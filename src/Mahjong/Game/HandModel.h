@@ -162,8 +162,8 @@ namespace BECore::Mahjong {
      * `HandResult::loose`.
      *
      * Actions as data: `LegalActions(seat)` lists everything the seat can do now (empty for a seat that is not to act) and
-     * `Apply(seat, action)` carries one out through the methods above; an action that is not in the list is refused with the error
-     * its method gives and changes nothing. A seat that is not a seat (outside 0..3) gets an empty list and `NotYourTurn`.
+     * `Apply(seat, action)` carries one out through the methods above; an action that `LegalActions` would not list (once the fields
+     * its kind ignores are left empty) is refused with the error its method gives and changes nothing. A seat that is not a seat (outside 0..3) gets an empty list and `NotYourTurn`.
      *
      * A model that was never begun is a finished, drawn hand (`Result()` holds it), so a result exists exactly when the phase is
      * `Finished`.

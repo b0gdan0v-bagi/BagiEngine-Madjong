@@ -99,22 +99,25 @@ namespace BECore::Mahjong::Tests {
 
     /// Every canonical action a seat could try, listed or not: a discard of each playable kind with and without the declaration, the
     /// win, both kongs of each kind, a claim of each kind (a chow with every possible first tile, and with none), the pass.
-    inline eastl::vector<HandAction> EveryCanonicalAction() {
-        eastl::vector<HandAction> candidates;
-        candidates.push_back(HandAction::MakeDeclareWin());
-        candidates.push_back(HandAction::MakePass());
-        candidates.push_back(HandAction::MakeClaim(ClaimKind::Chow));
-        candidates.push_back(HandAction::MakeClaim(ClaimKind::Pung));
-        candidates.push_back(HandAction::MakeClaim(ClaimKind::Kong));
-        candidates.push_back(HandAction::MakeClaim(ClaimKind::Mahjong));
-        for (uint8_t id = 0; id < kKindCount; ++id) {
-            const Tile tile{id};
-            candidates.push_back(HandAction::MakeDiscard(tile));
-            candidates.push_back(HandAction::MakeDiscard(tile, true));
-            candidates.push_back(HandAction::MakeConcealedKong(tile));
-            candidates.push_back(HandAction::MakeUpgradeKong(tile));
-            candidates.push_back(HandAction::MakeClaim(ClaimKind::Chow, tile));
-        }
+    inline const eastl::vector<HandAction>& EveryCanonicalAction() {
+        static const eastl::vector<HandAction> candidates = [] {
+            eastl::vector<HandAction> list;
+            list.push_back(HandAction::MakeDeclareWin());
+            list.push_back(HandAction::MakePass());
+            list.push_back(HandAction::MakeClaim(ClaimKind::Chow));
+            list.push_back(HandAction::MakeClaim(ClaimKind::Pung));
+            list.push_back(HandAction::MakeClaim(ClaimKind::Kong));
+            list.push_back(HandAction::MakeClaim(ClaimKind::Mahjong));
+            for (uint8_t id = 0; id < kKindCount; ++id) {
+                const Tile tile{id};
+                list.push_back(HandAction::MakeDiscard(tile));
+                list.push_back(HandAction::MakeDiscard(tile, true));
+                list.push_back(HandAction::MakeConcealedKong(tile));
+                list.push_back(HandAction::MakeUpgradeKong(tile));
+                list.push_back(HandAction::MakeClaim(ClaimKind::Chow, tile));
+            }
+            return list;
+        }();
         return candidates;
     }
 

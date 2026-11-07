@@ -5,6 +5,9 @@
 #include <Mahjong/Game/HandShape.h>
 #include <Mahjong/Game/Tile.h>
 #include <gtest/gtest.h>
+#include <set>
+#include <string>
+#include <vector>
 
 /**
  * `LegalActions` and `Apply`: the one list of what a seat can do, on fixed walls: a plain turn, the kongs, a calling hand that is
@@ -128,32 +131,72 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(HandModelActionsTest, ApplyAcceptsACanonicalActionExactlyWhenItIsListed) {
+        // Eight models; between them every kind of action is listed at least once (asserted below).
+        // A plain turn: the discards.
         FixedWallSpec plain = QuietSpec();
         plain.live = kRed;
         const HandModel plainTurn = MakeModel(plain);
 
-        FixedWallSpec claim = QuietSpec();
-        claim.hands[kSeat1] = "3p 4p 6p 7p 2s 5s 8s 2m 5m 8m Sw Ww Nw";
-        claim.hands[kSeat2] = "Rd Rd Rd 3p 6p 9p 3s 6s 9s 3m 6m 9m Sw";
-        claim.live = kFifth;
-        HandModel claimWindow = MakeModel(claim);
-        ASSERT_TRUE(claimWindow.Apply(kSeat0, HandAction::MakeDiscard(T(kFifth))).has_value());
-        ASSERT_EQ(claimWindow.GetPhase(), Phase::Claim);
+        // A waiting hand that is not declared: the discards and the discards with the declaration.
+        const HandModel waitingTurn = MakeModel(WaitingSpec(kRed));
 
-        HandModel robbingWindow = UpgradeModel({kSeat2});
-        ASSERT_TRUE(robbingWindow.Apply(kSeat1, HandAction::MakeUpgradeKong(T(kFifth))).has_value());
-        ASSERT_EQ(robbingWindow.GetPhase(), Phase::RobKong);
-
+        // East has declared and draws the winning tile: the discards and the win.
         HandModel declared = MakeModel(WaitingSpec("9p Wd Gd Nw Rd"));
         Lap(declared, "9p Wd Gd Nw", {kSeat0});
         ASSERT_TRUE(declared.GetHand(kSeat0).callingDeclared);
 
-        // The window models have listed actions to try (a chow, a pung, a kong, a pass, a mahjong); the plain and the declared turn have
-        // the discards, the declaration and the win.
-        ExpectAcceptedExactlyWhenListed(plainTurn);
-        ExpectAcceptedExactlyWhenListed(claimWindow);
-        ExpectAcceptedExactlyWhenListed(robbingWindow);
-        ExpectAcceptedExactlyWhenListed(declared);
+        // East discards the 5p: seat 1 has the chows and the pass.
+        FixedWallSpec chowSpec = QuietSpec();
+        chowSpec.hands[kSeat1] = "3p 4p 6p 7p 2s 5s 8s 2m 5m 8m Sw Ww Nw";
+        chowSpec.live = kFifth;
+        HandModel chowWindow = MakeModel(chowSpec);
+        ASSERT_TRUE(chowWindow.Apply(kSeat0, HandAction::MakeDiscard(T(kFifth))).has_value());
+        ASSERT_EQ(chowWindow.GetPhase(), Phase::Claim);
+
+        // East discards the red dragon: seat 2 holds three of it and has the pung, the kong and the pass.
+        FixedWallSpec pungSpec = QuietSpec();
+        pungSpec.hands[kSeat2] = "Rd Rd Rd 3p 6p 9p 3s 6s 9s 3m 6m 9m Sw";
+        pungSpec.live = kRed;
+        HandModel pungWindow = MakeModel(pungSpec);
+        ASSERT_TRUE(pungWindow.Apply(kSeat0, HandAction::MakeDiscard(T(kRed))).has_value());
+        ASSERT_EQ(pungWindow.GetPhase(), Phase::Claim);
+
+        // Seat 1 has upgraded its pung and seat 2 has declared on the 5p: seat 2 has the mahjong claim and the pass.
+        HandModel robbingWindow = UpgradeModel({kSeat2});
+        ASSERT_TRUE(robbingWindow.Apply(kSeat1, HandAction::MakeUpgradeKong(T(kFifth))).has_value());
+        ASSERT_EQ(robbingWindow.GetPhase(), Phase::RobKong);
+
+        // Seat 1 draws the fourth 5p of its open pung: the discards and the upgraded kong.
+        const HandModel upgradeTurn = UpgradeModel();
+
+        // East holds three of a kind and draws the fourth: the discards and the concealed kong.
+        FixedWallSpec kongSpec = QuietSpec();
+        kongSpec.hands[kSeat0] = "Ew Ew Ew 1p 4p 7p 1s 4s 7s 1m 4m 7m Gd";
+        kongSpec.hands[kSeat1] = "2p 5p 8p 2s 5s 8s 2m 5m 8m Sw Ww Nw Rd";
+        kongSpec.live = kEast;
+        const HandModel concealedKongTurn = MakeModel(kongSpec);
+
+        const HandModel* const models[] = {&plainTurn, &waitingTurn, &declared, &chowWindow, &pungWindow, &robbingWindow, &upgradeTurn, &concealedKongTurn};
+        std::set<std::string> listedKinds;
+        for (const HandModel* model : models) {
+            ExpectAcceptedExactlyWhenListed(*model);
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                for (const HandAction& action : model->LegalActions(seat)) {
+                    std::string kind = Name(action.kind);
+                    if (action.kind == ActionKind::Claim) {
+                        kind += Name(action.claim);
+                    } else if (action.kind == ActionKind::Discard && action.declareCalling) {
+                        kind += "Declare";
+                    }
+                    listedKinds.insert(kind);
+                }
+            }
+        }
+
+        // The brute force proves nothing about a kind that no model lists, so each kind has to be listed by one of them.
+        for (const char* kind : {"Discard", "DiscardDeclare", "DeclareWin", "ConcealedKong", "UpgradeKong", "ClaimChow", "ClaimPung", "ClaimKong", "ClaimMahjong", "Pass"}) {
+            EXPECT_TRUE(listedKinds.count(kind) == 1) << kind << " is listed by none of the models";
+        }
     }
 
     TEST(HandModelActionsTest, ASeatThatIsNotToActHasNoActionsAndANumberThatIsNoSeatHasNone) {
