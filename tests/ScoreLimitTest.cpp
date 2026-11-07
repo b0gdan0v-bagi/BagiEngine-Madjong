@@ -3,9 +3,9 @@
 #include <Mahjong/Game/HandShape.h>
 
 /**
- * The eleven limit hands of `ScoreSeat` (and the shape-independent two: the last tile as 1 dot and the loose tile as 5 dots), each on a
- * hand that has it and on near misses that score normally; the limit setting; a seat that does not win. Pure logic: no engine
- * services. Hands are written with the winning tile in them; the expected numbers are in `ScoreTestSupport.h`.
+ * The limit hands of `ScoreSeat` (the owner's eleven, 12 kinds because seven pairs has two; two of them are about the last / loose
+ * tile), each on a hand that has it and on near misses that score normally; the limit setting; a seat that does not win. Pure logic:
+ * no engine services. Hands are written with the winning tile in them; the expected numbers are in `ScoreTestSupport.h`.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -92,7 +92,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(ScoreLimitTest, HonoursOnlyNearMisses) {
         ExpectNoLimitHand(Win("Ew Ew Ew Sw Sw Sw Rd Rd Rd Wd Wd Wd 5p 5p", "5p"));
-        ExpectNoLimitHand(Win("Ew Ew Ew Sw Sw Sw Rd Rd Rd Wd Wd Wd 4p 5p", "5p", WinSource::SelfDraw, {OpenChow(T("3p"))}));
+        ExpectNoLimitHand(Win("Ew Ew Ew Sw Sw Sw Rd Rd Rd 5p 5p", "5p", WinSource::SelfDraw, {OpenChow(T("3p"))}));
     }
 
     TEST(ScoreLimitTest, TerminalsOnly) {

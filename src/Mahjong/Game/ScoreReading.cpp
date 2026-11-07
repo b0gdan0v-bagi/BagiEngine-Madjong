@@ -83,6 +83,25 @@ namespace BECore::Mahjong {
 
     }  // namespace
 
+    SuitSummary SummariseSuits(const PlayerHand& hand) noexcept {
+        SuitSummary summary;
+        const auto look = [&summary](Tile tile) {
+            if (tile.IsHonour()) {
+                summary.honours = true;
+            } else if (tile.IsSuit()) {
+                summary.mixed = summary.mixed || (summary.suit != TileSuit::None && summary.suit != tile.Suit());
+                summary.suit = tile.Suit();
+            }
+        };
+        for (const Tile tile : hand.concealed) {
+            look(tile);
+        }
+        for (const Meld& meld : hand.melds) {
+            look(meld.first);
+        }
+        return summary;
+    }
+
     int PairPoints(Tile pair, Wind seatWind, Wind roundWind) noexcept {
         int points = 0;
         if (pair.IsDragon()) {

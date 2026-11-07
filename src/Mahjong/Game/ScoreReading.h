@@ -80,6 +80,28 @@ namespace BECore::Mahjong {
         breakdown.lines.push_back({kind, tile, points, doubles});
     }
 
+    /// How the tiles of a hand lie in the suits: the one-suit doubles and the limit hand of concealed pungs read it (bonus tiles are not
+    /// looked at).
+    struct SuitSummary {
+        /// The suit of the suit tiles when there is just one, `TileSuit::None` when there is none (or, with `mixed`, more than one).
+        TileSuit suit = TileSuit::None;
+        bool mixed = false;
+        bool honours = false;
+
+        /// Suit tiles of one suit only (honours allowed).
+        [[nodiscard]] bool IsOneSuit() const noexcept {
+            return suit != TileSuit::None && !mixed;
+        }
+        /// Suit tiles of one suit and no honour.
+        [[nodiscard]] bool IsOneSuitNoHonours() const noexcept {
+            return IsOneSuit() && !honours;
+        }
+    };
+
+    /// The suits of every tile the seat holds: the concealed tiles and the tiles of the melds (a chow lies in one suit, so its first tile
+    /// tells).
+    [[nodiscard]] SuitSummary SummariseSuits(const PlayerHand& hand) noexcept;
+
     /// The points of a pair: `kPairPoints` for each of dragons, the own wind and the round wind it is (0 for any other tile).
     [[nodiscard]] int PairPoints(Tile pair, Wind seatWind, Wind roundWind) noexcept;
 

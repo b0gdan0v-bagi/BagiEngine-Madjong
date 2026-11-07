@@ -71,27 +71,11 @@ namespace BECore::Mahjong {
         /// One suit with honours or without: read on every tile the seat holds, the concealed ones and those of the melds. Bonus tiles
         /// are not looked at.
         void AddOneSuitDoubles(const ScoreInput& input, ScoreBreakdown& breakdown) {
-            TileSuit suit = TileSuit::None;
-            bool oneSuit = true;
-            bool honours = false;
-            auto look = [&](Tile tile) {
-                if (tile.IsHonour()) {
-                    honours = true;
-                } else if (tile.IsSuit()) {
-                    oneSuit = oneSuit && (suit == TileSuit::None || suit == tile.Suit());
-                    suit = tile.Suit();
-                }
-            };
-            for (const Tile tile : input.hand.concealed) {
-                look(tile);
-            }
-            for (const Meld& meld : input.hand.melds) {
-                look(meld.first);
-            }
-            if (suit == TileSuit::None || !oneSuit) {
+            const SuitSummary suits = SummariseSuits(input.hand);
+            if (!suits.IsOneSuit()) {
                 return;
             }
-            if (honours) {
+            if (suits.honours) {
                 AddLine(breakdown, ScoreKind::OneSuitWithHonours, Tile{}, 0, kOneSuitWithHonoursDoubles);
             } else {
                 AddLine(breakdown, ScoreKind::OneSuitNoHonours, Tile{}, 0, kOneSuitNoHonoursDoubles);

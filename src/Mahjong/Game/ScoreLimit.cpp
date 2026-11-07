@@ -29,22 +29,6 @@ namespace BECore::Mahjong {
             return true;
         }
 
-        /// Every held tile is of one suit (an honour is none).
-        bool IsOneSuitNoHonours(const TileCounts& held) noexcept {
-            TileSuit suit = TileSuit::None;
-            for (uint8_t id = 0; id < kKindCount; ++id) {
-                const Tile tile{id};
-                if (held[id] == 0) {
-                    continue;
-                }
-                if (!tile.IsSuit() || (suit != TileSuit::None && tile.Suit() != suit)) {
-                    return false;
-                }
-                suit = tile.Suit();
-            }
-            return suit != TileSuit::None;
-        }
-
         bool AnyCompleteReading(const eastl::vector<Reading>& readings) noexcept {
             return eastl::any_of(readings.begin(), readings.end(), IsCompleteReading);
         }
@@ -64,8 +48,8 @@ namespace BECore::Mahjong {
         // ----- hands made of sets: any complete reading that has them -----
 
         /// Four pungs or kongs, none open, of one suit (no honours, so the pair is of the suit too).
-        bool HasConcealedPungsOneSuit(const eastl::vector<Reading>& readings, const TileCounts& held) {
-            if (!IsOneSuitNoHonours(held)) {
+        bool HasConcealedPungsOneSuit(const eastl::vector<Reading>& readings, const PlayerHand& hand) {
+            if (!SummariseSuits(hand).IsOneSuitNoHonours()) {
                 return false;
             }
             return eastl::any_of(readings.begin(), readings.end(), [](const Reading& reading) {
@@ -118,7 +102,7 @@ namespace BECore::Mahjong {
         }
 
         bool AnyReading(const eastl::vector<Reading>& readings, bool (*hasHand)(const Reading&) noexcept) noexcept {
-            return eastl::any_of(readings.begin(), readings.end(), [hasHand](const Reading& reading) { return hasHand(reading); });
+            return eastl::any_of(readings.begin(), readings.end(), hasHand);
         }
 
     }  // namespace
@@ -135,10 +119,10 @@ namespace BECore::Mahjong {
         if (sevenPairs) {
             return honoursOnly ? ScoreKind::SevenPairsHonours : ScoreKind::SevenPairsOneSuit;
         }
-        if (HasConcealedPungsOneSuit(readings, held)) {
+        if (HasConcealedPungsOneSuit(readings, hand)) {
             return ScoreKind::ConcealedPungsOneSuit;
         }
-        if (honoursOnly && (sevenPairs || AnyCompleteReading(readings))) {
+        if (honoursOnly && AnyCompleteReading(readings)) {
             return ScoreKind::HonoursOnly;
         }
         if (EveryHeldTile(held, [](Tile tile) { return tile.IsTerminal(); }) && AnyCompleteReading(readings)) {
