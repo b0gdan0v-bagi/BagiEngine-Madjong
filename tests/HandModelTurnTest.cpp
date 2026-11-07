@@ -371,6 +371,43 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(model.Result()->loose);
     }
 
+    TEST(HandModelTurnTest, AReplacementThatEmptiesTheReserveEndsTheHandAsDrawn) {
+        FixedWallSpec spec = BaseSpec();
+        spec.live = "F1";
+        spec.loose = "F2 F3";
+        spec.liveAfterDeal = 1;  // East draws it: no live tile is left to refill the reserve
+        const HandModel model = MakeModel(spec, kSeat0, Wind::East, true);
+
+        // The draw and both loose tiles are bonus tiles, and there is no third replacement.
+        EXPECT_EQ(model.GetPhase(), Phase::Finished);
+        ASSERT_TRUE(model.Result().has_value());
+        EXPECT_EQ(model.Result()->kind, ResultKind::Drawn);
+        EXPECT_EQ(model.Result()->winner, kNoSeat);
+        EXPECT_EQ(model.GetHand(kSeat0).bonus.size(), 3u);
+        EXPECT_EQ(model.GetHand(kSeat0).concealed.size(), static_cast<size_t>(kDealtTiles));
+        EXPECT_EQ(model.GetWall().LooseCount(), 0u);
+    }
+
+    TEST(HandModelTurnTest, ASelfDrawWinOnALooseTileThatEmptiesTheLiveWallIsBothLooseAndTheLastLiveTile) {
+        // The five live tiles of the lap are drawn; the sixth is the refill that the loose draw takes from the live tail.
+        constexpr int kLiveWithOneRefill = 6;
+        FixedWallSpec spec = LapSpec("F1");
+        spec.loose = std::string(kWaitingTile) + " 3s 5s";
+        spec.liveAfterDeal = kLiveWithOneRefill;
+        HandModel model = MakeModel(spec, kSeat0, Wind::East, true);
+        ASSERT_TRUE(model.Discard(kSeat0, T(kUselessTile), true).has_value());
+        DiscardEach(model, "4m 6m 8p");
+        ASSERT_EQ(model.CurrentSeat(), kSeat0);
+        ASSERT_EQ(model.GetWall().LiveCount(), 0u);  // the flower was the fifth live tile and its replacement took the sixth
+
+        ASSERT_TRUE(model.DeclareWin(kSeat0).has_value());
+
+        ASSERT_TRUE(model.Result().has_value());
+        EXPECT_EQ(model.Result()->winningTile, T(kWaitingTile));
+        EXPECT_TRUE(model.Result()->loose);
+        EXPECT_TRUE(model.Result()->lastLiveTile);  // the current reading: both flags are set (stage 3 decides what each counts)
+    }
+
     TEST(HandModelTurnTest, ABonusTileDrawnByAnotherSeatIsReplacedToo) {
         FixedWallSpec spec = BaseSpec();
         spec.live = std::string(kUselessTile) + " T2";

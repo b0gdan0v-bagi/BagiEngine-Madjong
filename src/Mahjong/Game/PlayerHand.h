@@ -12,7 +12,8 @@ namespace BECore::Mahjong {
      *
      * `first` is the lowest tile of a chow and the tile of a pung or kong. A kong declared on the own turn from four tiles of the hand
      * is `concealed` (`fromDiscard` false); every other meld is open. `from` and `claimed` say where an open meld came from: the seat
-     * that discarded the tile and the tile itself (`fromDiscard`); they are not used for a concealed kong.
+     * that discarded the tile and the tile itself (`fromDiscard`); they are not used for a concealed kong. An upgraded kong (an open
+     * pung plus the fourth tile drawn) is the pung's own meld turned into a `Kong`: `from` and `claimed` stay those of the pung.
      */
     struct Meld {
         MeldKind kind = MeldKind::Pung;
@@ -41,6 +42,18 @@ namespace BECore::Mahjong {
         /// Puts `tile` into `concealed` at its sorted place (after equal tiles).
         void AddConcealed(Tile tile) {
             concealed.insert(eastl::upper_bound(concealed.begin(), concealed.end(), tile), tile);
+        }
+
+        /// Takes one copy of `tile` out of `concealed`; false (and nothing changes) when there is none. The model only removes tiles it
+        /// has checked (`CountConcealed`) or knows are there (the tiles of a claim, a kong or a discard), so a false is a defect of the
+        /// caller, not an input to answer.
+        bool RemoveConcealed(Tile tile) {
+            const auto found = eastl::find(concealed.begin(), concealed.end(), tile);
+            if (found == concealed.end()) {
+                return false;
+            }
+            concealed.erase(found);
+            return true;
         }
 
         /// How many copies of `tile` are in `concealed`.

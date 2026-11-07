@@ -343,6 +343,27 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(model.CurrentSeat(), kSeat3);  // discarder 0, claimer 2: the turn goes on from the seat after the claimer
     }
 
+    TEST(HandModelClaimTest, PassingOnALegalKongClaimIsAllowedAndTheNextSeatDraws) {
+        FixedWallSpec spec = QuietSpec();
+        spec.hands[kSeat2] = "Rd Rd Rd 3p 6p 9p 3s 6s 9s 3m 6m 9m Sw";
+        spec.live = kRed;
+        HandModel model = MakeModel(spec);
+        ASSERT_TRUE(model.Discard(kSeat0, T(kRed)).has_value());
+        ASSERT_EQ(model.GetPhase(), Phase::Claim);
+        ASSERT_EQ(model.LegalClaims(kSeat2).size(), 2u);  // pung and kong
+        const std::string before = Snapshot(model);
+
+        ASSERT_TRUE(model.Pass(kSeat2).has_value());
+
+        EXPECT_NE(Snapshot(model), before);
+        EXPECT_EQ(model.GetPhase(), Phase::Discard);
+        EXPECT_EQ(model.CurrentSeat(), kSeat1);
+        EXPECT_TRUE(model.GetHand(kSeat2).melds.empty());
+        EXPECT_EQ(model.GetHand(kSeat2).CountConcealed(T(kRed)), kPungTilesFromHand + 1);
+        EXPECT_EQ(model.Discards().back().tile, T(kRed));  // nobody took it
+        EXPECT_EQ(model.GetHand(kSeat1).concealed.size(), static_cast<size_t>(kTilesInHand) + 1);
+    }
+
     TEST(HandModelClaimTest, AMahjongClaimNeedsTheDeclarationAndTheWindowStillResolves) {
         // Seat 2 waits on the red dragon but has not declared; seat 3 holds a pair of them.
         FixedWallSpec spec = QuietSpec();
