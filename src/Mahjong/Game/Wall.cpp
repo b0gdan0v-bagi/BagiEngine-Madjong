@@ -43,7 +43,7 @@ namespace BECore::Mahjong {
         WallBreak wallBreak;
         wallBreak.eastDice = rng.Roll2d6();
         wallBreak.ownerDice = rng.Roll2d6();
-        wallBreak.seat = static_cast<Seat>((east + BreakSide(wallBreak.eastDice)) % kSeatCount);
+        wallBreak.seat = (east + BreakSide(wallBreak.eastDice)) % kSeatCount;
         wallBreak.index = BreakIndex(wallBreak.eastDice, wallBreak.ownerDice, StacksPerSide(settings.flowers));
 
         // The draw order is the ring read from the break onwards, round the end of the ring.

@@ -4,7 +4,7 @@
 
 `MahjongGame` is an `IGame` (name `Mahjong`, scene `MahjongScene`). Executable `BagiMahjong`, module `MahjongModule`, tests `MahjongTests`. Namespace `BECore::Mahjong`. Infrastructure and how a game is registered: `engine/src/Modules/Games/CLAUDE.md`; how this repository was set up around the engine: `engine/NEW_GAME.md` (on the engine's `main`).
 
-**State: a skeleton with the rules in progress.** The game is registered, starts in Game mode (`mode="Game"` in `config/ApplicationConfig.xml`; set `mode="Editor"` to open it in the scene editor) and shows its scene with a title. The rules of classic Chinese mahjong for four seats are being written in `Game/` as plain C++ (the tiles, the tile set, the seeded RNG and the seats exist so far; branch `todo/mahjong-classic-rules`); `MahjongGame` does not use them yet. There are no components and no control API yet.
+**State: a skeleton with the rules in progress.** The game is registered, starts in Game mode (`mode="Game"` in `config/ApplicationConfig.xml`; set `mode="Editor"` to open it in the scene editor) and shows its scene with a title. The rules of classic Chinese mahjong for four seats are being written in `Game/` as plain C++ (the tiles, the tile set, the seeded RNG, the seats, the wall and the deal exist so far; branch `todo/mahjong-classic-rules`); `MahjongGame` does not use them yet. There are no components and no control API yet.
 
 ## Layout
 
@@ -17,6 +17,8 @@ src/Mahjong/
 │   ├── MahjongRng.h      seeded mt19937 with Below / RollDie / Roll2d6 and a hand-written Fisher-Yates Shuffle (never std::shuffle or std::*_distribution: a seed must give the same game on every platform)
 │   ├── Seats.{h,cpp}     Seat (0..3, counter-clockwise), NextSeat, Offset, Wind, MakeSeatWinds, DecideEast (the draw for East, with a roll seam for tests), RollSeatWinds
 │   ├── Wall.{h,cpp}      Wall (loose reserve, live wall, dead wall), MakeWall(rng, settings, east) (shuffle, break), BreakIndex / BreakSide
+│   ├── PlayerHand.h      Meld (chow / pung / kong, concealed or open, where it came from), PlayerHand (sorted concealed tiles, melds, bonus tiles, the calling-hand declaration)
+│   ├── Deal.{h,cpp}      DealHands(wall, east, flowers): 13 tiles per seat, bonus tiles laid open and replaced from the loose tiles
 │   └── MahjongSettings.h handsPerMatch, flowers, replayDrawnHand, limit
 └── Components/           (to come) scene glue: components that read the model of the active game
 config/
@@ -28,7 +30,7 @@ tests/                    gtest sources, built as MahjongTests
 
 ## Wall conventions
 
-The break, the loose tiles and the dead wall are assumptions of this repository (`Wall.h` has the details; the numbers are named constants). The ring is four sides of 17 stacks of two tiles (18 stacks with flowers). East rolls 2d6 `a`: side `(a - 1) % 4` counted from East's own wall is broken; the owner of that side rolls `b`; the break is after `a + b` stacks from the right end of that side. Drawing starts at the break. The first 2 tiles are the loose reserve (a loose draw is refilled from the live tail), the last 14 are the dead wall and are never drawn.
+The break, the loose tiles and the dead wall are assumptions of this repository (`Wall.h` has the details; the numbers are named constants). The ring is four sides of 17 stacks of two tiles (18 stacks with flowers). East rolls 2d6 `a`: side `(a - 1) % 4` counted from East's own wall is broken; the owner of that side rolls `b`; the break is after `a + b` stacks from the right end of that side. The sides lie clockwise in the ring, so a count that runs past the left end of a side goes on into the wall of the clockwise neighbour, as on a real table, and `GetBreak().index` is the physical position of the break. Drawing starts at the break. The first 2 tiles are the loose reserve (a loose draw is refilled from the live tail), the last 14 are the dead wall and are never drawn.
 
 ## Rules for the code to come
 
@@ -48,4 +50,8 @@ The break, the loose tiles and the dead wall are assumptions of this repository 
 | `MahjongRngTest` | same seed same sequence, dice 1..6 and every face, shuffle keeps the multiset, golden values of seed 1 (the `mt19937` stream and the shuffled set are pinned) |
 | `SeatsTest` | `NextSeat` / `Offset`, seat winds counter-clockwise from East, the draw for East (scripted ties re-roll only the tied seats) |
 | `WallTest` | the ring (136 / 144), `BreakIndex` for hand-computed dice, the order of the rolls, same seed same wall, loose and live draws, refill from the live tail, the dead wall never reached |
+| `DealTest` | the deal: 13 tiles per seat for many seeds and every East, the deal order (four at a time from East, then one each), bonus tiles laid open and replaced from the loose tiles (also two in a row); `PlayerHand` helpers |
+| `FixedWallTest` | the helper `FixedWall.h` itself: layout, padding never over four copies, refills at the live tail, `liveAfterDeal`, a bad spec fails the test |
 | `MahjongGameTest` | the shipped `config/SceneConfig.xml` loads, `GameManager` activates `Mahjong` as the only registered game and its scene `MahjongScene` becomes active (needs the engine services) |
+
+`tests/FixedWall.h` (header only) lays out a wall tile by tile for the tests of the hand: `FixedWallSpec { hands[4] (13 tiles per seat in deal order), live, loose, liveAfterDeal }` and `MakeFixedWall(spec, flowers, east = 0)`; whatever the spec leaves out is padded from the set (never more than four of a kind; a spec that asks for more fails the test). Use it for every test that needs to know what a seat holds or draws.

@@ -39,18 +39,22 @@ namespace BECore::Mahjong {
      * @brief The ring index of the first tile drawn, from the two rolls of the break (an assumption of this repository, the usual
      *        way to break the wall).
      *
-     * Ring index 0 is the right end of East's own side; a side holds `perSide` stacks of `kTilesPerStack` tiles and the sides follow
-     * counter-clockwise. East rolls `eastDice` and that picks the side (`BreakSide`); the owner of that side rolls `ownerDice`; the
-     * wall is broken after `eastDice + ownerDice` stacks counted from the right end of that side. When the count runs past the end of
-     * the side it goes on into the next side, and past the last side back to the first. Both dice are the totals of 2d6 (2..12).
+     * Ring index 0 is the right end of East's own side; a side holds `perSide` stacks of `kTilesPerStack` tiles. The sides lie
+     * **clockwise** in the ring: side `s` (counted counter-clockwise from East's wall, see `BreakSide`) starts at ring position
+     * `((kSeatCount - s) % kSeatCount) * perSide` stacks. Counting from the right end of a side to its left end then runs on into the
+     * wall of the seat clockwise from it, as on a real table, so the index is the physical position of the break.
+     * East rolls `eastDice` and that picks the side; the owner of that side rolls `ownerDice`; the wall is broken after
+     * `eastDice + ownerDice` stacks counted from the right end of that side, past the last stack of the ring back to the first.
+     * Both dice are the totals of 2d6 (2..12).
      */
     [[nodiscard]] constexpr int BreakIndex(int eastDice, int ownerDice, int perSide) noexcept {
         const int stacksInRing = kSeatCount * perSide;
-        const int stack = (BreakSide(eastDice) * perSide + eastDice + ownerDice) % stacksInRing;
+        const int sideStart = ((kSeatCount - BreakSide(eastDice)) % kSeatCount) * perSide;
+        const int stack = (sideStart + eastDice + ownerDice) % stacksInRing;
         return stack * kTilesPerStack;
     }
 
-    /// How a wall was broken: whose wall, and the two rolls. All zero for a wall that was not built by `MakeWall`.
+    /// How a wall was broken: whose wall, the two rolls and the ring index of the first tile drawn (`BreakIndex`). All zero for a wall that was not built by `MakeWall`.
     struct WallBreak {
         Seat seat = 0;
         int eastDice = 0;

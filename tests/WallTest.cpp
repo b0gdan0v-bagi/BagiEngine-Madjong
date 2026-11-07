@@ -67,7 +67,6 @@ namespace BECore::Mahjong::Tests {
     static_assert(StacksPerSide(false) == 17);
     static_assert(StacksPerSide(true) == 18);
     static_assert(BreakSide(5) == 0);
-    static_assert(BreakIndex(5, 6, kStacksPerSide) == 22);
 
     TEST(WallTest, RingHas136Tiles) {
         MahjongRng rng(kSeed);
@@ -112,27 +111,44 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(BreakIndex(5, 6, kStacksPerSide), 22);
     }
 
-    TEST(WallTest, BreakIndexRunsIntoTheNextSide) {
-        // 5 + 12 = 17 stacks is exactly the whole side: the next side starts there.
-        EXPECT_EQ(BreakIndex(5, 12, kStacksPerSide), 34);
-        // 9 + 12 = 21 stacks from the right end of East's side: four stacks into the second side.
-        EXPECT_EQ(BreakIndex(9, 12, kStacksPerSide), 42);
-        // Second side (roll 2), owner 2: 17 + 4 stacks.
-        EXPECT_EQ(BreakIndex(2, 2, kStacksPerSide), 42);
+    TEST(WallTest, SidesLieClockwiseInTheRing) {
+        // Side s starts at ring position ((4 - s) % 4) * perSide stacks: East's side, then North's, West's and South's.
+        // The owner rolls 2 on top of East's roll; the rolls 5, 4, 3, 2 pick sides 0, 3, 2, 1 (BreakSide).
+        EXPECT_EQ(BreakIndex(5, 2, kStacksPerSide), (0 * kStacksPerSide + 5 + 2) * kTilesPerStack);
+        EXPECT_EQ(BreakIndex(4, 2, kStacksPerSide), (1 * kStacksPerSide + 4 + 2) * kTilesPerStack);
+        EXPECT_EQ(BreakIndex(3, 2, kStacksPerSide), (2 * kStacksPerSide + 3 + 2) * kTilesPerStack);
+        EXPECT_EQ(BreakIndex(2, 2, kStacksPerSide), (3 * kStacksPerSide + 2 + 2) * kTilesPerStack);
     }
 
-    TEST(WallTest, BreakIndexLowestAndHighestDice) {
-        // 2 + 2: the second side, four stacks in.
-        EXPECT_EQ(BreakIndex(2, 2, kStacksPerSide), (kStacksPerSide + 4) * kTilesPerStack);
-        // 12 + 12: the fourth side (51 stacks before it) plus 24 stacks is 75, which wraps past the 68 of the ring to 7.
-        EXPECT_EQ(BreakIndex(12, 12, kStacksPerSide), 14);
+    TEST(WallTest, BreakIndexRunsIntoTheClockwiseNeighbour) {
+        // 5 + 12 = 17 stacks is exactly the whole of East's side: the count goes on into the wall of North (side 3, the clockwise
+        // neighbour), which starts at stack 17.
+        EXPECT_EQ(BreakIndex(5, 12, kStacksPerSide), 34);
+        // 9 + 12 = 21 stacks from the right end of East's side: four stacks into North's side.
+        EXPECT_EQ(BreakIndex(9, 12, kStacksPerSide), 42);
+        // Second side (roll 2, South's wall at stack 51), owner 12: 51 + 14 = 65 stacks, still inside South's side (51..67).
+        EXPECT_EQ(BreakIndex(2, 12, kStacksPerSide), 130);
+        // Second side, owner 2: 51 + 4 = 55 stacks.
+        EXPECT_EQ(BreakIndex(2, 2, kStacksPerSide), 110);
+        // Roll 3 (West's wall at stack 34), owner 12: 34 + 15 = 49 stacks; South's side starts at 51, so the count is still in West's.
+        EXPECT_EQ(BreakIndex(3, 12, kStacksPerSide), 98);
+    }
+
+    TEST(WallTest, BreakIndexRunsOffTheEndOfTheRing) {
+        // Roll 6 picks South's side too (stack 51..67): 51 + 6 + 12 = 69 stacks, past the 68 of the ring, so 1 stack.
+        EXPECT_EQ(BreakIndex(6, 12, kStacksPerSide), 2);
+        // 12 + 12: side 3 (North's, stack 17) + 24 = 41 stacks.
+        EXPECT_EQ(BreakIndex(12, 12, kStacksPerSide), 82);
     }
 
     TEST(WallTest, BreakIndexWithFlowersUsesEighteenStacksPerSide) {
-        EXPECT_EQ(BreakIndex(2, 2, kStacksPerSideWithBonus), (kStacksPerSideWithBonus + 4) * kTilesPerStack);
+        // Side 1 starts at 3 * 18 = 54 stacks.
+        EXPECT_EQ(BreakIndex(2, 2, kStacksPerSideWithBonus), (3 * kStacksPerSideWithBonus + 4) * kTilesPerStack);
         EXPECT_EQ(BreakIndex(5, 12, kStacksPerSideWithBonus), 34);
-        // 3 * 18 + 24 = 78 stacks, wrapped on the 72 of the ring.
-        EXPECT_EQ(BreakIndex(12, 12, kStacksPerSideWithBonus), 12);
+        // Side 3 starts at 18 stacks: 18 + 24 = 42 stacks.
+        EXPECT_EQ(BreakIndex(12, 12, kStacksPerSideWithBonus), 84);
+        // Side 1: 54 + 6 + 12 = 72 stacks, wrapped on the 72 of the ring.
+        EXPECT_EQ(BreakIndex(6, 12, kStacksPerSideWithBonus), 0);
     }
 
     TEST(WallTest, BreakIndexIsAlwaysInsideTheRingAndOnAStackStart) {
@@ -202,9 +218,9 @@ namespace BECore::Mahjong::Tests {
             MahjongRng rng(kSeed);
             const Wall wall = MakeWall(rng, Settings(flowers), 0);
             const size_t total = flowers ? kFullWallWithBonus : kFullWall;
-            EXPECT_EQ(wall.LooseCount(), 2U);
-            EXPECT_EQ(wall.DeadWallSize(), 14U);
-            EXPECT_EQ(wall.LiveCount(), total - 16);
+            EXPECT_EQ(wall.LooseCount(), kLooseTiles);
+            EXPECT_EQ(wall.DeadWallSize(), kDeadWallTiles);
+            EXPECT_EQ(wall.LiveCount(), total - kLooseTiles - kDeadWallTiles);
             EXPECT_EQ(wall.Remaining(), total);
         }
     }
@@ -212,7 +228,7 @@ namespace BECore::Mahjong::Tests {
     TEST(WallTest, FromOrderSplitsLooseLiveAndDead) {
         const Wall wall = Wall::FromOrder(Sequence(kShortWallSize));
         EXPECT_EQ(Ids(wall.LooseTiles()), (std::vector<int>{0, 1}));
-        EXPECT_EQ(wall.LiveCount(), kShortWallSize - 16);
+        EXPECT_EQ(wall.LiveCount(), kShortWallSize - kLooseTiles - kDeadWallTiles);
         EXPECT_EQ(wall.LiveTiles().front().Id(), 2);
         EXPECT_EQ(wall.LiveTiles().back().Id(), 15);
         EXPECT_EQ(Ids(wall.DeadWall()), (std::vector<int>{16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29}));
@@ -228,8 +244,8 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(wall.LiveCount(), 0U);
         EXPECT_FALSE(wall.Draw().has_value());
         // The dead wall and the reserve are still whole.
-        EXPECT_EQ(wall.DeadWallSize(), 14U);
-        EXPECT_EQ(wall.Remaining(), 16U);
+        EXPECT_EQ(wall.DeadWallSize(), kDeadWallTiles);
+        EXPECT_EQ(wall.Remaining(), kLooseTiles + kDeadWallTiles);
         EXPECT_FALSE(wall.Draw().has_value());
     }
 
@@ -240,15 +256,15 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(first->Id(), 0);
         // The live tail was tile 15 (the one just before the dead wall); it joins the back of the reserve.
         EXPECT_EQ(Ids(wall.LooseTiles()), (std::vector<int>{1, 15}));
-        EXPECT_EQ(wall.LiveCount(), kShortWallSize - 16 - 1);
+        EXPECT_EQ(wall.LiveCount(), kShortWallSize - kLooseTiles - kDeadWallTiles - 1);
         EXPECT_EQ(wall.LiveTiles().back().Id(), 14);
 
         const std::optional<Tile> second = wall.DrawLoose();
         ASSERT_TRUE(second.has_value());
         EXPECT_EQ(second->Id(), 1);
         EXPECT_EQ(Ids(wall.LooseTiles()), (std::vector<int>{15, 14}));
-        EXPECT_EQ(wall.LiveCount(), kShortWallSize - 16 - 2);
-        EXPECT_EQ(wall.DeadWallSize(), 14U);
+        EXPECT_EQ(wall.LiveCount(), kShortWallSize - kLooseTiles - kDeadWallTiles - 2);
+        EXPECT_EQ(wall.DeadWallSize(), kDeadWallTiles);
     }
 
     TEST(WallTest, RegularDrawsAndLooseRefillsMeetWithoutOverlap) {
@@ -257,7 +273,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(wall.Draw()->Id(), 2);
         EXPECT_EQ(wall.Draw()->Id(), 3);
         EXPECT_EQ(wall.DrawLoose()->Id(), 0);
-        EXPECT_EQ(wall.LiveCount(), 14 - 2 - 1U);
+        EXPECT_EQ(wall.LiveCount(), kShortWallSize - kLooseTiles - kDeadWallTiles - 2 - 1);
         EXPECT_EQ(wall.Draw()->Id(), 4);
         EXPECT_EQ(wall.LiveTiles().back().Id(), 14);
     }
@@ -283,9 +299,9 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(wall.DrawLoose().has_value());
         EXPECT_FALSE(wall.Draw().has_value());
         // Through all of it the dead wall stayed whole.
-        EXPECT_EQ(wall.DeadWallSize(), 14U);
+        EXPECT_EQ(wall.DeadWallSize(), kDeadWallTiles);
         EXPECT_EQ(Ids(wall.DeadWall()), (std::vector<int>{4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17}));
-        EXPECT_EQ(wall.Remaining(), 14U);
+        EXPECT_EQ(wall.Remaining(), kDeadWallTiles);
     }
 
     TEST(WallTest, ShortWallsGiveTheReserveFirstThenTheDeadWall) {
@@ -313,7 +329,7 @@ namespace BECore::Mahjong::Tests {
         while (wall.Draw().has_value()) {
             ++taken;
         }
-        EXPECT_EQ(taken, kFullWall - 16);
+        EXPECT_EQ(taken, kFullWall - kLooseTiles - kDeadWallTiles);
         while (wall.DrawLoose().has_value()) {
             ++taken;
         }
