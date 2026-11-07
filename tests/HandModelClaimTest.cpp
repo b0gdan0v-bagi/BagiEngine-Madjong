@@ -422,7 +422,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Error(model.Claim(kSeat0, ClaimKind::Mahjong)), HandError::WrongPhase);
     }
 
-    TEST(HandModelClaimTest, AWinOnTheDiscardAfterTheLastLiveTileSetsLastLiveTile) {
+    TEST(HandModelClaimTest, AWinOnTheDiscardAfterTheLastLiveTileIsNotALastLiveTile) {
         HandModel model = MahjongWindow(kLapTiles);  // the four tiles of the lap are all there is
         ASSERT_EQ(model.GetPhase(), Phase::Claim);
         ASSERT_EQ(model.GetWall().LiveCount(), 0u);
@@ -431,7 +431,8 @@ namespace BECore::Mahjong::Tests {
 
         ASSERT_TRUE(model.Result().has_value());
         EXPECT_EQ(model.Result()->kind, ResultKind::Win);
-        EXPECT_TRUE(model.Result()->lastLiveTile);
+        EXPECT_EQ(model.Result()->source, WinSource::Discard);
+        EXPECT_FALSE(model.Result()->lastLiveTile);  // only a self-draw of the last live tile counts
     }
 
     TEST(HandModelClaimTest, PassingTheLastDiscardOfAnEmptyLiveWallIsADrawnHand) {

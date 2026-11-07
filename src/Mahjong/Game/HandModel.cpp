@@ -214,7 +214,8 @@ namespace BECore::Mahjong {
             return turn;
         }
         PlayerHand& hand = _hands[seat];
-        if (FindPung(hand, tile) == nullptr || hand.CountConcealed(tile) == 0) {
+        // Only the tile drawn from the wall this turn upgrades a pung: not a copy kept from earlier turns, not right after a claim.
+        if (FindPung(hand, tile) == nullptr || !_drawnTile.IsValid() || _drawnTile != tile) {
             return std::unexpected(HandError::IllegalKong);
         }
         if (!OpenWindow(Phase::RobKong, seat, tile)) {
@@ -320,7 +321,7 @@ namespace BECore::Mahjong {
                 if (hand.CountConcealed(tile) == kCopiesPerTile) {
                     actions.push_back(HandAction::MakeConcealedKong(tile));
                 }
-                if (FindPung(hand, tile) != nullptr) {
+                if (FindPung(hand, tile) != nullptr && _drawnTile == tile) {
                     actions.push_back(HandAction::MakeUpgradeKong(tile));
                 }
             }
@@ -515,7 +516,7 @@ namespace BECore::Mahjong {
         result.source = source;
         result.from = from;
         result.loose = loose;
-        result.lastLiveTile = _wall.LiveCount() == 0;
+        result.lastLiveTile = source == WinSource::SelfDraw && !loose && _wall.LiveCount() == 0;
         _result = result;
         _phase = Phase::Finished;
     }

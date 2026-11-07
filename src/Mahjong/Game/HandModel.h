@@ -111,8 +111,8 @@ namespace BECore::Mahjong {
      * A drawn hand has `kind == Drawn` and no winner (`winner` and `from` are `kNoSeat`). For a win: `winner` completed the hand with
      * `winningTile`; `source` says how; `from` is the seat that discarded the tile (`Discard`), the seat that owns the kong
      * (`RobbedKong`) or the winner itself (`SelfDraw`). `loose` is set when the tile came from the loose reserve (after a bonus tile
-     * or a kong); `lastLiveTile` when the live wall was empty after it (the last tile before the dead wall, a discard after it
-     * included).
+     * or a kong). `lastLiveTile` only for a self-drawn win (`WinSource::SelfDraw`) on the last tile drawn from the live wall: it is
+     * not set for a win on a discard, for a loose tile (even one whose refill emptied the live wall) or for a robbed kong.
      */
     struct HandResult {
         ResultKind kind = ResultKind::Drawn;
@@ -153,7 +153,8 @@ namespace BECore::Mahjong {
      * goes to the seat after the claimer. If all pass, the seat after the discarder draws.
      *
      * The kongs: besides the open kong of a claim, a seat on its turn declares a concealed kong from four equal tiles of its hand
-     * (`DeclareConcealedKong`) or upgrades an open pung with the fourth tile (`UpgradeKong`). Each draws a loose tile (the reserve is
+     * (`DeclareConcealedKong`) or upgrades an open pung with the fourth tile (`UpgradeKong`), which must be the tile just drawn from the wall this turn (a
+     * regular or a loose draw; not a copy kept from earlier turns, not right after a claim). Each draws a loose tile (the reserve is
      * refilled from the end of the live wall) and the seat then discards. An upgraded kong can be robbed, only to win: when another
      * seat has declared a calling hand that the tile completes, `Phase::RobKong` opens and those seats `Claim(Mahjong)` or `Pass`;
      * the robber farthest counter-clockwise from the kong's owner wins, taking the tile (the pung stays a pung in the owner's hand);
@@ -246,8 +247,8 @@ namespace BECore::Mahjong {
          *
          * When another seat has declared a calling hand that `tile` completes, `Phase::RobKong` opens and the kong waits for those
          * seats (`Claim(seat, ClaimKind::Mahjong)` or `Pass`); otherwise the kong is completed at once: the meld becomes a kong, the
-         * seat draws a loose tile and discards. Errors: `WrongPhase`, `NotYourTurn`, `IllegalKong` (no open pung of `tile`, or the
-         * fourth tile is not in the concealed hand).
+         * seat draws a loose tile and discards. Errors: `WrongPhase`, `NotYourTurn`, `IllegalKong` (no open pung of `tile`, or `tile` is not
+         * the tile drawn from the wall this turn).
          */
         HandStatus UpgradeKong(Seat seat, Tile tile);
 
@@ -265,7 +266,7 @@ namespace BECore::Mahjong {
 
         /// Everything `seat` can do now, in this order: the discards (each distinct concealed tile, and the same tile with the
         /// calling-hand declaration where `Discard` would accept it), `DeclareWin`, a `ConcealedKong` for each tile held four times, an
-        /// `UpgradeKong` for each open pung whose tile is in the concealed hand; or, in a window, the `LegalClaims` plus `Pass`. Empty
+        /// `UpgradeKong` for the open pung of the tile drawn this turn, if there is one; or, in a window, the `LegalClaims` plus `Pass`. Empty
         /// for a seat that is not to act and for a number that is no seat.
         [[nodiscard]] eastl::vector<HandAction> LegalActions(Seat seat) const;
         /// Carries out `action` for `seat` through the method of its kind. Errors are those of the method (`NotYourTurn` for a number
@@ -313,8 +314,8 @@ namespace BECore::Mahjong {
         [[nodiscard]] Seat BestClaimant() const;
         /// Ends the robbing window: `robber` takes `tile` from the kong of `owner` and wins, or (`kNoSeat`) the kong is completed.
         void ResolveRobbery(Seat owner, Seat robber, Tile tile);
-        /// Turns the open pung of `tile` of `seat` into a kong with the fourth tile of its hand, then the loose-tile draw. The seat
-        /// holds both: `UpgradeKong` checked it, and no hand changes while the robbing window is open.
+        /// Turns the open pung of `tile` of `seat` into a kong with the fourth tile of its hand (the drawn one), then the loose-tile
+        /// draw. The seat holds both: `UpgradeKong` checked it, and no hand changes while the robbing window is open.
         void CompleteKong(Seat seat, Tile tile);
         /// Lays `claimer`'s claimed meld: removes the tiles it uses from its hand and puts the meld down.
         void ExposeClaim(Seat claimer, const ClaimOption& claim, Seat from, Tile tile);

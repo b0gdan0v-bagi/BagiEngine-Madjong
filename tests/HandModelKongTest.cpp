@@ -54,6 +54,10 @@ namespace BECore::Mahjong::Tests {
             return spec;
         }
 
+        bool Has(const eastl::vector<HandAction>& actions, const HandAction& wanted) {
+            return eastl::find(actions.begin(), actions.end(), wanted) != actions.end();
+        }
+
         std::optional<HandError> Error(const HandStatus& status) {
             return status.has_value() ? std::nullopt : std::optional<HandError>(status.error());
         }
@@ -120,7 +124,13 @@ namespace BECore::Mahjong::Tests {
         constexpr const char* kFifth = "5p";
         constexpr const char* kUpgradeLoose = "9m";
 
-        FixedWallSpec UpgradeSpec(const char* lastDraw = kFifth) {
+        // A second lap after seat 1 has declined the upgrade: it discards 8p, the others draw and discard Rd Gd Wd (no window opens),
+        // and seat 1 draws Nw, which is no fourth 5p. `UpgradeSpec` lays these tiles after the first lap unless it is given none.
+        constexpr const char* kSecondLap = "8p Rd Gd Wd";
+        constexpr const char* kNextDraw = "Nw";
+        constexpr const char* kSecondLapDraws = "Rd Gd Wd Nw";
+
+        FixedWallSpec UpgradeSpec(const char* lastDraw = kFifth, const char* secondLapDraws = kSecondLapDraws) {
             FixedWallSpec spec;
             spec.hands[kSeat0] = "1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Gd Rd";
             spec.hands[kSeat1] = "5p 5p 8p 2s 5s 8s 2m 5m 8m Ww Nw Gd Wd";
@@ -128,14 +138,17 @@ namespace BECore::Mahjong::Tests {
             spec.hands[kSeat2] = "4p 6p 1s 2s 3s 4m 5m 6m 7s 8s 9s Ew Ew";
             spec.hands[kSeat3] = "4p 6p 1m 2m 3m 4s 5s 6s 7m 8m 9m Ww Ww";
             spec.live = std::string(kFifth) + " Rd Gd Wd " + lastDraw;
+            if (secondLapDraws[0] != '\0') {
+                spec.live += std::string(" ") + secondLapDraws;
+            }
             spec.loose = std::string(kUpgradeLoose) + " 9s";
             return spec;
         }
 
         /// Seat 1 is to act with the fourth 5p drawn and an open pung of 5p laid; the seats in `declaring` have declared a calling hand
         /// that waits on 5p. Seat 1 has drawn `lastDraw`, which is the fourth 5p unless a test says otherwise.
-        HandModel UpgradeModel(std::initializer_list<Seat> declaring = {}, const char* lastDraw = kFifth) {
-            HandModel model = MakeModel(UpgradeSpec(lastDraw));
+        HandModel UpgradeModelOn(const FixedWallSpec& spec, std::initializer_list<Seat> declaring = {}, const char* lastDraw = kFifth) {
+            HandModel model = MakeModel(spec);
             EXPECT_TRUE(model.Discard(kSeat0, T(kFifth)).has_value());
             EXPECT_EQ(model.GetPhase(), Phase::Claim);
             EXPECT_TRUE(model.Claim(kSeat1, ClaimKind::Pung).has_value());
@@ -144,6 +157,10 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(model.CurrentSeat(), kSeat1);
             EXPECT_GE(model.GetHand(kSeat1).CountConcealed(T(lastDraw)), 1);
             return model;
+        }
+
+        HandModel UpgradeModel(std::initializer_list<Seat> declaring = {}, const char* lastDraw = kFifth) {
+            return UpgradeModelOn(UpgradeSpec(lastDraw), declaring, lastDraw);
         }
 
         // ----- a win on a loose tile -----
@@ -296,7 +313,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(result.lastLiveTile);
     }
 
-    TEST(HandModelKongTest, ALooseRefillThatEmptiesTheLiveWallSetsBothLooseAndLastLiveTile) {
+    TEST(HandModelKongTest, ALooseRefillThatEmptiesTheLiveWallIsLooseButNotTheLastLiveTile) {
         // Five live tiles are drawn, the sixth is the refill that the loose draw of the kong takes from the live tail.
         constexpr int kLiveWithOneRefill = 6;
         HandModel model = LooseWinModel(kLiveWithOneRefill);
@@ -308,7 +325,7 @@ namespace BECore::Mahjong::Tests {
 
         ASSERT_TRUE(model.Result().has_value());
         EXPECT_TRUE(model.Result()->loose);
-        EXPECT_TRUE(model.Result()->lastLiveTile);
+        EXPECT_FALSE(model.Result()->lastLiveTile);
     }
 
     TEST(HandModelKongTest, ALooseTileThatIsABonusTileIsLaidOpenAndReplacedAgain) {
@@ -412,6 +429,86 @@ namespace BECore::Mahjong::Tests {
         for (const HandAction& action : model.LegalActions(kSeat1)) {
             EXPECT_NE(action.kind, ActionKind::UpgradeKong);
         }
+    }
+
+    TEST(HandModelKongTest, ACopyKeptFromAnEarlierTurnCannotUpgradeThePung) {
+        // Seat 1 draws the fourth 5p, declines, and on its next turn still holds it next to a new tile.
+        HandModel model = UpgradeModel();
+        Lap(model, kSecondLap);
+        ASSERT_EQ(model.CurrentSeat(), kSeat1);
+        ASSERT_EQ(model.GetHand(kSeat1).CountConcealed(T(kFifth)), 1);
+        ASSERT_EQ(model.GetHand(kSeat1).CountConcealed(T(kNextDraw)), 2);
+        const std::string before = Snapshot(model);
+
+        EXPECT_EQ(Error(model.UpgradeKong(kSeat1, T(kFifth))), HandError::IllegalKong);
+        EXPECT_EQ(Error(model.Apply(kSeat1, HandAction::MakeUpgradeKong(T(kFifth)))), HandError::IllegalKong);
+        EXPECT_EQ(Snapshot(model), before);
+        for (const HandAction& action : model.LegalActions(kSeat1)) {
+            EXPECT_NE(action.kind, ActionKind::UpgradeKong);
+        }
+        ASSERT_TRUE(model.Discard(kSeat1, T(kNextDraw)).has_value());  // the turn goes on
+    }
+
+    TEST(HandModelKongTest, ACopyKeptRightAfterAPungClaimCannotUpgradeItEither) {
+        // Seat 1 holds three 5p, claims the fourth as a pung and keeps one in hand; it has drawn nothing this turn.
+        FixedWallSpec spec = UpgradeSpec("8p", "");
+        spec.hands[kSeat1] = "5p 5p 5p 8p 2s 5s 8s 2m 5m 8m Ww Nw Wd";
+        HandModel model = MakeModel(spec);
+        ASSERT_TRUE(model.Discard(kSeat0, T(kFifth)).has_value());
+        ASSERT_EQ(model.GetPhase(), Phase::Claim);
+        ASSERT_TRUE(model.Claim(kSeat1, ClaimKind::Pung).has_value());
+        ASSERT_EQ(model.GetPhase(), Phase::Discard);
+        ASSERT_EQ(model.CurrentSeat(), kSeat1);
+        ASSERT_EQ(model.GetHand(kSeat1).CountConcealed(T(kFifth)), 1);
+        const std::string before = Snapshot(model);
+
+        EXPECT_EQ(Error(model.UpgradeKong(kSeat1, T(kFifth))), HandError::IllegalKong);
+        EXPECT_EQ(Snapshot(model), before);
+        for (const HandAction& action : model.LegalActions(kSeat1)) {
+            EXPECT_NE(action.kind, ActionKind::UpgradeKong);
+        }
+        ASSERT_TRUE(model.Discard(kSeat1, T(kFifth)).has_value());  // the kept copy can still be discarded
+    }
+
+    TEST(HandModelKongTest, ALooseTileDrawnAfterAConcealedKongCanUpgradeThePung) {
+        // Seat 1 claims the pung of 5p, draws the fourth 9p, declares the concealed kong and gets the fourth 5p from the reserve.
+        FixedWallSpec spec = UpgradeSpec("9p", "");
+        spec.hands[kSeat1] = "5p 5p 9p 9p 9p 2s 5s 8s 2m 5m Ww Nw Wd";
+        spec.loose = "5p 9s";
+        HandModel model = UpgradeModelOn(spec, {}, "9p");
+        EXPECT_EQ(Error(model.UpgradeKong(kSeat1, T(kFifth))), HandError::IllegalKong);  // the tile drawn from the wall is a 9p
+
+        ASSERT_TRUE(model.DeclareConcealedKong(kSeat1, T("9p")).has_value());
+        const PlayerHand& hand = model.GetHand(kSeat1);
+        ASSERT_EQ(hand.CountConcealed(T(kFifth)), 1);  // the loose tile
+        EXPECT_TRUE(Has(model.LegalActions(kSeat1), HandAction::MakeUpgradeKong(T(kFifth))));
+
+        ASSERT_TRUE(model.Apply(kSeat1, HandAction::MakeUpgradeKong(T(kFifth))).has_value());
+
+        EXPECT_EQ(model.GetPhase(), Phase::Discard);
+        ASSERT_EQ(hand.melds.size(), 2u);
+        EXPECT_EQ(hand.melds[0].kind, MeldKind::Kong);  // the claimed pung, now with the fourth tile
+        EXPECT_FALSE(hand.melds[0].concealed);
+        EXPECT_TRUE(hand.melds[1].concealed);
+        EXPECT_EQ(hand.CountConcealed(T(kFifth)), 0);
+        EXPECT_EQ(HeldTiles(hand), kTilesInHand + 1);
+    }
+
+    TEST(HandModelKongTest, ARobbedKongOnAnEmptyLiveWallIsNotALastLiveTile) {
+        // The fourth 5p is the fifth and last live tile; the kong is robbed on it.
+        constexpr int kLiveTiles = 5;
+        FixedWallSpec spec = UpgradeSpec(kFifth, "");
+        spec.liveAfterDeal = kLiveTiles;
+        HandModel model = UpgradeModelOn(spec, {kSeat2});
+        ASSERT_EQ(model.GetWall().LiveCount(), 0u);
+
+        ASSERT_TRUE(model.UpgradeKong(kSeat1, T(kFifth)).has_value());
+        ASSERT_EQ(model.GetPhase(), Phase::RobKong);
+        ASSERT_TRUE(model.Claim(kSeat2, ClaimKind::Mahjong).has_value());
+
+        ASSERT_TRUE(model.Result().has_value());
+        EXPECT_EQ(model.Result()->source, WinSource::RobbedKong);
+        EXPECT_FALSE(model.Result()->lastLiveTile);
     }
 
     TEST(HandModelKongTest, AConcealedKongOpensNoRobbingWindowEvenWhenADeclaredSeatWaitsOnThatTile) {

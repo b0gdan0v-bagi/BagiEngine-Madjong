@@ -344,6 +344,8 @@ namespace BECore::Mahjong::Tests {
 
         ASSERT_TRUE(model.Result().has_value());
         EXPECT_EQ(model.Result()->kind, ResultKind::Win);
+        EXPECT_EQ(model.Result()->source, WinSource::SelfDraw);
+        EXPECT_FALSE(model.Result()->loose);
         EXPECT_TRUE(model.Result()->lastLiveTile);
     }
 
@@ -430,7 +432,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(model.GetWall().LooseCount(), 0u);
     }
 
-    TEST(HandModelTurnTest, ASelfDrawWinOnALooseTileThatEmptiesTheLiveWallIsBothLooseAndTheLastLiveTile) {
+    TEST(HandModelTurnTest, ASelfDrawWinOnALooseTileThatEmptiesTheLiveWallIsLooseButNotTheLastLiveTile) {
         // The five live tiles of the lap are drawn; the sixth is the refill that the loose draw takes from the live tail.
         constexpr int kLiveWithOneRefill = 6;
         FixedWallSpec spec = LapSpec("F1");
@@ -447,7 +449,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(model.Result().has_value());
         EXPECT_EQ(model.Result()->winningTile, T(kWaitingTile));
         EXPECT_TRUE(model.Result()->loose);
-        EXPECT_TRUE(model.Result()->lastLiveTile);  // the current reading: both flags are set (stage 3 decides what each counts)
+        EXPECT_FALSE(model.Result()->lastLiveTile);  // the last live tile has to be drawn from the live wall itself
     }
 
     TEST(HandModelTurnTest, ABonusTileDrawnByAnotherSeatIsReplacedToo) {
