@@ -6,39 +6,11 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        bool IsCompleteReading(const Reading& reading) noexcept {
-            return reading.sets.size() == static_cast<size_t>(kSetsInHand) && reading.pair.IsValid();
-        }
-
-        bool IsGroupSet(const ReadingSet& set) noexcept {
-            return set.kind != MeldKind::Chow;
-        }
-
         bool HoldsTerminalOrHonour(const ReadingSet& set) noexcept {
             if (set.kind != MeldKind::Chow) {
                 return set.first.IsTerminal() || set.first.IsHonour();
             }
             return set.first.Rank() == 1 || set.first.Rank() == kLastChowStartRank;
-        }
-
-        bool IsWindGroup(const ReadingSet& set) noexcept {
-            return IsGroupSet(set) && set.first.IsWind();
-        }
-
-        bool IsDragonGroup(const ReadingSet& set) noexcept {
-            return IsGroupSet(set) && set.first.IsDragon();
-        }
-
-        bool IsKong(const ReadingSet& set) noexcept {
-            return set.kind == MeldKind::Kong;
-        }
-
-        int CountSets(const Reading& reading, bool (*isWanted)(const ReadingSet&)) noexcept {
-            int count = 0;
-            for (const ReadingSet& set : reading.sets) {
-                count += isWanted(set) ? 1 : 0;
-            }
-            return count;
         }
 
         int SumPoints(const ScoreBreakdown& breakdown) noexcept {

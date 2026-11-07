@@ -340,9 +340,9 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(ScoreDoublesTest, AWinnerThatIsNoFourSetsAndAPairIsReadLikeAnyOtherSeat) {
-        // Seven pairs have no decomposition; the limit hands to come score them. Until then the pairs that stand are read, and the
-        // doubles that need four sets are left out.
-        const ScoreBreakdown breakdown = ScoreSeat(MakeWinnerInput("Ew Ew Rd Rd Ww Ww Nw Nw Sw Sw Wd Wd Gd Gd", "Gd"));
+        // Seven pairs are a limit hand (`ScoreLimitTest`); a winner whose tiles are no win at all (a single in place of the last pair)
+        // is read by the pairs that stand, and the doubles that need four sets are left out.
+        const ScoreBreakdown breakdown = ScoreSeat(MakeWinnerInput("Ew Ew Rd Rd Ww Ww Nw Nw Sw Sw Wd Wd Gd 1p", "1p"));
 
         EXPECT_TRUE(breakdown.won);
         EXPECT_EQ(LinePoints(breakdown, ScoreKind::Pair), kPairOfOwnAndRoundWind);

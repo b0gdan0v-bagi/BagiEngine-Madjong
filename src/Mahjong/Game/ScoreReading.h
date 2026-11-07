@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Mahjong/Game/HandShape.h>
 #include <Mahjong/Game/Score.h>
 
 namespace BECore::Mahjong {
@@ -38,6 +39,36 @@ namespace BECore::Mahjong {
      *   looked for.
      */
     [[nodiscard]] eastl::vector<Reading> BuildReadings(const ScoreInput& input);
+
+    /// A reading of four sets and a pair: the shape of a win by sets.
+    [[nodiscard]] inline bool IsCompleteReading(const Reading& reading) noexcept {
+        return reading.sets.size() == static_cast<size_t>(kSetsInHand) && reading.pair.IsValid();
+    }
+
+    [[nodiscard]] inline bool IsGroupSet(const ReadingSet& set) noexcept {
+        return set.kind != MeldKind::Chow;
+    }
+
+    [[nodiscard]] inline bool IsWindGroup(const ReadingSet& set) noexcept {
+        return IsGroupSet(set) && set.first.IsWind();
+    }
+
+    [[nodiscard]] inline bool IsDragonGroup(const ReadingSet& set) noexcept {
+        return IsGroupSet(set) && set.first.IsDragon();
+    }
+
+    [[nodiscard]] inline bool IsKong(const ReadingSet& set) noexcept {
+        return set.kind == MeldKind::Kong;
+    }
+
+    /// How many sets of `reading` `isWanted` accepts.
+    [[nodiscard]] inline int CountSets(const Reading& reading, bool (*isWanted)(const ReadingSet&)) noexcept {
+        int count = 0;
+        for (const ReadingSet& set : reading.sets) {
+            count += isWanted(set) ? 1 : 0;
+        }
+        return count;
+    }
 
     /// The tile of the wind `wind` (the numbering of `Wind` and of the winds of `Tile` is the same).
     [[nodiscard]] constexpr Tile WindTile(Wind wind) noexcept {

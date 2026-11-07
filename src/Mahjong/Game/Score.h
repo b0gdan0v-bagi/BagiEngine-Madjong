@@ -152,7 +152,8 @@ namespace BECore::Mahjong {
      * @brief The score of one seat: every reading of its hand is scored and the best one (the largest `raw`; a tie keeps the first) is
      *        returned with all its lines.
      *
-     * Everyone scores their own hand, the winner or not. A seat that does not win has no winning lines and no winner doubles.
+     * Everyone scores their own hand, the winner or not. A seat that does not win has no winning lines and no winner doubles. A winner
+     * who holds a limit hand (`ScoreLimit.h`) is not read by readings: it scores `LimitCap(limit)` with the one line of the hand.
      * Readings and the lines of a reading: `ScoreReading.h`, `CLAUDE.md` ("Scoring").
      */
     [[nodiscard]] ScoreBreakdown ScoreSeat(const ScoreInput& input);

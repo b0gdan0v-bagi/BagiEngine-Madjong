@@ -1,6 +1,7 @@
 #include "Score.h"
 
 #include <Mahjong/Game/HandShape.h>
+#include <Mahjong/Game/ScoreLimit.h>
 #include <Mahjong/Game/ScoreReading.h>
 #include <Mahjong/Game/ScoreWinner.h>
 
@@ -152,13 +153,28 @@ namespace BECore::Mahjong {
             return breakdown;
         }
 
+        /// The score of a limit hand: its one line and the limit (no points, no doubles, nothing else is read from the hand).
+        ScoreBreakdown LimitHandBreakdown(const ScoreInput& input, ScoreKind limitHand) {
+            ScoreBreakdown breakdown;
+            breakdown.won = true;
+            AddLine(breakdown, limitHand, Tile{}, 0, 0);
+            breakdown.limitHand = limitHand;
+            breakdown.raw = LimitCap(input.limit);
+            breakdown.score = breakdown.raw;
+            return breakdown;
+        }
+
     }  // namespace
 
     ScoreBreakdown ScoreSeat(const ScoreInput& input) {
+        const eastl::vector<Reading> readings = BuildReadings(input);
+        if (const std::optional<ScoreKind> limitHand = FindLimitHand(readings, input)) {
+            return LimitHandBreakdown(input, *limitHand);
+        }
         ScoreBreakdown best;
         bool first = true;
         const bool onlyWinningTile = input.won && WaitsOnlyForTheWinningTile(input);
-        for (const Reading& reading : BuildReadings(input)) {
+        for (const Reading& reading : readings) {
             ScoreBreakdown breakdown = ScoreReading(input, reading, onlyWinningTile);
             if (first || breakdown.raw > best.raw) {
                 best = eastl::move(breakdown);
