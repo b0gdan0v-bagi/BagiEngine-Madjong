@@ -24,6 +24,7 @@ namespace BECore::Mahjong {
             return nullptr;
         }
 
+        /// The same, for a hand that is changed (`CompleteKong` turns the pung it finds into a kong).
         Meld* FindPung(PlayerHand& hand, Tile tile) {
             return const_cast<Meld*>(FindPung(static_cast<const PlayerHand&>(hand), tile));
         }
@@ -215,7 +216,7 @@ namespace BECore::Mahjong {
         }
         PlayerHand& hand = _hands[seat];
         // Only the tile drawn from the wall this turn upgrades a pung: not a copy kept from earlier turns, not right after a claim.
-        if (FindPung(hand, tile) == nullptr || !_drawnTile.IsValid() || _drawnTile != tile) {
+        if (FindPung(hand, tile) == nullptr || _drawnTile != tile) {
             return std::unexpected(HandError::IllegalKong);
         }
         if (!OpenWindow(Phase::RobKong, seat, tile)) {
@@ -468,8 +469,8 @@ namespace BECore::Mahjong {
 
     void HandModel::CompleteKong(Seat seat, Tile tile) {
         PlayerHand& hand = _hands[seat];
-        // The pung and the fourth tile are there (see the declaration), so the results of `FindPung` and `RemoveConcealed` are not
-        // looked at.
+        // The pung is there, and so is the fourth tile: a valid `_drawnTile` lies in the hand (see the declaration). So a pung that
+        // is missing is skipped silently and the result of `RemoveConcealed` is not looked at.
         if (Meld* pung = FindPung(hand, tile)) {
             pung->kind = MeldKind::Kong;
         }

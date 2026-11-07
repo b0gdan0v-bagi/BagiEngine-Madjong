@@ -140,7 +140,7 @@ namespace BECore::Mahjong {
     private:
         static constexpr int kGreenDragonIndex = 2;
         /// The bamboo ranks printed in green only.
-        static constexpr eastl::array<int, 5> kGreenBambooRanks = {2, 3, 4, 6, 8};
+        static constexpr eastl::array kGreenBambooRanks = {2, 3, 4, 6, 8};
 
         uint8_t _id = kInvalidId;
     };
