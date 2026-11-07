@@ -74,6 +74,14 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
+    TEST(SeatsTest, EastOfIsTheSeatThatHoldsEastAndNoSeatOtherwise) {
+        for (Seat east = 0; east < kSeatCount; ++east) {
+            EXPECT_EQ(EastOf(MakeSeatWinds(east)), east);
+        }
+        EXPECT_EQ(EastOf({Wind::South, Wind::South, Wind::West, Wind::North}), kNoSeat);
+        EXPECT_EQ(EastOf({Wind::East, Wind::East, Wind::West, Wind::North}), kNoSeat);
+    }
+
     TEST(SeatsTest, RollSeatWindsGivesEachWindOnce) {
         std::set<Seat> easts;
         for (uint32_t seed = 0; seed < kSeedsToTry; ++seed) {

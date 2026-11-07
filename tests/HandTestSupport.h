@@ -5,6 +5,7 @@
 #include <EASTL/algorithm.h>
 #include <Mahjong/Game/HandModel.h>
 #include <Mahjong/Game/MahjongRng.h>
+#include <Mahjong/Game/Match.h>
 #include <Mahjong/Game/Payments.h>
 #include <Mahjong/Game/Seats.h>
 #include <Mahjong/Game/Tile.h>
@@ -199,6 +200,18 @@ namespace BECore::Mahjong::Tests {
             }
         }
         return PickRandom(wanted.empty() ? actions : wanted, rng);
+    }
+
+    /// The hand in progress of `match` is played with random legal actions until it is finished.
+    inline void PlayHand(Match& match, Mode mode, MahjongRng& rng) {
+        HandModel& hand = match.Hand();
+        while (hand.GetPhase() != Phase::Finished) {
+            const Seat actor = NextActor(hand, rng);
+            ASSERT_NE(actor, kNoSeat);
+            const eastl::vector<HandAction> actions = hand.LegalActions(actor);
+            ASSERT_FALSE(actions.empty());
+            ASSERT_TRUE(hand.Apply(actor, Choose(actions, mode, rng)).has_value());
+        }
     }
 
 }  // namespace BECore::Mahjong::Tests

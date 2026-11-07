@@ -133,34 +133,6 @@ namespace BECore::Mahjong::Tests {
 
         // ----- helpers -----
 
-        /// A line that only a winner has.
-        bool IsWinnerLine(const ScoreLine& line) {
-            return line.kind == ScoreKind::Win || line.kind == ScoreKind::WinTileFromWall || line.kind == ScoreKind::OnlyWinningTile ||
-                   static_cast<int>(line.kind) >= static_cast<int>(ScoreKind::OnlyPungs);
-        }
-
-        void ExpectNoWinnerLine(const ScoreBreakdown& breakdown, Seat seat) {
-            for (const ScoreLine& line : breakdown.lines) {
-                EXPECT_FALSE(IsWinnerLine(line)) << "seat " << seat << " has the winner's line " << Name(line.kind);
-            }
-            EXPECT_FALSE(breakdown.won) << "seat " << seat;
-            EXPECT_FALSE(breakdown.limitHand.has_value()) << "seat " << seat;
-        }
-
-        /// What every settlement is: the scores are those of the breakdowns, the deltas are what `Settle` makes of the scores, the
-        /// change sums to zero.
-        void ExpectConsistent(const HandSettlement& settlement) {
-            for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                EXPECT_EQ(settlement.scores[seat], settlement.breakdowns[seat].score) << "seat " << seat;
-                EXPECT_EQ(settlement.scores[seat] % kScoreRounding, 0) << "seat " << seat;
-            }
-            const SeatScores expected = Settle(settlement.scores, settlement.winner, settlement.east);
-            for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                EXPECT_EQ(settlement.deltas[seat], expected[seat]) << "seat " << seat;
-            }
-            EXPECT_EQ(Sum(settlement.deltas), 0);
-        }
-
         void ExpectScores(const HandSettlement& settlement, const SeatScores& scores, const SeatScores& deltas) {
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 EXPECT_EQ(settlement.scores[seat], scores[seat]) << "score of seat " << seat;

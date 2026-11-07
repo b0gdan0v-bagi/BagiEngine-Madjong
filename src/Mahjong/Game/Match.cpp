@@ -5,20 +5,6 @@
 
 namespace BECore::Mahjong {
 
-    namespace {
-
-        /// The seat that holds East in `winds`.
-        Seat EastOf(const SeatWinds& winds) noexcept {
-            for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                if (winds[seat] == Wind::East) {
-                    return seat;
-                }
-            }
-            return 0;
-        }
-
-    }  // namespace
-
     MatchProgress NextProgress(MatchProgress progress, ResultKind kind, Seat winner, const MahjongSettings& settings) noexcept {
         if (kind == ResultKind::Drawn && settings.replayDrawnHand) {
             return progress;

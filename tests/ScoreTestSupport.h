@@ -2,12 +2,15 @@
 
 #include "HandTestSupport.h"
 
+#include <Mahjong/Game/Payments.h>
 #include <Mahjong/Game/Score.h>
+#include <Mahjong/Game/ScoreHand.h>
 
 /**
- * What the scoring tests share (`ScorePointsTest`, `ScoreDoublesTest`, `ScoreWinnerTest`, `ScoreLimitTest`): a `ScoreInput` made
- * from notation, melds, and the lines of a breakdown by kind. Header only. A hand written here needs no 13 or 14 tiles: scoring reads
- * what the seat holds and does not check the count, so a test lists only the tiles it is about (plus `kQuietChows`).
+ * What the scoring tests share (`ScorePointsTest`, `ScoreDoublesTest`, `ScoreWinnerTest`, `ScoreLimitTest`, `ScoreHandTest`,
+ * `MatchPlayoutTest`): a `ScoreInput` made from notation, melds, the lines of a breakdown by kind, and the checks every settled hand
+ * must pass. Header only. A hand written here needs no 13 or 14 tiles: scoring reads what the seat holds and does not check the
+ * count, so a test lists only the tiles it is about (plus `kQuietChows`).
  */
 namespace BECore::Mahjong::Tests {
 
@@ -111,6 +114,36 @@ namespace BECore::Mahjong::Tests {
     /// How many lines are of `kind`.
     inline int CountLines(const ScoreBreakdown& breakdown, ScoreKind kind) {
         return static_cast<int>(eastl::count_if(breakdown.lines.begin(), breakdown.lines.end(), [kind](const ScoreLine& line) { return line.kind == kind; }));
+    }
+
+    // ----- what every settled hand is -----
+
+    /// A line that only a winner has.
+    inline bool IsWinnerLine(const ScoreLine& line) {
+        return line.kind == ScoreKind::Win || line.kind == ScoreKind::WinTileFromWall || line.kind == ScoreKind::OnlyWinningTile ||
+               static_cast<int>(line.kind) >= static_cast<int>(ScoreKind::OnlyPungs);
+    }
+
+    inline void ExpectNoWinnerLine(const ScoreBreakdown& breakdown, Seat seat) {
+        for (const ScoreLine& line : breakdown.lines) {
+            EXPECT_FALSE(IsWinnerLine(line)) << "seat " << seat << " has the winner's line " << Name(line.kind);
+        }
+        EXPECT_FALSE(breakdown.won) << "seat " << seat;
+        EXPECT_FALSE(breakdown.limitHand.has_value()) << "seat " << seat;
+    }
+
+    /// What every settlement is: the scores are those of the breakdowns, the deltas are what `Settle` makes of the scores, the
+    /// change sums to zero.
+    inline void ExpectConsistent(const HandSettlement& settlement) {
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            EXPECT_EQ(settlement.scores[seat], settlement.breakdowns[seat].score) << "seat " << seat;
+            EXPECT_EQ(settlement.scores[seat] % kScoreRounding, 0) << "seat " << seat;
+        }
+        const SeatScores expected = Settle(settlement.scores, settlement.winner, settlement.east);
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            EXPECT_EQ(settlement.deltas[seat], expected[seat]) << "seat " << seat;
+        }
+        EXPECT_EQ(Sum(settlement.deltas), 0);
     }
 
 }  // namespace BECore::Mahjong::Tests

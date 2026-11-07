@@ -1,14 +1,19 @@
 #pragma once
 
 #include <Games/IGame.h>
+#include <Mahjong/Game/Match.h>
 
 namespace BECore::Mahjong {
 
     /**
-     * @brief Concrete IGame for mahjong (a skeleton: no rules yet).
+     * @brief Concrete IGame for mahjong: it owns the match (`Game/Match.h`), the rules of classic Chinese mahjong for four seats.
      *
-     * Activates "MahjongScene" when started. Auto-registered into AbstractFactory<IGame> via the BE_CLASS reflection machinery, no hand-written
-     * registrar. The rules will live in plain C++ under Game/ and be owned here; the scene glue in Components/ will reach them through GetActive().
+     * Activates "MahjongScene" when started. Auto-registered into AbstractFactory<IGame> via the BE_CLASS reflection machinery, no
+     * hand-written registrar. The rules are plain C++ under Game/; the scene glue in Components/ (to come) reaches the match through
+     * GetActive()->GetMatch().
+     *
+     * `Start()` and `Reset()` begin a new match with a seed from `std::random_device`: the randomness is chosen here, outside the rules,
+     * which only ever see the seed (`StartMatch(seed)` is how a test or a control API replays a match).
      */
     class MahjongGame : public IGame {
         BE_CLASS(MahjongGame)
@@ -19,8 +24,28 @@ namespace BECore::Mahjong {
         PoolString GetName() const override;
         PoolString GetSceneName() const override;
 
+        void Start() override;
+        void Reset() override;
+
+        /// The match: started by `Start()` / `Reset()` / `StartMatch`, `NotStarted` before the game is first started.
+        Match& GetMatch() {
+            return _match;
+        }
+        const Match& GetMatch() const {
+            return _match;
+        }
+
+        /// Begins a new match with the default `MahjongSettings` and `seed` (one seed is one match, the first hand included).
+        MatchStatus StartMatch(uint32_t seed);
+
         /// The active game, or nullptr when no game is active or the active game is not Mahjong.
         static MahjongGame* GetActive();
+
+    private:
+        /// `StartMatch` with a seed from `std::random_device`; a refusal (it cannot happen with the default settings) is logged.
+        void StartRandomMatch();
+
+        Match _match;
     };
 
 }  // namespace BECore::Mahjong

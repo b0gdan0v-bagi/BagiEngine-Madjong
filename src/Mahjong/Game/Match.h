@@ -14,8 +14,8 @@ namespace BECore::Mahjong {
     inline constexpr int kRoundsPerMatch = 4;
 
     /// Whether a hand that East wins (and so deals again) counts towards `handsPerMatch`. The one place of this rule: with `true` a match
-    /// is always exactly `handsPerMatch` hands long; with `false` a round ends only after the deal has gone round, which makes the
-    /// number of hands depend on the play (and unbounded in theory).
+    /// is always exactly `handsPerMatch` hands long; with `false` a repeat does not count, so a round ends after `handsPerMatch / 4`
+    /// deals (in the full game of 16 that is the deal going round once) and the number of hands depends on the play (unbounded in theory).
     inline constexpr bool kEastRepeatCountsAsHand = true;
 
     /// Where the match stands, the part the bookkeeping of the rules needs: how many hands counted and who is East.
@@ -103,11 +103,11 @@ namespace BECore::Mahjong {
         [[nodiscard]] Seat East() const noexcept {
             return _progress.east;
         }
-        /// The wind of each seat in the hand in progress.
+        /// The wind of each seat in the hand in progress (of the next hand once the match is over, like `East()`).
         [[nodiscard]] SeatWinds Winds() const noexcept {
             return MakeSeatWinds(_progress.east);
         }
-        /// The round wind of the hand in progress.
+        /// The round wind of the hand in progress (of the next hand once the match is over: North, `RoundWindOf` stops there).
         [[nodiscard]] Wind RoundWind() const noexcept {
             return RoundWindOf(_progress.handsPlayed, _settings);
         }

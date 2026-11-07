@@ -9,9 +9,6 @@
 
 namespace BECore::Mahjong {
 
-    /// No seat (the winner of a drawn hand).
-    inline constexpr Seat kNoSeat = -1;
-
     /**
      * @brief Where a hand stands. A draw is automatic, so a seat only ever sees one of these.
      *

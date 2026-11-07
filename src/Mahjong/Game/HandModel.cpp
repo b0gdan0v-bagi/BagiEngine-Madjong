@@ -111,15 +111,8 @@ namespace BECore::Mahjong {
     }  // namespace
 
     HandStatus HandModel::Begin(const MahjongSettings& settings, Wall wall, const SeatWinds& seatWinds, Wind roundWind) {
-        Seat east = kNoSeat;
-        int eastCount = 0;
-        for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            if (seatWinds[seat] == Wind::East) {
-                east = seat;
-                ++eastCount;
-            }
-        }
-        if (eastCount != 1) {
+        const Seat east = EastOf(seatWinds);
+        if (east == kNoSeat) {
             return std::unexpected(HandError::BadSeatWinds);
         }
 

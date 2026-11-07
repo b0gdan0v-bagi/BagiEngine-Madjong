@@ -64,18 +64,6 @@ namespace BECore::Mahjong::Tests {
             return MadeUp(match, ResultKind::Drawn, kNoSeat);
         }
 
-        /// The hand in progress is played with random legal actions until it is finished.
-        void PlayHand(Match& match, Mode mode, MahjongRng& rng) {
-            HandModel& hand = match.Hand();
-            while (hand.GetPhase() != Phase::Finished) {
-                const Seat actor = NextActor(hand, rng);
-                ASSERT_NE(actor, kNoSeat);
-                const eastl::vector<HandAction> actions = hand.LegalActions(actor);
-                ASSERT_FALSE(actions.empty());
-                ASSERT_TRUE(hand.Apply(actor, Choose(actions, mode, rng)).has_value());
-            }
-        }
-
     }  // namespace
 
     // ----- the start -----
@@ -449,7 +437,7 @@ namespace BECore::Mahjong::Tests {
             Match match = StartedMatch(Settings(kExpectedFullHands, false));
             MahjongRng rng(kSeed);
             const Seat east = match.East();
-            PlayHand(match, mode, rng);
+            ASSERT_NO_FATAL_FAILURE(PlayHand(match, mode, rng));
             const HandSettlement expected = SettleHand(match.Hand());
 
             const auto ended = match.EndHand();
@@ -476,7 +464,7 @@ namespace BECore::Mahjong::Tests {
         Match match = StartedMatch(Settings(kExpectedFullHands, true));
         MahjongRng rng(kSeed);
         const Seat east = match.East();
-        PlayHand(match, Mode::NeverWin, rng);
+        ASSERT_NO_FATAL_FAILURE(PlayHand(match, Mode::NeverWin, rng));
 
         const auto ended = match.EndHand();
 

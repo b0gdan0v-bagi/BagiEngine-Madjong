@@ -10,6 +10,18 @@ namespace BECore::Mahjong {
         return winds;
     }
 
+    Seat EastOf(const SeatWinds& winds) noexcept {
+        Seat east = kNoSeat;
+        int eastCount = 0;
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            if (winds[seat] == Wind::East) {
+                east = seat;
+                ++eastCount;
+            }
+        }
+        return eastCount == 1 ? east : kNoSeat;
+    }
+
     Seat DecideEast(const SeatRoller& roll) {
         eastl::vector<Seat> running;
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
