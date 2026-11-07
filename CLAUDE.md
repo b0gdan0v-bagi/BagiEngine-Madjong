@@ -4,14 +4,17 @@
 
 `MahjongGame` is an `IGame` (name `Mahjong`, scene `MahjongScene`). Executable `BagiMahjong`, module `MahjongModule`, tests `MahjongTests`. Namespace `BECore::Mahjong`. Infrastructure and how a game is registered: `engine/src/Modules/Games/CLAUDE.md`; how this repository was set up around the engine: `engine/NEW_GAME.md` (on the engine's `main`).
 
-**State: a skeleton.** The game is registered, starts in Game mode (`mode="Game"` in `config/ApplicationConfig.xml`; set `mode="Editor"` to open it in the scene editor) and shows its scene with a title. There are no rules, no components and no control API yet; which mahjong it is (solitaire or a table game) is still the owner's decision.
+**State: a skeleton with the rules in progress.** The game is registered, starts in Game mode (`mode="Game"` in `config/ApplicationConfig.xml`; set `mode="Editor"` to open it in the scene editor) and shows its scene with a title. The rules of classic Chinese mahjong for four seats are being written in `Game/` as plain C++ (the tiles and the tile set exist so far; branch `todo/mahjong-classic-rules`); `MahjongGame` does not use them yet. There are no components and no control API yet.
 
 ## Layout
 
 ```
 src/Mahjong/
 ├── MahjongGame.{h,cpp}   IGame; GetActive() is how components will reach it
-├── Game/                 (to come) plain C++ rules, no scene or renderer
+├── Game/                 plain C++ rules, no scene or renderer
+│   ├── Tile.{h,cpp}      Tile (one id 0..41: suits, winds, dragons, flowers, seasons), predicates, notation (ToString / TryParse / ParseTiles: 1p 9s 5m Ew Rd F1 T4)
+│   ├── TileSet.{h,cpp}   BuildTileSet(flowers): 136 or 144 tiles in a fixed order
+│   └── MahjongSettings.h handsPerMatch, flowers, replayDrawnHand, limit
 └── Components/           (to come) scene glue: components that read the model of the active game
 config/
 ├── ApplicationConfig.xml the engine's file with mode="Game"
@@ -34,4 +37,5 @@ tests/                    gtest sources, built as MahjongTests
 
 | File | Covers |
 |------|--------|
+| `TileTest` | tile ids and predicates, the notation round trip, the tile set (136 / 144, four of each kind), the settings defaults (pure logic, no engine services) |
 | `MahjongGameTest` | the shipped `config/SceneConfig.xml` loads, `GameManager` activates `Mahjong` as the only registered game and its scene `MahjongScene` becomes active (needs the engine services) |
