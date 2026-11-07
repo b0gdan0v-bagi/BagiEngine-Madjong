@@ -19,7 +19,6 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        constexpr int kExpectedStartingScore = 2000;
         constexpr uint32_t kSeed = 11;
 
         std::filesystem::path ShippedSceneConfig() {

@@ -143,6 +143,10 @@ namespace BECore::Mahjong {
         if (IsThirteenOrphansHand(hand)) {
             return ScoreKind::ThirteenOrphans;
         }
+        // These two read the circumstances, but only of a hand that is complete (the shapes of the limit hands above returned already).
+        if (!AnyCompleteReading(readings)) {
+            return std::nullopt;
+        }
         if (input.result.lastLiveTile && input.result.winningTile == Tile::Suited(TileSuit::Dots, kLastTileLimitRank)) {
             return ScoreKind::LastTileOneDot;
         }

@@ -12,7 +12,6 @@ namespace BECore::Mahjong::Tests {
     namespace {
 
         // The rules written out, not taken from the headers.
-        constexpr int kExpectedStartingScore = 2000;
         constexpr int kExpectedFullHands = 16;
         constexpr int kExpectedShortHands = 8;
         constexpr int kHandsPerRoundFull = 4;

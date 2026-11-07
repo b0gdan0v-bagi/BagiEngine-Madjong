@@ -34,7 +34,7 @@ namespace BECore::Mahjong {
     void MahjongGame::StartRandomMatch() {
         std::random_device device;
         if (const MatchStatus started = StartMatch(device()); !started.has_value()) {
-            LOG_ERROR(Format("MahjongGame: the match did not start: {}", EnumUtils<MatchError>::ToString(started.error())).c_str());
+            LOG_ERROR(Format("MahjongGame: the match did not start: {}", EnumUtils<MatchError>::ToString(started.error())));
         }
     }
 

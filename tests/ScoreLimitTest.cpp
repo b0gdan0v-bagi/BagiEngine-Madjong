@@ -214,6 +214,15 @@ namespace BECore::Mahjong::Tests {
         ExpectNoLimitHand(Win(kPlainWithOneDot, "1p"));
     }
 
+    TEST(ScoreLimitTest, TheCircumstanceHandsNeedAWinningShape) {
+        // 1 dot as the last tile and 5 dots as a loose tile, but the 14 tiles make no hand.
+        const char* noShape = "1p 2p 4p 7m 8m 9m 5s 6s 8s Ww Ww Ww 4m 4m";
+        const char* noShapeWithFiveDots = "5p 2p 4p 7m 8m 9m 5s 6s 8s Ww Ww Ww 4m 4m";
+
+        EXPECT_FALSE(ScoreSeat(LastTileInput(noShape, "1p")).limitHand.has_value());
+        EXPECT_FALSE(ScoreSeat(LooseTileInput(noShapeWithFiveDots, "5p")).limitHand.has_value());
+    }
+
     TEST(ScoreLimitTest, ALooseTileAsFiveDots) {
         ExpectLimitHand(ScoreSeat(LooseTileInput(kPlainWithFiveDots, "5p")), ScoreKind::LooseTileFiveDots);
     }

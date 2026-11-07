@@ -24,6 +24,9 @@ namespace BECore::Mahjong::Tests {
     inline constexpr Seat kSeat2 = 2;
     inline constexpr Seat kSeat3 = 3;
 
+    /// The starting score of a seat, written out and not taken from the header (2000), for the tests of a match.
+    inline constexpr int kExpectedStartingScore = 2000;
+
     /// The total of a number per seat (the points of the four seats, or the change of a hand: zero).
     inline int Sum(const SeatScores& scores) {
         int total = 0;

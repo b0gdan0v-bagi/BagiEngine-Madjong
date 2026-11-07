@@ -14,8 +14,7 @@ namespace BECore::Mahjong::Tests {
 
         constexpr int kMatchCount = 8;
         constexpr uint32_t kFirstSeed = 100;
-        constexpr int kStartingScore = 2000;
-        constexpr int kTableTotal = kSeatCount * kStartingScore;
+        constexpr int kTableTotal = kSeatCount * kExpectedStartingScore;
         /// The match of this index is played by the player who never wins (so only drawn hands happen); it must not replay them, or it
         /// would never end.
         constexpr int kNeverWinMatch = 7;
@@ -26,6 +25,8 @@ namespace BECore::Mahjong::Tests {
             int wins = 0;
             int draws = 0;
             int replays = 0;
+            /// Matches in which East never won, so the deal went round and the check of it ran.
+            int dealtRoundChecks = 0;
         };
 
         /// Match number `index` of the table: bit 0 flowers, bit 1 the short game, bit 2 a drawn hand counts (no replay).
@@ -129,13 +130,16 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(match.GetPhase(), MatchPhase::Finished) << where;
             EXPECT_EQ(match.HandsPlayed(), settings.handsPerMatch) << where;
             EXPECT_EQ(counted, settings.handsPerMatch) << where;
-            EXPECT_EQ(match.EndHand().error(), MatchError::NotInHand) << where;
+            const auto refused = match.EndHand();
+            ASSERT_FALSE(refused.has_value()) << where;
+            EXPECT_EQ(refused.error(), MatchError::NotInHand) << where;
             // The round winds ran East to North, a quarter of the hands each.
             for (int round = 0; round < kRoundsPerMatch; ++round) {
                 EXPECT_EQ(roundHands[static_cast<size_t>(round)], handsPerRound) << where << " round " << round;
             }
             // When East never won, the deal went round: every seat was East of the same number of hands.
             if (!eastWon) {
+                ++totals.dealtRoundChecks;
                 for (Seat seat = 0; seat < kSeatCount; ++seat) {
                     EXPECT_EQ(eastHands[static_cast<size_t>(seat)], handsPerRound) << where << " seat " << seat;
                 }
@@ -162,6 +166,7 @@ namespace BECore::Mahjong::Tests {
         }
         EXPECT_GT(totals.wins, 0);
         EXPECT_GT(totals.draws, 0);
+        EXPECT_GT(totals.dealtRoundChecks, 0);
     }
 
     TEST(MatchPlayoutTest, ThePlayerWhoNeverWinsDrawsEveryHandAndNobodyPays) {
@@ -181,7 +186,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(settlement.kind, ResultKind::Drawn);
         }
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            EXPECT_EQ(match.Scores()[seat], kStartingScore) << "seat " << seat;
+            EXPECT_EQ(match.Scores()[seat], kExpectedStartingScore) << "seat " << seat;
         }
     }
 

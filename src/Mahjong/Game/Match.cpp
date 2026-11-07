@@ -52,6 +52,7 @@ namespace BECore::Mahjong {
         next._settings = settings;
         next._rng.Seed(seed);
         next._progress = MatchProgress{0, EastOf(RollSeatWinds(next._rng))};
+        ASSERT(IsSeat(next._progress.east));
         next._scores.fill(settings.startingScore);
         if (const MatchStatus dealt = next.DealHand(next._progress, next._hand); !dealt.has_value()) {
             return dealt;
@@ -83,7 +84,7 @@ namespace BECore::Mahjong {
         const bool over = IsMatchOver(next.handsPlayed, _settings);
         HandModel nextHand;
         if (!over) {
-            // Before anything changes, so a refusal leaves the match as it was.
+            // Before anything changes, so a refusal leaves the scores, the history and the hand as they were.
             if (const MatchStatus dealt = DealHand(next, nextHand); !dealt.has_value()) {
                 return dealt;
             }
