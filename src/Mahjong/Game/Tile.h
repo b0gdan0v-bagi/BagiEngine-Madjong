@@ -49,7 +49,7 @@ namespace BECore::Mahjong {
 
         /// A suit tile; rank is 1..9. An invalid suit or rank gives an invalid tile.
         [[nodiscard]] static constexpr Tile Suited(TileSuit suit, int rank) noexcept {
-            if (suit == TileSuit::None || rank < 1 || rank > kRanksPerSuit) {
+            if (suit == TileSuit::None || suit > TileSuit::Characters || rank < 1 || rank > kRanksPerSuit) {
                 return Tile{};
             }
             return Tile{static_cast<uint8_t>((static_cast<int>(suit) - 1) * kRanksPerSuit + rank - 1)};
@@ -116,7 +116,12 @@ namespace BECore::Mahjong {
                 return false;
             }
             const int rank = Rank();
-            return rank == 2 || rank == 3 || rank == 4 || rank == 6 || rank == 8;
+            for (const int greenRank : kGreenBambooRanks) {
+                if (rank == greenRank) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         [[nodiscard]] constexpr TileSuit Suit() const noexcept {
@@ -134,6 +139,8 @@ namespace BECore::Mahjong {
 
     private:
         static constexpr int kGreenDragonIndex = 2;
+        /// The bamboo ranks printed in green only.
+        static constexpr int kGreenBambooRanks[] = {2, 3, 4, 6, 8};
 
         uint8_t _id = kInvalidId;
     };

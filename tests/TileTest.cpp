@@ -33,6 +33,8 @@ namespace BECore::Mahjong::Tests {
     static_assert(!Tile{kTileIdCount}.IsValid());
     static_assert(!Tile::Suited(TileSuit::Dots, 0).IsValid());
     static_assert(!Tile::Suited(TileSuit::Dots, 10).IsValid());
+    static_assert(!Tile::Suited(static_cast<TileSuit>(4), 1).IsValid());
+    static_assert(!Tile::Suited(TileSuit::None, 1).IsValid());
     static_assert(!Tile::FromWind(4).IsValid());
     static_assert(Tile::Suited(TileSuit::Bamboo, 2) < Tile::Suited(TileSuit::Characters, 1));
     static_assert(Tile::Suited(TileSuit::Dots, 5).Suit() == TileSuit::Dots);
@@ -57,9 +59,9 @@ namespace BECore::Mahjong::Tests {
     TEST(TileTest, EveryIdHasOneCategory) {
         for (uint8_t id = 0; id < kTileIdCount; ++id) {
             const Tile tile{id};
-            ASSERT_TRUE(tile.IsValid()) << int(id);
+            ASSERT_TRUE(tile.IsValid()) << static_cast<int>(id);
             EXPECT_EQ(tile.Id(), id);
-            const int groups = int(tile.IsSuit()) + int(tile.IsWind()) + int(tile.IsDragon()) + int(tile.IsBonus());
+            const int groups = static_cast<int>(tile.IsSuit()) + static_cast<int>(tile.IsWind()) + static_cast<int>(tile.IsDragon()) + static_cast<int>(tile.IsBonus());
             EXPECT_EQ(groups, 1) << Str(tile);
             EXPECT_EQ(tile.IsHonour(), tile.IsWind() || tile.IsDragon()) << Str(tile);
             EXPECT_EQ(tile.IsPlayable(), id < kKindCount) << Str(tile);
@@ -141,7 +143,7 @@ namespace BECore::Mahjong::Tests {
         for (uint8_t id = 0; id < kTileIdCount; ++id) {
             const Tile tile{id};
             const auto parsed = TryParse(ToString(tile));
-            ASSERT_TRUE(parsed.has_value()) << int(id);
+            ASSERT_TRUE(parsed.has_value()) << static_cast<int>(id);
             EXPECT_EQ(*parsed, tile);
             names.insert(Str(tile));
         }
