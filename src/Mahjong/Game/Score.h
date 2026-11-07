@@ -40,6 +40,29 @@ namespace BECore::Mahjong {
     /// Scores are rounded up to a multiple of this.
     inline constexpr int kScoreRounding = 10;
 
+    // ----- doubles for the winner (the rules of the hand; a line each) -----
+
+    inline constexpr int kOnlyPungsDoubles = 1;
+    inline constexpr int kNoPointsDoubles = 1;
+    inline constexpr int kLooseTileDoubles = 1;
+    inline constexpr int kLastTileDoubles = 1;
+    inline constexpr int kRobbedKongDoubles = 1;
+    /// Little four winds is worth x4.
+    inline constexpr int kLittleFourWindsDoubles = 2;
+    inline constexpr int kLittleThreeDragonsDoubles = 1;
+    inline constexpr int kTerminalsOrHonoursEverywhereDoubles = 1;
+    inline constexpr int kFullyConcealedDoubles = 1;
+    inline constexpr int kSeveralKongsDoubles = 1;
+    inline constexpr int kObviouslyLastDoubles = 1;
+    inline constexpr int kCallingFirstHandDoubles = 1;
+    /// Sets of winds (with a pair of winds) of the little four winds; sets of dragons (with a pair of dragons) of the little three dragons.
+    inline constexpr int kLittleFourWindsSets = 3;
+    inline constexpr int kLittleThreeDragonsSets = 2;
+    /// A hand with at least this many kongs (and not all four, which is a limit hand) doubles.
+    inline constexpr int kSeveralKongsCount = 2;
+    /// The winning tile is obviously the last of its four when at least this many other copies lie open.
+    inline constexpr int kObviouslyLastCopies = 3;
+
     /// What a line of a score is about: points first, then the doubles for everyone, then the doubles for the winner, then the limit hands.
     CORE_ENUM(ScoreKind, uint8_t,
               // points
@@ -70,6 +93,7 @@ namespace BECore::Mahjong {
         PlayerHand hand;
         Wind seatWind = Wind::East;
         Wind roundWind = Wind::East;
+        /// The most a hand scores. It is used rounded down to a multiple of `kScoreRounding` (`LimitCap`), so a score never exceeds it.
         int limit = kDefaultLimit;
         /// This seat is the winner.
         bool won = false;
@@ -81,6 +105,7 @@ namespace BECore::Mahjong {
 
     /// One line of a score. `tile` is the set, pair or bonus tile the line is about, invalid for a line that is about the whole hand.
     struct ScoreLine {
+        /// No kind is neutral: every line is made with its kind (`AddLine`); `Win` is only the zero value of the enum.
         ScoreKind kind = ScoreKind::Win;
         Tile tile;
         int points = 0;
@@ -90,8 +115,9 @@ namespace BECore::Mahjong {
     /// The score of one seat: the lines of the best reading and what they add up to.
     struct ScoreBreakdown {
         bool won = false;
-        /// The lines of the best reading, in a stable order: points (sets in the order of the reading, the pair, the bonus tiles), then
-        /// the doubles; the score table prints them as they are.
+        /// The lines of the best reading, in a stable order: the winner's points (`Win`, the wall tile, the only winning tile), the points
+        /// of the sets in the order of the reading, the pair, the bonus tiles; then the doubles for everyone, then the doubles for the
+        /// winner. The score table prints them as they are.
         eastl::vector<ScoreLine> lines;
         /// The sum of the points of the lines.
         int points = 0;
@@ -101,9 +127,20 @@ namespace BECore::Mahjong {
         int raw = 0;
         /// The limit hand the winner holds, if any (its single line is in `lines`).
         std::optional<ScoreKind> limitHand;
-        /// `RoundUpToTen(min(raw, limit))`; a limit hand scores the limit.
+        /// `RoundUpToTen(min(raw, LimitCap(limit)))`; a limit hand scores `LimitCap(limit)`.
         int score = 0;
     };
+
+    /// `value` down to a multiple of `kScoreRounding`; `value` is not negative.
+    [[nodiscard]] constexpr int RoundDownToTen(int value) noexcept {
+        return value - value % kScoreRounding;
+    }
+
+    /// The most a score can be for the setting `limit`: the limit rounded down to a multiple of `kScoreRounding`, 0 for a negative one.
+    /// Every score is at most this and a multiple of `kScoreRounding`, whatever the limit is (also `INT_MAX`).
+    [[nodiscard]] constexpr int LimitCap(int limit) noexcept {
+        return limit > 0 ? RoundDownToTen(limit) : 0;
+    }
 
     /// `value` up to the next multiple of `kScoreRounding` (a multiple stays as it is); `value` is not negative.
     [[nodiscard]] constexpr int RoundUpToTen(int value) noexcept {

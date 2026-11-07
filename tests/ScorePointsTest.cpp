@@ -2,25 +2,12 @@
 
 /**
  * The points of a hand (`ScoreSeat`): chows, pungs and kongs open and concealed, pairs, bonus tiles. Pure logic: no engine services.
- * The expected numbers are the table of the rules, written out here and not taken from `Score.h`. Hands are seats that do not win
- * unless the case is about a winner (a winner's total still lacks the 20 for winning until the winner's lines are built).
+ * The expected numbers are the table of the rules, in `ScoreTestSupport.h`. Hands are seats that do not win; the winner's lines are
+ * in `ScoreWinnerTest`.
  */
 namespace BECore::Mahjong::Tests {
 
     namespace {
-
-        // The table of the rules.
-        constexpr int kSimplePungOpen = 2;
-        constexpr int kSimplePungConcealed = 4;
-        constexpr int kHonourPungOpen = 4;
-        constexpr int kHonourPungConcealed = 8;
-        constexpr int kSimpleKongOpen = 8;
-        constexpr int kSimpleKongConcealed = 16;
-        constexpr int kHonourKongOpen = 16;
-        constexpr int kHonourKongConcealed = 32;
-        constexpr int kScoringPair = 2;
-        constexpr int kPairOfOwnAndRoundWind = 4;
-        constexpr int kBonusTile = 4;
 
         // Tiles the cases use. None of them is in `kQuietChows`; the winds are neither the East of the default winds nor, where a
         // case says so, the seat's own.

@@ -3,24 +3,13 @@
 /**
  * The doubles for everyone, the total of a score and the readings (`ScoreSeat`): pungs and kongs of dragons and winds, one suit,
  * flowers, `points << doubles` with the limit and the rounding, and the choice of the best reading of a hand with several. Pure
- * logic: no engine services. The expected numbers are the table of the rules, written out here and not taken from `Score.h`.
+ * logic: no engine services. The expected numbers are the table of the rules, in `ScoreTestSupport.h`; the winner's lines are in
+ * `ScoreWinnerTest`.
  */
 namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        constexpr int kOneDouble = 1;
-        constexpr int kTwoDoubles = 2;
-        constexpr int kOneSuitNoHonoursDoubles = 3;
-        constexpr int kSimplePungConcealed = 4;
-        constexpr int kHonourPungOpen = 4;
-        constexpr int kHonourPungConcealed = 8;
-        constexpr int kHonourKongConcealed = 32;
-        constexpr int kScoringPair = 2;
-        constexpr int kPairOfOwnAndRoundWind = 4;
-        constexpr int kBonusTile = 4;
-        constexpr int kLimit = 500;
-        constexpr int kLowerLimit = 300;
         /// Four concealed kongs of honours: 4 x 32 points, two doubles for East's wind and three for the dragons.
         constexpr int kFourKongsPoints = 4 * kHonourKongConcealed;
         constexpr int kFourKongsDoubles = 5;
@@ -28,9 +17,16 @@ namespace BECore::Mahjong::Tests {
         /// Flowers of the number of East for East in the East round: 4 points and 2 doubles each.
         constexpr int kManyFlowers = 40;
         constexpr int kManyFlowersDoubles = 80;
+        /// A limit that is not a multiple of 10 caps at the multiple below it.
+        constexpr int kOddLimit = 495;
+        constexpr int kOddLimitCap = 490;
+        constexpr int kLimitBelowTen = 9;
+        constexpr int kStepOfTen = 10;
+        /// The largest multiple of 10 an `int` holds.
+        constexpr int kLargestRoundedScore = 2147483640;
 
-        // The hands of the readings: three pungs or three chows of 1p 2p 3p, a chow of bamboo, a pair of characters.
-        constexpr const char* kPungsOrChows = "1p 1p 1p 2p 2p 2p 3p 3p 3p 4s 5s 6s 9m 9m";
+        // The hands of the readings: three pungs or three chows of 1p 2p 3p, a chow of bamboo, a pair of dragons.
+        constexpr const char* kPungsOrChows = "1p 1p 1p 2p 2p 2p 3p 3p 3p 4s 5s 6s Rd Rd";
         // One suit of dots: all nine ranks and two more tiles.
         constexpr const char* kDots = "1p 2p 3p 4p 5p 6p 7p 8p 9p 2p 3p";
 
@@ -223,6 +219,36 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(ScoreSeat(lower).raw, kFourKongsRaw);
     }
 
+    TEST(ScoreDoublesTest, ALimitThatIsNotAMultipleOfTenCapsDownToOne) {
+        ScoreInput input = MakeInput("", {ConcealedKong(T("Ew")), ConcealedKong(T("Rd")), ConcealedKong(T("Wd")), ConcealedKong(T("Gd"))});
+        input.limit = kOddLimit;
+
+        EXPECT_EQ(ScoreSeat(input).score, kOddLimitCap);
+        static_assert(LimitCap(kOddLimit) == kOddLimitCap);
+    }
+
+    TEST(ScoreDoublesTest, ALimitBelowTenOrBelowZeroScoresNothing) {
+        ScoreInput input = MakeInput(std::string(kQuietChows) + " 5p 5p 5p");
+        for (const int limit : {kLimitBelowTen, 0, -kLowerLimit}) {
+            input.limit = limit;
+            EXPECT_EQ(ScoreSeat(input).score, 0) << limit;
+        }
+    }
+
+    TEST(ScoreDoublesTest, ALimitOfIntMaxDoesNotOverflow) {
+        std::string flowers = "F1";
+        for (int count = 1; count < kManyFlowers; ++count) {
+            flowers += " F1";
+        }
+        ScoreInput input = MakeInput(kQuietChows, {}, flowers);
+        input.limit = std::numeric_limits<int>::max();
+        const ScoreBreakdown breakdown = ScoreSeat(input);
+
+        EXPECT_EQ(breakdown.raw, std::numeric_limits<int>::max());
+        EXPECT_EQ(breakdown.score, kLargestRoundedScore);
+        EXPECT_EQ(breakdown.score % kStepOfTen, 0);
+    }
+
     TEST(ScoreDoublesTest, TheRawScoreSaturatesAndTheLimitStillCaps) {
         std::string flowers = "F1";
         for (int count = 1; count < kManyFlowers; ++count) {
@@ -250,10 +276,10 @@ namespace BECore::Mahjong::Tests {
 
     TEST(ScoreDoublesTest, AHandWithTwoDecompositionsScoresTheBetterOne) {
         // 1p 1p 1p 2p 2p 2p 3p 3p 3p is three pungs or three chows 1p 2p 3p; the pungs score (8 + 4 + 4), the chows nothing.
-        const ScoreBreakdown breakdown = ScoreSeat(MakeWinnerInput(kPungsOrChows, "9m"));
+        const ScoreBreakdown breakdown = ScoreSeat(MakeWinnerInput(kPungsOrChows, "Rd"));
 
         EXPECT_TRUE(breakdown.won);
-        EXPECT_EQ(breakdown.points, kHonourPungConcealed + 2 * kSimplePungConcealed);
+        EXPECT_EQ(LinePoints(breakdown, ScoreKind::Pung), kHonourPungConcealed + 2 * kSimplePungConcealed);
         EXPECT_EQ(CountLines(breakdown, ScoreKind::Pung), 3);
     }
 
@@ -261,7 +287,7 @@ namespace BECore::Mahjong::Tests {
         const ScoreBreakdown breakdown = ScoreSeat(MakeWinnerInput("4s 5s 6s 7m 8m 9m 2m 2m 2m 1p 2p 3p Rd Rd", "Rd"));
 
         EXPECT_EQ(LinePoints(breakdown, ScoreKind::Pair), kScoringPair);
-        EXPECT_EQ(breakdown.points, kSimplePungConcealed + kScoringPair);
+        EXPECT_EQ(breakdown.points, kWinning + kWallTile + kOnlyTile + kSimplePungConcealed + kScoringPair);
     }
 
     TEST(ScoreDoublesTest, AWinnersMeldsAreSetsAndTheRestIsDecomposed) {
@@ -269,8 +295,8 @@ namespace BECore::Mahjong::Tests {
         const ScoreInput input = MakeWinnerInput("4s 5s 6s 7m 8m 9m 2p 3p 4p Sw Sw", "4p", WinSource::SelfDraw, {OpenPung(T("Rd"))});
         const ScoreBreakdown breakdown = ScoreSeat(input);
 
-        EXPECT_EQ(breakdown.points, kHonourPungOpen);
-        EXPECT_EQ(breakdown.doubles, kOneDouble);
+        EXPECT_EQ(LinePoints(breakdown, ScoreKind::Pung), kHonourPungOpen);
+        EXPECT_EQ(LineDoubles(breakdown, ScoreKind::DragonSet), kOneDouble);
     }
 
     TEST(ScoreDoublesTest, AWinningTileFromADiscardOpensTheSetThatHoldsIt) {
@@ -278,13 +304,21 @@ namespace BECore::Mahjong::Tests {
         const ScoreBreakdown byDiscard = ScoreSeat(MakeWinnerInput(kPungsOrChows, "1p", WinSource::Discard));
         const ScoreBreakdown selfDrawn = ScoreSeat(MakeWinnerInput(kPungsOrChows, "1p", WinSource::SelfDraw));
 
-        EXPECT_EQ(byDiscard.points, kHonourPungOpen + 2 * kSimplePungConcealed);
-        EXPECT_EQ(selfDrawn.points, kHonourPungConcealed + 2 * kSimplePungConcealed);
+        EXPECT_EQ(LinePoints(byDiscard, ScoreKind::Pung), kHonourPungOpen + 2 * kSimplePungConcealed);
+        EXPECT_EQ(LinePoints(selfDrawn, ScoreKind::Pung), kHonourPungConcealed + 2 * kSimplePungConcealed);
+    }
+
+    TEST(ScoreDoublesTest, ARobbedKongOpensTheSetThatHoldsTheTileToo) {
+        const ScoreBreakdown robbed = ScoreSeat(MakeWinnerInput(kPungsOrChows, "1p", WinSource::RobbedKong));
+
+        EXPECT_EQ(LinePoints(robbed, ScoreKind::Pung), kHonourPungOpen + 2 * kSimplePungConcealed);
     }
 
     TEST(ScoreDoublesTest, AWinningTileThatIsThePairLeavesEverySetConcealed) {
-        EXPECT_EQ(ScoreSeat(MakeWinnerInput(kPungsOrChows, "9m", WinSource::Discard)).points, kHonourPungConcealed + 2 * kSimplePungConcealed);
-        EXPECT_EQ(ScoreSeat(MakeWinnerInput(kPungsOrChows, "9m", WinSource::RobbedKong)).points, kHonourPungConcealed + 2 * kSimplePungConcealed);
+        for (const WinSource source : {WinSource::Discard, WinSource::RobbedKong}) {
+            const ScoreBreakdown breakdown = ScoreSeat(MakeWinnerInput(kPungsOrChows, "Rd", source));
+            EXPECT_EQ(LinePoints(breakdown, ScoreKind::Pung), kHonourPungConcealed + 2 * kSimplePungConcealed);
+        }
     }
 
     TEST(ScoreDoublesTest, TheWinningTileSittingInTwoSetsTakesTheBetterPlacement) {
@@ -293,7 +327,7 @@ namespace BECore::Mahjong::Tests {
         const ScoreBreakdown breakdown = ScoreSeat(MakeWinnerInput("3p 4p 4p 4p 4p 5p 7s 7s 7s 1m 2m 3m 9m 9m", "4p", WinSource::Discard));
 
         EXPECT_EQ(LinePoints(breakdown, ScoreKind::Pung), 2 * kSimplePungConcealed);
-        EXPECT_EQ(breakdown.points, 2 * kSimplePungConcealed);
+        EXPECT_EQ(breakdown.points, kWinning + 2 * kSimplePungConcealed);
     }
 
     TEST(ScoreDoublesTest, ASeatThatDoesNotWinScoresItsBestPair) {
@@ -306,7 +340,8 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(ScoreDoublesTest, AWinnerThatIsNoFourSetsAndAPairIsReadLikeAnyOtherSeat) {
-        // Seven pairs have no decomposition; the limit hands to come score them. Until then the pairs that stand are read.
+        // Seven pairs have no decomposition; the limit hands to come score them. Until then the pairs that stand are read, and the
+        // doubles that need four sets are left out.
         const ScoreBreakdown breakdown = ScoreSeat(MakeWinnerInput("Ew Ew Rd Rd Ww Ww Nw Nw Sw Sw Wd Wd Gd Gd", "Gd"));
 
         EXPECT_TRUE(breakdown.won);

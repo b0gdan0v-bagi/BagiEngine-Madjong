@@ -44,6 +44,11 @@ namespace BECore::Mahjong {
         return Tile::FromWind(static_cast<int>(wind));
     }
 
+    /// Appends a line to `breakdown` (the one way the line families make lines).
+    inline void AddLine(ScoreBreakdown& breakdown, ScoreKind kind, Tile tile, int points, int doubles) {
+        breakdown.lines.push_back({kind, tile, points, doubles});
+    }
+
     /// The points of a pair: `kPairPoints` for each of dragons, the own wind and the round wind it is (0 for any other tile).
     [[nodiscard]] int PairPoints(Tile pair, Wind seatWind, Wind roundWind) noexcept;
 

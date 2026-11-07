@@ -18,7 +18,7 @@ namespace BECore::Mahjong {
         bool flowers = false;
         /// A drawn hand is replayed instead of counting towards handsPerMatch (used by the match, not built yet).
         bool replayDrawnHand = true;
-        /// The most a hand can pay, in points.
+        /// The most a hand can pay, in points (scoring uses it rounded down to a multiple of 10, `LimitCap`).
         int limit = kDefaultLimit;
     };
 

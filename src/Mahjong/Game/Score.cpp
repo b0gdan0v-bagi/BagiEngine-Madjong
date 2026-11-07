@@ -2,6 +2,7 @@
 
 #include <Mahjong/Game/HandShape.h>
 #include <Mahjong/Game/ScoreReading.h>
+#include <Mahjong/Game/ScoreWinner.h>
 
 namespace BECore::Mahjong {
 
@@ -11,10 +12,6 @@ namespace BECore::Mahjong {
         int BonusNumber(Tile bonus) noexcept {
             static_assert(kFlowerCount == kSeasonCount && kFlowerCount == kWindCount, "a bonus tile is numbered like a wind");
             return bonus.Id() < kFirstSeasonId ? bonus.Id() - kFirstFlowerId : bonus.Id() - kFirstSeasonId;
-        }
-
-        void AddLine(ScoreBreakdown& breakdown, ScoreKind kind, Tile tile, int points, int doubles) {
-            breakdown.lines.push_back({kind, tile, points, doubles});
         }
 
         // ----- points -----
@@ -130,19 +127,27 @@ namespace BECore::Mahjong {
                 breakdown.doubles += line.doubles;
             }
             breakdown.raw = ShiftSaturating(breakdown.points, breakdown.doubles);
-            breakdown.score = RoundUpToTen(breakdown.raw < input.limit ? breakdown.raw : input.limit);
+            const int cap = LimitCap(input.limit);
+            breakdown.score = RoundUpToTen(breakdown.raw < cap ? breakdown.raw : cap);
         }
 
         /// The score of one reading: all its lines.
-        ScoreBreakdown ScoreReading(const ScoreInput& input, const Reading& reading) {
+        /// `onlyWinningTile` is read from the hand, not from the reading, so `ScoreSeat` finds it once.
+        ScoreBreakdown ScoreReading(const ScoreInput& input, const Reading& reading, bool onlyWinningTile) {
             ScoreBreakdown breakdown;
             breakdown.won = input.won;
+            if (input.won) {
+                AddWinnerPoints(input, onlyWinningTile, breakdown);
+            }
             AddSetPoints(reading, breakdown);
             AddPairPoints(reading, input, breakdown);
             AddBonusPoints(input, breakdown);
             AddSetDoubles(reading, input, breakdown);
             AddOneSuitDoubles(input, breakdown);
             AddBonusDoubles(input, breakdown);
+            if (input.won) {
+                AddWinnerDoubles(reading, input, breakdown);
+            }
             Total(input, breakdown);
             return breakdown;
         }
@@ -152,8 +157,9 @@ namespace BECore::Mahjong {
     ScoreBreakdown ScoreSeat(const ScoreInput& input) {
         ScoreBreakdown best;
         bool first = true;
+        const bool onlyWinningTile = input.won && WaitsOnlyForTheWinningTile(input);
         for (const Reading& reading : BuildReadings(input)) {
-            ScoreBreakdown breakdown = ScoreReading(input, reading);
+            ScoreBreakdown breakdown = ScoreReading(input, reading, onlyWinningTile);
             if (first || breakdown.raw > best.raw) {
                 best = eastl::move(breakdown);
                 first = false;

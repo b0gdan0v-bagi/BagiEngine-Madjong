@@ -11,6 +11,30 @@
  */
 namespace BECore::Mahjong::Tests {
 
+    // The table of the rules, written out here and not taken from `Score.h`, so a wrong constant there fails a test.
+    inline constexpr int kSimplePungOpen = 2;
+    inline constexpr int kSimplePungConcealed = 4;
+    inline constexpr int kHonourPungOpen = 4;
+    inline constexpr int kHonourPungConcealed = 8;
+    inline constexpr int kSimpleKongOpen = 8;
+    inline constexpr int kSimpleKongConcealed = 16;
+    inline constexpr int kHonourKongOpen = 16;
+    inline constexpr int kHonourKongConcealed = 32;
+    inline constexpr int kScoringPair = 2;
+    inline constexpr int kPairOfOwnAndRoundWind = 4;
+    inline constexpr int kBonusTile = 4;
+    /// For winning, for the winning tile from the wall, for the only possible winning tile.
+    inline constexpr int kWinning = 20;
+    inline constexpr int kWallTile = 2;
+    inline constexpr int kOnlyTile = 2;
+
+    inline constexpr int kOneDouble = 1;
+    inline constexpr int kTwoDoubles = 2;
+    inline constexpr int kOneSuitNoHonoursDoubles = 3;
+
+    inline constexpr int kLimit = 500;
+    inline constexpr int kLowerLimit = 300;
+
     /// Two chows of two suits: no points, no doubles, no pair, and the mixed suits keep the one-suit doubles away from a hand.
     inline constexpr const char* kQuietChows = "1p 2p 3p 7m 8m 9m";
 
@@ -56,8 +80,9 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// The input of the winner: `concealed` holds the winning tile `winningTile`, which came by `source`.
-    inline ScoreInput MakeWinnerInput(const std::string& concealed, const char* winningTile, WinSource source = WinSource::SelfDraw, std::initializer_list<Meld> melds = {}) {
-        ScoreInput input = MakeInput(concealed, melds);
+    inline ScoreInput MakeWinnerInput(const std::string& concealed, const char* winningTile, WinSource source = WinSource::SelfDraw, std::initializer_list<Meld> melds = {}, Wind seatWind = Wind::East,
+                                      Wind roundWind = Wind::East) {
+        ScoreInput input = MakeInput(concealed, melds, "", seatWind, roundWind);
         input.won = true;
         input.result.kind = ResultKind::Win;
         input.result.winningTile = T(winningTile);
