@@ -4,7 +4,7 @@
 
 `MahjongGame` is an `IGame` (name `Mahjong`, scene `MahjongScene`). Executable `BagiMahjong`, module `MahjongModule`, tests `MahjongTests`. Namespace `BECore::Mahjong`. Infrastructure and how a game is registered: `engine/src/Modules/Games/CLAUDE.md`; how this repository was set up around the engine: `engine/NEW_GAME.md` (on the engine's `main`).
 
-**State: a skeleton with the rules in progress.** The game is registered, starts in Game mode (`mode="Game"` in `config/ApplicationConfig.xml`; set `mode="Editor"` to open it in the scene editor) and shows its scene with a title. The rules of classic Chinese mahjong for four seats are being written in `Game/` as plain C++ (the tiles and the tile set exist so far; branch `todo/mahjong-classic-rules`); `MahjongGame` does not use them yet. There are no components and no control API yet.
+**State: a skeleton with the rules in progress.** The game is registered, starts in Game mode (`mode="Game"` in `config/ApplicationConfig.xml`; set `mode="Editor"` to open it in the scene editor) and shows its scene with a title. The rules of classic Chinese mahjong for four seats are being written in `Game/` as plain C++ (the tiles, the tile set, the seeded RNG and the seats exist so far; branch `todo/mahjong-classic-rules`); `MahjongGame` does not use them yet. There are no components and no control API yet.
 
 ## Layout
 
@@ -14,6 +14,8 @@ src/Mahjong/
 ├── Game/                 plain C++ rules, no scene or renderer
 │   ├── Tile.{h,cpp}      Tile (one id 0..41: suits, winds, dragons, flowers, seasons), predicates, notation (ToString / TryParse / ParseTiles: 1p 9s 5m Ew Rd F1 T4)
 │   ├── TileSet.{h,cpp}   BuildTileSet(flowers): 136 or 144 tiles in a fixed order
+│   ├── MahjongRng.h      seeded mt19937 with Below / RollDie / Roll2d6 and a hand-written Fisher-Yates Shuffle (never std::shuffle or std::*_distribution: a seed must give the same game on every platform)
+│   ├── Seats.{h,cpp}     Seat (0..3, counter-clockwise), NextSeat, Offset, Wind, MakeSeatWinds, DecideEast (the draw for East, with a roll seam for tests), RollSeatWinds
 │   └── MahjongSettings.h handsPerMatch, flowers, replayDrawnHand, limit
 └── Components/           (to come) scene glue: components that read the model of the active game
 config/
@@ -38,4 +40,6 @@ tests/                    gtest sources, built as MahjongTests
 | File | Covers |
 |------|--------|
 | `TileTest` | tile ids and predicates, the notation round trip, the tile set (136 / 144, four of each kind), the settings defaults (pure logic, no engine services) |
+| `MahjongRngTest` | same seed same sequence, dice 1..6 and every face, shuffle keeps the multiset, golden values of seed 1 (the `mt19937` stream and the shuffled set are pinned) |
+| `SeatsTest` | `NextSeat` / `Offset`, seat winds counter-clockwise from East, the draw for East (scripted ties re-roll only the tied seats) |
 | `MahjongGameTest` | the shipped `config/SceneConfig.xml` loads, `GameManager` activates `Mahjong` as the only registered game and its scene `MahjongScene` becomes active (needs the engine services) |
