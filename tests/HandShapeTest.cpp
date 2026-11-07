@@ -285,6 +285,21 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(counts[Tile::FromDragon(0).Id()], kCopiesPerTile);
     }
 
+    TEST(HandShapeTest, AChowThatCouldNotExistHoldsNothing) {
+        // A sequence starts at a 1..7 of a suit: 8p 9p 1s is no chow, nor is a chow of honours.
+        eastl::vector<Meld> melds;
+        melds.push_back({MeldKind::Chow, false, Tile::Suited(TileSuit::Dots, 8)});
+        melds.push_back({MeldKind::Chow, false, Tile::Suited(TileSuit::Characters, 9)});
+        melds.push_back({MeldKind::Chow, false, Tile::FromWind(0)});
+
+        EXPECT_EQ(TotalTiles(CountMeldTiles(melds)), 0);
+
+        melds.push_back({MeldKind::Chow, false, Tile::Suited(TileSuit::Bamboo, 7)});
+        const TileCounts counts = CountMeldTiles(melds);
+        EXPECT_EQ(TotalTiles(counts), kTilesPerSet);
+        EXPECT_EQ(counts[Tile::Suited(TileSuit::Bamboo, 9).Id()], 1);
+    }
+
     TEST(HandShapeTest, TheCopiesInMeldsAreNotOfferedAsAFifthCopy) {
         // An open pung of 5p, and the hand waits on 5p for its pair: the fourth copy is in the hand, the fifth does not exist.
         PlayerHand hand;

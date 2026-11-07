@@ -5,8 +5,8 @@
 #include <gtest/gtest.h>
 
 /**
- * The turn of a hand: the start, discards, the calling-hand declaration, the self-draw win, bonus tiles and the drawn hand (no claims
- * yet). Fixed walls say what every seat holds and what comes next. Pure logic: no engine services.
+ * The turn of a hand: the start, discards, the calling-hand declaration, the self-draw win, bonus tiles and the drawn hand (the claims
+ * have `HandModelClaimTest`). Fixed walls say what every seat holds and what comes next. Pure logic: no engine services.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -73,13 +73,18 @@ namespace BECore::Mahjong::Tests {
             return text;
         }
 
-        /// Each seat in turn discards the next tile of `tiles` (a lap's `live`: every seat discards what it has just drawn).
+        /// Each seat in turn discards the next tile of `tiles` (a lap's `live`: every seat discards what it has just drawn). These tests
+        /// are about the turn, so a claim window that the scattered hands happen to open is passed by every seat (the claims have their
+        /// own tests, `HandModelClaimTest`).
         void DiscardEach(HandModel& model, const std::string& tiles) {
             const eastl::vector<Tile> parsed = ParseTiles(tiles).value();
             for (const Tile tile : parsed) {
                 const Seat seat = model.CurrentSeat();
                 const HandStatus status = model.Discard(seat, tile);
                 ASSERT_TRUE(status.has_value()) << "seat " << seat << " cannot discard " << ToString(tile);
+                for (const Seat pending : model.PendingClaimSeats()) {
+                    ASSERT_TRUE(model.Pass(pending).has_value()) << "seat " << pending << " cannot pass";
+                }
             }
         }
 

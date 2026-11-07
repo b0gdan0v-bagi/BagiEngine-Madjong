@@ -1,7 +1,6 @@
 #pragma once
 
 #include <EASTL/array.h>
-#include <Mahjong/Game/Deal.h>
 #include <Mahjong/Game/MahjongSettings.h>
 #include <Mahjong/Game/PlayerHand.h>
 #include <Mahjong/Game/Seats.h>
@@ -17,7 +16,7 @@ namespace BECore::Mahjong {
      * @brief Where a hand stands. A draw is automatic, so a seat only ever sees one of these.
      *
      * - `Discard`: the current seat holds one tile too many (it has just drawn, or just claimed) and acts.
-     * - `Claim`: a discard is pending and the other seats decide (the claim window; not in this model yet).
+     * - `Claim`: a discard is pending and the other seats decide (the claim window; `CurrentSeat()` is the discarder).
      * - `RobKong`: an upgraded kong is pending and the other seats may only claim mahjong (not in this model yet).
      * - `Finished`: `Result()` holds the outcome.
      */
@@ -35,6 +34,26 @@ namespace BECore::Mahjong {
               IllegalClaim,    // the claim is not possible for the seat (claim window)
               AlreadyDecided   // the seat has claimed or passed already (claim window)
     )
+
+    /// Tiles a seat holds for a claim on a discard: two equal ones for a pung, three for a kong (a chow takes two other tiles too).
+    inline constexpr int kPungTilesFromHand = 2;
+    inline constexpr int kKongTilesFromHand = 3;
+
+    /// What a seat claims a discard for. A chow takes the two other tiles of a sequence, a pung two equal tiles, a kong three, mahjong
+    /// completes the hand.
+    CORE_ENUM(ClaimKind, uint8_t, Chow, Pung, Kong, Mahjong)
+
+    /// One way a seat can claim the pending discard. `chowFirst` is the lowest tile of the sequence for a chow (a seat may have
+    /// several), invalid for the other kinds.
+    struct ClaimOption {
+        ClaimKind kind = ClaimKind::Pung;
+        Tile chowFirst;
+
+        bool operator==(const ClaimOption&) const = default;
+    };
+
+    /// Where a seat stands in the claim window: not in it, still to decide, or decided (passed or claimed).
+    CORE_ENUM(ClaimStatus, uint8_t, NotInWindow, Waiting, Passed, Claimed)
 
     /// A win or a drawn hand.
     CORE_ENUM(ResultKind, uint8_t, Win, Drawn)
@@ -82,8 +101,15 @@ namespace BECore::Mahjong {
      * Actions return `HandStatus` and never assert on a bad input: a refused action leaves the model exactly as it was. Nothing is
      * compulsory: a seat that could declare a win may discard instead.
      *
-     * Where the next steps join (the claim window, the kongs): `AfterDiscard` is the one place that decides what follows a discard,
-     * and `Receive` is the one place that gives a seat a tile and ends a hand that cannot.
+     * The claim window: a discard opens `Phase::Claim` only when at least one other seat has a legal claim (`LegalClaims`), otherwise
+     * the next seat draws at once. Each seat in the window claims once (`Claim`) or passes (`Pass`); when every one has decided the
+     * best claim wins: mahjong, then pung or kong, then chow; two mahjong claims go to the seat farther counter-clockwise from the
+     * discarder. A chow is only for the seat after the discarder. A claimed tile leaves the pile and goes into an open meld (or into
+     * the winning hand); after a chow or pung the claimer discards, after a kong it draws a loose tile first, and the turn that follows
+     * goes to the seat after the claimer. If all pass, the seat after the discarder draws.
+     *
+     * Where the next steps join (the kongs): `AfterDiscard` is the one place that decides what follows a discard, and `Receive` is
+     * the one place that gives a seat a tile and ends a hand that cannot.
      */
     class HandModel {
     public:
@@ -94,7 +120,8 @@ namespace BECore::Mahjong {
         [[nodiscard]] Phase GetPhase() const noexcept {
             return _phase;
         }
-        /// The seat that acts in `Phase::Discard`: the one that holds the extra tile.
+        /// The seat that acts in `Phase::Discard`: the one that holds the extra tile. In `Phase::Claim` it is the discarder; the
+        /// pending tile is `Discards().back()`.
         [[nodiscard]] Seat CurrentSeat() const noexcept {
             return _current;
         }
@@ -145,6 +172,29 @@ namespace BECore::Mahjong {
          */
         HandStatus DeclareWin(Seat seat);
 
+        /**
+         * @brief A seat in the claim window claims the pending discard.
+         *
+         * `chowFirst` is the lowest tile of the chosen sequence (only for `ClaimKind::Chow`). The claim is stored; once every seat in
+         * the window has decided, the best claim is carried out (see the class comment). Errors: `WrongPhase`; `NotYourTurn` (not a
+         * seat, the discarder, or a seat with no legal claim); `AlreadyDecided`; `NotCalling` / `CannotWin` for a mahjong claim
+         * without the declaration or without a winning hand; `IllegalClaim` for any other claim the seat cannot make.
+         */
+        HandStatus Claim(Seat seat, ClaimKind kind, Tile chowFirst = Tile{});
+
+        /// A seat in the window lets the discard go. Always allowed while the seat has not decided. Errors: `WrongPhase`, `NotYourTurn`,
+        /// `AlreadyDecided`.
+        HandStatus Pass(Seat seat);
+
+        /// The seats in the window that have not decided yet, in seat order. Empty outside `Phase::Claim`.
+        [[nodiscard]] eastl::vector<Seat> PendingClaimSeats() const;
+        /// The claims `seat` can make on the pending discard (a pass is always possible besides). Empty for a seat that is not in the
+        /// window or has decided, and outside `Phase::Claim`.
+        [[nodiscard]] eastl::vector<ClaimOption> LegalClaims(Seat seat) const;
+        [[nodiscard]] ClaimStatus GetClaimStatus(Seat seat) const noexcept {
+            return _claimStatus[seat];
+        }
+
     private:
         /// Gives `seat` its tile: `first` (the draw that was due, nullopt when there was none), then replacements from the loose
         /// reserve while the tile is a bonus tile. `loose` says that `first` came from the reserve. Ends the hand as drawn when no
@@ -152,8 +202,14 @@ namespace BECore::Mahjong {
         void Receive(Seat seat, std::optional<Tile> first, bool loose);
         /// The regular draw of `seat` (from the live wall).
         void StartTurn(Seat seat);
-        /// What follows the discard of `tile` by `seat`. Now: the next seat draws. (The claim window opens here.)
+        /// What follows the discard of `tile` by `seat`: the claim window when a seat can claim, otherwise the next seat draws.
         void AfterDiscard(Seat seat, Tile tile);
+        /// Opens the claim window when some seat other than `from` has a legal claim on `tile`; false when none has.
+        bool OpenClaimWindow(Seat from, Tile tile);
+        /// Carries out the best claim once every seat in the window has decided (or deals on when all passed).
+        void ResolveClaims();
+        /// Lays `claimer`'s claimed meld: removes the tiles it uses from its hand and puts the meld down.
+        void ExposeClaim(Seat claimer, const ClaimOption& claim, Seat from, Tile tile);
 
         void FinishDrawn();
         void FinishWin(Seat winner, Tile tile, WinSource source, Seat from, bool loose);
@@ -171,6 +227,9 @@ namespace BECore::Mahjong {
         /// the loose reserve.
         Tile _drawnTile;
         bool _drawnLoose = false;
+        /// The claim window: where each seat stands and what the seats that claimed asked for.
+        eastl::array<ClaimStatus, kSeatCount> _claimStatus{};
+        eastl::array<ClaimOption, kSeatCount> _claims;
         std::optional<HandResult> _result;
     };
 

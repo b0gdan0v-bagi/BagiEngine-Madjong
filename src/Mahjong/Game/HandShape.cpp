@@ -107,8 +107,11 @@ namespace BECore::Mahjong {
                 continue;
             }
             if (meld.kind == MeldKind::Chow) {
-                // The ranks of a chow are consecutive ids of one suit.
-                for (uint8_t step = 0; step < kTilesPerSet && meld.first.Id() + step < kSuitTileCount; ++step) {
+                // A chow is three consecutive ranks of one suit, so its lowest tile is a 1..7; anything else is no chow and holds nothing.
+                if (!meld.first.IsSuit() || meld.first.Rank() > kRanksPerSuit - kTilesPerSet + 1) {
+                    continue;
+                }
+                for (uint8_t step = 0; step < kTilesPerSet; ++step) {
                     ++counts[meld.first.Id() + step];
                 }
             } else {
