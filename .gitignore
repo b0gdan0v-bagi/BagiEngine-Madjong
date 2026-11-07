@@ -1,0 +1,32 @@
+# CMake and build output
+/build/
+/out/
+/.cmake/
+
+# IDE
+.vs/
+.vscode/
+.cache/
+*.user
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Per-machine files
+.env
+CMakeUserPresets.json
+.claude/settings.local.json
+config/imgui.ini
+config/*.local.xml
+engine.log
+
+# macOS
+.DS_Store
+._*
+
+# The todo store keeps plans, reviews and entries; they never go into the repository
+.claude/plans/
+*.plan.md
+todo-export/
