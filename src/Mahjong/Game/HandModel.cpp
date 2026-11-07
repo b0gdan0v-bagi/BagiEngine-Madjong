@@ -7,10 +7,6 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        bool IsSeat(Seat seat) noexcept {
-            return seat >= 0 && seat < kSeatCount;
-        }
-
         /// Whether `hand` is waiting without one copy of its concealed `tile`.
         bool IsWaitingWithout(const PlayerHand& hand, Tile tile) {
             PlayerHand rest = hand;
@@ -33,6 +29,11 @@ namespace BECore::Mahjong {
             TileCounts counts = CountTiles(hand.concealed);
             ++counts[tile.Id()];
             return IsWinningShape(counts, static_cast<int>(hand.melds.size()));
+        }
+
+        /// Whether the concealed tiles of `hand` with its melds form a winning hand (the declaration is not looked at here).
+        bool IsWinningHand(const PlayerHand& hand) {
+            return IsWinningShape(CountTiles(hand.concealed), static_cast<int>(hand.melds.size()));
         }
 
         /// The sequences of `tile` that `hand` can complete from its concealed tiles, as the lowest tile of each.
@@ -106,28 +107,44 @@ namespace BECore::Mahjong {
 
     }  // namespace
 
-    void HandModel::Begin(const MahjongSettings& settings, Wall wall, const SeatWinds& seatWinds, Wind roundWind) {
+    HandStatus HandModel::Begin(const MahjongSettings& settings, Wall wall, const SeatWinds& seatWinds, Wind roundWind) {
+        Seat east = kNoSeat;
+        int eastCount = 0;
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            if (seatWinds[seat] == Wind::East) {
+                east = seat;
+                ++eastCount;
+            }
+        }
+        if (eastCount != 1) {
+            return std::unexpected(HandError::BadSeatWinds);
+        }
+
         *this = HandModel{};
+        _result.reset();
         _settings = settings;
         _seatWinds = seatWinds;
         _roundWind = roundWind;
+        _east = east;
         _wall = eastl::move(wall);
-        for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            if (_seatWinds[seat] == Wind::East) {
-                _east = seat;
-                break;
-            }
-        }
         _hands = DealHands(_wall, _east, _settings.flowers);
         StartTurn(_east);
+        return {};
     }
 
-    HandStatus HandModel::Discard(Seat seat, Tile tile, bool declareCalling) {
+    HandStatus HandModel::CheckOwnTurn(Seat seat) const {
         if (_phase != Phase::Discard) {
             return std::unexpected(HandError::WrongPhase);
         }
         if (seat != _current || !IsSeat(seat)) {
             return std::unexpected(HandError::NotYourTurn);
+        }
+        return {};
+    }
+
+    HandStatus HandModel::Discard(Seat seat, Tile tile, bool declareCalling) {
+        if (const HandStatus turn = CheckOwnTurn(seat); !turn) {
+            return turn;
         }
         PlayerHand& hand = _hands[seat];
         if (hand.CountConcealed(tile) == 0) {
@@ -156,17 +173,14 @@ namespace BECore::Mahjong {
     }
 
     HandStatus HandModel::DeclareWin(Seat seat) {
-        if (_phase != Phase::Discard) {
-            return std::unexpected(HandError::WrongPhase);
-        }
-        if (seat != _current || !IsSeat(seat)) {
-            return std::unexpected(HandError::NotYourTurn);
+        if (const HandStatus turn = CheckOwnTurn(seat); !turn) {
+            return turn;
         }
         const PlayerHand& hand = _hands[seat];
         if (!hand.callingDeclared) {
             return std::unexpected(HandError::NotCalling);
         }
-        if (!_drawnTile.IsValid() || !IsWinningShape(CountTiles(hand.concealed), static_cast<int>(hand.melds.size()))) {
+        if (!_drawnTile.IsValid() || !IsWinningHand(hand)) {
             return std::unexpected(HandError::CannotWin);
         }
         FinishWin(seat, _drawnTile, WinSource::SelfDraw, seat, _drawnLoose);
@@ -174,11 +188,8 @@ namespace BECore::Mahjong {
     }
 
     HandStatus HandModel::DeclareConcealedKong(Seat seat, Tile tile) {
-        if (_phase != Phase::Discard) {
-            return std::unexpected(HandError::WrongPhase);
-        }
-        if (seat != _current || !IsSeat(seat)) {
-            return std::unexpected(HandError::NotYourTurn);
+        if (const HandStatus turn = CheckOwnTurn(seat); !turn) {
+            return turn;
         }
         PlayerHand& hand = _hands[seat];
         if (hand.CountConcealed(tile) < kCopiesPerTile) {
@@ -197,11 +208,8 @@ namespace BECore::Mahjong {
     }
 
     HandStatus HandModel::UpgradeKong(Seat seat, Tile tile) {
-        if (_phase != Phase::Discard) {
-            return std::unexpected(HandError::WrongPhase);
-        }
-        if (seat != _current || !IsSeat(seat)) {
-            return std::unexpected(HandError::NotYourTurn);
+        if (const HandStatus turn = CheckOwnTurn(seat); !turn) {
+            return turn;
         }
         PlayerHand& hand = _hands[seat];
         if (FindPung(hand, tile) == nullptr || hand.CountConcealed(tile) == 0) {
@@ -220,7 +228,11 @@ namespace BECore::Mahjong {
         if (!IsSeat(seat) || seat == _current) {
             return std::unexpected(HandError::NotYourTurn);
         }
-        if (_claimStatus[seat] == ClaimStatus::Passed || _claimStatus[seat] == ClaimStatus::Claimed) {
+        // Whether the seat is in the window comes first, so that a seat outside it gets the same answer for every claim.
+        if (_claimStatus[seat] == ClaimStatus::NotInWindow) {
+            return std::unexpected(HandError::NotYourTurn);
+        }
+        if (_claimStatus[seat] != ClaimStatus::Waiting) {
             return std::unexpected(HandError::AlreadyDecided);
         }
         const PlayerHand& hand = _hands[seat];
@@ -232,9 +244,6 @@ namespace BECore::Mahjong {
             if (!tile.IsPlayable() || !WinsWith(hand, tile)) {
                 return std::unexpected(HandError::CannotWin);
             }
-        }
-        if (_claimStatus[seat] != ClaimStatus::Waiting) {
-            return std::unexpected(HandError::NotYourTurn);
         }
         ClaimOption claim{kind, kind == ClaimKind::Chow ? chowFirst : Tile{}};
         const eastl::vector<ClaimOption> options = ClaimOptionsFor(hand, seat, _current, tile, _phase == Phase::RobKong);
@@ -279,6 +288,69 @@ namespace BECore::Mahjong {
             return {};
         }
         return ClaimOptionsFor(_hands[seat], seat, _current, _pendingTile, _phase == Phase::RobKong);
+    }
+
+    eastl::vector<HandAction> HandModel::LegalActions(Seat seat) const {
+        eastl::vector<HandAction> actions;
+        if (!IsSeat(seat)) {
+            return actions;
+        }
+        const PlayerHand& hand = _hands[seat];
+        if (_phase == Phase::Discard && seat == _current) {
+            for (size_t i = 0; i < hand.concealed.size(); ++i) {
+                const Tile tile = hand.concealed[i];
+                if (i > 0 && hand.concealed[i - 1] == tile) {
+                    continue;
+                }
+                actions.push_back(HandAction::MakeDiscard(tile));
+                if (!hand.callingDeclared && IsWaitingWithout(hand, tile)) {
+                    actions.push_back(HandAction::MakeDiscard(tile, true));
+                }
+            }
+            if (hand.callingDeclared && _drawnTile.IsValid() && IsWinningHand(hand)) {
+                actions.push_back(HandAction::MakeDeclareWin());
+            }
+            for (size_t i = 0; i < hand.concealed.size(); ++i) {
+                const Tile tile = hand.concealed[i];
+                if (i > 0 && hand.concealed[i - 1] == tile) {
+                    continue;
+                }
+                if (hand.CountConcealed(tile) == kCopiesPerTile) {
+                    actions.push_back(HandAction::MakeConcealedKong(tile));
+                }
+                const auto isOpenPung = [tile](const Meld& meld) { return meld.kind == MeldKind::Pung && !meld.concealed && meld.first == tile; };
+                if (eastl::find_if(hand.melds.begin(), hand.melds.end(), isOpenPung) != hand.melds.end()) {
+                    actions.push_back(HandAction::MakeUpgradeKong(tile));
+                }
+            }
+        } else if (_claimStatus[seat] == ClaimStatus::Waiting) {
+            for (const ClaimOption& option : LegalClaims(seat)) {
+                actions.push_back(HandAction::MakeClaim(option.kind, option.chowFirst));
+            }
+            actions.push_back(HandAction::MakePass());
+        }
+        return actions;
+    }
+
+    HandStatus HandModel::Apply(Seat seat, const HandAction& action) {
+        if (!IsSeat(seat)) {
+            return std::unexpected(HandError::NotYourTurn);
+        }
+        switch (action.kind) {
+            case ActionKind::Discard:
+                return Discard(seat, action.tile, action.declareCalling);
+            case ActionKind::DeclareWin:
+                return DeclareWin(seat);
+            case ActionKind::ConcealedKong:
+                return DeclareConcealedKong(seat, action.tile);
+            case ActionKind::UpgradeKong:
+                return UpgradeKong(seat, action.tile);
+            case ActionKind::Claim:
+                return Claim(seat, action.claim, action.chowFirst);
+            case ActionKind::Pass:
+                return Pass(seat);
+        }
+        return std::unexpected(HandError::WrongPhase);
     }
 
     void HandModel::StartTurn(Seat seat) {
@@ -351,10 +423,12 @@ namespace BECore::Mahjong {
         const Seat winner = BestClaimant();
         const ClaimOption claim = winner == kNoSeat ? ClaimOption{} : _claims[winner];
         const bool robbing = _phase == Phase::RobKong;
+        const Tile tile = _pendingTile;
         _claimStatus = {};
         _claims = {};
+        _pendingTile = Tile{};
         if (robbing) {
-            ResolveRobbery(from, winner);
+            ResolveRobbery(from, winner, tile);
             return;
         }
         if (winner == kNoSeat) {
@@ -362,8 +436,7 @@ namespace BECore::Mahjong {
             return;
         }
 
-        const Tile tile = _discards.back().tile;
-        _discards.pop_back();
+        _discards.pop_back();  // the pending tile is the last discard
         if (claim.kind == ClaimKind::Mahjong) {
             _hands[winner].AddConcealed(tile);
             FinishWin(winner, tile, WinSource::Discard, from, false);
@@ -380,8 +453,7 @@ namespace BECore::Mahjong {
         _phase = Phase::Discard;
     }
 
-    void HandModel::ResolveRobbery(Seat owner, Seat robber) {
-        const Tile tile = _pendingTile;
+    void HandModel::ResolveRobbery(Seat owner, Seat robber, Tile tile) {
         if (robber == kNoSeat) {
             CompleteKong(owner, tile);
             return;
@@ -394,6 +466,8 @@ namespace BECore::Mahjong {
 
     void HandModel::CompleteKong(Seat seat, Tile tile) {
         PlayerHand& hand = _hands[seat];
+        // The pung and the fourth tile are there (see the declaration), so the results of `FindPung` and `RemoveConcealed` are not
+        // looked at.
         if (Meld* pung = FindPung(hand, tile)) {
             pung->kind = MeldKind::Kong;
         }

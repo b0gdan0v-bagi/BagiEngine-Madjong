@@ -101,6 +101,48 @@ namespace BECore::Mahjong::Tests {
 
     }  // namespace
 
+    TEST(HandModelTurnTest, AModelThatWasNeverBegunIsAFinishedDrawnHandWithAResult) {
+        const HandModel model;
+
+        EXPECT_EQ(model.GetPhase(), Phase::Finished);
+        ASSERT_TRUE(model.Result().has_value());
+        EXPECT_EQ(model.Result()->kind, ResultKind::Drawn);
+        EXPECT_EQ(model.Result()->winner, kNoSeat);
+        EXPECT_TRUE(model.LegalActions(kSeat0).empty());
+        EXPECT_FALSE(model.PendingTile().IsValid());
+    }
+
+    TEST(HandModelTurnTest, BeginWithoutExactlyOneEastIsRefusedAndTheModelStaysAsItWas) {
+        SeatWinds noEast = MakeSeatWinds(kSeat0);
+        noEast[kSeat0] = Wind::South;  // South twice, no East
+        SeatWinds twoEast = MakeSeatWinds(kSeat0);
+        twoEast[kSeat2] = Wind::East;
+        HandModel model = MakeModel(BaseSpec());
+        const std::string before = Snapshot(model);
+
+        for (const SeatWinds& winds : {noEast, twoEast}) {
+            EXPECT_EQ(Error(model.Begin(MahjongSettings{}, MakeFixedWall(BaseSpec(), false), winds, Wind::East)), HandError::BadSeatWinds);
+            EXPECT_EQ(Snapshot(model), before);
+        }
+        HandModel fresh;
+        EXPECT_EQ(Error(fresh.Begin(MahjongSettings{}, MakeFixedWall(BaseSpec(), false), noEast, Wind::East)), HandError::BadSeatWinds);
+        EXPECT_EQ(fresh.GetPhase(), Phase::Finished);
+        EXPECT_TRUE(fresh.Result().has_value());
+    }
+
+    TEST(HandModelTurnTest, BeginStartsAHandWithNoResultOnAModelThatWasFinished) {
+        FixedWallSpec spec = BaseSpec();
+        spec.liveAfterDeal = 0;
+        HandModel model = MakeModel(spec);
+        ASSERT_EQ(model.GetPhase(), Phase::Finished);
+        ASSERT_TRUE(model.Result().has_value());
+
+        ASSERT_TRUE(model.Begin(MahjongSettings{}, MakeFixedWall(BaseSpec(), false), MakeSeatWinds(kSeat0), Wind::East).has_value());
+
+        EXPECT_EQ(model.GetPhase(), Phase::Discard);
+        EXPECT_FALSE(model.Result().has_value());
+    }
+
     TEST(HandModelTurnTest, BeginLeavesEastWithFourteenAndTheOthersWithThirteen) {
         FixedWallSpec spec = BaseSpec();
         spec.live = kUselessTile;

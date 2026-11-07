@@ -1,6 +1,7 @@
 #include "FixedWall.h"
 
 #include <Mahjong/Game/HandModel.h>
+#include <Mahjong/Game/HandShape.h>
 #include <Mahjong/Game/Tile.h>
 #include <gtest/gtest.h>
 
@@ -119,29 +120,29 @@ namespace BECore::Mahjong::Tests {
         constexpr const char* kFifth = "5p";
         constexpr const char* kUpgradeLoose = "9m";
 
-        FixedWallSpec UpgradeSpec() {
+        FixedWallSpec UpgradeSpec(const char* lastDraw = kFifth) {
             FixedWallSpec spec;
             spec.hands[kSeat0] = "1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Gd Rd";
             spec.hands[kSeat1] = "5p 5p 8p 2s 5s 8s 2m 5m 8m Ww Nw Gd Wd";
             // Seats 2 and 3 wait on the 5p, and declare when a test says so.
             spec.hands[kSeat2] = "4p 6p 1s 2s 3s 4m 5m 6m 7s 8s 9s Ew Ew";
             spec.hands[kSeat3] = "4p 6p 1m 2m 3m 4s 5s 6s 7m 8m 9m Ww Ww";
-            spec.live = std::string(kFifth) + " Rd Gd Wd " + kFifth;
+            spec.live = std::string(kFifth) + " Rd Gd Wd " + lastDraw;
             spec.loose = std::string(kUpgradeLoose) + " 9s";
             return spec;
         }
 
         /// Seat 1 is to act with the fourth 5p drawn and an open pung of 5p laid; the seats in `declaring` have declared a calling hand
-        /// that waits on 5p.
-        HandModel UpgradeModel(std::initializer_list<Seat> declaring = {}) {
-            HandModel model = MakeModel(UpgradeSpec());
+        /// that waits on 5p. Seat 1 has drawn `lastDraw`, which is the fourth 5p unless a test says otherwise.
+        HandModel UpgradeModel(std::initializer_list<Seat> declaring = {}, const char* lastDraw = kFifth) {
+            HandModel model = MakeModel(UpgradeSpec(lastDraw));
             EXPECT_TRUE(model.Discard(kSeat0, T(kFifth)).has_value());
             EXPECT_EQ(model.GetPhase(), Phase::Claim);
             EXPECT_TRUE(model.Claim(kSeat1, ClaimKind::Pung).has_value());
             Lap(model, "Wd Rd Gd Wd", declaring);
             EXPECT_EQ(model.GetPhase(), Phase::Discard);
             EXPECT_EQ(model.CurrentSeat(), kSeat1);
-            EXPECT_EQ(model.GetHand(kSeat1).CountConcealed(T(kFifth)), 1);
+            EXPECT_GE(model.GetHand(kSeat1).CountConcealed(T(lastDraw)), 1);
             return model;
         }
 
@@ -399,6 +400,48 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Snapshot(model), before);
     }
 
+    TEST(HandModelKongTest, AnOpenPungWithNoFourthTileInTheHandCannotBeUpgraded) {
+        // Seat 1 lays the pung of 5p and draws an 8p instead of the fourth 5p.
+        HandModel model = UpgradeModel({}, "8p");
+        ASSERT_EQ(model.GetHand(kSeat1).melds.size(), 1u);
+        ASSERT_EQ(model.GetHand(kSeat1).CountConcealed(T(kFifth)), 0);
+        const std::string before = Snapshot(model);
+
+        EXPECT_EQ(Error(model.UpgradeKong(kSeat1, T(kFifth))), HandError::IllegalKong);
+        EXPECT_EQ(Snapshot(model), before);
+        for (const HandAction& action : model.LegalActions(kSeat1)) {
+            EXPECT_NE(action.kind, ActionKind::UpgradeKong);
+        }
+    }
+
+    TEST(HandModelKongTest, AConcealedKongOpensNoRobbingWindowEvenWhenADeclaredSeatWaitsOnThatTile) {
+        // East holds three 9p and draws the fourth after seat 1 has declared a hand that waits on 6p and 9p.
+        FixedWallSpec spec;
+        spec.hands[kSeat0] = "9p 9p 9p 1p 4s 7s 1s 4m 7m 1m 3p Sw Gd";
+        spec.hands[kSeat1] = "7p 8p 1s 2s 3s 4m 5m 6m 7s 8s 9s Ew Ew";
+        spec.hands[kSeat2] = "3p 6p 4p 3s 6s 9s 3m 6m 9m Ww Nw Rd Wd";
+        spec.hands[kSeat3] = "3p 6p 1p 3s 6s 9s 3m 6m 9m Ww Nw Rd Gd";
+        spec.live = "Gd Nw Wd Rd 9p";
+        spec.loose = kLoose;
+        HandModel model = MakeModel(spec);
+        Lap(model, "Gd Nw Wd Rd", {kSeat1});
+        ASSERT_TRUE(model.GetHand(kSeat1).callingDeclared);
+        ASSERT_EQ(model.CurrentSeat(), kSeat0);
+        ASSERT_EQ(model.GetHand(kSeat0).CountConcealed(T("9p")), kCopiesPerTile);
+        const eastl::vector<Tile> waits = WinningTiles(model.GetHand(kSeat1));
+        ASSERT_NE(eastl::find(waits.begin(), waits.end(), T("9p")), waits.end());
+
+        ASSERT_TRUE(model.DeclareConcealedKong(kSeat0, T("9p")).has_value());
+
+        EXPECT_EQ(model.GetPhase(), Phase::Discard);
+        EXPECT_EQ(model.CurrentSeat(), kSeat0);
+        EXPECT_TRUE(model.PendingClaimSeats().empty());
+        EXPECT_FALSE(model.PendingTile().IsValid());
+        ASSERT_EQ(model.GetHand(kSeat0).melds.size(), 1u);
+        EXPECT_TRUE(model.GetHand(kSeat0).melds[0].concealed);
+        EXPECT_FALSE(model.Result().has_value());
+    }
+
     TEST(HandModelKongTest, AnUpgradedKongIsRobbedByADeclaredCallingHandThatTheTileCompletes) {
         HandModel model = UpgradeModel({kSeat2});
         ASSERT_TRUE(model.GetHand(kSeat2).callingDeclared);
@@ -424,7 +467,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Error(model.Claim(kSeat2, ClaimKind::Pung)), HandError::IllegalClaim);
         EXPECT_EQ(Error(model.Claim(kSeat2, ClaimKind::Kong)), HandError::IllegalClaim);
         EXPECT_EQ(Error(model.Claim(kSeat2, ClaimKind::Chow, T("4p"))), HandError::IllegalClaim);
-        EXPECT_EQ(Error(model.Claim(kSeat3, ClaimKind::Mahjong)), HandError::NotCalling);
+        EXPECT_EQ(Error(model.Claim(kSeat3, ClaimKind::Mahjong)), HandError::NotYourTurn);  // not in the window, whatever it claims
         EXPECT_EQ(Error(model.Claim(kSeat3, ClaimKind::Pung)), HandError::NotYourTurn);
         EXPECT_EQ(Error(model.Claim(kSeat1, ClaimKind::Mahjong)), HandError::NotYourTurn);  // the owner of the kong
         EXPECT_EQ(Error(model.Pass(kSeat3)), HandError::NotYourTurn);

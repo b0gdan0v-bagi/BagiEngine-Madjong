@@ -380,8 +380,11 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(model.PendingClaimSeats()[0], kSeat3);
         EXPECT_TRUE(model.LegalClaims(kSeat2).empty());
         const std::string before = Snapshot(model);
-        EXPECT_EQ(Error(model.Claim(kSeat2, ClaimKind::Mahjong)), HandError::NotCalling);
+        // Whether a seat is in the window is asked first, for every kind of claim; the declaration only for a seat in it.
+        EXPECT_EQ(Error(model.Claim(kSeat2, ClaimKind::Mahjong)), HandError::NotYourTurn);
+        EXPECT_EQ(Error(model.Claim(kSeat2, ClaimKind::Pung)), HandError::NotYourTurn);
         EXPECT_EQ(Error(model.Pass(kSeat2)), HandError::NotYourTurn);
+        EXPECT_EQ(Error(model.Claim(kSeat3, ClaimKind::Mahjong)), HandError::NotCalling);  // in the window, but did not declare
         EXPECT_EQ(Snapshot(model), before);
         EXPECT_FALSE(model.Result().has_value());
 

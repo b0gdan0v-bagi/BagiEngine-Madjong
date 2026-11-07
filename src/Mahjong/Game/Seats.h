@@ -12,6 +12,11 @@ namespace BECore::Mahjong {
     /// The wind of a seat. The numbering is the same as the winds of Tile (East = 0 ... North = 3).
     CORE_ENUM(Wind, uint8_t, East, South, West, North)
 
+    /// Whether `seat` is one of the four seats.
+    [[nodiscard]] constexpr bool IsSeat(Seat seat) noexcept {
+        return seat >= 0 && seat < kSeatCount;
+    }
+
     /// The seat that plays after `seat`.
     [[nodiscard]] constexpr Seat NextSeat(Seat seat) noexcept {
         return (seat + 1) % kSeatCount;
