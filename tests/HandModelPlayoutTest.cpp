@@ -25,7 +25,7 @@ namespace BECore::Mahjong::Tests {
         constexpr size_t kMeldedByAnySet = 3;
 
         /// Which player draws the hand: one that takes every win and declares whenever it can, or one that never wins.
-        enum class Mode : uint8_t { SeekWin, NeverWin };
+        CORE_ENUM(Mode, uint8_t, SeekWin, NeverWin)
 
         struct Outcome {
             int wins = 0;
@@ -55,8 +55,8 @@ namespace BECore::Mahjong::Tests {
                 }
                 for (const Meld& meld : hand.melds) {
                     if (meld.kind == MeldKind::Chow) {
-                        for (int step = 0; step < kTilesPerSet; ++step) {
-                            add(Tile{static_cast<uint8_t>(meld.first.Id() + step)});
+                        for (const Tile member : ChowTiles(meld.first)) {
+                            add(member);
                         }
                     } else {
                         add(meld.first, meld.kind == MeldKind::Kong ? kCopiesPerTile : static_cast<int>(kMeldedByAnySet));

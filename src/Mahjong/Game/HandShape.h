@@ -9,6 +9,8 @@ namespace BECore::Mahjong {
     /// A hand is four sets and a pair.
     inline constexpr int kSetsInHand = 4;
     inline constexpr int kTilesPerSet = 3;
+    /// The highest rank a chow may start at (7 8 9).
+    inline constexpr int kLastChowStartRank = kRanksPerSuit - kTilesPerSet + 1;
     inline constexpr int kTilesInPair = 2;
     /// Tiles of a winning hand, the concealed ones and the melds together; a kong counts as a set of 3 (its fourth tile is not counted).
     inline constexpr int kWinningHandTiles = kSetsInHand * kTilesPerSet + kTilesInPair;
@@ -30,6 +32,15 @@ namespace BECore::Mahjong {
 
         bool operator==(const Decomposition&) const = default;
     };
+
+    /// The three tiles of the chow that starts at `first`, lowest first. `first` has to be a suit tile of rank 1..`kLastChowStartRank`.
+    [[nodiscard]] constexpr eastl::array<Tile, kTilesPerSet> ChowTiles(Tile first) noexcept {
+        eastl::array<Tile, kTilesPerSet> tiles;
+        for (int step = 0; step < kTilesPerSet; ++step) {
+            tiles[step] = Tile{static_cast<uint8_t>(first.Id() + step)};
+        }
+        return tiles;
+    }
 
     /// Counts the playable tiles of `tiles` (a bonus or an invalid tile is skipped).
     [[nodiscard]] TileCounts CountTiles(const eastl::vector<Tile>& tiles) noexcept;

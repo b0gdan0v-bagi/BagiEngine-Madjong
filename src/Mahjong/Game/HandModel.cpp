@@ -15,13 +15,17 @@ namespace BECore::Mahjong {
         }
 
         /// The open pung of `tile` in `hand`, nullptr when there is none (a pung is the meld an upgraded kong grows from).
-        Meld* FindPung(PlayerHand& hand, Tile tile) {
-            for (Meld& meld : hand.melds) {
+        const Meld* FindPung(const PlayerHand& hand, Tile tile) {
+            for (const Meld& meld : hand.melds) {
                 if (meld.kind == MeldKind::Pung && !meld.concealed && meld.first == tile) {
                     return &meld;
                 }
             }
             return nullptr;
+        }
+
+        Meld* FindPung(PlayerHand& hand, Tile tile) {
+            return const_cast<Meld*>(FindPung(static_cast<const PlayerHand&>(hand), tile));
         }
 
         /// Whether `hand` is a winning hand with `tile` added (the declaration is not looked at here).
@@ -42,14 +46,12 @@ namespace BECore::Mahjong {
             if (!tile.IsSuit()) {
                 return starts;
             }
-            const int lastStart = kRanksPerSuit - kTilesPerSet + 1;
             const int firstRank = eastl::max(1, tile.Rank() - (kTilesPerSet - 1));
-            const int lastRank = eastl::min(lastStart, tile.Rank());
+            const int lastRank = eastl::min(kLastChowStartRank, tile.Rank());
             for (int rank = firstRank; rank <= lastRank; ++rank) {
                 const Tile first{static_cast<uint8_t>(tile.Id() - tile.Rank() + rank)};
                 bool complete = true;
-                for (int step = 0; step < kTilesPerSet; ++step) {
-                    const Tile member{static_cast<uint8_t>(first.Id() + step)};
+                for (const Tile member : ChowTiles(first)) {
                     complete = complete && (member == tile || hand.CountConcealed(member) > 0);
                 }
                 if (complete) {
@@ -318,8 +320,7 @@ namespace BECore::Mahjong {
                 if (hand.CountConcealed(tile) == kCopiesPerTile) {
                     actions.push_back(HandAction::MakeConcealedKong(tile));
                 }
-                const auto isOpenPung = [tile](const Meld& meld) { return meld.kind == MeldKind::Pung && !meld.concealed && meld.first == tile; };
-                if (eastl::find_if(hand.melds.begin(), hand.melds.end(), isOpenPung) != hand.melds.end()) {
+                if (FindPung(hand, tile) != nullptr) {
                     actions.push_back(HandAction::MakeUpgradeKong(tile));
                 }
             }
@@ -485,8 +486,7 @@ namespace BECore::Mahjong {
         if (claim.kind == ClaimKind::Chow) {
             meld.kind = MeldKind::Chow;
             meld.first = claim.chowFirst;
-            for (int step = 0; step < kTilesPerSet; ++step) {
-                const Tile member{static_cast<uint8_t>(claim.chowFirst.Id() + step)};
+            for (const Tile member : ChowTiles(claim.chowFirst)) {
                 if (member != tile) {
                     hand.RemoveConcealed(member);
                 }

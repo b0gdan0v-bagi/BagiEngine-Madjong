@@ -185,7 +185,8 @@ namespace BECore::Mahjong::Tests {
         MahjongSettings settings;
         settings.flowers = flowers;
         HandModel model;
-        model.Begin(settings, MakeFixedWall(spec, flowers, east), MakeSeatWinds(east), roundWind);
+        const HandStatus begun = model.Begin(settings, MakeFixedWall(spec, flowers, east), MakeSeatWinds(east), roundWind);
+        EXPECT_TRUE(begun.has_value()) << "MakeModel: Begin refused the hand";
         return model;
     }
 

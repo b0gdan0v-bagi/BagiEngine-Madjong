@@ -4,9 +4,6 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        /// The highest rank a chow may start at (7 8 9).
-        constexpr int kLastChowStartRank = kRanksPerSuit - kTilesPerSet + 1;
-
         bool IsOrphan(Tile tile) noexcept {
             return tile.IsTerminal() || tile.IsHonour();
         }
@@ -108,11 +105,11 @@ namespace BECore::Mahjong {
             }
             if (meld.kind == MeldKind::Chow) {
                 // A chow is three consecutive ranks of one suit, so its lowest tile is a 1..7; anything else is no chow and holds nothing.
-                if (!meld.first.IsSuit() || meld.first.Rank() > kRanksPerSuit - kTilesPerSet + 1) {
+                if (!meld.first.IsSuit() || meld.first.Rank() > kLastChowStartRank) {
                     continue;
                 }
-                for (uint8_t step = 0; step < kTilesPerSet; ++step) {
-                    ++counts[meld.first.Id() + step];
+                for (const Tile member : ChowTiles(meld.first)) {
+                    ++counts[member.Id()];
                 }
             } else {
                 counts[meld.first.Id()] += meld.kind == MeldKind::Kong ? kCopiesPerTile : kTilesPerSet;
