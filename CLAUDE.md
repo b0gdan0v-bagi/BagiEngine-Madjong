@@ -19,6 +19,7 @@ src/Mahjong/
 │   ├── Wall.{h,cpp}      Wall (loose reserve, live wall, dead wall), MakeWall(rng, settings, east) (shuffle, break), BreakIndex / BreakSide
 │   ├── PlayerHand.h      Meld (chow / pung / kong, concealed or open, where it came from), PlayerHand (sorted concealed tiles, melds, bonus tiles, the calling-hand declaration)
 │   ├── Deal.{h,cpp}      DealHands(wall, east, flowers): 13 tiles per seat, bonus tiles laid open and replaced from the loose tiles
+│   ├── HandShape.{h,cpp} pure functions on tile counts: CountTiles, Decompose (every split into sets and a pair, stage 3 scores from it), IsWinningShape, WinningTiles (the tiles that complete a waiting hand), thirteen orphans and seven pairs (no melds only)
 │   └── MahjongSettings.h handsPerMatch, flowers, replayDrawnHand, limit
 └── Components/           (to come) scene glue: components that read the model of the active game
 config/
@@ -51,6 +52,7 @@ The break, the loose tiles and the dead wall are assumptions of this repository 
 | `SeatsTest` | `NextSeat` / `Offset`, seat winds counter-clockwise from East, the draw for East (scripted ties re-roll only the tied seats) |
 | `WallTest` | the ring (136 / 144), `BreakIndex` for hand-computed dice, the order of the rolls, same seed same wall, loose and live draws, refill from the live tail, the dead wall never reached |
 | `DealTest` | the deal: 13 tiles per seat for many seeds and every East, the deal order (four at a time from East, then one each), bonus tiles laid open and replaced from the loose tiles (also two in a row); `PlayerHand` helpers |
+| `HandShapeTest` | `Decompose` (each split once, chows never wrap or use honours), `IsWinningShape` and `WinningTiles` for the kinds of wait, melds reducing the sets needed, thirteen orphans, seven pairs (one suit or honours; not mixed, not a four of a kind) |
 | `FixedWallTest` | the helper `FixedWall.h` itself: layout, padding never over four copies, refills at the live tail, `liveAfterDeal`, a bad spec fails the test |
 | `MahjongGameTest` | the shipped `config/SceneConfig.xml` loads, `GameManager` activates `Mahjong` as the only registered game and its scene `MahjongScene` becomes active (needs the engine services) |
 
