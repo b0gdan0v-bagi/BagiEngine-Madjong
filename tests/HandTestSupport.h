@@ -5,13 +5,14 @@
 #include <EASTL/algorithm.h>
 #include <Mahjong/Game/HandModel.h>
 #include <Mahjong/Game/MahjongRng.h>
+#include <Mahjong/Game/Payments.h>
 #include <Mahjong/Game/Seats.h>
 #include <Mahjong/Game/Tile.h>
 #include <gtest/gtest.h>
 
 /**
  * What the tests of a `HandModel` share (`HandModelActionsTest`, `HandModelClaimTest`, `HandModelKongTest`, `HandModelTurnTest`,
- * `HandModelPlayoutTest`, and the match tests to come): the seat names, a tile from text, the error of a status, a snapshot of
+ * `HandModelPlayoutTest`, `MatchTest`): the seat names, a sum of a number per seat, a tile from text, the error of a status, a snapshot of
  * everything an action could change, a lap of discards, the checks of `LegalActions` against `Apply`, and the chooser that plays a
  * hand with random legal actions. Header only. What differs between the files (the quiet hands, the specs) stays in them.
  */
@@ -21,6 +22,15 @@ namespace BECore::Mahjong::Tests {
     inline constexpr Seat kSeat1 = 1;
     inline constexpr Seat kSeat2 = 2;
     inline constexpr Seat kSeat3 = 3;
+
+    /// The total of a number per seat (the points of the four seats, or the change of a hand: zero).
+    inline int Sum(const SeatScores& scores) {
+        int total = 0;
+        for (const int value : scores) {
+            total += value;
+        }
+        return total;
+    }
 
     /// The name of an enum value, for a failure message.
     template <typename E>

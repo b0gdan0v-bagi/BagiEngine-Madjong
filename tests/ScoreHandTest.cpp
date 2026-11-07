@@ -133,14 +133,6 @@ namespace BECore::Mahjong::Tests {
 
         // ----- helpers -----
 
-        int Sum(const SeatScores& scores) {
-            int total = 0;
-            for (const int value : scores) {
-                total += value;
-            }
-            return total;
-        }
-
         /// A line that only a winner has.
         bool IsWinnerLine(const ScoreLine& line) {
             return line.kind == ScoreKind::Win || line.kind == ScoreKind::WinTileFromWall || line.kind == ScoreKind::OnlyWinningTile ||
@@ -191,6 +183,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(settlement.winner, kSeat1);
         EXPECT_EQ(settlement.east, kSeat0);
         EXPECT_EQ(settlement.roundWind, Wind::East);
+        EXPECT_EQ(model.Result()->winningTile, T(kSelfDrawWinningTile));
         const ScoreBreakdown& winner = settlement.breakdowns[kSeat1];
         EXPECT_TRUE(winner.won);
         EXPECT_EQ(winner.points, kSelfDrawPoints);
@@ -314,6 +307,41 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(kong.GetHand(kSeat0).melds.size(), 1u);
 
         EXPECT_EQ(CountVisibleCopies(kong, T("Ew")), 0);
+    }
+
+    TEST(ScoreHandTest, ACopyInTheWinnersOwnOpenMeldIsVisibleButTheWinningTileIsNot) {
+        // South takes East's 5p in the chow 4p 5p 6p, keeps one 4p, declares with the Nw and waits on 4p alone (the pair); it draws the
+        // 4p and wins. The 4p of its own open chow is visible, the 4p it holds is not.
+        // 32 points = 20 + wall tile 2 + only winning tile 2 + concealed pung of red dragons 8; 2 doubles = dragons, calling hand in
+        // the first hand (the chow is open: not fully concealed). 32 x 4 = 128, rounded up to 130.
+        constexpr int kOwnChowPoints = kWinning + kWallTile + kOnlyTile + kHonourPungConcealed;
+        constexpr int kOwnChowDoubles = 2;
+        constexpr int kOwnChowScore = 130;
+        constexpr int kVisibleFourths = 1;
+        FixedWallSpec spec;
+        spec.hands[kSeat0] = "5p 9p 1s 4s 7s 1m 4m 7m Ew Ww Gd Wd 9s";
+        spec.hands[kSeat1] = "4p 4p 6p 1s 2s 3s 7m 8m 9m Rd Rd Rd Nw";
+        spec.hands[kSeat2] = "2p 8p 3s 6s 3m 6m 9m 8s Ww Gd Wd Nw 5m";
+        spec.hands[kSeat3] = "3p 9p 2s 5s 8s 2m 5m 8m 1m Ew Gd Wd Sw";
+        spec.live = "2m 7s 6m 3p 4p";
+        HandModel model = MakeModel(spec);
+        ASSERT_TRUE(model.Discard(kSeat0, T(kFifth)).has_value());
+        ASSERT_EQ(model.GetPhase(), Phase::Claim);
+        ASSERT_TRUE(model.Claim(kSeat1, ClaimKind::Chow, T("4p")).has_value());
+        Lap(model, "Nw Ww Gd Ew", {kSeat1});
+        ASSERT_EQ(model.CurrentSeat(), kSeat1);
+        ASSERT_TRUE(model.DeclareWin(kSeat1).has_value());
+
+        EXPECT_EQ(CountVisibleCopies(model, T("4p")), kVisibleFourths);
+
+        const HandSettlement settlement = SettleHand(model);
+        const ScoreBreakdown& winner = settlement.breakdowns[kSeat1];
+        EXPECT_EQ(settlement.winner, kSeat1);
+        EXPECT_EQ(winner.points, kOwnChowPoints);
+        EXPECT_EQ(winner.doubles, kOwnChowDoubles);
+        EXPECT_EQ(winner.score, kOwnChowScore);
+        EXPECT_EQ(CountLines(winner, ScoreKind::ObviouslyLast), 0);
+        ExpectConsistent(settlement);
     }
 
     // ----- a drawn hand -----

@@ -23,14 +23,6 @@ namespace BECore::Mahjong::Tests {
         // Scores in steps of the rounding, to try every shape of table.
         constexpr int kScoreSteps[] = {0, 10, 30, 130, 500};
 
-        int Sum(const SeatScores& scores) {
-            int total = 0;
-            for (const int value : scores) {
-                total += value;
-            }
-            return total;
-        }
-
         void ExpectDeltas(const SeatScores& actual, const SeatScores& expected) {
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 EXPECT_EQ(actual[seat], expected[seat]) << "seat " << seat;

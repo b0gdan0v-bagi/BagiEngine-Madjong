@@ -64,6 +64,8 @@ namespace BECore::Mahjong {
     inline constexpr int kObviouslyLastCopies = 3;
 
     /// What a line of a score is about: points first, then the doubles for everyone, then the doubles for the winner, then the limit hands.
+    /// Order matters: the kinds only a winner has are `Win`, `WinTileFromWall`, `OnlyWinningTile` and everything from `OnlyPungs` on (the
+    /// winner's doubles and the limit hands come last); a test tells a winner's line from the others by it.
     CORE_ENUM(ScoreKind, uint8_t,
               // points
               Win,              // the winner, 20

@@ -83,7 +83,8 @@ namespace BECore::Mahjong {
     /// How the tiles of a hand lie in the suits: the one-suit doubles and the limit hand of concealed pungs read it (bonus tiles are not
     /// looked at).
     struct SuitSummary {
-        /// The suit of the suit tiles when there is just one, `TileSuit::None` when there is none (or, with `mixed`, more than one).
+        /// The suit of the suit tiles when there is just one; with `mixed` the last suit seen; `TileSuit::None` only when there is no
+        /// suit tile.
         TileSuit suit = TileSuit::None;
         bool mixed = false;
         bool honours = false;

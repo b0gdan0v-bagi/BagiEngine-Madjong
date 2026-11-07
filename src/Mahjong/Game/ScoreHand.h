@@ -35,8 +35,8 @@ namespace BECore::Mahjong {
     /**
      * @brief Scores the four seats of a finished hand and settles the payments.
      *
-     * Precondition: `model.GetPhase() == Phase::Finished`. Each seat is scored from its own hand with the winds and the limit of the
-     * model (`ScoreSeat`); the winner gets `result` and the visible copies of its winning tile. A hand that is not finished is
+     * Precondition: `finished.GetPhase() == Phase::Finished`. Each seat is scored from its own hand with the winds and the limit of the
+     * model (`ScoreSeat`); the winner gets `Result()` and the visible copies of its winning tile. A hand that is not finished is
      * settled like a drawn one: scores for everyone, no payments.
      */
     [[nodiscard]] HandSettlement SettleHand(const HandModel& finished);
