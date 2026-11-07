@@ -21,6 +21,18 @@ namespace BECore::Mahjong {
             return set.first.Rank() == 1 || set.first.Rank() == kLastChowStartRank;
         }
 
+        bool IsWindGroup(const ReadingSet& set) noexcept {
+            return IsGroupSet(set) && set.first.IsWind();
+        }
+
+        bool IsDragonGroup(const ReadingSet& set) noexcept {
+            return IsGroupSet(set) && set.first.IsDragon();
+        }
+
+        bool IsKong(const ReadingSet& set) noexcept {
+            return set.kind == MeldKind::Kong;
+        }
+
         int CountSets(const Reading& reading, bool (*isWanted)(const ReadingSet&)) noexcept {
             int count = 0;
             for (const ReadingSet& set : reading.sets) {
@@ -53,21 +65,13 @@ namespace BECore::Mahjong {
         }
 
         void AddLittleFourWinds(const Reading& reading, ScoreBreakdown& breakdown) {
-            int winds = 0;
-            for (const ReadingSet& set : reading.sets) {
-                winds += IsGroupSet(set) && set.first.IsWind() ? 1 : 0;
-            }
-            if (winds == kLittleFourWindsSets && reading.pair.IsWind()) {
+            if (CountSets(reading, IsWindGroup) == kLittleFourWindsSets && reading.pair.IsWind()) {
                 AddLine(breakdown, ScoreKind::LittleFourWinds, reading.pair, 0, kLittleFourWindsDoubles);
             }
         }
 
         void AddLittleThreeDragons(const Reading& reading, ScoreBreakdown& breakdown) {
-            int dragons = 0;
-            for (const ReadingSet& set : reading.sets) {
-                dragons += IsGroupSet(set) && set.first.IsDragon() ? 1 : 0;
-            }
-            if (dragons == kLittleThreeDragonsSets && reading.pair.IsDragon()) {
+            if (CountSets(reading, IsDragonGroup) == kLittleThreeDragonsSets && reading.pair.IsDragon()) {
                 AddLine(breakdown, ScoreKind::LittleThreeDragons, reading.pair, 0, kLittleThreeDragonsDoubles);
             }
         }
@@ -90,10 +94,7 @@ namespace BECore::Mahjong {
 
         /// Two or three kongs, open or concealed (four is a limit hand).
         void AddSeveralKongs(const Reading& reading, ScoreBreakdown& breakdown) {
-            int kongs = 0;
-            for (const ReadingSet& set : reading.sets) {
-                kongs += set.kind == MeldKind::Kong ? 1 : 0;
-            }
+            const int kongs = CountSets(reading, IsKong);
             if (kongs >= kSeveralKongsCount && kongs < kSetsInHand) {
                 AddLine(breakdown, ScoreKind::SeveralKongs, Tile{}, 0, kSeveralKongsDoubles);
             }

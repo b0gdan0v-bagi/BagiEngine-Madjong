@@ -16,7 +16,7 @@ namespace BECore::Mahjong::Tests {
         constexpr int kNoPointsScore = 40;
         constexpr int kVisibleCopies = 3;
 
-        // Three chows of two suits and four more tiles come after them in each hand: no point, no double of their own.
+        // Three chows of two suits; each hand adds more tiles after them (a pair, or a set and a pair): no point, no double of their own.
         constexpr const char* kThreeChows = "5s 6s 7s 7m 8m 9m 3m 4m 5m";
         constexpr const char* kNoPointsHand = "5s 6s 7s 7m 8m 9m 3m 4m 5m 2p 3p 4p Ww Ww";
 
@@ -33,7 +33,7 @@ namespace BECore::Mahjong::Tests {
     // ----- the points of the winner -----
 
     TEST(ScoreWinnerTest, TheTwentyAloneIsTheTotalOfANoPointsHandAndDoublesOnce) {
-        // A win on a discard of 4p (a wait on 1p and 4p): chows and a pair of simples.
+        // A win on a discard of 4p (a wait on 1p and 4p): chows and a pair of West wind (neither the own nor the round wind).
         const ScoreBreakdown breakdown = Win(kNoPointsHand, "4p", WinSource::Discard);
 
         EXPECT_EQ(breakdown.points, kWinning);
@@ -92,6 +92,16 @@ namespace BECore::Mahjong::Tests {
         const ScoreBreakdown breakdown = Win("5s 6s 7s 7m 8m 9m 1p 2p 3p Ww Ww", "3p", WinSource::Discard, {OpenPung(T("3p"))});
 
         EXPECT_EQ(LinePoints(breakdown, ScoreKind::OnlyWinningTile), kOnlyTile);
+    }
+
+    TEST(ScoreWinnerTest, AKindWithAllFourCopiesInHandIsNoWait) {
+        // Before the 1p the hand waits on 1p and 4p, but all four 4p lie in the open kong: the 1p is the only wait.
+        const ScoreBreakdown kongOf4p = Win("2p 3p 5s 6s 7s 7m 8m 9m Ww Ww 1p", "1p", WinSource::Discard, {OpenKong(T("4p"))});
+        // The same hand without the kong (a fourth chow instead): the wait on 1p and 4p is two-sided.
+        const ScoreBreakdown twoSided = Win(WithChows("1p 2p 3p Ww Ww"), "1p", WinSource::Discard);
+
+        EXPECT_EQ(LinePoints(kongOf4p, ScoreKind::OnlyWinningTile), kOnlyTile);
+        EXPECT_EQ(CountLines(twoSided, ScoreKind::OnlyWinningTile), 0);
     }
 
     // ----- the doubles for the winner, each on a hand that has it and a near miss -----
@@ -258,7 +268,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(ScoreWinnerTest, TheChowsAreReadWhenNoPointsIsWorthMore) {
-        // 2p 2p 2p 3p 3p 3p 4p 4p 4p as pungs: 20 + 3 x 2 = 26 points, none of the doubles; as three chows 2 3 4p: the 20, no points x2.
+        // 2p 2p 2p 3p 3p 3p 4p 4p 4p as pungs: 20 + 3 x 4 = 32 points, none of the doubles; as three chows 2 3 4p: the 20, no points x2.
         const ScoreBreakdown breakdown = Win("2p 2p 2p 3p 3p 3p 4p 4p 4p 5s 6s 7s 8m 8m", "5s", WinSource::Discard);
 
         EXPECT_EQ(CountLines(breakdown, ScoreKind::Pung), 0);

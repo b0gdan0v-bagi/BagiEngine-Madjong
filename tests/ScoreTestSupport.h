@@ -5,7 +5,7 @@
 #include <Mahjong/Game/Score.h>
 
 /**
- * What the scoring tests share (`ScorePointsTest`, `ScoreDoublesTest`, and the winner and limit tests to come): a `ScoreInput` made
+ * What the scoring tests share (`ScorePointsTest`, `ScoreDoublesTest`, `ScoreWinnerTest`, and the limit tests to come): a `ScoreInput` made
  * from notation, melds, and the lines of a breakdown by kind. Header only. A hand written here needs no 13 or 14 tiles: scoring reads
  * what the seat holds and does not check the count, so a test lists only the tiles it is about (plus `kQuietChows`).
  */
