@@ -122,6 +122,13 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(script.rolled, (std::vector<Seat>{0, 1, 2, 3, 0, 1, 2, 3, 0, 2}));
     }
 
+    TEST(SeatsTest, RollsOfZeroOrLessStillDecideEast) {
+        // A roller that returns no real 2d6 total (here all below 1) must not leave the draw without a leader.
+        ScriptedRolls script{{-4, -1, -3, -1, -2, -6}, {}, 0};
+        EXPECT_EQ(DecideEast(script.AsRoller()), 1);
+        EXPECT_EQ(script.rolled, (std::vector<Seat>{0, 1, 2, 3, 1, 3}));
+    }
+
     TEST(SeatsTest, RealDiceTieIsResolvedToo) {
         // Find a seed whose first round has a tie for the highest roll (a real stream, not a script), and check that the draw
         // still ends with exactly one East who is among the tied seats of that round.

@@ -44,7 +44,8 @@ namespace BECore::Mahjong {
             return first + RollDie();
         }
 
-        /// Fisher-Yates, written by hand: i from the last index down to 1 swaps with `Below(i + 1)`.
+        /// Fisher-Yates, written by hand: for a size i from the item count down to 2, the item at index i - 1 swaps with the one at
+        /// index `Below(i)`.
         template <typename T>
         void Shuffle(eastl::vector<T>& items) {
             for (size_t i = items.size(); i > 1; --i) {

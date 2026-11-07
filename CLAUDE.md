@@ -16,6 +16,7 @@ src/Mahjong/
 │   ├── TileSet.{h,cpp}   BuildTileSet(flowers): 136 or 144 tiles in a fixed order
 │   ├── MahjongRng.h      seeded mt19937 with Below / RollDie / Roll2d6 and a hand-written Fisher-Yates Shuffle (never std::shuffle or std::*_distribution: a seed must give the same game on every platform)
 │   ├── Seats.{h,cpp}     Seat (0..3, counter-clockwise), NextSeat, Offset, Wind, MakeSeatWinds, DecideEast (the draw for East, with a roll seam for tests), RollSeatWinds
+│   ├── Wall.{h,cpp}      Wall (loose reserve, live wall, dead wall), MakeWall(rng, settings, east) (shuffle, break), BreakIndex / BreakSide
 │   └── MahjongSettings.h handsPerMatch, flowers, replayDrawnHand, limit
 └── Components/           (to come) scene glue: components that read the model of the active game
 config/
@@ -24,6 +25,10 @@ config/
 assets/                   (empty) sprites, with a config/TextureLibrary.xml once there are any
 tests/                    gtest sources, built as MahjongTests
 ```
+
+## Wall conventions
+
+The break, the loose tiles and the dead wall are assumptions of this repository (`Wall.h` has the details; the numbers are named constants). The ring is four sides of 17 stacks of two tiles (18 stacks with flowers). East rolls 2d6 `a`: side `(a - 1) % 4` counted from East's own wall is broken; the owner of that side rolls `b`; the break is after `a + b` stacks from the right end of that side. Drawing starts at the break. The first 2 tiles are the loose reserve (a loose draw is refilled from the live tail), the last 14 are the dead wall and are never drawn.
 
 ## Rules for the code to come
 
@@ -42,4 +47,5 @@ tests/                    gtest sources, built as MahjongTests
 | `TileTest` | tile ids and predicates, the notation round trip, the tile set (136 / 144, four of each kind), the settings defaults (pure logic, no engine services) |
 | `MahjongRngTest` | same seed same sequence, dice 1..6 and every face, shuffle keeps the multiset, golden values of seed 1 (the `mt19937` stream and the shuffled set are pinned) |
 | `SeatsTest` | `NextSeat` / `Offset`, seat winds counter-clockwise from East, the draw for East (scripted ties re-roll only the tied seats) |
+| `WallTest` | the ring (136 / 144), `BreakIndex` for hand-computed dice, the order of the rolls, same seed same wall, loose and live draws, refill from the live tail, the dead wall never reached |
 | `MahjongGameTest` | the shipped `config/SceneConfig.xml` loads, `GameManager` activates `Mahjong` as the only registered game and its scene `MahjongScene` becomes active (needs the engine services) |

@@ -20,7 +20,8 @@ namespace BECore::Mahjong {
             eastl::vector<Seat> leaders;
             for (const Seat seat : running) {
                 const int total = roll(seat);
-                if (total > best) {
+                // The first roll of the round starts the leaders, whatever it is, so a roller that returns 0 or less still ends.
+                if (leaders.empty() || total > best) {
                     best = total;
                     leaders.clear();
                 }
