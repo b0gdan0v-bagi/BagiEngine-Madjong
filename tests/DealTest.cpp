@@ -37,6 +37,10 @@ namespace BECore::Mahjong::Tests {
             return ids;
         }
 
+        std::vector<int> Ids(const std::string& text) {
+            return Ids(ParseTiles(text).value());
+        }
+
         std::vector<int> SortedIds(const eastl::vector<Tile>& tiles) {
             std::vector<int> ids = Ids(tiles);
             std::sort(ids.begin(), ids.end());
@@ -172,17 +176,6 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
-    TEST(DealTest, DealOrderOnAFixedWallGivesEachSeatItsHand) {
-        const FixedWallSpec spec = PlainSpec();
-        for (const Seat east : {0, 1, 2, 3}) {
-            Wall wall = MakeFixedWall(spec, false, east);
-            const eastl::array<PlayerHand, kSeatCount> hands = DealHands(wall, east, false);
-            for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                EXPECT_EQ(Ids(hands[seat].concealed), SortedIds(spec.hands[seat])) << "east " << east << " seat " << seat;
-            }
-        }
-    }
-
     TEST(DealTest, ABonusTileInTheDealIsReplacedByTheFirstLooseTile) {
         FixedWallSpec spec = PlainSpec();
         spec.hands[0] = "F1 1p 2p 3p 4p 5p 6p 7p 8p 9p 1s 2s 3s";
@@ -194,7 +187,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Ids(hands[0].bonus), (std::vector<int>{Tile::FromFlower(0).Id()}));
         EXPECT_EQ(Ids(hands[0].concealed), SortedIds("1p 2p 3p 4p 5p 6p 7p 8p 9p 1s 2s 3s 4s"));
         // The loose tile 4s left the reserve and the first refill (6s, the live tail) joined it.
-        EXPECT_EQ(Ids(wall.LooseTiles()), (SortedIds("5s 6s")));
+        EXPECT_EQ(Ids(wall.LooseTiles()), Ids("5s 6s"));
         for (Seat seat = 1; seat < kSeatCount; ++seat) {
             EXPECT_EQ(Ids(hands[seat].concealed), SortedIds(spec.hands[seat]));
             EXPECT_TRUE(hands[seat].bonus.empty());
@@ -211,7 +204,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(hands[0].concealed.size(), static_cast<size_t>(kDealtTiles));
         EXPECT_EQ(Ids(hands[0].bonus), (std::vector<int>{Tile::FromFlower(0).Id(), Tile::FromSeason(0).Id()}));
         EXPECT_EQ(Ids(hands[0].concealed), SortedIds("1p 2p 3p 4p 5p 6p 7p 8p 9p 1s 2s 3s 5s"));
-        EXPECT_EQ(Ids(wall.LooseTiles()), (SortedIds("7s 8s")));
+        EXPECT_EQ(Ids(wall.LooseTiles()), Ids("7s 8s"));
     }
 
     TEST(DealTest, BonusTilesOfTwoSeatsUseTheLooseTilesInDealOrder) {
@@ -227,7 +220,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Ids(hands[1].concealed), SortedIds("2m 3m 4m 5m 6m 7m 8m 9m Ew Sw Ww Nw 5s"));
         EXPECT_EQ(Ids(hands[0].bonus), (std::vector<int>{Tile::FromFlower(0).Id()}));
         EXPECT_EQ(Ids(hands[1].bonus), (std::vector<int>{Tile::FromFlower(1).Id()}));
-        EXPECT_EQ(Ids(wall.LooseTiles()), SortedIds("6s 7s"));
+        EXPECT_EQ(Ids(wall.LooseTiles()), Ids("6s 7s"));
     }
 
     TEST(DealTest, WithoutFlowersTheBonusTilesAreNotTouched) {

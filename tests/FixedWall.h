@@ -1,6 +1,9 @@
 #pragma once
 
 #include <Mahjong/Game/Deal.h>
+#include <Mahjong/Game/HandModel.h>
+#include <Mahjong/Game/MahjongSettings.h>
+#include <Mahjong/Game/Seats.h>
 #include <Mahjong/Game/Tile.h>
 #include <Mahjong/Game/TileSet.h>
 #include <Mahjong/Game/Wall.h>
@@ -26,7 +29,10 @@ namespace BECore::Mahjong::Tests {
      * - `loose`: the two loose tiles, then the tiles that refill the reserve after each loose draw, in the order they join it. The
      *   refills are laid at the end of the live wall (the tile just before the dead wall is the first refill).
      * - `liveAfterDeal`: the live wall holds exactly this many tiles after the deal (the refills included), so that a drawn hand comes
-     *   soon; the wall is then shorter than the ring. Unset: the wall is a whole ring.
+     *   soon; the wall is then shorter than the ring. Each bonus tile dealt takes one refill from the live tail, so the live wall ends
+     *   the deal with `liveAfterDeal - bonusTilesDealt`. It has to lie between what `live` and the refills need and what the ring
+     *   leaves after the deal and the dead wall, otherwise the test fails once and the value is clamped. Unset: the wall is a whole
+     *   ring.
      */
     struct FixedWallSpec {
         std::array<std::string, kSeatCount> hands;
@@ -133,12 +139,26 @@ namespace BECore::Mahjong::Tests {
         // The live wall after the deal: `live`, padding, and the refills at the very end.
         const size_t ringSize = static_cast<size_t>(RingSize(StacksPerSide(flowers)));
         const size_t dealtSize = order.size();
-        const size_t liveWanted = spec.liveAfterDeal.has_value() ? static_cast<size_t>(*spec.liveAfterDeal) : ringSize - dealtSize - kDeadWallTiles;
-        EXPECT_GE(liveWanted, live.size() + refills.size()) << "FixedWallSpec: `live` and the refills do not fit the live wall";
+        const size_t liveNeeded = live.size() + refills.size();
+        const size_t liveAvailable = ringSize > dealtSize + kDeadWallTiles ? ringSize - dealtSize - kDeadWallTiles : 0;
+        size_t liveWanted = liveAvailable;
+        if (spec.liveAfterDeal.has_value()) {
+            const int cut = *spec.liveAfterDeal;
+            if (cut < 0 || static_cast<size_t>(cut) < liveNeeded || static_cast<size_t>(cut) > liveAvailable) {
+                ADD_FAILURE() << "FixedWallSpec.liveAfterDeal " << cut << " is outside " << liveNeeded << ".." << liveAvailable
+                              << " (`live` and the refills at least, the ring after the deal and the dead wall at most)";
+                const size_t cutSize = cut < 0 ? 0 : static_cast<size_t>(cut);
+                liveWanted = eastl::max(liveNeeded, eastl::min(cutSize, liveAvailable));
+            } else {
+                liveWanted = static_cast<size_t>(cut);
+            }
+        } else {
+            EXPECT_GE(liveWanted, liveNeeded) << "FixedWallSpec: `live` and the refills do not fit the live wall";
+        }
         for (const Tile tile : live) {
             order.push_back(tile);
         }
-        const size_t padTo = dealtSize + eastl::max(liveWanted, live.size() + refills.size()) - refills.size();
+        const size_t padTo = dealtSize + eastl::max(liveWanted, liveNeeded) - refills.size();
         while (order.size() < padTo) {
             order.push_back(pad());
         }
@@ -155,6 +175,18 @@ namespace BECore::Mahjong::Tests {
             order.push_back(pool[i]);
         }
         return Wall::FromOrder(eastl::move(order));
+    }
+
+    /**
+     * @brief A started hand on the fixed wall of `spec`: the winds follow counter-clockwise from `east` (that seat is the dealer and
+     *        takes the first tile), `flowers` is the setting of the hand (it also decides the size of the wall).
+     */
+    inline HandModel MakeModel(const FixedWallSpec& spec, Seat east = 0, Wind roundWind = Wind::East, bool flowers = false) {
+        MahjongSettings settings;
+        settings.flowers = flowers;
+        HandModel model;
+        model.Begin(settings, MakeFixedWall(spec, flowers, east), MakeSeatWinds(east), roundWind);
+        return model;
     }
 
 }  // namespace BECore::Mahjong::Tests

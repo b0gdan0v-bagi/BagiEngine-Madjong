@@ -253,4 +253,64 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Waits("Ew Ew Sw Sw Ww Ww Nw Nw Rd Rd Wd Wd Gd"), "Gd");
     }
 
+    TEST(HandShapeTest, TwoFoursOfAKindGiveBothSplits) {
+        // 1p 2p 3p four times each: four chows, or three pungs and one chow.
+        const TileCounts counts = Counts("1p 1p 1p 1p 2p 2p 2p 2p 3p 3p 3p 3p Ew Ew");
+
+        EXPECT_EQ(DescribeAll(Decompose(counts, kSetsInHand)), (std::vector<std::string>{"Ew: C1p C1p C1p C1p", "Ew: P1p C1p P2p P3p"}));
+    }
+
+    TEST(HandShapeTest, SevenPairsAndThirteenOrphansWinWithoutADecomposition) {
+        const char* const sevenPairs = "Ew Ew Sw Sw Ww Ww Nw Nw Rd Rd Wd Wd Gd Gd";
+        const char* const thirteenOrphans = "1p 9p 1s 9s 1m 9m Ew Sw Ww Nw Rd Wd Gd Rd";
+
+        EXPECT_TRUE(Wins(sevenPairs));
+        EXPECT_TRUE(Decompose(Counts(sevenPairs), kSetsInHand).empty());
+        EXPECT_TRUE(Wins(thirteenOrphans));
+        EXPECT_TRUE(Decompose(Counts(thirteenOrphans), kSetsInHand).empty());
+    }
+
+    TEST(HandShapeTest, CountMeldTilesCountsEveryTileOfEveryMeld) {
+        eastl::vector<Meld> melds;
+        melds.push_back({MeldKind::Chow, false, Tile::Suited(TileSuit::Dots, 7)});
+        melds.push_back({MeldKind::Pung, false, Tile::FromWind(0)});
+        melds.push_back({MeldKind::Kong, true, Tile::FromDragon(0)});
+        const TileCounts counts = CountMeldTiles(melds);
+
+        EXPECT_EQ(TotalTiles(counts), kTilesPerSet + kTilesPerSet + kCopiesPerTile);
+        EXPECT_EQ(counts[Tile::Suited(TileSuit::Dots, 7).Id()], 1);
+        EXPECT_EQ(counts[Tile::Suited(TileSuit::Dots, 8).Id()], 1);
+        EXPECT_EQ(counts[Tile::Suited(TileSuit::Dots, 9).Id()], 1);
+        EXPECT_EQ(counts[Tile::FromWind(0).Id()], kTilesPerSet);
+        EXPECT_EQ(counts[Tile::FromDragon(0).Id()], kCopiesPerTile);
+    }
+
+    TEST(HandShapeTest, TheCopiesInMeldsAreNotOfferedAsAFifthCopy) {
+        // An open pung of 5p, and the hand waits on 5p for its pair: the fourth copy is in the hand, the fifth does not exist.
+        PlayerHand hand;
+        hand.melds.push_back({MeldKind::Pung, false, Tile::Suited(TileSuit::Dots, 5)});
+        const eastl::vector<Tile> concealed = ParseTiles("5p 1s 2s 3s 4s 5s 6s Ew Ew Ew").value();
+        for (const Tile tile : concealed) {
+            hand.AddConcealed(tile);
+        }
+        const TileCounts counts = CountTiles(hand.concealed);
+
+        EXPECT_EQ(WinningTiles(counts, kOneMeld).size(), 1u);  // without the meld tiles the fifth copy would be offered
+        EXPECT_TRUE(WinningTiles(counts, kOneMeld, CountMeldTiles(hand.melds)).empty());
+        EXPECT_TRUE(WinningTiles(hand).empty());
+    }
+
+    TEST(HandShapeTest, TheSeatOverloadOffersTheOtherWaits) {
+        PlayerHand hand;
+        hand.melds.push_back({MeldKind::Pung, false, Tile::Suited(TileSuit::Dots, 5)});
+        const eastl::vector<Tile> concealed = ParseTiles("1s 2s 4s 5s 6s Ew Ew Ew 7m 7m").value();
+        for (const Tile tile : concealed) {
+            hand.AddConcealed(tile);
+        }
+        const eastl::vector<Tile> waits = WinningTiles(hand);
+
+        ASSERT_EQ(waits.size(), 1u);
+        EXPECT_EQ(waits[0], Tile::Suited(TileSuit::Bamboo, 3));
+    }
+
 }  // namespace BECore::Mahjong::Tests

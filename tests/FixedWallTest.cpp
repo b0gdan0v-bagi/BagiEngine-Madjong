@@ -147,6 +147,35 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(wall.Remaining(), kLooseTiles + kDeadWallTiles);
     }
 
+    TEST(FixedWallTest, ALiveAfterDealOutsideTheRangeFailsOnceAndIsClamped) {
+        FixedWallSpec negative = PlainSpec();
+        negative.live = "1p 2p";
+        negative.liveAfterDeal = -3;
+        Wall tooShort = Wall::FromOrder({});
+        EXPECT_NONFATAL_FAILURE(tooShort = MakeFixedWall(negative, false), "liveAfterDeal -3");
+        (void)DealHands(tooShort, 0, false);
+        EXPECT_EQ(tooShort.LiveCount(), 2u);  // what `live` needs
+
+        FixedWallSpec large = PlainSpec();
+        large.liveAfterDeal = static_cast<int>(kFullWall);
+        Wall tooLong = Wall::FromOrder({});
+        EXPECT_NONFATAL_FAILURE(tooLong = MakeFixedWall(large, false), "liveAfterDeal 136");
+        EXPECT_EQ(tooLong.Remaining(), kFullWall);
+        (void)DealHands(tooLong, 0, false);
+        EXPECT_EQ(tooLong.LiveCount(), kFullWall - kLooseTiles - kDealtTotal - kDeadWallTiles);
+    }
+
+    TEST(FixedWallTest, EachBonusTileDealtTakesARefillFromTheLiveTail) {
+        FixedWallSpec spec = PlainSpec();
+        spec.hands[0] = "F1 1p 2p 3p 4p 5p 6p 7p 8p 9p 1s 2s 3s";
+        spec.loose = "4s 5s";
+        spec.liveAfterDeal = 6;
+        Wall wall = MakeFixedWall(spec, true);
+        (void)DealHands(wall, 0, true);
+
+        EXPECT_EQ(wall.LiveCount(), 5u);  // liveAfterDeal minus the one bonus tile dealt
+    }
+
     TEST(FixedWallTest, BonusTilesInASpecNeedTheFlowersSet) {
         FixedWallSpec spec = PlainSpec();
         spec.hands[0] = "F1 2p 3p 4p 5p 6p 7p 8p 9p 1s 2s 3s 4s";

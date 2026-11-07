@@ -100,6 +100,24 @@ namespace BECore::Mahjong {
         return counts;
     }
 
+    TileCounts CountMeldTiles(const eastl::vector<Meld>& melds) noexcept {
+        TileCounts counts{};
+        for (const Meld& meld : melds) {
+            if (!meld.first.IsPlayable()) {
+                continue;
+            }
+            if (meld.kind == MeldKind::Chow) {
+                // The ranks of a chow are consecutive ids of one suit.
+                for (uint8_t step = 0; step < kTilesPerSet && meld.first.Id() + step < kSuitTileCount; ++step) {
+                    ++counts[meld.first.Id() + step];
+                }
+            } else {
+                counts[meld.first.Id()] += meld.kind == MeldKind::Kong ? kCopiesPerTile : kTilesPerSet;
+            }
+        }
+        return counts;
+    }
+
     int TotalTiles(const TileCounts& counts) noexcept {
         int total = 0;
         for (const uint8_t count : counts) {
@@ -136,6 +154,7 @@ namespace BECore::Mahjong {
         bool allHonours = true;
         bool oneSuit = true;
         TileSuit suit = TileSuit::None;
+        int pairs = 0;
         for (uint8_t id = 0; id < kKindCount; ++id) {
             if (counts[id] == 0) {
                 continue;
@@ -143,6 +162,7 @@ namespace BECore::Mahjong {
             if (counts[id] != kTilesInPair) {
                 return false;
             }
+            ++pairs;
             const Tile tile{id};
             allHonours = allHonours && tile.IsHonour();
             if (!tile.IsSuit() || (suit != TileSuit::None && tile.Suit() != suit)) {
@@ -150,7 +170,7 @@ namespace BECore::Mahjong {
             }
             suit = tile.IsSuit() ? tile.Suit() : suit;
         }
-        return allHonours || oneSuit;
+        return pairs == kPairsInSevenPairs && (allHonours || oneSuit);
     }
 
     bool IsWinningShape(const TileCounts& counts, int meldCount) {
@@ -164,13 +184,17 @@ namespace BECore::Mahjong {
     }
 
     eastl::vector<Tile> WinningTiles(const TileCounts& counts, int meldCount) {
+        return WinningTiles(counts, meldCount, TileCounts{});
+    }
+
+    eastl::vector<Tile> WinningTiles(const TileCounts& counts, int meldCount, const TileCounts& meldTiles) {
         eastl::vector<Tile> tiles;
         if (meldCount < 0 || meldCount > kSetsInHand || TotalTiles(counts) != kWinningHandTiles - 1 - meldCount * kTilesPerSet) {
             return tiles;
         }
         TileCounts probe = counts;
         for (uint8_t id = 0; id < kKindCount; ++id) {
-            if (counts[id] >= kCopiesPerTile) {
+            if (counts[id] + meldTiles[id] >= kCopiesPerTile) {
                 continue;
             }
             ++probe[id];
@@ -180,6 +204,10 @@ namespace BECore::Mahjong {
             --probe[id];
         }
         return tiles;
+    }
+
+    eastl::vector<Tile> WinningTiles(const PlayerHand& hand) {
+        return WinningTiles(CountTiles(hand.concealed), static_cast<int>(hand.melds.size()), CountMeldTiles(hand.melds));
     }
 
 }  // namespace BECore::Mahjong

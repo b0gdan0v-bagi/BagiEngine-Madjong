@@ -8,9 +8,11 @@ namespace BECore::Mahjong {
 
     /// Tiles each seat holds after the deal.
     inline constexpr int kDealtTiles = 13;
-    /// The deal goes round the table taking this many tiles at a time, until every seat has `kDealtBlockRounds * kDealBlock` tiles.
+    /// The deal goes round the table taking this many tiles at a time, until every seat has `kDealBlockRounds * kDealBlock` tiles.
     inline constexpr int kDealBlock = 4;
     inline constexpr int kDealBlockRounds = 3;
+    /// The three rounds of four, then one tile each.
+    static_assert(kDealtTiles == kDealBlockRounds * kDealBlock + 1);
 
     /**
      * @brief Deals 13 tiles to each seat from the live wall.
