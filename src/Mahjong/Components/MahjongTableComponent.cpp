@@ -44,16 +44,30 @@ namespace BECore::Mahjong {
             }
         };
 
-        /// The picture `name` of the canvas on the node `Actions`; null when the scene has none.
-        UIImage* FindActionImage(Scene& scene, PoolString name) {
+        /// The element `name` of the canvas on the node `Actions`; null when the scene has none.
+        UIElement* FindActionElement(Scene& scene, PoolString name) {
             for (const auto& node : scene.GetRootNode().GetChildren()) {
                 if (node->GetName() == "Actions"_intern) {
                     const auto canvas = node->GetComponent<UICanvasComponent>();
-                    UIElement* element = canvas ? canvas->GetRoot().FindByName(name) : nullptr;
-                    return element != nullptr ? element->Cast<UIImage>() : nullptr;
+                    return canvas ? canvas->GetRoot().FindByName(name) : nullptr;
                 }
             }
             return nullptr;
+        }
+
+        /// The sentence of the shown button under the pointer (the canvas sets `UIElement::hovered` from the mouse); empty when none is.
+        eastl::string_view HoveredHint(Scene& scene, const ActionButtons& buttons) {
+            for (int i = 0; i < kButtonCount; ++i) {
+                const ButtonKind kind = static_cast<ButtonKind>(i);
+                if (!buttons[kind].shown) {
+                    continue;  // a hidden button may still carry the flag of the last motion
+                }
+                const UIElement* element = FindActionElement(scene, PoolString::Intern(SpecOf(kind).element));
+                if (element != nullptr && element->hovered) {
+                    return buttons[kind].hint;
+                }
+            }
+            return {};
         }
 
         Faces FacesOf(const TableSession& session) {
@@ -211,9 +225,10 @@ namespace BECore::Mahjong {
                 if (showNow == showBefore && (!showNow || sameTile)) {
                     continue;
                 }
-                const PoolString imageName = PoolString::Intern(TileImageName(static_cast<ButtonKind>(i), t));
+                const PoolString imageName = PoolString::Intern(TileImageName(kind, t));
                 if (showNow) {
-                    if (UIImage* image = FindActionImage(scene, imageName)) {
+                    UIElement* element = FindActionElement(scene, imageName);
+                    if (UIImage* image = element != nullptr ? element->Cast<UIImage>() : nullptr) {
                         image->sprite = PoolString::Intern(SpriteName(now.tiles[static_cast<size_t>(t)]));
                     }
                 }
@@ -224,6 +239,15 @@ namespace BECore::Mahjong {
         }
         _published = buttons;
         vars.Set("declareNext"_intern, _declareNext ? kDeclareOn : kDeclareOff);
+
+        // The hint of the button under the pointer, in the label `Hint` that shows exactly while there is one
+        const eastl::string_view hint = HoveredHint(scene, buttons);
+        const PoolString actionHint = "actionHint"_intern;
+        if (hint != _hint || !vars.Has(actionHint)) {
+            _hint = hint;
+            vars.Set(actionHint, hint);
+            UICanvasComponent::SetElementVisibleByName(scene, "Hint"_intern, !hint.empty());
+        }
 
         // The cover of a hot seat: a modal canvas, shown exactly while the screen waits for the next person
         const bool handoff = game != nullptr && game->GetSession().HandoffPending();

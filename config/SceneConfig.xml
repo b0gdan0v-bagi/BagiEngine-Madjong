@@ -29,11 +29,15 @@
           its sprite (Tile_<notation> of TextureLibrary.xml) and shows it; a picture takes no input, so a click on it is a click on the button.
           A button is 56 view units high, which is a 32 px touch target from a window of 731 x 411 px; the table is a fixed design that the
           engine scales to the window, so a smaller window has smaller buttons and tiles (a tile is 21 x 28 units, the 3:4 of an atlas cell).
+          The label Hint above the row shows the sentence of the button under the pointer ({actionHint}, set by the component from
+          UIElement::hovered; hidden while there is none). It takes no input, so it never eats a click; it lies over the right seat's discards,
+          a tooltip may cover tiles for as long as the pointer rests on a button, but never the row it explains. A touch screen has no hover.
         -->
         <node name="Actions" layer="10">
           <components>
             <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
               <elements>
+                <element type="UILabel" name="Hint" anchor="TopLeft" ignoreSafeArea="true" visible="false" x="724" y="392" width="408" height="60" text="{actionHint}" fontSize="18" align="Center" verticalAlign="Center" color="0,0,0,200" />
                 <element type="UIStack" name="ActionRow" anchor="TopLeft" ignoreSafeArea="true" x="724" y="460" width="408" height="180" direction="Horizontal" spacing="6" wrapChildren="true">
                   <children>
                   <element type="UIButton" name="Win" visible="false" width="132" height="56" text="Mahjong!" fontSize="22" action="MahjongWin" color="40,110,60,255" />

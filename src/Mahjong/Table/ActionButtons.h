@@ -37,8 +37,8 @@ namespace BECore::Mahjong {
 
     [[nodiscard]] const ButtonSpec& SpecOf(ButtonKind kind) noexcept;
 
-    /// The name of the `UIImage` that pictures tile `t` (0..`maxTiles` - 1) on the button, as the scene file has it: "ClaimChowTile1"
-    /// style, the element of the button, `Tile` and the number.
+    /// The name of the `UIImage` that pictures tile `t` (0..`maxTiles` - 1) on the button, as the scene file has it: the element of
+    /// the button, `Tile` and the number ("Chow1Tile2").
     [[nodiscard]] inline eastl::string TileImageName(ButtonKind kind, int t) {
         return Format("{}Tile{}", SpecOf(kind).element, t);
     }

@@ -23,10 +23,17 @@ namespace BECore::Mahjong::Tests {
         constexpr float kSmallestWindowTouchMinimum = 20.0f;
         /// The height of the line of the word at the top of a button; the pictures of tiles lie below it.
         constexpr float kWordLineHeight = 24.0f;
-        /// The smallest tile picture in view units (the 3:4 of an atlas cell), so a tile can be told at the smallest window of the matrix.
+        /// The width of an action button in view units.
         constexpr float kButtonWidth = 132.0f;
+        /// The smallest tile picture in view units (the 3:4 of an atlas cell), so a tile can be told at the smallest window of the matrix.
         constexpr float kLeastTileWidth = 20.0f;
         constexpr float kLeastTileHeight = 26.0f;
+        /// Output sizes the hint is asked in: the design size, a small window, the narrowest windows.
+        struct Output {
+            float width;
+            float height;
+        };
+        constexpr Output kOutputs[] = {{1280.0f, 720.0f}, {731.0f, 411.0f}, {853.0f, 480.0f}, {480.0f, 480.0f}, {480.0f, 853.0f}};
         constexpr float kTileShape = 3.0f / 4.0f;
         constexpr float kShapeTolerance = 0.02f;
         /// A pile longer than any hand leaves (136 tiles, 52 in the hands at the least).
@@ -80,7 +87,7 @@ namespace BECore::Mahjong::Tests {
             }
             EXPECT_EQ(images, spec.maxTiles) << spec.element;
             for (int t = 0; t < kMaxButtonTiles; ++t) {
-                const std::string name = TileImageName(static_cast<ButtonKind>(i), t).c_str();
+                const std::string name = TileImageName(kind, t).c_str();
                 EXPECT_EQ(Element("Actions", name.c_str()) != nullptr, t < spec.maxTiles) << name;
             }
         }
@@ -102,7 +109,8 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_TRUE(names.insert(name).second) << "duplicate name " << name;
             }
             if (const auto* label = element->Cast<UILabel>()) {
-                EXPECT_EQ(std::string(label->text.c_str()).find('{'), std::string::npos) << name << " has a variable in its text";
+                // Only the hint follows a variable; the words of the buttons are fixed text
+                EXPECT_EQ(std::string(label->text.c_str()).find('{') == std::string::npos, name != "Hint") << name << " and its variable";
             }
             for (const auto& child : element->children) {
                 pending.push_back(child.Get());
@@ -139,7 +147,8 @@ namespace BECore::Mahjong::Tests {
         Canvas("Actions")->UpdateLayout(kViewWidth, kViewHeight);
 
         for (int i = 0; i < kButtonCount; ++i) {
-            const ButtonSpec& spec = SpecOf(static_cast<ButtonKind>(i));
+            const ButtonKind kind = static_cast<ButtonKind>(i);
+            const ButtonSpec& spec = SpecOf(kind);
             const UIElement* button = Element("Actions", spec.element);
             ASSERT_NE(button, nullptr) << spec.element;
             const Rect& outer = button->rect;
@@ -147,7 +156,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_GE(outer.h, kButtonHeight) << spec.element;
             const UIElement* previous = nullptr;
             for (int t = 0; t < spec.maxTiles; ++t) {
-                const std::string name = TileImageName(static_cast<ButtonKind>(i), t).c_str();
+                const std::string name = TileImageName(kind, t).c_str();
                 const UIElement* picture = Element("Actions", name.c_str());
                 ASSERT_NE(picture, nullptr) << name;
                 const Rect& r = picture->rect;
@@ -182,6 +191,53 @@ namespace BECore::Mahjong::Tests {
             const float fit = kSmallestTouchWindowHeight / kViewHeight;  // the window of 731 x 411 shows the 1280 x 720 view at this scale
             EXPECT_GE(element->rect.h * fit, CoreManager::GetUIEnvironment().GetSettings().minTouchSize - 0.5f) << SpecOf(static_cast<ButtonKind>(i)).element;
         }
+    }
+
+    TEST_F(MahjongTableScreenTest, TheHintTakesNoInputLiesInTheViewClearOfTheButtonsAndHoldsTheLongestSentenceInEveryWindow) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        auto canvas = Canvas("Actions");
+        ASSERT_TRUE(canvas);
+        const UIElement* hint = Element("Actions", "Hint");
+        ASSERT_NE(hint, nullptr);
+        EXPECT_FALSE(OnScreen("Actions", "Hint")) << "hidden in the file";
+        EXPECT_FALSE(hint->IsHitTestable()) << "a tooltip never takes a click";
+        EXPECT_TRUE(hint->ignoreSafeArea);
+
+        eastl::string_view longest;
+        for (int i = 0; i < kButtonCount; ++i) {
+            const eastl::string_view sentence = HintOf(static_cast<ButtonKind>(i));
+            if (sentence.size() > longest.size()) {
+                longest = sentence;
+            }
+        }
+        CoreManager::GetUIVars().Set("actionHint"_intern, longest);
+        ASSERT_TRUE(canvas->SetElementVisible("Hint"_intern, true));
+        // With the fullest turn and the fullest window under it, as the matrix test of the buttons has them
+        for (const std::vector<ButtonKind>& kinds :
+             {std::vector<ButtonKind>{ButtonKind::Win, ButtonKind::Declare, ButtonKind::ConcealedKong0, ButtonKind::ConcealedKong1, ButtonKind::ConcealedKong2, ButtonKind::UpgradeKong},
+              std::vector<ButtonKind>{ButtonKind::ClaimMahjong, ButtonKind::ClaimKong, ButtonKind::ClaimPung, ButtonKind::ClaimChow0, ButtonKind::ClaimChow1, ButtonKind::ClaimChow2,
+                                      ButtonKind::Pass}}) {
+            for (int i = 0; i < kButtonCount; ++i) {
+                SetShown(static_cast<ButtonKind>(i), false);
+            }
+            for (const ButtonKind kind : kinds) {
+                SetShown(kind, true);
+            }
+            ExpectPassesTheMatrix("Actions", kSmallestWindowTouchMinimum);
+            for (const Output& output : kOutputs) {
+                ExpectWordsFit("Actions", output.width, output.height, 0.0f);
+            }
+        }
+
+        canvas->UpdateLayout(kViewWidth, kViewHeight);
+        const Rect& plate = hint->rect;
+        EXPECT_GE(plate.x, 0.0f);
+        EXPECT_GE(plate.y, 0.0f);
+        EXPECT_LE(plate.x + plate.w, kViewWidth);
+        EXPECT_LE(plate.y + plate.h, kViewHeight);
+        const Rect& row = Element("Actions", "ActionRow")->rect;
+        const bool apart = plate.x + plate.w <= row.x || plate.x >= row.x + row.w || plate.y + plate.h <= row.y || plate.y >= row.y + row.h;
+        EXPECT_TRUE(apart) << "the hint does not lie over the buttons it explains";
     }
 
     TEST_F(MahjongTableScreenTest, TheCoverPassesTheSizeMatrixWithTheLongestSeatName) {
