@@ -2,6 +2,8 @@
 #include "MahjongTableTestSupport.h"
 
 #include <BECore/UI/UIButton.h>
+#include <BECore/UI/UIImage.h>
+#include <BECore/UI/UILabel.h>
 #include <Events/InputEvents.h>
 
 /**
@@ -70,6 +72,66 @@ namespace BECore::Mahjong::Tests {
             return shown;
         }
 
+        /// The sprites of the tile pictures on screen on a button, in order; the picture of a hidden button or without a tile is not on screen.
+        std::vector<std::string> PicturesOf(ButtonKind kind) const {
+            std::vector<std::string> sprites;
+            for (int t = 0; t < kMaxButtonTiles; ++t) {
+                const std::string name = TileImageName(kind, t).c_str();
+                if (!OnScreen("Actions", name.c_str())) {
+                    continue;
+                }
+                const auto* image = Element("Actions", name.c_str())->Cast<UIImage>();
+                EXPECT_NE(image, nullptr) << name;
+                if (image != nullptr) {
+                    sprites.emplace_back(image->sprite.ToStringView().data(), image->sprite.ToStringView().size());
+                }
+            }
+            return sprites;
+        }
+
+        /// No button that is off screen has a picture on screen.
+        void ExpectPicturesOnlyOnShownButtons() const {
+            for (int i = 0; i < kButtonCount; ++i) {
+                const ButtonKind kind = static_cast<ButtonKind>(i);
+                if (!OnScreen("Actions", SpecOf(kind).element)) {
+                    EXPECT_TRUE(PicturesOf(kind).empty()) << SpecOf(kind).element;
+                }
+            }
+        }
+
+        /// The pointer moves to the middle of an element of the canvas `Actions` as the last draw put it (the canvas sets its hover).
+        void HoverOver(const char* element) {
+            const UIElement* found = Element("Actions", element);
+            ASSERT_NE(found, nullptr) << element;
+            HoverAt(found->rect.x + found->rect.w * 0.5f, found->rect.y + found->rect.h * 0.5f);
+        }
+
+        void HoverAt(float x, float y) {
+            SDL_MouseMotionEvent motion{};
+            motion.type = SDL_EVENT_MOUSE_MOTION;
+            motion.x = x;
+            motion.y = y;
+            CoreManager::GetUIInput().DispatchMouseMotion(motion);
+        }
+
+        /// The hint as the player sees it: the text of the label `Hint` when it is on screen, else empty. The variable has to agree.
+        std::string HintOnScreen() const {
+            const bool shown = OnScreen("Actions", "Hint");
+            const std::string variable = Var("actionHint");
+            EXPECT_EQ(shown, !variable.empty()) << "the label is shown exactly while there is a sentence";
+            const auto* label = Element("Actions", "Hint") != nullptr ? Element("Actions", "Hint")->Cast<UILabel>() : nullptr;
+            EXPECT_NE(label, nullptr);
+            if (!shown || label == nullptr) {
+                return {};
+            }
+            EXPECT_EQ(std::string(label->GetDisplayText().data(), label->GetDisplayText().size()), variable);
+            return variable;
+        }
+
+        static std::string Sentence(ButtonKind kind) {
+            return std::string(HintOf(kind).data(), HintOf(kind).size());
+        }
+
         std::string LabelOf(const char* element) const {
             const auto* button = Element("Actions", element) != nullptr ? Element("Actions", element)->Cast<UIButton>() : nullptr;
             EXPECT_NE(button, nullptr) << element;
@@ -94,10 +156,46 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(_game->GetSession().Actor(), kSeat1);
 
         EXPECT_EQ(OnScreenButtons(), (std::vector<ButtonKind>{ButtonKind::ClaimPung, ButtonKind::ClaimChow0, ButtonKind::ClaimChow1, ButtonKind::Pass}));
-        EXPECT_EQ(LabelOf("Chow0"), "Chow 4-6p");
-        EXPECT_EQ(LabelOf("Chow1"), "Chow 5-7p");
+        EXPECT_EQ(LabelOf("Chow0"), "Chow");
+        EXPECT_EQ(LabelOf("Chow1"), "Chow");
         EXPECT_EQ(LabelOf("Pung"), "Pung");
-        EXPECT_EQ(Var("chow0"), "Chow 4-6p");
+        EXPECT_EQ(LabelOf("Pass"), "Pass");
+        // The tiles of the chow in order, the claimed discard on the pung; Pass has none
+        EXPECT_EQ(PicturesOf(ButtonKind::ClaimChow0), (std::vector<std::string>{"Tile_4p", "Tile_5p", "Tile_6p"}));
+        EXPECT_EQ(PicturesOf(ButtonKind::ClaimChow1), (std::vector<std::string>{"Tile_5p", "Tile_6p", "Tile_7p"}));
+        EXPECT_EQ(PicturesOf(ButtonKind::ClaimPung), (std::vector<std::string>{"Tile_5p"}));
+        EXPECT_TRUE(PicturesOf(ButtonKind::Pass).empty());
+        ExpectPicturesOnlyOnShownButtons();
+    }
+
+    TEST_F(MahjongTableActionsTest, ThePicturesGoWithTheButtonsAndTheLabelVariablesAreGone) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kPersonAtSeat1, ClaimWindowModel()));
+        ASSERT_FALSE(PicturesOf(ButtonKind::ClaimChow0).empty());
+
+        EmitAction("MahjongPass");
+        Draw();
+
+        EXPECT_TRUE(OnScreenButtons().empty());
+        for (int i = 0; i < kButtonCount; ++i) {
+            EXPECT_TRUE(PicturesOf(static_cast<ButtonKind>(i)).empty()) << SpecOf(static_cast<ButtonKind>(i)).element;
+        }
+        for (const char* name : {"chow0", "chow1", "chow2", "kong0", "kong1", "kong2", "upgrade"}) {
+            EXPECT_FALSE(CoreManager::GetUIVars().Has(PoolString::Intern(name))) << name;
+        }
+    }
+
+    TEST_F(MahjongTableActionsTest, AClickOnThePictureOfAChowButtonClaimsThatChow) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kPersonAtSeat1, ClaimWindowModel()));
+        const UIElement* picture = Element("Actions", "Chow1Tile1");
+        ASSERT_NE(picture, nullptr);
+        ASSERT_TRUE(OnScreen("Actions", "Chow1Tile1"));
+
+        EXPECT_TRUE(Click(picture->rect.x + picture->rect.w * 0.5f, picture->rect.y + picture->rect.h * 0.5f));
+
+        const PlayerHand& held = Hand().GetHand(kSeat1);
+        ASSERT_EQ(held.melds.size(), 1u);
+        EXPECT_EQ(held.melds[0].kind, MeldKind::Chow);
+        EXPECT_EQ(held.melds[0].first, T("5p"));
     }
 
     TEST_F(MahjongTableActionsTest, PungLaysAPungAndTheSeatDiscardsNext) {
@@ -175,6 +273,8 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(_game->GetSession().Actor(), kSeat1);
 
         EXPECT_EQ(OnScreenButtons(), (std::vector<ButtonKind>{ButtonKind::ClaimMahjong, ButtonKind::ClaimChow0, ButtonKind::Pass}));
+        EXPECT_EQ(LabelOf("Mahjong"), "Mahjong!");
+        EXPECT_EQ(PicturesOf(ButtonKind::ClaimMahjong), (std::vector<std::string>{"Tile_5p"})) << "the discard that completes the hand";
 
         EmitAction("MahjongClaimMahjong");
         Draw();
@@ -194,6 +294,8 @@ namespace BECore::Mahjong::Tests {
 
         const std::vector<ButtonKind> shown = OnScreenButtons();
         EXPECT_NE(std::find(shown.begin(), shown.end(), ButtonKind::Win), shown.end());
+        EXPECT_EQ(LabelOf("Win"), "Mahjong!");
+        EXPECT_TRUE(PicturesOf(ButtonKind::Win).empty());
 
         EmitAction("MahjongWin");
 
@@ -209,7 +311,8 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, MakeModel(spec)));
         const std::vector<ButtonKind> shown = OnScreenButtons();
         EXPECT_NE(std::find(shown.begin(), shown.end(), ButtonKind::ConcealedKong0), shown.end());
-        EXPECT_EQ(LabelOf("ConcealedKong0"), "Kong 1p");
+        EXPECT_EQ(LabelOf("ConcealedKong0"), "Kong");
+        EXPECT_EQ(PicturesOf(ButtonKind::ConcealedKong0), (std::vector<std::string>{"Tile_1p"}));
 
         EmitAction("MahjongConcealedKong", "0");
         Draw();
@@ -255,7 +358,8 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(_game->GetSession().Actor(), kSeat1);
         const std::vector<ButtonKind> shown = OnScreenButtons();
         ASSERT_NE(std::find(shown.begin(), shown.end(), ButtonKind::UpgradeKong), shown.end());
-        EXPECT_EQ(LabelOf("UpgradeKong"), "Add 5p");
+        EXPECT_EQ(LabelOf("UpgradeKong"), "Add to pung");
+        EXPECT_EQ(PicturesOf(ButtonKind::UpgradeKong), (std::vector<std::string>{"Tile_5p"}));
 
         EmitAction("MahjongUpgradeKong");
 
@@ -272,12 +376,135 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(_game->GetSession().Actor(), kSeat2);
 
         EXPECT_EQ(OnScreenButtons(), (std::vector<ButtonKind>{ButtonKind::ClaimMahjong, ButtonKind::Pass}));
+        EXPECT_EQ(PicturesOf(ButtonKind::ClaimMahjong), (std::vector<std::string>{"Tile_5p"})) << "the tile of the kong that is robbed";
 
         EmitAction("MahjongClaimMahjong");
 
         ASSERT_TRUE(Hand().Result().has_value());
         EXPECT_EQ(Hand().Result()->source, WinSource::RobbedKong);
         EXPECT_EQ(Hand().Result()->winner, kSeat2);
+    }
+
+    // ----- the hint on hover -----
+
+    TEST_F(MahjongTableActionsTest, TheHintIsHiddenUntilThePointerRestsOnAButton) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kPersonAtSeat1, ClaimWindowModel()));
+        EXPECT_EQ(HintOnScreen(), "");
+
+        HoverOver("Chow0");
+        Draw();
+        EXPECT_EQ(HintOnScreen(), Sentence(ButtonKind::ClaimChow0));
+
+        HoverOver("Pass");
+        Draw();
+        EXPECT_EQ(HintOnScreen(), Sentence(ButtonKind::Pass)) << "the hint follows the pointer from button to button";
+
+        HoverAt(100.0f, 650.0f);  // the felt
+        Draw();
+        EXPECT_EQ(HintOnScreen(), "");
+    }
+
+    TEST_F(MahjongTableActionsTest, ThePictureOfAButtonIsPartOfTheButtonForTheHint) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kPersonAtSeat1, ClaimWindowModel()));
+
+        HoverOver("Chow1Tile1");
+        Draw();
+
+        EXPECT_EQ(HintOnScreen(), Sentence(ButtonKind::ClaimChow1));
+    }
+
+    TEST_F(MahjongTableActionsTest, TheHintGoesWhenTheButtonUnderThePointerGoes) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kPersonAtSeat1, ClaimWindowModel()));
+        HoverOver("Pass");
+        Draw();
+        ASSERT_EQ(HintOnScreen(), Sentence(ButtonKind::Pass));
+
+        EmitAction("MahjongPass");  // the pointer has not moved, but the button is gone
+        Draw();
+
+        EXPECT_TRUE(OnScreenButtons().empty());
+        EXPECT_EQ(HintOnScreen(), "");
+    }
+
+    TEST_F(MahjongTableActionsTest, TheHintFollowsTheButtonThatIsUnderThePointerAfterANewWindow) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kPersonAtSeat1, ClaimWindowModel()));
+        const UIElement* first = Element("Actions", "Pung");  // the first button of the row
+        ASSERT_NE(first, nullptr);
+        const float x = first->rect.x + first->rect.w * 0.5f;
+        const float y = first->rect.y + first->rect.h * 0.5f;
+        HoverAt(x, y);
+        Draw();
+        ASSERT_EQ(HintOnScreen(), Sentence(ButtonKind::ClaimPung));
+
+        Lay(MahjongWindowModel());  // a new window: the first button of the row is now Mahjong
+        Draw();
+        HoverAt(x, y);
+        Draw();
+
+        ASSERT_TRUE(_table->GetButtons()[ButtonKind::ClaimMahjong].shown);
+        EXPECT_EQ(HintOnScreen(), Sentence(ButtonKind::ClaimMahjong));
+    }
+
+    TEST_F(MahjongTableActionsTest, TheDeclareToggleHasItsSentence) {
+        FixedWallSpec spec = SpecOf("1p 2p 3p 4s 5s 6s 7m 8m 9m Ew Ew Ew Rd", "9p");
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, MakeModel(spec)));
+        ASSERT_TRUE(_table->GetButtons()[ButtonKind::Declare].shown);
+
+        HoverOver("Declare");
+        Draw();
+
+        EXPECT_EQ(HintOnScreen(), Sentence(ButtonKind::Declare));
+    }
+
+    TEST_F(MahjongTableActionsTest, AClickOnAButtonStillPerformsItWhileItsHintIsUp) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kPersonAtSeat1, ClaimWindowModel()));
+        HoverOver("Pung");
+        Draw();
+        ASSERT_EQ(HintOnScreen(), Sentence(ButtonKind::ClaimPung));
+
+        EXPECT_TRUE(ClickElement("Actions", "Pung"));
+
+        ASSERT_EQ(Hand().GetHand(kSeat1).melds.size(), 1u);
+        EXPECT_EQ(Hand().GetHand(kSeat1).melds[0].kind, MeldKind::Pung);
+    }
+
+    TEST_F(MahjongTableActionsTest, TheHintTakesNoClickAndNoPointerHover) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kPersonAtSeat1, ClaimWindowModel()));
+        HoverOver("Pass");
+        Draw();
+        ASSERT_EQ(HintOnScreen(), Sentence(ButtonKind::Pass));
+        const UIElement* hint = Element("Actions", "Hint");
+        ASSERT_NE(hint, nullptr);
+        const std::string before = Snapshot(Hand());
+
+        EXPECT_FALSE(Click(hint->rect.x + hint->rect.w * 0.5f, hint->rect.y + hint->rect.h * 0.5f)) << "the canvas does not take a click on the hint";
+
+        EXPECT_EQ(Snapshot(Hand()), before);
+        HoverAt(hint->rect.x + hint->rect.w * 0.5f, hint->rect.y + hint->rect.h * 0.5f);
+        Draw();
+        EXPECT_EQ(HintOnScreen(), "") << "the pointer on the hint is not on a button";
+    }
+
+    TEST_F(MahjongTableActionsTest, AFrameWhereTheHoveredButtonDidNotChangeSetsNothing) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kPersonAtSeat1, ClaimWindowModel()));
+        HoverOver("Chow0");
+        Draw();
+        ASSERT_EQ(HintOnScreen(), Sentence(ButtonKind::ClaimChow0));
+        const uint64_t version = CoreManager::GetUIVars().GetVersion();
+
+        Draw();
+        Draw();
+
+        EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), version);
+    }
+
+    TEST_F(MahjongTableActionsTest, NoHintAtAnEmptyTable) {
+        ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
+        Draw();
+        HoverAt(800.0f, 500.0f);
+        Draw();
+
+        EXPECT_EQ(HintOnScreen(), "");
     }
 
 }  // namespace BECore::Mahjong::Tests
