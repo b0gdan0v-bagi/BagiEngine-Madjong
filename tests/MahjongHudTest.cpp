@@ -4,6 +4,7 @@
 #include <BECore/Control/Json.h>
 #include <Events/SceneEvents.h>
 #include <Mahjong/Components/MahjongHudComponent.h>
+#include <Mahjong/Table/ScoreText.h>
 #include <Mahjong/Table/SeatName.h>
 
 /**
@@ -343,6 +344,11 @@ namespace BECore::Mahjong::Tests {
                     EXPECT_GE(segment->rect.h, kMinControlHeight) << seat << kind;
                 }
             }
+            for (const char* language : {"LanguageEn", "LanguageRu"}) {
+                const UIElement* segment = Element("Setup", language);
+                ASSERT_NE(segment, nullptr);
+                EXPECT_GE(segment->rect.h, kMinControlHeight) << language;
+            }
             EXPECT_GE(Element("Setup", "Start")->rect.h, kMinControlHeight);
         });
     }
@@ -383,6 +389,129 @@ namespace BECore::Mahjong::Tests {
     }
 
     // ----- the seat choice -----
+
+    // ----- the language row -----
+
+    TEST_F(MahjongHudTest, TheLanguageRowShowsTheLanguageOfTheGameAndEachLanguageIsWrittenInItself) {
+        _game->Start();
+        Draw();
+        ASSERT_TRUE(SetupShown());
+
+        EXPECT_EQ(Var("language"), "en");
+        EXPECT_EQ(Text("Setup", "LanguageCaption"), "Language");
+        EXPECT_EQ(Text("Setup", "LanguageEn"), "English");
+        EXPECT_EQ(Text("Setup", "LanguageRu"), "Русский");
+        EXPECT_TRUE(Element("Setup", "LanguageEn")->Cast<UIButton>()->selected);
+        EXPECT_FALSE(Element("Setup", "LanguageRu")->Cast<UIButton>()->selected);
+        EXPECT_GE(Element("Setup", "LanguageEn")->rect.h, kMinControlHeight);
+        EXPECT_GE(Element("Setup", "LanguageRu")->rect.h, kMinControlHeight);
+
+        ASSERT_TRUE(_game->SetLanguage("ru"_intern));
+        Draw();
+        EXPECT_EQ(Text("Setup", "LanguageEn"), "English") << "a language is written the same in both";
+        EXPECT_EQ(Text("Setup", "LanguageRu"), "Русский");
+        EXPECT_EQ(Text("Setup", "LanguageCaption"), "Язык");
+    }
+
+    TEST_F(MahjongHudTest, AClickOnRussianChangesTheGameAndTheWordsOfSetupAndTheHud) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        _game->OpenSetup();
+        Draw();
+        ASSERT_EQ(_game->GetLanguage(), "en"_intern);
+
+        ASSERT_TRUE(ClickElement("Setup", "LanguageRu"));
+        Draw();
+
+        EXPECT_EQ(_game->GetLanguage(), "ru"_intern);
+        EXPECT_EQ(CoreManager::GetUIStrings().GetLanguage(), "ru"_intern);
+        EXPECT_EQ(Var("language"), "ru");
+        EXPECT_TRUE(Element("Setup", "LanguageRu")->Cast<UIButton>()->selected);
+        EXPECT_FALSE(Element("Setup", "LanguageEn")->Cast<UIButton>()->selected);
+        EXPECT_EQ(Text("Setup", "Title"), "Новая игра: кто играет?");
+        EXPECT_EQ(Text("Setup", "Seat3Computer"), "Компьютер");
+        EXPECT_EQ(Text("Hud", "RoundLabel"), "Раунд: Восток, раздача 1 из 16");
+        EXPECT_EQ(Var("round"), "Восток");
+        EXPECT_EQ(SeatKindVar(1), "computer") << "the seats are untouched";
+
+        ASSERT_TRUE(ClickElement("Setup", "LanguageEn"));
+        Draw();
+        EXPECT_EQ(_game->GetLanguage(), "en"_intern);
+        EXPECT_EQ(Text("Setup", "Title"), "New game: who plays?");
+        EXPECT_EQ(Text("Hud", "RoundLabel"), "Round: East, hand 1 of 16");
+    }
+
+    TEST_F(MahjongHudTest, TheChoiceIsKeptByStartNewGameAndAControlReset) {
+        _game->Start();
+        Draw();
+        ASSERT_TRUE(ClickElement("Setup", "LanguageRu"));
+        ASSERT_TRUE(ClickElement("Setup", "Start"));
+        Draw();
+
+        EXPECT_FALSE(SetupShown());
+        EXPECT_EQ(CoreManager::GetUIStrings().GetLanguage(), "ru"_intern) << "a started match speaks the language of the game";
+        EXPECT_EQ(Text("Hud", "NewGame"), "Новая игра");
+
+        ASSERT_TRUE(ClickElement("Hud", "NewGame"));
+        Draw();
+        EXPECT_TRUE(SetupShown());
+        EXPECT_EQ(Var("language"), "ru") << "the row shows the language the game has";
+        EXPECT_TRUE(Element("Setup", "LanguageRu")->Cast<UIButton>()->selected);
+        EXPECT_EQ(Text("Setup", "Start"), "Начать");
+
+        Json options = Json::object();
+        options["seed"] = 5;
+        ASSERT_TRUE(_game->AsControllable()->Reset(options).has_value());
+        Draw();
+        EXPECT_EQ(_game->GetLanguage(), "ru"_intern);
+        EXPECT_EQ(Text("Hud", "RoundLabel"), "Раунд: Восток, раздача 1 из 16");
+    }
+
+    TEST_F(MahjongHudTest, AnUnknownLanguageChangesNothingAndNeitherDoesAClickWhileThePanelIsClosed) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        _game->OpenSetup();
+        Draw();
+        EmitAction("MahjongSetLanguage", "de");
+        EmitAction("MahjongSetLanguage", "");
+        Draw();
+        EXPECT_EQ(_game->GetLanguage(), "en"_intern);
+        EXPECT_EQ(CoreManager::GetUIStrings().GetLanguage(), "en"_intern);
+        EXPECT_EQ(Var("language"), "en") << "the variable keeps the truth";
+        EXPECT_TRUE(Element("Setup", "LanguageEn")->Cast<UIButton>()->selected);
+
+        _game->CloseSetup();
+        Draw();
+        ASSERT_FALSE(SetupShown());
+        const uint64_t strings = CoreManager::GetUIStrings().GetVersion();
+        EmitAction("MahjongSetLanguage", "ru");
+        Draw();
+        EXPECT_EQ(_game->GetLanguage(), "en"_intern) << "a stale click is ignored";
+        EXPECT_EQ(CoreManager::GetUIStrings().GetVersion(), strings);
+        EXPECT_EQ(Text("Hud", "NewGame"), "New game");
+    }
+
+    TEST_F(MahjongHudTest, TheLanguageOfTheScoreTableAndTheStandingsFollowsTheRowOfSetup) {
+        MahjongSettings settings = _game->GetSettings();
+        settings.handsPerMatch = kRoundsPerMatch;
+        _game->SetSettings(settings);
+        ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
+        _game->GetSession().RunComputers();
+        ASSERT_EQ(_game->GetSession().GetPhase(), SessionPhase::HandOver);
+        Draw();
+        EXPECT_EQ(Text("HandOver", "NextHand"), "Next hand");
+
+        _game->OpenSetup();  // New game over the score table
+        Draw();
+        ASSERT_TRUE(ClickElement("Setup", "LanguageRu"));
+        Draw();
+        EXPECT_EQ(Text("HandOver", "NextHand"), "Следующая раздача");
+
+        _game->CloseSetup();
+        ASSERT_NO_FATAL_FAILURE(PlayMatchToTheEnd());
+        Draw();
+        EXPECT_EQ(Text("MatchOver", "NewGame"), "Новая игра");
+        EXPECT_EQ(Text("MatchOver", "Headline"), FormatStandings(CoreManager::GetUIStrings(), _game->GetMatch(), _game->GetSession().Seats()).headline.c_str());
+        EXPECT_EQ(Var("standing0").find("1. "), 0u);
+    }
 
     TEST_F(MahjongHudTest, TheGameStartsWithTheSeatChoiceOpenOnTheSeatsOfTheGame) {
         _game->SetSeats(kTwoPeople);

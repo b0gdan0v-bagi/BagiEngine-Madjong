@@ -21,6 +21,7 @@ namespace BECore::Mahjong {
         constexpr eastl::string_view kNewGameAction = "MahjongNewGame";
         constexpr eastl::string_view kStartAction = "MahjongStart";
         constexpr eastl::string_view kNextHandAction = "MahjongNextHand";
+        constexpr eastl::string_view kSetLanguageAction = "MahjongSetLanguage";
 
         /// "seatName2": the variable of a seat.
         PoolString SeatVar(const char* base, Seat seat) {
@@ -130,11 +131,16 @@ namespace BECore::Mahjong {
         }
     }
 
+    void MahjongHudComponent::PublishLanguage(const MahjongGame& game) const {
+        CoreManager::GetUIVars().Set("language"_intern, game.GetLanguage().ToStringView());
+    }
+
     void MahjongHudComponent::PublishSetup(const MahjongGame* game) {
         const bool open = game != nullptr && game->IsSetupOpen();
         if (open && !_setupShown) {
             _pending = game->GetSeats();  // the panel opens on the seats of the last match
             PublishSeatKinds();
+            PublishLanguage(*game);
         }
         if (open != _setupShown) {
             _setupShown = open;
@@ -245,6 +251,12 @@ namespace BECore::Mahjong {
                 game->SetSeats(before);
                 LOG_WARNING("MahjongHudComponent: the match did not start, the seat choice stays open");
             }
+            return;
+        }
+        if (action == kSetLanguageAction) {
+            // The game keeps the language and applies it to the table; an id the table does not have changes nothing, the variable keeps the truth
+            game->SetLanguage(event.value);
+            PublishLanguage(*game);
             return;
         }
         const std::optional<Seat> seat = SeatOfAction(action);

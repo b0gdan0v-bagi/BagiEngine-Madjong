@@ -1,8 +1,10 @@
 #include "ComputerTestSupport.h"
 #include "FixedWall.h"
 #include "HandTestSupport.h"
+#include "StringsTestSupport.h"
 
 #include <BECore/Control/Json.h>
+#include <BECore/GameManager/CoreManager.h>
 #include <Common/EngineEnvironment.h>
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/MahjongGameControl.h>
@@ -425,6 +427,41 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(Reset("{\"seed\": 5, \"seats\": \"PCCC\"}"));
         EXPECT_EQ(Stable(State()), first);
         EXPECT_NE(other, first);
+    }
+
+    TEST_F(MahjongGameControlTest, TheOutputIsTheSameInEveryLanguage) {
+        UIStrings& strings = CoreManager::GetUIStrings();
+        ASSERT_TRUE(LoadShippedStrings(strings).empty());
+
+        // The same seed, the same moves: the state, the listed actions and the outcome of what a client does
+        const auto play = [&](const char* language) {
+            EXPECT_TRUE(game->SetLanguage(PoolString::Intern(language))) << language;
+            ResetWithEastAtSeat0();
+            // The version counts the changes of the game since it was built, so the second run does not start at the same number
+            const auto unversioned = [](Json json) {
+                json.erase("version");
+                return json;
+            };
+            std::vector<Json> seen;
+            for (int move = 0; move < kMovesChecked && Str(Member(State(), "phase")) == "playing"; ++move) {
+                seen.push_back(unversioned(State()));
+                const Json actions = Actions();
+                seen.push_back(actions);
+                if (actions.empty()) {
+                    break;
+                }
+                seen.push_back(unversioned(Perform(actions[0])));
+            }
+            seen.push_back(unversioned(State()));
+            return seen;
+        };
+        const std::vector<Json> english = play("en");
+        const std::vector<Json> russian = play("ru");
+
+        ASSERT_GT(english.size(), 6u) << "a few moves were played";
+        EXPECT_EQ(russian, english) << "ids, tile notation and the keys of the JSON are not translated";
+        EXPECT_EQ(CoreManager::GetUIStrings().GetLanguage(), "ru"_intern);
+        strings.Clear();
     }
 
     TEST_F(MahjongGameControlTest, NoTileOfAnotherHandIsInTheStateOrTheActions) {

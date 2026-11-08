@@ -225,17 +225,29 @@
           The seat choice of a new game: a modal canvas on the view of the table (SceneView, like the buttons: a Screen canvas would have to
           fit a 320 unit wide window at the user scale 1.5 of the size matrix), hidden here; MahjongHudComponent shows it exactly while
           MahjongGame::IsSetupOpen() (at the start, and after the New game button). Each group carries action MahjongSetSeatN and the value
-          person or computer; its variable seatKindN is set by the component, which also begins the match on MahjongStart. The plate is
-          32 padding + 44 title + 4 x 56 rows + 56 Start + 5 x 12 spacing = 416 units.
+          person or computer; its variable seatKindN is set by the component, which also begins the match on MahjongStart. The row of the
+          language (MahjongSetLanguage, value = the language id, variable language) comes first. The plate is
+          32 padding + 44 title + 5 x 56 rows + 56 Start + 6 x 12 spacing = 484 units.
         -->
         <node name="Setup" layer="30">
           <components>
             <component type="UICanvasComponent" space="SceneView" useSafeArea="true" modal="true" visible="false">
               <elements>
                 <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
-                <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="640" height="416" direction="Vertical" spacing="12" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
+                <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="640" height="484" direction="Vertical" spacing="12" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
                   <children>
                     <element type="UILabel" name="Title" height="44" text="{#setup.title}" fontSize="30" align="Center" />
+                    <element type="UIStack" name="LanguageRow" height="56" direction="Horizontal" spacing="8" crossAlign="Stretch">
+                      <children>
+                        <element type="UILabel" name="LanguageCaption" width="110" height="56" text="{#setup.language}" fontSize="24" verticalAlign="Center" />
+                        <element type="UISegmented" name="Language" bind="language" flex="1" height="56" direction="Horizontal" spacing="4" color="30,30,30,255">
+                          <children>
+                            <element type="UIButton" name="LanguageEn" flex="1" height="56" text="{#lang.en}" fontSize="24" action="MahjongSetLanguage" value="en" color="70,70,100,255" />
+                            <element type="UIButton" name="LanguageRu" flex="1" height="56" text="{#lang.ru}" fontSize="24" action="MahjongSetLanguage" value="ru" color="70,70,100,255" />
+                          </children>
+                        </element>
+                      </children>
+                    </element>
                     <element type="UIStack" name="SeatRow0" height="56" direction="Horizontal" spacing="8" crossAlign="Stretch">
                       <children>
                         <element type="UILabel" name="SeatCaption0" width="110" height="56" text="{#setup.seat1}" fontSize="24" verticalAlign="Center" />

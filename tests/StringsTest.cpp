@@ -1,11 +1,13 @@
 #include "StringsTestSupport.h"
 
+#include <Mahjong/Game/Score.h>
+#include <Mahjong/Game/Tile.h>
+#include <Mahjong/Table/ActionButtons.h>
 #include <Mahjong/Table/Words.h>
-#include <fstream>
 #include <gtest/gtest.h>
 #include <map>
 #include <regex>
-#include <sstream>
+#include <set>
 
 /**
  * The string table of the game (`config/UIStrings.xml`) and the helpers that read it (`Table/Words.h`). Pure logic over a `UIStrings` of the test's own: no scene and no engine
@@ -24,6 +26,68 @@ namespace BECore::Mahjong::Tests {
 
         std::string Std(const eastl::string& text) {
             return std::string(text.data(), text.size());
+        }
+
+        std::filesystem::path GameRoot() {
+            return std::filesystem::path(__FILE__).parent_path().parent_path();
+        }
+
+        std::string SceneText() {
+            return ReadFile(GameRoot() / "config" / "SceneConfig.xml");
+        }
+
+        /// The scene without its comments (which quote attributes as examples).
+        std::string WithoutComments(const std::string& xml) {
+            return std::regex_replace(xml, std::regex(R"(<!--[\s\S]*?-->)"), "");
+        }
+
+        /// Every key the scene asks for with `{#key}`.
+        std::set<std::string> KeysOfTheScene() {
+            const std::string text = SceneText();
+            std::set<std::string> keys;
+            const std::regex reference(R"(\{#([^}]+)\})");
+            for (auto it = std::sregex_iterator(text.begin(), text.end(), reference); it != std::sregex_iterator(); ++it) {
+                keys.insert((*it)[1].str());
+            }
+            return keys;
+        }
+
+        /// Every string literal of the sources of the game that has the shape of a key (`area.name`, `area.name.more`): the keys code asks for by name.
+        std::set<std::string> KeysNamedInCode() {
+            std::set<std::string> keys;
+            const std::regex literal(R"re("([a-z]+(?:\.[A-Za-z0-9]+)+)")re");
+            for (const auto& entry : std::filesystem::recursive_directory_iterator(GameRoot() / "src" / "Mahjong")) {
+                const std::string extension = entry.path().extension().string();
+                if (!entry.is_regular_file() || (extension != ".h" && extension != ".cpp")) {
+                    continue;
+                }
+                const std::string text = ReadFile(entry.path());
+                for (auto it = std::sregex_iterator(text.begin(), text.end(), literal); it != std::sregex_iterator(); ++it) {
+                    keys.insert((*it)[1].str());
+                }
+            }
+            return keys;
+        }
+
+        /// The keys code builds from an enum value: the families that are walked, not named (`wind.<Wind>`, `suit.<suit>`, `score.kind.<ScoreKind>`, `button.<ButtonKind>`, `hint.<ButtonKind>`).
+        std::set<std::string> KeysBuiltFromEnums() {
+            std::set<std::string> keys;
+            for (const Wind wind : EnumUtils<Wind>::Values()) {
+                keys.insert(Std(Format("wind.{}", EnumUtils<Wind>::ToString(wind))));
+            }
+            for (const TileSuit suit : EnumUtils<TileSuit>::Values()) {
+                if (suit != TileSuit::None) {
+                    keys.insert(Std(Format("suit.{}", EnumUtils<TileSuit>::ToString(suit))));
+                }
+            }
+            for (const ScoreKind kind : EnumUtils<ScoreKind>::Values()) {
+                keys.insert(Std(Format("score.kind.{}", EnumUtils<ScoreKind>::ToString(kind))));
+            }
+            for (const ButtonKind kind : EnumUtils<ButtonKind>::Values()) {
+                keys.insert(Std(Format("button.{}", EnumUtils<ButtonKind>::ToString(kind))));
+                keys.insert(std::string(HintKey(kind).data(), HintKey(kind).size()));
+            }
+            return keys;
         }
 
         UIStrings MakeTable() {
@@ -115,6 +179,48 @@ namespace BECore::Mahjong::Tests {
             }
         }
         EXPECT_GT(references, 0);
+    }
+
+    TEST(StringsTest, EveryKeyOfTheFileIsUsedByTheSceneOrByCode) {
+        const std::set<std::string> scene = KeysOfTheScene();
+        const std::set<std::string> named = KeysNamedInCode();
+        const std::set<std::string> walked = KeysBuiltFromEnums();
+        ASSERT_FALSE(scene.empty());
+        ASSERT_FALSE(named.empty());
+        ASSERT_FALSE(walked.empty());
+
+        std::set<std::string> inTheFile;
+        for (const LanguageEntries& language : ReadShippedEntries()) {
+            for (const StringEntry& entry : language.entries) {
+                inTheFile.insert(entry.key);
+                EXPECT_TRUE(scene.contains(entry.key) || named.contains(entry.key) || walked.contains(entry.key)) << language.id << ": " << entry.key << " is used by nobody";
+            }
+        }
+        for (const std::string& key : walked) {
+            EXPECT_TRUE(inTheFile.contains(key)) << "code builds the key " << key << " and the file has no text for it";
+        }
+        for (const std::string& key : named) {
+            if (key.starts_with("handover.") || key.starts_with("matchover.") || key.starts_with("tile.") || key.starts_with("seat.") || key.starts_with("hud.") || key.starts_with("cover.")) {
+                EXPECT_TRUE(inTheFile.contains(key)) << "code asks for the key " << key << " and the file has no text for it";
+            }
+        }
+    }
+
+    TEST(StringsTest, NoTextOfTheSceneIsAPlainWord) {
+        const std::string scene = WithoutComments(SceneText());
+        ASSERT_FALSE(scene.empty());
+
+        // A `text` is empty, a `{variable}`, a `{#key}`, or a mix of those with signs and spaces: no letter outside the braces
+        const std::regex attribute(R"re(\stext="([^"]*)")re");
+        int texts = 0;
+        for (auto it = std::sregex_iterator(scene.begin(), scene.end(), attribute); it != std::sregex_iterator(); ++it) {
+            const std::string text = (*it)[1].str();
+            ++texts;
+            const std::string outside = std::regex_replace(text, std::regex(R"(\{[^}]*\})"), "");
+            const bool word = std::any_of(outside.begin(), outside.end(), [](unsigned char c) { return std::isalpha(c) != 0 || c >= 0x80; });
+            EXPECT_FALSE(word) << "text=\"" << text << "\" holds a word that belongs in config/UIStrings.xml";
+        }
+        EXPECT_GT(texts, 50);
     }
 
     TEST(StringsTest, TrFindsTheTextOfTheCurrentLanguageElseTheDefaultElseTheKey) {

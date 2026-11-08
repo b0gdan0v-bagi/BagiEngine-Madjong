@@ -32,7 +32,10 @@ namespace BECore::Mahjong {
      * `MahjongSetSeat0` .. `MahjongSetSeat3` with the value; this component changes the pending `SeatSetup` and the variable, and
      * `MahjongStart` gives the pending setup to the game and begins a match with a random seed (`StartRandomMatch`), which closes the
      * panel; a start the game refuses leaves it open. `MahjongNewGame` (the HUD button) opens it again, with the pending setup of the
-     * last match. Nothing is played while it is open (`MahjongTableComponent` takes no click and steps no computer).
+     * last match. The first row of the panel is the language: a `UISegmented` bound to `language` (the id of the language) emits
+     * `MahjongSetLanguage` with the id; `MahjongGame::SetLanguage` applies it to the string table (an id the table does not have is refused and
+     * the variable is set to the language the game really has), and the labels and the variables follow at the next draw. Nothing is played while it is open (`MahjongTableComponent` takes no click
+     * and steps no computer).
      *
      * **The end of a hand and of a match.** While the session is in `HandOver` the modal canvas `HandOver` is shown with the rows of
      * `FormatScoreTable` (`Table/ScoreText.h`): `handOverHeadline`, `handOverSeat0` .. `3`, `scoreLine0` .. `15` (the element
@@ -68,6 +71,8 @@ namespace BECore::Mahjong {
         /// Shows or hides `Setup` after the game, and takes the setup of the game when the panel opens.
         void PublishSetup(const MahjongGame* game);
         void PublishSeatKinds() const;
+        /// Sets the variable `language` to the language of the game.
+        void PublishLanguage(const MahjongGame& game) const;
         /// Shows or hides `HandOver` and `MatchOver` after the session, and sets their variables when the session moved.
         void PublishEndScreens(const MahjongGame* game);
         void PublishHandOver(const MahjongGame& game);
