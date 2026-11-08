@@ -19,6 +19,13 @@ An engine entry's branch `todo/<id>` is cut in `engine/` from `games/mahjong`; i
 - Read first: `CLAUDE.md` of this repository (the game) and `engine/CLAUDE.md` (style, DO and DON'T, the engine's contract), the nested `CLAUDE.md` of the touched directories, the matching `.claude/rules/` file of `<R>`.
 - Format: `python3 engine/CI/scripts/format_sources.py --changed --root <R>` and `strip_pch_includes.py --root <R>` (`<R>` is `.` for the game, `engine` for the engine); see the developer agent; the full commands and the facts of this repository are in `.claude/rules/build-project.md`.
 
+## Workers
+
+Parallel loops run in worker folders (`engine/.claude/skills/todo-loop/SKILL.md`, "Parallel workers"; `engine/tools/todo/CLAUDE.md`, "Workers"): `python3 engine/tools/todo/worker.py create 3` in the main checkout makes `../BagiEngine-Madjong.workers/w1` ... `w3`, each with its own `engine/` (a worktree of the main checkout's engine module, so engine branches are shared too) and its own `build/`; `/todo-loop-parallel` (or `python3 engine/tools/todo/worker.py start`) runs `/todo-loop` in all of them as background sessions a minute apart (`worker.py list` shows their state, `claude attach todo-w<k>` opens one that waits for a permission, `worker.py run <k>` starts a session in a terminal). The main checkout stays the owner's: trying branches and `/todo-merge`. Three suit the owner's machine (14 cores; a full build takes about 17 s there, and `worker.py run` gives each session a share of the cores).
+
+- **Shared files**, which do not count alone when the loop compares busy files: `CLAUDE.md` and `README.md` (every entry touches them a little, `CLAUDE.md` with one row of its test table per test file; the developer keeps its edits to its own lines and rows).
+- Everything else counts as it is. `config/SceneConfig.xml`, `src/Mahjong/Components/MahjongTableComponent.cpp`, `src/Mahjong/Components/MahjongHudComponent.cpp` and `tests/MahjongTableTestSupport.h` are where most UI entries meet, so two entries that change the scene wait for each other, while an entry of `src/Mahjong/Game/` only or of the engine area runs beside them.
+
 ## Zones nobody edits
 
 The vendored code of the engine: `engine/src/Modules/EABase/`, `EnTT/`, `fmt/`, `imgui/`, `nlohmann/`, `pugixml/`, `RmlUi/`, `stb/`, and `engine/external/`. The rest of `engine/` is editable through an entry of the engine area, in its own branch.
