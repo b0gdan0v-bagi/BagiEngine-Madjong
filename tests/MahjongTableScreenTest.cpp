@@ -41,7 +41,7 @@ namespace BECore::Mahjong::Tests {
         constexpr int kMostDiscards = 100;
         /// The gap between the buttons of a row, and the width of a row of three buttons of 132 with two gaps (the row wraps at it).
         constexpr float kButtonGap = 8.0f;
-        constexpr float kRowWidth = 3.0f * 132.0f + 2.0f * kButtonGap;
+        constexpr float kRowWidth = 3.0f * kButtonWidth + 2.0f * kButtonGap;
 
         /// The role of the colour of a button (an entry of `kUiPaletteNames`), by what the button does.
         const char* RoleOf(ButtonKind kind) {
@@ -338,6 +338,34 @@ namespace BECore::Mahjong::Tests {
             const bool apart =
                 slot.rect.x + slot.rect.w <= row->rect.x || slot.rect.x >= row->rect.x + row->rect.w || slot.rect.y + slot.rect.h <= row->rect.y || slot.rect.y >= row->rect.y + row->rect.h;
             EXPECT_TRUE(apart) << "role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
+        }
+
+        // The row holds what is in it: the buttons of the fullest turn and of the fullest claim window lie inside the row
+        // (the gap of the stack is also between its lines) and so clear of every slot
+        for (const std::vector<ButtonKind>& kinds :
+             {std::vector<ButtonKind>{ButtonKind::Win, ButtonKind::Declare, ButtonKind::ConcealedKong0, ButtonKind::ConcealedKong1, ButtonKind::ConcealedKong2, ButtonKind::UpgradeKong},
+              std::vector<ButtonKind>{ButtonKind::ClaimMahjong, ButtonKind::ClaimKong, ButtonKind::ClaimPung, ButtonKind::ClaimChow0, ButtonKind::ClaimChow1, ButtonKind::ClaimChow2,
+                                      ButtonKind::Pass}}) {
+            for (int i = 0; i < kButtonCount; ++i) {
+                SetShown(static_cast<ButtonKind>(i), false);
+            }
+            for (const ButtonKind kind : kinds) {
+                SetShown(kind, true);
+            }
+            Canvas("Actions")->UpdateLayout(kViewWidth, kViewHeight);
+            for (const ButtonKind kind : kinds) {
+                const UIElement* button = Element("Actions", SpecOf(kind).element);
+                ASSERT_NE(button, nullptr) << SpecOf(kind).element;
+                const Rect& r = button->rect;
+                EXPECT_GE(r.x, row->rect.x) << SpecOf(kind).element;
+                EXPECT_GE(r.y, row->rect.y) << SpecOf(kind).element;
+                EXPECT_LE(r.x + r.w, row->rect.x + row->rect.w) << SpecOf(kind).element;
+                EXPECT_LE(r.y + r.h, row->rect.y + row->rect.h) << SpecOf(kind).element << " lies below the row";
+                for (const TileSlot& slot : layout.slots) {
+                    const bool apart = slot.rect.x + slot.rect.w <= r.x || slot.rect.x >= r.x + r.w || slot.rect.y + slot.rect.h <= r.y || slot.rect.y >= r.y + r.h;
+                    EXPECT_TRUE(apart) << SpecOf(kind).element << " covers role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
+                }
+            }
         }
     }
 
