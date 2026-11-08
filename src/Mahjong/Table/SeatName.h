@@ -22,13 +22,22 @@ namespace BECore::Mahjong {
         return people == 1 && IsSeat(seat) && seats[seat] == SeatKind::Person;
     }
 
-    /// `SeatName`, and `kYouMark` after it for "you".
-    [[nodiscard]] inline eastl::string SeatLabel(Seat seat, Wind wind, const SeatSetup& seats) {
-        eastl::string name = SeatName(seat, wind);
+    /// `name`, and `kYouMark` after it when `seat` is "you".
+    [[nodiscard]] inline eastl::string MarkYou(eastl::string name, Seat seat, const SeatSetup& seats) {
         if (IsYou(seat, seats)) {
             name.append(kYouMark.data(), kYouMark.size());
         }
         return name;
+    }
+
+    /// `SeatName`, and `kYouMark` after it for "you".
+    [[nodiscard]] inline eastl::string SeatLabel(Seat seat, Wind wind, const SeatSetup& seats) {
+        return MarkYou(SeatName(seat, wind), seat, seats);
+    }
+
+    /// "Seat 2" without the wind (where the wind would name the wrong deal), and `kYouMark` for "you".
+    [[nodiscard]] inline eastl::string SeatLabel(Seat seat, const SeatSetup& seats) {
+        return MarkYou(Format("Seat {}", seat + 1), seat, seats);
     }
 
 }  // namespace BECore::Mahjong

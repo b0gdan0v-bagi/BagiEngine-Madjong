@@ -10,6 +10,7 @@ namespace BECore::Mahjong {
         constexpr eastl::string_view kDrawnHand = "Drawn hand";
         constexpr eastl::string_view kNoPayments = "No payments";
         constexpr eastl::string_view kLimitHand = "Limit";
+        constexpr eastl::string_view kTiedForFirst = "Tied for first:";
 
         /// The word of a suit: "5 Dots".
         eastl::string_view SuitName(TileSuit suit) noexcept {
@@ -49,11 +50,15 @@ namespace BECore::Mahjong {
         }
 
         /// The limit hands are the kinds from the first of them on (`ScoreKind` keeps them last).
+        static_assert(ScoreKind::ConcealedPungsOneSuit > ScoreKind::CallingFirstHand, "the limit hands come after every other kind");
+        static_assert(ScoreKind::LooseTileFiveDots > ScoreKind::ConcealedPungsOneSuit, "the limit hands are the last kinds");
+
         bool IsLimitKind(ScoreKind kind) noexcept {
             return kind >= ScoreKind::ConcealedPungsOneSuit;
         }
 
-        /// 2^doubles, never past the range of a 64-bit number.
+        /// 2^doubles, never past the range of a 64-bit number. The clamp only matters for made-up input: a real hand's raw score
+        /// saturates at INT_MAX long before 40 doubles, so the shown multiplier of a real line is exact.
         int64_t Multiplier(int doubles) noexcept {
             constexpr int kMostDoubles = 40;
             return int64_t{1} << std::clamp(doubles, 0, kMostDoubles);
@@ -239,13 +244,7 @@ namespace BECore::Mahjong {
         const eastl::array<Seat, kSeatCount> order = match.Standings();
         const SeatScores& scores = match.Scores();
         // The wind is not part of the name here: the match is over and "Seat 3 (East)" would name the next deal
-        const auto plain = [&](Seat seat) {
-            eastl::string name = Format("Seat {}", seat + 1);
-            if (IsYou(seat, seats)) {
-                name.append(kYouMark.data(), kYouMark.size());
-            }
-            return name;
-        };
+        const auto plain = [&](Seat seat) { return SeatLabel(seat, seats); };
         int place = 1;
         int tied = 0;
         for (int i = 0; i < kSeatCount; ++i) {
@@ -258,7 +257,7 @@ namespace BECore::Mahjong {
         if (tied == 1) {
             table.headline = Format("{} wins the match", plain(order[0]));
         } else {
-            table.headline = "Tied for first:";
+            table.headline.assign(kTiedForFirst.data(), kTiedForFirst.size());
             for (int i = 0; i < tied; ++i) {
                 table.headline += Format("{} {}", i > 0 ? "," : "", plain(order[i]));
             }

@@ -13,7 +13,8 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        constexpr const char* kLongestHeadline = "Seat 4 (North) You wins by robbing the kong of Seat 3 (West)";
+        /// The worst case: the longest wind names (North, South) on both seats and the mark of "you" on one of them (61 characters).
+        constexpr const char* kLongestHeadline = "Seat 4 (North) You wins by robbing the kong of Seat 2 (South)";
         constexpr const char* kLongestSeatRow = "Seat 4 (North) You: hand 500, -4000, total 12000";
         constexpr const char* kLongestSummary = "Winning tile 9 Characters: 64 points x 4096 = 262144, score 500";
         constexpr const char* kLongestStanding = "4. Seat 4 You: 12000";
