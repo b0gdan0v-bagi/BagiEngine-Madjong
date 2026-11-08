@@ -125,7 +125,7 @@
                     <element type="UILabel" name="TurnLabel" height="32" text="Turn: {turn}" fontSize="22" />
                   </children>
                 </element>
-                <element type="UIStack" name="Scores" anchor="TopLeft" x="96" y="128" width="400" height="144" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170">
+                <element type="UIStack" name="Scores" anchor="TopLeft" x="96" y="128" width="336" height="144" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170">
                   <children>
                     <element type="UILabel" name="Score0" height="32" text="{seatMark0}{seatName0}{seatDealer0}: {seatScore0}" fontSize="22" />
                     <element type="UILabel" name="Score1" height="32" text="{seatMark1}{seatName1}{seatDealer1}: {seatScore1}" fontSize="22" />

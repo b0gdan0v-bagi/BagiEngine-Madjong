@@ -4,6 +4,7 @@
 #include <BECore/Control/Json.h>
 #include <Events/SceneEvents.h>
 #include <Mahjong/Components/MahjongHudComponent.h>
+#include <Mahjong/Table/UiPalette.h>
 
 /**
  * The HUD and the seat choice of the shipped scene (`Components/MahjongHudComponent.h`): the variables follow the session, the labels
@@ -226,14 +227,26 @@ namespace BECore::Mahjong::Tests {
         worst.wallRemaining = 2 * kWallRingCells;
         const TableLayout layout = MakeTableLayout(worst);
 
+        // The plates the table paints under the discard blocks and the wall ring, as the component pads them
+        eastl::vector<Rect> plates;
+        for (const Rect& zone : layout.zones.discards) {
+            plates.push_back({zone.x - kPlatePadding, zone.y - kPlatePadding, zone.w + 2.0f * kPlatePadding, zone.h + 2.0f * kPlatePadding});
+        }
+        const Rect& wall = layout.zones.wall;
+        plates.push_back({wall.x - kPlatePadding, wall.y - kPlatePadding, wall.w + 2.0f * kPlatePadding, wall.h + 2.0f * kPlatePadding});
+
+        const auto apartFrom = [](const Rect& a, const Rect& b) { return a.x + a.w <= b.x || a.x >= b.x + b.w || a.y + a.h <= b.y || a.y >= b.y + b.h; };
         for (const char* name : {"Info", "Scores", "NewGame"}) {
             const UIElement* element = Element("Hud", name);
             ASSERT_NE(element, nullptr) << name;
             ASSERT_FALSE(element->rect.IsEmpty()) << name;
             for (const TileSlot& slot : layout.slots) {
-                const bool apart = slot.rect.x + slot.rect.w <= element->rect.x || slot.rect.x >= element->rect.x + element->rect.w || slot.rect.y + slot.rect.h <= element->rect.y ||
-                                   slot.rect.y >= element->rect.y + element->rect.h;
-                EXPECT_TRUE(apart) << name << " covers role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
+                EXPECT_TRUE(apartFrom(slot.rect, element->rect)) << name << " covers role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
+            }
+            // A gap of one grid unit at least: panels that touch a plate edge to edge merge with it on screen
+            const Rect aired{element->rect.x - kGridUnit, element->rect.y - kGridUnit, element->rect.w + 2.0f * kGridUnit, element->rect.h + 2.0f * kGridUnit};
+            for (size_t i = 0; i < plates.size(); ++i) {
+                EXPECT_TRUE(apartFrom(plates[i], aired)) << name << " is less than one grid unit from plate " << i;
             }
         }
     }

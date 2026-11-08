@@ -31,6 +31,9 @@ namespace BECore::Mahjong {
     /// Over a tile whose declaring discard is not legal while the next discard declares the calling hand.
     inline constexpr Color kVeil{0, 0, 0, 140};
 
+    /// A plate under a discard block or the wall ring reaches this far past its zone, in view units; the HUD keeps clear of the plate.
+    inline constexpr float kPlatePadding = 4.0f;
+
     /// The colours of the scene file, by role (`kUiPaletteNames` holds the role of each, in the same order).
     inline constexpr int kUiPaletteSize = 12;
     inline constexpr eastl::array<Color, kUiPaletteSize> kUiPalette{{

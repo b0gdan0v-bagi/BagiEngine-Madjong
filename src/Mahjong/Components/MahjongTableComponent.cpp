@@ -27,9 +27,8 @@ namespace BECore::Mahjong {
         /// The highlight of the acting seat reaches this far past the hand; the pending discard's frame this far past the tile.
         constexpr float kActingMargin = 4.0f;
         constexpr float kPendingMargin = 3.0f;
-        /// The rim along the edge of the view, a plate reaches this far past its zone, and a tile's shadow falls this far down and right.
+        /// The rim along the edge of the view, and a tile's shadow falls this far down and right (a plate's padding is `kPlatePadding`).
         constexpr float kRimWidth = 8.0f;
-        constexpr float kPlatePadding = 4.0f;
         constexpr float kShadowOffset = 2.0f;
         /// The inner mark of a tile drawn without the atlas, as a fraction of the tile.
         constexpr float kPlainMarkInset = 0.25f;
