@@ -259,12 +259,14 @@ def check_screens_follow_the_game(client: BagiControlClient, rng: random.Random)
     client.call("reset", {"seed": SEED, "seats": "CCCC", "hands": SHORT_MATCH_HANDS})
     shown, _ = screens_shown(client)
     check(shown == {"HandOver"}, f"a hand of computers, over at once, shows {sorted(shown)}")
-    played = get_state(client)["handsPlayed"]
+    over = get_state(client)
+    played = over["handsPlayed"]
+    drawn = over["result"]["kind"] == "drawn"  # a drawn hand is replayed and does not count: handsPlayed stays
     clicked = client.call("ui_click", {"name": "NextHand"})
     check(clicked["consumed"] and clicked["action"] == "MahjongNextHand", f"the click on Next hand was not taken: {clicked}")
     shown, _ = screens_shown(client)
     check(shown == set(), f"a click on Next hand left {sorted(shown)} on the screen")
-    check(get_state(client)["handsPlayed"] > played, "the click on Next hand did not settle the hand")
+    check(get_state(client)["handsPlayed"] >= played + (0 if drawn else 1), "the click on Next hand did not settle the hand")
 
     # The end of the match: the standings, then New game opens the seat choice, and Start begins another match
     client.call("reset", {"seed": SEED, "seats": "CCCC", "hands": SHORT_MATCH_HANDS})

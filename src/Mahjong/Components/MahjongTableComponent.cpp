@@ -16,6 +16,7 @@ namespace BECore::Mahjong {
 
     namespace {
 
+        constexpr eastl::string_view kRevealAction = "MahjongReveal";
         constexpr Color kFelt{22, 92, 62, 255};
         constexpr Color kActingSeat{255, 214, 80, 90};
         constexpr Color kPendingDiscard{255, 214, 80, 200};
@@ -192,7 +193,7 @@ namespace BECore::Mahjong {
             }
         }
         _published = buttons;
-        vars.Set("declareNext"_intern, _declareNext ? "on" : "off");
+        vars.Set("declareNext"_intern, _declareNext ? kDeclareOn : kDeclareOff);
 
         // The cover of a hot seat: a modal canvas, shown exactly while the screen waits for the next person
         const bool handoff = game != nullptr && game->GetSession().HandoffPending();
@@ -236,7 +237,7 @@ namespace BECore::Mahjong {
             return;
         }
         TableSession& session = game->GetSession();
-        if (event.action == "MahjongReveal"_intern) {
+        if (event.action.ToStringView() == kRevealAction) {
             if (session.HandoffPending()) {
                 session.Reveal();
             }

@@ -52,6 +52,7 @@ namespace BECore::Mahjong {
         /// The limit hands are the kinds from the first of them on (`ScoreKind` keeps them last).
         static_assert(ScoreKind::ConcealedPungsOneSuit > ScoreKind::CallingFirstHand, "the limit hands come after every other kind");
         static_assert(ScoreKind::LooseTileFiveDots > ScoreKind::ConcealedPungsOneSuit, "the limit hands are the last kinds");
+        static_assert(static_cast<size_t>(ScoreKind::LooseTileFiveDots) + 1 == EnumUtils<ScoreKind>::Count(), "LooseTileFiveDots is the last kind");
 
         bool IsLimitKind(ScoreKind kind) noexcept {
             return kind >= ScoreKind::ConcealedPungsOneSuit;
@@ -244,22 +245,21 @@ namespace BECore::Mahjong {
         const eastl::array<Seat, kSeatCount> order = match.Standings();
         const SeatScores& scores = match.Scores();
         // The wind is not part of the name here: the match is over and "Seat 3 (East)" would name the next deal
-        const auto plain = [&](Seat seat) { return SeatLabel(seat, seats); };
         int place = 1;
         int tied = 0;
         for (int i = 0; i < kSeatCount; ++i) {
             if (i > 0 && scores[order[i]] != scores[order[i - 1]]) {
                 place = i + 1;
             }
-            table.rows[i] = Format("{}. {}: {}", place, plain(order[i]), scores[order[i]]);
+            table.rows[i] = Format("{}. {}: {}", place, SeatLabel(order[i], seats), scores[order[i]]);
             tied += scores[order[i]] == scores[order[0]] ? 1 : 0;
         }
         if (tied == 1) {
-            table.headline = Format("{} wins the match", plain(order[0]));
+            table.headline = Format("{} wins the match", SeatLabel(order[0], seats));
         } else {
             table.headline.assign(kTiedForFirst.data(), kTiedForFirst.size());
             for (int i = 0; i < tied; ++i) {
-                table.headline += Format("{} {}", i > 0 ? "," : "", plain(order[i]));
+                table.headline += Format("{} {}", i > 0 ? "," : "", SeatLabel(order[i], seats));
             }
         }
         return table;
