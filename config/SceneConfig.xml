@@ -4,7 +4,9 @@
     <!--
       The one scene of the game (MahjongGame::GetSceneName()). The view is the design size of the table (kViewWidth x kViewHeight in
       Table/TableLayout.h; MahjongTableUiTest compares the two) and the engine fits it to the window. MahjongTableComponent draws the
-      felt, the four hands, the melds, the discards and the wall of the active game; the HUD and the panels come with the next steps.
+      felt, the four hands, the melds, the discards and the wall of the active game, plays the person seats and paces the computers.
+      Its buttons are the canvases below; the component shows and hides them from the legal actions (Table/ActionButtons.h) and answers
+      their actions. The HUD, the setup and the score table come with the next steps.
     -->
     <scene
       type="Scene"
@@ -15,6 +17,57 @@
         <node name="Table">
           <components>
             <component type="MahjongTableComponent" />
+          </components>
+        </node>
+        <!--
+          The action buttons lie in the free corner of the table, right of the bottom discards and above the viewer's melds (see
+          Table/TableLayout.cpp); three rows of three, laid out against the whole view (ignoreSafeArea) like the table. They start hidden: the
+          component shows the ones the person to act can press. A button is 56 view units high, which is a 32 px touch target from a
+          window of 731 x 411 px; the table is a fixed design that the engine scales to the window, so a smaller window has smaller buttons.
+        -->
+        <node name="Actions" layer="10">
+          <components>
+            <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
+              <elements>
+                <element type="UIStack" name="ActionRow" anchor="TopLeft" ignoreSafeArea="true" x="724" y="460" width="408" height="180" direction="Horizontal" spacing="6" wrapChildren="true">
+                  <children>
+                  <element type="UIButton" name="Win" visible="false" width="132" height="56" text="Win" fontSize="22" action="MahjongWin" color="40,110,60,255" />
+                  <element type="UIButton" name="Mahjong" visible="false" width="132" height="56" text="Mahjong" fontSize="22" action="MahjongClaimMahjong" color="40,110,60,255" />
+                  <element type="UIButton" name="Pung" visible="false" width="132" height="56" text="Pung" fontSize="22" action="MahjongClaimPung" color="45,75,120,255" />
+                  <element type="UIButton" name="Kong" visible="false" width="132" height="56" text="Kong" fontSize="22" action="MahjongClaimKong" color="45,75,120,255" />
+                  <element type="UIButton" name="Chow0" visible="false" width="132" height="56" text="{chow0}" fontSize="22" action="MahjongClaimChow" value="0" color="45,75,120,255" />
+                  <element type="UIButton" name="Chow1" visible="false" width="132" height="56" text="{chow1}" fontSize="22" action="MahjongClaimChow" value="1" color="45,75,120,255" />
+                  <element type="UIButton" name="Chow2" visible="false" width="132" height="56" text="{chow2}" fontSize="22" action="MahjongClaimChow" value="2" color="45,75,120,255" />
+                  <element type="UIButton" name="ConcealedKong0" visible="false" width="132" height="56" text="{kong0}" fontSize="22" action="MahjongConcealedKong" value="0" color="70,70,100,255" />
+                  <element type="UIButton" name="ConcealedKong1" visible="false" width="132" height="56" text="{kong1}" fontSize="22" action="MahjongConcealedKong" value="1" color="70,70,100,255" />
+                  <element type="UIButton" name="ConcealedKong2" visible="false" width="132" height="56" text="{kong2}" fontSize="22" action="MahjongConcealedKong" value="2" color="70,70,100,255" />
+                  <element type="UIButton" name="UpgradeKong" visible="false" width="132" height="56" text="{upgrade}" fontSize="22" action="MahjongUpgradeKong" color="70,70,100,255" />
+                  <element type="UIButton" name="Pass" visible="false" width="132" height="56" text="Pass" fontSize="22" action="MahjongPass" color="90,50,50,255" />
+                  <element type="UISegmented" name="Declare" visible="false" bind="declareNext" width="132" height="56" direction="Horizontal" color="30,30,30,255">
+                    <children>
+                      <element type="UIButton" name="DeclareButton" flex="1" height="56" text="Declare" fontSize="22" action="MahjongDeclare" value="on" color="70,70,100,255" />
+                    </children>
+                  </element>
+                  </children>
+                </element>
+              </elements>
+            </component>
+          </components>
+        </node>
+        <!-- The cover of a hot seat: shown by the component exactly while the screen waits for the next person (HandoffPending). A Screen canvas that keeps its buttons touch targets in any window. -->
+        <node name="Handoff" layer="20">
+          <components>
+            <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.7" useSafeArea="true" modal="true" visible="false">
+              <elements>
+                <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
+                <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="560" height="224" direction="Vertical" spacing="16" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
+                  <children>
+                    <element type="UILabel" name="HandoffText" height="104" text="Pass the screen to {handoffSeat}" fontSize="30" align="Center" verticalAlign="Center" />
+                    <element type="UIButton" name="Reveal" height="56" text="Show" fontSize="28" action="MahjongReveal" color="40,110,60,255" />
+                  </children>
+                </element>
+              </elements>
+            </component>
           </components>
         </node>
       </nodes>
