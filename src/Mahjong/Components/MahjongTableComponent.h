@@ -47,6 +47,12 @@ namespace BECore::Mahjong {
      * asked to claim first: that would tell a person that this computer holds a claim) and the discard that waits for a claim has a frame,
      * drawn only while the viewer is among the seats that have yet to decide (and no cover is up).
      *
+     * **The last move.** Three marks of the gold family (`Table/UiPalette.h`) show what has just happened, from the public data of `HandModel`
+     * (`Moves()`, `Discards()`, the open sets): a tint over the last discard (`kLastDiscardMark`; the frame of a pending discard shows
+     * besides it), a bar along the edge of the claimed tile of an open set that faces the seat it came from (`kClaimedEdge`, from
+     * `TileSlot::claimEdge`), and the tile the viewer has just drawn, which lies apart at the end of its row (only in a hand that is
+     * face up: under the cover and for a spectator the hand is the plain row); a click on it discards it like any other tile.
+     *
      * **Playing.** While a person has to act (`TableSession::ActorIsPerson()`, no hot-seat cover) a left click on a tile of the viewer's hand
      * discards it (`PerformPerson(MakeDiscard(tile, declareNext))`); a refused action changes nothing. The other actions are the buttons of the
      * canvas `Actions` (`Table/ActionButtons.h`), shown from `LegalActions` every frame (`SetElementVisibleByName`; each button says a word of the

@@ -159,6 +159,7 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_EQ(a.slots[i].role, b.slots[i].role);
                 EXPECT_EQ(a.slots[i].seat, b.slots[i].seat);
                 EXPECT_EQ(a.slots[i].index, b.slots[i].index);
+                EXPECT_EQ(a.slots[i].claimEdge, b.slots[i].claimEdge);
                 EXPECT_EQ(a.slots[i].part, b.slots[i].part);
             }
         }
