@@ -8,7 +8,7 @@ namespace BECore::Mahjong {
 
     /**
      * The table is designed on a view of kViewWidth x kViewHeight units (the view size of `MahjongScene`, which repeats these two
-     * numbers; `MahjongGameTest` compares them). `MakeTableLayout` for another view size scales the design uniformly to fit and
+     * numbers; `MahjongTableUiTest` compares them). `MakeTableLayout` for another view size scales the design uniformly to fit and
      * centres it. All sizes below are in design units; every tile has the proportions of the atlas cell (3 : 4).
      */
     inline constexpr float kViewWidth = 1280.0f;
@@ -57,8 +57,8 @@ namespace BECore::Mahjong {
      *
      * `seat` is the seat the slot belongs to (the discarder for a discard; 0 for a wall stack). `index` says which of the seat's things it
      * is: `HandTile` the index in the seat's concealed tiles, `MeldTile` the index of the meld in the seat's melds (`part` the tile in
-     * the meld), `BonusTile` the index in the seat's bonus tiles, `DiscardTile` the index in the pile (`HandModel::Discards()`), `WallStack`
-     * the stack counted along the ring from its first cell.
+     * the meld), `BonusTile` the index in the seat's bonus tiles, `DiscardTile` the index in the pile (`HandModel::Discards()`),
+     * `WallStack` the stack counted along the ring from its first cell.
      */
     struct TileSlot {
         Rect rect;

@@ -55,6 +55,8 @@ namespace BECore::Mahjong {
         constexpr float kSideHandSpan = kOpponentHandTileH * kMaxConcealedTiles;
         constexpr float kSideMeldCapacity = StripCapacity(kOpponentMeldTileH, kMeldTilesPerKong* kMaxMelds, kMaxMelds - 1);
         constexpr float kSideBonusCapacity = kOpponentBonusTileH * kMaxBonusTiles;
+        // The top seat's bonus tiles lie in a row, so they span the tile width, not the height.
+        constexpr float kTopBonusCapacity = kOpponentBonusTileW * kMaxBonusTiles;
         constexpr float kSideHandY = Centered(kViewHeight, kSideHandSpan);
         constexpr float kSideMeldY = Centered(kViewHeight, kSideMeldCapacity);
         constexpr float kSideBonusY = kSideHandY;
@@ -116,7 +118,7 @@ namespace BECore::Mahjong {
                     geometry.hand = {kTopHandX, kEdge, kOpponentHandTileW, kOpponentHandTileH, false, kTopHandSpan};
                     geometry.melds = {Centered(kViewWidth, kTopMeldCapacity), kTopMeldY, kOpponentMeldTileW, kOpponentMeldTileH, false, kTopMeldCapacity};
                     geometry.bonus = {
-                        kTopHandX + kTopHandSpan + kBlockGap, kEdge + Centered(kOpponentHandTileH, kOpponentBonusTileH), kOpponentBonusTileW, kOpponentBonusTileH, false, kSideBonusCapacity};
+                        kTopHandX + kTopHandSpan + kBlockGap, kEdge + Centered(kOpponentHandTileH, kOpponentBonusTileH), kOpponentBonusTileW, kOpponentBonusTileH, false, kTopBonusCapacity};
                     geometry.discardX = kDiscardBlockX;
                     geometry.discardY = kTopDiscardY;
                     break;
@@ -225,6 +227,12 @@ namespace BECore::Mahjong {
                     ++pileOfSeat[seat];
                 }
             }
+            // A pile of more rows than the block holds squeezes its rows together; the pitch is the same for the whole pile of a seat.
+            eastl::array<float, kSeatCount> rowPitchOfSeat{};
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                const int rows = (pileOfSeat[seat] + kDiscardsPerRow - 1) / kDiscardsPerRow;
+                rowPitchOfSeat[seat] = rows <= kDiscardRowCapacity ? kDiscardTileH : kDiscardTileH * (kDiscardRowCapacity - 1) / static_cast<float>(rows - 1);
+            }
             eastl::array<int, kSeatCount> placed{};
             for (size_t entry = 0; entry < input.discardSeats.size(); ++entry) {
                 const Seat seat = input.discardSeats[entry];
@@ -233,9 +241,7 @@ namespace BECore::Mahjong {
                 }
                 const SeatGeometry& geometry = geometries[SeatPosition(layout.viewer, seat)];
                 const int cell = placed[seat]++;
-                const int rows = (pileOfSeat[seat] + kDiscardsPerRow - 1) / kDiscardsPerRow;
-                const float rowPitch = rows <= kDiscardRowCapacity ? kDiscardTileH : kDiscardTileH * (kDiscardRowCapacity - 1) / static_cast<float>(rows - 1);
-                const Rect rect(geometry.discardX + static_cast<float>(cell % kDiscardsPerRow) * kDiscardTileW, geometry.discardY + static_cast<float>(cell / kDiscardsPerRow) * rowPitch,
+                const Rect rect(geometry.discardX + static_cast<float>(cell % kDiscardsPerRow) * kDiscardTileW, geometry.discardY + static_cast<float>(cell / kDiscardsPerRow) * rowPitchOfSeat[seat],
                                 kDiscardTileW, kDiscardTileH);
                 AddSlot(layout, fit, rect, SlotRole::DiscardTile, seat, static_cast<int>(entry));
             }

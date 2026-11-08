@@ -1,18 +1,20 @@
 <?xml version="1.0"?>
 <SceneManager>
   <scenes>
-    <!-- The one scene of the game (MahjongGame::GetSceneName()). The skeleton shows only its title on a Screen canvas; the table, the tiles and the HUD come with the rules. -->
+    <!--
+      The one scene of the game (MahjongGame::GetSceneName()). The view is the design size of the table (kViewWidth x kViewHeight in
+      Table/TableLayout.h; MahjongTableUiTest compares the two) and the engine fits it to the window. MahjongTableComponent draws the
+      felt, the four hands, the melds, the discards and the wall of the active game; the HUD and the panels come with the next steps.
+    -->
     <scene
       type="Scene"
-      name="MahjongScene">
+      name="MahjongScene"
+      viewWidth="1280"
+      viewHeight="720">
       <nodes>
-        <node name="Hud" layer="10">
+        <node name="Table">
           <components>
-            <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.7" useSafeArea="true">
-              <elements>
-                <element type="UILabel" name="Title" anchor="Center" width="90%" maxWidth="480" height="88" text="Mahjong" fontSize="56" align="Center" verticalAlign="Center" />
-              </elements>
-            </component>
+            <component type="MahjongTableComponent" />
           </components>
         </node>
       </nodes>
