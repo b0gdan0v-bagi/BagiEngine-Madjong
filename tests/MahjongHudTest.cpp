@@ -61,6 +61,24 @@ namespace BECore::Mahjong::Tests {
             return Var(Format("seatKind{}", seat).c_str());
         }
 
+        std::string HandsChoiceVar() const {
+            return Var("handsChoice");
+        }
+
+        bool HandsSelected(const char* segment) const {
+            const UIElement* element = Element("Setup", segment);
+            const auto* button = element != nullptr ? element->Cast<UIButton>() : nullptr;
+            return button != nullptr && button->selected;
+        }
+
+        static void ExpectSameSettings(const MahjongSettings& actual, const MahjongSettings& expected) {
+            EXPECT_EQ(actual.handsPerMatch, expected.handsPerMatch);
+            EXPECT_EQ(actual.flowers, expected.flowers);
+            EXPECT_EQ(actual.replayDrawnHand, expected.replayDrawnHand);
+            EXPECT_EQ(actual.limit, expected.limit);
+            EXPECT_EQ(actual.startingScore, expected.startingScore);
+        }
+
         bool SetupShown() const {
             const auto canvas = Canvas("Setup");
             return canvas && canvas->TakesInput();
@@ -180,6 +198,11 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_GE(segment->rect.h, kMinControlHeight) << seat << kind;
             }
         }
+        for (const char* hands : {"Hands16", "Hands8"}) {
+            const UIElement* segment = Element("Setup", hands);
+            ASSERT_NE(segment, nullptr) << hands;
+            EXPECT_GE(segment->rect.h, kMinControlHeight) << hands;
+        }
         EXPECT_GE(Element("Setup", "Start")->rect.h, kMinControlHeight);
     }
 
@@ -274,6 +297,205 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(_game->IsSetupOpen());
         EXPECT_TRUE(SetupShown());
         EXPECT_EQ(_game->GetSession().Version(), version);
+    }
+
+    TEST_F(MahjongHudTest, ARefusedStartLeavesTheSettingsAsTheyWere) {
+        _game->Start();
+        MahjongSettings settings = _game->GetSettings();
+        settings.handsPerMatch = kUnplayableHandsPerMatch;
+        settings.limit = 300;
+        _game->SetSettings(settings);
+        const SeatSetup seats = _game->GetSeats();
+        Draw();
+        ASSERT_TRUE(ClickElement("Setup", "Seat1Person"));
+
+        ASSERT_TRUE(ClickElement("Setup", "Start"));
+        Draw();
+
+        EXPECT_TRUE(SetupShown());
+        ExpectSameSettings(_game->GetSettings(), settings);
+        EXPECT_EQ(_game->GetSeats(), seats) << "the seats the panel offered are not taken either";
+    }
+
+    // ----- the number of hands -----
+
+    TEST_F(MahjongHudTest, ThePanelOpensOnTheHandsOfTheGame) {
+        _game->Start();
+        Draw();
+
+        ASSERT_TRUE(SetupShown());
+        EXPECT_EQ(HandsChoiceVar(), "16");
+        EXPECT_TRUE(HandsSelected("Hands16"));
+        EXPECT_FALSE(HandsSelected("Hands8"));
+        EXPECT_EQ(Hud()->PendingHands(), 16);
+
+        _game->CloseSetup();
+        Draw();
+        MahjongSettings settings = _game->GetSettings();
+        settings.handsPerMatch = 8;
+        _game->SetSettings(settings);
+        _game->OpenSetup();
+        Draw();
+
+        EXPECT_EQ(HandsChoiceVar(), "8");
+        EXPECT_FALSE(HandsSelected("Hands16"));
+        EXPECT_TRUE(HandsSelected("Hands8"));
+        EXPECT_EQ(Hud()->PendingHands(), 8);
+    }
+
+    TEST_F(MahjongHudTest, AnUnofferedNumberOfHandsLeavesNoSegmentSelectedAndIsKept) {
+        _game->Start();
+        _game->CloseSetup();
+        Draw();
+        MahjongSettings settings = _game->GetSettings();
+        settings.handsPerMatch = 12;
+        _game->SetSettings(settings);
+        _game->OpenSetup();
+        Draw();
+
+        EXPECT_EQ(HandsChoiceVar(), "12");
+        EXPECT_FALSE(HandsSelected("Hands16"));
+        EXPECT_FALSE(HandsSelected("Hands8"));
+        EXPECT_EQ(Hud()->PendingHands(), 12);
+    }
+
+    TEST_F(MahjongHudTest, AClickOnAHandsSegmentChangesOnlyThePendingNumberAndTheVariable) {
+        _game->Start();
+        Draw();
+        const uint64_t version = _game->GetSession().Version();
+        const SeatSetup seats = _game->GetSeats();
+        const MahjongSettings settings = _game->GetSettings();
+
+        ASSERT_TRUE(ClickElement("Setup", "Hands8"));
+        Draw();
+
+        EXPECT_EQ(Hud()->PendingHands(), 8);
+        EXPECT_EQ(HandsChoiceVar(), "8");
+        EXPECT_TRUE(HandsSelected("Hands8"));
+        EXPECT_FALSE(HandsSelected("Hands16"));
+        EXPECT_EQ(_game->GetSettings().handsPerMatch, 16) << "nothing is decided before Start";
+        ExpectSameSettings(_game->GetSettings(), settings);
+        EXPECT_EQ(_game->GetSession().Version(), version);
+        EXPECT_EQ(_game->GetSeats(), seats);
+        EXPECT_EQ(Hud()->PendingSeats(), seats);
+
+        ASSERT_TRUE(ClickElement("Setup", "Hands16"));
+        Draw();
+
+        EXPECT_EQ(Hud()->PendingHands(), 16);
+        EXPECT_EQ(HandsChoiceVar(), "16");
+        EXPECT_TRUE(HandsSelected("Hands16"));
+        EXPECT_FALSE(HandsSelected("Hands8"));
+    }
+
+    TEST_F(MahjongHudTest, StartAfterTheShortGameBeginsAMatchOfEightHandsWithTheSeatsOfTheSameVisit) {
+        _game->Start();
+        Draw();
+        const uint64_t version = _game->GetSession().Version();
+
+        ASSERT_TRUE(ClickElement("Setup", "Hands8"));
+        ASSERT_TRUE(ClickElement("Setup", "Seat2Person"));
+        ASSERT_TRUE(ClickElement("Setup", "Start"));
+        Draw();
+
+        EXPECT_FALSE(_game->IsSetupOpen());
+        EXPECT_FALSE(SetupShown());
+        EXPECT_GT(_game->GetSession().Version(), version);
+        EXPECT_EQ(_game->GetMatch().HandsTotal(), 8);
+        EXPECT_EQ(_game->GetSettings().handsPerMatch, 8);
+        EXPECT_EQ(Var("handsTotal"), "8");
+        EXPECT_EQ(_game->GetSession().KindOf(2), SeatKind::Person);
+        EXPECT_EQ(_game->GetSession().PersonCount(), 2);
+    }
+
+    TEST_F(MahjongHudTest, AStartFromThePanelChangesOnlyTheNumberOfHands) {
+        MahjongSettings settings;
+        settings.handsPerMatch = kFullMatchHands;
+        settings.flowers = true;
+        settings.replayDrawnHand = false;
+        settings.limit = 300;
+        settings.startingScore = 1500;
+        _game->SetSettings(settings);
+        _game->Start();
+        Draw();
+
+        ASSERT_TRUE(ClickElement("Setup", "Hands8"));
+        ASSERT_TRUE(ClickElement("Setup", "Start"));
+        Draw();
+
+        const MahjongSettings after = _game->GetSettings();
+        EXPECT_EQ(after.handsPerMatch, 8);
+        EXPECT_TRUE(after.flowers) << "a setting of the control API is not undone";
+        EXPECT_FALSE(after.replayDrawnHand);
+        EXPECT_EQ(after.limit, 300);
+        EXPECT_EQ(after.startingScore, 1500);
+        EXPECT_EQ(_game->GetMatch().HandsTotal(), 8);
+        EXPECT_EQ(_game->GetMatch().Scores(), (SeatScores{1500, 1500, 1500, 1500})) << "the match uses the settings";
+    }
+
+    TEST_F(MahjongHudTest, ThePanelNeverTurnsTheFlowersOn) {
+        _game->Start();
+        Draw();
+        ASSERT_TRUE(ClickElement("Setup", "Hands8"));
+        ASSERT_TRUE(ClickElement("Setup", "Start"));
+        Draw();
+
+        EXPECT_FALSE(_game->GetSettings().flowers);
+    }
+
+    TEST_F(MahjongHudTest, TheChoiceOfHandsIsKeptForNewGameAndFollowsAControlReset) {
+        _game->Start();
+        Draw();
+        ASSERT_TRUE(ClickElement("Setup", "Hands8"));
+        ASSERT_TRUE(ClickElement("Setup", "Start"));
+        Draw();
+        ASSERT_FALSE(SetupShown());
+
+        ASSERT_TRUE(ClickElement("Hud", "NewGame"));
+        Draw();
+
+        ASSERT_TRUE(SetupShown());
+        EXPECT_EQ(Hud()->PendingHands(), 8);
+        EXPECT_EQ(HandsChoiceVar(), "8");
+        EXPECT_TRUE(HandsSelected("Hands8"));
+
+        ASSERT_TRUE(ClickElement("Setup", "Start"));  // without touching the choice
+        Draw();
+        EXPECT_EQ(_game->GetMatch().HandsTotal(), 8);
+
+        IControllableGame* control = _game->AsControllable();
+        ASSERT_NE(control, nullptr);
+        Json options = Json::object();
+        options["hands"] = 16;
+        ASSERT_TRUE(control->Reset(options).has_value());
+        Draw();
+        ASSERT_FALSE(SetupShown());
+        ASSERT_TRUE(ClickElement("Hud", "NewGame"));
+        Draw();
+
+        ASSERT_TRUE(SetupShown());
+        EXPECT_EQ(Hud()->PendingHands(), 16);
+        EXPECT_EQ(HandsChoiceVar(), "16");
+        EXPECT_TRUE(HandsSelected("Hands16"));
+    }
+
+    TEST_F(MahjongHudTest, AValueThatIsNeitherSixteenNorEightChangesNothingAndNeitherDoesAClosedPanel) {
+        _game->Start();
+        Draw();
+        ASSERT_TRUE(SetupShown());
+
+        for (const char* value : {"12", "0", "-8", "08", "8 ", " 8", "eight", "16.0", ""}) {
+            EmitAction("MahjongSetHands", value);
+            EXPECT_EQ(Hud()->PendingHands(), 16) << "'" << value << "'";
+            EXPECT_EQ(HandsChoiceVar(), "16") << "'" << value << "'";
+        }
+
+        _game->CloseSetup();
+        Draw();
+        ASSERT_FALSE(SetupShown());
+        EmitAction("MahjongSetHands", "8");
+        EXPECT_EQ(Hud()->PendingHands(), 16) << "the panel is closed";
+        EXPECT_EQ(HandsChoiceVar(), "16");
     }
 
     TEST_F(MahjongHudTest, NewGameOpensThePanelOnTheSeatsOfTheLastMatch) {

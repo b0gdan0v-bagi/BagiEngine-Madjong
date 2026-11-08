@@ -224,16 +224,17 @@
         <!--
           The seat choice of a new game: a modal canvas on the view of the table (SceneView, like the buttons: a Screen canvas would have to
           fit a 320 unit wide window at the user scale 1.5 of the size matrix), hidden here; MahjongHudComponent shows it exactly while
-          MahjongGame::IsSetupOpen() (at the start, and after the New game button). Each group carries action MahjongSetSeatN and the value
-          person or computer; its variable seatKindN is set by the component, which also begins the match on MahjongStart. The plate is
-          32 padding + 44 title + 4 x 56 rows + 56 Start + 5 x 12 spacing = 416 units.
+          MahjongGame::IsSetupOpen() (at the start, and after the New game button). Each seat group carries action MahjongSetSeatN and the
+          value person or computer; the row HandsRow below them carries MahjongSetHands and the value 16 or 8. The variables seatKindN and
+          handsChoice are set by the component, which also begins the match on MahjongStart. The plate is
+          32 padding + 44 title + 5 x 56 rows + 56 Start + 6 x 12 spacing = 484 units.
         -->
         <node name="Setup" layer="30">
           <components>
             <component type="UICanvasComponent" space="SceneView" useSafeArea="true" modal="true" visible="false">
               <elements>
                 <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
-                <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="640" height="416" direction="Vertical" spacing="12" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
+                <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="640" height="484" direction="Vertical" spacing="12" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
                   <children>
                     <element type="UILabel" name="Title" height="44" text="New game: who plays?" fontSize="30" align="Center" />
                     <element type="UIStack" name="SeatRow0" height="56" direction="Horizontal" spacing="8" crossAlign="Stretch">
@@ -276,6 +277,17 @@
                           <children>
                             <element type="UIButton" name="Seat3Person" flex="1" height="56" text="Person" fontSize="24" action="MahjongSetSeat3" value="person" color="70,70,100,255" />
                             <element type="UIButton" name="Seat3Computer" flex="1" height="56" text="Computer" fontSize="24" action="MahjongSetSeat3" value="computer" color="70,70,100,255" />
+                          </children>
+                        </element>
+                      </children>
+                    </element>
+                    <element type="UIStack" name="HandsRow" height="56" direction="Horizontal" spacing="8" crossAlign="Stretch">
+                      <children>
+                        <element type="UILabel" name="HandsCaption" width="110" height="56" text="Hands" fontSize="24" verticalAlign="Center" />
+                        <element type="UISegmented" name="HandsChoice" bind="handsChoice" flex="1" height="56" direction="Horizontal" spacing="4" color="30,30,30,255">
+                          <children>
+                            <element type="UIButton" name="Hands16" flex="1" height="56" text="16" fontSize="24" action="MahjongSetHands" value="16" color="70,70,100,255" />
+                            <element type="UIButton" name="Hands8" flex="1" height="56" text="8" fontSize="24" action="MahjongSetHands" value="8" color="70,70,100,255" />
                           </children>
                         </element>
                       </children>

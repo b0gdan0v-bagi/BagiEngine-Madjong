@@ -27,10 +27,12 @@ namespace BECore::Mahjong {
      * They carry no tile and nothing a seat could not see.
      *
      * **Setup.** `MahjongGame::IsSetupOpen()` decides whether the modal canvas `Setup` is shown (this component shows and hides it every
-     * frame). Its four `UISegmented` groups are bound to `seatKind0` .. `seatKind3` (`person` | `computer`) and emit
-     * `MahjongSetSeat0` .. `MahjongSetSeat3` with the value; this component changes the pending `SeatSetup` and the variable, and
-     * `MahjongStart` gives the pending setup to the game and begins a match with a random seed (`StartRandomMatch`), which closes the
-     * panel; a start the game refuses leaves it open. `MahjongNewGame` (the HUD button) opens it again, with the pending setup of the
+     * frame). Its four seat `UISegmented` groups are bound to `seatKind0` .. `seatKind3` (`person` | `computer`) and emit
+     * `MahjongSetSeat0` .. `MahjongSetSeat3` with the value; the fifth, `Hands`, is bound to `handsChoice` (`16` | `8`) and emits
+     * `MahjongSetHands` with the value. This component changes the pending `SeatSetup` or the pending number of hands and the variable,
+     * and `MahjongStart` gives the pending seats and the number of hands (`handsPerMatch` only: every other setting stays as the game
+     * has it) to the game and begins a match with a random seed (`StartRandomMatch`), which closes the panel; a start the game refuses
+     * leaves it open and the seats and settings as they were. `MahjongNewGame` (the HUD button) opens it again, with the pending setup of the
      * last match. Nothing is played while it is open (`MahjongTableComponent` takes no click and steps no computer).
      *
      * **The end of a hand and of a match.** While the session is in `HandOver` the modal canvas `HandOver` is shown with the rows of
@@ -55,6 +57,11 @@ namespace BECore::Mahjong {
             return _pending;
         }
 
+        /// The number of hands the panel shows and `MahjongStart` would begin a match with.
+        [[nodiscard]] int PendingHands() const noexcept {
+            return _pendingHands;
+        }
+
         /// The attached HUD, if any; the game assumes a single one.
         static MahjongHudComponent* GetActive() noexcept {
             return s_active;
@@ -67,6 +74,7 @@ namespace BECore::Mahjong {
         /// Shows or hides `Setup` after the game, and takes the setup of the game when the panel opens.
         void PublishSetup(const MahjongGame* game);
         void PublishSeatKinds() const;
+        void PublishHandsChoice() const;
         /// Shows or hides `HandOver` and `MatchOver` after the session, and sets their variables when the session moved.
         void PublishEndScreens(const MahjongGame* game);
         void PublishHandOver(const MahjongGame& game);
@@ -75,6 +83,7 @@ namespace BECore::Mahjong {
         void ShowScoreLines(int count);
 
         SeatSetup _pending = kDefaultSeatSetup;
+        int _pendingHands = kFullMatchHands;
         bool _setupShown = false;
         const MahjongGame* _numbersOf = nullptr;  // the game and the version the variables show
         uint64_t _numbersVersion = 0;
