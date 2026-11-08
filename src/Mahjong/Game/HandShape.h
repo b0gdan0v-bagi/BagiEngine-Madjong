@@ -16,6 +16,8 @@ namespace BECore::Mahjong {
     inline constexpr int kWinningHandTiles = kSetsInHand * kTilesPerSet + kTilesInPair;
     /// Pairs of the seven-pairs shape (`IsSevenPairs`).
     inline constexpr int kPairsInSevenPairs = 7;
+    /// The kinds of terminals and honours: 3 suits x 2 terminals + 4 winds + 3 dragons.
+    inline constexpr int kOrphanKinds = 13;
 
     /// One set of a decomposition: a chow (`first` is its lowest tile) or a pung (`first` is the tile). Never a kong: kongs are melds.
     struct ShapeSet {
@@ -91,6 +93,10 @@ namespace BECore::Mahjong {
     /// As above, and a kind whose four copies are all in `counts` and `meldTiles` (the tiles of the seat's melds, `CountMeldTiles`)
     /// is not offered either: the seat cannot win on a fifth copy.
     [[nodiscard]] eastl::vector<Tile> WinningTiles(const TileCounts& counts, int meldCount, const TileCounts& meldTiles);
+
+    /// Whether the hand is waiting: `WinningTiles(counts, meldCount, meldTiles)` is not empty (the same rule for the copies in the melds).
+    /// Cheaper than that: it stops at the first winning kind and probes only the kinds next to a held tile.
+    [[nodiscard]] bool IsWaiting(const TileCounts& counts, int meldCount, const TileCounts& meldTiles);
 
     /// The waits of a seat: `hand.concealed` against `hand.melds`, the copies in the melds counted. Use this one for a seat.
     [[nodiscard]] eastl::vector<Tile> WinningTiles(const PlayerHand& hand);
