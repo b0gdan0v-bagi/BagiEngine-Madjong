@@ -312,6 +312,28 @@ namespace BECore::Mahjong::Tests {
         ExpectPassesTheMatrix("Handoff", CoreManager::GetUIEnvironment().GetSettings().minTouchSize);
     }
 
+    TEST_F(MahjongTableScreenTest, TheCoverFollowsTheModalAnatomy) {
+        constexpr float kPlatePadding = 16.0f;
+        constexpr float kSectionGap = 16.0f;
+        ASSERT_NO_FATAL_FAILURE(Start(kTwoPeople));
+        CoreManager::GetUIVars().Set("handoffSeat"_intern, eastl::string_view(kLongestSeat));
+        UICanvasComponent::SetVisibleByName(*_manager->GetSceneByName("MahjongScene"_intern), "Handoff"_intern, true);
+        Draw();
+        Canvas("Handoff")->UpdateLayout(kViewWidth, kViewHeight);
+
+        const UIElement* plate = Element("Handoff", "Plate");
+        const UIElement* text = Element("Handoff", "HandoffText");
+        const UIElement* reveal = Element("Handoff", "Reveal");
+        ASSERT_TRUE(plate != nullptr && text != nullptr && reveal != nullptr);
+        EXPECT_TRUE(SameColor(plate->color, PaletteColor("surface")));
+        EXPECT_TRUE(SameColor(text->color, PaletteColor("header")));
+        EXPECT_TRUE(SameColor(reveal->color, PaletteColor("primary")));
+        EXPECT_EQ(reveal->rect.h, 64.0f);
+        EXPECT_EQ(text->rect.y, plate->rect.y + kPlatePadding);
+        EXPECT_EQ(reveal->rect.y - (text->rect.y + text->rect.h), kSectionGap);
+        EXPECT_EQ(reveal->rect.y + reveal->rect.h, plate->rect.y + plate->rect.h - kPlatePadding) << "the plate holds the band and the button and nothing more";
+    }
+
     TEST_F(MahjongTableScreenTest, TheButtonsLieInTheFreeCornerOfTheTableAndCoverNoTile) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();

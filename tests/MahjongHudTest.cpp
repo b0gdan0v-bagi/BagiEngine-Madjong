@@ -2,6 +2,7 @@
 #include "MahjongTableTestSupport.h"
 
 #include <BECore/Control/Json.h>
+#include <BECore/UI/UIButton.h>
 #include <Events/SceneEvents.h>
 #include <Mahjong/Components/MahjongHudComponent.h>
 #include <Mahjong/Table/UiPalette.h>
@@ -27,6 +28,26 @@ namespace BECore::Mahjong::Tests {
         constexpr int kHandsToTry = 20;
         constexpr const char* kPlainHand = "1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Gd Rd";
         constexpr int kWorstDiscards = 100;
+
+        bool SameColor(const Color& a, const Color& b) {
+            return a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a;
+        }
+
+        /// The colour of a role of the palette (an entry of `kUiPaletteNames`).
+        Color PaletteColor(const char* role) {
+            for (int i = 0; i < kUiPaletteSize; ++i) {
+                if (eastl::string_view(kUiPaletteNames[i]) == role) {
+                    return kUiPalette[i];
+                }
+            }
+            ADD_FAILURE() << "no role " << role;
+            return {};
+        }
+
+        /// The gap between two rects one above the other (negative when they overlap).
+        float GapBelow(const Rect& upper, const Rect& lower) {
+            return lower.y - (upper.y + upper.h);
+        }
 
         void Elapse(float seconds) {
             SceneEvents::SceneUpdateEvent::Emit(seconds);
@@ -206,6 +227,82 @@ namespace BECore::Mahjong::Tests {
             }
         }
         EXPECT_GE(Element("Setup", "Start")->rect.h, kMinControlHeight);
+    }
+
+    TEST_F(MahjongHudTest, TheSeatChoiceFollowsTheModalAnatomyAndTheGridGaps) {
+        constexpr float kPlatePadding16 = 16.0f;
+        constexpr float kRowPadding = 8.0f;
+        constexpr float kGap = 8.0f;
+        constexpr float kSectionGap = 16.0f;
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        _game->OpenSetup();
+        Draw();
+        ASSERT_TRUE(SetupShown());
+        Canvas("Setup")->UpdateLayout(kViewWidth, kViewHeight);
+
+        const Rect& plate = Element("Setup", "Plate")->rect;
+        const UIElement* title = Element("Setup", "Title");
+        ASSERT_NE(title, nullptr);
+        EXPECT_TRUE(SameColor(title->color, PaletteColor("header")));
+        EXPECT_TRUE(SameColor(Element("Setup", "Plate")->color, PaletteColor("surface")));
+        EXPECT_EQ(title->rect.x, plate.x + kPlatePadding16);
+        EXPECT_EQ(title->rect.y, plate.y + kPlatePadding16);
+        EXPECT_EQ(title->rect.h, 56.0f);
+
+        const Rect* above = &title->rect;
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            const UIElement* row = Element("Setup", Format("SeatRow{}", seat).c_str());
+            ASSERT_NE(row, nullptr);
+            EXPECT_TRUE(SameColor(row->color, PaletteColor("surfaceRaised"))) << seat;
+            EXPECT_EQ(GapBelow(*above, row->rect), kGap) << "row " << seat;
+            above = &row->rect;
+
+            const UIElement* caption = Element("Setup", Format("SeatCaption{}", seat).c_str());
+            ASSERT_NE(caption, nullptr);
+            EXPECT_TRUE(SameColor(caption->Cast<UILabel>()->textColor, PaletteColor("textMuted"))) << seat;
+            EXPECT_EQ(caption->rect.x, row->rect.x + kRowPadding) << seat;
+            const UIElement* group = Element("Setup", Format("SeatKind{}", seat).c_str());
+            ASSERT_NE(group, nullptr);
+            EXPECT_EQ(group->rect.x, caption->rect.x + caption->rect.w + kGap) << seat;
+            EXPECT_EQ(group->rect.x + group->rect.w, row->rect.x + row->rect.w - kRowPadding) << seat << " the group ends inside the row's padding";
+            EXPECT_EQ(group->rect.y, row->rect.y + kRowPadding) << seat;
+            EXPECT_EQ(group->rect.y + group->rect.h, row->rect.y + row->rect.h - kRowPadding) << seat;
+
+            for (const char* kind : {"Person", "Computer"}) {
+                const auto* segment = Element("Setup", Format("Seat{}{}", seat, kind).c_str())->Cast<UIButton>();
+                ASSERT_NE(segment, nullptr);
+                EXPECT_TRUE(SameColor(segment->selectedColor, PaletteColor("primary"))) << "the chosen segment of seat " << seat << " is the confirming colour";
+                EXPECT_TRUE(SameColor(segment->color, PaletteColor("neutral"))) << "the others are neutral";
+                EXPECT_GE(segment->rect.x, group->rect.x);
+                EXPECT_LE(segment->rect.x + segment->rect.w, group->rect.x + group->rect.w);
+                EXPECT_EQ(segment->rect.h, group->rect.h);
+            }
+        }
+
+        const UIElement* start = Element("Setup", "Start");
+        ASSERT_NE(start, nullptr);
+        EXPECT_TRUE(SameColor(start->color, PaletteColor("primary")));
+        EXPECT_EQ(start->rect.h, 64.0f);
+        EXPECT_EQ(GapBelow(*above, start->rect), kSectionGap) << "Start is set apart from the rows by 16";
+        EXPECT_EQ(start->rect.x, plate.x + kPlatePadding16);
+        EXPECT_EQ(start->rect.y + start->rect.h, plate.y + plate.h - kPlatePadding16) << "the plate holds Start and nothing more";
+        EXPECT_LE(plate.y + plate.h, kViewHeight);
+    }
+
+    TEST_F(MahjongHudTest, TheSelectedSegmentIsDrawnInTheFillOfThePrimaryRole) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        _game->OpenSetup();
+        Draw();
+        ASSERT_TRUE(SetupShown());
+
+        const auto* chosen = Element("Setup", "Seat0Person")->Cast<UIButton>();
+        const auto* other = Element("Setup", "Seat0Computer")->Cast<UIButton>();
+        ASSERT_TRUE(chosen != nullptr && other != nullptr);
+        ASSERT_TRUE(chosen->selected);
+        ASSERT_FALSE(other->selected);
+        EXPECT_TRUE(SameColor(chosen->GetCurrentFill(), PaletteColor("primary"))) << "the choice is read from the colour, not only from the bar";
+        EXPECT_FALSE(SameColor(other->GetCurrentFill(), PaletteColor("primary")));
+        EXPECT_TRUE(SameColor(other->GetCurrentFill(), PaletteColor("neutral")));
     }
 
     TEST_F(MahjongHudTest, TheHudCoversNoTileOfTheWorstTable) {

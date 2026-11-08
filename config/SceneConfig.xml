@@ -144,10 +144,10 @@
             <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.7" useSafeArea="true" modal="true" visible="false">
               <elements>
                 <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
-                <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="560" height="224" direction="Vertical" spacing="16" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
+                <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="560" height="208" direction="Vertical" spacing="16" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
                   <children>
-                    <element type="UILabel" name="HandoffText" height="104" text="Pass the screen to {handoffSeat}" fontSize="30" align="Center" verticalAlign="Center" />
-                    <element type="UIButton" name="Reveal" height="56" text="Show" fontSize="28" action="MahjongReveal" color="40,110,60,255" />
+                    <element type="UILabel" name="HandoffText" height="96" text="Pass the screen to {handoffSeat}" fontSize="28" align="Center" verticalAlign="Center" color="58,66,92,255" />
+                    <element type="UIButton" name="Reveal" height="64" text="Show" fontSize="28" action="MahjongReveal" color="40,110,60,255" />
                   </children>
                 </element>
               </elements>
@@ -226,61 +226,63 @@
           fit a 320 unit wide window at the user scale 1.5 of the size matrix), hidden here; MahjongHudComponent shows it exactly while
           MahjongGame::IsSetupOpen() (at the start, and after the New game button). Each group carries action MahjongSetSeatN and the value
           person or computer; its variable seatKindN is set by the component, which also begins the match on MahjongStart. The plate is
-          32 padding + 44 title + 4 x 56 rows + 56 Start + 5 x 12 spacing = 416 units.
+          32 padding + 56 title band + 4 x 72 rows (8 padding round a 56 segment) + 64 Start + 6 x 8 spacing (7 children: StartGap is empty,
+          so the 8 + 8 round it set Start 16 apart from the rows) = 488 units.
         -->
         <node name="Setup" layer="30">
           <components>
             <component type="UICanvasComponent" space="SceneView" useSafeArea="true" modal="true" visible="false">
               <elements>
                 <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
-                <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="640" height="416" direction="Vertical" spacing="12" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
+                <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="640" height="488" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
                   <children>
-                    <element type="UILabel" name="Title" height="44" text="New game: who plays?" fontSize="30" align="Center" />
-                    <element type="UIStack" name="SeatRow0" height="56" direction="Horizontal" spacing="8" crossAlign="Stretch">
+                    <element type="UILabel" name="Title" height="56" text="New game: who plays?" fontSize="28" align="Center" verticalAlign="Center" color="58,66,92,255" />
+                    <element type="UIStack" name="SeatRow0" height="72" direction="Horizontal" spacing="8" padding="8" crossAlign="Stretch" color="48,54,72,255">
                       <children>
-                        <element type="UILabel" name="SeatCaption0" width="110" height="56" text="Seat 1" fontSize="24" verticalAlign="Center" />
-                        <element type="UISegmented" name="SeatKind0" bind="seatKind0" flex="1" height="56" direction="Horizontal" spacing="4" color="30,30,30,255">
+                        <element type="UILabel" name="SeatCaption0" width="112" height="56" text="Seat 1" fontSize="22" verticalAlign="Center" textColor="190,196,190,255" />
+                        <element type="UISegmented" name="SeatKind0" bind="seatKind0" flex="1" height="56" direction="Horizontal" spacing="4" color="48,54,72,255">
                           <children>
-                            <element type="UIButton" name="Seat0Person" flex="1" height="56" text="Person" fontSize="24" action="MahjongSetSeat0" value="person" color="70,70,100,255" />
-                            <element type="UIButton" name="Seat0Computer" flex="1" height="56" text="Computer" fontSize="24" action="MahjongSetSeat0" value="computer" color="70,70,100,255" />
+                            <element type="UIButton" name="Seat0Person" flex="1" height="56" text="Person" fontSize="22" action="MahjongSetSeat0" value="person" color="70,70,100,255" selectedColor="40,110,60,255" />
+                            <element type="UIButton" name="Seat0Computer" flex="1" height="56" text="Computer" fontSize="22" action="MahjongSetSeat0" value="computer" color="70,70,100,255" selectedColor="40,110,60,255" />
                           </children>
                         </element>
                       </children>
                     </element>
-                    <element type="UIStack" name="SeatRow1" height="56" direction="Horizontal" spacing="8" crossAlign="Stretch">
+                    <element type="UIStack" name="SeatRow1" height="72" direction="Horizontal" spacing="8" padding="8" crossAlign="Stretch" color="48,54,72,255">
                       <children>
-                        <element type="UILabel" name="SeatCaption1" width="110" height="56" text="Seat 2" fontSize="24" verticalAlign="Center" />
-                        <element type="UISegmented" name="SeatKind1" bind="seatKind1" flex="1" height="56" direction="Horizontal" spacing="4" color="30,30,30,255">
+                        <element type="UILabel" name="SeatCaption1" width="112" height="56" text="Seat 2" fontSize="22" verticalAlign="Center" textColor="190,196,190,255" />
+                        <element type="UISegmented" name="SeatKind1" bind="seatKind1" flex="1" height="56" direction="Horizontal" spacing="4" color="48,54,72,255">
                           <children>
-                            <element type="UIButton" name="Seat1Person" flex="1" height="56" text="Person" fontSize="24" action="MahjongSetSeat1" value="person" color="70,70,100,255" />
-                            <element type="UIButton" name="Seat1Computer" flex="1" height="56" text="Computer" fontSize="24" action="MahjongSetSeat1" value="computer" color="70,70,100,255" />
+                            <element type="UIButton" name="Seat1Person" flex="1" height="56" text="Person" fontSize="22" action="MahjongSetSeat1" value="person" color="70,70,100,255" selectedColor="40,110,60,255" />
+                            <element type="UIButton" name="Seat1Computer" flex="1" height="56" text="Computer" fontSize="22" action="MahjongSetSeat1" value="computer" color="70,70,100,255" selectedColor="40,110,60,255" />
                           </children>
                         </element>
                       </children>
                     </element>
-                    <element type="UIStack" name="SeatRow2" height="56" direction="Horizontal" spacing="8" crossAlign="Stretch">
+                    <element type="UIStack" name="SeatRow2" height="72" direction="Horizontal" spacing="8" padding="8" crossAlign="Stretch" color="48,54,72,255">
                       <children>
-                        <element type="UILabel" name="SeatCaption2" width="110" height="56" text="Seat 3" fontSize="24" verticalAlign="Center" />
-                        <element type="UISegmented" name="SeatKind2" bind="seatKind2" flex="1" height="56" direction="Horizontal" spacing="4" color="30,30,30,255">
+                        <element type="UILabel" name="SeatCaption2" width="112" height="56" text="Seat 3" fontSize="22" verticalAlign="Center" textColor="190,196,190,255" />
+                        <element type="UISegmented" name="SeatKind2" bind="seatKind2" flex="1" height="56" direction="Horizontal" spacing="4" color="48,54,72,255">
                           <children>
-                            <element type="UIButton" name="Seat2Person" flex="1" height="56" text="Person" fontSize="24" action="MahjongSetSeat2" value="person" color="70,70,100,255" />
-                            <element type="UIButton" name="Seat2Computer" flex="1" height="56" text="Computer" fontSize="24" action="MahjongSetSeat2" value="computer" color="70,70,100,255" />
+                            <element type="UIButton" name="Seat2Person" flex="1" height="56" text="Person" fontSize="22" action="MahjongSetSeat2" value="person" color="70,70,100,255" selectedColor="40,110,60,255" />
+                            <element type="UIButton" name="Seat2Computer" flex="1" height="56" text="Computer" fontSize="22" action="MahjongSetSeat2" value="computer" color="70,70,100,255" selectedColor="40,110,60,255" />
                           </children>
                         </element>
                       </children>
                     </element>
-                    <element type="UIStack" name="SeatRow3" height="56" direction="Horizontal" spacing="8" crossAlign="Stretch">
+                    <element type="UIStack" name="SeatRow3" height="72" direction="Horizontal" spacing="8" padding="8" crossAlign="Stretch" color="48,54,72,255">
                       <children>
-                        <element type="UILabel" name="SeatCaption3" width="110" height="56" text="Seat 4" fontSize="24" verticalAlign="Center" />
-                        <element type="UISegmented" name="SeatKind3" bind="seatKind3" flex="1" height="56" direction="Horizontal" spacing="4" color="30,30,30,255">
+                        <element type="UILabel" name="SeatCaption3" width="112" height="56" text="Seat 4" fontSize="22" verticalAlign="Center" textColor="190,196,190,255" />
+                        <element type="UISegmented" name="SeatKind3" bind="seatKind3" flex="1" height="56" direction="Horizontal" spacing="4" color="48,54,72,255">
                           <children>
-                            <element type="UIButton" name="Seat3Person" flex="1" height="56" text="Person" fontSize="24" action="MahjongSetSeat3" value="person" color="70,70,100,255" />
-                            <element type="UIButton" name="Seat3Computer" flex="1" height="56" text="Computer" fontSize="24" action="MahjongSetSeat3" value="computer" color="70,70,100,255" />
+                            <element type="UIButton" name="Seat3Person" flex="1" height="56" text="Person" fontSize="22" action="MahjongSetSeat3" value="person" color="70,70,100,255" selectedColor="40,110,60,255" />
+                            <element type="UIButton" name="Seat3Computer" flex="1" height="56" text="Computer" fontSize="22" action="MahjongSetSeat3" value="computer" color="70,70,100,255" selectedColor="40,110,60,255" />
                           </children>
                         </element>
                       </children>
                     </element>
-                    <element type="UIButton" name="Start" height="56" text="Start" fontSize="28" action="MahjongStart" color="40,110,60,255" />
+                    <element type="UIElement" name="StartGap" height="0" />
+                    <element type="UIButton" name="Start" height="64" text="Start" fontSize="28" action="MahjongStart" color="40,110,60,255" />
                   </children>
                 </element>
               </elements>
