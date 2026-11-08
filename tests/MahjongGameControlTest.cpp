@@ -226,7 +226,8 @@ namespace BECore::Mahjong::Tests {
                     }
                     for (Seat seat = 0; seat < kSeatCount; ++seat) {
                         for (const Meld& meld : hand.GetHand(seat).melds) {
-                            lies_open = lies_open || (!meld.concealed && meld.first.Id() <= id && id <= meld.first.Id() + 2);
+                            const bool inSet = meld.kind == MeldKind::Chow ? meld.first.Id() <= id && id <= meld.first.Id() + 2 : meld.first.Id() == id;
+                            lies_open = lies_open || (!meld.concealed && inSet);
                         }
                     }
                     if (!lies_open) {
@@ -380,7 +381,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(Member(state, "discards").empty());
 
         const Json& hand = Member(state, "hand");
-        ASSERT_EQ(hand.size(), 14u) << "East holds 14 tiles";
+        ASSERT_EQ(hand.size(), static_cast<size_t>(kDealtTiles + 1)) << "East holds one tile more than the others";
         const std::vector<int> ids = HandIds(hand);
         EXPECT_TRUE(std::is_sorted(ids.begin(), ids.end()));
         EXPECT_EQ(std::count(ids.begin(), ids.end(), -1), 0);
@@ -397,7 +398,7 @@ namespace BECore::Mahjong::Tests {
             const Json& entry = seats[static_cast<size_t>(seat)];
             EXPECT_EQ(Str(Member(entry, "kind")), seat == kSeat0 ? "person" : "computer");
             EXPECT_EQ(Member(entry, "score").get<int>(), kExpectedStartingScore);
-            EXPECT_EQ(Member(entry, "concealedCount").get<int>(), seat == kSeat0 ? 14 : 13);
+            EXPECT_EQ(Member(entry, "concealedCount").get<int>(), seat == kSeat0 ? kDealtTiles + 1 : kDealtTiles);
             EXPECT_TRUE(Member(entry, "melds").empty());
             EXPECT_EQ(Member(entry, "concealedKongs").get<int>(), 0);
             EXPECT_TRUE(Member(entry, "bonus").empty());
@@ -485,7 +486,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Strings(Member(seats[0], "bonus")), std::vector<std::string>{kFlowerTile});
         EXPECT_TRUE(Member(seats[1], "bonus").empty());
         EXPECT_FALSE(Member(Member(state, "turn"), "yourTurn").get<bool>());
-        EXPECT_EQ(Member(state, "hand").size(), 13u);
+        EXPECT_EQ(Member(state, "hand").size(), static_cast<size_t>(kDealtTiles));
         EXPECT_TRUE(Actions().empty());
         const uint64_t version = control->GetStateVersion();
         EXPECT_EQ(CodeOf(control->PerformAction(Parse("{\"type\": \"pass\"}"))), "illegal_action");

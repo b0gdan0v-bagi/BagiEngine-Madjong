@@ -145,7 +145,7 @@ def play_mahjong(client: BagiControlClient) -> None:
     check(state["seat"] == 0 and [seat["kind"] for seat in state["seats"]] == ["person", "computer", "computer", "computer"], "the seats are not PCCC")
     check(all(seat["score"] == STARTING_SCORE for seat in state["seats"]), "the scores do not start at 2000")
     check(len(state["hand"]) in (13, 14), f"the person holds {len(state['hand'])} tiles")
-    check([seat["concealedCount"] for seat in state["seats"]][0] == len(state["hand"]), "concealedCount disagrees with the hand")
+    check(state["seats"][0]["concealedCount"] == len(state["hand"]), "concealedCount disagrees with the hand")
     version = snapshot["version"]
 
     actions = client.call("list_actions")["actions"]

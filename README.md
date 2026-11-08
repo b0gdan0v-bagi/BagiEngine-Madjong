@@ -36,12 +36,15 @@ ctest --preset macos-debug                    # MahjongTests and BagiMahjongCont
 build/ClangmacOS/BagiMahjong                  # the game; the executable folder depends on compiler and OS
 ```
 
+The tile art is drawn by a script (standard library only): `python3 tools/make_tiles.py` regenerates `assets/tiles/tiles.png` and `config/TextureLibrary.xml`, `python3 tools/make_tiles.py --check` tells whether the committed files are up to date.
+
 ## Layout
 
 | Path | What |
 |------|------|
 | `src/Mahjong/` | the game: `MahjongGame` now, the rules (`Game/`) and the scene components (`Components/`) to come. `CLAUDE.md` describes it |
-| `config/`, `assets/` | scene, application config; sprites to come |
+| `config/`, `assets/` | scene, application config, the tile sprite library; the tile atlas (`assets/tiles/tiles.png`) |
+| `tools/` | `make_tiles.py`, the generator of our own tile art (`config/TextureLibrary.xml` and the atlas are its output) |
 | `tests/` | gtest cases and `control_smoke.py`, the smoke test of the control API (plays a hand and a match over WebSocket) |
 | `todo/`, `TODO.md` | known problems and ideas live in the todo store (area `mahjong`), not in git (`todo/README.md`) |
 | `CI/` | environment setup (`setup_venv.*`) and the VS Code workspace `BagiMahjong.code-workspace` (CMake Tools on the engine's presets, CodeLLDB / MSVC launch, build tasks) |
