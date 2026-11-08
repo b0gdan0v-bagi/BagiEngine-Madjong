@@ -4,39 +4,24 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        constexpr eastl::array<ButtonSpec, kButtonCount> kSpecs{{
-            {"Win", "MahjongWin", "", nullptr, "Mahjong!", 0},
-            {"Mahjong", "MahjongClaimMahjong", "", nullptr, "Mahjong!", 1},
-            {"Pung", "MahjongClaimPung", "", nullptr, "Pung", 1},
-            {"Kong", "MahjongClaimKong", "", nullptr, "Kong", 1},
-            {"Chow0", "MahjongClaimChow", "0", "chow0", "Chow", kMaxButtonTiles},
-            {"Chow1", "MahjongClaimChow", "1", "chow1", "Chow", kMaxButtonTiles},
-            {"Chow2", "MahjongClaimChow", "2", "chow2", "Chow", kMaxButtonTiles},
-            {"Pass", "MahjongPass", "", nullptr, "Pass", 0},
-            {"ConcealedKong0", "MahjongConcealedKong", "0", "kong0", "Kong", 1},
-            {"ConcealedKong1", "MahjongConcealedKong", "1", "kong1", "Kong", 1},
-            {"ConcealedKong2", "MahjongConcealedKong", "2", "kong2", "Kong", 1},
-            {"UpgradeKong", "MahjongUpgradeKong", "", "upgrade", "Add to pung", 1},
-            {"Declare", "MahjongDeclare", kDeclareOn.data(), nullptr, "Ready hand", 0},
-        }};
-
         /// The sentences of the hint label, one per kind (the chows, the concealed kongs share theirs).
-        constexpr eastl::string_view kChowHint = "Take the discard to complete a run of three in a row (only from the player before you).";
-        constexpr eastl::string_view kConcealedKongHint = "Set four equal tiles from your hand aside and draw a spare tile.";
-        constexpr eastl::array<eastl::string_view, kButtonCount> kHints{{
-            "Your hand is complete: win the hand.",
-            "The tile completes your hand: take it and win.",
-            "Take the discard to make a set of three equal tiles.",
-            "Take the discard to make a set of four equal tiles; you then draw a spare tile.",
-            kChowHint,
-            kChowHint,
-            kChowHint,
-            "Let the discard go.",
-            kConcealedKongHint,
-            kConcealedKongHint,
-            kConcealedKongHint,
-            "Add the fourth tile to your open pung to make a kong; you draw a spare tile.",
-            "Announce you are one tile from mahjong (needed to win), then click the tile to discard.",
+        constexpr const char* kChowHint = "Take the discard to complete a run of three in a row (only from the player before you).";
+        constexpr const char* kConcealedKongHint = "Set four equal tiles from your hand aside and draw a spare tile.";
+
+        constexpr eastl::array<ButtonSpec, kButtonCount> kSpecs{{
+            {"Win", "MahjongWin", "", nullptr, "Mahjong!", "Your hand is complete: win the hand.", 0},
+            {"Mahjong", "MahjongClaimMahjong", "", nullptr, "Mahjong!", "The tile completes your hand: take it and win.", 1},
+            {"Pung", "MahjongClaimPung", "", nullptr, "Pung", "Take the discard to make a set of three equal tiles.", 1},
+            {"Kong", "MahjongClaimKong", "", nullptr, "Kong", "Take the discard to make a set of four equal tiles; you then draw a spare tile.", 1},
+            {"Chow0", "MahjongClaimChow", "0", "chow0", "Chow", kChowHint, kMaxButtonTiles},
+            {"Chow1", "MahjongClaimChow", "1", "chow1", "Chow", kChowHint, kMaxButtonTiles},
+            {"Chow2", "MahjongClaimChow", "2", "chow2", "Chow", kChowHint, kMaxButtonTiles},
+            {"Pass", "MahjongPass", "", nullptr, "Pass", "Let the discard go.", 0},
+            {"ConcealedKong0", "MahjongConcealedKong", "0", "kong0", "Kong", kConcealedKongHint, 1},
+            {"ConcealedKong1", "MahjongConcealedKong", "1", "kong1", "Kong", kConcealedKongHint, 1},
+            {"ConcealedKong2", "MahjongConcealedKong", "2", "kong2", "Kong", kConcealedKongHint, 1},
+            {"UpgradeKong", "MahjongUpgradeKong", "", "upgrade", "Add to pung", "Add the fourth tile to your open pung to make a kong; you draw a spare tile.", 1},
+            {"Declare", "MahjongDeclare", kDeclareOn.data(), nullptr, "Ready hand", "Announce you are one tile from mahjong (needed to win), then click the tile to discard.", 0},
         }};
 
         static_assert(kChowButtons + static_cast<int>(ButtonKind::ClaimChow0) == static_cast<int>(ButtonKind::Pass));
@@ -49,7 +34,6 @@ namespace BECore::Mahjong {
             button.action = action;
             button.label = eastl::move(label);
             button.hint = HintOf(kind);
-            button.tileCount = 0;
             return button;
         }
 
@@ -95,7 +79,7 @@ namespace BECore::Mahjong {
     }
 
     eastl::string_view HintOf(ButtonKind kind) noexcept {
-        return kHints[static_cast<size_t>(kind)];
+        return SpecOf(kind).hint;
     }
 
     ActionButtons MakeActionButtons(const eastl::vector<HandAction>& legal, std::optional<Tile> pendingTile) {
@@ -107,7 +91,9 @@ namespace BECore::Mahjong {
             switch (action.kind) {
                 case ActionKind::Discard:
                     if (action.declareCalling) {
+                        // The flag is set by the toggle: no action of its own, only the hint
                         buttons[ButtonKind::Declare].shown = true;
+                        buttons[ButtonKind::Declare].hint = HintOf(ButtonKind::Declare);
                     }
                     break;
                 case ActionKind::DeclareWin:

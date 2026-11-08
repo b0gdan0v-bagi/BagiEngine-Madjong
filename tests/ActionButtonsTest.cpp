@@ -157,6 +157,18 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(Pictured(buttons, ButtonKind::Win).empty());
         EXPECT_TRUE(Pictured(buttons, ButtonKind::Declare).empty());
         EXPECT_TRUE(buttons[ButtonKind::Declare].shown);
+        EXPECT_EQ(buttons[ButtonKind::Declare].hint, HintOf(ButtonKind::Declare));
+        EXPECT_FALSE(buttons[ButtonKind::Declare].hint.empty());
+    }
+
+    TEST(ActionButtonsTest, EveryShownButtonOfATurnHasItsHint) {
+        const ActionButtons buttons =
+            MakeActionButtons({HandAction::MakeDiscard(T("1p"), true), HandAction::MakeDeclareWin(), HandAction::MakeConcealedKong(T("5p")), HandAction::MakeUpgradeKong(T("Ew"))}, T("3s"));
+
+        for (int i = 0; i < kButtonCount; ++i) {
+            const ButtonKind kind = static_cast<ButtonKind>(i);
+            EXPECT_EQ(buttons[kind].hint, buttons[kind].shown ? HintOf(kind) : eastl::string_view{}) << SpecOf(kind).element;
+        }
     }
 
     TEST(ActionButtonsTest, AButtonThatIsNotShownHasNoTilesAndNoHint) {

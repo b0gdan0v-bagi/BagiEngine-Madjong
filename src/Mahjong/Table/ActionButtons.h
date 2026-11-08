@@ -24,14 +24,15 @@ namespace BECore::Mahjong {
     inline constexpr size_t kMaxHintLength = 90;
 
     /// How the scene file names a button: its element, the action and value it emits, the `UIVars` variable that is its label (null: the
-    /// label is fixed text in the file), the plain word the file shows on it and the most tiles pictured on it (3 for a chow, 1 for a
-    /// claim of the pending tile and for a kong, 0 for none).
+    /// label is fixed text in the file), the plain word the file shows on it, the sentence that explains it (`HintOf`) and the most tiles
+    /// pictured on it (3 for a chow, 1 for a claim of the pending tile and for a kong, 0 for none).
     struct ButtonSpec {
         const char* element;
         const char* action;
         const char* value;
         const char* labelVar;
         const char* word;
+        const char* hint;
         int maxTiles;
     };
 
