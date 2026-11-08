@@ -6,28 +6,8 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        constexpr eastl::string_view kNoTile = "No tile";
-        constexpr eastl::string_view kDrawnHand = "Drawn hand";
-        constexpr eastl::string_view kNoPayments = "No payments";
-        constexpr eastl::string_view kLimitHand = "Limit";
-        constexpr eastl::string_view kTiedForFirst = "Tied for first:";
-
-        /// The word of a suit: "5 Dots".
-        eastl::string_view SuitName(TileSuit suit) noexcept {
-            switch (suit) {
-                case TileSuit::Dots:
-                    return "Dots";
-                case TileSuit::Bamboo:
-                    return "Bamboo";
-                case TileSuit::Characters:
-                    return "Characters";
-                case TileSuit::None:
-                    break;
-            }
-            return {};
-        }
-
-        constexpr eastl::array<eastl::string_view, kDragonCount> kDragonNames{"Red Dragon", "White Dragon", "Green Dragon"};
+        /// The keys of the three dragons, in tile order.
+        constexpr eastl::array<eastl::string_view, kDragonCount> kDragonKeys{"tile.dragon.Red", "tile.dragon.White", "tile.dragon.Green"};
 
         /// Lines about a set or a pair: "Pung of 5 Dots".
         bool NamesItsTileWithOf(ScoreKind kind) noexcept {
@@ -65,182 +45,120 @@ namespace BECore::Mahjong {
             return int64_t{1} << std::clamp(doubles, 0, kMostDoubles);
         }
 
-        eastl::string WinHeadline(const HandSettlement& settlement, const HandResult& result, const SeatSetup& seats) {
+        eastl::string WinHeadline(const UIStrings& strings, const HandSettlement& settlement, const HandResult& result, const SeatSetup& seats) {
             const SeatWinds winds = MakeSeatWinds(settlement.east);
-            const auto label = [&](Seat seat) { return SeatLabel(seat, winds[seat], seats); };
+            const auto label = [&](Seat seat) { return SeatLabel(strings, seat, winds[seat], seats); };
             const eastl::string winner = label(settlement.winner);
+            const bool knowsFrom = IsSeat(result.from);
             switch (result.source) {
                 case WinSource::SelfDraw:
-                    return Format("{} wins by self-draw", winner);
+                    return Tr(strings, "handover.win.selfDraw", {{"winner", winner}});
                 case WinSource::Discard:
-                    return IsSeat(result.from) ? Format("{} wins on the discard of {}", winner, label(result.from)) : Format("{} wins on a discard", winner);
+                    return knowsFrom ? Tr(strings, "handover.win.discard", {{"winner", winner}, {"from", label(result.from)}}) : Tr(strings, "handover.win.discardUnknown", {{"winner", winner}});
                 case WinSource::RobbedKong:
-                    return IsSeat(result.from) ? Format("{} wins by robbing the kong of {}", winner, label(result.from)) : Format("{} wins by robbing a kong", winner);
+                    return knowsFrom ? Tr(strings, "handover.win.robbedKong", {{"winner", winner}, {"from", label(result.from)}}) : Tr(strings, "handover.win.robbedKongUnknown", {{"winner", winner}});
             }
             return winner;
         }
 
-        eastl::string WinSummary(const ScoreBreakdown& breakdown, const HandResult& result) {
-            const eastl::string tile = TileName(result.winningTile);
+        eastl::string WinSummary(const UIStrings& strings, const ScoreBreakdown& breakdown, const HandResult& result) {
+            const eastl::string tile = TileName(strings, result.winningTile);
+            const eastl::string score = Format("{}", breakdown.score);
             if (breakdown.limitHand) {
-                return Format("Winning tile {}: score {}", tile, breakdown.score);
+                return Tr(strings, "handover.summary.limit", {{"tile", tile}, {"score", score}});
             }
+            const eastl::string points = Format("{}", breakdown.points);
             if (breakdown.doubles > 0) {
-                return Format("Winning tile {}: {} points x {} = {}, score {}", tile, breakdown.points, Multiplier(breakdown.doubles), breakdown.raw, breakdown.score);
+                const eastl::string multiplier = Format("{}", Multiplier(breakdown.doubles));
+                const eastl::string raw = Format("{}", breakdown.raw);
+                return Tr(strings, "handover.summary.doubles", {{"tile", tile}, {"points", points}, {"multiplier", multiplier}, {"raw", raw}, {"score", score}});
             }
-            return Format("Winning tile {}: {} points, score {}", tile, breakdown.points, breakdown.score);
+            return Tr(strings, "handover.summary.plain", {{"tile", tile}, {"points", points}, {"score", score}});
         }
 
     }  // namespace
 
-    eastl::string TileName(Tile tile) {
+    eastl::string TileName(const UIStrings& strings, Tile tile) {
         if (!tile.IsValid()) {
-            return eastl::string(kNoTile);
+            return Tr(strings, "tile.none");
         }
         if (tile.IsSuit()) {
-            const eastl::string_view suit = SuitName(tile.Suit());
-            return Format("{} {}", tile.Rank(), suit);
+            const eastl::string rank = Format("{}", tile.Rank());
+            const eastl::string suit = Tr(strings, Format("suit.{}", EnumUtils<TileSuit>::ToString(tile.Suit())).c_str());
+            return Tr(strings, "tile.suit", {{"rank", rank}, {"suit", suit}});
         }
         if (tile.IsWind()) {
-            return Format("{} Wind", EnumUtils<Wind>::ToString(static_cast<Wind>(tile.Id() - kFirstWindId)));
+            return Tr(strings, "tile.wind", {{"wind", WindName(strings, static_cast<Wind>(tile.Id() - kFirstWindId))}});
         }
         if (tile.IsDragon()) {
-            return eastl::string(kDragonNames[tile.Id() - kFirstDragonId]);
+            return Tr(strings, kDragonKeys[tile.Id() - kFirstDragonId]);
         }
         if (tile.Id() < kFirstSeasonId) {
-            return Format("Flower {}", tile.Id() - kFirstFlowerId + 1);
+            const eastl::string number = Format("{}", tile.Id() - kFirstFlowerId + 1);
+            return Tr(strings, "tile.flower", {{"n", number}});
         }
-        return Format("Season {}", tile.Id() - kFirstSeasonId + 1);
+        const eastl::string number = Format("{}", tile.Id() - kFirstSeasonId + 1);
+        return Tr(strings, "tile.season", {{"n", number}});
     }
 
-    eastl::string_view ScoreKindName(ScoreKind kind) noexcept {
-        switch (kind) {
-            case ScoreKind::Win:
-                return "Win";
-            case ScoreKind::WinTileFromWall:
-                return "Tile from the wall";
-            case ScoreKind::OnlyWinningTile:
-                return "Only winning tile";
-            case ScoreKind::Pung:
-                return "Pung";
-            case ScoreKind::Kong:
-                return "Kong";
-            case ScoreKind::Pair:
-                return "Pair";
-            case ScoreKind::Bonus:
-                return "Bonus tile";
-            case ScoreKind::DragonSet:
-                return "Dragon set";
-            case ScoreKind::OwnWindSet:
-                return "Own wind set";
-            case ScoreKind::RoundWindSet:
-                return "Round wind set";
-            case ScoreKind::OneSuitWithHonours:
-                return "One suit with honours";
-            case ScoreKind::OneSuitNoHonours:
-                return "One suit, no honours";
-            case ScoreKind::OwnBonus:
-                return "Own wind bonus";
-            case ScoreKind::RoundBonus:
-                return "Round wind bonus";
-            case ScoreKind::OnlyPungs:
-                return "Only pungs";
-            case ScoreKind::NoPoints:
-                return "No points";
-            case ScoreKind::LooseTile:
-                return "Loose tile";
-            case ScoreKind::LastTile:
-                return "Last tile";
-            case ScoreKind::RobbedKong:
-                return "Robbed kong";
-            case ScoreKind::LittleFourWinds:
-                return "Little four winds";
-            case ScoreKind::LittleThreeDragons:
-                return "Little three dragons";
-            case ScoreKind::TerminalsOrHonoursEverywhere:
-                return "Terminal or honour in every set";
-            case ScoreKind::FullyConcealed:
-                return "Fully concealed";
-            case ScoreKind::SeveralKongs:
-                return "Several kongs";
-            case ScoreKind::ObviouslyLast:
-                return "Obviously the last tile";
-            case ScoreKind::CallingFirstHand:
-                return "Calling hand, first hand";
-            case ScoreKind::ConcealedPungsOneSuit:
-                return "Concealed pungs, one suit";
-            case ScoreKind::HonoursOnly:
-                return "Honours only";
-            case ScoreKind::TerminalsOnly:
-                return "Terminals only";
-            case ScoreKind::AllGreen:
-                return "All green";
-            case ScoreKind::SevenPairsHonours:
-                return "Seven pairs of honours";
-            case ScoreKind::SevenPairsOneSuit:
-                return "Seven pairs of one suit";
-            case ScoreKind::BigThreeDragons:
-                return "Big three dragons";
-            case ScoreKind::BigFourWinds:
-                return "Big four winds";
-            case ScoreKind::FourKongs:
-                return "Four kongs";
-            case ScoreKind::ThirteenOrphans:
-                return "Thirteen orphans";
-            case ScoreKind::LastTileOneDot:
-                return "Last tile, 1 of dots";
-            case ScoreKind::LooseTileFiveDots:
-                return "Loose tile, 5 of dots";
-        }
-        return "Unknown";
+    eastl::string ScoreKindName(const UIStrings& strings, ScoreKind kind) {
+        return Tr(strings, Format("score.kind.{}", EnumUtils<ScoreKind>::ToString(kind)).c_str());
     }
 
-    eastl::string ScoreLineText(const ScoreLine& line) {
-        const eastl::string_view name = ScoreKindName(line.kind);
+    eastl::string ScoreLineText(const UIStrings& strings, const ScoreLine& line) {
+        const eastl::string name = ScoreKindName(strings, line.kind);
         if (IsLimitKind(line.kind)) {
-            return Format("{}: {}", kLimitHand, name);
+            return Tr(strings, "score.limit", {{"name", name}});
         }
-        eastl::string text(name);
+        eastl::string text = name;
         if (line.tile.IsValid() && NamesItsTileWithOf(line.kind)) {
-            text = Format("{} of {}", name, TileName(line.tile));
+            text = Tr(strings, "score.of", {{"name", name}, {"tile", TileName(strings, line.tile)}});
         } else if (line.tile.IsValid() && NamesItsTileInBrackets(line.kind)) {
-            text = Format("{} ({})", name, TileName(line.tile));
+            text = Tr(strings, "score.bracket", {{"name", name}, {"tile", TileName(strings, line.tile)}});
         }
         if (line.doubles > 0) {
-            return Format("{}: x{}", text, Multiplier(line.doubles));
+            const eastl::string multiplier = Format("{}", Multiplier(line.doubles));
+            return Tr(strings, "score.doubles", {{"name", text}, {"multiplier", multiplier}});
         }
-        return Format("{}: {}", text, line.points);
+        const eastl::string points = Format("{}", line.points);
+        return Tr(strings, "score.points", {{"name", text}, {"points", points}});
     }
 
-    ScoreTable FormatScoreTable(const HandSettlement& settlement, const HandResult& result, const SeatScores& totalsAfter, const SeatSetup& seats) {
+    ScoreTable FormatScoreTable(const UIStrings& strings, const HandSettlement& settlement, const HandResult& result, const SeatScores& totalsAfter, const SeatSetup& seats) {
         ScoreTable table;
         const SeatWinds winds = MakeSeatWinds(settlement.east);
         const bool won = settlement.kind == ResultKind::Win && IsSeat(settlement.winner);
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            const eastl::string name = SeatLabel(seat, winds[seat], seats);
-            table.seats[seat] =
-                won ? Format("{}: hand {}, {:+}, total {}", name, settlement.scores[seat], settlement.deltas[seat], totalsAfter[seat]) : Format("{}: no payment, total {}", name, totalsAfter[seat]);
+            const eastl::string name = SeatLabel(strings, seat, winds[seat], seats);
+            const eastl::string total = Format("{}", totalsAfter[seat]);
+            if (won) {
+                const eastl::string hand = Format("{}", settlement.scores[seat]);
+                const eastl::string delta = Format("{:+}", settlement.deltas[seat]);
+                table.seats[seat] = Tr(strings, "handover.seat.won", {{"name", name}, {"hand", hand}, {"delta", delta}, {"total", total}});
+            } else {
+                table.seats[seat] = Tr(strings, "handover.seat.drawn", {{"name", name}, {"total", total}});
+            }
         }
         if (!won) {
-            table.headline = eastl::string(kDrawnHand);
-            table.summary = eastl::string(kNoPayments);
+            table.headline = Tr(strings, "handover.drawn");
+            table.summary = Tr(strings, "handover.noPayments");
             return table;
         }
-        table.headline = WinHeadline(settlement, result, seats);
+        table.headline = WinHeadline(strings, settlement, result, seats);
         const ScoreBreakdown& breakdown = settlement.breakdowns[settlement.winner];
-        table.summary = WinSummary(breakdown, result);
+        table.summary = WinSummary(strings, breakdown, result);
         const int count = static_cast<int>(breakdown.lines.size());
         const int shown = count > kMaxScoreLines ? kMaxScoreLines - 1 : count;
         for (int i = 0; i < shown; ++i) {
-            table.lines.push_back(ScoreLineText(breakdown.lines[i]));
+            table.lines.push_back(ScoreLineText(strings, breakdown.lines[i]));
         }
         if (shown < count) {
-            table.lines.push_back(Format("+{} more", count - shown));
+            table.lines.push_back(Tr(strings, "handover.more", {{"n", Format("{}", count - shown)}}));
         }
         return table;
     }
 
-    StandingsTable FormatStandings(const Match& match, const SeatSetup& seats) {
+    StandingsTable FormatStandings(const UIStrings& strings, const Match& match, const SeatSetup& seats) {
         StandingsTable table;
         const eastl::array<Seat, kSeatCount> order = match.Standings();
         const SeatScores& scores = match.Scores();
@@ -251,16 +169,17 @@ namespace BECore::Mahjong {
             if (i > 0 && scores[order[i]] != scores[order[i - 1]]) {
                 place = i + 1;
             }
-            table.rows[i] = Format("{}. {}: {}", place, SeatLabel(order[i], seats), scores[order[i]]);
+            table.rows[i] = Tr(strings, "matchover.row", {{"place", Format("{}", place)}, {"name", SeatLabel(strings, order[i], seats)}, {"score", Format("{}", scores[order[i]])}});
             tied += scores[order[i]] == scores[order[0]] ? 1 : 0;
         }
         if (tied == 1) {
-            table.headline = Format("{} wins the match", SeatLabel(order[0], seats));
+            table.headline = Tr(strings, "matchover.wins", {{"winner", SeatLabel(strings, order[0], seats)}});
         } else {
-            table.headline.assign(kTiedForFirst.data(), kTiedForFirst.size());
+            eastl::string names;
             for (int i = 0; i < tied; ++i) {
-                table.headline += Format("{} {}", i > 0 ? "," : "", SeatLabel(order[i], seats));
+                names += Format("{}{}", i > 0 ? ", " : "", SeatLabel(strings, order[i], seats));
             }
+            table.headline = Tr(strings, "matchover.tied", {{"seats", names}});
         }
         return table;
     }

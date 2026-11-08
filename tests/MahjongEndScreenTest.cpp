@@ -1,8 +1,11 @@
 #include "MahjongTableTestSupport.h"
 
+#include <BECore/Text/Utf8.h>
 #include <Events/SceneEvents.h>
 #include <Mahjong/Components/MahjongHudComponent.h>
 #include <Mahjong/Table/ScoreText.h>
+#include <Mahjong/Table/SeatName.h>
+#include <functional>
 
 /**
  * The screens that end a hand and a match in the shipped scene (`Components/MahjongHudComponent.h`): the score table `HandOver` is shown
@@ -13,12 +16,13 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        /// The worst case: the longest wind names (North, South) on both seats and the mark of "you" on one of them (61 characters).
-        constexpr const char* kLongestHeadline = "Seat 4 (North) You wins by robbing the kong of Seat 2 (South)";
-        constexpr const char* kLongestSeatRow = "Seat 4 (North) You: hand 500, -4000, total 12000";
-        constexpr const char* kLongestSummary = "Winning tile 9 Characters: 64 points x 4096 = 262144, score 500";
-        constexpr const char* kLongestStanding = "4. Seat 4 You: 12000";
-        constexpr const char* kLongestStandingsHeadline = "Tied for first: Seat 1, Seat 2, Seat 3";
+        /// The worst numbers a screen can show: a limit-sized score, a big change and total, a long chain of doubles.
+        constexpr int kWorstScore = 500;
+        constexpr int kWorstDelta = -4000;
+        constexpr int kWorstTotal = 12000;
+        constexpr int kWorstPoints = 64;
+        constexpr int kWorstDoubles = 12;
+        constexpr int kWorstLinePoints = 32;  // the most one line can give: a concealed kong of terminals (2 x 2 x 2 x 4)
         /// The standings are a Screen canvas with minScale: its button is a touch target in any window. The score table lies on the
         /// fixed design of the table, as `Setup` and the HUD do: from a 480 px window its button is 21 px (the owner's list).
         constexpr float kStandingsTouchMinimum = 32.0f;
@@ -32,6 +36,124 @@ namespace BECore::Mahjong::Tests {
             float height;
         };
         constexpr Output kOutputs[] = {{1280.0f, 720.0f}, {731.0f, 411.0f}, {480.0f, 480.0f}, {480.0f, 853.0f}, {1707.0f, 480.0f}};
+
+        /// The longest texts of the screens in the current language of `strings`: the real formatters over every winner, East, kind of win, seat of the
+        /// discarder, seat of the one person (the mark of "you") and winning tile, the longest found by code points.
+        /// The tiles a line of this kind can name: a set or a pair any tile of the hand, a bonus line a flower or a season, a dragon set a dragon, a wind set a wind.
+        bool CanNameTile(ScoreKind kind, Tile tile) {
+            switch (kind) {
+                case ScoreKind::Pung:
+                case ScoreKind::Kong:
+                case ScoreKind::Pair:
+                    return !tile.IsBonus();
+                case ScoreKind::Bonus:
+                case ScoreKind::OwnBonus:
+                case ScoreKind::RoundBonus:
+                    return tile.IsBonus();
+                case ScoreKind::DragonSet:
+                    return tile.IsDragon();
+                case ScoreKind::OwnWindSet:
+                case ScoreKind::RoundWindSet:
+                    return tile.IsWind();
+                default:
+                    return false;
+            }
+        }
+
+        /// The tile of the longest name among those `candidate` allows (by code points); `Tile{}` when none.
+        Tile LongestTile(const UIStrings& strings, const std::function<bool(Tile)>& candidate) {
+            Tile longest;
+            size_t most = 0;
+            for (uint8_t id = 0; id < kTileIdCount; ++id) {
+                const size_t length = candidate(Tile(id)) ? Utf8::CountCodePoints(TileName(strings, Tile(id))) : 0;
+                if (length > most) {
+                    most = length;
+                    longest = Tile(id);
+                }
+            }
+            return longest;
+        }
+
+        struct WorstTexts {
+            eastl::string headline;
+            eastl::string seatRow;
+            eastl::string summary;
+            eastl::string standing;
+            eastl::string standingsHeadline;
+            Tile tile;  // the winning tile with the longest name (not a flower)
+        };
+
+        WorstTexts FindWorstTexts(const UIStrings& strings) {
+            WorstTexts worst;
+            worst.tile = LongestTile(strings, [](Tile tile) { return !tile.IsBonus(); });  // a winning tile is never a flower
+
+            std::vector<eastl::string> headlines;
+            std::vector<eastl::string> rows;
+            std::vector<eastl::string> summaries;
+            for (Seat winner = 0; winner < kSeatCount; ++winner) {
+                for (Seat east = 0; east < kSeatCount; ++east) {
+                    HandSettlement settlement;
+                    settlement.kind = ResultKind::Win;
+                    settlement.winner = winner;
+                    settlement.east = east;
+                    settlement.scores.fill(kWorstScore);
+                    settlement.deltas.fill(kWorstDelta);
+                    ScoreBreakdown& breakdown = settlement.breakdowns[winner];
+                    breakdown.won = true;
+                    breakdown.points = kWorstPoints;
+                    breakdown.doubles = kWorstDoubles;
+                    breakdown.raw = kWorstPoints << kWorstDoubles;
+                    breakdown.score = kWorstScore;
+                    SeatScores totals;
+                    totals.fill(kWorstTotal);
+                    for (const WinSource source : {WinSource::SelfDraw, WinSource::Discard, WinSource::RobbedKong}) {
+                        for (Seat from = 0; from < kSeatCount; ++from) {
+                            for (Seat person = 0; person < kSeatCount; ++person) {
+                                SeatSetup seats{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
+                                seats[person] = SeatKind::Person;
+                                HandResult result;
+                                result.kind = ResultKind::Win;
+                                result.winner = winner;
+                                result.winningTile = worst.tile;
+                                result.source = source;
+                                result.from = from;
+                                const ScoreTable table = FormatScoreTable(strings, settlement, result, totals, seats);
+                                headlines.push_back(table.headline);
+                                summaries.push_back(table.summary);
+                                rows.insert(rows.end(), table.seats.begin(), table.seats.end());
+                            }
+                        }
+                    }
+                }
+            }
+            worst.headline = LongestText(headlines);
+            worst.seatRow = LongestText(rows);
+            worst.summary = LongestText(summaries);
+
+            // The standings: a row with the last place and the biggest score, the headline of three tied seats and of a single winner
+            std::vector<eastl::string> standings;
+            std::vector<eastl::string> standingsHeadlines;
+            for (Seat person = 0; person < kSeatCount; ++person) {
+                SeatSetup seats{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
+                seats[person] = SeatKind::Person;
+                for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                    standings.push_back(Tr(strings, "matchover.row", {{"place", "4"}, {"name", SeatLabel(strings, seat, seats)}, {"score", Format("{}", kWorstTotal)}}));
+                }
+                for (const SeatScores& deltas : {SeatScores{-300, 100, 100, 100}, SeatScores{100, -300, 100, 100}, SeatScores{100, 100, -300, 100}, SeatScores{100, 100, 100, -300},
+                                                 SeatScores{200, 100, 0, -300}, SeatScores{-300, 0, 100, 200}}) {
+                    Match match;
+                    EXPECT_TRUE(match.Start(MahjongSettings{}, 1).has_value());
+                    HandSettlement settlement;
+                    settlement.kind = ResultKind::Drawn;
+                    settlement.deltas = deltas;
+                    EXPECT_TRUE(match.ApplySettlement(settlement).has_value());
+                    standingsHeadlines.push_back(FormatStandings(strings, match, seats).headline);
+                }
+            }
+            worst.standing = LongestText(standings);
+            worst.standingsHeadline = LongestText(standingsHeadlines);
+            return worst;
+        }
 
     }  // namespace
 
@@ -72,7 +194,7 @@ namespace BECore::Mahjong::Tests {
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 totals[seat] += settlement.deltas[seat];
             }
-            return FormatScoreTable(settlement, *Hand().Result(), totals, _game->GetSession().Seats());
+            return FormatScoreTable(CoreManager::GetUIStrings(), settlement, *Hand().Result(), totals, _game->GetSession().Seats());
         }
 
         /// Plays whole hands (the person clicking `Next hand` each time) until the match is over.
@@ -121,6 +243,39 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(Var(Format("scoreLine{}", i).c_str()), has ? expected.lines[i].c_str() : "") << "line " << i;
             EXPECT_EQ(OnScreen("HandOver", Format("ScoreLine{}", i).c_str()), has) << "line " << i << " is visible exactly when it has text";
         }
+        EXPECT_EQ(Text("HandOver", "NextHand"), "Next hand");
+    }
+
+    TEST_F(MahjongEndScreenTest, ALanguageSwitchWhileTheScoreTableIsUpChangesItsTextAtTheNextDraw) {
+        ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers, 3));
+        ASSERT_NO_FATAL_FAILURE(PlayHandOver());
+        const ScoreTable english = ExpectedTable();
+        ASSERT_EQ(Text("HandOver", "Headline"), english.headline.c_str());
+        const uint64_t version = _game->GetSession().Version();
+
+        ASSERT_TRUE(_game->SetLanguage("ru"_intern));
+        Draw();
+
+        const ScoreTable russian = ExpectedTable();
+        EXPECT_NE(russian.headline, english.headline);
+        EXPECT_EQ(Text("HandOver", "Headline"), russian.headline.c_str());
+        EXPECT_EQ(Text("HandOver", "Summary"), russian.summary.c_str());
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            EXPECT_EQ(Text("HandOver", Format("SeatRow{}", seat).c_str()), russian.seats[seat].c_str());
+        }
+        for (int i = 0; i < kMaxScoreLines; ++i) {
+            const bool has = i < static_cast<int>(russian.lines.size());
+            EXPECT_EQ(Var(Format("scoreLine{}", i).c_str()), has ? russian.lines[i].c_str() : "") << "line " << i;
+            EXPECT_EQ(OnScreen("HandOver", Format("ScoreLine{}", i).c_str()), has) << "the same lines are visible in the new language";
+        }
+        EXPECT_NE(Text("HandOver", "NextHand"), "Next hand");
+        EXPECT_EQ(Text("HandOver", "NextHand").size(), Tr(CoreManager::GetUIStrings(), "handover.next").size());
+        EXPECT_EQ(_game->GetSession().Version(), version) << "the game did not move";
+        EXPECT_TRUE(Shown("HandOver"));
+
+        ASSERT_TRUE(_game->SetLanguage("en"_intern));
+        Draw();
+        EXPECT_EQ(Text("HandOver", "Headline"), english.headline.c_str());
         EXPECT_EQ(Text("HandOver", "NextHand"), "Next hand");
     }
 
@@ -217,13 +372,50 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(_game->GetMatch().GetPhase(), MatchPhase::Finished);
         EXPECT_FALSE(Shown("HandOver"));
         EXPECT_TRUE(Shown("MatchOver"));
-        const StandingsTable table = FormatStandings(_game->GetMatch(), _game->GetSession().Seats());
+        const StandingsTable table = FormatStandings(CoreManager::GetUIStrings(), _game->GetMatch(), _game->GetSession().Seats());
         EXPECT_EQ(Var("matchOverHeadline"), table.headline.c_str());
         EXPECT_EQ(Text("MatchOver", "Headline"), table.headline.c_str());
         for (int row = 0; row < kSeatCount; ++row) {
             EXPECT_EQ(Var(Format("standing{}", row).c_str()), table.rows[row].c_str());
             EXPECT_EQ(Text("MatchOver", Format("Standing{}", row).c_str()), table.rows[row].c_str());
         }
+    }
+
+    TEST_F(MahjongEndScreenTest, TheButtonOfTheLastHandSaysFinishInEveryLanguageAndTheStandingsFollowALanguageSwitch) {
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            const UIStrings& strings = CoreManager::GetUIStrings();
+            ASSERT_TRUE(_game->SetLanguage(language));  // a start applies the language of the game, not the one the walk set on the table
+            ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers));
+            int finishing = 0;
+            for (int hand = 0; hand < kHandLimit && _game->GetMatch().GetPhase() != MatchPhase::Finished; ++hand) {
+                ASSERT_NO_FATAL_FAILURE(PlayHandOver());
+                const std::string label = Text("HandOver", "NextHand");
+                const bool says = label == Tr(strings, "handover.finish").c_str();
+                ASSERT_TRUE(says || label == Tr(strings, "handover.next").c_str()) << label;
+                ASSERT_TRUE(ClickElement("HandOver", "NextHand"));
+                Draw();
+                EXPECT_EQ(says, _game->GetMatch().GetPhase() == MatchPhase::Finished) << "hand " << hand << ": the button promises what the click does";
+                finishing += says ? 1 : 0;
+            }
+            EXPECT_EQ(finishing, 1);
+            ASSERT_EQ(_game->GetMatch().GetPhase(), MatchPhase::Finished);
+
+            // The standings are in this language, and in the other after a switch while they are up
+            const StandingsTable table = FormatStandings(strings, _game->GetMatch(), _game->GetSession().Seats());
+            EXPECT_EQ(Text("MatchOver", "Headline"), table.headline.c_str());
+            EXPECT_EQ(Text("MatchOver", "NewGame"), Tr(strings, "matchover.newGame").c_str());
+            const PoolString other = language == "en"_intern ? PoolString("ru"_intern) : PoolString("en"_intern);
+            ASSERT_TRUE(_game->SetLanguage(other));
+            Draw();
+            const StandingsTable switched = FormatStandings(CoreManager::GetUIStrings(), _game->GetMatch(), _game->GetSession().Seats());
+            EXPECT_NE(switched.headline, table.headline);
+            EXPECT_EQ(Text("MatchOver", "Headline"), switched.headline.c_str());
+            for (int row = 0; row < kSeatCount; ++row) {
+                EXPECT_EQ(Text("MatchOver", Format("Standing{}", row).c_str()), switched.rows[row].c_str());
+            }
+            ASSERT_TRUE(_game->SetLanguage(language));  // the walk goes on from this language
+        });
     }
 
     TEST_F(MahjongEndScreenTest, NewGameOnTheStandingsOpensTheSeatChoiceAndAStartHidesThem) {
@@ -259,56 +451,70 @@ namespace BECore::Mahjong::Tests {
 
     // ----- the size matrix -----
 
-    TEST_F(MahjongEndScreenTest, TheScoreTablePassesTheSizeMatrixWithTheLongestRowsAndEveryWordFits) {
+    TEST_F(MahjongEndScreenTest, TheScoreTablePassesTheSizeMatrixInEveryLanguageWithTheLongestRowsAndEveryWordFits) {
         ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers));
         ASSERT_NO_FATAL_FAILURE(PlayHandOver());
-        UIVars& vars = CoreManager::GetUIVars();
-        vars.Set("handOverHeadline"_intern, eastl::string_view(kLongestHeadline));
-        vars.Set("handOverSummary"_intern, eastl::string_view(kLongestSummary));
-        for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            vars.Set(PoolString::Intern(Format("handOverSeat{}", seat)), eastl::string_view(kLongestSeatRow));
-        }
         auto canvas = Canvas("HandOver");
         ASSERT_TRUE(canvas);
         for (int i = 0; i < kMaxScoreLines; ++i) {
             ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(Format("ScoreLine{}", i)), true));
         }
 
-        // The longest line the rules can print, of every kind, in all sixteen places at once
-        for (const ScoreKind kind : EnumUtils<ScoreKind>::Values()) {
-            ScoreLine line;
-            line.kind = kind;
-            line.tile = T("9m");
-            line.points = 128;
-            line.doubles = 3;
-            const eastl::string text = ScoreLineText(line);
-            for (int i = 0; i < kMaxScoreLines; ++i) {
-                vars.Set(PoolString::Intern(Format("scoreLine{}", i)), eastl::string_view(text));
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            const UIStrings& strings = CoreManager::GetUIStrings();
+            const WorstTexts worst = FindWorstTexts(strings);
+            UIVars& vars = CoreManager::GetUIVars();
+            vars.Set("handOverHeadline"_intern, eastl::string_view(worst.headline));
+            vars.Set("handOverSummary"_intern, eastl::string_view(worst.summary));
+            vars.Set("handOverButton"_intern, eastl::string_view(LongestText({Tr(strings, "handover.next"), Tr(strings, "handover.finish")})));
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                vars.Set(PoolString::Intern(Format("handOverSeat{}", seat)), eastl::string_view(worst.seatRow));
             }
-            SCOPED_TRACE(EnumUtils<ScoreKind>::ToString(kind).data());
-            for (const Output& output : kOutputs) {
-                ExpectWordsFit("HandOver", output.width, output.height, kButtonAir);
+
+            // The longest line the rules can print, of every kind and in both forms (points and doubles), in all sixteen places at once
+            for (const ScoreKind kind : EnumUtils<ScoreKind>::Values()) {
+                for (const int doubles : {0, 3}) {
+                    ScoreLine line;
+                    line.kind = kind;
+                    line.tile = LongestTile(strings, [&](Tile tile) { return CanNameTile(kind, tile); });  // the longest tile this kind can name
+                    line.points = kWorstLinePoints;
+                    line.doubles = doubles;
+                    const eastl::string text = ScoreLineText(strings, line);
+                    for (int i = 0; i < kMaxScoreLines; ++i) {
+                        vars.Set(PoolString::Intern(Format("scoreLine{}", i)), eastl::string_view(text));
+                    }
+                    SCOPED_TRACE(EnumUtils<ScoreKind>::ToString(kind).data());
+                    for (const Output& output : kOutputs) {
+                        ExpectWordsFit("HandOver", output.width, output.height, kButtonAir);
+                    }
+                }
             }
-        }
-        ExpectPassesTheMatrix("HandOver", kScoreTableTouchMinimum);
-        EXPECT_GE(Element("HandOver", "NextHand")->rect.h, kMinControlHeight);
+            ExpectPassesTheMatrix("HandOver", kScoreTableTouchMinimum);
+            EXPECT_GE(Element("HandOver", "NextHand")->rect.h, kMinControlHeight);
+        });
     }
 
-    TEST_F(MahjongEndScreenTest, TheStandingsPassTheSizeMatrixWithTheLongestRowsAndEveryWordFits) {
+    TEST_F(MahjongEndScreenTest, TheStandingsPassTheSizeMatrixInEveryLanguageWithTheLongestRowsAndEveryWordFits) {
         ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers));
         ASSERT_NO_FATAL_FAILURE(PlayMatchToTheEnd());
         Draw();
-        UIVars& vars = CoreManager::GetUIVars();
-        vars.Set("matchOverHeadline"_intern, eastl::string_view(kLongestStandingsHeadline));
-        for (int row = 0; row < kSeatCount; ++row) {
-            vars.Set(PoolString::Intern(Format("standing{}", row)), eastl::string_view(kLongestStanding));
-        }
 
-        ExpectPassesTheMatrix("MatchOver", kStandingsTouchMinimum);
-        for (const Output& output : kOutputs) {
-            ExpectWordsFit("MatchOver", output.width, output.height, kButtonAir);
-        }
-        EXPECT_GE(Element("MatchOver", "NewGame")->rect.h, kMinControlHeight);
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            const WorstTexts worst = FindWorstTexts(CoreManager::GetUIStrings());
+            UIVars& vars = CoreManager::GetUIVars();
+            vars.Set("matchOverHeadline"_intern, eastl::string_view(worst.standingsHeadline));
+            for (int row = 0; row < kSeatCount; ++row) {
+                vars.Set(PoolString::Intern(Format("standing{}", row)), eastl::string_view(worst.standing));
+            }
+
+            ExpectPassesTheMatrix("MatchOver", kStandingsTouchMinimum);
+            for (const Output& output : kOutputs) {
+                ExpectWordsFit("MatchOver", output.width, output.height, kButtonAir);
+            }
+            EXPECT_GE(Element("MatchOver", "NewGame")->rect.h, kMinControlHeight);
+        });
     }
 
     TEST_F(MahjongEndScreenTest, TheButtonsOfBothPanelsCarryTheirActions) {

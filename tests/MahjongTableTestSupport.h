@@ -1,6 +1,7 @@
 #pragma once
 
 #include "HandTestSupport.h"
+#include "StringsTestSupport.h"
 
 #include <BECore/GameManager/CoreManager.h>
 #include <BECore/Reflection/XmlDeserializer.h>
@@ -79,6 +80,8 @@ namespace BECore::Mahjong::Tests {
         void SetUp() override {
             CoreManager::GetFontAtlasLibrary().Clear();
             CoreManager::GetUIVars().Clear();
+            EXPECT_TRUE(LoadShippedStrings(CoreManager::GetUIStrings()).empty());
+            ASSERT_TRUE(CoreManager::GetUIStrings().SetLanguage("en"_intern));  // the expectations of the tests are English
             _renderer = New<RecordingRenderer>();
             _renderer->width = kViewWidth;
             _renderer->height = kViewHeight;
@@ -109,6 +112,7 @@ namespace BECore::Mahjong::Tests {
             _manager.Reset();
             CoreManager::GetRendererManager().SetRenderer({});
             CoreManager::GetUIVars().Clear();
+            CoreManager::GetUIStrings().Clear();
             CoreManager::GetFontAtlasLibrary().Clear();
         }
 

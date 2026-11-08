@@ -1,19 +1,21 @@
 #include "MahjongTableTestSupport.h"
 
+#include <BECore/Text/Utf8.h>
 #include <BECore/UI/UIButton.h>
 #include <BECore/UI/UIImage.h>
 #include <BECore/UI/UILabel.h>
 #include <BECore/UI/UIToggle.h>
+#include <Mahjong/Table/SeatName.h>
 
 /**
  * The canvases of the shipped scene that belong to the table (`Actions`, `Handoff`): the buttons of the component are the buttons of the
- * file with their action and value, the longest labels fit, both pass the size matrix, and the buttons lie where no tile of any game can.
+ * file with their action and value, the words are keys of the string table, the longest labels fit in every language, both pass the size
+ * matrix once per language, and the buttons lie where no tile of any game can.
  */
 namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        constexpr const char* kLongestSeat = "Seat 4 (North)";
         /// The height of an action button in view units: 32 px (the engine's touch minimum) from a window of 731 x 411 px.
         constexpr float kButtonHeight = 56.0f;
         /// The height in pixels of the smallest window the touch minimum is held from; the view is 1280 x 720 units, scaled to fit it.
@@ -53,6 +55,26 @@ namespace BECore::Mahjong::Tests {
                 ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(TileImageName(kind, t)), shown)) << spec.element;
             }
         }
+
+        /// The fullest turn (a win, a declaration, three kongs and the upgrade) and the fullest window (all claims, three chows, pass).
+        static std::vector<std::vector<ButtonKind>> FullestScreens() {
+            return {std::vector<ButtonKind>{ButtonKind::Win, ButtonKind::Declare, ButtonKind::ConcealedKong0, ButtonKind::ConcealedKong1, ButtonKind::ConcealedKong2, ButtonKind::UpgradeKong},
+                    std::vector<ButtonKind>{ButtonKind::ClaimMahjong, ButtonKind::ClaimKong, ButtonKind::ClaimPung, ButtonKind::ClaimChow0, ButtonKind::ClaimChow1, ButtonKind::ClaimChow2,
+                                            ButtonKind::Pass}};
+        }
+
+        /// The longest text (by code points, the measure of a line of text in any language) of `candidates`.
+        static eastl::string Longest(const std::vector<eastl::string>& candidates) {
+            eastl::string longest;
+            size_t most = 0;
+            for (const eastl::string& candidate : candidates) {
+                if (Utf8::CountCodePoints(candidate) > most) {
+                    most = Utf8::CountCodePoints(candidate);
+                    longest = candidate;
+                }
+            }
+            return longest;
+        }
     };
 
     TEST_F(MahjongTableScreenTest, EveryButtonOfTheComponentIsInTheSceneFileWithItsActionAndValue) {
@@ -71,14 +93,14 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_EQ(toggle->onValue, PoolString::Intern(kDeclareOn.data()));
                 EXPECT_EQ(toggle->offValue, PoolString::Intern(kDeclareOff.data()));
                 EXPECT_EQ(toggle->bind, "declareNext"_intern);
-                EXPECT_EQ(toggle->text, eastl::string(spec.word)) << "the toggle says its word";
+                EXPECT_EQ(toggle->text, eastl::string("{#") + spec.wordKey + "}") << "the toggle says the word of the string table";
                 continue;
             }
             const auto* button = element->Cast<UIButton>();
             ASSERT_NE(button, nullptr) << spec.element;
             EXPECT_EQ(button->action, PoolString::Intern(spec.action)) << spec.element;
             EXPECT_EQ(button->value, PoolString::Intern(spec.value)) << spec.element;
-            EXPECT_EQ(button->text, eastl::string(spec.word)) << "the button says its word, fixed text";
+            EXPECT_EQ(button->text, eastl::string("{#") + spec.wordKey + "}") << spec.element << " says a word of the string table";
             // The pictures of its tiles: `maxTiles` hidden images named after the button, and no more
             int images = 0;
             for (const auto& child : button->children) {
@@ -93,6 +115,8 @@ namespace BECore::Mahjong::Tests {
         }
         EXPECT_NE(Element("Handoff", "Reveal"), nullptr);
         EXPECT_EQ(Element("Handoff", "Reveal")->Cast<UIButton>()->action, "MahjongReveal"_intern);
+        EXPECT_EQ(Element("Handoff", "Reveal")->Cast<UIButton>()->text, eastl::string("{#cover.show}"));
+        EXPECT_EQ(Element("Handoff", "HandoffText")->Cast<UILabel>()->text, eastl::string("{#cover.text}"));
     }
 
     TEST_F(MahjongTableScreenTest, EveryElementNameOfTheActionsCanvasIsUniqueAndNoLabelVariableIsLeft) {
@@ -109,7 +133,7 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_TRUE(names.insert(name).second) << "duplicate name " << name;
             }
             if (const auto* label = element->Cast<UILabel>()) {
-                // Only the hint follows a variable; the words of the buttons are fixed text
+                // Only the hint follows a variable; the words of the buttons are keys of the string table
                 EXPECT_EQ(std::string(label->text.c_str()).find('{') == std::string::npos, name != "Hint") << name << " and its variable";
             }
             for (const auto& child : element->children) {
@@ -118,25 +142,27 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
-    TEST_F(MahjongTableScreenTest, TheActionButtonsPassTheSizeMatrixWithTheirWordsAndPicturesAndEveryButtonIsATouchTarget) {
+    TEST_F(MahjongTableScreenTest, TheActionButtonsPassTheSizeMatrixInEveryLanguageWithTheirWordsAndPicturesAndEveryButtonIsATouchTarget) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         auto canvas = Canvas("Actions");
         ASSERT_TRUE(canvas);
 
-        // The fullest turn (a win, a declaration, three kongs and the upgrade) and the fullest window (all claims, three chows, pass), every
-        // button with all its pictures. The words are fixed text in the file; the longest are `Add to pung`, `Mahjong!` and `Ready hand`.
-        for (const std::vector<ButtonKind>& kinds :
-             {std::vector<ButtonKind>{ButtonKind::Win, ButtonKind::Declare, ButtonKind::ConcealedKong0, ButtonKind::ConcealedKong1, ButtonKind::ConcealedKong2, ButtonKind::UpgradeKong},
-              std::vector<ButtonKind>{ButtonKind::ClaimMahjong, ButtonKind::ClaimKong, ButtonKind::ClaimPung, ButtonKind::ClaimChow0, ButtonKind::ClaimChow1, ButtonKind::ClaimChow2,
-                                      ButtonKind::Pass}}) {
-            for (int i = 0; i < kButtonCount; ++i) {
-                SetShown(static_cast<ButtonKind>(i), false);
+        // Every button with all its pictures, once per language of the table (a language added to the file is covered without touching the test)
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            for (const std::vector<ButtonKind>& kinds : FullestScreens()) {
+                for (int i = 0; i < kButtonCount; ++i) {
+                    SetShown(static_cast<ButtonKind>(i), false);
+                }
+                for (const ButtonKind kind : kinds) {
+                    SetShown(kind, true);
+                }
+                ExpectPassesTheMatrix("Actions", kSmallestWindowTouchMinimum);
+                for (const Output& output : kOutputs) {
+                    ExpectWordsFit("Actions", output.width, output.height, 0.0f);
+                }
             }
-            for (const ButtonKind kind : kinds) {
-                SetShown(kind, true);
-            }
-            ExpectPassesTheMatrix("Actions", kSmallestWindowTouchMinimum);
-        }
+        });
     }
 
     TEST_F(MahjongTableScreenTest, EveryTilePictureLiesInsideItsButtonBelowTheWordAndKeepsTheShapeOfATile) {
@@ -193,7 +219,7 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
-    TEST_F(MahjongTableScreenTest, TheHintTakesNoInputLiesInTheViewClearOfTheButtonsAndHoldsTheLongestSentenceInEveryWindow) {
+    TEST_F(MahjongTableScreenTest, TheHintTakesNoInputLiesInTheViewClearOfTheButtonsAndHoldsTheLongestSentenceOfEveryLanguageInEveryWindow) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         auto canvas = Canvas("Actions");
         ASSERT_TRUE(canvas);
@@ -202,32 +228,31 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(OnScreen("Actions", "Hint")) << "hidden in the file";
         EXPECT_FALSE(hint->IsHitTestable()) << "a tooltip never takes a click";
         EXPECT_TRUE(hint->ignoreSafeArea);
-
-        eastl::string_view longest;
-        for (int i = 0; i < kButtonCount; ++i) {
-            const eastl::string_view sentence = HintOf(static_cast<ButtonKind>(i));
-            if (sentence.size() > longest.size()) {
-                longest = sentence;
-            }
-        }
-        CoreManager::GetUIVars().Set("actionHint"_intern, longest);
         ASSERT_TRUE(canvas->SetElementVisible("Hint"_intern, true));
-        // With the fullest turn and the fullest window under it, as the matrix test of the buttons has them
-        for (const std::vector<ButtonKind>& kinds :
-             {std::vector<ButtonKind>{ButtonKind::Win, ButtonKind::Declare, ButtonKind::ConcealedKong0, ButtonKind::ConcealedKong1, ButtonKind::ConcealedKong2, ButtonKind::UpgradeKong},
-              std::vector<ButtonKind>{ButtonKind::ClaimMahjong, ButtonKind::ClaimKong, ButtonKind::ClaimPung, ButtonKind::ClaimChow0, ButtonKind::ClaimChow1, ButtonKind::ClaimChow2,
-                                      ButtonKind::Pass}}) {
+
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            std::vector<eastl::string> sentences;
             for (int i = 0; i < kButtonCount; ++i) {
-                SetShown(static_cast<ButtonKind>(i), false);
+                sentences.push_back(HintOf(CoreManager::GetUIStrings(), static_cast<ButtonKind>(i)));
             }
-            for (const ButtonKind kind : kinds) {
-                SetShown(kind, true);
+            const eastl::string longest = Longest(sentences);
+            EXPECT_LE(Utf8::CountCodePoints(longest), kMaxHintLength);
+            CoreManager::GetUIVars().Set("actionHint"_intern, eastl::string_view(longest));
+            // With the fullest turn and the fullest window under it, as the matrix test of the buttons has them
+            for (const std::vector<ButtonKind>& kinds : FullestScreens()) {
+                for (int i = 0; i < kButtonCount; ++i) {
+                    SetShown(static_cast<ButtonKind>(i), false);
+                }
+                for (const ButtonKind kind : kinds) {
+                    SetShown(kind, true);
+                }
+                ExpectPassesTheMatrix("Actions", kSmallestWindowTouchMinimum);
+                for (const Output& output : kOutputs) {
+                    ExpectWordsFit("Actions", output.width, output.height, 0.0f);
+                }
             }
-            ExpectPassesTheMatrix("Actions", kSmallestWindowTouchMinimum);
-            for (const Output& output : kOutputs) {
-                ExpectWordsFit("Actions", output.width, output.height, 0.0f);
-            }
-        }
+        });
 
         canvas->UpdateLayout(kViewWidth, kViewHeight);
         const Rect& plate = hint->rect;
@@ -240,12 +265,26 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(apart) << "the hint does not lie over the buttons it explains";
     }
 
-    TEST_F(MahjongTableScreenTest, TheCoverPassesTheSizeMatrixWithTheLongestSeatName) {
+    TEST_F(MahjongTableScreenTest, TheCoverPassesTheSizeMatrixInEveryLanguageWithTheLongestSeatName) {
         ASSERT_NO_FATAL_FAILURE(Start(kTwoPeople));
-        CoreManager::GetUIVars().Set("handoffSeat"_intern, eastl::string_view(kLongestSeat));
         UICanvasComponent::SetVisibleByName(*_manager->GetSceneByName("MahjongScene"_intern), "Handoff"_intern, true);
 
-        ExpectPassesTheMatrix("Handoff", CoreManager::GetUIEnvironment().GetSettings().minTouchSize);
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            // The longest name any seat can have, from the real function: every seat with every wind
+            std::vector<eastl::string> names;
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                for (int wind = 0; wind < kSeatCount; ++wind) {
+                    names.push_back(SeatName(CoreManager::GetUIStrings(), seat, static_cast<Wind>(wind)));
+                }
+            }
+            CoreManager::GetUIVars().Set("handoffSeat"_intern, eastl::string_view(Longest(names)));
+
+            ExpectPassesTheMatrix("Handoff", CoreManager::GetUIEnvironment().GetSettings().minTouchSize);
+            for (const Output& output : kOutputs) {
+                ExpectWordsFit("Handoff", output.width, output.height, 0.0f);
+            }
+        });
     }
 
     TEST_F(MahjongTableScreenTest, TheButtonsLieInTheFreeCornerOfTheTableAndCoverNoTile) {

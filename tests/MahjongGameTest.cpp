@@ -1,4 +1,5 @@
 #include "HandTestSupport.h"
+#include "StringsTestSupport.h"
 
 #include <BECore/GameManager/CoreManager.h>
 #include <BECore/Reflection/XmlDeserializer.h>
@@ -34,6 +35,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         void SetUp() override {
+            EXPECT_TRUE(LoadShippedStrings(CoreManager::GetUIStrings()).empty());
             XmlDeserializer deserializer;
             ASSERT_TRUE(deserializer.LoadFromFile(ShippedSceneConfig())) << ShippedSceneConfig().string();
             _manager = New<SceneManager>();
@@ -48,6 +50,7 @@ namespace BECore::Mahjong::Tests {
             GameManager::GetInstance().Shutdown();
             EngineEnvironment::UseSceneManager({});
             _manager.Reset();
+            CoreManager::GetUIStrings().Clear();
         }
 
         IntrusivePtrAtomic<SceneManager> _manager;
@@ -172,6 +175,64 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(game->GetSession().PersonCount(), 2);
         EXPECT_EQ(game->GetSession().GetPhase(), SessionPhase::Playing);
         EXPECT_EQ(game->GetSeats(), seats);
+    }
+
+    TEST_F(MahjongGameTest, TheLanguageIsEnglishAfterTheStart) {
+        MahjongGame* game = MahjongGame::GetActive();
+        ASSERT_NE(game, nullptr);
+
+        EXPECT_EQ(game->GetLanguage(), PoolString::Intern(kDefaultLanguage));
+        EXPECT_EQ(game->GetLanguage(), "en"_intern);
+        EXPECT_EQ(CoreManager::GetUIStrings().GetLanguage(), "en"_intern);
+    }
+
+    TEST_F(MahjongGameTest, SetLanguageChangesTheStringTable) {
+        MahjongGame* game = MahjongGame::GetActive();
+        ASSERT_NE(game, nullptr);
+
+        EXPECT_TRUE(game->SetLanguage("ru"_intern));
+
+        EXPECT_EQ(game->GetLanguage(), "ru"_intern);
+        EXPECT_EQ(CoreManager::GetUIStrings().GetLanguage(), "ru"_intern);
+    }
+
+    TEST_F(MahjongGameTest, AnUnknownLanguageIsRefusedAndNothingChanges) {
+        MahjongGame* game = MahjongGame::GetActive();
+        ASSERT_NE(game, nullptr);
+        ASSERT_TRUE(game->SetLanguage("ru"_intern));
+        const uint64_t version = CoreManager::GetUIStrings().GetVersion();
+
+        EXPECT_FALSE(game->SetLanguage("xx"_intern));
+
+        EXPECT_EQ(game->GetLanguage(), "ru"_intern);
+        EXPECT_EQ(CoreManager::GetUIStrings().GetLanguage(), "ru"_intern);
+        EXPECT_EQ(CoreManager::GetUIStrings().GetVersion(), version);
+    }
+
+    TEST_F(MahjongGameTest, TheLanguageSurvivesResetAndStartMatch) {
+        MahjongGame* game = MahjongGame::GetActive();
+        ASSERT_NE(game, nullptr);
+        ASSERT_TRUE(game->SetLanguage("ru"_intern));
+
+        game->Reset();
+        EXPECT_EQ(game->GetLanguage(), "ru"_intern);
+        EXPECT_EQ(CoreManager::GetUIStrings().GetLanguage(), "ru"_intern);
+
+        // Whoever reset the table in between (an earlier scene, a test), the next start puts the language back.
+        CoreManager::GetUIStrings().SetLanguage("en"_intern);
+        ASSERT_TRUE(game->StartMatch(kSeed).has_value());
+        EXPECT_EQ(game->GetLanguage(), "ru"_intern);
+        EXPECT_EQ(CoreManager::GetUIStrings().GetLanguage(), "ru"_intern);
+    }
+
+    TEST_F(MahjongGameTest, AnEmptyStringTableIsNotAnError) {
+        MahjongGame* game = MahjongGame::GetActive();
+        ASSERT_NE(game, nullptr);
+        CoreManager::GetUIStrings().Clear();
+
+        EXPECT_FALSE(game->SetLanguage("ru"_intern));  // the table has no such language
+        EXPECT_TRUE(game->StartMatch(kSeed).has_value());
+        EXPECT_EQ(game->GetLanguage(), "en"_intern);
     }
 
 }  // namespace BECore::Mahjong::Tests
