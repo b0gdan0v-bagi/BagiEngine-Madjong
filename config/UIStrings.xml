@@ -106,6 +106,18 @@
         <string key="hint.ConcealedKong" text="Set four equal tiles from your hand aside and draw a spare tile."/>
         <string key="hint.UpgradeKong" text="Add the fourth tile to your open pung to make a kong; you draw a spare tile."/>
         <string key="hint.Declare" text="Announce you are one tile from mahjong (needed to win), then click the tile to discard."/>
+        <string key="hints.waitCaption" text="Your hand waits for (unseen copies under each tile):"/>
+        <string key="hints.adviseButton" text="Hint"/>
+        <string key="hints.advice.discard" text="Discard {tile}."/>
+        <string key="hints.advice.discardCalling" text="Discard {tile} and declare the ready hand."/>
+        <string key="hints.advice.win" text="Your hand is complete: declare mahjong."/>
+        <string key="hints.advice.concealedKong" text="Make a kong of {tile}."/>
+        <string key="hints.advice.upgradeKong" text="Add {tile} to your pung to make a kong."/>
+        <string key="hints.advice.claimMahjong" text="Take the discard: it completes your hand."/>
+        <string key="hints.advice.claimPung" text="Take the discard to make a pung of {tile}."/>
+        <string key="hints.advice.claimKong" text="Take the discard to make a kong of {tile}."/>
+        <string key="hints.advice.claimChow" text="Take the discard to make the chow {first}, {second}, {third}."/>
+        <string key="hints.advice.pass" text="Let the discard go."/>
         <string key="cover.text" text="Pass the screen to {handoffSeat}"/>
         <string key="cover.show" text="Show"/>
         <string key="hud.round" text="Round: {round}, hand {hand} of {handsTotal}"/>
@@ -118,6 +130,9 @@
         <string key="setup.title" text="New game: who plays?"/>
         <string key="setup.language" text="Language"/>
         <string key="setup.hands" text="Hands"/>
+        <string key="setup.hints" text="Hints"/>
+        <string key="setup.on" text="On"/>
+        <string key="setup.off" text="Off"/>
         <string key="setup.seat1" text="Seat 1"/>
         <string key="setup.seat2" text="Seat 2"/>
         <string key="setup.seat3" text="Seat 3"/>
@@ -230,6 +245,18 @@
         <string key="hint.ConcealedKong" text="Выложите четыре одинаковые кости из руки и возьмите запасную."/>
         <string key="hint.UpgradeKong" text="Добавьте четвёртую кость к открытому пуну: получится конг; затем запасная кость."/>
         <string key="hint.Declare" text="Объявите, что не хватает одной кости (нужно для победы), затем нажмите кость для сброса."/>
+        <string key="hints.waitCaption" text="Рука ждёт (под каждой костью: сколько их не видно):"/>
+        <string key="hints.adviseButton" text="Подсказка"/>
+        <string key="hints.advice.discard" text="Сбросьте: {tile}."/>
+        <string key="hints.advice.discardCalling" text="Сбросьте {tile} и объявите заявку."/>
+        <string key="hints.advice.win" text="Рука собрана: объявите победу."/>
+        <string key="hints.advice.concealedKong" text="Составьте конг: {tile}."/>
+        <string key="hints.advice.upgradeKong" text="Добавьте к пуну {tile}: получится конг."/>
+        <string key="hints.advice.claimMahjong" text="Возьмите сброс: он завершает руку."/>
+        <string key="hints.advice.claimPung" text="Возьмите сброс и составьте пун: {tile}."/>
+        <string key="hints.advice.claimKong" text="Возьмите сброс и составьте конг: {tile}."/>
+        <string key="hints.advice.claimChow" text="Возьмите сброс и составьте чи: {first}, {second}, {third}."/>
+        <string key="hints.advice.pass" text="Пропустите сброс."/>
         <string key="cover.text" text="Передайте экран: {handoffSeat}"/>
         <string key="cover.show" text="Показать"/>
         <string key="hud.round" text="Раунд: {round}, раздача {hand} из {handsTotal}"/>
@@ -242,6 +269,9 @@
         <string key="setup.title" text="Новая игра: кто играет?"/>
         <string key="setup.language" text="Язык"/>
         <string key="setup.hands" text="Раздачи"/>
+        <string key="setup.hints" text="Подсказки"/>
+        <string key="setup.on" text="Вкл"/>
+        <string key="setup.off" text="Выкл"/>
         <string key="setup.seat1" text="Место 1"/>
         <string key="setup.seat2" text="Место 2"/>
         <string key="setup.seat3" text="Место 3"/>
