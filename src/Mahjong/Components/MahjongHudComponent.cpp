@@ -65,7 +65,7 @@ namespace BECore::Mahjong {
                     break;
             }
             const HandModel& hand = match.Hand();
-            return SeatName(hand.CurrentSeat(), hand.SeatWind(hand.CurrentSeat()));
+            return SeatName(CoreManager::GetUIStrings(), hand.CurrentSeat(), hand.SeatWind(hand.CurrentSeat()));
         }
 
     }  // namespace
@@ -117,7 +117,7 @@ namespace BECore::Mahjong {
         const bool playing = session.GetPhase() == SessionPhase::Playing;
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             const Wind wind = hand.SeatWind(seat);
-            vars.Set(SeatVar("seatName", seat), eastl::string_view(SeatLabel(seat, wind, session.Seats())));
+            vars.Set(SeatVar("seatName", seat), eastl::string_view(SeatLabel(CoreManager::GetUIStrings(), seat, wind, session.Seats())));
             vars.Set(SeatVar("seatWind", seat), EnumUtils<Wind>::ToString(wind));
             vars.Set(SeatVar("seatScore", seat), match.Scores()[seat]);
             vars.Set(SeatVar("seatMark", seat), playing && hand.CurrentSeat() == seat ? kTurnMark : eastl::string_view());
@@ -160,7 +160,7 @@ namespace BECore::Mahjong {
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             totals[seat] += settlement.deltas[seat];
         }
-        const ScoreTable table = FormatScoreTable(settlement, match.Hand().Result().value_or(HandResult{}), totals, session.Seats());
+        const ScoreTable table = FormatScoreTable(CoreManager::GetUIStrings(), settlement, match.Hand().Result().value_or(HandResult{}), totals, session.Seats());
 
         UIVars& vars = CoreManager::GetUIVars();
         vars.Set("handOverHeadline"_intern, eastl::string_view(table.headline));
@@ -179,7 +179,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongHudComponent::PublishMatchOver(const MahjongGame& game) {
-        const StandingsTable table = FormatStandings(game.GetMatch(), game.GetSession().Seats());
+        const StandingsTable table = FormatStandings(CoreManager::GetUIStrings(), game.GetMatch(), game.GetSession().Seats());
         UIVars& vars = CoreManager::GetUIVars();
         vars.Set("matchOverHeadline"_intern, eastl::string_view(table.headline));
         for (Seat row = 0; row < kSeatCount; ++row) {

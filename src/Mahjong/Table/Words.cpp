@@ -52,4 +52,8 @@ namespace BECore::Mahjong {
         return Subst(Tr(strings, key), args);
     }
 
+    eastl::string WindName(const UIStrings& strings, Wind wind) {
+        return Tr(strings, Format("wind.{}", EnumUtils<Wind>::ToString(wind)).c_str());
+    }
+
 }  // namespace BECore::Mahjong

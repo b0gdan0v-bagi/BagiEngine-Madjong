@@ -1,6 +1,7 @@
 #pragma once
 
 #include <BECore/UI/UIStrings.h>
+#include <Mahjong/Game/Seats.h>
 
 namespace BECore::Mahjong {
 
@@ -18,5 +19,8 @@ namespace BECore::Mahjong {
     /// `Tr` with the placeholders of the text replaced: `Tr(strings, "seat.name", {{"n", "2"}, {"wind", "South"}})`. The order of the words in a sentence
     /// belongs to the translation, so a sentence is one key with placeholders and never pieces joined in code.
     [[nodiscard]] eastl::string Tr(const UIStrings& strings, eastl::string_view key, WordArgs args);
+
+    /// The name of a wind in the current language ("East", "Восток"): the key `wind.<Wind>`; never the id `EnumUtils<Wind>::ToString` gives (that one is the control API's).
+    [[nodiscard]] eastl::string WindName(const UIStrings& strings, Wind wind);
 
 }  // namespace BECore::Mahjong

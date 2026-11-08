@@ -72,7 +72,7 @@ namespace BECore::Mahjong::Tests {
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 totals[seat] += settlement.deltas[seat];
             }
-            return FormatScoreTable(settlement, *Hand().Result(), totals, _game->GetSession().Seats());
+            return FormatScoreTable(CoreManager::GetUIStrings(), settlement, *Hand().Result(), totals, _game->GetSession().Seats());
         }
 
         /// Plays whole hands (the person clicking `Next hand` each time) until the match is over.
@@ -217,7 +217,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(_game->GetMatch().GetPhase(), MatchPhase::Finished);
         EXPECT_FALSE(Shown("HandOver"));
         EXPECT_TRUE(Shown("MatchOver"));
-        const StandingsTable table = FormatStandings(_game->GetMatch(), _game->GetSession().Seats());
+        const StandingsTable table = FormatStandings(CoreManager::GetUIStrings(), _game->GetMatch(), _game->GetSession().Seats());
         EXPECT_EQ(Var("matchOverHeadline"), table.headline.c_str());
         EXPECT_EQ(Text("MatchOver", "Headline"), table.headline.c_str());
         for (int row = 0; row < kSeatCount; ++row) {
@@ -281,7 +281,7 @@ namespace BECore::Mahjong::Tests {
             line.tile = T("9m");
             line.points = 128;
             line.doubles = 3;
-            const eastl::string text = ScoreLineText(line);
+            const eastl::string text = ScoreLineText(CoreManager::GetUIStrings(), line);
             for (int i = 0; i < kMaxScoreLines; ++i) {
                 vars.Set(PoolString::Intern(Format("scoreLine{}", i)), eastl::string_view(text));
             }

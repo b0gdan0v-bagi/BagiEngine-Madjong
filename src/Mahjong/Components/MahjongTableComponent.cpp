@@ -253,7 +253,7 @@ namespace BECore::Mahjong {
         const bool handoff = game != nullptr && game->GetSession().HandoffPending();
         if (handoff) {
             const Seat actor = game->GetSession().Actor();
-            vars.Set("handoffSeat"_intern, eastl::string_view(SeatName(actor, game->GetMatch().Hand().SeatWind(actor))));
+            vars.Set("handoffSeat"_intern, eastl::string_view(SeatName(CoreManager::GetUIStrings(), actor, game->GetMatch().Hand().SeatWind(actor))));
         }
         if (handoff != _handoffShown) {
             _handoffShown = handoff;

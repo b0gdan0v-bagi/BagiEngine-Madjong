@@ -5,9 +5,131 @@
     <language id="en">
         <string key="lang.en" text="English"/>
         <string key="lang.ru" text="Русский"/>
+        <string key="wind.East" text="East"/>
+        <string key="wind.South" text="South"/>
+        <string key="wind.West" text="West"/>
+        <string key="wind.North" text="North"/>
+        <string key="suit.Dots" text="Dots"/>
+        <string key="suit.Bamboo" text="Bamboo"/>
+        <string key="suit.Characters" text="Characters"/>
+        <string key="tile.suit" text="{rank} {suit}"/>
+        <string key="tile.wind" text="{wind} Wind"/>
+        <string key="tile.dragon.Red" text="Red Dragon"/>
+        <string key="tile.dragon.White" text="White Dragon"/>
+        <string key="tile.dragon.Green" text="Green Dragon"/>
+        <string key="tile.flower" text="Flower {n}"/>
+        <string key="tile.season" text="Season {n}"/>
+        <string key="tile.none" text="No tile"/>
+        <string key="seat.name" text="Seat {n} ({wind})"/>
+        <string key="seat.short" text="Seat {n}"/>
+        <string key="seat.you" text=" You"/>
+        <string key="score.of" text="{name} of {tile}"/>
+        <string key="score.bracket" text="{name} ({tile})"/>
+        <string key="score.points" text="{name}: {points}"/>
+        <string key="score.doubles" text="{name}: x{multiplier}"/>
+        <string key="score.limit" text="Limit: {name}"/>
+        <string key="score.kind.Win" text="Win"/>
+        <string key="score.kind.WinTileFromWall" text="Tile from the wall"/>
+        <string key="score.kind.OnlyWinningTile" text="Only winning tile"/>
+        <string key="score.kind.Pung" text="Pung"/>
+        <string key="score.kind.Kong" text="Kong"/>
+        <string key="score.kind.Pair" text="Pair"/>
+        <string key="score.kind.Bonus" text="Bonus tile"/>
+        <string key="score.kind.DragonSet" text="Dragon set"/>
+        <string key="score.kind.OwnWindSet" text="Own wind set"/>
+        <string key="score.kind.RoundWindSet" text="Round wind set"/>
+        <string key="score.kind.OneSuitWithHonours" text="One suit with honours"/>
+        <string key="score.kind.OneSuitNoHonours" text="One suit, no honours"/>
+        <string key="score.kind.OwnBonus" text="Own wind bonus"/>
+        <string key="score.kind.RoundBonus" text="Round wind bonus"/>
+        <string key="score.kind.OnlyPungs" text="Only pungs"/>
+        <string key="score.kind.NoPoints" text="No points"/>
+        <string key="score.kind.LooseTile" text="Loose tile"/>
+        <string key="score.kind.LastTile" text="Last tile"/>
+        <string key="score.kind.RobbedKong" text="Robbed kong"/>
+        <string key="score.kind.LittleFourWinds" text="Little four winds"/>
+        <string key="score.kind.LittleThreeDragons" text="Little three dragons"/>
+        <string key="score.kind.TerminalsOrHonoursEverywhere" text="Terminal or honour in every set"/>
+        <string key="score.kind.FullyConcealed" text="Fully concealed"/>
+        <string key="score.kind.SeveralKongs" text="Several kongs"/>
+        <string key="score.kind.ObviouslyLast" text="Obviously the last tile"/>
+        <string key="score.kind.CallingFirstHand" text="Calling hand, first hand"/>
+        <string key="score.kind.ConcealedPungsOneSuit" text="Concealed pungs, one suit"/>
+        <string key="score.kind.HonoursOnly" text="Honours only"/>
+        <string key="score.kind.TerminalsOnly" text="Terminals only"/>
+        <string key="score.kind.AllGreen" text="All green"/>
+        <string key="score.kind.SevenPairsHonours" text="Seven pairs of honours"/>
+        <string key="score.kind.SevenPairsOneSuit" text="Seven pairs of one suit"/>
+        <string key="score.kind.BigThreeDragons" text="Big three dragons"/>
+        <string key="score.kind.BigFourWinds" text="Big four winds"/>
+        <string key="score.kind.FourKongs" text="Four kongs"/>
+        <string key="score.kind.ThirteenOrphans" text="Thirteen orphans"/>
+        <string key="score.kind.LastTileOneDot" text="Last tile, 1 of dots"/>
+        <string key="score.kind.LooseTileFiveDots" text="Loose tile, 5 of dots"/>
     </language>
     <language id="ru">
         <string key="lang.en" text="English"/>
         <string key="lang.ru" text="Русский"/>
+        <string key="wind.East" text="Восток"/>
+        <string key="wind.South" text="Юг"/>
+        <string key="wind.West" text="Запад"/>
+        <string key="wind.North" text="Север"/>
+        <string key="suit.Dots" text="Круги"/>
+        <string key="suit.Bamboo" text="Бамбук"/>
+        <string key="suit.Characters" text="Знаки"/>
+        <string key="tile.suit" text="{suit} {rank}"/>
+        <string key="tile.wind" text="Ветер: {wind}"/>
+        <string key="tile.dragon.Red" text="Красный дракон"/>
+        <string key="tile.dragon.White" text="Белый дракон"/>
+        <string key="tile.dragon.Green" text="Зелёный дракон"/>
+        <string key="tile.flower" text="Цветок {n}"/>
+        <string key="tile.season" text="Сезон {n}"/>
+        <string key="tile.none" text="Нет кости"/>
+        <string key="seat.name" text="Место {n} ({wind})"/>
+        <string key="seat.short" text="Место {n}"/>
+        <string key="seat.you" text=" Вы"/>
+        <string key="score.of" text="{name} ({tile})"/>
+        <string key="score.bracket" text="{name} ({tile})"/>
+        <string key="score.points" text="{name}: {points}"/>
+        <string key="score.doubles" text="{name}: x{multiplier}"/>
+        <string key="score.limit" text="Лимит: {name}"/>
+        <string key="score.kind.Win" text="Победа"/>
+        <string key="score.kind.WinTileFromWall" text="Кость из стены"/>
+        <string key="score.kind.OnlyWinningTile" text="Единственная выигрышная кость"/>
+        <string key="score.kind.Pung" text="Пун"/>
+        <string key="score.kind.Kong" text="Конг"/>
+        <string key="score.kind.Pair" text="Пара"/>
+        <string key="score.kind.Bonus" text="Бонусная кость"/>
+        <string key="score.kind.DragonSet" text="Набор драконов"/>
+        <string key="score.kind.OwnWindSet" text="Набор своего ветра"/>
+        <string key="score.kind.RoundWindSet" text="Набор ветра раунда"/>
+        <string key="score.kind.OneSuitWithHonours" text="Одна масть с почётными"/>
+        <string key="score.kind.OneSuitNoHonours" text="Одна масть без почётных"/>
+        <string key="score.kind.OwnBonus" text="Бонус своего ветра"/>
+        <string key="score.kind.RoundBonus" text="Бонус ветра раунда"/>
+        <string key="score.kind.OnlyPungs" text="Только пуны"/>
+        <string key="score.kind.NoPoints" text="Без очков"/>
+        <string key="score.kind.LooseTile" text="Запасная кость"/>
+        <string key="score.kind.LastTile" text="Последняя кость"/>
+        <string key="score.kind.RobbedKong" text="Ограбленный конг"/>
+        <string key="score.kind.LittleFourWinds" text="Малые четыре ветра"/>
+        <string key="score.kind.LittleThreeDragons" text="Малые три дракона"/>
+        <string key="score.kind.TerminalsOrHonoursEverywhere" text="Крайняя или почётная в каждом наборе"/>
+        <string key="score.kind.FullyConcealed" text="Полностью закрытая"/>
+        <string key="score.kind.SeveralKongs" text="Несколько конгов"/>
+        <string key="score.kind.ObviouslyLast" text="Очевидно последняя кость"/>
+        <string key="score.kind.CallingFirstHand" text="Заявка с первого хода"/>
+        <string key="score.kind.ConcealedPungsOneSuit" text="Закрытые пуны одной масти"/>
+        <string key="score.kind.HonoursOnly" text="Только почётные"/>
+        <string key="score.kind.TerminalsOnly" text="Только крайние"/>
+        <string key="score.kind.AllGreen" text="Всё зелёное"/>
+        <string key="score.kind.SevenPairsHonours" text="Семь пар почётных"/>
+        <string key="score.kind.SevenPairsOneSuit" text="Семь пар одной масти"/>
+        <string key="score.kind.BigThreeDragons" text="Большие три дракона"/>
+        <string key="score.kind.BigFourWinds" text="Большие четыре ветра"/>
+        <string key="score.kind.FourKongs" text="Четыре конга"/>
+        <string key="score.kind.ThirteenOrphans" text="Тринадцать сирот"/>
+        <string key="score.kind.LastTileOneDot" text="Последняя кость, 1 круг"/>
+        <string key="score.kind.LooseTileFiveDots" text="Запасная кость, 5 кругов"/>
     </language>
 </UIStrings>

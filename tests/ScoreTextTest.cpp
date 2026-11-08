@@ -1,7 +1,10 @@
 #include "ScoreTestSupport.h"
+#include "StringsTestSupport.h"
 
 #include <Mahjong/Game/Match.h>
 #include <Mahjong/Table/ScoreText.h>
+#include <Mahjong/Table/SeatName.h>
+#include <set>
 
 /**
  * The words of the end-of-hand screen and of the end-of-match screen (`Table/ScoreText.h`). Pure logic: no engine services. The worked
@@ -10,6 +13,33 @@
 namespace BECore::Mahjong::Tests {
 
     namespace {
+
+        /// The shipped table with the given language current; one per language, loaded once (the tests only read it).
+        const UIStrings& Words(std::string_view language) {
+            static UIStrings english;
+            static UIStrings russian;
+            static const bool loaded = [] {
+                EXPECT_TRUE(LoadShippedStrings(english).empty());
+                EXPECT_TRUE(LoadShippedStrings(russian).empty());
+                EXPECT_TRUE(english.SetLanguage("en"_intern));
+                EXPECT_TRUE(russian.SetLanguage("ru"_intern));
+                return true;
+            }();
+            (void)loaded;
+            return language == "ru" ? russian : english;
+        }
+
+        const UIStrings& En() {
+            return Words("en");
+        }
+
+        const UIStrings& Ru() {
+            return Words("ru");
+        }
+
+        std::string Std(const eastl::string& text) {
+            return std::string(text.data(), text.size());
+        }
 
         constexpr SeatSetup kNoPeople{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
         constexpr SeatSetup kTwoSeatsOfPeople{SeatKind::Person, SeatKind::Person, SeatKind::Computer, SeatKind::Computer};
@@ -70,7 +100,7 @@ namespace BECore::Mahjong::Tests {
     TEST(ScoreTextTest, EveryScoreKindHasANonEmptyDistinctName) {
         eastl::vector<eastl::string> seen;
         for (const ScoreKind kind : EnumUtils<ScoreKind>::Values()) {
-            const eastl::string name(ScoreKindName(kind));
+            const eastl::string name = ScoreKindName(En(), kind);
             EXPECT_FALSE(name.empty()) << EnumUtils<ScoreKind>::ToString(kind).data();
             EXPECT_EQ(eastl::find(seen.begin(), seen.end(), name), seen.end()) << "the name '" << name.c_str() << "' is used twice";
             seen.push_back(name);
@@ -81,33 +111,104 @@ namespace BECore::Mahjong::Tests {
     TEST(ScoreTextTest, EveryTileHasADistinctNameAndTheSamplesReadRight) {
         eastl::vector<eastl::string> seen;
         for (uint8_t id = 0; id < kTileIdCount; ++id) {
-            const eastl::string name = TileName(Tile(id));
+            const eastl::string name = TileName(En(), Tile(id));
             EXPECT_FALSE(name.empty()) << int{id};
             EXPECT_EQ(eastl::find(seen.begin(), seen.end(), name), seen.end()) << name.c_str();
             seen.push_back(name);
         }
-        EXPECT_STREQ(TileName(T("5p")).c_str(), "5 Dots");
-        EXPECT_STREQ(TileName(T("9s")).c_str(), "9 Bamboo");
-        EXPECT_STREQ(TileName(T("1m")).c_str(), "1 Characters");
-        EXPECT_STREQ(TileName(T("Ew")).c_str(), "East Wind");
-        EXPECT_STREQ(TileName(T("Nw")).c_str(), "North Wind");
-        EXPECT_STREQ(TileName(T("Rd")).c_str(), "Red Dragon");
-        EXPECT_STREQ(TileName(T("Wd")).c_str(), "White Dragon");
-        EXPECT_STREQ(TileName(T("Gd")).c_str(), "Green Dragon");
-        EXPECT_STREQ(TileName(T("F1")).c_str(), "Flower 1");
-        EXPECT_STREQ(TileName(T("T4")).c_str(), "Season 4");
-        EXPECT_STREQ(TileName(Tile{}).c_str(), "No tile");
+        EXPECT_STREQ(TileName(En(), T("5p")).c_str(), "5 Dots");
+        EXPECT_STREQ(TileName(En(), T("9s")).c_str(), "9 Bamboo");
+        EXPECT_STREQ(TileName(En(), T("1m")).c_str(), "1 Characters");
+        EXPECT_STREQ(TileName(En(), T("Ew")).c_str(), "East Wind");
+        EXPECT_STREQ(TileName(En(), T("Nw")).c_str(), "North Wind");
+        EXPECT_STREQ(TileName(En(), T("Rd")).c_str(), "Red Dragon");
+        EXPECT_STREQ(TileName(En(), T("Wd")).c_str(), "White Dragon");
+        EXPECT_STREQ(TileName(En(), T("Gd")).c_str(), "Green Dragon");
+        EXPECT_STREQ(TileName(En(), T("F1")).c_str(), "Flower 1");
+        EXPECT_STREQ(TileName(En(), T("T4")).c_str(), "Season 4");
+        EXPECT_STREQ(TileName(En(), Tile{}).c_str(), "No tile");
     }
 
     TEST(ScoreTextTest, ALineReadsAsItsNameItsTileAndItsValue) {
-        EXPECT_STREQ(ScoreLineText(MakeLine(ScoreKind::Win, "", 20, 0)).c_str(), "Win: 20");
-        EXPECT_STREQ(ScoreLineText(MakeLine(ScoreKind::Pung, "5p", 8, 0)).c_str(), "Pung of 5 Dots: 8");
-        EXPECT_STREQ(ScoreLineText(MakeLine(ScoreKind::Pair, "Rd", 2, 0)).c_str(), "Pair of Red Dragon: 2");
-        EXPECT_STREQ(ScoreLineText(MakeLine(ScoreKind::Bonus, "F1", 4, 0)).c_str(), "Bonus tile (Flower 1): 4");
-        EXPECT_STREQ(ScoreLineText(MakeLine(ScoreKind::DragonSet, "Gd", 0, 1)).c_str(), "Dragon set (Green Dragon): x2");
-        EXPECT_STREQ(ScoreLineText(MakeLine(ScoreKind::OneSuitNoHonours, "", 0, 3)).c_str(), "One suit, no honours: x8");
-        EXPECT_STREQ(ScoreLineText(MakeLine(ScoreKind::LittleFourWinds, "", 0, 2)).c_str(), "Little four winds: x4");
-        EXPECT_STREQ(ScoreLineText(MakeLine(ScoreKind::ThirteenOrphans, "", 0, 0)).c_str(), "Limit: Thirteen orphans");
+        EXPECT_STREQ(ScoreLineText(En(), MakeLine(ScoreKind::Win, "", 20, 0)).c_str(), "Win: 20");
+        EXPECT_STREQ(ScoreLineText(En(), MakeLine(ScoreKind::Pung, "5p", 8, 0)).c_str(), "Pung of 5 Dots: 8");
+        EXPECT_STREQ(ScoreLineText(En(), MakeLine(ScoreKind::Pair, "Rd", 2, 0)).c_str(), "Pair of Red Dragon: 2");
+        EXPECT_STREQ(ScoreLineText(En(), MakeLine(ScoreKind::Bonus, "F1", 4, 0)).c_str(), "Bonus tile (Flower 1): 4");
+        EXPECT_STREQ(ScoreLineText(En(), MakeLine(ScoreKind::DragonSet, "Gd", 0, 1)).c_str(), "Dragon set (Green Dragon): x2");
+        EXPECT_STREQ(ScoreLineText(En(), MakeLine(ScoreKind::OneSuitNoHonours, "", 0, 3)).c_str(), "One suit, no honours: x8");
+        EXPECT_STREQ(ScoreLineText(En(), MakeLine(ScoreKind::LittleFourWinds, "", 0, 2)).c_str(), "Little four winds: x4");
+        EXPECT_STREQ(ScoreLineText(En(), MakeLine(ScoreKind::ThirteenOrphans, "", 0, 0)).c_str(), "Limit: Thirteen orphans");
+    }
+
+    TEST(ScoreTextTest, TheSeatsAreNamedInEveryLanguage) {
+        EXPECT_STREQ(SeatName(En(), kSeat1, Wind::South).c_str(), "Seat 2 (South)");
+        EXPECT_STREQ(SeatName(Ru(), kSeat1, Wind::South).c_str(), "Место 2 (Юг)");
+        EXPECT_STREQ(SeatName(Ru(), kSeat3, Wind::North).c_str(), "Место 4 (Север)");
+        EXPECT_STREQ(SeatLabel(En(), kSeat2, kNoPeople).c_str(), "Seat 3");
+        EXPECT_STREQ(SeatLabel(Ru(), kSeat2, kNoPeople).c_str(), "Место 3");
+        EXPECT_STREQ(WindName(Ru(), Wind::East).c_str(), "Восток");
+        EXPECT_STREQ(WindName(Ru(), Wind::West).c_str(), "Запад");
+    }
+
+    TEST(ScoreTextTest, YouIsMarkedOnlyAtATableWithOnePersonInEveryLanguage) {
+        // kDefaultSeatSetup: seat 0 is the only person
+        EXPECT_STREQ(SeatLabel(En(), kSeat0, Wind::East, kDefaultSeatSetup).c_str(), "Seat 1 (East) You");
+        EXPECT_STREQ(SeatLabel(Ru(), kSeat0, Wind::East, kDefaultSeatSetup).c_str(), "Место 1 (Восток) Вы");
+        EXPECT_STREQ(SeatLabel(Ru(), kSeat0, kDefaultSeatSetup).c_str(), "Место 1 Вы");
+        for (const UIStrings* strings : {&En(), &Ru()}) {
+            EXPECT_EQ(SeatLabel(*strings, kSeat1, Wind::South, kDefaultSeatSetup), SeatName(*strings, kSeat1, Wind::South)) << "a computer is nobody";
+            EXPECT_EQ(SeatLabel(*strings, kSeat0, Wind::East, kTwoSeatsOfPeople), SeatName(*strings, kSeat0, Wind::East)) << "two people: nobody is you";
+            EXPECT_EQ(SeatLabel(*strings, kSeat0, Wind::East, kNoPeople), SeatName(*strings, kSeat0, Wind::East));
+        }
+    }
+
+    TEST(ScoreTextTest, EveryNameInEveryLanguageIsNonEmptyDistinctAndNotItsKey) {
+        UIStrings strings;
+        ASSERT_TRUE(LoadShippedStrings(strings).empty());
+        ForEachLanguage(strings, [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            std::set<std::string> kinds;
+            for (const ScoreKind kind : EnumUtils<ScoreKind>::Values()) {
+                const std::string name = Std(ScoreKindName(strings, kind));
+                EXPECT_FALSE(name.empty());
+                EXPECT_EQ(name.find("score.kind."), std::string::npos) << "the key stands in for a missing text: " << name;
+                EXPECT_TRUE(kinds.insert(name).second) << "the name '" << name << "' is used twice";
+            }
+            EXPECT_EQ(kinds.size(), EnumUtils<ScoreKind>::Count());
+
+            std::set<std::string> tiles;
+            for (uint8_t id = 0; id < kTileIdCount; ++id) {
+                const std::string name = Std(TileName(strings, Tile(id)));
+                EXPECT_FALSE(name.empty()) << int{id};
+                EXPECT_EQ(name.find("tile."), std::string::npos) << name;
+                EXPECT_EQ(name.find("suit."), std::string::npos) << name;
+                EXPECT_EQ(name.find("wind."), std::string::npos) << name;
+                EXPECT_EQ(name.find('{'), std::string::npos) << "a placeholder was left: " << name;
+                EXPECT_TRUE(tiles.insert(name).second) << "the name '" << name << "' is used twice";
+            }
+            EXPECT_EQ(tiles.size(), static_cast<size_t>(kTileIdCount));
+            EXPECT_EQ(Std(TileName(strings, Tile{})).find("tile.none"), std::string::npos);
+        });
+    }
+
+    TEST(ScoreTextTest, TheRussianNamesAndLinesReadRight) {
+        EXPECT_STREQ(TileName(Ru(), T("5p")).c_str(), "Круги 5");
+        EXPECT_STREQ(TileName(Ru(), T("9s")).c_str(), "Бамбук 9");
+        EXPECT_STREQ(TileName(Ru(), T("1m")).c_str(), "Знаки 1");
+        EXPECT_STREQ(TileName(Ru(), T("Ew")).c_str(), "Ветер: Восток");
+        EXPECT_STREQ(TileName(Ru(), T("Rd")).c_str(), "Красный дракон");
+        EXPECT_STREQ(TileName(Ru(), T("Wd")).c_str(), "Белый дракон");
+        EXPECT_STREQ(TileName(Ru(), T("Gd")).c_str(), "Зелёный дракон");
+        EXPECT_STREQ(TileName(Ru(), T("F1")).c_str(), "Цветок 1");
+        EXPECT_STREQ(TileName(Ru(), T("T4")).c_str(), "Сезон 4");
+        EXPECT_STREQ(TileName(Ru(), Tile{}).c_str(), "Нет кости");
+
+        EXPECT_STREQ(ScoreLineText(Ru(), MakeLine(ScoreKind::Win, "", 20, 0)).c_str(), "Победа: 20");
+        EXPECT_STREQ(ScoreLineText(Ru(), MakeLine(ScoreKind::Pung, "5p", 8, 0)).c_str(), "Пун (Круги 5): 8");
+        EXPECT_STREQ(ScoreLineText(Ru(), MakeLine(ScoreKind::Bonus, "F1", 4, 0)).c_str(), "Бонусная кость (Цветок 1): 4");
+        EXPECT_STREQ(ScoreLineText(Ru(), MakeLine(ScoreKind::DragonSet, "Gd", 0, 1)).c_str(), "Набор драконов (Зелёный дракон): x2");
+        EXPECT_STREQ(ScoreLineText(Ru(), MakeLine(ScoreKind::LittleFourWinds, "", 0, 2)).c_str(), "Малые четыре ветра: x4");
+        EXPECT_STREQ(ScoreLineText(Ru(), MakeLine(ScoreKind::ThirteenOrphans, "", 0, 0)).c_str(), "Лимит: Тринадцать сирот");
     }
 
     // ----- the end of a hand -----
@@ -117,7 +218,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(model.GetPhase(), Phase::Finished);
         const HandSettlement settlement = SettleHand(model);
 
-        const ScoreTable table = FormatScoreTable(settlement, *model.Result(), TotalsAfter(settlement), kDefaultSeatSetup);
+        const ScoreTable table = FormatScoreTable(En(), settlement, *model.Result(), TotalsAfter(settlement), kDefaultSeatSetup);
 
         EXPECT_STREQ(table.headline.c_str(), "Seat 2 (South) wins by self-draw");
         EXPECT_STREQ(table.summary.c_str(), "Winning tile 4 Dots: 36 points x 8 = 288, score 290");
@@ -144,8 +245,8 @@ namespace BECore::Mahjong::Tests {
         const HandModel model = PlayToSelfDrawWin();
         const HandSettlement settlement = SettleHand(model);
 
-        const ScoreTable none = FormatScoreTable(settlement, *model.Result(), TotalsAfter(settlement), kNoPeople);
-        const ScoreTable two = FormatScoreTable(settlement, *model.Result(), TotalsAfter(settlement), kTwoSeatsOfPeople);
+        const ScoreTable none = FormatScoreTable(En(), settlement, *model.Result(), TotalsAfter(settlement), kNoPeople);
+        const ScoreTable two = FormatScoreTable(En(), settlement, *model.Result(), TotalsAfter(settlement), kTwoSeatsOfPeople);
 
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             EXPECT_EQ(std::string(none.seats[seat].c_str()).find("You"), std::string::npos) << seat;
@@ -162,11 +263,11 @@ namespace BECore::Mahjong::Tests {
 
         result.source = WinSource::Discard;
         result.from = kSeat3;
-        EXPECT_STREQ(FormatScoreTable(settlement, result, TotalsAfter(settlement), kNoPeople).headline.c_str(), "Seat 3 (West) wins on the discard of Seat 4 (North)");
+        EXPECT_STREQ(FormatScoreTable(En(), settlement, result, TotalsAfter(settlement), kNoPeople).headline.c_str(), "Seat 3 (West) wins on the discard of Seat 4 (North)");
 
         result.source = WinSource::RobbedKong;
         result.from = kSeat1;
-        EXPECT_STREQ(FormatScoreTable(settlement, result, TotalsAfter(settlement), kNoPeople).headline.c_str(), "Seat 3 (West) wins by robbing the kong of Seat 2 (South)");
+        EXPECT_STREQ(FormatScoreTable(En(), settlement, result, TotalsAfter(settlement), kNoPeople).headline.c_str(), "Seat 3 (West) wins by robbing the kong of Seat 2 (South)");
     }
 
     TEST(ScoreTextTest, ADrawnHandHasNoPaymentsAndNoLines) {
@@ -174,7 +275,7 @@ namespace BECore::Mahjong::Tests {
         settlement.kind = ResultKind::Drawn;
         settlement.east = kSeat1;
 
-        const ScoreTable table = FormatScoreTable(settlement, HandResult{}, SeatScores{2000, 2000, 2000, 2000}, kDefaultSeatSetup);
+        const ScoreTable table = FormatScoreTable(En(), settlement, HandResult{}, SeatScores{2000, 2000, 2000, 2000}, kDefaultSeatSetup);
 
         EXPECT_STREQ(table.headline.c_str(), "Drawn hand");
         EXPECT_STREQ(table.summary.c_str(), "No payments");
@@ -192,7 +293,7 @@ namespace BECore::Mahjong::Tests {
         result.winner = kSeat2;
         result.winningTile = T("Rd");
 
-        const ScoreTable table = FormatScoreTable(settlement, result, TotalsAfter(settlement), kNoPeople);
+        const ScoreTable table = FormatScoreTable(En(), settlement, result, TotalsAfter(settlement), kNoPeople);
 
         ASSERT_EQ(table.lines.size(), 1u);
         EXPECT_STREQ(table.lines[0].c_str(), "Limit: Thirteen orphans");
@@ -206,14 +307,14 @@ namespace BECore::Mahjong::Tests {
         }
         const HandSettlement settlement = MadeUpWin(lines);
 
-        const ScoreTable table = FormatScoreTable(settlement, HandResult{ResultKind::Win, kSeat2, T("5p")}, TotalsAfter(settlement), kNoPeople);
+        const ScoreTable table = FormatScoreTable(En(), settlement, HandResult{ResultKind::Win, kSeat2, T("5p")}, TotalsAfter(settlement), kNoPeople);
 
         ASSERT_EQ(table.lines.size(), static_cast<size_t>(kMaxScoreLines));
         EXPECT_STREQ(table.lines[kMaxScoreLines - 2].c_str(), "Bonus tile (Flower 1): 4");
         EXPECT_STREQ(table.lines[kMaxScoreLines - 1].c_str(), "+5 more") << "20 lines: 15 shown, 5 summed up";
 
         lines.resize(kMaxScoreLines);
-        const ScoreTable exact = FormatScoreTable(MadeUpWin(lines), HandResult{ResultKind::Win, kSeat2, T("5p")}, TotalsAfter(settlement), kNoPeople);
+        const ScoreTable exact = FormatScoreTable(En(), MadeUpWin(lines), HandResult{ResultKind::Win, kSeat2, T("5p")}, TotalsAfter(settlement), kNoPeople);
         EXPECT_EQ(exact.lines.size(), static_cast<size_t>(kMaxScoreLines)) << "exactly sixteen lines are all shown";
         EXPECT_STREQ(exact.lines.back().c_str(), "Bonus tile (Flower 1): 4");
     }
@@ -221,7 +322,7 @@ namespace BECore::Mahjong::Tests {
     TEST(ScoreTextTest, ALargeNumberOfDoublesNeverOverflowsTheMultiplier) {
         const HandSettlement settlement = MadeUpWin({MakeLine(ScoreKind::OnlyPungs, "", 0, 100)});
 
-        const eastl::string text = ScoreLineText(settlement.breakdowns[kSeat2].lines[0]);
+        const eastl::string text = ScoreLineText(En(), settlement.breakdowns[kSeat2].lines[0]);
 
         EXPECT_FALSE(text.empty());
     }
@@ -236,7 +337,7 @@ namespace BECore::Mahjong::Tests {
         settlement.deltas = {100, -100, 100, -100};
         ASSERT_TRUE(match.ApplySettlement(settlement).has_value());
 
-        const StandingsTable table = FormatStandings(match, kNoPeople);
+        const StandingsTable table = FormatStandings(En(), match, kNoPeople);
 
         EXPECT_STREQ(table.headline.c_str(), "Tied for first: Seat 1, Seat 3");
         EXPECT_STREQ(table.rows[0].c_str(), "1. Seat 1: 2100");
@@ -253,7 +354,7 @@ namespace BECore::Mahjong::Tests {
         settlement.deltas = {-300, 0, 100, 200};
         ASSERT_TRUE(match.ApplySettlement(settlement).has_value());
 
-        const StandingsTable table = FormatStandings(match, kDefaultSeatSetup);
+        const StandingsTable table = FormatStandings(En(), match, kDefaultSeatSetup);
 
         EXPECT_STREQ(table.headline.c_str(), "Seat 4 wins the match");
         EXPECT_STREQ(table.rows[0].c_str(), "1. Seat 4: 2200");
