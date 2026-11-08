@@ -18,7 +18,6 @@ namespace BECore::Mahjong {
     namespace {
 
         constexpr eastl::string_view kRevealAction = "MahjongReveal";
-        constexpr const char* kActionsNode = "Actions";
         constexpr Color kFelt{22, 92, 62, 255};
         constexpr Color kActingSeat{255, 214, 80, 90};
         constexpr Color kPendingDiscard{255, 214, 80, 200};
@@ -48,7 +47,7 @@ namespace BECore::Mahjong {
         /// The picture `name` of the canvas on the node `Actions`; null when the scene has none.
         UIImage* FindActionImage(Scene& scene, PoolString name) {
             for (const auto& node : scene.GetRootNode().GetChildren()) {
-                if (node->GetName() == PoolString::Intern(kActionsNode)) {
+                if (node->GetName() == "Actions"_intern) {
                     const auto canvas = node->GetComponent<UICanvasComponent>();
                     UIElement* element = canvas ? canvas->GetRoot().FindByName(name) : nullptr;
                     return element != nullptr ? element->Cast<UIImage>() : nullptr;
@@ -212,7 +211,7 @@ namespace BECore::Mahjong {
                 if (showNow == showBefore && (!showNow || sameTile)) {
                     continue;
                 }
-                const PoolString imageName = PoolString::Intern(Format("{}Tile{}", spec.element, t));
+                const PoolString imageName = PoolString::Intern(TileImageName(static_cast<ButtonKind>(i), t));
                 if (showNow) {
                     if (UIImage* image = FindActionImage(scene, imageName)) {
                         image->sprite = PoolString::Intern(SpriteName(now.tiles[static_cast<size_t>(t)]));

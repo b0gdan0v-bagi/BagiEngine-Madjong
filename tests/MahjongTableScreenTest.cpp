@@ -24,6 +24,7 @@ namespace BECore::Mahjong::Tests {
         /// The height of the line of the word at the top of a button; the pictures of tiles lie below it.
         constexpr float kWordLineHeight = 24.0f;
         /// The smallest tile picture in view units (the 3:4 of an atlas cell), so a tile can be told at the smallest window of the matrix.
+        constexpr float kButtonWidth = 132.0f;
         constexpr float kLeastTileWidth = 20.0f;
         constexpr float kLeastTileHeight = 26.0f;
         constexpr float kTileShape = 3.0f / 4.0f;
@@ -42,7 +43,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_TRUE(canvas);
             ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(spec.element), shown)) << spec.element;
             for (int t = 0; t < spec.maxTiles; ++t) {
-                ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(Format("{}Tile{}", spec.element, t)), shown)) << spec.element;
+                ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(TileImageName(kind, t)), shown)) << spec.element;
             }
         }
     };
@@ -79,7 +80,7 @@ namespace BECore::Mahjong::Tests {
             }
             EXPECT_EQ(images, spec.maxTiles) << spec.element;
             for (int t = 0; t < kMaxButtonTiles; ++t) {
-                const std::string name = Format("{}Tile{}", spec.element, t).c_str();
+                const std::string name = TileImageName(static_cast<ButtonKind>(i), t).c_str();
                 EXPECT_EQ(Element("Actions", name.c_str()) != nullptr, t < spec.maxTiles) << name;
             }
         }
@@ -142,11 +143,11 @@ namespace BECore::Mahjong::Tests {
             const UIElement* button = Element("Actions", spec.element);
             ASSERT_NE(button, nullptr) << spec.element;
             const Rect& outer = button->rect;
-            EXPECT_GE(outer.w, 132.0f) << spec.element;
+            EXPECT_GE(outer.w, kButtonWidth) << spec.element;
             EXPECT_GE(outer.h, kButtonHeight) << spec.element;
             const UIElement* previous = nullptr;
             for (int t = 0; t < spec.maxTiles; ++t) {
-                const std::string name = Format("{}Tile{}", spec.element, t).c_str();
+                const std::string name = TileImageName(static_cast<ButtonKind>(i), t).c_str();
                 const UIElement* picture = Element("Actions", name.c_str());
                 ASSERT_NE(picture, nullptr) << name;
                 const Rect& r = picture->rect;
