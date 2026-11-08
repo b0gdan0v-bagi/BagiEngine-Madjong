@@ -120,4 +120,58 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Sum(game->GetMatch().Scores()), kSeatCount * kExpectedStartingScore);
     }
 
+    TEST_F(MahjongGameTest, TheGameOwnsASessionInPlayAfterTheStart) {
+        MahjongGame* game = MahjongGame::GetActive();
+        ASSERT_NE(game, nullptr);
+        const TableSession& session = game->GetSession();
+
+        EXPECT_EQ(session.GetPhase(), SessionPhase::Playing);
+        EXPECT_GT(session.Version(), 0u);
+        EXPECT_EQ(session.Seats(), kDefaultSeatSetup);
+        EXPECT_EQ(session.Actor(), game->GetMatch().East());
+    }
+
+    TEST_F(MahjongGameTest, StartMatchGoesThroughTheSessionWithTheSettingsAndTheSeats) {
+        MahjongGame* game = MahjongGame::GetActive();
+        ASSERT_NE(game, nullptr);
+        MahjongSettings settings;
+        settings.handsPerMatch = kShortMatchHands;
+        SeatSetup seats = kDefaultSeatSetup;
+        seats[0] = SeatKind::Computer;
+        game->SetSettings(settings);
+        game->SetSeats(seats);
+
+        const uint64_t version = game->GetSession().Version();
+        ASSERT_TRUE(game->StartMatch(kSeed).has_value());
+
+        EXPECT_GT(game->GetSession().Version(), version);
+        EXPECT_EQ(game->GetMatch().HandsTotal(), kShortMatchHands);
+        EXPECT_EQ(game->GetSession().Seats(), seats);
+        EXPECT_EQ(game->GetSession().PersonCount(), 0);
+
+        // Settings that cannot be played are refused and the match in play is left as it is.
+        settings.handsPerMatch = kUnplayableHandsPerMatch;
+        game->SetSettings(settings);
+        const std::string hand = Snapshot(game->GetMatch().Hand());
+        const MatchStatus refused = game->StartMatch(kSeed);
+        ASSERT_FALSE(refused.has_value());
+        EXPECT_EQ(refused.error(), MatchError::BadSettings);
+        EXPECT_EQ(Snapshot(game->GetMatch().Hand()), hand);
+    }
+
+    TEST_F(MahjongGameTest, ResetKeepsTheSeatSetup) {
+        MahjongGame* game = MahjongGame::GetActive();
+        ASSERT_NE(game, nullptr);
+        SeatSetup seats = kDefaultSeatSetup;
+        seats[2] = SeatKind::Person;
+        game->SetSeats(seats);
+
+        game->Reset();
+
+        EXPECT_EQ(game->GetSession().Seats(), seats);
+        EXPECT_EQ(game->GetSession().PersonCount(), 2);
+        EXPECT_EQ(game->GetSession().GetPhase(), SessionPhase::Playing);
+        EXPECT_EQ(game->GetSeats(), seats);
+    }
+
 }  // namespace BECore::Mahjong::Tests

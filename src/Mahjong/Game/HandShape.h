@@ -18,6 +18,8 @@ namespace BECore::Mahjong {
     inline constexpr int kPairsInSevenPairs = 7;
     /// The kinds of terminals and honours: 3 suits x 2 terminals + 4 winds + 3 dragons.
     inline constexpr int kOrphanKinds = 13;
+    /// How far apart (in ranks) two tiles of one chow may be: a chow `1 3` reaches over one rank.
+    inline constexpr int kChowReachRanks = kTilesPerSet - 1;
 
     /// One set of a decomposition: a chow (`first` is its lowest tile) or a pung (`first` is the tile). Never a kong: kongs are melds.
     struct ShapeSet {
@@ -62,6 +64,11 @@ namespace BECore::Mahjong {
      * four-sets-and-a-pair splits are found: seven pairs and thirteen orphans have none, although `IsWinningShape` accepts them.
      */
     [[nodiscard]] eastl::vector<Decomposition> Decompose(const TileCounts& counts, int setsNeeded);
+
+    /// Whether `counts` holds a tile that a tile of kind `id` could sit next to in a set or a pair: the same kind, or for a suit tile any
+    /// tile of its suit within two ranks (a chow reaches over one rank at most). A kind that fails this cannot complete a hand of four
+    /// sets and a pair, and neither seven pairs; thirteen orphans is the exception. Shared by `IsWaiting` and the shanten search.
+    [[nodiscard]] bool HasTileNearby(const TileCounts& counts, uint8_t id) noexcept;
 
     /// Thirteen orphans: every terminal and every honour at least once, 14 tiles, nothing else (so one of them twice).
     [[nodiscard]] bool IsThirteenOrphans(const TileCounts& counts) noexcept;

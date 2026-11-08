@@ -22,17 +22,6 @@ namespace BECore::Mahjong::Tests {
         constexpr uint32_t kFirstRngSeed = 1;
         constexpr uint32_t kRngSeeds = 5;
 
-        // Seat 1 holds two 5p and pungs the 5p of East, then draws the fourth. Seats 2 and 3 wait on the 5p (so seat 2 can rob the kong
-        // once it has declared).
-        constexpr const char* kSeat1Hand = "5p 5p 8p 2s 5s 8s 2m 5m 8m Ww Nw Gd Wd";
-        constexpr const char* kSeat2Waits = "4p 6p 1s 2s 3s 4m 5m 6m 7s 8s 9s Ew Ew";
-        constexpr const char* kSeat3Waits = "4p 6p 1m 2m 3m 4s 5s 6s 7m 8m 9m Ww Ww";
-
-        /// Seat 1 is to act with the fourth 5p drawn and an open pung of 5p laid; the seats in `declaring` have declared.
-        HandModel UpgradeModel(std::initializer_list<Seat> declaring = {}) {
-            return OpenPungModel(kSeat1Hand, kSeat2Waits, kSeat3Waits, declaring);
-        }
-
         int VisibleTotal(const TableView& view) {
             int total = 0;
             for (const uint8_t copies : view.visible) {
@@ -62,6 +51,9 @@ namespace BECore::Mahjong::Tests {
                 text += " || open";
                 for (const Meld& meld : seat.openMelds) {
                     text += " " + Name(meld.kind) + std::string(ToString(meld.first));
+                }
+                for (const Tile tile : seat.bonus) {
+                    text += " bonus:" + std::string(ToString(tile));
                 }
                 text += " ck " + std::to_string(seat.concealedKongs) + " bonus " + std::to_string(seat.bonusCount) + " disc " + std::to_string(seat.discardCount) + " calling " +
                         std::to_string(seat.callingDeclared);
@@ -187,6 +179,13 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(view.seats[kSeat1].callingDeclared);
         EXPECT_EQ(view.seats[kSeat0].bonusCount, 1);
         EXPECT_EQ(view.seats[kSeat1].bonusCount, 0);
+        // The bonus tiles themselves are listed, as many as are counted (they lie open).
+        ASSERT_EQ(view.seats[kSeat0].bonus.size(), 1u);
+        EXPECT_EQ(view.seats[kSeat0].bonus[0], T("F1"));
+        EXPECT_TRUE(view.seats[kSeat1].bonus.empty());
+        for (const PublicSeat& seat : view.seats) {
+            EXPECT_EQ(static_cast<size_t>(seat.bonusCount), seat.bonus.size());
+        }
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             EXPECT_EQ(view.seats[seat].discardCount, 1) << "seat " << seat;
         }

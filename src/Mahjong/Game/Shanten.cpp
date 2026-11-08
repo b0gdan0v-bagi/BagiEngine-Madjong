@@ -9,8 +9,7 @@ namespace BECore::Mahjong {
         CORE_ENUM(Role, uint8_t, Pung, Chow, Pair, PartialPair, PartialNeighbour, PartialGap, Isolated)
 
         constexpr int kMostSetsNeeded = kSetsInHand;
-        /// Two tiles that reach a chow over one rank (1 3, 5 7) and two that are next to each other (4 5).
-        constexpr int kGapRanks = 2;
+        /// Two tiles that are next to each other (4 5); two that reach a chow over one rank (1 3) are `kChowReachRanks` apart.
         constexpr int kNeighbourRanks = 1;
         /// A set lowers the number by two steps with three tiles: the most a tile can do is 2/3 of a step.
         constexpr int kStepsPerSet = 2;
@@ -77,7 +76,7 @@ namespace BECore::Mahjong {
                     Walk(id, Role::Pung, sets + 1, partials, pair);
                     TakeSame(id, kTilesPerSet, 1);
                 }
-                const bool chowFits = CanStartChow(id, kTilesPerSet - 1) && _held[id + 1] > 0 && _held[id + kGapRanks] > 0;
+                const bool chowFits = CanStartChow(id, kTilesPerSet - 1) && _held[id + 1] > 0 && _held[id + kChowReachRanks] > 0;
                 if (role <= Role::Chow && sets < _needed && chowFits) {
                     TakeChow(id, -1);
                     Walk(id, Role::Chow, sets + 1, partials, pair);
@@ -110,10 +109,10 @@ namespace BECore::Mahjong {
                     Walk(id, Role::PartialNeighbour, sets, partials + 1, pair);
                     TakePartial(id, kNeighbourRanks, 1);
                 }
-                if (role <= Role::PartialGap && CanStartChow(id, kGapRanks) && _held[id + kGapRanks] > 0) {
-                    TakePartial(id, kGapRanks, -1);
+                if (role <= Role::PartialGap && CanStartChow(id, kChowReachRanks) && _held[id + kChowReachRanks] > 0) {
+                    TakePartial(id, kChowReachRanks, -1);
                     Walk(id, Role::PartialGap, sets, partials + 1, pair);
-                    TakePartial(id, kGapRanks, 1);
+                    TakePartial(id, kChowReachRanks, 1);
                 }
             }
 
@@ -147,25 +146,6 @@ namespace BECore::Mahjong {
             return meldCount < 0 ? 0 : (meldCount > kSetsInHand ? kSetsInHand : meldCount);
         }
 
-        /// Whether a tile of kind `id` could join a set or a pair of the held tiles: the same kind, or the same suit within two ranks.
-        bool TouchesHeldTile(const TileCounts& counts, uint8_t id) noexcept {
-            if (counts[id] > 0) {
-                return true;
-            }
-            const Tile tile{id};
-            if (!tile.IsSuit()) {
-                return false;
-            }
-            const int rank = tile.Rank();
-            for (int distance = -kGapRanks; distance <= kGapRanks; ++distance) {
-                const int other = rank + distance;
-                if (distance != 0 && other >= 1 && other <= kRanksPerSuit && counts[id + distance] > 0) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
     }  // namespace
 
     int Shanten(const TileCounts& counts, int meldCount) {
@@ -181,7 +161,7 @@ namespace BECore::Mahjong {
         }
         TileCounts probe = counts;
         for (uint8_t id = 0; id < kKindCount; ++id) {
-            if (!TouchesHeldTile(counts, id)) {
+            if (!HasTileNearby(counts, id)) {
                 continue;
             }
             ++probe[id];

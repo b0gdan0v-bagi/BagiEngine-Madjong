@@ -360,7 +360,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_GT(checked, 200);
     }
 
-    TEST(ShantenTest, AddingATileNeverRaisesTheNumberAndDiscardingNeverLowersItByMoreThanOne) {
+    TEST(ShantenTest, AddingATileNeverRaisesTheNumberAndDiscardingRaisesItByAtMostOne) {
         ForEachRandomHand(14, kHandsPerProbingProperty, [](const TileCounts& counts, int meldCount) {
             const int shanten = Shanten(counts, meldCount);
             TileCounts probe = counts;
