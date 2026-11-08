@@ -11,8 +11,10 @@ namespace BECore::Mahjong {
     inline constexpr int kClaimRankKong = 2;
     inline constexpr int kClaimRankPung = 1;
     inline constexpr int kClaimRankChow = 0;
+    /// A mahjong claim is taken at once and never compared with another claim; it has a rank of its own so that no other number is meant.
+    inline constexpr int kClaimRankMahjong = -1;
 
-    /// The tie-break rank of a kind of claim (`kClaimRank...`); 0 for a mahjong claim, which is never compared.
+    /// The tie-break rank of a kind of claim (`kClaimRank...`).
     [[nodiscard]] int ClaimRank(ClaimKind kind) noexcept;
 
     /// The concealed tiles of the seat after it claims `view.pendingTile` as `claim` (a `HandAction` of kind `Claim`, not mahjong):

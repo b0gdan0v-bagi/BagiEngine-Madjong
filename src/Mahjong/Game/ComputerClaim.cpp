@@ -82,10 +82,11 @@ namespace BECore::Mahjong {
             case ClaimKind::Pung:
                 return kClaimRankPung;
             case ClaimKind::Chow:
+                return kClaimRankChow;
             case ClaimKind::Mahjong:
                 break;
         }
-        return kClaimRankChow;
+        return kClaimRankMahjong;
     }
 
     TileCounts ConcealedAfterClaim(const TableView& view, const HandAction& claim) {

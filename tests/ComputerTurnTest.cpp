@@ -203,6 +203,18 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
+    TEST(ComputerTurnTest, DoesNotUpgradeAPungWhenTheKongWouldLeaveAWorseWait) {
+        // Seat 1: open pung of 5p, 6p 7p 1s 2s 3s 4s 5s 6s 8m 8m, draws the fourth 5p (the 11 tiles are a complete hand, not declared).
+        // With the kong it would wait on 5p (dead: all four copies are in the kong) and 8p, 4 unseen; the 1s leaves a better wait (1s, 4s
+        // and 7s, 10 unseen) and keeps the pung, so the kong is not taken and the seat declares with the discard.
+        const HandModel model = OpenPungModel("5p 5p 6p 7p 1s 2s 3s 4s 5s 6s 8m 8m Wd");
+        const TableView view = MakeTableView(model, kSeat1);
+        ASSERT_TRUE(Has(view.legal, HandAction::MakeUpgradeKong(T("5p"))));
+        ASSERT_EQ(view.own.melds.size(), 1u);
+
+        ExpectChoiceForEverySeed(model, kSeat1, HandAction::MakeDiscard(T("1s"), true));
+    }
+
     // ----- 4. the discard -----
 
     TEST(ComputerTurnTest, DiscardsTheWorthlessHonourBeforeAValueHonourWhenEfficiencyIsEqual) {

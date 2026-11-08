@@ -7,7 +7,7 @@
 #include <Mahjong/Game/HandModel.h>
 #include <Mahjong/Game/Match.h>
 #include <gtest/gtest.h>
-#include <set>
+#include <string>
 
 /**
  * `ChooseClaimAction`: the choices of a computer player when a discard (or an upgraded kong) is up for claiming, one case per rule, on
@@ -15,8 +15,9 @@
  * Then the helpers (`ConcealedAfterClaim`, `RateClaim`, `ClaimRank`, `IsValueTile`) and a run over random hands: every pending seat
  * answers every window it is asked about with a listed action that `Apply` accepts. Pure logic: no engine services.
  *
- * The window is opened by East, who throws the only tile of `live`; seat 1 (South) is the seat under test, the others hold hands
- * without winds that claim nothing the tests look at.
+ * `WindowModel` opens the window of most cases: East throws the only tile of `live`; seat 1 (South) is the seat under test, the others
+ * hold hands without winds that claim nothing the tests look at. The cases of a robbed kong use `OpenPungModel` of
+ * `ComputerTestSupport.h` instead (seat 1 upgrades its pung).
  */
 namespace BECore::Mahjong::Tests {
 
@@ -273,6 +274,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_GT(ClaimRank(ClaimKind::Kong), ClaimRank(ClaimKind::Pung));
         EXPECT_GT(ClaimRank(ClaimKind::Pung), ClaimRank(ClaimKind::Chow));
         EXPECT_EQ(ClaimRank(ClaimKind::Kong), kClaimRankKong);
+        EXPECT_LT(ClaimRank(ClaimKind::Mahjong), ClaimRank(ClaimKind::Chow));
     }
 
     TEST(ComputerClaimTest, IsValueTileIsADragonTheOwnWindOrTheRoundWind) {
