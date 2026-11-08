@@ -291,7 +291,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(windows, BECore::Tests::UILayoutMatrix().size());
     }
 
-    TEST_F(MahjongHudTest, ThePlateOfTheSeatChoiceIsAsBigAsItWasWhereThereIsRoom) {
+    TEST_F(MahjongHudTest, ThePlateOfTheSeatChoiceHasRowsOf56WhereThereIsRoom) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         _game->OpenSetup();
         Draw();  // the window of the fixture is the design size

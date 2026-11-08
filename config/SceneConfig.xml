@@ -170,7 +170,7 @@
           </components>
         </node>
         <!--
-          The score table of a finished hand: a modal canvas on the view of the table (SceneView like Setup: 16 lines of the winner, four
+          The score table of a finished hand: a modal canvas on the view of the table (a SceneView: 16 lines of the winner, four
           seats, a headline and a summary are about 550 units, which a Screen canvas would not fit in a 480 px window at the user scale
           1.5, and it is text only, no touch target), shown by MahjongHudComponent exactly while the session is in HandOver. The component
           publishes handOverHeadline, handOverSeat0..3, scoreLine0..15 (only the first lines of the winner are shown: ScoreLineN is
@@ -260,9 +260,10 @@
           the start, and after the New game button). Its Dim covers the whole window, bars and the New game button of HudMenu included.
           Each seat group carries action MahjongSetSeatN and the value person or computer; the row HandsRow below them carries
           MahjongSetHands and the value 16 or 8. The variables seatKindN and handsChoice are set by the component, which also begins the
-          match on MahjongStart. The plate is a share of the safe area (90 % of its height, at most 452 units): the rows share it by flex
-          (the title weighs 44 against 56: 0.7857) and stop growing at 56 (the title at 44), so a roomy canvas shows 32 padding + 44 title + 6 x 56 rows + 6 x 8 spacing = 452
-          units as before, and a short one (a 480 px window at the user scale 1.5 has a safe height of about 300 units) shrinks every row.
+          match on MahjongStart. The plate is a share of the safe area (90 % of its height, at most 452 units): the title is a fixed 44
+          and the six rows share the rest by flex and stop growing at 56, so a roomy canvas shows 24 padding + 44 title + 6 x 56 rows
+          + 6 x 8 spacing = 452 units (the rows are 56 as before), and a short one (a 480 px window at the user scale 1.5 has a safe
+          height of about 300 units) shrinks every row.
           The captions have a share of the width and every word may shrink (AutoFit, down to 14 units) instead of being cut.
         -->
         <node name="Setup" layer="30">
@@ -272,7 +273,7 @@
                 <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
                 <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="640" height="90%" maxHeight="452" direction="Vertical" spacing="8" padding="12" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
                   <children>
-                    <element type="UILabel" name="Title" flex="0.7857" maxHeight="44" text="New game: who plays?" fontSize="30" overflow="AutoFit" minFontSize="14" align="Center" verticalAlign="Center" />
+                    <element type="UILabel" name="Title" height="44" text="New game: who plays?" fontSize="30" overflow="AutoFit" minFontSize="14" align="Center" verticalAlign="Center" />
                     <element type="UIStack" name="SeatRow0" flex="1" maxHeight="56" direction="Horizontal" spacing="8" crossAlign="Stretch">
                       <children>
                         <element type="UILabel" name="SeatCaption0" width="28%" text="Seat 1" fontSize="24" overflow="AutoFit" minFontSize="14" verticalAlign="Center" />
