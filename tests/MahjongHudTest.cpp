@@ -1,7 +1,9 @@
 #include "ComputerTestSupport.h"
 #include "MahjongTableTestSupport.h"
+#include "UiStyleTestSupport.h"
 
 #include <BECore/Control/Json.h>
+#include <BECore/UI/UIButton.h>
 #include <Events/SceneEvents.h>
 #include <Mahjong/Components/MahjongHudComponent.h>
 #include <Mahjong/Table/ScoreText.h>
@@ -235,6 +237,30 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
+    TEST_F(MahjongHudTest, TheRowsOfEachPanelLieInsideItWithThePaddingKept) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        Draw();
+        SetWorstVars();
+        constexpr float kPanelPadding = 8.0f;
+
+        const struct {
+            const char* panel;
+            std::vector<const char*> rows;
+        } panels[] = {{"Info", {"RoundLabel", "WallLabel", "TurnLabel"}}, {"Scores", {"Score0", "Score1", "Score2", "Score3"}}};
+        for (const auto& [panel, rows] : panels) {
+            const UIElement* plate = Element("Hud", panel);
+            ASSERT_NE(plate, nullptr) << panel;
+            for (const char* name : rows) {
+                const UIElement* row = Element("Hud", name);
+                ASSERT_NE(row, nullptr) << name;
+                EXPECT_GE(row->rect.x, plate->rect.x + kPanelPadding) << name;
+                EXPECT_GE(row->rect.y, plate->rect.y + kPanelPadding) << name;
+                EXPECT_LE(row->rect.x + row->rect.w, plate->rect.x + plate->rect.w - kPanelPadding) << name;
+                EXPECT_LE(row->rect.y + row->rect.h, plate->rect.y + plate->rect.h - kPanelPadding) << name;
+            }
+        }
+    }
+
     TEST_F(MahjongHudTest, TheTurnWordsForTheEndOfAHandAndOfAMatchComeFromTheTable) {
         MahjongSettings settings = _game->GetSettings();
         settings.handsPerMatch = kRoundsPerMatch;
@@ -371,6 +397,95 @@ namespace BECore::Mahjong::Tests {
         });
     }
 
+    TEST_F(MahjongHudTest, TheSeatChoiceFollowsTheModalAnatomyAndTheGridGaps) {
+        constexpr float kRowPadding = 8.0f;
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        _game->OpenSetup();
+        Draw();
+        ASSERT_TRUE(SetupShown());
+        Canvas("Setup")->UpdateLayout(kViewWidth, kViewHeight);
+
+        const Rect& plate = Element("Setup", "Plate")->rect;
+        const UIElement* title = Element("Setup", "Title");
+        ASSERT_NE(title, nullptr);
+        EXPECT_TRUE(SameColor(title->color, PaletteColor("header")));
+        EXPECT_TRUE(SameColor(Element("Setup", "Plate")->color, PaletteColor("surface")));
+        EXPECT_EQ(title->rect.x, plate.x + kModalPadding);
+        EXPECT_EQ(title->rect.y, plate.y + kModalPadding);
+        EXPECT_EQ(title->rect.h, kModalTitleHeight);
+
+        // The rows from the top: the language, the four seats, the number of hands; each a raised band with a muted caption and a group
+        struct Row {
+            std::string row, caption, group;
+            std::vector<std::string> segments;
+        };
+        std::vector<Row> rows{{"LanguageRow", "LanguageCaption", "Language", {"LanguageEn", "LanguageRu"}}};
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            rows.push_back({Format("SeatRow{}", seat).c_str(),
+                            Format("SeatCaption{}", seat).c_str(),
+                            Format("SeatKind{}", seat).c_str(),
+                            {Format("Seat{}Person", seat).c_str(), Format("Seat{}Computer", seat).c_str()}});
+        }
+        rows.push_back({"HandsRow", "HandsCaption", "HandsChoice", {"Hands16", "Hands8"}});
+
+        const Rect* above = &title->rect;
+        for (const Row& entry : rows) {
+            SCOPED_TRACE(entry.row);
+            const UIElement* row = Element("Setup", entry.row.c_str());
+            ASSERT_NE(row, nullptr);
+            EXPECT_TRUE(SameColor(row->color, PaletteColor("surfaceRaised")));
+            EXPECT_EQ(GapBelow(*above, row->rect), kModalGap);
+            above = &row->rect;
+
+            const UIElement* caption = Element("Setup", entry.caption.c_str());
+            ASSERT_NE(caption, nullptr);
+            EXPECT_TRUE(SameColor(caption->Cast<UILabel>()->textColor, PaletteColor("textMuted")));
+            EXPECT_EQ(caption->rect.x, row->rect.x + kRowPadding);
+            const UIElement* group = Element("Setup", entry.group.c_str());
+            ASSERT_NE(group, nullptr);
+            EXPECT_EQ(group->rect.x, caption->rect.x + caption->rect.w + kModalGap);
+            EXPECT_EQ(group->rect.x + group->rect.w, row->rect.x + row->rect.w - kRowPadding) << "the group ends inside the row's padding";
+            EXPECT_EQ(group->rect.y, row->rect.y + kRowPadding);
+            EXPECT_EQ(group->rect.y + group->rect.h, row->rect.y + row->rect.h - kRowPadding);
+
+            for (const std::string& name : entry.segments) {
+                const UIElement* element = Element("Setup", name.c_str());
+                const auto* segment = element != nullptr ? element->Cast<UIButton>() : nullptr;
+                ASSERT_NE(segment, nullptr) << name;
+                EXPECT_TRUE(SameColor(segment->selectedColor, PaletteColor("primary"))) << name << ": the chosen segment is the confirming colour";
+                EXPECT_TRUE(SameColor(segment->color, PaletteColor("neutral"))) << name << ": the others are neutral";
+                EXPECT_GE(segment->rect.x, group->rect.x);
+                EXPECT_LE(segment->rect.x + segment->rect.w, group->rect.x + group->rect.w);
+                EXPECT_EQ(segment->rect.h, group->rect.h);
+            }
+        }
+
+        const UIElement* start = Element("Setup", "Start");
+        ASSERT_NE(start, nullptr);
+        EXPECT_TRUE(SameColor(start->color, PaletteColor("primary")));
+        EXPECT_EQ(start->rect.h, kMainButtonHeight);
+        EXPECT_EQ(GapBelow(*above, start->rect), kModalSectionGap) << "Start is set apart from the rows by 16";
+        EXPECT_EQ(start->rect.x, plate.x + kModalPadding);
+        EXPECT_EQ(start->rect.y + start->rect.h, plate.y + plate.h - kModalPadding) << "the plate holds Start and nothing more";
+        EXPECT_LE(plate.y + plate.h, kViewHeight);
+    }
+
+    TEST_F(MahjongHudTest, TheSelectedSegmentIsDrawnInTheFillOfThePrimaryRole) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        _game->OpenSetup();
+        Draw();
+        ASSERT_TRUE(SetupShown());
+
+        const auto* chosen = Element("Setup", "Seat0Person")->Cast<UIButton>();
+        const auto* other = Element("Setup", "Seat0Computer")->Cast<UIButton>();
+        ASSERT_TRUE(chosen != nullptr && other != nullptr);
+        ASSERT_TRUE(chosen->selected);
+        ASSERT_FALSE(other->selected);
+        EXPECT_TRUE(SameColor(chosen->GetCurrentFill(), PaletteColor("primary"))) << "the choice is read from the colour, not only from the bar";
+        EXPECT_FALSE(SameColor(other->GetCurrentFill(), PaletteColor("primary")));
+        EXPECT_TRUE(SameColor(other->GetCurrentFill(), PaletteColor("neutral")));
+    }
+
     TEST_F(MahjongHudTest, TheHudCoversNoTileOfTheWorstTable) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
@@ -390,6 +505,9 @@ namespace BECore::Mahjong::Tests {
         worst.wallRemaining = 2 * kWallRingCells;
         const TableLayout layout = MakeTableLayout(worst);
 
+        // The plates the table paints under the discard blocks and the wall ring
+        const eastl::vector<Rect> plates = ZonePlates(layout);
+
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             Draw();  // laid out again with the words of this language
@@ -398,9 +516,12 @@ namespace BECore::Mahjong::Tests {
                 ASSERT_NE(element, nullptr) << name;
                 ASSERT_FALSE(element->rect.IsEmpty()) << name;
                 for (const TileSlot& slot : layout.slots) {
-                    const bool apart = slot.rect.x + slot.rect.w <= element->rect.x || slot.rect.x >= element->rect.x + element->rect.w || slot.rect.y + slot.rect.h <= element->rect.y ||
-                                       slot.rect.y >= element->rect.y + element->rect.h;
-                    EXPECT_TRUE(apart) << name << " covers role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
+                    EXPECT_TRUE(Apart(slot.rect, element->rect)) << name << " covers role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
+                }
+                // A gap of one grid unit at least: panels that touch a plate edge to edge merge with it on screen
+                const Rect aired = Grown(element->rect, kGridUnit);
+                for (size_t i = 0; i < plates.size(); ++i) {
+                    EXPECT_TRUE(Apart(plates[i], aired)) << name << " is less than one grid unit from plate " << i;
                 }
             }
         });

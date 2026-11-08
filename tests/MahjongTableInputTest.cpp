@@ -1,5 +1,6 @@
 #include "ComputerTestSupport.h"
 #include "MahjongTableTestSupport.h"
+#include "UiStyleTestSupport.h"
 
 #include <BECore/Control/Json.h>
 #include <BECore/UI/UIButton.h>
@@ -7,6 +8,7 @@
 #include <BECore/UI/UIToggle.h>
 #include <Events/InputEvents.h>
 #include <Events/SceneEvents.h>
+#include <Mahjong/Table/UiPalette.h>
 
 /**
  * Playing on the table with the mouse (`Components/MahjongTableComponent.h`): a click on a tile discards it, `Declare` and the dimmed
@@ -21,8 +23,6 @@ namespace BECore::Mahjong::Tests {
         constexpr const char* kPlainHand = "1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Gd Rd";
         /// Seat 0 waits on Rd (a single); drawing 9p it can discard 9p or Rd and still wait, no other tile.
         constexpr const char* kWaitingHand = "1p 2p 3p 4s 5s 6s 7m 8m 9m Ew Ew Ew Rd";
-        /// The veil that `MahjongTableComponent` lays over a tile that cannot declare (its `kDimmedTile`).
-        constexpr Color kVeil{0, 0, 0, 140};
         constexpr int kTilesThatCannotDeclare = kDealtTiles + 1 - 2;
         /// Steps that fit in no pause: a fraction of the pause per event.
         constexpr float kPauseFraction = 0.4f;
@@ -47,7 +47,7 @@ namespace BECore::Mahjong::Tests {
         int VeilCalls() const {
             int veils = 0;
             for (const DrawCall& call : _renderer->calls) {
-                const bool veil = call.kind == DrawKind::Rect && call.color.r == kVeil.r && call.color.g == kVeil.g && call.color.b == kVeil.b && call.color.a == kVeil.a;
+                const bool veil = call.kind == DrawKind::Rect && SameColor(call.color, kVeil);
                 veils += veil ? 1 : 0;
             }
             return veils;

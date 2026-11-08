@@ -115,6 +115,40 @@ namespace BECore::Mahjong::Tests {
             }
         }
 
+        bool Holds(const Rect& outer, const Rect& inner) {
+            return inner.x >= outer.x - kTolerance && inner.y >= outer.y - kTolerance && inner.x + inner.w <= outer.x + outer.w + kTolerance && inner.y + inner.h <= outer.y + outer.h + kTolerance;
+        }
+
+        /// The five zones of the plates: the discard block of each seat, then the wall ring.
+        std::vector<Rect> PlateZones(const TableLayout& layout) {
+            std::vector<Rect> zones(layout.zones.discards.begin(), layout.zones.discards.end());
+            zones.push_back(layout.zones.wall);
+            return zones;
+        }
+
+        void ExpectZonesAreSound(const TableLayout& layout) {
+            const std::vector<Rect> zones = PlateZones(layout);
+            for (size_t first = 0; first < zones.size(); ++first) {
+                EXPECT_GT(zones[first].w, 0.0f) << "zone " << first;
+                EXPECT_GT(zones[first].h, 0.0f) << "zone " << first;
+                EXPECT_TRUE(Inside(zones[first], layout.viewWidth, layout.viewHeight)) << "zone " << first;
+                for (size_t second = first + 1; second < zones.size(); ++second) {
+                    EXPECT_FALSE(Overlaps(zones[first], zones[second])) << "zone " << first << " overlaps zone " << second;
+                }
+            }
+            for (const TileSlot& slot : layout.slots) {
+                if (slot.role == SlotRole::DiscardTile) {
+                    EXPECT_TRUE(Holds(layout.zones.discards[slot.seat], slot.rect)) << "discard " << slot.index << " of seat " << slot.seat;
+                } else if (slot.role == SlotRole::WallStack) {
+                    EXPECT_TRUE(Holds(layout.zones.wall, slot.rect)) << "wall stack " << slot.index;
+                } else {
+                    for (size_t zone = 0; zone < zones.size(); ++zone) {
+                        EXPECT_FALSE(Overlaps(zones[zone], slot.rect)) << "role " << static_cast<int>(slot.role) << " of seat " << slot.seat << " over zone " << zone;
+                    }
+                }
+            }
+        }
+
         void ExpectSameSlots(const TableLayout& a, const TableLayout& b) {
             ASSERT_EQ(a.slots.size(), b.slots.size());
             for (size_t i = 0; i < a.slots.size(); ++i) {
@@ -259,6 +293,39 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_EQ(layout.viewHeight, size.height);
                 ExpectSlotsInsideTheView(layout);
                 ExpectNoZoneOverlaps(layout);
+            }
+        }
+    }
+
+    TEST(TableLayoutTest, TheZonesHoldTheirSlotsAndOverlapNothingElse) {
+        for (const ViewSize& size : kViewSizes) {
+            for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+                for (const Seat discardSeat : {kNoSeat, 0, 1, 2, 3}) {
+                    ASSERT_NO_FATAL_FAILURE(ExpectZonesAreSound(MakeTableLayout(WorstInput(viewer, kWorstPile, discardSeat), size.width, size.height)))
+                        << "view " << size.width << "x" << size.height << " viewer " << viewer;
+                }
+                // The zones are there whatever the table holds
+                ASSERT_NO_FATAL_FAILURE(ExpectZonesAreSound(MakeTableLayout(QuietInput(viewer), size.width, size.height)));
+            }
+        }
+    }
+
+    TEST(TableLayoutTest, TheDiscardZoneOfASeatFollowsItsPositionAndTheViewerThatIsNoSeatIsSeatZero) {
+        const TableLayout seat0 = MakeTableLayout(QuietInput(0));
+        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+            const TableLayout layout = MakeTableLayout(QuietInput(viewer));
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                const Rect& expected = seat0.zones.discards[SeatAtPosition(0, SeatPosition(viewer, seat))];
+                EXPECT_EQ(layout.zones.discards[seat].x, expected.x) << "viewer " << viewer << " seat " << seat;
+                EXPECT_EQ(layout.zones.discards[seat].y, expected.y) << "viewer " << viewer << " seat " << seat;
+            }
+            EXPECT_EQ(layout.zones.wall.x, seat0.zones.wall.x);
+        }
+        for (const Seat noSeat : {kNoSeat, 4, -2}) {
+            const TableLayout layout = MakeTableLayout(QuietInput(noSeat));
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                EXPECT_EQ(layout.zones.discards[seat].x, seat0.zones.discards[seat].x);
+                EXPECT_EQ(layout.zones.discards[seat].y, seat0.zones.discards[seat].y);
             }
         }
     }

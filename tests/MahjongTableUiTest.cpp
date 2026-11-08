@@ -1,4 +1,5 @@
 #include "MahjongTableTestSupport.h"
+#include "UiStyleTestSupport.h"
 
 /**
  * The table as drawn (`Components/MahjongTableComponent.h`): the shipped `config/SceneConfig.xml` is drawn into a `RecordingRenderer` and
@@ -15,7 +16,27 @@ namespace BECore::Mahjong::Tests {
 
     }  // namespace
 
-    class MahjongTableUiTest : public MahjongTableTestBase {};
+    class MahjongTableUiTest : public MahjongTableTestBase {
+    protected:
+        /// The rectangles drawn in exactly this colour, in the order drawn.
+        std::vector<DrawCall> RectsOf(const Color& color) const {
+            std::vector<DrawCall> found;
+            for (const DrawCall& call : _renderer->calls) {
+                if (call.kind == DrawKind::Rect && SameColor(call.color, color)) {
+                    found.push_back(call);
+                }
+            }
+            return found;
+        }
+
+        static int NotWallStacks(const TableLayout& layout) {
+            int tiles = 0;
+            for (const TileSlot& slot : layout.slots) {
+                tiles += slot.role == SlotRole::WallStack ? 0 : 1;
+            }
+            return tiles;
+        }
+    };
 
     TEST_F(MahjongTableUiTest, TheSceneViewIsTheDesignSizeOfTheLayout) {
         const Scene* scene = _manager->GetSceneByName("MahjongScene"_intern);
@@ -36,6 +57,84 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_renderer->calls[0].kind, DrawKind::Rect);
         EXPECT_TRUE(TileCalls().empty());
         EXPECT_TRUE(_table->GetLayout().slots.empty());
+        // ... and the rim round it: no plate, no shadow
+        EXPECT_EQ(RectsOf(kFeltRim).size(), 4u);
+        EXPECT_TRUE(RectsOf(kZonePlate).empty());
+        EXPECT_TRUE(RectsOf(kTileShadow).empty());
+    }
+
+    TEST_F(MahjongTableUiTest, TheRimIsFourRectanglesAlongTheEdgeRightAfterTheFelt) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        Draw();
+
+        ASSERT_GE(_renderer->calls.size(), 5u);
+        EXPECT_EQ(_renderer->calls[0].color.r, kFelt.r);
+        EXPECT_EQ(_renderer->calls[0].color.g, kFelt.g);
+        EXPECT_EQ(_renderer->calls[0].color.b, kFelt.b);
+        const std::vector<DrawCall> rim = RectsOf(kFeltRim);
+        ASSERT_EQ(rim.size(), 4u);
+        for (size_t i = 0; i < rim.size(); ++i) {
+            EXPECT_EQ(rim[i].rect.x, _renderer->calls[1 + i].rect.x) << "the rim is drawn right after the felt";
+            EXPECT_EQ(rim[i].rect.y, _renderer->calls[1 + i].rect.y);
+        }
+        float area = 0.0f;
+        for (const DrawCall& side : rim) {
+            area += side.rect.w * side.rect.h;
+            EXPECT_TRUE(side.rect.w == 8.0f || side.rect.h == 8.0f) << "a rim side is 8 units wide";
+        }
+        const float inner = (kViewWidth - 16.0f) * (kViewHeight - 16.0f);
+        EXPECT_FLOAT_EQ(area, kViewWidth * kViewHeight - inner);
+    }
+
+    TEST_F(MahjongTableUiTest, ThePlatesAreTheDiscardBlocksAndTheWallRingPaddedBy4) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        Draw();
+
+        const std::vector<DrawCall> plates = RectsOf(kZonePlate);
+        ASSERT_EQ(plates.size(), 5u) << "four discard blocks and the wall ring";
+        const TableZones& zones = _table->GetLayout().zones;
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            EXPECT_EQ(plates[seat].rect.x, zones.discards[seat].x - 4.0f) << "seat " << seat;
+            EXPECT_EQ(plates[seat].rect.y, zones.discards[seat].y - 4.0f) << "seat " << seat;
+            EXPECT_EQ(plates[seat].rect.w, zones.discards[seat].w + 8.0f) << "seat " << seat;
+            EXPECT_EQ(plates[seat].rect.h, zones.discards[seat].h + 8.0f) << "seat " << seat;
+        }
+        EXPECT_EQ(plates[4].rect.x, zones.wall.x - 4.0f);
+        EXPECT_EQ(plates[4].rect.w, zones.wall.w + 8.0f);
+        EXPECT_EQ(plates[4].rect.h, zones.wall.h + 8.0f);
+    }
+
+    TEST_F(MahjongTableUiTest, TheWallPlateKeepsTheSameGapToTheTopAndTheBottomDiscardPlates) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        Draw();
+
+        const std::vector<DrawCall> plates = RectsOf(kZonePlate);
+        ASSERT_EQ(plates.size(), 5u);
+        const Rect& top = plates[2].rect;
+        const Rect& bottom = plates[0].rect;
+        const Rect& wall = plates[4].rect;
+        EXPECT_GT(GapBelow(top, wall), 0.0f) << "the plates do not merge";
+        EXPECT_EQ(GapBelow(top, wall), GapBelow(wall, bottom));
+    }
+
+    TEST_F(MahjongTableUiTest, EveryTileThatIsNotAWallStackHasAShadowOffsetBy2) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        Draw();
+
+        const TableLayout& layout = _table->GetLayout();
+        const std::vector<DrawCall> shadows = RectsOf(kTileShadow);
+        ASSERT_EQ(static_cast<int>(shadows.size()), NotWallStacks(layout));
+        size_t next = 0;
+        for (const TileSlot& slot : layout.slots) {
+            if (slot.role == SlotRole::WallStack) {
+                continue;
+            }
+            EXPECT_EQ(shadows[next].rect.x, slot.rect.x + 2.0f);
+            EXPECT_EQ(shadows[next].rect.y, slot.rect.y + 2.0f);
+            EXPECT_EQ(shadows[next].rect.w, slot.rect.w);
+            EXPECT_EQ(shadows[next].rect.h, slot.rect.h);
+            ++next;
+        }
     }
 
     TEST_F(MahjongTableUiTest, TheViewerSeesItsOwnHandFaceUpAndTheOthersFaceDown) {
