@@ -14,6 +14,9 @@ namespace BECore::Mahjong {
     namespace {
 
         constexpr eastl::string_view kSetSeatPrefix = "MahjongSetSeat";
+        constexpr eastl::string_view kSetHandsAction = "MahjongSetHands";
+        constexpr eastl::string_view kFullHandsId = "16";
+        constexpr eastl::string_view kShortHandsId = "8";
         constexpr eastl::string_view kPersonId = "person";
         constexpr eastl::string_view kComputerId = "computer";
         constexpr eastl::string_view kTurnMark = ">";
@@ -132,11 +135,18 @@ namespace BECore::Mahjong {
         }
     }
 
+    void MahjongHudComponent::PublishHandsChoice() const {
+        // The number as text, also a number the panel does not offer: then no segment is selected
+        CoreManager::GetUIVars().Set("handsChoice"_intern, eastl::string_view(Format("{}", _pendingHands)));
+    }
+
     void MahjongHudComponent::PublishSetup(const MahjongGame* game) {
         const bool open = game != nullptr && game->IsSetupOpen();
         if (open && !_setupShown) {
             _pending = game->GetSeats();  // the panel opens on the seats of the last match
             PublishSeatKinds();
+            _pendingHands = game->GetSettings().handsPerMatch;
+            PublishHandsChoice();
         }
         if (open != _setupShown) {
             _setupShown = open;
@@ -237,12 +247,27 @@ namespace BECore::Mahjong {
             return;
         }
         if (action == kStartAction) {
-            // The seats are the game's only when the match began with them; a refusal leaves the choice open on the old ones
-            const SeatSetup before = game->GetSeats();
+            // The seats and the number of hands are the game's only when the match began with them (every other setting stays as it
+            // is); a refusal leaves the choice open on the old ones
+            const SeatSetup seatsBefore = game->GetSeats();
+            const MahjongSettings settingsBefore = game->GetSettings();
+            MahjongSettings settings = settingsBefore;
+            settings.handsPerMatch = _pendingHands;
             game->SetSeats(_pending);
+            game->SetSettings(settings);
             if (!game->StartRandomMatch().has_value()) {
-                game->SetSeats(before);
+                game->SetSeats(seatsBefore);
+                game->SetSettings(settingsBefore);
                 LOG_WARNING("MahjongHudComponent: the match did not start, the seat choice stays open");
+            }
+            return;
+        }
+        if (action == kSetHandsAction) {
+            // Only the two numbers the panel offers; client text is never parsed into another number
+            const eastl::string_view value = event.value.ToStringView();
+            if (value == kFullHandsId || value == kShortHandsId) {
+                _pendingHands = value == kFullHandsId ? kFullMatchHands : kShortMatchHands;
+                PublishHandsChoice();
             }
             return;
         }
