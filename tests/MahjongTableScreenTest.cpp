@@ -1,4 +1,4 @@
-#include "MahjongTableTestSupport.h"
+#include "MahjongTouchTestSupport.h"
 
 #include <BECore/UI/UIButton.h>
 #include <BECore/UI/UIImage.h>
@@ -36,8 +36,6 @@ namespace BECore::Mahjong::Tests {
         constexpr Output kOutputs[] = {{1280.0f, 720.0f}, {731.0f, 411.0f}, {853.0f, 480.0f}, {480.0f, 480.0f}, {480.0f, 853.0f}};
         constexpr float kTileShape = 3.0f / 4.0f;
         constexpr float kShapeTolerance = 0.02f;
-        /// A pile longer than any hand leaves (136 tiles, 52 in the hands at the least).
-        constexpr int kMostDiscards = 100;
 
     }  // namespace
 
@@ -252,21 +250,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
         // The worst-case layout: every zone at its capacity, so no tile of any game can lie where a button does
-        TableInput worst;
-        worst.viewer = 0;
-        worst.concealedCount.fill(kMaxConcealedTiles);
-        worst.bonusCount.fill(kMaxBonusTiles);
-        Meld kong;
-        kong.kind = MeldKind::Kong;
-        kong.first = T("1p");
-        for (auto& melds : worst.melds) {
-            melds.assign(kMaxMelds, kong);
-        }
-        for (int i = 0; i < kMostDiscards; ++i) {
-            worst.discardSeats.push_back(i % kSeatCount);
-        }
-        worst.wallRemaining = 2 * kWallRingCells;
-        const TableLayout layout = MakeTableLayout(worst);
+        const TableLayout layout = MakeWorstCaseTableLayout();
         const UIElement* row = Element("Actions", "ActionRow");
         ASSERT_NE(row, nullptr);
 
