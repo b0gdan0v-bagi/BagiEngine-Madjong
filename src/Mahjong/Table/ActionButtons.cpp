@@ -5,29 +5,59 @@ namespace BECore::Mahjong {
     namespace {
 
         constexpr eastl::array<ButtonSpec, kButtonCount> kSpecs{{
-            {"Win", "MahjongWin", "", nullptr},
-            {"Mahjong", "MahjongClaimMahjong", "", nullptr},
-            {"Pung", "MahjongClaimPung", "", nullptr},
-            {"Kong", "MahjongClaimKong", "", nullptr},
-            {"Chow0", "MahjongClaimChow", "0", "chow0"},
-            {"Chow1", "MahjongClaimChow", "1", "chow1"},
-            {"Chow2", "MahjongClaimChow", "2", "chow2"},
-            {"Pass", "MahjongPass", "", nullptr},
-            {"ConcealedKong0", "MahjongConcealedKong", "0", "kong0"},
-            {"ConcealedKong1", "MahjongConcealedKong", "1", "kong1"},
-            {"ConcealedKong2", "MahjongConcealedKong", "2", "kong2"},
-            {"UpgradeKong", "MahjongUpgradeKong", "", "upgrade"},
-            {"Declare", "MahjongDeclare", kDeclareOn.data(), nullptr},
+            {"Win", "MahjongWin", "", nullptr, "Mahjong!", 0},
+            {"Mahjong", "MahjongClaimMahjong", "", nullptr, "Mahjong!", 1},
+            {"Pung", "MahjongClaimPung", "", nullptr, "Pung", 1},
+            {"Kong", "MahjongClaimKong", "", nullptr, "Kong", 1},
+            {"Chow0", "MahjongClaimChow", "0", "chow0", "Chow", kMaxButtonTiles},
+            {"Chow1", "MahjongClaimChow", "1", "chow1", "Chow", kMaxButtonTiles},
+            {"Chow2", "MahjongClaimChow", "2", "chow2", "Chow", kMaxButtonTiles},
+            {"Pass", "MahjongPass", "", nullptr, "Pass", 0},
+            {"ConcealedKong0", "MahjongConcealedKong", "0", "kong0", "Kong", 1},
+            {"ConcealedKong1", "MahjongConcealedKong", "1", "kong1", "Kong", 1},
+            {"ConcealedKong2", "MahjongConcealedKong", "2", "kong2", "Kong", 1},
+            {"UpgradeKong", "MahjongUpgradeKong", "", "upgrade", "Add to pung", 1},
+            {"Declare", "MahjongDeclare", kDeclareOn.data(), nullptr, "Ready hand", 0},
+        }};
+
+        /// The sentences of the hint label, one per kind (the chows, the concealed kongs share theirs).
+        constexpr eastl::string_view kChowHint = "Take the discard to complete a run of three in a row (only from the player before you).";
+        constexpr eastl::string_view kConcealedKongHint = "Set four equal tiles from your hand aside and draw a spare tile.";
+        constexpr eastl::array<eastl::string_view, kButtonCount> kHints{{
+            "Your hand is complete: win the hand.",
+            "The tile completes your hand: take it and win.",
+            "Take the discard to make a set of three equal tiles.",
+            "Take the discard to make a set of four equal tiles; you then draw a spare tile.",
+            kChowHint,
+            kChowHint,
+            kChowHint,
+            "Let the discard go.",
+            kConcealedKongHint,
+            kConcealedKongHint,
+            kConcealedKongHint,
+            "Add the fourth tile to your open pung to make a kong; you draw a spare tile.",
+            "Announce you are one tile from mahjong (needed to win), then click the tile to discard.",
         }};
 
         static_assert(kChowButtons + static_cast<int>(ButtonKind::ClaimChow0) == static_cast<int>(ButtonKind::Pass));
         static_assert(kConcealedKongButtons + static_cast<int>(ButtonKind::ConcealedKong0) == static_cast<int>(ButtonKind::UpgradeKong));
 
-        void Show(ActionButtons& buttons, ButtonKind kind, const HandAction& action, eastl::string label = {}) {
+        /// Shows `kind` with its action, label and hint and no tile yet.
+        ButtonState& Show(ActionButtons& buttons, ButtonKind kind, const HandAction& action, eastl::string label = {}) {
             ButtonState& button = buttons[kind];
             button.shown = true;
             button.action = action;
             button.label = eastl::move(label);
+            button.hint = HintOf(kind);
+            button.tileCount = 0;
+            return button;
+        }
+
+        /// Adds a tile to picture on the button, up to the `maxTiles` of its kind; an invalid tile ("not known") is not added.
+        void AddTile(ButtonState& button, ButtonKind kind, Tile tile) {
+            if (tile.IsValid() && button.tileCount < SpecOf(kind).maxTiles) {
+                button.tiles[static_cast<size_t>(button.tileCount++)] = tile;
+            }
         }
 
         /// "4-6p" for the chow that starts at 4p.
@@ -64,7 +94,12 @@ namespace BECore::Mahjong {
         return std::nullopt;
     }
 
-    ActionButtons MakeActionButtons(const eastl::vector<HandAction>& legal) {
+    eastl::string_view HintOf(ButtonKind kind) noexcept {
+        return kHints[static_cast<size_t>(kind)];
+    }
+
+    ActionButtons MakeActionButtons(const eastl::vector<HandAction>& legal, std::optional<Tile> pendingTile) {
+        const Tile pending = pendingTile.value_or(Tile{});
         ActionButtons buttons;
         int chows = 0;
         int concealedKongs = 0;
@@ -80,11 +115,12 @@ namespace BECore::Mahjong {
                     break;
                 case ActionKind::ConcealedKong:
                     if (concealedKongs < kConcealedKongButtons) {
-                        Show(buttons, Offset(ButtonKind::ConcealedKong0, concealedKongs++), action, TileLabel("Kong", action.tile));
+                        const ButtonKind kind = Offset(ButtonKind::ConcealedKong0, concealedKongs++);
+                        AddTile(Show(buttons, kind, action, TileLabel("Kong", action.tile)), kind, action.tile);
                     }
                     break;
                 case ActionKind::UpgradeKong:
-                    Show(buttons, ButtonKind::UpgradeKong, action, TileLabel("Add", action.tile));
+                    AddTile(Show(buttons, ButtonKind::UpgradeKong, action, TileLabel("Add", action.tile)), ButtonKind::UpgradeKong, action.tile);
                     break;
                 case ActionKind::Pass:
                     Show(buttons, ButtonKind::Pass, action);
@@ -93,17 +129,21 @@ namespace BECore::Mahjong {
                     switch (action.claim) {
                         case ClaimKind::Chow:
                             if (chows < kChowButtons) {
-                                Show(buttons, Offset(ButtonKind::ClaimChow0, chows++), action, ChowLabel(action.chowFirst));
+                                const ButtonKind kind = Offset(ButtonKind::ClaimChow0, chows++);
+                                ButtonState& button = Show(buttons, kind, action, ChowLabel(action.chowFirst));
+                                for (int k = 0; k < kMaxButtonTiles; ++k) {
+                                    AddTile(button, kind, Tile::Suited(action.chowFirst.Suit(), action.chowFirst.Rank() + k));
+                                }
                             }
                             break;
                         case ClaimKind::Pung:
-                            Show(buttons, ButtonKind::ClaimPung, action);
+                            AddTile(Show(buttons, ButtonKind::ClaimPung, action), ButtonKind::ClaimPung, pending);
                             break;
                         case ClaimKind::Kong:
-                            Show(buttons, ButtonKind::ClaimKong, action);
+                            AddTile(Show(buttons, ButtonKind::ClaimKong, action), ButtonKind::ClaimKong, pending);
                             break;
                         case ClaimKind::Mahjong:
-                            Show(buttons, ButtonKind::ClaimMahjong, action);
+                            AddTile(Show(buttons, ButtonKind::ClaimMahjong, action), ButtonKind::ClaimMahjong, pending);
                             break;
                     }
                     break;
