@@ -9,9 +9,6 @@
 
 namespace BECore::Mahjong {
 
-    /// No seat (the winner of a drawn hand).
-    inline constexpr Seat kNoSeat = -1;
-
     /**
      * @brief Where a hand stands. A draw is automatic, so a seat only ever sees one of these.
      *
@@ -153,16 +150,18 @@ namespace BECore::Mahjong {
      * goes to the seat after the claimer. If all pass, the seat after the discarder draws.
      *
      * The kongs: besides the open kong of a claim, a seat on its turn declares a concealed kong from four equal tiles of its hand
-     * (`DeclareConcealedKong`) or upgrades an open pung with the fourth tile (`UpgradeKong`), which must be the tile just drawn from the wall this turn (a
-     * regular or a loose draw; not a copy kept from earlier turns, not right after a claim). Each draws a loose tile (the reserve is
-     * refilled from the end of the live wall) and the seat then discards. An upgraded kong can be robbed, only to win: when another
-     * seat has declared a calling hand that the tile completes, `Phase::RobKong` opens and those seats `Claim(Mahjong)` or `Pass`;
-     * the robber farthest counter-clockwise from the kong's owner wins, taking the tile (the pung stays a pung in the owner's hand);
-     * if nobody robs, the kong is completed. A win on a tile from the loose reserve has `HandResult::loose`.
+     * (`DeclareConcealedKong`) or upgrades an open pung with the fourth tile (`UpgradeKong`), which must be the tile just drawn
+     * from the wall this turn (a regular or a loose draw; not a copy kept from earlier turns, not right after a claim). Each draws a
+     * loose tile (the reserve is refilled from the end of the live wall) and the seat then discards. An upgraded kong can be robbed,
+     * only to win: when another seat has declared a calling hand that the tile completes, `Phase::RobKong` opens and those seats
+     * `Claim(Mahjong)` or `Pass`; the robber farthest counter-clockwise from the kong's owner wins, taking the tile (the pung stays a
+     * pung in the owner's hand); if nobody robs, the kong is completed. A win on a tile from the loose reserve has
+     * `HandResult::loose`.
      *
      * Actions as data: `LegalActions(seat)` lists everything the seat can do now (empty for a seat that is not to act) and
-     * `Apply(seat, action)` carries one out through the methods above; an action that is not in the list is refused with the error
-     * its method gives and changes nothing. A seat that is not a seat (outside 0..3) gets an empty list and `NotYourTurn`.
+     * `Apply(seat, action)` carries one out through the methods above; an action that `LegalActions` would not list (once the fields
+     * its kind ignores are left empty) is refused with the error its method gives and changes nothing. A seat that is not a seat
+     * (outside 0..3) gets an empty list and `NotYourTurn`.
      *
      * A model that was never begun is a finished, drawn hand (`Result()` holds it), so a result exists exactly when the phase is
      * `Finished`.
@@ -247,8 +246,8 @@ namespace BECore::Mahjong {
          *
          * When another seat has declared a calling hand that `tile` completes, `Phase::RobKong` opens and the kong waits for those
          * seats (`Claim(seat, ClaimKind::Mahjong)` or `Pass`); otherwise the kong is completed at once: the meld becomes a kong, the
-         * seat draws a loose tile and discards. Errors: `WrongPhase`, `NotYourTurn`, `IllegalKong` (no open pung of `tile`, or `tile` is not
-         * the tile drawn from the wall this turn).
+         * seat draws a loose tile and discards. Errors: `WrongPhase`, `NotYourTurn`, `IllegalKong` (no open pung of `tile`, or `tile`
+         * is not the tile drawn from the wall this turn).
          */
         HandStatus UpgradeKong(Seat seat, Tile tile);
 
@@ -265,12 +264,13 @@ namespace BECore::Mahjong {
         HandStatus Claim(Seat seat, ClaimKind kind, Tile chowFirst = Tile{});
 
         /// Everything `seat` can do now, in this order: the discards (each distinct concealed tile, and the same tile with the
-        /// calling-hand declaration where `Discard` would accept it), `DeclareWin`, a `ConcealedKong` for each tile held four times, an
-        /// `UpgradeKong` for the open pung of the tile drawn this turn, if there is one; or, in a window, the `LegalClaims` plus `Pass`. Empty
-        /// for a seat that is not to act and for a number that is no seat.
+        /// calling-hand declaration where `Discard` would accept it), `DeclareWin`, a `ConcealedKong` for each tile held four times,
+        /// an `UpgradeKong` for the open pung of the tile drawn this turn, if there is one; or, in a window, the `LegalClaims` plus
+        /// `Pass`. Empty for a seat that is not to act and for a number that is no seat.
         [[nodiscard]] eastl::vector<HandAction> LegalActions(Seat seat) const;
         /// Carries out `action` for `seat` through the method of its kind. Errors are those of the method (`NotYourTurn` for a number
-        /// that is no seat); a refused action changes nothing.
+        /// that is no seat); a refused action changes nothing. An action that `LegalActions` would not list (once the fields
+        /// its kind ignores are left empty) is refused.
         HandStatus Apply(Seat seat, const HandAction& action);
 
         /// A seat in the window lets the tile go (a kong is then completed). Always allowed while the seat has not decided. Errors:

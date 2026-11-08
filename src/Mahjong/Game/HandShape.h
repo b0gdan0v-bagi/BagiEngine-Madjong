@@ -65,7 +65,8 @@ namespace BECore::Mahjong {
     [[nodiscard]] bool IsThirteenOrphans(const TileCounts& counts) noexcept;
 
     /// Seven pairs: seven different kinds twice each (a four of a kind is not two pairs), and either all of one suit (no honours) or
-    /// all honours. The restriction to one suit or honours is this repository's reading; stage 3 confirms it with the limit hands.
+    /// all honours. This is the reading of this repository, the limit hands `SevenPairsOneSuit` and `SevenPairsHonours` of `ScoreLimit.h`;
+    /// pairs of mixed suits are no win.
     [[nodiscard]] bool IsSevenPairs(const TileCounts& counts) noexcept;
 
     /**

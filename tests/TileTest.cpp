@@ -221,6 +221,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(settings.flowers);
         EXPECT_TRUE(settings.replayDrawnHand);
         EXPECT_EQ(settings.limit, 500);
+        EXPECT_EQ(settings.startingScore, 2000);
     }
 
 }  // namespace BECore::Mahjong::Tests

@@ -1,3 +1,5 @@
+#include "HandTestSupport.h"
+
 #include <EASTL/algorithm.h>
 #include <Mahjong/Game/Deal.h>
 #include <Mahjong/Game/HandModel.h>
@@ -13,31 +15,24 @@
 /**
  * Whole hands played with random legal actions, for many seeds. After every action the invariants of a hand hold: no tile is lost or
  * made, the hands have the size their state asks for, the dead wall is untouched, a result exists exactly when the hand is
- * finished, and every action of every `LegalActions` list is accepted by `Apply`. Pure logic: no engine services.
+ * finished, and every action of every `LegalActions` list is accepted by `Apply`; for the first seeds also the other way round, an action
+ * is accepted only when it is listed. Pure logic: no engine services.
  */
 namespace BECore::Mahjong::Tests {
 
     namespace {
 
         constexpr uint32_t kSeedCount = 200;
+        /// The seeds whose every step also tries every canonical action of the actor (a few hundred `Apply` calls per step).
+        constexpr uint32_t kBruteForceSeedCount = 20;
         /// Far more than a hand needs: a draw, a discard and the odd claim per tile of the wall.
         constexpr int kStepLimit = 2000;
         constexpr size_t kMeldedByAnySet = 3;
-
-        /// Which player draws the hand: one that takes every win and declares whenever it can, or one that never wins.
-        CORE_ENUM(Mode, uint8_t, SeekWin, NeverWin)
 
         struct Outcome {
             int wins = 0;
             int draws = 0;
         };
-
-        /// The name of an enum value, for a failure message.
-        template <typename E>
-        std::string Name(E value) {
-            const auto name = EnumUtils<E>::ToString(value);
-            return std::string(name.data(), name.size());
-        }
 
         /// The tiles in the model, counted by kind: hands (concealed, melds with a kong as four, laid-open bonus tiles), the pile and
         /// every part of the wall. The tile of a claim that is waiting is in the pile, the fourth tile of a kong that is waiting is in
@@ -138,48 +133,9 @@ namespace BECore::Mahjong::Tests {
             return true;
         }
 
-        /// The seat that acts next: the one to discard, or a random one of the seats a window still waits for.
-        Seat NextActor(const HandModel& model, MahjongRng& rng) {
-            if (model.GetPhase() == Phase::Discard) {
-                return model.CurrentSeat();
-            }
-            const eastl::vector<Seat> pending = model.PendingClaimSeats();
-            return pending.empty() ? kNoSeat : pending[rng.Below(static_cast<uint32_t>(pending.size()))];
-        }
-
-        bool WinsTheHand(const HandAction& action) {
-            return action.kind == ActionKind::DeclareWin || (action.kind == ActionKind::Claim && action.claim == ClaimKind::Mahjong);
-        }
-
-        HandAction PickRandom(const eastl::vector<HandAction>& actions, MahjongRng& rng) {
-            return actions[rng.Below(static_cast<uint32_t>(actions.size()))];
-        }
-
-        /// The action a player of `mode` takes from a non-empty list.
-        HandAction Choose(const eastl::vector<HandAction>& actions, Mode mode, MahjongRng& rng) {
-            eastl::vector<HandAction> wanted;
-            for (const HandAction& action : actions) {
-                if (mode == Mode::NeverWin) {
-                    if (!WinsTheHand(action)) {
-                        wanted.push_back(action);
-                    }
-                    continue;
-                }
-                // Win when it can, declare when it can, build sets when it can, otherwise anything.
-                if (WinsTheHand(action)) {
-                    return action;
-                }
-                const bool declares = action.kind == ActionKind::Discard && action.declareCalling;
-                const bool buildsSet = action.kind == ActionKind::Claim || action.kind == ActionKind::ConcealedKong || action.kind == ActionKind::UpgradeKong;
-                if (declares || buildsSet) {
-                    wanted.push_back(action);
-                }
-            }
-            return PickRandom(wanted.empty() ? actions : wanted, rng);
-        }
-
-        /// Plays one hand to its end. Returns false when an invariant broke or the hand did not end.
-        bool Playout(uint32_t seed, Mode mode, Outcome& outcome) {
+        /// Plays one hand to its end; `withBruteForce` also checks at every step that the actor's canonical actions are accepted exactly
+        /// when listed. Returns false when an invariant broke or the hand did not end.
+        bool Playout(uint32_t seed, Mode mode, Outcome& outcome, bool withBruteForce = false) {
             MahjongRng rng(seed);
             MahjongSettings settings;
             settings.flowers = seed % 2 == 1;
@@ -202,10 +158,8 @@ namespace BECore::Mahjong::Tests {
                     ADD_FAILURE() << where << ": nobody is to act in phase " << Name(model.GetPhase());
                     return false;
                 }
-                bool someoneActs = false;
                 for (Seat seat = 0; seat < kSeatCount; ++seat) {
                     for (const HandAction& action : model.LegalActions(seat)) {
-                        someoneActs = true;
                         HandModel copy = model;
                         if (!copy.Apply(seat, action).has_value()) {
                             ADD_FAILURE() << where << ": seat " << seat << " is offered " << Name(action.kind) << " " << ToString(action.tile) << " but Apply refuses it";
@@ -213,8 +167,15 @@ namespace BECore::Mahjong::Tests {
                         }
                     }
                 }
+                if (withBruteForce) {
+                    const ::testing::AssertionResult exact = AcceptedExactlyWhenListed(model, actor);
+                    if (!exact) {
+                        ADD_FAILURE() << where << ": " << exact.message();
+                        return false;
+                    }
+                }
                 const eastl::vector<HandAction> actions = model.LegalActions(actor);
-                if (!someoneActs || actions.empty()) {
+                if (actions.empty()) {
                     ADD_FAILURE() << where << ": seat " << actor << " is to act but has no legal action";
                     return false;
                 }
@@ -264,7 +225,7 @@ namespace BECore::Mahjong::Tests {
             // Even seeds are played by the winner, odd seeds by the player who never wins: a drawn hand is certain for the latter.
             // The flowers setting and the seat of East follow the seed too, so each combination is played in both modes.
             const Mode mode = (seed / (2 * kSeatCount)) % 2 == 0 ? Mode::SeekWin : Mode::NeverWin;
-            ASSERT_TRUE(Playout(seed, mode, outcome)) << "seed " << seed;
+            ASSERT_TRUE(Playout(seed, mode, outcome, seed < kBruteForceSeedCount)) << "seed " << seed;
         }
         EXPECT_GT(outcome.wins, 0);
         EXPECT_GT(outcome.draws, 0);

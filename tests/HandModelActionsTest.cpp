@@ -1,9 +1,13 @@
 #include "FixedWall.h"
+#include "HandTestSupport.h"
 
 #include <Mahjong/Game/HandModel.h>
 #include <Mahjong/Game/HandShape.h>
 #include <Mahjong/Game/Tile.h>
 #include <gtest/gtest.h>
+#include <set>
+#include <string>
+#include <vector>
 
 /**
  * `LegalActions` and `Apply`: the one list of what a seat can do, on fixed walls: a plain turn, the kongs, a calling hand that is
@@ -14,10 +18,6 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        constexpr Seat kSeat0 = 0;
-        constexpr Seat kSeat1 = 1;
-        constexpr Seat kSeat2 = 2;
-        constexpr Seat kSeat3 = 3;
         constexpr Seat kNoSuchSeat = kSeatCount;
         constexpr size_t kTilesInHand = static_cast<size_t>(kDealtTiles);
 
@@ -31,10 +31,6 @@ namespace BECore::Mahjong::Tests {
         constexpr const char* kEast = "Ew";
         constexpr const char* kFifth = "5p";
 
-        Tile T(const char* text) {
-            return TryParse(text).value();
-        }
-
         FixedWallSpec QuietSpec() {
             FixedWallSpec spec;
             spec.hands[kSeat0] = kQuiet0;
@@ -44,61 +40,12 @@ namespace BECore::Mahjong::Tests {
             return spec;
         }
 
-        std::optional<HandError> Error(const HandStatus& status) {
-            return status.has_value() ? std::nullopt : std::optional<HandError>(status.error());
-        }
-
-        /// Everything an action could change, as text.
-        std::string Snapshot(const HandModel& model) {
-            std::string text = std::to_string(static_cast<int>(model.GetPhase())) + " seat " + std::to_string(model.CurrentSeat());
-            for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                const PlayerHand& hand = model.GetHand(seat);
-                text += " |";
-                for (const Tile tile : hand.concealed) {
-                    text += " ";
-                    text += ToString(tile);
-                }
-                text += " melds " + std::to_string(hand.melds.size());
-                text += " calling " + std::to_string(hand.callingDeclared) + " claim " + std::to_string(static_cast<int>(model.GetClaimStatus(seat)));
-            }
-            text += " | pile " + std::to_string(model.Discards().size());
-            text += " | live " + std::to_string(model.GetWall().LiveCount());
-            text += model.Result().has_value() ? " result" : " open";
-            return text;
-        }
-
-        /// Each seat in turn discards the next tile of `tiles`; the seats in `declaring` declare the calling hand with their discard.
-        /// No discard of a lap may open a claim window.
-        void Lap(HandModel& model, const std::string& tiles, std::initializer_list<Seat> declaring = {}) {
-            const eastl::vector<Tile> parsed = ParseTiles(tiles).value();
-            for (const Tile tile : parsed) {
-                const Seat seat = model.CurrentSeat();
-                const bool declare = eastl::find(declaring.begin(), declaring.end(), seat) != declaring.end();
-                ASSERT_TRUE(model.Discard(seat, tile, declare).has_value()) << "seat " << seat << " cannot discard " << ToString(tile);
-                ASSERT_EQ(model.GetPhase(), Phase::Discard) << "the discard of " << ToString(tile) << " by seat " << seat << " opened a window";
-            }
-        }
-
-        bool Has(const eastl::vector<HandAction>& actions, const HandAction& action) {
-            return eastl::find(actions.begin(), actions.end(), action) != actions.end();
-        }
-
         size_t Count(const eastl::vector<HandAction>& actions, ActionKind kind) {
             size_t count = 0;
             for (const HandAction& action : actions) {
                 count += action.kind == kind ? 1 : 0;
             }
             return count;
-        }
-
-        /// Every action of every seat's list is accepted by `Apply` (on a copy, so that each is tried from the same state).
-        void ExpectEveryLegalActionIsAccepted(const HandModel& model) {
-            for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                for (const HandAction& action : model.LegalActions(seat)) {
-                    HandModel copy = model;
-                    EXPECT_TRUE(copy.Apply(seat, action).has_value()) << "seat " << seat << " action " << static_cast<int>(action.kind) << " " << ToString(action.tile);
-                }
-            }
         }
 
         /// The seats that have something to do.
@@ -180,6 +127,76 @@ namespace BECore::Mahjong::Tests {
 
         EXPECT_EQ(actions.size(), kTilesInHand);  // 14 tiles, one pair
         EXPECT_EQ(std::count(actions.begin(), actions.end(), HandAction::MakeDiscard(T("1p"))), 1);
+        ExpectEveryLegalActionIsAccepted(model);
+    }
+
+    TEST(HandModelActionsTest, ApplyAcceptsACanonicalActionExactlyWhenItIsListed) {
+        // Eight models; between them every kind of action is listed at least once (asserted below).
+        // A plain turn: the discards.
+        FixedWallSpec plain = QuietSpec();
+        plain.live = kRed;
+        const HandModel plainTurn = MakeModel(plain);
+
+        // A waiting hand that is not declared: the discards and the discards with the declaration.
+        const HandModel waitingTurn = MakeModel(WaitingSpec(kRed));
+
+        // East has declared and draws the winning tile: the discards and the win.
+        HandModel declared = MakeModel(WaitingSpec("9p Wd Gd Nw Rd"));
+        Lap(declared, "9p Wd Gd Nw", {kSeat0});
+        ASSERT_TRUE(declared.GetHand(kSeat0).callingDeclared);
+
+        // East discards the 5p: seat 1 has the chows and the pass.
+        FixedWallSpec chowSpec = QuietSpec();
+        chowSpec.hands[kSeat1] = "3p 4p 6p 7p 2s 5s 8s 2m 5m 8m Sw Ww Nw";
+        chowSpec.live = kFifth;
+        HandModel chowWindow = MakeModel(chowSpec);
+        ASSERT_TRUE(chowWindow.Apply(kSeat0, HandAction::MakeDiscard(T(kFifth))).has_value());
+        ASSERT_EQ(chowWindow.GetPhase(), Phase::Claim);
+
+        // East discards the red dragon: seat 2 holds three of it and has the pung, the kong and the pass.
+        FixedWallSpec pungSpec = QuietSpec();
+        pungSpec.hands[kSeat2] = "Rd Rd Rd 3p 6p 9p 3s 6s 9s 3m 6m 9m Sw";
+        pungSpec.live = kRed;
+        HandModel pungWindow = MakeModel(pungSpec);
+        ASSERT_TRUE(pungWindow.Apply(kSeat0, HandAction::MakeDiscard(T(kRed))).has_value());
+        ASSERT_EQ(pungWindow.GetPhase(), Phase::Claim);
+
+        // Seat 1 has upgraded its pung and seat 2 has declared on the 5p: seat 2 has the mahjong claim and the pass.
+        HandModel robbingWindow = UpgradeModel({kSeat2});
+        ASSERT_TRUE(robbingWindow.Apply(kSeat1, HandAction::MakeUpgradeKong(T(kFifth))).has_value());
+        ASSERT_EQ(robbingWindow.GetPhase(), Phase::RobKong);
+
+        // Seat 1 draws the fourth 5p of its open pung: the discards and the upgraded kong.
+        const HandModel upgradeTurn = UpgradeModel();
+
+        // East holds three of a kind and draws the fourth: the discards and the concealed kong.
+        FixedWallSpec kongSpec = QuietSpec();
+        kongSpec.hands[kSeat0] = "Ew Ew Ew 1p 4p 7p 1s 4s 7s 1m 4m 7m Gd";
+        kongSpec.hands[kSeat1] = "2p 5p 8p 2s 5s 8s 2m 5m 8m Sw Ww Nw Rd";
+        kongSpec.live = kEast;
+        const HandModel concealedKongTurn = MakeModel(kongSpec);
+
+        const HandModel* const models[] = {&plainTurn, &waitingTurn, &declared, &chowWindow, &pungWindow, &robbingWindow, &upgradeTurn, &concealedKongTurn};
+        std::set<std::string> listedKinds;
+        for (const HandModel* model : models) {
+            ExpectAcceptedExactlyWhenListed(*model);
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                for (const HandAction& action : model->LegalActions(seat)) {
+                    std::string kind = Name(action.kind);
+                    if (action.kind == ActionKind::Claim) {
+                        kind += Name(action.claim);
+                    } else if (action.kind == ActionKind::Discard && action.declareCalling) {
+                        kind += "Declare";
+                    }
+                    listedKinds.insert(kind);
+                }
+            }
+        }
+
+        // The brute force proves nothing about a kind that no model lists, so each kind has to be listed by one of them.
+        for (const char* kind : {"Discard", "DiscardDeclare", "DeclareWin", "ConcealedKong", "UpgradeKong", "ClaimChow", "ClaimPung", "ClaimKong", "ClaimMahjong", "Pass"}) {
+            EXPECT_TRUE(listedKinds.count(kind) == 1) << kind << " is listed by none of the models";
+        }
     }
 
     TEST(HandModelActionsTest, ASeatThatIsNotToActHasNoActionsAndANumberThatIsNoSeatHasNone) {

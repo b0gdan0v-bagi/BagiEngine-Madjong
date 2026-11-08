@@ -1,4 +1,5 @@
 #include "FixedWall.h"
+#include "HandTestSupport.h"
 
 #include <Mahjong/Game/HandModel.h>
 #include <Mahjong/Game/HandShape.h>
@@ -15,11 +16,6 @@
 namespace BECore::Mahjong::Tests {
 
     namespace {
-
-        constexpr Seat kSeat0 = 0;
-        constexpr Seat kSeat1 = 1;
-        constexpr Seat kSeat2 = 2;
-        constexpr Seat kSeat3 = 3;
 
         constexpr int kTilesInHand = kDealtTiles;
         constexpr size_t kMeldedByChowOrPung = 2;
@@ -39,10 +35,6 @@ namespace BECore::Mahjong::Tests {
         /// The tiles `MahjongWindow` draws.
         constexpr int kLapTiles = 4;
 
-        Tile T(const char* text) {
-            return TryParse(text).value();
-        }
-
         FixedWallSpec QuietSpec() {
             FixedWallSpec spec;
             spec.hands[kSeat0] = kQuiet0;
@@ -50,46 +42,6 @@ namespace BECore::Mahjong::Tests {
             spec.hands[kSeat2] = kQuiet2;
             spec.hands[kSeat3] = kQuiet3;
             return spec;
-        }
-
-        std::optional<HandError> Error(const HandStatus& status) {
-            return status.has_value() ? std::nullopt : std::optional<HandError>(status.error());
-        }
-
-        /// Everything an action could change, as text.
-        std::string Snapshot(const HandModel& model) {
-            std::string text = std::to_string(static_cast<int>(model.GetPhase())) + " seat " + std::to_string(model.CurrentSeat());
-            for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                const PlayerHand& hand = model.GetHand(seat);
-                text += " |";
-                for (const Tile tile : hand.concealed) {
-                    text += " ";
-                    text += ToString(tile);
-                }
-                text += " melds " + std::to_string(hand.melds.size());
-                text += " calling " + std::to_string(hand.callingDeclared) + " claim " + std::to_string(static_cast<int>(model.GetClaimStatus(seat)));
-            }
-            text += " | pile";
-            for (const DiscardEntry& entry : model.Discards()) {
-                text += " ";
-                text += ToString(entry.tile);
-            }
-            text += " | live " + std::to_string(model.GetWall().LiveCount());
-            text += model.Result().has_value() ? " result" : " open";
-            return text;
-        }
-
-        /// Each seat in turn discards the next tile of `tiles`; the seats in `declaring` declare the calling hand with their discard.
-        /// No discard of a lap may open a claim window.
-        void Lap(HandModel& model, const std::string& tiles, std::initializer_list<Seat> declaring = {}) {
-            const eastl::vector<Tile> parsed = ParseTiles(tiles).value();
-            for (const Tile tile : parsed) {
-                const Seat seat = model.CurrentSeat();
-                const bool declare = eastl::find(declaring.begin(), declaring.end(), seat) != declaring.end();
-                const HandStatus status = model.Discard(seat, tile, declare);
-                ASSERT_TRUE(status.has_value()) << "seat " << seat << " cannot discard " << ToString(tile);
-                ASSERT_EQ(model.GetPhase(), Phase::Discard) << "the discard of " << ToString(tile) << " by seat " << seat << " opened a window";
-            }
         }
 
         bool HasMeld(const PlayerHand& hand, MeldKind kind, Tile first, Seat from, Tile claimed) {

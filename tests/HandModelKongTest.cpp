@@ -1,4 +1,5 @@
 #include "FixedWall.h"
+#include "HandTestSupport.h"
 
 #include <Mahjong/Game/HandModel.h>
 #include <Mahjong/Game/HandShape.h>
@@ -16,11 +17,6 @@
 namespace BECore::Mahjong::Tests {
 
     namespace {
-
-        constexpr Seat kSeat0 = 0;
-        constexpr Seat kSeat1 = 1;
-        constexpr Seat kSeat2 = 2;
-        constexpr Seat kSeat3 = 3;
 
         constexpr size_t kTilesInHand = static_cast<size_t>(kDealtTiles);
         constexpr size_t kTilesInKong = static_cast<size_t>(kCopiesPerTile);
@@ -41,10 +37,6 @@ namespace BECore::Mahjong::Tests {
         constexpr const char* kWaitingTile = "Rd";
         constexpr const char* kFirstDiscard = "9p";
 
-        Tile T(const char* text) {
-            return TryParse(text).value();
-        }
-
         FixedWallSpec QuietSpec() {
             FixedWallSpec spec;
             spec.hands[kSeat0] = kEastKong;
@@ -52,54 +44,6 @@ namespace BECore::Mahjong::Tests {
             spec.hands[kSeat2] = kQuiet2;
             spec.hands[kSeat3] = kQuiet3;
             return spec;
-        }
-
-        bool Has(const eastl::vector<HandAction>& actions, const HandAction& wanted) {
-            return eastl::find(actions.begin(), actions.end(), wanted) != actions.end();
-        }
-
-        std::optional<HandError> Error(const HandStatus& status) {
-            return status.has_value() ? std::nullopt : std::optional<HandError>(status.error());
-        }
-
-        /// Everything an action could change, as text.
-        std::string Snapshot(const HandModel& model) {
-            std::string text = std::to_string(static_cast<int>(model.GetPhase())) + " seat " + std::to_string(model.CurrentSeat());
-            for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                const PlayerHand& hand = model.GetHand(seat);
-                text += " |";
-                for (const Tile tile : hand.concealed) {
-                    text += " ";
-                    text += ToString(tile);
-                }
-                text += " melds";
-                for (const Meld& meld : hand.melds) {
-                    text += " " + std::to_string(static_cast<int>(meld.kind)) + std::string(ToString(meld.first)) + std::to_string(meld.concealed);
-                }
-                text += " bonus " + std::to_string(hand.bonus.size());
-                text += " claim " + std::to_string(static_cast<int>(model.GetClaimStatus(seat)));
-            }
-            text += " | pile";
-            for (const DiscardEntry& entry : model.Discards()) {
-                text += " ";
-                text += ToString(entry.tile);
-            }
-            text += " | live " + std::to_string(model.GetWall().LiveCount()) + " loose " + std::to_string(model.GetWall().LooseCount());
-            text += model.Result().has_value() ? " result" : " open";
-            return text;
-        }
-
-        /// Each seat in turn discards the next tile of `tiles`; the seats in `declaring` declare the calling hand with their discard.
-        /// No discard of a lap may open a claim window.
-        void Lap(HandModel& model, const std::string& tiles, std::initializer_list<Seat> declaring = {}) {
-            const eastl::vector<Tile> parsed = ParseTiles(tiles).value();
-            for (const Tile tile : parsed) {
-                const Seat seat = model.CurrentSeat();
-                const bool declare = eastl::find(declaring.begin(), declaring.end(), seat) != declaring.end();
-                const HandStatus status = model.Discard(seat, tile, declare);
-                ASSERT_TRUE(status.has_value()) << "seat " << seat << " cannot discard " << ToString(tile);
-                ASSERT_EQ(model.GetPhase(), Phase::Discard) << "the discard of " << ToString(tile) << " by seat " << seat << " opened a window";
-            }
         }
 
         /// The tiles of a hand as the model counts them: the concealed ones and three for each meld, so that it is 14 for the seat to
@@ -145,8 +89,11 @@ namespace BECore::Mahjong::Tests {
             return spec;
         }
 
-        /// Seat 1 is to act with the fourth 5p drawn and an open pung of 5p laid; the seats in `declaring` have declared a calling hand
-        /// that waits on 5p. Seat 1 has drawn `lastDraw`, which is the fourth 5p unless a test says otherwise.
+        /// Seat 1 is to act with an open pung of 5p laid; the seats in `declaring` have declared a calling hand that waits on 5p.
+        /// The model plays a fixed script on `spec`: seat 0 discards the 5p it draws first (`kFifth`), seat 1 claims the pung, a lap
+        /// of discards (Wd Rd Gd Wd) goes round, and seat 1 draws `lastDraw`. So `spec` has to give seat 1 two 5p in hand, seat 0 the
+        /// 5p as its first live tile and `lastDraw` as the fifth, and no discard of the lap may open a window (`UpgradeSpec(lastDraw)`
+        /// makes such a spec). `lastDraw` is the fourth 5p unless a test says otherwise; it must be in seat 1's hand when it acts.
         HandModel UpgradeModelOn(const FixedWallSpec& spec, std::initializer_list<Seat> declaring = {}, const char* lastDraw = kFifth) {
             HandModel model = MakeModel(spec);
             EXPECT_TRUE(model.Discard(kSeat0, T(kFifth)).has_value());

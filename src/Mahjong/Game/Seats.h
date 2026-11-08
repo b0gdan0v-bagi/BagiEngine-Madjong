@@ -12,6 +12,9 @@ namespace BECore::Mahjong {
     /// The wind of a seat. The numbering is the same as the winds of Tile (East = 0 ... North = 3).
     CORE_ENUM(Wind, uint8_t, East, South, West, North)
 
+    /// No seat (the winner of a drawn hand, the East of winds that name none).
+    inline constexpr Seat kNoSeat = -1;
+
     /// Whether `seat` is one of the four seats.
     [[nodiscard]] constexpr bool IsSeat(Seat seat) noexcept {
         return seat >= 0 && seat < kSeatCount;
@@ -32,6 +35,9 @@ namespace BECore::Mahjong {
 
     /// The seat winds when `east` is the dealer: South is `NextSeat(east)`, then West, then North.
     [[nodiscard]] SeatWinds MakeSeatWinds(Seat east) noexcept;
+
+    /// The seat that holds East in `winds`; `kNoSeat` unless exactly one seat does.
+    [[nodiscard]] Seat EastOf(const SeatWinds& winds) noexcept;
 
     /// The dice of a seat in the draw for East: returns the total of 2d6 for that seat. A seam, so that a test can script the rolls.
     using SeatRoller = eastl::function<int(Seat)>;

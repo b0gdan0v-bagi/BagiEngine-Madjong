@@ -1,4 +1,5 @@
 #include "FixedWall.h"
+#include "HandTestSupport.h"
 
 #include <Mahjong/Game/HandModel.h>
 #include <Mahjong/Game/Tile.h>
@@ -12,11 +13,6 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        constexpr Seat kSeat0 = 0;
-        constexpr Seat kSeat1 = 1;
-        constexpr Seat kSeat2 = 2;
-        constexpr Seat kSeat3 = 3;
-
         constexpr size_t kFullWall = 136;
         constexpr size_t kDealtTotal = static_cast<size_t>(kDealtTiles) * kSeatCount;
 
@@ -26,10 +22,6 @@ namespace BECore::Mahjong::Tests {
         /// A tile that does not help seat 0, and a tile of its hand whose discard leaves it not waiting.
         constexpr const char* kUselessTile = "9p";
         constexpr const char* kNeededTile = "7m";
-
-        Tile T(const char* text) {
-            return TryParse(text).value();
-        }
 
         FixedWallSpec BaseSpec() {
             FixedWallSpec spec;
@@ -45,32 +37,6 @@ namespace BECore::Mahjong::Tests {
             FixedWallSpec spec = BaseSpec();
             spec.live = std::string(kUselessTile) + " 4m 6m 8p " + last;
             return spec;
-        }
-
-        std::optional<HandError> Error(const HandStatus& status) {
-            return status.has_value() ? std::nullopt : std::optional<HandError>(status.error());
-        }
-
-        /// Everything an action could change, as text.
-        std::string Snapshot(const HandModel& model) {
-            std::string text = std::to_string(static_cast<int>(model.GetPhase())) + " seat " + std::to_string(model.CurrentSeat());
-            for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                const PlayerHand& hand = model.GetHand(seat);
-                text += " |";
-                for (const Tile tile : hand.concealed) {
-                    text += " ";
-                    text += ToString(tile);
-                }
-                text += " calling " + std::to_string(hand.callingDeclared) + "/" + std::to_string(hand.callingAtDiscardCount) + "/" + std::to_string(hand.discardCount);
-            }
-            text += " | pile";
-            for (const DiscardEntry& entry : model.Discards()) {
-                text += " ";
-                text += ToString(entry.tile);
-            }
-            text += " | live " + std::to_string(model.GetWall().LiveCount()) + " loose " + std::to_string(model.GetWall().LooseCount());
-            text += model.Result().has_value() ? " result" : " open";
-            return text;
         }
 
         /// Each seat in turn discards the next tile of `tiles` (a lap's `live`: every seat discards what it has just drawn). These tests
