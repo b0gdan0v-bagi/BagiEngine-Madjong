@@ -84,6 +84,30 @@
         <string key="matchover.wins" text="{winner} wins the match"/>
         <string key="matchover.tied" text="Tied for first: {seats}"/>
         <string key="matchover.row" text="{place}. {name}: {score}"/>
+        <string key="button.Win" text="Mahjong!"/>
+        <string key="button.ClaimMahjong" text="Mahjong!"/>
+        <string key="button.ClaimPung" text="Pung"/>
+        <string key="button.ClaimKong" text="Kong"/>
+        <string key="button.ClaimChow0" text="Chow"/>
+        <string key="button.ClaimChow1" text="Chow"/>
+        <string key="button.ClaimChow2" text="Chow"/>
+        <string key="button.Pass" text="Pass"/>
+        <string key="button.ConcealedKong0" text="Kong"/>
+        <string key="button.ConcealedKong1" text="Kong"/>
+        <string key="button.ConcealedKong2" text="Kong"/>
+        <string key="button.UpgradeKong" text="Add to pung"/>
+        <string key="button.Declare" text="Ready hand"/>
+        <string key="hint.Win" text="Your hand is complete: win the hand."/>
+        <string key="hint.ClaimMahjong" text="The tile completes your hand: take it and win."/>
+        <string key="hint.ClaimPung" text="Take the discard to make a set of three equal tiles."/>
+        <string key="hint.ClaimKong" text="Take the discard to make a set of four equal tiles; you then draw a spare tile."/>
+        <string key="hint.ClaimChow" text="Take the discard to complete a run of three in a row (only from the player before you)."/>
+        <string key="hint.Pass" text="Let the discard go."/>
+        <string key="hint.ConcealedKong" text="Set four equal tiles from your hand aside and draw a spare tile."/>
+        <string key="hint.UpgradeKong" text="Add the fourth tile to your open pung to make a kong; you draw a spare tile."/>
+        <string key="hint.Declare" text="Announce you are one tile from mahjong (needed to win), then click the tile to discard."/>
+        <string key="cover.text" text="Pass the screen to {handoffSeat}"/>
+        <string key="cover.show" text="Show"/>
     </language>
     <language id="ru">
         <string key="lang.en" text="English"/>
@@ -167,5 +191,29 @@
         <string key="matchover.wins" text="{winner} выигрывает матч"/>
         <string key="matchover.tied" text="Делят первое место: {seats}"/>
         <string key="matchover.row" text="{place}. {name}: {score}"/>
+        <string key="button.Win" text="Маджонг!"/>
+        <string key="button.ClaimMahjong" text="Маджонг!"/>
+        <string key="button.ClaimPung" text="Пун"/>
+        <string key="button.ClaimKong" text="Конг"/>
+        <string key="button.ClaimChow0" text="Чи"/>
+        <string key="button.ClaimChow1" text="Чи"/>
+        <string key="button.ClaimChow2" text="Чи"/>
+        <string key="button.Pass" text="Пас"/>
+        <string key="button.ConcealedKong0" text="Конг"/>
+        <string key="button.ConcealedKong1" text="Конг"/>
+        <string key="button.ConcealedKong2" text="Конг"/>
+        <string key="button.UpgradeKong" text="Добавить"/>
+        <string key="button.Declare" text="Заявка"/>
+        <string key="hint.Win" text="Рука собрана: объявите победу."/>
+        <string key="hint.ClaimMahjong" text="Эта кость завершает руку: возьмите её и выиграйте."/>
+        <string key="hint.ClaimPung" text="Возьмите сброшенную кость и составьте набор из трёх одинаковых."/>
+        <string key="hint.ClaimKong" text="Возьмите сброшенную кость и составьте набор из четырёх; затем возьмёте запасную."/>
+        <string key="hint.ClaimChow" text="Возьмите сброшенную кость и соберите три подряд (только у игрока перед вами)."/>
+        <string key="hint.Pass" text="Пропустить сброшенную кость."/>
+        <string key="hint.ConcealedKong" text="Выложите четыре одинаковые кости из руки и возьмите запасную."/>
+        <string key="hint.UpgradeKong" text="Добавьте четвёртую кость к открытому пуну: получится конг; затем запасная кость."/>
+        <string key="hint.Declare" text="Объявите, что не хватает одной кости (нужно для победы), затем нажмите кость для сброса."/>
+        <string key="cover.text" text="Передайте экран: {handoffSeat}"/>
+        <string key="cover.show" text="Показать"/>
     </language>
 </UIStrings>
