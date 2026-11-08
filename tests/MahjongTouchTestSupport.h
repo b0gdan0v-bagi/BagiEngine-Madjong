@@ -99,6 +99,32 @@ namespace BECore::Mahjong::Tests {
         return {fit.ToViewX(output.x), fit.ToViewY(output.y), output.w / fit.scale, output.h / fit.scale};
     }
 
+    /// Whether the buttons of `Actions` are under the engine's touch minimum in this window, so `ActionsCompact` is the canvas shown.
+    inline bool IsCompactWindow(const MatrixWindow& window) {
+        return NeedsCompactActions(window.outputWidth, window.outputHeight, window.pixelDensity, CoreManager::GetUIEnvironment().GetSettings().minTouchSize);
+    }
+
+    /// The fullest turn (a win, a declaration, three kongs and the upgrade) and the fullest claim window (all claims, three chows,
+    /// pass): the buttons the action canvases have to hold at once.
+    inline const std::vector<std::vector<ButtonKind>>& FullestButtonSets() {
+        static const std::vector<std::vector<ButtonKind>> sets{
+            {ButtonKind::Win, ButtonKind::Declare, ButtonKind::ConcealedKong0, ButtonKind::ConcealedKong1, ButtonKind::ConcealedKong2, ButtonKind::UpgradeKong},
+            {ButtonKind::ClaimMahjong, ButtonKind::ClaimKong, ButtonKind::ClaimPung, ButtonKind::ClaimChow0, ButtonKind::ClaimChow1, ButtonKind::ClaimChow2, ButtonKind::Pass}};
+        return sets;
+    }
+
+    /// Sets the size of the window the fixture's `RecordingRenderer` stands for (before the draw that should see it).
+    inline void SetOutputSize(RecordingRenderer& renderer, float width, float height) {
+        renderer.width = width;
+        renderer.height = height;
+    }
+
+    /// The middle of an element of a canvas in output pixels, as the last layout of the canvas puts it (a click point).
+    inline std::pair<float, float> OutputCenterOf(const UICanvasComponent& canvas, const UIElement& element) {
+        const Rect output = canvas.GetLayout().GetResolved().transform.ToOutput(element.rect.x, element.rect.y, element.rect.w, element.rect.h);
+        return {output.x + output.w * 0.5f, output.y + output.h * 0.5f};
+    }
+
     /// The table with every zone at its capacity (14 concealed tiles, four kongs and 8 bonus tiles a seat, 100 discards, the 144-tile
     /// wall), so no tile of any game lies where this does not.
     inline TableLayout MakeWorstCaseTableLayout() {

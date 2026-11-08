@@ -269,4 +269,78 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(checked, BECore::Tests::UILayoutMatrix().size());
     }
 
+    // ----- the action buttons in the narrow windows -----
+
+    TEST_F(MahjongTouchSizeTest, TheCompactActionButtonsLieOnTheBarUnderTheTableInsideTheWindowWhereTheRuleShowsThem) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        auto compact = Canvas("ActionsCompact");
+        ASSERT_TRUE(compact);
+        // Hidden in the file; shown by hand, and no draw after it (a draw would hide it again at the design size)
+        ASSERT_TRUE(UICanvasComponent::SetVisibleByName(*_manager->GetSceneByName("MahjongScene"_intern), "ActionsCompact"_intern, true));
+
+        const TableLayout layout = MakeWorstCaseTableLayout();
+        size_t checked = 0;
+        size_t sideInsets = 0;
+        for (const std::vector<ButtonKind>& kinds : FullestButtonSets()) {
+            for (int i = 0; i < kButtonCount; ++i) {
+                const ButtonSpec& spec = SpecOf(static_cast<ButtonKind>(i));
+                const bool shown = std::find(kinds.begin(), kinds.end(), static_cast<ButtonKind>(i)) != kinds.end();
+                ASSERT_TRUE(compact->SetElementVisible(PoolString::Intern(spec.element), shown)) << spec.element;
+                for (int t = 0; t < spec.maxTiles; ++t) {
+                    ASSERT_TRUE(compact->SetElementVisible(PoolString::Intern(TileImageName(static_cast<ButtonKind>(i), t)), shown));
+                }
+            }
+            ForEachMatrixWindow([&](const MatrixWindow& window) {
+                if (!IsCompactWindow(window)) {
+                    return;
+                }
+                if (window.simulation == SafeAreaSimulation::SideInsets) {
+                    ++sideInsets;  // the row keeps to the safe area there and can lie on the nearest tiles (see the file)
+                    return;
+                }
+                LayOutInWindow(*compact, window, CanvasScaleMode::ScaleWithScreen, 1.0f);
+                for (const ButtonKind kind : kinds) {
+                    const ButtonSpec& spec = SpecOf(kind);
+                    const UIElement* button = Element("ActionsCompact", spec.element);
+                    ASSERT_NE(button, nullptr) << spec.element;
+                    ASSERT_FALSE(button->rect.IsEmpty()) << window.label.c_str() << " " << spec.element;
+                    const std::string label = std::string(window.label.c_str()) + " " + spec.element;
+                    ExpectClearOfTable(ToView(button->rect, *compact, window), layout, label.c_str());
+                    for (int t = 0; t < spec.maxTiles; ++t) {
+                        const UIElement* picture = Element("ActionsCompact", TileImageName(kind, t).c_str());
+                        ASSERT_NE(picture, nullptr);
+                        ExpectClearOfTable(ToView(picture->rect, *compact, window), layout, label.c_str());
+                    }
+                    // Inside the window (the validator says the same for every mode and user scale)
+                    const Rect output = compact->GetLayout().GetResolved().transform.ToOutput(button->rect.x, button->rect.y, button->rect.w, button->rect.h);
+                    EXPECT_GE(output.x, -0.01f) << label;
+                    EXPECT_GE(output.y, -0.01f) << label;
+                    EXPECT_LE(output.x + output.w, window.outputWidth + 0.01f) << label;
+                    EXPECT_LE(output.y + output.h, window.outputHeight + 0.01f) << label;
+                }
+                ++checked;
+            });
+        }
+        EXPECT_GT(checked, 0u);
+        EXPECT_GT(sideInsets, 0u);
+    }
+
+    TEST_F(MahjongTouchSizeTest, TheActionsCanvasIsOnlyBelowTheTouchMinimumInTheWindowsTheRuleGivesToTheCompactCanvas) {
+        // Every window of the matrix is one or the other: the buttons of `Actions` are 56 units of the table's fit, the rule says where that is too small
+        size_t compactWindows = 0;
+        size_t roomyWindows = 0;
+        const float minTouch = CoreManager::GetUIEnvironment().GetSettings().minTouchSize;
+        ForEachMatrixWindow([&](const MatrixWindow& window) {
+            const float buttonPixels = kActionButtonHeight * TableFit(window).scale / window.pixelDensity;
+            EXPECT_EQ(IsCompactWindow(window), buttonPixels < minTouch) << window.label.c_str();
+            if (IsCompactWindow(window)) {
+                ++compactWindows;
+            } else {
+                ++roomyWindows;
+            }
+        });
+        EXPECT_GT(compactWindows, 0u);
+        EXPECT_GT(roomyWindows, 0u);
+    }
+
 }  // namespace BECore::Mahjong::Tests

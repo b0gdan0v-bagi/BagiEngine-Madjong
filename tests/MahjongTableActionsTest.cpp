@@ -1,5 +1,6 @@
 #include "ComputerTestSupport.h"
 #include "MahjongTableTestSupport.h"
+#include "MahjongTouchTestSupport.h"
 
 #include <BECore/UI/UIButton.h>
 #include <BECore/UI/UIImage.h>
@@ -126,6 +127,59 @@ namespace BECore::Mahjong::Tests {
             }
             EXPECT_EQ(std::string(label->GetDisplayText().data(), label->GetDisplayText().size()), variable);
             return variable;
+        }
+
+        /// Whether the canvas on `node` is the one on screen: shown and taking input (a hidden canvas keeps the rects of its last layout).
+        bool CanvasShown(const char* node) const {
+            const auto canvas = Canvas(node);
+            return canvas && canvas->TakesInput();
+        }
+
+        /// The buttons on screen in the canvas `ActionsCompact`, by kind: the canvas is shown and the button has a rect.
+        std::vector<ButtonKind> OnCompactScreen() const {
+            std::vector<ButtonKind> shown;
+            for (int i = 0; i < kButtonCount; ++i) {
+                const ButtonKind kind = static_cast<ButtonKind>(i);
+                if (CanvasShown("ActionsCompact") && OnScreen("ActionsCompact", SpecOf(kind).element)) {
+                    shown.push_back(kind);
+                }
+            }
+            return shown;
+        }
+
+        /// The sprites of the tile pictures on screen on a button of `ActionsCompact`, in order.
+        std::vector<std::string> CompactPicturesOf(ButtonKind kind) const {
+            std::vector<std::string> sprites;
+            for (int t = 0; t < kMaxButtonTiles; ++t) {
+                const std::string name = TileImageName(kind, t).c_str();
+                if (!CanvasShown("ActionsCompact") || !OnScreen("ActionsCompact", name.c_str())) {
+                    continue;
+                }
+                const auto* image = Element("ActionsCompact", name.c_str())->Cast<UIImage>();
+                EXPECT_NE(image, nullptr) << name;
+                if (image != nullptr) {
+                    sprites.emplace_back(image->sprite.ToStringView().data(), image->sprite.ToStringView().size());
+                }
+            }
+            return sprites;
+        }
+
+        /// A click on the middle of a button of `ActionsCompact` in output pixels, as the last draw put it; true when a canvas took it.
+        bool ClickCompact(const char* element) {
+            const auto canvas = Canvas("ActionsCompact");
+            const UIElement* found = Element("ActionsCompact", element);
+            EXPECT_TRUE(canvas && found) << element;
+            if (!canvas || !found) {
+                return false;
+            }
+            const auto [x, y] = OutputCenterOf(*canvas, *found);
+            return Click(x, y);
+        }
+
+        /// Starts in a window of this size (the fixture's renderer stands for it from the first draw on).
+        void StartInWindow(float width, float height, const SeatSetup& seats, const HandModel& model) {
+            SetOutputSize(*_renderer, width, height);
+            ASSERT_NO_FATAL_FAILURE(StartWith(seats, model));
         }
 
         static std::string Sentence(ButtonKind kind) {
@@ -505,6 +559,117 @@ namespace BECore::Mahjong::Tests {
         Draw();
 
         EXPECT_EQ(HintOnScreen(), "");
+    }
+
+    // ----- the compact canvas: windows where the buttons of `Actions` would be under the touch minimum -----
+
+    TEST_F(MahjongTableActionsTest, InAWindowBelowTheRuleTheClaimWindowIsInTheCompactCanvasWithItsPictures) {
+        ASSERT_NO_FATAL_FAILURE(StartInWindow(480.0f, 480.0f, kPersonAtSeat1, ClaimWindowModel()));
+        ASSERT_EQ(_game->GetSession().Actor(), kSeat1);
+
+        EXPECT_FALSE(CanvasShown("Actions"));
+        EXPECT_TRUE(CanvasShown("ActionsCompact"));
+        EXPECT_EQ(OnCompactScreen(), (std::vector<ButtonKind>{ButtonKind::ClaimPung, ButtonKind::ClaimChow0, ButtonKind::ClaimChow1, ButtonKind::Pass}));
+        EXPECT_EQ(CompactPicturesOf(ButtonKind::ClaimChow0), (std::vector<std::string>{"Tile_4p", "Tile_5p", "Tile_6p"}));
+        EXPECT_EQ(CompactPicturesOf(ButtonKind::ClaimChow1), (std::vector<std::string>{"Tile_5p", "Tile_6p", "Tile_7p"}));
+        EXPECT_EQ(CompactPicturesOf(ButtonKind::ClaimPung), (std::vector<std::string>{"Tile_5p"}));
+        EXPECT_TRUE(CompactPicturesOf(ButtonKind::Pass).empty());
+        // The same state in the other canvas, so a window that grows shows the same buttons at once
+        const auto* image = Element("Actions", "Chow0Tile0") != nullptr ? Element("Actions", "Chow0Tile0")->Cast<UIImage>() : nullptr;
+        ASSERT_NE(image, nullptr);
+        EXPECT_EQ(image->sprite, "Tile_4p"_intern);
+        const std::vector<ButtonKind> onCompact = OnCompactScreen();
+        for (int i = 0; i < kButtonCount; ++i) {
+            const ButtonKind kind = static_cast<ButtonKind>(i);
+            EXPECT_EQ(_table->GetButtons()[kind].shown, std::find(onCompact.begin(), onCompact.end(), kind) != onCompact.end()) << SpecOf(kind).element;
+        }
+    }
+
+    TEST_F(MahjongTableActionsTest, AClickOnAButtonOfTheCompactCanvasPerformsItsAction) {
+        ASSERT_NO_FATAL_FAILURE(StartInWindow(480.0f, 480.0f, kPersonAtSeat1, ClaimWindowModel()));
+        EXPECT_TRUE(ClickCompact("Pung")) << "the canvas takes the click";
+        ASSERT_EQ(Hand().GetHand(kSeat1).melds.size(), 1u);
+        EXPECT_EQ(Hand().GetHand(kSeat1).melds[0].kind, MeldKind::Pung);
+    }
+
+    TEST_F(MahjongTableActionsTest, AClickOnAChowOfTheCompactCanvasClaimsThatChow) {
+        ASSERT_NO_FATAL_FAILURE(StartInWindow(480.0f, 853.0f, kPersonAtSeat1, ClaimWindowModel()));
+        // On the picture of the chow, as a finger lands on the tiles
+        const auto canvas = Canvas("ActionsCompact");
+        const UIElement* picture = Element("ActionsCompact", "Chow1Tile1");
+        ASSERT_TRUE(canvas && picture);
+        const auto [x, y] = OutputCenterOf(*canvas, *picture);
+        EXPECT_TRUE(Click(x, y));
+        const PlayerHand& held = Hand().GetHand(kSeat1);
+        ASSERT_EQ(held.melds.size(), 1u);
+        EXPECT_EQ(held.melds[0].kind, MeldKind::Chow);
+        EXPECT_EQ(held.melds[0].first, T("5p"));
+    }
+
+    TEST_F(MahjongTableActionsTest, PassInTheCompactCanvasLeavesTheDiscard) {
+        ASSERT_NO_FATAL_FAILURE(StartInWindow(640.0f, 480.0f, kPersonAtSeat1, ClaimWindowModel()));
+        EXPECT_TRUE(ClickCompact("Pass"));
+        EXPECT_TRUE(Hand().GetHand(kSeat1).melds.empty());
+        EXPECT_NE(Hand().GetPhase(), Phase::Claim);
+    }
+
+    TEST_F(MahjongTableActionsTest, WinInTheCompactCanvasEndsTheHand) {
+        ASSERT_NO_FATAL_FAILURE(StartInWindow(480.0f, 480.0f, kDefaultSeatSetup, SelfDrawModel()));
+        const std::vector<ButtonKind> shown = OnCompactScreen();
+        ASSERT_NE(std::find(shown.begin(), shown.end(), ButtonKind::Win), shown.end());
+
+        EXPECT_TRUE(ClickCompact("Win"));
+
+        ASSERT_TRUE(Hand().Result().has_value());
+        EXPECT_EQ(Hand().Result()->winner, kSeat0);
+        EXPECT_EQ(Hand().Result()->source, WinSource::SelfDraw);
+    }
+
+    TEST_F(MahjongTableActionsTest, TheCanvasesSwapWhenTheWindowCrossesTheRule) {
+        ASSERT_NO_FATAL_FAILURE(StartInWindow(1280.0f, 720.0f, kPersonAtSeat1, ClaimWindowModel()));
+        // The design size: `Actions`, and nothing of the compact canvas
+        EXPECT_TRUE(CanvasShown("Actions"));
+        EXPECT_FALSE(CanvasShown("ActionsCompact"));
+        EXPECT_EQ(OnScreenButtons().size(), 4u);
+        EXPECT_TRUE(OnCompactScreen().empty());
+
+        SetOutputSize(*_renderer, 480.0f, 480.0f);
+        Draw();
+        EXPECT_FALSE(CanvasShown("Actions"));
+        EXPECT_TRUE(CanvasShown("ActionsCompact"));
+        EXPECT_EQ(OnCompactScreen().size(), 4u);
+
+        SetOutputSize(*_renderer, 1280.0f, 720.0f);
+        Draw();
+        EXPECT_TRUE(CanvasShown("Actions"));
+        EXPECT_FALSE(CanvasShown("ActionsCompact"));
+        EXPECT_EQ(OnScreenButtons().size(), 4u);
+        EXPECT_TRUE(OnCompactScreen().empty());
+
+        // The boundary of the rule: 732 x 412 keeps `Actions`, 731 x 411 does not
+        SetOutputSize(*_renderer, 732.0f, 412.0f);
+        Draw();
+        EXPECT_TRUE(CanvasShown("Actions"));
+        EXPECT_FALSE(CanvasShown("ActionsCompact"));
+        SetOutputSize(*_renderer, 731.0f, 411.0f);
+        Draw();
+        EXPECT_FALSE(CanvasShown("Actions"));
+        EXPECT_TRUE(CanvasShown("ActionsCompact"));
+    }
+
+    TEST_F(MahjongTableActionsTest, NoHintIsShownForTheCompactCanvas) {
+        ASSERT_NO_FATAL_FAILURE(StartInWindow(480.0f, 480.0f, kPersonAtSeat1, ClaimWindowModel()));
+        const auto canvas = Canvas("ActionsCompact");
+        const UIElement* chow = Element("ActionsCompact", "Chow0");
+        ASSERT_TRUE(canvas && chow);
+        const auto [x, y] = OutputCenterOf(*canvas, *chow);
+        HoverAt(x, y);
+        ASSERT_TRUE(chow->hovered) << "the canvas follows the pointer";
+
+        Draw();
+
+        EXPECT_EQ(Var("actionHint"), "");
+        EXPECT_FALSE(CanvasShown("Actions")) << "the label Hint is in Actions, which is hidden";
     }
 
 }  // namespace BECore::Mahjong::Tests

@@ -49,7 +49,8 @@ namespace BECore::Mahjong {
      *
      * **Playing.** While a person has to act (`TableSession::ActorIsPerson()`, no hot-seat cover) a left click on a tile of the viewer's hand
      * discards it (`PerformPerson(MakeDiscard(tile, declareNext))`); a refused action changes nothing. The other actions are the buttons of the
-     * canvas `Actions` (`Table/ActionButtons.h`), shown from `LegalActions` every frame (`SetElementVisibleByName`; each button says a fixed
+     * canvas `Actions` (`Table/ActionButtons.h`; `ActionsCompact` holds the same buttons by name for the windows where those would be under the
+     * touch minimum, `NeedsCompactActions`, and exactly one of the two is shown), shown from `LegalActions` every frame (`SetElementVisibleByName`; each button says a fixed
      * word in the file and the tiles of its action are `UIImage` children whose sprite the component sets), and answered here as
      * `InputEvents::ActionEvent`s. While the pointer is over a shown button (`UIElement::hovered`, set by the canvas) its sentence is the
      * variable `actionHint` and the label `Hint` is shown; a touch screen has no hover and so no hint. `Declare` is a `UIToggle` bound to the flag "the next discard declares the calling hand"
@@ -112,7 +113,8 @@ namespace BECore::Mahjong {
         [[nodiscard]] static DeclareTurn TurnOf(const MahjongGame& game);
         /// One action of the computer that has to act; false (and a log line) when the model refused it.
         static bool StepComputerChecked(TableSession& session);
-        /// Pushes the buttons, the tile pictures on them, the hint of the hovered button and the cover to the canvases of the scene, only what changed.
+        /// Pushes the buttons, the tile pictures on them, the hint of the hovered button, the choice between `Actions` and `ActionsCompact`
+        /// and the cover to the canvases of the scene, only what changed.
         void PublishScreen(const MahjongGame* game);
 
         ResourceHandle<ITexture> _atlas;
@@ -120,6 +122,7 @@ namespace BECore::Mahjong {
         ActionButtons _published;  // what the canvases show; the scene file starts with every button hidden
         eastl::string_view _hint;  // the sentence in `actionHint` (a text of `HintOf`, which lives as long as the program)
         bool _handoffShown = false;
+        bool _compactActions = false;  // `ActionsCompact` is the shown canvas of the buttons; the scene file starts with `Actions`
         bool _declareNext = false;
         DeclareTurn _declareTurn;     // the turn `_declareNext` was set on
         float _computerClock = 0.0f;  // seconds a computer has been waiting to play

@@ -4,6 +4,7 @@
 #include <BECore/Renderer/IRenderer.h>
 #include <BECore/Scene/Scene.h>
 #include <BECore/UI/UICanvasComponent.h>
+#include <BECore/UI/UIEnvironment.h>
 #include <BECore/UI/UIImage.h>
 #include <CoreSDL/SDLEvents.h>
 #include <Events/InputEvents.h>
@@ -12,6 +13,7 @@
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/Table/SeatName.h>
 #include <Mahjong/Table/TileAtlas.h>
+#include <Mahjong/Table/TouchRegime.h>
 
 namespace BECore::Mahjong {
 
@@ -44,25 +46,35 @@ namespace BECore::Mahjong {
             }
         };
 
-        /// The element `name` of the canvas on the node `Actions`; null when the scene has none.
-        UIElement* FindActionElement(Scene& scene, PoolString name) {
-            for (const auto& node : scene.GetRootNode().GetChildren()) {
-                if (node->GetName() == "Actions"_intern) {
-                    const auto canvas = node->GetComponent<UICanvasComponent>();
+        /// The canvases that hold the action buttons: `Actions` on the table, `ActionsCompact` on the bar under it where the first would
+        /// be too small to touch. They hold the same elements by name, and exactly one is shown.
+        constexpr eastl::string_view kActionsNode = "Actions";
+        constexpr eastl::string_view kCompactActionsNode = "ActionsCompact";
+        PoolString NodeName(eastl::string_view node) {
+            return PoolString::Intern(node);
+        }
+
+        /// The element `name` of the canvas on the node `node`; null when the scene has none.
+        UIElement* FindElementOf(Scene& scene, eastl::string_view node, PoolString name) {
+            const PoolString nodeName = NodeName(node);
+            for (const auto& child : scene.GetRootNode().GetChildren()) {
+                if (child->GetName() == nodeName) {
+                    const auto canvas = child->GetComponent<UICanvasComponent>();
                     return canvas ? canvas->GetRoot().FindByName(name) : nullptr;
                 }
             }
             return nullptr;
         }
 
-        /// The sentence of the shown button under the pointer (the canvas sets `UIElement::hovered` from the mouse); empty when none is.
+        /// The sentence of the shown button under the pointer (the canvas sets `UIElement::hovered` from the mouse); empty when none is. Only
+        /// the buttons of `Actions` have a hint: a touch screen has no hover, and `ActionsCompact` has no label for it.
         eastl::string_view HoveredHint(Scene& scene, const ActionButtons& buttons) {
             for (int i = 0; i < kButtonCount; ++i) {
                 const ButtonKind kind = static_cast<ButtonKind>(i);
                 if (!buttons[kind].shown) {
                     continue;  // a hidden button may still carry the flag of the last motion
                 }
-                const UIElement* element = FindActionElement(scene, PoolString::Intern(SpecOf(kind).element));
+                const UIElement* element = FindElementOf(scene, kActionsNode, PoolString::Intern(SpecOf(kind).element));
                 if (element != nullptr && element->hovered) {
                     return buttons[kind].hint;
                 }
@@ -209,6 +221,17 @@ namespace BECore::Mahjong {
         const ActionButtons buttons = game != nullptr ? CurrentButtons(*game) : ActionButtons{};
         UIVars& vars = CoreManager::GetUIVars();
         Scene& scene = GetScene();
+
+        // The canvas of the buttons: `Actions` while its buttons are touch targets, else `ActionsCompact` (the same buttons by name)
+        const IRenderer& renderer = *CoreManager::GetRenderer();
+        const UIEnvironment& environment = CoreManager::GetUIEnvironment();
+        const UILayoutContext window = environment.MakeContext(CoreManager::GetMainWindow().Get(), renderer.GetOutputWidth(), renderer.GetOutputHeight());
+        const bool compact = NeedsCompactActions(window.outputWidth, window.outputHeight, window.pixelDensity, environment.GetSettings().minTouchSize);
+        if (compact != _compactActions) {
+            _compactActions = compact;
+            UICanvasComponent::SetVisibleByName(scene, NodeName(kActionsNode), !compact);
+            UICanvasComponent::SetVisibleByName(scene, NodeName(kCompactActionsNode), compact);
+        }
         for (int i = 0; i < kButtonCount; ++i) {
             const ButtonKind kind = static_cast<ButtonKind>(i);
             const ButtonState& now = buttons[kind];
@@ -227,9 +250,11 @@ namespace BECore::Mahjong {
                 }
                 const PoolString imageName = PoolString::Intern(TileImageName(kind, t));
                 if (showNow) {
-                    UIElement* element = FindActionElement(scene, imageName);
-                    if (UIImage* image = element != nullptr ? element->Cast<UIImage>() : nullptr) {
-                        image->sprite = PoolString::Intern(SpriteName(now.tiles[static_cast<size_t>(t)]));
+                    for (const eastl::string_view node : {kActionsNode, kCompactActionsNode}) {
+                        UIElement* element = FindElementOf(scene, node, imageName);
+                        if (UIImage* image = element != nullptr ? element->Cast<UIImage>() : nullptr) {
+                            image->sprite = PoolString::Intern(SpriteName(now.tiles[static_cast<size_t>(t)]));
+                        }
                     }
                 }
                 if (showNow != showBefore) {
@@ -241,7 +266,7 @@ namespace BECore::Mahjong {
         vars.Set("declareNext"_intern, _declareNext ? kDeclareOn : kDeclareOff);
 
         // The hint of the button under the pointer, in the label `Hint` that shows exactly while there is one
-        const eastl::string_view hint = HoveredHint(scene, buttons);
+        const eastl::string_view hint = compact ? eastl::string_view{} : HoveredHint(scene, buttons);
         const PoolString actionHint = "actionHint"_intern;
         if (hint != _hint || !vars.Has(actionHint)) {
             _hint = hint;
