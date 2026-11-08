@@ -43,9 +43,9 @@ namespace BECore::Mahjong {
             return PoolString::Intern(name);
         }
 
-        /// A person acts and it is the viewer: with something to choose from (a non-empty `legal`) the button `Hint` is offered.
-        bool IsViewersTurn(const TableSession& session, Seat viewer) {
-            return session.ActorIsPerson() && session.Actor() == viewer;
+        /// The button `Hint` is offered: a person acts and it is the viewer, with something to choose from (a non-empty `legal`).
+        bool IsOffered(const TableSession& session, Seat viewer, const TableView& view) {
+            return session.ActorIsPerson() && session.Actor() == viewer && !view.legal.empty();
         }
 
     }  // namespace
@@ -78,11 +78,8 @@ namespace BECore::Mahjong {
             return std::nullopt;
         }
         const TableSession& session = game->GetSession();
-        if (!IsViewersTurn(session, session.Viewer())) {
-            return std::nullopt;
-        }
         TableView view = MakeTableView(game->GetMatch().Hand(), session.Viewer());
-        if (view.legal.empty()) {
+        if (!IsOffered(session, session.Viewer(), view)) {
             return std::nullopt;
         }
         return view;
@@ -119,7 +116,7 @@ namespace BECore::Mahjong {
         const TableView view = MakeTableView(game->GetMatch().Hand(), key.viewer);
         _row = WaitingTiles(view);
         const TableSession& session = game->GetSession();
-        _offered = IsViewersTurn(session, key.viewer) && !view.legal.empty();  // the same test as `ViewToAdvise`
+        _offered = IsOffered(session, key.viewer, view);
         if (_offered) {
             _declaring = DeclaringDiscards(view);
         }

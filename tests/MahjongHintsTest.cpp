@@ -34,8 +34,26 @@ namespace BECore::Mahjong::Tests {
         constexpr const char* kOrphansWait = "1p 9p 1s 9s 1m 9m Ew Sw Ww Nw Rd Wd Gd";   // waits on all thirteen
         constexpr const char* kPlainEast = "1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Gd Rd";     // far from waiting
         constexpr int kWaitCells = kMaxWaitingTiles;
-        /// The worst-case table, as `MahjongTableScreenTest` lays it out: every zone at its capacity.
         constexpr int kMostDiscards = 100;
+
+        /// The worst-case table, as `MahjongTableScreenTest` lays it out: every zone at its capacity.
+        TableInput WorstCaseInput() {
+            TableInput worst;
+            worst.viewer = 0;
+            worst.concealedCount.fill(kMaxConcealedTiles);
+            worst.bonusCount.fill(kMaxBonusTiles);
+            Meld kong;
+            kong.kind = MeldKind::Kong;
+            kong.first = T("1p");
+            for (auto& melds : worst.melds) {
+                melds.assign(kMaxMelds, kong);
+            }
+            for (int i = 0; i < kMostDiscards; ++i) {
+                worst.discardSeats.push_back(i % kSeatCount);
+            }
+            worst.wallRemaining = 2 * kWallRingCells;
+            return worst;
+        }
 
         /// What the canvas shows: the notation of each tile of a shown cell and its count text.
         using Row = std::vector<std::pair<std::string, std::string>>;
@@ -736,21 +754,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(Click(panel->rect.x + panel->rect.w * 0.5f, panel->rect.y + panel->rect.h * 0.5f)) << "a click on the row is no canvas's";
 
         // The worst-case layout: no tile of any table lies where the panel does
-        TableInput worst;
-        worst.viewer = 0;
-        worst.concealedCount.fill(kMaxConcealedTiles);
-        worst.bonusCount.fill(kMaxBonusTiles);
-        Meld kong;
-        kong.kind = MeldKind::Kong;
-        kong.first = T("1p");
-        for (auto& melds : worst.melds) {
-            melds.assign(kMaxMelds, kong);
-        }
-        for (int i = 0; i < kMostDiscards; ++i) {
-            worst.discardSeats.push_back(i % kSeatCount);
-        }
-        worst.wallRemaining = 2 * kWallRingCells;
-        const TableLayout layout = MakeTableLayout(worst);
+        const TableLayout layout = MakeTableLayout(WorstCaseInput());
         for (const TileSlot& slot : layout.slots) {
             EXPECT_TRUE(Apart(slot.rect, panel->rect)) << "role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
         }
@@ -1198,21 +1202,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(button->IsHitTestable()) << "the button takes the press";
         EXPECT_FALSE(label->IsHitTestable()) << "the sentence takes no input";
 
-        TableInput worst;
-        worst.viewer = 0;
-        worst.concealedCount.fill(kMaxConcealedTiles);
-        worst.bonusCount.fill(kMaxBonusTiles);
-        Meld kong;
-        kong.kind = MeldKind::Kong;
-        kong.first = T("1p");
-        for (auto& melds : worst.melds) {
-            melds.assign(kMaxMelds, kong);
-        }
-        for (int i = 0; i < kMostDiscards; ++i) {
-            worst.discardSeats.push_back(i % kSeatCount);
-        }
-        worst.wallRemaining = 2 * kWallRingCells;
-        for (const TileSlot& slot : MakeTableLayout(worst).slots) {
+        for (const TileSlot& slot : MakeTableLayout(WorstCaseInput()).slots) {
             EXPECT_TRUE(Apart(slot.rect, button->rect)) << "role " << static_cast<int>(slot.role);
             EXPECT_TRUE(Apart(slot.rect, label->rect)) << "role " << static_cast<int>(slot.role) << " slot " << slot.rect.x << "," << slot.rect.y << "," << slot.rect.w << "x" << slot.rect.h
                                                        << " label " << label->rect.x << "," << label->rect.y << "," << label->rect.w << "x" << label->rect.h;

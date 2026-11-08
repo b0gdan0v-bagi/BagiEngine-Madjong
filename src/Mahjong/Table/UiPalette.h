@@ -8,12 +8,12 @@ namespace BECore::Mahjong {
      * The look of the game in numbers: the palette, the type scale and the spacing grid. `config/SceneConfig.xml` writes the colours of
      * `kUiPalette` as text (`r,g,b,a`) and the sizes of `kFontScale` (`fontSize`), and every position and size on the grid of
      * `kGridUnit`; `MahjongUiStyleTest` holds the file to all three, so a stray colour, size or number fails. The colours of the table
-     * (`kFelt` ... `kAdvisedFrame`) are drawn by `MahjongTableComponent` and are not in the file; the modal numbers below are the anatomy that the
-     * file's screens follow and the tests of the screens check.
+     * (`kFelt` ... `kVeil`) are drawn by `MahjongTableComponent`, the two marks of the hints (`kDeclareMark`, `kAdvisedFrame`) by `MahjongHintsComponent`, and none is in the file; the modal numbers
+     * below are the anatomy that the file's screens follow and the tests of the screens check.
      *
      * Roles, not colours, are the rule: a new control takes the role of what it does.
      * - The table: `kFelt` with a `kFeltRim` round the view, a `kZonePlate` under the discard blocks and the wall ring, a `kTileShadow`
-     *   under each tile. A mark on the table is the gold family (`kTurnMark`, `kPendingFrame`) and nothing else on the table is gold;
+     *   under each tile. A mark on the table is the gold family (`kTurnMark`, `kPendingFrame`, `kDeclareMark`, `kAdvisedFrame`) and nothing else on the table is gold;
      *   `kVeil` dims a tile that cannot be discarded now.
      * - The screens: `scrim` dims what lies behind a modal screen (and the hint), `surface` is the plate, `header` its headline band,
      *   `surfaceRaised` the rows on it, `hudPanel` the panels of the HUD over the felt.
