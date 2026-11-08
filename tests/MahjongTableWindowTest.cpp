@@ -3,7 +3,6 @@
 #include "UiStyleTestSupport.h"
 
 #include <Events/SceneEvents.h>
-#include <Mahjong/Table/UiPalette.h>
 
 /**
  * The claim window on the table (`Components/MahjongTableComponent.h`): the mark and the frame on the discard do not tell a person that a

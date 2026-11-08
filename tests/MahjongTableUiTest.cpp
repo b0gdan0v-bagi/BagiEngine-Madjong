@@ -1,8 +1,6 @@
 #include "MahjongTableTestSupport.h"
 #include "UiStyleTestSupport.h"
 
-#include <Mahjong/Table/UiPalette.h>
-
 /**
  * The table as drawn (`Components/MahjongTableComponent.h`): the shipped `config/SceneConfig.xml` is drawn into a `RecordingRenderer` and
  * the draw calls are read back (the fixture is `MahjongTableTestSupport.h`). Needs the engine services.

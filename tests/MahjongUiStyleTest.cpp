@@ -8,13 +8,14 @@
  * with pugixml, no engine services). Every `element` of `config/SceneConfig.xml` is walked: each colour is an entry of the palette, each
  * `fontSize` is on the type scale, each position and size is a multiple of the grid unit (a percent and the tile pictures of the buttons
  * excepted), and each button and toggle has an action (a segment of a choice group may take its action from the group). A later entry that adds
- * a control with a stray colour, size or number fails here; a deliberately broken copy of the text shows that each check can fail.
+ * a control with a stray colour, size or number fails here; a deliberately broken copy of the text shows that each check can fail. The `set`
+ * nodes of a variant (`<set element=".." fontSize/x/y/width/height=..>`) are held to the font and grid rules too.
  */
 namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        enum class Rule { Colour, FontSize, Grid, Action };
+        CORE_ENUM(Rule, uint8_t, Colour, FontSize, Grid, Action)
 
         struct Violation {
             Rule rule;
@@ -47,11 +48,53 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The tile pictures of the action buttons (`Chow0Tile1`) keep the 3:4 of an atlas cell and are the one exception to the grid.
-        bool IsTilePicture(const pugi::xml_node& element) {
-            const std::string name = AttributeOf(element, "name");
+        bool IsTilePictureName(const std::string& name) {
             const size_t at = name.rfind("Tile");
-            return AttributeOf(element, "type") == "UIImage" && at != std::string::npos && at + 4 < name.size() &&
-                   std::all_of(name.begin() + static_cast<std::ptrdiff_t>(at) + 4, name.end(), [](char c) { return c >= '0' && c <= '9'; });
+            return at != std::string::npos && at + 4 < name.size() && std::all_of(name.begin() + static_cast<std::ptrdiff_t>(at) + 4, name.end(), [](char c) { return c >= '0' && c <= '9'; });
+        }
+
+        bool IsTilePicture(const pugi::xml_node& element) {
+            return AttributeOf(element, "type") == "UIImage" && IsTilePictureName(AttributeOf(element, "name"));
+        }
+
+        /// The font size and the position and size attributes of an `element` or of a `set` of a variant (`name` is the element it speaks of).
+        void CheckFontAndGrid(const pugi::xml_node& node, const std::string& name, bool tilePicture, std::vector<Violation>& found) {
+            const auto flag = [&](Rule rule, const char* attribute) { found.push_back({rule, name, attribute, AttributeOf(node, attribute)}); };
+
+            if (node.attribute("fontSize")) {
+                const std::optional<float> size = UIText::ParseFiniteFloat(node.attribute("fontSize").as_string());
+                if (!size || !OnTheFontScale(*size)) {
+                    flag(Rule::FontSize, "fontSize");
+                }
+            }
+
+            if (tilePicture) {
+                return;
+            }
+            for (const char* attribute : kLengthAttributes) {
+                if (node.attribute(attribute)) {
+                    const std::optional<UILength> length = UIText::ParseLength(node.attribute(attribute).as_string());
+                    if (!length || (length->unit == UIUnit::Pixels && !OnTheGrid(length->value))) {
+                        flag(Rule::Grid, attribute);
+                    }
+                }
+            }
+            for (const char* attribute : kNumberAttributes) {
+                if (node.attribute(attribute)) {
+                    const std::optional<float> number = UIText::ParseFiniteFloat(node.attribute(attribute).as_string());
+                    if (!number || !OnTheGrid(*number)) {
+                        flag(Rule::Grid, attribute);
+                    }
+                }
+            }
+            for (const char* attribute : kEdgeAttributes) {
+                if (node.attribute(attribute)) {
+                    const std::optional<UIEdges> edges = UIText::ParseEdges(node.attribute(attribute).as_string());
+                    if (!edges || !OnTheGrid(edges->left) || !OnTheGrid(edges->top) || !OnTheGrid(edges->right) || !OnTheGrid(edges->bottom)) {
+                        flag(Rule::Grid, attribute);
+                    }
+                }
+            }
         }
 
         void CheckElement(const pugi::xml_node& element, std::vector<Violation>& found) {
@@ -68,39 +111,7 @@ namespace BECore::Mahjong::Tests {
                 }
             }
 
-            if (element.attribute("fontSize")) {
-                const std::optional<float> size = UIText::ParseFiniteFloat(element.attribute("fontSize").as_string());
-                if (!size || !OnTheFontScale(*size)) {
-                    flag(Rule::FontSize, "fontSize");
-                }
-            }
-
-            if (!IsTilePicture(element)) {
-                for (const char* attribute : kLengthAttributes) {
-                    if (element.attribute(attribute)) {
-                        const std::optional<UILength> length = UIText::ParseLength(element.attribute(attribute).as_string());
-                        if (!length || (length->unit == UIUnit::Pixels && !OnTheGrid(length->value))) {
-                            flag(Rule::Grid, attribute);
-                        }
-                    }
-                }
-                for (const char* attribute : kNumberAttributes) {
-                    if (element.attribute(attribute)) {
-                        const std::optional<float> number = UIText::ParseFiniteFloat(element.attribute(attribute).as_string());
-                        if (!number || !OnTheGrid(*number)) {
-                            flag(Rule::Grid, attribute);
-                        }
-                    }
-                }
-                for (const char* attribute : kEdgeAttributes) {
-                    if (element.attribute(attribute)) {
-                        const std::optional<UIEdges> edges = UIText::ParseEdges(element.attribute(attribute).as_string());
-                        if (!edges || !OnTheGrid(edges->left) || !OnTheGrid(edges->top) || !OnTheGrid(edges->right) || !OnTheGrid(edges->bottom)) {
-                            flag(Rule::Grid, attribute);
-                        }
-                    }
-                }
-            }
+            CheckFontAndGrid(element, name, IsTilePicture(element), found);
 
             // A button and a toggle do something; a segment of a choice group may leave it to the group
             const std::string type = AttributeOf(element, "type");
@@ -115,6 +126,11 @@ namespace BECore::Mahjong::Tests {
             for (const pugi::xml_node child : node.children()) {
                 if (std::string_view(child.name()) == "element") {
                     CheckElement(child, found);
+                    ++count;
+                } else if (std::string_view(child.name()) == "set") {
+                    // a variant sets font and geometry (no colour) of the element it names; a tile picture is told by the name alone
+                    const std::string name = AttributeOf(child, "element");
+                    CheckFontAndGrid(child, name, IsTilePictureName(name), found);
                     ++count;
                 }
                 Walk(child, found, count);
@@ -237,6 +253,16 @@ namespace BECore::Mahjong::Tests {
             EXPECT_TRUE(Of(report, Rule::Colour).empty()) << to;
             EXPECT_TRUE(Of(report, Rule::FontSize).empty()) << to;
         }
+    }
+
+    TEST_F(MahjongUiStyleTest, TheSetNodesOfAVariantAreHeldToTheFontAndGridRules) {
+        const std::string variant = "<root><element type=\"UILabel\" name=\"A\" /><variant><set element=\"A\" x=\"16\" fontSize=\"18\" width=\"50%\" /></variant></root>";
+        EXPECT_TRUE(CheckStyle(variant).violations.empty());
+        const Report offGrid = CheckStyle(Broken(variant, "x=\"16\"", "x=\"17\""));
+        ASSERT_EQ(Of(offGrid, Rule::Grid).size(), 1u);
+        EXPECT_EQ(Of(offGrid, Rule::Grid).front().element, "A");
+        EXPECT_FALSE(Of(CheckStyle(Broken(variant, "fontSize=\"18\"", "fontSize=\"19\"")), Rule::FontSize).empty());
+        EXPECT_FALSE(Of(CheckStyle(Broken(variant, "width=\"50%\"", "width=\"51\"")), Rule::Grid).empty());
     }
 
     TEST_F(MahjongUiStyleTest, AButtonWithoutAnActionIsCaught) {

@@ -30,14 +30,15 @@
           A button is 56 view units high, which is a 32 px touch target from a window of 731 x 411 px; the table is a fixed design that the
           engine scales to the window, so a smaller window has smaller buttons and tiles (a tile is 21 x 28 units, the 3:4 of an atlas cell).
           The label Hint above the row shows the sentence of the button under the pointer ({actionHint}, set by the component from
-          UIElement::hovered; hidden while there is none). It takes no input, so it never eats a click; it lies in the gutter between the wall and the right seat's discards (clear
+          UIElement::hovered; hidden while there is none). It takes no input, so it never eats a click; it lies in the gutter between the wall and the right seat's discards (x 832..1028, y 256..452: 196 square, room for the longer
+          words of a translation; clear
           of their plates and of the row it explains, MahjongTableScreenTest holds the place). A touch screen has no hover.
         -->
         <node name="Actions" layer="10">
           <components>
             <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
               <elements>
-                <element type="UILabel" name="Hint" anchor="TopLeft" ignoreSafeArea="true" visible="false" x="832" y="336" width="196" height="116" text="{actionHint}" fontSize="18" align="Center" verticalAlign="Center" color="0,0,0,200" />
+                <element type="UILabel" name="Hint" anchor="TopLeft" ignoreSafeArea="true" visible="false" x="832" y="256" width="196" height="196" text="{actionHint}" fontSize="18" align="Center" verticalAlign="Center" color="0,0,0,200" />
                 <element type="UIStack" name="ActionRow" anchor="TopLeft" ignoreSafeArea="true" x="724" y="460" width="412" height="184" direction="Horizontal" spacing="8" wrapChildren="true">
                   <children>
                   <element type="UIButton" name="Win" visible="false" width="132" height="56" text="Mahjong!" fontSize="22" action="MahjongWin" color="40,110,60,255" />

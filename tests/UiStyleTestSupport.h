@@ -1,5 +1,6 @@
 #pragma once
 
+// The includes below are kept on purpose so that this header stands alone: do not strip them.
 #include <BECore/Math/Color.h>
 #include <BECore/Math/Rect.h>
 #include <EASTL/string_view.h>
