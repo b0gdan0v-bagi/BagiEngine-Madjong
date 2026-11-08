@@ -18,6 +18,8 @@ namespace BECore::Mahjong {
     inline constexpr int kPairsInSevenPairs = 7;
     /// The kinds of terminals and honours: 3 suits x 2 terminals + 4 winds + 3 dragons.
     inline constexpr int kOrphanKinds = 13;
+    /// How far apart (in ranks) two tiles of one chow may be: a chow `1 3` reaches over one rank.
+    inline constexpr int kChowReachRanks = kTilesPerSet - 1;
 
     /// One set of a decomposition: a chow (`first` is its lowest tile) or a pung (`first` is the tile). Never a kong: kongs are melds.
     struct ShapeSet {

@@ -9,8 +9,7 @@ namespace BECore::Mahjong {
         CORE_ENUM(Role, uint8_t, Pung, Chow, Pair, PartialPair, PartialNeighbour, PartialGap, Isolated)
 
         constexpr int kMostSetsNeeded = kSetsInHand;
-        /// Two tiles that reach a chow over one rank (1 3, 5 7) and two that are next to each other (4 5).
-        constexpr int kGapRanks = 2;
+        /// Two tiles that are next to each other (4 5); two that reach a chow over one rank (1 3) are `kChowReachRanks` apart.
         constexpr int kNeighbourRanks = 1;
         /// A set lowers the number by two steps with three tiles: the most a tile can do is 2/3 of a step.
         constexpr int kStepsPerSet = 2;
@@ -77,7 +76,7 @@ namespace BECore::Mahjong {
                     Walk(id, Role::Pung, sets + 1, partials, pair);
                     TakeSame(id, kTilesPerSet, 1);
                 }
-                const bool chowFits = CanStartChow(id, kTilesPerSet - 1) && _held[id + 1] > 0 && _held[id + kGapRanks] > 0;
+                const bool chowFits = CanStartChow(id, kTilesPerSet - 1) && _held[id + 1] > 0 && _held[id + kChowReachRanks] > 0;
                 if (role <= Role::Chow && sets < _needed && chowFits) {
                     TakeChow(id, -1);
                     Walk(id, Role::Chow, sets + 1, partials, pair);
@@ -110,10 +109,10 @@ namespace BECore::Mahjong {
                     Walk(id, Role::PartialNeighbour, sets, partials + 1, pair);
                     TakePartial(id, kNeighbourRanks, 1);
                 }
-                if (role <= Role::PartialGap && CanStartChow(id, kGapRanks) && _held[id + kGapRanks] > 0) {
-                    TakePartial(id, kGapRanks, -1);
+                if (role <= Role::PartialGap && CanStartChow(id, kChowReachRanks) && _held[id + kChowReachRanks] > 0) {
+                    TakePartial(id, kChowReachRanks, -1);
                     Walk(id, Role::PartialGap, sets, partials + 1, pair);
-                    TakePartial(id, kGapRanks, 1);
+                    TakePartial(id, kChowReachRanks, 1);
                 }
             }
 

@@ -1,0 +1,109 @@
+#pragma once
+
+#include <EASTL/array.h>
+#include <Mahjong/Game/ComputerPlayer.h>
+#include <Mahjong/Game/Match.h>
+
+namespace BECore::Mahjong {
+
+    /// Who plays a seat: a person (a front end asks for its actions) or a computer player (the session plays it).
+    CORE_ENUM(SeatKind, uint8_t, Person, Computer)
+
+    /// The kind of each seat, indexed by seat.
+    using SeatSetup = eastl::array<SeatKind, kSeatCount>;
+
+    /// Seat 0 is a person, the others are computers.
+    inline constexpr SeatSetup kDefaultSeatSetup{SeatKind::Person, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
+
+    /// Where the table stands for a front end: some seat has to act, the hand is over and waits for `NextHand`, or the match is over.
+    CORE_ENUM(SessionPhase, uint8_t, Playing, HandOver, MatchOver)
+
+    /// The most steps `RunComputers` takes in one call; a hand of four computer players takes a few hundred, so more is a defect.
+    inline constexpr int kMaxComputerSteps = 2000;
+
+    /**
+     * @brief The one object every front end drives: a `Match` with the seats set up as people and computers. Plain C++, no scene.
+     *
+     * The control API, the table component and the HUD never drive `Match`, `HandModel` and `ComputerTable` by themselves, so the
+     * rules of "who acts next" and "when does the state change" exist once. The session keeps a reference to the match, which belongs
+     * to its owner (`MahjongGame`) and must outlive it.
+     *
+     * - `StartMatch` begins a match and the computer players of the same seed.
+     * - `Actor` is the seat that has to act (the first pending seat in a claim window; the result does not depend on the order).
+     *   `StepComputer` plays one action of a computer actor, `RunComputers` plays until a person has to act or the hand is over,
+     *   `PerformPerson` applies the action of a person actor, `NextHand` settles a finished hand and deals on.
+     * - `Version` grows on every change a front end must see (a start, a step, an accepted action, a settled hand, a `Reveal`) and
+     *   never goes back, so a front end redraws or publishes only when it moved. A refused call changes nothing.
+     * - Hot seat: with exactly one person that seat is the viewer always (no cover); with none the viewer is `kNoSeat` (a spectator
+     *   sees no concealed hand until the hand is over); with two or more the viewer is the person who acted last, and it becomes
+     *   `kNoSeat` as soon as another person has to act (a start, a step, an action, a settled hand), so the screen is covered
+     *   (`HandoffPending`) until that person calls `Reveal`. The same person acting again keeps the viewer. In `HandOver` and
+     *   `MatchOver` every hand is shown: front ends read `GetPhase()` then and not the viewer.
+     */
+    class TableSession {
+    public:
+        /// The match belongs to the caller; the session keeps a reference.
+        explicit TableSession(Match& match) : _match(match) {}
+
+        TableSession(const TableSession&) = delete;
+        TableSession& operator=(const TableSession&) = delete;
+
+        /// `Match::Start(settings, seed)` with `seats` and computer players seeded `seed`. `BadSettings`, and nothing changes (the
+        /// version too), unless `IsPlayable(settings)`.
+        MatchStatus StartMatch(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats);
+
+        /// `MatchOver` before the first start, too.
+        [[nodiscard]] SessionPhase GetPhase() const noexcept;
+        [[nodiscard]] const SeatSetup& Seats() const noexcept {
+            return _seats;
+        }
+        /// `Computer` for a number that is no seat.
+        [[nodiscard]] SeatKind KindOf(Seat seat) const noexcept;
+        [[nodiscard]] int PersonCount() const noexcept;
+
+        /// The seat to act while `Playing`, `kNoSeat` otherwise.
+        [[nodiscard]] Seat Actor() const;
+        /// Whether the actor is a seat of a person.
+        [[nodiscard]] bool ActorIsPerson() const;
+
+        /// One action of the actor, chosen by its computer player and applied. `WrongPhase` unless `Playing`, `NotYourTurn` when the
+        /// actor is a person.
+        StepResult StepComputer();
+        /// `StepComputer` until a person has to act or the hand is over: the number of steps. At most `kMaxComputerSteps`; more
+        /// (or a refused step) is a defect and asserts.
+        int RunComputers();
+        /// `action` for the actor, a person. `WrongPhase` unless `Playing`, `NotYourTurn` when the actor is a computer, otherwise the
+        /// error of `HandModel::Apply`. An accepted action makes the actor the viewer (it has seen its hand).
+        HandStatus PerformPerson(const HandAction& action);
+        /// `Match::EndHand`: settles the finished hand and deals the next. `HandNotFinished` and `NotInHand` as there.
+        std::expected<HandSettlement, MatchError> NextHand();
+        /// The settlement `NextHand` applied last (the last element of `Match::History()`), nullopt before any. The settlement of a
+        /// hand that is `HandOver` is `SettleHand(Hand())`.
+        [[nodiscard]] std::optional<HandSettlement> LastSettlement() const;
+
+        /// The person whose concealed tiles the screen shows, `kNoSeat` for nobody (everything covered). See the class comment.
+        [[nodiscard]] Seat Viewer() const noexcept {
+            return _viewer;
+        }
+        /// `Playing`, two or more people, the actor is a person and is not the viewer: the screen waits for that person's `Reveal`.
+        [[nodiscard]] bool HandoffPending() const;
+        /// The actor, a person, becomes the viewer (nothing when no person has to act).
+        void Reveal();
+
+        /// Grows on every change a front end must see, never goes back; 0 before the first start.
+        [[nodiscard]] uint64_t Version() const noexcept {
+            return _version;
+        }
+
+    private:
+        /// After every change of the actor: with two or more people the viewer is `kNoSeat` when another person has to act.
+        void CoverForNextPerson();
+
+        Match& _match;
+        std::optional<ComputerTable> _table;
+        SeatSetup _seats = kDefaultSeatSetup;
+        Seat _viewer = kNoSeat;
+        uint64_t _version = 0;
+    };
+
+}  // namespace BECore::Mahjong

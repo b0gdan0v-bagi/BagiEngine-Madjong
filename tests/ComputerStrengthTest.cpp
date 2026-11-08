@@ -144,7 +144,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(ComputerStrengthTest, TwentyWholeHandsByFourComputerPlayersEndLegally) {
-        // The cost case: the player asks `LegalActions` at every decision once per decision (for the view). No timing is
+        // The cost case: the player asks `LegalActions` once per decision (for the view). No timing is
         // asserted; the hands must end within the step limit with every action accepted.
         const MahjongSettings settings;
         for (int index = 0; index < kCostHands; ++index) {

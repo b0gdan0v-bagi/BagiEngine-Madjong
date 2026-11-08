@@ -1,0 +1,415 @@
+#include "HandTestSupport.h"
+
+#include <Mahjong/Game/TableSession.h>
+#include <gtest/gtest.h>
+
+/**
+ * `TableSession` (`Game/TableSession.h`): the start, `Actor` in a turn and in a claim window, `StepComputer` and `RunComputers` (a
+ * computer plays, a person is waited for), `PerformPerson`, `NextHand` and the end of the match, the version, the hot-seat viewer, and
+ * whole matches played by people (a chooser of `HandTestSupport.h`) against computers. Pure logic: no engine services.
+ */
+namespace BECore::Mahjong::Tests {
+
+    namespace {
+
+        constexpr uint32_t kSeed = 31;
+        /// Far more actions than a hand of people and computers takes; a loop fails fast.
+        constexpr int kActionLimitPerMatch = 20000;
+        constexpr int kSeedsToSearch = 80;
+        constexpr int kTableTotal = kSeatCount * kExpectedStartingScore;
+
+        constexpr SeatSetup kAllComputers{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
+        constexpr SeatSetup kAllPeople{SeatKind::Person, SeatKind::Person, SeatKind::Person, SeatKind::Person};
+        constexpr SeatSetup kTwoPeople{SeatKind::Person, SeatKind::Computer, SeatKind::Person, SeatKind::Computer};
+
+        MahjongSettings ShortMatch() {
+            MahjongSettings settings;
+            settings.handsPerMatch = kShortMatchHands;
+            return settings;
+        }
+
+        /// A setup with one person at `seat`.
+        SeatSetup PersonAt(Seat seat) {
+            SeatSetup setup = kAllComputers;
+            setup[static_cast<size_t>(seat)] = SeatKind::Person;
+            return setup;
+        }
+
+        /// A match and its session, started.
+        struct Table {
+            Match match;
+            TableSession session{match};
+
+            void Start(const SeatSetup& seats, uint32_t seed = kSeed, const MahjongSettings& settings = MahjongSettings{}) {
+                ASSERT_TRUE(session.StartMatch(settings, seed, seats).has_value());
+            }
+        };
+
+        /// What a refused call must leave as it was: the hand, the scores, the count, the version, the viewer and the phase.
+        std::string State(const Table& table) {
+            std::string text = Snapshot(table.match.Hand()) + " | scores";
+            for (const int score : table.match.Scores()) {
+                text += " " + std::to_string(score);
+            }
+            text += " | hands " + std::to_string(table.match.HandsPlayed()) + " version " + std::to_string(table.session.Version());
+            text += " viewer " + std::to_string(table.session.Viewer()) + " phase " + Name(table.session.GetPhase());
+            return text;
+        }
+
+        /// A person takes the action of `mode` from the legal ones of the actor.
+        HandStatus PersonActs(TableSession& session, const HandModel& hand, Mode mode, MahjongRng& rng) {
+            const eastl::vector<HandAction> legal = hand.LegalActions(session.Actor());
+            EXPECT_FALSE(legal.empty());
+            return session.PerformPerson(Choose(legal, mode, rng));
+        }
+
+        /// A tile the seat does not hold.
+        Tile TileNotHeldBy(const PlayerHand& hand) {
+            for (uint8_t id = 0; id < kKindCount; ++id) {
+                if (eastl::find(hand.concealed.begin(), hand.concealed.end(), Tile{id}) == hand.concealed.end()) {
+                    return Tile{id};
+                }
+            }
+            return Tile{};
+        }
+
+        /// Plays a whole match: the computers step, the people act with `mode`, a finished hand is settled. `beforePerson(actor)` runs
+        /// before each action of a person. Checks that every call moves the version and that the points of the table add up.
+        template <class Before>
+        void PlayWholeMatch(Table& table, Mode mode, MahjongRng& rng, Before beforePerson) {
+            TableSession& session = table.session;
+            uint64_t version = session.Version();
+            for (int actions = 0; session.GetPhase() != SessionPhase::MatchOver; ++actions) {
+                ASSERT_LT(actions, kActionLimitPerMatch) << "the match does not end";
+                if (session.GetPhase() == SessionPhase::HandOver) {
+                    ASSERT_TRUE(session.NextHand().has_value());
+                    EXPECT_EQ(Sum(table.match.Scores()), kTableTotal);
+                } else if (session.ActorIsPerson()) {
+                    ASSERT_NO_FATAL_FAILURE(beforePerson(session.Actor()));
+                    ASSERT_TRUE(PersonActs(session, table.match.Hand(), mode, rng).has_value());
+                } else {
+                    ASSERT_TRUE(session.StepComputer().has_value());
+                }
+                ASSERT_GT(session.Version(), version);
+                version = session.Version();
+            }
+        }
+
+    }  // namespace
+
+    TEST(TableSessionTest, ANewSessionIsOverAndStepsNothing) {
+        Table table;
+        EXPECT_EQ(table.session.GetPhase(), SessionPhase::MatchOver);
+        EXPECT_EQ(table.session.Actor(), kNoSeat);
+        EXPECT_FALSE(table.session.ActorIsPerson());
+        EXPECT_EQ(table.session.Version(), 0u);
+        EXPECT_EQ(table.session.Viewer(), kNoSeat);
+        EXPECT_FALSE(table.session.HandoffPending());
+        const StepResult step = table.session.StepComputer();
+        ASSERT_FALSE(step.has_value());
+        EXPECT_EQ(step.error(), HandError::WrongPhase);
+        EXPECT_EQ(Error(table.session.PerformPerson(HandAction::MakePass())), HandError::WrongPhase);
+        EXPECT_EQ(table.session.NextHand().error(), MatchError::NotInHand);
+        EXPECT_EQ(table.session.RunComputers(), 0);
+        EXPECT_FALSE(table.session.LastSettlement().has_value());
+        EXPECT_EQ(table.session.Version(), 0u);
+    }
+
+    TEST(TableSessionTest, TheStartBeginsAMatchInPlayAndMovesTheVersion) {
+        Table table;
+        ASSERT_NO_FATAL_FAILURE(table.Start(kDefaultSeatSetup));
+        EXPECT_EQ(table.session.GetPhase(), SessionPhase::Playing);
+        EXPECT_GT(table.session.Version(), 0u);
+        EXPECT_EQ(table.session.Seats(), kDefaultSeatSetup);
+        EXPECT_EQ(table.session.KindOf(0), SeatKind::Person);
+        EXPECT_EQ(table.session.KindOf(3), SeatKind::Computer);
+        EXPECT_EQ(table.session.KindOf(kNoSeat), SeatKind::Computer);
+        EXPECT_EQ(table.session.KindOf(kSeatCount), SeatKind::Computer);
+        EXPECT_EQ(table.session.PersonCount(), 1);
+        EXPECT_EQ(table.session.Actor(), table.match.East());
+        EXPECT_EQ(table.match.GetPhase(), MatchPhase::InHand);
+    }
+
+    TEST(TableSessionTest, ABadHandsPerMatchIsRefusedAndNothingChanges) {
+        Table table;
+        ASSERT_NO_FATAL_FAILURE(table.Start(kDefaultSeatSetup));
+        const std::string before = State(table);
+        MahjongSettings bad;
+        bad.handsPerMatch = 6;
+        const MatchStatus refused = table.session.StartMatch(bad, kSeed + 1, kAllComputers);
+        ASSERT_FALSE(refused.has_value());
+        EXPECT_EQ(refused.error(), MatchError::BadSettings);
+        EXPECT_EQ(State(table), before);
+        EXPECT_EQ(table.session.Seats(), kDefaultSeatSetup);
+    }
+
+    TEST(TableSessionTest, TheActorIsTheDiscarderInATurnAndThePendingSeatsInAClaimWindow) {
+        bool sawWindowOfTwo = false;
+        for (uint32_t seed = 1; seed <= kSeedsToSearch && !sawWindowOfTwo; ++seed) {
+            Table table;
+            ASSERT_NO_FATAL_FAILURE(table.Start(kAllPeople, seed));
+            MahjongRng rng(seed);
+            for (int actions = 0; actions < 400 && table.session.GetPhase() == SessionPhase::Playing; ++actions) {
+                const HandModel& hand = table.match.Hand();
+                if (hand.GetPhase() == Phase::Discard) {
+                    ASSERT_EQ(table.session.Actor(), hand.CurrentSeat());
+                } else if (hand.PendingClaimSeats().size() >= 2) {
+                    const eastl::vector<Seat> pending = hand.PendingClaimSeats();
+                    ASSERT_EQ(table.session.Actor(), pending.front());
+                    const Seat first = pending.front();
+                    ASSERT_TRUE(table.session.PerformPerson(HandAction::MakePass()).has_value());
+                    // The seat that passed is done; the next pending seat is asked.
+                    if (hand.GetPhase() != Phase::Claim) {
+                        continue;
+                    }
+                    EXPECT_NE(table.session.Actor(), first);
+                    EXPECT_EQ(table.session.Actor(), hand.PendingClaimSeats().front());
+                    EXPECT_TRUE(table.session.ActorIsPerson());
+                    sawWindowOfTwo = true;
+                    break;
+                }
+                ASSERT_TRUE(PersonActs(table.session, hand, Mode::NeverWin, rng).has_value());
+            }
+        }
+        EXPECT_TRUE(sawWindowOfTwo) << "no claim window with two pending seats found";
+    }
+
+    TEST(TableSessionTest, AComputerIsSteppedAndAPersonIsNot) {
+        Table table;
+        ASSERT_NO_FATAL_FAILURE(table.Start(kAllComputers));
+        const Seat east = table.match.East();
+        ASSERT_NO_FATAL_FAILURE(table.Start(PersonAt(east)));
+        // The actor is a person: a step is refused and changes nothing.
+        const std::string before = State(table);
+        const StepResult refused = table.session.StepComputer();
+        ASSERT_FALSE(refused.has_value());
+        EXPECT_EQ(refused.error(), HandError::NotYourTurn);
+        EXPECT_EQ(State(table), before);
+
+        // The actor is a computer: the step is one of its legal actions, applied, and moves the version once.
+        ASSERT_NO_FATAL_FAILURE(table.Start(PersonAt(NextSeat(east))));
+        const Seat actor = table.session.Actor();
+        const eastl::vector<HandAction> legal = table.match.Hand().LegalActions(actor);
+        const uint64_t version = table.session.Version();
+        const StepResult step = table.session.StepComputer();
+        ASSERT_TRUE(step.has_value());
+        EXPECT_TRUE(Has(legal, *step));
+        EXPECT_EQ(table.session.Version(), version + 1);
+        EXPECT_NE(table.session.Actor(), kNoSeat);
+    }
+
+    TEST(TableSessionTest, RunComputersStopsWhereAPersonMustAct) {
+        for (const SeatSetup& seats : {kDefaultSeatSetup, kTwoPeople, PersonAt(2)}) {
+            Table table;
+            ASSERT_NO_FATAL_FAILURE(table.Start(seats));
+            MahjongRng rng(kSeed);
+            for (int actions = 0; actions < 60 && table.session.GetPhase() == SessionPhase::Playing; ++actions) {
+                const uint64_t version = table.session.Version();
+                const int steps = table.session.RunComputers();
+                EXPECT_EQ(table.session.Version(), version + static_cast<uint64_t>(steps));
+                if (table.session.GetPhase() != SessionPhase::Playing) {
+                    break;
+                }
+                EXPECT_TRUE(table.session.ActorIsPerson());
+                EXPECT_EQ(table.session.KindOf(table.session.Actor()), SeatKind::Person);
+                EXPECT_EQ(table.session.RunComputers(), 0) << "it must not move again where a person has to act";
+                ASSERT_TRUE(PersonActs(table.session, table.match.Hand(), Mode::NeverWin, rng).has_value());
+            }
+        }
+    }
+
+    TEST(TableSessionTest, WithNoPersonRunComputersEndsTheHand) {
+        Table table;
+        ASSERT_NO_FATAL_FAILURE(table.Start(kAllComputers));
+        const int steps = table.session.RunComputers();
+        EXPECT_GT(steps, 0);
+        EXPECT_LT(steps, kMaxComputerSteps);
+        EXPECT_EQ(table.session.GetPhase(), SessionPhase::HandOver);
+        EXPECT_EQ(table.match.Hand().GetPhase(), Phase::Finished);
+        EXPECT_EQ(table.session.Actor(), kNoSeat);
+        EXPECT_EQ(table.session.RunComputers(), 0);
+        EXPECT_EQ(table.session.Viewer(), kNoSeat);
+        EXPECT_FALSE(table.session.HandoffPending());
+    }
+
+    TEST(TableSessionTest, APersonActsOnlyForItsOwnSeatAndARefusedActionChangesNothing) {
+        Table table;
+        ASSERT_NO_FATAL_FAILURE(table.Start(kAllComputers));
+        const Seat east = table.match.East();
+        // The actor is a computer: refused.
+        ASSERT_NO_FATAL_FAILURE(table.Start(PersonAt(NextSeat(east))));
+        std::string before = State(table);
+        const eastl::vector<HandAction> legal = table.match.Hand().LegalActions(east);
+        ASSERT_FALSE(legal.empty());
+        EXPECT_EQ(Error(table.session.PerformPerson(legal.front())), HandError::NotYourTurn);
+        EXPECT_EQ(State(table), before);
+
+        // The actor is a person: an action that is not listed is refused with the error of the model, and nothing moves.
+        ASSERT_NO_FATAL_FAILURE(table.Start(PersonAt(east)));
+        before = State(table);
+        const Tile missing = TileNotHeldBy(table.match.Hand().GetHand(east));
+        EXPECT_EQ(Error(table.session.PerformPerson(HandAction::MakeDiscard(missing))), HandError::TileNotInHand);
+        EXPECT_EQ(Error(table.session.PerformPerson(HandAction::MakePass())), HandError::WrongPhase);
+        EXPECT_EQ(State(table), before);
+
+        // A listed one is accepted and moves the version once.
+        const uint64_t version = table.session.Version();
+        const eastl::vector<HandAction> listed = table.match.Hand().LegalActions(east);
+        ASSERT_TRUE(table.session.PerformPerson(listed.front()).has_value());
+        EXPECT_EQ(table.session.Version(), version + 1);
+    }
+
+    TEST(TableSessionTest, NextHandNeedsAFinishedHandAndSettlesIt) {
+        Table table;
+        ASSERT_NO_FATAL_FAILURE(table.Start(kAllComputers));
+        const std::string before = State(table);
+        const auto early = table.session.NextHand();
+        ASSERT_FALSE(early.has_value());
+        EXPECT_EQ(early.error(), MatchError::HandNotFinished);
+        EXPECT_EQ(State(table), before);
+
+        table.session.RunComputers();
+        ASSERT_EQ(table.session.GetPhase(), SessionPhase::HandOver);
+        const HandSettlement expected = SettleHand(table.match.Hand());
+        const uint64_t version = table.session.Version();
+        const auto settled = table.session.NextHand();
+        ASSERT_TRUE(settled.has_value());
+        EXPECT_EQ(settled->kind, expected.kind);
+        EXPECT_EQ(settled->deltas, expected.deltas);
+        EXPECT_EQ(table.session.Version(), version + 1);
+        EXPECT_EQ(table.session.GetPhase(), SessionPhase::Playing);
+        EXPECT_EQ(Sum(table.match.Scores()), kSeatCount * kExpectedStartingScore);
+        ASSERT_TRUE(table.session.LastSettlement().has_value());
+        EXPECT_EQ(table.session.LastSettlement()->deltas, expected.deltas);
+        EXPECT_EQ(table.match.History().size(), 1u);
+    }
+
+    TEST(TableSessionTest, TheMatchEndsAfterHandsPerMatchCountedHands) {
+        const MahjongSettings settings = ShortMatch();
+        Table table;
+        ASSERT_NO_FATAL_FAILURE(table.Start(kAllComputers, kSeed, settings));
+        uint64_t version = table.session.Version();
+        for (int hands = 0; table.session.GetPhase() != SessionPhase::MatchOver; ++hands) {
+            ASSERT_LT(hands, 200) << "the match does not end";
+            table.session.RunComputers();
+            ASSERT_EQ(table.session.GetPhase(), SessionPhase::HandOver);
+            ASSERT_TRUE(table.session.NextHand().has_value());
+            EXPECT_GT(table.session.Version(), version);
+            version = table.session.Version();
+            EXPECT_EQ(Sum(table.match.Scores()), kTableTotal);
+        }
+        EXPECT_EQ(table.match.GetPhase(), MatchPhase::Finished);
+        EXPECT_EQ(table.match.HandsPlayed(), settings.handsPerMatch);
+        EXPECT_EQ(table.session.Actor(), kNoSeat);
+        const std::string before = State(table);
+        const auto refused = table.session.NextHand();
+        ASSERT_FALSE(refused.has_value());
+        EXPECT_EQ(refused.error(), MatchError::NotInHand);
+        EXPECT_EQ(Error(table.session.PerformPerson(HandAction::MakePass())), HandError::WrongPhase);
+        EXPECT_EQ(State(table), before);
+    }
+
+    TEST(TableSessionTest, OnePersonIsAlwaysTheViewerAndNoPersonHasNone) {
+        struct Case {
+            SeatSetup seats;
+            Seat viewer;
+        };
+        for (const Case& test : {Case{PersonAt(0), 0}, Case{PersonAt(3), 3}, Case{kAllComputers, kNoSeat}}) {
+            Table table;
+            ASSERT_NO_FATAL_FAILURE(table.Start(test.seats, kSeed, ShortMatch()));
+            MahjongRng rng(kSeed);
+            ASSERT_NO_FATAL_FAILURE(PlayWholeMatch(table, Mode::SeekWin, rng, [&](Seat) {
+                EXPECT_EQ(table.session.Viewer(), test.viewer);
+                EXPECT_FALSE(table.session.HandoffPending());
+            }));
+            EXPECT_EQ(table.session.Viewer(), test.viewer);
+            EXPECT_FALSE(table.session.HandoffPending());
+        }
+    }
+
+    TEST(TableSessionTest, TwoPeopleShareTheScreenBehindACover) {
+        Table table;
+        ASSERT_NO_FATAL_FAILURE(table.Start(kTwoPeople, kSeed, ShortMatch()));
+        MahjongRng rng(kSeed);
+        Seat lastPerson = kNoSeat;
+        int covers = 0;
+        int sameTwice = 0;
+        while (table.session.GetPhase() != SessionPhase::MatchOver) {
+            if (table.session.GetPhase() == SessionPhase::HandOver) {
+                ASSERT_TRUE(table.session.NextHand().has_value());
+                continue;
+            }
+            if (!table.session.ActorIsPerson()) {
+                ASSERT_TRUE(table.session.StepComputer().has_value());
+                continue;
+            }
+            const Seat actor = table.session.Actor();
+            // The cover is up exactly when this is not the person who acted last.
+            ASSERT_EQ(table.session.HandoffPending(), actor != lastPerson) << "actor " << actor << " last " << lastPerson;
+            if (table.session.HandoffPending()) {
+                ++covers;
+                EXPECT_EQ(table.session.Viewer(), kNoSeat);
+                const uint64_t version = table.session.Version();
+                table.session.Reveal();
+                EXPECT_EQ(table.session.Version(), version + 1);
+                table.session.Reveal();
+                EXPECT_EQ(table.session.Version(), version + 1) << "revealing twice changes nothing more";
+            } else {
+                ++sameTwice;
+            }
+            EXPECT_EQ(table.session.Viewer(), actor);
+            EXPECT_FALSE(table.session.HandoffPending());
+            ASSERT_TRUE(PersonActs(table.session, table.match.Hand(), Mode::NeverWin, rng).has_value());
+            lastPerson = actor;
+        }
+        EXPECT_GT(covers, 1) << "the screen was never handed over";
+        EXPECT_GT(sameTwice, 0) << "the same person never acted twice in a row";
+    }
+
+    TEST(TableSessionTest, RevealDoesNothingWhereNoPersonActs) {
+        Table table;
+        ASSERT_NO_FATAL_FAILURE(table.Start(kAllComputers));
+        const uint64_t version = table.session.Version();
+        table.session.Reveal();
+        EXPECT_EQ(table.session.Version(), version);
+        EXPECT_EQ(table.session.Viewer(), kNoSeat);
+    }
+
+    TEST(TableSessionTest, OneSeedAndSetupGiveTheSameMatchActionByAction) {
+        Table first;
+        Table second;
+        ASSERT_NO_FATAL_FAILURE(first.Start(kDefaultSeatSetup, kSeed, ShortMatch()));
+        ASSERT_NO_FATAL_FAILURE(second.Start(kDefaultSeatSetup, kSeed, ShortMatch()));
+        MahjongRng firstRng(kSeed);
+        MahjongRng secondRng(kSeed);
+        for (int actions = 0; first.session.GetPhase() != SessionPhase::MatchOver; ++actions) {
+            ASSERT_LT(actions, kActionLimitPerMatch);
+            ASSERT_EQ(State(first), State(second)) << "action " << actions;
+            if (first.session.GetPhase() == SessionPhase::HandOver) {
+                ASSERT_TRUE(first.session.NextHand().has_value());
+                ASSERT_TRUE(second.session.NextHand().has_value());
+            } else if (first.session.ActorIsPerson()) {
+                ASSERT_TRUE(PersonActs(first.session, first.match.Hand(), Mode::SeekWin, firstRng).has_value());
+                ASSERT_TRUE(PersonActs(second.session, second.match.Hand(), Mode::SeekWin, secondRng).has_value());
+            } else {
+                ASSERT_TRUE(first.session.StepComputer().has_value());
+                ASSERT_TRUE(second.session.StepComputer().has_value());
+            }
+        }
+        EXPECT_EQ(State(first), State(second));
+    }
+
+    TEST(TableSessionTest, APersonWhoSeeksTheWinPlaysAWholeMatchAgainstThreeComputers) {
+        for (const uint32_t seed : {kSeed, kSeed + 1}) {
+            Table table;
+            ASSERT_NO_FATAL_FAILURE(table.Start(kDefaultSeatSetup, seed));
+            MahjongRng rng(seed);
+            ASSERT_NO_FATAL_FAILURE(PlayWholeMatch(table, Mode::SeekWin, rng, [](Seat) {}));
+            EXPECT_EQ(table.session.GetPhase(), SessionPhase::MatchOver);
+            EXPECT_EQ(table.match.HandsPlayed(), table.match.HandsTotal());
+            EXPECT_EQ(Sum(table.match.Scores()), kTableTotal);
+            EXPECT_GE(table.match.History().size(), static_cast<size_t>(table.match.HandsTotal()));
+        }
+    }
+
+}  // namespace BECore::Mahjong::Tests

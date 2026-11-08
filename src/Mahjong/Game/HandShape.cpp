@@ -4,9 +4,6 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        /// How far apart (in ranks) two tiles of one set may be: a chow `1 3` reaches over one rank.
-        constexpr int kChowReachRanks = 2;
-
         bool IsOrphan(Tile tile) noexcept {
             return tile.IsTerminal() || tile.IsHonour();
         }

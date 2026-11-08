@@ -28,7 +28,7 @@ namespace BECore::Mahjong {
     }
 
     MatchStatus MahjongGame::StartMatch(uint32_t seed) {
-        return _match.Start(MahjongSettings{}, seed);
+        return _session.StartMatch(_settings, seed, _seats);
     }
 
     void MahjongGame::StartRandomMatch() {
