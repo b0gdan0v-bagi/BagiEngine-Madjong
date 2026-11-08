@@ -12,17 +12,13 @@
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/Table/SeatName.h>
 #include <Mahjong/Table/TileAtlas.h>
+#include <Mahjong/Table/UiPalette.h>
 
 namespace BECore::Mahjong {
 
     namespace {
 
         constexpr eastl::string_view kRevealAction = "MahjongReveal";
-        constexpr Color kFelt{22, 92, 62, 255};
-        constexpr Color kActingSeat{255, 214, 80, 90};
-        constexpr Color kPendingDiscard{255, 214, 80, 200};
-        /// Over a tile whose declaring discard is not legal while the next discard declares the calling hand.
-        constexpr Color kDimmedTile{0, 0, 0, 140};
         constexpr Color kPlainFace{238, 230, 205, 255};
         constexpr Color kPlainBack{36, 120, 118, 255};
         constexpr Color kPlainSuit{70, 110, 200, 255};
@@ -31,6 +27,10 @@ namespace BECore::Mahjong {
         /// The highlight of the acting seat reaches this far past the hand; the pending discard's frame this far past the tile.
         constexpr float kActingMargin = 4.0f;
         constexpr float kPendingMargin = 3.0f;
+        /// The rim along the edge of the view, a plate reaches this far past its zone, and a tile's shadow falls this far down and right.
+        constexpr float kRimWidth = 8.0f;
+        constexpr float kPlatePadding = 4.0f;
+        constexpr float kShadowOffset = 2.0f;
         /// The inner mark of a tile drawn without the atlas, as a fraction of the tile.
         constexpr float kPlainMarkInset = 0.25f;
 
@@ -370,6 +370,13 @@ namespace BECore::Mahjong {
         const float viewWidth = GetScene().GetViewWidth() > 0.0f ? GetScene().GetViewWidth() : kViewWidth;
         const float viewHeight = GetScene().GetViewHeight() > 0.0f ? GetScene().GetViewHeight() : kViewHeight;
         renderer.DrawFilledRect(0.0f, 0.0f, viewWidth, viewHeight, kFelt);
+        // The layout is built in design units and scaled to the view, so what is measured in units here is scaled the same way
+        const float unit = eastl::max(0.0f, eastl::min(viewWidth / kViewWidth, viewHeight / kViewHeight));
+        const float rim = kRimWidth * unit;
+        renderer.DrawFilledRect(0.0f, 0.0f, viewWidth, rim, kFeltRim);
+        renderer.DrawFilledRect(0.0f, viewHeight - rim, viewWidth, rim, kFeltRim);
+        renderer.DrawFilledRect(0.0f, rim, rim, viewHeight - 2.0f * rim, kFeltRim);
+        renderer.DrawFilledRect(viewWidth - rim, rim, rim, viewHeight - 2.0f * rim, kFeltRim);
 
         _layout = TableLayout{};
         const MahjongGame* game = MahjongGame::GetActive();
@@ -382,8 +389,12 @@ namespace BECore::Mahjong {
         const Faces faces = FacesOf(session);
         _layout = MakeTableLayout(MakeInput(hand, BottomSeat(session)), viewWidth, viewHeight);
 
-        // A face (the tile) or the back (nullopt) at `rect`: from the atlas, else a plain rectangle.
-        const auto drawTile = [&](const Rect& rect, std::optional<Tile> face) {
+        // A face (the tile) or the back (nullopt) at `rect`, with a shadow under it unless it is a wall stack: from the atlas, else a plain
+        // rectangle.
+        const auto drawTile = [&](const Rect& rect, std::optional<Tile> face, bool shadowed = true) {
+            if (shadowed) {
+                renderer.DrawFilledRect(rect.x + kShadowOffset * unit, rect.y + kShadowOffset * unit, rect.w, rect.h, kTileShadow);
+            }
             if (_atlas) {
                 const Rect source = face ? SourceRect(*face) : BackRect();
                 renderer.DrawTexture(*_atlas, &source, rect.x, rect.y, rect.w, rect.h);
@@ -397,11 +408,20 @@ namespace BECore::Mahjong {
             }
         };
 
+        // The plates under the discard blocks and the wall ring
+        const float plate = kPlatePadding * unit;
+        for (const Rect& zone : _layout.zones.discards) {
+            const Rect plated = Padded(zone, plate);
+            renderer.DrawFilledRect(plated.x, plated.y, plated.w, plated.h, kZonePlate);
+        }
+        const Rect ring = Padded(_layout.zones.wall, plate);
+        renderer.DrawFilledRect(ring.x, ring.y, ring.w, ring.h, kZonePlate);
+
         if (const Seat turn = TurnSeat(session, hand); IsSeat(turn)) {
             const Rect bounds = BoundsOf(_layout, SlotRole::HandTile, turn);
             if (bounds.w > 0.0f) {
                 const Rect marked = Padded(bounds, kActingMargin);
-                renderer.DrawFilledRect(marked.x, marked.y, marked.w, marked.h, kActingSeat);
+                renderer.DrawFilledRect(marked.x, marked.y, marked.w, marked.h, kTurnMark);
             }
         }
         // The tiles that cannot declare the calling hand when they are discarded, while the next discard is to declare it
@@ -429,7 +449,7 @@ namespace BECore::Mahjong {
                 case SlotRole::HandTile:
                     drawTile(slot.rect, faces.Shows(slot.seat) ? std::optional<Tile>(held.concealed[slot.index]) : std::nullopt);
                     if (_declareNext && slot.seat == session.Actor() && cannotDeclare[held.concealed[slot.index].Id()]) {
-                        renderer.DrawFilledRect(slot.rect.x, slot.rect.y, slot.rect.w, slot.rect.h, kDimmedTile);
+                        renderer.DrawFilledRect(slot.rect.x, slot.rect.y, slot.rect.w, slot.rect.h, kVeil);
                     }
                     break;
                 case SlotRole::MeldTile: {
@@ -445,12 +465,12 @@ namespace BECore::Mahjong {
                 case SlotRole::DiscardTile:
                     if (claimPending && slot.index == pendingEntry) {
                         const Rect framed = Padded(slot.rect, kPendingMargin);
-                        renderer.DrawFilledRect(framed.x, framed.y, framed.w, framed.h, kPendingDiscard);
+                        renderer.DrawFilledRect(framed.x, framed.y, framed.w, framed.h, kPendingFrame);
                     }
                     drawTile(slot.rect, hand.Discards()[slot.index].tile);
                     break;
                 case SlotRole::WallStack:
-                    drawTile(slot.rect, std::nullopt);
+                    drawTile(slot.rect, std::nullopt, false);
                     break;
             }
         }

@@ -287,11 +287,13 @@ namespace BECore::Mahjong {
         }
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             const SeatGeometry& geometry = geometries[SeatPosition(layout.viewer, seat)];
+            layout.zones.discards[seat] = fit.Map(Rect(geometry.discardX, geometry.discardY, kDiscardBlockW, kDiscardBlockH));
             AddHand(layout, fit, geometry, seat, ClampCount(input.concealedCount[seat]));
             AddMelds(layout, fit, geometry, seat, input.melds[seat]);
             AddBonus(layout, fit, geometry, seat, ClampCount(input.bonusCount[seat]));
         }
         AddDiscards(layout, fit, geometries, input);
+        layout.zones.wall = fit.Map(Rect(kWallRingX, kWallRingY, kWallRingW, kWallRingH));
         const int stacks = WallStackCount(input.wallRemaining);
         for (int stack = 0; stack < stacks; ++stack) {
             AddSlot(layout, fit, WallCell(stack), SlotRole::WallStack, 0, stack);

@@ -2,6 +2,7 @@
 #include "MahjongTableTestSupport.h"
 
 #include <Events/SceneEvents.h>
+#include <Mahjong/Table/UiPalette.h>
 
 /**
  * The claim window on the table (`Components/MahjongTableComponent.h`): the mark and the frame on the discard do not tell a person that a
@@ -14,11 +15,8 @@ namespace BECore::Mahjong::Tests {
 
         /// Seat 0 holds a hand that is far from waiting; as East it draws 5p.
         constexpr const char* kPlainHand = "1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Gd Rd";
-        /// The colour behind the hand of the seat whose turn it is (`kActingSeat` of the component) and how far it reaches past the hand.
-        constexpr Color kTurnMark{255, 214, 80, 90};
+        /// How far the mark (`kTurnMark` of `UiPalette.h`) behind the hand of the seat whose turn it is reaches past the hand.
         constexpr float kTurnMarkMargin = 4.0f;
-        /// The frame round the discard that waits for a claim (`kPendingDiscard` of the component).
-        constexpr Color kPendingFrame{255, 214, 80, 200};
         /// Seat 1 holds 4p 5p 5p 6p 7p: a discarded 5p gives it a pung and two chows, so it has a claim.
         constexpr const char* kSeat1HoldsPairOf5p = "4p 5p 5p 6p 7p 2s 5s 8s 2m 5m 8m Ww Nw";
         constexpr SeatSetup kPersonAtSeat1{SeatKind::Computer, SeatKind::Person, SeatKind::Computer, SeatKind::Computer};
