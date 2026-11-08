@@ -24,6 +24,7 @@ namespace BECore::Mahjong::Tests {
         constexpr int kActionLimitPerMatch = 20000;
         constexpr int kHandLimitPerMatch = 200;
         constexpr int kStepsToAClaimWindow = 300;
+        constexpr int kMovesChecked = 12;
         constexpr int64_t kMaxSeed = 4294967295;
         constexpr const char* kFlowerTile = "F1";
 
@@ -65,6 +66,11 @@ namespace BECore::Mahjong::Tests {
             std::set<uint8_t> mine;
             for (const Tile tile : hand.GetHand(viewer).concealed) {
                 mine.insert(tile.Id());
+            }
+            for (const Meld& meld : hand.GetHand(viewer).melds) {  // the viewer sees its own concealed kongs
+                for (int offset = 0; offset < (meld.kind == MeldKind::Chow ? 3 : 1); ++offset) {
+                    mine.insert(static_cast<uint8_t>(meld.first.Id() + offset));
+                }
             }
             std::set<uint8_t> hidden;
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
@@ -203,6 +209,30 @@ namespace BECore::Mahjong::Tests {
                 }
                 EXPECT_FALSE(hands.empty());
                 return hands.empty() ? Json() : ActionToJson(Tests::Choose(hands, Mode::SeekWin, rng));
+            }
+
+            /// The state and the actions name no tile that only another seat holds (unless it lies open in the pile or in a set).
+            void ExpectNoTileOfAnotherHand(uint32_t seed, int moves) const {
+                const HandModel& hand = game->GetMatch().Hand();
+                const Json state = State();
+                const Seat viewer = Member(state, "seat").get<int>();
+                const std::string text = std::string(DumpJson(state).c_str()) + std::string(DumpJson(Actions()).c_str());
+                for (const uint8_t id : KindsOnlyOthersHold(hand, viewer)) {
+                    const std::string quoted = "\"" + std::string(ToString(Tile{id})) + "\"";
+                    // The piles and the open sets are public, so a kind that only others hold can be there only when it lies open.
+                    bool lies_open = false;
+                    for (const DiscardEntry& entry : hand.Discards()) {
+                        lies_open = lies_open || entry.tile.Id() == id;
+                    }
+                    for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                        for (const Meld& meld : hand.GetHand(seat).melds) {
+                            lies_open = lies_open || (!meld.concealed && meld.first.Id() <= id && id <= meld.first.Id() + 2);
+                        }
+                    }
+                    if (!lies_open) {
+                        EXPECT_EQ(text.find(quoted), std::string::npos) << "seed " << seed << ", after " << moves << " moves: " << quoted << " is held only by another seat";
+                    }
+                }
             }
 
             /// The state without the version, to compare two states.
@@ -367,6 +397,7 @@ namespace BECore::Mahjong::Tests {
             const Json& entry = seats[static_cast<size_t>(seat)];
             EXPECT_EQ(Str(Member(entry, "kind")), seat == kSeat0 ? "person" : "computer");
             EXPECT_EQ(Member(entry, "score").get<int>(), kExpectedStartingScore);
+            EXPECT_EQ(Member(entry, "concealedCount").get<int>(), seat == kSeat0 ? 14 : 13);
             EXPECT_TRUE(Member(entry, "melds").empty());
             EXPECT_EQ(Member(entry, "concealedKongs").get<int>(), 0);
             EXPECT_TRUE(Member(entry, "bonus").empty());
@@ -398,27 +429,39 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongGameControlTest, NoTileOfAnotherHandIsInTheStateOrTheActions) {
         for (uint32_t seed = 1; seed <= 12; ++seed) {
             ASSERT_NO_FATAL_FAILURE(Reset((std::string("{\"seed\": ") + std::to_string(seed) + ", \"seats\": \"PCCC\"}").c_str()));
-            const HandModel& hand = game->GetMatch().Hand();
-            const Json state = State();
-            const Seat viewer = Member(state, "seat").get<int>();
-            const std::string text = std::string(DumpJson(state).c_str()) + std::string(DumpJson(Actions()).c_str());
-            const std::set<uint8_t> hidden = KindsOnlyOthersHold(hand, viewer);
-            for (const uint8_t id : hidden) {
-                const std::string quoted = "\"" + std::string(ToString(Tile{id})) + "\"";
-                // The piles and the open sets are public, so a kind that only others hold can be there only when it lies open.
-                bool lies_open = false;
-                for (const DiscardEntry& entry : hand.Discards()) {
-                    lies_open = lies_open || entry.tile.Id() == id;
+            // The fresh deal and the states after some moves of the person (the computers answer each time).
+            for (int moves = 0; moves <= kMovesChecked; ++moves) {
+                if (Str(Member(State(), "phase")) != "playing") {
+                    break;
                 }
-                for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                    for (const Meld& meld : hand.GetHand(seat).melds) {
-                        lies_open = lies_open || (!meld.concealed && meld.first.Id() <= id && id <= meld.first.Id() + 2);
-                    }
-                }
-                if (!lies_open) {
-                    EXPECT_EQ(text.find(quoted), std::string::npos) << "seed " << seed << ": " << quoted << " is held only by another seat";
-                }
+                ASSERT_NO_FATAL_FAILURE(ExpectNoTileOfAnotherHand(seed, moves));
+                const Json actions = Actions();
+                ASSERT_FALSE(actions.empty());
+                Perform(actions[0]);
             }
+        }
+    }
+
+    TEST_F(MahjongGameControlTest, ASpectatorSeesNoConcealedTileWhileTheHandIsPlayed) {
+        // No person seat: a scene paces the computers, so a match started by the game waits at its first action.
+        game->SetSeats(SeatSetup{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer});
+        ASSERT_TRUE(game->StartMatch(4).has_value());
+        ASSERT_EQ(game->GetSession().GetPhase(), SessionPhase::Playing);
+        for (int step = 0; step < kMovesChecked; ++step) {
+            const Json state = State();
+            EXPECT_TRUE(Member(state, "seat").is_null());
+            EXPECT_TRUE(Member(state, "seatWind").is_null());
+            EXPECT_TRUE(Member(state, "hand").empty());
+            EXPECT_FALSE(Member(Member(state, "turn"), "yourTurn").get<bool>());
+            EXPECT_TRUE(Actions().empty());
+            // Only the counts of the concealed tiles; the open sets and the pile are public.
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                EXPECT_EQ(Member(Member(state, "seats")[static_cast<size_t>(seat)], "concealedCount").get<size_t>(), game->GetMatch().Hand().GetHand(seat).concealed.size());
+            }
+            if (game->GetSession().GetPhase() != SessionPhase::Playing) {
+                break;
+            }
+            ASSERT_TRUE(game->GetSession().StepComputer().has_value());
         }
     }
 

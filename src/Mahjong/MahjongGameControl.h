@@ -8,6 +8,9 @@ namespace BECore::Mahjong {
 
     class MahjongGame;
 
+    /// The seed of a `reset` that names none, until the first `reset` that does.
+    inline constexpr uint32_t kFirstResetSeed = 1;
+
     /// What a client sent to `perform_action`: a seat's action in the hand, or `next_hand` (the settlement of a finished hand).
     struct ControlAction {
         bool nextHand = false;
@@ -43,14 +46,16 @@ namespace BECore::Mahjong {
      * a `next_hand` play the hand to its end.
      *
      * State (`get_state`), built from `MakeTableView` so a client never sees what a computer player could not see: the view of the
-     * person who has to act, else of the first person seat, else of seat 0.
+     * person who has to act, else of the first person seat. With no person seat at all the client is a spectator: "seat",
+     * "seatWind" and "hand" are empty (null, null, []) and `yourTurn` is false; the hands are in `result` once the hand is over.
      * ```
      * {"phase": "playing" | "hand_over" | "match_over",
-     *  "seat": 0, "seatWind": "East", "roundWind": "East", "east": 2,
+     *  "seat": 0 | null, "seatWind": "East" | null, "roundWind": "East", "east": 2,
      *  "hand": ["1p", "2p", ...],                        the concealed tiles of "seat", sorted
      *  "turn": {"phase": "discard" | "claim" | "rob_kong" | "finished", "current": 1 | null, "pendingTile": "5p" | null, "yourTurn": true},
-     *  "seats": [{"kind": "person" | "computer", "wind", "score", "melds": [{"kind": "chow" | "pung" | "kong", "tiles", "concealed",
-     *              "from": seat | null, "fromDiscard", "claimed"}], "concealedKongs", "bonus", "discardCount", "calling"} x 4],
+     *  "seats": [{"kind": "person" | "computer", "wind", "score", "concealedCount", "melds": [{"kind": "chow" | "pung" | "kong", "tiles",
+     *              "concealed", "from": seat | null, "fromDiscard", "claimed"}], "concealedKongs", "bonus", "discardCount",
+     *              "calling"} x 4],
      *  "discards": [{"tile", "seat"}, ...], "wall": live tiles left, "handsPlayed", "handsTotal", "version",
      *  "result": {...}}                                  only in hand_over and match_over
      * ```
@@ -81,7 +86,7 @@ namespace BECore::Mahjong {
 
     private:
         MahjongGame& _game;
-        uint32_t _lastSeed = 1;
+        uint32_t _lastSeed = kFirstResetSeed;
     };
 
 }  // namespace BECore::Mahjong

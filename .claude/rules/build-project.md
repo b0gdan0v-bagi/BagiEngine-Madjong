@@ -45,7 +45,7 @@ The common configure triggers (the skill states them; this repository adds the o
 
 ### Tests
 
-`ctest --preset <p>` runs `MahjongTests` (the gtests, each in its own process). There is no control API yet, so no control smoke test; when the game gets one, `be_add_game_control_tests(BagiMahjong ...)` adds `BagiMahjongControlSmoke`, which is skipped (exit code 77) when the executable is not built.
+`ctest --preset <p>` runs `MahjongTests` (the gtests, each in its own process) and `BagiMahjongControlSmoke` (`be_add_game_control_tests(BagiMahjong SCRIPT tests/control_smoke.py)` in `CMakeLists.txt`). The smoke test starts `BagiMahjong --headless --control` (no window) on a free port, once on the real clock and once with `--manual-clock`, and plays a hand and a match over WebSocket; it takes about 2 seconds. It does not build the executable: `cmake --build --preset <p> --target BagiMahjong MahjongTests` first (a missing executable is a skip, exit code 77). It runs by hand as `BAGI_ENGINE_DIR=engine python3 tests/control_smoke.py --exe build/ClangmacOS/BagiMahjong`.
 
 ### Local overrides
 

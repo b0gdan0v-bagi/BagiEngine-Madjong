@@ -29,4 +29,7 @@ if(ENGINE_BUILD_TESTS)
         SOURCES ${MAHJONG_TEST_SOURCES}
         WHOLE_ARCHIVE MahjongModule
     )
+
+    # Starts BagiMahjong with the control API and plays a hand and a match over WebSocket (ctest entry BagiMahjongControlSmoke)
+    be_add_game_control_tests(BagiMahjong SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/tests/control_smoke.py)
 endif()

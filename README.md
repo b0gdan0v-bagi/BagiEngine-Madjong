@@ -32,7 +32,7 @@ The presets are the engine's (`CMakePresets.json` includes `engine/CMakePresets.
 export PATH="$PWD/engine/.venv/bin:$PATH"     # the reflection generator needs jinja2
 cmake --preset macos-debug                    # list: cmake --list-presets
 cmake --build --preset macos-debug
-ctest --preset macos-debug                    # MahjongTests
+ctest --preset macos-debug                    # MahjongTests and BagiMahjongControlSmoke (needs BagiMahjong built; headless, no window)
 build/ClangmacOS/BagiMahjong                  # the game; the executable folder depends on compiler and OS
 ```
 
@@ -42,7 +42,7 @@ build/ClangmacOS/BagiMahjong                  # the game; the executable folder 
 |------|------|
 | `src/Mahjong/` | the game: `MahjongGame` now, the rules (`Game/`) and the scene components (`Components/`) to come. `CLAUDE.md` describes it |
 | `config/`, `assets/` | scene, application config; sprites to come |
-| `tests/` | gtest cases |
+| `tests/` | gtest cases and `control_smoke.py`, the smoke test of the control API (plays a hand and a match over WebSocket) |
 | `todo/`, `TODO.md` | known problems and ideas live in the todo store (area `mahjong`), not in git (`todo/README.md`) |
 | `CI/` | environment setup (`setup_venv.*`) and the VS Code workspace `BagiMahjong.code-workspace` (CMake Tools on the engine's presets, CodeLLDB / MSVC launch, build tasks) |
 | `engine/` | the engine (submodule); not edited from here |

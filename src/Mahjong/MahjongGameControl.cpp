@@ -6,7 +6,6 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        constexpr uint32_t kFirstResetSeed = 1;
         constexpr size_t kSeatLetterCount = kSeatCount;
         constexpr char kPersonLetter = 'P';
         constexpr char kComputerLetter = 'C';
@@ -24,6 +23,10 @@ namespace BECore::Mahjong {
 
         std::unexpected<ControlError> InvalidParams(eastl::string message) {
             return std::unexpected(MakeControlError(ControlErrors::kInvalidParams, std::move(message)));
+        }
+
+        std::unexpected<ControlError> NoMatchStarted() {
+            return std::unexpected(MakeControlError(GameControlErrors::kNoActiveModel, "no match has been started"));
         }
 
         std::unexpected<ControlError> IllegalAction(eastl::string message) {
@@ -236,7 +239,7 @@ namespace BECore::Mahjong {
             return json;
         }
 
-        /// The seat the client sees through: the person who has to act, else the first person, else seat 0.
+        /// The seat the client sees through: the person who has to act, else the first person, else kNoSeat (a spectator).
         Seat ViewSeat(const TableSession& session) {
             if (session.ActorIsPerson()) {
                 return session.Actor();
@@ -246,17 +249,18 @@ namespace BECore::Mahjong {
                     return seat;
                 }
             }
-            return 0;
+            return kNoSeat;
         }
 
-        Json SeatToJson(const TableView& view, const MahjongGame& game, Seat seat) {
+        Json SeatToJson(const TableView& view, Seat viewSeat, const MahjongGame& game, Seat seat) {
             const HandModel& hand = game.GetMatch().Hand();
             const PublicSeat& open = view.seats[static_cast<size_t>(seat)];
             Json json = Json::object();
             json["kind"] = MakeJsonString(game.GetSession().KindOf(seat) == SeatKind::Person ? "person" : "computer");
             json["wind"] = MakeJsonString(EnumUtils<Wind>::ToString(hand.SeatWind(seat)));
             json["score"] = game.GetMatch().Scores()[static_cast<size_t>(seat)];
-            json["melds"] = MeldsToJson(seat == view.seat ? view.own.melds : open.openMelds);
+            json["concealedCount"] = hand.GetHand(seat).concealed.size();
+            json["melds"] = MeldsToJson(seat == viewSeat ? view.own.melds : open.openMelds);
             json["concealedKongs"] = open.concealedKongs;
             json["bonus"] = TilesToJson(open.bonus);
             json["discardCount"] = open.discardCount;
@@ -396,23 +400,26 @@ namespace BECore::Mahjong {
     std::expected<Json, ControlError> MahjongGameControl::GetState() const {
         const Match& match = _game.GetMatch();
         if (match.GetPhase() == MatchPhase::NotStarted) {
-            return std::unexpected(MakeControlError(GameControlErrors::kNoActiveModel, "no match has been started"));
+            return NoMatchStarted();
         }
         const TableSession& session = _game.GetSession();
         const HandModel& hand = match.Hand();
         const SessionPhase phase = session.GetPhase();
+        // A spectator (no person seat) sees the public table and no own tiles: the view of seat 0 is made only for the numbers every
+        // seat sees (and the hands are in `result` once the hand is over).
         const Seat seat = ViewSeat(session);
-        const TableView view = MakeTableView(hand, seat);
+        const bool spectator = seat == kNoSeat;
+        const TableView view = MakeTableView(hand, spectator ? 0 : seat);
 
         Json turn = Json::object();
         turn["phase"] = MakeJsonString(TurnPhaseName(view.phase));
         turn["current"] = view.phase == Phase::Finished ? Json(nullptr) : SeatOrNull(view.currentSeat);
         turn["pendingTile"] = TileToJson(view.pendingTile);
-        turn["yourTurn"] = !view.legal.empty();
+        turn["yourTurn"] = !spectator && !view.legal.empty();
 
         Json seats = Json::array();
         for (Seat other = 0; other < kSeatCount; ++other) {
-            seats.push_back(SeatToJson(view, _game, other));
+            seats.push_back(SeatToJson(view, seat, _game, other));
         }
 
         Json discards = Json::array();
@@ -425,11 +432,11 @@ namespace BECore::Mahjong {
 
         Json state = Json::object();
         state["phase"] = MakeJsonString(PhaseName(phase));
-        state["seat"] = seat;
-        state["seatWind"] = MakeJsonString(EnumUtils<Wind>::ToString(view.seatWind));
+        state["seat"] = SeatOrNull(seat);
+        state["seatWind"] = spectator ? Json(nullptr) : MakeJsonString(EnumUtils<Wind>::ToString(view.seatWind));
         state["roundWind"] = MakeJsonString(EnumUtils<Wind>::ToString(view.roundWind));
         state["east"] = hand.East();
-        state["hand"] = TilesToJson(view.own.concealed);
+        state["hand"] = spectator ? Json::array() : TilesToJson(view.own.concealed);
         state["turn"] = std::move(turn);
         state["seats"] = std::move(seats);
         state["discards"] = std::move(discards);
@@ -446,7 +453,7 @@ namespace BECore::Mahjong {
     std::expected<Json, ControlError> MahjongGameControl::GetActions() const {
         const Match& match = _game.GetMatch();
         if (match.GetPhase() == MatchPhase::NotStarted) {
-            return std::unexpected(MakeControlError(GameControlErrors::kNoActiveModel, "no match has been started"));
+            return NoMatchStarted();
         }
         const TableSession& session = _game.GetSession();
         Json actions = Json::array();
@@ -469,7 +476,7 @@ namespace BECore::Mahjong {
 
     std::expected<Json, ControlError> MahjongGameControl::PerformAction(const Json& action) {
         if (_game.GetMatch().GetPhase() == MatchPhase::NotStarted) {
-            return std::unexpected(MakeControlError(GameControlErrors::kNoActiveModel, "no match has been started"));
+            return NoMatchStarted();
         }
         const std::expected<ControlAction, ControlError> parsed = ActionFromJson(action);
         if (!parsed) {
