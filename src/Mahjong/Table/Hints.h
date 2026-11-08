@@ -20,7 +20,7 @@ namespace BECore::Mahjong {
     /// The seed of the computer player that gives the advice: fixed, so the same view always gives the same advice and no rng of the game is touched.
     inline constexpr uint32_t kAdviceSeed = 1;
 
-    /// The keys of the words the panel and the hint canvas show (the scene says `{#key}`; the names are here so that code and tests can ask for them).
+    /// The keys of the words the hint canvas shows (the scene says `{#key}`; the names are here so that code and tests can ask for them).
     inline constexpr const char* kWaitCaptionKey = "hints.waitCaption";
     inline constexpr const char* kAdviseButtonKey = "hints.adviseButton";
 

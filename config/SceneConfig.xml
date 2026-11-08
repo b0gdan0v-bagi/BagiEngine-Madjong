@@ -22,8 +22,8 @@
         </node>
         <!--
           The hints (Table/Hints.h): MahjongHintsComponent answers the row HintsRow of Setup (MahjongSetHints) and, once the next steps
-          are built, shows what the hand waits for and what the computer player would do. It draws after the table (layer 5) and does
-          nothing while MahjongGame::HintsOn() is false.
+          are built, shows what the hand waits for and what the computer player would do. It draws after the table (layer 5) and shows
+          nothing while MahjongGame::HintsOn() is false (it still answers MahjongSetHints).
         -->
         <node name="Hints" layer="5">
           <components>
@@ -236,9 +236,9 @@
           fit a 320 unit wide window at the user scale 1.5 of the size matrix), hidden here; MahjongHudComponent shows it exactly while
           MahjongGame::IsSetupOpen() (at the start, and after the New game button). Each seat group carries action MahjongSetSeatN and the
           value person or computer; the row HandsRow below them carries MahjongSetHands and the value 16 or 8; the row HintsRow
-          carries MahjongSetHints and the value on or off (MahjongHintsComponent, variable hintsChoice; it takes effect at once, no Start
-          needed). The variables seatKindN and handsChoice are set by the component, which also begins the match on MahjongStart. The row of the language (MahjongSetLanguage,
-          value = the language id, variable language) comes first. The plate is
+          carries MahjongSetHints and the value on or off (MahjongHintsComponent, variable hintsChoice; it takes effect at once, no
+          Start needed). The variables seatKindN and handsChoice are set by the component, which also begins the match on MahjongStart.
+          The row of the language (MahjongSetLanguage, value = the language id, variable language) comes first. The plate is
           32 padding + 44 title + 7 x 56 rows + 56 Start + 8 x 12 spacing = 620 units.
         -->
         <node name="Setup" layer="30">
