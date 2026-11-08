@@ -33,6 +33,7 @@ namespace BECore::Mahjong {
 
         /// The move a carried-out claim of `kind` is logged as (a mahjong claim is no move: it ends the hand).
         MoveKind MoveKindOf(ClaimKind kind) {
+            ASSERT(kind != ClaimKind::Mahjong, "MoveKindOf: a mahjong claim ends the hand and is not logged");
             switch (kind) {
                 case ClaimKind::Chow:
                     return MoveKind::ClaimChow;

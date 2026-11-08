@@ -51,7 +51,11 @@ namespace BECore::Mahjong {
      * (`Moves()`, `Discards()`, the open sets): a tint over the last discard (`kLastDiscardMark`; the frame of a pending discard shows
      * besides it), a bar along the edge of the claimed tile of an open set that faces the seat it came from (`kClaimedEdge`, from
      * `TileSlot::claimEdge`), and the tile the viewer has just drawn, which lies apart at the end of its row (only in a hand that is
-     * face up: under the cover and for a spectator the hand is the plain row); a click on it discards it like any other tile.
+     * face up: under the cover and for a spectator the hand is the plain row); a click on it discards it like any other tile. The set a seat
+     * has just laid (a claimed chow, pung or kong, a concealed kong, an upgraded kong: the last entry of `Moves()` that made one among those
+     * not seen yet, so a claim and the discard after it in one step still show the set) has a fill behind it that blinks for
+     * `kClaimHighlightSeconds` (`kClaimHighlight`, on for the first half of each `kClaimBlinkSeconds`); the time runs on `SceneUpdateEvent`
+     * (also under the cover, not while the seat choice is open) and the highlight changes no game state.
      *
      * **Playing.** While a person has to act (`TableSession::ActorIsPerson()`, no hot-seat cover) a left click on a tile of the viewer's hand
      * discards it (`PerformPerson(MakeDiscard(tile, declareNext))`); a refused action changes nothing. The other actions are the buttons of the
@@ -121,6 +125,10 @@ namespace BECore::Mahjong {
         /// Pushes the buttons, the tile pictures on them, the hint of the hovered button and the cover to the canvases of the scene, only what changed.
         void PublishScreen(const MahjongGame* game);
 
+        /// Looks at the entries of `Moves()` not seen yet and starts the highlight of the set the last of them laid; a hand, a match or a
+        /// game that is not the one seen before starts over without a highlight.
+        void FollowMoves(const MahjongGame& game);
+
         ResourceHandle<ITexture> _atlas;
         TableLayout _layout;
         ActionButtons _published;          // what the canvases show; the scene file starts with every button hidden
@@ -130,6 +138,19 @@ namespace BECore::Mahjong {
         bool _declareNext = false;
         DeclareTurn _declareTurn;     // the turn `_declareNext` was set on
         float _computerClock = 0.0f;  // seconds a computer has been waiting to play
+        /// The hand `_movesSeen` entries of whose `Moves()` the component has looked at (the game, the hands played and the settled hands tell one hand from the next)
+        struct SeenHand {
+            const MahjongGame* game = nullptr;
+            int handsPlayed = -1;
+            size_t settled = 0;
+
+            bool operator==(const SeenHand&) const = default;
+        };
+        SeenHand _seenHand;
+        size_t _movesSeen = 0;
+        Seat _highlightSeat = kNoSeat;  // the set that blinks: the meld `_highlightMeld` of this seat
+        int _highlightMeld = -1;
+        float _highlightLeft = 0.0f;  // seconds of the highlight left, 0 for none
         static MahjongTableComponent* s_active;
     };
 

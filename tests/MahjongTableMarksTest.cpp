@@ -2,13 +2,14 @@
 #include "MahjongTableTestSupport.h"
 #include "UiStyleTestSupport.h"
 
+#include <Events/SceneEvents.h>
 #include <Mahjong/Table/UiPalette.h>
 
 /**
  * The marks of the last move on the table (`Components/MahjongTableComponent.h`): the tint on the last discard, the tile the viewer has
  * just drawn lying apart (and clickable like any other tile) and the bar on the claimed tile of an open set. The shipped scene is drawn
  * into a `RecordingRenderer` as big as the view, so a rect of a draw call is a rect of the layout. The fixed hands come from
- * `FixedWall.h` and are laid into the hand in progress.
+ * `FixedWall.h` and are laid into the hand in progress. The highlight of a set that was just laid is here too: it is a mark of the last move.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -25,7 +26,19 @@ namespace BECore::Mahjong::Tests {
         /// Seat 0 holds three 1p (no other seat holds one) and draws a fourth.
         constexpr const char* kThree1pHand = "1p 1p 1p 4s 7s 1m 4m 7m 4p 7p Sw Ew Gd";
         constexpr SeatSetup kPersonAtSeat1{SeatKind::Computer, SeatKind::Person, SeatKind::Computer, SeatKind::Computer};
-        /// How far a tile of the hand is apart from the next one in a plain row at the size of the test (the view is not scaled).
+        /// The fill behind a set that was just laid reaches this far past the tiles of the set (`kActingMargin` of the component).
+        constexpr float kHighlightMargin = 4.0f;
+        /// Times that a blink period (`kClaimBlinkSeconds` 0.5) divides exactly in floats: 0.375 s is in the off half, 0.125 s ends it.
+        constexpr float kOffHalf = 0.375f;
+        constexpr float kEndOfPeriod = 0.125f;
+        /// Seat 1 holds a pair of red dragons and a hand that a pung of them brings no further from winning: it claims (`ComputerClaimTest`).
+        constexpr const char* kSeat1HoldsRedPair = "3p 4p 6p 7p 3s 4s 6s 7s 1m 9m Nw Rd Rd";
+
+        void Elapse(float seconds) {
+            SceneEvents::SceneUpdateEvent::Emit(seconds);
+        }
+
+        /// The tolerance of a float comparison of two rects (the view is not scaled, so the numbers are exact up to rounding).
         constexpr float kEpsilon = 0.01f;
 
         /// The bar along `edge` of `rect`, worked out here and not taken from the component.
@@ -49,17 +62,6 @@ namespace BECore::Mahjong::Tests {
 
     class MahjongTableMarksTest : public MahjongTableTestBase {
     protected:
-        /// The rectangles drawn in `color`, in the order drawn.
-        std::vector<Rect> RectsOf(const Color& color) const {
-            std::vector<Rect> found;
-            for (const DrawCall& call : _renderer->calls) {
-                if (call.kind == DrawKind::Rect && SameColor(call.color, color)) {
-                    found.push_back(call.rect);
-                }
-            }
-            return found;
-        }
-
         /// The index in `_renderer->calls` of each rectangle drawn in `color`.
         std::vector<size_t> CallsOf(const Color& color) const {
             std::vector<size_t> found;
@@ -67,6 +69,15 @@ namespace BECore::Mahjong::Tests {
                 if (_renderer->calls[i].kind == DrawKind::Rect && SameColor(_renderer->calls[i].color, color)) {
                     found.push_back(i);
                 }
+            }
+            return found;
+        }
+
+        /// The rectangles drawn in `color`, in the order drawn.
+        std::vector<Rect> RectsOf(const Color& color) const {
+            std::vector<Rect> found;
+            for (const size_t i : CallsOf(color)) {
+                found.push_back(_renderer->calls[i].rect);
             }
             return found;
         }
@@ -120,6 +131,31 @@ namespace BECore::Mahjong::Tests {
             }
             EXPECT_NEAR(slots[drawn]->rect.x - others.back()->rect.x, step + kDrawnTileGap, kEpsilon);
             EXPECT_EQ(slots[drawn]->rect.y, others.back()->rect.y);
+        }
+
+        /// The fill that should lie behind the meld `meld` of `seat` in the last layout.
+        Rect HighlightOf(Seat seat, int meld) const {
+            const Rect bounds = BoundsOfMeld(_table->GetLayout(), seat, meld);
+            return Rect(bounds.x - kHighlightMargin, bounds.y - kHighlightMargin, bounds.w + 2.0f * kHighlightMargin, bounds.h + 2.0f * kHighlightMargin);
+        }
+
+        /// The highlight is drawn exactly once, behind the meld `meld` of `seat`.
+        void ExpectHighlightOn(Seat seat, int meld) const {
+            const std::vector<Rect> fills = RectsOf(kClaimHighlight);
+            ASSERT_EQ(fills.size(), 1u);
+            const Rect expected = HighlightOf(seat, meld);
+            EXPECT_NEAR(fills[0].x, expected.x, kEpsilon);
+            EXPECT_NEAR(fills[0].y, expected.y, kEpsilon);
+            EXPECT_NEAR(fills[0].w, expected.w, kEpsilon);
+            EXPECT_NEAR(fills[0].h, expected.h, kEpsilon);
+        }
+
+        /// A match with `seats`, drawn once empty, and then `model` laid and drawn: everything in `model` is news to the table.
+        void StartThenLay(const SeatSetup& seats, const HandModel& model) {
+            ASSERT_NO_FATAL_FAILURE(Start(seats));
+            Draw();
+            Lay(model);
+            Draw();
         }
 
         /// A match with `seats` and a fixed model laid; the first frame is drawn.
@@ -216,6 +252,37 @@ namespace BECore::Mahjong::Tests {
         Draw();
 
         EXPECT_TRUE(RectsOf(kLastDiscardMark).empty());
+    }
+
+    TEST_F(MahjongTableMarksTest, AWinOnADiscardMarksNoDiscardEvenWhenTheDiscarderHadDiscardedTheSameTileBefore) {
+        // Seat 0 declares with its first discard and waits on the red dragon; seat 3 discards one (seat 0 passes), later claims a pung of
+        // the 9s that seat 0 discards and discards its second red dragon: seat 0 wins on it, and the entry left at the end of the pile
+        // is seat 3's first red dragon, the same seat and the same tile as the move
+        FixedWallSpec spec = SpecOf("1p 2p 3p 4s 5s 6s 7m 8m 9m Ew Ew Ew Rd", "9p Wd Gd 1s 9s");
+        spec.hands[kSeat3] = "3p 6p 9p 3s 6s 9s 9s 3m 6m 9m Sw Rd Rd";
+        HandModel model = MakeModel(spec);
+        ASSERT_TRUE(model.Discard(kSeat0, T("9p"), true).has_value());
+        ASSERT_TRUE(model.Discard(kSeat1, T("Wd")).has_value());
+        ASSERT_TRUE(model.Discard(kSeat2, T("Gd")).has_value());
+        ASSERT_EQ(model.GetPhase(), Phase::Discard);
+        ASSERT_TRUE(model.Discard(kSeat3, T("Rd")).has_value());
+        ASSERT_EQ(model.GetPhase(), Phase::Claim);
+        ASSERT_TRUE(model.Pass(kSeat0).has_value());
+        ASSERT_TRUE(model.Discard(kSeat0, T("9s")).has_value());
+        ASSERT_EQ(model.GetPhase(), Phase::Claim);
+        ASSERT_TRUE(model.Claim(kSeat3, ClaimKind::Pung).has_value());
+        ASSERT_TRUE(model.Discard(kSeat3, T("Rd")).has_value());
+        ASSERT_EQ(model.GetPhase(), Phase::Claim);
+        ASSERT_TRUE(model.Claim(kSeat0, ClaimKind::Mahjong).has_value());
+        ASSERT_EQ(model.GetPhase(), Phase::Finished);
+        ASSERT_EQ(model.Result()->source, WinSource::Discard);
+        ASSERT_EQ(model.Moves().back().kind, MoveKind::Discard);
+        ASSERT_EQ(model.Discards().back().seat, kSeat3);
+        ASSERT_EQ(model.Discards().back().tile, T("Rd"));
+
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, model));
+
+        EXPECT_TRUE(RectsOf(kLastDiscardMark).empty()) << "the discard that won left the pile; the earlier one is not the last move";
     }
 
     TEST_F(MahjongTableMarksTest, ThePendingFrameAndTheTintAreSeparateDrawsOnAPendingDiscard) {
@@ -492,6 +559,139 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(RectsOf(kClaimedEdge).size(), 1u);
         EXPECT_EQ(RectsOf(kLastDiscardMark).size(), 1u);
         ASSERT_NO_FATAL_FAILURE(ExpectLiesApart(IndexOf(kSeat1, Hand().DrawnTile(kSeat1))));
+    }
+
+    // ----- the set that was just laid -----
+
+    TEST_F(MahjongTableMarksTest, AClaimByAComputerStartsTheHighlightEvenWhenTheClaimerDiscardsInTheSameStep) {
+        FixedWallSpec spec = SpecOf(kPlainHand, "Rd");
+        spec.hands[kSeat1] = kSeat1HoldsRedPair;
+        ASSERT_NO_FATAL_FAILURE(StartThenLay(kDefaultSeatSetup, MakeModel(spec)));
+        EXPECT_TRUE(RectsOf(kClaimHighlight).empty()) << "no move yet";
+        ASSERT_FALSE(ClickHandTile(IndexOf(kSeat0, T("Rd"))));
+        Draw();
+        EXPECT_TRUE(RectsOf(kClaimHighlight).empty()) << "a discard alone lays no set";
+        ASSERT_EQ(Hand().GetPhase(), Phase::Claim);
+
+        Elapse(kComputerStepSeconds);
+        Draw();
+
+        const eastl::vector<HandMove>& moves = Hand().Moves();
+        ASSERT_EQ(moves.size(), 3u);
+        EXPECT_EQ(moves[1].kind, MoveKind::ClaimPung);
+        EXPECT_EQ(moves[2].kind, MoveKind::Discard) << "the claimer discarded within the same pause";
+        ASSERT_NO_FATAL_FAILURE(ExpectHighlightOn(kSeat1, 0));
+        // Behind the tiles of the set: before the shadow of its first tile
+        const TileSlot* first = SlotOf(SlotRole::MeldTile, kSeat1, 0, 0);
+        ASSERT_NE(first, nullptr);
+        const std::vector<size_t> shadows = CallsOf(kTileShadow);
+        const auto shadow =
+            std::find_if(shadows.begin(), shadows.end(), [&](size_t i) { return _renderer->calls[i].rect.x == first->rect.x + 2.0f && _renderer->calls[i].rect.y == first->rect.y + 2.0f; });
+        ASSERT_NE(shadow, shadows.end());
+        EXPECT_LT(CallsOf(kClaimHighlight).front(), *shadow);
+    }
+
+    TEST_F(MahjongTableMarksTest, TheHighlightBlinksAndIsGoneAfterItsTimeAndNotBackByRedrawing) {
+        ASSERT_NO_FATAL_FAILURE(StartThenLay(kPersonAtSeat1, EastDiscardsFive(kSeat1HoldsPairOf5p)));
+        EXPECT_TRUE(RectsOf(kClaimHighlight).empty());
+        ASSERT_TRUE(_game->GetSession().PerformPerson(HandAction::MakeClaim(ClaimKind::Pung)).has_value());
+
+        Draw();
+        ASSERT_NO_FATAL_FAILURE(ExpectHighlightOn(kSeat1, 0)) << "on at the moment of the move";
+        Draw();
+        EXPECT_EQ(RectsOf(kClaimHighlight).size(), 1u) << "drawing again changes nothing";
+
+        Elapse(kOffHalf);
+        Draw();
+        EXPECT_TRUE(RectsOf(kClaimHighlight).empty()) << "the second half of the period";
+        Elapse(kEndOfPeriod);
+        Draw();
+        EXPECT_EQ(RectsOf(kClaimHighlight).size(), 1u) << "the next period begins";
+        Elapse(kOffHalf);
+        Draw();
+        EXPECT_TRUE(RectsOf(kClaimHighlight).empty());
+        Elapse(kEndOfPeriod);
+        Draw();
+        EXPECT_EQ(RectsOf(kClaimHighlight).size(), 1u);
+
+        Elapse(kClaimHighlightSeconds);
+        for (int i = 0; i < 3; ++i) {
+            Draw();
+            EXPECT_TRUE(RectsOf(kClaimHighlight).empty()) << "over for good, frame " << i;
+            Elapse(kEndOfPeriod);
+        }
+    }
+
+    TEST_F(MahjongTableMarksTest, AnUpgradedKongRestartsTheHighlightOnItsSet) {
+        ASSERT_NO_FATAL_FAILURE(StartThenLay(kPersonAtSeat1, OpenPungModel(kSeat1Hand)));
+        ASSERT_NO_FATAL_FAILURE(ExpectHighlightOn(kSeat1, 0)) << "the pung that seat 1 laid";
+        Elapse(1.5f);
+        Draw();
+        ASSERT_NO_FATAL_FAILURE(ExpectHighlightOn(kSeat1, 0)) << "1.5 s is a whole number of blinks, a half second is left";
+
+        ASSERT_TRUE(_game->GetSession().PerformPerson(HandAction::MakeUpgradeKong(T("5p"))).has_value());
+        ASSERT_EQ(Hand().Moves().back().kind, MoveKind::UpgradeKong);
+        Draw();
+        ASSERT_NO_FATAL_FAILURE(ExpectHighlightOn(kSeat1, 0));
+        Elapse(1.5f);
+        Draw();
+
+        EXPECT_EQ(Hand().GetHand(kSeat1).melds[0].kind, MeldKind::Kong);
+        ASSERT_NO_FATAL_FAILURE(ExpectHighlightOn(kSeat1, 0)) << "the time began again with the new move, so 1.5 s later it is still there";
+    }
+
+    TEST_F(MahjongTableMarksTest, AConcealedKongHighlightsItsSetToo) {
+        FixedWallSpec spec = SpecOf(kThree1pHand, "1p");
+        spec.loose = "9m";
+        ASSERT_NO_FATAL_FAILURE(StartThenLay(kDefaultSeatSetup, MakeModel(spec)));
+        EXPECT_TRUE(RectsOf(kClaimHighlight).empty());
+
+        ASSERT_TRUE(_game->GetSession().PerformPerson(HandAction::MakeConcealedKong(T("1p"))).has_value());
+        Draw();
+
+        ASSERT_EQ(Hand().Moves().back().kind, MoveKind::ConcealedKong);
+        ASSERT_NO_FATAL_FAILURE(ExpectHighlightOn(kSeat0, 0));
+        EXPECT_TRUE(RectsOf(kClaimedEdge).empty());
+    }
+
+    TEST_F(MahjongTableMarksTest, ANewHandOrMatchStartsWithoutAHighlight) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        Draw();
+        EXPECT_TRUE(RectsOf(kClaimHighlight).empty()) << "nothing has happened at the start of a hand";
+
+        ASSERT_NO_FATAL_FAILURE(StartThenLay(kPersonAtSeat1, EastDiscardsFive(kSeat1HoldsPairOf5p)));
+        ASSERT_TRUE(_game->GetSession().PerformPerson(HandAction::MakeClaim(ClaimKind::Pung)).has_value());
+        Draw();
+        ASSERT_EQ(RectsOf(kClaimHighlight).size(), 1u);
+
+        _game->Reset();
+        Draw();
+
+        EXPECT_TRUE(Hand().Moves().empty());
+        EXPECT_TRUE(RectsOf(kClaimHighlight).empty()) << "a new match";
+    }
+
+    TEST_F(MahjongTableMarksTest, TheClockRunsUnderTheCoverAndStopsWhileTheSeatChoiceIsOpen) {
+        // Seat 1 has pungged the 5p of seat 0 and is to act; two people, the screen is covered until "Show"
+        ASSERT_NO_FATAL_FAILURE(StartThenLay(kTwoPeople, OpenPungModel(kSeat1Hand)));
+        TableSession& session = _game->GetSession();
+        ASSERT_TRUE(session.HandoffPending());
+        ASSERT_NO_FATAL_FAILURE(ExpectHighlightOn(kSeat1, 0)) << "an open set is public, so the cover hides nothing here";
+
+        _game->OpenSetup();
+        Elapse(10.0f);
+        _game->CloseSetup();
+        Draw();
+        ASSERT_NO_FATAL_FAILURE(ExpectHighlightOn(kSeat1, 0)) << "no time passes while the seat choice is open";
+
+        Elapse(1.0f + kOffHalf);
+        Draw();
+        EXPECT_TRUE(RectsOf(kClaimHighlight).empty()) << "the clock did not wait for the screen to be shown: this is the off half of a period";
+
+        session.Reveal();
+        Elapse(kClaimHighlightSeconds);
+        Draw();
+        EXPECT_TRUE(RectsOf(kClaimHighlight).empty());
     }
 
 }  // namespace BECore::Mahjong::Tests
