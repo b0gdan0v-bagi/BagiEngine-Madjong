@@ -14,17 +14,19 @@ namespace BECore::Mahjong {
     namespace {
 
         constexpr eastl::string_view kSetSeatPrefix = "MahjongSetSeat";
+        constexpr eastl::string_view kSetHandsAction = "MahjongSetHands";
+        // The ids of the two segments of `Hands` (the values of the buttons in the scene file): the numbers of `MahjongSettings.h` as text
+        constexpr eastl::string_view kFullHandsId = "16";
+        constexpr eastl::string_view kShortHandsId = "8";
+        static_assert(kFullMatchHands == 16 && kShortMatchHands == 8, "the ids and the buttons `Hands16` / `Hands8` of the scene follow these numbers");
         constexpr eastl::string_view kPersonId = "person";
         constexpr eastl::string_view kComputerId = "computer";
         constexpr eastl::string_view kTurnMark = ">";
         constexpr eastl::string_view kDealerMark = "*";
-        constexpr eastl::string_view kHandOver = "Hand over";
-        constexpr eastl::string_view kMatchOver = "Match over";
-        constexpr eastl::string_view kNextHandLabel = "Next hand";
-        constexpr eastl::string_view kFinishMatchLabel = "Finish match";
         constexpr eastl::string_view kNewGameAction = "MahjongNewGame";
         constexpr eastl::string_view kStartAction = "MahjongStart";
         constexpr eastl::string_view kNextHandAction = "MahjongNextHand";
+        constexpr eastl::string_view kSetLanguageAction = "MahjongSetLanguage";
 
         /// "seatName2": the variable of a seat.
         PoolString SeatVar(const char* base, Seat seat) {
@@ -54,18 +56,18 @@ namespace BECore::Mahjong {
             return std::nullopt;
         }
 
-        /// Who is whose turn on the table, for the label `Turn:`.
-        eastl::string TurnText(const TableSession& session, const Match& match) {
+        /// Who is whose turn on the table, for the label `Turn:`, in the language of `strings`.
+        eastl::string TurnText(const UIStrings& strings, const TableSession& session, const Match& match) {
             switch (session.GetPhase()) {
                 case SessionPhase::HandOver:
-                    return eastl::string(kHandOver);
+                    return Tr(strings, "hud.handOver");
                 case SessionPhase::MatchOver:
-                    return eastl::string(kMatchOver);
+                    return Tr(strings, "hud.matchOver");
                 case SessionPhase::Playing:
                     break;
             }
             const HandModel& hand = match.Hand();
-            return SeatName(hand.CurrentSeat(), hand.SeatWind(hand.CurrentSeat()));
+            return SeatName(strings, hand.CurrentSeat(), hand.SeatWind(hand.CurrentSeat()));
         }
 
     }  // namespace
@@ -98,27 +100,29 @@ namespace BECore::Mahjong {
             return;
         }
         const TableSession& session = game->GetSession();
-        if (_numbersPublished && _numbersOf == game && _numbersVersion == session.Version()) {
+        const UIStrings& strings = CoreManager::GetUIStrings();
+        if (_numbersPublished && _numbersOf == game && _numbersVersion == session.Version() && _numbersStrings == strings.GetVersion()) {
             return;
         }
         _numbersOf = game;
         _numbersVersion = session.Version();
+        _numbersStrings = strings.GetVersion();
         _numbersPublished = true;
 
         const Match& match = game->GetMatch();
         const HandModel& hand = match.Hand();
         UIVars& vars = CoreManager::GetUIVars();
-        vars.Set("round"_intern, EnumUtils<Wind>::ToString(match.RoundWind()));
+        vars.Set("round"_intern, eastl::string_view(WindName(strings, match.RoundWind())));
         vars.Set("hand"_intern, std::min(match.HandsPlayed() + 1, match.HandsTotal()));
         vars.Set("handsTotal"_intern, match.HandsTotal());
         vars.Set("wall"_intern, static_cast<int>(hand.GetWall().LiveCount()));
-        vars.Set("turn"_intern, eastl::string_view(TurnText(session, match)));
+        vars.Set("turn"_intern, eastl::string_view(TurnText(strings, session, match)));
 
         const bool playing = session.GetPhase() == SessionPhase::Playing;
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             const Wind wind = hand.SeatWind(seat);
-            vars.Set(SeatVar("seatName", seat), eastl::string_view(SeatLabel(seat, wind, session.Seats())));
-            vars.Set(SeatVar("seatWind", seat), EnumUtils<Wind>::ToString(wind));
+            vars.Set(SeatVar("seatName", seat), eastl::string_view(SeatLabel(strings, seat, wind, session.Seats())));
+            vars.Set(SeatVar("seatWind", seat), eastl::string_view(WindName(strings, wind)));
             vars.Set(SeatVar("seatScore", seat), match.Scores()[seat]);
             vars.Set(SeatVar("seatMark", seat), playing && hand.CurrentSeat() == seat ? kTurnMark : eastl::string_view());
             vars.Set(SeatVar("seatDealer", seat), match.East() == seat ? kDealerMark : eastl::string_view());
@@ -132,11 +136,23 @@ namespace BECore::Mahjong {
         }
     }
 
+    void MahjongHudComponent::PublishHandsChoice() const {
+        // The number as text, also a number the panel does not offer: then no segment is selected
+        CoreManager::GetUIVars().Set("handsChoice"_intern, _pendingHands);
+    }
+
+    void MahjongHudComponent::PublishLanguage(const MahjongGame& game) const {
+        CoreManager::GetUIVars().Set("language"_intern, game.GetLanguage().ToStringView());
+    }
+
     void MahjongHudComponent::PublishSetup(const MahjongGame* game) {
         const bool open = game != nullptr && game->IsSetupOpen();
         if (open && !_setupShown) {
             _pending = game->GetSeats();  // the panel opens on the seats of the last match
             PublishSeatKinds();
+            _pendingHands = game->GetSettings().handsPerMatch;
+            PublishHandsChoice();
+            PublishLanguage(*game);
         }
         if (open != _setupShown) {
             _setupShown = open;
@@ -160,7 +176,8 @@ namespace BECore::Mahjong {
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             totals[seat] += settlement.deltas[seat];
         }
-        const ScoreTable table = FormatScoreTable(settlement, match.Hand().Result().value_or(HandResult{}), totals, session.Seats());
+        const UIStrings& strings = CoreManager::GetUIStrings();
+        const ScoreTable table = FormatScoreTable(strings, settlement, match.Hand().Result().value_or(HandResult{}), totals, session.Seats());
 
         UIVars& vars = CoreManager::GetUIVars();
         vars.Set("handOverHeadline"_intern, eastl::string_view(table.headline));
@@ -175,11 +192,11 @@ namespace BECore::Mahjong {
         ShowScoreLines(static_cast<int>(table.lines.size()));
         // The last hand of the match ends it: the button says so
         const MatchProgress after = NextProgress(MatchProgress{match.HandsPlayed(), match.East()}, settlement.kind, settlement.winner, match.GetSettings());
-        vars.Set("handOverButton"_intern, IsMatchOver(after.handsPlayed, match.GetSettings()) ? kFinishMatchLabel : kNextHandLabel);
+        vars.Set("handOverButton"_intern, eastl::string_view(Tr(strings, IsMatchOver(after.handsPlayed, match.GetSettings()) ? "handover.finish" : "handover.next")));
     }
 
     void MahjongHudComponent::PublishMatchOver(const MahjongGame& game) {
-        const StandingsTable table = FormatStandings(game.GetMatch(), game.GetSession().Seats());
+        const StandingsTable table = FormatStandings(CoreManager::GetUIStrings(), game.GetMatch(), game.GetSession().Seats());
         UIVars& vars = CoreManager::GetUIVars();
         vars.Set("matchOverHeadline"_intern, eastl::string_view(table.headline));
         for (Seat row = 0; row < kSeatCount; ++row) {
@@ -192,9 +209,11 @@ namespace BECore::Mahjong {
         const bool handOver = started && game->GetSession().GetPhase() == SessionPhase::HandOver;
         const bool matchOver = started && game->GetMatch().GetPhase() == MatchPhase::Finished;
         if (handOver || matchOver) {
-            if (!_endScreenPublished || _endScreenOf != game || _endScreenVersion != game->GetSession().Version()) {
+            const uint64_t stringsVersion = CoreManager::GetUIStrings().GetVersion();
+            if (!_endScreenPublished || _endScreenOf != game || _endScreenVersion != game->GetSession().Version() || _endScreenStrings != stringsVersion) {
                 _endScreenOf = game;
                 _endScreenVersion = game->GetSession().Version();
+                _endScreenStrings = stringsVersion;
                 _endScreenPublished = true;
                 if (handOver) {
                     PublishHandOver(*game);
@@ -237,12 +256,33 @@ namespace BECore::Mahjong {
             return;
         }
         if (action == kStartAction) {
-            // The seats are the game's only when the match began with them; a refusal leaves the choice open on the old ones
-            const SeatSetup before = game->GetSeats();
+            // The seats and the number of hands are the game's only when the match began with them (every other setting stays as it
+            // is); a refusal leaves the choice open on the old ones
+            const SeatSetup seatsBefore = game->GetSeats();
+            const MahjongSettings settingsBefore = game->GetSettings();
+            MahjongSettings settings = settingsBefore;
+            settings.handsPerMatch = _pendingHands;
             game->SetSeats(_pending);
+            game->SetSettings(settings);
             if (!game->StartRandomMatch().has_value()) {
-                game->SetSeats(before);
+                game->SetSeats(seatsBefore);
+                game->SetSettings(settingsBefore);
                 LOG_WARNING("MahjongHudComponent: the match did not start, the seat choice stays open");
+            }
+            return;
+        }
+        if (action == kSetLanguageAction) {
+            // The game keeps the language and applies it to the table; an id the table does not have changes nothing, the variable keeps the truth
+            game->SetLanguage(event.value);
+            PublishLanguage(*game);
+            return;
+        }
+        if (action == kSetHandsAction) {
+            // Only the two numbers the panel offers; client text is never parsed into another number
+            const eastl::string_view value = event.value.ToStringView();
+            if (value == kFullHandsId || value == kShortHandsId) {
+                _pendingHands = value == kFullHandsId ? kFullMatchHands : kShortMatchHands;
+                PublishHandsChoice();
             }
             return;
         }

@@ -4,6 +4,7 @@
 
 #include <BECore/Control/Json.h>
 #include <BECore/UI/UIButton.h>
+#include <BECore/UI/UILabel.h>
 #include <BECore/UI/UIToggle.h>
 #include <Events/InputEvents.h>
 #include <Events/SceneEvents.h>
@@ -325,6 +326,28 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(_table->GetButtons()[ButtonKind::Declare].shown);
         EXPECT_FALSE(ClickHandTile(IndexOf(kSeat0, T("9p"))));
         EXPECT_EQ(Hand().Discards().front().tile, T("9p"));
+    }
+
+    TEST_F(MahjongTableInputTest, TheCoverSpeaksTheLanguageOfTheTableAndFollowsASwitchWhileItIsUp) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kTwoPeople, kWaitingHand));
+        ASSERT_TRUE(CoverShown());
+        const auto textOf = [this](const char* element) {
+            const auto* label = Element("Handoff", element)->Cast<UILabel>();
+            const auto* button = Element("Handoff", element)->Cast<UIButton>();
+            const eastl::string_view text = label != nullptr ? label->GetDisplayText() : button->GetDisplayText();
+            return std::string(text.data(), text.size());
+        };
+        Draw();
+        EXPECT_EQ(textOf("HandoffText"), "Pass the screen to Seat 1 (East)");
+        EXPECT_EQ(textOf("Reveal"), "Show");
+
+        ASSERT_TRUE(CoreManager::GetUIStrings().SetLanguage("ru"_intern));
+        Draw();
+
+        EXPECT_EQ(Var("handoffSeat"), "Место 1 (Восток)") << "the seat is named in the new language at the next frame";
+        EXPECT_EQ(textOf("HandoffText"), "Передайте экран: Место 1 (Восток)");
+        EXPECT_EQ(textOf("Reveal"), "Показать");
+        EXPECT_TRUE(CoverShown());
     }
 
     TEST_F(MahjongTableInputTest, AfterAPersonsDiscardTheCoverGoesUpForTheOtherPerson) {

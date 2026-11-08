@@ -2,16 +2,16 @@
 
 #include <Mahjong/Game/Seats.h>
 #include <Mahjong/Game/TableSession.h>
+#include <Mahjong/Table/Words.h>
 
 namespace BECore::Mahjong {
 
-    /// How a seat is named on screen: "Seat 2 (South)" (seats count from 1 for a person; `wind` is the seat's wind in the hand).
-    [[nodiscard]] inline eastl::string SeatName(Seat seat, Wind wind) {
-        return Format("Seat {} ({})", seat + 1, EnumUtils<Wind>::ToString(wind));
+    /// How a seat is named on screen: "Seat 2 (South)" (seats count from 1 for a person; `wind` is the seat's wind in the hand). The words are the keys `seat.name` and `wind.*`.
+    [[nodiscard]] inline eastl::string SeatName(const UIStrings& strings, Seat seat, Wind wind) {
+        const eastl::string number = Format("{}", seat + 1);
+        const eastl::string windName = WindName(strings, wind);
+        return Tr(strings, "seat.name", {{"n", number}, {"wind", windName}});
     }
-
-    /// The word that marks "you" after a seat's name.
-    inline constexpr eastl::string_view kYouMark = " You";
 
     /// Whether `seat` is "you": the person at a table where exactly one person plays (with two or more nobody is, with none nobody is).
     [[nodiscard]] inline bool IsYou(Seat seat, const SeatSetup& seats) {
@@ -22,22 +22,23 @@ namespace BECore::Mahjong {
         return people == 1 && IsSeat(seat) && seats[seat] == SeatKind::Person;
     }
 
-    /// `name`, and `kYouMark` after it when `seat` is "you".
-    [[nodiscard]] inline eastl::string MarkYou(eastl::string name, Seat seat, const SeatSetup& seats) {
+    /// `name`, and the word `seat.you` after it when `seat` is "you".
+    [[nodiscard]] inline eastl::string MarkYou(const UIStrings& strings, eastl::string name, Seat seat, const SeatSetup& seats) {
         if (IsYou(seat, seats)) {
-            name.append(kYouMark.data(), kYouMark.size());
+            name += Tr(strings, "seat.you");
         }
         return name;
     }
 
-    /// `SeatName`, and `kYouMark` after it for "you".
-    [[nodiscard]] inline eastl::string SeatLabel(Seat seat, Wind wind, const SeatSetup& seats) {
-        return MarkYou(SeatName(seat, wind), seat, seats);
+    /// `SeatName`, and the word `seat.you` after it for "you".
+    [[nodiscard]] inline eastl::string SeatLabel(const UIStrings& strings, Seat seat, Wind wind, const SeatSetup& seats) {
+        return MarkYou(strings, SeatName(strings, seat, wind), seat, seats);
     }
 
-    /// "Seat 2" without the wind (where the wind would name the wrong deal), and `kYouMark` for "you".
-    [[nodiscard]] inline eastl::string SeatLabel(Seat seat, const SeatSetup& seats) {
-        return MarkYou(Format("Seat {}", seat + 1), seat, seats);
+    /// "Seat 2" without the wind (where the wind would name the wrong deal), and the word `seat.you` for "you".
+    [[nodiscard]] inline eastl::string SeatLabel(const UIStrings& strings, Seat seat, const SeatSetup& seats) {
+        const eastl::string number = Format("{}", seat + 1);
+        return MarkYou(strings, Tr(strings, "seat.short", {{"n", number}}), seat, seats);
     }
 
 }  // namespace BECore::Mahjong

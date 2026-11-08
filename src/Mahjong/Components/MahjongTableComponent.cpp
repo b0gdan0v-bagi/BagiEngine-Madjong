@@ -54,8 +54,8 @@ namespace BECore::Mahjong {
             return nullptr;
         }
 
-        /// The sentence of the shown button under the pointer (the canvas sets `UIElement::hovered` from the mouse); empty when none is.
-        eastl::string_view HoveredHint(Scene& scene, const ActionButtons& buttons) {
+        /// The key of the sentence of the shown button under the pointer (the canvas sets `UIElement::hovered` from the mouse); empty when none is.
+        eastl::string_view HoveredHintKey(Scene& scene, const ActionButtons& buttons) {
             for (int i = 0; i < kButtonCount; ++i) {
                 const ButtonKind kind = static_cast<ButtonKind>(i);
                 if (!buttons[kind].shown) {
@@ -63,7 +63,7 @@ namespace BECore::Mahjong {
                 }
                 const UIElement* element = FindActionElement(scene, PoolString::Intern(SpecOf(kind).element));
                 if (element != nullptr && element->hovered) {
-                    return buttons[kind].hint;
+                    return buttons[kind].hintKey;
                 }
             }
             return {};
@@ -239,12 +239,16 @@ namespace BECore::Mahjong {
         _published = buttons;
         vars.Set("declareNext"_intern, _declareNext ? kDeclareOn : kDeclareOff);
 
-        // The hint of the button under the pointer, in the label `Hint` that shows exactly while there is one
-        const eastl::string_view hint = HoveredHint(scene, buttons);
+        // The hint of the button under the pointer, in the label `Hint` that shows exactly while there is one; the sentence is
+        // looked up again when the language changed under it
+        const UIStrings& strings = CoreManager::GetUIStrings();
+        const eastl::string_view hintKey = HoveredHintKey(scene, buttons);
         const PoolString actionHint = "actionHint"_intern;
-        if (hint != _hint || !vars.Has(actionHint)) {
-            _hint = hint;
-            vars.Set(actionHint, hint);
+        if (hintKey != _hintKey || strings.GetVersion() != _hintStringsVersion || !vars.Has(actionHint)) {
+            _hintKey = hintKey;
+            _hintStringsVersion = strings.GetVersion();
+            const eastl::string hint = hintKey.empty() ? eastl::string() : Tr(strings, hintKey);
+            vars.Set(actionHint, eastl::string_view(hint));
             UICanvasComponent::SetElementVisibleByName(scene, "Hint"_intern, !hint.empty());
         }
 
@@ -252,7 +256,7 @@ namespace BECore::Mahjong {
         const bool handoff = game != nullptr && game->GetSession().HandoffPending();
         if (handoff) {
             const Seat actor = game->GetSession().Actor();
-            vars.Set("handoffSeat"_intern, eastl::string_view(SeatName(actor, game->GetMatch().Hand().SeatWind(actor))));
+            vars.Set("handoffSeat"_intern, eastl::string_view(SeatName(strings, actor, game->GetMatch().Hand().SeatWind(actor))));
         }
         if (handoff != _handoffShown) {
             _handoffShown = handoff;
