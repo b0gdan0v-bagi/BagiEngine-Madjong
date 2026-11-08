@@ -106,10 +106,11 @@
           </components>
         </node>
         <!--
-          The HUD lies in the free parts of the table (Table/TableLayout.cpp): the round, the wall and the turn above the left column of melds, the New game
-          button in the top right one, the four scores on the free ground between the top hand and the left column. It keeps to the safe area
-          (the table is a fixed design that the safe area does not move), so on a screen with a notch or side insets it moves inwards and can
-          cover the nearest tiles. MahjongHudComponent publishes round, hand, handsTotal, wall, turn and, per seat, seatName, seatWind,
+          The HUD lies in the free parts of the table (Table/TableLayout.cpp): the round, the wall and the turn above the left column of melds, the four
+          scores on the free ground between the top hand and the left column. These are labels only (not touch targets), on the view of the table. They
+          keep to the safe area (the table is a fixed design that the safe area does not move), so on a screen with a notch or side insets they move
+          inwards and can cover the nearest tiles. The New game button is in the node HudMenu below, a Screen canvas, because a control of a SceneView
+          canvas is only 21 px high in a small window. MahjongHudComponent publishes round, hand, handsTotal, wall, turn and, per seat, seatName, seatWind,
           seatScore, seatMark (the seat whose turn it is) and seatDealer (East). MahjongHudTest holds the worst texts and checks that no tile of any
           game lies under it.
         -->
@@ -133,6 +134,19 @@
                     <element type="UILabel" name="Score3" height="34" text="{seatMark3}{seatName3}{seatDealer3}: {seatScore3}" fontSize="22" />
                   </children>
                 </element>
+              </elements>
+            </component>
+          </components>
+        </node>
+        <!--
+          The New game button (MahjongNewGame, opens Setup) in the top right corner of the window. A Screen canvas with a floor on its scale
+          (minScale 0.6: the 56 unit button is 33.6 px), so it is a touch target in any window; MahjongHudTest and MahjongTouchSizeTest check it on the
+          size matrix and that it covers no tile in a window without insets. With insets it lies nearer the table, as the HUD does.
+        -->
+        <node name="HudMenu" layer="10">
+          <components>
+            <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true">
+              <elements>
                 <element type="UIButton" name="NewGame" anchor="TopRight" x="-8" y="8" width="176" height="56" text="New game" fontSize="22" action="MahjongNewGame" color="45,75,120,255" />
               </elements>
             </component>

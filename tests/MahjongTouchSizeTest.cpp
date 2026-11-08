@@ -197,4 +197,32 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(actions->GetLayout().params.space, CanvasSpace::SceneView);
     }
 
+    // ----- the New game button of the HUD -----
+
+    TEST_F(MahjongTouchSizeTest, TheNewGameButtonIsATouchTargetInEveryWindowAndCoversNoTileWhereTheWindowHasNoInsets) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        auto menu = Canvas("HudMenu");
+        ASSERT_TRUE(menu);
+        const float minTouch = CoreManager::GetUIEnvironment().GetSettings().minTouchSize;
+        EXPECT_EQ(minTouch, kEngineTouchMinimum);
+        ExpectPassesTheMatrix("HudMenu", minTouch);
+        EXPECT_EQ(menu->GetLayout().params.space, CanvasSpace::Screen) << "the button is in a Screen canvas";
+        EXPECT_EQ(menu->GetLayout().params.scaleMode, CanvasScaleMode::ScaleWithScreen);
+
+        const TableLayout layout = MakeWorstCaseTableLayout();
+        size_t checked = 0;
+        ForEachMatrixWindow([&](const MatrixWindow& window) {
+            if (window.HasInsets()) {
+                return;  // with insets the button lies nearer the table, as the HUD does
+            }
+            LayOutInWindow(*menu, window, CanvasScaleMode::ScaleWithScreen, 1.0f);
+            const UIElement* button = Element("HudMenu", "NewGame");
+            ASSERT_NE(button, nullptr);
+            ASSERT_FALSE(button->rect.IsEmpty()) << window.label.c_str();
+            ExpectClearOfTable(ToView(button->rect, *menu, window), layout, window.label.c_str());
+            ++checked;
+        });
+        EXPECT_GT(checked, 0u);
+    }
+
 }  // namespace BECore::Mahjong::Tests

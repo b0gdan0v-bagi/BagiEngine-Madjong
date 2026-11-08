@@ -1,5 +1,6 @@
 #include "ComputerTestSupport.h"
 #include "MahjongTableTestSupport.h"
+#include "MahjongTouchTestSupport.h"
 
 #include <BECore/Control/Json.h>
 #include <Events/SceneEvents.h>
@@ -14,7 +15,7 @@ namespace BECore::Mahjong::Tests {
     namespace {
 
         constexpr const char* kLongestSeat = "Seat 4 (North) You";
-        constexpr float kHudTouchMinimum = 20.0f;  // the HUD and the panel lie on the fixed design of the table, as the action buttons do
+        constexpr float kHudTouchMinimum = 20.0f;  // the panel `Setup` lies on the fixed design of the table (WP 4 of mahjong-touch-size moves it)
         /// Output sizes (and the air a button keeps) the words are asked in: the design size, a small window, the narrowest windows.
         struct Output {
             float width;
@@ -25,7 +26,6 @@ namespace BECore::Mahjong::Tests {
         constexpr float kMinControlHeight = 48.0f;
         constexpr int kHandsToTry = 20;
         constexpr const char* kPlainHand = "1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Gd Rd";
-        constexpr int kWorstDiscards = 100;
 
         void Elapse(float seconds) {
             SceneEvents::SceneUpdateEvent::Emit(seconds);
@@ -174,11 +174,15 @@ namespace BECore::Mahjong::Tests {
         Draw();
         SetWorstVars();
 
-        ExpectPassesTheMatrix("Hud", kHudTouchMinimum);
+        // The labels are no touch target; the one button of the HUD is in `HudMenu`, a Screen canvas with the engine's touch minimum
+        const float minTouch = CoreManager::GetUIEnvironment().GetSettings().minTouchSize;
+        ExpectPassesTheMatrix("Hud", minTouch);
+        ExpectPassesTheMatrix("HudMenu", minTouch);
         for (const Output& output : kOutputs) {
             ExpectWordsFit("Hud", output.width, output.height, kButtonAir);
+            ExpectWordsFit("HudMenu", output.width, output.height, kButtonAir);
         }
-        EXPECT_GE(Element("Hud", "NewGame")->rect.h, kMinControlHeight);
+        EXPECT_GE(Element("HudMenu", "NewGame")->rect.h, kMinControlHeight);
     }
 
     TEST_F(MahjongHudTest, TheSetupPanelPassesTheSizeMatrixAndEveryWordFitsAndEverySegmentIsATouchTarget) {
@@ -209,23 +213,9 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongHudTest, TheHudCoversNoTileOfTheWorstTable) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
-        TableInput worst;
-        worst.viewer = 0;
-        worst.concealedCount.fill(kMaxConcealedTiles);
-        worst.bonusCount.fill(kMaxBonusTiles);
-        Meld kong;
-        kong.kind = MeldKind::Kong;
-        kong.first = T("1p");
-        for (auto& melds : worst.melds) {
-            melds.assign(kMaxMelds, kong);
-        }
-        for (int i = 0; i < kWorstDiscards; ++i) {
-            worst.discardSeats.push_back(i % kSeatCount);
-        }
-        worst.wallRemaining = 2 * kWallRingCells;
-        const TableLayout layout = MakeTableLayout(worst);
+        const TableLayout layout = MakeWorstCaseTableLayout();
 
-        for (const char* name : {"Info", "Scores", "NewGame"}) {
+        for (const char* name : {"Info", "Scores"}) {
             const UIElement* element = Element("Hud", name);
             ASSERT_NE(element, nullptr) << name;
             ASSERT_FALSE(element->rect.IsEmpty()) << name;
@@ -451,7 +441,7 @@ namespace BECore::Mahjong::Tests {
         Draw();
         ASSERT_FALSE(SetupShown());
 
-        ASSERT_TRUE(ClickElement("Hud", "NewGame"));
+        ASSERT_TRUE(ClickElement("HudMenu", "NewGame"));
         Draw();
 
         ASSERT_TRUE(SetupShown());
@@ -470,7 +460,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(control->Reset(options).has_value());
         Draw();
         ASSERT_FALSE(SetupShown());
-        ASSERT_TRUE(ClickElement("Hud", "NewGame"));
+        ASSERT_TRUE(ClickElement("HudMenu", "NewGame"));
         Draw();
 
         ASSERT_TRUE(SetupShown());
@@ -503,7 +493,7 @@ namespace BECore::Mahjong::Tests {
         Draw();
         EXPECT_FALSE(SetupShown());
 
-        ASSERT_TRUE(ClickElement("Hud", "NewGame"));
+        ASSERT_TRUE(ClickElement("HudMenu", "NewGame"));
         Draw();
 
         EXPECT_TRUE(_game->IsSetupOpen());
