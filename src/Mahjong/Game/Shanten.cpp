@@ -11,9 +11,9 @@ namespace BECore::Mahjong {
         constexpr int kMostSetsNeeded = kSetsInHand;
         /// Two tiles that reach a chow over one rank (1 3, 5 7) and two that are next to each other (4 5).
         constexpr int kGapRanks = 2;
+        constexpr int kNeighbourRanks = 1;
         /// A set lowers the number by two steps with three tiles: the most a tile can do is 2/3 of a step.
         constexpr int kStepsPerSet = 2;
-        constexpr int kNeighbourRanks = 1;
 
         /// The search over the readings of `held` into sets, partial sets and a pair. Works on its own copy of the counts.
         class Searcher {
@@ -65,6 +65,7 @@ namespace BECore::Mahjong {
                 id = NextKind(id, role);
                 if (id == kKindCount) {
                     // A set found after the partial sets can leave more of them than the hand has room for: only the room counts.
+                    // No `min` with `_best`: the cut above guarantees `ValueNow < _best` here (nothing is left to lower it).
                     _best = ValueNow(sets, partials, pair);
                     return;
                 }

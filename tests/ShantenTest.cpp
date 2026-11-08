@@ -2,7 +2,6 @@
 #include <Mahjong/Game/MahjongRng.h>
 #include <Mahjong/Game/Shanten.h>
 #include <Mahjong/Game/Tile.h>
-#include <algorithm>
 #include <gtest/gtest.h>
 
 /**
@@ -22,7 +21,6 @@ namespace BECore::Mahjong::Tests {
         constexpr int kShantenOfNothing = 2 * kSetsInHand;
         /// One tile in this many of a crowded hand is of any kind.
         constexpr uint32_t kStrangerOneIn = 6;
-        constexpr uint32_t kHandStyles = 4;
 
         TileCounts Counts(const std::string& text) {
             return CountTiles(ParseTiles(text).value());
@@ -64,6 +62,9 @@ namespace BECore::Mahjong::Tests {
         /// How `FillRandom` picks the kinds.
         CORE_ENUM(Spread, uint8_t, AnyKind, MostlyOneSuit, OneSuit)
 
+        /// The four kinds of hand `HandMaker::Make` draws: the three spreads, and sets with a pair and a few swaps.
+        CORE_ENUM(HandStyle, uint8_t, Random, MostlyOneSuit, OneSuit, NearComplete)
+
         /// Seeded hands of `3n + 1` or `3n + 2` concealed tiles for `meldCount` melds: random, near-complete, mostly one suit or one
         /// suit (the hands where the search has the most readings to walk).
         class HandMaker {
@@ -73,12 +74,12 @@ namespace BECore::Mahjong::Tests {
             /// A hand of `size` concealed tiles; never more than four of a kind.
             TileCounts Make(int size) {
                 TileCounts counts{};
-                const uint32_t style = _rng.Below(kHandStyles);
-                if (style == 0) {
+                const auto style = static_cast<HandStyle>(_rng.Below(static_cast<uint32_t>(EnumUtils<HandStyle>::Values().size())));
+                if (style == HandStyle::Random) {
                     FillRandom(counts, size, Spread::AnyKind);
-                } else if (style == 1) {
+                } else if (style == HandStyle::MostlyOneSuit) {
                     FillRandom(counts, size, Spread::MostlyOneSuit);
-                } else if (style == 2) {
+                } else if (style == HandStyle::OneSuit) {
                     FillRandom(counts, size, Spread::OneSuit);
                 } else {
                     FillNearComplete(counts, size);
