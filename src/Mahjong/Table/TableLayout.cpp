@@ -79,11 +79,12 @@ namespace BECore::Mahjong {
 
         constexpr float kDiscardBlockX = Centered(kViewWidth, kDiscardBlockW);
 
-        // The wall: a rectangle ring of cells in the middle, between the top and the bottom discard blocks.
+        // The wall: a rectangle ring of cells in the middle, centred between the top and the bottom discard blocks (so the plates that
+        // the table paints under the three keep the same gap).
         constexpr float kWallRingW = kWallStackSize * kWallRingColumns;
         constexpr float kWallRingH = kWallStackSize * kWallRingRows;
         constexpr float kWallRingX = Centered(kViewWidth, kWallRingW);
-        constexpr float kWallRingY = Centered(kViewHeight, kWallRingH);
+        constexpr float kWallRingY = (kTopDiscardY + kDiscardBlockH + kBottomDiscardY - kWallRingH) / 2.0f;
 
         // The layout above must fit the zones it names: a change to a size that breaks it fails to compile.
         static_assert(kViewerRowX + kViewerHandSpan + kViewerRowGap + kViewerMeldCapacity <= kViewWidth - kEdge);
@@ -287,11 +288,13 @@ namespace BECore::Mahjong {
         }
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             const SeatGeometry& geometry = geometries[SeatPosition(layout.viewer, seat)];
+            layout.zones.discards[seat] = fit.Map(Rect(geometry.discardX, geometry.discardY, kDiscardBlockW, kDiscardBlockH));
             AddHand(layout, fit, geometry, seat, ClampCount(input.concealedCount[seat]));
             AddMelds(layout, fit, geometry, seat, input.melds[seat]);
             AddBonus(layout, fit, geometry, seat, ClampCount(input.bonusCount[seat]));
         }
         AddDiscards(layout, fit, geometries, input);
+        layout.zones.wall = fit.Map(Rect(kWallRingX, kWallRingY, kWallRingW, kWallRingH));
         const int stacks = WallStackCount(input.wallRemaining);
         for (int stack = 0; stack < stacks; ++stack) {
             AddSlot(layout, fit, WallCell(stack), SlotRole::WallStack, 0, stack);

@@ -1,4 +1,5 @@
 #include "MahjongTableTestSupport.h"
+#include "UiStyleTestSupport.h"
 
 #include <BECore/Text/Utf8.h>
 #include <Events/SceneEvents.h>
@@ -29,6 +30,9 @@ namespace BECore::Mahjong::Tests {
         constexpr float kScoreTableTouchMinimum = 20.0f;
         constexpr float kButtonAir = 8.0f;
         constexpr float kMinControlHeight = 48.0f;
+        /// The standings lie on a Screen canvas that a 480 px window at the user scale 1.5 makes 320 units high (296 with a notch), so
+        /// the plate keeps its rows 4 apart; the button is still 16 below them (a spacer of 8 between two gaps of 4).
+        constexpr float kStandingsGap = 4.0f;
         constexpr int kHandLimit = 60;  // hands of a 4-hand match with replayed draws
         /// Output sizes the words are asked in: the design size, a small window, the narrowest windows and a wide short one.
         struct Output {
@@ -447,6 +451,121 @@ namespace BECore::Mahjong::Tests {
 
         EXPECT_EQ(_game->GetSession().Version(), version);
         EXPECT_EQ(_game->GetSession().GetPhase(), SessionPhase::HandOver);
+    }
+
+    // ----- the look of the two screens -----
+
+    TEST_F(MahjongEndScreenTest, TheScoreTableFollowsTheModalAnatomyAndTheGridGaps) {
+        ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers));
+        ASSERT_NO_FATAL_FAILURE(PlayHandOver());
+        auto canvas = Canvas("HandOver");
+        ASSERT_TRUE(canvas);
+        for (int i = 0; i < kMaxScoreLines; ++i) {
+            ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(Format("ScoreLine{}", i)), true));
+        }
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            CoreManager::GetUIVars().Set("handOverHeadline"_intern, eastl::string_view(FindWorstTexts(CoreManager::GetUIStrings()).headline));
+            canvas->UpdateLayout(kViewWidth, kViewHeight);
+
+            const UIElement* plateElement = Element("HandOver", "Plate");
+            ASSERT_NE(plateElement, nullptr);
+            const Rect& plate = plateElement->rect;
+            EXPECT_TRUE(SameColor(plateElement->color, PaletteColor("surface")));
+            EXPECT_GE(plate.y, kViewMargin);
+            EXPECT_LE(plate.y + plate.h, kViewHeight - kViewMargin) << "the plate lies inside the view with a margin";
+
+            const UIElement* headline = Element("HandOver", "Headline");
+            ASSERT_NE(headline, nullptr);
+            EXPECT_TRUE(SameColor(headline->color, PaletteColor("header")));
+            EXPECT_EQ(headline->rect.x, plate.x + kModalPadding);
+            EXPECT_EQ(headline->rect.y, plate.y + kModalPadding);
+            EXPECT_EQ(headline->rect.w, plate.w - 2.0f * kModalPadding);
+
+            const Rect* above = &headline->rect;
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                const UIElement* row = Element("HandOver", Format("SeatRow{}", seat).c_str());
+                ASSERT_NE(row, nullptr);
+                EXPECT_TRUE(SameColor(row->color, PaletteColor("surfaceRaised"))) << seat;
+                EXPECT_EQ(GapBelow(*above, row->rect), kModalGap) << "row " << seat;
+                EXPECT_EQ(row->rect.x, headline->rect.x) << seat;
+                EXPECT_EQ(row->rect.w, headline->rect.w) << seat;
+                above = &row->rect;
+            }
+
+            const UIElement* lines = Element("HandOver", "Lines");
+            ASSERT_NE(lines, nullptr);
+            EXPECT_EQ(GapBelow(*above, lines->rect), kModalGap);
+            for (int i = 0; i < kMaxScoreLines; ++i) {
+                const UIElement* line = Element("HandOver", Format("ScoreLine{}", i).c_str());
+                ASSERT_NE(line, nullptr) << i;
+                EXPECT_GE(line->rect.x, lines->rect.x) << i;
+                EXPECT_LE(line->rect.x + line->rect.w, lines->rect.x + lines->rect.w) << i;
+                EXPECT_GE(line->rect.y, lines->rect.y) << i;
+                EXPECT_LE(line->rect.y + line->rect.h, lines->rect.y + lines->rect.h) << "line " << i << " lies inside its area, all sixteen shown";
+            }
+            above = &lines->rect;
+
+            const UIElement* summary = Element("HandOver", "Summary");
+            ASSERT_NE(summary, nullptr);
+            EXPECT_TRUE(SameColor(summary->color, PaletteColor("surfaceRaised")));
+            EXPECT_TRUE(SameColor(summary->Cast<UILabel>()->textColor, PaletteColor("textMuted")));
+            EXPECT_EQ(GapBelow(*above, summary->rect), kModalGap);
+            above = &summary->rect;
+
+            const UIElement* next = Element("HandOver", "NextHand");
+            ASSERT_NE(next, nullptr);
+            EXPECT_TRUE(SameColor(next->color, PaletteColor("primary")));
+            EXPECT_EQ(next->rect.h, kMainButtonHeight);
+            EXPECT_EQ(GapBelow(*above, next->rect), kModalSectionGap) << "the button is set apart from the rows by 16";
+            EXPECT_EQ(next->rect.y + next->rect.h, plate.y + plate.h - kModalPadding) << "the plate holds the button and nothing more";
+        });
+    }
+
+    TEST_F(MahjongEndScreenTest, TheStandingsFollowTheModalAnatomyAndTheFirstPlaceIsGold) {
+        ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers));
+        ASSERT_NO_FATAL_FAILURE(PlayMatchToTheEnd());
+        Draw();
+        auto canvas = Canvas("MatchOver");
+        ASSERT_TRUE(canvas);
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            CoreManager::GetUIVars().Set("matchOverHeadline"_intern, eastl::string_view(FindWorstTexts(CoreManager::GetUIStrings()).standingsHeadline));
+            canvas->UpdateLayout(kViewWidth, kViewHeight);
+
+            const UIElement* plateElement = Element("MatchOver", "Plate");
+            ASSERT_NE(plateElement, nullptr);
+            const Rect& plate = plateElement->rect;
+            EXPECT_TRUE(SameColor(plateElement->color, PaletteColor("surface")));
+
+            const UIElement* headline = Element("MatchOver", "Headline");
+            ASSERT_NE(headline, nullptr);
+            EXPECT_TRUE(SameColor(headline->color, PaletteColor("header")));
+            EXPECT_EQ(headline->rect.x, plate.x + kModalPadding);
+            EXPECT_EQ(headline->rect.y, plate.y + kModalPadding);
+
+            const Rect* above = &headline->rect;
+            for (int row = 0; row < kSeatCount; ++row) {
+                const UIElement* standing = Element("MatchOver", Format("Standing{}", row).c_str());
+                ASSERT_NE(standing, nullptr);
+                EXPECT_TRUE(SameColor(standing->color, PaletteColor("surfaceRaised"))) << row;
+                EXPECT_EQ(GapBelow(*above, standing->rect), kStandingsGap) << "row " << row;
+                above = &standing->rect;
+                // The first place is the accent (gold), the others the plain text colour
+                const Color& text = standing->Cast<UILabel>()->textColor;
+                EXPECT_EQ(SameColor(text, PaletteColor("accent")), row == 0) << "row " << row;
+                if (row != 0) {
+                    EXPECT_TRUE(SameColor(text, PaletteColor("text"))) << "row " << row;
+                }
+            }
+
+            const UIElement* button = Element("MatchOver", "NewGame");
+            ASSERT_NE(button, nullptr);
+            EXPECT_TRUE(SameColor(button->color, PaletteColor("primary")));
+            EXPECT_EQ(button->rect.h, kMainButtonHeight);
+            EXPECT_EQ(GapBelow(*above, button->rect), kModalSectionGap) << "the button is set apart from the rows by 16";
+            EXPECT_EQ(button->rect.y + button->rect.h, plate.y + plate.h - kModalPadding) << "the plate holds the button and nothing more";
+        });
     }
 
     // ----- the size matrix -----

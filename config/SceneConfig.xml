@@ -30,15 +30,17 @@
           A button is 56 view units high, which is a 32 px touch target from a window of 731 x 411 px; the table is a fixed design that the
           engine scales to the window, so a smaller window has smaller buttons and tiles (a tile is 21 x 28 units, the 3:4 of an atlas cell).
           The label Hint above the row shows the sentence of the button under the pointer ({actionHint}, set by the component in the
-          current language from UIElement::hovered and again when the language changes; hidden while there is none). It takes no input, so it never eats a click; it lies over the right seat's discards,
-          a tooltip may cover tiles for as long as the pointer rests on a button, but never the row it explains. A touch screen has no hover.
+          current language from UIElement::hovered and again when the language changes; hidden while there is none). It takes no input, so
+          it never eats a click; it lies in the gutter between the wall and the right seat's discards (x 832..1028, y 256..452: 196 square,
+          room for the longer words of a translation; clear of their plates and of the row it explains, MahjongTableScreenTest holds the
+          place). A touch screen has no hover.
         -->
         <node name="Actions" layer="10">
           <components>
             <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
               <elements>
-                <element type="UILabel" name="Hint" anchor="TopLeft" ignoreSafeArea="true" visible="false" x="724" y="392" width="408" height="60" text="{actionHint}" fontSize="18" align="Center" verticalAlign="Center" color="0,0,0,200" />
-                <element type="UIStack" name="ActionRow" anchor="TopLeft" ignoreSafeArea="true" x="724" y="460" width="408" height="180" direction="Horizontal" spacing="6" wrapChildren="true">
+                <element type="UILabel" name="Hint" anchor="TopLeft" ignoreSafeArea="true" visible="false" x="832" y="256" width="196" height="196" text="{actionHint}" fontSize="18" align="Center" verticalAlign="Center" color="0,0,0,200" />
+                <element type="UIStack" name="ActionRow" anchor="TopLeft" ignoreSafeArea="true" x="724" y="460" width="412" height="184" direction="Horizontal" spacing="8" wrapChildren="true">
                   <children>
                   <element type="UIButton" name="Win" visible="false" width="132" height="56" text="{#button.Win}" fontSize="22" action="MahjongWin" color="40,110,60,255" />
                   <element type="UIButton" name="Mahjong" visible="false" width="132" height="56" text="{#button.ClaimMahjong}" fontSize="18" verticalAlign="Top" action="MahjongClaimMahjong" color="40,110,60,255">
@@ -118,19 +120,19 @@
             <component type="MahjongHudComponent" />
             <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
               <elements>
-                <element type="UIStack" name="Info" anchor="TopLeft" x="96" y="4" width="336" height="94" direction="Vertical" padding="2" crossAlign="Stretch" color="0,0,0,110">
+                <element type="UIStack" name="Info" anchor="TopLeft" x="96" y="8" width="336" height="112" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170">
                   <children>
-                    <element type="UILabel" name="RoundLabel" height="30" text="{#hud.round}" fontSize="20" />
-                    <element type="UILabel" name="WallLabel" height="30" text="{#hud.wall}" fontSize="20" />
-                    <element type="UILabel" name="TurnLabel" height="30" text="{#hud.turn}" fontSize="20" />
+                    <element type="UILabel" name="RoundLabel" height="32" text="{#hud.round}" fontSize="22" />
+                    <element type="UILabel" name="WallLabel" height="32" text="{#hud.wall}" fontSize="22" />
+                    <element type="UILabel" name="TurnLabel" height="32" text="{#hud.turn}" fontSize="22" />
                   </children>
                 </element>
-                <element type="UIStack" name="Scores" anchor="TopLeft" x="100" y="100" width="400" height="144" direction="Vertical" padding="4" crossAlign="Stretch" color="0,0,0,110">
+                <element type="UIStack" name="Scores" anchor="TopLeft" x="96" y="128" width="336" height="144" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170">
                   <children>
-                    <element type="UILabel" name="Score0" height="34" text="{seatMark0}{seatName0}{seatDealer0}: {seatScore0}" fontSize="22" />
-                    <element type="UILabel" name="Score1" height="34" text="{seatMark1}{seatName1}{seatDealer1}: {seatScore1}" fontSize="22" />
-                    <element type="UILabel" name="Score2" height="34" text="{seatMark2}{seatName2}{seatDealer2}: {seatScore2}" fontSize="22" />
-                    <element type="UILabel" name="Score3" height="34" text="{seatMark3}{seatName3}{seatDealer3}: {seatScore3}" fontSize="22" />
+                    <element type="UILabel" name="Score0" height="32" text="{seatMark0}{seatName0}{seatDealer0}: {seatScore0}" fontSize="22" />
+                    <element type="UILabel" name="Score1" height="32" text="{seatMark1}{seatName1}{seatDealer1}: {seatScore1}" fontSize="22" />
+                    <element type="UILabel" name="Score2" height="32" text="{seatMark2}{seatName2}{seatDealer2}: {seatScore2}" fontSize="22" />
+                    <element type="UILabel" name="Score3" height="32" text="{seatMark3}{seatName3}{seatDealer3}: {seatScore3}" fontSize="22" />
                   </children>
                 </element>
                 <element type="UIButton" name="NewGame" anchor="TopRight" x="-8" y="8" width="176" height="56" text="{#hud.newGame}" fontSize="22" action="MahjongNewGame" color="45,75,120,255" />
@@ -144,10 +146,10 @@
             <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.7" useSafeArea="true" modal="true" visible="false">
               <elements>
                 <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
-                <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="560" height="224" direction="Vertical" spacing="16" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
+                <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="560" height="208" direction="Vertical" spacing="16" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
                   <children>
-                    <element type="UILabel" name="HandoffText" height="104" text="{#cover.text}" fontSize="30" align="Center" verticalAlign="Center" />
-                    <element type="UIButton" name="Reveal" height="56" text="{#cover.show}" fontSize="28" action="MahjongReveal" color="40,110,60,255" />
+                    <element type="UILabel" name="HandoffText" height="96" text="{#cover.text}" fontSize="28" align="Center" verticalAlign="Center" color="58,66,92,255" />
+                    <element type="UIButton" name="Reveal" height="64" text="{#cover.show}" fontSize="28" action="MahjongReveal" color="40,110,60,255" />
                   </children>
                 </element>
               </elements>
@@ -156,65 +158,74 @@
         </node>
         <!--
           The score table of a finished hand: a modal canvas on the view of the table (SceneView like Setup: 16 lines of the winner, four
-          seats, a headline and a button are about 600 units, which a Screen canvas would not fit in a 480 px window at the user scale 1.5),
+          seats, a headline and a button are 668 units, which a Screen canvas would not fit in a 480 px window at the user scale 1.5),
           shown by MahjongHudComponent exactly while the session is in HandOver. The component publishes handOverHeadline,
           handOverSeat0..3, scoreLine0..15 (only the first lines of the winner are shown: ScoreLineN is visible when there is a line N),
           handOverSummary and handOverButton ("Next hand", "Finish match" on the last hand); MahjongNextHand settles the hand and deals on.
+          The plate is 32 padding + 80 headline band (two lines of 28 for the longest headline) + 4 x 32 seat rows + 252 lines (8 rows of 28
+          with 4 between) + 48 summary band + 64 button + 8 x 8 spacing (9 children: NextGap is empty, so the 8 + 8 round it set the button
+          16 apart from the summary) = 668 units of the 720 of the view.
         -->
         <node name="HandOver" layer="25">
           <components>
             <component type="UICanvasComponent" space="SceneView" useSafeArea="true" modal="true" visible="false">
               <elements>
                 <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
-                <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="640" height="608" direction="Vertical" spacing="6" padding="14" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
+                <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="640" height="668" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
                   <children>
-                    <element type="UILabel" name="Headline" height="64" text="{handOverHeadline}" fontSize="24" align="Center" verticalAlign="Center" />
-                    <element type="UILabel" name="SeatRow0" height="30" text="{handOverSeat0}" fontSize="20" verticalAlign="Center" />
-                    <element type="UILabel" name="SeatRow1" height="30" text="{handOverSeat1}" fontSize="20" verticalAlign="Center" />
-                    <element type="UILabel" name="SeatRow2" height="30" text="{handOverSeat2}" fontSize="20" verticalAlign="Center" />
-                    <element type="UILabel" name="SeatRow3" height="30" text="{handOverSeat3}" fontSize="20" verticalAlign="Center" />
-                    <element type="UIStack" name="Lines" height="236" direction="Horizontal" spacing="4" wrapChildren="true">
+                    <element type="UILabel" name="Headline" height="80" text="{handOverHeadline}" fontSize="28" align="Center" verticalAlign="Center" color="58,66,92,255" />
+                    <element type="UILabel" name="SeatRow0" height="32" text="{handOverSeat0}" fontSize="22" align="Center" verticalAlign="Center" color="48,54,72,255" />
+                    <element type="UILabel" name="SeatRow1" height="32" text="{handOverSeat1}" fontSize="22" align="Center" verticalAlign="Center" color="48,54,72,255" />
+                    <element type="UILabel" name="SeatRow2" height="32" text="{handOverSeat2}" fontSize="22" align="Center" verticalAlign="Center" color="48,54,72,255" />
+                    <element type="UILabel" name="SeatRow3" height="32" text="{handOverSeat3}" fontSize="22" align="Center" verticalAlign="Center" color="48,54,72,255" />
+                    <element type="UIStack" name="Lines" height="252" direction="Horizontal" spacing="4" wrapChildren="true">
                       <children>
-                        <element type="UILabel" name="ScoreLine0" visible="false" width="48%" height="26" text="{scoreLine0}" fontSize="18" />
-                        <element type="UILabel" name="ScoreLine1" visible="false" width="48%" height="26" text="{scoreLine1}" fontSize="18" />
-                        <element type="UILabel" name="ScoreLine2" visible="false" width="48%" height="26" text="{scoreLine2}" fontSize="18" />
-                        <element type="UILabel" name="ScoreLine3" visible="false" width="48%" height="26" text="{scoreLine3}" fontSize="18" />
-                        <element type="UILabel" name="ScoreLine4" visible="false" width="48%" height="26" text="{scoreLine4}" fontSize="18" />
-                        <element type="UILabel" name="ScoreLine5" visible="false" width="48%" height="26" text="{scoreLine5}" fontSize="18" />
-                        <element type="UILabel" name="ScoreLine6" visible="false" width="48%" height="26" text="{scoreLine6}" fontSize="18" />
-                        <element type="UILabel" name="ScoreLine7" visible="false" width="48%" height="26" text="{scoreLine7}" fontSize="18" />
-                        <element type="UILabel" name="ScoreLine8" visible="false" width="48%" height="26" text="{scoreLine8}" fontSize="18" />
-                        <element type="UILabel" name="ScoreLine9" visible="false" width="48%" height="26" text="{scoreLine9}" fontSize="18" />
-                        <element type="UILabel" name="ScoreLine10" visible="false" width="48%" height="26" text="{scoreLine10}" fontSize="18" />
-                        <element type="UILabel" name="ScoreLine11" visible="false" width="48%" height="26" text="{scoreLine11}" fontSize="18" />
-                        <element type="UILabel" name="ScoreLine12" visible="false" width="48%" height="26" text="{scoreLine12}" fontSize="18" />
-                        <element type="UILabel" name="ScoreLine13" visible="false" width="48%" height="26" text="{scoreLine13}" fontSize="18" />
-                        <element type="UILabel" name="ScoreLine14" visible="false" width="48%" height="26" text="{scoreLine14}" fontSize="18" />
-                        <element type="UILabel" name="ScoreLine15" visible="false" width="48%" height="26" text="{scoreLine15}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine0" visible="false" width="49%" height="28" text="{scoreLine0}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine1" visible="false" width="49%" height="28" text="{scoreLine1}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine2" visible="false" width="49%" height="28" text="{scoreLine2}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine3" visible="false" width="49%" height="28" text="{scoreLine3}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine4" visible="false" width="49%" height="28" text="{scoreLine4}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine5" visible="false" width="49%" height="28" text="{scoreLine5}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine6" visible="false" width="49%" height="28" text="{scoreLine6}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine7" visible="false" width="49%" height="28" text="{scoreLine7}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine8" visible="false" width="49%" height="28" text="{scoreLine8}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine9" visible="false" width="49%" height="28" text="{scoreLine9}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine10" visible="false" width="49%" height="28" text="{scoreLine10}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine11" visible="false" width="49%" height="28" text="{scoreLine11}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine12" visible="false" width="49%" height="28" text="{scoreLine12}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine13" visible="false" width="49%" height="28" text="{scoreLine13}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine14" visible="false" width="49%" height="28" text="{scoreLine14}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine15" visible="false" width="49%" height="28" text="{scoreLine15}" fontSize="18" />
                       </children>
                     </element>
-                    <element type="UILabel" name="Summary" height="56" text="{handOverSummary}" fontSize="20" align="Center" verticalAlign="Center" />
-                    <element type="UIButton" name="NextHand" height="56" text="{handOverButton}" fontSize="28" action="MahjongNextHand" color="40,110,60,255" />
+                    <element type="UILabel" name="Summary" height="48" text="{handOverSummary}" fontSize="18" align="Center" verticalAlign="Center" color="48,54,72,255" textColor="190,196,190,255" />
+                    <element type="UIElement" name="NextGap" height="0" />
+                    <element type="UIButton" name="NextHand" height="64" text="{handOverButton}" fontSize="28" action="MahjongNextHand" color="40,110,60,255" />
                   </children>
                 </element>
               </elements>
             </component>
           </components>
         </node>
-        <!-- The end of the match: the seats by points and the New game button (MahjongNewGame, which opens Setup), shown while the match is Finished. -->
+        <!--
+          The end of the match: the seats by points and the New game button (MahjongNewGame, which opens Setup), shown while the match is Finished.
+          A 480 px window at the user scale 1.5 is 320 units high (296 with a notch), so the plate is 296: 32 padding + 40 headline band +
+          4 x 32 rows + 64 button + 8 NewGameGap + 6 x 4 spacing (7 children: the rows lie 4 apart and the button 4 + 8 + 4 = 16 below them).
+        -->
         <node name="MatchOver" layer="25">
           <components>
             <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.7" useSafeArea="true" modal="true" visible="false">
               <elements>
                 <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
-                <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="560" height="262" direction="Vertical" spacing="6" padding="10" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
+                <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="560" height="296" direction="Vertical" spacing="4" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
                   <children>
-                    <element type="UILabel" name="Headline" height="36" text="{matchOverHeadline}" fontSize="24" align="Center" verticalAlign="Center" />
-                    <element type="UILabel" name="Standing0" height="30" text="{standing0}" fontSize="22" verticalAlign="Center" />
-                    <element type="UILabel" name="Standing1" height="30" text="{standing1}" fontSize="22" verticalAlign="Center" />
-                    <element type="UILabel" name="Standing2" height="30" text="{standing2}" fontSize="22" verticalAlign="Center" />
-                    <element type="UILabel" name="Standing3" height="30" text="{standing3}" fontSize="22" verticalAlign="Center" />
-                    <element type="UIButton" name="NewGame" height="48" text="{#matchover.newGame}" fontSize="26" action="MahjongNewGame" color="40,110,60,255" />
+                    <element type="UILabel" name="Headline" height="40" text="{matchOverHeadline}" fontSize="22" align="Center" verticalAlign="Center" color="58,66,92,255" />
+                    <element type="UILabel" name="Standing0" height="32" text="{standing0}" fontSize="22" align="Center" verticalAlign="Center" color="48,54,72,255" textColor="255,214,80,255" />
+                    <element type="UILabel" name="Standing1" height="32" text="{standing1}" fontSize="22" align="Center" verticalAlign="Center" color="48,54,72,255" />
+                    <element type="UILabel" name="Standing2" height="32" text="{standing2}" fontSize="22" align="Center" verticalAlign="Center" color="48,54,72,255" />
+                    <element type="UILabel" name="Standing3" height="32" text="{standing3}" fontSize="22" align="Center" verticalAlign="Center" color="48,54,72,255" />
+                    <element type="UIElement" name="NewGameGap" height="8" />
+                    <element type="UIButton" name="NewGame" height="64" text="{#matchover.newGame}" fontSize="28" action="MahjongNewGame" color="40,110,60,255" />
                   </children>
                 </element>
               </elements>
@@ -225,86 +236,88 @@
           The seat choice of a new game: a modal canvas on the view of the table (SceneView, like the buttons: a Screen canvas would have to
           fit a 320 unit wide window at the user scale 1.5 of the size matrix), hidden here; MahjongHudComponent shows it exactly while
           MahjongGame::IsSetupOpen() (at the start, and after the New game button). Each seat group carries action MahjongSetSeatN and the
-          value person or computer; the row HandsRow below them carries MahjongSetHands and the value 16 or 8. The variables seatKindN and
-          handsChoice are set by the component, which also begins the match on MahjongStart. The row of the language (MahjongSetLanguage,
-          value = the language id, variable language) comes first. The plate is
-          32 padding + 44 title + 6 x 56 rows + 56 Start + 7 x 12 spacing = 552 units.
+          value person or computer; the row HandsRow below them carries MahjongSetHands and the value 16 or 8, the row LanguageRow above
+          them MahjongSetLanguage (value = the language id, variable language). The variables seatKindN, handsChoice and language are set
+          by the component, which also begins the match on MahjongStart. The plate is
+          32 padding + 56 title band + 6 x 72 rows (8 padding round a 56 segment) + 64 Start + 8 x 8 spacing (9 children: StartGap is
+          empty, so the 8 + 8 round it set Start 16 apart from the rows) = 648 units of the 720 of the view (8 clear above and below).
         -->
         <node name="Setup" layer="30">
           <components>
             <component type="UICanvasComponent" space="SceneView" useSafeArea="true" modal="true" visible="false">
               <elements>
                 <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
-                <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="640" height="552" direction="Vertical" spacing="12" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
+                <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="640" height="648" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
                   <children>
-                    <element type="UILabel" name="Title" height="44" text="{#setup.title}" fontSize="30" align="Center" />
-                    <element type="UIStack" name="LanguageRow" height="56" direction="Horizontal" spacing="8" crossAlign="Stretch">
+                    <element type="UILabel" name="Title" height="56" text="{#setup.title}" fontSize="28" align="Center" verticalAlign="Center" color="58,66,92,255" />
+                    <element type="UIStack" name="LanguageRow" height="72" direction="Horizontal" spacing="8" padding="8" crossAlign="Stretch" color="48,54,72,255">
                       <children>
-                        <element type="UILabel" name="LanguageCaption" width="110" height="56" text="{#setup.language}" fontSize="24" verticalAlign="Center" />
-                        <element type="UISegmented" name="Language" bind="language" flex="1" height="56" direction="Horizontal" spacing="4" color="30,30,30,255">
+                        <element type="UILabel" name="LanguageCaption" width="112" height="56" text="{#setup.language}" fontSize="22" verticalAlign="Center" textColor="190,196,190,255" />
+                        <element type="UISegmented" name="Language" bind="language" flex="1" height="56" direction="Horizontal" spacing="4" color="48,54,72,255">
                           <children>
-                            <element type="UIButton" name="LanguageEn" flex="1" height="56" text="{#lang.en}" fontSize="24" action="MahjongSetLanguage" value="en" color="70,70,100,255" />
-                            <element type="UIButton" name="LanguageRu" flex="1" height="56" text="{#lang.ru}" fontSize="24" action="MahjongSetLanguage" value="ru" color="70,70,100,255" />
+                            <element type="UIButton" name="LanguageEn" flex="1" height="56" text="{#lang.en}" fontSize="22" action="MahjongSetLanguage" value="en" color="70,70,100,255" selectedColor="40,110,60,255" />
+                            <element type="UIButton" name="LanguageRu" flex="1" height="56" text="{#lang.ru}" fontSize="22" action="MahjongSetLanguage" value="ru" color="70,70,100,255" selectedColor="40,110,60,255" />
                           </children>
                         </element>
                       </children>
                     </element>
-                    <element type="UIStack" name="SeatRow0" height="56" direction="Horizontal" spacing="8" crossAlign="Stretch">
+                    <element type="UIStack" name="SeatRow0" height="72" direction="Horizontal" spacing="8" padding="8" crossAlign="Stretch" color="48,54,72,255">
                       <children>
-                        <element type="UILabel" name="SeatCaption0" width="110" height="56" text="{#setup.seat1}" fontSize="24" verticalAlign="Center" />
-                        <element type="UISegmented" name="SeatKind0" bind="seatKind0" flex="1" height="56" direction="Horizontal" spacing="4" color="30,30,30,255">
+                        <element type="UILabel" name="SeatCaption0" width="112" height="56" text="{#setup.seat1}" fontSize="22" verticalAlign="Center" textColor="190,196,190,255" />
+                        <element type="UISegmented" name="SeatKind0" bind="seatKind0" flex="1" height="56" direction="Horizontal" spacing="4" color="48,54,72,255">
                           <children>
-                            <element type="UIButton" name="Seat0Person" flex="1" height="56" text="{#setup.person}" fontSize="24" action="MahjongSetSeat0" value="person" color="70,70,100,255" />
-                            <element type="UIButton" name="Seat0Computer" flex="1" height="56" text="{#setup.computer}" fontSize="24" action="MahjongSetSeat0" value="computer" color="70,70,100,255" />
+                            <element type="UIButton" name="Seat0Person" flex="1" height="56" text="{#setup.person}" fontSize="22" action="MahjongSetSeat0" value="person" color="70,70,100,255" selectedColor="40,110,60,255" />
+                            <element type="UIButton" name="Seat0Computer" flex="1" height="56" text="{#setup.computer}" fontSize="22" action="MahjongSetSeat0" value="computer" color="70,70,100,255" selectedColor="40,110,60,255" />
                           </children>
                         </element>
                       </children>
                     </element>
-                    <element type="UIStack" name="SeatRow1" height="56" direction="Horizontal" spacing="8" crossAlign="Stretch">
+                    <element type="UIStack" name="SeatRow1" height="72" direction="Horizontal" spacing="8" padding="8" crossAlign="Stretch" color="48,54,72,255">
                       <children>
-                        <element type="UILabel" name="SeatCaption1" width="110" height="56" text="{#setup.seat2}" fontSize="24" verticalAlign="Center" />
-                        <element type="UISegmented" name="SeatKind1" bind="seatKind1" flex="1" height="56" direction="Horizontal" spacing="4" color="30,30,30,255">
+                        <element type="UILabel" name="SeatCaption1" width="112" height="56" text="{#setup.seat2}" fontSize="22" verticalAlign="Center" textColor="190,196,190,255" />
+                        <element type="UISegmented" name="SeatKind1" bind="seatKind1" flex="1" height="56" direction="Horizontal" spacing="4" color="48,54,72,255">
                           <children>
-                            <element type="UIButton" name="Seat1Person" flex="1" height="56" text="{#setup.person}" fontSize="24" action="MahjongSetSeat1" value="person" color="70,70,100,255" />
-                            <element type="UIButton" name="Seat1Computer" flex="1" height="56" text="{#setup.computer}" fontSize="24" action="MahjongSetSeat1" value="computer" color="70,70,100,255" />
+                            <element type="UIButton" name="Seat1Person" flex="1" height="56" text="{#setup.person}" fontSize="22" action="MahjongSetSeat1" value="person" color="70,70,100,255" selectedColor="40,110,60,255" />
+                            <element type="UIButton" name="Seat1Computer" flex="1" height="56" text="{#setup.computer}" fontSize="22" action="MahjongSetSeat1" value="computer" color="70,70,100,255" selectedColor="40,110,60,255" />
                           </children>
                         </element>
                       </children>
                     </element>
-                    <element type="UIStack" name="SeatRow2" height="56" direction="Horizontal" spacing="8" crossAlign="Stretch">
+                    <element type="UIStack" name="SeatRow2" height="72" direction="Horizontal" spacing="8" padding="8" crossAlign="Stretch" color="48,54,72,255">
                       <children>
-                        <element type="UILabel" name="SeatCaption2" width="110" height="56" text="{#setup.seat3}" fontSize="24" verticalAlign="Center" />
-                        <element type="UISegmented" name="SeatKind2" bind="seatKind2" flex="1" height="56" direction="Horizontal" spacing="4" color="30,30,30,255">
+                        <element type="UILabel" name="SeatCaption2" width="112" height="56" text="{#setup.seat3}" fontSize="22" verticalAlign="Center" textColor="190,196,190,255" />
+                        <element type="UISegmented" name="SeatKind2" bind="seatKind2" flex="1" height="56" direction="Horizontal" spacing="4" color="48,54,72,255">
                           <children>
-                            <element type="UIButton" name="Seat2Person" flex="1" height="56" text="{#setup.person}" fontSize="24" action="MahjongSetSeat2" value="person" color="70,70,100,255" />
-                            <element type="UIButton" name="Seat2Computer" flex="1" height="56" text="{#setup.computer}" fontSize="24" action="MahjongSetSeat2" value="computer" color="70,70,100,255" />
+                            <element type="UIButton" name="Seat2Person" flex="1" height="56" text="{#setup.person}" fontSize="22" action="MahjongSetSeat2" value="person" color="70,70,100,255" selectedColor="40,110,60,255" />
+                            <element type="UIButton" name="Seat2Computer" flex="1" height="56" text="{#setup.computer}" fontSize="22" action="MahjongSetSeat2" value="computer" color="70,70,100,255" selectedColor="40,110,60,255" />
                           </children>
                         </element>
                       </children>
                     </element>
-                    <element type="UIStack" name="SeatRow3" height="56" direction="Horizontal" spacing="8" crossAlign="Stretch">
+                    <element type="UIStack" name="SeatRow3" height="72" direction="Horizontal" spacing="8" padding="8" crossAlign="Stretch" color="48,54,72,255">
                       <children>
-                        <element type="UILabel" name="SeatCaption3" width="110" height="56" text="{#setup.seat4}" fontSize="24" verticalAlign="Center" />
-                        <element type="UISegmented" name="SeatKind3" bind="seatKind3" flex="1" height="56" direction="Horizontal" spacing="4" color="30,30,30,255">
+                        <element type="UILabel" name="SeatCaption3" width="112" height="56" text="{#setup.seat4}" fontSize="22" verticalAlign="Center" textColor="190,196,190,255" />
+                        <element type="UISegmented" name="SeatKind3" bind="seatKind3" flex="1" height="56" direction="Horizontal" spacing="4" color="48,54,72,255">
                           <children>
-                            <element type="UIButton" name="Seat3Person" flex="1" height="56" text="{#setup.person}" fontSize="24" action="MahjongSetSeat3" value="person" color="70,70,100,255" />
-                            <element type="UIButton" name="Seat3Computer" flex="1" height="56" text="{#setup.computer}" fontSize="24" action="MahjongSetSeat3" value="computer" color="70,70,100,255" />
+                            <element type="UIButton" name="Seat3Person" flex="1" height="56" text="{#setup.person}" fontSize="22" action="MahjongSetSeat3" value="person" color="70,70,100,255" selectedColor="40,110,60,255" />
+                            <element type="UIButton" name="Seat3Computer" flex="1" height="56" text="{#setup.computer}" fontSize="22" action="MahjongSetSeat3" value="computer" color="70,70,100,255" selectedColor="40,110,60,255" />
                           </children>
                         </element>
                       </children>
                     </element>
-                    <element type="UIStack" name="HandsRow" height="56" direction="Horizontal" spacing="8" crossAlign="Stretch">
+                    <element type="UIStack" name="HandsRow" height="72" direction="Horizontal" spacing="8" padding="8" crossAlign="Stretch" color="48,54,72,255">
                       <children>
-                        <element type="UILabel" name="HandsCaption" width="110" height="56" text="{#setup.hands}" fontSize="24" verticalAlign="Center" />
-                        <element type="UISegmented" name="HandsChoice" bind="handsChoice" flex="1" height="56" direction="Horizontal" spacing="4" color="30,30,30,255">
+                        <element type="UILabel" name="HandsCaption" width="112" height="56" text="{#setup.hands}" fontSize="22" verticalAlign="Center" textColor="190,196,190,255" />
+                        <element type="UISegmented" name="HandsChoice" bind="handsChoice" flex="1" height="56" direction="Horizontal" spacing="4" color="48,54,72,255">
                           <children>
-                            <element type="UIButton" name="Hands16" flex="1" height="56" text="16" fontSize="24" action="MahjongSetHands" value="16" color="70,70,100,255" />
-                            <element type="UIButton" name="Hands8" flex="1" height="56" text="8" fontSize="24" action="MahjongSetHands" value="8" color="70,70,100,255" />
+                            <element type="UIButton" name="Hands16" flex="1" height="56" text="16" fontSize="22" action="MahjongSetHands" value="16" color="70,70,100,255" selectedColor="40,110,60,255" />
+                            <element type="UIButton" name="Hands8" flex="1" height="56" text="8" fontSize="22" action="MahjongSetHands" value="8" color="70,70,100,255" selectedColor="40,110,60,255" />
                           </children>
                         </element>
                       </children>
                     </element>
-                    <element type="UIButton" name="Start" height="56" text="{#setup.start}" fontSize="28" action="MahjongStart" color="40,110,60,255" />
+                    <element type="UIElement" name="StartGap" height="0" />
+                    <element type="UIButton" name="Start" height="64" text="{#setup.start}" fontSize="28" action="MahjongStart" color="40,110,60,255" />
                   </children>
                 </element>
               </elements>

@@ -82,12 +82,20 @@ namespace BECore::Mahjong {
         int wallRemaining = 0;
     };
 
+    /// The ground the component paints plates on, in view units: the block that holds each seat's discards (by seat, whatever the pile
+    /// holds) and the ring that holds the wall stacks. A zone holds its slots and overlaps no other zone and no hand, meld or bonus slot.
+    struct TableZones {
+        eastl::array<Rect, kSeatCount> discards{};
+        Rect wall;
+    };
+
     /// The slots of the four seats and the wall: per seat the hand, the melds, the bonus tiles, then the pile, then the wall stacks.
     struct TableLayout {
         Seat viewer = 0;
         float viewWidth = kViewWidth;
         float viewHeight = kViewHeight;
         eastl::vector<TileSlot> slots;
+        TableZones zones;
     };
 
     /// Where `seat` sits for `viewer`: 0 bottom, 1 right, 2 top, 3 left (counter-clockwise from the viewer).
