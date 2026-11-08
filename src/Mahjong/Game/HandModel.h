@@ -130,6 +130,9 @@ namespace BECore::Mahjong {
     /// What kind of move a `HandMove` records (`HandModel::Moves()`). The three claims are the carried-out ones from a discard.
     CORE_ENUM(MoveKind, uint8_t, Discard, ClaimChow, ClaimPung, ClaimKong, ConcealedKong, UpgradeKong)
 
+    /// The `meld` of a `HandMove` that has no meld (a discard).
+    inline constexpr int kNoMeld = -1;
+
     /**
      * @brief One accepted move of the hand, public data only (`HandModel::Moves()`).
      *
@@ -140,14 +143,14 @@ namespace BECore::Mahjong {
      * - `UpgradeKong`: `seat`, `tile` and `meld` (the index of the pung that grows); logged when the upgrade is accepted, also when the
      *   kong is then robbed.
      *
-     * `meld` is -1 and `from` is `kNoSeat` where they do not apply.
+     * `meld` is `kNoMeld` and `from` is `kNoSeat` where they do not apply.
      */
     struct HandMove {
         MoveKind kind = MoveKind::Discard;
         Seat seat = 0;
         Tile tile;
         Seat from = kNoSeat;
-        int meld = -1;
+        int meld = kNoMeld;
         bool declaredCalling = false;
     };
 

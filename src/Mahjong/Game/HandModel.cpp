@@ -31,6 +31,20 @@ namespace BECore::Mahjong {
             return const_cast<Meld*>(FindPung(static_cast<const PlayerHand&>(hand), tile));
         }
 
+        /// The move a carried-out claim of `kind` is logged as (a mahjong claim is no move: it ends the hand).
+        MoveKind MoveKindOf(ClaimKind kind) {
+            switch (kind) {
+                case ClaimKind::Chow:
+                    return MoveKind::ClaimChow;
+                case ClaimKind::Pung:
+                    return MoveKind::ClaimPung;
+                case ClaimKind::Kong:
+                case ClaimKind::Mahjong:
+                    break;
+            }
+            return MoveKind::ClaimKong;
+        }
+
         /// Whether `hand` is a winning hand with `tile` added (the declaration is not looked at here).
         bool WinsWith(const PlayerHand& hand, Tile tile) {
             TileCounts counts = CountTiles(hand.concealed);
@@ -165,7 +179,7 @@ namespace BECore::Mahjong {
         }
         ++hand.discardCount;
         _discards.push_back({tile, seat});
-        _moves.push_back({MoveKind::Discard, seat, tile, kNoSeat, -1, declareCalling});
+        _moves.push_back({.kind = MoveKind::Discard, .seat = seat, .tile = tile, .declaredCalling = declareCalling});
         _drawnTile = Tile{};
         _drawnLoose = false;
         AfterDiscard(seat, tile);
@@ -203,7 +217,7 @@ namespace BECore::Mahjong {
         meld.concealed = true;
         meld.first = tile;
         hand.melds.push_back(meld);
-        _moves.push_back({MoveKind::ConcealedKong, seat, Tile{}, kNoSeat, static_cast<int>(hand.melds.size()) - 1, false});
+        _moves.push_back({.kind = MoveKind::ConcealedKong, .seat = seat, .meld = static_cast<int>(hand.melds.size()) - 1});
         Receive(seat, _wall.DrawLoose(), true);
         return {};
     }
@@ -218,7 +232,7 @@ namespace BECore::Mahjong {
         if (pung == nullptr || _drawnTile != tile) {
             return std::unexpected(HandError::IllegalKong);
         }
-        _moves.push_back({MoveKind::UpgradeKong, seat, tile, kNoSeat, static_cast<int>(pung - hand.melds.data()), false});
+        _moves.push_back({.kind = MoveKind::UpgradeKong, .seat = seat, .tile = tile, .meld = static_cast<int>(pung - hand.melds.data())});
         if (!OpenWindow(Phase::RobKong, seat, tile)) {
             CompleteKong(seat, tile);
         }
@@ -449,8 +463,7 @@ namespace BECore::Mahjong {
             return;
         }
         ExposeClaim(winner, claim, from, tile);
-        const MoveKind moveKind = claim.kind == ClaimKind::Chow ? MoveKind::ClaimChow : claim.kind == ClaimKind::Pung ? MoveKind::ClaimPung : MoveKind::ClaimKong;
-        _moves.push_back({moveKind, winner, tile, from, static_cast<int>(_hands[winner].melds.size()) - 1, false});
+        _moves.push_back({.kind = MoveKindOf(claim.kind), .seat = winner, .tile = tile, .from = from, .meld = static_cast<int>(_hands[winner].melds.size()) - 1});
         if (claim.kind == ClaimKind::Kong) {
             Receive(winner, _wall.DrawLoose(), true);
             return;

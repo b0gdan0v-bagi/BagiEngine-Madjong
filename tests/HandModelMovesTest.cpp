@@ -96,13 +96,17 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(chow.CurrentSeat(), kSeat1);
         EXPECT_FALSE(chow.DrawnTile(kSeat1).IsValid());
 
-        HandModel pung = OpenPungModel(kSeat1Hand);  // seat 1 has pung-claimed the 5p and, after a lap, drawn the fifth tile of the wall
-        EXPECT_EQ(pung.DrawnTile(kSeat1), T("5p"));
         HandModel claimed = MakeModel(OpenPungSpec(kSeat1Hand));
         ASSERT_TRUE(claimed.Discard(kSeat0, T("5p")).has_value());
         ASSERT_TRUE(claimed.Claim(kSeat1, ClaimKind::Pung).has_value());
         ASSERT_EQ(claimed.GetPhase(), Phase::Discard);
         EXPECT_FALSE(claimed.DrawnTile(kSeat1).IsValid());
+    }
+
+    TEST(HandModelMovesTest, ADrawAfterAClaimedPungIsTheDrawnTile) {
+        // seat 1 has pung-claimed the 5p and, after a lap, drawn the next tile of the wall
+        HandModel model = OpenPungModel(kSeat1Hand);
+        EXPECT_EQ(model.DrawnTile(kSeat1), T("5p"));
     }
 
     TEST(HandModelMovesTest, AfterAKongTheDrawnTileIsTheLooseTile) {
@@ -160,7 +164,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(move.seat, kSeat0);
         EXPECT_EQ(move.tile, T("5p"));
         EXPECT_EQ(move.from, kNoSeat);
-        EXPECT_EQ(move.meld, -1);
+        EXPECT_EQ(move.meld, kNoMeld);
         EXPECT_FALSE(move.declaredCalling);
 
         HandModel calling = MakeModel(CallingSpec());
