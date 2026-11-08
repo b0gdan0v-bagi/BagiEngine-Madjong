@@ -5,8 +5,11 @@
 namespace BECore::Mahjong {
 
     /**
-     * The look of the game in numbers: the palette, the type scale and the spacing grid. `config/SceneConfig.xml` writes the same
-     * values as text (`r,g,b,a`, `fontSize`); the tests compare the file with this header, so a stray colour, size or number fails.
+     * The look of the game in numbers: the palette, the type scale and the spacing grid. `config/SceneConfig.xml` writes the colours of
+     * `kUiPalette` as text (`r,g,b,a`) and the sizes of `kFontScale` (`fontSize`), and every position and size on the grid of
+     * `kGridUnit`; `MahjongUiStyleTest` holds the file to all three, so a stray colour, size or number fails. The colours of the table
+     * (`kFelt` ... `kVeil`) are drawn by `MahjongTableComponent` and are not in the file; the modal numbers below are the anatomy that the
+     * file's screens follow and the tests of the screens check.
      *
      * Roles, not colours, are the rule: a new control takes the role of what it does.
      * - The table: `kFelt` with a `kFeltRim` round the view, a `kZonePlate` under the discard blocks and the wall ring, a `kTileShadow`
@@ -73,5 +76,15 @@ namespace BECore::Mahjong {
     /// gap between controls and the margin to the edge of the view.
     inline constexpr int kGridUnit = 4;
     inline constexpr int kGridStep = 8;
+
+    /// The anatomy of a modal screen (`Setup`, `Handoff`, `HandOver`, `MatchOver`), in view units: the plate's padding, the gap between
+    /// the rows of its stack (the grid step), the gap that sets the main button apart from the rows above it, the headline band of
+    /// `Setup`, the main button and the margin of a plate to the edge of the view.
+    inline constexpr float kModalPadding = 16.0f;
+    inline constexpr float kModalGap = static_cast<float>(kGridStep);
+    inline constexpr float kModalSectionGap = 16.0f;
+    inline constexpr float kModalTitleHeight = 56.0f;
+    inline constexpr float kMainButtonHeight = 64.0f;
+    inline constexpr float kViewMargin = 8.0f;
 
 }  // namespace BECore::Mahjong

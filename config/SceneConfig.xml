@@ -30,14 +30,14 @@
           A button is 56 view units high, which is a 32 px touch target from a window of 731 x 411 px; the table is a fixed design that the
           engine scales to the window, so a smaller window has smaller buttons and tiles (a tile is 21 x 28 units, the 3:4 of an atlas cell).
           The label Hint above the row shows the sentence of the button under the pointer ({actionHint}, set by the component from
-          UIElement::hovered; hidden while there is none). It takes no input, so it never eats a click; it lies over the right seat's discards,
-          a tooltip may cover tiles for as long as the pointer rests on a button, but never the row it explains. A touch screen has no hover.
+          UIElement::hovered; hidden while there is none). It takes no input, so it never eats a click; it lies in the gutter between the wall and the right seat's discards (clear
+          of their plates and of the row it explains, MahjongTableScreenTest holds the place). A touch screen has no hover.
         -->
         <node name="Actions" layer="10">
           <components>
             <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
               <elements>
-                <element type="UILabel" name="Hint" anchor="TopLeft" ignoreSafeArea="true" visible="false" x="724" y="392" width="412" height="60" text="{actionHint}" fontSize="18" align="Center" verticalAlign="Center" color="0,0,0,200" />
+                <element type="UILabel" name="Hint" anchor="TopLeft" ignoreSafeArea="true" visible="false" x="832" y="336" width="196" height="116" text="{actionHint}" fontSize="18" align="Center" verticalAlign="Center" color="0,0,0,200" />
                 <element type="UIStack" name="ActionRow" anchor="TopLeft" ignoreSafeArea="true" x="724" y="460" width="412" height="184" direction="Horizontal" spacing="8" wrapChildren="true">
                   <children>
                   <element type="UIButton" name="Win" visible="false" width="132" height="56" text="Mahjong!" fontSize="22" action="MahjongWin" color="40,110,60,255" />
@@ -156,7 +156,7 @@
         </node>
         <!--
           The score table of a finished hand: a modal canvas on the view of the table (SceneView like Setup: 16 lines of the winner, four
-          seats, a headline and a button are about 600 units, which a Screen canvas would not fit in a 480 px window at the user scale 1.5),
+          seats, a headline and a button are 668 units, which a Screen canvas would not fit in a 480 px window at the user scale 1.5),
           shown by MahjongHudComponent exactly while the session is in HandOver. The component publishes handOverHeadline,
           handOverSeat0..3, scoreLine0..15 (only the first lines of the winner are shown: ScoreLineN is visible when there is a line N),
           handOverSummary and handOverButton ("Next hand", "Finish match" on the last hand); MahjongNextHand settles the hand and deals on.

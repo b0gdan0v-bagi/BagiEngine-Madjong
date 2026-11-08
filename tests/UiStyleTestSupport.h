@@ -1,10 +1,16 @@
 #pragma once
 
+#include <BECore/Math/Color.h>
+#include <BECore/Math/Rect.h>
+#include <EASTL/string_view.h>
+#include <EASTL/vector.h>
+#include <Mahjong/Table/TableLayout.h>
 #include <Mahjong/Table/UiPalette.h>
+#include <gtest/gtest.h>
 
 /**
  * What the tests of the look share (`Table/UiPalette.h`): a colour compared field by field, the colour of a role of the palette by its
- * name, and the gap between two rects one above the other.
+ * name, the gap between two rects one above the other, rects that are apart and the plates the table paints under the zones.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -26,6 +32,26 @@ namespace BECore::Mahjong::Tests {
     /// The gap between two rects one above the other (negative when they overlap).
     inline float GapBelow(const Rect& upper, const Rect& lower) {
         return lower.y - (upper.y + upper.h);
+    }
+
+    /// Whether two rects share no area (touching edges are apart).
+    inline bool Apart(const Rect& a, const Rect& b) {
+        return a.x + a.w <= b.x || a.x >= b.x + b.w || a.y + a.h <= b.y || a.y >= b.y + b.h;
+    }
+
+    /// `rect` grown by `margin` on every side.
+    inline Rect Grown(const Rect& rect, float margin) {
+        return Rect(rect.x - margin, rect.y - margin, rect.w + 2.0f * margin, rect.h + 2.0f * margin);
+    }
+
+    /// Where the table paints the plates (`kZonePlate`) under the discard blocks and the wall ring: the zones grown by `kPlatePadding`.
+    inline eastl::vector<Rect> ZonePlates(const TableLayout& layout) {
+        eastl::vector<Rect> plates;
+        for (const Rect& zone : layout.zones.discards) {
+            plates.push_back(Grown(zone, kPlatePadding));
+        }
+        plates.push_back(Grown(layout.zones.wall, kPlatePadding));
+        return plates;
     }
 
 }  // namespace BECore::Mahjong::Tests

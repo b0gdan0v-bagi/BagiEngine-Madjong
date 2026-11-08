@@ -1,10 +1,10 @@
 #include "MahjongTableTestSupport.h"
+#include "UiStyleTestSupport.h"
 
 #include <BECore/UI/UIButton.h>
 #include <BECore/UI/UIImage.h>
 #include <BECore/UI/UILabel.h>
 #include <BECore/UI/UIToggle.h>
-#include <Mahjong/Table/UiPalette.h>
 
 /**
  * The canvases of the shipped scene that belong to the table (`Actions`, `Handoff`): the buttons of the component are the buttons of the
@@ -43,6 +43,25 @@ namespace BECore::Mahjong::Tests {
         constexpr float kButtonGap = 8.0f;
         constexpr float kRowWidth = 3.0f * kButtonWidth + 2.0f * kButtonGap;
 
+        /// The worst-case layout: every zone at its capacity, so no tile of any game can lie where a control does.
+        TableLayout WorstLayout() {
+            TableInput worst;
+            worst.viewer = 0;
+            worst.concealedCount.fill(kMaxConcealedTiles);
+            worst.bonusCount.fill(kMaxBonusTiles);
+            Meld kong;
+            kong.kind = MeldKind::Kong;
+            kong.first = T("1p");
+            for (auto& melds : worst.melds) {
+                melds.assign(kMaxMelds, kong);
+            }
+            for (int i = 0; i < kMostDiscards; ++i) {
+                worst.discardSeats.push_back(i % kSeatCount);
+            }
+            worst.wallRemaining = 2 * kWallRingCells;
+            return MakeTableLayout(worst);
+        }
+
         /// The role of the colour of a button (an entry of `kUiPaletteNames`), by what the button does.
         const char* RoleOf(ButtonKind kind) {
             switch (kind) {
@@ -65,20 +84,6 @@ namespace BECore::Mahjong::Tests {
                     return "neutral";
             }
             return "";
-        }
-
-        bool SameColor(const Color& a, const Color& b) {
-            return a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a;
-        }
-
-        const Color& PaletteColor(const char* role) {
-            for (int i = 0; i < kUiPaletteSize; ++i) {
-                if (eastl::string_view(kUiPaletteNames[i]) == role) {
-                    return kUiPalette[i];
-                }
-            }
-            ADD_FAILURE() << "no role " << role;
-            return kUiPalette[0];
         }
 
     }  // namespace
@@ -155,7 +160,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(row->rect.w, kRowWidth) << "three buttons and two gaps fit a row";
         const UIElement* hint = Element("Actions", "Hint");
         ASSERT_NE(hint, nullptr);
-        EXPECT_EQ(hint->rect.w, kRowWidth) << "the hint is as wide as the row it explains";
         EXPECT_TRUE(SameColor(hint->color, PaletteColor("scrim")));
     }
 
@@ -300,8 +304,16 @@ namespace BECore::Mahjong::Tests {
         EXPECT_LE(plate.x + plate.w, kViewWidth);
         EXPECT_LE(plate.y + plate.h, kViewHeight);
         const Rect& row = Element("Actions", "ActionRow")->rect;
-        const bool apart = plate.x + plate.w <= row.x || plate.x >= row.x + row.w || plate.y + plate.h <= row.y || plate.y >= row.y + row.h;
-        EXPECT_TRUE(apart) << "the hint does not lie over the buttons it explains";
+        EXPECT_TRUE(Apart(plate, row)) << "the hint does not lie over the buttons it explains";
+        // ... nor over a tile or a plate of the table: a tooltip in the gutter, one grid unit clear of the plates
+        const TableLayout layout = WorstLayout();
+        for (const TileSlot& slot : layout.slots) {
+            EXPECT_TRUE(Apart(slot.rect, plate)) << "the hint covers role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
+        }
+        const eastl::vector<Rect> plates = ZonePlates(layout);
+        for (size_t i = 0; i < plates.size(); ++i) {
+            EXPECT_TRUE(Apart(plates[i], Grown(plate, kGridUnit))) << "the hint is less than one grid unit from plate " << i;
+        }
     }
 
     TEST_F(MahjongTableScreenTest, TheCoverPassesTheSizeMatrixWithTheLongestSeatName) {
@@ -313,8 +325,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableScreenTest, TheCoverFollowsTheModalAnatomy) {
-        constexpr float kPlatePadding = 16.0f;
-        constexpr float kSectionGap = 16.0f;
         ASSERT_NO_FATAL_FAILURE(Start(kTwoPeople));
         CoreManager::GetUIVars().Set("handoffSeat"_intern, eastl::string_view(kLongestSeat));
         UICanvasComponent::SetVisibleByName(*_manager->GetSceneByName("MahjongScene"_intern), "Handoff"_intern, true);
@@ -328,38 +338,21 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(SameColor(plate->color, PaletteColor("surface")));
         EXPECT_TRUE(SameColor(text->color, PaletteColor("header")));
         EXPECT_TRUE(SameColor(reveal->color, PaletteColor("primary")));
-        EXPECT_EQ(reveal->rect.h, 64.0f);
-        EXPECT_EQ(text->rect.y, plate->rect.y + kPlatePadding);
-        EXPECT_EQ(reveal->rect.y - (text->rect.y + text->rect.h), kSectionGap);
-        EXPECT_EQ(reveal->rect.y + reveal->rect.h, plate->rect.y + plate->rect.h - kPlatePadding) << "the plate holds the band and the button and nothing more";
+        EXPECT_EQ(reveal->rect.h, kMainButtonHeight);
+        EXPECT_EQ(text->rect.y, plate->rect.y + kModalPadding);
+        EXPECT_EQ(reveal->rect.y - (text->rect.y + text->rect.h), kModalSectionGap);
+        EXPECT_EQ(reveal->rect.y + reveal->rect.h, plate->rect.y + plate->rect.h - kModalPadding) << "the plate holds the band and the button and nothing more";
     }
 
     TEST_F(MahjongTableScreenTest, TheButtonsLieInTheFreeCornerOfTheTableAndCoverNoTile) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
-        // The worst-case layout: every zone at its capacity, so no tile of any game can lie where a button does
-        TableInput worst;
-        worst.viewer = 0;
-        worst.concealedCount.fill(kMaxConcealedTiles);
-        worst.bonusCount.fill(kMaxBonusTiles);
-        Meld kong;
-        kong.kind = MeldKind::Kong;
-        kong.first = T("1p");
-        for (auto& melds : worst.melds) {
-            melds.assign(kMaxMelds, kong);
-        }
-        for (int i = 0; i < kMostDiscards; ++i) {
-            worst.discardSeats.push_back(i % kSeatCount);
-        }
-        worst.wallRemaining = 2 * kWallRingCells;
-        const TableLayout layout = MakeTableLayout(worst);
+        const TableLayout layout = WorstLayout();
         const UIElement* row = Element("Actions", "ActionRow");
         ASSERT_NE(row, nullptr);
 
         for (const TileSlot& slot : layout.slots) {
-            const bool apart =
-                slot.rect.x + slot.rect.w <= row->rect.x || slot.rect.x >= row->rect.x + row->rect.w || slot.rect.y + slot.rect.h <= row->rect.y || slot.rect.y >= row->rect.y + row->rect.h;
-            EXPECT_TRUE(apart) << "role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
+            EXPECT_TRUE(Apart(slot.rect, row->rect)) << "role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
         }
 
         // The row holds what is in it: the buttons of the fullest turn and of the fullest claim window lie inside the row
@@ -384,8 +377,7 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_LE(r.x + r.w, row->rect.x + row->rect.w) << SpecOf(kind).element;
                 EXPECT_LE(r.y + r.h, row->rect.y + row->rect.h) << SpecOf(kind).element << " lies below the row";
                 for (const TileSlot& slot : layout.slots) {
-                    const bool apart = slot.rect.x + slot.rect.w <= r.x || slot.rect.x >= r.x + r.w || slot.rect.y + slot.rect.h <= r.y || slot.rect.y >= r.y + r.h;
-                    EXPECT_TRUE(apart) << SpecOf(kind).element << " covers role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
+                    EXPECT_TRUE(Apart(slot.rect, r)) << SpecOf(kind).element << " covers role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
                 }
             }
         }

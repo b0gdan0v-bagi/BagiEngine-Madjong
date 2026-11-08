@@ -1,5 +1,6 @@
 #include "ComputerTestSupport.h"
 #include "MahjongTableTestSupport.h"
+#include "UiStyleTestSupport.h"
 
 #include <Events/SceneEvents.h>
 #include <Mahjong/Table/UiPalette.h>
@@ -62,7 +63,7 @@ namespace BECore::Mahjong::Tests {
         std::vector<Rect> RectsOf(const Color& color) const {
             std::vector<Rect> found;
             for (const DrawCall& call : _renderer->calls) {
-                if (call.kind == DrawKind::Rect && call.color.r == color.r && call.color.g == color.g && call.color.b == color.b && call.color.a == color.a) {
+                if (call.kind == DrawKind::Rect && SameColor(call.color, color)) {
                     found.push_back(call.rect);
                 }
             }
@@ -114,6 +115,31 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NE(slot, _table->GetLayout().slots.end());
         EXPECT_LT(frames[0].x, slot->rect.x);
         EXPECT_GT(frames[0].x + frames[0].w, slot->rect.x + slot->rect.w);
+    }
+
+    TEST_F(MahjongTableWindowTest, TheShadowOfThePendingDiscardLiesUnderItsFrameSoTheGoldIsEven) {
+        ASSERT_NO_FATAL_FAILURE(ComputerDiscardsFive(true));
+        ASSERT_EQ(Hand().GetPhase(), Phase::Claim);
+
+        const int last = static_cast<int>(Hand().Discards().size()) - 1;
+        const auto slot = std::find_if(_table->GetLayout().slots.begin(), _table->GetLayout().slots.end(), [last](const TileSlot& s) { return s.role == SlotRole::DiscardTile && s.index == last; });
+        ASSERT_NE(slot, _table->GetLayout().slots.end());
+        int shadowAt = -1;
+        int frameAt = -1;
+        for (size_t i = 0; i < _renderer->calls.size(); ++i) {
+            const DrawCall& call = _renderer->calls[i];
+            if (call.kind != DrawKind::Rect) {
+                continue;
+            }
+            if (SameColor(call.color, kPendingFrame)) {
+                frameAt = static_cast<int>(i);
+            } else if (SameColor(call.color, kTileShadow) && call.rect.x == slot->rect.x + 2.0f && call.rect.y == slot->rect.y + 2.0f) {
+                shadowAt = static_cast<int>(i);
+            }
+        }
+        ASSERT_GE(frameAt, 0);
+        ASSERT_GE(shadowAt, 0);
+        EXPECT_LT(shadowAt, frameAt) << "a shadow drawn over the frame would eat its right and bottom edge";
     }
 
     TEST_F(MahjongTableWindowTest, TheFrameIsGoneWhenNobodyMayClaimOrTheViewerHasDecided) {

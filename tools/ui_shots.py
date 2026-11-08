@@ -27,12 +27,12 @@ sys.path.insert(0, str(ENGINE_DIR / "tools" / "control" / "tests"))
 from bagi_control_client import BagiControlClient, ConnectionClosed, ControlError  # noqa: E402
 from game_process import GameLaunchError, GameProcess, build_game_command, free_port  # noqa: E402
 from png_reader import PngError, read_png  # noqa: E402
-from smoke import find_ui_element  # noqa: E402
 
 EXIT_DONE = 0
 EXIT_FAILED = 1
 EXIT_SKIPPED = 77
 
+# The default folder is the one of the entry that made the tool (mahjong-ui-polish); a later entry passes --out with its own
 DEFAULT_OUT = Path("~/.claude/plans/mahjong-ui-polish-shots")
 NATIVE_WIDTH = 1920  # the headless window (engine/src/Modules/SDL/CLAUDE.md, "Headless and screenshots")
 NATIVE_HEIGHT = 1080
@@ -45,7 +45,7 @@ SETTLE_FRAMES = 2  # frames after a change of the game before the canvases show 
 HANDS = 8
 STEP_LIMIT = 2000  # actions of one hand of a person
 HAND_LIMIT = 100  # hands of one match of 8 (a drawn hand is dealt again)
-MODAL_SCENE = "MahjongScene"
+TABLE_SCENE = "MahjongScene"
 
 
 class ShotFailure(Exception):
@@ -65,7 +65,7 @@ def settle(client: BagiControlClient) -> dict[str, Any]:
     """Steps the frames in which the scene reads the game, and returns the UI tree."""
     client.call("step", {"frames": SETTLE_FRAMES})
     tree = client.call("ui_tree")
-    check(tree["scene"] == MODAL_SCENE, f"the active scene is {tree['scene']}")
+    check(tree["scene"] == TABLE_SCENE, f"the active scene is {tree['scene']}")
     return tree
 
 
@@ -102,7 +102,7 @@ def claim_window(client: BagiControlClient, first_seed: int) -> str:
             if get_state(client)["phase"] != "playing" or offers_a_claim(client):
                 break
             discards = [action for action in client.call("list_actions")["actions"] if action["type"] == "discard"]
-            if not discards:  # a window the person may only pass, or a turn that can only win: take the first action
+            if not discards:  # a window where the person can only pass: take the first action
                 actions = client.call("list_actions")["actions"]
                 check(len(actions) > 0, "the person has to act but has no action")
                 client.call("perform_action", actions[0])
@@ -133,8 +133,7 @@ def standings(client: BagiControlClient, seed: int) -> str:
         if get_state(client)["phase"] == "match_over":
             break
         client.call("perform_action", {"type": "next_hand"})
-    else:
-        raise ShotFailure(f"the match did not end in {HAND_LIMIT} hands")
+    check(get_state(client)["phase"] == "match_over", f"the match did not end in {HAND_LIMIT} hands")
     tree = settle(client)
     check(canvas_visible(tree, "MatchOver"), "the standings are not shown at the end of the match")
     return f"seed {seed}"
@@ -149,19 +148,12 @@ def setup_screen(client: BagiControlClient, seed: int) -> str:
     return f"seed {seed}"
 
 
-def handoff(client: BagiControlClient, first_seed: int) -> str:
-    """Two people at seats 0 and 1: after the first discard the screen is to be passed."""
-    for seed in seeds(first_seed):
-        reset(client, seed, "PPCC")
-        discards = [action for action in client.call("list_actions")["actions"] if action["type"] == "discard"]
-        if not discards:
-            continue
-        client.call("perform_action", discards[0])
-        tree = settle(client)
-        element = find_ui_element(tree, "Handoff")
-        if canvas_visible(tree, "Handoff") or (element is not None and element["visible"]):
-            return f"seed {seed}"
-    raise ShotFailure(f"no hot-seat cover in {SEED_TRIES} seeds from {first_seed}")
+def handoff(client: BagiControlClient, seed: int) -> str:
+    """Two people at seats 0 and 1: the cover is up right after the start, the screen is to be passed to the person who acts first."""
+    reset(client, seed, "PPCC")
+    tree = settle(client)
+    check(canvas_visible(tree, "Handoff"), "the hot-seat cover is not shown after the start with two people")
+    return f"seed {seed}"
 
 
 SCENES = [

@@ -1,11 +1,11 @@
 #include "ComputerTestSupport.h"
 #include "MahjongTableTestSupport.h"
+#include "UiStyleTestSupport.h"
 
 #include <BECore/Control/Json.h>
 #include <BECore/UI/UIButton.h>
 #include <Events/SceneEvents.h>
 #include <Mahjong/Components/MahjongHudComponent.h>
-#include <Mahjong/Table/UiPalette.h>
 
 /**
  * The HUD and the seat choice of the shipped scene (`Components/MahjongHudComponent.h`): the variables follow the session, the labels
@@ -28,26 +28,6 @@ namespace BECore::Mahjong::Tests {
         constexpr int kHandsToTry = 20;
         constexpr const char* kPlainHand = "1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Gd Rd";
         constexpr int kWorstDiscards = 100;
-
-        bool SameColor(const Color& a, const Color& b) {
-            return a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a;
-        }
-
-        /// The colour of a role of the palette (an entry of `kUiPaletteNames`).
-        Color PaletteColor(const char* role) {
-            for (int i = 0; i < kUiPaletteSize; ++i) {
-                if (eastl::string_view(kUiPaletteNames[i]) == role) {
-                    return kUiPalette[i];
-                }
-            }
-            ADD_FAILURE() << "no role " << role;
-            return {};
-        }
-
-        /// The gap between two rects one above the other (negative when they overlap).
-        float GapBelow(const Rect& upper, const Rect& lower) {
-            return lower.y - (upper.y + upper.h);
-        }
 
         void Elapse(float seconds) {
             SceneEvents::SceneUpdateEvent::Emit(seconds);
@@ -230,10 +210,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongHudTest, TheSeatChoiceFollowsTheModalAnatomyAndTheGridGaps) {
-        constexpr float kPlatePadding16 = 16.0f;
         constexpr float kRowPadding = 8.0f;
-        constexpr float kGap = 8.0f;
-        constexpr float kSectionGap = 16.0f;
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         _game->OpenSetup();
         Draw();
@@ -245,16 +222,16 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NE(title, nullptr);
         EXPECT_TRUE(SameColor(title->color, PaletteColor("header")));
         EXPECT_TRUE(SameColor(Element("Setup", "Plate")->color, PaletteColor("surface")));
-        EXPECT_EQ(title->rect.x, plate.x + kPlatePadding16);
-        EXPECT_EQ(title->rect.y, plate.y + kPlatePadding16);
-        EXPECT_EQ(title->rect.h, 56.0f);
+        EXPECT_EQ(title->rect.x, plate.x + kModalPadding);
+        EXPECT_EQ(title->rect.y, plate.y + kModalPadding);
+        EXPECT_EQ(title->rect.h, kModalTitleHeight);
 
         const Rect* above = &title->rect;
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             const UIElement* row = Element("Setup", Format("SeatRow{}", seat).c_str());
             ASSERT_NE(row, nullptr);
             EXPECT_TRUE(SameColor(row->color, PaletteColor("surfaceRaised"))) << seat;
-            EXPECT_EQ(GapBelow(*above, row->rect), kGap) << "row " << seat;
+            EXPECT_EQ(GapBelow(*above, row->rect), kModalGap) << "row " << seat;
             above = &row->rect;
 
             const UIElement* caption = Element("Setup", Format("SeatCaption{}", seat).c_str());
@@ -263,7 +240,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(caption->rect.x, row->rect.x + kRowPadding) << seat;
             const UIElement* group = Element("Setup", Format("SeatKind{}", seat).c_str());
             ASSERT_NE(group, nullptr);
-            EXPECT_EQ(group->rect.x, caption->rect.x + caption->rect.w + kGap) << seat;
+            EXPECT_EQ(group->rect.x, caption->rect.x + caption->rect.w + kModalGap) << seat;
             EXPECT_EQ(group->rect.x + group->rect.w, row->rect.x + row->rect.w - kRowPadding) << seat << " the group ends inside the row's padding";
             EXPECT_EQ(group->rect.y, row->rect.y + kRowPadding) << seat;
             EXPECT_EQ(group->rect.y + group->rect.h, row->rect.y + row->rect.h - kRowPadding) << seat;
@@ -282,10 +259,10 @@ namespace BECore::Mahjong::Tests {
         const UIElement* start = Element("Setup", "Start");
         ASSERT_NE(start, nullptr);
         EXPECT_TRUE(SameColor(start->color, PaletteColor("primary")));
-        EXPECT_EQ(start->rect.h, 64.0f);
-        EXPECT_EQ(GapBelow(*above, start->rect), kSectionGap) << "Start is set apart from the rows by 16";
-        EXPECT_EQ(start->rect.x, plate.x + kPlatePadding16);
-        EXPECT_EQ(start->rect.y + start->rect.h, plate.y + plate.h - kPlatePadding16) << "the plate holds Start and nothing more";
+        EXPECT_EQ(start->rect.h, kMainButtonHeight);
+        EXPECT_EQ(GapBelow(*above, start->rect), kModalSectionGap) << "Start is set apart from the rows by 16";
+        EXPECT_EQ(start->rect.x, plate.x + kModalPadding);
+        EXPECT_EQ(start->rect.y + start->rect.h, plate.y + plate.h - kModalPadding) << "the plate holds Start and nothing more";
         EXPECT_LE(plate.y + plate.h, kViewHeight);
     }
 
@@ -324,26 +301,20 @@ namespace BECore::Mahjong::Tests {
         worst.wallRemaining = 2 * kWallRingCells;
         const TableLayout layout = MakeTableLayout(worst);
 
-        // The plates the table paints under the discard blocks and the wall ring, as the component pads them
-        eastl::vector<Rect> plates;
-        for (const Rect& zone : layout.zones.discards) {
-            plates.push_back({zone.x - kPlatePadding, zone.y - kPlatePadding, zone.w + 2.0f * kPlatePadding, zone.h + 2.0f * kPlatePadding});
-        }
-        const Rect& wall = layout.zones.wall;
-        plates.push_back({wall.x - kPlatePadding, wall.y - kPlatePadding, wall.w + 2.0f * kPlatePadding, wall.h + 2.0f * kPlatePadding});
+        // The plates the table paints under the discard blocks and the wall ring
+        const eastl::vector<Rect> plates = ZonePlates(layout);
 
-        const auto apartFrom = [](const Rect& a, const Rect& b) { return a.x + a.w <= b.x || a.x >= b.x + b.w || a.y + a.h <= b.y || a.y >= b.y + b.h; };
         for (const char* name : {"Info", "Scores", "NewGame"}) {
             const UIElement* element = Element("Hud", name);
             ASSERT_NE(element, nullptr) << name;
             ASSERT_FALSE(element->rect.IsEmpty()) << name;
             for (const TileSlot& slot : layout.slots) {
-                EXPECT_TRUE(apartFrom(slot.rect, element->rect)) << name << " covers role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
+                EXPECT_TRUE(Apart(slot.rect, element->rect)) << name << " covers role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
             }
             // A gap of one grid unit at least: panels that touch a plate edge to edge merge with it on screen
-            const Rect aired{element->rect.x - kGridUnit, element->rect.y - kGridUnit, element->rect.w + 2.0f * kGridUnit, element->rect.h + 2.0f * kGridUnit};
+            const Rect aired = Grown(element->rect, kGridUnit);
             for (size_t i = 0; i < plates.size(); ++i) {
-                EXPECT_TRUE(apartFrom(plates[i], aired)) << name << " is less than one grid unit from plate " << i;
+                EXPECT_TRUE(Apart(plates[i], aired)) << name << " is less than one grid unit from plate " << i;
             }
         }
     }

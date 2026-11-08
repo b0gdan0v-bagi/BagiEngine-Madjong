@@ -26,15 +26,9 @@ namespace BECore::Mahjong::Tests {
         constexpr float kScoreTableTouchMinimum = 20.0f;
         constexpr float kButtonAir = 8.0f;
         constexpr float kMinControlHeight = 48.0f;
-        /// The anatomy of a modal plate (the same numbers as `Setup`): the padding, the gap, the gap of a section, the title band, the main button.
-        constexpr float kModalPadding = 16.0f;
-        constexpr float kGap = 8.0f;
-        constexpr float kSectionGap = 16.0f;
         /// The standings lie on a Screen canvas that a 480 px window at the user scale 1.5 makes 320 units high (296 with a notch), so
         /// the plate keeps its rows 4 apart; the button is still 16 below them (a spacer of 8 between two gaps of 4).
         constexpr float kStandingsGap = 4.0f;
-        constexpr float kMainButtonHeight = 64.0f;
-        constexpr float kViewMargin = 8.0f;
         constexpr int kHandLimit = 60;  // hands of a 4-hand match with replayed draws
         /// Output sizes the words are asked in: the design size, a small window, the narrowest windows and a wide short one.
         struct Output {
@@ -300,7 +294,7 @@ namespace BECore::Mahjong::Tests {
             const UIElement* row = Element("HandOver", Format("SeatRow{}", seat).c_str());
             ASSERT_NE(row, nullptr);
             EXPECT_TRUE(SameColor(row->color, PaletteColor("surfaceRaised"))) << seat;
-            EXPECT_EQ(GapBelow(*above, row->rect), kGap) << "row " << seat;
+            EXPECT_EQ(GapBelow(*above, row->rect), kModalGap) << "row " << seat;
             EXPECT_EQ(row->rect.x, headline->rect.x) << seat;
             EXPECT_EQ(row->rect.w, headline->rect.w) << seat;
             above = &row->rect;
@@ -308,7 +302,7 @@ namespace BECore::Mahjong::Tests {
 
         const UIElement* lines = Element("HandOver", "Lines");
         ASSERT_NE(lines, nullptr);
-        EXPECT_EQ(GapBelow(*above, lines->rect), kGap);
+        EXPECT_EQ(GapBelow(*above, lines->rect), kModalGap);
         for (int i = 0; i < kMaxScoreLines; ++i) {
             const UIElement* line = Element("HandOver", Format("ScoreLine{}", i).c_str());
             ASSERT_NE(line, nullptr) << i;
@@ -323,14 +317,14 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NE(summary, nullptr);
         EXPECT_TRUE(SameColor(summary->color, PaletteColor("surfaceRaised")));
         EXPECT_TRUE(SameColor(summary->Cast<UILabel>()->textColor, PaletteColor("textMuted")));
-        EXPECT_EQ(GapBelow(*above, summary->rect), kGap);
+        EXPECT_EQ(GapBelow(*above, summary->rect), kModalGap);
         above = &summary->rect;
 
         const UIElement* next = Element("HandOver", "NextHand");
         ASSERT_NE(next, nullptr);
         EXPECT_TRUE(SameColor(next->color, PaletteColor("primary")));
         EXPECT_EQ(next->rect.h, kMainButtonHeight);
-        EXPECT_EQ(GapBelow(*above, next->rect), kSectionGap) << "the button is set apart from the rows by 16";
+        EXPECT_EQ(GapBelow(*above, next->rect), kModalSectionGap) << "the button is set apart from the rows by 16";
         EXPECT_EQ(next->rect.y + next->rect.h, plate.y + plate.h - kModalPadding) << "the plate holds the button and nothing more";
     }
 
@@ -374,7 +368,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NE(button, nullptr);
         EXPECT_TRUE(SameColor(button->color, PaletteColor("primary")));
         EXPECT_EQ(button->rect.h, kMainButtonHeight);
-        EXPECT_EQ(GapBelow(*above, button->rect), kSectionGap) << "the button is set apart from the rows by 16";
+        EXPECT_EQ(GapBelow(*above, button->rect), kModalSectionGap) << "the button is set apart from the rows by 16";
         EXPECT_EQ(button->rect.y + button->rect.h, plate.y + plate.h - kModalPadding) << "the plate holds the button and nothing more";
     }
 

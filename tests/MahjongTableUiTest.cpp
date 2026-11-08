@@ -1,4 +1,5 @@
 #include "MahjongTableTestSupport.h"
+#include "UiStyleTestSupport.h"
 
 #include <Mahjong/Table/UiPalette.h>
 
@@ -23,7 +24,7 @@ namespace BECore::Mahjong::Tests {
         std::vector<DrawCall> RectsOf(const Color& color) const {
             std::vector<DrawCall> found;
             for (const DrawCall& call : _renderer->calls) {
-                if (call.kind == DrawKind::Rect && call.color.r == color.r && call.color.g == color.g && call.color.b == color.b && call.color.a == color.a) {
+                if (call.kind == DrawKind::Rect && SameColor(call.color, color)) {
                     found.push_back(call);
                 }
             }
@@ -102,6 +103,20 @@ namespace BECore::Mahjong::Tests {
         }
         EXPECT_EQ(plates[4].rect.x, zones.wall.x - 4.0f);
         EXPECT_EQ(plates[4].rect.w, zones.wall.w + 8.0f);
+        EXPECT_EQ(plates[4].rect.h, zones.wall.h + 8.0f);
+    }
+
+    TEST_F(MahjongTableUiTest, TheWallPlateKeepsTheSameGapToTheTopAndTheBottomDiscardPlates) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        Draw();
+
+        const std::vector<DrawCall> plates = RectsOf(kZonePlate);
+        ASSERT_EQ(plates.size(), 5u);
+        const Rect& top = plates[2].rect;
+        const Rect& bottom = plates[0].rect;
+        const Rect& wall = plates[4].rect;
+        EXPECT_GT(GapBelow(top, wall), 0.0f) << "the plates do not merge";
+        EXPECT_EQ(GapBelow(top, wall), GapBelow(wall, bottom));
     }
 
     TEST_F(MahjongTableUiTest, EveryTileThatIsNotAWallStackHasAShadowOffsetBy2) {

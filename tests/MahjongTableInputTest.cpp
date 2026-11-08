@@ -1,5 +1,6 @@
 #include "ComputerTestSupport.h"
 #include "MahjongTableTestSupport.h"
+#include "UiStyleTestSupport.h"
 
 #include <BECore/Control/Json.h>
 #include <BECore/UI/UIButton.h>
@@ -45,7 +46,7 @@ namespace BECore::Mahjong::Tests {
         int VeilCalls() const {
             int veils = 0;
             for (const DrawCall& call : _renderer->calls) {
-                const bool veil = call.kind == DrawKind::Rect && call.color.r == kVeil.r && call.color.g == kVeil.g && call.color.b == kVeil.b && call.color.a == kVeil.a;
+                const bool veil = call.kind == DrawKind::Rect && SameColor(call.color, kVeil);
                 veils += veil ? 1 : 0;
             }
             return veils;

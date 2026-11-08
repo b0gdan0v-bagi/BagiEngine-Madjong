@@ -388,12 +388,8 @@ namespace BECore::Mahjong {
         const Faces faces = FacesOf(session);
         _layout = MakeTableLayout(MakeInput(hand, BottomSeat(session)), viewWidth, viewHeight);
 
-        // A face (the tile) or the back (nullopt) at `rect`, with a shadow under it unless it is a wall stack: from the atlas, else a plain
-        // rectangle.
-        const auto drawTile = [&](const Rect& rect, std::optional<Tile> face, bool shadowed = true) {
-            if (shadowed) {
-                renderer.DrawFilledRect(rect.x + kShadowOffset * unit, rect.y + kShadowOffset * unit, rect.w, rect.h, kTileShadow);
-            }
+        // A face (the tile) or the back (nullopt) at `rect`: from the atlas, else a plain rectangle.
+        const auto drawFace = [&](const Rect& rect, std::optional<Tile> face) {
             if (_atlas) {
                 const Rect source = face ? SourceRect(*face) : BackRect();
                 renderer.DrawTexture(*_atlas, &source, rect.x, rect.y, rect.w, rect.h);
@@ -405,6 +401,12 @@ namespace BECore::Mahjong {
                 const float insetY = rect.h * kPlainMarkInset;
                 renderer.DrawFilledRect(rect.x + insetX, rect.y + insetY, rect.w - 2.0f * insetX, rect.h - 2.0f * insetY, PlainMarkColor(*face));
             }
+        };
+        // The shadow under a tile (not under a wall stack); the frame of a pending discard lies over it, so the gold is even
+        const auto drawShadow = [&](const Rect& rect) { renderer.DrawFilledRect(rect.x + kShadowOffset * unit, rect.y + kShadowOffset * unit, rect.w, rect.h, kTileShadow); };
+        const auto drawTile = [&](const Rect& rect, std::optional<Tile> face) {
+            drawShadow(rect);
+            drawFace(rect, face);
         };
 
         // The plates under the discard blocks and the wall ring
@@ -419,7 +421,7 @@ namespace BECore::Mahjong {
         if (const Seat turn = TurnSeat(session, hand); IsSeat(turn)) {
             const Rect bounds = BoundsOf(_layout, SlotRole::HandTile, turn);
             if (bounds.w > 0.0f) {
-                const Rect marked = Padded(bounds, kActingMargin);
+                const Rect marked = Padded(bounds, kActingMargin * unit);
                 renderer.DrawFilledRect(marked.x, marked.y, marked.w, marked.h, kTurnMark);
             }
         }
@@ -463,13 +465,16 @@ namespace BECore::Mahjong {
                     break;
                 case SlotRole::DiscardTile:
                     if (claimPending && slot.index == pendingEntry) {
-                        const Rect framed = Padded(slot.rect, kPendingMargin);
+                        drawShadow(slot.rect);
+                        const Rect framed = Padded(slot.rect, kPendingMargin * unit);
                         renderer.DrawFilledRect(framed.x, framed.y, framed.w, framed.h, kPendingFrame);
+                        drawFace(slot.rect, hand.Discards()[slot.index].tile);
+                    } else {
+                        drawTile(slot.rect, hand.Discards()[slot.index].tile);
                     }
-                    drawTile(slot.rect, hand.Discards()[slot.index].tile);
                     break;
                 case SlotRole::WallStack:
-                    drawTile(slot.rect, std::nullopt, false);
+                    drawFace(slot.rect, std::nullopt);
                     break;
             }
         }
