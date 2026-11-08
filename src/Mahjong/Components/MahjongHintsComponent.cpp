@@ -10,6 +10,7 @@
 #include <Mahjong/Components/MahjongTableComponent.h>
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/Table/TileAtlas.h>
+#include <Mahjong/Table/UiPalette.h>
 
 namespace BECore::Mahjong {
 
@@ -35,11 +36,16 @@ namespace BECore::Mahjong {
         constexpr float kFrameThickness = 3.0f;  ///< drawn inside the edge of the tile
 
         PoolString IndexedName(eastl::string_view prefix, int index) {
-            return PoolString::Intern(Format("{}{}", std::string_view(prefix.data(), prefix.size()), index));
+            return PoolString::Intern(Format("{}{}", prefix, index));
         }
 
         PoolString NameOf(eastl::string_view name) {
             return PoolString::Intern(name);
+        }
+
+        /// A person acts and it is the viewer: with something to choose from (a non-empty `legal`) the button `Hint` is offered.
+        bool IsViewersTurn(const TableSession& session, Seat viewer) {
+            return session.ActorIsPerson() && session.Actor() == viewer;
         }
 
     }  // namespace
@@ -72,7 +78,7 @@ namespace BECore::Mahjong {
             return std::nullopt;
         }
         const TableSession& session = game->GetSession();
-        if (!session.ActorIsPerson() || session.Actor() != session.Viewer()) {
+        if (!IsViewersTurn(session, session.Viewer())) {
             return std::nullopt;
         }
         TableView view = MakeTableView(game->GetMatch().Hand(), session.Viewer());
@@ -113,7 +119,7 @@ namespace BECore::Mahjong {
         const TableView view = MakeTableView(game->GetMatch().Hand(), key.viewer);
         _row = WaitingTiles(view);
         const TableSession& session = game->GetSession();
-        _offered = session.ActorIsPerson() && session.Actor() == key.viewer && !view.legal.empty();
+        _offered = IsViewersTurn(session, key.viewer) && !view.legal.empty();  // the same test as `ViewToAdvise`
         if (_offered) {
             _declaring = DeclaringDiscards(view);
         }
@@ -122,13 +128,14 @@ namespace BECore::Mahjong {
     void MahjongHintsComponent::PushWaitingRow() {
         const int now = static_cast<int>(_row.size());
         const int before = static_cast<int>(_published.size());
-        const auto canvas = GetNode().GetComponent<UICanvasComponent>();
         UIVars& vars = CoreManager::GetUIVars();
         Scene& scene = GetScene();
         for (int i = 0; i < kMaxWaitingTiles; ++i) {
             const bool showNow = i < now;
             const bool showBefore = i < before;
             if (showNow && (!showBefore || _row[i].tile != _published[i].tile)) {
+                // The canvas is looked up only when a sprite must change
+                const auto canvas = GetNode().GetComponent<UICanvasComponent>();
                 UIElement* element = canvas ? canvas->GetRoot().FindByName(IndexedName(kWaitTilePrefix, i)) : nullptr;
                 if (UIImage* image = element != nullptr ? element->Cast<UIImage>() : nullptr) {
                     image->sprite = PoolString::Intern(SpriteName(_row[i].tile));

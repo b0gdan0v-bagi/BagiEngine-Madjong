@@ -106,7 +106,7 @@
         <string key="hint.ConcealedKong" text="Set four equal tiles from your hand aside and draw a spare tile."/>
         <string key="hint.UpgradeKong" text="Add the fourth tile to your open pung to make a kong; you draw a spare tile."/>
         <string key="hint.Declare" text="Announce you are one tile from mahjong (needed to win), then click the tile to discard."/>
-        <string key="hints.waitCaption" text="Your hand waits for (unseen copies under each tile):"/>
+        <string key="hints.waitCaption" text="Waiting for (unseen copies):"/>
         <string key="hints.adviseButton" text="Hint"/>
         <string key="hints.advice.discard" text="Discard {tile}."/>
         <string key="hints.advice.discardCalling" text="Discard {tile} and declare the ready hand."/>
@@ -245,7 +245,7 @@
         <string key="hint.ConcealedKong" text="Выложите четыре одинаковые кости из руки и возьмите запасную."/>
         <string key="hint.UpgradeKong" text="Добавьте четвёртую кость к открытому пуну: получится конг; затем запасная кость."/>
         <string key="hint.Declare" text="Объявите, что не хватает одной кости (нужно для победы), затем нажмите кость для сброса."/>
-        <string key="hints.waitCaption" text="Рука ждёт (под каждой костью: сколько их не видно):"/>
+        <string key="hints.waitCaption" text="Ждёт (не видно копий):"/>
         <string key="hints.adviseButton" text="Подсказка"/>
         <string key="hints.advice.discard" text="Сбросьте: {tile}."/>
         <string key="hints.advice.discardCalling" text="Сбросьте {tile} и объявите заявку."/>

@@ -82,7 +82,7 @@ namespace BECore::Mahjong {
             case ActionKind::Claim:
                 if (advice.claim == ClaimKind::Chow) {
                     // An action of the legal list always has a valid `chowFirst`; a made-up one names three invalid tiles.
-                    const eastl::array<Tile, kTilesPerSet> tiles = advice.chowFirst.IsValid() ? ChowTiles(advice.chowFirst) : eastl::array<Tile, kTilesPerSet>{};
+                    const auto tiles = advice.chowFirst.IsValid() ? ChowTiles(advice.chowFirst) : eastl::array<Tile, kTilesPerSet>{};
                     return Tr(strings, key, {{"first", TileName(strings, tiles[0])}, {"second", TileName(strings, tiles[1])}, {"third", TileName(strings, tiles[2])}});
                 }
                 if (advice.claim == ClaimKind::Pung || advice.claim == ClaimKind::Kong) {

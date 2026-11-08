@@ -1,5 +1,6 @@
 #include "ComputerTestSupport.h"
 #include "MahjongTableTestSupport.h"
+#include "UiStyleTestSupport.h"
 
 #include <BECore/Control/Json.h>
 #include <BECore/UI/UIImage.h>
@@ -7,6 +8,7 @@
 #include <Mahjong/Game/ComputerPlayer.h>
 #include <Mahjong/Table/Hints.h>
 #include <Mahjong/Table/TableLayout.h>
+#include <Mahjong/Table/UiPalette.h>
 
 /**
  * The hints of the shipped scene (`Components/MahjongHintsComponent.h`, `Table/Hints.h`): the switch `Hints` On | Off of the panel
@@ -678,8 +680,10 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        bool Apart(const Rect& a, const Rect& b) {
-            return a.x + a.w <= b.x || a.x >= b.x + b.w || a.y + a.h <= b.y || a.y >= b.y + b.h;
+        /// The ground inside the ring of wall stacks: the ring of the layout (`zones.wall`, where the table puts it) less its one row of stacks.
+        Rect GroundInsideTheRing() {
+            const Rect& ring = MakeTableLayout(TableInput{}).zones.wall;
+            return Rect(ring.x + kWallStackSize, ring.y + kWallStackSize, ring.w - 2.0f * kWallStackSize, ring.h - 2.0f * kWallStackSize);
         }
 
         bool Inside(const Rect& inner, const Rect& outer) {
@@ -713,10 +717,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(canvas);
         canvas->UpdateLayout(kViewWidth, kViewHeight);
 
-        // The ground inside the ring of wall stacks, from the constants of the layout
-        constexpr float ringW = kWallStackSize * kWallRingColumns;
-        constexpr float ringH = kWallStackSize * kWallRingRows;
-        const Rect inside((kViewWidth - ringW) * 0.5f + kWallStackSize, (kViewHeight - ringH) * 0.5f + kWallStackSize, ringW - 2.0f * kWallStackSize, ringH - 2.0f * kWallStackSize);
+        const Rect inside = GroundInsideTheRing();
 
         const UIElement* panel = Element("Hints", "WaitPanel");
         ASSERT_NE(panel, nullptr);
@@ -774,7 +775,7 @@ namespace BECore::Mahjong::Tests {
         const std::vector<Rect> expected = ExpectedBars(declaring);
         ASSERT_EQ(expected.size(), 2u) << "the 9p and the east wind";
 
-        const std::vector<Rect> bars = RectsOf(MahjongHintsComponent::kDeclareMark);
+        const std::vector<Rect> bars = RectsOf(kDeclareMark);
 
         ASSERT_EQ(bars.size(), expected.size());
         for (size_t i = 0; i < bars.size(); ++i) {
@@ -801,48 +802,61 @@ namespace BECore::Mahjong::Tests {
             const DrawCall& call = _renderer->calls[i];
             if (call.kind == DrawKind::Texture && call.texture == _atlasTexture) {
                 lastTile = i;
-            } else if (call.kind == DrawKind::Rect && call.color.g == MahjongHintsComponent::kDeclareMark.g && call.color.r == MahjongHintsComponent::kDeclareMark.r &&
-                       call.color.b == MahjongHintsComponent::kDeclareMark.b) {
+            } else if (call.kind == DrawKind::Rect && SameColor(call.color, kDeclareMark)) {  // the gold of the turn mark has another alpha
                 firstMark = std::min(firstMark, i);
             }
         }
         EXPECT_GT(firstMark, lastTile);
     }
 
+    TEST_F(MahjongHintsTest, TheMarksAreInTheGoldFamilyOfTheTableAndDifferFromEachOther) {
+        // The style: a mark on the table is gold and nothing else is (`UiPalette.h`); the two marks differ in alpha, so a test (and an eye) tells them apart
+        for (const Color& mark : {kDeclareMark, kAdvisedFrame}) {
+            EXPECT_EQ(mark.r, kTurnMark.r);
+            EXPECT_EQ(mark.g, kTurnMark.g);
+            EXPECT_EQ(mark.b, kTurnMark.b);
+        }
+        EXPECT_FALSE(SameColor(kDeclareMark, kAdvisedFrame));
+        for (const Color& other : {kTurnMark, kPendingFrame, kVeil}) {
+            EXPECT_FALSE(SameColor(kDeclareMark, other));
+            EXPECT_FALSE(SameColor(kAdvisedFrame, other));
+        }
+    }
+
     TEST_F(MahjongHintsTest, AHandThatCannotDeclareHasNoBar) {
         ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
-        EXPECT_TRUE(RectsOf(MahjongHintsComponent::kDeclareMark).empty()) << "no discard leaves a waiting hand";
+        EXPECT_TRUE(RectsOf(kDeclareMark).empty()) << "no discard leaves a waiting hand";
 
         ASSERT_NO_FATAL_FAILURE(StartEast(kPlainEast, "5p"));
         ASSERT_TRUE(_game->GetSession().ActorIsPerson());
-        EXPECT_TRUE(RectsOf(MahjongHintsComponent::kDeclareMark).empty());
+        EXPECT_TRUE(RectsOf(kDeclareMark).empty());
     }
 
     TEST_F(MahjongHintsTest, NoMarkOffTheViewersTurnAndNoneWhenHintsDoNotApply) {
         ASSERT_NO_FATAL_FAILURE(StartEast(kSingleWait, "9p"));
-        ASSERT_EQ(RectsOf(MahjongHintsComponent::kDeclareMark).size(), 2u);
+        ASSERT_EQ(RectsOf(kDeclareMark).size(), 2u);
 
         _game->SetHintsOn(false);
         Draw();
-        EXPECT_TRUE(RectsOf(MahjongHintsComponent::kDeclareMark).empty()) << "hints off";
+        EXPECT_TRUE(RectsOf(kDeclareMark).empty()) << "hints off";
         _game->SetHintsOn(true);
         Draw();
-        ASSERT_EQ(RectsOf(MahjongHintsComponent::kDeclareMark).size(), 2u);
+        ASSERT_EQ(RectsOf(kDeclareMark).size(), 2u);
         _game->OpenSetup();
         Draw();
-        EXPECT_TRUE(RectsOf(MahjongHintsComponent::kDeclareMark).empty()) << "Setup is open";
+        EXPECT_TRUE(RectsOf(kDeclareMark).empty()) << "Setup is open";
         _game->CloseSetup();
 
         // The turn passes to a computer: the 13 tiles wait, but nothing can be discarded
         ASSERT_TRUE(Discard("9p"));
         Draw();
         ASSERT_FALSE(_game->GetSession().ActorIsPerson());
-        EXPECT_TRUE(RectsOf(MahjongHintsComponent::kDeclareMark).empty());
+        EXPECT_TRUE(RectsOf(kDeclareMark).empty());
         EXPECT_FALSE(ButtonShown());
 
         // A spectator
         ASSERT_NO_FATAL_FAILURE(StartEast(kSingleWait, "9p", kAllComputers));
-        EXPECT_TRUE(RectsOf(MahjongHintsComponent::kDeclareMark).empty());
+        EXPECT_TRUE(RectsOf(kDeclareMark).empty());
         EXPECT_FALSE(ButtonShown());
     }
 
@@ -850,12 +864,12 @@ namespace BECore::Mahjong::Tests {
         const SeatSetup twoPeople{SeatKind::Person, SeatKind::Computer, SeatKind::Person, SeatKind::Computer};
         ASSERT_NO_FATAL_FAILURE(StartEast(kSingleWait, "9p", twoPeople));
         ASSERT_TRUE(_game->GetSession().HandoffPending());
-        EXPECT_TRUE(RectsOf(MahjongHintsComponent::kDeclareMark).empty());
+        EXPECT_TRUE(RectsOf(kDeclareMark).empty());
         EXPECT_FALSE(ButtonShown());
 
         _game->GetSession().Reveal();
         Refresh();
-        EXPECT_EQ(RectsOf(MahjongHintsComponent::kDeclareMark).size(), 2u);
+        EXPECT_EQ(RectsOf(kDeclareMark).size(), 2u);
         EXPECT_TRUE(ButtonShown());
     }
 
@@ -864,7 +878,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(Discard("9p", true));
         Draw();
         ASSERT_EQ(_game->GetSession().GetPhase(), SessionPhase::HandOver);
-        EXPECT_TRUE(RectsOf(MahjongHintsComponent::kDeclareMark).empty());
+        EXPECT_TRUE(RectsOf(kDeclareMark).empty());
         EXPECT_FALSE(ButtonShown());
     }
 
@@ -901,7 +915,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongHintsTest, APressSetsTheSentenceOfTheAdviceAndFramesTheAdvisedDiscard) {
         ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
         ASSERT_TRUE(ButtonShown());
-        ASSERT_TRUE(RectsOf(MahjongHintsComponent::kAdvisedFrame).empty());
+        ASSERT_TRUE(RectsOf(kAdvisedFrame).empty());
         const std::optional<HandAction> advice = AdviceFor(ViewOf(kSeat0));
         ASSERT_TRUE(advice.has_value());
         ASSERT_EQ(*advice, HandAction::MakeDiscard(T("Nw"))) << "worked out in HintsTest";
@@ -921,15 +935,15 @@ namespace BECore::Mahjong::Tests {
                 ++slots;
                 const Rect& r = slot.rect;
                 bool top = false;
-                for (const Rect& bar : RectsOf(MahjongHintsComponent::kAdvisedFrame)) {
+                for (const Rect& bar : RectsOf(kAdvisedFrame)) {
                     top = top || (bar.x == r.x && bar.y == r.y && bar.w == r.w);
                 }
                 EXPECT_TRUE(top);
             }
         }
         EXPECT_EQ(slots, 1);
-        EXPECT_EQ(RectsOf(MahjongHintsComponent::kAdvisedFrame).size(), 4u * slots);
-        // A hand is not left unchanged by it
+        EXPECT_EQ(RectsOf(kAdvisedFrame).size(), 4u * slots);
+        // Asking for the advice plays nothing: the hand still holds its 14 tiles and the person is still to act
         EXPECT_EQ(Hand().GetHand(kSeat0).concealed.size(), 14u);
         EXPECT_TRUE(_game->GetSession().ActorIsPerson());
     }
@@ -946,8 +960,8 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(StartEast(kSingleWait, "9p"));
         Press();
         EXPECT_EQ(AdviceVar(), "Discard 9 Dots and declare the ready hand.");
-        EXPECT_EQ(RectsOf(MahjongHintsComponent::kAdvisedFrame).size(), 4u);
-        EXPECT_EQ(RectsOf(MahjongHintsComponent::kDeclareMark).size(), 2u);
+        EXPECT_EQ(RectsOf(kAdvisedFrame).size(), 4u);
+        EXPECT_EQ(RectsOf(kDeclareMark).size(), 2u);
     }
 
     TEST_F(MahjongHintsTest, PressingAgainGivesTheSameAnswer) {
@@ -972,7 +986,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(AdviceVar(), SentenceFor(kSeat1));
         EXPECT_EQ(_game->GetSession().Version(), version);
         EXPECT_EQ(Hand().GetPhase(), Phase::Claim) << "nothing was claimed";
-        EXPECT_TRUE(RectsOf(MahjongHintsComponent::kAdvisedFrame).empty()) << "no tile of the hand is advised";
+        EXPECT_TRUE(RectsOf(kAdvisedFrame).empty()) << "no tile of the hand is advised";
     }
 
     TEST_F(MahjongHintsTest, InAClaimWindowTheAdviceMayBeToLetTheDiscardGo) {
@@ -1026,7 +1040,7 @@ namespace BECore::Mahjong::Tests {
 
         EXPECT_FALSE(AdviceShown());
         EXPECT_TRUE(AdviceVar().empty());
-        EXPECT_TRUE(RectsOf(MahjongHintsComponent::kAdvisedFrame).empty());
+        EXPECT_TRUE(RectsOf(kAdvisedFrame).empty());
     }
 
     TEST_F(MahjongHintsTest, AnyOtherDiscardDropsTheAdviceToo) {
@@ -1133,13 +1147,10 @@ namespace BECore::Mahjong::Tests {
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             const UIStrings& strings = CoreManager::GetUIStrings();
-            std::vector<std::string> sentences;
+            std::vector<eastl::string> sentences;
             TableView view;
             view.pendingTile = T("5p");
-            const auto add = [&](const HandAction& action) {
-                const eastl::string text = AdviceText(strings, view, action);
-                sentences.emplace_back(text.data(), text.size());
-            };
+            const auto add = [&](const HandAction& action) { sentences.push_back(AdviceText(strings, view, action)); };
             for (int id = 0; id < kTileIdCount; ++id) {
                 const Tile tile = Tile(static_cast<uint8_t>(id));
                 add(HandAction::MakeDiscard(tile, true));
@@ -1157,13 +1168,8 @@ namespace BECore::Mahjong::Tests {
             }
             add(HandAction::MakePass());
             add(HandAction::MakeDeclareWin());
-            std::string longest;
-            for (const std::string& sentence : sentences) {
-                if (sentence.size() > longest.size()) {
-                    longest = sentence;
-                }
-            }
-            CoreManager::GetUIVars().Set("hintAdvice"_intern, eastl::string_view(longest.data(), longest.size()));
+            const eastl::string longest = LongestText(sentences);
+            CoreManager::GetUIVars().Set("hintAdvice"_intern, eastl::string_view(longest));
             Draw();
             ASSERT_TRUE(AdviceShown());
             ASSERT_TRUE(ButtonShown());
@@ -1183,9 +1189,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NE(label, nullptr);
         ASSERT_NE(panel, nullptr);
 
-        constexpr float ringW = kWallStackSize * kWallRingColumns;
-        constexpr float ringH = kWallStackSize * kWallRingRows;
-        const Rect inside((kViewWidth - ringW) * 0.5f + kWallStackSize, (kViewHeight - ringH) * 0.5f + kWallStackSize, ringW - 2.0f * kWallStackSize, ringH - 2.0f * kWallStackSize);
+        const Rect inside = GroundInsideTheRing();
         EXPECT_TRUE(Inside(button->rect, inside));
         EXPECT_TRUE(Inside(label->rect, inside));
         EXPECT_TRUE(Apart(button->rect, label->rect));
@@ -1210,7 +1214,8 @@ namespace BECore::Mahjong::Tests {
         worst.wallRemaining = 2 * kWallRingCells;
         for (const TileSlot& slot : MakeTableLayout(worst).slots) {
             EXPECT_TRUE(Apart(slot.rect, button->rect)) << "role " << static_cast<int>(slot.role);
-            EXPECT_TRUE(Apart(slot.rect, label->rect)) << "role " << static_cast<int>(slot.role);
+            EXPECT_TRUE(Apart(slot.rect, label->rect)) << "role " << static_cast<int>(slot.role) << " slot " << slot.rect.x << "," << slot.rect.y << "," << slot.rect.w << "x" << slot.rect.h
+                                                       << " label " << label->rect.x << "," << label->rect.y << "," << label->rect.w << "x" << label->rect.h;
         }
     }
 

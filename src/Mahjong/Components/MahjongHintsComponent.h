@@ -43,11 +43,6 @@ namespace BECore::Mahjong {
     class MahjongHintsComponent : public IComponent {
         BE_CLASS(MahjongHintsComponent)
     public:
-        /// A bar under a tile whose discard declares the calling hand.
-        static constexpr Color kDeclareMark{90, 220, 120, 255};
-        /// The frame on the tile the computer would discard.
-        static constexpr Color kAdvisedFrame{80, 200, 255, 255};
-
         MahjongHintsComponent() = default;
         ~MahjongHintsComponent() override;
 
