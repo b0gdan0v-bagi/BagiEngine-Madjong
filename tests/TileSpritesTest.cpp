@@ -16,6 +16,11 @@ namespace BECore::Mahjong::Tests {
         constexpr size_t kPngSignatureSize = 8;
         constexpr size_t kIhdrDataOffset = kPngSignatureSize + 8;  // after the signature, the chunk length and the chunk type
         constexpr size_t kIhdrSize = 13;
+        constexpr size_t kIhdrTypeOffset = kPngSignatureSize + 4;  // the chunk type follows the 4 bytes of the chunk length
+        constexpr size_t kIhdrHeightOffset = 4;                    // within the chunk data: width (4), height (4), depth, colour type, ...
+        constexpr size_t kIhdrDepthOffset = 8;
+        constexpr size_t kIhdrColorTypeOffset = 9;
+        constexpr size_t kIhdrInterlaceOffset = 12;
         constexpr uint8_t kBitDepth = 8;
         constexpr uint8_t kColorTypeRgba = 6;
         constexpr uint8_t kNoInterlace = 0;
@@ -81,12 +86,12 @@ namespace BECore::Mahjong::Tests {
         file.read(reinterpret_cast<char*>(head.data()), static_cast<std::streamsize>(head.size()));
         ASSERT_EQ(static_cast<size_t>(file.gcount()), head.size());
         EXPECT_TRUE(std::equal(std::begin(kPngSignature), std::end(kPngSignature), head.begin()));
-        EXPECT_EQ(std::string(head.begin() + kPngSignatureSize + 4, head.begin() + kPngSignatureSize + 8), "IHDR");
+        EXPECT_EQ(std::string(head.begin() + kIhdrTypeOffset, head.begin() + kIhdrDataOffset), "IHDR");
         EXPECT_EQ(ReadBigEndian(head, kIhdrDataOffset), static_cast<uint32_t>(kAtlasWidth));
-        EXPECT_EQ(ReadBigEndian(head, kIhdrDataOffset + 4), static_cast<uint32_t>(kAtlasHeight));
-        EXPECT_EQ(head[kIhdrDataOffset + 8], kBitDepth);
-        EXPECT_EQ(head[kIhdrDataOffset + 9], kColorTypeRgba);
-        EXPECT_EQ(head[kIhdrDataOffset + 12], kNoInterlace);
+        EXPECT_EQ(ReadBigEndian(head, kIhdrDataOffset + kIhdrHeightOffset), static_cast<uint32_t>(kAtlasHeight));
+        EXPECT_EQ(head[kIhdrDataOffset + kIhdrDepthOffset], kBitDepth);
+        EXPECT_EQ(head[kIhdrDataOffset + kIhdrColorTypeOffset], kColorTypeRgba);
+        EXPECT_EQ(head[kIhdrDataOffset + kIhdrInterlaceOffset], kNoInterlace);
     }
 
     TEST_F(TileSpritesTest, TheLibraryHoldsOneSpritePerTileAndTheBack) {

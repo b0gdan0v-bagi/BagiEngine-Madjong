@@ -8,8 +8,8 @@ tile set and no font file, so the art is ours and anyone can change it by editin
     python3 tools/make_tiles.py --check    exits 0 when the committed files are what the generator makes now
 
 The check compares the decoded pixels and the text of the XML, not the bytes of the PNG, because zlib output differs between versions.
-Standard library only (zlib, struct). The geometry below (CELL_W, CELL_H, COLUMNS, the cell of an id) is the only copy; the C++ side
-(src/Mahjong/Table/TileAtlas.h) repeats the same numbers and tests/TileSpritesTest.cpp compares the two.
+Standard library only (zlib, struct). The geometry below (CELL_W, CELL_H, COLUMNS, the cell of an id) is the source of the numbers;
+src/Mahjong/Table/TileAtlas.h mirrors them and tests/TileSpritesTest.cpp compares the two.
 
 Atlas: COLUMNS x ROWS cells of CELL_W x CELL_H pixels, RGBA, transparent outside the tiles. Cell index = tile id of Tile.h
 (0..8 dots, 9..17 bamboo, 18..26 characters, 27..30 winds, 31..33 dragons, 34..37 flowers, 38..41 seasons), cell 42 = the back.
@@ -253,7 +253,7 @@ def draw_body(canvas: Canvas, face: Color = FACE) -> None:
     canvas.rrect(*BODY_OUTLINE, OUTLINE)
     canvas.rrect(*BODY_SIDE, SIDE)
     canvas.rrect(*BODY_FACE, face)
-    # a thin light edge on the top left of the face gives the bevel
+    # a thin light edge along the top of the face gives the bevel
     canvas.line(BODY_FACE[0] + 7, BODY_FACE[1] + 1.5, BODY_FACE[2] - 7, BODY_FACE[1] + 1.5, 1.6, (255, 253, 244))
 
 
@@ -582,7 +582,7 @@ def check() -> int:
         try:
             if decode_png(PNG_PATH.read_bytes()) != expected_rows:
                 failures.append(f"{PNG_PATH.relative_to(ROOT)} differs from what the generator makes now")
-        except (ValueError, zlib.error) as error:
+        except (ValueError, zlib.error, struct.error) as error:
             failures.append(f"{PNG_PATH.relative_to(ROOT)}: {error}")
     if not XML_PATH.is_file():
         failures.append(f"{XML_PATH} is missing")
