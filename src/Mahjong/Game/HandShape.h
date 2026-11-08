@@ -95,7 +95,8 @@ namespace BECore::Mahjong {
     [[nodiscard]] eastl::vector<Tile> WinningTiles(const TileCounts& counts, int meldCount, const TileCounts& meldTiles);
 
     /// Whether the hand is waiting: `WinningTiles(counts, meldCount, meldTiles)` is not empty (the same rule for the copies in the melds).
-    /// Cheaper than that: it stops at the first winning kind and probes only the kinds next to a held tile.
+    /// Cheaper than that: it stops at the first winning kind and probes only the kinds next to a held tile (and the orphans for
+    /// thirteen orphans).
     [[nodiscard]] bool IsWaiting(const TileCounts& counts, int meldCount, const TileCounts& meldTiles);
 
     /// The waits of a seat: `hand.concealed` against `hand.melds`, the copies in the melds counted. Use this one for a seat.

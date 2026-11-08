@@ -127,7 +127,8 @@ namespace BECore::Mahjong::Tests {
                 return Take(style == 2 ? RandomKind() : static_cast<uint8_t>(suitBase + Below(kRanksPerSuit)), false);
             }
 
-            /// Thirteen orphans or near it: all 13 kinds once, or 12 kinds with one of them twice; one time in five a random tile is swapped in.
+            /// Thirteen orphans or near it: all 13 kinds once, or 12 kinds with one of them twice; one time in five a random tile is
+            /// swapped in.
             bool AddOrphansShape() {
                 const uint32_t skipped = Below(kOrphanKinds + 1);  // kOrphanKinds: none skipped
                 int index = 0;
@@ -261,7 +262,11 @@ namespace BECore::Mahjong::Tests {
                 }
                 const Sample& sample = builder.Get();
                 ++tally.hands;
-                (ExpectSameAsReference(sample) ? tally.waiting : tally.notWaiting)++;
+                if (ExpectSameAsReference(sample)) {
+                    ++tally.waiting;
+                } else {
+                    ++tally.notWaiting;
+                }
                 tally.deadKinds += CountDeadKinds(sample);
             }
             return tally;
