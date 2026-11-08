@@ -85,6 +85,62 @@ namespace BECore::Mahjong {
             return false;
         }
 
+        /// Whether `counts` holds a tile that a tile of kind `id` could sit next to in a set or a pair: the same kind, or for a suit tile
+        /// any tile of its suit within two ranks. A kind that fails this cannot complete a hand of four sets and a pair, and neither seven
+        /// pairs (the added tile pairs with a single of its own kind). Thirteen orphans is the exception, see `VisitWinningKinds`.
+        bool HasNeighbour(const TileCounts& counts, uint8_t id) noexcept {
+            if (counts[id] > 0) {
+                return true;
+            }
+            const Tile tile{id};
+            if (!tile.IsSuit()) {
+                return false;
+            }
+            const int rank = tile.Rank();
+            const int low = rank > 2 ? -2 : 1 - rank;
+            const int high = rank < kRanksPerSuit - 1 ? 2 : kRanksPerSuit - rank;
+            for (int step = low; step <= high; ++step) {
+                if (counts[id + step] > 0) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// The number of different terminals and honours `counts` holds.
+        int CountOrphanKinds(const TileCounts& counts) noexcept {
+            int kinds = 0;
+            for (uint8_t id = 0; id < kKindCount; ++id) {
+                kinds += counts[id] > 0 && IsOrphan(Tile{id}) ? 1 : 0;
+            }
+            return kinds;
+        }
+
+        /// Calls `visit(tile)` for each kind that completes the waiting hand `counts` (the rules of `WinningTiles`), in the order of the
+        /// ids; `visit` returns true to stop. Returns true when stopped. Only kinds next to a held tile are probed (`HasNeighbour`); a
+        /// hand with no melds and 12 or more kinds of orphans can still become thirteen orphans with a kind it does not hold, so
+        /// there every orphan is probed as well.
+        template <class Visit>
+        bool VisitWinningKinds(const TileCounts& counts, int meldCount, const TileCounts& meldTiles, Visit&& visit) {
+            if (meldCount < 0 || meldCount > kSetsInHand || TotalTiles(counts) != kWinningHandTiles - 1 - meldCount * kTilesPerSet) {
+                return false;
+            }
+            const bool orphansPossible = meldCount == 0 && CountOrphanKinds(counts) >= kOrphanKinds - 1;
+            TileCounts probe = counts;
+            for (uint8_t id = 0; id < kKindCount; ++id) {
+                if (counts[id] + meldTiles[id] >= kCopiesPerTile || !(HasNeighbour(counts, id) || (orphansPossible && IsOrphan(Tile{id})))) {
+                    continue;
+                }
+                ++probe[id];
+                const bool wins = IsWinningShape(probe, meldCount);
+                --probe[id];
+                if (wins && visit(Tile{id})) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
     }  // namespace
 
     TileCounts CountTiles(const eastl::vector<Tile>& tiles) noexcept {
@@ -189,21 +245,15 @@ namespace BECore::Mahjong {
 
     eastl::vector<Tile> WinningTiles(const TileCounts& counts, int meldCount, const TileCounts& meldTiles) {
         eastl::vector<Tile> tiles;
-        if (meldCount < 0 || meldCount > kSetsInHand || TotalTiles(counts) != kWinningHandTiles - 1 - meldCount * kTilesPerSet) {
-            return tiles;
-        }
-        TileCounts probe = counts;
-        for (uint8_t id = 0; id < kKindCount; ++id) {
-            if (counts[id] + meldTiles[id] >= kCopiesPerTile) {
-                continue;
-            }
-            ++probe[id];
-            if (IsWinningShape(probe, meldCount)) {
-                tiles.push_back(Tile{id});
-            }
-            --probe[id];
-        }
+        VisitWinningKinds(counts, meldCount, meldTiles, [&](Tile tile) {
+            tiles.push_back(tile);
+            return false;
+        });
         return tiles;
+    }
+
+    bool IsWaiting(const TileCounts& counts, int meldCount, const TileCounts& meldTiles) {
+        return VisitWinningKinds(counts, meldCount, meldTiles, [](Tile) { return true; });
     }
 
     eastl::vector<Tile> WinningTiles(const PlayerHand& hand) {

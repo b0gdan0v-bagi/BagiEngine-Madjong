@@ -114,6 +114,7 @@ namespace BECore::Mahjong {
         const PlayerHand& hand = input.hand;
         const TileCounts held = HeldTiles(hand);
         const bool sevenPairs = IsSevenPairsHand(hand);
+        const bool complete = AnyCompleteReading(readings);
         const bool honoursOnly = EveryHeldTile(held, [](Tile tile) { return tile.IsHonour(); });
 
         if (sevenPairs) {
@@ -122,10 +123,10 @@ namespace BECore::Mahjong {
         if (HasConcealedPungsOneSuit(readings, hand)) {
             return ScoreKind::ConcealedPungsOneSuit;
         }
-        if (honoursOnly && AnyCompleteReading(readings)) {
+        if (honoursOnly && complete) {
             return ScoreKind::HonoursOnly;
         }
-        if (EveryHeldTile(held, [](Tile tile) { return tile.IsTerminal(); }) && AnyCompleteReading(readings)) {
+        if (EveryHeldTile(held, [](Tile tile) { return tile.IsTerminal(); }) && complete) {
             return ScoreKind::TerminalsOnly;
         }
         if (HasAllGreen(readings, held)) {
@@ -144,7 +145,7 @@ namespace BECore::Mahjong {
             return ScoreKind::ThirteenOrphans;
         }
         // These two read the circumstances, but only of a hand that is complete (the shapes of the limit hands above returned already).
-        if (!AnyCompleteReading(readings)) {
+        if (!complete) {
             return std::nullopt;
         }
         if (input.result.lastLiveTile && input.result.winningTile == Tile::Suited(TileSuit::Dots, kLastTileLimitRank)) {

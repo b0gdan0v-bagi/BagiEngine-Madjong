@@ -7,11 +7,13 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        /// Whether `hand` is waiting without one copy of its concealed `tile`.
-        bool IsWaitingWithout(const PlayerHand& hand, Tile tile) {
-            PlayerHand rest = hand;
-            rest.RemoveConcealed(tile);
-            return !WinningTiles(rest).empty();
+        /// Whether the hand of `counts` (its concealed tiles) and `meldCount` / `meldTiles` (its melds) is waiting without one copy of the
+        /// concealed `tile`: the counts are changed and put back.
+        bool IsWaitingWithout(TileCounts& counts, Tile tile, int meldCount, const TileCounts& meldTiles) {
+            --counts[tile.Id()];
+            const bool waiting = IsWaiting(counts, meldCount, meldTiles);
+            ++counts[tile.Id()];
+            return waiting;
         }
 
         /// The open pung of `tile` in `hand`, nullptr when there is none (a pung is the meld an upgraded kong grows from).
@@ -150,7 +152,8 @@ namespace BECore::Mahjong {
             if (hand.callingDeclared) {
                 return std::unexpected(HandError::AlreadyCalling);
             }
-            if (!IsWaitingWithout(hand, tile)) {
+            TileCounts counts = CountTiles(hand.concealed);
+            if (!IsWaitingWithout(counts, tile, static_cast<int>(hand.melds.size()), CountMeldTiles(hand.melds))) {
                 return std::unexpected(HandError::NotWaiting);
             }
         }
@@ -294,13 +297,16 @@ namespace BECore::Mahjong {
         }
         const PlayerHand& hand = _hands[seat];
         if (_phase == Phase::Discard && seat == _current) {
+            TileCounts counts = CountTiles(hand.concealed);
+            const TileCounts meldTiles = CountMeldTiles(hand.melds);
+            const int meldCount = static_cast<int>(hand.melds.size());
             for (size_t i = 0; i < hand.concealed.size(); ++i) {
                 const Tile tile = hand.concealed[i];
                 if (i > 0 && hand.concealed[i - 1] == tile) {
                     continue;
                 }
                 actions.push_back(HandAction::MakeDiscard(tile));
-                if (!hand.callingDeclared && IsWaitingWithout(hand, tile)) {
+                if (!hand.callingDeclared && IsWaitingWithout(counts, tile, meldCount, meldTiles)) {
                     actions.push_back(HandAction::MakeDiscard(tile, true));
                 }
             }

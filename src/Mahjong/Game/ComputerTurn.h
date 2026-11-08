@@ -1,0 +1,74 @@
+#pragma once
+
+#include <Mahjong/Game/ComputerView.h>
+#include <Mahjong/Game/MahjongRng.h>
+#include <Mahjong/Game/Shanten.h>
+
+namespace BECore::Mahjong {
+
+    /// What `KeepValue` says of a tile: the higher, the more the seat wants to keep it when the hand is no nearer to a win either way.
+    inline constexpr int kKeepWorthless = 0;  // an honour that is no dragon, not the own wind and not the round wind
+    inline constexpr int kKeepTerminal = 1;
+    inline constexpr int kKeepSimple = 2;
+    inline constexpr int kKeepValueTile = 3;  // a dragon, the own wind, the round wind: a pung of it scores a double
+
+    /// The copies of `tile` the seat cannot see (`kCopiesPerTile - view.visible`, never below 0); 0 for a tile that is not playable.
+    [[nodiscard]] int UnseenCopies(const TableView& view, Tile tile) noexcept;
+
+    /// Whether a pung of `tile` scores a double for the seat: a dragon, the seat's own wind or the round wind. The one place of the rule
+    /// (`KeepValue` and the claims use it).
+    [[nodiscard]] bool IsValueTile(Tile tile, Wind seatWind, Wind roundWind) noexcept;
+
+    /// One of non-empty `ties` by `rng` (the first when there is only one: no number is drawn).
+    template <typename T>
+    const T& PickOne(const eastl::vector<T>& ties, MahjongRng& rng) {
+        return ties.size() == 1 ? ties.front() : ties[rng.Below(static_cast<uint32_t>(ties.size()))];
+    }
+
+    /// How much the seat wants to keep `tile` (`kKeep...`); it only breaks ties, efficiency decides first.
+    [[nodiscard]] int KeepValue(Tile tile, Wind seatWind, Wind roundWind) noexcept;
+
+    /// The unseen copies of the kinds that lower `Shanten(counts, meldCount)` (`ImprovingTiles`): how many tiles of the wall (and of the
+    /// hands) would take a hand of `3n + 1` tiles one step nearer. At shanten 0 these are the unseen copies of the winning tiles of the
+    /// four-sets-and-a-pair shape.
+    [[nodiscard]] int AcceptanceOf(const TableView& view, const TileCounts& counts, int meldCount);
+
+    /// How good the best discard of a hand of `3n + 2` tiles is: the tile, the shanten and the acceptance of the `3n + 1` tiles left.
+    struct DiscardRating {
+        Tile tile;
+        int shanten = 0;
+        int acceptance = 0;
+    };
+
+    /**
+     * @brief The best discard of the concealed tiles `counts` with `meldCount` melds (hand of `3n + 2` tiles).
+     *
+     * Of every kind held, the discards that leave the lowest `Shanten` are candidates; among them the highest `AcceptanceOf`; among
+     * those the lowest `KeepValue`; the rest of the ties go to `rng`. `view` gives the unseen copies and the winds. Used for the own
+     * turn and, with the hand after a claim, for the claims. An empty `counts` gives an invalid tile.
+     */
+    [[nodiscard]] DiscardRating BestDiscard(const TileCounts& counts, int meldCount, const TableView& view, MahjongRng& rng);
+
+    /// The shanten and the acceptance `BestDiscard` finds, with no rng: `tile` is the first of the tied discards (the lowest `KeepValue`,
+    /// then the lowest id). For comparing hands.
+    [[nodiscard]] DiscardRating BestDiscardRating(const TileCounts& counts, int meldCount, const TableView& view);
+
+    /**
+     * @brief The action of a seat that has to discard (`Phase::Discard`, `view.currentSeat == view.seat`, `view.legal` not empty).
+     *
+     * The steps, the first that applies wins:
+     * 1. `DeclareWin` when it is listed.
+     * 2. The calling hand: of the discards that declare it, the one that leaves the most unseen winning copies (`WinningTiles` of the
+     *    13 tiles that stay); ties by the lowest `KeepValue`, then `rng`.
+     * 3. A kong (`ConcealedKong`, `UpgradeKong`) when the hand without it is no worse: the best discard of the hand as it is, against
+     *    the hand without the four tiles and one more meld (the fourth tile of an upgrade leaves), the shanten not higher and, for a
+     *    waiting hand, the acceptance not lower.
+     * 4. After the declaration: the discard that keeps the hand waiting with the most unseen winning copies (the tie-breaks as in 2).
+     * 5. Otherwise `BestDiscard` of the concealed tiles.
+     *
+     * Always an element of `view.legal`. Seven pairs and thirteen orphans are not aimed at (`Shanten` does not look at them), but
+     * step 1 to 2 take them whenever the model lists them.
+     */
+    [[nodiscard]] HandAction ChooseTurnAction(const TableView& view, MahjongRng& rng);
+
+}  // namespace BECore::Mahjong
