@@ -17,7 +17,7 @@ namespace BECore::Mahjong {
             {"ConcealedKong1", "MahjongConcealedKong", "1", "kong1"},
             {"ConcealedKong2", "MahjongConcealedKong", "2", "kong2"},
             {"UpgradeKong", "MahjongUpgradeKong", "", "upgrade"},
-            {"Declare", "MahjongDeclare", "on", nullptr},  // kDeclareOn
+            {"Declare", "MahjongDeclare", kDeclareOn.data(), nullptr},
         }};
 
         static_assert(kChowButtons + static_cast<int>(ButtonKind::ClaimChow0) == static_cast<int>(ButtonKind::Pass));

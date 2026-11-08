@@ -1,6 +1,6 @@
 # BagiEngine-Madjong
 
-Mahjong on the [BagiEngine](https://github.com/b0gdan0v-bagi/BagiEngine). The engine is the git submodule `engine/`, on the permanent branch `games/mahjong` of the engine repository. So far it is a skeleton: the game is registered and opens its scene, the rules are still to come.
+Mahjong on the [BagiEngine](https://github.com/b0gdan0v-bagi/BagiEngine). The engine is the git submodule `engine/`, on the permanent branch `games/mahjong` of the engine repository. It is classic Chinese mahjong for four seats: the rules (the hand, the three kongs, robbing a kong, scoring and payments, a match of 16 or 8 hands), computer players, a control API for external clients (`engine/tools/control`) and a table on screen that you play with the mouse, alone against three computers or hot seat at one screen. The tile art is drawn by a script in this repository.
 
 ## Get it
 
@@ -46,13 +46,14 @@ The game opens on **New game: who plays?**: for each of the four seats pick `Per
 - **Everything else is a button** in the lower right of the table: `Win`, `Mahjong`, `Pung`, `Kong`, `Chow 4-6p` (one button per sequence you can make), `Kong 5p` (a concealed kong), `Add 5p` (a fourth tile to an open pung) and `Pass`. Only the buttons that are legal now are shown. `Declare` is a switch: turn it on and the next tile you click is discarded as the declaration of the calling hand (the tiles that cannot declare are dimmed).
 - **Computers** play one step every 0.6 seconds (`kComputerStepSeconds`); nothing moves while the seat choice is open.
 - **Hot seat:** with two or more people at one screen the table is covered between turns ("Pass the screen to Seat 2 (South)"); the next person presses `Show`.
+- **The end of a hand:** a score table covers the table: who won and how, the points of every seat in the hand, what each seat paid or got and its total, the winner's lines (`Pung of 5 Dots: 8`, `One suit, no honours: x8`) and the sum. All four hands are face up. `Next hand` settles it and deals on (`Finish match` on the last one); after the last hand the standings show the seats by points and `New game` opens the seat choice.
 - The HUD (top left and left of the table) shows the round and the hand number, the tiles left in the wall, whose turn it is and the four scores (`>` the seat whose turn it is, `*` East).
 
 ## Layout
 
 | Path | What |
 |------|------|
-| `src/Mahjong/` | the game: `MahjongGame` now, the rules (`Game/`) and the scene components (`Components/`) to come. `CLAUDE.md` describes it |
+| `src/Mahjong/` | the game: `MahjongGame` and its control adapter, the rules and the computer players (`Game/`), the pure side of the scene (`Table/`: layout, tile atlas cells, action buttons, the words of the score table) and the scene components (`Components/`: the table, the HUD). `CLAUDE.md` describes it |
 | `config/`, `assets/` | scene, application config, the tile sprite library; the tile atlas (`assets/tiles/tiles.png`) |
 | `tools/` | `make_tiles.py`, the generator of our own tile art (`config/TextureLibrary.xml` and the atlas are its output) |
 | `tests/` | gtest cases and `control_smoke.py`, the smoke test of the control API (plays a hand and a match over WebSocket) |

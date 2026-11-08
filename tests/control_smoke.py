@@ -5,7 +5,9 @@
 
 The game is started twice, once on the real clock and once with --manual-clock (game time moves only on `step`), headless (no window).
 Both runs play the same scenario: the methods of the control API, one whole hand chosen at random among `list_actions`, and a match of
-eight hands between four computers driven by `next_hand` alone. The helpers are the engine's (tools/control/tests/smoke.py).
+eight hands between four computers driven by `next_hand` alone; then the scene: the UI tree (the HUD, the seat choice closed by a reset,
+the score table of a finished hand and the standings of a finished match, shown and hidden by the game), a screenshot of the table and,
+on the manual clock, the screenshots of two seeds. The helpers are the engine's (tools/control/tests/smoke.py).
 Exit code: 0 passed, 1 failed, 77 skipped (the executable does not exist; ctest reads 77 as "skipped").
 """
 
@@ -26,6 +28,7 @@ from smoke import (  # noqa: E402
     check,
     check_state_push,
     expect_error,
+    find_ui_element,
     receive_response,
     run_smoke,
     take_screenshot,
@@ -38,6 +41,10 @@ SEAT_COUNT = 4
 STARTING_SCORE = 2000
 STEP_LIMIT_PER_HAND = 2000  # a hand has far fewer decisions of one person
 HAND_LIMIT_PER_MATCH = 100  # 8 counted hands; a drawn hand is dealt again
+TABLE_COLORS = 500  # a table of 150 tiles with antialiased marks and text shows thousands; flat felt, or felt and plain boxes, far fewer
+SCENE_CANVASES = {"Actions", "Hud", "Handoff", "HandOver", "MatchOver", "Setup"}
+MODAL_SCREENS = ("Setup", "Handoff", "HandOver", "MatchOver")
+SETTLE_FRAMES = 2  # frames after a change of the game before the canvases show it
 IDLE_CHECK_SECONDS = 0.3  # how long the manual clock is watched not moving
 DEFAULT_STEP_SECONDS = 1.0 / 60.0
 STATE_KEYS = {"phase", "seat", "seatWind", "roundWind", "east", "hand", "turn", "seats", "discards", "wall", "handsPlayed", "handsTotal", "version"}
@@ -206,10 +213,98 @@ def check_state_is_pushed(client: BagiControlClient) -> None:
     check_state_push(client, outcome)
 
 
-def check_screenshot(client: BagiControlClient) -> None:
+def screens_shown(client: BagiControlClient) -> tuple[set[str], dict[str, Any]]:
+    """Which of the modal screens are shown, after a few frames in which the scene reads the game; and the whole UI tree."""
+    client.call("step", {"frames": SETTLE_FRAMES})
+    tree = client.call("ui_tree")
+    check(tree["scene"] == "MahjongScene", f"the active scene is {tree['scene']}")
+    canvases = {canvas["node"]: canvas for canvas in tree["canvases"]}
+    check(SCENE_CANVASES <= set(canvases), f"the scene lacks the canvases {sorted(SCENE_CANVASES - set(canvases))}: {sorted(canvases)}")
+    return {node for node in MODAL_SCREENS if canvases[node]["visible"]}, tree
+
+
+def check_hud(tree: dict[str, Any], state: dict[str, Any]) -> None:
+    """The HUD labels carry the round and the four scores of the state."""
+    round_label = find_ui_element(tree, "RoundLabel")
+    check(round_label is not None and round_label["text"].startswith(f"Round: {state['roundWind']}"), f"the round label is {round_label}")
+    for seat in range(SEAT_COUNT):
+        label = find_ui_element(tree, f"Score{seat}")
+        check(label is not None and str(state["seats"][seat]["score"]) in label["text"] and f"Seat {seat + 1}" in label["text"], f"the score label of seat {seat} is {label}")
+
+
+def check_screens_follow_the_game(client: BagiControlClient, rng: random.Random) -> None:
+    """The seat choice is closed by a reset, the score table is shown exactly while a hand is over, the standings while the match is."""
     client.call("reset", {"seed": SEED, "seats": "PCCC", "hands": SHORT_MATCH_HANDS})
-    image = take_screenshot(client)
+    shown, tree = screens_shown(client)
+    check("Setup" not in shown, "the seat choice is still open after a reset")
+    check(shown == set(), f"a table in play shows {sorted(shown)}")
+    check_hud(tree, get_state(client))
+
+    # A hand played by the person: the score table appears with the end of the hand and goes with next_hand
+    over = play_one_hand(client, rng)
+    check(over["phase"] == "hand_over", f"the hand ended in {over['phase']}")
+    shown, tree = screens_shown(client)
+    check(shown == {"HandOver"}, f"a finished hand shows {sorted(shown)}")
+    headline = find_ui_element(tree, "Headline")
+    check(headline is not None and headline["text"] != "", "the score table has no headline")
+    won = over["result"]["kind"] == "win"
+    check(headline["text"].startswith("Seat") if won else headline["text"] == "Drawn hand", f"the headline '{headline['text']}' does not say '{over['result']['kind']}'")
+    button = find_ui_element(tree, "NextHand")
+    check(button is not None and button["visible"] and button["action"] == "MahjongNextHand", f"the table has no Next hand button: {button}")
+    client.call("perform_action", {"type": "next_hand"})
+    shown, _ = screens_shown(client)
+    check(shown == set(), f"next_hand left {sorted(shown)} on the screen")
+
+    # The same through the screen: four computers, the click on Next hand
+    client.call("reset", {"seed": SEED, "seats": "CCCC", "hands": SHORT_MATCH_HANDS})
+    shown, _ = screens_shown(client)
+    check(shown == {"HandOver"}, f"a hand of computers, over at once, shows {sorted(shown)}")
+    played = get_state(client)["handsPlayed"] + get_state(client)["version"]
+    clicked = client.call("ui_click", {"name": "NextHand"})
+    check(clicked["consumed"] and clicked["action"] == "MahjongNextHand", f"the click on Next hand was not taken: {clicked}")
+    shown, _ = screens_shown(client)
+    check(shown == set(), f"a click on Next hand left {sorted(shown)} on the screen")
+    check(get_state(client)["handsPlayed"] + get_state(client)["version"] > played, "the click on Next hand did not settle the hand")
+
+    # The end of the match: the standings, then New game opens the seat choice, and Start begins another match
+    client.call("reset", {"seed": SEED, "seats": "CCCC", "hands": SHORT_MATCH_HANDS})
+    for _ in range(HAND_LIMIT_PER_MATCH):
+        if get_state(client)["phase"] == "match_over":
+            break
+        client.call("perform_action", {"type": "next_hand"})
+    shown, tree = screens_shown(client)
+    check(shown == {"MatchOver"}, f"a finished match shows {sorted(shown)}")
+    standing = find_ui_element(tree, "Standing0")
+    check(standing is not None and standing["text"].startswith("1. Seat"), f"the first row of the standings is {standing}")
+    client.call("ui_click", {"name": "NewGame", "canvas": "MatchOver"})
+    shown, _ = screens_shown(client)
+    check(shown == {"Setup", "MatchOver"}, f"New game on the standings shows {sorted(shown)}")  # the seat choice lies over the standings
+    client.call("ui_click", {"name": "Start"})
+    shown, _ = screens_shown(client)
+    check(shown == set(), f"Start left {sorted(shown)} on the screen")
+    check(get_state(client)["handsPlayed"] == 0, "Start did not begin a new match")
+
+
+def table_colors(client: BagiControlClient, seed: int) -> Any:
+    client.call("reset", {"seed": seed, "seats": "PCCC", "hands": SHORT_MATCH_HANDS})
+    client.call("step", {"frames": SETTLE_FRAMES})
+    return take_screenshot(client)
+
+
+def check_table_screenshot(client: BagiControlClient) -> None:
+    """A screenshot of a fresh table has felt, tiles and text in it, not a flat colour."""
+    image = table_colors(client, SEED)
     check(image.width > 0 and image.height > 0, "the screenshot is empty")
+    check(len(image.colors()) >= TABLE_COLORS, f"the screenshot has {len(image.colors())} colours, it does not look like a table")
+
+
+def check_screenshots_of_two_seeds(client: BagiControlClient) -> None:
+    """The same seed looks the same twice and another seed looks different (the screenshot follows the game)."""
+    first = table_colors(client, SEED)
+    again = table_colors(client, SEED)
+    check(again.rows == first.rows, "the same seed looked different in two screenshots")
+    other = table_colors(client, SEED + 1)
+    check(other.rows != first.rows, "another seed looked the same: the screenshot does not follow the game")
 
 
 def run_real_clock_scenario(client: BagiControlClient, headless: bool) -> None:
@@ -225,8 +320,9 @@ def run_real_clock_scenario(client: BagiControlClient, headless: bool) -> None:
     after = client.call("step", {"frames": 3})["frame"]
     check(after >= before + 3, f"step 3 moved the frame from {before} to {after}")
 
+    check_screens_follow_the_game(client, random.Random(SEED + 2))
     if headless:
-        check_screenshot(client)
+        check_table_screenshot(client)
 
 
 def run_manual_clock_scenario(client: BagiControlClient, headless: bool) -> None:
@@ -263,8 +359,10 @@ def run_manual_clock_scenario(client: BagiControlClient, headless: bool) -> None
     check_state_push(client, outcome)
     check(not client.events or all(event["data"].get("version") != outcome["version"] for event in client.events), "the same change was pushed twice")
 
+    check_screens_follow_the_game(client, random.Random(SEED + 2))
     if headless:
-        check_screenshot(client)
+        check_table_screenshot(client)
+        check_screenshots_of_two_seeds(client)
 
 
 SCENARIOS = [

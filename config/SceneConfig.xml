@@ -6,8 +6,8 @@
       Table/TableLayout.h; MahjongTableUiTest compares the two) and the engine fits it to the window. MahjongTableComponent draws the
       felt, the four hands, the melds, the discards and the wall of the active game, plays the person seats and paces the computers.
       Its buttons are the canvases below; the component shows and hides them from the legal actions (Table/ActionButtons.h) and answers
-      their actions. MahjongHudComponent publishes the words of the HUD (UIVars) and runs the seat choice (the modal canvas Setup).
-      The score table comes with the next step.
+      their actions. MahjongHudComponent publishes the words of the HUD (UIVars), runs the seat choice (the modal canvas Setup) and
+      shows the score table of a finished hand (HandOver) and the standings of a finished match (MatchOver).
     -->
     <scene
       type="Scene"
@@ -94,6 +94,73 @@
                   <children>
                     <element type="UILabel" name="HandoffText" height="104" text="Pass the screen to {handoffSeat}" fontSize="30" align="Center" verticalAlign="Center" />
                     <element type="UIButton" name="Reveal" height="56" text="Show" fontSize="28" action="MahjongReveal" color="40,110,60,255" />
+                  </children>
+                </element>
+              </elements>
+            </component>
+          </components>
+        </node>
+        <!--
+          The score table of a finished hand: a modal canvas on the view of the table (SceneView like Setup: 16 lines of the winner, four
+          seats, a headline and a button are about 600 units, which a Screen canvas would not fit in a 480 px window at the user scale 1.5),
+          shown by MahjongHudComponent exactly while the session is in HandOver. The component publishes handOverHeadline,
+          handOverSeat0..3, scoreLine0..15 (only the first lines of the winner are shown: ScoreLineN is visible when there is a line N),
+          handOverSummary and handOverButton ("Next hand", "Finish match" on the last hand); MahjongNextHand settles the hand and deals on.
+        -->
+        <node name="HandOver" layer="25">
+          <components>
+            <component type="UICanvasComponent" space="SceneView" useSafeArea="true" modal="true" visible="false">
+              <elements>
+                <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
+                <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="640" height="608" direction="Vertical" spacing="6" padding="14" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
+                  <children>
+                    <element type="UILabel" name="Headline" height="64" text="{handOverHeadline}" fontSize="24" align="Center" verticalAlign="Center" />
+                    <element type="UILabel" name="SeatRow0" height="30" text="{handOverSeat0}" fontSize="20" verticalAlign="Center" />
+                    <element type="UILabel" name="SeatRow1" height="30" text="{handOverSeat1}" fontSize="20" verticalAlign="Center" />
+                    <element type="UILabel" name="SeatRow2" height="30" text="{handOverSeat2}" fontSize="20" verticalAlign="Center" />
+                    <element type="UILabel" name="SeatRow3" height="30" text="{handOverSeat3}" fontSize="20" verticalAlign="Center" />
+                    <element type="UIStack" name="Lines" height="236" direction="Horizontal" spacing="4" wrapChildren="true">
+                      <children>
+                        <element type="UILabel" name="ScoreLine0" visible="false" width="48%" height="26" text="{scoreLine0}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine1" visible="false" width="48%" height="26" text="{scoreLine1}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine2" visible="false" width="48%" height="26" text="{scoreLine2}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine3" visible="false" width="48%" height="26" text="{scoreLine3}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine4" visible="false" width="48%" height="26" text="{scoreLine4}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine5" visible="false" width="48%" height="26" text="{scoreLine5}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine6" visible="false" width="48%" height="26" text="{scoreLine6}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine7" visible="false" width="48%" height="26" text="{scoreLine7}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine8" visible="false" width="48%" height="26" text="{scoreLine8}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine9" visible="false" width="48%" height="26" text="{scoreLine9}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine10" visible="false" width="48%" height="26" text="{scoreLine10}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine11" visible="false" width="48%" height="26" text="{scoreLine11}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine12" visible="false" width="48%" height="26" text="{scoreLine12}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine13" visible="false" width="48%" height="26" text="{scoreLine13}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine14" visible="false" width="48%" height="26" text="{scoreLine14}" fontSize="18" />
+                        <element type="UILabel" name="ScoreLine15" visible="false" width="48%" height="26" text="{scoreLine15}" fontSize="18" />
+                      </children>
+                    </element>
+                    <element type="UILabel" name="Summary" height="56" text="{handOverSummary}" fontSize="20" align="Center" verticalAlign="Center" />
+                    <element type="UIButton" name="NextHand" height="56" text="{handOverButton}" fontSize="28" action="MahjongNextHand" color="40,110,60,255" />
+                  </children>
+                </element>
+              </elements>
+            </component>
+          </components>
+        </node>
+        <!-- The end of the match: the seats by points and the New game button (MahjongNewGame, which opens Setup), shown while the match is Finished. -->
+        <node name="MatchOver" layer="25">
+          <components>
+            <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.7" useSafeArea="true" modal="true" visible="false">
+              <elements>
+                <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
+                <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="560" height="262" direction="Vertical" spacing="6" padding="10" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
+                  <children>
+                    <element type="UILabel" name="Headline" height="36" text="{matchOverHeadline}" fontSize="24" align="Center" verticalAlign="Center" />
+                    <element type="UILabel" name="Standing0" height="30" text="{standing0}" fontSize="22" verticalAlign="Center" />
+                    <element type="UILabel" name="Standing1" height="30" text="{standing1}" fontSize="22" verticalAlign="Center" />
+                    <element type="UILabel" name="Standing2" height="30" text="{standing2}" fontSize="22" verticalAlign="Center" />
+                    <element type="UILabel" name="Standing3" height="30" text="{standing3}" fontSize="22" verticalAlign="Center" />
+                    <element type="UIButton" name="NewGame" height="48" text="New game" fontSize="26" action="MahjongNewGame" color="40,110,60,255" />
                   </children>
                 </element>
               </elements>

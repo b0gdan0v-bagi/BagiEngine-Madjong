@@ -15,9 +15,6 @@ namespace BECore::Mahjong {
 
     class MahjongGame;
 
-    /// The seat count of the variable names `seatName0` .. `seatName3`.
-    inline constexpr int kHudSeats = kSeatCount;
-
     /**
      * @brief The words and numbers of the HUD, and the seat choice of a new game: the canvases `Hud` and `Setup` of
      *        `config/SceneConfig.xml` show what this component publishes to `CoreManager::GetUIVars()` and emit the actions it answers.
@@ -35,6 +32,14 @@ namespace BECore::Mahjong {
      * `MahjongStart` gives the pending setup to the game and begins a match with a random seed (`StartRandomMatch`), which closes the
      * panel; a start the game refuses leaves it open. `MahjongNewGame` (the HUD button) opens it again, with the pending setup of the
      * last match. Nothing is played while it is open (`MahjongTableComponent` takes no click and steps no computer).
+     *
+     * **The end of a hand and of a match.** While the session is in `HandOver` the modal canvas `HandOver` is shown with the rows of
+     * `FormatScoreTable` (`Table/ScoreText.h`): `handOverHeadline`, `handOverSeat0` .. `3`, `scoreLine0` .. `15` (the element
+     * `ScoreLineN` is visible exactly when there is a line N), `handOverSummary` and `handOverButton` (`Next hand`, `Finish match` on
+     * the last hand of the match); `MahjongNextHand` settles the hand (`TableSession::NextHand`) and deals on. While the match is
+     * finished the canvas `MatchOver` is shown with `matchOverHeadline` and `standing0` .. `3` (`FormatStandings`); its button
+     * `MahjongNewGame` opens `Setup`. Both are published when the version of the session moved and read only public data (the hands
+     * are open once the hand is over).
      */
     class MahjongHudComponent : public IComponent {
         BE_CLASS(MahjongHudComponent)
@@ -62,12 +67,24 @@ namespace BECore::Mahjong {
         /// Shows or hides `Setup` after the game, and takes the setup of the game when the panel opens.
         void PublishSetup(const MahjongGame* game);
         void PublishSeatKinds() const;
+        /// Shows or hides `HandOver` and `MatchOver` after the session, and sets their variables when the session moved.
+        void PublishEndScreens(const MahjongGame* game);
+        void PublishHandOver(const MahjongGame& game);
+        void PublishMatchOver(const MahjongGame& game);
+        /// Makes exactly the first `count` line labels of the score table visible.
+        void ShowScoreLines(int count);
 
         SeatSetup _pending = kDefaultSeatSetup;
         bool _setupShown = false;
         const MahjongGame* _numbersOf = nullptr;  // the game and the version the variables show
         uint64_t _numbersVersion = 0;
         bool _numbersPublished = false;
+        bool _handOverShown = false;
+        bool _matchOverShown = false;
+        int _shownLines = 0;                        // the labels `ScoreLine0` .. that are visible
+        const MahjongGame* _endScreenOf = nullptr;  // the game and the version the variables of the end screens show
+        uint64_t _endScreenVersion = 0;
+        bool _endScreenPublished = false;
         static MahjongHudComponent* s_active;
     };
 

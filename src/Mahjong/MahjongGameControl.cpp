@@ -565,8 +565,7 @@ namespace BECore::Mahjong {
             return InvalidParams(Format("the match did not start: {}", EnumUtils<MatchError>::ToString(started.error())));
         }
         _lastSeed = seed;
-        _game.GetSession().RunComputers();
-        _game.CloseSetup();  // StartMatch closed it already; a reset is a controller entering the game, so it is said here too
+        _game.GetSession().RunComputers();  // StartMatch closed the seat choice: a reset is a controller entering the game
         return {};
     }
 

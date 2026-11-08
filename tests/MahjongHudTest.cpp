@@ -108,7 +108,6 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongHudTest, TheVariablesFollowAnActionAndAreNotSetAgainWhileTheVersionStandsStill) {
         ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
         Draw();
-        const std::string wall = Var("wall");
         const std::string turn = Var("turn");
         const uint64_t varsVersion = CoreManager::GetUIVars().GetVersion();
 
@@ -125,7 +124,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_NE(Var("turn"), turn) << "the turn went on";
         EXPECT_EQ(Var("wall"), std::to_string(Hand().GetWall().LiveCount()));
         EXPECT_NE(CoreManager::GetUIVars().GetVersion(), varsVersion);
-        (void)wall;
     }
 
     TEST_F(MahjongHudTest, TheLabelsOnScreenShowTheScoresOfTheMatchAfterAHand) {

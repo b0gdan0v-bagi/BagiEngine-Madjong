@@ -361,9 +361,11 @@ namespace BECore::Mahjong {
         }
         // The frame on the discard that waits tells a person that a claim is open for them: only the viewer who is asked sees it (a window
         // that only computers may claim in shows nothing, and nothing shows while the screen is covered)
-        const eastl::vector<Seat> asked = hand.PendingClaimSeats();
-        const bool claimPending = session.GetPhase() == SessionPhase::Playing && hand.GetPhase() == Phase::Claim && !hand.Discards().empty() && IsSeat(faces.seat) &&
-                                  eastl::find(asked.begin(), asked.end(), faces.seat) != asked.end();
+        bool claimPending = false;
+        if (session.GetPhase() == SessionPhase::Playing && hand.GetPhase() == Phase::Claim && !hand.Discards().empty() && IsSeat(faces.seat)) {
+            const eastl::vector<Seat> asked = hand.PendingClaimSeats();
+            claimPending = eastl::find(asked.begin(), asked.end(), faces.seat) != asked.end();
+        }
         const int pendingEntry = static_cast<int>(hand.Discards().size()) - 1;
 
         for (const TileSlot& slot : _layout.slots) {
