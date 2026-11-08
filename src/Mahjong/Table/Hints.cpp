@@ -2,11 +2,15 @@
 
 #include <Mahjong/Game/ComputerPlayer.h>
 #include <Mahjong/Game/ComputerTurn.h>
+#include <Mahjong/Game/HandShape.h>
 #include <Mahjong/Table/ScoreText.h>
 
 namespace BECore::Mahjong {
 
     namespace {
+
+        /// A hand that waits holds sets of `kTilesPerSet` and one tile over (3n + 1 concealed tiles); with the tile to discard (3n + 2) it does not wait yet.
+        constexpr size_t kWaitingRemainder = 1;
 
         /// The key of the advice for `advice`, one per kind of action (and per kind of claim).
         const char* AdviceKey(const HandAction& advice) noexcept {
@@ -41,7 +45,7 @@ namespace BECore::Mahjong {
 
     eastl::vector<WaitEntry> WaitingTiles(const TableView& view) {
         eastl::vector<WaitEntry> entries;
-        if (view.own.concealed.size() % 3 != 1) {
+        if (view.own.concealed.size() % kTilesPerSet != kWaitingRemainder) {
             return entries;
         }
         for (const Tile tile : WinningTiles(view.own)) {
@@ -77,11 +81,9 @@ namespace BECore::Mahjong {
                 return Tr(strings, key, {{"tile", TileName(strings, advice.tile)}});
             case ActionKind::Claim:
                 if (advice.claim == ClaimKind::Chow) {
-                    const Tile first = advice.chowFirst;
-                    const eastl::string a = TileName(strings, first);
-                    const eastl::string b = TileName(strings, first.IsValid() ? Tile(static_cast<uint8_t>(first.Id() + 1)) : Tile{});
-                    const eastl::string c = TileName(strings, first.IsValid() ? Tile(static_cast<uint8_t>(first.Id() + 2)) : Tile{});
-                    return Tr(strings, key, {{"first", a}, {"second", b}, {"third", c}});
+                    // An action of the legal list always has a valid `chowFirst`; a made-up one names three invalid tiles.
+                    const eastl::array<Tile, kTilesPerSet> tiles = advice.chowFirst.IsValid() ? ChowTiles(advice.chowFirst) : eastl::array<Tile, kTilesPerSet>{};
+                    return Tr(strings, key, {{"first", TileName(strings, tiles[0])}, {"second", TileName(strings, tiles[1])}, {"third", TileName(strings, tiles[2])}});
                 }
                 if (advice.claim == ClaimKind::Pung || advice.claim == ClaimKind::Kong) {
                     return Tr(strings, key, {{"tile", TileName(strings, view.pendingTile)}});

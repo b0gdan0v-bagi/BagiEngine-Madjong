@@ -93,11 +93,10 @@ namespace BECore::Mahjong::Tests {
 
         const UIStrings& Words() {
             static UIStrings strings;
-            static const bool loaded = [] {
+            [[maybe_unused]] static const bool loaded = [] {
                 EXPECT_TRUE(LoadShippedStrings(strings).empty());
                 return true;
             }();
-            (void)loaded;
             return strings;
         }
 
@@ -229,8 +228,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(view.own.callingDeclared);
 
         EXPECT_EQ(before, (Waits{{"4p", 4}, {"7p", 4}}));
-        EXPECT_EQ(WaitsOf(view).size(), 2U);
-        EXPECT_EQ(WaitsOf(view)[0].first, "4p");
+        EXPECT_EQ(WaitsOf(view), before);
     }
 
     // ----- the discards that declare -----
