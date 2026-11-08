@@ -1,7 +1,7 @@
 #include "MahjongTableTestSupport.h"
 
 #include <BECore/UI/UIButton.h>
-#include <Common/UILayoutMatrix.h>
+#include <BECore/UI/UIToggle.h>
 
 /**
  * The canvases of the shipped scene that belong to the table (`Actions`, `Handoff`): the buttons of the component are the buttons of the
@@ -27,24 +27,7 @@ namespace BECore::Mahjong::Tests {
 
     }  // namespace
 
-    class MahjongTableScreenTest : public MahjongTableTestBase {
-    protected:
-        /// The size matrix on a canvas of the scene, as Match3's HUD test does it.
-        void ExpectPassesTheMatrix(const char* node, float minTouchSize) {
-            auto canvas = Canvas(node);
-            ASSERT_TRUE(canvas) << node;
-            canvas->UpdateLayout(kViewWidth, kViewHeight);  // the reflected fields of the component reach the layout on its first update
-            UILayoutContext base;
-            base.sceneViewWidth = kViewWidth;
-            base.sceneViewHeight = kViewHeight;
-            UILayoutValidatorOptions options;
-            options.minTouchSize = minTouchSize;
-
-            const auto failures = ValidateOnMatrix(canvas->GetLayout(), options, base);
-
-            EXPECT_TRUE(failures.empty()) << node << ": " << DescribeMatrixFailures(failures).c_str();
-        }
-    };
+    class MahjongTableScreenTest : public MahjongTableTestBase {};
 
     TEST_F(MahjongTableScreenTest, EveryButtonOfTheComponentIsInTheSceneFileWithItsActionAndValue) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
@@ -52,13 +35,23 @@ namespace BECore::Mahjong::Tests {
         for (int i = 0; i < kButtonCount; ++i) {
             const ButtonKind kind = static_cast<ButtonKind>(i);
             const ButtonSpec& spec = SpecOf(kind);
-            const UIElement* element = Element("Actions", kind == ButtonKind::Declare ? "DeclareButton" : spec.element);
+            const UIElement* element = Element("Actions", spec.element);
             ASSERT_NE(element, nullptr) << spec.element;
+            if (kind == ButtonKind::Declare) {
+                // The declaration is a toggle: it emits the state it asks for, `on` or `off` (`kDeclareOn`, `kDeclareOff`)
+                const auto* toggle = element->Cast<UIToggle>();
+                ASSERT_NE(toggle, nullptr);
+                EXPECT_EQ(toggle->action, PoolString::Intern(spec.action));
+                EXPECT_EQ(toggle->onValue, PoolString::Intern(kDeclareOn.data()));
+                EXPECT_EQ(toggle->offValue, PoolString::Intern(kDeclareOff.data()));
+                EXPECT_EQ(toggle->bind, "declareNext"_intern);
+                continue;
+            }
             const auto* button = element->Cast<UIButton>();
             ASSERT_NE(button, nullptr) << spec.element;
             EXPECT_EQ(button->action, PoolString::Intern(spec.action)) << spec.element;
             EXPECT_EQ(button->value, PoolString::Intern(spec.value)) << spec.element;
-            if (spec.labelVar != nullptr && kind != ButtonKind::Declare) {
+            if (spec.labelVar != nullptr) {
                 EXPECT_EQ(button->text, eastl::string(Format("{{{}}}", spec.labelVar))) << "the label of " << spec.element << " is its variable";
             }
         }

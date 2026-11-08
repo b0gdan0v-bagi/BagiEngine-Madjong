@@ -9,6 +9,7 @@
 #include <Events/SceneEvents.h>
 #include <Generated/MahjongTableComponent.gen.hpp>
 #include <Mahjong/MahjongGame.h>
+#include <Mahjong/Table/SeatName.h>
 #include <Mahjong/Table/TileAtlas.h>
 
 namespace BECore::Mahjong {
@@ -64,9 +65,21 @@ namespace BECore::Mahjong {
             return 0;
         }
 
+        /// Whether the table is played now: it is not played while the seat choice (`Setup`) is open over it.
+        bool TableIsLive(const MahjongGame& game) {
+            return !game.IsSetupOpen();
+        }
+
         /// Whether a person is to act and may: the table is being played, the actor is a person and no cover is up.
-        bool PersonActs(const TableSession& session) {
-            return session.GetPhase() == SessionPhase::Playing && session.ActorIsPerson() && !session.HandoffPending();
+        bool PersonActs(const MahjongGame& game) {
+            const TableSession& session = game.GetSession();
+            return TableIsLive(game) && session.GetPhase() == SessionPhase::Playing && session.ActorIsPerson() && !session.HandoffPending();
+        }
+
+        /// Whether a computer is to act and may: the table is being played and the actor is a computer.
+        bool ComputerActs(const MahjongGame& game) {
+            const TableSession& session = game.GetSession();
+            return TableIsLive(game) && session.GetPhase() == SessionPhase::Playing && !session.ActorIsPerson();
         }
 
         /// A claim window: a discard or an upgraded kong waits for the other seats to decide.
@@ -103,11 +116,6 @@ namespace BECore::Mahjong {
             }
             input.wallRemaining = static_cast<int>(hand.GetWall().Remaining());
             return input;
-        }
-
-        /// "Seat 2 (South)": how a seat is named on screen.
-        eastl::string SeatName(Seat seat, Wind wind) {
-            return Format("Seat {} ({})", seat + 1, EnumUtils<Wind>::ToString(wind));
         }
 
         Color PlainMarkColor(Tile tile) {
@@ -147,7 +155,7 @@ namespace BECore::Mahjong {
         if (game == nullptr) {
             return nullptr;
         }
-        return PersonActs(game->GetSession()) ? game : nullptr;
+        return PersonActs(*game) ? game : nullptr;
     }
 
     MahjongTableComponent::DeclareTurn MahjongTableComponent::TurnOf(const MahjongGame& game) {
@@ -157,7 +165,7 @@ namespace BECore::Mahjong {
     ActionButtons MahjongTableComponent::CurrentButtons(const MahjongGame& game) {
         ActionButtons buttons;
         const TableSession& session = game.GetSession();
-        if (PersonActs(session)) {
+        if (PersonActs(game)) {
             buttons = MakeActionButtons(game.GetMatch().Hand().LegalActions(session.Actor()));
         }
         // The flag belongs to the turn it was set on: gone when the button goes, and when the turn moved on without the table's discard
@@ -244,7 +252,8 @@ namespace BECore::Mahjong {
             return;
         }
         if (*kind == ButtonKind::Declare) {
-            _declareNext = !_declareNext;
+            // The toggle emits the state it asks for
+            _declareNext = event.value.ToStringView() == kDeclareOn;
             _declareTurn = TurnOf(*game);
             return;
         }
@@ -268,8 +277,7 @@ namespace BECore::Mahjong {
             return;
         }
         TableSession& session = game->GetSession();
-        const bool computerToAct = session.GetPhase() == SessionPhase::Playing && !session.ActorIsPerson();
-        if (!computerToAct) {
+        if (!ComputerActs(*game)) {
             _computerClock = 0.0f;
             return;
         }
@@ -288,13 +296,12 @@ namespace BECore::Mahjong {
         }
         // The pause after a discard is one whether or not a window opened (a longer one would tell a person that a computer holds a
         // claim): the computers settle a window within the pause, and a computer that is to discard after it does so in the same pause.
-        const auto computerActs = [&session] { return session.GetPhase() == SessionPhase::Playing && !session.ActorIsPerson(); };
-        while (computerActs() && IsClaimWindow(hand.GetPhase())) {
+        while (ComputerActs(*game) && IsClaimWindow(hand.GetPhase())) {
             if (!StepComputerChecked(session)) {
                 return;
             }
         }
-        if (computerActs() && !StepComputerChecked(session)) {
+        if (ComputerActs(*game) && !StepComputerChecked(session)) {
             return;
         }
     }
@@ -352,7 +359,11 @@ namespace BECore::Mahjong {
                 }
             }
         }
-        const bool claimPending = session.GetPhase() == SessionPhase::Playing && hand.GetPhase() == Phase::Claim && !hand.Discards().empty();
+        // The frame on the discard that waits tells a person that a claim is open for them: only the viewer who is asked sees it (a window
+        // that only computers may claim in shows nothing, and nothing shows while the screen is covered)
+        const eastl::vector<Seat> asked = hand.PendingClaimSeats();
+        const bool claimPending = session.GetPhase() == SessionPhase::Playing && hand.GetPhase() == Phase::Claim && !hand.Discards().empty() && IsSeat(faces.seat) &&
+                                  eastl::find(asked.begin(), asked.end(), faces.seat) != asked.end();
         const int pendingEntry = static_cast<int>(hand.Discards().size()) - 1;
 
         for (const TileSlot& slot : _layout.slots) {

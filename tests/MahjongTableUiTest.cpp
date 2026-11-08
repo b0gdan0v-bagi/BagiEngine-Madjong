@@ -31,8 +31,10 @@ namespace BECore::Mahjong::Tests {
 
         Draw();
 
-        ASSERT_EQ(_renderer->calls.size(), 1u);
+        // The table draws the felt and nothing else (the canvases of the scene draw their own, with no match behind them)
+        ASSERT_FALSE(_renderer->calls.empty());
         EXPECT_EQ(_renderer->calls[0].kind, DrawKind::Rect);
+        EXPECT_TRUE(TileCalls().empty());
         EXPECT_TRUE(_table->GetLayout().slots.empty());
     }
 

@@ -7,9 +7,12 @@
 #include <BECore/Scene/Scene.h>
 #include <BECore/Scene/SceneManager.h>
 #include <BECore/Text/FontAtlasLibrary.h>
+#include <BECore/UI/UIButton.h>
 #include <BECore/UI/UICanvasComponent.h>
+#include <BECore/UI/UILabel.h>
 #include <Common/EngineEnvironment.h>
 #include <Common/RecordingRenderer.h>
+#include <Common/UILayoutMatrix.h>
 #include <Events/InputEvents.h>
 #include <Games/GameManager.h>
 #include <Mahjong/Components/MahjongTableComponent.h>
@@ -19,10 +22,11 @@
 
 /**
  * What the tests of the table component share (`MahjongTableUiTest`, `MahjongTableInputTest`, `MahjongTableActionsTest`,
- * `MahjongTableScreenTest`): the fixture `MahjongTableTestBase` loads the shipped `config/SceneConfig.xml` (read from the source tree, a
- * game's content is not mounted in the test environment), starts the game through `GameManager` and draws the scene into a `RecordingRenderer` as big as the view of the scene,
- * so the view transform is the identity: a call's rect is a slot of the layout and a click at a point of the view is a click at that
- * pixel. Header only; needs the engine services.
+ * `MahjongTableScreenTest`, `MahjongTableWindowTest`, `MahjongHudTest`): the fixture `MahjongTableTestBase` loads the shipped
+ * `config/SceneConfig.xml` (read from the source tree, a game's content is not mounted in the test environment), starts the game through
+ * `GameManager` and draws the scene into a `RecordingRenderer` as big as the view of the scene, so the view transform is the identity:
+ * a call's rect is a slot of the layout and a click at a point of the view is a click at that pixel. Header only; needs the engine
+ * services.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -193,6 +197,15 @@ namespace BECore::Mahjong::Tests {
             return canvas ? canvas->GetRoot().FindByName(PoolString::Intern(element)) : nullptr;
         }
 
+        static void CollectControls(const UIElement& element, std::vector<const UIElement*>& found) {
+            if (element.Cast<UILabel>() != nullptr || element.Cast<UIButton>() != nullptr) {
+                found.push_back(&element);
+            }
+            for (const auto& child : element.children) {
+                CollectControls(*child, found);
+            }
+        }
+
         /// Whether the cover of a hot seat is shown: a canvas that is shown takes the input (a hidden one keeps its old rects).
         bool CoverShown() const {
             const auto canvas = Canvas("Handoff");
@@ -210,6 +223,41 @@ namespace BECore::Mahjong::Tests {
             const UIElement* found = Element(node, element);
             EXPECT_NE(found, nullptr) << element;
             return found != nullptr && Click(found->rect.x + found->rect.w * 0.5f, found->rect.y + found->rect.h * 0.5f);
+        }
+
+        /// The size matrix on a canvas of the scene, as Match3's HUD test does it. `minTouchSize`: the least size of a control as seen.
+        void ExpectPassesTheMatrix(const char* node, float minTouchSize) {
+            auto canvas = Canvas(node);
+            ASSERT_TRUE(canvas) << node;
+            canvas->UpdateLayout(kViewWidth, kViewHeight);  // the reflected fields of the component reach the layout on its first update
+            UILayoutContext base;
+            base.sceneViewWidth = kViewWidth;
+            base.sceneViewHeight = kViewHeight;
+            UILayoutValidatorOptions options;
+            options.minTouchSize = minTouchSize;
+
+            const auto failures = ValidateOnMatrix(canvas->GetLayout(), options, base);
+
+            EXPECT_TRUE(failures.empty()) << node << ": " << DescribeMatrixFailures(failures).c_str();
+        }
+
+        /// The validator does not see text that a label cuts with an ellipsis (it can shrink): asks every control of the canvas on the
+        /// text it shows, with `air` units kept free each side of an interactive one, once the canvas is laid out for this output size.
+        void ExpectWordsFit(const char* node, float outputWidth, float outputHeight, float air) {
+            auto canvas = Canvas(node);
+            ASSERT_TRUE(canvas) << node;
+            canvas->UpdateLayout(outputWidth, outputHeight);
+            std::vector<const UIElement*> controls;
+            CollectControls(canvas->GetRoot(), controls);
+            const float scale = canvas->GetLayout().GetResolved().scale;
+            for (const UIElement* control : controls) {
+                if (control->rect.IsEmpty()) {
+                    continue;  // a hidden element
+                }
+                const float spare = control->interactive ? air : 0.0f;
+                const UIContentFit fit = control->CheckContent(control->rect.w - 2.0f * spare, control->rect.h, scale);
+                EXPECT_TRUE(!fit.hasContent || fit.fits) << node << " " << control->name.ToStringView().data() << " cuts its text at " << outputWidth << "x" << outputHeight;
+            }
         }
 
         /// What the model says the slot shows: a tile, or nullopt for a back. `allFaces` says that every concealed tile is open, otherwise

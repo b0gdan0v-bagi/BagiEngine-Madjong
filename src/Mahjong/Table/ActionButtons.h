@@ -29,6 +29,10 @@ namespace BECore::Mahjong {
 
     [[nodiscard]] const ButtonSpec& SpecOf(ButtonKind kind) noexcept;
 
+    /// The values of the toggle `Declare`: it emits the state it asks for (`SpecOf(Declare).value` is "on", this is the other one).
+    inline constexpr eastl::string_view kDeclareOn = "on";
+    inline constexpr eastl::string_view kDeclareOff = "off";
+
     /// The button that emits `action` with `value`, nullopt for an action that no button emits.
     [[nodiscard]] std::optional<ButtonKind> ButtonOf(eastl::string_view action, eastl::string_view value) noexcept;
 

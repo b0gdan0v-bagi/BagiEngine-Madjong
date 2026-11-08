@@ -17,7 +17,7 @@ namespace BECore::Mahjong {
             {"ConcealedKong1", "MahjongConcealedKong", "1", "kong1"},
             {"ConcealedKong2", "MahjongConcealedKong", "2", "kong2"},
             {"UpgradeKong", "MahjongUpgradeKong", "", "upgrade"},
-            {"Declare", "MahjongDeclare", "on", nullptr},
+            {"Declare", "MahjongDeclare", "on", nullptr},  // kDeclareOn
         }};
 
         static_assert(kChowButtons + static_cast<int>(ButtonKind::ClaimChow0) == static_cast<int>(ButtonKind::Pass));
@@ -56,6 +56,10 @@ namespace BECore::Mahjong {
             if (action == kSpecs[i].action && value == kSpecs[i].value) {
                 return static_cast<ButtonKind>(i);
             }
+        }
+        // The toggle of the declaration emits the state it asks for: "on" while the flag is off and "off" while it is on
+        if (action == SpecOf(ButtonKind::Declare).action && value == kDeclareOff) {
+            return ButtonKind::Declare;
         }
         return std::nullopt;
     }

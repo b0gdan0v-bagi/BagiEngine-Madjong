@@ -38,6 +38,16 @@ build/ClangmacOS/BagiMahjong                  # the game; the executable folder 
 
 The tile art is drawn by a script (standard library only): `python3 tools/make_tiles.py` regenerates `assets/tiles/tiles.png` and `config/TextureLibrary.xml`, `python3 tools/make_tiles.py --check` tells whether the committed files are up to date.
 
+## How to play
+
+The game opens on **New game: who plays?**: for each of the four seats pick `Person` or `Computer` (the default is you at seat 1 against three computers), then `Start`. The `New game` button in the top right corner of the table opens the question again and starts a new match.
+
+- **Discard:** click a tile of your hand (the bottom row). Your hand is the only one face up; the others show backs until the hand is over.
+- **Everything else is a button** in the lower right of the table: `Win`, `Mahjong`, `Pung`, `Kong`, `Chow 4-6p` (one button per sequence you can make), `Kong 5p` (a concealed kong), `Add 5p` (a fourth tile to an open pung) and `Pass`. Only the buttons that are legal now are shown. `Declare` is a switch: turn it on and the next tile you click is discarded as the declaration of the calling hand (the tiles that cannot declare are dimmed).
+- **Computers** play one step every 0.6 seconds (`kComputerStepSeconds`); nothing moves while the seat choice is open.
+- **Hot seat:** with two or more people at one screen the table is covered between turns ("Pass the screen to Seat 2 (South)"); the next person presses `Show`.
+- The HUD (top left and left of the table) shows the round and the hand number, the tiles left in the wall, whose turn it is and the four scores (`>` the seat whose turn it is, `*` East).
+
 ## Layout
 
 | Path | What |

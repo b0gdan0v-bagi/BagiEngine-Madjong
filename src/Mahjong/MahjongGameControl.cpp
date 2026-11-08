@@ -513,6 +513,7 @@ namespace BECore::Mahjong {
         }
 
         session.RunComputers();
+        _game.CloseSetup();  // a controller that plays is in the game, not in its seat choice
         outcome["phase"] = MakeJsonString(PhaseName(session.GetPhase()));
         outcome["version"] = session.Version();
         return outcome;
@@ -565,6 +566,7 @@ namespace BECore::Mahjong {
         }
         _lastSeed = seed;
         _game.GetSession().RunComputers();
+        _game.CloseSetup();  // StartMatch closed it already; a reset is a controller entering the game, so it is said here too
         return {};
     }
 

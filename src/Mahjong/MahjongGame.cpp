@@ -24,7 +24,9 @@ namespace BECore::Mahjong {
     }
 
     void MahjongGame::Start() {
+        // A match is dealt at once so that the table is never empty, and the person is asked who plays before it goes on
         StartRandomMatch();
+        OpenSetup();
     }
 
     void MahjongGame::Reset() {
@@ -32,14 +34,20 @@ namespace BECore::Mahjong {
     }
 
     MatchStatus MahjongGame::StartMatch(uint32_t seed) {
-        return _session.StartMatch(_settings, seed, _seats);
+        const MatchStatus started = _session.StartMatch(_settings, seed, _seats);
+        if (started.has_value()) {
+            CloseSetup();
+        }
+        return started;
     }
 
-    void MahjongGame::StartRandomMatch() {
+    MatchStatus MahjongGame::StartRandomMatch() {
         std::random_device device;
-        if (const MatchStatus started = StartMatch(device()); !started.has_value()) {
+        const MatchStatus started = StartMatch(device());
+        if (!started.has_value()) {
             LOG_ERROR(Format("MahjongGame: the match did not start: {}", EnumUtils<MatchError>::ToString(started.error())));
         }
+        return started;
     }
 
 }  // namespace BECore::Mahjong

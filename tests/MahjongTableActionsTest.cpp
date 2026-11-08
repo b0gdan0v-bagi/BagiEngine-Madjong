@@ -61,8 +61,8 @@ namespace BECore::Mahjong::Tests {
             std::vector<ButtonKind> shown;
             for (int i = 0; i < kButtonCount; ++i) {
                 const ButtonKind kind = static_cast<ButtonKind>(i);
-                const char* element = kind == ButtonKind::Declare ? "DeclareButton" : SpecOf(kind).element;
-                EXPECT_EQ(_table->GetButtons()[kind].shown, OnScreen("Actions", element)) << SpecOf(kind).element;
+                const char* element = SpecOf(kind).element;
+                EXPECT_EQ(_table->GetButtons()[kind].shown, OnScreen("Actions", element)) << element;
                 if (OnScreen("Actions", element)) {
                     shown.push_back(kind);
                 }
