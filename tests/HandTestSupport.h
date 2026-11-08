@@ -18,8 +18,8 @@
  * legal actions. Header only. Included directly by `ComputerClaimTest`, `ComputerMatchTest`, `ComputerPlayerTest`, `ComputerStrengthTest`,
  * `ComputerTestSupport.h`, `ComputerTurnTest`, `ComputerViewTest`, `HandModelActionsTest`, `HandModelClaimTest`, `HandModelKongTest`,
  * `HandModelPlayoutTest`, `HandModelTurnTest`, `MahjongGameTest`, `MatchTest`, `PaymentsTest` and `TableSessionTest`,
- * and through `ScoreTestSupport.h` by `MatchTestSupport.h` (so `MatchPlayoutTest` and `ComputerMatchTest`) and the `Score*Test` files. What differs
- * between the files (the quiet hands, the specs) stays in them.
+ * and through `ScoreTestSupport.h` by `MatchTestSupport.h` (so `MatchPlayoutTest` and `ComputerMatchTest`) and the `Score*Test` files.
+ * What differs between the files (the quiet hands, the specs) stays in them.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -30,6 +30,9 @@ namespace BECore::Mahjong::Tests {
 
     /// The starting score of a seat, written out and not taken from the header (2000), for the tests of a match.
     inline constexpr int kExpectedStartingScore = 2000;
+
+    /// Not a positive multiple of 4, so `StartMatch` refuses it as `BadSettings`.
+    inline constexpr int kUnplayableHandsPerMatch = 6;
 
     /// The total of a number per seat (the points of the four seats, or the change of a hand: zero).
     inline int Sum(const SeatScores& scores) {

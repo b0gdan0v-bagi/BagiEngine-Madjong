@@ -4,6 +4,7 @@
 #include <Mahjong/Game/MahjongSettings.h>
 #include <Mahjong/Game/Match.h>
 #include <Mahjong/Game/TableSession.h>
+#include <Mahjong/MahjongGameControl.h>
 
 namespace BECore::Mahjong {
 
@@ -18,7 +19,8 @@ namespace BECore::Mahjong {
      * `Start()` and `Reset()` begin a new match with a seed from `std::random_device`: the randomness is chosen here, outside the rules,
      * which only ever see the seed (`StartMatch(seed)` is how a test or a control API replays a match). A match is begun with
      * `GetSettings()` (the defaults, `MahjongSettings{}`, until `SetSettings`) and the seat setup `GetSeats()` (`kDefaultSeatSetup`:
-     * seat 0 a person, the others computers); both are kept across `Reset()`.
+     * seat 0 a person, the others computers); both are kept across `Reset()`. `AsControllable()` hands out the control adapter, which
+     * drives the match through the session.
      */
     class MahjongGame : public IGame {
         BE_CLASS(MahjongGame)
@@ -28,6 +30,9 @@ namespace BECore::Mahjong {
 
         PoolString GetName() const override;
         PoolString GetSceneName() const override;
+
+        /// The adapter of the external control API (`MahjongGameControl.h`): a client plays the person seats of the session.
+        IControllableGame* AsControllable() override;
 
         void Start() override;
         void Reset() override;
@@ -78,6 +83,7 @@ namespace BECore::Mahjong {
         MahjongSettings _settings;
         SeatSetup _seats = kDefaultSeatSetup;
         TableSession _session{_match};  // after _match: it keeps a reference
+        MahjongGameControl _control{*this};
     };
 
 }  // namespace BECore::Mahjong

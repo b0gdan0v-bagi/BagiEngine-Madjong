@@ -13,6 +13,8 @@ namespace BECore::Mahjong {
         /// The melds with `!concealed`: chows, pungs, open and upgraded kongs.
         eastl::vector<Meld> openMelds;
         int concealedKongs = 0;
+        /// The flowers and seasons laid open; `bonusCount` is their number.
+        eastl::vector<Tile> bonus;
         int bonusCount = 0;
         int discardCount = 0;
         bool callingDeclared = false;

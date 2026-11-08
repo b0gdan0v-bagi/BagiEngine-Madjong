@@ -21,8 +21,6 @@ namespace BECore::Mahjong::Tests {
         constexpr int kActionLimitPerHandStop = 60;
         /// Counted hands of a short match played by computers; a loop fails fast.
         constexpr int kHandLimitPerMatch = 200;
-        /// Not a positive multiple of 4, so `StartMatch` refuses it.
-        constexpr int kUnplayableHandsPerMatch = 6;
         constexpr int kTableTotal = kSeatCount * kExpectedStartingScore;
 
         constexpr SeatSetup kAllComputers{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};

@@ -19,6 +19,10 @@ namespace BECore::Mahjong {
         return "MahjongScene"_intern;
     }
 
+    IControllableGame* MahjongGame::AsControllable() {
+        return &_control;
+    }
+
     void MahjongGame::Start() {
         StartRandomMatch();
     }

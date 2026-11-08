@@ -32,8 +32,8 @@ namespace BECore::Mahjong {
      * - `Actor` is the seat that has to act (the first pending seat in a claim window; the result does not depend on the order).
      *   `StepComputer` plays one action of a computer actor, `RunComputers` plays until a person has to act or the hand is over,
      *   `PerformPerson` applies the action of a person actor, `NextHand` settles a finished hand and deals on.
-     * - `Version` grows on every change a front end must see (a start, a step, an accepted action, a settled hand, a `Reveal` that changes the viewer) and
-     *   never goes back, so a front end redraws or publishes only when it moved. A refused call changes nothing.
+     * - `Version` grows on every change a front end must see (a start, a step, an accepted action, a settled hand, a `Reveal` that
+     *   changes the viewer) and never goes back, so a front end redraws or publishes only when it moved. A refused call changes nothing.
      * - Hot seat: with exactly one person that seat is the viewer always (no cover); with none the viewer is `kNoSeat` (a spectator
      *   sees no concealed hand until the hand is over); with two or more the viewer is the person who acted last, and it becomes
      *   `kNoSeat` as soon as another person has to act (a start, a step, an action, a settled hand), so the screen is covered

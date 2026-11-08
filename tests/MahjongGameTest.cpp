@@ -20,8 +20,6 @@ namespace BECore::Mahjong::Tests {
     namespace {
 
         constexpr uint32_t kSeed = 11;
-        /// Not a positive multiple of 4, so `StartMatch` refuses it.
-        constexpr int kUnplayableHandsPerMatch = 6;
 
         std::filesystem::path ShippedSceneConfig() {
             return std::filesystem::path(__FILE__).parent_path().parent_path() / "config" / "SceneConfig.xml";

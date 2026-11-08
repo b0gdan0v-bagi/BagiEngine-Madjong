@@ -19,7 +19,8 @@ namespace BECore::Mahjong {
                     info.openMelds.push_back(meld);
                 }
             }
-            info.bonusCount = static_cast<int>(hand.bonus.size());
+            info.bonus = hand.bonus;
+            info.bonusCount = static_cast<int>(info.bonus.size());
             info.discardCount = hand.discardCount;
             info.callingDeclared = hand.callingDeclared;
             return info;

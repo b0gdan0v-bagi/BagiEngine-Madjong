@@ -5,11 +5,11 @@
 
 #include <Mahjong/Game/HandModel.h>
 #include <initializer_list>
-#include <string>
 
 /**
  * What the tests of the computer player share (`ComputerViewTest`, `ComputerTurnTest`, `ComputerClaimTest`): the quiet hands of the
- * other seats, the spec of a hand where East holds a given hand and the model of an open pung with the fourth tile drawn. Header only.
+ * other seats, the spec of a hand where East holds a given hand, the model of an open pung with the fourth tile drawn and the upgrade
+ * model built on it (`UpgradeModel`). Header only.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -54,6 +54,17 @@ namespace BECore::Mahjong::Tests {
         Lap(model, "Wd Rd Gd Wd", declaring);
         EXPECT_EQ(model.CurrentSeat(), kSeat1);
         return model;
+    }
+
+    // Seat 1 holds two 5p and pungs the 5p of East, then draws the fourth. Seats 2 and 3 wait on the 5p (so seat 2 can rob the kong once it
+    // has declared).
+    inline constexpr const char* kSeat1Hand = "5p 5p 8p 2s 5s 8s 2m 5m 8m Ww Nw Gd Wd";
+    inline constexpr const char* kSeat2Waits = "4p 6p 1s 2s 3s 4m 5m 6m 7s 8s 9s Ew Ew";
+    inline constexpr const char* kSeat3Waits = "4p 6p 1m 2m 3m 4s 5s 6s 7m 8m 9m Ww Ww";
+
+    /// Seat 1 is to act with the fourth 5p drawn and an open pung of 5p laid; the seats in `declaring` have declared.
+    inline HandModel UpgradeModel(std::initializer_list<Seat> declaring = {}) {
+        return OpenPungModel(kSeat1Hand, kSeat2Waits, kSeat3Waits, declaring);
     }
 
 }  // namespace BECore::Mahjong::Tests
