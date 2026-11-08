@@ -15,8 +15,10 @@ namespace BECore::Mahjong {
 
         constexpr eastl::string_view kSetSeatPrefix = "MahjongSetSeat";
         constexpr eastl::string_view kSetHandsAction = "MahjongSetHands";
+        // The ids of the two segments of `Hands` (the values of the buttons in the scene file): the numbers of `MahjongSettings.h` as text
         constexpr eastl::string_view kFullHandsId = "16";
         constexpr eastl::string_view kShortHandsId = "8";
+        static_assert(kFullMatchHands == 16 && kShortMatchHands == 8, "the ids and the buttons `Hands16` / `Hands8` of the scene follow these numbers");
         constexpr eastl::string_view kPersonId = "person";
         constexpr eastl::string_view kComputerId = "computer";
         constexpr eastl::string_view kTurnMark = ">";
@@ -137,7 +139,7 @@ namespace BECore::Mahjong {
 
     void MahjongHudComponent::PublishHandsChoice() const {
         // The number as text, also a number the panel does not offer: then no segment is selected
-        CoreManager::GetUIVars().Set("handsChoice"_intern, eastl::string_view(Format("{}", _pendingHands)));
+        CoreManager::GetUIVars().Set("handsChoice"_intern, _pendingHands);
     }
 
     void MahjongHudComponent::PublishSetup(const MahjongGame* game) {
