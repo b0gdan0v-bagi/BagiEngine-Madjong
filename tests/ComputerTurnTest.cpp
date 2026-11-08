@@ -1,3 +1,4 @@
+#include "ComputerTestSupport.h"
 #include "FixedWall.h"
 #include "HandTestSupport.h"
 
@@ -23,22 +24,6 @@ namespace BECore::Mahjong::Tests {
         constexpr int kRandomHands = 20;
         constexpr int kTurnsPerHand = 30;
         constexpr uint32_t kRandomFirstSeed = 300;
-
-        // The other three seats. They hold no pair and no two suit tiles near each other, so no discard of a quiet seat (or of a draw
-        // listed in a test) opens a claim window; honours are single in each hand.
-        constexpr const char* kQuiet1 = "2p 5p 8p 2s 5s 8s 2m 5m 8m Ww Nw Gd Wd";
-        constexpr const char* kQuiet2 = "3p 6p 9p 3s 6s 9s 3m 6m 9m Sw Ww Nw Wd";
-        constexpr const char* kQuiet3 = "3p 6p 9p 3s 6s 9s 3m 6m 9m Sw Ww Nw Gd";
-
-        FixedWallSpec SpecOf(const char* east, const std::string& live) {
-            FixedWallSpec spec;
-            spec.hands[kSeat0] = east;
-            spec.hands[kSeat1] = kQuiet1;
-            spec.hands[kSeat2] = kQuiet2;
-            spec.hands[kSeat3] = kQuiet3;
-            spec.live = live;
-            return spec;
-        }
 
         HandAction Choice(const HandModel& model, Seat seat, uint32_t rngSeed = kRngSeed) {
             const TableView view = MakeTableView(model, seat);
@@ -72,23 +57,6 @@ namespace BECore::Mahjong::Tests {
             FixedWallSpec spec = SpecOf(hand, std::string("Gd Wd Gd Nw ") + fourth);
             HandModel model = MakeModel(spec);
             Lap(model, "Gd Wd Gd Nw", {kSeat0});
-            return model;
-        }
-
-        // Seat 1 holds two 5p, East discards a third and seat 1 claims the pung; after a lap seat 1 draws the fourth. `seat1` is its hand.
-        HandModel OpenPungModel(const char* seat1) {
-            FixedWallSpec spec;
-            spec.hands[kSeat0] = "1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Gd Rd";
-            spec.hands[kSeat1] = seat1;
-            spec.hands[kSeat2] = kQuiet2;
-            spec.hands[kSeat3] = kQuiet3;
-            spec.live = "5p Rd Gd Wd 5p";
-            HandModel model = MakeModel(spec);
-            EXPECT_TRUE(model.Discard(kSeat0, T("5p")).has_value());
-            EXPECT_EQ(model.GetPhase(), Phase::Claim);
-            EXPECT_TRUE(model.Claim(kSeat1, ClaimKind::Pung).has_value());
-            Lap(model, "Wd Rd Gd Wd");
-            EXPECT_EQ(model.CurrentSeat(), kSeat1);
             return model;
         }
 
@@ -139,7 +107,8 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(ComputerTurnTest, DeclaresASevenPairsWaitThatTheModelOffers) {
-        // Six pairs of honours and a green dragon: the only way to complete it is a second green dragon; discarding the 1p it draws declares.
+        // Six pairs of honours and a green dragon: the only way to complete it is a second green dragon; discarding the 1p it draws
+        // declares.
         FixedWallSpec spec;
         spec.hands[kSeat0] = "Ew Ew Sw Sw Ww Ww Nw Nw Rd Rd Wd Wd Gd";
         spec.hands[kSeat1] = "2p 5p 8p 2s 5s 8s 2m 5m 8m Ew Sw Ww Nw";
@@ -167,8 +136,8 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(ComputerTurnTest, AfterTheDeclarationItKeepsTheWaitWithTheMostUnseenCopies) {
-        // 123s 456s 789m 5p 6p Ew Ew waits on 4p and 7p; the declared hand draws a second 6p. Discarding the 6p keeps the two-sided wait
-        // (8 copies), discarding the 5p turns it into a pair wait on 6p and Ew (2 + 2).
+        // 123s 456s 789m 5p 6p Ew Ew waits on 4p and 7p; the declared hand draws a second 6p. Discarding the 6p keeps the two-sided
+        // wait (8 copies), discarding the 5p turns it into a pair wait on 6p and Ew (2 + 2).
         FixedWallSpec spec = SpecOf(kTwoSided, "Gd Wd Gd Nw 6p");
         HandModel model = MakeModel(spec);
         Lap(model, "Gd Wd Gd Nw", {kSeat0});

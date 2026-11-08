@@ -15,9 +15,10 @@
  * What the tests of a `HandModel` share: the seat names, `kExpectedStartingScore`, a sum of a number per seat, the name of an enum value
  * (`Name`), a tile from text, the error of a status, a snapshot of everything an action could change, a lap of discards, the checks of
  * `LegalActions` against `Apply` (`EveryCanonicalAction`, `AcceptedExactlyWhenListed`) and the chooser that plays a hand with random
- * legal actions. Header only. Included directly by `HandModelActionsTest`, `HandModelClaimTest`, `HandModelKongTest`,
- * `HandModelPlayoutTest`, `HandModelTurnTest`, `MahjongGameTest`, `MatchTest` and `PaymentsTest`, and through `ScoreTestSupport.h` by
- * `MatchPlayoutTest` and the `Score*Test` files. What differs between the files (the quiet hands, the specs) stays in them.
+ * legal actions. Header only. Included directly by `ComputerClaimTest`, `ComputerTestSupport.h`, `ComputerTurnTest`, `ComputerViewTest`,
+ * `HandModelActionsTest`, `HandModelClaimTest`, `HandModelKongTest`, `HandModelPlayoutTest`, `HandModelTurnTest`, `MahjongGameTest`,
+ * `MatchTest` and `PaymentsTest`, and through `ScoreTestSupport.h` by `MatchPlayoutTest` and the `Score*Test` files. What differs
+ * between the files (the quiet hands, the specs) stays in them.
  */
 namespace BECore::Mahjong::Tests {
 

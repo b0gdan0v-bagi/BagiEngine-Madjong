@@ -6,6 +6,12 @@ namespace BECore::Mahjong {
 
         /// What a discard that does not leave a waiting hand scores in `UnseenWinningCopies`.
         constexpr int kNotWaiting = -1;
+        /// Below every acceptance (an acceptance is a count of tiles), so the first discard examined is always better.
+        constexpr int kNoAcceptance = -1;
+        /// Above every shanten a hand can have (the worst is `2 * kSetsInHand`, with no melds and no two tiles that belong together).
+        constexpr int kAboveWorstShanten = 2 * kSetsInHand + 1;
+        /// The tiles a concealed kong takes out of the hand: all four copies (an upgraded kong takes the one drawn tile).
+        constexpr int kConcealedKongTiles = kCopiesPerTile;
 
         /// A discard to pick from: the tile, how good it is (higher is better) and `KeepValue` (lower is discarded first).
         struct Candidate {
@@ -18,14 +24,6 @@ namespace BECore::Mahjong {
             return static_cast<int>(view.own.melds.size());
         }
 
-        bool IsValueTile(Tile tile, Wind seatWind, Wind roundWind) noexcept {
-            if (tile.IsDragon()) {
-                return true;
-            }
-            const int wind = tile.Id() - kFirstWindId;
-            return tile.IsWind() && (wind == static_cast<int>(seatWind) || wind == static_cast<int>(roundWind));
-        }
-
         const HandAction* FindAction(const TableView& view, ActionKind kind) noexcept {
             for (const HandAction& action : view.legal) {
                 if (action.kind == kind) {
@@ -33,12 +31,6 @@ namespace BECore::Mahjong {
                 }
             }
             return nullptr;
-        }
-
-        /// One of `ties` by `rng` (the first when there is only one: no number is drawn).
-        template <typename T>
-        const T& PickOne(const eastl::vector<T>& ties, MahjongRng& rng) {
-            return ties.size() == 1 ? ties.front() : ties[rng.Below(static_cast<uint32_t>(ties.size()))];
         }
 
         /// Whether `a` is a better discard than `b`: the higher score, then the lower keep value.
@@ -107,7 +99,7 @@ namespace BECore::Mahjong {
             TileCounts rest = counts;
             int melds = MeldCountOf(view);
             if (action.kind == ActionKind::ConcealedKong) {
-                rest[action.tile.Id()] = static_cast<uint8_t>(rest[action.tile.Id()] - kKongTilesFromHand - 1);
+                rest[action.tile.Id()] = static_cast<uint8_t>(rest[action.tile.Id()] - kConcealedKongTiles);
                 ++melds;
             } else {
                 --rest[action.tile.Id()];
@@ -145,7 +137,7 @@ namespace BECore::Mahjong {
 
         LowestShanten FindLowestShanten(const TileCounts& counts, int meldCount) {
             LowestShanten lowest;
-            lowest.shanten = 2 * kSetsInHand + 1;
+            lowest.shanten = kAboveWorstShanten;
             TileCounts rest = counts;
             for (uint8_t id = 0; id < kKindCount; ++id) {
                 if (counts[id] == 0) {
@@ -176,7 +168,7 @@ namespace BECore::Mahjong {
             const LowestShanten lowest = FindLowestShanten(counts, meldCount);
             BestDiscards best;
             best.shanten = lowest.shanten;
-            best.acceptance = -1;
+            best.acceptance = kNoAcceptance;
             TileCounts rest = counts;
             for (const uint8_t id : lowest.kinds) {
                 --rest[id];
@@ -208,6 +200,10 @@ namespace BECore::Mahjong {
         }
         const int unseen = kCopiesPerTile - view.visible[tile.Id()];
         return unseen > 0 ? unseen : 0;
+    }
+
+    bool IsValueTile(Tile tile, Wind seatWind, Wind roundWind) noexcept {
+        return tile.IsDragon() || tile == Tile::FromWind(static_cast<int>(seatWind)) || tile == Tile::FromWind(static_cast<int>(roundWind));
     }
 
     int KeepValue(Tile tile, Wind seatWind, Wind roundWind) noexcept {

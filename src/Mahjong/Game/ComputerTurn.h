@@ -15,6 +15,16 @@ namespace BECore::Mahjong {
     /// The copies of `tile` the seat cannot see (`kCopiesPerTile - view.visible`, never below 0); 0 for a tile that is not playable.
     [[nodiscard]] int UnseenCopies(const TableView& view, Tile tile) noexcept;
 
+    /// Whether a pung of `tile` scores a double for the seat: a dragon, the seat's own wind or the round wind. The one place of the rule
+    /// (`KeepValue` and the claims use it).
+    [[nodiscard]] bool IsValueTile(Tile tile, Wind seatWind, Wind roundWind) noexcept;
+
+    /// One of non-empty `ties` by `rng` (the first when there is only one: no number is drawn).
+    template <typename T>
+    const T& PickOne(const eastl::vector<T>& ties, MahjongRng& rng) {
+        return ties.size() == 1 ? ties.front() : ties[rng.Below(static_cast<uint32_t>(ties.size()))];
+    }
+
     /// How much the seat wants to keep `tile` (`kKeep...`); it only breaks ties, efficiency decides first.
     [[nodiscard]] int KeepValue(Tile tile, Wind seatWind, Wind roundWind) noexcept;
 
