@@ -3,6 +3,7 @@
 #include "HandTestSupport.h"
 
 #include <Mahjong/Game/ComputerPlayer.h>
+#include <Mahjong/Game/ComputerTurn.h>
 #include <Mahjong/Game/Match.h>
 #include <gtest/gtest.h>
 #include <set>
@@ -27,7 +28,8 @@ namespace BECore::Mahjong::Tests {
             return MakeModel(SpecOf(kWaitingEast, kWinningLive));
         }
 
-        // East throws a 5p; seat 1 may claim a chow of it (4p 6p) and seat 3 a pung (two 5p): a window with two pending seats, seat 2 not in it.
+        // East throws a 5p; seat 1 may claim a chow of it (4p 6p) and seat 3 a pung (two 5p): a window with two pending seats, seat 2 is
+        // not in it.
         HandModel WindowOfTwoModel() {
             FixedWallSpec spec = SpecOf("1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Gd Rd", "5p");
             spec.hands[kSeat1] = "4p 6p 8p 2s 5s 8s 2m 5m 8m Ww Nw Gd Wd";
@@ -189,7 +191,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(eastActions[1], HandAction::MakeDeclareWin());
     }
 
-    TEST(ComputerPlayerTest, PlayHandStopsAtTheFirstRefusalAndPlaysAHandToTheEnd) {
+    TEST(ComputerPlayerTest, PlayHandPlaysAHandToTheEndAndIsANoOpOnAFinishedHand) {
         ComputerTable table(kSeed);
         HandModel model = WinningWallModel();
         ASSERT_TRUE(table.PlayHand(model).has_value());

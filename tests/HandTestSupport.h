@@ -15,7 +15,7 @@
  * What the tests of a `HandModel` share: the seat names, `kExpectedStartingScore`, a sum of a number per seat, the name of an enum value
  * (`Name`), a tile from text, the error of a status, a snapshot of everything an action could change, a lap of discards, the checks of
  * `LegalActions` against `Apply` (`EveryCanonicalAction`, `AcceptedExactlyWhenListed`) and the chooser that plays a hand with random
- * legal actions. Header only. Included directly by `ComputerClaimTest`, `ComputerMatchTest`, `ComputerPlayerTest`,
+ * legal actions. Header only. Included directly by `ComputerClaimTest`, `ComputerMatchTest`, `ComputerPlayerTest`, `ComputerStrengthTest`,
  * `ComputerTestSupport.h`, `ComputerTurnTest`, `ComputerViewTest`, `HandModelActionsTest`, `HandModelClaimTest`, `HandModelKongTest`,
  * `HandModelPlayoutTest`, `HandModelTurnTest`, `MahjongGameTest`, `MatchTest` and `PaymentsTest`, and through `ScoreTestSupport.h`
  * by `MatchTestSupport.h` (so `MatchPlayoutTest` and `ComputerMatchTest`) and the `Score*Test` files. What differs

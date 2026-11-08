@@ -11,7 +11,8 @@
  * model accepts it (`Step` applies it through `Apply` and never falls back), a hand is bounded so that a loop fails fast, and after
  * every hand the invariants of `MatchAudit` hold (the points add up, the count and the deal as `NextProgress` says, the settlement is
  * well formed); at the end the match is finished after exactly `handsPerMatch` counted hands. The same seed played again, this time by
- * `ComputerTable::PlayMatch`, gives the same history and the same scores; another table seed plays another match. Pure logic: no engine services.
+ * `ComputerTable::PlayMatch`, gives the same history and the same scores; another table seed plays another match. Pure logic: no
+ * engine services.
  */
 namespace BECore::Mahjong::Tests {
 

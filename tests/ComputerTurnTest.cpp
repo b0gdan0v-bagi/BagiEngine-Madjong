@@ -215,6 +215,19 @@ namespace BECore::Mahjong::Tests {
         ExpectChoiceForEverySeed(model, kSeat1, HandAction::MakeDiscard(T("1s"), true));
     }
 
+    TEST(ComputerTurnTest, DoesNotUpgradeAPungOfADeclaredSeatWhenTheKongWouldLowerTheWait) {
+        // Seat 1 is declared and waits (123s 789s 3p 3p 4p 4p, the open pung of 5p, on 3p and 4p). It draws the fourth 5p, which is no win.
+        // Discarding the 4p keeps a wait on 3p and 6p with the drawn 5p in the hand (6 unseen); the kong takes the 5p out and leaves a
+        // wait of 4 unseen copies, so the acceptance of an upgrade is lower and it is refused.
+        const HandModel model = OpenPungModel("5p 5p 1s 2s 3s 7s 8s 9s 3p 3p 4p 4p Wd", kQuiet2, kQuiet3, {kSeat1});
+        ASSERT_TRUE(model.GetHand(kSeat1).callingDeclared);
+        const TableView view = MakeTableView(model, kSeat1);
+        ASSERT_TRUE(Has(view.legal, HandAction::MakeUpgradeKong(T("5p"))));
+        ASSERT_FALSE(Has(view.legal, HandAction::MakeDeclareWin()));
+
+        ExpectChoiceForEverySeed(model, kSeat1, HandAction::MakeDiscard(T("4p")));
+    }
+
     // ----- 4. the discard -----
 
     TEST(ComputerTurnTest, DiscardsTheWorthlessHonourBeforeAValueHonourWhenEfficiencyIsEqual) {

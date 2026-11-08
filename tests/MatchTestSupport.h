@@ -69,7 +69,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_EQ(match.Hand().RoundWind(), _roundWind) << HandWhere();
         }
 
-        /// After `EndHand` returned `settlement` for hand number `index` of the match (replayed draws included).
+        /// After `EndHand` returned `settlement` for hand number `_handIndex` of the match (replayed draws included).
         void AfterHand(const Match& match, const HandSettlement& settlement) {
             const std::string where = HandWhere();
             // The settlement is of this hand and well formed.

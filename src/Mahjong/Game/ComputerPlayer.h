@@ -1,8 +1,6 @@
 #pragma once
 
 #include <EASTL/array.h>
-#include <Mahjong/Game/ComputerClaim.h>
-#include <Mahjong/Game/ComputerTurn.h>
 #include <Mahjong/Game/ComputerView.h>
 #include <Mahjong/Game/Match.h>
 
@@ -17,7 +15,7 @@ namespace BECore::Mahjong {
      */
     class ComputerPlayer {
     public:
-        explicit ComputerPlayer(uint32_t seed = 0) : _rng(seed) {}
+        explicit ComputerPlayer(uint32_t seed) : _rng(seed) {}
 
         /// An element of `view.legal`. The caller asks only a seat that can act: a view with no legal action asserts in debug and answers
         /// `Pass` (which the model then refuses).
@@ -43,7 +41,7 @@ namespace BECore::Mahjong {
      *
      * Seat `i` is a `ComputerPlayer` seeded `SeatSeed(tableSeed, i)`. `Step` asks the next actor for an action and applies it through
      * `HandModel::Apply`; it never falls back to another action, so an action the model refuses is a defect and comes back as the
-     * error. The table does not know the seat setup of slice 4 (which seats are people); it drives whatever model it is given.
+     * error. The table does not know a seat setup (which seats are people) yet; it drives whatever model it is given.
      */
     class ComputerTable {
     public:
@@ -53,13 +51,15 @@ namespace BECore::Mahjong {
         /// the hand is `Finished`.
         [[nodiscard]] static Seat NextActor(const HandModel& model);
 
-        /// One action of the next actor, applied. `WrongPhase` on a finished hand.
+        /// One action of the next actor, applied. `WrongPhase` on a finished hand, `NotYourTurn` when the next actor has no legal action
+        /// (cannot happen on a model that is not finished), otherwise the error of `Apply`.
         StepResult Step(HandModel& model);
 
         /// `Step` until the hand is finished; the first refusal ends it and is returned.
         HandStatus PlayHand(HandModel& model);
 
-        /// Hands of `match` are played and ended (`Match::EndHand`) until the match is `Finished`; the first refusal of a hand ends it.
+        /// Hands of `match` are played and ended (`Match::EndHand`) until the match is `Finished`; the first refusal of a hand ends it. A
+        /// finished hand that `EndHand` refuses is a defect (asserts in debug) and is answered `WrongPhase`.
         HandStatus PlayMatch(Match& match);
 
     private:

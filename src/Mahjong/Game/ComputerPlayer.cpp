@@ -1,5 +1,8 @@
 #include "ComputerPlayer.h"
 
+#include <Mahjong/Game/ComputerClaim.h>
+#include <Mahjong/Game/ComputerTurn.h>
+
 namespace BECore::Mahjong {
 
     HandAction ComputerPlayer::Choose(const TableView& view) {
@@ -80,8 +83,9 @@ namespace BECore::Mahjong {
                 return played;
             }
             if (!match.EndHand()) {
-                // A finished hand always ends; if the match refuses it the match has no hand to play and nothing more can be done.
-                break;
+                // The hand is finished and the match is in a hand, so `EndHand` cannot refuse; if it does the match is broken.
+                ASSERT(false);
+                return std::unexpected(HandError::WrongPhase);
             }
         }
         return {};
