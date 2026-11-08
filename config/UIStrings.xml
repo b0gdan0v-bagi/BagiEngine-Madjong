@@ -108,6 +108,21 @@
         <string key="hint.Declare" text="Announce you are one tile from mahjong (needed to win), then click the tile to discard."/>
         <string key="cover.text" text="Pass the screen to {handoffSeat}"/>
         <string key="cover.show" text="Show"/>
+        <string key="hud.round" text="Round: {round}, hand {hand} of {handsTotal}"/>
+        <string key="hud.wall" text="Wall: {wall}"/>
+        <string key="hud.turn" text="Turn: {turn}"/>
+        <string key="hud.handOver" text="Hand over"/>
+        <string key="hud.matchOver" text="Match over"/>
+        <string key="hud.newGame" text="New game"/>
+        <string key="matchover.newGame" text="New game"/>
+        <string key="setup.title" text="New game: who plays?"/>
+        <string key="setup.seat1" text="Seat 1"/>
+        <string key="setup.seat2" text="Seat 2"/>
+        <string key="setup.seat3" text="Seat 3"/>
+        <string key="setup.seat4" text="Seat 4"/>
+        <string key="setup.person" text="Person"/>
+        <string key="setup.computer" text="Computer"/>
+        <string key="setup.start" text="Start"/>
     </language>
     <language id="ru">
         <string key="lang.en" text="English"/>
@@ -137,14 +152,14 @@
         <string key="score.limit" text="Лимит: {name}"/>
         <string key="score.kind.Win" text="Победа"/>
         <string key="score.kind.WinTileFromWall" text="Кость из стены"/>
-        <string key="score.kind.OnlyWinningTile" text="Единственная выигрышная кость"/>
+        <string key="score.kind.OnlyWinningTile" text="Ожидание на одну кость"/>
         <string key="score.kind.Pung" text="Пун"/>
         <string key="score.kind.Kong" text="Конг"/>
         <string key="score.kind.Pair" text="Пара"/>
         <string key="score.kind.Bonus" text="Бонусная кость"/>
-        <string key="score.kind.DragonSet" text="Набор драконов"/>
-        <string key="score.kind.OwnWindSet" text="Набор своего ветра"/>
-        <string key="score.kind.RoundWindSet" text="Набор ветра раунда"/>
+        <string key="score.kind.DragonSet" text="Драконы"/>
+        <string key="score.kind.OwnWindSet" text="Свой ветер"/>
+        <string key="score.kind.RoundWindSet" text="Ветер раунда"/>
         <string key="score.kind.OneSuitWithHonours" text="Одна масть с почётными"/>
         <string key="score.kind.OneSuitNoHonours" text="Одна масть без почётных"/>
         <string key="score.kind.OwnBonus" text="Бонус своего ветра"/>
@@ -156,12 +171,12 @@
         <string key="score.kind.RobbedKong" text="Ограбленный конг"/>
         <string key="score.kind.LittleFourWinds" text="Малые четыре ветра"/>
         <string key="score.kind.LittleThreeDragons" text="Малые три дракона"/>
-        <string key="score.kind.TerminalsOrHonoursEverywhere" text="Крайняя или почётная в каждом наборе"/>
+        <string key="score.kind.TerminalsOrHonoursEverywhere" text="Крайние или почётные везде"/>
         <string key="score.kind.FullyConcealed" text="Полностью закрытая"/>
         <string key="score.kind.SeveralKongs" text="Несколько конгов"/>
         <string key="score.kind.ObviouslyLast" text="Очевидно последняя кость"/>
         <string key="score.kind.CallingFirstHand" text="Заявка с первого хода"/>
-        <string key="score.kind.ConcealedPungsOneSuit" text="Закрытые пуны одной масти"/>
+        <string key="score.kind.ConcealedPungsOneSuit" text="Тайные пуны одной масти"/>
         <string key="score.kind.HonoursOnly" text="Только почётные"/>
         <string key="score.kind.TerminalsOnly" text="Только крайние"/>
         <string key="score.kind.AllGreen" text="Всё зелёное"/>
@@ -215,5 +230,20 @@
         <string key="hint.Declare" text="Объявите, что не хватает одной кости (нужно для победы), затем нажмите кость для сброса."/>
         <string key="cover.text" text="Передайте экран: {handoffSeat}"/>
         <string key="cover.show" text="Показать"/>
+        <string key="hud.round" text="Раунд: {round}, раздача {hand} из {handsTotal}"/>
+        <string key="hud.wall" text="Стена: {wall}"/>
+        <string key="hud.turn" text="Ход: {turn}"/>
+        <string key="hud.handOver" text="Раздача окончена"/>
+        <string key="hud.matchOver" text="Матч окончен"/>
+        <string key="hud.newGame" text="Новая игра"/>
+        <string key="matchover.newGame" text="Новая игра"/>
+        <string key="setup.title" text="Новая игра: кто играет?"/>
+        <string key="setup.seat1" text="Место 1"/>
+        <string key="setup.seat2" text="Место 2"/>
+        <string key="setup.seat3" text="Место 3"/>
+        <string key="setup.seat4" text="Место 4"/>
+        <string key="setup.person" text="Человек"/>
+        <string key="setup.computer" text="Компьютер"/>
+        <string key="setup.start" text="Начать"/>
     </language>
 </UIStrings>

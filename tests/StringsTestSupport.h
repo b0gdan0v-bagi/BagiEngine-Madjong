@@ -1,6 +1,7 @@
 #pragma once
 
 #include <BECore/Config/XmlConfig.h>
+#include <BECore/Text/Utf8.h>
 #include <BECore/UI/UIStrings.h>
 #include <filesystem>
 #include <gtest/gtest.h>
@@ -89,6 +90,20 @@ namespace BECore::Mahjong::Tests {
             check(language);
         }
         strings.SetLanguage(saved);
+    }
+
+    /// The longest text of `candidates` by code points (how a line of text is measured in any language, the bytes of Cyrillic are twice as many); the first of equals; empty for none.
+    inline eastl::string LongestText(const std::vector<eastl::string>& candidates) {
+        eastl::string longest;
+        size_t most = 0;
+        for (const eastl::string& candidate : candidates) {
+            const size_t length = Utf8::CountCodePoints(candidate);
+            if (length > most) {
+                most = length;
+                longest = candidate;
+            }
+        }
+        return longest;
     }
 
 }  // namespace BECore::Mahjong::Tests

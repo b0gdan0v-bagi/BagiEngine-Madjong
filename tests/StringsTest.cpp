@@ -96,16 +96,25 @@ namespace BECore::Mahjong::Tests {
         const std::filesystem::path scene = std::filesystem::path(__FILE__).parent_path().parent_path() / "config" / "SceneConfig.xml";
         const std::string text = ReadFile(scene);
         ASSERT_FALSE(text.empty()) << scene.string();
-        UIStrings strings;
-        ASSERT_TRUE(LoadShippedStrings(strings).empty());
+        // Looked up in the entries of each language: `Find` falls back to the default language and would hide a missing translation
+        std::map<std::string, std::set<std::string>> keysOf;
+        for (const LanguageEntries& language : ReadShippedEntries()) {
+            for (const StringEntry& entry : language.entries) {
+                keysOf[language.id].insert(entry.key);
+            }
+        }
+        ASSERT_FALSE(keysOf.empty());
 
         const std::regex reference(R"(\{#([^}]+)\})");
+        int references = 0;
         for (auto it = std::sregex_iterator(text.begin(), text.end(), reference); it != std::sregex_iterator(); ++it) {
             const std::string key = (*it)[1].str();
-            ForEachLanguage(strings, [&](PoolString language) {
-                EXPECT_TRUE(strings.Find(eastl::string_view(key.data(), key.size())).has_value()) << "{#" << key << "} of the scene is missing in " << language.ToStringView().data();
-            });
+            ++references;
+            for (const auto& [language, keys] : keysOf) {
+                EXPECT_TRUE(keys.contains(key)) << "{#" << key << "} of the scene is missing in " << language;
+            }
         }
+        EXPECT_GT(references, 0);
     }
 
     TEST(StringsTest, TrFindsTheTextOfTheCurrentLanguageElseTheDefaultElseTheKey) {

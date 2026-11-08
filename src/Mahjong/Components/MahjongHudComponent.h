@@ -19,11 +19,12 @@ namespace BECore::Mahjong {
      * @brief The words and numbers of the HUD, and the seat choice of a new game: the canvases `Hud` and `Setup` of
      *        `config/SceneConfig.xml` show what this component publishes to `CoreManager::GetUIVars()` and emit the actions it answers.
      *
-     * **Variables** (set when `TableSession::Version()` moved, or the game changed; nothing is set again otherwise): `round` (the round
-     * wind), `hand` (the number of the hand in progress, at most `handsTotal`), `handsTotal`, `wall` (live tiles left), `turn` (the seat
-     * whose turn it is, never the seat that is asked to claim: that would tell a person that this computer holds a claim; `Hand over`
-     * and `Match over` when the hand or the match is over), and per seat `seatName` (`Seat 2 (South)`, with ` You` for the person when
-     * exactly one person plays), `seatWind`, `seatScore`, `seatMark` (`>` on the seat whose turn it is) and `seatDealer` (`*` on East).
+     * **Variables** (set when `TableSession::Version()` moved, or the game changed, or the version of `UIStrings` moved, i.e. the language;
+     * nothing is set again otherwise; every word is in the current language of the string table, `config/UIStrings.xml`): `round` (the name
+     * of the round wind), `hand` (the number of the hand in progress, at most `handsTotal`), `handsTotal`, `wall` (live tiles left), `turn` (the seat
+     * whose turn it is, never the seat that is asked to claim: that would tell a person that this computer holds a claim; `hud.handOver`
+     * and `hud.matchOver` when the hand or the match is over), and per seat `seatName` (`Seat 2 (South)`, with ` You` for the person when
+     * exactly one person plays), `seatWind` (the wind's name), `seatScore`, `seatMark` (`>` on the seat whose turn it is) and `seatDealer` (`*` on East).
      * They carry no tile and nothing a seat could not see.
      *
      * **Setup.** `MahjongGame::IsSetupOpen()` decides whether the modal canvas `Setup` is shown (this component shows and hides it every
@@ -35,10 +36,10 @@ namespace BECore::Mahjong {
      *
      * **The end of a hand and of a match.** While the session is in `HandOver` the modal canvas `HandOver` is shown with the rows of
      * `FormatScoreTable` (`Table/ScoreText.h`): `handOverHeadline`, `handOverSeat0` .. `3`, `scoreLine0` .. `15` (the element
-     * `ScoreLineN` is visible exactly when there is a line N), `handOverSummary` and `handOverButton` (`Next hand`, `Finish match` on
-     * the last hand of the match); `MahjongNextHand` settles the hand (`TableSession::NextHand`) and deals on. While the match is
+     * `ScoreLineN` is visible exactly when there is a line N), `handOverSummary` and `handOverButton` (`handover.next`, `handover.finish` on
+     * the last hand of the match, resolved); `MahjongNextHand` settles the hand (`TableSession::NextHand`) and deals on. While the match is
      * finished the canvas `MatchOver` is shown with `matchOverHeadline` and `standing0` .. `3` (`FormatStandings`); its button
-     * `MahjongNewGame` opens `Setup`. Both are published when the version of the session moved and read only public data (the hands
+     * `MahjongNewGame` opens `Setup`. Both are published when the version of the session or of the string table moved and read only public data (the hands
      * are open once the hand is over).
      */
     class MahjongHudComponent : public IComponent {
@@ -78,12 +79,14 @@ namespace BECore::Mahjong {
         bool _setupShown = false;
         const MahjongGame* _numbersOf = nullptr;  // the game and the version the variables show
         uint64_t _numbersVersion = 0;
+        uint64_t _numbersStrings = 0;  // the version of the string table the variables are worded in
         bool _numbersPublished = false;
         bool _handOverShown = false;
         bool _matchOverShown = false;
         int _shownLines = 0;                        // the labels `ScoreLine0` .. that are visible
         const MahjongGame* _endScreenOf = nullptr;  // the game and the version the variables of the end screens show
         uint64_t _endScreenVersion = 0;
+        uint64_t _endScreenStrings = 0;
         bool _endScreenPublished = false;
         static MahjongHudComponent* s_active;
     };

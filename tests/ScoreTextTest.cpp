@@ -206,7 +206,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_STREQ(ScoreLineText(Ru(), MakeLine(ScoreKind::Win, "", 20, 0)).c_str(), "Победа: 20");
         EXPECT_STREQ(ScoreLineText(Ru(), MakeLine(ScoreKind::Pung, "5p", 8, 0)).c_str(), "Пун (Круги 5): 8");
         EXPECT_STREQ(ScoreLineText(Ru(), MakeLine(ScoreKind::Bonus, "F1", 4, 0)).c_str(), "Бонусная кость (Цветок 1): 4");
-        EXPECT_STREQ(ScoreLineText(Ru(), MakeLine(ScoreKind::DragonSet, "Gd", 0, 1)).c_str(), "Набор драконов (Зелёный дракон): x2");
+        EXPECT_STREQ(ScoreLineText(Ru(), MakeLine(ScoreKind::DragonSet, "Gd", 0, 1)).c_str(), "Драконы (Зелёный дракон): x2");
         EXPECT_STREQ(ScoreLineText(Ru(), MakeLine(ScoreKind::LittleFourWinds, "", 0, 2)).c_str(), "Малые четыре ветра: x4");
         EXPECT_STREQ(ScoreLineText(Ru(), MakeLine(ScoreKind::ThirteenOrphans, "", 0, 0)).c_str(), "Лимит: Тринадцать сирот");
     }
@@ -344,7 +344,7 @@ namespace BECore::Mahjong::Tests {
                                         "Пун (Бамбук 6): 4",
                                         "Пун (Красный дракон): 8",
                                         "Пара (Ветер: Юг): 2",
-                                        "Набор драконов (Красный дракон): x2",
+                                        "Драконы (Красный дракон): x2",
                                         "Полностью закрытая: x2",
                                         "Заявка с первого хода: x2"};
         ASSERT_EQ(table.lines.size(), std::size(expected));

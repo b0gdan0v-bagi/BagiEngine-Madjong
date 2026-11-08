@@ -18,10 +18,6 @@ namespace BECore::Mahjong {
         constexpr eastl::string_view kComputerId = "computer";
         constexpr eastl::string_view kTurnMark = ">";
         constexpr eastl::string_view kDealerMark = "*";
-        constexpr eastl::string_view kHandOver = "Hand over";
-        constexpr eastl::string_view kMatchOver = "Match over";
-        constexpr eastl::string_view kNextHandLabel = "Next hand";
-        constexpr eastl::string_view kFinishMatchLabel = "Finish match";
         constexpr eastl::string_view kNewGameAction = "MahjongNewGame";
         constexpr eastl::string_view kStartAction = "MahjongStart";
         constexpr eastl::string_view kNextHandAction = "MahjongNextHand";
@@ -54,18 +50,18 @@ namespace BECore::Mahjong {
             return std::nullopt;
         }
 
-        /// Who is whose turn on the table, for the label `Turn:`.
-        eastl::string TurnText(const TableSession& session, const Match& match) {
+        /// Who is whose turn on the table, for the label `Turn:`, in the language of `strings`.
+        eastl::string TurnText(const UIStrings& strings, const TableSession& session, const Match& match) {
             switch (session.GetPhase()) {
                 case SessionPhase::HandOver:
-                    return eastl::string(kHandOver);
+                    return Tr(strings, "hud.handOver");
                 case SessionPhase::MatchOver:
-                    return eastl::string(kMatchOver);
+                    return Tr(strings, "hud.matchOver");
                 case SessionPhase::Playing:
                     break;
             }
             const HandModel& hand = match.Hand();
-            return SeatName(CoreManager::GetUIStrings(), hand.CurrentSeat(), hand.SeatWind(hand.CurrentSeat()));
+            return SeatName(strings, hand.CurrentSeat(), hand.SeatWind(hand.CurrentSeat()));
         }
 
     }  // namespace
@@ -98,27 +94,29 @@ namespace BECore::Mahjong {
             return;
         }
         const TableSession& session = game->GetSession();
-        if (_numbersPublished && _numbersOf == game && _numbersVersion == session.Version()) {
+        const UIStrings& strings = CoreManager::GetUIStrings();
+        if (_numbersPublished && _numbersOf == game && _numbersVersion == session.Version() && _numbersStrings == strings.GetVersion()) {
             return;
         }
         _numbersOf = game;
         _numbersVersion = session.Version();
+        _numbersStrings = strings.GetVersion();
         _numbersPublished = true;
 
         const Match& match = game->GetMatch();
         const HandModel& hand = match.Hand();
         UIVars& vars = CoreManager::GetUIVars();
-        vars.Set("round"_intern, EnumUtils<Wind>::ToString(match.RoundWind()));
+        vars.Set("round"_intern, eastl::string_view(WindName(strings, match.RoundWind())));
         vars.Set("hand"_intern, std::min(match.HandsPlayed() + 1, match.HandsTotal()));
         vars.Set("handsTotal"_intern, match.HandsTotal());
         vars.Set("wall"_intern, static_cast<int>(hand.GetWall().LiveCount()));
-        vars.Set("turn"_intern, eastl::string_view(TurnText(session, match)));
+        vars.Set("turn"_intern, eastl::string_view(TurnText(strings, session, match)));
 
         const bool playing = session.GetPhase() == SessionPhase::Playing;
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             const Wind wind = hand.SeatWind(seat);
-            vars.Set(SeatVar("seatName", seat), eastl::string_view(SeatLabel(CoreManager::GetUIStrings(), seat, wind, session.Seats())));
-            vars.Set(SeatVar("seatWind", seat), EnumUtils<Wind>::ToString(wind));
+            vars.Set(SeatVar("seatName", seat), eastl::string_view(SeatLabel(strings, seat, wind, session.Seats())));
+            vars.Set(SeatVar("seatWind", seat), eastl::string_view(WindName(strings, wind)));
             vars.Set(SeatVar("seatScore", seat), match.Scores()[seat]);
             vars.Set(SeatVar("seatMark", seat), playing && hand.CurrentSeat() == seat ? kTurnMark : eastl::string_view());
             vars.Set(SeatVar("seatDealer", seat), match.East() == seat ? kDealerMark : eastl::string_view());
@@ -160,7 +158,8 @@ namespace BECore::Mahjong {
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             totals[seat] += settlement.deltas[seat];
         }
-        const ScoreTable table = FormatScoreTable(CoreManager::GetUIStrings(), settlement, match.Hand().Result().value_or(HandResult{}), totals, session.Seats());
+        const UIStrings& strings = CoreManager::GetUIStrings();
+        const ScoreTable table = FormatScoreTable(strings, settlement, match.Hand().Result().value_or(HandResult{}), totals, session.Seats());
 
         UIVars& vars = CoreManager::GetUIVars();
         vars.Set("handOverHeadline"_intern, eastl::string_view(table.headline));
@@ -175,7 +174,7 @@ namespace BECore::Mahjong {
         ShowScoreLines(static_cast<int>(table.lines.size()));
         // The last hand of the match ends it: the button says so
         const MatchProgress after = NextProgress(MatchProgress{match.HandsPlayed(), match.East()}, settlement.kind, settlement.winner, match.GetSettings());
-        vars.Set("handOverButton"_intern, IsMatchOver(after.handsPlayed, match.GetSettings()) ? kFinishMatchLabel : kNextHandLabel);
+        vars.Set("handOverButton"_intern, eastl::string_view(Tr(strings, IsMatchOver(after.handsPlayed, match.GetSettings()) ? "handover.finish" : "handover.next")));
     }
 
     void MahjongHudComponent::PublishMatchOver(const MahjongGame& game) {
@@ -192,9 +191,11 @@ namespace BECore::Mahjong {
         const bool handOver = started && game->GetSession().GetPhase() == SessionPhase::HandOver;
         const bool matchOver = started && game->GetMatch().GetPhase() == MatchPhase::Finished;
         if (handOver || matchOver) {
-            if (!_endScreenPublished || _endScreenOf != game || _endScreenVersion != game->GetSession().Version()) {
+            const uint64_t stringsVersion = CoreManager::GetUIStrings().GetVersion();
+            if (!_endScreenPublished || _endScreenOf != game || _endScreenVersion != game->GetSession().Version() || _endScreenStrings != stringsVersion) {
                 _endScreenOf = game;
                 _endScreenVersion = game->GetSession().Version();
+                _endScreenStrings = stringsVersion;
                 _endScreenPublished = true;
                 if (handOver) {
                     PublishHandOver(*game);
