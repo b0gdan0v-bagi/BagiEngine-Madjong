@@ -269,7 +269,7 @@
         <string key="setup.title" text="Новая игра: кто играет?"/>
         <string key="setup.language" text="Язык"/>
         <string key="setup.hands" text="Раздачи"/>
-        <string key="setup.hints" text="Подсказки"/>
+        <string key="setup.hints" text="Помощь"/>
         <string key="setup.on" text="Вкл"/>
         <string key="setup.off" text="Выкл"/>
         <string key="setup.seat1" text="Место 1"/>

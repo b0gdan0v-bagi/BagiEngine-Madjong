@@ -459,7 +459,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
 
         ForEachLanguage(strings, [&](PoolString language) {
-            for (const char* key : {kWaitCaptionKey, kAdviseButtonKey, kSetupHintsKey, kSetupOnKey, kSetupOffKey}) {
+            for (const char* key : {kWaitCaptionKey, kAdviseButtonKey, "setup.hints", "setup.on", "setup.off"}) {
                 EXPECT_NE(Std(Tr(strings, key)), key) << language.ToStringView().data() << " " << key;
             }
         });

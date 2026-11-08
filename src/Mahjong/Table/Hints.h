@@ -23,9 +23,6 @@ namespace BECore::Mahjong {
     /// The keys of the words the panel and the hint canvas show (the scene says `{#key}`; the names are here so that code and tests can ask for them).
     inline constexpr const char* kWaitCaptionKey = "hints.waitCaption";
     inline constexpr const char* kAdviseButtonKey = "hints.adviseButton";
-    inline constexpr const char* kSetupHintsKey = "setup.hints";
-    inline constexpr const char* kSetupOnKey = "setup.on";
-    inline constexpr const char* kSetupOffKey = "setup.off";
 
     /// One tile the hand waits for and the copies of it the viewer cannot see (it may be 0: a dead wait is still shown).
     struct WaitEntry {
