@@ -3,7 +3,6 @@
 #include <Mahjong/Game/Shanten.h>
 #include <Mahjong/Game/Tile.h>
 #include <algorithm>
-#include <chrono>
 #include <gtest/gtest.h>
 
 /**
@@ -15,12 +14,15 @@ namespace BECore::Mahjong::Tests {
     namespace {
 
         /// Hands of the cheap properties (at most one `Shanten` and one `Decompose` probe per kind), and of the ones that call `Shanten`
-        /// for every kind added or taken away (about 70 searches a hand, about 20 microseconds each in Debug: 500 hands are enough).
+        /// for every kind added or taken away (about 70 searches a hand, 2 to 6 microseconds each in Debug).
         constexpr int kHandsPerProperty = 2000;
-        constexpr int kHandsPerProbingProperty = 500;
+        constexpr int kHandsPerProbingProperty = 2000;
+        /// The property that adds every kind and discards every kind held (about 400 searches a hand) runs on fewer hands.
+        constexpr int kHandsPerExchangeProperty = 1000;
         constexpr int kShantenOfNothing = 2 * kSetsInHand;
         /// One tile in this many of a crowded hand is of any kind.
         constexpr uint32_t kStrangerOneIn = 6;
+        constexpr uint32_t kHandStyles = 4;
 
         TileCounts Counts(const std::string& text) {
             return CountTiles(ParseTiles(text).value());
@@ -59,7 +61,11 @@ namespace BECore::Mahjong::Tests {
             return false;
         }
 
-        /// Seeded hands of `3n + 1` or `3n + 2` concealed tiles for `meldCount` melds, random, near-complete or crowded into few kinds.
+        /// How `FillRandom` picks the kinds.
+        CORE_ENUM(Spread, uint8_t, AnyKind, MostlyOneSuit, OneSuit)
+
+        /// Seeded hands of `3n + 1` or `3n + 2` concealed tiles for `meldCount` melds: random, near-complete, mostly one suit or one
+        /// suit (the hands where the search has the most readings to walk).
         class HandMaker {
         public:
             explicit HandMaker(uint32_t seed) : _rng(seed) {}
@@ -67,9 +73,13 @@ namespace BECore::Mahjong::Tests {
             /// A hand of `size` concealed tiles; never more than four of a kind.
             TileCounts Make(int size) {
                 TileCounts counts{};
-                const uint32_t style = _rng.Below(3);
-                if (style < 2) {
-                    FillRandom(counts, size, style == 1);
+                const uint32_t style = _rng.Below(kHandStyles);
+                if (style == 0) {
+                    FillRandom(counts, size, Spread::AnyKind);
+                } else if (style == 1) {
+                    FillRandom(counts, size, Spread::MostlyOneSuit);
+                } else if (style == 2) {
+                    FillRandom(counts, size, Spread::OneSuit);
                 } else {
                     FillNearComplete(counts, size);
                 }
@@ -77,12 +87,12 @@ namespace BECore::Mahjong::Tests {
             }
 
         private:
-            /// Tiles of any kind, or (`crowded`) mostly of one suit with a few strangers: chows and partial sets are likely.
-            void FillRandom(TileCounts& counts, int size, bool crowded) {
+            /// Tiles of any kind, or mostly of one suit with a few strangers, or of one suit alone: chows and partial sets are likely.
+            void FillRandom(TileCounts& counts, int size, Spread spread) {
                 const uint8_t suitBase = static_cast<uint8_t>(_rng.Below(kSuitCount) * kRanksPerSuit);
                 int placed = 0;
                 while (placed < size) {
-                    const bool stranger = !crowded || _rng.Below(kStrangerOneIn) == 0;
+                    const bool stranger = spread == Spread::AnyKind || (spread == Spread::MostlyOneSuit && _rng.Below(kStrangerOneIn) == 0);
                     const uint8_t id = stranger ? RandomKind() : static_cast<uint8_t>(suitBase + _rng.Below(kRanksPerSuit));
                     placed += Add(counts, id, 1) ? 1 : 0;
                 }
@@ -198,7 +208,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(ShantenOf("1p 2p 3p 4s 5s 6s 7m 8m 9m Ew Rd 5p 7p"), 1) << "three sets, one partial set";
         EXPECT_EQ(ShantenOf("1p 2p 3p 4s 5s 6s 7m 8m 9m 2s 9s Ew Rd"), 2) << "three sets and floating tiles";
         EXPECT_EQ(ShantenOf("1p 2p 3p 4s 5s 6s 7m 8m 9m Ew Rd 5p 7p 9s"), 1) << "14 tiles: after the best discard the same as 13";
-        EXPECT_EQ(ShantenOf("1p 2p 4p 5p 7p 8p 1s 2s 4s 5s 7s 8s 9m"), 4) << "six partial sets: only four count";
+        EXPECT_EQ(ShantenOf("1p 2p 3p 4s 5s 6s 1m 3m 9m 9s Ew Sw Ww"), 3) << "two sets, one partial set and singles";
     }
 
     TEST(ShantenTest, ThirteenIsolatedTilesAreTheWorst) {
@@ -315,6 +325,38 @@ namespace BECore::Mahjong::Tests {
             listed += static_cast<int>(improving.size());
         });
         EXPECT_GT(listed, 500);
+    }
+
+    TEST(ShantenTest, EveryValueIsTheFewestExchangesFromACompleteHand) {
+        // A hand of 3n + 1 tiles at k > 0 reaches k - 1 by taking one tile and giving one back, and no exchange reaches less: with the
+        // anchors above (-1 and 0 against `Decompose`) this pins every value.
+        int checked = 0;
+        ForEachRandomHand(15, kHandsPerExchangeProperty, [&](const TileCounts& counts, int meldCount) {
+            if (TotalTiles(counts) != HandSize(meldCount, false)) {
+                return;
+            }
+            const int shanten = Shanten(counts, meldCount);
+            if (shanten <= 0) {
+                return;
+            }
+            int bestAfterExchange = kShantenOfNothing;
+            TileCounts probe = counts;
+            for (uint8_t added = 0; added < kKindCount; ++added) {
+                ++probe[added];
+                for (uint8_t given = 0; given < kKindCount; ++given) {
+                    if (probe[given] == 0) {
+                        continue;
+                    }
+                    --probe[given];
+                    bestAfterExchange = std::min(bestAfterExchange, Shanten(probe, meldCount));
+                    ++probe[given];
+                }
+                --probe[added];
+            }
+            EXPECT_EQ(bestAfterExchange, shanten - 1);
+            ++checked;
+        });
+        EXPECT_GT(checked, 200);
     }
 
     TEST(ShantenTest, AddingATileNeverRaisesTheNumberAndDiscardingNeverLowersItByMoreThanOne) {

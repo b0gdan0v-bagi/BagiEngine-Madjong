@@ -6,11 +6,13 @@ namespace BECore::Mahjong {
 
         /// The roles the lowest tile of the search can play, in the order they are tried. The copies of one kind take roles in
         /// non-decreasing order, so two orders of the same roles are not walked twice.
-        enum class Role : uint8_t { Pung, Chow, Pair, PartialPair, PartialNeighbour, PartialGap, Isolated };
+        CORE_ENUM(Role, uint8_t, Pung, Chow, Pair, PartialPair, PartialNeighbour, PartialGap, Isolated)
 
         constexpr int kMostSetsNeeded = kSetsInHand;
         /// Two tiles that reach a chow over one rank (1 3, 5 7) and two that are next to each other (4 5).
         constexpr int kGapRanks = 2;
+        /// A set lowers the number by two steps with three tiles: the most a tile can do is 2/3 of a step.
+        constexpr int kStepsPerSet = 2;
         constexpr int kNeighbourRanks = 1;
 
         /// The search over the readings of `held` into sets, partial sets and a pair. Works on its own copy of the counts.
@@ -19,6 +21,7 @@ namespace BECore::Mahjong {
             Searcher(const TileCounts& counts, int needed) : _needed(needed) {
                 for (uint8_t id = 0; id < kKindCount; ++id) {
                     _held[id] = static_cast<int8_t>(counts[id]);
+                    _remaining += _held[id];
                 }
             }
 
@@ -47,25 +50,31 @@ namespace BECore::Mahjong {
                 return tile.IsSuit() && tile.Rank() + span <= kRanksPerSuit;
             }
 
+            /// The number the reading so far stands at if no tile that is left helped any more.
+            [[nodiscard]] int ValueNow(int sets, int partials, int pair) const noexcept {
+                const int usefulPartials = partials < _needed - sets ? partials : _needed - sets;
+                return 2 * _needed - 2 * sets - usefulPartials - pair;
+            }
+
             void Walk(int id, Role role, int sets, int partials, int pair) {
-                if (Done()) {
+                // A tile that is left lowers the number by at most 2/3 of a step (a set takes 3 tiles for 2 steps), so a reading that
+                // cannot get below the best even then is not walked on.
+                if (Done() || ValueNow(sets, partials, pair) - (kStepsPerSet * _remaining) / kTilesPerSet >= _best) {
                     return;
                 }
                 id = NextKind(id, role);
                 if (id == kKindCount) {
                     // A set found after the partial sets can leave more of them than the hand has room for: only the room counts.
-                    const int usefulPartials = partials < _needed - sets ? partials : _needed - sets;
-                    const int value = 2 * _needed - 2 * sets - usefulPartials - pair;
-                    _best = value < _best ? value : _best;
+                    _best = ValueNow(sets, partials, pair);
                     return;
                 }
                 const int blocks = sets + partials;
                 const int8_t copies = _held[id];
 
                 if (role <= Role::Pung && copies >= kTilesPerSet && sets < _needed) {
-                    _held[id] -= kTilesPerSet;
+                    TakeSame(id, kTilesPerSet, -1);
                     Walk(id, Role::Pung, sets + 1, partials, pair);
-                    _held[id] += kTilesPerSet;
+                    TakeSame(id, kTilesPerSet, 1);
                 }
                 const bool chowFits = CanStartChow(id, kTilesPerSet - 1) && _held[id + 1] > 0 && _held[id + kGapRanks] > 0;
                 if (role <= Role::Chow && sets < _needed && chowFits) {
@@ -74,26 +83,26 @@ namespace BECore::Mahjong {
                     TakeChow(id, 1);
                 }
                 if (role <= Role::Pair && pair == 0 && copies >= kTilesInPair) {
-                    _held[id] -= kTilesInPair;
+                    TakeSame(id, kTilesInPair, -1);
                     Walk(id, Role::Pair, sets, partials, 1);
-                    _held[id] += kTilesInPair;
+                    TakeSame(id, kTilesInPair, 1);
                 }
                 if (blocks < _needed) {
                     WalkPartials(id, role, sets, partials, pair);
                 }
                 if (role <= Role::Isolated) {
-                    --_held[id];
+                    TakeSame(id, 1, -1);
                     Walk(id, Role::Isolated, sets, partials, pair);
-                    ++_held[id];
+                    TakeSame(id, 1, 1);
                 }
             }
 
             /// The branches that take a partial set; the caller has checked that one more block is wanted.
             void WalkPartials(int id, Role role, int sets, int partials, int pair) {
                 if (role <= Role::PartialPair && _held[id] >= kTilesInPair) {
-                    _held[id] -= kTilesInPair;
+                    TakeSame(id, kTilesInPair, -1);
                     Walk(id, Role::PartialPair, sets, partials + 1, pair);
-                    _held[id] += kTilesInPair;
+                    TakeSame(id, kTilesInPair, 1);
                 }
                 if (role <= Role::PartialNeighbour && CanStartChow(id, kNeighbourRanks) && _held[id + kNeighbourRanks] > 0) {
                     TakePartial(id, kNeighbourRanks, -1);
@@ -107,20 +116,28 @@ namespace BECore::Mahjong {
                 }
             }
 
-            /// Takes (`delta` -1) or puts back (+1) the three tiles of the chow that starts at `id`.
+            /// Takes (`delta` -1) or puts back (+1) `count` copies of the kind `id`.
+            void TakeSame(int id, int count, int delta) noexcept {
+                _held[id] = static_cast<int8_t>(_held[id] + count * delta);
+                _remaining += count * delta;
+            }
+
+            /// Takes or puts back the three tiles of the chow that starts at `id`.
             void TakeChow(int id, int delta) noexcept {
                 for (int step = 0; step < kTilesPerSet; ++step) {
-                    _held[id + step] = static_cast<int8_t>(_held[id + step] + delta);
+                    TakeSame(id + step, 1, delta);
                 }
             }
 
             /// Takes or puts back the tile `id` and the one `distance` ranks above it.
             void TakePartial(int id, int distance, int delta) noexcept {
-                _held[id] = static_cast<int8_t>(_held[id] + delta);
-                _held[id + distance] = static_cast<int8_t>(_held[id + distance] + delta);
+                TakeSame(id, 1, delta);
+                TakeSame(id + distance, 1, delta);
             }
 
             eastl::array<int8_t, kKindCount> _held{};
+            /// The tiles of `_held` taken together: the tiles no role has been given yet.
+            int _remaining = 0;
             int _needed = 0;
             int _best = 2 * kMostSetsNeeded;
         };
