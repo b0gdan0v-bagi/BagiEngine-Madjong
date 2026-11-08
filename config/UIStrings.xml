@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The words of the game: English (the default) and Russian. Every key is in both languages with the same {placeholders}; StringsTest holds that.
+     A language is written in itself (lang.*). The scene says text="{#key}", code reads a key through Table/Words.h. -->
+<UIStrings default="en">
+    <language id="en">
+        <string key="lang.en" text="English"/>
+        <string key="lang.ru" text="Русский"/>
+    </language>
+    <language id="ru">
+        <string key="lang.en" text="English"/>
+        <string key="lang.ru" text="Русский"/>
+    </language>
+</UIStrings>

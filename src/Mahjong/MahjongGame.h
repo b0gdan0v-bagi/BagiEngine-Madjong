@@ -8,6 +8,9 @@
 
 namespace BECore::Mahjong {
 
+    /// The language the game speaks until `SetLanguage` says otherwise (the default language of `config/UIStrings.xml`).
+    inline constexpr eastl::string_view kDefaultLanguage = "en";
+
     /**
      * @brief Concrete IGame for mahjong: it owns the match (`Game/Match.h`), the rules of classic Chinese mahjong for four seats, and
      *        the `TableSession` over it (`Game/TableSession.h`), which every front end drives.
@@ -20,7 +23,8 @@ namespace BECore::Mahjong {
      * which only ever see the seed (`StartMatch(seed)` is how a test or a control API replays a match). A match is begun with
      * `GetSettings()` (the defaults, `MahjongSettings{}`, until `SetSettings`) and the seat setup `GetSeats()` (`kDefaultSeatSetup`:
      * seat 0 a person, the others computers); both are kept across `Reset()`. `AsControllable()` hands out the control adapter, which
-     * drives the match through the session. The seat choice of a new game is the panel `Setup` of the scene (`IsSetupOpen`).
+     * drives the match through the session. The seat choice of a new game is the panel `Setup` of the scene (`IsSetupOpen`). The language
+     * of the words (`GetLanguage`, `kDefaultLanguage`) is kept for the session and applied to `CoreManager::GetUIStrings()` at every start.
      */
     class MahjongGame : public IGame {
         BE_CLASS(MahjongGame)
@@ -89,14 +93,25 @@ namespace BECore::Mahjong {
             _setupOpen = false;
         }
 
+        /// The language of the words, an id of `config/UIStrings.xml`. Kept across `Reset()` and `StartMatch`.
+        PoolString GetLanguage() const {
+            return _language;
+        }
+        /// Picks the language and applies it to the string table. False, and nothing changes, for a language the table does not have.
+        bool SetLanguage(PoolString language);
+
         /// The active game, or nullptr when no game is active or the active game is not Mahjong.
         static MahjongGame* GetActive();
 
     private:
+        /// Puts the stored language into the string table; an empty table (or one without the language) is left alone.
+        void ApplyLanguage() const;
+
         Match _match;
         MahjongSettings _settings;
         SeatSetup _seats = kDefaultSeatSetup;
         bool _setupOpen = false;
+        PoolString _language = PoolString::Intern(kDefaultLanguage);
         TableSession _session{_match};  // after _match: it keeps a reference
         MahjongGameControl _control{*this};
     };
