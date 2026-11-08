@@ -147,25 +147,6 @@ namespace BECore::Mahjong {
             return meldCount < 0 ? 0 : (meldCount > kSetsInHand ? kSetsInHand : meldCount);
         }
 
-        /// Whether a tile of kind `id` could join a set or a pair of the held tiles: the same kind, or the same suit within two ranks.
-        bool TouchesHeldTile(const TileCounts& counts, uint8_t id) noexcept {
-            if (counts[id] > 0) {
-                return true;
-            }
-            const Tile tile{id};
-            if (!tile.IsSuit()) {
-                return false;
-            }
-            const int rank = tile.Rank();
-            for (int distance = -kGapRanks; distance <= kGapRanks; ++distance) {
-                const int other = rank + distance;
-                if (distance != 0 && other >= 1 && other <= kRanksPerSuit && counts[id + distance] > 0) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
     }  // namespace
 
     int Shanten(const TileCounts& counts, int meldCount) {
@@ -181,7 +162,7 @@ namespace BECore::Mahjong {
         }
         TileCounts probe = counts;
         for (uint8_t id = 0; id < kKindCount; ++id) {
-            if (!TouchesHeldTile(counts, id)) {
+            if (!HasTileNearby(counts, id)) {
                 continue;
             }
             ++probe[id];

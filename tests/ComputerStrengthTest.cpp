@@ -31,12 +31,13 @@ namespace BECore::Mahjong::Tests {
 
         /// The margins. Wins: at least a third of the hands, and at least four times the wins of an average random seat. Declarations:
         /// at least half of the hands, and at least twice an average random seat. Points: at least 60 a hand, and above an average
-        /// random seat.
+        /// random seat. On every seat the computer wins at least a quarter of its hands there.
         constexpr int kMinWinShareOfHands = 3;  // one hand in three
         constexpr int kMinWinFactor = 4;
         constexpr int kMinDeclaredShareOfHands = 2;  // one hand in two
         constexpr int kMinDeclaredFactor = 2;
         constexpr int kMinPointsPerHand = 60;
+        constexpr int kMinWinShareOnSeat = 4;  // one hand in four
 
         constexpr int kCostHands = 20;
         constexpr uint32_t kCostFirstSeed = 9100;
@@ -72,8 +73,14 @@ namespace BECore::Mahjong::Tests {
                 ASSERT_LT(++steps, kStepLimit) << "seed " << seed << ": the hand does not end";
                 const Seat actor = ComputerTable::NextActor(hand);
                 ASSERT_TRUE(IsSeat(actor));
-                const std::optional<HandAction> chosen = actor == computerSeat ? computer.Decide(hand, actor) : std::nullopt;
-                const HandAction action = chosen ? *chosen : Choose(hand.LegalActions(actor), Mode::SeekWin, randomRng);
+                HandAction action;
+                if (actor == computerSeat) {
+                    const std::optional<HandAction> chosen = computer.Decide(hand, actor);
+                    ASSERT_TRUE(chosen.has_value()) << "seed " << seed << ": the computer seat " << actor << " has no action";
+                    action = *chosen;
+                } else {
+                    action = Choose(hand.LegalActions(actor), Mode::SeekWin, randomRng);
+                }
                 ASSERT_TRUE(hand.Apply(actor, action).has_value()) << "seed " << seed << " seat " << actor;
             }
 
@@ -117,29 +124,27 @@ namespace BECore::Mahjong::Tests {
         RecordProperty("randomPoints", out.random.points);
         RecordProperty("drawn", out.drawn);
 
-        // (a) wins: the computer wins clearly more hands than an average random seat (the total of the three, divided by three).
-        const int averageRandomWins = out.random.wins / kRandomSeats;
+        // The totals of the three random seats are compared against the computer's times three (no integer average).
+        // (a) wins: the computer wins clearly more hands than an average random seat.
         EXPECT_GE(out.computer.wins * kMinWinShareOfHands, out.computer.hands) << "computer wins " << out.computer.wins;
-        EXPECT_GE(out.computer.wins, kMinWinFactor * averageRandomWins) << "random seats won " << averageRandomWins << " each on average";
+        EXPECT_GE(out.computer.wins * kRandomSeats, kMinWinFactor * out.random.wins) << "random seats won " << out.random.wins << " together";
 
         // (b) the calling hand is declared in more hands than a random seat does.
-        const int averageRandomDeclared = out.random.declared / kRandomSeats;
         EXPECT_GE(out.computer.declared * kMinDeclaredShareOfHands, out.computer.hands) << "computer declared " << out.computer.declared;
-        EXPECT_GE(out.computer.declared, kMinDeclaredFactor * averageRandomDeclared) << "random seats declared " << averageRandomDeclared;
+        EXPECT_GE(out.computer.declared * kRandomSeats, kMinDeclaredFactor * out.random.declared) << "random seats declared " << out.random.declared << " together";
 
         // (c) the points of the computer seat over all hands are positive, well above a random seat's.
-        const int averageRandomPoints = out.random.points / kRandomSeats;
         EXPECT_GE(out.computer.points, kMinPointsPerHand * out.computer.hands) << "computer points " << out.computer.points;
-        EXPECT_GT(out.computer.points, averageRandomPoints) << "random seats scored " << averageRandomPoints << " each on average";
+        EXPECT_GT(out.computer.points * kRandomSeats, out.random.points) << "random seats scored " << out.random.points << " together";
 
         // The advantage is not a trick of one seat: on every seat the computer wins at least a quarter of its hands.
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            EXPECT_GE(out.winsOnSeat[seat] * kSeatCount, kSeedCount) << "computer on seat " << seat << " won " << out.winsOnSeat[seat];
+            EXPECT_GE(out.winsOnSeat[seat] * kMinWinShareOnSeat, kSeedCount) << "computer on seat " << seat << " won " << out.winsOnSeat[seat];
         }
     }
 
     TEST(ComputerStrengthTest, TwentyWholeHandsByFourComputerPlayersEndLegally) {
-        // The cost case: the player asks `LegalActions` at every decision (once for the view, once in `Decide`'s caller). No timing is
+        // The cost case: the player asks `LegalActions` at every decision once per decision (for the view). No timing is
         // asserted; the hands must end within the step limit with every action accepted.
         const MahjongSettings settings;
         for (int index = 0; index < kCostHands; ++index) {

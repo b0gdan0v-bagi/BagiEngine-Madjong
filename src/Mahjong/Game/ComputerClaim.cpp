@@ -11,19 +11,6 @@ namespace BECore::Mahjong {
             int rank = 0;
         };
 
-        const HandAction* FindMahjong(const TableView& view) noexcept {
-            for (const HandAction& action : view.legal) {
-                if (action.kind == ActionKind::Claim && action.claim == ClaimKind::Mahjong) {
-                    return &action;
-                }
-            }
-            return nullptr;
-        }
-
-        int MeldCountOf(const TableView& view) noexcept {
-            return static_cast<int>(view.own.melds.size());
-        }
-
         /// Whether a claim of `kind` at a rating that is no better than the hand as it is (`s1 == s0`) is still worth it.
         bool KeepsValueAtEqualShanten(const TableView& view, ClaimKind kind) noexcept {
             return (kind == ClaimKind::Pung || kind == ClaimKind::Kong) && IsValueTile(view.pendingTile, view.seatWind, view.roundWind);

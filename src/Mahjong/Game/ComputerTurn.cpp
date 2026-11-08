@@ -20,19 +20,6 @@ namespace BECore::Mahjong {
             int keep = 0;
         };
 
-        int MeldCountOf(const TableView& view) noexcept {
-            return static_cast<int>(view.own.melds.size());
-        }
-
-        const HandAction* FindAction(const TableView& view, ActionKind kind) noexcept {
-            for (const HandAction& action : view.legal) {
-                if (action.kind == kind) {
-                    return &action;
-                }
-            }
-            return nullptr;
-        }
-
         /// Whether `a` is a better discard than `b`: the higher score, then the lower keep value.
         bool IsBetter(const Candidate& a, const Candidate& b) noexcept {
             return a.score != b.score ? a.score > b.score : a.keep < b.keep;
@@ -200,6 +187,28 @@ namespace BECore::Mahjong {
         }
         const int unseen = kCopiesPerTile - view.visible[tile.Id()];
         return unseen > 0 ? unseen : 0;
+    }
+
+    int MeldCountOf(const TableView& view) noexcept {
+        return static_cast<int>(view.own.melds.size());
+    }
+
+    const HandAction* FindAction(const TableView& view, ActionKind kind) noexcept {
+        for (const HandAction& action : view.legal) {
+            if (action.kind == kind) {
+                return &action;
+            }
+        }
+        return nullptr;
+    }
+
+    const HandAction* FindMahjong(const TableView& view) noexcept {
+        for (const HandAction& action : view.legal) {
+            if (action.kind == ActionKind::Claim && action.claim == ClaimKind::Mahjong) {
+                return &action;
+            }
+        }
+        return nullptr;
     }
 
     bool IsValueTile(Tile tile, Wind seatWind, Wind roundWind) noexcept {

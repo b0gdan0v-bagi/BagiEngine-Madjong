@@ -4,6 +4,9 @@ namespace BECore::Mahjong {
 
     namespace {
 
+        /// How far apart (in ranks) two tiles of one set may be: a chow `1 3` reaches over one rank.
+        constexpr int kChowReachRanks = 2;
+
         bool IsOrphan(Tile tile) noexcept {
             return tile.IsTerminal() || tile.IsHonour();
         }
@@ -85,28 +88,6 @@ namespace BECore::Mahjong {
             return false;
         }
 
-        /// Whether `counts` holds a tile that a tile of kind `id` could sit next to in a set or a pair: the same kind, or for a suit tile
-        /// any tile of its suit within two ranks. A kind that fails this cannot complete a hand of four sets and a pair, and neither seven
-        /// pairs (the added tile pairs with a single of its own kind). Thirteen orphans is the exception, see `VisitWinningKinds`.
-        bool HasNeighbour(const TileCounts& counts, uint8_t id) noexcept {
-            if (counts[id] > 0) {
-                return true;
-            }
-            const Tile tile{id};
-            if (!tile.IsSuit()) {
-                return false;
-            }
-            const int rank = tile.Rank();
-            const int low = rank > 2 ? -2 : 1 - rank;
-            const int high = rank < kRanksPerSuit - 1 ? 2 : kRanksPerSuit - rank;
-            for (int step = low; step <= high; ++step) {
-                if (counts[id + step] > 0) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
         /// The number of different terminals and honours `counts` holds.
         int CountOrphanKinds(const TileCounts& counts) noexcept {
             int kinds = 0;
@@ -117,7 +98,7 @@ namespace BECore::Mahjong {
         }
 
         /// Calls `visit(tile)` for each kind that completes the waiting hand `counts` (the rules of `WinningTiles`), in the order of the
-        /// ids; `visit` returns true to stop. Returns true when stopped. Only kinds next to a held tile are probed (`HasNeighbour`); a
+        /// ids; `visit` returns true to stop. Returns true when stopped. Only kinds next to a held tile are probed (`HasTileNearby`); a
         /// hand with no melds and 12 or more kinds of orphans can still become thirteen orphans with a kind it does not hold, so
         /// there every orphan is probed as well.
         template <class Visit>
@@ -128,7 +109,7 @@ namespace BECore::Mahjong {
             const bool orphansPossible = meldCount == 0 && CountOrphanKinds(counts) >= kOrphanKinds - 1;
             TileCounts probe = counts;
             for (uint8_t id = 0; id < kKindCount; ++id) {
-                if (counts[id] + meldTiles[id] >= kCopiesPerTile || !(HasNeighbour(counts, id) || (orphansPossible && IsOrphan(Tile{id})))) {
+                if (counts[id] + meldTiles[id] >= kCopiesPerTile || !(HasTileNearby(counts, id) || (orphansPossible && IsOrphan(Tile{id})))) {
                     continue;
                 }
                 ++probe[id];
@@ -142,6 +123,24 @@ namespace BECore::Mahjong {
         }
 
     }  // namespace
+
+    bool HasTileNearby(const TileCounts& counts, uint8_t id) noexcept {
+        if (counts[id] > 0) {
+            return true;
+        }
+        const Tile tile{id};
+        if (!tile.IsSuit()) {
+            return false;
+        }
+        const int rank = tile.Rank();
+        for (int distance = -kChowReachRanks; distance <= kChowReachRanks; ++distance) {
+            const int other = rank + distance;
+            if (distance != 0 && other >= 1 && other <= kRanksPerSuit && counts[id + distance] > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     TileCounts CountTiles(const eastl::vector<Tile>& tiles) noexcept {
         TileCounts counts{};

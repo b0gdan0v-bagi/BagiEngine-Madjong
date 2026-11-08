@@ -63,6 +63,11 @@ namespace BECore::Mahjong {
      */
     [[nodiscard]] eastl::vector<Decomposition> Decompose(const TileCounts& counts, int setsNeeded);
 
+    /// Whether `counts` holds a tile that a tile of kind `id` could sit next to in a set or a pair: the same kind, or for a suit tile any
+    /// tile of its suit within two ranks (a chow reaches over one rank at most). A kind that fails this cannot complete a hand of four
+    /// sets and a pair, and neither seven pairs; thirteen orphans is the exception. Shared by `IsWaiting` and the shanten search.
+    [[nodiscard]] bool HasTileNearby(const TileCounts& counts, uint8_t id) noexcept;
+
     /// Thirteen orphans: every terminal and every honour at least once, 14 tiles, nothing else (so one of them twice).
     [[nodiscard]] bool IsThirteenOrphans(const TileCounts& counts) noexcept;
 

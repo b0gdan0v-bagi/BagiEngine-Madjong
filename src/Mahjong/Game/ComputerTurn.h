@@ -19,6 +19,15 @@ namespace BECore::Mahjong {
     /// (`KeepValue` and the claims use it).
     [[nodiscard]] bool IsValueTile(Tile tile, Wind seatWind, Wind roundWind) noexcept;
 
+    /// The number of melds the seat has (the `meldCount` of the shanten functions).
+    [[nodiscard]] int MeldCountOf(const TableView& view) noexcept;
+
+    /// The first of `view.legal` of `kind`, or null.
+    [[nodiscard]] const HandAction* FindAction(const TableView& view, ActionKind kind) noexcept;
+
+    /// The first mahjong claim of `view.legal`, or null.
+    [[nodiscard]] const HandAction* FindMahjong(const TableView& view) noexcept;
+
     /// One of non-empty `ties` by `rng` (the first when there is only one: no number is drawn).
     template <typename T>
     const T& PickOne(const eastl::vector<T>& ties, MahjongRng& rng) {

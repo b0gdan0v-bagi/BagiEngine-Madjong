@@ -6,7 +6,6 @@
 #include <Mahjong/Game/Tile.h>
 #include <gtest/gtest.h>
 #include <set>
-#include <string>
 #include <vector>
 
 /**

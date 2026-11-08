@@ -84,7 +84,7 @@ namespace BECore::Mahjong {
             }
             if (!match.EndHand()) {
                 // The hand is finished and the match is in a hand, so `EndHand` cannot refuse; if it does the match is broken.
-                ASSERT(false);
+                ASSERT(false, "EndHand refused a finished hand of a match that is in a hand");
                 return std::unexpected(HandError::WrongPhase);
             }
         }
