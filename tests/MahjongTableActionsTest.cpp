@@ -646,15 +646,30 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(OnScreenButtons().size(), 4u);
         EXPECT_TRUE(OnCompactScreen().empty());
 
-        // The boundary of the rule: 732 x 412 keeps `Actions`, 731 x 411 does not
-        SetOutputSize(*_renderer, 732.0f, 412.0f);
+        // The boundary of the size: 732 x 1000 keeps `Actions` (a button of 32.03 px), 731 x 1000 does not (31.98 px) and has a bar for the row
+        SetOutputSize(*_renderer, 732.0f, 1000.0f);
         Draw();
         EXPECT_TRUE(CanvasShown("Actions"));
         EXPECT_FALSE(CanvasShown("ActionsCompact"));
-        SetOutputSize(*_renderer, 731.0f, 411.0f);
+        SetOutputSize(*_renderer, 731.0f, 1000.0f);
         Draw();
         EXPECT_FALSE(CanvasShown("Actions"));
         EXPECT_TRUE(CanvasShown("ActionsCompact"));
+    }
+
+    TEST_F(MahjongTableActionsTest, AWindowAsHighAsTheTableKeepsActionsWhateverSizeTheButtonsHave) {
+        ASSERT_NO_FATAL_FAILURE(StartInWindow(480.0f, 480.0f, kPersonAtSeat1, ClaimWindowModel()));
+        ASSERT_TRUE(CanvasShown("ActionsCompact"));
+
+        // 731 x 411: a button of `Actions` is 31.97 px, but the table fills the window and the compact row would lie on the viewer's hand
+        for (const auto& [width, height] : {std::pair{731.0f, 411.0f}, std::pair{1000.0f, 400.0f}, std::pair{720.0f, 405.0f}}) {
+            SetOutputSize(*_renderer, width, height);
+            Draw();
+            EXPECT_TRUE(CanvasShown("Actions")) << width << " x " << height;
+            EXPECT_FALSE(CanvasShown("ActionsCompact")) << width << " x " << height;
+            EXPECT_EQ(OnScreenButtons().size(), 4u) << width << " x " << height;
+            EXPECT_TRUE(OnCompactScreen().empty()) << width << " x " << height;
+        }
     }
 
     TEST_F(MahjongTableActionsTest, NoHintIsShownForTheCompactCanvas) {

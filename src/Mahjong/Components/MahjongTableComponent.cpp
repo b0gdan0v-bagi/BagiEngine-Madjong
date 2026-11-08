@@ -47,15 +47,18 @@ namespace BECore::Mahjong {
         };
 
         /// The canvases that hold the action buttons: `Actions` on the table, `ActionsCompact` on the bar under it where the first would
-        /// be too small to touch. They hold the same elements by name, and exactly one is shown.
-        constexpr eastl::string_view kActionsNode = "Actions";
-        constexpr eastl::string_view kCompactActionsNode = "ActionsCompact";
-        PoolString NodeName(eastl::string_view node) {
-            return PoolString::Intern(node);
+        /// be too small to touch and the bar can hold a line of it (`NeedsCompactActions`). They hold the same elements by name, and exactly
+        /// one is shown.
+        enum class ActionsNode { Actions, Compact };
+        PoolString NodeName(ActionsNode node) {
+            if (node == ActionsNode::Actions) {
+                return "Actions"_intern;
+            }
+            return "ActionsCompact"_intern;
         }
 
         /// The element `name` of the canvas on the node `node`; null when the scene has none.
-        UIElement* FindElementOf(Scene& scene, eastl::string_view node, PoolString name) {
+        UIElement* FindElementOf(Scene& scene, ActionsNode node, PoolString name) {
             const PoolString nodeName = NodeName(node);
             for (const auto& child : scene.GetRootNode().GetChildren()) {
                 if (child->GetName() == nodeName) {
@@ -74,7 +77,7 @@ namespace BECore::Mahjong {
                 if (!buttons[kind].shown) {
                     continue;  // a hidden button may still carry the flag of the last motion
                 }
-                const UIElement* element = FindElementOf(scene, kActionsNode, PoolString::Intern(SpecOf(kind).element));
+                const UIElement* element = FindElementOf(scene, ActionsNode::Actions, PoolString::Intern(SpecOf(kind).element));
                 if (element != nullptr && element->hovered) {
                     return buttons[kind].hint;
                 }
@@ -226,11 +229,11 @@ namespace BECore::Mahjong {
         const IRenderer& renderer = *CoreManager::GetRenderer();
         const UIEnvironment& environment = CoreManager::GetUIEnvironment();
         const UILayoutContext window = environment.MakeContext(CoreManager::GetMainWindow().Get(), renderer.GetOutputWidth(), renderer.GetOutputHeight());
-        const bool compact = NeedsCompactActions(window.outputWidth, window.outputHeight, window.pixelDensity, environment.GetSettings().minTouchSize);
+        const bool compact = NeedsCompactActions(window.outputWidth, window.outputHeight, window.pixelDensity, environment.GetSettings().minTouchSize, window.userScale);
         if (compact != _compactActions) {
             _compactActions = compact;
-            UICanvasComponent::SetVisibleByName(scene, NodeName(kActionsNode), !compact);
-            UICanvasComponent::SetVisibleByName(scene, NodeName(kCompactActionsNode), compact);
+            UICanvasComponent::SetVisibleByName(scene, NodeName(ActionsNode::Actions), !compact);
+            UICanvasComponent::SetVisibleByName(scene, NodeName(ActionsNode::Compact), compact);
         }
         for (int i = 0; i < kButtonCount; ++i) {
             const ButtonKind kind = static_cast<ButtonKind>(i);
@@ -250,7 +253,7 @@ namespace BECore::Mahjong {
                 }
                 const PoolString imageName = PoolString::Intern(TileImageName(kind, t));
                 if (showNow) {
-                    for (const eastl::string_view node : {kActionsNode, kCompactActionsNode}) {
+                    for (const ActionsNode node : {ActionsNode::Actions, ActionsNode::Compact}) {
                         UIElement* element = FindElementOf(scene, node, imageName);
                         if (UIImage* image = element != nullptr ? element->Cast<UIImage>() : nullptr) {
                             image->sprite = PoolString::Intern(SpriteName(now.tiles[static_cast<size_t>(t)]));

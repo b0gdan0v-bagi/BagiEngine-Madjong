@@ -21,8 +21,13 @@ namespace BECore::Mahjong::Tests {
         /// aspect is 16:9.
         constexpr float kSmallestActionsWindowWidth = 732.0f;
         constexpr float kSmallestActionsWindowHeight = 412.0f;
-        /// The width of a button of `ActionsCompact` in view units.
+        /// The width of a button of `ActionsCompact` in view units, the spacing of its row and the buttons of the fullest claim window; the
+        /// variants of the file are counted from them (the comment above the node in the file has the working).
         constexpr float kCompactButtonWidth = 116.0f;
+        constexpr float kCompactSpacing = 6.0f;
+        constexpr int kCompactClaimButtons = 7;
+        /// The part of the canvas that the safe area is at the least (side insets of the matrix), which a variant cannot see.
+        constexpr float kLeastSafeShare = 0.82f;
         /// The height of the line of the word at the top of a button; the pictures of tiles lie below it.
         constexpr float kWordLineHeight = 24.0f;
         /// The width of an action button in view units.
@@ -36,8 +41,9 @@ namespace BECore::Mahjong::Tests {
             float height;
         };
         constexpr Output kOutputs[] = {{1280.0f, 720.0f}, {731.0f, 411.0f}, {853.0f, 480.0f}, {480.0f, 480.0f}, {480.0f, 853.0f}};
-        /// The windows of the compact canvas: the five above and the widest (1707 x 480).
-        constexpr Output kCompactOutputs[] = {{1280.0f, 720.0f}, {731.0f, 411.0f}, {853.0f, 480.0f}, {480.0f, 480.0f}, {480.0f, 853.0f}, {1707.0f, 480.0f}};
+        /// The windows the words of the compact canvas are asked in: the design size, the windows below the rule (640 x 480, 480 x 480,
+        /// 480 x 853: `NeedsCompactActions` is true there), two that are not and the widest (1707 x 480).
+        constexpr Output kCompactOutputs[] = {{1280.0f, 720.0f}, {640.0f, 480.0f}, {853.0f, 480.0f}, {480.0f, 480.0f}, {480.0f, 853.0f}, {1707.0f, 480.0f}};
         constexpr float kTileShape = 3.0f / 4.0f;
         constexpr float kShapeTolerance = 0.02f;
 
@@ -222,7 +228,8 @@ namespace BECore::Mahjong::Tests {
         const float minTouch = CoreManager::GetUIEnvironment().GetSettings().minTouchSize;
         // The rule: this window keeps `Actions`, one pixel less does not
         ASSERT_FALSE(NeedsCompactActions(kSmallestActionsWindowWidth, kSmallestActionsWindowHeight, 1.0f, minTouch));
-        ASSERT_TRUE(NeedsCompactActions(kSmallestActionsWindowWidth - 1.0f, kSmallestActionsWindowHeight - 1.0f, 1.0f, minTouch));
+        // One pixel narrower is too small; the window is taller here, so the bar under the table holds the compact row
+        ASSERT_TRUE(NeedsCompactActions(kSmallestActionsWindowWidth - 1.0f, 2000.0f, 1.0f, minTouch));
 
         auto canvas = Canvas("Actions");
         ASSERT_TRUE(canvas);
@@ -250,7 +257,19 @@ namespace BECore::Mahjong::Tests {
         compact->UpdateLayout(kViewWidth, kViewHeight);  // the reflected fields of the component reach the layout on its first update
         EXPECT_EQ(compact->GetLayout().params.space, CanvasSpace::Screen);
         EXPECT_EQ(compact->GetLayout().params.scaleMode, CanvasScaleMode::ScaleWithScreen);
-        EXPECT_GE(compact->GetLayout().params.minScale, 0.6f);
+        // The scale settings that `CompactScale` (and so the rule) assumes are the ones of the file
+        EXPECT_FLOAT_EQ(compact->GetLayout().params.referenceWidth, kCompactReferenceWidth);
+        EXPECT_FLOAT_EQ(compact->GetLayout().params.referenceHeight, kCompactReferenceHeight);
+        EXPECT_FLOAT_EQ(compact->GetLayout().params.match, 0.5f);
+        EXPECT_FLOAT_EQ(compact->GetLayout().params.minScale, kCompactMinScale);
+        // The buttons are the width and the row the spacing the variants below are counted with
+        const UIElement* row = Element("ActionsCompact", "ActionRow");
+        ASSERT_NE(row, nullptr);
+        EXPECT_FLOAT_EQ(row->style.stack.spacing, kCompactSpacing);
+        EXPECT_FLOAT_EQ(row->style.rect.height.value, kActionButtonHeight);
+        for (const char* name : {"Win", "Pung", "Chow2", "Pass"}) {
+            EXPECT_FLOAT_EQ(Element("ActionsCompact", name)->style.rect.width.value, kCompactButtonWidth) << name;
+        }
 
         for (int i = 0; i < kButtonCount; ++i) {
             const ButtonKind kind = static_cast<ButtonKind>(i);
@@ -290,6 +309,35 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(wideNames.erase("Hint"), 1u);
         EXPECT_EQ(wideNames, narrowNames);
         EXPECT_EQ(Element("ActionsCompact", "Hint"), nullptr) << "a touch screen has no hover";
+    }
+
+    TEST_F(MahjongTableScreenTest, TheHeightVariantsOfTheCompactRowAreTheLinesTheWidthNeedsRoundedUp) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        const auto compact = Canvas("ActionsCompact");
+        ASSERT_TRUE(compact);
+        compact->UpdateLayout(kViewWidth, kViewHeight);
+        const eastl::vector<UIVariant>& variants = compact->GetLayout().variants;
+
+        // k buttons to a line need k * width + (k - 1) * spacing of the safe area, which is at least 82 % of the canvas. A canvas up to the width
+        // where k buttons stop fitting holds k - 1 to a line, so the claim window's seven buttons make ceil(7 / (k - 1)) lines, and a stack has
+        // the height it is given. The variants run from the widest threshold to the narrowest (a later one wins); the file's own height is
+        // the one line of a canvas wide enough for all seven.
+        constexpr int kStopsFitting[] = {7, 4, 3, 2};
+        ASSERT_EQ(variants.size(), std::size(kStopsFitting));
+        EXPECT_FLOAT_EQ(Element("ActionsCompact", "ActionRow")->style.rect.height.value, kActionButtonHeight) << "one line in the file";
+        for (size_t i = 0; i < std::size(kStopsFitting); ++i) {
+            const int fits = kStopsFitting[i];
+            const int lines = (kCompactClaimButtons + fits - 2) / (fits - 1);  // ceil(7 / (fits - 1))
+            const float neededSafe = static_cast<float>(fits) * kCompactButtonWidth + static_cast<float>(fits - 1) * kCompactSpacing;
+            const float threshold = std::ceil(neededSafe / kLeastSafeShare * 100.0f) / 100.0f;
+            EXPECT_NEAR(variants[i].when.maxWidth, threshold, 0.006f) << i << ": " << neededSafe << " / " << kLeastSafeShare;
+            EXPECT_GE(variants[i].when.maxWidth, neededSafe / kLeastSafeShare) << i << ": rounded up, never down";
+            ASSERT_EQ(variants[i].overrides.size(), 1u);
+            EXPECT_EQ(variants[i].overrides[0].element, PoolString::Intern("ActionRow"));
+            ASSERT_TRUE(variants[i].overrides[0].height.has_value());
+            const float height = static_cast<float>(lines) * kActionButtonHeight + static_cast<float>(lines - 1) * kCompactSpacing;
+            EXPECT_FLOAT_EQ(variants[i].overrides[0].height->value, height) << i;
+        }
     }
 
     TEST_F(MahjongTableScreenTest, TheCompactButtonsPassTheSizeMatrixWithTheEnginesTouchMinimumAndTheirWordsFit) {
