@@ -170,17 +170,19 @@
         </node>
         <!--
           The score table of a finished hand: a modal canvas on the view of the table (SceneView like Setup: 16 lines of the winner, four
-          seats, a headline and a button are about 600 units, which a Screen canvas would not fit in a 480 px window at the user scale 1.5),
-          shown by MahjongHudComponent exactly while the session is in HandOver. The component publishes handOverHeadline,
-          handOverSeat0..3, scoreLine0..15 (only the first lines of the winner are shown: ScoreLineN is visible when there is a line N),
-          handOverSummary and handOverButton ("Next hand", "Finish match" on the last hand); MahjongNextHand settles the hand and deals on.
+          seats, a headline and a summary are about 550 units, which a Screen canvas would not fit in a 480 px window at the user scale
+          1.5, and it is text only, no touch target), shown by MahjongHudComponent exactly while the session is in HandOver. The component
+          publishes handOverHeadline, handOverSeat0..3, scoreLine0..15 (only the first lines of the winner are shown: ScoreLineN is
+          visible when there is a line N), handOverSummary and handOverButton ("Next hand", "Finish match" on the last hand). The button
+          is not in this canvas: a control of a SceneView canvas is only 21 px high in a small window. It is in HandOverAction below.
+          The plate lies 48 units above the middle (centred over the space above a 72 unit bar) so that the action bar under it does not touch it, also in a 32:9 window with insets, where the bar is 100 view units high.
         -->
         <node name="HandOver" layer="25">
           <components>
             <component type="UICanvasComponent" space="SceneView" useSafeArea="true" modal="true" visible="false">
               <elements>
                 <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
-                <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="640" height="608" direction="Vertical" spacing="6" padding="14" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
+                <element type="UIStack" name="Plate" anchor="Center" y="-48" width="94%" maxWidth="640" height="546" direction="Vertical" spacing="6" padding="14" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
                   <children>
                     <element type="UILabel" name="Headline" height="64" text="{handOverHeadline}" fontSize="24" align="Center" verticalAlign="Center" />
                     <element type="UILabel" name="SeatRow0" height="30" text="{handOverSeat0}" fontSize="20" verticalAlign="Center" />
@@ -208,9 +210,25 @@
                       </children>
                     </element>
                     <element type="UILabel" name="Summary" height="56" text="{handOverSummary}" fontSize="20" align="Center" verticalAlign="Center" />
-                    <element type="UIButton" name="NextHand" height="56" text="{handOverButton}" fontSize="28" action="MahjongNextHand" color="40,110,60,255" />
                   </children>
                 </element>
+              </elements>
+            </component>
+          </components>
+        </node>
+        <!--
+          The button of the score table (MahjongNextHand, which settles the hand and deals on): an action bar at the bottom of the window,
+          a Screen canvas with a floor on its scale (minScale 0.6: the 56 unit button is 33.6 px), so it is a touch target in any window.
+          Shown and hidden by MahjongHudComponent together with HandOver. It is not modal: HandOver is, and takes every click that the
+          bar does not. The bar is 72 units high and lies on the bar under the table in a narrow window; MahjongTouchSizeTest checks that
+          it does not touch the plate of HandOver at the user scale 1.0 in any window of the size matrix.
+        -->
+        <node name="HandOverAction" layer="26">
+          <components>
+            <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" visible="false">
+              <elements>
+                <element type="UIElement" name="Bar" anchor="Bottom" width="100%" height="72" color="36,40,52,255" blocksInput="true" />
+                <element type="UIButton" name="NextHand" anchor="Bottom" y="-8" width="240" height="56" text="{handOverButton}" fontSize="28" action="MahjongNextHand" color="40,110,60,255" />
               </elements>
             </component>
           </components>

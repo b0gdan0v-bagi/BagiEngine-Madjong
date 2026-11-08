@@ -42,8 +42,9 @@ STARTING_SCORE = 2000
 STEP_LIMIT_PER_HAND = 2000  # a hand has far fewer decisions of one person
 HAND_LIMIT_PER_MATCH = 100  # 8 counted hands; a drawn hand is dealt again
 TABLE_COLORS = 500  # a table of 150 tiles with antialiased marks and text shows thousands; flat felt, or felt and plain boxes, far fewer
-SCENE_CANVASES = {"Actions", "Hud", "HudMenu", "Handoff", "HandOver", "MatchOver", "Setup"}
-MODAL_SCREENS = ("Setup", "Handoff", "HandOver", "MatchOver")
+SCENE_CANVASES = {"Actions", "Hud", "HudMenu", "Handoff", "HandOver", "HandOverAction", "MatchOver", "Setup"}
+MODAL_SCREENS = ("Setup", "Handoff", "HandOver", "HandOverAction", "MatchOver")
+HAND_OVER_SCREENS = {"HandOver", "HandOverAction"}  # the score table and its action bar are shown together
 SETTLE_FRAMES = 2  # frames after a change of the game before the canvases show it
 IDLE_CHECK_SECONDS = 0.3  # how long the manual clock is watched not moving
 DEFAULT_STEP_SECONDS = 1.0 / 60.0
@@ -244,13 +245,15 @@ def check_screens_follow_the_game(client: BagiControlClient, rng: random.Random)
     over = play_one_hand(client, rng)
     check(over["phase"] == "hand_over", f"the hand ended in {over['phase']}")
     shown, tree = screens_shown(client)
-    check(shown == {"HandOver"}, f"a finished hand shows {sorted(shown)}")
+    check(shown == HAND_OVER_SCREENS, f"a finished hand shows {sorted(shown)}")
     headline = find_ui_element(tree, "Headline")
     check(headline is not None and headline["text"] != "", "the score table has no headline")
     won = over["result"]["kind"] == "win"
     check(headline["text"].startswith("Seat") if won else headline["text"] == "Drawn hand", f"the headline '{headline['text']}' does not say '{over['result']['kind']}'")
     button = find_ui_element(tree, "NextHand")
     check(button is not None and button["visible"] and button["action"] == "MahjongNextHand", f"the table has no Next hand button: {button}")
+    menu = next(canvas for canvas in tree["canvases"] if canvas["node"] == "HudMenu")
+    check(not menu["visible"], "the New game button of the HUD is still shown over the score table")
     client.call("perform_action", {"type": "next_hand"})
     shown, _ = screens_shown(client)
     check(shown == set(), f"next_hand left {sorted(shown)} on the screen")
@@ -258,7 +261,7 @@ def check_screens_follow_the_game(client: BagiControlClient, rng: random.Random)
     # The same through the screen: four computers, the click on Next hand
     client.call("reset", {"seed": SEED, "seats": "CCCC", "hands": SHORT_MATCH_HANDS})
     shown, _ = screens_shown(client)
-    check(shown == {"HandOver"}, f"a hand of computers, over at once, shows {sorted(shown)}")
+    check(shown == HAND_OVER_SCREENS, f"a hand of computers, over at once, shows {sorted(shown)}")
     over = get_state(client)
     played = over["handsPlayed"]
     drawn = over["result"]["kind"] == "drawn"  # a drawn hand is replayed and does not count: handsPlayed stays

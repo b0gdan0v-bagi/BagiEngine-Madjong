@@ -225,4 +225,48 @@ namespace BECore::Mahjong::Tests {
         EXPECT_GT(checked, 0u);
     }
 
+    // ----- the Next hand button of the score table -----
+
+    TEST_F(MahjongTouchSizeTest, TheActionBarOfTheScoreTableLiesInsideTheWindowAndDoesNotTouchThePlate) {
+        ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
+        _game->GetSession().RunComputers();
+        ASSERT_EQ(_game->GetSession().GetPhase(), SessionPhase::HandOver);
+        Draw();
+        auto plate = Canvas("HandOver");
+        auto action = Canvas("HandOverAction");
+        ASSERT_TRUE(plate && action);
+        ASSERT_TRUE(plate->TakesInput() && action->TakesInput());
+        const float minTouch = CoreManager::GetUIEnvironment().GetSettings().minTouchSize;
+        ExpectPassesTheMatrix("HandOverAction", minTouch);
+        EXPECT_EQ(action->GetLayout().params.space, CanvasSpace::Screen);
+        EXPECT_EQ(action->GetLayout().params.scaleMode, CanvasScaleMode::ScaleWithScreen);
+
+        size_t checked = 0;
+        ForEachMatrixWindow([&](const MatrixWindow& window) {
+            // The plate (SceneView) and the bar (Screen, ScaleWithScreen, user scale 1.0), both in view units of the table
+            LayOutInWindow(*plate, window);
+            const UIElement* plateElement = Element("HandOver", "Plate");
+            ASSERT_NE(plateElement, nullptr);
+            ASSERT_FALSE(plateElement->rect.IsEmpty()) << window.label.c_str();
+            const Rect plateRect = ToView(plateElement->rect, *plate, window);
+
+            LayOutInWindow(*action, window, CanvasScaleMode::ScaleWithScreen, 1.0f);
+            const UIElement* bar = Element("HandOverAction", "Bar");
+            const UIElement* button = Element("HandOverAction", "NextHand");
+            ASSERT_TRUE(bar != nullptr && button != nullptr);
+            ASSERT_FALSE(bar->rect.IsEmpty()) << window.label.c_str();
+            EXPECT_FALSE(Intersects(ToView(bar->rect, *action, window), plateRect)) << window.label.c_str() << ": the bar touches the plate";
+            EXPECT_FALSE(Intersects(ToView(button->rect, *action, window), plateRect)) << window.label.c_str() << ": the button touches the plate";
+
+            // Inside the window (the validator says the same for every mode and user scale)
+            const Rect output = action->GetLayout().GetResolved().transform.ToOutput(bar->rect.x, bar->rect.y, bar->rect.w, bar->rect.h);
+            EXPECT_GE(output.x, -0.01f) << window.label.c_str();
+            EXPECT_GE(output.y, -0.01f) << window.label.c_str();
+            EXPECT_LE(output.x + output.w, window.outputWidth + 0.01f) << window.label.c_str();
+            EXPECT_LE(output.y + output.h, window.outputHeight + 0.01f) << window.label.c_str();
+            ++checked;
+        });
+        EXPECT_EQ(checked, BECore::Tests::UILayoutMatrix().size());
+    }
+
 }  // namespace BECore::Mahjong::Tests
