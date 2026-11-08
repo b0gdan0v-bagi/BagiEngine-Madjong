@@ -21,24 +21,27 @@
           </components>
         </node>
         <!--
-          The hints (Table/Hints.h, MahjongHintsComponent). The component answers the row HintsRow of Setup (MahjongSetHints) and fills the
-          canvas below; it comes before the canvas so that the variables are set when the canvas draws. The canvas lies on the view of the
-          table (SceneView, ignoreSafeArea: like the table it is a fixed design) in the free ground inside the wall ring, x 472..808 and
-          y 290..430 (the ring is 26 x 12 stacks of 14 units, centred; TableLayout.h; MahjongHintsTest checks the rectangle against the
-          worst-case layout). The top 92 units are the waiting row WaitPanel: the caption and a cell per tile that the viewer's hand waits
-          for (WaitCell0..12: the tile as a UIImage whose sprite Tile_<notation> the component sets, and under it the count of the copies
-          the viewer cannot see, {hintCountN}). It starts hidden; the component shows the panel and the first N cells exactly while hints
-          apply (MahjongGame::HintsOn(), a person at the table, no cover, no Setup, the hand being played) and the hand waits. Nothing here
-          takes input. The strip y 386..430 below it is kept free for the Hint button and its sentence.
+          The hints (Table/Hints.h, MahjongHintsComponent). The component answers the row HintsRow of Setup (MahjongSetHints) and the button
+          HintButton (MahjongHintAdvice), fills the canvas below and draws the marks over the viewer's hand; it comes after the table (layer
+          5: it reads the layout the table drew) and before the canvas so that the variables are set when the canvas draws. The canvas lies
+          on the view of the table (SceneView, ignoreSafeArea: like the table it is a fixed design) in the free ground inside the wall ring,
+          x 472..808 and y 290..430 (the ring is 26 x 12 stacks of 14 units, centred; TableLayout.h; MahjongHintsTest checks the rectangles
+          against the worst-case layout). The top 84 units are the waiting row WaitPanel: the caption and a cell per tile that the viewer's
+          hand waits for (WaitCell0..12: the tile as a UIImage whose sprite Tile_<notation> the component sets, and under it the count of the
+          copies the viewer cannot see, {hintCountN}). The strip y 376..430 below it (54 units: a touch target of 20 px in the smallest window) holds the button HintButton (the only element that takes
+          input) and the label AdviceText with the sentence {hintAdvice} of the advice. All start hidden; the component shows the panel and
+          the first N cells exactly while hints apply (MahjongGame::HintsOn(), a person at the table, no cover, no Setup, the hand being
+          played) and the hand waits, the button while hints apply and the viewer has actions to choose from, and the label while an advice
+          is up.
         -->
         <node name="Hints" layer="5">
           <components>
             <component type="MahjongHintsComponent" />
             <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
               <elements>
-                <element type="UIStack" name="WaitPanel" anchor="TopLeft" ignoreSafeArea="true" visible="false" x="472" y="290" width="336" height="92" direction="Vertical" spacing="2" padding="4" crossAlign="Start" color="0,0,0,150">
+                <element type="UIStack" name="WaitPanel" anchor="TopLeft" ignoreSafeArea="true" visible="false" x="472" y="290" width="336" height="84" direction="Vertical" spacing="2" padding="2" crossAlign="Start" color="0,0,0,150">
                   <children>
-                    <element type="UILabel" name="WaitCaption" width="328" height="30" text="{#hints.waitCaption}" fontSize="13" align="Center" verticalAlign="Center" />
+                    <element type="UILabel" name="WaitCaption" width="328" height="26" text="{#hints.waitCaption}" fontSize="13" align="Center" verticalAlign="Center" />
                     <element type="UIStack" name="WaitRow" width="328" height="52" direction="Horizontal" spacing="1" crossAlign="Start">
                       <children>
                         <element type="UIStack" name="WaitCell0" visible="false" width="24" height="52" direction="Vertical" crossAlign="Stretch">
@@ -123,6 +126,8 @@
                     </element>
                   </children>
                 </element>
+                <element type="UIButton" name="HintButton" anchor="TopLeft" ignoreSafeArea="true" visible="false" x="472" y="376" width="112" height="54" text="{#hints.adviseButton}" fontSize="16" action="MahjongHintAdvice" color="70,70,100,255" />
+                <element type="UILabel" name="AdviceText" anchor="TopLeft" ignoreSafeArea="true" visible="false" x="588" y="376" width="220" height="54" text="{hintAdvice}" fontSize="13" align="Center" verticalAlign="Center" color="0,0,0,150" />
               </elements>
             </component>
           </components>

@@ -110,6 +110,72 @@ namespace BECore::Mahjong::Tests {
             return OnScreen("Hints", "WaitPanel");
         }
 
+        bool ButtonShown() const {
+            return OnScreen("Hints", "HintButton");
+        }
+
+        bool AdviceShown() const {
+            return OnScreen("Hints", "AdviceText");
+        }
+
+        /// The rectangles drawn in `color`, in the order of the draw calls.
+        std::vector<Rect> RectsOf(const Color& color) const {
+            std::vector<Rect> found;
+            for (const DrawCall& call : _renderer->calls) {
+                if (call.kind == DrawKind::Rect && call.color.r == color.r && call.color.g == color.g && call.color.b == color.b && call.color.a == color.a) {
+                    found.push_back(call.rect);
+                }
+            }
+            return found;
+        }
+
+        /// The marks under the hand: for each slot of the viewer's hand whose tile is in `tiles`, the bar the component should draw.
+        std::vector<Rect> ExpectedBars(const eastl::array<bool, kTileIdCount>& tiles) const {
+            std::vector<Rect> bars;
+            const PlayerHand& held = Hand().GetHand(_table->GetLayout().viewer);
+            for (const TileSlot& slot : _table->GetLayout().slots) {
+                if (slot.role == SlotRole::HandTile && slot.seat == _table->GetLayout().viewer && tiles[held.concealed[slot.index].Id()]) {
+                    bars.push_back(Rect(slot.rect.x, slot.rect.y + slot.rect.h, slot.rect.w, 0.0f));  // the bar starts below the tile
+                }
+            }
+            return bars;
+        }
+
+        /// The view of the viewer (or of `seat`) now.
+        TableView ViewOf(Seat seat) const {
+            return MakeTableView(Hand(), seat);
+        }
+
+        void Press() {
+            EmitAction("MahjongHintAdvice");
+            Draw();
+        }
+
+        std::string AdviceVar() const {
+            return Var("hintAdvice");
+        }
+
+        /// The sentence the pure helper says for `seat`'s view now, in the current language.
+        std::string SentenceFor(Seat seat) const {
+            const TableView view = ViewOf(seat);
+            const std::optional<HandAction> advice = AdviceFor(view);
+            const eastl::string text = advice ? AdviceText(CoreManager::GetUIStrings(), view, *advice) : eastl::string();
+            return std::string(text.data(), text.size());
+        }
+
+        /// A match where the person at seat 1 is asked about a 5p that East discarded; `seat1` is its hand, East holds a plain hand.
+        void StartWindow(const char* seat1, const char* discard) {
+            constexpr SeatSetup personAtSeat1{SeatKind::Computer, SeatKind::Person, SeatKind::Computer, SeatKind::Computer};
+            ASSERT_NO_FATAL_FAILURE(Start(personAtSeat1));
+            FixedWallSpec spec = SpecOf(kPlainEast, discard);
+            spec.hands[kSeat1] = seat1;
+            Lay(MakeModel(spec));
+            ASSERT_TRUE(_game->GetMatch().Hand().Discard(kSeat0, T(discard)).has_value());
+            Refresh();
+            ASSERT_EQ(Hand().GetPhase(), Phase::Claim);
+            ASSERT_EQ(_game->GetSession().Actor(), kSeat1);
+        }
+
         /// The panel open and drawn on the game as it is.
         void OpenPanel() {
             _game->OpenSetup();
@@ -423,7 +489,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(StartEast(kSingleWait, "9p"));
         ASSERT_TRUE(Discard("9p", true)) << "the 13 that stay wait: the calling hand is declared";
         Draw();
-        ASSERT_TRUE(_game->GetSession().ActorIsPerson() == false) << "a computer acts now";
+        ASSERT_FALSE(_game->GetSession().ActorIsPerson()) << "a computer acts now";
         EXPECT_EQ(ShownRow(), (Row{{"Ew", "3"}}));
 
         // The computers play on; the row is whatever the pure helper says for the viewer after each step
@@ -598,7 +664,7 @@ namespace BECore::Mahjong::Tests {
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             Draw();
-            const eastl::string expected = Tr(CoreManager::GetUIStrings(), kWaitCaptionKey);
+            const eastl::string expected = Tr(CoreManager::GetUIStrings(), "hints.waitCaption");
             const auto* caption = Element("Hints", "WaitCaption") != nullptr ? Element("Hints", "WaitCaption")->Cast<UILabel>() : nullptr;
             ASSERT_NE(caption, nullptr);
             EXPECT_EQ(std::string(caption->GetDisplayText().data(), caption->GetDisplayText().size()), std::string(expected.data(), expected.size()));
@@ -686,6 +752,465 @@ namespace BECore::Mahjong::Tests {
         const TableLayout layout = MakeTableLayout(worst);
         for (const TileSlot& slot : layout.slots) {
             EXPECT_TRUE(Apart(slot.rect, panel->rect)) << "role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
+        }
+    }
+
+    // ----- the marks on the hand -----
+
+    namespace {
+
+        // 123s 456s 789m 5p 5p and three single honours: with a drawn north wind the computer discards it (worked out in `HintsTest`)
+        constexpr const char* kBestIsTheNorthWind = "1s 2s 3s 4s 5s 6s 7m 8m 9m 5p 5p Rd Ew";
+        constexpr const char* kWindowPung = "5p 5p 1s 2s 3s 4s 5s 6s 7m 8m 9m Nw Wd";  // a pung of the 5p lowers the shanten: claimed
+        constexpr const char* kWindowPass = "3p 4p 6p 7p 3s 4s 6s 7s 1m 9m Nw 5m 5m";  // a pung of the 5m does nothing: passed
+
+    }  // namespace
+
+    TEST_F(MahjongHintsTest, TheMarkedTilesAreExactlyTheDeclaringDiscards) {
+        // 123s 456s 789m 234p Ew and a drawn 9p: the 9p goes and the hand waits on the Ew, or the Ew goes and it waits on the 9p
+        ASSERT_NO_FATAL_FAILURE(StartEast(kSingleWait, "9p"));
+        ASSERT_TRUE(_game->GetSession().ActorIsPerson());
+        const eastl::array<bool, kTileIdCount> declaring = DeclaringDiscards(ViewOf(kSeat0));
+        const std::vector<Rect> expected = ExpectedBars(declaring);
+        ASSERT_EQ(expected.size(), 2u) << "the 9p and the east wind";
+
+        const std::vector<Rect> bars = RectsOf(MahjongHintsComponent::kDeclareMark);
+
+        ASSERT_EQ(bars.size(), expected.size());
+        for (size_t i = 0; i < bars.size(); ++i) {
+            EXPECT_EQ(bars[i].x, expected[i].x) << i;
+            EXPECT_EQ(bars[i].w, expected[i].w) << i;
+            EXPECT_GE(bars[i].y, expected[i].y) << i << ": under the tile, not over it";
+            EXPECT_GT(bars[i].h, 0.0f);
+            EXPECT_LE(bars[i].y + bars[i].h, kViewHeight) << i << ": inside the view";
+        }
+        // The marks are the legal declaring discards of the model and nothing else
+        int declaringSlots = 0;
+        for (const HandAction& action : Hand().LegalActions(kSeat0)) {
+            if (action.kind == ActionKind::Discard && action.declareCalling) {
+                EXPECT_TRUE(declaring[action.tile.Id()]);
+                ++declaringSlots;
+            }
+        }
+        EXPECT_EQ(declaringSlots, 2);
+        EXPECT_TRUE(declaring[T("9p").Id()] && declaring[T("Ew").Id()]);
+        // They are drawn over the table: after its last tile
+        size_t lastTile = 0;
+        size_t firstMark = _renderer->calls.size();
+        for (size_t i = 0; i < _renderer->calls.size(); ++i) {
+            const DrawCall& call = _renderer->calls[i];
+            if (call.kind == DrawKind::Texture && call.texture == _atlasTexture) {
+                lastTile = i;
+            } else if (call.kind == DrawKind::Rect && call.color.g == MahjongHintsComponent::kDeclareMark.g && call.color.r == MahjongHintsComponent::kDeclareMark.r &&
+                       call.color.b == MahjongHintsComponent::kDeclareMark.b) {
+                firstMark = std::min(firstMark, i);
+            }
+        }
+        EXPECT_GT(firstMark, lastTile);
+    }
+
+    TEST_F(MahjongHintsTest, AHandThatCannotDeclareHasNoBar) {
+        ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
+        EXPECT_TRUE(RectsOf(MahjongHintsComponent::kDeclareMark).empty()) << "no discard leaves a waiting hand";
+
+        ASSERT_NO_FATAL_FAILURE(StartEast(kPlainEast, "5p"));
+        ASSERT_TRUE(_game->GetSession().ActorIsPerson());
+        EXPECT_TRUE(RectsOf(MahjongHintsComponent::kDeclareMark).empty());
+    }
+
+    TEST_F(MahjongHintsTest, NoMarkOffTheViewersTurnAndNoneWhenHintsDoNotApply) {
+        ASSERT_NO_FATAL_FAILURE(StartEast(kSingleWait, "9p"));
+        ASSERT_EQ(RectsOf(MahjongHintsComponent::kDeclareMark).size(), 2u);
+
+        _game->SetHintsOn(false);
+        Draw();
+        EXPECT_TRUE(RectsOf(MahjongHintsComponent::kDeclareMark).empty()) << "hints off";
+        _game->SetHintsOn(true);
+        Draw();
+        ASSERT_EQ(RectsOf(MahjongHintsComponent::kDeclareMark).size(), 2u);
+        _game->OpenSetup();
+        Draw();
+        EXPECT_TRUE(RectsOf(MahjongHintsComponent::kDeclareMark).empty()) << "Setup is open";
+        _game->CloseSetup();
+
+        // The turn passes to a computer: the 13 tiles wait, but nothing can be discarded
+        ASSERT_TRUE(Discard("9p"));
+        Draw();
+        ASSERT_FALSE(_game->GetSession().ActorIsPerson());
+        EXPECT_TRUE(RectsOf(MahjongHintsComponent::kDeclareMark).empty());
+        EXPECT_FALSE(ButtonShown());
+
+        // A spectator
+        ASSERT_NO_FATAL_FAILURE(StartEast(kSingleWait, "9p", kAllComputers));
+        EXPECT_TRUE(RectsOf(MahjongHintsComponent::kDeclareMark).empty());
+        EXPECT_FALSE(ButtonShown());
+    }
+
+    TEST_F(MahjongHintsTest, UnderTheCoverNeitherMarksNorButtonShowAndRevealBringsThem) {
+        const SeatSetup twoPeople{SeatKind::Person, SeatKind::Computer, SeatKind::Person, SeatKind::Computer};
+        ASSERT_NO_FATAL_FAILURE(StartEast(kSingleWait, "9p", twoPeople));
+        ASSERT_TRUE(_game->GetSession().HandoffPending());
+        EXPECT_TRUE(RectsOf(MahjongHintsComponent::kDeclareMark).empty());
+        EXPECT_FALSE(ButtonShown());
+
+        _game->GetSession().Reveal();
+        Refresh();
+        EXPECT_EQ(RectsOf(MahjongHintsComponent::kDeclareMark).size(), 2u);
+        EXPECT_TRUE(ButtonShown());
+    }
+
+    TEST_F(MahjongHintsTest, NoMarkAndNoButtonWhenTheHandIsOver) {
+        ASSERT_NO_FATAL_FAILURE(StartEast(kSingleWait, "9p", kDefaultSeatSetup, 1));
+        ASSERT_TRUE(Discard("9p", true));
+        Draw();
+        ASSERT_EQ(_game->GetSession().GetPhase(), SessionPhase::HandOver);
+        EXPECT_TRUE(RectsOf(MahjongHintsComponent::kDeclareMark).empty());
+        EXPECT_FALSE(ButtonShown());
+    }
+
+    // ----- the button and the advice -----
+
+    TEST_F(MahjongHintsTest, TheButtonIsOfferedExactlyWhileHintsApplyAndAPersonHasActions) {
+        EXPECT_FALSE(ButtonShown()) << "hidden in the file";
+        ASSERT_NO_FATAL_FAILURE(StartEast(kSingleWait, "9p"));
+        EXPECT_TRUE(ButtonShown());
+        EXPECT_FALSE(AdviceShown()) << "nothing is advised before the press";
+
+        _game->SetHintsOn(false);
+        Draw();
+        EXPECT_FALSE(ButtonShown()) << "hints off";
+        _game->SetHintsOn(true);
+        Draw();
+        EXPECT_TRUE(ButtonShown());
+        _game->OpenSetup();
+        Draw();
+        EXPECT_FALSE(ButtonShown()) << "Setup is open";
+        _game->CloseSetup();
+        Draw();
+
+        ASSERT_TRUE(Discard("9p"));
+        Draw();
+        EXPECT_FALSE(ButtonShown()) << "a computer acts";
+    }
+
+    TEST_F(MahjongHintsTest, TheButtonIsOfferedInAClaimWindowOfThePerson) {
+        ASSERT_NO_FATAL_FAILURE(StartWindow(kWindowPung, "5p"));
+        EXPECT_TRUE(ButtonShown());
+    }
+
+    TEST_F(MahjongHintsTest, APressSetsTheSentenceOfTheAdviceAndFramesTheAdvisedDiscard) {
+        ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
+        ASSERT_TRUE(ButtonShown());
+        ASSERT_TRUE(RectsOf(MahjongHintsComponent::kAdvisedFrame).empty());
+        const std::optional<HandAction> advice = AdviceFor(ViewOf(kSeat0));
+        ASSERT_TRUE(advice.has_value());
+        ASSERT_EQ(*advice, HandAction::MakeDiscard(T("Nw"))) << "worked out in HintsTest";
+        const uint64_t version = _game->GetSession().Version();
+
+        Press();
+
+        EXPECT_EQ(AdviceVar(), "Discard North Wind.");
+        EXPECT_EQ(AdviceVar(), SentenceFor(kSeat0));
+        EXPECT_TRUE(AdviceShown());
+        EXPECT_EQ(_game->GetSession().Version(), version) << "the advice never moves the session";
+        // The frame lies on the Nw of the hand: four bars round exactly that slot
+        const PlayerHand& held = Hand().GetHand(kSeat0);
+        int slots = 0;
+        for (const TileSlot& slot : _table->GetLayout().slots) {
+            if (slot.role == SlotRole::HandTile && slot.seat == kSeat0 && held.concealed[slot.index] == T("Nw")) {
+                ++slots;
+                const Rect& r = slot.rect;
+                bool top = false;
+                for (const Rect& bar : RectsOf(MahjongHintsComponent::kAdvisedFrame)) {
+                    top = top || (bar.x == r.x && bar.y == r.y && bar.w == r.w);
+                }
+                EXPECT_TRUE(top);
+            }
+        }
+        EXPECT_EQ(slots, 1);
+        EXPECT_EQ(RectsOf(MahjongHintsComponent::kAdvisedFrame).size(), 4u * slots);
+        // A hand is not left unchanged by it
+        EXPECT_EQ(Hand().GetHand(kSeat0).concealed.size(), 14u);
+        EXPECT_TRUE(_game->GetSession().ActorIsPerson());
+    }
+
+    TEST_F(MahjongHintsTest, ThePressOfTheButtonWorksByClick) {
+        ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
+        ASSERT_TRUE(ClickElement("Hints", "HintButton"));
+        Draw();
+        EXPECT_TRUE(AdviceShown());
+        EXPECT_EQ(AdviceVar(), SentenceFor(kSeat0));
+    }
+
+    TEST_F(MahjongHintsTest, ADeclaringAdviceSaysSoAndMarksTheDeclaringTile) {
+        ASSERT_NO_FATAL_FAILURE(StartEast(kSingleWait, "9p"));
+        Press();
+        EXPECT_EQ(AdviceVar(), "Discard 9 Dots and declare the ready hand.");
+        EXPECT_EQ(RectsOf(MahjongHintsComponent::kAdvisedFrame).size(), 4u);
+        EXPECT_EQ(RectsOf(MahjongHintsComponent::kDeclareMark).size(), 2u);
+    }
+
+    TEST_F(MahjongHintsTest, PressingAgainGivesTheSameAnswer) {
+        ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
+        Press();
+        const std::string first = AdviceVar();
+        const uint64_t varsVersion = CoreManager::GetUIVars().GetVersion();
+        Press();
+        EXPECT_EQ(AdviceVar(), first);
+        EXPECT_TRUE(AdviceShown());
+        EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), varsVersion) << "an equal sentence sets nothing";
+    }
+
+    TEST_F(MahjongHintsTest, InAClaimWindowTheSentenceNamesTheClaimTheComputerWouldMake) {
+        ASSERT_NO_FATAL_FAILURE(StartWindow(kWindowPung, "5p"));
+        ASSERT_EQ(AdviceFor(ViewOf(kSeat1)), std::optional<HandAction>(HandAction::MakeClaim(ClaimKind::Pung)));
+        const uint64_t version = _game->GetSession().Version();
+
+        Press();
+
+        EXPECT_EQ(AdviceVar(), "Take the discard to make a pung of 5 Dots.");
+        EXPECT_EQ(AdviceVar(), SentenceFor(kSeat1));
+        EXPECT_EQ(_game->GetSession().Version(), version);
+        EXPECT_EQ(Hand().GetPhase(), Phase::Claim) << "nothing was claimed";
+        EXPECT_TRUE(RectsOf(MahjongHintsComponent::kAdvisedFrame).empty()) << "no tile of the hand is advised";
+    }
+
+    TEST_F(MahjongHintsTest, InAClaimWindowTheAdviceMayBeToLetTheDiscardGo) {
+        ASSERT_NO_FATAL_FAILURE(StartWindow(kWindowPass, "5m"));
+        ASSERT_EQ(AdviceFor(ViewOf(kSeat1)), std::optional<HandAction>(HandAction::MakePass()));
+
+        Press();
+
+        EXPECT_EQ(AdviceVar(), "Let the discard go.");
+        EXPECT_TRUE(AdviceShown());
+    }
+
+    TEST_F(MahjongHintsTest, APressThatIsNotOfferedChangesNothing) {
+        // A computer acts: the button is not offered, a stale press is ignored
+        ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
+        ASSERT_TRUE(Discard("Nw"));
+        Draw();
+        ASSERT_FALSE(_game->GetSession().ActorIsPerson());
+        const uint64_t version = _game->GetSession().Version();
+        const uint64_t varsVersion = CoreManager::GetUIVars().GetVersion();
+        Press();
+        EXPECT_FALSE(AdviceShown());
+        EXPECT_EQ(_game->GetSession().Version(), version);
+        EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), varsVersion);
+
+        // Hints off, Setup open, a spectator
+        ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
+        _game->SetHintsOn(false);
+        Press();
+        EXPECT_FALSE(AdviceShown());
+        _game->SetHintsOn(true);
+        _game->OpenSetup();
+        Press();
+        EXPECT_FALSE(AdviceShown());
+        _game->CloseSetup();
+        Draw();
+        EXPECT_FALSE(AdviceShown()) << "the press while Setup was open is not kept";
+        ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw", kAllComputers));
+        Press();
+        EXPECT_FALSE(AdviceShown());
+    }
+
+    TEST_F(MahjongHintsTest, TheAdviceGoesWhenTheDiscardIsMadeAndNothingStaysInTheVariable) {
+        ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
+        Press();
+        ASSERT_TRUE(AdviceShown());
+        ASSERT_FALSE(AdviceVar().empty());
+
+        ASSERT_TRUE(Discard("Nw"));
+        Draw();
+
+        EXPECT_FALSE(AdviceShown());
+        EXPECT_TRUE(AdviceVar().empty());
+        EXPECT_TRUE(RectsOf(MahjongHintsComponent::kAdvisedFrame).empty());
+    }
+
+    TEST_F(MahjongHintsTest, AnyOtherDiscardDropsTheAdviceToo) {
+        ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
+        Press();
+        ASSERT_TRUE(AdviceShown());
+        // Another discard than the advised one: the table moved on all the same
+        ASSERT_TRUE(Discard("Rd"));
+        Draw();
+        EXPECT_FALSE(AdviceShown());
+    }
+
+    TEST_F(MahjongHintsTest, TheAdviceGoesWhenHintsGoOffOrASetupOpensOrACoverGoesUp) {
+        ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
+        Press();
+        ASSERT_TRUE(AdviceShown());
+        _game->SetHintsOn(false);
+        Draw();
+        EXPECT_FALSE(AdviceShown());
+        _game->SetHintsOn(true);
+        Draw();
+        EXPECT_FALSE(AdviceShown()) << "it does not come back by itself";
+        EXPECT_TRUE(ButtonShown());
+
+        Press();
+        ASSERT_TRUE(AdviceShown());
+        _game->OpenSetup();
+        Draw();
+        EXPECT_FALSE(AdviceShown());
+        _game->CloseSetup();
+        Draw();
+        EXPECT_FALSE(AdviceShown());
+
+        // Hot seat: person 0 asks, discards; the cover goes up for person 2 and the advice is gone
+        const SeatSetup twoPeople{SeatKind::Person, SeatKind::Computer, SeatKind::Person, SeatKind::Computer};
+        ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw", twoPeople));
+        _game->GetSession().Reveal();
+        Refresh();
+        Press();
+        ASSERT_TRUE(AdviceShown());
+        ASSERT_TRUE(Discard("Nw"));
+        ASSERT_TRUE(StepUntil([&] { return _game->GetSession().ActorIsPerson(); }));
+        Draw();
+        ASSERT_TRUE(_game->GetSession().HandoffPending());
+        EXPECT_FALSE(AdviceShown());
+        EXPECT_FALSE(ButtonShown());
+        _game->GetSession().Reveal();
+        Draw();
+        EXPECT_FALSE(AdviceShown()) << "the next person does not inherit the advice";
+        EXPECT_TRUE(ButtonShown());
+    }
+
+    TEST_F(MahjongHintsTest, TheLanguageSwitchWordsTheAdviceAgain) {
+        ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
+        Press();
+        std::vector<std::string> seen;
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            Draw();
+            EXPECT_EQ(AdviceVar(), SentenceFor(kSeat0));
+            EXPECT_FALSE(AdviceVar().empty());
+            EXPECT_TRUE(AdviceShown());
+            seen.push_back(AdviceVar());
+        });
+        ASSERT_GE(seen.size(), 2u);
+        EXPECT_NE(seen[0], seen[1]);
+    }
+
+    TEST_F(MahjongHintsTest, TheAdviceNeverMovesTheSessionAndTheControlStateIsEqualWithHintsOnAndOff) {
+        const auto play = [&](bool hintsOn) {
+            std::string state;
+            [&] {
+                _game->SetHintsOn(hintsOn);
+                ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
+                const uint64_t version = _game->GetSession().Version();
+                for (int i = 0; i < 3; ++i) {
+                    Press();
+                }
+                EXPECT_EQ(_game->GetSession().Version(), version);
+                EXPECT_EQ(hintsOn, AdviceShown());
+                const auto got = _game->AsControllable()->GetState();
+                ASSERT_TRUE(got.has_value());
+                Json shown = *got;
+                shown.erase("version");  // counts the changes of the whole session, which the second match starts further on
+                state = shown.dump();
+            }();
+            return state;
+        };
+        const std::string withHints = play(true);
+        const std::string withoutHints = play(false);
+        size_t at = 0;
+        while (at < withHints.size() && at < withoutHints.size() && withHints[at] == withoutHints[at]) {
+            ++at;
+        }
+        EXPECT_EQ(withHints, withoutHints) << "first difference at " << at << ": " << withHints.substr(at > 40 ? at - 40 : 0, 120) << " | " << withoutHints.substr(at > 40 ? at - 40 : 0, 120);
+    }
+
+    TEST_F(MahjongHintsTest, TheButtonAndTheSentenceFitInEveryLanguageAndTheStripIsClearOfTheTable) {
+        ASSERT_NO_FATAL_FAILURE(StartWindow(kWindowPung, "5p"));
+        Press();
+        ASSERT_TRUE(AdviceShown());
+
+        // The longest sentence of each language, over every kind of advice and every tile
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            const UIStrings& strings = CoreManager::GetUIStrings();
+            std::vector<std::string> sentences;
+            TableView view;
+            view.pendingTile = T("5p");
+            const auto add = [&](const HandAction& action) {
+                const eastl::string text = AdviceText(strings, view, action);
+                sentences.emplace_back(text.data(), text.size());
+            };
+            for (int id = 0; id < kTileIdCount; ++id) {
+                const Tile tile = Tile(static_cast<uint8_t>(id));
+                add(HandAction::MakeDiscard(tile, true));
+                add(HandAction::MakeConcealedKong(tile));
+                add(HandAction::MakeUpgradeKong(tile));
+                if (tile.IsSuit() && tile.Rank() <= 7) {
+                    add(HandAction::MakeClaim(ClaimKind::Chow, tile));
+                }
+            }
+            for (const ClaimKind kind : {ClaimKind::Pung, ClaimKind::Kong, ClaimKind::Mahjong}) {
+                view.pendingTile = T("7s");
+                add(HandAction::MakeClaim(kind));
+                view.pendingTile = T("Wd");
+                add(HandAction::MakeClaim(kind));
+            }
+            add(HandAction::MakePass());
+            add(HandAction::MakeDeclareWin());
+            std::string longest;
+            for (const std::string& sentence : sentences) {
+                if (sentence.size() > longest.size()) {
+                    longest = sentence;
+                }
+            }
+            CoreManager::GetUIVars().Set("hintAdvice"_intern, eastl::string_view(longest.data(), longest.size()));
+            Draw();
+            ASSERT_TRUE(AdviceShown());
+            ASSERT_TRUE(ButtonShown());
+            ExpectPassesTheMatrix("Hints", kPanelTouchMinimum);
+            for (const Output& output : kOutputs) {
+                ExpectWordsFit("Hints", output.width, output.height, 0.0f);
+            }
+        });
+
+        auto canvas = Canvas("Hints");
+        ASSERT_TRUE(canvas);
+        canvas->UpdateLayout(kViewWidth, kViewHeight);
+        const UIElement* button = Element("Hints", "HintButton");
+        const UIElement* label = Element("Hints", "AdviceText");
+        const UIElement* panel = Element("Hints", "WaitPanel");
+        ASSERT_NE(button, nullptr);
+        ASSERT_NE(label, nullptr);
+        ASSERT_NE(panel, nullptr);
+
+        constexpr float ringW = kWallStackSize * kWallRingColumns;
+        constexpr float ringH = kWallStackSize * kWallRingRows;
+        const Rect inside((kViewWidth - ringW) * 0.5f + kWallStackSize, (kViewHeight - ringH) * 0.5f + kWallStackSize, ringW - 2.0f * kWallStackSize, ringH - 2.0f * kWallStackSize);
+        EXPECT_TRUE(Inside(button->rect, inside));
+        EXPECT_TRUE(Inside(label->rect, inside));
+        EXPECT_TRUE(Apart(button->rect, label->rect));
+        EXPECT_TRUE(Apart(button->rect, panel->rect));
+        EXPECT_TRUE(Apart(label->rect, panel->rect));
+        EXPECT_TRUE(button->IsHitTestable()) << "the button takes the press";
+        EXPECT_FALSE(label->IsHitTestable()) << "the sentence takes no input";
+
+        TableInput worst;
+        worst.viewer = 0;
+        worst.concealedCount.fill(kMaxConcealedTiles);
+        worst.bonusCount.fill(kMaxBonusTiles);
+        Meld kong;
+        kong.kind = MeldKind::Kong;
+        kong.first = T("1p");
+        for (auto& melds : worst.melds) {
+            melds.assign(kMaxMelds, kong);
+        }
+        for (int i = 0; i < kMostDiscards; ++i) {
+            worst.discardSeats.push_back(i % kSeatCount);
+        }
+        worst.wallRemaining = 2 * kWallRingCells;
+        for (const TileSlot& slot : MakeTableLayout(worst).slots) {
+            EXPECT_TRUE(Apart(slot.rect, button->rect)) << "role " << static_cast<int>(slot.role);
+            EXPECT_TRUE(Apart(slot.rect, label->rect)) << "role " << static_cast<int>(slot.role);
         }
     }
 

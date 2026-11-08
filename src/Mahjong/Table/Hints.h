@@ -11,7 +11,8 @@ namespace BECore::Mahjong {
      * What the hints of the table say (the node `Hints` of `config/SceneConfig.xml`): which tiles the viewer's hand waits for, which
      * discards declare the calling hand, and what the computer player would do in the viewer's place. Plain C++, no scene: everything
      * is computed from the `TableView` of the viewer (`MakeTableView`), so a hint never knows more than the viewer sees. The words are
-     * keys of the string table (`config/UIStrings.xml`), this file holds no English.
+     * keys of the string table (`config/UIStrings.xml`), this file holds no English; the captions of the canvas (`hints.waitCaption`,
+     * `hints.adviseButton`) are said by the scene itself (`{#key}`), only the sentences of the advice are built here.
      */
 
     /// The tiles of the waiting row: the 13 orphans are the most a hand can wait for.
@@ -19,10 +20,6 @@ namespace BECore::Mahjong {
 
     /// The seed of the computer player that gives the advice: fixed, so the same view always gives the same advice and no rng of the game is touched.
     inline constexpr uint32_t kAdviceSeed = 1;
-
-    /// The keys of the words the hint canvas shows (the scene says `{#key}`; the names are here so that code and tests can ask for them).
-    inline constexpr const char* kWaitCaptionKey = "hints.waitCaption";
-    inline constexpr const char* kAdviseButtonKey = "hints.adviseButton";
 
     /// One tile the hand waits for and the copies of it the viewer cannot see (it may be 0: a dead wait is still shown).
     struct WaitEntry {
