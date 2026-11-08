@@ -25,6 +25,7 @@ namespace BECore {
 namespace BECore::Mahjong {
 
     class MahjongGame;
+    class TableSession;
 
     /// The pause before a computer seat plays (the component steps one computer action per period while a computer has to act).
     inline constexpr float kComputerStepSeconds = 0.6f;
@@ -42,17 +43,21 @@ namespace BECore::Mahjong {
      * over (`SessionPhase::HandOver` and `MatchOver`) all four hands are face up. Open sets, bonus tiles and discards are public.
      *
      * Without an atlas texture (the file did not load, or a test did not give one) the tiles are coloured rectangles, so the layout
-     * stays visible. The acting seat's hand has a highlight behind it and the discard that waits for a claim has one too.
+     * stays visible. The seat whose turn it is has a highlight behind its hand (in a claim window the discarder, never the seat that is
+     * asked to claim first: that would tell a person that this computer holds a claim) and the discard that waits for a claim has a frame.
      *
      * **Playing.** While a person has to act (`TableSession::ActorIsPerson()`, no hot-seat cover) a left click on a tile of the viewer's
      * hand discards it (`PerformPerson(MakeDiscard(tile, declareNext))`); a refused action changes nothing. The other actions are the
      * buttons of the canvas `Actions` (`Table/ActionButtons.h`), shown from `LegalActions` every frame (`SetElementVisibleByName`, the
      * labels of the chow and kong buttons are `UIVars`), and answered here as `InputEvents::ActionEvent`s. `Declare` toggles the flag
      * "the next discard declares the calling hand" (variable `declareNext`, `on` / `off`; the tiles whose declaring discard is not legal
-     * are dimmed while it is on); it is cleared by the discard and when the button is no longer offered. With two or more people the
+     * are dimmed while it is on); it is cleared by the discard, when the button is no longer offered and when the turn it was set on is
+     * over (the seat or the number of discards changed, e.g. a control client played for the person). With two or more people the
      * canvas `Handoff` (a modal, hidden at the start) is shown exactly while `HandoffPending()`; its button `MahjongReveal` calls
      * `Reveal()`. **Pace:** while a computer has to act the component plays one of its actions every `kComputerStepSeconds` of
-     * `SceneUpdateEvent` time, and nothing while a person acts, the cover is up or the hand is over.
+     * `SceneUpdateEvent` time, and nothing while a person acts, the cover is up or the hand is over. A claim window is settled within one
+     * period (the computers decide one after the other without a pause between them) and a computer that is to discard after it does so in
+     * the same period, so the time from a discard to the next one is the same whether or not a window opened.
      */
     class MahjongTableComponent : public IComponent {
         BE_CLASS(MahjongTableComponent)
@@ -95,6 +100,16 @@ namespace BECore::Mahjong {
         /// The buttons for what the person to act can do now (all hidden when none can); clears `_declareNext` when `Declare` is not
         /// offered.
         [[nodiscard]] ActionButtons CurrentButtons(const MahjongGame& game);
+        /// The turn the `Declare` flag is set on: the acting seat and the number of discards so far (every turn follows a discard).
+        struct DeclareTurn {
+            Seat seat = kNoSeat;
+            size_t discards = 0;
+
+            bool operator==(const DeclareTurn&) const = default;
+        };
+        [[nodiscard]] static DeclareTurn TurnOf(const MahjongGame& game);
+        /// One action of the computer that has to act; false (and a log line) when the model refused it.
+        static bool StepComputerChecked(TableSession& session);
         /// Pushes the buttons, their labels and the cover to the canvases of the scene, only what changed.
         void PublishScreen(const MahjongGame* game);
 
@@ -103,6 +118,7 @@ namespace BECore::Mahjong {
         ActionButtons _published;  // what the canvases show; the scene file starts with every button hidden
         bool _handoffShown = false;
         bool _declareNext = false;
+        DeclareTurn _declareTurn;     // the turn `_declareNext` was set on
         float _computerClock = 0.0f;  // seconds a computer has been waiting to play
         static MahjongTableComponent* s_active;
     };

@@ -17,6 +17,8 @@ namespace BECore::Mahjong::Tests {
         constexpr const char* kLongestSeat = "Seat 4 (North)";
         /// The height of an action button in view units: 32 px (the engine's touch minimum) from a window of 731 x 411 px.
         constexpr float kButtonHeight = 56.0f;
+        /// The height in pixels of the smallest window the touch minimum is held from; the view is 1280 x 720 units, scaled to fit it.
+        constexpr float kSmallestTouchWindowHeight = 411.0f;
         /// The table is a fixed design scaled to the window, so on the smallest windows of the matrix (480 px) a button is 21 px high:
         /// the matrix runs the buttons with this minimum, and the engine's own is held from the 731 px windows (the test of the height).
         constexpr float kSmallestWindowTouchMinimum = 20.0f;
@@ -103,7 +105,7 @@ namespace BECore::Mahjong::Tests {
             const UIElement* element = Element("Actions", SpecOf(static_cast<ButtonKind>(i)).element);
             ASSERT_NE(element, nullptr);
             EXPECT_GE(element->rect.h, kButtonHeight) << SpecOf(static_cast<ButtonKind>(i)).element;
-            const float fit = 411.0f / kViewHeight;  // the window of 731 x 411 shows the 1280 x 720 view at this scale
+            const float fit = kSmallestTouchWindowHeight / kViewHeight;  // the window of 731 x 411 shows the 1280 x 720 view at this scale
             EXPECT_GE(element->rect.h * fit, CoreManager::GetUIEnvironment().GetSettings().minTouchSize - 0.5f) << SpecOf(static_cast<ButtonKind>(i)).element;
         }
     }

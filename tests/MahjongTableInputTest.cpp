@@ -26,17 +26,8 @@ namespace BECore::Mahjong::Tests {
         constexpr float kPauseFraction = 0.4f;
         constexpr float kLongFrame = 100.0f;
 
-        void EmitAction(const char* action, const char* value = "") {
-            InputEvents::ActionEvent::Emit(PoolString::Intern(action), PoolString::Intern(value));
-        }
-
         void Elapse(float seconds) {
             SceneEvents::SceneUpdateEvent::Emit(seconds);
-        }
-
-        std::string Var(const char* name) {
-            const eastl::string_view value = CoreManager::GetUIVars().Get(PoolString::Intern(name));
-            return std::string(value.data(), value.size());
         }
 
     }  // namespace
@@ -204,11 +195,29 @@ namespace BECore::Mahjong::Tests {
         EmitAction("MahjongDeclare", "on");
         ASSERT_TRUE(_table->DeclareNext());
 
-        // The turn moves on by the model (a control client played for the person): the next frame has no Declare button
+        // The model moves on under the table (a discard that bypasses the session): the next frame has no Declare button
         ASSERT_TRUE(_game->GetMatch().Hand().Discard(kSeat0, T("Ew")).has_value());
         Draw();
 
         EXPECT_FALSE(_table->DeclareNext());
+        EXPECT_EQ(Var("declareNext"), "off");
+    }
+
+    TEST_F(MahjongTableInputTest, TheFlagDoesNotSurviveIntoTheNextTurnOfTheSamePerson) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, kWaitingHand));
+        EmitAction("MahjongDeclare", "on");
+        ASSERT_TRUE(_table->DeclareNext());
+
+        // A control client plays 9p for the person (no declaration); the computers play on until the person is asked again
+        TableSession& session = _game->GetSession();
+        ASSERT_TRUE(session.PerformPerson(HandAction::MakeDiscard(T("9p"), false)).has_value());
+        session.RunComputers();
+        ASSERT_EQ(session.Actor(), kSeat0);
+        ASSERT_EQ(Hand().GetPhase(), Phase::Discard) << "this seed gives the person a plain turn again";
+        Draw();
+
+        EXPECT_TRUE(_table->GetButtons()[ButtonKind::Declare].shown) << "the hand still waits, so Declare is offered again";
+        EXPECT_FALSE(_table->DeclareNext()) << "but the flag was set in the turn before";
         EXPECT_EQ(Var("declareNext"), "off");
     }
 
@@ -275,6 +284,87 @@ namespace BECore::Mahjong::Tests {
         Elapse(kLongFrame);
 
         EXPECT_EQ(session.Version(), version);
+    }
+
+    // ----- the claim window does not tell a person what a computer holds -----
+
+    namespace {
+
+        /// The colour behind the hand of the seat whose turn it is (`kActingSeat` of the component) and how far it reaches past the hand.
+        constexpr Color kTurnMark{255, 214, 80, 90};
+        constexpr float kTurnMarkMargin = 4.0f;
+        /// Seat 1 holds 4p 5p 5p 6p 7p: a discarded 5p gives it a pung and two chows, so it has a claim.
+        constexpr const char* kSeat1HoldsPairOf5p = "4p 5p 5p 6p 7p 2s 5s 8s 2m 5m 8m Ww Nw";
+
+    }  // namespace
+
+    /// A match where East (the person) discards a 5p: with `claimable` seat 1 holds a claim on it, otherwise nobody does.
+    class MahjongTableClaimWindowTest : public MahjongTableInputTest {
+    protected:
+        void DiscardFive(bool claimable) {
+            ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+            FixedWallSpec spec = SpecOf(kPlainHand, "5p");
+            if (claimable) {
+                spec.hands[kSeat1] = kSeat1HoldsPairOf5p;
+            }
+            Lay(MakeModel(spec));
+            Draw();
+            ASSERT_GE(IndexOf(kSeat0, T("5p")), 0);
+            ClickHandTile(IndexOf(kSeat0, T("5p")));
+            Draw();
+        }
+
+        /// The rectangles of the turn mark, one per frame at most.
+        std::vector<Rect> TurnMarks() const {
+            std::vector<Rect> marks;
+            for (const DrawCall& call : _renderer->calls) {
+                if (call.kind == DrawKind::Rect && call.color.r == kTurnMark.r && call.color.g == kTurnMark.g && call.color.b == kTurnMark.b && call.color.a == kTurnMark.a) {
+                    marks.push_back(call.rect);
+                }
+            }
+            return marks;
+        }
+
+        /// Where the mark lies when it is behind the hand of `seat`.
+        Rect MarkOf(Seat seat) const {
+            const Rect bounds = BoundsOf(_table->GetLayout(), SlotRole::HandTile, seat);
+            return Rect(bounds.x - kTurnMarkMargin, bounds.y - kTurnMarkMargin, bounds.w + 2.0f * kTurnMarkMargin, bounds.h + 2.0f * kTurnMarkMargin);
+        }
+    };
+
+    TEST_F(MahjongTableClaimWindowTest, WhileAComputerMayClaimTheMarkStaysOnTheDiscarderAndNotOnThatComputer) {
+        ASSERT_NO_FATAL_FAILURE(DiscardFive(true));
+        ASSERT_EQ(Hand().GetPhase(), Phase::Claim);
+        ASSERT_EQ(_game->GetSession().Actor(), kSeat1) << "the computer with the claim is the one asked first";
+
+        const std::vector<Rect> marks = TurnMarks();
+
+        ASSERT_EQ(marks.size(), 1u);
+        const Rect expected = MarkOf(kSeat0);
+        EXPECT_EQ(marks[0].x, expected.x);
+        EXPECT_EQ(marks[0].y, expected.y);
+        EXPECT_EQ(marks[0].w, expected.w);
+        EXPECT_EQ(marks[0].h, expected.h);
+    }
+
+    TEST_F(MahjongTableClaimWindowTest, OnePauseSettlesTheWindowAndPlaysTheNextDiscardLikeAnUnclaimedDiscard) {
+        ASSERT_NO_FATAL_FAILURE(DiscardFive(false));
+        ASSERT_EQ(_game->GetSession().Actor(), kSeat1);
+        const size_t pile = Hand().Discards().size();
+        Elapse(kComputerStepSeconds);
+        const size_t plainSteps = Hand().Discards().size() - pile;
+
+        ASSERT_NO_FATAL_FAILURE(DiscardFive(true));
+        ASSERT_EQ(Hand().GetPhase(), Phase::Claim);
+        const size_t windowPile = Hand().Discards().size();
+        Elapse(kComputerStepSeconds * kPauseFraction);
+        EXPECT_EQ(Hand().GetPhase(), Phase::Claim) << "nothing before the pause is over";
+        Elapse(kComputerStepSeconds * kPauseFraction);
+        Elapse(kComputerStepSeconds * kPauseFraction);
+
+        EXPECT_EQ(plainSteps, 1u);
+        EXPECT_EQ(Hand().Discards().size() - windowPile, plainSteps) << "the same one discard after the same one pause";
+        EXPECT_NE(Hand().GetPhase(), Phase::Claim);
     }
 
     // ----- the cover of a hot seat -----

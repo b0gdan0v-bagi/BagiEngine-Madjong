@@ -64,6 +64,23 @@ namespace BECore::Mahjong {
             return 0;
         }
 
+        /// Whether a person is to act and may: the table is being played, the actor is a person and no cover is up.
+        bool PersonActs(const TableSession& session) {
+            return session.GetPhase() == SessionPhase::Playing && session.ActorIsPerson() && !session.HandoffPending();
+        }
+
+        /// A claim window: a discard or an upgraded kong waits for the other seats to decide.
+        bool IsClaimWindow(Phase phase) noexcept {
+            return phase == Phase::Claim || phase == Phase::RobKong;
+        }
+
+        /// The seat whose turn it is on the table: the one that discards, the discarder (or the kong's owner) while the others decide.
+        /// Not the seat that has to act: that one is the first seat with a claim in a window, which would tell a person that this
+        /// computer could claim.
+        Seat TurnSeat(const TableSession& session, const HandModel& hand) {
+            return session.GetPhase() == SessionPhase::Playing ? hand.CurrentSeat() : kNoSeat;
+        }
+
         /// The tile at `part` of a meld as laid: a chow runs up from its first tile, a pung and a kong repeat it.
         Tile MeldTileAt(const Meld& meld, int part) {
             if (meld.kind == MeldKind::Chow && meld.first.IsSuit()) {
@@ -130,18 +147,21 @@ namespace BECore::Mahjong {
         if (game == nullptr) {
             return nullptr;
         }
-        const TableSession& session = game->GetSession();
-        const bool person = session.GetPhase() == SessionPhase::Playing && session.ActorIsPerson() && !session.HandoffPending();
-        return person ? game : nullptr;
+        return PersonActs(game->GetSession()) ? game : nullptr;
+    }
+
+    MahjongTableComponent::DeclareTurn MahjongTableComponent::TurnOf(const MahjongGame& game) {
+        return DeclareTurn{game.GetSession().Actor(), game.GetMatch().Hand().Discards().size()};
     }
 
     ActionButtons MahjongTableComponent::CurrentButtons(const MahjongGame& game) {
         ActionButtons buttons;
         const TableSession& session = game.GetSession();
-        if (session.GetPhase() == SessionPhase::Playing && session.ActorIsPerson() && !session.HandoffPending()) {
+        if (PersonActs(session)) {
             buttons = MakeActionButtons(game.GetMatch().Hand().LegalActions(session.Actor()));
         }
-        if (!buttons[ButtonKind::Declare].shown) {
+        // The flag belongs to the turn it was set on: gone when the button goes, and when the turn moved on without the table's discard
+        if (!buttons[ButtonKind::Declare].shown || TurnOf(game) != _declareTurn) {
             _declareNext = false;
         }
         return buttons;
@@ -199,7 +219,7 @@ namespace BECore::Mahjong {
         }
         if (session.PerformPerson(HandAction::MakeDiscard(held.concealed[*hit], _declareNext)).has_value()) {
             _declareNext = false;
-        }
+        }  // else the click changes nothing: a tile that cannot declare while the flag is on, or the model moved on since the draw
     }
 
     void MahjongTableComponent::OnAction(const InputEvents::ActionEvent& event) {
@@ -225,10 +245,21 @@ namespace BECore::Mahjong {
         }
         if (*kind == ButtonKind::Declare) {
             _declareNext = !_declareNext;
+            _declareTurn = TurnOf(*game);
             return;
         }
         // A refused action is a button that was out of date; it changes nothing
-        (void)session.PerformPerson(buttons[*kind].action);
+        if (const HandStatus performed = session.PerformPerson(buttons[*kind].action); !performed.has_value()) {
+            LOG_WARNING(Format("MahjongTableComponent: the button '{}' was refused: {}", SpecOf(*kind).element, EnumUtils<HandError>::ToString(performed.error())));
+        }
+    }
+
+    bool MahjongTableComponent::StepComputerChecked(TableSession& session) {
+        if (const StepResult stepped = session.StepComputer(); !stepped.has_value()) {
+            LOG_ERROR("MahjongTableComponent: a computer seat's action was refused");
+            return false;
+        }
+        return true;
     }
 
     void MahjongTableComponent::OnUpdate(const SceneEvents::SceneUpdateEvent& event) {
@@ -247,8 +278,24 @@ namespace BECore::Mahjong {
             return;
         }
         _computerClock = 0.0f;  // one action a period, whatever the frame took
-        if (const StepResult stepped = session.StepComputer(); !stepped.has_value()) {
-            LOG_ERROR("MahjongTableComponent: a computer seat's action was refused");
+        const HandModel& hand = game->GetMatch().Hand();
+        const bool window = IsClaimWindow(hand.GetPhase());
+        if (!StepComputerChecked(session)) {
+            return;
+        }
+        if (!window) {
+            return;
+        }
+        // The pause after a discard is one whether or not a window opened (a longer one would tell a person that a computer holds a
+        // claim): the computers settle a window within the pause, and a computer that is to discard after it does so in the same pause.
+        const auto computerActs = [&session] { return session.GetPhase() == SessionPhase::Playing && !session.ActorIsPerson(); };
+        while (computerActs() && IsClaimWindow(hand.GetPhase())) {
+            if (!StepComputerChecked(session)) {
+                return;
+            }
+        }
+        if (computerActs() && !StepComputerChecked(session)) {
+            return;
         }
     }
 
@@ -288,8 +335,8 @@ namespace BECore::Mahjong {
             }
         };
 
-        if (session.GetPhase() == SessionPhase::Playing && IsSeat(session.Actor())) {
-            const Rect bounds = BoundsOf(_layout, SlotRole::HandTile, session.Actor());
+        if (const Seat turn = TurnSeat(session, hand); IsSeat(turn)) {
+            const Rect bounds = BoundsOf(_layout, SlotRole::HandTile, turn);
             if (bounds.w > 0.0f) {
                 const Rect marked = Padded(bounds, kActingMargin);
                 renderer.DrawFilledRect(marked.x, marked.y, marked.w, marked.h, kActingSeat);

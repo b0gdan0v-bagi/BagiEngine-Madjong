@@ -10,6 +10,7 @@
 #include <BECore/UI/UICanvasComponent.h>
 #include <Common/EngineEnvironment.h>
 #include <Common/RecordingRenderer.h>
+#include <Events/InputEvents.h>
 #include <Games/GameManager.h>
 #include <Mahjong/Components/MahjongTableComponent.h>
 #include <Mahjong/MahjongGame.h>
@@ -17,9 +18,9 @@
 #include <gtest/gtest.h>
 
 /**
- * What the tests of the table component share (`MahjongTableUiTest`, `MahjongTableInputTest`, `MahjongTableActionsTest`): the fixture
- * `MahjongTableTestBase` loads the shipped `config/SceneConfig.xml` (read from the source tree, a game's content is not mounted in the
- * test environment), starts the game through `GameManager` and draws the scene into a `RecordingRenderer` as big as the view of the scene,
+ * What the tests of the table component share (`MahjongTableUiTest`, `MahjongTableInputTest`, `MahjongTableActionsTest`,
+ * `MahjongTableScreenTest`): the fixture `MahjongTableTestBase` loads the shipped `config/SceneConfig.xml` (read from the source tree, a
+ * game's content is not mounted in the test environment), starts the game through `GameManager` and draws the scene into a `RecordingRenderer` as big as the view of the scene,
  * so the view transform is the identity: a call's rect is a slot of the layout and a click at a point of the view is a click at that
  * pixel. Header only; needs the engine services.
  */
@@ -52,6 +53,17 @@ namespace BECore::Mahjong::Tests {
         event.x = x;
         event.y = y;
         return event;
+    }
+
+    /// An `ActionEvent` as a button of a canvas emits it.
+    inline void EmitAction(const char* action, const char* value = "") {
+        InputEvents::ActionEvent::Emit(PoolString::Intern(action), PoolString::Intern(value));
+    }
+
+    /// The text of a `UIVars` variable.
+    inline std::string Var(const char* name) {
+        const eastl::string_view value = CoreManager::GetUIVars().Get(PoolString::Intern(name));
+        return std::string(value.data(), value.size());
     }
 
     class MahjongTableTestBase : public ::testing::Test {
@@ -200,7 +212,8 @@ namespace BECore::Mahjong::Tests {
             return found != nullptr && Click(found->rect.x + found->rect.w * 0.5f, found->rect.y + found->rect.h * 0.5f);
         }
 
-        /// What the model says the slot shows: a tile, or nullopt for a back. `faces` says whose concealed tiles are open.
+        /// What the model says the slot shows: a tile, or nullopt for a back. `allFaces` says that every concealed tile is open, otherwise
+        /// only those of `faceSeat`.
         std::optional<Tile> Expected(const TileSlot& slot, bool allFaces, Seat faceSeat) const {
             const PlayerHand& held = Hand().GetHand(slot.seat);
             const bool open = allFaces || slot.seat == faceSeat;

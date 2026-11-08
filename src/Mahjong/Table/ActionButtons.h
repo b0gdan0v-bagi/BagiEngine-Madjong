@@ -6,27 +6,13 @@
 namespace BECore::Mahjong {
 
     /**
-     * The action buttons of the table (the node `Hud`, canvas `Actions` of `config/SceneConfig.xml`): what the person to act can do besides
+     * The action buttons of the table (the node and canvas `Actions` of `config/SceneConfig.xml`): what the person to act can do besides
      * clicking a tile to discard it. Plain C++, no scene: `MakeActionButtons` turns `HandModel::LegalActions` into the buttons that are
      * shown, the `HandAction` each one performs and its label.
      */
-    enum class ButtonKind : uint8_t {
-        Win,
-        ClaimMahjong,
-        ClaimPung,
-        ClaimKong,
-        ClaimChow0,
-        ClaimChow1,
-        ClaimChow2,
-        Pass,
-        ConcealedKong0,
-        ConcealedKong1,
-        ConcealedKong2,
-        UpgradeKong,
-        Declare,
-    };
+    CORE_ENUM(ButtonKind, uint8_t, Win, ClaimMahjong, ClaimPung, ClaimKong, ClaimChow0, ClaimChow1, ClaimChow2, Pass, ConcealedKong0, ConcealedKong1, ConcealedKong2, UpgradeKong, Declare)
 
-    inline constexpr int kButtonCount = 13;
+    inline constexpr int kButtonCount = static_cast<int>(EnumUtils<ButtonKind>::Count());
     /// A tile has at most three sequences, so a claim window lists at most three chows.
     inline constexpr int kChowButtons = 3;
     /// Fourteen concealed tiles hold at most three sets of four equal tiles.

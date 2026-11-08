@@ -13,15 +13,6 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        void EmitAction(const char* action, const char* value = "") {
-            InputEvents::ActionEvent::Emit(PoolString::Intern(action), PoolString::Intern(value));
-        }
-
-        std::string Var(const char* name) {
-            const eastl::string_view value = CoreManager::GetUIVars().Get(PoolString::Intern(name));
-            return std::string(value.data(), value.size());
-        }
-
         /// East discards the 5p it drew; seat 1 holds 4p 5p 5p 6p 7p, so it may pung or take the chow 4-6p or 5-7p.
         HandModel ClaimWindowModel() {
             FixedWallSpec spec = SpecOf("1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Gd Rd", "5p");
