@@ -6,10 +6,6 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        constexpr eastl::string_view kDrawnHand = "Drawn hand";
-        constexpr eastl::string_view kNoPayments = "No payments";
-        constexpr eastl::string_view kTiedForFirst = "Tied for first:";
-
         /// The keys of the three dragons, in tile order.
         constexpr eastl::array<eastl::string_view, kDragonCount> kDragonKeys{"tile.dragon.Red", "tile.dragon.White", "tile.dragon.Green"};
 
@@ -53,26 +49,31 @@ namespace BECore::Mahjong {
             const SeatWinds winds = MakeSeatWinds(settlement.east);
             const auto label = [&](Seat seat) { return SeatLabel(strings, seat, winds[seat], seats); };
             const eastl::string winner = label(settlement.winner);
+            const bool knowsFrom = IsSeat(result.from);
             switch (result.source) {
                 case WinSource::SelfDraw:
-                    return Format("{} wins by self-draw", winner);
+                    return Tr(strings, "handover.win.selfDraw", {{"winner", winner}});
                 case WinSource::Discard:
-                    return IsSeat(result.from) ? Format("{} wins on the discard of {}", winner, label(result.from)) : Format("{} wins on a discard", winner);
+                    return knowsFrom ? Tr(strings, "handover.win.discard", {{"winner", winner}, {"from", label(result.from)}}) : Tr(strings, "handover.win.discardUnknown", {{"winner", winner}});
                 case WinSource::RobbedKong:
-                    return IsSeat(result.from) ? Format("{} wins by robbing the kong of {}", winner, label(result.from)) : Format("{} wins by robbing a kong", winner);
+                    return knowsFrom ? Tr(strings, "handover.win.robbedKong", {{"winner", winner}, {"from", label(result.from)}}) : Tr(strings, "handover.win.robbedKongUnknown", {{"winner", winner}});
             }
             return winner;
         }
 
         eastl::string WinSummary(const UIStrings& strings, const ScoreBreakdown& breakdown, const HandResult& result) {
             const eastl::string tile = TileName(strings, result.winningTile);
+            const eastl::string score = Format("{}", breakdown.score);
             if (breakdown.limitHand) {
-                return Format("Winning tile {}: score {}", tile, breakdown.score);
+                return Tr(strings, "handover.summary.limit", {{"tile", tile}, {"score", score}});
             }
+            const eastl::string points = Format("{}", breakdown.points);
             if (breakdown.doubles > 0) {
-                return Format("Winning tile {}: {} points x {} = {}, score {}", tile, breakdown.points, Multiplier(breakdown.doubles), breakdown.raw, breakdown.score);
+                const eastl::string multiplier = Format("{}", Multiplier(breakdown.doubles));
+                const eastl::string raw = Format("{}", breakdown.raw);
+                return Tr(strings, "handover.summary.doubles", {{"tile", tile}, {"points", points}, {"multiplier", multiplier}, {"raw", raw}, {"score", score}});
             }
-            return Format("Winning tile {}: {} points, score {}", tile, breakdown.points, breakdown.score);
+            return Tr(strings, "handover.summary.plain", {{"tile", tile}, {"points", points}, {"score", score}});
         }
 
     }  // namespace
@@ -129,12 +130,18 @@ namespace BECore::Mahjong {
         const bool won = settlement.kind == ResultKind::Win && IsSeat(settlement.winner);
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             const eastl::string name = SeatLabel(strings, seat, winds[seat], seats);
-            table.seats[seat] =
-                won ? Format("{}: hand {}, {:+}, total {}", name, settlement.scores[seat], settlement.deltas[seat], totalsAfter[seat]) : Format("{}: no payment, total {}", name, totalsAfter[seat]);
+            const eastl::string total = Format("{}", totalsAfter[seat]);
+            if (won) {
+                const eastl::string hand = Format("{}", settlement.scores[seat]);
+                const eastl::string delta = Format("{:+}", settlement.deltas[seat]);
+                table.seats[seat] = Tr(strings, "handover.seat.won", {{"name", name}, {"hand", hand}, {"delta", delta}, {"total", total}});
+            } else {
+                table.seats[seat] = Tr(strings, "handover.seat.drawn", {{"name", name}, {"total", total}});
+            }
         }
         if (!won) {
-            table.headline = eastl::string(kDrawnHand);
-            table.summary = eastl::string(kNoPayments);
+            table.headline = Tr(strings, "handover.drawn");
+            table.summary = Tr(strings, "handover.noPayments");
             return table;
         }
         table.headline = WinHeadline(strings, settlement, result, seats);
@@ -146,7 +153,7 @@ namespace BECore::Mahjong {
             table.lines.push_back(ScoreLineText(strings, breakdown.lines[i]));
         }
         if (shown < count) {
-            table.lines.push_back(Format("+{} more", count - shown));
+            table.lines.push_back(Tr(strings, "handover.more", {{"n", Format("{}", count - shown)}}));
         }
         return table;
     }
@@ -162,16 +169,17 @@ namespace BECore::Mahjong {
             if (i > 0 && scores[order[i]] != scores[order[i - 1]]) {
                 place = i + 1;
             }
-            table.rows[i] = Format("{}. {}: {}", place, SeatLabel(strings, order[i], seats), scores[order[i]]);
+            table.rows[i] = Tr(strings, "matchover.row", {{"place", Format("{}", place)}, {"name", SeatLabel(strings, order[i], seats)}, {"score", Format("{}", scores[order[i]])}});
             tied += scores[order[i]] == scores[order[0]] ? 1 : 0;
         }
         if (tied == 1) {
-            table.headline = Format("{} wins the match", SeatLabel(strings, order[0], seats));
+            table.headline = Tr(strings, "matchover.wins", {{"winner", SeatLabel(strings, order[0], seats)}});
         } else {
-            table.headline.assign(kTiedForFirst.data(), kTiedForFirst.size());
+            eastl::string names;
             for (int i = 0; i < tied; ++i) {
-                table.headline += Format("{} {}", i > 0 ? "," : "", SeatLabel(strings, order[i], seats));
+                names += Format("{}{}", i > 0 ? ", " : "", SeatLabel(strings, order[i], seats));
             }
+            table.headline = Tr(strings, "matchover.tied", {{"seats", names}});
         }
         return table;
     }

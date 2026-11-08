@@ -66,6 +66,24 @@
         <string key="score.kind.ThirteenOrphans" text="Thirteen orphans"/>
         <string key="score.kind.LastTileOneDot" text="Last tile, 1 of dots"/>
         <string key="score.kind.LooseTileFiveDots" text="Loose tile, 5 of dots"/>
+        <string key="handover.win.selfDraw" text="{winner} wins by self-draw"/>
+        <string key="handover.win.discard" text="{winner} wins on the discard of {from}"/>
+        <string key="handover.win.discardUnknown" text="{winner} wins on a discard"/>
+        <string key="handover.win.robbedKong" text="{winner} wins by robbing the kong of {from}"/>
+        <string key="handover.win.robbedKongUnknown" text="{winner} wins by robbing a kong"/>
+        <string key="handover.drawn" text="Drawn hand"/>
+        <string key="handover.noPayments" text="No payments"/>
+        <string key="handover.summary.limit" text="Winning tile {tile}: score {score}"/>
+        <string key="handover.summary.doubles" text="Winning tile {tile}: {points} points x {multiplier} = {raw}, score {score}"/>
+        <string key="handover.summary.plain" text="Winning tile {tile}: {points} points, score {score}"/>
+        <string key="handover.seat.won" text="{name}: hand {hand}, {delta}, total {total}"/>
+        <string key="handover.seat.drawn" text="{name}: no payment, total {total}"/>
+        <string key="handover.more" text="+{n} more"/>
+        <string key="handover.next" text="Next hand"/>
+        <string key="handover.finish" text="Finish match"/>
+        <string key="matchover.wins" text="{winner} wins the match"/>
+        <string key="matchover.tied" text="Tied for first: {seats}"/>
+        <string key="matchover.row" text="{place}. {name}: {score}"/>
     </language>
     <language id="ru">
         <string key="lang.en" text="English"/>
@@ -131,5 +149,23 @@
         <string key="score.kind.ThirteenOrphans" text="Тринадцать сирот"/>
         <string key="score.kind.LastTileOneDot" text="Последняя кость, 1 круг"/>
         <string key="score.kind.LooseTileFiveDots" text="Запасная кость, 5 кругов"/>
+        <string key="handover.win.selfDraw" text="{winner} побеждает, взяв кость из стены"/>
+        <string key="handover.win.discard" text="{winner} побеждает на сбросе: {from}"/>
+        <string key="handover.win.discardUnknown" text="{winner} побеждает на сброшенной кости"/>
+        <string key="handover.win.robbedKong" text="{winner} побеждает, забрав конг: {from}"/>
+        <string key="handover.win.robbedKongUnknown" text="{winner} побеждает, забрав конг"/>
+        <string key="handover.drawn" text="Ничья"/>
+        <string key="handover.noPayments" text="Без выплат"/>
+        <string key="handover.summary.limit" text="Выигрышная кость {tile}: счёт {score}"/>
+        <string key="handover.summary.doubles" text="Выигрышная кость {tile}: {points} очк. x {multiplier} = {raw}, счёт {score}"/>
+        <string key="handover.summary.plain" text="Выигрышная кость {tile}: {points} очк., счёт {score}"/>
+        <string key="handover.seat.won" text="{name}: рука {hand}, {delta}, итого {total}"/>
+        <string key="handover.seat.drawn" text="{name}: без выплат, итого {total}"/>
+        <string key="handover.more" text="ещё +{n}"/>
+        <string key="handover.next" text="Следующая раздача"/>
+        <string key="handover.finish" text="Закончить матч"/>
+        <string key="matchover.wins" text="{winner} выигрывает матч"/>
+        <string key="matchover.tied" text="Делят первое место: {seats}"/>
+        <string key="matchover.row" text="{place}. {name}: {score}"/>
     </language>
 </UIStrings>

@@ -327,6 +327,112 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(text.empty());
     }
 
+    TEST(ScoreTextTest, TheWorkedSelfDrawFormatsToTheExpectedRowsInRussian) {
+        const HandModel model = PlayToSelfDrawWin();
+        const HandSettlement settlement = SettleHand(model);
+
+        const ScoreTable table = FormatScoreTable(Ru(), settlement, *model.Result(), TotalsAfter(settlement), kDefaultSeatSetup);
+
+        EXPECT_STREQ(table.headline.c_str(), "Место 2 (Юг) побеждает, взяв кость из стены");
+        EXPECT_STREQ(table.summary.c_str(), "Выигрышная кость Круги 4: 36 очк. x 8 = 288, счёт 290");
+        EXPECT_STREQ(table.seats[kSeat0].c_str(), "Место 1 (Восток) Вы: рука 0, -600, итого 1400");
+        EXPECT_STREQ(table.seats[kSeat1].c_str(), "Место 2 (Юг): рука 290, +1160, итого 3160");
+        EXPECT_STREQ(table.seats[kSeat2].c_str(), "Место 3 (Запад): рука 10, -260, итого 1740");
+        EXPECT_STREQ(table.seats[kSeat3].c_str(), "Место 4 (Север): рука 0, -300, итого 1700");
+        const char* const expected[] = {"Победа: 20",
+                                        "Кость из стены: 2",
+                                        "Пун (Бамбук 6): 4",
+                                        "Пун (Красный дракон): 8",
+                                        "Пара (Ветер: Юг): 2",
+                                        "Набор драконов (Красный дракон): x2",
+                                        "Полностью закрытая: x2",
+                                        "Заявка с первого хода: x2"};
+        ASSERT_EQ(table.lines.size(), std::size(expected));
+        for (size_t i = 0; i < table.lines.size(); ++i) {
+            EXPECT_STREQ(table.lines[i].c_str(), expected[i]) << "line " << i;
+        }
+    }
+
+    TEST(ScoreTextTest, EverySentenceOfTheHandScreenIsBuiltInEveryLanguage) {
+        UIStrings strings;
+        ASSERT_TRUE(LoadShippedStrings(strings).empty());
+        ForEachLanguage(strings, [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            const bool russian = language.ToStringView() == "ru";
+            HandSettlement settlement = MadeUpWin({MakeLine(ScoreKind::Win, "", 20, 0), MakeLine(ScoreKind::OnlyPungs, "", 0, 1)});
+            settlement.breakdowns[kSeat2].points = 20;
+            settlement.breakdowns[kSeat2].doubles = 1;
+            settlement.breakdowns[kSeat2].raw = 40;
+            HandResult result;
+            result.kind = ResultKind::Win;
+            result.winner = kSeat2;
+            result.winningTile = T("5p");
+            const std::string winner = Std(SeatName(strings, kSeat2, Wind::West));
+            const std::string from = Std(SeatName(strings, kSeat3, Wind::North));
+
+            std::set<std::string> headlines;
+            for (const WinSource source : {WinSource::SelfDraw, WinSource::Discard, WinSource::RobbedKong}) {
+                for (const Seat origin : {kSeat3, kNoSeat}) {
+                    result.source = source;
+                    result.from = origin;
+                    const std::string headline = Std(FormatScoreTable(strings, settlement, result, TotalsAfter(settlement), kNoPeople).headline);
+                    EXPECT_NE(headline.find(winner), std::string::npos) << headline;
+                    EXPECT_EQ(headline.find("handover."), std::string::npos) << "a key stands in for a missing text: " << headline;
+                    EXPECT_EQ(headline.find('{'), std::string::npos) << "a placeholder was left: " << headline;
+                    EXPECT_EQ(headline.find(from) != std::string::npos, source != WinSource::SelfDraw && origin == kSeat3) << headline;
+                    headlines.insert(headline);
+                }
+            }
+            EXPECT_EQ(headlines.size(), 5u) << "self-draw, discard (known / unknown), robbed kong (known / unknown)";
+
+            const ScoreTable won = FormatScoreTable(strings, settlement, result, TotalsAfter(settlement), kNoPeople);
+            EXPECT_EQ(Std(won.summary).find("handover."), std::string::npos);
+            EXPECT_EQ(Std(won.summary).find('{'), std::string::npos);
+            EXPECT_NE(Std(won.summary).find("2"), std::string::npos);
+            for (const eastl::string& row : won.seats) {
+                EXPECT_EQ(Std(row).find("handover."), std::string::npos) << Std(row);
+                EXPECT_EQ(Std(row).find('{'), std::string::npos) << Std(row);
+            }
+            EXPECT_NE(Std(won.seats[kSeat2]).find("+300"), std::string::npos) << "the sign and the number stay in the row";
+            EXPECT_NE(Std(won.seats[kSeat0]).find("-100"), std::string::npos);
+
+            HandSettlement drawn;
+            drawn.kind = ResultKind::Drawn;
+            const ScoreTable none = FormatScoreTable(strings, drawn, HandResult{}, SeatScores{2000, 2000, 2000, 2000}, kNoPeople);
+            EXPECT_STREQ(none.headline.c_str(), russian ? "Ничья" : "Drawn hand");
+            EXPECT_STREQ(none.summary.c_str(), russian ? "Без выплат" : "No payments");
+            EXPECT_TRUE(none.lines.empty());
+            EXPECT_STREQ(none.seats[kSeat1].c_str(), russian ? "Место 2 (Юг): без выплат, итого 2000" : "Seat 2 (South): no payment, total 2000");
+        });
+    }
+
+    TEST(ScoreTextTest, TheOtherSummariesAndTheMoreLineInRussian) {
+        HandSettlement settlement = MadeUpWin({MakeLine(ScoreKind::ThirteenOrphans, "", 0, 0)});
+        settlement.breakdowns[kSeat2].limitHand = ScoreKind::ThirteenOrphans;
+        settlement.breakdowns[kSeat2].score = kLimit;
+        HandResult result;
+        result.kind = ResultKind::Win;
+        result.winner = kSeat2;
+        result.winningTile = T("Rd");
+        const ScoreTable limit = FormatScoreTable(Ru(), settlement, result, TotalsAfter(settlement), kNoPeople);
+        ASSERT_EQ(limit.lines.size(), 1u);
+        EXPECT_STREQ(limit.lines[0].c_str(), "Лимит: Тринадцать сирот");
+        EXPECT_STREQ(limit.summary.c_str(), "Выигрышная кость Красный дракон: счёт 500");
+
+        settlement.breakdowns[kSeat2].limitHand.reset();
+        settlement.breakdowns[kSeat2].points = 20;
+        settlement.breakdowns[kSeat2].score = 20;
+        EXPECT_STREQ(FormatScoreTable(Ru(), settlement, result, TotalsAfter(settlement), kNoPeople).summary.c_str(), "Выигрышная кость Красный дракон: 20 очк., счёт 20");
+
+        eastl::vector<ScoreLine> lines;
+        for (int i = 0; i < kMaxScoreLines + 4; ++i) {
+            lines.push_back(MakeLine(ScoreKind::Bonus, "F1", 4, 0));
+        }
+        const ScoreTable many = FormatScoreTable(Ru(), MadeUpWin(lines), HandResult{ResultKind::Win, kSeat2, T("5p")}, TotalsAfter(settlement), kNoPeople);
+        ASSERT_EQ(many.lines.size(), static_cast<size_t>(kMaxScoreLines));
+        EXPECT_STREQ(many.lines.back().c_str(), "ещё +5");
+    }
+
     // ----- the end of a match -----
 
     TEST(ScoreTextTest, TheStandingsListTheSeatsBestFirstAndTiedSeatsShareAPlaceInSeatOrder) {
@@ -361,6 +467,31 @@ namespace BECore::Mahjong::Tests {
         EXPECT_STREQ(table.rows[1].c_str(), "2. Seat 3: 2100");
         EXPECT_STREQ(table.rows[2].c_str(), "3. Seat 2: 2000");
         EXPECT_STREQ(table.rows[3].c_str(), "4. Seat 1 You: 1700");
+    }
+
+    TEST(ScoreTextTest, TheStandingsAreWordedInEveryLanguage) {
+        Match match;
+        ASSERT_TRUE(match.Start(MahjongSettings{}, 1).has_value());
+        HandSettlement settlement;
+        settlement.kind = ResultKind::Drawn;
+        settlement.deltas = {100, -100, 100, -100};
+        ASSERT_TRUE(match.ApplySettlement(settlement).has_value());
+
+        const StandingsTable tied = FormatStandings(Ru(), match, kNoPeople);
+        EXPECT_STREQ(tied.headline.c_str(), "Делят первое место: Место 1, Место 3");
+        EXPECT_STREQ(tied.rows[0].c_str(), "1. Место 1: 2100");
+        EXPECT_STREQ(tied.rows[3].c_str(), "3. Место 4: 1900");
+
+        HandSettlement second;
+        second.kind = ResultKind::Drawn;
+        second.deltas = {-300, 0, 100, 200};
+        Match other;
+        ASSERT_TRUE(other.Start(MahjongSettings{}, 1).has_value());
+        ASSERT_TRUE(other.ApplySettlement(second).has_value());
+        const StandingsTable one = FormatStandings(Ru(), other, kDefaultSeatSetup);
+        EXPECT_STREQ(one.headline.c_str(), "Место 4 выигрывает матч");
+        EXPECT_STREQ(one.rows[0].c_str(), "1. Место 4: 2200");
+        EXPECT_STREQ(one.rows[3].c_str(), "4. Место 1 Вы: 1700");
     }
 
 }  // namespace BECore::Mahjong::Tests
