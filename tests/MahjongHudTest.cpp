@@ -163,6 +163,30 @@ namespace BECore::Mahjong::Tests {
         EXPECT_GE(Element("Hud", "NewGame")->rect.h, kMinControlHeight);
     }
 
+    TEST_F(MahjongHudTest, TheRowsOfEachPanelLieInsideItWithThePaddingKept) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        Draw();
+        SetWorstVars();
+        constexpr float kPanelPadding = 8.0f;
+
+        const struct {
+            const char* panel;
+            std::vector<const char*> rows;
+        } panels[] = {{"Info", {"RoundLabel", "WallLabel", "TurnLabel"}}, {"Scores", {"Score0", "Score1", "Score2", "Score3"}}};
+        for (const auto& [panel, rows] : panels) {
+            const UIElement* plate = Element("Hud", panel);
+            ASSERT_NE(plate, nullptr) << panel;
+            for (const char* name : rows) {
+                const UIElement* row = Element("Hud", name);
+                ASSERT_NE(row, nullptr) << name;
+                EXPECT_GE(row->rect.x, plate->rect.x + kPanelPadding) << name;
+                EXPECT_GE(row->rect.y, plate->rect.y + kPanelPadding) << name;
+                EXPECT_LE(row->rect.x + row->rect.w, plate->rect.x + plate->rect.w - kPanelPadding) << name;
+                EXPECT_LE(row->rect.y + row->rect.h, plate->rect.y + plate->rect.h - kPanelPadding) << name;
+            }
+        }
+    }
+
     TEST_F(MahjongHudTest, TheSetupPanelPassesTheSizeMatrixAndEveryWordFitsAndEverySegmentIsATouchTarget) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         _game->OpenSetup();

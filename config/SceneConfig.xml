@@ -118,19 +118,19 @@
             <component type="MahjongHudComponent" />
             <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
               <elements>
-                <element type="UIStack" name="Info" anchor="TopLeft" x="96" y="4" width="336" height="94" direction="Vertical" padding="2" crossAlign="Stretch" color="0,0,0,110">
+                <element type="UIStack" name="Info" anchor="TopLeft" x="96" y="8" width="336" height="112" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170">
                   <children>
-                    <element type="UILabel" name="RoundLabel" height="30" text="Round: {round}, hand {hand} of {handsTotal}" fontSize="20" />
-                    <element type="UILabel" name="WallLabel" height="30" text="Wall: {wall}" fontSize="20" />
-                    <element type="UILabel" name="TurnLabel" height="30" text="Turn: {turn}" fontSize="20" />
+                    <element type="UILabel" name="RoundLabel" height="32" text="Round: {round}, hand {hand} of {handsTotal}" fontSize="22" />
+                    <element type="UILabel" name="WallLabel" height="32" text="Wall: {wall}" fontSize="22" />
+                    <element type="UILabel" name="TurnLabel" height="32" text="Turn: {turn}" fontSize="22" />
                   </children>
                 </element>
-                <element type="UIStack" name="Scores" anchor="TopLeft" x="100" y="100" width="400" height="144" direction="Vertical" padding="4" crossAlign="Stretch" color="0,0,0,110">
+                <element type="UIStack" name="Scores" anchor="TopLeft" x="96" y="128" width="400" height="144" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170">
                   <children>
-                    <element type="UILabel" name="Score0" height="34" text="{seatMark0}{seatName0}{seatDealer0}: {seatScore0}" fontSize="22" />
-                    <element type="UILabel" name="Score1" height="34" text="{seatMark1}{seatName1}{seatDealer1}: {seatScore1}" fontSize="22" />
-                    <element type="UILabel" name="Score2" height="34" text="{seatMark2}{seatName2}{seatDealer2}: {seatScore2}" fontSize="22" />
-                    <element type="UILabel" name="Score3" height="34" text="{seatMark3}{seatName3}{seatDealer3}: {seatScore3}" fontSize="22" />
+                    <element type="UILabel" name="Score0" height="32" text="{seatMark0}{seatName0}{seatDealer0}: {seatScore0}" fontSize="22" />
+                    <element type="UILabel" name="Score1" height="32" text="{seatMark1}{seatName1}{seatDealer1}: {seatScore1}" fontSize="22" />
+                    <element type="UILabel" name="Score2" height="32" text="{seatMark2}{seatName2}{seatDealer2}: {seatScore2}" fontSize="22" />
+                    <element type="UILabel" name="Score3" height="32" text="{seatMark3}{seatName3}{seatDealer3}: {seatScore3}" fontSize="22" />
                   </children>
                 </element>
                 <element type="UIButton" name="NewGame" anchor="TopRight" x="-8" y="8" width="176" height="56" text="New game" fontSize="22" action="MahjongNewGame" color="45,75,120,255" />
