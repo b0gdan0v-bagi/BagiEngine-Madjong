@@ -17,8 +17,8 @@
  * `LegalActions` against `Apply` (`EveryCanonicalAction`, `AcceptedExactlyWhenListed`) and the chooser that plays a hand with random
  * legal actions. Header only. Included directly by `ComputerClaimTest`, `ComputerMatchTest`, `ComputerPlayerTest`, `ComputerStrengthTest`,
  * `ComputerTestSupport.h`, `ComputerTurnTest`, `ComputerViewTest`, `HandModelActionsTest`, `HandModelClaimTest`, `HandModelKongTest`,
- * `HandModelPlayoutTest`, `HandModelTurnTest`, `MahjongGameTest`, `MatchTest`, `PaymentsTest` and `TableSessionTest`, and through `ScoreTestSupport.h`
- * by `MatchTestSupport.h` (so `MatchPlayoutTest` and `ComputerMatchTest`) and the `Score*Test` files. What differs
+ * `HandModelPlayoutTest`, `HandModelTurnTest`, `MahjongGameTest`, `MatchTest`, `PaymentsTest` and `TableSessionTest`,
+ * and through `ScoreTestSupport.h` by `MatchTestSupport.h` (so `MatchPlayoutTest` and `ComputerMatchTest`) and the `Score*Test` files. What differs
  * between the files (the quiet hands, the specs) stays in them.
  */
 namespace BECore::Mahjong::Tests {

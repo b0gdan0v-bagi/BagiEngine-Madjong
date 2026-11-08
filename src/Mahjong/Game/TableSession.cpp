@@ -139,7 +139,7 @@ namespace BECore::Mahjong {
     }
 
     void TableSession::CoverForNextPerson() {
-        if (PersonCount() >= 2 && ActorIsPerson() && Actor() != _viewer) {
+        if (HandoffPending()) {
             _viewer = kNoSeat;
         }
     }

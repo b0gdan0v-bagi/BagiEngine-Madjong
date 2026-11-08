@@ -16,6 +16,13 @@ namespace BECore::Mahjong::Tests {
         /// Far more actions than a hand of people and computers takes; a loop fails fast.
         constexpr int kActionLimitPerMatch = 20000;
         constexpr int kSeedsToSearch = 80;
+        /// Actions of a loop that looks for a claim window of two seats, and of one that stops where a person must act.
+        constexpr int kActionLimitSearch = 400;
+        constexpr int kActionLimitPerHandStop = 60;
+        /// Counted hands of a short match played by computers; a loop fails fast.
+        constexpr int kHandLimitPerMatch = 200;
+        /// Not a positive multiple of 4, so `StartMatch` refuses it.
+        constexpr int kUnplayableHandsPerMatch = 6;
         constexpr int kTableTotal = kSeatCount * kExpectedStartingScore;
 
         constexpr SeatSetup kAllComputers{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
@@ -135,7 +142,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(table.Start(kDefaultSeatSetup));
         const std::string before = State(table);
         MahjongSettings bad;
-        bad.handsPerMatch = 6;
+        bad.handsPerMatch = kUnplayableHandsPerMatch;
         const MatchStatus refused = table.session.StartMatch(bad, kSeed + 1, kAllComputers);
         ASSERT_FALSE(refused.has_value());
         EXPECT_EQ(refused.error(), MatchError::BadSettings);
@@ -149,7 +156,7 @@ namespace BECore::Mahjong::Tests {
             Table table;
             ASSERT_NO_FATAL_FAILURE(table.Start(kAllPeople, seed));
             MahjongRng rng(seed);
-            for (int actions = 0; actions < 400 && table.session.GetPhase() == SessionPhase::Playing; ++actions) {
+            for (int actions = 0; actions < kActionLimitSearch && table.session.GetPhase() == SessionPhase::Playing; ++actions) {
                 const HandModel& hand = table.match.Hand();
                 if (hand.GetPhase() == Phase::Discard) {
                     ASSERT_EQ(table.session.Actor(), hand.CurrentSeat());
@@ -203,7 +210,7 @@ namespace BECore::Mahjong::Tests {
             Table table;
             ASSERT_NO_FATAL_FAILURE(table.Start(seats));
             MahjongRng rng(kSeed);
-            for (int actions = 0; actions < 60 && table.session.GetPhase() == SessionPhase::Playing; ++actions) {
+            for (int actions = 0; actions < kActionLimitPerHandStop && table.session.GetPhase() == SessionPhase::Playing; ++actions) {
                 const uint64_t version = table.session.Version();
                 const int steps = table.session.RunComputers();
                 EXPECT_EQ(table.session.Version(), version + static_cast<uint64_t>(steps));
@@ -290,7 +297,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(table.Start(kAllComputers, kSeed, settings));
         uint64_t version = table.session.Version();
         for (int hands = 0; table.session.GetPhase() != SessionPhase::MatchOver; ++hands) {
-            ASSERT_LT(hands, 200) << "the match does not end";
+            ASSERT_LT(hands, kHandLimitPerMatch) << "the match does not end";
             table.session.RunComputers();
             ASSERT_EQ(table.session.GetPhase(), SessionPhase::HandOver);
             ASSERT_TRUE(table.session.NextHand().has_value());
