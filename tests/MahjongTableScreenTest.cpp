@@ -4,6 +4,7 @@
 #include <BECore/UI/UIImage.h>
 #include <BECore/UI/UILabel.h>
 #include <BECore/UI/UIToggle.h>
+#include <Mahjong/Table/UiPalette.h>
 
 /**
  * The canvases of the shipped scene that belong to the table (`Actions`, `Handoff`): the buttons of the component are the buttons of the
@@ -38,6 +39,47 @@ namespace BECore::Mahjong::Tests {
         constexpr float kShapeTolerance = 0.02f;
         /// A pile longer than any hand leaves (136 tiles, 52 in the hands at the least).
         constexpr int kMostDiscards = 100;
+        /// The gap between the buttons of a row, and the width of a row of three buttons of 132 with two gaps (the row wraps at it).
+        constexpr float kButtonGap = 8.0f;
+        constexpr float kRowWidth = 3.0f * 132.0f + 2.0f * kButtonGap;
+
+        /// The role of the colour of a button (an entry of `kUiPaletteNames`), by what the button does.
+        const char* RoleOf(ButtonKind kind) {
+            switch (kind) {
+                case ButtonKind::Win:
+                case ButtonKind::ClaimMahjong:
+                    return "primary";
+                case ButtonKind::ClaimPung:
+                case ButtonKind::ClaimKong:
+                case ButtonKind::ClaimChow0:
+                case ButtonKind::ClaimChow1:
+                case ButtonKind::ClaimChow2:
+                    return "secondary";
+                case ButtonKind::Pass:
+                    return "danger";
+                case ButtonKind::ConcealedKong0:
+                case ButtonKind::ConcealedKong1:
+                case ButtonKind::ConcealedKong2:
+                case ButtonKind::UpgradeKong:
+                case ButtonKind::Declare:
+                    return "neutral";
+            }
+            return "";
+        }
+
+        bool SameColor(const Color& a, const Color& b) {
+            return a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a;
+        }
+
+        const Color& PaletteColor(const char* role) {
+            for (int i = 0; i < kUiPaletteSize; ++i) {
+                if (eastl::string_view(kUiPaletteNames[i]) == role) {
+                    return kUiPalette[i];
+                }
+            }
+            ADD_FAILURE() << "no role " << role;
+            return kUiPalette[0];
+        }
 
     }  // namespace
 
@@ -93,6 +135,28 @@ namespace BECore::Mahjong::Tests {
         }
         EXPECT_NE(Element("Handoff", "Reveal"), nullptr);
         EXPECT_EQ(Element("Handoff", "Reveal")->Cast<UIButton>()->action, "MahjongReveal"_intern);
+    }
+
+    TEST_F(MahjongTableScreenTest, EveryActionButtonHasTheColourOfItsRoleAndTheRowKeepsTheGapOfTheGrid) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        for (int i = 0; i < kButtonCount; ++i) {
+            const ButtonKind kind = static_cast<ButtonKind>(i);
+            const ButtonSpec& spec = SpecOf(kind);
+            const UIElement* element = Element("Actions", spec.element);
+            ASSERT_NE(element, nullptr) << spec.element;
+            EXPECT_TRUE(SameColor(element->color, PaletteColor(RoleOf(kind)))) << spec.element << " is a " << RoleOf(kind) << " button";
+        }
+
+        const UIElement* row = Element("Actions", "ActionRow");
+        ASSERT_NE(row, nullptr);
+        EXPECT_EQ(row->style.stack.spacing, kButtonGap);
+        ASSERT_TRUE(Canvas("Actions")->SetElementVisible("Hint"_intern, true));  // a hidden element has no rect
+        Canvas("Actions")->UpdateLayout(kViewWidth, kViewHeight);
+        EXPECT_EQ(row->rect.w, kRowWidth) << "three buttons and two gaps fit a row";
+        const UIElement* hint = Element("Actions", "Hint");
+        ASSERT_NE(hint, nullptr);
+        EXPECT_EQ(hint->rect.w, kRowWidth) << "the hint is as wide as the row it explains";
+        EXPECT_TRUE(SameColor(hint->color, PaletteColor("scrim")));
     }
 
     TEST_F(MahjongTableScreenTest, EveryElementNameOfTheActionsCanvasIsUniqueAndNoLabelVariableIsLeft) {

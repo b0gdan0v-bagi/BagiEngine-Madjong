@@ -37,8 +37,8 @@
           <components>
             <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
               <elements>
-                <element type="UILabel" name="Hint" anchor="TopLeft" ignoreSafeArea="true" visible="false" x="724" y="392" width="408" height="60" text="{actionHint}" fontSize="18" align="Center" verticalAlign="Center" color="0,0,0,200" />
-                <element type="UIStack" name="ActionRow" anchor="TopLeft" ignoreSafeArea="true" x="724" y="460" width="408" height="180" direction="Horizontal" spacing="6" wrapChildren="true">
+                <element type="UILabel" name="Hint" anchor="TopLeft" ignoreSafeArea="true" visible="false" x="724" y="392" width="412" height="60" text="{actionHint}" fontSize="18" align="Center" verticalAlign="Center" color="0,0,0,200" />
+                <element type="UIStack" name="ActionRow" anchor="TopLeft" ignoreSafeArea="true" x="724" y="460" width="412" height="180" direction="Horizontal" spacing="8" wrapChildren="true">
                   <children>
                   <element type="UIButton" name="Win" visible="false" width="132" height="56" text="Mahjong!" fontSize="22" action="MahjongWin" color="40,110,60,255" />
                   <element type="UIButton" name="Mahjong" visible="false" width="132" height="56" text="Mahjong!" fontSize="18" verticalAlign="Top" action="MahjongClaimMahjong" color="40,110,60,255">
