@@ -127,6 +127,30 @@ namespace BECore::Mahjong {
         Seat seat = 0;
     };
 
+    /// What kind of move a `HandMove` records (`HandModel::Moves()`). The three claims are the carried-out ones from a discard.
+    CORE_ENUM(MoveKind, uint8_t, Discard, ClaimChow, ClaimPung, ClaimKong, ConcealedKong, UpgradeKong)
+
+    /**
+     * @brief One accepted move of the hand, public data only (`HandModel::Moves()`).
+     *
+     * - `Discard`: `seat` discarded `tile`; `declaredCalling` when the discard declared the calling hand.
+     * - `ClaimChow` / `ClaimPung` / `ClaimKong`: a claim that was carried out; `seat` is the claimer, `tile` the claimed tile, `from`
+     *   the discarder, `meld` the index of the new meld in `GetHand(seat).melds`.
+     * - `ConcealedKong`: `seat` and `meld` (the index of the kong); `tile` stays invalid, the tile of a concealed kong is not public.
+     * - `UpgradeKong`: `seat`, `tile` and `meld` (the index of the pung that grows); logged when the upgrade is accepted, also when the
+     *   kong is then robbed.
+     *
+     * `meld` is -1 and `from` is `kNoSeat` where they do not apply.
+     */
+    struct HandMove {
+        MoveKind kind = MoveKind::Discard;
+        Seat seat = 0;
+        Tile tile;
+        Seat from = kNoSeat;
+        int meld = -1;
+        bool declaredCalling = false;
+    };
+
     /// What an action returns: nothing, or why it was refused.
     using HandStatus = std::expected<void, HandError>;
 
@@ -194,6 +218,18 @@ namespace BECore::Mahjong {
         }
         [[nodiscard]] const Wall& GetWall() const noexcept {
             return _wall;
+        }
+        /// The tile `seat` has just drawn (a regular or a loose draw, a bonus tile already replaced): invalid unless the phase is
+        /// `Discard`, `seat` is `CurrentSeat()` and it really drew (after the claim of a pung or a chow it holds one tile too many but
+        /// drew nothing; after a kong, claimed or concealed, it is the loose tile). A front end calls it only for the seat whose hand it
+        /// shows face up.
+        [[nodiscard]] Tile DrawnTile(Seat seat) const noexcept {
+            return _phase == Phase::Discard && seat == _current ? _drawnTile : Tile{};
+        }
+        /// Every accepted move of this hand in order (discards, carried-out claims of a chow, pung or kong, concealed and upgraded
+        /// kongs); `Begin` clears it. Passes, wins, bonus tiles and the end of a hand are not in it (`Result()` has the end).
+        [[nodiscard]] const eastl::vector<HandMove>& Moves() const noexcept {
+            return _moves;
         }
         /// The outcome once the phase is `Finished`.
         [[nodiscard]] const std::optional<HandResult>& Result() const noexcept {
@@ -330,6 +366,7 @@ namespace BECore::Mahjong {
         Wall _wall;
         eastl::array<PlayerHand, kSeatCount> _hands;
         eastl::vector<DiscardEntry> _discards;
+        eastl::vector<HandMove> _moves;
         Phase _phase = Phase::Finished;
         Seat _current = 0;
         /// The tile `_current` has just drawn (invalid when the extra tile is not a draw, e.g. after a claim) and whether it came from

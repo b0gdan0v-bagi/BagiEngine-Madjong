@@ -165,6 +165,7 @@ namespace BECore::Mahjong {
         }
         ++hand.discardCount;
         _discards.push_back({tile, seat});
+        _moves.push_back({MoveKind::Discard, seat, tile, kNoSeat, -1, declareCalling});
         _drawnTile = Tile{};
         _drawnLoose = false;
         AfterDiscard(seat, tile);
@@ -202,6 +203,7 @@ namespace BECore::Mahjong {
         meld.concealed = true;
         meld.first = tile;
         hand.melds.push_back(meld);
+        _moves.push_back({MoveKind::ConcealedKong, seat, Tile{}, kNoSeat, static_cast<int>(hand.melds.size()) - 1, false});
         Receive(seat, _wall.DrawLoose(), true);
         return {};
     }
@@ -212,9 +214,11 @@ namespace BECore::Mahjong {
         }
         PlayerHand& hand = _hands[seat];
         // Only the tile drawn from the wall this turn upgrades a pung: not a copy kept from earlier turns, not right after a claim.
-        if (FindPung(hand, tile) == nullptr || _drawnTile != tile) {
+        const Meld* pung = FindPung(hand, tile);
+        if (pung == nullptr || _drawnTile != tile) {
             return std::unexpected(HandError::IllegalKong);
         }
+        _moves.push_back({MoveKind::UpgradeKong, seat, tile, kNoSeat, static_cast<int>(pung - hand.melds.data()), false});
         if (!OpenWindow(Phase::RobKong, seat, tile)) {
             CompleteKong(seat, tile);
         }
@@ -445,6 +449,8 @@ namespace BECore::Mahjong {
             return;
         }
         ExposeClaim(winner, claim, from, tile);
+        const MoveKind moveKind = claim.kind == ClaimKind::Chow ? MoveKind::ClaimChow : claim.kind == ClaimKind::Pung ? MoveKind::ClaimPung : MoveKind::ClaimKong;
+        _moves.push_back({moveKind, winner, tile, from, static_cast<int>(_hands[winner].melds.size()) - 1, false});
         if (claim.kind == ClaimKind::Kong) {
             Receive(winner, _wall.DrawLoose(), true);
             return;
