@@ -1,6 +1,8 @@
 #include "MahjongTableTestSupport.h"
 
 #include <BECore/UI/UIButton.h>
+#include <BECore/UI/UIImage.h>
+#include <BECore/UI/UILabel.h>
 #include <BECore/UI/UIToggle.h>
 
 /**
@@ -11,9 +13,6 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        constexpr const char* kLongestChow = "Chow 7-9s";
-        constexpr const char* kLongestKong = "Kong 9m";
-        constexpr const char* kLongestUpgrade = "Add 9m";
         constexpr const char* kLongestSeat = "Seat 4 (North)";
         /// The height of an action button in view units: 32 px (the engine's touch minimum) from a window of 731 x 411 px.
         constexpr float kButtonHeight = 56.0f;
@@ -22,12 +21,31 @@ namespace BECore::Mahjong::Tests {
         /// The table is a fixed design scaled to the window, so on the smallest windows of the matrix (480 px) a button is 21 px high:
         /// the matrix runs the buttons with this minimum, and the engine's own is held from the 731 px windows (the test of the height).
         constexpr float kSmallestWindowTouchMinimum = 20.0f;
+        /// The height of the line of the word at the top of a button; the pictures of tiles lie below it.
+        constexpr float kWordLineHeight = 24.0f;
+        /// The smallest tile picture in view units (the 3:4 of an atlas cell), so a tile can be told at the smallest window of the matrix.
+        constexpr float kLeastTileWidth = 20.0f;
+        constexpr float kLeastTileHeight = 26.0f;
+        constexpr float kTileShape = 3.0f / 4.0f;
+        constexpr float kShapeTolerance = 0.02f;
         /// A pile longer than any hand leaves (136 tiles, 52 in the hands at the least).
         constexpr int kMostDiscards = 100;
 
     }  // namespace
 
-    class MahjongTableScreenTest : public MahjongTableTestBase {};
+    class MahjongTableScreenTest : public MahjongTableTestBase {
+    protected:
+        /// Shows or hides a button of the canvas `Actions` with all the pictures of its tiles.
+        void SetShown(ButtonKind kind, bool shown) {
+            const ButtonSpec& spec = SpecOf(kind);
+            auto canvas = Canvas("Actions");
+            ASSERT_TRUE(canvas);
+            ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(spec.element), shown)) << spec.element;
+            for (int t = 0; t < spec.maxTiles; ++t) {
+                ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(Format("{}Tile{}", spec.element, t)), shown)) << spec.element;
+            }
+        }
+    };
 
     TEST_F(MahjongTableScreenTest, EveryButtonOfTheComponentIsInTheSceneFileWithItsActionAndValue) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
@@ -45,43 +63,105 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_EQ(toggle->onValue, PoolString::Intern(kDeclareOn.data()));
                 EXPECT_EQ(toggle->offValue, PoolString::Intern(kDeclareOff.data()));
                 EXPECT_EQ(toggle->bind, "declareNext"_intern);
+                EXPECT_EQ(toggle->text, eastl::string(spec.word)) << "the toggle says its word";
                 continue;
             }
             const auto* button = element->Cast<UIButton>();
             ASSERT_NE(button, nullptr) << spec.element;
             EXPECT_EQ(button->action, PoolString::Intern(spec.action)) << spec.element;
             EXPECT_EQ(button->value, PoolString::Intern(spec.value)) << spec.element;
-            if (spec.labelVar != nullptr) {
-                EXPECT_EQ(button->text, eastl::string(Format("{{{}}}", spec.labelVar))) << "the label of " << spec.element << " is its variable";
+            EXPECT_EQ(button->text, eastl::string(spec.word)) << "the button says its word, fixed text";
+            // The pictures of its tiles: `maxTiles` hidden images named after the button, and no more
+            int images = 0;
+            for (const auto& child : button->children) {
+                EXPECT_NE(child->Cast<UIImage>(), nullptr) << spec.element << " has only pictures as children";
+                ++images;
+            }
+            EXPECT_EQ(images, spec.maxTiles) << spec.element;
+            for (int t = 0; t < kMaxButtonTiles; ++t) {
+                const std::string name = Format("{}Tile{}", spec.element, t).c_str();
+                EXPECT_EQ(Element("Actions", name.c_str()) != nullptr, t < spec.maxTiles) << name;
             }
         }
         EXPECT_NE(Element("Handoff", "Reveal"), nullptr);
         EXPECT_EQ(Element("Handoff", "Reveal")->Cast<UIButton>()->action, "MahjongReveal"_intern);
     }
 
-    TEST_F(MahjongTableScreenTest, TheActionButtonsPassTheSizeMatrixWithTheLongestLabelsAndEveryButtonIsATouchTarget) {
+    TEST_F(MahjongTableScreenTest, EveryElementNameOfTheActionsCanvasIsUniqueAndNoLabelVariableIsLeft) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
-        UIVars& vars = CoreManager::GetUIVars();
-        for (const char* name : {"chow0", "chow1", "chow2"}) {
-            vars.Set(PoolString::Intern(name), eastl::string_view(kLongestChow));
+        auto canvas = Canvas("Actions");
+        ASSERT_TRUE(canvas);
+        std::set<std::string> names;
+        std::vector<const UIElement*> pending{&canvas->GetRoot()};
+        while (!pending.empty()) {
+            const UIElement* element = pending.back();
+            pending.pop_back();
+            const std::string name = element->name.ToStringView().data();
+            if (!name.empty()) {
+                EXPECT_TRUE(names.insert(name).second) << "duplicate name " << name;
+            }
+            if (const auto* label = element->Cast<UILabel>()) {
+                EXPECT_EQ(std::string(label->text.c_str()).find('{'), std::string::npos) << name << " has a variable in its text";
+            }
+            for (const auto& child : element->children) {
+                pending.push_back(child.Get());
+            }
         }
-        for (const char* name : {"kong0", "kong1", "kong2"}) {
-            vars.Set(PoolString::Intern(name), eastl::string_view(kLongestKong));
-        }
-        vars.Set("upgrade"_intern, eastl::string_view(kLongestUpgrade));
+    }
+
+    TEST_F(MahjongTableScreenTest, TheActionButtonsPassTheSizeMatrixWithTheirWordsAndPicturesAndEveryButtonIsATouchTarget) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         auto canvas = Canvas("Actions");
         ASSERT_TRUE(canvas);
 
-        // The fullest turn (a win, a declaration, three kongs and the upgrade) and the fullest window (all claims, three chows, pass)
-        for (const std::vector<const char*>& names : {std::vector<const char*>{"Win", "Declare", "ConcealedKong0", "ConcealedKong1", "ConcealedKong2", "UpgradeKong"},
-                                                      std::vector<const char*>{"Mahjong", "Kong", "Pung", "Chow0", "Chow1", "Chow2", "Pass"}}) {
+        // The fullest turn (a win, a declaration, three kongs and the upgrade) and the fullest window (all claims, three chows, pass), every
+        // button with all its pictures. The words are fixed text in the file; the longest are `Add to pung`, `Mahjong!` and `Ready hand`.
+        for (const std::vector<ButtonKind>& kinds :
+             {std::vector<ButtonKind>{ButtonKind::Win, ButtonKind::Declare, ButtonKind::ConcealedKong0, ButtonKind::ConcealedKong1, ButtonKind::ConcealedKong2, ButtonKind::UpgradeKong},
+              std::vector<ButtonKind>{ButtonKind::ClaimMahjong, ButtonKind::ClaimKong, ButtonKind::ClaimPung, ButtonKind::ClaimChow0, ButtonKind::ClaimChow1, ButtonKind::ClaimChow2,
+                                      ButtonKind::Pass}}) {
             for (int i = 0; i < kButtonCount; ++i) {
-                canvas->SetElementVisible(PoolString::Intern(SpecOf(static_cast<ButtonKind>(i)).element), false);
+                SetShown(static_cast<ButtonKind>(i), false);
             }
-            for (const char* name : names) {
-                ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(name), true)) << name;
+            for (const ButtonKind kind : kinds) {
+                SetShown(kind, true);
             }
             ExpectPassesTheMatrix("Actions", kSmallestWindowTouchMinimum);
+        }
+    }
+
+    TEST_F(MahjongTableScreenTest, EveryTilePictureLiesInsideItsButtonBelowTheWordAndKeepsTheShapeOfATile) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        for (int i = 0; i < kButtonCount; ++i) {
+            SetShown(static_cast<ButtonKind>(i), true);
+        }
+        Canvas("Actions")->UpdateLayout(kViewWidth, kViewHeight);
+
+        for (int i = 0; i < kButtonCount; ++i) {
+            const ButtonSpec& spec = SpecOf(static_cast<ButtonKind>(i));
+            const UIElement* button = Element("Actions", spec.element);
+            ASSERT_NE(button, nullptr) << spec.element;
+            const Rect& outer = button->rect;
+            EXPECT_GE(outer.w, 132.0f) << spec.element;
+            EXPECT_GE(outer.h, kButtonHeight) << spec.element;
+            const UIElement* previous = nullptr;
+            for (int t = 0; t < spec.maxTiles; ++t) {
+                const std::string name = Format("{}Tile{}", spec.element, t).c_str();
+                const UIElement* picture = Element("Actions", name.c_str());
+                ASSERT_NE(picture, nullptr) << name;
+                const Rect& r = picture->rect;
+                EXPECT_GE(r.x, outer.x) << name;
+                EXPECT_LE(r.x + r.w, outer.x + outer.w) << name;
+                EXPECT_GE(r.y, outer.y + kWordLineHeight) << name << " lies below the line of the word";
+                EXPECT_LE(r.y + r.h, outer.y + outer.h) << name;
+                EXPECT_GE(r.w, kLeastTileWidth) << name;
+                EXPECT_GE(r.h, kLeastTileHeight) << name;
+                EXPECT_NEAR(r.w / r.h, kTileShape, kShapeTolerance) << name;
+                if (previous != nullptr) {
+                    EXPECT_GE(r.x, previous->rect.x + previous->rect.w) << name << " does not overlap the tile before it";
+                }
+                previous = picture;
+            }
         }
     }
 

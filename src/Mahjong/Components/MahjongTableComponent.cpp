@@ -4,6 +4,7 @@
 #include <BECore/Renderer/IRenderer.h>
 #include <BECore/Scene/Scene.h>
 #include <BECore/UI/UICanvasComponent.h>
+#include <BECore/UI/UIImage.h>
 #include <CoreSDL/SDLEvents.h>
 #include <Events/InputEvents.h>
 #include <Events/SceneEvents.h>
@@ -17,6 +18,7 @@ namespace BECore::Mahjong {
     namespace {
 
         constexpr eastl::string_view kRevealAction = "MahjongReveal";
+        constexpr const char* kActionsNode = "Actions";
         constexpr Color kFelt{22, 92, 62, 255};
         constexpr Color kActingSeat{255, 214, 80, 90};
         constexpr Color kPendingDiscard{255, 214, 80, 200};
@@ -42,6 +44,18 @@ namespace BECore::Mahjong {
                 return all || other == seat;
             }
         };
+
+        /// The picture `name` of the canvas on the node `Actions`; null when the scene has none.
+        UIImage* FindActionImage(Scene& scene, PoolString name) {
+            for (const auto& node : scene.GetRootNode().GetChildren()) {
+                if (node->GetName() == PoolString::Intern(kActionsNode)) {
+                    const auto canvas = node->GetComponent<UICanvasComponent>();
+                    UIElement* element = canvas ? canvas->GetRoot().FindByName(name) : nullptr;
+                    return element != nullptr ? element->Cast<UIImage>() : nullptr;
+                }
+            }
+            return nullptr;
+        }
 
         Faces FacesOf(const TableSession& session) {
             Faces faces;
@@ -167,7 +181,9 @@ namespace BECore::Mahjong {
         ActionButtons buttons;
         const TableSession& session = game.GetSession();
         if (PersonActs(game)) {
-            buttons = MakeActionButtons(game.GetMatch().Hand().LegalActions(session.Actor()));
+            const HandModel& hand = game.GetMatch().Hand();
+            // The tile of the window: the discard that waits for a claim, the tile of a kong that waits to be robbed (invalid in a turn)
+            buttons = MakeActionButtons(hand.LegalActions(session.Actor()), hand.PendingTile());
         }
         // The flag belongs to the turn it was set on: gone when the button goes, and when the turn moved on without the table's discard
         if (!buttons[ButtonKind::Declare].shown || TurnOf(game) != _declareTurn) {
@@ -185,11 +201,26 @@ namespace BECore::Mahjong {
             const ButtonState& now = buttons[kind];
             const ButtonState& before = _published[kind];
             const ButtonSpec& spec = SpecOf(kind);
-            if (spec.labelVar != nullptr && now.label != before.label) {
-                vars.Set(PoolString::Intern(spec.labelVar), eastl::string_view(now.label));
-            }
             if (now.shown != before.shown) {
                 UICanvasComponent::SetElementVisibleByName(scene, PoolString::Intern(spec.element), now.shown);
+            }
+            // The tiles pictured on the button: one `UIImage` per tile, hidden in the file, shown exactly while the button shows that tile
+            for (int t = 0; t < spec.maxTiles; ++t) {
+                const bool showNow = now.shown && t < now.tileCount;
+                const bool showBefore = before.shown && t < before.tileCount;
+                const bool sameTile = showNow && showBefore && now.tiles[static_cast<size_t>(t)] == before.tiles[static_cast<size_t>(t)];
+                if (showNow == showBefore && (!showNow || sameTile)) {
+                    continue;
+                }
+                const PoolString imageName = PoolString::Intern(Format("{}Tile{}", spec.element, t));
+                if (showNow) {
+                    if (UIImage* image = FindActionImage(scene, imageName)) {
+                        image->sprite = PoolString::Intern(SpriteName(now.tiles[static_cast<size_t>(t)]));
+                    }
+                }
+                if (showNow != showBefore) {
+                    UICanvasComponent::SetElementVisibleByName(scene, imageName, showNow);
+                }
             }
         }
         _published = buttons;

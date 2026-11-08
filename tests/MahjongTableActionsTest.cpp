@@ -2,6 +2,7 @@
 #include "MahjongTableTestSupport.h"
 
 #include <BECore/UI/UIButton.h>
+#include <BECore/UI/UIImage.h>
 #include <Events/InputEvents.h>
 
 /**
@@ -70,6 +71,33 @@ namespace BECore::Mahjong::Tests {
             return shown;
         }
 
+        /// The sprites of the tile pictures on screen on a button, in order; the picture of a hidden button or without a tile is not on screen.
+        std::vector<std::string> PicturesOf(const char* element) const {
+            std::vector<std::string> sprites;
+            for (int t = 0; t < kMaxButtonTiles; ++t) {
+                const std::string name = Format("{}Tile{}", element, t).c_str();
+                if (!OnScreen("Actions", name.c_str())) {
+                    continue;
+                }
+                const auto* image = Element("Actions", name.c_str())->Cast<UIImage>();
+                EXPECT_NE(image, nullptr) << name;
+                if (image != nullptr) {
+                    sprites.emplace_back(image->sprite.ToStringView().data(), image->sprite.ToStringView().size());
+                }
+            }
+            return sprites;
+        }
+
+        /// No button that is off screen has a picture on screen.
+        void ExpectPicturesOnlyOnShownButtons() const {
+            for (int i = 0; i < kButtonCount; ++i) {
+                const ButtonKind kind = static_cast<ButtonKind>(i);
+                if (!OnScreen("Actions", SpecOf(kind).element)) {
+                    EXPECT_TRUE(PicturesOf(SpecOf(kind).element).empty()) << SpecOf(kind).element;
+                }
+            }
+        }
+
         std::string LabelOf(const char* element) const {
             const auto* button = Element("Actions", element) != nullptr ? Element("Actions", element)->Cast<UIButton>() : nullptr;
             EXPECT_NE(button, nullptr) << element;
@@ -94,10 +122,46 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(_game->GetSession().Actor(), kSeat1);
 
         EXPECT_EQ(OnScreenButtons(), (std::vector<ButtonKind>{ButtonKind::ClaimPung, ButtonKind::ClaimChow0, ButtonKind::ClaimChow1, ButtonKind::Pass}));
-        EXPECT_EQ(LabelOf("Chow0"), "Chow 4-6p");
-        EXPECT_EQ(LabelOf("Chow1"), "Chow 5-7p");
+        EXPECT_EQ(LabelOf("Chow0"), "Chow");
+        EXPECT_EQ(LabelOf("Chow1"), "Chow");
         EXPECT_EQ(LabelOf("Pung"), "Pung");
-        EXPECT_EQ(Var("chow0"), "Chow 4-6p");
+        EXPECT_EQ(LabelOf("Pass"), "Pass");
+        // The tiles of the chow in order, the claimed discard on the pung; Pass has none
+        EXPECT_EQ(PicturesOf("Chow0"), (std::vector<std::string>{"Tile_4p", "Tile_5p", "Tile_6p"}));
+        EXPECT_EQ(PicturesOf("Chow1"), (std::vector<std::string>{"Tile_5p", "Tile_6p", "Tile_7p"}));
+        EXPECT_EQ(PicturesOf("Pung"), (std::vector<std::string>{"Tile_5p"}));
+        EXPECT_TRUE(PicturesOf("Pass").empty());
+        ExpectPicturesOnlyOnShownButtons();
+    }
+
+    TEST_F(MahjongTableActionsTest, ThePicturesGoWithTheButtonsAndTheLabelVariablesAreGone) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kPersonAtSeat1, ClaimWindowModel()));
+        ASSERT_FALSE(PicturesOf("Chow0").empty());
+
+        EmitAction("MahjongPass");
+        Draw();
+
+        EXPECT_TRUE(OnScreenButtons().empty());
+        for (int i = 0; i < kButtonCount; ++i) {
+            EXPECT_TRUE(PicturesOf(SpecOf(static_cast<ButtonKind>(i)).element).empty()) << SpecOf(static_cast<ButtonKind>(i)).element;
+        }
+        for (const char* name : {"chow0", "chow1", "chow2", "kong0", "kong1", "kong2", "upgrade"}) {
+            EXPECT_FALSE(CoreManager::GetUIVars().Has(PoolString::Intern(name))) << name;
+        }
+    }
+
+    TEST_F(MahjongTableActionsTest, AClickOnThePictureOfAChowButtonClaimsThatChow) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kPersonAtSeat1, ClaimWindowModel()));
+        const UIElement* picture = Element("Actions", "Chow1Tile1");
+        ASSERT_NE(picture, nullptr);
+        ASSERT_TRUE(OnScreen("Actions", "Chow1Tile1"));
+
+        EXPECT_TRUE(Click(picture->rect.x + picture->rect.w * 0.5f, picture->rect.y + picture->rect.h * 0.5f));
+
+        const PlayerHand& held = Hand().GetHand(kSeat1);
+        ASSERT_EQ(held.melds.size(), 1u);
+        EXPECT_EQ(held.melds[0].kind, MeldKind::Chow);
+        EXPECT_EQ(held.melds[0].first, T("5p"));
     }
 
     TEST_F(MahjongTableActionsTest, PungLaysAPungAndTheSeatDiscardsNext) {
@@ -175,6 +239,8 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(_game->GetSession().Actor(), kSeat1);
 
         EXPECT_EQ(OnScreenButtons(), (std::vector<ButtonKind>{ButtonKind::ClaimMahjong, ButtonKind::ClaimChow0, ButtonKind::Pass}));
+        EXPECT_EQ(LabelOf("Mahjong"), "Mahjong!");
+        EXPECT_EQ(PicturesOf("Mahjong"), (std::vector<std::string>{"Tile_5p"})) << "the discard that completes the hand";
 
         EmitAction("MahjongClaimMahjong");
         Draw();
@@ -194,6 +260,8 @@ namespace BECore::Mahjong::Tests {
 
         const std::vector<ButtonKind> shown = OnScreenButtons();
         EXPECT_NE(std::find(shown.begin(), shown.end(), ButtonKind::Win), shown.end());
+        EXPECT_EQ(LabelOf("Win"), "Mahjong!");
+        EXPECT_TRUE(PicturesOf("Win").empty());
 
         EmitAction("MahjongWin");
 
@@ -209,7 +277,8 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, MakeModel(spec)));
         const std::vector<ButtonKind> shown = OnScreenButtons();
         EXPECT_NE(std::find(shown.begin(), shown.end(), ButtonKind::ConcealedKong0), shown.end());
-        EXPECT_EQ(LabelOf("ConcealedKong0"), "Kong 1p");
+        EXPECT_EQ(LabelOf("ConcealedKong0"), "Kong");
+        EXPECT_EQ(PicturesOf("ConcealedKong0"), (std::vector<std::string>{"Tile_1p"}));
 
         EmitAction("MahjongConcealedKong", "0");
         Draw();
@@ -255,7 +324,8 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(_game->GetSession().Actor(), kSeat1);
         const std::vector<ButtonKind> shown = OnScreenButtons();
         ASSERT_NE(std::find(shown.begin(), shown.end(), ButtonKind::UpgradeKong), shown.end());
-        EXPECT_EQ(LabelOf("UpgradeKong"), "Add 5p");
+        EXPECT_EQ(LabelOf("UpgradeKong"), "Add to pung");
+        EXPECT_EQ(PicturesOf("UpgradeKong"), (std::vector<std::string>{"Tile_5p"}));
 
         EmitAction("MahjongUpgradeKong");
 
@@ -272,6 +342,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(_game->GetSession().Actor(), kSeat2);
 
         EXPECT_EQ(OnScreenButtons(), (std::vector<ButtonKind>{ButtonKind::ClaimMahjong, ButtonKind::Pass}));
+        EXPECT_EQ(PicturesOf("Mahjong"), (std::vector<std::string>{"Tile_5p"})) << "the tile of the kong that is robbed";
 
         EmitAction("MahjongClaimMahjong");
 

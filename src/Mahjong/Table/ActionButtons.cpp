@@ -9,30 +9,29 @@ namespace BECore::Mahjong {
         constexpr const char* kConcealedKongHint = "Set four equal tiles from your hand aside and draw a spare tile.";
 
         constexpr eastl::array<ButtonSpec, kButtonCount> kSpecs{{
-            {"Win", "MahjongWin", "", nullptr, "Mahjong!", "Your hand is complete: win the hand.", 0},
-            {"Mahjong", "MahjongClaimMahjong", "", nullptr, "Mahjong!", "The tile completes your hand: take it and win.", 1},
-            {"Pung", "MahjongClaimPung", "", nullptr, "Pung", "Take the discard to make a set of three equal tiles.", 1},
-            {"Kong", "MahjongClaimKong", "", nullptr, "Kong", "Take the discard to make a set of four equal tiles; you then draw a spare tile.", 1},
-            {"Chow0", "MahjongClaimChow", "0", "chow0", "Chow", kChowHint, kMaxButtonTiles},
-            {"Chow1", "MahjongClaimChow", "1", "chow1", "Chow", kChowHint, kMaxButtonTiles},
-            {"Chow2", "MahjongClaimChow", "2", "chow2", "Chow", kChowHint, kMaxButtonTiles},
-            {"Pass", "MahjongPass", "", nullptr, "Pass", "Let the discard go.", 0},
-            {"ConcealedKong0", "MahjongConcealedKong", "0", "kong0", "Kong", kConcealedKongHint, 1},
-            {"ConcealedKong1", "MahjongConcealedKong", "1", "kong1", "Kong", kConcealedKongHint, 1},
-            {"ConcealedKong2", "MahjongConcealedKong", "2", "kong2", "Kong", kConcealedKongHint, 1},
-            {"UpgradeKong", "MahjongUpgradeKong", "", "upgrade", "Add to pung", "Add the fourth tile to your open pung to make a kong; you draw a spare tile.", 1},
-            {"Declare", "MahjongDeclare", kDeclareOn.data(), nullptr, "Ready hand", "Announce you are one tile from mahjong (needed to win), then click the tile to discard.", 0},
+            {"Win", "MahjongWin", "", "Mahjong!", "Your hand is complete: win the hand.", 0},
+            {"Mahjong", "MahjongClaimMahjong", "", "Mahjong!", "The tile completes your hand: take it and win.", 1},
+            {"Pung", "MahjongClaimPung", "", "Pung", "Take the discard to make a set of three equal tiles.", 1},
+            {"Kong", "MahjongClaimKong", "", "Kong", "Take the discard to make a set of four equal tiles; you then draw a spare tile.", 1},
+            {"Chow0", "MahjongClaimChow", "0", "Chow", kChowHint, kMaxButtonTiles},
+            {"Chow1", "MahjongClaimChow", "1", "Chow", kChowHint, kMaxButtonTiles},
+            {"Chow2", "MahjongClaimChow", "2", "Chow", kChowHint, kMaxButtonTiles},
+            {"Pass", "MahjongPass", "", "Pass", "Let the discard go.", 0},
+            {"ConcealedKong0", "MahjongConcealedKong", "0", "Kong", kConcealedKongHint, 1},
+            {"ConcealedKong1", "MahjongConcealedKong", "1", "Kong", kConcealedKongHint, 1},
+            {"ConcealedKong2", "MahjongConcealedKong", "2", "Kong", kConcealedKongHint, 1},
+            {"UpgradeKong", "MahjongUpgradeKong", "", "Add to pung", "Add the fourth tile to your open pung to make a kong; you draw a spare tile.", 1},
+            {"Declare", "MahjongDeclare", kDeclareOn.data(), "Ready hand", "Announce you are one tile from mahjong (needed to win), then click the tile to discard.", 0},
         }};
 
         static_assert(kChowButtons + static_cast<int>(ButtonKind::ClaimChow0) == static_cast<int>(ButtonKind::Pass));
         static_assert(kConcealedKongButtons + static_cast<int>(ButtonKind::ConcealedKong0) == static_cast<int>(ButtonKind::UpgradeKong));
 
-        /// Shows `kind` with its action, label and hint and no tile yet.
-        ButtonState& Show(ActionButtons& buttons, ButtonKind kind, const HandAction& action, eastl::string label = {}) {
+        /// Shows `kind` with its action and hint and no tile yet.
+        ButtonState& Show(ActionButtons& buttons, ButtonKind kind, const HandAction& action) {
             ButtonState& button = buttons[kind];
             button.shown = true;
             button.action = action;
-            button.label = eastl::move(label);
             button.hint = HintOf(kind);
             return button;
         }
@@ -42,17 +41,6 @@ namespace BECore::Mahjong {
             if (tile.IsValid() && button.tileCount < SpecOf(kind).maxTiles) {
                 button.tiles[static_cast<size_t>(button.tileCount++)] = tile;
             }
-        }
-
-        /// "4-6p" for the chow that starts at 4p.
-        eastl::string ChowLabel(Tile first) {
-            const std::string_view start = ToString(first);
-            const std::string_view end = ToString(Tile::Suited(first.Suit(), first.Rank() + 2));
-            return Format("Chow {}-{}", start.substr(0, 1), end);
-        }
-
-        eastl::string TileLabel(const char* word, Tile tile) {
-            return Format("{} {}", word, ToString(tile));
         }
 
         ButtonKind Offset(ButtonKind first, int index) noexcept {
@@ -102,11 +90,11 @@ namespace BECore::Mahjong {
                 case ActionKind::ConcealedKong:
                     if (concealedKongs < kConcealedKongButtons) {
                         const ButtonKind kind = Offset(ButtonKind::ConcealedKong0, concealedKongs++);
-                        AddTile(Show(buttons, kind, action, TileLabel("Kong", action.tile)), kind, action.tile);
+                        AddTile(Show(buttons, kind, action), kind, action.tile);
                     }
                     break;
                 case ActionKind::UpgradeKong:
-                    AddTile(Show(buttons, ButtonKind::UpgradeKong, action, TileLabel("Add", action.tile)), ButtonKind::UpgradeKong, action.tile);
+                    AddTile(Show(buttons, ButtonKind::UpgradeKong, action), ButtonKind::UpgradeKong, action.tile);
                     break;
                 case ActionKind::Pass:
                     Show(buttons, ButtonKind::Pass, action);
@@ -116,7 +104,7 @@ namespace BECore::Mahjong {
                         case ClaimKind::Chow:
                             if (chows < kChowButtons) {
                                 const ButtonKind kind = Offset(ButtonKind::ClaimChow0, chows++);
-                                ButtonState& button = Show(buttons, kind, action, ChowLabel(action.chowFirst));
+                                ButtonState& button = Show(buttons, kind, action);
                                 for (int k = 0; k < kMaxButtonTiles; ++k) {
                                     AddTile(button, kind, Tile::Suited(action.chowFirst.Suit(), action.chowFirst.Rank() + k));
                                 }
