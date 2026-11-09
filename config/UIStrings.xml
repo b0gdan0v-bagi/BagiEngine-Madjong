@@ -166,7 +166,39 @@
         <string key="rules.end.line1" text="A hand ends when somebody wins, or when the live wall is empty at a draw: a drawn hand, nobody pays."/>
         <string key="rules.end.line2" text="You win with {mahjong} on a discard or a robbed kong, and with {win} on your own draw; you need a winning hand and a declared ready hand."/>
         <string key="rules.end.line3" text="A drawn hand is played again with the same dealer and does not count as a hand of the match."/>
-        <string key="rules.end.line4" text="After a hand, won or drawn, the score table shows what each seat scored, the winner's lines and the change of points; press {nextHand} to go on."/>
+        <string key="rules.end.line4" text="After a hand the score table shows what each seat scored and, after a win, the winner's lines and the change of points; press {nextHand} to go on."/>
+        <string key="rules.points.title" text="Points"/>
+        <string key="rules.points.line1" text="The winner gets {winPoints} points for winning, {wallTilePoints} more for a tile drawn from the wall (a loose tile too) and {onlyTilePoints} more when only one kind of tile could complete the hand."/>
+        <string key="rules.points.line2" text="A chow is worth nothing. A pung of simples laid open is worth {simplePung}; a pung of terminals, winds or dragons is worth x{honourFactor}, a concealed set x{concealedFactor}, a kong x{kongFactor}."/>
+        <string key="rules.points.line3" text="A pair of dragons, of your own wind or of the round wind is worth {pairPoints} points; a pair that is both your wind and the round wind, the sum."/>
+        <string key="rules.points.line4" text="A set completed by a winning discard counts as open; one completed by your own draw counts as concealed. Some examples:"/>
+        <string key="rules.points.open" text="Open: {line}"/>
+        <string key="rules.points.concealed" text="Concealed: {line}"/>
+        <string key="rules.doubles.title" text="Doubles for everyone"/>
+        <string key="rules.doubles.line1" text="Every seat can double its points. Each double doubles them, and doubles add up: two doubles make the points four times larger."/>
+        <string key="rules.doubles.line2" text="A dragon set, an own wind set and a round wind set are a pung or kong of dragons, of your own wind or of the round wind."/>
+        <string key="rules.doubles.line3" text="One suit: every tile of one suit, open sets too, with honours or without them (without them it is worth more)."/>
+        <string key="rules.doubles.line4" text="The score of a hand is the points times the doubles, at most the limit of {limit} points, rounded up to a multiple of {rounding}."/>
+        <string key="rules.winner.title" text="Doubles for the winner"/>
+        <string key="rules.winner.line1" text="Only the winner gets these doubles, on top of the ones for everyone. Each is listed with its value."/>
+        <string key="rules.winner.line2" text="No points: the hand scores only the {winPoints} for winning, so a tile from the wall, a single wait, a pung or a scoring pair spoils it."/>
+        <string key="rules.winner.line3" text="Obviously the last tile: {obviousCopies} other copies of the winning tile lie open. Loose tile: a win on a replacement after a kong. Last tile: a win on the last live tile."/>
+        <string key="rules.winner.line4" text="Fully concealed: no open set. Several kongs: at least {severalKongs} of them, but not all four. Calling hand, first hand: declared with your first discard."/>
+        <string key="rules.limit.title" text="Limit hands"/>
+        <string key="rules.limit.line1" text="A limit hand scores the limit, {limit} points, whatever it adds up to, and nothing else is counted. These are the hands:"/>
+        <string key="rules.limit.line2" text="Four pungs or kongs: concealed pungs of one suit, honours only, terminals only, all green; big three dragons, big four winds, four kongs."/>
+        <string key="rules.limit.line3" text="Seven pairs of honours or of one suit. Orphans: one of each of the {orphans} terminals and honours and one of them twice."/>
+        <string key="rules.limit.line4" text="Two depend on the last tile: a win on the last live tile when it is the one of dots, or on a loose tile when it is the five of dots."/>
+        <string key="rules.payments.title" text="Payments"/>
+        <string key="rules.payments.line1" text="Every loser pays the winner the winner's score, even a loser whose own hand scored more."/>
+        <string key="rules.payments.line2" text="The losers also settle among themselves: of two losers the one with the lower score pays the other the difference; equal scores pay nothing."/>
+        <string key="rules.payments.line3" text="Every payment of East, paid or received, is {eastFactor} times larger: East pays double and receives double."/>
+        <string key="rules.payments.line4" text="A drawn hand pays nothing. The points of the table always add up to the same total."/>
+        <string key="rules.match.title" text="The match"/>
+        <string key="rules.match.line1" text="Everyone starts with {startScore} points. A match is {fullHands} hands, or {shortHands} in the short game, chosen when you start."/>
+        <string key="rules.match.line2" text="The hands make {rounds} rounds of one wind each: {east}, {south}, {west}, {north}. The round wind and the hand are shown at the top left."/>
+        <string key="rules.match.line3" text="East deals. When East wins, East deals again; when another seat wins, the deal and the winds move on to the next seat. An East repeat counts as a hand."/>
+        <string key="rules.match.line4" text="A drawn hand is played again with the same dealer and does not count. After the last hand the seat with the most points wins the match."/>
         <string key="setup.title" text="New game: who plays?"/>
         <string key="setup.language" text="Language"/>
         <string key="setup.hands" text="Hands"/>
@@ -352,7 +384,39 @@
         <string key="rules.end.line1" text="Раздача кончается, когда кто-то выиграл или когда в живой стене нет кости для взятия: ничья, никто не платит."/>
         <string key="rules.end.line2" text="Выигрывают словом {mahjong} на сброс или ограбив конг и словом {win} на свою кость; рука должна быть выигрышной и заявка объявлена."/>
         <string key="rules.end.line3" text="Ничья переигрывается с тем же сдающим и не засчитывается как раздача матча."/>
-        <string key="rules.end.line4" text="После раздачи, выигранной или ничьей, таблица показывает очки каждого места, строки победителя и изменение очков; нажмите {nextHand}, чтобы идти дальше."/>
+        <string key="rules.end.line4" text="После раздачи таблица показывает очки каждого места, а после выигрыша ещё строки победителя и изменение очков; нажмите {nextHand}, чтобы идти дальше."/>
+        <string key="rules.points.title" text="Очки"/>
+        <string key="rules.points.line1" text="Победитель получает: за победу {winPoints}, за кость из стены (запасная тоже) {wallTilePoints}, за ожидание на одну кость {onlyTilePoints}."/>
+        <string key="rules.points.line2" text="Чи очков не даёт. Открытый пун из простых костей: {simplePung}; пун из крайних, ветров и драконов: x{honourFactor}; закрытый набор: x{concealedFactor}; конг: x{kongFactor}."/>
+        <string key="rules.points.line3" text="Пара драконов, своего ветра или ветра раунда даёт {pairPoints}; пара, которая и свой ветер, и ветер раунда, даёт сумму."/>
+        <string key="rules.points.line4" text="Набор, завершённый выигрышным сбросом, считается открытым; завершённый своей костью — закрытым. Примеры:"/>
+        <string key="rules.points.open" text="Открытый: {line}"/>
+        <string key="rules.points.concealed" text="Закрытый: {line}"/>
+        <string key="rules.doubles.title" text="Удвоения для всех"/>
+        <string key="rules.doubles.line1" text="Каждое место может удвоить очки. Каждое удвоение удваивает их, удвоения складываются: два удвоения делают очки в четыре раза больше."/>
+        <string key="rules.doubles.line2" text="Драконы, свой ветер и ветер раунда — это пун или конг из драконов, из своего ветра или из ветра раунда."/>
+        <string key="rules.doubles.line3" text="Одна масть: все кости одной масти, открытые наборы тоже, с почётными или без них (без них выше)."/>
+        <string key="rules.doubles.line4" text="Счёт руки: очки на удвоения, не выше лимита {limit}, с округлением вверх до кратного {rounding}."/>
+        <string key="rules.winner.title" text="Удвоения победителя"/>
+        <string key="rules.winner.line1" text="Только победитель получает эти удвоения, сверх общих для всех. У каждого указано значение."/>
+        <string key="rules.winner.line2" text="Без очков: рука даёт только {winPoints} за победу, поэтому кость из стены, одиночное ожидание, пун или пара с очками это портят."/>
+        <string key="rules.winner.line3" text="Очевидно последняя кость: остальные копии выигрышной кости ({obviousCopies}) лежат открыто. Запасная кость: победа на замене после конга. Последняя: на последней кости."/>
+        <string key="rules.winner.line4" text="Полностью закрытая: нет открытых наборов. Несколько конгов: не меньше {severalKongs}, но не все четыре. Заявка с первого хода: объявлена первым сбросом."/>
+        <string key="rules.limit.title" text="Лимитные руки"/>
+        <string key="rules.limit.line1" text="Лимитная рука даёт лимит, {limit} очков, сколько бы она ни набрала, и больше ничего не считается. Вот эти руки:"/>
+        <string key="rules.limit.line2" text="Четыре пуна или конга: тайные пуны одной масти, только почётные, только крайние, всё зелёное; большие три дракона, большие четыре ветра, четыре конга."/>
+        <string key="rules.limit.line3" text="Семь пар почётных или одной масти. Сироты: по кости каждого из {orphans} видов крайних и почётных и ещё одна из них."/>
+        <string key="rules.limit.line4" text="Две зависят от последней кости: победа на последней кости стены, если это один круг, или на запасной кости, если это пять кругов."/>
+        <string key="rules.payments.title" text="Расчёт"/>
+        <string key="rules.payments.line1" text="Каждый проигравший платит победителю счёт победителя, даже если его собственная рука набрала больше."/>
+        <string key="rules.payments.line2" text="Проигравшие рассчитываются и между собой: из двух проигравших тот, у кого счёт ниже, платит другому разницу; при равных счетах никто не платит."/>
+        <string key="rules.payments.line3" text="Каждая выплата Востока, отданная или полученная, умножается на {eastFactor}: Восток платит вдвое и получает вдвое."/>
+        <string key="rules.payments.line4" text="Ничья ничего не платит. Сумма очков за столом всегда остаётся одной и той же."/>
+        <string key="rules.match.title" text="Матч"/>
+        <string key="rules.match.line1" text="Все начинают с {startScore} очков. Матч длится {fullHands} раздач, а в коротком варианте {shortHands}; выбирается при начале игры."/>
+        <string key="rules.match.line2" text="Раздачи делятся на {rounds} раундов по одному ветру: {east}, {south}, {west}, {north}. Ветер раунда и номер раздачи показаны слева вверху."/>
+        <string key="rules.match.line3" text="Сдаёт Восток. Если выиграл Восток, он сдаёт снова; если другое место, сдача и ветра переходят к следующему месту. Повтор Востока считается раздачей."/>
+        <string key="rules.match.line4" text="Ничья переигрывается с тем же сдающим и не считается. После последней раздачи побеждает место с наибольшим числом очков."/>
         <string key="setup.title" text="Новая игра: кто играет?"/>
         <string key="setup.language" text="Язык"/>
         <string key="setup.hands" text="Раздачи"/>

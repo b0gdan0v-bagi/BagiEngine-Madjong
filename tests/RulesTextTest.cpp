@@ -1,16 +1,20 @@
+#include "ScoreTestSupport.h"
 #include "StringsTestSupport.h"
 
 #include <Mahjong/Game/Deal.h>
 #include <Mahjong/Game/HandShape.h>
+#include <Mahjong/Game/Match.h>
 #include <Mahjong/Game/TileSet.h>
 #include <Mahjong/Game/Wall.h>
 #include <Mahjong/Table/ActionButtons.h>
 #include <Mahjong/Table/RulesText.h>
+#include <Mahjong/Table/ScoreText.h>
 #include <set>
 
 /**
  * The rules pages (`Table/RulesText.h`). Pure logic over the shipped string table: no engine services. The tests hold the limits of a page, the
- * examples to what the page says, the height to the plate and, above all, that no number is retyped in a text (the drift guard).
+ * examples to what the page says, the height to the plate and, above all, that no number is retyped in a text (the drift guard) and that
+ * the numbers the pages print are what the scoring and the payments really do (`ScoreSeat`, `Settle`).
  */
 namespace BECore::Mahjong::Tests {
 
@@ -73,6 +77,14 @@ namespace BECore::Mahjong::Tests {
             return text.find(Std(word)) != std::string::npos;
         }
 
+        /// The pages by name, as the tests below find them.
+        constexpr int kPointsPage = 7;
+        constexpr int kDoublesPage = 8;
+        constexpr int kWinnerPage = 9;
+        constexpr int kLimitPage = 10;
+        constexpr int kPaymentsPage = 11;
+        constexpr int kMatchPage = 12;
+
         std::string Where(PoolString language, int page) {
             return std::string(language.ToStringView().data(), language.ToStringView().size()) + ", page " + std::to_string(page + 1);
         }
@@ -82,7 +94,8 @@ namespace BECore::Mahjong::Tests {
     // ----- the pages -----
 
     TEST(RulesTextTest, ThePagesAreThere) {
-        EXPECT_EQ(RulesPageCount(), 7);  // pages 1 to 7: tiles, sets, a turn, claims, kongs, the calling hand, the end of a hand
+        // tiles, sets, a turn, claims, kongs, the calling hand, the end of a hand, points, doubles, the winner's doubles, limit hands, payments, the match
+        EXPECT_EQ(RulesPageCount(), 13);
     }
 
     TEST(RulesTextTest, EveryPageHasATitleAndTextWithinTheLimitsInEveryLanguage) {
@@ -100,6 +113,12 @@ namespace BECore::Mahjong::Tests {
             for (const eastl::string& line : content.lines) {
                 EXPECT_FALSE(line.empty()) << where;
                 EXPECT_LE(Utf8::CountCodePoints(line), kRulesMaxLineLength) << where << ": " << line.c_str();
+            }
+            for (const eastl::string& item : content.items) {
+                EXPECT_FALSE(item.empty()) << where;
+            }
+            if (!content.items.empty()) {
+                EXPECT_LE(content.lines.size(), 4u) << where << ": the plate holds the items with four lines at most";
             }
         });
     }
@@ -152,7 +171,9 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(FormatRulesPage(strings, 2).tileRows.empty());  // a turn
         EXPECT_TRUE(FormatRulesPage(strings, 3).tileRows.empty());  // claims
         EXPECT_TRUE(FormatRulesPage(strings, 4).tileRows.empty());  // kongs
-        EXPECT_TRUE(FormatRulesPage(strings, 6).tileRows.empty());  // the end of a hand
+        for (int page = 6; page < RulesPageCount(); ++page) {       // the end of a hand, then the pages with numbers
+            EXPECT_TRUE(FormatRulesPage(strings, page).tileRows.empty()) << page;
+        }
     }
 
     TEST(RulesTextTest, TheExampleOfTheSetsPageIsAWholeWinningHand) {
@@ -261,14 +282,14 @@ namespace BECore::Mahjong::Tests {
     TEST(RulesTextTest, ThePagerSaysWhereYouAre) {
         UIStrings& strings = Words();
         ASSERT_TRUE(strings.SetLanguage("en"_intern));
-        EXPECT_EQ(Std(RulesPagerText(strings, 0)), "Page 1 of 7");
-        EXPECT_EQ(Std(RulesPagerText(strings, 2)), "Page 3 of 7");
-        EXPECT_EQ(Std(RulesPagerText(strings, RulesPageCount() - 1)), "Page 7 of 7");
-        EXPECT_EQ(Std(RulesPagerText(strings, -4)), "Page 1 of 7");  // clamped
-        EXPECT_EQ(Std(RulesPagerText(strings, 100)), "Page 7 of 7");
+        EXPECT_EQ(Std(RulesPagerText(strings, 0)), "Page 1 of 13");
+        EXPECT_EQ(Std(RulesPagerText(strings, 2)), "Page 3 of 13");
+        EXPECT_EQ(Std(RulesPagerText(strings, RulesPageCount() - 1)), "Page 13 of 13");
+        EXPECT_EQ(Std(RulesPagerText(strings, -4)), "Page 1 of 13");  // clamped
+        EXPECT_EQ(Std(RulesPagerText(strings, 100)), "Page 13 of 13");
         ASSERT_TRUE(strings.SetLanguage("ru"_intern));
-        EXPECT_EQ(Std(RulesPagerText(strings, 0)), "Страница 1 из 7");
-        EXPECT_EQ(Std(RulesPagerText(strings, 6)), "Страница 7 из 7");
+        EXPECT_EQ(Std(RulesPagerText(strings, 0)), "Страница 1 из 13");
+        EXPECT_EQ(Std(RulesPagerText(strings, 12)), "Страница 13 из 13");
         ASSERT_TRUE(strings.SetLanguage("en"_intern));
     }
 
@@ -291,7 +312,7 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_FALSE(HasDigitOutsidePlaceholders(entry.text)) << language.id << ": " << entry.key << ": " << entry.text;
             }
         }
-        EXPECT_GE(checked, 2 * (1 + 7 + 4 * 7));  // at least the pager, the titles and four lines of each page in both languages
+        EXPECT_GE(checked, 2 * (1 + 13 + 4 * 13));  // at least the pager, the titles and four lines of each page in both languages
     }
 
     TEST(RulesTextTest, ThePagesNameTheNumbersOfTheRulesAsTheCodeHasThem) {
@@ -320,6 +341,35 @@ namespace BECore::Mahjong::Tests {
                     break;
                 case 5:  // the calling hand
                     EXPECT_TRUE(Contains(text, kDealtTiles)) << where;
+                    break;
+                case kPointsPage:
+                    EXPECT_TRUE(Contains(text, kWinPoints)) << where;
+                    EXPECT_TRUE(Contains(text, kWinTileFromWallPoints)) << where;
+                    EXPECT_TRUE(Contains(text, kOnlyWinningTilePoints)) << where;
+                    EXPECT_TRUE(Contains(text, kHonourPointsFactor)) << where;
+                    EXPECT_TRUE(Contains(text, kKongPointsFactor)) << where;
+                    break;
+                case kDoublesPage:
+                    EXPECT_TRUE(Contains(text, LimitCap(kDefaultLimit))) << where;
+                    EXPECT_TRUE(Contains(text, kScoreRounding)) << where;
+                    break;
+                case kWinnerPage:
+                    EXPECT_TRUE(Contains(text, kWinPoints)) << where;
+                    EXPECT_TRUE(Contains(text, kObviouslyLastCopies)) << where;
+                    EXPECT_TRUE(Contains(text, kSeveralKongsCount)) << where;
+                    break;
+                case kLimitPage:
+                    EXPECT_TRUE(Contains(text, LimitCap(kDefaultLimit))) << where;
+                    EXPECT_TRUE(Contains(text, kOrphanKinds)) << where;
+                    break;
+                case kPaymentsPage:
+                    EXPECT_TRUE(Contains(text, kEastPaymentFactor)) << where;
+                    break;
+                case kMatchPage:
+                    EXPECT_TRUE(Contains(text, kStartingScore)) << where;
+                    EXPECT_TRUE(Contains(text, kFullMatchHands)) << where;
+                    EXPECT_TRUE(Contains(text, kShortMatchHands)) << where;
+                    EXPECT_TRUE(Contains(text, kRoundsPerMatch)) << where;
                     break;
                 default:
                     break;
@@ -358,12 +408,225 @@ namespace BECore::Mahjong::Tests {
             const RulesPage& base = english[static_cast<size_t>(page)];
             EXPECT_NE(russian.title, base.title) << page;
             EXPECT_EQ(russian.lines.size(), base.lines.size()) << page;
+            ASSERT_EQ(russian.items.size(), base.items.size()) << page;
+            for (size_t item = 0; item < russian.items.size(); ++item) {
+                EXPECT_NE(russian.items[item], base.items[item]) << page << "/item " << item;
+            }
             for (size_t line = 0; line < russian.lines.size() && line < base.lines.size(); ++line) {
                 EXPECT_NE(russian.lines[line], base.lines[line]) << page << "/" << line;
             }
             EXPECT_EQ(russian.tileRows, base.tileRows) << page;  // a picture has no language
         }
         ASSERT_TRUE(strings.SetLanguage("en"_intern));
+    }
+
+    // ----- the numbers of the pages are what the scoring and the payments do -----
+
+    namespace {
+
+        /// The first line of `kind` of a breakdown; the test fails when there is none.
+        ScoreLine LineOfKind(const ScoreBreakdown& breakdown, ScoreKind kind) {
+            for (const ScoreLine& line : breakdown.lines) {
+                if (line.kind == kind) {
+                    return line;
+                }
+            }
+            ADD_FAILURE() << "no line " << Name(kind);
+            return ScoreLine{kind, Tile{}, 0, 0};
+        }
+
+        bool HasItem(const RulesPage& page, const eastl::string& text) {
+            return eastl::find(page.items.begin(), page.items.end(), text) != page.items.end();
+        }
+
+        /// Whether an item of the page holds `text` (the example items wear a prefix: "Open: Pung of 5 Dots: 2").
+        bool HasItemWith(const RulesPage& page, const eastl::string& text) {
+            return eastl::any_of(page.items.begin(), page.items.end(), [&](const eastl::string& item) { return Contains(Std(item), text); });
+        }
+
+        /// A kind as the doubles pages print it: its name and the doubles of the score, no tile.
+        eastl::string DoublesItem(const UIStrings& strings, const ScoreBreakdown& breakdown, ScoreKind kind) {
+            return ScoreLineText(strings, ScoreLine{kind, Tile{}, 0, LineOfKind(breakdown, kind).doubles});
+        }
+
+    }  // namespace
+
+    TEST(RulesTextTest, ThePointsPageHoldsTheNumbersTheScoringGives) {
+        UIStrings& strings = Words();
+        ForEachLanguage(strings, [&](PoolString language) {
+            const std::string where = Where(language, kPointsPage);
+            const RulesPage page = FormatRulesPage(strings, kPointsPage);
+
+            // the examples: each is a hand scored by `ScoreSeat`, and the line it gives is in the items as the score table would print it
+            struct Example {
+                ScoreInput input;
+                ScoreKind kind;
+            };
+            const std::string quiet = kQuietChows;
+            const Example examples[] = {
+                {MakeInput(quiet, {OpenPung(T("5p"))}), ScoreKind::Pung},       // an open pung of a simple tile
+                {MakeInput(quiet, {OpenPung(T("9s"))}), ScoreKind::Pung},       // of a terminal
+                {MakeInput(quiet + " 5p 5p 5p"), ScoreKind::Pung},              // a concealed pung
+                {MakeInput(quiet, {OpenKong(T("5p"))}), ScoreKind::Kong},       // an open kong
+                {MakeInput(quiet, {ConcealedKong(T("Rd"))}), ScoreKind::Kong},  // a concealed kong of an honour
+                {MakeInput(quiet + " Rd Rd"), ScoreKind::Pair},                 // the pair of dragons
+            };
+            for (const Example& example : examples) {
+                const ScoreLine line = LineOfKind(ScoreSeat(example.input), example.kind);
+                EXPECT_TRUE(HasItemWith(page, ScoreLineText(strings, line))) << where << ": " << ScoreLineText(strings, line).c_str();
+            }
+            EXPECT_EQ(page.items.size(), std::size(examples)) << where;
+
+            // the winner's points
+            const ScoreBreakdown winner = ScoreSeat(MakeWinnerInput("1p 2p 3p 7m 8m 9m 5s 5s 5s Rd Rd Rd 9p 9p", "9p"));
+            EXPECT_EQ(LinePoints(winner, ScoreKind::Win), kWinPoints) << where;
+            EXPECT_EQ(LinePoints(winner, ScoreKind::WinTileFromWall), kWinTileFromWallPoints) << where;
+            EXPECT_EQ(LinePoints(winner, ScoreKind::OnlyWinningTile), kOnlyWinningTilePoints) << where;
+            const std::string text = AllText(page);
+            EXPECT_TRUE(Contains(text, LinePoints(winner, ScoreKind::Win))) << where;
+            EXPECT_TRUE(Contains(text, LinePoints(winner, ScoreKind::WinTileFromWall))) << where;
+            EXPECT_TRUE(Contains(text, LinePoints(winner, ScoreKind::OnlyWinningTile))) << where;
+
+            // the chow is worth nothing and the pairs of the page are the ones that score
+            EXPECT_EQ(ScoreSeat(MakeInput(kQuietChows, {OpenChow(T("4s"))})).points, 0) << where;
+            EXPECT_EQ(ScoreSeat(MakeInput(quiet + " Sw Sw", {}, "", Wind::South)).points, kPairPoints) << where;
+            EXPECT_EQ(ScoreSeat(MakeInput(quiet + " Sw Sw", {}, "", Wind::West, Wind::South)).points, kPairPoints) << where;
+        });
+    }
+
+    TEST(RulesTextTest, TheDoublesForEveryoneAreTheDoublesTheScoringGives) {
+        UIStrings& strings = Words();
+        const std::string quiet = kQuietChows;
+        const ScoreBreakdown dragon = ScoreSeat(MakeInput(quiet + " Rd Rd Rd"));
+        const ScoreBreakdown own = ScoreSeat(MakeInput(quiet + " Sw Sw Sw", {}, "", Wind::South, Wind::East));
+        const ScoreBreakdown round = ScoreSeat(MakeInput(quiet + " Sw Sw Sw", {}, "", Wind::East, Wind::South));
+        const ScoreBreakdown withHonours = ScoreSeat(MakeInput("1p 2p 3p 4p 5p 6p 7p 8p 9p Ww Ww"));
+        const ScoreBreakdown noHonours = ScoreSeat(MakeInput("1p 2p 3p 4p 5p 6p 7p 8p 9p"));
+        ForEachLanguage(strings, [&](PoolString language) {
+            const std::string where = Where(language, kDoublesPage);
+            const RulesPage page = FormatRulesPage(strings, kDoublesPage);
+            ASSERT_EQ(page.items.size(), 5u) << where;  // the five kinds from `DragonSet` to `OneSuitNoHonours`
+            EXPECT_EQ(page.items[0], DoublesItem(strings, dragon, ScoreKind::DragonSet)) << where;
+            EXPECT_EQ(page.items[1], DoublesItem(strings, own, ScoreKind::OwnWindSet)) << where;
+            EXPECT_EQ(page.items[2], DoublesItem(strings, round, ScoreKind::RoundWindSet)) << where;
+            EXPECT_EQ(page.items[3], DoublesItem(strings, withHonours, ScoreKind::OneSuitWithHonours)) << where;
+            EXPECT_EQ(page.items[4], DoublesItem(strings, noHonours, ScoreKind::OneSuitNoHonours)) << where;
+            // the order the page says: points times the multiplier, then the limit, then rounded up
+            const ScoreBreakdown score = ScoreSeat(MakeInput(quiet + " Rd Rd Rd 5p 5p"));
+            EXPECT_EQ(score.raw, score.points << score.doubles) << where;
+            EXPECT_EQ(score.score, RoundUpToTen(std::min(score.raw, LimitCap(kDefaultLimit)))) << where;
+        });
+    }
+
+    TEST(RulesTextTest, TheDoublesForTheWinnerAreTheDoublesTheScoringGives) {
+        UIStrings& strings = Words();
+        // one hand per kind from `OnlyPungs` to `CallingFirstHand`, each win scored by `ScoreSeat`
+        constexpr const char* kNoPointsTiles = "5s 6s 7s 7m 8m 9m 3m 4m 5m 2p 3p 4p Ww Ww";
+        const auto win = [](const char* concealed, const char* tile, WinSource source = WinSource::SelfDraw, std::initializer_list<Meld> melds = {}) {
+            return MakeWinnerInput(concealed, tile, source, melds);
+        };
+        ScoreInput loose = win(kNoPointsTiles, "4p");
+        loose.result.loose = true;
+        ScoreInput last = win(kNoPointsTiles, "4p");
+        last.result.lastLiveTile = true;
+        ScoreInput obvious = win(kNoPointsTiles, "4p", WinSource::Discard);
+        obvious.visibleWinningTileCopies = kObviouslyLastCopies;
+        ScoreInput calling = win(kNoPointsTiles, "4p");
+        calling.hand.callingDeclared = true;
+        calling.hand.callingAtDiscardCount = 0;
+        const eastl::vector<eastl::pair<ScoreKind, ScoreInput>> cases = {
+            {ScoreKind::OnlyPungs, win("2p 2p 2p 5s 5s 5s 7m 7m 7m 9m 9m 9m 4s 4s", "4s")},
+            {ScoreKind::NoPoints, win(kNoPointsTiles, "4p", WinSource::Discard)},
+            {ScoreKind::LooseTile, loose},
+            {ScoreKind::LastTile, last},
+            {ScoreKind::RobbedKong, win(kNoPointsTiles, "4p", WinSource::RobbedKong)},
+            {ScoreKind::LittleFourWinds, win("Ew Ew Ew Sw Sw Sw Ww Ww Ww Nw Nw 1p 2p 3p", "1p")},
+            {ScoreKind::LittleThreeDragons, win("Rd Rd Rd Wd Wd Wd Gd Gd 1p 2p 3p 4s 5s 6s", "1p")},
+            {ScoreKind::TerminalsOrHonoursEverywhere, win("1p 2p 3p 7m 8m 9m 9s 9s 9s Ew Ew Ew 1m 1m", "1m")},
+            {ScoreKind::FullyConcealed, win(kNoPointsTiles, "4p")},
+            {ScoreKind::SeveralKongs, win("5s 6s 7s 3m 4m 5m Ww Ww", "Ww", WinSource::SelfDraw, {OpenKong(T("2p")), ConcealedKong(T("9s"))})},
+            {ScoreKind::ObviouslyLast, obvious},
+            {ScoreKind::CallingFirstHand, calling},
+        };
+        constexpr int kWinnerKinds = static_cast<int>(ScoreKind::CallingFirstHand) - static_cast<int>(ScoreKind::OnlyPungs) + 1;
+        ASSERT_EQ(cases.size(), static_cast<size_t>(kWinnerKinds));
+        ForEachLanguage(strings, [&](PoolString language) {
+            const std::string where = Where(language, kWinnerPage);
+            const RulesPage page = FormatRulesPage(strings, kWinnerPage);
+            ASSERT_EQ(page.items.size(), static_cast<size_t>(kWinnerKinds)) << where;
+            for (size_t i = 0; i < cases.size(); ++i) {
+                const ScoreKind kind = static_cast<ScoreKind>(static_cast<int>(ScoreKind::OnlyPungs) + static_cast<int>(i));
+                ASSERT_EQ(cases[i].first, kind) << where;  // the cases run in the order of the enum, as the page does
+                const ScoreBreakdown breakdown = ScoreSeat(cases[i].second);
+                ASSERT_EQ(CountLines(breakdown, kind), 1) << where << ": " << Name(kind);
+                EXPECT_EQ(page.items[i], DoublesItem(strings, breakdown, kind)) << where << ": " << Name(kind);
+            }
+        });
+    }
+
+    TEST(RulesTextTest, TheLimitHandsOfThePageAreTheKindsOfTheEnumRange) {
+        UIStrings& strings = Words();
+        constexpr int kFirst = static_cast<int>(ScoreKind::ConcealedPungsOneSuit);
+        constexpr int kLast = static_cast<int>(ScoreKind::LooseTileFiveDots);
+        constexpr int kLimitKinds = kLast - kFirst + 1;
+        EXPECT_EQ(kLimitKinds, 12);
+        ForEachLanguage(strings, [&](PoolString language) {
+            const std::string where = Where(language, kLimitPage);
+            const RulesPage page = FormatRulesPage(strings, kLimitPage);
+            ASSERT_EQ(page.items.size(), static_cast<size_t>(kLimitKinds)) << where;
+            std::set<std::string> names;
+            for (int kind = kFirst; kind <= kLast; ++kind) {
+                const eastl::string expected = ScoreLineText(strings, ScoreLine{static_cast<ScoreKind>(kind), Tile{}, 0, 0});
+                EXPECT_EQ(page.items[static_cast<size_t>(kind - kFirst)], expected) << where;
+                EXPECT_TRUE(HasItem(page, expected)) << where;
+                names.insert(Std(expected));
+            }
+            EXPECT_EQ(names.size(), static_cast<size_t>(kLimitKinds)) << where << ": two limit hands have one name";
+        });
+    }
+
+    TEST(RulesTextTest, EveryScoreKindFromTheDoublesOnIsOnSomePageExceptTheFlowers) {
+        UIStrings& strings = Words();
+        // The flowers and seasons are not offered to the player (`MahjongSettings::flowers` is false), so their doubles are not explained.
+        const auto isFlowers = [](ScoreKind kind) { return kind == ScoreKind::OwnBonus || kind == ScoreKind::RoundBonus; };
+        ForEachLanguage(strings, [&](PoolString language) {
+            std::string all;
+            for (int page = 0; page < RulesPageCount(); ++page) {
+                all += AllText(FormatRulesPage(strings, page)) + '\n';
+            }
+            for (int kind = static_cast<int>(ScoreKind::DragonSet); kind < static_cast<int>(EnumUtils<ScoreKind>::Count()); ++kind) {
+                const ScoreKind scoreKind = static_cast<ScoreKind>(kind);
+                if (isFlowers(scoreKind)) {
+                    continue;
+                }
+                EXPECT_TRUE(Contains(all, ScoreKindName(strings, scoreKind)))
+                    << Std(eastl::string(language.ToStringView().data(), language.ToStringView().size())) << ": " << Name(scoreKind) << " is on no page";
+            }
+        });
+    }
+
+    TEST(RulesTextTest, ThePaymentsPageSaysWhatSettleDoes) {
+        // The loser East pays the winner's score times the factor, a loser that is not East pays it once.
+        constexpr int kWinnerScore = 100;
+        const SeatScores deltas = Settle({0, kWinnerScore, 0, 0}, kSeat1, kSeat0);
+        EXPECT_EQ(deltas[kSeat0], -kWinnerScore * kEastPaymentFactor);
+        EXPECT_EQ(deltas[kSeat2], -kWinnerScore);
+        EXPECT_EQ(deltas[kSeat3], -kWinnerScore);
+        EXPECT_EQ(Sum(deltas), 0);  // "the points of the table always add up to the same total"
+        // East as the winner receives the factor from everyone; the losers settle among themselves once (seat 2 has 40 more than seats 1 and 3)
+        constexpr int kLead = 40;
+        const SeatScores eastWins = Settle({kWinnerScore, 0, kLead, 0}, kSeat0, kSeat0);
+        EXPECT_EQ(eastWins[kSeat0], 3 * kWinnerScore * kEastPaymentFactor);
+        EXPECT_EQ(eastWins[kSeat1], -kWinnerScore * kEastPaymentFactor - kLead);
+        EXPECT_EQ(eastWins[kSeat2], -kWinnerScore * kEastPaymentFactor + 2 * kLead);
+        // a drawn hand pays nothing
+        const SeatScores drawn = Settle({100, 50, 30, 0}, kNoSeat, kSeat0);
+        for (const int delta : drawn) {
+            EXPECT_EQ(delta, 0);
+        }
+        // the page names the factor in both languages
+        UIStrings& strings = Words();
+        ForEachLanguage(strings, [&](PoolString language) { EXPECT_TRUE(Contains(AllText(FormatRulesPage(strings, kPaymentsPage)), kEastPaymentFactor)) << Where(language, kPaymentsPage); });
     }
 
 }  // namespace BECore::Mahjong::Tests
