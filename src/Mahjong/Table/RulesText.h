@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Mahjong/Game/HandShape.h>
 #include <Mahjong/Game/Tile.h>
 #include <Mahjong/Table/UiPalette.h>
 #include <Mahjong/Table/Words.h>
@@ -23,8 +24,8 @@ namespace BECore::Mahjong {
     inline constexpr int kRulesMaxLines = 6;
     inline constexpr int kRulesMaxItems = 12;
     inline constexpr int kRulesMaxTileRows = 2;
-    /// A whole winning hand: `kWinningHandTiles` tiles, the longest row a page shows.
-    inline constexpr int kRulesMaxRowTiles = 14;
+    /// A whole winning hand, the longest row a page shows.
+    inline constexpr int kRulesMaxRowTiles = kWinningHandTiles;
     /// The longest line of prose in code points, after the numbers and the words of the buttons are put in (two rows of text on the plate).
     inline constexpr size_t kRulesMaxLineLength = 160;
 

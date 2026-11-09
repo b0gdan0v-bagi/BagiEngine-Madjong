@@ -10,8 +10,12 @@ namespace BECore::Mahjong {
 
     namespace {
 
+        /// The tiles East starts with: the dealt tiles and the first draw (the first tile is drawn at once).
+        inline constexpr int kEastOpeningTiles = kDealtTiles + 1;
+
         /// The numbers and the words that the texts of the pages put in: `{dealt}`, `{pung}`, ... Built once per page from the named constants
         /// of the rules and the string table, so no text holds a number or a button word of its own. An unused name is harmless (`Subst`).
+        /// Not copyable: the views of `_args` point into `_values`.
         class RulesArgs {
         public:
             explicit RulesArgs(const UIStrings& strings) : _strings(strings) {
@@ -20,6 +24,7 @@ namespace BECore::Mahjong {
                 Number("copies", kCopiesPerTile);
                 Number("dealt", kDealtTiles);
                 Number("winning", kWinningHandTiles);
+                Number("eastDealt", kEastOpeningTiles);
                 Number("pairs", kPairsInSevenPairs);
                 Number("orphans", kOrphanKinds);
                 Number("loose", static_cast<long long>(kLooseTiles));
@@ -32,21 +37,26 @@ namespace BECore::Mahjong {
                 Add("mahjong", WordOf(strings, ButtonKind::ClaimMahjong));
                 Add("pung", WordOf(strings, ButtonKind::ClaimPung));
                 Add("kong", WordOf(strings, ButtonKind::ClaimKong));
+                Add("concealedKong", WordOf(strings, ButtonKind::ConcealedKong0));
                 Add("chow", WordOf(strings, ButtonKind::ClaimChow0));
                 Add("pass", WordOf(strings, ButtonKind::Pass));
+                Add("win", WordOf(strings, ButtonKind::Win));
                 Add("upgrade", WordOf(strings, ButtonKind::UpgradeKong));
                 Add("declare", WordOf(strings, ButtonKind::Declare));
                 Add("nextHand", Tr(strings, "handover.next"));
+
+                // Built after the last `Add`, so no growth of `_values` moves a string under a view.
+                _args.reserve(_values.size());
+                for (const auto& [name, value] : _values) {
+                    _args.push_back({name, eastl::string_view(value.data(), value.size())});
+                }
             }
+            RulesArgs(const RulesArgs&) = delete;
+            RulesArgs& operator=(const RulesArgs&) = delete;
 
             /// The text of `key` with every placeholder filled.
             [[nodiscard]] eastl::string Text(eastl::string_view key) const {
-                eastl::vector<WordArg> args;
-                args.reserve(_values.size());
-                for (const auto& [name, value] : _values) {
-                    args.push_back({name, eastl::string_view(value.data(), value.size())});
-                }
-                return Tr(_strings, key, std::span<const WordArg>(args.data(), args.size()));
+                return Tr(_strings, key, eastl::span<const WordArg>(_args.data(), _args.size()));
             }
 
         private:
@@ -59,13 +69,16 @@ namespace BECore::Mahjong {
 
             const UIStrings& _strings;
             eastl::vector<eastl::pair<eastl::string_view, eastl::string>> _values;
+            eastl::vector<WordArg> _args;
         };
 
         using TileRows = eastl::vector<eastl::vector<Tile>>;
 
         /// A row of tiles from the notation of `Tile.h`; the examples are written the way a player reads them.
         eastl::vector<Tile> Row(std::string_view notation) {
-            return ParseTiles(notation).value_or(eastl::vector<Tile>{});
+            const auto tiles = ParseTiles(notation);
+            ASSERT(tiles.has_value(), "RulesText: an example row is not in the notation of Tile.h");
+            return tiles.value_or(eastl::vector<Tile>{});
         }
 
         /// Page 1: one suit from the lowest rank to the highest, then the honours (four winds, three dragons).

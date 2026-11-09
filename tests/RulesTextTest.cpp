@@ -19,12 +19,8 @@ namespace BECore::Mahjong::Tests {
         /// The shipped table, loaded once; the tests change its language through `ForEachLanguage` and put it back.
         UIStrings& Words() {
             static UIStrings strings;
-            static const bool loaded = [] {
-                EXPECT_TRUE(LoadShippedStrings(strings).empty());
-                EXPECT_TRUE(strings.SetLanguage("en"_intern));
-                return true;
-            }();
-            (void)loaded;
+            static const bool loaded = LoadShippedStrings(strings).empty() && strings.SetLanguage("en"_intern);
+            EXPECT_TRUE(loaded);
             return strings;
         }
 
