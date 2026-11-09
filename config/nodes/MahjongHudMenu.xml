@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<!--
+  The New game button (MahjongNewGame, opens Setup) in the top right corner of the window and the Rules button (MahjongRules, opens
+  the pages of the rules, 92 units wide: the top seat's row of bonus tiles of the worst-case table ends at x 980 and a wider button covers it in a 16:10 window) 8 left of it (under it in a canvas of at most 440 units wide, where both do not fit in a row). A Screen canvas with a floor on its scale
+  (minScale 0.6: the 56 unit buttons are 33.6 px), so they are touch targets in any window; MahjongHudTest and MahjongTouchSizeTest check them on the
+  size matrix and that they cover no tile in a window without insets. With insets they lie nearer the table, as the HUD does. Hidden by the component while
+  HandOver or Rules is shown (that dim covers only the view, the buttons may lie on a bar). MatchOver and Setup are Screen canvases whose dim
+  covers the whole window, so the buttons stay under them.
+-->
+<node name="HudMenu" layer="10">
+  <components>
+    <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true">
+      <elements>
+        <element type="UIButton" name="NewGame" anchor="TopRight" x="-8" y="8" width="176" height="56" text="{#hud.newGame}" fontSize="22" action="MahjongNewGame" color="45,75,120,255" />
+        <element type="UIButton" name="Rules" anchor="TopRight" x="-192" y="8" width="92" height="56" text="{#hud.rules}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongRules" color="45,75,120,255" />
+      </elements>
+      <variants>
+        <variant when="maxWidth:440">
+          <overrides>
+            <set element="Rules" x="-8" y="72" width="176" />
+          </overrides>
+        </variant>
+      </variants>
+    </component>
+  </components>
+</node>
