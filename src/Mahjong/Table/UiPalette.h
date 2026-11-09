@@ -8,12 +8,12 @@ namespace BECore::Mahjong {
      * The look of the game in numbers: the palette, the type scale and the spacing grid. `config/SceneConfig.xml` writes the colours of
      * `kUiPalette` as text (`r,g,b,a`) and the sizes of `kFontScale` (`fontSize`), and every position and size on the grid of
      * `kGridUnit`; `MahjongUiStyleTest` holds the file to all three, so a stray colour, size or number fails. The colours of the table
-     * (`kFelt` ... `kVeil`) are drawn by `MahjongTableComponent` and are not in the file; the modal numbers below are the anatomy that the
-     * file's screens follow and the tests of the screens check.
+     * (`kFelt` ... `kVeil`) are drawn by `MahjongTableComponent`, the two marks of the hints (`kDeclareMark`, `kAdvisedFrame`) by `MahjongHintsComponent`, and none is in the file; the modal numbers
+     * below are the anatomy that the file's screens follow and the tests of the screens check.
      *
      * Roles, not colours, are the rule: a new control takes the role of what it does.
      * - The table: `kFelt` with a `kFeltRim` round the view, a `kZonePlate` under the discard blocks and the wall ring, a `kTileShadow`
-     *   under each tile. A mark on the table is the gold family (`kTurnMark`, `kPendingFrame`) and nothing else on the table is gold;
+     *   under each tile. A mark on the table is the gold family (`kTurnMark`, `kPendingFrame`, `kDeclareMark`, `kAdvisedFrame`) and nothing else on the table is gold;
      *   `kVeil` dims a tile that cannot be discarded now.
      * - The screens: `scrim` dims what lies behind a modal screen (and the hint), `surface` is the plate, `header` its headline band,
      *   `surfaceRaised` the rows on it, `hudPanel` the panels of the HUD over the felt.
@@ -33,6 +33,10 @@ namespace BECore::Mahjong {
     inline constexpr Color kPendingFrame{255, 214, 80, 200};
     /// Over a tile whose declaring discard is not legal while the next discard declares the calling hand.
     inline constexpr Color kVeil{0, 0, 0, 140};
+    /// The hints (`MahjongHintsComponent`), marks on the viewer's hand and so in the gold family: a bar under a tile whose discard declares
+    /// the calling hand, and the frame on the tile the computer would discard (the two differ in shape and in alpha).
+    inline constexpr Color kDeclareMark{255, 214, 80, 255};
+    inline constexpr Color kAdvisedFrame{255, 214, 80, 230};
 
     /// A plate under a discard block or the wall ring reaches this far past its zone, in view units; the HUD keeps clear of the plate.
     inline constexpr float kPlatePadding = 4.0f;
@@ -83,7 +87,7 @@ namespace BECore::Mahjong {
     inline constexpr float kModalPadding = 16.0f;
     inline constexpr float kModalGap = static_cast<float>(kGridStep);
     inline constexpr float kModalSectionGap = 16.0f;
-    inline constexpr float kModalTitleHeight = 56.0f;
+    inline constexpr float kModalTitleHeight = 48.0f;
     inline constexpr float kMainButtonHeight = 64.0f;
     inline constexpr float kViewMargin = 8.0f;
 

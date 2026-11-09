@@ -25,6 +25,7 @@ namespace BECore::Mahjong {
      * seat 0 a person, the others computers); both are kept across `Reset()`. `AsControllable()` hands out the control adapter, which
      * drives the match through the session. The seat choice of a new game is the panel `Setup` of the scene (`IsSetupOpen`). The language
      * of the words (`GetLanguage`, `kDefaultLanguage`) is kept for the session and applied to `CoreManager::GetUIStrings()` at every start.
+     * `HintsOn()` is the switch of the hints (default on, kept for the session, changed in `Setup`).
      */
     class MahjongGame : public IGame {
         BE_CLASS(MahjongGame)
@@ -100,6 +101,16 @@ namespace BECore::Mahjong {
         /// Picks the language and applies it to the string table. False, and nothing changes, for a language the table does not have.
         bool SetLanguage(PoolString language);
 
+        /// Whether the table shows hints (`Table/Hints.h`: the tiles the hand waits for, the discards that declare, the advice). On by
+        /// default, kept across `Reset()`, `StartMatch` and `New game`, takes effect at once. It is no rule, so it is not in the settings,
+        /// and the control API does not know it.
+        bool HintsOn() const {
+            return _hintsOn;
+        }
+        void SetHintsOn(bool on) {
+            _hintsOn = on;
+        }
+
         /// The active game, or nullptr when no game is active or the active game is not Mahjong.
         static MahjongGame* GetActive();
 
@@ -111,6 +122,7 @@ namespace BECore::Mahjong {
         MahjongSettings _settings;
         SeatSetup _seats = kDefaultSeatSetup;
         bool _setupOpen = false;
+        bool _hintsOn = true;
         PoolString _language = PoolString::Intern(kDefaultLanguage);
         TableSession _session{_match};  // after _match: it keeps a reference
         MahjongGameControl _control{*this};
