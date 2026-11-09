@@ -763,7 +763,7 @@ def write() -> int:
 # ----- the preview -----
 
 PREVIEW_FELT: Color = (30, 90, 60)
-PREVIEW_SIZES = ((CELL_W, CELL_H), (45, 60), (28, 37), (24, 32))  # native, the viewer's hand, a meld, a discard
+PREVIEW_SIZES = ((CELL_W, CELL_H), (45, 60), (30, 40), (24, 32))  # native, the viewer's hand, the viewer's meld, a discard
 PREVIEW_GAP = 8
 
 
@@ -830,8 +830,9 @@ def preview(out: Path) -> int:
 
 def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="Draws the Mahjong tile atlas and writes the sprite library.")
-    parser.add_argument("--check", action="store_true", help="exit 0 when the committed files are what the generator makes now")
-    parser.add_argument("--preview", metavar="OUT.png",
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument("--check", action="store_true", help="exit 0 when the committed files are what the generator makes now")
+    modes.add_argument("--preview", metavar="OUT.png",
                         help="write a contact sheet of every cell at four sizes (OUT must be outside the repository)")
     arguments = parser.parse_args(argv)
     if arguments.preview:
