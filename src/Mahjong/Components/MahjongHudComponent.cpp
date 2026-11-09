@@ -213,6 +213,15 @@ namespace BECore::Mahjong {
         vars.Set("handOverButton"_intern, eastl::string_view(Tr(strings, IsMatchOver(after.handsPlayed, match.GetSettings()) ? "handover.finish" : "handover.next")));
     }
 
+    void MahjongHudComponent::ShowHandOver(bool shown) {
+        Scene& scene = GetScene();
+        UICanvasComponent::SetVisibleByName(scene, "HandOver"_intern, shown);
+        UICanvasComponent::SetVisibleByName(scene, "HandOverAction"_intern, shown);
+        // The New game button lies on the bar of a narrow window, outside the view that the dim of the score table covers: it would look
+        // clickable. The standings (MatchOver) are a Screen canvas whose dim covers the whole window, so they need nothing.
+        UICanvasComponent::SetVisibleByName(scene, "HudMenu"_intern, !shown);
+    }
+
     void MahjongHudComponent::PublishMatchOver(const MahjongGame& game) {
         const StandingsTable table = FormatStandings(CoreManager::GetUIStrings(), game.GetMatch(), game.GetSession().Seats());
         UIVars& vars = CoreManager::GetUIVars();
@@ -244,7 +253,7 @@ namespace BECore::Mahjong {
         }
         if (handOver != _handOverShown) {
             _handOverShown = handOver;
-            UICanvasComponent::SetVisibleByName(GetScene(), "HandOver"_intern, handOver);
+            ShowHandOver(handOver);
         }
         if (matchOver != _matchOverShown) {
             _matchOverShown = matchOver;

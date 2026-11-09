@@ -1,4 +1,5 @@
 #include "MahjongTableTestSupport.h"
+#include "MahjongTouchTestSupport.h"
 #include "UiStyleTestSupport.h"
 
 #include <BECore/Text/Utf8.h>
@@ -24,10 +25,6 @@ namespace BECore::Mahjong::Tests {
         constexpr int kWorstPoints = 64;
         constexpr int kWorstDoubles = 12;
         constexpr int kWorstLinePoints = 32;  // the most one line can give: a concealed kong of terminals (2 x 2 x 2 x 4)
-        /// The standings are a Screen canvas with minScale: its button is a touch target in any window. The score table lies on the
-        /// fixed design of the table, as `Setup` and the HUD do: from a 480 px window its button is 21 px (the owner's list).
-        constexpr float kStandingsTouchMinimum = 32.0f;
-        constexpr float kScoreTableTouchMinimum = 20.0f;
         constexpr float kButtonAir = 8.0f;
         constexpr float kMinControlHeight = 48.0f;
         /// The standings lie on a Screen canvas that a 480 px window at the user scale 1.5 makes 320 units high (296 with a notch), so
@@ -217,15 +214,18 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers));
         Draw();
         EXPECT_FALSE(Shown("HandOver")) << "a hand in play";
+        EXPECT_FALSE(Shown("HandOverAction")) << "a hand in play";
         EXPECT_FALSE(Shown("MatchOver"));
 
         ASSERT_NO_FATAL_FAILURE(PlayHandOver());
         EXPECT_TRUE(Shown("HandOver"));
+        EXPECT_TRUE(Shown("HandOverAction"));
         EXPECT_FALSE(Shown("MatchOver"));
 
         ASSERT_TRUE(_game->GetSession().NextHand().has_value());
         Draw();
         EXPECT_FALSE(Shown("HandOver"));
+        EXPECT_FALSE(Shown("HandOverAction"));
         EXPECT_EQ(_game->GetSession().GetPhase(), SessionPhase::Playing);
     }
 
@@ -247,7 +247,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(Var(Format("scoreLine{}", i).c_str()), has ? expected.lines[i].c_str() : "") << "line " << i;
             EXPECT_EQ(OnScreen("HandOver", Format("ScoreLine{}", i).c_str()), has) << "line " << i << " is visible exactly when it has text";
         }
-        EXPECT_EQ(Text("HandOver", "NextHand"), "Next hand");
+        EXPECT_EQ(Text("HandOverAction", "NextHand"), "Next hand");
     }
 
     TEST_F(MahjongEndScreenTest, ALanguageSwitchWhileTheScoreTableIsUpChangesItsTextAtTheNextDraw) {
@@ -272,15 +272,15 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(Var(Format("scoreLine{}", i).c_str()), has ? russian.lines[i].c_str() : "") << "line " << i;
             EXPECT_EQ(OnScreen("HandOver", Format("ScoreLine{}", i).c_str()), has) << "the same lines are visible in the new language";
         }
-        EXPECT_NE(Text("HandOver", "NextHand"), "Next hand");
-        EXPECT_EQ(Text("HandOver", "NextHand").size(), Tr(CoreManager::GetUIStrings(), "handover.next").size());
+        EXPECT_NE(Text("HandOverAction", "NextHand"), "Next hand");
+        EXPECT_EQ(Text("HandOverAction", "NextHand").size(), Tr(CoreManager::GetUIStrings(), "handover.next").size());
         EXPECT_EQ(_game->GetSession().Version(), version) << "the game did not move";
         EXPECT_TRUE(Shown("HandOver"));
 
         ASSERT_TRUE(_game->SetLanguage("en"_intern));
         Draw();
         EXPECT_EQ(Text("HandOver", "Headline"), english.headline.c_str());
-        EXPECT_EQ(Text("HandOver", "NextHand"), "Next hand");
+        EXPECT_EQ(Text("HandOverAction", "NextHand"), "Next hand");
     }
 
     TEST_F(MahjongEndScreenTest, AWonHandShowsTheWinnersLinesAndADrawnHandShowsNone) {
@@ -312,7 +312,7 @@ namespace BECore::Mahjong::Tests {
         const SeatScores deltas = SettleHand(Hand()).deltas;
         const size_t history = _game->GetMatch().History().size();
 
-        ASSERT_TRUE(ClickElement("HandOver", "NextHand"));
+        ASSERT_TRUE(ClickElement("HandOverAction", "NextHand"));
         Draw();
 
         EXPECT_EQ(_game->GetMatch().History().size(), history + 1);
@@ -335,6 +335,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_game->GetMatch().History().size(), history);
         Draw();
         EXPECT_FALSE(Shown("HandOver"));
+        EXPECT_FALSE(Shown("HandOverAction"));
     }
 
     TEST_F(MahjongEndScreenTest, ANextHandFromAControlClientClosesTheScoreTable) {
@@ -351,6 +352,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(_game->GetSession().GetPhase(), SessionPhase::HandOver);
         Draw();
         ASSERT_TRUE(Shown("HandOver"));
+        ASSERT_TRUE(Shown("HandOverAction"));
 
         Json action = Json::object();
         action["type"] = "next_hand";
@@ -358,6 +360,7 @@ namespace BECore::Mahjong::Tests {
         Draw();
 
         EXPECT_FALSE(Shown("HandOver"));
+        EXPECT_FALSE(Shown("HandOverAction"));
     }
 
     TEST_F(MahjongEndScreenTest, TheButtonOfTheLastHandSaysFinishAndLeadsToTheStandings) {
@@ -365,9 +368,9 @@ namespace BECore::Mahjong::Tests {
         int finishing = 0;
         for (int hand = 0; hand < kHandLimit && _game->GetMatch().GetPhase() != MatchPhase::Finished; ++hand) {
             ASSERT_NO_FATAL_FAILURE(PlayHandOver());
-            const bool says = Text("HandOver", "NextHand") == "Finish match";
-            ASSERT_TRUE(says || Text("HandOver", "NextHand") == "Next hand");
-            ASSERT_TRUE(ClickElement("HandOver", "NextHand"));
+            const bool says = Text("HandOverAction", "NextHand") == "Finish match";
+            ASSERT_TRUE(says || Text("HandOverAction", "NextHand") == "Next hand");
+            ASSERT_TRUE(ClickElement("HandOverAction", "NextHand"));
             Draw();
             EXPECT_EQ(says, _game->GetMatch().GetPhase() == MatchPhase::Finished) << "hand " << hand << ": the button promises what the click does";
             finishing += says ? 1 : 0;
@@ -375,6 +378,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(finishing, 1);
         ASSERT_EQ(_game->GetMatch().GetPhase(), MatchPhase::Finished);
         EXPECT_FALSE(Shown("HandOver"));
+        EXPECT_FALSE(Shown("HandOverAction"));
         EXPECT_TRUE(Shown("MatchOver"));
         const StandingsTable table = FormatStandings(CoreManager::GetUIStrings(), _game->GetMatch(), _game->GetSession().Seats());
         EXPECT_EQ(Var("matchOverHeadline"), table.headline.c_str());
@@ -394,10 +398,10 @@ namespace BECore::Mahjong::Tests {
             int finishing = 0;
             for (int hand = 0; hand < kHandLimit && _game->GetMatch().GetPhase() != MatchPhase::Finished; ++hand) {
                 ASSERT_NO_FATAL_FAILURE(PlayHandOver());
-                const std::string label = Text("HandOver", "NextHand");
+                const std::string label = Text("HandOverAction", "NextHand");
                 const bool says = label == Tr(strings, "handover.finish").c_str();
                 ASSERT_TRUE(says || label == Tr(strings, "handover.next").c_str()) << label;
-                ASSERT_TRUE(ClickElement("HandOver", "NextHand"));
+                ASSERT_TRUE(ClickElement("HandOverAction", "NextHand"));
                 Draw();
                 EXPECT_EQ(says, _game->GetMatch().GetPhase() == MatchPhase::Finished) << "hand " << hand << ": the button promises what the click does";
                 finishing += says ? 1 : 0;
@@ -513,12 +517,23 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(GapBelow(*above, summary->rect), kModalGap);
             above = &summary->rect;
 
-            const UIElement* next = Element("HandOver", "NextHand");
-            ASSERT_NE(next, nullptr);
+            EXPECT_EQ(summary->rect.y + summary->rect.h, plate.y + plate.h - kModalPadding) << "the plate ends with the summary band: the button is in the action bar";
+
+            // The main button is not in the plate (64 units on the view are 24 px in the smallest window): it is the last thing of the bar
+            // below, which keeps its role, size and font and lies at least one section gap under the plate in a window of 1280 x 720
+            auto bar = Canvas("HandOverAction");
+            ASSERT_TRUE(bar);
+            bar->UpdateLayout(kViewWidth, kViewHeight);
+            const UIElement* barElement = Element("HandOverAction", "Bar");
+            const UIElement* next = Element("HandOverAction", "NextHand");
+            ASSERT_TRUE(barElement != nullptr && next != nullptr);
+            EXPECT_TRUE(SameColor(barElement->color, PaletteColor("surface")));
+            EXPECT_EQ(barElement->rect.h, kMainButtonHeight + 2.0f * kModalGap);
             EXPECT_TRUE(SameColor(next->color, PaletteColor("primary")));
             EXPECT_EQ(next->rect.h, kMainButtonHeight);
-            EXPECT_EQ(GapBelow(*above, next->rect), kModalSectionGap) << "the button is set apart from the rows by 16";
-            EXPECT_EQ(next->rect.y + next->rect.h, plate.y + plate.h - kModalPadding) << "the plate holds the button and nothing more";
+            EXPECT_EQ(next->rect.y - barElement->rect.y, kModalGap);
+            EXPECT_EQ(barElement->rect.y + barElement->rect.h - (next->rect.y + next->rect.h), kModalGap);
+            EXPECT_GE(GapBelow(plate, barElement->rect), kModalSectionGap) << "the plate ends a section gap above the bar";
         });
     }
 
@@ -609,8 +624,13 @@ namespace BECore::Mahjong::Tests {
                     }
                 }
             }
-            ExpectPassesTheMatrix("HandOver", kScoreTableTouchMinimum);
-            EXPECT_GE(Element("HandOver", "NextHand")->rect.h, kMinControlHeight);
+            // The plate is text only; the button is in the action bar, and the longer of its two words fits there
+            for (const Output& output : kOutputs) {
+                ExpectWordsFit("HandOverAction", output.width, output.height, kButtonAir);
+            }
+            ExpectPassesTheMatrix("HandOver", EngineTouchMinimum());
+            ExpectPassesTheMatrix("HandOverAction", EngineTouchMinimum());
+            EXPECT_GE(Element("HandOverAction", "NextHand")->rect.h, kMinControlHeight);
         });
     }
 
@@ -628,7 +648,7 @@ namespace BECore::Mahjong::Tests {
                 vars.Set(PoolString::Intern(Format("standing{}", row)), eastl::string_view(worst.standing));
             }
 
-            ExpectPassesTheMatrix("MatchOver", kStandingsTouchMinimum);
+            ExpectPassesTheMatrix("MatchOver", EngineTouchMinimum());
             for (const Output& output : kOutputs) {
                 ExpectWordsFit("MatchOver", output.width, output.height, kButtonAir);
             }
@@ -639,8 +659,44 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongEndScreenTest, TheButtonsOfBothPanelsCarryTheirActions) {
         ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers));
         Draw();
-        EXPECT_EQ(Element("HandOver", "NextHand")->Cast<UIButton>()->action, "MahjongNextHand"_intern);
+        EXPECT_EQ(Element("HandOverAction", "NextHand")->Cast<UIButton>()->action, "MahjongNextHand"_intern);
         EXPECT_EQ(Element("MatchOver", "NewGame")->Cast<UIButton>()->action, "MahjongNewGame"_intern);
+    }
+
+    TEST_F(MahjongEndScreenTest, TheScoreTableHasNoControlAndTheNewGameButtonOfTheHudIsHiddenWhileItIsShown) {
+        ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers));
+        Draw();
+        EXPECT_TRUE(Shown("HudMenu")) << "a hand in play";
+
+        ASSERT_NO_FATAL_FAILURE(PlayHandOver());
+        // The button of the HUD lies on a bar of a narrow window, which the dim of the score table does not cover: it is hidden
+        EXPECT_FALSE(Shown("HudMenu"));
+        auto plate = Canvas("HandOver");
+        ASSERT_TRUE(plate);
+        std::vector<const UIElement*> controls;
+        CollectControls(plate->GetRoot(), controls);
+        for (const UIElement* control : controls) {
+            EXPECT_FALSE(control->interactive) << control->name.ToStringView().data() << ": the plate is text, the button is in HandOverAction";
+        }
+
+        ASSERT_TRUE(ClickElement("HandOverAction", "NextHand"));
+        Draw();
+        EXPECT_TRUE(Shown("HudMenu"));
+    }
+
+    TEST_F(MahjongEndScreenTest, TheStandingsCoverTheWholeWindowSoTheNewGameButtonOfTheHudStaysAsItIs) {
+        ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers));
+        ASSERT_NO_FATAL_FAILURE(PlayMatchToTheEnd());
+        Draw();
+        ASSERT_TRUE(Shown("MatchOver"));
+        EXPECT_TRUE(Shown("HudMenu"));
+        const UIElement* dim = Element("MatchOver", "Dim");
+        ASSERT_NE(dim, nullptr);
+        EXPECT_TRUE(dim->blocksInput);
+        EXPECT_EQ(Canvas("MatchOver")->GetLayout().params.space, CanvasSpace::Screen) << "a Screen canvas: its dim covers the bars too";
+        // The button of the standings is the one that answers, and the click opens the seat choice
+        ASSERT_TRUE(ClickElement("MatchOver", "NewGame"));
+        EXPECT_TRUE(_game->IsSetupOpen());
     }
 
 }  // namespace BECore::Mahjong::Tests

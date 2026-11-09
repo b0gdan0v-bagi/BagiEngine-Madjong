@@ -59,17 +59,19 @@ namespace BECore::Mahjong {
      *
      * **Playing.** While a person has to act (`TableSession::ActorIsPerson()`, no hot-seat cover) a left click on a tile of the viewer's hand
      * discards it (`PerformPerson(MakeDiscard(tile, declareNext))`); a refused action changes nothing. The other actions are the buttons of the
-     * canvas `Actions` (`Table/ActionButtons.h`), shown from `LegalActions` every frame (`SetElementVisibleByName`; each button says a word of the
-     * string table in the file (`{#button.<Kind>}`) and the tiles of its action are `UIImage` children whose sprite the component sets), and answered here as
-     * `InputEvents::ActionEvent`s. While the pointer is over a shown button (`UIElement::hovered`, set by the canvas) its sentence (a key of the
-     * string table, looked up in the current language and again when it changes) is the variable `actionHint` and the label `Hint` is shown; a touch screen has no hover and so no hint. `Declare` is a
-     * `UIToggle` bound to the flag "the next discard declares the calling hand" (variable `declareNext`, `on` / `off`; it emits the state it asks for; the tiles whose declaring discard is not legal
-     * are dimmed while it is on); the flag is cleared by the discard, when the button is no longer offered and when the turn it was set on is over (the seat or the number of discards changed, e.g. a
-     * control client played for the person). With two or more people the canvas `Handoff` (a modal, hidden at the start) is shown exactly while `HandoffPending()`; its button `MahjongReveal` calls
-     * `Reveal()`. **Pace:** while a computer has to act the component plays one step every `kComputerStepSeconds` of `SceneUpdateEvent` time (a claim window and the discard after it count as one
-     * step), and nothing while a person acts, the cover is up, the seat choice `Setup` is open (`MahjongGame::IsSetupOpen()`: no click is taken either) or the hand is over. A claim window is settled
-     * within one period (the computers decide one after the other without a pause between them) and a computer that is to discard after it does so in the same period, so between computers the time
-     * from a discard to the next one is the same whether or not a window opened (a person who acts next gets the turn at once when no window opened and after the pause when one did).
+     * canvas `Actions` (`Table/ActionButtons.h`; `ActionsCompact` holds the same buttons by name for the windows where those would be under the
+     * touch minimum and the bar under the table holds the row at its height there, `NeedsCompactActions`, and exactly one of the two is shown; the node `HintsButton`, the button of the hints on the
+     * table, is shown with `Actions`, and `ActionsCompact` holds a `HintButton` of its own), shown from `LegalActions` every frame
+     * (`SetElementVisibleByName`; each button says a word of the string table in the file (`{#button.<Kind>}`) and the tiles of its action are `UIImage` children whose sprite the component sets), and
+     * answered here as `InputEvents::ActionEvent`s. While the pointer is over a shown button (`UIElement::hovered`, set by the canvas) its sentence (a key of the string table, looked up in the
+     * current language and again when it changes) is the variable `actionHint` and the label `Hint` is shown; a touch screen has no hover and so no hint. `Declare` is a `UIToggle` bound to the flag
+     * "the next discard declares the calling hand" (variable `declareNext`, `on` / `off`; it emits the state it asks for; the tiles whose declaring discard is not legal are dimmed while it is on);
+     * the flag is cleared by the discard, when the button is no longer offered and when the turn it was set on is over (the seat or the number of discards changed, e.g. a control client played for
+     * the person). With two or more people the canvas `Handoff` (a modal, hidden at the start) is shown exactly while `HandoffPending()`; its button `MahjongReveal` calls `Reveal()`. **Pace:** while
+     * a computer has to act the component plays one step every `kComputerStepSeconds` of `SceneUpdateEvent` time (a claim window and the discard after it count as one step), and nothing while a
+     * person acts, the cover is up, the seat choice `Setup` is open (`MahjongGame::IsSetupOpen()`: no click is taken either) or the hand is over. A claim window is settled within one period (the
+     * computers decide one after the other without a pause between them) and a computer that is to discard after it does so in the same period, so between computers the time from a discard to the
+     * next one is the same whether or not a window opened (a person who acts next gets the turn at once when no window opened and after the pause when one did).
      */
     class MahjongTableComponent : public IComponent {
         BE_CLASS(MahjongTableComponent)
@@ -122,7 +124,8 @@ namespace BECore::Mahjong {
         [[nodiscard]] static DeclareTurn TurnOf(const MahjongGame& game);
         /// One action of the computer that has to act; false (and a log line) when the model refused it.
         static bool StepComputerChecked(TableSession& session);
-        /// Pushes the buttons, the tile pictures on them, the hint of the hovered button and the cover to the canvases of the scene, only what changed.
+        /// Pushes the buttons, the tile pictures on them, the hint of the hovered button, the choice between `Actions` (with `HintsButton`) and
+        /// `ActionsCompact` and the cover to the canvases of the scene, only what changed.
         void PublishScreen(const MahjongGame* game);
 
         /// Looks at the entries of `Moves()` not seen yet and starts the highlight of the set the last of them laid; a hand, a match or a
@@ -135,6 +138,7 @@ namespace BECore::Mahjong {
         eastl::string_view _hintKey;       // the key of the sentence in `actionHint` (a literal of `SpecOf`, which lives as long as the program)
         uint64_t _hintStringsVersion = 0;  // the version of the string table that sentence was looked up at
         bool _handoffShown = false;
+        bool _compactActions = false;  // `ActionsCompact` is the shown canvas of the buttons; the scene file starts with `Actions`
         bool _declareNext = false;
         DeclareTurn _declareTurn;     // the turn `_declareNext` was set on
         float _computerClock = 0.0f;  // seconds a computer has been waiting to play

@@ -4,6 +4,7 @@
 #include <BECore/Renderer/IRenderer.h>
 #include <BECore/Scene/Scene.h>
 #include <BECore/UI/UICanvasComponent.h>
+#include <BECore/UI/UIEnvironment.h>
 #include <BECore/UI/UIImage.h>
 #include <CoreSDL/SDLEvents.h>
 #include <Events/InputEvents.h>
@@ -12,6 +13,7 @@
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/Table/SeatName.h>
 #include <Mahjong/Table/TileAtlas.h>
+#include <Mahjong/Table/TouchRegime.h>
 #include <Mahjong/Table/UiPalette.h>
 
 namespace BECore::Mahjong {
@@ -43,25 +45,45 @@ namespace BECore::Mahjong {
             }
         };
 
-        /// The element `name` of the canvas on the node `Actions`; null when the scene has none.
-        UIElement* FindActionElement(Scene& scene, PoolString name) {
-            for (const auto& node : scene.GetRootNode().GetChildren()) {
-                if (node->GetName() == "Actions"_intern) {
-                    const auto canvas = node->GetComponent<UICanvasComponent>();
-                    return canvas ? canvas->GetRoot().FindByName(name) : nullptr;
+        /// The two nodes of the action buttons (the names of the scene file).
+        PoolString ActionsNode() {
+            return "Actions"_intern;
+        }
+        PoolString ActionsCompactNode() {
+            return "ActionsCompact"_intern;
+        }
+        /// The node of the button `HintButton` of the hints on the table: shown with `Actions`, hidden where `ActionsCompact` is shown (which
+        /// holds a `HintButton` of its own, the last button of its row)
+        PoolString HintsButtonNode() {
+            return "HintsButton"_intern;
+        }
+
+        /// The canvas on the node `nodeName`; null when the scene has none. The action buttons are on two nodes, `Actions` on the table and
+        /// `ActionsCompact` on the bar under it, where the first would be too small to touch and the bar holds the row at its height there
+        /// (`NeedsCompactActions`); they hold the same elements by name, and exactly one is shown. A frame looks each canvas up once.
+        IntrusivePtr<UICanvasComponent> FindCanvasOf(Scene& scene, PoolString nodeName) {
+            for (const auto& child : scene.GetRootNode().GetChildren()) {
+                if (child->GetName() == nodeName) {
+                    return child->GetComponent<UICanvasComponent>();
                 }
             }
-            return nullptr;
+            return {};
+        }
+
+        /// The element `name` of `canvas`; null when there is no canvas or no such element.
+        UIElement* FindElementIn(const IntrusivePtr<UICanvasComponent>& canvas, PoolString name) {
+            return canvas ? canvas->GetRoot().FindByName(name) : nullptr;
         }
 
         /// The key of the sentence of the shown button under the pointer (the canvas sets `UIElement::hovered` from the mouse); empty when none is.
-        eastl::string_view HoveredHintKey(Scene& scene, const ActionButtons& buttons) {
+        /// Only the buttons of `Actions` have a hint: a touch screen has no hover, and `ActionsCompact` has no label for it.
+        eastl::string_view HoveredHintKey(const IntrusivePtr<UICanvasComponent>& actions, const ActionButtons& buttons) {
             for (int i = 0; i < kButtonCount; ++i) {
                 const ButtonKind kind = static_cast<ButtonKind>(i);
                 if (!buttons[kind].shown) {
                     continue;  // a hidden button may still carry the flag of the last motion
                 }
-                const UIElement* element = FindActionElement(scene, PoolString::Intern(SpecOf(kind).element));
+                const UIElement* element = FindElementIn(actions, PoolString::Intern(SpecOf(kind).element));
                 if (element != nullptr && element->hovered) {
                     return buttons[kind].hintKey;
                 }
@@ -262,6 +284,21 @@ namespace BECore::Mahjong {
         const ActionButtons buttons = game != nullptr ? CurrentButtons(*game) : ActionButtons{};
         UIVars& vars = CoreManager::GetUIVars();
         Scene& scene = GetScene();
+
+        // The canvas of the buttons: `Actions` while its buttons are touch targets, else `ActionsCompact` (the same buttons by name); the
+        // button of the hints goes with them: `HintsButton` where `Actions` is, its copy in `ActionsCompact` where that is
+        const IRenderer& renderer = *CoreManager::GetRenderer();
+        const UIEnvironment& environment = CoreManager::GetUIEnvironment();
+        const UILayoutContext window = environment.MakeContext(CoreManager::GetMainWindow().Get(), renderer.GetOutputWidth(), renderer.GetOutputHeight());
+        const bool compact = NeedsCompactActions(window.outputWidth, window.outputHeight, window.pixelDensity, environment.GetSettings().minTouchSize, window.userScale);
+        if (compact != _compactActions) {
+            _compactActions = compact;
+            UICanvasComponent::SetVisibleByName(scene, ActionsNode(), !compact);
+            UICanvasComponent::SetVisibleByName(scene, HintsButtonNode(), !compact);
+            UICanvasComponent::SetVisibleByName(scene, ActionsCompactNode(), compact);
+        }
+        const IntrusivePtr<UICanvasComponent> actionsCanvas = FindCanvasOf(scene, ActionsNode());
+        const IntrusivePtr<UICanvasComponent> canvases[] = {actionsCanvas, FindCanvasOf(scene, ActionsCompactNode())};
         for (int i = 0; i < kButtonCount; ++i) {
             const ButtonKind kind = static_cast<ButtonKind>(i);
             const ButtonState& now = buttons[kind];
@@ -280,9 +317,11 @@ namespace BECore::Mahjong {
                 }
                 const PoolString imageName = PoolString::Intern(TileImageName(kind, t));
                 if (showNow) {
-                    UIElement* element = FindActionElement(scene, imageName);
-                    if (UIImage* image = element != nullptr ? element->Cast<UIImage>() : nullptr) {
-                        image->sprite = PoolString::Intern(SpriteName(now.tiles[static_cast<size_t>(t)]));
+                    for (const IntrusivePtr<UICanvasComponent>& canvas : canvases) {
+                        UIElement* element = FindElementIn(canvas, imageName);
+                        if (UIImage* image = element != nullptr ? element->Cast<UIImage>() : nullptr) {
+                            image->sprite = PoolString::Intern(SpriteName(now.tiles[static_cast<size_t>(t)]));
+                        }
                     }
                 }
                 if (showNow != showBefore) {
@@ -296,7 +335,7 @@ namespace BECore::Mahjong {
         // The hint of the button under the pointer, in the label `Hint` that shows exactly while there is one; the sentence is
         // looked up again when the language changed under it
         const UIStrings& strings = CoreManager::GetUIStrings();
-        const eastl::string_view hintKey = HoveredHintKey(scene, buttons);
+        const eastl::string_view hintKey = compact ? eastl::string_view{} : HoveredHintKey(actionsCanvas, buttons);
         const PoolString actionHint = "actionHint"_intern;
         if (hintKey != _hintKey || strings.GetVersion() != _hintStringsVersion || !vars.Has(actionHint)) {
             _hintKey = hintKey;

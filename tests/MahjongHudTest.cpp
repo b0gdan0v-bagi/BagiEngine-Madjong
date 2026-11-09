@@ -1,5 +1,6 @@
 #include "ComputerTestSupport.h"
 #include "MahjongTableTestSupport.h"
+#include "MahjongTouchTestSupport.h"
 #include "UiStyleTestSupport.h"
 
 #include <BECore/Control/Json.h>
@@ -19,18 +20,16 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        constexpr float kHudTouchMinimum = 20.0f;  // the HUD and the panel lie on the fixed design of the table, as the action buttons do
         /// Output sizes (and the air a button keeps) the words are asked in: the design size, a small window, the narrowest windows.
         struct Output {
             float width;
             float height;
         };
-        constexpr Output kOutputs[] = {{1280.0f, 720.0f}, {731.0f, 411.0f}, {853.0f, 480.0f}, {480.0f, 480.0f}, {480.0f, 853.0f}};
+        constexpr Output kOutputs[] = {{1280.0f, 720.0f}, {731.0f, 411.0f}, {853.0f, 480.0f}, {480.0f, 480.0f}, {480.0f, 853.0f}, {1707.0f, 480.0f}};
         constexpr float kButtonAir = 8.0f;
         constexpr float kMinControlHeight = 48.0f;
         constexpr int kHandsToTry = 20;
         constexpr const char* kPlainHand = "1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Gd Rd";
-        constexpr int kWorstDiscards = 100;
 
         void Elapse(float seconds) {
             SceneEvents::SceneUpdateEvent::Emit(seconds);
@@ -275,7 +274,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Text("Hud", "RoundLabel"), "Раунд: Восток, раздача 1 из 16");
         EXPECT_EQ(Text("Hud", "WallLabel"), "Стена: " + std::to_string(Hand().GetWall().LiveCount()));
         EXPECT_EQ(Text("Hud", "TurnLabel"), "Ход: " + Var("turn"));
-        EXPECT_EQ(Text("Hud", "NewGame"), "Новая игра");
+        EXPECT_EQ(Text("HudMenu", "NewGame"), "Новая игра");
 
         for (const SeatSetup& seats : {kTwoPeople, kAllComputers}) {
             ASSERT_NO_FATAL_FAILURE(Start(seats));
@@ -383,7 +382,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongHudTest, NoKeyIsMissingWhenEveryCanvasOfTheSceneIsShownInEveryLanguage) {
         ASSERT_NO_FATAL_FAILURE(Start(kTwoPeople));
         Scene& scene = *_manager->GetSceneByName("MahjongScene"_intern);
-        for (const char* node : {"Actions", "Hud", "Handoff", "HandOver", "MatchOver", "Setup"}) {
+        for (const char* node : {"Actions", "ActionsCompact", "Hud", "HudMenu", "Handoff", "HandOver", "HandOverAction", "MatchOver", "Setup"}) {
             UICanvasComponent::SetVisibleByName(scene, PoolString::Intern(node), true);
             const auto canvas = Canvas(node);
             ASSERT_TRUE(canvas) << node;
@@ -410,11 +409,15 @@ namespace BECore::Mahjong::Tests {
             SCOPED_TRACE(language.ToStringView().data());
             SetWorstVars();
 
-            ExpectPassesTheMatrix("Hud", kHudTouchMinimum);
+            // The labels are no touch target; the one button of the HUD is in `HudMenu`, a Screen canvas with the engine's touch minimum
+            const float minTouch = EngineTouchMinimum();
+            ExpectPassesTheMatrix("Hud", minTouch);
+            ExpectPassesTheMatrix("HudMenu", minTouch);
             for (const Output& output : kOutputs) {
                 ExpectWordsFit("Hud", output.width, output.height, kButtonAir);
+                ExpectWordsFit("HudMenu", output.width, output.height, kButtonAir);
             }
-            EXPECT_GE(Element("Hud", "NewGame")->rect.h, kMinControlHeight);
+            EXPECT_GE(Element("HudMenu", "NewGame")->rect.h, kMinControlHeight);
         });
     }
 
@@ -426,10 +429,10 @@ namespace BECore::Mahjong::Tests {
 
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
-            ExpectPassesTheMatrix("Setup", kHudTouchMinimum);
-            for (const Output& output : kOutputs) {
-                ExpectWordsFit("Setup", output.width, output.height, kButtonAir);
-            }
+
+            // In the design size the controls are as high as main's anatomy has them
+            Draw();
+            Canvas("Setup")->UpdateLayout(kViewWidth, kViewHeight);
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 for (const char* kind : {"Person", "Computer"}) {
                     const UIElement* segment = Element("Setup", Format("Seat{}{}", seat, kind).c_str());
@@ -437,12 +440,20 @@ namespace BECore::Mahjong::Tests {
                     EXPECT_GE(segment->rect.h, kMinControlHeight) << seat << kind;
                 }
             }
-            for (const char* segmentName : {"LanguageEn", "LanguageRu", "Hands16", "Hands8"}) {
+            for (const char* segmentName : {"LanguageEn", "LanguageRu", "Hands16", "Hands8", "HintsOn", "HintsOff"}) {
                 const UIElement* segment = Element("Setup", segmentName);
                 ASSERT_NE(segment, nullptr) << segmentName;
                 EXPECT_GE(segment->rect.h, kMinControlHeight) << segmentName;
             }
             EXPECT_GE(Element("Setup", "Start")->rect.h, kMinControlHeight);
+
+            // In every window, scale mode and user scale: the engine's touch minimum, and every word whole
+            ExpectPassesTheMatrix("Setup", EngineTouchMinimum());
+            for (const Output& output : kOutputs) {
+                ExpectWordsFit("Setup", output.width, output.height, kButtonAir);
+            }
+            const std::vector<std::string> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Setup"), kButtonAir);
+            EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
         });
     }
 
@@ -539,21 +550,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongHudTest, TheHudCoversNoTileOfTheWorstTable) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
-        TableInput worst;
-        worst.viewer = 0;
-        worst.concealedCount.fill(kMaxConcealedTiles);
-        worst.bonusCount.fill(kMaxBonusTiles);
-        Meld kong;
-        kong.kind = MeldKind::Kong;
-        kong.first = T("1p");
-        for (auto& melds : worst.melds) {
-            melds.assign(kMaxMelds, kong);
-        }
-        for (int i = 0; i < kWorstDiscards; ++i) {
-            worst.discardSeats.push_back(i % kSeatCount);
-        }
-        worst.wallRemaining = 2 * kWallRingCells;
-        const TableLayout layout = MakeTableLayout(worst);
+        const TableLayout layout = MakeWorstCaseTableLayout();
 
         // The plates the table paints under the discard blocks and the wall ring
         const eastl::vector<Rect> plates = ZonePlates(layout);
@@ -564,7 +561,7 @@ namespace BECore::Mahjong::Tests {
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             Draw();  // laid out again with the words of this language
-            for (const char* name : {"Info", "Scores", "NewGame", "MoveLine"}) {
+            for (const char* name : {"Info", "Scores", "MoveLine"}) {
                 const UIElement* element = Element("Hud", name);
                 ASSERT_NE(element, nullptr) << name;
                 ASSERT_FALSE(element->rect.IsEmpty()) << name;
@@ -702,7 +699,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_FALSE(longest.empty());
             CoreManager::GetUIVars().Set("lastMove"_intern, eastl::string_view(longest));
 
-            ExpectPassesTheMatrix("Hud", kHudTouchMinimum);
+            ExpectPassesTheMatrix("Hud", EngineTouchMinimum());
             for (const Output& output : kOutputs) {
                 ExpectWordsFit("Hud", output.width, output.height, kButtonAir);
             }
@@ -770,9 +767,9 @@ namespace BECore::Mahjong::Tests {
 
         EXPECT_FALSE(SetupShown());
         EXPECT_EQ(CoreManager::GetUIStrings().GetLanguage(), "ru"_intern) << "a started match speaks the language of the game";
-        EXPECT_EQ(Text("Hud", "NewGame"), "Новая игра");
+        EXPECT_EQ(Text("HudMenu", "NewGame"), "Новая игра");
 
-        ASSERT_TRUE(ClickElement("Hud", "NewGame"));
+        ASSERT_TRUE(ClickElement("HudMenu", "NewGame"));
         Draw();
         EXPECT_TRUE(SetupShown());
         EXPECT_EQ(Var("language"), "ru") << "the row shows the language the game has";
@@ -807,7 +804,7 @@ namespace BECore::Mahjong::Tests {
         Draw();
         EXPECT_EQ(_game->GetLanguage(), "en"_intern) << "a stale click is ignored";
         EXPECT_EQ(CoreManager::GetUIStrings().GetVersion(), strings);
-        EXPECT_EQ(Text("Hud", "NewGame"), "New game");
+        EXPECT_EQ(Text("HudMenu", "NewGame"), "New game");
     }
 
     TEST_F(MahjongHudTest, TheLanguageOfTheScoreTableAndTheStandingsFollowsTheRowOfSetup) {
@@ -818,13 +815,13 @@ namespace BECore::Mahjong::Tests {
         _game->GetSession().RunComputers();
         ASSERT_EQ(_game->GetSession().GetPhase(), SessionPhase::HandOver);
         Draw();
-        EXPECT_EQ(Text("HandOver", "NextHand"), "Next hand");
+        EXPECT_EQ(Text("HandOverAction", "NextHand"), "Next hand");
 
         _game->OpenSetup();  // New game over the score table
         Draw();
         ASSERT_TRUE(ClickElement("Setup", "LanguageRu"));
         Draw();
-        EXPECT_EQ(Text("HandOver", "NextHand"), "Следующая раздача");
+        EXPECT_EQ(Text("HandOverAction", "NextHand"), "Следующая раздача");
 
         _game->CloseSetup();
         ASSERT_NO_FATAL_FAILURE(PlayMatchToTheEnd());
@@ -1046,7 +1043,7 @@ namespace BECore::Mahjong::Tests {
         Draw();
         ASSERT_FALSE(SetupShown());
 
-        ASSERT_TRUE(ClickElement("Hud", "NewGame"));
+        ASSERT_TRUE(ClickElement("HudMenu", "NewGame"));
         Draw();
 
         ASSERT_TRUE(SetupShown());
@@ -1065,7 +1062,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(control->Reset(options).has_value());
         Draw();
         ASSERT_FALSE(SetupShown());
-        ASSERT_TRUE(ClickElement("Hud", "NewGame"));
+        ASSERT_TRUE(ClickElement("HudMenu", "NewGame"));
         Draw();
 
         ASSERT_TRUE(SetupShown());
@@ -1098,7 +1095,7 @@ namespace BECore::Mahjong::Tests {
         Draw();
         EXPECT_FALSE(SetupShown());
 
-        ASSERT_TRUE(ClickElement("Hud", "NewGame"));
+        ASSERT_TRUE(ClickElement("HudMenu", "NewGame"));
         Draw();
 
         EXPECT_TRUE(_game->IsSetupOpen());

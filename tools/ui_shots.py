@@ -142,7 +142,7 @@ def standings(client: BagiControlClient, seed: int) -> str:
 def setup_screen(client: BagiControlClient, seed: int) -> str:
     reset(client, seed, "PCCC")
     settle(client)
-    client.call("ui_click", {"name": "NewGame", "canvas": "Hud"})
+    client.call("ui_click", {"name": "NewGame", "canvas": "HudMenu"})
     tree = settle(client)
     check(canvas_visible(tree, "Setup"), "New game did not open the seat choice")
     return f"seed {seed}"
