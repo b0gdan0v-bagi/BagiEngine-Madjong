@@ -62,6 +62,9 @@ namespace BECore::Mahjong {
      * `kCallingFrame` round its hand (four bars of `kCallingFrameWidth` units on the border of the rectangle of the turn backdrop),
      * drawn before the tiles, for every seat that has declared, under the cover and at the end of the hand too (it reads the flag, never
      * a tile); it follows the flag, so it is gone in the next hand.
+     * While the viewer's own hand is declared, face up and it is its turn, every tile whose discard leaves the hand waiting
+     * (`KeepsWaitingDiscards`, `Table/CallingMarks.h`, from the viewer's `TableView`) has a bar of `kKeepsWaitingMark` inside its bottom
+     * edge, whatever the `Hints` switch says.
      *
      * **Playing.** While a person has to act (`TableSession::ActorIsPerson()`, no hot-seat cover) a left click on a tile of the viewer's hand
      * discards it (`PerformPerson(MakeDiscard(tile, declareNext))`); a refused action changes nothing. The other actions are the buttons of the

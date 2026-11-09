@@ -11,6 +11,7 @@
 #include <Events/SceneEvents.h>
 #include <Generated/MahjongTableComponent.gen.hpp>
 #include <Mahjong/MahjongGame.h>
+#include <Mahjong/Table/CallingMarks.h>
 #include <Mahjong/Table/SeatName.h>
 #include <Mahjong/Table/TileAtlas.h>
 #include <Mahjong/Table/TouchRegime.h>
@@ -521,6 +522,14 @@ namespace BECore::Mahjong {
         // nothing marks it (and the layout is the same plain row either way)
         const int drawnIndex = IsSeat(bottom) && session.GetPhase() == SessionPhase::Playing && faces.Shows(bottom) ? DrawnIndexOf(hand, bottom) : -1;
 
+        // The discards that keep a declared hand waiting: only on the viewer's own turn in a hand that is face up (the guard is cheap, the
+        // view is made only when it can say something); not tied to the hints switch
+        eastl::array<bool, kTileIdCount> keepsWaiting{};
+        if (IsSeat(bottom) && session.GetPhase() == SessionPhase::Playing && faces.Shows(bottom) && hand.GetPhase() == Phase::Discard && hand.CurrentSeat() == bottom &&
+            hand.GetHand(bottom).callingDeclared) {
+            keepsWaiting = KeepsWaitingDiscards(MakeTableView(hand, bottom));
+        }
+
         // A face (the tile) or the back (nullopt) at `rect`: from the atlas, else a plain rectangle.
         const auto drawFace = [&](const Rect& rect, std::optional<Tile> face) {
             if (_atlas) {
@@ -605,6 +614,10 @@ namespace BECore::Mahjong {
                     drawTile(slot.rect, faces.Shows(slot.seat) ? std::optional<Tile>(held.concealed[slot.index]) : std::nullopt);
                     if (slot.seat == bottom && slot.index == drawnIndex) {
                         renderer.DrawFilledRect(slot.rect.x, slot.rect.y, slot.rect.w, slot.rect.h, kDrawnTileMark);
+                    }
+                    if (slot.seat == bottom && keepsWaiting[held.concealed[slot.index].Id()]) {
+                        const float bar = kKeepsWaitingBarHeight * unit;
+                        renderer.DrawFilledRect(slot.rect.x, slot.rect.y + slot.rect.h - bar, slot.rect.w, bar, kKeepsWaitingMark);
                     }
                     if (_declareNext && slot.seat == session.Actor() && cannotDeclare[held.concealed[slot.index].Id()]) {
                         renderer.DrawFilledRect(slot.rect.x, slot.rect.y, slot.rect.w, slot.rect.h, kVeil);
