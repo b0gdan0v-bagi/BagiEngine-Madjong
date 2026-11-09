@@ -265,7 +265,7 @@ namespace BECore::Mahjong::Tests {
                     SetShown(kind, true);
                 }
                 // The touch size is held where the rule keeps `Actions` (but for the windows of 640 x 480 and 720 x 480, see `ActionsMayBeSmall`); elsewhere `ActionsCompact` holds it (below)
-                ExpectMatrixExceptTouchWhere(*canvas, "Actions", CoreManager::GetUIEnvironment().GetSettings().minTouchSize, ActionsMayBeSmall);
+                ExpectMatrixExceptTouchWhere(*canvas, "Actions", EngineTouchMinimum(), ActionsMayBeSmall);
                 for (const Output& output : kOutputs) {
                     ExpectWordsFit("Actions", output.width, output.height, 0.0f);
                 }
@@ -285,7 +285,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongTableScreenTest, EveryActionButtonIsATouchTargetFromTheSmallestWindowThatKeepsTheActionsCanvas) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
-        const float minTouch = CoreManager::GetUIEnvironment().GetSettings().minTouchSize;
+        const float minTouch = EngineTouchMinimum();
         // The rule: this window keeps `Actions`, one pixel less does not
         ASSERT_FALSE(NeedsCompactActions(kSmallestActionsWindowWidth, kSmallestActionsWindowHeight, 1.0f, minTouch));
         // One pixel narrower is too small; the window is taller here, so the bar under the table holds the compact row
@@ -442,7 +442,7 @@ namespace BECore::Mahjong::Tests {
         // Hidden in the file; shown by hand and not drawn after it (a draw would hide it again: the window is big)
         ASSERT_TRUE(UICanvasComponent::SetVisibleByName(*_manager->GetSceneByName("MahjongScene"_intern), "ActionsCompact"_intern, true));
 
-        const float minTouch = CoreManager::GetUIEnvironment().GetSettings().minTouchSize;
+        const float minTouch = EngineTouchMinimum();
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             for (const std::vector<ButtonKind>& kinds : FullestButtonSets()) {
@@ -490,7 +490,7 @@ namespace BECore::Mahjong::Tests {
                     SetShown(kind, true);
                 }
                 // The touch size is held where the rule keeps `Actions` (but for the windows of 640 x 480 and 720 x 480, see `ActionsMayBeSmall`); elsewhere `ActionsCompact` holds it (below)
-                ExpectMatrixExceptTouchWhere(*canvas, "Actions", CoreManager::GetUIEnvironment().GetSettings().minTouchSize, ActionsMayBeSmall);
+                ExpectMatrixExceptTouchWhere(*canvas, "Actions", EngineTouchMinimum(), ActionsMayBeSmall);
                 for (const Output& output : kOutputs) {
                     ExpectWordsFit("Actions", output.width, output.height, 0.0f);
                 }
@@ -531,7 +531,7 @@ namespace BECore::Mahjong::Tests {
             }
             CoreManager::GetUIVars().Set("handoffSeat"_intern, eastl::string_view(Longest(names)));
 
-            ExpectPassesTheMatrix("Handoff", CoreManager::GetUIEnvironment().GetSettings().minTouchSize);
+            ExpectPassesTheMatrix("Handoff", EngineTouchMinimum());
             for (const Output& output : kOutputs) {
                 ExpectWordsFit("Handoff", output.width, output.height, 0.0f);
             }

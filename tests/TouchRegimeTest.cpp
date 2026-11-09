@@ -270,7 +270,7 @@ namespace BECore::Mahjong::Tests {
                 ++roomy;
             }
         }
-        // Both kinds of window are in the matrix: the 480 px ones are compact, the full HD ones are not
+        // Both kinds of window are in the matrix: some 480 px ones are compact (480 x 480), the full HD ones are not
         EXPECT_GT(compact, 0);
         EXPECT_GT(roomy, 0);
         EXPECT_TRUE(Compact(480.0f, 480.0f));

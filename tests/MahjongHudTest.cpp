@@ -410,7 +410,7 @@ namespace BECore::Mahjong::Tests {
             SetWorstVars();
 
             // The labels are no touch target; the one button of the HUD is in `HudMenu`, a Screen canvas with the engine's touch minimum
-            const float minTouch = CoreManager::GetUIEnvironment().GetSettings().minTouchSize;
+            const float minTouch = EngineTouchMinimum();
             ExpectPassesTheMatrix("Hud", minTouch);
             ExpectPassesTheMatrix("HudMenu", minTouch);
             for (const Output& output : kOutputs) {
@@ -699,7 +699,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_FALSE(longest.empty());
             CoreManager::GetUIVars().Set("lastMove"_intern, eastl::string_view(longest));
 
-            ExpectPassesTheMatrix("Hud", CoreManager::GetUIEnvironment().GetSettings().minTouchSize);
+            ExpectPassesTheMatrix("Hud", EngineTouchMinimum());
             for (const Output& output : kOutputs) {
                 ExpectWordsFit("Hud", output.width, output.height, kButtonAir);
             }

@@ -1,4 +1,5 @@
 #include "MahjongTableTestSupport.h"
+#include "MahjongTouchTestSupport.h"
 #include "UiStyleTestSupport.h"
 
 #include <BECore/Text/Utf8.h>
@@ -171,11 +172,6 @@ namespace BECore::Mahjong::Tests {
             _game->GetSession().RunComputers();
             ASSERT_EQ(_game->GetSession().GetPhase(), SessionPhase::HandOver);
             Draw();
-        }
-
-        /// The engine's least size of a control as seen: every button of both panels reaches it in every window of the matrix.
-        static float TouchMinimum() {
-            return CoreManager::GetUIEnvironment().GetSettings().minTouchSize;
         }
 
         std::string Text(const char* node, const char* element) const {
@@ -632,8 +628,8 @@ namespace BECore::Mahjong::Tests {
             for (const Output& output : kOutputs) {
                 ExpectWordsFit("HandOverAction", output.width, output.height, kButtonAir);
             }
-            ExpectPassesTheMatrix("HandOver", TouchMinimum());
-            ExpectPassesTheMatrix("HandOverAction", TouchMinimum());
+            ExpectPassesTheMatrix("HandOver", EngineTouchMinimum());
+            ExpectPassesTheMatrix("HandOverAction", EngineTouchMinimum());
             EXPECT_GE(Element("HandOverAction", "NextHand")->rect.h, kMinControlHeight);
         });
     }
@@ -652,7 +648,7 @@ namespace BECore::Mahjong::Tests {
                 vars.Set(PoolString::Intern(Format("standing{}", row)), eastl::string_view(worst.standing));
             }
 
-            ExpectPassesTheMatrix("MatchOver", TouchMinimum());
+            ExpectPassesTheMatrix("MatchOver", EngineTouchMinimum());
             for (const Output& output : kOutputs) {
                 ExpectWordsFit("MatchOver", output.width, output.height, kButtonAir);
             }

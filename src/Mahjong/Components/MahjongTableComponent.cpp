@@ -58,28 +58,33 @@ namespace BECore::Mahjong {
             return "HintsButton"_intern;
         }
 
-        /// The element `name` of the canvas on the node `nodeName`; null when the scene has none. The action buttons are on two nodes,
-        /// `Actions` on the table and `ActionsCompact` on the bar under it, where the first would be too small to touch and the bar holds
-        /// the row at its height there (`NeedsCompactActions`); they hold the same elements by name, and exactly one is shown.
-        UIElement* FindElementOf(Scene& scene, PoolString nodeName, PoolString name) {
+        /// The canvas on the node `nodeName`; null when the scene has none. The action buttons are on two nodes, `Actions` on the table and
+        /// `ActionsCompact` on the bar under it, where the first would be too small to touch and the bar holds the row at its height there
+        /// (`NeedsCompactActions`); they hold the same elements by name, and exactly one is shown. A frame looks each canvas up once.
+        IntrusivePtr<UICanvasComponent> FindCanvasOf(Scene& scene, PoolString nodeName) {
             for (const auto& child : scene.GetRootNode().GetChildren()) {
                 if (child->GetName() == nodeName) {
-                    const auto canvas = child->GetComponent<UICanvasComponent>();
-                    return canvas ? canvas->GetRoot().FindByName(name) : nullptr;
+                    return child->GetComponent<UICanvasComponent>();
                 }
             }
-            return nullptr;
+            return {};
+        }
+
+        /// The element `name` of `canvas`; null when there is no canvas or no such element.
+        UIElement* FindElementIn(const IntrusivePtr<UICanvasComponent>& canvas, PoolString name) {
+            return canvas ? canvas->GetRoot().FindByName(name) : nullptr;
         }
 
         /// The key of the sentence of the shown button under the pointer (the canvas sets `UIElement::hovered` from the mouse); empty when none is.
         /// Only the buttons of `Actions` have a hint: a touch screen has no hover, and `ActionsCompact` has no label for it.
         eastl::string_view HoveredHintKey(Scene& scene, const ActionButtons& buttons) {
+            const IntrusivePtr<UICanvasComponent> actions = FindCanvasOf(scene, ActionsNode());
             for (int i = 0; i < kButtonCount; ++i) {
                 const ButtonKind kind = static_cast<ButtonKind>(i);
                 if (!buttons[kind].shown) {
                     continue;  // a hidden button may still carry the flag of the last motion
                 }
-                const UIElement* element = FindElementOf(scene, ActionsNode(), PoolString::Intern(SpecOf(kind).element));
+                const UIElement* element = FindElementIn(actions, PoolString::Intern(SpecOf(kind).element));
                 if (element != nullptr && element->hovered) {
                     return buttons[kind].hintKey;
                 }
@@ -293,6 +298,7 @@ namespace BECore::Mahjong {
             UICanvasComponent::SetVisibleByName(scene, HintsButtonNode(), !compact);
             UICanvasComponent::SetVisibleByName(scene, ActionsCompactNode(), compact);
         }
+        const IntrusivePtr<UICanvasComponent> canvases[] = {FindCanvasOf(scene, ActionsNode()), FindCanvasOf(scene, ActionsCompactNode())};
         for (int i = 0; i < kButtonCount; ++i) {
             const ButtonKind kind = static_cast<ButtonKind>(i);
             const ButtonState& now = buttons[kind];
@@ -311,8 +317,8 @@ namespace BECore::Mahjong {
                 }
                 const PoolString imageName = PoolString::Intern(TileImageName(kind, t));
                 if (showNow) {
-                    for (const PoolString node : {ActionsNode(), ActionsCompactNode()}) {
-                        UIElement* element = FindElementOf(scene, node, imageName);
+                    for (const IntrusivePtr<UICanvasComponent>& canvas : canvases) {
+                        UIElement* element = FindElementIn(canvas, imageName);
                         if (UIImage* image = element != nullptr ? element->Cast<UIImage>() : nullptr) {
                             image->sprite = PoolString::Intern(SpriteName(now.tiles[static_cast<size_t>(t)]));
                         }

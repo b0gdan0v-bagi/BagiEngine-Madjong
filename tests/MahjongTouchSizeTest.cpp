@@ -3,6 +3,7 @@
 #include <BECore/UI/UIButton.h>
 #include <EASTL/map.h>
 #include <Mahjong/Components/MahjongHudComponent.h>
+#include <set>
 
 /**
  * The touch size of the shipped scene: every control is a touch target of the engine's minimum in every window of the size matrix. The
@@ -238,7 +239,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         auto menu = Canvas("HudMenu");
         ASSERT_TRUE(menu);
-        const float minTouch = CoreManager::GetUIEnvironment().GetSettings().minTouchSize;
+        const float minTouch = EngineTouchMinimum();
         EXPECT_EQ(minTouch, kEngineTouchMinimum);
         ExpectPassesTheMatrix("HudMenu", minTouch);
         EXPECT_EQ(menu->GetLayout().params.space, CanvasSpace::Screen) << "the button is in a Screen canvas";
@@ -405,8 +406,6 @@ namespace BECore::Mahjong::Tests {
         auto action = Canvas("HandOverAction");
         ASSERT_TRUE(plate && action);
         ASSERT_TRUE(plate->TakesInput() && action->TakesInput());
-        const float minTouch = CoreManager::GetUIEnvironment().GetSettings().minTouchSize;
-        ExpectPassesTheMatrix("HandOverAction", minTouch);
         EXPECT_EQ(action->GetLayout().params.space, CanvasSpace::Screen);
         EXPECT_EQ(action->GetLayout().params.scaleMode, CanvasScaleMode::ScaleWithScreen);
 
@@ -477,6 +476,15 @@ namespace BECore::Mahjong::Tests {
             }
         }
 
+        /// `rect` (in the units of the canvas) lies inside the output of `window` once the canvas has been laid out in it.
+        static void ExpectInsideTheWindow(UICanvasComponent& canvas, const Rect& rect, const MatrixWindow& window, const std::string& label) {
+            const Rect output = canvas.GetLayout().GetResolved().transform.ToOutput(rect.x, rect.y, rect.w, rect.h);
+            EXPECT_GE(output.x, -0.01f) << label;
+            EXPECT_GE(output.y, -0.01f) << label;
+            EXPECT_LE(output.x + output.w, window.outputWidth + 0.01f) << label;
+            EXPECT_LE(output.y + output.h, window.outputHeight + 0.01f) << label;
+        }
+
         /// The buttons and pictures of `kinds`, and the hint button, in the compact canvas laid out in the window lie clear of the table and inside the window.
         void ExpectCompactRowClearOfTheTable(UICanvasComponent& compact, const MatrixWindow& window, const std::vector<ButtonKind>& kinds, const TableLayout& layout, float userScale = 1.0f) {
             LayOutInWindow(compact, window, CanvasScaleMode::ScaleWithScreen, userScale);
@@ -497,11 +505,7 @@ namespace BECore::Mahjong::Tests {
                     ExpectClearOfTable(ToView(picture->rect, compact, window), layout, label.c_str());
                 }
                 // Inside the window (the validator says the same for every mode and user scale)
-                const Rect output = compact.GetLayout().GetResolved().transform.ToOutput(button->rect.x, button->rect.y, button->rect.w, button->rect.h);
-                EXPECT_GE(output.x, -0.01f) << label;
-                EXPECT_GE(output.y, -0.01f) << label;
-                EXPECT_LE(output.x + output.w, window.outputWidth + 0.01f) << label;
-                EXPECT_LE(output.y + output.h, window.outputHeight + 0.01f) << label;
+                ExpectInsideTheWindow(compact, button->rect, window, label);
             }
             // The hint button ends the row in every set
             const UIElement* hint = Element("ActionsCompact", "HintButton");
@@ -509,11 +513,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_FALSE(hint->rect.IsEmpty()) << window.label.c_str() << " HintButton";
             const std::string hintLabel = std::string(window.label.c_str()) + " HintButton";
             ExpectClearOfTable(ToView(hint->rect, compact, window), layout, hintLabel.c_str());
-            const Rect hintOutput = compact.GetLayout().GetResolved().transform.ToOutput(hint->rect.x, hint->rect.y, hint->rect.w, hint->rect.h);
-            EXPECT_GE(hintOutput.x, -0.01f) << hintLabel;
-            EXPECT_GE(hintOutput.y, -0.01f) << hintLabel;
-            EXPECT_LE(hintOutput.x + hintOutput.w, window.outputWidth + 0.01f) << hintLabel;
-            EXPECT_LE(hintOutput.y + hintOutput.h, window.outputHeight + 0.01f) << hintLabel;
+            ExpectInsideTheWindow(compact, hint->rect, window, hintLabel);
         }
     };
 
@@ -709,6 +709,76 @@ namespace BECore::Mahjong::Tests {
         EXPECT_GT(roomyWindows, 0u);
         EXPECT_EQ(smallWindows, 0u) << "at the user scale 1.0 no small window keeps Actions";
         EXPECT_EQ(smallAtOnePointFive, 6u) << "640 x 480 and 720 x 480, each in the three simulations";
+    }
+
+    // ----- the whole scene -----
+
+    namespace {
+
+        /// The names of the interactive elements (those that take clicks: buttons, toggles, segments) of `element` and below.
+        void CollectInteractive(const UIElement& element, std::set<std::string>& names) {
+            if (element.interactive) {
+                names.insert(std::string(element.name.ToStringView().data(), element.name.ToStringView().size()));
+            }
+            for (const auto& child : element.children) {
+                CollectInteractive(*child, names);
+            }
+        }
+
+        std::set<std::string> InteractiveOf(UICanvasComponent& canvas) {
+            std::set<std::string> names;
+            CollectInteractive(canvas.GetRoot(), names);
+            return names;
+        }
+
+        /// The least floor on the scale of a `Screen` canvas that holds a control (56 units are then 33.6 px of the 32 the engine asks for).
+        constexpr float kLeastTouchFloor = 0.6f;
+
+    }  // namespace
+
+    TEST_F(MahjongTouchSizeTest, EveryInteractiveElementOfTheSceneIsInAScreenCanvasWithAFloorOrInOneOfTheTwoSceneViewCanvasesTheCompactRowReplaces) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        size_t canvases = 0;
+        size_t controls = 0;
+        for (const auto& child : _manager->GetSceneByName("MahjongScene"_intern)->GetRootNode().GetChildren()) {
+            const auto canvas = child->GetComponent<UICanvasComponent>();
+            if (!canvas) {
+                continue;
+            }
+            ++canvases;
+            const std::string node(child->GetName().ToStringView().data(), child->GetName().ToStringView().size());
+            const std::set<std::string> names = InteractiveOf(*canvas);
+            controls += names.size();
+            if (names.empty()) {
+                continue;
+            }
+            canvas->UpdateLayout(kViewWidth, kViewHeight);  // the settings of the file reach the layout on its first update, shown or not
+            const UICanvasScaleParams& params = canvas->GetLayout().params;
+            // `Actions` and `HintsButton` are the SceneView canvases the component hides where `ActionsCompact` (a Screen canvas) replaces them
+            if (node == "Actions" || node == "HintsButton") {
+                EXPECT_EQ(params.space, CanvasSpace::SceneView) << node;
+                continue;
+            }
+            EXPECT_EQ(params.space, CanvasSpace::Screen) << node << " holds " << *names.begin()
+                                                         << ": a control of a SceneView canvas is as small as the table in a small window, so it belongs in a Screen canvas with a floor on its scale "
+                                                         << "(like HudMenu or ActionsCompact), or in the compact row if it is an action button";
+            EXPECT_GE(params.minScale, kLeastTouchFloor) << node << " needs a minScale of at least " << kLeastTouchFloor << ": " << *names.begin();
+        }
+        EXPECT_GE(canvases, 10u);
+        EXPECT_GT(controls, 30u);
+    }
+
+    TEST_F(MahjongTouchSizeTest, TheCompactRowHoldsExactlyTheInteractiveElementsOfActionsAndOfTheHintButtonByName) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        const auto actions = Canvas("Actions");
+        const auto hints = Canvas("HintsButton");
+        const auto compact = Canvas("ActionsCompact");
+        ASSERT_TRUE(actions && hints && compact);
+        std::set<std::string> expected = InteractiveOf(*actions);
+        const std::set<std::string> hintNames = InteractiveOf(*hints);
+        EXPECT_FALSE(hintNames.empty());
+        expected.insert(hintNames.begin(), hintNames.end());
+        EXPECT_EQ(InteractiveOf(*compact), expected) << "a button added to Actions or to HintsButton needs its copy in ActionsCompact, or the narrow windows lose it";
     }
 
 }  // namespace BECore::Mahjong::Tests

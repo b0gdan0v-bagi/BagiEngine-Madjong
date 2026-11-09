@@ -98,9 +98,9 @@ namespace BECore::Mahjong {
      * it is given, so it reaches that far up whatever number of lines its buttons use; without such a bar (a window as high as the table:
      * every 16:9 window below 731.4 x 411.4, a short wide one, a landscape phone; or one where the width makes the row several lines, like
      * 626 x 480, or 640 x 480 and 720 x 480 at the user scale 1.5) it would lie on the viewer's hand and take the click from its
-     * tiles, so `Actions` stays, in the free corner of the table, slightly under the minimum but clear of the hand. The bar is taken without the safe area's inset, so a window with insets is judged
-     * like one without. False for an output of no size or a density that is not positive, so the first frame, before anything was drawn,
-     * shows `Actions`. The component and the tests use this one rule.
+     * tiles, so `Actions` stays, in the free corner of the table, slightly under the minimum but clear of the hand. The bar is taken
+     * without the safe area's inset, so a window with insets is judged like one without. False for an output of no size or a density that
+     * is not positive, so the first frame, before anything was drawn, shows `Actions`. The component and the tests use this one rule.
      */
     [[nodiscard]] inline bool NeedsCompactActions(float outputWidth, float outputHeight, float pixelDensity, float minTouchSize, float userScale = 1.0f) noexcept {
         const float fit = FitScale(outputWidth, outputHeight);
