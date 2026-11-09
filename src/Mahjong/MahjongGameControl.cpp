@@ -311,18 +311,6 @@ namespace BECore::Mahjong {
         return letters;
     }
 
-    eastl::string LevelNamesText() {
-        eastl::string names;
-        for (int index = 0; index < kLevelCount; ++index) {
-            const std::string_view name = LevelName(static_cast<ComputerLevel>(index));
-            if (index > 0) {
-                names += index + 1 == kLevelCount ? " or " : ", ";
-            }
-            names.append(name.data(), name.size());
-        }
-        return names;
-    }
-
     Json ActionToJson(const HandAction& action) {
         Json json = Json::object();
         switch (action.kind) {

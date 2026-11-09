@@ -24,9 +24,9 @@ namespace BECore::Mahjong {
      * which only ever see the seed (`StartMatch(seed)` is how a test or a control API replays a match). A match is begun with
      * `GetSettings()` (the defaults, `MahjongSettings{}`, until `SetSettings`) and the seat setup `GetSeats()` (`kDefaultSeatSetup`:
      * seat 0 a person, the others computers) and the level of the computers `GetLevel()` (`kDefaultLevel`, Normal); all three are kept
-     * across `Reset()`. `AsControllable()` hands out the control adapter, which
-     * drives the match through the session. The seat choice of a new game is the panel `Setup` of the scene (`IsSetupOpen`). The language
-     * of the words (`GetLanguage`, `kDefaultLanguage`) is kept for the session and applied to `CoreManager::GetUIStrings()` at every start.
+     * across `Reset()`. `AsControllable()` hands out the control adapter, which drives the match through the session. The seat choice of
+     * a new game is the panel `Setup` of the scene (`IsSetupOpen`). The language of the words (`GetLanguage`, `kDefaultLanguage`) is kept
+     * for the session and applied to `CoreManager::GetUIStrings()` at every start.
      * `HintsOn()` is the switch of the hints (default on, kept for the session, changed in `Setup`). Every match begun through the
      * session is written down by the `MatchLogWriter` the game owns (`GetMatchLog()`); a match started through the non-const `GetMatch()`
      * is not.

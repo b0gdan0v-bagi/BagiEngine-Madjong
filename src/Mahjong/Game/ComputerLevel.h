@@ -41,4 +41,17 @@ namespace BECore::Mahjong {
         return std::nullopt;
     }
 
+    /// The names of the levels for an error text: "easy, normal or hard" (`LevelName` of each, in the order of the enum).
+    [[nodiscard]] inline eastl::string LevelNamesText() {
+        eastl::string names;
+        for (int index = 0; index < kLevelCount; ++index) {
+            const std::string_view name = LevelName(static_cast<ComputerLevel>(index));
+            if (index > 0) {
+                names += index + 1 == kLevelCount ? " or " : ", ";
+            }
+            names.append(name.data(), name.size());
+        }
+        return names;
+    }
+
 }  // namespace BECore::Mahjong
