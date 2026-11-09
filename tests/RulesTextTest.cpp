@@ -439,9 +439,9 @@ namespace BECore::Mahjong::Tests {
             return eastl::find(page.items.begin(), page.items.end(), text) != page.items.end();
         }
 
-        /// Whether an item of the page holds `text` (the example items wear a prefix: "Open: Pung of 5 Dots: 2").
-        bool HasItemWith(const RulesPage& page, const eastl::string& text) {
-            return eastl::any_of(page.items.begin(), page.items.end(), [&](const eastl::string& item) { return Contains(Std(item), text); });
+        /// An example item as the page words it: the score line of `ScoreSeat` behind the prefix of its kind ("Open: Pung of 5 Dots: 2").
+        eastl::string PointsItem(const UIStrings& strings, const char* prefixKey, const ScoreLine& line) {
+            return prefixKey == nullptr ? ScoreLineText(strings, line) : Tr(strings, prefixKey, {{"line", ScoreLineText(strings, line)}});
         }
 
         /// A kind as the doubles pages print it: its name and the doubles of the score, no tile.
@@ -461,21 +461,22 @@ namespace BECore::Mahjong::Tests {
             struct Example {
                 ScoreInput input;
                 ScoreKind kind;
+                const char* prefixKey;  // null for a line the page prints bare
             };
             const std::string quiet = kQuietChows;
             const Example examples[] = {
-                {MakeInput(quiet, {OpenPung(T("5p"))}), ScoreKind::Pung},       // an open pung of a simple tile
-                {MakeInput(quiet, {OpenPung(T("9s"))}), ScoreKind::Pung},       // of a terminal
-                {MakeInput(quiet + " 5p 5p 5p"), ScoreKind::Pung},              // a concealed pung
-                {MakeInput(quiet, {OpenKong(T("5p"))}), ScoreKind::Kong},       // an open kong
-                {MakeInput(quiet, {ConcealedKong(T("Rd"))}), ScoreKind::Kong},  // a concealed kong of an honour
-                {MakeInput(quiet + " Rd Rd"), ScoreKind::Pair},                 // the pair of dragons
+                {MakeInput(quiet, {OpenPung(T("5p"))}), ScoreKind::Pung, "rules.points.open"},            // an open pung of a simple tile
+                {MakeInput(quiet, {OpenPung(T("9s"))}), ScoreKind::Pung, "rules.points.open"},            // of a terminal
+                {MakeInput(quiet + " 5p 5p 5p"), ScoreKind::Pung, "rules.points.concealed"},              // a concealed pung
+                {MakeInput(quiet, {OpenKong(T("5p"))}), ScoreKind::Kong, "rules.points.open"},            // an open kong
+                {MakeInput(quiet, {ConcealedKong(T("Rd"))}), ScoreKind::Kong, "rules.points.concealed"},  // a concealed kong of an honour
+                {MakeInput(quiet + " Rd Rd"), ScoreKind::Pair, nullptr},                                  // the pair of dragons
             };
-            for (const Example& example : examples) {
-                const ScoreLine line = LineOfKind(ScoreSeat(example.input), example.kind);
-                EXPECT_TRUE(HasItemWith(page, ScoreLineText(strings, line))) << where << ": " << ScoreLineText(strings, line).c_str();
+            ASSERT_EQ(page.items.size(), std::size(examples)) << where;
+            for (size_t i = 0; i < std::size(examples); ++i) {
+                const ScoreLine line = LineOfKind(ScoreSeat(examples[i].input), examples[i].kind);
+                EXPECT_EQ(page.items[i], PointsItem(strings, examples[i].prefixKey, line)) << where << ": item " << i;
             }
-            EXPECT_EQ(page.items.size(), std::size(examples)) << where;
 
             // the winner's points
             const ScoreBreakdown winner = ScoreSeat(MakeWinnerInput("1p 2p 3p 7m 8m 9m 5s 5s 5s Rd Rd Rd 9p 9p", "9p"));
@@ -624,9 +625,15 @@ namespace BECore::Mahjong::Tests {
         for (const int delta : drawn) {
             EXPECT_EQ(delta, 0);
         }
-        // the page names the factor in both languages
+        // the page names the factor in both languages, and as a number only: no word for it ("double", "вдвое") that would outlive a change
         UIStrings& strings = Words();
-        ForEachLanguage(strings, [&](PoolString language) { EXPECT_TRUE(Contains(AllText(FormatRulesPage(strings, kPaymentsPage)), kEastPaymentFactor)) << Where(language, kPaymentsPage); });
+        ForEachLanguage(strings, [&](PoolString language) {
+            const std::string text = AllText(FormatRulesPage(strings, kPaymentsPage));
+            EXPECT_TRUE(Contains(text, kEastPaymentFactor)) << Where(language, kPaymentsPage);
+            for (const char* word : {"double", "twice", "вдво", "дважды", "удво"}) {
+                EXPECT_EQ(text.find(word), std::string::npos) << Where(language, kPaymentsPage) << ": " << word;
+            }
+        });
     }
 
 }  // namespace BECore::Mahjong::Tests

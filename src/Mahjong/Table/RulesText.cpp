@@ -146,7 +146,7 @@ namespace BECore::Mahjong {
         }
 
         /// The kinds of `first` to `last` as items, each with the doubles `doublesOf` says; the kinds are walked in the order of the enum, so
-        /// a kind added between the two shows up by itself (and `doublesOf` must know it).
+        /// a kind added between the two shows up by itself (and `doublesOf` must know it: its `default` asserts).
         template <typename DoublesOf>
         Items DoublesItems(const UIStrings& strings, ScoreKind first, ScoreKind last, DoublesOf doublesOf) {
             Items items;
@@ -158,7 +158,8 @@ namespace BECore::Mahjong {
         }
 
         /// Page 8: worked examples of the points of a set. Each number is the product of the named factors of `Score.h`, the same ones the
-        /// scoring multiplies (`RulesTextTest` holds the examples to `ScoreSeat`).
+        /// scoring multiplies (`RulesTextTest` holds the examples to `ScoreSeat`). The tiles are examples, not numbers of the rules: any simple,
+        /// terminal and dragon would do.
         Items ItemsOfPoints(const UIStrings& strings) {
             const Tile simple = Tile::Suited(TileSuit::Dots, 5);
             const Tile terminal = Tile::Suited(TileSuit::Bamboo, kRanksPerSuit);
@@ -189,8 +190,11 @@ namespace BECore::Mahjong {
                         return kRoundWindSetDoubles;
                     case ScoreKind::OneSuitWithHonours:
                         return kOneSuitWithHonoursDoubles;
-                    default:
+                    case ScoreKind::OneSuitNoHonours:
                         return kOneSuitNoHonoursDoubles;
+                    default:
+                        ASSERT(false, "RulesText: a kind between DragonSet and OneSuitNoHonours has no doubles here");
+                        return 0;
                 }
             });
         }
@@ -221,19 +225,18 @@ namespace BECore::Mahjong {
                         return kSeveralKongsDoubles;
                     case ScoreKind::ObviouslyLast:
                         return kObviouslyLastDoubles;
-                    default:
+                    case ScoreKind::CallingFirstHand:
                         return kCallingFirstHandDoubles;
+                    default:
+                        ASSERT(false, "RulesText: a kind between OnlyPungs and CallingFirstHand has no doubles here");
+                        return 0;
                 }
             });
         }
 
         /// Page 11: every limit hand, by name ("Limit: Thirteen orphans"); the walk is the range of the enum, as in `ScoreText.cpp`.
         Items ItemsOfLimitHands(const UIStrings& strings) {
-            Items items;
-            for (size_t kind = static_cast<size_t>(ScoreKind::ConcealedPungsOneSuit); kind <= static_cast<size_t>(ScoreKind::LooseTileFiveDots); ++kind) {
-                items.push_back(ScoreItem(strings, static_cast<ScoreKind>(kind), Tile{}, 0, 0));
-            }
-            return items;
+            return DoublesItems(strings, ScoreKind::ConcealedPungsOneSuit, ScoreKind::LooseTileFiveDots, [](ScoreKind) { return 0; });
         }
 
         /// One page of the table: the key of its title, the keys of its lines (a null one ends the list) and the builders of its items and
