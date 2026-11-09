@@ -107,12 +107,12 @@ namespace BECore::Mahjong::Tests {
     /// Whether the buttons of `Actions` are under the engine's touch minimum in this window and the rule shows `ActionsCompact` (at this
     /// user scale: the row is as high as the canvas it lies in makes it, and the user scale makes the canvas smaller).
     inline bool IsCompactWindow(const MatrixWindow& window, float userScale = 1.0f) {
-        return NeedsCompactActions(window.outputWidth, window.outputHeight, window.pixelDensity, CoreManager::GetUIEnvironment().GetSettings().minTouchSize, userScale);
+        return NeedsCompactActions(window.outputWidth, window.outputHeight, window.pixelDensity, EngineTouchMinimum(), userScale);
     }
 
     /// Whether the buttons of `Actions` are under the engine's touch minimum in this window, whatever canvas the rule shows.
     inline bool ActionButtonsAreUnderTheMinimum(const MatrixWindow& window) {
-        return kActionButtonHeight * TableFit(window).scale / window.pixelDensity < CoreManager::GetUIEnvironment().GetSettings().minTouchSize;
+        return kActionButtonHeight * TableFit(window).scale / window.pixelDensity < EngineTouchMinimum();
     }
 
     /// Whether `Actions` is the canvas shown in this window at this user scale with buttons under the engine's touch minimum: the rule keeps

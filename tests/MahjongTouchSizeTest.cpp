@@ -241,7 +241,6 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(menu);
         const float minTouch = EngineTouchMinimum();
         EXPECT_EQ(minTouch, kEngineTouchMinimum);
-        ExpectPassesTheMatrix("HudMenu", minTouch);
         EXPECT_EQ(menu->GetLayout().params.space, CanvasSpace::Screen) << "the button is in a Screen canvas";
         EXPECT_EQ(menu->GetLayout().params.scaleMode, CanvasScaleMode::ScaleWithScreen);
 

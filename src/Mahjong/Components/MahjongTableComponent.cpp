@@ -77,8 +77,7 @@ namespace BECore::Mahjong {
 
         /// The key of the sentence of the shown button under the pointer (the canvas sets `UIElement::hovered` from the mouse); empty when none is.
         /// Only the buttons of `Actions` have a hint: a touch screen has no hover, and `ActionsCompact` has no label for it.
-        eastl::string_view HoveredHintKey(Scene& scene, const ActionButtons& buttons) {
-            const IntrusivePtr<UICanvasComponent> actions = FindCanvasOf(scene, ActionsNode());
+        eastl::string_view HoveredHintKey(const IntrusivePtr<UICanvasComponent>& actions, const ActionButtons& buttons) {
             for (int i = 0; i < kButtonCount; ++i) {
                 const ButtonKind kind = static_cast<ButtonKind>(i);
                 if (!buttons[kind].shown) {
@@ -298,7 +297,8 @@ namespace BECore::Mahjong {
             UICanvasComponent::SetVisibleByName(scene, HintsButtonNode(), !compact);
             UICanvasComponent::SetVisibleByName(scene, ActionsCompactNode(), compact);
         }
-        const IntrusivePtr<UICanvasComponent> canvases[] = {FindCanvasOf(scene, ActionsNode()), FindCanvasOf(scene, ActionsCompactNode())};
+        const IntrusivePtr<UICanvasComponent> actionsCanvas = FindCanvasOf(scene, ActionsNode());
+        const IntrusivePtr<UICanvasComponent> canvases[] = {actionsCanvas, FindCanvasOf(scene, ActionsCompactNode())};
         for (int i = 0; i < kButtonCount; ++i) {
             const ButtonKind kind = static_cast<ButtonKind>(i);
             const ButtonState& now = buttons[kind];
@@ -335,7 +335,7 @@ namespace BECore::Mahjong {
         // The hint of the button under the pointer, in the label `Hint` that shows exactly while there is one; the sentence is
         // looked up again when the language changed under it
         const UIStrings& strings = CoreManager::GetUIStrings();
-        const eastl::string_view hintKey = compact ? eastl::string_view{} : HoveredHintKey(scene, buttons);
+        const eastl::string_view hintKey = compact ? eastl::string_view{} : HoveredHintKey(actionsCanvas, buttons);
         const PoolString actionHint = "actionHint"_intern;
         if (hintKey != _hintKey || strings.GetVersion() != _hintStringsVersion || !vars.Has(actionHint)) {
             _hintKey = hintKey;
