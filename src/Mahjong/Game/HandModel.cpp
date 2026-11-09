@@ -4,8 +4,6 @@
 #include <Mahjong/Game/Deal.h>
 #include <Mahjong/Game/HandShape.h>
 #include <Mahjong/Game/TileSet.h>
-#include <cstdarg>
-#include <cstdio>
 
 namespace BECore::Mahjong {
 
@@ -129,25 +127,6 @@ namespace BECore::Mahjong {
             return kChowPriority;
         }
 
-        /// The longest text `Restore` gives (cut when longer).
-        constexpr size_t kRefusalTextSize = 256;
-
-        /// The failure of `Restore`: a text, built like printf.
-        std::unexpected<eastl::string> Refuse(const char* format, ...) {
-            char buffer[kRefusalTextSize];
-            va_list args;
-            va_start(args, format);
-            std::vsnprintf(buffer, sizeof(buffer), format, args);
-            va_end(args);
-            return std::unexpected<eastl::string>(eastl::string(buffer));
-        }
-
-        /// The notation of a tile as an `eastl::string` (to print with `%s`).
-        eastl::string NameOf(Tile tile) {
-            const std::string_view name = ToString(tile);
-            return eastl::string(name.data(), name.size());
-        }
-
         /// How many tiles a seat holds in a hand of this phase, the way the model counts a hand (a meld is three tiles, a kong too):
         /// 13, and one more for the seat that acts and for a winner.
         int HeldTilesExpected(const HandState& state, Seat seat) {
@@ -208,13 +187,13 @@ namespace BECore::Mahjong {
 
     std::expected<HandModel, eastl::string> HandModel::Restore(HandState state) {
         if (EastOf(state.seatWinds) == kNoSeat) {
-            return Refuse("the seat winds do not hold East exactly once");
+            return std::unexpected(Format("the seat winds do not hold East exactly once"));
         }
         if (state.east != EastOf(state.seatWinds)) {
-            return Refuse("east is seat %d but the seat winds make seat %d East", state.east, EastOf(state.seatWinds));
+            return std::unexpected(Format("east is seat {} but the seat winds make seat {} East", state.east, EastOf(state.seatWinds)));
         }
         if (!IsSeat(state.current)) {
-            return Refuse("the current seat %d is no seat", state.current);
+            return std::unexpected(Format("the current seat {} is no seat", state.current));
         }
 
         // Every tile of the set, once: counted over everything the state holds.
@@ -231,46 +210,46 @@ namespace BECore::Mahjong {
             eastl::sort(hand.concealed.begin(), hand.concealed.end());
             for (const Tile tile : hand.concealed) {
                 if (!tile.IsPlayable() || !add(tile)) {
-                    return Refuse("seat %d holds a concealed tile that is not a playable tile (id %d)", seat, static_cast<int>(tile.Id()));
+                    return std::unexpected(Format("seat {} holds a concealed tile that is not a playable tile (id {})", seat, tile.Id()));
                 }
             }
             for (const Tile tile : hand.bonus) {
                 if (!tile.IsBonus() || !add(tile)) {
-                    return Refuse("seat %d has a bonus tile that is not a flower or a season (id %d)", seat, static_cast<int>(tile.Id()));
+                    return std::unexpected(Format("seat {} has a bonus tile that is not a flower or a season (id {})", seat, tile.Id()));
                 }
             }
             for (const Meld& meld : hand.melds) {
                 if (meld.concealed && meld.kind != MeldKind::Kong) {
-                    return Refuse("seat %d has a concealed meld that is no kong", seat);
+                    return std::unexpected(Format("seat {} has a concealed meld that is no kong", seat));
                 }
                 if (meld.kind == MeldKind::Chow) {
                     if (!meld.first.IsSuit() || meld.first.Rank() > kLastChowStartRank) {
-                        return Refuse("seat %d has a chow that cannot exist (first tile id %d)", seat, static_cast<int>(meld.first.Id()));
+                        return std::unexpected(Format("seat {} has a chow that cannot exist (first tile id {})", seat, meld.first.Id()));
                     }
                     for (const Tile member : ChowTiles(meld.first)) {
                         add(member);
                     }
                 } else {
                     if (!meld.first.IsPlayable()) {
-                        return Refuse("seat %d has a pung or kong of a tile that is not playable (id %d)", seat, static_cast<int>(meld.first.Id()));
+                        return std::unexpected(Format("seat {} has a pung or kong of a tile that is not playable (id {})", seat, meld.first.Id()));
                     }
                     add(meld.first, meld.kind == MeldKind::Kong ? kCopiesPerTile : kTilesPerSet);
                 }
             }
             if (hand.melds.size() > static_cast<size_t>(kSetsInHand)) {
-                return Refuse("seat %d has %d melds, at most four fit", seat, static_cast<int>(hand.melds.size()));
+                return std::unexpected(Format("seat {} has {} melds, at most four fit", seat, hand.melds.size()));
             }
         }
         for (const DiscardEntry& entry : state.discards) {
             if (!entry.tile.IsPlayable() || !IsSeat(entry.seat)) {
-                return Refuse("the pile holds a discard that is not a playable tile of a seat (tile id %d, seat %d)", static_cast<int>(entry.tile.Id()), entry.seat);
+                return std::unexpected(Format("the pile holds a discard that is not a playable tile of a seat (tile id {}, seat {})", entry.tile.Id(), entry.seat));
             }
             add(entry.tile);
         }
         for (const eastl::vector<Tile>* part : {&state.loose, &state.live, &state.dead}) {
             for (const Tile tile : *part) {
                 if (!add(tile)) {
-                    return Refuse("the wall holds a tile that is not a tile (id %d)", static_cast<int>(tile.Id()));
+                    return std::unexpected(Format("the wall holds a tile that is not a tile (id {})", tile.Id()));
                 }
             }
         }
@@ -278,68 +257,69 @@ namespace BECore::Mahjong {
             const Tile tile{id};
             const int expected = tile.IsBonus() ? (state.settings.flowers ? 1 : 0) : kCopiesPerTile;
             if (counts[id] > expected) {
-                return Refuse("%s is there %d times, only %d exist", NameOf(tile).c_str(), counts[id], expected);
+                return std::unexpected(Format("{} is there {} times, only {} exist", ToString(tile), counts[id], expected));
             }
             if (counts[id] < expected) {
-                return Refuse("%s is missing: there are %d of %d copies", NameOf(tile).c_str(), counts[id], expected);
+                return std::unexpected(Format("{} is missing: there are {} of {} copies", ToString(tile), counts[id], expected));
             }
         }
         if (state.loose.size() > kLooseTiles) {
-            return Refuse("the loose reserve holds %d tiles, at most %d", static_cast<int>(state.loose.size()), static_cast<int>(kLooseTiles));
+            return std::unexpected(Format("the loose reserve holds {} tiles, at most {}", state.loose.size(), kLooseTiles));
         }
         if (state.dead.size() != kDeadWallTiles) {
-            return Refuse("the dead wall holds %d tiles, not %d", static_cast<int>(state.dead.size()), static_cast<int>(kDeadWallTiles));
+            return std::unexpected(Format("the dead wall holds {} tiles, not {}", state.dead.size(), kDeadWallTiles));
         }
 
         if (state.result.has_value() != (state.phase == Phase::Finished)) {
-            return Refuse("a result exists exactly when the hand is finished");
+            return std::unexpected(Format("a result exists exactly when the hand is finished"));
         }
         if (state.result.has_value()) {
             const HandResult& result = *state.result;
             if (result.kind == ResultKind::Win ? (!IsSeat(result.winner) || !IsSeat(result.from) || !result.winningTile.IsPlayable()) : result.winner != kNoSeat) {
-                return Refuse("the result does not fit its kind (a win needs a winner, an origin and a tile; a drawn hand has no winner)");
+                return std::unexpected(Format("the result does not fit its kind (a win needs a winner, an origin and a tile; a drawn hand has no winner)"));
             }
         }
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             const PlayerHand& hand = state.hands[seat];
             const int held = static_cast<int>(hand.concealed.size()) + kTilesPerSet * static_cast<int>(hand.melds.size());
-            if (held != HeldTilesExpected(state, seat)) {
-                return Refuse("seat %d holds %d tiles, a hand in this phase holds %d", seat, held, HeldTilesExpected(state, seat));
+            const int expected = HeldTilesExpected(state, seat);
+            if (held != expected) {
+                return std::unexpected(Format("seat {} holds {} tiles, a hand in this phase holds {}", seat, held, expected));
             }
         }
         for (const HandMove& move : state.moves) {
             if (!IsSeat(move.seat)) {
-                return Refuse("a move of the log has a seat that is no seat (%d)", move.seat);
+                return std::unexpected(Format("a move of the log has a seat that is no seat ({})", move.seat));
             }
         }
 
         if (state.drawnTile.IsValid() && (state.phase == Phase::Discard || state.phase == Phase::RobKong) && state.hands[state.current].CountConcealed(state.drawnTile) == 0) {
-            return Refuse("the drawn tile is not in the hand of seat %d", state.current);
+            return std::unexpected(Format("the drawn tile is not in the hand of seat {}", state.current));
         }
 
         const bool window = state.phase == Phase::Claim || state.phase == Phase::RobKong;
         if (!window) {
             if (state.pendingTile.IsValid()) {
-                return Refuse("a tile is pending but no window is open");
+                return std::unexpected(Format("a tile is pending but no window is open"));
             }
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 if (state.claimStatus[seat] != ClaimStatus::NotInWindow || state.claims[seat] != ClaimOption{}) {
-                    return Refuse("seat %d has a claim status but no window is open", seat);
+                    return std::unexpected(Format("seat {} has a claim status but no window is open", seat));
                 }
             }
         } else {
             if (!state.pendingTile.IsPlayable()) {
-                return Refuse("a window is open but no playable tile is pending");
+                return std::unexpected(Format("a window is open but no playable tile is pending"));
             }
             if (state.phase == Phase::Claim) {
                 if (state.drawnTile.IsValid()) {
-                    return Refuse("a drawn tile is kept in a claim window");
+                    return std::unexpected(Format("a drawn tile is kept in a claim window"));
                 }
                 if (state.discards.empty() || state.discards.back().tile != state.pendingTile || state.discards.back().seat != state.current) {
-                    return Refuse("the pending tile is not the last discard of seat %d", state.current);
+                    return std::unexpected(Format("the pending tile is not the last discard of seat {}", state.current));
                 }
             } else if (FindPung(state.hands[state.current], state.pendingTile) == nullptr || state.hands[state.current].CountConcealed(state.pendingTile) == 0) {
-                return Refuse("seat %d is adding a tile to a kong but has no open pung of it and the fourth tile", state.current);
+                return std::unexpected(Format("seat {} is adding a tile to a kong but has no open pung of it and the fourth tile", state.current));
             }
         }
 
@@ -367,7 +347,7 @@ namespace BECore::Mahjong {
                 const ClaimStatus status = model._claimStatus[seat];
                 if (seat == model._current) {
                     if (status != ClaimStatus::NotInWindow || model._claims[seat] != ClaimOption{}) {
-                        return Refuse("seat %d, whose tile is pending, has a claim status", seat);
+                        return std::unexpected(Format("seat {}, whose tile is pending, has a claim status", seat));
                     }
                     continue;
                 }
@@ -377,20 +357,20 @@ namespace BECore::Mahjong {
                 model._claimStatus[seat] = status;
                 if (status == ClaimStatus::NotInWindow) {
                     if (!options.empty()) {
-                        return Refuse("seat %d could claim the pending tile but is not in the window", seat);
+                        return std::unexpected(Format("seat {} could claim the pending tile but is not in the window", seat));
                     }
                     continue;
                 }
                 if (options.empty()) {
-                    return Refuse("seat %d is in the window but has no claim", seat);
+                    return std::unexpected(Format("seat {} is in the window but has no claim", seat));
                 }
                 someoneToDecide = someoneToDecide || status == ClaimStatus::Waiting;
                 if (status == ClaimStatus::Claimed ? eastl::find(options.begin(), options.end(), model._claims[seat]) == options.end() : model._claims[seat] != ClaimOption{}) {
-                    return Refuse("seat %d has a claim that does not fit its status or that it cannot make", seat);
+                    return std::unexpected(Format("seat {} has a claim that does not fit its status or that it cannot make", seat));
                 }
             }
             if (!someoneToDecide) {
-                return Refuse("the window is open but every seat has decided");
+                return std::unexpected(Format("the window is open but every seat has decided"));
             }
         }
         return model;
