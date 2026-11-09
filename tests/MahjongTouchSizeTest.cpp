@@ -1,8 +1,8 @@
 #include "MahjongTouchTestSupport.h"
 
 #include <BECore/UI/UIButton.h>
+#include <EASTL/map.h>
 #include <Mahjong/Components/MahjongHudComponent.h>
-#include <map>
 
 /**
  * The touch size of the shipped scene: every control is a touch target of the engine's minimum in every window of the size matrix. The
@@ -535,7 +535,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(compact);
         size_t compactWindows = 0;
         // The windows (and user scales) where the rule keeps `Actions` under the minimum, each with its number of simulations
-        std::map<std::string, size_t> keptWindows;
+        eastl::map<eastl::string, size_t> keptWindows;
         ForEachMatrixWindow([&](const MatrixWindow& window) {
             for (const float userScale : {1.0f, 1.5f}) {
                 const UICanvasResolved resolved = LayOutInWindow(*compact, window, CanvasScaleMode::ScaleWithScreen, userScale);
@@ -551,14 +551,14 @@ namespace BECore::Mahjong::Tests {
                 if (IsCompactWindow(window, userScale)) {
                     ++compactWindows;
                 } else if (ActionButtonsAreUnderTheMinimum(window)) {
-                    ++keptWindows[std::to_string(static_cast<int>(window.outputWidth)) + "x" + std::to_string(static_cast<int>(window.outputHeight)) + " x" + (userScale > 1.0f ? "1.5" : "1.0")];
+                    ++keptWindows[Format("{}x{} x{}", static_cast<int>(window.outputWidth), static_cast<int>(window.outputHeight), userScale > 1.0f ? "1.5" : "1.0").c_str()];
                 }
             }
         });
         EXPECT_GT(compactWindows, 0u);
-        // A new window that keeps `Actions` under the minimum has to be named (here, in `ActionsMayBeSmall` and in CLAUDE.md): 640 x 480 at both
+        // A new window that keeps `Actions` under the minimum has to be named here and in CLAUDE.md: 640 x 480 at both
         // user scales and 720 x 480 at 1.5, each in its three simulations (no insets, a notch, side insets)
-        const std::map<std::string, size_t> expectedKept{{"640x480 x1.0", 3u}, {"640x480 x1.5", 3u}, {"720x480 x1.5", 3u}};
+        const eastl::map<eastl::string, size_t> expectedKept{{"640x480 x1.0", 3u}, {"640x480 x1.5", 3u}, {"720x480 x1.5", 3u}};
         EXPECT_EQ(keptWindows, expectedKept);
     }
 
