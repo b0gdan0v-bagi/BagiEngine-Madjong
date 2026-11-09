@@ -251,6 +251,12 @@
                   </children>
                 </element>
                 <element type="UIButton" name="NewGame" anchor="TopRight" x="-8" y="8" width="176" height="56" text="{#hud.newGame}" fontSize="22" action="MahjongNewGame" color="45,75,120,255" />
+                <!-- The last move in words (lastMove), shown by the component exactly while it has a text: right of the top discards and below the top seat sets, clear of the right seat columns -->
+                <element type="UIStack" name="MoveLine" anchor="TopRight" x="-92" y="92" width="448" height="80" visible="false" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170">
+                  <children>
+                    <element type="UILabel" name="MoveText" height="64" text="{lastMove}" fontSize="18" verticalAlign="Center" />
+                  </children>
+                </element>
               </elements>
             </component>
           </components>

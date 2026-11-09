@@ -129,9 +129,63 @@ namespace BECore::Mahjong {
             return meld.first;
         }
 
-        TableInput MakeInput(const HandModel& hand, Seat viewer) {
+        /// The index, in the concealed tiles of `seat`, of the tile it has just drawn (the last copy: `AddConcealed` sorts equal tiles
+        /// together and the drawn one is the one that was added last); -1 when it drew none.
+        int DrawnIndexOf(const HandModel& hand, Seat seat) {
+            const Tile drawn = hand.DrawnTile(seat);
+            if (!drawn.IsValid()) {
+                return -1;
+            }
+            const eastl::vector<Tile>& concealed = hand.GetHand(seat).concealed;
+            for (int i = static_cast<int>(concealed.size()) - 1; i >= 0; --i) {
+                if (concealed[static_cast<size_t>(i)] == drawn) {
+                    return i;
+                }
+            }
+            ASSERT(false, "DrawnIndexOf: the drawn tile is not in the concealed tiles");
+            return -1;
+        }
+
+        /// The entry of the pile that is the last move (a discard nobody has claimed yet); -1 when the last move is something else.
+        int LastDiscardEntry(const HandModel& hand) {
+            if (hand.Moves().empty() || hand.Discards().empty()) {
+                return -1;
+            }
+            // A discard that took a win left the pile: the entry at the end is an earlier one, even when it has the same seat and tile
+            if (hand.Result() && hand.Result()->source == WinSource::Discard) {
+                return -1;
+            }
+            const HandMove& move = hand.Moves().back();
+            const DiscardEntry& last = hand.Discards().back();
+            if (move.kind != MoveKind::Discard || last.seat != move.seat || last.tile != move.tile) {
+                return -1;
+            }
+            return static_cast<int>(hand.Discards().size()) - 1;
+        }
+
+        /// The bar of `kClaimedEdge` along the edge `edge` of `rect`, inside the tile.
+        Rect EdgeBar(const Rect& rect, Edge edge, float width) {
+            switch (edge) {
+                case Edge::Left:
+                    return Rect(rect.x, rect.y, width, rect.h);
+                case Edge::Right:
+                    return Rect(rect.x + rect.w - width, rect.y, width, rect.h);
+                case Edge::Top:
+                    return Rect(rect.x, rect.y, rect.w, width);
+                case Edge::Bottom:
+                    return Rect(rect.x, rect.y + rect.h - width, rect.w, width);
+                case Edge::None:
+                    break;
+            }
+            return Rect();
+        }
+
+        TableInput MakeInput(const HandModel& hand, Seat viewer, bool drawnApart) {
             TableInput input;
             input.viewer = viewer;
+            if (drawnApart && IsSeat(viewer)) {
+                input.drawnIndex = DrawnIndexOf(hand, viewer);
+            }
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 const PlayerHand& held = hand.GetHand(seat);
                 input.concealedCount[seat] = static_cast<int>(held.concealed.size());
@@ -329,10 +383,35 @@ namespace BECore::Mahjong {
         return true;
     }
 
+    void MahjongTableComponent::FollowMoves(const MahjongGame& game) {
+        const Match& match = game.GetMatch();
+        const eastl::vector<HandMove>& moves = match.Hand().Moves();
+        const SeenHand now{&game, match.HandsPlayed(), match.History().size()};
+        if (now != _seenHand || moves.size() < _movesSeen) {
+            // Another hand, match or game: what is on the table now is not news
+            _seenHand = now;
+            _movesSeen = moves.size();
+            _highlightLeft = 0.0f;
+            return;
+        }
+        for (size_t i = moves.size(); i > _movesSeen; --i) {
+            if (moves[i - 1].meld >= 0) {
+                _highlightSeat = moves[i - 1].seat;
+                _highlightMeld = moves[i - 1].meld;
+                _highlightLeft = kClaimHighlightSeconds;
+                break;
+            }
+        }
+        _movesSeen = moves.size();
+    }
+
     void MahjongTableComponent::OnUpdate(const SceneEvents::SceneUpdateEvent& event) {
         MahjongGame* game = MahjongGame::GetActive();
         if (game == nullptr) {
             return;
+        }
+        if (_highlightLeft > 0.0f && TableIsLive(*game)) {
+            _highlightLeft = eastl::max(0.0f, _highlightLeft - event.deltaTime);
         }
         TableSession& session = game->GetSession();
         if (!ComputerActs(*game)) {
@@ -389,8 +468,12 @@ namespace BECore::Mahjong {
         }
         const TableSession& session = game->GetSession();
         const HandModel& hand = game->GetMatch().Hand();
+        FollowMoves(*game);
         const Faces faces = FacesOf(session);
-        _layout = MakeTableLayout(MakeInput(hand, BottomSeat(session)), viewWidth, viewHeight);
+        // The drawn tile lies apart only in a hand that is face up: under the cover and for a spectator the hand is a plain row
+        const Seat bottom = BottomSeat(session);
+        const bool drawnApart = session.GetPhase() == SessionPhase::Playing && faces.Shows(bottom);
+        _layout = MakeTableLayout(MakeInput(hand, bottom, drawnApart), viewWidth, viewHeight);
 
         // A face (the tile) or the back (nullopt) at `rect`: from the atlas, else a plain rectangle.
         const auto drawFace = [&](const Rect& rect, std::optional<Tile> face) {
@@ -429,6 +512,15 @@ namespace BECore::Mahjong {
                 renderer.DrawFilledRect(marked.x, marked.y, marked.w, marked.h, kTurnMark);
             }
         }
+        // The set that was just laid blinks behind its tiles: on at the moment of the move, then half a period on and half off
+        if (_highlightLeft > 0.0f) {
+            const float elapsed = kClaimHighlightSeconds - _highlightLeft;
+            const Rect bounds = BoundsOfMeld(_layout, _highlightSeat, _highlightMeld);
+            if (bounds.w > 0.0f && std::fmod(elapsed, kClaimBlinkSeconds) < kClaimBlinkSeconds * 0.5f) {
+                const Rect marked = Padded(bounds, kActingMargin * unit);
+                renderer.DrawFilledRect(marked.x, marked.y, marked.w, marked.h, kClaimHighlight);
+            }
+        }
         // The tiles that cannot declare the calling hand when they are discarded, while the next discard is to declare it
         eastl::array<bool, kTileIdCount> cannotDeclare{};
         if (_declareNext) {
@@ -447,6 +539,7 @@ namespace BECore::Mahjong {
             claimPending = eastl::find(asked.begin(), asked.end(), faces.seat) != asked.end();
         }
         const int pendingEntry = static_cast<int>(hand.Discards().size()) - 1;
+        const int lastDiscard = LastDiscardEntry(hand);
 
         for (const TileSlot& slot : _layout.slots) {
             const PlayerHand& held = hand.GetHand(slot.seat);
@@ -462,6 +555,10 @@ namespace BECore::Mahjong {
                     // An open set is public; a concealed kong is as hidden as the hand it was made from.
                     const bool shown = !meld.concealed || faces.Shows(slot.seat);
                     drawTile(slot.rect, shown ? std::optional<Tile>(MeldTileAt(meld, slot.part)) : std::nullopt);
+                    if (slot.claimEdge != Edge::None) {
+                        const Rect bar = EdgeBar(slot.rect, slot.claimEdge, kClaimedEdgeWidth * unit);
+                        renderer.DrawFilledRect(bar.x, bar.y, bar.w, bar.h, kClaimedEdge);
+                    }
                     break;
                 }
                 case SlotRole::BonusTile:
@@ -475,6 +572,9 @@ namespace BECore::Mahjong {
                         drawFace(slot.rect, hand.Discards()[slot.index].tile);
                     } else {
                         drawTile(slot.rect, hand.Discards()[slot.index].tile);
+                    }
+                    if (slot.index == lastDiscard) {
+                        renderer.DrawFilledRect(slot.rect.x, slot.rect.y, slot.rect.w, slot.rect.h, kLastDiscardMark);
                     }
                     break;
                 case SlotRole::WallStack:

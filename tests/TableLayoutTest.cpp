@@ -159,6 +159,7 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_EQ(a.slots[i].role, b.slots[i].role);
                 EXPECT_EQ(a.slots[i].seat, b.slots[i].seat);
                 EXPECT_EQ(a.slots[i].index, b.slots[i].index);
+                EXPECT_EQ(a.slots[i].claimEdge, b.slots[i].claimEdge);
                 EXPECT_EQ(a.slots[i].part, b.slots[i].part);
             }
         }
@@ -557,6 +558,273 @@ namespace BECore::Mahjong::Tests {
         input.bonusCount = {-2, 0, 0, 0};
         input.wallRemaining = -9;
         EXPECT_TRUE(MakeTableLayout(input).slots.empty());
+    }
+
+    // The drawn tile and the claimed tile of an open set.
+
+    namespace {
+
+        Tile Parsed(std::string_view text) {
+            return TryParse(text).value();
+        }
+
+        /// A viewer's hand of `count` tiles with the tile at `drawnIndex` apart (the rest of the table is quiet).
+        TableInput DrawnInput(Seat viewer, int count, int drawnIndex) {
+            TableInput input = QuietInput(viewer);
+            input.concealedCount[viewer] = count;
+            input.drawnIndex = drawnIndex;
+            return input;
+        }
+
+        Meld ClaimedMeld(MeldKind kind, Seat from, std::string_view first, std::string_view claimed) {
+            Meld meld = MakeMeld(kind);
+            meld.first = Parsed(first);
+            meld.claimed = Parsed(claimed);
+            meld.from = from;
+            meld.fromDiscard = true;
+            return meld;
+        }
+
+        /// The edge of the claimed tile by the table of the plan: rows the owner's screen position, columns the source is the next
+        /// seat, across, the previous seat.
+        Edge ExpectedEdge(int position, int offset) {
+            constexpr Edge kTable[4][3] = {
+                {Edge::Right, Edge::Top, Edge::Left},
+                {Edge::Top, Edge::Left, Edge::Bottom},
+                {Edge::Left, Edge::Bottom, Edge::Right},
+                {Edge::Bottom, Edge::Right, Edge::Top},
+            };
+            return kTable[position][offset - 1];
+        }
+
+        /// The (part, edge) of every meld tile of `owner`'s meld `meld` that has an edge.
+        std::vector<std::pair<int, Edge>> ClaimedTiles(const TableLayout& layout, Seat owner, int meld) {
+            std::vector<std::pair<int, Edge>> found;
+            for (const TileSlot& slot : SlotsOf(layout, SlotRole::MeldTile, owner)) {
+                if (slot.index == meld && slot.claimEdge != Edge::None) {
+                    found.emplace_back(slot.part, slot.claimEdge);
+                }
+            }
+            return found;
+        }
+
+    }  // namespace
+
+    TEST(TableLayoutTest, NoDrawnIndexAndTheOnesThatAreIgnoredChangeNothing) {
+        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+            const TableLayout plain = MakeTableLayout(BusyInput(viewer));
+            for (const int ignored : {-1, -7, 14, 15, 1000}) {
+                TableInput input = BusyInput(viewer);
+                input.drawnIndex = ignored;
+                ExpectSameSlots(plain, MakeTableLayout(input));
+            }
+            // a smaller hand: an index past its end is out of range
+            TableInput small = BusyInput(viewer);
+            small.concealedCount[viewer] = 5;
+            const TableLayout expected = MakeTableLayout(small);
+            small.drawnIndex = 5;
+            ExpectSameSlots(expected, MakeTableLayout(small));
+        }
+    }
+
+    TEST(TableLayoutTest, TheDrawnTileLiesApartAtTheRightEndAndTheOthersCloseUp) {
+        const float left = BoundsOf(MakeTableLayout(DrawnInput(0, 14, -1)), SlotRole::HandTile, 0).x;
+        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+            for (const int count : {1, 2, 14}) {
+                for (const int drawn : {0, count / 2, count - 1}) {
+                    const TableLayout layout = MakeTableLayout(DrawnInput(viewer, count, drawn));
+                    const std::vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, viewer);
+                    ASSERT_EQ(static_cast<int>(hand.size()), count);
+                    int next = 0;
+                    for (int i = 0; i < count; ++i) {
+                        EXPECT_EQ(hand[i].index, i) << "slots stay in input order";
+                        EXPECT_EQ(hand[i].rect.y, hand[0].rect.y);
+                        EXPECT_EQ(hand[i].rect.w, kViewerHandTileW);
+                        const float x =
+                            i == drawn ? left + static_cast<float>(count - 1) * kViewerHandTileW + (count > 1 ? kDrawnTileGap : 0.0f) : left + static_cast<float>(next++) * kViewerHandTileW;
+                        EXPECT_NEAR(hand[i].rect.x, x, kTolerance) << "count " << count << " drawn " << drawn << " tile " << i;
+                    }
+                    if (count > 1) {
+                        const TileSlot& apart = hand[drawn];
+                        for (const TileSlot& slot : hand) {
+                            if (slot.index != drawn) {
+                                EXPECT_GE(apart.rect.x - (slot.rect.x + slot.rect.w), kDrawnTileGap - kTolerance) << "gap to tile " << slot.index;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    TEST(TableLayoutTest, ADrawnIndexOfAnotherSeatOrOfAnOpponentChangesNothing) {
+        // the index is the viewer's: the opponents' hands are the same with or without it
+        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+            const TableLayout plain = MakeTableLayout(BusyInput(viewer));
+            TableInput input = BusyInput(viewer);
+            input.drawnIndex = 13;
+            const TableLayout layout = MakeTableLayout(input);
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                if (seat == viewer) {
+                    continue;
+                }
+                const std::vector<TileSlot> before = SlotsOf(plain, SlotRole::HandTile, seat);
+                const std::vector<TileSlot> after = SlotsOf(layout, SlotRole::HandTile, seat);
+                ASSERT_EQ(before.size(), after.size());
+                for (size_t i = 0; i < before.size(); ++i) {
+                    EXPECT_EQ(before[i].rect.x, after[i].rect.x);
+                    EXPECT_EQ(before[i].rect.y, after[i].rect.y);
+                }
+            }
+        }
+    }
+
+    TEST(TableLayoutTest, TheWorstTableWithADrawnTileStaysInTheViewAndClearOfTheMelds) {
+        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+            for (const int drawn : {0, 7, 13}) {
+                TableInput input = WorstInput(viewer, kWorstPile, kNoSeat);
+                input.drawnIndex = drawn;
+                for (const ViewSize& size : kViewSizes) {
+                    const TableLayout layout = MakeTableLayout(input, size.width, size.height);
+                    ExpectSlotsInsideTheView(layout);
+                    ExpectNoZoneOverlaps(layout);
+                    ExpectZonesAreSound(layout);
+                }
+                // 14 tiles and the gap end before the melds, and no hand tile touches another
+                const TableLayout layout = MakeTableLayout(input);
+                const Rect hand = BoundsOf(layout, SlotRole::HandTile, viewer);
+                const Rect melds = BoundsOf(layout, SlotRole::MeldTile, viewer);
+                EXPECT_LE(hand.x + hand.w, melds.x + kTolerance);
+                const std::vector<TileSlot> tiles = SlotsOf(layout, SlotRole::HandTile, viewer);
+                for (size_t a = 0; a < tiles.size(); ++a) {
+                    for (size_t b = a + 1; b < tiles.size(); ++b) {
+                        EXPECT_FALSE(Overlaps(tiles[a].rect, tiles[b].rect)) << "tiles " << a << " and " << b;
+                    }
+                }
+            }
+        }
+    }
+
+    TEST(TableLayoutTest, AHandBeyondTheLimitWithADrawnTileIsSqueezedInsideItsStrip) {
+        TableInput input = QuietInput(0);
+        input.concealedCount[0] = 40;
+        input.drawnIndex = 3;
+        const TableLayout layout = MakeTableLayout(input);
+        ExpectSlotsInsideTheView(layout);
+        const Rect hand = BoundsOf(layout, SlotRole::HandTile, 0);
+        EXPECT_LE(hand.x + hand.w, 72.0f + kViewerHandTileW * kMaxConcealedTiles + kDrawnTileGap + kTolerance);
+    }
+
+    TEST(TableLayoutTest, HitHandTileOnTheDrawnTileGivesItsConcealedIndex) {
+        for (const int drawn : {0, 6, 13}) {
+            const TableLayout layout = MakeTableLayout(DrawnInput(0, 14, drawn));
+            for (const TileSlot& slot : SlotsOf(layout, SlotRole::HandTile, 0)) {
+                const std::optional<int> hit = HitHandTile(layout, slot.rect.x + slot.rect.w / 2.0f, slot.rect.y + slot.rect.h / 2.0f);
+                ASSERT_TRUE(hit.has_value());
+                EXPECT_EQ(*hit, slot.index);
+            }
+            // the gap before the drawn tile hits nothing
+            const TileSlot apart = SlotsOf(layout, SlotRole::HandTile, 0)[drawn];
+            EXPECT_FALSE(HitHandTile(layout, apart.rect.x - kDrawnTileGap / 2.0f, apart.rect.y + 1.0f).has_value());
+        }
+    }
+
+    TEST(TableLayoutTest, TheClaimedTileOfAPungOrKongFacesTheSeatItCameFrom) {
+        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+            for (Seat owner = 0; owner < kSeatCount; ++owner) {
+                for (const MeldKind kind : {MeldKind::Pung, MeldKind::Kong}) {
+                    for (int offset = 1; offset < kSeatCount; ++offset) {
+                        TableInput input = QuietInput(viewer);
+                        input.melds[owner] = {MakeMeld(MeldKind::Pung), ClaimedMeld(kind, (owner + offset) % kSeatCount, "5p", "5p")};
+                        const TableLayout layout = MakeTableLayout(input);
+                        const int expectedPart = 3 - offset;  // the previous seat: first tile, across: middle, the next seat: last
+                        const std::vector<std::pair<int, Edge>> claimed = ClaimedTiles(layout, owner, 1);
+                        ASSERT_EQ(claimed.size(), 1u) << "viewer " << viewer << " owner " << owner << " offset " << offset;
+                        EXPECT_EQ(claimed[0].first, expectedPart);
+                        EXPECT_EQ(claimed[0].second, ExpectedEdge(SeatPosition(viewer, owner), offset)) << "viewer " << viewer << " owner " << owner << " offset " << offset;
+                        EXPECT_TRUE(ClaimedTiles(layout, owner, 0).empty()) << "the meld that was not claimed";
+                    }
+                }
+            }
+        }
+    }
+
+    TEST(TableLayoutTest, TheClaimedTileOfAChowIsTheOneThatWasClaimedAndFacesThePreviousSeat) {
+        const char* const kClaimed[] = {"4p", "5p", "6p"};
+        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+            for (Seat owner = 0; owner < kSeatCount; ++owner) {
+                for (int part = 0; part < 3; ++part) {
+                    TableInput input = QuietInput(viewer);
+                    input.melds[owner] = {ClaimedMeld(MeldKind::Chow, (owner + 3) % kSeatCount, "4p", kClaimed[part])};
+                    const std::vector<std::pair<int, Edge>> claimed = ClaimedTiles(MakeTableLayout(input), owner, 0);
+                    ASSERT_EQ(claimed.size(), 1u);
+                    EXPECT_EQ(claimed[0].first, part);
+                    EXPECT_EQ(claimed[0].second, ExpectedEdge(SeatPosition(viewer, owner), 3));
+                }
+            }
+        }
+    }
+
+    TEST(TableLayoutTest, NoClaimedTileOnAConcealedKongAMeldNotFromADiscardOrACorruptOne) {
+        TableInput input = QuietInput(0);
+        Meld concealedKong = ClaimedMeld(MeldKind::Kong, 1, "5p", "5p");
+        concealedKong.concealed = true;
+        concealedKong.fromDiscard = false;
+        Meld notFromDiscard = ClaimedMeld(MeldKind::Pung, 1, "5p", "5p");
+        notFromDiscard.fromDiscard = false;
+        Meld fromItself = ClaimedMeld(MeldKind::Pung, 0, "5p", "5p");
+        Meld claimedOutsideTheChow = ClaimedMeld(MeldKind::Chow, 3, "4p", "9p");
+        Meld noTile = MakeMeld(MeldKind::Chow);
+        noTile.fromDiscard = true;
+        noTile.from = 3;
+        input.melds[0] = {concealedKong, notFromDiscard, fromItself, claimedOutsideTheChow, noTile};
+        for (const TileSlot& slot : MakeTableLayout(input).slots) {
+            EXPECT_EQ(slot.claimEdge, Edge::None) << "role " << static_cast<int>(slot.role) << " meld " << slot.index << " part " << slot.part;
+        }
+    }
+
+    TEST(TableLayoutTest, AnUpgradedKongKeepsTheMarkOfItsPungAndAnyViewSizeKeepsTheEdges) {
+        TableInput input = QuietInput(0);
+        input.melds[2] = {ClaimedMeld(MeldKind::Kong, 1, "5p", "5p")};  // the pung of seat 2 was claimed from the seat before it
+        for (const ViewSize& size : kViewSizes) {
+            const std::vector<std::pair<int, Edge>> claimed = ClaimedTiles(MakeTableLayout(input, size.width, size.height), 2, 0);
+            ASSERT_EQ(claimed.size(), 1u);
+            EXPECT_EQ(claimed[0].first, 0);
+            EXPECT_EQ(claimed[0].second, Edge::Right);  // seat 2 is at the top for the viewer 0; the previous seat: right
+        }
+    }
+
+    TEST(TableLayoutTest, BoundsOfMeldIsTheRectangleRoundTheTilesOfThatMeld) {
+        TableInput input = QuietInput(0);
+        input.melds[0] = {MakeMeld(MeldKind::Chow), MakeMeld(MeldKind::Kong)};
+        input.melds[2] = {MakeMeld(MeldKind::Pung)};
+        const TableLayout layout = MakeTableLayout(input);
+        const std::vector<TileSlot> melds = SlotsOf(layout, SlotRole::MeldTile, 0);
+        const Rect chow = BoundsOfMeld(layout, 0, 0);
+        const Rect kong = BoundsOfMeld(layout, 0, 1);
+        EXPECT_NEAR(chow.x, melds[0].rect.x, kTolerance);
+        EXPECT_NEAR(chow.w, 3 * kViewerMeldTileW, kTolerance);
+        EXPECT_NEAR(chow.h, kViewerMeldTileH, kTolerance);
+        EXPECT_NEAR(kong.x, melds[3].rect.x, kTolerance);
+        EXPECT_NEAR(kong.w, 4 * kViewerMeldTileW, kTolerance);
+        EXPECT_FALSE(Overlaps(chow, kong));
+        // the top seat's meld is laid in a row of its own size
+        EXPECT_NEAR(BoundsOfMeld(layout, 2, 0).w, 3 * kOpponentMeldTileW, kTolerance);
+        // a side seat's meld is a column
+        input.melds[1] = {MakeMeld(MeldKind::Pung)};
+        const Rect column = BoundsOfMeld(MakeTableLayout(input), 1, 0);
+        EXPECT_NEAR(column.h, 3 * kOpponentMeldTileH, kTolerance);
+        EXPECT_NEAR(column.w, kOpponentMeldTileW, kTolerance);
+    }
+
+    TEST(TableLayoutTest, BoundsOfMeldIsEmptyWhenThereIsNoSuchMeld) {
+        TableInput input = QuietInput(0);
+        input.melds[0] = {MakeMeld(MeldKind::Pung)};
+        const TableLayout layout = MakeTableLayout(input);
+        EXPECT_TRUE(BoundsOfMeld(layout, 0, 1).IsEmpty());
+        EXPECT_TRUE(BoundsOfMeld(layout, 0, -1).IsEmpty());
+        EXPECT_TRUE(BoundsOfMeld(layout, 1, 0).IsEmpty());
+        EXPECT_TRUE(BoundsOfMeld(layout, kNoSeat, 0).IsEmpty());
     }
 
 }  // namespace BECore::Mahjong::Tests

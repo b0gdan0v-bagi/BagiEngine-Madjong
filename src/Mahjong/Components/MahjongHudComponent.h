@@ -24,8 +24,10 @@ namespace BECore::Mahjong {
      * of the round wind), `hand` (the number of the hand in progress, at most `handsTotal`), `handsTotal`, `wall` (live tiles left), `turn` (the seat
      * whose turn it is, never the seat that is asked to claim: that would tell a person that this computer holds a claim; `hud.handOver`
      * and `hud.matchOver` when the hand or the match is over), and per seat `seatName` (`Seat 2 (South)`, with ` You` for the person when
-     * exactly one person plays), `seatWind` (the wind's name), `seatScore`, `seatMark` (`>` on the seat whose turn it is) and `seatDealer` (`*` on East).
-     * They carry no tile and nothing a seat could not see.
+     * exactly one person plays), `seatWind` (the wind's name), `seatScore`, `seatMark` (`>` on the seat whose turn it is) and `seatDealer` (`*` on East),
+     * and `lastMove` (the last accepted move of the hand in words, `MoveText` of `HandModel::Moves().back()`; empty before the first move and
+     * once the hand is over; the element `MoveLine` is visible exactly while it is not empty). They carry no tile a seat could not see
+     * (the last move is public: a concealed kong names no tile).
      *
      * **Setup.** `MahjongGame::IsSetupOpen()` decides whether the modal canvas `Setup` is shown (this component shows and hides it every
      * frame). Its four seat `UISegmented` groups are bound to `seatKind0` .. `seatKind3` (`person` | `computer`) and emit
@@ -77,6 +79,8 @@ namespace BECore::Mahjong {
         void PublishNumbers(const MahjongGame* game);
         /// Shows or hides `Setup` after the game, and takes the setup of the game when the panel opens.
         void PublishSetup(const MahjongGame* game);
+        /// Shows or hides the plate `MoveLine` (the variable `lastMove` holds its text).
+        void ShowMoveLine(bool show);
         void PublishSeatKinds() const;
         void PublishHandsChoice() const;
         /// Sets the variable `language` to the language of the game.
@@ -95,6 +99,7 @@ namespace BECore::Mahjong {
         uint64_t _numbersVersion = 0;
         uint64_t _numbersStrings = 0;  // the version of the string table the variables are worded in
         bool _numbersPublished = false;
+        bool _moveLineShown = false;
         bool _handOverShown = false;
         bool _matchOverShown = false;
         int _shownLines = 0;                        // the labels `ScoreLine0` .. that are visible

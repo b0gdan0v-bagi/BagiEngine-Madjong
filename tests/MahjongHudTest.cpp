@@ -6,6 +6,7 @@
 #include <BECore/UI/UIButton.h>
 #include <Events/SceneEvents.h>
 #include <Mahjong/Components/MahjongHudComponent.h>
+#include <Mahjong/Table/MoveText.h>
 #include <Mahjong/Table/ScoreText.h>
 #include <Mahjong/Table/SeatName.h>
 
@@ -125,6 +126,54 @@ namespace BECore::Mahjong::Tests {
                 ASSERT_TRUE(_game->GetSession().NextHand().has_value());
             }
             ASSERT_EQ(_game->GetMatch().GetPhase(), MatchPhase::Finished);
+        }
+
+        /// Whether the plate `MoveLine` is shown (not hidden by the component).
+        bool MoveLineShown() const {
+            const UIElement* line = Element("Hud", "MoveLine");
+            return line != nullptr && line->style.visible;
+        }
+
+        /// The last move of the hand as the HUD should word it in the current language; empty when the hand has none.
+        std::string ExpectedLastMove() const {
+            if (Hand().Moves().empty()) {
+                return {};
+            }
+            const HandMove& move = Hand().Moves().back();
+            const eastl::string text = MoveText(CoreManager::GetUIStrings(), move, Hand().SeatWind(move.seat));
+            return std::string(text.data(), text.size());
+        }
+
+        /// Steps the computers until the last move of the hand is of `kind`; false when the hand ended first.
+        bool StepUntilMove(MoveKind kind) {
+            while (_game->GetSession().GetPhase() == SessionPhase::Playing) {
+                if (!_game->GetSession().StepComputer().has_value()) {
+                    return false;
+                }
+                if (!Hand().Moves().empty() && Hand().Moves().back().kind == kind) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// The longest sentence of the move line in the current language: every kind of move with every seat, wind and the longest tile names.
+        static eastl::string LongestMoveText() {
+            const UIStrings& strings = CoreManager::GetUIStrings();
+            std::vector<eastl::string> candidates;
+            const Tile tiles[] = {T("9m"), T("Ew"), T("Rd"), T("Wd"), T("Gd"), T("F1"), T("T4"), T("5s")};
+            for (int wind = 0; wind < kSeatCount; ++wind) {
+                for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                    for (const MoveKind kind : {MoveKind::Discard, MoveKind::ClaimChow, MoveKind::ClaimPung, MoveKind::ClaimKong, MoveKind::ConcealedKong, MoveKind::UpgradeKong}) {
+                        for (const Tile tile : tiles) {
+                            for (const bool declaring : {false, true}) {
+                                candidates.push_back(MoveText(strings, HandMove{.kind = kind, .seat = seat, .tile = tile, .declaredCalling = declaring}, static_cast<Wind>(wind)));
+                            }
+                        }
+                    }
+                }
+            }
+            return LongestText(candidates);
         }
     };
 
@@ -509,10 +558,13 @@ namespace BECore::Mahjong::Tests {
         // The plates the table paints under the discard blocks and the wall ring
         const eastl::vector<Rect> plates = ZonePlates(layout);
 
+        // The line of the last move is hidden until a move is made: shown here, so that its place is checked too
+        Canvas("Hud")->SetElementVisible("MoveLine"_intern, true);
+
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             Draw();  // laid out again with the words of this language
-            for (const char* name : {"Info", "Scores", "NewGame"}) {
+            for (const char* name : {"Info", "Scores", "NewGame", "MoveLine"}) {
                 const UIElement* element = Element("Hud", name);
                 ASSERT_NE(element, nullptr) << name;
                 ASSERT_FALSE(element->rect.IsEmpty()) << name;
@@ -524,6 +576,135 @@ namespace BECore::Mahjong::Tests {
                 for (size_t i = 0; i < plates.size(); ++i) {
                     EXPECT_TRUE(Apart(plates[i], aired)) << name << " is less than one grid unit from plate " << i;
                 }
+            }
+        });
+    }
+
+    // ----- the move line -----
+
+    TEST_F(MahjongHudTest, TheMoveLineIsEmptyAtTheStartAndWordsTheLastMoveAfterwards) {
+        ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
+        Draw();
+        EXPECT_EQ(Var("lastMove"), "");
+        EXPECT_FALSE(MoveLineShown()) << "no empty plate";
+
+        ASSERT_TRUE(_game->GetSession().StepComputer().has_value());  // East's discard
+        Draw();
+
+        ASSERT_EQ(Hand().Moves().size(), 1u);
+        const HandMove& move = Hand().Moves().back();
+        EXPECT_EQ(move.kind, MoveKind::Discard);
+        EXPECT_EQ(Var("lastMove"), ExpectedLastMove());
+        EXPECT_EQ(Var("lastMove").find("Seat " + std::to_string(move.seat + 1) + " ("), 0u) << Var("lastMove");
+        EXPECT_NE(Var("lastMove").find(" discarded "), std::string::npos) << Var("lastMove");
+        EXPECT_TRUE(MoveLineShown());
+        EXPECT_TRUE(OnScreen("Hud", "MoveLine"));
+        EXPECT_EQ(Text("Hud", "MoveText"), Var("lastMove"));
+    }
+
+    TEST_F(MahjongHudTest, TheMoveLineWordsAClaimAndTheNextDiscardAndAnEmptyLineGoesWhenANewHandStarts) {
+        bool claimed = false;
+        for (uint32_t seed = 1; seed <= kHandsToTry && !claimed; ++seed) {
+            ASSERT_NO_FATAL_FAILURE(Start(kAllComputers, seed));
+            claimed = StepUntilMove(MoveKind::ClaimPung);
+        }
+        ASSERT_TRUE(claimed) << "a pung is claimed in one of the hands";
+        Draw();
+
+        EXPECT_EQ(Var("lastMove"), ExpectedLastMove());
+        EXPECT_NE(Var("lastMove").find(" claimed "), std::string::npos) << Var("lastMove");
+        EXPECT_NE(Var("lastMove").find(" for a pung"), std::string::npos) << Var("lastMove");
+        EXPECT_TRUE(MoveLineShown());
+
+        ASSERT_TRUE(_game->GetSession().StepComputer().has_value());  // the claimer discards
+        Draw();
+        EXPECT_EQ(Hand().Moves().back().kind, MoveKind::Discard);
+        EXPECT_EQ(Var("lastMove"), ExpectedLastMove());
+
+        ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));  // a new match: no move yet
+        Draw();
+        EXPECT_EQ(Var("lastMove"), "");
+        EXPECT_FALSE(MoveLineShown());
+    }
+
+    TEST_F(MahjongHudTest, TheMoveLineIsEmptyWhenTheHandIsOverAndTheEndScreensSpeak) {
+        ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
+        Draw();
+        _game->GetSession().RunComputers();
+        ASSERT_EQ(_game->GetSession().GetPhase(), SessionPhase::HandOver);
+        ASSERT_FALSE(Hand().Moves().empty());
+
+        Draw();
+
+        EXPECT_EQ(Var("lastMove"), "");
+        EXPECT_FALSE(MoveLineShown());
+        ASSERT_TRUE(_game->GetSession().NextHand().has_value());
+        Draw();
+        EXPECT_EQ(Var("lastMove"), "") << "and the next hand has no move yet";
+    }
+
+    TEST_F(MahjongHudTest, TheMoveLineIsWordedAgainInTheOtherLanguageAndNothingIsSetWhileNothingChanges) {
+        ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
+        ASSERT_TRUE(_game->GetSession().StepComputer().has_value());
+        Draw();
+        const std::string english = Var("lastMove");
+        ASSERT_FALSE(english.empty());
+        const uint64_t varsVersion = CoreManager::GetUIVars().GetVersion();
+        Draw();
+        Draw();
+        EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), varsVersion) << "an unchanged table sets nothing";
+
+        ASSERT_TRUE(_game->SetLanguage("ru"_intern));
+        Draw();
+
+        EXPECT_NE(Var("lastMove"), english);
+        EXPECT_EQ(Var("lastMove"), ExpectedLastMove());
+        EXPECT_EQ(Var("lastMove").find("Место "), 0u) << Var("lastMove");
+        EXPECT_NE(Var("lastMove").find(" сбросило "), std::string::npos) << Var("lastMove");
+        EXPECT_EQ(Text("Hud", "MoveText"), Var("lastMove"));
+        const uint64_t russian = CoreManager::GetUIVars().GetVersion();
+        Draw();
+        EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), russian);
+
+        ASSERT_TRUE(_game->SetLanguage("en"_intern));
+        Draw();
+        EXPECT_EQ(Var("lastMove"), english);
+    }
+
+    TEST_F(MahjongHudTest, TheMoveLineNamesNoTileOfAConcealedKong) {
+        // A concealed kong is public as a fact only: the sentence names the seat and no tile
+        bool declared = false;
+        for (uint32_t seed = 1; seed <= 200 && !declared; ++seed) {
+            ASSERT_NO_FATAL_FAILURE(Start(kAllComputers, seed));
+            declared = StepUntilMove(MoveKind::ConcealedKong);
+        }
+        if (!declared) {
+            GTEST_SKIP() << "no computer declared a concealed kong in these seeds (MoveTextTest holds the sentence)";
+        }
+        Draw();
+        EXPECT_EQ(Var("lastMove"), ExpectedLastMove());
+        EXPECT_NE(Var("lastMove").find("concealed kong"), std::string::npos) << Var("lastMove");
+        for (const char* word : {"Dots", "Bamboo", "Characters", "Dragon", "Wind"}) {
+            EXPECT_EQ(Var("lastMove").find(word), std::string::npos) << Var("lastMove");
+        }
+    }
+
+    TEST_F(MahjongHudTest, TheMoveLinePassesTheSizeMatrixInEveryLanguageWithTheLongestSentenceAndEveryWordFits) {
+        ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
+        ASSERT_TRUE(_game->GetSession().StepComputer().has_value());
+        Draw();
+        ASSERT_TRUE(MoveLineShown());
+
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            SetWorstVars();
+            const eastl::string longest = LongestMoveText();
+            ASSERT_FALSE(longest.empty());
+            CoreManager::GetUIVars().Set("lastMove"_intern, eastl::string_view(longest));
+
+            ExpectPassesTheMatrix("Hud", kHudTouchMinimum);
+            for (const Output& output : kOutputs) {
+                ExpectWordsFit("Hud", output.width, output.height, kButtonAir);
             }
         });
     }
