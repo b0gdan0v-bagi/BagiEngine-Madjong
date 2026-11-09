@@ -327,16 +327,22 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NE(row, nullptr);
         EXPECT_FLOAT_EQ(row->style.stack.spacing, kCompactSpacing);
         EXPECT_FLOAT_EQ(row->style.rect.height.value, kActionButtonHeight);
-        for (const char* name : {"Win", "Pung", "Chow2", "Pass"}) {
+        for (const char* name : {"Win", "Pung", "Chow2", "Pass", "HintButton"}) {
             EXPECT_FLOAT_EQ(Element("ActionsCompact", name)->style.rect.width.value, kCompactButtonWidth) << name;
         }
         EXPECT_FLOAT_EQ(Element("ActionsCompact", "Declare")->style.rect.width.value, kCompactDeclareWidth);
-        // The rule counts the buttons of the fullest window: the biggest set the canvases have to hold at once
+        // The rule counts the buttons of the fullest window, and the hint button that the hints offer with it: the biggest set the canvases
+        // have to hold at once
         size_t fullest = 0;
         for (const std::vector<ButtonKind>& kinds : FullestButtonSets()) {
             fullest = std::max(fullest, kinds.size());
         }
-        EXPECT_GE(static_cast<size_t>(kCompactButtonCount), fullest);
+        EXPECT_EQ(static_cast<size_t>(kCompactButtonCount), fullest + 1u);
+        // The row ends with the hint button and then the wide `Declare` switch, so that the switch ends a line (the turn never needs more lines
+        // than the claim window)
+        ASSERT_GE(row->children.size(), 2u);
+        EXPECT_EQ(row->children[row->children.size() - 2]->name, PoolString::Intern("HintButton"));
+        EXPECT_EQ(row->children.back()->name, PoolString::Intern("Declare"));
 
         for (int i = 0; i < kButtonCount; ++i) {
             const ButtonKind kind = static_cast<ButtonKind>(i);
@@ -370,11 +376,27 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_EQ(Element("ActionsCompact", name.c_str()) != nullptr, t < spec.maxTiles) << name;
             }
         }
-        // And nothing else: the same names, except the hint label that only the canvas with a pointer has
+        // And nothing else: the same names, except the hint label that only the canvas with a pointer has and the hint button of the hints,
+        // which is in the node `HintsButton` on the table and in the row here
         std::set<std::string> wideNames = ElementNamesOf("Actions");
         const std::set<std::string> narrowNames = ElementNamesOf("ActionsCompact");
         EXPECT_EQ(wideNames.erase("Hint"), 1u);
+        wideNames.insert("HintButton");
         EXPECT_EQ(wideNames, narrowNames);
+        // The hint button of the row is the one of the table: the action, the word and the colour; it has no pictures
+        const UIElement* tableHint = Element("HintsButton", "HintButton");
+        const UIElement* rowHint = Element("ActionsCompact", "HintButton");
+        ASSERT_TRUE(tableHint != nullptr && rowHint != nullptr);
+        const auto* tableHintButton = tableHint->Cast<UIButton>();
+        const auto* rowHintButton = rowHint->Cast<UIButton>();
+        ASSERT_TRUE(tableHintButton != nullptr && rowHintButton != nullptr);
+        EXPECT_EQ(rowHintButton->action, PoolString::Intern("MahjongHintAdvice"));
+        EXPECT_EQ(rowHintButton->action, tableHintButton->action);
+        EXPECT_EQ(rowHintButton->text, tableHintButton->text);
+        EXPECT_EQ(rowHintButton->text, "{#hints.adviseButton}");
+        EXPECT_TRUE(SameColor(rowHint->color, PaletteColor("neutral")));
+        EXPECT_TRUE(SameColor(rowHint->color, tableHint->color));
+        EXPECT_TRUE(rowHint->children.empty());
         EXPECT_EQ(Element("ActionsCompact", "Hint"), nullptr) << "a touch screen has no hover";
     }
 
@@ -430,6 +452,7 @@ namespace BECore::Mahjong::Tests {
                 for (const ButtonKind kind : kinds) {
                     SetShown(kind, true, "ActionsCompact");
                 }
+                ASSERT_TRUE(canvas->SetElementVisible("HintButton"_intern, true)) << "the hint button ends every set";
                 ExpectPassesTheMatrix("ActionsCompact", minTouch);
                 for (const Output& output : kCompactOutputs) {
                     ExpectWordsFit("ActionsCompact", output.width, output.height, 0.0f);

@@ -50,26 +50,33 @@ namespace BECore::Mahjong {
     }
 
     /// The numbers of the row of `ActionsCompact` (`config/SceneConfig.xml` repeats them and `MahjongTableScreenTest` compares the two): the
-    /// width of a button, the spacing of the row and the buttons of the fullest claim window (mahjong, kong, pung, three chows, pass; the
-    /// fullest turn is narrower, `TouchRegimeTest` wraps both). `kCompactSafeShare` is the part of the canvas that the safe area is at the
-    /// least (the side insets of the matrix), which a canvas variant cannot see: it sees the whole canvas.
-    inline constexpr float kCompactButtonWidth = 120.0f;
+    /// width of a button, the spacing of the row and the buttons of the fullest claim window (mahjong, kong, pung, three chows, pass, and
+    /// the hint button `HintButton`, which follows them: eight buttons). The fullest turn (win, three concealed kongs, the upgrade, the hint
+    /// button and `Declare`: seven buttons, the last one wider) never needs more lines than the claim window, because `Declare` is the
+    /// last element of the row and ends a line; `TouchRegimeTest` wraps both, and every part of them, against the variants.
+    /// `kCompactSafeShare` is the part of the canvas that the safe area is at the least (the side insets of the matrix), which a canvas
+    /// variant cannot see: it sees the whole canvas.
+    inline constexpr float kCompactButtonWidth = 100.0f;
     inline constexpr float kCompactSpacing = 8.0f;
     /// The `Declare` switch of the fullest turn, which its caption and switch need wider than the other buttons.
     inline constexpr float kCompactDeclareWidth = 180.0f;
-    inline constexpr int kCompactButtonCount = 7;
+    inline constexpr int kCompactButtonCount = 8;
     inline constexpr float kCompactSafeShare = 0.82f;
 
     /// A height variant of the stack `ActionRow`: a canvas up to `maxWidth` units wide gives the row `height` units (the later, narrower
     /// variant wins, as in the file). A stack has the height it is given and starts its lines at its top, so this is how far above the
-    /// bottom of the window the row reaches, whatever number of lines the buttons use. Each width is `k` buttons to a line
-    /// (`k * kCompactButtonWidth + (k - 1) * kCompactSpacing`) over `kCompactSafeShare`, rounded up to 0.01, for k = 7, 4, 3, 2; each height
-    /// is the lines the `kCompactButtonCount` buttons need when one fewer fits (2, 3, 4 and 7 lines of `kActionButtonHeight`).
+    /// bottom of the window the row reaches, whatever number of lines the buttons use. Each width is k buttons of the claim window in a
+    /// line (`k * kCompactButtonWidth + (k - 1) * kCompactSpacing`) over `kCompactSafeShare`, rounded up to 0.01, and each height is
+    /// the lines the canvas below it needs (lines of `kActionButtonHeight` with `kCompactSpacing` between):
+    ///  - 1043.91: eight to a line (856) stop fitting: two lines (120) while four to a line (424) fit; above it one line (56);
+    ///  - 517.08: four to a line stop fitting: three lines (184) while three to a line (316) fit;
+    ///  - 385.37: three to a line stop fitting: four lines (248) while two to a line (208) fit;
+    ///  - 253.66: two to a line stop fitting: eight lines (504), one to a line.
     struct CompactRowVariant {
         float maxWidth;
         float height;
     };
-    inline constexpr CompactRowVariant kCompactRowVariants[] = {{1082.93f, 120.0f}, {614.64f, 184.0f}, {458.54f, 248.0f}, {302.44f, 440.0f}};
+    inline constexpr CompactRowVariant kCompactRowVariants[] = {{1043.91f, 120.0f}, {517.08f, 184.0f}, {385.37f, 248.0f}, {253.66f, 504.0f}};
 
     /// The height in canvas units of the `ActionRow` of `ActionsCompact` in a canvas `canvasWidthUnits` wide: `kActionButtonHeight` (one
     /// line) above the first variant, else the height of the narrowest variant that applies.

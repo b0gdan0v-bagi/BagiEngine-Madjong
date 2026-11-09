@@ -22,8 +22,9 @@
         </node>
         <!--
           The hints (Table/Hints.h, MahjongHintsComponent). The component answers the row HintsRow of Setup (MahjongSetHints) and the
-          button HintButton (MahjongHintAdvice), fills the canvas below and draws the marks over the viewer's hand; it comes after the
-          table (layer 5: it reads the layout the table drew) and before the canvas so that the variables are set when the canvas draws.
+          button HintButton (MahjongHintAdvice; it is in the node HintsButton below and in ActionsCompact), fills the canvas below and
+          draws the marks over the viewer's hand; it comes after the table (layer 5: it reads the layout the table drew) and before the
+          canvas so that the variables are set when the canvas draws.
           The canvas lies on the view of the table (SceneView, ignoreSafeArea: like the table it is a fixed design) in the free ground
           inside the wall ring, x 472..808 and y 284..420 (the ring is 26 x 12 stacks of 14 units at y 268, TableLayout.h, and its inside
           is x 472..808, y 282..422: the canvas keeps to the grid of 4; MahjongHintsTest checks the rectangles against the worst-case
@@ -31,11 +32,12 @@
           viewer's hand waits for (WaitCell0..12, 24 x 56: the tile as a UIImage of 24 x 32 whose sprite Tile_<notation> the component
           sets, and under it the count of the copies the viewer cannot see, {hintCountN}, 24 high, font 18). The caption, the counts and
           the sentence are AutoFit: at 18 they fill their lines in a window of 1280 x 720 and shrink in the smallest windows, where a line
-          of 18 units is taller than the 24 the row has. The strip y 364..420 below it (56 units: a touch target of 20 px in the smallest
-          window) holds the button HintButton (neutral, the only element that takes input) and the label AdviceText (a scrim plate)
-          with the sentence {hintAdvice} of the advice. All start hidden; the component shows the panel and the first N cells exactly
-          while hints apply (MahjongGame::HintsOn(), a person at the table, no cover, no Setup, the hand being played) and the hand
-          waits, the button while hints apply and the viewer has actions to choose from, and the label while an advice is up.
+          of 18 units is taller than the 24 the row has. The strip y 364..420 below it (56 units) holds the label AdviceText (a scrim plate,
+          x 596..808) with the sentence {hintAdvice} of the advice, right of the place of the button HintButton (x 472..592), which is
+          in the node HintsButton and not here: nothing on this canvas takes input, so it needs no touch size. All start hidden; the
+          component shows the panel and the first N cells exactly while hints apply (MahjongGame::HintsOn(), a person at the table, no
+          cover, no Setup, the hand being played) and the hand waits, the button while hints apply and the viewer has actions to choose
+          from, and the label while an advice is up.
         -->
         <node name="Hints" layer="5">
           <components>
@@ -129,8 +131,26 @@
                     </element>
                   </children>
                 </element>
-                <element type="UIButton" name="HintButton" anchor="TopLeft" ignoreSafeArea="true" visible="false" x="472" y="364" width="120" height="56" text="{#hints.adviseButton}" fontSize="22" action="MahjongHintAdvice" color="70,70,100,255" />
                 <element type="UILabel" name="AdviceText" anchor="TopLeft" ignoreSafeArea="true" visible="false" x="596" y="364" width="212" height="56" text="{hintAdvice}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" color="0,0,0,200" />
+              </elements>
+            </component>
+          </components>
+        </node>
+        <!--
+          The button HintButton (action MahjongHintAdvice, neutral, 120 x 56 units, hidden until the component shows it) of the hints. It is
+          the one interactive element of the hints and has a node of its own because the canvas Hints is a SceneView canvas, which the
+          table's fit scales (56 units are 32 px only from a window of 732 x 412), so a button there is under the touch minimum in every
+          narrow window. HintsButton is the same canvas in the same place (x 472, y 364, the left end of the strip under the waiting
+          row; the label AdviceText of Hints lies right of it), shown by MahjongTableComponent exactly where Actions is shown and hidden
+          where ActionsCompact is, which holds a HintButton of its own in its row, 100 wide (a Screen canvas, touch minimum met).
+          MahjongHintsComponent shows and hides the element by name, so both follow. It comes after Hints (layer 6) so that it lies over the
+          label's plate.
+        -->
+        <node name="HintsButton" layer="6">
+          <components>
+            <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
+              <elements>
+                <element type="UIButton" name="HintButton" anchor="TopLeft" ignoreSafeArea="true" visible="false" x="472" y="364" width="120" height="56" text="{#hints.adviseButton}" fontSize="22" action="MahjongHintAdvice" color="70,70,100,255" />
               </elements>
             </component>
           </components>
@@ -147,7 +167,7 @@
           units, the 3:4 of an atlas cell). Below that window the component hides this canvas and shows ActionsCompact instead
           (NeedsCompactActions), which holds the same buttons by name on the bar under the table, but only where that bar holds the row at its
           height at that canvas width. In a window that the table fills to the bottom (16:9 below 731 x 411, a short wide one like 1000 x 400, a
-          landscape phone) or whose bar is lower than the row (600 x 420, 500 x 400, 640 x 480, and 720 x 480 at the user scale 1.5) this
+          landscape phone) or whose bar is lower than the row (600 x 420, 500 x 400, 626 x 480, and 640 x 480 and 720 x 480 at the user scale 1.5) this
           canvas stays, slightly under 32 px but clear of the viewer's hand.
           The label Hint above the row shows the sentence of the button under the pointer ({actionHint}, set by the component in the
           current language from UIElement::hovered and again when the language changes; hidden while there is none). It takes no input, so
@@ -234,9 +254,11 @@
           480 px are there). Where the table fills the height of the window and so leaves no bar (every 16:9 window below 731 x 411, a short wide
           window, a landscape phone) this row would lie on the viewer's hand and take the click from its tiles, so Actions stays there, slightly
           under 32 px but in the free corner of the table; so it does where the bar is lower than the row's height at that width (600 x 420,
-          500 x 400, and in the matrix 640 x 480 at the user scales 1.0 and 1.5 and 720 x 480 at 1.5; at 1.0 the canvas of 640 x 480 is 1066.7
-          units wide: a row of 72 px on a bar of 60 px). The same 13 buttons with
-          the same element names, actions, values, words and pictures; the component shows exactly one of the two canvases (Actions where it is
+          500 x 400, 626 x 480, and in the matrix 640 x 480 and 720 x 480 at the user scale 1.5: their canvases are 739 and 783.8 units wide,
+          two lines, rows of 104 and 110 px on bars of 60 and 37.5 px; at 1.0 both are one line and compact). The same 13 buttons and a
+          HintButton (the button of the hints, which MahjongHintsComponent shows by name; on the table it is in the node HintsButton,
+          which is hidden where this canvas is shown; here it is 100 wide at font 18, because the word of the Russian button does not fit 100
+          at 22) with the same element names, actions, values, words and pictures; the component shows exactly one of the two canvases (Actions where it is
           big enough or this one has no bar to lie on, this one elsewhere) and gives both the same visibility and sprites by name. This one is a
           Screen canvas (a SceneView canvas is scaled by the fit of the table, whatever the window, and so cannot be made bigger than the table),
           minScale 0.6 makes a 56 unit button 33.6 px, and the row lies at the bottom of the window, on the bar under the table. The numbers the
@@ -248,16 +270,19 @@
           side) it can lie on the nearest tiles by a few pixels, never by more than the inset: in the matrix that is the 3:2 window of 720 x 480
           (a bar of 37.5 px, the inset 19.2 px, a line of 34.3 px) and the 1:1 windows of 480 and 720 at the user scale 1.5. The touch size is met
           there but not "no button over a tile"; an engine change would fix it (the validator letting ignoreSafeArea cover the descendants of the
-          element, so the row could lie on the whole bar). The buttons are 120 units wide (the grid of 4, the words of button.* are keys) and the
-          row is as wide as the safe area, which a canvas variant cannot see: it sees the whole canvas, of which the safe area is at least 82 %
-          (side insets). Seven buttons (a claim window: mahjong, kong, pung, three chows, pass) are 888 units, so the row is one line from a
-          canvas 1082.93 units wide. A stack has the height it is given and starts its lines at its top, so the row reaches as far up as that
-          height, whatever number of lines the buttons use. The variants below give the height of the lines the width needs (the buttons wrap),
-          counted for the narrowest safe area: k buttons to a line need k x 120 + (k - 1) x 8 units, so the thresholds are 888, 504, 376 and 248
-          divided by 0.82 and rounded up to 0.01 (1082.93, 614.64, 458.54, 302.44) and the heights are 2, 3, 4 and 7 lines of 56 with 8 between
-          (120, 184, 248, 440). MahjongTableScreenTest recomputes them from the button width, the spacing, the seven buttons and the 82 %, and
-          TouchRegimeTest wraps the claim window and the turn against them. No Hint label: a touch screen has no hover, and the label would lie
-          over the table.
+          element, so the row could lie on the whole bar). The buttons are 100 units wide (the grid of 4, the words of button.* are keys; the
+          Declare switch is 180) and the row is as wide as the safe area, which a canvas variant cannot see: it sees the whole canvas, of
+          which the safe area is at least 82 % (side insets). Eight buttons (a claim window: mahjong, kong, pung, three chows, pass, and the
+          hint button HintButton after them, which MahjongHintsComponent shows in a claim window too) are 856 units, so the row is one line
+          from a canvas 1043.91 units wide. A stack has the height it is given and starts its lines at its top, so the row reaches as far
+          up as that height, whatever number of lines the buttons use. The variants below give the height of the lines the width needs (the
+          buttons wrap), counted for the narrowest safe area: k buttons to a line need k x 100 + (k - 1) x 8 units, so the thresholds are
+          856, 424, 316 and 208 divided by 0.82 and rounded up to 0.01 (1043.91, 517.08, 385.37, 253.66) and the heights are 2, 3, 4 and 8
+          lines of 56 with 8 between (120, 184, 248, 504). The fullest turn (win, three concealed kongs, the upgrade, the hint button and
+          the Declare switch of 180, which is the last element so that it ends a line: seven buttons, 828 units) never needs more lines
+          than the claim window, so the claim window decides. MahjongTableScreenTest recomputes the variants from the button width, the
+          spacing, the eight buttons and the 82 %, and TouchRegimeTest wraps the claim window and the turn, and every part of them, against
+          them. No Hint label: a touch screen has no hover, and the label would lie over the table.
         -->
         <node name="ActionsCompact" layer="10">
           <components>
@@ -265,80 +290,81 @@
               <elements>
                 <element type="UIStack" name="ActionRow" anchor="Bottom" width="100%" height="56" direction="Horizontal" spacing="8" wrapChildren="true">
                   <children>
-                  <element type="UIButton" name="Win" visible="false" width="120" height="56" text="{#button.Win}" fontSize="22" action="MahjongWin" color="40,110,60,255" />
-                  <element type="UIButton" name="Mahjong" visible="false" width="120" height="56" text="{#button.ClaimMahjong}" fontSize="18" verticalAlign="Top" action="MahjongClaimMahjong" color="40,110,60,255">
+                  <element type="UIButton" name="Win" visible="false" width="100" height="56" text="{#button.Win}" fontSize="22" action="MahjongWin" color="40,110,60,255" />
+                  <element type="UIButton" name="Mahjong" visible="false" width="100" height="56" text="{#button.ClaimMahjong}" fontSize="18" verticalAlign="Top" action="MahjongClaimMahjong" color="40,110,60,255">
                     <children>
                       <element type="UIImage" name="MahjongTile0" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
                     </children>
                   </element>
-                  <element type="UIButton" name="Pung" visible="false" width="120" height="56" text="{#button.ClaimPung}" fontSize="18" verticalAlign="Top" action="MahjongClaimPung" color="45,75,120,255">
+                  <element type="UIButton" name="Pung" visible="false" width="100" height="56" text="{#button.ClaimPung}" fontSize="18" verticalAlign="Top" action="MahjongClaimPung" color="45,75,120,255">
                     <children>
                       <element type="UIImage" name="PungTile0" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
                     </children>
                   </element>
-                  <element type="UIButton" name="Kong" visible="false" width="120" height="56" text="{#button.ClaimKong}" fontSize="18" verticalAlign="Top" action="MahjongClaimKong" color="45,75,120,255">
+                  <element type="UIButton" name="Kong" visible="false" width="100" height="56" text="{#button.ClaimKong}" fontSize="18" verticalAlign="Top" action="MahjongClaimKong" color="45,75,120,255">
                     <children>
                       <element type="UIImage" name="KongTile0" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
                     </children>
                   </element>
-                  <element type="UIButton" name="Chow0" visible="false" width="120" height="56" text="{#button.ClaimChow0}" fontSize="18" verticalAlign="Top" action="MahjongClaimChow" value="0" color="45,75,120,255">
+                  <element type="UIButton" name="Chow0" visible="false" width="100" height="56" text="{#button.ClaimChow0}" fontSize="18" verticalAlign="Top" action="MahjongClaimChow" value="0" color="45,75,120,255">
                     <children>
                       <element type="UIImage" name="Chow0Tile0" visible="false" anchor="Bottom" x="-23" y="-3" width="21" height="28" />
                       <element type="UIImage" name="Chow0Tile1" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
                       <element type="UIImage" name="Chow0Tile2" visible="false" anchor="Bottom" x="23" y="-3" width="21" height="28" />
                     </children>
                   </element>
-                  <element type="UIButton" name="Chow1" visible="false" width="120" height="56" text="{#button.ClaimChow1}" fontSize="18" verticalAlign="Top" action="MahjongClaimChow" value="1" color="45,75,120,255">
+                  <element type="UIButton" name="Chow1" visible="false" width="100" height="56" text="{#button.ClaimChow1}" fontSize="18" verticalAlign="Top" action="MahjongClaimChow" value="1" color="45,75,120,255">
                     <children>
                       <element type="UIImage" name="Chow1Tile0" visible="false" anchor="Bottom" x="-23" y="-3" width="21" height="28" />
                       <element type="UIImage" name="Chow1Tile1" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
                       <element type="UIImage" name="Chow1Tile2" visible="false" anchor="Bottom" x="23" y="-3" width="21" height="28" />
                     </children>
                   </element>
-                  <element type="UIButton" name="Chow2" visible="false" width="120" height="56" text="{#button.ClaimChow2}" fontSize="18" verticalAlign="Top" action="MahjongClaimChow" value="2" color="45,75,120,255">
+                  <element type="UIButton" name="Chow2" visible="false" width="100" height="56" text="{#button.ClaimChow2}" fontSize="18" verticalAlign="Top" action="MahjongClaimChow" value="2" color="45,75,120,255">
                     <children>
                       <element type="UIImage" name="Chow2Tile0" visible="false" anchor="Bottom" x="-23" y="-3" width="21" height="28" />
                       <element type="UIImage" name="Chow2Tile1" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
                       <element type="UIImage" name="Chow2Tile2" visible="false" anchor="Bottom" x="23" y="-3" width="21" height="28" />
                     </children>
                   </element>
-                  <element type="UIButton" name="ConcealedKong0" visible="false" width="120" height="56" text="{#button.ConcealedKong0}" fontSize="18" verticalAlign="Top" action="MahjongConcealedKong" value="0" color="70,70,100,255">
+                  <element type="UIButton" name="ConcealedKong0" visible="false" width="100" height="56" text="{#button.ConcealedKong0}" fontSize="18" verticalAlign="Top" action="MahjongConcealedKong" value="0" color="70,70,100,255">
                     <children>
                       <element type="UIImage" name="ConcealedKong0Tile0" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
                     </children>
                   </element>
-                  <element type="UIButton" name="ConcealedKong1" visible="false" width="120" height="56" text="{#button.ConcealedKong1}" fontSize="18" verticalAlign="Top" action="MahjongConcealedKong" value="1" color="70,70,100,255">
+                  <element type="UIButton" name="ConcealedKong1" visible="false" width="100" height="56" text="{#button.ConcealedKong1}" fontSize="18" verticalAlign="Top" action="MahjongConcealedKong" value="1" color="70,70,100,255">
                     <children>
                       <element type="UIImage" name="ConcealedKong1Tile0" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
                     </children>
                   </element>
-                  <element type="UIButton" name="ConcealedKong2" visible="false" width="120" height="56" text="{#button.ConcealedKong2}" fontSize="18" verticalAlign="Top" action="MahjongConcealedKong" value="2" color="70,70,100,255">
+                  <element type="UIButton" name="ConcealedKong2" visible="false" width="100" height="56" text="{#button.ConcealedKong2}" fontSize="18" verticalAlign="Top" action="MahjongConcealedKong" value="2" color="70,70,100,255">
                     <children>
                       <element type="UIImage" name="ConcealedKong2Tile0" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
                     </children>
                   </element>
-                  <element type="UIButton" name="UpgradeKong" visible="false" width="120" height="56" text="{#button.UpgradeKong}" fontSize="18" verticalAlign="Top" action="MahjongUpgradeKong" color="70,70,100,255">
+                  <element type="UIButton" name="UpgradeKong" visible="false" width="100" height="56" text="{#button.UpgradeKong}" fontSize="18" verticalAlign="Top" action="MahjongUpgradeKong" color="70,70,100,255">
                     <children>
                       <element type="UIImage" name="UpgradeKongTile0" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
                     </children>
                   </element>
-                  <element type="UIButton" name="Pass" visible="false" width="120" height="56" text="{#button.Pass}" fontSize="22" action="MahjongPass" color="90,50,50,255" />
+                  <element type="UIButton" name="Pass" visible="false" width="100" height="56" text="{#button.Pass}" fontSize="22" action="MahjongPass" color="90,50,50,255" />
+                  <element type="UIButton" name="HintButton" visible="false" width="100" height="56" text="{#hints.adviseButton}" fontSize="18" action="MahjongHintAdvice" color="70,70,100,255" />
                   <element type="UIToggle" name="Declare" visible="false" bind="declareNext" onValue="on" offValue="off" width="180" height="56" text="{#button.Declare}" fontSize="22" action="MahjongDeclare" color="70,70,100,255" />
                   </children>
                 </element>
               </elements>
               <variants>
-                <variant when="maxWidth:1082.93">
+                <variant when="maxWidth:1043.91">
                   <overrides><set element="ActionRow" height="120" /></overrides>
                 </variant>
-                <variant when="maxWidth:614.64">
+                <variant when="maxWidth:517.08">
                   <overrides><set element="ActionRow" height="184" /></overrides>
                 </variant>
-                <variant when="maxWidth:458.54">
+                <variant when="maxWidth:385.37">
                   <overrides><set element="ActionRow" height="248" /></overrides>
                 </variant>
-                <variant when="maxWidth:302.44">
-                  <overrides><set element="ActionRow" height="440" /></overrides>
+                <variant when="maxWidth:253.66">
+                  <overrides><set element="ActionRow" height="504" /></overrides>
                 </variant>
               </variants>
             </component>

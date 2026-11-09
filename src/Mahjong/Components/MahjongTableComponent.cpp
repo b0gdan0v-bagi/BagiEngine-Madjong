@@ -52,6 +52,11 @@ namespace BECore::Mahjong {
         PoolString ActionsCompactNode() {
             return "ActionsCompact"_intern;
         }
+        /// The node of the button `HintButton` of the hints on the table: shown with `Actions`, hidden where `ActionsCompact` is shown (which
+        /// holds a `HintButton` of its own, the last button of its row)
+        PoolString HintsButtonNode() {
+            return "HintsButton"_intern;
+        }
 
         /// The element `name` of the canvas on the node `nodeName`; null when the scene has none. The action buttons are on two nodes,
         /// `Actions` on the table and `ActionsCompact` on the bar under it, where the first would be too small to touch and the bar holds
@@ -276,7 +281,8 @@ namespace BECore::Mahjong {
         UIVars& vars = CoreManager::GetUIVars();
         Scene& scene = GetScene();
 
-        // The canvas of the buttons: `Actions` while its buttons are touch targets, else `ActionsCompact` (the same buttons by name)
+        // The canvas of the buttons: `Actions` while its buttons are touch targets, else `ActionsCompact` (the same buttons by name); the
+        // button of the hints goes with them: `HintsButton` where `Actions` is, its copy in `ActionsCompact` where that is
         const IRenderer& renderer = *CoreManager::GetRenderer();
         const UIEnvironment& environment = CoreManager::GetUIEnvironment();
         const UILayoutContext window = environment.MakeContext(CoreManager::GetMainWindow().Get(), renderer.GetOutputWidth(), renderer.GetOutputHeight());
@@ -284,6 +290,7 @@ namespace BECore::Mahjong {
         if (compact != _compactActions) {
             _compactActions = compact;
             UICanvasComponent::SetVisibleByName(scene, ActionsNode(), !compact);
+            UICanvasComponent::SetVisibleByName(scene, HintsButtonNode(), !compact);
             UICanvasComponent::SetVisibleByName(scene, ActionsCompactNode(), compact);
         }
         for (int i = 0; i < kButtonCount; ++i) {

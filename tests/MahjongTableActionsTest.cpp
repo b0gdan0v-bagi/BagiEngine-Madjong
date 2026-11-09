@@ -722,10 +722,9 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(StartInWindow(480.0f, 480.0f, kPersonAtSeat1, ClaimWindowModel()));
         ASSERT_TRUE(CanvasShown("ActionsCompact"));
 
-        // The row is as high as the width of its canvas makes it (the stack starts its lines at its top): 72 px under 1083 units, on bars of 41 to
-        // 60 px. 640 x 480 (both user scales) and 720 x 480 (at 1.5) are the windows of the matrix that keep `Actions` for it,
-        // with buttons of 28 and 31.5 px
-        for (const auto& [width, height] : {std::pair{600.0f, 420.0f}, std::pair{480.0f, 360.0f}, std::pair{500.0f, 400.0f}, std::pair{640.0f, 480.0f}, std::pair{649.0f, 500.0f}}) {
+        // The row is as high as the width of its canvas makes it (the stack starts its lines at its top): 72 px under 1043.91 units, on bars of 41
+        // to 64 px. (640 x 480 and 720 x 480 of the matrix keep `Actions` for it at the user scale 1.5 only, which this window does not set.)
+        for (const auto& [width, height] : {std::pair{600.0f, 420.0f}, std::pair{480.0f, 360.0f}, std::pair{500.0f, 400.0f}, std::pair{626.0f, 480.0f}}) {
             SetOutputSize(*_renderer, width, height);
             Draw();
             EXPECT_TRUE(CanvasShown("Actions")) << width << " x " << height;
@@ -733,8 +732,8 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(OnScreenButtons().size(), 4u) << width << " x " << height;
             EXPECT_TRUE(OnCompactScreen().empty()) << width << " x " << height;
         }
-        // One pixel of width more and the canvas is wide enough for one line
-        SetOutputSize(*_renderer, 650.0f, 500.0f);
+        // One pixel of width more and the canvas is wide enough for one line (1045 units, 33.6 px on a bar of 63.7 px)
+        SetOutputSize(*_renderer, 627.0f, 480.0f);
         Draw();
         EXPECT_FALSE(CanvasShown("Actions"));
         EXPECT_TRUE(CanvasShown("ActionsCompact"));

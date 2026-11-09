@@ -92,16 +92,18 @@ namespace BECore::Mahjong::Tests {
 
     TEST(TouchRegimeTest, TheBarMustHoldTheRowAtItsHeightAtThatCanvasWidth) {
         // 640 x 480: the table is 360 high at fit 0.5 (a button 28 px), the bar is 60 px. The scale is the floor 0.6, the canvas 1066.7 units wide,
-        // below 1082.93, so the row is 120 units (72 px) high whatever lines its buttons use: it does not fit
+        // above 1043.91, so the row is one line of 56 units (33.6 px) and fits: compact
         EXPECT_FLOAT_EQ(CompactScale(640.0f, 480.0f), kCompactMinScale);
         EXPECT_FLOAT_EQ(BarUnderTable(640.0f, 480.0f), 60.0f);
-        EXPECT_FLOAT_EQ(CompactRowHeight(640.0f / kCompactMinScale), 120.0f);
-        EXPECT_FALSE(Compact(640.0f, 480.0f)) << "a row of 72 px on a bar of 60 px would lie on the hand";
-        EXPECT_FALSE(Compact(640.0f, 428.0f)) << "a bar of 34 px";
-        // A canvas just wide enough for the row in one line (1082.93 units at the floor scale: 649.76 px): 650 x 500 has the bar of 67.2 px for
-        // the line of 33.6 px, 649 x 500 is 1081.7 units wide, the row is 120 units high and does not fit the bar
-        EXPECT_TRUE(Compact(650.0f, 500.0f));
-        EXPECT_FALSE(Compact(649.0f, 500.0f));
+        EXPECT_FLOAT_EQ(CompactRowHeight(640.0f / kCompactMinScale), kActionButtonHeight);
+        EXPECT_TRUE(Compact(640.0f, 480.0f)) << "a row of 33.6 px on a bar of 60 px";
+        EXPECT_TRUE(Compact(640.0f, 440.0f)) << "a bar of 40 px";
+        EXPECT_TRUE(Compact(640.0f, 428.0f)) << "a bar of 34 px holds the line of 33.6 px";
+        EXPECT_FALSE(Compact(640.0f, 420.0f)) << "a bar of 30 px";
+        // A canvas just wide enough for the row in one line (1043.91 units at the floor scale: 626.35 px): 627 x 480 has the bar of 63.7 px for
+        // the line of 33.6 px; 626 x 480 is 1043.3 units wide, the row is 120 units (72 px) high and does not fit its bar of 63.9 px
+        EXPECT_TRUE(Compact(627.0f, 480.0f));
+        EXPECT_FALSE(Compact(626.0f, 480.0f));
         EXPECT_TRUE(Compact(480.0f, 480.0f)) << "800 units wide, a row of 72 px on a bar of 105 px";
         EXPECT_TRUE(Compact(720.0f, 480.0f)) << "1176 units wide: one line of 34.3 px on a bar of 37.5 px";
         // Where the compact scale rises above its floor the row is higher in pixels: 1000 x 700 has a scale of 0.8715 (a line of 48.8 px)
@@ -113,7 +115,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(TouchRegimeTest, AWindowWhoseBarHoldsALineButNotTheRowKeepsActions) {
         // The row reaches as far up as its height: the stack starts its lines at its top, so a window with a bar of one line of 34 px (and
-        // more) still gets `Actions` when the canvas is narrower than 1082.93 units and the row is 120 units high
+        // more) still gets `Actions` when the canvas is narrower than 1043.91 units and the row is 120 units high
         EXPECT_FALSE(Compact(600.0f, 420.0f)) << "a bar of 41 px, a row of 72 px";
         EXPECT_FALSE(Compact(480.0f, 360.0f)) << "a bar of 45 px";
         EXPECT_FALSE(Compact(500.0f, 400.0f)) << "a bar of 59 px";
@@ -176,15 +178,30 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(TouchRegimeTest, TheRowHeightHoldsTheFullestTurnAndTheFullestClaimWindowToo) {
-        // The thresholds are counted for the seven buttons of 120 of the claim window; the fullest turn (a win, three concealed kongs, the
-        // upgrade and the declaration, which is wider) never needs more lines, wrapped in the order of the file
+        // The thresholds are counted for the eight buttons of 100 of the claim window (seven and the hint button); the fullest turn (a win,
+        // three concealed kongs, the upgrade, the hint button and the declaration, which is wider and comes last) never needs more lines,
+        // wrapped in the order of the file
         const std::vector<float> claim(static_cast<size_t>(kCompactButtonCount), kCompactButtonWidth);
-        const std::vector<float> turn = {kCompactButtonWidth, kCompactButtonWidth, kCompactButtonWidth, kCompactButtonWidth, kCompactButtonWidth, kCompactDeclareWidth};
+        const std::vector<float> turn = {kCompactButtonWidth, kCompactButtonWidth, kCompactButtonWidth, kCompactButtonWidth, kCompactButtonWidth, kCompactButtonWidth, kCompactDeclareWidth};
         ASSERT_LE(turn.size(), claim.size());
         for (float width = 250.0f; width <= 1400.0f; width += 0.25f) {
             const float safe = kCompactSafeShare * width;
             EXPECT_GE(CompactRowHeight(width), WrappedHeight(claim, safe)) << width << ": the claim window";
             EXPECT_GE(CompactRowHeight(width), WrappedHeight(turn, safe)) << width << ": the turn";
+        }
+        // Every part of the two sets (a window shows the buttons it is offered, and wrapping is not monotone in general): never more lines
+        for (const std::vector<float>* set : {&claim, &turn}) {
+            for (unsigned mask = 1; mask < (1u << set->size()); ++mask) {
+                std::vector<float> part;
+                for (size_t i = 0; i < set->size(); ++i) {
+                    if ((mask >> i & 1u) != 0u) {
+                        part.push_back((*set)[i]);
+                    }
+                }
+                for (float width = 250.0f; width <= 1400.0f; width += 1.0f) {
+                    EXPECT_GE(CompactRowHeight(width), WrappedHeight(part, kCompactSafeShare * width)) << width << ": part " << mask << " of a set of " << set->size();
+                }
+            }
         }
         // And the claim window makes exactly that many lines, so the table is not taller than the buttons need: the widest canvas is one line
         EXPECT_FLOAT_EQ(WrappedHeight(claim, kCompactSafeShare * 1090.0f), kActionButtonHeight);
@@ -234,23 +251,20 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(Compact(480.0f, 480.0f, std::nanf("")));
     }
 
-    TEST(TouchRegimeTest, TheWholeMatrixIsCompactExactlyWhere56TimesTheFitIsBelow32ButForTheWindowWhoseBarHoldsNoRow) {
-        // Every window of the matrix is 480 px or more on its short side. Each one below the touch size has a bar that holds the row, but
-        // the 4:3 window of 640 x 480 (the canvas 1066.7 units wide, a row of 72 px on a bar of 60 px): `Actions` stays there, at 28 px
+    TEST(TouchRegimeTest, TheWholeMatrixIsCompactExactlyWhere56TimesTheFitIsBelow32AtTheUserScale1) {
+        // Every window of the matrix is 480 px or more on its short side. Each one below the touch size has a bar that holds the row (the
+        // canvas is 1043.91 units wide or more at the user scale 1.0 there: one line of 33.6 px or so on a bar of 37.5 px or more; the
+        // user scale 1.5 makes it smaller and keeps `Actions` in 640 x 480 and 720 x 480, see `TheUserScaleMakes...`)
         int compact = 0;
         int roomy = 0;
-        int kept = 0;
         for (const BECore::Tests::UIMatrixCase& matrixCase : BECore::Tests::UILayoutMatrix()) {
             const float width = matrixCase.context.outputWidth;
             const float height = matrixCase.context.outputHeight;
             const float fit = std::min(width / kViewWidth, height / kViewHeight);  // worked out here, not by FitScale
             const bool small = 56.0f * fit < kMinTouch;
-            const bool expected = small && !(width == 640.0f && height == 480.0f);
-            EXPECT_EQ(Compact(width, height), expected) << matrixCase.label.c_str();
-            if (expected) {
+            EXPECT_EQ(Compact(width, height), small) << matrixCase.label.c_str();
+            if (small) {
                 ++compact;
-            } else if (small) {
-                ++kept;
             } else {
                 ++roomy;
             }
@@ -258,7 +272,6 @@ namespace BECore::Mahjong::Tests {
         // Both kinds of window are in the matrix: the 480 px ones are compact, the full HD ones are not
         EXPECT_GT(compact, 0);
         EXPECT_GT(roomy, 0);
-        EXPECT_EQ(kept, 3) << "640 x 480 with no insets, a notch and side insets";
         EXPECT_TRUE(Compact(480.0f, 480.0f));
         EXPECT_FALSE(Compact(1920.0f, 1080.0f));
     }

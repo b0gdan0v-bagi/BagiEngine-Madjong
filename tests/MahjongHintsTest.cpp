@@ -20,7 +20,6 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        constexpr float kPanelTouchMinimum = 20.0f;  // the panel lies on the fixed design of the table, like the HUD
         constexpr float kMinControlHeight = 48.0f;
         constexpr float kButtonAir = 8.0f;
         struct Output {
@@ -131,8 +130,17 @@ namespace BECore::Mahjong::Tests {
             return OnScreen("Hints", "WaitPanel");
         }
 
+        /// The button on the table: the canvas `HintsButton` is the one on screen (a hidden canvas keeps the rects of its last layout) and the
+        /// button has a rect.
         bool ButtonShown() const {
-            return OnScreen("Hints", "HintButton");
+            const auto canvas = Canvas("HintsButton");
+            return canvas && canvas->TakesInput() && OnScreen("HintsButton", "HintButton");
+        }
+
+        /// The button in the row of `ActionsCompact`, the canvas of the narrow windows.
+        bool CompactButtonShown() const {
+            const auto canvas = Canvas("ActionsCompact");
+            return canvas && canvas->TakesInput() && OnScreen("ActionsCompact", "HintButton");
         }
 
         bool AdviceShown() const {
@@ -720,7 +728,8 @@ namespace BECore::Mahjong::Tests {
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             Draw();
-            ExpectPassesTheMatrix("Hints", kPanelTouchMinimum);
+            // The canvas has no interactive element (the button is in `HintsButton`), so the engine's minimum holds in every window
+            ExpectPassesTheMatrix("Hints", EngineTouchMinimum());
             for (const Output& output : kOutputs) {
                 ExpectWordsFit("Hints", output.width, output.height, 0.0f);
             }
@@ -917,6 +926,73 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(ButtonShown());
     }
 
+    // ----- the button in a narrow window: the row of ActionsCompact -----
+
+    TEST_F(MahjongHintsTest, InANarrowWindowTheButtonIsInTheCompactRowAndOfferedExactlyWhereItIsOnTheTable) {
+        // The same state is looked at in the design size (the canvas `HintsButton`) and in 480 x 480 (the row of `ActionsCompact`, `HintsButton`
+        // hidden with `Actions`): the button is on the one and on the other exactly together
+        const auto expectBoth = [&](bool offered, const char* state) {
+            SetOutputSize(*_renderer, kViewWidth, kViewHeight);
+            Draw();
+            EXPECT_EQ(ButtonShown(), offered) << state << ": on the table";
+            EXPECT_FALSE(CompactButtonShown()) << state << ": the row is hidden at the design size";
+            SetOutputSize(*_renderer, 480.0f, 480.0f);
+            Draw();
+            EXPECT_EQ(CompactButtonShown(), offered) << state << ": in the row";
+            EXPECT_FALSE(ButtonShown()) << state << ": the canvas of the table is hidden in a narrow window";
+        };
+        ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
+        expectBoth(true, "a plain turn");
+        // A plain turn: the hint button is the only button of the row
+        for (int i = 0; i < kButtonCount; ++i) {
+            EXPECT_FALSE(OnScreen("ActionsCompact", SpecOf(static_cast<ButtonKind>(i)).element)) << SpecOf(static_cast<ButtonKind>(i)).element;
+        }
+        _game->SetHintsOn(false);
+        expectBoth(false, "hints off");
+        _game->SetHintsOn(true);
+        expectBoth(true, "hints on again");
+        _game->OpenSetup();
+        expectBoth(false, "Setup open");
+        _game->CloseSetup();
+        expectBoth(true, "Setup closed");
+        ASSERT_TRUE(Discard("Nw"));
+        expectBoth(false, "a computer acts");
+
+        ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw", kAllComputers));
+        expectBoth(false, "a spectator");
+        ASSERT_NO_FATAL_FAILURE(StartWindow(kWindowPung, "5p"));
+        expectBoth(true, "a claim window of the person");
+    }
+
+    TEST_F(MahjongHintsTest, AClickOnTheButtonOfTheCompactRowAsksForTheAdviceAndPlaysNothing) {
+        SetOutputSize(*_renderer, 480.0f, 480.0f);
+        ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
+        ASSERT_TRUE(CompactButtonShown());
+        const auto canvas = Canvas("ActionsCompact");
+        const UIElement* button = Element("ActionsCompact", "HintButton");
+        ASSERT_TRUE(canvas && button);
+        const uint64_t version = _game->GetSession().Version();
+
+        const auto [x, y] = OutputCenterOf(*canvas, *button);
+        EXPECT_TRUE(Click(x, y)) << "the canvas takes the click";
+        Draw();
+
+        EXPECT_TRUE(AdviceShown());
+        EXPECT_EQ(AdviceVar(), "Discard North Wind.");
+        EXPECT_EQ(AdviceVar(), SentenceFor(kSeat0));
+        EXPECT_EQ(_game->GetSession().Version(), version) << "the advice never moves the session";
+        EXPECT_EQ(Hand().GetHand(kSeat0).concealed.size(), 14u);
+        EXPECT_TRUE(_game->GetSession().ActorIsPerson());
+
+        // The window grows: the canvases swap back, the button is on the table again and the advice stays (it belongs to the table, not to the canvas)
+        SetOutputSize(*_renderer, kViewWidth, kViewHeight);
+        Draw();
+        EXPECT_TRUE(ButtonShown());
+        EXPECT_FALSE(CompactButtonShown());
+        EXPECT_TRUE(AdviceShown());
+        EXPECT_EQ(AdviceVar(), SentenceFor(kSeat0));
+    }
+
     TEST_F(MahjongHintsTest, APressSetsTheSentenceOfTheAdviceAndFramesTheAdvisedDiscard) {
         ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
         ASSERT_TRUE(ButtonShown());
@@ -955,7 +1031,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongHintsTest, ThePressOfTheButtonWorksByClick) {
         ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
-        ASSERT_TRUE(ClickElement("Hints", "HintButton"));
+        ASSERT_TRUE(ClickElement("HintsButton", "HintButton"));
         Draw();
         EXPECT_TRUE(AdviceShown());
         EXPECT_EQ(AdviceVar(), SentenceFor(kSeat0));
@@ -1178,16 +1254,23 @@ namespace BECore::Mahjong::Tests {
             Draw();
             ASSERT_TRUE(AdviceShown());
             ASSERT_TRUE(ButtonShown());
-            ExpectPassesTheMatrix("Hints", kPanelTouchMinimum);
+            ExpectPassesTheMatrix("Hints", EngineTouchMinimum());
             for (const Output& output : kOutputs) {
                 ExpectWordsFit("Hints", output.width, output.height, 0.0f);
+                ExpectWordsFit("HintsButton", output.width, output.height, 0.0f);
             }
+            // The button is a 56-unit control on a canvas that the table's fit scales: the engine's minimum holds wherever `Actions` does, and in
+            // the narrow windows the button of the row of `ActionsCompact` takes its place (`ExpectPassesTheMatrix("ActionsCompact")` of
+            // `MahjongTableScreenTest` holds that one)
+            ExpectMatrixExceptTouchWhere(*Canvas("HintsButton"), "HintsButton", EngineTouchMinimum(), ActionsMayBeSmall);
         });
 
         auto canvas = Canvas("Hints");
-        ASSERT_TRUE(canvas);
+        auto buttonCanvas = Canvas("HintsButton");
+        ASSERT_TRUE(canvas && buttonCanvas);
         canvas->UpdateLayout(kViewWidth, kViewHeight);
-        const UIElement* button = Element("Hints", "HintButton");
+        buttonCanvas->UpdateLayout(kViewWidth, kViewHeight);
+        const UIElement* button = Element("HintsButton", "HintButton");
         const UIElement* label = Element("Hints", "AdviceText");
         const UIElement* panel = Element("Hints", "WaitPanel");
         ASSERT_NE(button, nullptr);

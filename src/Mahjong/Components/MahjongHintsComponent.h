@@ -33,7 +33,8 @@ namespace BECore::Mahjong {
      *
      * **The marks and the advice.** On the viewer's turn the component draws over the hand of the table (it reads the layout of the last
      * draw of `MahjongTableComponent`, which draws first): a bar under every tile whose discard declares the calling hand
-     * (`DeclaringDiscards`, exactly what the `Declare` switch allows). The button `HintButton` is shown exactly while hints apply and the
+     * (`DeclaringDiscards`, exactly what the `Declare` switch allows). The button `HintButton` (in the nodes `HintsButton` on the table and `ActionsCompact` in the narrow windows,
+     * shown by name in both, `MahjongTableComponent` swaps the canvases) is shown exactly while hints apply and the
      * viewer has actions to choose from; `MahjongHintAdvice` (ignored when the button is not offered) stores `AdviceFor(view)` and the
      * component publishes the sentence `AdviceText` as the variable `hintAdvice` for the label `AdviceText`; a discard that is advised is
      * framed on the hand. The advice belongs to the table it was asked on: any change of the session `Version()`, a cover, hints off or
