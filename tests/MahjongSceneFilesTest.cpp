@@ -1,11 +1,10 @@
 #include "MahjongTableTestSupport.h"
 
 #include <Mahjong/Table/TableLayout.h>
-#include <algorithm>
-#include <filesystem>
+#include <iterator>
 #include <map>
 #include <set>
-#include <string>
+#include <vector>
 
 /**
  * The scene is split into files: `config/SceneConfig.xml` holds the scene and one `<node ref>` per node, each node lives in `config/nodes/Mahjong<Name>.xml`
@@ -40,12 +39,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         size_t AttributeCount(const pugi::xml_node& node) {
-            size_t count = 0;
-            for (const pugi::xml_attribute& attribute : node.attributes()) {
-                static_cast<void>(attribute);
-                ++count;
-            }
-            return count;
+            const pugi::xml_object_range<pugi::xml_attribute_iterator> attributes = node.attributes();
+            return static_cast<size_t>(std::distance(attributes.begin(), attributes.end()));
         }
 
         std::vector<pugi::xml_node> ElementChildren(const pugi::xml_node& parent) {
@@ -85,7 +80,8 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(MahjongSceneFilesTest, EveryNodeIsInAFileOfItsOwn) {
-        std::map<std::string, int> stems;  // every xml file of config/ is loaded by ConfigManager as a config named by its stem
+        // Every xml file of config/ is loaded by ConfigManager as a config named by its stem; the `Mahjong` prefix of the node files also keeps them clear of the stems of the engine's config.
+        std::map<std::string, int> stems;
         for (const std::filesystem::directory_entry& entry : std::filesystem::recursive_directory_iterator(ShippedConfigDirectory())) {
             if (entry.is_regular_file() && entry.path().extension() == ".xml") {
                 ++stems[entry.path().stem().string()];
