@@ -50,12 +50,21 @@ namespace BECore::Mahjong {
      * **The last move.** Three marks of the gold family (`Table/UiPalette.h`) show what has just happened, from the public data of `HandModel`
      * (`Moves()`, `Discards()`, the open sets): a tint over the last discard (`kLastDiscardMark`; the frame of a pending discard shows
      * besides it), a bar along the edge of the claimed tile of an open set that faces the seat it came from (`kClaimedEdge`, from
-     * `TileSlot::claimEdge`), and the tile the viewer has just drawn, which lies apart at the end of its row (only in a hand that is
-     * face up: under the cover and for a spectator the hand is the plain row); a click on it discards it like any other tile. The set a seat
+     * `TileSlot::claimEdge`), and the tile the viewer has just drawn, which stays in its place in the sorted row and has a tint over its
+     * face (`kDrawnTileMark`; only in a hand that is face up: under the cover and for a spectator nothing marks it); a click on it
+     * discards it like any other tile. The set a seat
      * has just laid (a claimed chow, pung or kong, a concealed kong, an upgraded kong: the last entry of `Moves()` that made one among those
      * not seen yet, so a claim and the discard after it in one step still show the set) has a fill behind it that blinks for
      * `kClaimHighlightSeconds` (`kClaimHighlight`, on for the first half of each `kClaimBlinkSeconds`); the time runs on `SceneUpdateEvent`
      * (also under the cover, not while the seat choice is open) and the highlight changes no game state.
+     *
+     * **A declared calling hand** (`PlayerHand::callingDeclared`, public: the control state lists it as `calling`) has a frame of
+     * `kCallingFrame` round its hand (four bars of `kCallingFrameWidth` units on the border of the rectangle of the turn backdrop),
+     * drawn before the tiles, for every seat that has declared, under the cover and at the end of the hand too (it reads the flag, never
+     * a tile); it follows the flag, so it is gone in the next hand.
+     * While the viewer's own hand is declared, face up and it is its turn, every tile whose discard leaves the hand waiting
+     * (`KeepsWaitingDiscards`, `Table/CallingMarks.h`, from the viewer's `TableView`) has a bar of `kKeepsWaitingMark` inside its bottom
+     * edge, whatever the `Hints` switch says.
      *
      * **Playing.** While a person has to act (`TableSession::ActorIsPerson()`, no hot-seat cover) a left click on a tile of the viewer's hand
      * discards it (`PerformPerson(MakeDiscard(tile, declareNext))`); a refused action changes nothing. The other actions are the buttons of the

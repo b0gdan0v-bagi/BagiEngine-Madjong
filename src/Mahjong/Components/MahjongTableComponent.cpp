@@ -11,6 +11,7 @@
 #include <Events/SceneEvents.h>
 #include <Generated/MahjongTableComponent.gen.hpp>
 #include <Mahjong/MahjongGame.h>
+#include <Mahjong/Table/CallingMarks.h>
 #include <Mahjong/Table/SeatName.h>
 #include <Mahjong/Table/TileAtlas.h>
 #include <Mahjong/Table/TouchRegime.h>
@@ -202,12 +203,9 @@ namespace BECore::Mahjong {
             return Rect();
         }
 
-        TableInput MakeInput(const HandModel& hand, Seat viewer, bool drawnApart) {
+        TableInput MakeInput(const HandModel& hand, Seat viewer) {
             TableInput input;
             input.viewer = viewer;
-            if (drawnApart && IsSeat(viewer)) {
-                input.drawnIndex = DrawnIndexOf(hand, viewer);
-            }
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 const PlayerHand& held = hand.GetHand(seat);
                 input.concealedCount[seat] = static_cast<int>(held.concealed.size());
@@ -230,6 +228,15 @@ namespace BECore::Mahjong {
 
         Rect Padded(const Rect& rect, float margin) {
             return Rect(rect.x - margin, rect.y - margin, rect.w + 2.0f * margin, rect.h + 2.0f * margin);
+        }
+
+        /// Four bars of `width` on the border of `rect`, inside it; the two side bars lie between the top and the bottom one, so no
+        /// corner is drawn twice (the colour is translucent).
+        void DrawFrame(IRenderer& renderer, const Rect& rect, float width, const Color& color) {
+            renderer.DrawFilledRect(rect.x, rect.y, rect.w, width, color);
+            renderer.DrawFilledRect(rect.x, rect.y + rect.h - width, rect.w, width, color);
+            renderer.DrawFilledRect(rect.x, rect.y + width, width, rect.h - 2.0f * width, color);
+            renderer.DrawFilledRect(rect.x + rect.w - width, rect.y + width, width, rect.h - 2.0f * width, color);
         }
 
     }  // namespace
@@ -509,10 +516,19 @@ namespace BECore::Mahjong {
         const HandModel& hand = game->GetMatch().Hand();
         FollowMoves(*game);
         const Faces faces = FacesOf(session);
-        // The drawn tile lies apart only in a hand that is face up: under the cover and for a spectator the hand is a plain row
         const Seat bottom = BottomSeat(session);
-        const bool drawnApart = session.GetPhase() == SessionPhase::Playing && faces.Shows(bottom);
-        _layout = MakeTableLayout(MakeInput(hand, bottom, drawnApart), viewWidth, viewHeight);
+        _layout = MakeTableLayout(MakeInput(hand, bottom), viewWidth, viewHeight);
+        // The tile the viewer has just drawn is tinted in its place, only in a hand that is face up: under the cover and for a spectator
+        // nothing marks it (and the layout is the same plain row either way)
+        const int drawnIndex = IsSeat(bottom) && session.GetPhase() == SessionPhase::Playing && faces.Shows(bottom) ? DrawnIndexOf(hand, bottom) : -1;
+
+        // The discards that keep a declared hand waiting: only on the viewer's own turn in a hand that is face up (the guard is cheap, the
+        // view is made only when it can say something); not tied to the hints switch
+        eastl::array<bool, kTileIdCount> keepsWaiting{};
+        if (IsSeat(bottom) && session.GetPhase() == SessionPhase::Playing && faces.Shows(bottom) && hand.GetPhase() == Phase::Discard && hand.CurrentSeat() == bottom &&
+            hand.GetHand(bottom).callingDeclared) {
+            keepsWaiting = KeepsWaitingDiscards(MakeTableView(hand, bottom));
+        }
 
         // A face (the tile) or the back (nullopt) at `rect`: from the atlas, else a plain rectangle.
         const auto drawFace = [&](const Rect& rect, std::optional<Tile> face) {
@@ -560,6 +576,17 @@ namespace BECore::Mahjong {
                 renderer.DrawFilledRect(marked.x, marked.y, marked.w, marked.h, kClaimHighlight);
             }
         }
+        // A declared calling hand is public: a frame round the hand of each seat that has declared it, under the tiles (it reads the flag
+        // only, so it shows under the cover and at the end of the hand too)
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            if (!hand.GetHand(seat).callingDeclared) {
+                continue;
+            }
+            const Rect bounds = BoundsOf(_layout, SlotRole::HandTile, seat);
+            if (bounds.w > 0.0f) {
+                DrawFrame(renderer, Padded(bounds, kActingMargin * unit), kCallingFrameWidth * unit, kCallingFrame);
+            }
+        }
         // The tiles that cannot declare the calling hand when they are discarded, while the next discard is to declare it
         eastl::array<bool, kTileIdCount> cannotDeclare{};
         if (_declareNext) {
@@ -585,6 +612,13 @@ namespace BECore::Mahjong {
             switch (slot.role) {
                 case SlotRole::HandTile:
                     drawTile(slot.rect, faces.Shows(slot.seat) ? std::optional<Tile>(held.concealed[slot.index]) : std::nullopt);
+                    if (slot.seat == bottom && slot.index == drawnIndex) {
+                        renderer.DrawFilledRect(slot.rect.x, slot.rect.y, slot.rect.w, slot.rect.h, kDrawnTileMark);
+                    }
+                    if (slot.seat == bottom && keepsWaiting[held.concealed[slot.index].Id()]) {
+                        const float bar = kKeepsWaitingBarHeight * unit;
+                        renderer.DrawFilledRect(slot.rect.x, slot.rect.y + slot.rect.h - bar, slot.rect.w, bar, kKeepsWaitingMark);
+                    }
                     if (_declareNext && slot.seat == session.Actor() && cannotDeclare[held.concealed[slot.index].Id()]) {
                         renderer.DrawFilledRect(slot.rect.x, slot.rect.y, slot.rect.w, slot.rect.h, kVeil);
                     }

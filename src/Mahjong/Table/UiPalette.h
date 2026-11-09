@@ -14,9 +14,8 @@ namespace BECore::Mahjong {
      * Roles, not colours, are the rule: a new control takes the role of what it does.
      * - The table: `kFelt` with a `kFeltRim` round the view, a `kZonePlate` under the discard blocks and the wall ring, a `kTileShadow`
      *   under each tile. A mark on the table is the gold family (`kTurnMark`, `kPendingFrame`, the hints `kDeclareMark`,
-     *   `kAdvisedFrame`, and the marks of the last move `kLastDiscardMark`, `kClaimedEdge`, `kClaimHighlight`) and nothing else on
-     *   the table is gold;
-     *   `kVeil` dims a tile that cannot be discarded now.
+     *   `kAdvisedFrame`, and the marks of the last move `kLastDiscardMark`, `kDrawnTileMark`, `kClaimedEdge`, `kClaimHighlight`, the frame of a declared hand `kCallingFrame` and the bar of its safe
+     * discards `kKeepsWaitingMark`) and nothing else on the table is gold; `kVeil` dims a tile that cannot be discarded now.
      * - The screens: `scrim` dims what lies behind a modal screen (and the hint), `surface` is the plate, `header` its headline band,
      *   `surfaceRaised` the rows on it, `hudPanel` the panels of the HUD over the felt.
      * - The buttons: `primary` confirms (Mahjong!, Start, Next hand), `secondary` claims and the HUD's New game, `neutral` the extras of
@@ -35,6 +34,9 @@ namespace BECore::Mahjong {
     inline constexpr Color kPendingFrame{255, 214, 80, 200};
     /// A tint over the face of the last discard (not a frame, so it stays apart from `kPendingFrame`, which shows besides it).
     inline constexpr Color kLastDiscardMark{255, 214, 80, 110};
+    /// A tint over the face of the tile the viewer has just drawn, in its place in the sorted hand (a different alpha from the tint of
+    /// the last discard, which lies in the pile and never on the hand).
+    inline constexpr Color kDrawnTileMark{255, 214, 80, 130};
     /// The bar along the edge of the claimed tile of an open set that faces the seat it came from, `kClaimedEdgeWidth` units wide.
     inline constexpr Color kClaimedEdge{255, 214, 80, 255};
     inline constexpr float kClaimedEdgeWidth = 4.0f;
@@ -43,6 +45,15 @@ namespace BECore::Mahjong {
     inline constexpr Color kClaimHighlight{255, 214, 80, 120};
     inline constexpr float kClaimHighlightSeconds = 2.0f;
     inline constexpr float kClaimBlinkSeconds = 0.5f;
+    /// Round the hand of a seat that has declared its calling hand (public), four bars of `kCallingFrameWidth` units on the border of the
+    /// padded rectangle of the hand, behind the tiles; it stays while the declaration stands.
+    inline constexpr Color kCallingFrame{255, 214, 80, 160};
+    inline constexpr float kCallingFrameWidth = 3.0f;
+    /// A bar inside the bottom edge of a tile of the viewer's declared hand whose discard leaves the hand waiting (`KeepsWaitingDiscards`), on the
+    /// viewer's turn: `kKeepsWaitingBarHeight` units high, the full width of the tile. Inside the tile, so it stays apart from the `kDeclareMark`
+    /// bar of the hints (under the tile), which shows only before the declaration.
+    inline constexpr Color kKeepsWaitingMark{255, 214, 80, 220};
+    inline constexpr float kKeepsWaitingBarHeight = 6.0f;
     /// Over a tile whose declaring discard is not legal while the next discard declares the calling hand.
     inline constexpr Color kVeil{0, 0, 0, 140};
     /// The hints (`MahjongHintsComponent`), marks on the viewer's hand and so in the gold family: a bar under a tile whose discard declares
