@@ -252,9 +252,10 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(TouchRegimeTest, TheWholeMatrixIsCompactExactlyWhere56TimesTheFitIsBelow32AtTheUserScale1) {
-        // Every window of the matrix is 480 px or more on its short side. Each one below the touch size has a bar that holds the row (the
-        // canvas is 1043.91 units wide or more at the user scale 1.0 there: one line of 33.6 px or so on a bar of 37.5 px or more; the
-        // user scale 1.5 makes it smaller and keeps `Actions` in 640 x 480 and 720 x 480, see `TheUserScaleMakes...`)
+        // Every window of the matrix is 480 px or more on its short side. Each one below the touch size has a bar that holds the row at
+        // its height at the user scale 1.0: one line (the canvas is 1043.91 units wide or more, e.g. 640 x 480 and 720 x 480) or several
+        // lines on the tall bars of the square and portrait windows (480 x 480: two lines, 72 px on a bar of 105 px). The user scale 1.5
+        // makes the canvas narrower and keeps `Actions` in 640 x 480 and 720 x 480, see `TheUserScaleMakes...`
         int compact = 0;
         int roomy = 0;
         for (const BECore::Tests::UIMatrixCase& matrixCase : BECore::Tests::UILayoutMatrix()) {
