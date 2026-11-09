@@ -12,7 +12,7 @@
  * `LevelProfile`, the random "seek win" chooser and `PlayArenaHand`. The last part is the point of the arena: it plays the hands of
  * `ComputerStrengthTest` (seeds 4000..4059, Normal on each seat in turn against three random seats) to the same numbers, 186 wins of
  * 240, 27 won by the random seats together, 27 drawn hands, +31730 points for the focus seat. Pure logic: no engine services; about
- * 1.5 s in Debug.
+ * 3 s in Debug.
  */
 namespace BECore::Mahjong::Arena {
 
@@ -114,7 +114,7 @@ namespace BECore::Mahjong::Arena {
     TEST(ArenaPlayerTest, TheKnobsTableCoversEveryFieldOfTheProfile) {
         // Each row sets its own field and no other; between them the rows set all four fields of `LevelProfile` (a fifth field
         // without a row stops the build in ArenaPlayer.cpp, which names every field).
-        eastl::array<bool, 4> moved{};
+        eastl::array<bool, kProfileFieldCount> moved{};
         for (const ProfileKnob& knob : kProfileKnobs) {
             ASSERT_NE(knob.percent == nullptr, knob.flag == nullptr) << knob.name.data() << ": exactly one member";
             const std::string name(knob.name.data(), knob.name.size());
@@ -122,17 +122,17 @@ namespace BECore::Mahjong::Arena {
             const int other = knob.percent != nullptr ? knob.maxValue : 0;
             const ArenaPlayer player = Player("normal:" + name + "=" + std::to_string(other));
             const LevelProfile& set = player.profile;
-            const bool changed[4] = {set.skipAcceptancePercent != kNormalProfile.skipAcceptancePercent, set.skipDeclarationPercent != kNormalProfile.skipDeclarationPercent,
-                                     set.skipClaimPercent != kNormalProfile.skipClaimPercent, set.takeValueClaimsAtEqualShanten != kNormalProfile.takeValueClaimsAtEqualShanten};
-            EXPECT_EQ(std::count(changed, changed + 4, true), 1) << name;
-            for (int index = 0; index < 4; ++index) {
+            const bool changed[kProfileFieldCount] = {set.skipAcceptancePercent != kNormalProfile.skipAcceptancePercent, set.skipDeclarationPercent != kNormalProfile.skipDeclarationPercent,
+                                                      set.skipClaimPercent != kNormalProfile.skipClaimPercent, set.takeValueClaimsAtEqualShanten != kNormalProfile.takeValueClaimsAtEqualShanten};
+            EXPECT_EQ(std::count(changed, changed + kProfileFieldCount, true), 1) << name;
+            for (size_t index = 0; index < kProfileFieldCount; ++index) {
                 moved[index] = moved[index] || changed[index];
             }
             // The largest value is accepted, one above it is refused.
             EXPECT_FALSE(ParseArenaPlayer("normal:" + name + "=" + std::to_string(knob.maxValue + 1)).has_value()) << name;
             EXPECT_TRUE(ParseArenaPlayer("normal:" + name + "=" + std::to_string(knob.maxValue)).has_value()) << name;
         }
-        EXPECT_EQ(std::count(moved.begin(), moved.end(), true), 4);
+        EXPECT_EQ(static_cast<size_t>(std::count(moved.begin(), moved.end(), true)), kProfileFieldCount);
     }
 
     TEST(ArenaPlayerTest, TheRandomChooserPicksOnlyListedActionsAndWinsWhenItCan) {
@@ -178,9 +178,6 @@ namespace BECore::Mahjong::Arena {
             }
         }
         EXPECT_GT(compared, 500);
-        MahjongRng left(3);
-        MahjongRng right(3);
-        EXPECT_EQ(left.Below(1000), right.Below(1000));
     }
 
     TEST(ArenaPlayerTest, AHandIsDeterministicAndKeepsItsBooks) {

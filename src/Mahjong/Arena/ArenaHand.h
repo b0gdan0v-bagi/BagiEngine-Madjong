@@ -7,6 +7,11 @@
 
 namespace BECore::Mahjong::Arena {
 
+    /// The seed of the random seats' shared rng is `seed * kRandomSeatSeedFactor + kRandomSeatSeedOffset`: the seeding of
+    /// `ComputerStrengthTest`, kept so that the arena plays its hands and reaches its numbers. Changing either moves every random seat.
+    inline constexpr uint32_t kRandomSeatSeedFactor = 13;
+    inline constexpr uint32_t kRandomSeatSeedOffset = 5;
+
     /// The four players of a hand, by seat.
     using ArenaPlayers = eastl::array<ArenaPlayer, kSeatCount>;
 
@@ -37,7 +42,7 @@ namespace BECore::Mahjong::Arena {
      * The conventions of `ComputerStrengthTest`, so the old numbers come out: the wall is `MakeWall(MahjongRng(seed), MahjongSettings{},
      * east)` with `east = seed % 4`, the round wind is East, the next actor is `ComputerTable::NextActor` (the first pending seat of a
      * window); a computer seat `i` is seeded `SeatSeed(seed, i)` and plays by its profile exactly as `ComputerPlayer` does; the random
-     * seats share one `MahjongRng(seed * 13 + 5)` and choose by `ChooseSeekWin`; the results are `SettleHand` of the finished hand.
+     * seats share one `MahjongRng(seed * kRandomSeatSeedFactor + kRandomSeatSeedOffset)` and choose by `ChooseSeekWin`; the results are `SettleHand` of the finished hand.
      * Deterministic: the same arguments give the same record (the nanoseconds apart, which are measured only with `timing`).
      *
      * A refused action, a computer seat with nothing to choose from or a hand that does not end is a defect and comes back as an error

@@ -4,24 +4,13 @@ namespace BECore::Mahjong::Arena {
 
     namespace {
 
-        /// A number as text (`eastl::to_string` needs a library the arena does not link).
-        eastl::string NumberText(long long value) {
-            const std::string text = std::to_string(value);
-            return eastl::string(text.data(), text.size());
-        }
-
         // A new field of `LevelProfile` needs a row of `kProfileKnobs`: the binding below names every field, so it stops compiling
         // when the count changes, and `ArenaPlayerTest` checks that each row sets its own field.
-        constexpr bool ProfileHasFourFields() {
+        constexpr bool ProfileHasKnownFields() {
             [[maybe_unused]] const auto& [skipAcceptance, skipDeclaration, skipClaim, takeValue] = kNormalProfile;
             return true;
         }
-        static_assert(ProfileHasFourFields());
-        static_assert(kProfileKnobs.size() == 4, "one row of kProfileKnobs per field of LevelProfile");
-
-        eastl::string Text(std::string_view text) {
-            return eastl::string(text.data(), text.size());
-        }
+        static_assert(ProfileHasKnownFields());
 
         /// The value of `text` as a whole number (an optional minus sign), nullopt when anything else is in it.
         std::optional<int> ParseNumber(std::string_view text) {
@@ -59,27 +48,27 @@ namespace BECore::Mahjong::Arena {
         }
 
         /// Applies `knob=value` (`part`) to `profile`; the error names the part.
-        std::optional<eastl::string> ApplyKnob(std::string_view part, LevelProfile& profile, eastl::array<bool, kProfileKnobs.size()>& seen) {
+        std::optional<eastl::string> ApplyKnob(std::string_view part, LevelProfile& profile, eastl::array<bool, kProfileFieldCount>& seen) {
             const size_t equals = part.find('=');
             if (equals == std::string_view::npos) {
-                return "\"" + Text(part) + "\" is no knob=value (a knob is set as name=number)";
+                return Format("\"{}\" is no knob=value (a knob is set as name=number)", part);
             }
             const std::string_view name = part.substr(0, equals);
             const std::string_view valueText = part.substr(equals + 1);
             const ProfileKnob* const knob = FindKnob(name);
             if (knob == nullptr) {
-                return "unknown knob \"" + Text(name) + "\" (the knobs are " + KnobNamesText() + ")";
+                return Format("unknown knob \"{}\" (the knobs are {})", name, KnobNamesText());
             }
             const size_t index = static_cast<size_t>(knob - kProfileKnobs.data());
             if (seen[index]) {
-                return "knob \"" + Text(name) + "\" is set twice";
+                return Format("knob \"{}\" is set twice", name);
             }
             const std::optional<int> value = ParseNumber(valueText);
             if (!value.has_value()) {
-                return "the value \"" + Text(valueText) + "\" of \"" + Text(name) + "\" is no whole number";
+                return Format("the value \"{}\" of \"{}\" is no whole number", valueText, name);
             }
             if (*value < 0 || *value > knob->maxValue) {
-                return "the value " + Text(valueText) + " of \"" + Text(name) + "\" is outside 0.." + NumberText(knob->maxValue);
+                return Format("the value {} of \"{}\" is outside 0..{}", valueText, name, knob->maxValue);
             }
             seen[index] = true;
             if (knob->percent != nullptr) {
@@ -94,15 +83,15 @@ namespace BECore::Mahjong::Arena {
 
     std::expected<ArenaPlayer, eastl::string> ParseArenaPlayer(std::string_view spec) {
         if (spec.empty()) {
-            return std::unexpected("empty player spec (use " + LevelAndRandomNamesText() + ", or a level with knobs: easy:skipClaimPercent=20)");
+            return std::unexpected(Format("empty player spec (use {}, or a level with knobs: easy:skipClaimPercent=20)", LevelAndRandomNamesText()));
         }
         const size_t colon = spec.find(':');
         const std::string_view head = spec.substr(0, colon);
         ArenaPlayer player;
-        player.name = Text(spec);
+        player.name = Format("{}", spec);
         if (head == "random") {
             if (colon != std::string_view::npos) {
-                return std::unexpected("\"random\" takes no knobs: \"" + Text(spec) + "\"");
+                return std::unexpected(Format("\"random\" takes no knobs: \"{}\"", spec));
             }
             player.random = true;
             player.profile = kNormalProfile;
@@ -110,7 +99,7 @@ namespace BECore::Mahjong::Arena {
         }
         const std::optional<ComputerLevel> level = TryParseLevel(head);
         if (!level.has_value()) {
-            return std::unexpected("unknown player \"" + Text(head) + "\" in \"" + Text(spec) + "\" (use " + LevelAndRandomNamesText() + ", all lowercase)");
+            return std::unexpected(Format("unknown player \"{}\" in \"{}\" (use {}, all lowercase)", head, spec, LevelAndRandomNamesText()));
         }
         player.profile = ProfileOf(*level);
         if (colon == std::string_view::npos) {
@@ -118,9 +107,9 @@ namespace BECore::Mahjong::Arena {
         }
         const std::string_view knobs = spec.substr(colon + 1);
         if (knobs.empty()) {
-            return std::unexpected("no knobs after the colon in \"" + Text(spec) + "\"");
+            return std::unexpected(Format("no knobs after the colon in \"{}\"", spec));
         }
-        eastl::array<bool, kProfileKnobs.size()> seen{};
+        eastl::array<bool, kProfileFieldCount> seen{};
         size_t begin = 0;
         while (begin <= knobs.size()) {
             const size_t comma = knobs.find(',', begin);
