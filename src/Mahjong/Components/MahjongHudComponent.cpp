@@ -6,6 +6,7 @@
 #include <Events/InputEvents.h>
 #include <Generated/MahjongHudComponent.gen.hpp>
 #include <Mahjong/MahjongGame.h>
+#include <Mahjong/Table/MoveText.h>
 #include <Mahjong/Table/ScoreText.h>
 #include <Mahjong/Table/SeatName.h>
 
@@ -97,6 +98,7 @@ namespace BECore::Mahjong {
         if (!started) {
             _numbersOf = nullptr;
             _numbersPublished = false;
+            ShowMoveLine(false);
             return;
         }
         const TableSession& session = game->GetSession();
@@ -118,6 +120,15 @@ namespace BECore::Mahjong {
         vars.Set("wall"_intern, static_cast<int>(hand.GetWall().LiveCount()));
         vars.Set("turn"_intern, eastl::string_view(TurnText(strings, session, match)));
 
+        // The last move, in words: only while a hand is played and has a move (the end screens speak after it)
+        eastl::string lastMove;
+        if (session.GetPhase() == SessionPhase::Playing && !hand.Moves().empty()) {
+            const HandMove& move = hand.Moves().back();
+            lastMove = MoveText(strings, move, hand.SeatWind(move.seat));
+        }
+        vars.Set("lastMove"_intern, eastl::string_view(lastMove));
+        ShowMoveLine(!lastMove.empty());
+
         const bool playing = session.GetPhase() == SessionPhase::Playing;
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             const Wind wind = hand.SeatWind(seat);
@@ -126,6 +137,13 @@ namespace BECore::Mahjong {
             vars.Set(SeatVar("seatScore", seat), match.Scores()[seat]);
             vars.Set(SeatVar("seatMark", seat), playing && hand.CurrentSeat() == seat ? kTurnMark : eastl::string_view());
             vars.Set(SeatVar("seatDealer", seat), match.East() == seat ? kDealerMark : eastl::string_view());
+        }
+    }
+
+    void MahjongHudComponent::ShowMoveLine(bool show) {
+        if (show != _moveLineShown) {
+            _moveLineShown = show;
+            UICanvasComponent::SetElementVisibleByName(GetScene(), "MoveLine"_intern, show);
         }
     }
 

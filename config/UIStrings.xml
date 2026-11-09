@@ -125,6 +125,13 @@
         <string key="setup.person" text="Person"/>
         <string key="setup.computer" text="Computer"/>
         <string key="setup.start" text="Start"/>
+        <string key="move.discard" text="{seat} discarded {tile}"/>
+        <string key="move.discardCalling" text="{seat} discarded {tile} and declared a ready hand"/>
+        <string key="move.chow" text="{seat} claimed {tile} for a chow"/>
+        <string key="move.pung" text="{seat} claimed {tile} for a pung"/>
+        <string key="move.kong" text="{seat} claimed {tile} for a kong"/>
+        <string key="move.concealedKong" text="{seat} declared a concealed kong"/>
+        <string key="move.upgradeKong" text="{seat} added {tile} to a pung to make a kong"/>
     </language>
     <language id="ru">
         <string key="lang.en" text="English"/>
@@ -249,5 +256,12 @@
         <string key="setup.person" text="Человек"/>
         <string key="setup.computer" text="Компьютер"/>
         <string key="setup.start" text="Начать"/>
+        <string key="move.discard" text="{seat} сбросило {tile}"/>
+        <string key="move.discardCalling" text="{seat} сбросило {tile} и объявило заявку"/>
+        <string key="move.chow" text="{seat} взяло {tile} в чи"/>
+        <string key="move.pung" text="{seat} взяло {tile} в пун"/>
+        <string key="move.kong" text="{seat} взяло {tile} в конг"/>
+        <string key="move.concealedKong" text="{seat} выложило скрытый конг"/>
+        <string key="move.upgradeKong" text="{seat} добавило {tile} к пуну, получился конг"/>
     </language>
 </UIStrings>
