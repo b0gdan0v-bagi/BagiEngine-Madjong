@@ -42,9 +42,10 @@ STARTING_SCORE = 2000
 STEP_LIMIT_PER_HAND = 2000  # a hand has far fewer decisions of one person
 HAND_LIMIT_PER_MATCH = 100  # 8 counted hands; a drawn hand is dealt again
 TABLE_COLORS = 500  # a table of 150 tiles with antialiased marks and text shows thousands; flat felt, or felt and plain boxes, far fewer
-SCENE_CANVASES = {"Hints", "HintsButton", "Actions", "ActionsCompact", "Hud", "HudMenu", "Handoff", "HandOver", "HandOverAction", "MatchOver", "Setup"}
-COMING_AND_GOING_SCREENS = ("Setup", "Handoff", "HandOver", "HandOverAction", "MatchOver")
+SCENE_CANVASES = {"Hints", "HintsButton", "Actions", "ActionsCompact", "Hud", "HudMenu", "Handoff", "HandOver", "HandOverAction", "MatchOver", "Setup", "Rules", "RulesAction"}
+COMING_AND_GOING_SCREENS = ("Setup", "Handoff", "HandOver", "HandOverAction", "MatchOver", "Rules", "RulesAction")
 HAND_OVER_SCREENS = {"HandOver", "HandOverAction"}  # the score table and its action bar are shown together
+RULES_SCREENS = {"Rules", "RulesAction"}  # the pages of the rules and their bar are shown together
 SETTLE_FRAMES = 2  # frames after a change of the game before the canvases show it
 IDLE_CHECK_SECONDS = 0.3  # how long the manual clock is watched not moving
 DEFAULT_STEP_SECONDS = 1.0 / 60.0
@@ -290,6 +291,60 @@ def check_screens_follow_the_game(client: BagiControlClient, rng: random.Random)
     check(get_state(client)["handsPlayed"] == 0, "Start did not begin a new match")
 
 
+def element_text(tree: dict[str, Any], node: str, name: str) -> str:
+    """The text of the element `name` of the canvas on the node `node` (the names Title and Pager are in other canvases too)."""
+    canvas = next((canvas for canvas in tree["canvases"] if canvas["node"] == node), None)
+    check(canvas is not None, f"the canvas {node} is not in the tree")
+    found = find_ui_element({"canvases": [canvas]}, name)
+    check(found is not None, f"{node} has no element {name}")
+    return found["text"]
+
+
+def check_rules_screen(client: BagiControlClient) -> None:
+    """The Rules button of the HUD opens the pages, Next turns them, Close closes them; the match does not move meanwhile."""
+    client.call("reset", {"seed": SEED, "seats": "PCCC", "hands": SHORT_MATCH_HANDS})
+    shown, tree = screens_shown(client)
+    check(shown == set(), f"a table in play shows {sorted(shown)}")
+    version = get_state(client)["version"]
+    button = find_ui_element(tree, "Rules")
+    check(button is not None and button["action"] == "MahjongRules", f"the HUD has no Rules button: {button}")
+
+    clicked = client.call("ui_click", {"name": "Rules", "canvas": "HudMenu"})
+    check(clicked["consumed"] and clicked["action"] == "MahjongRules", f"the click on Rules was not taken: {clicked}")
+    shown, tree = screens_shown(client)
+    check(shown == RULES_SCREENS, f"the Rules button shows {sorted(shown)}")
+    menu = next(canvas for canvas in tree["canvases"] if canvas["node"] == "HudMenu")
+    check(not menu["visible"], "the buttons of the HUD are still shown over the pages of the rules")
+    title = element_text(tree, "Rules", "Title")
+    pager = element_text(tree, "Rules", "Pager")
+    check(title != "" and pager != "", f"the first page has title '{title}' and pager '{pager}'")
+    check(pager.startswith("Page 1 of"), f"the pager of the first page is '{pager}'")
+
+    clicked = client.call("ui_click", {"name": "RulesNext"})
+    check(clicked["consumed"] and clicked["action"] == "MahjongRulesNext", f"the click on Next was not taken: {clicked}")
+    shown, tree = screens_shown(client)
+    check(shown == RULES_SCREENS, f"Next left {sorted(shown)} on the screen")
+    check(element_text(tree, "Rules", "Title") not in ("", title), "the title did not change with the next page")
+    check(element_text(tree, "Rules", "Pager").startswith("Page 2 of"), "the pager did not move to the second page")
+    check(get_state(client)["version"] == version, "the match moved while the pages of the rules were open")
+
+    clicked = client.call("ui_click", {"name": "RulesClose"})
+    check(clicked["consumed"] and clicked["action"] == "MahjongRulesClose", f"the click on Close was not taken: {clicked}")
+    shown, tree = screens_shown(client)
+    check(shown == set(), f"Close left {sorted(shown)} on the screen")
+    menu = next(canvas for canvas in tree["canvases"] if canvas["node"] == "HudMenu")
+    check(menu["visible"], "the buttons of the HUD are not back after Close")
+    check(get_state(client)["version"] == version, "the match moved while the pages of the rules were open and closed")
+
+    # An action of the control API is a controller that plays: it closes the pages
+    client.call("ui_click", {"name": "Rules", "canvas": "HudMenu"})
+    shown, _ = screens_shown(client)
+    check(shown == RULES_SCREENS, f"the Rules button shows {sorted(shown)} the second time")
+    client.call("perform_action", client.call("list_actions")["actions"][0])
+    shown, _ = screens_shown(client)
+    check(shown == set(), f"a control action left {sorted(shown)} on the screen")
+
+
 def table_colors(client: BagiControlClient, seed: int) -> Any:
     client.call("reset", {"seed": seed, "seats": "PCCC", "hands": SHORT_MATCH_HANDS})
     client.call("step", {"frames": SETTLE_FRAMES})
@@ -326,6 +381,7 @@ def run_real_clock_scenario(client: BagiControlClient, headless: bool) -> None:
     check(after >= before + 3, f"step 3 moved the frame from {before} to {after}")
 
     check_screens_follow_the_game(client, random.Random(SEED + 2))
+    check_rules_screen(client)
     if headless:
         check_table_screenshot(client)
 
@@ -365,6 +421,7 @@ def run_manual_clock_scenario(client: BagiControlClient, headless: bool) -> None
     check(not client.events or all(event["data"].get("version") != outcome["version"] for event in client.events), "the same change was pushed twice")
 
     check_screens_follow_the_game(client, random.Random(SEED + 2))
+    check_rules_screen(client)
     if headless:
         check_table_screenshot(client)
         check_screenshots_of_two_seeds(client)

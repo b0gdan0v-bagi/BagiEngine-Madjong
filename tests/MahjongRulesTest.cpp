@@ -1,5 +1,7 @@
 #include "ComputerTestSupport.h"
 #include "MahjongTableTestSupport.h"
+#include "MahjongTouchTestSupport.h"
+#include "UiStyleTestSupport.h"
 
 #include <BECore/Control/Json.h>
 #include <BECore/UI/UIButton.h>
@@ -23,6 +25,14 @@ namespace BECore::Mahjong::Tests {
         /// Seat 0 waits on Ew; drawing 9p it can discard 9p and still wait.
         constexpr const char* kWaitingHand = "1s 2s 3s 4s 5s 6s 7m 8m 9m 2p 3p 4p Ew";
         constexpr float kLongWait = 10.0f;
+        constexpr float kButtonAir = 8.0f;
+        constexpr float kMinControlHeight = 48.0f;
+        /// Output sizes the words are asked in: the design size, a small window, the narrowest windows and a wide short one.
+        struct Output {
+            float width;
+            float height;
+        };
+        constexpr Output kOutputs[] = {{1280.0f, 720.0f}, {731.0f, 411.0f}, {480.0f, 480.0f}, {480.0f, 853.0f}, {1707.0f, 480.0f}};
 
         void Elapse(float seconds) {
             SceneEvents::SceneUpdateEvent::Emit(seconds);
@@ -139,6 +149,32 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(OnScreen("RulesAction", "RulesBack"), page > 0) << "Back is hidden on the first page";
             EXPECT_EQ(OnScreen("RulesAction", "RulesNext"), page + 1 < RulesPageCount()) << "Next is hidden on the last page";
             EXPECT_TRUE(OnScreen("RulesAction", "RulesClose"));
+        }
+
+        /// Turns the open pages to `page` by the actions of the bar and draws.
+        void GoToPage(int page) {
+            while (Hud()->CurrentRulesPage() < page) {
+                EmitAction("MahjongRulesNext");
+            }
+            while (Hud()->CurrentRulesPage() > page) {
+                EmitAction("MahjongRulesBack");
+            }
+            Draw();
+            ASSERT_EQ(Hud()->CurrentRulesPage(), page);
+        }
+
+        /// The children of the plate that the page shows, in the order of the file (a hidden one has no rect).
+        std::vector<const UIElement*> ShownBlocks() const {
+            std::vector<const UIElement*> blocks;
+            const UIElement* plate = Element("Rules", "Plate");
+            if (plate != nullptr) {
+                for (const auto& child : plate->children) {
+                    if (!child->rect.IsEmpty()) {
+                        blocks.push_back(child.Get());
+                    }
+                }
+            }
+            return blocks;
         }
 
         /// A match with the people of `seats`, then a fixed hand laid: seat 0 is East and holds `seat0Hand`.
@@ -455,6 +491,313 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(PressBar("RulesClose"));
         EXPECT_EQ(RectsOf(kDeclareMark).size(), 2u);
         EXPECT_TRUE(button());
+    }
+
+    // ----- the size matrix and the word fit -----
+
+    TEST_F(MahjongRulesTest, EveryPageInEveryLanguagePassesTheSizeMatrixAndEveryWordFits) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        ASSERT_NO_FATAL_FAILURE(PressRules());
+
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            ASSERT_TRUE(_game->SetLanguage(language));
+            for (int page = 0; page < RulesPageCount(); ++page) {
+                SCOPED_TRACE(page);
+                ASSERT_NO_FATAL_FAILURE(GoToPage(page));
+                ASSERT_NO_FATAL_FAILURE(ExpectPageShown(page));
+                // The pages are text and pictures (no control), the bar holds the buttons: the engine's touch minimum for both
+                ExpectPassesTheMatrix("Rules", EngineTouchMinimum());
+                ExpectPassesTheMatrix("RulesAction", EngineTouchMinimum());
+                for (const Output& output : kOutputs) {
+                    ExpectWordsFit("Rules", output.width, output.height, kButtonAir);
+                    ExpectWordsFit("RulesAction", output.width, output.height, kButtonAir);
+                }
+                // The matrix leaves the layout as it ran last: draw again for the next page
+                Draw();
+            }
+        });
+    }
+
+    TEST_F(MahjongRulesTest, TheBarsButtonsAreTouchTargetsOnThePagesWhereAllThreeAreShown) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        ASSERT_NO_FATAL_FAILURE(PressRules());
+        ASSERT_NO_FATAL_FAILURE(GoToPage(1));
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            ASSERT_TRUE(_game->SetLanguage(language));
+            Draw();
+            for (const char* button : {"RulesBack", "RulesNext", "RulesClose"}) {
+                ASSERT_TRUE(OnScreen("RulesAction", button)) << button;
+                EXPECT_GE(Element("RulesAction", button)->rect.h, kMinControlHeight) << button;
+            }
+        });
+    }
+
+    // ----- the plate holds every page, and the scene file is what the constants say -----
+
+    TEST_F(MahjongRulesTest, EveryPageLiesInsideThePlateWithTheGapsOfTheAnatomyAndNoBlockOverlapsAnother) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        ASSERT_NO_FATAL_FAILURE(PressRules());
+        const UIElement* plate = Element("Rules", "Plate");
+        ASSERT_NE(plate, nullptr);
+
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            ASSERT_TRUE(_game->SetLanguage(language));
+            for (int page = 0; page < RulesPageCount(); ++page) {
+                SCOPED_TRACE(page);
+                ASSERT_NO_FATAL_FAILURE(GoToPage(page));
+                const RulesPage expected = FormatRulesPage(CoreManager::GetUIStrings(), page);
+                const Rect& inner = plate->rect;
+                const std::vector<const UIElement*> blocks = ShownBlocks();
+                ASSERT_GE(blocks.size(), 2u) << "at least the title and the pager";
+                EXPECT_EQ(Element("Rules", "Title"), blocks[0]);
+                EXPECT_EQ(Element("Rules", "Pager"), blocks[1]);
+
+                EXPECT_EQ(blocks.front()->rect.y, inner.y + kModalPadding) << "the padding of the plate";
+                for (size_t i = 0; i < blocks.size(); ++i) {
+                    const Rect& rect = blocks[i]->rect;
+                    EXPECT_EQ(rect.x, inner.x + kModalPadding) << i;
+                    EXPECT_EQ(rect.w, inner.w - 2.0f * kModalPadding) << i;
+                    if (i > 0) {
+                        EXPECT_EQ(GapBelow(blocks[i - 1]->rect, rect), kModalGap) << "block " << i << ": the gap of the plate";
+                        EXPECT_FALSE(Intersects(blocks[i - 1]->rect, rect)) << "block " << i << " overlaps the one above";
+                    }
+                }
+                const Rect& last = blocks.back()->rect;
+                EXPECT_LE(last.y + last.h, inner.y + inner.h - kModalPadding + 0.01f) << "the last block ends inside the padding";
+                // `PageHeight` is the height the scene really gives the page
+                EXPECT_EQ(last.y + last.h - blocks.front()->rect.y, static_cast<float>(PageHeight(expected)));
+                EXPECT_LE(PageHeight(expected), kRulesInnerHeight);
+
+                // What a block holds lies in it, side by side without overlap
+                for (const UIElement* block : blocks) {
+                    const UIElement* previous = nullptr;
+                    for (const auto& child : block->children) {
+                        if (child->rect.IsEmpty()) {
+                            continue;
+                        }
+                        EXPECT_GE(child->rect.x, block->rect.x - 0.01f) << child->name.ToStringView().data();
+                        EXPECT_GE(child->rect.y, block->rect.y - 0.01f) << child->name.ToStringView().data();
+                        EXPECT_LE(child->rect.x + child->rect.w, block->rect.x + block->rect.w + 0.01f) << child->name.ToStringView().data();
+                        EXPECT_LE(child->rect.y + child->rect.h, block->rect.y + block->rect.h + 0.01f) << child->name.ToStringView().data();
+                        if (previous != nullptr) {
+                            EXPECT_FALSE(Intersects(previous->rect, child->rect)) << child->name.ToStringView().data() << " overlaps " << previous->name.ToStringView().data();
+                        }
+                        previous = child.Get();
+                    }
+                }
+            }
+        });
+    }
+
+    TEST_F(MahjongRulesTest, TheSceneFileHasExactlyTheElementsAndTheSizesTheConstantsSay) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        ASSERT_NO_FATAL_FAILURE(PressRules());
+        auto canvas = Canvas("Rules");
+        ASSERT_TRUE(canvas);
+        const auto count = [&](const char* prefix) {
+            int found = 0;
+            while (Element("Rules", Format("{}{}", prefix, found).c_str()) != nullptr) {
+                ++found;
+            }
+            return found;
+        };
+        EXPECT_EQ(count("RulesLine"), kRulesMaxLines);
+        EXPECT_EQ(count("RulesItem"), kRulesMaxItems) << "RulesItemRow0 does not match `RulesItem<digit>`, so this counts the labels";
+        EXPECT_EQ(count("RulesItemRow"), kRulesMaxItems / kRulesItemColumns);
+        EXPECT_EQ(count("RulesTileRow"), kRulesMaxTileRows);
+        EXPECT_EQ(count("RulesTile"), kRulesMaxTileRows * kRulesMaxRowTiles);
+
+        // Everything shown at once, to read the sizes the file gives
+        for (const char* prefix : {"RulesLine", "RulesItemRow", "RulesItem", "RulesTileRow", "RulesTile"}) {
+            for (int i = 0; Element("Rules", Format("{}{}", prefix, i).c_str()) != nullptr; ++i) {
+                ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(Format("{}{}", prefix, i)), true));
+            }
+        }
+        canvas->UpdateLayout(kViewWidth, kViewHeight);
+        const UIElement* plate = Element("Rules", "Plate");
+        ASSERT_NE(plate, nullptr);
+        EXPECT_EQ(plate->rect.h, static_cast<float>(kRulesPlateHeight));
+        EXPECT_EQ(kRulesPlatePadding, 16);
+        EXPECT_EQ(kRulesBlockGap, 8);
+        EXPECT_EQ(Element("Rules", "Title")->rect.h, static_cast<float>(kRulesTitleHeight));
+        EXPECT_EQ(Element("Rules", "Pager")->rect.h, static_cast<float>(kRulesPagerHeight));
+        EXPECT_EQ(Element("Rules", "RulesLine0")->rect.h, static_cast<float>(kRulesLineHeight));
+        EXPECT_EQ(Element("Rules", "RulesItem0")->rect.h, static_cast<float>(kRulesItemHeight));
+        EXPECT_EQ(Element("Rules", "RulesTile0")->rect.w, static_cast<float>(kRulesTileWidth));
+        EXPECT_EQ(Element("Rules", "RulesTile0")->rect.h, static_cast<float>(kRulesTileHeight));
+        EXPECT_EQ(Element("Rules", "RulesTileRow0")->rect.h, static_cast<float>(kRulesTileHeight));
+        EXPECT_EQ(Element("Rules", "RulesItemRow0")->rect.h, static_cast<float>(kRulesItemHeight));
+        // The fourteen tiles of a row fit its width at the widest line of the plate
+        const UIElement* row = Element("Rules", "RulesTileRow0");
+        for (int column = 0; column < kRulesMaxRowTiles; ++column) {
+            const UIElement* tile = Element("Rules", Format("RulesTile{}", column).c_str());
+            ASSERT_NE(tile, nullptr);
+            EXPECT_LE(tile->rect.x + tile->rect.w, row->rect.x + row->rect.w + 0.01f) << "tile " << column;
+        }
+    }
+
+    // ----- the anatomy -----
+
+    TEST_F(MahjongRulesTest, ThePlateIsTheModalAnatomyAndTheBarsButtonsKeepTheirRolesAndSizes) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        ASSERT_NO_FATAL_FAILURE(PressRules());
+        ASSERT_NO_FATAL_FAILURE(GoToPage(1));
+        auto canvas = Canvas("Rules");
+        auto bar = Canvas("RulesAction");
+        ASSERT_TRUE(canvas && bar);
+        EXPECT_EQ(canvas->GetLayout().params.space, CanvasSpace::SceneView);
+        EXPECT_EQ(bar->GetLayout().params.space, CanvasSpace::Screen) << "the buttons are on a Screen canvas: 64 units on the view are 24 px in the smallest window";
+        EXPECT_GE(bar->GetLayout().params.minScale, 0.6f);
+        canvas->UpdateLayout(kViewWidth, kViewHeight);
+        bar->UpdateLayout(kViewWidth, kViewHeight);
+
+        const UIElement* plate = Element("Rules", "Plate");
+        ASSERT_NE(plate, nullptr);
+        EXPECT_TRUE(SameColor(plate->color, PaletteColor("surface")));
+        EXPECT_GE(plate->rect.y, kViewMargin);
+        EXPECT_LE(plate->rect.y + plate->rect.h, kViewHeight - kViewMargin) << "the plate lies inside the view with a margin";
+        EXPECT_GE(plate->rect.x, kViewMargin);
+        EXPECT_LE(plate->rect.x + plate->rect.w, kViewWidth - kViewMargin);
+
+        const UIElement* title = Element("Rules", "Title");
+        ASSERT_NE(title, nullptr);
+        EXPECT_TRUE(SameColor(title->color, PaletteColor("header")));
+        EXPECT_EQ(title->rect.h, kModalTitleHeight);
+        EXPECT_EQ(title->rect.x, plate->rect.x + kModalPadding);
+        EXPECT_EQ(title->rect.y, plate->rect.y + kModalPadding);
+
+        const UIElement* pager = Element("Rules", "Pager");
+        ASSERT_NE(pager, nullptr);
+        EXPECT_TRUE(SameColor(pager->Cast<UILabel>()->textColor, PaletteColor("textMuted")));
+        EXPECT_EQ(GapBelow(title->rect, pager->rect), kModalGap);
+
+        // The dim is the whole view, and it takes the clicks
+        const UIElement* dim = Element("Rules", "Dim");
+        ASSERT_NE(dim, nullptr);
+        EXPECT_TRUE(SameColor(dim->color, PaletteColor("scrim")));
+        EXPECT_TRUE(dim->blocksInput);
+        EXPECT_EQ(dim->rect.x, 0.0f);
+        EXPECT_EQ(dim->rect.y, 0.0f);
+        EXPECT_EQ(dim->rect.w, kViewWidth);
+        EXPECT_EQ(dim->rect.h, kViewHeight);
+
+        // The bar: the anatomy of the bar of the score table, the three buttons in their roles at the size of a main button
+        const UIElement* barElement = Element("RulesAction", "Bar");
+        ASSERT_NE(barElement, nullptr);
+        EXPECT_TRUE(SameColor(barElement->color, PaletteColor("surface")));
+        EXPECT_EQ(barElement->rect.h, kMainButtonHeight + 2.0f * kModalGap);
+        EXPECT_GE(GapBelow(plate->rect, barElement->rect), kModalSectionGap) << "the plate ends a section gap above the bar";
+        const char* const roles[][2] = {{"RulesBack", "neutral"}, {"RulesNext", "primary"}, {"RulesClose", "neutral"}};
+        const UIElement* left = nullptr;
+        for (const auto& role : roles) {
+            const UIElement* button = Element("RulesAction", role[0]);
+            ASSERT_NE(button, nullptr) << role[0];
+            EXPECT_TRUE(SameColor(button->color, PaletteColor(role[1]))) << role[0] << " is " << role[1];
+            EXPECT_EQ(button->rect.h, kMainButtonHeight) << role[0];
+            EXPECT_EQ(button->rect.y - barElement->rect.y, kModalGap) << role[0];
+            EXPECT_EQ(barElement->rect.y + barElement->rect.h - (button->rect.y + button->rect.h), kModalGap) << role[0];
+            if (left != nullptr) {
+                EXPECT_EQ(button->rect.x - (left->rect.x + left->rect.w), kModalGap) << role[0] << ": the gap of 8 between the buttons";
+            }
+            left = button;
+        }
+    }
+
+    TEST_F(MahjongRulesTest, ThePlateIsClearOfTheBarInEveryWindowOfTheMatrixWithoutInsets) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        ASSERT_NO_FATAL_FAILURE(PressRules());
+        auto plate = Canvas("Rules");
+        auto bar = Canvas("RulesAction");
+        ASSERT_TRUE(plate && bar);
+        size_t checked = 0;
+        ForEachMatrixWindow([&](const MatrixWindow& window) {
+            if (window.HasInsets()) {
+                return;
+            }
+            LayOutInWindow(*plate, window);
+            const UIElement* plateElement = Element("Rules", "Plate");
+            ASSERT_NE(plateElement, nullptr);
+            ASSERT_FALSE(plateElement->rect.IsEmpty()) << window.label.c_str();
+            const Rect plateRect = ToView(plateElement->rect, *plate, window);
+            LayOutInWindow(*bar, window, CanvasScaleMode::ScaleWithScreen, 1.0f);
+            const UIElement* barElement = Element("RulesAction", "Bar");
+            const UIElement* buttons = Element("RulesAction", "Buttons");
+            ASSERT_TRUE(barElement != nullptr && buttons != nullptr);
+            ASSERT_FALSE(barElement->rect.IsEmpty()) << window.label.c_str();
+            EXPECT_FALSE(Intersects(ToView(barElement->rect, *bar, window), plateRect)) << window.label.c_str() << ": the bar touches the plate";
+            EXPECT_FALSE(Intersects(ToView(buttons->rect, *bar, window), plateRect)) << window.label.c_str() << ": the buttons touch the plate";
+            ++checked;
+        });
+        EXPECT_GT(checked, 0u);
+    }
+
+    TEST_F(MahjongRulesTest, TheActionsOfTheFourButtonsAreInTheFile) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        ASSERT_NO_FATAL_FAILURE(PressRules());
+        ASSERT_NO_FATAL_FAILURE(GoToPage(1));
+        const auto action = [&](const char* node, const char* element) {
+            const UIElement* found = Element(node, element);
+            const UIButton* button = found != nullptr ? found->Cast<UIButton>() : nullptr;
+            return button != nullptr ? button->action : PoolString();
+        };
+        EXPECT_EQ(action("HudMenu", "Rules"), "MahjongRules"_intern);
+        EXPECT_EQ(action("RulesAction", "RulesBack"), "MahjongRulesBack"_intern);
+        EXPECT_EQ(action("RulesAction", "RulesNext"), "MahjongRulesNext"_intern);
+        EXPECT_EQ(action("RulesAction", "RulesClose"), "MahjongRulesClose"_intern);
+    }
+
+    TEST_F(MahjongRulesTest, TheTilePicturesTakeNoInputAndThePlateHoldsNoControl) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        auto plate = Canvas("Rules");
+        ASSERT_TRUE(plate);
+        std::vector<const UIElement*> controls;
+        CollectControls(plate->GetRoot(), controls);
+        for (const UIElement* control : controls) {
+            EXPECT_FALSE(control->interactive) << control->name.ToStringView().data() << ": the pages are text, the buttons are in RulesAction";
+        }
+    }
+
+    TEST_F(MahjongRulesTest, ALanguageSwitchToRussianAndBackChangesTheTextOfEveryPage) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        ASSERT_NO_FATAL_FAILURE(PressRules());
+        for (int page = 0; page < RulesPageCount(); ++page) {
+            SCOPED_TRACE(page);
+            ASSERT_TRUE(_game->SetLanguage("en"_intern));
+            ASSERT_NO_FATAL_FAILURE(GoToPage(page));
+            const RulesPage english = FormatRulesPage(CoreManager::GetUIStrings(), page);
+            const std::string englishTitle = Var("rulesTitle");
+
+            ASSERT_TRUE(_game->SetLanguage("ru"_intern));
+            Draw();
+            const RulesPage russian = FormatRulesPage(CoreManager::GetUIStrings(), page);
+            EXPECT_NE(Var("rulesTitle"), englishTitle);
+            ASSERT_EQ(russian.lines.size(), english.lines.size());
+            ASSERT_EQ(russian.items.size(), english.items.size());
+            for (size_t i = 0; i < russian.lines.size(); ++i) {
+                EXPECT_NE(russian.lines[i], english.lines[i]) << "line " << i;
+            }
+            ASSERT_NO_FATAL_FAILURE(ExpectPageShown(page));
+        }
+        ASSERT_TRUE(_game->SetLanguage("en"_intern));
+    }
+
+    TEST_F(MahjongRulesTest, WhileThePagesAreOpenTheButtonsOfTheHudTakeNoClick) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        ASSERT_NO_FATAL_FAILURE(PressRules());
+        ASSERT_NO_FATAL_FAILURE(PressBar("RulesNext"));
+        ASSERT_EQ(Hud()->CurrentRulesPage(), 1);
+        ASSERT_FALSE(MenuShown()) << "HudMenu is hidden meanwhile";
+
+        // The buttons keep the place they had; a click there goes to the dim of the pages, which takes it
+        EXPECT_TRUE(ClickElement("HudMenu", "NewGame")) << "the dim of the pages takes the click";
+        Draw();
+        EXPECT_FALSE(_game->IsSetupOpen());
+        EXPECT_TRUE(ClickElement("HudMenu", "Rules"));
+        Draw();
+        EXPECT_EQ(Hud()->CurrentRulesPage(), 1) << "the Rules button was not pressed again (it would have opened the first page)";
+        EXPECT_TRUE(_game->IsRulesOpen());
     }
 
 }  // namespace BECore::Mahjong::Tests

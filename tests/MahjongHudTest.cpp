@@ -382,7 +382,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongHudTest, NoKeyIsMissingWhenEveryCanvasOfTheSceneIsShownInEveryLanguage) {
         ASSERT_NO_FATAL_FAILURE(Start(kTwoPeople));
         Scene& scene = *_manager->GetSceneByName("MahjongScene"_intern);
-        for (const char* node : {"Actions", "ActionsCompact", "Hud", "HudMenu", "Handoff", "HandOver", "HandOverAction", "MatchOver", "Setup"}) {
+        for (const char* node : {"Actions", "ActionsCompact", "Hud", "HudMenu", "Handoff", "HandOver", "HandOverAction", "MatchOver", "Setup", "Rules", "RulesAction"}) {
             UICanvasComponent::SetVisibleByName(scene, PoolString::Intern(node), true);
             const auto canvas = Canvas(node);
             ASSERT_TRUE(canvas) << node;
@@ -418,6 +418,12 @@ namespace BECore::Mahjong::Tests {
                 ExpectWordsFit("HudMenu", output.width, output.height, kButtonAir);
             }
             EXPECT_GE(Element("HudMenu", "NewGame")->rect.h, kMinControlHeight);
+            // Both buttons of the menu are shown together, the word of each in the language of the table
+            ASSERT_TRUE(OnScreen("HudMenu", "Rules"));
+            ASSERT_TRUE(OnScreen("HudMenu", "NewGame"));
+            EXPECT_GE(Element("HudMenu", "Rules")->rect.h, kMinControlHeight);
+            EXPECT_EQ(Text("HudMenu", "Rules"), Tr(CoreManager::GetUIStrings(), "hud.rules").c_str());
+            EXPECT_EQ(Text("HudMenu", "NewGame"), Tr(CoreManager::GetUIStrings(), "hud.newGame").c_str());
         });
     }
 

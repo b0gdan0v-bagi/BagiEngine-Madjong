@@ -260,6 +260,67 @@ namespace BECore::Mahjong::Tests {
         EXPECT_GT(checked, 0u);
     }
 
+    TEST_F(MahjongTouchSizeTest, TheRulesButtonIsATouchTargetInEveryWindowCoversNoTileWhereThereAreNoInsetsAndNeverTouchesNewGame) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        auto menu = Canvas("HudMenu");
+        ASSERT_TRUE(menu);
+        const float minTouch = EngineTouchMinimum();
+        const CanvasScaleMode modes[] = {CanvasScaleMode::ConstantPixelSize, CanvasScaleMode::ScaleWithScreen, CanvasScaleMode::ConstantPhysicalSize};
+
+        const TableLayout layout = MakeWorstCaseTableLayout();
+        size_t checked = 0;
+        ForEachMatrixWindow([&](const MatrixWindow& window) {
+            for (const CanvasScaleMode mode : modes) {
+                for (const float userScale : {1.0f, 1.5f}) {
+                    const std::string label = Format("{} {} x{}", window.label.c_str(), EnumUtils<CanvasScaleMode>::ToString(mode).data(), userScale).c_str();
+                    const UICanvasResolved resolved = LayOutInWindow(*menu, window, mode, userScale);
+                    const UIElement* rules = Element("HudMenu", "Rules");
+                    const UIElement* newGame = Element("HudMenu", "NewGame");
+                    ASSERT_TRUE(rules != nullptr && newGame != nullptr);
+                    ASSERT_FALSE(rules->rect.IsEmpty()) << label;
+                    EXPECT_GE(std::min(rules->rect.w, rules->rect.h) * resolved.scale / window.pixelDensity, minTouch - 0.01f) << label << ": a touch target as the user sees it";
+                    EXPECT_FALSE(Intersects(rules->rect, newGame->rect)) << label << ": the Rules button touches New game";
+                    EXPECT_GE(rules->rect.x, resolved.contentBounds.x - 0.01f) << label;
+                    EXPECT_LE(rules->rect.x + rules->rect.w, resolved.contentBounds.x + resolved.contentBounds.w + 0.01f) << label;
+                    EXPECT_LE(rules->rect.y + rules->rect.h, resolved.contentBounds.y + resolved.contentBounds.h + 0.01f) << label;
+                    ++checked;
+                }
+            }
+            if (window.HasInsets()) {
+                return;  // with insets the buttons lie nearer the table, as the HUD does
+            }
+            LayOutInWindow(*menu, window, CanvasScaleMode::ScaleWithScreen, 1.0f);
+            ExpectClearOfTable(ToView(Element("HudMenu", "Rules")->rect, *menu, window), layout, window.label.c_str());
+        });
+        EXPECT_EQ(checked, BECore::Tests::UILayoutMatrix().size() * 6);
+    }
+
+    TEST_F(MahjongTouchSizeTest, WhileThePagesAreOpenTheMenuIsHiddenAndItsButtonsLieUnderTheDimOfThePages) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        Draw();
+        auto menu = Canvas("HudMenu");
+        ASSERT_TRUE(menu && menu->TakesInput());
+        _game->OpenRules();
+        Draw();
+        auto rules = Canvas("Rules");
+        ASSERT_TRUE(rules);
+        EXPECT_TRUE(rules->TakesInput());
+        EXPECT_FALSE(menu->TakesInput()) << "a hidden canvas takes no input";
+        // In the design window the click at the place of either button is the dim's
+        const UIElement* dim = Element("Rules", "Dim");
+        ASSERT_NE(dim, nullptr);
+        for (const char* name : {"Rules", "NewGame"}) {
+            const UIElement* button = Element("HudMenu", name);
+            ASSERT_NE(button, nullptr);
+            EXPECT_GE(button->rect.x, dim->rect.x) << name;
+            EXPECT_LE(button->rect.x + button->rect.w, dim->rect.x + dim->rect.w) << name;
+            EXPECT_GE(button->rect.y, dim->rect.y) << name;
+            EXPECT_LE(button->rect.y + button->rect.h, dim->rect.y + dim->rect.h) << name;
+        }
+        ClickElement("HudMenu", "NewGame");
+        EXPECT_FALSE(_game->IsSetupOpen());
+    }
+
     // ----- the seat choice -----
 
     TEST_F(MahjongTouchSizeTest, TheSeatChoiceKeepsItsRowsInsideThePlateAndTheSafeAreaAndEverySegmentIsATouchTargetInEveryWindow) {

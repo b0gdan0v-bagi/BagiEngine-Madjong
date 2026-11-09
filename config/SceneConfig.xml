@@ -411,7 +411,7 @@
         </node>
         <!--
           The New game button (MahjongNewGame, opens Setup) in the top right corner of the window and the Rules button (MahjongRules, opens
-          the pages of the rules) 8 left of it (under it in a canvas of at most 440 units wide, where both do not fit in a row). A Screen canvas with a floor on its scale
+          the pages of the rules, 92 units wide: the top seat's row of bonus tiles of the worst-case table ends at x 980 and a wider button covers it in a 16:10 window) 8 left of it (under it in a canvas of at most 440 units wide, where both do not fit in a row). A Screen canvas with a floor on its scale
           (minScale 0.6: the 56 unit buttons are 33.6 px), so they are touch targets in any window; MahjongHudTest and MahjongTouchSizeTest check them on the
           size matrix and that they cover no tile in a window without insets. With insets they lie nearer the table, as the HUD does. Hidden by the component while
           HandOver or Rules is shown (that dim covers only the view, the buttons may lie on a bar). MatchOver and Setup are Screen canvases whose dim
@@ -422,7 +422,7 @@
             <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true">
               <elements>
                 <element type="UIButton" name="NewGame" anchor="TopRight" x="-8" y="8" width="176" height="56" text="{#hud.newGame}" fontSize="22" action="MahjongNewGame" color="45,75,120,255" />
-                <element type="UIButton" name="Rules" anchor="TopRight" x="-192" y="8" width="140" height="56" text="{#hud.rules}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongRules" color="45,75,120,255" />
+                <element type="UIButton" name="Rules" anchor="TopRight" x="-192" y="8" width="92" height="56" text="{#hud.rules}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongRules" color="45,75,120,255" />
               </elements>
               <variants>
                 <variant when="maxWidth:440">
@@ -689,7 +689,9 @@
           and shows exactly the elements the page has: a hidden element takes no room in a stack, so the plate needs no fixed block heights. The
           plate is 588 units like HandOver (32 padding + the blocks of a page and 8 between them, PageHeight in RulesText.h; a page that does not
           fit is split in two) and lies 40 units above the middle so that it ends clear of the bar RulesAction below it. The buttons are not in
-          this canvas for the reason of HandOver: a control of a SceneView canvas is only 24 px high in the smallest window.
+          this canvas for the reason of HandOver: a control of a SceneView canvas is only 24 px high in the smallest window. A line is 48 units
+          high (two rows of the 18 font are 47) and shrinks (AutoFit, down to 12) where a long line of a translation does not fit two rows in
+          the narrowest windows (480 px wide), as the titles do; at the design size and in a window of 731 px no line is shrunk.
         -->
         <node name="Rules" layer="35">
           <components>
@@ -700,12 +702,12 @@
                   <children>
                     <element type="UILabel" name="Title" height="48" text="{rulesTitle}" fontSize="28" overflow="AutoFit" minFontSize="18" align="Center" verticalAlign="Center" color="58,66,92,255" />
                     <element type="UILabel" name="Pager" height="28" text="{rulesPager}" fontSize="18" align="Center" verticalAlign="Center" textColor="190,196,190,255" />
-                    <element type="UILabel" name="RulesLine0" visible="false" height="44" text="{rulesLine0}" fontSize="18" />
-                    <element type="UILabel" name="RulesLine1" visible="false" height="44" text="{rulesLine1}" fontSize="18" />
-                    <element type="UILabel" name="RulesLine2" visible="false" height="44" text="{rulesLine2}" fontSize="18" />
-                    <element type="UILabel" name="RulesLine3" visible="false" height="44" text="{rulesLine3}" fontSize="18" />
-                    <element type="UILabel" name="RulesLine4" visible="false" height="44" text="{rulesLine4}" fontSize="18" />
-                    <element type="UILabel" name="RulesLine5" visible="false" height="44" text="{rulesLine5}" fontSize="18" />
+                    <element type="UILabel" name="RulesLine0" visible="false" height="48" text="{rulesLine0}" fontSize="18" overflow="AutoFit" minFontSize="12" />
+                    <element type="UILabel" name="RulesLine1" visible="false" height="48" text="{rulesLine1}" fontSize="18" overflow="AutoFit" minFontSize="12" />
+                    <element type="UILabel" name="RulesLine2" visible="false" height="48" text="{rulesLine2}" fontSize="18" overflow="AutoFit" minFontSize="12" />
+                    <element type="UILabel" name="RulesLine3" visible="false" height="48" text="{rulesLine3}" fontSize="18" overflow="AutoFit" minFontSize="12" />
+                    <element type="UILabel" name="RulesLine4" visible="false" height="48" text="{rulesLine4}" fontSize="18" overflow="AutoFit" minFontSize="12" />
+                    <element type="UILabel" name="RulesLine5" visible="false" height="48" text="{rulesLine5}" fontSize="18" overflow="AutoFit" minFontSize="12" />
                     <element type="UIStack" name="RulesTileRow0" visible="false" height="48" direction="Horizontal" spacing="4">
                       <children>
                         <element type="UIImage" name="RulesTile0" visible="false" width="36" height="48" />

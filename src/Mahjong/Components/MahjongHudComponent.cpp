@@ -367,6 +367,9 @@ namespace BECore::Mahjong {
         if (action == kRulesAction) {
             // Under the dim of the seat choice the button cannot be pressed; an event that says otherwise is out of date
             if (!game->IsSetupOpen()) {
+                if (!game->IsRulesOpen()) {
+                    _rulesPage = 0;  // the screen opens on its first page, whatever the order of the events
+                }
                 game->OpenRules();
             }
             return;
