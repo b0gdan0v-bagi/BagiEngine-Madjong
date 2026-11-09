@@ -42,6 +42,17 @@ namespace BECore::Mahjong::Tests {
 
     }  // namespace
 
+    // ----- The level -----
+
+    TEST(ComputerPlayerTest, ThePlayerAndTheTableReportTheirLevelAndTheDefaultIsNormal) {
+        EXPECT_EQ(ComputerPlayer(kSeed).Level(), ComputerLevel::Normal);
+        EXPECT_EQ(ComputerTable(kSeed).Level(), ComputerLevel::Normal);
+        EXPECT_EQ(ComputerPlayer(kSeed, ComputerLevel::Easy).Level(), ComputerLevel::Easy);
+        EXPECT_EQ(ComputerPlayer(kSeed, ComputerLevel::Hard).Level(), ComputerLevel::Hard);
+        EXPECT_EQ(ComputerTable(kSeed, ComputerLevel::Easy).Level(), ComputerLevel::Easy);
+        EXPECT_EQ(ComputerTable(kSeed, ComputerLevel::Hard).Level(), ComputerLevel::Hard);
+    }
+
     // ----- Decide and Choose -----
 
     TEST(ComputerPlayerTest, DecideIsEmptyForASeatWithNothingToDoAndForANumberThatIsNoSeat) {

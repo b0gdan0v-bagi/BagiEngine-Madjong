@@ -35,8 +35,9 @@ namespace BECore::Mahjong {
         return mixer.Below(std::numeric_limits<uint32_t>::max());
     }
 
-    ComputerTable::ComputerTable(uint32_t seed)
-        : _players{ComputerPlayer(SeatSeed(seed, 0)), ComputerPlayer(SeatSeed(seed, 1)), ComputerPlayer(SeatSeed(seed, 2)), ComputerPlayer(SeatSeed(seed, 3))} {}
+    ComputerTable::ComputerTable(uint32_t seed, ComputerLevel level)
+        : _level(level),
+          _players{ComputerPlayer(SeatSeed(seed, 0), level), ComputerPlayer(SeatSeed(seed, 1), level), ComputerPlayer(SeatSeed(seed, 2), level), ComputerPlayer(SeatSeed(seed, 3), level)} {}
 
     Seat ComputerTable::NextActor(const HandModel& model) {
         switch (model.GetPhase()) {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <EASTL/array.h>
+#include <Mahjong/Game/ComputerLevel.h>
 #include <Mahjong/Game/ComputerView.h>
 #include <Mahjong/Game/Match.h>
 
@@ -11,11 +12,16 @@ namespace BECore::Mahjong {
      *
      * `Choose` dispatches on the phase: `ChooseTurnAction` on the own turn, `ChooseClaimAction` in a claim window or a robbed-kong
      * window. The player owns a `MahjongRng` that only breaks ties, so one seed gives the same play on every platform. It never sees
-     * a `HandModel` except through `Decide`, which makes the view first.
+     * a `HandModel` except through `Decide`, which makes the view first. It has a `ComputerLevel` (default Normal, the player described
+     * in `CLAUDE.md`); the other levels get their numbers in a later step, so every level plays like Normal for now.
      */
     class ComputerPlayer {
     public:
-        explicit ComputerPlayer(uint32_t seed) : _rng(seed) {}
+        explicit ComputerPlayer(uint32_t seed, ComputerLevel level = kDefaultLevel) : _rng(seed), _level(level) {}
+
+        [[nodiscard]] ComputerLevel Level() const noexcept {
+            return _level;
+        }
 
         /// An element of `view.legal`. The caller asks only a seat that can act: a view with no legal action asserts in debug and answers
         /// `Pass` (which the model then refuses).
@@ -26,6 +32,7 @@ namespace BECore::Mahjong {
 
     private:
         MahjongRng _rng;
+        ComputerLevel _level;
     };
 
     /// The rng seed of seat `seat` at a table seeded `tableSeed`: a fixed mixing, one roll of an `MahjongRng` seeded `tableSeed * 4 + seat`
@@ -41,11 +48,16 @@ namespace BECore::Mahjong {
      *
      * Seat `i` is a `ComputerPlayer` seeded `SeatSeed(tableSeed, i)`. `Step` asks the next actor for an action and applies it through
      * `HandModel::Apply`; it never falls back to another action, so an action the model refuses is a defect and comes back as the
-     * error. The table does not know a seat setup (which seats are people) yet; it drives whatever model it is given.
+     * error. The table does not know a seat setup (which seats are people) yet; it drives whatever model it is given. Every seat has
+     * the table's `ComputerLevel`; the seat seeds do not depend on it, so one table seed gives the same tie-breaks at every level.
      */
     class ComputerTable {
     public:
-        explicit ComputerTable(uint32_t seed);
+        explicit ComputerTable(uint32_t seed, ComputerLevel level = kDefaultLevel);
+
+        [[nodiscard]] ComputerLevel Level() const noexcept {
+            return _level;
+        }
 
         /// The seat to ask next: `CurrentSeat()` in `Phase::Discard`, the first of `PendingClaimSeats()` in a window, `kNoSeat` when
         /// the hand is `Finished`.
@@ -63,6 +75,7 @@ namespace BECore::Mahjong {
         HandStatus PlayMatch(Match& match);
 
     private:
+        ComputerLevel _level;
         eastl::array<ComputerPlayer, kSeatCount> _players;
     };
 
