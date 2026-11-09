@@ -447,7 +447,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongHudTest, TheSeatChoiceFollowsTheModalAnatomyAndTheGridGaps) {
-        constexpr float kRowPadding = 8.0f;
+        constexpr float kRowPadding = 4.0f;  // the seven rows of 64 round a 56 segment: rows of 72 would not leave room for the plate
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         _game->OpenSetup();
         Draw();
@@ -463,7 +463,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(title->rect.y, plate.y + kModalPadding);
         EXPECT_EQ(title->rect.h, kModalTitleHeight);
 
-        // The rows from the top: the language, the four seats, the number of hands; each a raised band with a muted caption and a group
+        // The rows from the top: the language, the four seats, the number of hands, the hints; each a raised band with a muted caption and a group
         struct Row {
             std::string row, caption, group;
             std::vector<std::string> segments;
@@ -476,6 +476,7 @@ namespace BECore::Mahjong::Tests {
                             {Format("Seat{}Person", seat).c_str(), Format("Seat{}Computer", seat).c_str()}});
         }
         rows.push_back({"HandsRow", "HandsCaption", "HandsChoice", {"Hands16", "Hands8"}});
+        rows.push_back({"HintsRow", "HintsCaption", "HintsChoice", {"HintsOn", "HintsOff"}});
 
         const Rect* above = &title->rect;
         for (const Row& entry : rows) {
