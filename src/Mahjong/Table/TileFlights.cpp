@@ -46,11 +46,6 @@ namespace BECore::Mahjong {
             return last;
         }
 
-        /// The tile at `part` of a meld: a chow runs up from its first tile, a pung or kong is the same tile throughout.
-        Tile MeldTileAt(const Meld& meld, int part) noexcept {
-            return meld.kind == MeldKind::Chow ? Tile::Suited(meld.first.Suit(), meld.first.Rank() + part) : meld.first;
-        }
-
         bool IsClaimMove(MoveKind kind) noexcept {
             return kind == MoveKind::ClaimChow || kind == MoveKind::ClaimPung || kind == MoveKind::ClaimKong;
         }
@@ -187,6 +182,13 @@ namespace BECore::Mahjong {
         };
 
     }  // namespace
+
+    Tile MeldTileAt(const Meld& meld, int part) noexcept {
+        if (meld.kind == MeldKind::Chow && meld.first.IsSuit()) {
+            return Tile::Suited(meld.first.Suit(), meld.first.Rank() + part);
+        }
+        return meld.first;
+    }
 
     eastl::vector<TileFlight> PlanFlights(const TableSnapshot& before, const TableSnapshot& after, eastl::span<const HandMove> newMoves) {
         if (before.layout.slots.empty() || before.layout.viewer != after.layout.viewer || before.layout.viewWidth != after.layout.viewWidth || before.layout.viewHeight != after.layout.viewHeight) {

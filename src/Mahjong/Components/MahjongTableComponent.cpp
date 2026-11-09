@@ -122,14 +122,6 @@ namespace BECore::Mahjong {
             return phase == Phase::Claim || phase == Phase::RobKong;
         }
 
-        /// The tile at `part` of a meld as laid: a chow runs up from its first tile, a pung and a kong repeat it.
-        Tile MeldTileAt(const Meld& meld, int part) {
-            if (meld.kind == MeldKind::Chow && meld.first.IsSuit()) {
-                return Tile::Suited(meld.first.Suit(), meld.first.Rank() + part);
-            }
-            return meld.first;
-        }
-
         /// The index, in the concealed tiles of `seat`, of the tile it has just drawn (the last copy: `AddConcealed` sorts equal tiles
         /// together and the drawn one is the one that was added last); -1 when it drew none.
         int DrawnIndexOf(const HandModel& hand, Seat seat) {
@@ -179,6 +171,25 @@ namespace BECore::Mahjong {
                     break;
             }
             return Rect();
+        }
+
+        /// What the frame shows besides its layout, as far as the flights need it (`TableSnapshot`): the viewer's face-up tiles, the pile, the open
+        /// sets, the wall and the tile that was just drawn (for an opponent only that it was, never which: its slot is the last of its backs).
+        void FillSnapshot(TableSnapshot& snapshot, const HandModel& hand, const Faces& faces, Seat bottom) {
+            if (IsSeat(bottom) && faces.Shows(bottom)) {
+                snapshot.viewerHand = hand.GetHand(bottom).concealed;
+            }
+            for (const DiscardEntry& entry : hand.Discards()) {
+                snapshot.pile.push_back(entry.tile);
+            }
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                snapshot.melds[seat] = hand.GetHand(seat).melds;
+                if (snapshot.drawSeat == kNoSeat && hand.DrawnTile(seat).IsValid()) {
+                    snapshot.drawSeat = seat;
+                    snapshot.drawIndex = faces.Shows(seat) ? DrawnIndexOf(hand, seat) : static_cast<int>(hand.GetHand(seat).concealed.size()) - 1;
+                }
+            }
+            snapshot.wallRemaining = static_cast<int>(hand.GetWall().Remaining());
         }
 
         TableInput MakeInput(const HandModel& hand, Seat viewer) {
@@ -350,7 +361,7 @@ namespace BECore::Mahjong {
         if (game == nullptr) {
             return;
         }
-        const std::optional<int> hit = HitHandTile(_layout, GetScene().ScreenToSceneX(event.button.x), GetScene().ScreenToSceneY(event.button.y));
+        const std::optional<int> hit = HitHandTile(_shown.layout, GetScene().ScreenToSceneX(event.button.x), GetScene().ScreenToSceneY(event.button.y));
         if (!hit) {
             return;
         }
@@ -358,7 +369,7 @@ namespace BECore::Mahjong {
         const Seat actor = session.Actor();
         const PlayerHand& held = game->GetMatch().Hand().GetHand(actor);
         // The layout is the last frame's: it has to be of this hand
-        if (_layout.viewer != actor || *hit < 0 || *hit >= static_cast<int>(held.concealed.size())) {
+        if (_shown.layout.viewer != actor || *hit < 0 || *hit >= static_cast<int>(held.concealed.size())) {
             return;
         }
         if (session.PerformPerson(HandAction::MakeDiscard(held.concealed[*hit], _declareNext)).has_value()) {
@@ -407,7 +418,7 @@ namespace BECore::Mahjong {
         return true;
     }
 
-    void MahjongTableComponent::FollowMoves(const MahjongGame& game) {
+    MahjongTableComponent::NewMoves MahjongTableComponent::FollowMoves(const MahjongGame& game) {
         const Match& match = game.GetMatch();
         const eastl::vector<HandMove>& moves = match.Hand().Moves();
         const SeenHand now{&game, match.HandsPlayed(), match.History().size()};
@@ -416,8 +427,9 @@ namespace BECore::Mahjong {
             _seenHand = now;
             _movesSeen = moves.size();
             _highlightLeft = 0.0f;
-            return;
+            return NewMoves{true, moves.size()};
         }
+        const size_t first = _movesSeen;
         for (size_t i = moves.size(); i > _movesSeen; --i) {
             if (moves[i - 1].meld >= 0) {
                 _highlightSeat = moves[i - 1].seat;
@@ -427,6 +439,29 @@ namespace BECore::Mahjong {
             }
         }
         _movesSeen = moves.size();
+        return NewMoves{false, first};
+    }
+
+    void MahjongTableComponent::PlanBatch(const TableSnapshot& before, const NewMoves& news, const HandModel& hand) {
+        const TableLayout& was = before.layout;
+        const TableLayout& now = _shown.layout;
+        const bool sameView = was.viewer == now.viewer && was.viewWidth == now.viewWidth && was.viewHeight == now.viewHeight;
+        if (news.restarted || !sameView || _flightSeconds <= 0.0f) {
+            _flights.clear();
+            _flightElapsed = 0.0f;
+            return;
+        }
+        // Nothing new is the common frame: no move since the last draw and no tile drawn from the wall
+        const eastl::vector<HandMove>& moves = hand.Moves();
+        const eastl::span<const HandMove> fresh(moves.data() + news.first, moves.size() - news.first);
+        if (fresh.empty() && _shown.wallRemaining >= before.wallRemaining) {
+            return;
+        }
+        eastl::vector<TileFlight> planned = PlanFlights(before, _shown, fresh);
+        if (!planned.empty()) {
+            _flights = eastl::move(planned);  // the running flights end at their targets: their slots are drawn in place from now on
+            _flightElapsed = 0.0f;
+        }
     }
 
     void MahjongTableComponent::OnUpdate(const SceneEvents::SceneUpdateEvent& event) {
@@ -436,6 +471,13 @@ namespace BECore::Mahjong {
         }
         if (_highlightLeft > 0.0f && TableIsLive(*game)) {
             _highlightLeft = eastl::max(0.0f, _highlightLeft - event.deltaTime);
+        }
+        if (!_flights.empty() && TableIsLive(*game)) {
+            _flightElapsed += event.deltaTime;
+            if (_flightElapsed >= _flightSeconds) {
+                _flights.clear();
+                _flightElapsed = 0.0f;
+            }
         }
         TableSession& session = game->GetSession();
         if (!ComputerActs(*game)) {
@@ -484,18 +526,24 @@ namespace BECore::Mahjong {
         renderer.DrawFilledRect(0.0f, rim, rim, viewHeight - 2.0f * rim, kFeltRim);
         renderer.DrawFilledRect(viewWidth - rim, rim, rim, viewHeight - 2.0f * rim, kFeltRim);
 
-        _layout = TableLayout{};
+        const TableSnapshot before = eastl::move(_shown);
+        _shown = TableSnapshot{};
         const MahjongGame* game = MahjongGame::GetActive();
         PublishScreen(game);
         if (game == nullptr || game->GetMatch().GetPhase() == MatchPhase::NotStarted) {
+            _flights.clear();
+            _flightElapsed = 0.0f;
             return;
         }
         const TableSession& session = game->GetSession();
         const HandModel& hand = game->GetMatch().Hand();
-        FollowMoves(*game);
+        const NewMoves news = FollowMoves(*game);
         const Faces faces = FacesOf(session);
         const Seat bottom = BottomSeat(session);
-        _layout = MakeTableLayout(MakeInput(hand, bottom), viewWidth, viewHeight);
+        _shown.layout = MakeTableLayout(MakeInput(hand, bottom), viewWidth, viewHeight);
+        FillSnapshot(_shown, hand, faces, bottom);
+        PlanBatch(before, news, hand);
+        const TableLayout& layout = _shown.layout;
         // The tile the viewer has just drawn is tinted in its place, only in a hand that is face up: under the cover and for a spectator
         // nothing marks it (and the layout is the same plain row either way)
         const int drawnIndex = IsSeat(bottom) && session.GetPhase() == SessionPhase::Playing && faces.Shows(bottom) ? DrawnIndexOf(hand, bottom) : -1;
@@ -531,11 +579,11 @@ namespace BECore::Mahjong {
 
         // The plates under the discard blocks and the wall ring
         const float plate = kPlatePadding * unit;
-        for (const Rect& zone : _layout.zones.discards) {
+        for (const Rect& zone : layout.zones.discards) {
             const Rect plated = Padded(zone, plate);
             renderer.DrawFilledRect(plated.x, plated.y, plated.w, plated.h, kZonePlate);
         }
-        const Rect ring = Padded(_layout.zones.wall, plate);
+        const Rect ring = Padded(layout.zones.wall, plate);
         renderer.DrawFilledRect(ring.x, ring.y, ring.w, ring.h, kZonePlate);
 
         // The seat plates (public data only, so also under the cover, for a spectator and at the end of a hand): the base of each, on the
@@ -543,7 +591,7 @@ namespace BECore::Mahjong {
         // match as in the hand) the bar of the dealer
         const Seat turnSeat = TurnSeat(session, hand);
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            const Rect& box = _layout.zones.seatPlates[seat];
+            const Rect& box = layout.zones.seatPlates[seat];
             renderer.DrawFilledRect(box.x, box.y, box.w, box.h, kSeatPlate);
             if (seat == turnSeat) {
                 renderer.DrawFilledRect(box.x, box.y, box.w, box.h, kTurnMark);
@@ -555,7 +603,7 @@ namespace BECore::Mahjong {
         }
 
         if (IsSeat(turnSeat)) {
-            const Rect bounds = BoundsOf(_layout, SlotRole::HandTile, turnSeat);
+            const Rect bounds = BoundsOf(layout, SlotRole::HandTile, turnSeat);
             if (bounds.w > 0.0f) {
                 const Rect marked = Padded(bounds, kActingMargin * unit);
                 renderer.DrawFilledRect(marked.x, marked.y, marked.w, marked.h, kTurnMark);
@@ -564,7 +612,7 @@ namespace BECore::Mahjong {
         // The set that was just laid blinks behind its tiles: on at the moment of the move, then half a period on and half off
         if (_highlightLeft > 0.0f) {
             const float elapsed = kClaimHighlightSeconds - _highlightLeft;
-            const Rect bounds = BoundsOfMeld(_layout, _highlightSeat, _highlightMeld);
+            const Rect bounds = BoundsOfMeld(layout, _highlightSeat, _highlightMeld);
             if (bounds.w > 0.0f && std::fmod(elapsed, kClaimBlinkSeconds) < kClaimBlinkSeconds * 0.5f) {
                 const Rect marked = Padded(bounds, kActingMargin * unit);
                 renderer.DrawFilledRect(marked.x, marked.y, marked.w, marked.h, kClaimHighlight);
@@ -576,7 +624,7 @@ namespace BECore::Mahjong {
             if (!hand.GetHand(seat).callingDeclared) {
                 continue;
             }
-            const Rect bounds = BoundsOf(_layout, SlotRole::HandTile, seat);
+            const Rect bounds = BoundsOf(layout, SlotRole::HandTile, seat);
             if (bounds.w > 0.0f) {
                 DrawFrame(renderer, Padded(bounds, kActingMargin * unit), kCallingFrameWidth * unit, kCallingFrame);
             }
@@ -601,52 +649,77 @@ namespace BECore::Mahjong {
         const int pendingEntry = static_cast<int>(hand.Discards().size()) - 1;
         const int lastDiscard = LastDiscardEntry(hand);
 
-        for (const TileSlot& slot : _layout.slots) {
+        // One slot at `rect`: its own rectangle, or where it is in the air; the face and every mark of the slot follow the rectangle
+        const auto drawSlot = [&](const TileSlot& slot, const Rect& rect) {
             const PlayerHand& held = hand.GetHand(slot.seat);
             switch (slot.role) {
                 case SlotRole::HandTile:
-                    drawTile(slot.rect, faces.Shows(slot.seat) ? std::optional<Tile>(held.concealed[slot.index]) : std::nullopt);
+                    drawTile(rect, faces.Shows(slot.seat) ? std::optional<Tile>(held.concealed[slot.index]) : std::nullopt);
                     if (slot.seat == bottom && slot.index == drawnIndex) {
-                        renderer.DrawFilledRect(slot.rect.x, slot.rect.y, slot.rect.w, slot.rect.h, kDrawnTileMark);
+                        renderer.DrawFilledRect(rect.x, rect.y, rect.w, rect.h, kDrawnTileMark);
                     }
                     if (slot.seat == bottom && keepsWaiting[held.concealed[slot.index].Id()]) {
                         const float bar = kKeepsWaitingBarHeight * unit;
-                        renderer.DrawFilledRect(slot.rect.x, slot.rect.y + slot.rect.h - bar, slot.rect.w, bar, kKeepsWaitingMark);
+                        renderer.DrawFilledRect(rect.x, rect.y + rect.h - bar, rect.w, bar, kKeepsWaitingMark);
                     }
                     if (_declareNext && slot.seat == session.Actor() && cannotDeclare[held.concealed[slot.index].Id()]) {
-                        renderer.DrawFilledRect(slot.rect.x, slot.rect.y, slot.rect.w, slot.rect.h, kVeil);
+                        renderer.DrawFilledRect(rect.x, rect.y, rect.w, rect.h, kVeil);
                     }
                     break;
                 case SlotRole::MeldTile: {
                     const Meld& meld = held.melds[slot.index];
                     // An open set is public; a concealed kong is as hidden as the hand it was made from.
                     const bool shown = !meld.concealed || faces.Shows(slot.seat);
-                    drawTile(slot.rect, shown ? std::optional<Tile>(MeldTileAt(meld, slot.part)) : std::nullopt);
+                    drawTile(rect, shown ? std::optional<Tile>(MeldTileAt(meld, slot.part)) : std::nullopt);
                     if (slot.claimEdge != Edge::None) {
-                        const Rect bar = EdgeBar(slot.rect, slot.claimEdge, kClaimedEdgeWidth * unit);
+                        const Rect bar = EdgeBar(rect, slot.claimEdge, kClaimedEdgeWidth * unit);
                         renderer.DrawFilledRect(bar.x, bar.y, bar.w, bar.h, kClaimedEdge);
                     }
                     break;
                 }
                 case SlotRole::BonusTile:
-                    drawTile(slot.rect, held.bonus[slot.index]);
+                    drawTile(rect, held.bonus[slot.index]);
                     break;
                 case SlotRole::DiscardTile:
                     if (claimPending && slot.index == pendingEntry) {
-                        drawShadow(slot.rect);
-                        const Rect framed = Padded(slot.rect, kPendingMargin * unit);
+                        drawShadow(rect);
+                        const Rect framed = Padded(rect, kPendingMargin * unit);
                         renderer.DrawFilledRect(framed.x, framed.y, framed.w, framed.h, kPendingFrame);
-                        drawFace(slot.rect, hand.Discards()[slot.index].tile);
+                        drawFace(rect, hand.Discards()[slot.index].tile);
                     } else {
-                        drawTile(slot.rect, hand.Discards()[slot.index].tile);
+                        drawTile(rect, hand.Discards()[slot.index].tile);
                     }
                     if (slot.index == lastDiscard) {
-                        renderer.DrawFilledRect(slot.rect.x, slot.rect.y, slot.rect.w, slot.rect.h, kLastDiscardMark);
+                        renderer.DrawFilledRect(rect.x, rect.y, rect.w, rect.h, kLastDiscardMark);
                     }
                     break;
                 case SlotRole::WallStack:
-                    drawFace(slot.rect, std::nullopt);
+                    drawFace(rect, std::nullopt);
                     break;
+            }
+        };
+
+        // A slot whose tile is in the air is drawn once, in the second pass, over everything else; a flight whose slot the layout no longer
+        // has is ignored
+        const auto flightOf = [&](const TileSlot& slot) -> const TileFlight* {
+            for (const TileFlight& flight : _flights) {
+                if (flight.key.Matches(slot)) {
+                    return &flight;
+                }
+            }
+            return nullptr;
+        };
+        for (const TileSlot& slot : layout.slots) {
+            if (flightOf(slot) == nullptr) {
+                drawSlot(slot, slot.rect);
+            }
+        }
+        if (!_flights.empty()) {
+            const float progress = Ease(kTileFlightEase, _flightSeconds > 0.0f ? _flightElapsed / _flightSeconds : 1.0f);
+            for (const TileSlot& slot : layout.slots) {
+                if (const TileFlight* flight = flightOf(slot)) {
+                    drawSlot(slot, FlightRect(*flight, slot.rect, progress));
+                }
             }
         }
     }

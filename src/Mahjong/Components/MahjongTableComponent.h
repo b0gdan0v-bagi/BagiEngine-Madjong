@@ -5,6 +5,7 @@
 #include <BECore/Scene/IComponent.h>
 #include <Mahjong/Table/ActionButtons.h>
 #include <Mahjong/Table/TableLayout.h>
+#include <Mahjong/Table/TileFlights.h>
 
 namespace BECore {
 
@@ -64,6 +65,17 @@ namespace BECore::Mahjong {
      * `kClaimHighlightSeconds` (`kClaimHighlight`, on for the first half of each `kClaimBlinkSeconds`); the time runs on `SceneUpdateEvent`
      * (also under the cover, not while the seat choice is open) and the highlight changes no game state.
      *
+     * **Flights** (`Table/TileFlights.h`). The tiles that arrive somewhere new fly there in `kTileFlightSeconds`: a discard from its hand to the
+     * pile, a claimed tile from the pile (or, when the discard and the claim fall into one frame, from the discarder's hand) and the tiles of
+     * the set from the claimer's hand, the tiles of a kong, a draw from the wall. Every frame the component keeps a `TableSnapshot` of what it
+     * drew; the new snapshot against the old one (`PlanFlights`) says which slots are new and where they come from, and all the moves between
+     * two draws are one batch, whoever made them (a computer's step, a click, the control API). A flight carries no face: the slot is drawn by
+     * the same code and with the same face rule at an interpolated rectangle (`FlightRect`), second pass and on top, so an opponent's tile or a
+     * hidden kong flies as a back and nothing is face up that the slot would not show; the marks of the slot follow the rectangle. A new batch ends
+     * the running flights at their targets, a new hand, match or game, another viewer or view size starts without any. The time is the
+     * component's own clock on `SceneUpdateEvent` (it stops with the table pause); `SetTileFlightSeconds(0)` switches the flights off. The model,
+     * the session and the control API are not touched.
+     *
      * **A declared calling hand** (`PlayerHand::callingDeclared`, public: the control state lists it as `calling`) has a frame of
      * `kCallingFrame` round its hand (four bars of `kCallingFrameWidth` units on the border of the rectangle of the turn backdrop),
      * drawn before the tiles, for every seat that has declared, under the cover and at the end of the hand too (it reads the flag, never
@@ -111,7 +123,19 @@ namespace BECore::Mahjong {
 
         /// The layout of the last `OnDraw` in the view units of the scene (empty before the first draw and while nothing is drawn).
         [[nodiscard]] const TableLayout& GetLayout() const noexcept {
-            return _layout;
+            return _shown.layout;
+        }
+
+        /// How long a flight lasts (default `kTileFlightSeconds`); 0 or less plans no flight (the tests of the table switch them off).
+        void SetTileFlightSeconds(float seconds) noexcept {
+            _flightSeconds = seconds;
+        }
+        [[nodiscard]] float GetTileFlightSeconds() const noexcept {
+            return _flightSeconds;
+        }
+        /// The tiles in the air now.
+        [[nodiscard]] size_t FlightCount() const noexcept {
+            return _flights.size();
         }
 
         /// The attached table, if any; the game assumes a single one.
@@ -143,12 +167,26 @@ namespace BECore::Mahjong {
         /// `ActionsCompact` and the cover to the canvases of the scene, only what changed.
         void PublishScreen(const MahjongGame* game);
 
+        /// The entries of `Moves()` not seen before the frame: `first` is the index of the first of them; `restarted` when the hand, match or
+        /// game is not the one seen before (what is on the table then is not news).
+        struct NewMoves {
+            bool restarted = false;
+            size_t first = 0;
+        };
+
         /// Looks at the entries of `Moves()` not seen yet and starts the highlight of the set the last of them laid; a hand, a match or a
         /// game that is not the one seen before starts over without a highlight.
-        void FollowMoves(const MahjongGame& game);
+        NewMoves FollowMoves(const MahjongGame& game);
+
+        /// Plans the flights of the frame just laid out (`_shown`) against `before`, the frame drawn last: the new batch replaces the running
+        /// flights when it has any, a restart, another viewer or another view size drops them.
+        void PlanBatch(const TableSnapshot& before, const NewMoves& news, const HandModel& hand);
 
         ResourceHandle<ITexture> _atlas;
-        TableLayout _layout;
+        TableSnapshot _shown;                // what the last `OnDraw` drew: its layout is `GetLayout()`, empty while nothing is drawn
+        eastl::vector<TileFlight> _flights;  // the tiles in the air, flying to slots of `_shown.layout`
+        float _flightElapsed = 0.0f;         // seconds since the batch of `_flights` was planned
+        float _flightSeconds = kTileFlightSeconds;
         ActionButtons _published;          // what the canvases show; the scene file starts with every button hidden
         eastl::string_view _hintKey;       // the key of the sentence in `actionHint` (a literal of `SpecOf`, which lives as long as the program)
         uint64_t _hintStringsVersion = 0;  // the version of the string table that sentence was looked up at

@@ -21,6 +21,10 @@ namespace BECore::Mahjong {
     /// The curve of a flight: fast at the start, settling into the place.
     inline constexpr EaseType kTileFlightEase = EaseType::CubicOut;
 
+    /// The tile at `part` of a meld as laid: a chow runs up from its first tile, a pung and a kong repeat it. The one definition of the
+    /// table: the component draws it and the planner names the tile that flies.
+    [[nodiscard]] Tile MeldTileAt(const Meld& meld, int part) noexcept;
+
     /// What a slot of a layout is, without its rectangle: the same key in two layouts names the same thing on the table.
     struct SlotKey {
         SlotRole role = SlotRole::HandTile;
