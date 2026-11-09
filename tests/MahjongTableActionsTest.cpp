@@ -182,8 +182,10 @@ namespace BECore::Mahjong::Tests {
             ASSERT_NO_FATAL_FAILURE(StartWith(seats, model));
         }
 
+        /// The sentence of a button in the current language of the table.
         static std::string Sentence(ButtonKind kind) {
-            return std::string(HintOf(kind).data(), HintOf(kind).size());
+            const eastl::string sentence = HintOf(CoreManager::GetUIStrings(), kind);
+            return std::string(sentence.data(), sentence.size());
         }
 
         std::string LabelOf(const char* element) const {
@@ -550,6 +552,49 @@ namespace BECore::Mahjong::Tests {
         Draw();
 
         EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), version);
+    }
+
+    TEST_F(MahjongTableActionsTest, TheHintAndTheLabelsOfTheButtonsFollowALanguageSwitch) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kPersonAtSeat1, ClaimWindowModel()));
+        HoverOver("Chow0");
+        Draw();
+        ASSERT_EQ(HintOnScreen(), Sentence(ButtonKind::ClaimChow0));
+        ASSERT_EQ(LabelOf("Chow0"), "Chow");
+        const std::string english = HintOnScreen();
+
+        ASSERT_TRUE(CoreManager::GetUIStrings().SetLanguage("ru"_intern));
+        Draw();
+
+        EXPECT_NE(HintOnScreen(), english) << "the pointer did not move, the sentence did";
+        EXPECT_EQ(HintOnScreen(), Sentence(ButtonKind::ClaimChow0));
+        EXPECT_EQ(LabelOf("Chow0"), "Чи");
+        EXPECT_EQ(LabelOf("Pung"), "Пун");
+        EXPECT_EQ(LabelOf("Pass"), "Пас");
+
+        HoverOver("Pass");
+        Draw();
+        EXPECT_EQ(HintOnScreen(), Sentence(ButtonKind::Pass)) << "a new hint is looked up in the new language";
+
+        ASSERT_TRUE(CoreManager::GetUIStrings().SetLanguage("en"_intern));
+        Draw();
+        EXPECT_EQ(HintOnScreen(), Sentence(ButtonKind::Pass));
+        EXPECT_EQ(LabelOf("Pass"), "Pass");
+    }
+
+    TEST_F(MahjongTableActionsTest, AnUnchangedHintIsNotSetAgainInEitherLanguage) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kPersonAtSeat1, ClaimWindowModel()));
+        for (const char* language : {"en", "ru"}) {
+            ASSERT_TRUE(CoreManager::GetUIStrings().SetLanguage(PoolString::Intern(language)));
+            HoverOver("Pung");
+            Draw();
+            ASSERT_EQ(HintOnScreen(), Sentence(ButtonKind::ClaimPung)) << language;
+            const uint64_t version = CoreManager::GetUIVars().GetVersion();
+
+            Draw();
+            Draw();
+
+            EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), version) << language;
+        }
     }
 
     TEST_F(MahjongTableActionsTest, NoHintAtAnEmptyTable) {

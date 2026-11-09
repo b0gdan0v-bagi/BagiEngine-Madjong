@@ -47,12 +47,23 @@ namespace BECore::Mahjong {
      * asked to claim first: that would tell a person that this computer holds a claim) and the discard that waits for a claim has a frame,
      * drawn only while the viewer is among the seats that have yet to decide (and no cover is up).
      *
+     * **The last move.** Three marks of the gold family (`Table/UiPalette.h`) show what has just happened, from the public data of `HandModel`
+     * (`Moves()`, `Discards()`, the open sets): a tint over the last discard (`kLastDiscardMark`; the frame of a pending discard shows
+     * besides it), a bar along the edge of the claimed tile of an open set that faces the seat it came from (`kClaimedEdge`, from
+     * `TileSlot::claimEdge`), and the tile the viewer has just drawn, which lies apart at the end of its row (only in a hand that is
+     * face up: under the cover and for a spectator the hand is the plain row); a click on it discards it like any other tile. The set a seat
+     * has just laid (a claimed chow, pung or kong, a concealed kong, an upgraded kong: the last entry of `Moves()` that made one among those
+     * not seen yet, so a claim and the discard after it in one step still show the set) has a fill behind it that blinks for
+     * `kClaimHighlightSeconds` (`kClaimHighlight`, on for the first half of each `kClaimBlinkSeconds`); the time runs on `SceneUpdateEvent`
+     * (also under the cover, not while the seat choice is open) and the highlight changes no game state.
+     *
      * **Playing.** While a person has to act (`TableSession::ActorIsPerson()`, no hot-seat cover) a left click on a tile of the viewer's hand
      * discards it (`PerformPerson(MakeDiscard(tile, declareNext))`); a refused action changes nothing. The other actions are the buttons of the
      * canvas `Actions` (`Table/ActionButtons.h`; `ActionsCompact` holds the same buttons by name for the windows where those would be under the
      * touch minimum and the bar under the table holds a line of it, `NeedsCompactActions`, and exactly one of the two is shown), shown from `LegalActions` every frame (`SetElementVisibleByName`; each
-     * button says a fixed word in the file and the tiles of its action are `UIImage` children whose sprite the component sets), and answered here as `InputEvents::ActionEvent`s. While the pointer is
-     * over a shown button (`UIElement::hovered`, set by the canvas) its sentence is the variable `actionHint` and the label `Hint` is shown; a touch screen has no hover and so no hint. `Declare` is a
+     * button says a word of the string table in the file (`{#button.<Kind>}`) and the tiles of its action are `UIImage` children whose sprite the component sets), and answered here as
+     * `InputEvents::ActionEvent`s. While the pointer is over a shown button (`UIElement::hovered`, set by the canvas) its sentence (a key of the
+     * string table, looked up in the current language and again when it changes) is the variable `actionHint` and the label `Hint` is shown; a touch screen has no hover and so no hint. `Declare` is a
      * `UIToggle` bound to the flag "the next discard declares the calling hand" (variable `declareNext`, `on` / `off`; it emits the state it asks for; the tiles whose declaring discard is not legal
      * are dimmed while it is on); the flag is cleared by the discard, when the button is no longer offered and when the turn it was set on is over (the seat or the number of discards changed, e.g. a
      * control client played for the person). With two or more people the canvas `Handoff` (a modal, hidden at the start) is shown exactly while `HandoffPending()`; its button `MahjongReveal` calls
@@ -116,15 +127,33 @@ namespace BECore::Mahjong {
         /// and the cover to the canvases of the scene, only what changed.
         void PublishScreen(const MahjongGame* game);
 
+        /// Looks at the entries of `Moves()` not seen yet and starts the highlight of the set the last of them laid; a hand, a match or a
+        /// game that is not the one seen before starts over without a highlight.
+        void FollowMoves(const MahjongGame& game);
+
         ResourceHandle<ITexture> _atlas;
         TableLayout _layout;
-        ActionButtons _published;  // what the canvases show; the scene file starts with every button hidden
-        eastl::string_view _hint;  // the sentence in `actionHint` (a text of `HintOf`, which lives as long as the program)
+        ActionButtons _published;          // what the canvases show; the scene file starts with every button hidden
+        eastl::string_view _hintKey;       // the key of the sentence in `actionHint` (a literal of `SpecOf`, which lives as long as the program)
+        uint64_t _hintStringsVersion = 0;  // the version of the string table that sentence was looked up at
         bool _handoffShown = false;
         bool _compactActions = false;  // `ActionsCompact` is the shown canvas of the buttons; the scene file starts with `Actions`
         bool _declareNext = false;
         DeclareTurn _declareTurn;     // the turn `_declareNext` was set on
         float _computerClock = 0.0f;  // seconds a computer has been waiting to play
+        /// The hand `_movesSeen` entries of whose `Moves()` the component has looked at (the game, the hands played and the settled hands tell one hand from the next)
+        struct SeenHand {
+            const MahjongGame* game = nullptr;
+            int handsPlayed = -1;
+            size_t settled = 0;
+
+            bool operator==(const SeenHand&) const = default;
+        };
+        SeenHand _seenHand;
+        size_t _movesSeen = 0;
+        Seat _highlightSeat = kNoSeat;  // the set that blinks: the meld `_highlightMeld` of this seat
+        int _highlightMeld = -1;
+        float _highlightLeft = 0.0f;  // seconds of the highlight left, 0 for none
         static MahjongTableComponent* s_active;
     };
 

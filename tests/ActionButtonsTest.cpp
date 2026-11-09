@@ -1,6 +1,8 @@
 #include "ComputerTestSupport.h"
 #include "HandTestSupport.h"
+#include "StringsTestSupport.h"
 
+#include <BECore/Text/Utf8.h>
 #include <Mahjong/Table/ActionButtons.h>
 #include <gtest/gtest.h>
 
@@ -64,36 +66,73 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(ButtonOf("", "").has_value());
     }
 
-    TEST(ActionButtonsTest, EveryButtonHasAPlainWordAndADistinctHintThatFitsItsLabel) {
-        std::set<std::string> hints;
+    TEST(ActionButtonsTest, EveryButtonHasAWordKeyAndAHintKeyAndBothLanguagesHaveThem) {
+        UIStrings strings;
+        ASSERT_TRUE(LoadShippedStrings(strings).empty());
+        std::set<std::string> hintKeys;
         for (int i = 0; i < kButtonCount; ++i) {
             const ButtonKind kind = static_cast<ButtonKind>(i);
             const ButtonSpec& spec = SpecOf(kind);
-            ASSERT_NE(spec.word, nullptr) << spec.element;
-            EXPECT_GT(std::strlen(spec.word), 0u) << spec.element;
+            ASSERT_NE(spec.wordKey, nullptr) << spec.element;
+            ASSERT_NE(spec.hintKey, nullptr) << spec.element;
+            EXPECT_EQ(std::string(spec.wordKey), "button." + std::string(EnumUtils<ButtonKind>::ToString(kind).data())) << "the key of the word is derived from the kind";
+            EXPECT_EQ(HintKey(kind), eastl::string_view(spec.hintKey));
             EXPECT_GE(spec.maxTiles, 0) << spec.element;
             EXPECT_LE(spec.maxTiles, kMaxButtonTiles) << spec.element;
-            const eastl::string_view hint = HintOf(kind);
-            EXPECT_FALSE(hint.empty()) << spec.element;
-            EXPECT_LE(hint.size(), kMaxHintLength) << spec.element;
-            hints.insert(std::string(hint.data(), hint.size()));
+            hintKeys.insert(spec.hintKey);
+            ForEachLanguage(strings, [&](PoolString language) {
+                const std::string where = std::string(spec.element) + " in " + language.ToStringView().data();
+                const eastl::string word = WordOf(strings, kind);
+                const eastl::string hint = HintOf(strings, kind);
+                EXPECT_FALSE(word.empty()) << where;
+                EXPECT_NE(word, eastl::string(spec.wordKey)) << where << ": the word is translated";
+                EXPECT_FALSE(hint.empty()) << where;
+                EXPECT_NE(hint, eastl::string(spec.hintKey)) << where << ": the hint is translated";
+                EXPECT_LE(Utf8::CountCodePoints(hint), kMaxHintLength) << where;
+                EXPECT_EQ(hint.find('{'), eastl::string::npos) << where << ": a hint has no placeholder";
+            });
         }
         // The three chows explain themselves alike and so do the three concealed kongs; every other sentence is its own
-        EXPECT_EQ(hints.size(), static_cast<size_t>(kButtonCount - (kChowButtons - 1) - (kConcealedKongButtons - 1)));
-        EXPECT_EQ(HintOf(ButtonKind::ClaimChow0), HintOf(ButtonKind::ClaimChow2));
-        EXPECT_NE(HintOf(ButtonKind::Win), HintOf(ButtonKind::ClaimMahjong));
-        EXPECT_NE(HintOf(ButtonKind::ClaimPung), HintOf(ButtonKind::ClaimKong));
-        EXPECT_NE(HintOf(ButtonKind::ConcealedKong0), HintOf(ButtonKind::UpgradeKong));
+        EXPECT_EQ(hintKeys.size(), static_cast<size_t>(kButtonCount - (kChowButtons - 1) - (kConcealedKongButtons - 1)));
+        EXPECT_EQ(HintKey(ButtonKind::ClaimChow0), HintKey(ButtonKind::ClaimChow2));
+        EXPECT_EQ(HintKey(ButtonKind::ConcealedKong0), HintKey(ButtonKind::ConcealedKong2));
+        EXPECT_NE(HintKey(ButtonKind::Win), HintKey(ButtonKind::ClaimMahjong));
+        EXPECT_NE(HintKey(ButtonKind::ClaimPung), HintKey(ButtonKind::ClaimKong));
+        EXPECT_NE(HintKey(ButtonKind::ConcealedKong0), HintKey(ButtonKind::UpgradeKong));
+    }
+
+    TEST(ActionButtonsTest, TheHintsAreDistinctInEveryLanguage) {
+        UIStrings strings;
+        ASSERT_TRUE(LoadShippedStrings(strings).empty());
+        ForEachLanguage(strings, [&](PoolString language) {
+            std::set<std::string> hints;
+            std::set<std::string> keys;
+            for (int i = 0; i < kButtonCount; ++i) {
+                const ButtonKind kind = static_cast<ButtonKind>(i);
+                const eastl::string hint = HintOf(strings, kind);
+                hints.insert(std::string(hint.data(), hint.size()));
+                keys.insert(SpecOf(kind).hintKey);
+            }
+            EXPECT_EQ(hints.size(), keys.size()) << language.ToStringView().data();
+        });
     }
 
     TEST(ActionButtonsTest, TheWordsAndTheMostTilesOfEachKind) {
+        UIStrings strings;
+        ASSERT_TRUE(LoadShippedStrings(strings).empty());
+        ASSERT_TRUE(strings.SetLanguage("en"_intern));
         const std::pair<ButtonKind, const char*> words[] = {{ButtonKind::Win, "Mahjong!"},      {ButtonKind::ClaimMahjong, "Mahjong!"}, {ButtonKind::ClaimPung, "Pung"},
                                                             {ButtonKind::ClaimKong, "Kong"},    {ButtonKind::ClaimChow0, "Chow"},       {ButtonKind::ClaimChow2, "Chow"},
                                                             {ButtonKind::Pass, "Pass"},         {ButtonKind::ConcealedKong1, "Kong"},   {ButtonKind::UpgradeKong, "Add to pung"},
                                                             {ButtonKind::Declare, "Ready hand"}};
         for (const auto& [kind, word] : words) {
-            EXPECT_STREQ(SpecOf(kind).word, word) << SpecOf(kind).element;
+            EXPECT_EQ(WordOf(strings, kind), eastl::string(word)) << SpecOf(kind).element;
         }
+        ASSERT_TRUE(strings.SetLanguage("ru"_intern));
+        EXPECT_EQ(WordOf(strings, ButtonKind::ClaimPung), eastl::string("Пун"));
+        EXPECT_EQ(WordOf(strings, ButtonKind::ClaimChow1), eastl::string("Чи"));
+        EXPECT_EQ(WordOf(strings, ButtonKind::Pass), eastl::string("Пас"));
+        EXPECT_EQ(HintOf(strings, ButtonKind::Pass), eastl::string("Пропустить сброшенную кость."));
         for (const ButtonKind kind : {ButtonKind::ClaimChow0, ButtonKind::ClaimChow1, ButtonKind::ClaimChow2}) {
             EXPECT_EQ(SpecOf(kind).maxTiles, 3) << SpecOf(kind).element;
         }
@@ -106,12 +145,24 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
+    TEST(ActionButtonsTest, TheStateOfTheButtonsHoldsNoLanguage) {
+        UIStrings strings;
+        ASSERT_TRUE(LoadShippedStrings(strings).empty());
+        const eastl::vector<HandAction> list = Claims({{ClaimKind::Pung, Tile{}}, {ClaimKind::Chow, T("4p")}});
+        ASSERT_TRUE(strings.SetLanguage("en"_intern));
+        const ActionButtons english = MakeActionButtons(list, T("5p"));
+        ASSERT_TRUE(strings.SetLanguage("ru"_intern));
+        const ActionButtons russian = MakeActionButtons(list, T("5p"));
+
+        EXPECT_EQ(english, russian) << "MakeActionButtons is pure: the same list gives the same buttons in any language";
+    }
+
     TEST(ActionButtonsTest, AChowPicturesItsThreeTilesInOrder) {
         const ActionButtons buttons = MakeActionButtons(Claims({{ClaimKind::Chow, T("4p")}, {ClaimKind::Chow, T("7s")}}), T("5p"));
 
         EXPECT_EQ(Pictured(buttons, ButtonKind::ClaimChow0), (std::vector<std::string>{"4p", "5p", "6p"}));
         EXPECT_EQ(Pictured(buttons, ButtonKind::ClaimChow1), (std::vector<std::string>{"7s", "8s", "9s"})) << "the chow at the end of a suit";
-        EXPECT_EQ(buttons[ButtonKind::ClaimChow0].hint, HintOf(ButtonKind::ClaimChow0));
+        EXPECT_EQ(buttons[ButtonKind::ClaimChow0].hintKey, HintKey(ButtonKind::ClaimChow0));
     }
 
     TEST(ActionButtonsTest, TheClaimsOfThePendingTilePictureIt) {
@@ -121,7 +172,7 @@ namespace BECore::Mahjong::Tests {
 
         for (const ButtonKind kind : {ButtonKind::ClaimMahjong, ButtonKind::ClaimPung, ButtonKind::ClaimKong}) {
             EXPECT_EQ(Pictured(buttons, kind), std::vector<std::string>{"Rd"}) << SpecOf(kind).element;
-            EXPECT_EQ(buttons[kind].hint, HintOf(kind));
+            EXPECT_EQ(buttons[kind].hintKey, HintKey(kind));
         }
         EXPECT_TRUE(Pictured(buttons, ButtonKind::Pass).empty());
 
@@ -143,8 +194,8 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(Pictured(buttons, ButtonKind::Win).empty());
         EXPECT_TRUE(Pictured(buttons, ButtonKind::Declare).empty());
         EXPECT_TRUE(buttons[ButtonKind::Declare].shown);
-        EXPECT_EQ(buttons[ButtonKind::Declare].hint, HintOf(ButtonKind::Declare));
-        EXPECT_FALSE(buttons[ButtonKind::Declare].hint.empty());
+        EXPECT_EQ(buttons[ButtonKind::Declare].hintKey, HintKey(ButtonKind::Declare));
+        EXPECT_FALSE(buttons[ButtonKind::Declare].hintKey.empty());
     }
 
     TEST(ActionButtonsTest, EveryShownButtonOfATurnHasItsHint) {
@@ -153,7 +204,7 @@ namespace BECore::Mahjong::Tests {
 
         for (int i = 0; i < kButtonCount; ++i) {
             const ButtonKind kind = static_cast<ButtonKind>(i);
-            EXPECT_EQ(buttons[kind].hint, buttons[kind].shown ? HintOf(kind) : eastl::string_view{}) << SpecOf(kind).element;
+            EXPECT_EQ(buttons[kind].hintKey, buttons[kind].shown ? HintKey(kind) : eastl::string_view{}) << SpecOf(kind).element;
         }
     }
 
@@ -164,9 +215,9 @@ namespace BECore::Mahjong::Tests {
             const ButtonState& button = buttons.buttons[static_cast<size_t>(i)];
             if (!button.shown) {
                 EXPECT_EQ(button.tileCount, 0) << SpecOf(static_cast<ButtonKind>(i)).element;
-                EXPECT_TRUE(button.hint.empty()) << SpecOf(static_cast<ButtonKind>(i)).element;
+                EXPECT_TRUE(button.hintKey.empty()) << SpecOf(static_cast<ButtonKind>(i)).element;
             } else {
-                EXPECT_FALSE(button.hint.empty());
+                EXPECT_FALSE(button.hintKey.empty());
                 EXPECT_LE(button.tileCount, SpecOf(static_cast<ButtonKind>(i)).maxTiles);
             }
         }

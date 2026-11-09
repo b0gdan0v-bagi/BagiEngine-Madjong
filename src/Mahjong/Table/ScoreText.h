@@ -3,6 +3,7 @@
 #include <Mahjong/Game/Match.h>
 #include <Mahjong/Game/ScoreHand.h>
 #include <Mahjong/Game/TableSession.h>
+#include <Mahjong/Table/Words.h>
 
 namespace BECore::Mahjong {
 
@@ -28,13 +29,15 @@ namespace BECore::Mahjong {
     };
 
     /// "5 Dots", "East Wind", "Red Dragon", "Flower 1", "Season 3"; "No tile" for an invalid one.
-    [[nodiscard]] eastl::string TileName(Tile tile);
+    /// (words from the keys `tile.*`, `suit.*`, `wind.*` of the current language of `strings`)
+    [[nodiscard]] eastl::string TileName(const UIStrings& strings, Tile tile);
 
     /// A readable name for every kind of line ("Pung", "One suit, no honours", "Thirteen orphans"); never empty.
-    [[nodiscard]] eastl::string_view ScoreKindName(ScoreKind kind) noexcept;
+    /// The key is `score.kind.<ScoreKind>`.
+    [[nodiscard]] eastl::string ScoreKindName(const UIStrings& strings, ScoreKind kind);
 
     /// One line of a score: "Pung of 5 Dots: 8", "Win: 20", "One suit, no honours: x8", "Limit: Thirteen orphans".
-    [[nodiscard]] eastl::string ScoreLineText(const ScoreLine& line);
+    [[nodiscard]] eastl::string ScoreLineText(const UIStrings& strings, const ScoreLine& line);
 
     /**
      * @brief The rows of the screen that follows a finished hand.
@@ -43,9 +46,9 @@ namespace BECore::Mahjong {
      * seats once the settlement is applied (`Match::Scores()` plus `deltas`), `seats` says who is "You". The seats are named with the
      * winds of the hand (`settlement.east`).
      */
-    [[nodiscard]] ScoreTable FormatScoreTable(const HandSettlement& settlement, const HandResult& result, const SeatScores& totalsAfter, const SeatSetup& seats);
+    [[nodiscard]] ScoreTable FormatScoreTable(const UIStrings& strings, const HandSettlement& settlement, const HandResult& result, const SeatScores& totalsAfter, const SeatSetup& seats);
 
     /// The standings of a match: equal points share a place and keep the seat order. The seats carry no wind (the match is over).
-    [[nodiscard]] StandingsTable FormatStandings(const Match& match, const SeatSetup& seats);
+    [[nodiscard]] StandingsTable FormatStandings(const UIStrings& strings, const Match& match, const SeatSetup& seats);
 
 }  // namespace BECore::Mahjong

@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The words of the game: English (the default) and Russian. Every key is in both languages with the same {placeholders}; StringsTest holds that.
+     A language is written in itself (lang.*). The scene says text="{#key}", code reads a key through Table/Words.h. -->
+<UIStrings default="en">
+    <language id="en">
+        <string key="lang.en" text="English"/>
+        <string key="lang.ru" text="Русский"/>
+        <string key="wind.East" text="East"/>
+        <string key="wind.South" text="South"/>
+        <string key="wind.West" text="West"/>
+        <string key="wind.North" text="North"/>
+        <string key="suit.Dots" text="Dots"/>
+        <string key="suit.Bamboo" text="Bamboo"/>
+        <string key="suit.Characters" text="Characters"/>
+        <string key="tile.suit" text="{rank} {suit}"/>
+        <string key="tile.wind" text="{wind} Wind"/>
+        <string key="tile.dragon.Red" text="Red Dragon"/>
+        <string key="tile.dragon.White" text="White Dragon"/>
+        <string key="tile.dragon.Green" text="Green Dragon"/>
+        <string key="tile.flower" text="Flower {n}"/>
+        <string key="tile.season" text="Season {n}"/>
+        <string key="tile.none" text="No tile"/>
+        <string key="seat.name" text="Seat {n} ({wind})"/>
+        <string key="seat.short" text="Seat {n}"/>
+        <string key="seat.you" text=" You"/>
+        <string key="score.of" text="{name} of {tile}"/>
+        <string key="score.bracket" text="{name} ({tile})"/>
+        <string key="score.points" text="{name}: {points}"/>
+        <string key="score.doubles" text="{name}: x{multiplier}"/>
+        <string key="score.limit" text="Limit: {name}"/>
+        <string key="score.kind.Win" text="Win"/>
+        <string key="score.kind.WinTileFromWall" text="Tile from the wall"/>
+        <string key="score.kind.OnlyWinningTile" text="Only winning tile"/>
+        <string key="score.kind.Pung" text="Pung"/>
+        <string key="score.kind.Kong" text="Kong"/>
+        <string key="score.kind.Pair" text="Pair"/>
+        <string key="score.kind.Bonus" text="Bonus tile"/>
+        <string key="score.kind.DragonSet" text="Dragon set"/>
+        <string key="score.kind.OwnWindSet" text="Own wind set"/>
+        <string key="score.kind.RoundWindSet" text="Round wind set"/>
+        <string key="score.kind.OneSuitWithHonours" text="One suit with honours"/>
+        <string key="score.kind.OneSuitNoHonours" text="One suit, no honours"/>
+        <string key="score.kind.OwnBonus" text="Own wind bonus"/>
+        <string key="score.kind.RoundBonus" text="Round wind bonus"/>
+        <string key="score.kind.OnlyPungs" text="Only pungs"/>
+        <string key="score.kind.NoPoints" text="No points"/>
+        <string key="score.kind.LooseTile" text="Loose tile"/>
+        <string key="score.kind.LastTile" text="Last tile"/>
+        <string key="score.kind.RobbedKong" text="Robbed kong"/>
+        <string key="score.kind.LittleFourWinds" text="Little four winds"/>
+        <string key="score.kind.LittleThreeDragons" text="Little three dragons"/>
+        <string key="score.kind.TerminalsOrHonoursEverywhere" text="Terminal or honour in every set"/>
+        <string key="score.kind.FullyConcealed" text="Fully concealed"/>
+        <string key="score.kind.SeveralKongs" text="Several kongs"/>
+        <string key="score.kind.ObviouslyLast" text="Obviously the last tile"/>
+        <string key="score.kind.CallingFirstHand" text="Calling hand, first hand"/>
+        <string key="score.kind.ConcealedPungsOneSuit" text="Concealed pungs, one suit"/>
+        <string key="score.kind.HonoursOnly" text="Honours only"/>
+        <string key="score.kind.TerminalsOnly" text="Terminals only"/>
+        <string key="score.kind.AllGreen" text="All green"/>
+        <string key="score.kind.SevenPairsHonours" text="Seven pairs of honours"/>
+        <string key="score.kind.SevenPairsOneSuit" text="Seven pairs of one suit"/>
+        <string key="score.kind.BigThreeDragons" text="Big three dragons"/>
+        <string key="score.kind.BigFourWinds" text="Big four winds"/>
+        <string key="score.kind.FourKongs" text="Four kongs"/>
+        <string key="score.kind.ThirteenOrphans" text="Thirteen orphans"/>
+        <string key="score.kind.LastTileOneDot" text="Last tile, 1 of dots"/>
+        <string key="score.kind.LooseTileFiveDots" text="Loose tile, 5 of dots"/>
+        <string key="handover.win.selfDraw" text="{winner} wins by self-draw"/>
+        <string key="handover.win.discard" text="{winner} wins on the discard of {from}"/>
+        <string key="handover.win.discardUnknown" text="{winner} wins on a discard"/>
+        <string key="handover.win.robbedKong" text="{winner} wins by robbing the kong of {from}"/>
+        <string key="handover.win.robbedKongUnknown" text="{winner} wins by robbing a kong"/>
+        <string key="handover.drawn" text="Drawn hand"/>
+        <string key="handover.noPayments" text="No payments"/>
+        <string key="handover.summary.limit" text="Winning tile {tile}: score {score}"/>
+        <string key="handover.summary.doubles" text="Winning tile {tile}: {points} points x {multiplier} = {raw}, score {score}"/>
+        <string key="handover.summary.plain" text="Winning tile {tile}: {points} points, score {score}"/>
+        <string key="handover.seat.won" text="{name}: hand {hand}, {delta}, total {total}"/>
+        <string key="handover.seat.drawn" text="{name}: no payment, total {total}"/>
+        <string key="handover.more" text="+{n} more"/>
+        <string key="handover.next" text="Next hand"/>
+        <string key="handover.finish" text="Finish match"/>
+        <string key="matchover.wins" text="{winner} wins the match"/>
+        <string key="matchover.tied" text="Tied for first: {seats}"/>
+        <string key="matchover.row" text="{place}. {name}: {score}"/>
+        <string key="button.Win" text="Mahjong!"/>
+        <string key="button.ClaimMahjong" text="Mahjong!"/>
+        <string key="button.ClaimPung" text="Pung"/>
+        <string key="button.ClaimKong" text="Kong"/>
+        <string key="button.ClaimChow0" text="Chow"/>
+        <string key="button.ClaimChow1" text="Chow"/>
+        <string key="button.ClaimChow2" text="Chow"/>
+        <string key="button.Pass" text="Pass"/>
+        <string key="button.ConcealedKong0" text="Kong"/>
+        <string key="button.ConcealedKong1" text="Kong"/>
+        <string key="button.ConcealedKong2" text="Kong"/>
+        <string key="button.UpgradeKong" text="Add to pung"/>
+        <string key="button.Declare" text="Ready hand"/>
+        <string key="hint.Win" text="Your hand is complete: win the hand."/>
+        <string key="hint.ClaimMahjong" text="The tile completes your hand: take it and win."/>
+        <string key="hint.ClaimPung" text="Take the discard to make a set of three equal tiles."/>
+        <string key="hint.ClaimKong" text="Take the discard to make a set of four equal tiles; you then draw a spare tile."/>
+        <string key="hint.ClaimChow" text="Take the discard to complete a run of three in a row (only from the player before you)."/>
+        <string key="hint.Pass" text="Let the discard go."/>
+        <string key="hint.ConcealedKong" text="Set four equal tiles from your hand aside and draw a spare tile."/>
+        <string key="hint.UpgradeKong" text="Add the fourth tile to your open pung to make a kong; you draw a spare tile."/>
+        <string key="hint.Declare" text="Announce you are one tile from mahjong (needed to win), then click the tile to discard."/>
+        <string key="hints.waitCaption" text="Waiting for (unseen copies):"/>
+        <string key="hints.adviseButton" text="Hint"/>
+        <string key="hints.advice.discard" text="Discard {tile}."/>
+        <string key="hints.advice.discardCalling" text="Discard {tile} and declare the ready hand."/>
+        <string key="hints.advice.win" text="Your hand is complete: declare mahjong."/>
+        <string key="hints.advice.concealedKong" text="Make a kong of {tile}."/>
+        <string key="hints.advice.upgradeKong" text="Add {tile} to your pung to make a kong."/>
+        <string key="hints.advice.claimMahjong" text="Take the discard: it completes your hand."/>
+        <string key="hints.advice.claimPung" text="Take the discard to make a pung of {tile}."/>
+        <string key="hints.advice.claimKong" text="Take the discard to make a kong of {tile}."/>
+        <string key="hints.advice.claimChow" text="Take the discard to make the chow {first}, {second}, {third}."/>
+        <string key="hints.advice.pass" text="Let the discard go."/>
+        <string key="cover.text" text="Pass the screen to {handoffSeat}"/>
+        <string key="cover.show" text="Show"/>
+        <string key="hud.round" text="Round: {round}, hand {hand} of {handsTotal}"/>
+        <string key="hud.wall" text="Wall: {wall}"/>
+        <string key="hud.turn" text="Turn: {turn}"/>
+        <string key="hud.handOver" text="Hand over"/>
+        <string key="hud.matchOver" text="Match over"/>
+        <string key="hud.newGame" text="New game"/>
+        <string key="matchover.newGame" text="New game"/>
+        <string key="setup.title" text="New game: who plays?"/>
+        <string key="setup.language" text="Language"/>
+        <string key="setup.hands" text="Hands"/>
+        <string key="setup.hints" text="Hints"/>
+        <string key="setup.on" text="On"/>
+        <string key="setup.off" text="Off"/>
+        <string key="setup.seat1" text="Seat 1"/>
+        <string key="setup.seat2" text="Seat 2"/>
+        <string key="setup.seat3" text="Seat 3"/>
+        <string key="setup.seat4" text="Seat 4"/>
+        <string key="setup.person" text="Person"/>
+        <string key="setup.computer" text="Computer"/>
+        <string key="setup.start" text="Start"/>
+        <string key="move.discard" text="{seat} discarded {tile}"/>
+        <string key="move.discardCalling" text="{seat} discarded {tile} and declared a ready hand"/>
+        <string key="move.chow" text="{seat} claimed {tile} for a chow"/>
+        <string key="move.pung" text="{seat} claimed {tile} for a pung"/>
+        <string key="move.kong" text="{seat} claimed {tile} for a kong"/>
+        <string key="move.concealedKong" text="{seat} declared a concealed kong"/>
+        <string key="move.upgradeKong" text="{seat} added {tile} to a pung to make a kong"/>
+    </language>
+    <language id="ru">
+        <string key="lang.en" text="English"/>
+        <string key="lang.ru" text="Русский"/>
+        <string key="wind.East" text="Восток"/>
+        <string key="wind.South" text="Юг"/>
+        <string key="wind.West" text="Запад"/>
+        <string key="wind.North" text="Север"/>
+        <string key="suit.Dots" text="Круги"/>
+        <string key="suit.Bamboo" text="Бамбук"/>
+        <string key="suit.Characters" text="Знаки"/>
+        <string key="tile.suit" text="{suit} {rank}"/>
+        <string key="tile.wind" text="Ветер: {wind}"/>
+        <string key="tile.dragon.Red" text="Красный дракон"/>
+        <string key="tile.dragon.White" text="Белый дракон"/>
+        <string key="tile.dragon.Green" text="Зелёный дракон"/>
+        <string key="tile.flower" text="Цветок {n}"/>
+        <string key="tile.season" text="Сезон {n}"/>
+        <string key="tile.none" text="Нет кости"/>
+        <string key="seat.name" text="Место {n} ({wind})"/>
+        <string key="seat.short" text="Место {n}"/>
+        <string key="seat.you" text=" Вы"/>
+        <string key="score.of" text="{name} ({tile})"/>
+        <string key="score.bracket" text="{name} ({tile})"/>
+        <string key="score.points" text="{name}: {points}"/>
+        <string key="score.doubles" text="{name}: x{multiplier}"/>
+        <string key="score.limit" text="Лимит: {name}"/>
+        <string key="score.kind.Win" text="Победа"/>
+        <string key="score.kind.WinTileFromWall" text="Кость из стены"/>
+        <string key="score.kind.OnlyWinningTile" text="Ожидание на одну кость"/>
+        <string key="score.kind.Pung" text="Пун"/>
+        <string key="score.kind.Kong" text="Конг"/>
+        <string key="score.kind.Pair" text="Пара"/>
+        <string key="score.kind.Bonus" text="Бонусная кость"/>
+        <string key="score.kind.DragonSet" text="Драконы"/>
+        <string key="score.kind.OwnWindSet" text="Свой ветер"/>
+        <string key="score.kind.RoundWindSet" text="Ветер раунда"/>
+        <string key="score.kind.OneSuitWithHonours" text="Одна масть с почётными"/>
+        <string key="score.kind.OneSuitNoHonours" text="Одна масть без почётных"/>
+        <string key="score.kind.OwnBonus" text="Бонус своего ветра"/>
+        <string key="score.kind.RoundBonus" text="Бонус ветра раунда"/>
+        <string key="score.kind.OnlyPungs" text="Только пуны"/>
+        <string key="score.kind.NoPoints" text="Без очков"/>
+        <string key="score.kind.LooseTile" text="Запасная кость"/>
+        <string key="score.kind.LastTile" text="Последняя кость"/>
+        <string key="score.kind.RobbedKong" text="Ограбленный конг"/>
+        <string key="score.kind.LittleFourWinds" text="Малые четыре ветра"/>
+        <string key="score.kind.LittleThreeDragons" text="Малые три дракона"/>
+        <string key="score.kind.TerminalsOrHonoursEverywhere" text="Крайние или почётные везде"/>
+        <string key="score.kind.FullyConcealed" text="Полностью закрытая"/>
+        <string key="score.kind.SeveralKongs" text="Несколько конгов"/>
+        <string key="score.kind.ObviouslyLast" text="Очевидно последняя кость"/>
+        <string key="score.kind.CallingFirstHand" text="Заявка с первого хода"/>
+        <string key="score.kind.ConcealedPungsOneSuit" text="Тайные пуны одной масти"/>
+        <string key="score.kind.HonoursOnly" text="Только почётные"/>
+        <string key="score.kind.TerminalsOnly" text="Только крайние"/>
+        <string key="score.kind.AllGreen" text="Всё зелёное"/>
+        <string key="score.kind.SevenPairsHonours" text="Семь пар почётных"/>
+        <string key="score.kind.SevenPairsOneSuit" text="Семь пар одной масти"/>
+        <string key="score.kind.BigThreeDragons" text="Большие три дракона"/>
+        <string key="score.kind.BigFourWinds" text="Большие четыре ветра"/>
+        <string key="score.kind.FourKongs" text="Четыре конга"/>
+        <string key="score.kind.ThirteenOrphans" text="Тринадцать сирот"/>
+        <string key="score.kind.LastTileOneDot" text="Последняя кость, 1 круг"/>
+        <string key="score.kind.LooseTileFiveDots" text="Запасная кость, 5 кругов"/>
+        <string key="handover.win.selfDraw" text="{winner} побеждает, взяв кость из стены"/>
+        <string key="handover.win.discard" text="{winner} побеждает на сбросе: {from}"/>
+        <string key="handover.win.discardUnknown" text="{winner} побеждает на сброшенной кости"/>
+        <string key="handover.win.robbedKong" text="{winner} побеждает, забрав конг: {from}"/>
+        <string key="handover.win.robbedKongUnknown" text="{winner} побеждает, забрав конг"/>
+        <string key="handover.drawn" text="Ничья"/>
+        <string key="handover.noPayments" text="Без выплат"/>
+        <string key="handover.summary.limit" text="Выигрышная кость {tile}: счёт {score}"/>
+        <string key="handover.summary.doubles" text="Выигрышная кость {tile}: {points} очк. x {multiplier} = {raw}, счёт {score}"/>
+        <string key="handover.summary.plain" text="Выигрышная кость {tile}: {points} очк., счёт {score}"/>
+        <string key="handover.seat.won" text="{name}: рука {hand}, {delta}, итого {total}"/>
+        <string key="handover.seat.drawn" text="{name}: без выплат, итого {total}"/>
+        <string key="handover.more" text="ещё +{n}"/>
+        <string key="handover.next" text="Следующая раздача"/>
+        <string key="handover.finish" text="Закончить матч"/>
+        <string key="matchover.wins" text="{winner} выигрывает матч"/>
+        <string key="matchover.tied" text="Делят первое место: {seats}"/>
+        <string key="matchover.row" text="{place}. {name}: {score}"/>
+        <string key="button.Win" text="Маджонг!"/>
+        <string key="button.ClaimMahjong" text="Маджонг!"/>
+        <string key="button.ClaimPung" text="Пун"/>
+        <string key="button.ClaimKong" text="Конг"/>
+        <string key="button.ClaimChow0" text="Чи"/>
+        <string key="button.ClaimChow1" text="Чи"/>
+        <string key="button.ClaimChow2" text="Чи"/>
+        <string key="button.Pass" text="Пас"/>
+        <string key="button.ConcealedKong0" text="Конг"/>
+        <string key="button.ConcealedKong1" text="Конг"/>
+        <string key="button.ConcealedKong2" text="Конг"/>
+        <string key="button.UpgradeKong" text="Добавить"/>
+        <string key="button.Declare" text="Заявка"/>
+        <string key="hint.Win" text="Рука собрана: объявите победу."/>
+        <string key="hint.ClaimMahjong" text="Эта кость завершает руку: возьмите её и выиграйте."/>
+        <string key="hint.ClaimPung" text="Возьмите сброшенную кость и составьте набор из трёх одинаковых."/>
+        <string key="hint.ClaimKong" text="Возьмите сброшенную кость и составьте набор из четырёх; затем возьмёте запасную."/>
+        <string key="hint.ClaimChow" text="Возьмите сброшенную кость и соберите три подряд (только у игрока перед вами)."/>
+        <string key="hint.Pass" text="Пропустить сброшенную кость."/>
+        <string key="hint.ConcealedKong" text="Выложите четыре одинаковые кости из руки и возьмите запасную."/>
+        <string key="hint.UpgradeKong" text="Добавьте четвёртую кость к открытому пуну: получится конг; затем запасная кость."/>
+        <string key="hint.Declare" text="Объявите, что не хватает одной кости (нужно для победы), затем нажмите кость для сброса."/>
+        <string key="hints.waitCaption" text="Ждёт (не видно копий):"/>
+        <string key="hints.adviseButton" text="Подсказка"/>
+        <string key="hints.advice.discard" text="Сбросьте: {tile}."/>
+        <string key="hints.advice.discardCalling" text="Сбросьте {tile} и объявите заявку."/>
+        <string key="hints.advice.win" text="Рука собрана: объявите победу."/>
+        <string key="hints.advice.concealedKong" text="Составьте конг: {tile}."/>
+        <string key="hints.advice.upgradeKong" text="Добавьте к пуну {tile}: получится конг."/>
+        <string key="hints.advice.claimMahjong" text="Возьмите сброс: он завершает руку."/>
+        <string key="hints.advice.claimPung" text="Возьмите сброс и составьте пун: {tile}."/>
+        <string key="hints.advice.claimKong" text="Возьмите сброс и составьте конг: {tile}."/>
+        <string key="hints.advice.claimChow" text="Возьмите сброс и составьте чи: {first}, {second}, {third}."/>
+        <string key="hints.advice.pass" text="Пропустите сброс."/>
+        <string key="cover.text" text="Передайте экран: {handoffSeat}"/>
+        <string key="cover.show" text="Показать"/>
+        <string key="hud.round" text="Раунд: {round}, раздача {hand} из {handsTotal}"/>
+        <string key="hud.wall" text="Стена: {wall}"/>
+        <string key="hud.turn" text="Ход: {turn}"/>
+        <string key="hud.handOver" text="Раздача окончена"/>
+        <string key="hud.matchOver" text="Матч окончен"/>
+        <string key="hud.newGame" text="Новая игра"/>
+        <string key="matchover.newGame" text="Новая игра"/>
+        <string key="setup.title" text="Новая игра: кто играет?"/>
+        <string key="setup.language" text="Язык"/>
+        <string key="setup.hands" text="Раздачи"/>
+        <string key="setup.hints" text="Помощь"/>
+        <string key="setup.on" text="Вкл"/>
+        <string key="setup.off" text="Выкл"/>
+        <string key="setup.seat1" text="Место 1"/>
+        <string key="setup.seat2" text="Место 2"/>
+        <string key="setup.seat3" text="Место 3"/>
+        <string key="setup.seat4" text="Место 4"/>
+        <string key="setup.person" text="Человек"/>
+        <string key="setup.computer" text="Компьютер"/>
+        <string key="setup.start" text="Начать"/>
+        <string key="move.discard" text="{seat} сбросило {tile}"/>
+        <string key="move.discardCalling" text="{seat} сбросило {tile} и объявило заявку"/>
+        <string key="move.chow" text="{seat} взяло {tile} в чи"/>
+        <string key="move.pung" text="{seat} взяло {tile} в пун"/>
+        <string key="move.kong" text="{seat} взяло {tile} в конг"/>
+        <string key="move.concealedKong" text="{seat} выложило скрытый конг"/>
+        <string key="move.upgradeKong" text="{seat} добавило {tile} к пуну, получился конг"/>
+    </language>
+</UIStrings>

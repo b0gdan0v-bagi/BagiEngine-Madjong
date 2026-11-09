@@ -1,5 +1,6 @@
 #include "ComputerTestSupport.h"
 #include "MahjongTableTestSupport.h"
+#include "UiStyleTestSupport.h"
 
 #include <Events/SceneEvents.h>
 
@@ -14,11 +15,8 @@ namespace BECore::Mahjong::Tests {
 
         /// Seat 0 holds a hand that is far from waiting; as East it draws 5p.
         constexpr const char* kPlainHand = "1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Gd Rd";
-        /// The colour behind the hand of the seat whose turn it is (`kActingSeat` of the component) and how far it reaches past the hand.
-        constexpr Color kTurnMark{255, 214, 80, 90};
+        /// How far the mark (`kTurnMark` of `UiPalette.h`) behind the hand of the seat whose turn it is reaches past the hand.
         constexpr float kTurnMarkMargin = 4.0f;
-        /// The frame round the discard that waits for a claim (`kPendingDiscard` of the component).
-        constexpr Color kPendingFrame{255, 214, 80, 200};
         /// Seat 1 holds 4p 5p 5p 6p 7p: a discarded 5p gives it a pung and two chows, so it has a claim.
         constexpr const char* kSeat1HoldsPairOf5p = "4p 5p 5p 6p 7p 2s 5s 8s 2m 5m 8m Ww Nw";
         constexpr SeatSetup kPersonAtSeat1{SeatKind::Computer, SeatKind::Person, SeatKind::Computer, SeatKind::Computer};
@@ -64,7 +62,7 @@ namespace BECore::Mahjong::Tests {
         std::vector<Rect> RectsOf(const Color& color) const {
             std::vector<Rect> found;
             for (const DrawCall& call : _renderer->calls) {
-                if (call.kind == DrawKind::Rect && call.color.r == color.r && call.color.g == color.g && call.color.b == color.b && call.color.a == color.a) {
+                if (call.kind == DrawKind::Rect && SameColor(call.color, color)) {
                     found.push_back(call.rect);
                 }
             }
@@ -116,6 +114,31 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NE(slot, _table->GetLayout().slots.end());
         EXPECT_LT(frames[0].x, slot->rect.x);
         EXPECT_GT(frames[0].x + frames[0].w, slot->rect.x + slot->rect.w);
+    }
+
+    TEST_F(MahjongTableWindowTest, TheShadowOfThePendingDiscardLiesUnderItsFrameSoTheGoldIsEven) {
+        ASSERT_NO_FATAL_FAILURE(ComputerDiscardsFive(true));
+        ASSERT_EQ(Hand().GetPhase(), Phase::Claim);
+
+        const int last = static_cast<int>(Hand().Discards().size()) - 1;
+        const auto slot = std::find_if(_table->GetLayout().slots.begin(), _table->GetLayout().slots.end(), [last](const TileSlot& s) { return s.role == SlotRole::DiscardTile && s.index == last; });
+        ASSERT_NE(slot, _table->GetLayout().slots.end());
+        int shadowAt = -1;
+        int frameAt = -1;
+        for (size_t i = 0; i < _renderer->calls.size(); ++i) {
+            const DrawCall& call = _renderer->calls[i];
+            if (call.kind != DrawKind::Rect) {
+                continue;
+            }
+            if (SameColor(call.color, kPendingFrame)) {
+                frameAt = static_cast<int>(i);
+            } else if (SameColor(call.color, kTileShadow) && call.rect.x == slot->rect.x + 2.0f && call.rect.y == slot->rect.y + 2.0f) {
+                shadowAt = static_cast<int>(i);
+            }
+        }
+        ASSERT_GE(frameAt, 0);
+        ASSERT_GE(shadowAt, 0);
+        EXPECT_LT(shadowAt, frameAt) << "a shadow drawn over the frame would eat its right and bottom edge";
     }
 
     TEST_F(MahjongTableWindowTest, TheFrameIsGoneWhenNobodyMayClaimOrTheViewerHasDecided) {

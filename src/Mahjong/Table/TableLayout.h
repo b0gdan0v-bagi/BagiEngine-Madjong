@@ -33,6 +33,8 @@ namespace BECore::Mahjong {
     inline constexpr float kWallStackSize = 14.0f;
     /// The space between two melds of a seat.
     inline constexpr float kMeldGap = 8.0f;
+    /// The space between the viewer's tiles and the tile it has just drawn, which lies apart at the right end of the row.
+    inline constexpr float kDrawnTileGap = 12.0f;
 
     /// What a zone is made to hold; more is squeezed together (the tiles overlap) so that a zone never grows. The rules allow no more.
     inline constexpr int kMaxConcealedTiles = 14;
@@ -52,6 +54,9 @@ namespace BECore::Mahjong {
     /// What a slot is for.
     CORE_ENUM(SlotRole, uint8_t, HandTile, MeldTile, BonusTile, DiscardTile, WallStack)
 
+    /// A side of a tile's rectangle, as seen on the screen.
+    CORE_ENUM(Edge, uint8_t, None, Left, Right, Top, Bottom)
+
     /**
      * @brief One rectangle of the table, in view units.
      *
@@ -59,6 +64,9 @@ namespace BECore::Mahjong {
      * is: `HandTile` the index in the seat's concealed tiles, `MeldTile` the index of the meld in the seat's melds (`part` the tile in
      * the meld), `BonusTile` the index in the seat's bonus tiles, `DiscardTile` the index in the pile (`HandModel::Discards()`),
      * `WallStack` the stack counted along the ring from its first cell.
+     *
+     * `claimEdge` is set on one `MeldTile` slot of an open meld that was claimed from a discard: the claimed tile, and the side of it
+     * that faces the seat it came from (`None` on every other slot).
      */
     struct TileSlot {
         Rect rect;
@@ -66,6 +74,7 @@ namespace BECore::Mahjong {
         Seat seat = 0;
         int index = 0;
         int part = 0;
+        Edge claimEdge = Edge::None;
     };
 
     /// What is on the table, as numbers. The layout needs no tile identity, only how many of each thing there are.
@@ -76,10 +85,20 @@ namespace BECore::Mahjong {
         /// The melds as laid: a chow or pung is three tiles, a kong four (a concealed kong is laid as four tiles too).
         eastl::array<eastl::vector<Meld>, kSeatCount> melds;
         eastl::array<int, kSeatCount> bonusCount{};
+        /// The index, in the viewer's concealed tiles, of the tile that has just been drawn: it lies apart at the right end of the row
+        /// (`kDrawnTileGap`), the others close up in order. -1, an index out of range and every seat but the viewer: no tile apart.
+        int drawnIndex = -1;
         /// The seat of each entry of the pile, in the order discarded (`HandModel::Discards()`).
         eastl::vector<Seat> discardSeats;
         /// `Wall::Remaining()`: two tiles make a stack.
         int wallRemaining = 0;
+    };
+
+    /// The ground the component paints plates on, in view units: the block that holds each seat's discards (by seat, whatever the pile
+    /// holds) and the ring that holds the wall stacks. A zone holds its slots and overlaps no other zone and no hand, meld or bonus slot.
+    struct TableZones {
+        eastl::array<Rect, kSeatCount> discards{};
+        Rect wall;
     };
 
     /// The slots of the four seats and the wall: per seat the hand, the melds, the bonus tiles, then the pile, then the wall stacks.
@@ -88,6 +107,7 @@ namespace BECore::Mahjong {
         float viewWidth = kViewWidth;
         float viewHeight = kViewHeight;
         eastl::vector<TileSlot> slots;
+        TableZones zones;
     };
 
     /// Where `seat` sits for `viewer`: 0 bottom, 1 right, 2 top, 3 left (counter-clockwise from the viewer).
@@ -108,6 +128,9 @@ namespace BECore::Mahjong {
 
     /// The smallest rectangle that holds every slot of `role` of `seat` (`seat` ignored for the wall); empty when there is none.
     [[nodiscard]] Rect BoundsOf(const TableLayout& layout, SlotRole role, Seat seat);
+
+    /// The rectangle round the slots of meld `meldIndex` of `seat`; empty when there is none.
+    [[nodiscard]] Rect BoundsOfMeld(const TableLayout& layout, Seat seat, int meldIndex);
 
     /// The index (in the viewer's concealed tiles) of the hand tile at the point (x, y); the later tile where tiles overlap.
     [[nodiscard]] std::optional<int> HitHandTile(const TableLayout& layout, float x, float y);

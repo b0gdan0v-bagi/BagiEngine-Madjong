@@ -79,14 +79,17 @@ namespace BECore::Mahjong {
 
         constexpr float kDiscardBlockX = Centered(kViewWidth, kDiscardBlockW);
 
-        // The wall: a rectangle ring of cells in the middle, between the top and the bottom discard blocks.
+        // The wall: a rectangle ring of cells in the middle, centred between the top and the bottom discard blocks (so the plates that
+        // the table paints under the three keep the same gap).
         constexpr float kWallRingW = kWallStackSize * kWallRingColumns;
         constexpr float kWallRingH = kWallStackSize * kWallRingRows;
         constexpr float kWallRingX = Centered(kViewWidth, kWallRingW);
-        constexpr float kWallRingY = Centered(kViewHeight, kWallRingH);
+        constexpr float kWallRingY = (kTopDiscardY + kDiscardBlockH + kBottomDiscardY - kWallRingH) / 2.0f;
 
         // The layout above must fit the zones it names: a change to a size that breaks it fails to compile.
         static_assert(kViewerRowX + kViewerHandSpan + kViewerRowGap + kViewerMeldCapacity <= kViewWidth - kEdge);
+        // The drawn tile's gap is in the hand's strip: 14 tiles and the gap end before the melds start.
+        static_assert(kViewerRowX + kViewerHandSpan + kDrawnTileGap <= kViewerRowX + kViewerHandSpan + kViewerRowGap);
         static_assert(kSideMeldY + kSideMeldCapacity <= kViewHeight - kEdge);
         static_assert(kTopDiscardY > kTopMeldY + kOpponentMeldTileH);
         static_assert(kTopDiscardY + kDiscardBlockH < kWallRingY);
@@ -101,7 +104,7 @@ namespace BECore::Mahjong {
             SeatGeometry geometry;
             switch (position) {
                 case 0:
-                    geometry.hand = {kViewerRowX, kViewerHandY, kViewerHandTileW, kViewerHandTileH, false, kViewerHandSpan};
+                    geometry.hand = {kViewerRowX, kViewerHandY, kViewerHandTileW, kViewerHandTileH, false, kViewerHandSpan + kDrawnTileGap};
                     geometry.melds = {kViewerRowX + kViewerHandSpan + kViewerRowGap, kViewHeight - kEdge - kViewerMeldTileH, kViewerMeldTileW, kViewerMeldTileH, false, kViewerMeldCapacity};
                     geometry.bonus = {kViewerRowX, kViewerBonusY, kViewerBonusTileW, kViewerBonusTileH, false, kViewerBonusTileW * kMaxBonusTiles};
                     geometry.discardX = kDiscardBlockX;
@@ -133,14 +136,14 @@ namespace BECore::Mahjong {
             return geometry;
         }
 
-        /// The offsets along the strip's axis of `groups` of tiles (the gap `kMeldGap` between two groups), squeezed to the capacity.
-        eastl::vector<float> StripOffsets(const Strip& strip, const eastl::vector<int>& groups) {
+        /// The offsets along the strip's axis of `groups` of tiles (the gap `gap` between two groups), squeezed to the capacity.
+        eastl::vector<float> StripOffsets(const Strip& strip, const eastl::vector<int>& groups, float gap = kMeldGap) {
             const float length = strip.vertical ? strip.tileH : strip.tileW;
             eastl::vector<float> offsets;
             float position = 0.0f;
             for (size_t group = 0; group < groups.size(); ++group) {
-                if (group > 0) {
-                    position += kMeldGap;
+                if (group > 0 && !offsets.empty()) {
+                    position += gap;
                 }
                 for (int tile = 0; tile < groups[group]; ++tile) {
                     offsets.push_back(position);
@@ -187,18 +190,48 @@ namespace BECore::Mahjong {
             return fit;
         }
 
-        void AddSlot(TableLayout& layout, const ViewFit& fit, const Rect& rect, SlotRole role, Seat seat, int index, int part = 0) {
-            layout.slots.push_back(TileSlot{fit.Map(rect), role, seat, index, part});
+        void AddSlot(TableLayout& layout, const ViewFit& fit, const Rect& rect, SlotRole role, Seat seat, int index, int part = 0, Edge claimEdge = Edge::None) {
+            layout.slots.push_back(TileSlot{fit.Map(rect), role, seat, index, part, claimEdge});
         }
 
-        void AddHand(TableLayout& layout, const ViewFit& fit, const SeatGeometry& geometry, Seat seat, int count) {
-            const eastl::vector<float> offsets = StripOffsets(geometry.hand, {count});
+        /// The hand in input order; with `drawnIndex` in range that tile lies at the right end after a gap, the others closing up.
+        void AddHand(TableLayout& layout, const ViewFit& fit, const SeatGeometry& geometry, Seat seat, int count, int drawnIndex) {
+            const bool apart = drawnIndex >= 0 && drawnIndex < count;
+            const eastl::vector<float> offsets = apart ? StripOffsets(geometry.hand, {count - 1, 1}, kDrawnTileGap) : StripOffsets(geometry.hand, {count});
             for (int index = 0; index < count; ++index) {
-                AddSlot(layout, fit, StripRect(geometry.hand, offsets[index]), SlotRole::HandTile, seat, index);
+                // the tiles before the drawn one keep their place, the ones after it move up one; the drawn tile is the last offset
+                const int place = !apart || index < drawnIndex ? index : (index == drawnIndex ? count - 1 : index - 1);
+                AddSlot(layout, fit, StripRect(geometry.hand, offsets[place]), SlotRole::HandTile, seat, index);
             }
         }
 
-        void AddMelds(TableLayout& layout, const ViewFit& fit, const SeatGeometry& geometry, Seat seat, const eastl::vector<Meld>& melds) {
+        /// The edge of a meld tile that faces the seat the tile came from, for an owner at screen position `position`; `offset` is
+        /// `Offset(owner, from)`: 1 the next seat, 2 across, 3 the previous seat.
+        Edge FacingEdge(int position, int offset) noexcept {
+            // rows: the owner at the bottom, right, top, left; columns: the source is the next seat, across, the previous seat
+            constexpr Edge kEdges[kSeatCount][3] = {
+                {Edge::Right, Edge::Top, Edge::Left},
+                {Edge::Top, Edge::Left, Edge::Bottom},
+                {Edge::Left, Edge::Bottom, Edge::Right},
+                {Edge::Bottom, Edge::Right, Edge::Top},
+            };
+            return position >= 0 && position < kSeatCount && offset >= 1 && offset < kSeatCount ? kEdges[position][offset - 1] : Edge::None;
+        }
+
+        /// The part of an open meld that is the claimed tile, -1 for a meld that has none.
+        int ClaimedPart(const Meld& meld, Seat owner) noexcept {
+            if (meld.concealed || !meld.fromDiscard || !IsSeat(meld.from) || meld.from == owner) {
+                return -1;
+            }
+            if (meld.kind == MeldKind::Chow) {
+                const int part = meld.claimed.Rank() - meld.first.Rank();
+                return meld.claimed.IsSuit() && part >= 0 && part < kMeldTilesPerSet ? part : -1;
+            }
+            // a pung or kong: the claimed tile lies on the side of the seat it came from: the previous seat left, across middle, next right
+            return kSeatCount - Offset(owner, meld.from) - 1;
+        }
+
+        void AddMelds(TableLayout& layout, const ViewFit& fit, const SeatGeometry& geometry, Seat seat, int position, const eastl::vector<Meld>& melds) {
             eastl::vector<int> groups;
             for (const Meld& meld : melds) {
                 groups.push_back(MeldTileCount(meld));
@@ -206,8 +239,10 @@ namespace BECore::Mahjong {
             const eastl::vector<float> offsets = StripOffsets(geometry.melds, groups);
             size_t next = 0;
             for (size_t meld = 0; meld < groups.size(); ++meld) {
+                const int claimedPart = ClaimedPart(melds[meld], seat);
+                const Edge claimEdge = claimedPart >= 0 ? FacingEdge(position, Offset(seat, melds[meld].from)) : Edge::None;
                 for (int part = 0; part < groups[meld]; ++part) {
-                    AddSlot(layout, fit, StripRect(geometry.melds, offsets[next++]), SlotRole::MeldTile, seat, static_cast<int>(meld), part);
+                    AddSlot(layout, fit, StripRect(geometry.melds, offsets[next++]), SlotRole::MeldTile, seat, static_cast<int>(meld), part, part == claimedPart ? claimEdge : Edge::None);
                 }
             }
         }
@@ -287,11 +322,13 @@ namespace BECore::Mahjong {
         }
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             const SeatGeometry& geometry = geometries[SeatPosition(layout.viewer, seat)];
-            AddHand(layout, fit, geometry, seat, ClampCount(input.concealedCount[seat]));
-            AddMelds(layout, fit, geometry, seat, input.melds[seat]);
+            layout.zones.discards[seat] = fit.Map(Rect(geometry.discardX, geometry.discardY, kDiscardBlockW, kDiscardBlockH));
+            AddHand(layout, fit, geometry, seat, ClampCount(input.concealedCount[seat]), seat == layout.viewer ? input.drawnIndex : -1);
+            AddMelds(layout, fit, geometry, seat, SeatPosition(layout.viewer, seat), input.melds[seat]);
             AddBonus(layout, fit, geometry, seat, ClampCount(input.bonusCount[seat]));
         }
         AddDiscards(layout, fit, geometries, input);
+        layout.zones.wall = fit.Map(Rect(kWallRingX, kWallRingY, kWallRingW, kWallRingH));
         const int stacks = WallStackCount(input.wallRemaining);
         for (int stack = 0; stack < stacks; ++stack) {
             AddSlot(layout, fit, WallCell(stack), SlotRole::WallStack, 0, stack);
@@ -315,6 +352,25 @@ namespace BECore::Mahjong {
             top = any ? eastl::min(top, slot.rect.y) : slot.rect.y;
             right = any ? eastl::max(right, slotRight) : slotRight;
             bottom = any ? eastl::max(bottom, slotBottom) : slotBottom;
+            any = true;
+        }
+        return any ? Rect(left, top, right - left, bottom - top) : Rect();
+    }
+
+    Rect BoundsOfMeld(const TableLayout& layout, Seat seat, int meldIndex) {
+        bool any = false;
+        float left = 0.0f;
+        float top = 0.0f;
+        float right = 0.0f;
+        float bottom = 0.0f;
+        for (const TileSlot& slot : layout.slots) {
+            if (slot.role != SlotRole::MeldTile || slot.seat != seat || slot.index != meldIndex) {
+                continue;
+            }
+            left = any ? eastl::min(left, slot.rect.x) : slot.rect.x;
+            top = any ? eastl::min(top, slot.rect.y) : slot.rect.y;
+            right = any ? eastl::max(right, slot.rect.x + slot.rect.w) : slot.rect.x + slot.rect.w;
+            bottom = any ? eastl::max(bottom, slot.rect.y + slot.rect.h) : slot.rect.y + slot.rect.h;
             any = true;
         }
         return any ? Rect(left, top, right - left, bottom - top) : Rect();

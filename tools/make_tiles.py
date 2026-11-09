@@ -6,6 +6,12 @@ tile set and no font file, so the art is ours and anyone can change it by editin
 
     python3 tools/make_tiles.py            writes assets/tiles/tiles.png and config/TextureLibrary.xml
     python3 tools/make_tiles.py --check    exits 0 when the committed files are what the generator makes now
+    python3 tools/make_tiles.py --preview OUT.png   writes a contact sheet of every cell at four sizes (OUT outside the repository)
+
+Every face has a corner index in its top left corner (a rank glyph over a small sign of the suit, or the letter of a wind, a dragon,
+a flower or a season), so that a tile can be told at the small sizes of the table. The patterns are drawn under a view transform that
+scales them toward the bottom right corner and leaves the corner free; the check holds that the index box of every face has index pixels
+and no art. The back has no index.
 
 The check compares the decoded pixels and the text of the XML, not the bytes of the PNG, because zlib output differs between versions.
 Standard library only (zlib, struct). The geometry below (CELL_W, CELL_H, COLUMNS, the cell of an id) is the source of the numbers;
@@ -56,12 +62,29 @@ BACK_FACE: Color = (22, 120, 104)
 BACK_RIM: Color = (88, 176, 156)
 BACK_DARK: Color = (12, 80, 70)
 
+# The corner index: a glyph of the 5x7 font at INDEX_PIXEL cell units per font pixel with its top left corner at (INDEX_X, INDEX_Y), and
+# below it a sign of INDEX_SIGN_HEIGHT units. The patterns are scaled by ART_SCALE toward the bottom right corner of the face so that they
+# leave INDEX_BOX (x0, y0, x1, y1, in cell pixels) free; a bigger index reads better on a small tile but takes more of the face.
+INDEX_PIXEL = 4.0
+INDEX_X = 8.0  # a multiple of 4, so that at a quarter size (a discard) a font pixel is one whole pixel
+INDEX_Y = 8.0
+INDEX_GAP = 4.0
+INDEX_SIGN_HEIGHT = 16.0
+ART_SCALE = 0.72
+INDEX_OUTLINE = 1.0
+
 # The body of a tile: an outline, the thick side and the face on top of it (the face is the area the patterns use).
 BODY_OUTLINE = (1.0, 1.0, CELL_W - 1.0, CELL_H - 1.0, 11.0)
 BODY_SIDE = (2.0, 2.0, CELL_W - 2.0, CELL_H - 2.0, 10.0)
 BODY_FACE = (4.0, 4.0, CELL_W - 4.0, CELL_H - 10.0, 8.0)
 CENTER_X = CELL_W / 2
 CENTER_Y = (BODY_FACE[1] + BODY_FACE[3]) / 2
+INDEX_GLYPH_W = 5 * INDEX_PIXEL
+INDEX_GLYPH_H = 7 * INDEX_PIXEL
+INDEX_CENTER_X = INDEX_X + INDEX_GLYPH_W / 2
+INDEX_SIGN_TOP = INDEX_Y + INDEX_GLYPH_H + INDEX_GAP
+# the box has room for a glyph under the glyph (flowers and seasons), the art keeps out of all of it
+INDEX_BOX = (4, 4, int(INDEX_X + INDEX_GLYPH_W + 2), int(INDEX_SIGN_TOP + INDEX_GLYPH_H + 2))
 
 
 # ----- the rasterizer -----
@@ -74,6 +97,14 @@ class Canvas:
         self.width = CELL_W * self.scale
         self.height = CELL_H * self.scale
         self.pixels = bytearray(self.width * self.height * 4)
+        self.view = (1.0, 0.0, 0.0)  # scale, offset x, offset y: art coordinates -> cell coordinates
+
+    def set_view(self, scale: float, offset_x: float, offset_y: float) -> None:
+        """From now on every shape is given in art coordinates and lands at `art * scale + offset` in the cell."""
+        self.view = (scale, offset_x, offset_y)
+
+    def reset_view(self) -> None:
+        self.view = (1.0, 0.0, 0.0)
 
     def copy(self) -> "Canvas":
         other = Canvas()
@@ -81,7 +112,13 @@ class Canvas:
         return other
 
     def fill(self, bounds: tuple[float, float, float, float], inside: Callable[[float, float], bool], color: Color) -> None:
-        """Paints every pixel of the box `bounds` (x0, y0, x1, y1) whose centre is inside the shape."""
+        """Paints every pixel of the box `bounds` (x0, y0, x1, y1) whose centre is inside the shape (both in the units of the view)."""
+        view_scale, view_x, view_y = self.view
+        if self.view != (1.0, 0.0, 0.0):
+            bounds = (bounds[0] * view_scale + view_x, bounds[1] * view_scale + view_y,
+                      bounds[2] * view_scale + view_x, bounds[3] * view_scale + view_y)
+            shape = inside
+            inside = lambda x, y: shape((x - view_x) / view_scale, (y - view_y) / view_scale)
         scale = self.scale
         left = max(0, int(bounds[0] * scale) - 1)
         top = max(0, int(bounds[1] * scale) - 1)
@@ -148,8 +185,16 @@ class Canvas:
         ys = [point[1] for point in points]
         self.fill((min(xs), min(ys), max(xs), max(ys)), inside, color)
 
-    def glyph(self, character: str, x: float, y: float, pixel: float, color: Color) -> None:
-        """A character of the 5x7 font with its top left corner at (x, y); every font pixel is a square of `pixel` cell units."""
+    def glyph(self, character: str, x: float, y: float, pixel: float, color: Color, outline: Optional[Color] = None) -> None:
+        """A character of the 5x7 font with its top left corner at (x, y); every font pixel is a square of `pixel` cell units.
+        With `outline` the glyph gets a border of INDEX_OUTLINE units in that colour (for a light colour on the ivory face)."""
+        if outline is not None:
+            grow = INDEX_OUTLINE
+            for row, bits in enumerate(FONT[character]):
+                for column, bit in enumerate(bits):
+                    if bit == "#":
+                        self.rect(x + column * pixel - grow, y + row * pixel - grow,
+                                  x + (column + 1) * pixel + grow, y + (row + 1) * pixel + grow, outline)
         for row, bits in enumerate(FONT[character]):
             for column, bit in enumerate(bits):
                 if bit == "#":
@@ -218,6 +263,8 @@ FONT: dict[str, tuple[str, ...]] = {
     "S": (".####", "#....", "#....", ".###.", "....#", "....#", "####."),
     "W": ("#...#", "#...#", "#...#", "#.#.#", "#.#.#", "##.##", "#...#"),
     "N": ("#...#", "##..#", "#.#.#", "#..##", "#...#", "#...#", "#...#"),
+    "R": ("####.", "#...#", "#...#", "####.", "#.#..", "#..#.", "#...#"),
+    "G": (".###.", "#...#", "#....", "#.###", "#...#", "#...#", ".###."),
     "F": ("#####", "#....", "#....", "####.", "#....", "#....", "#...."),
     "T": ("#####", "..#..", "..#..", "..#..", "..#..", "..#..", "..#.."),
 }
@@ -435,8 +482,7 @@ def draw_back(canvas: Canvas) -> None:
 
 # ----- the atlas -----
 
-def draw_face(tile_id: int, template: Canvas) -> Canvas:
-    canvas = template.copy()
+def draw_pattern(canvas: Canvas, tile_id: int) -> None:
     if tile_id < 9:
         draw_dots(canvas, tile_id + 1)
     elif tile_id < 18:
@@ -451,6 +497,87 @@ def draw_face(tile_id: int, template: Canvas) -> Canvas:
         draw_bonus(canvas, "F", tile_id - 34 + 1, FLOWER_COLORS[tile_id - 34])
     else:
         draw_bonus(canvas, "T", tile_id - 38 + 1, SEASON_COLORS[tile_id - 38])
+
+
+# ----- the corner index -----
+
+def is_light(color: Color) -> bool:
+    return 0.299 * color[0] + 0.587 * color[1] + 0.114 * color[2] > 120
+
+
+def index_glyph(canvas: Canvas, character: str, top: float, color: Color) -> None:
+    canvas.glyph(character, INDEX_X, top, INDEX_PIXEL, color, INK if is_light(color) else None)
+
+
+def sign_ring(canvas: Canvas) -> None:
+    """The sign of the dots: a ring with an ivory hole."""
+    cy = INDEX_SIGN_TOP + INDEX_SIGN_HEIGHT / 2
+    radius = INDEX_SIGN_HEIGHT / 2
+    canvas.circle(INDEX_CENTER_X, cy, radius + INDEX_OUTLINE, INK)
+    canvas.circle(INDEX_CENTER_X, cy, radius, BLUE)
+    canvas.circle(INDEX_CENTER_X, cy, radius * 0.42, FACE)
+
+
+def sign_stick(canvas: Canvas) -> None:
+    """The sign of the bamboo: a short green stick with a red band."""
+    top = INDEX_SIGN_TOP
+    bottom = INDEX_SIGN_TOP + INDEX_SIGN_HEIGHT
+    half = 4.6
+    x = INDEX_CENTER_X
+    canvas.rrect(x - half - INDEX_OUTLINE, top - INDEX_OUTLINE, x + half + INDEX_OUTLINE, bottom + INDEX_OUTLINE, half + 1.0, INK)
+    canvas.rrect(x - half, top, x + half, bottom, half, GREEN)
+    middle = (top + bottom) / 2
+    canvas.rect(x - half, middle - 2.0, x + half, middle + 2.0, RED)
+
+
+def sign_character(canvas: Canvas) -> None:
+    """The sign of the characters: a small mark of our own (heavy stroke, vertical stroke, a dot), not a real glyph."""
+    top = INDEX_SIGN_TOP
+    bottom = INDEX_SIGN_TOP + INDEX_SIGN_HEIGHT
+    x = INDEX_CENTER_X
+    y = top + 5.0
+    canvas.line(x - 7.5, y, x + 7.5, y, 4.0, RED)
+    canvas.line(x, top, x, bottom - 1.5, 3.4, RED)
+    canvas.line(x, bottom - 1.5, x - 5.5, bottom - 4.0, 2.8, RED)
+    canvas.circle(x + 5.0, bottom - 3.4, 2.4, RED)
+
+
+def sign_frame(canvas: Canvas) -> None:
+    """The White dragon: a hollow blue frame in the place of a letter (a W would be taken for the West wind)."""
+    top = INDEX_Y + 3.0
+    canvas.rrect_frame(INDEX_X, top, INDEX_X + INDEX_GLYPH_W, top + INDEX_GLYPH_W, 2.0, 3.6, BLUE)
+
+
+def draw_index(canvas: Canvas, tile_id: int) -> None:
+    """The corner index of a face, in cell coordinates (the view is the identity)."""
+    name = notation(tile_id)
+    if tile_id < 27:
+        index_glyph(canvas, name[0], INDEX_Y, INK)
+        (sign_ring, sign_stick, sign_character)[tile_id // 9](canvas)
+    elif tile_id < 31:
+        index_glyph(canvas, name[0], INDEX_Y, WIND_COLORS[tile_id - 27])
+    elif tile_id == 32:
+        sign_frame(canvas)
+    elif tile_id < 34:
+        index_glyph(canvas, name[0], INDEX_Y, (RED, BLUE, GREEN)[tile_id - 31])
+    else:
+        color = FLOWER_COLORS[tile_id - 34] if tile_id < 38 else SEASON_COLORS[tile_id - 38]
+        index_glyph(canvas, name[1], INDEX_Y, INK)
+        index_glyph(canvas, name[0], INDEX_SIGN_TOP, color)
+
+
+def art_view() -> tuple[float, float, float]:
+    """The view of the patterns: scaled toward the bottom right corner of the face, which leaves the top left corner free."""
+    return ART_SCALE, BODY_FACE[2] * (1 - ART_SCALE), BODY_FACE[3] * (1 - ART_SCALE)
+
+
+def draw_face(tile_id: int, template: Canvas, with_index: bool = True) -> Canvas:
+    canvas = template.copy()
+    canvas.set_view(*art_view())
+    draw_pattern(canvas, tile_id)
+    canvas.reset_view()
+    if with_index:
+        draw_index(canvas, tile_id)
     return canvas
 
 
@@ -484,7 +611,7 @@ def chunk(kind: bytes, data: bytes) -> bytes:
 
 def encode_png(rows: list[bytes]) -> bytes:
     raw = b"".join(b"\x00" + row for row in rows)  # filter type 0 on every row
-    header = struct.pack(">IIBBBBB", ATLAS_W, ATLAS_H, 8, 6, 0, 0, 0)
+    header = struct.pack(">IIBBBBB", len(rows[0]) // 4, len(rows), 8, 6, 0, 0, 0)
     return PNG_SIGNATURE + chunk(b"IHDR", header) + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b"")
 
 
@@ -573,9 +700,29 @@ def problems_of(rows: list[bytes]) -> list[str]:
     return problems
 
 
+def box_of(cell: bytes) -> bytes:
+    """The pixels of INDEX_BOX in a cell of CELL_W x CELL_H RGBA pixels."""
+    x0, y0, x1, y1 = INDEX_BOX
+    return b"".join(bytes(cell[(y * CELL_W + x0) * 4 : (y * CELL_W + x1) * 4]) for y in range(y0, y1))
+
+
+def index_problems(rows: list[bytes]) -> list[str]:
+    """Every face has index pixels in INDEX_BOX, and the art alone (rendered with its view, without the index) leaves the box untouched."""
+    problems = []
+    template = body_template()
+    plain = box_of(template.downsample())
+    names = sprite_names()
+    for tile_id in range(TILE_ID_COUNT):
+        if box_of(cell_bytes(rows, tile_id)) == plain:
+            problems.append(f"{names[tile_id]} has no index")
+        if box_of(draw_face(tile_id, template, with_index=False).downsample()) != plain:
+            problems.append(f"{names[tile_id]} has art under the index")
+    return problems
+
+
 def check() -> int:
     expected_rows = assemble(render_cells())
-    failures = problems_of(expected_rows)
+    failures = problems_of(expected_rows) + index_problems(expected_rows)
     if not PNG_PATH.is_file():
         failures.append(f"{PNG_PATH} is missing")
     else:
@@ -597,7 +744,7 @@ def check() -> int:
 
 def write() -> int:
     rows = assemble(render_cells())
-    problems = problems_of(rows)
+    problems = problems_of(rows) + index_problems(rows)
     if problems:
         for problem in problems:
             print("make_tiles: " + problem, file=sys.stderr)
@@ -613,10 +760,83 @@ def write() -> int:
     return 0
 
 
+# ----- the preview -----
+
+PREVIEW_FELT: Color = (30, 90, 60)
+PREVIEW_SIZES = ((CELL_W, CELL_H), (45, 60), (30, 40), (24, 32))  # native, the viewer's hand, the viewer's meld, a discard
+PREVIEW_GAP = 8
+
+
+def box_filter(cell: bytes, width: int, height: int) -> list[bytes]:
+    """The cell at width x height pixels by averaging the covered source area, over the felt colour; rows of RGB bytes."""
+
+    def weights(count: int, size: int) -> list[list[tuple[int, float]]]:
+        step = size / count
+        result = []
+        for out in range(count):
+            low, high = out * step, (out + 1) * step
+            covered = [(i, min(high, i + 1) - max(low, i)) for i in range(int(low), min(size, int(high) + 1))]
+            result.append([(i, weight) for i, weight in covered if weight > 0])
+        return result
+
+    columns = weights(width, CELL_W)
+    lines = weights(height, CELL_H)
+    rows = []
+    for out_y in range(height):
+        row = bytearray()
+        for out_x in range(width):
+            red = green = blue = alpha = total = 0.0
+            for sy, wy in lines[out_y]:
+                for sx, wx in columns[out_x]:
+                    weight = wx * wy
+                    a = cell[(sy * CELL_W + sx) * 4 + 3] / 255
+                    red += cell[(sy * CELL_W + sx) * 4] * a * weight
+                    green += cell[(sy * CELL_W + sx) * 4 + 1] * a * weight
+                    blue += cell[(sy * CELL_W + sx) * 4 + 2] * a * weight
+                    alpha += a * weight
+                    total += weight
+            coverage = alpha / total
+            for value, felt in ((red, PREVIEW_FELT[0]), (green, PREVIEW_FELT[1]), (blue, PREVIEW_FELT[2])):
+                row.append(min(255, round(value / total + felt * (1 - coverage))))
+        rows.append(bytes(row))
+    return rows
+
+
+def preview(out: Path) -> int:
+    """A contact sheet: all cells at the four sizes of PREVIEW_SIZES, one block of COLUMNS columns per size, on the felt."""
+    out = out.expanduser().resolve()
+    if out.is_relative_to(ROOT):
+        print(f"make_tiles: the preview must not be written inside the repository ({ROOT}); it is never committed", file=sys.stderr)
+        return 1
+    rows_atlas = assemble(render_cells())
+    cells = [cell_bytes(rows_atlas, index) for index in range(CELL_COUNT)]
+    block_rows = (CELL_COUNT + COLUMNS - 1) // COLUMNS
+    sheet_width = COLUMNS * (CELL_W + PREVIEW_GAP) + PREVIEW_GAP
+    sheet: list[bytearray] = []
+    for width, height in PREVIEW_SIZES:
+        top = len(sheet)
+        sheet.extend(bytearray(PREVIEW_FELT * sheet_width) for _ in range(PREVIEW_GAP + block_rows * (height + PREVIEW_GAP)))
+        for index, cell in enumerate(cells):
+            x = PREVIEW_GAP + (index % COLUMNS) * (CELL_W + PREVIEW_GAP) + (CELL_W - width) // 2
+            y = top + PREVIEW_GAP + (index // COLUMNS) * (height + PREVIEW_GAP)
+            for dy, line in enumerate(box_filter(cell, width, height)):
+                sheet[y + dy][x * 3 : (x + width) * 3] = line
+    rgba = [bytes(b for i in range(0, len(row), 3) for b in (row[i], row[i + 1], row[i + 2], 255)) for row in sheet]
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_bytes(encode_png(rgba))
+    print(f"wrote {out} ({sheet_width}x{len(sheet)}, sizes {PREVIEW_SIZES})")
+    return 0
+
+
 def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(description="Draws the Mahjong tile atlas and writes the sprite library.")
-    parser.add_argument("--check", action="store_true", help="exit 0 when the committed files are what the generator makes now")
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument("--check", action="store_true", help="exit 0 when the committed files are what the generator makes now")
+    modes.add_argument("--preview", metavar="OUT.png",
+                        help="write a contact sheet of every cell at four sizes (OUT must be outside the repository)")
     arguments = parser.parse_args(argv)
+    if arguments.preview:
+        return preview(Path(arguments.preview))
     return check() if arguments.check else write()
 
 

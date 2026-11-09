@@ -4,24 +4,24 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        /// The sentences of the hint label, one per kind (the chows, the concealed kongs share theirs).
-        constexpr const char* kChowHint = "Take the discard to complete a run of three in a row (only from the player before you).";
-        constexpr const char* kConcealedKongHint = "Set four equal tiles from your hand aside and draw a spare tile.";
+        /// The hint keys that more than one button shares: the three chows, the three concealed kongs.
+        constexpr const char* kChowHint = "hint.ClaimChow";
+        constexpr const char* kConcealedKongHint = "hint.ConcealedKong";
 
         constexpr eastl::array<ButtonSpec, kButtonCount> kSpecs{{
-            {"Win", "MahjongWin", "", "Mahjong!", "Your hand is complete: win the hand.", 0},
-            {"Mahjong", "MahjongClaimMahjong", "", "Mahjong!", "The tile completes your hand: take it and win.", 1},
-            {"Pung", "MahjongClaimPung", "", "Pung", "Take the discard to make a set of three equal tiles.", 1},
-            {"Kong", "MahjongClaimKong", "", "Kong", "Take the discard to make a set of four equal tiles; you then draw a spare tile.", 1},
-            {"Chow0", "MahjongClaimChow", "0", "Chow", kChowHint, kMaxButtonTiles},
-            {"Chow1", "MahjongClaimChow", "1", "Chow", kChowHint, kMaxButtonTiles},
-            {"Chow2", "MahjongClaimChow", "2", "Chow", kChowHint, kMaxButtonTiles},
-            {"Pass", "MahjongPass", "", "Pass", "Let the discard go.", 0},
-            {"ConcealedKong0", "MahjongConcealedKong", "0", "Kong", kConcealedKongHint, 1},
-            {"ConcealedKong1", "MahjongConcealedKong", "1", "Kong", kConcealedKongHint, 1},
-            {"ConcealedKong2", "MahjongConcealedKong", "2", "Kong", kConcealedKongHint, 1},
-            {"UpgradeKong", "MahjongUpgradeKong", "", "Add to pung", "Add the fourth tile to your open pung to make a kong; you draw a spare tile.", 1},
-            {"Declare", "MahjongDeclare", kDeclareOn.data(), "Ready hand", "Announce you are one tile from mahjong (needed to win), then click the tile to discard.", 0},
+            {"Win", "MahjongWin", "", "button.Win", "hint.Win", 0},
+            {"Mahjong", "MahjongClaimMahjong", "", "button.ClaimMahjong", "hint.ClaimMahjong", 1},
+            {"Pung", "MahjongClaimPung", "", "button.ClaimPung", "hint.ClaimPung", 1},
+            {"Kong", "MahjongClaimKong", "", "button.ClaimKong", "hint.ClaimKong", 1},
+            {"Chow0", "MahjongClaimChow", "0", "button.ClaimChow0", kChowHint, kMaxButtonTiles},
+            {"Chow1", "MahjongClaimChow", "1", "button.ClaimChow1", kChowHint, kMaxButtonTiles},
+            {"Chow2", "MahjongClaimChow", "2", "button.ClaimChow2", kChowHint, kMaxButtonTiles},
+            {"Pass", "MahjongPass", "", "button.Pass", "hint.Pass", 0},
+            {"ConcealedKong0", "MahjongConcealedKong", "0", "button.ConcealedKong0", kConcealedKongHint, 1},
+            {"ConcealedKong1", "MahjongConcealedKong", "1", "button.ConcealedKong1", kConcealedKongHint, 1},
+            {"ConcealedKong2", "MahjongConcealedKong", "2", "button.ConcealedKong2", kConcealedKongHint, 1},
+            {"UpgradeKong", "MahjongUpgradeKong", "", "button.UpgradeKong", "hint.UpgradeKong", 1},
+            {"Declare", "MahjongDeclare", kDeclareOn.data(), "button.Declare", "hint.Declare", 0},
         }};
 
         static_assert(kChowButtons + static_cast<int>(ButtonKind::ClaimChow0) == static_cast<int>(ButtonKind::Pass));
@@ -32,7 +32,7 @@ namespace BECore::Mahjong {
             ButtonState& button = buttons[kind];
             button.shown = true;
             button.action = action;
-            button.hint = HintOf(kind);
+            button.hintKey = HintKey(kind);
             return button;
         }
 
@@ -66,8 +66,16 @@ namespace BECore::Mahjong {
         return std::nullopt;
     }
 
-    eastl::string_view HintOf(ButtonKind kind) noexcept {
-        return SpecOf(kind).hint;
+    eastl::string_view HintKey(ButtonKind kind) noexcept {
+        return SpecOf(kind).hintKey;
+    }
+
+    eastl::string WordOf(const UIStrings& strings, ButtonKind kind) {
+        return Tr(strings, SpecOf(kind).wordKey);
+    }
+
+    eastl::string HintOf(const UIStrings& strings, ButtonKind kind) {
+        return Tr(strings, SpecOf(kind).hintKey);
     }
 
     ActionButtons MakeActionButtons(const eastl::vector<HandAction>& legal, std::optional<Tile> pendingTile) {
@@ -81,7 +89,7 @@ namespace BECore::Mahjong {
                     if (action.declareCalling) {
                         // The flag is set by the toggle: no action of its own, only the hint
                         buttons[ButtonKind::Declare].shown = true;
-                        buttons[ButtonKind::Declare].hint = HintOf(ButtonKind::Declare);
+                        buttons[ButtonKind::Declare].hintKey = HintKey(ButtonKind::Declare);
                     }
                     break;
                 case ActionKind::DeclareWin:
