@@ -1,7 +1,11 @@
 #include "HandModel.h"
 
+#include <EASTL/sort.h>
 #include <Mahjong/Game/Deal.h>
 #include <Mahjong/Game/HandShape.h>
+#include <Mahjong/Game/TileSet.h>
+#include <cstdarg>
+#include <cstdio>
 
 namespace BECore::Mahjong {
 
@@ -125,6 +129,40 @@ namespace BECore::Mahjong {
             return kChowPriority;
         }
 
+        /// The longest text `Restore` gives (cut when longer).
+        constexpr size_t kRefusalTextSize = 256;
+
+        /// The failure of `Restore`: a text, built like printf.
+        std::unexpected<eastl::string> Refuse(const char* format, ...) {
+            char buffer[kRefusalTextSize];
+            va_list args;
+            va_start(args, format);
+            std::vsnprintf(buffer, sizeof(buffer), format, args);
+            va_end(args);
+            return std::unexpected<eastl::string>(eastl::string(buffer));
+        }
+
+        /// The notation of a tile as an `eastl::string` (to print with `%s`).
+        eastl::string NameOf(Tile tile) {
+            const std::string_view name = ToString(tile);
+            return eastl::string(name.data(), name.size());
+        }
+
+        /// How many tiles a seat holds in a hand of this phase, the way the model counts a hand (a meld is three tiles, a kong too):
+        /// 13, and one more for the seat that acts and for a winner.
+        int HeldTilesExpected(const HandState& state, Seat seat) {
+            switch (state.phase) {
+                case Phase::Discard:
+                case Phase::RobKong:
+                    return seat == state.current ? kDealtTiles + 1 : kDealtTiles;
+                case Phase::Claim:
+                    return kDealtTiles;
+                case Phase::Finished:
+                    return state.result.has_value() && state.result->kind == ResultKind::Win && state.result->winner == seat ? kDealtTiles + 1 : kDealtTiles;
+            }
+            return kDealtTiles;
+        }
+
     }  // namespace
 
     HandStatus HandModel::Begin(const MahjongSettings& settings, Wall wall, const SeatWinds& seatWinds, Wind roundWind) {
@@ -143,6 +181,219 @@ namespace BECore::Mahjong {
         _hands = DealHands(_wall, _east, _settings.flowers);
         StartTurn(_east);
         return {};
+    }
+
+    HandState HandModel::Capture() const {
+        HandState state;
+        state.settings = _settings;
+        state.seatWinds = _seatWinds;
+        state.roundWind = _roundWind;
+        state.east = _east;
+        state.loose = _wall.LooseTiles();
+        state.live = _wall.LiveTiles();
+        state.dead = _wall.DeadWall();
+        state.hands = _hands;
+        state.discards = _discards;
+        state.moves = _moves;
+        state.phase = _phase;
+        state.current = _current;
+        state.drawnTile = _drawnTile;
+        state.drawnLoose = _drawnLoose;
+        state.claimStatus = _claimStatus;
+        state.claims = _claims;
+        state.pendingTile = _pendingTile;
+        state.result = _result;
+        return state;
+    }
+
+    std::expected<HandModel, eastl::string> HandModel::Restore(HandState state) {
+        if (EastOf(state.seatWinds) == kNoSeat) {
+            return Refuse("the seat winds do not hold East exactly once");
+        }
+        if (state.east != EastOf(state.seatWinds)) {
+            return Refuse("east is seat %d but the seat winds make seat %d East", state.east, EastOf(state.seatWinds));
+        }
+        if (!IsSeat(state.current)) {
+            return Refuse("the current seat %d is no seat", state.current);
+        }
+
+        // Every tile of the set, once: counted over everything the state holds.
+        eastl::array<int, kTileIdCount> counts{};
+        const auto add = [&counts](Tile tile, int copies = 1) {
+            if (!tile.IsValid()) {
+                return false;
+            }
+            counts[tile.Id()] += copies;
+            return true;
+        };
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            PlayerHand& hand = state.hands[seat];
+            eastl::sort(hand.concealed.begin(), hand.concealed.end());
+            for (const Tile tile : hand.concealed) {
+                if (!tile.IsPlayable() || !add(tile)) {
+                    return Refuse("seat %d holds a concealed tile that is not a playable tile (id %d)", seat, static_cast<int>(tile.Id()));
+                }
+            }
+            for (const Tile tile : hand.bonus) {
+                if (!tile.IsBonus() || !add(tile)) {
+                    return Refuse("seat %d has a bonus tile that is not a flower or a season (id %d)", seat, static_cast<int>(tile.Id()));
+                }
+            }
+            for (const Meld& meld : hand.melds) {
+                if (meld.concealed && meld.kind != MeldKind::Kong) {
+                    return Refuse("seat %d has a concealed meld that is no kong", seat);
+                }
+                if (meld.kind == MeldKind::Chow) {
+                    if (!meld.first.IsSuit() || meld.first.Rank() > kLastChowStartRank) {
+                        return Refuse("seat %d has a chow that cannot exist (first tile id %d)", seat, static_cast<int>(meld.first.Id()));
+                    }
+                    for (const Tile member : ChowTiles(meld.first)) {
+                        add(member);
+                    }
+                } else {
+                    if (!meld.first.IsPlayable()) {
+                        return Refuse("seat %d has a pung or kong of a tile that is not playable (id %d)", seat, static_cast<int>(meld.first.Id()));
+                    }
+                    add(meld.first, meld.kind == MeldKind::Kong ? kCopiesPerTile : kTilesPerSet);
+                }
+            }
+            if (hand.melds.size() > static_cast<size_t>(kSetsInHand)) {
+                return Refuse("seat %d has %d melds, at most four fit", seat, static_cast<int>(hand.melds.size()));
+            }
+        }
+        for (const DiscardEntry& entry : state.discards) {
+            if (!entry.tile.IsPlayable() || !IsSeat(entry.seat)) {
+                return Refuse("the pile holds a discard that is not a playable tile of a seat (tile id %d, seat %d)", static_cast<int>(entry.tile.Id()), entry.seat);
+            }
+            add(entry.tile);
+        }
+        for (const eastl::vector<Tile>* part : {&state.loose, &state.live, &state.dead}) {
+            for (const Tile tile : *part) {
+                if (!add(tile)) {
+                    return Refuse("the wall holds a tile that is not a tile (id %d)", static_cast<int>(tile.Id()));
+                }
+            }
+        }
+        for (uint8_t id = 0; id < kTileIdCount; ++id) {
+            const Tile tile{id};
+            const int expected = tile.IsBonus() ? (state.settings.flowers ? 1 : 0) : kCopiesPerTile;
+            if (counts[id] > expected) {
+                return Refuse("%s is there %d times, only %d exist", NameOf(tile).c_str(), counts[id], expected);
+            }
+            if (counts[id] < expected) {
+                return Refuse("%s is missing: there are %d of %d copies", NameOf(tile).c_str(), counts[id], expected);
+            }
+        }
+        if (state.loose.size() > kLooseTiles) {
+            return Refuse("the loose reserve holds %d tiles, at most %d", static_cast<int>(state.loose.size()), static_cast<int>(kLooseTiles));
+        }
+        if (state.dead.size() != kDeadWallTiles) {
+            return Refuse("the dead wall holds %d tiles, not %d", static_cast<int>(state.dead.size()), static_cast<int>(kDeadWallTiles));
+        }
+
+        if (state.result.has_value() != (state.phase == Phase::Finished)) {
+            return Refuse("a result exists exactly when the hand is finished");
+        }
+        if (state.result.has_value()) {
+            const HandResult& result = *state.result;
+            if (result.kind == ResultKind::Win ? (!IsSeat(result.winner) || !IsSeat(result.from) || !result.winningTile.IsPlayable()) : result.winner != kNoSeat) {
+                return Refuse("the result does not fit its kind (a win needs a winner, an origin and a tile; a drawn hand has no winner)");
+            }
+        }
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            const PlayerHand& hand = state.hands[seat];
+            const int held = static_cast<int>(hand.concealed.size()) + kTilesPerSet * static_cast<int>(hand.melds.size());
+            if (held != HeldTilesExpected(state, seat)) {
+                return Refuse("seat %d holds %d tiles, a hand in this phase holds %d", seat, held, HeldTilesExpected(state, seat));
+            }
+        }
+        for (const HandMove& move : state.moves) {
+            if (!IsSeat(move.seat)) {
+                return Refuse("a move of the log has a seat that is no seat (%d)", move.seat);
+            }
+        }
+
+        if (state.drawnTile.IsValid() && (state.phase == Phase::Discard || state.phase == Phase::RobKong) && state.hands[state.current].CountConcealed(state.drawnTile) == 0) {
+            return Refuse("the drawn tile is not in the hand of seat %d", state.current);
+        }
+
+        const bool window = state.phase == Phase::Claim || state.phase == Phase::RobKong;
+        if (!window) {
+            if (state.pendingTile.IsValid()) {
+                return Refuse("a tile is pending but no window is open");
+            }
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                if (state.claimStatus[seat] != ClaimStatus::NotInWindow || state.claims[seat] != ClaimOption{}) {
+                    return Refuse("seat %d has a claim status but no window is open", seat);
+                }
+            }
+        } else {
+            if (!state.pendingTile.IsPlayable()) {
+                return Refuse("a window is open but no playable tile is pending");
+            }
+            if (state.phase == Phase::Claim) {
+                if (state.drawnTile.IsValid()) {
+                    return Refuse("a drawn tile is kept in a claim window");
+                }
+                if (state.discards.empty() || state.discards.back().tile != state.pendingTile || state.discards.back().seat != state.current) {
+                    return Refuse("the pending tile is not the last discard of seat %d", state.current);
+                }
+            } else if (FindPung(state.hands[state.current], state.pendingTile) == nullptr || state.hands[state.current].CountConcealed(state.pendingTile) == 0) {
+                return Refuse("seat %d is adding a tile to a kong but has no open pung of it and the fourth tile", state.current);
+            }
+        }
+
+        HandModel model;
+        model._settings = state.settings;
+        model._seatWinds = state.seatWinds;
+        model._roundWind = state.roundWind;
+        model._east = state.east;
+        model._wall = Wall::FromParts(eastl::move(state.loose), eastl::move(state.live), eastl::move(state.dead));
+        model._hands = eastl::move(state.hands);
+        model._discards = eastl::move(state.discards);
+        model._moves = eastl::move(state.moves);
+        model._phase = state.phase;
+        model._current = state.current;
+        model._drawnTile = state.drawnTile;
+        model._drawnLoose = state.drawnLoose;
+        model._claimStatus = state.claimStatus;
+        model._claims = state.claims;
+        model._pendingTile = state.pendingTile;
+        model._result = state.result;
+
+        if (window) {
+            bool someoneToDecide = false;
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                const ClaimStatus status = model._claimStatus[seat];
+                if (seat == model._current) {
+                    if (status != ClaimStatus::NotInWindow || model._claims[seat] != ClaimOption{}) {
+                        return Refuse("seat %d, whose tile is pending, has a claim status", seat);
+                    }
+                    continue;
+                }
+                // Who is in the window is fixed by the hands when it opens, and no hand changes meanwhile: the seats that could claim.
+                model._claimStatus[seat] = ClaimStatus::Waiting;
+                const eastl::vector<ClaimOption> options = model.LegalClaims(seat);
+                model._claimStatus[seat] = status;
+                if (status == ClaimStatus::NotInWindow) {
+                    if (!options.empty()) {
+                        return Refuse("seat %d could claim the pending tile but is not in the window", seat);
+                    }
+                    continue;
+                }
+                if (options.empty()) {
+                    return Refuse("seat %d is in the window but has no claim", seat);
+                }
+                someoneToDecide = someoneToDecide || status == ClaimStatus::Waiting;
+                if (status == ClaimStatus::Claimed ? eastl::find(options.begin(), options.end(), model._claims[seat]) == options.end() : model._claims[seat] != ClaimOption{}) {
+                    return Refuse("seat %d has a claim that does not fit its status or that it cannot make", seat);
+                }
+            }
+            if (!someoneToDecide) {
+                return Refuse("the window is open but every seat has decided");
+            }
+        }
+        return model;
     }
 
     HandStatus HandModel::CheckOwnTurn(Seat seat) const {

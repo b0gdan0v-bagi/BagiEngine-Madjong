@@ -17,6 +17,16 @@ namespace BECore::Mahjong {
         return wall;
     }
 
+    Wall Wall::FromParts(eastl::vector<Tile> loose, eastl::vector<Tile> live, eastl::vector<Tile> dead) {
+        Wall wall;
+        wall._loose = eastl::move(loose);
+        wall._live = eastl::move(live);
+        wall._dead = eastl::move(dead);
+        wall._liveBegin = 0;
+        wall._liveEnd = wall._live.size();
+        return wall;
+    }
+
     std::optional<Tile> Wall::Draw() {
         if (LiveCount() == 0) {
             return std::nullopt;

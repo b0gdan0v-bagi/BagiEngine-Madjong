@@ -80,6 +80,10 @@ namespace BECore::Mahjong {
         /// A wall from tiles in draw order (the first tile is the first loose tile). Any length; the break is not recorded.
         [[nodiscard]] static Wall FromOrder(eastl::vector<Tile> order);
 
+        /// A wall from its three parts exactly as given (for `HandModel::Restore` and the tests): `loose` front first, `live` in draw
+        /// order, `dead` in draw order. No layout is guessed from the sizes and the break is not recorded.
+        [[nodiscard]] static Wall FromParts(eastl::vector<Tile> loose, eastl::vector<Tile> live, eastl::vector<Tile> dead);
+
         /// The next tile of the live wall, or `nullopt` when it is empty. Never touches the loose tiles or the dead wall.
         [[nodiscard]] std::optional<Tile> Draw();
 

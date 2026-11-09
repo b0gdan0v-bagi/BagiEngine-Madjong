@@ -338,4 +338,45 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(eastl::equal(dead.begin(), dead.end(), wall.DeadWall().begin()));
     }
 
+    TEST(WallTest, FromPartsKeepsTheThreePartsExactlyAsGiven) {
+        // Sizes that FromOrder would never choose: one loose tile, three live tiles, two dead ones.
+        const eastl::vector<Tile> all = Sequence(6);
+        const Wall wall = Wall::FromParts({all[0]}, {all[1], all[2], all[3]}, {all[4], all[5]});
+        EXPECT_EQ(wall.LooseCount(), 1U);
+        EXPECT_EQ(wall.LiveCount(), 3U);
+        EXPECT_EQ(wall.DeadWallSize(), 2U);
+        EXPECT_EQ(wall.Remaining(), 6U);
+        EXPECT_EQ(wall.LooseTiles(), (eastl::vector<Tile>{all[0]}));
+        EXPECT_EQ(wall.LiveTiles(), (eastl::vector<Tile>{all[1], all[2], all[3]}));
+        EXPECT_EQ(wall.DeadWall(), (eastl::vector<Tile>{all[4], all[5]}));
+
+        // It draws like any wall: the live front, the loose front with a refill from the live tail.
+        Wall draw = wall;
+        EXPECT_EQ(draw.Draw(), all[1]);
+        EXPECT_EQ(draw.DrawLoose(), all[0]);
+        EXPECT_EQ(draw.LooseTiles(), (eastl::vector<Tile>{all[3]}));
+        EXPECT_EQ(draw.LiveTiles(), (eastl::vector<Tile>{all[2]}));
+    }
+
+    TEST(WallTest, FromPartsOfAWallsPartsIsTheSameWall) {
+        MahjongRng rng(kSeed);
+        Wall wall = MakeWall(rng, Settings(true), 0);
+        ASSERT_TRUE(wall.Draw().has_value());
+        ASSERT_TRUE(wall.DrawLoose().has_value());
+        Wall rebuilt = Wall::FromParts(wall.LooseTiles(), wall.LiveTiles(), wall.DeadWall());
+        EXPECT_EQ(rebuilt.LooseTiles(), wall.LooseTiles());
+        EXPECT_EQ(rebuilt.LiveTiles(), wall.LiveTiles());
+        EXPECT_EQ(rebuilt.DeadWall(), wall.DeadWall());
+        // The same draws follow.
+        while (true) {
+            const std::optional<Tile> a = wall.Draw();
+            const std::optional<Tile> b = rebuilt.Draw();
+            ASSERT_EQ(a, b);
+            if (!a.has_value()) {
+                break;
+            }
+            ASSERT_EQ(wall.DrawLoose(), rebuilt.DrawLoose());
+        }
+    }
+
 }  // namespace BECore::Mahjong::Tests
