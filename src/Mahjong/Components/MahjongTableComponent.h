@@ -28,7 +28,7 @@ namespace BECore::Mahjong {
     class TableSession;
 
     /// The pause before a computer seat plays (the component steps one computer action per period while a computer has to act).
-    inline constexpr float kComputerStepSeconds = 0.6f;
+    inline constexpr float kComputerStepSeconds = 1.0f;
 
     /**
      * @brief The table of the active `MahjongGame` on screen: draws the felt, the four hands, the open sets, the bonus tiles, the discards
