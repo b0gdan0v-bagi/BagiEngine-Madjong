@@ -382,7 +382,7 @@
           The New game button (MahjongNewGame, opens Setup) in the top right corner of the window. A Screen canvas with a floor on its scale
           (minScale 0.6: the 56 unit button is 33.6 px), so it is a touch target in any window; MahjongHudTest and MahjongTouchSizeTest check it on the
           size matrix and that it covers no tile in a window without insets. With insets it lies nearer the table, as the HUD does. Hidden by the component while
-          HandOver is shown (that dim covers only the view, the button may lie on a bar); Setup and MatchOver are Screen canvases whose dim covers the window.
+          HandOver is shown (that dim covers only the view, the button may lie on a bar). MatchOver is a Screen canvas whose dim covers the window, so the button stays there; Setup is still a SceneView canvas, whose dim covers only the view, so the button stays uncovered on a bar of a narrow window while Setup is open (until Setup becomes a Screen canvas).
         -->
         <node name="HudMenu" layer="10">
           <components>
@@ -463,8 +463,9 @@
         </node>
         <!--
           The button of the score table (MahjongNextHand, which settles the hand and deals on): an action bar at the bottom of the window,
-          a Screen canvas with a floor on its scale (minScale 0.6: the 56 unit button is 33.6 px, the 64 unit one 38.4 px), so it is a touch
-          target in any window. Shown and hidden by MahjongHudComponent together with HandOver. It is not modal: HandOver is, and takes every
+          a Screen canvas with a floor on its scale (minScale 0.6: the 64 unit button is 38.4 px), so it is a touch
+          target in any window. match is 1, not the 0.5 of the other Screen canvases: with 0.5 the bar is only 91-113 view units wide in a
+          21:9 or 32:9 window and touches the plate. Shown and hidden by MahjongHudComponent together with HandOver. It is not modal: HandOver is, and takes every
           click that the bar does not. The bar is 80 units high (surface colour) and holds the main button of the modal anatomy (primary,
           28, 64 high, 8 above and below): the one place where a main button is not last in its plate, because 64 units on the view are
           24 px in the smallest window and the plate cannot be a Screen canvas. It lies on the bar under the table in a narrow window;
