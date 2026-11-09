@@ -72,8 +72,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The error text of an event read from `json` ("" when it is accepted).
-        std::string ErrorOf(const Json& json) {
-            const std::expected<MatchLogEvent, std::string> event = EventFromJson(json);
+        eastl::string ErrorOf(const Json& json) {
+            const std::expected<MatchLogEvent, eastl::string> event = EventFromJson(json);
             return event ? "" : event.error();
         }
 
@@ -83,14 +83,14 @@ namespace BECore::Mahjong::Tests {
             return json;
         }
 
-        /// The error of the event at `index` of `events` with `key` changed to `value`; expected to name `key`.
+        /// Whether `event` with the member `key` changed to `value` is refused with an error that names `key`.
         ::testing::AssertionResult ChangedMemberIsRefused(const MatchLogEvent& event, const char* key, Json value) {
-            const std::string error = ErrorOf(With(EventToJson(event), key, std::move(value)));
+            const eastl::string error = ErrorOf(With(EventToJson(event), key, std::move(value)));
             if (error.empty()) {
                 return ::testing::AssertionFailure() << "'" << key << "' changed and still accepted";
             }
-            if (error.find(key) == std::string::npos) {
-                return ::testing::AssertionFailure() << "the error does not name '" << key << "': " << error;
+            if (error.find(key) == eastl::string::npos) {
+                return ::testing::AssertionFailure() << "the error does not name '" << key << "': " << error.c_str();
             }
             return ::testing::AssertionSuccess();
         }
@@ -114,15 +114,15 @@ namespace BECore::Mahjong::Tests {
             for (size_t index = 0; index < events.size(); ++index) {
                 const MatchLogEvent& event = events[index];
                 kinds.insert(event.kind);
-                const std::expected<MatchLogEvent, std::string> back = EventFromJson(EventToJson(event));
-                ASSERT_TRUE(back.has_value()) << "seed " << seed << " event " << index << ": " << back.error();
+                const std::expected<MatchLogEvent, eastl::string> back = EventFromJson(EventToJson(event));
+                ASSERT_TRUE(back.has_value()) << "seed " << seed << " event " << index << ": " << back.error().c_str();
                 EXPECT_EQ(*back, event) << "seed " << seed << " event " << index;
 
                 // Through the text of a line too.
                 const auto parsed = ParseJson(DumpJson(EventToJson(event)));
                 ASSERT_TRUE(parsed.has_value());
-                const std::expected<MatchLogEvent, std::string> viaText = EventFromJson(*parsed);
-                ASSERT_TRUE(viaText.has_value()) << viaText.error();
+                const std::expected<MatchLogEvent, eastl::string> viaText = EventFromJson(*parsed);
+                ASSERT_TRUE(viaText.has_value()) << viaText.error().c_str();
                 EXPECT_EQ(*viaText, event);
             }
         }
@@ -139,7 +139,7 @@ namespace BECore::Mahjong::Tests {
             const Json json = EventToJson(event);
             EXPECT_EQ(Member(json, "by"), by == SeatKind::Person ? "person" : "computer");
             const auto back = EventFromJson(json);
-            ASSERT_TRUE(back.has_value()) << back.error();
+            ASSERT_TRUE(back.has_value()) << back.error().c_str();
             EXPECT_EQ(*back, event);
         }
     }
@@ -235,7 +235,7 @@ namespace BECore::Mahjong::Tests {
         event.settlement.roundWind = Wind::South;
         event.settlement.scores = {10, 20, 30, 40};
         const auto back = EventFromJson(EventToJson(event));
-        ASSERT_TRUE(back.has_value()) << back.error();
+        ASSERT_TRUE(back.has_value()) << back.error().c_str();
         EXPECT_EQ(*back, event);
         EXPECT_EQ(back->settlement.winner, kNoSeat);
     }
@@ -248,7 +248,7 @@ namespace BECore::Mahjong::Tests {
         text.insert(firstBreak + 1, "\n   \n");
         text.insert(firstBreak, "\r");
         const auto parsed = ParseMatchLog(text);
-        ASSERT_TRUE(parsed.has_value()) << parsed.error();
+        ASSERT_TRUE(parsed.has_value()) << parsed.error().c_str();
         EXPECT_EQ(*parsed, events);
 
         Match replayed;
@@ -278,8 +278,8 @@ namespace BECore::Mahjong::Tests {
             const std::string text = valid + "\n\n" + test.line + "\n" + valid + "\n";
             const auto parsed = ParseMatchLog(text);
             ASSERT_FALSE(parsed.has_value()) << test.line;
-            EXPECT_EQ(parsed.error().rfind("line 3: ", 0), 0u) << parsed.error();
-            EXPECT_NE(parsed.error().find(test.expected), std::string::npos) << test.line << " -> " << parsed.error();
+            EXPECT_EQ(parsed.error().rfind("line 3: ", 0), 0u) << parsed.error().c_str();
+            EXPECT_NE(parsed.error().find(test.expected), eastl::string::npos) << test.line << " -> " << parsed.error().c_str();
         }
         // The first and a late line are named too.
         EXPECT_EQ(ParseMatchLog("{").error().rfind("line 1: ", 0), 0u);
@@ -299,8 +299,8 @@ namespace BECore::Mahjong::Tests {
         {
             Json settings = EventToJson(start)["settings"];
             settings["limit"] = "many";
-            const std::string error = ErrorOf(With(EventToJson(start), "settings", settings));
-            EXPECT_NE(error.find("limit"), std::string::npos) << error;
+            const eastl::string error = ErrorOf(With(EventToJson(start), "settings", settings));
+            EXPECT_NE(error.find("limit"), eastl::string::npos) << error.c_str();
         }
 
         const MatchLogEvent& hand = First(events, MatchLogKind::Hand);
@@ -312,11 +312,11 @@ namespace BECore::Mahjong::Tests {
         {
             Json json = EventToJson(hand);
             json["deal"][1]["concealed"][0] = kBadTile;
-            const std::string error = ErrorOf(json);
-            EXPECT_NE(error.find("concealed"), std::string::npos) << error;
-            EXPECT_NE(error.find(kBadTile), std::string::npos) << error;
+            const eastl::string error = ErrorOf(json);
+            EXPECT_NE(error.find("concealed"), eastl::string::npos) << error.c_str();
+            EXPECT_NE(error.find(kBadTile), eastl::string::npos) << error.c_str();
             json["deal"][1]["concealed"][0] = 5;
-            EXPECT_NE(ErrorOf(json).find("concealed"), std::string::npos);
+            EXPECT_NE(ErrorOf(json).find("concealed"), eastl::string::npos);
         }
 
         const MatchLogEvent& action = First(events, MatchLogKind::Action);
@@ -330,7 +330,7 @@ namespace BECore::Mahjong::Tests {
             Json json = EventToJson(action);
             json["action"] = ActionToJson(HandAction::MakeDiscard(T("5p")));
             json["action"]["tile"] = kBadTile;
-            EXPECT_NE(ErrorOf(json).find("action"), std::string::npos);
+            EXPECT_NE(ErrorOf(json).find("action"), eastl::string::npos);
         }
 
         const MatchLogEvent& settlement = First(events, MatchLogKind::Settlement);
@@ -348,6 +348,13 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(ChangedMemberIsRefused(end, "standings", Json::array({0, 1, 2, kBadSeat})));
         EXPECT_TRUE(ChangedMemberIsRefused(end, "standings", Json::array({0, 1})));
 
+        // A number above INT64_MAX is refused, not wrapped into a negative one.
+        constexpr uint64_t kAboveInt64 = std::numeric_limits<uint64_t>::max();
+        EXPECT_TRUE(ChangedMemberIsRefused(settlement, "scores", Json::array({kAboveInt64, 0, 0, 0})));
+        EXPECT_TRUE(ChangedMemberIsRefused(settlement, "deltas", Json::array({0, kAboveInt64, 0, 0})));
+        EXPECT_TRUE(ChangedMemberIsRefused(end, "scores", Json::array({0, 0, kAboveInt64, 0})));
+        EXPECT_TRUE(ChangedMemberIsRefused(end, "standings", Json::array({0, 1, 2, kAboveInt64})));
+
         // A member that is missing altogether is named too.
         for (const MatchLogEvent* event : {&start, &hand, &action, &settlement, &end}) {
             Json json = EventToJson(*event);
@@ -357,9 +364,9 @@ namespace BECore::Mahjong::Tests {
                 }
                 Json without = json;
                 without.erase(item.key());
-                const std::string error = ErrorOf(without);
+                const eastl::string error = ErrorOf(without);
                 EXPECT_FALSE(error.empty()) << "without '" << item.key() << "'";
-                EXPECT_NE(error.find(item.key()), std::string::npos) << error;
+                EXPECT_NE(error.find(item.key().c_str()), eastl::string::npos) << error.c_str();
             }
         }
     }
@@ -370,7 +377,7 @@ namespace BECore::Mahjong::Tests {
         Json json = EventToJson(settlement);
         json.erase("seats");
         const auto back = EventFromJson(json);
-        ASSERT_TRUE(back.has_value()) << back.error();
+        ASSERT_TRUE(back.has_value()) << back.error().c_str();
         EXPECT_EQ(*back, settlement);
     }
 

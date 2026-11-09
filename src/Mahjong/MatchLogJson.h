@@ -33,9 +33,9 @@ namespace BECore::Mahjong {
     [[nodiscard]] Json EventToJson(const MatchLogEvent& event);
 
     /// The event of one parsed line, or the error text naming the member that is wrong.
-    [[nodiscard]] std::expected<MatchLogEvent, std::string> EventFromJson(const Json& json);
+    [[nodiscard]] std::expected<MatchLogEvent, eastl::string> EventFromJson(const Json& json);
 
     /// A whole log file: lines of JSON, blank lines skipped. The error names the line number (counted from 1) and what is wrong with it.
-    [[nodiscard]] std::expected<eastl::vector<MatchLogEvent>, std::string> ParseMatchLog(std::string_view lines);
+    [[nodiscard]] std::expected<eastl::vector<MatchLogEvent>, eastl::string> ParseMatchLog(std::string_view lines);
 
 }  // namespace BECore::Mahjong
