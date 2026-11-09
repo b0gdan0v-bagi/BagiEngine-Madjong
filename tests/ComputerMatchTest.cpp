@@ -12,10 +12,9 @@
  * every hand the invariants of `MatchAudit` hold (the points add up, the count and the deal as `NextProgress` says, the settlement is
  * well formed); at the end the match is finished after exactly `handsPerMatch` counted hands. The same seed played again, this time by
  * `ComputerTable::PlayMatch`, gives the same history and the same scores; another table seed plays another match. Normal plays all
- * eight combinations, Easy and Hard the three of `kLevelSubset` (flowers off with 16 hands, flowers on with 8, flowers off with 8 and
- * counted draws): Hard is the same code as Normal for now (`kHardProfile`), so a third of the combinations is enough, and the whole
- * first test takes about 8 s in Debug. Easy plays another match than Normal on the same seed; Hard plays the
- * same one, until the owner decides what Hard is. Pure logic: no engine services.
+ * eight combinations, Easy the three of `kLevelSubset` (flowers off with 16 hands, flowers on with 8, flowers off with 8 and
+ * counted draws), so the whole first test takes about 8 s in Debug. Easy plays another match than Normal on the same seed. Pure
+ * logic: no engine services.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -96,7 +95,7 @@ namespace BECore::Mahjong::Tests {
     }  // namespace
 
     TEST(ComputerMatchTest, WholeMatchesByFourComputerPlayersNeverMakeAnIllegalMoveAndKeepEveryInvariant) {
-        for (const ComputerLevel level : {ComputerLevel::Normal, ComputerLevel::Easy, ComputerLevel::Hard}) {
+        for (const ComputerLevel level : {ComputerLevel::Normal, ComputerLevel::Easy}) {
             MatchTotals totals;
             int steps = 0;
             int matches = 0;
@@ -132,21 +131,13 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
-    TEST(ComputerMatchTest, EasyPlaysAnotherMatchThanNormalAndHardTheSameOnTheSameSeed) {
+    TEST(ComputerMatchTest, EasyPlaysAnotherMatchThanNormalOnTheSameSeed) {
         for (const int index : kLevelSubset) {
             PlayedMatch normal;
             PlayedMatch easy;
-            PlayedMatch hard;
             ASSERT_NO_FATAL_FAILURE(PlayWithTheTable(index, ComputerLevel::Normal, normal));
             ASSERT_NO_FATAL_FAILURE(PlayWithTheTable(index, ComputerLevel::Easy, easy));
-            ASSERT_NO_FATAL_FAILURE(PlayWithTheTable(index, ComputerLevel::Hard, hard));
             EXPECT_NE(easy.scores, normal.scores) << WhereOf(index);
-            // Hard is Normal's twin until the owner decides what Hard is: this case goes when Hard gets numbers of its own.
-            EXPECT_EQ(hard.scores, normal.scores) << WhereOf(index);
-            ASSERT_EQ(hard.history.size(), normal.history.size()) << WhereOf(index);
-            for (size_t hand = 0; hand < normal.history.size(); ++hand) {
-                EXPECT_EQ(hard.history[hand].deltas, normal.history[hand].deltas) << WhereOf(index) << " hand " << hand;
-            }
         }
     }
 

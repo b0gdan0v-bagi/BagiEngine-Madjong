@@ -183,11 +183,9 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(start.kind, MatchLogKind::Start);
         for (int index = 0; index < kLevelCount; ++index) {
             start.level = static_cast<ComputerLevel>(index);
-            if (LevelName(start.level) == kMatchLogRetiredLevelName) {
-                continue;  // the retired name reads back as Normal, see AVersionTwoStartThatNamesHardReadsAsNormal
-            }
             const Json json = EventToJson(start);
             EXPECT_EQ(Member(json, "level"), std::string(LevelName(start.level)));
+            EXPECT_NE(Member(json, "level"), std::string(kMatchLogRetiredLevelName)) << "the writer never says the retired name";
             const auto back = EventFromJson(json);
             ASSERT_TRUE(back.has_value()) << back.error().c_str();
             EXPECT_EQ(back->level, start.level);
@@ -221,7 +219,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(ignored->level, ComputerLevel::Normal);
     }
 
-    TEST_F(MatchLogJsonTest, AVersionTwoStartNeedsALevelOfTheThreeNames) {
+    TEST_F(MatchLogJsonTest, AVersionTwoStartNeedsALevelOfTheTwoNames) {
         const MatchLogEvent start = PlayedLog(kSeed).front();
         Json without = EventToJson(start);
         without.erase("level");
@@ -234,9 +232,10 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(ChangedMemberIsRefused(start, "level", ""));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "level", 1));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "level", nullptr));
-        // An unknown name is answered with the three names
+        // An unknown name is answered with the two names
         const eastl::string unknown = ErrorOf(With(EventToJson(start), "level", "expert"));
-        EXPECT_NE(unknown.find("easy, normal or hard"), eastl::string::npos) << unknown.c_str();
+        EXPECT_NE(unknown.find("easy or normal"), eastl::string::npos) << unknown.c_str();
+        EXPECT_EQ(unknown.find("hard"), eastl::string::npos) << unknown.c_str();
         // The versions around the known ones are refused.
         EXPECT_TRUE(ChangedMemberIsRefused(start, "version", kMatchLogFormatVersion + 1));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "version", kMatchLogOldestVersion - 1));

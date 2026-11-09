@@ -137,7 +137,7 @@ namespace BECore::Mahjong::Tests {
     }  // namespace
 
     TEST(ComputerLevelTest, TheNamesRoundTripForEveryLevel) {
-        EXPECT_EQ(kLevelCount, 3);  // a new level needs its name, its parse and a look at every table of levels
+        EXPECT_EQ(kLevelCount, 2);  // a new level needs its name, its parse and a look at every table of levels
         for (const ComputerLevel level : EnumUtils<ComputerLevel>::Values()) {
             const std::string_view name = LevelName(level);
             EXPECT_FALSE(name.empty());
@@ -145,11 +145,10 @@ namespace BECore::Mahjong::Tests {
         }
         EXPECT_EQ(LevelName(ComputerLevel::Easy), "easy");
         EXPECT_EQ(LevelName(ComputerLevel::Normal), "normal");
-        EXPECT_EQ(LevelName(ComputerLevel::Hard), "hard");
     }
 
     TEST(ComputerLevelTest, ParsingTakesTheLowercaseNamesOnly) {
-        for (const char* text : {"Easy", "EASY", "", "hard ", " hard", "medium", "Normal", "norma", "normall", "0", "easy\n"}) {
+        for (const char* text : {"Easy", "EASY", "", "hard", "Hard", "hard ", " hard", "medium", "Normal", "norma", "normall", "0", "easy\n"}) {
             EXPECT_FALSE(TryParseLevel(text).has_value()) << "'" << text << "'";
         }
     }
@@ -165,7 +164,7 @@ namespace BECore::Mahjong::Tests {
         }
         // The seat seeds do not depend on the level, so a table of a level plays exactly what four players of that level seeded
         // `SeatSeed(seed, seat)` play: every seat has the level of the table (a seat at another level would play other actions). The
-        // actions of the three levels differ.
+        // actions of the two levels differ.
         eastl::vector<eastl::vector<HandAction>> byLevel;
         for (const ComputerLevel level : EnumUtils<ComputerLevel>::Values()) {
             ComputerTable table(31, level);
@@ -184,7 +183,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(kNormalProfile.takeValueClaimsAtEqualShanten);
         EXPECT_EQ(&ProfileOf(ComputerLevel::Normal), &kNormalProfile);
         EXPECT_EQ(&ProfileOf(ComputerLevel::Easy), &kEasyProfile);
-        EXPECT_EQ(&ProfileOf(ComputerLevel::Hard), &kHardProfile);
         EXPECT_GT(kEasyProfile.skipAcceptancePercent, 0);
         EXPECT_GT(kEasyProfile.skipDeclarationPercent, 0);
         EXPECT_GT(kEasyProfile.skipClaimPercent, 0);
@@ -205,27 +203,6 @@ namespace BECore::Mahjong::Tests {
             const eastl::vector<HandAction> expected = PlayActions(byDefault, seed);
             ASSERT_FALSE(expected.empty()) << "seed " << seed;
             EXPECT_EQ(PlayActions(explicitNormal, seed), expected) << "seed " << seed;
-        }
-    }
-
-    // Hard is Normal's twin until the owner decides what Hard is (`ComputerLevel`, `kHardProfile`). These two cases are the ones that go
-    // when Hard gets numbers of its own; the slow strength test does not play Hard again for the same reason.
-    TEST(ComputerLevelTest, HardIsNormalsTwinUntilTheOwnerDecidesOtherwise) {
-        const LevelProfile& normal = ProfileOf(ComputerLevel::Normal);
-        const LevelProfile& hard = ProfileOf(ComputerLevel::Hard);
-        EXPECT_EQ(hard.skipAcceptancePercent, normal.skipAcceptancePercent);
-        EXPECT_EQ(hard.skipDeclarationPercent, normal.skipDeclarationPercent);
-        EXPECT_EQ(hard.skipClaimPercent, normal.skipClaimPercent);
-        EXPECT_EQ(hard.takeValueClaimsAtEqualShanten, normal.takeValueClaimsAtEqualShanten);
-    }
-
-    TEST(ComputerLevelTest, HardPlaysTheSameActionsAsNormalOnSixWholeHands) {
-        for (uint32_t seed = 900; seed < 903; ++seed) {
-            ComputerTable normal(seed, ComputerLevel::Normal);
-            ComputerTable hard(seed, ComputerLevel::Hard);
-            const eastl::vector<HandAction> expected = PlayActions(normal, seed);
-            ASSERT_FALSE(expected.empty()) << "seed " << seed;
-            EXPECT_EQ(PlayActions(hard, seed), expected) << "seed " << seed;
         }
     }
 
