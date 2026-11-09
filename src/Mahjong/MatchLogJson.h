@@ -10,7 +10,7 @@ namespace BECore::Mahjong {
      * this is its text form, written by `MatchLogWriter`.
      *
      * ```
-     * {"event":"start","version":1,"seed":N,"settings":{"handsPerMatch","flowers","replayDrawnHand","limit","startingScore"},"seats":"PCCC"}
+     * {"event":"start","version":2,"seed":N,"settings":{"handsPerMatch","flowers","replayDrawnHand","limit","startingScore"},"seats":"PCCC","level":"normal"}
      * {"event":"hand","number":handsPlayed,"east":s,"roundWind":"East","winds":["East",...],"deal":[{"concealed":["1p",...],"bonus":[...]} x4]}
      * {"event":"action","seat":s,"by":"person"|"computer","action":{...}}
      * {"event":"settlement","kind":"win"|"drawn","winner":s|null,"east":s,"roundWind":"..","scores":[4],"deltas":[4],"seats":[{"breakdown":{...}} x4]}
@@ -24,10 +24,17 @@ namespace BECore::Mahjong {
      * Reading back takes everything but the `breakdown`s of a settlement, which are there for the human reader (the scores and changes
      * they sum up to are in the line). Reading is checked: a missing or wrong-typed member, an unknown `event`, a bad tile, seat letter
      * or wind name is an error text that names the member; nothing aborts.
+     *
+     * Versions: 2 (`kMatchLogFormatVersion`) added `level` to `start`, the strength of the computer players (`LevelName`: `easy`,
+     * `normal`, `hard`); it is needed in version 2. Version 1 files (`kMatchLogOldestVersion`) have no `level` and are read as
+     * `Normal`, the only player there was. Any other version is refused.
      */
 
-    /// The `version` of the `start` line; a log with another version is not read.
-    inline constexpr int kMatchLogFormatVersion = 1;
+    /// The `version` of the `start` line that is written.
+    inline constexpr int kMatchLogFormatVersion = 2;
+
+    /// The oldest `version` that is still read; a log with a version outside `kMatchLogOldestVersion..kMatchLogFormatVersion` is not read.
+    inline constexpr int kMatchLogOldestVersion = 1;
 
     /// One event as the object of its line.
     [[nodiscard]] Json EventToJson(const MatchLogEvent& event);
