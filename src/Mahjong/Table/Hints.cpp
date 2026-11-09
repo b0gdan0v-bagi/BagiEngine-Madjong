@@ -96,8 +96,8 @@ namespace BECore::Mahjong {
         return Tr(strings, key);
     }
 
-    bool HintsApply(bool hintsOn, bool setupOpen, const TableSession& session) {
-        if (!hintsOn || setupOpen || session.GetPhase() != SessionPhase::Playing || session.HandoffPending()) {
+    bool HintsApply(bool hintsOn, bool tablePaused, const TableSession& session) {
+        if (!hintsOn || tablePaused || session.GetPhase() != SessionPhase::Playing || session.HandoffPending()) {
             return false;
         }
         const Seat viewer = session.Viewer();

@@ -25,7 +25,7 @@ namespace BECore::Mahjong {
      * click that arrives late), accepts only `on` and `off` and sets `hintsChoice` from the game while the panel is open and after each
      * click, so the variable keeps the truth.
      *
-     * **The waiting row.** While `HintsApply` holds (hints on, `Setup` closed, a person at the table, no cover, the hand being played) and
+     * **The waiting row.** While `HintsApply` holds (hints on, neither `Setup` nor the rules open, a person at the table, no cover, the hand being played) and
      * the viewer's hand waits, the canvas shows the caption and a cell per tile (`WaitCell0..12`: the picture `WaitTile<i>`, whose sprite
      * is `Tile_<notation>`, and the count of the unseen copies in the variable `hintCount<i>`); otherwise it shows nothing. The row is
      * worked out from `MakeTableView(hand, viewer)` only when the session version, the viewer or the rule `HintsApply` changed, and each

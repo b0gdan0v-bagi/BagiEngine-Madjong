@@ -41,15 +41,14 @@ namespace BECore::Mahjong {
             return PoolString::Intern(Format("{}{}", base, index));
         }
 
-        /// The element `name` of the canvas on the node `nodeName`; null when there is none.
-        UIElement* FindElementOf(Scene& scene, PoolString nodeName, PoolString name) {
+        /// The canvas of the node `nodeName`; null when there is none.
+        IntrusivePtr<UICanvasComponent> CanvasOf(Scene& scene, PoolString nodeName) {
             for (const auto& child : scene.GetRootNode().GetChildren()) {
                 if (child->GetName() == nodeName) {
-                    const IntrusivePtr<UICanvasComponent> canvas = child->GetComponent<UICanvasComponent>();
-                    return canvas ? canvas->GetRoot().FindByName(name) : nullptr;
+                    return child->GetComponent<UICanvasComponent>();
                 }
             }
-            return nullptr;
+            return {};
         }
 
         /// "seatName2": the variable of a seat.
@@ -270,6 +269,8 @@ namespace BECore::Mahjong {
         for (int row = 0; row < kRulesMaxItems / kRulesItemColumns; ++row) {
             UICanvasComponent::SetElementVisibleByName(scene, NumberedName("RulesItemRow", row), row * kRulesItemColumns < static_cast<int>(page.items.size()));
         }
+        const IntrusivePtr<UICanvasComponent> rulesCanvas = CanvasOf(scene, "Rules"_intern);
+        ASSERT(rulesCanvas != nullptr, "PublishRulesPage: the node Rules has no canvas");
         for (int row = 0; row < kRulesMaxTileRows; ++row) {
             const bool hasRow = row < static_cast<int>(page.tileRows.size());
             const int count = hasRow ? static_cast<int>(page.tileRows[static_cast<size_t>(row)].size()) : 0;
@@ -278,8 +279,10 @@ namespace BECore::Mahjong {
                 const PoolString name = NumberedName("RulesTile", row * kRulesMaxRowTiles + column);
                 const bool has = column < count;
                 if (has) {
-                    UIElement* element = FindElementOf(scene, "Rules"_intern, name);
-                    if (UIImage* image = element != nullptr ? element->Cast<UIImage>() : nullptr) {
+                    UIElement* element = rulesCanvas ? rulesCanvas->GetRoot().FindByName(name) : nullptr;
+                    UIImage* image = element != nullptr ? element->Cast<UIImage>() : nullptr;
+                    ASSERT(image != nullptr, "PublishRulesPage: the scene file has no UIImage RulesTile<N> for a tile of the page");
+                    if (image != nullptr) {
                         image->sprite = PoolString::Intern(SpriteName(page.tileRows[static_cast<size_t>(row)][static_cast<size_t>(column)]));
                     }
                 }
@@ -364,7 +367,6 @@ namespace BECore::Mahjong {
         if (action == kRulesAction) {
             // Under the dim of the seat choice the button cannot be pressed; an event that says otherwise is out of date
             if (!game->IsSetupOpen()) {
-                _rulesPage = 0;
                 game->OpenRules();
             }
             return;
@@ -375,7 +377,6 @@ namespace BECore::Mahjong {
                 return;
             }
             if (action == kRulesCloseAction) {
-                _rulesPage = 0;
                 game->CloseRules();
             } else {
                 _rulesPage = std::clamp(_rulesPage + (action == kRulesNextAction ? 1 : -1), 0, RulesPageCount() - 1);

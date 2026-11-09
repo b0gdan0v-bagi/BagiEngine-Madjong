@@ -45,10 +45,10 @@ namespace BECore::Mahjong {
     [[nodiscard]] eastl::string AdviceText(const UIStrings& strings, const TableView& view, const HandAction& advice);
 
     /**
-     * @brief Whether the hints are on screen now: `hintsOn` (`MahjongGame::HintsOn()`), the seat choice is closed (`setupOpen` false,
-     * `MahjongGame::IsSetupOpen()`), the session is `Playing`, it has a viewer who is a person (never a spectator), and no hot-seat
-     * cover is up. In `HandOver` and `MatchOver` there are no hints. The one place of the rule; the components ask it every frame.
+     * @brief Whether the hints are on screen now: `hintsOn` (`MahjongGame::HintsOn()`), the table is not paused behind a modal screen
+     * (`tablePaused` false, `MahjongGame::IsTablePaused()`: neither the seat choice nor the rules are open), the session is `Playing`, it has a viewer who is a person (never a spectator), and no
+     * hot-seat cover is up. In `HandOver` and `MatchOver` there are no hints. The one place of the rule; the components ask it every frame.
      */
-    [[nodiscard]] bool HintsApply(bool hintsOn, bool setupOpen, const TableSession& session);
+    [[nodiscard]] bool HintsApply(bool hintsOn, bool tablePaused, const TableSession& session);
 
 }  // namespace BECore::Mahjong

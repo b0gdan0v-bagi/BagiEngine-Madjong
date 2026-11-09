@@ -435,4 +435,26 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(OnScreen("Hints", "WaitPanel"));
     }
 
+    TEST_F(MahjongRulesTest, TheMarksAndTheHintButtonGoWithThePagesAndComeBackOnClose) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        Lay(MakeModel(SpecOf(kWaitingHand, "9p"), kSeat0));
+        Draw();
+        ASSERT_TRUE(_game->HintsOn());
+        ASSERT_TRUE(_game->GetSession().ActorIsPerson());
+        const auto button = [this] {
+            const auto canvas = Canvas("HintsButton");
+            return canvas && canvas->TakesInput() && OnScreen("HintsButton", "HintButton");
+        };
+        EXPECT_EQ(RectsOf(kDeclareMark).size(), 2u) << "the 9p and the east wind declare the calling hand";
+        EXPECT_TRUE(button()) << "the person has a choice to ask advice about";
+
+        ASSERT_NO_FATAL_FAILURE(PressRules());
+        EXPECT_TRUE(RectsOf(kDeclareMark).empty()) << "no marks under the dim of the pages";
+        EXPECT_FALSE(button()) << "no hint button under the dim of the pages";
+
+        ASSERT_NO_FATAL_FAILURE(PressBar("RulesClose"));
+        EXPECT_EQ(RectsOf(kDeclareMark).size(), 2u);
+        EXPECT_TRUE(button());
+    }
+
 }  // namespace BECore::Mahjong::Tests
