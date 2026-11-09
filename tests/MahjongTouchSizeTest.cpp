@@ -179,7 +179,7 @@ namespace BECore::Mahjong::Tests {
 
         const auto never = [](const MatrixWindow&) { return false; };
         const auto always = [](const MatrixWindow&) { return true; };
-        const auto compact = [](const MatrixWindow& window) { return NeedsCompactActions(window.outputWidth, window.outputHeight, window.pixelDensity, kEngineTouchMinimum); };
+        const auto compact = [](const MatrixWindow& window) { return IsCompactWindow(window); };
 
         // With the engine's minimum the buttons are too small in the narrow windows, and that is all that is wrong with them
         const auto strict = MatrixFailuresExceptTouchWhere(*actions, kEngineTouchMinimum, never);
@@ -190,8 +190,15 @@ namespace BECore::Mahjong::Tests {
             }
         }
         EXPECT_TRUE(MatrixFailuresExceptTouchWhere(*actions, kEngineTouchMinimum, always).empty());
-        // Dropping them exactly where the rule says compact leaves a failure for no window: that is what the rule is for
-        EXPECT_TRUE(MatrixFailuresExceptTouchWhere(*actions, kEngineTouchMinimum, compact).empty());
+        // Dropping them where the rule says compact leaves the 4:3 window of 640 x 480 only (a bar of 60 px for a row of 72 px: `Actions` stays,
+        // 28 px high), in each of its three simulations
+        const auto leftOver = MatrixFailuresExceptTouchWhere(*actions, kEngineTouchMinimum, compact);
+        EXPECT_EQ(leftOver.size(), 3u);
+        for (const BECore::Tests::UIMatrixFailure& failure : leftOver) {
+            EXPECT_EQ(std::string(failure.label.c_str()).rfind("4:3 640x480 ", 0), 0u) << failure.label.c_str();
+        }
+        // That window is the one `ActionsMayBeSmall` adds to the compact ones, and nothing else is left
+        EXPECT_TRUE(MatrixFailuresExceptTouchWhere(*actions, kEngineTouchMinimum, ActionsMayBeSmall).empty());
         // Dropping them only in windows the rule calls roomy leaves the narrow ones failing
         const auto roomy = [&](const MatrixWindow& window) { return !compact(window); };
         EXPECT_FALSE(MatrixFailuresExceptTouchWhere(*actions, kEngineTouchMinimum, roomy).empty());
@@ -409,20 +416,19 @@ namespace BECore::Mahjong::Tests {
 
         /// Whether the compact row, which keeps to the safe area and so lies above the bottom inset, can clear the table in this window: the bar
         /// under the table less the inset holds the row at its height there (`rowHeightUnits` of the laid-out `ActionRow`: a wrapped stack
-        /// starts its lines at its top, so the row is as high as it is given, not as the lines it uses).
-        bool RowCanClearTheTable(const MatrixWindow& window, float rowHeightUnits) {
+        /// starts its lines at its top, so the row is as high as it is given, not as the lines it uses) at the user scale of the layout.
+        bool RowCanClearTheTable(const MatrixWindow& window, float rowHeightUnits, float userScale = 1.0f) {
             const float bottomInset = window.HasInsets() ? window.outputHeight - (window.safeArea.y + window.safeArea.h) : 0.0f;
-            return BarUnderTable(window.outputWidth, window.outputHeight) - bottomInset >= rowHeightUnits * CompactScale(window.outputWidth, window.outputHeight);
+            return BarUnderTable(window.outputWidth, window.outputHeight) - bottomInset >= rowHeightUnits * CompactScale(window.outputWidth, window.outputHeight, userScale);
         }
 
-        /// The windows where the row cannot clear the table because the rule (`NeedsCompactActions`) still measures one line of it: the 3:2 window
-        /// of 720 x 480 with side insets (a bar of 37.5 px, an inset of 19.2 px, a line of 34.3 px) and the 4:3 windows of 640 px width (the
-        /// canvas is under 1082.93 units wide there, so the row is two lines of 72 px on a bar of 60 px or 34 px). WP 8 of mahjong-touch-size
-        /// makes the rule measure the row, so these keep `Actions` and this list goes; until then a window that is not in it must clear.
-        bool RuleStillMeasuresOneLine(const MatrixWindow& window) {
-            const bool threeToTwo = window.outputWidth == 720.0f && window.outputHeight == 480.0f && window.simulation == SafeAreaSimulation::SideInsets;
-            const bool fourToThree = window.outputWidth == 640.0f && (window.outputHeight == 480.0f || window.outputHeight == 428.0f);
-            return threeToTwo || fourToThree;
+        /// The windows where the rule shows the compact row and the safe area still lifts it onto the table: those with side insets (the only
+        /// simulation with a bottom inset, 4 % of the short side), where the bar holds the row but not the row above the inset. The rule takes the
+        /// bar without the inset (the same for a window with insets and without), and an engine change would fix it (the file's comment has it).
+        /// The matrix has the 3:2 window of 720 x 480 (a bar of 37.5 px, an inset of 19.2 px, a line of 34.3 px) and the 1:1 windows of 480 and 720
+        /// at the user scale 1.5; the row then lies on the viewer's hand by a few pixels, never by more than the inset.
+        bool SafeAreaLiftsTheRowOntoTheTable(const MatrixWindow& window) {
+            return window.simulation == SafeAreaSimulation::SideInsets;
         }
 
     }  // namespace
@@ -444,8 +450,12 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The buttons and pictures of `kinds` in the compact canvas laid out in the window lie clear of the table and inside the window.
-        void ExpectCompactRowClearOfTheTable(UICanvasComponent& compact, const MatrixWindow& window, const std::vector<ButtonKind>& kinds, const TableLayout& layout) {
-            LayOutInWindow(compact, window, CanvasScaleMode::ScaleWithScreen, 1.0f);
+        void ExpectCompactRowClearOfTheTable(UICanvasComponent& compact, const MatrixWindow& window, const std::vector<ButtonKind>& kinds, const TableLayout& layout, float userScale = 1.0f) {
+            LayOutInWindow(compact, window, CanvasScaleMode::ScaleWithScreen, userScale);
+            // The whole row, all its lines: the stack is as high as it is given, and it lies clear of the table
+            const UIElement* row = Element("ActionsCompact", "ActionRow");
+            ASSERT_NE(row, nullptr);
+            ExpectClearOfTable(ToView(row->rect, compact, window), layout, (std::string(window.label.c_str()) + " ActionRow").c_str());
             for (const ButtonKind kind : kinds) {
                 const ButtonSpec& spec = SpecOf(kind);
                 const UIElement* button = Element("ActionsCompact", spec.element);
@@ -477,34 +487,74 @@ namespace BECore::Mahjong::Tests {
 
         const TableLayout layout = MakeWorstCaseTableLayout();
         size_t checked = 0;
+        size_t checkedAtOnePointFive = 0;
         size_t sideInsets = 0;
-        size_t onTheTable = 0;
+        size_t liftedOntoTheTable = 0;
         for (const std::vector<ButtonKind>& kinds : FullestButtonSets()) {
             ASSERT_NO_FATAL_FAILURE(ShowCompactButtons(*compact, kinds));
             ForEachMatrixWindow([&](const MatrixWindow& window) {
-                if (!IsCompactWindow(window)) {
-                    return;
+                // The rule is asked at the user scale of the layout: a bigger scale makes the canvas smaller and the row higher
+                for (const float userScale : {1.0f, 1.5f}) {
+                    if (!IsCompactWindow(window, userScale)) {
+                        continue;
+                    }
+                    if (window.simulation == SafeAreaSimulation::SideInsets) {
+                        ++sideInsets;
+                    }
+                    // The row keeps to the safe area: it is checked wherever the bar less the bottom inset holds the row at its height there, and
+                    // the one window where it does not is the known deviation of the file (see `SafeAreaLiftsTheRowOntoTheTable`)
+                    LayOutInWindow(*compact, window, CanvasScaleMode::ScaleWithScreen, userScale);
+                    const UIElement* row = Element("ActionsCompact", "ActionRow");
+                    ASSERT_NE(row, nullptr);
+                    if (!RowCanClearTheTable(window, row->rect.h, userScale)) {
+                        ++liftedOntoTheTable;
+                        EXPECT_TRUE(SafeAreaLiftsTheRowOntoTheTable(window)) << window.label.c_str() << " x" << userScale << ": a new window where the row lies on the table";
+                        EXPECT_LE(row->rect.h * CompactScale(window.outputWidth, window.outputHeight, userScale), BarUnderTable(window.outputWidth, window.outputHeight))
+                            << window.label.c_str() << " x" << userScale << ": the bar holds the row, so it lies on the table by the inset at the most";
+                        continue;
+                    }
+                    ExpectCompactRowClearOfTheTable(*compact, window, kinds, layout, userScale);
+                    ++checked;
+                    if (userScale > 1.0f) {
+                        ++checkedAtOnePointFive;
+                    }
                 }
-                if (window.simulation == SafeAreaSimulation::SideInsets) {
-                    ++sideInsets;
-                }
-                // The row keeps to the safe area: it is checked wherever the bar less the bottom inset holds the row at its height there, and
-                // the windows where it does not are the known deviations of the file (see `RuleStillMeasuresOneLine`)
-                LayOutInWindow(*compact, window, CanvasScaleMode::ScaleWithScreen, 1.0f);
-                const UIElement* row = Element("ActionsCompact", "ActionRow");
-                ASSERT_NE(row, nullptr);
-                if (!RowCanClearTheTable(window, row->rect.h)) {
-                    ++onTheTable;
-                    EXPECT_TRUE(RuleStillMeasuresOneLine(window)) << window.label.c_str() << ": a new window where the row lies on the table";
-                    return;
-                }
-                ExpectCompactRowClearOfTheTable(*compact, window, kinds, layout);
-                ++checked;
             });
         }
         EXPECT_GT(checked, 0u);
+        EXPECT_GT(checkedAtOnePointFive, 0u) << "the rule says compact in some windows at the user scale 1.5 too";
         EXPECT_GT(sideInsets, 0u);
-        EXPECT_GT(onTheTable, 0u);
+        EXPECT_GT(liftedOntoTheTable, 0u);
+    }
+
+    TEST_F(MahjongCompactRowTest, TheRuleIsTheHeightOfTheRowTheFileLaysOutInEveryWindowOfTheMatrixAtBothUserScales) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        auto compact = Canvas("ActionsCompact");
+        ASSERT_TRUE(compact);
+        size_t compactWindows = 0;
+        size_t keptWindows = 0;
+        ForEachMatrixWindow([&](const MatrixWindow& window) {
+            for (const float userScale : {1.0f, 1.5f}) {
+                const UICanvasResolved resolved = LayOutInWindow(*compact, window, CanvasScaleMode::ScaleWithScreen, userScale);
+                const UIElement* row = Element("ActionsCompact", "ActionRow");
+                ASSERT_NE(row, nullptr);
+                const std::string label = std::string(window.label.c_str()) + " x" + std::to_string(userScale);
+                // The scale and the row height of the rule are those of the engine's layout of the file
+                EXPECT_NEAR(resolved.scale, CompactScale(window.outputWidth, window.outputHeight, userScale), 0.0001f) << label;
+                EXPECT_FLOAT_EQ(row->rect.h, CompactRowHeight(window.outputWidth / resolved.scale)) << label;
+                // The verdict is the comparison of the bar with that row (the bar of the table, not of the safe area)
+                const bool fitsTheBar = BarUnderTable(window.outputWidth, window.outputHeight) >= row->rect.h * resolved.scale;
+                EXPECT_EQ(IsCompactWindow(window, userScale), ActionButtonsAreUnderTheMinimum(window) && fitsTheBar) << label;
+                if (IsCompactWindow(window, userScale)) {
+                    ++compactWindows;
+                } else if (ActionButtonsAreUnderTheMinimum(window)) {
+                    ++keptWindows;
+                    EXPECT_FALSE(fitsTheBar) << label;
+                }
+            }
+        });
+        EXPECT_GT(compactWindows, 0u);
+        EXPECT_GT(keptWindows, 0u) << "640 x 480 keeps Actions";
     }
 
     TEST_F(MahjongCompactRowTest, InAWindowOutsideTheMatrixEitherActionsStaysOrTheCompactRowIsClearOfTheTable) {
@@ -514,36 +564,37 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(compact && actions);
         ASSERT_TRUE(UICanvasComponent::SetVisibleByName(*_manager->GetSceneByName("MahjongScene"_intern), "ActionsCompact"_intern, true));
         const TableLayout layout = MakeWorstCaseTableLayout();
-        const MatrixWindow windows[] = {WindowOf(731.0f, 411.0f), WindowOf(720.0f, 405.0f), WindowOf(700.0f, 420.0f), WindowOf(1000.0f, 400.0f), WindowOf(640.0f, 360.0f),
-                                        WindowOf(640.0f, 428.0f), WindowOf(640.0f, 427.0f), WindowOf(600.0f, 700.0f), WindowOf(480.0f, 700.0f),  WindowOf(1000.0f, 700.0f)};
+        // 600 x 420 and 480 x 360 have a bar of a line (41 and 45 px) but not of the row (72 px); 650 x 500 and 649 x 500 are either side of the
+        // width where the row is one line (1082.93 units at the floor scale)
+        const MatrixWindow windows[] = {WindowOf(731.0f, 411.0f), WindowOf(720.0f, 405.0f), WindowOf(700.0f, 420.0f), WindowOf(1000.0f, 400.0f), WindowOf(640.0f, 360.0f), WindowOf(640.0f, 428.0f),
+                                        WindowOf(640.0f, 427.0f), WindowOf(640.0f, 480.0f), WindowOf(600.0f, 420.0f), WindowOf(480.0f, 360.0f),  WindowOf(500.0f, 400.0f), WindowOf(650.0f, 500.0f),
+                                        WindowOf(649.0f, 500.0f), WindowOf(600.0f, 700.0f), WindowOf(480.0f, 700.0f), WindowOf(1000.0f, 700.0f)};
         MatrixWindow phone = WindowOf(2532.0f, 1170.0f);  // a landscape phone at density 3: 844 x 390 window units, a button of 30.3 units
         phone.pixelDensity = 3.0f;
 
         size_t compactWindows = 0;
         size_t actionsWindows = 0;
-        auto check = [&](const MatrixWindow& window) {
-            const std::string label = std::string(window.label.c_str()) + " " + std::to_string(static_cast<int>(window.outputWidth)) + "x" + std::to_string(static_cast<int>(window.outputHeight));
-            if (IsCompactWindow(window)) {
+        auto check = [&](const MatrixWindow& window, float userScale) {
+            const std::string label = std::string(window.label.c_str()) + " " + std::to_string(static_cast<int>(window.outputWidth)) + "x" + std::to_string(static_cast<int>(window.outputHeight)) +
+                                      " x" + std::to_string(userScale);
+            const UICanvasResolved resolved = LayOutInWindow(*compact, window, CanvasScaleMode::ScaleWithScreen, userScale);
+            const float rowPixels = Element("ActionsCompact", "ActionRow")->rect.h * resolved.scale;
+            if (IsCompactWindow(window, userScale)) {
                 ++compactWindows;
-                EXPECT_GE(BarUnderTable(window.outputWidth, window.outputHeight), kActionButtonHeight * CompactScale(window.outputWidth, window.outputHeight)) << label;
-                LayOutInWindow(*compact, window, CanvasScaleMode::ScaleWithScreen, 1.0f);
-                if (!RowCanClearTheTable(window, Element("ActionsCompact", "ActionRow")->rect.h)) {
-                    EXPECT_TRUE(RuleStillMeasuresOneLine(window)) << label << ": a new window where the row lies on the table";
-                    return;
-                }
+                EXPECT_GE(BarUnderTable(window.outputWidth, window.outputHeight), rowPixels) << label << ": the bar holds the whole row";
+                ASSERT_TRUE(RowCanClearTheTable(window, Element("ActionsCompact", "ActionRow")->rect.h, userScale)) << label;
                 for (const std::vector<ButtonKind>& kinds : FullestButtonSets()) {
                     ASSERT_NO_FATAL_FAILURE(ShowCompactButtons(*compact, kinds));
-                    ExpectCompactRowClearOfTheTable(*compact, window, kinds, layout);
+                    ExpectCompactRowClearOfTheTable(*compact, window, kinds, layout, userScale);
                 }
                 return;
             }
             // `Actions` stays: the canvas of the table is clear of every slot (its rect is in view units whatever the window) and the table
             // fills the height or the width, so nothing of the compact row is shown over the viewer's hand
             ++actionsWindows;
-            // Either the buttons are big enough or there is no bar for a line of the compact row
-            const float buttonUnits = kActionButtonHeight * TableFit(window).scale / window.pixelDensity;
-            if (buttonUnits < CoreManager::GetUIEnvironment().GetSettings().minTouchSize) {
-                EXPECT_LT(BarUnderTable(window.outputWidth, window.outputHeight), kActionButtonHeight * CompactScale(window.outputWidth, window.outputHeight)) << label;
+            // Either the buttons are big enough or the bar does not hold the row (a bar of a line is not enough: the row is as high as its width makes it)
+            if (ActionButtonsAreUnderTheMinimum(window)) {
+                EXPECT_LT(BarUnderTable(window.outputWidth, window.outputHeight), rowPixels) << label;
             }
             LayOutInWindow(*actions, window);
             for (int i = 0; i < kButtonCount; ++i) {
@@ -552,41 +603,58 @@ namespace BECore::Mahjong::Tests {
                 ExpectClearOfTable(ToView(button->rect, *actions, window), layout, label.c_str());
             }
         };
-        for (const MatrixWindow& window : windows) {
-            check(window);
+        for (const float userScale : {1.0f, 1.5f}) {
+            for (const MatrixWindow& window : windows) {
+                check(window, userScale);
+            }
+            check(phone, userScale);
         }
-        check(phone);
 
-        // The windows of the first kind in the list are told apart as the rule says: a bar of a line or no bar
+        // The windows are told apart as the rule says
         EXPECT_FALSE(IsCompactWindow(WindowOf(731.0f, 411.0f)));
         EXPECT_FALSE(IsCompactWindow(WindowOf(720.0f, 405.0f)));
         EXPECT_FALSE(IsCompactWindow(WindowOf(700.0f, 420.0f)));
         EXPECT_FALSE(IsCompactWindow(WindowOf(1000.0f, 400.0f)));
         EXPECT_FALSE(IsCompactWindow(phone));
-        EXPECT_TRUE(IsCompactWindow(WindowOf(640.0f, 428.0f)));
-        EXPECT_FALSE(IsCompactWindow(WindowOf(640.0f, 427.0f)));
+        EXPECT_FALSE(IsCompactWindow(WindowOf(640.0f, 428.0f))) << "a bar of 34 px for a row of 72";
+        EXPECT_FALSE(IsCompactWindow(WindowOf(640.0f, 480.0f)));
+        EXPECT_FALSE(IsCompactWindow(WindowOf(640.0f, 480.0f), 1.5f));
+        EXPECT_FALSE(IsCompactWindow(WindowOf(600.0f, 420.0f)));
+        EXPECT_FALSE(IsCompactWindow(WindowOf(480.0f, 360.0f)));
+        EXPECT_FALSE(IsCompactWindow(WindowOf(500.0f, 400.0f)));
+        EXPECT_TRUE(IsCompactWindow(WindowOf(650.0f, 500.0f)));
+        EXPECT_FALSE(IsCompactWindow(WindowOf(649.0f, 500.0f)));
+        EXPECT_FALSE(IsCompactWindow(WindowOf(650.0f, 500.0f), 1.5f));
+        EXPECT_TRUE(IsCompactWindow(WindowOf(480.0f, 480.0f)));
+        EXPECT_TRUE(IsCompactWindow(WindowOf(480.0f, 480.0f), 1.5f));
         EXPECT_TRUE(IsCompactWindow(WindowOf(480.0f, 700.0f)));
         EXPECT_GT(compactWindows, 0u);
         EXPECT_GT(actionsWindows, 0u);
     }
 
-    TEST_F(MahjongTouchSizeTest, EveryWindowOfTheMatrixIsCompactExactlyWhereAButtonOfActionsIsBelowTheTouchMinimum) {
-        // Every window of the matrix is one or the other: the buttons of `Actions` are 56 units of the table's fit, the rule says where that is too small.
-        // Each window of the matrix (480 px on the short side at the least) has a bar under the table that holds the row, so the size alone decides here
+    TEST_F(MahjongTouchSizeTest, EveryWindowOfTheMatrixIsCompactExactlyWhereAButtonOfActionsIsBelowTheTouchMinimumButTheOneWhoseBarHoldsNoRow) {
+        // Every window of the matrix is one or the other: the buttons of `Actions` are 56 units of the table's fit, the rule says where that is too
+        // small and the bar under the table (480 px on the short side at the least) holds the row. The one window that does not is the 4:3 window of
+        // 640 x 480, where the row is two lines on a bar of 60 px, so `Actions` stays there with buttons of 28 px
         size_t compactWindows = 0;
         size_t roomyWindows = 0;
-        const float minTouch = CoreManager::GetUIEnvironment().GetSettings().minTouchSize;
+        size_t smallWindows = 0;
         ForEachMatrixWindow([&](const MatrixWindow& window) {
-            const float buttonPixels = kActionButtonHeight * TableFit(window).scale / window.pixelDensity;
-            EXPECT_EQ(IsCompactWindow(window), buttonPixels < minTouch) << window.label.c_str();
+            const bool small = ActionButtonsAreUnderTheMinimum(window);
+            const bool fourToThree = window.outputWidth == 640.0f && window.outputHeight == 480.0f;
+            EXPECT_EQ(IsCompactWindow(window), small && !fourToThree) << window.label.c_str();
+            EXPECT_EQ(ActionsMayBeSmall(window), small) << window.label.c_str() << ": the touch size of Actions is left out exactly where its buttons are small";
             if (IsCompactWindow(window)) {
                 ++compactWindows;
+            } else if (small) {
+                ++smallWindows;
             } else {
                 ++roomyWindows;
             }
         });
         EXPECT_GT(compactWindows, 0u);
         EXPECT_GT(roomyWindows, 0u);
+        EXPECT_EQ(smallWindows, 3u) << "640 x 480 with no insets, a notch and side insets";
     }
 
 }  // namespace BECore::Mahjong::Tests

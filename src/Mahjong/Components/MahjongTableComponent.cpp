@@ -45,20 +45,10 @@ namespace BECore::Mahjong {
             }
         };
 
-        /// The canvases that hold the action buttons: `Actions` on the table, `ActionsCompact` on the bar under it where the first would
-        /// be too small to touch and the bar can hold a line of it (`NeedsCompactActions`). They hold the same elements by name, and exactly
-        /// one is shown.
-        enum class ActionsNode { Actions, Compact };
-        PoolString NodeName(ActionsNode node) {
-            if (node == ActionsNode::Actions) {
-                return "Actions"_intern;
-            }
-            return "ActionsCompact"_intern;
-        }
-
-        /// The element `name` of the canvas on the node `node`; null when the scene has none.
-        UIElement* FindElementOf(Scene& scene, ActionsNode node, PoolString name) {
-            const PoolString nodeName = NodeName(node);
+        /// The element `name` of the canvas on the node `nodeName`; null when the scene has none. The action buttons are on two nodes,
+        /// `Actions` on the table and `ActionsCompact` on the bar under it, where the first would be too small to touch and the bar holds
+        /// the row at its height there (`NeedsCompactActions`); they hold the same elements by name, and exactly one is shown.
+        UIElement* FindElementOf(Scene& scene, PoolString nodeName, PoolString name) {
             for (const auto& child : scene.GetRootNode().GetChildren()) {
                 if (child->GetName() == nodeName) {
                     const auto canvas = child->GetComponent<UICanvasComponent>();
@@ -76,7 +66,7 @@ namespace BECore::Mahjong {
                 if (!buttons[kind].shown) {
                     continue;  // a hidden button may still carry the flag of the last motion
                 }
-                const UIElement* element = FindElementOf(scene, ActionsNode::Actions, PoolString::Intern(SpecOf(kind).element));
+                const UIElement* element = FindElementOf(scene, "Actions"_intern, PoolString::Intern(SpecOf(kind).element));
                 if (element != nullptr && element->hovered) {
                     return buttons[kind].hintKey;
                 }
@@ -285,8 +275,8 @@ namespace BECore::Mahjong {
         const bool compact = NeedsCompactActions(window.outputWidth, window.outputHeight, window.pixelDensity, environment.GetSettings().minTouchSize, window.userScale);
         if (compact != _compactActions) {
             _compactActions = compact;
-            UICanvasComponent::SetVisibleByName(scene, NodeName(ActionsNode::Actions), !compact);
-            UICanvasComponent::SetVisibleByName(scene, NodeName(ActionsNode::Compact), compact);
+            UICanvasComponent::SetVisibleByName(scene, "Actions"_intern, !compact);
+            UICanvasComponent::SetVisibleByName(scene, "ActionsCompact"_intern, compact);
         }
         for (int i = 0; i < kButtonCount; ++i) {
             const ButtonKind kind = static_cast<ButtonKind>(i);
@@ -306,7 +296,7 @@ namespace BECore::Mahjong {
                 }
                 const PoolString imageName = PoolString::Intern(TileImageName(kind, t));
                 if (showNow) {
-                    for (const ActionsNode node : {ActionsNode::Actions, ActionsNode::Compact}) {
+                    for (const PoolString node : {PoolString("Actions"_intern), PoolString("ActionsCompact"_intern)}) {
                         UIElement* element = FindElementOf(scene, node, imageName);
                         if (UIImage* image = element != nullptr ? element->Cast<UIImage>() : nullptr) {
                             image->sprite = PoolString::Intern(SpriteName(now.tiles[static_cast<size_t>(t)]));

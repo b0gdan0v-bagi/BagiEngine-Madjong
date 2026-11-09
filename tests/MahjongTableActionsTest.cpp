@@ -652,7 +652,8 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableActionsTest, PassInTheCompactCanvasLeavesTheDiscard) {
-        ASSERT_NO_FATAL_FAILURE(StartInWindow(640.0f, 480.0f, kPersonAtSeat1, ClaimWindowModel()));
+        ASSERT_NO_FATAL_FAILURE(StartInWindow(650.0f, 500.0f, kPersonAtSeat1, ClaimWindowModel()));
+        ASSERT_TRUE(CanvasShown("ActionsCompact")) << "the canvas is 1083 units wide: the row is one line on a bar of 67 px";
         EXPECT_TRUE(ClickCompact("Pass"));
         EXPECT_TRUE(Hand().GetHand(kSeat1).melds.empty());
         EXPECT_NE(Hand().GetPhase(), Phase::Claim);
@@ -715,6 +716,27 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(OnScreenButtons().size(), 4u) << width << " x " << height;
             EXPECT_TRUE(OnCompactScreen().empty()) << width << " x " << height;
         }
+    }
+
+    TEST_F(MahjongTableActionsTest, AWindowWhoseBarHoldsALineButNotTheRowKeepsActions) {
+        ASSERT_NO_FATAL_FAILURE(StartInWindow(480.0f, 480.0f, kPersonAtSeat1, ClaimWindowModel()));
+        ASSERT_TRUE(CanvasShown("ActionsCompact"));
+
+        // The row is as high as the width of its canvas makes it (the stack starts its lines at its top): 72 px under 1083 units, on bars of 41 to
+        // 60 px. 640 x 480 is the window of the matrix that keeps `Actions` for it, with buttons of 28 px
+        for (const auto& [width, height] : {std::pair{600.0f, 420.0f}, std::pair{480.0f, 360.0f}, std::pair{500.0f, 400.0f}, std::pair{640.0f, 480.0f}, std::pair{649.0f, 500.0f}}) {
+            SetOutputSize(*_renderer, width, height);
+            Draw();
+            EXPECT_TRUE(CanvasShown("Actions")) << width << " x " << height;
+            EXPECT_FALSE(CanvasShown("ActionsCompact")) << width << " x " << height;
+            EXPECT_EQ(OnScreenButtons().size(), 4u) << width << " x " << height;
+            EXPECT_TRUE(OnCompactScreen().empty()) << width << " x " << height;
+        }
+        // One pixel of width more and the canvas is wide enough for one line
+        SetOutputSize(*_renderer, 650.0f, 500.0f);
+        Draw();
+        EXPECT_FALSE(CanvasShown("Actions"));
+        EXPECT_TRUE(CanvasShown("ActionsCompact"));
     }
 
     TEST_F(MahjongTableActionsTest, NoHintIsShownForTheCompactCanvas) {

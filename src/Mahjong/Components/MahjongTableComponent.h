@@ -60,7 +60,7 @@ namespace BECore::Mahjong {
      * **Playing.** While a person has to act (`TableSession::ActorIsPerson()`, no hot-seat cover) a left click on a tile of the viewer's hand
      * discards it (`PerformPerson(MakeDiscard(tile, declareNext))`); a refused action changes nothing. The other actions are the buttons of the
      * canvas `Actions` (`Table/ActionButtons.h`; `ActionsCompact` holds the same buttons by name for the windows where those would be under the
-     * touch minimum and the bar under the table holds a line of it, `NeedsCompactActions`, and exactly one of the two is shown), shown from `LegalActions` every frame (`SetElementVisibleByName`; each
+     * touch minimum and the bar under the table holds the row at its height there, `NeedsCompactActions`, and exactly one of the two is shown), shown from `LegalActions` every frame (`SetElementVisibleByName`; each
      * button says a word of the string table in the file (`{#button.<Kind>}`) and the tiles of its action are `UIImage` children whose sprite the component sets), and answered here as
      * `InputEvents::ActionEvent`s. While the pointer is over a shown button (`UIElement::hovered`, set by the canvas) its sentence (a key of the
      * string table, looked up in the current language and again when it changes) is the variable `actionHint` and the label `Hint` is shown; a touch screen has no hover and so no hint. `Declare` is a

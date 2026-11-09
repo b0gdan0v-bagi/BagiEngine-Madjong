@@ -49,15 +49,51 @@ namespace BECore::Mahjong {
         return bar > 0.0f ? bar : 0.0f;
     }
 
+    /// The numbers of the row of `ActionsCompact` (`config/SceneConfig.xml` repeats them and `MahjongTableScreenTest` compares the two): the
+    /// width of a button, the spacing of the row and the buttons of the fullest claim window (mahjong, kong, pung, three chows, pass; the
+    /// fullest turn is narrower, `TouchRegimeTest` wraps both). `kCompactSafeShare` is the part of the canvas that the safe area is at the
+    /// least (the side insets of the matrix), which a canvas variant cannot see: it sees the whole canvas.
+    inline constexpr float kCompactButtonWidth = 120.0f;
+    inline constexpr float kCompactSpacing = 8.0f;
+    /// The `Declare` switch of the fullest turn, which its caption and switch need wider than the other buttons.
+    inline constexpr float kCompactDeclareWidth = 180.0f;
+    inline constexpr int kCompactButtonCount = 7;
+    inline constexpr float kCompactSafeShare = 0.82f;
+
+    /// A height variant of the stack `ActionRow`: a canvas up to `maxWidth` units wide gives the row `height` units (the later, narrower
+    /// variant wins, as in the file). A stack has the height it is given and starts its lines at its top, so this is how far above the
+    /// bottom of the window the row reaches, whatever number of lines the buttons use. Each width is `k` buttons to a line
+    /// (`k * kCompactButtonWidth + (k - 1) * kCompactSpacing`) over `kCompactSafeShare`, rounded up to 0.01, for k = 7, 4, 3, 2; each height
+    /// is the lines the `kCompactButtonCount` buttons need when one fewer fits (2, 3, 4 and 7 lines of `kActionButtonHeight`).
+    struct CompactRowVariant {
+        float maxWidth;
+        float height;
+    };
+    inline constexpr CompactRowVariant kCompactRowVariants[] = {{1082.93f, 120.0f}, {614.64f, 184.0f}, {458.54f, 248.0f}, {302.44f, 440.0f}};
+
+    /// The height in canvas units of the `ActionRow` of `ActionsCompact` in a canvas `canvasWidthUnits` wide: `kActionButtonHeight` (one
+    /// line) above the first variant, else the height of the narrowest variant that applies.
+    [[nodiscard]] constexpr float CompactRowHeight(float canvasWidthUnits) noexcept {
+        float height = kActionButtonHeight;
+        for (const CompactRowVariant& variant : kCompactRowVariants) {
+            if (canvasWidthUnits <= variant.maxWidth) {
+                height = variant.height;
+            }
+        }
+        return height;
+    }
+
     /**
      * Whether `ActionsCompact` is the canvas of the action buttons in an output of this size: a button of `Actions` (`kActionButtonHeight`
      * view units scaled by the fit of the table, over the pixel density) would be smaller than the touch minimum
-     * (`UISettings::minTouchSize`, in window units) **and** the bar under the table can hold one line of the compact row
-     * (`kActionButtonHeight * CompactScale`). The row lies at the bottom of the window, so without such a bar (a window as high as the table:
-     * every 16:9 window below 731.4 x 411.4, a short wide one, a landscape phone) it would lie on the viewer's hand and take the click from
-     * its tiles; there `Actions` stays, in the free corner of the table, slightly under the minimum but clear of the hand. The bar is taken
-     * without the safe area's inset, so a window with insets is judged like one without. False for an output of no size or a density that is
-     * not positive, so the first frame, before anything was drawn, shows `Actions`. The component and the tests use this one rule.
+     * (`UISettings::minTouchSize`, in window units) **and** the bar under the table holds the compact row at its height there
+     * (`CompactRowHeight` of the canvas width, times `CompactScale`). The row lies at the bottom of the window and a stack has the height
+     * it is given, so it reaches that far up whatever number of lines its buttons use; without such a bar (a window as high as the table:
+     * every 16:9 window below 731.4 x 411.4, a short wide one, a landscape phone; or one where the width makes the row several lines, like
+     * 640 x 480) it would lie on the viewer's hand and take the click from its tiles, so `Actions` stays, in the free corner of the table,
+     * slightly under the minimum but clear of the hand. The bar is taken without the safe area's inset, so a window with insets is judged
+     * like one without. False for an output of no size or a density that is not positive, so the first frame, before anything was drawn,
+     * shows `Actions`. The component and the tests use this one rule.
      */
     [[nodiscard]] inline bool NeedsCompactActions(float outputWidth, float outputHeight, float pixelDensity, float minTouchSize, float userScale = 1.0f) noexcept {
         const float fit = FitScale(outputWidth, outputHeight);
@@ -67,7 +103,8 @@ namespace BECore::Mahjong {
         if (!(kActionButtonHeight * fit / pixelDensity < minTouchSize)) {
             return false;
         }
-        return BarUnderTable(outputWidth, outputHeight) >= kActionButtonHeight * CompactScale(outputWidth, outputHeight, userScale);
+        const float scale = CompactScale(outputWidth, outputHeight, userScale);
+        return BarUnderTable(outputWidth, outputHeight) >= CompactRowHeight(outputWidth / scale) * scale;
     }
 
 }  // namespace BECore::Mahjong

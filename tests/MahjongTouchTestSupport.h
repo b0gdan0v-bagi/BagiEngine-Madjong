@@ -104,9 +104,22 @@ namespace BECore::Mahjong::Tests {
         return {fit.ToViewX(output.x), fit.ToViewY(output.y), output.w / fit.scale, output.h / fit.scale};
     }
 
-    /// Whether the buttons of `Actions` are under the engine's touch minimum in this window, so `ActionsCompact` is the canvas shown.
-    inline bool IsCompactWindow(const MatrixWindow& window) {
-        return NeedsCompactActions(window.outputWidth, window.outputHeight, window.pixelDensity, CoreManager::GetUIEnvironment().GetSettings().minTouchSize);
+    /// Whether the buttons of `Actions` are under the engine's touch minimum in this window and the rule shows `ActionsCompact` (at this
+    /// user scale: the row is as high as the canvas it lies in makes it, and the user scale makes the canvas smaller).
+    inline bool IsCompactWindow(const MatrixWindow& window, float userScale = 1.0f) {
+        return NeedsCompactActions(window.outputWidth, window.outputHeight, window.pixelDensity, CoreManager::GetUIEnvironment().GetSettings().minTouchSize, userScale);
+    }
+
+    /// Whether the buttons of `Actions` are under the engine's touch minimum in this window, whatever canvas the rule shows.
+    inline bool ActionButtonsAreUnderTheMinimum(const MatrixWindow& window) {
+        return kActionButtonHeight * TableFit(window).scale / window.pixelDensity < CoreManager::GetUIEnvironment().GetSettings().minTouchSize;
+    }
+
+    /// Where a matrix test may leave the touch size of `Actions` out: the windows that show `ActionsCompact`, and the one window of the
+    /// matrix that keeps `Actions` with buttons of 28 px, the 4:3 window of 640 x 480, where the compact row is two lines high (72 px)
+    /// on a bar of 60 px and so would lie on the viewer's hand (`MahjongTouchSizeTest` holds that this is the only one).
+    inline bool ActionsMayBeSmall(const MatrixWindow& window) {
+        return IsCompactWindow(window) || (window.outputWidth == 640.0f && window.outputHeight == 480.0f);
     }
 
     /// The fullest turn (a win, a declaration, three kongs and the upgrade) and the fullest claim window (all claims, three chows,
