@@ -12,7 +12,7 @@ namespace BECore::Mahjong::Tests {
     namespace {
 
         constexpr uint32_t kSeed = 41;
-        /// A hand of four computers takes a few hundred steps; a loop fails fast.
+        /// The most hands a loop plays before it gives up (a match is 8 or 16 counted hands, a replayed draw adds some).
         constexpr int kHandLimitPerMatch = 200;
         /// The tiles on the table at the deal: East 14, the others 13.
         constexpr size_t kEastTiles = 14;
@@ -57,15 +57,6 @@ namespace BECore::Mahjong::Tests {
             }
         };
 
-        /// The kinds of the events, in order.
-        std::vector<MatchLogKind> KindsOf(const eastl::vector<MatchLogEvent>& events) {
-            std::vector<MatchLogKind> kinds;
-            for (const MatchLogEvent& event : events) {
-                kinds.push_back(event.kind);
-            }
-            return kinds;
-        }
-
         /// A match played to its end by four computers on `seed`, and its log.
         struct PlayedMatch {
             Match match;
@@ -73,13 +64,13 @@ namespace BECore::Mahjong::Tests {
             int steps = 0;
         };
 
-        std::unique_ptr<PlayedMatch> Play(uint32_t seed) {
+        PlayedMatch Play(uint32_t seed) {
             LoggedTable table;
             table.Start(kAllComputers, seed);
-            auto played = std::make_unique<PlayedMatch>();
-            played->steps = table.PlayMatch();
-            played->events = table.log.Events();
-            played->match = table.match;
+            PlayedMatch played;
+            played.steps = table.PlayMatch();
+            played.events = table.log.Events();
+            played.match = table.match;
             return played;
         }
 
@@ -96,8 +87,8 @@ namespace BECore::Mahjong::Tests {
     }  // namespace
 
     TEST(MatchLogTest, AMatchOfComputersIsLoggedInOrder) {
-        const std::unique_ptr<PlayedMatch> played = Play(kSeed);
-        const eastl::vector<MatchLogEvent>& events = played->events;
+        const PlayedMatch played = Play(kSeed);
+        const eastl::vector<MatchLogEvent>& events = played.events;
         ASSERT_GT(events.size(), 3u);
         EXPECT_EQ(events.front().kind, MatchLogKind::Start);
         EXPECT_EQ(events.back().kind, MatchLogKind::End);
@@ -133,34 +124,34 @@ namespace BECore::Mahjong::Tests {
             ++index;
         }
         EXPECT_EQ(index, events.size() - 1) << "the End is the last event, after the last Settlement";
-        EXPECT_EQ(hands, played->match.History().size());
+        EXPECT_EQ(hands, played.match.History().size());
         EXPECT_GE(hands, static_cast<size_t>(kShortMatchHands));
-        EXPECT_EQ(events.back().scores, played->match.Scores());
-        EXPECT_EQ(events.back().standings, played->match.Standings());
+        EXPECT_EQ(events.back().scores, played.match.Scores());
+        EXPECT_EQ(events.back().standings, played.match.Standings());
         EXPECT_EQ(Sum(events.back().scores), kSeatCount * kExpectedStartingScore);
     }
 
     TEST(MatchLogTest, TheActionsLoggedAreTheStepsOfTheComputers) {
-        const std::unique_ptr<PlayedMatch> played = Play(kSeed);
+        const PlayedMatch played = Play(kSeed);
         int actions = 0;
-        for (const MatchLogEvent& event : played->events) {
+        for (const MatchLogEvent& event : played.events) {
             actions += event.kind == MatchLogKind::Action ? 1 : 0;
         }
-        EXPECT_GT(played->steps, 0);
-        EXPECT_EQ(actions, played->steps);
+        EXPECT_GT(played.steps, 0);
+        EXPECT_EQ(actions, played.steps);
     }
 
     TEST(MatchLogTest, TheReplayGivesTheSameMatch) {
-        const std::unique_ptr<PlayedMatch> played = Play(kSeed);
+        const PlayedMatch played = Play(kSeed);
         Match replayed;
-        const ReplayStatus status = ReplayMatchLog(played->events, replayed);
+        const ReplayStatus status = ReplayMatchLog(played.events, replayed);
         ASSERT_TRUE(status.has_value()) << "stopped at event " << status.error().index << ": " << Name(status.error().problem);
         EXPECT_EQ(replayed.GetPhase(), MatchPhase::Finished);
-        EXPECT_EQ(replayed.Scores(), played->match.Scores());
-        ASSERT_EQ(replayed.History().size(), played->match.History().size());
+        EXPECT_EQ(replayed.Scores(), played.match.Scores());
+        ASSERT_EQ(replayed.History().size(), played.match.History().size());
         for (size_t hand = 0; hand < replayed.History().size(); ++hand) {
             const HandSettlement& got = replayed.History()[hand];
-            const HandSettlement& want = played->match.History()[hand];
+            const HandSettlement& want = played.match.History()[hand];
             EXPECT_EQ(got.kind, want.kind) << "hand " << hand;
             EXPECT_EQ(got.winner, want.winner) << "hand " << hand;
             EXPECT_EQ(got.scores, want.scores) << "hand " << hand;
@@ -169,10 +160,10 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(MatchLogTest, AChangedLogIsReportedAtTheFirstEventThatDisagrees) {
-        const std::unique_ptr<PlayedMatch> played = Play(kSeed);
+        const PlayedMatch played = Play(kSeed);
 
         // An action the hand cannot take: East has declared nothing, so no win.
-        eastl::vector<MatchLogEvent> swapped = played->events;
+        eastl::vector<MatchLogEvent> swapped = played.events;
         const size_t action = IndexOf(swapped, MatchLogKind::Action);
         ASSERT_LT(action, swapped.size());
         swapped[action].action = HandAction::MakeDeclareWin();
@@ -183,7 +174,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(status.error().problem, ReplayProblem::ActionRefused);
 
         // Another seed deals another hand: the first Hand event no longer matches.
-        eastl::vector<MatchLogEvent> reseeded = played->events;
+        eastl::vector<MatchLogEvent> reseeded = played.events;
         reseeded[0].seed += 1;
         Match second;
         status = ReplayMatchLog(reseeded, second);
@@ -192,7 +183,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(status.error().problem, ReplayProblem::HandMismatch);
 
         // A settlement that pays otherwise.
-        eastl::vector<MatchLogEvent> paid = played->events;
+        eastl::vector<MatchLogEvent> paid = played.events;
         const size_t settlement = IndexOf(paid, MatchLogKind::Settlement);
         ASSERT_LT(settlement, paid.size());
         paid[settlement].settlement.deltas[0] += 10;
@@ -203,7 +194,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(status.error().problem, ReplayProblem::SettlementMismatch);
 
         // The final scores of the End event.
-        eastl::vector<MatchLogEvent> ended = played->events;
+        eastl::vector<MatchLogEvent> ended = played.events;
         ended.back().scores[1] += 10;
         Match fourth;
         status = ReplayMatchLog(ended, fourth);
@@ -219,13 +210,13 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(status.error().index, 0u);
         EXPECT_EQ(status.error().problem, ReplayProblem::NoStart);
 
-        const std::unique_ptr<PlayedMatch> played = Play(kSeed);
-        eastl::vector<MatchLogEvent> headless(played->events.begin() + 1, played->events.end());
+        const PlayedMatch played = Play(kSeed);
+        eastl::vector<MatchLogEvent> headless(played.events.begin() + 1, played.events.end());
         status = ReplayMatchLog(headless, match);
         ASSERT_FALSE(status.has_value());
         EXPECT_EQ(status.error().problem, ReplayProblem::NoStart);
 
-        eastl::vector<MatchLogEvent> bad = played->events;
+        eastl::vector<MatchLogEvent> bad = played.events;
         bad[0].settings.handsPerMatch = kUnplayableHandsPerMatch;
         status = ReplayMatchLog(bad, match);
         ASSERT_FALSE(status.has_value());
@@ -234,11 +225,10 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(MatchLogTest, ADifferentSeedGivesADifferentLog) {
-        const std::unique_ptr<PlayedMatch> a = Play(kSeed);
-        const std::unique_ptr<PlayedMatch> b = Play(kSeed + 1);
-        EXPECT_FALSE(a->events == b->events);
-        EXPECT_EQ(KindsOf(a->events).front(), MatchLogKind::Start);
-        EXPECT_EQ(Play(kSeed)->events, a->events) << "the same seed gives the same log";
+        const PlayedMatch a = Play(kSeed);
+        const PlayedMatch b = Play(kSeed + 1);
+        EXPECT_FALSE(a.events == b.events);
+        EXPECT_EQ(Play(kSeed).events, a.events) << "the same seed gives the same log";
     }
 
     TEST(MatchLogTest, APersonsAcceptedActionIsLoggedWithBy) {

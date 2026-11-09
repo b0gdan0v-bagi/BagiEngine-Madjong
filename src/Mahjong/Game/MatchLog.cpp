@@ -13,25 +13,26 @@ namespace BECore::Mahjong {
             return a.kind == b.kind && a.winner == b.winner && a.east == b.east && a.roundWind == b.roundWind && a.scores == b.scores && a.deltas == b.deltas;
         }
 
-        /// The `Hand` event of the hand `match` has dealt, as a front end writes it; a replay compares it with the event of the log.
-        MatchLogEvent DealtHandOf(const Match& match, const MatchLogEvent& like) {
-            MatchLogEvent dealt = like;
-            dealt.number = match.HandsPlayed();
-            dealt.east = match.East();
-            dealt.roundWind = match.RoundWind();
-            dealt.winds = match.Winds();
-            for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                dealt.concealed[static_cast<size_t>(seat)] = match.Hand().GetHand(seat).concealed;
-                dealt.bonus[static_cast<size_t>(seat)] = match.Hand().GetHand(seat).bonus;
-            }
-            return dealt;
-        }
-
         ReplayError At(size_t index, ReplayProblem problem) noexcept {
             return ReplayError{index, problem};
         }
 
     }  // namespace
+
+    MatchLogEvent MakeHandEvent(const Match& match) {
+        MatchLogEvent event;
+        event.kind = MatchLogKind::Hand;
+        event.number = match.HandsPlayed();
+        event.east = match.East();
+        event.roundWind = match.RoundWind();
+        event.winds = match.Winds();
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            const PlayerHand& hand = match.Hand().GetHand(seat);
+            event.concealed[static_cast<size_t>(seat)] = hand.concealed;
+            event.bonus[static_cast<size_t>(seat)] = hand.bonus;
+        }
+        return event;
+    }
 
     bool MatchLogEvent::operator==(const MatchLogEvent& other) const {
         if (kind != other.kind) {
@@ -68,7 +69,7 @@ namespace BECore::Mahjong {
                     if (match.GetPhase() != MatchPhase::InHand) {
                         return std::unexpected(At(index, ReplayProblem::NoStart));
                     }
-                    if (!(event == DealtHandOf(match, event))) {
+                    if (!(event == MakeHandEvent(match))) {
                         return std::unexpected(At(index, ReplayProblem::HandMismatch));
                     }
                     break;

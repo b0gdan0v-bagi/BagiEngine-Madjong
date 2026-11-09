@@ -54,6 +54,9 @@ namespace BECore::Mahjong {
         bool operator==(const MatchLogEvent& other) const;
     };
 
+    /// The `Hand` event of the hand `match` has just dealt: what the session logs, and what a replay compares the log's `Hand` with.
+    [[nodiscard]] MatchLogEvent MakeHandEvent(const Match& match);
+
     /// Receives the events of a session in order. The session calls it on the thread that drives the table.
     class IMatchLogSink {
     public:

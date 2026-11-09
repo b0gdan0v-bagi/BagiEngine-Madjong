@@ -2,6 +2,8 @@
 
 #include <Games/IControllableGame.h>
 #include <Mahjong/Game/HandModel.h>
+#include <Mahjong/Game/ScoreHand.h>
+#include <Mahjong/Game/TableSession.h>
 #include <Mahjong/Game/Tile.h>
 
 namespace BECore::Mahjong {
@@ -19,6 +21,23 @@ namespace BECore::Mahjong {
 
     /// A tile as text in the notation of `Tile.h` ("5p", "Ew", "F1"); JSON null for an invalid tile.
     [[nodiscard]] Json TileToJson(Tile tile);
+
+    /// A seat as a number; JSON null for `kNoSeat` (or any number that is no seat).
+    [[nodiscard]] Json SeatOrNull(Seat seat);
+
+    /// A list of tiles in the notation of `Tile.h`.
+    [[nodiscard]] Json TilesToJson(const eastl::vector<Tile>& tiles);
+
+    /// One number per seat (points, scores, changes).
+    [[nodiscard]] Json SeatScoresToJson(const SeatScores& scores);
+
+    /// {"won", "lines": [{"kind", "tile", "points", "doubles"}], "points", "doubles", "raw", "score", "limitHand": kind | null}: the
+    /// breakdown of one seat in `result` of the state.
+    [[nodiscard]] Json BreakdownToJson(const ScoreBreakdown& breakdown);
+
+    /// The setup of "PCCC"-style letters (P a person, C a computer), nullopt unless it is exactly four of them; and back.
+    [[nodiscard]] std::optional<SeatSetup> ReadSeats(const eastl::string& letters);
+    [[nodiscard]] eastl::string SeatsToLetters(const SeatSetup& seats);
 
     /// An action as the object `list_actions` gives: {"type": "discard", "tile", "declareCalling"}, {"type": "win"},
     /// {"type": "concealed_kong" | "upgrade_kong", "tile"}, {"type": "claim", "claim": "chow" | "pung" | "kong" | "mahjong", "first" for

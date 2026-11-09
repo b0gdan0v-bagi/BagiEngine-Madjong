@@ -20,22 +20,6 @@ namespace BECore::Mahjong {
             return found;
         }
 
-        /// The `Hand` event of the hand the match has just dealt.
-        MatchLogEvent MakeHandEvent(const Match& match) {
-            MatchLogEvent event;
-            event.kind = MatchLogKind::Hand;
-            event.number = match.HandsPlayed();
-            event.east = match.East();
-            event.roundWind = match.RoundWind();
-            event.winds = match.Winds();
-            for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                const PlayerHand& hand = match.Hand().GetHand(seat);
-                event.concealed[static_cast<size_t>(seat)] = hand.concealed;
-                event.bonus[static_cast<size_t>(seat)] = hand.bonus;
-            }
-            return event;
-        }
-
     }  // namespace
 
     MatchStatus TableSession::StartMatch(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats) {
@@ -188,6 +172,9 @@ namespace BECore::Mahjong {
     }
 
     void TableSession::LogAfterSettlement() {
+        if (_sink == nullptr) {
+            return;
+        }
         if (_match.GetPhase() == MatchPhase::InHand) {
             _sink->OnEvent(MakeHandEvent(_match));
             return;
