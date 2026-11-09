@@ -13,6 +13,7 @@
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/Table/CallingMarks.h>
 #include <Mahjong/Table/SeatName.h>
+#include <Mahjong/Table/SeatPlates.h>
 #include <Mahjong/Table/TileAtlas.h>
 #include <Mahjong/Table/TouchRegime.h>
 #include <Mahjong/Table/UiPalette.h>
@@ -99,22 +100,6 @@ namespace BECore::Mahjong {
             return faces;
         }
 
-        /// The seat at the bottom: the viewer, else the person that waits for the cover to go, else the first person, else seat 0.
-        Seat BottomSeat(const TableSession& session) {
-            if (IsSeat(session.Viewer())) {
-                return session.Viewer();
-            }
-            if (session.GetPhase() == SessionPhase::Playing && session.ActorIsPerson()) {
-                return session.Actor();
-            }
-            for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                if (session.KindOf(seat) == SeatKind::Person) {
-                    return seat;
-                }
-            }
-            return 0;
-        }
-
         /// Whether the table is played now: it is not played while the seat choice (`Setup`) or the rules are open over it.
         bool TableIsLive(const MahjongGame& game) {
             return !game.IsTablePaused();
@@ -135,13 +120,6 @@ namespace BECore::Mahjong {
         /// A claim window: a discard or an upgraded kong waits for the other seats to decide.
         bool IsClaimWindow(Phase phase) noexcept {
             return phase == Phase::Claim || phase == Phase::RobKong;
-        }
-
-        /// The seat whose turn it is on the table: the one that discards, the discarder (or the kong's owner) while the others decide.
-        /// Not the seat that has to act: that one is the first seat with a claim in a window, which would tell a person that this
-        /// computer could claim.
-        Seat TurnSeat(const TableSession& session, const HandModel& hand) {
-            return session.GetPhase() == SessionPhase::Playing ? hand.CurrentSeat() : kNoSeat;
         }
 
         /// The tile at `part` of a meld as laid: a chow runs up from its first tile, a pung and a kong repeat it.

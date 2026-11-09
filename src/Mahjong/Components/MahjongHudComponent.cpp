@@ -26,7 +26,7 @@ namespace BECore::Mahjong {
         constexpr eastl::string_view kPersonId = "person";
         constexpr eastl::string_view kComputerId = "computer";
         constexpr eastl::string_view kTurnMarkText = ">";
-        constexpr eastl::string_view kDealerMark = "*";
+        constexpr eastl::string_view kDealerMarkText = "*";
         constexpr eastl::string_view kNewGameAction = "MahjongNewGame";
         constexpr eastl::string_view kStartAction = "MahjongStart";
         constexpr eastl::string_view kNextHandAction = "MahjongNextHand";
@@ -159,7 +159,7 @@ namespace BECore::Mahjong {
             vars.Set(SeatVar("seatWind", seat), eastl::string_view(WindName(strings, wind)));
             vars.Set(SeatVar("seatScore", seat), match.Scores()[seat]);
             vars.Set(SeatVar("seatMark", seat), playing && hand.CurrentSeat() == seat ? kTurnMarkText : eastl::string_view());
-            vars.Set(SeatVar("seatDealer", seat), match.East() == seat ? kDealerMark : eastl::string_view());
+            vars.Set(SeatVar("seatDealer", seat), match.East() == seat ? kDealerMarkText : eastl::string_view());
         }
     }
 

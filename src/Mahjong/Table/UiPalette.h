@@ -15,7 +15,8 @@ namespace BECore::Mahjong {
      * - The table: `kFelt` with a `kFeltRim` round the view, a `kZonePlate` under the discard blocks and the wall ring, a `kTileShadow`
      *   under each tile. A mark on the table is the gold family (`kTurnMark`, `kPendingFrame`, the hints `kDeclareMark`,
      *   `kAdvisedFrame`, and the marks of the last move `kLastDiscardMark`, `kDrawnTileMark`, `kClaimedEdge`, `kClaimHighlight`, the frame of a declared hand `kCallingFrame` and the bar of its safe
-     * discards `kKeepsWaitingMark`) and nothing else on the table is gold; `kVeil` dims a tile that cannot be discarded now.
+     * discards `kKeepsWaitingMark`, and the turn plate of a seat: `kSeatTurnFrame` with the tint `kTurnMark`) and nothing else on the table is gold (the
+     * dealer mark `kDealerMark` of a seat plate is red); `kVeil` dims a tile that cannot be discarded now.
      * - The screens: `scrim` dims what lies behind a modal screen (and the hint), `surface` is the plate, `header` its headline band,
      *   `surfaceRaised` the rows on it, `hudPanel` the panels of the HUD over the felt.
      * - The buttons: `primary` confirms (Mahjong!, Start, Next hand), `secondary` claims and the HUD's New game, `neutral` the extras of
@@ -60,6 +61,16 @@ namespace BECore::Mahjong {
     /// the calling hand, and the frame on the tile the computer would discard (the two differ in shape and in alpha).
     inline constexpr Color kDeclareMark{255, 214, 80, 255};
     inline constexpr Color kAdvisedFrame{255, 214, 80, 230};
+
+    /// The seat plates (the table paints them; the words on them are labels of the node `SeatPlates`): the base is the `hudPanel` colour
+    /// (a test holds them equal), the plate of the seat whose turn it is gets the tint `kTurnMark` over it and a frame
+    /// `kSeatTurnFrame` of `kSeatTurnFrameWidth` units on its border (the gold family), the dealer a bar `kDealerMark` of
+    /// `kDealerMarkHeight` units along the top edge: the one mark of the table that is neither gold nor a plate.
+    inline constexpr Color kSeatPlate{10, 30, 22, 170};
+    inline constexpr Color kSeatTurnFrame{255, 214, 80, 255};
+    inline constexpr float kSeatTurnFrameWidth = 4.0f;
+    inline constexpr Color kDealerMark{200, 70, 60, 255};
+    inline constexpr float kDealerMarkHeight = 6.0f;
 
     /// A plate under a discard block or the wall ring reaches this far past its zone, in view units; the HUD keeps clear of the plate.
     inline constexpr float kPlatePadding = 4.0f;
