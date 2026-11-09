@@ -82,7 +82,7 @@ namespace BECore::Mahjong::Tests {
         /// A profile with one knob at 100 percent and the others as Normal's.
         LevelProfile Always(int LevelProfile::* knob) {
             LevelProfile profile = kNormalProfile;
-            profile.*knob = 100;
+            profile.*knob = kPercentBase;
             return profile;
         }
 
@@ -184,6 +184,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(kNormalProfile.takeValueClaimsAtEqualShanten);
         EXPECT_EQ(&ProfileOf(ComputerLevel::Normal), &kNormalProfile);
         EXPECT_EQ(&ProfileOf(ComputerLevel::Easy), &kEasyProfile);
+        EXPECT_EQ(&ProfileOf(ComputerLevel::Hard), &kHardProfile);
         EXPECT_GT(kEasyProfile.skipAcceptancePercent, 0);
         EXPECT_GT(kEasyProfile.skipDeclarationPercent, 0);
         EXPECT_GT(kEasyProfile.skipClaimPercent, 0);
@@ -192,7 +193,7 @@ namespace BECore::Mahjong::Tests {
             const LevelProfile& profile = ProfileOf(level);
             for (const int percent : {profile.skipAcceptancePercent, profile.skipDeclarationPercent, profile.skipClaimPercent}) {
                 EXPECT_GE(percent, 0) << LevelName(level);
-                EXPECT_LE(percent, 100) << LevelName(level);
+                EXPECT_LE(percent, kPercentBase) << LevelName(level);
             }
         }
     }
@@ -204,6 +205,27 @@ namespace BECore::Mahjong::Tests {
             const eastl::vector<HandAction> expected = PlayActions(byDefault, seed);
             ASSERT_FALSE(expected.empty()) << "seed " << seed;
             EXPECT_EQ(PlayActions(explicitNormal, seed), expected) << "seed " << seed;
+        }
+    }
+
+    // Hard is Normal's twin until the owner decides what Hard is (`ComputerLevel`, `kHardProfile`). These two cases are the ones that go
+    // when Hard gets numbers of its own; the slow strength test does not play Hard again for the same reason.
+    TEST(ComputerLevelTest, HardIsNormalsTwinUntilTheOwnerDecidesOtherwise) {
+        const LevelProfile& normal = ProfileOf(ComputerLevel::Normal);
+        const LevelProfile& hard = ProfileOf(ComputerLevel::Hard);
+        EXPECT_EQ(hard.skipAcceptancePercent, normal.skipAcceptancePercent);
+        EXPECT_EQ(hard.skipDeclarationPercent, normal.skipDeclarationPercent);
+        EXPECT_EQ(hard.skipClaimPercent, normal.skipClaimPercent);
+        EXPECT_EQ(hard.takeValueClaimsAtEqualShanten, normal.takeValueClaimsAtEqualShanten);
+    }
+
+    TEST(ComputerLevelTest, HardPlaysTheSameActionsAsNormalOnSixWholeHands) {
+        for (uint32_t seed = 900; seed < 903; ++seed) {
+            ComputerTable normal(seed, ComputerLevel::Normal);
+            ComputerTable hard(seed, ComputerLevel::Hard);
+            const eastl::vector<HandAction> expected = PlayActions(normal, seed);
+            ASSERT_FALSE(expected.empty()) << "seed " << seed;
+            EXPECT_EQ(PlayActions(hard, seed), expected) << "seed " << seed;
         }
     }
 
@@ -332,13 +354,14 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(Roll(drawn, 0));
         EXPECT_FALSE(Roll(drawn, -5));
         EXPECT_EQ(drawn.Below(1000), fresh.Below(1000));
-        EXPECT_TRUE(Roll(drawn, 100));
-        (void)fresh.Below(100);
+        EXPECT_TRUE(Roll(drawn, kPercentBase));
+        const uint32_t rollOfTheFreshOne = fresh.Below(kPercentBase);  // the one number the roll of 100 percent drew
+        EXPECT_LT(rollOfTheFreshOne, static_cast<uint32_t>(kPercentBase));
         EXPECT_EQ(drawn.Below(1000), fresh.Below(1000));
         for (uint32_t seed = 1; seed < 20; ++seed) {
             MahjongRng rng(seed);
             EXPECT_FALSE(Roll(rng, 0)) << seed;
-            EXPECT_TRUE(Roll(rng, 100)) << seed;
+            EXPECT_TRUE(Roll(rng, kPercentBase)) << seed;
         }
     }
 

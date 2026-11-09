@@ -35,10 +35,11 @@ namespace BECore::Mahjong {
         return ties.size() == 1 ? ties.front() : ties[rng.Below(static_cast<uint32_t>(ties.size()))];
     }
 
-    /// Whether a roll of `percent` comes up: draws one number from `rng`, and none when `percent` is not above 0 (a knob of the
-    /// `LevelProfile` that is off costs nothing), so a profile with only some knobs on does not move the stream of the others.
+    /// Whether a roll of `percent` comes up. What holds: a knob that is off (`percent` not above 0) draws nothing, so it moves no
+    /// stream and Normal's tie-breaks are those of the player before levels existed. A knob that is on draws one number from `rng`,
+    /// so it shifts the later tie-breaks of that player (its play is another play, as a level should be).
     [[nodiscard]] inline bool Roll(MahjongRng& rng, int percent) {
-        return percent > 0 && static_cast<int>(rng.Below(100)) < percent;
+        return percent > 0 && static_cast<int>(rng.Below(kPercentBase)) < percent;
     }
 
     /// How much the seat wants to keep `tile` (`kKeep...`); it only breaks ties, efficiency decides first.

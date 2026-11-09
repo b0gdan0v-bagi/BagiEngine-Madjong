@@ -27,6 +27,10 @@
  * test. The first version of Easy (40 / 50 / 25 percent) won 161: too near Normal; a declaration skipped on 100 percent of the turns is
  * a seat that never wins (the win needs the declaration), so the knobs are sensitive and the percentages were found by measuring.
  * The margins for Easy are again far under the numbers: "clearly better than random, clearly worse than Normal".
+ *
+ * Hard is not played here: it plays exactly like Normal until the owner decides what Hard is (`kHardProfile`; `ComputerLevelTest`
+ * pins the twin and goes with it when Hard gets numbers of its own). The Normal run of the 240 hands is played once per process and
+ * shared by the two tests.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -148,10 +152,17 @@ namespace BECore::Mahjong::Tests {
             return out;
         }
 
+        /// Normal against three random seats on the 240 hands, played once per process: the first test and the Easy test both compare
+        /// with it. (A failed run is kept too; the caller asks `HasFatalFailure` after the call.)
+        const Outcome& NormalAgainstRandom() {
+            static const Outcome outcome = PlayAllSeeds(SeatPlayer::Computer(ComputerLevel::Normal));
+            return outcome;
+        }
+
     }  // namespace
 
     TEST(ComputerStrengthTest, TheComputerSeatBeatsRandomSeatsOnTheSameHands) {
-        const Outcome out = PlayAllSeeds(SeatPlayer::Computer(ComputerLevel::Normal));
+        const Outcome& out = NormalAgainstRandom();
         ASSERT_FALSE(::testing::Test::HasFatalFailure());
         ASSERT_EQ(out.computer.hands, kSeedCount * kSeatCount);
         ASSERT_EQ(out.random.hands, out.computer.hands * kRandomSeats);
@@ -185,7 +196,7 @@ namespace BECore::Mahjong::Tests {
     TEST(ComputerStrengthTest, EasyBeatsRandomSeatsButLosesToNormalOnTheSameHands) {
         const Outcome easy = PlayAllSeeds(SeatPlayer::Computer(ComputerLevel::Easy));
         ASSERT_FALSE(::testing::Test::HasFatalFailure());
-        const Outcome normal = PlayAllSeeds(SeatPlayer::Computer(ComputerLevel::Normal));
+        const Outcome& normal = NormalAgainstRandom();
         ASSERT_FALSE(::testing::Test::HasFatalFailure());
         ASSERT_EQ(easy.computer.hands, kSeedCount * kSeatCount);
         RecordProperty("easyWins", easy.computer.wins);

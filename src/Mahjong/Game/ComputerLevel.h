@@ -2,8 +2,11 @@
 
 namespace BECore::Mahjong {
 
-    /// How well a computer seat plays. `Normal` is the player described in `CLAUDE.md` ("Computer player"); `Easy` and `Hard` are
-    /// the same player with other numbers (`ProfileOf`).
+    /// How well a computer seat plays. `Normal` is the player described in `CLAUDE.md` ("Computer player"); `Easy` is the same player
+    /// with other numbers (`kEasyProfile`). **`Hard` plays exactly like `Normal`**: it is in the enum, the control API and the match log
+    /// because the owner chose three levels, but what Hard should be waits for the owner's decision (the levers tried, a suit focus, a
+    /// look-ahead, passing claims to keep a concealed hand and kong claims, all lost wins and did not beat Normal in these rules; the
+    /// measurements are in the todo store, in the entry `mahjong-computer-difficulty`).
     CORE_ENUM(ComputerLevel, uint8_t, Easy, Normal, Hard)
 
     /// The level of a table nobody chose a level for.
@@ -41,10 +44,13 @@ namespace BECore::Mahjong {
         return std::nullopt;
     }
 
+    /// The base of a percentage: a roll is one `MahjongRng::Below(kPercentBase)` against the percent.
+    inline constexpr int kPercentBase = 100;
+
     /**
      * @brief The numbers a level plays by: what the choosers of `ComputerTurn.h` and `ComputerClaim.h` do differently from the Normal
      * player. Every knob of `kNormalProfile` is off, and **a knob that is off draws nothing from the rng**, so Normal's stream is the
-     * stream of the player before levels existed. A percentage is 0..100; each roll is one `MahjongRng::Below(100)` of the player's own
+     * stream of the player before levels existed. A percentage is 0..100; each roll is one `MahjongRng::Below(kPercentBase)` of the player's own
      * seeded rng, so one seed and one setup is one match.
      */
     struct LevelProfile {
@@ -72,9 +78,21 @@ namespace BECore::Mahjong {
         .takeValueClaimsAtEqualShanten = false,
     };
 
+    /// What Hard plays by: Normal's numbers, until the owner decides what Hard is (see `ComputerLevel`). The one place that goes when
+    /// Hard gets numbers of its own; `ComputerLevelTest` pins the twin and goes with it.
+    inline constexpr LevelProfile kHardProfile = kNormalProfile;
+
     /// The profile of `level`. A value outside the enum gives Normal's.
     [[nodiscard]] constexpr const LevelProfile& ProfileOf(ComputerLevel level) noexcept {
-        return level == ComputerLevel::Easy ? kEasyProfile : kNormalProfile;
+        switch (level) {
+            case ComputerLevel::Easy:
+                return kEasyProfile;
+            case ComputerLevel::Normal:
+                return kNormalProfile;
+            case ComputerLevel::Hard:
+                return kHardProfile;
+        }
+        return kNormalProfile;
     }
 
     /// The names of the levels for an error text: "easy, normal or hard" (`LevelName` of each, in the order of the enum).

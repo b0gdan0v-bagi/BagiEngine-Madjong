@@ -1,5 +1,6 @@
 #include "HandTestSupport.h"
 
+#include <Mahjong/Game/MatchLog.h>
 #include <Mahjong/Game/TableSession.h>
 #include <gtest/gtest.h>
 
@@ -201,12 +202,16 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(State(byDefault), State(explicitNormal));
     }
 
-    TEST(TableSessionTest, EveryLevelPlaysAWholeMatchLegally) {
-        // Only legality here: how the levels differ is the business of the computer player's tests.
+    TEST(TableSessionTest, EveryLevelPlaysAWholeMatchLegallyAndTheLogSaysTheLevelAndReplays) {
+        // How the levels differ is the business of the computer player's tests; here the match is legal at each, the points add up, the
+        // `Start` of the log carries the level and the log replays to the same match.
         for (int index = 0; index < kLevelCount; ++index) {
             const ComputerLevel level = static_cast<ComputerLevel>(index);
             Table table;
+            MatchLog log;
+            table.session.SetLogSink(&log);
             ASSERT_NO_FATAL_FAILURE(table.StartAt(level));
+            EXPECT_EQ(table.session.Level(), level) << Name(level);
             for (int actions = 0; table.session.GetPhase() != SessionPhase::MatchOver; ++actions) {
                 ASSERT_LT(actions, kActionLimitPerMatch) << Name(level);
                 if (table.session.GetPhase() == SessionPhase::HandOver) {
@@ -217,6 +222,16 @@ namespace BECore::Mahjong::Tests {
             }
             EXPECT_EQ(table.match.HandsPlayed(), table.match.HandsTotal()) << Name(level);
             EXPECT_EQ(Sum(table.match.Scores()), kTableTotal) << Name(level);
+
+            ASSERT_FALSE(log.Events().empty()) << Name(level);
+            EXPECT_EQ(log.Events().front().kind, MatchLogKind::Start) << Name(level);
+            EXPECT_EQ(log.Events().front().level, level) << Name(level);
+            EXPECT_EQ(log.Events().back().kind, MatchLogKind::End) << Name(level);
+            Match replayed;
+            const ReplayStatus status = ReplayMatchLog(log.Events(), replayed);
+            ASSERT_TRUE(status.has_value()) << Name(level) << ": stopped at event " << status.error().index << ": " << Name(status.error().problem);
+            EXPECT_EQ(replayed.Scores(), table.match.Scores()) << Name(level);
+            EXPECT_EQ(replayed.History().size(), table.match.History().size()) << Name(level);
         }
     }
 

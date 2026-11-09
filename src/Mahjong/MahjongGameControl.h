@@ -93,8 +93,8 @@ namespace BECore::Mahjong {
      * `reset` takes {"seed": 0..4294967295, "seats": "PCCC" (four letters P or C), "hands": 8 | 16, "flowers": bool,
      * "level": "easy" | "normal" | "hard"}, all optional: what is left out keeps the setting of the game (the seed: the one of the last
      * `reset`, or 1). The seats, the settings and the level of the computer seats stay for the next match. A level that is not one of
-     * the three names (a string, exactly in lowercase) is `invalid_params`, which names the three levels, and nothing changes. `set_state` is not supported. `no_active_model` before the first match
-     * was started.
+     * the three names (a string, exactly in lowercase) is `invalid_params`, which names the three levels, and nothing changes.
+     * `set_state` is not supported. `no_active_model` before the first match was started.
      */
     class MahjongGameControl : public IControllableGame {
     public:

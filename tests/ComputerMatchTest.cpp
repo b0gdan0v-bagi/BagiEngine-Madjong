@@ -11,14 +11,19 @@
  * model accepts it (`Step` applies it through `Apply` and never falls back), a hand is bounded so that a loop fails fast, and after
  * every hand the invariants of `MatchAudit` hold (the points add up, the count and the deal as `NextProgress` says, the settlement is
  * well formed); at the end the match is finished after exactly `handsPerMatch` counted hands. The same seed played again, this time by
- * `ComputerTable::PlayMatch`, gives the same history and the same scores; another table seed plays another match. Pure logic: no
- * engine services.
+ * `ComputerTable::PlayMatch`, gives the same history and the same scores; another table seed plays another match. Normal plays all
+ * eight combinations, Easy and Hard the three of `kLevelSubset` (flowers off with 16 hands, flowers on with 8, flowers off with 8 and
+ * counted draws): Hard is the same code as Normal for now (`kHardProfile`), so a third of the combinations is enough, and the whole
+ * first test takes about 8 s in Debug. Easy plays another match than Normal on the same seed; Hard plays the
+ * same one, until the owner decides what Hard is. Pure logic: no engine services.
  */
 namespace BECore::Mahjong::Tests {
 
     namespace {
 
         constexpr int kMatchCount = 8;
+        /// The matches (indices of `SettingsOf`) the levels other than Normal play.
+        constexpr int kLevelSubset[] = {0, 3, 5};
         constexpr uint32_t kFirstSeed = 700;
         /// A hand is at most about 4 x 70 actions; far more means a loop.
         constexpr int kStepLimitPerHand = 2000;
@@ -57,12 +62,12 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Plays match number `index` with the checks of `MatchAudit` after every hand. A failed ASSERT ends the function.
-        void PlayAudited(int index, MatchTotals& totals, PlayedMatch& played) {
+        void PlayAudited(int index, ComputerLevel level, MatchTotals& totals, PlayedMatch& played) {
             const MahjongSettings settings = SettingsOf(index);
             const std::string where = WhereOf(index);
             Match match;
             ASSERT_TRUE(match.Start(settings, SeedOf(index)).has_value()) << where;
-            ComputerTable table(SeedOf(index));
+            ComputerTable table(SeedOf(index), level);
             MatchAudit audit(settings, where, totals);
 
             while (match.GetPhase() == MatchPhase::InHand) {
@@ -79,10 +84,10 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The same match played again by `ComputerTable::PlayMatch`.
-        void PlayWithTheTable(int index, PlayedMatch& played) {
+        void PlayWithTheTable(int index, ComputerLevel level, PlayedMatch& played) {
             Match match;
             ASSERT_TRUE(match.Start(SettingsOf(index), SeedOf(index)).has_value());
-            ComputerTable table(SeedOf(index));
+            ComputerTable table(SeedOf(index), level);
             ASSERT_TRUE(table.PlayMatch(match).has_value());
             played.history = match.History();
             played.scores = match.Scores();
@@ -91,31 +96,58 @@ namespace BECore::Mahjong::Tests {
     }  // namespace
 
     TEST(ComputerMatchTest, WholeMatchesByFourComputerPlayersNeverMakeAnIllegalMoveAndKeepEveryInvariant) {
-        MatchTotals totals;
-        int steps = 0;
-        for (int index = 0; index < kMatchCount; ++index) {
-            PlayedMatch played;
-            ASSERT_NO_FATAL_FAILURE(PlayAudited(index, totals, played));
-            steps += played.steps;
+        for (const ComputerLevel level : {ComputerLevel::Normal, ComputerLevel::Easy, ComputerLevel::Hard}) {
+            MatchTotals totals;
+            int steps = 0;
+            int matches = 0;
+            for (int index = 0; index < kMatchCount; ++index) {
+                if (level != ComputerLevel::Normal && std::find(std::begin(kLevelSubset), std::end(kLevelSubset), index) == std::end(kLevelSubset)) {
+                    continue;
+                }
+                ++matches;
+                PlayedMatch played;
+                ASSERT_NO_FATAL_FAILURE(PlayAudited(index, level, totals, played)) << LevelName(level);
+                steps += played.steps;
 
-            // The same seed played again, by `PlayMatch`, gives the same match: the winner, the kind and the change of every hand.
-            PlayedMatch again;
-            ASSERT_NO_FATAL_FAILURE(PlayWithTheTable(index, again));
-            const std::string where = WhereOf(index);
-            ASSERT_EQ(again.history.size(), played.history.size()) << where;
-            for (size_t hand = 0; hand < played.history.size(); ++hand) {
-                EXPECT_EQ(again.history[hand].kind, played.history[hand].kind) << where << " hand " << hand;
-                EXPECT_EQ(again.history[hand].winner, played.history[hand].winner) << where << " hand " << hand;
-                EXPECT_EQ(again.history[hand].deltas, played.history[hand].deltas) << where << " hand " << hand;
+                // The same seed played again, by `PlayMatch`, gives the same match: the winner, the kind and the change of every hand.
+                PlayedMatch again;
+                ASSERT_NO_FATAL_FAILURE(PlayWithTheTable(index, level, again)) << LevelName(level);
+                const std::string where = WhereOf(index) + " at " + std::string(LevelName(level));
+                ASSERT_EQ(again.history.size(), played.history.size()) << where;
+                for (size_t hand = 0; hand < played.history.size(); ++hand) {
+                    EXPECT_EQ(again.history[hand].kind, played.history[hand].kind) << where << " hand " << hand;
+                    EXPECT_EQ(again.history[hand].winner, played.history[hand].winner) << where << " hand " << hand;
+                    EXPECT_EQ(again.history[hand].deltas, played.history[hand].deltas) << where << " hand " << hand;
+                }
+                EXPECT_EQ(again.scores, played.scores) << where;
             }
-            EXPECT_EQ(again.scores, played.scores) << where;
+            EXPECT_GT(matches, 0);
+            EXPECT_GT(steps, 0) << LevelName(level);
+            EXPECT_GT(totals.wins, 0) << "four computer players of level " << LevelName(level) << " never won a hand";
+            const std::string name(LevelName(level));
+            RecordProperty(name + "Wins", totals.wins);
+            RecordProperty(name + "Draws", totals.draws);
+            RecordProperty(name + "Replays", totals.replays);
+            RecordProperty(name + "Steps", steps);
         }
-        EXPECT_GT(steps, 0);
-        EXPECT_GT(totals.wins, 0) << "four computer players never won a hand";
-        RecordProperty("wins", totals.wins);
-        RecordProperty("draws", totals.draws);
-        RecordProperty("replays", totals.replays);
-        RecordProperty("steps", steps);
+    }
+
+    TEST(ComputerMatchTest, EasyPlaysAnotherMatchThanNormalAndHardTheSameOnTheSameSeed) {
+        for (const int index : kLevelSubset) {
+            PlayedMatch normal;
+            PlayedMatch easy;
+            PlayedMatch hard;
+            ASSERT_NO_FATAL_FAILURE(PlayWithTheTable(index, ComputerLevel::Normal, normal));
+            ASSERT_NO_FATAL_FAILURE(PlayWithTheTable(index, ComputerLevel::Easy, easy));
+            ASSERT_NO_FATAL_FAILURE(PlayWithTheTable(index, ComputerLevel::Hard, hard));
+            EXPECT_NE(easy.scores, normal.scores) << WhereOf(index);
+            // Hard is Normal's twin until the owner decides what Hard is: this case goes when Hard gets numbers of its own.
+            EXPECT_EQ(hard.scores, normal.scores) << WhereOf(index);
+            ASSERT_EQ(hard.history.size(), normal.history.size()) << WhereOf(index);
+            for (size_t hand = 0; hand < normal.history.size(); ++hand) {
+                EXPECT_EQ(hard.history[hand].deltas, normal.history[hand].deltas) << WhereOf(index) << " hand " << hand;
+            }
+        }
     }
 
     TEST(ComputerMatchTest, ADifferentTableSeedPlaysADifferentMatchOnTheSameWalls) {

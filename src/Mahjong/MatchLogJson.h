@@ -25,8 +25,8 @@ namespace BECore::Mahjong {
      * they sum up to are in the line). Reading is checked: a missing or wrong-typed member, an unknown `event`, a bad tile, seat letter,
      * wind name or level name is an error text that names the member; nothing aborts.
      *
-     * Versions: 2 (`kMatchLogFormatVersion`, `kMatchLogLevelVersion`) added `level` to `start`, the strength of the computer players (`LevelName`: `easy`,
-     * `normal`, `hard`); it is needed in version 2. Version 1 files (`kMatchLogOldestVersion`) have no `level` and are read as
+     * Versions: 2 (`kMatchLogFormatVersion`, `kMatchLogLevelVersion`) added `level` to `start`, the strength of the computer players
+     * (`LevelName`: `easy`, `normal`, `hard`); it is needed in version 2. Version 1 files (`kMatchLogOldestVersion`) have no `level` and are read as
      * `Normal`, the only player there was. Any other version is refused.
      */
 
