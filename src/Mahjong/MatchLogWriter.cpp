@@ -3,8 +3,7 @@
 #include <Mahjong/MatchLogJson.h>
 #include <chrono>
 #include <ctime>
-#include <iomanip>
-#include <sstream>
+#include <fmt/chrono.h>
 
 namespace BECore::Mahjong {
 
@@ -12,7 +11,10 @@ namespace BECore::Mahjong {
 
         constexpr const char* kDefaultDirectory = "logs/matches";
         constexpr const char* kFileExtension = ".jsonl";
-        constexpr const char* kTimeFormat = "%Y-%m-%dT%H-%M-%S";
+        /// The first suffix of a second file of the same name (`-2`) and how many files of one name are tried: past the last the name stays
+        /// taken, so the open below (which never replaces a file) fails and the match goes on unlogged.
+        constexpr int kFirstCopySuffix = 2;
+        constexpr int kMaxCopySuffix = 100000;
 
         std::filesystem::path& Directory() {
             static std::filesystem::path directory = kDefaultDirectory;
@@ -28,18 +30,16 @@ namespace BECore::Mahjong {
 #else
             localtime_r(&now, &local);
 #endif
-            std::ostringstream text;
-            text << std::put_time(&local, kTimeFormat);
-            return text.str();
+            return Format("{:%Y-%m-%dT%H-%M-%S}", local).c_str();
         }
 
         /// `<directory>/<stamp>_seed<seed>.jsonl`, or with `-2`, `-3` ... before the extension while that file exists.
         std::filesystem::path FreeFileName(const std::filesystem::path& directory, uint32_t seed) {
-            const std::string stem = TimeStamp() + "_seed" + std::to_string(seed);
-            std::filesystem::path path = directory / (stem + kFileExtension);
+            const std::string stem = Format("{}_seed{}", TimeStamp(), seed).c_str();
+            std::filesystem::path path = directory / Format("{}{}", stem, kFileExtension).c_str();
             std::error_code error;
-            for (int copy = 2; std::filesystem::exists(path, error) && copy < 100000; ++copy) {
-                path = directory / (stem + "-" + std::to_string(copy) + kFileExtension);
+            for (int copy = kFirstCopySuffix; std::filesystem::exists(path, error) && copy < kMaxCopySuffix; ++copy) {
+                path = directory / Format("{}-{}{}", stem, copy, kFileExtension).c_str();
             }
             return path;
         }
@@ -84,7 +84,7 @@ namespace BECore::Mahjong {
             return;
         }
         const std::filesystem::path path = FreeFileName(directory, start.seed);
-        _file.open(path, std::ios::out | std::ios::trunc);
+        _file.open(path, std::ios::out | std::ios::noreplace);  // never replaces a file (two processes may pick one name)
         if (!_file.is_open()) {
             _file.clear();
             LOG_WARNING(Format("MatchLogWriter: the file '{}' could not be opened, this match is not logged", path.string()));

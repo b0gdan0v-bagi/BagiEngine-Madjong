@@ -2,17 +2,18 @@
 
 #include <BECore/Control/Json.h>
 #include <Common/EngineEnvironment.h>
+#include <Common/TempPath.h>
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/MatchLogJson.h>
 #include <Mahjong/MatchLogWriter.h>
 #include <algorithm>
-#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
 #include <regex>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <vector>
 
 /**
@@ -31,7 +32,11 @@ namespace BECore::Mahjong::Tests {
         constexpr int kHandLimitPerMatch = 200;
         constexpr int kSeedsToSearch = 200;
         constexpr int kStartsInARow = 3;
-        constexpr const char* kFolderPrefix = "bagi-mahjong-match-logs-";
+        constexpr int kControlStepLimit = 400;
+        constexpr const char* kFolderStem = "bagi-mahjong-match-logs";
+        /// A stamp and a name of the shape the writer makes, for the length of their parts only.
+        constexpr std::string_view kExampleStamp = "2026-11-09T14-03-55";
+        constexpr std::string_view kExampleStem = "2026-11-09T14-03-55_seed41";
         /// `2026-11-09T14-03-55_seed41.jsonl`, with `-2` ... before the extension for a second file of the same second.
         constexpr const char* kFileNamePattern = R"(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}_seed41(-\d+)?\.jsonl)";
 
@@ -48,17 +53,19 @@ namespace BECore::Mahjong::Tests {
         class MatchLogFolderEnvironment final : public ::testing::Environment {
         public:
             void SetUp() override {
-                std::error_code error;
-                const auto ticks = std::chrono::steady_clock::now().time_since_epoch().count();
-                SessionFolder() = fs::temp_directory_path(error) / (kFolderPrefix + std::to_string(ticks));
+                _before = MatchLogDirectory();
+                SessionFolder() = TestTempPath(kFolderStem);
                 SetMatchLogDirectory(SessionFolder() / "default");
             }
 
             void TearDown() override {
                 std::error_code error;
                 fs::remove_all(SessionFolder(), error);
-                SetMatchLogDirectory("logs/matches");
+                SetMatchLogDirectory(_before);
             }
+
+        private:
+            fs::path _before;
         };
 
         [[maybe_unused]] ::testing::Environment* const kMatchLogFolderEnvironment = ::testing::AddGlobalTestEnvironment(new MatchLogFolderEnvironment);
@@ -242,18 +249,19 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(files.size(), static_cast<size_t>(kStartsInARow));
         std::sort(paths.begin(), paths.end());
         EXPECT_EQ(std::unique(paths.begin(), paths.end()), paths.end()) << "two matches share a file";
+        const std::regex fileName(kFileNamePattern);
         for (const fs::path& file : files) {
-            EXPECT_TRUE(std::regex_match(file.filename().string(), std::regex(kFileNamePattern))) << file.filename().string();
+            EXPECT_TRUE(std::regex_match(file.filename().string(), fileName)) << file.filename().string();
         }
         // the suffix exists exactly for the files that share their second with an earlier one
         std::vector<std::string> stamps;
         for (const fs::path& file : files) {
-            stamps.push_back(file.filename().string().substr(0, std::string("2026-11-09T14-03-55").size()));
+            stamps.push_back(file.filename().string().substr(0, kExampleStamp.size()));
         }
         std::sort(stamps.begin(), stamps.end());
         const auto distinctStamps = static_cast<size_t>(std::unique(stamps.begin(), stamps.end()) - stamps.begin());
-        const auto suffixed = static_cast<size_t>(
-            std::count_if(files.begin(), files.end(), [](const fs::path& file) { return file.stem().string().find("-", std::string("2026-11-09T14-03-55_seed41").size()) != std::string::npos; }));
+        const auto suffixed =
+            static_cast<size_t>(std::count_if(files.begin(), files.end(), [](const fs::path& file) { return file.stem().string().find("-", kExampleStem.size()) != std::string::npos; }));
         EXPECT_EQ(suffixed, files.size() - distinctStamps);
     }
 
@@ -382,8 +390,13 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(silent->StartMatch(seed).has_value());
         EXPECT_FALSE(silent->GetMatchLog().IsOpen());
 
-        for (int step = 0; step < 3; ++step) {
-            ASSERT_EQ(logged->AsControllable()->GetState().value(), silent->AsControllable()->GetState().value()) << "step " << step;
+        // a whole hand: the person plays the first listed action until the hand is over
+        for (int step = 0; step < kControlStepLimit; ++step) {
+            const Json state = logged->AsControllable()->GetState().value();
+            ASSERT_EQ(state, silent->AsControllable()->GetState().value()) << "step " << step;
+            if (state["phase"] != "playing") {
+                break;
+            }
             const Json actions = logged->AsControllable()->GetActions().value();
             ASSERT_EQ(actions, silent->AsControllable()->GetActions().value());
             if (actions.empty()) {
@@ -395,6 +408,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_TRUE(b.has_value());
             EXPECT_EQ(*a, *b);
         }
+        EXPECT_NE(logged->AsControllable()->GetState().value()["phase"], "playing") << "the hand was played to its end";
     }
 
 }  // namespace BECore::Mahjong::Tests
