@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Mahjong/Game/ComputerLevel.h>
 #include <Mahjong/Game/ComputerView.h>
 #include <Mahjong/Game/MahjongRng.h>
 #include <Mahjong/Game/Shanten.h>
@@ -32,6 +33,12 @@ namespace BECore::Mahjong {
     template <typename T>
     const T& PickOne(const eastl::vector<T>& ties, MahjongRng& rng) {
         return ties.size() == 1 ? ties.front() : ties[rng.Below(static_cast<uint32_t>(ties.size()))];
+    }
+
+    /// Whether a roll of `percent` comes up: draws one number from `rng`, and none when `percent` is not above 0 (a knob of the
+    /// `LevelProfile` that is off costs nothing), so a profile with only some knobs on does not move the stream of the others.
+    [[nodiscard]] inline bool Roll(MahjongRng& rng, int percent) {
+        return percent > 0 && static_cast<int>(rng.Below(100)) < percent;
     }
 
     /// How much the seat wants to keep `tile` (`kKeep...`); it only breaks ties, efficiency decides first.
@@ -68,16 +75,19 @@ namespace BECore::Mahjong {
      * The steps, the first that applies wins:
      * 1. `DeclareWin` when it is listed.
      * 2. The calling hand: of the discards that declare it, the one that leaves the most unseen winning copies (`WinningTiles` of the
-     *    13 tiles that stay); ties by the lowest `KeepValue`, then `rng`.
+     *    13 tiles that stay); ties by the lowest `KeepValue`, then `rng`. With `profile.skipDeclarationPercent` a roll can skip this
+     *    step for the turn.
      * 3. A kong (`ConcealedKong`, `UpgradeKong`) when the hand without it is no worse: the best discard of the hand as it is, against
      *    the hand without the four tiles and one more meld (the fourth tile of an upgrade leaves), the shanten not higher and, for a
      *    waiting hand, the acceptance not lower.
      * 4. After the declaration: the discard that keeps the hand waiting with the most unseen winning copies (the tie-breaks as in 2).
-     * 5. Otherwise `BestDiscard` of the concealed tiles.
+     * 5. Otherwise `BestDiscard` of the concealed tiles; with `profile.skipAcceptancePercent` a roll leaves out the acceptance (the
+     *    lowest shanten, then `KeepValue`, then `rng`).
      *
-     * Always an element of `view.legal`. Seven pairs and thirteen orphans are not aimed at (`Shanten` does not look at them), but
+     * `profile` is the level's numbers (`kNormalProfile`: every knob off, no number drawn besides the tie-breaks). Always an element
+     * of `view.legal`. Seven pairs and thirteen orphans are not aimed at (`Shanten` does not look at them), but
      * step 1 to 2 take them whenever the model lists them.
      */
-    [[nodiscard]] HandAction ChooseTurnAction(const TableView& view, MahjongRng& rng);
+    [[nodiscard]] HandAction ChooseTurnAction(const TableView& view, MahjongRng& rng, const LevelProfile& profile = kNormalProfile);
 
 }  // namespace BECore::Mahjong

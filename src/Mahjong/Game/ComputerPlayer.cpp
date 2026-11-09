@@ -13,9 +13,9 @@ namespace BECore::Mahjong {
         switch (view.phase) {
             case Phase::Claim:
             case Phase::RobKong:
-                return ChooseClaimAction(view, _rng);
+                return ChooseClaimAction(view, _rng, ProfileOf(_level));
             case Phase::Discard:
-                return ChooseTurnAction(view, _rng);
+                return ChooseTurnAction(view, _rng, ProfileOf(_level));
             case Phase::Finished:
                 break;
         }

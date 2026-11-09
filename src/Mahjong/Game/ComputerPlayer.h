@@ -13,7 +13,7 @@ namespace BECore::Mahjong {
      * `Choose` dispatches on the phase: `ChooseTurnAction` on the own turn, `ChooseClaimAction` in a claim window or a robbed-kong
      * window. The player owns a `MahjongRng` that only breaks ties, so one seed gives the same play on every platform. It never sees
      * a `HandModel` except through `Decide`, which makes the view first. It has a `ComputerLevel` (default Normal, the player described
-     * in `CLAUDE.md`); the other levels get their numbers in a later step, so every level plays like Normal for now.
+     * in `CLAUDE.md`) and plays by `ProfileOf(level)`.
      */
     class ComputerPlayer {
     public:
