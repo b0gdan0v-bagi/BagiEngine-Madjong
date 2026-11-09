@@ -7,8 +7,6 @@
 #include <Mahjong/Components/MahjongHudComponent.h>
 #include <Mahjong/Table/ScoreText.h>
 #include <Mahjong/Table/SeatName.h>
-#include <algorithm>
-#include <functional>
 
 /**
  * The screens that end a hand and a match in the shipped scene (`Components/MahjongHudComponent.h`): the score table `HandOver` is shown
@@ -560,6 +558,115 @@ namespace BECore::Mahjong::Tests {
             EXPECT_GE(GapBelow(next->rect, plate), 0.0f) << "above the plate";
             EXPECT_FALSE(Intersects(next->rect, plate));
         });
+    }
+
+    namespace {
+
+        /// Whether a slot is part of a hand: its concealed tiles, its sets and its bonus tiles. The discard blocks and the wall are the piles and
+        /// the ring in the middle, which the score table covers on purpose (the owner's call is about the hands).
+        bool IsHandSlot(const TileSlot& slot) {
+            return slot.role == SlotRole::HandTile || slot.role == SlotRole::MeldTile || slot.role == SlotRole::BonusTile;
+        }
+
+        /// Expects that no hand, meld or bonus slot of the layout (view units) intersects `rect`, and that the layout has such slots of all four
+        /// seats, so the check is not an empty one.
+        void ExpectNoHandUnder(const Rect& rect, const TableLayout& layout, const char* label) {
+            std::array<size_t, kSeatCount> slotsOfSeat{};
+            for (const TileSlot& slot : layout.slots) {
+                if (!IsHandSlot(slot)) {
+                    continue;
+                }
+                ++slotsOfSeat[slot.seat];
+                EXPECT_FALSE(Intersects(rect, slot.rect)) << label << ": covers the slot of role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index << " part "
+                                                          << slot.part << " at (" << slot.rect.x << ", " << slot.rect.y << ", " << slot.rect.w << " x " << slot.rect.h << ")";
+            }
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                EXPECT_GT(slotsOfSeat[seat], 0u) << label << ": seat " << seat;
+            }
+        }
+
+    }  // namespace
+
+    TEST_F(MahjongEndScreenTest, TheScoreTableCoversNoHandMeldOrBonusTileAtTheDesignSize) {
+        ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers));
+        ASSERT_NO_FATAL_FAILURE(PlayHandOver());
+        auto canvas = Canvas("HandOver");
+        auto corner = Canvas("HandOverAction");
+        ASSERT_TRUE(canvas && corner);
+        ASSERT_TRUE(Shown("HandOver") && Shown("HandOverAction"));
+        for (int i = 0; i < kMaxScoreLines; ++i) {
+            ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(Format("ScoreLine{}", i)), true));
+        }
+
+        // The score table promises that the four hands stay readable under it: there is no dim, it is the plate that is modal
+        EXPECT_EQ(Element("HandOver", "Dim"), nullptr);
+        EXPECT_TRUE(canvas->_modal);
+        EXPECT_EQ(Element("HandOverAction", "Bar"), nullptr);
+
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            const WorstTexts worst = FindWorstTexts(CoreManager::GetUIStrings());
+            UIVars& vars = CoreManager::GetUIVars();
+            vars.Set("handOverHeadline"_intern, eastl::string_view(worst.headline));
+            vars.Set("handOverSummary"_intern, eastl::string_view(worst.summary));
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                vars.Set(PoolString::Intern(Format("handOverSeat{}", seat)), eastl::string_view(worst.seatRow));
+            }
+            canvas->UpdateLayout(kViewWidth, kViewHeight);
+            corner->UpdateLayout(kViewWidth, kViewHeight);
+            const UIElement* plate = Element("HandOver", "Plate");
+            const UIElement* next = Element("HandOverAction", "NextHand");
+            ASSERT_TRUE(plate != nullptr && next != nullptr);
+
+            // The worst-case table, seen from each seat: 14 tiles, four kongs and 8 bonus tiles a seat
+            for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+                const TableLayout layout = MakeWorstCaseTableLayout(viewer);
+                ExpectNoHandUnder(plate->rect, layout, Format("plate, viewer {}", viewer).c_str());
+                ExpectNoHandUnder(next->rect, layout, Format("Next hand, viewer {}", viewer).c_str());
+            }
+        });
+
+        // The table of the finished hand itself: all four hands are face up and no slot of them is under the plate or the button
+        const TableLayout& layout = _table->GetLayout();
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            EXPECT_EQ(FaceUpHandTiles(seat), static_cast<int>(Hand().GetHand(seat).concealed.size())) << "seat " << seat << ": the hand is face up under the score table";
+        }
+        ExpectNoHandUnder(Element("HandOver", "Plate")->rect, layout, "plate, the table of the hand");
+        ExpectNoHandUnder(Element("HandOverAction", "NextHand")->rect, layout, "Next hand, the table of the hand");
+    }
+
+    TEST_F(MahjongEndScreenTest, ThePlateOfTheScoreTableCoversNoHandMeldOrBonusTileInAnyWindowOfTheMatrix) {
+        ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers));
+        ASSERT_NO_FATAL_FAILURE(PlayHandOver());
+        auto canvas = Canvas("HandOver");
+        ASSERT_TRUE(canvas);
+        for (int i = 0; i < kMaxScoreLines; ++i) {
+            ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(Format("ScoreLine{}", i)), true));
+        }
+        std::vector<TableLayout> layouts;  // the worst case seen from each seat
+        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+            layouts.push_back(MakeWorstCaseTableLayout(viewer));
+        }
+
+        // The plate is a SceneView canvas and follows the table (it has ignoreSafeArea like the table), so no window brings it onto a hand,
+        // not even one with insets
+        size_t windows = 0;
+        ForEachMatrixWindow([&](const MatrixWindow& window) {
+            LayOutInWindow(*canvas, window);
+            const UIElement* plate = Element("HandOver", "Plate");
+            ASSERT_NE(plate, nullptr);
+            ASSERT_FALSE(plate->rect.IsEmpty()) << window.label.c_str();
+            const Rect plateRect = ToView(plate->rect, *canvas, window);
+            EXPECT_GE(plateRect.x, kScoreTableLeft - 0.01f) << window.label.c_str();
+            EXPECT_LE(plateRect.x + plateRect.w, kScoreTableRight + 0.01f) << window.label.c_str();
+            EXPECT_GE(plateRect.y, kScoreTableTop - 0.01f) << window.label.c_str();
+            EXPECT_LE(plateRect.y + plateRect.h, kScoreTableBottom + 0.01f) << window.label.c_str();
+            for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+                ExpectNoHandUnder(plateRect, layouts[viewer], Format("{} viewer {}", window.label.c_str(), viewer).c_str());
+            }
+            ++windows;
+        });
+        EXPECT_GT(windows, 0u);
     }
 
     TEST_F(MahjongEndScreenTest, TheStandingsFollowTheModalAnatomyAndTheFirstPlaceIsGold) {

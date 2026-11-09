@@ -16,8 +16,9 @@
   y -8 from the middle: y 106..598, clear of the top sets and 14 above the bottom row of bonus tiles. The fallbacks (a headline of two
   lines, the plate 516 high) were not needed. The plate has ignoreSafeArea, like the table it lies on (a fixed design that ignores the
   safe area): with side insets in a portrait or square window 1072 units do not fit the safe area, and the hands do not move either.
-  In a window with a top notch the Next hand button of HandOverAction is pushed down by the inset onto the empty right end of the
-  headline band (the safe area's call, as for the HUD). MahjongEndScreenTest holds the sizes and that no hand, meld or bonus tile is covered.
+  In a window with a top notch the Next hand button of HandOverAction is pushed down by the inset (at most 8.4 units) onto the top
+  padding of the plate, never onto the headline band (the safe area's call, as for the HUD; MahjongTouchSizeTest holds both).
+  MahjongEndScreenTest holds the sizes and that no hand, meld or bonus tile of the worst-case table is covered by the plate or the button.
 -->
 <node name="HandOver" layer="25">
   <components>

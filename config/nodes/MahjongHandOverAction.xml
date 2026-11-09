@@ -5,8 +5,11 @@
   of HudMenu (match 0.5, minScale 0.6: the 56 unit button is 33.6 px), so it is a touch target in any window. Shown and hidden by
   MahjongHudComponent together with HandOver, which is modal and takes every click that the button does not. It is 56 high at 22,
   176 wide, and its word shrinks (AutoFit): "Следующая раздача" does not fit 176 at 22. The main button of the modal anatomy (64 high at 28,
-  last in the plate) and the action bar it had would lie over the hands of the viewer, which stay face up under the score table:
-  the corner is clear of every hand, meld and bonus tile (MahjongTouchSizeTest, MahjongEndScreenTest).
+  last in the plate) or an action bar at the bottom would lie over the hands of the viewer, which stay face up under the score table:
+  in a window without insets the corner is clear of every hand, meld and bonus tile (MahjongTouchSizeTest, MahjongEndScreenTest). A
+  top notch in a 16:9 window pushes the button down onto the first 13 units of the right seat's first hand, meld and bonus tile (the
+  safe area's call, as for New game); moving it left (x -100) would clear them but leaves the safe area in the 480 px windows with
+  side insets (the matrix fails), so it stays in the corner.
 -->
 <node name="HandOverAction" layer="26">
   <components>
