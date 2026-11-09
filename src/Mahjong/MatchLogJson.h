@@ -22,8 +22,8 @@ namespace BECore::Mahjong {
      * breakdown). The deal lists East's 14 tiles: nothing is hidden, the log is the owner's.
      *
      * Reading back takes everything but the `breakdown`s of a settlement, which are there for the human reader (the scores and changes
-     * they sum up to are in the line). Reading is checked: a missing or wrong-typed member, an unknown `event`, a bad tile, seat letter
-     * or wind name is an error text that names the member; nothing aborts.
+     * they sum up to are in the line). Reading is checked: a missing or wrong-typed member, an unknown `event`, a bad tile, seat letter,
+     * wind name or level name is an error text that names the member; nothing aborts.
      *
      * Versions: 2 (`kMatchLogFormatVersion`, `kMatchLogLevelVersion`) added `level` to `start`, the strength of the computer players (`LevelName`: `easy`,
      * `normal`, `hard`); it is needed in version 2. Version 1 files (`kMatchLogOldestVersion`) have no `level` and are read as
@@ -38,6 +38,7 @@ namespace BECore::Mahjong {
 
     /// The first `version` whose `start` line has `level`; an older one has none and reads as `Normal`.
     inline constexpr int kMatchLogLevelVersion = 2;
+    static_assert(kMatchLogLevelVersion >= kMatchLogOldestVersion && kMatchLogLevelVersion <= kMatchLogFormatVersion);
 
     /// One event as the object of its line.
     [[nodiscard]] Json EventToJson(const MatchLogEvent& event);

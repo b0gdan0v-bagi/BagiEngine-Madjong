@@ -311,6 +311,18 @@ namespace BECore::Mahjong {
         return letters;
     }
 
+    eastl::string LevelNamesText() {
+        eastl::string names;
+        for (int index = 0; index < kLevelCount; ++index) {
+            const std::string_view name = LevelName(static_cast<ComputerLevel>(index));
+            if (index > 0) {
+                names += index + 1 == kLevelCount ? " or " : ", ";
+            }
+            names.append(name.data(), name.size());
+        }
+        return names;
+    }
+
     Json ActionToJson(const HandAction& action) {
         Json json = Json::object();
         switch (action.kind) {
@@ -438,12 +450,14 @@ namespace BECore::Mahjong {
             discards.push_back(std::move(item));
         }
 
+        const std::string_view levelName = LevelName(session.Level());
         Json state = Json::object();
         state["phase"] = MakeJsonString(PhaseName(phase));
         state["seat"] = SeatOrNull(seat);
         state["seatWind"] = spectator ? Json(nullptr) : MakeJsonString(EnumUtils<Wind>::ToString(view.seatWind));
         state["roundWind"] = MakeJsonString(EnumUtils<Wind>::ToString(view.roundWind));
         state["east"] = hand.East();
+        state["level"] = MakeJsonString(eastl::string_view(levelName.data(), levelName.size()));
         state["hand"] = spectator ? Json::array() : TilesToJson(view.own.concealed);
         state["turn"] = std::move(turn);
         state["seats"] = std::move(seats);
@@ -547,6 +561,16 @@ namespace BECore::Mahjong {
             seats = *read;
         }
 
+        ComputerLevel level = _game.GetLevel();
+        if (FindJsonMember(options, "level") != nullptr) {
+            const auto name = GetJsonString(options, "level");
+            const std::optional<ComputerLevel> read = name ? TryParseLevel(std::string_view(name->c_str(), name->size())) : std::nullopt;
+            if (!read) {
+                return InvalidParams(Format("'level' has to be {}, as a string", LevelNamesText().c_str()));
+            }
+            level = *read;
+        }
+
         MahjongSettings settings = _game.GetSettings();
         if (FindJsonMember(options, "hands") != nullptr) {
             const auto hands = GetJsonInt(options, "hands");
@@ -569,6 +593,7 @@ namespace BECore::Mahjong {
         // Every option is read and checked: from here on the match starts and nothing is refused.
         _game.SetSettings(settings);
         _game.SetSeats(seats);
+        _game.SetLevel(level);
         if (const MatchStatus started = _game.StartMatch(seed); !started) {
             return InvalidParams(Format("the match did not start: {}", EnumUtils<MatchError>::ToString(started.error())));
         }

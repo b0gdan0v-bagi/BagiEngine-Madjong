@@ -39,6 +39,9 @@ namespace BECore::Mahjong {
     [[nodiscard]] std::optional<SeatSetup> ReadSeats(const eastl::string& letters);
     [[nodiscard]] eastl::string SeatsToLetters(const SeatSetup& seats);
 
+    /// The names of the levels for an error text: "easy, normal or hard" (`LevelName` of each, in the order of the enum).
+    [[nodiscard]] eastl::string LevelNamesText();
+
     /// An action as the object `list_actions` gives: {"type": "discard", "tile", "declareCalling"}, {"type": "win"},
     /// {"type": "concealed_kong" | "upgrade_kong", "tile"}, {"type": "claim", "claim": "chow" | "pung" | "kong" | "mahjong", "first" for
     /// a chow}, {"type": "pass"}.

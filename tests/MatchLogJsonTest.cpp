@@ -230,6 +230,9 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(ChangedMemberIsRefused(start, "level", ""));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "level", 1));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "level", nullptr));
+        // An unknown name is answered with the three names
+        const eastl::string unknown = ErrorOf(With(EventToJson(start), "level", "expert"));
+        EXPECT_NE(unknown.find("easy, normal or hard"), eastl::string::npos) << unknown.c_str();
         // The versions around the known ones are refused.
         EXPECT_TRUE(ChangedMemberIsRefused(start, "version", kMatchLogFormatVersion + 1));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "version", kMatchLogOldestVersion - 1));
