@@ -127,8 +127,8 @@ namespace BECore::Mahjong::Tests {
         // 650 x 500 holds the one-line row at 1.0 and not at 1.5 (the canvas is 730 units, two lines, 120 x 0.89 = 107 px on a bar of 67 px)
         EXPECT_TRUE(Compact(650.0f, 500.0f, kDensity, kMinTouch, 1.0f));
         EXPECT_FALSE(Compact(650.0f, 500.0f, kDensity, kMinTouch, 1.5f));
-        // 720 x 480 is compact at 1.0 and not at 1.5 (the canvas is 783.6 units wide, the row 120 units = 110 px on a bar of 37.5 px)
-        EXPECT_FALSE(Compact(720.0f, 480.0f, kDensity, kMinTouch, 1.5f)) << "783.6 units wide: a row of 110 px on a bar of 37.5 px";
+        // 720 x 480 is compact at 1.0 and not at 1.5 (the canvas is 783.8 units wide, the row 120 units = 110 px on a bar of 37.5 px)
+        EXPECT_FALSE(Compact(720.0f, 480.0f, kDensity, kMinTouch, 1.5f)) << "783.8 units wide: a row of 110 px on a bar of 37.5 px";
         // The tall and the square windows keep the compact row at both
         EXPECT_TRUE(Compact(480.0f, 480.0f, kDensity, kMinTouch, 1.0f));
         EXPECT_TRUE(Compact(480.0f, 480.0f, kDensity, kMinTouch, 1.5f)) << "640 units wide, 120 x 0.75 = 90 px on a bar of 105 px";

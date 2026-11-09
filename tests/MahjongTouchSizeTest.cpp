@@ -641,7 +641,7 @@ namespace BECore::Mahjong::Tests {
         // Every window of the matrix is one or the other: the buttons of `Actions` are 56 units of the table's fit, the rule says where that is too
         // small and the bar under the table (480 px on the short side at the least) holds the row. The one window that does not, at the user scale
         // 1.0, is the 4:3 window of 640 x 480, where the row is two lines on a bar of 60 px, so `Actions` stays there with buttons of 28 px; at 1.5
-        // it stays in 640 x 480 and in the 3:2 window of 720 x 480 (31.5 px), whose canvas is 783.6 units wide
+        // it stays in 640 x 480 and in the 3:2 window of 720 x 480 (31.5 px), whose canvas is 783.8 units wide
         size_t compactWindows = 0;
         size_t roomyWindows = 0;
         size_t smallWindows = 0;
