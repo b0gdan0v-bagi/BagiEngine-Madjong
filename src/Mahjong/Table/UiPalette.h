@@ -14,7 +14,7 @@ namespace BECore::Mahjong {
      * Roles, not colours, are the rule: a new control takes the role of what it does.
      * - The table: `kFelt` with a `kFeltRim` round the view, a `kZonePlate` under the discard blocks and the wall ring, a `kTileShadow`
      *   under each tile. A mark on the table is the gold family (`kTurnMark`, `kPendingFrame`, the hints `kDeclareMark`,
-     *   `kAdvisedFrame`, and the marks of the last move `kLastDiscardMark`, `kDrawnTileMark`, `kClaimedEdge`, `kClaimHighlight`) and nothing else on
+     *   `kAdvisedFrame`, and the marks of the last move `kLastDiscardMark`, `kDrawnTileMark`, `kClaimedEdge`, `kClaimHighlight`, and the frame of a declared hand `kCallingFrame`) and nothing else on
      *   the table is gold;
      *   `kVeil` dims a tile that cannot be discarded now.
      * - The screens: `scrim` dims what lies behind a modal screen (and the hint), `surface` is the plate, `header` its headline band,
@@ -46,6 +46,10 @@ namespace BECore::Mahjong {
     inline constexpr Color kClaimHighlight{255, 214, 80, 120};
     inline constexpr float kClaimHighlightSeconds = 2.0f;
     inline constexpr float kClaimBlinkSeconds = 0.5f;
+    /// Round the hand of a seat that has declared its calling hand (public), four bars of `kCallingFrameWidth` units on the border of the
+    /// padded rectangle of the hand, behind the tiles; it stays while the declaration stands.
+    inline constexpr Color kCallingFrame{255, 214, 80, 160};
+    inline constexpr float kCallingFrameWidth = 3.0f;
     /// Over a tile whose declaring discard is not legal while the next discard declares the calling hand.
     inline constexpr Color kVeil{0, 0, 0, 140};
     /// The hints (`MahjongHintsComponent`), marks on the viewer's hand and so in the gold family: a bar under a tile whose discard declares

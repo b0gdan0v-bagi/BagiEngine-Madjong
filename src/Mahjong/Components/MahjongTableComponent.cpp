@@ -229,6 +229,15 @@ namespace BECore::Mahjong {
             return Rect(rect.x - margin, rect.y - margin, rect.w + 2.0f * margin, rect.h + 2.0f * margin);
         }
 
+        /// Four bars of `width` on the border of `rect`, inside it; the two side bars lie between the top and the bottom one, so no
+        /// corner is drawn twice (the colour is translucent).
+        void DrawFrame(IRenderer& renderer, const Rect& rect, float width, const Color& color) {
+            renderer.DrawFilledRect(rect.x, rect.y, rect.w, width, color);
+            renderer.DrawFilledRect(rect.x, rect.y + rect.h - width, rect.w, width, color);
+            renderer.DrawFilledRect(rect.x, rect.y + width, width, rect.h - 2.0f * width, color);
+            renderer.DrawFilledRect(rect.x + rect.w - width, rect.y + width, width, rect.h - 2.0f * width, color);
+        }
+
     }  // namespace
 
     MahjongTableComponent* MahjongTableComponent::s_active = nullptr;
@@ -556,6 +565,17 @@ namespace BECore::Mahjong {
             if (bounds.w > 0.0f && std::fmod(elapsed, kClaimBlinkSeconds) < kClaimBlinkSeconds * 0.5f) {
                 const Rect marked = Padded(bounds, kActingMargin * unit);
                 renderer.DrawFilledRect(marked.x, marked.y, marked.w, marked.h, kClaimHighlight);
+            }
+        }
+        // A declared calling hand is public: a frame round the hand of each seat that has declared it, under the tiles (it reads the flag
+        // only, so it shows under the cover and at the end of the hand too)
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            if (!hand.GetHand(seat).callingDeclared) {
+                continue;
+            }
+            const Rect bounds = BoundsOf(_layout, SlotRole::HandTile, seat);
+            if (bounds.w > 0.0f) {
+                DrawFrame(renderer, Padded(bounds, kActingMargin * unit), kCallingFrameWidth * unit, kCallingFrame);
             }
         }
         // The tiles that cannot declare the calling hand when they are discarded, while the next discard is to declare it

@@ -7,7 +7,8 @@
 
 /**
  * The marks of the last move on the table (`Components/MahjongTableComponent.h`): the tint on the last discard, the tint on the tile the
- * viewer has just drawn (it stays in its place in the row and is clickable like any other tile) and the bar on the claimed tile of an open set. The shipped scene is drawn
+ * viewer has just drawn (it stays in its place in the row and is clickable like any other tile), the bar on the claimed tile of an open set
+ * and the frame round the hand of a seat that has declared its calling hand. The shipped scene is drawn
  * into a `RecordingRenderer` as big as the view, so a rect of a draw call is a rect of the layout. The fixed hands come from
  * `FixedWall.h` and are laid into the hand in progress. The highlight of a set that was just laid is here too: it is a mark of the last move.
  */
@@ -28,6 +29,11 @@ namespace BECore::Mahjong::Tests {
         constexpr SeatSetup kPersonAtSeat1{SeatKind::Computer, SeatKind::Person, SeatKind::Computer, SeatKind::Computer};
         /// The fill behind a set that was just laid reaches this far past the tiles of the set (`kActingMargin` of the component).
         constexpr float kHighlightMargin = 4.0f;
+        /// The frame of a declared hand is `kCallingFrameWidth` units wide on the border of the same padded rectangle.
+        constexpr float kFrameMargin = 4.0f;
+        /// Every seat waits on the 5p with two tiles of a wind as the pair; seat `s` holds the wind `kWaitingWinds[s]`.
+        constexpr const char* kWaitingHand0 = "4p 6p 1s 2s 3s 4m 5m 6m 7s 8s 9s Sw Sw";
+        constexpr const char* kWaitingHand1 = "4p 6p 1m 2m 3m 4s 5s 6s 7m 8m 9m Nw Nw";
         /// Times that a blink period (`kClaimBlinkSeconds` 0.5) divides exactly in floats: 0.375 s is in the off half, 0.125 s ends it.
         constexpr float kOffHalf = 0.375f;
         constexpr float kEndOfPeriod = 0.125f;
@@ -137,6 +143,56 @@ namespace BECore::Mahjong::Tests {
             }
             ASSERT_LT(tileCall, _renderer->calls.size());
             EXPECT_LT(tileCall, tints[0]) << "the tint lies over the face";
+        }
+
+        /// A match in which the four seats hold waiting hands (on the 5p) and every seat has declared with its first discard (the dragons
+        /// of the live wall: no discard opens a window); seat 0 is to act again, with `lastDraw` drawn (not a 5p, unless the test wins).
+        static HandModel AllDeclaredModel(const char* lastDraw = "9s") {
+            FixedWallSpec spec;
+            spec.hands[kSeat0] = kWaitingHand0;
+            spec.hands[kSeat1] = kWaitingHand1;
+            spec.hands[kSeat2] = kSeat2Waits;
+            spec.hands[kSeat3] = kSeat3Waits;
+            spec.live = std::string("Gd Rd Wd Gd ") + lastDraw;
+            HandModel model = MakeModel(spec);
+            Lap(model, "Gd Rd Wd Gd", {kSeat0, kSeat1, kSeat2, kSeat3});
+            EXPECT_EQ(model.CurrentSeat(), kSeat0);
+            return model;
+        }
+
+        /// The four bars of `kCallingFrame` that should lie round the hand of `seat` in the last layout, worked out here.
+        std::vector<Rect> FrameOf(Seat seat) const {
+            const Rect bounds = BoundsOf(_table->GetLayout(), SlotRole::HandTile, seat);
+            const Rect padded(bounds.x - kFrameMargin, bounds.y - kFrameMargin, bounds.w + 2.0f * kFrameMargin, bounds.h + 2.0f * kFrameMargin);
+            const float width = kCallingFrameWidth;
+            return {Rect(padded.x, padded.y, padded.w, width), Rect(padded.x, padded.y + padded.h - width, padded.w, width), Rect(padded.x, padded.y + width, width, padded.h - 2.0f * width),
+                    Rect(padded.x + padded.w - width, padded.y + width, width, padded.h - 2.0f * width)};
+        }
+
+        static bool SameRect(const Rect& a, const Rect& b) {
+            return std::abs(a.x - b.x) < kEpsilon && std::abs(a.y - b.y) < kEpsilon && std::abs(a.w - b.w) < kEpsilon && std::abs(a.h - b.h) < kEpsilon;
+        }
+
+        /// The frame of `seat` is in the draw calls (all four bars, once each).
+        void ExpectFramed(Seat seat) const {
+            const std::vector<Rect> drawn = RectsOf(kCallingFrame);
+            for (const Rect& bar : FrameOf(seat)) {
+                int found = 0;
+                for (const Rect& rect : drawn) {
+                    found += SameRect(rect, bar) ? 1 : 0;
+                }
+                EXPECT_EQ(found, 1) << "seat " << seat << " bar " << bar.x << "," << bar.y << " " << bar.w << "x" << bar.h;
+            }
+        }
+
+        /// Every bar of the frames lies inside the view.
+        void ExpectFramesInsideTheView() const {
+            for (const Rect& rect : RectsOf(kCallingFrame)) {
+                EXPECT_GE(rect.x, 0.0f);
+                EXPECT_GE(rect.y, 0.0f);
+                EXPECT_LE(rect.x + rect.w, kViewWidth);
+                EXPECT_LE(rect.y + rect.h, kViewHeight);
+            }
         }
 
         /// The fill that should lie behind the meld `meld` of `seat` in the last layout.
@@ -553,6 +609,120 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(kDrawnTileMark.b, kTurnMark.b);
         for (const Color& other : {kTurnMark, kPendingFrame, kLastDiscardMark, kClaimedEdge, kClaimHighlight, kDeclareMark, kAdvisedFrame, kVeil, kTileShadow, kZonePlate}) {
             EXPECT_FALSE(SameColor(kDrawnTileMark, other));
+        }
+    }
+
+    // ----- a declared calling hand -----
+
+    TEST_F(MahjongTableMarksTest, ASeatThatHasDeclaredItsCallingHandHasAFrameRoundItsHandAndNoOtherSeatHas) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, MakeModel(SpecOf(kPlainHand, "5p"))));
+        EXPECT_TRUE(RectsOf(kCallingFrame).empty()) << "nobody has declared at the start";
+
+        // Seat 2 (the opponent at the top for the person at seat 0) declares in the lap; seat 1 is to act
+        HandModel model = OpenPungModel(kSeat1Hand, kSeat2Waits, kSeat3Waits, {kSeat2});
+        ASSERT_TRUE(model.GetHand(kSeat2).callingDeclared);
+        ASSERT_FALSE(model.GetHand(kSeat1).callingDeclared);
+        Lay(model);
+        Draw();
+
+        const std::vector<Rect> bars = RectsOf(kCallingFrame);
+        ASSERT_EQ(bars.size(), 4u);
+        ASSERT_NO_FATAL_FAILURE(ExpectFramed(kSeat2));
+        ASSERT_NO_FATAL_FAILURE(ExpectFramesInsideTheView());
+        // The bars lie on the border of the padded hand: none inside the hand's own rect
+        const Rect hand = BoundsOf(_table->GetLayout(), SlotRole::HandTile, kSeat2);
+        for (const Rect& bar : bars) {
+            const bool inside = bar.x >= hand.x && bar.y >= hand.y && bar.x + bar.w <= hand.x + hand.w && bar.y + bar.h <= hand.y + hand.h;
+            EXPECT_FALSE(inside);
+        }
+
+        // The frame stays after another seat's discard
+        ASSERT_TRUE(model.Discard(kSeat1, T("8p")).has_value());
+        ASSERT_EQ(model.GetPhase(), Phase::Discard);
+        Lay(model);
+        Draw();
+        EXPECT_EQ(RectsOf(kCallingFrame).size(), 4u);
+        ASSERT_NO_FATAL_FAILURE(ExpectFramed(kSeat2));
+    }
+
+    TEST_F(MahjongTableMarksTest, EverySeatThatHasDeclaredIsFramedAtEachOfTheFourPlacesOnTheScreen) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, AllDeclaredModel()));
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            ASSERT_TRUE(Hand().GetHand(seat).callingDeclared) << "seat " << seat;
+        }
+
+        // The viewer is seat 0 at the bottom, then seats 1, 2 and 3 at the right, the top and the left
+        EXPECT_EQ(RectsOf(kCallingFrame).size(), 16u);
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            ASSERT_NO_FATAL_FAILURE(ExpectFramed(seat));
+        }
+        ASSERT_NO_FATAL_FAILURE(ExpectFramesInsideTheView());
+
+        // Two declared seats give eight bars
+        Lay(UpgradeModel({kSeat2, kSeat3}));
+        Draw();
+        EXPECT_EQ(RectsOf(kCallingFrame).size(), 8u);
+        ASSERT_NO_FATAL_FAILURE(ExpectFramed(kSeat2));
+        ASSERT_NO_FATAL_FAILURE(ExpectFramed(kSeat3));
+    }
+
+    TEST_F(MahjongTableMarksTest, TheFrameLiesBehindTheTilesOfItsHand) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, AllDeclaredModel()));
+        const std::vector<size_t> frames = CallsOf(kCallingFrame);
+        ASSERT_EQ(frames.size(), 16u);
+        const size_t lastFrame = frames.back();
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            for (const TileSlot* slot : HandSlots(seat)) {
+                size_t call = _renderer->calls.size();
+                for (size_t i = 0; i < _renderer->calls.size(); ++i) {
+                    const DrawCall& drawn = _renderer->calls[i];
+                    if (drawn.kind == DrawKind::Texture && drawn.texture == _atlasTexture && drawn.rect.x == slot->rect.x && drawn.rect.y == slot->rect.y) {
+                        call = i;
+                    }
+                }
+                ASSERT_LT(call, _renderer->calls.size()) << "seat " << seat;
+                EXPECT_LT(lastFrame, call) << "the frame of every seat is drawn before every tile of the hands";
+            }
+        }
+    }
+
+    TEST_F(MahjongTableMarksTest, TheFrameIsPublicSoItShowsUnderTheCoverAndAtTheEndOfTheHand) {
+        // Two people: the screen is covered, and the hand of seat 0 is backs, but the declaration is public
+        ASSERT_NO_FATAL_FAILURE(StartWith(kTwoPeople, AllDeclaredModel()));
+        TableSession& session = _game->GetSession();
+        ASSERT_TRUE(session.HandoffPending());
+        EXPECT_EQ(RectsOf(kCallingFrame).size(), 16u);
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            ASSERT_NO_FATAL_FAILURE(ExpectFramed(seat));
+        }
+        session.Reveal();
+        Draw();
+        EXPECT_EQ(RectsOf(kCallingFrame).size(), 16u);
+
+        // Seat 0 wins with the 5p it draws: the hand is over, all four hands face up, the frames stay
+        HandModel won = AllDeclaredModel("5p");
+        ASSERT_TRUE(won.DeclareWin(kSeat0).has_value());
+        ASSERT_EQ(won.GetPhase(), Phase::Finished);
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, won));
+        ASSERT_EQ(_game->GetSession().GetPhase(), SessionPhase::HandOver);
+        EXPECT_EQ(RectsOf(kCallingFrame).size(), 16u);
+
+        // The next hand starts without a declaration, so without a frame
+        ASSERT_TRUE(_game->GetSession().NextHand().has_value());
+        Draw();
+        ASSERT_EQ(_game->GetSession().GetPhase(), SessionPhase::Playing);
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            EXPECT_FALSE(Hand().GetHand(seat).callingDeclared);
+        }
+        EXPECT_TRUE(RectsOf(kCallingFrame).empty());
+    }
+
+    TEST_F(MahjongTableMarksTest, TheFrameOfADeclaredHandIsInTheGoldFamilyAndDiffersFromTheOtherMarks) {
+        EXPECT_EQ(kCallingFrame.r, kTurnMark.r);
+        EXPECT_EQ(kCallingFrame.g, kTurnMark.g);
+        EXPECT_EQ(kCallingFrame.b, kTurnMark.b);
+        for (const Color& other : {kTurnMark, kPendingFrame, kLastDiscardMark, kDrawnTileMark, kClaimedEdge, kClaimHighlight, kDeclareMark, kAdvisedFrame, kVeil, kTileShadow, kZonePlate}) {
+            EXPECT_FALSE(SameColor(kCallingFrame, other));
         }
     }
 

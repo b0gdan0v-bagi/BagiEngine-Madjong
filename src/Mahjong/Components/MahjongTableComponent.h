@@ -58,6 +58,11 @@ namespace BECore::Mahjong {
      * `kClaimHighlightSeconds` (`kClaimHighlight`, on for the first half of each `kClaimBlinkSeconds`); the time runs on `SceneUpdateEvent`
      * (also under the cover, not while the seat choice is open) and the highlight changes no game state.
      *
+     * **A declared calling hand** (`PlayerHand::callingDeclared`, public: the control state lists it as `calling`) has a frame of
+     * `kCallingFrame` round its hand (four bars of `kCallingFrameWidth` units on the border of the rectangle of the turn backdrop),
+     * drawn before the tiles, for every seat that has declared, under the cover and at the end of the hand too (it reads the flag, never
+     * a tile); it follows the flag, so it is gone in the next hand.
+     *
      * **Playing.** While a person has to act (`TableSession::ActorIsPerson()`, no hot-seat cover) a left click on a tile of the viewer's hand
      * discards it (`PerformPerson(MakeDiscard(tile, declareNext))`); a refused action changes nothing. The other actions are the buttons of the
      * canvas `Actions` (`Table/ActionButtons.h`; `ActionsCompact` holds the same buttons by name for the windows where those would be under the
