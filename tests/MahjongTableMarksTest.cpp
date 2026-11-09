@@ -411,11 +411,13 @@ namespace BECore::Mahjong::Tests {
         template <typename Fn>
         void PlayMatchToTheEnd(Fn perHand) {
             MahjongSettings settings = _game->GetSettings();
-            settings.handsPerMatch = 8;
+            settings.handsPerMatch = kShortMatchHands;
             _game->SetSettings(settings);
             ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
             TableSession& session = _game->GetSession();
-            for (int guard = 0; guard < 100 && session.GetPhase() != SessionPhase::MatchOver; ++guard) {
+            // The counted hands plus the drawn ones that are replayed: far more than a match of 8 needs, so only a stuck match ends the loop
+            constexpr int kMaxHandsGuard = 100;
+            for (int guard = 0; guard < kMaxHandsGuard && session.GetPhase() != SessionPhase::MatchOver; ++guard) {
                 session.RunComputers();
                 if (session.GetPhase() == SessionPhase::HandOver) {
                     perHand();

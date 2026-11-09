@@ -237,7 +237,7 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
-    TEST_F(MahjongHudTest, ThePlatesOfAHotSeatTableMoveWithTheViewer) {
+    TEST_F(MahjongHudTest, TheBottomPlateOfAHotSeatTableIsTheViewerAfterReveal) {
         // Seat 1 is East and to act: the cover waits for that person, who is at the bottom, so seat 1 is at position 0 and seat 2 at position 1
         ASSERT_NO_FATAL_FAILURE(Start(kTwoPeople));
         Lay(MakeModel(SpecOf(kPlainHand, "9p"), kSeat1));
