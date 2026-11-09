@@ -1,5 +1,7 @@
 #include "TableSession.h"
 
+#include <Mahjong/Game/MatchLog.h>
+
 namespace BECore::Mahjong {
 
     namespace {
@@ -28,6 +30,15 @@ namespace BECore::Mahjong {
         _seats = seats;
         _viewer = PersonCount() == 1 ? OnlyPerson(_seats) : kNoSeat;
         ++_version;
+        if (_sink != nullptr) {
+            MatchLogEvent start;
+            start.kind = MatchLogKind::Start;
+            start.seed = seed;
+            start.settings = settings;
+            start.seats = seats;
+            _sink->OnEvent(start);
+            _sink->OnEvent(MakeHandEvent(_match));
+        }
         return {};
     }
 
@@ -66,8 +77,10 @@ namespace BECore::Mahjong {
         if (ActorIsPerson()) {
             return std::unexpected(HandError::NotYourTurn);
         }
+        const Seat actor = Actor();
         const StepResult step = _table->Step(_match.Hand());
         if (step) {
+            LogAction(actor, *step);
             CoverForNextPerson();
             ++_version;
         }
@@ -104,6 +117,7 @@ namespace BECore::Mahjong {
         if (PersonCount() >= 2) {
             _viewer = actor;
         }
+        LogAction(actor, action);
         CoverForNextPerson();
         ++_version;
         return {};
@@ -112,6 +126,13 @@ namespace BECore::Mahjong {
     std::expected<HandSettlement, MatchError> TableSession::NextHand() {
         std::expected<HandSettlement, MatchError> settled = _match.EndHand();
         if (settled) {
+            if (_sink != nullptr) {
+                MatchLogEvent event;
+                event.kind = MatchLogKind::Settlement;
+                event.settlement = *settled;
+                _sink->OnEvent(event);
+                LogAfterSettlement();
+            }
             CoverForNextPerson();
             ++_version;
         }
@@ -136,6 +157,33 @@ namespace BECore::Mahjong {
             _viewer = actor;
             ++_version;
         }
+    }
+
+    void TableSession::LogAction(Seat seat, const HandAction& action) {
+        if (_sink == nullptr) {
+            return;
+        }
+        MatchLogEvent event;
+        event.kind = MatchLogKind::Action;
+        event.seat = seat;
+        event.by = KindOf(seat);
+        event.action = action;
+        _sink->OnEvent(event);
+    }
+
+    void TableSession::LogAfterSettlement() {
+        if (_sink == nullptr) {
+            return;
+        }
+        if (_match.GetPhase() == MatchPhase::InHand) {
+            _sink->OnEvent(MakeHandEvent(_match));
+            return;
+        }
+        MatchLogEvent event;
+        event.kind = MatchLogKind::End;
+        event.scores = _match.Scores();
+        event.standings = _match.Standings();
+        _sink->OnEvent(event);
     }
 
     void TableSession::CoverForNextPerson() {

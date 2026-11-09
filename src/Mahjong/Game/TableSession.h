@@ -21,6 +21,8 @@ namespace BECore::Mahjong {
     /// The most steps `RunComputers` takes in one call; a hand of four computer players takes a few hundred, so more is a defect.
     inline constexpr int kMaxComputerSteps = 2000;
 
+    class IMatchLogSink;
+
     /**
      * @brief The one object every front end drives: a `Match` with the seats set up as people and computers. Plain C++, no scene.
      *
@@ -39,6 +41,10 @@ namespace BECore::Mahjong {
      *   `kNoSeat` as soon as another person has to act (a start, a step, an action, a settled hand), so the screen is covered
      *   (`HandoffPending`) until that person calls `Reveal`. The same person acting again keeps the viewer. In `HandOver` and
      *   `MatchOver` every hand is shown: front ends read `GetPhase()` then and not the viewer.
+     * - The match log (`Game/MatchLog.h`): with a sink set (`SetLogSink`), every accepted change is reported to it as an event, in
+     *   order: `StartMatch` (Start, Hand), `StepComputer` / `PerformPerson` (Action), `NextHand` (Settlement, then Hand or End). A
+     *   refused call, `Reveal` and a start with bad settings report nothing. A match started behind the session's back (through the
+     *   non-const `Match::Start`) is not seen and so not logged.
      */
     class TableSession {
     public:
@@ -51,6 +57,15 @@ namespace BECore::Mahjong {
         /// `Match::Start(settings, seed)` with `seats` and computer players seeded `seed`. `BadSettings`, and nothing changes (the
         /// version too), unless `IsPlayable(settings)`.
         MatchStatus StartMatch(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats);
+
+        /// Where the events of the match go (see the class comment); null (the default) for none. Not owned: the sink outlives its use
+        /// by the session. May be changed at any time, also in the middle of a match.
+        void SetLogSink(IMatchLogSink* sink) noexcept {
+            _sink = sink;
+        }
+        [[nodiscard]] IMatchLogSink* GetLogSink() const noexcept {
+            return _sink;
+        }
 
         /// `MatchOver` before the first start, too.
         [[nodiscard]] SessionPhase GetPhase() const noexcept;
@@ -98,12 +113,17 @@ namespace BECore::Mahjong {
     private:
         /// After every change of the actor: with two or more people the viewer is `kNoSeat` when another person has to act.
         void CoverForNextPerson();
+        /// Reports the action the actor `seat` has just done.
+        void LogAction(Seat seat, const HandAction& action);
+        /// Reports the hand that was just dealt, or the end of the match when the last hand was settled.
+        void LogAfterSettlement();
 
         Match& _match;
         std::optional<ComputerTable> _table;
         SeatSetup _seats = kDefaultSeatSetup;
         Seat _viewer = kNoSeat;
         uint64_t _version = 0;
+        IMatchLogSink* _sink = nullptr;
     };
 
 }  // namespace BECore::Mahjong

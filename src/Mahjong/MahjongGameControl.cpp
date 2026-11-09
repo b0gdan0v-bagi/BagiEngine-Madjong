@@ -119,26 +119,6 @@ namespace BECore::Mahjong {
 
         // ----- the pieces of the state -----
 
-        Json SeatOrNull(Seat seat) {
-            return IsSeat(seat) ? Json(seat) : Json(nullptr);
-        }
-
-        Json TilesToJson(const eastl::vector<Tile>& tiles) {
-            Json list = Json::array();
-            for (const Tile tile : tiles) {
-                list.push_back(TileToJson(tile));
-            }
-            return list;
-        }
-
-        Json SeatScoresToJson(const SeatScores& scores) {
-            Json list = Json::array();
-            for (const int value : scores) {
-                list.push_back(value);
-            }
-            return list;
-        }
-
         /// The tiles of a meld as they lie: three in sequence for a chow, three or four equal ones.
         Json MeldTilesToJson(const Meld& meld) {
             Json tiles = Json::array();
@@ -180,22 +160,6 @@ namespace BECore::Mahjong {
             json["tile"] = TileToJson(line.tile);
             json["points"] = line.points;
             json["doubles"] = line.doubles;
-            return json;
-        }
-
-        Json BreakdownToJson(const ScoreBreakdown& breakdown) {
-            Json lines = Json::array();
-            for (const ScoreLine& line : breakdown.lines) {
-                lines.push_back(LineToJson(line));
-            }
-            Json json = Json::object();
-            json["won"] = breakdown.won;
-            json["lines"] = std::move(lines);
-            json["points"] = breakdown.points;
-            json["doubles"] = breakdown.doubles;
-            json["raw"] = breakdown.raw;
-            json["score"] = breakdown.score;
-            json["limitHand"] = breakdown.limitHand ? MakeJsonString(EnumUtils<ScoreKind>::ToString(*breakdown.limitHand)) : Json(nullptr);
             return json;
         }
 
@@ -282,25 +246,69 @@ namespace BECore::Mahjong {
             return *tile;
         }
 
-        /// The seat setup of a `seats` string such as "PCCC", nullopt unless it is four letters P or C.
-        std::optional<SeatSetup> ReadSeats(const eastl::string& letters) {
-            if (letters.size() != kSeatLetterCount) {
-                return std::nullopt;
-            }
-            SeatSetup seats = kDefaultSeatSetup;
-            for (size_t seat = 0; seat < kSeatLetterCount; ++seat) {
-                if (letters[seat] != kPersonLetter && letters[seat] != kComputerLetter) {
-                    return std::nullopt;
-                }
-                seats[seat] = letters[seat] == kPersonLetter ? SeatKind::Person : SeatKind::Computer;
-            }
-            return seats;
-        }
-
     }  // namespace
 
     Json TileToJson(Tile tile) {
         return tile.IsValid() ? MakeJsonString(View(ToString(tile))) : Json(nullptr);
+    }
+
+    Json SeatOrNull(Seat seat) {
+        return IsSeat(seat) ? Json(seat) : Json(nullptr);
+    }
+
+    Json TilesToJson(const eastl::vector<Tile>& tiles) {
+        Json list = Json::array();
+        for (const Tile tile : tiles) {
+            list.push_back(TileToJson(tile));
+        }
+        return list;
+    }
+
+    Json SeatScoresToJson(const SeatScores& scores) {
+        Json list = Json::array();
+        for (const int value : scores) {
+            list.push_back(value);
+        }
+        return list;
+    }
+
+    Json BreakdownToJson(const ScoreBreakdown& breakdown) {
+        Json lines = Json::array();
+        for (const ScoreLine& line : breakdown.lines) {
+            lines.push_back(LineToJson(line));
+        }
+        Json json = Json::object();
+        json["won"] = breakdown.won;
+        json["lines"] = std::move(lines);
+        json["points"] = breakdown.points;
+        json["doubles"] = breakdown.doubles;
+        json["raw"] = breakdown.raw;
+        json["score"] = breakdown.score;
+        json["limitHand"] = breakdown.limitHand ? MakeJsonString(EnumUtils<ScoreKind>::ToString(*breakdown.limitHand)) : Json(nullptr);
+        return json;
+    }
+
+    /// The seat setup of a `seats` string such as "PCCC", nullopt unless it is four letters P or C.
+    std::optional<SeatSetup> ReadSeats(const eastl::string& letters) {
+        if (letters.size() != kSeatLetterCount) {
+            return std::nullopt;
+        }
+        SeatSetup seats = kDefaultSeatSetup;
+        for (size_t seat = 0; seat < kSeatLetterCount; ++seat) {
+            if (letters[seat] != kPersonLetter && letters[seat] != kComputerLetter) {
+                return std::nullopt;
+            }
+            seats[seat] = letters[seat] == kPersonLetter ? SeatKind::Person : SeatKind::Computer;
+        }
+        return seats;
+    }
+
+    eastl::string SeatsToLetters(const SeatSetup& seats) {
+        eastl::string letters;
+        for (const SeatKind kind : seats) {
+            letters.push_back(kind == SeatKind::Person ? kPersonLetter : kComputerLetter);
+        }
+        return letters;
     }
 
     Json ActionToJson(const HandAction& action) {
