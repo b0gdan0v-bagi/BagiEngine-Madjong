@@ -4,7 +4,7 @@
 /**
  * The command line of the arena (`src/Mahjong/Arena/ArenaCli.h`, the program `BagiMahjongArena`): the arguments (defaults, every option,
  * a list of focus players with knobs, every refusal with its message), and the whole program on a few seeds: the report, twice the same
- * text, `--help`, the exit codes, `--time`. Pure logic: no engine services; the file takes about 1 s in Debug (three seeds).
+ * text, `--help`, the exit codes, `--time`. Pure logic: no engine services; the file takes about 1.5 s in Debug (three seeds).
  */
 namespace BECore::Mahjong::Arena {
 

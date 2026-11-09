@@ -36,6 +36,8 @@ ctest --preset macos-debug                    # MahjongTests and BagiMahjongCont
 build/ClangmacOS/BagiMahjong                  # the game; the executable folder depends on compiler and OS
 ```
 
+The computer players are measured by the bot arena, a program with no window (Release, `docs/bot-arena.md`): `cmake --preset macos-release && cmake --build --preset macos-release --target BagiMahjongArena`, then `build/ClangmacOS/BagiMahjongArena --focus normal --others random --seeds 1000` (it overwrites the Debug executables in `build/ClangmacOS/`; build `macos-debug` again before `ctest`).
+
 The tile art is drawn by a script (standard library only): `python3 tools/make_tiles.py` regenerates `assets/tiles/tiles.png` and `config/TextureLibrary.xml`, `python3 tools/make_tiles.py --check` tells whether the committed files are up to date.
 
 ## How to play
@@ -56,7 +58,8 @@ The game opens on **New game: who plays?**: for each of the four seats pick `Per
 |------|------|
 | `src/Mahjong/` | the game: `MahjongGame` and its control adapter, the rules and the computer players (`Game/`), the pure side of the scene (`Table/`: layout, tile atlas cells, action buttons, the words of the score table) and the scene components (`Components/`: the table, the HUD). `CLAUDE.md` describes it |
 | `config/`, `assets/` | scene, application config, the tile sprite library; the tile atlas (`assets/tiles/tiles.png`) |
-| `tools/` | `make_tiles.py`, the generator of our own tile art (`config/TextureLibrary.xml` and the atlas are its output) |
+| `tools/` | `make_tiles.py`, the generator of our own tile art (`config/TextureLibrary.xml` and the atlas are its output); `arena/main.cpp`, the bot arena program |
+| `docs/` | `bot-arena.md`: how to run the arena and read its intervals |
 | `tests/` | gtest cases and `control_smoke.py`, the smoke test of the control API (plays a hand and a match over WebSocket) |
 | `todo/`, `TODO.md` | known problems and ideas live in the todo store (area `mahjong`), not in git (`todo/README.md`) |
 | `CI/` | environment setup (`setup_venv.*`) and the VS Code workspace `BagiMahjong.code-workspace` (CMake Tools on the engine's presets, CodeLLDB / MSVC launch, build tasks) |

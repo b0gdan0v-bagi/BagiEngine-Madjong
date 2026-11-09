@@ -15,7 +15,8 @@ namespace BECore::Mahjong::Arena {
         constexpr char kKnobMarker = '=';
         constexpr char kLevelMarker = ':';
 
-        /// The value of `text` as a whole number of type `T`; nullopt when anything else is in it (a sign, a space, a letter, too large).
+        /// The value of `text` as a whole number of type `T`; nullopt when anything else is in it (a `+`, a space, a letter, too large;
+        /// a `-` only for an unsigned `T`: a signed one reads it and `ValidateArenaConfig` refuses the number).
         template <typename T>
         std::optional<T> ParseWhole(std::string_view text) {
             T value{};
@@ -57,10 +58,10 @@ namespace BECore::Mahjong::Arena {
         }
 
         template <typename T>
-        std::expected<T, eastl::string> ParseNumberOption(std::string_view option, std::string_view value) {
+        std::expected<T, eastl::string> ParseNumberOption(std::string_view option, std::string_view value, T smallest) {
             const std::optional<T> number = ParseWhole<T>(value);
             if (!number.has_value()) {
-                return std::unexpected(Format("{}: \"{}\" is not a whole number from 0 to {}", option, value, std::numeric_limits<T>::max()));
+                return std::unexpected(Format("{}: \"{}\" is not a whole number from {} to {}", option, value, smallest, std::numeric_limits<T>::max()));
             }
             return *number;
         }
@@ -74,7 +75,7 @@ namespace BECore::Mahjong::Arena {
                       "seed against three others; the same seeds are played for every focus player. Prints a table with 95 percent intervals.\n"
                       "\n"
                       "options:\n"
-                      "  {focus} LIST    the focus players, separated by commas: random, easy, normal, hard, or a level with knobs\n"
+                      "  {focus} LIST    the focus players, separated by commas: random, a level ({levels}), or a level with knobs\n"
                       "                  (easy:skipClaimPercent=20,skipDeclarationPercent=10); default {focusDefault}\n"
                       "  {others} SPEC   the player on the three other seats; default {othersDefault}\n"
                       "  {first} N       the first seed; default {firstDefault}\n"
@@ -86,9 +87,10 @@ namespace BECore::Mahjong::Arena {
                       "\n"
                       "interval: the four rotations of a seed share one wall, so the seed is the sample; a number is the mean over the seeds and\n"
                       "+- is 1.96 standard errors (normal approximation, fine from about 100 seeds). Read the paired rows for a difference.\n",
-                      fmt::arg("focus", kFocusOption), fmt::arg("others", kOthersOption), fmt::arg("first", kFirstOption), fmt::arg("seeds", kSeedsOption), fmt::arg("time", kTimeOption),
-                      fmt::arg("help", kHelpOption), fmt::arg("focusDefault", kDefaultFocusSpec), fmt::arg("othersDefault", kDefaultOthersSpec), fmt::arg("firstDefault", kDefaultFirstSeed),
-                      fmt::arg("seedsDefault", kDefaultSeedCount), fmt::arg("ok", kExitOk), fmt::arg("refused", kExitRefusedAction), fmt::arg("bad", kExitBadArguments));
+                      fmt::arg("levels", LevelNamesText().c_str()), fmt::arg("focus", kFocusOption), fmt::arg("others", kOthersOption), fmt::arg("first", kFirstOption),
+                      fmt::arg("seeds", kSeedsOption), fmt::arg("time", kTimeOption), fmt::arg("help", kHelpOption), fmt::arg("focusDefault", kDefaultFocusSpec),
+                      fmt::arg("othersDefault", kDefaultOthersSpec), fmt::arg("firstDefault", kDefaultFirstSeed), fmt::arg("seedsDefault", kDefaultSeedCount), fmt::arg("ok", kExitOk),
+                      fmt::arg("refused", kExitRefusedAction), fmt::arg("bad", kExitBadArguments));
     }
 
     std::expected<ArenaArgs, eastl::string> ParseArenaArgs(eastl::span<const std::string_view> args) {
@@ -129,13 +131,13 @@ namespace BECore::Mahjong::Arena {
                 }
                 parsed.config.others = std::move(*others);
             } else if (option == kFirstOption) {
-                const std::expected<uint32_t, eastl::string> first = ParseNumberOption<uint32_t>(option, value);
+                const std::expected<uint32_t, eastl::string> first = ParseNumberOption<uint32_t>(option, value, 0);
                 if (!first.has_value()) {
                     return std::unexpected(first.error());
                 }
                 parsed.config.first = *first;
             } else {
-                const std::expected<int, eastl::string> count = ParseNumberOption<int>(option, value);
+                const std::expected<int, eastl::string> count = ParseNumberOption<int>(option, value, 1);
                 if (!count.has_value()) {
                     return std::unexpected(count.error());
                 }
