@@ -10,7 +10,7 @@
 #include <Mahjong/Table/MoveText.h>
 #include <Mahjong/Table/RulesText.h>
 #include <Mahjong/Table/ScoreText.h>
-#include <Mahjong/Table/SeatName.h>
+#include <Mahjong/Table/SeatPlates.h>
 #include <Mahjong/Table/TileAtlas.h>
 
 namespace BECore::Mahjong {
@@ -25,7 +25,6 @@ namespace BECore::Mahjong {
         static_assert(kFullMatchHands == 16 && kShortMatchHands == 8, "the ids and the buttons `Hands16` / `Hands8` of the scene follow these numbers");
         constexpr eastl::string_view kPersonId = "person";
         constexpr eastl::string_view kComputerId = "computer";
-        constexpr eastl::string_view kTurnMarkText = ">";
         constexpr eastl::string_view kDealerMarkText = "*";
         constexpr eastl::string_view kNewGameAction = "MahjongNewGame";
         constexpr eastl::string_view kStartAction = "MahjongStart";
@@ -51,7 +50,12 @@ namespace BECore::Mahjong {
             return {};
         }
 
-        /// "seatName2": the variable of a seat.
+        /// "plateName2": the variable of the plate at screen position `position`.
+        PoolString PlateVar(const char* base, int position) {
+            return PoolString::Intern(Format("{}{}", base, position));
+        }
+
+        /// "seatKind2": the variable of a seat.
         PoolString SeatVar(const char* base, Seat seat) {
             return PoolString::Intern(Format("{}{}", base, seat));
         }
@@ -77,20 +81,6 @@ namespace BECore::Mahjong {
                 return SeatKind::Computer;
             }
             return std::nullopt;
-        }
-
-        /// Who is whose turn on the table, for the label `Turn:`, in the language of `strings`.
-        eastl::string TurnText(const UIStrings& strings, const TableSession& session, const Match& match) {
-            switch (session.GetPhase()) {
-                case SessionPhase::HandOver:
-                    return Tr(strings, "hud.handOver");
-                case SessionPhase::MatchOver:
-                    return Tr(strings, "hud.matchOver");
-                case SessionPhase::Playing:
-                    break;
-            }
-            const HandModel& hand = match.Hand();
-            return SeatName(strings, hand.CurrentSeat(), hand.SeatWind(hand.CurrentSeat()));
         }
 
     }  // namespace
@@ -141,7 +131,6 @@ namespace BECore::Mahjong {
         vars.Set("hand"_intern, std::min(match.HandsPlayed() + 1, match.HandsTotal()));
         vars.Set("handsTotal"_intern, match.HandsTotal());
         vars.Set("wall"_intern, static_cast<int>(hand.GetWall().LiveCount()));
-        vars.Set("turn"_intern, eastl::string_view(TurnText(strings, session, match)));
 
         // The last move, in words: only while a hand is played and has a move (the end screens speak after it)
         eastl::string lastMove;
@@ -152,14 +141,17 @@ namespace BECore::Mahjong {
         vars.Set("lastMove"_intern, eastl::string_view(lastMove));
         ShowMoveLine(!lastMove.empty());
 
-        const bool playing = session.GetPhase() == SessionPhase::Playing;
-        for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            const Wind wind = hand.SeatWind(seat);
-            vars.Set(SeatVar("seatName", seat), eastl::string_view(SeatLabel(strings, seat, wind, session.Seats())));
-            vars.Set(SeatVar("seatWind", seat), eastl::string_view(WindName(strings, wind)));
-            vars.Set(SeatVar("seatScore", seat), match.Scores()[seat]);
-            vars.Set(SeatVar("seatMark", seat), playing && hand.CurrentSeat() == seat ? kTurnMarkText : eastl::string_view());
-            vars.Set(SeatVar("seatDealer", seat), match.East() == seat ? kDealerMarkText : eastl::string_view());
+        // The plates, by screen position: the seat there, its wind (and the mark of the dealer) and its score
+        const auto plates = MakeSeatPlates(strings, session, match);
+        for (int position = 0; position < kSeatCount; ++position) {
+            const SeatPlateText& plate = plates[position];
+            eastl::string wind = plate.wind;
+            if (plate.dealer) {
+                wind += kDealerMarkText.data();
+            }
+            vars.Set(PlateVar("plateName", position), eastl::string_view(plate.name));
+            vars.Set(PlateVar("plateWind", position), eastl::string_view(wind));
+            vars.Set(PlateVar("plateScore", position), plate.score);
         }
     }
 

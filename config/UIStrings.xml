@@ -122,9 +122,6 @@
         <string key="cover.show" text="Show"/>
         <string key="hud.round" text="Round: {round}, hand {hand} of {handsTotal}"/>
         <string key="hud.wall" text="Wall: {wall}"/>
-        <string key="hud.turn" text="Turn: {turn}"/>
-        <string key="hud.handOver" text="Hand over"/>
-        <string key="hud.matchOver" text="Match over"/>
         <string key="hud.newGame" text="New game"/>
         <string key="hud.rules" text="Rules"/>
         <string key="matchover.newGame" text="New game"/>
@@ -344,9 +341,6 @@
         <string key="cover.show" text="Показать"/>
         <string key="hud.round" text="Раунд: {round}, раздача {hand} из {handsTotal}"/>
         <string key="hud.wall" text="Стена: {wall}"/>
-        <string key="hud.turn" text="Ход: {turn}"/>
-        <string key="hud.handOver" text="Раздача окончена"/>
-        <string key="hud.matchOver" text="Матч окончен"/>
         <string key="hud.newGame" text="Новая игра"/>
         <string key="hud.rules" text="Правила"/>
         <string key="matchover.newGame" text="Новая игра"/>

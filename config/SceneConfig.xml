@@ -371,32 +371,22 @@
           </components>
         </node>
         <!--
-          The HUD lies in the free parts of the table (Table/TableLayout.cpp): the round, the wall and the turn above the left column of melds, the four
-          scores on the free ground between the top hand and the left column. These are labels only (not touch targets), on the view of the table. They
-          keep to the safe area (the table is a fixed design that the safe area does not move), so on a screen with a notch or side insets they move
-          inwards and can cover the nearest tiles. The New game button is in the node HudMenu below, a Screen canvas, because a control of a SceneView
-          canvas is only 21 px high in a small window. MahjongHudComponent publishes round, hand, handsTotal, wall, turn and, per seat, seatName, seatWind,
-          seatScore, seatMark (the seat whose turn it is) and seatDealer (East). MahjongHudTest holds the worst texts and checks that no tile of any
-          game lies under it.
+          The HUD lies in the free parts of the table (Table/TableLayout.cpp): the round and the wall above the left column of melds. These are
+          labels only (not touch targets), on the view of the table. They keep to the safe area (the table is a fixed design that the safe area
+          does not move), so on a screen with a notch or side insets they move inwards and can cover the nearest tiles. The New game button is in
+          the node HudMenu below, a Screen canvas, because a control of a SceneView canvas is only 21 px high in a small window.
+          MahjongHudComponent publishes round, hand, handsTotal, wall and lastMove (the seats' names, winds and scores are in the node SeatPlates
+          below). MahjongHudTest holds the worst texts and checks that no tile of any game lies under it.
         -->
         <node name="Hud" layer="10">
           <components>
             <component type="MahjongHudComponent" />
             <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
               <elements>
-                <element type="UIStack" name="Info" anchor="TopLeft" x="96" y="8" width="336" height="112" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170">
+                <element type="UIStack" name="Info" anchor="TopLeft" x="96" y="8" width="336" height="80" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170">
                   <children>
                     <element type="UILabel" name="RoundLabel" height="32" text="{#hud.round}" fontSize="22" />
                     <element type="UILabel" name="WallLabel" height="32" text="{#hud.wall}" fontSize="22" />
-                    <element type="UILabel" name="TurnLabel" height="32" text="{#hud.turn}" fontSize="22" />
-                  </children>
-                </element>
-                <element type="UIStack" name="Scores" anchor="TopLeft" x="96" y="128" width="336" height="144" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170">
-                  <children>
-                    <element type="UILabel" name="Score0" height="32" text="{seatMark0}{seatName0}{seatDealer0}: {seatScore0}" fontSize="22" />
-                    <element type="UILabel" name="Score1" height="32" text="{seatMark1}{seatName1}{seatDealer1}: {seatScore1}" fontSize="22" />
-                    <element type="UILabel" name="Score2" height="32" text="{seatMark2}{seatName2}{seatDealer2}: {seatScore2}" fontSize="22" />
-                    <element type="UILabel" name="Score3" height="32" text="{seatMark3}{seatName3}{seatDealer3}: {seatScore3}" fontSize="22" />
                   </children>
                 </element>
                 <!-- The last move in words (lastMove), shown by the component exactly while it has a text: right of the top discards and below the top seat sets, clear of the right seat columns -->
@@ -405,6 +395,31 @@
                     <element type="UILabel" name="MoveText" height="64" text="{lastMove}" fontSize="18" verticalAlign="Center" />
                   </children>
                 </element>
+              </elements>
+            </component>
+          </components>
+        </node>
+        <!--
+          The words of the four seat plates (Table/SeatPlates.h): the seat's number (and You), its wind with the mark * of the dealer, and its
+          score, at the rectangles of TableLayout::zones.seatPlates (MahjongTableComponent paints the plate, its turn and its dealer mark under
+          them). By screen position, not by seat, so the labels stay at fixed places: 0 bottom, 1 right, 2 top, 3 left (the variables
+          plateName0..3, plateWind0..3, plateScore0..3 that MahjongHudComponent publishes follow the seat that sits there). Text only, no
+          control. A SceneView canvas whose labels ignore the safe area like Actions: the plates are on the table, so the words stay on them. Two
+          labels of 136 x 32 per plate (the plate is 152 x 80 with a padding of 8): the labels are direct elements of the canvas, because the
+          validator checks the children of a stack against the safe area whatever the stack says.
+        -->
+        <node name="SeatPlates" layer="10">
+          <components>
+            <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
+              <elements>
+                <element type="UILabel" name="PlateName0" anchor="TopLeft" ignoreSafeArea="true" x="80" y="540" width="136" height="32" text="{plateName0}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
+                <element type="UILabel" name="PlateRow0" anchor="TopLeft" ignoreSafeArea="true" x="80" y="572" width="136" height="32" text="{plateWind0}: {plateScore0}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
+                <element type="UILabel" name="PlateName1" anchor="TopLeft" ignoreSafeArea="true" x="1044" y="192" width="136" height="32" text="{plateName1}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
+                <element type="UILabel" name="PlateRow1" anchor="TopLeft" ignoreSafeArea="true" x="1044" y="224" width="136" height="32" text="{plateWind1}: {plateScore1}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
+                <element type="UILabel" name="PlateName2" anchor="TopLeft" ignoreSafeArea="true" x="416" y="104" width="136" height="32" text="{plateName2}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
+                <element type="UILabel" name="PlateRow2" anchor="TopLeft" ignoreSafeArea="true" x="416" y="136" width="136" height="32" text="{plateWind2}: {plateScore2}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
+                <element type="UILabel" name="PlateName3" anchor="TopLeft" ignoreSafeArea="true" x="104" y="192" width="136" height="32" text="{plateName3}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
+                <element type="UILabel" name="PlateRow3" anchor="TopLeft" ignoreSafeArea="true" x="104" y="224" width="136" height="32" text="{plateWind3}: {plateScore3}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
               </elements>
             </component>
           </components>
