@@ -233,7 +233,6 @@ namespace BECore::Mahjong::Tests {
         // The versions around the known ones are refused.
         EXPECT_TRUE(ChangedMemberIsRefused(start, "version", kMatchLogFormatVersion + 1));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "version", kMatchLogOldestVersion - 1));
-        EXPECT_TRUE(ChangedMemberIsRefused(start, "version", 3));
     }
 
     TEST_F(MatchLogJsonTest, TheHandLineListsFourteenTilesForEastAndThirteenForTheOthers) {

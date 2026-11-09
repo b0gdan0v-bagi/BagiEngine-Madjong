@@ -246,6 +246,19 @@ namespace BECore::Mahjong {
             return settings;
         }
 
+        /// The names of the levels for an error text: "easy, normal or hard".
+        eastl::string LevelNames() {
+            eastl::string names;
+            for (int index = 0; index < kLevelCount; ++index) {
+                const std::string_view name = LevelName(static_cast<ComputerLevel>(index));
+                if (index > 0) {
+                    names += index + 1 == kLevelCount ? " or " : ", ";
+                }
+                names.append(name.data(), name.size());
+            }
+            return names;
+        }
+
         std::expected<MatchLogEvent, eastl::string> StartFromJson(const Json& json) {
             MatchLogEvent event;
             event.kind = MatchLogKind::Start;
@@ -275,14 +288,14 @@ namespace BECore::Mahjong {
                 return Fail("seats", Format("has to be four letters, P for a person and C for a computer: \"{}\"", *letters).c_str());
             }
             event.seats = *seats;
-            if (*version >= 2) {
+            if (*version >= kMatchLogLevelVersion) {
                 const auto name = ReadString(json, "level");
                 if (!name) {
                     return std::unexpected(name.error());
                 }
                 const std::optional<ComputerLevel> level = TryParseLevel(std::string_view(name->c_str(), name->size()));
                 if (!level) {
-                    return Fail("level", Format("has to be easy, normal or hard: \"{}\"", *name).c_str());
+                    return Fail("level", Format("has to be {}: \"{}\"", LevelNames().c_str(), *name).c_str());
                 }
                 event.level = *level;
             }

@@ -25,7 +25,7 @@ namespace BECore::Mahjong {
      * they sum up to are in the line). Reading is checked: a missing or wrong-typed member, an unknown `event`, a bad tile, seat letter
      * or wind name is an error text that names the member; nothing aborts.
      *
-     * Versions: 2 (`kMatchLogFormatVersion`) added `level` to `start`, the strength of the computer players (`LevelName`: `easy`,
+     * Versions: 2 (`kMatchLogFormatVersion`, `kMatchLogLevelVersion`) added `level` to `start`, the strength of the computer players (`LevelName`: `easy`,
      * `normal`, `hard`); it is needed in version 2. Version 1 files (`kMatchLogOldestVersion`) have no `level` and are read as
      * `Normal`, the only player there was. Any other version is refused.
      */
@@ -35,6 +35,9 @@ namespace BECore::Mahjong {
 
     /// The oldest `version` that is still read; a log with a version outside `kMatchLogOldestVersion..kMatchLogFormatVersion` is not read.
     inline constexpr int kMatchLogOldestVersion = 1;
+
+    /// The first `version` whose `start` line has `level`; an older one has none and reads as `Normal`.
+    inline constexpr int kMatchLogLevelVersion = 2;
 
     /// One event as the object of its line.
     [[nodiscard]] Json EventToJson(const MatchLogEvent& event);
