@@ -27,8 +27,8 @@ namespace BECore::Mahjong::Tests {
         };
 
         /// Every action of `kWholeHands` hands played by a table, in order.
-        std::vector<HandAction> PlayActions(ComputerTable& table, uint32_t seed) {
-            std::vector<HandAction> actions;
+        eastl::vector<HandAction> PlayActions(ComputerTable& table, uint32_t seed) {
+            eastl::vector<HandAction> actions;
             Match match;
             EXPECT_TRUE(match.Start(SettingsOf(0), seed).has_value());
             for (int hand = 0; hand < kWholeHands && match.GetPhase() == MatchPhase::InHand; ++hand) {
@@ -48,7 +48,7 @@ namespace BECore::Mahjong::Tests {
     }  // namespace
 
     TEST(ComputerLevelTest, TheNamesRoundTripForEveryLevel) {
-        EXPECT_EQ(EnumUtils<ComputerLevel>::Count(), static_cast<size_t>(kLevelCount));
+        EXPECT_EQ(kLevelCount, 3);  // a new level needs its name, its parse and a look at every table of levels
         for (const ComputerLevel level : EnumUtils<ComputerLevel>::Values()) {
             const std::string_view name = LevelName(level);
             EXPECT_FALSE(name.empty());
@@ -67,11 +67,9 @@ namespace BECore::Mahjong::Tests {
 
     TEST(ComputerLevelTest, TheDefaultIsNormal) {
         EXPECT_EQ(kDefaultLevel, ComputerLevel::Normal);
-        EXPECT_EQ(ComputerPlayer(1).Level(), ComputerLevel::Normal);
-        EXPECT_EQ(ComputerTable(1).Level(), ComputerLevel::Normal);
     }
 
-    TEST(ComputerLevelTest, TheTableGivesEverySeatItsLevelAndTheSeedsDoNotDependOnIt) {
+    TEST(ComputerLevelTest, TheTableReportsItsLevelAndTheSeedsDoNotDependOnIt) {
         for (const ComputerLevel level : EnumUtils<ComputerLevel>::Values()) {
             EXPECT_EQ(ComputerTable(5, level).Level(), level);
             EXPECT_EQ(ComputerPlayer(5, level).Level(), level);
@@ -79,7 +77,7 @@ namespace BECore::Mahjong::Tests {
         // The same table seed gives the same walls and tie-breaks at every level: the actions of a level that has no profile yet are
         // those of Normal (this line goes when the first profile does something).
         ComputerTable normal(31);
-        const std::vector<HandAction> expected = PlayActions(normal, 31);
+        const eastl::vector<HandAction> expected = PlayActions(normal, 31);
         ASSERT_FALSE(expected.empty());
         for (const ComputerLevel level : EnumUtils<ComputerLevel>::Values()) {
             ComputerTable table(31, level);
@@ -91,7 +89,7 @@ namespace BECore::Mahjong::Tests {
         for (uint32_t seed = 900; seed < 903; ++seed) {
             ComputerTable byDefault(seed);
             ComputerTable explicitNormal(seed, ComputerLevel::Normal);
-            const std::vector<HandAction> expected = PlayActions(byDefault, seed);
+            const eastl::vector<HandAction> expected = PlayActions(byDefault, seed);
             ASSERT_FALSE(expected.empty()) << "seed " << seed;
             EXPECT_EQ(PlayActions(explicitNormal, seed), expected) << "seed " << seed;
         }

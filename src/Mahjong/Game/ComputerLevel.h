@@ -1,6 +1,5 @@
 #pragma once
 
-
 namespace BECore::Mahjong {
 
     /// How well a computer seat plays. `Normal` is the player described in `CLAUDE.md` ("Computer player"); `Easy` and `Hard` are
@@ -11,7 +10,7 @@ namespace BECore::Mahjong {
     inline constexpr ComputerLevel kDefaultLevel = ComputerLevel::Normal;
 
     /// The number of levels.
-    inline constexpr int kLevelCount = 3;
+    inline constexpr int kLevelCount = static_cast<int>(EnumUtils<ComputerLevel>::Count());
 
     /// The name of a level in the control API and the match log: `easy`, `normal`, `hard` (lowercase). A value outside the enum asserts
     /// in debug and answers the name of the default.

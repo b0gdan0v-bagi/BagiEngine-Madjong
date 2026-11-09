@@ -32,7 +32,7 @@ namespace BECore::Mahjong {
 
     private:
         MahjongRng _rng;
-        ComputerLevel _level;
+        ComputerLevel _level = kDefaultLevel;
     };
 
     /// The rng seed of seat `seat` at a table seeded `tableSeed`: a fixed mixing, one roll of an `MahjongRng` seeded `tableSeed * 4 + seat`
@@ -75,7 +75,7 @@ namespace BECore::Mahjong {
         HandStatus PlayMatch(Match& match);
 
     private:
-        ComputerLevel _level;
+        ComputerLevel _level = kDefaultLevel;
         eastl::array<ComputerPlayer, kSeatCount> _players;
     };
 
