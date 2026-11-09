@@ -723,7 +723,8 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(CanvasShown("ActionsCompact"));
 
         // The row is as high as the width of its canvas makes it (the stack starts its lines at its top): 72 px under 1083 units, on bars of 41 to
-        // 60 px. 640 x 480 is the window of the matrix that keeps `Actions` for it, with buttons of 28 px
+        // 60 px. 640 x 480 (both user scales) and 720 x 480 (at 1.5) are the windows of the matrix that keep `Actions` for it,
+        // with buttons of 28 and 31.5 px
         for (const auto& [width, height] : {std::pair{600.0f, 420.0f}, std::pair{480.0f, 360.0f}, std::pair{500.0f, 400.0f}, std::pair{640.0f, 480.0f}, std::pair{649.0f, 500.0f}}) {
             SetOutputSize(*_renderer, width, height);
             Draw();

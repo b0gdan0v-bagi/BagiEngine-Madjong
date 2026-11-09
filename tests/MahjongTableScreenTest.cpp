@@ -264,7 +264,7 @@ namespace BECore::Mahjong::Tests {
                 for (const ButtonKind kind : kinds) {
                     SetShown(kind, true);
                 }
-                // The touch size is held where the rule keeps `Actions` (but for the one 4:3 window of 640 x 480, see `ActionsMayBeSmall`); elsewhere `ActionsCompact` holds it (below)
+                // The touch size is held where the rule keeps `Actions` (but for the windows of 640 x 480 and 720 x 480, see `ActionsMayBeSmall`); elsewhere `ActionsCompact` holds it (below)
                 ExpectMatrixExceptTouchWhere(*canvas, "Actions", CoreManager::GetUIEnvironment().GetSettings().minTouchSize, ActionsMayBeSmall);
                 for (const Output& output : kOutputs) {
                     ExpectWordsFit("Actions", output.width, output.height, 0.0f);
@@ -466,7 +466,7 @@ namespace BECore::Mahjong::Tests {
                 for (const ButtonKind kind : kinds) {
                     SetShown(kind, true);
                 }
-                // The touch size is held where the rule keeps `Actions` (but for the one 4:3 window of 640 x 480, see `ActionsMayBeSmall`); elsewhere `ActionsCompact` holds it (below)
+                // The touch size is held where the rule keeps `Actions` (but for the windows of 640 x 480 and 720 x 480, see `ActionsMayBeSmall`); elsewhere `ActionsCompact` holds it (below)
                 ExpectMatrixExceptTouchWhere(*canvas, "Actions", CoreManager::GetUIEnvironment().GetSettings().minTouchSize, ActionsMayBeSmall);
                 for (const Output& output : kOutputs) {
                     ExpectWordsFit("Actions", output.width, output.height, 0.0f);

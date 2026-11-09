@@ -147,8 +147,8 @@
           units, the 3:4 of an atlas cell). Below that window the component hides this canvas and shows ActionsCompact instead
           (NeedsCompactActions), which holds the same buttons by name on the bar under the table, but only where that bar holds the row at its
           height at that canvas width. In a window that the table fills to the bottom (16:9 below 731 x 411, a short wide one like 1000 x 400, a
-          landscape phone) or whose bar is lower than the row (600 x 420, 500 x 400, 640 x 480) this canvas stays, slightly under 32 px but
-          clear of the viewer's hand.
+          landscape phone) or whose bar is lower than the row (600 x 420, 500 x 400, 640 x 480, and 720 x 480 at the user scale 1.5) this
+          canvas stays, slightly under 32 px but clear of the viewer's hand.
           The label Hint above the row shows the sentence of the button under the pointer ({actionHint}, set by the component in the
           current language from UIElement::hovered and again when the language changes; hidden while there is none). It takes no input, so
           it never eats a click; it lies in the gutter between the wall and the right seat's discards (x 832..1028, y 256..452: 196 square,
@@ -234,7 +234,8 @@
           480 px are there). Where the table fills the height of the window and so leaves no bar (every 16:9 window below 731 x 411, a short wide
           window, a landscape phone) this row would lie on the viewer's hand and take the click from its tiles, so Actions stays there, slightly
           under 32 px but in the free corner of the table; so it does where the bar is lower than the row's height at that width (600 x 420,
-          500 x 400, and 640 x 480 of the matrix, whose canvas is 1066.7 units wide: a row of 72 px on a bar of 60 px). The same 13 buttons with
+          500 x 400, and in the matrix 640 x 480 at the user scales 1.0 and 1.5 and 720 x 480 at 1.5; at 1.0 the canvas of 640 x 480 is 1066.7
+          units wide: a row of 72 px on a bar of 60 px). The same 13 buttons with
           the same element names, actions, values, words and pictures; the component shows exactly one of the two canvases (Actions where it is
           big enough or this one has no bar to lie on, this one elsewhere) and gives both the same visibility and sprites by name. This one is a
           Screen canvas (a SceneView canvas is scaled by the fit of the table, whatever the window, and so cannot be made bigger than the table),

@@ -115,11 +115,19 @@ namespace BECore::Mahjong::Tests {
         return kActionButtonHeight * TableFit(window).scale / window.pixelDensity < CoreManager::GetUIEnvironment().GetSettings().minTouchSize;
     }
 
-    /// Where a matrix test may leave the touch size of `Actions` out: the windows that show `ActionsCompact`, and the one window of the
-    /// matrix that keeps `Actions` with buttons of 28 px, the 4:3 window of 640 x 480, where the compact row is two lines high (72 px)
-    /// on a bar of 60 px and so would lie on the viewer's hand (`MahjongTouchSizeTest` holds that this is the only one).
+    /// Whether `Actions` is the canvas shown in this window at this user scale with buttons under the engine's touch minimum: the rule keeps
+    /// it because the bar under the table cannot hold the compact row. In the matrix that is 640 x 480 at both user scales (28 px) and
+    /// 720 x 480 at 1.5 (31.5 px; at 1.0 it is compact).
+    inline bool ActionsStaysSmall(const MatrixWindow& window, float userScale) {
+        return ActionButtonsAreUnderTheMinimum(window) && !IsCompactWindow(window, userScale);
+    }
+
+    /// Where a matrix test may leave the touch size of `Actions` out. The matrix test runs a `SceneView` canvas once per window, whatever
+    /// the user scale, so it is every window where `Actions` may be shown small at either of the two user scales: the windows that show
+    /// `ActionsCompact` at 1.0, and the windows 640 x 480 (both scales) and 720 x 480 (at 1.5) that keep `Actions` for lack of a bar for the
+    /// row (`MahjongTouchSizeTest` holds that these are the only ones).
     inline bool ActionsMayBeSmall(const MatrixWindow& window) {
-        return IsCompactWindow(window) || (window.outputWidth == 640.0f && window.outputHeight == 480.0f);
+        return IsCompactWindow(window) || ActionsStaysSmall(window, 1.0f) || ActionsStaysSmall(window, 1.5f);
     }
 
     /// The fullest turn (a win, a declaration, three kongs and the upgrade) and the fullest claim window (all claims, three chows,

@@ -2,6 +2,7 @@
 
 #include <BECore/UI/UIButton.h>
 #include <Mahjong/Components/MahjongHudComponent.h>
+#include <map>
 
 /**
  * The touch size of the shipped scene: every control is a touch target of the engine's minimum in every window of the size matrix. The
@@ -197,7 +198,8 @@ namespace BECore::Mahjong::Tests {
         for (const BECore::Tests::UIMatrixFailure& failure : leftOver) {
             EXPECT_EQ(std::string(failure.label.c_str()).rfind("4:3 640x480 ", 0), 0u) << failure.label.c_str();
         }
-        // That window is the one `ActionsMayBeSmall` adds to the compact ones, and nothing else is left
+        // That window is the one `ActionsMayBeSmall` adds to the compact ones (the matrix runs a `SceneView` canvas once per window: 720 x 480, which keeps
+        // `Actions` at the user scale 1.5 only, is compact at 1.0 and dropped with them), and nothing else is left
         EXPECT_TRUE(MatrixFailuresExceptTouchWhere(*actions, kEngineTouchMinimum, ActionsMayBeSmall).empty());
         // Dropping them only in windows the rule calls roomy leaves the narrow ones failing
         const auto roomy = [&](const MatrixWindow& window) { return !compact(window); };
@@ -532,7 +534,8 @@ namespace BECore::Mahjong::Tests {
         auto compact = Canvas("ActionsCompact");
         ASSERT_TRUE(compact);
         size_t compactWindows = 0;
-        size_t keptWindows = 0;
+        // The windows (and user scales) where the rule keeps `Actions` under the minimum, each with its number of simulations
+        std::map<std::string, size_t> keptWindows;
         ForEachMatrixWindow([&](const MatrixWindow& window) {
             for (const float userScale : {1.0f, 1.5f}) {
                 const UICanvasResolved resolved = LayOutInWindow(*compact, window, CanvasScaleMode::ScaleWithScreen, userScale);
@@ -548,13 +551,15 @@ namespace BECore::Mahjong::Tests {
                 if (IsCompactWindow(window, userScale)) {
                     ++compactWindows;
                 } else if (ActionButtonsAreUnderTheMinimum(window)) {
-                    ++keptWindows;
-                    EXPECT_FALSE(fitsTheBar) << label;
+                    ++keptWindows[std::to_string(static_cast<int>(window.outputWidth)) + "x" + std::to_string(static_cast<int>(window.outputHeight)) + " x" + (userScale > 1.0f ? "1.5" : "1.0")];
                 }
             }
         });
         EXPECT_GT(compactWindows, 0u);
-        EXPECT_GT(keptWindows, 0u) << "640 x 480 keeps Actions";
+        // A new window that keeps `Actions` under the minimum has to be named (here, in `ActionsMayBeSmall` and in CLAUDE.md): 640 x 480 at both
+        // user scales and 720 x 480 at 1.5, each in its three simulations (no insets, a notch, side insets)
+        const std::map<std::string, size_t> expectedKept{{"640x480 x1.0", 3u}, {"640x480 x1.5", 3u}, {"720x480 x1.5", 3u}};
+        EXPECT_EQ(keptWindows, expectedKept);
     }
 
     TEST_F(MahjongCompactRowTest, InAWindowOutsideTheMatrixEitherActionsStaysOrTheCompactRowIsClearOfTheTable) {
@@ -634,15 +639,20 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongTouchSizeTest, EveryWindowOfTheMatrixIsCompactExactlyWhereAButtonOfActionsIsBelowTheTouchMinimumButTheOneWhoseBarHoldsNoRow) {
         // Every window of the matrix is one or the other: the buttons of `Actions` are 56 units of the table's fit, the rule says where that is too
-        // small and the bar under the table (480 px on the short side at the least) holds the row. The one window that does not is the 4:3 window of
-        // 640 x 480, where the row is two lines on a bar of 60 px, so `Actions` stays there with buttons of 28 px
+        // small and the bar under the table (480 px on the short side at the least) holds the row. The one window that does not, at the user scale
+        // 1.0, is the 4:3 window of 640 x 480, where the row is two lines on a bar of 60 px, so `Actions` stays there with buttons of 28 px; at 1.5
+        // it stays in 640 x 480 and in the 3:2 window of 720 x 480 (31.5 px), whose canvas is 783.6 units wide
         size_t compactWindows = 0;
         size_t roomyWindows = 0;
         size_t smallWindows = 0;
+        size_t smallAtOnePointFive = 0;
         ForEachMatrixWindow([&](const MatrixWindow& window) {
             const bool small = ActionButtonsAreUnderTheMinimum(window);
             const bool fourToThree = window.outputWidth == 640.0f && window.outputHeight == 480.0f;
+            const bool threeToTwo = window.outputWidth == 720.0f && window.outputHeight == 480.0f;
             EXPECT_EQ(IsCompactWindow(window), small && !fourToThree) << window.label.c_str();
+            EXPECT_EQ(ActionsStaysSmall(window, 1.0f), fourToThree) << window.label.c_str();
+            EXPECT_EQ(ActionsStaysSmall(window, 1.5f), fourToThree || threeToTwo) << window.label.c_str() << " x1.5";
             EXPECT_EQ(ActionsMayBeSmall(window), small) << window.label.c_str() << ": the touch size of Actions is left out exactly where its buttons are small";
             if (IsCompactWindow(window)) {
                 ++compactWindows;
@@ -651,10 +661,14 @@ namespace BECore::Mahjong::Tests {
             } else {
                 ++roomyWindows;
             }
+            if (ActionsStaysSmall(window, 1.5f)) {
+                ++smallAtOnePointFive;
+            }
         });
         EXPECT_GT(compactWindows, 0u);
         EXPECT_GT(roomyWindows, 0u);
         EXPECT_EQ(smallWindows, 3u) << "640 x 480 with no insets, a notch and side insets";
+        EXPECT_EQ(smallAtOnePointFive, 6u) << "640 x 480 and 720 x 480, each in the three simulations";
     }
 
 }  // namespace BECore::Mahjong::Tests
