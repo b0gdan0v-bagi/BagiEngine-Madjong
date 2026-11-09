@@ -40,12 +40,13 @@ namespace BECore::Mahjong {
      * 3. Otherwise each listed pung, kong and chow is rated with `RateClaim` (shanten `s1`, acceptance `a1`; the shanten of the hand as
      *    it is is `s0`). A claim is acceptable when `s1 < s0`, or when `s1 == s0` for a pung or kong of a value tile (`IsValueTile`:
      *    a dragon, the own wind, the round wind; it scores a double). Of the acceptable ones: the lowest `s1`, then the highest `a1`,
-     *    then `ClaimRank` (a kong, a pung, a chow), then `rng`.
+     *    then `ClaimRank` (a kong, a pung, a chow), then `rng`. With `profile.takeValueClaimsAtEqualShanten` off the equal-shanten
+     *    case does not count. With `profile.skipClaimPercent` a roll passes the claim that was chosen.
      * 4. No acceptable claim: `Pass`.
      *
      * No defence: every loser pays the winner the same, so a discard that wins for another seat costs the discarder nothing extra.
      * Always an element of `view.legal` (`Pass` is, for a seat that has not decided).
      */
-    [[nodiscard]] HandAction ChooseClaimAction(const TableView& view, MahjongRng& rng);
+    [[nodiscard]] HandAction ChooseClaimAction(const TableView& view, MahjongRng& rng, const LevelProfile& profile = kNormalProfile);
 
 }  // namespace BECore::Mahjong

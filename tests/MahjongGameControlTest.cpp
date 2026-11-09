@@ -375,6 +375,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Str(Member(state, "seatWind")), "East");
         EXPECT_EQ(Str(Member(state, "roundWind")), "East");
         EXPECT_EQ(Member(state, "east").get<int>(), kSeat0);
+        EXPECT_EQ(Str(Member(state, "level")), "normal") << "the level of the match, Normal until a reset says otherwise";
         EXPECT_EQ(Member(state, "handsPlayed").get<int>(), 0);
         EXPECT_EQ(Member(state, "handsTotal").get<int>(), kFullMatchHands);
         EXPECT_EQ(Member(state, "version").get<uint64_t>(), control->GetStateVersion());
@@ -748,6 +749,16 @@ namespace BECore::Mahjong::Tests {
             "{\"seed\": null}",
             "{\"flowers\": \"yes\"}",
             "{\"flowers\": 1}",
+            "{\"level\": \"Hard\"}",
+            "{\"level\": \"HARD\"}",
+            "{\"level\": \"hard \"}",
+            "{\"level\": \"expert\"}",
+            "{\"level\": \"\"}",
+            "{\"level\": 3}",
+            "{\"level\": null}",
+            "{\"level\": [\"hard\"]}",
+            "{\"level\": \"hard\", \"seats\": \"XXXX\"}",
+            "{\"level\": \"hard\", \"hands\": 12}",
             "{\"hands\": 8, \"seats\": \"XXXX\"}",
         };
         for (const char* text : bad) {
@@ -758,6 +769,8 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(State(), state) << text;
             EXPECT_EQ(game->GetSeats(), seats) << text;
             EXPECT_EQ(game->GetSettings().handsPerMatch, kFullMatchHands) << text;
+            EXPECT_EQ(game->GetLevel(), ComputerLevel::Normal) << text;
+            EXPECT_EQ(game->GetSession().Level(), ComputerLevel::Normal) << text;
         }
         // The limits of a seed are accepted.
         EXPECT_TRUE(control->Reset(Parse("{\"seed\": 0}")).has_value());
@@ -775,6 +788,52 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Stable(State()), first);
         const Json again = State();
         EXPECT_EQ(Member(again, "handsTotal").get<int>(), kShortMatchHands);
+    }
+
+    TEST_F(MahjongGameControlTest, ResetSetsTheLevelAndTheStateSaysIt) {
+        for (int index = 0; index < kLevelCount; ++index) {
+            const ComputerLevel level = static_cast<ComputerLevel>(index);
+            const std::string name(LevelName(level));
+            ASSERT_NO_FATAL_FAILURE(Reset(("{\"seed\": 8, \"seats\": \"PCCC\", \"level\": \"" + name + "\"}").c_str()));
+            EXPECT_EQ(game->GetLevel(), level) << name;
+            EXPECT_EQ(game->GetSession().Level(), level) << name;
+            EXPECT_EQ(Str(Member(State(), "level")), name);
+
+            // What is left out keeps the level of the game, also when the next reset changes other things
+            ASSERT_NO_FATAL_FAILURE(Reset("{\"seed\": 9}"));
+            EXPECT_EQ(game->GetLevel(), level) << name;
+            EXPECT_EQ(Str(Member(State(), "level")), name);
+        }
+        ASSERT_NO_FATAL_FAILURE(Reset("{}"));
+        EXPECT_EQ(Str(Member(State(), "level")), "hard") << "the last level set";
+    }
+
+    TEST_F(MahjongGameControlTest, ABadLevelNamesTheThreeLevels) {
+        const auto reset = control->Reset(Parse("{\"level\": \"Easy\"}"));
+        ASSERT_FALSE(reset.has_value());
+        EXPECT_EQ(ErrorCodeOf(reset.error()), "invalid_params");
+        const std::string message = reset.error().message.c_str();
+        EXPECT_NE(message.find("'level'"), std::string::npos) << message;
+        EXPECT_NE(message.find("easy, normal or hard"), std::string::npos) << message;
+    }
+
+    TEST_F(MahjongGameControlTest, AWholeMatchAtEveryLevelEndsLegallyWithAllThePoints) {
+        for (int index = 0; index < kLevelCount; ++index) {
+            const std::string name(LevelName(static_cast<ComputerLevel>(index)));
+            ASSERT_NO_FATAL_FAILURE(Reset(("{\"seed\": 5, \"seats\": \"CCCC\", \"hands\": 8, \"level\": \"" + name + "\"}").c_str()));
+            int hands = 0;
+            for (; hands < kHandLimitPerMatch && Str(Member(State(), "phase")) != "match_over"; ++hands) {
+                ASSERT_EQ(Str(Member(State(), "phase")), "hand_over") << name;
+                EXPECT_EQ(Str(Member(State(), "level")), name);
+                Perform(NextHandActionToJson());
+                EXPECT_EQ(PointsOnTheTable(State()), kSeatCount * kExpectedStartingScore) << name;
+            }
+            ASSERT_LT(hands, kHandLimitPerMatch) << name;
+            const Json end = State();
+            EXPECT_EQ(Member(end, "handsPlayed").get<int>(), kShortMatchHands) << name;
+            EXPECT_EQ(PointsOnTheTable(end), kSeatCount * kExpectedStartingScore) << name;
+            EXPECT_EQ(Str(Member(end, "level")), name);
+        }
     }
 
     // ----- the end of a hand and of a match -----

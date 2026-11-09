@@ -253,7 +253,7 @@ namespace BECore::Mahjong {
             if (!version) {
                 return std::unexpected(version.error());
             }
-            if (*version != kMatchLogFormatVersion) {
+            if (*version < kMatchLogOldestVersion || *version > kMatchLogFormatVersion) {
                 return Fail("version", Format("is not a version this reader knows: {}", *version).c_str());
             }
             const auto seed = ReadInt(json, "seed", 0, std::numeric_limits<uint32_t>::max());
@@ -275,6 +275,17 @@ namespace BECore::Mahjong {
                 return Fail("seats", Format("has to be four letters, P for a person and C for a computer: \"{}\"", *letters).c_str());
             }
             event.seats = *seats;
+            if (*version >= kMatchLogLevelVersion) {
+                const auto name = ReadString(json, "level");
+                if (!name) {
+                    return std::unexpected(name.error());
+                }
+                const std::optional<ComputerLevel> level = TryParseLevel(std::string_view(name->c_str(), name->size()));
+                if (!level) {
+                    return Fail("level", Format("has to be {}: \"{}\"", LevelNamesText().c_str(), *name).c_str());
+                }
+                event.level = *level;
+            }
             return event;
         }
 
@@ -440,12 +451,15 @@ namespace BECore::Mahjong {
         Json json = Json::object();
         json["event"] = MakeJsonString(EventName(event.kind));
         switch (event.kind) {
-            case MatchLogKind::Start:
+            case MatchLogKind::Start: {
                 json["version"] = kMatchLogFormatVersion;
                 json["seed"] = event.seed;
                 json["settings"] = SettingsToJson(event.settings);
                 json["seats"] = MakeJsonString(SeatsToLetters(event.seats));
+                const std::string_view level = LevelName(event.level);
+                json["level"] = MakeJsonString(eastl::string_view(level.data(), level.size()));
                 break;
+            }
             case MatchLogKind::Hand: {
                 json["number"] = event.number;
                 json["east"] = event.east;

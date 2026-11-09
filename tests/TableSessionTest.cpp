@@ -1,5 +1,6 @@
 #include "HandTestSupport.h"
 
+#include <Mahjong/Game/MatchLog.h>
 #include <Mahjong/Game/TableSession.h>
 #include <gtest/gtest.h>
 
@@ -47,6 +48,10 @@ namespace BECore::Mahjong::Tests {
 
             void Start(const SeatSetup& seats, uint32_t seed = kSeed, const MahjongSettings& settings = MahjongSettings{}) {
                 ASSERT_TRUE(session.StartMatch(settings, seed, seats).has_value());
+            }
+
+            void StartAt(ComputerLevel level, uint32_t seed = kSeed, const MahjongSettings& settings = ShortMatch()) {
+                ASSERT_TRUE(session.StartMatch(settings, seed, kAllComputers, level).has_value());
             }
         };
 
@@ -146,6 +151,88 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(refused.error(), MatchError::BadSettings);
         EXPECT_EQ(State(table), before);
         EXPECT_EQ(table.session.Seats(), kDefaultSeatSetup);
+    }
+
+    TEST(TableSessionTest, TheLevelIsNormalByDefaultAndAStartKeepsTheOneItGets) {
+        Table table;
+        EXPECT_EQ(table.session.Level(), ComputerLevel::Normal) << "before the first start";
+        ASSERT_NO_FATAL_FAILURE(table.Start(kDefaultSeatSetup));
+        EXPECT_EQ(table.session.Level(), kDefaultLevel) << "a start with no level";
+        for (int index = 0; index < kLevelCount; ++index) {
+            const ComputerLevel level = static_cast<ComputerLevel>(index);
+            ASSERT_NO_FATAL_FAILURE(table.StartAt(level));
+            EXPECT_EQ(table.session.Level(), level) << Name(level);
+        }
+        ASSERT_NO_FATAL_FAILURE(table.Start(kAllComputers));
+        EXPECT_EQ(table.session.Level(), kDefaultLevel) << "the level is not kept from the match before";
+    }
+
+    TEST(TableSessionTest, ARefusedStartKeepsTheOldLevelAndTheMatch) {
+        Table table;
+        ASSERT_NO_FATAL_FAILURE(table.StartAt(ComputerLevel::Hard));
+        const std::string before = State(table);
+        MahjongSettings bad;
+        bad.handsPerMatch = kUnplayableHandsPerMatch;
+        const MatchStatus refused = table.session.StartMatch(bad, kSeed + 1, kAllComputers, ComputerLevel::Easy);
+        ASSERT_FALSE(refused.has_value());
+        EXPECT_EQ(refused.error(), MatchError::BadSettings);
+        EXPECT_EQ(table.session.Level(), ComputerLevel::Hard);
+        EXPECT_EQ(State(table), before);
+    }
+
+    TEST(TableSessionTest, TheExplicitNormalLevelPlaysLikeTheDefaultActionByAction) {
+        Table byDefault;
+        Table explicitNormal;
+        ASSERT_NO_FATAL_FAILURE(byDefault.Start(kAllComputers, kSeed, ShortMatch()));
+        ASSERT_NO_FATAL_FAILURE(explicitNormal.StartAt(ComputerLevel::Normal));
+        for (int actions = 0; byDefault.session.GetPhase() != SessionPhase::MatchOver; ++actions) {
+            ASSERT_LT(actions, kActionLimitPerMatch);
+            ASSERT_EQ(State(byDefault), State(explicitNormal)) << "action " << actions;
+            if (byDefault.session.GetPhase() == SessionPhase::HandOver) {
+                ASSERT_TRUE(byDefault.session.NextHand().has_value());
+                ASSERT_TRUE(explicitNormal.session.NextHand().has_value());
+            } else {
+                const StepResult a = byDefault.session.StepComputer();
+                const StepResult b = explicitNormal.session.StepComputer();
+                ASSERT_TRUE(a.has_value());
+                ASSERT_TRUE(b.has_value());
+                ASSERT_EQ(*a, *b) << "action " << actions;
+            }
+        }
+        EXPECT_EQ(State(byDefault), State(explicitNormal));
+    }
+
+    TEST(TableSessionTest, EveryLevelPlaysAWholeMatchLegallyAndTheLogSaysTheLevelAndReplays) {
+        // How the levels differ is the business of the computer player's tests; here the match is legal at each, the points add up, the
+        // `Start` of the log carries the level and the log replays to the same match.
+        for (int index = 0; index < kLevelCount; ++index) {
+            const ComputerLevel level = static_cast<ComputerLevel>(index);
+            Table table;
+            MatchLog log;
+            table.session.SetLogSink(&log);
+            ASSERT_NO_FATAL_FAILURE(table.StartAt(level));
+            EXPECT_EQ(table.session.Level(), level) << Name(level);
+            for (int actions = 0; table.session.GetPhase() != SessionPhase::MatchOver; ++actions) {
+                ASSERT_LT(actions, kActionLimitPerMatch) << Name(level);
+                if (table.session.GetPhase() == SessionPhase::HandOver) {
+                    ASSERT_TRUE(table.session.NextHand().has_value()) << Name(level);
+                } else {
+                    ASSERT_TRUE(table.session.StepComputer().has_value()) << Name(level) << " action " << actions;
+                }
+            }
+            EXPECT_EQ(table.match.HandsPlayed(), table.match.HandsTotal()) << Name(level);
+            EXPECT_EQ(Sum(table.match.Scores()), kTableTotal) << Name(level);
+
+            ASSERT_FALSE(log.Events().empty()) << Name(level);
+            EXPECT_EQ(log.Events().front().kind, MatchLogKind::Start) << Name(level);
+            EXPECT_EQ(log.Events().front().level, level) << Name(level);
+            EXPECT_EQ(log.Events().back().kind, MatchLogKind::End) << Name(level);
+            Match replayed;
+            const ReplayStatus status = ReplayMatchLog(log.Events(), replayed);
+            ASSERT_TRUE(status.has_value()) << Name(level) << ": stopped at event " << status.error().index << ": " << Name(status.error().problem);
+            EXPECT_EQ(replayed.Scores(), table.match.Scores()) << Name(level);
+            EXPECT_EQ(replayed.History().size(), table.match.History().size()) << Name(level);
+        }
     }
 
     TEST(TableSessionTest, TheActorIsTheDiscarderInATurnAndThePendingSeatsInAClaimWindow) {

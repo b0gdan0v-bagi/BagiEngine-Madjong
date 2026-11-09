@@ -56,7 +56,7 @@ namespace BECore::Mahjong {
 
     MatchStatus MahjongGame::StartMatch(uint32_t seed) {
         ApplyLanguage();
-        const MatchStatus started = _session.StartMatch(_settings, seed, _seats);
+        const MatchStatus started = _session.StartMatch(_settings, seed, _seats, _level);
         if (started.has_value()) {
             CloseSetup();
             CloseRules();

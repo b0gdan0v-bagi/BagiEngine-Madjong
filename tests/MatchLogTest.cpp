@@ -36,8 +36,8 @@ namespace BECore::Mahjong::Tests {
                 session.SetLogSink(&log);
             }
 
-            void Start(const SeatSetup& seats, uint32_t seed = kSeed, const MahjongSettings& settings = ShortMatch()) {
-                ASSERT_TRUE(session.StartMatch(settings, seed, seats).has_value());
+            void Start(const SeatSetup& seats, uint32_t seed = kSeed, const MahjongSettings& settings = ShortMatch(), ComputerLevel level = kDefaultLevel) {
+                ASSERT_TRUE(session.StartMatch(settings, seed, seats, level).has_value());
             }
 
             /// The computers play every hand to the end; returns the steps taken.
@@ -64,9 +64,9 @@ namespace BECore::Mahjong::Tests {
             int steps = 0;
         };
 
-        PlayedMatch Play(uint32_t seed) {
+        PlayedMatch Play(uint32_t seed, ComputerLevel level = kDefaultLevel) {
             LoggedTable table;
-            table.Start(kAllComputers, seed);
+            table.Start(kAllComputers, seed, ShortMatch(), level);
             PlayedMatch played;
             played.steps = table.PlayMatch();
             played.events = table.log.Events();
@@ -156,6 +156,42 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(got.winner, want.winner) << "hand " << hand;
             EXPECT_EQ(got.scores, want.scores) << "hand " << hand;
             EXPECT_EQ(got.deltas, want.deltas) << "hand " << hand;
+        }
+    }
+
+    TEST(MatchLogTest, TheStartEventHoldsTheLevelOfTheSession) {
+        EXPECT_EQ(Play(kSeed).events.front().level, kDefaultLevel);
+        for (int index = 0; index < kLevelCount; ++index) {
+            const ComputerLevel level = static_cast<ComputerLevel>(index);
+            const PlayedMatch played = Play(kSeed, level);
+            ASSERT_FALSE(played.events.empty());
+            EXPECT_EQ(played.events.front().kind, MatchLogKind::Start);
+            EXPECT_EQ(played.events.front().level, level) << Name(level);
+        }
+    }
+
+    TEST(MatchLogTest, TheStartsOfTwoLevelsAreUnequal) {
+        const MatchLogEvent normal = Play(kSeed, ComputerLevel::Normal).events.front();
+        for (const ComputerLevel other : {ComputerLevel::Easy, ComputerLevel::Hard}) {
+            const MatchLogEvent changed = Play(kSeed, other).events.front();
+            EXPECT_FALSE(normal == changed) << Name(other);
+        }
+        MatchLogEvent same = normal;
+        EXPECT_TRUE(normal == same);
+        same.level = ComputerLevel::Hard;
+        EXPECT_FALSE(normal == same);
+    }
+
+    TEST(MatchLogTest, ALogMadeAtEveryLevelReplaysFromItsActions) {
+        // The replay needs no computer player and so no level: the actions are in the log.
+        for (int index = 0; index < kLevelCount; ++index) {
+            const ComputerLevel level = static_cast<ComputerLevel>(index);
+            const PlayedMatch played = Play(kSeed, level);
+            Match replayed;
+            const ReplayStatus status = ReplayMatchLog(played.events, replayed);
+            ASSERT_TRUE(status.has_value()) << Name(level) << ": stopped at event " << status.error().index << ": " << Name(status.error().problem);
+            EXPECT_EQ(replayed.GetPhase(), MatchPhase::Finished) << Name(level);
+            EXPECT_EQ(replayed.Scores(), played.match.Scores()) << Name(level);
         }
     }
 

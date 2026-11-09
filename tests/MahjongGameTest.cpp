@@ -177,6 +177,45 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(game->GetSeats(), seats);
     }
 
+    TEST_F(MahjongGameTest, TheLevelIsNormalByDefaultAndKeptAcrossResetAndStartMatch) {
+        MahjongGame* game = MahjongGame::GetActive();
+        ASSERT_NE(game, nullptr);
+        EXPECT_EQ(game->GetLevel(), ComputerLevel::Normal);
+        EXPECT_EQ(game->GetSession().Level(), ComputerLevel::Normal);
+
+        for (int index = 0; index < kLevelCount; ++index) {
+            const ComputerLevel level = static_cast<ComputerLevel>(index);
+            game->SetLevel(level);
+            EXPECT_EQ(game->GetLevel(), level);
+
+            // StartMatch reaches the session with the level, a Reset and a second StartMatch keep it
+            ASSERT_TRUE(game->StartMatch(kSeed).has_value());
+            EXPECT_EQ(game->GetSession().Level(), level) << LevelName(level);
+            game->Reset();
+            EXPECT_EQ(game->GetLevel(), level) << LevelName(level);
+            EXPECT_EQ(game->GetSession().Level(), level) << LevelName(level);
+            ASSERT_TRUE(game->StartMatch(kSeed + 1).has_value());
+            EXPECT_EQ(game->GetLevel(), level) << LevelName(level);
+            EXPECT_EQ(game->GetSession().Level(), level) << LevelName(level);
+        }
+    }
+
+    TEST_F(MahjongGameTest, ARefusedStartLeavesTheLevelOfTheMatchInPlay) {
+        MahjongGame* game = MahjongGame::GetActive();
+        ASSERT_NE(game, nullptr);
+        game->SetLevel(ComputerLevel::Easy);
+        ASSERT_TRUE(game->StartMatch(kSeed).has_value());
+
+        MahjongSettings settings;
+        settings.handsPerMatch = kUnplayableHandsPerMatch;
+        game->SetSettings(settings);
+        game->SetLevel(ComputerLevel::Hard);
+        ASSERT_FALSE(game->StartMatch(kSeed).has_value());
+
+        EXPECT_EQ(game->GetSession().Level(), ComputerLevel::Easy) << "the match in play keeps the level it was started with";
+        EXPECT_EQ(game->GetLevel(), ComputerLevel::Hard) << "the setting is the next match's";
+    }
+
     TEST_F(MahjongGameTest, TheLanguageIsEnglishAfterTheStart) {
         MahjongGame* game = MahjongGame::GetActive();
         ASSERT_NE(game, nullptr);

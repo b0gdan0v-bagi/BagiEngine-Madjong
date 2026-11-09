@@ -30,7 +30,7 @@ namespace BECore::Mahjong {
      * rules of "who acts next" and "when does the state change" exist once. The session keeps a reference to the match, which belongs
      * to its owner (`MahjongGame`) and must outlive it.
      *
-     * - `StartMatch` begins a match and the computer players of the same seed.
+     * - `StartMatch` begins a match and the computer players of the same seed and of the given level.
      * - `Actor` is the seat that has to act (the first pending seat in a claim window; the result does not depend on the order).
      *   `StepComputer` plays one action of a computer actor, `RunComputers` plays until a person has to act or the hand is over,
      *   `PerformPerson` applies the action of a person actor, `NextHand` settles a finished hand and deals on.
@@ -54,9 +54,14 @@ namespace BECore::Mahjong {
         TableSession(const TableSession&) = delete;
         TableSession& operator=(const TableSession&) = delete;
 
-        /// `Match::Start(settings, seed)` with `seats` and computer players seeded `seed`. `BadSettings`, and nothing changes (the
-        /// version too), unless `IsPlayable(settings)`.
-        MatchStatus StartMatch(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats);
+        /// `Match::Start(settings, seed)` with `seats` and computer players of `level` seeded `seed`. `BadSettings`, and nothing changes
+        /// (the version and the level too), unless `IsPlayable(settings)`.
+        MatchStatus StartMatch(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats, ComputerLevel level = kDefaultLevel);
+
+        /// The level of the computer players of the match started last; `kDefaultLevel` before the first start.
+        [[nodiscard]] ComputerLevel Level() const noexcept {
+            return _level;
+        }
 
         /// Where the events of the match go (see the class comment); null (the default) for none. Not owned: the sink outlives its use
         /// by the session. May be changed at any time, also in the middle of a match.
@@ -121,6 +126,7 @@ namespace BECore::Mahjong {
         Match& _match;
         std::optional<ComputerTable> _table;
         SeatSetup _seats = kDefaultSeatSetup;
+        ComputerLevel _level = kDefaultLevel;
         Seat _viewer = kNoSeat;
         uint64_t _version = 0;
         IMatchLogSink* _sink = nullptr;

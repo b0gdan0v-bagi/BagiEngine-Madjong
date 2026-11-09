@@ -169,12 +169,73 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Member(json, "version"), kMatchLogFormatVersion);
         EXPECT_EQ(Member(json, "seed"), kSeed);
         EXPECT_EQ(Member(json, "seats"), "CCCC");
+        EXPECT_EQ(Member(json, "level"), "normal");
         const Json settings = Member(json, "settings");
         EXPECT_EQ(Member(settings, "handsPerMatch"), kShortMatchHands);
         EXPECT_EQ(Member(settings, "flowers"), false);
         EXPECT_EQ(Member(settings, "replayDrawnHand"), true);
         EXPECT_EQ(Member(settings, "limit"), kDefaultLimit);
         EXPECT_EQ(Member(settings, "startingScore"), kExpectedStartingScore);
+    }
+
+    TEST_F(MatchLogJsonTest, TheLevelOfTheStartRoundTripsForEveryLevel) {
+        MatchLogEvent start = PlayedLog(kSeed).front();
+        ASSERT_EQ(start.kind, MatchLogKind::Start);
+        for (int index = 0; index < kLevelCount; ++index) {
+            start.level = static_cast<ComputerLevel>(index);
+            const Json json = EventToJson(start);
+            EXPECT_EQ(Member(json, "level"), std::string(LevelName(start.level)));
+            const auto back = EventFromJson(json);
+            ASSERT_TRUE(back.has_value()) << back.error().c_str();
+            EXPECT_EQ(back->level, start.level);
+            EXPECT_EQ(*back, start);
+        }
+        // A match played at a level logs that level, also through the text of the line.
+        Match match;
+        TableSession session(match);
+        MatchLog log;
+        session.SetLogSink(&log);
+        ASSERT_TRUE(session.StartMatch(MahjongSettings{}, kSeed, kAllComputers, ComputerLevel::Hard).has_value());
+        const auto parsed = ParseMatchLog(TextOf(log.Events()).c_str());
+        ASSERT_TRUE(parsed.has_value()) << parsed.error().c_str();
+        EXPECT_EQ(parsed->front().level, ComputerLevel::Hard);
+    }
+
+    TEST_F(MatchLogJsonTest, AVersionOneStartHasNoLevelAndReadsAsNormal) {
+        const MatchLogEvent start = PlayedLog(kSeed).front();
+        Json json = EventToJson(start);
+        json["version"] = kMatchLogOldestVersion;
+        json.erase("level");
+        const auto back = EventFromJson(json);
+        ASSERT_TRUE(back.has_value()) << back.error().c_str();
+        EXPECT_EQ(back->level, ComputerLevel::Normal);
+        EXPECT_EQ(*back, start);
+
+        // A version 1 line does not look at a `level` it should not have.
+        json["level"] = "hard";
+        const auto ignored = EventFromJson(json);
+        ASSERT_TRUE(ignored.has_value()) << ignored.error().c_str();
+        EXPECT_EQ(ignored->level, ComputerLevel::Normal);
+    }
+
+    TEST_F(MatchLogJsonTest, AVersionTwoStartNeedsALevelOfTheThreeNames) {
+        const MatchLogEvent start = PlayedLog(kSeed).front();
+        Json without = EventToJson(start);
+        without.erase("level");
+        const eastl::string missing = ErrorOf(without);
+        EXPECT_NE(missing.find("level"), eastl::string::npos) << missing.c_str();
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", "Easy"));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", "easy "));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", "expert"));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", ""));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", 1));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", nullptr));
+        // An unknown name is answered with the three names
+        const eastl::string unknown = ErrorOf(With(EventToJson(start), "level", "expert"));
+        EXPECT_NE(unknown.find("easy, normal or hard"), eastl::string::npos) << unknown.c_str();
+        // The versions around the known ones are refused.
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "version", kMatchLogFormatVersion + 1));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "version", kMatchLogOldestVersion - 1));
     }
 
     TEST_F(MatchLogJsonTest, TheHandLineListsFourteenTilesForEastAndThirteenForTheOthers) {

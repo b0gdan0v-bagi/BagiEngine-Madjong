@@ -22,12 +22,13 @@ namespace BECore::Mahjong {
 
     }  // namespace
 
-    MatchStatus TableSession::StartMatch(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats) {
+    MatchStatus TableSession::StartMatch(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats, ComputerLevel level) {
         if (const MatchStatus started = _match.Start(settings, seed); !started) {
             return started;
         }
-        _table.emplace(seed);
+        _table.emplace(seed, level);
         _seats = seats;
+        _level = level;
         _viewer = PersonCount() == 1 ? OnlyPerson(_seats) : kNoSeat;
         ++_version;
         if (_sink != nullptr) {
@@ -36,6 +37,7 @@ namespace BECore::Mahjong {
             start.seed = seed;
             start.settings = settings;
             start.seats = seats;
+            start.level = level;
             _sink->OnEvent(start);
             _sink->OnEvent(MakeHandEvent(_match));
         }

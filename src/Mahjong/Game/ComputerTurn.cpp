@@ -173,9 +173,24 @@ namespace BECore::Mahjong {
             return best;
         }
 
+        /// The discard of an inattentive seat: of the discards that leave the lowest shanten the lowest `KeepValue`, then `rng`; the
+        /// acceptance is not looked at.
+        Tile DiscardWithoutAcceptance(const TileCounts& counts, const TableView& view, MahjongRng& rng) {
+            eastl::vector<Candidate> candidates;
+            for (const uint8_t id : FindLowestShanten(counts, MeldCountOf(view)).kinds) {
+                const Tile tile{id};
+                candidates.push_back({tile, 0, KeepValue(tile, view.seatWind, view.roundWind)});
+            }
+            return candidates.empty() ? Tile{} : PickBest(candidates, rng);
+        }
+
         /// Step 5: the discard of the best rating that is not a declaration.
-        HandAction ChooseDiscard(const TableView& view, MahjongRng& rng) {
-            const DiscardRating best = BestDiscard(CountTiles(view.own.concealed), MeldCountOf(view), view, rng);
+        HandAction ChooseDiscard(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
+            const TileCounts counts = CountTiles(view.own.concealed);
+            if (Roll(rng, profile.skipAcceptancePercent)) {
+                return HandAction::MakeDiscard(DiscardWithoutAcceptance(counts, view, rng));
+            }
+            const DiscardRating best = BestDiscard(counts, MeldCountOf(view), view, rng);
             return HandAction::MakeDiscard(best.tile);
         }
 
@@ -255,12 +270,14 @@ namespace BECore::Mahjong {
         return {first, best.shanten, best.acceptance};
     }
 
-    HandAction ChooseTurnAction(const TableView& view, MahjongRng& rng) {
+    HandAction ChooseTurnAction(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
         if (const HandAction* win = FindAction(view, ActionKind::DeclareWin)) {
             return *win;
         }
         if (const std::optional<HandAction> declaration = ChooseWaitingDiscard(view, rng, true)) {
-            return *declaration;
+            if (!Roll(rng, profile.skipDeclarationPercent)) {
+                return *declaration;
+            }
         }
         if (const std::optional<HandAction> kong = ChooseKong(view)) {
             return *kong;
@@ -270,7 +287,7 @@ namespace BECore::Mahjong {
                 return *keeping;
             }
         }
-        return ChooseDiscard(view, rng);
+        return ChooseDiscard(view, rng, profile);
     }
 
 }  // namespace BECore::Mahjong
