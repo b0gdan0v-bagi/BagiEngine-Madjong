@@ -26,8 +26,9 @@ namespace BECore::Mahjong {
      * wind name or level name is an error text that names the member; nothing aborts.
      *
      * Versions: 2 (`kMatchLogFormatVersion`, `kMatchLogLevelVersion`) added `level` to `start`, the strength of the computer players
-     * (`LevelName`: `easy`, `normal`, `hard`); it is needed in version 2. Version 1 files (`kMatchLogOldestVersion`) have no `level` and are read as
-     * `Normal`, the only player there was. Any other version is refused.
+     * (`LevelName`: `easy`, `normal`); it is needed in version 2, and a `hard` of version 2 (`kMatchLogRetiredLevelName`) is read as `normal`.
+     * Version 1 files (`kMatchLogOldestVersion`) have no `level` and are read as `Normal`, the only player there was. Any other version is
+     * refused.
      */
 
     /// The `version` of the `start` line that is written.
@@ -39,6 +40,11 @@ namespace BECore::Mahjong {
     /// The first `version` whose `start` line has `level`; an older one has none and reads as `Normal`.
     inline constexpr int kMatchLogLevelVersion = 2;
     static_assert(kMatchLogLevelVersion >= kMatchLogOldestVersion && kMatchLogLevelVersion <= kMatchLogFormatVersion);
+
+    /// The name of the level `Hard` of the first slice of the computer levels. It played exactly like Normal and is gone, but files were
+    /// written with it: a version 2 `start` that names it is read as `Normal`, not refused. When a level `hard` comes back (the search
+    /// player), `kMatchLogFormatVersion` goes to 3 with the new meaning of `hard`, and this name stays what it was for version 2.
+    inline constexpr std::string_view kMatchLogRetiredLevelName = "hard";
 
     /// One event as the object of its line.
     [[nodiscard]] Json EventToJson(const MatchLogEvent& event);

@@ -169,14 +169,14 @@ namespace BECore::Mahjong::Tests {
 
     TEST(TableSessionTest, ARefusedStartKeepsTheOldLevelAndTheMatch) {
         Table table;
-        ASSERT_NO_FATAL_FAILURE(table.StartAt(ComputerLevel::Hard));
+        ASSERT_NO_FATAL_FAILURE(table.StartAt(ComputerLevel::Easy));
         const std::string before = State(table);
         MahjongSettings bad;
         bad.handsPerMatch = kUnplayableHandsPerMatch;
-        const MatchStatus refused = table.session.StartMatch(bad, kSeed + 1, kAllComputers, ComputerLevel::Easy);
+        const MatchStatus refused = table.session.StartMatch(bad, kSeed + 1, kAllComputers, ComputerLevel::Normal);
         ASSERT_FALSE(refused.has_value());
         EXPECT_EQ(refused.error(), MatchError::BadSettings);
-        EXPECT_EQ(table.session.Level(), ComputerLevel::Hard);
+        EXPECT_EQ(table.session.Level(), ComputerLevel::Easy);
         EXPECT_EQ(State(table), before);
     }
 

@@ -209,11 +209,11 @@ namespace BECore::Mahjong::Tests {
         MahjongSettings settings;
         settings.handsPerMatch = kUnplayableHandsPerMatch;
         game->SetSettings(settings);
-        game->SetLevel(ComputerLevel::Hard);
+        game->SetLevel(ComputerLevel::Normal);
         ASSERT_FALSE(game->StartMatch(kSeed).has_value());
 
         EXPECT_EQ(game->GetSession().Level(), ComputerLevel::Easy) << "the match in play keeps the level it was started with";
-        EXPECT_EQ(game->GetLevel(), ComputerLevel::Hard) << "the setting is the next match's";
+        EXPECT_EQ(game->GetLevel(), ComputerLevel::Normal) << "the setting is the next match's";
     }
 
     TEST_F(MahjongGameTest, TheLanguageIsEnglishAfterTheStart) {

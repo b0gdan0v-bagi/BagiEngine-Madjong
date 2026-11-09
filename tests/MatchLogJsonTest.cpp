@@ -185,6 +185,7 @@ namespace BECore::Mahjong::Tests {
             start.level = static_cast<ComputerLevel>(index);
             const Json json = EventToJson(start);
             EXPECT_EQ(Member(json, "level"), std::string(LevelName(start.level)));
+            EXPECT_NE(Member(json, "level"), std::string(kMatchLogRetiredLevelName)) << "the writer never says the retired name";
             const auto back = EventFromJson(json);
             ASSERT_TRUE(back.has_value()) << back.error().c_str();
             EXPECT_EQ(back->level, start.level);
@@ -195,10 +196,10 @@ namespace BECore::Mahjong::Tests {
         TableSession session(match);
         MatchLog log;
         session.SetLogSink(&log);
-        ASSERT_TRUE(session.StartMatch(MahjongSettings{}, kSeed, kAllComputers, ComputerLevel::Hard).has_value());
+        ASSERT_TRUE(session.StartMatch(MahjongSettings{}, kSeed, kAllComputers, ComputerLevel::Easy).has_value());
         const auto parsed = ParseMatchLog(TextOf(log.Events()).c_str());
         ASSERT_TRUE(parsed.has_value()) << parsed.error().c_str();
-        EXPECT_EQ(parsed->front().level, ComputerLevel::Hard);
+        EXPECT_EQ(parsed->front().level, ComputerLevel::Easy);
     }
 
     TEST_F(MatchLogJsonTest, AVersionOneStartHasNoLevelAndReadsAsNormal) {
@@ -218,24 +219,57 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(ignored->level, ComputerLevel::Normal);
     }
 
-    TEST_F(MatchLogJsonTest, AVersionTwoStartNeedsALevelOfTheThreeNames) {
+    TEST_F(MatchLogJsonTest, AVersionTwoStartNeedsALevelOfTheTwoNames) {
         const MatchLogEvent start = PlayedLog(kSeed).front();
         Json without = EventToJson(start);
         without.erase("level");
         const eastl::string missing = ErrorOf(without);
         EXPECT_NE(missing.find("level"), eastl::string::npos) << missing.c_str();
         EXPECT_TRUE(ChangedMemberIsRefused(start, "level", "Easy"));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", "Hard"));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "level", "easy "));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "level", "expert"));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "level", ""));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "level", 1));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "level", nullptr));
-        // An unknown name is answered with the three names
+        // An unknown name is answered with the two names
         const eastl::string unknown = ErrorOf(With(EventToJson(start), "level", "expert"));
-        EXPECT_NE(unknown.find("easy, normal or hard"), eastl::string::npos) << unknown.c_str();
+        EXPECT_NE(unknown.find("easy or normal"), eastl::string::npos) << unknown.c_str();
+        EXPECT_EQ(unknown.find("hard"), eastl::string::npos) << unknown.c_str();
         // The versions around the known ones are refused.
         EXPECT_TRUE(ChangedMemberIsRefused(start, "version", kMatchLogFormatVersion + 1));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "version", kMatchLogOldestVersion - 1));
+    }
+
+    TEST_F(MatchLogJsonTest, AVersionTwoStartThatNamesHardReadsAsNormal) {
+        const eastl::vector<MatchLogEvent> events = PlayedLog(kSeed);
+        const MatchLogEvent& start = events.front();
+        ASSERT_EQ(start.kind, MatchLogKind::Start);
+        ASSERT_EQ(start.level, ComputerLevel::Normal);
+        const Json hard = With(EventToJson(start), "level", std::string(kMatchLogRetiredLevelName));
+        const auto back = EventFromJson(hard);
+        ASSERT_TRUE(back.has_value()) << back.error().c_str();
+        EXPECT_EQ(back->level, ComputerLevel::Normal);
+        EXPECT_EQ(*back, start);
+
+        // The whole file, with its first line written as an old game wrote it, reads back as the same log and replays.
+        std::string text = hard.dump();
+        text += '\n';
+        for (size_t index = 1; index < events.size(); ++index) {
+            text += EventToJson(events[index]).dump();
+            text += '\n';
+        }
+        const auto parsed = ParseMatchLog(text);
+        ASSERT_TRUE(parsed.has_value()) << parsed.error().c_str();
+        EXPECT_EQ(*parsed, events);
+        Match replayed;
+        const ReplayStatus status = ReplayMatchLog(*parsed, replayed);
+        ASSERT_TRUE(status.has_value()) << "stopped at event " << status.error().index;
+        EXPECT_EQ(replayed.GetPhase(), MatchPhase::Finished);
+
+        // Only that one name is read as Normal.
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", "HARD"));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", "hard "));
     }
 
     TEST_F(MatchLogJsonTest, TheHandLineListsFourteenTilesForEastAndThirteenForTheOthers) {

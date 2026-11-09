@@ -3,11 +3,10 @@
 namespace BECore::Mahjong {
 
     /// How well a computer seat plays. `Normal` is the player described in `CLAUDE.md` ("Computer player"); `Easy` is the same player
-    /// with other numbers (`kEasyProfile`). **`Hard` plays exactly like `Normal`**: it is in the enum, the control API and the match log
-    /// because the owner chose three levels, but what Hard should be waits for the owner's decision (the levers tried, a suit focus, a
-    /// look-ahead, passing claims to keep a concealed hand and kong claims, all lost wins and did not beat Normal in these rules; the
-    /// measurements are in the todo store, in the entry `mahjong-computer-difficulty`).
-    CORE_ENUM(ComputerLevel, uint8_t, Easy, Normal, Hard)
+    /// with other numbers (`kEasyProfile`). A third level, `Hard`, was removed on the owner's decision (2026-11-09): it played exactly
+    /// like Normal, and it comes back as the search player of the entry `mahjong-bot-search` when that one beats Normal (the levers
+    /// tried for it earlier are in the todo store, in the entry `mahjong-computer-difficulty`).
+    CORE_ENUM(ComputerLevel, uint8_t, Easy, Normal)
 
     /// The level of a table nobody chose a level for.
     inline constexpr ComputerLevel kDefaultLevel = ComputerLevel::Normal;
@@ -15,7 +14,7 @@ namespace BECore::Mahjong {
     /// The number of levels.
     inline constexpr int kLevelCount = static_cast<int>(EnumUtils<ComputerLevel>::Count());
 
-    /// The name of a level in the control API and the match log: `easy`, `normal`, `hard` (lowercase). A value outside the enum asserts
+    /// The name of a level in the control API and the match log: `easy`, `normal` (lowercase). A value outside the enum asserts
     /// in debug and answers the name of the default.
     [[nodiscard]] constexpr std::string_view LevelName(ComputerLevel level) noexcept {
         switch (level) {
@@ -23,8 +22,6 @@ namespace BECore::Mahjong {
                 return "easy";
             case ComputerLevel::Normal:
                 return "normal";
-            case ComputerLevel::Hard:
-                return "hard";
         }
         ASSERT(false, "a value outside ComputerLevel");
         return "normal";
@@ -37,9 +34,6 @@ namespace BECore::Mahjong {
         }
         if (text == LevelName(ComputerLevel::Normal)) {
             return ComputerLevel::Normal;
-        }
-        if (text == LevelName(ComputerLevel::Hard)) {
-            return ComputerLevel::Hard;
         }
         return std::nullopt;
     }
@@ -78,10 +72,6 @@ namespace BECore::Mahjong {
         .takeValueClaimsAtEqualShanten = false,
     };
 
-    /// What Hard plays by: Normal's numbers, until the owner decides what Hard is (see `ComputerLevel`). The one place that goes when
-    /// Hard gets numbers of its own; `ComputerLevelTest` pins the twin and goes with it.
-    inline constexpr LevelProfile kHardProfile = kNormalProfile;
-
     /// The profile of `level`. A value outside the enum gives Normal's.
     [[nodiscard]] constexpr const LevelProfile& ProfileOf(ComputerLevel level) noexcept {
         switch (level) {
@@ -89,13 +79,11 @@ namespace BECore::Mahjong {
                 return kEasyProfile;
             case ComputerLevel::Normal:
                 return kNormalProfile;
-            case ComputerLevel::Hard:
-                return kHardProfile;
         }
         return kNormalProfile;
     }
 
-    /// The names of the levels for an error text: "easy, normal or hard" (`LevelName` of each, in the order of the enum).
+    /// The names of the levels for an error text: "easy or normal" (`LevelName` of each, in the order of the enum).
     [[nodiscard]] inline eastl::string LevelNamesText() {
         eastl::string names;
         for (int index = 0; index < kLevelCount; ++index) {
