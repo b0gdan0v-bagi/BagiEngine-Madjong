@@ -5,6 +5,7 @@
 #include <Mahjong/Game/Match.h>
 #include <Mahjong/Game/TableSession.h>
 #include <Mahjong/MahjongGameControl.h>
+#include <Mahjong/MatchLogWriter.h>
 
 namespace BECore::Mahjong {
 
@@ -25,12 +26,14 @@ namespace BECore::Mahjong {
      * seat 0 a person, the others computers); both are kept across `Reset()`. `AsControllable()` hands out the control adapter, which
      * drives the match through the session. The seat choice of a new game is the panel `Setup` of the scene (`IsSetupOpen`). The language
      * of the words (`GetLanguage`, `kDefaultLanguage`) is kept for the session and applied to `CoreManager::GetUIStrings()` at every start.
-     * `HintsOn()` is the switch of the hints (default on, kept for the session, changed in `Setup`).
+     * `HintsOn()` is the switch of the hints (default on, kept for the session, changed in `Setup`). Every match begun through the
+     * session is written down by the `MatchLogWriter` the game owns (`GetMatchLog()`); a match started through the non-const `GetMatch()`
+     * is not.
      */
     class MahjongGame : public IGame {
         BE_CLASS(MahjongGame)
     public:
-        MahjongGame() = default;
+        MahjongGame();
         ~MahjongGame() override = default;
 
         PoolString GetName() const override;
@@ -56,6 +59,12 @@ namespace BECore::Mahjong {
         }
         const TableSession& GetSession() const {
             return _session;
+        }
+
+        /// The writer of the match log (`MatchLogWriter.h`): every match begun through the session is written to a file of its own;
+        /// `Path()` is the file of the current (or last) match.
+        const MatchLogWriter& GetMatchLog() const {
+            return _log;
         }
 
         /// The settings of the next match; a match in progress keeps the ones it was started with.
@@ -124,6 +133,7 @@ namespace BECore::Mahjong {
         bool _setupOpen = false;
         bool _hintsOn = true;
         PoolString _language = PoolString::Intern(kDefaultLanguage);
+        MatchLogWriter _log;            // before _session: the session reports to it, so it goes last
         TableSession _session{_match};  // after _match: it keeps a reference
         MahjongGameControl _control{*this};
     };

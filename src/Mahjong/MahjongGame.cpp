@@ -7,6 +7,10 @@
 
 namespace BECore::Mahjong {
 
+    MahjongGame::MahjongGame() {
+        _session.SetLogSink(&_log);
+    }
+
     MahjongGame* MahjongGame::GetActive() {
         auto* active = GameManager::GetInstance().GetActive();
         return active ? active->Cast<MahjongGame>() : nullptr;

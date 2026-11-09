@@ -30,3 +30,6 @@ engine.log
 .claude/plans/
 *.plan.md
 todo-export/
+
+# Match logs (one file per match, written to the working directory)
+logs/
