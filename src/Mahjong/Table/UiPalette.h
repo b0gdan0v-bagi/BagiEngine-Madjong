@@ -5,7 +5,7 @@
 namespace BECore::Mahjong {
 
     /**
-     * The look of the game in numbers: the palette, the type scale and the spacing grid. `config/SceneConfig.xml` writes the colours of
+     * The look of the game in numbers: the palette, the type scale and the spacing grid. The scene and its node files (`config/SceneConfig.xml`, `config/nodes/`) write the colours of
      * `kUiPalette` as text (`r,g,b,a`) and the sizes of `kFontScale` (`fontSize`), and every position and size on the grid of
      * `kGridUnit`; `MahjongUiStyleTest` holds the file to all three, so a stray colour, size or number fails. The colours of the table
      * (`kFelt` ... `kVeil`) are drawn by `MahjongTableComponent`, the two marks of the hints (`kDeclareMark`, `kAdvisedFrame`) by `MahjongHintsComponent`, and none is in the file; the modal numbers

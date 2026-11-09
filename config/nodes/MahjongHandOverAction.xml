@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<!--
+  The button of the score table (MahjongNextHand, which settles the hand and deals on): an action bar at the bottom of the window,
+  a Screen canvas with a floor on its scale (minScale 0.6: the 64 unit button is 38.4 px), so it is a touch
+  target in any window. match is 1, not the 0.5 of the other Screen canvases: with 0.5 the bar is only 91-113 view units high in a
+  21:9 or 32:9 window and touches the plate. Shown and hidden by MahjongHudComponent together with HandOver. It is not modal: HandOver is, and takes every
+  click that the bar does not. The bar is 80 units high (surface colour) and holds the main button of the modal anatomy (primary,
+  28, 64 high, 8 above and below): the one place where a main button is not last in its plate, because 64 units on the view are
+  24 px in the smallest window and the plate cannot be a Screen canvas. It lies on the bar under the table in a narrow window;
+  MahjongTouchSizeTest checks that it does not touch the plate of HandOver at the user scale 1.0 in any window of the size matrix.
+-->
+<node name="HandOverAction" layer="26">
+  <components>
+    <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="1" minScale="0.6" useSafeArea="true" visible="false">
+      <elements>
+        <element type="UIElement" name="Bar" anchor="Bottom" width="100%" height="80" color="36,40,52,255" blocksInput="true" />
+        <element type="UIButton" name="NextHand" anchor="Bottom" y="-8" width="94%" maxWidth="320" height="64" text="{handOverButton}" fontSize="28" overflow="AutoFit" minFontSize="18" action="MahjongNextHand" color="40,110,60,255" />
+      </elements>
+    </component>
+  </components>
+</node>

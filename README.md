@@ -57,7 +57,7 @@ The game opens on **New game: who plays?**: for each of the four seats pick `Per
 | Path | What |
 |------|------|
 | `src/Mahjong/` | the game: `MahjongGame` and its control adapter, the rules and the computer players (`Game/`), the pure side of the scene (`Table/`: layout, tile atlas cells, action buttons, the words of the score table) and the scene components (`Components/`: the table, the HUD). `CLAUDE.md` describes it |
-| `config/`, `assets/` | scene, application config, the tile sprite library; the tile atlas (`assets/tiles/tiles.png`) |
+| `config/`, `assets/` | scene (`SceneConfig.xml` with the references and one file per node in `config/nodes/`), application config, the tile sprite library; the tile atlas (`assets/tiles/tiles.png`) |
 | `tools/` | `make_tiles.py`, the generator of our own tile art (`config/TextureLibrary.xml` and the atlas are its output); `arena/main.cpp`, the bot arena program |
 | `docs/` | `bot-arena.md`: how to run the arena and read its intervals |
 | `tests/` | gtest cases and `control_smoke.py`, the smoke test of the control API (plays a hand and a match over WebSocket) |

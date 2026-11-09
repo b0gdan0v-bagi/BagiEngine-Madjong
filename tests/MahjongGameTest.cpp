@@ -1,4 +1,5 @@
 #include "HandTestSupport.h"
+#include "ShippedScene.h"
 #include "StringsTestSupport.h"
 
 #include <BECore/GameManager/CoreManager.h>
@@ -11,7 +12,7 @@
 #include <gtest/gtest.h>
 
 /**
- * The game is registered and starts on its scene: the shipped SceneConfig.xml is read from the source tree (a game's content is not mounted in the
+ * The game is registered and starts on its scene: the shipped scene (SceneConfig.xml and its node files, `ShippedScene.h`) is read from the source tree (a game's content is not mounted in the
  * test environment) and the game is started through GameManager like the executable does. Needs the engine services.
  */
 namespace BECore::Mahjong::Tests {
@@ -21,10 +22,6 @@ namespace BECore::Mahjong::Tests {
     namespace {
 
         constexpr uint32_t kSeed = 11;
-
-        std::filesystem::path ShippedSceneConfig() {
-            return std::filesystem::path(__FILE__).parent_path().parent_path() / "config" / "SceneConfig.xml";
-        }
 
     }  // namespace
 
@@ -37,7 +34,7 @@ namespace BECore::Mahjong::Tests {
         void SetUp() override {
             EXPECT_TRUE(LoadShippedStrings(CoreManager::GetUIStrings()).empty());
             XmlDeserializer deserializer;
-            ASSERT_TRUE(deserializer.LoadFromFile(ShippedSceneConfig())) << ShippedSceneConfig().string();
+            ASSERT_TRUE(LoadShippedScene(deserializer)) << ShippedSceneConfig().string();
             _manager = New<SceneManager>();
             _manager->Deserialize(deserializer);
             ASSERT_FALSE(deserializer.HasErrors());

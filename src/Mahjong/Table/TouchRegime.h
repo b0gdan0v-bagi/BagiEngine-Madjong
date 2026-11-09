@@ -5,7 +5,7 @@
 
 namespace BECore::Mahjong {
 
-    /// The height of an action button of the canvas `Actions` in view units; the one place (`config/SceneConfig.xml` repeats it and
+    /// The height of an action button of the canvas `Actions` in view units; the one place (`config/nodes/MahjongActions.xml` repeats it and
     /// `MahjongTableScreenTest` compares the two). `Actions` is a `SceneView` canvas, so the table's fit scales it with the table.
     inline constexpr float kActionButtonHeight = 56.0f;
 
@@ -49,7 +49,7 @@ namespace BECore::Mahjong {
         return bar > 0.0f ? bar : 0.0f;
     }
 
-    /// The numbers of the row of `ActionsCompact` (`config/SceneConfig.xml` repeats them and `MahjongTableScreenTest` compares the two): the
+    /// The numbers of the row of `ActionsCompact` (`config/nodes/MahjongActionsCompact.xml` repeats them and `MahjongTableScreenTest` compares the two): the
     /// width of a button, the spacing of the row and the buttons of the fullest claim window (mahjong, kong, pung, three chows, pass, and
     /// the hint button `HintButton`, which follows them: eight buttons). The fullest turn (win, three concealed kongs, the upgrade, the hint
     /// button and `Declare`: seven buttons, the last one wider) never needs more lines than the claim window, because `Declare` is the

@@ -1,0 +1,117 @@
+<?xml version="1.0"?>
+<!--
+  The hints (Table/Hints.h, MahjongHintsComponent). The component answers the row HintsRow of Setup (MahjongSetHints) and the
+  button HintButton (MahjongHintAdvice; it is in the node HintsButton below and in ActionsCompact), fills the canvas below and
+  draws the marks over the viewer's hand; it comes after the table (layer 5: it reads the layout the table drew) and before the
+  canvas so that the variables are set when the canvas draws.
+  The canvas lies on the view of the table (SceneView, ignoreSafeArea: like the table it is a fixed design) in the free ground
+  inside the wall ring, x 472..808 and y 284..420 (the ring is 26 x 12 stacks of 14 units at y 268, TableLayout.h, and its inside
+  is x 472..808, y 282..422: the canvas keeps to the grid of 4; MahjongHintsTest checks the rectangles against the worst-case
+  layout). The top 80 units are the waiting row WaitPanel (a scrim plate): the caption (24, font 18) and a cell per tile that the
+  viewer's hand waits for (WaitCell0..12, 24 x 56: the tile as a UIImage of 24 x 32 whose sprite Tile_<notation> the component
+  sets, and under it the count of the copies the viewer cannot see, {hintCountN}, 24 high, font 18). The caption, the counts and
+  the sentence are AutoFit: at 18 they fill their lines in a window of 1280 x 720 and shrink in the smallest windows, where a line
+  of 18 units is taller than the 24 the row has. The strip y 364..420 below it (56 units) holds the label AdviceText (a scrim plate,
+  x 596..808) with the sentence {hintAdvice} of the advice, right of the place of the button HintButton (x 472..592), which is
+  in the node HintsButton and not here: nothing on this canvas takes input, so it needs no touch size. All start hidden; the
+  component shows the panel and the first N cells exactly while hints apply (MahjongGame::HintsOn(), a person at the table, no
+  cover, no Setup, the hand being played) and the hand waits, the button while hints apply and the viewer has actions to choose
+  from, and the label while an advice is up.
+-->
+<node name="Hints" layer="5">
+  <components>
+    <component type="MahjongHintsComponent" />
+    <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
+      <elements>
+        <element type="UIStack" name="WaitPanel" anchor="TopLeft" ignoreSafeArea="true" visible="false" x="472" y="284" width="336" height="80" direction="Vertical" spacing="0" padding="0" crossAlign="Center" color="0,0,0,200">
+          <children>
+            <element type="UILabel" name="WaitCaption" width="336" height="24" text="{#hints.waitCaption}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" />
+            <element type="UIStack" name="WaitRow" width="312" height="56" direction="Horizontal" spacing="0" crossAlign="Start">
+              <children>
+                <element type="UIStack" name="WaitCell0" visible="false" width="24" height="56" direction="Vertical" crossAlign="Stretch">
+                  <children>
+                    <element type="UIImage" name="WaitTile0" height="32" />
+                    <element type="UILabel" name="WaitCount0" height="24" text="{hintCount0}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" />
+                  </children>
+                </element>
+                <element type="UIStack" name="WaitCell1" visible="false" width="24" height="56" direction="Vertical" crossAlign="Stretch">
+                  <children>
+                    <element type="UIImage" name="WaitTile1" height="32" />
+                    <element type="UILabel" name="WaitCount1" height="24" text="{hintCount1}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" />
+                  </children>
+                </element>
+                <element type="UIStack" name="WaitCell2" visible="false" width="24" height="56" direction="Vertical" crossAlign="Stretch">
+                  <children>
+                    <element type="UIImage" name="WaitTile2" height="32" />
+                    <element type="UILabel" name="WaitCount2" height="24" text="{hintCount2}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" />
+                  </children>
+                </element>
+                <element type="UIStack" name="WaitCell3" visible="false" width="24" height="56" direction="Vertical" crossAlign="Stretch">
+                  <children>
+                    <element type="UIImage" name="WaitTile3" height="32" />
+                    <element type="UILabel" name="WaitCount3" height="24" text="{hintCount3}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" />
+                  </children>
+                </element>
+                <element type="UIStack" name="WaitCell4" visible="false" width="24" height="56" direction="Vertical" crossAlign="Stretch">
+                  <children>
+                    <element type="UIImage" name="WaitTile4" height="32" />
+                    <element type="UILabel" name="WaitCount4" height="24" text="{hintCount4}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" />
+                  </children>
+                </element>
+                <element type="UIStack" name="WaitCell5" visible="false" width="24" height="56" direction="Vertical" crossAlign="Stretch">
+                  <children>
+                    <element type="UIImage" name="WaitTile5" height="32" />
+                    <element type="UILabel" name="WaitCount5" height="24" text="{hintCount5}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" />
+                  </children>
+                </element>
+                <element type="UIStack" name="WaitCell6" visible="false" width="24" height="56" direction="Vertical" crossAlign="Stretch">
+                  <children>
+                    <element type="UIImage" name="WaitTile6" height="32" />
+                    <element type="UILabel" name="WaitCount6" height="24" text="{hintCount6}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" />
+                  </children>
+                </element>
+                <element type="UIStack" name="WaitCell7" visible="false" width="24" height="56" direction="Vertical" crossAlign="Stretch">
+                  <children>
+                    <element type="UIImage" name="WaitTile7" height="32" />
+                    <element type="UILabel" name="WaitCount7" height="24" text="{hintCount7}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" />
+                  </children>
+                </element>
+                <element type="UIStack" name="WaitCell8" visible="false" width="24" height="56" direction="Vertical" crossAlign="Stretch">
+                  <children>
+                    <element type="UIImage" name="WaitTile8" height="32" />
+                    <element type="UILabel" name="WaitCount8" height="24" text="{hintCount8}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" />
+                  </children>
+                </element>
+                <element type="UIStack" name="WaitCell9" visible="false" width="24" height="56" direction="Vertical" crossAlign="Stretch">
+                  <children>
+                    <element type="UIImage" name="WaitTile9" height="32" />
+                    <element type="UILabel" name="WaitCount9" height="24" text="{hintCount9}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" />
+                  </children>
+                </element>
+                <element type="UIStack" name="WaitCell10" visible="false" width="24" height="56" direction="Vertical" crossAlign="Stretch">
+                  <children>
+                    <element type="UIImage" name="WaitTile10" height="32" />
+                    <element type="UILabel" name="WaitCount10" height="24" text="{hintCount10}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" />
+                  </children>
+                </element>
+                <element type="UIStack" name="WaitCell11" visible="false" width="24" height="56" direction="Vertical" crossAlign="Stretch">
+                  <children>
+                    <element type="UIImage" name="WaitTile11" height="32" />
+                    <element type="UILabel" name="WaitCount11" height="24" text="{hintCount11}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" />
+                  </children>
+                </element>
+                <element type="UIStack" name="WaitCell12" visible="false" width="24" height="56" direction="Vertical" crossAlign="Stretch">
+                  <children>
+                    <element type="UIImage" name="WaitTile12" height="32" />
+                    <element type="UILabel" name="WaitCount12" height="24" text="{hintCount12}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" />
+                  </children>
+                </element>
+              </children>
+            </element>
+          </children>
+        </element>
+        <element type="UILabel" name="AdviceText" anchor="TopLeft" ignoreSafeArea="true" visible="false" x="596" y="364" width="212" height="56" text="{hintAdvice}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" color="0,0,0,200" />
+      </elements>
+    </component>
+  </components>
+</node>

@@ -1,0 +1,93 @@
+<?xml version="1.0"?>
+<!--
+  The action buttons lie in the free corner of the table, right of the bottom discards and above the viewer's melds (see
+  Table/TableLayout.cpp); three rows of three, laid out against the whole view (ignoreSafeArea) like the table. They start hidden: the
+  component shows the ones the person to act can press. A button says what it does in a plain word (Table/ActionButtons.h, ButtonSpec::wordKey:
+  the keys button.<Kind> of config/UIStrings.xml) and, where it concerns tiles, shows them as pictures: a UIImage child NameTile0..2 on the bottom line (the three tiles of
+  a chow, the claimed discard of a pung, kong or mahjong, the tile of a concealed kong or of the upgrade), hidden until the component sets
+  its sprite (Tile_<notation> of TextureLibrary.xml) and shows it; a picture takes no input, so a click on it is a click on the button.
+  A button is 56 view units high (kActionButtonHeight, Table/TouchRegime.h), which is a 32 px touch target from a window of 732 x 412 px;
+  the table is a fixed design that the engine scales to the window, so a smaller window has smaller buttons and tiles (a tile is 21 x 28
+  units, the 3:4 of an atlas cell). Below that window the component hides this canvas and shows ActionsCompact instead
+  (NeedsCompactActions), which holds the same buttons by name on the bar under the table, but only where that bar holds the row at its
+  height at that canvas width. In a window that the table fills to the bottom (16:9 below 731 x 411, a short wide one like 1000 x 400, a
+  landscape phone) or whose bar is lower than the row (600 x 420, 500 x 400, 626 x 480, and 640 x 480 and 720 x 480 at the user scale 1.5) this
+  canvas stays, slightly under 32 px but clear of the viewer's hand.
+  The label Hint above the row shows the sentence of the button under the pointer ({actionHint}, set by the component in the
+  current language from UIElement::hovered and again when the language changes; hidden while there is none). It takes no input, so
+  it never eats a click; it lies in the gutter between the wall and the right seat's discards (x 832..1028, y 256..452: 196 square,
+  room for the longer words of a translation; clear of their plates and of the row it explains, MahjongTableScreenTest holds the
+  place). A touch screen has no hover.
+-->
+<node name="Actions" layer="10">
+  <components>
+    <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
+      <elements>
+        <element type="UILabel" name="Hint" anchor="TopLeft" ignoreSafeArea="true" visible="false" x="832" y="256" width="196" height="196" text="{actionHint}" fontSize="18" align="Center" verticalAlign="Center" color="0,0,0,200" />
+        <element type="UIStack" name="ActionRow" anchor="TopLeft" ignoreSafeArea="true" x="724" y="460" width="412" height="184" direction="Horizontal" spacing="8" wrapChildren="true">
+          <children>
+          <element type="UIButton" name="Win" visible="false" width="132" height="56" text="{#button.Win}" fontSize="22" action="MahjongWin" color="40,110,60,255" />
+          <element type="UIButton" name="Mahjong" visible="false" width="132" height="56" text="{#button.ClaimMahjong}" fontSize="18" verticalAlign="Top" action="MahjongClaimMahjong" color="40,110,60,255">
+            <children>
+              <element type="UIImage" name="MahjongTile0" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
+            </children>
+          </element>
+          <element type="UIButton" name="Pung" visible="false" width="132" height="56" text="{#button.ClaimPung}" fontSize="18" verticalAlign="Top" action="MahjongClaimPung" color="45,75,120,255">
+            <children>
+              <element type="UIImage" name="PungTile0" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
+            </children>
+          </element>
+          <element type="UIButton" name="Kong" visible="false" width="132" height="56" text="{#button.ClaimKong}" fontSize="18" verticalAlign="Top" action="MahjongClaimKong" color="45,75,120,255">
+            <children>
+              <element type="UIImage" name="KongTile0" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
+            </children>
+          </element>
+          <element type="UIButton" name="Chow0" visible="false" width="132" height="56" text="{#button.ClaimChow0}" fontSize="18" verticalAlign="Top" action="MahjongClaimChow" value="0" color="45,75,120,255">
+            <children>
+              <element type="UIImage" name="Chow0Tile0" visible="false" anchor="Bottom" x="-23" y="-3" width="21" height="28" />
+              <element type="UIImage" name="Chow0Tile1" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
+              <element type="UIImage" name="Chow0Tile2" visible="false" anchor="Bottom" x="23" y="-3" width="21" height="28" />
+            </children>
+          </element>
+          <element type="UIButton" name="Chow1" visible="false" width="132" height="56" text="{#button.ClaimChow1}" fontSize="18" verticalAlign="Top" action="MahjongClaimChow" value="1" color="45,75,120,255">
+            <children>
+              <element type="UIImage" name="Chow1Tile0" visible="false" anchor="Bottom" x="-23" y="-3" width="21" height="28" />
+              <element type="UIImage" name="Chow1Tile1" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
+              <element type="UIImage" name="Chow1Tile2" visible="false" anchor="Bottom" x="23" y="-3" width="21" height="28" />
+            </children>
+          </element>
+          <element type="UIButton" name="Chow2" visible="false" width="132" height="56" text="{#button.ClaimChow2}" fontSize="18" verticalAlign="Top" action="MahjongClaimChow" value="2" color="45,75,120,255">
+            <children>
+              <element type="UIImage" name="Chow2Tile0" visible="false" anchor="Bottom" x="-23" y="-3" width="21" height="28" />
+              <element type="UIImage" name="Chow2Tile1" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
+              <element type="UIImage" name="Chow2Tile2" visible="false" anchor="Bottom" x="23" y="-3" width="21" height="28" />
+            </children>
+          </element>
+          <element type="UIButton" name="ConcealedKong0" visible="false" width="132" height="56" text="{#button.ConcealedKong0}" fontSize="18" verticalAlign="Top" action="MahjongConcealedKong" value="0" color="70,70,100,255">
+            <children>
+              <element type="UIImage" name="ConcealedKong0Tile0" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
+            </children>
+          </element>
+          <element type="UIButton" name="ConcealedKong1" visible="false" width="132" height="56" text="{#button.ConcealedKong1}" fontSize="18" verticalAlign="Top" action="MahjongConcealedKong" value="1" color="70,70,100,255">
+            <children>
+              <element type="UIImage" name="ConcealedKong1Tile0" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
+            </children>
+          </element>
+          <element type="UIButton" name="ConcealedKong2" visible="false" width="132" height="56" text="{#button.ConcealedKong2}" fontSize="18" verticalAlign="Top" action="MahjongConcealedKong" value="2" color="70,70,100,255">
+            <children>
+              <element type="UIImage" name="ConcealedKong2Tile0" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
+            </children>
+          </element>
+          <element type="UIButton" name="UpgradeKong" visible="false" width="132" height="56" text="{#button.UpgradeKong}" fontSize="18" verticalAlign="Top" action="MahjongUpgradeKong" color="70,70,100,255">
+            <children>
+              <element type="UIImage" name="UpgradeKongTile0" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
+            </children>
+          </element>
+          <element type="UIButton" name="Pass" visible="false" width="132" height="56" text="{#button.Pass}" fontSize="22" action="MahjongPass" color="90,50,50,255" />
+          <element type="UIToggle" name="Declare" visible="false" bind="declareNext" onValue="on" offValue="off" width="180" height="56" text="{#button.Declare}" fontSize="22" action="MahjongDeclare" color="70,70,100,255" />
+          </children>
+        </element>
+      </elements>
+    </component>
+  </components>
+</node>

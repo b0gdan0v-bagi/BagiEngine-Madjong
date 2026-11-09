@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<!--
+  The HUD lies in the free parts of the table (Table/TableLayout.cpp): the round and the wall above the left column of melds. These are
+  labels only (not touch targets), on the view of the table. They keep to the safe area (the table is a fixed design that the safe area
+  does not move), so on a screen with a notch or side insets they move inwards and can cover the nearest tiles. The New game button is in
+  the node HudMenu below, a Screen canvas, because a control of a SceneView canvas is only 21 px high in a small window.
+  MahjongHudComponent publishes round, hand, handsTotal, wall and lastMove (the seats' names, winds and scores are in the node SeatPlates
+  below). MahjongHudTest holds the worst texts and checks that no tile of any game lies under it.
+-->
+<node name="Hud" layer="10">
+  <components>
+    <component type="MahjongHudComponent" />
+    <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
+      <elements>
+        <element type="UIStack" name="Info" anchor="TopLeft" x="96" y="8" width="336" height="80" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170">
+          <children>
+            <element type="UILabel" name="RoundLabel" height="32" text="{#hud.round}" fontSize="22" />
+            <element type="UILabel" name="WallLabel" height="32" text="{#hud.wall}" fontSize="22" />
+          </children>
+        </element>
+        <!-- The last move in words (lastMove), shown by the component exactly while it has a text: right of the top discards and below the top seat sets, clear of the right seat columns -->
+        <element type="UIStack" name="MoveLine" anchor="TopRight" x="-92" y="92" width="448" height="80" visible="false" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170">
+          <children>
+            <element type="UILabel" name="MoveText" height="64" text="{lastMove}" fontSize="18" verticalAlign="Center" />
+          </children>
+        </element>
+      </elements>
+    </component>
+  </components>
+</node>

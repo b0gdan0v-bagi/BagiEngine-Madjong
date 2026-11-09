@@ -16,8 +16,8 @@ namespace BECore::Mahjong {
     class MahjongGame;
 
     /**
-     * @brief The words and numbers of the HUD, and the seat choice of a new game: the canvases `Hud` and `Setup` of
-     *        `config/SceneConfig.xml` show what this component publishes to `CoreManager::GetUIVars()` and emit the actions it answers.
+     * @brief The words and numbers of the HUD, and the seat choice of a new game: the canvases `Hud` and `Setup` (`config/nodes/MahjongHud.xml`,
+     *        `MahjongSetup.xml`) show what this component publishes to `CoreManager::GetUIVars()` and emit the actions it answers.
      *
      * **Variables** (set when `TableSession::Version()` moved, or the game changed, or the version of `UIStrings` moved, i.e. the language;
      * nothing is set again otherwise; every word is in the current language of the string table, `config/UIStrings.xml`): `round` (the name
