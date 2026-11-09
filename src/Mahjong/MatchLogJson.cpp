@@ -280,7 +280,12 @@ namespace BECore::Mahjong {
                 if (!name) {
                     return std::unexpected(name.error());
                 }
-                const std::optional<ComputerLevel> level = TryParseLevel(std::string_view(name->c_str(), name->size()));
+                const std::string_view levelName(name->c_str(), name->size());
+                if (levelName == kMatchLogRetiredLevelName) {
+                    event.level = ComputerLevel::Normal;
+                    return event;
+                }
+                const std::optional<ComputerLevel> level = TryParseLevel(levelName);
                 if (!level) {
                     return Fail("level", Format("has to be {}: \"{}\"", LevelNamesText().c_str(), *name).c_str());
                 }
