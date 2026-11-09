@@ -170,10 +170,6 @@ namespace BECore::Mahjong::Tests {
                     Rect(padded.x + padded.w - width, padded.y + width, width, padded.h - 2.0f * width)};
         }
 
-        static bool SameRect(const Rect& a, const Rect& b) {
-            return std::abs(a.x - b.x) < kEpsilon && std::abs(a.y - b.y) < kEpsilon && std::abs(a.w - b.w) < kEpsilon && std::abs(a.h - b.h) < kEpsilon;
-        }
-
         /// The frame of `seat` is in the draw calls (all four bars, once each).
         void ExpectFramed(Seat seat) const {
             const std::vector<Rect> drawn = RectsOf(kCallingFrame);

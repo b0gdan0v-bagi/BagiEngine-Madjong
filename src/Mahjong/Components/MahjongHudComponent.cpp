@@ -51,8 +51,8 @@ namespace BECore::Mahjong {
         }
 
         /// "seatKind2": the variable of a seat, "plateName2": that of the plate at a screen position.
-        PoolString SeatVar(const char* base, Seat seat) {
-            return PoolString::Intern(Format("{}{}", base, seat));
+        PoolString SeatVar(const char* base, int index) {
+            return PoolString::Intern(Format("{}{}", base, index));
         }
 
         eastl::string_view KindId(SeatKind kind) {

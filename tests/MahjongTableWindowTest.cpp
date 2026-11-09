@@ -87,11 +87,10 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(marks.size(), 2u);
         const Rect expected = MarkOf(kSeat0);
         const Rect plate = _table->GetLayout().zones.seatPlates[kSeat0];
-        const auto same = [](const Rect& a, const Rect& b) { return a.x == b.x && a.y == b.y && a.w == b.w && a.h == b.h; };
-        EXPECT_TRUE(same(marks[0], plate) || same(marks[1], plate));
-        EXPECT_TRUE(same(marks[0], expected) || same(marks[1], expected));
+        EXPECT_TRUE(SameRect(marks[0], plate) || SameRect(marks[1], plate));
+        EXPECT_TRUE(SameRect(marks[0], expected) || SameRect(marks[1], expected));
         const Rect other = _table->GetLayout().zones.seatPlates[kSeat1];
-        EXPECT_FALSE(same(marks[0], other) || same(marks[1], other));
+        EXPECT_FALSE(SameRect(marks[0], other) || SameRect(marks[1], other));
     }
 
     TEST_F(MahjongTableWindowTest, TheFrameOnTheDiscardIsNotDrawnWhenOnlyAComputerMayClaim) {

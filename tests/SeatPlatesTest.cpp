@@ -7,6 +7,7 @@
 #include <Mahjong/Table/TableLayout.h>
 #include <Mahjong/Table/UiPalette.h>
 #include <gtest/gtest.h>
+#include <set>
 
 /**
  * The plates of the seats (`Table/SeatPlates.h`): which seat lies at each side of the table, and what its plate says (the name, the
@@ -26,12 +27,11 @@ namespace BECore::Mahjong::Tests {
 
         UIStrings& Words() {
             static UIStrings strings;
-            static const bool loaded = [] {
+            [[maybe_unused]] static const bool loaded = [] {
                 EXPECT_TRUE(LoadShippedStrings(strings).empty());
                 EXPECT_TRUE(strings.SetLanguage("en"_intern));
                 return true;
             }();
-            (void)loaded;
             return strings;
         }
 

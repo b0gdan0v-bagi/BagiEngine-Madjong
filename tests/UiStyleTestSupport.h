@@ -7,6 +7,7 @@
 #include <EASTL/vector.h>
 #include <Mahjong/Table/TableLayout.h>
 #include <Mahjong/Table/UiPalette.h>
+#include <cmath>
 #include <gtest/gtest.h>
 
 /**
@@ -17,6 +18,12 @@ namespace BECore::Mahjong::Tests {
 
     inline bool SameColor(const Color& a, const Color& b) {
         return a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a;
+    }
+
+    /// Two rects equal to within a hundredth of a unit (what a draw call and a layout slot may differ by).
+    inline bool SameRect(const Rect& a, const Rect& b) {
+        constexpr float kSameRectEpsilon = 0.01f;
+        return std::abs(a.x - b.x) < kSameRectEpsilon && std::abs(a.y - b.y) < kSameRectEpsilon && std::abs(a.w - b.w) < kSameRectEpsilon && std::abs(a.h - b.h) < kSameRectEpsilon;
     }
 
     /// The colour of a role of the palette (an entry of `kUiPaletteNames`: `surface`, `header`, `textMuted`, `accent`, ...).
