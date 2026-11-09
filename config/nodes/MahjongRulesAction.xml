@@ -2,7 +2,9 @@
 <!--
   The buttons of the rules screen (MahjongRulesBack, MahjongRulesNext, MahjongRulesClose): an action bar at the bottom of the window,
   a Screen canvas with a floor on its scale (minScale 0.6: the 64 unit buttons are 38.4 px), so they are touch targets in any window,
-  with the anatomy and the reasons of HandOverAction (match 1, not modal: Rules is, and takes every click that the bar does not). Shown
+  set to match 1 (with 0.5 the bar is only 91-113 view units high in a 21:9 or 32:9 window and touches the plate of Rules) and not
+  modal (Rules is, and takes every click that the bar does not). The buttons are in a bar and not in the plate because 64 units on the
+  view are 24 px in the smallest window and the plate cannot be a Screen canvas. Shown
   and hidden by MahjongHudComponent together with Rules, which also hides Back on the first page and Next on the last (the others
   widen: a hidden element takes no room in a stack). Back and Close are neutral, Next confirms (primary).
 -->

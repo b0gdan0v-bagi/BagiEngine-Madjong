@@ -6,9 +6,9 @@
   while MahjongGame::IsRulesOpen() (the Rules button of HudMenu). The component publishes rulesTitle, rulesPager, rulesLine0..5 and
   rulesItem0..11 from FormatRulesPage (Table/RulesText.h), sets the sprite of the pictures RulesTile0..27 (row r, tile c is r * 14 + c)
   and shows exactly the elements the page has: a hidden element takes no room in a stack, so the plate needs no fixed block heights. The
-  plate is 588 units like HandOver (32 padding + the blocks of a page and 8 between them, PageHeight in RulesText.h; a page that does not
+  plate is 588 units (32 padding + the blocks of a page and 8 between them, PageHeight in RulesText.h; a page that does not
   fit is split in two) and lies 40 units above the middle so that it ends clear of the bar RulesAction below it. The buttons are not in
-  this canvas for the reason of HandOver: a control of a SceneView canvas is only 24 px high in the smallest window. A line is 48 units
+  this canvas, they are in RulesAction: a control of a SceneView canvas is only 24 px high in the smallest window. A line is 48 units
   high (two rows of the 18 font are 47) and shrinks (AutoFit, down to 12) where a long line of a translation does not fit two rows in
   the narrowest windows (480 px wide), as the titles do; at the design size and in a window of 731 px no line is shrunk.
 -->
