@@ -749,6 +749,7 @@ namespace BECore::Mahjong::Tests {
             "{\"seed\": null}",
             "{\"flowers\": \"yes\"}",
             "{\"flowers\": 1}",
+            "{\"level\": \"hard\"}",
             "{\"level\": \"Hard\"}",
             "{\"level\": \"HARD\"}",
             "{\"level\": \"hard \"}",
@@ -757,8 +758,8 @@ namespace BECore::Mahjong::Tests {
             "{\"level\": 3}",
             "{\"level\": null}",
             "{\"level\": [\"hard\"]}",
-            "{\"level\": \"hard\", \"seats\": \"XXXX\"}",
-            "{\"level\": \"hard\", \"hands\": 12}",
+            "{\"level\": \"easy\", \"seats\": \"XXXX\"}",
+            "{\"level\": \"easy\", \"hands\": 12}",
             "{\"hands\": 8, \"seats\": \"XXXX\"}",
         };
         for (const char* text : bad) {
@@ -805,16 +806,16 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(Str(Member(State(), "level")), name);
         }
         ASSERT_NO_FATAL_FAILURE(Reset("{}"));
-        EXPECT_EQ(Str(Member(State(), "level")), "hard") << "the last level set";
+        EXPECT_EQ(Str(Member(State(), "level")), "normal") << "the last level set";
     }
 
-    TEST_F(MahjongGameControlTest, ABadLevelNamesTheThreeLevels) {
+    TEST_F(MahjongGameControlTest, ABadLevelNamesTheTwoLevels) {
         const auto reset = control->Reset(Parse("{\"level\": \"Easy\"}"));
         ASSERT_FALSE(reset.has_value());
         EXPECT_EQ(ErrorCodeOf(reset.error()), "invalid_params");
         const std::string message = reset.error().message.c_str();
         EXPECT_NE(message.find("'level'"), std::string::npos) << message;
-        EXPECT_NE(message.find("easy, normal or hard"), std::string::npos) << message;
+        EXPECT_NE(message.find("easy or normal"), std::string::npos) << message;
     }
 
     TEST_F(MahjongGameControlTest, AWholeMatchAtEveryLevelEndsLegallyWithAllThePoints) {

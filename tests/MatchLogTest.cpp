@@ -172,13 +172,11 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MatchLogTest, TheStartsOfTwoLevelsAreUnequal) {
         const MatchLogEvent normal = Play(kSeed, ComputerLevel::Normal).events.front();
-        for (const ComputerLevel other : {ComputerLevel::Easy, ComputerLevel::Hard}) {
-            const MatchLogEvent changed = Play(kSeed, other).events.front();
-            EXPECT_FALSE(normal == changed) << Name(other);
-        }
+        const MatchLogEvent easy = Play(kSeed, ComputerLevel::Easy).events.front();
+        EXPECT_FALSE(normal == easy);
         MatchLogEvent same = normal;
         EXPECT_TRUE(normal == same);
-        same.level = ComputerLevel::Hard;
+        same.level = ComputerLevel::Easy;
         EXPECT_FALSE(normal == same);
     }
 

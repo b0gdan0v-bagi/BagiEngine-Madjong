@@ -28,9 +28,7 @@
  * a seat that never wins (the win needs the declaration), so the knobs are sensitive and the percentages were found by measuring.
  * The margins for Easy are again far under the numbers: "clearly better than random, clearly worse than Normal".
  *
- * Hard is not played here: it plays exactly like Normal until the owner decides what Hard is (`kHardProfile`; `ComputerLevelTest`
- * pins the twin and goes with it when Hard gets numbers of its own). The Normal run of the 240 hands is played once per process and
- * shared by the two tests.
+ * The Normal run of the 240 hands is played once per process and shared by the two tests.
  */
 namespace BECore::Mahjong::Tests {
 
