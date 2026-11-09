@@ -7,11 +7,16 @@ namespace BECore::Mahjong::Arena {
     /// The number of kinds of score line; `ArenaTally::winsByKind` has a place for each.
     inline constexpr size_t kScoreKindCount = EnumUtils<ScoreKind>::Count();
 
+    /// The first seed of a run that names none: the first seed of `ComputerStrengthTest`, so the default run is that test's hands.
+    inline constexpr uint32_t kDefaultFirstSeed = 4000;
+    /// The number of seeds of a run that names none (a seed is four hands, one per seat for the focus player).
+    inline constexpr int kDefaultSeedCount = 250;
+
     /// What to play: the seeds `first .. first + count - 1`, and for each player of `focus` and each of the four seats the hand of the
     /// seed with that player on the seat and `others` on the other three. Every focus player plays the same walls.
     struct ArenaConfig {
-        uint32_t first = 4000;
-        int count = 250;
+        uint32_t first = kDefaultFirstSeed;
+        int count = kDefaultSeedCount;
         eastl::vector<ArenaPlayer> focus;
         ArenaPlayer others;
         /// Measure the time of the decisions (the one number that is not a function of the config).

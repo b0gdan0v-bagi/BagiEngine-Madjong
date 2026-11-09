@@ -1,7 +1,5 @@
 #include "ArenaRun.h"
 
-#include <Mahjong/Game/ScoreHand.h>
-
 namespace BECore::Mahjong::Arena {
 
     namespace {
@@ -41,14 +39,15 @@ namespace BECore::Mahjong::Arena {
             FocusResult result;
             result.player = focus;
             result.rows.reserve(static_cast<size_t>(config.count));
+            ArenaPlayers players;
+            players.fill(config.others);
             for (int index = 0; index < config.count; ++index) {
                 SeedRow row;
                 row.seed = config.first + static_cast<uint32_t>(index);
                 for (Seat focusSeat = 0; focusSeat < kSeatCount; ++focusSeat) {
-                    ArenaPlayers players;
-                    players.fill(config.others);
                     players[focusSeat] = focus;
                     const std::expected<HandRecord, eastl::string> record = PlayArenaHand(row.seed, players, config.timing);
+                    players[focusSeat] = config.others;
                     if (!record.has_value()) {
                         return std::unexpected(Format("focus {}: {}", focus.name.c_str(), record.error().c_str()));
                     }

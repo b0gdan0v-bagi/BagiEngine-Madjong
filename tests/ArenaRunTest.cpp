@@ -18,6 +18,9 @@ namespace BECore::Mahjong::Arena {
         /// The seeds of `ComputerStrengthTest`.
         constexpr int kStrengthSeeds = 60;
         constexpr int kFewSeeds = 4;
+        constexpr int kTwoSeeds = 2;
+        constexpr int kNoSeeds = 0;
+        constexpr int kNegativeSeeds = -3;
 
         ArenaPlayer Player(std::string_view spec) {
             const std::expected<ArenaPlayer, eastl::string> player = ParseArenaPlayer(spec);
@@ -89,7 +92,11 @@ namespace BECore::Mahjong::Arena {
         EXPECT_EQ(run.count, kFewSeeds);
         ASSERT_EQ(result.rows.size(), static_cast<size_t>(kFewSeeds));
 
-        int64_t points = 0, wins = 0, drawn = 0, declared = 0, winScore = 0;
+        int64_t points = 0;
+        int64_t wins = 0;
+        int64_t drawn = 0;
+        int64_t declared = 0;
+        int64_t winScore = 0;
         for (size_t index = 0; index < result.rows.size(); ++index) {
             const SeedRow& row = result.rows[index];
             EXPECT_EQ(row.seed, kFirstSeed + index);
@@ -214,7 +221,7 @@ namespace BECore::Mahjong::Arena {
         EXPECT_TRUE(SameFocus(swapped.focus[0], justEasy.focus[0]));
         EXPECT_TRUE(SameFocus(swapped.focus[1], justNormal.focus[0]));
         // The same walls for every focus player: the same player twice in the list gives the same rows.
-        const ArenaResult twin = PlayConfig(ConfigOf({"normal", "normal"}, "random", 3));
+        const ArenaResult twin = PlayConfig(ConfigOf({"normal", "normal"}, "random", kFewSeeds));
         EXPECT_TRUE(SameRows(twin.focus[0].rows, twin.focus[1].rows));
     }
 
@@ -261,7 +268,7 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaRunTest, TimingIsKeptOnlyWhenAskedFor) {
-        ArenaConfig config = ConfigOf({"normal"}, "normal", 2);
+        ArenaConfig config = ConfigOf({"normal"}, "normal", kTwoSeeds);
         const ArenaResult quiet = PlayConfig(config);
         EXPECT_EQ(quiet.focus[0].focus.nanoseconds, 0);
         EXPECT_EQ(quiet.focus[0].others.nanoseconds, 0);
@@ -277,17 +284,17 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaRunTest, ARandomPlayerCanBeTheFocus) {
-        const ArenaResult run = PlayConfig(ConfigOf({"random"}, "random", 4));
-        EXPECT_EQ(run.focus.at(0).focus.hands, 16);
+        const ArenaResult run = PlayConfig(ConfigOf({"random"}, "random", kFewSeeds));
+        EXPECT_EQ(run.focus.at(0).focus.hands, kSeatCount * kFewSeeds);
         EXPECT_EQ(run.focus.at(0).focus.points + run.focus.at(0).others.points, 0);
     }
 
     TEST(ArenaRunTest, ABadConfigIsAnError) {
-        EXPECT_FALSE(ErrorOf(ConfigOf({"normal"}, "random", 0)).empty());
-        EXPECT_NE(ErrorOf(ConfigOf({"normal"}, "random", -3)).find("-3"), std::string::npos);
-        EXPECT_NE(ErrorOf(ConfigOf({}, "random", 5)).find("no focus"), std::string::npos);
+        EXPECT_FALSE(ErrorOf(ConfigOf({"normal"}, "random", kNoSeeds)).empty());
+        EXPECT_NE(ErrorOf(ConfigOf({"normal"}, "random", kNegativeSeeds)).find("-3"), std::string::npos);
+        EXPECT_NE(ErrorOf(ConfigOf({}, "random", kFewSeeds)).find("no focus"), std::string::npos);
         // The seeds run past the largest one.
-        const std::string past = ErrorOf(ConfigOf({"normal"}, "random", 2, std::numeric_limits<uint32_t>::max()));
+        const std::string past = ErrorOf(ConfigOf({"normal"}, "random", kTwoSeeds, std::numeric_limits<uint32_t>::max()));
         EXPECT_NE(past.find("4294967295"), std::string::npos) << past;
     }
 
