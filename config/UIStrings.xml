@@ -127,6 +127,46 @@
         <string key="hud.matchOver" text="Match over"/>
         <string key="hud.newGame" text="New game"/>
         <string key="matchover.newGame" text="New game"/>
+        <string key="rules.pager" text="Page {n} of {total}"/>
+        <string key="rules.tiles.title" text="Tiles"/>
+        <string key="rules.tiles.line1" text="The set has {tiles} tiles: three suits ({dots}, {bamboo}, {characters}) running from one to {ranks}, four winds and three dragons, {copies} copies of each."/>
+        <string key="rules.tiles.line2" text="Ones and nines are terminals, twos to eights are simples, winds and dragons are honours. Terminals and honours are worth more in scoring."/>
+        <string key="rules.tiles.line3" text="Winds and dragons only go into pungs, kongs and pairs: they never form a chow."/>
+        <string key="rules.tiles.line4" text="This game is played without flowers and seasons."/>
+        <string key="rules.sets.title" text="Sets and a winning hand"/>
+        <string key="rules.sets.line1" text="A winning hand is {winning} tiles: four sets and a pair. You hold {dealt} tiles and win with the one tile that completes them."/>
+        <string key="rules.sets.line2" text="A chow is three tiles of one suit in a row; it never uses honours and never wraps round from a nine to a one."/>
+        <string key="rules.sets.line3" text="A pung is three equal tiles. A kong is four equal tiles and counts as one set. A pair is two equal tiles."/>
+        <string key="rules.sets.line4" text="Two special hands need no sets: {pairs} different pairs, and the {orphans} orphans (one of each terminal and honour, and one of them twice)."/>
+        <string key="rules.sets.line5" text="Special hands win only when no set has been laid out. Below: a chow, a pung, a chow, a pung of dragons and a pair."/>
+        <string key="rules.turn.title" text="A turn"/>
+        <string key="rules.turn.line1" text="Each seat holds {dealt} tiles. On your turn you draw a tile from the wall (the game does it for you) and discard one, back to {dealt}."/>
+        <string key="rules.turn.line2" text="Click a tile of your hand to discard it; the tile you have just drawn lies apart at the right end. East, the dealer, starts with {winning} tiles."/>
+        <string key="rules.turn.line3" text="Discards lie in front of their seat in the order thrown, and everyone sees them. The turn goes counter-clockwise to the next seat."/>
+        <string key="rules.turn.line4" text="The buttons ({pung}, {kong}, {chow}, {pass}, {mahjong}, {declare}) appear only when that move is possible; point at one to read what it does."/>
+        <string key="rules.claims.title" text="Claims and their priority"/>
+        <string key="rules.claims.line1" text="When a seat discards, the others may take the tile out of turn if it completes a set; if nobody can, the next seat draws at once."/>
+        <string key="rules.claims.line2" text="{chow}: a run of three, only for the seat right after the discarder. {pung}: three equal tiles, from any seat. {kong}: four equal tiles, from any seat."/>
+        <string key="rules.claims.line3" text="{mahjong}: the tile completes your hand; you must have declared the ready hand first (see the page about the calling hand)."/>
+        <string key="rules.claims.line4" text="Priority: {mahjong} first, then {pung} or {kong}, then {chow}. Two claims of {mahjong}: the seat farther counter-clockwise from the discarder wins."/>
+        <string key="rules.claims.line5" text="A claimed set is laid face up and its owner discards without drawing; after a kong a loose tile is drawn. {pass} lets the tile go; each seat decides once."/>
+        <string key="rules.kongs.title" text="Kongs and the loose tile"/>
+        <string key="rules.kongs.line1" text="A kong is four equal tiles, made three ways: {kong} on a discard when you hold three, {kong} from four equal tiles of your hand, or {upgrade} to an open pung."/>
+        <string key="rules.kongs.line2" text="A pung is upgraded only with the tile you have just drawn from the wall, not with one that you kept from an earlier turn."/>
+        <string key="rules.kongs.line3" text="After a kong you draw a loose tile from the reserve of {loose} tiles at the break of the wall; the reserve is refilled from the end of the live wall."/>
+        <string key="rules.kongs.line4" text="The last {deadWall} tiles of the wall are the dead wall and are never drawn."/>
+        <string key="rules.kongs.line5" text="A kong added to a pung can be robbed: a seat with a declared ready hand that the tile completes may take it with {mahjong} and wins."/>
+        <string key="rules.calling.title" text="The calling hand"/>
+        <string key="rules.calling.line1" text="A hand is calling when one tile more completes it: {dealt} tiles that wait for a winning tile. Below: this hand waits for two kinds."/>
+        <string key="rules.calling.line2" text="To declare it press {declare}, then click the tile to discard; the {dealt} tiles that stay must be waiting."/>
+        <string key="rules.calling.line3" text="Without the declaration you cannot win, on a discard or on your own draw. After it you are not bound to keep the hand."/>
+        <string key="rules.calling.line4" text="Declaring with your first discard of the hand scores extra."/>
+        <string key="rules.calling.line5" text="With the hints on, the row inside the wall shows the tiles your hand waits for and how many copies you cannot see."/>
+        <string key="rules.end.title" text="The end of a hand"/>
+        <string key="rules.end.line1" text="A hand ends when somebody wins, or when the live wall is empty at a draw: a drawn hand, nobody pays."/>
+        <string key="rules.end.line2" text="You win with {mahjong} on a discard, on your own draw (self-draw) or by robbing a kong; the hand must be a winning hand and the ready hand declared."/>
+        <string key="rules.end.line3" text="A drawn hand is played again with the same dealer and does not count as a hand of the match."/>
+        <string key="rules.end.line4" text="After a win the score table shows what each seat scored, the winner's lines and the change of points; press {nextHand} to go on."/>
         <string key="setup.title" text="New game: who plays?"/>
         <string key="setup.language" text="Language"/>
         <string key="setup.hands" text="Hands"/>
@@ -273,6 +313,46 @@
         <string key="hud.matchOver" text="Матч окончен"/>
         <string key="hud.newGame" text="Новая игра"/>
         <string key="matchover.newGame" text="Новая игра"/>
+        <string key="rules.pager" text="Страница {n} из {total}"/>
+        <string key="rules.tiles.title" text="Кости"/>
+        <string key="rules.tiles.line1" text="В наборе {tiles} костей: три масти ({dots}, {bamboo}, {characters}) от единицы до {ranks}, четыре ветра и три дракона, по {copies} копии каждой."/>
+        <string key="rules.tiles.line2" text="Единицы и девятки — крайние кости, от двойки до восьмёрки — простые, ветра и драконы — почётные. Крайние и почётные ценятся выше."/>
+        <string key="rules.tiles.line3" text="Ветра и драконы идут только в пуны, конги и пары: чи из них не собрать."/>
+        <string key="rules.tiles.line4" text="В эту игру играют без цветов и сезонов."/>
+        <string key="rules.sets.title" text="Наборы и выигрышная рука"/>
+        <string key="rules.sets.line1" text="Выигрышная рука — это {winning} костей: четыре набора и пара. В руке {dealt} костей, а выигрывает кость, которая их завершает."/>
+        <string key="rules.sets.line2" text="Чи — три кости одной масти подряд; из почётных костей чи не бывает, и он не заворачивается с девятки на единицу."/>
+        <string key="rules.sets.line3" text="Пун — три одинаковые кости. Конг — четыре одинаковые кости, он считается одним набором. Пара — две одинаковые кости."/>
+        <string key="rules.sets.line4" text="Две особые руки обходятся без наборов: {pairs} разных пар и {orphans} сирот (по кости каждого вида крайних и почётных и ещё одна из них)."/>
+        <string key="rules.sets.line5" text="Особые руки выигрывают, только если ни один набор не выложен. Ниже: чи, пун, чи, пун из драконов и пара."/>
+        <string key="rules.turn.title" text="Ход"/>
+        <string key="rules.turn.line1" text="У каждого {dealt} костей. В свой ход вы берёте кость из стены (игра делает это сама) и сбрасываете одну: снова {dealt}."/>
+        <string key="rules.turn.line2" text="Чтобы сбросить, нажмите кость в руке; только что взятая лежит отдельно справа. Восток, сдающий, начинает с {winning} костей."/>
+        <string key="rules.turn.line3" text="Сброшенные кости лежат перед своим местом в порядке сброса, их видят все. Ход идёт против часовой стрелки к следующему месту."/>
+        <string key="rules.turn.line4" text="Кнопки ({pung}, {kong}, {chow}, {pass}, {mahjong}, {declare}) появляются, только когда ход возможен; наведите на кнопку, чтобы прочесть пояснение."/>
+        <string key="rules.claims.title" text="Взять сброс и порядок"/>
+        <string key="rules.claims.line1" text="Когда кто-то сбросил кость, остальные могут взять её вне очереди, если она завершает набор; если никто не может, ход сразу идёт дальше."/>
+        <string key="rules.claims.line2" text="{chow}: три подряд, только у места сразу после сбросившего. {pung}: три одинаковые, у любого места. {kong}: четыре одинаковые, у любого места."/>
+        <string key="rules.claims.line3" text="{mahjong}: кость завершает руку; нужна заранее объявленная заявка (см. страницу о заявке)."/>
+        <string key="rules.claims.line4" text="Порядок: сначала {mahjong}, затем {pung} или {kong}, затем {chow}. Если {mahjong} просят двое, выигрывает тот, кто дальше от сбросившего против часовой."/>
+        <string key="rules.claims.line5" text="Взятый набор выкладывается открыто, его владелец сбрасывает без добора; после конга берётся запасная кость. {pass}: пропустить; каждый решает один раз."/>
+        <string key="rules.kongs.title" text="Конги и запасная кость"/>
+        <string key="rules.kongs.line1" text="Конг — четыре одинаковые кости, трёх видов: {kong} на сброс, когда в руке три такие; {kong} из четырёх одинаковых костей руки; {upgrade} к открытому пуну."/>
+        <string key="rules.kongs.line2" text="К пуну добавляют только кость, которую вы только что взяли из стены, а не ту, что лежит в руке с прошлых ходов."/>
+        <string key="rules.kongs.line3" text="После конга берётся запасная кость из резерва в {loose} кости у места разлома стены; резерв пополняется с конца живой стены."/>
+        <string key="rules.kongs.line4" text="Последние {deadWall} костей стены — мёртвая стена, их никогда не берут."/>
+        <string key="rules.kongs.line5" text="Конг, добавленный к пуну, можно ограбить: место с объявленной заявкой, которому эта кость нужна, берёт её словом {mahjong} и выигрывает."/>
+        <string key="rules.calling.title" text="Заявка"/>
+        <string key="rules.calling.line1" text="Рука готова, если ей не хватает одной кости: {dealt} костей ждут выигрышную. Ниже рука ждёт две кости разного вида."/>
+        <string key="rules.calling.line2" text="Чтобы объявить заявку, нажмите «{declare}», затем кость для сброса; оставшиеся {dealt} костей должны ждать."/>
+        <string key="rules.calling.line3" text="Без заявки выиграть нельзя ни на сбросе, ни на своём ходу. После неё вы не обязаны хранить руку."/>
+        <string key="rules.calling.line4" text="Заявка первым сбросом в раздаче даёт дополнительные очки."/>
+        <string key="rules.calling.line5" text="Когда помощь включена, ряд внутри стены показывает, каких костей ждёт рука и сколько копий вам не видно."/>
+        <string key="rules.end.title" text="Конец раздачи"/>
+        <string key="rules.end.line1" text="Раздача кончается, когда кто-то выиграл или когда в живой стене нет кости для взятия: ничья, никто не платит."/>
+        <string key="rules.end.line2" text="Выигрывают словом {mahjong} на сброс, на свою кость или ограбив конг; рука должна быть выигрышной и заявка объявлена."/>
+        <string key="rules.end.line3" text="Ничья переигрывается с тем же сдающим и не засчитывается как раздача матча."/>
+        <string key="rules.end.line4" text="После победы таблица показывает очки каждого места, строки победителя и изменение очков; нажмите {nextHand}, чтобы идти дальше."/>
         <string key="setup.title" text="Новая игра: кто играет?"/>
         <string key="setup.language" text="Язык"/>
         <string key="setup.hands" text="Раздачи"/>

@@ -4,7 +4,7 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        const eastl::string_view* FindArg(WordArgs args, eastl::string_view name) {
+        const eastl::string_view* FindArg(std::span<const WordArg> args, eastl::string_view name) {
             for (const WordArg& arg : args) {
                 if (arg.first == name) {
                     return &arg.second;
@@ -16,6 +16,10 @@ namespace BECore::Mahjong {
     }  // namespace
 
     eastl::string Subst(eastl::string_view text, WordArgs args) {
+        return Subst(text, std::span<const WordArg>(args.begin(), args.size()));
+    }
+
+    eastl::string Subst(eastl::string_view text, std::span<const WordArg> args) {
         eastl::string out;
         size_t at = 0;
         while (at < text.size()) {
@@ -49,6 +53,10 @@ namespace BECore::Mahjong {
     }
 
     eastl::string Tr(const UIStrings& strings, eastl::string_view key, WordArgs args) {
+        return Subst(Tr(strings, key), args);
+    }
+
+    eastl::string Tr(const UIStrings& strings, eastl::string_view key, std::span<const WordArg> args) {
         return Subst(Tr(strings, key), args);
     }
 
