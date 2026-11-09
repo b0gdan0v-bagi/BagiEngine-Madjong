@@ -560,20 +560,12 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(MakeTableLayout(input).slots.empty());
     }
 
-    // The drawn tile and the claimed tile of an open set.
+    // The claimed tile of an open set.
 
     namespace {
 
         Tile Parsed(std::string_view text) {
             return TryParse(text).value();
-        }
-
-        /// A viewer's hand of `count` tiles with the tile at `drawnIndex` apart (the rest of the table is quiet).
-        TableInput DrawnInput(Seat viewer, int count, int drawnIndex) {
-            TableInput input = QuietInput(viewer);
-            input.concealedCount[viewer] = count;
-            input.drawnIndex = drawnIndex;
-            return input;
         }
 
         Meld ClaimedMeld(MeldKind kind, Seat from, std::string_view first, std::string_view claimed) {
@@ -610,122 +602,20 @@ namespace BECore::Mahjong::Tests {
 
     }  // namespace
 
-    TEST(TableLayoutTest, NoDrawnIndexAndTheOnesThatAreIgnoredChangeNothing) {
+    TEST(TableLayoutTest, TheViewersHandStripOfTheWorstTableIsOneRowOf14Tiles) {
+        // no gap for a drawn tile: the strip ends where 14 tiles end, and the melds start after it
         for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
-            const TableLayout plain = MakeTableLayout(BusyInput(viewer));
-            for (const int ignored : {-1, -7, 14, 15, 1000}) {
-                TableInput input = BusyInput(viewer);
-                input.drawnIndex = ignored;
-                ExpectSameSlots(plain, MakeTableLayout(input));
+            const TableLayout layout = MakeTableLayout(WorstInput(viewer, kWorstPile, kNoSeat));
+            const Rect hand = BoundsOf(layout, SlotRole::HandTile, viewer);
+            const Rect melds = BoundsOf(layout, SlotRole::MeldTile, viewer);
+            EXPECT_NEAR(hand.x, 72.0f, kTolerance);
+            EXPECT_NEAR(hand.x + hand.w, 72.0f + static_cast<float>(kMaxConcealedTiles) * kViewerHandTileW, kTolerance);
+            EXPECT_LE(hand.x + hand.w, melds.x + kTolerance);
+            const std::vector<TileSlot> tiles = SlotsOf(layout, SlotRole::HandTile, viewer);
+            ASSERT_EQ(static_cast<int>(tiles.size()), kMaxConcealedTiles);
+            for (size_t i = 1; i < tiles.size(); ++i) {
+                EXPECT_NEAR(tiles[i].rect.x - tiles[i - 1].rect.x, kViewerHandTileW, kTolerance) << "tile " << i;
             }
-            // a smaller hand: an index past its end is out of range
-            TableInput small = BusyInput(viewer);
-            small.concealedCount[viewer] = 5;
-            const TableLayout expected = MakeTableLayout(small);
-            small.drawnIndex = 5;
-            ExpectSameSlots(expected, MakeTableLayout(small));
-        }
-    }
-
-    TEST(TableLayoutTest, TheDrawnTileLiesApartAtTheRightEndAndTheOthersCloseUp) {
-        const float left = BoundsOf(MakeTableLayout(DrawnInput(0, 14, -1)), SlotRole::HandTile, 0).x;
-        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
-            for (const int count : {1, 2, 14}) {
-                for (const int drawn : {0, count / 2, count - 1}) {
-                    const TableLayout layout = MakeTableLayout(DrawnInput(viewer, count, drawn));
-                    const std::vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, viewer);
-                    ASSERT_EQ(static_cast<int>(hand.size()), count);
-                    int next = 0;
-                    for (int i = 0; i < count; ++i) {
-                        EXPECT_EQ(hand[i].index, i) << "slots stay in input order";
-                        EXPECT_EQ(hand[i].rect.y, hand[0].rect.y);
-                        EXPECT_EQ(hand[i].rect.w, kViewerHandTileW);
-                        const float x =
-                            i == drawn ? left + static_cast<float>(count - 1) * kViewerHandTileW + (count > 1 ? kDrawnTileGap : 0.0f) : left + static_cast<float>(next++) * kViewerHandTileW;
-                        EXPECT_NEAR(hand[i].rect.x, x, kTolerance) << "count " << count << " drawn " << drawn << " tile " << i;
-                    }
-                    if (count > 1) {
-                        const TileSlot& apart = hand[drawn];
-                        for (const TileSlot& slot : hand) {
-                            if (slot.index != drawn) {
-                                EXPECT_GE(apart.rect.x - (slot.rect.x + slot.rect.w), kDrawnTileGap - kTolerance) << "gap to tile " << slot.index;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    TEST(TableLayoutTest, ADrawnIndexOfAnotherSeatOrOfAnOpponentChangesNothing) {
-        // the index is the viewer's: the opponents' hands are the same with or without it
-        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
-            const TableLayout plain = MakeTableLayout(BusyInput(viewer));
-            TableInput input = BusyInput(viewer);
-            input.drawnIndex = 13;
-            const TableLayout layout = MakeTableLayout(input);
-            for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                if (seat == viewer) {
-                    continue;
-                }
-                const std::vector<TileSlot> before = SlotsOf(plain, SlotRole::HandTile, seat);
-                const std::vector<TileSlot> after = SlotsOf(layout, SlotRole::HandTile, seat);
-                ASSERT_EQ(before.size(), after.size());
-                for (size_t i = 0; i < before.size(); ++i) {
-                    EXPECT_EQ(before[i].rect.x, after[i].rect.x);
-                    EXPECT_EQ(before[i].rect.y, after[i].rect.y);
-                }
-            }
-        }
-    }
-
-    TEST(TableLayoutTest, TheWorstTableWithADrawnTileStaysInTheViewAndClearOfTheMelds) {
-        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
-            for (const int drawn : {0, 7, 13}) {
-                TableInput input = WorstInput(viewer, kWorstPile, kNoSeat);
-                input.drawnIndex = drawn;
-                for (const ViewSize& size : kViewSizes) {
-                    const TableLayout layout = MakeTableLayout(input, size.width, size.height);
-                    ExpectSlotsInsideTheView(layout);
-                    ExpectNoZoneOverlaps(layout);
-                    ExpectZonesAreSound(layout);
-                }
-                // 14 tiles and the gap end before the melds, and no hand tile touches another
-                const TableLayout layout = MakeTableLayout(input);
-                const Rect hand = BoundsOf(layout, SlotRole::HandTile, viewer);
-                const Rect melds = BoundsOf(layout, SlotRole::MeldTile, viewer);
-                EXPECT_LE(hand.x + hand.w, melds.x + kTolerance);
-                const std::vector<TileSlot> tiles = SlotsOf(layout, SlotRole::HandTile, viewer);
-                for (size_t a = 0; a < tiles.size(); ++a) {
-                    for (size_t b = a + 1; b < tiles.size(); ++b) {
-                        EXPECT_FALSE(Overlaps(tiles[a].rect, tiles[b].rect)) << "tiles " << a << " and " << b;
-                    }
-                }
-            }
-        }
-    }
-
-    TEST(TableLayoutTest, AHandBeyondTheLimitWithADrawnTileIsSqueezedInsideItsStrip) {
-        TableInput input = QuietInput(0);
-        input.concealedCount[0] = 40;
-        input.drawnIndex = 3;
-        const TableLayout layout = MakeTableLayout(input);
-        ExpectSlotsInsideTheView(layout);
-        const Rect hand = BoundsOf(layout, SlotRole::HandTile, 0);
-        EXPECT_LE(hand.x + hand.w, 72.0f + kViewerHandTileW * kMaxConcealedTiles + kDrawnTileGap + kTolerance);
-    }
-
-    TEST(TableLayoutTest, HitHandTileOnTheDrawnTileGivesItsConcealedIndex) {
-        for (const int drawn : {0, 6, 13}) {
-            const TableLayout layout = MakeTableLayout(DrawnInput(0, 14, drawn));
-            for (const TileSlot& slot : SlotsOf(layout, SlotRole::HandTile, 0)) {
-                const std::optional<int> hit = HitHandTile(layout, slot.rect.x + slot.rect.w / 2.0f, slot.rect.y + slot.rect.h / 2.0f);
-                ASSERT_TRUE(hit.has_value());
-                EXPECT_EQ(*hit, slot.index);
-            }
-            // the gap before the drawn tile hits nothing
-            const TileSlot apart = SlotsOf(layout, SlotRole::HandTile, 0)[drawn];
-            EXPECT_FALSE(HitHandTile(layout, apart.rect.x - kDrawnTileGap / 2.0f, apart.rect.y + 1.0f).has_value());
         }
     }
 

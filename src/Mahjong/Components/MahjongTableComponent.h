@@ -50,8 +50,9 @@ namespace BECore::Mahjong {
      * **The last move.** Three marks of the gold family (`Table/UiPalette.h`) show what has just happened, from the public data of `HandModel`
      * (`Moves()`, `Discards()`, the open sets): a tint over the last discard (`kLastDiscardMark`; the frame of a pending discard shows
      * besides it), a bar along the edge of the claimed tile of an open set that faces the seat it came from (`kClaimedEdge`, from
-     * `TileSlot::claimEdge`), and the tile the viewer has just drawn, which lies apart at the end of its row (only in a hand that is
-     * face up: under the cover and for a spectator the hand is the plain row); a click on it discards it like any other tile. The set a seat
+     * `TileSlot::claimEdge`), and the tile the viewer has just drawn, which stays in its place in the sorted row and has a tint over its
+     * face (`kDrawnTileMark`; only in a hand that is face up: under the cover and for a spectator nothing marks it); a click on it
+     * discards it like any other tile. The set a seat
      * has just laid (a claimed chow, pung or kong, a concealed kong, an upgraded kong: the last entry of `Moves()` that made one among those
      * not seen yet, so a claim and the discard after it in one step still show the set) has a fill behind it that blinks for
      * `kClaimHighlightSeconds` (`kClaimHighlight`, on for the first half of each `kClaimBlinkSeconds`); the time runs on `SceneUpdateEvent`

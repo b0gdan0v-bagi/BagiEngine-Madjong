@@ -14,7 +14,7 @@ namespace BECore::Mahjong {
      * Roles, not colours, are the rule: a new control takes the role of what it does.
      * - The table: `kFelt` with a `kFeltRim` round the view, a `kZonePlate` under the discard blocks and the wall ring, a `kTileShadow`
      *   under each tile. A mark on the table is the gold family (`kTurnMark`, `kPendingFrame`, the hints `kDeclareMark`,
-     *   `kAdvisedFrame`, and the marks of the last move `kLastDiscardMark`, `kClaimedEdge`, `kClaimHighlight`) and nothing else on
+     *   `kAdvisedFrame`, and the marks of the last move `kLastDiscardMark`, `kDrawnTileMark`, `kClaimedEdge`, `kClaimHighlight`) and nothing else on
      *   the table is gold;
      *   `kVeil` dims a tile that cannot be discarded now.
      * - The screens: `scrim` dims what lies behind a modal screen (and the hint), `surface` is the plate, `header` its headline band,
@@ -35,6 +35,9 @@ namespace BECore::Mahjong {
     inline constexpr Color kPendingFrame{255, 214, 80, 200};
     /// A tint over the face of the last discard (not a frame, so it stays apart from `kPendingFrame`, which shows besides it).
     inline constexpr Color kLastDiscardMark{255, 214, 80, 110};
+    /// A tint over the face of the tile the viewer has just drawn, in its place in the sorted hand (a different alpha from the tint of
+    /// the last discard, which lies in the pile and never on the hand).
+    inline constexpr Color kDrawnTileMark{255, 214, 80, 130};
     /// The bar along the edge of the claimed tile of an open set that faces the seat it came from, `kClaimedEdgeWidth` units wide.
     inline constexpr Color kClaimedEdge{255, 214, 80, 255};
     inline constexpr float kClaimedEdgeWidth = 4.0f;

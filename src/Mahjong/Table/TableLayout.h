@@ -33,8 +33,6 @@ namespace BECore::Mahjong {
     inline constexpr float kWallStackSize = 14.0f;
     /// The space between two melds of a seat.
     inline constexpr float kMeldGap = 8.0f;
-    /// The space between the viewer's tiles and the tile it has just drawn, which lies apart at the right end of the row.
-    inline constexpr float kDrawnTileGap = 12.0f;
 
     /// What a zone is made to hold; more is squeezed together (the tiles overlap) so that a zone never grows. The rules allow no more.
     inline constexpr int kMaxConcealedTiles = 14;
@@ -85,9 +83,6 @@ namespace BECore::Mahjong {
         /// The melds as laid: a chow or pung is three tiles, a kong four (a concealed kong is laid as four tiles too).
         eastl::array<eastl::vector<Meld>, kSeatCount> melds;
         eastl::array<int, kSeatCount> bonusCount{};
-        /// The index, in the viewer's concealed tiles, of the tile that has just been drawn: it lies apart at the right end of the row
-        /// (`kDrawnTileGap`), the others close up in order. -1, an index out of range and every seat but the viewer: no tile apart.
-        int drawnIndex = -1;
         /// The seat of each entry of the pile, in the order discarded (`HandModel::Discards()`).
         eastl::vector<Seat> discardSeats;
         /// `Wall::Remaining()`: two tiles make a stack.

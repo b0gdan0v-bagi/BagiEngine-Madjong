@@ -88,8 +88,6 @@ namespace BECore::Mahjong {
 
         // The layout above must fit the zones it names: a change to a size that breaks it fails to compile.
         static_assert(kViewerRowX + kViewerHandSpan + kViewerRowGap + kViewerMeldCapacity <= kViewWidth - kEdge);
-        // The drawn tile's gap is in the hand's strip: 14 tiles and the gap end before the melds start.
-        static_assert(kViewerRowX + kViewerHandSpan + kDrawnTileGap <= kViewerRowX + kViewerHandSpan + kViewerRowGap);
         static_assert(kSideMeldY + kSideMeldCapacity <= kViewHeight - kEdge);
         static_assert(kTopDiscardY > kTopMeldY + kOpponentMeldTileH);
         static_assert(kTopDiscardY + kDiscardBlockH < kWallRingY);
@@ -104,7 +102,7 @@ namespace BECore::Mahjong {
             SeatGeometry geometry;
             switch (position) {
                 case 0:
-                    geometry.hand = {kViewerRowX, kViewerHandY, kViewerHandTileW, kViewerHandTileH, false, kViewerHandSpan + kDrawnTileGap};
+                    geometry.hand = {kViewerRowX, kViewerHandY, kViewerHandTileW, kViewerHandTileH, false, kViewerHandSpan};
                     geometry.melds = {kViewerRowX + kViewerHandSpan + kViewerRowGap, kViewHeight - kEdge - kViewerMeldTileH, kViewerMeldTileW, kViewerMeldTileH, false, kViewerMeldCapacity};
                     geometry.bonus = {kViewerRowX, kViewerBonusY, kViewerBonusTileW, kViewerBonusTileH, false, kViewerBonusTileW * kMaxBonusTiles};
                     geometry.discardX = kDiscardBlockX;
@@ -136,14 +134,14 @@ namespace BECore::Mahjong {
             return geometry;
         }
 
-        /// The offsets along the strip's axis of `groups` of tiles (the gap `gap` between two groups), squeezed to the capacity.
-        eastl::vector<float> StripOffsets(const Strip& strip, const eastl::vector<int>& groups, float gap = kMeldGap) {
+        /// The offsets along the strip's axis of `groups` of tiles (`kMeldGap` between two groups), squeezed to the capacity.
+        eastl::vector<float> StripOffsets(const Strip& strip, const eastl::vector<int>& groups) {
             const float length = strip.vertical ? strip.tileH : strip.tileW;
             eastl::vector<float> offsets;
             float position = 0.0f;
             for (size_t group = 0; group < groups.size(); ++group) {
                 if (group > 0 && !offsets.empty()) {
-                    position += gap;
+                    position += kMeldGap;
                 }
                 for (int tile = 0; tile < groups[group]; ++tile) {
                     offsets.push_back(position);
@@ -194,14 +192,11 @@ namespace BECore::Mahjong {
             layout.slots.push_back(TileSlot{fit.Map(rect), role, seat, index, part, claimEdge});
         }
 
-        /// The hand in input order; with `drawnIndex` in range that tile lies at the right end after a gap, the others closing up.
-        void AddHand(TableLayout& layout, const ViewFit& fit, const SeatGeometry& geometry, Seat seat, int count, int drawnIndex) {
-            const bool apart = drawnIndex >= 0 && drawnIndex < count;
-            const eastl::vector<float> offsets = apart ? StripOffsets(geometry.hand, {count - 1, 1}, kDrawnTileGap) : StripOffsets(geometry.hand, {count});
+        /// The hand in input order, one plain row.
+        void AddHand(TableLayout& layout, const ViewFit& fit, const SeatGeometry& geometry, Seat seat, int count) {
+            const eastl::vector<float> offsets = StripOffsets(geometry.hand, {count});
             for (int index = 0; index < count; ++index) {
-                // the tiles before the drawn one keep their place, the ones after it move up one; the drawn tile is the last offset
-                const int place = !apart || index < drawnIndex ? index : (index == drawnIndex ? count - 1 : index - 1);
-                AddSlot(layout, fit, StripRect(geometry.hand, offsets[place]), SlotRole::HandTile, seat, index);
+                AddSlot(layout, fit, StripRect(geometry.hand, offsets[index]), SlotRole::HandTile, seat, index);
             }
         }
 
@@ -323,7 +318,7 @@ namespace BECore::Mahjong {
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             const SeatGeometry& geometry = geometries[SeatPosition(layout.viewer, seat)];
             layout.zones.discards[seat] = fit.Map(Rect(geometry.discardX, geometry.discardY, kDiscardBlockW, kDiscardBlockH));
-            AddHand(layout, fit, geometry, seat, ClampCount(input.concealedCount[seat]), seat == layout.viewer ? input.drawnIndex : -1);
+            AddHand(layout, fit, geometry, seat, ClampCount(input.concealedCount[seat]));
             AddMelds(layout, fit, geometry, seat, SeatPosition(layout.viewer, seat), input.melds[seat]);
             AddBonus(layout, fit, geometry, seat, ClampCount(input.bonusCount[seat]));
         }

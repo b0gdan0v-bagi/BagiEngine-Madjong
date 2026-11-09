@@ -6,8 +6,8 @@
 #include <Mahjong/Table/UiPalette.h>
 
 /**
- * The marks of the last move on the table (`Components/MahjongTableComponent.h`): the tint on the last discard, the tile the viewer has
- * just drawn lying apart (and clickable like any other tile) and the bar on the claimed tile of an open set. The shipped scene is drawn
+ * The marks of the last move on the table (`Components/MahjongTableComponent.h`): the tint on the last discard, the tint on the tile the
+ * viewer has just drawn (it stays in its place in the row and is clickable like any other tile) and the bar on the claimed tile of an open set. The shipped scene is drawn
  * into a `RecordingRenderer` as big as the view, so a rect of a draw call is a rect of the layout. The fixed hands come from
  * `FixedWall.h` and are laid into the hand in progress. The highlight of a set that was just laid is here too: it is a mark of the last move.
  */
@@ -114,23 +114,29 @@ namespace BECore::Mahjong::Tests {
             }
         }
 
-        /// The viewer's tile `drawn` lies apart: the tiles before it keep their step, it is `kDrawnTileGap` farther from the last of them.
-        void ExpectLiesApart(int drawn) const {
+        /// The viewer's hand is one plain row and its tile `drawn` carries the tint `kDrawnTileMark`: exactly one rect of that colour, equal
+        /// to the slot's rect, drawn after the tile itself.
+        void ExpectDrawnMarked(int drawn) const {
+            ASSERT_NO_FATAL_FAILURE(ExpectPlainRow(_table->GetLayout().viewer));
             const std::vector<const TileSlot*> slots = HandSlots(_table->GetLayout().viewer);
-            ASSERT_GE(slots.size(), 4u);
             ASSERT_LT(drawn, static_cast<int>(slots.size()));
-            std::vector<const TileSlot*> others;
-            for (size_t i = 0; i < slots.size(); ++i) {
-                if (static_cast<int>(i) != drawn) {
-                    others.push_back(slots[i]);
+            const Rect& rect = slots[static_cast<size_t>(drawn)]->rect;
+            const std::vector<size_t> tints = CallsOf(kDrawnTileMark);
+            ASSERT_EQ(tints.size(), 1u);
+            const DrawCall& tint = _renderer->calls[tints[0]];
+            EXPECT_EQ(tint.rect.x, rect.x);
+            EXPECT_EQ(tint.rect.y, rect.y);
+            EXPECT_EQ(tint.rect.w, rect.w);
+            EXPECT_EQ(tint.rect.h, rect.h);
+            size_t tileCall = _renderer->calls.size();
+            for (size_t i = 0; i < _renderer->calls.size(); ++i) {
+                const DrawCall& call = _renderer->calls[i];
+                if (call.kind == DrawKind::Texture && call.texture == _atlasTexture && call.rect.x == rect.x && call.rect.y == rect.y) {
+                    tileCall = i;
                 }
             }
-            const float step = others[1]->rect.x - others[0]->rect.x;
-            for (size_t i = 1; i < others.size(); ++i) {
-                EXPECT_NEAR(others[i]->rect.x - others[i - 1]->rect.x, step, kEpsilon) << "the others close up";
-            }
-            EXPECT_NEAR(slots[drawn]->rect.x - others.back()->rect.x, step + kDrawnTileGap, kEpsilon);
-            EXPECT_EQ(slots[drawn]->rect.y, others.back()->rect.y);
+            ASSERT_LT(tileCall, _renderer->calls.size());
+            EXPECT_LT(tileCall, tints[0]) << "the tint lies over the face";
         }
 
         /// The fill that should lie behind the meld `meld` of `seat` in the last layout.
@@ -304,25 +310,23 @@ namespace BECore::Mahjong::Tests {
 
     // ----- the tile just drawn -----
 
-    TEST_F(MahjongTableMarksTest, TheTileTheViewerHasJustDrawnLiesApartAndTheHandClosesUpAfterTheDiscard) {
+    TEST_F(MahjongTableMarksTest, TheTileTheViewerHasJustDrawnIsTintedInPlaceAndTheMarkGoesAfterTheDiscard) {
         ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, MakeModel(SpecOf(kPlainHand, "5p"))));
         ASSERT_EQ(Hand().DrawnTile(kSeat0), T("5p"));
 
         const int drawn = IndexOf(kSeat0, T("5p"));
         ASSERT_GE(drawn, 0);
         EXPECT_NE(drawn, static_cast<int>(Hand().GetHand(kSeat0).concealed.size()) - 1) << "5p sorts into the middle of the hand";
-        ASSERT_NO_FATAL_FAILURE(ExpectLiesApart(drawn));
-        const TileSlot* slot = HandSlot(drawn);
-        ASSERT_NE(slot, nullptr);
-        EXPECT_EQ(slot->index, drawn) << "the slot keeps the index of the tile";
+        ASSERT_NO_FATAL_FAILURE(ExpectDrawnMarked(drawn));
         ASSERT_NO_FATAL_FAILURE(ExpectTableDrawn(false, kSeat0));
 
-        // After the discard seat 0 holds no drawn tile: the plain row of 13
+        // After the discard seat 0 holds no drawn tile: the plain row of 13 and no tint
         ASSERT_TRUE(_game->GetSession().PerformPerson(HandAction::MakeDiscard(T("1p"), false)).has_value());
         Draw();
 
         EXPECT_EQ(Hand().DrawnTile(kSeat0), Tile{});
         ASSERT_NO_FATAL_FAILURE(ExpectPlainRow(kSeat0));
+        EXPECT_TRUE(RectsOf(kDrawnTileMark).empty());
     }
 
     TEST_F(MahjongTableMarksTest, AClickOnTheDrawnTileDiscardsThatTile) {
@@ -332,6 +336,7 @@ namespace BECore::Mahjong::Tests {
         const int index = IndexOf(kSeat0, drawn);
         ASSERT_GE(index, 0);
 
+        ASSERT_NO_FATAL_FAILURE(ExpectDrawnMarked(index));
         EXPECT_FALSE(ClickHandTile(index)) << "no canvas takes the click: the table does";
 
         ASSERT_EQ(Hand().Discards().size(), 1u);
@@ -341,7 +346,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableMarksTest, TheDrawnTileIsTheLastCopyWhenTheHandHoldsMore) {
-        // 5p 5p in the hand and a 5p drawn: the apart tile is a 5p, the one that sorted last among the three
+        // 5p 5p in the hand and a 5p drawn: the tinted tile is a 5p, the one that sorted last among the three
         FixedWallSpec spec = SpecOf("5p 5p 4s 7s 1m 4m 7m 1p 4p 7p Sw Ew Gd", "5p");
         ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, MakeModel(spec)));
         ASSERT_EQ(Hand().DrawnTile(kSeat0), T("5p"));
@@ -352,10 +357,10 @@ namespace BECore::Mahjong::Tests {
             last = held.concealed[i] == T("5p") ? static_cast<int>(i) : last;
         }
         ASSERT_GE(last, 2);
-        ASSERT_NO_FATAL_FAILURE(ExpectLiesApart(last));
+        ASSERT_NO_FATAL_FAILURE(ExpectDrawnMarked(last));
     }
 
-    TEST_F(MahjongTableMarksTest, NoTileLiesApartAfterAClaimOfAPung) {
+    TEST_F(MahjongTableMarksTest, NoTileIsTintedAfterAClaimOfAPung) {
         // Seat 1 (East) discards a 5p and the person at seat 0 pungs it: it holds one tile too many and drew nothing
         FixedWallSpec spec = SpecOf("5p 5p 4s 7s 1m 4m 7m 1p 4p 7p Sw Ew Gd", "5p");
         spec.hands[kSeat1] = kQuiet1;
@@ -368,9 +373,10 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(Hand().CurrentSeat(), kSeat0);
         ASSERT_EQ(Hand().DrawnTile(kSeat0), Tile{});
         ASSERT_NO_FATAL_FAILURE(ExpectPlainRow(kSeat0));
+        EXPECT_TRUE(RectsOf(kDrawnTileMark).empty());
     }
 
-    TEST_F(MahjongTableMarksTest, TheLooseTileAfterAKongLiesApart) {
+    TEST_F(MahjongTableMarksTest, TheLooseTileAfterAKongIsTinted) {
         // A concealed kong, then the loose tile
         FixedWallSpec own = SpecOf(kThree1pHand, "1p");
         own.loose = "9m";
@@ -379,7 +385,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(model.DrawnTile(kSeat0), T("9m"));
         ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, model));
 
-        ASSERT_NO_FATAL_FAILURE(ExpectLiesApart(IndexOf(kSeat0, T("9m"))));
+        ASSERT_NO_FATAL_FAILURE(ExpectDrawnMarked(IndexOf(kSeat0, T("9m"))));
         EXPECT_TRUE(RectsOf(kClaimedEdge).empty()) << "a concealed kong was claimed from nobody";
 
         // A claimed kong, then the loose tile: seat 1 (East) discards the 1p, the person at seat 0 holds three
@@ -394,10 +400,10 @@ namespace BECore::Mahjong::Tests {
         Lay(claimed);
         Draw();
 
-        ASSERT_NO_FATAL_FAILURE(ExpectLiesApart(IndexOf(kSeat0, T("9m"))));
+        ASSERT_NO_FATAL_FAILURE(ExpectDrawnMarked(IndexOf(kSeat0, T("9m"))));
     }
 
-    TEST_F(MahjongTableMarksTest, NoPeekingTheCoverTheSpectatorAndAnOpponentSeeAPlainRow) {
+    TEST_F(MahjongTableMarksTest, NoPeekingTheCoverTheSpectatorAndAnOpponentShowNoTintOnTheHand) {
         // Two people: the screen is covered at the start, the hand of seat 0 (14 tiles, one drawn) is backs in a plain row
         ASSERT_NO_FATAL_FAILURE(Start(kTwoPeople));
         Lay(MakeModel(SpecOf(kPlainHand, "5p")));
@@ -406,13 +412,14 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(session.HandoffPending());
         ASSERT_TRUE(Hand().DrawnTile(kSeat0).IsValid());
         ASSERT_NO_FATAL_FAILURE(ExpectPlainRow(kSeat0));
+        EXPECT_TRUE(RectsOf(kDrawnTileMark).empty());
         ASSERT_NO_FATAL_FAILURE(ExpectTableDrawn(false, kNoSeat));
 
         session.Reveal();
         Draw();
 
         ASSERT_FALSE(session.HandoffPending());
-        ASSERT_NO_FATAL_FAILURE(ExpectLiesApart(IndexOf(kSeat0, T("5p"))));
+        ASSERT_NO_FATAL_FAILURE(ExpectDrawnMarked(IndexOf(kSeat0, T("5p"))));
 
         // A spectator: no person at the table
         ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
@@ -420,6 +427,7 @@ namespace BECore::Mahjong::Tests {
         Draw();
         ASSERT_TRUE(Hand().DrawnTile(kSeat0).IsValid());
         ASSERT_NO_FATAL_FAILURE(ExpectPlainRow(kSeat0));
+        EXPECT_TRUE(RectsOf(kDrawnTileMark).empty());
 
         // An opponent that has just drawn: seat 1 is East, the person sits at seat 0
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
@@ -428,6 +436,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(Hand().DrawnTile(kSeat1).IsValid());
         ASSERT_NO_FATAL_FAILURE(ExpectPlainRow(kSeat1));
         ASSERT_NO_FATAL_FAILURE(ExpectPlainRow(kSeat0));
+        EXPECT_TRUE(RectsOf(kDrawnTileMark).empty()) << "the opponent's drawn tile is its own secret";
         ASSERT_NO_FATAL_FAILURE(ExpectTableDrawn(false, kSeat0));
     }
 
@@ -537,6 +546,16 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(RectsOf(kLastDiscardMark).empty());
     }
 
+    TEST_F(MahjongTableMarksTest, TheTintOfTheDrawnTileIsInTheGoldFamilyAndDiffersFromTheOtherMarks) {
+        // The style: a mark on the table is gold and nothing else is (`UiPalette.h`); each mark has an alpha of its own
+        EXPECT_EQ(kDrawnTileMark.r, kTurnMark.r);
+        EXPECT_EQ(kDrawnTileMark.g, kTurnMark.g);
+        EXPECT_EQ(kDrawnTileMark.b, kTurnMark.b);
+        for (const Color& other : {kTurnMark, kPendingFrame, kLastDiscardMark, kClaimedEdge, kClaimHighlight, kDeclareMark, kAdvisedFrame, kVeil, kTileShadow, kZonePlate}) {
+            EXPECT_FALSE(SameColor(kDrawnTileMark, other));
+        }
+    }
+
     // ----- the cover -----
 
     TEST_F(MahjongTableMarksTest, UnderTheCoverTheMarksOfTheOpenTableShowAndNothingElseDoes) {
@@ -550,6 +569,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(RectsOf(kClaimedEdge).size(), 1u) << "an open set is public";
         EXPECT_EQ(RectsOf(kLastDiscardMark).size(), 1u) << "so is the pile";
         ASSERT_NO_FATAL_FAILURE(ExpectPlainRow(kSeat1));
+        EXPECT_TRUE(RectsOf(kDrawnTileMark).empty());
         ASSERT_NO_FATAL_FAILURE(ExpectTableDrawn(false, kNoSeat));
 
         session.Reveal();
@@ -558,7 +578,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_FALSE(session.HandoffPending());
         EXPECT_EQ(RectsOf(kClaimedEdge).size(), 1u);
         EXPECT_EQ(RectsOf(kLastDiscardMark).size(), 1u);
-        ASSERT_NO_FATAL_FAILURE(ExpectLiesApart(IndexOf(kSeat1, Hand().DrawnTile(kSeat1))));
+        ASSERT_NO_FATAL_FAILURE(ExpectDrawnMarked(IndexOf(kSeat1, Hand().DrawnTile(kSeat1))));
     }
 
     // ----- the set that was just laid -----

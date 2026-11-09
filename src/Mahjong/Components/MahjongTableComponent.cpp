@@ -202,12 +202,9 @@ namespace BECore::Mahjong {
             return Rect();
         }
 
-        TableInput MakeInput(const HandModel& hand, Seat viewer, bool drawnApart) {
+        TableInput MakeInput(const HandModel& hand, Seat viewer) {
             TableInput input;
             input.viewer = viewer;
-            if (drawnApart && IsSeat(viewer)) {
-                input.drawnIndex = DrawnIndexOf(hand, viewer);
-            }
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 const PlayerHand& held = hand.GetHand(seat);
                 input.concealedCount[seat] = static_cast<int>(held.concealed.size());
@@ -509,10 +506,11 @@ namespace BECore::Mahjong {
         const HandModel& hand = game->GetMatch().Hand();
         FollowMoves(*game);
         const Faces faces = FacesOf(session);
-        // The drawn tile lies apart only in a hand that is face up: under the cover and for a spectator the hand is a plain row
         const Seat bottom = BottomSeat(session);
-        const bool drawnApart = session.GetPhase() == SessionPhase::Playing && faces.Shows(bottom);
-        _layout = MakeTableLayout(MakeInput(hand, bottom, drawnApart), viewWidth, viewHeight);
+        _layout = MakeTableLayout(MakeInput(hand, bottom), viewWidth, viewHeight);
+        // The tile the viewer has just drawn is tinted in its place, only in a hand that is face up: under the cover and for a spectator
+        // nothing marks it (and the layout is the same plain row either way)
+        const int drawnIndex = IsSeat(bottom) && session.GetPhase() == SessionPhase::Playing && faces.Shows(bottom) ? DrawnIndexOf(hand, bottom) : -1;
 
         // A face (the tile) or the back (nullopt) at `rect`: from the atlas, else a plain rectangle.
         const auto drawFace = [&](const Rect& rect, std::optional<Tile> face) {
@@ -585,6 +583,9 @@ namespace BECore::Mahjong {
             switch (slot.role) {
                 case SlotRole::HandTile:
                     drawTile(slot.rect, faces.Shows(slot.seat) ? std::optional<Tile>(held.concealed[slot.index]) : std::nullopt);
+                    if (slot.seat == bottom && slot.index == drawnIndex) {
+                        renderer.DrawFilledRect(slot.rect.x, slot.rect.y, slot.rect.w, slot.rect.h, kDrawnTileMark);
+                    }
                     if (_declareNext && slot.seat == session.Actor() && cannotDeclare[held.concealed[slot.index].Id()]) {
                         renderer.DrawFilledRect(slot.rect.x, slot.rect.y, slot.rect.w, slot.rect.h, kVeil);
                     }
