@@ -33,6 +33,11 @@ namespace BECore::Mahjong::Tests {
         }
     };
 
+    /// The engine's touch minimum (`minTouchSize`, window units): what every control of the game is held to in the matrix.
+    inline float EngineTouchMinimum() {
+        return CoreManager::GetUIEnvironment().GetSettings().minTouchSize;
+    }
+
     /// The table of the matrix as the game fits it: view units to output pixels (scale and bars).
     inline ViewTransform TableFit(const MatrixWindow& window) {
         return ViewTransform::Fit(kViewWidth, kViewHeight, window.outputWidth, window.outputHeight);
@@ -211,6 +216,63 @@ namespace BECore::Mahjong::Tests {
         layout.params = saved;
         layout.Invalidate();
         return failures;
+    }
+
+    /// Every label and button of the canvas, shown or not, in tree order.
+    inline void CollectTextControls(const UIElement& element, std::vector<const UIElement*>& found) {
+        if (element.Cast<UILabel>() != nullptr || element.Cast<UIButton>() != nullptr) {
+            found.push_back(&element);
+        }
+        for (const auto& child : element.children) {
+            CollectTextControls(*child, found);
+        }
+    }
+
+    /// The words of the canvas on the whole matrix: `ValidateOnMatrix` does not flag a text that can shrink (`AutoFit`, ellipsis), so
+    /// this asks every shown label and button on the text it shows, with `air` units kept free each side of an interactive one, in every
+    /// window, scale mode and user scale of the matrix (a `SceneView` canvas once per window). Returns a line per control that cuts its
+    /// text, empty when every word fits.
+    inline std::vector<std::string> WordsThatDoNotFitOnTheMatrix(UICanvasComponent& canvas, float air) {
+        canvas.UpdateLayout(kViewWidth, kViewHeight);
+        UICanvasLayout& layout = canvas.GetLayout();
+        const UICanvasScaleParams saved = layout.params;
+        const bool screen = saved.space == CanvasSpace::Screen;
+        const CanvasScaleMode modes[] = {CanvasScaleMode::ConstantPixelSize, CanvasScaleMode::ScaleWithScreen, CanvasScaleMode::ConstantPhysicalSize};
+        const float userScales[] = {1.0f, 1.5f};
+
+        std::vector<std::string> cut;
+        ForEachMatrixWindow([&](const MatrixWindow& window) {
+            for (const CanvasScaleMode mode : modes) {
+                for (const float userScale : userScales) {
+                    if (!screen && (mode != modes[0] || userScale != userScales[0])) {
+                        continue;
+                    }
+                    layout.params = saved;
+                    if (screen) {
+                        layout.params.scaleMode = mode;
+                    }
+                    layout.Update(ContextOf(window, userScale));
+                    const float scale = layout.GetResolved().scale;
+                    std::vector<const UIElement*> controls;
+                    CollectTextControls(canvas.GetRoot(), controls);
+                    for (const UIElement* control : controls) {
+                        if (control->rect.IsEmpty()) {
+                            continue;  // hidden
+                        }
+                        const float spare = control->interactive ? air : 0.0f;
+                        const UIContentFit fit = control->CheckContent(control->rect.w - 2.0f * spare, control->rect.h, scale);
+                        if (fit.hasContent && !fit.fits) {
+                            const eastl::string_view modeName = screen ? EnumUtils<CanvasScaleMode>::ToString(mode) : eastl::string_view("-");
+                            cut.push_back(std::string(
+                                Format("{} {} x{}: {} ({} x {}) scale {}", window.label, modeName, userScale, control->name.ToStringView(), control->rect.w, control->rect.h, scale).c_str()));
+                        }
+                    }
+                }
+            }
+        });
+        layout.params = saved;
+        layout.Invalidate();
+        return cut;
     }
 
     /// `MatrixFailuresExceptTouchWhere` as an expectation, with the name of the node in the message.

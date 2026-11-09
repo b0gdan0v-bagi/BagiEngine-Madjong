@@ -1,5 +1,6 @@
 #include "ComputerTestSupport.h"
 #include "MahjongTableTestSupport.h"
+#include "MahjongTouchTestSupport.h"
 #include "UiStyleTestSupport.h"
 
 #include <BECore/Control/Json.h>
@@ -423,7 +424,7 @@ namespace BECore::Mahjong::Tests {
 
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
-            ExpectPassesTheMatrix("Setup", kPanelTouchMinimum);
+            ExpectPassesTheMatrix("Setup", EngineTouchMinimum());
             for (const Output& output : kOutputs) {
                 ExpectWordsFit("Setup", output.width, output.height, kButtonAir);
             }

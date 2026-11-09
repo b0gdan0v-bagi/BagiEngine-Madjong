@@ -1,6 +1,7 @@
 #include "MahjongTouchTestSupport.h"
 
 #include <BECore/UI/UIButton.h>
+#include <Mahjong/Components/MahjongHudComponent.h>
 
 /**
  * The touch size of the shipped scene: every control is a touch target of the engine's minimum in every window of the size matrix. The
@@ -224,6 +225,140 @@ namespace BECore::Mahjong::Tests {
             ++checked;
         });
         EXPECT_GT(checked, 0u);
+    }
+
+    // ----- the seat choice -----
+
+    TEST_F(MahjongTouchSizeTest, TheSeatChoiceKeepsItsRowsInsideThePlateAndTheSafeAreaAndEverySegmentIsATouchTargetInEveryWindow) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        _game->OpenSetup();
+        Draw();
+        auto setup = Canvas("Setup");
+        ASSERT_TRUE(setup);
+        EXPECT_EQ(setup->GetLayout().params.space, CanvasSpace::Screen) << "the seat choice is a Screen canvas";
+        EXPECT_EQ(setup->GetLayout().params.scaleMode, CanvasScaleMode::ScaleWithScreen);
+        EXPECT_GE(setup->GetLayout().params.minScale, 0.6f) << "a floor keeps a 56 unit control above 32 px";
+        EXPECT_EQ(setup->GetLayout().params.maxScale, UICanvasScaleParams{}.maxScale) << "no cap of our own: the scale is in output pixels and does not know the density";
+        const float minTouch = EngineTouchMinimum();
+
+        const char* const rows[] = {"Title", "LanguageRow", "SeatRow0", "SeatRow1", "SeatRow2", "SeatRow3", "HandsRow", "HintsRow", "Start"};
+        const char* const segments[] = {"LanguageEn",    "LanguageRu",  "Seat0Person",   "Seat0Computer", "Seat1Person", "Seat1Computer", "Seat2Person",
+                                        "Seat2Computer", "Seat3Person", "Seat3Computer", "Hands16",       "Hands8",      "HintsOn",       "HintsOff"};
+        const CanvasScaleMode modes[] = {CanvasScaleMode::ConstantPixelSize, CanvasScaleMode::ScaleWithScreen, CanvasScaleMode::ConstantPhysicalSize};
+        size_t cases = 0;
+        ForEachMatrixWindow([&](const MatrixWindow& window) {
+            for (const CanvasScaleMode mode : modes) {
+                for (const float userScale : {1.0f, 1.5f}) {
+                    const std::string label = Format("{} {} x{}", window.label.c_str(), EnumUtils<CanvasScaleMode>::ToString(mode).data(), userScale).c_str();
+                    const UICanvasResolved resolved = LayOutInWindow(*setup, window, mode, userScale);
+                    const UIElement* plate = Element("Setup", "Plate");
+                    ASSERT_NE(plate, nullptr);
+                    ASSERT_FALSE(plate->rect.IsEmpty()) << label;
+                    const Rect& safe = resolved.contentBounds;
+                    EXPECT_GE(plate->rect.x, safe.x - 0.01f) << label;
+                    EXPECT_GE(plate->rect.y, safe.y - 0.01f) << label;
+                    EXPECT_LE(plate->rect.x + plate->rect.w, safe.x + safe.w + 0.01f) << label;
+                    EXPECT_LE(plate->rect.y + plate->rect.h, safe.y + safe.h + 0.01f) << label;
+
+                    // The rows lie in the plate, one under the other (the title is gone in a short canvas)
+                    const UIElement* previous = nullptr;
+                    for (const char* name : rows) {
+                        const UIElement* row = Element("Setup", name);
+                        ASSERT_NE(row, nullptr) << name;
+                        if (row->rect.IsEmpty()) {
+                            EXPECT_STREQ(name, "Title") << label << ": only the title may give way";
+                            continue;
+                        }
+                        EXPECT_GE(row->rect.y, plate->rect.y - 0.01f) << label << " " << name;
+                        EXPECT_LE(row->rect.y + row->rect.h, plate->rect.y + plate->rect.h + 0.01f) << label << " " << name;
+                        if (previous != nullptr) {
+                            EXPECT_GE(row->rect.y, previous->rect.y + previous->rect.h - 0.01f) << label << " " << name << " overlaps the row above";
+                        }
+                        previous = row;
+                    }
+                    // Every segment lies in the plate and is a touch target as the user sees it
+                    for (const char* name : segments) {
+                        const UIElement* segment = Element("Setup", name);
+                        ASSERT_NE(segment, nullptr) << name;
+                        ASSERT_FALSE(segment->rect.IsEmpty()) << label << " " << name;
+                        EXPECT_GE(segment->rect.x, plate->rect.x - 0.01f) << label << " " << name;
+                        EXPECT_LE(segment->rect.x + segment->rect.w, plate->rect.x + plate->rect.w + 0.01f) << label << " " << name;
+                        EXPECT_GE(std::min(segment->rect.w, segment->rect.h) * resolved.scale / window.pixelDensity, minTouch - 0.01f) << label << " " << name;
+                    }
+                    const UIElement* start = Element("Setup", "Start");
+                    ASSERT_NE(start, nullptr);
+                    EXPECT_GE(start->rect.h * resolved.scale / window.pixelDensity, minTouch - 0.01f) << label << " Start";
+                    ++cases;
+                }
+            }
+        });
+        EXPECT_EQ(cases, BECore::Tests::UILayoutMatrix().size() * 6);
+    }
+
+    TEST_F(MahjongTouchSizeTest, TheSeatChoiceIsMainsAnatomyWhereThereIsRoomAndTheTitleGivesWayInAShortCanvas) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        _game->OpenSetup();
+        Draw();
+        auto setup = Canvas("Setup");
+        ASSERT_TRUE(setup);
+
+        // The design size: the plate of 664, the title band of 48, the rows of 64 and a Start of 64
+        LayOutInWindow(*setup, DesignWindow());
+        EXPECT_NEAR(Element("Setup", "Plate")->rect.h, 664.0f, 0.01f);
+        EXPECT_NEAR(Element("Setup", "Title")->rect.h, 48.0f, 0.01f);
+        for (const char* row : {"LanguageRow", "SeatRow0", "SeatRow1", "SeatRow2", "SeatRow3", "HandsRow", "HintsRow", "Start"}) {
+            EXPECT_NEAR(Element("Setup", row)->rect.h, 64.0f, 0.01f) << row;
+        }
+        EXPECT_NEAR(Element("Setup", "SeatCaption0")->rect.w, 112.0f, 0.01f);
+
+        // A canvas of 320 units (a 480 px window at the user scale 1.5): no title, narrower captions, the plate the whole safe width
+        const MatrixWindow tight = WindowOf(480.0f, 480.0f);
+        LayOutInWindow(*setup, tight, CanvasScaleMode::ConstantPixelSize, 1.5f);
+        EXPECT_TRUE(Element("Setup", "Title")->rect.IsEmpty());
+        EXPECT_LT(Element("Setup", "SeatCaption0")->rect.w, 112.0f);
+        EXPECT_NEAR(Element("Setup", "Plate")->rect.w, setup->GetLayout().GetResolved().contentBounds.w, 0.01f);
+        for (const char* row : {"LanguageRow", "SeatRow0", "HintsRow", "Start"}) {
+            EXPECT_GT(Element("Setup", row)->rect.h, 0.0f) << row << ": nothing but the title is dropped";
+        }
+    }
+
+    TEST_F(MahjongTouchSizeTest, TheSeatChoiceDimsTheWholeWindowAndTheNewGameButtonUnderItTakesNoClick) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        _game->OpenSetup();
+        Draw();
+        auto setup = Canvas("Setup");
+        auto menu = Canvas("HudMenu");
+        ASSERT_TRUE(setup && menu);
+        ASSERT_TRUE(menu->TakesInput()) << "the HUD button is shown while the seat choice is open";
+
+        // In every window the dim (the whole window, bars included) covers the New game button, which lies on a bar in a narrow window
+        ForEachMatrixWindow([&](const MatrixWindow& window) {
+            LayOutInWindow(*setup, window);
+            LayOutInWindow(*menu, window);
+            const UIElement* dim = Element("Setup", "Dim");
+            const UIElement* button = Element("HudMenu", "NewGame");
+            ASSERT_TRUE(dim != nullptr && button != nullptr);
+            const Rect dimOutput = setup->GetLayout().GetResolved().transform.ToOutput(dim->rect.x, dim->rect.y, dim->rect.w, dim->rect.h);
+            const Rect buttonOutput = menu->GetLayout().GetResolved().transform.ToOutput(button->rect.x, button->rect.y, button->rect.w, button->rect.h);
+            EXPECT_LE(dimOutput.x, 0.01f) << window.label.c_str();
+            EXPECT_LE(dimOutput.y, 0.01f) << window.label.c_str();
+            EXPECT_GE(dimOutput.x + dimOutput.w, window.outputWidth - 0.01f) << window.label.c_str();
+            EXPECT_GE(dimOutput.y + dimOutput.h, window.outputHeight - 0.01f) << window.label.c_str();
+            EXPECT_GE(buttonOutput.x, dimOutput.x - 0.01f) << window.label.c_str();
+            EXPECT_LE(buttonOutput.x + buttonOutput.w, dimOutput.x + dimOutput.w + 0.01f) << window.label.c_str();
+            EXPECT_GE(buttonOutput.y, dimOutput.y - 0.01f) << window.label.c_str();
+            EXPECT_LE(buttonOutput.y + buttonOutput.h, dimOutput.y + dimOutput.h + 0.01f) << window.label.c_str();
+        });
+
+        // And a click on it reaches the modal canvas, not the button: the choice made so far stays
+        Draw();
+        ASSERT_TRUE(ClickElement("Setup", "Seat2Person"));
+        const SeatSetup pending = MahjongHudComponent::GetActive()->PendingSeats();
+        ASSERT_EQ(pending[2], SeatKind::Person);
+        ASSERT_TRUE(OnScreen("HudMenu", "NewGame"));
+        ClickElement("HudMenu", "NewGame");
+        EXPECT_TRUE(Canvas("Setup")->TakesInput());
+        EXPECT_EQ(MahjongHudComponent::GetActive()->PendingSeats(), pending) << "New game would have opened the panel again from the seats of the game";
     }
 
     // ----- the Next hand button of the score table -----

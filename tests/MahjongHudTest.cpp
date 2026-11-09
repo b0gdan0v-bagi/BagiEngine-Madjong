@@ -20,9 +20,6 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        /// The least touch size the seat choice is held to: it lies on the fixed design of the table (a SceneView canvas), so 20 px; WP 7 of
-        /// mahjong-touch-size makes it a Screen canvas and removes this constant.
-        constexpr float kSetupTouchMinimum = 20.0f;
         /// Output sizes (and the air a button keeps) the words are asked in: the design size, a small window, the narrowest windows.
         struct Output {
             float width;
@@ -432,10 +429,10 @@ namespace BECore::Mahjong::Tests {
 
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
-            ExpectPassesTheMatrix("Setup", kSetupTouchMinimum);
-            for (const Output& output : kOutputs) {
-                ExpectWordsFit("Setup", output.width, output.height, kButtonAir);
-            }
+
+            // In the design size the controls are as high as main's anatomy has them
+            Draw();
+            Canvas("Setup")->UpdateLayout(kViewWidth, kViewHeight);
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 for (const char* kind : {"Person", "Computer"}) {
                     const UIElement* segment = Element("Setup", Format("Seat{}{}", seat, kind).c_str());
@@ -443,12 +440,20 @@ namespace BECore::Mahjong::Tests {
                     EXPECT_GE(segment->rect.h, kMinControlHeight) << seat << kind;
                 }
             }
-            for (const char* segmentName : {"LanguageEn", "LanguageRu", "Hands16", "Hands8"}) {
+            for (const char* segmentName : {"LanguageEn", "LanguageRu", "Hands16", "Hands8", "HintsOn", "HintsOff"}) {
                 const UIElement* segment = Element("Setup", segmentName);
                 ASSERT_NE(segment, nullptr) << segmentName;
                 EXPECT_GE(segment->rect.h, kMinControlHeight) << segmentName;
             }
             EXPECT_GE(Element("Setup", "Start")->rect.h, kMinControlHeight);
+
+            // In every window, scale mode and user scale: the engine's touch minimum, and every word whole
+            ExpectPassesTheMatrix("Setup", EngineTouchMinimum());
+            for (const Output& output : kOutputs) {
+                ExpectWordsFit("Setup", output.width, output.height, kButtonAir);
+            }
+            const std::vector<std::string> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Setup"), kButtonAir);
+            EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
         });
     }
 
