@@ -1,6 +1,7 @@
 #pragma once
 
 #include "HandTestSupport.h"
+#include "ShippedScene.h"
 #include "StringsTestSupport.h"
 
 #include <BECore/GameManager/CoreManager.h>
@@ -24,7 +25,7 @@
 /**
  * What the tests of the table component share (`MahjongTableUiTest`, `MahjongTableInputTest`, `MahjongTableActionsTest`,
  * `MahjongTableScreenTest`, `MahjongTableWindowTest`, `MahjongHudTest`): the fixture `MahjongTableTestBase` loads the shipped
- * `config/SceneConfig.xml` (read from the source tree, a game's content is not mounted in the test environment), starts the game through
+ * scene (`ShippedScene.h`: `config/SceneConfig.xml` with its node files expanded, read from the source tree, a game's content is not mounted in the test environment), starts the game through
  * `GameManager` and draws the scene into a `RecordingRenderer` as big as the view of the scene, so the view transform is the identity:
  * a call's rect is a slot of the layout and a click at a point of the view is a click at that pixel. Header only; needs the engine
  * services.
@@ -40,10 +41,6 @@ namespace BECore::Mahjong::Tests {
     inline constexpr uint32_t kTextureSide = 4;
     /// Actions of a hand played by computers; a loop fails fast.
     inline constexpr int kActionLimit = 600;
-
-    inline std::filesystem::path ShippedSceneConfig() {
-        return std::filesystem::path(__FILE__).parent_path().parent_path() / "config" / "SceneConfig.xml";
-    }
 
     /// The tile at `part` of a meld as laid, worked out here and not taken from the component.
     inline Tile LaidTile(const Meld& meld, int part) {
@@ -88,7 +85,7 @@ namespace BECore::Mahjong::Tests {
             CoreManager::GetRendererManager().SetRenderer(_renderer);
 
             XmlDeserializer deserializer;
-            ASSERT_TRUE(deserializer.LoadFromFile(ShippedSceneConfig())) << ShippedSceneConfig().string();
+            ASSERT_TRUE(LoadShippedScene(deserializer)) << ShippedSceneConfig().string();
             _manager = New<SceneManager>();
             _manager->Deserialize(deserializer);
             ASSERT_FALSE(deserializer.HasErrors());

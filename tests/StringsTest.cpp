@@ -1,3 +1,4 @@
+#include "ShippedScene.h"
 #include "StringsTestSupport.h"
 
 #include <Mahjong/Game/Score.h>
@@ -32,8 +33,9 @@ namespace BECore::Mahjong::Tests {
             return std::filesystem::path(__FILE__).parent_path().parent_path();
         }
 
+        /// The shipped scene with its node files expanded (`ShippedScene.h`).
         std::string SceneText() {
-            return ReadFile(GameRoot() / "config" / "SceneConfig.xml");
+            return ShippedSceneXml();
         }
 
         /// The scene without its comments (which quote attributes as examples).
@@ -157,9 +159,8 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(StringsTest, EveryReferenceOfTheSceneIsInBothLanguages) {
-        const std::filesystem::path scene = std::filesystem::path(__FILE__).parent_path().parent_path() / "config" / "SceneConfig.xml";
-        const std::string text = ReadFile(scene);
-        ASSERT_FALSE(text.empty()) << scene.string();
+        const std::string text = SceneText();
+        ASSERT_FALSE(text.empty()) << ShippedSceneConfig().string();
         // Looked up in the entries of each language: `Find` falls back to the default language and would hide a missing translation
         std::map<std::string, std::set<std::string>> keysOf;
         for (const LanguageEntries& language : ReadShippedEntries()) {
