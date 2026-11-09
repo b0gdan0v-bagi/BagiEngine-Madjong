@@ -44,7 +44,7 @@ HAND_LIMIT_PER_MATCH = 100  # 8 counted hands; a drawn hand is dealt again
 TABLE_COLORS = 500  # a table of 150 tiles with antialiased marks and text shows thousands; flat felt, or felt and plain boxes, far fewer
 SCENE_CANVASES = {"Hints", "HintsButton", "Actions", "ActionsCompact", "Hud", "SeatPlates", "HudMenu", "Handoff", "HandOver", "HandOverAction", "MatchOver", "Setup", "Rules", "RulesAction"}
 COMING_AND_GOING_SCREENS = ("Setup", "Handoff", "HandOver", "HandOverAction", "MatchOver", "Rules", "RulesAction")
-HAND_OVER_SCREENS = {"HandOver", "HandOverAction"}  # the score table and its action bar are shown together
+HAND_OVER_SCREENS = {"HandOver", "HandOverAction"}  # the score table and its Next hand button are shown together
 RULES_SCREENS = {"Rules", "RulesAction"}  # the pages of the rules and their bar are shown together
 SETTLE_FRAMES = 2  # frames after a change of the game before the canvases show it
 IDLE_CHECK_SECONDS = 0.3  # how long the manual clock is watched not moving
@@ -244,7 +244,7 @@ def check_state_is_pushed(client: BagiControlClient) -> None:
 
 
 def screens_shown(client: BagiControlClient) -> tuple[set[str], dict[str, Any]]:
-    """Which of the screens that come and go (the modal ones and the action bar of the score table) are shown, after a few frames in which the scene reads the game; and the whole UI tree."""
+    """Which of the screens that come and go (the modal ones and the Next hand button of the score table) are shown, after a few frames in which the scene reads the game; and the whole UI tree."""
     client.call("step", {"frames": SETTLE_FRAMES})
     tree = client.call("ui_tree")
     check(tree["scene"] == "MahjongScene", f"the active scene is {tree['scene']}")

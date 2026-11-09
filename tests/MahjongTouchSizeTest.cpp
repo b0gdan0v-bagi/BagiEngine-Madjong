@@ -3,6 +3,7 @@
 #include <BECore/UI/UIButton.h>
 #include <EASTL/map.h>
 #include <Mahjong/Components/MahjongHudComponent.h>
+#include <Mahjong/Table/UiPalette.h>
 #include <set>
 
 /**
@@ -457,7 +458,7 @@ namespace BECore::Mahjong::Tests {
 
     // ----- the Next hand button of the score table -----
 
-    TEST_F(MahjongTouchSizeTest, TheActionBarOfTheScoreTableLiesInsideTheWindowAndDoesNotTouchThePlate) {
+    TEST_F(MahjongTouchSizeTest, TheNextHandButtonIsATouchTargetInEveryWindowAndTouchesNeitherThePlateNorATile) {
         ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
         _game->GetSession().RunComputers();
         ASSERT_EQ(_game->GetSession().GetPhase(), SessionPhase::HandOver);
@@ -468,33 +469,56 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(plate->TakesInput() && action->TakesInput());
         EXPECT_EQ(action->GetLayout().params.space, CanvasSpace::Screen);
         EXPECT_EQ(action->GetLayout().params.scaleMode, CanvasScaleMode::ScaleWithScreen);
+        EXPECT_GE(action->GetLayout().params.minScale, 0.6f) << "the floor that keeps the 56 unit button a touch target";
+        EXPECT_EQ(EngineTouchMinimum(), kEngineTouchMinimum);
 
+        const TableLayout layout = MakeWorstCaseTableLayout();
         size_t checked = 0;
+        size_t withoutInsets = 0;
         ForEachMatrixWindow([&](const MatrixWindow& window) {
-            // The plate (SceneView) and the bar (Screen, ScaleWithScreen, user scale 1.0), both in view units of the table
+            withoutInsets += window.HasInsets() ? 0u : 1u;
+            // The plate (SceneView) and the button (Screen, ScaleWithScreen, user scale 1.0), both in view units of the table
             LayOutInWindow(*plate, window);
             const UIElement* plateElement = Element("HandOver", "Plate");
-            ASSERT_NE(plateElement, nullptr);
+            const UIElement* headlineElement = Element("HandOver", "Headline");
+            ASSERT_TRUE(plateElement != nullptr && headlineElement != nullptr);
             ASSERT_FALSE(plateElement->rect.IsEmpty()) << window.label.c_str();
             const Rect plateRect = ToView(plateElement->rect, *plate, window);
+            const Rect headlineRect = ToView(headlineElement->rect, *plate, window);
 
             LayOutInWindow(*action, window, CanvasScaleMode::ScaleWithScreen, 1.0f);
-            const UIElement* bar = Element("HandOverAction", "Bar");
             const UIElement* button = Element("HandOverAction", "NextHand");
-            ASSERT_TRUE(bar != nullptr && button != nullptr);
-            ASSERT_FALSE(bar->rect.IsEmpty()) << window.label.c_str();
-            EXPECT_FALSE(Intersects(ToView(bar->rect, *action, window), plateRect)) << window.label.c_str() << ": the bar touches the plate";
-            EXPECT_FALSE(Intersects(ToView(button->rect, *action, window), plateRect)) << window.label.c_str() << ": the button touches the plate";
+            ASSERT_NE(button, nullptr);
+            ASSERT_FALSE(button->rect.IsEmpty()) << window.label.c_str();
+            const Rect buttonRect = ToView(button->rect, *action, window);
+            // The button never touches the headline band. A top notch (7 % of the short side) pushes it down by the inset, and in a 16:9
+            // window that is onto the top padding of the plate (the safe area's call, as for New game): then it stays inside the 16 units.
+            EXPECT_FALSE(Intersects(buttonRect, headlineRect)) << window.label.c_str() << ": the button touches the headline";
+            if (window.simulation == SafeAreaSimulation::TopNotch) {
+                if (Intersects(buttonRect, plateRect)) {
+                    EXPECT_LE(buttonRect.y + buttonRect.h, plateRect.y + kModalPadding + 0.01f) << window.label.c_str() << ": the button reaches into the plate";
+                }
+            } else {
+                EXPECT_FALSE(Intersects(buttonRect, plateRect)) << window.label.c_str() << ": the button touches the plate";
+            }
 
             // Inside the window (the validator says the same for every mode and user scale)
-            const Rect output = action->GetLayout().GetResolved().transform.ToOutput(bar->rect.x, bar->rect.y, bar->rect.w, bar->rect.h);
+            const Rect output = action->GetLayout().GetResolved().transform.ToOutput(button->rect.x, button->rect.y, button->rect.w, button->rect.h);
             EXPECT_GE(output.x, -0.01f) << window.label.c_str();
             EXPECT_GE(output.y, -0.01f) << window.label.c_str();
             EXPECT_LE(output.x + output.w, window.outputWidth + 0.01f) << window.label.c_str();
             EXPECT_LE(output.y + output.h, window.outputHeight + 0.01f) << window.label.c_str();
+            // A touch target as the user sees it (the same rule as New game, which has its corner)
+            EXPECT_GE(std::min(output.w, output.h) / window.pixelDensity, EngineTouchMinimum() - 0.01f) << window.label.c_str();
+
+            if (window.HasInsets()) {
+                return;  // with insets the button lies nearer the table, as the HUD does
+            }
+            ExpectClearOfTable(buttonRect, layout, window.label.c_str());
             ++checked;
         });
-        EXPECT_EQ(checked, BECore::Tests::UILayoutMatrix().size());
+        EXPECT_GT(checked, 0u);
+        EXPECT_EQ(checked, withoutInsets) << "every window without insets was checked";
     }
 
     namespace {
