@@ -238,16 +238,19 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongHudTest, ThePlatesOfAHotSeatTableMoveWithTheViewer) {
+        // Seat 1 is East and to act: the cover waits for that person, who is at the bottom, so seat 1 is at position 0 and seat 2 at position 1
         ASSERT_NO_FATAL_FAILURE(Start(kTwoPeople));
-        Draw();
-        const Seat first = BottomSeat(_game->GetSession());
+        Lay(MakeModel(SpecOf(kPlainHand, "9p"), kSeat1));
         _game->GetSession().Reveal();
         Draw();
+        ASSERT_EQ(BottomSeat(_game->GetSession()), kSeat1);
+        EXPECT_EQ(Var("plateName0"), "Seat 2") << "nobody is 'you' at a table of two";
+        EXPECT_EQ(Var("plateName1"), "Seat 3");
         for (int position = 0; position < kSeatCount; ++position) {
-            EXPECT_EQ(Var(Format("plateScore{}", position).c_str()), std::to_string(_game->GetMatch().Scores()[SeatAtPosition(BottomSeat(_game->GetSession()), position)]));
-            EXPECT_EQ(Var(Format("plateName{}", position).c_str()), Format("Seat {}", SeatAtPosition(BottomSeat(_game->GetSession()), position) + 1).c_str()) << "nobody is 'you' at a table of two";
+            const Seat seat = SeatAtPosition(kSeat1, position);
+            EXPECT_EQ(Var(Format("plateScore{}", position).c_str()), std::to_string(_game->GetMatch().Scores()[seat]));
+            EXPECT_EQ(Var(Format("plateWind{}", position).c_str()).back() == '*', seat == kSeat1) << "the dealer mark is on the East plate only";
         }
-        EXPECT_TRUE(IsSeat(first));
     }
 
     TEST_F(MahjongHudTest, NoOneIsMarkedYouWhenTwoPeoplePlayOrNobodyDoes) {
@@ -290,7 +293,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_TRUE(_game->StartMatch(seed).has_value());
             _game->GetSession().RunComputers();
             ASSERT_TRUE(_game->GetSession().NextHand().has_value());
-            paid = _game->GetMatch().Scores() != SeatScores{2000, 2000, 2000, 2000};
+            paid = _game->GetMatch().Scores() != SeatScores{kExpectedStartingScore, kExpectedStartingScore, kExpectedStartingScore, kExpectedStartingScore};
         }
         ASSERT_TRUE(paid) << "one of the hands is won";
 
@@ -330,8 +333,8 @@ namespace BECore::Mahjong::Tests {
         for (const SeatSetup& seats : {kTwoPeople, kAllComputers}) {
             ASSERT_NO_FATAL_FAILURE(Start(seats));
             Draw();
-            for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                EXPECT_EQ(Var(Format("plateName{}", seat).c_str()).find("Вы"), std::string::npos) << "no one is 'you' at a table of " << (seats == kTwoPeople ? "two" : "no") << " people";
+            for (int position = 0; position < kSeatCount; ++position) {
+                EXPECT_EQ(Var(Format("plateName{}", position).c_str()).find("Вы"), std::string::npos) << "no one is 'you' at a table of " << (seats == kTwoPeople ? "two" : "no") << " people";
             }
         }
     }
@@ -421,7 +424,7 @@ namespace BECore::Mahjong::Tests {
             const Seat east = _game->GetMatch().East();
             _game->GetSession().RunComputers();
             ASSERT_TRUE(_game->GetSession().NextHand().has_value());
-            moved = _game->GetMatch().East() != east && _game->GetMatch().Scores() != SeatScores{2000, 2000, 2000, 2000};
+            moved = _game->GetMatch().East() != east && _game->GetMatch().Scores() != SeatScores{kExpectedStartingScore, kExpectedStartingScore, kExpectedStartingScore, kExpectedStartingScore};
         }
         ASSERT_TRUE(moved) << "one of the hands is won by a seat that is not East";
 

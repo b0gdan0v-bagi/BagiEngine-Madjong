@@ -322,6 +322,112 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(model.GetPhase(), Phase::Claim);
             return model;
         }
+
+        // ----- the seat plates -----
+
+        /// The plate of `seat` in the last layout.
+        Rect PlateOf(Seat seat) const {
+            return _table->GetLayout().zones.seatPlates[static_cast<size_t>(seat)];
+        }
+
+        /// The four bars `DrawFrame` should lay on the border of `rect`, worked out here.
+        static std::vector<Rect> BarsOf(const Rect& rect, float width) {
+            return {Rect(rect.x, rect.y, rect.w, width), Rect(rect.x, rect.y + rect.h - width, rect.w, width), Rect(rect.x, rect.y + width, width, rect.h - 2.0f * width),
+                    Rect(rect.x + rect.w - width, rect.y + width, width, rect.h - 2.0f * width)};
+        }
+
+        /// How many of the rects drawn in `color` are `rect`.
+        int CountOf(const Color& color, const Rect& rect) const {
+            int found = 0;
+            for (const Rect& drawn : RectsOf(color)) {
+                found += SameRect(drawn, rect) ? 1 : 0;
+            }
+            return found;
+        }
+
+        /// The plate of `seat` carries the tint and the frame of the turn, all four bars once.
+        bool TurnShownOn(Seat seat) const {
+            if (CountOf(kTurnMark, PlateOf(seat)) != 1) {
+                return false;
+            }
+            for (const Rect& bar : BarsOf(PlateOf(seat), kSeatTurnFrameWidth)) {
+                if (CountOf(kSeatTurnFrame, bar) != 1) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        /// The bar of the dealer lies along the top edge of the plate of `seat`.
+        bool DealerShownOn(Seat seat) const {
+            const Rect plate = PlateOf(seat);
+            return CountOf(kDealerMark, Rect(plate.x, plate.y, plate.w, kDealerMarkHeight)) == 1;
+        }
+
+        /// The turn is on exactly the plate of `turn` (no seat: on none), the dealer's bar on exactly the plate of `dealer`.
+        void ExpectMarksOnPlates(Seat turn, Seat dealer) const {
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                EXPECT_EQ(TurnShownOn(seat), seat == turn) << "turn, seat " << seat;
+                EXPECT_EQ(DealerShownOn(seat), seat == dealer) << "dealer, seat " << seat;
+            }
+            EXPECT_EQ(RectsOf(kSeatTurnFrame).size(), IsSeat(turn) ? 4u : 0u);
+            EXPECT_EQ(RectsOf(kDealerMark).size(), IsSeat(dealer) ? 1u : 0u);
+        }
+
+        /// The seat of the hand shown that holds East.
+        Seat EastOfTheHand() const {
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                if (Hand().SeatWind(seat) == Wind::East) {
+                    return seat;
+                }
+            }
+            return kNoSeat;
+        }
+
+        /// The base of every plate is drawn once, after the plates of the zones and before the first tile.
+        void ExpectBasePlatesInOrder() const {
+            std::vector<size_t> zonePlates = CallsOf(kZonePlate);
+            ASSERT_FALSE(zonePlates.empty());
+            size_t firstTile = _renderer->calls.size();
+            for (size_t i = 0; i < _renderer->calls.size(); ++i) {
+                if (_renderer->calls[i].kind == DrawKind::Texture && _renderer->calls[i].texture == _atlasTexture) {
+                    firstTile = i;
+                    break;
+                }
+            }
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                // The HUD draws its panels in the same colour, so a plate is found by its rectangle
+                size_t at = _renderer->calls.size();
+                int found = 0;
+                for (const size_t i : CallsOf(kSeatPlate)) {
+                    if (SameRect(_renderer->calls[i].rect, PlateOf(seat))) {
+                        at = i;
+                        ++found;
+                    }
+                }
+                ASSERT_EQ(found, 1) << "seat " << seat;
+                EXPECT_GT(at, zonePlates.back()) << "seat " << seat << ": after the plates of the zones";
+                EXPECT_LT(at, firstTile) << "seat " << seat << ": before the tiles";
+            }
+        }
+
+        /// Plays a match of four computers (8 hands) to the end through the session; `perHand` is called when a hand is over.
+        template <typename Fn>
+        void PlayMatchToTheEnd(Fn perHand) {
+            MahjongSettings settings = _game->GetSettings();
+            settings.handsPerMatch = 8;
+            _game->SetSettings(settings);
+            ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
+            TableSession& session = _game->GetSession();
+            for (int guard = 0; guard < 100 && session.GetPhase() != SessionPhase::MatchOver; ++guard) {
+                session.RunComputers();
+                if (session.GetPhase() == SessionPhase::HandOver) {
+                    perHand();
+                    ASSERT_TRUE(session.NextHand().has_value());
+                }
+            }
+            ASSERT_EQ(session.GetPhase(), SessionPhase::MatchOver);
+        }
     };
 
     // ----- the last discard -----
@@ -1064,6 +1170,117 @@ namespace BECore::Mahjong::Tests {
         Elapse(kClaimHighlightSeconds);
         Draw();
         EXPECT_TRUE(RectsOf(kClaimHighlight).empty());
+    }
+
+    // ----- the seat plates -----
+
+    TEST_F(MahjongTableMarksTest, EverySeatHasABasePlateAtItsRectangleForEachViewerAfterTheZonePlatesAndBeforeTheTiles) {
+        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+            SeatSetup seats{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
+            seats[static_cast<size_t>(viewer)] = SeatKind::Person;
+            ASSERT_NO_FATAL_FAILURE(Start(seats));
+            Draw();
+            ASSERT_EQ(_table->GetLayout().viewer, viewer);
+            ASSERT_NO_FATAL_FAILURE(ExpectBasePlatesInOrder()) << "viewer " << viewer;
+            // The viewer's plate is the one at the bottom of the table, and the four rectangles differ
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                if (seat != viewer) {
+                    EXPECT_LT(PlateOf(seat).y, PlateOf(viewer).y) << "viewer " << viewer << " seat " << seat;
+                    EXPECT_FALSE(SameRect(PlateOf(seat), PlateOf(viewer)));
+                }
+            }
+        }
+    }
+
+    TEST_F(MahjongTableMarksTest, TheTurnTintAndFrameLieOnThePlateOfTheSeatWhoseTurnItIsAndMoveWithTheNextDiscard) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, MakeModel(SpecOf(kPlainHand, "9p"))));
+        ASSERT_NO_FATAL_FAILURE(ExpectMarksOnPlates(kSeat0, kSeat0));
+
+        EXPECT_FALSE(ClickHandTile(IndexOf(kSeat0, T("9p"))));
+        Draw();
+
+        ASSERT_EQ(Hand().CurrentSeat(), kSeat1);
+        ASSERT_NO_FATAL_FAILURE(ExpectMarksOnPlates(kSeat1, kSeat0));
+    }
+
+    TEST_F(MahjongTableMarksTest, InAClaimWindowTheTurnStaysOnTheDiscarderAndNeverMovesToTheSeatThatIsAskedFirst) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, EastDiscardsFive(kSeat1HoldsPairOf5p)));
+        ASSERT_EQ(Hand().GetPhase(), Phase::Claim);
+        ASSERT_EQ(_game->GetSession().Actor(), kSeat1);
+
+        ASSERT_NO_FATAL_FAILURE(ExpectMarksOnPlates(kSeat0, kSeat0));
+    }
+
+    TEST_F(MahjongTableMarksTest, NoTurnIsMarkedAtTheEndOfAHandAndOfTheMatchAndTheDealerStaysOnTheEastOfTheHandShown) {
+        // A hand that seat 0 (East) has won: all hands face up, the turn gone, the dealer where the winds put it
+        HandModel won = AllDeclaredModel("5p");
+        ASSERT_TRUE(won.DeclareWin(kSeat0).has_value());
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, won));
+        ASSERT_EQ(_game->GetSession().GetPhase(), SessionPhase::HandOver);
+        ASSERT_NO_FATAL_FAILURE(ExpectMarksOnPlates(kNoSeat, kSeat0));
+
+        // The whole match: after each hand and after the last one (the winds of the last hand stay, though Match::East() is the next deal's)
+        std::set<Seat> dealers;
+        ASSERT_NO_FATAL_FAILURE(PlayMatchToTheEnd([&] {
+            Draw();
+            dealers.insert(EastOfTheHand());
+            ExpectMarksOnPlates(kNoSeat, EastOfTheHand());
+        }));
+        Draw();
+        EXPECT_EQ(_game->GetSession().GetPhase(), SessionPhase::MatchOver);
+        EXPECT_GT(dealers.size(), 1u) << "the deal moved at least once in eight hands";
+        ExpectMarksOnPlates(kNoSeat, EastOfTheHand());
+    }
+
+    TEST_F(MahjongTableMarksTest, TheDealerBarAndTheTurnFollowTheWindsOfTheHandWhenTheDealMoves) {
+        // Seat 1 is East of this hand (the winds are the hand's, not Match::East()): its plate has the bar, and the turn is on it too
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, MakeModel(SpecOf(kPlainHand, "5p"), kSeat1)));
+        ASSERT_EQ(Hand().CurrentSeat(), kSeat1);
+        ASSERT_NO_FATAL_FAILURE(ExpectMarksOnPlates(kSeat1, kSeat1));
+        Lay(MakeModel(SpecOf(kPlainHand, "5p"), kSeat3));
+        Draw();
+        ASSERT_NO_FATAL_FAILURE(ExpectMarksOnPlates(kSeat3, kSeat3));
+    }
+
+    TEST_F(MahjongTableMarksTest, ThePlateMarksArePublicSoTheyShowUnderTheCoverAfterRevealAndForASpectator) {
+        // Two people, seat 1 is East and to act: the screen is covered, the plates are not
+        ASSERT_NO_FATAL_FAILURE(StartWith(kTwoPeople, MakeModel(SpecOf(kPlainHand, "5p"), kSeat1)));
+        TableSession& session = _game->GetSession();
+        ASSERT_TRUE(session.HandoffPending());
+        ASSERT_EQ(_table->GetLayout().viewer, kSeat1) << "the person that waits for the cover to go is at the bottom";
+        ASSERT_NO_FATAL_FAILURE(ExpectBasePlatesInOrder());
+        ASSERT_NO_FATAL_FAILURE(ExpectMarksOnPlates(kSeat1, kSeat1));
+        const Rect bottomBefore = PlateOf(kSeat1);
+
+        session.Reveal();
+        Draw();
+
+        ASSERT_FALSE(session.HandoffPending());
+        EXPECT_TRUE(SameRect(PlateOf(kSeat1), bottomBefore)) << "the viewer is the same person after Show";
+        ASSERT_NO_FATAL_FAILURE(ExpectMarksOnPlates(kSeat1, kSeat1));
+
+        // A spectator: seat 0 is at the bottom (nobody is the viewer), the same marks
+        ASSERT_NO_FATAL_FAILURE(StartWith(kAllComputers, MakeModel(SpecOf(kPlainHand, "5p"), kSeat2)));
+        ASSERT_NO_FATAL_FAILURE(ExpectBasePlatesInOrder());
+        ASSERT_NO_FATAL_FAILURE(ExpectMarksOnPlates(kSeat2, kSeat2));
+    }
+
+    TEST_F(MahjongTableMarksTest, ThePlateColoursAreGoldForTheTurnAndNotForTheDealerAndThePlateIsTheHudPanel) {
+        EXPECT_EQ(kSeatTurnFrame.r, kTurnMark.r);
+        EXPECT_EQ(kSeatTurnFrame.g, kTurnMark.g);
+        EXPECT_EQ(kSeatTurnFrame.b, kTurnMark.b);
+        for (const Color& other : {kTurnMark, kPendingFrame, kLastDiscardMark, kDrawnTileMark, kCallingFrame, kClaimedEdge, kClaimHighlight, kDeclareMark, kKeepsWaitingMark, kAdvisedFrame, kVeil,
+                                   kTileShadow, kZonePlate, kSeatPlate, kDealerMark}) {
+            EXPECT_FALSE(SameColor(kSeatTurnFrame, other)) << "the tests find a mark by its colour";
+        }
+        // The dealer's mark is red: little green and blue, and no colour of the other marks
+        EXPECT_LT(kDealerMark.g, kTurnMark.g / 2);
+        EXPECT_LT(kDealerMark.b, kTurnMark.b);
+        for (const Color& other : {kTurnMark, kPendingFrame, kLastDiscardMark, kDrawnTileMark, kCallingFrame, kClaimedEdge, kClaimHighlight, kDeclareMark, kKeepsWaitingMark, kAdvisedFrame, kVeil,
+                                   kTileShadow, kZonePlate, kSeatPlate, kSeatTurnFrame}) {
+            EXPECT_FALSE(SameColor(kDealerMark, other));
+        }
+        EXPECT_TRUE(SameColor(kSeatPlate, PaletteColor("hudPanel")));
     }
 
 }  // namespace BECore::Mahjong::Tests

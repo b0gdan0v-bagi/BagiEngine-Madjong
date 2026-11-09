@@ -50,12 +50,7 @@ namespace BECore::Mahjong {
             return {};
         }
 
-        /// "plateName2": the variable of the plate at screen position `position`.
-        PoolString PlateVar(const char* base, int position) {
-            return PoolString::Intern(Format("{}{}", base, position));
-        }
-
-        /// "seatKind2": the variable of a seat.
+        /// "seatKind2": the variable of a seat, "plateName2": that of the plate at a screen position.
         PoolString SeatVar(const char* base, Seat seat) {
             return PoolString::Intern(Format("{}{}", base, seat));
         }
@@ -147,11 +142,11 @@ namespace BECore::Mahjong {
             const SeatPlateText& plate = plates[position];
             eastl::string wind = plate.wind;
             if (plate.dealer) {
-                wind += kDealerMarkText.data();
+                wind.append(kDealerMarkText.data(), kDealerMarkText.size());
             }
-            vars.Set(PlateVar("plateName", position), eastl::string_view(plate.name));
-            vars.Set(PlateVar("plateWind", position), eastl::string_view(wind));
-            vars.Set(PlateVar("plateScore", position), plate.score);
+            vars.Set(SeatVar("plateName", position), eastl::string_view(plate.name));
+            vars.Set(SeatVar("plateWind", position), eastl::string_view(wind));
+            vars.Set(SeatVar("plateScore", position), plate.score);
         }
     }
 

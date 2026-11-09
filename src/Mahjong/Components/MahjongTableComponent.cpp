@@ -538,8 +538,24 @@ namespace BECore::Mahjong {
         const Rect ring = Padded(_layout.zones.wall, plate);
         renderer.DrawFilledRect(ring.x, ring.y, ring.w, ring.h, kZonePlate);
 
-        if (const Seat turn = TurnSeat(session, hand); IsSeat(turn)) {
-            const Rect bounds = BoundsOf(_layout, SlotRole::HandTile, turn);
+        // The seat plates (public data only, so also under the cover, for a spectator and at the end of a hand): the base of each, on the
+        // plate of the seat whose turn it is the gold tint and frame, and on the dealer's (East of the hand shown: the same at the end of the
+        // match as in the hand) the bar of the dealer
+        const Seat turnSeat = TurnSeat(session, hand);
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            const Rect& box = _layout.zones.seatPlates[seat];
+            renderer.DrawFilledRect(box.x, box.y, box.w, box.h, kSeatPlate);
+            if (seat == turnSeat) {
+                renderer.DrawFilledRect(box.x, box.y, box.w, box.h, kTurnMark);
+                DrawFrame(renderer, box, kSeatTurnFrameWidth * unit, kSeatTurnFrame);
+            }
+            if (hand.SeatWind(seat) == Wind::East) {
+                renderer.DrawFilledRect(box.x, box.y, box.w, kDealerMarkHeight * unit, kDealerMark);
+            }
+        }
+
+        if (IsSeat(turnSeat)) {
+            const Rect bounds = BoundsOf(_layout, SlotRole::HandTile, turnSeat);
             if (bounds.w > 0.0f) {
                 const Rect marked = Padded(bounds, kActingMargin * unit);
                 renderer.DrawFilledRect(marked.x, marked.y, marked.w, marked.h, kTurnMark);

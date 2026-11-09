@@ -65,9 +65,10 @@ namespace BECore::Mahjong {
     /// The seat plates (the table paints them; the words on them are labels of the node `SeatPlates`): the base is the `hudPanel` colour
     /// (a test holds them equal), the plate of the seat whose turn it is gets the tint `kTurnMark` over it and a frame
     /// `kSeatTurnFrame` of `kSeatTurnFrameWidth` units on its border (the gold family), the dealer a bar `kDealerMark` of
-    /// `kDealerMarkHeight` units along the top edge: the one mark of the table that is neither gold nor a plate.
+    /// `kDealerMarkHeight` units along the top edge: the one mark of the table that is neither gold nor a plate. The frame has an alpha
+    /// of its own, so no other gold mark is drawn in its colour (the tests find a mark by colour).
     inline constexpr Color kSeatPlate{10, 30, 22, 170};
-    inline constexpr Color kSeatTurnFrame{255, 214, 80, 255};
+    inline constexpr Color kSeatTurnFrame{255, 214, 80, 240};
     inline constexpr float kSeatTurnFrameWidth = 4.0f;
     inline constexpr Color kDealerMark{200, 70, 60, 255};
     inline constexpr float kDealerMarkHeight = 6.0f;

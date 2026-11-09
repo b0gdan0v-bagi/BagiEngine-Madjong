@@ -291,10 +291,11 @@ namespace BECore::Mahjong::Tests {
 
     TEST(SeatPlatesTest, ThePlateColoursAreTheHudPanelTheGoldOfTheTurnAndADealerMarkThatIsNotGold) {
         EXPECT_TRUE(SameColor(kSeatPlate, PaletteColor("hudPanel")));
-        // The turn is gold: the frame has the colour of the other gold marks, the tint is the turn mark of the hand
-        EXPECT_TRUE(SameColor(kSeatTurnFrame, kClaimedEdge));
-        EXPECT_EQ(kSeatTurnFrame.a, 255);
-        EXPECT_TRUE(SameColor(Color{kTurnMark.r, kTurnMark.g, kTurnMark.b, kSeatTurnFrame.a}, kSeatTurnFrame));
+        // The turn is gold: the frame is the gold of the other marks (the same red, green and blue as the turn mark) with an alpha of its own
+        EXPECT_EQ(kSeatTurnFrame.r, kTurnMark.r);
+        EXPECT_EQ(kSeatTurnFrame.g, kTurnMark.g);
+        EXPECT_EQ(kSeatTurnFrame.b, kTurnMark.b);
+        EXPECT_GT(kSeatTurnFrame.a, kTurnMark.a);
         EXPECT_GT(kSeatTurnFrameWidth, 0.0f);
         // The dealer mark is a colour of its own, gold in none of the channels, and opaque
         EXPECT_FALSE(SameColor(Color{kDealerMark.r, kDealerMark.g, kDealerMark.b, kSeatTurnFrame.a}, kSeatTurnFrame));
