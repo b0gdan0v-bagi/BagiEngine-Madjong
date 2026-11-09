@@ -410,18 +410,27 @@
           </components>
         </node>
         <!--
-          The New game button (MahjongNewGame, opens Setup) in the top right corner of the window. A Screen canvas with a floor on its scale
-          (minScale 0.6: the 56 unit button is 33.6 px), so it is a touch target in any window; MahjongHudTest and MahjongTouchSizeTest check it on the
-          size matrix and that it covers no tile in a window without insets. With insets it lies nearer the table, as the HUD does. Hidden by the component while
-          HandOver is shown (that dim covers only the view, the button may lie on a bar). MatchOver and Setup are Screen canvases whose dim
-          covers the whole window, so the button stays under them.
+          The New game button (MahjongNewGame, opens Setup) in the top right corner of the window and the Rules button (MahjongRules, opens
+          the pages of the rules) 8 left of it (under it in a canvas of at most 440 units wide, where both do not fit in a row). A Screen canvas with a floor on its scale
+          (minScale 0.6: the 56 unit buttons are 33.6 px), so they are touch targets in any window; MahjongHudTest and MahjongTouchSizeTest check them on the
+          size matrix and that they cover no tile in a window without insets. With insets they lie nearer the table, as the HUD does. Hidden by the component while
+          HandOver or Rules is shown (that dim covers only the view, the buttons may lie on a bar). MatchOver and Setup are Screen canvases whose dim
+          covers the whole window, so the buttons stay under them.
         -->
         <node name="HudMenu" layer="10">
           <components>
             <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true">
               <elements>
                 <element type="UIButton" name="NewGame" anchor="TopRight" x="-8" y="8" width="176" height="56" text="{#hud.newGame}" fontSize="22" action="MahjongNewGame" color="45,75,120,255" />
+                <element type="UIButton" name="Rules" anchor="TopRight" x="-192" y="8" width="140" height="56" text="{#hud.rules}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongRules" color="45,75,120,255" />
               </elements>
+              <variants>
+                <variant when="maxWidth:440">
+                  <overrides>
+                    <set element="Rules" x="-8" y="72" width="176" />
+                  </overrides>
+                </variant>
+              </variants>
             </component>
           </components>
         </node>
@@ -668,6 +677,133 @@
                   </overrides>
                 </variant>
               </variants>
+            </component>
+          </components>
+        </node>
+        <!--
+          The rules screen: a modal canvas on the view of the table (a SceneView: a title, a pager, six lines of two rows, six rows of two
+          items or two rows of fourteen tile pictures are up to 588 units, and the text needs 900 units of width, which a Screen canvas would
+          not fit in a 480 px window at the user scale 1.5; it is text and pictures only, no touch target), shown by MahjongHudComponent exactly
+          while MahjongGame::IsRulesOpen() (the Rules button of HudMenu). The component publishes rulesTitle, rulesPager, rulesLine0..5 and
+          rulesItem0..11 from FormatRulesPage (Table/RulesText.h), sets the sprite of the pictures RulesTile0..27 (row r, tile c is r * 14 + c)
+          and shows exactly the elements the page has: a hidden element takes no room in a stack, so the plate needs no fixed block heights. The
+          plate is 588 units like HandOver (32 padding + the blocks of a page and 8 between them, PageHeight in RulesText.h; a page that does not
+          fit is split in two) and lies 40 units above the middle so that it ends clear of the bar RulesAction below it. The buttons are not in
+          this canvas for the reason of HandOver: a control of a SceneView canvas is only 24 px high in the smallest window.
+        -->
+        <node name="Rules" layer="35">
+          <components>
+            <component type="UICanvasComponent" space="SceneView" useSafeArea="true" modal="true" visible="false">
+              <elements>
+                <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
+                <element type="UIStack" name="Plate" anchor="Center" y="-40" width="94%" maxWidth="960" height="588" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
+                  <children>
+                    <element type="UILabel" name="Title" height="48" text="{rulesTitle}" fontSize="28" overflow="AutoFit" minFontSize="18" align="Center" verticalAlign="Center" color="58,66,92,255" />
+                    <element type="UILabel" name="Pager" height="28" text="{rulesPager}" fontSize="18" align="Center" verticalAlign="Center" textColor="190,196,190,255" />
+                    <element type="UILabel" name="RulesLine0" visible="false" height="44" text="{rulesLine0}" fontSize="18" />
+                    <element type="UILabel" name="RulesLine1" visible="false" height="44" text="{rulesLine1}" fontSize="18" />
+                    <element type="UILabel" name="RulesLine2" visible="false" height="44" text="{rulesLine2}" fontSize="18" />
+                    <element type="UILabel" name="RulesLine3" visible="false" height="44" text="{rulesLine3}" fontSize="18" />
+                    <element type="UILabel" name="RulesLine4" visible="false" height="44" text="{rulesLine4}" fontSize="18" />
+                    <element type="UILabel" name="RulesLine5" visible="false" height="44" text="{rulesLine5}" fontSize="18" />
+                    <element type="UIStack" name="RulesTileRow0" visible="false" height="48" direction="Horizontal" spacing="4">
+                      <children>
+                        <element type="UIImage" name="RulesTile0" visible="false" width="36" height="48" />
+                        <element type="UIImage" name="RulesTile1" visible="false" width="36" height="48" />
+                        <element type="UIImage" name="RulesTile2" visible="false" width="36" height="48" />
+                        <element type="UIImage" name="RulesTile3" visible="false" width="36" height="48" />
+                        <element type="UIImage" name="RulesTile4" visible="false" width="36" height="48" />
+                        <element type="UIImage" name="RulesTile5" visible="false" width="36" height="48" />
+                        <element type="UIImage" name="RulesTile6" visible="false" width="36" height="48" />
+                        <element type="UIImage" name="RulesTile7" visible="false" width="36" height="48" />
+                        <element type="UIImage" name="RulesTile8" visible="false" width="36" height="48" />
+                        <element type="UIImage" name="RulesTile9" visible="false" width="36" height="48" />
+                        <element type="UIImage" name="RulesTile10" visible="false" width="36" height="48" />
+                        <element type="UIImage" name="RulesTile11" visible="false" width="36" height="48" />
+                        <element type="UIImage" name="RulesTile12" visible="false" width="36" height="48" />
+                        <element type="UIImage" name="RulesTile13" visible="false" width="36" height="48" />
+                      </children>
+                    </element>
+                    <element type="UIStack" name="RulesTileRow1" visible="false" height="48" direction="Horizontal" spacing="4">
+                      <children>
+                        <element type="UIImage" name="RulesTile14" visible="false" width="36" height="48" />
+                        <element type="UIImage" name="RulesTile15" visible="false" width="36" height="48" />
+                        <element type="UIImage" name="RulesTile16" visible="false" width="36" height="48" />
+                        <element type="UIImage" name="RulesTile17" visible="false" width="36" height="48" />
+                        <element type="UIImage" name="RulesTile18" visible="false" width="36" height="48" />
+                        <element type="UIImage" name="RulesTile19" visible="false" width="36" height="48" />
+                        <element type="UIImage" name="RulesTile20" visible="false" width="36" height="48" />
+                        <element type="UIImage" name="RulesTile21" visible="false" width="36" height="48" />
+                        <element type="UIImage" name="RulesTile22" visible="false" width="36" height="48" />
+                        <element type="UIImage" name="RulesTile23" visible="false" width="36" height="48" />
+                        <element type="UIImage" name="RulesTile24" visible="false" width="36" height="48" />
+                        <element type="UIImage" name="RulesTile25" visible="false" width="36" height="48" />
+                        <element type="UIImage" name="RulesTile26" visible="false" width="36" height="48" />
+                        <element type="UIImage" name="RulesTile27" visible="false" width="36" height="48" />
+                      </children>
+                    </element>
+                    <element type="UIStack" name="RulesItemRow0" visible="false" height="28" direction="Horizontal" spacing="4">
+                      <children>
+                        <element type="UILabel" name="RulesItem0" visible="false" width="49%" height="28" text="{rulesItem0}" fontSize="18" />
+                        <element type="UILabel" name="RulesItem1" visible="false" width="49%" height="28" text="{rulesItem1}" fontSize="18" />
+                      </children>
+                    </element>
+                    <element type="UIStack" name="RulesItemRow1" visible="false" height="28" direction="Horizontal" spacing="4">
+                      <children>
+                        <element type="UILabel" name="RulesItem2" visible="false" width="49%" height="28" text="{rulesItem2}" fontSize="18" />
+                        <element type="UILabel" name="RulesItem3" visible="false" width="49%" height="28" text="{rulesItem3}" fontSize="18" />
+                      </children>
+                    </element>
+                    <element type="UIStack" name="RulesItemRow2" visible="false" height="28" direction="Horizontal" spacing="4">
+                      <children>
+                        <element type="UILabel" name="RulesItem4" visible="false" width="49%" height="28" text="{rulesItem4}" fontSize="18" />
+                        <element type="UILabel" name="RulesItem5" visible="false" width="49%" height="28" text="{rulesItem5}" fontSize="18" />
+                      </children>
+                    </element>
+                    <element type="UIStack" name="RulesItemRow3" visible="false" height="28" direction="Horizontal" spacing="4">
+                      <children>
+                        <element type="UILabel" name="RulesItem6" visible="false" width="49%" height="28" text="{rulesItem6}" fontSize="18" />
+                        <element type="UILabel" name="RulesItem7" visible="false" width="49%" height="28" text="{rulesItem7}" fontSize="18" />
+                      </children>
+                    </element>
+                    <element type="UIStack" name="RulesItemRow4" visible="false" height="28" direction="Horizontal" spacing="4">
+                      <children>
+                        <element type="UILabel" name="RulesItem8" visible="false" width="49%" height="28" text="{rulesItem8}" fontSize="18" />
+                        <element type="UILabel" name="RulesItem9" visible="false" width="49%" height="28" text="{rulesItem9}" fontSize="18" />
+                      </children>
+                    </element>
+                    <element type="UIStack" name="RulesItemRow5" visible="false" height="28" direction="Horizontal" spacing="4">
+                      <children>
+                        <element type="UILabel" name="RulesItem10" visible="false" width="49%" height="28" text="{rulesItem10}" fontSize="18" />
+                        <element type="UILabel" name="RulesItem11" visible="false" width="49%" height="28" text="{rulesItem11}" fontSize="18" />
+                      </children>
+                    </element>
+                  </children>
+                </element>
+              </elements>
+            </component>
+          </components>
+        </node>
+        <!--
+          The buttons of the rules screen (MahjongRulesBack, MahjongRulesNext, MahjongRulesClose): an action bar at the bottom of the window,
+          a Screen canvas with a floor on its scale (minScale 0.6: the 64 unit buttons are 38.4 px), so they are touch targets in any window,
+          with the anatomy and the reasons of HandOverAction (match 1, not modal: Rules is, and takes every click that the bar does not). Shown
+          and hidden by MahjongHudComponent together with Rules, which also hides Back on the first page and Next on the last (the others
+          widen: a hidden element takes no room in a stack). Back and Close are neutral, Next confirms (primary).
+        -->
+        <node name="RulesAction" layer="36">
+          <components>
+            <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="1" minScale="0.6" useSafeArea="true" visible="false">
+              <elements>
+                <element type="UIElement" name="Bar" anchor="Bottom" width="100%" height="80" color="36,40,52,255" blocksInput="true" />
+                <element type="UIStack" name="Buttons" anchor="Bottom" y="-8" width="94%" maxWidth="640" height="64" direction="Horizontal" spacing="8" crossAlign="Stretch">
+                  <children>
+                    <element type="UIButton" name="RulesBack" flex="1" height="64" text="{#rules.back}" fontSize="28" overflow="AutoFit" minFontSize="18" action="MahjongRulesBack" color="70,70,100,255" />
+                    <element type="UIButton" name="RulesNext" flex="1" height="64" text="{#rules.next}" fontSize="28" overflow="AutoFit" minFontSize="18" action="MahjongRulesNext" color="40,110,60,255" />
+                    <element type="UIButton" name="RulesClose" flex="1" height="64" text="{#rules.close}" fontSize="28" overflow="AutoFit" minFontSize="18" action="MahjongRulesClose" color="70,70,100,255" />
+                  </children>
+                </element>
+              </elements>
             </component>
           </components>
         </node>

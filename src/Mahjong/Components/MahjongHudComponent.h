@@ -49,6 +49,15 @@ namespace BECore::Mahjong {
      * finished the canvas `MatchOver` is shown with `matchOverHeadline` and `standing0` .. `3` (`FormatStandings`); its button
      * `MahjongNewGame` opens `Setup`. Both are published when the version of the session or of the string table moved and read only public data (the hands
      * are open once the hand is over).
+     *
+     * **The rules screen.** `MahjongGame::IsRulesOpen()` (the HUD button `Rules`, action `MahjongRules`) decides whether the modal canvas
+     * `Rules` (text and tile pictures only) and its action bar `RulesAction` are shown; `HudMenu` is hidden meanwhile. The page number is
+     * this component's (`CurrentRulesPage()`, 0 when the screen opens); `MahjongRulesNext` / `MahjongRulesBack` turn the pages (clamped) and
+     * `MahjongRulesClose` closes the screen, the last three ignored while it is not open. The page is `FormatRulesPage`
+     * (`Table/RulesText.h`): `rulesTitle`, `rulesPager`, `rulesLine0` .. `5`, `rulesItem0` .. `11` and the pictured tiles `RulesTile0` ..
+     * (`kRulesMaxRowTiles` per row); the elements `RulesLineN`, `RulesItemRowR`, `RulesItemN`, `RulesTileRowR`, `RulesTileN` are visible exactly
+     * when the page has them, `RulesBack` is hidden on the first page and `RulesNext` on the last. It is set when the page, the open state or
+     * the version of `UIStrings` moved (a language switch rewords the open page); it reads and changes no state of the table.
      */
     class MahjongHudComponent : public IComponent {
         BE_CLASS(MahjongHudComponent)
@@ -58,6 +67,11 @@ namespace BECore::Mahjong {
 
         void OnAttached() override;
         void OnDraw() override;
+
+        /// The page of the rules the screen shows (0 while the rules are closed).
+        [[nodiscard]] int CurrentRulesPage() const noexcept {
+            return _rulesPage;
+        }
 
         /// The seats the panel shows and `MahjongStart` would begin a match with.
         [[nodiscard]] const SeatSetup& PendingSeats() const noexcept {
@@ -94,6 +108,12 @@ namespace BECore::Mahjong {
         void ShowHandOver(bool shown);
         /// Makes exactly the first `count` line labels of the score table visible.
         void ShowScoreLines(int count);
+        /// Shows or hides the rules screen (`Rules` and its bar `RulesAction`) after `MahjongGame::IsRulesOpen()`, and puts the page into
+        /// variables and elements when the page, the open state or the language changed.
+        void PublishRules(const MahjongGame* game);
+        void PublishRulesPage();
+        /// `HudMenu` (New game, Rules) is shown exactly while neither the score table nor the rules are up.
+        void ShowHudMenu();
 
         SeatSetup _pending = kDefaultSeatSetup;
         int _pendingHands = kFullMatchHands;
@@ -110,6 +130,10 @@ namespace BECore::Mahjong {
         uint64_t _endScreenVersion = 0;
         uint64_t _endScreenStrings = 0;
         bool _endScreenPublished = false;
+        int _rulesPage = 0;  // the page the rules show; 0 whenever they are closed
+        bool _rulesShown = false;
+        int _rulesPublishedPage = -1;  // the page and the language the elements show
+        uint64_t _rulesStrings = 0;
         static MahjongHudComponent* s_active;
     };
 

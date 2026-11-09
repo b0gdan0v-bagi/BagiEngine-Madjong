@@ -126,8 +126,12 @@
         <string key="hud.handOver" text="Hand over"/>
         <string key="hud.matchOver" text="Match over"/>
         <string key="hud.newGame" text="New game"/>
+        <string key="hud.rules" text="Rules"/>
         <string key="matchover.newGame" text="New game"/>
         <string key="rules.pager" text="Page {n} of {total}"/>
+        <string key="rules.back" text="Back"/>
+        <string key="rules.next" text="Next"/>
+        <string key="rules.close" text="Close"/>
         <string key="rules.tiles.title" text="Tiles"/>
         <string key="rules.tiles.line1" text="The set has {tiles} tiles: three suits ({dots}, {bamboo}, {characters}) running from one to {ranks}, four winds and three dragons, {copies} copies of each."/>
         <string key="rules.tiles.line2" text="Ones and nines are terminals, twos to eights are simples, winds and dragons are honours. Terminals and honours are worth more in scoring."/>
@@ -192,7 +196,7 @@
         <string key="rules.payments.title" text="Payments"/>
         <string key="rules.payments.line1" text="Every loser pays the winner the winner's score, even a loser whose own hand scored more."/>
         <string key="rules.payments.line2" text="The losers also settle among themselves: of two losers the one with the lower score pays the other the difference; equal scores pay nothing."/>
-        <string key="rules.payments.line3" text="Every payment of East, paid or received, is {eastFactor} times larger: that holds both for what East pays and for what East receives."/>
+        <string key="rules.payments.line3" text="Every payment of East, paid or received, is {eastFactor} times larger."/>
         <string key="rules.payments.line4" text="A drawn hand pays nothing. The points of the table always add up to the same total."/>
         <string key="rules.match.title" text="The match"/>
         <string key="rules.match.line1" text="Everyone starts with {startScore} points. A match is {fullHands} hands, or {shortHands} in the short game, chosen when you start."/>
@@ -344,8 +348,12 @@
         <string key="hud.handOver" text="Раздача окончена"/>
         <string key="hud.matchOver" text="Матч окончен"/>
         <string key="hud.newGame" text="Новая игра"/>
+        <string key="hud.rules" text="Правила"/>
         <string key="matchover.newGame" text="Новая игра"/>
         <string key="rules.pager" text="Страница {n} из {total}"/>
+        <string key="rules.back" text="Назад"/>
+        <string key="rules.next" text="Далее"/>
+        <string key="rules.close" text="Закрыть"/>
         <string key="rules.tiles.title" text="Кости"/>
         <string key="rules.tiles.line1" text="В наборе {tiles} костей: три масти ({dots}, {bamboo}, {characters}) от единицы до {ranks}, четыре ветра и три дракона, по {copies} копии каждой."/>
         <string key="rules.tiles.line2" text="Единицы и девятки — крайние кости, от двойки до восьмёрки — простые, ветра и драконы — почётные. Крайние и почётные ценятся выше."/>
@@ -400,17 +408,17 @@
         <string key="rules.winner.title" text="Удвоения победителя"/>
         <string key="rules.winner.line1" text="Только победитель получает эти удвоения, сверх общих для всех. У каждого указано значение."/>
         <string key="rules.winner.line2" text="Без очков: рука даёт только {winPoints} за победу, поэтому кость из стены, одиночное ожидание, пун или пара с очками это портят."/>
-        <string key="rules.winner.line3" text="Очевидно последняя: остальные копии кости ({obviousCopies}) лежат открыто. Запасная кость: победа на замене после конга. Последняя: вы взяли последнюю кость стены и выиграли."/>
+        <string key="rules.winner.line3" text="Очевидно последняя кость: открыты остальные её копии ({obviousCopies}). Запасная кость: победа на замене после конга. Последняя кость: выигрыш на последней кости стены."/>
         <string key="rules.winner.line4" text="Полностью закрытая: нет открытых наборов. Несколько конгов: не меньше {severalKongs}, но не все четыре. Заявка с первого хода: объявлена первым сбросом."/>
         <string key="rules.limit.title" text="Лимитные руки"/>
         <string key="rules.limit.line1" text="Лимитная рука даёт лимит, {limit} очков, сколько бы она ни набрала, и больше ничего не считается. Вот эти руки:"/>
         <string key="rules.limit.line2" text="Четыре пуна или конга: тайные пуны одной масти, только почётные, только крайние, всё зелёное; большие три дракона, большие четыре ветра, четыре конга."/>
         <string key="rules.limit.line3" text="Семь пар почётных или одной масти. Сироты: по кости каждого из {orphans} видов крайних и почётных и ещё одна из них."/>
-        <string key="rules.limit.line4" text="Две зависят от последней кости: победа на последней кости стены, если она взята самим и это один круг, или на запасной кости, если это пять кругов."/>
+        <string key="rules.limit.line4" text="Две зависят от последней кости: победа на последней кости стены, если вы взяли её сами и это один круг, или на запасной кости, если это пять кругов."/>
         <string key="rules.payments.title" text="Расчёт"/>
         <string key="rules.payments.line1" text="Каждый проигравший платит победителю счёт победителя, даже если его собственная рука набрала больше."/>
         <string key="rules.payments.line2" text="Проигравшие рассчитываются и между собой: из двух проигравших тот, у кого счёт ниже, платит другому разницу; при равных счетах никто не платит."/>
-        <string key="rules.payments.line3" text="Каждая выплата Востока, отданная или полученная, умножается на {eastFactor}: это верно и для того, что Восток платит, и для того, что получает."/>
+        <string key="rules.payments.line3" text="Каждая выплата Востока, отданная или полученная, умножается на {eastFactor}."/>
         <string key="rules.payments.line4" text="Ничья ничего не платит. Сумма очков за столом всегда остаётся одной и той же."/>
         <string key="rules.match.title" text="Матч"/>
         <string key="rules.match.line1" text="Все начинают с {startScore} очков. Матч длится {fullHands} раздач, а в коротком варианте {shortHands}; выбирается при начале игры."/>

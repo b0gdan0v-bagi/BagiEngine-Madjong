@@ -59,6 +59,7 @@ namespace BECore::Mahjong {
         const MatchStatus started = _session.StartMatch(_settings, seed, _seats);
         if (started.has_value()) {
             CloseSetup();
+            CloseRules();
         }
         return started;
     }

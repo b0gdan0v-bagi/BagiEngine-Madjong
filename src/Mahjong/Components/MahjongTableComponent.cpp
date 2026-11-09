@@ -114,9 +114,9 @@ namespace BECore::Mahjong {
             return 0;
         }
 
-        /// Whether the table is played now: it is not played while the seat choice (`Setup`) is open over it.
+        /// Whether the table is played now: it is not played while the seat choice (`Setup`) or the rules are open over it.
         bool TableIsLive(const MahjongGame& game) {
-            return !game.IsSetupOpen();
+            return !game.IsTablePaused();
         }
 
         /// Whether a person is to act and may: the table is being played, the actor is a person and no cover is up.

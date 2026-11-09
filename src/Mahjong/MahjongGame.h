@@ -24,7 +24,7 @@ namespace BECore::Mahjong {
      * which only ever see the seed (`StartMatch(seed)` is how a test or a control API replays a match). A match is begun with
      * `GetSettings()` (the defaults, `MahjongSettings{}`, until `SetSettings`) and the seat setup `GetSeats()` (`kDefaultSeatSetup`:
      * seat 0 a person, the others computers); both are kept across `Reset()`. `AsControllable()` hands out the control adapter, which
-     * drives the match through the session. The seat choice of a new game is the panel `Setup` of the scene (`IsSetupOpen`). The language
+     * drives the match through the session. The seat choice of a new game is the panel `Setup` of the scene (`IsSetupOpen`), the pages of the rules are `IsRulesOpen`. The language
      * of the words (`GetLanguage`, `kDefaultLanguage`) is kept for the session and applied to `CoreManager::GetUIStrings()` at every start.
      * `HintsOn()` is the switch of the hints (default on, kept for the session, changed in `Setup`). Every match begun through the
      * session is written down by the `MatchLogWriter` the game owns (`GetMatchLog()`); a match started through the non-const `GetMatch()`
@@ -103,6 +103,24 @@ namespace BECore::Mahjong {
             _setupOpen = false;
         }
 
+        /// Whether the rules screen (the modal pages `Rules` of the scene, `Table/RulesText.h`) is open. The HUD button `Rules` opens it; a
+        /// new match (`StartMatch`, a control `reset`) and every control action close it. While it is open the table is not played, like
+        /// under `Setup`.
+        bool IsRulesOpen() const {
+            return _rulesOpen;
+        }
+        void OpenRules() {
+            _rulesOpen = true;
+        }
+        void CloseRules() {
+            _rulesOpen = false;
+        }
+
+        /// Whether a modal panel (`Setup` or the rules) covers the table: no click is taken, no computer steps, no hint is shown.
+        bool IsTablePaused() const {
+            return _setupOpen || _rulesOpen;
+        }
+
         /// The language of the words, an id of `config/UIStrings.xml`. Kept across `Reset()` and `StartMatch`.
         PoolString GetLanguage() const {
             return _language;
@@ -131,6 +149,7 @@ namespace BECore::Mahjong {
         MahjongSettings _settings;
         SeatSetup _seats = kDefaultSeatSetup;
         bool _setupOpen = false;
+        bool _rulesOpen = false;
         bool _hintsOn = true;
         PoolString _language = PoolString::Intern(kDefaultLanguage);
         MatchLogWriter _log;            // before _session: the session reports to it, so it goes last

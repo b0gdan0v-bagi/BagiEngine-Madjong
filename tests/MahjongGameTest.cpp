@@ -235,4 +235,51 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(game->GetLanguage(), "en"_intern);
     }
 
+    TEST_F(MahjongGameTest, TheRulesScreenIsClosedByDefaultAndOpensAndClosesWithItsFlag) {
+        MahjongGame fresh;
+        EXPECT_FALSE(fresh.IsRulesOpen());
+        EXPECT_FALSE(fresh.IsTablePaused());
+
+        fresh.OpenRules();
+        EXPECT_TRUE(fresh.IsRulesOpen());
+        fresh.CloseRules();
+        EXPECT_FALSE(fresh.IsRulesOpen());
+    }
+
+    TEST_F(MahjongGameTest, TheTableIsPausedWhileEitherPanelIsOpen) {
+        MahjongGame fresh;
+
+        fresh.OpenSetup();
+        EXPECT_TRUE(fresh.IsTablePaused());
+        EXPECT_FALSE(fresh.IsRulesOpen());
+        fresh.CloseSetup();
+        EXPECT_FALSE(fresh.IsTablePaused());
+
+        fresh.OpenRules();
+        EXPECT_TRUE(fresh.IsTablePaused());
+        EXPECT_FALSE(fresh.IsSetupOpen());
+        fresh.OpenSetup();
+        fresh.CloseRules();
+        EXPECT_TRUE(fresh.IsTablePaused()) << "the seat choice still covers the table";
+        fresh.CloseSetup();
+        EXPECT_FALSE(fresh.IsTablePaused());
+    }
+
+    TEST_F(MahjongGameTest, AMatchThatBeganClosesTheRulesAndARefusedStartDoesNot) {
+        MahjongGame* game = MahjongGame::GetActive();
+        ASSERT_NE(game, nullptr);
+        game->OpenRules();
+
+        MahjongSettings broken = game->GetSettings();
+        broken.handsPerMatch = 3;  // not a multiple of four
+        const MahjongSettings playable = game->GetSettings();
+        game->SetSettings(broken);
+        EXPECT_FALSE(game->StartMatch(kSeed).has_value());
+        EXPECT_TRUE(game->IsRulesOpen()) << "nothing began";
+
+        game->SetSettings(playable);
+        ASSERT_TRUE(game->StartMatch(kSeed).has_value());
+        EXPECT_FALSE(game->IsRulesOpen());
+    }
+
 }  // namespace BECore::Mahjong::Tests

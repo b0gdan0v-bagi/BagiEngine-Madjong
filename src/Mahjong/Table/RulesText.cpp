@@ -146,7 +146,7 @@ namespace BECore::Mahjong {
         }
 
         /// The kinds of `first` to `last` as items, each with the doubles `doublesOf` says; the kinds are walked in the order of the enum, so
-        /// a kind added between the two shows up by itself (and `doublesOf` must know it: its `default` asserts).
+        /// a kind added between the two shows up by itself (and `doublesOf` must know it: the callers with a switch assert in its `default`).
         template <typename DoublesOf>
         Items DoublesItems(const UIStrings& strings, ScoreKind first, ScoreKind last, DoublesOf doublesOf) {
             Items items;
