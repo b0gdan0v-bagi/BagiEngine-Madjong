@@ -21,20 +21,6 @@ namespace BECore::Mahjong::Arena {
             }
         }
 
-        eastl::string ValidateConfig(const ArenaConfig& config) {
-            if (config.focus.empty()) {
-                return "no focus player to play";
-            }
-            if (config.count < 1) {
-                return Format("the number of seeds is {}, it must be at least 1", config.count);
-            }
-            const uint64_t last = static_cast<uint64_t>(config.first) + static_cast<uint64_t>(config.count) - 1;
-            if (last > std::numeric_limits<uint32_t>::max()) {
-                return Format("the seeds {} .. {} run past the largest seed", config.first, last);
-            }
-            return {};
-        }
-
         std::expected<FocusResult, eastl::string> PlayFocus(const ArenaConfig& config, const ArenaPlayer& focus) {
             FocusResult result;
             result.player = focus;
@@ -72,8 +58,22 @@ namespace BECore::Mahjong::Arena {
 
     }  // namespace
 
+    eastl::string ValidateArenaConfig(const ArenaConfig& config) {
+        if (config.focus.empty()) {
+            return "no focus player to play";
+        }
+        if (config.count < 1) {
+            return Format("the number of seeds is {}, it must be at least 1", config.count);
+        }
+        const uint64_t last = static_cast<uint64_t>(config.first) + static_cast<uint64_t>(config.count) - 1;
+        if (last > std::numeric_limits<uint32_t>::max()) {
+            return Format("the seeds {} .. {} run past the largest seed", config.first, last);
+        }
+        return {};
+    }
+
     std::expected<ArenaResult, eastl::string> RunArena(const ArenaConfig& config) {
-        const eastl::string problem = ValidateConfig(config);
+        const eastl::string problem = ValidateArenaConfig(config);
         if (!problem.empty()) {
             return std::unexpected(problem);
         }

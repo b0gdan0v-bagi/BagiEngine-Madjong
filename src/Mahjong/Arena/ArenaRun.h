@@ -78,6 +78,11 @@ namespace BECore::Mahjong::Arena {
         eastl::vector<FocusResult> focus;
     };
 
+    /// Whether `config` can be played: empty when it can, else the text that says why not (no focus player, fewer than one seed, a range
+    /// that runs past the largest seed). `RunArena` refuses a config with this text; a front end asks first to tell a bad argument from
+    /// a refused action.
+    [[nodiscard]] eastl::string ValidateArenaConfig(const ArenaConfig& config);
+
     /**
      * @brief Plays the config and returns the totals and the per-seed rows of every focus player.
      *
