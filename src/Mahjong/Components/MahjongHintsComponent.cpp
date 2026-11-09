@@ -65,7 +65,7 @@ namespace BECore::Mahjong {
 
     MahjongHintsComponent::Key MahjongHintsComponent::KeyOf(const MahjongGame* game) {
         Key key;
-        key.applies = game != nullptr && HintsApply(game->HintsOn(), game->IsSetupOpen(), game->GetSession());
+        key.applies = game != nullptr && HintsApply(game->HintsOn(), game->IsTablePaused(), game->GetSession());
         if (key.applies) {
             key.viewer = game->GetSession().Viewer();
             key.version = game->GetSession().Version();

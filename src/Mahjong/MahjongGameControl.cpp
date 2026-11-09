@@ -522,6 +522,7 @@ namespace BECore::Mahjong {
 
         session.RunComputers();
         _game.CloseSetup();  // a controller that plays is in the game, not in its seat choice
+        _game.CloseRules();  // nor in the pages of the rules
         outcome["phase"] = MakeJsonString(PhaseName(session.GetPhase()));
         outcome["version"] = session.Version();
         return outcome;

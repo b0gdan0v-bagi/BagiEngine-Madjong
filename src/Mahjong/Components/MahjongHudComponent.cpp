@@ -3,12 +3,15 @@
 #include <BECore/GameManager/CoreManager.h>
 #include <BECore/Scene/Scene.h>
 #include <BECore/UI/UICanvasComponent.h>
+#include <BECore/UI/UIImage.h>
 #include <Events/InputEvents.h>
 #include <Generated/MahjongHudComponent.gen.hpp>
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/Table/MoveText.h>
+#include <Mahjong/Table/RulesText.h>
 #include <Mahjong/Table/ScoreText.h>
 #include <Mahjong/Table/SeatName.h>
+#include <Mahjong/Table/TileAtlas.h>
 
 namespace BECore::Mahjong {
 
@@ -22,12 +25,31 @@ namespace BECore::Mahjong {
         static_assert(kFullMatchHands == 16 && kShortMatchHands == 8, "the ids and the buttons `Hands16` / `Hands8` of the scene follow these numbers");
         constexpr eastl::string_view kPersonId = "person";
         constexpr eastl::string_view kComputerId = "computer";
-        constexpr eastl::string_view kTurnMark = ">";
+        constexpr eastl::string_view kTurnMarkText = ">";
         constexpr eastl::string_view kDealerMark = "*";
         constexpr eastl::string_view kNewGameAction = "MahjongNewGame";
         constexpr eastl::string_view kStartAction = "MahjongStart";
         constexpr eastl::string_view kNextHandAction = "MahjongNextHand";
         constexpr eastl::string_view kSetLanguageAction = "MahjongSetLanguage";
+        constexpr eastl::string_view kRulesAction = "MahjongRules";
+        constexpr eastl::string_view kRulesNextAction = "MahjongRulesNext";
+        constexpr eastl::string_view kRulesBackAction = "MahjongRulesBack";
+        constexpr eastl::string_view kRulesCloseAction = "MahjongRulesClose";
+
+        /// "RulesLine3": the element or variable `base` of number `index`.
+        PoolString NumberedName(const char* base, int index) {
+            return PoolString::Intern(Format("{}{}", base, index));
+        }
+
+        /// The canvas of the node `nodeName`; null when there is none.
+        IntrusivePtr<UICanvasComponent> CanvasOf(Scene& scene, PoolString nodeName) {
+            for (const auto& child : scene.GetRootNode().GetChildren()) {
+                if (child->GetName() == nodeName) {
+                    return child->GetComponent<UICanvasComponent>();
+                }
+            }
+            return {};
+        }
 
         /// "seatName2": the variable of a seat.
         PoolString SeatVar(const char* base, Seat seat) {
@@ -91,6 +113,7 @@ namespace BECore::Mahjong {
         PublishNumbers(game);
         PublishSetup(game);
         PublishEndScreens(game);
+        PublishRules(game);
     }
 
     void MahjongHudComponent::PublishNumbers(const MahjongGame* game) {
@@ -135,7 +158,7 @@ namespace BECore::Mahjong {
             vars.Set(SeatVar("seatName", seat), eastl::string_view(SeatLabel(strings, seat, wind, session.Seats())));
             vars.Set(SeatVar("seatWind", seat), eastl::string_view(WindName(strings, wind)));
             vars.Set(SeatVar("seatScore", seat), match.Scores()[seat]);
-            vars.Set(SeatVar("seatMark", seat), playing && hand.CurrentSeat() == seat ? kTurnMark : eastl::string_view());
+            vars.Set(SeatVar("seatMark", seat), playing && hand.CurrentSeat() == seat ? kTurnMarkText : eastl::string_view());
             vars.Set(SeatVar("seatDealer", seat), match.East() == seat ? kDealerMark : eastl::string_view());
         }
     }
@@ -219,7 +242,77 @@ namespace BECore::Mahjong {
         UICanvasComponent::SetVisibleByName(scene, "HandOverAction"_intern, shown);
         // The New game button lies on the bar of a narrow window, outside the view that the dim of the score table covers: it would look
         // clickable. The standings (MatchOver) are a Screen canvas whose dim covers the whole window, so they need nothing.
-        UICanvasComponent::SetVisibleByName(scene, "HudMenu"_intern, !shown);
+        ShowHudMenu();
+    }
+
+    void MahjongHudComponent::ShowHudMenu() {
+        UICanvasComponent::SetVisibleByName(GetScene(), "HudMenu"_intern, !_handOverShown && !_rulesShown);
+    }
+
+    void MahjongHudComponent::PublishRulesPage() {
+        Scene& scene = GetScene();
+        const UIStrings& strings = CoreManager::GetUIStrings();
+        const RulesPage page = FormatRulesPage(strings, _rulesPage);
+        UIVars& vars = CoreManager::GetUIVars();
+        vars.Set("rulesTitle"_intern, eastl::string_view(page.title));
+        vars.Set("rulesPager"_intern, eastl::string_view(RulesPagerText(strings, _rulesPage)));
+        for (int i = 0; i < kRulesMaxLines; ++i) {
+            const bool has = i < static_cast<int>(page.lines.size());
+            vars.Set(NumberedName("rulesLine", i), has ? eastl::string_view(page.lines[static_cast<size_t>(i)]) : eastl::string_view());
+            UICanvasComponent::SetElementVisibleByName(scene, NumberedName("RulesLine", i), has);
+        }
+        for (int i = 0; i < kRulesMaxItems; ++i) {
+            const bool has = i < static_cast<int>(page.items.size());
+            vars.Set(NumberedName("rulesItem", i), has ? eastl::string_view(page.items[static_cast<size_t>(i)]) : eastl::string_view());
+            UICanvasComponent::SetElementVisibleByName(scene, NumberedName("RulesItem", i), has);
+        }
+        for (int row = 0; row < kRulesMaxItems / kRulesItemColumns; ++row) {
+            UICanvasComponent::SetElementVisibleByName(scene, NumberedName("RulesItemRow", row), row * kRulesItemColumns < static_cast<int>(page.items.size()));
+        }
+        const IntrusivePtr<UICanvasComponent> rulesCanvas = CanvasOf(scene, "Rules"_intern);
+        ASSERT(rulesCanvas != nullptr, "PublishRulesPage: the node Rules has no canvas");
+        for (int row = 0; row < kRulesMaxTileRows; ++row) {
+            const bool hasRow = row < static_cast<int>(page.tileRows.size());
+            const int count = hasRow ? static_cast<int>(page.tileRows[static_cast<size_t>(row)].size()) : 0;
+            UICanvasComponent::SetElementVisibleByName(scene, NumberedName("RulesTileRow", row), hasRow);
+            for (int column = 0; column < kRulesMaxRowTiles; ++column) {
+                const PoolString name = NumberedName("RulesTile", row * kRulesMaxRowTiles + column);
+                const bool has = column < count;
+                if (has) {
+                    UIElement* element = rulesCanvas ? rulesCanvas->GetRoot().FindByName(name) : nullptr;
+                    UIImage* image = element != nullptr ? element->Cast<UIImage>() : nullptr;
+                    ASSERT(image != nullptr, "PublishRulesPage: the scene file has no UIImage RulesTile<N> for a tile of the page");
+                    if (image != nullptr) {
+                        image->sprite = PoolString::Intern(SpriteName(page.tileRows[static_cast<size_t>(row)][static_cast<size_t>(column)]));
+                    }
+                }
+                UICanvasComponent::SetElementVisibleByName(scene, name, has);
+            }
+        }
+        UICanvasComponent::SetElementVisibleByName(scene, "RulesBack"_intern, _rulesPage > 0);
+        UICanvasComponent::SetElementVisibleByName(scene, "RulesNext"_intern, _rulesPage + 1 < RulesPageCount());
+    }
+
+    void MahjongHudComponent::PublishRules(const MahjongGame* game) {
+        const bool open = game != nullptr && game->IsRulesOpen();
+        if (!open) {
+            _rulesPage = 0;
+        }
+        if (open) {
+            const uint64_t stringsVersion = CoreManager::GetUIStrings().GetVersion();
+            if (!_rulesShown || _rulesPublishedPage != _rulesPage || _rulesStrings != stringsVersion) {
+                _rulesPublishedPage = _rulesPage;
+                _rulesStrings = stringsVersion;
+                PublishRulesPage();
+            }
+        }
+        if (open != _rulesShown) {
+            _rulesShown = open;
+            Scene& scene = GetScene();
+            UICanvasComponent::SetVisibleByName(scene, "Rules"_intern, open);
+            UICanvasComponent::SetVisibleByName(scene, "RulesAction"_intern, open);
+            ShowHudMenu();
+        }
     }
 
     void MahjongHudComponent::PublishMatchOver(const MahjongGame& game) {
@@ -269,6 +362,28 @@ namespace BECore::Mahjong {
         const eastl::string_view action = event.action.ToStringView();
         if (action == kNewGameAction) {
             game->OpenSetup();
+            return;
+        }
+        if (action == kRulesAction) {
+            // Under the dim of the seat choice the button cannot be pressed; an event that says otherwise is out of date
+            if (!game->IsSetupOpen()) {
+                if (!game->IsRulesOpen()) {
+                    _rulesPage = 0;  // the screen opens on its first page, whatever the order of the events
+                }
+                game->OpenRules();
+            }
+            return;
+        }
+        if (action == kRulesNextAction || action == kRulesBackAction || action == kRulesCloseAction) {
+            // The pages turn only while they are open: a click that arrives after a control action closed them is out of date
+            if (!game->IsRulesOpen()) {
+                return;
+            }
+            if (action == kRulesCloseAction) {
+                game->CloseRules();
+            } else {
+                _rulesPage = std::clamp(_rulesPage + (action == kRulesNextAction ? 1 : -1), 0, RulesPageCount() - 1);
+            }
             return;
         }
         if (action == kNextHandAction) {
