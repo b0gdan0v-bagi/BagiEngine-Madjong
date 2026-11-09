@@ -89,11 +89,20 @@ namespace BECore::Mahjong {
         int wallRemaining = 0;
     };
 
+    /// A seat plate (the seat's number, wind, dealer mark and score, at the side of the table where the seat sits): all four are of this
+    /// size, in design units. The places are in `TableLayout.cpp`, each with the things it stays clear of.
+    inline constexpr float kSeatPlateW = 152.0f;
+    inline constexpr float kSeatPlateH = 80.0f;
+
     /// The ground the component paints plates on, in view units: the block that holds each seat's discards (by seat, whatever the pile
-    /// holds) and the ring that holds the wall stacks. A zone holds its slots and overlaps no other zone and no hand, meld or bonus slot.
+    /// holds), the ring that holds the wall stacks and the plate of each seat (by seat, for the viewer at the bottom: it lies at the
+    /// screen position `SeatPosition(viewer, seat)`). A zone holds its slots and overlaps no other zone and no hand, meld or bonus slot;
+    /// a seat plate overlaps no slot, no plate under a zone (`kPlatePadding` past it) and no other seat plate, and keeps a grid unit
+    /// clear of the plates.
     struct TableZones {
         eastl::array<Rect, kSeatCount> discards{};
         Rect wall;
+        eastl::array<Rect, kSeatCount> seatPlates{};
     };
 
     /// The slots of the four seats and the wall: per seat the hand, the melds, the bonus tiles, then the pile, then the wall stacks.

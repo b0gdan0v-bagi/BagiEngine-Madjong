@@ -1,5 +1,7 @@
 #include "TableLayout.h"
 
+#include <Mahjong/Table/UiPalette.h>
+
 namespace BECore::Mahjong {
 
     namespace {
@@ -86,6 +88,19 @@ namespace BECore::Mahjong {
         constexpr float kWallRingX = Centered(kViewWidth, kWallRingW);
         constexpr float kWallRingY = (kTopDiscardY + kDiscardBlockH + kBottomDiscardY - kWallRingH) / 2.0f;
 
+        // The seat plates, by screen position (0 bottom, 1 right, 2 top, 3 left), each in the free ground next to its seat's discard block.
+        // Bottom: left of the bottom discard plate, above the viewer's bonus row. Right: above the right discard plate, below the move
+        // line of the HUD (which ends at y 172) and right of the `Hint` label (x 1028). Top: below the top seat's melds and the HUD's
+        // `Info`, left of the top discard plate. Left: above the left discard plate, clear of the left bonus column.
+        constexpr float kSeatPlateBottomX = 72.0f;
+        constexpr float kSeatPlateBottomY = 532.0f;
+        constexpr float kSeatPlateRightX = 1036.0f;
+        constexpr float kSeatPlateRightY = 184.0f;
+        constexpr float kSeatPlateTopX = 408.0f;
+        constexpr float kSeatPlateTopY = 96.0f;
+        constexpr float kSeatPlateLeftX = 96.0f;
+        constexpr float kSeatPlateLeftY = 184.0f;
+
         // The layout above must fit the zones it names: a change to a size that breaks it fails to compile.
         static_assert(kViewerRowX + kViewerHandSpan + kViewerRowGap + kViewerMeldCapacity <= kViewWidth - kEdge);
         static_assert(kSideMeldY + kSideMeldCapacity <= kViewHeight - kEdge);
@@ -97,6 +112,17 @@ namespace BECore::Mahjong {
         static_assert(kRightDiscardX > kWallRingX + kWallRingW);
         static_assert(kLeftDiscardX > kLeftBonusX + kOpponentBonusTileW);
         static_assert(kSideBonusCapacity <= kSideHandSpan);
+        // The seat plates keep clear of the plates under the discard blocks (a plate reaches `kPlatePadding` past its block) and of the
+        // tiles round them
+        static_assert(kSeatPlateBottomX + kSeatPlateW <= kDiscardBlockX - kPlatePadding);
+        static_assert(kSeatPlateBottomY + kSeatPlateH <= kViewerBonusY);
+        static_assert(kSeatPlateBottomX >= kLeftMeldX + kOpponentMeldTileW);
+        static_assert(kSeatPlateRightY + kSeatPlateH <= kSideDiscardY - kPlatePadding);
+        static_assert(kSeatPlateRightX + kSeatPlateW <= kRightBonusX);
+        static_assert(kSeatPlateLeftY + kSeatPlateH <= kSideDiscardY - kPlatePadding);
+        static_assert(kSeatPlateLeftX >= kLeftBonusX + kOpponentBonusTileW);
+        static_assert(kSeatPlateTopX + kSeatPlateW <= kDiscardBlockX - kPlatePadding);
+        static_assert(kSeatPlateTopY >= kTopMeldY + kOpponentMeldTileH);
 
         SeatGeometry GeometryAt(int position) {
             SeatGeometry geometry;
@@ -132,6 +158,19 @@ namespace BECore::Mahjong {
                     break;
             }
             return geometry;
+        }
+
+        Rect SeatPlateAt(int position) {
+            switch (position) {
+                case 0:
+                    return Rect(kSeatPlateBottomX, kSeatPlateBottomY, kSeatPlateW, kSeatPlateH);
+                case 1:
+                    return Rect(kSeatPlateRightX, kSeatPlateRightY, kSeatPlateW, kSeatPlateH);
+                case 2:
+                    return Rect(kSeatPlateTopX, kSeatPlateTopY, kSeatPlateW, kSeatPlateH);
+                default:
+                    return Rect(kSeatPlateLeftX, kSeatPlateLeftY, kSeatPlateW, kSeatPlateH);
+            }
         }
 
         /// The offsets along the strip's axis of `groups` of tiles (`kMeldGap` between two groups), squeezed to the capacity.
@@ -318,6 +357,7 @@ namespace BECore::Mahjong {
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             const SeatGeometry& geometry = geometries[SeatPosition(layout.viewer, seat)];
             layout.zones.discards[seat] = fit.Map(Rect(geometry.discardX, geometry.discardY, kDiscardBlockW, kDiscardBlockH));
+            layout.zones.seatPlates[seat] = fit.Map(SeatPlateAt(SeatPosition(layout.viewer, seat)));
             AddHand(layout, fit, geometry, seat, ClampCount(input.concealedCount[seat]));
             AddMelds(layout, fit, geometry, seat, SeatPosition(layout.viewer, seat), input.melds[seat]);
             AddBonus(layout, fit, geometry, seat, ClampCount(input.bonusCount[seat]));

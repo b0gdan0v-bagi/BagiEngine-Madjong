@@ -81,14 +81,16 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(Hand().GetPhase(), Phase::Claim);
         ASSERT_EQ(_game->GetSession().Actor(), kSeat1) << "the computer with the claim is the one asked first";
 
+        // Two tints of the turn: behind the hand of the discarder and over its seat plate; nothing on seat 1, which holds the first claim
         const std::vector<Rect> marks = RectsOf(kTurnMark);
 
-        ASSERT_EQ(marks.size(), 1u);
+        ASSERT_EQ(marks.size(), 2u);
         const Rect expected = MarkOf(kSeat0);
-        EXPECT_EQ(marks[0].x, expected.x);
-        EXPECT_EQ(marks[0].y, expected.y);
-        EXPECT_EQ(marks[0].w, expected.w);
-        EXPECT_EQ(marks[0].h, expected.h);
+        const Rect plate = _table->GetLayout().zones.seatPlates[kSeat0];
+        EXPECT_TRUE(SameRect(marks[0], plate) || SameRect(marks[1], plate));
+        EXPECT_TRUE(SameRect(marks[0], expected) || SameRect(marks[1], expected));
+        const Rect other = _table->GetLayout().zones.seatPlates[kSeat1];
+        EXPECT_FALSE(SameRect(marks[0], other) || SameRect(marks[1], other));
     }
 
     TEST_F(MahjongTableWindowTest, TheFrameOnTheDiscardIsNotDrawnWhenOnlyAComputerMayClaim) {

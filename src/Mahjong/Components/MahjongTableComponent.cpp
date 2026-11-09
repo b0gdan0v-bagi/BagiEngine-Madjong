@@ -13,6 +13,7 @@
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/Table/CallingMarks.h>
 #include <Mahjong/Table/SeatName.h>
+#include <Mahjong/Table/SeatPlates.h>
 #include <Mahjong/Table/TileAtlas.h>
 #include <Mahjong/Table/TouchRegime.h>
 #include <Mahjong/Table/UiPalette.h>
@@ -99,22 +100,6 @@ namespace BECore::Mahjong {
             return faces;
         }
 
-        /// The seat at the bottom: the viewer, else the person that waits for the cover to go, else the first person, else seat 0.
-        Seat BottomSeat(const TableSession& session) {
-            if (IsSeat(session.Viewer())) {
-                return session.Viewer();
-            }
-            if (session.GetPhase() == SessionPhase::Playing && session.ActorIsPerson()) {
-                return session.Actor();
-            }
-            for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                if (session.KindOf(seat) == SeatKind::Person) {
-                    return seat;
-                }
-            }
-            return 0;
-        }
-
         /// Whether the table is played now: it is not played while the seat choice (`Setup`) or the rules are open over it.
         bool TableIsLive(const MahjongGame& game) {
             return !game.IsTablePaused();
@@ -135,13 +120,6 @@ namespace BECore::Mahjong {
         /// A claim window: a discard or an upgraded kong waits for the other seats to decide.
         bool IsClaimWindow(Phase phase) noexcept {
             return phase == Phase::Claim || phase == Phase::RobKong;
-        }
-
-        /// The seat whose turn it is on the table: the one that discards, the discarder (or the kong's owner) while the others decide.
-        /// Not the seat that has to act: that one is the first seat with a claim in a window, which would tell a person that this
-        /// computer could claim.
-        Seat TurnSeat(const TableSession& session, const HandModel& hand) {
-            return session.GetPhase() == SessionPhase::Playing ? hand.CurrentSeat() : kNoSeat;
         }
 
         /// The tile at `part` of a meld as laid: a chow runs up from its first tile, a pung and a kong repeat it.
@@ -560,8 +538,24 @@ namespace BECore::Mahjong {
         const Rect ring = Padded(_layout.zones.wall, plate);
         renderer.DrawFilledRect(ring.x, ring.y, ring.w, ring.h, kZonePlate);
 
-        if (const Seat turn = TurnSeat(session, hand); IsSeat(turn)) {
-            const Rect bounds = BoundsOf(_layout, SlotRole::HandTile, turn);
+        // The seat plates (public data only, so also under the cover, for a spectator and at the end of a hand): the base of each, on the
+        // plate of the seat whose turn it is the gold tint and frame, and on the dealer's (East of the hand shown: the same at the end of the
+        // match as in the hand) the bar of the dealer
+        const Seat turnSeat = TurnSeat(session, hand);
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            const Rect& box = _layout.zones.seatPlates[seat];
+            renderer.DrawFilledRect(box.x, box.y, box.w, box.h, kSeatPlate);
+            if (seat == turnSeat) {
+                renderer.DrawFilledRect(box.x, box.y, box.w, box.h, kTurnMark);
+                DrawFrame(renderer, box, kSeatTurnFrameWidth * unit, kSeatTurnFrame);
+            }
+            if (hand.SeatWind(seat) == Wind::East) {
+                renderer.DrawFilledRect(box.x, box.y, box.w, kDealerMarkHeight * unit, kDealerMark);
+            }
+        }
+
+        if (IsSeat(turnSeat)) {
+            const Rect bounds = BoundsOf(_layout, SlotRole::HandTile, turnSeat);
             if (bounds.w > 0.0f) {
                 const Rect marked = Padded(bounds, kActingMargin * unit);
                 renderer.DrawFilledRect(marked.x, marked.y, marked.w, marked.h, kTurnMark);

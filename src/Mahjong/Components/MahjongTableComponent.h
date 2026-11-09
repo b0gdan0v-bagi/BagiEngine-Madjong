@@ -47,6 +47,12 @@ namespace BECore::Mahjong {
      * asked to claim first: that would tell a person that this computer holds a claim) and the discard that waits for a claim has a frame,
      * drawn only while the viewer is among the seats that have yet to decide (and no cover is up).
      *
+     * **The seat plates.** Each seat has a plate (`TableLayout::zones.seatPlates`, indexed by seat: each lies at `SeatPosition(viewer, seat)`) painted after the plates of the
+     * discards and the wall: the base `kSeatPlate`, on the plate of the seat whose turn it is (`TurnSeat`, never the seat asked to
+     * claim) the tint `kTurnMark` and a frame `kSeatTurnFrame`, and along the top edge of the dealer's plate (East of the hand shown) a
+     * bar `kDealerMark`, which is red, not gold. All public data, so they show under the cover, for a spectator and at the end of a hand;
+     * the words on the plates are the labels of the node `SeatPlates` (`MahjongHudComponent`).
+     *
      * **The last move.** Three marks of the gold family (`Table/UiPalette.h`) show what has just happened, from the public data of `HandModel`
      * (`Moves()`, `Discards()`, the open sets): a tint over the last discard (`kLastDiscardMark`; the frame of a pending discard shows
      * besides it), a bar along the edge of the claimed tile of an open set that faces the seat it came from (`kClaimedEdge`, from

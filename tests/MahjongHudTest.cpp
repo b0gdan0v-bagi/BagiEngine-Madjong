@@ -10,6 +10,7 @@
 #include <Mahjong/Table/MoveText.h>
 #include <Mahjong/Table/ScoreText.h>
 #include <Mahjong/Table/SeatName.h>
+#include <Mahjong/Table/SeatPlates.h>
 
 /**
  * The HUD and the seat choice of the shipped scene (`Components/MahjongHudComponent.h`): the variables follow the session and the language,
@@ -40,33 +41,34 @@ namespace BECore::Mahjong::Tests {
     class MahjongHudTest : public MahjongTableTestBase {
     protected:
         /// The longest text each variable can have in the current language: found by code points among the real candidates (every wind, every
-        /// seat with every wind, the mark of "you" at a table of one person), not typed in.
+        /// seat with and without the mark of "you" at a table of one person, the mark of the dealer), not typed in.
         static void SetWorstVars() {
             const UIStrings& strings = CoreManager::GetUIStrings();
             std::vector<eastl::string> winds;
-            std::vector<eastl::string> turns{Tr(strings, "hud.handOver"), Tr(strings, "hud.matchOver")};
             std::vector<eastl::string> names;
+            std::vector<eastl::string> plateWinds;
             for (int wind = 0; wind < kSeatCount; ++wind) {
                 winds.push_back(WindName(strings, static_cast<Wind>(wind)));
-                for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                    SeatSetup onePerson{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
-                    onePerson[seat] = SeatKind::Person;
-                    turns.push_back(SeatName(strings, seat, static_cast<Wind>(wind)));
-                    names.push_back(SeatLabel(strings, seat, static_cast<Wind>(wind), onePerson));
-                }
+                plateWinds.push_back(WindName(strings, static_cast<Wind>(wind)));
+                plateWinds.push_back(WindName(strings, static_cast<Wind>(wind)) + "*");
+            }
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                SeatSetup onePerson{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
+                onePerson[seat] = SeatKind::Person;
+                names.push_back(SeatLabel(strings, seat, onePerson));
+                names.push_back(SeatLabel(strings, seat, kAllComputers));
             }
             const eastl::string longestName = LongestText(names);
+            const eastl::string longestWind = LongestText(plateWinds);
             UIVars& vars = CoreManager::GetUIVars();
             vars.Set("round"_intern, eastl::string_view(LongestText(winds)));
             vars.Set("hand"_intern, 16);
             vars.Set("handsTotal"_intern, 16);
             vars.Set("wall"_intern, 144);
-            vars.Set("turn"_intern, eastl::string_view(LongestText(turns)));
-            for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                vars.Set(PoolString::Intern(Format("seatName{}", seat)), eastl::string_view(longestName));
-                vars.Set(PoolString::Intern(Format("seatScore{}", seat)), "-9999");
-                vars.Set(PoolString::Intern(Format("seatMark{}", seat)), ">");
-                vars.Set(PoolString::Intern(Format("seatDealer{}", seat)), "*");
+            for (int position = 0; position < kSeatCount; ++position) {
+                vars.Set(PoolString::Intern(Format("plateName{}", position)), eastl::string_view(longestName));
+                vars.Set(PoolString::Intern(Format("plateWind{}", position)), eastl::string_view(longestWind));
+                vars.Set(PoolString::Intern(Format("plateScore{}", position)), "-9999");
             }
         }
 
@@ -77,6 +79,17 @@ namespace BECore::Mahjong::Tests {
                 label = found->Cast<UIButton>();  // a button is a label by inheritance, but `Cast` is exact
             }
             return label != nullptr ? std::string(label->GetDisplayText().data(), label->GetDisplayText().size()) : std::string("<no label>");
+        }
+
+        /// The Russian words of the winds, written out here and not taken from the table
+        static std::string RussianWind(Wind wind) {
+            const char* const winds[] = {"Восток", "Юг", "Запад", "Север"};
+            return winds[static_cast<int>(wind)];
+        }
+
+        /// The row of the plate at screen position `position` on screen: "South*: 2000".
+        std::string PlateRow(int position) const {
+            return Text("SeatPlates", Format("PlateRow{}", position).c_str());
         }
 
         std::string SeatKindVar(Seat seat) const {
@@ -187,33 +200,76 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Var("hand"), "1");
         EXPECT_EQ(Var("handsTotal"), "16");
         EXPECT_EQ(Var("wall"), std::to_string(Hand().GetWall().LiveCount()));
-        const Seat turn = Hand().CurrentSeat();
-        EXPECT_EQ(Var("turn"), std::string(Format("Seat {} ({})", turn + 1, EnumUtils<Wind>::ToString(Hand().SeatWind(turn))).c_str()));
-        for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            const std::string name = Format("Seat {} ({})", seat + 1, EnumUtils<Wind>::ToString(Hand().SeatWind(seat))).c_str();
-            EXPECT_EQ(Var(Format("seatName{}", seat).c_str()), seat == 0 ? name + " You" : name) << "only the one person is marked, seat " << seat;
-            EXPECT_EQ(Var(Format("seatWind{}", seat).c_str()), EnumUtils<Wind>::ToString(Hand().SeatWind(seat)).data());
-            EXPECT_EQ(Var(Format("seatScore{}", seat).c_str()), std::to_string(match.Scores()[seat]));
-            EXPECT_EQ(Var(Format("seatMark{}", seat).c_str()), seat == turn ? ">" : "") << "the mark is on the seat whose turn it is";
-            EXPECT_EQ(Var(Format("seatDealer{}", seat).c_str()), seat == match.East() ? "*" : "");
+        EXPECT_EQ(Var("turn"), "") << "the turn is marked on the table, not worded in the HUD";
+        for (int position = 0; position < kSeatCount; ++position) {
+            // One person at seat 0: it sits at the bottom, the others follow counter-clockwise
+            const Seat seat = SeatAtPosition(0, position);
+            EXPECT_EQ(Var(Format("plateName{}", position).c_str()), Format("Seat {}", seat + 1).c_str() + std::string(seat == 0 ? " You" : ""))
+                << "only the one person is marked, position " << position;
+            const std::string wind = EnumUtils<Wind>::ToString(Hand().SeatWind(seat)).data();
+            EXPECT_EQ(Var(Format("plateWind{}", position).c_str()), seat == match.East() ? wind + "*" : wind) << "the dealer is marked, position " << position;
+            EXPECT_EQ(Var(Format("plateScore{}", position).c_str()), std::to_string(match.Scores()[seat]));
+        }
+        for (const char* gone : {"seatName0", "seatWind0", "seatScore0", "seatMark0", "seatDealer0"}) {
+            EXPECT_EQ(Var(gone), "") << gone << " is not published any more";
+        }
+    }
+
+    TEST_F(MahjongHudTest, ThePlatesFollowTheBottomSeatOfAPersonElsewhereAndOfASpectator) {
+        for (Seat person = 0; person < kSeatCount; ++person) {
+            SeatSetup seats = kAllComputers;
+            seats[person] = SeatKind::Person;
+            ASSERT_NO_FATAL_FAILURE(Start(seats));
+            Draw();
+            for (int position = 0; position < kSeatCount; ++position) {
+                const Seat seat = SeatAtPosition(person, position);
+                EXPECT_EQ(Var(Format("plateName{}", position).c_str()), Format("Seat {}", seat + 1).c_str() + std::string(seat == person ? " You" : ""))
+                    << "person " << person << " position " << position;
+                EXPECT_EQ(Var(Format("plateScore{}", position).c_str()), std::to_string(_game->GetMatch().Scores()[seat]));
+            }
+        }
+
+        // A spectator sees the table from seat 0, nobody is "you"
+        ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
+        Draw();
+        for (int position = 0; position < kSeatCount; ++position) {
+            EXPECT_EQ(Var(Format("plateName{}", position).c_str()), Format("Seat {}", position + 1).c_str());
+        }
+    }
+
+    TEST_F(MahjongHudTest, TheBottomPlateOfAHotSeatTableIsTheViewerAfterReveal) {
+        // Seat 1 is East and to act: the cover waits for that person, who is at the bottom, so seat 1 is at position 0 and seat 2 at position 1
+        ASSERT_NO_FATAL_FAILURE(Start(kTwoPeople));
+        Lay(MakeModel(SpecOf(kPlainHand, "9p"), kSeat1));
+        _game->GetSession().Reveal();
+        Draw();
+        ASSERT_EQ(BottomSeat(_game->GetSession()), kSeat1);
+        EXPECT_EQ(Var("plateName0"), "Seat 2") << "nobody is 'you' at a table of two";
+        EXPECT_EQ(Var("plateName1"), "Seat 3");
+        for (int position = 0; position < kSeatCount; ++position) {
+            const Seat seat = SeatAtPosition(kSeat1, position);
+            EXPECT_EQ(Var(Format("plateScore{}", position).c_str()), std::to_string(_game->GetMatch().Scores()[seat]));
+            EXPECT_EQ(Var(Format("plateWind{}", position).c_str()).back() == '*', seat == kSeat1) << "the dealer mark is on the East plate only";
         }
     }
 
     TEST_F(MahjongHudTest, NoOneIsMarkedYouWhenTwoPeoplePlayOrNobodyDoes) {
         ASSERT_NO_FATAL_FAILURE(Start(kTwoPeople));
         Draw();
-        EXPECT_EQ(Var("seatName0").find("You"), std::string::npos);
-        EXPECT_EQ(Var("seatName1").find("You"), std::string::npos);
+        for (int position = 0; position < kSeatCount; ++position) {
+            EXPECT_EQ(Var(Format("plateName{}", position).c_str()).find("You"), std::string::npos) << position;
+        }
 
         ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
         Draw();
-        EXPECT_EQ(Var("seatName0").find("You"), std::string::npos);
+        for (int position = 0; position < kSeatCount; ++position) {
+            EXPECT_EQ(Var(Format("plateName{}", position).c_str()).find("You"), std::string::npos) << position;
+        }
     }
 
     TEST_F(MahjongHudTest, TheVariablesFollowAnActionAndAreNotSetAgainWhileTheVersionStandsStill) {
         ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
         Draw();
-        const std::string turn = Var("turn");
         const uint64_t varsVersion = CoreManager::GetUIVars().GetVersion();
 
         Draw();
@@ -226,7 +282,6 @@ namespace BECore::Mahjong::Tests {
         ASSERT_GT(_game->GetSession().Version(), version);
         Draw();
 
-        EXPECT_NE(Var("turn"), turn) << "the turn went on";
         EXPECT_EQ(Var("wall"), std::to_string(Hand().GetWall().LiveCount()));
         EXPECT_NE(CoreManager::GetUIVars().GetVersion(), varsVersion);
     }
@@ -238,17 +293,20 @@ namespace BECore::Mahjong::Tests {
             ASSERT_TRUE(_game->StartMatch(seed).has_value());
             _game->GetSession().RunComputers();
             ASSERT_TRUE(_game->GetSession().NextHand().has_value());
-            paid = _game->GetMatch().Scores() != SeatScores{2000, 2000, 2000, 2000};
+            paid = _game->GetMatch().Scores() != SeatScores{kExpectedStartingScore, kExpectedStartingScore, kExpectedStartingScore, kExpectedStartingScore};
         }
         ASSERT_TRUE(paid) << "one of the hands is won";
 
         Draw();
 
         const Match& match = _game->GetMatch();
-        for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            const std::string text = Text("Hud", Format("Score{}", seat).c_str());
-            EXPECT_NE(text.find(std::to_string(match.Scores()[seat])), std::string::npos) << text;
-            EXPECT_NE(text.find(Format("Seat {}", seat + 1).c_str()), std::string::npos) << text;
+        for (int position = 0; position < kSeatCount; ++position) {
+            const Seat seat = SeatAtPosition(0, position);  // a table of computers is seen from seat 0
+            const std::string name = Text("SeatPlates", Format("PlateName{}", position).c_str());
+            const std::string row = PlateRow(position);
+            EXPECT_EQ(name, Format("Seat {}", seat + 1).c_str()) << "seat " << seat;
+            const std::string wind = EnumUtils<Wind>::ToString(Hand().SeatWind(seat)).data();
+            EXPECT_EQ(row, (seat == match.East() ? wind + "*" : wind) + ": " + std::to_string(match.Scores()[seat])) << "seat " << seat;
         }
         EXPECT_EQ(Text("Hud", "RoundLabel"), "Round: East, hand 2 of 16");
         EXPECT_EQ(Text("Hud", "WallLabel").substr(0, 6), "Wall: ");
@@ -259,28 +317,24 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
 
-        // The names of the winds, written out here and not taken from the table
-        const char* const winds[] = {"Восток", "Юг", "Запад", "Север"};
-        const auto windOf = [&](Seat seat) { return std::string(winds[static_cast<int>(Hand().SeatWind(seat))]); };
-        const Seat turn = Hand().CurrentSeat();
         EXPECT_EQ(Var("round"), "Восток");
-        EXPECT_EQ(Var("turn"), "Место " + std::to_string(turn + 1) + " (" + windOf(turn) + ")");
-        for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            const std::string name = "Место " + std::to_string(seat + 1) + " (" + windOf(seat) + ")";
-            EXPECT_EQ(Var(Format("seatName{}", seat).c_str()), seat == 0 ? name + " Вы" : name) << "only the one person is marked, seat " << seat;
-            EXPECT_EQ(Var(Format("seatWind{}", seat).c_str()), windOf(seat));
-            EXPECT_EQ(Var(Format("seatScore{}", seat).c_str()), std::to_string(_game->GetMatch().Scores()[seat])) << "numbers are the same";
+        for (int position = 0; position < kSeatCount; ++position) {
+            const Seat seat = SeatAtPosition(0, position);
+            EXPECT_EQ(Var(Format("plateName{}", position).c_str()), "Место " + std::to_string(seat + 1) + (seat == 0 ? " Вы" : "")) << "only the one person is marked, seat " << seat;
+            const std::string wind = RussianWind(Hand().SeatWind(seat));
+            EXPECT_EQ(Var(Format("plateWind{}", position).c_str()), seat == _game->GetMatch().East() ? wind + "*" : wind);
+            EXPECT_EQ(Var(Format("plateScore{}", position).c_str()), std::to_string(_game->GetMatch().Scores()[seat])) << "numbers are the same";
+            EXPECT_EQ(PlateRow(position), Var(Format("plateWind{}", position).c_str()) + ": " + Var(Format("plateScore{}", position).c_str()));
         }
         EXPECT_EQ(Text("Hud", "RoundLabel"), "Раунд: Восток, раздача 1 из 16");
         EXPECT_EQ(Text("Hud", "WallLabel"), "Стена: " + std::to_string(Hand().GetWall().LiveCount()));
-        EXPECT_EQ(Text("Hud", "TurnLabel"), "Ход: " + Var("turn"));
         EXPECT_EQ(Text("HudMenu", "NewGame"), "Новая игра");
 
         for (const SeatSetup& seats : {kTwoPeople, kAllComputers}) {
             ASSERT_NO_FATAL_FAILURE(Start(seats));
             Draw();
-            for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                EXPECT_EQ(Var(Format("seatName{}", seat).c_str()).find("Вы"), std::string::npos) << "no one is 'you' at a table of " << (seats == kTwoPeople ? "two" : "no") << " people";
+            for (int position = 0; position < kSeatCount; ++position) {
+                EXPECT_EQ(Var(Format("plateName{}", position).c_str()).find("Вы"), std::string::npos) << "no one is 'you' at a table of " << (seats == kTwoPeople ? "two" : "no") << " people";
             }
         }
     }
@@ -291,45 +345,98 @@ namespace BECore::Mahjong::Tests {
         SetWorstVars();
         constexpr float kPanelPadding = 8.0f;
 
-        const struct {
-            const char* panel;
-            std::vector<const char*> rows;
-        } panels[] = {{"Info", {"RoundLabel", "WallLabel", "TurnLabel"}}, {"Scores", {"Score0", "Score1", "Score2", "Score3"}}};
-        for (const auto& [panel, rows] : panels) {
-            const UIElement* plate = Element("Hud", panel);
-            ASSERT_NE(plate, nullptr) << panel;
-            for (const char* name : rows) {
-                const UIElement* row = Element("Hud", name);
-                ASSERT_NE(row, nullptr) << name;
-                EXPECT_GE(row->rect.x, plate->rect.x + kPanelPadding) << name;
-                EXPECT_GE(row->rect.y, plate->rect.y + kPanelPadding) << name;
-                EXPECT_LE(row->rect.x + row->rect.w, plate->rect.x + plate->rect.w - kPanelPadding) << name;
-                EXPECT_LE(row->rect.y + row->rect.h, plate->rect.y + plate->rect.h - kPanelPadding) << name;
+        const auto expectInside = [&](const char* node, const char* name, const Rect& plate) {
+            const UIElement* row = Element(node, name);
+            ASSERT_NE(row, nullptr) << name;
+            EXPECT_GE(row->rect.x, plate.x + kPanelPadding) << name;
+            EXPECT_GE(row->rect.y, plate.y + kPanelPadding) << name;
+            EXPECT_LE(row->rect.x + row->rect.w, plate.x + plate.w - kPanelPadding) << name;
+            EXPECT_LE(row->rect.y + row->rect.h, plate.y + plate.h - kPanelPadding) << name;
+        };
+        const UIElement* info = Element("Hud", "Info");
+        ASSERT_NE(info, nullptr);
+        for (const char* name : {"RoundLabel", "WallLabel"}) {
+            expectInside("Hud", name, info->rect);
+        }
+        // The plate of a seat is painted by the table: its rectangle is the layout's (the viewer of the worst-case layout is seat 0)
+        const TableLayout layout = MakeWorstCaseTableLayout();
+        for (int position = 0; position < kSeatCount; ++position) {
+            const Rect& plate = layout.zones.seatPlates[SeatAtPosition(layout.viewer, position)];
+            expectInside("SeatPlates", Format("PlateName{}", position).c_str(), plate);
+            expectInside("SeatPlates", Format("PlateRow{}", position).c_str(), plate);
+        }
+    }
+
+    TEST_F(MahjongHudTest, TheSeatPlatesLieAtTheRectanglesOfTheLayoutAndClearOfEverythingElseOnTheTable) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        Draw();
+        // Everything that hides in the file is shown, so that its place is asked for
+        for (const char* node : {"Hud", "Actions", "Hints", "HintsButton", "SeatPlates"}) {
+            const auto canvas = Canvas(node);
+            ASSERT_TRUE(canvas) << node;
+            ShowAll(*canvas, canvas->GetRoot());
+            canvas->UpdateLayout(kViewWidth, kViewHeight);
+        }
+        const TableLayout layout = MakeWorstCaseTableLayout();
+
+        // The file is by screen position and the viewer of the worst-case layout is seat 0, so position p is seat p: the two labels of a
+        // plate are the plate without its padding of 8
+        constexpr float kPlatePad = 8.0f;
+        eastl::vector<Rect> plates;
+        for (int position = 0; position < kSeatCount; ++position) {
+            const UIElement* name = Element("SeatPlates", Format("PlateName{}", position).c_str());
+            const UIElement* row = Element("SeatPlates", Format("PlateRow{}", position).c_str());
+            ASSERT_NE(name, nullptr) << position;
+            ASSERT_NE(row, nullptr) << position;
+            const Rect& expected = layout.zones.seatPlates[SeatAtPosition(layout.viewer, position)];
+            EXPECT_FLOAT_EQ(name->rect.x, expected.x + kPlatePad) << position;
+            EXPECT_FLOAT_EQ(name->rect.y, expected.y + kPlatePad) << position;
+            EXPECT_FLOAT_EQ(name->rect.w, expected.w - 2 * kPlatePad) << position;
+            EXPECT_FLOAT_EQ(row->rect.x, expected.x + kPlatePad) << position;
+            EXPECT_FLOAT_EQ(row->rect.y + row->rect.h, expected.y + expected.h - kPlatePad) << position;
+            EXPECT_FLOAT_EQ(row->rect.w, expected.w - 2 * kPlatePad) << position;
+            EXPECT_FALSE(name->IsHitTestable() || row->IsHitTestable()) << "a plate takes no input";
+            plates.push_back(expected);
+        }
+
+        // The panels and the areas of the buttons that lie near: a grid unit clear of every plate
+        struct Neighbour {
+            const char* node;
+            const char* element;
+        };
+        const Neighbour neighbours[] = {{"Hud", "Info"},        {"Hud", "MoveLine"},     {"Actions", "Hint"},          {"Actions", "ActionRow"},
+                                        {"Hints", "WaitPanel"}, {"Hints", "AdviceText"}, {"HintsButton", "HintButton"}};
+        for (const Neighbour& neighbour : neighbours) {
+            const UIElement* element = Element(neighbour.node, neighbour.element);
+            ASSERT_NE(element, nullptr) << neighbour.element;
+            ASSERT_FALSE(element->rect.IsEmpty()) << neighbour.element;
+            for (size_t i = 0; i < plates.size(); ++i) {
+                EXPECT_TRUE(Apart(Grown(plates[i], kGridUnit), element->rect)) << neighbour.element << " is less than a grid unit from the plate at position " << i;
             }
         }
     }
 
-    TEST_F(MahjongHudTest, TheTurnWordsForTheEndOfAHandAndOfAMatchComeFromTheTable) {
-        MahjongSettings settings = _game->GetSettings();
-        settings.handsPerMatch = kRoundsPerMatch;
-        _game->SetSettings(settings);
+    TEST_F(MahjongHudTest, ThePlatesSayWhoIsEastAfterTheDealMovesAndTheScoresAfterAHand) {
         ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
-        _game->GetSession().RunComputers();
-        ASSERT_EQ(_game->GetSession().GetPhase(), SessionPhase::HandOver);
+        bool moved = false;
+        for (uint32_t seed = 1; seed <= kHandsToTry && !moved; ++seed) {
+            ASSERT_TRUE(_game->StartMatch(seed).has_value());
+            const Seat east = _game->GetMatch().East();
+            _game->GetSession().RunComputers();
+            ASSERT_TRUE(_game->GetSession().NextHand().has_value());
+            moved = _game->GetMatch().East() != east && _game->GetMatch().Scores() != SeatScores{kExpectedStartingScore, kExpectedStartingScore, kExpectedStartingScore, kExpectedStartingScore};
+        }
+        ASSERT_TRUE(moved) << "one of the hands is won by a seat that is not East";
 
         Draw();
-        EXPECT_EQ(Var("turn"), "Hand over");
-        ASSERT_TRUE(_game->SetLanguage("ru"_intern));
-        Draw();
-        EXPECT_EQ(Var("turn"), "Раздача окончена");
-        EXPECT_EQ(Text("Hud", "TurnLabel"), "Ход: Раздача окончена");
-
-        ASSERT_NO_FATAL_FAILURE(PlayMatchToTheEnd());
-        Draw();
-        EXPECT_EQ(Var("turn"), "Матч окончен");
-        ASSERT_TRUE(_game->SetLanguage("en"_intern));
-        Draw();
-        EXPECT_EQ(Var("turn"), "Match over");
+        const Match& match = _game->GetMatch();
+        for (int position = 0; position < kSeatCount; ++position) {
+            const Seat seat = SeatAtPosition(0, position);
+            const bool east = seat == match.East();
+            EXPECT_EQ(Var(Format("plateWind{}", position).c_str()).back() == '*', east) << "the mark is on the seat that deals now, seat " << seat;
+            EXPECT_EQ(Var(Format("plateScore{}", position).c_str()), std::to_string(match.Scores()[seat]));
+            EXPECT_EQ(Hand().SeatWind(seat) == Wind::East, east);
+        }
     }
 
     TEST_F(MahjongHudTest, ALanguageSwitchPutsTheWordsAgainAndNothingIsSetAgainWhileNothingChanges) {
@@ -346,7 +453,8 @@ namespace BECore::Mahjong::Tests {
 
         EXPECT_NE(CoreManager::GetUIVars().GetVersion(), varsVersion) << "the language is a change";
         EXPECT_EQ(Var("round"), "Восток");
-        EXPECT_EQ(Var("seatName0").find("Место 1 "), 0u) << Var("seatName0");
+        EXPECT_EQ(Var("plateName0").find("Место 1 "), 0u) << Var("plateName0");
+        EXPECT_EQ(Text("SeatPlates", "PlateName0").find("Место 1 "), 0u) << Text("SeatPlates", "PlateName0");
         EXPECT_EQ(Text("Hud", "RoundLabel"), "Раунд: Восток, раздача 1 из 16");
         const uint64_t russian = CoreManager::GetUIVars().GetVersion();
         Draw();
@@ -382,7 +490,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongHudTest, NoKeyIsMissingWhenEveryCanvasOfTheSceneIsShownInEveryLanguage) {
         ASSERT_NO_FATAL_FAILURE(Start(kTwoPeople));
         Scene& scene = *_manager->GetSceneByName("MahjongScene"_intern);
-        for (const char* node : {"Actions", "ActionsCompact", "Hud", "HudMenu", "Handoff", "HandOver", "HandOverAction", "MatchOver", "Setup", "Rules", "RulesAction"}) {
+        for (const char* node : {"Actions", "ActionsCompact", "Hud", "SeatPlates", "HudMenu", "Handoff", "HandOver", "HandOverAction", "MatchOver", "Setup", "Rules", "RulesAction"}) {
             UICanvasComponent::SetVisibleByName(scene, PoolString::Intern(node), true);
             const auto canvas = Canvas(node);
             ASSERT_TRUE(canvas) << node;
@@ -412,9 +520,11 @@ namespace BECore::Mahjong::Tests {
             // The labels are no touch target; the one button of the HUD is in `HudMenu`, a Screen canvas with the engine's touch minimum
             const float minTouch = EngineTouchMinimum();
             ExpectPassesTheMatrix("Hud", minTouch);
+            ExpectPassesTheMatrix("SeatPlates", minTouch);
             ExpectPassesTheMatrix("HudMenu", minTouch);
             for (const Output& output : kOutputs) {
                 ExpectWordsFit("Hud", output.width, output.height, kButtonAir);
+                ExpectWordsFit("SeatPlates", output.width, output.height, kButtonAir);
                 ExpectWordsFit("HudMenu", output.width, output.height, kButtonAir);
             }
             EXPECT_GE(Element("HudMenu", "NewGame")->rect.h, kMinControlHeight);
@@ -567,7 +677,7 @@ namespace BECore::Mahjong::Tests {
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             Draw();  // laid out again with the words of this language
-            for (const char* name : {"Info", "Scores", "MoveLine"}) {
+            for (const char* name : {"Info", "MoveLine"}) {
                 const UIElement* element = Element("Hud", name);
                 ASSERT_NE(element, nullptr) << name;
                 ASSERT_FALSE(element->rect.IsEmpty()) << name;

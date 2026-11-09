@@ -1,4 +1,6 @@
 #include <Mahjong/Table/TableLayout.h>
+#include <Mahjong/Table/UiPalette.h>
+#include <cmath>
 #include <gtest/gtest.h>
 
 /**
@@ -327,6 +329,106 @@ namespace BECore::Mahjong::Tests {
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 EXPECT_EQ(layout.zones.discards[seat].x, seat0.zones.discards[seat].x);
                 EXPECT_EQ(layout.zones.discards[seat].y, seat0.zones.discards[seat].y);
+            }
+        }
+    }
+
+    namespace {
+
+        /// The clear space between two rects (0 when they overlap or touch): the larger of the gaps along the two axes.
+        float ClearSpace(const Rect& a, const Rect& b) {
+            const float gapX = eastl::max(a.x - (b.x + b.w), b.x - (a.x + a.w));
+            const float gapY = eastl::max(a.y - (b.y + b.h), b.y - (a.y + a.h));
+            return eastl::max(0.0f, eastl::max(gapX, gapY));
+        }
+
+        Rect GrownBy(const Rect& rect, float margin) {
+            return Rect(rect.x - margin, rect.y - margin, rect.w + 2.0f * margin, rect.h + 2.0f * margin);
+        }
+
+        /// The four plates of `layout` are of one size, inside the view, hold no slot, keep a grid unit clear of the plates under the zones
+        /// (the zones grown by `kPlatePadding`) and of each other; `scale` is the factor of the view over the design.
+        void ExpectSeatPlatesAreSound(const TableLayout& layout, float scale) {
+            const float unit = static_cast<float>(kGridUnit) * scale;
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                const Rect& plate = layout.zones.seatPlates[seat];
+                EXPECT_NEAR(plate.w, kSeatPlateW * scale, kTolerance) << "seat " << seat;
+                EXPECT_NEAR(plate.h, kSeatPlateH * scale, kTolerance) << "seat " << seat;
+                EXPECT_TRUE(Inside(plate, layout.viewWidth, layout.viewHeight)) << "seat " << seat;
+                for (const TileSlot& slot : layout.slots) {
+                    EXPECT_FALSE(Overlaps(plate, slot.rect)) << "plate of seat " << seat << " over role " << static_cast<int>(slot.role) << " of seat " << slot.seat << " index " << slot.index;
+                }
+                for (const Rect& zone : PlateZones(layout)) {
+                    EXPECT_GE(ClearSpace(plate, GrownBy(zone, kPlatePadding * scale)), unit - kTolerance) << "plate of seat " << seat;
+                }
+                for (Seat other = seat + 1; other < kSeatCount; ++other) {
+                    EXPECT_GE(ClearSpace(plate, layout.zones.seatPlates[other]), unit - kTolerance) << "plates of seats " << seat << " and " << other;
+                }
+            }
+        }
+
+    }  // namespace
+
+    TEST(TableLayoutTest, TheSeatPlatesAreFourRectanglesOfOneSizeOnTheGridClearOfEverything) {
+        const TableLayout design = MakeTableLayout(QuietInput(0));
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            const Rect& plate = design.zones.seatPlates[seat];
+            EXPECT_EQ(std::fmod(plate.x, static_cast<float>(kGridUnit)), 0.0f) << "seat " << seat;
+            EXPECT_EQ(std::fmod(plate.y, static_cast<float>(kGridUnit)), 0.0f) << "seat " << seat;
+            EXPECT_EQ(std::fmod(plate.w, static_cast<float>(kGridUnit)), 0.0f);
+            EXPECT_EQ(std::fmod(plate.h, static_cast<float>(kGridUnit)), 0.0f);
+            EXPECT_EQ(plate.w, kSeatPlateW);
+            EXPECT_EQ(plate.h, kSeatPlateH);
+        }
+        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+            for (const Seat discardSeat : {kNoSeat, 0, 1, 2, 3}) {
+                ASSERT_NO_FATAL_FAILURE(ExpectSeatPlatesAreSound(MakeTableLayout(WorstInput(viewer, kWorstPile, discardSeat)), 1.0f)) << "viewer " << viewer;
+            }
+            ASSERT_NO_FATAL_FAILURE(ExpectSeatPlatesAreSound(MakeTableLayout(QuietInput(viewer)), 1.0f)) << "viewer " << viewer;
+            ASSERT_NO_FATAL_FAILURE(ExpectSeatPlatesAreSound(MakeTableLayout(BusyInput(viewer)), 1.0f)) << "viewer " << viewer;
+        }
+    }
+
+    TEST(TableLayoutTest, TheSeatPlateOfASeatLiesAtItsScreenPositionForEveryViewer) {
+        const TableLayout seat0 = MakeTableLayout(QuietInput(0));
+        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+            const TableLayout layout = MakeTableLayout(QuietInput(viewer));
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                // The plate of the seat at position p for this viewer is the plate that seat p has for viewer 0
+                const Rect& expected = seat0.zones.seatPlates[SeatPosition(viewer, seat)];
+                EXPECT_EQ(layout.zones.seatPlates[seat].x, expected.x) << "viewer " << viewer << " seat " << seat;
+                EXPECT_EQ(layout.zones.seatPlates[seat].y, expected.y) << "viewer " << viewer << " seat " << seat;
+            }
+            // The same four rectangles, permuted: the bottom plate is the viewer's own
+            EXPECT_EQ(layout.zones.seatPlates[viewer].y, seat0.zones.seatPlates[0].y);
+            EXPECT_EQ(layout.zones.seatPlates[viewer].x, seat0.zones.seatPlates[0].x);
+        }
+        for (const Seat noSeat : {kNoSeat, 4, -2}) {
+            const TableLayout layout = MakeTableLayout(QuietInput(noSeat));
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                EXPECT_EQ(layout.zones.seatPlates[seat].x, seat0.zones.seatPlates[seat].x);
+                EXPECT_EQ(layout.zones.seatPlates[seat].y, seat0.zones.seatPlates[seat].y);
+            }
+        }
+        // The four are at four sides: bottom lowest, top highest, left of right
+        const auto& plates = seat0.zones.seatPlates;
+        EXPECT_GT(plates[0].y, plates[1].y);
+        EXPECT_LT(plates[2].y, plates[1].y);
+        EXPECT_LT(plates[3].x, plates[1].x);
+    }
+
+    TEST(TableLayoutTest, TheSeatPlatesScaleWithAnotherViewSize) {
+        const TableInput input = WorstInput(1, 30, kNoSeat);
+        const TableLayout design = MakeTableLayout(input);
+        for (const ViewSize& size : kViewSizes) {
+            const TableLayout layout = MakeTableLayout(input, size.width, size.height);
+            const float scale = std::min(size.width / kViewWidth, size.height / kViewHeight);
+            ASSERT_NO_FATAL_FAILURE(ExpectSeatPlatesAreSound(layout, scale)) << "view " << size.width << "x" << size.height;
+            const float offsetX = (size.width - kViewWidth * scale) / 2.0f;
+            const float offsetY = (size.height - kViewHeight * scale) / 2.0f;
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                EXPECT_NEAR(layout.zones.seatPlates[seat].x, offsetX + design.zones.seatPlates[seat].x * scale, kTolerance) << "seat " << seat;
+                EXPECT_NEAR(layout.zones.seatPlates[seat].y, offsetY + design.zones.seatPlates[seat].y * scale, kTolerance) << "seat " << seat;
             }
         }
     }

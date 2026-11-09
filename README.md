@@ -48,7 +48,7 @@ The game opens on **New game: who plays?**: for each of the four seats pick `Per
 - **Computers** play one step every 0.6 seconds (`kComputerStepSeconds`); nothing moves while the seat choice is open.
 - **Hot seat:** with two or more people at one screen the table is covered between turns ("Pass the screen to Seat 2 (South)"); the next person presses `Show`.
 - **The end of a hand:** a score table covers the table: who won and how, the points of every seat in the hand, what each seat paid or got and its total, the winner's lines (`Pung of 5 Dots: 8`, `One suit, no honours: x8`) and the sum. All four hands are face up. `Next hand` settles it and deals on (`Finish match` on the last one); after the last hand the standings show the seats by points and `New game` opens the seat choice.
-- The HUD (top left and left of the table) shows the round and the hand number, the tiles left in the wall, whose turn it is and the four scores (`>` the seat whose turn it is, `*` East).
+- The HUD (top left of the table) shows the round and the hand number and the tiles left in the wall. Each seat has a plate at its side of the table with its number, its wind (a `*` and a red bar on the plate of East, the dealer) and its score; the plate of the seat whose turn it is is gold.
 
 ## Layout
 
