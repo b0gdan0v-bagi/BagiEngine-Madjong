@@ -28,6 +28,8 @@ namespace BECore::Mahjong {
     /// The table.
     inline constexpr Color kFelt{22, 92, 62, 255};
     inline constexpr Color kFeltRim{10, 46, 32, 255};
+    /// The rim is this wide on every side of the view (the tiles keep `kEdge` of the layout from the edge, so the rim does not grow).
+    inline constexpr float kRimWidth = 8.0f;
     /// A thin line on the inner side of the rim, `kFeltLipWidth` units wide; under every tile.
     inline constexpr Color kFeltLip{54, 128, 92, 255};
     inline constexpr float kFeltLipWidth = 2.0f;

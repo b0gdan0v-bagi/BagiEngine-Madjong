@@ -11,8 +11,6 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        constexpr float kRimUnits = 8.0f;
-
         bool IsGold(const Color& color) {
             return color.r == kTurnMark.r && color.g == kTurnMark.g && color.b == kTurnMark.b;
         }
@@ -68,7 +66,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FLOAT_EQ(plate.x, hand.x - kRackPadding);
         EXPECT_FLOAT_EQ(plate.y, hand.y - kRackPadding);
         EXPECT_FLOAT_EQ(plate.w, hand.w + 2.0f * kRackPadding);
-        EXPECT_FLOAT_EQ(plate.y + plate.h, std::min(hand.y + hand.h + kRackPadding, kViewHeight - kRimUnits));
+        EXPECT_FLOAT_EQ(plate.y + plate.h, std::min(hand.y + hand.h + kRackPadding, kViewHeight - kRimWidth));
         EXPECT_GE(plate.y + plate.h, hand.y + hand.h);
         // The body is the lighter top of it: the edge shows left, right and below, not above
         EXPECT_FLOAT_EQ(body.x, plate.x + kHandRackLipWidth);
@@ -96,6 +94,16 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FLOAT_EQ(plate.x, BoundsOf(layout, SlotRole::HandTile, layout.viewer).x - kRackPadding);
     }
 
+    TEST_F(MahjongHandRackTest, NoNewTableColourEqualsAMarkColour) {
+        const Color marks[] = {kTurnMark,       kPendingFrame, kLastDiscardMark, kDrawnTileMark,    kCallingFrame,  kClaimedEdge, kClaimHighlight,
+                               kClaimLostFrame, kDeclareMark,  kAdvisedFrame,    kKeepsWaitingMark, kSeatTurnFrame, kVeil};
+        for (const Color& fresh : {kFeltLip, kTileShadowSoft, kHandRack, kHandRackLip}) {
+            for (const Color& mark : marks) {
+                EXPECT_FALSE(SameColor(fresh, mark));
+            }
+        }
+    }
+
     TEST_F(MahjongHandRackTest, TheRackIsWoodAndTakesNoGold) {
         EXPECT_FALSE(IsGold(kHandRack));
         EXPECT_FALSE(IsGold(kHandRackLip));
@@ -112,8 +120,8 @@ namespace BECore::Mahjong::Tests {
         const Rect rack(hand.x - kRackPadding, hand.y - kRackPadding, hand.w + 2.0f * kRackPadding, hand.h + 2.0f * kRackPadding);
 
         EXPECT_FALSE(Intersects(rack, worst.zones.seatPlates[worst.viewer])) << "the seat plate of the bottom position";
-        EXPECT_GE(rack.x, kRimUnits);
-        EXPECT_LE(rack.x + rack.w, kViewWidth - kRimUnits);
+        EXPECT_GE(rack.x, kRimWidth);
+        EXPECT_LE(rack.x + rack.w, kViewWidth - kRimWidth);
         EXPECT_GE(rack.y, 0.0f);
 
         const auto actions = Canvas("Actions");

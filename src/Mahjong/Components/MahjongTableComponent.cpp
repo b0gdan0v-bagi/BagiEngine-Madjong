@@ -35,8 +35,7 @@ namespace BECore::Mahjong {
         /// The highlight of the acting seat reaches this far past the hand; the pending discard's frame this far past the tile.
         constexpr float kActingMargin = 4.0f;
         constexpr float kPendingMargin = 3.0f;
-        /// The rim along the edge of the view (the tiles keep `kEdge` of the layout from it), and a tile's shadow falls this far down and right.
-        constexpr float kRimWidth = 8.0f;
+        /// A tile's shadow falls this far down and right.
         constexpr float kShadowOffset = 2.0f;
         /// How far the soft layer of a tile's shadow reaches past the tight one on every side, in view units.
         constexpr float kShadowSoftMargin = 2.0f;
