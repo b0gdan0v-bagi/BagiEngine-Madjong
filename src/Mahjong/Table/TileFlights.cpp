@@ -72,6 +72,7 @@ namespace BECore::Mahjong {
                             break;
                         case SlotRole::HandTile:
                             PlanDraw(slot);
+                            PlanWin(slot);
                             break;
                         default:
                             break;
@@ -169,6 +170,20 @@ namespace BECore::Mahjong {
                 }
                 if (const TileSlot* stack = LastWallStack(_before.layout)) {
                     Add(slot, stack->rect);
+                }
+            }
+
+            /// The winning tile of a mahjong on a discard: the hand slot of the winner flies from the pile slot the discard left.
+            void PlanWin(const TileSlot& slot) {
+                if (!IsSeat(_after.winSeat) || IsSeat(_before.winSeat) || slot.seat != _after.winSeat || slot.index != _after.winIndex) {
+                    return;
+                }
+                const size_t last = _beforePile.size();
+                if (last == 0 || _after.pile.size() >= last) {
+                    return;
+                }
+                if (const TileSlot* pileSlot = FindSlot(_before.layout, SlotKey{SlotRole::DiscardTile, _beforePile[last - 1].seat, static_cast<int>(last) - 1, 0})) {
+                    Add(slot, pileSlot->rect);
                 }
             }
 

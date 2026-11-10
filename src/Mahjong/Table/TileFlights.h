@@ -57,6 +57,11 @@ namespace BECore::Mahjong {
         Seat drawSeat = kNoSeat;
         /// The index of the drawn tile in the concealed tiles of `drawSeat`: the viewer's drawn tile, an opponent's last slot.
         int drawIndex = -1;
+        /// The seat that won on a discard (the hand is finished, `WinSource::Discard`) and holds the winning tile, `kNoSeat` otherwise
+        /// (no win yet, a self-draw, a robbed kong: those have no pile slot to fly from).
+        Seat winSeat = kNoSeat;
+        /// The index of the winning tile in the sorted concealed tiles of `winSeat`: the last copy of that kind.
+        int winIndex = -1;
     };
 
     /// One slot of the new layout that flies, and the rectangle it flies from (in the view units of the old layout, which is the new
@@ -76,6 +81,9 @@ namespace BECore::Mahjong {
      *   tiles; an upgraded kong: its one new tile).
      * - A draw (`after.drawSeat` is a seat, the wall lost tiles, and `before` shows the wall) flies the hand slot `drawIndex` from the
      *   last wall stack of `before`.
+     * - A mahjong on a discard (`after.winSeat` is a seat, `before.winSeat` is not) flies the hand slot `winIndex` of the winner from the
+     *   pile slot of the last entry of `before`'s pile when that entry is gone from `after`'s pile; no such pile slot (the discard and the
+     *   win fall into one batch), no flight. The other tiles of the winner's hand do not fly.
      * - A tile that leaves a hand comes from the slot of the first unused copy of it in the viewer's face-up hand, else from the middle
      *   hand slot of its seat in `before` (no identity: an opponent's hand is backs); no hand slot in `before`, no flight for that tile.
      *
