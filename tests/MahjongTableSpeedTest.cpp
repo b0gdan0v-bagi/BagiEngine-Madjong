@@ -47,7 +47,7 @@ namespace BECore::Mahjong::Tests {
     };
 
     TEST_F(MahjongTableSpeedTest, AComputerWaitsItsPauseAtTheSpeedOfTheGame) {
-        for (const AnimationSpeed speed : kAllAnimationSpeeds) {
+        for (const AnimationSpeed speed : EnumUtils<AnimationSpeed>::Values()) {
             SCOPED_TRACE(SpeedText(speed).data());
             ASSERT_NO_FATAL_FAILURE(StartWithComputerToAct(speed));
             const float pause = ScaledSeconds(kComputerStepSeconds, speed);
@@ -61,7 +61,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableSpeedTest, ATileFliesForTheFlightTimeAtTheSpeedOfTheGame) {
-        for (const AnimationSpeed speed : kAllAnimationSpeeds) {
+        for (const AnimationSpeed speed : EnumUtils<AnimationSpeed>::Values()) {
             SCOPED_TRACE(SpeedText(speed).data());
             ASSERT_NO_FATAL_FAILURE(StartWithComputerToAct(speed));
             UseFlights();
@@ -80,7 +80,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableSpeedTest, TheSetJustLaidBlinksAndEndsAtTheSpeedOfTheGame) {
-        for (const AnimationSpeed speed : kAllAnimationSpeeds) {
+        for (const AnimationSpeed speed : EnumUtils<AnimationSpeed>::Values()) {
             SCOPED_TRACE(SpeedText(speed).data());
             ASSERT_NO_FATAL_FAILURE(Start(kTwoPeople));
             _game->SetAnimationSpeed(speed);
@@ -109,7 +109,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableSpeedTest, TheControlApiPlaysTheComputersAtOnceAtEverySpeed) {
-        for (const AnimationSpeed speed : kAllAnimationSpeeds) {
+        for (const AnimationSpeed speed : EnumUtils<AnimationSpeed>::Values()) {
             SCOPED_TRACE(SpeedText(speed).data());
             ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
             _game->SetAnimationSpeed(speed);

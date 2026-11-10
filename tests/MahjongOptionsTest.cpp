@@ -49,9 +49,9 @@ namespace BECore::Mahjong::Tests {
         constexpr const char* kSpeedChoice = "SpeedChoice";
         constexpr size_t kPageRowCount = kRowCount + 2;
 
-        /// The segments in the order of `kAllAnimationSpeeds`.
+        /// The segments in the order of `EnumUtils<AnimationSpeed>::Values()`.
         constexpr const char* kSpeedSegments[] = {"SpeedSlow", "SpeedNormal", "SpeedFast"};
-        static_assert(sizeof(kSpeedSegments) / sizeof(kSpeedSegments[0]) == kAllAnimationSpeeds.size());
+        static_assert(sizeof(kSpeedSegments) / sizeof(kSpeedSegments[0]) == EnumUtils<AnimationSpeed>::Count());
 
         std::string LevelOption(ComputerLevel level) {
             return "Level" + std::string(LevelText(level));
@@ -206,13 +206,13 @@ namespace BECore::Mahjong::Tests {
         const auto* speedGroup = Element("Options", kSpeedChoice) != nullptr ? Element("Options", kSpeedChoice)->Cast<UISegmented>() : nullptr;
         ASSERT_NE(speedGroup, nullptr);
         EXPECT_EQ(speedGroup->bind, "speedChoice"_intern);
-        ASSERT_EQ(speedGroup->children.size(), kAllAnimationSpeeds.size()) << "one segment per speed, slowest first";
-        for (size_t index = 0; index < kAllAnimationSpeeds.size(); ++index) {
+        ASSERT_EQ(speedGroup->children.size(), EnumUtils<AnimationSpeed>::Count()) << "one segment per speed, slowest first";
+        for (size_t index = 0; index < EnumUtils<AnimationSpeed>::Count(); ++index) {
             const auto* segment = speedGroup->children[index]->Cast<UIButton>();
             ASSERT_NE(segment, nullptr) << index;
             EXPECT_EQ(segment->name.ToStringView(), kSpeedSegments[index]);
             EXPECT_EQ(segment->action, "MahjongSetSpeed"_intern);
-            EXPECT_EQ(segment->value.ToStringView(), SpeedText(kAllAnimationSpeeds[index]).data());
+            EXPECT_EQ(segment->value.ToStringView(), SpeedText(EnumUtils<AnimationSpeed>::Values()[index]).data());
         }
         const UIDropdown* level = Dropdown();
         ASSERT_NE(level, nullptr);
@@ -508,8 +508,8 @@ namespace BECore::Mahjong::Tests {
 
         ASSERT_EQ(_game->GetAnimationSpeed(), AnimationSpeed::Normal);
         EXPECT_TRUE(Selected("SpeedNormal"));
-        for (size_t index = 0; index < kAllAnimationSpeeds.size(); ++index) {
-            const AnimationSpeed speed = kAllAnimationSpeeds[index];
+        for (size_t index = 0; index < EnumUtils<AnimationSpeed>::Count(); ++index) {
+            const AnimationSpeed speed = EnumUtils<AnimationSpeed>::Values()[index];
             SCOPED_TRACE(SpeedText(speed).data());
             ASSERT_TRUE(ClickElement("Options", kSpeedSegments[index]));
             Draw();

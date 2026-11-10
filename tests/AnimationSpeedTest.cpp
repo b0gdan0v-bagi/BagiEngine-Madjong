@@ -29,7 +29,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(AnimationSpeedTest, EverySpeedIsScaledByItsOwnFactorAndTheStepsAreInOrderSlowestFirst) {
         float previous = 1.0e9f;
-        for (const AnimationSpeed speed : kAllAnimationSpeeds) {
+        for (const AnimationSpeed speed : EnumUtils<AnimationSpeed>::Values()) {
             EXPECT_FLOAT_EQ(ScaledSeconds(2.0f, speed), 2.0f * SpeedFactor(speed));
             EXPECT_LT(SpeedFactor(speed), previous) << "the speeds go from the slowest to the fastest";
             previous = SpeedFactor(speed);
@@ -38,7 +38,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(AnimationSpeedTest, TheIdsRoundTripAndAnyOtherTextIsNoSpeed) {
-        for (const AnimationSpeed speed : kAllAnimationSpeeds) {
+        for (const AnimationSpeed speed : EnumUtils<AnimationSpeed>::Values()) {
             const auto parsed = TryParseSpeed(SpeedText(speed));
             ASSERT_TRUE(parsed.has_value()) << SpeedText(speed);
             EXPECT_EQ(*parsed, speed);
@@ -49,7 +49,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(AnimationSpeedTest, ThePrefsHoldTheSpeedAndACopyWithoutItReadsAsNormal) {
-        for (const AnimationSpeed speed : kAllAnimationSpeeds) {
+        for (const AnimationSpeed speed : EnumUtils<AnimationSpeed>::Values()) {
             const MahjongPrefsSave prefs = MakePrefs("en", true, kDefaultSeatSetup, kFullMatchHands, kDefaultLevel, speed);
             EXPECT_EQ(prefs.speed, eastl::string(SpeedText(speed).data(), SpeedText(speed).size()));
             const auto read = ReadPrefs(prefs);

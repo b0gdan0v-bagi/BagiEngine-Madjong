@@ -1,6 +1,5 @@
 #pragma once
 
-
 namespace BECore::Mahjong {
 
     /**
@@ -10,19 +9,21 @@ namespace BECore::Mahjong {
      * multiplies those base times by `SpeedFactor`, so every one of them stays what it was at `Normal` and a flight stays inside the
      * step at every speed. The control API does not wait, so it ignores the speed.
      */
-    enum class AnimationSpeed { Slow, Normal, Fast };
+    CORE_ENUM(AnimationSpeed, uint8_t, Slow, Normal, Fast)
 
     inline constexpr AnimationSpeed kDefaultAnimationSpeed = AnimationSpeed::Normal;
 
-    inline constexpr std::array<AnimationSpeed, 3> kAllAnimationSpeeds{AnimationSpeed::Slow, AnimationSpeed::Normal, AnimationSpeed::Fast};
+    /// The factors of the base times: more is slower. `Normal` is 1.
+    inline constexpr float kSlowFactor = 1.6f;
+    inline constexpr float kFastFactor = 0.6f;
 
-    /// The factor of the base times: more is slower. `Normal` is 1, the pace the table had before the setting.
+    /// The factor of the base times at `speed`.
     [[nodiscard]] constexpr float SpeedFactor(AnimationSpeed speed) noexcept {
         switch (speed) {
             case AnimationSpeed::Slow:
-                return 1.6f;
+                return kSlowFactor;
             case AnimationSpeed::Fast:
-                return 0.6f;
+                return kFastFactor;
             case AnimationSpeed::Normal:
                 break;
         }
@@ -49,7 +50,7 @@ namespace BECore::Mahjong {
 
     /// The speed of an id, or nothing for any other text (client text, an old or damaged save).
     [[nodiscard]] constexpr std::optional<AnimationSpeed> TryParseSpeed(std::string_view text) noexcept {
-        for (const AnimationSpeed speed : kAllAnimationSpeeds) {
+        for (const AnimationSpeed speed : EnumUtils<AnimationSpeed>::Values()) {
             if (SpeedText(speed) == text) {
                 return speed;
             }
