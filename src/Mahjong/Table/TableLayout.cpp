@@ -43,6 +43,8 @@ namespace BECore::Mahjong {
             float rotation = 0.0f;
             float discardW = 0.0f;
             float discardH = 0.0f;
+            /// The hand is spread over its capacity (the phone profile): tile i lies at i times `(capacity - tileW) / (tiles - 1)`.
+            bool spreadHand = false;
         };
 
         constexpr float StripCapacity(float tileLength, int tiles, int gaps) noexcept {
@@ -141,6 +143,37 @@ namespace BECore::Mahjong {
         static_assert(kRightDiscardX > kWallRingX + kWallRingW);
         static_assert(kLeftDiscardX > kLeftBonusX + kOpponentBonusTileH);
         static_assert(kSideBonusCapacity <= kSideHandSpan);
+        // The phone profile of the viewer's side (`TableProfile`): the hand is one row across the view inside the rim and the rack, at the
+        // bottom edge of the desktop hand; the tiles are as high as `handTileW` says, up to the tallest (`kPhoneHandTileMaxW`). The bottom
+        // plate lies under the tallest hand tile's top, the bonus tiles and melds in a row above the hand's tallest top starting right of
+        // the plate, the bottom discard block between the wall ring and that row, squeezed to the height left (its rows overlap).
+        constexpr float kPhoneHandX = kEdge + kRackPadding;
+        constexpr float kPhoneHandSpan = kViewWidth - 2.0f * kPhoneHandX;
+        constexpr float kPhoneHandBottom = kViewHeight - kEdge;
+        constexpr float kPhoneHandMaxH = kPhoneHandTileMaxW * kViewerHandTileH / kViewerHandTileW;
+        constexpr float kPhoneHandTopAtMax = kPhoneHandBottom - kPhoneHandMaxH;
+        constexpr float kPhoneRowBottom = kPhoneHandTopAtMax - kZoneGap;
+        constexpr float kPhoneRowX = kSeatPlateBottomX + kSeatPlateW + kBlockGap;
+        constexpr float kPhoneBonusY = kPhoneRowBottom - kViewerBonusTileH;
+        constexpr float kPhoneMeldX = kPhoneRowX + kViewerBonusTileW * kMaxBonusTiles + kViewerRowGap;
+        constexpr float kPhoneMeldY = kPhoneRowBottom - kViewerMeldTileH;
+        constexpr float kPhoneDiscardY = kWallRingY + kWallRingH + kZoneGap;
+        constexpr float kPhoneDiscardBlockH = 120.0f;
+        constexpr float kSeatPlateBottomPhoneY = kPhoneHandTopAtMax - kSeatPlateH;
+
+        static_assert(kPhoneHandTileMaxW >= kViewerHandTileW);
+        static_assert(kPhoneHandTileMaxW * kMaxConcealedTiles <= kPhoneHandSpan);
+        static_assert(kPhoneHandTopAtMax >= kSeatPlateBottomPhoneY + kSeatPlateH);
+        static_assert(kSeatPlateBottomPhoneY >= kWallRingY + kWallRingH + kPlatePadding);
+        static_assert(kPhoneMeldX + kViewerMeldCapacity <= kViewWidth - kEdge);
+        static_assert(kPhoneMeldY + kViewerMeldTileH <= kPhoneHandTopAtMax);
+        static_assert(kPhoneDiscardY >= kWallRingY + kWallRingH);
+        static_assert(kPhoneDiscardY + kPhoneDiscardBlockH + kZoneGap <= kPhoneMeldY);
+        static_assert(kPhoneDiscardBlockH >= kDiscardTileH);
+        // the side seats' columns end above the row of melds, and the viewer's row clears them at the sides
+        static_assert(kSideMeldY + kSideMeldCapacity <= kPhoneMeldY);
+        static_assert(kPhoneRowX >= kLeftMeldX + kOpponentMeldTileH);
+        static_assert(kPhoneMeldX + kViewerMeldCapacity < kRightDiscardX);
         // The seat plates keep `kPlatePadding` clear of the discard blocks and clear of the tiles round them
         static_assert(kSeatPlateBottomX + kSeatPlateW <= kDiscardBlockX - kPlatePadding);
         static_assert(kSeatPlateBottomY + kSeatPlateH <= kViewerBonusY);
@@ -152,10 +185,22 @@ namespace BECore::Mahjong {
         static_assert(kSeatPlateTopX + kSeatPlateW <= kDiscardBlockX - kPlatePadding);
         static_assert(kSeatPlateTopY >= kTopMeldY + kOpponentMeldTileH);
 
-        SeatGeometry GeometryAt(int position) {
+        SeatGeometry GeometryAt(int position, const TableProfile& profile) {
             SeatGeometry geometry;
             switch (position) {
                 case 0:
+                    if (profile.phone) {
+                        const float tileH = profile.handTileW * kViewerHandTileH / kViewerHandTileW;
+                        geometry.hand = {kPhoneHandX, kPhoneHandBottom - tileH, profile.handTileW, tileH, false, kPhoneHandSpan};
+                        geometry.spreadHand = true;
+                        geometry.melds = {kPhoneMeldX, kPhoneMeldY, kViewerMeldTileW, kViewerMeldTileH, false, kViewerMeldCapacity};
+                        geometry.bonus = {kPhoneRowX, kPhoneBonusY, kViewerBonusTileW, kViewerBonusTileH, false, kViewerBonusTileW * kMaxBonusTiles};
+                        geometry.discardX = kDiscardBlockX;
+                        geometry.discardY = kPhoneDiscardY;
+                        geometry.discardW = kDiscardBlockW;
+                        geometry.discardH = kPhoneDiscardBlockH;
+                        break;
+                    }
                     geometry.hand = {kViewerRowX, kViewerHandY, kViewerHandTileW, kViewerHandTileH, false, kViewerHandSpan};
                     geometry.melds = {kViewerRowX + kViewerHandSpan + kViewerRowGap, kViewHeight - kEdge - kViewerMeldTileH, kViewerMeldTileW, kViewerMeldTileH, false, kViewerMeldCapacity};
                     geometry.bonus = {kViewerRowX, kViewerBonusY, kViewerBonusTileW, kViewerBonusTileH, false, kViewerBonusTileW * kMaxBonusTiles};
@@ -198,10 +243,10 @@ namespace BECore::Mahjong {
             return geometry;
         }
 
-        Rect SeatPlateAt(int position) {
+        Rect SeatPlateAt(int position, const TableProfile& profile) {
             switch (position) {
                 case 0:
-                    return Rect(kSeatPlateBottomX, kSeatPlateBottomY, kSeatPlateW, kSeatPlateH);
+                    return Rect(kSeatPlateBottomX, profile.phone ? kSeatPlateBottomPhoneY : kSeatPlateBottomY, kSeatPlateW, kSeatPlateH);
                 case 1:
                     return Rect(kSeatPlateRightX, kSeatPlateRightY, kSeatPlateW, kSeatPlateH);
                 case 2:
@@ -269,9 +314,16 @@ namespace BECore::Mahjong {
             layout.slots.push_back(TileSlot{fit.Map(rect), role, seat, index, part, claimEdge, rotation});
         }
 
-        /// The hand in input order, one plain row.
+        /// The hand in input order, one plain row; a spread one (the phone profile) puts tile `i` at `i` times the pitch that makes 14
+        /// tiles span the strip, a longer hand squeezes to the strip.
         void AddHand(TableLayout& layout, const ViewFit& fit, const SeatGeometry& geometry, Seat seat, int count) {
-            const eastl::vector<float> offsets = StripOffsets(geometry.hand, {count});
+            eastl::vector<float> offsets = StripOffsets(geometry.hand, {count});
+            if (geometry.spreadHand) {
+                const float pitch = (geometry.hand.capacity - geometry.hand.tileW) / static_cast<float>(eastl::max(count, kMaxConcealedTiles) - 1);
+                for (int index = 0; index < count; ++index) {
+                    offsets[index] = static_cast<float>(index) * pitch;
+                }
+            }
             for (int index = 0; index < count; ++index) {
                 AddSlot(layout, fit, StripRect(geometry.hand, offsets[index]), SlotRole::HandTile, seat, index, geometry.rotation);
             }
@@ -346,6 +398,12 @@ namespace BECore::Mahjong {
             }
         }
 
+        /// The distance between two rows of a pile of `rows` rows in a block whose rows run along `rowSpan` (the block's extent across its
+        /// rows): a tile's thickness while the rows fit, else the rows squeezed to the span.
+        float DiscardRowPitch(int rows, float rowSpan) {
+            return rows <= 1 ? kDiscardTileH : eastl::min(kDiscardTileH, (rowSpan - kDiscardTileH) / static_cast<float>(rows - 1));
+        }
+
         /// The discards of the seats, in the pile's order; each seat counts its own tiles to find the cell in its block.
         void AddDiscards(TableLayout& layout, const ViewFit& fit, const eastl::array<SeatGeometry, kSeatCount>& geometries, const TableInput& input) {
             eastl::array<int, kSeatCount> pileOfSeat{};
@@ -360,7 +418,9 @@ namespace BECore::Mahjong {
             eastl::array<float, kSeatCount> rowPitchOfSeat{};
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 const int rows = (pileOfSeat[seat] + kDiscardsPerRow - 1) / kDiscardsPerRow;
-                rowPitchOfSeat[seat] = rows <= kDiscardRowCapacity ? kDiscardTileH : kDiscardTileH * (kDiscardRowCapacity - 1) / static_cast<float>(rows - 1);
+                const int position = SeatPosition(layout.viewer, seat);
+                const SeatGeometry& geometry = geometries[position];
+                rowPitchOfSeat[seat] = DiscardRowPitch(rows, position == 1 || position == 3 ? geometry.discardW : geometry.discardH);
             }
             eastl::array<int, kSeatCount> placed{};
             for (size_t entry = 0; entry < input.discardSeats.size(); ++entry) {
@@ -422,18 +482,22 @@ namespace BECore::Mahjong {
     TableLayout MakeTableLayout(const TableInput& input, float viewWidth, float viewHeight) {
         TableLayout layout;
         layout.viewer = IsSeat(input.viewer) ? input.viewer : 0;
+        if (input.profile.phone) {
+            layout.profile.phone = true;
+            layout.profile.handTileW = eastl::max(kViewerHandTileW, eastl::min(input.profile.handTileW, kPhoneHandTileMaxW));
+        }
         layout.viewWidth = viewWidth;
         layout.viewHeight = viewHeight;
         const ViewFit fit = FitView(viewWidth, viewHeight);
 
         eastl::array<SeatGeometry, kSeatCount> geometries;
         for (int position = 0; position < kSeatCount; ++position) {
-            geometries[position] = GeometryAt(position);
+            geometries[position] = GeometryAt(position, layout.profile);
         }
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             const SeatGeometry& geometry = geometries[SeatPosition(layout.viewer, seat)];
             layout.zones.discards[seat] = fit.Map(Rect(geometry.discardX, geometry.discardY, geometry.discardW, geometry.discardH));
-            layout.zones.seatPlates[seat] = fit.Map(SeatPlateAt(SeatPosition(layout.viewer, seat)));
+            layout.zones.seatPlates[seat] = fit.Map(SeatPlateAt(SeatPosition(layout.viewer, seat), layout.profile));
             AddHand(layout, fit, geometry, seat, ClampCount(input.concealedCount[seat]));
             AddMelds(layout, fit, geometry, seat, SeatPosition(layout.viewer, seat), input.melds[seat]);
             AddBonus(layout, fit, geometry, seat, ClampCount(input.bonusCount[seat]));

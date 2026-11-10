@@ -1068,4 +1068,214 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
+    // The phone profile: the viewer's hand large, one row across the view.
+
+    namespace {
+
+        /// The widths the phone profile is tried at: the desktop tile (the least), two in between, the widest it holds.
+        const float kPhoneTileWidths[] = {kViewerHandTileW, 70.0f, 77.0f, kPhoneHandTileMaxW};
+
+        TableInput PhoneInput(TableInput input, float handTileW) {
+            input.profile = TableProfile{true, handTileW};
+            return input;
+        }
+
+        /// Every table the phone profile has to hold for `viewer`: the worst ones (the pile of each seat and spread), a busy and a quiet one.
+        std::vector<TableInput> PhoneTables(Seat viewer, float handTileW) {
+            std::vector<TableInput> tables;
+            for (const Seat discardSeat : {kNoSeat, 0, 1, 2, 3}) {
+                tables.push_back(PhoneInput(WorstInput(viewer, kWorstPile, discardSeat), handTileW));
+            }
+            tables.push_back(PhoneInput(BusyInput(viewer), handTileW));
+            tables.push_back(PhoneInput(QuietInput(viewer), handTileW));
+            return tables;
+        }
+
+        bool SameRect(const Rect& a, const Rect& b) {
+            return a.x == b.x && a.y == b.y && a.w == b.w && a.h == b.h;
+        }
+
+        /// The slots of every seat but `viewer`, and the wall, in layout order.
+        std::vector<TileSlot> SlotsApartFromTheViewers(const TableLayout& layout) {
+            std::vector<TileSlot> found;
+            for (const TileSlot& slot : layout.slots) {
+                if (slot.role == SlotRole::WallStack || slot.seat != layout.viewer) {
+                    found.push_back(slot);
+                }
+            }
+            return found;
+        }
+
+    }  // namespace
+
+    TEST(TableLayoutTest, TheDefaultLayoutIsTheExplicitDesktopOneWhateverTheTileWidthOfAnUnusedPhoneProfile) {
+        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+            for (const TableInput& input : {WorstInput(viewer, kWorstPile, kNoSeat), BusyInput(viewer), QuietInput(viewer)}) {
+                const TableLayout layout = MakeTableLayout(input);
+                EXPECT_FALSE(layout.profile.phone);
+                EXPECT_EQ(layout.profile.handTileW, kViewerHandTileW);
+                for (const TableProfile& profile : {TableProfile{false, kViewerHandTileW}, TableProfile{false, 70.0f}, TableProfile{false, 0.0f}}) {
+                    TableInput explicitInput = input;
+                    explicitInput.profile = profile;
+                    const TableLayout other = MakeTableLayout(explicitInput);
+                    ExpectSameSlots(layout, other);
+                    EXPECT_EQ(other.profile, TableProfile{});
+                    for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                        EXPECT_TRUE(SameRect(layout.zones.discards[seat], other.zones.discards[seat]));
+                        EXPECT_TRUE(SameRect(layout.zones.seatPlates[seat], other.zones.seatPlates[seat]));
+                    }
+                    EXPECT_TRUE(SameRect(layout.zones.wall, other.zones.wall));
+                    EXPECT_TRUE(SameRect(layout.zones.centerPanel, other.zones.centerPanel));
+                }
+            }
+        }
+    }
+
+    TEST(TableLayoutTest, ThePhoneProfileKeepsEveryZoneSoundAndEveryPlateClearAtEveryTileWidthForEveryViewer) {
+        for (const float handTileW : kPhoneTileWidths) {
+            for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+                for (const TableInput& input : PhoneTables(viewer, handTileW)) {
+                    const TableLayout layout = MakeTableLayout(input);
+                    ASSERT_TRUE(layout.profile.phone);
+                    ASSERT_NO_FATAL_FAILURE(ExpectZonesAreSound(layout)) << "width " << handTileW << " viewer " << viewer;
+                    ASSERT_NO_FATAL_FAILURE(ExpectSeatPlatesAreSound(layout, 1.0f)) << "width " << handTileW << " viewer " << viewer;
+                    ASSERT_NO_FATAL_FAILURE(ExpectSlotsInsideTheView(layout)) << "width " << handTileW << " viewer " << viewer;
+                    ASSERT_NO_FATAL_FAILURE(ExpectNoZoneOverlaps(layout)) << "width " << handTileW << " viewer " << viewer;
+                }
+            }
+        }
+    }
+
+    TEST(TableLayoutTest, ThePhoneProfileHoldsTheSqueezedWorstTableAtEveryViewSizeToo) {
+        TableInput input = WorstInput(0, kWorstPile, 0);
+        input.profile = TableProfile{true, kPhoneHandTileMaxW};
+        for (const ViewSize& size : kViewSizes) {
+            for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+                input.viewer = viewer;
+                const TableLayout layout = MakeTableLayout(input, size.width, size.height);
+                ASSERT_NO_FATAL_FAILURE(ExpectZonesAreSound(layout)) << "view " << size.width << "x" << size.height << " viewer " << viewer;
+                ASSERT_NO_FATAL_FAILURE(ExpectSlotsInsideTheView(layout));
+                ASSERT_NO_FATAL_FAILURE(ExpectNoZoneOverlaps(layout));
+                const float scale = std::min(size.width / kViewWidth, size.height / kViewHeight);
+                ASSERT_NO_FATAL_FAILURE(ExpectSeatPlatesAreSound(layout, scale));
+            }
+        }
+    }
+
+    TEST(TableLayoutTest, ThePhoneHandIsOneRowOfFourteenTilesOfTheWidthAskedForAcrossTheView) {
+        for (const float handTileW : kPhoneTileWidths) {
+            for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+                const TableLayout layout = MakeTableLayout(PhoneInput(WorstInput(viewer, kWorstPile, kNoSeat), handTileW));
+                const std::vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, viewer);
+                ASSERT_EQ(static_cast<int>(hand.size()), kMaxConcealedTiles);
+                for (int i = 0; i < kMaxConcealedTiles; ++i) {
+                    EXPECT_EQ(hand[i].index, i);
+                    EXPECT_NEAR(hand[i].rect.w, handTileW, kTolerance);
+                    EXPECT_NEAR(hand[i].rect.h, handTileW * 4.0f / 3.0f, kTolerance) << "a tile of the atlas is 3 : 4";
+                    EXPECT_EQ(hand[i].rect.y, hand[0].rect.y);
+                    if (i > 0) {
+                        EXPECT_GE(hand[i].rect.x - (hand[i - 1].rect.x + hand[i - 1].rect.w), -kTolerance) << "tiles overlap, width " << handTileW;
+                    }
+                    // a click at the centre of a tile finds it
+                    EXPECT_EQ(HitHandTile(layout, RectCentreX(hand[i].rect), RectCentreY(hand[i].rect)), i);
+                }
+                const Rect bounds = BoundsOf(layout, SlotRole::HandTile, viewer);
+                EXPECT_GE(bounds.w, 0.85f * kViewWidth) << "width " << handTileW;
+                EXPECT_GE(bounds.x, static_cast<float>(kRimWidth + kRackPadding) - kTolerance) << "the rack past the hand ends at the rim";
+                EXPECT_LE(bounds.x + bounds.w, kViewWidth - kRimWidth - kRackPadding + kTolerance);
+                EXPECT_NEAR(bounds.y + bounds.h, kViewHeight - kRimWidth, kTolerance) << "the hand rests on the rim";
+            }
+        }
+    }
+
+    TEST(TableLayoutTest, AShortPhoneHandKeepsItsTilesWhereTheFullOneHasThem) {
+        for (const int count : {1, 13}) {
+            TableInput input = PhoneInput(QuietInput(0), 70.0f);
+            const std::vector<TileSlot> full = SlotsOf(MakeTableLayout(input), SlotRole::HandTile, 0);
+            input.concealedCount[0] = count;
+            const std::vector<TileSlot> hand = SlotsOf(MakeTableLayout(input), SlotRole::HandTile, 0);
+            ASSERT_EQ(static_cast<int>(hand.size()), count);
+            for (int i = 0; i < count; ++i) {
+                EXPECT_EQ(hand[i].rect.x, full[i].rect.x);
+            }
+        }
+        // more tiles than a hand holds are squeezed into the row, not past it
+        TableInput input = PhoneInput(QuietInput(0), kPhoneHandTileMaxW);
+        input.concealedCount[0] = 40;
+        const Rect bounds = BoundsOf(MakeTableLayout(input), SlotRole::HandTile, 0);
+        EXPECT_LE(bounds.x + bounds.w, kViewWidth - kRimWidth - kRackPadding + kTolerance);
+    }
+
+    TEST(TableLayoutTest, ThePhoneProfileLeavesTheOpponentsTheWallAndTheCentrePanelWhereTheyAre) {
+        for (const float handTileW : kPhoneTileWidths) {
+            for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+                const TableInput desktopInput = WorstInput(viewer, kWorstPile, kNoSeat);
+                const TableLayout desktop = MakeTableLayout(desktopInput);
+                const TableLayout phone = MakeTableLayout(PhoneInput(desktopInput, handTileW));
+                const std::vector<TileSlot> expected = SlotsApartFromTheViewers(desktop);
+                const std::vector<TileSlot> slots = SlotsApartFromTheViewers(phone);
+                ASSERT_EQ(expected.size(), slots.size());
+                for (size_t i = 0; i < expected.size(); ++i) {
+                    EXPECT_TRUE(SameRect(expected[i].rect, slots[i].rect)) << "slot " << i << " of seat " << expected[i].seat << " viewer " << viewer;
+                }
+                for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                    if (seat != viewer) {
+                        EXPECT_TRUE(SameRect(desktop.zones.discards[seat], phone.zones.discards[seat])) << "seat " << seat;
+                        EXPECT_TRUE(SameRect(desktop.zones.seatPlates[seat], phone.zones.seatPlates[seat])) << "seat " << seat;
+                    }
+                }
+                EXPECT_TRUE(SameRect(desktop.zones.wall, phone.zones.wall));
+                EXPECT_TRUE(SameRect(desktop.zones.centerPanel, phone.zones.centerPanel));
+            }
+        }
+    }
+
+    TEST(TableLayoutTest, ThePhoneMeldsAndBonusTilesLieInARowAboveTheHandRightOfTheBottomPlate) {
+        for (const float handTileW : kPhoneTileWidths) {
+            const TableLayout layout = MakeTableLayout(PhoneInput(WorstInput(2, kWorstPile, kNoSeat), handTileW));
+            const Rect hand = BoundsOf(layout, SlotRole::HandTile, 2);
+            const Rect melds = BoundsOf(layout, SlotRole::MeldTile, 2);
+            const Rect bonus = BoundsOf(layout, SlotRole::BonusTile, 2);
+            const Rect& plate = layout.zones.seatPlates[2];
+            const Rect& discards = layout.zones.discards[2];
+            EXPECT_LE(melds.y + melds.h, hand.y + kTolerance);
+            EXPECT_LE(bonus.y + bonus.h, hand.y + kTolerance);
+            EXPECT_GE(bonus.x, plate.x + plate.w);
+            EXPECT_GE(melds.x, bonus.x + bonus.w);
+            EXPECT_LE(discards.y + discards.h, melds.y + kTolerance) << "the discards end above the row";
+            EXPECT_LE(discards.y + discards.h, bonus.y + kTolerance);
+            EXPECT_GE(discards.y, layout.zones.wall.y + layout.zones.wall.h - kTolerance) << "and start below the wall ring";
+            EXPECT_LE(discards.h, kDiscardTileH * kDiscardRowCapacity) << "a zone never grows";
+            EXPECT_LE(plate.y + plate.h, kViewHeight - kRimWidth - kPhoneHandTileMaxW * 4.0f / 3.0f + kTolerance) << "the plate ends where the tallest hand tile starts";
+        }
+    }
+
+    TEST(TableLayoutTest, ThePhoneDiscardsOfTheViewerRestInTheirLowerBlockAndSqueezeBeforeLeavingIt) {
+        for (const int pile : {1, 6, 18, 19, 40, kWorstPile}) {
+            const TableLayout layout = MakeTableLayout(PhoneInput(WorstInput(0, pile, 0), kPhoneHandTileMaxW));
+            const Rect& zone = layout.zones.discards[0];
+            const std::vector<TileSlot> discards = SlotsOf(layout, SlotRole::DiscardTile, 0);
+            ASSERT_EQ(static_cast<int>(discards.size()), pile);
+            for (const TileSlot& slot : discards) {
+                EXPECT_TRUE(Holds(zone, slot.rect)) << "pile " << pile << " tile " << slot.index;
+            }
+            EXPECT_EQ(discards[0].rect.x, zone.x);
+            EXPECT_EQ(discards[0].rect.y, zone.y);
+            if (pile > kDiscardsPerRow) {
+                EXPECT_LE(discards[kDiscardsPerRow].rect.y - discards[0].rect.y, kDiscardTileH + kTolerance) << "a row pitch is at most a tile's height";
+            }
+        }
+        // three rows lie as the desktop block's rows do, without overlap
+        const std::vector<TileSlot> three = SlotsOf(MakeTableLayout(PhoneInput(WorstInput(0, 18, 0), kPhoneHandTileMaxW)), SlotRole::DiscardTile, 0);
+        EXPECT_EQ(three[kDiscardsPerRow].rect.y - three[0].rect.y, kDiscardTileH);
+    }
+
+    TEST(TableLayoutTest, ThePhoneTileWidthIsClampedBetweenTheDesktopTileAndTheWidestTheViewHolds) {
+        EXPECT_EQ(MakeTableLayout(PhoneInput(QuietInput(0), 500.0f)).profile, (TableProfile{true, kPhoneHandTileMaxW}));
+        EXPECT_EQ(MakeTableLayout(PhoneInput(QuietInput(0), 10.0f)).profile, (TableProfile{true, kViewerHandTileW}));
+        EXPECT_EQ(MakeTableLayout(PhoneInput(QuietInput(0), std::nanf(""))).profile, (TableProfile{true, kViewerHandTileW}));
+        EXPECT_EQ(MakeTableLayout(PhoneInput(QuietInput(0), 70.0f)).profile, (TableProfile{true, 70.0f}));
+        ExpectSameSlots(MakeTableLayout(PhoneInput(WorstInput(1, 30, kNoSeat), 500.0f)), MakeTableLayout(PhoneInput(WorstInput(1, 30, kNoSeat), kPhoneHandTileMaxW)));
+    }
+
 }  // namespace BECore::Mahjong::Tests
