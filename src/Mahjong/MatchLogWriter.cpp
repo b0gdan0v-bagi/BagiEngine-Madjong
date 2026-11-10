@@ -1,6 +1,7 @@
 #include "MatchLogWriter.h"
 
 #include <Mahjong/MatchLogJson.h>
+#include <Mahjong/Platform.h>
 #include <chrono>
 #include <ctime>
 #include <fmt/chrono.h>
@@ -17,7 +18,7 @@ namespace BECore::Mahjong {
         constexpr int kMaxCopySuffix = 100000;
 
         std::filesystem::path& Directory() {
-            static std::filesystem::path directory = kDefaultDirectory;
+            static std::filesystem::path directory = DefaultMatchLogDirectory(kBrowserBuild);
             return directory;
         }
 
@@ -45,6 +46,13 @@ namespace BECore::Mahjong {
         }
 
     }  // namespace
+
+    std::filesystem::path DefaultMatchLogDirectory(bool browser) {
+        if (browser) {
+            return {};
+        }
+        return kDefaultDirectory;
+    }
 
     const std::filesystem::path& MatchLogDirectory() {
         return Directory();

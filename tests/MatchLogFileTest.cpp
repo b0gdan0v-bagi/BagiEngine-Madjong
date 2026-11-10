@@ -6,14 +6,8 @@
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/MatchLogJson.h>
 #include <Mahjong/MatchLogWriter.h>
-#include <algorithm>
-#include <filesystem>
-#include <fstream>
 #include <gtest/gtest.h>
 #include <regex>
-#include <sstream>
-#include <string>
-#include <string_view>
 #include <vector>
 
 /**
@@ -409,6 +403,11 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(*a, *b);
         }
         EXPECT_NE(logged->AsControllable()->GetState().value()["phase"], "playing") << "the hand was played to its end";
+    }
+
+    TEST(MatchLogDirectoryTest, TheDefaultFolderIsLogsMatchesAndNoneInTheBrowser) {
+        EXPECT_EQ(DefaultMatchLogDirectory(false), fs::path("logs/matches"));
+        EXPECT_TRUE(DefaultMatchLogDirectory(true).empty());
     }
 
 }  // namespace BECore::Mahjong::Tests

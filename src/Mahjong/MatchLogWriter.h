@@ -4,8 +4,11 @@
 
 namespace BECore::Mahjong {
 
-    /// The folder the match logs are written to, relative to the working directory unless absolute (`logs/matches`, beside `engine.log`).
-    /// An empty path switches logging off. Process-wide: `MatchLogWriter` reads it when a match starts.
+    /// The default match-log folder: empty (logging off) in the browser build, else `logs/matches`. Pure, so a test can drive both builds.
+    [[nodiscard]] std::filesystem::path DefaultMatchLogDirectory(bool browser);
+
+    /// The folder the match logs are written to, relative to the working directory unless absolute (`DefaultMatchLogDirectory`: `logs/matches`,
+    /// beside `engine.log`; none in the browser). An empty path switches logging off. Process-wide: `MatchLogWriter` reads it when a match starts.
     [[nodiscard]] const std::filesystem::path& MatchLogDirectory();
     void SetMatchLogDirectory(std::filesystem::path directory);
 

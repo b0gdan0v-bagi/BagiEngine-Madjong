@@ -1,7 +1,6 @@
 #include <Common/TempPath.h>
 #include <Mahjong/Game/TableSession.h>
 #include <Mahjong/Save/MatchSaveStore.h>
-#include <fstream>
 #include <gtest/gtest.h>
 
 /**
@@ -191,6 +190,14 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(store->LoadMatch().has_value());
         EXPECT_TRUE(store->Open(folder.parent_path() / "other"));  // another folder works
         EXPECT_TRUE(store->SaveMatch(PlayedEvents()));
+    }
+
+    TEST(MatchSaveDirectoryTest, TheDefaultFolderIsSavesOrTheEnvironmentAndNoneInTheBrowser) {
+        EXPECT_EQ(DefaultMatchSaveDirectory(false, nullptr), fs::path("saves"));
+        EXPECT_EQ(DefaultMatchSaveDirectory(false, "elsewhere"), fs::path("elsewhere"));
+        EXPECT_TRUE(DefaultMatchSaveDirectory(false, "").empty()) << "an empty value switches saving off";
+        EXPECT_TRUE(DefaultMatchSaveDirectory(true, nullptr).empty());
+        EXPECT_TRUE(DefaultMatchSaveDirectory(true, "elsewhere").empty()) << "the browser has no files to keep, whatever the environment says";
     }
 
     TEST(MatchSaveDirectoryTest, TheProcessWideFolderCanBeChangedAndSwitchedOff) {
