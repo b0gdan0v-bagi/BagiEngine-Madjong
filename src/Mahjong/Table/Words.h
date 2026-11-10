@@ -26,4 +26,7 @@ namespace BECore::Mahjong {
     /// The name of a wind in the current language ("East", "Восток"): the key `wind.<Wind>`; never the id `EnumUtils<Wind>::ToString` gives (that one is the control API's).
     [[nodiscard]] eastl::string WindName(const UIStrings& strings, Wind wind);
 
+    /// The one letter of a wind in the current language ("E", "В"): the key `wind.letter.<Wind>`.
+    [[nodiscard]] eastl::string WindLetter(const UIStrings& strings, Wind wind);
+
 }  // namespace BECore::Mahjong

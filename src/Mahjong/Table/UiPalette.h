@@ -17,7 +17,8 @@ namespace BECore::Mahjong {
      *   wooden rack (`kHandRack` with the darker edge `kHandRackLip`, brown, never gold). A mark on the table is the
      * gold family (`kTurnMark`, `kPendingFrame`, the hints `kDeclareMark`, `kAdvisedFrame`, and the marks of the last move `kLastDiscardMark`, `kDrawnTileMark`, `kClaimedEdge`, `kClaimHighlight`, the
      * frame of a seat plate whose claim lost `kClaimLostFrame`, the frame of a declared hand `kCallingFrame` and the bar of its safe discards `kKeepsWaitingMark`, and the turn plate of a seat:
-     * `kSeatTurnFrame` with the tint `kTurnMark`) and nothing else on the table is gold (the dealer mark `kDealerMark` of a seat plate is red); `kVeil` dims a tile that cannot be discarded now.
+     * `kSeatTurnFrame` with the tint `kTurnMark`, and the turn light of the centre panel `kPanelTurnLight`) and nothing else on the table is gold (the dealer mark `kDealerMark`, of a seat plate and
+     * of the centre panel, is red); `kVeil` dims a tile that cannot be discarded now.
      * - The screens: `scrim` dims what lies behind a modal screen (and the hint), `surface` is the plate, `header` its headline band,
      *   `surfaceRaised` the rows on it, `hudPanel` the panels of the HUD over the felt.
      * - The buttons: `primary` confirms (Mahjong!, Start, Next hand), `secondary` claims and the HUD's New game, `neutral` the extras of
@@ -93,6 +94,14 @@ namespace BECore::Mahjong {
     inline constexpr float kSeatTurnFrameWidth = 4.0f;
     inline constexpr Color kDealerMark{200, 70, 60, 255};
     inline constexpr float kDealerMarkHeight = 6.0f;
+
+    /// The centre panel (the table paints it; the words are labels of the node `CenterPanel`): the ground is the colour of the seat plates, the light
+    /// of the turn a bar `kPanelTurnLightWidth` units thick along the edge of the panel that faces the seat whose turn it is (the gold family) and the
+    /// dealer a bar `kDealerMarkHeight` units thick (red, as on the plates) on the inner boundary of the dealer's cell. Both have an alpha of their
+    /// own, so the tests find them by colour among the marks of the plates.
+    inline constexpr Color kPanelTurnLight{255, 214, 80, 250};
+    inline constexpr float kPanelTurnLightWidth = 4.0f;
+    inline constexpr Color kPanelDealerMark{200, 70, 60, 250};
 
     /// The HUD and the seat plates keep this far clear of a discard block and of the wall ring, in view units (a rule of geometry: no plate is painted there).
     inline constexpr float kPlatePadding = 4.0f;

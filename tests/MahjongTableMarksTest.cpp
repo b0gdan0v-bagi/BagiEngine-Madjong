@@ -407,6 +407,99 @@ namespace BECore::Mahjong::Tests {
             }
         }
 
+        // ----- the centre panel -----
+
+        /// The bar of the turn light at screen position `position`, worked out here from the panel of the last layout.
+        Rect LightAt(int position) const {
+            const Rect panel = _table->GetLayout().zones.centerPanel;
+            const float width = kPanelTurnLightWidth;
+            switch (position) {
+                case 1:
+                    return Rect(panel.x + panel.w - width, panel.y, width, panel.h);
+                case 2:
+                    return Rect(panel.x, panel.y, panel.w, width);
+                case 3:
+                    return Rect(panel.x, panel.y, width, panel.h);
+                default:
+                    return Rect(panel.x, panel.y + panel.h - width, panel.w, width);
+            }
+        }
+
+        /// The mark of the dealer at screen position `position` in the design view (the panel is 472, 282, 336 x 140; the top and the bottom cell
+        /// 32 high, a side cell 108 wide): on the boundary of the cell toward the middle.
+        static Rect DealerMarkAt(int position) {
+            const float thickness = kDealerMarkHeight;
+            switch (position) {
+                case 1:
+                    return Rect(808.0f - 108.0f - thickness, 314.0f, thickness, 76.0f);
+                case 2:
+                    return Rect(472.0f, 314.0f, 336.0f, thickness);
+                case 3:
+                    return Rect(472.0f + 108.0f, 314.0f, thickness, 76.0f);
+                default:
+                    return Rect(472.0f, 422.0f - 32.0f - thickness, 336.0f, thickness);
+            }
+        }
+
+        /// The light is on exactly the side of `turn` (no seat: none) and the mark of the dealer in exactly the cell of `dealer`, each drawn once,
+        /// inside the panel, after the ground of the panel and before the first seat plate and the first tile.
+        void ExpectPanelMarks(Seat turn, Seat dealer) const {
+            const Seat viewer = _table->GetLayout().viewer;
+            const Rect panel = _table->GetLayout().zones.centerPanel;
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                const int position = SeatPosition(viewer, seat);
+                EXPECT_EQ(CountOf(kPanelTurnLight, LightAt(position)), seat == turn ? 1 : 0) << "light, seat " << seat << " at " << position;
+                EXPECT_EQ(CountOf(kPanelDealerMark, DealerMarkAt(position)), seat == dealer ? 1 : 0) << "dealer, seat " << seat << " at " << position;
+            }
+            EXPECT_EQ(RectsOf(kPanelTurnLight).size(), IsSeat(turn) ? 1u : 0u);
+            EXPECT_EQ(RectsOf(kPanelDealerMark).size(), IsSeat(dealer) ? 1u : 0u);
+            std::vector<size_t> marks = CallsOf(kPanelTurnLight);
+            for (const size_t call : CallsOf(kPanelDealerMark)) {
+                marks.push_back(call);
+            }
+            std::vector<size_t> grounds;
+            for (const size_t i : CallsOf(kSeatPlate)) {
+                if (SameRect(_renderer->calls[i].rect, panel)) {
+                    grounds.push_back(i);
+                }
+            }
+            ASSERT_EQ(grounds.size(), 1u) << "one ground";
+            size_t firstTile = _renderer->calls.size();
+            size_t firstSeatPlate = _renderer->calls.size();
+            for (size_t i = 0; i < _renderer->calls.size(); ++i) {
+                const DrawCall& call = _renderer->calls[i];
+                if (call.kind == DrawKind::Texture && call.texture == _atlasTexture) {
+                    firstTile = eastl::min(firstTile, i);
+                }
+                if (call.kind == DrawKind::Rect && SameColor(call.color, kSeatPlate) && SameRect(call.rect, PlateOf(kSeat0))) {
+                    firstSeatPlate = eastl::min(firstSeatPlate, i);
+                }
+            }
+            EXPECT_LT(grounds[0], firstTile) << "before the tiles";
+            EXPECT_LT(grounds[0], firstSeatPlate) << "before the seat plates";
+            for (const size_t call : marks) {
+                EXPECT_GT(call, grounds[0]) << "a mark lies over the ground";
+                EXPECT_LT(call, firstTile) << "and under the tiles";
+                const Rect& rect = _renderer->calls[call].rect;
+                EXPECT_GE(rect.x, panel.x - kEpsilon);
+                EXPECT_GE(rect.y, panel.y - kEpsilon);
+                EXPECT_LE(rect.x + rect.w, panel.x + panel.w + kEpsilon);
+                EXPECT_LE(rect.y + rect.h, panel.y + panel.h + kEpsilon);
+            }
+        }
+
+        /// `SpecOf(kPlainHand, "5p")` with `east` as the dealer: the turn is on `east` too.
+        static HandModel EastedAt(Seat east) {
+            return MakeModel(SpecOf(kPlainHand, "5p"), east);
+        }
+
+        /// A match with a person at `person` only.
+        static SeatSetup PersonAt(Seat person) {
+            SeatSetup seats = kAllComputers;
+            seats[static_cast<size_t>(person)] = SeatKind::Person;
+            return seats;
+        }
+
         /// Plays a match of four computers (8 hands) to the end through the session; `perHand` is called when a hand is over.
         template <typename Fn>
         void PlayMatchToTheEnd(Fn perHand) {
@@ -1281,6 +1374,85 @@ namespace BECore::Mahjong::Tests {
             EXPECT_FALSE(SameColor(kDealerMark, other));
         }
         EXPECT_TRUE(SameColor(kSeatPlate, PaletteColor("hudPanel")));
+    }
+
+    // ----- the centre panel -----
+
+    TEST_F(MahjongTableMarksTest, TheLightAndTheDealerMarkAreOnTheSideOfTheSeatForEveryViewerAndEveryDealer) {
+        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+            for (Seat east = 0; east < kSeatCount; ++east) {
+                ASSERT_NO_FATAL_FAILURE(StartWith(PersonAt(viewer), EastedAt(east)));
+                ASSERT_EQ(_table->GetLayout().viewer, viewer);
+                ASSERT_EQ(Hand().CurrentSeat(), east);
+                EXPECT_NO_FATAL_FAILURE(ExpectPanelMarks(east, east)) << "viewer " << viewer << ", East " << east;
+            }
+        }
+    }
+
+    TEST_F(MahjongTableMarksTest, TheLightMovesWithTheTurnWhileTheDealerMarkStaysOnEast) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, MakeModel(SpecOf(kPlainHand, "9p"))));
+        ASSERT_NO_FATAL_FAILURE(ExpectPanelMarks(kSeat0, kSeat0));
+        EXPECT_FALSE(ClickHandTile(IndexOf(kSeat0, T("9p"))));
+        Draw();
+        ASSERT_EQ(Hand().CurrentSeat(), kSeat1);
+        ASSERT_NO_FATAL_FAILURE(ExpectPanelMarks(kSeat1, kSeat0));
+    }
+
+    TEST_F(MahjongTableMarksTest, InAClaimWindowTheLightStaysOnTheDiscarder) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, EastDiscardsFive(kSeat1HoldsPairOf5p)));
+        ASSERT_EQ(Hand().GetPhase(), Phase::Claim);
+        ASSERT_EQ(_game->GetSession().Actor(), kSeat1);
+        ASSERT_NO_FATAL_FAILURE(ExpectPanelMarks(kSeat0, kSeat0));
+    }
+
+    TEST_F(MahjongTableMarksTest, NoLightAtTheEndOfAHandAndOfTheMatchAndTheDealerMarkStaysOnTheEastOfTheHandShown) {
+        HandModel won = AllDeclaredModel("5p");
+        ASSERT_TRUE(won.DeclareWin(kSeat0).has_value());
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, won));
+        ASSERT_EQ(_game->GetSession().GetPhase(), SessionPhase::HandOver);
+        ASSERT_NO_FATAL_FAILURE(ExpectPanelMarks(kNoSeat, kSeat0));
+
+        ASSERT_NO_FATAL_FAILURE(PlayMatchToTheEnd([&] {
+            Draw();
+            ExpectPanelMarks(kNoSeat, EastOfTheHand());
+        }));
+        Draw();
+        EXPECT_EQ(_game->GetSession().GetPhase(), SessionPhase::MatchOver);
+        ExpectPanelMarks(kNoSeat, EastOfTheHand());
+    }
+
+    TEST_F(MahjongTableMarksTest, ThePanelMarksArePublicSoTheyShowUnderTheCoverAfterRevealAndForASpectator) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kTwoPeople, EastedAt(kSeat1)));
+        TableSession& session = _game->GetSession();
+        ASSERT_TRUE(session.HandoffPending());
+        ASSERT_NO_FATAL_FAILURE(ExpectPanelMarks(kSeat1, kSeat1));
+
+        session.Reveal();
+        Draw();
+        ASSERT_FALSE(session.HandoffPending());
+        ASSERT_NO_FATAL_FAILURE(ExpectPanelMarks(kSeat1, kSeat1));
+
+        ASSERT_NO_FATAL_FAILURE(StartWith(kAllComputers, EastedAt(kSeat2)));
+        ASSERT_NO_FATAL_FAILURE(ExpectPanelMarks(kSeat2, kSeat2));
+    }
+
+    TEST_F(MahjongTableMarksTest, ThePanelLightIsGoldAndTheDealerMarkRedEachWithAnAlphaOfItsOwn) {
+        EXPECT_EQ(kPanelTurnLight.r, kTurnMark.r);
+        EXPECT_EQ(kPanelTurnLight.g, kTurnMark.g);
+        EXPECT_EQ(kPanelTurnLight.b, kTurnMark.b);
+        EXPECT_LT(kPanelDealerMark.g, kTurnMark.g / 2);
+        EXPECT_LT(kPanelDealerMark.b, kTurnMark.b);
+        EXPECT_EQ(kPanelDealerMark.r, kDealerMark.r);
+        EXPECT_EQ(kPanelDealerMark.g, kDealerMark.g);
+        EXPECT_EQ(kPanelDealerMark.b, kDealerMark.b);
+        const Color others[] = {kTurnMark,     kPendingFrame, kLastDiscardMark, kDrawnTileMark,  kCallingFrame, kClaimedEdge,   kClaimHighlight, kClaimLostFrame, kDeclareMark, kKeepsWaitingMark,
+                                kAdvisedFrame, kVeil,         kTileShadow,      kTileShadowSoft, kSeatPlate,    kSeatTurnFrame, kDealerMark};
+        for (const Color& other : others) {
+            EXPECT_FALSE(SameColor(kPanelTurnLight, other)) << "the tests find a mark by its colour";
+            EXPECT_FALSE(SameColor(kPanelDealerMark, other)) << "the tests find a mark by its colour";
+        }
+        EXPECT_FALSE(SameColor(kPanelTurnLight, kPanelDealerMark));
+        EXPECT_GT(kPanelTurnLightWidth, 0.0f);
     }
 
 }  // namespace BECore::Mahjong::Tests

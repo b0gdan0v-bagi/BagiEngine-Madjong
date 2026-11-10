@@ -101,6 +101,13 @@ namespace BECore::Mahjong {
         constexpr float kWallRingX = Centered(kViewWidth, kWallRingW);
         constexpr float kWallRingY = (kTopDiscardY + kDiscardBlockH + kBottomDiscardY - kWallRingH) / 2.0f;
 
+        // The centre panel: the inside of the wall ring (the ring inset by one stack), where `MahjongCenterPanel.xml` puts the round, the wall
+        // and the seats' scores. Written out, so that the static_assert below says what it is.
+        constexpr float kCenterPanelX = 472.0f;
+        constexpr float kCenterPanelY = 282.0f;
+        constexpr float kCenterPanelW = 336.0f;
+        constexpr float kCenterPanelH = 140.0f;
+
         // The seat plates, by screen position (0 bottom, 1 right, 2 top, 3 left), each in the free ground next to its seat's discard block.
         // Bottom: left of the bottom discard block, above the viewer's bonus row, right of the left meld column (which ends at x 76). Right: above the right discard block, below the move
         // line of the HUD (which ends at y 172), right of the `Hint` label (x 1000) and left of the right bonus column. Top: below the top
@@ -128,6 +135,8 @@ namespace BECore::Mahjong {
         static_assert(kTopDiscardY + kDiscardBlockH < kWallRingY);
         static_assert(kWallRingY + kWallRingH < kBottomDiscardY);
         static_assert(kBottomDiscardY + kDiscardBlockH < kViewerBonusY);
+        static_assert(kCenterPanelX == kWallRingX + kWallStackSize && kCenterPanelY == kWallRingY + kWallStackSize);
+        static_assert(kCenterPanelW == kWallRingW - 2.0f * kWallStackSize && kCenterPanelH == kWallRingH - 2.0f * kWallStackSize);
         static_assert(kLeftDiscardX + kSideDiscardBlockW < kWallRingX);
         static_assert(kRightDiscardX > kWallRingX + kWallRingW);
         static_assert(kLeftDiscardX > kLeftBonusX + kOpponentBonusTileH);
@@ -431,6 +440,7 @@ namespace BECore::Mahjong {
         }
         AddDiscards(layout, fit, geometries, input);
         layout.zones.wall = fit.Map(Rect(kWallRingX, kWallRingY, kWallRingW, kWallRingH));
+        layout.zones.centerPanel = fit.Map(Rect(kCenterPanelX, kCenterPanelY, kCenterPanelW, kCenterPanelH));
         const int stacks = WallStackCount(input.wallRemaining);
         for (int stack = 0; stack < stacks; ++stack) {
             AddSlot(layout, fit, WallCell(stack), SlotRole::WallStack, 0, stack, 0.0f);

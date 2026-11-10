@@ -34,9 +34,6 @@ namespace BECore::Mahjong {
             SeatPlateText& plate = plates[position];
             plate.seat = seat;
             plate.name = SeatLabel(strings, seat, session.Seats());
-            plate.wind = WindName(strings, hand.SeatWind(seat));
-            plate.score = match.Scores()[seat];
-            plate.dealer = hand.SeatWind(seat) == Wind::East;
             plate.turn = turn == seat;
         }
         return plates;

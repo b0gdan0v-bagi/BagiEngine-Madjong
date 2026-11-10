@@ -9,6 +9,10 @@
         <string key="wind.South" text="South"/>
         <string key="wind.West" text="West"/>
         <string key="wind.North" text="North"/>
+        <string key="wind.letter.East" text="E"/>
+        <string key="wind.letter.South" text="S"/>
+        <string key="wind.letter.West" text="W"/>
+        <string key="wind.letter.North" text="N"/>
         <string key="suit.Dots" text="Dots"/>
         <string key="suit.Bamboo" text="Bamboo"/>
         <string key="suit.Characters" text="Characters"/>
@@ -120,8 +124,8 @@
         <string key="hints.advice.pass" text="Let the discard go."/>
         <string key="cover.text" text="Pass the screen to {handoffSeat}"/>
         <string key="cover.show" text="Show"/>
-        <string key="hud.round" text="Round: {round}, hand {hand} of {handsTotal}"/>
-        <string key="hud.wall" text="Wall: {wall}"/>
+        <string key="panel.round" text="{wind} {n}"/>
+        <string key="panel.wall" text="Wall {wall}"/>
         <string key="hud.newGame" text="New game"/>
         <string key="hud.rules" text="Rules"/>
         <string key="matchover.newGame" text="New game"/>
@@ -162,7 +166,7 @@
         <string key="rules.calling.line2" text="To declare it press {declare}, then click the tile to discard; the {dealt} tiles that stay must be waiting."/>
         <string key="rules.calling.line3" text="Without the declaration you cannot win, on a discard or on your own draw. After it you are not bound to keep the hand."/>
         <string key="rules.calling.line4" text="If you win after declaring with your first discard of the hand, the win scores extra."/>
-        <string key="rules.calling.line5" text="With the hints on, the row inside the wall shows the tiles your hand waits for and how many copies you cannot see."/>
+        <string key="rules.calling.line5" text="With the hints on, the row in the top left corner of the table shows the tiles your hand waits for and how many copies you cannot see."/>
         <string key="rules.end.title" text="The end of a hand"/>
         <string key="rules.end.line1" text="A hand ends when somebody wins, or when the live wall is empty at a draw: a drawn hand, nobody pays."/>
         <string key="rules.end.line2" text="You win with {mahjong} on a discard or a robbed kong, and with {win} on your own draw; you need a winning hand and a declared ready hand."/>
@@ -236,6 +240,10 @@
         <string key="wind.South" text="Юг"/>
         <string key="wind.West" text="Запад"/>
         <string key="wind.North" text="Север"/>
+        <string key="wind.letter.East" text="В"/>
+        <string key="wind.letter.South" text="Ю"/>
+        <string key="wind.letter.West" text="З"/>
+        <string key="wind.letter.North" text="С"/>
         <string key="suit.Dots" text="Круги"/>
         <string key="suit.Bamboo" text="Бамбук"/>
         <string key="suit.Characters" text="Знаки"/>
@@ -347,8 +355,8 @@
         <string key="hints.advice.pass" text="Пропустите сброс."/>
         <string key="cover.text" text="Передайте экран: {handoffSeat}"/>
         <string key="cover.show" text="Показать"/>
-        <string key="hud.round" text="Раунд: {round}, раздача {hand} из {handsTotal}"/>
-        <string key="hud.wall" text="Стена: {wall}"/>
+        <string key="panel.round" text="{wind} {n}"/>
+        <string key="panel.wall" text="Стена {wall}"/>
         <string key="hud.newGame" text="Новая игра"/>
         <string key="hud.rules" text="Правила"/>
         <string key="matchover.newGame" text="Новая игра"/>
@@ -389,7 +397,7 @@
         <string key="rules.calling.line2" text="Чтобы объявить заявку, нажмите «{declare}», затем кость для сброса; оставшиеся {dealt} костей должны ждать."/>
         <string key="rules.calling.line3" text="Без заявки выиграть нельзя ни на сбросе, ни на своём ходу. После неё вы не обязаны хранить руку."/>
         <string key="rules.calling.line4" text="Если вы выиграли, объявив заявку первым сбросом в раздаче, выигрыш даёт дополнительные очки."/>
-        <string key="rules.calling.line5" text="Когда помощь включена, ряд внутри стены показывает, каких костей ждёт рука и сколько копий вам не видно."/>
+        <string key="rules.calling.line5" text="Когда помощь включена, ряд в левом верхнем углу стола показывает, каких костей ждёт рука и сколько копий вам не видно."/>
         <string key="rules.end.title" text="Конец раздачи"/>
         <string key="rules.end.line1" text="Раздача кончается, когда кто-то выиграл или когда в живой стене нет кости для взятия: ничья, никто не платит."/>
         <string key="rules.end.line2" text="Выигрывают словом {mahjong} на сброс или ограбив конг и словом {win} на свою кость; рука должна быть выигрышной и заявка объявлена."/>

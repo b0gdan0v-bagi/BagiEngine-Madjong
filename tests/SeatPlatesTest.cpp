@@ -10,8 +10,8 @@
 #include <set>
 
 /**
- * The plates of the seats (`Table/SeatPlates.h`): which seat lies at each side of the table, and what its plate says (the name, the
- * wind, the score, the dealer and the turn). Pure logic over a `Match` and its `TableSession`; the shipped words are loaded into a
+ * The plates of the seats (`Table/SeatPlates.h`): which seat lies at each side of the table, and what its plate says (the name and the
+ * turn; the wind, the score and the dealer are the centre panel's, `CenterPanelTest`). Pure logic over a `Match` and its `TableSession`; the shipped words are loaded into a
  * `UIStrings` of the test, so no engine services are needed. The expectations are worked out here from the match and the session, not
  * taken from the function under test.
  */
@@ -21,7 +21,6 @@ namespace BECore::Mahjong::Tests {
 
         constexpr uint32_t kSeed = 31;
         constexpr int kActionLimit = 4000;
-        constexpr int kSeedsToSearch = 80;
         constexpr SeatSetup kAllComputers{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
         constexpr SeatSetup kTwoPeople{SeatKind::Person, SeatKind::Computer, SeatKind::Person, SeatKind::Computer};
 
@@ -74,7 +73,6 @@ namespace BECore::Mahjong::Tests {
             for (const SeatKind kind : table.session.Seats()) {
                 people += kind == SeatKind::Person ? 1 : 0;
             }
-            int dealers = 0;
             int turns = 0;
             for (int position = 0; position < kSeatCount; ++position) {
                 const SeatPlateText& plate = plates[static_cast<size_t>(position)];
@@ -83,20 +81,10 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_EQ(plate.seat, SeatAtPosition(bottom, position));
                 const bool you = people == 1 && table.session.Seats()[static_cast<size_t>(seat)] == SeatKind::Person;
                 EXPECT_EQ(Std(plate.name), Std(ExpectedName(strings, seat, you))) << "position " << position;
-                EXPECT_EQ(Std(plate.wind), Std(WindName(strings, table.match.Hand().SeatWind(seat)))) << "position " << position;
-                EXPECT_EQ(plate.score, table.match.Scores()[static_cast<size_t>(seat)]) << "position " << position;
-                EXPECT_EQ(plate.dealer, table.match.Hand().SeatWind(seat) == Wind::East) << "position " << position;
-                // While the match goes on that seat is East of the match; once it is over East() is the next hand's
-                if (table.session.GetPhase() != SessionPhase::MatchOver) {
-                    EXPECT_EQ(plate.dealer, seat == table.match.East()) << "position " << position;
-                }
                 EXPECT_EQ(plate.turn, seat == turn) << "position " << position;
                 EXPECT_EQ(plate.name.find('{'), eastl::string::npos);
-                EXPECT_EQ(plate.wind.find('{'), eastl::string::npos);
-                dealers += plate.dealer ? 1 : 0;
                 turns += plate.turn ? 1 : 0;
             }
-            EXPECT_EQ(dealers, 1);
             EXPECT_EQ(turns, turn == kNoSeat ? 0 : 1);
         }
 
@@ -235,58 +223,21 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
-    TEST(SeatPlatesTest, TheWindsAndTheDealerMoveWithTheDealAndTheScoresWithTheSettlement) {
-        Table table;
-        ASSERT_NO_FATAL_FAILURE(table.Start(kAllComputers, kSeed, kShortMatchHands));
-        std::set<Seat> dealers;
-        bool scoresMoved = false;
-        int hands = 0;
-        while (table.session.GetPhase() != SessionPhase::MatchOver) {
-            ASSERT_LT(hands, kActionLimit);
-            ASSERT_NO_FATAL_FAILURE(ExpectPlates(Words(), table, 0));
-            dealers.insert(table.match.East());
-            const auto plates = MakeSeatPlates(Words(), table.session, table.match);
-            // The seat that is East has the East wind on its plate
-            for (const SeatPlateText& plate : plates) {
-                EXPECT_EQ(plate.dealer, Std(plate.wind) == Std(WindName(Words(), Wind::East)));
-                scoresMoved = scoresMoved || plate.score != kExpectedStartingScore;
-            }
-            if (table.session.GetPhase() == SessionPhase::HandOver) {
-                ASSERT_TRUE(table.session.NextHand().has_value());
-                ++hands;
-            } else {
-                ASSERT_TRUE(table.session.StepComputer().has_value());
-            }
-        }
-        ASSERT_NO_FATAL_FAILURE(ExpectPlates(Words(), table, 0));
-        EXPECT_GT(dealers.size(), 1u) << "the deal never moved";
-        EXPECT_TRUE(scoresMoved);
-        int total = 0;
-        for (const SeatPlateText& plate : MakeSeatPlates(Words(), table.session, table.match)) {
-            total += plate.score;
-        }
-        EXPECT_EQ(total, kSeatCount * kExpectedStartingScore);
-    }
-
     TEST(SeatPlatesTest, TheWordsFollowTheLanguageOfTheTable) {
         Table table;
         ASSERT_NO_FATAL_FAILURE(table.Start(PersonAt(2)));
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
         std::set<std::string> names;
-        std::set<std::string> winds;
         ForEachLanguage(strings, [&](PoolString language) {
             ASSERT_NO_FATAL_FAILURE(ExpectPlates(strings, table, 2));
             for (const SeatPlateText& plate : MakeSeatPlates(strings, table.session, table.match)) {
                 EXPECT_FALSE(plate.name.empty()) << language.ToStringView().data();
-                EXPECT_FALSE(plate.wind.empty()) << language.ToStringView().data();
                 names.insert(Std(plate.name));
-                winds.insert(Std(plate.wind));
             }
         });
-        // Four seats and four winds in each of the two languages, and no word is shared between them
+        // Four seats in each of the two languages, and no word is shared between them
         EXPECT_EQ(names.size(), 2u * kSeatCount);
-        EXPECT_EQ(winds.size(), 2u * kSeatCount);
     }
 
     TEST(SeatPlatesTest, ThePlateColoursAreTheHudPanelTheGoldOfTheTurnAndADealerMarkThatIsNotGold) {

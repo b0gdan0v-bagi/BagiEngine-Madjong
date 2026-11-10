@@ -218,11 +218,19 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
 
-        // After the felt (1), the rim (4) and the lip (4) the next thing drawn is the first seat plate
+        // After the felt (1), the rim (4) and the lip (4) comes the ground of the centre panel, then only its marks up to the first seat plate
+        const TableLayout& layout = _table->GetLayout();
         ASSERT_GE(_renderer->calls.size(), 10u);
         EXPECT_EQ(_renderer->calls[9].kind, DrawKind::Rect);
         EXPECT_TRUE(SameColor(_renderer->calls[9].color, kSeatPlate));
-        EXPECT_TRUE(SameRect(_renderer->calls[9].rect, _table->GetLayout().zones.seatPlates[0]));
+        EXPECT_TRUE(SameRect(_renderer->calls[9].rect, layout.zones.centerPanel));
+        size_t next = 10;
+        while (next < _renderer->calls.size() && (SameColor(_renderer->calls[next].color, kPanelTurnLight) || SameColor(_renderer->calls[next].color, kPanelDealerMark))) {
+            ++next;
+        }
+        ASSERT_LT(next, _renderer->calls.size());
+        EXPECT_TRUE(SameColor(_renderer->calls[next].color, kSeatPlate));
+        EXPECT_TRUE(SameRect(_renderer->calls[next].rect, layout.zones.seatPlates[0]));
     }
 
     TEST_F(MahjongTableUiTest, EveryTileThatIsNotAWallStackHasAShadowOfTwoLayersOffsetBy2) {

@@ -24,6 +24,7 @@
         <node ref="nodes/MahjongActionsCompact"/>
         <node ref="nodes/MahjongHud"/>
         <node ref="nodes/MahjongSeatPlates"/>
+        <node ref="nodes/MahjongCenterPanel"/>
         <node ref="nodes/MahjongHudMenu"/>
         <node ref="nodes/MahjongHandoff"/>
         <node ref="nodes/MahjongHandOver"/>
