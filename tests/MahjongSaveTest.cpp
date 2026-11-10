@@ -723,7 +723,7 @@ namespace BECore::Mahjong::Tests {
                     EXPECT_EQ(read->hintsOn, hands == kFullMatchHands);
                     EXPECT_EQ(read->seats, seats);
                     EXPECT_EQ(read->handsPerMatch, hands);
-                    EXPECT_EQ(std::string(LevelText(read->level)), std::string(LevelText(level)));
+                    EXPECT_EQ(read->levels, UniformLevels(level));
                 }
             }
         }
@@ -732,7 +732,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(prefs.level, eastl::string(LevelText(level).data(), LevelText(level).size()));
             const auto read = ReadPrefs(prefs);
             ASSERT_TRUE(read.has_value()) << LevelText(level);
-            EXPECT_EQ(read->level, level) << LevelText(level);
+            EXPECT_EQ(read->levels, UniformLevels(level)) << LevelText(level);
         }
         // A copy written before the scale of numbers holds the name of a level
         for (const auto& [name, level] : {std::pair{"easy", ComputerLevel::Easy}, std::pair{"normal", ComputerLevel::Normal}}) {
@@ -740,7 +740,7 @@ namespace BECore::Mahjong::Tests {
             prefs.level = name;
             const auto read = ReadPrefs(prefs);
             ASSERT_TRUE(read.has_value()) << name;
-            EXPECT_EQ(read->level, level) << name;
+            EXPECT_EQ(read->levels, UniformLevels(level)) << name;
         }
         const MahjongPrefsSave defaults;
         EXPECT_EQ(defaults.level, "5");
@@ -765,6 +765,49 @@ namespace BECore::Mahjong::Tests {
         refused("hands 12", [](MahjongPrefsSave& prefs) { prefs.hands = 12; }, "hands");
         refused("hands 0", [](MahjongPrefsSave& prefs) { prefs.hands = 0; }, "hands");
         refused("language empty", [](MahjongPrefsSave& prefs) { prefs.language.clear(); }, "language");
+    }
+
+    TEST(MahjongSaveTest, ThePrefsKeepALevelPerSeat) {
+        const SeatLevels mixed{ComputerLevel{5}, ComputerLevel{2}, ComputerLevel{6}, ComputerLevel{10}};
+        const MahjongPrefsSave prefs = MakePrefs("en", true, kPCCC, kFullMatchHands, mixed);
+        EXPECT_EQ(prefs.levels, "5,2,6,10");
+        EXPECT_EQ(prefs.level, "2") << "level is the lowest computer seat's, for a reader that knows one";
+        const auto read = ReadPrefs(prefs);
+        ASSERT_TRUE(read.has_value());
+        EXPECT_EQ(read->levels, mixed);
+
+        // A person's seat keeps its level in the text, and the lowest computer seat gives `level`
+        const MahjongPrefsSave personFirst = MakePrefs("en", true, kPCCC, kFullMatchHands, SeatLevels{ComputerLevel{9}, ComputerLevel{3}, ComputerLevel{4}, ComputerLevel{5}});
+        EXPECT_EQ(personFirst.levels, "9,3,4,5");
+        EXPECT_EQ(personFirst.level, "3");
+
+        // A table of one level leaves `levels` empty, so an old file and a new one of that table are the same state
+        const MahjongPrefsSave uniform = MakePrefs("en", true, kPCCC, kFullMatchHands, UniformLevels(ComputerLevel{3}));
+        EXPECT_TRUE(uniform.levels.empty());
+        EXPECT_EQ(uniform.level, "3");
+        EXPECT_EQ(ReadPrefs(uniform)->levels, UniformLevels(ComputerLevel{3}));
+        // Nobody is a computer: `level` still carries the one level
+        const MahjongPrefsSave people = MakePrefs("en", true, SeatSetup{SeatKind::Person, SeatKind::Person, SeatKind::Person, SeatKind::Person}, kFullMatchHands, UniformLevels(ComputerLevel{3}));
+        EXPECT_EQ(ReadPrefs(people)->levels, UniformLevels(ComputerLevel{3}));
+
+        // `levels` wins over `level`, even a `level` that would be refused
+        MahjongPrefsSave wins;
+        wins.level = "hard";
+        wins.levels = "1,2,3,4";
+        ASSERT_TRUE(ReadPrefs(wins).has_value());
+        EXPECT_EQ(ReadPrefs(wins)->levels, (SeatLevels{ComputerLevel{1}, ComputerLevel{2}, ComputerLevel{3}, ComputerLevel{4}}));
+        // An older copy has only `level`
+        MahjongPrefsSave older;
+        older.level = "3";
+        EXPECT_EQ(ReadPrefs(older)->levels, UniformLevels(ComputerLevel{3}));
+
+        for (const char* bad : {"5,5,5", "5,5,5,11", "a", "5,5,5,5,5", "5,5,5,", ",5,5,5", "5,5,0,5", "5, 5,5,5", "05,5,5,5", "5;5;5;5", "easy,5,5,5"}) {
+            MahjongPrefsSave broken;
+            broken.levels = bad;
+            const auto refused = ReadPrefs(broken);
+            ASSERT_FALSE(refused.has_value()) << bad;
+            EXPECT_NE(Plain(refused.error()).find("levels"), std::string::npos) << bad << ": " << refused.error().c_str();
+        }
     }
 
     TEST(MahjongSaveTest, AMatchRecordedParsedAndResumedIsTheSameTable) {

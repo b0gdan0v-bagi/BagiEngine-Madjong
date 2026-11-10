@@ -86,7 +86,7 @@ namespace BECore::Mahjong {
     MatchStatus MahjongGame::BeginMatch(uint32_t seed, bool record) {
         ApplyLanguage();
         _recorder.SetRecording(record);
-        const MatchStatus started = _session.StartMatch(_settings, seed, _seats, _level);
+        const MatchStatus started = _session.StartMatch(_settings, seed, _seats, _levels);
         if (started.has_value()) {
             CloseSetup();
             CloseRules();
@@ -121,7 +121,7 @@ namespace BECore::Mahjong {
         _hintsOn = values->hintsOn;
         _seats = values->seats;
         _settings.handsPerMatch = values->handsPerMatch;
-        _level = values->level;
+        _levels = values->levels;
         _animationSpeed = values->speed;
     }
 
@@ -152,9 +152,7 @@ namespace BECore::Mahjong {
         _savedCounter = _recorder.Counter();  // the slot already holds exactly this
         // The panel shows the resumed match's own choices when it opens again (the prefs may be newer than the match)
         _seats = start.seats;
-        // One level until the game keeps one per seat: the lowest computer seat's, the first seat's when nobody is a computer
-        const bool anyComputer = std::ranges::any_of(start.seats, [](SeatKind kind) { return kind == SeatKind::Computer; });
-        _level = anyComputer ? FirstComputerLevel(start.seats, start.levels) : start.levels[0];
+        _levels = start.levels;
         if (start.settings.handsPerMatch == kFullMatchHands || start.settings.handsPerMatch == kShortMatchHands) {
             _settings.handsPerMatch = start.settings.handsPerMatch;
         }
@@ -177,7 +175,7 @@ namespace BECore::Mahjong {
         }
         const int hands = _settings.handsPerMatch;
         const bool handsAreAChoice = hands == kFullMatchHands || hands == kShortMatchHands;
-        const MahjongPrefsSave prefs = MakePrefs(_language.ToStringView(), _hintsOn, _seats, handsAreAChoice ? hands : _savedPrefs.hands, _level, _animationSpeed);
+        const MahjongPrefsSave prefs = MakePrefs(_language.ToStringView(), _hintsOn, _seats, handsAreAChoice ? hands : _savedPrefs.hands, _levels, _animationSpeed);
         if (!(prefs == _savedPrefs)) {
             _savedPrefs = prefs;
             _store.SavePrefs(prefs);

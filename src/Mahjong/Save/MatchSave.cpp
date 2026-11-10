@@ -48,6 +48,27 @@ namespace BECore::Mahjong {
             return count;
         }
 
+        constexpr char kLevelsSeparator = ',';
+
+        /// The four levels of a `levels` text ("5,2,6,10"), or nothing when it is not exactly four numbers 1..10.
+        std::optional<SeatLevels> ParseLevelsText(std::string_view text) {
+            SeatLevels levels = UniformLevels(kDefaultLevel);
+            for (size_t seat = 0; seat < levels.size(); ++seat) {
+                const bool last = seat + 1 == levels.size();
+                const size_t end = text.find(kLevelsSeparator);
+                if ((end == std::string_view::npos) != last) {
+                    return std::nullopt;
+                }
+                const std::optional<ComputerLevel> level = TryParseLevel(text.substr(0, end));
+                if (!level) {
+                    return std::nullopt;
+                }
+                levels[seat] = *level;
+                text = last ? std::string_view() : text.substr(end + 1);
+            }
+            return levels;
+        }
+
     }  // namespace
 
     eastl::string MatchSaveText(const eastl::vector<MatchLogEvent>& events) {
@@ -91,13 +112,30 @@ namespace BECore::Mahjong {
     }
 
     MahjongPrefsSave MakePrefs(eastl::string_view language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, ComputerLevel level, AnimationSpeed speed) {
+        return MakePrefs(language, hintsOn, seats, handsPerMatch, UniformLevels(level), speed);
+    }
+
+    MahjongPrefsSave MakePrefs(eastl::string_view language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, const SeatLevels& levels, AnimationSpeed speed) {
         MahjongPrefsSave prefs;
         prefs.language.assign(language.data(), language.size());
         prefs.hintsOn = hintsOn;
         prefs.seats = SeatsToLetters(seats);
         prefs.hands = handsPerMatch;
-        const std::string_view text = LevelText(level);
+        const std::string_view text = LevelText(FirstComputerLevel(seats, levels));
         prefs.level.assign(text.data(), text.size());
+        if (levels != UniformLevels(levels[0])) {
+            for (size_t seat = 0; seat < levels.size(); ++seat) {
+                if (seat > 0) {
+                    prefs.levels.push_back(kLevelsSeparator);
+                }
+                const std::string_view number = LevelText(levels[seat]);
+                prefs.levels.append(number.data(), number.size());
+            }
+        } else if (std::ranges::none_of(seats, [](SeatKind kind) { return kind == SeatKind::Computer; })) {
+            // `level` is the default when nobody is a computer, so it cannot carry the one level of the table
+            const std::string_view number = LevelText(levels[0]);
+            prefs.level.assign(number.data(), number.size());
+        }
         const std::string_view speedText = SpeedText(speed);
         prefs.speed.assign(speedText.data(), speedText.size());
         return prefs;
@@ -119,16 +157,24 @@ namespace BECore::Mahjong {
             return std::unexpected(Format("the hands {} are not {} or {}", prefs.hands, kFullMatchHands, kShortMatchHands));
         }
         values.handsPerMatch = prefs.hands;
-        // A copy written before the scale of numbers holds a name (`easy` | `normal`): read as the level of that name
-        const std::string_view levelText(prefs.level.c_str(), prefs.level.size());
-        std::optional<ComputerLevel> level = TryParseLevel(levelText);
-        if (!level) {
-            level = TryParseLevelName(levelText);
+        if (!prefs.levels.empty()) {  // one level per seat: it wins over `level`
+            const std::optional<SeatLevels> levels = ParseLevelsText(std::string_view(prefs.levels.c_str(), prefs.levels.size()));
+            if (!levels) {
+                return std::unexpected(Format("the levels '{}' are not four numbers {}..{} separated by commas", prefs.levels, kMinLevel, kMaxLevel));
+            }
+            values.levels = *levels;
+        } else {
+            // A copy written before the scale of numbers holds a name (`easy` | `normal`): read as the level of that name
+            const std::string_view levelText(prefs.level.c_str(), prefs.level.size());
+            std::optional<ComputerLevel> level = TryParseLevel(levelText);
+            if (!level) {
+                level = TryParseLevelName(levelText);
+            }
+            if (!level) {
+                return std::unexpected(Format("the level '{}' is not {}", prefs.level, LevelRangeText()));
+            }
+            values.levels = UniformLevels(*level);
         }
-        if (!level) {
-            return std::unexpected(Format("the level '{}' is not {}", prefs.level, LevelRangeText()));
-        }
-        values.level = *level;
         const std::optional<AnimationSpeed> speed = TryParseSpeed(std::string_view(prefs.speed.c_str(), prefs.speed.size()));
         if (!speed) {
             return std::unexpected(Format("the speed '{}' is not slow, normal or fast", prefs.speed));

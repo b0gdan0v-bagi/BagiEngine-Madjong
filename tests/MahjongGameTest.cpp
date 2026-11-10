@@ -205,6 +205,26 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
+    TEST_F(MahjongGameTest, ALevelPerSeatReachesTheSessionAndSetLevelSetsAllFour) {
+        MahjongGame* game = MahjongGame::GetActive();
+        ASSERT_NE(game, nullptr);
+        EXPECT_EQ(game->GetLevels(), UniformLevels(ComputerLevel::Normal));
+
+        const SeatLevels mixed{ComputerLevel{1}, ComputerLevel{2}, ComputerLevel{6}, ComputerLevel{10}};
+        game->SetLevels(mixed);
+        EXPECT_EQ(game->GetLevels(), mixed);
+        ASSERT_TRUE(game->StartMatch(kSeed).has_value());
+        EXPECT_EQ(game->GetSession().Levels(), mixed);
+        EXPECT_EQ(game->GetSession().LevelOf(2), ComputerLevel{6});
+        game->Reset();
+        EXPECT_EQ(game->GetLevels(), mixed) << "kept across Reset";
+        EXPECT_EQ(game->GetSession().Levels(), mixed);
+        EXPECT_EQ(game->GetLevel(), ComputerLevel{2}) << "the one level a client reads is the lowest computer seat's (seat 0 is a person)";
+
+        game->SetLevel(ComputerLevel{7});
+        EXPECT_EQ(game->GetLevels(), UniformLevels(ComputerLevel{7}));
+    }
+
     TEST_F(MahjongGameTest, ARefusedStartLeavesTheLevelOfTheMatchInPlay) {
         MahjongGame* game = MahjongGame::GetActive();
         ASSERT_NE(game, nullptr);
