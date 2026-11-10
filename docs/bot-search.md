@@ -365,3 +365,27 @@ $A --first 100000 --seeds 1000 --jobs 14 --others 5 --focus \
 (Normal on this range: 24.98 % wins, 0 points.)
 
 **Verdict: no search profile inside the time rule is stronger than Normal.** Neither of the two on the decision range is significant on points or on wins, so by the rule written first the confirmation range is not played (a result that is not positive on the decision range cannot pass "both ranges"). The decision-range signs are positive, the exploration-range signs of the same variants were negative; the mean of the two ranges is +0.6 points (3 x 3 / 30) and +0.1 (3 x 3 / 60), with intervals of about +-2: this is Normal's play with noise, which the first entry found. The 8 x 4 record row says the same: 2.7 times the worlds and a third more candidates than 3 x 3 (32 rollouts against 9, about 3.6 times) give +1.08 +- 2.93 and 0.00 wins, so compute inside a reasonable budget (a few times the rollouts) is not what limits the search (the rollout policy is Normal itself: "What the numbers do and do not show"). Nothing the knobs cannot say was needed; no code was changed. Consequence for the plan: levels 6..10 have no stronger profile to take, and the proposal for the top of the scale is the owner's ("Left for the owner" of the plan: leave 6..10 as Normal, re-map so that Normal is 10, or the background-search entry).
+
+### The profiles in the code (step 4: what `ComputerLevel.h` holds)
+
+Decided by the rule written before the numbers (plan, WP 3), from the two sections above and nothing newly measured:
+
+- **Level 5 is `kNormalProfile`**, unchanged (the golden scores of `ComputerLevelTest`, seeds 700..703, did not move).
+- **Levels 6..10 stay `kNormalProfile`.** "Above Normal" found no search profile inside the time rule that is stronger than Normal, so no
+  stronger profile is invented; they are placeholders (the owner's options for the top of the scale are in the plan's "Left for the
+  owner").
+- **Levels 1..4 stay the skip-knob profiles** (`kEasyProfile`, `kLevel2Profile`..`kLevel4Profile`). The rule re-cuts them from the
+  search dials only if a search-weakening variant is a clearly better ladder: smoother steps, or a weakness a person cannot see through.
+  Neither holds. (a) The steps: the skip ladder steps by about 16 / 12-14 / 8-12 / 8-9 points a hand, each significant on both ranges;
+  the search dial is the margin (the worlds change nothing, "The search as a weakening of Normal"), and along it the strength is
+  -34.7 (margin 0), -6.8 (10), -2.8 (30) points: a cliff and then a plateau, with nothing at level 3 and nothing between 0 and 10
+  (margins 5 and 20 were not in the grid, and by the rule nothing is added after a result). The margin 30 variant is not even
+  significantly below Normal on points. (b) The invisibility: margin 0 declares 28-30 % of the hands like level 2 (visible in the
+  same way), and margin 10 declares 45-48 % like level 4; only a ladder that is not steep could use the margins that declare like
+  Normal, and those lie within the noise of Normal. (c) The cost: a search seat spends about 65 ms a decision in Debug (a decision of
+  8 rollouts), the skip levels nothing, and the browser build is not measured. So no profile is re-cut and no number of 2..4 was
+  retuned.
+- **No level searches**, so there is no search level whose Debug decision time the rule would bound; the time rule stays what bounds
+  a future profile (`searchWorlds x searchCandidates` of at most 12 rollouts, the slowest decision at most 0.3 s: 237 to 261 ms for
+  the three shapes of "Above Normal"). `ComputerSearchTest` pins that no level searches, and `ComputerLevelTest` that the skip
+  profiles get weaker strictly along 1..4 and levels 5..10 are Normal's.

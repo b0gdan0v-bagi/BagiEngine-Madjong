@@ -209,13 +209,15 @@ namespace BECore::Mahjong::Tests {
             }
             EXPECT_EQ(profile.searchWorlds, 0) << LevelText(level);
             if (LevelNumber(level) >= LevelNumber(ComputerLevel::Normal)) {
-                EXPECT_EQ(&profile, &kNormalProfile) << LevelText(level) << ": no player above Normal exists yet";
+                EXPECT_EQ(&profile, &kNormalProfile) << LevelText(level) << ": no player above Normal exists inside the time rule (docs/bot-search.md)";
             } else if (weaker != nullptr) {
                 // Every knob of a level below Normal gives way no more than the level under it
                 EXPECT_LE(profile.skipAcceptancePercent, weaker->skipAcceptancePercent) << LevelText(level);
                 EXPECT_LE(profile.skipDeclarationPercent, weaker->skipDeclarationPercent) << LevelText(level);
                 EXPECT_LE(profile.skipClaimPercent, weaker->skipClaimPercent) << LevelText(level);
                 EXPECT_GE(profile.takeValueClaimsAtEqualShanten, weaker->takeValueClaimsAtEqualShanten) << LevelText(level);
+                // ... and a step is a step: the declaration skip (the biggest knob) is strictly lower than the level under it
+                EXPECT_LT(profile.skipDeclarationPercent, weaker->skipDeclarationPercent) << LevelText(level);
             }
             weaker = &profile;
         }
