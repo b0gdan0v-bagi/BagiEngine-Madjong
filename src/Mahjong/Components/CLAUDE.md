@@ -50,6 +50,6 @@ The glue between the model and the engine's scene and UI. Pure logic lives in `.
 
 Apply when `HintsApply(HintsOn(), IsTablePaused(), session)`: hints on, not paused, `Playing`, the viewer a person, no cover. Never for a spectator or once the hand is over; the control API does not know them (`get_state` is equal with hints on and off).
 
-- **Waiting row** inside the wall ring: the tiles the viewer's hand waits for with the unseen copies (`WaitingTiles`), while the hand has 3n+1 tiles. Recomputed only when the version, the viewer or `HintsApply` changed.
+- **Waiting row** in the top left corner (x 96..432, y 8..148, the ground of the removed HUD round box; the wall ring's inside is the centre panel, which the hints leave free; the elements keep to the safe area, so a notch moves them inwards): the tiles the viewer's hand waits for with the unseen copies (`WaitingTiles`), while the hand has 3n+1 tiles. Recomputed only when the version, the viewer or `HintsApply` changed.
 - **Declare marks:** gold bars under the hand tiles whose discard declares (`DeclaringDiscards`), on the viewer's turn.
 - **Advice:** `HintButton` (node `HintsButton`, or in `ActionsCompact`) is offered while the viewer is the person to act. A press stores `AdviceFor(view)` for that table; the sentence goes to `hintAdvice` and the advised tile is framed. Any version change, viewer change, hints off, pause or cover drops it. It never acts.

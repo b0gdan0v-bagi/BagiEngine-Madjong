@@ -15,8 +15,9 @@ namespace BECore::Mahjong {
      * - The table: `kFelt` with a `kFeltRim` round the view, a `kZonePlate` under the discard blocks and the wall ring, a `kTileShadow`
      *   under each tile. A mark on the table is the gold family (`kTurnMark`, `kPendingFrame`, the hints `kDeclareMark`,
      *   `kAdvisedFrame`, and the marks of the last move `kLastDiscardMark`, `kDrawnTileMark`, `kClaimedEdge`, `kClaimHighlight`, the frame of a seat plate whose claim lost `kClaimLostFrame`, the
-     * frame of a declared hand `kCallingFrame` and the bar of its safe discards `kKeepsWaitingMark`, and the turn plate of a seat: `kSeatTurnFrame` with the tint `kTurnMark`) and nothing else on the
-     * table is gold (the dealer mark `kDealerMark` of a seat plate is red); `kVeil` dims a tile that cannot be discarded now.
+     * frame of a declared hand `kCallingFrame` and the bar of its safe discards `kKeepsWaitingMark`, and the turn plate of a seat: `kSeatTurnFrame` with the tint `kTurnMark`, and the turn light of
+     * the centre panel `kPanelTurnLight`) and nothing else on the table is gold (the dealer mark `kDealerMark`, of a seat plate and of the centre panel, is red); `kVeil` dims a tile that cannot be
+     * discarded now.
      * - The screens: `scrim` dims what lies behind a modal screen (and the hint), `surface` is the plate, `header` its headline band,
      *   `surfaceRaised` the rows on it, `hudPanel` the panels of the HUD over the felt.
      * - The buttons: `primary` confirms (Mahjong!, Start, Next hand), `secondary` claims and the HUD's New game, `neutral` the extras of

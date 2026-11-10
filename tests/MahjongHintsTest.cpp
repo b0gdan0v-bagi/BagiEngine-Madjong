@@ -13,7 +13,7 @@
 
 /**
  * The hints of the shipped scene (`Components/MahjongHintsComponent.h`, `Table/Hints.h`): the switch `Hints` On | Off of the page
- * `Options`, which the component answers and the game keeps (`MahjongGame::HintsOn()`), and the waiting row inside the wall ring. Fixed
+ * `Options`, which the component answers and the game keeps (`MahjongGame::HintsOn()`), and the waiting row in the top left corner. Fixed
  * hands (`FixedWall.h`) are laid into the hand in progress; the pure helper has its own test (`HintsTest`).
  */
 namespace BECore::Mahjong::Tests {
@@ -728,10 +728,13 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        /// The ground inside the ring of wall stacks: the ring of the layout (`zones.wall`, where the table puts it) less its one row of stacks.
-        Rect GroundInsideTheRing() {
-            const Rect& ring = MakeTableLayout(TableInput{}).zones.wall;
-            return Rect(ring.x + kWallStackSize, ring.y + kWallStackSize, ring.w - 2.0f * kWallStackSize, ring.h - 2.0f * kWallStackSize);
+        /// The corner of the table the hints live in (`config/nodes/MahjongHints.xml`): the waiting row and the strip under it, left of the top
+        /// seat's plate; the ground the HUD box of the round and the wall had before the centre panel took them. Design units.
+        const Rect kHintsCorner(96.0f, 8.0f, 336.0f, 140.0f);
+
+        /// The centre panel of the layout: the inside of the wall ring, which nothing of the hints may touch.
+        Rect CenterPanel() {
+            return MakeTableLayout(TableInput{}).zones.centerPanel;
         }
 
         bool Inside(const Rect& inner, const Rect& outer) {
@@ -757,7 +760,7 @@ namespace BECore::Mahjong::Tests {
         });
     }
 
-    TEST_F(MahjongHintsTest, ThePanelLiesInsideTheWallRingClearOfEveryTileOfTheWorstCaseTableAndTakesNoInput) {
+    TEST_F(MahjongHintsTest, ThePanelLiesInTheCornerClearOfTheCentrePanelAndOfEveryTileOfTheWorstCaseTableAndTakesNoInput) {
         ASSERT_NO_FATAL_FAILURE(StartEast(kOrphansWait, "Ew"));
         ASSERT_TRUE(Discard("Ew"));
         Draw();
@@ -766,11 +769,10 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(canvas);
         canvas->UpdateLayout(kViewWidth, kViewHeight);
 
-        const Rect inside = GroundInsideTheRing();
-
         const UIElement* panel = Element("Hints", "WaitPanel");
         ASSERT_NE(panel, nullptr);
-        EXPECT_TRUE(Inside(panel->rect, inside)) << panel->rect.x << "," << panel->rect.y << " " << panel->rect.w << "x" << panel->rect.h;
+        EXPECT_TRUE(Inside(panel->rect, kHintsCorner)) << panel->rect.x << "," << panel->rect.y << " " << panel->rect.w << "x" << panel->rect.h;
+        EXPECT_TRUE(Apart(panel->rect, CenterPanel())) << "the waiting row is not on the centre panel";
         for (int i = 0; i < kWaitCells; ++i) {
             for (const char* prefix : {"WaitCell", "WaitTile", "WaitCount"}) {
                 const UIElement* part = Element("Hints", CellName(prefix, i).c_str());
@@ -1298,12 +1300,14 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NE(label, nullptr);
         ASSERT_NE(panel, nullptr);
 
-        const Rect inside = GroundInsideTheRing();
-        EXPECT_TRUE(Inside(button->rect, inside));
-        EXPECT_TRUE(Inside(label->rect, inside));
+        EXPECT_TRUE(Inside(button->rect, kHintsCorner));
+        EXPECT_TRUE(Inside(label->rect, kHintsCorner));
         EXPECT_TRUE(Apart(button->rect, label->rect));
         EXPECT_TRUE(Apart(button->rect, panel->rect));
         EXPECT_TRUE(Apart(label->rect, panel->rect));
+        for (const Rect* rect : {&button->rect, &label->rect, &panel->rect}) {
+            EXPECT_TRUE(Apart(*rect, CenterPanel())) << "nothing of the hints is on the centre panel";
+        }
         EXPECT_TRUE(button->IsHitTestable()) << "the button takes the press";
         EXPECT_FALSE(label->IsHitTestable()) << "the sentence takes no input";
 

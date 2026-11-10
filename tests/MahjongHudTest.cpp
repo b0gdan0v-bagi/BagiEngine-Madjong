@@ -428,6 +428,27 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_TRUE(Apart(Grown(plates[i], kGridUnit), element->rect)) << neighbour.element << " is less than a grid unit from the plate at position " << i;
             }
         }
+
+        // The hints (the corner of the removed round box) keep a grid unit from every other element of the HUD, from the plates under the
+        // discard blocks and from the centre panel, which they leave free
+        const Neighbour hints[] = {{"Hints", "WaitPanel"}, {"Hints", "AdviceText"}, {"HintsButton", "HintButton"}};
+        eastl::vector<Rect> others = ZonePlates(layout);
+        others.push_back(layout.zones.centerPanel);
+        for (const Neighbour& other : neighbours) {
+            others.push_back(Element(other.node, other.element)->rect);
+        }
+        for (const Neighbour& hint : hints) {
+            const Rect rect = Element(hint.node, hint.element)->rect;
+            int equal = 0;
+            for (const Rect& other : others) {
+                if (other.x == rect.x && other.y == rect.y && other.w == rect.w && other.h == rect.h) {
+                    ++equal;  // the element itself (it is in the list of the neighbours)
+                    continue;
+                }
+                EXPECT_TRUE(Apart(Grown(other, kGridUnit), rect)) << hint.element << " is less than a grid unit from the rect " << other.x << "," << other.y << " " << other.w << "x" << other.h;
+            }
+            EXPECT_EQ(equal, 1) << hint.element;
+        }
     }
 
     TEST_F(MahjongHudTest, ThePlatesSayWhoIsEastAfterTheDealMovesAndTheScoresAfterAHand) {
