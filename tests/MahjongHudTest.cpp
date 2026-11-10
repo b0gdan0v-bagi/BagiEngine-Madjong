@@ -1450,4 +1450,142 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(ContinueShown()) << "the offer is made at the start of the game only";
     }
 
+    // ----- the page Options -----
+
+    TEST_F(MahjongHudTest, OptionsOpensOnlyOverSetupAndBackClosesItAndSetupStaysOpen) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        ASSERT_FALSE(_game->IsSetupOpen());
+        EmitAction("MahjongOptions");
+        EXPECT_FALSE(_game->IsOptionsOpen()) << "a click that reached the HUD with Setup closed is out of date";
+
+        _game->OpenSetup();
+        Draw();
+        EmitAction("MahjongOptions");
+        EXPECT_TRUE(_game->IsOptionsOpen());
+        EXPECT_TRUE(_game->IsSetupOpen());
+        EXPECT_TRUE(_game->IsTablePaused());
+
+        EmitAction("MahjongOptionsBack");
+        EXPECT_FALSE(_game->IsOptionsOpen());
+        EXPECT_TRUE(_game->IsSetupOpen());
+        EmitAction("MahjongOptionsBack");  // closed already
+        EXPECT_FALSE(_game->IsOptionsOpen());
+        EXPECT_TRUE(_game->IsSetupOpen());
+    }
+
+    TEST_F(MahjongHudTest, TheLevelIsPublishedWhenSetupOpensAndAClickOnThePageChangesTheGameAndTheVariable) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        _game->SetLevel(ComputerLevel::Easy);
+        _game->OpenSetup();
+        Draw();
+        EXPECT_EQ(Var("levelChoice"), "easy") << "Setup opens on the level of the game";
+
+        EmitAction("MahjongOptions");
+        EmitAction("MahjongSetLevel", "normal");
+        EXPECT_EQ(_game->GetLevel(), ComputerLevel::Normal);
+        EXPECT_EQ(Var("levelChoice"), "normal");
+        EmitAction("MahjongSetLevel", "easy");
+        EXPECT_EQ(_game->GetLevel(), ComputerLevel::Easy);
+        EXPECT_EQ(Var("levelChoice"), "easy");
+    }
+
+    TEST_F(MahjongHudTest, ABadLevelAndALevelClickWhileThePageOrSetupIsClosedChangeNothing) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        _game->OpenSetup();
+        Draw();
+        ASSERT_EQ(_game->GetLevel(), ComputerLevel::Normal);
+        ASSERT_EQ(Var("levelChoice"), "normal");
+
+        EmitAction("MahjongSetLevel", "easy");
+        EXPECT_EQ(_game->GetLevel(), ComputerLevel::Normal) << "the page is closed";
+        EXPECT_EQ(Var("levelChoice"), "normal");
+
+        EmitAction("MahjongOptions");
+        for (const char* bad : {"hard", "Easy", "EASY", " easy", "", "1"}) {
+            EmitAction("MahjongSetLevel", bad);
+            EXPECT_EQ(_game->GetLevel(), ComputerLevel::Normal) << bad;
+            EXPECT_EQ(Var("levelChoice"), "normal") << bad;
+        }
+
+        EmitAction("MahjongOptionsBack");
+        EmitAction("MahjongSetLevel", "easy");
+        EXPECT_EQ(_game->GetLevel(), ComputerLevel::Normal) << "Back closed the page";
+
+        _game->CloseSetup();
+        EmitAction("MahjongSetLevel", "easy");
+        EXPECT_EQ(_game->GetLevel(), ComputerLevel::Normal) << "Setup is closed";
+    }
+
+    TEST_F(MahjongHudTest, TheLevelOfThePageReachesTheNextMatchAndNotTheRunningOne) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        ASSERT_EQ(_game->GetSession().Level(), ComputerLevel::Normal);
+        _game->OpenSetup();
+        Draw();
+        EmitAction("MahjongOptions");
+        EmitAction("MahjongSetLevel", "easy");
+        EXPECT_EQ(_game->GetSession().Level(), ComputerLevel::Normal) << "a running session keeps its level";
+
+        EmitAction("MahjongOptionsBack");
+        EmitAction("MahjongStart");
+        EXPECT_FALSE(_game->IsSetupOpen());
+        EXPECT_EQ(_game->GetSession().Level(), ComputerLevel::Easy);
+    }
+
+    TEST_F(MahjongHudTest, AStartAControlResetAndAControlActionCloseThePage) {
+        IControllableGame* control = _game->AsControllable();
+        ASSERT_NE(control, nullptr);
+        _game->Start();
+        Draw();
+
+        EmitAction("MahjongOptions");
+        ASSERT_TRUE(_game->IsOptionsOpen());
+        EmitAction("MahjongStart");
+        EXPECT_FALSE(_game->IsOptionsOpen());
+
+        _game->OpenSetup();
+        Draw();
+        EmitAction("MahjongOptions");
+        ASSERT_TRUE(_game->IsOptionsOpen());
+        Json options = Json::object();
+        options["seed"] = 3;
+        options["seats"] = "PCCC";
+        ASSERT_TRUE(control->Reset(options).has_value());
+        EXPECT_FALSE(_game->IsOptionsOpen());
+
+        _game->OpenSetup();
+        Draw();
+        EmitAction("MahjongOptions");
+        ASSERT_TRUE(_game->IsOptionsOpen());
+        const auto actions = control->GetActions();
+        ASSERT_TRUE(actions.has_value() && !actions->empty());
+        ASSERT_TRUE(control->PerformAction((*actions)[0]).has_value());
+        EXPECT_FALSE(_game->IsOptionsOpen());
+        EXPECT_FALSE(_game->IsSetupOpen());
+    }
+
+    TEST_F(MahjongHudTest, TheLevelVariableIsNotSetAgainWhileNothingChanges) {
+        _game->Start();
+        Draw();
+        EmitAction("MahjongOptions");
+        Draw();
+        const uint64_t version = CoreManager::GetUIVars().GetVersion();
+        Draw();
+        Draw();
+        EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), version);
+    }
+
+    TEST_F(MahjongHudContinueTest, ContinueWithThePageOpenClosesBothAndKeepsTheSavedMatch) {
+        Draw();
+        ASSERT_TRUE(_game->CanContinue());
+        EmitAction("MahjongOptions");
+        ASSERT_TRUE(_game->IsOptionsOpen());
+        EXPECT_TRUE(_game->CanContinue()) << "the page does not take the offer away";
+
+        EmitAction("MahjongContinue");
+        EXPECT_FALSE(_game->IsOptionsOpen());
+        EXPECT_FALSE(_game->IsSetupOpen());
+        EXPECT_FALSE(_game->IsTablePaused());
+        EXPECT_EQ(StateOf(*_game), _savedState);
+    }
+
 }  // namespace BECore::Mahjong::Tests

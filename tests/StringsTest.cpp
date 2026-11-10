@@ -92,6 +92,12 @@ namespace BECore::Mahjong::Tests {
             return keys;
         }
 
+        /// The words of the page `Options` while the scene does not show the page yet (the node comes with its own work package, which deletes this list).
+        bool IsWordOfThePageNotInTheSceneYet(const std::string& key) {
+            static const std::set<std::string> keys = {"setup.options", "setup.level", "options.title", "options.back", "level.easy", "level.normal"};
+            return keys.contains(key);
+        }
+
         UIStrings MakeTable() {
             UIStrings strings;
             strings.Set("en"_intern, "greeting", "Hello, {name}!");
@@ -194,7 +200,8 @@ namespace BECore::Mahjong::Tests {
         for (const LanguageEntries& language : ReadShippedEntries()) {
             for (const StringEntry& entry : language.entries) {
                 inTheFile.insert(entry.key);
-                EXPECT_TRUE(scene.contains(entry.key) || named.contains(entry.key) || walked.contains(entry.key)) << language.id << ": " << entry.key << " is used by nobody";
+                EXPECT_TRUE(scene.contains(entry.key) || named.contains(entry.key) || walked.contains(entry.key) || IsWordOfThePageNotInTheSceneYet(entry.key))
+                    << language.id << ": " << entry.key << " is used by nobody";
             }
         }
         for (const std::string& key : walked) {

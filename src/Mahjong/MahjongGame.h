@@ -27,7 +27,7 @@ namespace BECore::Mahjong {
      * `GetSettings()` (the defaults, `MahjongSettings{}`, until `SetSettings`) and the seat setup `GetSeats()` (`kDefaultSeatSetup`:
      * seat 0 a person, the others computers) and the level of the computers `GetLevel()` (`kDefaultLevel`, Normal); all three are kept
      * across `Reset()`. `AsControllable()` hands out the control adapter, which drives the match through the session. The seat choice of
-     * a new game is the panel `Setup` of the scene (`IsSetupOpen`), the pages of the rules are `IsRulesOpen`. The language of the words
+     * a new game is the panel `Setup` of the scene (`IsSetupOpen`, with the page `Options` over it, `IsOptionsOpen`), the pages of the rules are `IsRulesOpen`. The language of the words
      * (`GetLanguage`, `kDefaultLanguage`) is kept for the session and applied to `CoreManager::GetUIStrings()` at every start.
      * `HintsOn()` is the switch of the hints (default on, kept for the session, changed in `Setup`). Every match begun through the
      * session is written down by the `MatchLogWriter` the game owns (`GetMatchLog()`); a match started through the non-const `GetMatch()`
@@ -134,7 +134,21 @@ namespace BECore::Mahjong {
         }
         void CloseSetup() {
             _setupOpen = false;
+            _optionsOpen = false;  // the page lives over the panel
             _canContinue = false;  // whoever closes the panel has moved on from the offer
+        }
+
+        /// Whether the page `Options` (language, hints, level of the computers) is open over `Setup`. Meaningful only with `Setup` open:
+        /// `Setup` stays open under it, so `Continue` and the pending seats and hands are not lost. `CloseSetup()` closes it, so every
+        /// start, `Continue` and every accepted control action do too.
+        bool IsOptionsOpen() const {
+            return _optionsOpen;
+        }
+        void OpenOptions() {
+            _optionsOpen = true;
+        }
+        void CloseOptions() {
+            _optionsOpen = false;
         }
 
         /// Whether the rules screen (the modal pages `Rules` of the scene, `Table/RulesText.h`) is open. The HUD button `Rules` opens it; a
@@ -150,9 +164,9 @@ namespace BECore::Mahjong {
             _rulesOpen = false;
         }
 
-        /// Whether a modal panel (`Setup` or the rules) covers the table: no click is taken, no computer steps, no hint is shown.
+        /// Whether a modal panel (`Setup`, its page `Options` or the rules) covers the table: no click is taken, no computer steps, no hint is shown.
         bool IsTablePaused() const {
-            return _setupOpen || _rulesOpen;
+            return _setupOpen || _optionsOpen || _rulesOpen;
         }
 
         /// The language of the words, an id of `config/UIStrings.xml`. Kept across `Reset()` and `StartMatch`.
@@ -193,6 +207,7 @@ namespace BECore::Mahjong {
         ComputerLevel _level = kDefaultLevel;
         bool _setupOpen = false;
         bool _rulesOpen = false;
+        bool _optionsOpen = false;
         bool _hintsOn = true;
         PoolString _language = PoolString::Intern(kDefaultLanguage);
         MatchLogWriter _log;      // before _session: the session reports to it, so it goes last
