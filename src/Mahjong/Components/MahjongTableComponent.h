@@ -65,6 +65,13 @@ namespace BECore::Mahjong {
      * `kClaimHighlightSeconds` (`kClaimHighlight`, on for the first half of each `kClaimBlinkSeconds`); the time runs on `SceneUpdateEvent`
      * (also under the cover, not while the seat choice is open) and the highlight changes no game state.
      *
+     * **A claim that lost.** A claim window leaves a record (`HandModel::LastClaimWindow()`, public: every claim is said aloud at a table);
+     * when some claim lost to a better one, for `kClaimLostSeconds` the seat plate of the window's winner blinks (`kClaimHighlight`, as a set
+     * just laid) and the plate of every seat whose claim lost has a frame (`kClaimLostFrame`), drawn after the base and the turn mark of the plate,
+     * before the tiles; they show under the cover, for a spectator and at the end of the hand, the time runs on `SceneUpdateEvent` (it stops with
+     * the table pause) and a new hand, match or game starts without them. A mahjong on a discard also flies from its pile slot into the
+     * winner's hand (a win is no move, so it is seen as a new winner in the snapshot).
+     *
      * **Flights** (`Table/TileFlights.h`). The tiles that arrive somewhere new fly there in `kTileFlightSeconds`: a discard from its hand to the
      * pile, a claimed tile from the pile (or, when the discard and the claim fall into one frame, from the discarder's hand) and the tiles of
      * the set from the claimer's hand, the tiles of a kong, a draw from the wall. Every frame the component keeps a `TableSnapshot` of what it
@@ -177,8 +184,9 @@ namespace BECore::Mahjong {
             bool setLaid = false;  // a set was laid among them: the highlight of `_highlightSeat` / `_highlightMeld` has just started
         };
 
-        /// Looks at the entries of `Moves()` not seen yet and starts the highlight of the set the last of them laid; a hand, a match or a
-        /// game that is not the one seen before starts over without a highlight.
+        /// Looks at the entries of `Moves()` not seen yet and starts the highlight of the set the last of them laid, and at the claim window
+        /// settled since the last frame (`LastClaimWindow()`, by its serial) and starts the marks of the claims that lost; a hand, a match
+        /// or a game that is not the one seen before starts over without either.
         NewMoves FollowMoves(const MahjongGame& game);
 
         /// Plans the flights of the frame just laid out (`_shown`) against `before`, the frame drawn last: the new batch replaces the running
@@ -214,8 +222,12 @@ namespace BECore::Mahjong {
         size_t _movesSeen = 0;
         Seat _highlightSeat = kNoSeat;  // the set that blinks: the meld `_highlightMeld` of this seat
         int _highlightMeld = -1;
-        float _highlightLeft = 0.0f;   // seconds of the highlight left, 0 for none
-        bool _highlightWaits = false;  // the tiles of the set are still in the air: the highlight does not run and is not drawn until they land
+        float _highlightLeft = 0.0f;                  // seconds of the highlight left, 0 for none
+        bool _highlightWaits = false;                 // the tiles of the set are still in the air: the highlight does not run and is not drawn until they land
+        int _windowSeen = 0;                          // the serial of the last claim window looked at (`ClaimWindowResult::serial`), 0 for none
+        Seat _lostWinner = kNoSeat;                   // the seat that won the window whose losers are marked
+        eastl::array<bool, kSeatCount> _lostSeats{};  // the seats whose claim lost in it
+        float _lostLeft = 0.0f;                       // seconds of the marks of that window left, 0 for none
         static MahjongTableComponent* s_active;
     };
 

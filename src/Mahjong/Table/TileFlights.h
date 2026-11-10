@@ -58,7 +58,8 @@ namespace BECore::Mahjong {
         /// The index of the drawn tile in the concealed tiles of `drawSeat`: the viewer's drawn tile, an opponent's last slot.
         int drawIndex = -1;
         /// The seat that won on a discard (the hand is finished, `WinSource::Discard`) and holds the winning tile, `kNoSeat` otherwise
-        /// (no win yet, a self-draw, a robbed kong: those have no pile slot to fly from).
+        /// (no win yet, a self-draw, a robbed kong: those have no pile slot to fly from). Never set together with `drawSeat`: a hand that
+        /// is finished has no tile just drawn.
         Seat winSeat = kNoSeat;
         /// The index of the winning tile in the sorted concealed tiles of `winSeat`: the last copy of that kind.
         int winIndex = -1;

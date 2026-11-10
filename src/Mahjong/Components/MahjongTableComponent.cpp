@@ -124,19 +124,19 @@ namespace BECore::Mahjong {
 
         /// The index, in the concealed tiles of `seat`, of the tile it has just drawn (the last copy: `AddConcealed` sorts equal tiles
         /// together and the drawn one is the one that was added last); -1 when it drew none.
-        int DrawnIndexOf(const HandModel& hand, Seat seat) {
-            const Tile drawn = hand.DrawnTile(seat);
-            if (!drawn.IsValid()) {
-                return -1;
-            }
-            const eastl::vector<Tile>& concealed = hand.GetHand(seat).concealed;
+        int LastCopyIndex(const eastl::vector<Tile>& concealed, Tile tile) {
             for (int i = static_cast<int>(concealed.size()) - 1; i >= 0; --i) {
-                if (concealed[static_cast<size_t>(i)] == drawn) {
+                if (concealed[static_cast<size_t>(i)] == tile) {
                     return i;
                 }
             }
-            ASSERT(false, "DrawnIndexOf: the drawn tile is not in the concealed tiles");
+            ASSERT(false, "LastCopyIndex: the tile is not in the concealed tiles");
             return -1;
+        }
+
+        int DrawnIndexOf(const HandModel& hand, Seat seat) {
+            const Tile drawn = hand.DrawnTile(seat);
+            return drawn.IsValid() ? LastCopyIndex(hand.GetHand(seat).concealed, drawn) : -1;
         }
 
         /// The entry of the pile that is the last move (a discard nobody has claimed yet); -1 when the last move is something else.
@@ -190,6 +190,11 @@ namespace BECore::Mahjong {
                 }
             }
             snapshot.wallRemaining = static_cast<int>(hand.GetWall().Remaining());
+            // A mahjong on a discard: the winning tile joined the winner's concealed tiles, the last copy of it is the one that flew in
+            if (hand.GetPhase() == Phase::Finished && hand.Result() && hand.Result()->source == WinSource::Discard && IsSeat(hand.Result()->winner)) {
+                snapshot.winSeat = hand.Result()->winner;
+                snapshot.winIndex = LastCopyIndex(hand.GetHand(snapshot.winSeat).concealed, hand.Result()->winningTile);
+            }
         }
 
         TableInput MakeInput(const HandModel& hand, Seat viewer) {
@@ -428,6 +433,8 @@ namespace BECore::Mahjong {
             _movesSeen = moves.size();
             _highlightLeft = 0.0f;
             _highlightWaits = false;
+            _lostLeft = 0.0f;
+            _windowSeen = match.Hand().LastClaimWindow() ? match.Hand().LastClaimWindow()->serial : 0;
             return NewMoves{true, moves.size(), false};
         }
         const size_t first = _movesSeen;
@@ -443,6 +450,20 @@ namespace BECore::Mahjong {
             }
         }
         _movesSeen = moves.size();
+        // A claim window settled since the last frame: when a claim lost in it, the winner and the losers are marked for a while (a pass is no
+        // claim, so a window that nobody claimed in or that all passed marks nothing)
+        if (const std::optional<ClaimWindowResult>& window = match.Hand().LastClaimWindow(); window && window->serial != _windowSeen) {
+            _windowSeen = window->serial;
+            _lostLeft = 0.0f;
+            if (!window->beaten.empty()) {
+                _lostWinner = window->winner;
+                _lostSeats.fill(false);
+                for (const LostClaim& lost : window->beaten) {
+                    _lostSeats[lost.seat] = true;
+                }
+                _lostLeft = kClaimLostSeconds;
+            }
+        }
         return NewMoves{false, first, setLaid};
     }
 
@@ -454,10 +475,11 @@ namespace BECore::Mahjong {
             EndFlights();
             return;
         }
-        // Nothing new is the common frame: no move since the last draw and no tile drawn from the wall
+        // Nothing new is the common frame: no move since the last draw, no tile drawn from the wall and no win (a win is no move)
         const eastl::vector<HandMove>& moves = hand.Moves();
         const eastl::span<const HandMove> fresh(moves.data() + news.first, moves.size() - news.first);
-        if (fresh.empty() && _shown.wallRemaining >= before.wallRemaining) {
+        const bool newWin = _shown.winSeat != kNoSeat && before.winSeat == kNoSeat;
+        if (fresh.empty() && _shown.wallRemaining >= before.wallRemaining && !newWin) {
             return;
         }
         eastl::vector<TileFlight> planned = PlanFlights(before, _shown, fresh);
@@ -485,6 +507,9 @@ namespace BECore::Mahjong {
         }
         if (_highlightLeft > 0.0f && !_highlightWaits && TableIsLive(*game)) {
             _highlightLeft = eastl::max(0.0f, _highlightLeft - event.deltaTime);
+        }
+        if (_lostLeft > 0.0f && TableIsLive(*game)) {
+            _lostLeft = eastl::max(0.0f, _lostLeft - event.deltaTime);
         }
         if (!_flights.empty() && TableIsLive(*game)) {
             _flightElapsed += event.deltaTime;
@@ -608,6 +633,16 @@ namespace BECore::Mahjong {
             if (seat == turnSeat) {
                 renderer.DrawFilledRect(box.x, box.y, box.w, box.h, kTurnMark);
                 DrawFrame(renderer, box, kSeatTurnFrameWidth * unit, kSeatTurnFrame);
+            }
+            // The last claim window (public): the plate of the seat that won it blinks as a set just laid does, the plate of each seat whose
+            // claim lost has a frame
+            if (_lostLeft > 0.0f) {
+                if (seat == _lostWinner && std::fmod(kClaimLostSeconds - _lostLeft, kClaimBlinkSeconds) < kClaimBlinkSeconds * 0.5f) {
+                    renderer.DrawFilledRect(box.x, box.y, box.w, box.h, kClaimHighlight);
+                }
+                if (_lostSeats[seat]) {
+                    DrawFrame(renderer, box, kSeatTurnFrameWidth * unit, kClaimLostFrame);
+                }
             }
             if (hand.SeatWind(seat) == Wind::East) {
                 renderer.DrawFilledRect(box.x, box.y, box.w, kDealerMarkHeight * unit, kDealerMark);
