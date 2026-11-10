@@ -46,11 +46,11 @@ namespace BECore::Mahjong::Tests {
 
     TEST(ComputerPlayerTest, ThePlayerAndTheTableReportTheirLevelAndTheDefaultIsNormal) {
         EXPECT_EQ(ComputerPlayer(kSeed).Level(), ComputerLevel::Normal);
-        EXPECT_EQ(ComputerTable(kSeed).Level(), ComputerLevel::Normal);
+        EXPECT_EQ(ComputerTable(kSeed).LevelOf(kSeat0), ComputerLevel::Normal);
         EXPECT_EQ(ComputerPlayer(kSeed, ComputerLevel::Easy).Level(), ComputerLevel::Easy);
         EXPECT_EQ(ComputerPlayer(kSeed, ComputerLevel::Normal).Level(), ComputerLevel::Normal);
-        EXPECT_EQ(ComputerTable(kSeed, ComputerLevel::Easy).Level(), ComputerLevel::Easy);
-        EXPECT_EQ(ComputerTable(kSeed, ComputerLevel::Normal).Level(), ComputerLevel::Normal);
+        EXPECT_EQ(ComputerTable(kSeed, ComputerLevel::Easy).LevelOf(kSeat0), ComputerLevel::Easy);
+        EXPECT_EQ(ComputerTable(kSeed, ComputerLevel::Normal).LevelOf(kSeat0), ComputerLevel::Normal);
     }
 
     // ----- Decide and Choose -----

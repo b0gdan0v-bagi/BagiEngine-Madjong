@@ -63,6 +63,9 @@ namespace BECore::Mahjong::Tests {
             }
             text += " | hands " + std::to_string(table.match.HandsPlayed()) + " version " + std::to_string(table.session.Version());
             text += " viewer " + std::to_string(table.session.Viewer()) + " phase " + Name(table.session.GetPhase());
+            for (const ComputerLevel level : table.session.Levels()) {
+                text += " level " + Name(level);
+            }
             return text;
         }
 
@@ -192,6 +195,98 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(refused.error(), MatchError::BadSettings);
         EXPECT_EQ(table.session.Level(), ComputerLevel::Easy);
         EXPECT_EQ(State(table), before);
+    }
+
+    TEST(TableSessionTest, EachSeatKeepsTheLevelItWasStartedWithPersonSeatsToo) {
+        Table table;
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            EXPECT_EQ(table.session.LevelOf(seat), kDefaultLevel) << "before the first start";
+        }
+        const SeatLevels levels{ComputerLevel{1}, ComputerLevel{3}, ComputerLevel{6}, ComputerLevel{10}};
+        ASSERT_TRUE(table.session.StartMatch(ShortMatch(), kSeed, kDefaultSeatSetup, levels).has_value());
+        EXPECT_EQ(table.session.Levels(), levels) << "seat 0 is a person: its level is kept";
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            EXPECT_EQ(table.session.LevelOf(seat), levels[static_cast<size_t>(seat)]) << "seat " << seat;
+        }
+        EXPECT_EQ(table.session.LevelOf(kNoSeat), kDefaultLevel);
+        EXPECT_EQ(table.session.LevelOf(kSeatCount), kDefaultLevel);
+        EXPECT_EQ(table.session.Level(), ComputerLevel{3}) << "the level of the lowest computer seat";
+        ASSERT_TRUE(table.session.StartMatch(ShortMatch(), kSeed, PersonAt(2), levels).has_value());
+        EXPECT_EQ(table.session.Level(), ComputerLevel{1});
+        ASSERT_TRUE(table.session.StartMatch(ShortMatch(), kSeed, kAllPeople, levels).has_value());
+        EXPECT_EQ(table.session.Levels(), levels);
+        EXPECT_EQ(table.session.Level(), kDefaultLevel) << "no computer seat";
+
+        ASSERT_TRUE(table.session.StartMatch(ShortMatch(), kSeed, kAllComputers, ComputerLevel{4}).has_value());
+        EXPECT_EQ(table.session.Levels(), UniformLevels(ComputerLevel{4})) << "the one-level start is UniformLevels";
+        ASSERT_TRUE(table.session.StartMatch(ShortMatch(), kSeed, kAllComputers).has_value());
+        EXPECT_EQ(table.session.Levels(), UniformLevels(kDefaultLevel)) << "a start with no level";
+    }
+
+    TEST(TableSessionTest, ARefusedStartOfSeatLevelsChangesNothing) {
+        Table table;
+        ASSERT_TRUE(table.session.StartMatch(ShortMatch(), kSeed, kAllComputers, SeatLevels{ComputerLevel{2}, ComputerLevel{4}, ComputerLevel{6}, ComputerLevel{8}}).has_value());
+        const std::string before = State(table);
+        MahjongSettings bad;
+        bad.handsPerMatch = kUnplayableHandsPerMatch;
+        const MatchStatus refused = table.session.StartMatch(bad, kSeed + 1, kDefaultSeatSetup, UniformLevels(ComputerLevel::Easy));
+        ASSERT_FALSE(refused.has_value());
+        EXPECT_EQ(refused.error(), MatchError::BadSettings);
+        EXPECT_EQ(table.session.Levels(), (SeatLevels{ComputerLevel{2}, ComputerLevel{4}, ComputerLevel{6}, ComputerLevel{8}}));
+        EXPECT_EQ(State(table), before);
+    }
+
+    TEST(TableSessionTest, ASeatPlaysAtItsOwnLevelWhateverTheOthersPlay) {
+        // A table whose seat 0 is Easy and the rest Normal plays like the session of that table: step by step, the session's actions
+        // are those of a `ComputerTable` made with the same seed and levels.
+        const SeatLevels levels{ComputerLevel::Easy, ComputerLevel::Normal, ComputerLevel::Normal, ComputerLevel::Normal};
+        Table table;
+        ASSERT_TRUE(table.session.StartMatch(ShortMatch(), kSeed, kAllComputers, levels).has_value());
+        Match reference;
+        ASSERT_TRUE(reference.Start(ShortMatch(), kSeed).has_value());
+        ComputerTable players(kSeed, levels);
+        for (int actions = 0; table.session.GetPhase() != SessionPhase::MatchOver; ++actions) {
+            ASSERT_LT(actions, kActionLimitPerMatch);
+            if (table.session.GetPhase() == SessionPhase::HandOver) {
+                ASSERT_TRUE(table.session.NextHand().has_value());
+                ASSERT_TRUE(reference.EndHand().has_value());
+            } else {
+                const StepResult own = table.session.StepComputer();
+                const StepResult expected = players.Step(reference.Hand());
+                ASSERT_TRUE(own.has_value());
+                ASSERT_TRUE(expected.has_value());
+                ASSERT_EQ(*own, *expected) << "action " << actions;
+            }
+        }
+    }
+
+    TEST(TableSessionTest, ResumeMatchSetsTheLevelsAndARefusedOneChangesNothing) {
+        MatchLog log;
+        {
+            Table recorded;
+            recorded.session.SetLogSink(&log);
+            ASSERT_TRUE(recorded.session.StartMatch(ShortMatch(), kSeed, kAllComputers, ComputerLevel::Normal).has_value());
+            constexpr int kRecordedSteps = 20;  // far fewer than a hand takes
+            for (int actions = 0; actions < kRecordedSteps; ++actions) {
+                ASSERT_TRUE(recorded.session.StepComputer().has_value());
+            }
+        }
+        const SeatLevels levels{ComputerLevel{10}, ComputerLevel{2}, ComputerLevel{5}, ComputerLevel{1}};
+        Table table;
+        ASSERT_TRUE(table.session.StartMatch(ShortMatch(), kSeed + 5, kAllComputers, ComputerLevel::Easy).has_value());
+        const std::string before = State(table);
+        eastl::vector<MatchLogEvent> broken = log.Events();
+        broken[0].settings.handsPerMatch = kUnplayableHandsPerMatch;
+        const ReplayStatus refused = table.session.ResumeMatch(broken, kAllComputers, levels);
+        ASSERT_FALSE(refused.has_value());
+        EXPECT_EQ(table.session.Levels(), UniformLevels(ComputerLevel::Easy));
+        EXPECT_EQ(State(table), before);
+
+        ASSERT_TRUE(table.session.ResumeMatch(log.Events(), kDefaultSeatSetup, levels).has_value());
+        EXPECT_EQ(table.session.Levels(), levels) << "the person seat's level too";
+        EXPECT_EQ(table.session.Level(), ComputerLevel{2});
+        ASSERT_TRUE(table.session.ResumeMatch(log.Events(), kAllComputers, ComputerLevel{7}).has_value());
+        EXPECT_EQ(table.session.Levels(), UniformLevels(ComputerLevel{7}));
     }
 
     TEST(TableSessionTest, TheExplicitNormalLevelPlaysLikeTheDefaultActionByAction) {

@@ -15,6 +15,17 @@ namespace BECore::Mahjong {
     /// Seat 0 is a person, the others are computers.
     inline constexpr SeatSetup kDefaultSeatSetup{SeatKind::Person, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
 
+    /// The level of the lowest seat that `seats` makes a computer, `kDefaultLevel` when no seat is one: what a client that knows one level
+    /// for the whole table is told.
+    [[nodiscard]] constexpr ComputerLevel FirstComputerLevel(const SeatSetup& seats, const SeatLevels& levels) noexcept {
+        for (size_t seat = 0; seat < seats.size(); ++seat) {
+            if (seats[seat] == SeatKind::Computer) {
+                return levels[seat];
+            }
+        }
+        return kDefaultLevel;
+    }
+
     /// Where the table stands for a front end: some seat has to act, the hand is over and waits for `NextHand`, or the match is over.
     CORE_ENUM(SessionPhase, uint8_t, Playing, HandOver, MatchOver)
 
@@ -32,7 +43,8 @@ namespace BECore::Mahjong {
      * rules of "who acts next" and "when does the state change" exist once. The session keeps a reference to the match, which belongs
      * to its owner (`MahjongGame`) and must outlive it.
      *
-     * - `StartMatch` begins a match and the computer players of the same seed and of the given level.
+     * - `StartMatch` begins a match and the computer players of the same seed, each seat at its level (`SeatLevels`: one number for
+     *   the whole table is `UniformLevels`). The levels of seats a person plays are kept too and play nothing.
      * - `Actor` is the seat that has to act (the first pending seat in a claim window; the result does not depend on the order).
      *   `StepComputer` plays one action of a computer actor, `RunComputers` plays until a person has to act or the hand is over,
      *   `PerformPerson` applies the action of a person actor, `NextHand` settles a finished hand and deals on.
@@ -57,27 +69,41 @@ namespace BECore::Mahjong {
         TableSession(const TableSession&) = delete;
         TableSession& operator=(const TableSession&) = delete;
 
-        /// `Match::Start(settings, seed)` with `seats` and computer players of `level` seeded `seed`. `BadSettings`, and nothing changes
-        /// (the version and the level too), unless `IsPlayable(settings)`.
+        /// `Match::Start(settings, seed)` with `seats` and computer players seeded `seed`, seat `i` at `levels[i]`. `BadSettings`, and
+        /// nothing changes (the version and the levels too), unless `IsPlayable(settings)`.
+        MatchStatus StartMatch(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats, const SeatLevels& levels);
+        /// `StartMatch` with `UniformLevels(level)`.
         MatchStatus StartMatch(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats, ComputerLevel level = kDefaultLevel);
 
         /**
          * @brief Puts the session and its match where `events` (a log from its `Start`, `Hand` and `End` events optional) left them,
-         *        with `seats` and computer players of `level`. A log that does not replay (`ReplayMatchLog`) is refused with its
-         *        `ReplayError` and nothing changes (the match, the version, the level, the seats, the viewer, the sink).
+         *        with `seats` and computer players at `levels`. A log that does not replay (`ReplayMatchLog`) is refused with its
+         *        `ReplayError` and nothing changes (the match, the version, the levels, the seats, the viewer, the sink).
          *
          * The sink gets the whole log as a live match would (`ReplayMatchLog` with the sink as its echo), so a match log file and a
          * recorder are whole. The computer players are made again from the seed of the last `Start` and the random state they had is
-         * not restored: play goes on legally and at the level, not bit for bit as an uninterrupted match would. The seats and the
-         * level are the caller's (the `Start` event's own, for a saved match); they are not compared with the log. The viewer is as
+         * not restored: play goes on legally and at the levels, not bit for bit as an uninterrupted match would. The seats and the
+         * levels are the caller's (the `Start` event's own, for a saved match); they are not compared with the log. The viewer is as
          * after `StartMatch`: with two or more people or none nobody, so the cover is up for a person to act (`HandoffPending`).
          * Include `Game/MatchLog.h` to call it.
          */
+        std::expected<void, ReplayError> ResumeMatch(const eastl::vector<MatchLogEvent>& events, const SeatSetup& seats, const SeatLevels& levels);
+        /// `ResumeMatch` with `UniformLevels(level)`.
         std::expected<void, ReplayError> ResumeMatch(const eastl::vector<MatchLogEvent>& events, const SeatSetup& seats, ComputerLevel level);
 
-        /// The level of the computer players of the match started last; `kDefaultLevel` before the first start.
+        /// The level of each seat of the match started last (the entries of person seats are kept, they play nothing); all `kDefaultLevel`
+        /// before the first start.
+        [[nodiscard]] const SeatLevels& Levels() const noexcept {
+            return _levels;
+        }
+        /// `Levels()` of `seat`; `kDefaultLevel` for a number that is no seat.
+        [[nodiscard]] ComputerLevel LevelOf(Seat seat) const noexcept {
+            return IsSeat(seat) ? _levels[static_cast<size_t>(seat)] : kDefaultLevel;
+        }
+        /// The level of the lowest computer seat, `kDefaultLevel` when none: the one level of a client that knows no levels per seat.
+        /// Goes in WP 4 of `mahjong-per-computer-level` (callers use `Levels()`).
         [[nodiscard]] ComputerLevel Level() const noexcept {
-            return _level;
+            return FirstComputerLevel(_seats, _levels);
         }
 
         /// Where the events of the match go (see the class comment); null (the default) for none. Not owned: the sink outlives its use
@@ -148,7 +174,7 @@ namespace BECore::Mahjong {
         Match& _match;
         std::optional<ComputerTable> _table;
         SeatSetup _seats = kDefaultSeatSetup;
-        ComputerLevel _level = kDefaultLevel;
+        SeatLevels _levels = UniformLevels(kDefaultLevel);
         Seat _viewer = kNoSeat;
         uint64_t _version = 0;
         uint64_t _starts = 0;
