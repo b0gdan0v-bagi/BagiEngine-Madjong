@@ -5,6 +5,7 @@
 
 #include <BECore/Control/Json.h>
 #include <BECore/UI/UIButton.h>
+#include <BECore/UI/UIDropdown.h>
 #include <Common/TempPath.h>
 #include <Events/SceneEvents.h>
 #include <Mahjong/Components/MahjongHudComponent.h>
@@ -79,6 +80,10 @@ namespace BECore::Mahjong::Tests {
             if (label == nullptr && found != nullptr) {
                 label = found->Cast<UIButton>();  // a button is a label by inheritance, but `Cast` is exact
             }
+            if (found != nullptr && found->Cast<UIDropdown>() != nullptr) {
+                const UIButton* chosen = found->Cast<UIDropdown>()->FindChosenOption();  // the header shows the chosen option
+                return chosen != nullptr ? std::string(chosen->GetDisplayText().data(), chosen->GetDisplayText().size()) : std::string("<none chosen>");
+            }
             return label != nullptr ? std::string(label->GetDisplayText().data(), label->GetDisplayText().size()) : std::string("<no label>");
         }
 
@@ -95,6 +100,16 @@ namespace BECore::Mahjong::Tests {
 
         std::string SeatKindVar(Seat seat) const {
             return Var(Format("seatKind{}", seat).c_str());
+        }
+
+        std::string SeatLevelVar(Seat seat) const {
+            return Var(Format("seatLevel{}", seat).c_str());
+        }
+
+        /// Whether the dropdown of the level of `seat` is shown (not hidden by the component).
+        bool SeatLevelShown(Seat seat) const {
+            const UIElement* dropdown = Element("Setup", Format("SeatLevel{}", seat).c_str());
+            return dropdown != nullptr && dropdown->style.visible;
         }
 
         std::string HandsChoiceVar() const {
@@ -626,7 +641,17 @@ namespace BECore::Mahjong::Tests {
             const UIElement* group = Element("Setup", entry.group.c_str());
             ASSERT_NE(group, nullptr);
             EXPECT_EQ(group->rect.x, caption->rect.x + caption->rect.w + kModalGap);
-            EXPECT_EQ(group->rect.x + group->rect.w, row->rect.x + row->rect.w - kRowPadding) << "the group ends inside the row's padding";
+            const UIElement* level = Element("Setup", Format("SeatLevel{}", entry.row.back() - '0').c_str());
+            const bool hasLevel = entry.row != "HandsRow" && level != nullptr && !level->rect.IsEmpty();
+            if (hasLevel) {
+                EXPECT_EQ(group->rect.x + group->rect.w + kModalGap, level->rect.x) << "the dropdown of a computer seat follows its group";
+                EXPECT_EQ(level->rect.x + level->rect.w, row->rect.x + row->rect.w - kRowPadding) << "and ends inside the row's padding";
+                EXPECT_EQ(level->rect.y, row->rect.y + kRowPadding);
+                EXPECT_EQ(level->rect.y + level->rect.h, row->rect.y + row->rect.h - kRowPadding);
+                EXPECT_TRUE(SameColor(level->color, PaletteColor("neutral")));
+            } else {
+                EXPECT_EQ(group->rect.x + group->rect.w, row->rect.x + row->rect.w - kRowPadding) << "the group ends inside the row's padding";
+            }
             EXPECT_EQ(group->rect.y, row->rect.y + kRowPadding);
             EXPECT_EQ(group->rect.y + group->rect.h, row->rect.y + row->rect.h - kRowPadding);
 
@@ -1058,6 +1083,254 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(SetupShown());
         ExpectSameSettings(_game->GetSettings(), settings);
         EXPECT_EQ(_game->GetSeats(), seats) << "the seats the panel offered are not taken either";
+    }
+
+    // ----- the level of each computer seat -----
+
+    TEST_F(MahjongHudTest, ThePanelOpensOnTheLevelsOfTheGameAfterNewGameToo) {
+        _game->Start();
+        _game->SetLevels({ComputerLevel{1}, ComputerLevel{3}, ComputerLevel{6}, ComputerLevel{10}});
+        _game->CloseSetup();
+        Draw();
+        _game->OpenSetup();
+        Draw();
+
+        ASSERT_TRUE(SetupShown());
+        EXPECT_EQ(Hud()->PendingLevels(), _game->GetLevels());
+        EXPECT_EQ(SeatLevelVar(0), "1");
+        EXPECT_EQ(SeatLevelVar(1), "3");
+        EXPECT_EQ(SeatLevelVar(2), "6");
+        EXPECT_EQ(SeatLevelVar(3), "10");
+        EXPECT_EQ(Text("Setup", "SeatLevel3"), "10") << "the header of the dropdown shows the level";
+
+        // A match played, the panel again from "New game": the levels of the game, not those the panel last showed
+        ASSERT_TRUE(ClickElement("Setup", "Start"));
+        Draw();
+        _game->SetLevels(UniformLevels(ComputerLevel{2}));
+        _game->OpenSetup();
+        Draw();
+        EXPECT_EQ(Hud()->PendingLevels(), UniformLevels(ComputerLevel{2}));
+        EXPECT_EQ(SeatLevelVar(3), "2");
+    }
+
+    TEST_F(MahjongHudTest, ADropdownIsShownExactlyForAComputerSeatAndFollowsAClickOnTheSegments) {
+        _game->Start();
+        Draw();
+        ASSERT_EQ(_game->GetSeats(), kDefaultSeatSetup);
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            EXPECT_EQ(SeatLevelShown(seat), kDefaultSeatSetup[seat] == SeatKind::Computer) << seat;
+        }
+
+        ASSERT_TRUE(ClickElement("Setup", "Seat2Person"));
+        ASSERT_TRUE(ClickElement("Setup", "Seat0Computer"));
+        Draw();
+        EXPECT_TRUE(SeatLevelShown(0));
+        EXPECT_TRUE(SeatLevelShown(1) == (Hud()->PendingSeats()[1] == SeatKind::Computer));
+        EXPECT_FALSE(SeatLevelShown(2));
+        EXPECT_TRUE(SeatLevelShown(3));
+
+        // A hidden dropdown takes no room: the segments of its row run to the end of the row
+        Canvas("Setup")->UpdateLayout(kViewWidth, kViewHeight);
+        EXPECT_TRUE(Element("Setup", "SeatLevel2")->rect.IsEmpty());
+        const UIElement* row = Element("Setup", "SeatRow2");
+        const UIElement* group = Element("Setup", "SeatKind2");
+        EXPECT_EQ(group->rect.x + group->rect.w, row->rect.x + row->rect.w - 4.0f);
+        EXPECT_FALSE(Element("Setup", "SeatLevel3")->rect.IsEmpty());
+    }
+
+    TEST_F(MahjongHudTest, ALevelActionSetsThePendingLevelAndTheVariableAndTheGameKeepsItsOwnUntilStart) {
+        _game->Start();
+        Draw();
+        const uint64_t version = _game->GetSession().Version();
+        const SeatLevels before = _game->GetLevels();
+
+        for (const ComputerLevel level : kAllLevels) {
+            const std::string text(LevelText(level));
+            EmitAction("MahjongSetSeatLevel2", text.c_str());
+            EXPECT_EQ(Hud()->PendingLevels()[2], level) << text;
+            EXPECT_EQ(SeatLevelVar(2), text);
+        }
+        EmitAction("MahjongSetSeatLevel0", "1");
+        EXPECT_EQ(Hud()->PendingLevels()[0], ComputerLevel{1});
+        EXPECT_EQ(Hud()->PendingLevels()[1], before[1]) << "only the seat of the action";
+        EXPECT_EQ(_game->GetLevels(), before) << "nothing is decided before Start";
+        EXPECT_EQ(_game->GetSession().Version(), version);
+    }
+
+    TEST_F(MahjongHudTest, ABadLevelTextAndASeatOutsideTheTableChangeNothing) {
+        _game->Start();
+        Draw();
+        const SeatLevels pending = Hud()->PendingLevels();
+        const std::string var = SeatLevelVar(1);
+
+        for (const char* bad : {"hard", "easy", "normal", "", "0", "11", "-1", "05", " 1", "1 ", "5.0", "99999999999"}) {
+            EmitAction("MahjongSetSeatLevel1", bad);
+            EXPECT_EQ(Hud()->PendingLevels(), pending) << bad;
+            EXPECT_EQ(SeatLevelVar(1), var) << bad;
+        }
+        for (const char* action : {"MahjongSetSeatLevel4", "MahjongSetSeatLevel9", "MahjongSetSeatLevel", "MahjongSetSeatLevel10", "MahjongSetSeatLevel/", "MahjongSetSeatLevela",
+                                   "MahjongSetSeatLevel-1", "MahjongSetLevel0"}) {
+            EmitAction(action, "1");
+            EXPECT_EQ(Hud()->PendingLevels(), pending) << action;
+        }
+        EXPECT_EQ(Hud()->PendingSeats(), kDefaultSeatSetup) << "a level action is no seat action";
+    }
+
+    TEST_F(MahjongHudTest, ALevelActionWhileTheGameHasNoPanelOpenIsOutOfDate) {
+        _game->Start();
+        _game->CloseSetup();
+        Draw();
+        const SeatLevels pending = Hud()->PendingLevels();
+        EmitAction("MahjongSetSeatLevel2", pending[2] == ComputerLevel{1} ? "2" : "1");
+        EXPECT_EQ(Hud()->PendingLevels(), pending);
+    }
+
+    TEST_F(MahjongHudTest, StartGivesTheGameThePendingLevelsAndAPersonSeatKeepsItsLevelWhenItTurnsComputerAgain) {
+        _game->Start();
+        Draw();
+
+        EmitAction("MahjongSetSeatLevel0", "9");  // seat 0 is a person now
+        EmitAction("MahjongSetSeatLevel2", "2");
+        EmitAction("MahjongSetSeatLevel3", "10");
+        ASSERT_TRUE(ClickElement("Setup", "Seat1Computer"));
+        EXPECT_EQ(Hud()->PendingLevels()[0], ComputerLevel{9}) << "a person's seat keeps its level";
+        ASSERT_TRUE(ClickElement("Setup", "Seat2Person"));
+        ASSERT_TRUE(ClickElement("Setup", "Seat0Computer"));
+        Draw();
+        EXPECT_EQ(SeatLevelVar(0), "9") << "the seat is a computer again, with the level it had";
+        EXPECT_TRUE(SeatLevelShown(0));
+        EXPECT_EQ(SeatLevelVar(2), "2") << "and a seat that became a person keeps its own";
+        EXPECT_FALSE(SeatLevelShown(2));
+        EXPECT_NE(_game->GetLevels(), Hud()->PendingLevels());
+
+        ASSERT_TRUE(ClickElement("Setup", "Start"));
+        Draw();
+
+        const SeatLevels expected{ComputerLevel{9}, kDefaultLevel, ComputerLevel{2}, ComputerLevel{10}};
+        EXPECT_FALSE(_game->IsSetupOpen());
+        EXPECT_EQ(_game->GetLevels(), expected);
+        EXPECT_EQ(_game->GetSession().Levels(), expected);
+        EXPECT_EQ(_game->GetSession().LevelOf(0), ComputerLevel{9});
+    }
+
+    TEST_F(MahjongHudTest, ARefusedStartPutsTheLevelsBackAsItDoesTheSeats) {
+        _game->Start();
+        const SeatLevels levels = _game->GetLevels();
+        MahjongSettings settings = _game->GetSettings();
+        settings.handsPerMatch = kUnplayableHandsPerMatch;
+        _game->SetSettings(settings);
+        Draw();
+        EmitAction("MahjongSetSeatLevel2", "1");
+        ASSERT_NE(Hud()->PendingLevels(), levels);
+
+        ASSERT_TRUE(ClickElement("Setup", "Start"));
+        Draw();
+
+        EXPECT_TRUE(SetupShown());
+        EXPECT_EQ(_game->GetLevels(), levels);
+        EXPECT_EQ(Hud()->PendingLevels()[2], ComputerLevel{1}) << "the panel stays on what the player chose";
+    }
+
+    TEST_F(MahjongHudTest, ADropdownIsOpenedAndAnOptionChosenByClicks) {
+        _game->Start();
+        Draw();
+        ASSERT_TRUE(ClickElement("Setup", "SeatLevel3"));
+        Draw();
+        const auto* dropdown = Element("Setup", "SeatLevel3")->Cast<UIDropdown>();
+        ASSERT_NE(dropdown, nullptr);
+        ASSERT_TRUE(dropdown->IsOpen());
+        ASSERT_TRUE(ClickElement("Setup", "Seat3Level7"));
+        Draw();
+
+        EXPECT_FALSE(dropdown->IsOpen());
+        EXPECT_EQ(Hud()->PendingLevels()[3], ComputerLevel{7});
+        EXPECT_EQ(SeatLevelVar(3), "7");
+        EXPECT_EQ(Text("Setup", "SeatLevel3"), "7");
+        EXPECT_EQ(Hud()->PendingLevels()[2], kDefaultLevel);
+    }
+
+    TEST_F(MahjongHudTest, TheLevelOfThePageOptionsIsTheLevelOfEverySeatOfThePanelToo) {
+        _game->Start();
+        Draw();
+        EmitAction("MahjongSetSeatLevel2", "9");
+        EmitAction("MahjongOptions");
+        EmitAction("MahjongSetLevel", "3");
+        EXPECT_EQ(Hud()->PendingLevels(), UniformLevels(ComputerLevel{3}));
+        EXPECT_EQ(SeatLevelVar(2), "3");
+        EmitAction("MahjongOptionsBack");
+        ASSERT_TRUE(ClickElement("Setup", "Start"));
+        EXPECT_EQ(_game->GetLevels(), UniformLevels(ComputerLevel{3}));
+    }
+
+    TEST_F(MahjongHudTest, TheLevelVariablesAreNotSetAgainWhileNothingChanges) {
+        _game->Start();
+        Draw();
+        const uint64_t version = CoreManager::GetUIVars().GetVersion();
+        Draw();
+        Draw();
+        EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), version);
+    }
+
+    TEST_F(MahjongHudTest, TheDropdownsOfTheLevelsAreTouchTargetsWithTheWidestLevelShownInEveryWindowAndEveryLanguage) {
+        ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
+        _game->OpenSetup();
+        Draw();
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            EmitAction(Format("MahjongSetSeatLevel{}", seat).c_str(), "10");
+        }
+        ASSERT_TRUE(SetupShown());
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            ASSERT_TRUE(SeatLevelShown(seat)) << seat;
+        }
+
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            ExpectPassesTheMatrix("Setup", EngineTouchMinimum());
+            const std::vector<std::string> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Setup"), kButtonAir);
+            EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
+
+            // The header text of a dropdown is not among the words above (it is no plain label): it keeps the whole width and shows "10"
+            std::vector<std::string> narrow;
+            auto setup = Canvas("Setup");
+            ForEachMatrixWindow([&](const MatrixWindow& window) {
+                for (const CanvasScaleMode mode : {CanvasScaleMode::ConstantPixelSize, CanvasScaleMode::ScaleWithScreen, CanvasScaleMode::ConstantPhysicalSize}) {
+                    for (const float userScale : {1.0f, 1.5f}) {
+                        const UICanvasResolved resolved = LayOutInWindow(*setup, window, mode, userScale);
+                        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                            const UIElement* header = Element("Setup", Format("SeatLevel{}", seat).c_str());
+                            ASSERT_NE(header, nullptr);
+                            ASSERT_FALSE(header->rect.IsEmpty());
+                            EXPECT_GE(std::min(header->rect.w, header->rect.h) * resolved.scale / window.pixelDensity, EngineTouchMinimum() - 0.01f);
+                            const UIContentFit fit = header->CheckContent(header->rect.w, header->rect.h, resolved.scale);
+                            if (fit.hasContent && !fit.fits) {
+                                narrow.push_back(std::string(Format("{} x{}: SeatLevel{} {}", window.label.c_str(), userScale, seat, header->rect.w).c_str()));
+                            }
+                        }
+                    }
+                }
+            });
+            EXPECT_TRUE(narrow.empty()) << narrow.size() << " headers cut the level, the first: " << (narrow.empty() ? "" : narrow.front());
+        });
+    }
+
+    TEST_F(MahjongHudTest, TheOpenListOfTheLevelsOfAnySeatPassesTheSizeMatrixInEveryLanguage) {
+        ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
+        _game->OpenSetup();
+        Draw();
+        ASSERT_TRUE(SetupShown());
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            SCOPED_TRACE(seat);
+            ASSERT_TRUE(ClickElement("Setup", Format("SeatLevel{}", seat).c_str()));
+            Draw();
+            ASSERT_TRUE(Element("Setup", Format("SeatLevel{}", seat).c_str())->Cast<UIDropdown>()->IsOpen());
+            ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+                SCOPED_TRACE(language.ToStringView().data());
+                ExpectPassesTheMatrix("Setup", EngineTouchMinimum());
+            });
+            Canvas("Setup")->UpdateLayout(kViewWidth, kViewHeight);
+            EXPECT_NEAR(Element("Setup", Format("Seat{}Level10", seat).c_str())->rect.h, 56.0f, 0.01f) << "the options are the full touch size in the design window";
+            Element("Setup", Format("SeatLevel{}", seat).c_str())->Cast<UIDropdown>()->Close();
+        }
     }
 
     // ----- the number of hands -----

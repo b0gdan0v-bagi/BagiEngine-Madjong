@@ -346,8 +346,8 @@ namespace BECore::Mahjong::Tests {
         const float minTouch = EngineTouchMinimum();
 
         const char* const rows[] = {"Title", "SeatRow0", "SeatRow1", "SeatRow2", "SeatRow3", "HandsRow", "OptionsRow", "Start"};
-        const char* const segments[] = {"Seat0Person", "Seat0Computer", "Seat1Person", "Seat1Computer", "Seat2Person", "Seat2Computer",
-                                        "Seat3Person", "Seat3Computer", "Hands16",     "Hands8",        "OptionsRow",  "Continue"};
+        const char* const segments[] = {"Seat0Person",   "Seat0Computer", "Seat1Person", "Seat1Computer", "Seat2Person", "Seat2Computer", "Seat3Person",
+                                        "Seat3Computer", "SeatLevel2",    "SeatLevel3",  "Hands16",       "Hands8",      "OptionsRow",    "Continue"};
         const CanvasScaleMode modes[] = {CanvasScaleMode::ConstantPixelSize, CanvasScaleMode::ScaleWithScreen, CanvasScaleMode::ConstantPhysicalSize};
         size_t cases = 0;
         ForEachMatrixWindow([&](const MatrixWindow& window) {

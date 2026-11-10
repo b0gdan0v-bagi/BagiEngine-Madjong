@@ -34,10 +34,14 @@ namespace BECore::Mahjong {
      * **Setup.** `MahjongGame::IsSetupOpen()` decides whether the modal canvas `Setup` is shown (this component shows and hides it every
      * frame). Its four seat `UISegmented` groups are bound to `seatKind0` .. `seatKind3` (`person` | `computer`) and emit
      * `MahjongSetSeat0` .. `MahjongSetSeat3` with the value; the fifth, `Hands`, is bound to `handsChoice` (`16` | `8`) and emits
-     * `MahjongSetHands` with the value. This component changes the pending `SeatSetup` or the pending number of hands and the variable,
-     * and `MahjongStart` gives the pending seats and the number of hands (`handsPerMatch` only: every other setting stays as the game
+     * `MahjongSetHands` with the value. Each seat row also has a `UIDropdown` `SeatLevel0` .. `3` of `1` .. `10`, bound to `seatLevel0` ..
+     * `3` (the number as text; set when `Setup` opens, from `GetLevels()`) and emitting `MahjongSetSeatLevel0` .. `3` with the number
+     * (`TryParseLevel`: any other text is ignored); the element is visible exactly while that seat is a computer in the pending setup, and a
+     * person's seat keeps its pending level for when it turns computer again. This component changes the pending `SeatSetup`, the pending
+     * `SeatLevels` or the pending number of hands and the variable,
+     * and `MahjongStart` gives the pending seats, levels and number of hands (`handsPerMatch` only: every other setting stays as the game
      * has it) to the game and begins a match with a random seed (`StartRandomMatch`), which closes the panel; a start the game refuses
-     * leaves it open and the seats and settings as they were. `MahjongNewGame` (the HUD button) opens it again, with the pending setup of the
+     * leaves it open and the seats, levels and settings as they were. `MahjongNewGame` (the HUD button) opens it again, with the pending setup of the
      * last match. `MahjongOptions` (the full-width button `OptionsRow`) opens the page `Options`. The language row of the page is a
      * `UISegmented` bound to `language` (the id of the language) and emits `MahjongSetLanguage` with the id, which is accepted only while the page is open;
      * `MahjongGame::SetLanguage` applies it to the string table (an id the table does not have is refused and
@@ -48,9 +52,9 @@ namespace BECore::Mahjong {
      *
      * **Options.** `MahjongGame::IsOptionsOpen()` is the page over `Setup`. `MahjongOptions` opens it, only while `Setup` is
      * open; `MahjongOptionsBack` closes it (ignored while it is closed). `MahjongSetLevel` with `1` .. `10` (`TryParseLevel`; any other text is ignored, and
-     * so is the action while the page is closed) calls `SetLevel` and sets the variable `levelChoice` (`LevelText` of `GetLevel()`, also set when `Setup` opens). The
-     * level takes effect with the next match: a running session keeps its own. `MahjongSetSpeed` with `slow` | `normal` | `fast` (`TryParseSpeed`, ignored like the level) calls
-     * `SetAnimationSpeed` and sets `speedChoice`; it takes effect at once (`Table/AnimationSpeed.h`). `Setup` stays open under the page and `CloseSetup()` closes it. The canvas `Options` is
+     * so is the action while the page is closed) calls `SetLevel` (all four seats; the pending levels of `Setup` follow) and sets the variable `levelChoice` (`LevelText` of `GetLevel()`, also set
+     * when `Setup` opens). The level takes effect with the next match: a running session keeps its own. `MahjongSetSpeed` with `slow` | `normal` | `fast` (`TryParseSpeed`, ignored like the level)
+     * calls `SetAnimationSpeed` and sets `speedChoice`; it takes effect at once (`Table/AnimationSpeed.h`). `Setup` stays open under the page and `CloseSetup()` closes it. The canvas `Options` is
      * shown exactly while the page is open (rows: language, hints, speed, level, and the button `Back`); `language`, `speedChoice` and `levelChoice` are published when it opens.
      *
      * **Saving.** Every `SceneUpdateEvent` (once per frame, only for the active game) calls `MahjongGame::FlushSave()`, which writes the match and the
@@ -94,6 +98,11 @@ namespace BECore::Mahjong {
             return _pending;
         }
 
+        /// The level of each seat the panel shows and `MahjongStart` would begin a match with (a person's seat keeps its entry).
+        [[nodiscard]] const SeatLevels& PendingLevels() const noexcept {
+            return _pendingLevels;
+        }
+
         /// The number of hands the panel shows and `MahjongStart` would begin a match with.
         [[nodiscard]] int PendingHands() const noexcept {
             return _pendingHands;
@@ -116,7 +125,10 @@ namespace BECore::Mahjong {
         void PublishOptions(const MahjongGame* game);
         /// Shows or hides the plate `MoveLine` (the variable `lastMove` holds its text).
         void ShowMoveLine(bool show);
-        void PublishSeatKinds() const;
+        /// Sets `seatKind0` .. `3` and, through `PublishSeatLevels`, the level variables and dropdowns after the pending seats.
+        void PublishSeatKinds();
+        /// Sets `seatLevel0` .. `3` (the number as text) and shows `SeatLevel0` .. `3` exactly for the pending computer seats.
+        void PublishSeatLevels();
         void PublishHandsChoice() const;
         /// Sets the variable `language` to the language of the game.
         void PublishLanguage(const MahjongGame& game) const;
@@ -140,6 +152,7 @@ namespace BECore::Mahjong {
         void ShowHudMenu();
 
         SeatSetup _pending = kDefaultSeatSetup;
+        SeatLevels _pendingLevels = UniformLevels(kDefaultLevel);
         int _pendingHands = kFullMatchHands;
         bool _setupShown = false;
         bool _optionsShown = false;               // the canvas `Options`
