@@ -14,8 +14,8 @@
   units, the 3:4 of an atlas cell). Below that window the component hides this canvas and shows ActionsCompact instead
   (NeedsCompactActions), which holds the same buttons by name on the bar under the table, but only where that bar holds the row at its
   height at that canvas width. In a window that the table fills to the bottom (16:9 below 731 x 411, a short wide one like 1000 x 400, a
-  landscape phone) or whose bar is lower than the row (600 x 420, 500 x 400, 626 x 480, and 640 x 480 and 720 x 480 at the user scale 1.5) this
-  canvas stays, slightly under 32 px but clear of the viewer's hand.
+  landscape phone) or whose bar is lower than the row (a narrow window like 480 x 360 or 600 x 570) this canvas stays, slightly under 32 px but
+  clear of the viewer's hand.
   The label Hint above the row shows the sentence of the button under the pointer ({actionHint}, set by the component in the
   current language from UIElement::hovered and again when the language changes; hidden while there is none). It takes no input, so
   it never eats a click; it lies in the gutter between the wall and the right seat's discards (x 832..1000, y 256..436: 168 wide,
@@ -30,6 +30,16 @@
   keeps this canvas small is 1:1 at 480 px (25.5 px: the table fills it to the sides and the bottom, so there is no bar).
   In a wide view (1560 x 720, the variant with minAspect:2: the landscape table lies 140 units in from each side) the row and the
   Hint label move right by the wing (x 860 and 972) and keep every place they have in landscape; the buttons are as they were.
+  In a narrow view (1080 x 768, the variant with orientation:landscape;maxAspect:1.55; Table/TableLayout.cpp, the narrow table) the free
+  ground is right of the bottom discard block (x 468..612) and above the viewer's row of melds (y 636): the row is x 620..996, y 500..620
+  (8 clear of the block, of the right seat's meld column at x 1004 and 16 of the melds), and the buttons are 88 wide, so four make a line
+  of 376 and the fullest claim window, seven, two lines (the Declare toggle too). The fullest turn, six, is two lines as well, with
+  UpgradeKong 104 wide because "Add to pung" does not fit 88; the word of Win is the small size, "Маджонг!" at 22 does not fit 88 in a window of
+  720 x 480. The Hint label has no room beside that row (the gutter between the wall and the right seat's discards is 73 wide), so it lies left of
+  the bottom discard block, under the wall ring and over SelectedTile of Hud: x 280..460, y 444..568, 8 clear of the wall ring (y 436), of the
+  left seat's discards (x 109..269, y 312..456) and of the block (x 468).
+  The narrow table is 768 high, so a button is 33 px or more in every window from 640 x 480 up and ActionsCompact takes over only in a nearly
+  square window (610 x 600: a bar of 83 px under the table holds its row).
 -->
 <node name="Actions" layer="10">
   <components>
@@ -118,6 +128,25 @@
             <set element="UpgradeKong" width="92" height="68" />
             <set element="Pass" width="92" height="68" />
             <set element="Declare" width="124" height="68" />
+          </overrides>
+        </variant>
+        <variant when="orientation:landscape;maxAspect:1.55">
+          <overrides>
+            <set element="Hint" x="280" y="444" width="180" height="124" />
+            <set element="ActionRow" x="620" y="500" width="376" />
+            <set element="Win" width="88" fontSize="18" />
+            <set element="Mahjong" width="88" />
+            <set element="Pung" width="88" />
+            <set element="Kong" width="88" />
+            <set element="Chow0" width="88" />
+            <set element="Chow1" width="88" />
+            <set element="Chow2" width="88" />
+            <set element="ConcealedKong0" width="88" />
+            <set element="ConcealedKong1" width="88" />
+            <set element="ConcealedKong2" width="88" />
+            <set element="UpgradeKong" width="104" />
+            <set element="Pass" width="88" />
+            <set element="Declare" width="88" />
           </overrides>
         </variant>
         <variant when="minAspect:2">

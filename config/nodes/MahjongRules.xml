@@ -12,6 +12,8 @@
   high (two rows of the 18 font are 47) and shrinks (AutoFit, down to 12) where a long line of a translation does not fit two rows in
   the narrowest windows (480 px wide), as the titles do; at the design size and in a window of 731 px no line is shrunk. The items (half a
   row, 28 high) shrink the same way: the portrait view is 720 wide and a window with side insets keeps 590 of it.
+  In a narrow view (1080 x 768) 94% of the width is 1015, so maxWidth holds the plate to 960 (x 60..1020, y 50..638) and the pages fit as in
+  landscape: no variant (MahjongRulesTest holds the matrix and the narrow windows).
 -->
 <node name="Rules" layer="35">
   <components>

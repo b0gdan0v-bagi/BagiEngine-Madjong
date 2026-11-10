@@ -458,10 +458,7 @@ namespace BECore::Mahjong::Tests {
                 const char* node;
                 const char* element;
             };
-            std::vector<Neighbour> neighbours{{"Hud", "MoveLine"}, {"Hints", "WaitPanel"}, {"Hints", "AdviceText"}, {"HintsButton", "HintButton"}};
-            if (ShapeOf(window) != TableShape::Narrow) {  // `Actions` has no narrow variant yet: its landscape places lie over the narrow table
-                neighbours.insert(neighbours.begin() + 1, {{"Actions", "Hint"}, {"Actions", "ActionRow"}});
-            }
+            const std::vector<Neighbour> neighbours{{"Hud", "MoveLine"}, {"Actions", "Hint"}, {"Actions", "ActionRow"}, {"Hints", "WaitPanel"}, {"Hints", "AdviceText"}, {"HintsButton", "HintButton"}};
             for (const Neighbour& neighbour : neighbours) {
                 const UIElement* element = Element(neighbour.node, neighbour.element);
                 ASSERT_NE(element, nullptr) << neighbour.element;

@@ -2,12 +2,12 @@
 <!--
   The action buttons for the windows where the buttons of Actions would be smaller than the touch minimum and the table leaves a bar under
   itself that holds this row at its height there (Table/TouchRegime.h, NeedsCompactActions: a button of Actions is 56 view units, the
-  table's fit scales it, and below a window of about 732 x 412 px it is under 32 px; every portrait window, a square one and 3:2 of
-  480 px are there). Where the table fills the height of the window and so leaves no bar (every 16:9 window below 731 x 411, a short wide
-  window, a landscape phone) this row would lie on the viewer's hand and take the click from its tiles, so Actions stays there, slightly
-  under 32 px but in the free corner of the table; so it does where the bar is lower than the row's height at that width (600 x 420,
-  500 x 400, 626 x 480, and in the matrix 640 x 480 and 720 x 480 at the user scale 1.5: their canvases are 739 and 783.8 units wide,
-  two lines, rows of 104 and 110 px on bars of 60 and 37.5 px; at 1.0 both are one line and compact). The same 13 buttons and a
+  table's fit scales it, and below a window of about 732 x 412 px it is under 32 px; the landscape and the wide table are 720 high, the narrow
+  one 768, so there it is 32 px from a window of about 617 px wide, and the windows that need this row are the portrait ones under 339 px and
+  the nearly square narrow ones, 610 x 600, where the table fills the width and leaves a bar of 83 px). Where the table fills the height of
+  the window and so leaves no bar (every 16:9 window below 731 x 411, a short wide window, a landscape phone) this row would lie on the
+  viewer's hand and take the click from its tiles, so Actions stays there, slightly under 32 px but in the free corner of the table; so it
+  does where the bar is lower than the row's height at that width (480 x 360, 600 x 570: a bar of 9 and 72 px for a row of 73). The same 13 buttons and a
   HintButton (the button of the hints, which MahjongHintsComponent shows by name; on the table it is in the node HintsButton,
   which is hidden where this canvas is shown; here it is 100 wide at font 18, because the word of the Russian button does not fit 100
   at 22) with the same element names, actions, values, words and pictures; the component shows exactly one of the two canvases (Actions where it is
@@ -16,11 +16,11 @@
   minScale 0.6 makes a 56 unit button 33.6 px, and the row lies at the bottom of the window, on the bar under the table. The numbers the
   rule needs are constants of Table/TouchRegime.h (CompactScale repeats referenceWidth, referenceHeight, match and minScale; the button
   width, the spacing, the count, the 82 % and the variants below are kCompact*, CompactRowHeight) and MahjongTableScreenTest compares them
-  with this node; MahjongTouchSizeTest lays the row out in every window of the matrix at the user scales 1.0 and 1.5 and holds the rule
-  to the row it gets, and the row clear of the table. The row keeps to the safe area (the validator checks the buttons of a row against
+  with this node; MahjongTouchSizeTest lays the row out in the windows where the rule shows it (the matrix has none: its portrait ones are 339 px
+  wide or more) at the user scales 1.0 and 1.5 and holds the rule to the row it gets, and the row clear of the table. The row keeps to the safe area (the validator checks the buttons of a row against
   it, also where the stack has ignoreSafeArea), so a home bar lifts it, and in a window with side insets (a bottom inset of 4 % of the short
-  side) it can lie on the nearest tiles by a few pixels, never by more than the inset: in the matrix that is the 3:2 window of 720 x 480
-  (a bar of 37.5 px, the inset 19.2 px, a line of 34.3 px) and the 1:1 windows of 480 and 720 at the user scale 1.5. The touch size is met
+  side) it can lie on the nearest tiles by a few pixels, never by more than the inset: that is the near-square narrow
+  window of 610 x 600 with side insets (a bar of 83 px, the inset 24 px, a row of 73). The touch size is met
   there but not "no button over a tile"; an engine change would fix it (the validator letting ignoreSafeArea cover the descendants of the
   element, so the row could lie on the whole bar). The buttons are 100 units wide (the grid of 4, the words of button.* are keys; the
   Declare switch is 180) and the row is as wide as the safe area, which a canvas variant cannot see: it sees the whole canvas, of

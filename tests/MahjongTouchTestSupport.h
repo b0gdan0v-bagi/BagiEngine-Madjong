@@ -33,9 +33,13 @@ namespace BECore::Mahjong::Tests {
     };
 
     /// A landscape window (density 1) where the buttons of `Actions` are under the touch minimum and the bar under the table holds the row of
-    /// `ActionsCompact`: the tests of the compact canvas stand in it. (A square or a tall output is the portrait view, whose buttons are higher.)
+    /// `ActionsCompact`: the tests of the compact canvas stand in it. Where the scene has no narrow view yet it is a landscape window
+    /// (640 x 600, a button of 28 px); the narrow table fills its width and leaves a bar of the row's height only in a nearly square window
+    /// (610 x 600: a button of 31.6 px, a bar of 83 px), which is `kNarrowCompactWindowWidth/Height`. A square or a tall output is the portrait view.
     inline constexpr float kCompactWindowWidth = 640.0f;
     inline constexpr float kCompactWindowHeight = 600.0f;
+    inline constexpr float kNarrowCompactWindowWidth = 610.0f;
+    inline constexpr float kNarrowCompactWindowHeight = 600.0f;
 
     /// The engine's touch minimum (`minTouchSize`, window units): what every control of the game is held to in the matrix.
     inline float EngineTouchMinimum() {
@@ -143,6 +147,19 @@ namespace BECore::Mahjong::Tests {
         return windows;
     }
 
+    /// The windows where the rule shows `ActionsCompact` (the matrix has none: the narrow table's buttons are 33 px or more in every one of its
+    /// windows, and the portrait table's under 339 px wide ones are outside it): the near-square narrow windows, each with and without side
+    /// insets (the inset lifts the row onto the table), and two portrait ones. Density 1.
+    inline const std::vector<MatrixWindow>& CompactWindows() {
+        static const std::vector<MatrixWindow> windows{MakePhoneWindow(kNarrowCompactWindowWidth, kNarrowCompactWindowHeight, 1.0f),
+                                                       MakePhoneWindow(kNarrowCompactWindowWidth, kNarrowCompactWindowHeight, 1.0f, SafeAreaSimulation::SideInsets),
+                                                       MakePhoneWindow(600.0f, 580.0f, 1.0f),
+                                                       MakePhoneWindow(560.0f, 550.0f, 1.0f),
+                                                       MakePhoneWindow(300.0f, 800.0f, 1.0f),
+                                                       MakePhoneWindow(320.0f, 900.0f, 1.0f, SafeAreaSimulation::SideInsets)};
+        return windows;
+    }
+
     /// The narrow windows (4:3, 3:2, 5:4 landscape): the matrix's own 4:3 and 3:2 windows are in `ForEachMatrixWindow`; these are the ones it
     /// lacks, at density 1 the sizes a monitor window or a tablet browser has (1024 x 768, 1080 x 768 the design, 1200 x 800, 800 x 600,
     /// 640 x 480, 1400 x 1000) and a tablet 1024 x 768 at density 2. They are narrow under a `NarrowViewScope`, landscape otherwise.
@@ -164,6 +181,17 @@ namespace BECore::Mahjong::Tests {
         for (const MatrixWindow& window : PhoneWindows()) {
             fn(window);
         }
+        if (NarrowViewStandIn()) {
+            for (const MatrixWindow& window : NarrowWindows()) {
+                fn(window);
+            }
+        }
+    }
+
+    /// Calls `fn(window)` for every case of the matrix and, under a `NarrowViewScope`, for the narrow windows the matrix lacks: what the
+    /// loops of the touch size and of the words (`MatrixFailuresExceptTouchWhere`, `WordsThatDoNotFitOnTheMatrix`) run over.
+    inline void ForEachMatrixOrNarrowWindow(const std::function<void(const MatrixWindow&)>& fn) {
+        ForEachMatrixWindow(fn);
         if (NarrowViewStandIn()) {
             for (const MatrixWindow& window : NarrowWindows()) {
                 fn(window);
@@ -239,16 +267,15 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// Whether `Actions` is the canvas shown in this window at this user scale with buttons under the engine's touch minimum: the rule keeps
-    /// it because the bar under the table cannot hold the compact row. In the matrix that is 640 x 480 at both user scales (28 px) and
-    /// 720 x 480 at 1.5 (31.5 px; at 1.0 it is compact).
+    /// it because the bar under the table cannot hold the compact row. In the matrix that is the portrait window of 1:1 at 480 px (25.5 px,
+    /// no bar at all); no landscape window of it has small buttons now that 4:3 and 3:2 are the narrow view.
     inline bool ActionsStaysSmall(const MatrixWindow& window, float userScale) {
         return ActionButtonsAreUnderTheMinimum(window) && !IsCompactWindow(window, userScale);
     }
 
-    /// Where a matrix test may leave the touch size of `Actions` out. The matrix test runs a `SceneView` canvas once per window, whatever
-    /// the user scale, so it is every window where `Actions` may be shown small at either of the two user scales: the windows that show
-    /// `ActionsCompact` at 1.0, and the windows 640 x 480 (both scales) and 720 x 480 (at 1.5) that keep `Actions` for lack of a bar for the
-    /// row (`MahjongTouchSizeTest` holds that these are the only ones).
+    /// Where a matrix test may leave the touch size of `Actions` out: every window where its buttons are small, whichever canvas the rule shows
+    /// (`ActionsCompact` holds them in the near-square narrow windows and the portrait ones under 339 px; the matrix's own is only 1:1 at 480 px, which
+    /// keeps `Actions`, `MahjongTouchSizeTest` holds that it is the only one).
     inline bool ActionsMayBeSmall(const MatrixWindow& window) {
         return IsCompactWindow(window) || ActionsStaysSmall(window, 1.0f) || ActionsStaysSmall(window, 1.5f);
     }
@@ -380,7 +407,7 @@ namespace BECore::Mahjong::Tests {
         const float userScales[] = {1.0f, 1.5f};
 
         eastl::vector<UIMatrixFailure> failures;
-        ForEachMatrixWindow([&](const MatrixWindow& window) {
+        ForEachMatrixOrNarrowWindow([&](const MatrixWindow& window) {
             if (!portraitWindows && ShapeOf(window) == TableShape::Portrait) {
                 return;
             }
@@ -427,9 +454,9 @@ namespace BECore::Mahjong::Tests {
 
     /// The words of the canvas on the whole matrix: `ValidateOnMatrix` does not flag a text that can shrink (`AutoFit`, ellipsis), so
     /// this asks every shown label and button on the text it shows, with `air` units kept free each side of an interactive one, in every
-    /// window, scale mode and user scale of the matrix (a `SceneView` canvas once per window). Returns a line per control that cuts its
-    /// text, empty when every word fits.
-    inline std::vector<std::string> WordsThatDoNotFitOnTheMatrix(UICanvasComponent& canvas, float air) {
+    /// window, scale mode and user scale of the matrix (a `SceneView` canvas once per window; with `only` the windows of that shape alone).
+    /// Returns a line per control that cuts its text, empty when every word fits.
+    inline std::vector<std::string> WordsThatDoNotFitOnTheMatrix(UICanvasComponent& canvas, float air, std::optional<TableShape> only = std::nullopt) {
         canvas.UpdateLayout(kViewWidth, kViewHeight);
         UICanvasLayout& layout = canvas.GetLayout();
         const UICanvasScaleParams saved = layout.params;
@@ -438,7 +465,10 @@ namespace BECore::Mahjong::Tests {
         const float userScales[] = {1.0f, 1.5f};
 
         std::vector<std::string> cut;
-        ForEachMatrixWindow([&](const MatrixWindow& window) {
+        ForEachMatrixOrNarrowWindow([&](const MatrixWindow& window) {
+            if (only.has_value() && ShapeOf(window) != *only) {
+                return;
+            }
             for (const CanvasScaleMode mode : modes) {
                 for (const float userScale : userScales) {
                     if (!screen && (mode != modes[0] || userScale != userScales[0])) {
