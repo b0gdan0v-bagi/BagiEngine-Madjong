@@ -8,6 +8,7 @@
 #include <Mahjong/MatchLogWriter.h>
 #include <Mahjong/Save/MatchSave.h>
 #include <Mahjong/Save/MatchSaveStore.h>
+#include <Mahjong/Table/AnimationSpeed.h>
 
 namespace BECore::Mahjong {
 
@@ -186,6 +187,16 @@ namespace BECore::Mahjong {
             _hintsOn = on;
         }
 
+        /// The speed of the table (`Table/AnimationSpeed.h`): the pause of the computers, the flights and the marks of a claim, at once.
+        /// Normal by default, kept across `Reset()`, `StartMatch` and `New game`, saved with the other choices. It is no rule, so it is not
+        /// in the settings, and the control API neither knows it nor waits for it.
+        AnimationSpeed GetAnimationSpeed() const {
+            return _animationSpeed;
+        }
+        void SetAnimationSpeed(AnimationSpeed speed) {
+            _animationSpeed = speed;
+        }
+
         /// The active game, or nullptr when no game is active or the active game is not Mahjong.
         static MahjongGame* GetActive();
 
@@ -209,6 +220,7 @@ namespace BECore::Mahjong {
         bool _rulesOpen = false;
         bool _optionsOpen = false;
         bool _hintsOn = true;
+        AnimationSpeed _animationSpeed = kDefaultAnimationSpeed;
         PoolString _language = PoolString::Intern(kDefaultLanguage);
         MatchLogWriter _log;      // before _session: the session reports to it, so it goes last
         MatchRecorder _recorder;  // the session's sink; forwards to _log

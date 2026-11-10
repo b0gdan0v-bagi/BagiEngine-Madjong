@@ -157,9 +157,9 @@ namespace BECore::Mahjong {
             return static_cast<int>(hand.Discards().size()) - 1;
         }
 
-        /// The blink of `kClaimHighlight`: on for the first half of each `kClaimBlinkSeconds` of the `elapsed` time of a mark.
-        bool BlinkIsOn(float elapsed) {
-            return std::fmod(elapsed, kClaimBlinkSeconds) < kClaimBlinkSeconds * 0.5f;
+        /// The blink of `kClaimHighlight`: on for the first half of each period `blinkSeconds` of the `elapsed` time of a mark.
+        bool BlinkIsOn(float elapsed, float blinkSeconds) {
+            return std::fmod(elapsed, blinkSeconds) < blinkSeconds * 0.5f;
         }
 
         /// The serial of the last claim window of the hand, 0 for none (`ClaimWindowResult::serial`).
@@ -452,7 +452,7 @@ namespace BECore::Mahjong {
         }
         const bool personBeaten = eastl::any_of(window->beaten.begin(), window->beaten.end(), [&](const LostClaim& lost) { return game.GetSession().KindOf(lost.seat) == SeatKind::Person; });
         if (personBeaten) {
-            _handOverHoldLeft = kClaimLostSeconds;
+            _handOverHoldLeft = ScaledSeconds(kClaimLostSeconds, game.GetAnimationSpeed());
             _handOverHoldOf = SeenHandOf(game);
         }
     }
@@ -486,7 +486,7 @@ namespace BECore::Mahjong {
             if (moves[i - 1].meld >= 0) {
                 _highlightSeat = moves[i - 1].seat;
                 _highlightMeld = moves[i - 1].meld;
-                _highlightLeft = kClaimHighlightSeconds;
+                _highlightLeft = Seconds(kClaimHighlightSeconds);
                 _highlightWaits = false;  // `PlanBatch` makes it wait when the tiles of the set fly
                 setLaid = true;
                 break;
@@ -504,7 +504,7 @@ namespace BECore::Mahjong {
                 for (const LostClaim& lost : window->beaten) {
                     _lostSeats[lost.seat] = true;
                 }
-                _lostLeft = kClaimLostSeconds;
+                _lostLeft = Seconds(kClaimLostSeconds);
             }
         }
         return NewMoves{false, first, setLaid};
@@ -548,6 +548,7 @@ namespace BECore::Mahjong {
         if (game == nullptr) {
             return;
         }
+        _speed = game->GetAnimationSpeed();
         if (_highlightLeft > 0.0f && !_highlightWaits && TableIsLive(*game)) {
             _highlightLeft = eastl::max(0.0f, _highlightLeft - event.deltaTime);
         }
@@ -559,7 +560,7 @@ namespace BECore::Mahjong {
         }
         if (!_flights.empty() && TableIsLive(*game)) {
             _flightElapsed += event.deltaTime;
-            if (_flightElapsed >= _flightSeconds) {
+            if (_flightElapsed >= Seconds(_flightSeconds)) {
                 EndFlights();  // the set that waited for its tiles blinks from the next draw on, at the start of its time
             }
         }
@@ -569,7 +570,7 @@ namespace BECore::Mahjong {
             return;
         }
         _computerClock += event.deltaTime;
-        if (_computerClock < kComputerStepSeconds) {
+        if (_computerClock < Seconds(kComputerStepSeconds)) {
             return;
         }
         _computerClock = 0.0f;  // one action a period, whatever the frame took
@@ -616,6 +617,9 @@ namespace BECore::Mahjong {
         _shown = TableSnapshot{};
         _chowTakes = ChowTakes{};
         const MahjongGame* game = MahjongGame::GetActive();
+        if (game != nullptr) {
+            _speed = game->GetAnimationSpeed();
+        }
         PublishScreen(game);
         if (game == nullptr || game->GetMatch().GetPhase() == MatchPhase::NotStarted) {
             EndFlights();
@@ -701,7 +705,7 @@ namespace BECore::Mahjong {
             // The last claim window (public): the plate of the seat that won it blinks as a set just laid does, the plate of each seat whose
             // claim lost has a frame
             if (_lostLeft > 0.0f) {
-                if (seat == _lostWinner && BlinkIsOn(kClaimLostSeconds - _lostLeft)) {
+                if (seat == _lostWinner && BlinkIsOn(Seconds(kClaimLostSeconds) - _lostLeft, Seconds(kClaimBlinkSeconds))) {
                     renderer.DrawFilledRect(box.x, box.y, box.w, box.h, kClaimHighlight);
                 }
                 if (_lostSeats[seat]) {
@@ -724,7 +728,7 @@ namespace BECore::Mahjong {
         // half off; nothing while a tile of it is in the air
         if (_highlightLeft > 0.0f && !_highlightWaits) {
             const Rect bounds = BoundsOfMeld(layout, _highlightSeat, _highlightMeld);
-            if (bounds.w > 0.0f && BlinkIsOn(kClaimHighlightSeconds - _highlightLeft)) {
+            if (bounds.w > 0.0f && BlinkIsOn(Seconds(kClaimHighlightSeconds) - _highlightLeft, Seconds(kClaimBlinkSeconds))) {
                 const Rect marked = Padded(bounds, kActingMargin * unit);
                 renderer.DrawFilledRect(marked.x, marked.y, marked.w, marked.h, kClaimHighlight);
             }
@@ -829,7 +833,7 @@ namespace BECore::Mahjong {
             }
         }
         if (!_flights.empty()) {
-            const float progress = Ease(kTileFlightEase, _flightSeconds > 0.0f ? _flightElapsed / _flightSeconds : 1.0f);
+            const float progress = Ease(kTileFlightEase, _flightSeconds > 0.0f ? _flightElapsed / Seconds(_flightSeconds) : 1.0f);
             for (const TileSlot& slot : layout.slots) {
                 if (const TileFlight* flight = flightOf(slot)) {
                     drawSlot(slot, FlightRect(*flight, slot.rect, progress));

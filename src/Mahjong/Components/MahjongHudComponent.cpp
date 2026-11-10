@@ -9,6 +9,7 @@
 #include <Generated/MahjongHudComponent.gen.hpp>
 #include <Mahjong/Components/MahjongTableComponent.h>
 #include <Mahjong/MahjongGame.h>
+#include <Mahjong/Table/AnimationSpeed.h>
 #include <Mahjong/Table/MoveText.h>
 #include <Mahjong/Table/RulesText.h>
 #include <Mahjong/Table/ScoreText.h>
@@ -36,6 +37,7 @@ namespace BECore::Mahjong {
         constexpr eastl::string_view kOptionsAction = "MahjongOptions";
         constexpr eastl::string_view kOptionsBackAction = "MahjongOptionsBack";
         constexpr eastl::string_view kSetLevelAction = "MahjongSetLevel";
+        constexpr eastl::string_view kSetSpeedAction = "MahjongSetSpeed";
         constexpr eastl::string_view kRulesAction = "MahjongRules";
         constexpr eastl::string_view kRulesNextAction = "MahjongRulesNext";
         constexpr eastl::string_view kRulesBackAction = "MahjongRulesBack";
@@ -192,6 +194,11 @@ namespace BECore::Mahjong {
         CoreManager::GetUIVars().Set("levelChoice"_intern, eastl::string_view(text.data(), text.size()));
     }
 
+    void MahjongHudComponent::PublishSpeedChoice(const MahjongGame& game) const {
+        const std::string_view text = SpeedText(game.GetAnimationSpeed());
+        CoreManager::GetUIVars().Set("speedChoice"_intern, eastl::string_view(text.data(), text.size()));
+    }
+
     void MahjongHudComponent::PublishSetup(const MahjongGame* game) {
         const bool open = game != nullptr && game->IsSetupOpen();
         if (open && !_setupShown) {
@@ -222,6 +229,7 @@ namespace BECore::Mahjong {
         if (open) {
             // The rows show what the game has now; the hints row is published by the hints component while the page is open
             PublishLanguage(*game);
+            PublishSpeedChoice(*game);
             PublishLevelChoice(*game);
         }
         UICanvasComponent::SetVisibleByName(GetScene(), "Options"_intern, open);
@@ -433,6 +441,16 @@ namespace BECore::Mahjong {
         }
         if (action == kOptionsBackAction) {
             game->CloseOptions();  // a click while the page is closed finds it closed
+            return;
+        }
+        if (action == kSetSpeedAction) {
+            // The page is where the speed is set; client text is parsed by `TryParseSpeed`, anything else is ignored
+            const eastl::string_view text = event.value.ToStringView();
+            const std::optional<AnimationSpeed> speed = TryParseSpeed(std::string_view(text.data(), text.size()));
+            if (game->IsOptionsOpen() && speed) {
+                game->SetAnimationSpeed(*speed);
+                PublishSpeedChoice(*game);
+            }
             return;
         }
         if (action == kSetLevelAction) {

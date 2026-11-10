@@ -3,6 +3,7 @@
 #include <BECore/Reflection/TypeTraits.h>
 #include <BECore/Save/SaveGame.h>
 #include <Mahjong/Game/MatchLog.h>
+#include <Mahjong/Table/AnimationSpeed.h>
 
 namespace BECore::Mahjong {
 
@@ -43,7 +44,7 @@ namespace BECore::Mahjong {
     };
 
     /**
-     * @brief The five choices of the `Setup` panel, saved so that the game opens on them. No rule that a control `reset` alone can set
+     * @brief The six choices of the `Setup` panel and the `Options` page, saved so that the game opens on them. No rule that a control `reset` alone can set
      * (`flowers`, `limit`, `replayDrawnHand`, `startingScore`) is here: the match slot has the settings of its match.
      *
      * Adding a field needs no version (an old file keeps the default); changing what a field means does (`kMahjongSaveVersion`).
@@ -62,9 +63,11 @@ namespace BECore::Mahjong {
         /// The level of the computer players, its number as text `1` .. `10` (`LevelText`); a copy of an older build holds `easy` or
         /// `normal` (`TryParseLevelName`)
         BE_REFLECT_FIELD eastl::string level = "5";
+        /// The speed of the table (`SpeedText`: `slow` | `normal` | `fast`); a copy written before the setting holds the default
+        BE_REFLECT_FIELD eastl::string speed = "normal";
 
         bool operator==(const MahjongPrefsSave& other) const {
-            return language == other.language && hintsOn == other.hintsOn && seats == other.seats && hands == other.hands && level == other.level;
+            return language == other.language && hintsOn == other.hintsOn && seats == other.seats && hands == other.hands && level == other.level && speed == other.speed;
         }
     };
 
@@ -75,6 +78,7 @@ namespace BECore::Mahjong {
         SeatSetup seats = kDefaultSeatSetup;
         int handsPerMatch = kFullMatchHands;
         ComputerLevel level = kDefaultLevel;
+        AnimationSpeed speed = kDefaultAnimationSpeed;
     };
 
     /**
@@ -92,10 +96,10 @@ namespace BECore::Mahjong {
     [[nodiscard]] std::expected<eastl::vector<MatchLogEvent>, eastl::string> ParseMatchSaveText(std::string_view text);
 
     /// The state of the prefs slot from the choices of the game.
-    [[nodiscard]] MahjongPrefsSave MakePrefs(eastl::string_view language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, ComputerLevel level);
+    [[nodiscard]] MahjongPrefsSave MakePrefs(eastl::string_view language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, ComputerLevel level, AnimationSpeed speed = kDefaultAnimationSpeed);
 
-    /// The choices of a prefs state, or the first thing wrong: seats not four letters P / C, a level that is not `1` .. `10` (or the old names `easy` / `normal`), hands
-    /// other than 16 and 8, an empty language.
+    /// The choices of a prefs state, or the first thing wrong: seats not four letters P / C, a level that is not `1` .. `10` (or the old names `easy` / `normal`), a speed that is not `slow` /
+    /// `normal` / `fast`, hands other than 16 and 8, an empty language.
     [[nodiscard]] std::expected<PrefsValues, eastl::string> ReadPrefs(const MahjongPrefsSave& prefs);
 
     /**

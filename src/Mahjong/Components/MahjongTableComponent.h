@@ -4,6 +4,7 @@
 #include <BECore/Resource/ResourceHandle.h>
 #include <BECore/Scene/IComponent.h>
 #include <Mahjong/Table/ActionButtons.h>
+#include <Mahjong/Table/AnimationSpeed.h>
 #include <Mahjong/Table/TableLayout.h>
 #include <Mahjong/Table/TileFlights.h>
 
@@ -28,7 +29,8 @@ namespace BECore::Mahjong {
     class MahjongGame;
     class TableSession;
 
-    /// The pause before a computer seat plays (the component steps one computer action per period while a computer has to act).
+    /// The pause before a computer seat plays at `Normal` speed (the component steps one computer action per period while a computer has to act);
+    /// `MahjongGame::GetAnimationSpeed()` scales it, and the flights and the claim marks with it (`Table/AnimationSpeed.h`).
     inline constexpr float kComputerStepSeconds = 1.0f;
 
     /**
@@ -145,7 +147,7 @@ namespace BECore::Mahjong {
             return _shown.layout;
         }
 
-        /// How long a flight lasts (default `kTileFlightSeconds`); 0 or less plans no flight (the tests of the table switch them off).
+        /// How long a flight lasts at `Normal` speed (default `kTileFlightSeconds`; the game's speed scales it); 0 or less plans no flight (the tests of the table switch them off).
         void SetTileFlightSeconds(float seconds) noexcept {
             _flightSeconds = seconds;
         }
@@ -223,19 +225,25 @@ namespace BECore::Mahjong {
         /// flights when it has any, a restart, another viewer or another view size drops them.
         void PlanBatch(const TableSnapshot& before, const NewMoves& news, const HandModel& hand);
 
+        /// `baseSeconds` at the speed of the game.
+        [[nodiscard]] float Seconds(float baseSeconds) const noexcept {
+            return ScaledSeconds(baseSeconds, _speed);
+        }
+
         /// Ends the running flights where they are (their slots are drawn in place from now on); a highlight that waited for them starts.
         void EndFlights();
 
         ResourceHandle<ITexture> _atlas;
-        TableSnapshot _shown;                // what the last `OnDraw` drew: its layout is `GetLayout()`, empty while nothing is drawn
-        eastl::vector<TileFlight> _flights;  // the tiles in the air, flying to slots of `_shown.layout`
-        float _flightElapsed = 0.0f;         // seconds since the batch of `_flights` was planned
-        float _flightSeconds = kTileFlightSeconds;
-        ActionButtons _published;                  // what the canvases show; the scene file starts with every button hidden
-        std::optional<ButtonKind> _hoveredButton;  // the shown button of `Actions` under the pointer at the last publication
-        ChowTakes _chowTakes;                      // what the last `OnDraw` framed in the hand for the offered chow
-        eastl::string_view _hintKey;               // the key of the sentence in `actionHint` (a literal of `SpecOf`, which lives as long as the program)
-        uint64_t _hintStringsVersion = 0;          // the version of the string table that sentence was looked up at
+        TableSnapshot _shown;                            // what the last `OnDraw` drew: its layout is `GetLayout()`, empty while nothing is drawn
+        eastl::vector<TileFlight> _flights;              // the tiles in the air, flying to slots of `_shown.layout`
+        float _flightElapsed = 0.0f;                     // seconds since the batch of `_flights` was planned
+        float _flightSeconds = kTileFlightSeconds;       // at Normal speed: `Seconds(_flightSeconds)` is the length of a flight
+        AnimationSpeed _speed = kDefaultAnimationSpeed;  // the game's speed as of the last update or draw (the table does not move while `Options` is open)
+        ActionButtons _published;                        // what the canvases show; the scene file starts with every button hidden
+        std::optional<ButtonKind> _hoveredButton;        // the shown button of `Actions` under the pointer at the last publication
+        ChowTakes _chowTakes;                            // what the last `OnDraw` framed in the hand for the offered chow
+        eastl::string_view _hintKey;                     // the key of the sentence in `actionHint` (a literal of `SpecOf`, which lives as long as the program)
+        uint64_t _hintStringsVersion = 0;                // the version of the string table that sentence was looked up at
         bool _handoffShown = false;
         bool _compactActions = false;  // `ActionsCompact` is the shown canvas of the buttons; the scene file starts with `Actions`
         bool _declareNext = false;

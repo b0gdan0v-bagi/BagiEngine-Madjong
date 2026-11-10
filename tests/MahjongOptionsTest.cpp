@@ -6,6 +6,7 @@
 #include <BECore/UI/UIDropdown.h>
 #include <BECore/UI/UISegmented.h>
 #include <Mahjong/Components/MahjongHudComponent.h>
+#include <Mahjong/Table/AnimationSpeed.h>
 #include <Mahjong/Table/UiPalette.h>
 
 /**
@@ -42,7 +43,15 @@ namespace BECore::Mahjong::Tests {
         constexpr const char* kLevelRow = "LevelRow";
         constexpr const char* kLevelCaption = "LevelCaption";
         constexpr const char* kLevelChoice = "LevelChoice";
-        constexpr size_t kPageRowCount = kRowCount + 1;
+        /// The row of the speed: a caption and the three segments `SpeedSlow`, `SpeedNormal`, `SpeedFast` of the group `SpeedChoice`, between hints and level.
+        constexpr const char* kSpeedRow = "SpeedRow";
+        constexpr const char* kSpeedCaption = "SpeedCaption";
+        constexpr const char* kSpeedChoice = "SpeedChoice";
+        constexpr size_t kPageRowCount = kRowCount + 2;
+
+        /// The segments in the order of `EnumUtils<AnimationSpeed>::Values()`.
+        constexpr const char* kSpeedSegments[] = {"SpeedSlow", "SpeedNormal", "SpeedFast"};
+        static_assert(sizeof(kSpeedSegments) / sizeof(kSpeedSegments[0]) == EnumUtils<AnimationSpeed>::Count());
 
         std::string LevelOption(ComputerLevel level) {
             return "Level" + std::string(LevelText(level));
@@ -54,6 +63,9 @@ namespace BECore::Mahjong::Tests {
             for (const PageRow& row : kRows) {
                 names.push_back(row.firstSegment);
                 names.push_back(row.secondSegment);
+            }
+            for (const char* segment : kSpeedSegments) {
+                names.push_back(segment);
             }
             names.push_back(kLevelChoice);
             names.push_back("Back");
@@ -188,8 +200,19 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_EQ(button->action, PoolString::Intern(row.action)) << segment;
             }
         }
-        for (const char* name : {kLevelRow, kLevelCaption}) {
+        for (const char* name : {kSpeedRow, kSpeedCaption, kLevelRow, kLevelCaption}) {
             EXPECT_NE(Element("Options", name), nullptr) << name;
+        }
+        const auto* speedGroup = Element("Options", kSpeedChoice) != nullptr ? Element("Options", kSpeedChoice)->Cast<UISegmented>() : nullptr;
+        ASSERT_NE(speedGroup, nullptr);
+        EXPECT_EQ(speedGroup->bind, "speedChoice"_intern);
+        ASSERT_EQ(speedGroup->children.size(), EnumUtils<AnimationSpeed>::Count()) << "one segment per speed, slowest first";
+        for (size_t index = 0; index < EnumUtils<AnimationSpeed>::Count(); ++index) {
+            const auto* segment = speedGroup->children[index]->Cast<UIButton>();
+            ASSERT_NE(segment, nullptr) << index;
+            EXPECT_EQ(segment->name.ToStringView(), kSpeedSegments[index]);
+            EXPECT_EQ(segment->action, "MahjongSetSpeed"_intern);
+            EXPECT_EQ(segment->value.ToStringView(), SpeedText(EnumUtils<AnimationSpeed>::Values()[index]).data());
         }
         const UIDropdown* level = Dropdown();
         ASSERT_NE(level, nullptr);
@@ -238,6 +261,10 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(Text("Back"), Tr(strings, "options.back").c_str());
             EXPECT_EQ(Text("LanguageCaption"), Tr(strings, "setup.language").c_str());
             EXPECT_EQ(Text("HintsCaption"), Tr(strings, "setup.hints").c_str());
+            EXPECT_EQ(Text(kSpeedCaption), Tr(strings, "options.speed").c_str());
+            EXPECT_EQ(Text("SpeedSlow"), Tr(strings, "options.speedSlow").c_str());
+            EXPECT_EQ(Text("SpeedNormal"), Tr(strings, "options.speedNormal").c_str());
+            EXPECT_EQ(Text("SpeedFast"), Tr(strings, "options.speedFast").c_str());
             EXPECT_EQ(Text("LevelCaption"), Tr(strings, "setup.level").c_str());
             EXPECT_EQ(Text(kLevelChoice), LevelText(_game->GetLevel())) << "the header shows the level of the game";
         });
@@ -251,6 +278,7 @@ namespace BECore::Mahjong::Tests {
         for (const PageRow& row : kRows) {
             bands.push_back(row.row);
         }
+        bands.insert(bands.begin() + 1 + kRowCount, kSpeedRow);
         bands.push_back(kLevelRow);
         bands.push_back("Back");
 
@@ -304,11 +332,11 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(OpenPage());
         auto page = Canvas("Options");
 
-        // The design size: the plate of 376, the title band of 48, the rows of 64, Back of 64 set 16 below the rows
+        // The design size: the plate of 448, the title band of 48, the rows of 64, Back of 64 set 16 below the rows
         LayOutInWindow(*page, DesignWindow());
         const Rect plate = Element("Options", "Plate")->rect;
         EXPECT_NEAR(plate.h, kRoomyPlateHeight, 0.01f);
-        EXPECT_NEAR(plate.h, 376.0f, 0.01f);
+        EXPECT_NEAR(plate.h, 448.0f, 0.01f);
         EXPECT_TRUE(SameColor(Element("Options", "Plate")->color, PaletteColor("surface")));
         EXPECT_TRUE(SameColor(Element("Options", "Dim")->color, PaletteColor("scrim")));
         const UIElement* title = Element("Options", "Title");
@@ -338,6 +366,31 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(group->rect.y, row->rect.y + kRowPadding);
             EXPECT_EQ(group->rect.y + group->rect.h, row->rect.y + row->rect.h - kRowPadding);
             for (const char* name : {entry.firstSegment, entry.secondSegment}) {
+                const auto* segment = Element("Options", name)->Cast<UIButton>();
+                ASSERT_NE(segment, nullptr) << name;
+                EXPECT_TRUE(SameColor(segment->selectedColor, PaletteColor("primary"))) << name;
+                EXPECT_TRUE(SameColor(segment->color, PaletteColor("neutral"))) << name;
+                EXPECT_EQ(segment->rect.h, group->rect.h) << name;
+            }
+        }
+        {
+            SCOPED_TRACE(kSpeedRow);
+            const UIElement* row = Element("Options", kSpeedRow);
+            ASSERT_NE(row, nullptr);
+            EXPECT_NEAR(row->rect.h, 64.0f, 0.01f);
+            EXPECT_TRUE(SameColor(row->color, PaletteColor("surfaceRaised")));
+            EXPECT_EQ(GapBelow(*above, row->rect), kModalGap);
+            above = &row->rect;
+            const UIElement* caption = Element("Options", kSpeedCaption);
+            const UIElement* group = Element("Options", kSpeedChoice);
+            ASSERT_TRUE(caption != nullptr && group != nullptr);
+            EXPECT_NEAR(caption->rect.w, 96.0f, 0.01f) << "narrower than the others: the three words need the room";
+            EXPECT_TRUE(SameColor(caption->Cast<UILabel>()->textColor, PaletteColor("textMuted")));
+            EXPECT_EQ(group->rect.x, caption->rect.x + caption->rect.w + kModalGap);
+            EXPECT_EQ(group->rect.x + group->rect.w, row->rect.x + row->rect.w - kRowPadding);
+            EXPECT_EQ(group->rect.y, row->rect.y + kRowPadding);
+            EXPECT_EQ(group->rect.y + group->rect.h, row->rect.y + row->rect.h - kRowPadding);
+            for (const char* name : kSpeedSegments) {
                 const auto* segment = Element("Options", name)->Cast<UIButton>();
                 ASSERT_NE(segment, nullptr) << name;
                 EXPECT_TRUE(SameColor(segment->selectedColor, PaletteColor("primary"))) << name;
@@ -376,10 +429,12 @@ namespace BECore::Mahjong::Tests {
         LayOutInWindow(*page, WindowOf(480.0f, 480.0f), CanvasScaleMode::ConstantPixelSize, 1.5f);
         EXPECT_TRUE(Element("Options", "Title")->rect.IsEmpty());
         EXPECT_LT(Element("Options", kLevelCaption)->rect.w, 112.0f);
+        EXPECT_TRUE(Element("Options", kSpeedCaption)->rect.IsEmpty()) << "the caption of the speed gives its room to the three words";
         EXPECT_NEAR(Element("Options", "Plate")->rect.w, page->GetLayout().GetResolved().contentBounds.w, 0.01f);
         for (const PageRow& row : kRows) {
             EXPECT_GT(Element("Options", row.row)->rect.h, 0.0f) << row.row << ": nothing but the title is dropped";
         }
+        EXPECT_GT(Element("Options", kSpeedRow)->rect.h, 0.0f) << "nothing but the title is dropped";
         EXPECT_GT(Element("Options", kLevelRow)->rect.h, 0.0f) << "nothing but the title is dropped";
         EXPECT_GT(Element("Options", "Back")->rect.h, 0.0f);
 
@@ -451,6 +506,20 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(Selected("HintsOff"));
         EXPECT_FALSE(Selected("HintsOn"));
 
+        ASSERT_EQ(_game->GetAnimationSpeed(), AnimationSpeed::Normal);
+        EXPECT_TRUE(Selected("SpeedNormal"));
+        for (size_t index = 0; index < EnumUtils<AnimationSpeed>::Count(); ++index) {
+            const AnimationSpeed speed = EnumUtils<AnimationSpeed>::Values()[index];
+            SCOPED_TRACE(SpeedText(speed).data());
+            ASSERT_TRUE(ClickElement("Options", kSpeedSegments[index]));
+            Draw();
+            EXPECT_EQ(_game->GetAnimationSpeed(), speed);
+            EXPECT_EQ(Var("speedChoice"), SpeedText(speed).data());
+            EXPECT_TRUE(Selected(kSpeedSegments[index]));
+        }
+        EXPECT_FALSE(Selected("SpeedNormal"));
+        EXPECT_EQ(_game->GetAnimationSpeed(), AnimationSpeed::Fast);
+
         ASSERT_TRUE(ClickElement("Options", "LanguageRu"));
         Draw();
         EXPECT_EQ(_game->GetLanguage(), "ru"_intern);
@@ -510,17 +579,38 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_game->GetSession().Level(), ComputerLevel{3});
     }
 
+    TEST_F(MahjongOptionsTest, TheSpeedTakesEffectAtOnceIsKeptByANewMatchAndAnUnknownSpeedIsIgnored) {
+        ASSERT_NO_FATAL_FAILURE(OpenPage());
+        EmitAction("MahjongSetSpeed", "slow");
+        EXPECT_EQ(_game->GetAnimationSpeed(), AnimationSpeed::Slow);
+        EmitAction("MahjongSetSpeed", "warp");
+        EmitAction("MahjongSetSpeed", "");
+        EXPECT_EQ(_game->GetAnimationSpeed(), AnimationSpeed::Slow) << "text that is no speed changes nothing";
+        ASSERT_TRUE(ClickElement("Options", "Back"));
+        EmitAction("MahjongSetSpeed", "fast");
+        EXPECT_EQ(_game->GetAnimationSpeed(), AnimationSpeed::Slow) << "the page is closed: the event is out of date";
+        EmitAction("MahjongStart");
+        ASSERT_TRUE(_game->GetMatch().GetPhase() != MatchPhase::NotStarted);
+        EXPECT_EQ(_game->GetAnimationSpeed(), AnimationSpeed::Slow);
+        ASSERT_TRUE(_game->StartMatch(7).has_value());
+        EXPECT_EQ(_game->GetAnimationSpeed(), AnimationSpeed::Slow) << "a match does not reset the speed";
+    }
+
     TEST_F(MahjongOptionsTest, ThePageOpensOnWhatTheGameHasNow) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         _game->OpenSetup();
         Draw();
         _game->SetLevel(ComputerLevel::Easy);
+        _game->SetAnimationSpeed(AnimationSpeed::Slow);
         CoreManager::GetUIVars().Set("levelChoice"_intern, "5");  // a variable that is out of date
+        CoreManager::GetUIVars().Set("speedChoice"_intern, "fast");
         CoreManager::GetUIVars().Set("language"_intern, "ru");
         _game->OpenOptions();
         Draw();
         EXPECT_EQ(Var("levelChoice"), "1");
         EXPECT_EQ(Var("language"), "en");
+        EXPECT_EQ(Var("speedChoice"), "slow");
+        EXPECT_TRUE(Selected("SpeedSlow"));
         EXPECT_EQ(Text(kLevelChoice), "1");
         EXPECT_TRUE(Selected("LanguageEn"));
         EXPECT_TRUE(Selected("HintsOn")) << "the hints component publishes while Setup is open";
