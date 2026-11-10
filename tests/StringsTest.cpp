@@ -71,11 +71,13 @@ namespace BECore::Mahjong::Tests {
             return keys;
         }
 
-        /// The keys code builds from an enum value: the families that are walked, not named (`wind.<Wind>`, `suit.<suit>`, `score.kind.<ScoreKind>`, `button.<ButtonKind>`, `hint.<ButtonKind>`).
+        /// The keys code builds from an enum value: the families that are walked, not named (`wind.<Wind>`, `wind.letter.<Wind>`, `suit.<suit>`, `score.kind.<ScoreKind>`, `button.<ButtonKind>`,
+        /// `hint.<ButtonKind>`).
         std::set<std::string> KeysBuiltFromEnums() {
             std::set<std::string> keys;
             for (const Wind wind : EnumUtils<Wind>::Values()) {
                 keys.insert(Std(Format("wind.{}", EnumUtils<Wind>::ToString(wind))));
+                keys.insert(Std(Format("wind.letter.{}", EnumUtils<Wind>::ToString(wind))));
             }
             for (const TileSuit suit : EnumUtils<TileSuit>::Values()) {
                 if (suit != TileSuit::None) {

@@ -9,6 +9,10 @@
         <string key="wind.South" text="South"/>
         <string key="wind.West" text="West"/>
         <string key="wind.North" text="North"/>
+        <string key="wind.letter.East" text="E"/>
+        <string key="wind.letter.South" text="S"/>
+        <string key="wind.letter.West" text="W"/>
+        <string key="wind.letter.North" text="N"/>
         <string key="suit.Dots" text="Dots"/>
         <string key="suit.Bamboo" text="Bamboo"/>
         <string key="suit.Characters" text="Characters"/>
@@ -122,6 +126,8 @@
         <string key="cover.show" text="Show"/>
         <string key="hud.round" text="Round: {round}, hand {hand} of {handsTotal}"/>
         <string key="hud.wall" text="Wall: {wall}"/>
+        <string key="panel.round" text="{wind} {n}"/>
+        <string key="panel.wall" text="Wall {wall}"/>
         <string key="hud.newGame" text="New game"/>
         <string key="hud.rules" text="Rules"/>
         <string key="matchover.newGame" text="New game"/>
@@ -237,6 +243,10 @@
         <string key="wind.South" text="Юг"/>
         <string key="wind.West" text="Запад"/>
         <string key="wind.North" text="Север"/>
+        <string key="wind.letter.East" text="В"/>
+        <string key="wind.letter.South" text="Ю"/>
+        <string key="wind.letter.West" text="З"/>
+        <string key="wind.letter.North" text="С"/>
         <string key="suit.Dots" text="Круги"/>
         <string key="suit.Bamboo" text="Бамбук"/>
         <string key="suit.Characters" text="Знаки"/>
@@ -350,6 +360,8 @@
         <string key="cover.show" text="Показать"/>
         <string key="hud.round" text="Раунд: {round}, раздача {hand} из {handsTotal}"/>
         <string key="hud.wall" text="Стена: {wall}"/>
+        <string key="panel.round" text="{wind} {n}"/>
+        <string key="panel.wall" text="Стена {wall}"/>
         <string key="hud.newGame" text="Новая игра"/>
         <string key="hud.rules" text="Правила"/>
         <string key="matchover.newGame" text="Новая игра"/>

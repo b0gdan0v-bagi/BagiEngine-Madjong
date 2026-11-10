@@ -64,4 +64,8 @@ namespace BECore::Mahjong {
         return Tr(strings, Format("wind.{}", EnumUtils<Wind>::ToString(wind)).c_str());
     }
 
+    eastl::string WindLetter(const UIStrings& strings, Wind wind) {
+        return Tr(strings, Format("wind.letter.{}", EnumUtils<Wind>::ToString(wind)).c_str());
+    }
+
 }  // namespace BECore::Mahjong

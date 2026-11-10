@@ -425,6 +425,48 @@ namespace BECore::Mahjong::Tests {
         EXPECT_LT(plates[3].x, plates[1].x);
     }
 
+    TEST(TableLayoutTest, TheCenterPanelIsTheInsideOfTheWallRingAndTheSameForEveryViewer) {
+        const TableLayout design = MakeTableLayout(QuietInput(0));
+        const Rect& wall = design.zones.wall;
+        const Rect& panel = design.zones.centerPanel;
+        EXPECT_NEAR(panel.x, wall.x + kWallStackSize, kTolerance);
+        EXPECT_NEAR(panel.y, wall.y + kWallStackSize, kTolerance);
+        EXPECT_NEAR(panel.w, wall.w - 2.0f * kWallStackSize, kTolerance);
+        EXPECT_NEAR(panel.h, wall.h - 2.0f * kWallStackSize, kTolerance);
+        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+            const Rect& other = MakeTableLayout(QuietInput(viewer)).zones.centerPanel;
+            EXPECT_EQ(other.x, panel.x);
+            EXPECT_EQ(other.y, panel.y);
+            EXPECT_EQ(other.w, panel.w);
+            EXPECT_EQ(other.h, panel.h);
+        }
+    }
+
+    TEST(TableLayoutTest, TheCenterPanelHoldsNoSlotAndNoZoneAndKeepsTheWallStacksOutside) {
+        for (const ViewSize& size : kViewSizes) {
+            for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+                for (const Seat discardSeat : {kNoSeat, 0, 1, 2, 3}) {
+                    const TableLayout layout = MakeTableLayout(WorstInput(viewer, kWorstPile, discardSeat), size.width, size.height);
+                    const Rect& panel = layout.zones.centerPanel;
+                    ASSERT_GT(panel.w, 0.0f);
+                    ASSERT_GT(panel.h, 0.0f);
+                    EXPECT_TRUE(Inside(panel, layout.viewWidth, layout.viewHeight));
+                    EXPECT_TRUE(Holds(layout.zones.wall, panel));
+                    for (const TileSlot& slot : layout.slots) {
+                        EXPECT_FALSE(Overlaps(panel, slot.rect)) << "role " << static_cast<int>(slot.role) << " of seat " << slot.seat << " index " << slot.index << " view " << size.width << "x"
+                                                                 << size.height;
+                    }
+                    for (const Rect& zone : layout.zones.discards) {
+                        EXPECT_FALSE(Overlaps(panel, zone));
+                    }
+                    for (const Rect& plate : layout.zones.seatPlates) {
+                        EXPECT_FALSE(Overlaps(panel, plate));
+                    }
+                }
+            }
+        }
+    }
+
     TEST(TableLayoutTest, TheSeatPlatesScaleWithAnotherViewSize) {
         const TableInput input = WorstInput(1, 30, kNoSeat);
         const TableLayout design = MakeTableLayout(input);
