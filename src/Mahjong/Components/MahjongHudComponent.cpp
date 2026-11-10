@@ -10,6 +10,7 @@
 #include <Mahjong/Components/MahjongTableComponent.h>
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/Table/AnimationSpeed.h>
+#include <Mahjong/Table/CenterPanel.h>
 #include <Mahjong/Table/MoveText.h>
 #include <Mahjong/Table/RulesText.h>
 #include <Mahjong/Table/ScoreText.h>
@@ -28,7 +29,6 @@ namespace BECore::Mahjong {
         static_assert(kFullMatchHands == 16 && kShortMatchHands == 8, "the ids and the buttons `Hands16` / `Hands8` of the scene follow these numbers");
         constexpr eastl::string_view kPersonId = "person";
         constexpr eastl::string_view kComputerId = "computer";
-        constexpr eastl::string_view kDealerMarkText = "*";
         constexpr eastl::string_view kNewGameAction = "MahjongNewGame";
         constexpr eastl::string_view kStartAction = "MahjongStart";
         constexpr eastl::string_view kContinueAction = "MahjongContinue";
@@ -138,11 +138,6 @@ namespace BECore::Mahjong {
         const Match& match = game->GetMatch();
         const HandModel& hand = match.Hand();
         UIVars& vars = CoreManager::GetUIVars();
-        vars.Set("round"_intern, eastl::string_view(WindName(strings, match.RoundWind())));
-        vars.Set("hand"_intern, std::min(match.HandsPlayed() + 1, match.HandsTotal()));
-        vars.Set("handsTotal"_intern, match.HandsTotal());
-        vars.Set("wall"_intern, static_cast<int>(hand.GetWall().LiveCount()));
-
         // The last move, in words: only while a hand is played and has a move (the end screens speak after it)
         eastl::string lastMove;
         if (session.GetPhase() == SessionPhase::Playing && !hand.Moves().empty()) {
@@ -152,17 +147,16 @@ namespace BECore::Mahjong {
         vars.Set("lastMove"_intern, eastl::string_view(lastMove));
         ShowMoveLine(!lastMove.empty());
 
-        // The plates, by screen position: the seat there, its wind (and the mark of the dealer) and its score
+        // The plates' names and the centre panel, by screen position: the seat there, its wind letter and its score
         const auto plates = MakeSeatPlates(strings, session, match);
+        const CenterPanelText panel = MakeCenterPanel(strings, session, match);
+        vars.Set("panelRound"_intern, eastl::string_view(panel.round));
+        vars.Set("panelWall"_intern, eastl::string_view(panel.wallText));
         for (int position = 0; position < kSeatCount; ++position) {
-            const SeatPlateText& plate = plates[position];
-            eastl::string wind = plate.wind;
-            if (plate.dealer) {
-                wind.append(kDealerMarkText.data(), kDealerMarkText.size());
-            }
-            vars.Set(SeatVar("plateName", position), eastl::string_view(plate.name));
-            vars.Set(SeatVar("plateWind", position), eastl::string_view(wind));
-            vars.Set(SeatVar("plateScore", position), plate.score);
+            const CenterPanelSeat& side = panel.seats[position];
+            vars.Set(SeatVar("plateName", position), eastl::string_view(plates[position].name));
+            vars.Set(SeatVar("panelWind", position), eastl::string_view(side.wind));
+            vars.Set(SeatVar("panelScore", position), side.score);
         }
     }
 

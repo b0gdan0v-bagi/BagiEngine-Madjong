@@ -46,7 +46,7 @@ STARTING_SCORE = 2000
 STEP_LIMIT_PER_HAND = 2000  # a hand has far fewer decisions of one person
 HAND_LIMIT_PER_MATCH = 100  # 8 counted hands; a drawn hand is dealt again
 TABLE_COLORS = 500  # a table of 150 tiles with antialiased marks and text shows thousands; flat felt, or felt and plain boxes, far fewer
-SCENE_CANVASES = {"Hints", "HintsButton", "Actions", "ActionsCompact", "Hud", "SeatPlates", "HudMenu", "Handoff", "HandOver", "HandOverAction", "MatchOver", "Setup", "Rules", "RulesAction"}
+SCENE_CANVASES = {"Hints", "HintsButton", "Actions", "ActionsCompact", "Hud", "SeatPlates", "CenterPanel", "HudMenu", "Handoff", "HandOver", "HandOverAction", "MatchOver", "Setup", "Rules", "RulesAction"}
 COMING_AND_GOING_SCREENS = ("Setup", "Handoff", "HandOver", "HandOverAction", "MatchOver", "Rules", "RulesAction")
 HAND_OVER_SCREENS = {"HandOver", "HandOverAction"}  # the score table and its Next hand button are shown together
 RULES_SCREENS = {"Rules", "RulesAction"}  # the pages of the rules and their bar are shown together
@@ -260,16 +260,20 @@ def screens_shown(client: BagiControlClient) -> tuple[set[str], dict[str, Any]]:
 
 
 def check_hud(tree: dict[str, Any], state: dict[str, Any]) -> None:
-    """The HUD label carries the round; the labels of the seat plates (by screen position: the seat at the bottom is the person's) the four scores of the state."""
-    round_label = find_ui_element(tree, "RoundLabel")
-    check(round_label is not None and round_label["text"].startswith(f"Round: {state['roundWind']}"), f"the round label is {round_label}")
+    """The centre panel says the round and the number of the hand in it and, by screen position (the seat at the bottom is the person's), the wind letter and the score of each seat of the state; the plates say the names."""
+    hands_per_round = max(1, state["handsTotal"] // 4)
+    hand_in_round = min(state["handsPlayed"], state["handsTotal"] - 1) % hands_per_round + 1
+    round_label = find_ui_element(tree, "PanelRound")
+    check(round_label is not None and round_label["text"] == f"{state['roundWind']} {hand_in_round}", f"the round label is {round_label}")
+    wall_label = find_ui_element(tree, "PanelWall")
+    check(wall_label is not None and wall_label["text"] == f"Wall {state['wall']}", f"the wall label is {wall_label}")
     bottom = state["seat"] if state["seat"] is not None else 0
     for position in range(SEAT_COUNT):
         seat = (bottom + position) % SEAT_COUNT
         name = find_ui_element(tree, f"PlateName{position}")
-        row = find_ui_element(tree, f"PlateRow{position}")
+        cell = find_ui_element(tree, f"PanelSeat{position}")
         check(name is not None and f"Seat {seat + 1}" in name["text"], f"the name label of the plate at position {position} is {name}")
-        check(row is not None and row["text"].endswith(f": {state['seats'][seat]['score']}") and state["seats"][seat]["wind"] in row["text"], f"the row label of the plate at position {position} (seat {seat}) is {row}")
+        check(cell is not None and cell["text"] == f"{state['seats'][seat]['wind'][0]} {state['seats'][seat]['score']}", f"the panel cell at position {position} (seat {seat}) is {cell}")
 
 
 def check_screens_follow_the_game(client: BagiControlClient, rng: random.Random) -> None:

@@ -3,7 +3,7 @@
 The glue between the model and the engine's scene and UI. Pure logic lives in `../Table/` (read its `CLAUDE.md`); the node files, the string table and the UI style are in `config/` (`config/CLAUDE.md`).
 
 - `MahjongTableComponent` (node `Table`) draws the table and plays the person seats by mouse and buttons, paces the computers, flies tiles, shows the hot-seat cover, swaps `Actions` / `ActionsCompact`.
-- `MahjongHudComponent` (node `Hud`) publishes the HUD and seat-plate words and runs `Setup`, the rules screen and the end screens.
+- `MahjongHudComponent` (node `Hud`) publishes the HUD, seat-plate and centre-panel words and runs `Setup`, the rules screen and the end screens.
 - `MahjongHintsComponent` (node `Hints`) runs the hints.
 
 ## Rules for every component
@@ -36,8 +36,9 @@ The glue between the model and the engine's scene and UI. Pure logic lives in `.
 
 ## The HUD (`MahjongHudComponent`)
 
-- **Words:** `round`, `hand`, `handsTotal`, `wall`, `lastMove` (`MoveText` of the last move; empty before the first move and once the hand is over; the `MoveLine` plate is shown exactly while it has text), and per screen position `p` the seat-plate words `plateName<p>`, `plateWind<p>` (with `*` for the dealer), `plateScore<p>`. There is no turn word: the turn is the gold of a seat plate.
-- **Seat plates:** four plates of one size at the sides of the table (`zones.seatPlates`); the table component paints them (base, turn tint and frame, a red dealer bar), `SeatPlates` labels carry the words. Public data, so shown under the cover and at the end of a hand. The dealer is read from the winds of the hand shown, not `Match::East()`.
+- **Words:** `lastMove` (`MoveText` of the last move; empty before the first move and once the hand is over; the `MoveLine` plate is shown exactly while it has text), and per screen position `p` `plateName<p>`, `panelWind<p>` (one letter), `panelScore<p>`, plus `panelRound` and `panelWall` (`MakeCenterPanel`). There is no turn word: the turn is the gold of a seat plate.
+- **Seat plates:** four plates of one size at the sides of the table (`zones.seatPlates`); the table component paints them (base, turn tint and frame, a red dealer bar), `SeatPlates` labels carry the name only. Public data, so shown under the cover and at the end of a hand. The dealer is read from the winds of the hand shown, not `Match::East()`.
+- **Centre panel:** the node `CenterPanel` words the round and hand (`East 1`), the wall and, on the side of each seat, its wind letter and points, inside `zones.centerPanel` (the inside of the wall ring); labels only, by screen position and upright for every side (no label turn in the engine), on the grid inside the panel. A 2D overlay: the 3D table (`mahjong-table-3d`) is not touched.
 - **`HudMenu`:** `New game` and `Rules` in a `Screen` canvas (touch targets). Hidden while the score table or the rules are up.
 - **Save:** each frame (`SceneUpdateEvent`, active game only) the HUD calls `MahjongGame::FlushSave()` (`../Save/CLAUDE.md`).
 - **`Setup`** (modal `Screen` canvas): four seats, hands 16 | 8, the full-width button `Options`, `Start`, and `Continue` beside it (half the row each) exactly while `CanContinue()`; `MahjongContinue` calls `ContinueMatch()` and plays nothing by itself. The component keeps the pending choices (taken from the game when the panel opens) and applies them only on `Start` (`SetSeats`, `handsPerMatch` of a copy of the settings, `StartRandomMatch()`). It offers nothing else and never changes `flowers`, `replayDrawnHand`, `limit` or `startingScore`. Events while closed are ignored. One layout variant for canvases ≤ 440 wide (narrow captions); the title stays in every window.

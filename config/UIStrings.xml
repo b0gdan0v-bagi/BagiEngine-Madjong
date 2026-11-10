@@ -124,8 +124,6 @@
         <string key="hints.advice.pass" text="Let the discard go."/>
         <string key="cover.text" text="Pass the screen to {handoffSeat}"/>
         <string key="cover.show" text="Show"/>
-        <string key="hud.round" text="Round: {round}, hand {hand} of {handsTotal}"/>
-        <string key="hud.wall" text="Wall: {wall}"/>
         <string key="panel.round" text="{wind} {n}"/>
         <string key="panel.wall" text="Wall {wall}"/>
         <string key="hud.newGame" text="New game"/>
@@ -358,8 +356,6 @@
         <string key="hints.advice.pass" text="Пропустите сброс."/>
         <string key="cover.text" text="Передайте экран: {handoffSeat}"/>
         <string key="cover.show" text="Показать"/>
-        <string key="hud.round" text="Раунд: {round}, раздача {hand} из {handsTotal}"/>
-        <string key="hud.wall" text="Стена: {wall}"/>
         <string key="panel.round" text="{wind} {n}"/>
         <string key="panel.wall" text="Стена {wall}"/>
         <string key="hud.newGame" text="Новая игра"/>

@@ -24,11 +24,11 @@ namespace BECore::Mahjong {
      *        `MahjongSetup.xml`) show what this component publishes to `CoreManager::GetUIVars()` and emit the actions it answers.
      *
      * **Variables** (set when `TableSession::Version()` moved, or the game changed, or the version of `UIStrings` moved, i.e. the language;
-     * nothing is set again otherwise; every word is in the current language of the string table, `config/UIStrings.xml`): `round` (the name
-     * of the round wind), `hand` (the number of the hand in progress, at most `handsTotal`), `handsTotal`, `wall` (live tiles left), and, per screen position of the four seat plates (0 bottom, 1
-     * right, 2 top, 3 left; the seat there is the viewer's, `BottomSeat`), `plateName` (`Seat 2`, with ` You` for the person when exactly one person plays), `plateWind` (the wind's name and, for
-     * East, the mark `*` of the dealer) and `plateScore` (the labels of the node `SeatPlates` show them; the table paints the plates and marks the turn, `MahjongTableComponent`; the plates also
-     * change with the viewer, which moves `Version()`), and `lastMove` (the last accepted move of the hand in words, `MoveText` of `HandModel::Moves().back()`; empty before the first move and once
+     * nothing is set again otherwise; every word is in the current language of the string table, `config/UIStrings.xml`): per screen position of the four seats (0 bottom, 1 right, 2 top,
+     * 3 left; the seat there is the viewer's, `BottomSeat`) `plateName` (`Seat 2`, with ` You` for the person when exactly one person plays; the node `SeatPlates`), `panelWind` (the wind
+     * letter) and `panelScore`; and `panelRound` ("East 1": the round wind and the hand in it) and `panelWall` ("Wall 83"), all of `MakeCenterPanel` (the labels of the node `CenterPanel`; the
+     * table paints the plates, the panel's ground, the turn and the dealer, `MahjongTableComponent`; the plates also change with the viewer, which moves `Version()`), and `lastMove`
+     * (the last accepted move of the hand in words, `MoveText` of `HandModel::Moves().back()`; empty before the first move and once
      * the hand is over; the element `MoveLine` is visible exactly while it is not empty). They carry no tile a seat could not see (the last move is public: a concealed kong names no tile).
      *
      * **Setup.** `MahjongGame::IsSetupOpen()` decides whether the modal canvas `Setup` is shown (this component shows and hides it every
