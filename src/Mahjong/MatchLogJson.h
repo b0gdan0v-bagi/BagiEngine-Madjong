@@ -42,8 +42,8 @@ namespace BECore::Mahjong {
     static_assert(kMatchLogLevelVersion >= kMatchLogOldestVersion && kMatchLogLevelVersion <= kMatchLogFormatVersion);
 
     /// The name of the level `Hard` of the first slice of the computer levels. It played exactly like Normal and is gone, but files were
-    /// written with it: a version 2 `start` that names it is read as `Normal`, not refused. When a level `hard` comes back (the search
-    /// player), `kMatchLogFormatVersion` goes to 3 with the new meaning of `hard`, and this name stays what it was for version 2.
+    /// written with it: a version 2 `start` that names it is read as `Normal`, not refused. If a level `hard` is ever added,
+    /// `kMatchLogFormatVersion` goes to 3 with the new meaning of `hard`, and this name stays what it was for version 2.
     inline constexpr std::string_view kMatchLogRetiredLevelName = "hard";
 
     /// One event as the object of its line.
