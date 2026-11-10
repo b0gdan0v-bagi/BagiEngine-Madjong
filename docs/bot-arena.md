@@ -44,10 +44,12 @@ Options: `--focus LIST` (default `normal`), `--others SPEC` (default `random`), 
 hands per focus player), `--jobs N` (default 1; see below), `--time`, `--help`. Exit code 0 is done, 1 is an action the rules refused (a defect: the seed and the seat are
 printed), 2 is a bad argument (printed with the usage).
 
-**Threads.** `--jobs N` plays the seeds on N threads (1 to 256; `--jobs 0` is one thread per core, the hardware concurrency). A seed is played whole by
+**Threads.** `--jobs N` is N threads in all (1 to 256; `--jobs 0` is one thread per core, the hardware concurrency). The seeds come first: a seed is played whole by
 one thread (all focus players, all four rotations) into a result slot of its own, and the slots are merged in seed order, so the report is the
-same bytes at any N (only the `--time` table differs between runs, as always; it sums the microseconds of all the threads, so it is the cost
-of a decision, not the wall time of the run). A hand the rules refuse stops the run, and the error printed is that of the lowest seed that
+same bytes at any N (only the `--time` table differs between runs, as always). When there are fewer seeds than N, each seed thread also owns
+`N / seeds` threads (the integer division) that play the worlds of a search decision (`WorldThreads`), so the total never exceeds N and a
+one-seed job uses all the cores; the worlds are summed in world order, so the answer is the same bytes too. `--time` is the wall time of a
+decision: with the worlds level it is lower than the work in it, and the table sums the threads' microseconds, so it is not the wall time of the run. A hand the rules refuse stops the run, and the error printed is that of the lowest seed that
 failed, whatever N is. The default stays 1. A search player (`searchWorlds`) plays hundreds of Normal decisions for each of its own, so use
 `--jobs` for those runs; for the players without a search (`normal` and `easy`), on 14 cores in Debug, `--seeds 150` of two focus
 players against `--others normal` takes 2.8 s instead of 21 s (against `--others random`: 2.5 s instead of 9.7 s). Time a decision at `--jobs 1`: the `--time` table sums the microseconds of all the threads, which

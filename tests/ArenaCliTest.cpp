@@ -225,6 +225,17 @@ namespace BECore::Mahjong::Arena {
         }
     }
 
+    TEST(ArenaCliTest, TheWorldsOfOneSeedDoNotChangeTheBytes) {
+        constexpr std::string_view kSearchFocus = "normal:searchWorlds=2,searchCandidates=2,searchMargin=0";
+        ArenaCliOutput single;
+        EXPECT_EQ(RunProgram({"--seeds", "1", "--focus", kSearchFocus, "--jobs", "1"}, single), kExitOk);
+        EXPECT_FALSE(single.out.empty());
+        ArenaCliOutput threaded;
+        EXPECT_EQ(RunProgram({"--seeds", "1", "--focus", kSearchFocus, "--jobs", "3"}, threaded), kExitOk);
+        EXPECT_EQ(threaded.out, single.out);
+        EXPECT_TRUE(threaded.err.empty());
+    }
+
     TEST(ArenaCliTest, TimeAddsTheTimingTable) {
         ArenaCliOutput timed;
         EXPECT_EQ(RunProgram(FewSeeds({"--time"}), timed), kExitOk);
