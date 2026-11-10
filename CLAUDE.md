@@ -4,7 +4,7 @@ Classic Chinese mahjong for four seats on BagiEngine (the submodule `engine/`, b
 
 ## State
 
-Every stage of the plan is built: the rules, the match, the computer players (Easy | Normal), the table session, the control API, the match log, the scene (table, HUD, seat plates, hints, marks, flights, setup, end screens, 13 rules pages), English and Russian. Open work and the owner's pending looks are in the todo store (area `mahjong`), not here.
+Every stage of the plan is built: the rules, the match, the computer players (Easy | Normal), the table session, the control API, the match log, the scene (table, HUD, seat plates, hints, marks, flights, setup, end screens, 13 rules pages), save and Continue, English and Russian. Open work and the owner's pending looks are in the todo store (area `mahjong`), not here.
 
 ## Where to read
 
@@ -13,6 +13,7 @@ Nested `CLAUDE.md` files load when you work in their folder; read the one for th
 | Folder | Covers |
 |--------|--------|
 | `src/Mahjong/` | `MahjongGame`, the control API, the match log JSON and file |
+| `src/Mahjong/Save/` | the save of a match and of the `Setup` choices, `Continue` |
 | `src/Mahjong/Game/` | the rules: wall, `HandModel`, scoring and the owner's scoring readings, `Match`, the computer player and levels, `TableSession`, `MatchLog` |
 | `src/Mahjong/Table/` | pure scene logic: layout, words, seat plates, buttons, hints, flights, touch regime |
 | `src/Mahjong/Components/` | the scene: table drawing and play, marks, flights, HUD, setup, rules screen, end screens, hints, action buttons |

@@ -131,6 +131,15 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(session.Actor(), game->GetMatch().East());
     }
 
+    TEST_F(MahjongGameTest, ThereIsNothingToContinueOnAFreshStartWithSavingOff) {
+        MahjongGame* game = MahjongGame::GetActive();
+        ASSERT_NE(game, nullptr);
+        EXPECT_TRUE(game->IsSetupOpen());
+        EXPECT_FALSE(game->CanContinue());
+        EXPECT_FALSE(game->ContinueMatch());
+        EXPECT_TRUE(game->IsSetupOpen());  // an ignored Continue changes nothing
+    }
+
     TEST_F(MahjongGameTest, StartMatchGoesThroughTheSessionWithTheSettingsAndTheSeats) {
         MahjongGame* game = MahjongGame::GetActive();
         ASSERT_NE(game, nullptr);

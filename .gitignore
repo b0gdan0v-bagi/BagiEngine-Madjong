@@ -33,3 +33,6 @@ todo-export/
 
 # Match logs (one file per match, written to the working directory)
 logs/
+
+# The saved match and the choices of Setup (written to the working directory; BAGI_MAHJONG_SAVE_DIR moves them)
+/saves/

@@ -1,10 +1,10 @@
 # src/Mahjong — the game object, the control API, the match log
 
-Subfolders have their own `CLAUDE.md`: `Game/` (the rules), `Table/` (pure scene logic), `Components/` (the scene), `Arena/` (bot measurement).
+Subfolders have their own `CLAUDE.md`: `Game/` (the rules), `Save/` (save and Continue), `Table/` (pure scene logic), `Components/` (the scene), `Arena/` (bot measurement).
 
 ## MahjongGame
 
-`IGame` named `Mahjong`, scene `MahjongScene`. Owns, in this order, the `Match`, the `TableSession` over it, the `MatchLogWriter` (set as the session's log sink) and the control adapter. Components reach it through `MahjongGame::GetActive()` and must check it is the active game. `Start()` / `Reset()` begin a match from a random seed (`std::random_device`, the only place a seed is chosen); `StartMatch(seed)` replays one. Kept across `Reset()` and `StartMatch`: `GetSettings()`, `GetSeats()`, `GetLevel()`, `GetLanguage()` (applied to the string table at every start), `HintsOn()`. UI flags: `IsSetupOpen()` (`Start()` opens it; any start and any accepted control action close it), `IsRulesOpen()`, `IsTablePaused()` (either is open).
+`IGame` named `Mahjong`, scene `MahjongScene`. Owns, in this order, the `Match`, the `TableSession` over it, the `MatchLogWriter` (fed through the `MatchRecorder`, the session's log sink), the save store and the control adapter. `FlushSave()`, `CanContinue()` / `ContinueMatch()`: `Save/CLAUDE.md`. Components reach it through `MahjongGame::GetActive()` and must check it is the active game. `Start()` applies the saved `Setup` choices and offers a saved match (`Save/CLAUDE.md`); `Start()` / `Reset()` begin a match from a random seed (`std::random_device`, the only place a seed is chosen); `StartMatch(seed)` replays one. Kept across `Reset()` and `StartMatch`: `GetSettings()`, `GetSeats()`, `GetLevel()`, `GetLanguage()` (applied to the string table at every start), `HintsOn()`. UI flags: `IsSetupOpen()` (`Start()` opens it; any start and any accepted control action close it), `IsRulesOpen()`, `IsTablePaused()` (either is open).
 
 ## Control API
 
