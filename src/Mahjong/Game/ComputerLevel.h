@@ -48,6 +48,19 @@ namespace BECore::Mahjong {
     inline constexpr int kSearchMaxCandidates = 12;
     inline constexpr int kSearchMaxMargin = 100;
 
+    /// The shipped budget of the search player (used by no level yet; the arena sets the same numbers from the command line). Found by
+    /// time, as `docs/bot-search.md` records: the rule is that the slowest decision (the first discard of 14 tiles with the full candidate
+    /// count) takes at most 0.3 s in a **Debug** build, because a step blocks the frame and `kComputerStepSeconds` is 1.0 s. A decision
+    /// is `kSearchWorlds` x `kSearchCandidates` whole hands played out by four Normal players, 8 of them here; on 16 seeds (727
+    /// decisions, `--jobs 1`, the smaller of two runs of each decision) the worst decision took 248 ms, while 3 x 3, 4 x 2 and 5 x 2
+    /// took 314 to 335 ms and 2 x 5 over a second. The margin is not set by time: on the exploration range (seeds 4000 ..) every margin
+    /// from 20 to 100 tenths lost 2 to 3 points a hand to Normal (within each other's noise), 10 lost 7 and 0 lost 35, so a margin of 30
+    /// is used; with two worlds the choice is mostly noise, and the 4x and 16x rows of `docs/bot-search.md` say whether more worlds
+    /// would change that.
+    inline constexpr int kSearchWorlds = 2;
+    inline constexpr int kSearchCandidates = 4;
+    inline constexpr int kSearchMargin = 30;
+
     /**
      * @brief The numbers a level plays by: what the choosers of `ComputerTurn.h` and `ComputerClaim.h` do differently from the Normal
      * player. Every knob of `kNormalProfile` is off, and **a knob that is off draws nothing from the rng**, so Normal's stream is the
