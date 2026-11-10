@@ -307,3 +307,61 @@ Reading, for the ladder (not yet a decision):
   but is as visible as level 2's in declarations. Whether any of them is a better ladder than the skip levels (smoother, each
   step significant) is not known from this range: WP 3 decides, and every step it uses is measured by WP 4 on the decision and
   confirmation ranges.
+
+### Above Normal (step 3: is there a search profile inside the time rule that beats Normal?)
+
+The question of the top of the scale (levels 6..10). Fixed before any number was seen: shapes worlds x candidates in {2 x 4, 4 x 2, 3 x 3} (at most 12 rollouts a decision), margin in {30, 60, 100}, nine variants against three Normal seats on the exploration range, each paired with Normal; the Debug time of each shape (a shape whose slowest decision is over 0.3 s is out); the best one or two by the paired points a hand go to the decision range; the confirmation range is played only if the decision range is significantly positive on points **and** wins. Every variant is listed, none was left out.
+
+```bash
+for S in "2 4" "4 2" "3 3"; do set -- $S                        # W=$1, C=$2
+  $A --first 4000 --seeds 1000 --jobs 14 --others 5 --focus \
+     5,5:searchWorlds=$1,searchCandidates=$2,searchMargin=30,5:searchWorlds=$1,searchCandidates=$2,searchMargin=60,5:searchWorlds=$1,searchCandidates=$2,searchMargin=100
+done                                                            # 177 s, 190 s, 183 s of wall time
+```
+
+Exploration range, 1000 seeds (Normal: 25.00 %, 0 points, 55.77 % declared, 45.46 average win score); "sig." is the arena's `significant`:
+
+| worlds x cand. | margin | wins % | points/hand | declared % | paired points/hand | paired wins % |
+|---|---|---|---|---|---|---|
+| 2 x 4 | 30 | 23.32 +- 0.93 | -2.79 +- 3.09 | 52.83 | -2.79 +- 3.09 | -1.68 +- 0.93 sig. |
+| 2 x 4 | 60 | 23.52 +- 0.88 | -3.29 +- 3.07 | 53.60 | -3.29 +- 3.07 sig. | -1.48 +- 0.88 sig. |
+| 2 x 4 | 100 | 23.90 +- 0.87 | -2.06 +- 2.93 | 54.60 | -2.06 +- 2.93 | -1.10 +- 0.87 sig. |
+| 4 x 2 | 30 | 24.35 +- 0.83 | -1.51 +- 2.73 | 55.12 | -1.51 +- 2.73 | -0.65 +- 0.83 |
+| 4 x 2 | 60 | 24.32 +- 0.81 | -1.43 +- 2.58 | 55.27 | -1.43 +- 2.58 | -0.68 +- 0.81 |
+| 4 x 2 | 100 | 24.35 +- 0.81 | -1.38 +- 2.58 | 55.35 | -1.38 +- 2.58 | -0.65 +- 0.81 |
+| 3 x 3 | 30 | 24.32 +- 0.85 | -0.85 +- 2.89 | 54.85 | -0.85 +- 2.89 | -0.68 +- 0.85 |
+| 3 x 3 | 60 | 24.38 +- 0.82 | -0.94 +- 2.66 | 55.23 | -0.94 +- 2.66 | -0.62 +- 0.82 |
+| 3 x 3 | 100 | 24.32 +- 0.81 | -1.06 +- 2.66 | 55.30 | -1.06 +- 2.66 | -0.68 +- 0.81 |
+
+All nine are below Normal on points and on wins; none is above 0 even by its sign. The 2 x 4 / 30 row is the same bytes as in WP 1's table. The margin does not matter from 30 on (the rows of a shape are within each other's noise; they only move towards Normal's declared share); the shape matters a little (4 x 2 and 3 x 3 are closer to Normal than 2 x 4, whose wins are significantly below).
+
+**Debug time of the shapes** (Debug arena at `--jobs 1 --time`, `--others 5`, seeds 4000 .. 4015, margin 30, each decision timed with a temporary stderr print that was not committed; two runs, the smaller time of each decision, as in "The budget"; the machine was otherwise quiet):
+
+```bash
+$A --first 4000 --seeds 16 --jobs 1 --time --others 5 --focus 5:searchWorlds=<W>,searchCandidates=<C>,searchMargin=30     # twice
+```
+
+| worlds x candidates | decisions | worst decision | mean decision |
+|---|---|---|---|
+| 2 x 4 | 726 | 237 ms | 65 ms |
+| 4 x 2 | 704 | 246 ms | 74 ms |
+| 3 x 3 | 710 | 261 ms | 75 ms |
+
+All three are under 0.3 s on this sample, so none is out by the rule as written. (The single raw worst of a run was 238 / 300 ms for 2 x 4 and 285 / 274 and 267 / 261 ms for the others; "The budget" measured 314 and 319 ms for 4 x 2 and 3 x 3 under a loaded machine and with margin 0. 261 ms is a worst observed, not a bound: see "The budget".)
+
+**The best two by the paired points** are 3 x 3 / 30 (-0.85) and 3 x 3 / 60 (-0.94). They, and for the record 8 worlds x 4 candidates / 30 (over the time rule: 469 to 757 ms in Debug, "The budget"), were played once on the decision range, 1000 seeds:
+
+```bash
+$A --first 100000 --seeds 1000 --jobs 14 --others 5 --focus \
+   5,5:searchWorlds=3,searchCandidates=3,searchMargin=30,5:searchWorlds=3,searchCandidates=3,searchMargin=60,5:searchWorlds=8,searchCandidates=4,searchMargin=30     # 376 s
+```
+
+| variant | wins % | points/hand | paired points/hand | paired wins % |
+|---|---|---|---|---|
+| 3 x 3 / 30 | 25.15 +- 0.89 | 2.01 +- 2.92 | +2.01 +- 2.92 | +0.17 +- 0.89 |
+| 3 x 3 / 60 | 25.15 +- 0.85 | 1.15 +- 2.86 | +1.15 +- 2.86 | +0.17 +- 0.86 |
+| 8 x 4 / 30 (record, over the time rule) | 24.98 +- 0.86 | 1.08 +- 2.93 | +1.08 +- 2.93 | +0.00 +- 0.87 |
+
+(Normal on this range: 24.98 % wins, 0 points.)
+
+**Verdict: no search profile inside the time rule is stronger than Normal.** Neither of the two on the decision range is significant on points or on wins, so by the rule written first the confirmation range is not played (a result that is not positive on the decision range cannot pass "both ranges"). The decision-range signs are positive, the exploration-range signs of the same variants were negative; the mean of the two ranges is +0.6 points (3 x 3 / 30) and +0.1 (3 x 3 / 60), with intervals of about +-2: this is Normal's play with noise, which the first entry found. The 8 x 4 record row says the same: 4 times the worlds and a third more candidates than 3 x 3 give +1.08 +- 2.93 and 0.00 wins, so compute inside a reasonable budget is not what limits the search (the rollout policy is Normal itself: "What the numbers do and do not show"). Nothing the knobs cannot say was needed; no code was changed. Consequence for the plan: levels 6..10 have no stronger profile to take, and the proposal for the top of the scale is the owner's ("Left for the owner" of the plan: leave 6..10 as Normal, re-map so that Normal is 10, or the background-search entry).
