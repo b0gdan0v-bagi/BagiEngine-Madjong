@@ -34,6 +34,14 @@ namespace BECore::Mahjong {
         return event;
     }
 
+    MatchLogEvent MakeEndEvent(const Match& match) {
+        MatchLogEvent event;
+        event.kind = MatchLogKind::End;
+        event.scores = match.Scores();
+        event.standings = match.Standings();
+        return event;
+    }
+
     bool MatchLogEvent::operator==(const MatchLogEvent& other) const {
         if (kind != other.kind) {
             return false;
@@ -53,7 +61,7 @@ namespace BECore::Mahjong {
         return false;
     }
 
-    ReplayStatus ReplayMatchLog(const eastl::vector<MatchLogEvent>& events, Match& match) {
+    ReplayStatus ReplayMatchLog(const eastl::vector<MatchLogEvent>& events, Match& match, IMatchLogSink* echo) {
         if (events.empty() || events.front().kind != MatchLogKind::Start) {
             return std::unexpected(At(0, ReplayProblem::NoStart));
         }
@@ -63,6 +71,10 @@ namespace BECore::Mahjong {
                 case MatchLogKind::Start:
                     if (!match.Start(event.settings, event.seed)) {
                         return std::unexpected(At(index, ReplayProblem::BadSettings));
+                    }
+                    if (echo != nullptr) {
+                        echo->OnEvent(event);
+                        echo->OnEvent(MakeHandEvent(match));
                     }
                     break;
                 case MatchLogKind::Hand:
@@ -77,6 +89,9 @@ namespace BECore::Mahjong {
                     if (match.GetPhase() != MatchPhase::InHand || !match.Hand().Apply(event.seat, event.action)) {
                         return std::unexpected(At(index, ReplayProblem::ActionRefused));
                     }
+                    if (echo != nullptr) {
+                        echo->OnEvent(event);
+                    }
                     break;
                 case MatchLogKind::Settlement: {
                     const std::expected<HandSettlement, MatchError> settled = match.EndHand();
@@ -85,6 +100,13 @@ namespace BECore::Mahjong {
                     }
                     if (!SameSettlement(*settled, event.settlement)) {
                         return std::unexpected(At(index, ReplayProblem::SettlementMismatch));
+                    }
+                    if (echo != nullptr) {
+                        MatchLogEvent settlement;
+                        settlement.kind = MatchLogKind::Settlement;
+                        settlement.settlement = *settled;
+                        echo->OnEvent(settlement);
+                        echo->OnEvent(match.GetPhase() == MatchPhase::InHand ? MakeHandEvent(match) : MakeEndEvent(match));
                     }
                     break;
                 }

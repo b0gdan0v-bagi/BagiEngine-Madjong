@@ -22,6 +22,8 @@ namespace BECore::Mahjong {
     inline constexpr int kMaxComputerSteps = 2000;
 
     class IMatchLogSink;
+    struct MatchLogEvent;
+    struct ReplayError;
 
     /**
      * @brief The one object every front end drives: a `Match` with the seats set up as people and computers. Plain C++, no scene.
@@ -45,6 +47,7 @@ namespace BECore::Mahjong {
      *   order: `StartMatch` (Start, Hand), `StepComputer` / `PerformPerson` (Action), `NextHand` (Settlement, then Hand or End). A
      *   refused call, `Reveal` and a start with bad settings report nothing. A match started behind the session's back (through the
      *   non-const `Match::Start`) is not seen and so not logged.
+     * - `ResumeMatch` puts the session where a recorded log left it (a saved match), see there.
      */
     class TableSession {
     public:
@@ -57,6 +60,20 @@ namespace BECore::Mahjong {
         /// `Match::Start(settings, seed)` with `seats` and computer players of `level` seeded `seed`. `BadSettings`, and nothing changes
         /// (the version and the level too), unless `IsPlayable(settings)`.
         MatchStatus StartMatch(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats, ComputerLevel level = kDefaultLevel);
+
+        /**
+         * @brief Puts the session and its match where `events` (a log from its `Start`, `Hand` and `End` events optional) left them,
+         *        with `seats` and computer players of `level`. A log that does not replay (`ReplayMatchLog`) is refused with its
+         *        `ReplayError` and nothing changes (the match, the version, the level, the seats, the viewer, the sink).
+         *
+         * The sink gets the whole log as a live match would (`ReplayMatchLog` with the sink as its echo), so a match log file and a
+         * recorder are whole. The computer players are made again from the seed of the last `Start` and the random state they had is
+         * not restored: play goes on legally and at the level, not bit for bit as an uninterrupted match would. The seats and the
+         * level are the caller's (the `Start` event's own, for a saved match); they are not compared with the log. The viewer is as
+         * after `StartMatch`: with two or more people or none nobody, so the cover is up for a person to act (`HandoffPending`).
+         * Include `Game/MatchLog.h` to call it.
+         */
+        std::expected<void, ReplayError> ResumeMatch(const eastl::vector<MatchLogEvent>& events, const SeatSetup& seats, ComputerLevel level);
 
         /// The level of the computer players of the match started last; `kDefaultLevel` before the first start.
         [[nodiscard]] ComputerLevel Level() const noexcept {

@@ -44,6 +44,28 @@ namespace BECore::Mahjong {
         return {};
     }
 
+    ReplayStatus TableSession::ResumeMatch(const eastl::vector<MatchLogEvent>& events, const SeatSetup& seats, ComputerLevel level) {
+        Match scratch;
+        if (ReplayStatus checked = ReplayMatchLog(events, scratch); !checked) {
+            return checked;
+        }
+        uint32_t seed = 0;
+        for (const MatchLogEvent& event : events) {
+            seed = event.kind == MatchLogKind::Start ? event.seed : seed;
+        }
+        const ReplayStatus replayed = ReplayMatchLog(events, _match, _sink);
+        ASSERT(replayed.has_value(), "ResumeMatch: a log that replayed on a scratch match does not replay");
+        if (!replayed) {
+            return replayed;
+        }
+        _table.emplace(seed, level);
+        _seats = seats;
+        _level = level;
+        _viewer = PersonCount() == 1 ? OnlyPerson(_seats) : kNoSeat;
+        ++_version;
+        return {};
+    }
+
     SessionPhase TableSession::GetPhase() const noexcept {
         if (_match.GetPhase() != MatchPhase::InHand) {
             return SessionPhase::MatchOver;
@@ -181,11 +203,7 @@ namespace BECore::Mahjong {
             _sink->OnEvent(MakeHandEvent(_match));
             return;
         }
-        MatchLogEvent event;
-        event.kind = MatchLogKind::End;
-        event.scores = _match.Scores();
-        event.standings = _match.Standings();
-        _sink->OnEvent(event);
+        _sink->OnEvent(MakeEndEvent(_match));
     }
 
     void TableSession::CoverForNextPerson() {
