@@ -194,12 +194,21 @@ namespace BECore::Mahjong {
         // of the view, then a row of the three plates (each under the block of its seat), the wall ring, the viewer's discards and, at the
         // foot, the viewer's rows. The height the four seats do not need is free ground between the viewer's discards and the plate of the
         // viewer, which the canvases of the table use (`config/nodes/`): the layout keeps it empty. The opponents' tiles have the sizes of the
-        // landscape table, the viewer's discards are one and a half times larger (the view is 720 wide: on a phone a 24 unit tile is
-        // about 13 points).
-        constexpr float kPortraitBandY = 92.0f;
+        // landscape table except the hands, which are larger (the opponents are what a phone held upright shows smallest), and the
+        // viewer's discards are one and a half times larger in five rows (the view is 720 wide: on a phone a 24 unit tile is about 13
+        // points). The top seat starts a margin below the edge, where a phone's status bar or notch sits.
+        constexpr float kPortraitTopY = 32.0f;
+        constexpr float kPortraitTopHandTileW = 36.0f;
+        constexpr float kPortraitTopHandTileH = 48.0f;
+        constexpr float kPortraitSideHandTileW = 28.0f;
+        constexpr float kPortraitSideHandTileH = 37.0f;
+        constexpr float kPortraitTopHandSpan = kPortraitTopHandTileW * kMaxConcealedTiles;
+        constexpr float kPortraitSideHandSpan = kPortraitSideHandTileW * kMaxConcealedTiles;
+        constexpr float kPortraitTopMeldY = kPortraitTopY + kPortraitTopHandTileH + kZoneGap;
+        constexpr float kPortraitBandY = 140.0f;
         constexpr float kPortraitDiscardTileW = kDiscardTileW * 1.5f;
         constexpr float kPortraitDiscardTileH = kDiscardTileH * 1.5f;
-        constexpr int kPortraitViewerDiscardRows = 6;
+        constexpr int kPortraitViewerDiscardRows = kDiscardRowCapacity;
         constexpr float kPortraitViewerDiscardBlockW = kPortraitDiscardTileW * kDiscardsPerRow;
         constexpr float kPortraitViewerDiscardBlockH = kPortraitDiscardTileH * kPortraitViewerDiscardRows;
         constexpr float kPortraitViewerDiscardX = Centered(kPortraitViewWidth, kPortraitViewerDiscardBlockW);
@@ -213,17 +222,22 @@ namespace BECore::Mahjong {
         constexpr float kPortraitBonusY = kPortraitMeldY - kZoneGap - kViewerBonusTileH;
         constexpr float kPortraitViewerRowX = kEdge + kRackPadding;
 
-        constexpr float kPortraitRightHandX = kPortraitViewWidth - kEdge - kSideHandTileH;
+        constexpr float kPortraitLeftHandX = kEdge;
+        constexpr float kPortraitLeftMeldX = kPortraitLeftHandX + kPortraitSideHandTileH + kZoneGap;
+        constexpr float kPortraitLeftBonusX = kPortraitLeftMeldX + kOpponentMeldTileH + kZoneGap;
+        constexpr float kPortraitLeftDiscardX = kPortraitLeftBonusX + kOpponentBonusTileH + kSideBlockGap;
+        constexpr float kPortraitRightHandX = kPortraitViewWidth - kEdge - kPortraitSideHandTileH;
         constexpr float kPortraitRightMeldX = kPortraitRightHandX - kZoneGap - kOpponentMeldTileH;
         constexpr float kPortraitRightBonusX = kPortraitRightMeldX - kZoneGap - kOpponentBonusTileH;
         constexpr float kPortraitRightDiscardX = kPortraitRightBonusX - kSideBlockGap - kSideDiscardBlockW;
-        constexpr float kPortraitTopHandX = Centered(kPortraitViewWidth, kTopHandSpan);
+        // The top hand and its bonus row beside it, centred together.
+        constexpr float kPortraitTopHandX = Centered(kPortraitViewWidth, kPortraitTopHandSpan + kBlockGap + kTopBonusCapacity);
         constexpr float kPortraitTopDiscardX = Centered(kPortraitViewWidth, kDiscardBlockW);
 
         // The wall ring under the plates, and its inside, the centre panel (the ring less one stack on every side).
-        constexpr float kPortraitSeatPlateRowY = 260.0f;
+        constexpr float kPortraitSeatPlateRowY = 308.0f;
         constexpr float kPortraitWallRingX = Centered(kPortraitViewWidth, kWallRingW);
-        constexpr float kPortraitWallRingY = 352.0f;
+        constexpr float kPortraitWallRingY = 400.0f;
         constexpr float kPortraitBottomDiscardY = kPortraitWallRingY + kWallRingH + kBlockGap;
 
         // The plates: left and right under the blocks of their seats, the top plate under the top block, the viewer's above its rows.
@@ -241,14 +255,15 @@ namespace BECore::Mahjong {
         static_assert(kPortraitSeatPlateBottomY + kSeatPlateH < kPortraitBonusY);
         static_assert(kPortraitBottomDiscardY + kPortraitViewerDiscardBlockH + kPlatePadding <= kPortraitSeatPlateBottomY);
         // the top seat's rows end above the band, the side columns and the blocks lie in the band between the edges and the top block
-        static_assert(kTopMeldY + kOpponentMeldTileH < kPortraitBandY);
-        static_assert(kEdge + kOpponentHandTileH < kPortraitBandY);
+        static_assert(kPortraitTopMeldY + kOpponentMeldTileH < kPortraitBandY);
+        static_assert(kPortraitTopHandTileH >= kOpponentHandTileH && kPortraitSideHandTileH >= kSideHandTileH);
         static_assert(kPortraitBandY + kSideMeldCapacity < kPortraitSeatPlateBottomY);
-        static_assert(kLeftDiscardX + kSideDiscardBlockW < kPortraitTopDiscardX);
+        static_assert(kPortraitBandY + kPortraitSideHandSpan < kPortraitBottomDiscardY + kPortraitViewerDiscardBlockH);
+        static_assert(kPortraitLeftDiscardX + kSideDiscardBlockW < kPortraitTopDiscardX);
         static_assert(kPortraitTopDiscardX + kDiscardBlockW < kPortraitRightDiscardX);
         static_assert(kPortraitTopDiscardX + kDiscardBlockW <= kPortraitViewWidth - kEdge);
-        static_assert(kPortraitTopHandX + kTopHandSpan + kBlockGap + kTopBonusCapacity <= kPortraitViewWidth - kEdge);
-        static_assert(kLeftBonusX + kOpponentBonusTileH < kPortraitSeatPlateLeftX);
+        static_assert(kPortraitTopHandX >= kEdge && kPortraitTopHandX + kPortraitTopHandSpan + kBlockGap + kTopBonusCapacity <= kPortraitViewWidth - kEdge);
+        static_assert(kPortraitLeftBonusX + kOpponentBonusTileH < kPortraitSeatPlateLeftX);
         static_assert(kPortraitSeatPlateRightX + kSeatPlateW < kPortraitRightBonusX);
         // the plates keep `kPlatePadding` clear of the blocks above them (and of each other), and of the wall ring below
         static_assert(kPortraitSeatPlateRowY >= kPortraitBandY + kSideDiscardBlockH + kPlatePadding);
@@ -258,7 +273,7 @@ namespace BECore::Mahjong {
         static_assert(kPortraitSeatPlateLeftX + kSeatPlateW <= kPortraitSeatPlateTopX - kPlatePadding);
         static_assert(kPortraitSeatPlateRowY + kSeatPlateH + kPlatePadding <= kPortraitWallRingY);
         static_assert(kPortraitWallRingY + kWallRingH < kPortraitBottomDiscardY);
-        static_assert(kPortraitWallRingX > kLeftDiscardX);
+        static_assert(kPortraitWallRingX > kPortraitLeftDiscardX);
         static_assert(kPortraitWallRingX + kWallRingW < kPortraitRightDiscardX + kSideDiscardBlockW);
 
         SeatGeometry PortraitGeometryAt(int position) {
@@ -277,7 +292,7 @@ namespace BECore::Mahjong {
                     geometry.discardTileH = kPortraitDiscardTileH;
                     break;
                 case 1:
-                    geometry.hand = {kPortraitRightHandX, kPortraitBandY, kSideHandTileH, kSideHandTileW, true, kSideHandSpan};
+                    geometry.hand = {kPortraitRightHandX, kPortraitBandY, kPortraitSideHandTileH, kPortraitSideHandTileW, true, kPortraitSideHandSpan};
                     geometry.melds = {kPortraitRightMeldX, kPortraitBandY, kOpponentMeldTileH, kOpponentMeldTileW, true, kSideMeldCapacity};
                     geometry.bonus = {kPortraitRightBonusX, kPortraitBandY, kOpponentBonusTileH, kOpponentBonusTileW, true, kSideBonusCapacity};
                     geometry.discardX = kPortraitRightDiscardX;
@@ -287,20 +302,24 @@ namespace BECore::Mahjong {
                     geometry.rotation = kRightSeatRotation;
                     break;
                 case 2:
-                    geometry.hand = {kPortraitTopHandX, kEdge, kOpponentHandTileW, kOpponentHandTileH, false, kTopHandSpan};
-                    geometry.melds = {Centered(kPortraitViewWidth, kTopMeldCapacity), kTopMeldY, kOpponentMeldTileW, kOpponentMeldTileH, false, kTopMeldCapacity};
-                    geometry.bonus = {
-                        kPortraitTopHandX + kTopHandSpan + kBlockGap, kEdge + Centered(kOpponentHandTileH, kOpponentBonusTileH), kOpponentBonusTileW, kOpponentBonusTileH, false, kTopBonusCapacity};
+                    geometry.hand = {kPortraitTopHandX, kPortraitTopY, kPortraitTopHandTileW, kPortraitTopHandTileH, false, kPortraitTopHandSpan};
+                    geometry.melds = {Centered(kPortraitViewWidth, kTopMeldCapacity), kPortraitTopMeldY, kOpponentMeldTileW, kOpponentMeldTileH, false, kTopMeldCapacity};
+                    geometry.bonus = {kPortraitTopHandX + kPortraitTopHandSpan + kBlockGap,
+                                      kPortraitTopY + Centered(kPortraitTopHandTileH, kOpponentBonusTileH),
+                                      kOpponentBonusTileW,
+                                      kOpponentBonusTileH,
+                                      false,
+                                      kTopBonusCapacity};
                     geometry.discardX = kPortraitTopDiscardX;
                     geometry.discardY = kPortraitBandY;
                     geometry.discardW = kDiscardBlockW;
                     geometry.discardH = kDiscardBlockH;
                     break;
                 default:
-                    geometry.hand = {kLeftHandX, kPortraitBandY, kSideHandTileH, kSideHandTileW, true, kSideHandSpan};
-                    geometry.melds = {kLeftMeldX, kPortraitBandY, kOpponentMeldTileH, kOpponentMeldTileW, true, kSideMeldCapacity};
-                    geometry.bonus = {kLeftBonusX, kPortraitBandY, kOpponentBonusTileH, kOpponentBonusTileW, true, kSideBonusCapacity};
-                    geometry.discardX = kLeftDiscardX;
+                    geometry.hand = {kPortraitLeftHandX, kPortraitBandY, kPortraitSideHandTileH, kPortraitSideHandTileW, true, kPortraitSideHandSpan};
+                    geometry.melds = {kPortraitLeftMeldX, kPortraitBandY, kOpponentMeldTileH, kOpponentMeldTileW, true, kSideMeldCapacity};
+                    geometry.bonus = {kPortraitLeftBonusX, kPortraitBandY, kOpponentBonusTileH, kOpponentBonusTileW, true, kSideBonusCapacity};
+                    geometry.discardX = kPortraitLeftDiscardX;
                     geometry.discardY = kPortraitBandY;
                     geometry.discardW = kSideDiscardBlockW;
                     geometry.discardH = kSideDiscardBlockH;
