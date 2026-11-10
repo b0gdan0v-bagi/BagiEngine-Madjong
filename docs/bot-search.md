@@ -186,7 +186,43 @@ No range was replayed with other knobs, and no range or budget was chosen after 
 **What would make search win** (for the owner, not built): a rollout policy or an evaluation that differs from the policy being
 improved (the search over Normal plays Normal against itself); a sample of the opponents' hands that knows the waits of declared
 hands exactly; a win-rate objective compared with the points one; and many more rollouts, which is only possible off the frame
-(a worker thread) or with a faster rollout. Each of these is a separate entry; none was tried here.
+(a worker thread) or with a faster rollout; the arena already plays the worlds of one decision on many cores ("One decision on
+many cores"), the game does not. Each of these is a separate entry; none was tried here.
+
+## One decision on many cores
+
+The worlds of a decision do not depend on each other, so the arena can play them on several threads and get the same bytes.
+`SearchRun` (`ComputerSearch.h`) has `PlayWorld(i)` (const: world `i` and its rollouts, as one row of points a candidate),
+`Finish(worlds)` (the played worlds, summed in world order) and `RunWorlds(loop)` (a loop the tool gives: `body(i)` for every world
+in any order on any threads, then `Finish`); `Step()` plays the same code, so the answer is the same whatever the order or the number
+of threads. `Game/` starts no thread, and the game stays single-threaded (a thinking seat on several threads is not built, and the
+web build has none). The loop of the arena is `WorldThreads` (`Arena/ArenaWorlds.h`: a pool of `threads - 1` threads and the
+caller, one `ForEach` at a time). The split: `--jobs N` is N threads in all; `min(N, seeds)` seed threads each own
+`N / seedThreads` threads for the worlds of their search decisions, so the worlds level appears only when there are fewer seeds
+than cores (`docs/bot-arena.md`, "Threads").
+
+The same job in Release at each `--jobs`, the wall time of the whole run, the best of 3 (the three runs of a row were within 4 %
+of each other), on a machine with 14 logical cores (10 performance and 4 efficiency)
+that the other sessions left at 85 to 90 % idle before each run:
+
+```bash
+$A --seeds 1 --first 4000 --others normal --focus normal:searchWorlds=256,searchCandidates=4,searchMargin=30 --jobs N
+```
+
+| `--jobs` | wall time | speedup | per thread |
+|---|---|---|---|
+| 1 | 66.6 s | 1.00 | 100 % |
+| 2 | 34.5 s | 1.93 | 96 % |
+| 4 | 17.7 s | 3.77 | 94 % |
+| 8 | 9.2 s | 7.26 | 91 % |
+| 10 | 7.8 s | 8.55 | 85 % |
+| 14 | 6.8 s | 9.75 | 70 % |
+
+All 33 reports of the runs made for this table (the quiet sets and the loaded one) are byte for byte the same. One seed
+is four hands, each decision 256 worlds x up to 4 candidates. The speedup follows the threads while they are performance cores
+(91 % of the line at 8) and falls below the 14 cores because four of them are efficiency cores, each world is played whole, so the
+end of every decision waits for the slowest thread, and many decisions have fewer than 4 candidates. Time it on a quiet machine: a
+first set of these runs, while other sessions ran their tests, gave 15 s at `--jobs 14`, slower than at 8.
 
 ## Reproducing
 
