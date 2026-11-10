@@ -92,7 +92,7 @@ namespace BECore::Mahjong {
      * hidden kong flies as a back and nothing is face up that the slot would not show; the marks of the slot (the tints, the claimed edge, the
      * frame of the pending discard, the veil, the bars) follow the rectangle, and the blink of a set just laid starts when its tiles have
      * landed (the flight time is added before its `kClaimHighlightSeconds`; nothing waits when nothing of the set flies). A new batch ends
-     * the running flights at their targets, a new hand, match or game, another viewer or view size starts without any. The time is the
+     * the running flights at their targets, a new hand, match or game, another viewer, view size or layout profile starts without any. The time is the
      * component's own clock on `SceneUpdateEvent` (it stops with the table pause); `SetTileFlightSeconds(0)` switches the flights off. The model,
      * the session and the control API are not touched.
      *

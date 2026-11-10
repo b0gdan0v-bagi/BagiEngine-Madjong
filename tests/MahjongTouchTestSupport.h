@@ -68,6 +68,52 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
+    /// A landscape phone in the browser, the bars of the browser taken off: `windowWidth` x `windowHeight` window units at `density` output
+    /// pixels per unit, so the output is that much larger. `simulation` adds the insets of a notch or of the sides (in output pixels, as
+    /// `UIPreview` makes them for the matrix).
+    inline MatrixWindow MakePhoneWindow(float windowWidth, float windowHeight, float density, SafeAreaSimulation simulation = SafeAreaSimulation::None) {
+        MatrixWindow window;
+        window.outputWidth = windowWidth * density;
+        window.outputHeight = windowHeight * density;
+        window.pixelDensity = density;
+        window.simulation = simulation;
+        window.safeArea = UIPreview::SimulatedSafeArea(simulation, window.outputWidth, window.outputHeight);
+        const char* insets = simulation == SafeAreaSimulation::TopNotch ? " notch" : simulation == SafeAreaSimulation::SideInsets ? " side insets" : "";
+        window.label = Format("phone {}x{} @{}{}", static_cast<int>(windowWidth), static_cast<int>(windowHeight), density, insets);
+        return window;
+    }
+
+    /// The landscape phones the table is held to: the two phone windows of the entry (915 x 330, the worst, 780 x 300), a taller one
+    /// (851 x 393) and 915 x 330 with the insets of the sides, all at density 2.6.
+    inline const std::vector<MatrixWindow>& PhoneWindows() {
+        constexpr float kPhoneDensity = 2.6f;
+        static const std::vector<MatrixWindow> windows{MakePhoneWindow(915.0f, 330.0f, kPhoneDensity), MakePhoneWindow(780.0f, 300.0f, kPhoneDensity), MakePhoneWindow(851.0f, 393.0f, kPhoneDensity),
+                                                       MakePhoneWindow(915.0f, 330.0f, kPhoneDensity, SafeAreaSimulation::SideInsets),
+                                                       MakePhoneWindow(780.0f, 300.0f, kPhoneDensity, SafeAreaSimulation::TopNotch)};
+        return windows;
+    }
+
+    /// Calls `fn(window)` for every window the table is checked in: the matrix of the engine, then the landscape phones. The rule
+    /// `TableProfileFor` gives the phone profile to some windows of the matrix too (the short ones), so a check of the table takes the
+    /// layout of its window (`TableLayoutFor`).
+    inline void ForEachTableWindow(const std::function<void(const MatrixWindow&)>& fn) {
+        ForEachMatrixWindow(fn);
+        for (const MatrixWindow& window : PhoneWindows()) {
+            fn(window);
+        }
+    }
+
+    /// The profile of the table the component draws in this window (`TableProfileFor`, with the engine's touch minimum).
+    inline TableProfile TableProfileOf(const MatrixWindow& window) {
+        return TableProfileFor(window.outputWidth, window.outputHeight, window.pixelDensity, CoreManager::GetUIEnvironment().GetSettings().minTouchSize);
+    }
+
+    /// The layout of the table the component draws for this input in this window: the profile the rule gives the window, the fixed view.
+    inline TableLayout TableLayoutFor(const MatrixWindow& window, TableInput input) {
+        input.profile = TableProfileOf(window);
+        return MakeTableLayout(input);
+    }
+
     /// The layout context `ValidateOnMatrix` builds for a window of the matrix, for a scene whose view is the table.
     inline UILayoutContext ContextOf(const MatrixWindow& window, float userScale = 1.0f) {
         UILayoutContext context;
@@ -144,15 +190,22 @@ namespace BECore::Mahjong::Tests {
         renderer.height = height;
     }
 
+    /// Puts the fixture's renderer and the density of the engine's UI environment where `window` has them (the size and the pixel density
+    /// the table's rule reads); the fixture gives the density back in `TearDown`.
+    inline void SetWindow(RecordingRenderer& renderer, const MatrixWindow& window) {
+        SetOutputSize(renderer, window.outputWidth, window.outputHeight);
+        CoreManager::GetUIEnvironment().SetPixelDensityOverride(window.pixelDensity);
+    }
+
     /// The middle of an element of a canvas in output pixels, as the last layout of the canvas puts it (a click point).
     inline std::pair<float, float> OutputCenterOf(const UICanvasComponent& canvas, const UIElement& element) {
         const Rect output = canvas.GetLayout().GetResolved().transform.ToOutput(element.rect.x, element.rect.y, element.rect.w, element.rect.h);
         return {output.x + output.w * 0.5f, output.y + output.h * 0.5f};
     }
 
-    /// The table with every zone at its capacity (14 concealed tiles, four kongs and 8 bonus tiles a seat, 100 discards, the 144-tile
-    /// wall), so no tile of any game lies where this does not. `viewer` is the seat at the bottom (the zones are the same, the seats turn).
-    inline TableLayout MakeWorstCaseTableLayout(Seat viewer = 0) {
+    /// The input of the table with every zone at its capacity (14 concealed tiles, four kongs and 8 bonus tiles a seat, 100 discards, the
+    /// 144-tile wall). `viewer` is the seat at the bottom (the zones are the same, the seats turn).
+    inline TableInput WorstCaseTableInput(Seat viewer = 0) {
         constexpr int kMostDiscards = 100;  // longer than any hand leaves (136 tiles, 52 in the hands at the least)
         TableInput worst;
         worst.viewer = viewer;
@@ -168,7 +221,17 @@ namespace BECore::Mahjong::Tests {
             worst.discardSeats.push_back(i % kSeatCount);
         }
         worst.wallRemaining = 2 * kWallRingCells;
-        return MakeTableLayout(worst);
+        return worst;
+    }
+
+    /// The table with every zone at its capacity in the desktop profile, so no tile of any desktop game lies where this does not.
+    inline TableLayout MakeWorstCaseTableLayout(Seat viewer = 0) {
+        return MakeTableLayout(WorstCaseTableInput(viewer));
+    }
+
+    /// The table with every zone at its capacity as the component draws it in this window (the profile the rule gives the window).
+    inline TableLayout MakeWorstCaseTableLayout(Seat viewer, const MatrixWindow& window) {
+        return TableLayoutFor(window, WorstCaseTableInput(viewer));
     }
 
     /// Whether two rects share an area; rects that only touch are apart.

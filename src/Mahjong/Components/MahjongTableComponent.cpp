@@ -230,6 +230,15 @@ namespace BECore::Mahjong {
             return input;
         }
 
+        /// The profile the window the table is drawn in gets (`TableProfileFor`): the output size of the renderer, the density of the window
+        /// and the touch minimum of the engine, as `PublishScreen` reads them for the action buttons.
+        TableProfile CurrentTableProfile() {
+            const IRenderer& renderer = *CoreManager::GetRenderer();
+            const UIEnvironment& environment = CoreManager::GetUIEnvironment();
+            const UILayoutContext window = environment.MakeContext(CoreManager::GetMainWindow().Get(), renderer.GetOutputWidth(), renderer.GetOutputHeight());
+            return TableProfileFor(window.outputWidth, window.outputHeight, window.pixelDensity, environment.GetSettings().minTouchSize);
+        }
+
         Color PlainMarkColor(Tile tile) {
             if (tile.IsBonus()) {
                 return kPlainBonus;
@@ -549,7 +558,7 @@ namespace BECore::Mahjong {
     void MahjongTableComponent::PlanBatch(const TableSnapshot& before, const NewMoves& news, const HandModel& hand) {
         const TableLayout& was = before.layout;
         const TableLayout& now = _shown.layout;
-        const bool sameView = was.viewer == now.viewer && was.viewWidth == now.viewWidth && was.viewHeight == now.viewHeight;
+        const bool sameView = was.viewer == now.viewer && was.viewWidth == now.viewWidth && was.viewHeight == now.viewHeight && was.profile == now.profile;
         if (news.restarted || !sameView || _flightSeconds <= 0.0f) {
             EndFlights();
             return;
@@ -677,7 +686,9 @@ namespace BECore::Mahjong {
         const NewMoves news = FollowMoves(*game);
         const Faces faces = FacesOf(session);
         const Seat bottom = BottomSeat(session);
-        _shown.layout = MakeTableLayout(MakeInput(hand, bottom), viewWidth, viewHeight);
+        TableInput input = MakeInput(hand, bottom);
+        input.profile = CurrentTableProfile();
+        _shown.layout = MakeTableLayout(input, viewWidth, viewHeight);
         FillSnapshot(_shown, hand, faces, bottom);
         PlanBatch(before, news, hand);
         const TableLayout& layout = _shown.layout;
