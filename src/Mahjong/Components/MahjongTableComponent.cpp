@@ -247,13 +247,25 @@ namespace BECore::Mahjong {
             return input;
         }
 
+        /// The size of the view the scene draws in now (the active view: the portrait one for a tall output); the design size of the
+        /// landscape table before the scene has a view.
+        struct ViewSize {
+            float width = kViewWidth;
+            float height = kViewHeight;
+        };
+        ViewSize ActiveViewSize(const Scene& scene) {
+            const bool known = scene.GetViewWidth() > 0.0f && scene.GetViewHeight() > 0.0f;
+            return known ? ViewSize{scene.GetViewWidth(), scene.GetViewHeight()} : ViewSize{};
+        }
+
         /// The profile the window the table is drawn in gets (`TableProfileFor`): the output size of the renderer, the density of the window
-        /// and the touch minimum of the engine, as `PublishScreen` reads them for the action buttons.
-        TableProfile CurrentTableProfile() {
+        /// and the touch minimum of the engine, as `PublishScreen` reads them for the action buttons, and the active view (a portrait view
+        /// gets the desktop profile).
+        TableProfile CurrentTableProfile(const ViewSize& view) {
             const IRenderer& renderer = *CoreManager::GetRenderer();
             const UIEnvironment& environment = CoreManager::GetUIEnvironment();
             const UILayoutContext window = environment.MakeContext(CoreManager::GetMainWindow().Get(), renderer.GetOutputWidth(), renderer.GetOutputHeight());
-            return TableProfileFor(window.outputWidth, window.outputHeight, window.pixelDensity, environment.GetSettings().minTouchSize);
+            return TableProfileFor(window.outputWidth, window.outputHeight, window.pixelDensity, environment.GetSettings().minTouchSize, view.width, view.height);
         }
 
         Color PlainMarkColor(Tile tile) {
@@ -363,7 +375,8 @@ namespace BECore::Mahjong {
         // button of the hints goes with them: `HintsButton` where `Actions` is, its copy in `ActionsCompact` where that is
         const WindowNumbers numbers = ReadWindow();
         const UILayoutContext& window = numbers.context;
-        const bool compact = NeedsCompactActions(window.outputWidth, window.outputHeight, window.pixelDensity, numbers.minTouchSize, window.userScale);
+        const ViewSize view = ActiveViewSize(scene);
+        const bool compact = NeedsCompactActions(window.outputWidth, window.outputHeight, window.pixelDensity, numbers.minTouchSize, window.userScale, view.width, view.height);
         if (compact != _compactActions) {
             _compactActions = compact;
             UICanvasComponent::SetVisibleByName(scene, ActionsNode(), !compact);
@@ -437,8 +450,9 @@ namespace BECore::Mahjong {
         }
         const WindowNumbers numbers = ReadWindow();
         const UILayoutContext& window = numbers.context;
-        const TableProfile profile = TableProfileFor(window.outputWidth, window.outputHeight, window.pixelDensity, numbers.minTouchSize);
-        return UsesTapToSelect(_touchSeen, window.outputWidth, window.outputHeight, window.pixelDensity, numbers.minTouchSize, profile.handTileW);
+        const ViewSize view = ActiveViewSize(GetScene());
+        const TableProfile profile = TableProfileFor(window.outputWidth, window.outputHeight, window.pixelDensity, numbers.minTouchSize, view.width, view.height);
+        return UsesTapToSelect(_touchSeen, window.outputWidth, window.outputHeight, window.pixelDensity, numbers.minTouchSize, profile.handTileW, view.width, view.height);
     }
 
     bool MahjongTableComponent::SelectionHolds(const MahjongGame& game) const {
@@ -620,7 +634,7 @@ namespace BECore::Mahjong {
     void MahjongTableComponent::PlanBatch(const TableSnapshot& before, const NewMoves& news, const HandModel& hand) {
         const TableLayout& was = before.layout;
         const TableLayout& now = _shown.layout;
-        const bool sameView = was.viewer == now.viewer && was.viewWidth == now.viewWidth && was.viewHeight == now.viewHeight && was.profile == now.profile;
+        const bool sameView = was.viewer == now.viewer && was.shape == now.shape && was.viewWidth == now.viewWidth && was.viewHeight == now.viewHeight && was.profile == now.profile;
         if (news.restarted || !sameView || _flightSeconds <= 0.0f) {
             EndFlights();
             return;
@@ -789,16 +803,21 @@ namespace BECore::Mahjong {
 
     void MahjongTableComponent::OnDraw() {
         IRenderer& renderer = *CoreManager::GetRenderer();
-        const float viewWidth = GetScene().GetViewWidth() > 0.0f ? GetScene().GetViewWidth() : kViewWidth;
-        const float viewHeight = GetScene().GetViewHeight() > 0.0f ? GetScene().GetViewHeight() : kViewHeight;
-        // The felt is one soft picture over the view; without a texture (the backend refused it, a test renderer) it is the flat colour
+        // The active view: the landscape design or the portrait one (`Scene::Draw` picked it before this draw)
+        const ViewSize view = ActiveViewSize(GetScene());
+        const float viewWidth = view.width;
+        const float viewHeight = view.height;
+        // The felt is one soft picture over the view; without a texture (the backend refused it, a test renderer) it is the flat colour. It is
+        // a vignette and a grain of 3 levels, so over the tall portrait view the vignette is an ellipse and the grain about 3:1 taller than
+        // wide: not visible (a portrait texture of its own is for a look that says it is)
         if (ITexture* felt = FeltTexture(renderer)) {
             renderer.DrawTexture(*felt, nullptr, 0.0f, 0.0f, viewWidth, viewHeight);
         } else {
             renderer.DrawFilledRect(0.0f, 0.0f, viewWidth, viewHeight, kFelt);
         }
-        // The layout is built in design units and scaled to the view, so what is measured in units here is scaled the same way
-        const float unit = eastl::max(0.0f, eastl::min(viewWidth / kViewWidth, viewHeight / kViewHeight));
+        // The layout is built in design units (those of the shape of the view) and scaled to the view, so what is measured in units here is
+        // scaled the same way
+        const float unit = LayoutScale(viewWidth, viewHeight);
         const float rim = kRimWidth * unit;
         renderer.DrawFilledRect(0.0f, 0.0f, viewWidth, rim, kFeltRim);
         renderer.DrawFilledRect(0.0f, viewHeight - rim, viewWidth, rim, kFeltRim);
@@ -832,7 +851,7 @@ namespace BECore::Mahjong {
         const Faces faces = FacesOf(session);
         const Seat bottom = BottomSeat(session);
         TableInput input = MakeInput(hand, bottom);
-        input.profile = CurrentTableProfile();
+        input.profile = CurrentTableProfile(view);
         _shown.layout = MakeTableLayout(input, viewWidth, viewHeight);
         FillSnapshot(_shown, hand, faces, bottom);
         PlanBatch(before, news, hand);

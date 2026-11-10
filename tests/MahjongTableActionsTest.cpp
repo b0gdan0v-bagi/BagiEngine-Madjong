@@ -617,7 +617,7 @@ namespace BECore::Mahjong::Tests {
     // ----- the compact canvas: windows where the buttons of `Actions` would be under the touch minimum -----
 
     TEST_F(MahjongTableActionsTest, InAWindowBelowTheRuleTheClaimWindowIsInTheCompactCanvasWithItsPictures) {
-        ASSERT_NO_FATAL_FAILURE(StartInWindow(480.0f, 480.0f, kPersonAtSeat1, ClaimWindowModel()));
+        ASSERT_NO_FATAL_FAILURE(StartInWindow(kCompactWindowWidth, kCompactWindowHeight, kPersonAtSeat1, ClaimWindowModel()));
         ASSERT_EQ(_game->GetSession().Actor(), kSeat1);
 
         EXPECT_FALSE(CanvasShown("Actions"));
@@ -639,14 +639,14 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableActionsTest, AClickOnAButtonOfTheCompactCanvasPerformsItsAction) {
-        ASSERT_NO_FATAL_FAILURE(StartInWindow(480.0f, 480.0f, kPersonAtSeat1, ClaimWindowModel()));
+        ASSERT_NO_FATAL_FAILURE(StartInWindow(kCompactWindowWidth, kCompactWindowHeight, kPersonAtSeat1, ClaimWindowModel()));
         EXPECT_TRUE(ClickCompact("Pung")) << "the canvas takes the click";
         ASSERT_EQ(Hand().GetHand(kSeat1).melds.size(), 1u);
         EXPECT_EQ(Hand().GetHand(kSeat1).melds[0].kind, MeldKind::Pung);
     }
 
     TEST_F(MahjongTableActionsTest, AClickOnAChowOfTheCompactCanvasClaimsThatChow) {
-        ASSERT_NO_FATAL_FAILURE(StartInWindow(480.0f, 853.0f, kPersonAtSeat1, ClaimWindowModel()));
+        ASSERT_NO_FATAL_FAILURE(StartInWindow(kCompactWindowWidth, kCompactWindowHeight, kPersonAtSeat1, ClaimWindowModel()));
         // On the picture of the chow, as a finger lands on the tiles
         const auto canvas = Canvas("ActionsCompact");
         const UIElement* picture = Element("ActionsCompact", "Chow1Tile1");
@@ -668,7 +668,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableActionsTest, WinInTheCompactCanvasEndsTheHand) {
-        ASSERT_NO_FATAL_FAILURE(StartInWindow(480.0f, 480.0f, kDefaultSeatSetup, SelfDrawModel()));
+        ASSERT_NO_FATAL_FAILURE(StartInWindow(kCompactWindowWidth, kCompactWindowHeight, kDefaultSeatSetup, SelfDrawModel()));
         const std::vector<ButtonKind> shown = OnCompactScreen();
         ASSERT_NE(std::find(shown.begin(), shown.end(), ButtonKind::Win), shown.end());
 
@@ -687,7 +687,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(OnScreenButtons().size(), 4u);
         EXPECT_TRUE(OnCompactScreen().empty());
 
-        SetOutputSize(*_renderer, 480.0f, 480.0f);
+        SetOutputSize(*_renderer, kCompactWindowWidth, kCompactWindowHeight);
         Draw();
         EXPECT_FALSE(CanvasShown("Actions"));
         EXPECT_TRUE(CanvasShown("ActionsCompact"));
@@ -700,19 +700,19 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(OnScreenButtons().size(), 4u);
         EXPECT_TRUE(OnCompactScreen().empty());
 
-        // The boundary of the size: 732 x 1000 keeps `Actions` (a button of 32.03 px), 731 x 1000 does not (31.98 px) and has a bar for the row
-        SetOutputSize(*_renderer, 732.0f, 1000.0f);
+        // The boundary of the size: 732 x 700 keeps `Actions` (a button of 32.03 px), 731 x 700 does not (31.98 px) and has a bar for the row
+        SetOutputSize(*_renderer, 732.0f, 700.0f);
         Draw();
         EXPECT_TRUE(CanvasShown("Actions"));
         EXPECT_FALSE(CanvasShown("ActionsCompact"));
-        SetOutputSize(*_renderer, 731.0f, 1000.0f);
+        SetOutputSize(*_renderer, 731.0f, 700.0f);
         Draw();
         EXPECT_FALSE(CanvasShown("Actions"));
         EXPECT_TRUE(CanvasShown("ActionsCompact"));
     }
 
     TEST_F(MahjongTableActionsTest, AWindowAsHighAsTheTableKeepsActionsWhateverSizeTheButtonsHave) {
-        ASSERT_NO_FATAL_FAILURE(StartInWindow(480.0f, 480.0f, kPersonAtSeat1, ClaimWindowModel()));
+        ASSERT_NO_FATAL_FAILURE(StartInWindow(kCompactWindowWidth, kCompactWindowHeight, kPersonAtSeat1, ClaimWindowModel()));
         ASSERT_TRUE(CanvasShown("ActionsCompact"));
 
         // 731 x 411: a button of `Actions` is 31.97 px, but the table fills the window and the compact row would lie on the viewer's hand
@@ -727,7 +727,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableActionsTest, AWindowWhoseBarHoldsALineButNotTheRowKeepsActions) {
-        ASSERT_NO_FATAL_FAILURE(StartInWindow(480.0f, 480.0f, kPersonAtSeat1, ClaimWindowModel()));
+        ASSERT_NO_FATAL_FAILURE(StartInWindow(kCompactWindowWidth, kCompactWindowHeight, kPersonAtSeat1, ClaimWindowModel()));
         ASSERT_TRUE(CanvasShown("ActionsCompact"));
 
         // The row is as high as the width of its canvas makes it (the stack starts its lines at its top): 72 px under 1043.91 units, on bars of 41
@@ -748,7 +748,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableActionsTest, NoHintIsShownForTheCompactCanvas) {
-        ASSERT_NO_FATAL_FAILURE(StartInWindow(480.0f, 480.0f, kPersonAtSeat1, ClaimWindowModel()));
+        ASSERT_NO_FATAL_FAILURE(StartInWindow(kCompactWindowWidth, kCompactWindowHeight, kPersonAtSeat1, ClaimWindowModel()));
         const auto canvas = Canvas("ActionsCompact");
         const UIElement* chow = Element("ActionsCompact", "Chow0");
         ASSERT_TRUE(canvas && chow);

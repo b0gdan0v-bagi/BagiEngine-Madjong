@@ -2,6 +2,7 @@
 #include "MahjongTouchTestSupport.h"
 
 #include <Events/SceneEvents.h>
+#include <Mahjong/Table/TapSelect.h>
 
 /**
  * The table in a landscape phone (`TableProfileFor`, `Table/TouchRegime.h`): the component builds its layout with the profile the rule
@@ -15,37 +16,6 @@ namespace BECore::Mahjong::Tests {
 
         /// Seat 0 holds a hand that is far from waiting; as East it draws 9p, so it holds 14 tiles and is the one to discard.
         constexpr const char* kPlainHand = "1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Gd Rd";
-
-        /// The input of the table as the component makes it from the model (the seat at the bottom is seat 0).
-        TableInput InputOf(const HandModel& hand) {
-            TableInput input;
-            for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                const PlayerHand& held = hand.GetHand(seat);
-                input.concealedCount[seat] = static_cast<int>(held.concealed.size());
-                input.melds[seat] = held.melds;
-                input.bonusCount[seat] = static_cast<int>(held.bonus.size());
-            }
-            for (const DiscardEntry& entry : hand.Discards()) {
-                input.discardSeats.push_back(entry.seat);
-            }
-            input.wallRemaining = static_cast<int>(hand.GetWall().Remaining());
-            return input;
-        }
-
-        /// Whether the layouts have the same slots in the same places.
-        bool SameSlots(const TableLayout& a, const TableLayout& b) {
-            if (a.slots.size() != b.slots.size()) {
-                return false;
-            }
-            for (size_t i = 0; i < a.slots.size(); ++i) {
-                const Rect& ra = a.slots[i].rect;
-                const Rect& rb = b.slots[i].rect;
-                if (ra.x != rb.x || ra.y != rb.y || ra.w != rb.w || ra.h != rb.h || a.slots[i].role != b.slots[i].role || a.slots[i].index != b.slots[i].index) {
-                    return false;
-                }
-            }
-            return true;
-        }
 
     }  // namespace
 
@@ -72,9 +42,6 @@ namespace BECore::Mahjong::Tests {
         size_t phones = 0;
         size_t desktops = 0;
         ForEachTableWindow([&](const MatrixWindow& window) {
-            if (ShapeOf(window) == TableShape::Portrait) {
-                return;  // WP 5: the component draws the portrait table once the scene has the portrait view
-            }
             SetWindow(*_renderer, window);
             Draw();
             const TableLayout expected = TableLayoutFor(window, InputOf(Hand()));
@@ -91,7 +58,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongTablePhoneTest, ThePhoneHandIsATouchTargetInEveryPhoneWindow) {
         for (const MatrixWindow& window : PhoneWindows()) {
             if (ShapeOf(window) == TableShape::Portrait) {
-                continue;  // the portrait table has no phone profile: its hand is one row, tapped (WP 5)
+                continue;  // the portrait table has no phone profile: its hand is one row, tapped (`MahjongTablePortraitTest`)
             }
             ASSERT_NO_FATAL_FAILURE(StartIn(window));
             const TableLayout& layout = _table->GetLayout();
@@ -109,18 +76,26 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
-    TEST_F(MahjongTablePhoneTest, AClickOnTheMiddleOfAPhoneTileDiscardsThatTile) {
+    TEST_F(MahjongTablePhoneTest, AClickOnTheMiddleOfATileOfAPhoneWindowDiscardsThatTile) {
         for (const MatrixWindow& window : PhoneWindows()) {
-            if (ShapeOf(window) == TableShape::Portrait) {
-                continue;  // WP 5
-            }
+            const bool selects = UsesTapToSelect(false, window.outputWidth, window.outputHeight, window.pixelDensity, EngineTouchMinimum(), TableProfileOf(window).handTileW, ViewOf(window).width,
+                                                 ViewOf(window).height);
             for (int index = 0; index < kDealtTiles + 1; ++index) {
                 ASSERT_NO_FATAL_FAILURE(StartIn(window));
                 ASSERT_EQ(_game->GetSession().Actor(), kSeat0);
                 const Tile tile = Hand().GetHand(kSeat0).concealed[static_cast<size_t>(index)];
                 const TileSlot* slot = HandSlot(index);
                 ASSERT_NE(slot, nullptr) << window.label.c_str();
-                EXPECT_FALSE(ClickViewPoint(window, slot->rect.x + slot->rect.w * 0.5f, slot->rect.y + slot->rect.h * 0.5f)) << "no canvas takes the click: the table does";
+                const float x = slot->rect.x + slot->rect.w * 0.5f;
+                const float y = slot->rect.y + slot->rect.h * 0.5f;
+                EXPECT_FALSE(ClickViewPoint(window, x, y)) << "no canvas takes the click: the table does";
+                if (selects) {
+                    // A hand tile under the touch minimum (the one row of the portrait table in a phone): the first click selects, the second discards
+                    ASSERT_TRUE(Hand().Discards().empty()) << window.label.c_str() << " tile " << index;
+                    Draw();
+                    EXPECT_EQ(_table->SelectedHandIndex(), index) << window.label.c_str();
+                    EXPECT_FALSE(ClickViewPoint(window, x, y));
+                }
                 ASSERT_FALSE(Hand().Discards().empty()) << window.label.c_str() << " tile " << index;
                 EXPECT_EQ(Hand().Discards().front().tile, tile) << window.label.c_str() << " tile " << index;
             }

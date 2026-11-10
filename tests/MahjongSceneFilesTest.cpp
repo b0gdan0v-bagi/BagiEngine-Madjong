@@ -68,6 +68,15 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(scene.attribute("viewWidth").as_float(), kViewWidth);
         EXPECT_EQ(scene.attribute("viewHeight").as_float(), kViewHeight);
 
+        // The one other view: the portrait design for an output that is at least as high as it is wide (`ShapeOfOutput`)
+        const std::vector<pugi::xml_node> views = ElementChildren(scene.child("viewVariants"));
+        ASSERT_EQ(views.size(), 1u);
+        EXPECT_STREQ(views[0].name(), "view");
+        EXPECT_STREQ(views[0].attribute("name").as_string(), "Portrait");
+        EXPECT_STREQ(views[0].attribute("when").as_string(), "orientation:portrait");
+        EXPECT_EQ(views[0].attribute("width").as_float(), kPortraitViewWidth);
+        EXPECT_EQ(views[0].attribute("height").as_float(), kPortraitViewHeight);
+
         const std::vector<pugi::xml_node> nodes = ElementChildren(scene.child("nodes"));
         ASSERT_EQ(nodes.size(), std::size(kSceneNodes));
         for (size_t i = 0; i < nodes.size(); ++i) {
@@ -155,6 +164,36 @@ namespace BECore::Mahjong::Tests {
         for (size_t i = 0; i < children.size(); ++i) {
             EXPECT_EQ(children[i]->GetName(), PoolString::Intern(kSceneNodes[i].name)) << "position " << i;
             EXPECT_EQ(children[i]->GetLayer(), kSceneNodes[i].layer) << kSceneNodes[i].name;
+        }
+    }
+
+    TEST_F(MahjongSceneLoadTest, TheLoadedViewVariantsAreThePortraitViewTheTestsStandIn) {
+        const Scene* scene = _manager->GetSceneByName("MahjongScene"_intern);
+        ASSERT_NE(scene, nullptr);
+        const auto& variants = scene->GetViewVariants();
+        ASSERT_EQ(variants.size(), PortraitViewVariants().size());
+        EXPECT_TRUE(variants[0] == PortraitViewVariants()[0]) << "the helper of the tests repeats the file";
+        EXPECT_EQ(variants[0].name, "Portrait"_intern);
+        EXPECT_EQ(variants[0].width, kPortraitViewWidth);
+        EXPECT_EQ(variants[0].height, kPortraitViewHeight);
+    }
+
+    TEST_F(MahjongSceneLoadTest, TheViewTheFilePicksIsTheDesignOfTheShapeTheRuleGives) {
+        const Scene* scene = _manager->GetSceneByName("MahjongScene"_intern);
+        ASSERT_NE(scene, nullptr);
+        const auto& variants = scene->GetViewVariants();
+        struct Output {
+            float width;
+            float height;
+        };
+        // A square and a tall output are portrait, a wide one is not; an output of no size has no shape, so the default view
+        for (const Output output : {Output{1280, 720}, Output{720, 1280}, Output{480, 480}, Output{1, 1}, Output{0, 0}, Output{390, 844}, Output{2560, 1080}, Output{1080, 1920}, Output{721, 720}}) {
+            const ActiveSceneView picked =
+                SceneViewSelector::Pick(scene->GetViewWidth(), scene->GetViewHeight(), eastl::span<const SceneViewVariant>(variants.data(), variants.size()), output.width, output.height);
+            const TableShape shape = ShapeOfOutput(output.width, output.height);
+            EXPECT_EQ(picked.width, DesignWidthOf(shape)) << output.width << " x " << output.height;
+            EXPECT_EQ(picked.height, DesignHeightOf(shape)) << output.width << " x " << output.height;
+            EXPECT_EQ(ShapeOfView(picked.width, picked.height), shape) << output.width << " x " << output.height;
         }
     }
 

@@ -967,14 +967,14 @@ namespace BECore::Mahjong::Tests {
     // ----- the button in a narrow window: the row of ActionsCompact -----
 
     TEST_F(MahjongHintsTest, InANarrowWindowTheButtonIsInTheCompactRowAndOfferedExactlyWhereItIsOnTheTable) {
-        // The same state is looked at in the design size (the canvas `HintsButton`) and in 480 x 480 (the row of `ActionsCompact`, `HintsButton`
+        // The same state is looked at in the design size (the canvas `HintsButton`) and in a small landscape window (the row of `ActionsCompact`, `HintsButton`
         // hidden with `Actions`): the button is on the one and on the other exactly together
         const auto expectBoth = [&](bool offered, const char* state) {
             SetOutputSize(*_renderer, kViewWidth, kViewHeight);
             Draw();
             EXPECT_EQ(ButtonShown(), offered) << state << ": on the table";
             EXPECT_FALSE(CompactButtonShown()) << state << ": the row is hidden at the design size";
-            SetOutputSize(*_renderer, 480.0f, 480.0f);
+            SetOutputSize(*_renderer, kCompactWindowWidth, kCompactWindowHeight);
             Draw();
             EXPECT_EQ(CompactButtonShown(), offered) << state << ": in the row";
             EXPECT_FALSE(ButtonShown()) << state << ": the canvas of the table is hidden in a narrow window";
@@ -1003,7 +1003,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongHintsTest, AClickOnTheButtonOfTheCompactRowAsksForTheAdviceAndPlaysNothing) {
-        SetOutputSize(*_renderer, 480.0f, 480.0f);
+        SetOutputSize(*_renderer, kCompactWindowWidth, kCompactWindowHeight);
         ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
         ASSERT_TRUE(CompactButtonShown());
         const auto canvas = Canvas("ActionsCompact");

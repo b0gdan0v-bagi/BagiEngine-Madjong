@@ -32,6 +32,11 @@ namespace BECore::Mahjong::Tests {
         }
     };
 
+    /// A landscape window (density 1) where the buttons of `Actions` are under the touch minimum and the bar under the table holds the row of
+    /// `ActionsCompact`: the tests of the compact canvas stand in it. (A square or a tall output is the portrait view, whose buttons are higher.)
+    inline constexpr float kCompactWindowWidth = 640.0f;
+    inline constexpr float kCompactWindowHeight = 600.0f;
+
     /// The engine's touch minimum (`minTouchSize`, window units): what every control of the game is held to in the matrix.
     inline float EngineTouchMinimum() {
         return CoreManager::GetUIEnvironment().GetSettings().minTouchSize;
@@ -286,6 +291,37 @@ namespace BECore::Mahjong::Tests {
     /// The table with every zone at its capacity as the component draws it in this window (the profile the rule gives the window).
     inline TableLayout MakeWorstCaseTableLayout(Seat viewer, const MatrixWindow& window) {
         return TableLayoutFor(window, WorstCaseTableInput(viewer));
+    }
+
+    /// The input of the table as the component makes it from the model (the seat at the bottom is seat 0).
+    inline TableInput InputOf(const HandModel& hand) {
+        TableInput input;
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            const PlayerHand& held = hand.GetHand(seat);
+            input.concealedCount[seat] = static_cast<int>(held.concealed.size());
+            input.melds[seat] = held.melds;
+            input.bonusCount[seat] = static_cast<int>(held.bonus.size());
+        }
+        for (const DiscardEntry& entry : hand.Discards()) {
+            input.discardSeats.push_back(entry.seat);
+        }
+        input.wallRemaining = static_cast<int>(hand.GetWall().Remaining());
+        return input;
+    }
+
+    /// Whether the layouts have the same slots in the same places.
+    inline bool SameSlots(const TableLayout& a, const TableLayout& b) {
+        if (a.slots.size() != b.slots.size()) {
+            return false;
+        }
+        for (size_t i = 0; i < a.slots.size(); ++i) {
+            const Rect& ra = a.slots[i].rect;
+            const Rect& rb = b.slots[i].rect;
+            if (ra.x != rb.x || ra.y != rb.y || ra.w != rb.w || ra.h != rb.h || a.slots[i].role != b.slots[i].role || a.slots[i].index != b.slots[i].index) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /// Whether two rects share an area; rects that only touch are apart.
