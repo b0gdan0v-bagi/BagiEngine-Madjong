@@ -248,6 +248,17 @@ namespace BECore::Mahjong::Tests {
             IControllableGame* control = nullptr;
         };
 
+        /// The `levels` of a state: four numbers.
+        std::array<int, kSeatCount> LevelsOf(const Json& state) {
+            const Json& list = Member(state, "levels");
+            std::array<int, kSeatCount> levels{};
+            EXPECT_TRUE(list.is_array() && list.size() == kSeatCount);
+            for (size_t seat = 0; seat < kSeatCount && seat < list.size(); ++seat) {
+                levels[seat] = list[seat].get<int>();
+            }
+            return levels;
+        }
+
         /// The points of the four seats of a state.
         int PointsOnTheTable(const Json& state) {
             int total = 0;
@@ -376,6 +387,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Str(Member(state, "roundWind")), "East");
         EXPECT_EQ(Member(state, "east").get<int>(), kSeat0);
         EXPECT_EQ(Member(state, "level").get<int>(), LevelNumber(ComputerLevel::Normal)) << "the level of the match, Normal until a reset says otherwise";
+        EXPECT_EQ(LevelsOf(state), (std::array<int, kSeatCount>{5, 5, 5, 5})) << "a level per seat";
         EXPECT_EQ(Member(state, "handsPlayed").get<int>(), 0);
         EXPECT_EQ(Member(state, "handsTotal").get<int>(), kFullMatchHands);
         EXPECT_EQ(Member(state, "version").get<uint64_t>(), control->GetStateVersion());
@@ -761,6 +773,24 @@ namespace BECore::Mahjong::Tests {
             "{\"level\": true}",
             "{\"level\": null}",
             "{\"level\": [3]}",
+            "{\"levels\": [1, 2, 3]}",
+            "{\"levels\": [1, 2, 3, 4, 5]}",
+            "{\"levels\": []}",
+            "{\"levels\": [0, 5, 5, 5]}",
+            "{\"levels\": [5, 5, 5, 11]}",
+            "{\"levels\": [5, 5, -1, 5]}",
+            "{\"levels\": [5, 5, 2.5, 5]}",
+            "{\"levels\": [\"5\", 5, 5, 5]}",
+            "{\"levels\": [true, 5, 5, 5]}",
+            "{\"levels\": [null, 5, 5, 5]}",
+            "{\"levels\": [[5], 5, 5, 5]}",
+            "{\"levels\": 5}",
+            "{\"levels\": \"5555\"}",
+            "{\"levels\": {\"0\": 5}}",
+            "{\"levels\": null}",
+            "{\"levels\": [1, 2, 3, 4], \"level\": 3}",
+            "{\"level\": 3, \"levels\": [1, 2, 3, 4]}",
+            "{\"levels\": [1, 2, 3, 4], \"seats\": \"XXXX\"}",
             "{\"level\": 1, \"seats\": \"XXXX\"}",
             "{\"level\": 1, \"hands\": 12}",
             "{\"hands\": 8, \"seats\": \"XXXX\"}",
@@ -774,7 +804,8 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(game->GetSeats(), seats) << text;
             EXPECT_EQ(game->GetSettings().handsPerMatch, kFullMatchHands) << text;
             EXPECT_EQ(game->GetLevel(), ComputerLevel::Normal) << text;
-            EXPECT_EQ(game->GetSession().Level(), ComputerLevel::Normal) << text;
+            EXPECT_EQ(game->GetLevels(), UniformLevels(ComputerLevel::Normal)) << text;
+            EXPECT_EQ(game->GetSession().Levels(), UniformLevels(ComputerLevel::Normal)) << text;
         }
         // The limits of a seed are accepted.
         EXPECT_TRUE(control->Reset(Parse("{\"seed\": 0}")).has_value());
@@ -799,8 +830,10 @@ namespace BECore::Mahjong::Tests {
             const int number = LevelNumber(level);
             ASSERT_NO_FATAL_FAILURE(Reset(("{\"seed\": 8, \"seats\": \"PCCC\", \"level\": " + std::to_string(number) + "}").c_str()));
             EXPECT_EQ(game->GetLevel(), level) << number;
-            EXPECT_EQ(game->GetSession().Level(), level) << number;
+            EXPECT_EQ(game->GetLevels(), UniformLevels(level)) << number;
+            EXPECT_EQ(game->GetSession().Levels(), UniformLevels(level)) << number;
             EXPECT_EQ(Member(State(), "level").get<int>(), number);
+            EXPECT_EQ(LevelsOf(State()), (std::array<int, kSeatCount>{number, number, number, number}));
 
             // What is left out keeps the level of the game, also when the next reset changes other things
             ASSERT_NO_FATAL_FAILURE(Reset("{\"seed\": 9}"));
@@ -809,6 +842,58 @@ namespace BECore::Mahjong::Tests {
         }
         ASSERT_NO_FATAL_FAILURE(Reset("{}"));
         EXPECT_EQ(Member(State(), "level").get<int>(), kMaxLevel) << "the last level set";
+    }
+
+    TEST_F(MahjongGameControlTest, ResetSetsALevelPerSeatAndTheStateSaysThemAndTheLowestComputerSeatsOne) {
+        ASSERT_NO_FATAL_FAILURE(Reset("{\"seed\": 8, \"seats\": \"CCCC\", \"levels\": [2, 6, 10, 1]}"));
+        const SeatLevels want{ComputerLevel{2}, ComputerLevel{6}, ComputerLevel{10}, ComputerLevel{1}};
+        EXPECT_EQ(game->GetLevels(), want);
+        EXPECT_EQ(game->GetSession().Levels(), want);
+        EXPECT_EQ(LevelsOf(State()), (std::array<int, kSeatCount>{2, 6, 10, 1}));
+        EXPECT_EQ(Member(State(), "level").get<int>(), 2) << "the lowest computer seat is seat 0";
+
+        // A person's seat keeps its level (it plays again when the seat becomes a computer); `level` is the first computer seat's
+        ASSERT_NO_FATAL_FAILURE(Reset("{\"seed\": 8, \"seats\": \"PCPC\"}"));
+        EXPECT_EQ(game->GetSession().Levels(), want) << "a reset without levels keeps those of the game";
+        EXPECT_EQ(LevelsOf(State()), (std::array<int, kSeatCount>{2, 6, 10, 1}));
+        EXPECT_EQ(Member(State(), "level").get<int>(), 6);
+        ASSERT_NO_FATAL_FAILURE(Reset("{\"seed\": 8, \"seats\": \"PPPP\"}"));
+        EXPECT_EQ(Member(State(), "level").get<int>(), LevelNumber(kDefaultLevel)) << "no computer seat";
+
+        // `level` sets all four, over what `levels` set before
+        ASSERT_NO_FATAL_FAILURE(Reset("{\"seed\": 8, \"seats\": \"PCCC\", \"level\": 3}"));
+        EXPECT_EQ(LevelsOf(State()), (std::array<int, kSeatCount>{3, 3, 3, 3}));
+        EXPECT_EQ(Member(State(), "level").get<int>(), 3);
+        EXPECT_EQ(game->GetSession().Levels(), UniformLevels(ComputerLevel{3}));
+    }
+
+    TEST_F(MahjongGameControlTest, ABadLevelsNamesTheKey) {
+        for (const char* text : {"{\"levels\": [1, 2, 3]}", "{\"levels\": [1, 2, 3, 11]}", "{\"levels\": \"1234\"}"}) {
+            const auto reset = control->Reset(Parse(text));
+            ASSERT_FALSE(reset.has_value()) << text;
+            EXPECT_EQ(ErrorCodeOf(reset.error()), "invalid_params") << text;
+            const std::string message = reset.error().message.c_str();
+            EXPECT_NE(message.find("'levels'"), std::string::npos) << message;
+            EXPECT_NE(message.find("1..10"), std::string::npos) << message;
+        }
+        const auto both = control->Reset(Parse("{\"level\": 3, \"levels\": [1, 2, 3, 4]}"));
+        ASSERT_FALSE(both.has_value());
+        const std::string message = both.error().message.c_str();
+        EXPECT_NE(message.find("'level'"), std::string::npos) << message;
+        EXPECT_NE(message.find("'levels'"), std::string::npos) << message;
+    }
+
+    TEST_F(MahjongGameControlTest, AWholeMatchOfSeatsAtDifferentLevelsEndsLegallyWithAllThePoints) {
+        ASSERT_NO_FATAL_FAILURE(Reset("{\"seed\": 5, \"seats\": \"CCCC\", \"hands\": 8, \"levels\": [1, 4, 5, 10]}"));
+        int hands = 0;
+        for (; hands < kHandLimitPerMatch && Str(Member(State(), "phase")) != "match_over"; ++hands) {
+            ASSERT_EQ(Str(Member(State(), "phase")), "hand_over");
+            EXPECT_EQ(LevelsOf(State()), (std::array<int, kSeatCount>{1, 4, 5, 10}));
+            Perform(NextHandActionToJson());
+            EXPECT_EQ(PointsOnTheTable(State()), kSeatCount * kExpectedStartingScore);
+        }
+        ASSERT_LT(hands, kHandLimitPerMatch);
+        EXPECT_EQ(Member(State(), "handsPlayed").get<int>(), kShortMatchHands);
     }
 
     TEST_F(MahjongGameControlTest, ABadLevelNamesTheRange) {

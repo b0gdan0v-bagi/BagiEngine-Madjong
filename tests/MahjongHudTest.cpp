@@ -1555,17 +1555,17 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongHudTest, TheLevelOfThePageReachesTheNextMatchAndNotTheRunningOne) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
-        ASSERT_EQ(_game->GetSession().Level(), ComputerLevel::Normal);
+        ASSERT_EQ(_game->GetSession().Levels(), UniformLevels(ComputerLevel::Normal));
         _game->OpenSetup();
         Draw();
         EmitAction("MahjongOptions");
         EmitAction("MahjongSetLevel", "1");
-        EXPECT_EQ(_game->GetSession().Level(), ComputerLevel::Normal) << "a running session keeps its level";
+        EXPECT_EQ(_game->GetSession().Levels(), UniformLevels(ComputerLevel::Normal)) << "a running session keeps its level";
 
         EmitAction("MahjongOptionsBack");
         EmitAction("MahjongStart");
         EXPECT_FALSE(_game->IsSetupOpen());
-        EXPECT_EQ(_game->GetSession().Level(), ComputerLevel::Easy);
+        EXPECT_EQ(_game->GetSession().Levels(), UniformLevels(ComputerLevel::Easy));
     }
 
     TEST_F(MahjongHudTest, AStartAControlResetAndAControlActionCloseThePage) {

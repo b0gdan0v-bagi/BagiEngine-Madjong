@@ -37,6 +37,37 @@ namespace BECore::Mahjong {
             return eastl::string_view(text.data(), text.size());
         }
 
+        /// The `levels` of a `reset`: an array of four integers 1..10; nullopt for anything else (a number above INT64_MAX included, as
+        /// `GetJsonInt` refuses it).
+        std::optional<SeatLevels> ReadResetLevels(const Json& list) {
+            if (!list.is_array() || list.size() != kSeatCount) {
+                return std::nullopt;
+            }
+            SeatLevels levels = UniformLevels(kDefaultLevel);
+            size_t index = 0;
+            for (const Json& item : list) {
+                if (!item.is_number_integer()) {
+                    return std::nullopt;
+                }
+                int64_t number = 0;
+                if (item.is_number_unsigned()) {
+                    const uint64_t value = item.get<uint64_t>();
+                    if (value > static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
+                        return std::nullopt;
+                    }
+                    number = static_cast<int64_t>(value);
+                } else {
+                    number = item.get<int64_t>();
+                }
+                const std::optional<ComputerLevel> level = LevelOf(number);
+                if (!level) {
+                    return std::nullopt;
+                }
+                levels[index++] = *level;
+            }
+            return levels;
+        }
+
         // ----- the names of the enums in JSON -----
 
         eastl::string_view PhaseName(SessionPhase phase) {
@@ -444,7 +475,12 @@ namespace BECore::Mahjong {
         state["seatWind"] = spectator ? Json(nullptr) : MakeJsonString(EnumUtils<Wind>::ToString(view.seatWind));
         state["roundWind"] = MakeJsonString(EnumUtils<Wind>::ToString(view.roundWind));
         state["east"] = hand.East();
-        state["level"] = LevelNumber(session.Level());
+        state["level"] = LevelNumber(FirstComputerLevel(session.Seats(), session.Levels()));
+        Json levels = Json::array();
+        for (const ComputerLevel level : session.Levels()) {
+            levels.push_back(LevelNumber(level));
+        }
+        state["levels"] = std::move(levels);
         state["hand"] = spectator ? Json::array() : TilesToJson(view.own.concealed);
         state["turn"] = std::move(turn);
         state["seats"] = std::move(seats);
@@ -549,14 +585,24 @@ namespace BECore::Mahjong {
             seats = *read;
         }
 
-        ComputerLevel level = _game.GetLevel();
-        if (FindJsonMember(options, "level") != nullptr) {
+        SeatLevels levels = _game.GetLevels();
+        const Json* levelsMember = FindJsonMember(options, "levels");
+        if (levelsMember != nullptr) {
+            if (FindJsonMember(options, "level") != nullptr) {
+                return InvalidParams("'level' and 'levels' cannot be given together");
+            }
+            const std::optional<SeatLevels> read = ReadResetLevels(*levelsMember);
+            if (!read) {
+                return InvalidParams(Format("'levels' has to be an array of {} integers, each {}", kSeatCount, LevelRangeText().c_str()));
+            }
+            levels = *read;
+        } else if (FindJsonMember(options, "level") != nullptr) {
             const auto number = GetJsonInt(options, "level");
             const std::optional<ComputerLevel> read = number ? LevelOf(*number) : std::nullopt;
             if (!read) {
                 return InvalidParams(Format("'level' has to be {}", LevelRangeText().c_str()));
             }
-            level = *read;
+            levels = UniformLevels(*read);
         }
 
         MahjongSettings settings = _game.GetSettings();
@@ -581,7 +627,7 @@ namespace BECore::Mahjong {
         // Every option is read and checked: from here on the match starts and nothing is refused.
         _game.SetSettings(settings);
         _game.SetSeats(seats);
-        _game.SetLevel(level);
+        _game.SetLevels(levels);
         if (const MatchStatus started = _game.StartMatch(seed); !started) {
             return InvalidParams(Format("the match did not start: {}", EnumUtils<MatchError>::ToString(started.error())));
         }

@@ -100,11 +100,6 @@ namespace BECore::Mahjong {
         [[nodiscard]] ComputerLevel LevelOf(Seat seat) const noexcept {
             return IsSeat(seat) ? _levels[static_cast<size_t>(seat)] : kDefaultLevel;
         }
-        /// The level of the lowest computer seat, `kDefaultLevel` when none: the one level of a client that knows no levels per seat.
-        /// Goes in WP 4 of `mahjong-per-computer-level` (callers use `Levels()`).
-        [[nodiscard]] ComputerLevel Level() const noexcept {
-            return FirstComputerLevel(_seats, _levels);
-        }
 
         /// Where the events of the match go (see the class comment); null (the default) for none. Not owned: the sink outlives its use
         /// by the session. May be changed at any time, also in the middle of a match.

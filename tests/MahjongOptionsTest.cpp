@@ -576,7 +576,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(ClickElement("Options", "Back"));
         EmitAction("MahjongStart");
         ASSERT_TRUE(_game->GetMatch().GetPhase() != MatchPhase::NotStarted);
-        EXPECT_EQ(_game->GetSession().Level(), ComputerLevel{3});
+        EXPECT_EQ(_game->GetSession().Levels(), UniformLevels(ComputerLevel{3}));
     }
 
     TEST_F(MahjongOptionsTest, TheSpeedTakesEffectAtOnceIsKeptByANewMatchAndAnUnknownSpeedIsIgnored) {

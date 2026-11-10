@@ -55,7 +55,7 @@ IDLE_CHECK_SECONDS = 0.3  # how long the manual clock is watched not moving
 DEFAULT_STEP_SECONDS = 1.0 / 60.0
 EASY_LEVEL = 1    # the levels are 1..10 (ComputerLevel.h); Easy is 1
 NORMAL_LEVEL = 5  # and Normal, the default, is 5
-STATE_KEYS = {"phase", "seat", "seatWind", "roundWind", "east", "level", "hand", "turn", "seats", "discards", "wall", "handsPlayed", "handsTotal", "version"}
+STATE_KEYS = {"phase", "seat", "seatWind", "roundWind", "east", "level", "levels", "hand", "turn", "seats", "discards", "wall", "handsPlayed", "handsTotal", "version"}
 TURN_KEYS = {"phase", "current", "pendingTile", "yourTurn"}
 SEAT_KEYS = {"kind", "wind", "score", "concealedCount", "melds", "concealedKongs", "bonus", "discardCount", "calling"}
 RESULT_KEYS = {"kind", "winner", "winningTile", "source", "from", "loose", "lastLiveTile", "seats", "scores", "deltas"}
@@ -214,6 +214,7 @@ def play_mahjong(client: BagiControlClient) -> None:
     expect_error("illegal_action", lambda: client.call("perform_action", {"type": "next_hand"}), "next_hand after the last hand")
 
     check_level(client)
+    check_seat_levels(client)
 
 
 def check_level(client: BagiControlClient) -> None:
@@ -223,6 +224,7 @@ def check_level(client: BagiControlClient) -> None:
     for _ in range(HAND_LIMIT_PER_MATCH):
         state = get_state(client)
         check(state["level"] == EASY_LEVEL, f"the state says level {state['level']} after a reset with {EASY_LEVEL}")
+        check(state["levels"] == [EASY_LEVEL] * SEAT_COUNT, f"the state says levels {state['levels']} after a reset with level {EASY_LEVEL}")
         check(sum(seat["score"] for seat in state["seats"]) == SEAT_COUNT * STARTING_SCORE, "the points of the table do not add up at level 1")
         if state["phase"] == "match_over":
             break
@@ -240,6 +242,40 @@ def check_level(client: BagiControlClient) -> None:
     check(get_state(client)["level"] == EASY_LEVEL, "a reset without a level did not keep the level")
     client.call("reset", {"seed": SEED, "seats": "CCCC", "hands": SHORT_MATCH_HANDS, "level": NORMAL_LEVEL})
     check(get_state(client)["level"] == NORMAL_LEVEL, "the level did not go back to Normal (5)")
+
+
+def check_seat_levels(client: BagiControlClient) -> None:
+    """A level per seat: `levels` is a reset option and in the state (`level` stays, the lowest computer seat's), the match of seats
+    at different levels is played to its end, and a bad `levels`, or both keys, is invalid_params and changes nothing."""
+    levels = [2, 6, 10, 1]
+    client.call("reset", {"seed": SEED, "seats": "CCCC", "hands": SHORT_MATCH_HANDS, "levels": levels})
+    for _ in range(HAND_LIMIT_PER_MATCH):
+        state = get_state(client)
+        check(state["levels"] == levels, f"the state says levels {state['levels']} after a reset with {levels}")
+        check(state["level"] == levels[0], f"the state says level {state['level']}, not that of the lowest computer seat {levels[0]}")
+        check(sum(seat["score"] for seat in state["seats"]) == SEAT_COUNT * STARTING_SCORE, "the points of the table do not add up at mixed levels")
+        if state["phase"] == "match_over":
+            break
+        client.call("perform_action", {"type": "next_hand"})
+    else:
+        raise SmokeFailure(f"the match at levels {levels} did not end in {HAND_LIMIT_PER_MATCH} hands")
+    check(state["handsPlayed"] == SHORT_MATCH_HANDS, f"{state['handsPlayed']} hands played at the end of the match at mixed levels")
+
+    # Bad `levels` change nothing; a reset without the option keeps them, also with the seats of a person (its level is kept)
+    version = client.call("get_state")["version"]
+    for bad in ([1, 2, 3], [1, 2, 3, 4, 5], [0, 5, 5, 5], [5, 5, 5, 11], ["5", 5, 5, 5], [2.5, 5, 5, 5], 5, "5555", None):
+        expect_error("invalid_params", lambda bad=bad: client.call("reset", {"levels": bad}), f"levels {bad!r}")
+    expect_error("invalid_params", lambda: client.call("reset", {"level": 3, "levels": levels}), "level and levels together")
+    check(client.call("get_state")["version"] == version, "a refused reset changed the state")
+    client.call("reset", {"seed": SEED, "seats": "PCCC", "hands": SHORT_MATCH_HANDS})
+    state = get_state(client)
+    check(state["levels"] == levels, f"a reset without levels did not keep them: {state['levels']}")
+    check(state["level"] == levels[1], f"level {state['level']} with seat 0 a person, not that of seat 1 {levels[1]}")
+
+    # `level` sets all four
+    client.call("reset", {"seed": SEED, "seats": "CCCC", "hands": SHORT_MATCH_HANDS, "level": NORMAL_LEVEL})
+    state = get_state(client)
+    check(state["levels"] == [NORMAL_LEVEL] * SEAT_COUNT and state["level"] == NORMAL_LEVEL, "level did not set all four levels")
 
 
 def check_state_is_pushed(client: BagiControlClient) -> None:

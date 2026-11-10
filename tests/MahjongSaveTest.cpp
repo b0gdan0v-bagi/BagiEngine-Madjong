@@ -105,7 +105,7 @@ namespace BECore::Mahjong::Tests {
             int handsPlayed = 0;
             Seat east = kNoSeat;
             std::string hand;
-            ComputerLevel level = kDefaultLevel;
+            SeatLevels levels = UniformLevels(kDefaultLevel);
             SeatSetup seats = kDefaultSeatSetup;
         };
 
@@ -118,7 +118,7 @@ namespace BECore::Mahjong::Tests {
             seen.handsPlayed = table.match.HandsPlayed();
             seen.east = table.match.East();
             seen.hand = Snapshot(table.match.Hand());
-            seen.level = table.session.Level();
+            seen.levels = table.session.Levels();
             seen.seats = table.session.Seats();
             return seen;
         }
@@ -131,7 +131,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(got.handsPlayed, want.handsPlayed) << where;
             EXPECT_EQ(got.east, want.east) << where;
             EXPECT_EQ(got.hand, want.hand) << where;
-            EXPECT_EQ(std::string(LevelText(got.level)), std::string(LevelText(want.level))) << where;
+            EXPECT_EQ(got.levels, want.levels) << where;
             EXPECT_EQ(got.seats, want.seats) << where;
         }
 
@@ -233,7 +233,8 @@ namespace BECore::Mahjong::Tests {
                     text += " " + std::to_string(score);
                 }
                 text += " hands " + std::to_string(table.match.HandsPlayed()) + " version " + std::to_string(session.Version());
-                text += " viewer " + std::to_string(session.Viewer()) + " level " + std::string(LevelText(session.Level())) + " phase " + Name(session.GetPhase());
+                text += " viewer " + std::to_string(session.Viewer()) + " levels " + std::string(LevelText(session.LevelOf(0))) + std::string(LevelText(session.LevelOf(1))) +
+                        std::string(LevelText(session.LevelOf(2))) + std::string(LevelText(session.LevelOf(3))) + " phase " + Name(session.GetPhase());
                 text += " actor " + std::to_string(session.Actor()) + " seats ";
                 for (const SeatKind kind : session.Seats()) {
                     text += kind == SeatKind::Person ? 'P' : 'C';
@@ -365,7 +366,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(busy.table.session.ResumeMatch(WithoutHandsAndEnd(cut), kCCCC, ComputerLevel::Normal).has_value());
         EXPECT_GT(busy.table.session.Version(), before);
         EXPECT_EQ(busy.table.session.Seats(), kCCCC);
-        EXPECT_EQ(Name(busy.table.session.Level()), Name(ComputerLevel::Normal));
+        EXPECT_EQ(busy.table.session.Levels(), UniformLevels(ComputerLevel::Normal));
         EXPECT_EQ(busy.table.session.Viewer(), kNoSeat);
         EXPECT_EQ(busy.table.session.GetPhase(), SessionPhase::HandOver);
         EXPECT_GT(busy.table.log.Events().size(), logged) << "the resumed log reached the sink, from its Start";
@@ -830,7 +831,7 @@ namespace BECore::Mahjong::Tests {
                 want.handsPlayed = recorded.match.HandsPlayed();
                 want.east = recorded.match.East();
                 want.hand = Snapshot(recorded.match.Hand());
-                want.level = recorded.session.Level();
+                want.levels = recorded.session.Levels();
                 want.seats = recorded.session.Seats();
                 ExpectSame(want, Observe(resumed), where);
                 // And the resumed table's own text is the one it was resumed from.

@@ -173,15 +173,15 @@ namespace BECore::Mahjong::Tests {
 
     TEST(TableSessionTest, TheLevelIsNormalByDefaultAndAStartKeepsTheOneItGets) {
         Table table;
-        EXPECT_EQ(table.session.Level(), ComputerLevel::Normal) << "before the first start";
+        EXPECT_EQ(table.session.Levels(), UniformLevels(ComputerLevel::Normal)) << "before the first start";
         ASSERT_NO_FATAL_FAILURE(table.Start(kDefaultSeatSetup));
-        EXPECT_EQ(table.session.Level(), kDefaultLevel) << "a start with no level";
+        EXPECT_EQ(table.session.Levels(), UniformLevels(kDefaultLevel)) << "a start with no level";
         for (const ComputerLevel level : kAllLevels) {
             ASSERT_NO_FATAL_FAILURE(table.StartAt(level));
-            EXPECT_EQ(table.session.Level(), level) << Name(level);
+            EXPECT_EQ(table.session.Levels(), UniformLevels(level)) << Name(level);
         }
         ASSERT_NO_FATAL_FAILURE(table.Start(kAllComputers));
-        EXPECT_EQ(table.session.Level(), kDefaultLevel) << "the level is not kept from the match before";
+        EXPECT_EQ(table.session.Levels(), UniformLevels(kDefaultLevel)) << "the level is not kept from the match before";
     }
 
     TEST(TableSessionTest, ARefusedStartKeepsTheOldLevelAndTheMatch) {
@@ -193,7 +193,7 @@ namespace BECore::Mahjong::Tests {
         const MatchStatus refused = table.session.StartMatch(bad, kSeed + 1, kAllComputers, ComputerLevel::Normal);
         ASSERT_FALSE(refused.has_value());
         EXPECT_EQ(refused.error(), MatchError::BadSettings);
-        EXPECT_EQ(table.session.Level(), ComputerLevel::Easy);
+        EXPECT_EQ(table.session.Levels(), UniformLevels(ComputerLevel::Easy));
         EXPECT_EQ(State(table), before);
     }
 
@@ -210,12 +210,9 @@ namespace BECore::Mahjong::Tests {
         }
         EXPECT_EQ(table.session.LevelOf(kNoSeat), kDefaultLevel);
         EXPECT_EQ(table.session.LevelOf(kSeatCount), kDefaultLevel);
-        EXPECT_EQ(table.session.Level(), ComputerLevel{3}) << "the level of the lowest computer seat";
         ASSERT_TRUE(table.session.StartMatch(ShortMatch(), kSeed, PersonAt(2), levels).has_value());
-        EXPECT_EQ(table.session.Level(), ComputerLevel{1});
         ASSERT_TRUE(table.session.StartMatch(ShortMatch(), kSeed, kAllPeople, levels).has_value());
         EXPECT_EQ(table.session.Levels(), levels);
-        EXPECT_EQ(table.session.Level(), kDefaultLevel) << "no computer seat";
 
         ASSERT_TRUE(table.session.StartMatch(ShortMatch(), kSeed, kAllComputers, ComputerLevel{4}).has_value());
         EXPECT_EQ(table.session.Levels(), UniformLevels(ComputerLevel{4})) << "the one-level start is UniformLevels";
@@ -284,7 +281,6 @@ namespace BECore::Mahjong::Tests {
 
         ASSERT_TRUE(table.session.ResumeMatch(log.Events(), kDefaultSeatSetup, levels).has_value());
         EXPECT_EQ(table.session.Levels(), levels) << "the person seat's level too";
-        EXPECT_EQ(table.session.Level(), ComputerLevel{2});
         ASSERT_TRUE(table.session.ResumeMatch(log.Events(), kAllComputers, ComputerLevel{7}).has_value());
         EXPECT_EQ(table.session.Levels(), UniformLevels(ComputerLevel{7}));
     }
@@ -319,7 +315,7 @@ namespace BECore::Mahjong::Tests {
             MatchLog log;
             table.session.SetLogSink(&log);
             ASSERT_NO_FATAL_FAILURE(table.StartAt(level));
-            EXPECT_EQ(table.session.Level(), level) << Name(level);
+            EXPECT_EQ(table.session.Levels(), UniformLevels(level)) << Name(level);
             for (int actions = 0; table.session.GetPhase() != SessionPhase::MatchOver; ++actions) {
                 ASSERT_LT(actions, kActionLimitPerMatch) << Name(level);
                 if (table.session.GetPhase() == SessionPhase::HandOver) {

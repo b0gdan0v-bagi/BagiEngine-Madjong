@@ -339,7 +339,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(second->GetSeats(), (SeatSetup{SeatKind::Person, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer})) << "the panel shows the match behind it";
         EXPECT_EQ(second->GetLevel(), ComputerLevel::Easy);
         EXPECT_EQ(second->GetSettings().handsPerMatch, kShortMatchHands);
-        EXPECT_EQ(second->GetSession().Level(), ComputerLevel::Easy);
+        EXPECT_EQ(second->GetSession().Levels(), UniformLevels(ComputerLevel::Easy));
     }
 
     TEST_F(MahjongSaveGameTest, AClaimWindowIsResumedAsItWas) {

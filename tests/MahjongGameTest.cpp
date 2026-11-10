@@ -187,7 +187,7 @@ namespace BECore::Mahjong::Tests {
         MahjongGame* game = MahjongGame::GetActive();
         ASSERT_NE(game, nullptr);
         EXPECT_EQ(game->GetLevel(), ComputerLevel::Normal);
-        EXPECT_EQ(game->GetSession().Level(), ComputerLevel::Normal);
+        EXPECT_EQ(game->GetSession().Levels(), UniformLevels(ComputerLevel::Normal));
 
         for (const ComputerLevel level : kAllLevels) {
             game->SetLevel(level);
@@ -195,13 +195,13 @@ namespace BECore::Mahjong::Tests {
 
             // StartMatch reaches the session with the level, a Reset and a second StartMatch keep it
             ASSERT_TRUE(game->StartMatch(kSeed).has_value());
-            EXPECT_EQ(game->GetSession().Level(), level) << LevelText(level);
+            EXPECT_EQ(game->GetSession().Levels(), UniformLevels(level)) << LevelText(level);
             game->Reset();
             EXPECT_EQ(game->GetLevel(), level) << LevelText(level);
-            EXPECT_EQ(game->GetSession().Level(), level) << LevelText(level);
+            EXPECT_EQ(game->GetSession().Levels(), UniformLevels(level)) << LevelText(level);
             ASSERT_TRUE(game->StartMatch(kSeed + 1).has_value());
             EXPECT_EQ(game->GetLevel(), level) << LevelText(level);
-            EXPECT_EQ(game->GetSession().Level(), level) << LevelText(level);
+            EXPECT_EQ(game->GetSession().Levels(), UniformLevels(level)) << LevelText(level);
         }
     }
 
@@ -237,7 +237,7 @@ namespace BECore::Mahjong::Tests {
         game->SetLevel(ComputerLevel::Normal);
         ASSERT_FALSE(game->StartMatch(kSeed).has_value());
 
-        EXPECT_EQ(game->GetSession().Level(), ComputerLevel::Easy) << "the match in play keeps the level it was started with";
+        EXPECT_EQ(game->GetSession().Levels(), UniformLevels(ComputerLevel::Easy)) << "the match in play keeps the level it was started with";
         EXPECT_EQ(game->GetLevel(), ComputerLevel::Normal) << "the setting is the next match's";
     }
 
