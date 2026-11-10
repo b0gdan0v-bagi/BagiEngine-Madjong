@@ -705,6 +705,11 @@ namespace BECore::Mahjong {
         UIVars& vars = CoreManager::GetUIVars();
         const UIStrings& strings = CoreManager::GetUIStrings();
         const PoolString name = "selectedTileText"_intern;
+        // The label `SelectedTile` of the node `Hud` is shown exactly while a tile is selected (this is its only owner)
+        if (tile.IsValid() != _selectedLabelShown) {
+            _selectedLabelShown = tile.IsValid();
+            UICanvasComponent::SetElementVisibleByName(GetScene(), "SelectedTile"_intern, _selectedLabelShown);
+        }
         if (tile == _textTile && (!tile.IsValid() || strings.GetVersion() == _textStringsVersion) && vars.Has(name)) {
             return;
         }

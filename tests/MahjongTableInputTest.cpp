@@ -273,6 +273,27 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Var("selectedTileText"), "");
     }
 
+    TEST_F(MahjongTableInputTest, TheNameLabelIsShownExactlyWhileATileIsSelectedAndSaysItInBothLanguages) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup));
+        const int index = IndexOf(kSeat0, T("9p"));
+        EXPECT_FALSE(OnScreen("Hud", "SelectedTile"));
+
+        TapHandTile(index);
+        Draw();
+        ASSERT_TRUE(OnScreen("Hud", "SelectedTile"));
+        EXPECT_EQ(Var("selectedTileText"), "Selected: 9 Dots");
+
+        ASSERT_TRUE(_game->SetLanguage("ru"_intern));
+        Draw();
+        EXPECT_TRUE(OnScreen("Hud", "SelectedTile"));
+        EXPECT_EQ(Var("selectedTileText").find("Выбрано: "), 0u);
+        ASSERT_TRUE(_game->SetLanguage("en"_intern));
+
+        Tap(5.0f, 5.0f);
+        Draw();
+        EXPECT_FALSE(OnScreen("Hud", "SelectedTile")) << "gone with the selection";
+    }
+
     TEST_F(MahjongTableInputTest, ATapOnAnotherTileMovesTheSelectionAndOnlyTheSelectedOneDiscards) {
         ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup));
         const int first = IndexOf(kSeat0, T("1p"));

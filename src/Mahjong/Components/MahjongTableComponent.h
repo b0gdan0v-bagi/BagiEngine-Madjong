@@ -110,8 +110,12 @@ namespace BECore::Mahjong {
      * selects the tile (it is drawn raised by `kSelectedTileRise`, on top of the bonus row, with its marks and the hints' marks) and a click on
      * the same tile discards it (`StepTap`); another tile moves the selection, a click on no tile clears it. The selection holds only in the
      * discard turn it was made in: it is gone when the turn, the hand or the tile at that index changes, in a claim window, under the cover, while
-     * the table is paused and when the regime is off. `selectedTileText` is the name of the selected tile, empty with none. The
-     * other actions are the buttons of the canvas `Actions` (`Table/ActionButtons.h`; `ActionsCompact` holds the same buttons by name for the windows where those would be under the
+     * the table is paused and when the regime is off.
+     *
+     * `selectedTileText` is the name of the selected tile, empty with none; the label `SelectedTile` of the node `Hud` shows it and is shown
+     * by this component exactly while a tile is selected.
+     *
+     * The other actions are the buttons of the canvas `Actions` (`Table/ActionButtons.h`; `ActionsCompact` holds the same buttons by name for the windows where those would be under the
      * touch minimum and the bar under the table holds the row at its height there, `NeedsCompactActions`, and exactly one of the two is shown; the node `HintsButton`, the button of the hints on the
      * table, is shown with `Actions`, and `ActionsCompact` holds a `HintButton` of its own), shown from `LegalActions` every frame
      * (`SetElementVisibleByName`; each button says a word of the string table in the file (`{#button.<Kind>}`) and the tiles of its action are `UIImage` children whose sprite the component sets), and
@@ -289,6 +293,7 @@ namespace BECore::Mahjong {
         uint64_t _selectedVersion = 0;      // the version of the session
         SeenHand _selectedHand;             // and the hand and match
         std::optional<int> _drawnSelected;  // the tile the last `OnDraw` raised
+        bool _selectedLabelShown = false;   // the label `SelectedTile` is shown
         Tile _textTile;                     // the tile `selectedTileText` names now (invalid for none) and the string table version it was worded at
         uint64_t _textStringsVersion = 0;
         DeclareTurn _declareTurn;     // the turn `_declareNext` was set on
