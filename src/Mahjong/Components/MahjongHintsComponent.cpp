@@ -31,6 +31,9 @@ namespace BECore::Mahjong {
         constexpr eastl::string_view kHintButton = "HintButton";
         constexpr eastl::string_view kAdviceLabel = "AdviceText";
         constexpr eastl::string_view kAdviceVar = "hintAdvice";
+        // The panel of the reasons (node `HintsWhy`): its plate and the variable of line `i` (`hintWhy<i>`, `kMaxReasonLines` of them)
+        constexpr eastl::string_view kWhyPanel = "WhyPanel";
+        constexpr eastl::string_view kWhyVarPrefix = "hintWhy";
 
         constexpr float kMarkGap = 1.0f;         ///< between the tile and its bar
         constexpr float kMarkThickness = 4.0f;   ///< the bar, and below the hand there are 8 units to the edge of the view
@@ -154,6 +157,9 @@ namespace BECore::Mahjong {
 
     void MahjongHintsComponent::DropAdvice() {
         _advice.reset();
+        _explained.reset();
+        _whyOpen = false;
+        _whyDirty = false;
         _adviceView = TableView{};
         _adviceDirty = false;
     }
@@ -178,6 +184,30 @@ namespace BECore::Mahjong {
                 vars.Set(NameOf(kAdviceVar), eastl::string_view());  // nothing of the last advice stays in a variable
             }
             UICanvasComponent::SetElementVisibleByName(scene, NameOf(kAdviceLabel), show);
+        }
+        PushWhy(show && _whyOpen && _explained.has_value());
+    }
+
+    void MahjongHintsComponent::PushWhy(bool open) {
+        UIVars& vars = CoreManager::GetUIVars();
+        const UIStrings& strings = CoreManager::GetUIStrings();
+        if (open && (!_whyShown || _whyDirty || strings.GetVersion() != _whyStringsVersion)) {
+            _whyDirty = false;
+            _whyStringsVersion = strings.GetVersion();
+            const eastl::vector<eastl::string> lines = ReasonLines(strings, _adviceView, *_explained);
+            for (size_t i = 0; i < kMaxReasonLines; ++i) {
+                vars.Set(IndexedName(kWhyVarPrefix, static_cast<int>(i)), i < lines.size() ? eastl::string_view(lines[i]) : eastl::string_view());
+            }
+        }
+        if (open != _whyShown) {
+            _whyShown = open;
+            if (!open) {
+                // Nothing of the last advice stays in a variable
+                for (size_t i = 0; i < kMaxReasonLines; ++i) {
+                    vars.Set(IndexedName(kWhyVarPrefix, static_cast<int>(i)), eastl::string_view());
+                }
+            }
+            UICanvasComponent::SetElementVisibleByName(GetScene(), NameOf(kWhyPanel), open);
         }
     }
 
@@ -227,10 +257,19 @@ namespace BECore::Mahjong {
             if (!view) {
                 return;
             }
-            _advice = AdviceFor(*view);
-            _adviceKey = KeyOf(game);
+            const Key key = KeyOf(game);
+            if (_advice && key == _adviceKey && _explained) {
+                // The advice of this table is up: a press opens the reasons, the next one closes them
+                _whyOpen = !_whyOpen;
+                _whyDirty = true;
+                return;
+            }
+            _explained = ExplainAdviceFor(*view);
+            _advice = _explained ? std::optional<HandAction>(_explained->Action()) : AdviceFor(*view);
+            _adviceKey = key;
             _adviceView = std::move(*view);
             _adviceDirty = true;
+            _whyOpen = false;
             return;
         }
         if (action != kSetHintsAction || !game->IsOptionsOpen()) {
