@@ -44,6 +44,26 @@ namespace BECore::Mahjong::Tests {
     /// Actions of a hand played by computers; a loop fails fast.
     inline constexpr int kActionLimit = 600;
 
+    /// The view variants the shipped scene declares for the portrait shape: one view of `kPortraitViewWidth` x `kPortraitViewHeight` for an
+    /// output with `orientation:portrait` (`MahjongSceneFilesTest` holds the file to it). The windows of the tests pick their view from it.
+    inline const std::vector<SceneViewVariant>& PortraitViewVariants() {
+        static const std::vector<SceneViewVariant> variants = [] {
+            SceneViewVariant portrait;
+            portrait.name = "Portrait"_intern;
+            portrait.when.orientation = UIOrientation::Portrait;
+            portrait.width = kPortraitViewWidth;
+            portrait.height = kPortraitViewHeight;
+            return std::vector<SceneViewVariant>{portrait};
+        }();
+        return variants;
+    }
+
+    /// The view the scene draws with in an output of this size (`SceneViewSelector::Pick` over `PortraitViewVariants`).
+    inline ActiveSceneView ViewOfOutput(float outputWidth, float outputHeight) {
+        const auto& variants = PortraitViewVariants();
+        return SceneViewSelector::Pick(kViewWidth, kViewHeight, eastl::span<const SceneViewVariant>(variants.data(), variants.size()), outputWidth, outputHeight);
+    }
+
     /// The tile at `part` of a meld as laid, worked out here and not taken from the component.
     inline Tile LaidTile(const Meld& meld, int part) {
         return meld.kind == MeldKind::Chow ? Tile(static_cast<uint8_t>(meld.first.Id() + part)) : meld.first;
@@ -363,6 +383,18 @@ namespace BECore::Mahjong::Tests {
             return {};
         }
 
+        /// Lays the canvases of these nodes out as `window` shows them (`LayOutInWindow` in the view of the window's shape, without the insets:
+        /// the table is a fixed design that the safe area does not move), so their elements are where the layout of the window's table
+        /// (`TableLayoutFor`) can be compared with them. The next `Draw` lays them out for the fixture's output again. `Window` is `MatrixWindow`.
+        template <class Window>
+        void LayOutOnTheTable(const std::vector<const char*>& nodes, const Window& window) {
+            for (const char* node : nodes) {
+                const auto canvas = Canvas(node);
+                ASSERT_TRUE(canvas) << node;
+                LayOutInWindow(*canvas, WithoutInsets(window));
+            }
+        }
+
         /// The UI element `element` of the canvas on the node `node`, laid out by the last draw; null when there is none.
         UIElement* Element(const char* node, const char* element) const {
             const auto canvas = Canvas(node);
@@ -398,7 +430,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The size matrix on a canvas of the scene, as Match3's HUD test does it. `minTouchSize`: the least size of a control as seen.
-        void ExpectPassesTheMatrix(const char* node, float minTouchSize) {
+        /// `portraitViews` false keeps the fixed landscape view in every case (a `SceneView` canvas with no portrait variant yet).
+        void ExpectPassesTheMatrix(const char* node, float minTouchSize, bool portraitViews = true) {
             auto canvas = Canvas(node);
             ASSERT_TRUE(canvas) << node;
             canvas->UpdateLayout(kViewWidth, kViewHeight);  // the reflected fields of the component reach the layout on its first update
@@ -408,7 +441,13 @@ namespace BECore::Mahjong::Tests {
             UILayoutValidatorOptions options;
             options.minTouchSize = minTouchSize;
 
-            const auto failures = ValidateOnMatrix(canvas->GetLayout(), options, base);
+            // A `SceneView` canvas is laid out against the view each case of the matrix gets from the scene's view variants
+            const auto& variants = PortraitViewVariants();
+            UIMatrixViews views;
+            if (portraitViews) {
+                views = {kViewWidth, kViewHeight, eastl::span<const SceneViewVariant>(variants.data(), variants.size())};
+            }
+            const auto failures = ValidateOnMatrix(canvas->GetLayout(), options, base, views);
 
             EXPECT_TRUE(failures.empty()) << node << ": " << DescribeMatrixFailures(failures).c_str();
         }

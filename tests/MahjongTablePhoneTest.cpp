@@ -72,6 +72,9 @@ namespace BECore::Mahjong::Tests {
         size_t phones = 0;
         size_t desktops = 0;
         ForEachTableWindow([&](const MatrixWindow& window) {
+            if (ShapeOf(window) == TableShape::Portrait) {
+                return;  // WP 5: the component draws the portrait table once the scene has the portrait view
+            }
             SetWindow(*_renderer, window);
             Draw();
             const TableLayout expected = TableLayoutFor(window, InputOf(Hand()));
@@ -79,12 +82,17 @@ namespace BECore::Mahjong::Tests {
             EXPECT_TRUE(SameSlots(_table->GetLayout(), expected)) << window.label.c_str() << ": the component draws the layout of the rule's profile";
             (_table->GetLayout().profile.phone ? phones : desktops)++;
         });
-        EXPECT_GT(phones, PhoneWindows().size() - 1) << "the phone windows and the short windows of the matrix";
+        const size_t landscapePhones =
+            static_cast<size_t>(eastl::count_if(PhoneWindows().begin(), PhoneWindows().end(), [](const MatrixWindow& window) { return ShapeOf(window) == TableShape::Landscape; }));
+        EXPECT_GT(phones, landscapePhones - 1) << "the phone windows and the short windows of the matrix";
         EXPECT_GT(desktops, 0u) << "the large windows of the matrix keep the desktop table";
     }
 
     TEST_F(MahjongTablePhoneTest, ThePhoneHandIsATouchTargetInEveryPhoneWindow) {
         for (const MatrixWindow& window : PhoneWindows()) {
+            if (ShapeOf(window) == TableShape::Portrait) {
+                continue;  // the portrait table has no phone profile: its hand is one row, tapped (WP 5)
+            }
             ASSERT_NO_FATAL_FAILURE(StartIn(window));
             const TableLayout& layout = _table->GetLayout();
             ASSERT_TRUE(layout.profile.phone) << window.label.c_str();
@@ -103,6 +111,9 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongTablePhoneTest, AClickOnTheMiddleOfAPhoneTileDiscardsThatTile) {
         for (const MatrixWindow& window : PhoneWindows()) {
+            if (ShapeOf(window) == TableShape::Portrait) {
+                continue;  // WP 5
+            }
             for (int index = 0; index < kDealtTiles + 1; ++index) {
                 ASSERT_NO_FATAL_FAILURE(StartIn(window));
                 ASSERT_EQ(_game->GetSession().Actor(), kSeat0);
@@ -122,10 +133,8 @@ namespace BECore::Mahjong::Tests {
         constexpr float kPlatePad = 8.0f;
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
-        const auto canvas = Canvas("SeatPlates");
-        ASSERT_TRUE(canvas);
-        canvas->UpdateLayout(kViewWidth, kViewHeight);
         ForEachTableWindow([&](const MatrixWindow& window) {
+            LayOutOnTheTable({"SeatPlates"}, window);
             const TableLayout layout = MakeWorstCaseTableLayout(0, window);
             for (int position = 0; position < kSeatCount; ++position) {
                 const UIElement* name = Element("SeatPlates", Format("PlateName{}", position).c_str());

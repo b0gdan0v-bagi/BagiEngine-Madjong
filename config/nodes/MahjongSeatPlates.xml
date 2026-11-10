@@ -6,7 +6,9 @@
   3 left (the variables plateName0..3 that MahjongHudComponent publishes follow the seat that sits there). Text only, no control. A
   SceneView canvas whose labels ignore the safe area like Actions: the plates are on the table, so the words stay on them. One label of
   136 x 32 per plate (the plate is 152 x 80 with a padding of 8, at its top): the labels are direct elements of the canvas, because the
-  validator checks the children of a stack against the safe area whatever the stack says.
+  validator checks the children of a stack against the safe area whatever the stack says. The portrait variant puts each label on the plate of
+  the portrait layout (the three opponents' plates in one row under the discard blocks, the viewer's at the foot: x 112 / 284 / 456 at y 260
+  and x 12 at y 1028, 8 in from the plate's corner).
 -->
 <node name="SeatPlates" layer="10">
   <components>
@@ -17,6 +19,16 @@
         <element type="UILabel" name="PlateName2" anchor="TopLeft" ignoreSafeArea="true" x="416" y="104" width="136" height="32" text="{plateName2}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
         <element type="UILabel" name="PlateName3" anchor="TopLeft" ignoreSafeArea="true" x="120" y="192" width="136" height="32" text="{plateName3}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
       </elements>
+      <variants>
+        <variant when="orientation:portrait">
+          <overrides>
+            <set element="PlateName0" x="20" y="1036" />
+            <set element="PlateName1" x="464" y="268" />
+            <set element="PlateName2" x="292" y="268" />
+            <set element="PlateName3" x="120" y="268" />
+          </overrides>
+        </variant>
+      </variants>
     </component>
   </components>
 </node>

@@ -265,7 +265,7 @@ namespace BECore::Mahjong::Tests {
                     SetShown(kind, true);
                 }
                 // The touch size is held where the rule keeps `Actions` (but for the windows of 640 x 480 and 720 x 480, see `ActionsMayBeSmall`); elsewhere `ActionsCompact` holds it (below)
-                ExpectMatrixExceptTouchWhere(*canvas, "Actions", EngineTouchMinimum(), ActionsMayBeSmall);
+                ExpectMatrixExceptTouchWhere(*canvas, "Actions", EngineTouchMinimum(), ActionsMayBeSmall, false);
                 for (const Output& output : kOutputs) {
                     ExpectWordsFit("Actions", output.width, output.height, 0.0f);
                 }
@@ -490,7 +490,7 @@ namespace BECore::Mahjong::Tests {
                     SetShown(kind, true);
                 }
                 // The touch size is held where the rule keeps `Actions` (but for the windows of 640 x 480 and 720 x 480, see `ActionsMayBeSmall`); elsewhere `ActionsCompact` holds it (below)
-                ExpectMatrixExceptTouchWhere(*canvas, "Actions", EngineTouchMinimum(), ActionsMayBeSmall);
+                ExpectMatrixExceptTouchWhere(*canvas, "Actions", EngineTouchMinimum(), ActionsMayBeSmall, false);
                 for (const Output& output : kOutputs) {
                     ExpectWordsFit("Actions", output.width, output.height, 0.0f);
                 }
@@ -508,7 +508,7 @@ namespace BECore::Mahjong::Tests {
         // ... nor over a tile or a plate of the table: a tooltip in the gutter, one grid unit clear of the plates
         // in the desktop layout and in every window of the table, the phone layouts included (`ActionsCompact` holds the buttons where `Actions` is hidden, and its `Hint` with them)
         ForEachTableWindow([&](const MatrixWindow& window) {
-            if (IsCompactWindow(window)) {
+            if (IsCompactWindow(window) || ShapeOf(window) == TableShape::Portrait) {  // WP 4: `Actions` has no portrait variant yet
                 return;
             }
             const TableLayout layout = MakeWorstCaseTableLayout(0, window);

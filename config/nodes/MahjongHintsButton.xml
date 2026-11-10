@@ -7,7 +7,9 @@
   the top left corner; the label AdviceText of Hints lies right of it, and like it the button keeps to the safe area), shown by
   MahjongTableComponent exactly where Actions is shown and hidden where ActionsCompact is, which holds a HintButton of its own in its
   row, 100 wide (a Screen canvas, touch minimum met). MahjongHintsComponent shows and hides the element by name, so both
-  follow. It comes after Hints (layer 6) so that it lies over the label's plate.
+  follow. It comes after Hints (layer 6) so that it lies over the label's plate. In a portrait view it is at x 360, y 836, between the
+  waiting row and the label of Hints, and 68 high like the buttons of Actions there (kPortraitActionButtonHeight): the view is 720 wide,
+  so it is a touch target wherever Actions is.
 -->
 <node name="HintsButton" layer="6">
   <components>
@@ -15,6 +17,13 @@
       <elements>
         <element type="UIButton" name="HintButton" anchor="TopLeft" visible="false" x="96" y="92" width="120" height="56" text="{#hints.adviseButton}" fontSize="22" action="MahjongHintAdvice" color="70,70,100,255" />
       </elements>
+      <variants>
+        <variant when="orientation:portrait">
+          <overrides>
+            <set element="HintButton" x="360" y="836" height="68" />
+          </overrides>
+        </variant>
+      </variants>
     </component>
   </components>
 </node>
