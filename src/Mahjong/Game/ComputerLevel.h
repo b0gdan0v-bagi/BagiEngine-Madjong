@@ -86,8 +86,9 @@ namespace BECore::Mahjong {
     /// The base of a percentage: a roll is one `MahjongRng::Below(kPercentBase)` against the percent.
     inline constexpr int kPercentBase = 100;
 
-    /// The search knobs of `LevelProfile` (the search player of `ComputerSearch.h`; **no level turns it on**, `docs/bot-search.md`, "Levels"): the candidates a search decision looks at when nothing
-    /// else is said (neutral while `searchWorlds` is 0), and the largest value of each knob (what the arena accepts from the command line).
+    /// The search knobs of `LevelProfile` (the search player of `ComputerSearch.h`; **no level turns it on**, `docs/bot-search.md`,
+    /// "Levels"): the candidates a search decision looks at when nothing else is said (neutral while `searchWorlds` is 0), and the
+    /// largest value of each knob (what the arena accepts from the command line).
     inline constexpr int kSearchDefaultCandidates = 4;
     inline constexpr int kSearchMaxWorlds = 4096;
     inline constexpr int kSearchMaxCandidates = 12;

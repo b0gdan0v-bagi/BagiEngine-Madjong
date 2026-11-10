@@ -5,13 +5,18 @@ against Normal with the bot arena (`docs/bot-arena.md`). This page is the record
 found, the numbers, the decision rule applied to them, and the verdict. The code is `src/Mahjong/Game/ComputerSearch.{h,cpp}` (the
 chooser), `ComputerWorld.{h,cpp}` (the sample of a hand) and `HandModel::Capture` / `Restore` (a hand rebuilt from plain data); the
 search is a set of knobs of `LevelProfile` (`searchWorlds`, `searchCandidates`, `searchMargin`) that the arena can set
-(`normal:searchWorlds=2`), off in every level that ships.
+(`normal:searchWorlds=2`); no level of the scale turns it on.
 
 **VERDICT: no switch**
 
 The search player does not beat Normal. At the budget the time rule allows it is slightly worse (-3 points a hand, -1.5 points of
 wins, wins significantly below Normal's on both ranges); with 4 times and 16 times the worlds it is level with Normal, within
 intervals that are wide. Section "The rule applied" has the arithmetic, section "What the numbers do and do not show" the limits.
+
+**Verdict of the entry `mahjong-search-levels` (the scale 1..10): no level searches.** No search profile inside the time rule is
+stronger than Normal, and none is a better ladder for levels 2..4 than the skip knobs. So 1..4 are skip-knob profiles (each step
+significantly above the one below on both ranges), 5 is Normal, and 6..10 are Normal placeholders: the scale of strength ends at 5.
+Section "Levels" has the measurements; the top of the scale is the owner's decision.
 
 ## The design
 
@@ -199,9 +204,9 @@ $A --first 30000 --seeds 250  --jobs 14 --others random --focus normal,normal:se
 
 ## What was decided
 
-Outcome B of the plan: **no `Hard` level.** `ComputerLevel` stays Easy and Normal, the match log and the control API are unchanged
-(a level `hard` is still refused). The search stays in the tree as the three knobs of `LevelProfile` (`searchWorlds`,
-`searchCandidates`, `searchMargin`), off in every shipped level, which the arena can set from the command line
+Outcome B of the plan (the first entry): **no `Hard` level**, the match log and the control API unchanged (a level `hard` is still
+refused). The scale has since become 1..10 (`mahjong-search-levels`, "Levels" below), and still no level searches. The search stays
+in the tree as the three knobs of `LevelProfile` (`searchWorlds`, `searchCandidates`, `searchMargin`), off in every level, which the arena can set from the command line
 (`normal:searchWorlds=8`) for the next experiment. `kSearchWorlds`, `kSearchCandidates` and `kSearchMargin` (`ComputerLevel.h`) are
 the budget that fitted the time rule and are used by no level. The Hint advice stays Normal. A search seat plays a whole 4-hand match
 legally in `ComputerMatchTest`, so the code is kept working. The ideas that might make it win are listed under "What would make
@@ -287,7 +292,7 @@ Reading, for the ladder (not yet a decision):
 
 - **The margin is the dial; the worlds are not.** At margin 0 more worlds move the points from -34.7 to -30.0 and the wins not at
   all (-13.3, -13.1, -12.8); at 10 more worlds do not help, the points drift down (-6.8, -10.3, -11.6, within each other's intervals). Only at margin 30 do more worlds
-  bring the player to Normal (-2.8, -1.7, -1.6 points), which is "mostly overrides nothing". So the strength of a search player of
+  bring the player to Normal (-2.8, -1.7, -1.6 points), which is "mostly keeps Normal's own choice". So the strength of a search player of
   this kind is set by how often it overrides Normal at all, and the extra worlds only cost time.
 - **Strength against the skip levels** (wins % and points, exploration): margin 0 (12 %, -30 to -35) lies at level 2 (13.5 %, -31.5);
   margin 10 (19.5 to 21.1 %, -6.8 to -11.6) lies at level 4 (22.0 %, -8.2), above level 3 (17.5 %, -19.9); margin 30 (23.3 to 24.3

@@ -60,7 +60,7 @@ the search player, `searchWorlds` (0..4096, 0 = no search), `searchCandidates` (
 error), see `CLAUDE.md`, "Computer player"; the level's profile is the start and the knobs are set on it). A search seat is slow: one decision
 plays `searchWorlds` x candidates whole hands, so `normal:searchWorlds=2,searchCandidates=3` takes about 49 s on 20 seeds in Debug (one thread). In `--focus` a part with an `=` and no `:` goes on the knobs of the player before it,
 so `normal,easy:skipClaimPercent=20,skipDeclarationPercent=10` is two players. (Hard was removed on the owner's decision and stays removed: the search player of
-`mahjong-bot-search` did not beat Normal, so it is only these knobs, off in every level. Its measurements, its budget and the verdict are in
+`mahjong-bot-search` did not beat Normal, so it is only these knobs; no level of the scale 1..10 uses them. Its measurements, its budget and the verdict are in
 `docs/bot-search.md`.) `random` is the "seek win" seat of `ComputerStrengthTest` (wins when it can, declares when it can, builds a set
 when it can, else any legal action).
 
