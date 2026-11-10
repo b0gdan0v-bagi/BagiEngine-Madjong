@@ -191,7 +191,11 @@ namespace BECore::Mahjong {
     /// The rectangle round the slots of meld `meldIndex` of `seat`; empty when there is none.
     [[nodiscard]] Rect BoundsOfMeld(const TableLayout& layout, Seat seat, int meldIndex);
 
-    /// The index (in the viewer's concealed tiles) of the hand tile at the point (x, y); the later tile where tiles overlap.
+    /// The index (in the viewer's concealed tiles) of the hand tile for a click at the point (x, y). Forgiving: the region is the strip of
+    /// the viewer's hand, from the top of the tiles to the bottom of the view (the margin under them included) and from the left edge of
+    /// the first tile to the right edge of the last; inside it the tile whose horizontal span is nearest x wins (a gap goes to the nearest
+    /// tile; where tiles overlap or on a tie, the later one). Nothing outside the strip (the bonus row lies above it, the melds to its
+    /// right), nothing for a seat that is not the viewer or without hand tiles. The region is the unraised strip.
     [[nodiscard]] std::optional<int> HitHandTile(const TableLayout& layout, float x, float y);
 
 }  // namespace BECore::Mahjong

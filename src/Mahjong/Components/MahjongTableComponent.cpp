@@ -17,6 +17,7 @@
 #include <Mahjong/Table/SeatName.h>
 #include <Mahjong/Table/SeatPlates.h>
 #include <Mahjong/Table/TableLook.h>
+#include <Mahjong/Table/TapSelect.h>
 #include <Mahjong/Table/TileAtlas.h>
 #include <Mahjong/Table/TouchRegime.h>
 #include <Mahjong/Table/UiPalette.h>
@@ -97,6 +98,22 @@ namespace BECore::Mahjong {
                 }
             }
             return std::nullopt;
+        }
+
+        /// The window as the touch rules see it: the layout context of the main window and the touch minimum of the UI settings.
+        struct WindowNumbers {
+            UILayoutContext context;
+            float minTouchSize = 0.0f;
+        };
+        WindowNumbers ReadWindow() {
+            const IRenderer& renderer = *CoreManager::GetRenderer();
+            const UIEnvironment& environment = CoreManager::GetUIEnvironment();
+            return WindowNumbers{environment.MakeContext(CoreManager::GetMainWindow().Get(), renderer.GetOutputWidth(), renderer.GetOutputHeight()), environment.GetSettings().minTouchSize};
+        }
+
+        /// A click that SDL made from a touch or a pen (a real mouse never has these ids).
+        bool IsTouchClick(const SDL_MouseButtonEvent& button) {
+            return button.which == SDL_TOUCH_MOUSEID || button.which == SDL_PEN_MOUSEID;
         }
 
         Faces FacesOf(const TableSession& session) {
@@ -344,10 +361,9 @@ namespace BECore::Mahjong {
 
         // The canvas of the buttons: `Actions` while its buttons are touch targets, else `ActionsCompact` (the same buttons by name); the
         // button of the hints goes with them: `HintsButton` where `Actions` is, its copy in `ActionsCompact` where that is
-        const IRenderer& renderer = *CoreManager::GetRenderer();
-        const UIEnvironment& environment = CoreManager::GetUIEnvironment();
-        const UILayoutContext window = environment.MakeContext(CoreManager::GetMainWindow().Get(), renderer.GetOutputWidth(), renderer.GetOutputHeight());
-        const bool compact = NeedsCompactActions(window.outputWidth, window.outputHeight, window.pixelDensity, environment.GetSettings().minTouchSize, window.userScale);
+        const WindowNumbers numbers = ReadWindow();
+        const UILayoutContext& window = numbers.context;
+        const bool compact = NeedsCompactActions(window.outputWidth, window.outputHeight, window.pixelDensity, numbers.minTouchSize, window.userScale);
         if (compact != _compactActions) {
             _compactActions = compact;
             UICanvasComponent::SetVisibleByName(scene, ActionsNode(), !compact);
@@ -415,7 +431,66 @@ namespace BECore::Mahjong {
         }
     }
 
+    bool MahjongTableComponent::TapToSelect() const {
+        if (!CoreManager::GetRenderer()) {
+            return _touchSeen;
+        }
+        const WindowNumbers numbers = ReadWindow();
+        const UILayoutContext& window = numbers.context;
+        const TableProfile profile = TableProfileFor(window.outputWidth, window.outputHeight, window.pixelDensity, numbers.minTouchSize);
+        return UsesTapToSelect(_touchSeen, window.outputWidth, window.outputHeight, window.pixelDensity, numbers.minTouchSize, profile.handTileW);
+    }
+
+    bool MahjongTableComponent::SelectionHolds(const MahjongGame& game) const {
+        const TableSession& session = game.GetSession();
+        const HandModel& hand = game.GetMatch().Hand();
+        // A selection belongs to one discard turn of one person: a claim window, the cover, the pause and the end of the hand drop it
+        if (!_selected || !PersonActs(game) || hand.GetPhase() != Phase::Discard || session.Version() != _selectedVersion || SeenHandOf(game) != _selectedHand || TurnOf(game) != _selectedTurn) {
+            return false;
+        }
+        const eastl::vector<Tile>& concealed = hand.GetHand(session.Actor()).concealed;
+        return *_selected >= 0 && *_selected < static_cast<int>(concealed.size()) && concealed[static_cast<size_t>(*_selected)] == _selectedTile && TapToSelect();
+    }
+
+    void MahjongTableComponent::RefreshSelection(const MahjongGame* game) {
+        if (_selected && (game == nullptr || !SelectionHolds(*game))) {
+            _selected.reset();
+        }
+    }
+
+    void MahjongTableComponent::TapHandTile(MahjongGame& game, const std::optional<int>& hit) {
+        TableSession& session = game.GetSession();
+        const HandModel& hand = game.GetMatch().Hand();
+        const TapOutcome outcome = StepTap(_selected, hit, TapToSelect());
+        switch (outcome.action) {
+            case TapAction::Nothing:
+                break;
+            case TapAction::Clear:
+                _selected.reset();
+                break;
+            case TapAction::Select:
+                // Only a discard turn has a tile to pick; a claim window has none to raise
+                if (hand.GetPhase() == Phase::Discard) {
+                    _selected = outcome.index;
+                    _selectedTile = hand.GetHand(session.Actor()).concealed[static_cast<size_t>(outcome.index)];
+                    _selectedTurn = TurnOf(game);
+                    _selectedVersion = session.Version();
+                    _selectedHand = SeenHandOf(game);
+                }
+                break;
+            case TapAction::Discard:
+                if (session.PerformPerson(HandAction::MakeDiscard(hand.GetHand(session.Actor()).concealed[static_cast<size_t>(outcome.index)], _declareNext)).has_value()) {
+                    _declareNext = false;
+                    _selected.reset();
+                }  // else the click changes nothing: a tile that cannot declare while the flag is on, or the model moved on since the draw
+                break;
+        }
+    }
+
     void MahjongTableComponent::OnMouseDown(const SDLEvents::MouseButtonDownEvent& event) {
+        if (IsTouchClick(event.button)) {
+            _touchSeen = true;
+        }
         if (event.button.button != SDL_BUTTON_LEFT) {
             return;
         }
@@ -423,20 +498,15 @@ namespace BECore::Mahjong {
         if (game == nullptr) {
             return;
         }
+        RefreshSelection(game);
         const std::optional<int> hit = HitHandTile(_shown.layout, GetScene().ScreenToSceneX(event.button.x), GetScene().ScreenToSceneY(event.button.y));
-        if (!hit) {
-            return;
-        }
-        TableSession& session = game->GetSession();
-        const Seat actor = session.Actor();
+        const Seat actor = game->GetSession().Actor();
         const PlayerHand& held = game->GetMatch().Hand().GetHand(actor);
         // The layout is the last frame's: it has to be of this hand
-        if (_shown.layout.viewer != actor || *hit < 0 || *hit >= static_cast<int>(held.concealed.size())) {
+        if (hit && (_shown.layout.viewer != actor || *hit < 0 || *hit >= static_cast<int>(held.concealed.size()))) {
             return;
         }
-        if (session.PerformPerson(HandAction::MakeDiscard(held.concealed[*hit], _declareNext)).has_value()) {
-            _declareNext = false;
-        }  // else the click changes nothing: a tile that cannot declare while the flag is on, or the model moved on since the draw
+        TapHandTile(*game, hit);
     }
 
     void MahjongTableComponent::OnAction(const InputEvents::ActionEvent& event) {
@@ -594,6 +664,7 @@ namespace BECore::Mahjong {
             return;
         }
         _speed = game->GetAnimationSpeed();
+        RefreshSelection(game);
         if (_highlightLeft > 0.0f && !_highlightWaits && TableIsLive(*game)) {
             _highlightLeft = eastl::max(0.0f, _highlightLeft - event.deltaTime);
         }
@@ -641,6 +712,24 @@ namespace BECore::Mahjong {
         HoldScoreTableIfBeaten(*game, serialBefore);
     }
 
+    void MahjongTableComponent::PublishSelectedText(Tile tile) {
+        UIVars& vars = CoreManager::GetUIVars();
+        const UIStrings& strings = CoreManager::GetUIStrings();
+        const PoolString name = "selectedTileText"_intern;
+        // The label `SelectedTile` of the node `Hud` is shown exactly while a tile is selected (this is its only owner)
+        if (tile.IsValid() != _selectedLabelShown) {
+            _selectedLabelShown = tile.IsValid();
+            UICanvasComponent::SetElementVisibleByName(GetScene(), "SelectedTile"_intern, _selectedLabelShown);
+        }
+        if (tile == _textTile && (!tile.IsValid() || strings.GetVersion() == _textStringsVersion) && vars.Has(name)) {
+            return;
+        }
+        _textTile = tile;
+        _textStringsVersion = strings.GetVersion();
+        const eastl::string text = tile.IsValid() ? SelectedTileText(strings, tile) : eastl::string();
+        vars.Set(name, eastl::string_view(text));
+    }
+
     void MahjongTableComponent::SetAtlasTexture(IntrusivePtr<ITexture> texture) {
         _atlas = ResourceHandle<ITexture>(std::move(texture));
     }
@@ -672,12 +761,15 @@ namespace BECore::Mahjong {
         const TableSnapshot before = eastl::move(_shown);
         _shown = TableSnapshot{};
         _chowTakes = ChowTakes{};
+        _drawnSelected.reset();
         const MahjongGame* game = MahjongGame::GetActive();
         if (game != nullptr) {
             _speed = game->GetAnimationSpeed();
         }
         PublishScreen(game);
+        RefreshSelection(game);
         if (game == nullptr || game->GetMatch().GetPhase() == MatchPhase::NotStarted) {
+            PublishSelectedText(Tile{});
             EndFlights();
             return;
         }
@@ -707,6 +799,11 @@ namespace BECore::Mahjong {
                 }
             }
         }
+        // The selected tile (a tap in the touch regime) is the viewer's own and drawn raised, in a hand that is face up
+        if (_selected && IsSeat(bottom) && PersonActs(*game) && session.Actor() == bottom && faces.Shows(bottom)) {
+            _drawnSelected = _selected;
+        }
+        PublishSelectedText(_drawnSelected ? _selectedTile : Tile{});
         // The tile the viewer has just drawn is tinted in its place, only in a hand that is face up: under the cover and for a spectator
         // nothing marks it (and the layout is the same plain row either way)
         const int drawnIndex = IsSeat(bottom) && session.GetPhase() == SessionPhase::Playing && faces.Shows(bottom) ? DrawnIndexOf(hand, bottom) : -1;
@@ -927,10 +1024,21 @@ namespace BECore::Mahjong {
             }
             return nullptr;
         };
+        // The raised tile is drawn after the other slots: it rises over the bonus row above the hand, which comes later in the layout
+        const TileSlot* raised = nullptr;
         for (const TileSlot& slot : layout.slots) {
-            if (flightOf(slot) == nullptr) {
-                drawSlot(slot, slot.rect, PlacementOf(slot.rect, slot.rotation));
+            if (flightOf(slot) != nullptr) {
+                continue;
             }
+            if (_drawnSelected && slot.role == SlotRole::HandTile && slot.seat == bottom && slot.index == *_drawnSelected) {
+                raised = &slot;
+                continue;
+            }
+            drawSlot(slot, slot.rect, PlacementOf(slot.rect, slot.rotation));
+        }
+        if (raised != nullptr) {
+            const Rect lifted = RaisedRect(raised->rect);
+            drawSlot(*raised, lifted, PlacementOf(lifted, raised->rotation));
         }
         if (!_flights.empty()) {
             const float progress = Ease(kTileFlightEase, _flightSeconds > 0.0f ? _flightElapsed / Seconds(_flightSeconds) : 1.0f);

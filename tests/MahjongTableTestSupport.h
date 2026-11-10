@@ -49,8 +49,10 @@ namespace BECore::Mahjong::Tests {
         return meld.kind == MeldKind::Chow ? Tile(static_cast<uint8_t>(meld.first.Id() + part)) : meld.first;
     }
 
-    inline SDL_MouseButtonEvent MouseButton(float x, float y, bool down) {
+    /// A left button event at a point; `which` is the device, `SDL_TOUCH_MOUSEID` for a click SDL made from a touch (0 is a mouse).
+    inline SDL_MouseButtonEvent MouseButton(float x, float y, bool down, SDL_MouseID which = 0) {
         SDL_MouseButtonEvent event{};
+        event.which = which;
         event.type = down ? SDL_EVENT_MOUSE_BUTTON_DOWN : SDL_EVENT_MOUSE_BUTTON_UP;
         event.button = SDL_BUTTON_LEFT;
         event.down = down;
@@ -305,10 +307,15 @@ namespace BECore::Mahjong::Tests {
 
         /// A left click (press and release) at a point of the view through the engine's input path: a canvas that takes it consumes
         /// it, otherwise it reaches the table. True when a canvas took the press.
-        bool Click(float x, float y) {
-            const bool taken = CoreManager::GetUIInput().DispatchMouseButtonDown(MouseButton(x, y, true));
-            CoreManager::GetUIInput().DispatchMouseButtonUp(MouseButton(x, y, false));
+        bool Click(float x, float y, SDL_MouseID which = 0) {
+            const bool taken = CoreManager::GetUIInput().DispatchMouseButtonDown(MouseButton(x, y, true, which));
+            CoreManager::GetUIInput().DispatchMouseButtonUp(MouseButton(x, y, false, which));
             return taken;
+        }
+
+        /// A tap: the click a touch screen makes (`SDL_TOUCH_MOUSEID`).
+        bool Tap(float x, float y) {
+            return Click(x, y, SDL_TOUCH_MOUSEID);
         }
 
         /// The slot of the `index`-th concealed tile of the bottom seat in the last layout.
@@ -326,6 +333,13 @@ namespace BECore::Mahjong::Tests {
             const TileSlot* slot = HandSlot(index);
             EXPECT_NE(slot, nullptr) << "hand tile " << index;
             return slot != nullptr && Click(slot->rect.x + slot->rect.w * 0.5f, slot->rect.y + slot->rect.h * 0.5f);
+        }
+
+        /// Taps the middle of the `index`-th concealed tile of the bottom seat as the last draw put it.
+        bool TapHandTile(int index) {
+            const TileSlot* slot = HandSlot(index);
+            EXPECT_NE(slot, nullptr) << "hand tile " << index;
+            return slot != nullptr && Tap(slot->rect.x + slot->rect.w * 0.5f, slot->rect.y + slot->rect.h * 0.5f);
         }
 
         /// The index of the first concealed tile of `seat` that is `tile`, -1 when it holds none.

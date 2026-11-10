@@ -13,6 +13,7 @@
 #include <Mahjong/Table/ScoreText.h>
 #include <Mahjong/Table/SeatName.h>
 #include <Mahjong/Table/SeatPlates.h>
+#include <Mahjong/Table/TapSelect.h>
 
 /**
  * The HUD and the seat choice of the shipped scene (`Components/MahjongHudComponent.h`): the variables follow the session and the language,
@@ -187,6 +188,16 @@ namespace BECore::Mahjong::Tests {
                 }
             }
             return false;
+        }
+
+        /// The longest sentence that names a selected tile in the current language (every kind of tile that has a long name).
+        static eastl::string LongestSelectedText() {
+            const UIStrings& strings = CoreManager::GetUIStrings();
+            std::vector<eastl::string> candidates;
+            for (const Tile tile : {T("9m"), T("Ew"), T("Rd"), T("Wd"), T("Gd"), T("F1"), T("T4"), T("5s"), T("1p")}) {
+                candidates.push_back(SelectedTileText(strings, tile));
+            }
+            return LongestText(candidates);
         }
 
         /// The longest sentence of the move line in the current language: every kind of move with every seat, wind and the longest tile names.
@@ -909,6 +920,61 @@ namespace BECore::Mahjong::Tests {
             const eastl::string longest = LongestMoveText();
             ASSERT_FALSE(longest.empty());
             CoreManager::GetUIVars().Set("lastMove"_intern, eastl::string_view(longest));
+
+            ExpectPassesTheMatrix("Hud", EngineTouchMinimum());
+            for (const Output& output : kOutputs) {
+                ExpectWordsFit("Hud", output.width, output.height, kButtonAir);
+            }
+        });
+    }
+
+    // ----- the name of the selected tile -----
+
+    TEST_F(MahjongHudTest, TheSelectedTileLabelIsClearOfTheTableAndTheHudAndFitsInEveryLanguageAndWindow) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        Draw();
+        EXPECT_FALSE(OnScreen("Hud", "SelectedTile")) << "hidden while nothing is selected";
+        const TableLayout layout = MakeWorstCaseTableLayout();
+        const eastl::vector<Rect> plates = ZonePlates(layout);
+        // Everything that hides in the files is shown, so that its place is asked for
+        for (const char* node : {"Hud", "Actions", "Hints", "HintsButton"}) {
+            const auto canvas = Canvas(node);
+            ASSERT_TRUE(canvas) << node;
+            ShowAll(*canvas, canvas->GetRoot());
+        }
+
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            const eastl::string longest = LongestSelectedText();
+            ASSERT_FALSE(longest.empty());
+            CoreManager::GetUIVars().Set("selectedTileText"_intern, eastl::string_view(longest));
+            Canvas("Hud")->UpdateLayout(kViewWidth, kViewHeight);
+
+            const UIElement* label = Element("Hud", "SelectedTile");
+            ASSERT_NE(label, nullptr);
+            ASSERT_FALSE(label->rect.IsEmpty());
+            for (const TileSlot& slot : layout.slots) {
+                EXPECT_TRUE(Apart(slot.rect, label->rect)) << "covers role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
+            }
+            const Rect aired = Grown(label->rect, kGridUnit);
+            for (size_t i = 0; i < plates.size(); ++i) {
+                EXPECT_TRUE(Apart(plates[i], aired)) << "less than one grid unit from plate " << i;
+            }
+            EXPECT_TRUE(Apart(layout.zones.centerPanel, aired));
+            struct Neighbour {
+                const char* node;
+                const char* element;
+            };
+            const Neighbour others[] = {{"Hud", "MoveLine"}, {"Actions", "Hint"}, {"Actions", "ActionRow"}, {"Hints", "WaitPanel"}, {"Hints", "AdviceText"}, {"HintsButton", "HintButton"}};
+            for (const Neighbour& other : others) {
+                EXPECT_TRUE(Apart(Element(other.node, other.element)->rect, label->rect)) << other.element;
+            }
+            // The tile, raised by its rise, does not reach the label either
+            for (const TileSlot& slot : layout.slots) {
+                if (slot.role == SlotRole::HandTile) {
+                    EXPECT_TRUE(Apart(RaisedRect(slot.rect), label->rect)) << "the raised hand tile " << slot.index;
+                }
+            }
 
             ExpectPassesTheMatrix("Hud", EngineTouchMinimum());
             for (const Output& output : kOutputs) {
