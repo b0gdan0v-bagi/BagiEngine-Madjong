@@ -71,7 +71,9 @@ namespace BECore::Mahjong {
      * drew; the new snapshot against the old one (`PlanFlights`) says which slots are new and where they come from, and all the moves between
      * two draws are one batch, whoever made them (a computer's step, a click, the control API). A flight carries no face: the slot is drawn by
      * the same code and with the same face rule at an interpolated rectangle (`FlightRect`), second pass and on top, so an opponent's tile or a
-     * hidden kong flies as a back and nothing is face up that the slot would not show; the marks of the slot follow the rectangle. A new batch ends
+     * hidden kong flies as a back and nothing is face up that the slot would not show; the marks of the slot (the tints, the claimed edge, the
+     * frame of the pending discard, the veil, the bars) follow the rectangle, and the blink of a set just laid starts when its tiles have
+     * landed (the flight time is added before its `kClaimHighlightSeconds`; nothing waits when nothing of the set flies). A new batch ends
      * the running flights at their targets, a new hand, match or game, another viewer or view size starts without any. The time is the
      * component's own clock on `SceneUpdateEvent` (it stops with the table pause); `SetTileFlightSeconds(0)` switches the flights off. The model,
      * the session and the control API are not touched.
@@ -172,6 +174,7 @@ namespace BECore::Mahjong {
         struct NewMoves {
             bool restarted = false;
             size_t first = 0;
+            bool setLaid = false;  // a set was laid among them: the highlight of `_highlightSeat` / `_highlightMeld` has just started
         };
 
         /// Looks at the entries of `Moves()` not seen yet and starts the highlight of the set the last of them laid; a hand, a match or a
@@ -181,6 +184,9 @@ namespace BECore::Mahjong {
         /// Plans the flights of the frame just laid out (`_shown`) against `before`, the frame drawn last: the new batch replaces the running
         /// flights when it has any, a restart, another viewer or another view size drops them.
         void PlanBatch(const TableSnapshot& before, const NewMoves& news, const HandModel& hand);
+
+        /// Ends the running flights where they are (their slots are drawn in place from now on); a highlight that waited for them starts.
+        void EndFlights();
 
         ResourceHandle<ITexture> _atlas;
         TableSnapshot _shown;                // what the last `OnDraw` drew: its layout is `GetLayout()`, empty while nothing is drawn
@@ -200,6 +206,7 @@ namespace BECore::Mahjong {
             const MahjongGame* game = nullptr;
             int handsPlayed = -1;
             size_t settled = 0;
+            uint64_t starts = 0;  // `TableSession::StartCount()`: a new match is not the old one however many moves it has made
 
             bool operator==(const SeenHand&) const = default;
         };
@@ -207,7 +214,8 @@ namespace BECore::Mahjong {
         size_t _movesSeen = 0;
         Seat _highlightSeat = kNoSeat;  // the set that blinks: the meld `_highlightMeld` of this seat
         int _highlightMeld = -1;
-        float _highlightLeft = 0.0f;  // seconds of the highlight left, 0 for none
+        float _highlightLeft = 0.0f;   // seconds of the highlight left, 0 for none
+        bool _highlightWaits = false;  // the tiles of the set are still in the air: the highlight does not run and is not drawn until they land
         static MahjongTableComponent* s_active;
     };
 

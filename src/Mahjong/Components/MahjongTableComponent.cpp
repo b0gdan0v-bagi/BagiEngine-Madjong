@@ -421,25 +421,29 @@ namespace BECore::Mahjong {
     MahjongTableComponent::NewMoves MahjongTableComponent::FollowMoves(const MahjongGame& game) {
         const Match& match = game.GetMatch();
         const eastl::vector<HandMove>& moves = match.Hand().Moves();
-        const SeenHand now{&game, match.HandsPlayed(), match.History().size()};
+        const SeenHand now{&game, match.HandsPlayed(), match.History().size(), game.GetSession().StartCount()};
         if (now != _seenHand || moves.size() < _movesSeen) {
             // Another hand, match or game: what is on the table now is not news
             _seenHand = now;
             _movesSeen = moves.size();
             _highlightLeft = 0.0f;
-            return NewMoves{true, moves.size()};
+            _highlightWaits = false;
+            return NewMoves{true, moves.size(), false};
         }
         const size_t first = _movesSeen;
+        bool setLaid = false;
         for (size_t i = moves.size(); i > _movesSeen; --i) {
             if (moves[i - 1].meld >= 0) {
                 _highlightSeat = moves[i - 1].seat;
                 _highlightMeld = moves[i - 1].meld;
                 _highlightLeft = kClaimHighlightSeconds;
+                _highlightWaits = false;  // `PlanBatch` makes it wait when the tiles of the set fly
+                setLaid = true;
                 break;
             }
         }
         _movesSeen = moves.size();
-        return NewMoves{false, first};
+        return NewMoves{false, first, setLaid};
     }
 
     void MahjongTableComponent::PlanBatch(const TableSnapshot& before, const NewMoves& news, const HandModel& hand) {
@@ -447,8 +451,7 @@ namespace BECore::Mahjong {
         const TableLayout& now = _shown.layout;
         const bool sameView = was.viewer == now.viewer && was.viewWidth == now.viewWidth && was.viewHeight == now.viewHeight;
         if (news.restarted || !sameView || _flightSeconds <= 0.0f) {
-            _flights.clear();
-            _flightElapsed = 0.0f;
+            EndFlights();
             return;
         }
         // Nothing new is the common frame: no move since the last draw and no tile drawn from the wall
@@ -459,9 +462,20 @@ namespace BECore::Mahjong {
         }
         eastl::vector<TileFlight> planned = PlanFlights(before, _shown, fresh);
         if (!planned.empty()) {
-            _flights = eastl::move(planned);  // the running flights end at their targets: their slots are drawn in place from now on
-            _flightElapsed = 0.0f;
+            EndFlights();  // the running flights end at their targets: their slots are drawn in place from now on
+            _flights = eastl::move(planned);
         }
+        // The set that was just laid blinks once its tiles have landed: not while one of them is in the air
+        if (news.setLaid) {
+            _highlightWaits = eastl::any_of(_flights.begin(), _flights.end(),
+                                            [&](const TileFlight& flight) { return flight.key.role == SlotRole::MeldTile && flight.key.seat == _highlightSeat && flight.key.index == _highlightMeld; });
+        }
+    }
+
+    void MahjongTableComponent::EndFlights() {
+        _flights.clear();
+        _flightElapsed = 0.0f;
+        _highlightWaits = false;
     }
 
     void MahjongTableComponent::OnUpdate(const SceneEvents::SceneUpdateEvent& event) {
@@ -469,14 +483,13 @@ namespace BECore::Mahjong {
         if (game == nullptr) {
             return;
         }
-        if (_highlightLeft > 0.0f && TableIsLive(*game)) {
+        if (_highlightLeft > 0.0f && !_highlightWaits && TableIsLive(*game)) {
             _highlightLeft = eastl::max(0.0f, _highlightLeft - event.deltaTime);
         }
         if (!_flights.empty() && TableIsLive(*game)) {
             _flightElapsed += event.deltaTime;
             if (_flightElapsed >= _flightSeconds) {
-                _flights.clear();
-                _flightElapsed = 0.0f;
+                EndFlights();  // the set that waited for its tiles blinks from the next draw on, at the start of its time
             }
         }
         TableSession& session = game->GetSession();
@@ -531,8 +544,7 @@ namespace BECore::Mahjong {
         const MahjongGame* game = MahjongGame::GetActive();
         PublishScreen(game);
         if (game == nullptr || game->GetMatch().GetPhase() == MatchPhase::NotStarted) {
-            _flights.clear();
-            _flightElapsed = 0.0f;
+            EndFlights();
             return;
         }
         const TableSession& session = game->GetSession();
@@ -609,8 +621,9 @@ namespace BECore::Mahjong {
                 renderer.DrawFilledRect(marked.x, marked.y, marked.w, marked.h, kTurnMark);
             }
         }
-        // The set that was just laid blinks behind its tiles: on at the moment of the move, then half a period on and half off
-        if (_highlightLeft > 0.0f) {
+        // The set that was just laid blinks behind its tiles: on at the moment it is laid (its tiles have landed), then half a period on and
+        // half off; nothing while a tile of it is in the air
+        if (_highlightLeft > 0.0f && !_highlightWaits) {
             const float elapsed = kClaimHighlightSeconds - _highlightLeft;
             const Rect bounds = BoundsOfMeld(layout, _highlightSeat, _highlightMeld);
             if (bounds.w > 0.0f && std::fmod(elapsed, kClaimBlinkSeconds) < kClaimBlinkSeconds * 0.5f) {

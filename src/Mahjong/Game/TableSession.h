@@ -114,6 +114,11 @@ namespace BECore::Mahjong {
         [[nodiscard]] uint64_t Version() const noexcept {
             return _version;
         }
+        /// The number of matches begun through `StartMatch` (a refused start is not counted): a front end tells a new match from the old one
+        /// by it, whatever the new match has played since.
+        [[nodiscard]] uint64_t StartCount() const noexcept {
+            return _starts;
+        }
 
     private:
         /// After every change of the actor: with two or more people the viewer is `kNoSeat` when another person has to act.
@@ -129,6 +134,7 @@ namespace BECore::Mahjong {
         ComputerLevel _level = kDefaultLevel;
         Seat _viewer = kNoSeat;
         uint64_t _version = 0;
+        uint64_t _starts = 0;
         IMatchLogSink* _sink = nullptr;
     };
 

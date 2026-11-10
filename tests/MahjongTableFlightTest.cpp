@@ -31,9 +31,35 @@ namespace BECore::Mahjong::Tests {
         constexpr SeatSetup kPersonAtSeat1{SeatKind::Computer, SeatKind::Person, SeatKind::Computer, SeatKind::Computer};
         constexpr SeatSetup kOnePersonAtSeat0AndOneAtSeat3{SeatKind::Person, SeatKind::Computer, SeatKind::Computer, SeatKind::Person};
         constexpr SeatSetup kPersonAtSeat0{SeatKind::Person, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
-        /// A quarter of a second: exact in floats, so sums of it are exact.
+        /// A quarter of a second: exact in floats, so sums of it are exact; half a blink period (0.5 s) is a quarter.
         constexpr float kQuarter = 0.25f;
         constexpr float kHalfFlight = kTileFlightSeconds * 0.5f;
+        /// The fill behind a set and the frame of a pending discard reach this far past the tiles (`kActingMargin`, `kPendingMargin` of the component).
+        constexpr float kActingMargin = 4.0f;
+        constexpr float kPendingMargin = 3.0f;
+        /// Seat 0 waits on the 5p with a pair of winds (the others wait as `kSeat2Waits`, `kSeat3Waits`) and declares with its first discard.
+        constexpr const char* kWaitingHand0 = "4p 6p 1s 2s 3s 4m 5m 6m 7s 8s 9s Sw Sw";
+
+        Rect Padded(const Rect& rect, float margin) {
+            return Rect(rect.x - margin, rect.y - margin, rect.w + 2.0f * margin, rect.h + 2.0f * margin);
+        }
+
+        /// The bar along `edge` of `rect`, worked out here and not taken from the component.
+        Rect BarOf(const Rect& rect, Edge edge) {
+            switch (edge) {
+                case Edge::Left:
+                    return Rect(rect.x, rect.y, kClaimedEdgeWidth, rect.h);
+                case Edge::Right:
+                    return Rect(rect.x + rect.w - kClaimedEdgeWidth, rect.y, kClaimedEdgeWidth, rect.h);
+                case Edge::Top:
+                    return Rect(rect.x, rect.y, rect.w, kClaimedEdgeWidth);
+                case Edge::Bottom:
+                    return Rect(rect.x, rect.y + rect.h - kClaimedEdgeWidth, rect.w, kClaimedEdgeWidth);
+                case Edge::None:
+                    break;
+            }
+            return Rect();
+        }
 
         /// Where the tile of a slot arrives, and what it shows there.
         struct Arrival {
@@ -107,11 +133,6 @@ namespace BECore::Mahjong::Tests {
             }
             EXPECT_NE(last, nullptr) << "the wall has stacks";
             return last != nullptr ? last->rect : Rect();
-        }
-
-        /// The tile `tile` of the sorted hand of `seat` now.
-        int IndexNow(Seat seat, Tile tile) const {
-            return IndexOf(seat, tile);
         }
 
         /// Whether one of the last `last` tile draws is at `rect` and shows `face` (nullopt: a back).
@@ -239,7 +260,7 @@ namespace BECore::Mahjong::Tests {
             arrival.role = SlotRole::HandTile;
             arrival.seat = seat;
             if (seat == _table->GetLayout().viewer && ViewerSeesHand()) {
-                arrival.index = IndexNow(seat, hand.DrawnTile(seat));
+                arrival.index = IndexOf(seat, hand.DrawnTile(seat));
                 arrival.face = hand.DrawnTile(seat);
             } else {
                 arrival.index = static_cast<int>(hand.GetHand(seat).concealed.size()) - 1;
@@ -278,6 +299,70 @@ namespace BECore::Mahjong::Tests {
         /// No concealed tile is face up: only public tiles show a face.
         void ExpectNoConcealedFace() const {
             EXPECT_EQ(FaceUpCalls(), PublicFaces());
+        }
+
+        /// Seat 0 has declared with its first discard; after the four discards of the default it is to act again with the Nw drawn, and seat 1
+        /// draws a Sw next, which seat 0 may pung.
+        static HandModel ViewerDeclaredModel(const char* discards = "Gd Rd Wd Gd") {
+            FixedWallSpec spec;
+            spec.hands[kSeat0] = kWaitingHand0;
+            spec.hands[kSeat1] = kQuiet1;
+            spec.hands[kSeat2] = kSeat2Waits;
+            spec.hands[kSeat3] = kSeat3Waits;
+            spec.live = "Gd Rd Wd Gd Nw Sw";
+            HandModel model = MakeModel(spec);
+            Lap(model, discards, {kSeat0});
+            EXPECT_TRUE(model.GetHand(kSeat0).callingDeclared);
+            return model;
+        }
+
+        /// The rectangles drawn in `color` in the last frame, in the order drawn.
+        std::vector<Rect> RectsOf(const Color& color) const {
+            std::vector<Rect> found;
+            for (const DrawCall& call : _renderer->calls) {
+                if (call.kind == DrawKind::Rect && SameColor(call.color, color)) {
+                    found.push_back(call.rect);
+                }
+            }
+            return found;
+        }
+
+        /// `color` is drawn exactly once in the last frame, at `rect`.
+        void ExpectOneRectAt(const Color& color, const Rect& rect, const char* what) const {
+            const std::vector<Rect> found = RectsOf(color);
+            ASSERT_EQ(found.size(), 1u) << what;
+            EXPECT_TRUE(SameRect(found[0], rect)) << what << ": at " << found[0].x << "," << found[0].y << " " << found[0].w << "x" << found[0].h << ", expected " << rect.x << "," << rect.y << " "
+                                                  << rect.w << "x" << rect.h;
+        }
+
+        /// Runs the batch just drawn through its start, half way and landing, and calls `check(arrival fraction)` after each draw.
+        template <class Check>
+        void AtStartHalfAndLanding(Check check) {
+            check(0.0f);
+            AdvanceTime(kHalfFlight);
+            Draw();
+            check(0.5f);
+            AdvanceTime(kHalfFlight);
+            Draw();
+            check(1.0f);
+        }
+
+        /// The fill that lies behind the meld `meld` of `seat` in the last layout.
+        Rect HighlightOf(Seat seat, int meld) const {
+            return Padded(BoundsOfMeld(_table->GetLayout(), seat, meld), kActingMargin);
+        }
+
+        /// Seat 1 (the person) pungs the 5p East has discarded; the batch has just been drawn, three tiles are in the air. `before` is the
+        /// layout of the frame before.
+        void PungByThePerson(TableLayout& before) {
+            ASSERT_NO_FATAL_FAILURE(StartWith(kPersonAtSeat1, EastDiscardsFive(kSeat1HoldsPairOf5p)));
+            AdvanceTime(kTileFlightSeconds);
+            Draw();
+            before = _table->GetLayout();
+            EmitAction("MahjongClaimPung");
+            ASSERT_EQ(Hand().GetHand(kSeat1).melds.size(), 1u);
+            Draw();
+            ASSERT_EQ(_table->FlightCount(), 3u);
         }
     };
 
@@ -674,6 +759,298 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(play(false, without));
         EXPECT_EQ(withFlights, without);
         EXPECT_GT(withFlights.size(), 20u);
+    }
+
+    // ----- the marks follow the flying tile -----
+
+    TEST_F(MahjongTableFlightTest, TheTintOfTheLastDiscardIsOnTheFlyingTileAndThenOnItsSlot) {
+        FixedWallSpec spec = SpecOf(kPlainHand, "9p Gd");
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, MakeModel(spec)));
+        const TableLayout before = _table->GetLayout();
+        const int index = IndexOf(kSeat0, T("4s"));
+        ASSERT_GE(index, 0);
+        EXPECT_FALSE(ClickHandTile(index));
+        Draw();
+
+        const Arrival discard = Pile(RectOf(before, SlotRole::HandTile, kSeat0, index), kSeat0, 0, T("4s"));
+        AtStartHalfAndLanding([&](float fraction) {
+            ExpectOneRectAt(kLastDiscardMark, Where(discard, fraction), "the tint of the last discard");
+            ExpectEverySlotDrawnOnce();
+        });
+        EXPECT_EQ(_table->FlightCount(), 0u);
+    }
+
+    TEST_F(MahjongTableFlightTest, TheTintOfTheDrawnTileIsOnTheFlyingTileAndThenOnItsPlaceInTheRow) {
+        FixedWallSpec spec = SpecOf(kPlainHand, "9p Gd Rd Wd 8s");
+        HandModel model = MakeModel(spec);
+        Lap(model, "9p Gd Rd");
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, model));
+        const TableLayout before = _table->GetLayout();
+        ASSERT_TRUE(Model().Discard(kSeat3, T("Wd")).has_value());
+        ASSERT_EQ(Model().DrawnTile(kSeat0), T("8s"));
+        Draw();
+
+        const Arrival drawn = DrawnBy(before, kSeat0);
+        AtStartHalfAndLanding([&](float fraction) {
+            ExpectOneRectAt(kDrawnTileMark, Where(drawn, fraction), "the tint of the drawn tile");
+            ExpectOneRectAt(kLastDiscardMark, Where(Pile(MiddleHand(before, kSeat3), kSeat3, 3, T("Wd")), fraction), "the tint of the discard that came with it");
+        });
+    }
+
+    TEST_F(MahjongTableFlightTest, TheBarOfTheClaimedEdgeTravelsWithTheClaimedTile) {
+        TableLayout before;
+        ASSERT_NO_FATAL_FAILURE(PungByThePerson(before));
+        const std::vector<Arrival> arrivals = ClaimArrivals(kSeat1, RectOf(before, SlotRole::DiscardTile, kSeat0, 0),
+                                                            {RectOf(before, SlotRole::HandTile, kSeat1, 1), RectOf(before, SlotRole::HandTile, kSeat1, 2)}, T("5p"));  // 4p 5p 5p 6p ...
+        Edge edge = Edge::None;
+        Arrival flying;
+        for (const Arrival& arrival : arrivals) {
+            const TileSlot* slot = Find(_table->GetLayout(), arrival.role, arrival.seat, arrival.index, arrival.part);
+            if (slot != nullptr && slot->claimEdge != Edge::None) {
+                edge = slot->claimEdge;
+                flying = arrival;
+            }
+        }
+        ASSERT_NE(edge, Edge::None);
+        ASSERT_TRUE(SameRect(flying.from, RectOf(before, SlotRole::DiscardTile, kSeat0, 0))) << "the claimed tile leaves the pile";
+        AtStartHalfAndLanding([&](float fraction) { ExpectOneRectAt(kClaimedEdge, BarOf(Where(flying, fraction), edge), "the bar of the claimed edge"); });
+    }
+
+    TEST_F(MahjongTableFlightTest, TheFrameOfThePendingDiscardFollowsTheDiscardInTheAir) {
+        FixedWallSpec spec = SpecOf(kPlainHand, "5p");
+        spec.hands[kSeat1] = kSeat1HoldsPairOf5p;
+        ASSERT_NO_FATAL_FAILURE(StartWith(kPersonAtSeat1, MakeModel(spec)));
+        const TableLayout before = _table->GetLayout();
+        ASSERT_TRUE(Model().Discard(kSeat0, T("5p")).has_value());
+        ASSERT_EQ(Model().GetPhase(), Phase::Claim);
+        Draw();
+
+        // The person's claim buttons are live while the discard flies, and the frame says so
+        const Arrival pending = Pile(MiddleHand(before, kSeat0), kSeat0, 0, T("5p"));
+        AtStartHalfAndLanding([&](float fraction) {
+            ExpectOneRectAt(kPendingFrame, Padded(Where(pending, fraction), kPendingMargin), "the frame of the pending discard");
+            ExpectOneRectAt(kLastDiscardMark, Where(pending, fraction), "the tint of the pending discard");
+        });
+        EmitAction("MahjongClaimPung");  // the buttons work during a flight too: nothing refuses this one
+        EXPECT_EQ(Hand().GetHand(kSeat1).melds.size(), 1u);
+    }
+
+    TEST_F(MahjongTableFlightTest, TheBarOfASafeDiscardIsOnTheFlyingDrawnTileOfADeclaredHand) {
+        // Seat 0 has declared; seat 3 is to discard, and the draw that follows is seat 0's: the Nw, which is no part of its shape
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, ViewerDeclaredModel("Gd Rd Wd")));
+        const TableLayout before = _table->GetLayout();
+        ASSERT_TRUE(Model().Discard(kSeat3, T("Gd")).has_value());
+        ASSERT_EQ(Model().DrawnTile(kSeat0), T("Nw"));
+        Draw();
+
+        const Arrival drawn = DrawnBy(before, kSeat0);
+        ASSERT_TRUE(drawn.face.has_value());
+        AtStartHalfAndLanding([&](float fraction) {
+            const Rect tile = Where(drawn, fraction);
+            const Rect bar(tile.x, tile.y + tile.h - kKeepsWaitingBarHeight, tile.w, kKeepsWaitingBarHeight);
+            const std::vector<Rect> bars = RectsOf(kKeepsWaitingMark);
+            const bool onTheFlyingTile = std::any_of(bars.begin(), bars.end(), [&](const Rect& found) { return SameRect(found, bar); });
+            EXPECT_TRUE(onTheFlyingTile) << "fraction " << fraction << ": the bar of the drawn Nw is inside the bottom edge of the tile in the air";
+            ExpectOneRectAt(kDrawnTileMark, tile, "the tint of the drawn tile");
+            ExpectEverySlotDrawnOnce();
+        });
+    }
+
+    TEST_F(MahjongTableFlightTest, TheTurnBackdropTheCallingFrameAndTheSeatPlatesAreTheSameWithAFlightAsWithout) {
+        const std::vector<Color> colors = {kTurnMark, kSeatPlate, kSeatTurnFrame, kDealerMark, kCallingFrame};
+        const auto play = [&](bool flights, std::vector<std::vector<Rect>>& seen) {
+            _table->SetTileFlightSeconds(flights ? kTileFlightSeconds : 0.0f);
+            ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, ViewerDeclaredModel()));
+            const int drawn = IndexOf(kSeat0, T("Nw"));
+            ASSERT_GE(drawn, 0);
+            EXPECT_FALSE(ClickHandTile(drawn));
+            Draw();
+            EXPECT_EQ(_table->FlightCount() > 0u, flights);
+            AdvanceTime(kHalfFlight);
+            Draw();
+            for (const Color& color : colors) {
+                seen.push_back(RectsOf(color));
+            }
+        };
+        std::vector<std::vector<Rect>> with;
+        std::vector<std::vector<Rect>> without;
+        ASSERT_NO_FATAL_FAILURE(play(true, with));
+        ASSERT_NO_FATAL_FAILURE(play(false, without));
+        ASSERT_EQ(with.size(), without.size());
+        for (size_t i = 0; i < with.size(); ++i) {
+            ASSERT_EQ(with[i].size(), without[i].size()) << "colour " << i;
+            for (size_t k = 0; k < with[i].size(); ++k) {
+                EXPECT_TRUE(SameRect(with[i][k], without[i][k])) << "colour " << i << " rect " << k;
+            }
+        }
+        EXPECT_FALSE(with[4].empty()) << "the frame of the declared hand is drawn";
+        EXPECT_FALSE(with[0].empty()) << "and so is the turn backdrop";
+    }
+
+    // ----- the blink of a set waits for its tiles -----
+
+    TEST_F(MahjongTableFlightTest, TheSetBlinksOnlyAfterItsTilesHaveLandedAndThenForItsWholeTime) {
+        TableLayout before;
+        ASSERT_NO_FATAL_FAILURE(PungByThePerson(before));
+        EXPECT_TRUE(RectsOf(kClaimHighlight).empty()) << "the tiles are in the air";
+        AdvanceTime(kHalfFlight);
+        Draw();
+        ASSERT_EQ(_table->FlightCount(), 3u);
+        EXPECT_TRUE(RectsOf(kClaimHighlight).empty()) << "half way";
+        AdvanceTime(kHalfFlight);
+        Draw();
+
+        ASSERT_EQ(_table->FlightCount(), 0u);
+        ExpectOneRectAt(kClaimHighlight, HighlightOf(kSeat1, 0), "on at the moment of landing");
+        Draw();
+        EXPECT_EQ(RectsOf(kClaimHighlight).size(), 1u) << "drawing again changes nothing";
+        AdvanceTime(kQuarter);
+        Draw();
+        EXPECT_TRUE(RectsOf(kClaimHighlight).empty()) << "the second half of the period";
+        AdvanceTime(kQuarter);
+        Draw();
+        EXPECT_EQ(RectsOf(kClaimHighlight).size(), 1u) << "the next period";
+        AdvanceTime(kClaimHighlightSeconds);
+        Draw();
+        EXPECT_TRUE(RectsOf(kClaimHighlight).empty()) << "gone after kClaimHighlightSeconds more";
+        AdvanceTime(kQuarter);
+        Draw();
+        EXPECT_TRUE(RectsOf(kClaimHighlight).empty());
+    }
+
+    TEST_F(MahjongTableFlightTest, WithoutAFlightTheSetBlinksAtOnce) {
+        _table->SetTileFlightSeconds(0.0f);
+        ASSERT_NO_FATAL_FAILURE(StartWith(kPersonAtSeat1, EastDiscardsFive(kSeat1HoldsPairOf5p)));
+        EmitAction("MahjongClaimPung");
+        Draw();
+        ASSERT_EQ(_table->FlightCount(), 0u);
+        ExpectOneRectAt(kClaimHighlight, HighlightOf(kSeat1, 0), "on at the moment of the move");
+        AdvanceTime(kQuarter);
+        Draw();
+        EXPECT_TRUE(RectsOf(kClaimHighlight).empty());
+    }
+
+    TEST_F(MahjongTableFlightTest, FlightsSwitchedOffInTheAirEndAtOnceAndTheSetBlinks) {
+        TableLayout before;
+        ASSERT_NO_FATAL_FAILURE(PungByThePerson(before));
+        EXPECT_TRUE(RectsOf(kClaimHighlight).empty());
+        _table->SetTileFlightSeconds(0.0f);
+        AdvanceTime(0.01f);
+        Draw();
+        EXPECT_EQ(_table->FlightCount(), 0u);
+        ExpectOneRectAt(kClaimHighlight, HighlightOf(kSeat1, 0), "nothing is left in the air to wait for");
+    }
+
+    TEST_F(MahjongTableFlightTest, TheDelayOfTheBlinkRunsOnlyWhileTheTableIsLive) {
+        for (const bool rules : {false, true}) {
+            TableLayout before;
+            ASSERT_NO_FATAL_FAILURE(PungByThePerson(before));
+            AdvanceTime(kHalfFlight);
+            Draw();
+            if (rules) {
+                _game->OpenRules();
+            } else {
+                _game->OpenSetup();
+            }
+            AdvanceTime(5.0f);
+            Draw();
+            EXPECT_EQ(_table->FlightCount(), 3u) << (rules ? "rules" : "setup");
+            EXPECT_TRUE(RectsOf(kClaimHighlight).empty());
+            if (rules) {
+                _game->CloseRules();
+            } else {
+                _game->CloseSetup();
+            }
+            AdvanceTime(kHalfFlight);
+            Draw();
+            ASSERT_EQ(_table->FlightCount(), 0u) << (rules ? "rules" : "setup");
+            ExpectOneRectAt(kClaimHighlight, HighlightOf(kSeat1, 0), "on when the second half of the flight has run");
+        }
+    }
+
+    TEST_F(MahjongTableFlightTest, ASecondSetLaidDuringTheFlightRestartsTheDelayOnItsOwnTiles) {
+        FixedWallSpec spec = SpecOf(kPlainHand, "9p 5p");
+        spec.hands[kSeat1] = "5p 5p 5p 5s 5s 5s 2p 8p 2s 8s 2m 5m 8m";
+        spec.loose = "5s 9m";
+        HandModel model = MakeModel(spec);
+        Lap(model, "9p");  // seat 1 has drawn the fourth 5p
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, model));
+
+        ASSERT_TRUE(Model().DeclareConcealedKong(kSeat1, T("5p")).has_value());
+        ASSERT_EQ(Model().DrawnTile(kSeat1), T("5s"));
+        Draw();
+        ASSERT_GT(_table->FlightCount(), 0u);
+        EXPECT_TRUE(RectsOf(kClaimHighlight).empty());
+        AdvanceTime(kHalfFlight);
+        Draw();
+        EXPECT_TRUE(RectsOf(kClaimHighlight).empty());
+
+        ASSERT_TRUE(Model().DeclareConcealedKong(kSeat1, T("5s")).has_value());
+        ASSERT_EQ(Model().GetHand(kSeat1).melds.size(), 2u);
+        Draw();
+        EXPECT_TRUE(RectsOf(kClaimHighlight).empty()) << "the new set's tiles are in the air";
+        AdvanceTime(kHalfFlight);
+        Draw();
+        EXPECT_TRUE(RectsOf(kClaimHighlight).empty()) << "the first batch would have landed by now; the second has not";
+        ASSERT_GT(_table->FlightCount(), 0u);
+        AdvanceTime(kHalfFlight);
+        Draw();
+        ASSERT_EQ(_table->FlightCount(), 0u);
+        ExpectOneRectAt(kClaimHighlight, HighlightOf(kSeat1, 1), "the blink is on the second set");
+    }
+
+    // ----- a face-up flight after the cover, and a new match -----
+
+    TEST_F(MahjongTableFlightTest, AfterRevealTheViewersConcealedKongFliesAsFourFaces) {
+        FixedWallSpec own = SpecOf(kThree1pHand, "1p");
+        own.loose = "9m";
+        ASSERT_NO_FATAL_FAILURE(Start(kTwoPeople));
+        Lay(MakeModel(own));
+        Draw();
+        ASSERT_TRUE(Session().HandoffPending());
+        Session().Reveal();
+        Draw();
+        ASSERT_EQ(Session().Viewer(), kSeat0);
+        const TableLayout before = _table->GetLayout();
+
+        ASSERT_TRUE(Session().PerformPerson(HandAction::MakeConcealedKong(T("1p"))).has_value());
+        ASSERT_FALSE(Session().HandoffPending());
+        Draw();
+
+        std::vector<Arrival> arrivals;
+        for (const TileSlot* slot : MeldSlots(kSeat0, 0)) {
+            Arrival arrival;
+            arrival.from = RectOf(before, SlotRole::HandTile, kSeat0, slot->part);
+            arrival.role = SlotRole::MeldTile;
+            arrival.seat = kSeat0;
+            arrival.index = 0;
+            arrival.part = slot->part;
+            arrival.face = T("1p");
+            arrivals.push_back(arrival);
+        }
+        ASSERT_EQ(arrivals.size(), 4u);
+        arrivals.push_back(DrawnBy(before, kSeat0));
+        ExpectFlightsRun(arrivals);
+    }
+
+    TEST_F(MahjongTableFlightTest, AMatchStartedWhileTheOldOneHadNoHistoryFliesNothingEvenWhenItHasMadeMoreMovesThanWereSeen) {
+        // The old match is in its first hand with no move: the table has seen none. A control `reset` starts a new one and the computers
+        // play it on in the same call, so by the next draw it has more moves than were ever seen; that is not news.
+        ASSERT_NO_FATAL_FAILURE(Start(kAllComputers, 11));
+        Draw();
+        ASSERT_TRUE(Hand().Moves().empty());
+        ASSERT_NO_FATAL_FAILURE(Start(kAllComputers, 12));
+        ASSERT_GT(Session().RunComputers(), 5);
+        ASSERT_GT(Hand().Moves().size(), 5u);
+        Draw();
+        EXPECT_EQ(_table->FlightCount(), 0u) << "a new match starts without flights";
+        ExpectEverySlotDrawnOnce();
+        // and the batches of the new match fly as usual
+        ASSERT_NO_FATAL_FAILURE(Start(kPersonAtSeat0, 13));
+        Draw();
+        ASSERT_TRUE(Session().PerformPerson(HandAction::MakeDiscard(Hand().GetHand(kSeat0).concealed.front(), false)).has_value());
+        Draw();
+        EXPECT_GT(_table->FlightCount(), 0u);
     }
 
     // ----- the clock -----
