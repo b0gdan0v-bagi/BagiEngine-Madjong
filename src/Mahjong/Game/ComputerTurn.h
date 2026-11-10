@@ -54,6 +54,17 @@ namespace BECore::Mahjong {
     /// nullopt when the rest does not wait. What the declaring discards are ranked by.
     [[nodiscard]] std::optional<int> WaitingCopiesAfterDiscard(const TableView& view, Tile discarded);
 
+    /// A discard that leaves the hand waiting: the tile, the unseen copies of the tiles it waits on, and its `KeepValue`.
+    struct WaitingDiscard {
+        Tile tile;
+        int copies = 0;
+        int keep = 0;
+    };
+
+    /// The listed discards with `declareCalling == declaring` that leave a waiting hand (steps 2 and 4 of the turn, and the candidates of
+    /// the search), in the order of `view.legal`.
+    [[nodiscard]] eastl::vector<WaitingDiscard> WaitingDiscards(const TableView& view, bool declaring);
+
     /// How good the best discard of a hand of `3n + 2` tiles is: the tile, the shanten and the acceptance of the `3n + 1` tiles left.
     struct DiscardRating {
         Tile tile;

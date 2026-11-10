@@ -46,9 +46,10 @@ namespace BECore::Mahjong {
      * above 0 also needs a spread to measure, so two worlds at least). The baseline is the Normal choice by the profile with the search
      * off, made on a copy of `rng`.
      *
-     * Draws exactly one number from `rng` when it searches (two candidates at least) and nothing otherwise. `nullopt` means "answer as
-     * Normal does": the search is off, there is nothing to compare, or no world could be made; the caller then runs the Normal
-     * chooser, which on the state `rng` had gives the baseline again.
+     * Draws exactly one number from `rng` when it searches (two candidates at least) and nothing otherwise; when no world can be
+     * sampled the answer is the Normal choice, after that one draw. `nullopt` means "answer as Normal does" with nothing drawn: the
+     * search is off or there is nothing to compare; the caller then runs the Normal chooser, which on the state `rng` had gives the
+     * baseline again.
      */
     [[nodiscard]] std::optional<HandAction> SearchTurnAction(const TableView& view, MahjongRng& rng, const LevelProfile& profile);
 

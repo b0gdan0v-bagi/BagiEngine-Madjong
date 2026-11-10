@@ -50,16 +50,12 @@ namespace BECore::Mahjong {
             }
         }
 
-        /// The listed discards with `declareCalling == declaring` that leave a waiting hand, ranked by the unseen copies they wait on.
-        eastl::vector<RankedDiscard> WaitingDiscards(const TableView& view, bool declaring) {
+        /// The listed discards with `declareCalling == declaring` that leave a waiting hand, ranked by the unseen copies they wait on (the
+        /// list `ComputerTurn.h` makes for steps 2 and 4 of the turn, so the candidates are ranked as Normal ranks them).
+        eastl::vector<RankedDiscard> RankedWaitingDiscards(const TableView& view, bool declaring) {
             eastl::vector<RankedDiscard> ranked;
-            for (const HandAction& action : view.legal) {
-                if (action.kind != ActionKind::Discard || action.declareCalling != declaring) {
-                    continue;
-                }
-                if (const std::optional<int> copies = WaitingCopiesAfterDiscard(view, action.tile)) {
-                    ranked.push_back({action, 0, *copies, KeepValue(action.tile, view.seatWind, view.roundWind)});
-                }
+            for (const WaitingDiscard& discard : WaitingDiscards(view, declaring)) {
+                ranked.push_back({HandAction::MakeDiscard(discard.tile, declaring), 0, discard.copies, discard.keep});
             }
             return ranked;
         }
@@ -83,6 +79,10 @@ namespace BECore::Mahjong {
             ranked.erase(eastl::remove_if(ranked.begin(), ranked.end(), [best](const RankedDiscard& d) { return d.shanten > best + kSearchShantenSlack; }), ranked.end());
             return ranked;
         }
+
+        /// Each world uses two derived seeds: the index of the world's own `MahjongRng` and, one after it, the seed of the rollout table.
+        constexpr uint32_t kSeedsPerWorld = 2;
+        constexpr uint32_t kRolloutSeedOffset = 1;
 
         /// A seed of the search: a fixed mixing of the decision's base seed and an index (never the machine's randomness).
         uint32_t DerivedSeed(uint32_t base, uint32_t index) {
@@ -144,13 +144,13 @@ namespace BECore::Mahjong {
             const uint32_t base = rng.Below(kSearchBaseSeedRange);
             eastl::vector<eastl::vector<int>> values(candidates.size());
             for (int world = 0; world < profile.searchWorlds; ++world) {
-                const uint32_t index = static_cast<uint32_t>(world) * 2;
+                const uint32_t index = static_cast<uint32_t>(world) * kSeedsPerWorld;
                 MahjongRng worldRng(DerivedSeed(base, index));
                 const std::optional<HandModel> sampled = SampleWorld(view, worldRng);
                 if (!sampled.has_value()) {
                     continue;
                 }
-                const uint32_t tableSeed = DerivedSeed(base, index + 1);
+                const uint32_t tableSeed = DerivedSeed(base, index + kRolloutSeedOffset);
                 eastl::vector<int> row;
                 for (const HandAction& candidate : candidates) {
                     const std::optional<int> value = Rollout(*sampled, view.seat, candidate, tableSeed);
@@ -166,7 +166,8 @@ namespace BECore::Mahjong {
                 }
             }
             if (values.front().empty()) {
-                return std::nullopt;
+                // No world could be made (the view does not fit the rules of a sample): Normal's choice, after the one draw.
+                return candidates.front();
             }
             size_t best = 0;
             PairedDifference bestDifference;
@@ -193,10 +194,10 @@ namespace BECore::Mahjong {
         eastl::vector<HandAction> candidates;
         Add(candidates, baseline, maxCount);
         if (baseline.kind == ActionKind::Discard && baseline.declareCalling) {
-            eastl::vector<RankedDiscard> declaring = WaitingDiscards(view, true);
+            eastl::vector<RankedDiscard> declaring = RankedWaitingDiscards(view, true);
             AddRanked(candidates, declaring, maxCount);
         } else if (baseline.kind == ActionKind::Discard && view.own.callingDeclared) {
-            eastl::vector<RankedDiscard> keeping = WaitingDiscards(view, false);
+            eastl::vector<RankedDiscard> keeping = RankedWaitingDiscards(view, false);
             AddRanked(candidates, keeping, maxCount);
         } else {
             for (const HandAction& action : view.legal) {

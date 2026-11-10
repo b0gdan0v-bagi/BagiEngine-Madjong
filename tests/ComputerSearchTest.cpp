@@ -6,6 +6,7 @@
 #include <Mahjong/Game/ComputerPlayer.h>
 #include <Mahjong/Game/ComputerSearch.h>
 #include <Mahjong/Game/ComputerTurn.h>
+#include <Mahjong/Game/ComputerWorld.h>
 #include <Mahjong/Game/Shanten.h>
 #include <gtest/gtest.h>
 
@@ -192,6 +193,28 @@ namespace BECore::Mahjong::Tests {
             ASSERT_TRUE(answer.has_value());
             EXPECT_TRUE(Has(view.legal, *answer));
             EXPECT_EQ(RngState(rng), RngState(AfterOneDraw(MahjongRng(kRngSeed))));
+        }
+    }
+
+    TEST(ComputerSearchTest, WhenNoWorldCanBeSampledTheAnswerIsNormalsAfterTheOneDraw) {
+        // A wall that is five tiles too long for the view: `SampleWorld` refuses it, so every world is skipped.
+        TableView turn = MakeTableView(TurnModel(), kSeat0);
+        turn.liveCount += 5;
+        MahjongRng probe(kRngSeed);
+        ASSERT_FALSE(SampleWorld(turn, probe).has_value());
+        TableView window = MakeTableView(WindowModel(kPungHand, "5p"), kSeat1);
+        window.liveCount += 5;
+        ASSERT_FALSE(SampleWorld(window, probe).has_value());
+
+        for (const TableView& view : {turn, window}) {
+            MahjongRng rng(kRngSeed);
+            const std::optional<HandAction> answer = view.phase == Phase::Discard ? SearchTurnAction(view, rng, SearchProfile()) : SearchClaimAction(view, rng, SearchProfile());
+            ASSERT_TRUE(answer.has_value());
+            EXPECT_EQ(*answer, Normal(view, MahjongRng(kRngSeed)));
+            EXPECT_EQ(RngState(rng), RngState(AfterOneDraw(MahjongRng(kRngSeed))));
+            // The chooser takes the same way out.
+            MahjongRng chooser(kRngSeed);
+            EXPECT_EQ(Searching(view, chooser, SearchProfile()), *answer);
         }
     }
 
