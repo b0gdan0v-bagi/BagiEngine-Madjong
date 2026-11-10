@@ -454,8 +454,8 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// `MatrixFailuresExceptTouchWhere` as an expectation, with the name of the node in the message.
-    inline void ExpectMatrixExceptTouchWhere(UICanvasComponent& canvas, const char* node, float minTouchSize, const std::function<bool(const MatrixWindow&)>& skip, bool portraitWindows = true) {
-        const auto failures = MatrixFailuresExceptTouchWhere(canvas, minTouchSize, skip, portraitWindows);
+    inline void ExpectMatrixExceptTouchWhere(UICanvasComponent& canvas, const char* node, float minTouchSize, const std::function<bool(const MatrixWindow&)>& skip) {
+        const auto failures = MatrixFailuresExceptTouchWhere(canvas, minTouchSize, skip);
         EXPECT_TRUE(failures.empty()) << node << ": " << DescribeMatrixFailures(failures).c_str();
     }
 

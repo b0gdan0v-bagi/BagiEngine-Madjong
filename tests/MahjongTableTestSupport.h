@@ -430,8 +430,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The size matrix on a canvas of the scene, as Match3's HUD test does it. `minTouchSize`: the least size of a control as seen.
-        /// `portraitViews` false keeps the fixed landscape view in every case (a `SceneView` canvas with no portrait variant yet).
-        void ExpectPassesTheMatrix(const char* node, float minTouchSize, bool portraitViews = true) {
+        void ExpectPassesTheMatrix(const char* node, float minTouchSize) {
             auto canvas = Canvas(node);
             ASSERT_TRUE(canvas) << node;
             canvas->UpdateLayout(kViewWidth, kViewHeight);  // the reflected fields of the component reach the layout on its first update
@@ -443,10 +442,7 @@ namespace BECore::Mahjong::Tests {
 
             // A `SceneView` canvas is laid out against the view each case of the matrix gets from the scene's view variants
             const auto& variants = PortraitViewVariants();
-            UIMatrixViews views;
-            if (portraitViews) {
-                views = {kViewWidth, kViewHeight, eastl::span<const SceneViewVariant>(variants.data(), variants.size())};
-            }
+            const UIMatrixViews views{kViewWidth, kViewHeight, eastl::span<const SceneViewVariant>(variants.data(), variants.size())};
             const auto failures = ValidateOnMatrix(canvas->GetLayout(), options, base, views);
 
             EXPECT_TRUE(failures.empty()) << node << ": " << DescribeMatrixFailures(failures).c_str();
