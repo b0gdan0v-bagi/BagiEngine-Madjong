@@ -36,6 +36,17 @@ namespace BECore::Mahjong {
      */
     [[nodiscard]] eastl::vector<HandAction> ClaimCandidates(const TableView& view, const HandAction& baseline, int maxCount);
 
+    /// One world of a search played through: `values[c]` is the points of candidate `c` in it. `played` is false for a world that
+    /// cannot be sampled, or whose rollout the model refuses: the worlds `Step()` drops.
+    struct SearchWorld {
+        bool played = false;
+        eastl::vector<int> values;
+    };
+
+    /// The loop a tool supplies to `SearchRun::RunWorlds`: runs `body(i)` for every `i` in `[0, count)`, in any order and on any
+    /// threads, and returns when all are done.
+    using WorldLoop = std::function<void(int count, const std::function<void(int index)>& body)>;
+
     /**
      * @brief A search decision as a resumable object: `Step()` plays one rollout, `Result()` is the answer when `Done()`.
      *
@@ -44,6 +55,11 @@ namespace BECore::Mahjong {
      * so it can be stepped on another thread and dropped with nothing changed. A step is candidate `i` of world `w`; the world is
      * sampled when `i` is 0. A world that cannot be sampled, or one whose rollout the model refuses, is skipped whole in the step that
      * finds it. `SearchTurnAction` is "begin, step to the end", so the answer in the background is the one computed at once.
+     *
+     * The other way to play it: the worlds are independent, so a tool may play them in any order on any threads (`PlayWorld`) and hand
+     * them back in order (`Finish`), or give a `WorldLoop` to `RunWorlds`. `Game/` starts no thread; the loop is the tool's. Every
+     * number is a function of the base seed and the index of the world, and the sums run in world order, so the answer and the
+     * counters are the stepped run's whatever the order and the thread count.
      */
     class SearchRun {
     public:
@@ -51,6 +67,21 @@ namespace BECore::Mahjong {
 
         /// Plays one rollout; a no-op when `Done()`.
         void Step();
+
+        /// The number of worlds the run plays (`searchWorlds`).
+        [[nodiscard]] int WorldCount() const noexcept;
+
+        /// World `index` played through, the same one `Step()` would play: pure, repeatable, changes nothing of the run, so several
+        /// threads may call it at once for different (or equal) indexes. An index outside `[0, WorldCount())` is a world not played.
+        [[nodiscard]] SearchWorld PlayWorld(int index) const;
+
+        /// Takes the worlds `PlayWorld` gave, one slot per index in order, and makes the run `Done()`. A no-op (the contract) on a run
+        /// that was stepped or finished already, when the count is not `WorldCount()`, or a played world has not one value per candidate.
+        void Finish(eastl::span<const SearchWorld> worlds);
+
+        /// `PlayWorld` for every index through `loop` (slot `i` is written by `body(i)` only), then `Finish`. A no-op on a run that was
+        /// stepped or finished already.
+        void RunWorlds(const WorldLoop& loop);
 
         /// The answer: the best candidate when its advantage clears the margin, else the baseline (also when no world could be sampled).
         /// Valid when `Done()`.
@@ -67,6 +98,7 @@ namespace BECore::Mahjong {
         SearchRun(const TableView& view, eastl::vector<HandAction> candidates, uint32_t base, const LevelProfile& profile);
 
         [[nodiscard]] int StepsPerWorld() const noexcept;
+        [[nodiscard]] bool Untouched() const noexcept;
         void NextWorld();
 
         TableView _view;
