@@ -41,6 +41,130 @@ namespace BECore::Mahjong {
             return "hints.advice.pass";
         }
 
+        eastl::string Num(int value) {
+            return Format("{}", value);
+        }
+
+        void AddLine(eastl::vector<eastl::string>& lines, eastl::string line) {
+            if (!line.empty() && lines.size() < kMaxReasonLines) {
+                lines.push_back(eastl::move(line));
+            }
+        }
+
+        eastl::string StepsLine(const UIStrings& strings, int before, int after) {
+            return Tr(strings, "hints.why.steps", {{"before", Num(before)}, {"after", Num(after)}});
+        }
+
+        eastl::string WaitsLine(const UIStrings& strings, int kinds, int copies) {
+            return Tr(strings, "hints.why.waits", {{"kinds", Num(kinds)}, {"copies", Num(copies)}});
+        }
+
+        /// The word for a `kKeep...` class.
+        const char* KeepKey(int keep) noexcept {
+            if (keep <= kKeepWorthless) {
+                return "hints.why.keep.worthless";
+            }
+            if (keep == kKeepTerminal) {
+                return "hints.why.keep.terminal";
+            }
+            return keep == kKeepSimple ? "hints.why.keep.simple" : "hints.why.keep.value";
+        }
+
+        /// How the tie of equal choices was settled. The first alternative is the best of the others, so it is the equal one with the
+        /// lowest keep value: an equal keep value too leaves the choice to chance.
+        eastl::string TieLine(const UIStrings& strings, const TurnExplanation& turn) {
+            if (turn.equalChoices == 0) {
+                return Tr(strings, "hints.why.tie.none");
+            }
+            const bool alike = !turn.alternatives.empty() && turn.alternatives.front().keep == turn.chosen.keep;
+            if (alike) {
+                return Tr(strings, "hints.why.tie.chance", {{"n", Num(turn.equalChoices)}});
+            }
+            return Tr(strings, "hints.why.tie.keep", {{"n", Num(turn.equalChoices)}, {"keep", Tr(strings, KeepKey(turn.chosen.keep))}});
+        }
+
+        eastl::string DiscardAlternativeLine(const UIStrings& strings, const TurnOption& option, bool waiting) {
+            if (waiting) {
+                return Tr(strings, "hints.why.alt.wait", {{"tile", TileName(strings, option.tile)}, {"copies", Num(option.waitCopies)}});
+            }
+            return Tr(strings, "hints.why.alt.discard", {{"tile", TileName(strings, option.tile)}, {"steps", Num(option.shanten)}, {"copies", Num(option.acceptance)}});
+        }
+
+        eastl::string ClaimAlternativeLine(const UIStrings& strings, const TableView& view, const RatedClaim& option, int before) {
+            const WordArg beforeArg{"before", Num(before)};
+            const WordArg afterArg{"after", Num(option.after.shanten)};
+            if (option.action.claim == ClaimKind::Chow) {
+                const auto tiles = option.action.chowFirst.IsValid() ? ChowTiles(option.action.chowFirst) : eastl::array<Tile, kTilesPerSet>{};
+                return Tr(strings, "hints.why.alt.chow", {{"first", TileName(strings, tiles[0])}, {"third", TileName(strings, tiles[2])}, beforeArg, afterArg});
+            }
+            const char* key = option.action.claim == ClaimKind::Kong ? "hints.why.alt.kong" : "hints.why.alt.pung";
+            return Tr(strings, key, {{"tile", TileName(strings, view.pendingTile)}, beforeArg, afterArg});
+        }
+
+        void ReasonTurn(const UIStrings& strings, const TurnExplanation& turn, eastl::vector<eastl::string>& lines) {
+            const bool waiting = turn.step == TurnStep::Declare || turn.step == TurnStep::KeepWaiting;
+            switch (turn.step) {
+                case TurnStep::DeclareWin:
+                    AddLine(lines, Tr(strings, "hints.why.win"));
+                    return;
+                case TurnStep::Kong:
+                    AddLine(lines, StepsLine(strings, turn.shantenBefore, turn.kongShantenAfter));
+                    AddLine(lines, Tr(strings, "hints.why.help.change", {{"before", Num(turn.kongAcceptanceBefore)}, {"after", Num(turn.kongAcceptanceAfter)}}));
+                    AddLine(lines, Tr(strings, "hints.why.kong.noWorse"));
+                    return;
+                case TurnStep::Declare:
+                    AddLine(lines, Tr(strings, "hints.why.declare"));
+                    break;
+                case TurnStep::KeepWaiting:
+                    AddLine(lines, Tr(strings, "hints.why.keepWaiting"));
+                    break;
+                case TurnStep::Discard:
+                    AddLine(lines, StepsLine(strings, turn.shantenBefore, turn.chosen.shanten));
+                    break;
+            }
+            if (waiting) {
+                AddLine(lines, WaitsLine(strings, turn.chosen.waitKinds, turn.chosen.waitCopies));
+            } else {
+                AddLine(lines, Tr(strings, "hints.why.help", {{"copies", Num(turn.chosen.acceptance)}}));
+            }
+            AddLine(lines, TieLine(strings, turn));
+            for (const TurnOption& option : turn.alternatives) {
+                AddLine(lines, DiscardAlternativeLine(strings, option, waiting));
+            }
+        }
+
+        void ReasonClaim(const UIStrings& strings, const TableView& view, const ClaimExplanation& claim, eastl::vector<eastl::string>& lines) {
+            switch (claim.step) {
+                case ClaimStep::Mahjong:
+                    AddLine(lines, Tr(strings, "hints.why.claim.mahjong"));
+                    return;
+                case ClaimStep::WaitingHand: {
+                    int copies = 0;
+                    for (const TileCopies& wait : claim.waits) {
+                        copies += wait.unseen;
+                    }
+                    AddLine(lines, Tr(strings, "hints.why.pass.waiting"));
+                    AddLine(lines, WaitsLine(strings, static_cast<int>(claim.waits.size()), copies));
+                    return;
+                }
+                case ClaimStep::Claim:
+                    if (claim.chosen.has_value()) {
+                        AddLine(lines, StepsLine(strings, claim.shantenBefore, claim.chosen->after.shanten));
+                        AddLine(lines, Tr(strings, "hints.why.help", {{"copies", Num(claim.chosen->after.acceptance)}}));
+                        if (claim.chosen->after.shanten >= claim.shantenBefore) {
+                            AddLine(lines, Tr(strings, "hints.why.claim.value"));
+                        }
+                    }
+                    break;
+                case ClaimStep::NoGain:
+                    AddLine(lines, Tr(strings, "hints.why.pass.noGain"));
+                    break;
+            }
+            for (const RatedClaim& option : claim.alternatives) {
+                AddLine(lines, ClaimAlternativeLine(strings, view, option, claim.shantenBefore));
+            }
+        }
+
     }  // namespace
 
     eastl::vector<WaitEntry> WaitingTiles(const TableView& view) {
@@ -70,6 +194,20 @@ namespace BECore::Mahjong {
         }
         ComputerPlayer player(kAdviceSeed);
         return player.Choose(view);
+    }
+
+    std::optional<Explanation> ExplainAdviceFor(const TableView& view) {
+        return ExplainAdvice(view);
+    }
+
+    eastl::vector<eastl::string> ReasonLines(const UIStrings& strings, const TableView& view, const Explanation& explained) {
+        eastl::vector<eastl::string> lines;
+        if (explained.turn.has_value()) {
+            ReasonTurn(strings, *explained.turn, lines);
+        } else if (explained.claim.has_value()) {
+            ReasonClaim(strings, view, *explained.claim, lines);
+        }
+        return lines;
     }
 
     eastl::string AdviceText(const UIStrings& strings, const TableView& view, const HandAction& advice) {

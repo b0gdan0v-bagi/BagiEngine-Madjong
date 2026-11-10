@@ -11,8 +11,11 @@
 #include <Mahjong/Game/TableSession.h>
 #include <Mahjong/Table/Hints.h>
 #include <Mahjong/Table/ScoreText.h>
+#include <algorithm>
 #include <gtest/gtest.h>
 #include <set>
+#include <string>
+#include <vector>
 
 /**
  * The pure helper of the hints (`Table/Hints.h`): the waiting row, the discards that declare the calling hand, the advice and its words,
@@ -118,6 +121,73 @@ namespace BECore::Mahjong::Tests {
         HandAction ComputerChoice(const TableView& view) {
             MahjongRng rng(kAdviceSeed);
             return view.phase == Phase::Discard ? ChooseTurnAction(view, rng) : ChooseClaimAction(view, rng);
+        }
+
+        /// One advised table for the reasons: the view of the viewer and the rule of the chooser that is expected to decide.
+        struct ReasonCase {
+            const char* name;
+            TableView view;
+            std::optional<TurnStep> turnStep;
+            std::optional<ClaimStep> claimStep;
+        };
+
+        ReasonCase TurnCase(const char* name, const HandModel& model, Seat seat, TurnStep step) {
+            return {name, MakeTableView(model, seat), step, std::nullopt};
+        }
+
+        ReasonCase ClaimCase(const char* name, const HandModel& model, Seat seat, ClaimStep step) {
+            return {name, MakeTableView(model, seat), std::nullopt, step};
+        }
+
+        /// East throws the red dragon that completes seat 1, which has declared the calling hand.
+        HandModel MahjongWindowModel() {
+            FixedWallSpec spec;
+            spec.hands[kSeat0] = "1p 4p 7p 1s 4s 7s 1m 4m 7m 2m 5m 8m 9s";
+            spec.hands[kSeat1] = "Rd Rd 1s 2s 3s 4s 5s 6s 7m 8m 9m 4p 4p";
+            spec.hands[kSeat2] = "2p 5p 8p 2s 5s 8s 3m 6m 9m Gd Wd 9p 8m";
+            spec.hands[kSeat3] = "3p 6p 9p 3s 6s 9s 4m 7m Gd Wd 2m 7p 8s";
+            spec.live = "9p Wd Gd Nw Rd";
+            HandModel model = MakeModel(spec);
+            Lap(model, "9p Wd Gd Nw", {kSeat1});
+            EXPECT_TRUE(model.Discard(kSeat0, T("Rd")).has_value());
+            return model;
+        }
+
+        /// Every kind of advice, each on a hand worked out by hand (the numbers are those of `ComputerExplainTest`).
+        std::vector<ReasonCase> ReasonCases() {
+            std::vector<ReasonCase> cases;
+            cases.push_back(TurnCase("discard", MakeModel(SpecOf("1s 2s 3s 4s 5s 6s 7m 8m 9m 5p 5p Rd Ew", "Nw")), kSeat0, TurnStep::Discard));
+            cases.push_back(TurnCase("declare", MakeModel(SpecOf("1s 2s 3s 4s 5s 6s 7m 8m 9m 5p 6p 6p Ew", "Ew")), kSeat0, TurnStep::Declare));
+            HandModel keeping = MakeModel(SpecOf(kTwoSidedWait, "Gd Wd Gd Nw 6p"));
+            Lap(keeping, "Gd Wd Gd Nw", {kSeat0});
+            cases.push_back(TurnCase("keepWaiting", keeping, kSeat0, TurnStep::KeepWaiting));
+            cases.push_back(TurnCase("concealedKong", MakeModel(SpecOf("Ew Ew Ew 1p 4p 7p 1s 4s 7s 1m 4m 7m Gd", "Ew")), kSeat0, TurnStep::Kong));
+            cases.push_back(TurnCase("upgradeKong", OpenPungModel("5p 5p 8p 2s 5s 8s 2m 5m 8m Ww Nw Gd Wd"), kSeat1, TurnStep::Kong));
+            HandModel winning = MakeModel(SpecOf("1p 2p 3p 4s 5s 6s 7m 8m 9m Ew Ew Ew Rd", "9p Wd Gd Nw Rd"));
+            Lap(winning, "9p Wd Gd Nw", {kSeat0});
+            cases.push_back(TurnCase("win", winning, kSeat0, TurnStep::DeclareWin));
+            cases.push_back(ClaimCase("claimPung", WindowModel("5p 5p 1s 2s 3s 4s 5s 6s 7m 8m 9m Nw Wd", "5p"), kSeat1, ClaimStep::Claim));
+            cases.push_back(ClaimCase("claimChow", WindowModel("4p 6p 1s 2s 3s 4s 5s 6s 7m 8m 9m Nw Wd", "5p"), kSeat1, ClaimStep::Claim));
+            cases.push_back(ClaimCase("claimWithAlternatives", WindowModel("4p 6p 5p 5p 1s 2s 3s 7s 8s 9s Nw Nw Wd", "5p"), kSeat1, ClaimStep::Claim));
+            cases.push_back(ClaimCase("passWaiting", WindowModel("Rd Rd 1s 2s 3s 4s 5s 6s 7m 8m 9m 4p 4p", "Rd"), kSeat1, ClaimStep::WaitingHand));
+            cases.push_back(ClaimCase("passNoGain", WindowModel("3p 4p 6p 7p 3s 4s 6s 7s 1m 9m Nw 5m 5m", "5m"), kSeat1, ClaimStep::NoGain));
+            cases.push_back(ClaimCase("claimMahjong", MahjongWindowModel(), kSeat1, ClaimStep::Mahjong));
+            HandModel robbed = UpgradeModel({kSeat2});
+            EXPECT_TRUE(robbed.UpgradeKong(kSeat1, T("5p")).has_value());
+            cases.push_back(ClaimCase("robbedKong", robbed, kSeat2, ClaimStep::Mahjong));
+            return cases;
+        }
+
+        std::vector<std::string> Lines(const UIStrings& strings, const TableView& view) {
+            std::vector<std::string> lines;
+            const std::optional<Explanation> explained = ExplainAdviceFor(view);
+            EXPECT_TRUE(explained.has_value());
+            if (explained.has_value()) {
+                for (const eastl::string& line : ReasonLines(strings, view, *explained)) {
+                    lines.push_back(Std(line));
+                }
+            }
+            return lines;
         }
 
         /// The person who has to act follows the advice.
@@ -457,11 +527,216 @@ namespace BECore::Mahjong::Tests {
     TEST(HintsTest, TheKeysOfThePanelAreInBothLanguages) {
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
+        const std::vector<const char*> keys{"hints.waitCaption",
+                                            "hints.adviseButton",
+                                            "setup.hints",
+                                            "setup.on",
+                                            "setup.off",
+                                            "hints.why.steps",
+                                            "hints.why.help",
+                                            "hints.why.help.change",
+                                            "hints.why.waits",
+                                            "hints.why.declare",
+                                            "hints.why.keepWaiting",
+                                            "hints.why.tie.none",
+                                            "hints.why.tie.keep",
+                                            "hints.why.tie.chance",
+                                            "hints.why.keep.worthless",
+                                            "hints.why.keep.terminal",
+                                            "hints.why.keep.simple",
+                                            "hints.why.keep.value",
+                                            "hints.why.alt.discard",
+                                            "hints.why.alt.wait",
+                                            "hints.why.alt.pung",
+                                            "hints.why.alt.kong",
+                                            "hints.why.alt.chow",
+                                            "hints.why.kong.noWorse",
+                                            "hints.why.win",
+                                            "hints.why.claim.mahjong",
+                                            "hints.why.claim.value",
+                                            "hints.why.pass.waiting",
+                                            "hints.why.pass.noGain"};
 
         ForEachLanguage(strings, [&](PoolString language) {
-            for (const char* key : {"hints.waitCaption", "hints.adviseButton", "setup.hints", "setup.on", "setup.off"}) {
+            for (const char* key : keys) {
                 EXPECT_NE(Std(Tr(strings, key)), key) << language.ToStringView().data() << " " << key;
             }
+        });
+    }
+
+    // ----- the reasons -----
+
+    TEST(HintsTest, TheExplainedAdviceIsTheAdviceOfEveryKind) {
+        for (const ReasonCase& one : ReasonCases()) {
+            const std::optional<Explanation> explained = ExplainAdviceFor(one.view);
+            ASSERT_TRUE(explained.has_value()) << one.name;
+            EXPECT_EQ(explained->Action(), *AdviceFor(one.view)) << one.name;
+            ASSERT_EQ(explained->turn.has_value(), one.turnStep.has_value()) << one.name;
+            if (one.turnStep.has_value()) {
+                EXPECT_EQ(explained->turn->step, *one.turnStep) << one.name;
+            } else {
+                ASSERT_TRUE(explained->claim.has_value()) << one.name;
+                EXPECT_EQ(explained->claim->step, *one.claimStep) << one.name;
+            }
+        }
+        EXPECT_FALSE(ExplainAdviceFor(TableView{}).has_value());
+        EXPECT_FALSE(ExplainAdviceFor(ViewOfSeat1(kTwoSidedWait)).has_value());  // East acts
+    }
+
+    TEST(HintsTest, EveryKindOfAdviceHasReasonsInEveryLanguage) {
+        UIStrings strings;
+        ASSERT_TRUE(LoadShippedStrings(strings).empty());
+        const std::vector<ReasonCase> cases = ReasonCases();
+
+        ForEachLanguage(strings, [&](PoolString language) {
+            for (const ReasonCase& one : cases) {
+                const std::vector<std::string> lines = Lines(strings, one.view);
+                const std::string where = std::string(one.name) + " " + language.ToStringView().data();
+                EXPECT_FALSE(lines.empty()) << where;
+                EXPECT_LE(lines.size(), kMaxReasonLines) << where;
+                for (const std::string& line : lines) {
+                    EXPECT_FALSE(line.empty()) << where;
+                    EXPECT_EQ(line.find('{'), std::string::npos) << where << ": " << line;
+                    EXPECT_EQ(line.find('}'), std::string::npos) << where << ": " << line;
+                    EXPECT_EQ(line.find("hints."), std::string::npos) << where << ": a key is missing: " << line;
+                }
+                EXPECT_EQ(std::set<std::string>(lines.begin(), lines.end()).size(), lines.size()) << where << ": a line is said twice";
+            }
+        });
+    }
+
+    TEST(HintsTest, TheNumbersOfTheReasonsAreTheNumbersOfTheExplanation) {
+        UIStrings strings;
+        ASSERT_TRUE(LoadShippedStrings(strings).empty());
+        ASSERT_TRUE(strings.SetLanguage("en"_intern));
+        const auto number = [](int value) { return std::to_string(value); };
+        const auto has = [](const std::vector<std::string>& lines, const std::string& text) { return std::find(lines.begin(), lines.end(), text) != lines.end(); };
+        const std::vector<ReasonCase> cases = ReasonCases();
+        const auto of = [&](const char* name) -> const TableView& {
+            for (const ReasonCase& one : cases) {
+                if (std::string(one.name) == name) {
+                    return one.view;
+                }
+            }
+            ADD_FAILURE() << name;
+            return cases.front().view;
+        };
+
+        // A discard: steps before and after, the unseen tiles that help, then the two best others, each with its own numbers.
+        const TableView& discard = of("discard");
+        const TurnExplanation turn = *ExplainAdviceFor(discard)->turn;
+        const std::vector<std::string> lines = Lines(strings, discard);
+        ASSERT_GE(lines.size(), 4u);
+        EXPECT_EQ(lines[0], "Steps to ready: " + number(turn.shantenBefore) + " -> " + number(turn.chosen.shanten));
+        EXPECT_EQ(lines[1], "Unseen tiles that help: " + number(turn.chosen.acceptance));
+        ASSERT_EQ(turn.alternatives.size(), 2u);
+        for (size_t at = 0; at < turn.alternatives.size(); ++at) {
+            const TurnOption& option = turn.alternatives[at];
+            EXPECT_EQ(lines[lines.size() - 2 + at], "Instead " + Std(TileName(strings, option.tile)) + ": steps " + number(option.shanten) + ", helps " + number(option.acceptance));
+        }
+
+        // A declaration says what the hand waits on: 4p and 7p, 4 + 4 unseen copies.
+        const std::vector<std::string> declare = Lines(strings, of("declare"));
+        EXPECT_EQ(declare.front(), "This discard makes the hand ready.");
+        EXPECT_TRUE(has(declare, "Waiting tiles: 2, unseen copies: 8"));
+        EXPECT_TRUE(has(declare, "No other tile rates as well."));
+        EXPECT_TRUE(has(declare, "Instead 5 Dots: unseen copies 4"));
+
+        // A kong: the numbers of the best discard and of the hand without the kong.
+        const TurnExplanation kong = *ExplainAdviceFor(of("concealedKong"))->turn;
+        const std::vector<std::string> kongLines = Lines(strings, of("concealedKong"));
+        EXPECT_TRUE(has(kongLines, "Steps to ready: " + number(kong.shantenBefore) + " -> " + number(kong.kongShantenAfter)));
+        EXPECT_TRUE(has(kongLines, "Unseen tiles that help: " + number(kong.kongAcceptanceBefore) + " -> " + number(kong.kongAcceptanceAfter)));
+
+        // A claim: the shanten before and after it and the unseen tiles that help.
+        const ClaimExplanation pung = *ExplainAdviceFor(of("claimPung"))->claim;
+        const std::vector<std::string> pungLines = Lines(strings, of("claimPung"));
+        EXPECT_EQ(pungLines[0], "Steps to ready: " + number(pung.shantenBefore) + " -> " + number(pung.chosen->after.shanten));
+        EXPECT_EQ(pungLines[1], "Unseen tiles that help: " + number(pung.chosen->after.acceptance));
+
+        // A pass: why, and the waits of a hand that waits (the 4p with 2 copies and the Rd with 1) or the best claim that gains nothing.
+        const std::vector<std::string> waiting = Lines(strings, of("passWaiting"));
+        EXPECT_EQ(waiting, (std::vector<std::string>{"Your hand waits: a claim would break it.", "Waiting tiles: 2, unseen copies: 3"}));
+        const ClaimExplanation noGain = *ExplainAdviceFor(of("passNoGain"))->claim;
+        ASSERT_EQ(noGain.alternatives.size(), 1u);
+        EXPECT_EQ(Lines(strings, of("passNoGain")),
+                  (std::vector<std::string>{"No claim brings the hand closer to ready.", "Instead pung " + Std(TileName(strings, of("passNoGain").pendingTile)) + ": steps " +
+                                                                                             number(noGain.shantenBefore) + " -> " + number(noGain.alternatives[0].after.shanten)}));
+
+        // The listed claims after the advised one come as lines of their own, the sentence of the advice still first.
+        const ClaimExplanation withAlternatives = *ExplainAdviceFor(of("claimWithAlternatives"))->claim;
+        const std::vector<std::string> alternativeLines = Lines(strings, of("claimWithAlternatives"));
+        ASSERT_FALSE(withAlternatives.alternatives.empty());
+        ASSERT_GE(alternativeLines.size(), withAlternatives.alternatives.size());
+        for (size_t at = 0; at < withAlternatives.alternatives.size(); ++at) {
+            const std::string& line = alternativeLines[alternativeLines.size() - withAlternatives.alternatives.size() + at];
+            EXPECT_EQ(line.find("Instead "), 0u) << line;
+            EXPECT_NE(line.find("steps " + number(withAlternatives.shantenBefore) + " -> " + number(withAlternatives.alternatives[at].after.shanten)), std::string::npos) << line;
+        }
+
+        EXPECT_EQ(Lines(strings, of("win")), (std::vector<std::string>{"A complete hand: nothing beats a win."}));
+        EXPECT_EQ(Lines(strings, of("claimMahjong")), (std::vector<std::string>{"Take it: a win ends the hand."}));
+        EXPECT_EQ(Lines(strings, of("robbedKong")), (std::vector<std::string>{"Take it: a win ends the hand."}));
+    }
+
+    TEST(HintsTest, AnEqualTieIsSettledByTheKeepClassOrLeftToChance) {
+        UIStrings strings;
+        ASSERT_TRUE(LoadShippedStrings(strings).empty());
+        ASSERT_TRUE(strings.SetLanguage("en"_intern));
+
+        // Ww and Nw are equally worthless with the round wind South: the others are equal and the choice is chance.
+        const HandModel alike = MakeModel(SpecOf("1s 2s 3s 4s 5s 6s 7m 8m 9m 5p 5p Ww Nw", "Ew"), kSeat0, Wind::South);
+        const TableView alikeView = MakeTableView(alike, kSeat0);
+        const TurnExplanation alikeTurn = *ExplainAdviceFor(alikeView)->turn;
+        ASSERT_GT(alikeTurn.equalChoices, 0);
+        const std::vector<std::string> alikeLines = Lines(strings, alikeView);
+        EXPECT_NE(std::find(alikeLines.begin(), alikeLines.end(), "Equal tiles: " + std::to_string(alikeTurn.equalChoices) + "; any of them will do."), alikeLines.end());
+
+        // The worthless north wind goes before the value tiles that rate the same: the keep class settles the tie.
+        const TableView discard = ReasonCases().front().view;
+        const TurnExplanation turn = *ExplainAdviceFor(discard)->turn;
+        ASSERT_GT(turn.equalChoices, 0);
+        ASSERT_EQ(turn.alternatives.front().keep > turn.chosen.keep, true);
+        const std::vector<std::string> lines = Lines(strings, discard);
+        EXPECT_NE(std::find(lines.begin(), lines.end(), "Equal tiles: " + std::to_string(turn.equalChoices) + "; least wanted: a useless honour."), lines.end());
+    }
+
+    TEST(HintsTest, TheReasonsFollowTheLanguage) {
+        UIStrings strings;
+        ASSERT_TRUE(LoadShippedStrings(strings).empty());
+        const TableView view = ReasonCases().front().view;
+
+        ASSERT_TRUE(strings.SetLanguage("en"_intern));
+        const std::vector<std::string> english = Lines(strings, view);
+        ASSERT_TRUE(strings.SetLanguage("ru"_intern));
+        const std::vector<std::string> russian = Lines(strings, view);
+
+        ASSERT_FALSE(english.empty());
+        EXPECT_EQ(english.size(), russian.size());
+        EXPECT_EQ(english.front().find("Steps to ready"), 0u);
+        EXPECT_EQ(russian.front().find("Шагов до готовности"), 0u);
+    }
+
+    TEST(HintsTest, TheReasonsDoNotSeeTheOtherHands) {
+        const auto make = [](bool other) {
+            FixedWallSpec spec;
+            spec.hands[kSeat0] = "1s 2s 3s 4s 5s 6s 7m 8m 9m 5p 6p 6p Ew";
+            spec.hands[kSeat1] = other ? kQuiet3 : kQuiet1;
+            spec.hands[kSeat2] = other ? kQuiet1 : kQuiet2;
+            spec.hands[kSeat3] = other ? kQuiet2 : kQuiet3;
+            spec.live = std::string("Ew ") + (other ? "Gd Wd Nw" : "Nw Wd Gd");
+            return MakeModel(spec);
+        };
+        const HandModel a = make(false);
+        const HandModel b = make(true);
+        const TableView viewA = MakeTableView(a, kSeat0);
+        const TableView viewB = MakeTableView(b, kSeat0);
+        UIStrings strings;
+        ASSERT_TRUE(LoadShippedStrings(strings).empty());
+
+        ForEachLanguage(strings, [&](PoolString) {
+            EXPECT_EQ(Lines(strings, viewA), Lines(strings, viewB));
+            EXPECT_FALSE(Lines(strings, viewA).empty());
         });
     }
 

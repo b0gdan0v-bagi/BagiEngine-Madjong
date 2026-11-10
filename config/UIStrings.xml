@@ -122,6 +122,30 @@
         <string key="hints.advice.claimKong" text="Take the discard to make a kong of {tile}."/>
         <string key="hints.advice.claimChow" text="Take the discard to make the chow {first}, {second}, {third}."/>
         <string key="hints.advice.pass" text="Let the discard go."/>
+        <string key="hints.why.steps" text="Steps to ready: {before} -&gt; {after}"/>
+        <string key="hints.why.help" text="Unseen tiles that help: {copies}"/>
+        <string key="hints.why.help.change" text="Unseen tiles that help: {before} -&gt; {after}"/>
+        <string key="hints.why.waits" text="Waiting tiles: {kinds}, unseen copies: {copies}"/>
+        <string key="hints.why.declare" text="This discard makes the hand ready."/>
+        <string key="hints.why.keepWaiting" text="The hand is ready: keep the best wait."/>
+        <string key="hints.why.tie.none" text="No other tile rates as well."/>
+        <string key="hints.why.tie.keep" text="Equal tiles: {n}; least wanted: {keep}."/>
+        <string key="hints.why.tie.chance" text="Equal tiles: {n}; any of them will do."/>
+        <string key="hints.why.keep.worthless" text="a useless honour"/>
+        <string key="hints.why.keep.terminal" text="a terminal"/>
+        <string key="hints.why.keep.simple" text="a simple tile"/>
+        <string key="hints.why.keep.value" text="a value tile"/>
+        <string key="hints.why.alt.discard" text="Instead {tile}: steps {steps}, helps {copies}"/>
+        <string key="hints.why.alt.wait" text="Instead {tile}: unseen copies {copies}"/>
+        <string key="hints.why.alt.pung" text="Instead pung {tile}: steps {before} -&gt; {after}"/>
+        <string key="hints.why.alt.kong" text="Instead kong {tile}: steps {before} -&gt; {after}"/>
+        <string key="hints.why.alt.chow" text="Instead chow {first} - {third}: steps {before} -&gt; {after}"/>
+        <string key="hints.why.kong.noWorse" text="The kong does not make the hand worse."/>
+        <string key="hints.why.win" text="A complete hand: nothing beats a win."/>
+        <string key="hints.why.claim.mahjong" text="Take it: a win ends the hand."/>
+        <string key="hints.why.claim.value" text="A value tile: its set scores a double."/>
+        <string key="hints.why.pass.waiting" text="Your hand waits: a claim would break it."/>
+        <string key="hints.why.pass.noGain" text="No claim brings the hand closer to ready."/>
         <string key="cover.text" text="Pass the screen to {handoffSeat}"/>
         <string key="cover.show" text="Show"/>
         <string key="panel.round" text="{wind} {n}"/>
@@ -354,6 +378,30 @@
         <string key="hints.advice.claimKong" text="Возьмите сброс и составьте конг: {tile}."/>
         <string key="hints.advice.claimChow" text="Возьмите сброс и составьте чи: {first}, {second}, {third}."/>
         <string key="hints.advice.pass" text="Пропустите сброс."/>
+        <string key="hints.why.steps" text="Шагов до готовности: {before} -&gt; {after}"/>
+        <string key="hints.why.help" text="Полезных невидимых костей: {copies}"/>
+        <string key="hints.why.help.change" text="Полезных невидимых костей: {before} -&gt; {after}"/>
+        <string key="hints.why.waits" text="Ждёт костей: {kinds}, не видно копий: {copies}"/>
+        <string key="hints.why.declare" text="Этот сброс делает руку готовой."/>
+        <string key="hints.why.keepWaiting" text="Рука готова: оставьте лучшее ожидание."/>
+        <string key="hints.why.tie.none" text="Другой сброс не лучше."/>
+        <string key="hints.why.tie.keep" text="Равных костей: {n}; менее нужна: {keep}."/>
+        <string key="hints.why.tie.chance" text="Равных костей: {n}; подойдёт любая."/>
+        <string key="hints.why.keep.worthless" text="почётная без ценности"/>
+        <string key="hints.why.keep.terminal" text="крайняя"/>
+        <string key="hints.why.keep.simple" text="простая"/>
+        <string key="hints.why.keep.value" text="ценная"/>
+        <string key="hints.why.alt.discard" text="Вместо {tile} — шагов {steps}, помогут {copies}"/>
+        <string key="hints.why.alt.wait" text="Вместо {tile} — не видно копий {copies}"/>
+        <string key="hints.why.alt.pung" text="Вместо пуна {tile} — шагов {before} -&gt; {after}"/>
+        <string key="hints.why.alt.kong" text="Вместо конга {tile} — шагов {before} -&gt; {after}"/>
+        <string key="hints.why.alt.chow" text="Вместо чи {first} - {third} — шагов {before} -&gt; {after}"/>
+        <string key="hints.why.kong.noWorse" text="Конг не ухудшает руку."/>
+        <string key="hints.why.win" text="Рука собрана: лучше победы нет."/>
+        <string key="hints.why.claim.mahjong" text="Берите: победа завершает раздачу."/>
+        <string key="hints.why.claim.value" text="Ценная кость: набор даёт удвоение."/>
+        <string key="hints.why.pass.waiting" text="Рука уже ждёт: взяв сброс, вы её сломаете."/>
+        <string key="hints.why.pass.noGain" text="Взятие сброса не приближает руку к готовности."/>
         <string key="cover.text" text="Передайте экран: {handoffSeat}"/>
         <string key="cover.show" text="Показать"/>
         <string key="panel.round" text="{wind} {n}"/>
