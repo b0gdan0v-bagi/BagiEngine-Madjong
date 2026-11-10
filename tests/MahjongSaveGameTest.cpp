@@ -256,7 +256,7 @@ namespace BECore::Mahjong::Tests {
         PlayFirstActions(*second, 1);                        // and the match goes on legally
     }
 
-    TEST_F(MahjongSaveGameTest, AResumedMatchsOwnSeatsLevelAndHandsAreWhatTheGameHasNext) {
+    TEST_F(MahjongSaveGameTest, TheSeatsLevelAndHandsOfAResumedMatchAreWhatTheGameHasNext) {
         IntrusivePtr<MahjongGame> game = NewGame();
         Reset(*game, "{\"seed\": 5, \"seats\": \"PCCC\", \"hands\": 8, \"level\": \"easy\"}");
         // The choices of the game moved on after the match began (a client set them): the prefs slot says so

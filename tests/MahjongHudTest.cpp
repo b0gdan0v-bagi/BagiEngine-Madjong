@@ -1420,6 +1420,15 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_game->GetSession().Version(), version);
     }
 
+    TEST_F(MahjongHudContinueTest, AControlResetTakesTheOfferAway) {
+        Draw();
+        ASSERT_TRUE(ContinueShown());
+        ASSERT_TRUE(_game->AsControllable()->Reset(ParseJson("{\"seed\": 6, \"seats\": \"PCCC\", \"hands\": 8}").value()).has_value());
+        Draw();
+        EXPECT_FALSE(_game->CanContinue());
+        EXPECT_FALSE(ContinueShown());
+    }
+
     TEST_F(MahjongHudContinueTest, StartTakesTheOfferAwayAndOverwritesTheSaveAtTheNextFrameAndNotBefore) {
         Draw();
         ASSERT_TRUE(ContinueShown());
