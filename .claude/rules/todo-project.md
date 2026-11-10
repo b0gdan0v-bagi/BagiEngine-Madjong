@@ -1,3 +1,9 @@
+---
+paths:
+  - ".env.example"
+  - ".claude/agents/**/*"
+---
+
 # The todo areas of this repository
 
 Read by the skills `todo-loop`, `todo-merge`, `todo-add`, `todo-db` and by the agents `todo-*`. The skills and agents are one copy in the submodule (`engine/.claude/`), linked here by symlinks; `engine/.claude/skills/todo-loop/SKILL.md`, "Areas and the repository rules", explains the terms below. The engine is developed from this checkout: its entries are worked here, in the `engine/` submodule.
@@ -23,7 +29,7 @@ An engine entry's branch `todo/<id>` is cut in `engine/` from `games/mahjong`; i
 
 Parallel loops run in worker folders (`engine/.claude/skills/todo-loop/SKILL.md`, "Parallel workers"; `engine/tools/todo/CLAUDE.md`, "Workers"): `python3 engine/tools/todo/worker.py create 3` in the main checkout makes `../BagiEngine-Madjong.workers/w1` ... `w3`, each with its own `engine/` (a worktree of the main checkout's engine module, so engine branches are shared too) and its own `build/`; `/todo-loop-parallel` (or `python3 engine/tools/todo/worker.py start`) runs `/todo-loop` in all of them as background sessions a minute apart (`worker.py list` shows their state, `claude attach todo-w<k>` opens one that waits for a permission, `worker.py run <k>` starts a session in a terminal). The main checkout stays the owner's: trying branches and `/todo-merge`. Three suit the owner's machine (14 cores; a full build takes about 17 s there, and `worker.py run` gives each session a share of the cores).
 
-- **Shared files**, which do not count alone when the loop compares busy files: `CLAUDE.md` and `README.md` (every entry touches them a little, `CLAUDE.md` with one row of its test table per test file; the developer keeps its edits to its own lines and rows).
+- **Shared files**, which do not count alone when the loop compares busy files: every `CLAUDE.md` (the root one and the nested ones of `src/Mahjong/*/`, `config/`, `tests/`, `tools/`) and `README.md` (the developer keeps its edits to its own lines and within the docs budget of the root `CLAUDE.md`).
 - Everything else counts as it is. `src/Mahjong/Components/MahjongTableComponent.cpp`, `src/Mahjong/Components/MahjongHudComponent.cpp` and `tests/MahjongTableTestSupport.h` are where most UI entries meet. The scene is split: `config/SceneConfig.xml` holds the scene attributes and the node references only (it changes only when a node is added, removed or reordered) and each node is a file `config/nodes/Mahjong<Name>.xml`, so two UI entries conflict only when they change the same node file or one of those meeting points; an entry that adds a node also touches `config/SceneConfig.xml` and `tests/MahjongSceneFilesTest.cpp`. A plan's Files section names the node files (`config/nodes/MahjongHud.xml`), not the folder, when the node is known. An entry of `src/Mahjong/Game/` only or of the engine area runs beside them.
 
 ## Zones nobody edits

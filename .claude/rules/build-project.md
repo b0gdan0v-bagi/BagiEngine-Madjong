@@ -1,6 +1,14 @@
+---
+paths:
+  - "CMakeLists.txt"
+  - "CMakePresets.json"
+  - "CMakeUserPresets.json"
+  - "**/*.cmake"
+---
+
 # Build, format and include facts of this repository
 
-Read by the skills `build`, `clang-format` and `strip-pch-includes`. The three skills are symlinks into `engine/.claude/skills/` (the same text as in the engine repository); what differs between the repositories is here. This file has the same headings and fields as `engine/.claude/rules/build-project.md`, its template. The todo areas are in `todo-project.md`, not here.
+Read by the skills `build`, `clang-format` and `strip-pch-includes` (they read it by path: it is not loaded into every session). The three skills are symlinks into `engine/.claude/skills/` (the same text as in the engine repository); what differs between the repositories is here. This file has the same headings and fields as `engine/.claude/rules/build-project.md`, its template. The todo areas are in `todo-project.md`, not here.
 
 ## Terms
 
