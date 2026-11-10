@@ -49,7 +49,8 @@ golden of `ComputerLevelTest`).
 
 ## The budget
 
-A decision costs `searchWorlds` x `searchCandidates` rollouts (a rollout is a whole hand by four Normal players). The shipped
+A decision costs at most `searchWorlds` x `searchCandidates` rollouts (a rollout is a whole hand by four Normal players; only the
+candidates that exist are played, and many decisions have fewer than `searchCandidates`). The shipped
 constants are in `ComputerLevel.h` and used by no level:
 
 ```
@@ -62,7 +63,8 @@ kSearchMargin     = 30      (tenths of a standard error)
 tiles with the full candidate count) takes at most 0.3 s in a Debug build, because the step of a computer blocks the frame and
 `kComputerStepSeconds` is 1.0 s. A budget is a count of rollouts, never a clock, so a seed stays one match. Measured with a
 Debug `BagiMahjongArena` at `--jobs 1` (summed thread time over-counts, see `docs/bot-arena.md`), `--others normal`, seeds 4000 ..
-4015, 727 search decisions, each decision timed with a temporary stderr print (not committed) in two runs, and the table gives the
+4015 (margin 0: the cost of a decision is the same at any margin; 727 search decisions for 2 x 4, 724, 710, 706 and 723 for the
+other shapes of the table, so the means are of slightly different samples), each decision timed with a temporary stderr print (not committed) in two runs, and the table gives the
 smaller of the two times of each decision (the machine was shared with other sessions, so a single run has contention spikes):
 
 | worlds x candidates | worst decision | mean decision |
@@ -149,7 +151,7 @@ The 4x and 16x runs are for the record, to say whether compute was the limit; th
 1. Condition (1) fails. At the shipped worlds the points are not significant on either range (-3.07 +- 3.28 and -3.38 +- 3.44
    include 0) and the wins are significant but **negative** on both (-1.45 +- 0.95 and -1.55 +- 0.99).
 2. Condition (2) fails. The pooled difference over the two ranges (the mean of the two, 1000 seeds each) is -3.2 points a hand and
-   -1.5 points of wins, far from +5 and +1.5. (Pooled intervals are my arithmetic from the two rows, not an arena output:
+   -1.5 points of wins, far from +5 and +1.5. (Pooled intervals are computed from the two rows, not an arena output:
    about +-2.4 points and +-0.7 wins, so the pooled loss is itself outside 0.)
 3. Condition (3) holds: -9.22 +- 11.47 points and -1.80 +- 2.51 wins against three random seats, neither significant.
 4. Condition (4) holds on the observed worst of 248 ms (the smaller of two runs of each of 727 decisions), with the caveat above.
@@ -163,8 +165,8 @@ No range was replayed with other knobs, and no range or budget was chosen after 
   This is not noise: the exploration range shows the same sign for every margin and every shape tried.
 - **More compute does not show a gain at the intervals reached.** At 4 times the worlds the pooled paired difference is about
   0.0 +- 2.1 points and -0.1 +- 0.6 wins; the +5 points of the rule is far outside it. At 16 times, on 250 seeds a range, the
-  two ranges disagree (-2.37 and +5.15 points) and the pooled difference is about +1.4 +- 4.3 points and +0.4 +- 1.2 wins (my
-  arithmetic). That interval **cannot exclude** a gain of up to about +5 points a hand or +1.5 wins, the size the rule asks, nor a
+  two ranges disagree (-2.37 and +5.15 points) and the pooled difference is about +1.4 +- 4.3 points and +0.4 +- 1.2 wins (computed
+  from the two rows, not an arena output). That interval **cannot exclude** a gain of up to about +5 points a hand or +1.5 wins, the size the rule asks, nor a
   loss of several points: 500 seeds are too few to tell. Halving that interval takes four times the seeds; at 16 times
   the worlds a run costs about 200 s per 250 seeds on 14 cores, about 13 minutes per 1000 seeds.
 - The one trend in the data is the one to expect from the margin: with few worlds the player is Normal plus noise, and more worlds
@@ -192,5 +194,15 @@ $A --first 60000 --seeds 1000 --jobs 14 --others normal --focus normal,normal:se
 $A --first 30000 --seeds 250  --jobs 14 --others random --focus normal,normal:searchWorlds=2,searchCandidates=4,searchMargin=30
 ```
 
-`searchWorlds=8` and `searchWorlds=32` are 4 times and 16 times. A Release build overwrites the Debug executables
+`searchWorlds=8` and `searchWorlds=32` are 4 times and 16 times (the 32-world runs used `--seeds 250` on both ranges). A Release build overwrites the Debug executables
 (`docs/bot-arena.md`). The Debug time rule needs a Debug arena at `--jobs 1`.
+
+## What was decided
+
+Outcome B of the plan: **no `Hard` level.** `ComputerLevel` stays Easy and Normal, the match log and the control API are unchanged
+(a level `hard` is still refused). The search stays in the tree as the three knobs of `LevelProfile` (`searchWorlds`,
+`searchCandidates`, `searchMargin`), off in every shipped level, which the arena can set from the command line
+(`normal:searchWorlds=8`) for the next experiment. `kSearchWorlds`, `kSearchCandidates` and `kSearchMargin` (`ComputerLevel.h`) are
+the budget that fitted the time rule and are used by no level. The Hint advice stays Normal. A search seat plays a whole 4-hand match
+legally in `ComputerMatchTest`, so the code is kept working. The ideas that might make it win are listed under "What would make
+search win" above; none is built.

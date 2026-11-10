@@ -50,10 +50,6 @@ namespace BECore::Mahjong {
     /// four-sets-and-a-pair shape.
     [[nodiscard]] int AcceptanceOf(const TableView& view, const TileCounts& counts, int meldCount);
 
-    /// The unseen copies of the tiles that complete the hand once `discarded` leaves it (the concealed tiles and melds of `view.own`);
-    /// nullopt when the rest does not wait. What the declaring discards are ranked by.
-    [[nodiscard]] std::optional<int> WaitingCopiesAfterDiscard(const TableView& view, Tile discarded);
-
     /// A discard that leaves the hand waiting: the tile, the unseen copies of the tiles it waits on, and its `KeepValue`.
     struct WaitingDiscard {
         Tile tile;

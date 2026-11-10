@@ -234,19 +234,6 @@ namespace BECore::Mahjong {
         return copies;
     }
 
-    std::optional<int> WaitingCopiesAfterDiscard(const TableView& view, Tile discarded) {
-        if (!discarded.IsPlayable()) {
-            return std::nullopt;
-        }
-        TileCounts counts = CountTiles(view.own.concealed);
-        if (counts[discarded.Id()] == 0) {
-            return std::nullopt;
-        }
-        --counts[discarded.Id()];
-        const int copies = UnseenWinningCopies(view, counts, MeldCountOf(view), CountMeldTiles(view.own.melds));
-        return copies == kNotWaiting ? std::nullopt : std::optional<int>(copies);
-    }
-
     eastl::vector<WaitingDiscard> WaitingDiscards(const TableView& view, bool declaring) {
         TileCounts counts = CountTiles(view.own.concealed);
         const TileCounts meldTiles = CountMeldTiles(view.own.melds);

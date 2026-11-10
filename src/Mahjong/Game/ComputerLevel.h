@@ -4,8 +4,9 @@ namespace BECore::Mahjong {
 
     /// How well a computer seat plays. `Normal` is the player described in `CLAUDE.md` ("Computer player"); `Easy` is the same player
     /// with other numbers (`kEasyProfile`). A third level, `Hard`, was removed on the owner's decision (2026-11-09): it played exactly
-    /// like Normal, and it comes back as the search player of the entry `mahjong-bot-search` when that one beats Normal (the levers
-    /// tried for it earlier are in the todo store, in the entry `mahjong-computer-difficulty`).
+    /// like Normal. It stays removed: the search player of the entry `mahjong-bot-search` did not beat Normal (`docs/bot-search.md`, `VERDICT: no
+    /// switch`), so the search is only a set of knobs of `LevelProfile` that the arena can set, off in every level (the levers tried
+    /// earlier are in the todo store, in the entry `mahjong-computer-difficulty`).
     CORE_ENUM(ComputerLevel, uint8_t, Easy, Normal)
 
     /// The level of a table nobody chose a level for.
@@ -41,14 +42,15 @@ namespace BECore::Mahjong {
     /// The base of a percentage: a roll is one `MahjongRng::Below(kPercentBase)` against the percent.
     inline constexpr int kPercentBase = 100;
 
-    /// The search knobs of `LevelProfile`: the candidates a search decision looks at when nothing else is said (neutral while
+    /// The search knobs of `LevelProfile` (the search player of `ComputerSearch.h`; no level turns it on): the candidates a search decision looks at when nothing else is said (neutral while
     /// `searchWorlds` is 0), and the largest value of each knob (what the arena accepts from the command line).
     inline constexpr int kSearchDefaultCandidates = 4;
     inline constexpr int kSearchMaxWorlds = 4096;
     inline constexpr int kSearchMaxCandidates = 12;
     inline constexpr int kSearchMaxMargin = 100;
 
-    /// The shipped budget of the search player (used by no level yet; the arena sets the same numbers from the command line). Found by
+    /// The budget of the search player that fitted the time rule (**used by no level**: the search did not beat Normal and no `Hard` level
+    /// was made, `docs/bot-search.md`; the arena sets the same numbers from the command line, `normal:searchWorlds=2`). Found by
     /// time, as `docs/bot-search.md` records: the rule is that the slowest decision (the first discard of 14 tiles with the full candidate
     /// count) takes at most 0.3 s in a **Debug** build, because a step blocks the frame and `kComputerStepSeconds` is 1.0 s. A decision
     /// is `kSearchWorlds` x `kSearchCandidates` whole hands played out by four Normal players, 8 of them here; on 16 seeds (727
@@ -56,7 +58,7 @@ namespace BECore::Mahjong {
     /// took 314 to 335 ms and 2 x 5 over a second. The margin is not set by time: on the exploration range (seeds 4000 ..) every margin
     /// from 20 to 100 tenths lost 2 to 3 points a hand to Normal (within each other's noise), 10 lost 7 and 0 lost 35, so a margin of 30
     /// is used; with two worlds the choice is mostly noise, and the 4x and 16x rows of `docs/bot-search.md` say whether more worlds
-    /// would change that.
+    /// would change that (they did not: about level with Normal at 4x and 16x, within wide intervals).
     inline constexpr int kSearchWorlds = 2;
     inline constexpr int kSearchCandidates = 4;
     inline constexpr int kSearchMargin = 30;
@@ -79,7 +81,8 @@ namespace BECore::Mahjong {
         /// Whether a pung or kong of a value tile (a dragon, the own wind, the round wind) is taken at an equal shanten, for the double.
         bool takeValueClaimsAtEqualShanten = true;
         /// The search (`ComputerSearch.h`): the number of sampled worlds each candidate is played out in, 0 = no search at all (no number
-        /// drawn, the choosers answer as before). A level's search is its profile: it is off in `kNormalProfile` and `kEasyProfile`.
+        /// drawn, the choosers answer as before). It is off in `kNormalProfile` and `kEasyProfile`, so in every level that ships; only the
+        /// arena and the tests turn it on.
         int searchWorlds = 0;
         /// At most this many candidates are looked at in a search decision, Normal's own choice among them (below 2 there is nothing to
         /// compare). Unused while `searchWorlds` is 0.
