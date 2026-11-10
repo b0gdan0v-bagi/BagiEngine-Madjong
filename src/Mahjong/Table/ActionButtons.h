@@ -98,4 +98,17 @@ namespace BECore::Mahjong {
      */
     [[nodiscard]] ActionButtons MakeActionButtons(const eastl::vector<HandAction>& legal, std::optional<Tile> pendingTile = std::nullopt);
 
+    /// The tiles of the hand a chow takes: the two of its sequence besides the pending discard.
+    struct ChowTakes {
+        eastl::array<Tile, 2> tiles;
+        int count = 0;
+    };
+
+    /**
+     * The tiles of the hand to mark while chows are offered: those of the sequence of the `hovered` button when it is a shown chow, else
+     * (no pointer on a chow) those of the one chow on offer; none when two or three chows are offered and none is hovered, or when no chow is.
+     * The sequence is the three tiles pictured on the button less the `pending` discard (the first equal one).
+     */
+    [[nodiscard]] ChowTakes ChowTilesTaken(const ActionButtons& buttons, Tile pending, std::optional<ButtonKind> hovered);
+
 }  // namespace BECore::Mahjong

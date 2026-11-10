@@ -133,6 +133,12 @@ namespace BECore::Mahjong {
             return _published;
         }
 
+        /// The tiles of the viewer's hand framed by the last `OnDraw` for the offered chow (see `ChowTilesTaken`); none under the cover, with no
+        /// chow on offer or when several are and the pointer is on none of them.
+        [[nodiscard]] const ChowTakes& GetChowTakes() const noexcept {
+            return _chowTakes;
+        }
+
         /// Draws with `texture` (made from pixels, `IRenderer::CreateTexture()`) instead of the atlas from the file; a test hands one.
         void SetAtlasTexture(IntrusivePtr<ITexture> texture);
 
@@ -234,6 +240,8 @@ namespace BECore::Mahjong {
         float _flightSeconds = kTileFlightSeconds;       // at Normal speed: `Seconds(_flightSeconds)` is the length of a flight
         AnimationSpeed _speed = kDefaultAnimationSpeed;  // the game's speed as of the last update or draw (the table does not move while `Options` is open)
         ActionButtons _published;                        // what the canvases show; the scene file starts with every button hidden
+        std::optional<ButtonKind> _hoveredButton;        // the shown button of `Actions` under the pointer at the last publication
+        ChowTakes _chowTakes;                            // what the last `OnDraw` framed in the hand for the offered chow
         eastl::string_view _hintKey;                     // the key of the sentence in `actionHint` (a literal of `SpecOf`, which lives as long as the program)
         uint64_t _hintStringsVersion = 0;                // the version of the string table that sentence was looked up at
         bool _handoffShown = false;
