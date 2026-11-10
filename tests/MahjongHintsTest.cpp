@@ -9,6 +9,7 @@
 #include <Mahjong/Game/ComputerPlayer.h>
 #include <Mahjong/Table/Hints.h>
 #include <Mahjong/Table/TableLayout.h>
+#include <Mahjong/Table/TapSelect.h>
 #include <Mahjong/Table/UiPalette.h>
 
 /**
@@ -1050,6 +1051,57 @@ namespace BECore::Mahjong::Tests {
         // Asking for the advice plays nothing: the hand still holds its 14 tiles and the person is still to act
         EXPECT_EQ(Hand().GetHand(kSeat0).concealed.size(), 14u);
         EXPECT_TRUE(_game->GetSession().ActorIsPerson());
+    }
+
+    TEST_F(MahjongHintsTest, TheDeclareBarAndTheAdviceFrameOfTheSelectedTileFollowTheRaise) {
+        // 123s 456s 789m 234p Ew and a drawn 9p: the 9p and the east wind declare
+        ASSERT_NO_FATAL_FAILURE(StartEast(kSingleWait, "9p"));
+        const int index = IndexOf(kSeat0, T("9p"));
+        const int other = IndexOf(kSeat0, T("Ew"));
+        // Copies: the layout is made again by every draw
+        ASSERT_TRUE(HandSlot(index) != nullptr && HandSlot(other) != nullptr);
+        const Rect slotRect = HandSlot(index)->rect;
+        const Rect otherRect = HandSlot(other)->rect;
+        TapHandTile(index);
+        Draw();
+        ASSERT_EQ(_table->SelectedHandIndex(), index);
+        const Rect raised = RaisedRect(slotRect);
+
+        // The bar of the 9p lies under the raised tile, the bar of the east wind under its own slot
+        bool raisedBar = false;
+        bool plainBar = false;
+        for (const Rect& bar : RectsOf(kDeclareMark)) {
+            raisedBar = raisedBar || (bar.x == raised.x && bar.y > raised.y + raised.h && bar.y < slotRect.y + slotRect.h);
+            plainBar = plainBar || (bar.x == otherRect.x && bar.y > otherRect.y + otherRect.h);
+        }
+        EXPECT_TRUE(raisedBar);
+        EXPECT_TRUE(plainBar);
+        EXPECT_EQ(RectsOf(kDeclareMark).size(), 2u);
+
+        // The advice frame of the advised tile rises too
+        const std::optional<HandAction> advice = AdviceFor(ViewOf(kSeat0));
+        ASSERT_TRUE(advice.has_value());
+        ASSERT_EQ(advice->kind, ActionKind::Discard);
+        ASSERT_EQ(advice->tile, T("9p")) << "worked out in HintsTest: the advice is the 9p";
+        Press();
+        bool topBar = false;
+        for (const Rect& bar : RectsOf(kAdvisedFrame)) {
+            topBar = topBar || (bar.x == raised.x && bar.y == raised.y && bar.w == raised.w);
+        }
+        EXPECT_TRUE(topBar) << "the frame is round the raised rectangle";
+        EXPECT_EQ(RectsOf(kAdvisedFrame).size(), 4u);
+    }
+
+    TEST_F(MahjongHintsTest, AnUnchangedFrameWithASelectionSetsNothingAgain) {
+        ASSERT_NO_FATAL_FAILURE(StartEast(kSingleWait, "9p"));
+        TapHandTile(IndexOf(kSeat0, T("9p")));
+        Draw();
+        const uint64_t version = CoreManager::GetUIVars().GetVersion();
+
+        Draw();
+        Draw();
+
+        EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), version);
     }
 
     TEST_F(MahjongHintsTest, ThePressOfTheButtonWorksByClick) {

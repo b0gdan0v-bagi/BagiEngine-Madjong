@@ -9,6 +9,7 @@
 #include <Generated/MahjongHintsComponent.gen.hpp>
 #include <Mahjong/Components/MahjongTableComponent.h>
 #include <Mahjong/MahjongGame.h>
+#include <Mahjong/Table/TapSelect.h>
 #include <Mahjong/Table/TileAtlas.h>
 #include <Mahjong/Table/UiPalette.h>
 
@@ -189,13 +190,15 @@ namespace BECore::Mahjong {
         }
         const auto& concealed = game.GetMatch().Hand().GetHand(viewer).concealed;
         const Tile advised = _advice && _advice->kind == ActionKind::Discard ? _advice->tile : Tile{};
+        const std::optional<int> raised = table->SelectedHandIndex();
         for (const TileSlot& slot : table->GetLayout().slots) {
             // The layout is of the last draw of the table: it has to be of this hand
             if (slot.role != SlotRole::HandTile || slot.seat != viewer || slot.index < 0 || slot.index >= static_cast<int>(concealed.size())) {
                 continue;
             }
             const Tile tile = concealed[slot.index];
-            const Rect& rect = slot.rect;
+            // The tile the table drew raised carries its marks with it
+            const Rect rect = raised && *raised == slot.index ? RaisedRect(slot.rect) : slot.rect;
             if (_declaring[tile.Id()]) {
                 renderer->DrawFilledRect(rect.x, rect.y + rect.h + kMarkGap, rect.w, kMarkThickness, kDeclareMark);
             }

@@ -4,6 +4,8 @@
   only (not a touch target), on the view of the table. It keeps to the safe area (the table is a fixed design that the safe area does not
   move), so on a screen with a notch or side insets it moves inwards and can cover the nearest tiles. The New game button is in the node
   HudMenu below, a Screen canvas, because a control of a SceneView canvas is only 21 px high in a small window.
+  The label SelectedTile (the name of the tile selected by a tap) lies above the viewer's hand; MahjongTableComponent publishes
+  selectedTileText and shows it while a tile is selected.
   MahjongHudComponent publishes lastMove (the round, the wall and the seats' winds and points are in the node CenterPanel, the seats'
   names in SeatPlates). MahjongHudTest holds the worst texts and checks that no tile of any game lies under it.
 -->
@@ -16,6 +18,12 @@
         <element type="UIStack" name="MoveLine" anchor="TopRight" x="-92" y="92" width="448" height="80" visible="false" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170">
           <children>
             <element type="UILabel" name="MoveText" height="64" text="{lastMove}" fontSize="18" verticalAlign="Center" />
+          </children>
+        </element>
+        <!-- The name of the tile selected by a tap (selectedTileText, Table/TapSelect.h), shown by MahjongTableComponent exactly while a tile is selected: above the viewer's hand, right of the bonus row and the bottom seat plate, left of the bottom discard block -->
+        <element type="UIStack" name="SelectedTile" anchor="TopLeft" x="276" y="568" width="280" height="48" visible="false" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170">
+          <children>
+            <element type="UILabel" name="SelectedTileLabel" height="32" text="{selectedTileText}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" />
           </children>
         </element>
       </elements>

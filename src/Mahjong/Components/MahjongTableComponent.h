@@ -105,8 +105,17 @@ namespace BECore::Mahjong {
      * edge, whatever the `Hints` switch says.
      *
      * **Playing.** While a person has to act (`TableSession::ActorIsPerson()`, no hot-seat cover) a left click on a tile of the viewer's hand
-     * discards it (`PerformPerson(MakeDiscard(tile, declareNext))`); a refused action changes nothing. The other actions are the buttons of the
-     * canvas `Actions` (`Table/ActionButtons.h`; `ActionsCompact` holds the same buttons by name for the windows where those would be under the
+     * discards it (`PerformPerson(MakeDiscard(tile, declareNext))`); a refused action changes nothing. In the touch regime
+     * (`UsesTapToSelect`: a click that SDL made from a touch or a pen was seen, or a hand tile is under the touch minimum) the first click only
+     * selects the tile (it is drawn raised by `kSelectedTileRise`, on top of the bonus row, with its marks and the hints' marks) and a click on
+     * the same tile discards it (`StepTap`); another tile moves the selection, a click on no tile clears it. The selection holds only in the
+     * discard turn it was made in: it is gone when the turn, the hand or the tile at that index changes, in a claim window, under the cover, while
+     * the table is paused and when the regime is off.
+     *
+     * `selectedTileText` is the name of the selected tile, empty with none; the label `SelectedTile` of the node `Hud` shows it and is shown
+     * by this component exactly while a tile is selected.
+     *
+     * The other actions are the buttons of the canvas `Actions` (`Table/ActionButtons.h`; `ActionsCompact` holds the same buttons by name for the windows where those would be under the
      * touch minimum and the bar under the table holds the row at its height there, `NeedsCompactActions`, and exactly one of the two is shown; the node `HintsButton`, the button of the hints on the
      * table, is shown with `Actions`, and `ActionsCompact` holds a `HintButton` of its own), shown from `LegalActions` every frame
      * (`SetElementVisibleByName`; each button says a word of the string table in the file (`{#button.<Kind>}`) and the tiles of its action are `UIImage` children whose sprite the component sets), and
@@ -146,6 +155,12 @@ namespace BECore::Mahjong {
 
         /// Draws with `texture` (made from pixels, `IRenderer::CreateTexture()`) instead of the atlas from the file; a test hands one.
         void SetAtlasTexture(IntrusivePtr<ITexture> texture);
+
+        /// The index (in the concealed tiles of the viewer) of the tile drawn raised by the last `OnDraw`; none when no tile is selected. The
+        /// hints draw their marks on `RaisedRect` of that slot.
+        [[nodiscard]] std::optional<int> SelectedHandIndex() const noexcept {
+            return _drawnSelected;
+        }
 
         /// The layout of the last `OnDraw` in the view units of the scene (empty before the first draw and while nothing is drawn).
         [[nodiscard]] const TableLayout& GetLayout() const noexcept {
@@ -188,6 +203,15 @@ namespace BECore::Mahjong {
 
         /// The game when a person has to act and can (Playing, a person to act, no cover), else null.
         [[nodiscard]] MahjongGame* PersonToAct() const;
+        /// Whether a click on a hand tile only selects it: `UsesTapToSelect` over `_touchSeen` and the window as it is now.
+        [[nodiscard]] bool TapToSelect() const;
+        /// What a selection must still be to count: the regime on, a person to act in the discard turn of the hand and match it was made in,
+        /// at the version of the session it was made at, and the tile at its index still the one selected.
+        [[nodiscard]] bool SelectionHolds(const MahjongGame& game) const;
+        /// Drops the selection that no longer holds (and any, with no game).
+        void RefreshSelection(const MahjongGame* game);
+        /// A click on a hand tile: `StepTap` says what it does. Needs `PersonToAct()`.
+        void TapHandTile(MahjongGame& game, const std::optional<int>& hit);
         /// The buttons for what the person to act can do now (all hidden when none can); clears `_declareNext` when `Declare` is not
         /// offered.
         [[nodiscard]] ActionButtons CurrentButtons(const MahjongGame& game);
@@ -215,6 +239,8 @@ namespace BECore::Mahjong {
         void HoldScoreTableIfBeaten(const MahjongGame& game, int serialBefore);
         /// One action of the computer that has to act; false (and a log line) when the model refused it.
         static bool StepComputerChecked(TableSession& session);
+        /// Sets the variable `selectedTileText` to the name of `tile` (empty for none), only when the tile or the language changed.
+        void PublishSelectedText(Tile tile);
         /// Pushes the buttons, the tile pictures on them, the hint of the hovered button, the choice between `Actions` (with `HintsButton`) and
         /// `ActionsCompact` and the cover to the canvases of the scene, only what changed.
         void PublishScreen(const MahjongGame* game);
@@ -260,6 +286,16 @@ namespace BECore::Mahjong {
         bool _handoffShown = false;
         bool _compactActions = false;  // `ActionsCompact` is the shown canvas of the buttons; the scene file starts with `Actions`
         bool _declareNext = false;
+        bool _touchSeen = false;            // a click made by a touch or a pen was seen: the tap regime stays on from then
+        std::optional<int> _selected;       // the selected hand tile (an index of the concealed tiles of the person to act) and what it holds for
+        Tile _selectedTile;                 // the tile it was made on
+        DeclareTurn _selectedTurn;          // the turn,
+        uint64_t _selectedVersion = 0;      // the version of the session
+        SeenHand _selectedHand;             // and the hand and match
+        std::optional<int> _drawnSelected;  // the tile the last `OnDraw` raised
+        bool _selectedLabelShown = false;   // the label `SelectedTile` is shown
+        Tile _textTile;                     // the tile `selectedTileText` names now (invalid for none) and the string table version it was worded at
+        uint64_t _textStringsVersion = 0;
         DeclareTurn _declareTurn;     // the turn `_declareNext` was set on
         float _computerClock = 0.0f;  // seconds a computer has been waiting to play
         SeenHand _seenHand;

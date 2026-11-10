@@ -126,6 +126,7 @@
         <string key="cover.show" text="Show"/>
         <string key="panel.round" text="{wind} {n}"/>
         <string key="panel.wall" text="Wall {wall}"/>
+        <string key="table.selectedTile" text="Selected: {tile}"/>
         <string key="hud.newGame" text="New game"/>
         <string key="hud.rules" text="Rules"/>
         <string key="matchover.newGame" text="New game"/>
@@ -357,6 +358,7 @@
         <string key="cover.show" text="Показать"/>
         <string key="panel.round" text="{wind} {n}"/>
         <string key="panel.wall" text="Стена {wall}"/>
+        <string key="table.selectedTile" text="Выбрано: {tile}"/>
         <string key="hud.newGame" text="Новая игра"/>
         <string key="hud.rules" text="Правила"/>
         <string key="matchover.newGame" text="Новая игра"/>

@@ -736,8 +736,118 @@ namespace BECore::Mahjong::Tests {
             EXPECT_FALSE(HitHandTile(layout, bounds.x - 1.0f, bounds.y + bounds.h / 2.0f).has_value());
             EXPECT_FALSE(HitHandTile(layout, bounds.x + bounds.w + 1.0f, bounds.y + bounds.h / 2.0f).has_value());
             EXPECT_FALSE(HitHandTile(layout, bounds.x + bounds.w / 2.0f, bounds.y - 1.0f).has_value());
-            EXPECT_FALSE(HitHandTile(layout, bounds.x + bounds.w / 2.0f, bounds.y + bounds.h + 1.0f).has_value());
+            EXPECT_FALSE(HitHandTile(layout, bounds.x + bounds.w / 2.0f, layout.viewHeight + 1.0f).has_value());
             EXPECT_FALSE(HitHandTile(layout, -10.0f, -10.0f).has_value());
+        }
+    }
+
+    TEST(TableLayoutTest, APointInTheGapBetweenTilesHitsTheNearestTile) {
+        // the shipped layout has no gap in the hand row, so the rule is tried on a row with two gaps
+        TableLayout layout;
+        layout.viewer = 0;
+        const float xs[] = {100.0f, 200.0f, 400.0f};
+        for (int index = 0; index < 3; ++index) {
+            layout.slots.push_back(TileSlot{Rect(xs[index], 600.0f, kViewerHandTileW, kViewerHandTileH), SlotRole::HandTile, 0, index});
+        }
+        const float y = 630.0f;
+        // gap 1: 148..200, middle 174
+        EXPECT_EQ(HitHandTile(layout, 160.0f, y), 0);
+        EXPECT_EQ(HitHandTile(layout, 190.0f, y), 1);
+        EXPECT_EQ(HitHandTile(layout, 174.0f, y), 1) << "on a tie the later tile";
+        // gap 2: 248..400
+        EXPECT_EQ(HitHandTile(layout, 300.0f, y), 1);
+        EXPECT_EQ(HitHandTile(layout, 330.0f, y), 2);
+        // the gaps count in the margin under the tiles too
+        EXPECT_EQ(HitHandTile(layout, 160.0f, 668.0f), 0);
+        EXPECT_FALSE(HitHandTile(layout, 160.0f, 599.0f).has_value());
+    }
+
+    TEST(TableLayoutTest, WhereTheHandIsSqueezedTheLaterOfTheNearestTilesWinsInTheMargin) {
+        TableInput input = QuietInput(0);
+        input.concealedCount[0] = 40;
+        const TableLayout layout = MakeTableLayout(input);
+        const std::vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, 0);
+        ASSERT_EQ(hand.size(), 40u);
+        const float below = hand[0].rect.y + hand[0].rect.h + 2.0f;
+        EXPECT_EQ(HitHandTile(layout, hand[10].rect.x + 0.5f, below), 10);
+        EXPECT_EQ(HitHandTile(layout, hand.back().rect.x + hand.back().rect.w - 0.5f, below), 39);
+    }
+
+    TEST(TableLayoutTest, TheMarginUnderTheTilesAndTheWholeHeightOfTheStripHitTheTileAbove) {
+        for (const ViewSize& size : kViewSizes) {
+            const TableLayout layout = MakeTableLayout(BusyInput(0), size.width, size.height);
+            const std::vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, 0);
+            ASSERT_EQ(hand.size(), 14u);
+            // the bottom of the table fitted into the view: the table is centred, so there may be a bar under it
+            const float fit = std::min(size.width / kViewWidth, size.height / kViewHeight);
+            const float viewBottom = (size.height + kViewHeight * fit) / 2.0f;
+            for (const TileSlot& slot : hand) {
+                const float x = slot.rect.x + slot.rect.w / 2.0f;
+                EXPECT_EQ(HitHandTile(layout, x, slot.rect.y + 0.1f), slot.index) << "view " << size.width << "x" << size.height;
+                EXPECT_EQ(HitHandTile(layout, x, slot.rect.y + slot.rect.h + 0.5f), slot.index) << "the margin under the tile";
+                EXPECT_EQ(HitHandTile(layout, x, viewBottom - 0.1f), slot.index) << "the bottom of the view";
+                EXPECT_FALSE(HitHandTile(layout, x, viewBottom + 0.1f).has_value()) << "under the view";
+                EXPECT_FALSE(HitHandTile(layout, x, slot.rect.y - 0.1f).has_value()) << "above the tiles";
+            }
+        }
+    }
+
+    TEST(TableLayoutTest, TheHandStripStopsAtTheEdgesOfTheFirstAndTheLastTile) {
+        const TableLayout layout = MakeTableLayout(BusyInput(0));
+        const std::vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, 0);
+        const float y = hand[0].rect.y + hand[0].rect.h / 2.0f;
+        EXPECT_FALSE(HitHandTile(layout, hand.front().rect.x - 0.5f, y).has_value());
+        EXPECT_EQ(HitHandTile(layout, hand.front().rect.x + 0.1f, y), 0);
+        EXPECT_EQ(HitHandTile(layout, hand.back().rect.x + hand.back().rect.w - 0.1f, y), 13);
+        EXPECT_FALSE(HitHandTile(layout, hand.back().rect.x + hand.back().rect.w + 0.5f, y).has_value());
+        // the same for the margin under the tiles
+        const float below = hand[0].rect.y + hand[0].rect.h + 2.0f;
+        EXPECT_FALSE(HitHandTile(layout, hand.front().rect.x - 0.5f, below).has_value());
+        EXPECT_FALSE(HitHandTile(layout, hand.back().rect.x + hand.back().rect.w + 0.5f, below).has_value());
+    }
+
+    TEST(TableLayoutTest, NothingHitsWhereTheViewerHasNoHandTiles) {
+        TableInput input = BusyInput(0);
+        input.concealedCount[0] = 0;
+        const TableLayout layout = MakeTableLayout(input);
+        for (float x = 0.0f; x < kViewWidth; x += 16.0f) {
+            for (float y = 0.0f; y < kViewHeight; y += 16.0f) {
+                ASSERT_FALSE(HitHandTile(layout, x, y).has_value()) << x << "," << y;
+            }
+        }
+    }
+
+    TEST(TableLayoutTest, TheHitRegionOfTheHandReachesNeitherTheBonusRowNorTheMeldsNorAZone) {
+        for (const ViewSize& size : kViewSizes) {
+            for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+                const TableLayout layout = MakeTableLayout(WorstInput(viewer, kWorstPile, kNoSeat), size.width, size.height);
+                const std::vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, viewer);
+                ASSERT_EQ(hand.size(), 14u);
+                // the strip as the rule defines it, down to the bottom of the fitted view
+                const Rect handBounds = BoundsOf(layout, SlotRole::HandTile, viewer);
+                const float scale = handBounds.h / kViewerHandTileH;
+                const Rect strip(handBounds.x, handBounds.y, handBounds.w, handBounds.h + 8.0f * scale);
+                for (const TileSlot& slot : layout.slots) {
+                    if (slot.role == SlotRole::HandTile && slot.seat == viewer) {
+                        continue;
+                    }
+                    if (slot.role == SlotRole::DiscardTile || slot.role == SlotRole::WallStack || slot.seat == viewer) {
+                        EXPECT_FALSE(Overlaps(strip, slot.rect)) << "role " << static_cast<int>(slot.role) << " of seat " << slot.seat << " index " << slot.index;
+                    }
+                }
+                for (const Rect& zone : PlateZones(layout)) {
+                    EXPECT_FALSE(Overlaps(strip, zone));
+                }
+                EXPECT_FALSE(Overlaps(strip, layout.zones.centerPanel));
+                // a point in each bonus tile and each meld tile of the viewer, and in every other seat's slot, hits nothing
+                for (const TileSlot& slot : layout.slots) {
+                    if (slot.role == SlotRole::HandTile && slot.seat == viewer) {
+                        continue;
+                    }
+                    EXPECT_FALSE(HitHandTile(layout, slot.rect.x + slot.rect.w / 2.0f, slot.rect.y + slot.rect.h / 2.0f).has_value())
+                        << "role " << static_cast<int>(slot.role) << " of seat " << slot.seat;
+                }
+            }
         }
     }
 
