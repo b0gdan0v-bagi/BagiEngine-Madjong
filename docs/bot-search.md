@@ -65,8 +65,8 @@ kSearchMargin     = 30      (tenths of a standard error)
 ```
 
 **Worlds and candidates: the time rule.** The rule fixed before the measurement: the slowest decision (the first discard of 14
-tiles with the full candidate count) takes at most 0.3 s in a Debug build, because the step of a computer blocks the frame and
-`kComputerStepSeconds` is 1.0 s. A budget is a count of rollouts, never a clock, so a seed stays one match. Measured with a
+tiles with the full candidate count) takes at most 0.3 s in a Debug build: the table thinks in the background and waits for the
+answer (the pause is a floor, never a ceiling), so this is the reference for a pause that is not stretched, and `kComputerStepSeconds` is 1.0 s. A budget is a count of rollouts, never a clock, so a seed stays one match. Measured with a
 Debug `BagiMahjongArena` at `--jobs 1` (summed thread time over-counts, see `docs/bot-arena.md`), `--others normal`, seeds 4000 ..
 4015 (margin 0: the cost of a decision is the same at any margin; 727 search decisions for 2 x 4, 724, 710, 706 and 723 for the
 other shapes of the table, so the means are of slightly different samples), each decision timed with a temporary stderr print (not committed) in two runs, and the table gives the

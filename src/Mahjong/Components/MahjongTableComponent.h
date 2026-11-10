@@ -3,6 +3,7 @@
 #include <BECore/Renderer/ITexture.h>
 #include <BECore/Resource/ResourceHandle.h>
 #include <BECore/Scene/IComponent.h>
+#include <Mahjong/ComputerThinking.h>
 #include <Mahjong/Table/ActionButtons.h>
 #include <Mahjong/Table/AnimationSpeed.h>
 #include <Mahjong/Table/TableLayout.h>
@@ -138,6 +139,11 @@ namespace BECore::Mahjong {
         void OnAttached() override;
         void OnDraw() override;
 
+        /// A computer seat's decision is being computed in the background (a search seat; no decision that needs no search is ever "thinking").
+        [[nodiscard]] bool ComputerThinks() const {
+            return _thinking.Running();
+        }
+
         /// The next discard declares the calling hand (the button `Declare`).
         [[nodiscard]] bool DeclareNext() const noexcept {
             return _declareNext;
@@ -238,8 +244,14 @@ namespace BECore::Mahjong {
         /// Starts the hold of the score table when the claim window settled since `serialBefore` ended the hand with a mahjong that beat the
         /// claim of a person; called after an action the component carried out itself (a click on a button, a step of a computer).
         void HoldScoreTableIfBeaten(const MahjongGame& game, int serialBefore);
-        /// One action of the computer that has to act; false (and a log line) when the model refused it.
-        static bool StepComputerChecked(TableSession& session);
+        /// The pace of the computers, once a frame: begins the step of the computer that has to act at the start of its pause, applies it at
+        /// the pause end (when a search is still running, when it arrives), then the rest of a claim window and the discard after it, each begun
+        /// as soon as the one before was applied. Drops the step in progress when it can no longer be applied.
+        void PlayComputers(MahjongGame& game, float deltaTime);
+        /// Forgets the step in progress: the task is cancelled, nothing of it is applied, the burst of a claim window is over.
+        void DropComputerStep();
+        /// Begins the next step of the actor (`BeginComputerStep`) and hands it to `_thinking`; false when there is none.
+        bool BeginComputerStep(TableSession& session, const HandModel& hand);
         /// Sets the variable `selectedTileText` to the name of `tile` (empty for none), only when the tile or the language changed.
         void PublishSelectedText(Tile tile);
         /// Pushes the buttons, the tile pictures on them, the hint of the hovered button, the choice between `Actions` (with `HintsButton`) and
@@ -299,6 +311,20 @@ namespace BECore::Mahjong {
         uint64_t _textStringsVersion = 0;
         DeclareTurn _declareTurn;     // the turn `_declareNext` was set on
         float _computerClock = 0.0f;  // seconds a computer has been waiting to play
+        /// The step of a computer that was begun and is not applied yet: the session `Version()` and `StartCount()` it was begun at (the job
+        /// itself is in `_thinking`).
+        struct StepInProgress {
+            uint64_t version = 0;
+            uint64_t starts = 0;
+        };
+        std::optional<StepInProgress> _step;
+        ComputerThinking _thinking;  // runs the search of `_step`; ends with the component
+        /// After the first step of a pause that was in a claim window: the other computers of the window and the discard after it go
+        /// without another pause. `_burstSerial` is the window serial before the first step (`HoldScoreTableIfBeaten`).
+        enum class Burst : uint8_t { None, Window, Discard };
+        Burst _burst = Burst::None;
+        bool _firstInWindow = false;  // the step in progress is the first of its pause and began in a claim window
+        int _burstSerial = 0;
         SeenHand _seenHand;
         size_t _movesSeen = 0;
         Seat _highlightSeat = kNoSeat;  // the set that blinks: the meld `_highlightMeld` of this seat
