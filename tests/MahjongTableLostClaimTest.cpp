@@ -531,7 +531,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(kClaimLostFrame.g, kTurnMark.g);
         EXPECT_EQ(kClaimLostFrame.b, kTurnMark.b);
         for (const Color& other : {kTurnMark, kPendingFrame, kLastDiscardMark, kDrawnTileMark, kCallingFrame, kClaimedEdge, kClaimHighlight, kDeclareMark, kKeepsWaitingMark, kAdvisedFrame,
-                                   kSeatTurnFrame, kVeil, kTileShadow, kZonePlate, kSeatPlate, kDealerMark}) {
+                                   kSeatTurnFrame, kVeil, kTileShadow, kFeltLip, kSeatPlate, kDealerMark}) {
             EXPECT_FALSE(SameColor(kClaimLostFrame, other));
         }
         EXPECT_FLOAT_EQ(kClaimLostSeconds, kClaimHighlightSeconds);

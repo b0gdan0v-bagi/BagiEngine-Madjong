@@ -10,6 +10,8 @@
 
 namespace BECore {
 
+    class IRenderer;
+
     namespace SDLEvents {
         struct MouseButtonDownEvent;
     }
@@ -50,11 +52,14 @@ namespace BECore::Mahjong {
      * asked to claim first: that would tell a person that this computer holds a claim) and the discard that waits for a claim has a frame,
      * drawn only while the viewer is among the seats that have yet to decide (and no cover is up).
      *
-     * **The seat plates.** Each seat has a plate (`TableLayout::zones.seatPlates`, indexed by seat: each lies at `SeatPosition(viewer, seat)`) painted after the plates of the
-     * discards and the wall: the base `kSeatPlate`, on the plate of the seat whose turn it is (`TurnSeat`, never the seat asked to
-     * claim) the tint `kTurnMark` and a frame `kSeatTurnFrame`, and along the top edge of the dealer's plate (East of the hand shown) a
-     * bar `kDealerMark`, which is red, not gold. All public data, so they show under the cover, for a spectator and at the end of a hand;
-     * the words on the plates are the labels of the node `SeatPlates` (`MahjongHudComponent`).
+     * **The felt** is the picture of `Table/TableLook.h` (made once per renderer by `IRenderer::CreateTexture`, freed with the GPU idle on
+     * the application's clean-up, on a renderer change and with the component; the flat `kFelt` when the renderer gives none), the rim of
+     * `kFeltRim` and its lip `kFeltLip` follow it; no box is painted under the discards or the wall.
+     *
+     * **The seat plates.** Each seat has a plate (`TableLayout::zones.seatPlates`, indexed by seat: each lies at `SeatPosition(viewer, seat)`) painted after the felt: the base `kSeatPlate`, on the
+     * plate of the seat whose turn it is (`TurnSeat`, never the seat asked to claim) the tint `kTurnMark` and a frame `kSeatTurnFrame`, and along the top edge of the dealer's plate (East of the hand
+     * shown) a bar `kDealerMark`, which is red, not gold. All public data, so they show under the cover, for a spectator and at the end of a hand; the words on the plates are the labels of the node
+     * `SeatPlates` (`MahjongHudComponent`).
      *
      * **The last move.** Three marks of the gold family (`Table/UiPalette.h`) show what has just happened, from the public data of `HandModel`
      * (`Moves()`, `Discards()`, the open sets): a tint over the last discard (`kLastDiscardMark`; the frame of a pending discard shows
@@ -174,6 +179,12 @@ namespace BECore::Mahjong {
         void OnMouseDown(const SDLEvents::MouseButtonDownEvent& event);
         void OnAction(const InputEvents::ActionEvent& event);
         void OnUpdate(const SceneEvents::SceneUpdateEvent& event);
+        void OnApplicationCleanUp();
+
+        /// The felt texture for `renderer`, made on first use and again for another renderer (`GetId()`); null when the renderer gave none.
+        [[nodiscard]] ITexture* FeltTexture(IRenderer& renderer);
+        /// Frees the felt texture, with the GPU idle when the renderer is the one that made it.
+        void ReleaseFelt();
 
         /// The game when a person has to act and can (Playing, a person to act, no cover), else null.
         [[nodiscard]] MahjongGame* PersonToAct() const;
@@ -234,6 +245,8 @@ namespace BECore::Mahjong {
         void EndFlights();
 
         ResourceHandle<ITexture> _atlas;
+        IntrusivePtr<ITexture> _felt;                    // the felt made from pixels (`Table/TableLook.h`); empty when the renderer gave none
+        uint64_t _feltRenderer = 0;                      // `IRenderer::GetId()` of the renderer `_felt` was asked of, 0 for none yet
         TableSnapshot _shown;                            // what the last `OnDraw` drew: its layout is `GetLayout()`, empty while nothing is drawn
         eastl::vector<TileFlight> _flights;              // the tiles in the air, flying to slots of `_shown.layout`
         float _flightElapsed = 0.0f;                     // seconds since the batch of `_flights` was planned

@@ -2,6 +2,8 @@
 #include "MahjongTableTestSupport.h"
 #include "UiStyleTestSupport.h"
 
+#include <Mahjong/Table/TableLook.h>
+
 /**
  * The table as drawn (`Components/MahjongTableComponent.h`): the shipped scene (`config/SceneConfig.xml` and its node files) is drawn into a `RecordingRenderer` and
  * the draw calls are read back (the fixture is `MahjongTableTestSupport.h`). Needs the engine services.
@@ -84,6 +86,14 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FLOAT_EQ(scene->GetViewHeight(), kViewHeight);
     }
 
+    /// A renderer that gives no texture of its own (a backend that fails): the felt is the flat colour then.
+    class RefusingRenderer : public TurnRecordingRenderer {
+    public:
+        IntrusivePtr<ITexture> CreateTexture(const uint8_t*, uint32_t, uint32_t) override {
+            return {};
+        }
+    };
+
     TEST_F(MahjongTableUiTest, WithoutAnActiveGameOnlyTheFeltIsDrawn) {
         GameManager::GetInstance().Shutdown();
         ASSERT_EQ(MahjongGame::GetActive(), nullptr);
@@ -93,23 +103,80 @@ namespace BECore::Mahjong::Tests {
 
         // The table draws the felt and nothing else (the canvases of the scene draw their own, with no match behind them)
         ASSERT_FALSE(_renderer->calls.empty());
-        EXPECT_EQ(_renderer->calls[0].kind, DrawKind::Rect);
+        EXPECT_EQ(_renderer->calls[0].kind, DrawKind::Texture);
         EXPECT_TRUE(TileCalls().empty());
         EXPECT_TRUE(_table->GetLayout().slots.empty());
-        // ... and the rim round it: no plate, no shadow
+        // ... and the rim round it with its lip: no plate, no shadow
         EXPECT_EQ(RectsOf(kFeltRim).size(), 4u);
-        EXPECT_TRUE(RectsOf(kZonePlate).empty());
+        EXPECT_EQ(RectsOf(kFeltLip).size(), 4u);
         EXPECT_TRUE(RectsOf(kTileShadow).empty());
+    }
+
+    TEST_F(MahjongTableUiTest, TheFeltIsOneTextureOverTheViewMadeOnceAndNotTheAtlas) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        Draw();
+
+        const DrawCall& felt = _renderer->calls[0];
+        ASSERT_EQ(felt.kind, DrawKind::Texture);
+        EXPECT_NE(felt.texture, _atlasTexture);
+        EXPECT_FALSE(felt.source.has_value()) << "the whole texture";
+        EXPECT_FLOAT_EQ(felt.rect.x, 0.0f);
+        EXPECT_FLOAT_EQ(felt.rect.y, 0.0f);
+        EXPECT_FLOAT_EQ(felt.rect.w, kViewWidth);
+        EXPECT_FLOAT_EQ(felt.rect.h, kViewHeight);
+        EXPECT_TRUE(RectsOf(kFelt).empty());
+        EXPECT_FLOAT_EQ(felt.texture->GetWidth(), static_cast<float>(kFeltTextureWidth));
+        EXPECT_FLOAT_EQ(felt.texture->GetHeight(), static_cast<float>(kFeltTextureHeight));
+
+        const ITexture* first = felt.texture;
+        Draw();
+        ASSERT_EQ(_renderer->calls[0].kind, DrawKind::Texture);
+        EXPECT_EQ(_renderer->calls[0].texture, first) << "made once, not per frame";
+    }
+
+    TEST_F(MahjongTableUiTest, WithoutATextureTheFeltIsTheFlatColourFirstAndIsNotAskedForAgain) {
+        auto refusing = New<RefusingRenderer>();
+        refusing->width = kViewWidth;
+        refusing->height = kViewHeight;
+        _renderer = refusing;
+        CoreManager::GetRendererManager().SetRenderer(_renderer);
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+
+        Draw();
+        Draw();
+
+        ASSERT_FALSE(_renderer->calls.empty());
+        EXPECT_EQ(_renderer->calls[0].kind, DrawKind::Rect);
+        EXPECT_TRUE(SameColor(_renderer->calls[0].color, kFelt));
+        EXPECT_FLOAT_EQ(_renderer->calls[0].rect.w, kViewWidth);
+        EXPECT_FLOAT_EQ(_renderer->calls[0].rect.h, kViewHeight);
+        for (const DrawCall& call : _renderer->calls) {
+            EXPECT_FALSE(call.kind == DrawKind::Texture && call.rect.w == kViewWidth && call.rect.h == kViewHeight) << "no picture of the felt";
+        }
+    }
+
+    TEST_F(MahjongTableUiTest, AnotherRendererGetsAFeltOfItsOwn) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        Draw();
+        ASSERT_EQ(_renderer->calls[0].kind, DrawKind::Texture);
+
+        auto second = New<TurnRecordingRenderer>();
+        second->width = kViewWidth;
+        second->height = kViewHeight;
+        _renderer = second;
+        CoreManager::GetRendererManager().SetRenderer(_renderer);
+        Draw();
+
+        ASSERT_EQ(_renderer->calls[0].kind, DrawKind::Texture) << "a felt made by this renderer";
+        EXPECT_NE(_renderer->calls[0].texture, _atlasTexture);
+        EXPECT_FLOAT_EQ(_renderer->calls[0].texture->GetWidth(), static_cast<float>(kFeltTextureWidth));
     }
 
     TEST_F(MahjongTableUiTest, TheRimIsFourRectanglesAlongTheEdgeRightAfterTheFelt) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
 
-        ASSERT_GE(_renderer->calls.size(), 5u);
-        EXPECT_EQ(_renderer->calls[0].color.r, kFelt.r);
-        EXPECT_EQ(_renderer->calls[0].color.g, kFelt.g);
-        EXPECT_EQ(_renderer->calls[0].color.b, kFelt.b);
+        ASSERT_GE(_renderer->calls.size(), 9u);
         const std::vector<DrawCall> rim = RectsOf(kFeltRim);
         ASSERT_EQ(rim.size(), 4u);
         for (size_t i = 0; i < rim.size(); ++i) {
@@ -125,35 +192,37 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FLOAT_EQ(area, kViewWidth * kViewHeight - inner);
     }
 
-    TEST_F(MahjongTableUiTest, ThePlatesAreTheDiscardBlocksAndTheWallRingPaddedBy4) {
+    TEST_F(MahjongTableUiTest, TheLipIsFourBarsOf2UnitsOnTheInnerSideOfTheRimRightAfterIt) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
 
-        const std::vector<DrawCall> plates = RectsOf(kZonePlate);
-        ASSERT_EQ(plates.size(), 5u) << "four discard blocks and the wall ring";
-        const TableZones& zones = _table->GetLayout().zones;
-        for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            EXPECT_EQ(plates[seat].rect.x, zones.discards[seat].x - 4.0f) << "seat " << seat;
-            EXPECT_EQ(plates[seat].rect.y, zones.discards[seat].y - 4.0f) << "seat " << seat;
-            EXPECT_EQ(plates[seat].rect.w, zones.discards[seat].w + 8.0f) << "seat " << seat;
-            EXPECT_EQ(plates[seat].rect.h, zones.discards[seat].h + 8.0f) << "seat " << seat;
+        const std::vector<DrawCall> lip = RectsOf(kFeltLip);
+        ASSERT_EQ(lip.size(), 4u);
+        float area = 0.0f;
+        for (size_t i = 0; i < lip.size(); ++i) {
+            EXPECT_EQ(lip[i].rect.x, _renderer->calls[5 + i].rect.x) << "the lip is drawn right after the rim";
+            EXPECT_EQ(lip[i].rect.y, _renderer->calls[5 + i].rect.y);
+            EXPECT_TRUE(lip[i].rect.w == 2.0f || lip[i].rect.h == 2.0f) << "a lip bar is 2 units wide";
+            EXPECT_GE(lip[i].rect.x, 8.0f) << "inside the rim";
+            EXPECT_GE(lip[i].rect.y, 8.0f);
+            EXPECT_LE(lip[i].rect.x + lip[i].rect.w, kViewWidth - 8.0f);
+            EXPECT_LE(lip[i].rect.y + lip[i].rect.h, kViewHeight - 8.0f);
+            area += lip[i].rect.w * lip[i].rect.h;
         }
-        EXPECT_EQ(plates[4].rect.x, zones.wall.x - 4.0f);
-        EXPECT_EQ(plates[4].rect.w, zones.wall.w + 8.0f);
-        EXPECT_EQ(plates[4].rect.h, zones.wall.h + 8.0f);
+        const float inner = (kViewWidth - 16.0f) * (kViewHeight - 16.0f);
+        const float innerOfLip = (kViewWidth - 20.0f) * (kViewHeight - 20.0f);
+        EXPECT_FLOAT_EQ(area, inner - innerOfLip) << "the bars meet at the corners and do not overlap";
     }
 
-    TEST_F(MahjongTableUiTest, TheWallPlateKeepsTheSameGapToTheTopAndTheBottomDiscardPlates) {
+    TEST_F(MahjongTableUiTest, NoBoxIsPaintedUnderTheDiscardBlocksOrTheWall) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
 
-        const std::vector<DrawCall> plates = RectsOf(kZonePlate);
-        ASSERT_EQ(plates.size(), 5u);
-        const Rect& top = plates[2].rect;
-        const Rect& bottom = plates[0].rect;
-        const Rect& wall = plates[4].rect;
-        EXPECT_GT(GapBelow(top, wall), 0.0f) << "the plates do not merge";
-        EXPECT_EQ(GapBelow(top, wall), GapBelow(wall, bottom));
+        // After the felt (1), the rim (4) and the lip (4) the next thing drawn is the first seat plate
+        ASSERT_GE(_renderer->calls.size(), 10u);
+        EXPECT_EQ(_renderer->calls[9].kind, DrawKind::Rect);
+        EXPECT_TRUE(SameColor(_renderer->calls[9].color, kSeatPlate));
+        EXPECT_TRUE(SameRect(_renderer->calls[9].rect, _table->GetLayout().zones.seatPlates[0]));
     }
 
     TEST_F(MahjongTableUiTest, EveryTileThatIsNotAWallStackHasAShadowOffsetBy2) {

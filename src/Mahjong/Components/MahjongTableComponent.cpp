@@ -7,6 +7,7 @@
 #include <BECore/UI/UIEnvironment.h>
 #include <BECore/UI/UIImage.h>
 #include <CoreSDL/SDLEvents.h>
+#include <Events/ApplicationEvents.h>
 #include <Events/InputEvents.h>
 #include <Events/SceneEvents.h>
 #include <Generated/MahjongTableComponent.gen.hpp>
@@ -14,6 +15,7 @@
 #include <Mahjong/Table/CallingMarks.h>
 #include <Mahjong/Table/SeatName.h>
 #include <Mahjong/Table/SeatPlates.h>
+#include <Mahjong/Table/TableLook.h>
 #include <Mahjong/Table/TileAtlas.h>
 #include <Mahjong/Table/TouchRegime.h>
 #include <Mahjong/Table/UiPalette.h>
@@ -33,7 +35,7 @@ namespace BECore::Mahjong {
         /// The highlight of the acting seat reaches this far past the hand; the pending discard's frame this far past the tile.
         constexpr float kActingMargin = 4.0f;
         constexpr float kPendingMargin = 3.0f;
-        /// The rim along the edge of the view, and a tile's shadow falls this far down and right (a plate's padding is `kPlatePadding`).
+        /// The rim along the edge of the view (the tiles keep `kEdge` of the layout from it), and a tile's shadow falls this far down and right.
         constexpr float kRimWidth = 8.0f;
         constexpr float kShadowOffset = 2.0f;
         /// The inner mark of a tile drawn without the atlas, as a fraction of the tile.
@@ -251,9 +253,38 @@ namespace BECore::Mahjong {
     MahjongTableComponent* MahjongTableComponent::s_active = nullptr;
 
     MahjongTableComponent::~MahjongTableComponent() {
+        ReleaseFelt();
         if (s_active == this) {
             s_active = nullptr;
         }
+    }
+
+    void MahjongTableComponent::ReleaseFelt() {
+        if (_felt) {
+            // A frame in flight may still read the texture: the GPU has to be idle before it is freed (and a texture of another renderer is not ours to wait for)
+            const auto& renderer = CoreManager::GetRenderer();
+            if (renderer && renderer->GetId() == _feltRenderer) {
+                renderer->WaitIdle();
+            }
+            _felt = {};
+        }
+        _feltRenderer = 0;
+    }
+
+    void MahjongTableComponent::OnApplicationCleanUp() {
+        // The texture is a GPU object and components outlive the renderer: it goes when the application cleans up, before the renderer is destroyed
+        ReleaseFelt();
+    }
+
+    ITexture* MahjongTableComponent::FeltTexture(IRenderer& renderer) {
+        if (renderer.GetId() != _feltRenderer) {
+            _felt = {};  // made by another renderer, which has its own way of freeing it
+            _feltRenderer = renderer.GetId();
+            // Made once per renderer, even when it fails (the flat felt is drawn then)
+            const FeltPixels pixels = MakeFeltPixels(kFeltTextureWidth, kFeltTextureHeight);
+            _felt = renderer.CreateTexture(pixels.rgba.data(), pixels.width, pixels.height);
+        }
+        return _felt.Get();
     }
 
     void MahjongTableComponent::OnAttached() {
@@ -262,6 +293,7 @@ namespace BECore::Mahjong {
         if (!_atlas) {
             LOG_WARNING(Format("MahjongTableComponent: the tile atlas '{}' did not load, the tiles are drawn as plain rectangles", kAtlasPath));
         }
+        Subscribe<ApplicationEvents::ApplicationCleanUpEvent, &MahjongTableComponent::OnApplicationCleanUp>(this);
         SubscribeInScene<SDLEvents::MouseButtonDownEvent, &MahjongTableComponent::OnMouseDown>(this);
         SubscribeInScene<InputEvents::ActionEvent, &MahjongTableComponent::OnAction>(this);
         SubscribeInScene<SceneEvents::SceneUpdateEvent, &MahjongTableComponent::OnUpdate>(this);
@@ -606,7 +638,12 @@ namespace BECore::Mahjong {
         IRenderer& renderer = *CoreManager::GetRenderer();
         const float viewWidth = GetScene().GetViewWidth() > 0.0f ? GetScene().GetViewWidth() : kViewWidth;
         const float viewHeight = GetScene().GetViewHeight() > 0.0f ? GetScene().GetViewHeight() : kViewHeight;
-        renderer.DrawFilledRect(0.0f, 0.0f, viewWidth, viewHeight, kFelt);
+        // The felt is one soft picture over the view; without a texture (the backend refused it, a test renderer) it is the flat colour
+        if (ITexture* felt = FeltTexture(renderer)) {
+            renderer.DrawTexture(*felt, nullptr, 0.0f, 0.0f, viewWidth, viewHeight);
+        } else {
+            renderer.DrawFilledRect(0.0f, 0.0f, viewWidth, viewHeight, kFelt);
+        }
         // The layout is built in design units and scaled to the view, so what is measured in units here is scaled the same way
         const float unit = eastl::max(0.0f, eastl::min(viewWidth / kViewWidth, viewHeight / kViewHeight));
         const float rim = kRimWidth * unit;
@@ -614,6 +651,12 @@ namespace BECore::Mahjong {
         renderer.DrawFilledRect(0.0f, viewHeight - rim, viewWidth, rim, kFeltRim);
         renderer.DrawFilledRect(0.0f, rim, rim, viewHeight - 2.0f * rim, kFeltRim);
         renderer.DrawFilledRect(viewWidth - rim, rim, rim, viewHeight - 2.0f * rim, kFeltRim);
+        // The lip on the inner side of the rim: four bars, the side ones between the top and the bottom one
+        const float lip = kFeltLipWidth * unit;
+        renderer.DrawFilledRect(rim, rim, viewWidth - 2.0f * rim, lip, kFeltLip);
+        renderer.DrawFilledRect(rim, viewHeight - rim - lip, viewWidth - 2.0f * rim, lip, kFeltLip);
+        renderer.DrawFilledRect(rim, rim + lip, lip, viewHeight - 2.0f * (rim + lip), kFeltLip);
+        renderer.DrawFilledRect(viewWidth - rim - lip, rim + lip, lip, viewHeight - 2.0f * (rim + lip), kFeltLip);
 
         const TableSnapshot before = eastl::move(_shown);
         _shown = TableSnapshot{};
@@ -699,15 +742,6 @@ namespace BECore::Mahjong {
             drawShadow(rect);
             drawFace(place, face);
         };
-
-        // The plates under the discard blocks and the wall ring
-        const float plate = kPlatePadding * unit;
-        for (const Rect& zone : layout.zones.discards) {
-            const Rect plated = Padded(zone, plate);
-            renderer.DrawFilledRect(plated.x, plated.y, plated.w, plated.h, kZonePlate);
-        }
-        const Rect ring = Padded(layout.zones.wall, plate);
-        renderer.DrawFilledRect(ring.x, ring.y, ring.w, ring.h, kZonePlate);
 
         // The seat plates (public data only, so also under the cover, for a spectator and at the end of a hand): the base of each, on the
         // plate of the seat whose turn it is the gold tint and frame, and on the dealer's (East of the hand shown: the same at the end of the

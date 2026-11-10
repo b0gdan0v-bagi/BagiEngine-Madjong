@@ -9,6 +9,7 @@ Everything here is plain C++ over the model, a `TableView` or a `UIStrings&`: no
 | `TableLayout` | the table as rectangles in view units (below) |
 | `TileAtlas.h` | atlas cells by arithmetic (`SourceRect`, `BackRect`, `SpriteName`); must match `tools/make_tiles.py` (`TileSpritesTest`) |
 | `UiPalette.h` | every colour, the type scale `kFontScale`, the grid `kGridUnit` / `kGridStep`, the modal numbers; see `config/CLAUDE.md` ("UI style") |
+| `TableLook` | the felt as RGBA8 pixels (`MakeFeltPixels`: vignette, symmetric grain, no random generator); the component makes the texture |
 | `Words` | `Tr(strings, key[, args])`, `Subst`, `WindName` |
 | `SeatName`, `SeatPlates` | how a seat is named; `BottomSeat(session)` / `TurnSeat(session, hand)` — the one definition of the seat at the bottom and of whose turn it is; `MakeSeatPlates` |
 | `ScoreText`, `MoveText`, `RulesText` | the sentences of the end screens, the move line and the 13 rules pages |

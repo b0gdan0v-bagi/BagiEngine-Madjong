@@ -380,10 +380,10 @@ namespace BECore::Mahjong::Tests {
             return kNoSeat;
         }
 
-        /// The base of every plate is drawn once, after the plates of the zones and before the first tile.
+        /// The base of every plate is drawn once, after the felt, the rim and its lip (no plate of a zone lies between) and before the first tile.
         void ExpectBasePlatesInOrder() const {
-            std::vector<size_t> zonePlates = CallsOf(kZonePlate);
-            ASSERT_FALSE(zonePlates.empty());
+            const std::vector<size_t> lip = CallsOf(kFeltLip);
+            ASSERT_EQ(lip.size(), 4u);
             size_t firstTile = _renderer->calls.size();
             for (size_t i = 0; i < _renderer->calls.size(); ++i) {
                 if (_renderer->calls[i].kind == DrawKind::Texture && _renderer->calls[i].texture == _atlasTexture) {
@@ -402,7 +402,7 @@ namespace BECore::Mahjong::Tests {
                     }
                 }
                 ASSERT_EQ(found, 1) << "seat " << seat;
-                EXPECT_GT(at, zonePlates.back()) << "seat " << seat << ": after the plates of the zones";
+                EXPECT_GT(at, lip.back()) << "seat " << seat << ": after the felt and its rim";
                 EXPECT_LT(at, firstTile) << "seat " << seat << ": before the tiles";
             }
         }
@@ -785,7 +785,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(kDrawnTileMark.r, kTurnMark.r);
         EXPECT_EQ(kDrawnTileMark.g, kTurnMark.g);
         EXPECT_EQ(kDrawnTileMark.b, kTurnMark.b);
-        for (const Color& other : {kTurnMark, kPendingFrame, kLastDiscardMark, kClaimedEdge, kClaimHighlight, kClaimLostFrame, kDeclareMark, kAdvisedFrame, kVeil, kTileShadow, kZonePlate}) {
+        for (const Color& other : {kTurnMark, kPendingFrame, kLastDiscardMark, kClaimedEdge, kClaimHighlight, kClaimLostFrame, kDeclareMark, kAdvisedFrame, kVeil, kTileShadow, kFeltLip}) {
             EXPECT_FALSE(SameColor(kDrawnTileMark, other));
         }
     }
@@ -900,7 +900,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(kCallingFrame.g, kTurnMark.g);
         EXPECT_EQ(kCallingFrame.b, kTurnMark.b);
         for (const Color& other :
-             {kTurnMark, kPendingFrame, kLastDiscardMark, kDrawnTileMark, kClaimedEdge, kClaimHighlight, kClaimLostFrame, kDeclareMark, kAdvisedFrame, kVeil, kTileShadow, kZonePlate}) {
+             {kTurnMark, kPendingFrame, kLastDiscardMark, kDrawnTileMark, kClaimedEdge, kClaimHighlight, kClaimLostFrame, kDeclareMark, kAdvisedFrame, kVeil, kTileShadow, kFeltLip}) {
             EXPECT_FALSE(SameColor(kCallingFrame, other));
         }
     }
@@ -1007,7 +1007,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(kKeepsWaitingMark.g, kTurnMark.g);
         EXPECT_EQ(kKeepsWaitingMark.b, kTurnMark.b);
         for (const Color& other :
-             {kTurnMark, kPendingFrame, kLastDiscardMark, kDrawnTileMark, kCallingFrame, kClaimedEdge, kClaimHighlight, kClaimLostFrame, kDeclareMark, kAdvisedFrame, kVeil, kTileShadow, kZonePlate}) {
+             {kTurnMark, kPendingFrame, kLastDiscardMark, kDrawnTileMark, kCallingFrame, kClaimedEdge, kClaimHighlight, kClaimLostFrame, kDeclareMark, kAdvisedFrame, kVeil, kTileShadow, kFeltLip}) {
             EXPECT_FALSE(SameColor(kKeepsWaitingMark, other));
         }
         EXPECT_GT(kKeepsWaitingBarHeight, 0.0f);
@@ -1173,7 +1173,7 @@ namespace BECore::Mahjong::Tests {
 
     // ----- the seat plates -----
 
-    TEST_F(MahjongTableMarksTest, EverySeatHasABasePlateAtItsRectangleForEachViewerAfterTheZonePlatesAndBeforeTheTiles) {
+    TEST_F(MahjongTableMarksTest, EverySeatHasABasePlateAtItsRectangleForEachViewerAfterTheFeltAndBeforeTheTiles) {
         for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
             SeatSetup seats{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
             seats[static_cast<size_t>(viewer)] = SeatKind::Person;
@@ -1269,14 +1269,14 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(kSeatTurnFrame.g, kTurnMark.g);
         EXPECT_EQ(kSeatTurnFrame.b, kTurnMark.b);
         for (const Color& other : {kTurnMark, kPendingFrame, kLastDiscardMark, kDrawnTileMark, kCallingFrame, kClaimedEdge, kClaimHighlight, kClaimLostFrame, kDeclareMark, kKeepsWaitingMark,
-                                   kAdvisedFrame, kVeil, kTileShadow, kZonePlate, kSeatPlate, kDealerMark}) {
+                                   kAdvisedFrame, kVeil, kTileShadow, kFeltLip, kSeatPlate, kDealerMark}) {
             EXPECT_FALSE(SameColor(kSeatTurnFrame, other)) << "the tests find a mark by its colour";
         }
         // The dealer's mark is red: little green and blue, and no colour of the other marks
         EXPECT_LT(kDealerMark.g, kTurnMark.g / 2);
         EXPECT_LT(kDealerMark.b, kTurnMark.b);
         for (const Color& other : {kTurnMark, kPendingFrame, kLastDiscardMark, kDrawnTileMark, kCallingFrame, kClaimedEdge, kClaimHighlight, kClaimLostFrame, kDeclareMark, kKeepsWaitingMark,
-                                   kAdvisedFrame, kVeil, kTileShadow, kZonePlate, kSeatPlate, kSeatTurnFrame}) {
+                                   kAdvisedFrame, kVeil, kTileShadow, kFeltLip, kSeatPlate, kSeatTurnFrame}) {
             EXPECT_FALSE(SameColor(kDealerMark, other));
         }
         EXPECT_TRUE(SameColor(kSeatPlate, PaletteColor("hudPanel")));
