@@ -154,6 +154,30 @@ namespace BECore::Mahjong {
         bool declaredCalling = false;
     };
 
+    /// A claim that lost in a claim window to a better one (`ClaimWindowResult::beaten`).
+    struct LostClaim {
+        Seat seat = 0;
+        ClaimKind kind = ClaimKind::Chow;
+        Tile chowFirst;  // the lowest tile of the sequence for a chow, invalid for the other kinds
+    };
+
+    /**
+     * @brief How the last `Phase::Claim` window was settled (`HandModel::LastClaimWindow()`), public data only: at a table every claim
+     *        is said aloud. `HandModel::Moves()` stays "carried out", so a claim that lost is only here.
+     *
+     * `serial` counts the windows settled in this hand from 1, so a front end tells a new result from the one it has seen. `from` is
+     * the discarder and `tile` the discard. `winner` is the seat whose claim was carried out with `winningKind` (read only with a
+     * winner), `kNoSeat` when all passed. `beaten` lists every seat that claimed and did not win, in seat order; a pass is no claim.
+     */
+    struct ClaimWindowResult {
+        int serial = 0;
+        Seat from = kNoSeat;
+        Tile tile;
+        Seat winner = kNoSeat;
+        ClaimKind winningKind = ClaimKind::Chow;
+        eastl::vector<LostClaim> beaten;
+    };
+
     /// What an action returns: nothing, or why it was refused.
     using HandStatus = std::expected<void, HandError>;
 
@@ -233,6 +257,11 @@ namespace BECore::Mahjong {
         /// kongs); `Begin` clears it. Passes, wins, bonus tiles and the end of a hand are not in it (`Result()` has the end).
         [[nodiscard]] const eastl::vector<HandMove>& Moves() const noexcept {
             return _moves;
+        }
+        /// How the last claim window of `Phase::Claim` was settled (not the robbing window, which leaves it as it was); nullopt before
+        /// the first one of the hand. `Begin` clears it.
+        [[nodiscard]] const std::optional<ClaimWindowResult>& LastClaimWindow() const noexcept {
+            return _lastWindow;
         }
         /// The outcome once the phase is `Finished`.
         [[nodiscard]] const std::optional<HandResult>& Result() const noexcept {
@@ -381,6 +410,9 @@ namespace BECore::Mahjong {
         eastl::array<ClaimOption, kSeatCount> _claims;
         /// The tile the open window is about (`PendingTile()`); invalid while no window is open.
         Tile _pendingTile;
+        /// The last settled claim window (`LastClaimWindow()`) and how many were settled in this hand.
+        std::optional<ClaimWindowResult> _lastWindow;
+        int _windowSerial = 0;
         /// Starts as a drawn hand: a model that was never begun is finished, and a finished hand has a result.
         std::optional<HandResult> _result = HandResult{};
     };
