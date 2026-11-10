@@ -10,11 +10,10 @@
   plate around it, 80 units, hold that. The button has ignoreSafeArea (a child of the root: the validator lets it) and is anchored to the
   centre, so a notch or side insets do not move it off the gap; y 4 centres it in the gap of the plate (the gap's middle is 6 units
   under the middle of the view).
-  In a portrait window (height at least width, 1:1 included) the table is a strip in the middle of the window, the ratio reaches 1.96 and the
-  gap cannot hold the button: there it lies at the bottom of the window (the variant), 40 units above the edge (more than the home bar
-  of a phone), in the bar under the table. A main button of the modal anatomy (64 high at 28, last in the plate) or an action bar at the
-  bottom would lie over the hands of the viewer, which stay face up under the score table. MahjongTouchSizeTest and MahjongEndScreenTest
-  hold the place against the plate and the hands in every window of the matrix.
+  In a portrait window (height at least width, 1:1 included) the table is the portrait view, as wide as the window or narrower with bars at the
+  sides, and the plate of HandOver is 724 high with a gap of 112 (the variant of that file): the ratio of the two scales reaches 1.6 there (the
+  1:1 window of 480 px) and 56 x 1.6 = 90 fits the gap, so the button stays in the middle of the window as in a landscape one. MahjongTouchSizeTest and
+  MahjongEndScreenTest hold the place against the plate and the hands in every window of the matrix.
 -->
 <node name="HandOverAction" layer="26">
   <components>
@@ -22,13 +21,6 @@
       <elements>
         <element type="UIButton" name="NextHand" anchor="Center" ignoreSafeArea="true" x="0" y="4" width="176" height="56" text="{handOverButton}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongNextHand" color="40,110,60,255" />
       </elements>
-      <variants>
-        <variant when="orientation:portrait">
-          <overrides>
-            <set element="NextHand" anchor="Bottom" x="0" y="-40" />
-          </overrides>
-        </variant>
-      </variants>
     </component>
   </components>
 </node>

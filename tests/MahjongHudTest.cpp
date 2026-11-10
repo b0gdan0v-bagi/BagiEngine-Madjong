@@ -456,10 +456,7 @@ namespace BECore::Mahjong::Tests {
                 const char* node;
                 const char* element;
             };
-            std::vector<Neighbour> neighbours{{"Hud", "MoveLine"}, {"Hints", "WaitPanel"}, {"Hints", "AdviceText"}, {"HintsButton", "HintButton"}};
-            if (layout.shape == TableShape::Landscape) {  // the action buttons have no place in the portrait table yet (WP 4)
-                neighbours.insert(neighbours.end(), {{"Actions", "Hint"}, {"Actions", "ActionRow"}});
-            }
+            const Neighbour neighbours[] = {{"Hud", "MoveLine"}, {"Actions", "Hint"}, {"Actions", "ActionRow"}, {"Hints", "WaitPanel"}, {"Hints", "AdviceText"}, {"HintsButton", "HintButton"}};
             for (const Neighbour& neighbour : neighbours) {
                 const UIElement* element = Element(neighbour.node, neighbour.element);
                 ASSERT_NE(element, nullptr) << neighbour.element;
@@ -983,10 +980,7 @@ namespace BECore::Mahjong::Tests {
                     const char* node;
                     const char* element;
                 };
-                std::vector<Neighbour> others{{"Hud", "MoveLine"}, {"Hints", "WaitPanel"}, {"Hints", "AdviceText"}, {"HintsButton", "HintButton"}};
-                if (shape == TableShape::Landscape) {  // the action buttons have no place in the portrait table yet (WP 4)
-                    others.insert(others.end(), {{"Actions", "Hint"}, {"Actions", "ActionRow"}});
-                }
+                const Neighbour others[] = {{"Hud", "MoveLine"}, {"Actions", "Hint"}, {"Actions", "ActionRow"}, {"Hints", "WaitPanel"}, {"Hints", "AdviceText"}, {"HintsButton", "HintButton"}};
                 for (const Neighbour& other : others) {
                     EXPECT_TRUE(Apart(Element(other.node, other.element)->rect, label->rect)) << other.element;
                 }

@@ -63,6 +63,12 @@ namespace BECore::Mahjong::Tests {
         return ViewTransform::Fit(view.width, view.height, window.outputWidth, window.outputHeight);
     }
 
+    /// The bar under the table in the window, in output pixels (`BarUnderTable` for the view of the window's shape).
+    inline float BarUnderTableOf(const MatrixWindow& window) {
+        const ActiveSceneView view = ViewOf(window);
+        return BarUnderTable(window.outputWidth, window.outputHeight, view.width, view.height);
+    }
+
     /// The simulation that made `safeArea` for this output size (the matrix keeps only the area).
     inline SafeAreaSimulation SimulationOf(const UIMatrixCase& matrixCase) {
         for (const SafeAreaSimulation kind : {SafeAreaSimulation::TopNotch, SafeAreaSimulation::SideInsets}) {
