@@ -328,6 +328,8 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         _game->OpenSetup();
         Draw();
+        // The button beside Start, as it is when a saved match is on offer (the HUD test shows it by a real save)
+        UICanvasComponent::SetElementVisibleByName(*_manager->GetSceneByName("MahjongScene"_intern), "Continue"_intern, true);
         auto setup = Canvas("Setup");
         ASSERT_TRUE(setup);
         EXPECT_EQ(setup->GetLayout().params.space, CanvasSpace::Screen) << "the seat choice is a Screen canvas";
@@ -337,8 +339,8 @@ namespace BECore::Mahjong::Tests {
         const float minTouch = EngineTouchMinimum();
 
         const char* const rows[] = {"Title", "LanguageRow", "SeatRow0", "SeatRow1", "SeatRow2", "SeatRow3", "HandsRow", "HintsRow", "Start"};
-        const char* const segments[] = {"LanguageEn",    "LanguageRu",  "Seat0Person",   "Seat0Computer", "Seat1Person", "Seat1Computer", "Seat2Person",
-                                        "Seat2Computer", "Seat3Person", "Seat3Computer", "Hands16",       "Hands8",      "HintsOn",       "HintsOff"};
+        const char* const segments[] = {"LanguageEn",  "LanguageRu",    "Seat0Person", "Seat0Computer", "Seat1Person", "Seat1Computer", "Seat2Person", "Seat2Computer",
+                                        "Seat3Person", "Seat3Computer", "Hands16",     "Hands8",        "HintsOn",     "HintsOff",      "Continue"};
         const CanvasScaleMode modes[] = {CanvasScaleMode::ConstantPixelSize, CanvasScaleMode::ScaleWithScreen, CanvasScaleMode::ConstantPhysicalSize};
         size_t cases = 0;
         ForEachMatrixWindow([&](const MatrixWindow& window) {
@@ -383,6 +385,9 @@ namespace BECore::Mahjong::Tests {
                     const UIElement* start = Element("Setup", "Start");
                     ASSERT_NE(start, nullptr);
                     EXPECT_GE(start->rect.h * resolved.scale / window.pixelDensity, minTouch - 0.01f) << label << " Start";
+                    const UIElement* proceed = Element("Setup", "Continue");
+                    ASSERT_NE(proceed, nullptr);
+                    EXPECT_LE(proceed->rect.x + proceed->rect.w, start->rect.x + 0.01f) << label << ": Continue and Start do not overlap";
                     ++cases;
                 }
             }

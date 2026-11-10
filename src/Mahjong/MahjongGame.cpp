@@ -149,6 +149,12 @@ namespace BECore::Mahjong {
             return false;
         }
         _savedCounter = _recorder.Counter();  // the slot already holds exactly this
+        // The panel shows the resumed match's own choices when it opens again (the prefs may be newer than the match)
+        _seats = start.seats;
+        _level = start.level;
+        if (start.settings.handsPerMatch == kFullMatchHands || start.settings.handsPerMatch == kShortMatchHands) {
+            _settings.handsPerMatch = start.settings.handsPerMatch;
+        }
         return true;
     }
 

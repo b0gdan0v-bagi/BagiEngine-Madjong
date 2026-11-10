@@ -9,6 +9,10 @@ namespace BECore {
         struct ActionEvent;
     }
 
+    namespace SceneEvents {
+        struct SceneUpdateEvent;
+    }
+
 }  // namespace BECore
 
 namespace BECore::Mahjong {
@@ -37,7 +41,12 @@ namespace BECore::Mahjong {
      * last match. The first row of the panel is the language: a `UISegmented` bound to `language` (the id of the language) emits
      * `MahjongSetLanguage` with the id; `MahjongGame::SetLanguage` applies it to the string table (an id the table does not have is refused and
      * the variable is set to the language the game really has), and the labels and the variables follow at the next draw. Nothing is
-     * played while it is open (`MahjongTableComponent` takes no click and steps no computer).
+     * played while it is open (`MahjongTableComponent` takes no click and steps no computer). The button `Continue` (`MahjongContinue`, beside `Start` in
+     * the stack `ButtonRow`) is shown exactly while the panel is open and `MahjongGame::CanContinue()` (a saved match is the table behind it);
+     * `MahjongContinue` calls `ContinueMatch()` and is ignored while the panel is closed or there is nothing to continue.
+     *
+     * **Saving.** Every `SceneUpdateEvent` (once per frame, only for the active game) calls `MahjongGame::FlushSave()`, which writes the match and the
+     * choices of `Setup` when they changed, so a burst of computer steps is one write.
      *
      * **The end of a hand and of a match.** While the session is in `HandOver` the modal canvas `HandOver` is shown with the rows of
      * `FormatScoreTable` (`Table/ScoreText.h`): `handOverHeadline`, `handOverSeat0` .. `3`, `scoreLine0` .. `15` (the element
@@ -88,6 +97,8 @@ namespace BECore::Mahjong {
 
     private:
         void OnAction(const InputEvents::ActionEvent& event);
+        /// The frame hook of the save: writes what changed since the last frame.
+        void OnUpdate(const SceneEvents::SceneUpdateEvent& event);
         /// Sets the variables of the HUD when the version of the session (or the game) moved since the last time.
         void PublishNumbers(const MahjongGame* game);
         /// Shows or hides `Setup` after the game, and takes the setup of the game when the panel opens.
@@ -116,6 +127,7 @@ namespace BECore::Mahjong {
         SeatSetup _pending = kDefaultSeatSetup;
         int _pendingHands = kFullMatchHands;
         bool _setupShown = false;
+        bool _continueShown = false;              // the button `Continue` of the panel
         const MahjongGame* _numbersOf = nullptr;  // the game and the version the variables show
         uint64_t _numbersVersion = 0;
         uint64_t _numbersStrings = 0;  // the version of the string table the variables are worded in

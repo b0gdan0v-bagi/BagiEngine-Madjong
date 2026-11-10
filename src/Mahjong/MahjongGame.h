@@ -35,7 +35,7 @@ namespace BECore::Mahjong {
      *
      * **Saving** (`Save/MatchSave.h`, `Save/MatchSaveStore.h`): the session's sink is a `MatchRecorder` that keeps the events of the
      * match begun by `StartMatch` (and passes every one on to the match log writer), and `FlushSave()` writes the `match` slot (and the
-     * `settings` slot, the choices of `Setup`) when something changed; the HUD calls it once per frame and `Stop()` calls it, so a burst
+     * `settings` slot, the choices of `Setup`) when something changed; `MahjongHudComponent` calls it once per frame (a `SceneUpdateEvent`) and `Stop()` calls it, so a burst
      * of computer steps is one write. `Start()` reads the prefs and offers a saved match that replays (`CanContinue()`, taken by
      * `ContinueMatch()`); the background match it deals otherwise is not recorded, so it cannot overwrite the saved one.
      */

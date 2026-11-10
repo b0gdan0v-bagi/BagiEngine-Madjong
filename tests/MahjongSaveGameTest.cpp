@@ -256,6 +256,25 @@ namespace BECore::Mahjong::Tests {
         PlayFirstActions(*second, 1);                        // and the match goes on legally
     }
 
+    TEST_F(MahjongSaveGameTest, AResumedMatchsOwnSeatsLevelAndHandsAreWhatTheGameHasNext) {
+        IntrusivePtr<MahjongGame> game = NewGame();
+        Reset(*game, "{\"seed\": 5, \"seats\": \"PCCC\", \"hands\": 8, \"level\": \"easy\"}");
+        // The choices of the game moved on after the match began (a client set them): the prefs slot says so
+        game->SetSeats(SeatSetup{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Person});
+        game->SetLevel(ComputerLevel::Normal);
+        MahjongSettings settings = game->GetSettings();
+        settings.handsPerMatch = kFullMatchHands;
+        game->SetSettings(settings);
+        game->FlushSave();
+
+        IntrusivePtr<MahjongGame> second = StartedGame();
+        ASSERT_TRUE(second->CanContinue());
+        EXPECT_EQ(second->GetSeats(), (SeatSetup{SeatKind::Person, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer})) << "the panel shows the match behind it";
+        EXPECT_EQ(second->GetLevel(), ComputerLevel::Easy);
+        EXPECT_EQ(second->GetSettings().handsPerMatch, kShortMatchHands);
+        EXPECT_EQ(second->GetSession().Level(), ComputerLevel::Easy);
+    }
+
     TEST_F(MahjongSaveGameTest, AClaimWindowIsResumedAsItWas) {
         IntrusivePtr<MahjongGame> game = NewGame();
         ASSERT_TRUE(ResetToAClaimWindow(*game));

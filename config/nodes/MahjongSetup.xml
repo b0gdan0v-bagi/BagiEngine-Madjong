@@ -9,8 +9,8 @@
   MahjongSetLanguage (value = the language id, variable language). The variables seatKindN, handsChoice and language are set by
   the component, which also begins the match on MahjongStart.
   The roomy shape (a canvas of 1280 x 720 units, the design size) is the anatomy of the modal screens: the plate is the safe area
-  at most 664 high (32 padding + 48 title band + 7 x 64 rows + 64 Start + 9 x 8 spacing; StartGap is empty, so the 8 + 8 round
-  it set Start 16 apart from the rows) and the title, the rows and Start share its height by flex weights that come out at 48 / 64
+  at most 664 high (32 padding + 48 title band + 7 x 64 rows + 64 ButtonRow + 9 x 8 spacing; StartGap is empty, so the 8 + 8 round
+  it set the row of Start 16 apart from the rows) and the title, the rows and Start share its height by flex weights that come out at 48 / 64
   (0.75 / 1) and stop growing there (maxHeight). A row has no vertical padding: its caption and its group are 87.5 % of its
   height and centred, which is the 4 padding round a 56 segment of a row of 64. The shape gives way where the canvas is short: the
   smallest one is a 480 px window at the user scale 1.5, 320 x 320 units (262 x 297 of safe area with insets), where a control is
@@ -19,6 +19,10 @@
   the whole safe width for the plate and narrows the captions (64 for Language, 52 for the others) so that Person / Computer and
   Человек / Компьютер fit. Every text may shrink (AutoFit, down to 12 units) instead of being cut. MahjongHudTest and
   MahjongTouchSizeTest hold the shapes, the touch size and the words on the whole size matrix.
+  Continue (MahjongContinue; the saved match is the table behind the panel, MahjongGame::CanContinue()) is not a new row, because
+  the plate has no room for another: Start lives in the horizontal stack ButtonRow (64 high like the rows, 8 between) beside it.
+  Continue is hidden here and shown by MahjongHudComponent exactly while the panel is open and there is a match to continue; a hidden
+  element takes no room, so Start keeps the whole width otherwise, and the two share it half and half when both are there.
 -->
 <node name="Setup" layer="30">
   <components>
@@ -106,7 +110,12 @@
               </children>
             </element>
             <element type="UIElement" name="StartGap" height="0" />
-            <element type="UIButton" name="Start" flex="1" maxHeight="64" text="{#setup.start}" fontSize="28" overflow="AutoFit" minFontSize="12" action="MahjongStart" color="40,110,60,255" />
+            <element type="UIStack" name="ButtonRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" crossAlign="Stretch">
+              <children>
+                <element type="UIButton" name="Continue" flex="1" text="{#setup.continue}" fontSize="28" overflow="AutoFit" minFontSize="12" action="MahjongContinue" color="45,75,120,255" visible="false" />
+                <element type="UIButton" name="Start" flex="1" text="{#setup.start}" fontSize="28" overflow="AutoFit" minFontSize="12" action="MahjongStart" color="40,110,60,255" />
+              </children>
+            </element>
           </children>
         </element>
       </elements>
