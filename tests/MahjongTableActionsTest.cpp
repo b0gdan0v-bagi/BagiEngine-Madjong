@@ -100,6 +100,14 @@ namespace BECore::Mahjong::Tests {
             }
         }
 
+        /// The tiles of the viewer's hand framed for the offered chow in the last draw, as a sorted list.
+        std::vector<Tile> FramedForChow() const {
+            const ChowTakes& takes = _table->GetChowTakes();
+            std::vector<Tile> framed(takes.tiles.begin(), takes.tiles.begin() + takes.count);
+            std::sort(framed.begin(), framed.end(), [](Tile a, Tile b) { return a.Id() < b.Id(); });
+            return framed;
+        }
+
         /// The pointer moves to the middle of an element of the canvas `Actions` as the last draw put it (the canvas sets its hover).
         void HoverOver(const char* element) {
             const UIElement* found = Element("Actions", element);
@@ -752,6 +760,74 @@ namespace BECore::Mahjong::Tests {
 
         EXPECT_EQ(Var("actionHint"), "");
         EXPECT_FALSE(CanvasShown("Actions")) << "the label Hint is in Actions, which is hidden";
+    }
+
+    // ----- the tiles a chow takes -----
+
+    TEST_F(MahjongTableActionsTest, TheChowUnderThePointerFramesTheTwoTilesOfTheHandItTakes) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kPersonAtSeat1, ClaimWindowModel()));
+        ASSERT_TRUE(_table->GetButtons()[ButtonKind::ClaimChow0].shown);
+        ASSERT_TRUE(_table->GetButtons()[ButtonKind::ClaimChow1].shown);
+        EXPECT_TRUE(FramedForChow().empty()) << "two chows and the pointer on none";
+
+        HoverOver("Chow0");
+        Draw();
+        EXPECT_EQ(FramedForChow(), (std::vector<Tile>{T("4p"), T("6p")}));
+
+        HoverOver("Chow1Tile2");
+        Draw();
+        EXPECT_EQ(FramedForChow(), (std::vector<Tile>{T("6p"), T("7p")}));
+
+        HoverOver("Pass");
+        Draw();
+        EXPECT_TRUE(FramedForChow().empty());
+
+        HoverOver("Chow0");
+        Draw();
+        HoverAt(100.0f, 650.0f);  // the felt
+        Draw();
+        EXPECT_TRUE(FramedForChow().empty());
+    }
+
+    TEST_F(MahjongTableActionsTest, ASingleChowFramesItsTilesWithoutAHover) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kPersonAtSeat1, MahjongWindowModel()));
+        ASSERT_TRUE(_table->GetButtons()[ButtonKind::ClaimChow0].shown);
+        ASSERT_FALSE(_table->GetButtons()[ButtonKind::ClaimChow1].shown);
+
+        EXPECT_EQ(FramedForChow(), (std::vector<Tile>{T("4p"), T("6p")}));
+
+        HoverOver("Pass");
+        Draw();
+        EXPECT_EQ(FramedForChow(), (std::vector<Tile>{T("4p"), T("6p")})) << "the one chow on offer, whatever else is hovered";
+    }
+
+    TEST_F(MahjongTableActionsTest, NoTileIsFramedWithoutAChowOnOffer) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, SelfDrawModel()));
+        EXPECT_TRUE(FramedForChow().empty());
+
+        FixedWallSpec spec = SpecOf("1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Gd Rd", "5p");
+        spec.hands[kSeat1] = "5p 5p 9p 2s 5s 8s 2m 5m 8m Ww Nw Gd Gd";  // a pung is on offer, no chow
+        HandModel model = MakeModel(spec);
+        ASSERT_TRUE(model.Discard(kSeat0, T("5p")).has_value());
+        ASSERT_NO_FATAL_FAILURE(StartWith(kPersonAtSeat1, model));
+        ASSERT_FALSE(_table->GetButtons()[ButtonKind::ClaimChow0].shown);
+        EXPECT_TRUE(FramedForChow().empty());
+    }
+
+    TEST_F(MahjongTableActionsTest, NoTileIsFramedForAChowUnderTheHotSeatCover) {
+        constexpr SeatSetup kTwoPeople{SeatKind::Computer, SeatKind::Person, SeatKind::Person, SeatKind::Computer};
+        ASSERT_NO_FATAL_FAILURE(StartWith(kTwoPeople, ClaimWindowModel()));
+        TableSession& session = _game->GetSession();
+        ASSERT_TRUE(session.HandoffPending());
+        EXPECT_TRUE(FramedForChow().empty());
+
+        ASSERT_TRUE(ClickElement("Handoff", "Reveal"));
+        Draw();
+        ASSERT_FALSE(session.HandoffPending());
+        ASSERT_TRUE(_table->GetButtons()[ButtonKind::ClaimChow0].shown);
+        HoverOver("Chow0");
+        Draw();
+        EXPECT_EQ(FramedForChow(), (std::vector<Tile>{T("4p"), T("6p")}));
     }
 
 }  // namespace BECore::Mahjong::Tests

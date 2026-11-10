@@ -134,4 +134,43 @@ namespace BECore::Mahjong {
         return buttons;
     }
 
+    ChowTakes ChowTilesTaken(const ActionButtons& buttons, Tile pending, std::optional<ButtonKind> hovered) {
+        ChowTakes takes;
+        if (!pending.IsValid()) {
+            return takes;
+        }
+        std::optional<ButtonKind> chosen;
+        if (hovered && *hovered >= ButtonKind::ClaimChow0 && *hovered <= ButtonKind::ClaimChow2 && buttons[*hovered].shown) {
+            chosen = hovered;
+        } else {
+            for (int i = 0; i < kChowButtons; ++i) {
+                const ButtonKind kind = static_cast<ButtonKind>(static_cast<int>(ButtonKind::ClaimChow0) + i);
+                if (!buttons[kind].shown) {
+                    continue;
+                }
+                if (chosen) {
+                    return takes;  // several chows and none hovered: nothing to say which
+                }
+                chosen = kind;
+            }
+        }
+        if (!chosen) {
+            return takes;
+        }
+        const ButtonState& button = buttons[*chosen];
+        bool skipped = false;
+        for (int t = 0; t < button.tileCount; ++t) {
+            const Tile tile = button.tiles[static_cast<size_t>(t)];
+            if (!skipped && tile == pending) {
+                skipped = true;
+            } else if (takes.count < 2) {
+                takes.tiles[static_cast<size_t>(takes.count++)] = tile;
+            }
+        }
+        if (!skipped || takes.count != 2) {
+            return ChowTakes{};
+        }
+        return takes;
+    }
+
 }  // namespace BECore::Mahjong

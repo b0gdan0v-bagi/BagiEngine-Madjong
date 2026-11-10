@@ -12,7 +12,7 @@ Everything here is plain C++ over the model, a `TableView` or a `UIStrings&`: no
 | `Words` | `Tr(strings, key[, args])`, `Subst`, `WindName` |
 | `SeatName`, `SeatPlates` | how a seat is named; `BottomSeat(session)` / `TurnSeat(session, hand)` — the one definition of the seat at the bottom and of whose turn it is; `MakeSeatPlates` |
 | `ScoreText`, `MoveText`, `RulesText` | the sentences of the end screens, the move line and the 13 rules pages |
-| `ActionButtons` | `SpecOf` (element, action, value, word and hint keys, pictured tiles), `ButtonOf`, `MakeActionButtons(legal, pendingTile)` |
+| `ActionButtons` | `SpecOf` (element, action, value, word and hint keys, pictured tiles), `ButtonOf`, `MakeActionButtons(legal, pendingTile)`, `ChowTilesTaken` (the hand tiles a chow takes) |
 | `Hints`, `CallingMarks` | `WaitingTiles`, `DeclaringDiscards`, `AdviceFor` (= `ComputerPlayer(kAdviceSeed)`, Normal), `AdviceText`, `HintsApply`; `KeepsWaitingDiscards` |
 | `TileFlights` | `PlanFlights(before, after, newMoves)`, `FlightRect`, `kTileFlightSeconds` (must stay below `kComputerStepSeconds`) |
 | `TouchRegime.h` | `FitScale`, `NeedsCompactActions`, `CompactScale`, `CompactRowHeight` and the compact-row constants the scene file must match (`MahjongTableScreenTest`) |

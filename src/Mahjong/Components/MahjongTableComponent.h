@@ -131,6 +131,12 @@ namespace BECore::Mahjong {
             return _published;
         }
 
+        /// The tiles of the viewer's hand framed by the last `OnDraw` for the offered chow (see `ChowTilesTaken`); none under the cover, with no
+        /// chow on offer or when several are and the pointer is on none of them.
+        [[nodiscard]] const ChowTakes& GetChowTakes() const noexcept {
+            return _chowTakes;
+        }
+
         /// Draws with `texture` (made from pixels, `IRenderer::CreateTexture()`) instead of the atlas from the file; a test hands one.
         void SetAtlasTexture(IntrusivePtr<ITexture> texture);
 
@@ -225,9 +231,11 @@ namespace BECore::Mahjong {
         eastl::vector<TileFlight> _flights;  // the tiles in the air, flying to slots of `_shown.layout`
         float _flightElapsed = 0.0f;         // seconds since the batch of `_flights` was planned
         float _flightSeconds = kTileFlightSeconds;
-        ActionButtons _published;          // what the canvases show; the scene file starts with every button hidden
-        eastl::string_view _hintKey;       // the key of the sentence in `actionHint` (a literal of `SpecOf`, which lives as long as the program)
-        uint64_t _hintStringsVersion = 0;  // the version of the string table that sentence was looked up at
+        ActionButtons _published;                  // what the canvases show; the scene file starts with every button hidden
+        std::optional<ButtonKind> _hoveredButton;  // the shown button of `Actions` under the pointer at the last publication
+        ChowTakes _chowTakes;                      // what the last `OnDraw` framed in the hand for the offered chow
+        eastl::string_view _hintKey;               // the key of the sentence in `actionHint` (a literal of `SpecOf`, which lives as long as the program)
+        uint64_t _hintStringsVersion = 0;          // the version of the string table that sentence was looked up at
         bool _handoffShown = false;
         bool _compactActions = false;  // `ActionsCompact` is the shown canvas of the buttons; the scene file starts with `Actions`
         bool _declareNext = false;
