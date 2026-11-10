@@ -19,10 +19,10 @@ namespace BECore::Mahjong {
      * @brief The hints of the table (`Table/Hints.h`): the node `Hints` (`config/nodes/MahjongHints.xml`) carries this component and the canvas it
      *        fills. It reads the game and the viewer's view and never changes the match.
      *
-     * **The switch.** The panel `Setup` has the row `HintsRow`: a `UISegmented` bound to the variable `hintsChoice` (`on` | `off`) whose
+     * **The switch.** The page `Options` has the row `HintsRow`: a `UISegmented` bound to the variable `hintsChoice` (`on` | `off`) whose
      * buttons emit `MahjongSetHints` with that value. The flag lives on the game (`MahjongGame::HintsOn()`), is not part of the settings
-     * and takes effect at once (unlike the seats, nothing waits for `Start`). The component ignores the action while `Setup` is not open (a
-     * click that arrives late), accepts only `on` and `off` and sets `hintsChoice` from the game while the panel is open and after each
+     * and takes effect at once (unlike the seats, nothing waits for `Start`). The component ignores the action while the page is not open (a
+     * click that arrives late), accepts only `on` and `off` and sets `hintsChoice` from the game while `Setup` or the page is open and after each
      * click, so the variable keeps the truth.
      *
      * **The waiting row.** While `HintsApply` holds (hints on, neither `Setup` nor the rules open, a person at the table, no cover, the hand being played) and

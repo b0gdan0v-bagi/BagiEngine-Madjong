@@ -92,11 +92,6 @@ namespace BECore::Mahjong::Tests {
             return keys;
         }
 
-        /// The button `Options` of `Setup` leads to the page; its node comes with the work package that reshapes `Setup`, which deletes this.
-        bool IsWordOfTheButtonNotInTheSceneYet(const std::string& key) {
-            return key == "setup.options";
-        }
-
         UIStrings MakeTable() {
             UIStrings strings;
             strings.Set("en"_intern, "greeting", "Hello, {name}!");
@@ -199,8 +194,7 @@ namespace BECore::Mahjong::Tests {
         for (const LanguageEntries& language : ReadShippedEntries()) {
             for (const StringEntry& entry : language.entries) {
                 inTheFile.insert(entry.key);
-                EXPECT_TRUE(scene.contains(entry.key) || named.contains(entry.key) || walked.contains(entry.key) || IsWordOfTheButtonNotInTheSceneYet(entry.key))
-                    << language.id << ": " << entry.key << " is used by nobody";
+                EXPECT_TRUE(scene.contains(entry.key) || named.contains(entry.key) || walked.contains(entry.key)) << language.id << ": " << entry.key << " is used by nobody";
             }
         }
         for (const std::string& key : walked) {

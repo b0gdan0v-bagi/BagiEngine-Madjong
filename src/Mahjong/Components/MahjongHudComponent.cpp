@@ -220,7 +220,7 @@ namespace BECore::Mahjong {
         }
         _optionsShown = open;
         if (open) {
-            // The rows show what the game has now; the hints row is published by the hints component while `Setup` is open
+            // The rows show what the game has now; the hints row is published by the hints component while the page is open
             PublishLanguage(*game);
             PublishLevelChoice(*game);
         }
@@ -466,9 +466,12 @@ namespace BECore::Mahjong {
             return;
         }
         if (action == kSetLanguageAction) {
-            // The game keeps the language and applies it to the table; an id the table does not have changes nothing, the variable keeps the truth
-            game->SetLanguage(event.value);
-            PublishLanguage(*game);
+            // The language row is on the page: a click that arrives while the page is closed is out of date. The game keeps the language
+            // and applies it to the table; an id the table does not have changes nothing, the variable keeps the truth
+            if (game->IsOptionsOpen()) {
+                game->SetLanguage(event.value);
+                PublishLanguage(*game);
+            }
             return;
         }
         if (action == kSetHandsAction) {

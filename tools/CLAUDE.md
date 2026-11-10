@@ -1,7 +1,7 @@
 # tools/
 
 - `arena/main.cpp` — `BagiMahjongArena`, see `src/Mahjong/Arena/CLAUDE.md` and `docs/bot-arena.md`.
-- `ui_shots.py` — six UI scenes (`01-fresh-table` ... `06-handoff`) at 1920 x 1080 and scaled to 640, from `BagiMahjong --headless --control --manual-clock`. `--exe`, `--label`, `--out` (a folder outside the repository; the tool refuses one inside a git work tree). Pictures are never committed.
+- `ui_shots.py` — seven UI scenes (`01-fresh-table` ... `07-options`) at 1920 x 1080 and scaled to 640, from `BagiMahjong --headless --control --manual-clock`. `--exe`, `--label`, `--out` (a folder outside the repository; the tool refuses one inside a git work tree). Pictures are never committed.
 - `make_tiles.py` — the tile art (below).
 
 ## Tile art
