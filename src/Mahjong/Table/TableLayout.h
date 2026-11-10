@@ -14,28 +14,56 @@ namespace BECore::Mahjong {
     inline constexpr float kViewWidth = 1280.0f;
     inline constexpr float kViewHeight = 720.0f;
 
-    /// The two shapes of the table. A view that is as high as wide or higher is `Portrait`, any other `Landscape`; the scene's second
-    /// view (`orientation:portrait` in `config/SceneConfig.xml`, `MahjongSceneFilesTest` compares the two) is the portrait design size.
-    CORE_ENUM(TableShape, uint8_t, Landscape, Portrait)
+    /// The shapes of the table, each the design of one view of the scene (`viewVariants` of `config/SceneConfig.xml`, which repeats the
+    /// sizes and the rule; `MahjongSceneFilesTest` compares them): `Landscape` is the view of `kViewWidth` x `kViewHeight`, `Portrait`
+    /// one at least as high as wide, `Wide` a landscape one that is `kWideMinAspect` times as wide as high or more (the landscape table
+    /// with a wing on each side).
+    CORE_ENUM(TableShape, uint8_t, Landscape, Portrait, Wide)
 
     inline constexpr float kPortraitViewWidth = 720.0f;
     inline constexpr float kPortraitViewHeight = 1280.0f;
 
-    /// The shape of a view of this size: portrait iff `height >= width`; a size that is not positive (the first frame, no output yet) is
+    /// The wide view: the landscape table centred in it with a wing of `kWideWingWidth` units on each side (free ground for the canvases;
+    /// the table is as high as before, so the tiles do not grow).
+    inline constexpr float kWideViewWidth = 1560.0f;
+    inline constexpr float kWideWingWidth = (kWideViewWidth - kViewWidth) / 2.0f;
+    /// A landscape view of this aspect (width over height) or more is wide; `orientation:landscape` views below it are landscape.
+    inline constexpr float kWideMinAspect = 2.0f;
+
+    /// The shape of a view of this size: portrait iff `height >= width`, else wide iff `width / height >= kWideMinAspect` (the same float
+    /// expression as the engine's `UIVariantCondition`), else landscape; a size that is not positive (the first frame, no output yet) is
     /// landscape.
     [[nodiscard]] constexpr TableShape ShapeOfView(float viewWidth, float viewHeight) noexcept {
-        return viewWidth > 0.0f && viewHeight > 0.0f && viewHeight >= viewWidth ? TableShape::Portrait : TableShape::Landscape;
+        if (!(viewWidth > 0.0f) || !(viewHeight > 0.0f)) {
+            return TableShape::Landscape;
+        }
+        if (viewHeight >= viewWidth) {
+            return TableShape::Portrait;
+        }
+        return viewWidth / viewHeight >= kWideMinAspect ? TableShape::Wide : TableShape::Landscape;
     }
 
-    /// The shape of the view the scene picks for an output of this size: the same rule as `ShapeOfView` (the `orientation:portrait` of the
-    /// scene file tests the output, so a square output is portrait).
+    /// The shape of the view the scene picks for an output of this size: the same rule as `ShapeOfView` (the `orientation` and aspect of the
+    /// scene file test the output, so a square output is portrait).
     [[nodiscard]] constexpr TableShape ShapeOfOutput(float outputWidth, float outputHeight) noexcept {
         return ShapeOfView(outputWidth, outputHeight);
     }
 
+    /// Whether the shape has the landscape table (the phone profile, the landscape geometry): `Landscape` and `Wide`.
+    [[nodiscard]] constexpr bool IsLandscapeLike(TableShape shape) noexcept {
+        return shape == TableShape::Landscape || shape == TableShape::Wide;
+    }
+
     /// The design size of a shape, in view units.
     [[nodiscard]] constexpr float DesignWidthOf(TableShape shape) noexcept {
-        return shape == TableShape::Portrait ? kPortraitViewWidth : kViewWidth;
+        switch (shape) {
+            case TableShape::Portrait:
+                return kPortraitViewWidth;
+            case TableShape::Wide:
+                return kWideViewWidth;
+            default:
+                return kViewWidth;
+        }
     }
 
     [[nodiscard]] constexpr float DesignHeightOf(TableShape shape) noexcept {
@@ -154,7 +182,7 @@ namespace BECore::Mahjong {
      * each across the whole view (spread, so the tiles never touch), the viewer's bonus tiles and melds lie in a row of their own above it
      * and the bottom discard block is lower and squeezed. The wall ring, the centre panel, the three other seats and the other plates stay
      * where they are (the bottom plate only moves up to clear the tallest hand tile). Not `phone` is today's table whatever `handTileW` is.
-     * Landscape only: the portrait table (`TableShape::Portrait`) has its own one-row hand and ignores the profile.
+     * Landscape and wide only: the portrait table (`TableShape::Portrait`) has its own one-row hand and ignores the profile.
      */
     struct TableProfile {
         bool phone = false;
@@ -227,8 +255,9 @@ namespace BECore::Mahjong {
     [[nodiscard]] int WallStackCount(int wallRemaining) noexcept;
 
     /// Lays out the table for a view of the given size (see `kViewWidth`) in the shape of that view (`ShapeOfView`): the landscape table
-    /// of `kViewWidth` x `kViewHeight` units or the portrait one of `kPortraitViewWidth` x `kPortraitViewHeight`, fitted into the view
-    /// (`LayoutScale`) and centred. Deterministic: the same input gives the same slots.
+    /// of `kViewWidth` x `kViewHeight` units, the portrait one of `kPortraitViewWidth` x `kPortraitViewHeight` or the wide view of
+    /// `kWideViewWidth` x `kViewHeight` (the landscape table `kWideWingWidth` from its left edge), fitted into the view (`LayoutScale`)
+    /// and centred. Deterministic: the same input gives the same slots.
     [[nodiscard]] TableLayout MakeTableLayout(const TableInput& input, float viewWidth = kViewWidth, float viewHeight = kViewHeight);
 
     /// The smallest rectangle that holds every slot of `role` of `seat` (`seat` ignored for the wall); empty when there is none.

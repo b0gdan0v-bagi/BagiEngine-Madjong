@@ -452,6 +452,10 @@ namespace BECore::Mahjong {
             fit.scale = LayoutScale(viewWidth, viewHeight);
             fit.offsetX = Centered(viewWidth, DesignWidthOf(shape) * fit.scale);
             fit.offsetY = Centered(viewHeight, DesignHeightOf(shape) * fit.scale);
+            if (shape == TableShape::Wide) {
+                // the landscape table lies in the middle of the wide design, a wing from its left edge
+                fit.offsetX += kWideWingWidth * fit.scale;
+            }
             return fit;
         }
 
@@ -643,7 +647,7 @@ namespace BECore::Mahjong {
         layout.viewer = IsSeat(input.viewer) ? input.viewer : 0;
         const TableShape shape = ShapeOfView(viewWidth, viewHeight);
         layout.shape = shape;
-        if (shape == TableShape::Landscape && input.profile.phone) {
+        if (IsLandscapeLike(shape) && input.profile.phone) {
             layout.profile.phone = true;
             layout.profile.handTileW = eastl::max(kViewerHandTileW, eastl::min(input.profile.handTileW, kPhoneHandTileMaxW));
         }

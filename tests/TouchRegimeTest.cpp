@@ -385,6 +385,7 @@ namespace BECore::Mahjong::Tests {
     TEST(TouchRegimeTest, AnActionButtonIs56UnitsInLandscapeAnd68InPortrait) {
         EXPECT_EQ(ActionButtonHeightFor(TableShape::Landscape), kActionButtonHeight);
         EXPECT_EQ(ActionButtonHeightFor(TableShape::Portrait), kPortraitActionButtonHeight);
+        EXPECT_EQ(ActionButtonHeightFor(TableShape::Wide), kActionButtonHeight);
         EXPECT_EQ(kPortraitActionButtonHeight, 68.0f);
         EXPECT_EQ(std::fmod(kPortraitActionButtonHeight, 4.0f), 0.0f) << "a grid unit of 4";
     }
@@ -427,6 +428,55 @@ namespace BECore::Mahjong::Tests {
         }
         // the same pixels with the landscape view default are a phone: the portrait view is what changes the answer
         EXPECT_TRUE(TableProfileFor(720.0f, 1280.0f, 2.0f, kMinTouch).phone);
+    }
+
+    // The wide view: the landscape table with a wing on each side, so the rules are the landscape ones over the wider view.
+
+    TEST(TouchRegimeTest, TheWideViewFitsIntoAnOutputByTheSmallerOfTheTwoScalesAndLeavesNoBarUnderTheTableOfA21To9Window) {
+        EXPECT_FLOAT_EQ(FitScale(1560.0f, 720.0f, kWideViewWidth, kViewHeight), 1.0f);
+        EXPECT_FLOAT_EQ(FitScale(2560.0f, 1080.0f, kWideViewWidth, kViewHeight), 1.5f) << "21:9 at 2560 x 1080: the height limits";
+        EXPECT_FLOAT_EQ(FitScale(915.0f, 330.0f, kWideViewWidth, kViewHeight), 330.0f / 720.0f) << "a landscape phone is wider than 19.5:9: the height limits";
+        EXPECT_FLOAT_EQ(FitScale(2000.0f, 1000.0f, kWideViewWidth, kViewHeight), 2000.0f / 1560.0f) << "narrower than 19.5:9: the width of the wide view limits";
+        EXPECT_FLOAT_EQ(BarUnderTable(2560.0f, 1080.0f, kWideViewWidth, kViewHeight), 0.0f);
+        EXPECT_FLOAT_EQ(BarUnderTable(3440.0f, 1440.0f, kWideViewWidth, kViewHeight), 0.0f);
+        EXPECT_FLOAT_EQ(BarUnderTable(1560.0f, 800.0f, kWideViewWidth, kViewHeight), 40.0f);
+    }
+
+    TEST(TouchRegimeTest, AWideWindowOfTheLandscapePhonesGetsThePhoneProfileWhereTheLandscapeRuleDoesWithinThreePercentOfTheFit) {
+        const struct {
+            float width;
+            float height;
+        } phones[] = {{915.0f, 330.0f}, {851.0f, 393.0f}, {780.0f, 300.0f}};
+        for (const auto& phone : phones) {
+            const float density = 2.6f;
+            const float width = phone.width * density;
+            const float height = phone.height * density;
+            const TableProfile wide = TableProfileFor(width, height, density, kMinTouch, kWideViewWidth, kViewHeight);
+            const TableProfile landscape = TableProfileFor(width, height, density, kMinTouch);
+            EXPECT_TRUE(wide.phone) << phone.width << " x " << phone.height;
+            EXPECT_TRUE(landscape.phone);
+            EXPECT_NEAR(FitScale(width, height, kWideViewWidth, kViewHeight), FitScale(width, height), 0.03f * FitScale(width, height)) << phone.width << " x " << phone.height;
+            EXPECT_NEAR(wide.handTileW, landscape.handTileW, 0.03f * landscape.handTileW) << phone.width << " x " << phone.height;
+            EXPECT_GE(wide.handTileW, kViewerHandTileW);
+            EXPECT_LE(wide.handTileW, kPhoneHandTileMaxW);
+        }
+    }
+
+    TEST(TouchRegimeTest, AWideDesktopWindowKeepsTheDesktopProfile) {
+        EXPECT_EQ(TableProfileFor(2560.0f, 1080.0f, 1.0f, kMinTouch, kWideViewWidth, kViewHeight), TableProfile{});
+        EXPECT_EQ(TableProfileFor(3440.0f, 1440.0f, 1.0f, kMinTouch, kWideViewWidth, kViewHeight), TableProfile{});
+        EXPECT_EQ(TableProfileFor(0.0f, 1080.0f, 1.0f, kMinTouch, kWideViewWidth, kViewHeight), TableProfile{});
+    }
+
+    TEST(TouchRegimeTest, TheCompactRuleOfAWideWindowIsTheLandscapeOneOverTheWiderView) {
+        // 2560 x 1080 at density 1: the table fills the height (fit 1.5, a button of 84 units): no compact row
+        EXPECT_FALSE(NeedsCompactActions(2560.0f, 1080.0f, 1.0f, kMinTouch, 1.0f, kWideViewWidth, kViewHeight));
+        // a 21:9 window whose button is small has no bar under the table, so the row would lie on the hand: Actions stays
+        EXPECT_FALSE(NeedsCompactActions(840.0f, 360.0f, 1.0f, kMinTouch, 1.0f, kWideViewWidth, kViewHeight));
+        EXPECT_FLOAT_EQ(BarUnderTable(840.0f, 360.0f, kWideViewWidth, kViewHeight), 0.0f);
+        // a window barely wide enough for the wide view with a bar: 1560 x 900 at fit 1 has bars of 90 px, a button of 56 units
+        EXPECT_FALSE(NeedsCompactActions(1560.0f, 900.0f, 1.0f, kMinTouch, 1.0f, kWideViewWidth, kViewHeight));
+        EXPECT_TRUE(NeedsCompactActions(1560.0f, 900.0f, 1.0f, 64.0f, 1.0f, kWideViewWidth, kViewHeight));
     }
 
 }  // namespace BECore::Mahjong::Tests

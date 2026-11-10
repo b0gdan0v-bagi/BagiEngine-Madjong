@@ -23,11 +23,16 @@ namespace BECore::Mahjong::Tests {
             float width;
             float height;
         };
-        /// Landscape and portrait views: the designs, fitted ones, a square (portrait) and a phone's 390 x 844.
-        const ViewSize kViewSizes[] = {{kViewWidth, kViewHeight}, {1920.0f, 1080.0f}, {800.0f, 800.0f},  {640.0f, 360.0f}, {1000.0f, 400.0f}, {kPortraitViewWidth, kPortraitViewHeight},
-                                       {390.0f, 844.0f},          {360.0f, 640.0f},   {768.0f, 1024.0f}, {480.0f, 480.0f}};
-        /// The two designs, the views the layout is made in unscaled.
-        const ViewSize kDesigns[] = {{kViewWidth, kViewHeight}, {kPortraitViewWidth, kPortraitViewHeight}};
+        /// Landscape, wide and portrait views: the designs, fitted ones, the wide boundary (2000 x 1000), a square (portrait) and a phone's 390 x 844.
+        const ViewSize kViewSizes[] = {{kViewWidth, kViewHeight}, {1920.0f, 1080.0f},
+                                       {800.0f, 800.0f},          {640.0f, 360.0f},
+                                       {1000.0f, 400.0f},         {kWideViewWidth, kViewHeight},
+                                       {2560.0f, 1080.0f},        {3200.0f, 900.0f},
+                                       {2000.0f, 1000.0f},        {kPortraitViewWidth, kPortraitViewHeight},
+                                       {390.0f, 844.0f},          {360.0f, 640.0f},
+                                       {768.0f, 1024.0f},         {480.0f, 480.0f}};
+        /// The designs of the shapes, the views the layout is made in unscaled.
+        const ViewSize kDesigns[] = {{kViewWidth, kViewHeight}, {kWideViewWidth, kViewHeight}, {kPortraitViewWidth, kPortraitViewHeight}};
         const SlotRole kSeatRoles[] = {SlotRole::HandTile, SlotRole::MeldTile, SlotRole::BonusTile, SlotRole::DiscardTile};
 
         Meld MakeMeld(MeldKind kind) {
@@ -506,7 +511,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_NEAR(doubled.slots[i].rect.w, design.slots[i].rect.w * 2.0f, kTolerance);
             EXPECT_NEAR(doubled.slots[i].rect.h, design.slots[i].rect.h * 2.0f, kTolerance);
         }
-        // A view twice as wide keeps the scale of the height and puts the table in the middle.
+        // A view twice as wide (a wide view) keeps the scale of the height and puts the table in the middle: the wing is the same ground.
         const TableLayout wide = MakeTableLayout(input, 2.0f * kViewWidth, kViewHeight);
         ASSERT_EQ(design.slots.size(), wide.slots.size());
         for (size_t i = 0; i < design.slots.size(); ++i) {
@@ -1413,13 +1418,20 @@ namespace BECore::Mahjong::Tests {
         ExpectSameSlots(MakeTableLayout(PhoneInput(WorstInput(1, 30, kNoSeat), 500.0f)), MakeTableLayout(PhoneInput(WorstInput(1, 30, kNoSeat), kPhoneHandTileMaxW)));
     }
 
-    TEST(TableLayoutTest, AViewAsHighAsWideOrHigherIsPortraitAndAnyOtherLandscape) {
+    TEST(TableLayoutTest, AViewAsHighAsWideOrHigherIsPortraitOneTwiceAsWideOrWiderIsWideAndAnyOtherLandscape) {
         EXPECT_EQ(ShapeOfView(kViewWidth, kViewHeight), TableShape::Landscape);
+        EXPECT_EQ(ShapeOfView(1600.0f, 1000.0f), TableShape::Landscape) << "16:10";
+        EXPECT_EQ(ShapeOfView(1920.0f, 1080.0f), TableShape::Landscape);
         EXPECT_EQ(ShapeOfView(kPortraitViewWidth, kPortraitViewHeight), TableShape::Portrait);
         EXPECT_EQ(ShapeOfView(480.0f, 480.0f), TableShape::Portrait) << "a square is portrait, as `orientation:portrait`";
         EXPECT_EQ(ShapeOfView(480.0f, 479.0f), TableShape::Landscape);
         EXPECT_EQ(ShapeOfView(390.0f, 844.0f), TableShape::Portrait);
-        EXPECT_EQ(ShapeOfView(2560.0f, 1080.0f), TableShape::Landscape);
+        EXPECT_EQ(ShapeOfView(2000.0f, 1000.0f), TableShape::Wide) << "the boundary is wide, as `minAspect:2`";
+        EXPECT_EQ(ShapeOfView(1999.0f, 1000.0f), TableShape::Landscape);
+        EXPECT_EQ(ShapeOfView(2560.0f, 1080.0f), TableShape::Wide);
+        EXPECT_EQ(ShapeOfView(3200.0f, 900.0f), TableShape::Wide);
+        EXPECT_EQ(ShapeOfView(kWideViewWidth, kViewHeight), TableShape::Wide);
+        EXPECT_EQ(ShapeOfView(915.0f, 330.0f), TableShape::Wide) << "a landscape phone";
     }
 
     TEST(TableLayoutTest, AViewThatIsNotPositiveIsLandscape) {
@@ -1432,12 +1444,13 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(TableLayoutTest, TheShapeOfAnOutputIsTheShapeOfAViewOfThatSize) {
-        const ViewSize outputs[] = {{1280.0f, 720.0f}, {720.0f, 1280.0f}, {480.0f, 480.0f}, {1.0f, 1.0f}, {0.0f, 0.0f}, {390.0f, 844.0f}, {2560.0f, 1080.0f}};
+        const ViewSize outputs[] = {{1280.0f, 720.0f}, {720.0f, 1280.0f}, {480.0f, 480.0f}, {1.0f, 1.0f}, {0.0f, 0.0f}, {390.0f, 844.0f}, {2560.0f, 1080.0f}, {2000.0f, 1000.0f}, {1600.0f, 1000.0f}};
         for (const ViewSize& output : outputs) {
             EXPECT_EQ(ShapeOfOutput(output.width, output.height), ShapeOfView(output.width, output.height)) << output.width << " x " << output.height;
         }
         EXPECT_EQ(ShapeOfOutput(1.0f, 1.0f), TableShape::Portrait);
         EXPECT_EQ(ShapeOfOutput(0.0f, 0.0f), TableShape::Landscape);
+        EXPECT_EQ(ShapeOfOutput(2560.0f, 1080.0f), TableShape::Wide);
     }
 
     TEST(TableLayoutTest, TheDesignOfAShapeIsItsViewSize) {
@@ -1445,6 +1458,13 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(DesignHeightOf(TableShape::Landscape), kViewHeight);
         EXPECT_EQ(DesignWidthOf(TableShape::Portrait), 720.0f);
         EXPECT_EQ(DesignHeightOf(TableShape::Portrait), 1280.0f);
+        EXPECT_EQ(DesignWidthOf(TableShape::Wide), 1560.0f);
+        EXPECT_EQ(DesignHeightOf(TableShape::Wide), kViewHeight);
+        EXPECT_EQ(kWideWingWidth, 140.0f);
+        EXPECT_EQ(ShapeOfView(DesignWidthOf(TableShape::Wide), DesignHeightOf(TableShape::Wide)), TableShape::Wide);
+        EXPECT_TRUE(IsLandscapeLike(TableShape::Landscape));
+        EXPECT_TRUE(IsLandscapeLike(TableShape::Wide));
+        EXPECT_FALSE(IsLandscapeLike(TableShape::Portrait));
     }
 
     TEST(TableLayoutTest, TheLayoutScaleFitsTheDesignOfTheShapeOfTheViewIntoIt) {
@@ -1455,6 +1475,11 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FLOAT_EQ(LayoutScale(360.0f, 640.0f), 0.5f);
         EXPECT_FLOAT_EQ(LayoutScale(390.0f, 844.0f), 390.0f / 720.0f) << "width limited";
         EXPECT_FLOAT_EQ(LayoutScale(800.0f, 800.0f), 800.0f / 1280.0f) << "a square is portrait: the height limits";
+        EXPECT_FLOAT_EQ(LayoutScale(kWideViewWidth, kViewHeight), 1.0f);
+        EXPECT_FLOAT_EQ(LayoutScale(2560.0f, 1080.0f), 1.5f) << "wide: the height limits";
+        EXPECT_FLOAT_EQ(LayoutScale(1000.0f, 400.0f), 400.0f / 720.0f);
+        EXPECT_FLOAT_EQ(LayoutScale(915.0f, 330.0f), 330.0f / 720.0f) << "a landscape phone is wider than 19.5:9: the height limits";
+        EXPECT_FLOAT_EQ(LayoutScale(2000.0f, 1000.0f), 2000.0f / 1560.0f) << "the boundary of the wide view is narrower than 19.5:9: the width limits";
         EXPECT_EQ(LayoutScale(0.0f, 720.0f), 0.0f);
         EXPECT_EQ(LayoutScale(1280.0f, -1.0f), 0.0f);
         EXPECT_EQ(LayoutScale(std::nanf(""), 720.0f), 0.0f);
@@ -1490,6 +1515,73 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(InPortrait(QuietInput(0)).shape, TableShape::Portrait);
         EXPECT_EQ(MakeTableLayout(QuietInput(0), 480.0f, 480.0f).shape, TableShape::Portrait);
         EXPECT_EQ(MakeTableLayout(QuietInput(0), 0.0f, 0.0f).shape, TableShape::Landscape);
+    }
+
+    TEST(TableLayoutTest, TheWideLayoutIsTheLandscapeOneShiftedByTheWingAtTheScaleOfTheView) {
+        const auto expectShifted = [](const TableInput& input, float width, float height) {
+            const TableShape shape = ShapeOfView(width, height);
+            ASSERT_EQ(shape, TableShape::Wide) << width << "x" << height;
+            const TableLayout landscape = InLandscape(input);
+            const TableLayout wide = MakeTableLayout(input, width, height);
+            const float scale = LayoutScale(width, height);
+            const float offsetX = (width - kWideViewWidth * scale) / 2.0f + kWideWingWidth * scale;
+            const float offsetY = (height - kViewHeight * scale) / 2.0f;
+            const auto expectRect = [&](const Rect& actual, const Rect& expected, const char* what) {
+                EXPECT_NEAR(actual.x, offsetX + expected.x * scale, kTolerance) << what << " " << width << "x" << height;
+                EXPECT_NEAR(actual.y, offsetY + expected.y * scale, kTolerance) << what << " " << width << "x" << height;
+                EXPECT_NEAR(actual.w, expected.w * scale, kTolerance) << what << " " << width << "x" << height;
+                EXPECT_NEAR(actual.h, expected.h * scale, kTolerance) << what << " " << width << "x" << height;
+            };
+            EXPECT_EQ(wide.shape, TableShape::Wide);
+            EXPECT_EQ(wide.profile, landscape.profile);
+            ASSERT_EQ(wide.slots.size(), landscape.slots.size());
+            for (size_t i = 0; i < wide.slots.size(); ++i) {
+                expectRect(wide.slots[i].rect, landscape.slots[i].rect, "slot");
+                EXPECT_EQ(wide.slots[i].role, landscape.slots[i].role);
+                EXPECT_EQ(wide.slots[i].seat, landscape.slots[i].seat);
+                EXPECT_EQ(wide.slots[i].index, landscape.slots[i].index);
+                EXPECT_EQ(wide.slots[i].part, landscape.slots[i].part);
+                EXPECT_EQ(wide.slots[i].claimEdge, landscape.slots[i].claimEdge);
+                EXPECT_EQ(wide.slots[i].rotation, landscape.slots[i].rotation);
+            }
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                expectRect(wide.zones.discards[seat], landscape.zones.discards[seat], "discards");
+                expectRect(wide.zones.seatPlates[seat], landscape.zones.seatPlates[seat], "plate");
+            }
+            expectRect(wide.zones.wall, landscape.zones.wall, "wall");
+            expectRect(wide.zones.centerPanel, landscape.zones.centerPanel, "panel");
+        };
+        const ViewSize wideViews[] = {{kWideViewWidth, kViewHeight}, {2560.0f, 1080.0f}, {3200.0f, 900.0f}, {2000.0f, 1000.0f}, {915.0f, 330.0f}};
+        for (const ViewSize& size : wideViews) {
+            for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+                for (const TableInput& table : kAllTables) {
+                    expectShifted(WithViewer(table, viewer), size.width, size.height);
+                    expectShifted(PhoneInput(WithViewer(table, viewer), 60.0f), size.width, size.height);
+                    expectShifted(PhoneInput(WithViewer(table, viewer), kPhoneHandTileMaxW), size.width, size.height);
+                }
+            }
+        }
+    }
+
+    TEST(TableLayoutTest, TheWideTableKeepsTheNumbersOfTheLandscapeOneAWingFromTheLeftEdge) {
+        const TableLayout layout = MakeTableLayout(QuietInput(0), kWideViewWidth, kViewHeight);
+        EXPECT_TRUE(SameRect(layout.zones.wall, Rect(458.0f + kWideWingWidth, 268, 364, 168)));
+        EXPECT_TRUE(SameRect(layout.zones.centerPanel, Rect(472.0f + kWideWingWidth, 282, 336, 140)));
+        EXPECT_TRUE(SameRect(SlotsOf(layout, SlotRole::HandTile, 0)[0].rect, Rect(72.0f + kWideWingWidth, 648, 48, 64)));
+        EXPECT_NEAR(RectCentreX(layout.zones.wall), kWideViewWidth / 2.0f, kTolerance);
+    }
+
+    TEST(TableLayoutTest, TheWideViewHoldsThePhoneProfileLikeTheLandscapeOne) {
+        TableInput input = WorstInput(0, kWorstPile, kNoSeat);
+        input.profile = TableProfile{true, 60.0f};
+        const TableLayout wide = MakeTableLayout(input, kWideViewWidth, kViewHeight);
+        EXPECT_TRUE(wide.profile.phone);
+        EXPECT_EQ(wide.profile.handTileW, 60.0f);
+        const Rect hand = BoundsOf(wide, SlotRole::HandTile, 0);
+        EXPECT_NEAR(hand.y + hand.h, kViewHeight - kRimWidth, kTolerance);
+        EXPECT_GT(hand.w, 0.8f * kViewWidth);
+        EXPECT_GE(hand.x, kWideWingWidth);
+        EXPECT_LE(hand.x + hand.w, kWideWingWidth + kViewWidth);
     }
 
     TEST(TableLayoutTest, EachSeatIsInItsZoneOfThePortraitView) {
