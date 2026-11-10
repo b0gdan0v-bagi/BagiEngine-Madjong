@@ -5,9 +5,9 @@ namespace BECore::Mahjong {
     /// How well a computer seat plays: a whole number from `kMinLevel` (1, the weakest) to `kMaxLevel` (10), chosen by the owner
     /// (2026-11-10) so the levels can grow without a new name each. The two named points are the players that exist: `Easy` (1) is the
     /// player of `kEasyProfile`, `Normal` (5, the default) the player described in `CLAUDE.md` ("Computer player"). Levels 2..4 lie between
-    /// them (`ProfileOf`); levels 6..10 play exactly like Normal until a stronger player exists (the search of `ComputerSearch.h` did not
-    /// beat Normal, `docs/bot-search.md`; the entry `mahjong-search-levels` fills them). A number outside 1..10 is a defect; `LevelOf`
-    /// is the checked way in.
+    /// them (`ProfileOf`); levels 6..10 play exactly like Normal, because no player stronger than Normal exists inside the time rule (no
+    /// search profile beat it on two ranges, `docs/bot-search.md`, "Levels", "Above Normal"): they are placeholders, not a stronger
+    /// player. A number outside 1..10 is a defect; `LevelOf` is the checked way in.
     inline constexpr uint8_t kEasyLevelNumber = 1;
     inline constexpr uint8_t kNormalLevelNumber = 5;
 
@@ -86,15 +86,17 @@ namespace BECore::Mahjong {
     /// The base of a percentage: a roll is one `MahjongRng::Below(kPercentBase)` against the percent.
     inline constexpr int kPercentBase = 100;
 
-    /// The search knobs of `LevelProfile` (the search player of `ComputerSearch.h`; no level turns it on): the candidates a search decision looks at when nothing else is said (neutral while
-    /// `searchWorlds` is 0), and the largest value of each knob (what the arena accepts from the command line).
+    /// The search knobs of `LevelProfile` (the search player of `ComputerSearch.h`; **no level turns it on**, `docs/bot-search.md`,
+    /// "Levels"): the candidates a search decision looks at when nothing else is said (neutral while `searchWorlds` is 0), and the
+    /// largest value of each knob (what the arena accepts from the command line).
     inline constexpr int kSearchDefaultCandidates = 4;
     inline constexpr int kSearchMaxWorlds = 4096;
     inline constexpr int kSearchMaxCandidates = 12;
     inline constexpr int kSearchMaxMargin = 100;
 
-    /// The budget of the search player that fitted the time rule (**used by no level**: the search did not beat Normal and no `Hard` level
-    /// was made, `docs/bot-search.md`; the arena sets the same numbers from the command line, `normal:searchWorlds=2`). Found by
+    /// The budget of the search player that fitted the time rule (**used by no level**: the search is a weakening of Normal at best and
+    /// beats it at no budget inside the time rule, so it is neither a stronger level nor a better ladder for levels 2..4 than the skip
+    /// knobs, `docs/bot-search.md`, "Levels"; the arena sets the same numbers from the command line, `normal:searchWorlds=2`). Found by
     /// time, as `docs/bot-search.md` records: the rule is that the slowest decision (the first discard of 14 tiles with the full candidate
     /// count) takes at most 0.3 s in a **Debug** build, because a step blocks the frame and `kComputerStepSeconds` is 1.0 s. A decision
     /// is `kSearchWorlds` x `kSearchCandidates` whole hands played out by four Normal players, 8 of them here; on 16 seeds (727
@@ -125,8 +127,7 @@ namespace BECore::Mahjong {
         /// Whether a pung or kong of a value tile (a dragon, the own wind, the round wind) is taken at an equal shanten, for the double.
         bool takeValueClaimsAtEqualShanten = true;
         /// The search (`ComputerSearch.h`): the number of sampled worlds each candidate is played out in, 0 = no search at all (no number
-        /// drawn, the choosers answer as before). It is off in `kNormalProfile` and `kEasyProfile`, so in every level that ships; only the
-        /// arena and the tests turn it on.
+        /// drawn, the choosers answer as before). It is off in every profile of `kLevelProfiles`; only the arena and the tests turn it on.
         int searchWorlds = 0;
         /// At most this many candidates are looked at in a search decision, Normal's own choice among them (below 2 there is nothing to
         /// compare). Unused while `searchWorlds` is 0.
@@ -149,8 +150,9 @@ namespace BECore::Mahjong {
     };
 
     /// Levels 2..4 take Easy's percentages by 3/4, 1/2 and 1/4 (rounded) and pass value claims up to level 2. Against three Normal seats
-    /// the arena orders 1 < 2 < 3 < 4 < 5, each step significant on 300 seeds (2026-11-10); the entry `mahjong-search-levels` may retune
-    /// them.
+    /// the arena orders 1 < 2 < 3 < 4 < 5, each step significant on 1000 seeds of two ranges (`docs/bot-search.md`, "Levels"). The
+    /// search dials (worlds, margin) were tried as a ladder for these levels and kept out: the margin moves the strength from -35 to
+    /// -7 to -3 points in three steps, a steeper and less even ladder than this one, and nothing lies at level 3.
     inline constexpr LevelProfile kLevel2Profile{
         .skipAcceptancePercent = 45,
         .skipDeclarationPercent = 64,
@@ -160,7 +162,7 @@ namespace BECore::Mahjong {
     inline constexpr LevelProfile kLevel3Profile{.skipAcceptancePercent = 30, .skipDeclarationPercent = 43, .skipClaimPercent = 18};
     inline constexpr LevelProfile kLevel4Profile{.skipAcceptancePercent = 15, .skipDeclarationPercent = 21, .skipClaimPercent = 9};
 
-    /// The profile of each level 1..10; 5..10 are Normal's.
+    /// The profile of each level 1..10, the order of strength; 5..10 are Normal's (6..10 are placeholders: nothing stronger exists).
     inline constexpr const LevelProfile* kLevelProfiles[kLevelCount] = {
         &kEasyProfile, &kLevel2Profile, &kLevel3Profile, &kLevel4Profile, &kNormalProfile, &kNormalProfile, &kNormalProfile, &kNormalProfile, &kNormalProfile, &kNormalProfile,
     };
