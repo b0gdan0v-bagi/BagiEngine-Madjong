@@ -1,10 +1,11 @@
 #include <Mahjong/Arena/ArenaCli.h>
 #include <gtest/gtest.h>
+#include <thread>
 
 /**
  * The command line of the arena (`src/Mahjong/Arena/ArenaCli.h`, the program `BagiMahjongArena`): the arguments (defaults, every option,
  * a list of focus players with knobs, every refusal with its message), and the whole program on a few seeds: the report, twice the same
- * text, `--help`, the exit codes, `--time`. Pure logic: no engine services; the file takes about 1.5 s in Debug (three seeds).
+ * text, `--help`, the exit codes, `--time`. Pure logic: no engine services; the file takes about 1.7 s in Debug (three seeds).
  */
 namespace BECore::Mahjong::Arena {
 
@@ -75,6 +76,19 @@ namespace BECore::Mahjong::Arena {
         EXPECT_EQ(parsed.config.count, kFewSeeds);
         EXPECT_TRUE(parsed.config.timing);
         EXPECT_FALSE(parsed.help);
+        EXPECT_EQ(parsed.config.jobs, kDefaultJobs);
+        EXPECT_EQ(ArgsOf({"--jobs", "4"}).config.jobs, 4);
+        EXPECT_EQ(ArgsOf({"--jobs", "256"}).config.jobs, kMaxJobs);
+    }
+
+    TEST(ArenaCliTest, JobsZeroIsTheHardwareConcurrency) {
+        const int jobs = ArgsOf({"--jobs", "0"}).config.jobs;
+        EXPECT_GE(jobs, 1);
+        EXPECT_LE(jobs, kMaxJobs);
+        const unsigned cores = std::thread::hardware_concurrency();
+        if (cores >= 1 && cores <= static_cast<unsigned>(kMaxJobs)) {
+            EXPECT_EQ(jobs, static_cast<int>(cores));
+        }
     }
 
     TEST(ArenaCliTest, TheFocusListHoldsSeveralPlayersAndKnobs) {
@@ -107,6 +121,11 @@ namespace BECore::Mahjong::Arena {
         EXPECT_NE(ErrorOf({"--others"}).find("--others needs a value"), std::string::npos);
         EXPECT_NE(ErrorOf({"--first"}).find("--first needs a value"), std::string::npos);
         EXPECT_NE(ErrorOf({"--seeds"}).find("--seeds needs a value"), std::string::npos);
+        EXPECT_NE(ErrorOf({"--jobs"}).find("--jobs needs a value"), std::string::npos);
+        EXPECT_NE(ErrorOf({"--jobs", "many"}).find("--jobs: \"many\" is not a whole number from 0 to 256"), std::string::npos);
+        EXPECT_NE(ErrorOf({"--jobs", "-1"}).find("is not a whole number from 0 to 256"), std::string::npos);
+        EXPECT_NE(ErrorOf({"--jobs", "257"}).find("is not a whole number from 0 to 256"), std::string::npos);
+        EXPECT_NE(ErrorOf({"--jobs", "2x"}).find("--jobs:"), std::string::npos);
         EXPECT_NE(ErrorOf({"--seeds", "0"}).find("at least 1"), std::string::npos);
         EXPECT_NE(ErrorOf({"--seeds", "-5"}).find("at least 1"), std::string::npos);
         EXPECT_NE(ErrorOf({"--seeds", "many"}).find("--seeds: \"many\" is not a whole number"), std::string::npos);
@@ -127,7 +146,7 @@ namespace BECore::Mahjong::Arena {
 
     TEST(ArenaCliTest, TheUsageSaysTheDefaultsAndTheIntervalRule) {
         const eastl::string usage = ArenaUsage();
-        for (const std::string_view option : {"--focus", "--others", "--first", "--seeds", "--time", "--help"}) {
+        for (const std::string_view option : {"--focus", "--others", "--first", "--seeds", "--jobs", "--time", "--help"}) {
             EXPECT_TRUE(Contains(usage, option)) << std::string(option);
         }
         EXPECT_TRUE(Contains(usage, "default 4000"));
@@ -154,6 +173,12 @@ namespace BECore::Mahjong::Arena {
         // The usage follows the message.
         EXPECT_TRUE(Contains(output.err, "usage: BagiMahjongArena")) << output.err.c_str();
         EXPECT_FALSE(Contains(output.err, "Bot arena"));
+        // A bad number of threads is the same: exit 2, the message, the usage, nothing played.
+        ArenaCliOutput jobs;
+        EXPECT_EQ(RunProgram({"--jobs", "300"}, jobs), kExitBadArguments);
+        EXPECT_TRUE(jobs.out.empty());
+        EXPECT_TRUE(Contains(jobs.err, "error: --jobs: \"300\" is not a whole number from 0 to 256")) << jobs.err.c_str();
+        EXPECT_TRUE(Contains(jobs.err, "usage: BagiMahjongArena"));
     }
 
     TEST(ArenaCliTest, ARunPrintsTheReport) {
@@ -186,6 +211,18 @@ namespace BECore::Mahjong::Arena {
         EXPECT_TRUE(Contains(output.out, "seeds 17 .. 19")) << output.out.c_str();
         EXPECT_TRUE(Contains(output.out, "focus: normal, easy:skipClaimPercent=20; others: normal"));
         EXPECT_TRUE(Contains(output.out, "paired difference against normal (the same seeds)"));
+    }
+
+    TEST(ArenaCliTest, TheThreadsDoNotChangeTheBytes) {
+        ArenaCliOutput single;
+        EXPECT_EQ(RunProgram(FewSeeds({"--focus", "normal,easy", "--jobs", "1"}), single), kExitOk);
+        EXPECT_FALSE(single.out.empty());
+        for (const std::string_view jobs : {"2", "5", "0"}) {
+            ArenaCliOutput threaded;
+            EXPECT_EQ(RunProgram(FewSeeds({"--focus", "normal,easy", "--jobs", jobs}), threaded), kExitOk) << std::string(jobs);
+            EXPECT_EQ(threaded.out, single.out) << "jobs " << std::string(jobs);
+            EXPECT_TRUE(threaded.err.empty());
+        }
     }
 
     TEST(ArenaCliTest, TimeAddsTheTimingTable) {

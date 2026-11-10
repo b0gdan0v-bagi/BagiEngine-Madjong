@@ -37,11 +37,19 @@ A --focus easy --others normal --seeds 1000                        # head to hea
 A --focus normal,easy,hard --others random --seeds 1000            # several players on the same walls, with the paired rows
 A --focus normal,normal:skipClaimPercent=20 --others normal        # a profile with knobs against the plain Normal
 A --focus normal --seeds 100 --time                                # add the time per decision
+A --focus normal,normal:searchWorlds=8 --others normal --seeds 1000 --jobs 0   # all the cores, the same bytes as --jobs 1
 ```
 
 Options: `--focus LIST` (default `normal`), `--others SPEC` (default `random`), `--first N` (default 4000), `--seeds COUNT` (default 250: 1000
-hands per focus player), `--time`, `--help`. Exit code 0 is done, 1 is an action the rules refused (a defect: the seed and the seat are
+hands per focus player), `--jobs N` (default 1; see below), `--time`, `--help`. Exit code 0 is done, 1 is an action the rules refused (a defect: the seed and the seat are
 printed), 2 is a bad argument (printed with the usage).
+
+**Threads.** `--jobs N` plays the seeds on N threads (1 to 256; `--jobs 0` is one thread per core, the hardware concurrency). A seed is played whole by
+one thread (all focus players, all four rotations) into a result slot of its own, and the slots are merged in seed order, so the report is the
+same bytes at any N (only the `--time` table differs between runs, as always; it sums the microseconds of all the threads, so it is the cost
+of a decision, not the wall time of the run). A hand the rules refuse stops the run, and the error printed is that of the lowest seed that
+failed, whatever N is. The default stays 1. A search player (`searchWorlds`) plays hundreds of Normal decisions for each of its own, so use
+`--jobs` for those runs; in Debug on 8 cores `--seeds 150` of two focus players takes 2.8 s instead of 21 s.
 
 A player is `random`, `easy`, `normal`, or a level with knobs of `LevelProfile`, `<level>:<knob>=<value>,...` (the knobs are
 `skipAcceptancePercent`, `skipDeclarationPercent`, `skipClaimPercent` (0..100), `takeValueClaimsAtEqualShanten` (0 or 1) and the three knobs of
@@ -85,9 +93,9 @@ They are those of `ComputerStrengthTest`, so the old numbers come out exactly:
 ## The first check
 
 The first check reproduces the numbers of the Hard-lever measurements of `mahjong-computer-difficulty` (made with a throw-away harness
-that the arena replaces). Seeds 4000 .. 4999, Release, on the machine it was written on (one thread): the run of
-1000 seeds takes 3.9 s for one focus player (60 seeds 0.26 s, 250 seeds 1.0 s, three focus players on 1000 seeds 12 s), so the program
-has no `--jobs`.
+that the arena replaces). Seeds 4000 .. 4999, Release, on the machine it was written on (one thread, the default `--jobs 1`): the run of
+1000 seeds takes 3.9 s for one focus player (60 seeds 0.26 s, 250 seeds 1.0 s, three focus players on 1000 seeds 12 s); `--jobs` divides
+these by about the number of cores and does not change a byte of the report.
 
 **(1) Normal against three random seats**, `A --focus normal --others random --first 4000 --seeds 1000`:
 

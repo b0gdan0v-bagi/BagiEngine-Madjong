@@ -1,5 +1,7 @@
 #include "ArenaCli.h"
 
+#include <thread>
+
 namespace BECore::Mahjong::Arena {
 
     namespace {
@@ -8,6 +10,7 @@ namespace BECore::Mahjong::Arena {
         constexpr std::string_view kOthersOption = "--others";
         constexpr std::string_view kFirstOption = "--first";
         constexpr std::string_view kSeedsOption = "--seeds";
+        constexpr std::string_view kJobsOption = "--jobs";
         constexpr std::string_view kTimeOption = "--time";
         constexpr std::string_view kHelpOption = "--help";
 
@@ -66,6 +69,18 @@ namespace BECore::Mahjong::Arena {
             return *number;
         }
 
+        /// The threads of `--jobs N`: N from 1 to `kMaxJobs`, and 0 for the hardware concurrency (at least 1, at most `kMaxJobs`).
+        std::expected<int, eastl::string> ParseJobs(std::string_view value) {
+            const std::optional<uint32_t> number = ParseWhole<uint32_t>(value);
+            if (!number.has_value() || *number > static_cast<uint32_t>(kMaxJobs)) {
+                return std::unexpected(Format("{}: \"{}\" is not a whole number from 0 to {}", kJobsOption, value, kMaxJobs));
+            }
+            if (*number == 0) {
+                return std::clamp(static_cast<int>(std::thread::hardware_concurrency()), 1, kMaxJobs);
+            }
+            return static_cast<int>(*number);
+        }
+
     }  // namespace
 
     eastl::string ArenaUsage() {
@@ -80,6 +95,8 @@ namespace BECore::Mahjong::Arena {
                       "  {others} SPEC   the player on the three other seats; default {othersDefault}\n"
                       "  {first} N       the first seed; default {firstDefault}\n"
                       "  {seeds} COUNT   the number of seeds, four hands for each focus player per seed; default {seedsDefault}\n"
+                      "  {jobs} N        play the seeds on N threads (1 to {maxJobs}; 0 is one per core); the report is the same bytes whatever N is;\n"
+                      "                  default {jobsDefault}\n"
                       "  {time}          also print the time per decision (wall clock: the one number that differs between runs)\n"
                       "  {help}          this text\n"
                       "\n"
@@ -88,9 +105,9 @@ namespace BECore::Mahjong::Arena {
                       "interval: the four rotations of a seed share one wall, so the seed is the sample; a number is the mean over the seeds and\n"
                       "+- is 1.96 standard errors (normal approximation, fine from about 100 seeds). Read the paired rows for a difference.\n",
                       fmt::arg("levels", LevelNamesText().c_str()), fmt::arg("focus", kFocusOption), fmt::arg("others", kOthersOption), fmt::arg("first", kFirstOption),
-                      fmt::arg("seeds", kSeedsOption), fmt::arg("time", kTimeOption), fmt::arg("help", kHelpOption), fmt::arg("focusDefault", kDefaultFocusSpec),
-                      fmt::arg("othersDefault", kDefaultOthersSpec), fmt::arg("firstDefault", kDefaultFirstSeed), fmt::arg("seedsDefault", kDefaultSeedCount), fmt::arg("ok", kExitOk),
-                      fmt::arg("refused", kExitRefusedAction), fmt::arg("bad", kExitBadArguments));
+                      fmt::arg("seeds", kSeedsOption), fmt::arg("jobs", kJobsOption), fmt::arg("maxJobs", kMaxJobs), fmt::arg("jobsDefault", kDefaultJobs), fmt::arg("time", kTimeOption),
+                      fmt::arg("help", kHelpOption), fmt::arg("focusDefault", kDefaultFocusSpec), fmt::arg("othersDefault", kDefaultOthersSpec), fmt::arg("firstDefault", kDefaultFirstSeed),
+                      fmt::arg("seedsDefault", kDefaultSeedCount), fmt::arg("ok", kExitOk), fmt::arg("refused", kExitRefusedAction), fmt::arg("bad", kExitBadArguments));
     }
 
     std::expected<ArenaArgs, eastl::string> ParseArenaArgs(eastl::span<const std::string_view> args) {
@@ -110,7 +127,7 @@ namespace BECore::Mahjong::Arena {
                 parsed.config.timing = true;
                 continue;
             }
-            const bool takesValue = option == kFocusOption || option == kOthersOption || option == kFirstOption || option == kSeedsOption;
+            const bool takesValue = option == kFocusOption || option == kOthersOption || option == kFirstOption || option == kSeedsOption || option == kJobsOption;
             if (!takesValue) {
                 return std::unexpected(Format("unknown argument \"{}\"", option));
             }
@@ -136,6 +153,12 @@ namespace BECore::Mahjong::Arena {
                     return std::unexpected(first.error());
                 }
                 parsed.config.first = *first;
+            } else if (option == kJobsOption) {
+                const std::expected<int, eastl::string> jobs = ParseJobs(value);
+                if (!jobs.has_value()) {
+                    return std::unexpected(jobs.error());
+                }
+                parsed.config.jobs = *jobs;
             } else {
                 const std::expected<int, eastl::string> count = ParseNumberOption<int>(option, value, 1);
                 if (!count.has_value()) {
