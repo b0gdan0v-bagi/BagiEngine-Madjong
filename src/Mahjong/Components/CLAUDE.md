@@ -1,0 +1,53 @@
+# Components/ — the scene
+
+The glue between the model and the engine's scene and UI. Pure logic lives in `../Table/` (read its `CLAUDE.md`); the node files, the string table and the UI style are in `config/` (`config/CLAUDE.md`).
+
+- `MahjongTableComponent` (node `Table`) draws the table and plays the person seats by mouse and buttons, paces the computers, flies tiles, shows the hot-seat cover, swaps `Actions` / `ActionsCompact`.
+- `MahjongHudComponent` (node `Hud`) publishes the HUD and seat-plate words and runs `Setup`, the rules screen and the end screens.
+- `MahjongHintsComponent` (node `Hints`) runs the hints.
+
+## Rules for every component
+
+- Subscribe with `SubscribeInScene` (mouse, `ActionEvent`, `SceneUpdateEvent`), so nothing reacts while another scene is active. Check `MahjongGame::GetActive()` and that a match is started.
+- Change the game only through `TableSession` (`PerformPerson`, `StepComputer`, `NextHand`, `Reveal`). **The table component draws only from the model; hints never act** (no `PerformPerson`, no `Reveal`, no version change).
+- A button handler asks again what is on offer *now* and ignores an event that is not offered (stale clicks, events after a control action).
+- Publish `UIVars` only when something changed: the key is `TableSession::Version()` plus the version of `UIStrings` (a language switch rewords everything at the next draw). An unchanged frame must not move the `UIVars` version (tests check it).
+- `IsTablePaused()` (`Setup` or rules open) stops everything on the table: clicks, action events, computer steps, the blink and flight clocks, the hints.
+- Every word is a key (`text="{#key}"` in the scene, `Tr` in code).
+
+## The table (`MahjongTableComponent`)
+
+**Draw order:** felt, rim (also with no game), zone plates, seat plates, turn backdrop of `CurrentSeat()` (in a claim window the discarder, never `Actor()`), the highlight of a set just laid, calling frames, then every slot (a shadow before each tile but wall stacks), then flying tiles in a second pass. Tiles are `DrawTexture` from the atlas; without it, coloured rectangles in the same layout. `GetLayout()` is the layout of the last draw.
+
+**No peeking:** while playing only the viewer's concealed tiles are face up; none under the hot-seat cover and none for a spectator; all four once the hand is over. Bottom seat = `BottomSeat(session)`.
+
+**Marks** (all from public data; all in the gold family, see `config/CLAUDE.md`): last discard tint; claimed-edge bar (`claimEdge`); drawn-tile tint (only a face-up hand while playing); pending-discard frame (only while the viewer is in `PendingClaimSeats()`); the blink of a set just laid (`kClaimHighlightSeconds`, waits for its tiles to land, keeps running under the cover); the calling frame of every declared hand (reads the flag only); the keeps-waiting bars of the viewer's declared hand on its own discard turn (**not tied to the Hints switch**, owner 2026-11-09); **a claim that lost**: after a window with a `beaten` claim (`LastClaimWindow()`, followed by its `serial` with the restart rule of the moves) the winner's plate blinks and every beaten seat's plate gets the `kClaimLostFrame` for `kClaimLostSeconds`. A pass is no claim; a window with one claimer or none marks nothing.
+
+**Flights:** each draw keeps a `TableSnapshot`; all moves since the previous draw are one batch planned by `PlanFlights`. A flight carries no face: the slot is drawn by the same `drawSlot` at `FlightRect`, so a back flies as a back and the slot's marks travel with it. A win is no move, so the snapshot carries it (`winSeat` / `winIndex`): a mahjong on a discard flies from its pile slot into the winner's hand. A new batch lands the running flights; a new hand / match / game (`StartCount()` too), another viewer or view size start with none. `SetTileFlightSeconds(0)` turns them off; `MahjongTableTestBase` does, only `MahjongTableFlightTest` turns them on.
+
+**Playing:** a person acts when `Playing`, the actor is a person, no cover, not paused.
+- *Mouse:* a left click no canvas took, on a viewer's hand tile (`HitHandTile`) = `PerformPerson(MakeDiscard(tile, declareNext))`.
+- *Buttons:* each frame `MakeActionButtons(LegalActions(actor))` → show/hide elements and set the tile pictures **by name** (so `Actions` and `ActionsCompact` both follow). Buttons emit `ActionEvent` (`MahjongWin`, `MahjongClaimPung`, `MahjongClaimChow` + index, `MahjongPass`, ...; the table is `SpecOf`).
+- *Declare:* `MahjongDeclare` toggles "the next discard declares"; while on, non-declaring tiles are veiled and ignored; a discard, a frame where it is no longer offered, or a turn change clears it.
+- *Pace:* one `StepComputer()` per `kComputerStepSeconds` (1.0 s; 0.6 s was too fast for the owner); a claim window and the discard after it are one step. The control API does not wait.
+- *Cover:* `Handoff` is shown exactly while `HandoffPending()`; its button calls `Reveal()`.
+
+**Action buttons:** `Actions` is a `SceneView` canvas in the free corner of the table; a button is a 32 px touch target only from a 732 x 412 window. Where `NeedsCompactActions` says so (a button under the minimum **and** the bar under the table holds the compact row at its height), `Actions` and `HintsButton` hide and `ActionsCompact` (a `Screen` canvas at the bottom, the same 13 elements plus a `HintButton`) shows. A window with no bar for the row keeps `Actions` with buttons slightly under 32 px but clear of the hand. The `Hint` label shows the sentence of the hovered shown button of `Actions` (no hint on the compact row: touch has no hover). **Known deviations** (the owner's call; named in `ActionsMayBeSmall`): at user scale 1.5, 640 x 480 and 720 x 480 keep small `Actions`; with side insets in 720 x 480 and the 1:1 windows the compact row overlaps the hand by up to the inset (an engine change to `ignoreSafeArea` for descendants would fix it).
+
+## The HUD (`MahjongHudComponent`)
+
+- **Words:** `round`, `hand`, `handsTotal`, `wall`, `lastMove` (`MoveText` of the last move; empty before the first move and once the hand is over; the `MoveLine` plate is shown exactly while it has text), and per screen position `p` the seat-plate words `plateName<p>`, `plateWind<p>` (with `*` for the dealer), `plateScore<p>`. There is no turn word: the turn is the gold of a seat plate.
+- **Seat plates:** four plates of one size at the sides of the table (`zones.seatPlates`); the table component paints them (base, turn tint and frame, a red dealer bar), `SeatPlates` labels carry the words. Public data, so shown under the cover and at the end of a hand. The dealer is read from the winds of the hand shown, not `Match::East()`.
+- **`HudMenu`:** `New game` and `Rules` in a `Screen` canvas (touch targets). Hidden while the score table or the rules are up.
+- **Save:** each frame (`SceneUpdateEvent`, active game only) the HUD calls `MahjongGame::FlushSave()` (`../Save/CLAUDE.md`).
+- **`Setup`** (modal `Screen` canvas): language, four seats, hands 16 | 8, hints on | off, `Start`, and `Continue` beside it (half the row each) exactly while `CanContinue()`; `MahjongContinue` calls `ContinueMatch()` and plays nothing by itself. The component keeps the pending choices (taken from the game when the panel opens) and applies them only on `Start` (`SetSeats`, `handsPerMatch` of a copy of the settings, `StartRandomMatch()`); language and hints apply at once. It offers nothing else and never changes `flowers`, `replayDrawnHand`, `limit` or `startingScore`. Events while closed are ignored. Two layout variants for canvases ≤ 360 high (no title) and ≤ 440 wide.
+- **Rules screen:** `Rules` (modal `SceneView`, text and tile pictures) plus the bar `RulesAction` (`Screen` canvas with Back / Next / Close; the buttons cannot be in the plate because 64 view units are 24 px in the smallest window). The page is clamped, 0 whenever closed; `FormatRulesPage` is published when the page, the open state or the language moved. The plate's blocks are its own children so a hidden one takes no room and `PageHeight` equals the real extent. A new match and any accepted control action close it.
+- **End screens:** `HandOver` (modal `SceneView`, text only, **no dim**: all four hands stay face up and nothing of the plate covers a hand, meld or bonus tile) with `HandOverAction` (the `Next hand` / `Finish match` button in the `New game` corner, a `Screen` canvas). The hand is settled for the screen with `SettleHand(Hand())`; scores move only on `NextHand`. More than 16 lines show 15 and `+n more`. **One hold:** when a person's claim lost to a mahjong (any winner) in a window the table component settled itself (a click or a pace step), `HandOver` and `HandOverAction` wait while `MahjongTableComponent::HandOverHeld()`, so the plate does not cover the flying tile and the marks; the words are published at once, and a window settled by a control client holds nothing. `MatchOver` (`Screen` canvas) shows the standings and its `New game` opens `Setup`. A top-notch window pushes the corner button onto the plate's top padding: accepted (owner's call).
+
+## The hints (`MahjongHintsComponent`)
+
+Apply when `HintsApply(HintsOn(), IsTablePaused(), session)`: hints on, not paused, `Playing`, the viewer a person, no cover. Never for a spectator or once the hand is over; the control API does not know them (`get_state` is equal with hints on and off).
+
+- **Waiting row** inside the wall ring: the tiles the viewer's hand waits for with the unseen copies (`WaitingTiles`), while the hand has 3n+1 tiles. Recomputed only when the version, the viewer or `HintsApply` changed.
+- **Declare marks:** gold bars under the hand tiles whose discard declares (`DeclaringDiscards`), on the viewer's turn.
+- **Advice:** `HintButton` (node `HintsButton`, or in `ActionsCompact`) is offered while the viewer is the person to act. A press stores `AdviceFor(view)` for that table; the sentence goes to `hintAdvice` and the advised tile is framed. Any version change, viewer change, hints off, pause or cover drops it. It never acts.

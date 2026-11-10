@@ -785,7 +785,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(kDrawnTileMark.r, kTurnMark.r);
         EXPECT_EQ(kDrawnTileMark.g, kTurnMark.g);
         EXPECT_EQ(kDrawnTileMark.b, kTurnMark.b);
-        for (const Color& other : {kTurnMark, kPendingFrame, kLastDiscardMark, kClaimedEdge, kClaimHighlight, kDeclareMark, kAdvisedFrame, kVeil, kTileShadow, kZonePlate}) {
+        for (const Color& other : {kTurnMark, kPendingFrame, kLastDiscardMark, kClaimedEdge, kClaimHighlight, kClaimLostFrame, kDeclareMark, kAdvisedFrame, kVeil, kTileShadow, kZonePlate}) {
             EXPECT_FALSE(SameColor(kDrawnTileMark, other));
         }
     }
@@ -899,7 +899,8 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(kCallingFrame.r, kTurnMark.r);
         EXPECT_EQ(kCallingFrame.g, kTurnMark.g);
         EXPECT_EQ(kCallingFrame.b, kTurnMark.b);
-        for (const Color& other : {kTurnMark, kPendingFrame, kLastDiscardMark, kDrawnTileMark, kClaimedEdge, kClaimHighlight, kDeclareMark, kAdvisedFrame, kVeil, kTileShadow, kZonePlate}) {
+        for (const Color& other :
+             {kTurnMark, kPendingFrame, kLastDiscardMark, kDrawnTileMark, kClaimedEdge, kClaimHighlight, kClaimLostFrame, kDeclareMark, kAdvisedFrame, kVeil, kTileShadow, kZonePlate}) {
             EXPECT_FALSE(SameColor(kCallingFrame, other));
         }
     }
@@ -1006,7 +1007,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(kKeepsWaitingMark.g, kTurnMark.g);
         EXPECT_EQ(kKeepsWaitingMark.b, kTurnMark.b);
         for (const Color& other :
-             {kTurnMark, kPendingFrame, kLastDiscardMark, kDrawnTileMark, kCallingFrame, kClaimedEdge, kClaimHighlight, kDeclareMark, kAdvisedFrame, kVeil, kTileShadow, kZonePlate}) {
+             {kTurnMark, kPendingFrame, kLastDiscardMark, kDrawnTileMark, kCallingFrame, kClaimedEdge, kClaimHighlight, kClaimLostFrame, kDeclareMark, kAdvisedFrame, kVeil, kTileShadow, kZonePlate}) {
             EXPECT_FALSE(SameColor(kKeepsWaitingMark, other));
         }
         EXPECT_GT(kKeepsWaitingBarHeight, 0.0f);
@@ -1267,15 +1268,15 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(kSeatTurnFrame.r, kTurnMark.r);
         EXPECT_EQ(kSeatTurnFrame.g, kTurnMark.g);
         EXPECT_EQ(kSeatTurnFrame.b, kTurnMark.b);
-        for (const Color& other : {kTurnMark, kPendingFrame, kLastDiscardMark, kDrawnTileMark, kCallingFrame, kClaimedEdge, kClaimHighlight, kDeclareMark, kKeepsWaitingMark, kAdvisedFrame, kVeil,
-                                   kTileShadow, kZonePlate, kSeatPlate, kDealerMark}) {
+        for (const Color& other : {kTurnMark, kPendingFrame, kLastDiscardMark, kDrawnTileMark, kCallingFrame, kClaimedEdge, kClaimHighlight, kClaimLostFrame, kDeclareMark, kKeepsWaitingMark,
+                                   kAdvisedFrame, kVeil, kTileShadow, kZonePlate, kSeatPlate, kDealerMark}) {
             EXPECT_FALSE(SameColor(kSeatTurnFrame, other)) << "the tests find a mark by its colour";
         }
         // The dealer's mark is red: little green and blue, and no colour of the other marks
         EXPECT_LT(kDealerMark.g, kTurnMark.g / 2);
         EXPECT_LT(kDealerMark.b, kTurnMark.b);
-        for (const Color& other : {kTurnMark, kPendingFrame, kLastDiscardMark, kDrawnTileMark, kCallingFrame, kClaimedEdge, kClaimHighlight, kDeclareMark, kKeepsWaitingMark, kAdvisedFrame, kVeil,
-                                   kTileShadow, kZonePlate, kSeatPlate, kSeatTurnFrame}) {
+        for (const Color& other : {kTurnMark, kPendingFrame, kLastDiscardMark, kDrawnTileMark, kCallingFrame, kClaimedEdge, kClaimHighlight, kClaimLostFrame, kDeclareMark, kKeepsWaitingMark,
+                                   kAdvisedFrame, kVeil, kTileShadow, kZonePlate, kSeatPlate, kSeatTurnFrame}) {
             EXPECT_FALSE(SameColor(kDealerMark, other));
         }
         EXPECT_TRUE(SameColor(kSeatPlate, PaletteColor("hudPanel")));

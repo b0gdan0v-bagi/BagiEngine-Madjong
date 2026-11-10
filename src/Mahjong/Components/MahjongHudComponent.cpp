@@ -7,6 +7,7 @@
 #include <Events/InputEvents.h>
 #include <Events/SceneEvents.h>
 #include <Generated/MahjongHudComponent.gen.hpp>
+#include <Mahjong/Components/MahjongTableComponent.h>
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/Table/MoveText.h>
 #include <Mahjong/Table/RulesText.h>
@@ -241,7 +242,7 @@ namespace BECore::Mahjong {
         Scene& scene = GetScene();
         UICanvasComponent::SetVisibleByName(scene, "HandOver"_intern, shown);
         UICanvasComponent::SetVisibleByName(scene, "HandOverAction"_intern, shown);
-        // NextHand takes the corner of New game (the score table has no dim, so the hands stay visible), so HudMenu goes while it is up.
+        // The score table is a screen of its own (no dim, so the hands stay visible): HudMenu (New game, Rules) goes while it is up.
         // The standings (MatchOver) are a Screen canvas whose dim covers the whole window, so they need nothing.
         ShowHudMenu();
     }
@@ -345,9 +346,13 @@ namespace BECore::Mahjong {
         } else {
             _endScreenPublished = false;
         }
-        if (handOver != _handOverShown) {
-            _handOverShown = handOver;
-            ShowHandOver(handOver);
+        // The score table waits while the table holds it back (a person's claim lost to a mahjong and the flight is on screen); the words
+        // above are published at once
+        const MahjongTableComponent* table = MahjongTableComponent::GetActive();
+        const bool handOverShown = handOver && (table == nullptr || !table->HandOverHeld());
+        if (handOverShown != _handOverShown) {
+            _handOverShown = handOverShown;
+            ShowHandOver(handOverShown);
         }
         if (matchOver != _matchOverShown) {
             _matchOverShown = matchOver;

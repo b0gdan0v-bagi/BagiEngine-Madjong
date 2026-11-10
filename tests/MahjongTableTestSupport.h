@@ -16,6 +16,7 @@
 #include <Common/RecordingRenderer.h>
 #include <Common/UILayoutMatrix.h>
 #include <Events/InputEvents.h>
+#include <Events/SceneEvents.h>
 #include <Games/GameManager.h>
 #include <Mahjong/Components/MahjongTableComponent.h>
 #include <Mahjong/MahjongGame.h>
@@ -101,6 +102,8 @@ namespace BECore::Mahjong::Tests {
             IntrusivePtr<ITexture> atlas = _renderer->CreateTexture(pixels.data(), kTextureSide, kTextureSide);
             _atlasTexture = atlas.Get();
             _table->SetAtlasTexture(std::move(atlas));
+            // Tiles are at their slots in every test but those of the flights (`MahjongTableFlightTest`), which switch them on
+            _table->SetTileFlightSeconds(0.0f);
         }
 
         void TearDown() override {
@@ -124,6 +127,16 @@ namespace BECore::Mahjong::Tests {
         void Draw() {
             _renderer->ClearCalls();
             _manager->DrawAll();
+        }
+
+        /// Switches the flights of arriving tiles on, with their real duration (`kTileFlightSeconds`): `SetUp` switches them off.
+        void UseFlights() {
+            _table->SetTileFlightSeconds(kTileFlightSeconds);
+        }
+
+        /// Time passes on the clock of the table (the pace of the computers, the highlight and the flights run on it).
+        static void AdvanceTime(float seconds) {
+            SceneEvents::SceneUpdateEvent::Emit(seconds);
         }
 
         /// The draw calls of tiles, in the order of the layout's slots.

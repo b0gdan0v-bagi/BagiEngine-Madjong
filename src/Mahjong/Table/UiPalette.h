@@ -14,9 +14,9 @@ namespace BECore::Mahjong {
      * Roles, not colours, are the rule: a new control takes the role of what it does.
      * - The table: `kFelt` with a `kFeltRim` round the view, a `kZonePlate` under the discard blocks and the wall ring, a `kTileShadow`
      *   under each tile. A mark on the table is the gold family (`kTurnMark`, `kPendingFrame`, the hints `kDeclareMark`,
-     *   `kAdvisedFrame`, and the marks of the last move `kLastDiscardMark`, `kDrawnTileMark`, `kClaimedEdge`, `kClaimHighlight`, the frame of a declared hand `kCallingFrame` and the bar of its safe
-     * discards `kKeepsWaitingMark`, and the turn plate of a seat: `kSeatTurnFrame` with the tint `kTurnMark`) and nothing else on the table is gold (the
-     * dealer mark `kDealerMark` of a seat plate is red); `kVeil` dims a tile that cannot be discarded now.
+     *   `kAdvisedFrame`, and the marks of the last move `kLastDiscardMark`, `kDrawnTileMark`, `kClaimedEdge`, `kClaimHighlight`, the frame of a seat plate whose claim lost `kClaimLostFrame`, the
+     * frame of a declared hand `kCallingFrame` and the bar of its safe discards `kKeepsWaitingMark`, and the turn plate of a seat: `kSeatTurnFrame` with the tint `kTurnMark`) and nothing else on the
+     * table is gold (the dealer mark `kDealerMark` of a seat plate is red); `kVeil` dims a tile that cannot be discarded now.
      * - The screens: `scrim` dims what lies behind a modal screen (and the hint), `surface` is the plate, `header` its headline band,
      *   `surfaceRaised` the rows on it, `hudPanel` the panels of the HUD over the felt.
      * - The buttons: `primary` confirms (Mahjong!, Start, Next hand), `secondary` claims and the HUD's New game, `neutral` the extras of
@@ -46,6 +46,12 @@ namespace BECore::Mahjong {
     inline constexpr Color kClaimHighlight{255, 214, 80, 120};
     inline constexpr float kClaimHighlightSeconds = 2.0f;
     inline constexpr float kClaimBlinkSeconds = 0.5f;
+    /// Round the seat plate of a seat whose claim lost to a better one in the last claim window (four bars of `kSeatTurnFrameWidth` units on
+    /// the border of the plate); the plate of the seat that won the window blinks in `kClaimHighlight`. Both last `kClaimLostSeconds`: the
+    /// time and the blink of the set just laid, so the two signs of one window end together. The alpha is its own, so a test finds the
+    /// frame by its colour.
+    inline constexpr Color kClaimLostFrame{255, 214, 80, 180};
+    inline constexpr float kClaimLostSeconds = kClaimHighlightSeconds;
     /// Round the hand of a seat that has declared its calling hand (public), four bars of `kCallingFrameWidth` units on the border of the
     /// padded rectangle of the hand, behind the tiles; it stays while the declaration stands.
     inline constexpr Color kCallingFrame{255, 214, 80, 160};

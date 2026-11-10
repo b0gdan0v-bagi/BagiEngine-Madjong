@@ -153,6 +153,21 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(table.session.Seats(), kDefaultSeatSetup);
     }
 
+    TEST(TableSessionTest, EveryAcceptedStartCountsAndARefusedOneDoesNot) {
+        Table table;
+        EXPECT_EQ(table.session.StartCount(), 0u);
+        ASSERT_NO_FATAL_FAILURE(table.Start(kDefaultSeatSetup));
+        EXPECT_EQ(table.session.StartCount(), 1u);
+        table.session.RunComputers();
+        EXPECT_EQ(table.session.StartCount(), 1u) << "playing is no start";
+        ASSERT_NO_FATAL_FAILURE(table.Start(kDefaultSeatSetup));
+        EXPECT_EQ(table.session.StartCount(), 2u);
+        MahjongSettings bad;
+        bad.handsPerMatch = kUnplayableHandsPerMatch;
+        ASSERT_FALSE(table.session.StartMatch(bad, kSeed + 1, kAllComputers).has_value());
+        EXPECT_EQ(table.session.StartCount(), 2u);
+    }
+
     TEST(TableSessionTest, TheLevelIsNormalByDefaultAndAStartKeepsTheOneItGets) {
         Table table;
         EXPECT_EQ(table.session.Level(), ComputerLevel::Normal) << "before the first start";
