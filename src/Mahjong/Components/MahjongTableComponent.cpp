@@ -77,9 +77,9 @@ namespace BECore::Mahjong {
             return canvas ? canvas->GetRoot().FindByName(name) : nullptr;
         }
 
-        /// The key of the sentence of the shown button under the pointer (the canvas sets `UIElement::hovered` from the mouse); empty when none is.
-        /// Only the buttons of `Actions` have a hint: a touch screen has no hover, and `ActionsCompact` has no label for it.
-        eastl::string_view HoveredHintKey(const IntrusivePtr<UICanvasComponent>& actions, const ActionButtons& buttons) {
+        /// The shown button of `Actions` under the pointer (the canvas sets `UIElement::hovered` from the mouse); none when there is none.
+        /// Only the buttons of `Actions` are hovered: a touch screen has no hover, and `ActionsCompact` has no label for the hint.
+        std::optional<ButtonKind> HoveredButton(const IntrusivePtr<UICanvasComponent>& actions, const ActionButtons& buttons) {
             for (int i = 0; i < kButtonCount; ++i) {
                 const ButtonKind kind = static_cast<ButtonKind>(i);
                 if (!buttons[kind].shown) {
@@ -87,10 +87,10 @@ namespace BECore::Mahjong {
                 }
                 const UIElement* element = FindElementIn(actions, PoolString::Intern(SpecOf(kind).element));
                 if (element != nullptr && element->hovered) {
-                    return buttons[kind].hintKey;
+                    return kind;
                 }
             }
-            return {};
+            return std::nullopt;
         }
 
         Faces FacesOf(const TableSession& session) {
@@ -347,7 +347,8 @@ namespace BECore::Mahjong {
         // The hint of the button under the pointer, in the label `Hint` that shows exactly while there is one; the sentence is
         // looked up again when the language changed under it
         const UIStrings& strings = CoreManager::GetUIStrings();
-        const eastl::string_view hintKey = compact ? eastl::string_view{} : HoveredHintKey(actionsCanvas, buttons);
+        _hoveredButton = compact ? std::nullopt : HoveredButton(actionsCanvas, buttons);
+        const eastl::string_view hintKey = _hoveredButton ? buttons[*_hoveredButton].hintKey : eastl::string_view{};
         const PoolString actionHint = "actionHint"_intern;
         if (hintKey != _hintKey || strings.GetVersion() != _hintStringsVersion || !vars.Has(actionHint)) {
             _hintKey = hintKey;
@@ -613,6 +614,7 @@ namespace BECore::Mahjong {
 
         const TableSnapshot before = eastl::move(_shown);
         _shown = TableSnapshot{};
+        _chowTakes = ChowTakes{};
         const MahjongGame* game = MahjongGame::GetActive();
         PublishScreen(game);
         if (game == nullptr || game->GetMatch().GetPhase() == MatchPhase::NotStarted) {
@@ -628,6 +630,21 @@ namespace BECore::Mahjong {
         FillSnapshot(_shown, hand, faces, bottom);
         PlanBatch(before, news, hand);
         const TableLayout& layout = _shown.layout;
+        // The two tiles of the viewer's hand that the offered chow takes (the hovered one; the only one when a single chow is on offer) are
+        // framed in place: only in a hand that is face up and while the viewer is the person to act (so not under the cover)
+        eastl::array<int, 2> chowIndex{-1, -1};
+        if (IsSeat(bottom) && PersonActs(*game) && session.Actor() == bottom && faces.Shows(bottom)) {
+            _chowTakes = ChowTilesTaken(_published, hand.PendingTile(), _hoveredButton);
+            const PlayerHand& viewer = hand.GetHand(bottom);
+            for (int k = 0; k < _chowTakes.count; ++k) {
+                for (size_t i = 0; i < viewer.concealed.size(); ++i) {
+                    if (viewer.concealed[i] == _chowTakes.tiles[static_cast<size_t>(k)]) {
+                        chowIndex[static_cast<size_t>(k)] = static_cast<int>(i);
+                        break;  // one copy of each tile of the sequence
+                    }
+                }
+            }
+        }
         // The tile the viewer has just drawn is tinted in its place, only in a hand that is face up: under the cover and for a spectator
         // nothing marks it (and the layout is the same plain row either way)
         const int drawnIndex = IsSeat(bottom) && session.GetPhase() == SessionPhase::Playing && faces.Shows(bottom) ? DrawnIndexOf(hand, bottom) : -1;
@@ -751,6 +768,9 @@ namespace BECore::Mahjong {
                     drawTile(rect, faces.Shows(slot.seat) ? std::optional<Tile>(held.concealed[slot.index]) : std::nullopt);
                     if (slot.seat == bottom && slot.index == drawnIndex) {
                         renderer.DrawFilledRect(rect.x, rect.y, rect.w, rect.h, kDrawnTileMark);
+                    }
+                    if (slot.seat == bottom && (slot.index == chowIndex[0] || slot.index == chowIndex[1])) {
+                        DrawFrame(renderer, rect, kPendingMargin * unit, kPendingFrame);
                     }
                     if (slot.seat == bottom && keepsWaiting[held.concealed[slot.index].Id()]) {
                         const float bar = kKeepsWaitingBarHeight * unit;
