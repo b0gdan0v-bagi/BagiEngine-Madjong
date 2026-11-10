@@ -206,3 +206,104 @@ Outcome B of the plan: **no `Hard` level.** `ComputerLevel` stays Easy and Norma
 the budget that fitted the time rule and are used by no level. The Hint advice stays Normal. A search seat plays a whole 4-hand match
 legally in `ComputerMatchTest`, so the code is kept working. The ideas that might make it win are listed under "What would make
 search win" above; none is built.
+
+## Levels
+
+The entry `mahjong-search-levels` fills the scale 1..10 (`ComputerLevel.h`) and measures it. This section is its record, added as the
+work goes; the verdict above is the first entry's and stays as history. Rules fixed before any number was seen: the opponents are
+three Normal seats (`--others 5`); the **knobs are tuned only on the exploration range** (`--first 4000`, 1000 seeds); the decision
+range is `--first 100000` and the confirmation range `--first 130000` (1000 seeds each, played once as they stand); a level is
+"stronger than the level below" only when, on **both** the decision and the confirmation range, the paired difference of points a
+hand and of wins % is significant and positive and the pooled (mean of the two) difference is positive; anything else is reported as
+"not significantly above". All runs below are Release, `--jobs 14`, `A=build/ClangmacOS/BagiMahjongArena`, on a machine shared with
+other sessions (the wall times are indicative).
+
+### Levels 1..5 against three Normal seats (step 1: the scale today)
+
+```bash
+$A --first 4000   --seeds 1000 --jobs 14 --others 5 --focus 1,2,3,4,5      # exploration (6.3 s)
+$A --first 100000 --seeds 1000 --jobs 14 --others 5 --focus 1,2,3,4,5      # decision (5.6 s)
+$A --first <r> --seeds 1000 --jobs 14 --others 5 --focus 1,2               # the adjacent pairs, also 2,3  3,4  4,5
+```
+
+Wins % and points a hand with the 95 % interval (4000 hands per level); the interval of Normal is 0 on points by the mirror identity
+(on the decision range one of the 1000 walls was drawn for all four rotations, so its wins are 24.98 %, not 25.00):
+
+| level | exploration wins % | exploration points/hand | decision wins % | decision points/hand |
+|---|---|---|---|---|
+| 1 | 7.33 +- 0.78 | -47.92 +- 2.85 | 7.17 +- 0.75 | -47.47 +- 3.10 |
+| 2 | 13.47 +- 0.95 | -31.52 +- 3.37 | 13.68 +- 0.94 | -31.59 +- 3.22 |
+| 3 | 17.45 +- 1.02 | -19.92 +- 3.46 | 18.57 +- 1.05 | -17.26 +- 3.60 |
+| 4 | 21.95 +- 1.02 | -8.24 +- 3.51 | 21.77 +- 1.04 | -8.99 +- 3.69 |
+| 5 (Normal) | 25.00 +- 0.00 | 0.00 +- 0.00 | 24.98 +- 0.05 | 0.00 +- 0.00 |
+
+The numbers the entry quoted (6.7 / 12.8 / 17.8 / 23.3 / 25 %) were 300 seeds; on 1000 seeds the wins are 7.3 / 13.5 / 17.5 / 22.0 /
+25.0 on the exploration range and 7.2 / 13.7 / 18.6 / 21.8 / 25.0 on the decision range. The paired difference of each level to the one
+below (`--focus <k>,<k+1>`, same walls; every row significant):
+
+| step | exploration points/hand | exploration wins % | decision points/hand | decision wins % |
+|---|---|---|---|---|
+| 1 to 2 | +16.39 +- 3.01 | +6.15 +- 0.90 | +15.88 +- 3.35 | +6.50 +- 0.91 |
+| 2 to 3 | +11.60 +- 3.20 | +3.98 +- 0.99 | +14.33 +- 3.16 | +4.90 +- 0.98 |
+| 3 to 4 | +11.68 +- 3.49 | +4.50 +- 1.03 | +8.26 +- 3.13 | +3.20 +- 0.94 |
+| 4 to 5 | +8.24 +- 3.51 | +3.05 +- 1.02 | +8.99 +- 3.69 | +3.20 +- 1.04 |
+
+Each step is significant on both ranges (the confirmation range is not played for levels 1..5 in this step: WP 4 plays the shipped
+scale on it). The steps shrink towards Normal (16, 12-14, 8-12, 8-9 points). The skip-knob levels differ from Normal visibly: at
+level 1 declared hands are 18 % of the hands against 56 % of Normal (the declaration skip is the biggest knob), 32 % at level 2, 40-42
+% at level 3, 47-50 % at level 4. Their drawn share is 0.1 to 0.6 %, like Normal's.
+
+### The search as a weakening of Normal (step 2: exploration only)
+
+`5:searchWorlds=W,searchCandidates=4,searchMargin=M` for W in {2, 4, 8} and M in {0, 10, 30}: the search of
+`docs/bot-search.md` ("The design") with the Normal rollout, played against three Normal seats, each row paired with Normal (the
+first focus player, same walls). Candidates are 4 as in `kSearchCandidates`. Exploration range, 1000 seeds, the three margins of a
+shape in one run:
+
+```bash
+for W in 2 4 8; do
+  $A --first 4000 --seeds 1000 --jobs 14 --others 5 --focus \
+     5,5:searchWorlds=$W,searchCandidates=4,searchMargin=0,5:searchWorlds=$W,searchCandidates=4,searchMargin=10,5:searchWorlds=$W,searchCandidates=4,searchMargin=30
+done                                                                       # 180 s, 340 s, 586 s of wall time
+```
+
+| worlds | margin | wins % | points/hand | declared % | drawn % | avg win score | paired points/hand | paired wins % |
+|---|---|---|---|---|---|---|---|---|
+| 2 | 0 | 11.75 +- 0.95 | -34.73 +- 3.32 | 29.68 | 0.38 | 45.62 | -34.73 +- 3.32 sig. | -13.25 +- 0.95 sig. |
+| 2 | 10 | 21.12 +- 1.07 | -6.79 +- 3.90 | 48.40 | 0.28 | 47.18 | -6.79 +- 3.90 sig. | -3.88 +- 1.07 sig. |
+| 2 | 30 | 23.32 +- 0.93 | -2.79 +- 3.09 | 52.83 | 0.05 | 45.76 | -2.79 +- 3.09 | -1.68 +- 0.93 sig. |
+| 4 | 0 | 11.95 +- 0.96 | -31.51 +- 4.08 | 28.23 | 0.47 | 50.13 | -31.51 +- 4.08 sig. | -13.05 +- 0.96 sig. |
+| 4 | 10 | 20.68 +- 1.12 | -10.25 +- 3.71 | 45.48 | 0.25 | 45.83 | -10.25 +- 3.71 sig. | -4.33 +- 1.12 sig. |
+| 4 | 30 | 24.15 +- 0.84 | -1.70 +- 2.82 | 55.12 | 0.10 | 45.03 | -1.70 +- 2.82 | -0.85 +- 0.84 sig. |
+| 8 | 0 | 12.20 +- 1.00 | -30.00 +- 3.92 | 29.90 | 0.20 | 51.11 | -30.00 +- 3.92 sig. | -12.80 +- 1.00 sig. |
+| 8 | 10 | 19.52 +- 1.09 | -11.57 +- 3.77 | 45.55 | 0.10 | 46.13 | -11.57 +- 3.77 sig. | -5.47 +- 1.09 sig. |
+| 8 | 30 | 24.30 +- 0.84 | -1.63 +- 2.66 | 55.38 | 0.07 | 45.22 | -1.63 +- 2.66 | -0.70 +- 0.84 |
+
+(Normal: 25.00 %, 0 points, 55.77 % declared, 45.46 average win score.) The 2 x 4 rows are those of the table "The margin" above
+(the same command line and range, so the same bytes); all nine variants are listed, none was left out. Nine rows are nine tries on
+one range, so one marginal "significant" in them is not news; none is read alone.
+
+Reading, for the ladder (not yet a decision):
+
+- **The margin is the dial; the worlds are not.** At margin 0 more worlds move the points from -34.7 to -30.0 and the wins not at
+  all (-13.3, -13.1, -12.8); at 10 more worlds do not help, the points drift down (-6.8, -10.3, -11.6, within each other's intervals). Only at margin 30 do more worlds
+  bring the player to Normal (-2.8, -1.7, -1.6 points), which is "mostly overrides nothing". So the strength of a search player of
+  this kind is set by how often it overrides Normal at all, and the extra worlds only cost time.
+- **Strength against the skip levels** (wins % and points, exploration): margin 0 (12 %, -30 to -35) lies at level 2 (13.5 %, -31.5);
+  margin 10 (19.5 to 21.1 %, -6.8 to -11.6) lies at level 4 (22.0 %, -8.2), above level 3 (17.5 %, -19.9); margin 30 (23.3 to 24.3
+  %, -1.6 to -2.8) lies between level 4 and Normal, and its paired difference to Normal is not significant on points at any W. No
+  variant lies at level 3, or between 1 and 2; margin 5 or 20 were not tried (the dial between 0 and 10 and between 10 and 30 is
+  untried, by the rule that nothing is added after a result).
+- **Not the same kind of weakness.** The skip levels get weaker by skipped declarations, passed claims and a worse tile
+  (`declared %` 18 / 32 / 40 / 47 against 56). The search variants at margin 0 also declare rarely (28 to 30 %, like level 2) and win
+  with a higher average score at 4 and 8 worlds (50 to 51 against 45): the noise drops declarations too, so a person who counts
+  declarations sees the same thing as at level 2. At margin 10 and 30 the declared share is 45 to 55 %, close to Normal's, and the
+  weakness is in the discard and claim choices, which are not visible as a missing declaration: these two margins differ in kind
+  from the skip knobs, and are the candidates for a level 4 (margin 10) and an extra step between 4 and 5 (margin 30, whose
+  paired points interval includes 0 so its order against Normal is not established by this range).
+- **The time rule decides the shape.** Only 2 x 4 (8 rollouts a decision) fits the 0.3 s Debug rule of "The budget" (248 ms); 4 x 4
+  and 8 x 4 are 469 and 757 ms there. 4 and 8 worlds are for the record only, and the 2 x 4 rows are the only candidates for a
+  level: M=10 for a level 4 (about its strength), M=30 for a step between 4 and 5, M=0 as a level 2 whose weakness is not a coin
+  but is as visible as level 2's in declarations. Whether any of them is a better ladder than the skip levels (smoother, each
+  step significant) is not known from this range: WP 3 decides, and every step it uses is measured by WP 4 on the decision and
+  confirmation ranges.
