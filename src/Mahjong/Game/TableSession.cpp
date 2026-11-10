@@ -31,6 +31,7 @@ namespace BECore::Mahjong {
         _level = level;
         _viewer = PersonCount() == 1 ? OnlyPerson(_seats) : kNoSeat;
         ++_version;
+        ++_starts;
         if (_sink != nullptr) {
             MatchLogEvent start;
             start.kind = MatchLogKind::Start;
