@@ -47,7 +47,7 @@ namespace BECore::Mahjong {
             /// The upright size of a discarded tile of the seat (a side seat's block is turned, the tiles keep this size).
             float discardTileW = kDiscardTileW;
             float discardTileH = kDiscardTileH;
-            /// The hand is spread over its capacity (the phone profile): tile i lies at i times `(capacity - tileW) / (tiles - 1)`.
+            /// The hand is spread over its capacity (the portrait table): tile i lies at i times `(capacity - tileW) / (tiles - 1)`.
             bool spreadHand = false;
         };
 
@@ -80,7 +80,8 @@ namespace BECore::Mahjong {
         constexpr float kTopBonusCapacity = kSideBonusCapacity;
         constexpr float kSideHandY = Centered(kViewHeight, kSideHandSpan);
         constexpr float kSideMeldY = Centered(kViewHeight, kSideMeldCapacity);
-        constexpr float kSideBonusY = kSideHandY;
+        // The bonus columns start below the HUD's move line (it ends at y 172 and reaches over the right bonus column).
+        constexpr float kSideBonusY = 192.0f;
         constexpr float kSideDiscardY = Centered(kViewHeight, kSideDiscardBlockH);
         constexpr float kLeftHandX = kEdge;
         constexpr float kLeftMeldX = kLeftHandX + kSideHandTileH + kZoneGap;
@@ -93,9 +94,13 @@ namespace BECore::Mahjong {
 
         // The top row: the hand with the bonus tiles beside it, the melds below, then the discard block.
         constexpr float kTopHandSpan = kOpponentHandTileW * kMaxConcealedTiles;
-        constexpr float kTopHandX = Centered(kViewWidth, kTopHandSpan);
+        // The hand starts right of the hints' `WaitPanel` (top left, x 96..432) and is not centred: the larger tiles would reach under the
+        // panel. The bonus tiles lie in the row of the melds, right of them, so the row ends left of the `Rules` button (x 996).
+        constexpr float kTopHandX = 444.0f;
         constexpr float kTopMeldY = kEdge + kOpponentHandTileH + kZoneGap;
         constexpr float kTopMeldCapacity = StripCapacity(kOpponentMeldTileW, kMeldTilesPerKong* kMaxMelds, kMaxMelds - 1);
+        constexpr float kTopMeldX = Centered(kViewWidth, kTopMeldCapacity);
+        constexpr float kTopBonusX = kTopMeldX + kTopMeldCapacity + kBlockGap;
         constexpr float kTopDiscardY = 92.0f;
 
         constexpr float kDiscardBlockX = Centered(kViewWidth, kDiscardBlockW);
@@ -115,11 +120,11 @@ namespace BECore::Mahjong {
         constexpr float kCenterPanelH = 140.0f;
 
         // The seat plates, by screen position (0 bottom, 1 right, 2 top, 3 left), each in the free ground next to its seat's discard block.
-        // Bottom: left of the bottom discard block, above the viewer's bonus row, right of the left meld column (which ends at x 76). Right: above the right discard block, below the move
+        // Bottom: left of the bottom discard block, above the viewer's bonus row, right of the left meld column (which ends at x 81). Right: above the right discard block, below the move
         // line of the HUD (which ends at y 172), right of the `Hint` label (x 1000) and left of the right bonus column. Top: below the top
         // seat's melds and the HUD's `Info`, left of the top discard block. Left: above the left discard block, clear of the left bonus
         // column. The side plates start on the grid unit next to their discard block.
-        constexpr float kSeatPlateBottomX = 76.0f;
+        constexpr float kSeatPlateBottomX = 84.0f;
         constexpr float kSeatPlateBottomY = 532.0f;
         constexpr float kSeatPlateRightX = 1012.0f;
         constexpr float kSeatPlateRightY = 184.0f;
@@ -129,15 +134,16 @@ namespace BECore::Mahjong {
         constexpr float kSeatPlateLeftY = 184.0f;
 
         // The layout above must fit the zones it names: a change to a size that breaks it fails to compile.
-        // The side columns are the squeeze of the table: with the turned tiles (32 / 32 / 21 wide) and the block of 160 x 144 the right
-        // discard block lies at x 1011, so the `Hint` label of `config/nodes/MahjongActions.xml` ends at x 1000 (a grid unit clear of the
-        // block, which the seat plates keep `kPlatePadding` away from) and the side seat plates sit right at their blocks. The score
-        // table of a hand (`MahjongHandOver.xml`) lies on x 104..1176 and the HUD's move line ends at y 172, x 1188: the columns stay
-        // outside the one and the bonus column starts below the other.
+        // The side columns are the squeeze of the table: with the turned tiles (37 / 32 / 21 wide) and the block of 160 x 144 the right
+        // discard block lies at x 1006, so the `Hint` label of `config/nodes/MahjongActions.xml` ends at x 1000 (clear of the block,
+        // which the seat plates keep `kPlatePadding` away from) and the side seat plates sit right at their blocks. The score table of a
+        // hand (`MahjongHandOver.xml`) lies on x 108..1172 and the HUD's move line ends at y 172, x 1188: the columns stay outside the
+        // one and the bonus column starts below the other.
         static_assert(kViewerRowX + kViewerHandSpan + kViewerRowGap + kViewerMeldCapacity <= kViewWidth - kEdge);
         static_assert(kSideMeldY + kSideMeldCapacity <= kViewHeight - kEdge);
         static_assert(kSideHandY + kSideHandSpan <= kViewHeight - kEdge);
         static_assert(kTopDiscardY > kTopMeldY + kOpponentMeldTileH);
+        static_assert(kTopHandX + kTopHandSpan <= 996.0f - kZoneGap && kTopBonusX + kTopBonusCapacity <= 996.0f - kZoneGap);
         static_assert(kTopDiscardY + kDiscardBlockH < kWallRingY);
         static_assert(kWallRingY + kWallRingH < kBottomDiscardY);
         static_assert(kBottomDiscardY + kDiscardBlockH < kViewerBonusY);
@@ -146,8 +152,8 @@ namespace BECore::Mahjong {
         static_assert(kLeftDiscardX + kSideDiscardBlockW < kWallRingX);
         static_assert(kRightDiscardX > kWallRingX + kWallRingW);
         static_assert(kLeftDiscardX > kLeftBonusX + kOpponentBonusTileH);
-        static_assert(kSideBonusCapacity <= kSideHandSpan);
-        // The phone profile of the viewer's side (`TableProfile`): the hand is one row across the view inside the rim and the rack, at the
+        static_assert(kSideBonusY >= kSideHandY && kSideBonusY + kSideBonusCapacity <= kSideHandY + kSideHandSpan);
+        // The phone profile of the viewer's side (`TableProfile`): the hand is one row of tiles side by side from the left inside the rim and the rack, at the
         // bottom edge of the desktop hand; the tiles are as high as `handTileW` says, up to the tallest (`kPhoneHandTileMaxW`). The bottom
         // plate lies under the tallest hand tile's top, the bonus tiles and melds in a row above the hand's tallest top starting right of
         // the plate, the bottom discard block between the wall ring and that row, squeezed to the height left (its rows overlap).
@@ -352,7 +358,6 @@ namespace BECore::Mahjong {
                     if (profile.phone) {
                         const float tileH = profile.handTileW * kViewerHandTileH / kViewerHandTileW;
                         geometry.hand = {kPhoneHandX, kPhoneHandBottom - tileH, profile.handTileW, tileH, false, kPhoneHandSpan};
-                        geometry.spreadHand = true;
                         geometry.melds = {kPhoneMeldX, kPhoneMeldY, kViewerMeldTileW, kViewerMeldTileH, false, kViewerMeldCapacity};
                         geometry.bonus = {kPhoneRowX, kPhoneBonusY, kViewerBonusTileW, kViewerBonusTileH, false, kViewerBonusTileW * kMaxBonusTiles};
                         geometry.discardX = kDiscardBlockX;
@@ -381,9 +386,8 @@ namespace BECore::Mahjong {
                     break;
                 case 2:
                     geometry.hand = {kTopHandX, kEdge, kOpponentHandTileW, kOpponentHandTileH, false, kTopHandSpan};
-                    geometry.melds = {Centered(kViewWidth, kTopMeldCapacity), kTopMeldY, kOpponentMeldTileW, kOpponentMeldTileH, false, kTopMeldCapacity};
-                    geometry.bonus = {
-                        kTopHandX + kTopHandSpan + kBlockGap, kEdge + Centered(kOpponentHandTileH, kOpponentBonusTileH), kOpponentBonusTileW, kOpponentBonusTileH, false, kTopBonusCapacity};
+                    geometry.melds = {kTopMeldX, kTopMeldY, kOpponentMeldTileW, kOpponentMeldTileH, false, kTopMeldCapacity};
+                    geometry.bonus = {kTopBonusX, kTopMeldY, kOpponentBonusTileW, kOpponentBonusTileH, false, kTopBonusCapacity};
                     geometry.discardX = kDiscardBlockX;
                     geometry.discardY = kTopDiscardY;
                     geometry.discardW = kDiscardBlockW;
@@ -478,7 +482,7 @@ namespace BECore::Mahjong {
             layout.slots.push_back(TileSlot{fit.Map(rect), role, seat, index, part, claimEdge, rotation});
         }
 
-        /// The hand in input order, one plain row; a spread one (the phone profile) puts tile `i` at `i` times the pitch that makes 14
+        /// The hand in input order, one plain row; a spread one (the portrait table) puts tile `i` at `i` times the pitch that makes 14
         /// tiles span the strip, a longer hand squeezes to the strip.
         void AddHand(TableLayout& layout, const ViewFit& fit, const SeatGeometry& geometry, Seat seat, int count) {
             eastl::vector<float> offsets = StripOffsets(geometry.hand, {count});

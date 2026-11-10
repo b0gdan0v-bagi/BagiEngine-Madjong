@@ -60,12 +60,12 @@ namespace BECore::Mahjong {
     inline constexpr float kViewerHandTileH = 64.0f;
     inline constexpr float kViewerMeldTileW = 30.0f;
     inline constexpr float kViewerMeldTileH = 40.0f;
-    inline constexpr float kOpponentHandTileW = 28.0f;
-    inline constexpr float kOpponentHandTileH = 37.0f;
+    inline constexpr float kOpponentHandTileW = 32.0f;
+    inline constexpr float kOpponentHandTileH = 42.0f;
     /// The hands of the left and right seats are backs seen from the side, drawn turned: smaller than the top seat's, so that the two
-    /// columns of turned tiles leave room for the discard blocks (the table is full across: `TableLayout.cpp`).
-    inline constexpr float kSideHandTileW = 24.0f;
-    inline constexpr float kSideHandTileH = 32.0f;
+    /// columns of turned tiles leave room for the discard blocks and the score table (the table is full across: `TableLayout.cpp`).
+    inline constexpr float kSideHandTileW = 28.0f;
+    inline constexpr float kSideHandTileH = 37.0f;
     inline constexpr float kOpponentMeldTileW = 24.0f;
     inline constexpr float kOpponentMeldTileH = 32.0f;
     inline constexpr float kViewerBonusTileW = 24.0f;
@@ -151,7 +151,7 @@ namespace BECore::Mahjong {
     /**
      * How the viewer's side of the table is laid out. `phone` is for a window where the desktop hand tile (`kViewerHandTileW` units) would
      * be too small to touch (`TableProfileFor` in `TouchRegime.h` decides): the 14 concealed tiles are one row `handTileW` units wide
-     * each across the whole view (spread, so the tiles never touch), the viewer's bonus tiles and melds lie in a row of their own above it
+     * each in a plain row from the left of the view (side by side, as on the desktop), the viewer's bonus tiles and melds lie in a row of their own above it
      * and the bottom discard block is lower and squeezed. The wall ring, the centre panel, the three other seats and the other plates stay
      * where they are (the bottom plate only moves up to clear the tallest hand tile). Not `phone` is today's table whatever `handTileW` is.
      * Landscape only: the portrait table (`TableShape::Portrait`) has its own one-row hand and ignores the profile.

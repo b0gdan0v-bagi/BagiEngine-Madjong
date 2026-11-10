@@ -1297,7 +1297,7 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
-    TEST(TableLayoutTest, ThePhoneHandIsOneRowOfFourteenTilesOfTheWidthAskedForAcrossTheView) {
+    TEST(TableLayoutTest, ThePhoneHandIsOneRowOfFourteenTilesOfTheWidthAskedForSideBySideFromTheLeft) {
         for (const float handTileW : kPhoneTileWidths) {
             for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
                 const TableLayout layout = MakeTableLayout(PhoneInput(WorstInput(viewer, kWorstPile, kNoSeat), handTileW));
@@ -1309,14 +1309,13 @@ namespace BECore::Mahjong::Tests {
                     EXPECT_NEAR(hand[i].rect.h, handTileW * 4.0f / 3.0f, kTolerance) << "a tile of the atlas is 3 : 4";
                     EXPECT_EQ(hand[i].rect.y, hand[0].rect.y);
                     if (i > 0) {
-                        EXPECT_GE(hand[i].rect.x - (hand[i - 1].rect.x + hand[i - 1].rect.w), -kTolerance) << "tiles overlap, width " << handTileW;
+                        EXPECT_NEAR(hand[i].rect.x, hand[i - 1].rect.x + hand[i - 1].rect.w, kTolerance) << "side by side as on the desktop, width " << handTileW;
                     }
                     // a click at the centre of a tile finds it
                     EXPECT_EQ(HitHandTile(layout, RectCentreX(hand[i].rect), RectCentreY(hand[i].rect)), i);
                 }
                 const Rect bounds = BoundsOf(layout, SlotRole::HandTile, viewer);
-                EXPECT_GE(bounds.w, 0.85f * kViewWidth) << "width " << handTileW;
-                EXPECT_GE(bounds.x, static_cast<float>(kRimWidth + kRackPadding) - kTolerance) << "the rack past the hand ends at the rim";
+                EXPECT_NEAR(bounds.x, static_cast<float>(kRimWidth + kRackPadding), kTolerance) << "from the left, the rack past the hand ends at the rim";
                 EXPECT_LE(bounds.x + bounds.w, kViewWidth - kRimWidth - kRackPadding + kTolerance);
                 EXPECT_NEAR(bounds.y + bounds.h, kViewHeight - kRimWidth, kTolerance) << "the hand rests on the rim";
             }
@@ -1652,7 +1651,7 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
-    TEST(TableLayoutTest, TheOpponentsHandsAreLargerInPortraitTheirOtherTilesKeepTheirSizesAndTheViewersDiscardsAreLarger) {
+    TEST(TableLayoutTest, TheOpponentsHandsAreNoSmallerInPortraitTheirOtherTilesKeepTheirSizesAndTheViewersDiscardsAreLarger) {
         for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
             const TableInput input = WorstInput(viewer, 60, kNoSeat);
             const TableLayout landscape = InLandscape(input);
@@ -1673,8 +1672,8 @@ namespace BECore::Mahjong::Tests {
                     EXPECT_GT(b.rect.h, a.rect.h);
                     EXPECT_NEAR(b.rect.w * kDiscardTileH, b.rect.h * kDiscardTileW, kTolerance) << "3 : 4";
                 } else if (a.role == SlotRole::HandTile) {
-                    EXPECT_GT(b.rect.w, a.rect.w) << "an opponent's hand is larger in portrait, slot " << i;
-                    EXPECT_GT(b.rect.h, a.rect.h);
+                    EXPECT_GE(b.rect.w, a.rect.w) << "an opponent's hand is no smaller in portrait, slot " << i;
+                    EXPECT_GE(b.rect.h, a.rect.h);
                 } else {
                     EXPECT_EQ(a.rect.w, b.rect.w) << "slot " << i << " role " << static_cast<int>(a.role) << " seat " << a.seat;
                     EXPECT_EQ(a.rect.h, b.rect.h);
@@ -1741,18 +1740,18 @@ namespace BECore::Mahjong::Tests {
             input.discardSeats.push_back(seat);
         }
         for (const TableLayout& layout : {InLandscape(input), MakeTableLayout(input)}) {
-            const eastl::array<Rect, 4> discards = {Rect(568, 452, 144, 160), Rect(1011, 288, 160, 144), Rect(568, 92, 144, 160), Rect(109, 288, 160, 144)};
-            const eastl::array<Rect, 4> plates = {Rect(76, 532, 152, 80), Rect(1012, 184, 152, 80), Rect(408, 96, 152, 80), Rect(112, 184, 152, 80)};
+            const eastl::array<Rect, 4> discards = {Rect(568, 452, 144, 160), Rect(1006, 288, 160, 144), Rect(568, 92, 144, 160), Rect(114, 288, 160, 144)};
+            const eastl::array<Rect, 4> plates = {Rect(84, 532, 152, 80), Rect(1012, 184, 152, 80), Rect(408, 96, 152, 80), Rect(112, 184, 152, 80)};
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 EXPECT_TRUE(SameRect(layout.zones.discards[seat], discards[seat])) << "seat " << seat;
                 EXPECT_TRUE(SameRect(layout.zones.seatPlates[seat], plates[seat])) << "seat " << seat;
             }
             EXPECT_TRUE(SameRect(layout.zones.wall, Rect(458, 268, 364, 168)));
             EXPECT_TRUE(SameRect(layout.zones.centerPanel, Rect(472, 282, 336, 140)));
-            const eastl::array<Rect, 4> firstHand = {Rect(72, 648, 48, 64), Rect(1240, 192, 32, 24), Rect(444, 8, 28, 37), Rect(8, 192, 32, 24)};
-            const eastl::array<Rect, 4> firstMeld = {Rect(764, 672, 30, 40), Rect(1204, 156, 32, 24), Rect(436, 49, 24, 32), Rect(44, 156, 32, 24)};
-            const eastl::array<Rect, 4> firstBonus = {Rect(72, 616, 24, 32), Rect(1179, 192, 21, 16), Rect(852, 16, 16, 21), Rect(80, 192, 21, 16)};
-            const eastl::array<Rect, 4> firstDiscard = {Rect(568, 452, 24, 32), Rect(1139, 408, 32, 24), Rect(568, 92, 24, 32), Rect(109, 288, 32, 24)};
+            const eastl::array<Rect, 4> firstHand = {Rect(72, 648, 48, 64), Rect(1235, 164, 37, 28), Rect(444, 8, 32, 42), Rect(8, 164, 37, 28)};
+            const eastl::array<Rect, 4> firstMeld = {Rect(764, 672, 30, 40), Rect(1199, 156, 32, 24), Rect(436, 54, 24, 32), Rect(49, 156, 32, 24)};
+            const eastl::array<Rect, 4> firstBonus = {Rect(72, 616, 24, 32), Rect(1174, 192, 21, 16), Rect(860, 54, 16, 21), Rect(85, 192, 21, 16)};
+            const eastl::array<Rect, 4> firstDiscard = {Rect(568, 452, 24, 32), Rect(1134, 408, 32, 24), Rect(568, 92, 24, 32), Rect(114, 288, 32, 24)};
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 EXPECT_TRUE(SameRect(SlotsOf(layout, SlotRole::HandTile, seat)[0].rect, firstHand[seat])) << "hand of seat " << seat;
                 EXPECT_TRUE(SameRect(SlotsOf(layout, SlotRole::MeldTile, seat)[0].rect, firstMeld[seat])) << "melds of seat " << seat;

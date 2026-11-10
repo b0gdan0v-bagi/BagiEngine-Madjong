@@ -12,13 +12,13 @@
   the longest) instead of three of 32% (188).
   All four hands are face up under the table and must stay readable, so nothing lies over them: there is no Dim (a full-window
   scrim would cover them; the plate is opaque and a modal canvas takes every click) and the plate keeps to the middle of the view.
-  The hands, melds and bonus tiles of the four seats take the edges of the view (left columns x 8..84, right columns x 1196..1272,
-  the top rows y 8..81, the bottom rows y 620..712 at the design size), so the ground left is about x 96..1184 and y 92..616. It holds
+  The hands, melds and bonus tiles of the four seats take the edges of the view (left columns x 8..106, right columns x 1174..1272,
+  the top rows y 8..86, the bottom rows y 620..712 at the design size), so the ground left is about x 108..1172 and y 92..616. It holds
   the discard blocks, the wall ring and the seat plates, which the plate covers on purpose while it is up.
-  The plate is 1072 wide (x 104..1176, 20 clear of the side columns) and 32 padding + 48 headline band (one line of 28) + 4 x 32 seat
+  The plate is 1064 wide (x 108..1172, clear of the side columns) and 32 padding + 48 headline band (one line of 28) + 4 x 32 seat
   rows + 64 gap + 124 lines (four columns, 4 rows of 28 with 4 between) + 48 summary band + 7 x 8 spacing (8 children) = 500 units, at
   y -8 from the middle: y 102..602, clear of the top sets and 18 above the bottom row of bonus tiles. The plate has ignoreSafeArea, like the
-  table it lies on (a fixed design that ignores the safe area): with side insets in a portrait or square window 1072 units do not fit the
+  table it lies on (a fixed design that ignores the safe area): with side insets in a portrait or square window 1064 units do not fit the
   safe area, and the hands do not move either.
   In a portrait view (720 x 1280, the variant below) the plate is 504 wide (x 108..612, between the columns of the side seats' hands, melds and
   bonus tiles at x 8..101 and 619..712, which run from y 92 to 500). The lines are in two columns of 48% (eight rows, 252 high); the headline
@@ -34,7 +34,7 @@
   <components>
     <component type="UICanvasComponent" space="SceneView" useSafeArea="true" modal="true" visible="false">
       <elements>
-        <element type="UIStack" name="Plate" anchor="Center" ignoreSafeArea="true" y="-8" width="1072" height="500" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
+        <element type="UIStack" name="Plate" anchor="Center" ignoreSafeArea="true" y="-8" width="1064" height="500" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
           <children>
             <element type="UILabel" name="Headline" height="48" text="{handOverHeadline}" fontSize="28" align="Center" verticalAlign="Center" color="58,66,92,255" />
             <element type="UILabel" name="SeatRow0" height="32" text="{handOverSeat0}" fontSize="22" align="Center" verticalAlign="Center" color="48,54,72,255" />

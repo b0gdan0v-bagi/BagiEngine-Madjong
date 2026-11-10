@@ -14,7 +14,7 @@
   <components>
     <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
       <elements>
-        <element type="UILabel" name="PlateName0" anchor="TopLeft" ignoreSafeArea="true" x="84" y="540" width="136" height="32" text="{plateName0}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
+        <element type="UILabel" name="PlateName0" anchor="TopLeft" ignoreSafeArea="true" x="92" y="540" width="136" height="32" text="{plateName0}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
         <element type="UILabel" name="PlateName1" anchor="TopLeft" ignoreSafeArea="true" x="1020" y="192" width="136" height="32" text="{plateName1}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
         <element type="UILabel" name="PlateName2" anchor="TopLeft" ignoreSafeArea="true" x="416" y="104" width="136" height="32" text="{plateName2}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
         <element type="UILabel" name="PlateName3" anchor="TopLeft" ignoreSafeArea="true" x="120" y="192" width="136" height="32" text="{plateName3}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />

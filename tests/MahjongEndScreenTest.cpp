@@ -27,8 +27,8 @@ namespace BECore::Mahjong::Tests {
         constexpr float kButtonAir = 8.0f;
         /// The shape of the score table (see `config/nodes/MahjongHandOver.xml`): the plate lies in the ground the hands leave free, so all
         /// four hands stay readable under it. The edges are those of the hands, melds and bonus tiles of the worst-case table.
-        constexpr float kScoreTableLeft = 96.0f;
-        constexpr float kScoreTableRight = 1184.0f;
+        constexpr float kScoreTableLeft = 106.0f;
+        constexpr float kScoreTableRight = 1174.0f;
         constexpr float kScoreTableTop = 96.0f;
         constexpr float kScoreTableBottom = 612.0f;
         constexpr float kScoreTableHeight = 500.0f;
