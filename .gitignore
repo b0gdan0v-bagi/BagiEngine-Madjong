@@ -40,3 +40,6 @@ logs/
 # The packaged web page (engine/tools/web/package.py ... dist)
 /dist/
 /dist-*/
+
+# Node packages (the Railway IaC SDK of web/)
+node_modules/

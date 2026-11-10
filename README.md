@@ -75,7 +75,7 @@ Without a browser, the web-like desktop build tests the same code paths: `cmake 
 python3 engine/tools/web/build_and_deploy.py --source-dir . --game BagiMahjong --service <name> --deploy
 ```
 
-`--dry-run` prints the commands without running them. It builds with the SDK in `engine/external/emsdk`, so it is not possible in a worker folder.
+`--dry-run` prints the commands without running them. It builds with the SDK in `engine/external/emsdk`, so it is not possible in a worker folder. The service `bagi-mahjong` takes its Railway settings (builder Dockerfile, health check `/healthz`, restart on failure, limits) from `web/.railway/railway.ts`, an IaC partial that owns only it: after a change, `cd web && npm install && railway config plan`, then `railway config apply`.
 
 ## How to play
 
