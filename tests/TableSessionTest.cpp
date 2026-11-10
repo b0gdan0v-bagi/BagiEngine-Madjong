@@ -3,6 +3,7 @@
 #include <Mahjong/Game/MatchLog.h>
 #include <Mahjong/Game/TableSession.h>
 #include <gtest/gtest.h>
+#include <thread>
 
 /**
  * `TableSession` (`Game/TableSession.h`): the start, `Actor` in a turn and in a claim window, `StepComputer` and `RunComputers` (a
@@ -41,6 +42,14 @@ namespace BECore::Mahjong::Tests {
             return setup;
         }
 
+        /// A search at the cheapest setting: one world, two candidates (a whole hand takes a few seconds in Debug).
+        LevelProfile SearchProfile() {
+            LevelProfile profile = kNormalProfile;
+            profile.searchWorlds = 1;
+            profile.searchCandidates = 2;
+            return profile;
+        }
+
         /// A match and its session, started.
         struct Table {
             Match match;
@@ -48,6 +57,10 @@ namespace BECore::Mahjong::Tests {
 
             void Start(const SeatSetup& seats, uint32_t seed = kSeed, const MahjongSettings& settings = MahjongSettings{}) {
                 ASSERT_TRUE(session.StartMatch(settings, seed, seats).has_value());
+            }
+
+            void StartSearch(const SeatSetup& seats, uint32_t seed = kSeed) {
+                ASSERT_TRUE(session.StartMatch(ShortMatch(), seed, seats, SearchProfile()).has_value());
             }
 
             void StartAt(ComputerLevel level, uint32_t seed = kSeed, const MahjongSettings& settings = ShortMatch()) {
@@ -606,6 +619,214 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(Sum(table.match.Scores()), kTableTotal);
             EXPECT_GE(table.match.History().size(), static_cast<size_t>(table.match.HandsTotal()));
         }
+    }
+
+    // The two halves of a computer's step (`BeginComputerStep` / `FinishComputerStep`).
+    namespace {
+
+        /// A table of computers that plays by the search profile, with its log.
+        struct SearchTable {
+            Table table;
+            MatchLog log;
+
+            void Start(const SeatSetup& seats = kAllComputers, uint32_t seed = kSeed) {
+                table.session.SetLogSink(&log);
+                ASSERT_NO_FATAL_FAILURE(table.StartSearch(seats, seed));
+            }
+        };
+
+        /// One person, on the seat after East of `seed`: computers play first.
+        SeatSetup PersonAfterEast(uint32_t seed) {
+            Match scratch;
+            EXPECT_TRUE(scratch.Start(ShortMatch(), seed).has_value());
+            return PersonAt(NextSeat(scratch.East()));
+        }
+
+        /// The events of two logs are the same, in the same order.
+        void ExpectSameLog(const MatchLog& left, const MatchLog& right) {
+            ASSERT_EQ(left.Events().size(), right.Events().size());
+            for (size_t index = 0; index < left.Events().size(); ++index) {
+                EXPECT_TRUE(left.Events()[index] == right.Events()[index]) << "event " << index;
+            }
+        }
+
+    }  // namespace
+
+    TEST(TableSessionTest, ABeginAndAFinishGiveWhatStepComputerGivesActionByAction) {
+        SearchTable whole;
+        SearchTable halves;
+        ASSERT_NO_FATAL_FAILURE(whole.Start());
+        ASSERT_NO_FATAL_FAILURE(halves.Start());
+        int searched = 0;
+        for (int step = 0; whole.table.session.GetPhase() == SessionPhase::Playing; ++step) {
+            ASSERT_LT(step, kActionLimitPerMatch);
+            ASSERT_EQ(State(whole.table), State(halves.table)) << "step " << step;
+            const StepResult expected = whole.table.session.StepComputer();
+            ASSERT_TRUE(expected.has_value());
+
+            std::optional<ComputerStepJob> job = halves.table.session.BeginComputerStep();
+            ASSERT_TRUE(job.has_value());
+            EXPECT_EQ(job->Version(), halves.table.session.Version());
+            EXPECT_EQ(job->StartCount(), halves.table.session.StartCount());
+            EXPECT_EQ(halves.table.session.Version(), whole.table.session.Version() - 1) << "a begun step changes nothing";
+            searched += job->Ready() ? 0 : 1;
+            // A run is stepped one rollout at a time, as a background task steps it.
+            while (!job->Done()) {
+                job->Step();
+            }
+            const std::optional<StepResult> finished = halves.table.session.FinishComputerStep(*job);
+            ASSERT_TRUE(finished.has_value());
+            ASSERT_TRUE(finished->has_value());
+            EXPECT_TRUE(**finished == *expected) << "step " << step;
+        }
+        EXPECT_GT(searched, 0) << "no step of the hand was a search";
+        EXPECT_EQ(State(whole.table), State(halves.table));
+        ExpectSameLog(whole.log, halves.log);
+    }
+
+    TEST(TableSessionTest, RunComputersWithASearchProfileEqualsSteppingByHand) {
+        SearchTable run;
+        SearchTable stepped;
+        ASSERT_NO_FATAL_FAILURE(run.Start(PersonAfterEast(kSeed)));
+        ASSERT_NO_FATAL_FAILURE(stepped.Start(PersonAfterEast(kSeed)));
+        const int steps = run.table.session.RunComputers();
+        ASSERT_GT(steps, 0);
+        for (int step = 0; step < steps; ++step) {
+            ASSERT_TRUE(stepped.table.session.StepComputer().has_value());
+        }
+        EXPECT_TRUE(stepped.table.session.ActorIsPerson() || stepped.table.session.GetPhase() != SessionPhase::Playing);
+        EXPECT_EQ(State(run.table), State(stepped.table));
+        ExpectSameLog(run.log, stepped.log);
+    }
+
+    TEST(TableSessionTest, ABeginIsRefusedWhereNoComputerActs) {
+        Table table;
+        EXPECT_FALSE(table.session.BeginComputerStep().has_value()) << "before the first start";
+        ASSERT_NO_FATAL_FAILURE(table.Start(kAllPeople));
+        EXPECT_FALSE(table.session.BeginComputerStep().has_value()) << "a person acts";
+
+        SearchTable computers;
+        ASSERT_NO_FATAL_FAILURE(computers.Start());
+        ASSERT_GT(computers.table.session.RunComputers(), 0);
+        ASSERT_EQ(computers.table.session.GetPhase(), SessionPhase::HandOver);
+        EXPECT_FALSE(computers.table.session.BeginComputerStep().has_value()) << "the hand is over";
+    }
+
+    TEST(TableSessionTest, ARefusedBeginDrawsNothingFromThePlayers) {
+        SearchTable asked;
+        SearchTable quiet;
+        ASSERT_NO_FATAL_FAILURE(asked.Start(PersonAfterEast(kSeed)));
+        ASSERT_NO_FATAL_FAILURE(quiet.Start(PersonAfterEast(kSeed)));
+        ASSERT_GT(asked.table.session.RunComputers(), 0);
+        ASSERT_GT(quiet.table.session.RunComputers(), 0);
+        ASSERT_TRUE(asked.table.session.ActorIsPerson());
+        EXPECT_FALSE(asked.table.session.BeginComputerStep().has_value());
+        EXPECT_FALSE(asked.table.session.BeginComputerStep().has_value());
+        MahjongRng rng(kSeed);
+        MahjongRng other(kSeed);
+        ASSERT_TRUE(PersonActs(asked.table.session, asked.table.match.Hand(), Mode::NeverWin, rng).has_value());
+        ASSERT_TRUE(PersonActs(quiet.table.session, quiet.table.match.Hand(), Mode::NeverWin, other).has_value());
+        asked.table.session.RunComputers();
+        quiet.table.session.RunComputers();
+        EXPECT_EQ(State(asked.table), State(quiet.table));
+    }
+
+    TEST(TableSessionTest, AJobIsStaleAfterAnyChangeAndNothingIsAppliedOrLogged) {
+        enum class Change : uint8_t { StartMatch, ResumeMatch, NextHand, PerformPerson, StepComputer, RunComputers };
+        for (const Change change : {Change::StartMatch, Change::ResumeMatch, Change::NextHand, Change::PerformPerson, Change::StepComputer, Change::RunComputers}) {
+            SCOPED_TRACE(static_cast<int>(change));
+            SearchTable stale;
+            ASSERT_NO_FATAL_FAILURE(stale.Start(PersonAfterEast(kSeed)));
+            ASSERT_GT(stale.table.session.RunComputers(), 0);
+            MahjongRng rng(kSeed);
+            ASSERT_TRUE(PersonActs(stale.table.session, stale.table.match.Hand(), Mode::NeverWin, rng).has_value());
+            std::optional<ComputerStepJob> job = stale.table.session.BeginComputerStep();
+            ASSERT_TRUE(job.has_value());
+            job->Run();
+
+            switch (change) {
+                case Change::StartMatch:
+                    ASSERT_TRUE(stale.table.session.StartMatch(ShortMatch(), kSeed, PersonAfterEast(kSeed), SearchProfile()).has_value());
+                    break;
+                case Change::ResumeMatch: {
+                    const eastl::vector<MatchLogEvent> events = stale.log.Events();
+                    ASSERT_TRUE(stale.table.session.ResumeMatch(events, PersonAfterEast(kSeed), kDefaultLevel).has_value());
+                    break;
+                }
+                case Change::NextHand:
+                    for (int actions = 0; stale.table.session.GetPhase() == SessionPhase::Playing; ++actions) {
+                        ASSERT_LT(actions, kActionLimitPerMatch);
+                        stale.table.session.RunComputers();
+                        if (stale.table.session.GetPhase() == SessionPhase::Playing) {
+                            ASSERT_TRUE(PersonActs(stale.table.session, stale.table.match.Hand(), Mode::NeverWin, rng).has_value());
+                        }
+                    }
+                    ASSERT_EQ(stale.table.session.GetPhase(), SessionPhase::HandOver);
+                    ASSERT_TRUE(stale.table.session.NextHand().has_value());
+                    break;
+                case Change::PerformPerson:
+                    stale.table.session.RunComputers();
+                    ASSERT_TRUE(stale.table.session.ActorIsPerson());
+                    ASSERT_TRUE(PersonActs(stale.table.session, stale.table.match.Hand(), Mode::NeverWin, rng).has_value());
+                    break;
+                case Change::StepComputer:
+                    ASSERT_TRUE(stale.table.session.StepComputer().has_value());
+                    break;
+                case Change::RunComputers:
+                    ASSERT_GT(stale.table.session.RunComputers(), 0);
+                    break;
+            }
+
+            const std::string before = State(stale.table);
+            const size_t events = stale.log.Events().size();
+            EXPECT_FALSE(stale.table.session.FinishComputerStep(*job).has_value());
+            EXPECT_EQ(State(stale.table), before);
+            EXPECT_EQ(stale.log.Events().size(), events) << "a refused finish logs nothing";
+        }
+    }
+
+    TEST(TableSessionTest, AJobThatIsRunOnAnotherThreadGivesTheSameAction) {
+        SearchTable local;
+        SearchTable remote;
+        ASSERT_NO_FATAL_FAILURE(local.Start());
+        ASSERT_NO_FATAL_FAILURE(remote.Start());
+        int searched = 0;
+        for (int step = 0; local.table.session.GetPhase() == SessionPhase::Playing; ++step) {
+            ASSERT_LT(step, kActionLimitPerMatch);
+            std::optional<ComputerStepJob> job = remote.table.session.BeginComputerStep();
+            ASSERT_TRUE(job.has_value());
+            searched += job->Ready() ? 0 : 1;
+            if (!job->Ready()) {
+                ComputerStepJob copy = *job;
+                std::thread worker([&copy] { copy.Run(); });
+                worker.join();
+                job = copy;
+            }
+            const StepResult expected = local.table.session.StepComputer();
+            ASSERT_TRUE(expected.has_value());
+            const std::optional<StepResult> finished = remote.table.session.FinishComputerStep(*job);
+            ASSERT_TRUE(finished.has_value());
+            ASSERT_TRUE(finished->has_value());
+            ASSERT_TRUE(**finished == *expected) << "step " << step;
+        }
+        EXPECT_GT(searched, 0);
+        EXPECT_EQ(State(local.table), State(remote.table));
+    }
+
+    TEST(TableSessionTest, AProfileStartReportsTheDefaultLevel) {
+        SearchTable table;
+        ASSERT_NO_FATAL_FAILURE(table.Start());
+        for (const ComputerLevel level : table.table.session.Levels()) {
+            EXPECT_EQ(level, kDefaultLevel);
+        }
+        ASSERT_FALSE(table.log.Events().empty());
+        EXPECT_EQ(table.log.Events().front().kind, MatchLogKind::Start);
+        EXPECT_EQ(table.log.Events().front().levels, UniformLevels(kDefaultLevel));
+        MahjongSettings bad;
+        bad.handsPerMatch = 3;
+        const uint64_t version = table.table.session.Version();
+        EXPECT_FALSE(table.table.session.StartMatch(bad, kSeed, kAllComputers, SearchProfile()).has_value());
+        EXPECT_EQ(table.table.session.Version(), version);
     }
 
 }  // namespace BECore::Mahjong::Tests
