@@ -588,7 +588,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(Has(ParseError(afterHand), "Hand event"));
         const std::string endLine = EventToJson(MatchLogEvent{.kind = MatchLogKind::End}).dump();
         EXPECT_TRUE(Has(ParseError(text + endLine + "\n"), "End event"));
-        // A tile that is not one, on the first action (line 2), and a blank line before it does not move the number.
+        // A tile that is not one, on the first action (line 2), and a blank line before it is counted: the number is the physical line (3).
         const size_t tile = text.find("\"tile\":\"", firstBreak);
         ASSERT_NE(tile, std::string::npos);
         std::string badTile = text;

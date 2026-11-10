@@ -58,7 +58,7 @@ namespace BECore::Mahjong {
         /// Who plays each seat, four letters as in the control `reset`: P a person, C a computer
         BE_REFLECT_FIELD eastl::string seats = "PCCC";
         /// 16 or 8
-        BE_REFLECT_FIELD int32_t hands = 16;
+        BE_REFLECT_FIELD int32_t hands = kFullMatchHands;
         /// The level of the computer players, `easy` or `normal` (`LevelName`)
         BE_REFLECT_FIELD eastl::string level = "normal";
 

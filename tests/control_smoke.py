@@ -14,7 +14,9 @@ Exit code: 0 passed, 1 failed, 77 skipped (the executable does not exist; ctest 
 import json
 import os
 import random
+import shutil
 import sys
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -465,8 +467,17 @@ SCENARIOS = [
 ]
 
 
+SAVE_DIR_VARIABLE = "BAGI_MAHJONG_SAVE_DIR"  # where the game keeps the saved match and the choices of Setup (src/Mahjong/Save/MatchSaveStore.h)
+
+
 def main() -> int:
-    return run_smoke(__doc__, SCENARIOS)
+    # The games started below save as they play; their saves go to a folder of this run, never to the owner's `saves/`
+    save_dir = tempfile.mkdtemp(prefix="bagi-mahjong-smoke-saves-")
+    os.environ[SAVE_DIR_VARIABLE] = save_dir
+    try:
+        return run_smoke(__doc__, SCENARIOS)
+    finally:
+        shutil.rmtree(save_dir, ignore_errors=True)
 
 
 if __name__ == "__main__":
