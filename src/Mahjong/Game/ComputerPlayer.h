@@ -13,11 +13,13 @@ namespace BECore::Mahjong {
      * `Choose` dispatches on the phase: `ChooseTurnAction` on the own turn, `ChooseClaimAction` in a claim window or a robbed-kong
      * window. The player owns a `MahjongRng` that only breaks ties, so one seed gives the same play on every platform. It never sees
      * a `HandModel` except through `Decide`, which makes the view first. It has a `ComputerLevel` (default Normal, the player described
-     * in `CLAUDE.md`) and plays by `ProfileOf(level)`.
+     * in `CLAUDE.md`) and plays by `ProfileOf(level)`; the constructor that takes a `LevelProfile` plays by those numbers (tests and the
+     * arena play a profile that is no level, e.g. a search seat) and reports `Level()` Normal.
      */
     class ComputerPlayer {
     public:
-        explicit ComputerPlayer(uint32_t seed, ComputerLevel level = kDefaultLevel) : _rng(seed), _level(level) {}
+        explicit ComputerPlayer(uint32_t seed, ComputerLevel level = kDefaultLevel) : _rng(seed), _level(level), _profile(ProfileOf(level)) {}
+        ComputerPlayer(uint32_t seed, const LevelProfile& profile) : _rng(seed), _profile(profile) {}
 
         [[nodiscard]] ComputerLevel Level() const noexcept {
             return _level;
@@ -33,6 +35,7 @@ namespace BECore::Mahjong {
     private:
         MahjongRng _rng;
         ComputerLevel _level = kDefaultLevel;
+        LevelProfile _profile;
     };
 
     /// The rng seed of seat `seat` at a table seeded `tableSeed`: a fixed mixing, one roll of an `MahjongRng` seeded `tableSeed * 4 + seat`
@@ -54,6 +57,8 @@ namespace BECore::Mahjong {
     class ComputerTable {
     public:
         explicit ComputerTable(uint32_t seed, ComputerLevel level = kDefaultLevel);
+        /// Every seat plays by `profile` (and the table reports `Level()` Normal); the seat seeds are those of the level constructor.
+        ComputerTable(uint32_t seed, const LevelProfile& profile);
 
         [[nodiscard]] ComputerLevel Level() const noexcept {
             return _level;

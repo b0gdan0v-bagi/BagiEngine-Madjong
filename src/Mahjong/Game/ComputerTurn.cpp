@@ -1,5 +1,7 @@
 #include "ComputerTurn.h"
 
+#include <Mahjong/Game/ComputerSearch.h>
+
 namespace BECore::Mahjong {
 
     namespace {
@@ -248,6 +250,19 @@ namespace BECore::Mahjong {
         return copies;
     }
 
+    std::optional<int> WaitingCopiesAfterDiscard(const TableView& view, Tile discarded) {
+        if (!discarded.IsPlayable()) {
+            return std::nullopt;
+        }
+        TileCounts counts = CountTiles(view.own.concealed);
+        if (counts[discarded.Id()] == 0) {
+            return std::nullopt;
+        }
+        --counts[discarded.Id()];
+        const int copies = UnseenWinningCopies(view, counts, MeldCountOf(view), CountMeldTiles(view.own.melds));
+        return copies == kNotWaiting ? std::nullopt : std::optional<int>(copies);
+    }
+
     DiscardRating BestDiscard(const TileCounts& counts, int meldCount, const TableView& view, MahjongRng& rng) {
         const BestDiscards best = FindBestDiscards(counts, meldCount, view);
         if (best.candidates.empty()) {
@@ -273,6 +288,11 @@ namespace BECore::Mahjong {
     HandAction ChooseTurnAction(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
         if (const HandAction* win = FindAction(view, ActionKind::DeclareWin)) {
             return *win;
+        }
+        if (profile.searchWorlds > 0) {
+            if (const std::optional<HandAction> searched = SearchTurnAction(view, rng, profile)) {
+                return *searched;
+            }
         }
         if (const std::optional<HandAction> declaration = ChooseWaitingDiscard(view, rng, true)) {
             if (!Roll(rng, profile.skipDeclarationPercent)) {

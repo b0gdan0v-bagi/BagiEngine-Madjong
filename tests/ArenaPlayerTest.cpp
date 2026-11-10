@@ -37,7 +37,8 @@ namespace BECore::Mahjong::Arena {
 
         bool SameProfile(const LevelProfile& left, const LevelProfile& right) {
             return left.skipAcceptancePercent == right.skipAcceptancePercent && left.skipDeclarationPercent == right.skipDeclarationPercent && left.skipClaimPercent == right.skipClaimPercent &&
-                   left.takeValueClaimsAtEqualShanten == right.takeValueClaimsAtEqualShanten;
+                   left.takeValueClaimsAtEqualShanten == right.takeValueClaimsAtEqualShanten && left.searchWorlds == right.searchWorlds && left.searchCandidates == right.searchCandidates &&
+                   left.searchMargin == right.searchMargin;
         }
 
         ArenaPlayers Table(const ArenaPlayer& focus, Seat focusSeat, const ArenaPlayer& others) {
@@ -91,6 +92,22 @@ namespace BECore::Mahjong::Arena {
         EXPECT_FALSE(Player("normal:skipClaimPercent=0").random);
     }
 
+    TEST(ArenaPlayerTest, TheSearchKnobsAreSetFromTheSpec) {
+        const ArenaPlayer search = Player("normal:searchWorlds=8,searchCandidates=3,searchMargin=5");
+        EXPECT_EQ(search.profile.searchWorlds, 8);
+        EXPECT_EQ(search.profile.searchCandidates, 3);
+        EXPECT_EQ(search.profile.searchMargin, 5);
+        EXPECT_EQ(search.profile.skipClaimPercent, kNormalProfile.skipClaimPercent);
+        // Only the worlds named: the candidates and the margin stay at the neutral defaults.
+        const ArenaPlayer worlds = Player("normal:searchWorlds=2");
+        EXPECT_EQ(worlds.profile.searchWorlds, 2);
+        EXPECT_EQ(worlds.profile.searchCandidates, kNormalProfile.searchCandidates);
+        EXPECT_EQ(worlds.profile.searchMargin, kNormalProfile.searchMargin);
+        EXPECT_TRUE(Contains(ErrorOf("normal:searchWorlds=4097"), "4097"));
+        EXPECT_TRUE(Contains(ErrorOf("normal:searchMargin=101"), "101"));
+        EXPECT_TRUE(Contains(ErrorOf("normal:searchCandidates=13"), "13"));
+    }
+
     TEST(ArenaPlayerTest, ABadSpecIsAnErrorThatNamesThePart) {
         EXPECT_TRUE(Contains(ErrorOf(""), "empty"));
         EXPECT_TRUE(Contains(ErrorOf("Normal"), "\"Normal\""));
@@ -112,18 +129,24 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaPlayerTest, TheKnobsTableCoversEveryFieldOfTheProfile) {
-        // Each row sets its own field and no other; between them the rows set all four fields of `LevelProfile` (a fifth field
+        // Each row sets its own field and no other; between them the rows set all seven fields of `LevelProfile` (an eighth field
         // without a row stops the build in ArenaPlayer.cpp, which names every field).
         eastl::array<bool, kProfileFieldCount> moved{};
         for (const ProfileKnob& knob : kProfileKnobs) {
             ASSERT_NE(knob.percent == nullptr, knob.flag == nullptr) << knob.name.data() << ": exactly one member";
             const std::string name(knob.name.data(), knob.name.size());
-            // Normal has every percent at 0 and the flag on, so the other value is the largest percent and the flag off.
+            // Normal has every percent, the worlds and the margin at 0, the candidates at their default and the flag on, so the other value
+            // is the largest value and the flag off.
             const int other = knob.percent != nullptr ? knob.maxValue : 0;
             const ArenaPlayer player = Player("normal:" + name + "=" + std::to_string(other));
             const LevelProfile& set = player.profile;
-            const bool changed[kProfileFieldCount] = {set.skipAcceptancePercent != kNormalProfile.skipAcceptancePercent, set.skipDeclarationPercent != kNormalProfile.skipDeclarationPercent,
-                                                      set.skipClaimPercent != kNormalProfile.skipClaimPercent, set.takeValueClaimsAtEqualShanten != kNormalProfile.takeValueClaimsAtEqualShanten};
+            const bool changed[kProfileFieldCount] = {set.skipAcceptancePercent != kNormalProfile.skipAcceptancePercent,
+                                                      set.skipDeclarationPercent != kNormalProfile.skipDeclarationPercent,
+                                                      set.skipClaimPercent != kNormalProfile.skipClaimPercent,
+                                                      set.takeValueClaimsAtEqualShanten != kNormalProfile.takeValueClaimsAtEqualShanten,
+                                                      set.searchWorlds != kNormalProfile.searchWorlds,
+                                                      set.searchCandidates != kNormalProfile.searchCandidates,
+                                                      set.searchMargin != kNormalProfile.searchMargin};
             EXPECT_EQ(std::count(changed, changed + kProfileFieldCount, true), 1) << name;
             for (size_t index = 0; index < kProfileFieldCount; ++index) {
                 moved[index] = moved[index] || changed[index];

@@ -22,7 +22,7 @@ namespace BECore::Mahjong {
         };
 
         /// The seat that holds East when `view.seat` has `view.seatWind`.
-        Seat EastOf(const TableView& view) noexcept {
+        Seat EastSeatOf(const TableView& view) noexcept {
             return (view.seat - static_cast<int>(view.seatWind) + kSeatCount) % kSeatCount;
         }
 
@@ -99,7 +99,7 @@ namespace BECore::Mahjong {
         if (view.phase == Phase::RobKong && !HasOpenPung(view.seats[view.currentSeat].openMelds, view.pendingTile)) {
             return std::nullopt;
         }
-        const Seat east = EastOf(view);
+        const Seat east = EastSeatOf(view);
 
         // The pool: the copies nobody here can see.
         KindNumbers unseen{};

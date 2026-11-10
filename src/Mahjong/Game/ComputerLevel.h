@@ -41,6 +41,13 @@ namespace BECore::Mahjong {
     /// The base of a percentage: a roll is one `MahjongRng::Below(kPercentBase)` against the percent.
     inline constexpr int kPercentBase = 100;
 
+    /// The search knobs of `LevelProfile`: the candidates a search decision looks at when nothing else is said (neutral while
+    /// `searchWorlds` is 0), and the largest value of each knob (what the arena accepts from the command line).
+    inline constexpr int kSearchDefaultCandidates = 4;
+    inline constexpr int kSearchMaxWorlds = 4096;
+    inline constexpr int kSearchMaxCandidates = 12;
+    inline constexpr int kSearchMaxMargin = 100;
+
     /**
      * @brief The numbers a level plays by: what the choosers of `ComputerTurn.h` and `ComputerClaim.h` do differently from the Normal
      * player. Every knob of `kNormalProfile` is off, and **a knob that is off draws nothing from the rng**, so Normal's stream is the
@@ -58,6 +65,15 @@ namespace BECore::Mahjong {
         int skipClaimPercent = 0;
         /// Whether a pung or kong of a value tile (a dragon, the own wind, the round wind) is taken at an equal shanten, for the double.
         bool takeValueClaimsAtEqualShanten = true;
+        /// The search (`ComputerSearch.h`): the number of sampled worlds each candidate is played out in, 0 = no search at all (no number
+        /// drawn, the choosers answer as before). A level's search is its profile: it is off in `kNormalProfile` and `kEasyProfile`.
+        int searchWorlds = 0;
+        /// At most this many candidates are looked at in a search decision, Normal's own choice among them (below 2 there is nothing to
+        /// compare). Unused while `searchWorlds` is 0.
+        int searchCandidates = kSearchDefaultCandidates;
+        /// Normal's choice is replaced only when the best candidate's mean advantage in points is above this many tenths of the standard
+        /// error of the paired difference (0: the best mean wins, if it is above 0). Unused while `searchWorlds` is 0.
+        int searchMargin = 0;
     };
 
     /// The Normal player: every knob off.

@@ -7,7 +7,7 @@
 namespace BECore::Mahjong::Arena {
 
     /// One knob of `LevelProfile` the arena can set from a text: its name (the member's name), where it lives in the profile and the
-    /// largest value (a percent is 0..100, a bool 0..1; the smallest is always 0). **The one place to add a knob for an experiment:** a
+    /// largest value (a percent is 0..100, a bool 0..1, a count of the search `kSearchMax...`; the smallest is always 0). **The one place to add a knob for an experiment:** a
     /// new field of `LevelProfile` needs a row here and a larger `kProfileFieldCount` (the build stops in ArenaPlayer.cpp, which names
     /// every field, and `ArenaPlayerTest` fails when a row does not move its own field).
     struct ProfileKnob {
@@ -19,13 +19,16 @@ namespace BECore::Mahjong::Arena {
     };
 
     /// The number of fields of `LevelProfile`, and so of rows of `kProfileKnobs`.
-    inline constexpr size_t kProfileFieldCount = 4;
+    inline constexpr size_t kProfileFieldCount = 7;
 
     inline constexpr eastl::array<ProfileKnob, kProfileFieldCount> kProfileKnobs{{
         {"skipAcceptancePercent", &LevelProfile::skipAcceptancePercent, nullptr, kPercentBase},
         {"skipDeclarationPercent", &LevelProfile::skipDeclarationPercent, nullptr, kPercentBase},
         {"skipClaimPercent", &LevelProfile::skipClaimPercent, nullptr, kPercentBase},
         {"takeValueClaimsAtEqualShanten", nullptr, &LevelProfile::takeValueClaimsAtEqualShanten, 1},
+        {"searchWorlds", &LevelProfile::searchWorlds, nullptr, kSearchMaxWorlds},
+        {"searchCandidates", &LevelProfile::searchCandidates, nullptr, kSearchMaxCandidates},
+        {"searchMargin", &LevelProfile::searchMargin, nullptr, kSearchMaxMargin},
     }};
 
     /// Who sits on a seat: the random "seek win" chooser, or a computer player that plays by `profile`. `name` is the text it was made

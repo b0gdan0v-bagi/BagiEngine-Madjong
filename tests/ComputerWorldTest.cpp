@@ -33,8 +33,8 @@ namespace BECore::Mahjong::Tests {
         constexpr uint32_t kRngDraws = 3;
         constexpr uint32_t kRngRange = 1000000000;
         constexpr int kStepLimit = 2000;
-        /// A declared opponent with at least this many melds (4 hidden tiles or fewer) waits in the sample almost always: measured 812 of
-        /// 812 (3 melds) and 406 of 406 (4 melds) on 100 playouts; with 2 melds (7 hidden tiles) 137 of 252, with fewer almost never.
+        /// A declared opponent with at least this many melds (4 hidden tiles or fewer) waits in the sample almost always (3 and 4 melds:
+        /// every sample waited when this was measured); with 2 melds (7 hidden tiles) about half of the samples do, with fewer almost never.
         constexpr int kMeldsThatWaitEasily = 3;
         constexpr double kEasyWaitShare = 0.95;
         constexpr int kMeldsThatWaitOften = 2;

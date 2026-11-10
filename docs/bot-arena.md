@@ -44,8 +44,10 @@ hands per focus player), `--time`, `--help`. Exit code 0 is done, 1 is an action
 printed), 2 is a bad argument (printed with the usage).
 
 A player is `random`, `easy`, `normal`, or a level with knobs of `LevelProfile`, `<level>:<knob>=<value>,...` (the knobs are
-`skipAcceptancePercent`, `skipDeclarationPercent`, `skipClaimPercent` (0..100) and `takeValueClaimsAtEqualShanten` (0 or 1); the level's
-profile is the start and the knobs are set on it). In `--focus` a part with an `=` and no `:` goes on the knobs of the player before it,
+`skipAcceptancePercent`, `skipDeclarationPercent`, `skipClaimPercent` (0..100), `takeValueClaimsAtEqualShanten` (0 or 1) and the three knobs of
+the search player, `searchWorlds` (0..4096, 0 = no search), `searchCandidates` (0..12, default 4) and `searchMargin` (0..100 tenths of a standard
+error), see `CLAUDE.md`, "Computer player"; the level's profile is the start and the knobs are set on it). A search seat is slow: one decision
+plays `searchWorlds` x candidates whole hands, so `normal:searchWorlds=2,searchCandidates=3` takes minutes on 20 seeds in Debug. In `--focus` a part with an `=` and no `:` goes on the knobs of the player before it,
 so `normal,easy:skipClaimPercent=20,skipDeclarationPercent=10` is two players. (Hard was removed on the owner's decision; it
 comes back as the search player of `mahjong-bot-search`.) `random` is the "seek win" seat of `ComputerStrengthTest` (wins when it can, declares when it can, builds a set
 when it can, else any legal action).
