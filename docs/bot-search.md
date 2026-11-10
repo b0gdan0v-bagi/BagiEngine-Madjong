@@ -187,7 +187,7 @@ No range was replayed with other knobs, and no range or budget was chosen after 
 improved (the search over Normal plays Normal against itself); a sample of the opponents' hands that knows the waits of declared
 hands exactly; a win-rate objective compared with the points one; and many more rollouts, which is only possible off the frame
 (a worker thread) or with a faster rollout; the arena already plays the worlds of one decision on many cores ("One decision on
-many cores"), the game does not. Each of these is a separate entry; none was tried here.
+many cores"); in the game, only one thread plays them. Each of these is a separate entry; none was tried here.
 
 ## One decision on many cores
 

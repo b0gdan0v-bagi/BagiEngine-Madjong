@@ -14,8 +14,9 @@
  * hands, +31730 points), a bad config and the threads: the same config at 1, 2 and 5 jobs gives equal results and the same report text,
  * and a hand that fails gives the error of the lowest seed whatever the number of threads. The second level of threads (`WorldThreads`, the
  * worlds of a search decision): the pool runs every index once and serves many calls, a search focus player with few seeds gives the same
- * result and report at 1, 2 and 5 jobs, and the split of `jobs` between the seeds and the worlds is what `ArenaConfig::jobs` says. Pure logic: no engine services; the file takes about 8 s in Debug
- * (few seeds, the 60 seeds of `ComputerStrengthTest` played once for Normal and Easy together).
+ * result and report at 1, 2 and 5 jobs, and the split of `jobs` between the seeds and the worlds is what `ArenaConfig::jobs` says. Pure logic: no engine services; the file takes about 16 s in Debug
+ * (few seeds, the 60 seeds of `ComputerStrengthTest` played once for Normal and Easy together; 7 s of it is the search case, the search
+ * seeds being the dear ones: a seed is four hands of a search seat, about 1.2 s).
  */
 namespace BECore::Mahjong::Arena {
 
@@ -30,7 +31,9 @@ namespace BECore::Mahjong::Arena {
         constexpr int kNegativeSeeds = -3;
         /// The seeds of the thread tests (cheap in Debug) and the thread counts: one, two, and more than a seed per thread cannot be.
         constexpr int kThreadSeeds = 6;
-        constexpr int kJobCounts[] = {1, 2, 5};
+        constexpr int kFewJobs = 2;
+        constexpr int kManyJobs = 5;
+        constexpr int kJobCounts[] = {1, kFewJobs, kManyJobs};
         constexpr int kTooManyJobs = kMaxJobs + 1;
         /// A search focus player that is cheap in Debug; with few seeds the worlds level of the threads is the one that has work.
         constexpr const char* kSearchFocus = "normal:searchWorlds=1,searchCandidates=2,searchMargin=0";
@@ -331,24 +334,27 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaRunTest, ASearchFocusPlayerWithFewSeedsGivesTheSameResultAtAnyJobs) {
-        // One seed against 1, 2 and 5 jobs (one seed thread of 1, 2 and 5 world threads), two seeds against 1 and 5 (5 jobs over 2 seeds is
-        // 2 seed threads of 2 world threads each); `jobs` 1 is the run the others are compared with.
-        for (const int count : {1, kTwoSeeds}) {
-            ArenaConfig config = ConfigOf({kSearchFocus}, "random", count);
-            const ArenaResult single = PlayConfig(config);
-            const eastl::string singleReport = FormatArenaReport(single);
-            EXPECT_GT(single.focus.at(0).focus.decisions, 0);
-            for (const int jobs : kJobCounts) {
-                // `jobs` 1 is the run just made; two seeds on 2 jobs is the seed level alone, which the other tests cover.
-                if (jobs == 1 || (count == kTwoSeeds && jobs == 2)) {
-                    continue;
-                }
-                config.jobs = jobs;
-                const ArenaResult threaded = PlayConfig(config);
-                ASSERT_EQ(threaded.focus.size(), single.focus.size());
-                EXPECT_TRUE(SameFocus(single.focus[0], threaded.focus[0])) << "seeds " << count << " jobs " << jobs;
-                EXPECT_EQ(FormatArenaReport(threaded), singleReport) << "seeds " << count << " jobs " << jobs;
-            }
+        // The run at `jobs` 1 on two seeds is the one the others are compared with: all of it against 5 jobs (2 seed threads of 2 world
+        // threads each), and its first seed alone, which is the run of one seed, against 2 and 5 jobs (one seed thread of 2 and 5 world
+        // threads). A search seed is the dear part of the file in Debug, so no run is made twice.
+        ArenaConfig config = ConfigOf({kSearchFocus}, "random", kTwoSeeds);
+        const ArenaResult single = PlayConfig(config);
+        const eastl::string singleReport = FormatArenaReport(single);
+        EXPECT_GT(single.focus.at(0).focus.decisions, 0);
+        config.jobs = kManyJobs;
+        const ArenaResult threaded = PlayConfig(config);
+        ASSERT_EQ(threaded.focus.size(), single.focus.size());
+        EXPECT_TRUE(SameFocus(single.focus[0], threaded.focus[0])) << "seeds " << kTwoSeeds << " jobs " << config.jobs;
+        EXPECT_EQ(FormatArenaReport(threaded), singleReport) << "seeds " << kTwoSeeds << " jobs " << config.jobs;
+
+        config.count = 1;
+        for (const int jobs : {kFewJobs, kManyJobs}) {
+            config.jobs = jobs;
+            const ArenaResult one = PlayConfig(config);
+            ASSERT_EQ(one.focus.size(), single.focus.size());
+            ASSERT_EQ(one.focus[0].rows.size(), 1u);
+            ASSERT_FALSE(single.focus[0].rows.empty());
+            EXPECT_TRUE(SameRows(one.focus[0].rows, {single.focus[0].rows.front()})) << "one seed, jobs " << jobs;
         }
     }
 

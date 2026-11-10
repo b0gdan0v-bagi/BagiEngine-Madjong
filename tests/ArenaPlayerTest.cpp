@@ -13,7 +13,7 @@
  * `LevelProfile`, the random "seek win" chooser and `PlayArenaHand`. The last part is the point of the arena: it plays the hands of
  * `ComputerStrengthTest` (seeds 4000..4059, Normal on each seat in turn against three random seats) to the same numbers, 186 wins of
  * 240, 27 won by the random seats together, 27 drawn hands, +31730 points for the focus seat. Pure logic: no engine services; about
- * 3 s in Debug.
+ * 6 s in Debug (2 s of it the search seat with and without a loop over its worlds).
  */
 namespace BECore::Mahjong::Arena {
 
