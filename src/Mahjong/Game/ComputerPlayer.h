@@ -2,10 +2,18 @@
 
 #include <EASTL/array.h>
 #include <Mahjong/Game/ComputerLevel.h>
+#include <Mahjong/Game/ComputerSearch.h>
 #include <Mahjong/Game/ComputerView.h>
 #include <Mahjong/Game/Match.h>
 
 namespace BECore::Mahjong {
+
+    /// What `ComputerPlayer::Begin` hands back: exactly one member is set. `action` is the answer; `run` is a search that is begun and
+    /// not yet played (the caller steps it to its end, wherever, and takes `Result()`).
+    struct PlayerDecision {
+        std::optional<HandAction> action;
+        std::optional<SearchRun> run;
+    };
 
     /**
      * @brief One computer seat: looks at its `TableView` and chooses an element of `view.legal`.
@@ -28,6 +36,12 @@ namespace BECore::Mahjong {
         /// An element of `view.legal`. The caller asks only a seat that can act: a view with no legal action asserts in debug and answers
         /// `Pass` (which the model then refuses).
         [[nodiscard]] HandAction Choose(const TableView& view);
+
+        /// `Choose` in two halves: a decision that is a search comes back as a begun `SearchRun` (the player's rng has made its one draw,
+        /// as in `Choose`), every other one comes back as the action `Choose` gives. Finishing the run (`Step()` to `Done()`, then
+        /// `Result()`) gives what `Choose` would have given from the same state, and leaves the rng where `Choose` leaves it. The
+        /// preconditions of `Choose` hold.
+        [[nodiscard]] PlayerDecision Begin(const TableView& view);
 
         /// `Choose` on `MakeTableView(model, seat)`; nullopt when `model.LegalActions(seat)` is empty (nothing to do, or not a seat).
         [[nodiscard]] std::optional<HandAction> Decide(const HandModel& model, Seat seat);
@@ -74,8 +88,23 @@ namespace BECore::Mahjong {
         [[nodiscard]] static Seat NextActor(const HandModel& model);
 
         /// One action of the next actor, applied. `WrongPhase` on a finished hand, `NotYourTurn` when the next actor has no legal action
-        /// (cannot happen on a model that is not finished), otherwise the error of `Apply`.
+        /// (cannot happen on a model that is not finished), otherwise the error of `Apply`. `BeginStep`, the run stepped to its end,
+        /// `FinishStep`.
         StepResult Step(HandModel& model);
+
+        /// What `BeginStep` found: the seat that acts and its decision (`PlayerDecision`: an action, or a search to run).
+        struct BegunStep {
+            Seat actor = kNoSeat;
+            PlayerDecision decision;
+        };
+
+        /// The first half of `Step`: the next actor asks its player to `Begin` on `MakeTableView(model, actor)`. `WrongPhase` on a
+        /// finished hand, `NotYourTurn` when the actor has no legal action. The model is not changed; the actor's rng has drawn what
+        /// `Choose` draws (for a search, the one number of its run).
+        [[nodiscard]] std::expected<BegunStep, HandError> BeginStep(const HandModel& model);
+
+        /// The second half: `action` of `actor` applied through `HandModel::Apply`; the refusal comes back as `Step` returns it.
+        static StepResult FinishStep(HandModel& model, Seat actor, const HandAction& action);
 
         /// `Step` until the hand is finished; the first refusal ends it and is returned.
         HandStatus PlayHand(HandModel& model);

@@ -131,6 +131,32 @@ namespace BECore::Mahjong::Tests {
             return view.phase == Phase::Discard ? ChooseTurnAction(view, rng, kNormalProfile) : ChooseClaimAction(view, rng, kNormalProfile);
         }
 
+        std::optional<SearchRun> Begin(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
+            return view.phase == Phase::Discard ? BeginTurnSearch(view, rng, profile) : BeginClaimSearch(view, rng, profile);
+        }
+
+        std::optional<HandAction> AtOnce(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
+            return view.phase == Phase::Discard ? SearchTurnAction(view, rng, profile) : SearchClaimAction(view, rng, profile);
+        }
+
+        /// Steps `run` one `Step()` at a time to its end, checking the counters on the way; returns the number of steps taken.
+        int StepToEnd(SearchRun& run, const std::string& where) {
+            int steps = 0;
+            int done = run.StepsDone();
+            while (!run.Done()) {
+                run.Step();
+                ++steps;
+                EXPECT_GE(run.StepsDone(), done) << where;
+                done = run.StepsDone();
+                EXPECT_LE(steps, run.StepsTotal()) << where;
+                if (steps > run.StepsTotal()) {
+                    break;
+                }
+            }
+            EXPECT_EQ(run.StepsDone(), run.StepsTotal()) << where;
+            return steps;
+        }
+
         HandAction Searching(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
             return view.phase == Phase::Discard ? ChooseTurnAction(view, rng, profile) : ChooseClaimAction(view, rng, profile);
         }
@@ -369,6 +395,103 @@ namespace BECore::Mahjong::Tests {
             }
             // The search can leave Normal's choice: with no margin it does somewhere (a fact of these seeds, not a promise of the rule).
             EXPECT_GT(overridden, 0) << (turn ? "turns" : "windows");
+        }
+    }
+
+    // ----- the resumable run -----
+
+    TEST(ComputerSearchTest, ASteppedRunGivesTheAtOnceAnswerAndLeavesTheRngWhereTheAtOnceCallDoes) {
+        constexpr size_t kViewsPerPhase = 2;
+        struct Knobs {
+            int worlds;
+            int margin;
+        };
+        for (const bool turn : {true, false}) {
+            const eastl::vector<TableView> views = FindDecisions(turn);
+            ASSERT_GE(views.size(), kViewsPerPhase);
+            for (size_t i = 0; i < kViewsPerPhase; ++i) {
+                for (const Knobs knobs : {Knobs{1, 0}, Knobs{2, 30}, Knobs{5, 0}, Knobs{5, 30}}) {
+                    const LevelProfile profile = SearchProfile(knobs.worlds, kCandidates, knobs.margin);
+                    const std::string where = std::string(turn ? "turn " : "window ") + std::to_string(i) + " worlds " + std::to_string(knobs.worlds) + " margin " + std::to_string(knobs.margin);
+                    MahjongRng atOnce(kRngSeed + static_cast<uint32_t>(i));
+                    MahjongRng begun(kRngSeed + static_cast<uint32_t>(i));
+                    const std::optional<HandAction> expected = AtOnce(views[i], atOnce, profile);
+                    std::optional<SearchRun> run = Begin(views[i], begun, profile);
+                    ASSERT_EQ(run.has_value(), expected.has_value()) << where;
+                    ASSERT_TRUE(run.has_value()) << where;
+                    // The one draw is made by the factory, before any step.
+                    EXPECT_EQ(RngState(begun), RngState(atOnce)) << where;
+                    EXPECT_FALSE(run->Done()) << where;
+                    EXPECT_EQ(run->StepsDone(), 0) << where;
+                    EXPECT_GE(run->StepsTotal(), knobs.worlds * kSearchMinCandidates) << where;
+                    EXPECT_LE(run->StepsTotal(), knobs.worlds * kCandidates) << where;
+                    StepToEnd(*run, where);
+                    EXPECT_EQ(run->Result(), *expected) << where;
+                    EXPECT_EQ(RngState(begun), RngState(atOnce)) << where;
+                }
+            }
+        }
+    }
+
+    TEST(ComputerSearchTest, AStepAfterTheEndChangesNothingAndACopyOfAHalfSteppedRunFinishesAlike) {
+        for (const bool turn : {true, false}) {
+            const eastl::vector<TableView> views = FindDecisions(turn);
+            ASSERT_FALSE(views.empty());
+            const TableView& view = views.front();
+            const LevelProfile profile = SearchProfile(3, kCandidates);
+            MahjongRng rng(kRngSeed);
+            std::optional<SearchRun> run = Begin(view, rng, profile);
+            ASSERT_TRUE(run.has_value());
+            const int half = run->StepsTotal() / 2;
+            for (int i = 0; i < half; ++i) {
+                run->Step();
+            }
+            ASSERT_FALSE(run->Done());
+            SearchRun copy = *run;
+            EXPECT_EQ(copy.StepsDone(), run->StepsDone());
+            StepToEnd(*run, "original");
+            // The copy was not moved by the original's steps, and finishes with the same answer.
+            EXPECT_EQ(copy.StepsDone(), half);
+            StepToEnd(copy, "copy");
+            EXPECT_EQ(copy.Result(), run->Result());
+
+            const HandAction answer = run->Result();
+            const int done = run->StepsDone();
+            run->Step();
+            run->Step();
+            EXPECT_TRUE(run->Done());
+            EXPECT_EQ(run->StepsDone(), done);
+            EXPECT_EQ(run->Result(), answer);
+        }
+    }
+
+    TEST(ComputerSearchTest, TheFactoriesAnswerNothingAndDrawNothingWhereTheAtOnceCallsDid) {
+        const LevelProfile profile = SearchProfile();
+        const auto expectNone = [&](const TableView& view, const LevelProfile& used, const char* what) {
+            MahjongRng rng(kRngSeed);
+            EXPECT_FALSE(Begin(view, rng, used).has_value()) << what;
+            EXPECT_EQ(RngState(rng), RngState(MahjongRng(kRngSeed))) << what;
+            MahjongRng reference(kRngSeed);
+            EXPECT_FALSE(AtOnce(view, reference, used).has_value()) << what;
+        };
+
+        HandModel winning = MakeModel(SpecOf("1p 2p 3p 4s 5s 6s 7m 8m 9m Ew Ew Ew Rd", "9p Wd Gd Nw Rd"));
+        Lap(winning, "9p Wd Gd Nw", {kSeat0});
+        expectNone(MakeTableView(winning, kSeat0), profile, "declare win");
+
+        HandModel robbing = UpgradeModel({kSeat2});
+        ASSERT_TRUE(robbing.UpgradeKong(kSeat1, T("5p")).has_value());
+        expectNone(MakeTableView(robbing, kSeat2), profile, "mahjong claim");
+        expectNone(MakeTableView(robbing, kSeat3), profile, "no listed action");
+        expectNone(MakeTableView(MakeModel(SpecOf("1s 2s 3s 4s 5s 6s 7m 8m 9m 5p 6p Ew Ew", "9s")), kSeat0), profile, "single candidate");
+
+        // The knob off, and fewer than two candidates asked for.
+        const TableView turn = MakeTableView(TurnModel(), kSeat0);
+        const TableView window = MakeTableView(WindowModel(kPungHand, "5p"), kSeat1);
+        for (const TableView* view : {&turn, &window}) {
+            expectNone(*view, kNormalProfile, "knob off");
+            expectNone(*view, SearchProfile(kWorlds, 1), "one candidate asked for");
+            expectNone(*view, SearchProfile(0, kCandidates), "no worlds");
         }
     }
 

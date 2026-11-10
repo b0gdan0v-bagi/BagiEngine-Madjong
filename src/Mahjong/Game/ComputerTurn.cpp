@@ -1,7 +1,5 @@
 #include "ComputerTurn.h"
 
-#include <Mahjong/Game/ComputerSearch.h>
-
 namespace BECore::Mahjong {
 
     namespace {
@@ -274,12 +272,16 @@ namespace BECore::Mahjong {
         return {first, best.shanten, best.acceptance};
     }
 
-    HandAction ChooseTurnAction(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
+    HandAction ChooseTurnAction(const TableView& view, MahjongRng& rng, const LevelProfile& profile, SearchHandoff* handoff) {
         if (const HandAction* win = FindAction(view, ActionKind::DeclareWin)) {
             return *win;
         }
         if (profile.searchWorlds > 0) {
-            if (const std::optional<HandAction> searched = SearchTurnAction(view, rng, profile)) {
+            if (handoff != nullptr) {
+                if ((handoff->run = BeginTurnSearch(view, rng, profile))) {
+                    return HandAction::MakePass();
+                }
+            } else if (const std::optional<HandAction> searched = SearchTurnAction(view, rng, profile)) {
                 return *searched;
             }
         }

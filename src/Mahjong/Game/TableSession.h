@@ -37,6 +37,60 @@ namespace BECore::Mahjong {
     struct ReplayError;
 
     /**
+     * @brief One step of a computer actor, begun and not yet applied (`TableSession::BeginComputerStep`): a value type that holds
+     *        copies only and no pointer to the session, so it can be run on another thread and dropped with nothing changed.
+     *
+     * The decision is ready (an action: `Ready()`) or a search to play (`Step()` plays one rollout, `Run()` all of them). The
+     * `Version()` and `StartCount()` are those of the session when the job was begun; `FinishComputerStep` applies it only while
+     * both are unchanged. `Action()` is valid when `Done()`.
+     */
+    class ComputerStepJob {
+    public:
+        /// The seat that acts.
+        [[nodiscard]] Seat Actor() const noexcept {
+            return _actor;
+        }
+        /// The decision needs no search: `Done()` from the start.
+        [[nodiscard]] bool Ready() const noexcept {
+            return _decision.action.has_value();
+        }
+        [[nodiscard]] bool Done() const noexcept {
+            return Ready() || (_decision.run && _decision.run->Done());
+        }
+        /// One rollout of the search; nothing for a ready or a done job.
+        void Step() {
+            if (_decision.run && !_decision.run->Done()) {
+                _decision.run->Step();
+            }
+        }
+        /// `Step` until `Done()`.
+        void Run() {
+            while (!Done()) {
+                Step();
+            }
+        }
+        /// The action chosen; valid when `Done()`.
+        [[nodiscard]] HandAction Action() const {
+            return Ready() ? *_decision.action : _decision.run->Result();
+        }
+        /// `TableSession::Version()` / `StartCount()` when the job was begun.
+        [[nodiscard]] uint64_t Version() const noexcept {
+            return _version;
+        }
+        [[nodiscard]] uint64_t StartCount() const noexcept {
+            return _starts;
+        }
+
+    private:
+        friend class TableSession;
+
+        Seat _actor = kNoSeat;
+        PlayerDecision _decision;
+        uint64_t _version = 0;
+        uint64_t _starts = 0;
+    };
+
+    /**
      * @brief The one object every front end drives: a `Match` with the seats set up as people and computers. Plain C++, no scene.
      *
      * The control API, the table component and the HUD never drive `Match`, `HandModel` and `ComputerTable` by themselves, so the
@@ -48,6 +102,11 @@ namespace BECore::Mahjong {
      * - `Actor` is the seat that has to act (the first pending seat in a claim window; the result does not depend on the order).
      *   `StepComputer` plays one action of a computer actor, `RunComputers` plays until a person has to act or the hand is over,
      *   `PerformPerson` applies the action of a person actor, `NextHand` settles a finished hand and deals on.
+     * - A computer's step in two halves (a search seat may take long, so a front end can compute it elsewhere): `BeginComputerStep`
+     *   makes a `ComputerStepJob` (the player's rng draws here, on the caller's thread) and `FinishComputerStep` applies a done job
+     *   as `StepComputer` does, but only while `Version()` and `StartCount()` are those of the job: any change in between (a start, a
+     *   resume, another step, a person's action, a settled hand, a `Reveal` that moved the viewer) makes it stale and nothing changes.
+     *   `StepComputer` is both halves with the job run to its end, so its answers do not depend on who runs the job.
      * - `Version` grows on every change a front end must see (a start, a step, an accepted action, a settled hand, a `Reveal` that
      *   changes the viewer) and never goes back, so a front end redraws or publishes only when it moved. A refused call changes nothing.
      * - Hot seat: with exactly one person that seat is the viewer always (no cover); with none the viewer is `kNoSeat` (a spectator
@@ -74,6 +133,10 @@ namespace BECore::Mahjong {
         MatchStatus StartMatch(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats, const SeatLevels& levels);
         /// `StartMatch` with `UniformLevels(level)`.
         MatchStatus StartMatch(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats, ComputerLevel level = kDefaultLevel);
+        /// `StartMatch` where every computer seat plays by `profile` (a profile that is no level, e.g. a search seat; the seam of the
+        /// tests). `Levels()` and the log's `Start` event report `kDefaultLevel`, and a saved match does not keep the profile: a match
+        /// resumed from a save plays by its levels.
+        MatchStatus StartMatch(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats, const LevelProfile& profile);
 
         /**
          * @brief Puts the session and its match where `events` (a log from its `Start`, `Hand` and `End` events optional) left them,
@@ -127,6 +190,12 @@ namespace BECore::Mahjong {
         /// One action of the actor, chosen by its computer player and applied. `WrongPhase` unless `Playing`, `NotYourTurn` when the
         /// actor is a person.
         StepResult StepComputer();
+        /// The first half of `StepComputer`: the job of the actor's step, the player's rng drawn, the model and the version unchanged.
+        /// `nullopt` (nothing drawn) unless `Playing` with a computer as the actor.
+        [[nodiscard]] std::optional<ComputerStepJob> BeginComputerStep();
+        /// The second half: `job` (done) is applied, logged and counted as `StepComputer` does, and its `StepResult` returned; `nullopt`
+        /// when the job is stale (`Version()` or `StartCount()` is not the job's), with nothing changed or logged.
+        [[nodiscard]] std::optional<StepResult> FinishComputerStep(const ComputerStepJob& job);
         /// `StepComputer` until a person has to act or the hand is over: the number of steps. At most `kMaxComputerSteps`; more
         /// (or a refused step) is a defect and asserts.
         int RunComputers();
@@ -159,6 +228,12 @@ namespace BECore::Mahjong {
         }
 
     private:
+        /// `StartMatch` with the table of `levels`, or of `profile` when it is not null.
+        MatchStatus StartWith(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats, const SeatLevels& levels, const LevelProfile* profile);
+        /// The job of the actor's step, or why there is none (the errors of `StepComputer`).
+        [[nodiscard]] std::expected<ComputerStepJob, HandError> MakeComputerJob();
+        /// Applies the done `job`, then logs, covers and bumps the version.
+        StepResult ApplyComputerJob(const ComputerStepJob& job);
         /// After every change of the actor: with two or more people the viewer is `kNoSeat` when another person has to act.
         void CoverForNextPerson();
         /// Reports the action the actor `seat` has just done.

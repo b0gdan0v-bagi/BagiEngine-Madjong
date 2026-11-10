@@ -136,51 +136,6 @@ namespace BECore::Mahjong {
             return margin <= 0 || (difference.error > 0.0 && difference.mean > margin * kSearchMarginUnit * difference.error);
         }
 
-        /// The search proper over `candidates` (the baseline first, at least two): one number from `rng`, then the worlds.
-        std::optional<HandAction> Search(const TableView& view, MahjongRng& rng, const LevelProfile& profile, const eastl::vector<HandAction>& candidates) {
-            if (static_cast<int>(candidates.size()) < kSearchMinCandidates) {
-                return std::nullopt;
-            }
-            const uint32_t base = rng.Below(kSearchBaseSeedRange);
-            eastl::vector<eastl::vector<int>> values(candidates.size());
-            for (int world = 0; world < profile.searchWorlds; ++world) {
-                const uint32_t index = static_cast<uint32_t>(world) * kSeedsPerWorld;
-                MahjongRng worldRng(DerivedSeed(base, index));
-                const std::optional<HandModel> sampled = SampleWorld(view, worldRng);
-                if (!sampled.has_value()) {
-                    continue;
-                }
-                const uint32_t tableSeed = DerivedSeed(base, index + kRolloutSeedOffset);
-                eastl::vector<int> row;
-                for (const HandAction& candidate : candidates) {
-                    const std::optional<int> value = Rollout(*sampled, view.seat, candidate, tableSeed);
-                    if (!value.has_value()) {
-                        break;
-                    }
-                    row.push_back(*value);
-                }
-                if (row.size() == candidates.size()) {
-                    for (size_t i = 0; i < row.size(); ++i) {
-                        values[i].push_back(row[i]);
-                    }
-                }
-            }
-            if (values.front().empty()) {
-                // No world could be made (the view does not fit the rules of a sample): Normal's choice, after the one draw.
-                return candidates.front();
-            }
-            size_t best = 0;
-            PairedDifference bestDifference;
-            for (size_t i = 1; i < candidates.size(); ++i) {
-                const PairedDifference difference = Difference(values[i], values.front());
-                if (difference.mean > bestDifference.mean) {
-                    best = i;
-                    bestDifference = difference;
-                }
-            }
-            return BeatsMargin(bestDifference, profile.searchMargin) ? candidates[best] : candidates.front();
-        }
-
         /// The profile of the baseline: the same numbers with the search off.
         LevelProfile WithoutSearch(const LevelProfile& profile) {
             LevelProfile plain = profile;
@@ -242,23 +197,126 @@ namespace BECore::Mahjong {
         return candidates;
     }
 
-    std::optional<HandAction> SearchTurnAction(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
+    SearchRun::SearchRun(const TableView& view, eastl::vector<HandAction> candidates, uint32_t base, const LevelProfile& profile)
+        : _view(view), _candidates(eastl::move(candidates)), _base(base), _worlds(profile.searchWorlds), _margin(profile.searchMargin), _values(_candidates.size()) {}
+
+    bool SearchRun::Done() const noexcept {
+        return _worldIndex >= _worlds;
+    }
+
+    int SearchRun::StepsDone() const noexcept {
+        return eastl::min(_worldIndex * StepsPerWorld() + _candidateIndex, StepsTotal());
+    }
+
+    int SearchRun::StepsTotal() const noexcept {
+        return _worlds * StepsPerWorld();
+    }
+
+    int SearchRun::StepsPerWorld() const noexcept {
+        return static_cast<int>(_candidates.size());
+    }
+
+    void SearchRun::NextWorld() {
+        ++_worldIndex;
+        _candidateIndex = 0;
+        _sampled.reset();
+        _row.clear();
+    }
+
+    void SearchRun::Step() {
+        if (Done()) {
+            return;
+        }
+        if (_candidateIndex == 0) {
+            const uint32_t index = static_cast<uint32_t>(_worldIndex) * kSeedsPerWorld;
+            MahjongRng worldRng(DerivedSeed(_base, index));
+            _sampled = SampleWorld(_view, worldRng);
+            if (!_sampled.has_value()) {
+                NextWorld();
+                return;
+            }
+            _tableSeed = DerivedSeed(_base, index + kRolloutSeedOffset);
+            _row.clear();
+        }
+        const std::optional<int> value = Rollout(*_sampled, _view.seat, _candidates[static_cast<size_t>(_candidateIndex)], _tableSeed);
+        if (!value.has_value()) {
+            // A defect of the sample: the world is dropped with its partial row, as a whole.
+            NextWorld();
+            return;
+        }
+        _row.push_back(*value);
+        if (++_candidateIndex == StepsPerWorld()) {
+            for (size_t i = 0; i < _row.size(); ++i) {
+                _values[i].push_back(_row[i]);
+            }
+            NextWorld();
+        }
+    }
+
+    HandAction SearchRun::Result() const {
+        if (_values.front().empty()) {
+            // No world could be made (the view does not fit the rules of a sample): Normal's choice, after the one draw.
+            return _candidates.front();
+        }
+        size_t best = 0;
+        PairedDifference bestDifference;
+        for (size_t i = 1; i < _candidates.size(); ++i) {
+            const PairedDifference difference = Difference(_values[i], _values.front());
+            if (difference.mean > bestDifference.mean) {
+                best = i;
+                bestDifference = difference;
+            }
+        }
+        return BeatsMargin(bestDifference, _margin) ? _candidates[best] : _candidates.front();
+    }
+
+    std::optional<SearchRun> BeginTurnSearch(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
         if (profile.searchWorlds <= 0 || profile.searchCandidates < kSearchMinCandidates || view.phase != Phase::Discard || view.legal.empty() || FindAction(view, ActionKind::DeclareWin) != nullptr) {
             return std::nullopt;
         }
         MahjongRng baselineRng = rng;
         const HandAction baseline = ChooseTurnAction(view, baselineRng, WithoutSearch(profile));
-        return Search(view, rng, profile, TurnCandidates(view, baseline, profile.searchCandidates));
+        eastl::vector<HandAction> candidates = TurnCandidates(view, baseline, profile.searchCandidates);
+        if (static_cast<int>(candidates.size()) < kSearchMinCandidates) {
+            return std::nullopt;
+        }
+        return SearchRun(view, eastl::move(candidates), rng.Below(kSearchBaseSeedRange), profile);
     }
 
-    std::optional<HandAction> SearchClaimAction(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
+    std::optional<SearchRun> BeginClaimSearch(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
         if (profile.searchWorlds <= 0 || profile.searchCandidates < kSearchMinCandidates || view.legal.empty() || (view.phase != Phase::Claim && view.phase != Phase::RobKong) ||
             FindMahjong(view) != nullptr) {
             return std::nullopt;
         }
         MahjongRng baselineRng = rng;
         const HandAction baseline = ChooseClaimAction(view, baselineRng, WithoutSearch(profile));
-        return Search(view, rng, profile, ClaimCandidates(view, baseline, profile.searchCandidates));
+        eastl::vector<HandAction> candidates = ClaimCandidates(view, baseline, profile.searchCandidates);
+        if (static_cast<int>(candidates.size()) < kSearchMinCandidates) {
+            return std::nullopt;
+        }
+        return SearchRun(view, eastl::move(candidates), rng.Below(kSearchBaseSeedRange), profile);
+    }
+
+    namespace {
+
+        std::optional<HandAction> RunToEnd(std::optional<SearchRun> run) {
+            if (!run.has_value()) {
+                return std::nullopt;
+            }
+            while (!run->Done()) {
+                run->Step();
+            }
+            return run->Result();
+        }
+
+    }  // namespace
+
+    std::optional<HandAction> SearchTurnAction(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
+        return RunToEnd(BeginTurnSearch(view, rng, profile));
+    }
+
+    std::optional<HandAction> SearchClaimAction(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
+        return RunToEnd(BeginClaimSearch(view, rng, profile));
     }
 
 }  // namespace BECore::Mahjong

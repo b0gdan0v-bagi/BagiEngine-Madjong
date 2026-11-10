@@ -26,11 +26,23 @@ namespace BECore::Mahjong {
         return StartMatch(settings, seed, seats, UniformLevels(level));
     }
 
+    MatchStatus TableSession::StartMatch(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats, const LevelProfile& profile) {
+        return StartWith(settings, seed, seats, UniformLevels(kDefaultLevel), &profile);
+    }
+
     MatchStatus TableSession::StartMatch(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats, const SeatLevels& levels) {
+        return StartWith(settings, seed, seats, levels, nullptr);
+    }
+
+    MatchStatus TableSession::StartWith(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats, const SeatLevels& levels, const LevelProfile* profile) {
         if (const MatchStatus started = _match.Start(settings, seed); !started) {
             return started;
         }
-        _table.emplace(seed, levels);
+        if (profile != nullptr) {
+            _table.emplace(seed, *profile);
+        } else {
+            _table.emplace(seed, levels);
+        }
         _seats = seats;
         _levels = levels;
         _viewer = PersonCount() == 1 ? OnlyPerson(_seats) : kNoSeat;
@@ -103,21 +115,59 @@ namespace BECore::Mahjong {
         return IsSeat(actor) && KindOf(actor) == SeatKind::Person;
     }
 
-    StepResult TableSession::StepComputer() {
+    std::expected<ComputerStepJob, HandError> TableSession::MakeComputerJob() {
         if (GetPhase() != SessionPhase::Playing || !_table) {
             return std::unexpected(HandError::WrongPhase);
         }
         if (ActorIsPerson()) {
             return std::unexpected(HandError::NotYourTurn);
         }
-        const Seat actor = Actor();
-        const StepResult step = _table->Step(_match.Hand());
+        std::expected<ComputerTable::BegunStep, HandError> begun = _table->BeginStep(_match.Hand());
+        if (!begun) {
+            return std::unexpected(begun.error());
+        }
+        ComputerStepJob job;
+        job._actor = begun->actor;
+        job._decision = std::move(begun->decision);
+        job._version = _version;
+        job._starts = _starts;
+        return job;
+    }
+
+    StepResult TableSession::ApplyComputerJob(const ComputerStepJob& job) {
+        const HandAction action = job.Action();
+        const StepResult step = ComputerTable::FinishStep(_match.Hand(), job.Actor(), action);
         if (step) {
-            LogAction(actor, *step);
+            LogAction(job.Actor(), *step);
             CoverForNextPerson();
             ++_version;
         }
         return step;
+    }
+
+    std::optional<ComputerStepJob> TableSession::BeginComputerStep() {
+        std::expected<ComputerStepJob, HandError> job = MakeComputerJob();
+        return job ? std::optional<ComputerStepJob>(std::move(*job)) : std::nullopt;
+    }
+
+    std::optional<StepResult> TableSession::FinishComputerStep(const ComputerStepJob& job) {
+        if (job.Version() != _version || job.StartCount() != _starts) {
+            return std::nullopt;
+        }
+        ASSERT(job.Done(), "FinishComputerStep: the job is not done");
+        if (!job.Done()) {
+            return std::unexpected(HandError::WrongPhase);
+        }
+        return ApplyComputerJob(job);
+    }
+
+    StepResult TableSession::StepComputer() {
+        std::expected<ComputerStepJob, HandError> job = MakeComputerJob();
+        if (!job) {
+            return std::unexpected(job.error());
+        }
+        job->Run();
+        return ApplyComputerJob(*job);
     }
 
     int TableSession::RunComputers() {

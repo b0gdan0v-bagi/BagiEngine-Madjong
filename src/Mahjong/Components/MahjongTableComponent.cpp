@@ -572,14 +572,6 @@ namespace BECore::Mahjong {
         }
     }
 
-    bool MahjongTableComponent::StepComputerChecked(TableSession& session) {
-        if (const StepResult stepped = session.StepComputer(); !stepped.has_value()) {
-            LOG_ERROR("MahjongTableComponent: a computer seat's action was refused");
-            return false;
-        }
-        return true;
-    }
-
     MahjongTableComponent::NewMoves MahjongTableComponent::FollowMoves(const MahjongGame& game) {
         const Match& match = game.GetMatch();
         const eastl::vector<HandMove>& moves = match.Hand().Moves();
@@ -661,6 +653,7 @@ namespace BECore::Mahjong {
     void MahjongTableComponent::OnUpdate(const SceneEvents::SceneUpdateEvent& event) {
         MahjongGame* game = MahjongGame::GetActive();
         if (game == nullptr) {
+            DropComputerStep();
             return;
         }
         _speed = game->GetAnimationSpeed();
@@ -680,36 +673,96 @@ namespace BECore::Mahjong {
                 EndFlights();  // the set that waited for its tiles blinks from the next draw on, at the start of its time
             }
         }
-        TableSession& session = game->GetSession();
-        if (!ComputerActs(*game)) {
+        PlayComputers(*game, event.deltaTime);
+    }
+
+    void MahjongTableComponent::DropComputerStep() {
+        _thinking.Drop();
+        _step.reset();
+        _burst = Burst::None;
+        _firstInWindow = false;
+    }
+
+    bool MahjongTableComponent::BeginComputerStep(TableSession& session, const HandModel& hand) {
+        std::optional<ComputerStepJob> job = session.BeginComputerStep();
+        if (!job) {
+            return false;
+        }
+        if (_burst == Burst::None) {
+            _firstInWindow = IsClaimWindow(hand.GetPhase());
+            _burstSerial = WindowSerial(hand);
+        }
+        _step = StepInProgress{job->Version(), job->StartCount()};
+        if (CoreManager::GetControlService().IsManualClock()) {
+            job->Run();  // frames are `step`s of a script there: the answer is computed at once, whatever the clock of the machine says
+        }
+        _thinking.Start(std::move(*job));
+        return true;
+    }
+
+    void MahjongTableComponent::PlayComputers(MahjongGame& game, float deltaTime) {
+        TableSession& session = game.GetSession();
+        if (!ComputerActs(game)) {
+            DropComputerStep();
             _computerClock = 0.0f;
             return;
         }
-        _computerClock += event.deltaTime;
-        if (_computerClock < Seconds(kComputerStepSeconds)) {
-            return;
+        if (_step && (_step->version != session.Version() || _step->starts != session.StartCount())) {
+            // A control action, a new match or a person got in between: the answer is for a table that is gone. The pause already spent stays
+            _thinking.Drop();
+            _step.reset();
+            _burst = Burst::None;
         }
-        _computerClock = 0.0f;  // one action a period, whatever the frame took
-        const HandModel& hand = game->GetMatch().Hand();
-        const int serialBefore = WindowSerial(hand);
-        const bool window = IsClaimWindow(hand.GetPhase());
-        if (!StepComputerChecked(session)) {
-            return;
+        const HandModel& hand = game.GetMatch().Hand();
+        const float pause = Seconds(kComputerStepSeconds);
+        if (_burst == Burst::None && _computerClock < pause) {
+            if (!_step && !BeginComputerStep(session, hand)) {
+                return;
+            }
+            _computerClock += deltaTime;
         }
-        if (!window) {
-            return;
-        }
-        // The pause after a discard is one whether or not a window opened (a longer one would tell a person that a computer holds a
-        // claim): the computers settle a window within the pause, and a computer that is to discard after it does so in the same pause.
-        while (ComputerActs(*game) && IsClaimWindow(hand.GetPhase())) {
-            if (!StepComputerChecked(session)) {
+        // Past the pause the answer is applied when it is there; a search that is still running is not waited for (no blocking)
+        while (_burst != Burst::None || _computerClock >= pause) {
+            if (!_step && !BeginComputerStep(session, hand)) {
+                return;
+            }
+            std::optional<ComputerStepJob> job = _thinking.TakeFinished();
+            if (!job) {
+                return;
+            }
+            _step.reset();
+            const std::optional<StepResult> stepped = session.FinishComputerStep(*job);
+            if (!stepped) {
+                _burst = Burst::None;
+                continue;
+            }
+            if (!stepped->has_value()) {
+                LOG_ERROR("MahjongTableComponent: a computer seat's action was refused");
+                DropComputerStep();
+                return;
+            }
+            if (_burst == Burst::None) {
+                _computerClock = 0.0f;  // one action a period, whatever the frame took
+                if (!_firstInWindow) {
+                    return;
+                }
+                _burst = Burst::Window;
+            } else if (_burst == Burst::Discard) {
+                _burst = Burst::None;
+                HoldScoreTableIfBeaten(game, _burstSerial);
+                return;
+            }
+            // The pause after a discard is one whether or not a window opened (a longer one would tell a person that a computer holds a
+            // claim): the computers settle a window within the pause, and a computer that is to discard after it does so in the same pause.
+            if (_burst == Burst::Window && !(ComputerActs(game) && IsClaimWindow(hand.GetPhase()))) {
+                _burst = Burst::Discard;
+            }
+            if (_burst == Burst::Discard && !ComputerActs(game)) {
+                _burst = Burst::None;
+                HoldScoreTableIfBeaten(game, _burstSerial);
                 return;
             }
         }
-        if (ComputerActs(*game) && !StepComputerChecked(session)) {
-            return;
-        }
-        HoldScoreTableIfBeaten(*game, serialBefore);
     }
 
     void MahjongTableComponent::PublishSelectedText(Tile tile) {

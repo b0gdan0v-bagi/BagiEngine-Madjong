@@ -1,7 +1,5 @@
 #include "ComputerClaim.h"
 
-#include <Mahjong/Game/ComputerSearch.h>
-
 namespace BECore::Mahjong {
 
     namespace {
@@ -102,7 +100,7 @@ namespace BECore::Mahjong {
         return BestDiscardRating(counts, melds, view);
     }
 
-    HandAction ChooseClaimAction(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
+    HandAction ChooseClaimAction(const TableView& view, MahjongRng& rng, const LevelProfile& profile, SearchHandoff* handoff) {
         if (const HandAction* mahjong = FindMahjong(view)) {
             return *mahjong;
         }
@@ -111,7 +109,11 @@ namespace BECore::Mahjong {
             return HandAction::MakePass();
         }
         if (profile.searchWorlds > 0) {
-            if (const std::optional<HandAction> searched = SearchClaimAction(view, rng, profile)) {
+            if (handoff != nullptr) {
+                if ((handoff->run = BeginClaimSearch(view, rng, profile))) {
+                    return HandAction::MakePass();
+                }
+            } else if (const std::optional<HandAction> searched = SearchClaimAction(view, rng, profile)) {
                 return *searched;
             }
         }
