@@ -264,4 +264,47 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
+    TEST(CenterPanelRects, TheLightRunsAlongTheEdgeOfItsSideAndTheDealerMarkLiesOnTheInnerBoundaryOfItsCellForAnyPanelSize) {
+        for (const float scale : {1.0f, 0.5f, 1.75f}) {
+            const Rect panel(472.0f * scale + 10.0f, 282.0f * scale + 20.0f, 336.0f * scale, 140.0f * scale);
+            const float width = 4.0f * scale;
+            const Rect bottom = PanelTurnLight(panel, 0, width);
+            const Rect right = PanelTurnLight(panel, 1, width);
+            const Rect top = PanelTurnLight(panel, 2, width);
+            const Rect left = PanelTurnLight(panel, 3, width);
+            EXPECT_NEAR(bottom.y + bottom.h, panel.y + panel.h, 0.001f);
+            EXPECT_NEAR(bottom.w, panel.w, 0.001f);
+            EXPECT_NEAR(top.y, panel.y, 0.001f);
+            EXPECT_NEAR(top.w, panel.w, 0.001f);
+            EXPECT_NEAR(left.x, panel.x, 0.001f);
+            EXPECT_NEAR(left.h, panel.h, 0.001f);
+            EXPECT_NEAR(right.x + right.w, panel.x + panel.w, 0.001f);
+            EXPECT_NEAR(right.h, panel.h, 0.001f);
+            for (const Rect& rect : {bottom, right, top, left}) {
+                EXPECT_NEAR(eastl::min(rect.w, rect.h), width, 0.001f);
+            }
+
+            // The cells of the node: 32 units high above and below, 108 wide at the sides (design units, scaled with the panel)
+            const float thickness = 6.0f * scale;
+            const Rect lower = PanelDealerMark(panel, 0, thickness);
+            const Rect rightMark = PanelDealerMark(panel, 1, thickness);
+            const Rect upper = PanelDealerMark(panel, 2, thickness);
+            const Rect leftMark = PanelDealerMark(panel, 3, thickness);
+            EXPECT_NEAR(upper.y, panel.y + 32.0f * scale, 0.001f);
+            EXPECT_NEAR(lower.y + lower.h, panel.y + panel.h - 32.0f * scale, 0.001f);
+            EXPECT_NEAR(upper.w, panel.w, 0.001f);
+            EXPECT_NEAR(lower.w, panel.w, 0.001f);
+            EXPECT_NEAR(leftMark.x, panel.x + 108.0f * scale, 0.001f);
+            EXPECT_NEAR(rightMark.x + rightMark.w, panel.x + panel.w - 108.0f * scale, 0.001f);
+            EXPECT_NEAR(leftMark.h, panel.h - 64.0f * scale, 0.001f);
+            EXPECT_NEAR(rightMark.h, panel.h - 64.0f * scale, 0.001f);
+            for (const Rect& rect : {lower, rightMark, upper, leftMark}) {
+                EXPECT_GE(rect.x, panel.x - 0.001f);
+                EXPECT_GE(rect.y, panel.y - 0.001f);
+                EXPECT_LE(rect.x + rect.w, panel.x + panel.w + 0.001f);
+                EXPECT_LE(rect.y + rect.h, panel.y + panel.h + 0.001f);
+            }
+        }
+    }
+
 }  // namespace BECore::Mahjong::Tests

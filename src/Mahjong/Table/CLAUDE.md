@@ -11,7 +11,7 @@ Everything here is plain C++ over the model, a `TableView` or a `UIStrings&`: no
 | `UiPalette.h` | every colour, the type scale `kFontScale`, the grid `kGridUnit` / `kGridStep`, the modal numbers; see `config/CLAUDE.md` ("UI style") |
 | `Words` | `Tr(strings, key[, args])`, `Subst`, `WindName`, `WindLetter` |
 | `SeatName`, `SeatPlates` | how a seat is named; `BottomSeat(session)` / `TurnSeat(session, hand)` — the one definition of the seat at the bottom and of whose turn it is; `MakeSeatPlates` |
-| `CenterPanel` | the centre panel inside the wall ring: `HandNumberInRound(match)` (the hand inside its round, from 1; follows `HandsPlayed()`), `MakeCenterPanel` (round text, live wall, per screen position the seat's wind letter, points, dealer, turn; public data only) |
+| `CenterPanel` | the centre panel inside the wall ring: `HandNumberInRound(match)` (the hand inside its round, from 1; follows `HandsPlayed()`), `MakeCenterPanel` (round text, live wall, per screen position the seat's wind letter, points, dealer, turn; public data only), `PanelTurnLight` / `PanelDealerMark` (the light and the dealer's mark as rectangles of the panel, by screen position) |
 | `ScoreText`, `MoveText`, `RulesText` | the sentences of the end screens, the move line and the 13 rules pages |
 | `ActionButtons` | `SpecOf` (element, action, value, word and hint keys, pictured tiles), `ButtonOf`, `MakeActionButtons(legal, pendingTile)`, `ChowTilesTaken` (the hand tiles a chow takes) |
 | `Hints`, `CallingMarks` | `WaitingTiles`, `DeclaringDiscards`, `AdviceFor` (= `ComputerPlayer(kAdviceSeed)`, Normal), `AdviceText`, `HintsApply`; `KeepsWaitingDiscards` |

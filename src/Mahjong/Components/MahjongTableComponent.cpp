@@ -12,6 +12,7 @@
 #include <Generated/MahjongTableComponent.gen.hpp>
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/Table/CallingMarks.h>
+#include <Mahjong/Table/CenterPanel.h>
 #include <Mahjong/Table/SeatName.h>
 #include <Mahjong/Table/SeatPlates.h>
 #include <Mahjong/Table/TileAtlas.h>
@@ -709,10 +710,25 @@ namespace BECore::Mahjong {
         const Rect ring = Padded(layout.zones.wall, plate);
         renderer.DrawFilledRect(ring.x, ring.y, ring.w, ring.h, kZonePlate);
 
+        // The centre panel (public data only, like the plates): its ground, the light on the edge that faces the seat whose turn it is (none
+        // unless the session plays) and the mark of the dealer in the dealer's cell (East of the hand shown, as for the plates)
+        const Seat turnSeat = TurnSeat(session, hand);
+        const Rect& panel = layout.zones.centerPanel;
+        renderer.DrawFilledRect(panel.x, panel.y, panel.w, panel.h, kSeatPlate);
+        if (IsSeat(turnSeat)) {
+            const Rect light = PanelTurnLight(panel, SeatPosition(bottom, turnSeat), kPanelTurnLightWidth * unit);
+            renderer.DrawFilledRect(light.x, light.y, light.w, light.h, kPanelTurnLight);
+        }
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            if (hand.SeatWind(seat) == Wind::East) {
+                const Rect mark = PanelDealerMark(panel, SeatPosition(bottom, seat), kDealerMarkHeight * unit);
+                renderer.DrawFilledRect(mark.x, mark.y, mark.w, mark.h, kPanelDealerMark);
+            }
+        }
+
         // The seat plates (public data only, so also under the cover, for a spectator and at the end of a hand): the base of each, on the
         // plate of the seat whose turn it is the gold tint and frame, and on the dealer's (East of the hand shown: the same at the end of the
         // match as in the hand) the bar of the dealer
-        const Seat turnSeat = TurnSeat(session, hand);
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             const Rect& box = layout.zones.seatPlates[seat];
             renderer.DrawFilledRect(box.x, box.y, box.w, box.h, kSeatPlate);

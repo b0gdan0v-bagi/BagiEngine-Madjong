@@ -36,4 +36,33 @@ namespace BECore::Mahjong {
         return panel;
     }
 
+    Rect PanelTurnLight(const Rect& panel, int position, float width) {
+        switch (position) {
+            case 1:
+                return Rect(panel.x + panel.w - width, panel.y, width, panel.h);
+            case 2:
+                return Rect(panel.x, panel.y, panel.w, width);
+            case 3:
+                return Rect(panel.x, panel.y, width, panel.h);
+            default:
+                return Rect(panel.x, panel.y + panel.h - width, panel.w, width);
+        }
+    }
+
+    Rect PanelDealerMark(const Rect& panel, int position, float thickness) {
+        const float row = panel.h * kPanelRowShare;
+        const float side = panel.w * kPanelSideShare;
+        const float sideHeight = panel.h - 2.0f * row;
+        switch (position) {
+            case 1:
+                return Rect(panel.x + panel.w - side - thickness, panel.y + row, thickness, sideHeight);
+            case 2:
+                return Rect(panel.x, panel.y + row, panel.w, thickness);
+            case 3:
+                return Rect(panel.x + side, panel.y + row, thickness, sideHeight);
+            default:
+                return Rect(panel.x, panel.y + panel.h - row - thickness, panel.w, thickness);
+        }
+    }
+
 }  // namespace BECore::Mahjong

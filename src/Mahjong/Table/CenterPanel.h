@@ -3,6 +3,7 @@
 #include <EASTL/array.h>
 #include <Mahjong/Game/Match.h>
 #include <Mahjong/Game/TableSession.h>
+#include <Mahjong/Table/TableLayout.h>
 #include <Mahjong/Table/Words.h>
 
 namespace BECore::Mahjong {
@@ -43,5 +44,18 @@ namespace BECore::Mahjong {
 
     /// The panel in the current language of `strings`.
     [[nodiscard]] CenterPanelText MakeCenterPanel(const UIStrings& strings, const TableSession& session, const Match& match);
+
+    /// The cells of the panel as shares of its rectangle (the node `CenterPanel`: the top and the bottom cell are 32 of the 140 units high and as wide as the
+    /// panel, a side cell is 108 of the 336 wide and lies between them), so they follow the view fit.
+    inline constexpr float kPanelRowShare = 32.0f / 140.0f;
+    inline constexpr float kPanelSideShare = 108.0f / 336.0f;
+
+    /// The light of the turn: the bar `width` thick along the edge of `panel` that faces the screen `position` (0 bottom, 1 right, 2 top, 3 left), the
+    /// whole length of that edge.
+    [[nodiscard]] Rect PanelTurnLight(const Rect& panel, int position, float width);
+
+    /// The mark of the dealer: the bar `thickness` thick on the inner boundary of the cell at the screen `position`, where the cell meets the middle of
+    /// the panel (a top or bottom cell: along its whole width; a side cell: along its height), so it covers no word of the cell.
+    [[nodiscard]] Rect PanelDealerMark(const Rect& panel, int position, float thickness);
 
 }  // namespace BECore::Mahjong

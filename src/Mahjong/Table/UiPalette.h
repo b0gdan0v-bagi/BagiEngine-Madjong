@@ -79,6 +79,14 @@ namespace BECore::Mahjong {
     inline constexpr Color kDealerMark{200, 70, 60, 255};
     inline constexpr float kDealerMarkHeight = 6.0f;
 
+    /// The centre panel (the table paints it; the words are labels of the node `CenterPanel`): the ground is the colour of the seat plates, the light
+    /// of the turn a bar `kPanelTurnLightWidth` units thick along the edge of the panel that faces the seat whose turn it is (the gold family) and the
+    /// dealer a bar `kDealerMarkHeight` units thick (red, as on the plates) on the inner boundary of the dealer's cell. Both have an alpha of their
+    /// own, so the tests find them by colour among the marks of the plates.
+    inline constexpr Color kPanelTurnLight{255, 214, 80, 250};
+    inline constexpr float kPanelTurnLightWidth = 4.0f;
+    inline constexpr Color kPanelDealerMark{200, 70, 60, 250};
+
     /// A plate under a discard block or the wall ring reaches this far past its zone, in view units; the HUD keeps clear of the plate.
     inline constexpr float kPlatePadding = 4.0f;
 
