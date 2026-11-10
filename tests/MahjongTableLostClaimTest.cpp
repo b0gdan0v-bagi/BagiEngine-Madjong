@@ -67,7 +67,7 @@ namespace BECore::Mahjong::Tests {
 
         /// Where a tile that arrives somewhere flies from, and what it shows there.
         struct Arrival {
-            Rect from;
+            FlightOrigin from;
             SlotRole role = SlotRole::HandTile;
             Seat seat = 0;
             int index = 0;
@@ -187,10 +187,10 @@ namespace BECore::Mahjong::Tests {
             return nullptr;
         }
 
-        Rect RectOfSlot(const TableLayout& layout, SlotRole role, Seat seat, int index, int part = 0) const {
+        FlightOrigin RectOfSlot(const TableLayout& layout, SlotRole role, Seat seat, int index, int part = 0) const {
             const TileSlot* slot = Find(layout, role, seat, index, part);
             EXPECT_NE(slot, nullptr) << "role " << static_cast<int>(role) << " seat " << seat << " index " << index;
-            return slot != nullptr ? slot->rect : Rect();
+            return slot != nullptr ? FlightOrigin{slot->rect, slot->rotation} : FlightOrigin{};
         }
 
         /// The last copy of `tile` in the concealed tiles of `seat`, worked out here.
@@ -214,14 +214,14 @@ namespace BECore::Mahjong::Tests {
             return false;
         }
 
-        /// The rectangle of an arrival `fraction` of the way, eased.
+        /// What the draw of an arrival `fraction` of the way covers, eased: the box of the tile as turned on the way.
         Rect Where(const Arrival& arrival, float fraction) const {
             const TileSlot* slot = Find(_table->GetLayout(), arrival.role, arrival.seat, arrival.index);
             if (slot == nullptr) {
                 ADD_FAILURE() << "the layout has no slot seat " << arrival.seat << " index " << arrival.index;
                 return Rect();
             }
-            return fraction >= 1.0f ? slot->rect : FlightRect(TileFlight{SlotKey::Of(*slot), arrival.from}, slot->rect, Ease(kTileFlightEase, fraction));
+            return fraction >= 1.0f ? slot->rect : BoxOf(FlightPlacement(TileFlight{SlotKey::Of(*slot), arrival.from.rect, arrival.from.rotation}, *slot, Ease(kTileFlightEase, fraction)));
         }
 
         /// The tile of `arrival` flies from where it started, half way and lands at its slot (the clock of the table moves between draws).
@@ -313,7 +313,7 @@ namespace BECore::Mahjong::Tests {
 
         const int index = LastCopy(kSeat2, T("4p"));
         ASSERT_GE(index, 0);
-        const Rect pile = RectOfSlot(_before, SlotRole::DiscardTile, kSeat3, kPileEntryOfTheDiscard);
+        const FlightOrigin pile = RectOfSlot(_before, SlotRole::DiscardTile, kSeat3, kPileEntryOfTheDiscard);
         ExpectOneFlight(Arrival{pile, SlotRole::HandTile, kSeat2, index, T("4p")});
     }
 
@@ -332,7 +332,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(concealed[0], T("4p"));
         ASSERT_EQ(concealed[1], T("4p"));
         EXPECT_EQ(LastCopy(kSeat2, T("4p")), 1);
-        const Rect pile = RectOfSlot(before, SlotRole::DiscardTile, kSeat3, kPileEntryOfTheDiscard);
+        const FlightOrigin pile = RectOfSlot(before, SlotRole::DiscardTile, kSeat3, kPileEntryOfTheDiscard);
         ExpectOneFlight(Arrival{pile, SlotRole::HandTile, kSeat2, 1, T("4p")});
     }
 

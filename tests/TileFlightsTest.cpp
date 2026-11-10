@@ -8,7 +8,8 @@
  * `Table/TileFlights.h` (pure logic): which slots of the new frame fly and from where. The snapshots are made from `MakeTableLayout`
  * and hand-made melds: a discard of an opponent and of the viewer (a tile held twice, a tile drawn and discarded in one batch), a
  * claimed pung, chow and kong (from the pile slot, and from the discarder's hand when the discard and the claim fall into one batch),
- * the other tiles of the set, a concealed and an upgraded kong, the draw, and the cases that plan nothing. `FlightRect` at its ends.
+ * the other tiles of the set, a concealed and an upgraded kong, the draw, and the cases that plan nothing. The turn a flight starts with;
+ * `FlightRect` at its ends; `FlightPlacement`: the turn and the size of a tile in the air.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -789,6 +790,147 @@ namespace BECore::Mahjong::Tests {
         for (int i = 0; i <= kHandSize; ++i) {
             EXPECT_EQ(FlightOf(first, Hand(1, i)) != nullptr, i == 13) << "slot " << i;
         }
+    }
+
+    // -- the turn of the source --
+
+    TEST(TileFlightsTest, AFlightRemembersTheTurnOfTheSlotItLeaves) {
+        // A kong of seat 1 (the right seat, turned 270) claimed from the pile of seat 3 (the left seat, turned 90)
+        Scene before;
+        before.pile = {{3, T("Rd")}};
+        Scene afterScene = before;
+        afterScene.pile = {};
+        afterScene.concealed[1] = kHandSize - 3;
+        afterScene.melds[1] = {MakeMeld(MeldKind::Kong, "Rd", false, 3, "Rd")};
+        const TableSnapshot beforeSnapshot = Snapshot(before);
+        const TableSnapshot after = Snapshot(afterScene);
+        const auto flights = PlanFlights(beforeSnapshot, after, {});
+        ASSERT_EQ(flights.size(), 4u);
+        const int claimed = ClaimedPartOf(after, 1, 0);
+        ASSERT_GE(claimed, 0);
+        ASSERT_FLOAT_EQ(Find(beforeSnapshot, Discard(3, 0))->rotation, kLeftSeatRotation);
+        for (int part = 0; part < 4; ++part) {
+            EXPECT_FLOAT_EQ(FlightOf(flights, MeldPart(1, 0, part))->fromRotation, part == claimed ? kLeftSeatRotation : kRightSeatRotation) << "part " << part;
+        }
+    }
+
+    TEST(TileFlightsTest, ADiscardFliesWithTheTurnOfTheHandItLeavesAtEachPosition) {
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            Scene before;
+            Scene afterScene = before;
+            afterScene.pile = {{seat, T("Ew")}};
+            const TableSnapshot beforeSnapshot = Snapshot(before);
+            const auto flights = PlanFlights(beforeSnapshot, Snapshot(afterScene), {});
+            ASSERT_EQ(flights.size(), 1u) << "seat " << seat;
+            const float expected = seat == 1 ? kRightSeatRotation : (seat == 3 ? kLeftSeatRotation : 0.0f);
+            EXPECT_FLOAT_EQ(flights[0].fromRotation, expected) << "seat " << seat;
+        }
+    }
+
+    TEST(TileFlightsTest, ADrawLeavesTheWallUnturned) {
+        Scene before;
+        Scene afterScene = before;
+        afterScene.wall = before.wall - 1;
+        afterScene.concealed[3] = kHandSize + 1;
+        afterScene.drawSeat = 3;
+        afterScene.drawIndex = kHandSize;
+        const auto flights = PlanFlights(Snapshot(before), Snapshot(afterScene), {});
+        ASSERT_EQ(flights.size(), 1u);
+        EXPECT_FLOAT_EQ(flights[0].fromRotation, 0.0f);
+    }
+
+    // -- FlightPlacement --
+
+    namespace {
+
+        TileSlot SlotAt(const Rect& rect, float rotation) {
+            TileSlot slot;
+            slot.rect = rect;
+            slot.rotation = rotation;
+            return slot;
+        }
+
+        TileFlight FlightFrom(const Rect& rect, float rotation) {
+            TileFlight flight;
+            flight.from = rect;
+            flight.fromRotation = rotation;
+            return flight;
+        }
+
+        void ExpectPlacement(const TilePlacement& actual, const Rect& upright, float rotation, float pivotX, float pivotY) {
+            ExpectRect(actual.upright, upright);
+            EXPECT_NEAR(actual.rotation, rotation, kTolerance);
+            EXPECT_NEAR(actual.pivotX, pivotX, kTolerance);
+            EXPECT_NEAR(actual.pivotY, pivotY, kTolerance);
+        }
+
+        /// How far apart two turns are, in degrees, the short way: [0, 180].
+        float DistanceOf(float a, float b) {
+            const float delta = std::fmod(std::fabs(a - b), 360.0f);
+            return delta > 180.0f ? 360.0f - delta : delta;
+        }
+
+    }  // namespace
+
+    TEST(TileFlightsTest, APlacementIsTheSourceAtZeroAndTheSlotAtOne) {
+        // From a left-seat tile (screen 37 x 28, turned 90) to an unturned one
+        const TileFlight flight = FlightFrom(Rect(10.0f, 20.0f, 37.0f, 28.0f), kLeftSeatRotation);
+        const TileSlot to = SlotAt(Rect(110.0f, 220.0f, 24.0f, 32.0f), 0.0f);
+        ExpectPlacement(FlightPlacement(flight, to, 0.0f), UprightRect(flight.from, kLeftSeatRotation), kLeftSeatRotation, 28.5f, 34.0f);
+        ExpectPlacement(FlightPlacement(flight, to, 1.0f), to.rect, 0.0f, 122.0f, 236.0f);
+        EXPECT_EQ(FlightPlacement(flight, to, 1.0f).rotation, 0.0f) << "landed exactly, not nearly";
+        EXPECT_EQ(FlightPlacement(flight, to, 0.0f).rotation, kLeftSeatRotation);
+    }
+
+    TEST(TileFlightsTest, AHalfWayTileIsHalfTurnedAndHalfWayBetweenTheUnturnedSizes) {
+        const TileFlight flight = FlightFrom(Rect(10.0f, 20.0f, 37.0f, 28.0f), kLeftSeatRotation);
+        const TileSlot to = SlotAt(Rect(110.0f, 220.0f, 24.0f, 32.0f), 0.0f);
+        // The centre is that of FlightRect (75.25, 135); the unturned size runs 28 x 37 -> 24 x 32; the turn 90 -> 0
+        ExpectPlacement(FlightPlacement(flight, to, 0.5f), Rect(75.25f - 13.0f, 135.0f - 17.25f, 26.0f, 34.5f), 45.0f, 75.25f, 135.0f);
+    }
+
+    TEST(TileFlightsTest, TheTurnTakesTheShortWayRound) {
+        const TileSlot unturned = SlotAt(Rect(100.0f, 100.0f, 24.0f, 32.0f), 0.0f);
+        const TileSlot left = SlotAt(Rect(100.0f, 100.0f, 32.0f, 24.0f), kLeftSeatRotation);
+        const TileSlot right = SlotAt(Rect(100.0f, 100.0f, 32.0f, 24.0f), kRightSeatRotation);
+        const TileFlight fromUnturned = FlightFrom(Rect(0.0f, 0.0f, 24.0f, 32.0f), 0.0f);
+        const TileFlight fromLeft = FlightFrom(Rect(0.0f, 0.0f, 32.0f, 24.0f), kLeftSeatRotation);
+        const TileFlight fromRight = FlightFrom(Rect(0.0f, 0.0f, 32.0f, 24.0f), kRightSeatRotation);
+        // 0 and 270 meet through 315, never through 135
+        EXPECT_NEAR(FlightPlacement(fromUnturned, right, 0.5f).rotation, 315.0f, kTolerance);
+        EXPECT_NEAR(FlightPlacement(fromRight, unturned, 0.5f).rotation, 315.0f, kTolerance);
+        EXPECT_NEAR(FlightPlacement(fromUnturned, right, 0.25f).rotation, 337.5f, kTolerance);
+        EXPECT_NEAR(FlightPlacement(fromRight, unturned, 0.75f).rotation, 337.5f, kTolerance);
+        EXPECT_NEAR(FlightPlacement(fromUnturned, left, 0.5f).rotation, 45.0f, kTolerance);
+        // 90 -> 270 is a half turn either way: it moves evenly
+        for (const float t : {0.25f, 0.5f, 0.75f}) {
+            const float rotation = FlightPlacement(fromLeft, right, t).rotation;
+            EXPECT_NEAR(DistanceOf(rotation, kLeftSeatRotation), 180.0f * t, kTolerance) << "t " << t;
+            EXPECT_NEAR(DistanceOf(rotation, kRightSeatRotation), 180.0f * (1.0f - t), kTolerance) << "t " << t;
+        }
+    }
+
+    TEST(TileFlightsTest, TwoSlotsWithOneTurnGiveTheFlightRectOfToday) {
+        for (const float rotation : {0.0f, kLeftSeatRotation, kRightSeatRotation}) {
+            const TileFlight flight = FlightFrom(Rect(10.0f, 20.0f, 37.0f, 28.0f), rotation);
+            const TileSlot to = SlotAt(Rect(110.0f, 220.0f, 32.0f, 24.0f), rotation);
+            for (const float t : {0.0f, 0.1f, 0.5f, 0.9f, 1.0f}) {
+                const TilePlacement placement = FlightPlacement(flight, to, t);
+                EXPECT_NEAR(placement.rotation, rotation, kTolerance) << "t " << t;
+                ExpectRect(placement.upright, UprightRect(FlightRect(flight, to.rect, t), rotation));
+            }
+        }
+    }
+
+    TEST(TileFlightsTest, APlacementClampsTheProgressLikeFlightRect) {
+        const TileFlight flight = FlightFrom(Rect(0.0f, 0.0f, 10.0f, 10.0f), kLeftSeatRotation);
+        const TileSlot to = SlotAt(Rect(100.0f, 50.0f, 20.0f, 20.0f), 0.0f);
+        const TilePlacement start = FlightPlacement(flight, to, 0.0f);
+        const TilePlacement end = FlightPlacement(flight, to, 1.0f);
+        for (const float t : {-3.0f, std::nanf("")}) {
+            ExpectPlacement(FlightPlacement(flight, to, t), start.upright, start.rotation, start.pivotX, start.pivotY);
+        }
+        ExpectPlacement(FlightPlacement(flight, to, 7.0f), end.upright, end.rotation, end.pivotX, end.pivotY);
     }
 
     // -- FlightRect --

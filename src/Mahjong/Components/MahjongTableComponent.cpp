@@ -663,18 +663,19 @@ namespace BECore::Mahjong {
             keepsWaiting = KeepsWaitingDiscards(MakeTableView(hand, bottom));
         }
 
-        // A face (the tile) or the back (nullopt) at the screen rectangle `rect`: from the atlas, else a plain rectangle. A turned slot
-        // (`rotation` != 0, a side seat) hands the draw the unturned rectangle and the turn about the centre of `rect`, so the quad covers `rect`.
-        const auto drawFace = [&](const Rect& rect, std::optional<Tile> face, float rotation) {
-            const Rect upright = UprightRect(rect, rotation);
-            const DrawTransform turn{rotation, RectCentreX(rect), RectCentreY(rect)};
+        // A face (the tile) or the back (nullopt) placed as `place` says: from the atlas, else a plain rectangle. A turned tile (a side seat,
+        // or a tile in the air between two turns) hands the draw the unturned rectangle and the turn about the pivot; a tile that is not
+        // turned is the plain draw of its rectangle (`place.upright`, which is the screen rectangle then).
+        const auto drawFace = [&](const TilePlacement& place, std::optional<Tile> face) {
+            const Rect& upright = place.upright;
+            const DrawTransform turn{place.rotation, place.pivotX, place.pivotY};
             const bool turned = !turn.IsIdentity();
             if (_atlas) {
                 const Rect source = face ? SourceRect(*face) : BackRect();
                 if (turned) {
                     renderer.DrawTransformedTexture(*_atlas, &source, upright.x, upright.y, upright.w, upright.h, kUntinted, turn);
                 } else {
-                    renderer.DrawTexture(*_atlas, &source, rect.x, rect.y, rect.w, rect.h);
+                    renderer.DrawTexture(*_atlas, &source, upright.x, upright.y, upright.w, upright.h);
                 }
                 return;
             }
@@ -694,9 +695,9 @@ namespace BECore::Mahjong {
         };
         // The shadow under a tile (not under a wall stack); the frame of a pending discard lies over it, so the gold is even
         const auto drawShadow = [&](const Rect& rect) { renderer.DrawFilledRect(rect.x + kShadowOffset * unit, rect.y + kShadowOffset * unit, rect.w, rect.h, kTileShadow); };
-        const auto drawTile = [&](const Rect& rect, std::optional<Tile> face, float rotation) {
+        const auto drawTile = [&](const Rect& rect, const TilePlacement& place, std::optional<Tile> face) {
             drawShadow(rect);
-            drawFace(rect, face, rotation);
+            drawFace(place, face);
         };
 
         // The plates under the discard blocks and the wall ring
@@ -781,12 +782,13 @@ namespace BECore::Mahjong {
         const int pendingEntry = static_cast<int>(hand.Discards().size()) - 1;
         const int lastDiscard = LastDiscardEntry(hand);
 
-        // One slot at `rect`: its own rectangle, or where it is in the air; the face and every mark of the slot follow the rectangle
-        const auto drawSlot = [&](const TileSlot& slot, const Rect& rect) {
+        // One slot at the screen rectangle `rect` placed as `place`: its own, or where it is in the air; the face turns as `place` says and
+        // every mark of the slot follows the screen rectangle
+        const auto drawSlot = [&](const TileSlot& slot, const Rect& rect, const TilePlacement& place) {
             const PlayerHand& held = hand.GetHand(slot.seat);
             switch (slot.role) {
                 case SlotRole::HandTile:
-                    drawTile(rect, faces.Shows(slot.seat) ? std::optional<Tile>(held.concealed[slot.index]) : std::nullopt, slot.rotation);
+                    drawTile(rect, place, faces.Shows(slot.seat) ? std::optional<Tile>(held.concealed[slot.index]) : std::nullopt);
                     if (slot.seat == bottom && slot.index == drawnIndex) {
                         renderer.DrawFilledRect(rect.x, rect.y, rect.w, rect.h, kDrawnTileMark);
                     }
@@ -805,7 +807,7 @@ namespace BECore::Mahjong {
                     const Meld& meld = held.melds[slot.index];
                     // An open set is public; a concealed kong is as hidden as the hand it was made from.
                     const bool shown = !meld.concealed || faces.Shows(slot.seat);
-                    drawTile(rect, shown ? std::optional<Tile>(MeldTileAt(meld, slot.part)) : std::nullopt, slot.rotation);
+                    drawTile(rect, place, shown ? std::optional<Tile>(MeldTileAt(meld, slot.part)) : std::nullopt);
                     if (slot.claimEdge != Edge::None) {
                         const Rect bar = EdgeBar(rect, slot.claimEdge, kClaimedEdgeWidth * unit);
                         renderer.DrawFilledRect(bar.x, bar.y, bar.w, bar.h, kClaimedEdge);
@@ -813,23 +815,23 @@ namespace BECore::Mahjong {
                     break;
                 }
                 case SlotRole::BonusTile:
-                    drawTile(rect, held.bonus[slot.index], slot.rotation);
+                    drawTile(rect, place, held.bonus[slot.index]);
                     break;
                 case SlotRole::DiscardTile:
                     if (claimPending && slot.index == pendingEntry) {
                         drawShadow(rect);
                         const Rect framed = Padded(rect, kPendingMargin * unit);
                         renderer.DrawFilledRect(framed.x, framed.y, framed.w, framed.h, kPendingFrame);
-                        drawFace(rect, hand.Discards()[slot.index].tile, slot.rotation);
+                        drawFace(place, hand.Discards()[slot.index].tile);
                     } else {
-                        drawTile(rect, hand.Discards()[slot.index].tile, slot.rotation);
+                        drawTile(rect, place, hand.Discards()[slot.index].tile);
                     }
                     if (slot.index == lastDiscard) {
                         renderer.DrawFilledRect(rect.x, rect.y, rect.w, rect.h, kLastDiscardMark);
                     }
                     break;
                 case SlotRole::WallStack:
-                    drawFace(rect, std::nullopt, slot.rotation);
+                    drawFace(place, std::nullopt);
                     break;
             }
         };
@@ -846,14 +848,14 @@ namespace BECore::Mahjong {
         };
         for (const TileSlot& slot : layout.slots) {
             if (flightOf(slot) == nullptr) {
-                drawSlot(slot, slot.rect);
+                drawSlot(slot, slot.rect, PlacementOf(slot.rect, slot.rotation));
             }
         }
         if (!_flights.empty()) {
             const float progress = Ease(kTileFlightEase, _flightSeconds > 0.0f ? _flightElapsed / Seconds(_flightSeconds) : 1.0f);
             for (const TileSlot& slot : layout.slots) {
                 if (const TileFlight* flight = flightOf(slot)) {
-                    drawSlot(slot, FlightRect(*flight, slot.rect, progress));
+                    drawSlot(slot, FlightRect(*flight, slot.rect, progress), FlightPlacement(*flight, slot, progress));
                 }
             }
         }

@@ -21,6 +21,7 @@
 #include <Mahjong/Components/MahjongTableComponent.h>
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/Table/TileAtlas.h>
+#include <Mahjong/Table/TileFlights.h>
 #include <gtest/gtest.h>
 
 /**
@@ -67,6 +68,33 @@ namespace BECore::Mahjong::Tests {
     inline std::string Var(const char* name) {
         const eastl::string_view value = CoreManager::GetUIVars().Get(PoolString::Intern(name));
         return std::string(value.data(), value.size());
+    }
+
+    /// Where a flight starts: the screen rectangle of the old slot and its turn. It reads as the rectangle where only that is wanted.
+    struct FlightOrigin {
+        Rect rect;
+        float rotation = 0.0f;
+
+        operator const Rect&() const {
+            return rect;
+        }
+    };
+
+    /// The box around the quad that `place` makes (view units), worked out here from the corners; what the renderer records as the `rect` of
+    /// a tile draw.
+    inline Rect BoxOf(const TilePlacement& place) {
+        const std::array<Vec2, 4> corners = MakeTransformedQuad(place.upright, DrawTransform{place.rotation, place.pivotX, place.pivotY});
+        float left = corners[0].x;
+        float top = corners[0].y;
+        float right = left;
+        float bottom = top;
+        for (const Vec2& corner : corners) {
+            left = std::min(left, corner.x);
+            top = std::min(top, corner.y);
+            right = std::max(right, corner.x);
+            bottom = std::max(bottom, corner.y);
+        }
+        return Rect(left, top, right - left, bottom - top);
     }
 
     /// A turned draw as the renderer was asked for it: the index of its call in `calls`, the unturned rectangle and the transform as passed.

@@ -12,7 +12,7 @@ namespace BECore::Mahjong {
      * kong, a draw from the wall into the hand. Plain C++, no scene, no renderer and no model object: the table component keeps a
      * `TableSnapshot` of the frame it drew last, makes one of the frame it draws now and `PlanFlights` says which slots of the new layout
      * did not exist and where the tile came from. A flight carries no tile identity of its own: the component draws the slot's own face
-     * at an interpolated rectangle (`FlightRect`), so a flight shows nothing the slot itself does not.
+     * at an interpolated rectangle (`FlightRect`) and turn (`FlightPlacement`), so a flight shows nothing the slot itself does not.
      */
 
     /// How long one flight lasts, in seconds. Well inside the pace of the computers (`kComputerStepSeconds` in the table component, which
@@ -70,6 +70,8 @@ namespace BECore::Mahjong {
     struct TileFlight {
         SlotKey key;
         Rect from;
+        /// The turn of the slot the tile leaves (`TileSlot::rotation` of the old slot that `from` is the rectangle of).
+        float fromRotation = 0.0f;
     };
 
     /**
@@ -91,6 +93,27 @@ namespace BECore::Mahjong {
      * Empty when `before` has no slots, the viewer or the view size differ, or nothing is new. In the order of the slots of `after`.
      */
     [[nodiscard]] eastl::vector<TileFlight> PlanFlights(const TableSnapshot& before, const TableSnapshot& after, eastl::span<const HandMove> newMoves);
+
+    /// How a tile is handed to a draw: the unturned rectangle, the turn in degrees clockwise and the pivot (`DrawTransform`); the tile
+    /// covers the screen rectangle it was made from when the turn is a quarter or three quarters.
+    struct TilePlacement {
+        Rect upright;
+        float rotation = 0.0f;
+        float pivotX = 0.0f;
+        float pivotY = 0.0f;
+    };
+
+    /// The placement of a tile that lies in `screenRect` turned by `rotation` (a slot as laid).
+    [[nodiscard]] TilePlacement PlacementOf(const Rect& screenRect, float rotation) noexcept;
+
+    /**
+     * @brief How a flying tile is drawn at `progress` (0 = the source slot, 1 = `to`, clamped; NaN is 0).
+     *
+     * The centre follows `FlightRect`; the size runs from the unturned size of the source to that of `to`; the turn runs from
+     * `fromRotation` to `to.rotation` the shorter way round (0 and 270 meet through 315). At 0 the placement is that of the source slot,
+     * at 1 exactly that of `to` (no jump at the landing); two slots with one turn give the `FlightRect` of today.
+     */
+    [[nodiscard]] TilePlacement FlightPlacement(const TileFlight& flight, const TileSlot& to, float progress);
 
     /// The rectangle of a flight at `progress` (0 = `from`, 1 = `to`, clamped; NaN is 0): x, y, width and height interpolated.
     [[nodiscard]] Rect FlightRect(const TileFlight& flight, const Rect& to, float progress);

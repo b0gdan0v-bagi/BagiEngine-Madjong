@@ -15,7 +15,7 @@ Everything here is plain C++ over the model, a `TableView` or a `UIStrings&`: no
 | `ActionButtons` | `SpecOf` (element, action, value, word and hint keys, pictured tiles), `ButtonOf`, `MakeActionButtons(legal, pendingTile)`, `ChowTilesTaken` (the hand tiles a chow takes) |
 | `Hints`, `CallingMarks` | `WaitingTiles`, `DeclaringDiscards`, `AdviceFor` (= `ComputerPlayer(kAdviceSeed)`, Normal), `AdviceText`, `HintsApply`; `KeepsWaitingDiscards` |
 | `AnimationSpeed.h` | the player's speed Slow / Normal / Fast: `SpeedFactor`, `ScaledSeconds`, `SpeedText` / `TryParseSpeed`; the base times stay the Normal ones |
-| `TileFlights` | `PlanFlights(before, after, newMoves)`, `FlightRect`, `kTileFlightSeconds` (must stay below `kComputerStepSeconds`) |
+| `TileFlights` | `PlanFlights(before, after, newMoves)` (a flight keeps the `rotation` of its source slot), `FlightRect` (the screen rectangle, what the marks follow), `FlightPlacement` (the unturned rectangle, turn the short way and pivot of the tile in the air; 0 and 1 are exactly the source and the slot), `kTileFlightSeconds` (must stay below `kComputerStepSeconds`) |
 | `TouchRegime.h` | `FitScale`, `NeedsCompactActions`, `CompactScale`, `CompactRowHeight` and the compact-row constants the scene file must match (`MahjongTableScreenTest`) |
 
 ## Rules
