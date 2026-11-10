@@ -189,20 +189,19 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(game->GetLevel(), ComputerLevel::Normal);
         EXPECT_EQ(game->GetSession().Level(), ComputerLevel::Normal);
 
-        for (int index = 0; index < kLevelCount; ++index) {
-            const ComputerLevel level = static_cast<ComputerLevel>(index);
+        for (const ComputerLevel level : kAllLevels) {
             game->SetLevel(level);
             EXPECT_EQ(game->GetLevel(), level);
 
             // StartMatch reaches the session with the level, a Reset and a second StartMatch keep it
             ASSERT_TRUE(game->StartMatch(kSeed).has_value());
-            EXPECT_EQ(game->GetSession().Level(), level) << LevelName(level);
+            EXPECT_EQ(game->GetSession().Level(), level) << LevelText(level);
             game->Reset();
-            EXPECT_EQ(game->GetLevel(), level) << LevelName(level);
-            EXPECT_EQ(game->GetSession().Level(), level) << LevelName(level);
+            EXPECT_EQ(game->GetLevel(), level) << LevelText(level);
+            EXPECT_EQ(game->GetSession().Level(), level) << LevelText(level);
             ASSERT_TRUE(game->StartMatch(kSeed + 1).has_value());
-            EXPECT_EQ(game->GetLevel(), level) << LevelName(level);
-            EXPECT_EQ(game->GetSession().Level(), level) << LevelName(level);
+            EXPECT_EQ(game->GetLevel(), level) << LevelText(level);
+            EXPECT_EQ(game->GetSession().Level(), level) << LevelText(level);
         }
     }
 

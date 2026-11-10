@@ -161,8 +161,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MatchLogTest, TheStartEventHoldsTheLevelOfTheSession) {
         EXPECT_EQ(Play(kSeed).events.front().level, kDefaultLevel);
-        for (int index = 0; index < kLevelCount; ++index) {
-            const ComputerLevel level = static_cast<ComputerLevel>(index);
+        for (const ComputerLevel level : kAllLevels) {
             const PlayedMatch played = Play(kSeed, level);
             ASSERT_FALSE(played.events.empty());
             EXPECT_EQ(played.events.front().kind, MatchLogKind::Start);
@@ -182,8 +181,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MatchLogTest, ALogMadeAtEveryLevelReplaysFromItsActions) {
         // The replay needs no computer player and so no level: the actions are in the log.
-        for (int index = 0; index < kLevelCount; ++index) {
-            const ComputerLevel level = static_cast<ComputerLevel>(index);
+        for (const ComputerLevel level : kAllLevels) {
             const PlayedMatch played = Play(kSeed, level);
             Match replayed;
             const ReplayStatus status = ReplayMatchLog(played.events, replayed);

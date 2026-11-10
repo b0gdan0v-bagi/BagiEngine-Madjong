@@ -8,7 +8,7 @@
 #include <gtest/gtest.h>
 
 /**
- * `ComputerLevel` (the names, the parser, the default), the golden of the Normal player and the profiles of the levels. The golden is
+ * `ComputerLevel` (the numbers, the two parsers, the default), the golden of the Normal player and the profiles of the levels. The golden is
  * the final scores of four whole matches, written down from the player as it was before levels existed, so that "Normal is the player
  * of `CLAUDE.md`" stays true for as long as the test stays green. The profile cases put one knob of `LevelProfile` at 100 percent on a
  * hand worked out by hand and look at the effect (the numbers of `kEasyProfile` are measured in `ComputerStrengthTest`); a knob at 0
@@ -136,20 +136,33 @@ namespace BECore::Mahjong::Tests {
 
     }  // namespace
 
-    TEST(ComputerLevelTest, TheNamesRoundTripForEveryLevel) {
-        EXPECT_EQ(kLevelCount, 2);  // a new level needs its name, its parse and a look at every table of levels
-        for (const ComputerLevel level : EnumUtils<ComputerLevel>::Values()) {
-            const std::string_view name = LevelName(level);
-            EXPECT_FALSE(name.empty());
-            EXPECT_EQ(TryParseLevel(name), level) << name;
+    TEST(ComputerLevelTest, TheLevelsAreTheNumbersOneToTenAndTheirTextsRoundTrip) {
+        EXPECT_EQ(kLevelCount, 10);  // a new level needs a look at every table of levels
+        int expected = kMinLevel;
+        for (const ComputerLevel level : kAllLevels) {
+            EXPECT_EQ(LevelNumber(level), expected);
+            EXPECT_EQ(LevelOf(expected), level);
+            const std::string_view text = LevelText(level);
+            EXPECT_EQ(text, std::to_string(expected));
+            EXPECT_EQ(TryParseLevel(text), level) << text;
+            ++expected;
         }
-        EXPECT_EQ(LevelName(ComputerLevel::Easy), "easy");
-        EXPECT_EQ(LevelName(ComputerLevel::Normal), "normal");
+        EXPECT_EQ(LevelNumber(ComputerLevel::Easy), 1);
+        EXPECT_EQ(LevelNumber(ComputerLevel::Normal), 5);
+        EXPECT_EQ(ComputerLevel{}, ComputerLevel::Normal);
+        EXPECT_FALSE(LevelOf(0).has_value());
+        EXPECT_FALSE(LevelOf(11).has_value());
+        EXPECT_FALSE(LevelOf(-5).has_value());
     }
 
-    TEST(ComputerLevelTest, ParsingTakesTheLowercaseNamesOnly) {
-        for (const char* text : {"Easy", "EASY", "", "hard", "Hard", "hard ", " hard", "medium", "Normal", "norma", "normall", "0", "easy\n"}) {
+    TEST(ComputerLevelTest, ParsingTakesTheNumbersOnlyAndTheOldNamesOnlyAsNames) {
+        for (const char* text : {"Easy", "easy", "normal", "", "0", "11", "01", "+1", "1 ", " 1", "1.0", "ten", "hard", "5\n"}) {
             EXPECT_FALSE(TryParseLevel(text).has_value()) << "'" << text << "'";
+        }
+        EXPECT_EQ(TryParseLevelName("easy"), ComputerLevel::Easy);
+        EXPECT_EQ(TryParseLevelName("normal"), ComputerLevel::Normal);
+        for (const char* text : {"Easy", "EASY", "", "hard", "Hard", "medium", "Normal", "norma", "normall", "1", "5", "easy\n"}) {
+            EXPECT_FALSE(TryParseLevelName(text).has_value()) << "'" << text << "'";
         }
     }
 
@@ -158,25 +171,25 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(ComputerLevelTest, TheTableReportsItsLevelAndGivesEverySeatTheLevel) {
-        for (const ComputerLevel level : EnumUtils<ComputerLevel>::Values()) {
+        for (const ComputerLevel level : kAllLevels) {
             EXPECT_EQ(ComputerTable(5, level).Level(), level);
             EXPECT_EQ(ComputerPlayer(5, level).Level(), level);
         }
         // The seat seeds do not depend on the level, so a table of a level plays exactly what four players of that level seeded
         // `SeatSeed(seed, seat)` play: every seat has the level of the table (a seat at another level would play other actions). The
-        // actions of the two levels differ.
+        // actions of Easy and Normal differ.
         eastl::vector<eastl::vector<HandAction>> byLevel;
-        for (const ComputerLevel level : EnumUtils<ComputerLevel>::Values()) {
+        for (const ComputerLevel level : kAllLevels) {
             ComputerTable table(31, level);
             const eastl::vector<HandAction> played = PlayActions(table, 31);
             ASSERT_FALSE(played.empty());
-            EXPECT_EQ(PlayActionsByPlayers(31, level), played) << LevelName(level);
+            EXPECT_EQ(PlayActionsByPlayers(31, level), played) << LevelText(level);
             byLevel.push_back(played);
         }
-        EXPECT_NE(byLevel[static_cast<size_t>(ComputerLevel::Easy)], byLevel[static_cast<size_t>(ComputerLevel::Normal)]);
+        EXPECT_NE(byLevel[LevelNumber(ComputerLevel::Easy) - kMinLevel], byLevel[LevelNumber(ComputerLevel::Normal) - kMinLevel]);
     }
 
-    TEST(ComputerLevelTest, TheProfilesAreNormalsAndEasys) {
+    TEST(ComputerLevelTest, TheProfilesGoFromEasyToNormalAndNormalAboveIt) {
         EXPECT_EQ(kNormalProfile.skipAcceptancePercent, 0);
         EXPECT_EQ(kNormalProfile.skipDeclarationPercent, 0);
         EXPECT_EQ(kNormalProfile.skipClaimPercent, 0);
@@ -187,12 +200,24 @@ namespace BECore::Mahjong::Tests {
         EXPECT_GT(kEasyProfile.skipDeclarationPercent, 0);
         EXPECT_GT(kEasyProfile.skipClaimPercent, 0);
         EXPECT_FALSE(kEasyProfile.takeValueClaimsAtEqualShanten);
-        for (const ComputerLevel level : EnumUtils<ComputerLevel>::Values()) {
+        const LevelProfile* weaker = nullptr;
+        for (const ComputerLevel level : kAllLevels) {
             const LevelProfile& profile = ProfileOf(level);
             for (const int percent : {profile.skipAcceptancePercent, profile.skipDeclarationPercent, profile.skipClaimPercent}) {
-                EXPECT_GE(percent, 0) << LevelName(level);
-                EXPECT_LE(percent, kPercentBase) << LevelName(level);
+                EXPECT_GE(percent, 0) << LevelText(level);
+                EXPECT_LE(percent, kPercentBase) << LevelText(level);
             }
+            EXPECT_EQ(profile.searchWorlds, 0) << LevelText(level);
+            if (LevelNumber(level) >= LevelNumber(ComputerLevel::Normal)) {
+                EXPECT_EQ(&profile, &kNormalProfile) << LevelText(level) << ": no player above Normal exists yet";
+            } else if (weaker != nullptr) {
+                // Every knob of a level below Normal gives way no more than the level under it
+                EXPECT_LE(profile.skipAcceptancePercent, weaker->skipAcceptancePercent) << LevelText(level);
+                EXPECT_LE(profile.skipDeclarationPercent, weaker->skipDeclarationPercent) << LevelText(level);
+                EXPECT_LE(profile.skipClaimPercent, weaker->skipClaimPercent) << LevelText(level);
+                EXPECT_GE(profile.takeValueClaimsAtEqualShanten, weaker->takeValueClaimsAtEqualShanten) << LevelText(level);
+            }
+            weaker = &profile;
         }
     }
 
@@ -379,7 +404,7 @@ namespace BECore::Mahjong::Tests {
     // ----- every level: listed, repeatable, no peeking -----
 
     TEST(ComputerLevelTest, EveryChoiceOfEveryLevelIsListedAndRepeatableOnRandomHands) {
-        for (const ComputerLevel level : EnumUtils<ComputerLevel>::Values()) {
+        for (const ComputerLevel level : kAllLevels) {
             int turns = 0;
             int windows = 0;
             for (int index = 0; index < kRandomHands; ++index) {
@@ -395,15 +420,15 @@ namespace BECore::Mahjong::Tests {
                     ComputerPlayer first(playerSeed, level);
                     ComputerPlayer second(playerSeed, level);
                     const HandAction chosen = first.Choose(view);
-                    EXPECT_TRUE(Has(view.legal, chosen)) << LevelName(level) << " hand " << index << " step " << steps;
-                    EXPECT_EQ(chosen, second.Choose(view)) << LevelName(level) << " hand " << index << " step " << steps;
+                    EXPECT_TRUE(Has(view.legal, chosen)) << LevelText(level) << " hand " << index << " step " << steps;
+                    EXPECT_EQ(chosen, second.Choose(view)) << LevelText(level) << " hand " << index << " step " << steps;
                     (view.phase == Phase::Discard ? turns : windows) += 1;
-                    ASSERT_TRUE(hand.Apply(actor, chosen).has_value()) << LevelName(level) << " hand " << index << " step " << steps;
+                    ASSERT_TRUE(hand.Apply(actor, chosen).has_value()) << LevelText(level) << " hand " << index << " step " << steps;
                 }
-                EXPECT_EQ(hand.GetPhase(), Phase::Finished) << LevelName(level) << " hand " << index;
+                EXPECT_EQ(hand.GetPhase(), Phase::Finished) << LevelText(level) << " hand " << index;
             }
-            EXPECT_GT(turns, kRandomHands) << LevelName(level);
-            EXPECT_GT(windows, 0) << LevelName(level);
+            EXPECT_GT(turns, kRandomHands) << LevelText(level);
+            EXPECT_GT(windows, 0) << LevelText(level);
         }
     }
 
@@ -421,11 +446,11 @@ namespace BECore::Mahjong::Tests {
         };
         const HandModel a = build(kQuiet1, kQuiet2, kQuiet3, "Ew 1p 2p 3p");
         const HandModel b = build("4p 7p 4s 7s 4m 7m 1s 1m 9s 9m Rd Wd Gd", "2p 5p 8p 2s 5s 8s 2m 5m 8m Ww Nw Gd Wd", "1p 9p 3s 6s 9s 3m 6m 9m Sw Ww Nw Rd Wd", "Ew 9p 8p 7p");
-        for (const ComputerLevel level : EnumUtils<ComputerLevel>::Values()) {
+        for (const ComputerLevel level : kAllLevels) {
             for (uint32_t seed = 1; seed <= kRngSeeds; ++seed) {
                 ComputerPlayer playerA(seed, level);
                 ComputerPlayer playerB(seed, level);
-                EXPECT_EQ(playerA.Choose(MakeTableView(a, kSeat0)), playerB.Choose(MakeTableView(b, kSeat0))) << LevelName(level) << " seed " << seed;
+                EXPECT_EQ(playerA.Choose(MakeTableView(a, kSeat0)), playerB.Choose(MakeTableView(b, kSeat0))) << LevelText(level) << " seed " << seed;
             }
         }
     }

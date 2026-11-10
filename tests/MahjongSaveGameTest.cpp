@@ -235,7 +235,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongSaveGameTest, AMatchInTheMiddleOfAHandIsTheTableBehindTheSeatChoice) {
         IntrusivePtr<MahjongGame> game = NewGame();
-        Reset(*game, "{\"seed\": 5, \"seats\": \"PCCC\", \"hands\": 8, \"level\": \"easy\"}");
+        Reset(*game, "{\"seed\": 5, \"seats\": \"PCCC\", \"hands\": 8, \"level\": 1}");
         PlayFirstActions(*game, kPersonActions);
         game->FlushSave();
 
@@ -258,7 +258,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongSaveGameTest, TheSeatsLevelAndHandsOfAResumedMatchAreWhatTheGameHasNext) {
         IntrusivePtr<MahjongGame> game = NewGame();
-        Reset(*game, "{\"seed\": 5, \"seats\": \"PCCC\", \"hands\": 8, \"level\": \"easy\"}");
+        Reset(*game, "{\"seed\": 5, \"seats\": \"PCCC\", \"hands\": 8, \"level\": 1}");
         // The choices of the game moved on after the match began (a client set them): the prefs slot says so
         game->SetSeats(SeatSetup{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Person});
         game->SetLevel(ComputerLevel::Normal);

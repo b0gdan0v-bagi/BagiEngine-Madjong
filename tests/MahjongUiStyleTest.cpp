@@ -113,10 +113,11 @@ namespace BECore::Mahjong::Tests {
 
             CheckFontAndGrid(element, name, IsTilePicture(element), found);
 
-            // A button and a toggle do something; a segment of a choice group may leave it to the group
+            // A button and a toggle do something; a segment of a choice group may leave it to the group, and an option of a dropdown
+            // always does (a choice emits the dropdown's action with the option's value)
             const std::string type = AttributeOf(element, "type");
             const std::string parentType = AttributeOf(element.parent().parent(), "type");  // element -> children -> element
-            if ((type == "UIButton" || type == "UIToggle") && AttributeOf(element, "action").empty() && parentType != "UISegmented") {
+            if ((type == "UIButton" || type == "UIToggle") && AttributeOf(element, "action").empty() && parentType != "UISegmented" && parentType != "UIDropdown") {
                 flag(Rule::Action, "action");
             }
         }

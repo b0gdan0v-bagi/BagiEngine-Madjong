@@ -2,38 +2,82 @@
 
 namespace BECore::Mahjong {
 
-    /// How well a computer seat plays. `Normal` is the player described in `CLAUDE.md` ("Computer player"); `Easy` is the same player
-    /// with other numbers (`kEasyProfile`). A third level, `Hard`, was removed on the owner's decision (2026-11-09): it played exactly
-    /// like Normal. It stays removed: the search player of the entry `mahjong-bot-search` did not beat Normal (`docs/bot-search.md`, `VERDICT: no
-    /// switch`), so the search is only a set of knobs of `LevelProfile` that the arena can set, off in every level (the levers tried
-    /// earlier are in the todo store, in the entry `mahjong-computer-difficulty`).
-    CORE_ENUM(ComputerLevel, uint8_t, Easy, Normal)
+    /// How well a computer seat plays: a whole number from `kMinLevel` (1, the weakest) to `kMaxLevel` (10), chosen by the owner
+    /// (2026-11-10) so the levels can grow without a new name each. The two named points are the players that exist: `Easy` (1) is the
+    /// player of `kEasyProfile`, `Normal` (5, the default) the player described in `CLAUDE.md` ("Computer player"). Levels 2..4 lie between
+    /// them (`ProfileOf`); levels 6..10 play exactly like Normal until a stronger player exists (the search of `ComputerSearch.h` did not
+    /// beat Normal, `docs/bot-search.md`; the entry `mahjong-search-levels` fills them). A number outside 1..10 is a defect; `LevelOf`
+    /// is the checked way in.
+    inline constexpr uint8_t kEasyLevelNumber = 1;
+    inline constexpr uint8_t kNormalLevelNumber = 5;
+
+    struct ComputerLevel {
+        /// 1..10; a level made with no number is Normal
+        uint8_t number = kNormalLevelNumber;
+
+        static const ComputerLevel Easy;
+        static const ComputerLevel Normal;
+
+        constexpr bool operator==(const ComputerLevel&) const = default;
+    };
+
+    inline constexpr ComputerLevel ComputerLevel::Easy{kEasyLevelNumber};
+    inline constexpr ComputerLevel ComputerLevel::Normal{kNormalLevelNumber};
+
+    inline constexpr int kMinLevel = 1;
+    inline constexpr int kMaxLevel = 10;
+
+    /// The number of levels.
+    inline constexpr int kLevelCount = kMaxLevel - kMinLevel + 1;
 
     /// The level of a table nobody chose a level for.
     inline constexpr ComputerLevel kDefaultLevel = ComputerLevel::Normal;
 
-    /// The number of levels.
-    inline constexpr int kLevelCount = static_cast<int>(EnumUtils<ComputerLevel>::Count());
-
-    /// The name of a level in the control API and the match log: `easy`, `normal` (lowercase). A value outside the enum asserts
-    /// in debug and answers the name of the default.
-    [[nodiscard]] constexpr std::string_view LevelName(ComputerLevel level) noexcept {
-        switch (level) {
-            case ComputerLevel::Easy:
-                return "easy";
-            case ComputerLevel::Normal:
-                return "normal";
-        }
-        ASSERT(false, "a value outside ComputerLevel");
-        return "normal";
+    /// The number of a level, 1..10.
+    [[nodiscard]] constexpr int LevelNumber(ComputerLevel level) noexcept {
+        return level.number;
     }
 
-    /// The level named `text`: exactly the lowercase names of `LevelName`, nothing else (no case folding, no spaces).
+    /// The level of `number`, or nothing outside 1..10.
+    [[nodiscard]] constexpr std::optional<ComputerLevel> LevelOf(int64_t number) noexcept {
+        if (number < kMinLevel || number > kMaxLevel) {
+            return std::nullopt;
+        }
+        return ComputerLevel{static_cast<uint8_t>(number)};
+    }
+
+    /// Every level, weakest first.
+    inline constexpr ComputerLevel kAllLevels[kLevelCount] = {{1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}, {9}, {10}};
+
+    /// The text of a level: its number, `1` .. `10` (the value of the `Options` dropdown and of the saved `Setup` choices). A value
+    /// outside 1..10 asserts in debug and answers the text of the default.
+    [[nodiscard]] constexpr std::string_view LevelText(ComputerLevel level) noexcept {
+        constexpr std::string_view kTexts[kLevelCount] = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10"};
+        const int number = LevelNumber(level);
+        if (number < kMinLevel || number > kMaxLevel) {
+            ASSERT(false, "a value outside ComputerLevel");
+            return kTexts[LevelNumber(kDefaultLevel) - kMinLevel];
+        }
+        return kTexts[number - kMinLevel];
+    }
+
+    /// The level whose `LevelText` is `text`: exactly `1` .. `10` (no sign, no leading zero, no spaces), nothing else.
     [[nodiscard]] constexpr std::optional<ComputerLevel> TryParseLevel(std::string_view text) noexcept {
-        if (text == LevelName(ComputerLevel::Easy)) {
+        for (const ComputerLevel level : kAllLevels) {
+            if (text == LevelText(level)) {
+                return level;
+            }
+        }
+        return std::nullopt;
+    }
+
+    /// The level of a name of the two named levels before the scale of numbers: `easy` (1) and `normal` (5), lowercase. Read where such
+    /// names were written (the saved `Setup` choices, a version 2 match log) and accepted by the arena; never written.
+    [[nodiscard]] constexpr std::optional<ComputerLevel> TryParseLevelName(std::string_view text) noexcept {
+        if (text == "easy") {
             return ComputerLevel::Easy;
         }
-        if (text == LevelName(ComputerLevel::Normal)) {
+        if (text == "normal") {
             return ComputerLevel::Normal;
         }
         return std::nullopt;
@@ -95,8 +139,8 @@ namespace BECore::Mahjong {
     /// The Normal player: every knob off.
     inline constexpr LevelProfile kNormalProfile{};
 
-    /// What Easy plays by (measured in `ComputerStrengthTest`, whose comment has the numbers): about half of Normal's wins, still
-    /// several times a random seat's.
+    /// What Easy (level 1) plays by (measured in `ComputerStrengthTest`, whose comment has the numbers): about half of Normal's wins,
+    /// still several times a random seat's.
     inline constexpr LevelProfile kEasyProfile{
         .skipAcceptancePercent = 60,
         .skipDeclarationPercent = 85,
@@ -104,28 +148,35 @@ namespace BECore::Mahjong {
         .takeValueClaimsAtEqualShanten = false,
     };
 
-    /// The profile of `level`. A value outside the enum gives Normal's.
+    /// Levels 2..4 take Easy's percentages by 3/4, 1/2 and 1/4 (rounded) and pass value claims up to level 2. Against three Normal seats
+    /// the arena orders 1 < 2 < 3 < 4 < 5, each step significant on 300 seeds (2026-11-10); the entry `mahjong-search-levels` may retune
+    /// them.
+    inline constexpr LevelProfile kLevel2Profile{
+        .skipAcceptancePercent = 45,
+        .skipDeclarationPercent = 64,
+        .skipClaimPercent = 26,
+        .takeValueClaimsAtEqualShanten = false,
+    };
+    inline constexpr LevelProfile kLevel3Profile{.skipAcceptancePercent = 30, .skipDeclarationPercent = 43, .skipClaimPercent = 18};
+    inline constexpr LevelProfile kLevel4Profile{.skipAcceptancePercent = 15, .skipDeclarationPercent = 21, .skipClaimPercent = 9};
+
+    /// The profile of each level 1..10; 5..10 are Normal's.
+    inline constexpr const LevelProfile* kLevelProfiles[kLevelCount] = {
+        &kEasyProfile, &kLevel2Profile, &kLevel3Profile, &kLevel4Profile, &kNormalProfile, &kNormalProfile, &kNormalProfile, &kNormalProfile, &kNormalProfile, &kNormalProfile,
+    };
+
+    /// The profile of `level`. A value outside 1..10 gives Normal's.
     [[nodiscard]] constexpr const LevelProfile& ProfileOf(ComputerLevel level) noexcept {
-        switch (level) {
-            case ComputerLevel::Easy:
-                return kEasyProfile;
-            case ComputerLevel::Normal:
-                return kNormalProfile;
+        const int number = LevelNumber(level);
+        if (number < kMinLevel || number > kMaxLevel) {
+            return kNormalProfile;
         }
-        return kNormalProfile;
+        return *kLevelProfiles[number - kMinLevel];
     }
 
-    /// The names of the levels for an error text: "easy or normal" (`LevelName` of each, in the order of the enum).
-    [[nodiscard]] inline eastl::string LevelNamesText() {
-        eastl::string names;
-        for (int index = 0; index < kLevelCount; ++index) {
-            const std::string_view name = LevelName(static_cast<ComputerLevel>(index));
-            if (index > 0) {
-                names += index + 1 == kLevelCount ? " or " : ", ";
-            }
-            names.append(name.data(), name.size());
-        }
-        return names;
+    /// The levels for an error text: "a whole number 1..10".
+    [[nodiscard]] inline eastl::string LevelRangeText() {
+        return Format("a whole number {}..{}", kMinLevel, kMaxLevel);
     }
 
 }  // namespace BECore::Mahjong

@@ -1512,15 +1512,18 @@ namespace BECore::Mahjong::Tests {
         _game->SetLevel(ComputerLevel::Easy);
         _game->OpenSetup();
         Draw();
-        EXPECT_EQ(Var("levelChoice"), "easy") << "Setup opens on the level of the game";
+        EXPECT_EQ(Var("levelChoice"), "1") << "Setup opens on the level of the game";
 
         EmitAction("MahjongOptions");
-        EmitAction("MahjongSetLevel", "normal");
-        EXPECT_EQ(_game->GetLevel(), ComputerLevel::Normal);
-        EXPECT_EQ(Var("levelChoice"), "normal");
-        EmitAction("MahjongSetLevel", "easy");
+        for (const ComputerLevel level : kAllLevels) {
+            const std::string text(LevelText(level));
+            EmitAction("MahjongSetLevel", text.c_str());
+            EXPECT_EQ(_game->GetLevel(), level) << text;
+            EXPECT_EQ(Var("levelChoice"), text);
+        }
+        EmitAction("MahjongSetLevel", "1");
         EXPECT_EQ(_game->GetLevel(), ComputerLevel::Easy);
-        EXPECT_EQ(Var("levelChoice"), "easy");
+        EXPECT_EQ(Var("levelChoice"), "1");
     }
 
     TEST_F(MahjongHudTest, ABadLevelAndALevelClickWhileThePageOrSetupIsClosedChangeNothing) {
@@ -1528,25 +1531,25 @@ namespace BECore::Mahjong::Tests {
         _game->OpenSetup();
         Draw();
         ASSERT_EQ(_game->GetLevel(), ComputerLevel::Normal);
-        ASSERT_EQ(Var("levelChoice"), "normal");
+        ASSERT_EQ(Var("levelChoice"), "5");
 
-        EmitAction("MahjongSetLevel", "easy");
+        EmitAction("MahjongSetLevel", "1");
         EXPECT_EQ(_game->GetLevel(), ComputerLevel::Normal) << "the page is closed";
-        EXPECT_EQ(Var("levelChoice"), "normal");
+        EXPECT_EQ(Var("levelChoice"), "5");
 
         EmitAction("MahjongOptions");
-        for (const char* bad : {"hard", "Easy", "EASY", " easy", "", "1"}) {
+        for (const char* bad : {"hard", "easy", "normal", "Easy", "", "0", "11", "05", " 1"}) {
             EmitAction("MahjongSetLevel", bad);
             EXPECT_EQ(_game->GetLevel(), ComputerLevel::Normal) << bad;
-            EXPECT_EQ(Var("levelChoice"), "normal") << bad;
+            EXPECT_EQ(Var("levelChoice"), "5") << bad;
         }
 
         EmitAction("MahjongOptionsBack");
-        EmitAction("MahjongSetLevel", "easy");
+        EmitAction("MahjongSetLevel", "1");
         EXPECT_EQ(_game->GetLevel(), ComputerLevel::Normal) << "Back closed the page";
 
         _game->CloseSetup();
-        EmitAction("MahjongSetLevel", "easy");
+        EmitAction("MahjongSetLevel", "1");
         EXPECT_EQ(_game->GetLevel(), ComputerLevel::Normal) << "Setup is closed";
     }
 
@@ -1556,7 +1559,7 @@ namespace BECore::Mahjong::Tests {
         _game->OpenSetup();
         Draw();
         EmitAction("MahjongOptions");
-        EmitAction("MahjongSetLevel", "easy");
+        EmitAction("MahjongSetLevel", "1");
         EXPECT_EQ(_game->GetSession().Level(), ComputerLevel::Normal) << "a running session keeps its level";
 
         EmitAction("MahjongOptionsBack");

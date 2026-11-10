@@ -140,8 +140,8 @@ namespace BECore::Mahjong::Tests {
     // ----- the knobs are off in the levels, and off draws nothing -----
 
     TEST(ComputerSearchTest, TheSearchIsOffInEveryLevelAndNeutralByDefault) {
-        for (const ComputerLevel level : EnumUtils<ComputerLevel>::Values()) {
-            EXPECT_EQ(ProfileOf(level).searchWorlds, 0) << LevelName(level);
+        for (const ComputerLevel level : kAllLevels) {
+            EXPECT_EQ(ProfileOf(level).searchWorlds, 0) << LevelText(level);
         }
         EXPECT_EQ(kNormalProfile.searchWorlds, 0);
         EXPECT_EQ(kNormalProfile.searchCandidates, kSearchDefaultCandidates);

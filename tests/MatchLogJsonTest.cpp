@@ -169,7 +169,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Member(json, "version"), kMatchLogFormatVersion);
         EXPECT_EQ(Member(json, "seed"), kSeed);
         EXPECT_EQ(Member(json, "seats"), "CCCC");
-        EXPECT_EQ(Member(json, "level"), "normal");
+        EXPECT_EQ(Member(json, "level"), LevelNumber(ComputerLevel::Normal));
         const Json settings = Member(json, "settings");
         EXPECT_EQ(Member(settings, "handsPerMatch"), kShortMatchHands);
         EXPECT_EQ(Member(settings, "flowers"), false);
@@ -181,11 +181,10 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MatchLogJsonTest, TheLevelOfTheStartRoundTripsForEveryLevel) {
         MatchLogEvent start = PlayedLog(kSeed).front();
         ASSERT_EQ(start.kind, MatchLogKind::Start);
-        for (int index = 0; index < kLevelCount; ++index) {
-            start.level = static_cast<ComputerLevel>(index);
+        for (const ComputerLevel level : kAllLevels) {
+            start.level = level;
             const Json json = EventToJson(start);
-            EXPECT_EQ(Member(json, "level"), std::string(LevelName(start.level)));
-            EXPECT_NE(Member(json, "level"), std::string(kMatchLogRetiredLevelName)) << "the writer never says the retired name";
+            EXPECT_EQ(Member(json, "level"), LevelNumber(level)) << "a number, never a name";
             const auto back = EventFromJson(json);
             ASSERT_TRUE(back.has_value()) << back.error().c_str();
             EXPECT_EQ(back->level, start.level);
@@ -219,26 +218,46 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(ignored->level, ComputerLevel::Normal);
     }
 
-    TEST_F(MatchLogJsonTest, AVersionTwoStartNeedsALevelOfTheTwoNames) {
+    TEST_F(MatchLogJsonTest, AVersionThreeStartNeedsALevelNumberOneToTen) {
         const MatchLogEvent start = PlayedLog(kSeed).front();
         Json without = EventToJson(start);
         without.erase("level");
         const eastl::string missing = ErrorOf(without);
         EXPECT_NE(missing.find("level"), eastl::string::npos) << missing.c_str();
-        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", "Easy"));
-        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", "Hard"));
-        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", "easy "));
-        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", "expert"));
-        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", ""));
-        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", 1));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", 0));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", 11));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", -1));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", "5"));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", "normal"));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", "hard"));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", 2.5));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "level", nullptr));
-        // An unknown name is answered with the two names
-        const eastl::string unknown = ErrorOf(With(EventToJson(start), "level", "expert"));
-        EXPECT_NE(unknown.find("easy or normal"), eastl::string::npos) << unknown.c_str();
-        EXPECT_EQ(unknown.find("hard"), eastl::string::npos) << unknown.c_str();
         // The versions around the known ones are refused.
         EXPECT_TRUE(ChangedMemberIsRefused(start, "version", kMatchLogFormatVersion + 1));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "version", kMatchLogOldestVersion - 1));
+    }
+
+    TEST_F(MatchLogJsonTest, AVersionTwoStartNeedsALevelOfTheTwoNamesAndReadsThemAsOneAndFive) {
+        const MatchLogEvent start = PlayedLog(kSeed).front();
+        Json versionTwo = EventToJson(start);
+        versionTwo["version"] = kMatchLogLevelVersion;
+        for (const auto& [name, level] : {std::pair{"easy", ComputerLevel::Easy}, std::pair{"normal", ComputerLevel::Normal}}) {
+            const auto back = EventFromJson(With(versionTwo, "level", name));
+            ASSERT_TRUE(back.has_value()) << back.error().c_str();
+            EXPECT_EQ(back->level, level) << name;
+        }
+        Json without = versionTwo;
+        without.erase("level");
+        const eastl::string missing = ErrorOf(without);
+        EXPECT_NE(missing.find("level"), eastl::string::npos) << missing.c_str();
+        for (const char* bad : {"Easy", "Hard", "easy ", "expert", "", "1", "5"}) {
+            EXPECT_FALSE(EventFromJson(With(versionTwo, "level", bad)).has_value()) << "'" << bad << "'";
+        }
+        EXPECT_FALSE(EventFromJson(With(versionTwo, "level", 1)).has_value()) << "version 2 wrote names, not numbers";
+        // An unknown name is answered with the two names
+        const eastl::string unknown = ErrorOf(With(versionTwo, "level", "expert"));
+        EXPECT_NE(unknown.find("easy or normal"), eastl::string::npos) << unknown.c_str();
+        EXPECT_EQ(unknown.find("hard"), eastl::string::npos) << unknown.c_str();
     }
 
     TEST_F(MatchLogJsonTest, AVersionTwoStartThatNamesHardReadsAsNormal) {
@@ -246,7 +265,8 @@ namespace BECore::Mahjong::Tests {
         const MatchLogEvent& start = events.front();
         ASSERT_EQ(start.kind, MatchLogKind::Start);
         ASSERT_EQ(start.level, ComputerLevel::Normal);
-        const Json hard = With(EventToJson(start), "level", std::string(kMatchLogRetiredLevelName));
+        Json hard = With(EventToJson(start), "level", std::string(kMatchLogRetiredLevelName));
+        hard["version"] = kMatchLogLevelVersion;
         const auto back = EventFromJson(hard);
         ASSERT_TRUE(back.has_value()) << back.error().c_str();
         EXPECT_EQ(back->level, ComputerLevel::Normal);
@@ -268,8 +288,9 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(replayed.GetPhase(), MatchPhase::Finished);
 
         // Only that one name is read as Normal.
-        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", "HARD"));
-        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", "hard "));
+        for (const char* bad : {"HARD", "hard "}) {
+            EXPECT_FALSE(EventFromJson(With(hard, "level", bad)).has_value()) << "'" << bad << "'";
+        }
     }
 
     TEST_F(MatchLogJsonTest, TheHandLineListsFourteenTilesForEastAndThirteenForTheOthers) {

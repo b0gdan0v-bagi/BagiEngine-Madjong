@@ -130,7 +130,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(got.handsPlayed, want.handsPlayed) << where;
             EXPECT_EQ(got.east, want.east) << where;
             EXPECT_EQ(got.hand, want.hand) << where;
-            EXPECT_EQ(Name(got.level), Name(want.level)) << where;
+            EXPECT_EQ(std::string(LevelText(got.level)), std::string(LevelText(want.level))) << where;
             EXPECT_EQ(got.seats, want.seats) << where;
         }
 
@@ -211,7 +211,7 @@ namespace BECore::Mahjong::Tests {
             for (const SeatKind kind : seats) {
                 text += kind == SeatKind::Person ? 'P' : 'C';
             }
-            return text + " " + Name(level);
+            return text + " " + std::string(LevelText(level));
         }
 
         /// A started session in the middle of a match, to see what a refused resume leaves.
@@ -232,7 +232,7 @@ namespace BECore::Mahjong::Tests {
                     text += " " + std::to_string(score);
                 }
                 text += " hands " + std::to_string(table.match.HandsPlayed()) + " version " + std::to_string(session.Version());
-                text += " viewer " + std::to_string(session.Viewer()) + " level " + Name(session.Level()) + " phase " + Name(session.GetPhase());
+                text += " viewer " + std::to_string(session.Viewer()) + " level " + std::string(LevelText(session.Level())) + " phase " + Name(session.GetPhase());
                 text += " actor " + std::to_string(session.Actor()) + " seats ";
                 for (const SeatKind kind : session.Seats()) {
                     text += kind == SeatKind::Person ? 'P' : 'C';
@@ -551,7 +551,7 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_TRUE((*parsed)[index] == want[index]) << where << ": event " << index;
             }
             EXPECT_EQ((*parsed)[0].seats, played.seats) << where;
-            EXPECT_EQ(Name((*parsed)[0].level), Name(played.level)) << where;
+            EXPECT_EQ(std::string(LevelText((*parsed)[0].level)), std::string(LevelText(played.level))) << where;
             // The recorder keeps the same events.
             EXPECT_TRUE(recorded.recorder.Events() == want) << where;
             // Only the three kinds, no breakdowns, and smaller than the log file of the match.
@@ -678,11 +678,27 @@ namespace BECore::Mahjong::Tests {
                     EXPECT_EQ(read->hintsOn, hands == kFullMatchHands);
                     EXPECT_EQ(read->seats, seats);
                     EXPECT_EQ(read->handsPerMatch, hands);
-                    EXPECT_EQ(Name(read->level), Name(level));
+                    EXPECT_EQ(std::string(LevelText(read->level)), std::string(LevelText(level)));
                 }
             }
         }
+        for (const ComputerLevel level : kAllLevels) {
+            const MahjongPrefsSave prefs = MakePrefs("en", true, kDefaultSeatSetup, kFullMatchHands, level);
+            EXPECT_EQ(prefs.level, eastl::string(LevelText(level).data(), LevelText(level).size()));
+            const auto read = ReadPrefs(prefs);
+            ASSERT_TRUE(read.has_value()) << LevelText(level);
+            EXPECT_EQ(read->level, level) << LevelText(level);
+        }
+        // A copy written before the scale of numbers holds the name of a level
+        for (const auto& [name, level] : {std::pair{"easy", ComputerLevel::Easy}, std::pair{"normal", ComputerLevel::Normal}}) {
+            MahjongPrefsSave prefs;
+            prefs.level = name;
+            const auto read = ReadPrefs(prefs);
+            ASSERT_TRUE(read.has_value()) << name;
+            EXPECT_EQ(read->level, level) << name;
+        }
         const MahjongPrefsSave defaults;
+        EXPECT_EQ(defaults.level, "5");
         EXPECT_TRUE(ReadPrefs(defaults).has_value());
         EXPECT_TRUE(defaults == MakePrefs("en", true, kDefaultSeatSetup, kFullMatchHands, kDefaultLevel));
         EXPECT_FALSE(defaults == MakePrefs("ru", true, kDefaultSeatSetup, kFullMatchHands, kDefaultLevel));
@@ -698,6 +714,9 @@ namespace BECore::Mahjong::Tests {
         refused("seats letter", [](MahjongPrefsSave& prefs) { prefs.seats = "PCCX"; }, "seats");
         refused("level hard", [](MahjongPrefsSave& prefs) { prefs.level = "hard"; }, "level");
         refused("level capital", [](MahjongPrefsSave& prefs) { prefs.level = "Easy"; }, "level");
+        refused("level 0", [](MahjongPrefsSave& prefs) { prefs.level = "0"; }, "level");
+        refused("level 11", [](MahjongPrefsSave& prefs) { prefs.level = "11"; }, "level");
+        refused("level 05", [](MahjongPrefsSave& prefs) { prefs.level = "05"; }, "level");
         refused("hands 12", [](MahjongPrefsSave& prefs) { prefs.hands = 12; }, "hands");
         refused("hands 0", [](MahjongPrefsSave& prefs) { prefs.hands = 0; }, "hands");
         refused("language empty", [](MahjongPrefsSave& prefs) { prefs.language.clear(); }, "language");

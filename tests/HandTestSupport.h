@@ -3,6 +3,7 @@
 #include "FixedWall.h"
 
 #include <EASTL/algorithm.h>
+#include <Mahjong/Game/ComputerLevel.h>
 #include <Mahjong/Game/HandModel.h>
 #include <Mahjong/Game/MahjongRng.h>
 #include <Mahjong/Game/Match.h>
@@ -13,7 +14,7 @@
 
 /**
  * What the tests of a `HandModel` share: the seat names, `kExpectedStartingScore`, a sum of a number per seat, the name of an enum value
- * (`Name`), a tile from text, the error of a status, a snapshot of everything an action could change, a lap of discards, the checks of
+ * or a level (`Name`), a tile from text, the error of a status, a snapshot of everything an action could change, a lap of discards, the checks of
  * `LegalActions` against `Apply` (`EveryCanonicalAction`, `AcceptedExactlyWhenListed`) and the chooser that plays a hand with random
  * legal actions. Header only. Included directly by `ComputerClaimTest`, `ComputerMatchTest`, `ComputerPlayerTest`, `ComputerStrengthTest`,
  * `ComputerTestSupport.h`, `ComputerTurnTest`, `ComputerViewTest`, `HandModelActionsTest`, `HandModelClaimTest`, `HandModelKongTest`,
@@ -48,6 +49,11 @@ namespace BECore::Mahjong::Tests {
     std::string Name(E value) {
         const auto name = EnumUtils<E>::ToString(value);
         return std::string(name.data(), name.size());
+    }
+
+    /// The name of a level, for a failure message: its number (`LevelText`).
+    inline std::string Name(ComputerLevel level) {
+        return std::string(LevelText(level));
     }
 
     /// The tile of a text such as "5p" or "Rd"; the text is the test's own, so a bad one aborts at once.

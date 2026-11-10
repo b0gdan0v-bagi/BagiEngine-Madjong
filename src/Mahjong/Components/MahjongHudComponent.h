@@ -47,8 +47,8 @@ namespace BECore::Mahjong {
      * `MahjongContinue` calls `ContinueMatch()` and is ignored while the panel is closed or there is nothing to continue.
      *
      * **Options.** `MahjongGame::IsOptionsOpen()` is the page over `Setup`. `MahjongOptions` opens it, only while `Setup` is
-     * open; `MahjongOptionsBack` closes it (ignored while it is closed). `MahjongSetLevel` with `easy` | `normal` (`TryParseLevel`; any other text is ignored, and
-     * so is the action while the page is closed) calls `SetLevel` and sets the variable `levelChoice` (the name of `GetLevel()`, also set when `Setup` opens). The
+     * open; `MahjongOptionsBack` closes it (ignored while it is closed). `MahjongSetLevel` with `1` .. `10` (`TryParseLevel`; any other text is ignored, and
+     * so is the action while the page is closed) calls `SetLevel` and sets the variable `levelChoice` (`LevelText` of `GetLevel()`, also set when `Setup` opens). The
      * level takes effect with the next match: a running session keeps its own. `Setup` stays open under the page and `CloseSetup()` closes it. The canvas `Options` is
      * shown exactly while the page is open (rows: language, hints, level, and the button `Back`); `language` and `levelChoice` are published when it opens.
      *
@@ -119,7 +119,7 @@ namespace BECore::Mahjong {
         void PublishHandsChoice() const;
         /// Sets the variable `language` to the language of the game.
         void PublishLanguage(const MahjongGame& game) const;
-        /// Sets the variable `levelChoice` to the name of the level of the game (`easy` | `normal`).
+        /// Sets the variable `levelChoice` to the text of the level of the game (`1` .. `10`).
         void PublishLevelChoice(const MahjongGame& game) const;
         /// Shows or hides `HandOver` and `MatchOver` after the session, and sets their variables when the session moved.
         void PublishEndScreens(const MahjongGame* game);

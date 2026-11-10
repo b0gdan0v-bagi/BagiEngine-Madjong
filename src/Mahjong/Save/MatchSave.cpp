@@ -96,8 +96,8 @@ namespace BECore::Mahjong {
         prefs.hintsOn = hintsOn;
         prefs.seats = SeatsToLetters(seats);
         prefs.hands = handsPerMatch;
-        const std::string_view name = LevelName(level);
-        prefs.level.assign(name.data(), name.size());
+        const std::string_view text = LevelText(level);
+        prefs.level.assign(text.data(), text.size());
         return prefs;
     }
 
@@ -117,9 +117,14 @@ namespace BECore::Mahjong {
             return std::unexpected(Format("the hands {} are not {} or {}", prefs.hands, kFullMatchHands, kShortMatchHands));
         }
         values.handsPerMatch = prefs.hands;
-        const std::optional<ComputerLevel> level = TryParseLevel(std::string_view(prefs.level.c_str(), prefs.level.size()));
+        // A copy written before the scale of numbers holds a name (`easy` | `normal`): read as the level of that name
+        const std::string_view levelText(prefs.level.c_str(), prefs.level.size());
+        std::optional<ComputerLevel> level = TryParseLevel(levelText);
         if (!level) {
-            return std::unexpected(Format("the level '{}' is not {}", prefs.level, LevelNamesText()));
+            level = TryParseLevelName(levelText);
+        }
+        if (!level) {
+            return std::unexpected(Format("the level '{}' is not {}", prefs.level, LevelRangeText()));
         }
         values.level = *level;
         return values;

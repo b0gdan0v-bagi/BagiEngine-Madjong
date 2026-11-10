@@ -218,8 +218,6 @@
         <string key="setup.level" text="Level"/>
         <string key="options.title" text="Options"/>
         <string key="options.back" text="Back"/>
-        <string key="level.easy" text="Easy"/>
-        <string key="level.normal" text="Normal"/>
         <string key="move.discard" text="{seat} discarded {tile}"/>
         <string key="move.discardCalling" text="{seat} discarded {tile} and declared a ready hand"/>
         <string key="move.chow" text="{seat} claimed {tile} for a chow"/>
@@ -444,8 +442,6 @@
         <string key="setup.level" text="Уровень"/>
         <string key="options.title" text="Настройки"/>
         <string key="options.back" text="Назад"/>
-        <string key="level.easy" text="Лёгкий"/>
-        <string key="level.normal" text="Обычный"/>
         <string key="move.discard" text="{seat} сбросило {tile}"/>
         <string key="move.discardCalling" text="{seat} сбросило {tile} и объявило заявку"/>
         <string key="move.chow" text="{seat} взяло {tile} в чи"/>

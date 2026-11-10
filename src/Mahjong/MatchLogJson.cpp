@@ -275,7 +275,13 @@ namespace BECore::Mahjong {
                 return Fail("seats", Format("has to be four letters, P for a person and C for a computer: \"{}\"", *letters).c_str());
             }
             event.seats = *seats;
-            if (*version >= kMatchLogLevelVersion) {
+            if (*version >= kMatchLogNumberLevelVersion) {
+                const auto number = ReadInt(json, "level", kMinLevel, kMaxLevel);
+                if (!number) {
+                    return std::unexpected(number.error());
+                }
+                event.level = *LevelOf(*number);
+            } else if (*version >= kMatchLogLevelVersion) {
                 const auto name = ReadString(json, "level");
                 if (!name) {
                     return std::unexpected(name.error());
@@ -285,9 +291,9 @@ namespace BECore::Mahjong {
                     event.level = ComputerLevel::Normal;
                     return event;
                 }
-                const std::optional<ComputerLevel> level = TryParseLevel(levelName);
+                const std::optional<ComputerLevel> level = TryParseLevelName(levelName);
                 if (!level) {
-                    return Fail("level", Format("has to be {}: \"{}\"", LevelNamesText().c_str(), *name).c_str());
+                    return Fail("level", Format("has to be easy or normal in version {}: \"{}\"", kMatchLogLevelVersion, *name).c_str());
                 }
                 event.level = *level;
             }
@@ -461,8 +467,7 @@ namespace BECore::Mahjong {
                 json["seed"] = event.seed;
                 json["settings"] = SettingsToJson(event.settings);
                 json["seats"] = MakeJsonString(SeatsToLetters(event.seats));
-                const std::string_view level = LevelName(event.level);
-                json["level"] = MakeJsonString(eastl::string_view(level.data(), level.size()));
+                json["level"] = LevelNumber(event.level);
                 break;
             }
             case MatchLogKind::Hand: {

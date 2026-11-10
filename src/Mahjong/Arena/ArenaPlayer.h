@@ -39,7 +39,7 @@ namespace BECore::Mahjong::Arena {
         eastl::string name = "normal";
     };
 
-    /// The player of `spec`: `random`, a level (`easy`, `normal`), or a level with knobs, `<level>:<knob>=<value>,...` (the
+    /// The player of `spec`: `random`, a level (`1` .. `10`, or the names `easy` = 1 and `normal` = 5), or a level with knobs, `<level>:<knob>=<value>,...` (the
     /// knobs of `kProfileKnobs`, each at most once; the level's profile is the start and the listed knobs are set on it). The names are
     /// exactly the lowercase ones. A bad spec is an error text that names the part that is wrong; nothing is thrown.
     [[nodiscard]] std::expected<ArenaPlayer, eastl::string> ParseArenaPlayer(std::string_view spec);

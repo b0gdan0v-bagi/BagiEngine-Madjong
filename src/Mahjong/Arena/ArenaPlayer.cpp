@@ -42,9 +42,7 @@ namespace BECore::Mahjong::Arena {
         }
 
         eastl::string LevelAndRandomNamesText() {
-            eastl::string names = LevelNamesText();
-            names += " or random";
-            return names;
+            return Format("a level {}..{}, easy (1), normal ({}) or random", kMinLevel, kMaxLevel, LevelNumber(ComputerLevel::Normal));
         }
 
         /// Applies `knob=value` (`part`) to `profile`; the error names the part.
@@ -97,7 +95,10 @@ namespace BECore::Mahjong::Arena {
             player.profile = kNormalProfile;
             return player;
         }
-        const std::optional<ComputerLevel> level = TryParseLevel(head);
+        std::optional<ComputerLevel> level = TryParseLevel(head);
+        if (!level.has_value()) {
+            level = TryParseLevelName(head);
+        }
         if (!level.has_value()) {
             return std::unexpected(Format("unknown player \"{}\" in \"{}\" (use {}, all lowercase)", head, spec, LevelAndRandomNamesText()));
         }

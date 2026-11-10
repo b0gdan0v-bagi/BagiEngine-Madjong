@@ -188,8 +188,8 @@ namespace BECore::Mahjong {
     }
 
     void MahjongHudComponent::PublishLevelChoice(const MahjongGame& game) const {
-        const std::string_view name = LevelName(game.GetLevel());
-        CoreManager::GetUIVars().Set("levelChoice"_intern, eastl::string_view(name.data(), name.size()));
+        const std::string_view text = LevelText(game.GetLevel());
+        CoreManager::GetUIVars().Set("levelChoice"_intern, eastl::string_view(text.data(), text.size()));
     }
 
     void MahjongHudComponent::PublishSetup(const MahjongGame* game) {
@@ -436,7 +436,7 @@ namespace BECore::Mahjong {
             return;
         }
         if (action == kSetLevelAction) {
-            // The page is where the level is set; only the two names of `LevelName`, client text is parsed by `TryParseLevel`
+            // The page is where the level is set; only `1` .. `10` (`LevelText`), client text is parsed by `TryParseLevel`
             const eastl::string_view text = event.value.ToStringView();
             const std::optional<ComputerLevel> level = TryParseLevel(std::string_view(text.data(), text.size()));
             if (game->IsOptionsOpen() && level) {

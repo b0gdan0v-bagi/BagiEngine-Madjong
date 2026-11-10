@@ -438,14 +438,13 @@ namespace BECore::Mahjong {
             discards.push_back(std::move(item));
         }
 
-        const std::string_view levelName = LevelName(session.Level());
         Json state = Json::object();
         state["phase"] = MakeJsonString(PhaseName(phase));
         state["seat"] = SeatOrNull(seat);
         state["seatWind"] = spectator ? Json(nullptr) : MakeJsonString(EnumUtils<Wind>::ToString(view.seatWind));
         state["roundWind"] = MakeJsonString(EnumUtils<Wind>::ToString(view.roundWind));
         state["east"] = hand.East();
-        state["level"] = MakeJsonString(eastl::string_view(levelName.data(), levelName.size()));
+        state["level"] = LevelNumber(session.Level());
         state["hand"] = spectator ? Json::array() : TilesToJson(view.own.concealed);
         state["turn"] = std::move(turn);
         state["seats"] = std::move(seats);
@@ -552,10 +551,10 @@ namespace BECore::Mahjong {
 
         ComputerLevel level = _game.GetLevel();
         if (FindJsonMember(options, "level") != nullptr) {
-            const auto name = GetJsonString(options, "level");
-            const std::optional<ComputerLevel> read = name ? TryParseLevel(std::string_view(name->c_str(), name->size())) : std::nullopt;
+            const auto number = GetJsonInt(options, "level");
+            const std::optional<ComputerLevel> read = number ? LevelOf(*number) : std::nullopt;
             if (!read) {
-                return InvalidParams(Format("'level' has to be {}, as a string", LevelNamesText().c_str()));
+                return InvalidParams(Format("'level' has to be {}", LevelRangeText().c_str()));
             }
             level = *read;
         }

@@ -53,6 +53,8 @@ RULES_SCREENS = {"Rules", "RulesAction"}  # the pages of the rules and their bar
 SETTLE_FRAMES = 2  # frames after a change of the game before the canvases show it
 IDLE_CHECK_SECONDS = 0.3  # how long the manual clock is watched not moving
 DEFAULT_STEP_SECONDS = 1.0 / 60.0
+EASY_LEVEL = 1    # the levels are 1..10 (ComputerLevel.h); Easy is 1
+NORMAL_LEVEL = 5  # and Normal, the default, is 5
 STATE_KEYS = {"phase", "seat", "seatWind", "roundWind", "east", "level", "hand", "turn", "seats", "discards", "wall", "handsPlayed", "handsTotal", "version"}
 TURN_KEYS = {"phase", "current", "pendingTile", "yourTurn"}
 SEAT_KEYS = {"kind", "wind", "score", "concealedCount", "melds", "concealedKongs", "bonus", "discardCount", "calling"}
@@ -215,29 +217,29 @@ def play_mahjong(client: BagiControlClient) -> None:
 
 
 def check_level(client: BagiControlClient) -> None:
-    """The level of the computers is a reset option, stays across resets, is in the state, and a bad one changes nothing."""
-    check(get_state(client)["level"] == "normal", "the level of a match nobody chose a level for is not normal")
-    client.call("reset", {"seed": SEED, "seats": "CCCC", "hands": SHORT_MATCH_HANDS, "level": "easy"})
+    """The level of the computers (1..10, Normal is 5) is a reset option, stays across resets, is in the state, and a bad one changes nothing."""
+    check(get_state(client)["level"] == NORMAL_LEVEL, "the level of a match nobody chose a level for is not Normal (5)")
+    client.call("reset", {"seed": SEED, "seats": "CCCC", "hands": SHORT_MATCH_HANDS, "level": EASY_LEVEL})
     for _ in range(HAND_LIMIT_PER_MATCH):
         state = get_state(client)
-        check(state["level"] == "easy", f"the state says level {state['level']} after a reset with easy")
-        check(sum(seat["score"] for seat in state["seats"]) == SEAT_COUNT * STARTING_SCORE, "the points of the table do not add up at level easy")
+        check(state["level"] == EASY_LEVEL, f"the state says level {state['level']} after a reset with {EASY_LEVEL}")
+        check(sum(seat["score"] for seat in state["seats"]) == SEAT_COUNT * STARTING_SCORE, "the points of the table do not add up at level 1")
         if state["phase"] == "match_over":
             break
         client.call("perform_action", {"type": "next_hand"})
     else:
-        raise SmokeFailure(f"the match at level easy did not end in {HAND_LIMIT_PER_MATCH} hands")
-    check(state["handsPlayed"] == SHORT_MATCH_HANDS, f"{state['handsPlayed']} hands played at the end of the match at level easy")
+        raise SmokeFailure(f"the match at level 1 did not end in {HAND_LIMIT_PER_MATCH} hands")
+    check(state["handsPlayed"] == SHORT_MATCH_HANDS, f"{state['handsPlayed']} hands played at the end of the match at level 1")
 
     # A bad level is invalid_params and changes nothing; a reset without the option keeps the level
     version = client.call("get_state")["version"]
-    for bad in ("hard", "Hard", "hard ", "expert", "", 3, None):
+    for bad in ("easy", "normal", "hard", "5", "", 0, 11, 2.5, None):
         expect_error("invalid_params", lambda bad=bad: client.call("reset", {"level": bad}), f"the level {bad!r}")
     check(client.call("get_state")["version"] == version, "a refused reset changed the state")
     client.call("reset", {"seed": SEED, "seats": "CCCC", "hands": SHORT_MATCH_HANDS})
-    check(get_state(client)["level"] == "easy", "a reset without a level did not keep the level")
-    client.call("reset", {"seed": SEED, "seats": "CCCC", "hands": SHORT_MATCH_HANDS, "level": "normal"})
-    check(get_state(client)["level"] == "normal", "the level did not go back to normal")
+    check(get_state(client)["level"] == EASY_LEVEL, "a reset without a level did not keep the level")
+    client.call("reset", {"seed": SEED, "seats": "CCCC", "hands": SHORT_MATCH_HANDS, "level": NORMAL_LEVEL})
+    check(get_state(client)["level"] == NORMAL_LEVEL, "the level did not go back to Normal (5)")
 
 
 def check_state_is_pushed(client: BagiControlClient) -> None:

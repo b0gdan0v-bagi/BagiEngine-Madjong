@@ -173,8 +173,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(table.session.Level(), ComputerLevel::Normal) << "before the first start";
         ASSERT_NO_FATAL_FAILURE(table.Start(kDefaultSeatSetup));
         EXPECT_EQ(table.session.Level(), kDefaultLevel) << "a start with no level";
-        for (int index = 0; index < kLevelCount; ++index) {
-            const ComputerLevel level = static_cast<ComputerLevel>(index);
+        for (const ComputerLevel level : kAllLevels) {
             ASSERT_NO_FATAL_FAILURE(table.StartAt(level));
             EXPECT_EQ(table.session.Level(), level) << Name(level);
         }
@@ -220,8 +219,7 @@ namespace BECore::Mahjong::Tests {
     TEST(TableSessionTest, EveryLevelPlaysAWholeMatchLegallyAndTheLogSaysTheLevelAndReplays) {
         // How the levels differ is the business of the computer player's tests; here the match is legal at each, the points add up, the
         // `Start` of the log carries the level and the log replays to the same match.
-        for (int index = 0; index < kLevelCount; ++index) {
-            const ComputerLevel level = static_cast<ComputerLevel>(index);
+        for (const ComputerLevel level : kAllLevels) {
             Table table;
             MatchLog log;
             table.session.SetLogSink(&log);
