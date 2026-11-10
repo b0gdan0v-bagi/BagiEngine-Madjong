@@ -489,16 +489,36 @@ namespace BECore::Mahjong {
     }
 
     std::optional<int> HitHandTile(const TableLayout& layout, float x, float y) {
-        for (auto slot = layout.slots.rbegin(); slot != layout.slots.rend(); ++slot) {
-            if (slot->role != SlotRole::HandTile || slot->seat != layout.viewer) {
+        bool any = false;
+        float left = 0.0f;
+        float right = 0.0f;
+        float top = 0.0f;
+        float bottom = 0.0f;
+        std::optional<int> nearest;
+        float nearestDistance = 0.0f;
+        for (const TileSlot& slot : layout.slots) {
+            if (slot.role != SlotRole::HandTile || slot.seat != layout.viewer) {
                 continue;
             }
-            const Rect& rect = slot->rect;
-            if (x >= rect.x && x < rect.x + rect.w && y >= rect.y && y < rect.y + rect.h) {
-                return slot->index;
+            const Rect& rect = slot.rect;
+            // the margin under the tiles belongs to the strip: kEdge design units, at the scale the layout was fitted to
+            const float tileBottom = rect.y + rect.h + kEdge * (rect.h / kViewerHandTileH);
+            left = any ? eastl::min(left, rect.x) : rect.x;
+            right = any ? eastl::max(right, rect.x + rect.w) : rect.x + rect.w;
+            top = any ? eastl::min(top, rect.y) : rect.y;
+            bottom = any ? eastl::max(bottom, tileBottom) : tileBottom;
+            any = true;
+            // the tile whose span is nearest in x; on a tie the later tile (slots are in index order)
+            const float distance = eastl::max(eastl::max(rect.x - x, x - (rect.x + rect.w)), 0.0f);
+            if (!nearest || distance <= nearestDistance) {
+                nearest = slot.index;
+                nearestDistance = distance;
             }
         }
-        return std::nullopt;
+        if (!any || x < left || x > right || y < top || y >= bottom) {
+            return std::nullopt;
+        }
+        return nearest;
     }
 
 }  // namespace BECore::Mahjong
