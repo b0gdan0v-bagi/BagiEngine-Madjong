@@ -49,8 +49,9 @@ namespace BECore::Mahjong {
      * **Options.** `MahjongGame::IsOptionsOpen()` is the page over `Setup`. `MahjongOptions` opens it, only while `Setup` is
      * open; `MahjongOptionsBack` closes it (ignored while it is closed). `MahjongSetLevel` with `1` .. `10` (`TryParseLevel`; any other text is ignored, and
      * so is the action while the page is closed) calls `SetLevel` and sets the variable `levelChoice` (`LevelText` of `GetLevel()`, also set when `Setup` opens). The
-     * level takes effect with the next match: a running session keeps its own. `Setup` stays open under the page and `CloseSetup()` closes it. The canvas `Options` is
-     * shown exactly while the page is open (rows: language, hints, level, and the button `Back`); `language` and `levelChoice` are published when it opens.
+     * level takes effect with the next match: a running session keeps its own. `MahjongSetSpeed` with `slow` | `normal` | `fast` (`TryParseSpeed`, ignored like the level) calls
+     * `SetAnimationSpeed` and sets `speedChoice`; it takes effect at once (`Table/AnimationSpeed.h`). `Setup` stays open under the page and `CloseSetup()` closes it. The canvas `Options` is
+     * shown exactly while the page is open (rows: language, hints, speed, level, and the button `Back`); `language`, `speedChoice` and `levelChoice` are published when it opens.
      *
      * **Saving.** Every `SceneUpdateEvent` (once per frame, only for the active game) calls `MahjongGame::FlushSave()`, which writes the match and the
      * choices of `Setup` when they changed, so a burst of computer steps is one write.
@@ -111,7 +112,7 @@ namespace BECore::Mahjong {
         void PublishNumbers(const MahjongGame* game);
         /// Shows or hides `Setup` after the game, and takes the setup of the game when the panel opens.
         void PublishSetup(const MahjongGame* game);
-        /// Shows or hides `Options` after `MahjongGame::IsOptionsOpen()`, and publishes `language` and `levelChoice` when it opens.
+        /// Shows or hides `Options` after `MahjongGame::IsOptionsOpen()`, and publishes `language`, `speedChoice` and `levelChoice` when it opens.
         void PublishOptions(const MahjongGame* game);
         /// Shows or hides the plate `MoveLine` (the variable `lastMove` holds its text).
         void ShowMoveLine(bool show);
@@ -121,6 +122,8 @@ namespace BECore::Mahjong {
         void PublishLanguage(const MahjongGame& game) const;
         /// Sets the variable `levelChoice` to the text of the level of the game (`1` .. `10`).
         void PublishLevelChoice(const MahjongGame& game) const;
+        /// Sets the variable `speedChoice` to the id of the speed of the game (`SpeedText`).
+        void PublishSpeedChoice(const MahjongGame& game) const;
         /// Shows or hides `HandOver` and `MatchOver` after the session, and sets their variables when the session moved.
         void PublishEndScreens(const MahjongGame* game);
         void PublishHandOver(const MahjongGame& game);

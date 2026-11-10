@@ -398,6 +398,7 @@ namespace BECore::Mahjong::Tests {
         settings.limit = 300;
         game->SetSettings(settings);
         game->SetLevel(ComputerLevel::Easy);
+        game->SetAnimationSpeed(AnimationSpeed::Slow);
         game->FlushSave();
         CoreManager::GetUIStrings().SetLanguage("en"_intern);
 
@@ -409,6 +410,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(second->GetSettings().flowers);
         EXPECT_EQ(second->GetSettings().limit, MahjongSettings{}.limit);
         EXPECT_EQ(second->GetLevel(), ComputerLevel::Easy);
+        EXPECT_EQ(second->GetAnimationSpeed(), AnimationSpeed::Slow);
         EXPECT_FALSE(fs::exists(Slot(kMatchFile)));
     }
 

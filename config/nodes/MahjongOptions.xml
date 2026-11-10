@@ -4,15 +4,16 @@
   it lies over Setup, which stays open under it (the pending seats and hands and Continue are not lost). MahjongHudComponent shows it
   exactly while MahjongGame::IsOptionsOpen(); Back (MahjongOptionsBack) closes it. The rows are the shapes of the rows of Setup: the
   language MahjongSetLanguage (value = the language id, variable language), the hints MahjongSetHints (value on or off, variable
-  hintsChoice, published by MahjongHintsComponent), the level MahjongSetLevel (a dropdown of the levels 1 .. 10, value
+  hintsChoice, published by MahjongHintsComponent), the speed MahjongSetSpeed (value slow, normal or fast, variable
+  speedChoice; the pace of the computers, the flights and the marks of a claim, at once), the level MahjongSetLevel (a dropdown of the levels 1 .. 10, value
   the number, variable levelChoice; it applies to the game at once and takes effect with the next match). A row is a node edit: the plate's maximum height grows by 72 for it.
-  The roomy shape (a canvas of 1280 x 720 units) is the anatomy of the modal screens: the plate is the safe area at most 376 high
-  (32 padding + 48 title band + 3 x 64 rows + 64 Back + 5 x 8 spacing; BackGap is empty, so the 8 + 8 round it set Back 16 apart
+  The roomy shape (a canvas of 1280 x 720 units) is the anatomy of the modal screens: the plate is the safe area at most 448 high
+  (32 padding + 48 title band + 4 x 64 rows + 64 Back + 6 x 8 spacing; BackGap is empty, so the 8 + 8 round it set Back 16 apart
   from the rows) and the title, the rows and Back share its height by flex weights that come out at 48 / 64 (0.75 / 1) and stop
   growing there (maxHeight). A row has no vertical padding: its caption and its group are 87.5 % of its height and centred, which
   is the 4 padding round a 56 segment of a row of 64. The variant for a canvas of at most 360 units high hides the Title;
   the variant for a canvas of at most 440 units wide takes the whole safe width for the plate and narrows the captions (64 for
-  Language, 52 for the others). The open list of the ten levels is a popup in the safe area with no scrolling, so its options
+  Language, 52 for the others) and hides the caption of the speed, whose three words need the room (its caption is 96 wide elsewhere). The open list of the ten levels is a popup in the safe area with no scrolling, so its options
   are as high as the canvas allows: 56 in a canvas of more than 601 units, then 44, 32, 24, 20 and 16 by the height variants (on
   the grid, each between a fifteenth and a tenth of the canvas: the list of ten fits the safe area of a notch, and an option stays
   a 32 px touch target in a window 480 px high). Every text may shrink (AutoFit, down to 12 units) instead of being cut. MahjongOptionsTest holds the
@@ -23,7 +24,7 @@
     <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" modal="true" visible="false">
       <elements>
         <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
-        <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="640" height="100%" maxHeight="376" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
+        <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="640" height="100%" maxHeight="448" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
           <children>
             <element type="UILabel" name="Title" flex="0.75" maxHeight="48" text="{#options.title}" fontSize="28" overflow="AutoFit" minFontSize="12" align="Center" verticalAlign="Center" color="58,66,92,255" />
             <element type="UIStack" name="LanguageRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255">
@@ -44,6 +45,18 @@
                   <children>
                     <element type="UIButton" name="HintsOn" flex="1" height="100%" text="{#setup.on}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetHints" value="on" color="70,70,100,255" selectedColor="40,110,60,255" />
                     <element type="UIButton" name="HintsOff" flex="1" height="100%" text="{#setup.off}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetHints" value="off" color="70,70,100,255" selectedColor="40,110,60,255" />
+                  </children>
+                </element>
+              </children>
+            </element>
+            <element type="UIStack" name="SpeedRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255">
+              <children>
+                <element type="UILabel" name="SpeedCaption" width="96" height="87.5%" text="{#options.speed}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" textColor="190,196,190,255" />
+                <element type="UISegmented" name="SpeedChoice" bind="speedChoice" flex="1" height="87.5%" direction="Horizontal" spacing="4" color="48,54,72,255">
+                  <children>
+                    <element type="UIButton" name="SpeedSlow" flex="1" height="100%" text="{#options.speedSlow}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetSpeed" value="slow" color="70,70,100,255" selectedColor="40,110,60,255" />
+                    <element type="UIButton" name="SpeedNormal" flex="1" height="100%" text="{#options.speedNormal}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetSpeed" value="normal" color="70,70,100,255" selectedColor="40,110,60,255" />
+                    <element type="UIButton" name="SpeedFast" flex="1" height="100%" text="{#options.speedFast}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetSpeed" value="fast" color="70,70,100,255" selectedColor="40,110,60,255" />
                   </children>
                 </element>
               </children>
@@ -83,6 +96,7 @@
             <set element="Plate" width="100%" />
             <set element="LanguageCaption" width="64" />
             <set element="HintsCaption" width="52" />
+            <set element="SpeedCaption" visible="false" />
             <set element="LevelCaption" width="52" />
           </overrides>
         </variant>

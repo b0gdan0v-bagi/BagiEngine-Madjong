@@ -90,7 +90,7 @@ namespace BECore::Mahjong {
         return events;
     }
 
-    MahjongPrefsSave MakePrefs(eastl::string_view language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, ComputerLevel level) {
+    MahjongPrefsSave MakePrefs(eastl::string_view language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, ComputerLevel level, AnimationSpeed speed) {
         MahjongPrefsSave prefs;
         prefs.language.assign(language.data(), language.size());
         prefs.hintsOn = hintsOn;
@@ -98,6 +98,8 @@ namespace BECore::Mahjong {
         prefs.hands = handsPerMatch;
         const std::string_view text = LevelText(level);
         prefs.level.assign(text.data(), text.size());
+        const std::string_view speedText = SpeedText(speed);
+        prefs.speed.assign(speedText.data(), speedText.size());
         return prefs;
     }
 
@@ -127,6 +129,11 @@ namespace BECore::Mahjong {
             return std::unexpected(Format("the level '{}' is not {}", prefs.level, LevelRangeText()));
         }
         values.level = *level;
+        const std::optional<AnimationSpeed> speed = TryParseSpeed(std::string_view(prefs.speed.c_str(), prefs.speed.size()));
+        if (!speed) {
+            return std::unexpected(Format("the speed '{}' is not slow, normal or fast", prefs.speed));
+        }
+        values.speed = *speed;
         return values;
     }
 

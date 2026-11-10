@@ -122,6 +122,7 @@ namespace BECore::Mahjong {
         _seats = values->seats;
         _settings.handsPerMatch = values->handsPerMatch;
         _level = values->level;
+        _animationSpeed = values->speed;
     }
 
     bool MahjongGame::ResumeSavedMatch() {
@@ -174,7 +175,7 @@ namespace BECore::Mahjong {
         }
         const int hands = _settings.handsPerMatch;
         const bool handsAreAChoice = hands == kFullMatchHands || hands == kShortMatchHands;
-        const MahjongPrefsSave prefs = MakePrefs(_language.ToStringView(), _hintsOn, _seats, handsAreAChoice ? hands : _savedPrefs.hands, _level);
+        const MahjongPrefsSave prefs = MakePrefs(_language.ToStringView(), _hintsOn, _seats, handsAreAChoice ? hands : _savedPrefs.hands, _level, _animationSpeed);
         if (!(prefs == _savedPrefs)) {
             _savedPrefs = prefs;
             _store.SavePrefs(prefs);
