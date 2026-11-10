@@ -389,3 +389,60 @@ Decided by the rule written before the numbers (plan, WP 3), from the two sectio
   a future profile (`searchWorlds x searchCandidates` of at most 12 rollouts, the slowest decision at most 0.3 s: 237 to 261 ms for
   the three shapes of "Above Normal"). `ComputerSearchTest` pins that no level searches, and `ComputerLevelTest` that the skip
   profiles get weaker strictly along 1..4 and levels 5..10 are Normal's.
+
+### The whole scale measured (step 5: the shipped table 1..10)
+
+The table of `ComputerLevel.h` as it ships (WP 3: levels 1..4 skip knobs, 5..10 `kNormalProfile`), against three Normal seats
+(`--others 5`), 1000 seeds on each of two ranges that nothing was tuned on, each played once as it stands. Release,
+`--jobs 14`, `A=build/ClangmacOS/BagiMahjongArena`:
+
+```bash
+for R in 100000 130000; do                                                  # decision, confirmation
+  $A --first $R --seeds 1000 --jobs 14 --others 5 --focus 1,2,3,4,5,6,7,8,9,10    # 13.7 s, 20.7 s of wall time
+  for P in 1,2 2,3 3,4 4,5; do $A --first $R --seeds 1000 --jobs 14 --others 5 --focus $P; done   # the adjacent paired rows
+  $A --first $R --seeds 1000 --jobs 14 --others 5 --focus 5,6,7,8,9,10      # 6..10 against 5
+done
+```
+
+**Not significantly above the level below: levels 6, 7, 8, 9 and 10, each against the one below it (and each against 5).** They are
+`kNormalProfile`, the same player as level 5, so on every wall they play the same hand to the same bytes and every paired difference
+is exactly +0.00 +- 0.00 points and +0.00 +- 0.00 wins % on both ranges (the rows 5 to 10 of the first table below are one set of
+numbers, measured once). By the rule they are not stronger; they are not meant to be: "Above Normal" found no search profile inside
+the time rule that beats Normal, WP 3 shipped them as placeholders, and the retune round of the rule has nothing to retune (there is no
+dial of a Normal-identical level; inventing a profile to make a step would be the fake "stronger" level the plan forbids). They go to
+the owner ("Left for the owner" of the plan). Levels 2, 3, 4 and 5 are each significantly above the level below on both ranges; no
+retune round was played and no code changed.
+
+Wins % and points a hand with the 95 % interval (4000 hands per level). Level 5 against three level-5 seats is exactly 25 % and
+0 points by the mirror identity; the 24.98 % and 24.95 % are the wins lost to the drawn hands (a drawn wall is drawn in all four rotations, so no seat wins it):
+
+| level | decision wins % | decision points/hand | confirmation wins % | confirmation points/hand |
+|---|---|---|---|---|
+| 1 | 7.17 +- 0.75 | -47.47 +- 3.10 | 6.42 +- 0.73 | -52.87 +- 3.03 |
+| 2 | 13.68 +- 0.94 | -31.59 +- 3.22 | 13.22 +- 0.97 | -33.54 +- 3.68 |
+| 3 | 18.57 +- 1.05 | -17.26 +- 3.60 | 17.00 +- 1.00 | -22.05 +- 3.50 |
+| 4 | 21.77 +- 1.04 | -8.99 +- 3.69 | 21.77 +- 1.06 | -8.56 +- 3.49 |
+| 5 to 10 (Normal, one player) | 24.98 +- 0.05 | 0.00 +- 0.00 | 24.95 +- 0.07 | 0.00 +- 0.00 |
+
+The paired difference of each level to the one below (`--focus <k>,<k+1>`, same walls), both ranges side by side and pooled (the
+mean of the two):
+
+| step | decision points/hand | decision wins % | confirmation points/hand | confirmation wins % | pooled points/hand | pooled wins % | verdict |
+|---|---|---|---|---|---|---|---|
+| 1 to 2 | +15.88 +- 3.35 | +6.50 +- 0.91 | +19.33 +- 3.41 | +6.80 +- 0.92 | +17.61 | +6.65 | above |
+| 2 to 3 | +14.33 +- 3.16 | +4.90 +- 0.98 | +11.49 +- 3.74 | +3.77 +- 1.00 | +12.91 | +4.34 | above |
+| 3 to 4 | +8.26 +- 3.13 | +3.20 +- 0.94 | +13.48 +- 3.30 | +4.78 +- 1.00 | +10.87 | +3.99 | above |
+| 4 to 5 | +8.99 +- 3.69 | +3.20 +- 1.04 | +8.56 +- 3.49 | +3.17 +- 1.06 | +8.78 | +3.19 | above |
+| 5 to 6 | +0.00 +- 0.00 | +0.00 +- 0.00 | +0.00 +- 0.00 | +0.00 +- 0.00 | 0 | 0 | not significantly above |
+| 6 to 7, 7 to 8, 8 to 9, 9 to 10 | identical profiles: 0 and 0 as 5 to 6 (the five rows of `--focus 5,6,7,8,9,10` are all +0.00) | | | | 0 | 0 | not significantly above |
+
+(Every "above" row is marked `significant` by the arena on points and on wins on both ranges, and the pooled values are positive.)
+The steps shrink towards Normal as in step 1 (17.6, 12.9, 10.9, 8.8 points pooled; on the confirmation range 2 to 3 is 11.5 and 3 to 4
+is 13.5, within each other's intervals), so the ladder 1 < 2 < 3 < 4 < 5 holds on three ranges (exploration of step 1, decision,
+confirmation). The declared share runs 17 / 32 /
+42 / 50 / 56 % on the decision range and 16 / 31 / 42 / 50 / 57 % on the confirmation range, the drawn share 0.1 to 0.6 % at every
+level.
+
+**Time.** There is no search level, so there is no Release decision time of a search level to record (the arena's `--time` is read at
+`--jobs 1` for a search profile; the time rule and the Debug figures of the shapes that would fit it are in "Above Normal"). A run
+of the whole table plays 5 distinct players; the wall time of one range at `--jobs 14` is above.
