@@ -46,13 +46,13 @@ The game also builds as a web page (Emscripten, WebGL). The SDK is installed onc
 
 ```bash
 python3.14 engine/CI/scripts/setup_emsdk.py
-cmake --preset web-release                    # threaded; output in build/ClangWeb
+cmake --preset web-release                    # threaded; output in build/web-release/bin
 cmake --build --preset web-release --target BagiMahjong
-python3 engine/tools/web/package.py build/ClangWeb dist --game BagiMahjong     # dist/ is git-ignored
+python3 engine/tools/web/package.py build/web-release/bin dist --game BagiMahjong --app web/app.json   # dist/ is git-ignored
 python3 engine/tools/web/serve.py --root dist                                  # http://localhost:8080
 ```
 
-Open `localhost` or an https address: the threaded page needs cross-origin isolation, which a plain `http://` host never has. The single-thread page needs no headers: the preset `web-release-single-thread`, `package.py build/ClangWebSingleThread dist-single --game BagiMahjong --single-thread`, `serve.py --root dist-single`. Switching between `web-debug` and `web-release` (both use `build/ClangWeb`): delete `build/ClangWeb/lib/*.a` first. In a worker folder, which has no SDK of its own, the same presets exist as `-local` ones in the git-ignored `CMakeUserPresets.json`.
+Open `localhost` or an https address: the threaded page needs cross-origin isolation, which a plain `http://` host never has. The single-thread page needs no headers: the preset `web-release-single-thread`, `package.py build/web-release-single-thread/bin dist-single --game BagiMahjong --app web/app.json --single-thread`, `serve.py --root dist-single`. In a worker folder, which has no SDK of its own, the same presets exist as `-local` ones in the git-ignored `CMakeUserPresets.json`.
 
 The browser smoke (`tools/web_smoke.py`: the engine's smoke, then `Start` and a tile click on a 1280x720 page) needs Playwright in a venv:
 
@@ -64,6 +64,8 @@ build/web-venv/bin/python tools/web_smoke.py --dist dist-single --expect-console
 ```
 
 Without a browser, the web-like desktop build tests the same code paths: `cmake -S . -B build/webcheck -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug -DENGINE_WITH_VULKAN=OFF -DENGINE_WITH_REMOTE_CONTROL=OFF -DENGINE_STATIC_SDL=ON -DENGINE_SINGLE_THREAD=ON` (and `OFF`), then build `BagiMahjong MahjongTests` and `ctest --test-dir build/webcheck`. The output lands in `build/ClangmacOS/` whatever the folder: delete `build/ClangmacOS/lib/*.a` when switching and build `macos-debug` again afterwards.
+
+**The web app:** `web/app.json` names the page's home-screen app (name, landscape, the felt colour, the icons of `web/icons/`, made by `python3 tools/make_app_icons.py`); `build_and_deploy.py` picks it up by itself. On a phone the first tap asks for fullscreen and locks landscape (`engine/tools/web/CLAUDE.md`).
 
 **What differs in the browser:** no saves and no `Continue` (the page's file system is memory, lost on reload; the seat choice is not remembered either), no match log, no control API, no bot arena. Persistence needs IDBFS, which is engine work and not done.
 
