@@ -38,8 +38,8 @@ namespace BECore::Mahjong {
      * and `MahjongStart` gives the pending seats and the number of hands (`handsPerMatch` only: every other setting stays as the game
      * has it) to the game and begins a match with a random seed (`StartRandomMatch`), which closes the panel; a start the game refuses
      * leaves it open and the seats and settings as they were. `MahjongNewGame` (the HUD button) opens it again, with the pending setup of the
-     * last match. `MahjongOptions` (the full-width button `OptionsRow`) opens the page `Options`. The language row of the page is a `UISegmented` bound to
-     * `language` (the id of the language) and emits `MahjongSetLanguage` with the id, which is accepted only while the page is open;
+     * last match. `MahjongOptions` (the full-width button `OptionsRow`) opens the page `Options`. The language row of the page is a
+     * `UISegmented` bound to `language` (the id of the language) and emits `MahjongSetLanguage` with the id, which is accepted only while the page is open;
      * `MahjongGame::SetLanguage` applies it to the string table (an id the table does not have is refused and
      * the variable is set to the language the game really has), and the labels and the variables follow at the next draw. Nothing is
      * played while it is open (`MahjongTableComponent` takes no click and steps no computer). The button `Continue` (`MahjongContinue`, beside `Start` in

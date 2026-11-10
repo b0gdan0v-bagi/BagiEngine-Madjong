@@ -6,7 +6,7 @@ Plain C++ with reflected states: `MatchSave.*` has no scene and no disk, `MatchS
 
 - **`match`** (`kMatchSlot`): the `Start`, `Action` and `Settlement` events of the match in progress (`MatchSaveText`, one `EventToJson` line each, in the one string `MahjongMatchSave::log`; no `Hand` / `End`, no breakdowns). Resuming replays them (`TableSession::ResumeMatch`, `../Game/CLAUDE.md`). The settlements stay in on purpose: the replay checks them, so a save that a change of the rules or of the wall would make differ is **refused, not guessed at**.
 - **The computers' random state is not saved**: the computers are made again from the seed of the match, so play after Continue is legal and of the same level, but not bit for bit the uninterrupted game. The price of not tying a save to the computer players of the build that wrote it.
-- **`settings`** (`kPrefsSlot`, `MahjongPrefsSave`): the five choices of `Setup` (`language`, `hintsOn`, `seats` "PCCC", `hands` 16 | 8, `level`); never `flowers`, `limit`, `replayDrawnHand`, `startingScore`.
+- **`settings`** (`kPrefsSlot`, `MahjongPrefsSave`): the five choices of `Setup` and `Options` (`language`, `hintsOn`, `seats` "PCCC", `hands` 16 | 8, `level`); never `flowers`, `limit`, `replayDrawnHand`, `startingScore`.
 
 ## Where
 

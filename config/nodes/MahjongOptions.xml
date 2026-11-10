@@ -10,7 +10,7 @@
   (32 padding + 48 title band + 3 x 64 rows + 64 Back + 5 x 8 spacing; BackGap is empty, so the 8 + 8 round it set Back 16 apart
   from the rows) and the title, the rows and Back share its height by flex weights that come out at 48 / 64 (0.75 / 1) and stop
   growing there (maxHeight). A row has no vertical padding: its caption and its group are 87.5 % of its height and centred, which
-  is the 4 padding round a 56 segment of a row of 64. The variant for a canvas of at most 360 units high hides the Title, as in Setup;
+  is the 4 padding round a 56 segment of a row of 64. The variant for a canvas of at most 360 units high hides the Title;
   the variant for a canvas of at most 440 units wide takes the whole safe width for the plate and narrows the captions (64 for
   Language, 52 for the others). Every text may shrink (AutoFit, down to 12 units) instead of being cut. MahjongOptionsTest holds the
   shapes, the touch size and the words on the whole size matrix.

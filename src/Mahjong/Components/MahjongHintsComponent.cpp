@@ -87,7 +87,7 @@ namespace BECore::Mahjong {
 
     void MahjongHintsComponent::OnDraw() {
         const MahjongGame* game = MahjongGame::GetActive();
-        if (game != nullptr && (game->IsSetupOpen() || game->IsOptionsOpen())) {
+        if (game != nullptr && (game->IsOptionsOpen())) {
             PublishChoice(*game);  // an equal value changes nothing (the version of the variables stays)
         }
         const Key key = KeyOf(game);

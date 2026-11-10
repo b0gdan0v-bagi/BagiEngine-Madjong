@@ -30,9 +30,8 @@ namespace BECore::Mahjong {
      * a new game is the panel `Setup` of the scene (`IsSetupOpen`, with the page `Options` over it, `IsOptionsOpen`), the pages of the
      * rules are `IsRulesOpen`. The language of the words (`GetLanguage`, `kDefaultLanguage`) is kept for the session and applied to
      * `CoreManager::GetUIStrings()` at every start. `HintsOn()` is the switch of the hints (default on, kept for the session, changed
-     * on the page `Options`). Every match begun through the
-     * session is written down by the `MatchLogWriter` the game owns (`GetMatchLog()`); a match started through the non-const `GetMatch()`
-     * is not.
+     * on the page `Options`). Every match begun through the session is written down by the `MatchLogWriter` the game owns
+     * (`GetMatchLog()`); a match started through the non-const `GetMatch()` is not.
      *
      * **Saving** (`Save/MatchSave.h`, `Save/MatchSaveStore.h`): the session's sink is a `MatchRecorder` that keeps the events of the
      * match begun by `StartMatch` (and passes every one on to the match log writer), and `FlushSave()` writes the `match` slot (and the

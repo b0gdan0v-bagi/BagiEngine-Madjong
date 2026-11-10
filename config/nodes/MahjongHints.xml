@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!--
-  The hints (Table/Hints.h, MahjongHintsComponent). The component answers the row HintsRow of Setup (MahjongSetHints) and the
+  The hints (Table/Hints.h, MahjongHintsComponent). The component answers the row HintsRow of the page Options (MahjongSetHints) and the
   button HintButton (MahjongHintAdvice; it is in the node HintsButton below and in ActionsCompact), fills the canvas below and
   draws the marks over the viewer's hand; it comes after the table (layer 5: it reads the layout the table drew) and before the
   canvas so that the variables are set when the canvas draws.
