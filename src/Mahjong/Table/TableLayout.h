@@ -104,10 +104,32 @@ namespace BECore::Mahjong {
         return rect.y + rect.h / 2.0f;
     }
 
+    /// The widest hand tile the phone profile holds: the bottom plate (which the phone profile lifts to end where the tallest hand starts)
+    /// and the rim decide it. The 14 tiles of it span 85 percent of the view.
+    inline constexpr float kPhoneHandTileMaxW = 78.0f;
+
+    /**
+     * How the viewer's side of the table is laid out. `phone` is for a window where the desktop hand tile (`kViewerHandTileW` units) would
+     * be too small to touch (`TableProfileFor` in `TouchRegime.h` decides): the 14 concealed tiles are one row `handTileW` units wide
+     * each across the whole view (spread, so the tiles never touch), the viewer's bonus tiles and melds lie in a row of their own above it
+     * and the bottom discard block is lower and squeezed. The wall ring, the centre panel, the three other seats and the other plates stay
+     * where they are (the bottom plate only moves up to clear the tallest hand tile). Not `phone` is today's table whatever `handTileW` is.
+     */
+    struct TableProfile {
+        bool phone = false;
+        float handTileW = kViewerHandTileW;
+
+        [[nodiscard]] bool operator==(const TableProfile& other) const noexcept {
+            return phone == other.phone && handTileW == other.handTileW;
+        }
+    };
+
     /// What is on the table, as numbers. The layout needs no tile identity, only how many of each thing there are.
     struct TableInput {
         /// The seat at the bottom of the view. A number that is no seat is laid out as seat 0.
         Seat viewer = 0;
+        /// The profile of the viewer's side; a phone `handTileW` outside `kViewerHandTileW .. kPhoneHandTileMaxW` is clamped into it.
+        TableProfile profile;
         eastl::array<int, kSeatCount> concealedCount{};
         /// The melds as laid: a chow or pung is three tiles, a kong four (a concealed kong is laid as four tiles too).
         eastl::array<eastl::vector<Meld>, kSeatCount> melds;
@@ -139,6 +161,8 @@ namespace BECore::Mahjong {
     /// The slots of the four seats and the wall: per seat the hand, the melds, the bonus tiles, then the pile, then the wall stacks.
     struct TableLayout {
         Seat viewer = 0;
+        /// The profile the layout was made with, as used (a desktop one always has `kViewerHandTileW`, a phone one a clamped width).
+        TableProfile profile;
         float viewWidth = kViewWidth;
         float viewHeight = kViewHeight;
         eastl::vector<TileSlot> slots;

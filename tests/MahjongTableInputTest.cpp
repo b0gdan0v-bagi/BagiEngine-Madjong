@@ -357,12 +357,13 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongTableInputTest, ASmallWindowWithAMouseTakesTheTapRule) {
         ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup));
-        SetOutputSize(*_renderer, 640.0f, 360.0f);  // a hand tile is 24 px: under the touch minimum
+        // The phone profile gives this window its widest hand tile (`kPhoneHandTileMaxW`), still under the touch minimum: about 29 px
+        SetOutputSize(*_renderer, 480.0f, 270.0f);
         Draw();
         const int index = IndexOf(kSeat0, T("9p"));
         const TileSlot* slot = HandSlot(index);
         ASSERT_NE(slot, nullptr);
-        const float scale = 640.0f / kViewWidth;
+        const float scale = 480.0f / kViewWidth;
         const float x = (slot->rect.x + slot->rect.w * 0.5f) * scale;
         const float y = (slot->rect.y + slot->rect.h * 0.5f) * scale;
 
@@ -380,11 +381,12 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongTableInputTest, TheSelectionIsGoneWhenTheWindowGrowsAndTheRegimeIsOffAgain) {
         ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup));
-        SetOutputSize(*_renderer, 640.0f, 360.0f);
+        SetOutputSize(*_renderer, 480.0f, 270.0f);  // under the touch minimum even with the phone profile
         Draw();
         const TileSlot* slot = HandSlot(IndexOf(kSeat0, T("9p")));
         ASSERT_NE(slot, nullptr);
-        Click((slot->rect.x + slot->rect.w * 0.5f) * 0.5f, (slot->rect.y + slot->rect.h * 0.5f) * 0.5f);
+        const float scale = 480.0f / kViewWidth;
+        Click((slot->rect.x + slot->rect.w * 0.5f) * scale, (slot->rect.y + slot->rect.h * 0.5f) * scale);
         Draw();
         ASSERT_TRUE(_table->SelectedHandIndex().has_value());
 

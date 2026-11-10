@@ -12,10 +12,11 @@ namespace BECore::Mahjong {
     /**
      * Whether a tap on a hand tile only selects it (a second tap on the same tile discards) instead of discarding at once: when a touch
      * input was seen (`touchSeen`: a mouse event SDL made from a touch or a pen, remembered by the component) **or** a hand tile of the
-     * viewer (`kViewerHandTileW` view units times `FitScale`, over the pixel density) is smaller than `minTouchSize`, the measure of
-     * `NeedsCompactActions`. False for a size or a density that is not positive when no touch was seen.
+     * viewer (`handTileW` view units, the `TableProfile::handTileW` of the window, times `FitScale`, over the pixel density) is smaller
+     * than `minTouchSize`, the measure of `NeedsCompactActions`. A phone profile whose tile reaches the minimum keeps the one-click
+     * discard. False for a size or a density that is not positive when no touch was seen.
      */
-    [[nodiscard]] bool UsesTapToSelect(bool touchSeen, float outputWidth, float outputHeight, float pixelDensity, float minTouchSize) noexcept;
+    [[nodiscard]] bool UsesTapToSelect(bool touchSeen, float outputWidth, float outputHeight, float pixelDensity, float minTouchSize, float handTileW = kViewerHandTileW) noexcept;
 
     /// What a click on the hand does to the table.
     enum class TapAction : uint8_t {

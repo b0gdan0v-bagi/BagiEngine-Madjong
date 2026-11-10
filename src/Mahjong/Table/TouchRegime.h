@@ -114,4 +114,22 @@ namespace BECore::Mahjong {
         return BarUnderTable(outputWidth, outputHeight) >= CompactRowHeight(outputWidth / scale) * scale;
     }
 
+    /**
+     * The profile of the table in an output of this size (`TableLayout.h`, `TableProfile`): desktop where the hand tile of the desktop
+     * layout (`kViewerHandTileW` view units scaled by the fit of the table, over the pixel density) reaches the touch minimum
+     * (`UISettings::minTouchSize`, in window units), else phone with a hand tile as wide as reaches it (`minTouchSize * pixelDensity /
+     * FitScale` view units), at most `kPhoneHandTileMaxW`: a window too small to reach the minimum gets the widest tile the view holds,
+     * the best it can give. `outputWidth` and `outputHeight` are in output pixels, `pixelDensity` the output pixels per window unit (as in
+     * `NeedsCompactActions`). Desktop for an output of no size, a density that is not positive and a minimum that is not positive, so the
+     * first frame, before anything was drawn, shows today's table. The component and the tests use this one rule.
+     */
+    [[nodiscard]] inline TableProfile TableProfileFor(float outputWidth, float outputHeight, float pixelDensity, float minTouchSize) noexcept {
+        const float fit = FitScale(outputWidth, outputHeight);
+        if (!(fit > 0.0f) || !(pixelDensity > 0.0f) || !(kViewerHandTileW * fit / pixelDensity < minTouchSize)) {
+            return TableProfile{};
+        }
+        const float wanted = minTouchSize * pixelDensity / fit;
+        return TableProfile{true, wanted < kPhoneHandTileMaxW ? wanted : kPhoneHandTileMaxW};
+    }
+
 }  // namespace BECore::Mahjong

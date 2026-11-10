@@ -385,32 +385,35 @@ namespace BECore::Mahjong::Tests {
         // The plate of a seat and the panel are painted by the table: their rectangles are the layout's (the viewer of the worst-case
         // layout is seat 0). The words of the panel lie inside it (its top, 282, is off the grid of 4, so the labels start at 284) and do not touch
         // each other
-        const TableLayout layout = MakeWorstCaseTableLayout();
-        for (int position = 0; position < kSeatCount; ++position) {
-            const Rect& plate = layout.zones.seatPlates[SeatAtPosition(layout.viewer, position)];
-            expectInside("SeatPlates", Format("PlateName{}", position).c_str(), plate);
-        }
-        const char* const panelLabels[] = {"PanelRound", "PanelWall", "PanelSeat0", "PanelSeat1", "PanelSeat2", "PanelSeat3"};
-        for (const char* name : panelLabels) {
-            const UIElement* label = Element("CenterPanel", name);
-            ASSERT_NE(label, nullptr) << name;
-            EXPECT_GE(label->rect.x, layout.zones.centerPanel.x) << name;
-            EXPECT_GE(label->rect.y, layout.zones.centerPanel.y) << name;
-            EXPECT_LE(label->rect.x + label->rect.w, layout.zones.centerPanel.x + layout.zones.centerPanel.w) << name;
-            EXPECT_LE(label->rect.y + label->rect.h, layout.zones.centerPanel.y + layout.zones.centerPanel.h) << name;
-            EXPECT_FALSE(label->IsHitTestable()) << name << " takes no input";
-            for (const char* other : panelLabels) {
-                if (other != name) {
-                    EXPECT_TRUE(Apart(label->rect, Element("CenterPanel", other)->rect)) << name << " overlaps " << other;
+        ForEachTableWindow([&](const MatrixWindow& window) {
+            SCOPED_TRACE(window.label.c_str());
+            const TableLayout layout = MakeWorstCaseTableLayout(0, window);
+            for (int position = 0; position < kSeatCount; ++position) {
+                const Rect& plate = layout.zones.seatPlates[SeatAtPosition(layout.viewer, position)];
+                expectInside("SeatPlates", Format("PlateName{}", position).c_str(), plate);
+            }
+            const char* const panelLabels[] = {"PanelRound", "PanelWall", "PanelSeat0", "PanelSeat1", "PanelSeat2", "PanelSeat3"};
+            for (const char* name : panelLabels) {
+                const UIElement* label = Element("CenterPanel", name);
+                ASSERT_NE(label, nullptr) << name;
+                EXPECT_GE(label->rect.x, layout.zones.centerPanel.x) << name;
+                EXPECT_GE(label->rect.y, layout.zones.centerPanel.y) << name;
+                EXPECT_LE(label->rect.x + label->rect.w, layout.zones.centerPanel.x + layout.zones.centerPanel.w) << name;
+                EXPECT_LE(label->rect.y + label->rect.h, layout.zones.centerPanel.y + layout.zones.centerPanel.h) << name;
+                EXPECT_FALSE(label->IsHitTestable()) << name << " takes no input";
+                for (const char* other : panelLabels) {
+                    if (other != name) {
+                        EXPECT_TRUE(Apart(label->rect, Element("CenterPanel", other)->rect)) << name << " overlaps " << other;
+                    }
                 }
             }
-        }
-        // Each side's cell lies on that side of the panel: the top one above the middle, the bottom one below it, left and right beside it
-        const Rect round = Element("CenterPanel", "PanelRound")->rect;
-        EXPECT_LE(Element("CenterPanel", "PanelSeat2")->rect.y + Element("CenterPanel", "PanelSeat2")->rect.h, round.y);
-        EXPECT_GE(Element("CenterPanel", "PanelSeat0")->rect.y, round.y + round.h);
-        EXPECT_LE(Element("CenterPanel", "PanelSeat3")->rect.x + Element("CenterPanel", "PanelSeat3")->rect.w, round.x);
-        EXPECT_GE(Element("CenterPanel", "PanelSeat1")->rect.x, round.x + round.w);
+            // Each side's cell lies on that side of the panel: the top one above the middle, the bottom one below it, left and right beside it
+            const Rect round = Element("CenterPanel", "PanelRound")->rect;
+            EXPECT_LE(Element("CenterPanel", "PanelSeat2")->rect.y + Element("CenterPanel", "PanelSeat2")->rect.h, round.y);
+            EXPECT_GE(Element("CenterPanel", "PanelSeat0")->rect.y, round.y + round.h);
+            EXPECT_LE(Element("CenterPanel", "PanelSeat3")->rect.x + Element("CenterPanel", "PanelSeat3")->rect.w, round.x);
+            EXPECT_GE(Element("CenterPanel", "PanelSeat1")->rect.x, round.x + round.w);
+        });
     }
 
     TEST_F(MahjongHudTest, TheSeatPlatesLieAtTheRectanglesOfTheLayoutAndClearOfEverythingElseOnTheTable) {
@@ -423,58 +426,65 @@ namespace BECore::Mahjong::Tests {
             ShowAll(*canvas, canvas->GetRoot());
             canvas->UpdateLayout(kViewWidth, kViewHeight);
         }
-        const TableLayout layout = MakeWorstCaseTableLayout();
+        ForEachTableWindow([&](const MatrixWindow& window) {
+            SCOPED_TRACE(window.label.c_str());
+            const TableLayout layout = MakeWorstCaseTableLayout(0, window);
 
-        // The file is by screen position and the viewer of the worst-case layout is seat 0, so position p is seat p: the label of a plate
-        // is at its top, inside its padding of 8
-        constexpr float kPlatePad = 8.0f;
-        eastl::vector<Rect> plates;
-        for (int position = 0; position < kSeatCount; ++position) {
-            const UIElement* name = Element("SeatPlates", Format("PlateName{}", position).c_str());
-            ASSERT_NE(name, nullptr) << position;
-            const Rect& expected = layout.zones.seatPlates[SeatAtPosition(layout.viewer, position)];
-            EXPECT_FLOAT_EQ(name->rect.x, expected.x + kPlatePad) << position;
-            EXPECT_FLOAT_EQ(name->rect.y, expected.y + kPlatePad) << position;
-            EXPECT_FLOAT_EQ(name->rect.w, expected.w - 2 * kPlatePad) << position;
-            EXPECT_FALSE(name->IsHitTestable()) << "a plate takes no input";
-            plates.push_back(expected);
-        }
-
-        // The panels and the areas of the buttons that lie near: a grid unit clear of every plate
-        struct Neighbour {
-            const char* node;
-            const char* element;
-        };
-        const Neighbour neighbours[] = {{"Hud", "MoveLine"}, {"Actions", "Hint"}, {"Actions", "ActionRow"}, {"Hints", "WaitPanel"}, {"Hints", "AdviceText"}, {"HintsButton", "HintButton"}};
-        for (const Neighbour& neighbour : neighbours) {
-            const UIElement* element = Element(neighbour.node, neighbour.element);
-            ASSERT_NE(element, nullptr) << neighbour.element;
-            ASSERT_FALSE(element->rect.IsEmpty()) << neighbour.element;
-            for (size_t i = 0; i < plates.size(); ++i) {
-                EXPECT_TRUE(Apart(Grown(plates[i], kGridUnit), element->rect)) << neighbour.element << " is less than a grid unit from the plate at position " << i;
+            // The file is by screen position and the viewer of the worst-case layout is seat 0, so position p is seat p: the label of a plate
+            // is at its top, inside its padding of 8
+            constexpr float kPlatePad = 8.0f;
+            constexpr float kPhonePlateShift = 4.0f;
+            eastl::vector<Rect> plates;
+            for (int position = 0; position < kSeatCount; ++position) {
+                const UIElement* name = Element("SeatPlates", Format("PlateName{}", position).c_str());
+                ASSERT_NE(name, nullptr) << position;
+                const Rect& expected = layout.zones.seatPlates[SeatAtPosition(layout.viewer, position)];
+                EXPECT_FLOAT_EQ(name->rect.x, expected.x + kPlatePad) << position;
+                // The file's label is the desktop one; the bottom plate of the phone profile is a few units higher and the label stays inside it
+                EXPECT_NEAR(name->rect.y, expected.y + kPlatePad, layout.profile.phone && position == 0 ? kPhonePlateShift : 0.0f) << position;
+                EXPECT_LE(name->rect.y + name->rect.h, expected.y + expected.h - kPlatePad) << position << ": the label lies inside the plate";
+                EXPECT_FLOAT_EQ(name->rect.w, expected.w - 2 * kPlatePad) << position;
+                EXPECT_FALSE(name->IsHitTestable()) << "a plate takes no input";
+                plates.push_back(expected);
             }
-        }
 
-        // The hints (the corner of the removed round box) keep a grid unit from every other element of the HUD, from the plates under the
-        // discard blocks and from the centre panel, which they leave free
-        const Neighbour hints[] = {{"Hints", "WaitPanel"}, {"Hints", "AdviceText"}, {"HintsButton", "HintButton"}};
-        eastl::vector<Rect> others = ZonePlates(layout);
-        others.push_back(layout.zones.centerPanel);
-        for (const Neighbour& other : neighbours) {
-            others.push_back(Element(other.node, other.element)->rect);
-        }
-        for (const Neighbour& hint : hints) {
-            const Rect rect = Element(hint.node, hint.element)->rect;
-            int equal = 0;
-            for (const Rect& other : others) {
-                if (other.x == rect.x && other.y == rect.y && other.w == rect.w && other.h == rect.h) {
-                    ++equal;  // the element itself (it is in the list of the neighbours)
-                    continue;
+            // The panels and the areas of the buttons that lie near: a grid unit clear of every plate
+            struct Neighbour {
+                const char* node;
+                const char* element;
+            };
+            const Neighbour neighbours[] = {{"Hud", "MoveLine"}, {"Actions", "Hint"}, {"Actions", "ActionRow"}, {"Hints", "WaitPanel"}, {"Hints", "AdviceText"}, {"HintsButton", "HintButton"}};
+            for (const Neighbour& neighbour : neighbours) {
+                const UIElement* element = Element(neighbour.node, neighbour.element);
+                ASSERT_NE(element, nullptr) << neighbour.element;
+                ASSERT_FALSE(element->rect.IsEmpty()) << neighbour.element;
+                for (size_t i = 0; i < plates.size(); ++i) {
+                    EXPECT_TRUE(Apart(Grown(plates[i], kGridUnit), element->rect)) << neighbour.element << " is less than a grid unit from the plate at position " << i;
                 }
-                EXPECT_TRUE(Apart(Grown(other, kGridUnit), rect)) << hint.element << " is less than a grid unit from the rect " << other.x << "," << other.y << " " << other.w << "x" << other.h;
+                ExpectClearOfTable(element->rect, layout, neighbour.element);  // and no tile of the table as this window draws it, the phone hand included
             }
-            EXPECT_EQ(equal, 1) << hint.element;
-        }
+
+            // The hints (the corner of the removed round box) keep a grid unit from every other element of the HUD, from the plates under the
+            // discard blocks and from the centre panel, which they leave free
+            const Neighbour hints[] = {{"Hints", "WaitPanel"}, {"Hints", "AdviceText"}, {"HintsButton", "HintButton"}};
+            eastl::vector<Rect> others = ZonePlates(layout);
+            others.push_back(layout.zones.centerPanel);
+            for (const Neighbour& other : neighbours) {
+                others.push_back(Element(other.node, other.element)->rect);
+            }
+            for (const Neighbour& hint : hints) {
+                const Rect rect = Element(hint.node, hint.element)->rect;
+                int equal = 0;
+                for (const Rect& other : others) {
+                    if (other.x == rect.x && other.y == rect.y && other.w == rect.w && other.h == rect.h) {
+                        ++equal;  // the element itself (it is in the list of the neighbours)
+                        continue;
+                    }
+                    EXPECT_TRUE(Apart(Grown(other, kGridUnit), rect)) << hint.element << " is less than a grid unit from the rect " << other.x << "," << other.y << " " << other.w << "x" << other.h;
+                }
+                EXPECT_EQ(equal, 1) << hint.element;
+            }
+        });
     }
 
     TEST_F(MahjongHudTest, ThePlatesSayWhoIsEastAfterTheDealMovesAndTheScoresAfterAHand) {
@@ -748,41 +758,44 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongHudTest, TheHudCoversNoTileOfTheWorstTable) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
-        const TableLayout layout = MakeWorstCaseTableLayout();
+        ForEachTableWindow([&](const MatrixWindow& window) {
+            SCOPED_TRACE(window.label.c_str());
+            const TableLayout layout = MakeWorstCaseTableLayout(0, window);
 
-        // The plates the table paints under the discard blocks and the wall ring
-        const eastl::vector<Rect> plates = ZonePlates(layout);
+            // The plates the table paints under the discard blocks and the wall ring
+            const eastl::vector<Rect> plates = ZonePlates(layout);
 
-        // The line of the last move is hidden until a move is made: shown here, so that its place is checked too
-        Canvas("Hud")->SetElementVisible("MoveLine"_intern, true);
+            // The line of the last move is hidden until a move is made: shown here, so that its place is checked too
+            Canvas("Hud")->SetElementVisible("MoveLine"_intern, true);
 
-        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
-            SCOPED_TRACE(language.ToStringView().data());
-            Draw();  // laid out again with the words of this language
-            // The words of the centre panel lie on the plate of the wall ring on purpose (inside the ring: no tile there); the line of the last
-            // move is clear of every plate
-            const auto expectClearOfTiles = [&](const char* node, const char* name) -> const UIElement* {
-                const UIElement* element = Element(node, name);
-                EXPECT_NE(element, nullptr) << name;
-                if (element == nullptr) {
-                    return nullptr;
+            ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+                SCOPED_TRACE(language.ToStringView().data());
+                Draw();  // laid out again with the words of this language
+                // The words of the centre panel lie on the plate of the wall ring on purpose (inside the ring: no tile there); the line of the last
+                // move is clear of every plate
+                const auto expectClearOfTiles = [&](const char* node, const char* name) -> const UIElement* {
+                    const UIElement* element = Element(node, name);
+                    EXPECT_NE(element, nullptr) << name;
+                    if (element == nullptr) {
+                        return nullptr;
+                    }
+                    EXPECT_FALSE(element->rect.IsEmpty()) << name;
+                    for (const TileSlot& slot : layout.slots) {
+                        EXPECT_TRUE(Apart(slot.rect, element->rect)) << name << " covers role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
+                    }
+                    return element;
+                };
+                for (const char* name : {"PanelRound", "PanelWall", "PanelSeat0", "PanelSeat1", "PanelSeat2", "PanelSeat3"}) {
+                    expectClearOfTiles("CenterPanel", name);
                 }
-                EXPECT_FALSE(element->rect.IsEmpty()) << name;
-                for (const TileSlot& slot : layout.slots) {
-                    EXPECT_TRUE(Apart(slot.rect, element->rect)) << name << " covers role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
+                if (const UIElement* line = expectClearOfTiles("Hud", "MoveLine"); line != nullptr) {
+                    // A gap of one grid unit at least: panels that touch a plate edge to edge merge with it on screen
+                    const Rect aired = Grown(line->rect, kGridUnit);
+                    for (size_t i = 0; i < plates.size(); ++i) {
+                        EXPECT_TRUE(Apart(plates[i], aired)) << "MoveLine is less than one grid unit from plate " << i;
+                    }
                 }
-                return element;
-            };
-            for (const char* name : {"PanelRound", "PanelWall", "PanelSeat0", "PanelSeat1", "PanelSeat2", "PanelSeat3"}) {
-                expectClearOfTiles("CenterPanel", name);
-            }
-            if (const UIElement* line = expectClearOfTiles("Hud", "MoveLine"); line != nullptr) {
-                // A gap of one grid unit at least: panels that touch a plate edge to edge merge with it on screen
-                const Rect aired = Grown(line->rect, kGridUnit);
-                for (size_t i = 0; i < plates.size(); ++i) {
-                    EXPECT_TRUE(Apart(plates[i], aired)) << "MoveLine is less than one grid unit from plate " << i;
-                }
-            }
+            });
         });
     }
 

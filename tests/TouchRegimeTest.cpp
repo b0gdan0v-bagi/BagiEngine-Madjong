@@ -277,4 +277,81 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(Compact(1920.0f, 1080.0f));
     }
 
+    // The profile of the table: the hand tile of the desktop layout, or a phone profile with a larger one.
+
+    namespace {
+
+        /// The profile a window of `width` x `height` window units at `density` gets: the output is that many pixels per unit larger.
+        TableProfile ProfileOfWindow(float width, float height, float density = kDensity) {
+            return TableProfileFor(width * density, height * density, density, kMinTouch);
+        }
+
+        /// The hand tile of a profile in window units, worked out here.
+        float HandTileInWindowUnits(const TableProfile& profile, float width, float height, float density) {
+            return profile.handTileW * std::min(width * density / kViewWidth, height * density / kViewHeight) / density;
+        }
+
+    }  // namespace
+
+    TEST(TouchRegimeTest, ADesktopWindowKeepsTheDesktopProfile) {
+        for (const float density : {1.0f, 2.0f}) {
+            EXPECT_FALSE(ProfileOfWindow(1280.0f, 720.0f, density).phone) << density;
+            EXPECT_FALSE(ProfileOfWindow(1920.0f, 1080.0f, density).phone) << density;
+        }
+        EXPECT_EQ(ProfileOfWindow(1280.0f, 720.0f), TableProfile{});
+        EXPECT_EQ(ProfileOfWindow(1920.0f, 1080.0f), TableProfile{});
+        EXPECT_EQ(ProfileOfWindow(1280.0f, 720.0f).handTileW, kViewerHandTileW);
+    }
+
+    TEST(TouchRegimeTest, ALandscapePhoneGetsTheLargeHandWithATileOfAtLeastTheTouchMinimum) {
+        // the window units of the phones of the screenshots (915 x 330, 780 x 300, 851 x 393) at the density 2.6 of those phones
+        const float windows[][2] = {{915.0f, 330.0f}, {780.0f, 300.0f}, {851.0f, 393.0f}};
+        for (const auto& window : windows) {
+            const TableProfile profile = ProfileOfWindow(window[0], window[1], 2.6f);
+            EXPECT_TRUE(profile.phone) << window[0] << " x " << window[1];
+            EXPECT_GE(HandTileInWindowUnits(profile, window[0], window[1], 2.6f), kMinTouch - 0.01f) << window[0] << " x " << window[1];
+            EXPECT_GE(profile.handTileW, kViewerHandTileW);
+            EXPECT_LE(profile.handTileW, kPhoneHandTileMaxW);
+        }
+        // a tile of exactly the minimum where the maximum is not needed
+        const TableProfile wide = ProfileOfWindow(915.0f, 330.0f, 2.6f);
+        EXPECT_LT(wide.handTileW, kPhoneHandTileMaxW);
+        EXPECT_NEAR(HandTileInWindowUnits(wide, 915.0f, 330.0f, 2.6f), kMinTouch, 0.01f);
+        EXPECT_NEAR(ProfileOfWindow(780.0f, 300.0f, 2.6f).handTileW, 76.8f, 0.01f);
+    }
+
+    TEST(TouchRegimeTest, AWindowTooSmallToReachTheMinimumGetsTheWidestTileTheViewHolds) {
+        for (const float density : {1.0f, 2.6f}) {
+            const TableProfile profile = ProfileOfWindow(400.0f, 150.0f, density);
+            EXPECT_TRUE(profile.phone);
+            EXPECT_EQ(profile.handTileW, kPhoneHandTileMaxW);
+            EXPECT_LT(HandTileInWindowUnits(profile, 400.0f, 150.0f, density), kMinTouch);
+        }
+    }
+
+    TEST(TouchRegimeTest, TheProfileChangesWhereTheDesktopHandTileDropsUnderTheMinimum) {
+        // 48 units x fit 0.6667 = 32 at 854 x 480 (the height limits); a pixel less in either direction is phone
+        EXPECT_FALSE(ProfileOfWindow(854.0f, 480.0f).phone);
+        EXPECT_TRUE(ProfileOfWindow(853.0f, 480.0f).phone) << "width limited: 31.99";
+        EXPECT_TRUE(ProfileOfWindow(854.0f, 479.0f).phone);
+        EXPECT_FALSE(ProfileOfWindow(2000.0f, 480.0f).phone);
+        EXPECT_FALSE(ProfileOfWindow(1280.0f, 720.0f).phone);
+        // just under the boundary the tile is only a little wider than the desktop one
+        EXPECT_NEAR(ProfileOfWindow(853.0f, 480.0f).handTileW, kViewerHandTileW, 0.1f);
+        // the density moves the boundary: at 2.6 the window units are 2.6 times smaller than the pixels
+        EXPECT_TRUE(TableProfileFor(1280.0f, 720.0f, 2.0f, kMinTouch).phone) << "1280 x 720 pixels at 2 are a 640 x 360 window";
+    }
+
+    TEST(TouchRegimeTest, ASizeADensityOrAMinimumThatIsNotPositiveGetsTheDesktopProfile) {
+        EXPECT_EQ(TableProfileFor(0.0f, 330.0f, 1.0f, kMinTouch), TableProfile{});
+        EXPECT_EQ(TableProfileFor(915.0f, -1.0f, 1.0f, kMinTouch), TableProfile{});
+        EXPECT_EQ(TableProfileFor(std::nanf(""), 330.0f, 1.0f, kMinTouch), TableProfile{});
+        EXPECT_EQ(TableProfileFor(915.0f, 330.0f, 0.0f, kMinTouch), TableProfile{});
+        EXPECT_EQ(TableProfileFor(915.0f, 330.0f, -2.0f, kMinTouch), TableProfile{});
+        EXPECT_EQ(TableProfileFor(915.0f, 330.0f, std::nanf(""), kMinTouch), TableProfile{});
+        EXPECT_EQ(TableProfileFor(915.0f, 330.0f, 1.0f, 0.0f), TableProfile{});
+        EXPECT_EQ(TableProfileFor(915.0f, 330.0f, 1.0f, std::nanf("")), TableProfile{});
+        EXPECT_TRUE(TableProfileFor(915.0f, 330.0f, 1.0f, kMinTouch).phone) << "the same window with a size that counts";
+    }
+
 }  // namespace BECore::Mahjong::Tests

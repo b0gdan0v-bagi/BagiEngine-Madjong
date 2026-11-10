@@ -5,7 +5,7 @@
 
 namespace BECore::Mahjong {
 
-    bool UsesTapToSelect(bool touchSeen, float outputWidth, float outputHeight, float pixelDensity, float minTouchSize) noexcept {
+    bool UsesTapToSelect(bool touchSeen, float outputWidth, float outputHeight, float pixelDensity, float minTouchSize, float handTileW) noexcept {
         if (touchSeen) {
             return true;
         }
@@ -13,7 +13,8 @@ namespace BECore::Mahjong {
         if (!(fit > 0.0f) || !(pixelDensity > 0.0f)) {
             return false;
         }
-        return kViewerHandTileW * fit / pixelDensity < minTouchSize;
+        // The same expression `TableProfileFor` sizes the phone tile with, so a tile made just wide enough is not under the minimum
+        return handTileW < minTouchSize * pixelDensity / fit;
     }
 
     TapOutcome StepTap(const std::optional<int>& selected, const std::optional<int>& hit, bool tapToSelect) noexcept {

@@ -252,6 +252,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         void TearDown() override {
+            CoreManager::GetUIEnvironment().SetPixelDensityOverride(std::nullopt);  // a test that stood in a phone window (`SetWindow`)
             GameManager::GetInstance().Shutdown();
             EngineEnvironment::UseSceneManager({});
             _manager.Reset();

@@ -27,7 +27,7 @@ namespace BECore::Mahjong::Tests {
         /// The height of the line of the word at the top of a button; the pictures of tiles lie below it.
         constexpr float kWordLineHeight = 24.0f;
         /// The width of an action button in view units.
-        constexpr float kButtonWidth = 132.0f;
+        constexpr float kButtonWidth = 104.0f;
         /// The smallest tile picture in view units (the 3:4 of an atlas cell), so a tile can be told at the smallest window of the matrix.
         constexpr float kLeastTileWidth = 20.0f;
         constexpr float kLeastTileHeight = 26.0f;
@@ -42,9 +42,9 @@ namespace BECore::Mahjong::Tests {
         constexpr Output kCompactOutputs[] = {{1280.0f, 720.0f}, {640.0f, 480.0f}, {853.0f, 480.0f}, {480.0f, 480.0f}, {480.0f, 853.0f}, {1707.0f, 480.0f}};
         constexpr float kTileShape = 3.0f / 4.0f;
         constexpr float kShapeTolerance = 0.02f;
-        /// The gap between the buttons of a row, and the width of a row of three buttons of 132 with two gaps (the row wraps at it).
+        /// The gap between the buttons of a row, and the width of a row of four buttons of 104 with three gaps (the row wraps at it).
         constexpr float kButtonGap = 8.0f;
-        constexpr float kRowWidth = 3.0f * kButtonWidth + 2.0f * kButtonGap;
+        constexpr float kRowWidth = 4.0f * kButtonWidth + 3.0f * kButtonGap;
 
         /// The role of the colour of a button (an entry of `kUiPaletteNames`), by what the button does.
         const char* RoleOf(ButtonKind kind) {
@@ -220,7 +220,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(row->style.stack.spacing, kButtonGap);
         ASSERT_TRUE(Canvas("Actions")->SetElementVisible("Hint"_intern, true));  // a hidden element has no rect
         Canvas("Actions")->UpdateLayout(kViewWidth, kViewHeight);
-        EXPECT_EQ(row->rect.w, kRowWidth) << "three buttons and two gaps fit a row";
+        EXPECT_EQ(row->rect.w, kRowWidth) << "four buttons and three gaps fit a row";
         const UIElement* hint = Element("Actions", "Hint");
         ASSERT_NE(hint, nullptr);
         EXPECT_TRUE(SameColor(hint->color, PaletteColor("scrim")));
@@ -506,14 +506,20 @@ namespace BECore::Mahjong::Tests {
         const Rect& row = Element("Actions", "ActionRow")->rect;
         EXPECT_TRUE(Apart(plate, row)) << "the hint does not lie over the buttons it explains";
         // ... nor over a tile or a plate of the table: a tooltip in the gutter, one grid unit clear of the plates
-        const TableLayout layout = MakeWorstCaseTableLayout();
-        for (const TileSlot& slot : layout.slots) {
-            EXPECT_TRUE(Apart(slot.rect, plate)) << "the hint covers role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
-        }
-        const eastl::vector<Rect> plates = ZonePlates(layout);
-        for (size_t i = 0; i < plates.size(); ++i) {
-            EXPECT_TRUE(Apart(plates[i], Grown(plate, kGridUnit))) << "the hint is less than one grid unit from plate " << i;
-        }
+        // in the desktop layout and in every window of the table, the phone layouts included (`ActionsCompact` holds the buttons where `Actions` is hidden, and its `Hint` with them)
+        ForEachTableWindow([&](const MatrixWindow& window) {
+            if (IsCompactWindow(window)) {
+                return;
+            }
+            const TableLayout layout = MakeWorstCaseTableLayout(0, window);
+            for (const TileSlot& slot : layout.slots) {
+                EXPECT_TRUE(Apart(slot.rect, plate)) << window.label.c_str() << ": the hint covers role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
+            }
+            const eastl::vector<Rect> plates = ZonePlates(layout);
+            for (size_t i = 0; i < plates.size(); ++i) {
+                EXPECT_TRUE(Apart(plates[i], Grown(plate, kGridUnit))) << window.label.c_str() << ": the hint is less than one grid unit from plate " << i;
+            }
+        });
     }
 
     TEST_F(MahjongTableScreenTest, TheCoverPassesTheSizeMatrixInEveryLanguageWithTheLongestSeatName) {
@@ -570,12 +576,21 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongTableScreenTest, TheButtonsLieInTheFreeCornerOfTheTableAndCoverNoTile) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
-        const TableLayout layout = MakeWorstCaseTableLayout();
         const UIElement* row = Element("Actions", "ActionRow");
         ASSERT_NE(row, nullptr);
 
-        for (const TileSlot& slot : layout.slots) {
-            EXPECT_TRUE(Apart(slot.rect, row->rect)) << "role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
+        // the table of every window where `Actions` is shown: the desktop one and the phone ones (the row is a `SceneView` canvas: the same rect everywhere)
+        std::vector<std::pair<std::string, TableLayout>> layouts;
+        ForEachTableWindow([&](const MatrixWindow& window) {
+            if (!IsCompactWindow(window)) {
+                layouts.emplace_back(window.label.c_str(), MakeWorstCaseTableLayout(0, window));
+            }
+        });
+        ASSERT_FALSE(layouts.empty());
+        for (const auto& [label, layout] : layouts) {
+            for (const TileSlot& slot : layout.slots) {
+                EXPECT_TRUE(Apart(slot.rect, row->rect)) << label << ": role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
+            }
         }
 
         // The row holds what is in it: the buttons of the fullest turn and of the fullest claim window lie inside the row
@@ -599,8 +614,10 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_GE(r.y, row->rect.y) << SpecOf(kind).element;
                 EXPECT_LE(r.x + r.w, row->rect.x + row->rect.w) << SpecOf(kind).element;
                 EXPECT_LE(r.y + r.h, row->rect.y + row->rect.h) << SpecOf(kind).element << " lies below the row";
-                for (const TileSlot& slot : layout.slots) {
-                    EXPECT_TRUE(Apart(slot.rect, r)) << SpecOf(kind).element << " covers role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
+                for (const auto& [label, layout] : layouts) {
+                    for (const TileSlot& slot : layout.slots) {
+                        EXPECT_TRUE(Apart(slot.rect, r)) << label << ": " << SpecOf(kind).element << " covers role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
+                    }
                 }
             }
         }

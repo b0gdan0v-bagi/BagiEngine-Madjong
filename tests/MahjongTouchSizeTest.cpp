@@ -225,7 +225,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(canvas->GetLayout().params.space, CanvasSpace::SceneView) << "it lies on the table, scaled with it, where `Actions` is";
         EXPECT_FLOAT_EQ(button->rect.h, kActionButtonHeight) << "the same height as the buttons of `Actions`, so the same boundary of the rule";
         // The strip below the waiting row holds no tile of the worst-case table
-        ExpectClearOfTable(button->rect, MakeWorstCaseTableLayout(), "HintButton on the table");
+        ForEachTableWindow([&](const MatrixWindow& window) { ExpectClearOfTable(button->rect, MakeWorstCaseTableLayout(0, window), window.label.c_str()); });
 
         // Under the engine's minimum exactly where the buttons of `Actions` are, and there the rule shows the row of `ActionsCompact` with its own
         // hint button (but in the windows that keep `Actions` at the user scale 1.5, which `ActionsMayBeSmall` names)
@@ -252,9 +252,9 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(menu->GetLayout().params.space, CanvasSpace::Screen) << "the button is in a Screen canvas";
         EXPECT_EQ(menu->GetLayout().params.scaleMode, CanvasScaleMode::ScaleWithScreen);
 
-        const TableLayout layout = MakeWorstCaseTableLayout();
         size_t checked = 0;
-        ForEachMatrixWindow([&](const MatrixWindow& window) {
+        ForEachTableWindow([&](const MatrixWindow& window) {
+            const TableLayout layout = MakeWorstCaseTableLayout(0, window);  // the table as the window draws it (`TableProfileFor`)
             if (window.HasInsets()) {
                 return;  // with insets the button lies nearer the table, as the HUD does
             }
@@ -275,9 +275,9 @@ namespace BECore::Mahjong::Tests {
         const float minTouch = EngineTouchMinimum();
         const CanvasScaleMode modes[] = {CanvasScaleMode::ConstantPixelSize, CanvasScaleMode::ScaleWithScreen, CanvasScaleMode::ConstantPhysicalSize};
 
-        const TableLayout layout = MakeWorstCaseTableLayout();
         size_t checked = 0;
-        ForEachMatrixWindow([&](const MatrixWindow& window) {
+        ForEachTableWindow([&](const MatrixWindow& window) {
+            const TableLayout layout = MakeWorstCaseTableLayout(0, window);  // the table as the window draws it (`TableProfileFor`)
             for (const CanvasScaleMode mode : modes) {
                 for (const float userScale : {1.0f, 1.5f}) {
                     const std::string label = Format("{} {} x{}", window.label.c_str(), EnumUtils<CanvasScaleMode>::ToString(mode).data(), userScale).c_str();
@@ -286,12 +286,14 @@ namespace BECore::Mahjong::Tests {
                     const UIElement* newGame = Element("HudMenu", "NewGame");
                     ASSERT_TRUE(rules != nullptr && newGame != nullptr);
                     ASSERT_FALSE(rules->rect.IsEmpty()) << label;
-                    EXPECT_GE(std::min(rules->rect.w, rules->rect.h) * resolved.scale / window.pixelDensity, minTouch - 0.01f) << label << ": a touch target as the user sees it";
+                    if (IsMatrixWindow(window)) {  // the phone windows are held to the layout of the table here, not to the touch size of the HUD (the entry `mahjong-phone-hand-size` leaves it)
+                        EXPECT_GE(std::min(rules->rect.w, rules->rect.h) * resolved.scale / window.pixelDensity, minTouch - 0.01f) << label << ": a touch target as the user sees it";
+                    }
                     EXPECT_FALSE(Intersects(rules->rect, newGame->rect)) << label << ": the Rules button touches New game";
                     EXPECT_GE(rules->rect.x, resolved.contentBounds.x - 0.01f) << label;
                     EXPECT_LE(rules->rect.x + rules->rect.w, resolved.contentBounds.x + resolved.contentBounds.w + 0.01f) << label;
                     EXPECT_LE(rules->rect.y + rules->rect.h, resolved.contentBounds.y + resolved.contentBounds.h + 0.01f) << label;
-                    ++checked;
+                    checked += IsMatrixWindow(window) ? 1 : 0;
                 }
             }
             if (window.HasInsets()) {
@@ -522,14 +524,14 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NE(declared, nullptr);
         EXPECT_TRUE(declared->ignoreSafeArea) << "a notch or side insets do not move the button off its gap";
 
-        const TableLayout layout = MakeWorstCaseTableLayout();
         // The parts of the plate that carry text: the button covers none of them (the gap and the two gaps of 8 around it are free)
         const char* const kTexts[] = {"Headline", "SeatRow0", "SeatRow1", "SeatRow2", "SeatRow3", "Lines", "Summary"};
         size_t checked = 0;
         size_t inTheGap = 0;
         size_t underTheTable = 0;
         float tallestInTheGap = 0.0f;
-        ForEachMatrixWindow([&](const MatrixWindow& window) {
+        ForEachTableWindow([&](const MatrixWindow& window) {
+            const TableLayout layout = MakeWorstCaseTableLayout(0, window);  // the table as the window draws it (`TableProfileFor`)
             // The plate (SceneView) and the button (Screen, ScaleWithScreen, user scale 1.0), both in view units of the table
             LayOutInWindow(*plate, window);
             const UIElement* plateElement = Element("HandOver", "Plate");
@@ -574,7 +576,9 @@ namespace BECore::Mahjong::Tests {
             EXPECT_LE(output.x + output.w, window.outputWidth + 0.01f) << window.label.c_str();
             EXPECT_LE(output.y + output.h, window.outputHeight + 0.01f) << window.label.c_str();
             // A touch target as the user sees it (the same rule as New game)
-            EXPECT_GE(std::min(output.w, output.h) / window.pixelDensity, EngineTouchMinimum() - 0.01f) << window.label.c_str();
+            if (IsMatrixWindow(window)) {  // see the Rules button
+                EXPECT_GE(std::min(output.w, output.h) / window.pixelDensity, EngineTouchMinimum() - 0.01f) << window.label.c_str();
+            }
 
             // The button has ignoreSafeArea, so no inset moves it: every window is checked against the hands, insets included
             ExpectClearOfTable(buttonRect, layout, window.label.c_str());
@@ -676,14 +680,14 @@ namespace BECore::Mahjong::Tests {
         // Hidden in the file; shown by hand, and no draw after it (a draw would hide it again at the design size)
         ASSERT_TRUE(UICanvasComponent::SetVisibleByName(*_manager->GetSceneByName("MahjongScene"_intern), "ActionsCompact"_intern, true));
 
-        const TableLayout layout = MakeWorstCaseTableLayout();
         size_t checked = 0;
         size_t checkedAtOnePointFive = 0;
         size_t sideInsets = 0;
         size_t liftedOntoTheTable = 0;
         for (const std::vector<ButtonKind>& kinds : FullestButtonSets()) {
             ASSERT_NO_FATAL_FAILURE(ShowCompactButtons(*compact, kinds));
-            ForEachMatrixWindow([&](const MatrixWindow& window) {
+            ForEachTableWindow([&](const MatrixWindow& window) {
+                const TableLayout layout = MakeWorstCaseTableLayout(0, window);  // the table as the window draws it (`TableProfileFor`)
                 // The rule is asked at the user scale of the layout: a bigger scale makes the canvas smaller and the row higher
                 for (const float userScale : {1.0f, 1.5f}) {
                     if (!IsCompactWindow(window, userScale)) {
@@ -757,7 +761,6 @@ namespace BECore::Mahjong::Tests {
         auto actions = Canvas("Actions");
         ASSERT_TRUE(compact && actions);
         ASSERT_TRUE(UICanvasComponent::SetVisibleByName(*_manager->GetSceneByName("MahjongScene"_intern), "ActionsCompact"_intern, true));
-        const TableLayout layout = MakeWorstCaseTableLayout();
         // 600 x 420 and 480 x 360 have a bar of a line (41 and 45 px) but not of the row (72 px); 627 x 480 and 626 x 480 are either side of the
         // width where the row is one line (1043.91 units at the floor scale, 626.35 px; a bar of 63.7 and 63.9 px)
         const MatrixWindow windows[] = {WindowOf(731.0f, 411.0f), WindowOf(720.0f, 405.0f), WindowOf(700.0f, 420.0f), WindowOf(1000.0f, 400.0f), WindowOf(640.0f, 360.0f), WindowOf(640.0f, 428.0f),
@@ -769,6 +772,7 @@ namespace BECore::Mahjong::Tests {
         size_t compactWindows = 0;
         size_t actionsWindows = 0;
         auto check = [&](const MatrixWindow& window, float userScale) {
+            const TableLayout layout = MakeWorstCaseTableLayout(0, window);  // the table as the window draws it (`TableProfileFor`)
             const std::string label = std::string(window.label.c_str()) + " " + std::to_string(static_cast<int>(window.outputWidth)) + "x" + std::to_string(static_cast<int>(window.outputHeight)) +
                                       " x" + std::to_string(userScale);
             const UICanvasResolved resolved = LayOutInWindow(*compact, window, CanvasScaleMode::ScaleWithScreen, userScale);

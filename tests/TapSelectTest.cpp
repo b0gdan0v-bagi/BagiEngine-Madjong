@@ -1,4 +1,5 @@
 #include <Mahjong/Table/TapSelect.h>
+#include <Mahjong/Table/TouchRegime.h>
 #include <cmath>
 #include <gtest/gtest.h>
 
@@ -62,6 +63,18 @@ namespace BECore::Mahjong::Tests {
     TEST(TouchRegimeTest, ALargeWindowWithNoTouchKeepsTheOneClickDiscard) {
         EXPECT_FALSE(UsesTapToSelect(false, 1280.0f, 720.0f, 1.0f, kMinTouch));
         EXPECT_FALSE(UsesTapToSelect(false, 1920.0f, 1080.0f, 2.0f, kMinTouch));
+    }
+
+    TEST(TouchRegimeTest, APhoneProfileWhoseTileReachesTheMinimumKeepsTheOneClickDiscard) {
+        // A landscape phone: the desktop tile is under the minimum, the profile's tile is made just wide enough
+        constexpr float kWidth = 915.0f * 2.6f;
+        constexpr float kHeight = 330.0f * 2.6f;
+        const TableProfile profile = TableProfileFor(kWidth, kHeight, 2.6f, kMinTouch);
+        ASSERT_TRUE(profile.phone);
+        ASSERT_LT(profile.handTileW, kPhoneHandTileMaxW);
+        EXPECT_TRUE(UsesTapToSelect(false, kWidth, kHeight, 2.6f, kMinTouch)) << "the desktop tile";
+        EXPECT_FALSE(UsesTapToSelect(false, kWidth, kHeight, 2.6f, kMinTouch, profile.handTileW));
+        EXPECT_TRUE(UsesTapToSelect(true, kWidth, kHeight, 2.6f, kMinTouch, profile.handTileW)) << "a touch still selects first";
     }
 
     TEST(TouchRegimeTest, NoSizeOrNoDensityIsNoSmallWindow) {

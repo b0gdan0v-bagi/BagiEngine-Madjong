@@ -92,7 +92,7 @@ namespace BECore::Mahjong {
      * hidden kong flies as a back and nothing is face up that the slot would not show; the marks of the slot (the tints, the claimed edge, the
      * frame of the pending discard, the veil, the bars) follow the rectangle, and the blink of a set just laid starts when its tiles have
      * landed (the flight time is added before its `kClaimHighlightSeconds`; nothing waits when nothing of the set flies). A new batch ends
-     * the running flights at their targets, a new hand, match or game, another viewer or view size starts without any. The time is the
+     * the running flights at their targets, a new hand, match or game, another viewer, view size or layout profile starts without any. The time is the
      * component's own clock on `SceneUpdateEvent` (it stops with the table pause); `SetTileFlightSeconds(0)` switches the flights off. The model,
      * the session and the control API are not touched.
      *
@@ -203,7 +203,8 @@ namespace BECore::Mahjong {
 
         /// The game when a person has to act and can (Playing, a person to act, no cover), else null.
         [[nodiscard]] MahjongGame* PersonToAct() const;
-        /// Whether a click on a hand tile only selects it: `UsesTapToSelect` over `_touchSeen` and the window as it is now.
+        /// Whether a click on a hand tile only selects it: `UsesTapToSelect` over `_touchSeen`, the window as it is now and the hand tile of its
+        /// profile (`TableProfileFor`).
         [[nodiscard]] bool TapToSelect() const;
         /// What a selection must still be to count: the regime on, a person to act in the discard turn of the hand and match it was made in,
         /// at the version of the session it was made at, and the tile at its index still the one selected.
