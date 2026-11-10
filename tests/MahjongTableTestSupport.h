@@ -44,23 +44,29 @@ namespace BECore::Mahjong::Tests {
     /// Actions of a hand played by computers; a loop fails fast.
     inline constexpr int kActionLimit = 600;
 
-    /// The view variants the shipped scene declares for the portrait shape: one view of `kPortraitViewWidth` x `kPortraitViewHeight` for an
-    /// output with `orientation:portrait` (`MahjongSceneFilesTest` holds the file to it). The windows of the tests pick their view from it.
-    inline const std::vector<SceneViewVariant>& PortraitViewVariants() {
+    /// The view variants the shipped scene declares, in the order of the file (`MahjongSceneFilesTest` holds the file to it): the portrait
+    /// view (`orientation:portrait`) and the wide one (`minAspect:2`, the landscape table with a wing on each side), each with the design
+    /// size of its shape. The windows of the tests pick their view from it.
+    inline const std::vector<SceneViewVariant>& SceneViewVariants() {
         static const std::vector<SceneViewVariant> variants = [] {
             SceneViewVariant portrait;
             portrait.name = "Portrait"_intern;
             portrait.when.orientation = UIOrientation::Portrait;
             portrait.width = kPortraitViewWidth;
             portrait.height = kPortraitViewHeight;
-            return std::vector<SceneViewVariant>{portrait};
+            SceneViewVariant wide;
+            wide.name = "Wide"_intern;
+            wide.when.minAspect = kWideMinAspect;
+            wide.width = kWideViewWidth;
+            wide.height = kViewHeight;
+            return std::vector<SceneViewVariant>{portrait, wide};
         }();
         return variants;
     }
 
-    /// The view the scene draws with in an output of this size (`SceneViewSelector::Pick` over `PortraitViewVariants`).
+    /// The view the scene draws with in an output of this size (`SceneViewSelector::Pick` over `SceneViewVariants`).
     inline ActiveSceneView ViewOfOutput(float outputWidth, float outputHeight) {
-        const auto& variants = PortraitViewVariants();
+        const auto& variants = SceneViewVariants();
         return SceneViewSelector::Pick(kViewWidth, kViewHeight, eastl::span<const SceneViewVariant>(variants.data(), variants.size()), outputWidth, outputHeight);
     }
 
@@ -441,7 +447,7 @@ namespace BECore::Mahjong::Tests {
             options.minTouchSize = minTouchSize;
 
             // A `SceneView` canvas is laid out against the view each case of the matrix gets from the scene's view variants
-            const auto& variants = PortraitViewVariants();
+            const auto& variants = SceneViewVariants();
             const UIMatrixViews views{kViewWidth, kViewHeight, eastl::span<const SceneViewVariant>(variants.data(), variants.size())};
             const auto failures = ValidateOnMatrix(canvas->GetLayout(), options, base, views);
 

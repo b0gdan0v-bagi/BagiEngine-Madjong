@@ -68,14 +68,20 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(scene.attribute("viewWidth").as_float(), kViewWidth);
         EXPECT_EQ(scene.attribute("viewHeight").as_float(), kViewHeight);
 
-        // The one other view: the portrait design for an output that is at least as high as it is wide (`ShapeOfOutput`)
+        // The other views, in the order of the file: the portrait design for an output that is at least as high as it is wide, the wide one for
+        // an output kWideMinAspect times as wide as high or more (`ShapeOfOutput`)
         const std::vector<pugi::xml_node> views = ElementChildren(scene.child("viewVariants"));
-        ASSERT_EQ(views.size(), 1u);
+        ASSERT_EQ(views.size(), 2u);
         EXPECT_STREQ(views[0].name(), "view");
         EXPECT_STREQ(views[0].attribute("name").as_string(), "Portrait");
         EXPECT_STREQ(views[0].attribute("when").as_string(), "orientation:portrait");
         EXPECT_EQ(views[0].attribute("width").as_float(), kPortraitViewWidth);
         EXPECT_EQ(views[0].attribute("height").as_float(), kPortraitViewHeight);
+        EXPECT_STREQ(views[1].name(), "view");
+        EXPECT_STREQ(views[1].attribute("name").as_string(), "Wide");
+        EXPECT_STREQ(views[1].attribute("when").as_string(), "minAspect:2");
+        EXPECT_EQ(views[1].attribute("width").as_float(), kWideViewWidth);
+        EXPECT_EQ(views[1].attribute("height").as_float(), kViewHeight);
 
         const std::vector<pugi::xml_node> nodes = ElementChildren(scene.child("nodes"));
         ASSERT_EQ(nodes.size(), std::size(kSceneNodes));
@@ -167,15 +173,22 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
-    TEST_F(MahjongSceneLoadTest, TheLoadedViewVariantsAreThePortraitViewTheTestsStandIn) {
+    TEST_F(MahjongSceneLoadTest, TheLoadedViewVariantsArePortraitAndWideTheTestsStandIn) {
         const Scene* scene = _manager->GetSceneByName("MahjongScene"_intern);
         ASSERT_NE(scene, nullptr);
         const auto& variants = scene->GetViewVariants();
-        ASSERT_EQ(variants.size(), PortraitViewVariants().size());
-        EXPECT_TRUE(variants[0] == PortraitViewVariants()[0]) << "the helper of the tests repeats the file";
+        ASSERT_EQ(variants.size(), SceneViewVariants().size());
+        for (size_t i = 0; i < variants.size(); ++i) {
+            EXPECT_TRUE(variants[i] == SceneViewVariants()[i]) << "the helper of the tests repeats the file: view " << i;
+        }
         EXPECT_EQ(variants[0].name, "Portrait"_intern);
+        EXPECT_EQ(variants[0].when.ToText(), "orientation:portrait");
         EXPECT_EQ(variants[0].width, kPortraitViewWidth);
         EXPECT_EQ(variants[0].height, kPortraitViewHeight);
+        EXPECT_EQ(variants[1].name, "Wide"_intern);
+        EXPECT_EQ(variants[1].when.ToText(), "minAspect:2");
+        EXPECT_EQ(variants[1].width, kWideViewWidth);
+        EXPECT_EQ(variants[1].height, kViewHeight);
     }
 
     TEST_F(MahjongSceneLoadTest, TheViewTheFilePicksIsTheDesignOfTheShapeTheRuleGives) {
@@ -186,8 +199,10 @@ namespace BECore::Mahjong::Tests {
             float width;
             float height;
         };
-        // A square and a tall output are portrait, a landscape one is not (the wide and the narrow views are not in the file yet); an output of no size has no shape, so the default view
-        for (const Output output : {Output{1280, 720}, Output{720, 1280}, Output{480, 480}, Output{1, 1}, Output{0, 0}, Output{390, 844}, Output{1920, 1080}, Output{1080, 1920}}) {
+        // A square and a tall output are portrait, one of aspect 2 or more is wide (a landscape phone too), the rest is landscape (the narrow view is not in the file yet); an output of no size has no
+        // shape, so the default view
+        for (const Output output : {Output{1280, 720}, Output{1600, 1000}, Output{1920, 1080}, Output{2000, 1000}, Output{2560, 1080}, Output{3440, 1440}, Output{720, 1280}, Output{480, 480},
+                                    Output{1, 1}, Output{0, 0}, Output{390, 844}, Output{915, 330}, Output{1080, 1920}}) {
             const ActiveSceneView picked =
                 SceneViewSelector::Pick(scene->GetViewWidth(), scene->GetViewHeight(), eastl::span<const SceneViewVariant>(variants.data(), variants.size()), output.width, output.height);
             const TableShape shape = ShapeOfOutput(output.width, output.height);

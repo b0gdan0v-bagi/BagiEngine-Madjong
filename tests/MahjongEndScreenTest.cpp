@@ -43,11 +43,14 @@ namespace BECore::Mahjong::Tests {
         constexpr float kPortraitScoreBandHeight = 72.0f;  // the headline and the summary: two lines of the narrow plate
         constexpr float kPortraitScoreButtonGapHeight = 112.0f;
         constexpr int kPortraitScoreLineColumns = 2;
-        /// The edges the plate of the score table keeps to in a view of this shape.
+        /// The edges the plate of the score table keeps to in a view of this shape (the wide view is the landscape table a wing in from the
+        /// side, and the plate is centred on the view, so its edges move by the wing).
         Rect ScoreTableBounds(TableShape shape) {
-            return shape == TableShape::Portrait
-                       ? Rect(kPortraitScoreTableLeft, kPortraitScoreTableTop, kPortraitScoreTableRight - kPortraitScoreTableLeft, kPortraitScoreTableBottom - kPortraitScoreTableTop)
-                       : Rect(kScoreTableLeft, kScoreTableTop, kScoreTableRight - kScoreTableLeft, kScoreTableBottom - kScoreTableTop);
+            if (shape == TableShape::Portrait) {
+                return Rect(kPortraitScoreTableLeft, kPortraitScoreTableTop, kPortraitScoreTableRight - kPortraitScoreTableLeft, kPortraitScoreTableBottom - kPortraitScoreTableTop);
+            }
+            const float wing = shape == TableShape::Wide ? kWideWingWidth : 0.0f;
+            return Rect(kScoreTableLeft + wing, kScoreTableTop, kScoreTableRight - kScoreTableLeft, kScoreTableBottom - kScoreTableTop);
         }
         constexpr int kScoreLineColumns = 4;
         constexpr float kScoreHeadlineHeight = 48.0f;

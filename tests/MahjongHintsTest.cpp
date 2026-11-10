@@ -737,9 +737,12 @@ namespace BECore::Mahjong::Tests {
         /// less the margin of 12 each side, down to the row of the name of the selected tile. View units.
         const Rect kPortraitHintsBand(12.0f, 836.0f, 696.0f, 188.0f);
 
-        /// Where the hints live in the view of this shape.
+        /// Where the hints live in the view of this shape: in the wide view the corner of the landscape table, a wing in from the side.
         Rect HintsAreaOf(TableShape shape) {
-            return shape == TableShape::Portrait ? kPortraitHintsBand : kHintsCorner;
+            if (shape == TableShape::Portrait) {
+                return kPortraitHintsBand;
+            }
+            return shape == TableShape::Wide ? Rect(kHintsCorner.x + kWideWingWidth, kHintsCorner.y, kHintsCorner.w, kHintsCorner.h) : kHintsCorner;
         }
 
         /// The centre panel of the layout of this shape: the inside of the wall ring, which nothing of the hints may touch.
@@ -778,7 +781,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(Discard("Ew"));
         Draw();
         ASSERT_EQ(ShownRow().size(), static_cast<size_t>(kWaitCells));
-        for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait}) {
+        for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait, TableShape::Wide}) {
             const MatrixWindow window = DesignWindowOf(shape);
             SCOPED_TRACE(window.label.c_str());
             LayOutOnTheTable({"Hints"}, window);
@@ -1358,7 +1361,7 @@ namespace BECore::Mahjong::Tests {
             ExpectMatrixExceptTouchWhere(*Canvas("HintsButton"), "HintsButton", EngineTouchMinimum(), ActionsMayBeSmall);
         });
 
-        for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait}) {
+        for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait, TableShape::Wide}) {
             const MatrixWindow window = DesignWindowOf(shape);
             SCOPED_TRACE(window.label.c_str());
             LayOutOnTheTable({"Hints", "HintsButton"}, window);

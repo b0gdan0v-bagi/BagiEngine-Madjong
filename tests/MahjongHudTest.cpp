@@ -953,8 +953,8 @@ namespace BECore::Mahjong::Tests {
             ShowAll(*canvas, canvas->GetRoot());
         }
 
-        // In the table of each shape: the design window of the landscape view and of the portrait one
-        for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait}) {
+        // In the table of each shape: the design window of the landscape view, of the portrait one and of the wide one
+        for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait, TableShape::Wide}) {
             const MatrixWindow window = DesignWindowOf(shape);
             const TableLayout layout = MakeWorstCaseTableLayout(0, window);
             const eastl::vector<Rect> plates = ZonePlates(layout);

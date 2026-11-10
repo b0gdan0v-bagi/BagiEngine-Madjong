@@ -28,6 +28,8 @@
   Hud. The Hint label lies in the free ground right of the viewer's discards, under MoveLine (x 480..712, y 716..828). Where the buttons are under
   32 px (a portrait window narrower than 339 px) ActionsCompact takes over on the bar under the table; the one window of the matrix that
   keeps this canvas small is 1:1 at 480 px (25.5 px: the table fills it to the sides and the bottom, so there is no bar).
+  In a wide view (1560 x 720, the variant with minAspect:2: the landscape table lies 140 units in from each side) the row and the
+  Hint label move right by the wing (x 860 and 972) and keep every place they have in landscape; the buttons are as they were.
 -->
 <node name="Actions" layer="10">
   <components>
@@ -116,6 +118,12 @@
             <set element="UpgradeKong" width="92" height="68" />
             <set element="Pass" width="92" height="68" />
             <set element="Declare" width="124" height="68" />
+          </overrides>
+        </variant>
+        <variant when="minAspect:2">
+          <overrides>
+            <set element="Hint" x="972" />
+            <set element="ActionRow" x="860" />
           </overrides>
         </variant>
       </variants>

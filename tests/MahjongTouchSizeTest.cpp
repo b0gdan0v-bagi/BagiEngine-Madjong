@@ -80,11 +80,18 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTouchSizeTest, AWindowTakesTheViewOfItsShapeAndTheHelpersFollowIt) {
-        // The view is the scene's pick over the one portrait variant: a window at least as tall as wide gets the portrait view, a square too
-        for (const MatrixWindow& window : {WindowOf(1280.0f, 720.0f), WindowOf(2560.0f, 1080.0f), WindowOf(721.0f, 720.0f)}) {
+        // The view is the scene's pick over the variants of the file: a window at least as tall as wide gets the portrait view, a square too,
+        // one of aspect 2 or more the wide view
+        for (const MatrixWindow& window : {WindowOf(1280.0f, 720.0f), WindowOf(1600.0f, 1000.0f), WindowOf(721.0f, 720.0f)}) {
             EXPECT_EQ(ViewOf(window).index, -1) << window.label.c_str();
             EXPECT_EQ(ViewOf(window).width, kViewWidth) << window.label.c_str();
             EXPECT_EQ(ShapeOf(window), TableShape::Landscape) << window.label.c_str();
+        }
+        for (const MatrixWindow& window : {WindowOf(2560.0f, 1080.0f), WindowOf(2000.0f, 1000.0f), WindowOf(915.0f, 330.0f)}) {
+            EXPECT_EQ(ViewOf(window).index, 1) << window.label.c_str();
+            EXPECT_EQ(ViewOf(window).width, kWideViewWidth) << window.label.c_str();
+            EXPECT_EQ(ViewOf(window).height, kViewHeight) << window.label.c_str();
+            EXPECT_EQ(ShapeOf(window), TableShape::Wide) << window.label.c_str();
         }
         for (const MatrixWindow& window : {WindowOf(720.0f, 1280.0f), WindowOf(480.0f, 480.0f), WindowOf(390.0f, 844.0f)}) {
             EXPECT_EQ(ViewOf(window).index, 0) << window.label.c_str();
@@ -100,6 +107,8 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(ContextOf(tall).sceneViewHeight, kPortraitViewHeight);
         EXPECT_EQ(MakeWorstCaseTableLayout(0, tall).shape, TableShape::Portrait);
         EXPECT_EQ(MakeWorstCaseTableLayout(0, WindowOf(1280.0f, 720.0f)).shape, TableShape::Landscape);
+        EXPECT_EQ(MakeWorstCaseTableLayout(0, WindowOf(2560.0f, 1080.0f)).shape, TableShape::Wide);
+        EXPECT_EQ(DesignWindowOf(TableShape::Wide).outputWidth, kWideViewWidth);
         EXPECT_EQ(DesignWindowOf(TableShape::Portrait).outputHeight, kPortraitViewHeight);
         size_t portraitMatrixWindows = 0;
         size_t portraitPhones = 0;

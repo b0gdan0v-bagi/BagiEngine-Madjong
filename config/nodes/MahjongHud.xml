@@ -13,6 +13,9 @@
   high for the lines the narrow plate wraps to), and SelectedTile right of the viewer's seat plate (x 224, y 1036), above the bonus tiles and
   clear of the hand tile that a tap raises. Both are anchored to an edge, so a window with side insets moves them inwards, as the validator
   wants, and they can cover the nearest tiles there.
+  In a wide view (1560 x 720, the variant with minAspect:2; the table is the landscape one 140 units in from each side) both keep
+  their place on the landscape table: SelectedTile moves right by the wing (x 416) and MoveLine, which is anchored to the right edge,
+  in by the wing (x -232), so each is clear of the tiles as in landscape.
 -->
 <node name="Hud" layer="10">
   <components>
@@ -38,6 +41,12 @@
             <set element="MoveLine" x="-8" y="540" width="232" height="160" />
             <set element="MoveText" height="144" />
             <set element="SelectedTile" x="224" y="1036" />
+          </overrides>
+        </variant>
+        <variant when="minAspect:2">
+          <overrides>
+            <set element="MoveLine" x="-232" />
+            <set element="SelectedTile" x="416" />
           </overrides>
         </variant>
       </variants>

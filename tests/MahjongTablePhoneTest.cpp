@@ -49,8 +49,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_TRUE(SameSlots(_table->GetLayout(), expected)) << window.label.c_str() << ": the component draws the layout of the rule's profile";
             (_table->GetLayout().profile.phone ? phones : desktops)++;
         });
-        const size_t landscapePhones =
-            static_cast<size_t>(eastl::count_if(PhoneWindows().begin(), PhoneWindows().end(), [](const MatrixWindow& window) { return ShapeOf(window) == TableShape::Landscape; }));
+        const size_t landscapePhones = static_cast<size_t>(eastl::count_if(PhoneWindows().begin(), PhoneWindows().end(), [](const MatrixWindow& window) { return IsLandscapeLike(ShapeOf(window)); }));
         EXPECT_GT(phones, landscapePhones - 1) << "the phone windows and the short windows of the matrix";
         EXPECT_GT(desktops, 0u) << "the large windows of the matrix keep the desktop table";
     }
@@ -63,7 +62,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_NO_FATAL_FAILURE(StartIn(window));
             const TableLayout& layout = _table->GetLayout();
             ASSERT_TRUE(layout.profile.phone) << window.label.c_str();
-            const float scale = FitScale(window.outputWidth, window.outputHeight);
+            const float scale = TableFit(window).scale;
             int tiles = 0;
             for (const TileSlot& slot : layout.slots) {
                 if (slot.role != SlotRole::HandTile || slot.seat != layout.viewer) {

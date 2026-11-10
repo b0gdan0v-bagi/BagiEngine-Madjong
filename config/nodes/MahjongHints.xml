@@ -22,6 +22,8 @@
   at x 360..480, and AdviceText right of it (216 wide, 12 in from the right edge). The elements are anchored to the edge they are
   nearer to, so a window with side insets (65 units each side of a 9:16 view) moves them inwards, where the three no longer fit in a row
   (they may then overlap, no tile is checked in a window with insets).
+  In a wide view (1560 x 720, the variant with minAspect:2) the landscape table lies 140 units in from each side, so the waiting row
+  (x 236..572) and AdviceText (x 360..540) move right by that wing and keep the place of the corner of the table they have in landscape.
 -->
 <node name="Hints" layer="5">
   <components>
@@ -122,6 +124,12 @@
           <overrides>
             <set element="WaitPanel" x="12" y="836" />
             <set element="AdviceText" anchor="TopRight" x="-12" y="836" width="216" />
+          </overrides>
+        </variant>
+        <variant when="minAspect:2">
+          <overrides>
+            <set element="WaitPanel" x="236" />
+            <set element="AdviceText" x="360" />
           </overrides>
         </variant>
       </variants>

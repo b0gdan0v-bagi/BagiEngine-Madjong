@@ -9,7 +9,8 @@
   row, 100 wide (a Screen canvas, touch minimum met). MahjongHintsComponent shows and hides the element by name, so both
   follow. It comes after Hints (layer 6) so that it lies over the label's plate. In a portrait view it is at x 360, y 836, between the
   waiting row and the label of Hints, and 68 high like the buttons of Actions there (kPortraitActionButtonHeight): the view is 720 wide,
-  so it is a touch target wherever Actions is.
+  so it is a touch target wherever Actions is. In a wide view (1560 x 720, minAspect:2: the landscape table 140 units in from each
+  side) it moves right by the wing (x 236), so it stays under the waiting row and clear of every tile as in landscape.
 -->
 <node name="HintsButton" layer="6">
   <components>
@@ -21,6 +22,11 @@
         <variant when="orientation:portrait">
           <overrides>
             <set element="HintButton" x="360" y="836" height="68" />
+          </overrides>
+        </variant>
+        <variant when="minAspect:2">
+          <overrides>
+            <set element="HintButton" x="236" />
           </overrides>
         </variant>
       </variants>

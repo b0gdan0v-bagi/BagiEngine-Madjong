@@ -42,8 +42,8 @@ namespace BECore::Mahjong::Tests {
         return CoreManager::GetUIEnvironment().GetSettings().minTouchSize;
     }
 
-    /// The view the scene draws with in the window: the landscape view, or the portrait one where the window is at least as tall as wide
-    /// (`PortraitViewVariants`, picked as `Scene::Draw` does).
+    /// The view the scene draws with in the window: the landscape view, the portrait one where the window is at least as tall as wide, or the
+    /// wide one where it is twice as wide as high or more (`SceneViewVariants`, picked as `Scene::Draw` does).
     inline ActiveSceneView ViewOf(const MatrixWindow& window) {
         return ViewOfOutput(window.outputWidth, window.outputHeight);
     }
@@ -115,7 +115,7 @@ namespace BECore::Mahjong::Tests {
         return window;
     }
 
-    /// The window of the design of a shape: the output is the view (1280 x 720 or 720 x 1280) at density 1, no insets.
+    /// The window of the design of a shape: the output is the view (1280 x 720, 720 x 1280 or 1560 x 720) at density 1, no insets.
     inline MatrixWindow DesignWindowOf(TableShape shape) {
         MatrixWindow window;
         window.outputWidth = DesignWidthOf(shape);
@@ -126,8 +126,9 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// The phones the table is held to: the landscape ones (the two phone windows of the entry, 915 x 330, the worst, and 780 x 300, a
-    /// taller one, 851 x 393, and 915 x 330 with the insets of the sides, all at density 2.6), then two portrait ones (390 x 844 at 3 and
-    /// 360 x 640 at 2).
+    /// taller one, 851 x 393, and 915 x 330 with the insets of the sides, all at density 2.6: every one of them is wider than 2 : 1, so
+    /// the wide view), then two portrait ones (390 x 844 at 3 and 360 x 640 at 2). The matrix holds the wide windows of a monitor (21:9
+    /// and 32:9 at several sizes, with and without insets).
     inline const std::vector<MatrixWindow>& PhoneWindows() {
         constexpr float kPhoneDensity = 2.6f;
         constexpr float kTallPhoneDensity = 3.0f;
