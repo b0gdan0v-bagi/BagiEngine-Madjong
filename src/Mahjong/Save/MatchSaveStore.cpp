@@ -1,5 +1,6 @@
 #include "MatchSaveStore.h"
 
+#include <Mahjong/Platform.h>
 #include <cstdlib>
 
 namespace BECore::Mahjong {
@@ -9,15 +10,8 @@ namespace BECore::Mahjong {
         constexpr const char* kDefaultDirectory = "saves";
         constexpr const char* kDirectoryVariable = "BAGI_MAHJONG_SAVE_DIR";
 
-        std::filesystem::path DefaultDirectory() {
-            if (const char* fromEnvironment = std::getenv(kDirectoryVariable); fromEnvironment != nullptr) {
-                return fromEnvironment;
-            }
-            return kDefaultDirectory;
-        }
-
         std::filesystem::path& Directory() {
-            static std::filesystem::path directory = DefaultDirectory();
+            static std::filesystem::path directory = DefaultMatchSaveDirectory(kBrowserBuild, std::getenv(kDirectoryVariable));
             return directory;
         }
 
@@ -37,6 +31,16 @@ namespace BECore::Mahjong {
         }
 
     }  // namespace
+
+    std::filesystem::path DefaultMatchSaveDirectory(bool browser, const char* fromEnvironment) {
+        if (browser) {
+            return {};
+        }
+        if (fromEnvironment != nullptr) {
+            return fromEnvironment;
+        }
+        return kDefaultDirectory;
+    }
 
     const std::filesystem::path& MatchSaveDirectory() {
         return Directory();

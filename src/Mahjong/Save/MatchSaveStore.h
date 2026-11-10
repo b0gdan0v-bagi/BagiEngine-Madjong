@@ -4,9 +4,14 @@
 
 namespace BECore::Mahjong {
 
-    /// The folder the saves are written to, relative to the working directory unless absolute. The default is `saves`, or the
-    /// environment variable `BAGI_MAHJONG_SAVE_DIR` when it is set (an empty value switches saving off). An empty path switches
-    /// saving off. Process-wide: `MahjongGame` reads it when it opens its store.
+    /// The default save folder: empty (saving off) in the browser build, else `fromEnvironment` when it is not null (an empty value
+    /// switches saving off), else `saves`. `fromEnvironment` is the value of `BAGI_MAHJONG_SAVE_DIR` or null. Pure, so a test can drive
+    /// both builds.
+    [[nodiscard]] std::filesystem::path DefaultMatchSaveDirectory(bool browser, const char* fromEnvironment);
+
+    /// The folder the saves are written to, relative to the working directory unless absolute. The default is
+    /// `DefaultMatchSaveDirectory` (`saves`, or `BAGI_MAHJONG_SAVE_DIR`; none in the browser). An empty path switches saving off.
+    /// Process-wide: `MahjongGame` reads it when it opens its store.
     [[nodiscard]] const std::filesystem::path& MatchSaveDirectory();
     void SetMatchSaveDirectory(std::filesystem::path directory);
 

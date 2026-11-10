@@ -24,17 +24,20 @@ be_add_game_executable(BagiMahjong
 
 # The bot arena: a command-line program that plays many hands of the computer players with no window (docs/bot-arena.md). The rules
 # and the arena are plain C++ in MahjongModule; the program needs the engine core (BECoreModule) and nothing of the runtime.
-add_executable(BagiMahjongArena tools/arena/main.cpp)
-set_target_properties(BagiMahjongArena PROPERTIES FOLDER "Tools")
-target_precompile_headers(BagiMahjongArena REUSE_FROM BECoreModule)
-be_force_include_pch(BagiMahjongArena)
-target_compile_definitions(BagiMahjongArena PRIVATE IMGUI_VULKAN_AVAILABLE=1 REFLECTION_GENERATED=1)
-target_include_directories(BagiMahjongArena PRIVATE ${CMAKE_BINARY_DIR})
-be_link_engine(BagiMahjongArena)
-target_link_libraries(BagiMahjongArena PRIVATE MahjongModule)
-be_deploy_runtime_libs(BagiMahjongArena)
-if(APPLE)
-    set_target_properties(BagiMahjongArena PROPERTIES BUILD_RPATH "@executable_path" INSTALL_RPATH "@executable_path")
+# Not built for the web: a plain add_executable would link a second wasm without the content package.
+if(NOT ENGINE_TARGET_WEB)
+    add_executable(BagiMahjongArena tools/arena/main.cpp)
+    set_target_properties(BagiMahjongArena PROPERTIES FOLDER "Tools")
+    target_precompile_headers(BagiMahjongArena REUSE_FROM BECoreModule)
+    be_force_include_pch(BagiMahjongArena)
+    target_compile_definitions(BagiMahjongArena PRIVATE IMGUI_VULKAN_AVAILABLE=1 REFLECTION_GENERATED=1)
+    target_include_directories(BagiMahjongArena PRIVATE ${CMAKE_BINARY_DIR})
+    be_link_engine(BagiMahjongArena)
+    target_link_libraries(BagiMahjongArena PRIVATE MahjongModule)
+    be_deploy_runtime_libs(BagiMahjongArena)
+    if(APPLE)
+        set_target_properties(BagiMahjongArena PROPERTIES BUILD_RPATH "@executable_path" INSTALL_RPATH "@executable_path")
+    endif()
 endif()
 
 if(ENGINE_BUILD_TESTS)
@@ -45,6 +48,9 @@ if(ENGINE_BUILD_TESTS)
         WHOLE_ARCHIVE MahjongModule
     )
 
-    # Starts BagiMahjong with the control API and plays a hand and a match over WebSocket (ctest entry BagiMahjongControlSmoke)
-    be_add_game_control_tests(BagiMahjong SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/tests/control_smoke.py)
+    # Starts BagiMahjong with the control API and plays a hand and a match over WebSocket (ctest entry BagiMahjongControlSmoke);
+    # without the control server (ENGINE_WITH_REMOTE_CONTROL=OFF) the smoke could never connect
+    if(ENGINE_WITH_REMOTE_CONTROL)
+        be_add_game_control_tests(BagiMahjong SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/tests/control_smoke.py)
+    endif()
 endif()

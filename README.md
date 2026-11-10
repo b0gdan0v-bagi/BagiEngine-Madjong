@@ -40,6 +40,41 @@ The computer players are measured by the bot arena, a program with no window (Re
 
 The tile art is drawn by a script (standard library only): `python3 tools/make_tiles.py` regenerates `assets/tiles/tiles.png` and `config/TextureLibrary.xml`, `python3 tools/make_tiles.py --check` tells whether the committed files are up to date.
 
+## In a browser
+
+The game also builds as a web page (Emscripten, WebGL). The SDK is installed once into the submodule (about 2 GB); use Python 3.14 for it, the Homebrew 3.15 and 3.12 give an empty `platform.mac_ver()` on this Mac:
+
+```bash
+python3.14 engine/CI/scripts/setup_emsdk.py
+cmake --preset web-release                    # threaded; output in build/ClangWeb
+cmake --build --preset web-release --target BagiMahjong
+python3 engine/tools/web/package.py build/ClangWeb dist --game BagiMahjong     # dist/ is git-ignored
+python3 engine/tools/web/serve.py --root dist                                  # http://localhost:8080
+```
+
+Open `localhost` or an https address: the threaded page needs cross-origin isolation, which a plain `http://` host never has. The single-thread page needs no headers: the preset `web-release-single-thread`, `package.py build/ClangWebSingleThread dist-single --game BagiMahjong --single-thread`, `serve.py --root dist-single`. Switching between `web-debug` and `web-release` (both use `build/ClangWeb`): delete `build/ClangWeb/lib/*.a` first. In a worker folder, which has no SDK of its own, the same presets exist as `-local` ones in the git-ignored `CMakeUserPresets.json`.
+
+The browser smoke (`tools/web_smoke.py`: the engine's smoke, then `Start` and a tile click on a 1280x720 page) needs Playwright in a venv:
+
+```bash
+python3.14 -m venv build/web-venv && build/web-venv/bin/python -m pip install playwright
+build/web-venv/bin/python -m playwright install chromium                       # or --browser-channel chrome with the installed Chrome
+build/web-venv/bin/python tools/web_smoke.py --dist dist --expect-console "Initialized with \d+ worker threads"
+build/web-venv/bin/python tools/web_smoke.py --dist dist-single --expect-console "single-thread mode"
+```
+
+Without a browser, the web-like desktop build tests the same code paths: `cmake -S . -B build/webcheck -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug -DENGINE_WITH_VULKAN=OFF -DENGINE_WITH_REMOTE_CONTROL=OFF -DENGINE_STATIC_SDL=ON -DENGINE_SINGLE_THREAD=ON` (and `OFF`), then build `BagiMahjong MahjongTests` and `ctest --test-dir build/webcheck`. The output lands in `build/ClangmacOS/` whatever the folder: delete `build/ClangmacOS/lib/*.a` when switching and build `macos-debug` again afterwards.
+
+**What differs in the browser:** no saves and no `Continue` (the page's file system is memory, lost on reload; the seat choice is not remembered either), no match log, no control API, no bot arena. Persistence needs IDBFS, which is engine work and not done.
+
+**Deploy to Railway (written down, not run; the owner runs it).** After `railway login` and `railway link` in a service made once (`railway add --service <name>`):
+
+```bash
+python3 engine/tools/web/build_and_deploy.py --source-dir . --game BagiMahjong --service <name> --deploy
+```
+
+`--dry-run` prints the commands without running them. It builds with the SDK in `engine/external/emsdk`, so it is not possible in a worker folder.
+
 ## How to play
 
 The game opens on **New game: who plays?**: for each of the four seats pick `Person` or `Computer` (the default is you at seat 1 against three computers), then `Start`. The `New game` button in the top right corner of the table opens the question again and starts a new match.
@@ -50,7 +85,7 @@ The game opens on **New game: who plays?**: for each of the four seats pick `Per
 - **Computers** play one step every 0.6 seconds (`kComputerStepSeconds`); nothing moves while the seat choice is open.
 - **Hot seat:** with two or more people at one screen the table is covered between turns ("Pass the screen to Seat 2 (South)"); the next person presses `Show`.
 - **The end of a hand:** a score table covers the table: who won and how, the points of every seat in the hand, what each seat paid or got and its total, the winner's lines (`Pung of 5 Dots: 8`, `One suit, no honours: x8`) and the sum. All four hands are face up. `Next hand` settles it and deals on (`Finish match` on the last one); after the last hand the standings show the seats by points and `New game` opens the seat choice.
-- **Saves:** the match in progress and the choices of the seat choice (language, seats, hands, level, hints) are saved as you play, in `saves/` beside the working directory (git-ignored; `BAGI_MAHJONG_SAVE_DIR` names another folder, empty switches saving off). When the game starts again with a match to go on, the seat choice shows `Continue` beside `Start`: it brings back the table as it was; `Start` begins a new match and replaces the saved one. The match logs for reading are in `logs/matches/`.
+- **Saves:** the match in progress and the choices of the seat choice (language, seats, hands, level, hints) are saved as you play, in `saves/` beside the working directory (git-ignored; `BAGI_MAHJONG_SAVE_DIR` names another folder, empty switches saving off; off in the browser). When the game starts again with a match to go on, the seat choice shows `Continue` beside `Start`: it brings back the table as it was; `Start` begins a new match and replaces the saved one. The match logs for reading are in `logs/matches/`.
 - The HUD (top left of the table) shows the round and the hand number and the tiles left in the wall. Each seat has a plate at its side of the table with its number, its wind (a `*` and a red bar on the plate of East, the dealer) and its score; the plate of the seat whose turn it is is gold.
 
 ## Layout

@@ -10,7 +10,7 @@ Plain C++ with reflected states: `MatchSave.*` has no scene and no disk, `MatchS
 
 ## Where
 
-`MatchSaveDirectory()`: default `saves/` under the working directory (git-ignored), or `BAGI_MAHJONG_SAVE_DIR` when set; an empty path switches saving off (`SetMatchSaveDirectory`). The gtests switch it off for the whole process (the global environment of `MahjongSaveGameTest.cpp`) and the saving tests use a temporary folder; `control_smoke.py` sets the variable to a temporary folder, so no test touches the owner's `saves/`.
+`MatchSaveDirectory()`: default `saves/` under the working directory (git-ignored), or `BAGI_MAHJONG_SAVE_DIR` when set; an empty path switches saving off (`SetMatchSaveDirectory`). **The browser build (`kBrowserBuild`, `../Platform.h`) has saving off by default**: the page's file system is memory and is gone on reload, so a saved match could never be offered by `Continue`; keeping it needs IDBFS, which is not built. The `Setup` choices are not remembered there either. The gtests switch it off for the whole process (the global environment of `MahjongSaveGameTest.cpp`) and the saving tests use a temporary folder; `control_smoke.py` sets the variable to a temporary folder, so no test touches the owner's `saves/`.
 
 ## When it is written
 
