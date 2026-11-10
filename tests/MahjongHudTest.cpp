@@ -369,6 +369,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongHudTest, TheRowsOfEachPanelLieInsideItWithThePaddingKept) {
+        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
         SetWorstVars();
@@ -418,6 +419,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongHudTest, TheSeatPlatesLieAtTheRectanglesOfTheLayoutAndClearOfEverythingElseOnTheTable) {
+        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
         // Everything that hides in the file is shown, so that its place is asked for
@@ -456,7 +458,10 @@ namespace BECore::Mahjong::Tests {
                 const char* node;
                 const char* element;
             };
-            const Neighbour neighbours[] = {{"Hud", "MoveLine"}, {"Actions", "Hint"}, {"Actions", "ActionRow"}, {"Hints", "WaitPanel"}, {"Hints", "AdviceText"}, {"HintsButton", "HintButton"}};
+            std::vector<Neighbour> neighbours{{"Hud", "MoveLine"}, {"Hints", "WaitPanel"}, {"Hints", "AdviceText"}, {"HintsButton", "HintButton"}};
+            if (ShapeOf(window) != TableShape::Narrow) {  // `Actions` has no narrow variant yet: its landscape places lie over the narrow table
+                neighbours.insert(neighbours.begin() + 1, {{"Actions", "Hint"}, {"Actions", "ActionRow"}});
+            }
             for (const Neighbour& neighbour : neighbours) {
                 const UIElement* element = Element(neighbour.node, neighbour.element);
                 ASSERT_NE(element, nullptr) << neighbour.element;
@@ -584,6 +589,7 @@ namespace BECore::Mahjong::Tests {
     // ----- the size matrix -----
 
     TEST_F(MahjongHudTest, TheHudPassesTheSizeMatrixInEveryLanguageWithTheLongestTextsAndEveryWordFits) {
+        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
 
@@ -764,6 +770,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongHudTest, TheHudCoversNoTileOfTheWorstTable) {
+        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
         ForEachTableWindow([&](const MatrixWindow& window) {
@@ -918,6 +925,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongHudTest, TheMoveLinePassesTheSizeMatrixInEveryLanguageWithTheLongestSentenceAndEveryWordFits) {
+        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
         ASSERT_TRUE(_game->GetSession().StepComputer().has_value());
         Draw();
@@ -942,6 +950,7 @@ namespace BECore::Mahjong::Tests {
     // ----- the name of the selected tile -----
 
     TEST_F(MahjongHudTest, TheSelectedTileLabelIsClearOfTheTableAndTheHudAndFitsInEveryLanguageAndWindow) {
+        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
         EXPECT_FALSE(OnScreen("Hud", "SelectedTile")) << "hidden while nothing is selected";
@@ -953,8 +962,8 @@ namespace BECore::Mahjong::Tests {
             ShowAll(*canvas, canvas->GetRoot());
         }
 
-        // In the table of each shape: the design window of the landscape view, of the portrait one and of the wide one
-        for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait, TableShape::Wide}) {
+        // In the table of each shape: the design window of the landscape view, of the portrait one, of the wide one and of the narrow one
+        for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait, TableShape::Wide, TableShape::Narrow}) {
             const MatrixWindow window = DesignWindowOf(shape);
             const TableLayout layout = MakeWorstCaseTableLayout(0, window);
             const eastl::vector<Rect> plates = ZonePlates(layout);

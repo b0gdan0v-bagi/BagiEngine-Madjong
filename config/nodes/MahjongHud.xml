@@ -16,6 +16,11 @@
   In a wide view (1560 x 720, the variant with minAspect:2; the table is the landscape one 140 units in from each side) both keep
   their place on the landscape table: SelectedTile moves right by the wing (x 416) and MoveLine, which is anchored to the right edge,
   in by the wing (x -232), so each is clear of the tiles as in landscape.
+  In a narrow view (1080 x 768, the variant with orientation:landscape;maxAspect:1.55; Table/TableLayout.cpp, the narrow table) MoveLine
+  lies right of the top discard block (x 468..612) and above the right seat's melds (they start at y 180): right edge 8 in, 448 wide,
+  y 92..172, so it is clear of the block by 12 and of every tile of the right seat by 8. SelectedTile lies in the ground between the
+  bottom seat plate (right edge 228) and the bottom discard block (x 468), under the wall ring and over the viewer's row of bonus tiles
+  and melds (y 636): x 236, y 572, 224 wide, which leaves the tile a tap raises and the row clear.
 -->
 <node name="Hud" layer="10">
   <components>
@@ -41,6 +46,12 @@
             <set element="MoveLine" x="-8" y="540" width="232" height="160" />
             <set element="MoveText" height="144" />
             <set element="SelectedTile" x="224" y="1036" />
+          </overrides>
+        </variant>
+        <variant when="orientation:landscape;maxAspect:1.55">
+          <overrides>
+            <set element="MoveLine" x="-8" />
+            <set element="SelectedTile" x="236" y="572" width="224" />
           </overrides>
         </variant>
         <variant when="minAspect:2">

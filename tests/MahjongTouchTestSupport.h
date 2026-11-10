@@ -143,13 +143,31 @@ namespace BECore::Mahjong::Tests {
         return windows;
     }
 
-    /// Calls `fn(window)` for every window the table is checked in: the matrix of the engine, then the landscape phones. The rule
+    /// The narrow windows (4:3, 3:2, 5:4 landscape): the matrix's own 4:3 and 3:2 windows are in `ForEachMatrixWindow`; these are the ones it
+    /// lacks, at density 1 the sizes a monitor window or a tablet browser has (1024 x 768, 1080 x 768 the design, 1200 x 800, 800 x 600,
+    /// 640 x 480, 1400 x 1000) and a tablet 1024 x 768 at density 2. They are narrow under a `NarrowViewScope`, landscape otherwise.
+    inline const std::vector<MatrixWindow>& NarrowWindows() {
+        constexpr float kTabletDensity = 2.0f;
+        static const std::vector<MatrixWindow> windows{MakePhoneWindow(1024.0f, 768.0f, 1.0f),          MakePhoneWindow(kNarrowViewWidth, kNarrowViewHeight, 1.0f),
+                                                       MakePhoneWindow(1200.0f, 800.0f, 1.0f),          MakePhoneWindow(800.0f, 600.0f, 1.0f),
+                                                       MakePhoneWindow(640.0f, 480.0f, 1.0f),           MakePhoneWindow(1400.0f, 1000.0f, 1.0f),
+                                                       MakePhoneWindow(1024.0f, 768.0f, kTabletDensity)};
+        return windows;
+    }
+
+    /// Calls `fn(window)` for every window the table is checked in: the matrix of the engine, then the landscape phones (and under a
+    /// `NarrowViewScope` the narrow windows). The rule
     /// `TableProfileFor` gives the phone profile to some windows of the matrix too (the short ones), so a check of the table takes the
     /// layout of its window (`TableLayoutFor`).
     inline void ForEachTableWindow(const std::function<void(const MatrixWindow&)>& fn) {
         ForEachMatrixWindow(fn);
         for (const MatrixWindow& window : PhoneWindows()) {
             fn(window);
+        }
+        if (NarrowViewStandIn()) {
+            for (const MatrixWindow& window : NarrowWindows()) {
+                fn(window);
+            }
         }
     }
 

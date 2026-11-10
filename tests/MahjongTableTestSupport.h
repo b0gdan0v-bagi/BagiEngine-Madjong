@@ -64,9 +64,51 @@ namespace BECore::Mahjong::Tests {
         return variants;
     }
 
-    /// The view the scene draws with in an output of this size (`SceneViewSelector::Pick` over `SceneViewVariants`).
+    /// The list of views the scene will have once it declares the narrow view too (Portrait, Narrow, Wide, the rule of `ShapeOfOutput`): the
+    /// narrow canvases are tested against it while the shipped file does not declare that view yet (`NarrowViewScope`).
+    inline const std::vector<SceneViewVariant>& SceneViewVariantsWithNarrow() {
+        static const std::vector<SceneViewVariant> variants = [] {
+            std::vector<SceneViewVariant> list = SceneViewVariants();
+            SceneViewVariant narrow;
+            narrow.name = "Narrow"_intern;
+            narrow.when.orientation = UIOrientation::Landscape;
+            narrow.when.maxAspect = kNarrowMaxAspect;
+            narrow.width = kNarrowViewWidth;
+            narrow.height = kNarrowViewHeight;
+            list.insert(list.begin() + 1, narrow);
+            return list;
+        }();
+        return variants;
+    }
+
+    /// Whether the windows of the tests pick their view from `SceneViewVariantsWithNarrow` instead of the file's list.
+    inline bool& NarrowViewStandIn() {
+        static bool standIn = false;
+        return standIn;
+    }
+
+    /// Stands the tests in the narrow view while it is alive: every helper that picks the view of a window (`ViewOfOutput`, `ViewOf(window)`,
+    /// the matrix helpers) takes the list with the narrow view, and the loops over the table's windows visit `NarrowWindows()` too.
+    class NarrowViewScope {
+    public:
+        NarrowViewScope() {
+            NarrowViewStandIn() = true;
+        }
+        ~NarrowViewScope() {
+            NarrowViewStandIn() = false;
+        }
+        NarrowViewScope(const NarrowViewScope&) = delete;
+        NarrowViewScope& operator=(const NarrowViewScope&) = delete;
+    };
+
+    /// The views the windows of the tests pick from: the file's, or with the narrow one under a `NarrowViewScope`.
+    inline const std::vector<SceneViewVariant>& TestedViewVariants() {
+        return NarrowViewStandIn() ? SceneViewVariantsWithNarrow() : SceneViewVariants();
+    }
+
+    /// The view the scene draws with in an output of this size (`SceneViewSelector::Pick` over `TestedViewVariants`).
     inline ActiveSceneView ViewOfOutput(float outputWidth, float outputHeight) {
-        const auto& variants = SceneViewVariants();
+        const auto& variants = TestedViewVariants();
         return SceneViewSelector::Pick(kViewWidth, kViewHeight, eastl::span<const SceneViewVariant>(variants.data(), variants.size()), outputWidth, outputHeight);
     }
 
@@ -447,7 +489,7 @@ namespace BECore::Mahjong::Tests {
             options.minTouchSize = minTouchSize;
 
             // A `SceneView` canvas is laid out against the view each case of the matrix gets from the scene's view variants
-            const auto& variants = SceneViewVariants();
+            const auto& variants = TestedViewVariants();
             const UIMatrixViews views{kViewWidth, kViewHeight, eastl::span<const SceneViewVariant>(variants.data(), variants.size())};
             const auto failures = ValidateOnMatrix(canvas->GetLayout(), options, base, views);
 

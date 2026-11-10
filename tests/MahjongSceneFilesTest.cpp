@@ -157,6 +157,28 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(componentOf("Hints"), "MahjongHintsComponent");
     }
 
+    TEST(MahjongSceneFilesTest, TheVariantsOfTheCanvasesThatFollowTheViewUseTheConditionOfAView) {
+        pugi::xml_document document;
+        ASSERT_TRUE(LoadShippedSceneDocument(document));
+        // A canvas on the table is laid out against the view, whose aspect is the view's own, so each shape's variant carries the text of the view's
+        // `when` (the narrow one also says `orientation:landscape`: a portrait view is under the narrow aspect too) and the three exclude each other
+        std::set<std::string> allowed;
+        for (const SceneViewVariant& view : SceneViewVariantsWithNarrow()) {
+            allowed.insert(view.when.ToText().c_str());
+        }
+        ASSERT_EQ(allowed.size(), 3u);
+        size_t found = 0;
+        for (const pugi::xpath_node& variant : document.select_nodes("//variant[@when]")) {
+            const std::string when = variant.node().attribute("when").as_string();
+            if (when.find("orientation") == std::string::npos && when.find("Aspect") == std::string::npos) {
+                continue;  // a Screen canvas's variant by its size (`maxWidth:440`)
+            }
+            EXPECT_EQ(allowed.count(when), 1u) << "a variant that is not the condition of a view: " << when;
+            ++found;
+        }
+        EXPECT_GT(found, 0u);
+    }
+
     class MahjongSceneLoadTest : public MahjongTableTestBase {};
 
     TEST_F(MahjongSceneLoadTest, TheLoadedSceneHasTheNodesInOrder) {

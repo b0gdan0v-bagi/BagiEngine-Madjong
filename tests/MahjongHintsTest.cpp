@@ -737,12 +737,21 @@ namespace BECore::Mahjong::Tests {
         /// less the margin of 12 each side, down to the row of the name of the selected tile. View units.
         const Rect kPortraitHintsBand(12.0f, 836.0f, 696.0f, 188.0f);
 
+        /// The corner of the narrow table the hints live in: left of the top seat's hand and melds (x 336), over the left seat's melds (y 180).
+        const Rect kNarrowHintsCorner(8.0f, 8.0f, 320.0f, 168.0f);
+
         /// Where the hints live in the view of this shape: in the wide view the corner of the landscape table, a wing in from the side.
         Rect HintsAreaOf(TableShape shape) {
-            if (shape == TableShape::Portrait) {
-                return kPortraitHintsBand;
+            switch (shape) {
+                case TableShape::Portrait:
+                    return kPortraitHintsBand;
+                case TableShape::Wide:
+                    return Rect(kHintsCorner.x + kWideWingWidth, kHintsCorner.y, kHintsCorner.w, kHintsCorner.h);
+                case TableShape::Narrow:
+                    return kNarrowHintsCorner;
+                default:
+                    return kHintsCorner;
             }
-            return shape == TableShape::Wide ? Rect(kHintsCorner.x + kWideWingWidth, kHintsCorner.y, kHintsCorner.w, kHintsCorner.h) : kHintsCorner;
         }
 
         /// The centre panel of the layout of this shape: the inside of the wall ring, which nothing of the hints may touch.
@@ -757,6 +766,7 @@ namespace BECore::Mahjong::Tests {
     }  // namespace
 
     TEST_F(MahjongHintsTest, TheFullRowPassesTheSizeMatrixAndEveryWordFitsInEveryLanguage) {
+        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(StartEast(kOrphansWait, "Ew"));
         ASSERT_TRUE(Discard("Ew"));
         Draw();
@@ -777,11 +787,12 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongHintsTest, ThePanelLiesInTheCornerClearOfTheCentrePanelAndOfEveryTileOfTheWorstCaseTableAndTakesNoInput) {
+        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(StartEast(kOrphansWait, "Ew"));
         ASSERT_TRUE(Discard("Ew"));
         Draw();
         ASSERT_EQ(ShownRow().size(), static_cast<size_t>(kWaitCells));
-        for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait, TableShape::Wide}) {
+        for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait, TableShape::Wide, TableShape::Narrow}) {
             const MatrixWindow window = DesignWindowOf(shape);
             SCOPED_TRACE(window.label.c_str());
             LayOutOnTheTable({"Hints"}, window);
@@ -1312,6 +1323,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongHintsTest, TheButtonAndTheSentenceFitInEveryLanguageAndTheStripIsClearOfTheTable) {
+        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(StartWindow(kWindowPung, "5p"));
         Press();
         ASSERT_TRUE(AdviceShown());
@@ -1361,7 +1373,7 @@ namespace BECore::Mahjong::Tests {
             ExpectMatrixExceptTouchWhere(*Canvas("HintsButton"), "HintsButton", EngineTouchMinimum(), ActionsMayBeSmall);
         });
 
-        for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait, TableShape::Wide}) {
+        for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait, TableShape::Wide, TableShape::Narrow}) {
             const MatrixWindow window = DesignWindowOf(shape);
             SCOPED_TRACE(window.label.c_str());
             LayOutOnTheTable({"Hints", "HintsButton"}, window);
