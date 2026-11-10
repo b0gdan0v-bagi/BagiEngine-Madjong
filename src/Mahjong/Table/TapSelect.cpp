@@ -1,5 +1,6 @@
 #include "TapSelect.h"
 
+#include <Mahjong/Table/ScoreText.h>
 #include <Mahjong/Table/TouchRegime.h>
 
 namespace BECore::Mahjong {
@@ -29,6 +30,10 @@ namespace BECore::Mahjong {
         Rect raised = slotRect;
         raised.y -= kSelectedTileRise * (slotRect.h / kViewerHandTileH);
         return raised;
+    }
+
+    eastl::string SelectedTileText(const UIStrings& strings, Tile tile) {
+        return Tr(strings, "table.selectedTile", {{"tile", TileName(strings, tile)}});
     }
 
 }  // namespace BECore::Mahjong

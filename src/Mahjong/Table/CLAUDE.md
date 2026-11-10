@@ -18,7 +18,7 @@ Everything here is plain C++ over the model, a `TableView` or a `UIStrings&`: no
 | `Hints`, `CallingMarks` | `WaitingTiles`, `DeclaringDiscards`, `AdviceFor` (= `ComputerPlayer(kAdviceSeed)`, Normal), `AdviceText`, `HintsApply`; `KeepsWaitingDiscards` |
 | `AnimationSpeed.h` | the player's speed Slow / Normal / Fast: `SpeedFactor`, `ScaledSeconds`, `SpeedText` / `TryParseSpeed`; the base times stay the Normal ones |
 | `TileFlights` | `PlanFlights(before, after, newMoves)` (a flight keeps the `rotation` of its source slot), `FlightRect` (the screen rectangle, what the marks follow), `FlightPlacement` (the unturned rectangle, turn the short way and pivot of the tile in the air; 0 and 1 are exactly the source and the slot), `kTileFlightSeconds` (must stay below `kComputerStepSeconds`) |
-| `TapSelect` | the touch tap rule: `UsesTapToSelect` (touch seen, or a hand tile under the touch minimum), `StepTap` (select / confirm / move / clear, or discard at once with the regime off), `RaisedRect`, `kSelectedTileRise` |
+| `TapSelect` | the touch tap rule: `UsesTapToSelect` (touch seen, or a hand tile under the touch minimum), `StepTap` (select / confirm / move / clear, or discard at once with the regime off), `RaisedRect`, `kSelectedTileRise`, `SelectedTileText` (`table.selectedTile`) |
 | `TouchRegime.h` | `FitScale`, `NeedsCompactActions`, `CompactScale`, `CompactRowHeight` and the compact-row constants the scene file must match (`MahjongTableScreenTest`) |
 
 ## Rules

@@ -1,5 +1,6 @@
 #include "ComputerTestSupport.h"
 #include "MahjongTableTestSupport.h"
+#include "MahjongTouchTestSupport.h"
 #include "UiStyleTestSupport.h"
 
 #include <BECore/Control/Json.h>
@@ -8,6 +9,7 @@
 #include <BECore/UI/UIToggle.h>
 #include <Events/InputEvents.h>
 #include <Events/SceneEvents.h>
+#include <Mahjong/Table/TapSelect.h>
 #include <Mahjong/Table/UiPalette.h>
 
 /**
@@ -230,6 +232,310 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(_table->GetButtons()[ButtonKind::Declare].shown) << "the hand still waits, so Declare is offered again";
         EXPECT_FALSE(_table->DeclareNext()) << "but the flag was set in the turn before";
         EXPECT_EQ(Var("declareNext"), "off");
+    }
+
+    // ----- the tap: a first tap selects, a second one discards (the touch regime, `Table/TapSelect.h`) -----
+
+    TEST_F(MahjongTableInputTest, AMouseDiscardsWithOneClickInABigWindowAndSelectsNothing) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup));
+        const int index = IndexOf(kSeat0, T("9p"));
+
+        ClickHandTile(index);
+
+        ASSERT_FALSE(Hand().Discards().empty());
+        EXPECT_EQ(Hand().Discards().front().tile, T("9p"));
+        Draw();
+        EXPECT_FALSE(_table->SelectedHandIndex().has_value());
+        EXPECT_EQ(Var("selectedTileText"), "");
+    }
+
+    TEST_F(MahjongTableInputTest, ATapSelectsTheTileAndASecondTapOnItDiscardsIt) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup));
+        const int index = IndexOf(kSeat0, T("9p"));
+        const uint64_t version = _game->GetSession().Version();
+        const std::string before = Snapshot(Hand());
+
+        TapHandTile(index);
+        Draw();
+
+        EXPECT_EQ(Snapshot(Hand()), before) << "the first tap discards nothing";
+        EXPECT_EQ(_game->GetSession().Version(), version);
+        EXPECT_EQ(_table->SelectedHandIndex(), index);
+        EXPECT_EQ(Var("selectedTileText"), "Selected: 9 Dots");
+
+        TapHandTile(index);
+        Draw();
+
+        ASSERT_FALSE(Hand().Discards().empty());
+        EXPECT_EQ(Hand().Discards().front().tile, T("9p"));
+        EXPECT_GT(_game->GetSession().Version(), version);
+        EXPECT_FALSE(_table->SelectedHandIndex().has_value());
+        EXPECT_EQ(Var("selectedTileText"), "");
+    }
+
+    TEST_F(MahjongTableInputTest, ATapOnAnotherTileMovesTheSelectionAndOnlyTheSelectedOneDiscards) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup));
+        const int first = IndexOf(kSeat0, T("1p"));
+        const int second = IndexOf(kSeat0, T("Rd"));
+        ASSERT_NE(first, second);
+
+        TapHandTile(first);
+        TapHandTile(second);
+        Draw();
+
+        EXPECT_TRUE(Hand().Discards().empty());
+        EXPECT_EQ(_table->SelectedHandIndex(), second);
+        EXPECT_EQ(Var("selectedTileText"), "Selected: Red Dragon");
+
+        TapHandTile(second);
+
+        ASSERT_FALSE(Hand().Discards().empty());
+        EXPECT_EQ(Hand().Discards().front().tile, T("Rd"));
+    }
+
+    TEST_F(MahjongTableInputTest, ATapInTheStripBesideTheTilesSelectsTheNearestTile) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup));
+        const TileSlot* slot = HandSlot(3);
+        ASSERT_NE(slot, nullptr);
+
+        Tap(slot->rect.x + slot->rect.w * 0.5f, slot->rect.y + slot->rect.h + 2.0f);  // the margin under the tiles
+        Draw();
+
+        EXPECT_EQ(_table->SelectedHandIndex(), 3);
+        EXPECT_TRUE(Hand().Discards().empty());
+    }
+
+    TEST_F(MahjongTableInputTest, ATapElsewhereOnTheTableClearsTheSelectionAndTheNextTapSelectsAgain) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup));
+        const int index = IndexOf(kSeat0, T("9p"));
+        TapHandTile(index);
+        Draw();
+        ASSERT_EQ(_table->SelectedHandIndex(), index);
+
+        Tap(5.0f, 5.0f);  // empty felt
+        Draw();
+
+        EXPECT_FALSE(_table->SelectedHandIndex().has_value());
+        EXPECT_EQ(Var("selectedTileText"), "");
+        TapHandTile(index);
+        Draw();
+        EXPECT_EQ(_table->SelectedHandIndex(), index);
+        EXPECT_TRUE(Hand().Discards().empty()) << "the tap after the clear selects, it does not discard";
+    }
+
+    TEST_F(MahjongTableInputTest, TheTouchRegimeStaysOnForAMouseClickAfterATouch) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup));
+        const int index = IndexOf(kSeat0, T("9p"));
+        TapHandTile(index);
+
+        ClickHandTile(index);  // a mouse on a touch device (a pen, a trackpad): the regime stays
+
+        ASSERT_FALSE(Hand().Discards().empty());
+        EXPECT_EQ(Hand().Discards().front().tile, T("9p")) << "the second click is on the selected tile";
+    }
+
+    TEST_F(MahjongTableInputTest, ASmallWindowWithAMouseTakesTheTapRule) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup));
+        SetOutputSize(*_renderer, 640.0f, 360.0f);  // a hand tile is 24 px: under the touch minimum
+        Draw();
+        const int index = IndexOf(kSeat0, T("9p"));
+        const TileSlot* slot = HandSlot(index);
+        ASSERT_NE(slot, nullptr);
+        const float scale = 640.0f / kViewWidth;
+        const float x = (slot->rect.x + slot->rect.w * 0.5f) * scale;
+        const float y = (slot->rect.y + slot->rect.h * 0.5f) * scale;
+
+        Click(x, y);
+        Draw();
+
+        EXPECT_TRUE(Hand().Discards().empty());
+        EXPECT_EQ(_table->SelectedHandIndex(), index);
+
+        Click(x, y);
+
+        ASSERT_FALSE(Hand().Discards().empty());
+        EXPECT_EQ(Hand().Discards().front().tile, T("9p"));
+    }
+
+    TEST_F(MahjongTableInputTest, TheSelectionIsGoneWhenTheWindowGrowsAndTheRegimeIsOffAgain) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup));
+        SetOutputSize(*_renderer, 640.0f, 360.0f);
+        Draw();
+        const TileSlot* slot = HandSlot(IndexOf(kSeat0, T("9p")));
+        ASSERT_NE(slot, nullptr);
+        Click((slot->rect.x + slot->rect.w * 0.5f) * 0.5f, (slot->rect.y + slot->rect.h * 0.5f) * 0.5f);
+        Draw();
+        ASSERT_TRUE(_table->SelectedHandIndex().has_value());
+
+        SetOutputSize(*_renderer, kViewWidth, kViewHeight);
+        Draw();
+
+        EXPECT_FALSE(_table->SelectedHandIndex().has_value());
+    }
+
+    TEST_F(MahjongTableInputTest, TheSelectionIsGoneWhenTheTurnEndsAndTheComputersPlayOnToTheNextTurnOfThePerson) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, kWaitingHand));
+        TapHandTile(IndexOf(kSeat0, T("1p")));
+        Draw();
+        ASSERT_TRUE(_table->SelectedHandIndex().has_value());
+
+        // A control client plays 9p for the person; the computers play on until the person is asked again
+        TableSession& session = _game->GetSession();
+        ASSERT_TRUE(session.PerformPerson(HandAction::MakeDiscard(T("9p"), false)).has_value());
+        session.RunComputers();
+        ASSERT_EQ(session.Actor(), kSeat0);
+        ASSERT_EQ(Hand().GetPhase(), Phase::Discard);
+        Draw();
+
+        EXPECT_FALSE(_table->SelectedHandIndex().has_value()) << "a selection belongs to the turn it was made in, though the tile at its index may be the same";
+        EXPECT_EQ(Var("selectedTileText"), "");
+    }
+
+    TEST_F(MahjongTableInputTest, ADiscardOfTheControlApiWithASelectionDiscardsThatTileAndClearsIt) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup));
+        TapHandTile(IndexOf(kSeat0, T("1p")));
+        Draw();
+        ASSERT_TRUE(_table->SelectedHandIndex().has_value());
+
+        const auto action = ParseJson(R"({"type": "discard", "tile": "9p", "declareCalling": false})").value();
+        ASSERT_TRUE(_game->AsControllable()->PerformAction(action).has_value());
+        Draw();
+
+        ASSERT_FALSE(Hand().Discards().empty());
+        EXPECT_EQ(Hand().Discards().front().tile, T("9p")) << "the control API acts on the discard, not on the tap";
+        EXPECT_FALSE(_table->SelectedHandIndex().has_value());
+    }
+
+    TEST_F(MahjongTableInputTest, ATapDoesNotSelectInAClaimWindowOfThePerson) {
+        constexpr SeatSetup personAtSeat1{SeatKind::Computer, SeatKind::Person, SeatKind::Computer, SeatKind::Computer};
+        ASSERT_NO_FATAL_FAILURE(Start(personAtSeat1));
+        FixedWallSpec spec = SpecOf(kPlainHand, "5p");
+        spec.hands[kSeat1] = "4p 5p 5p 6p 7p 2s 5s 8s 2m 5m 8m Ww Nw";
+        HandModel model = MakeModel(spec);
+        ASSERT_TRUE(model.Discard(kSeat0, T("5p")).has_value());
+        ASSERT_EQ(model.GetPhase(), Phase::Claim);
+        Lay(model);
+        Draw();
+        ASSERT_TRUE(_game->GetSession().ActorIsPerson());
+        const std::string before = Snapshot(Hand());
+
+        TapHandTile(0);
+        Draw();
+
+        EXPECT_FALSE(_table->SelectedHandIndex().has_value()) << "there is no tile to raise in a claim window";
+        EXPECT_EQ(Snapshot(Hand()), before);
+    }
+
+    TEST_F(MahjongTableInputTest, NoSelectionSurvivesTheCoverOfTheNextPerson) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kTwoPeople, kPlainHand));
+        EmitAction("MahjongReveal");
+        Draw();
+        const int index = IndexOf(kSeat0, T("9p"));
+        TapHandTile(index);
+        Draw();
+        ASSERT_EQ(_table->SelectedHandIndex(), index);
+
+        TapHandTile(index);  // the discard: the next person's cover goes up
+        Draw();
+
+        ASSERT_TRUE(_game->GetSession().HandoffPending());
+        EXPECT_FALSE(_table->SelectedHandIndex().has_value());
+        EXPECT_EQ(Var("selectedTileText"), "");
+    }
+
+    TEST_F(MahjongTableInputTest, WithTheDeclareSwitchOnATapOnATileThatCannotDeclareDiscardsNothingAndTheNextTapOnADeclaringTileSelectsIt) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, kWaitingHand));
+        EmitAction("MahjongDeclare", "on");
+        Draw();
+        const int plain = IndexOf(kSeat0, T("Ew"));
+        const int declaring = IndexOf(kSeat0, T("Rd"));
+        const std::string before = Snapshot(Hand());
+
+        TapHandTile(plain);
+        TapHandTile(plain);  // the second tap asks for a discard that does not declare: the model refuses it
+        Draw();
+
+        EXPECT_EQ(Snapshot(Hand()), before);
+        EXPECT_TRUE(_table->DeclareNext()) << "the flag stays until a discard goes through";
+        EXPECT_EQ(_table->SelectedHandIndex(), plain) << "the selection stays";
+
+        TapHandTile(declaring);
+        Draw();
+
+        EXPECT_EQ(Snapshot(Hand()), before);
+        EXPECT_EQ(_table->SelectedHandIndex(), declaring);
+        TapHandTile(declaring);
+        EXPECT_EQ(Hand().Discards().front().tile, T("Rd"));
+        EXPECT_TRUE(Hand().GetHand(kSeat0).callingDeclared);
+    }
+
+    TEST_F(MahjongTableInputTest, TheDeclareSwitchKeepsTheSelection) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, kWaitingHand));
+        const int index = IndexOf(kSeat0, T("Rd"));
+        TapHandTile(index);
+        Draw();
+
+        EmitAction("MahjongDeclare", "on");
+        Draw();
+
+        EXPECT_EQ(_table->SelectedHandIndex(), index);
+    }
+
+    TEST_F(MahjongTableInputTest, TheSelectedTileIsDrawnRaisedAboveItsSlotAfterEveryOtherTileWithItsMarks) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, kWaitingHand));
+        EmitAction("MahjongDeclare", "on");
+        const int index = IndexOf(kSeat0, T("Ew"));  // cannot declare: veiled
+        TapHandTile(index);
+        Draw();
+        const TileSlot* slot = HandSlot(index);
+        ASSERT_NE(slot, nullptr);
+        const Rect raised = RaisedRect(slot->rect);
+        EXPECT_FLOAT_EQ(raised.y, slot->rect.y - kSelectedTileRise);
+        EXPECT_FLOAT_EQ(raised.h, slot->rect.h);
+
+        const std::vector<DrawCall> calls = TileCalls();
+        ASSERT_EQ(calls.size(), _table->GetLayout().slots.size());
+        const DrawCall& last = calls.back();
+        EXPECT_EQ(last.rect.x, raised.x);
+        EXPECT_EQ(last.rect.y, raised.y);
+        ASSERT_TRUE(last.source.has_value());
+        EXPECT_EQ(last.source->x, SourceRect(T("Ew")).x) << "the raised tile is drawn last: over the tiles of the bonus row that lie above the hand";
+        EXPECT_EQ(last.source->y, SourceRect(T("Ew")).y);
+        // Its veil follows the raise, the veils of the others do not
+        int veilsAtRaised = 0;
+        for (const DrawCall& call : _renderer->calls) {
+            if (call.kind == DrawKind::Rect && SameColor(call.color, kVeil) && call.rect.x == raised.x && call.rect.y == raised.y) {
+                ++veilsAtRaised;
+            }
+        }
+        EXPECT_EQ(veilsAtRaised, 1);
+        EXPECT_EQ(VeilCalls(), kTilesThatCannotDeclare);
+    }
+
+    TEST_F(MahjongTableInputTest, AnUnchangedFrameWithASelectionDoesNotMoveTheVariables) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup));
+        TapHandTile(IndexOf(kSeat0, T("9p")));
+        Draw();
+        const uint64_t version = CoreManager::GetUIVars().GetVersion();
+
+        Draw();
+        Draw();
+
+        EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), version);
+    }
+
+    TEST_F(MahjongTableInputTest, TheNameOfTheSelectedTileFollowsTheLanguage) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup));
+        TapHandTile(IndexOf(kSeat0, T("9p")));
+        Draw();
+        ASSERT_EQ(Var("selectedTileText"), "Selected: 9 Dots");
+
+        ASSERT_TRUE(CoreManager::GetUIStrings().SetLanguage("ru"_intern));
+        Draw();
+
+        const eastl::string expected = SelectedTileText(CoreManager::GetUIStrings(), T("9p"));
+        EXPECT_EQ(Var("selectedTileText"), std::string(expected.data(), expected.size()));
+        EXPECT_NE(Var("selectedTileText"), "Selected: 9 Dots");
     }
 
     // ----- the pace of the computers -----
