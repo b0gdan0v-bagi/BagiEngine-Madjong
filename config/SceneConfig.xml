@@ -2,9 +2,13 @@
 <SceneManager>
   <scenes>
     <!--
-      The one scene of the game (MahjongGame::GetSceneName()). The view is the design size of the table (kViewWidth x kViewHeight in
-      Table/TableLayout.h; MahjongTableUiTest compares the two) and the engine fits it to the window. MahjongTableComponent draws the
-      felt, the four hands, the melds, the discards and the wall of the active game, plays the person seats and paces the computers.
+      The one scene of the game (MahjongGame::GetSceneName()). The view is the design size of the landscape table (kViewWidth x kViewHeight in
+      Table/TableLayout.h; MahjongTableUiTest compares the two) and the engine fits it to the window. An output as high as it is wide or
+      higher (a phone held upright, a narrow window; a square counts) draws the portrait view instead, the design size of the portrait
+      table (kPortraitViewWidth x kPortraitViewHeight): the rule is ShapeOfOutput in Table/TableLayout.h and MahjongSceneFilesTest holds
+      the two to each other. The component lays the table out for the active view and the canvases choose their own variants by the same
+      condition. MahjongTableComponent draws the felt, the four hands, the melds, the discards and the wall of the active game, plays the
+      person seats and paces the computers.
       Its buttons are the canvases below; the component shows and hides them from the legal actions (Table/ActionButtons.h) and answers
       their actions. MahjongHudComponent publishes the words of the HUD (UIVars), runs the seat choice (the modal canvas Setup) and
       shows the score table of a finished hand (HandOver) and the standings of a finished match (MatchOver).
@@ -16,6 +20,9 @@
       name="MahjongScene"
       viewWidth="1280"
       viewHeight="720">
+      <viewVariants>
+        <view name="Portrait" when="orientation:portrait" width="720" height="1280"/>
+      </viewVariants>
       <nodes>
         <node ref="nodes/MahjongTable"/>
         <node ref="nodes/MahjongHints"/>

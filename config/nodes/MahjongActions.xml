@@ -21,6 +21,13 @@
   it never eats a click; it lies in the gutter between the wall and the right seat's discards (x 832..1000, y 256..436: 168 wide,
   room for the longer words of a translation; clear of their plates and of the row it explains, MahjongTableScreenTest holds the
   place; the discards of a side seat are turned, which made their columns wider and the gutter narrower). A touch screen has no hover.
+  In a portrait view (720 x 1280, the variant below) the buttons are 68 high (kPortraitActionButtonHeight, Table/TouchRegime.h: the view is
+  720 wide, so a 68 unit button is 34 pt on a phone of 360 pt and a touch target without ActionsCompact) and 92 wide (the toggle Declare 124: its word and box need it), so that the fullest
+  claim window, seven buttons, is one row of 692 units (x 12..704, y 924..992; the fullest turn is 628) in the band of free ground between the viewer's discards and
+  the viewer's seat plate, under the waiting row of Hints (y 836..916) and clear of the plate (y 1028) and of the row SelectedTile (y 1036) of
+  Hud. The Hint label lies in the free ground right of the viewer's discards, under MoveLine (x 480..712, y 716..828). Where the buttons are under
+  32 px (a portrait window narrower than 339 px) ActionsCompact takes over on the bar under the table; the one window of the matrix that
+  keeps this canvas small is 1:1 at 480 px (25.5 px: the table fills it to the sides and the bottom, so there is no bar).
 -->
 <node name="Actions" layer="10">
   <components>
@@ -91,6 +98,27 @@
           </children>
         </element>
       </elements>
+      <variants>
+        <variant when="orientation:portrait">
+          <overrides>
+            <set element="Hint" x="480" y="716" width="232" height="112" />
+            <set element="ActionRow" x="12" y="924" width="696" height="68" />
+            <set element="Win" width="92" height="68" />
+            <set element="Mahjong" width="92" height="68" />
+            <set element="Pung" width="92" height="68" />
+            <set element="Kong" width="92" height="68" />
+            <set element="Chow0" width="92" height="68" />
+            <set element="Chow1" width="92" height="68" />
+            <set element="Chow2" width="92" height="68" />
+            <set element="ConcealedKong0" width="92" height="68" />
+            <set element="ConcealedKong1" width="92" height="68" />
+            <set element="ConcealedKong2" width="92" height="68" />
+            <set element="UpgradeKong" width="92" height="68" />
+            <set element="Pass" width="92" height="68" />
+            <set element="Declare" width="124" height="68" />
+          </overrides>
+        </variant>
+      </variants>
     </component>
   </components>
 </node>

@@ -10,7 +10,8 @@
   fit is split in two) and lies 40 units above the middle so that it ends clear of the bar RulesAction below it. The buttons are not in
   this canvas, they are in RulesAction: a control of a SceneView canvas is only 24 px high in the smallest window. A line is 48 units
   high (two rows of the 18 font are 47) and shrinks (AutoFit, down to 12) where a long line of a translation does not fit two rows in
-  the narrowest windows (480 px wide), as the titles do; at the design size and in a window of 731 px no line is shrunk.
+  the narrowest windows (480 px wide), as the titles do; at the design size and in a window of 731 px no line is shrunk. The items (half a
+  row, 28 high) shrink the same way: the portrait view is 720 wide and a window with side insets keeps 590 of it.
 -->
 <node name="Rules" layer="35">
   <components>
@@ -65,38 +66,38 @@
             </element>
             <element type="UIStack" name="RulesItemRow0" visible="false" height="28" direction="Horizontal" spacing="4">
               <children>
-                <element type="UILabel" name="RulesItem0" visible="false" width="49%" height="28" text="{rulesItem0}" fontSize="18" />
-                <element type="UILabel" name="RulesItem1" visible="false" width="49%" height="28" text="{rulesItem1}" fontSize="18" />
+                <element type="UILabel" name="RulesItem0" visible="false" width="49%" height="28" text="{rulesItem0}" fontSize="18" overflow="AutoFit" minFontSize="12" />
+                <element type="UILabel" name="RulesItem1" visible="false" width="49%" height="28" text="{rulesItem1}" fontSize="18" overflow="AutoFit" minFontSize="12" />
               </children>
             </element>
             <element type="UIStack" name="RulesItemRow1" visible="false" height="28" direction="Horizontal" spacing="4">
               <children>
-                <element type="UILabel" name="RulesItem2" visible="false" width="49%" height="28" text="{rulesItem2}" fontSize="18" />
-                <element type="UILabel" name="RulesItem3" visible="false" width="49%" height="28" text="{rulesItem3}" fontSize="18" />
+                <element type="UILabel" name="RulesItem2" visible="false" width="49%" height="28" text="{rulesItem2}" fontSize="18" overflow="AutoFit" minFontSize="12" />
+                <element type="UILabel" name="RulesItem3" visible="false" width="49%" height="28" text="{rulesItem3}" fontSize="18" overflow="AutoFit" minFontSize="12" />
               </children>
             </element>
             <element type="UIStack" name="RulesItemRow2" visible="false" height="28" direction="Horizontal" spacing="4">
               <children>
-                <element type="UILabel" name="RulesItem4" visible="false" width="49%" height="28" text="{rulesItem4}" fontSize="18" />
-                <element type="UILabel" name="RulesItem5" visible="false" width="49%" height="28" text="{rulesItem5}" fontSize="18" />
+                <element type="UILabel" name="RulesItem4" visible="false" width="49%" height="28" text="{rulesItem4}" fontSize="18" overflow="AutoFit" minFontSize="12" />
+                <element type="UILabel" name="RulesItem5" visible="false" width="49%" height="28" text="{rulesItem5}" fontSize="18" overflow="AutoFit" minFontSize="12" />
               </children>
             </element>
             <element type="UIStack" name="RulesItemRow3" visible="false" height="28" direction="Horizontal" spacing="4">
               <children>
-                <element type="UILabel" name="RulesItem6" visible="false" width="49%" height="28" text="{rulesItem6}" fontSize="18" />
-                <element type="UILabel" name="RulesItem7" visible="false" width="49%" height="28" text="{rulesItem7}" fontSize="18" />
+                <element type="UILabel" name="RulesItem6" visible="false" width="49%" height="28" text="{rulesItem6}" fontSize="18" overflow="AutoFit" minFontSize="12" />
+                <element type="UILabel" name="RulesItem7" visible="false" width="49%" height="28" text="{rulesItem7}" fontSize="18" overflow="AutoFit" minFontSize="12" />
               </children>
             </element>
             <element type="UIStack" name="RulesItemRow4" visible="false" height="28" direction="Horizontal" spacing="4">
               <children>
-                <element type="UILabel" name="RulesItem8" visible="false" width="49%" height="28" text="{rulesItem8}" fontSize="18" />
-                <element type="UILabel" name="RulesItem9" visible="false" width="49%" height="28" text="{rulesItem9}" fontSize="18" />
+                <element type="UILabel" name="RulesItem8" visible="false" width="49%" height="28" text="{rulesItem8}" fontSize="18" overflow="AutoFit" minFontSize="12" />
+                <element type="UILabel" name="RulesItem9" visible="false" width="49%" height="28" text="{rulesItem9}" fontSize="18" overflow="AutoFit" minFontSize="12" />
               </children>
             </element>
             <element type="UIStack" name="RulesItemRow5" visible="false" height="28" direction="Horizontal" spacing="4">
               <children>
-                <element type="UILabel" name="RulesItem10" visible="false" width="49%" height="28" text="{rulesItem10}" fontSize="18" />
-                <element type="UILabel" name="RulesItem11" visible="false" width="49%" height="28" text="{rulesItem11}" fontSize="18" />
+                <element type="UILabel" name="RulesItem10" visible="false" width="49%" height="28" text="{rulesItem10}" fontSize="18" overflow="AutoFit" minFontSize="12" />
+                <element type="UILabel" name="RulesItem11" visible="false" width="49%" height="28" text="{rulesItem11}" fontSize="18" overflow="AutoFit" minFontSize="12" />
               </children>
             </element>
           </children>

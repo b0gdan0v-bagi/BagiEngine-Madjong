@@ -32,14 +32,46 @@ namespace BECore::Mahjong::Tests {
         }
     };
 
+    /// A landscape window (density 1) where the buttons of `Actions` are under the touch minimum and the bar under the table holds the row of
+    /// `ActionsCompact`: the tests of the compact canvas stand in it. (A square or a tall output is the portrait view, whose buttons are higher.)
+    inline constexpr float kCompactWindowWidth = 640.0f;
+    inline constexpr float kCompactWindowHeight = 600.0f;
+
     /// The engine's touch minimum (`minTouchSize`, window units): what every control of the game is held to in the matrix.
     inline float EngineTouchMinimum() {
         return CoreManager::GetUIEnvironment().GetSettings().minTouchSize;
     }
 
+    /// The view the scene draws with in the window: the landscape view, or the portrait one where the window is at least as tall as wide
+    /// (`PortraitViewVariants`, picked as `Scene::Draw` does).
+    inline ActiveSceneView ViewOf(const MatrixWindow& window) {
+        return ViewOfOutput(window.outputWidth, window.outputHeight);
+    }
+
+    /// The shape of the table in the window (`ShapeOfView` of its view).
+    inline TableShape ShapeOf(const MatrixWindow& window) {
+        const ActiveSceneView view = ViewOf(window);
+        return ShapeOfView(view.width, view.height);
+    }
+
+    /// The window without its insets: the table is a fixed design that the safe area does not move, so a check of where a canvas lies on the
+    /// table takes the layout of the design (the elements that keep to the safe area move inwards with insets: a known deviation).
+    inline MatrixWindow WithoutInsets(MatrixWindow window) {
+        window.simulation = SafeAreaSimulation::None;
+        window.safeArea = UIPreview::SimulatedSafeArea(SafeAreaSimulation::None, window.outputWidth, window.outputHeight);
+        return window;
+    }
+
     /// The table of the matrix as the game fits it: view units to output pixels (scale and bars).
     inline ViewTransform TableFit(const MatrixWindow& window) {
-        return ViewTransform::Fit(kViewWidth, kViewHeight, window.outputWidth, window.outputHeight);
+        const ActiveSceneView view = ViewOf(window);
+        return ViewTransform::Fit(view.width, view.height, window.outputWidth, window.outputHeight);
+    }
+
+    /// The bar under the table in the window, in output pixels (`BarUnderTable` for the view of the window's shape).
+    inline float BarUnderTableOf(const MatrixWindow& window) {
+        const ActiveSceneView view = ViewOf(window);
+        return BarUnderTable(window.outputWidth, window.outputHeight, view.width, view.height);
     }
 
     /// The simulation that made `safeArea` for this output size (the matrix keeps only the area).
@@ -68,7 +100,7 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
-    /// A landscape phone in the browser, the bars of the browser taken off: `windowWidth` x `windowHeight` window units at `density` output
+    /// A phone in the browser, the bars of the browser taken off: `windowWidth` x `windowHeight` window units at `density` output
     /// pixels per unit, so the output is that much larger. `simulation` adds the insets of a notch or of the sides (in output pixels, as
     /// `UIPreview` makes them for the matrix).
     inline MatrixWindow MakePhoneWindow(float windowWidth, float windowHeight, float density, SafeAreaSimulation simulation = SafeAreaSimulation::None) {
@@ -83,13 +115,30 @@ namespace BECore::Mahjong::Tests {
         return window;
     }
 
-    /// The landscape phones the table is held to: the two phone windows of the entry (915 x 330, the worst, 780 x 300), a taller one
-    /// (851 x 393) and 915 x 330 with the insets of the sides, all at density 2.6.
+    /// The window of the design of a shape: the output is the view (1280 x 720 or 720 x 1280) at density 1, no insets.
+    inline MatrixWindow DesignWindowOf(TableShape shape) {
+        MatrixWindow window;
+        window.outputWidth = DesignWidthOf(shape);
+        window.outputHeight = DesignHeightOf(shape);
+        window.safeArea = UIPreview::SimulatedSafeArea(SafeAreaSimulation::None, window.outputWidth, window.outputHeight);
+        window.label = Format("design {}x{}", static_cast<int>(window.outputWidth), static_cast<int>(window.outputHeight));
+        return window;
+    }
+
+    /// The phones the table is held to: the landscape ones (the two phone windows of the entry, 915 x 330, the worst, and 780 x 300, a
+    /// taller one, 851 x 393, and 915 x 330 with the insets of the sides, all at density 2.6), then two portrait ones (390 x 844 at 3 and
+    /// 360 x 640 at 2).
     inline const std::vector<MatrixWindow>& PhoneWindows() {
         constexpr float kPhoneDensity = 2.6f;
-        static const std::vector<MatrixWindow> windows{MakePhoneWindow(915.0f, 330.0f, kPhoneDensity), MakePhoneWindow(780.0f, 300.0f, kPhoneDensity), MakePhoneWindow(851.0f, 393.0f, kPhoneDensity),
+        constexpr float kTallPhoneDensity = 3.0f;
+        constexpr float kSmallPhoneDensity = 2.0f;
+        static const std::vector<MatrixWindow> windows{MakePhoneWindow(915.0f, 330.0f, kPhoneDensity),
+                                                       MakePhoneWindow(780.0f, 300.0f, kPhoneDensity),
+                                                       MakePhoneWindow(851.0f, 393.0f, kPhoneDensity),
                                                        MakePhoneWindow(915.0f, 330.0f, kPhoneDensity, SafeAreaSimulation::SideInsets),
-                                                       MakePhoneWindow(780.0f, 300.0f, kPhoneDensity, SafeAreaSimulation::TopNotch)};
+                                                       MakePhoneWindow(780.0f, 300.0f, kPhoneDensity, SafeAreaSimulation::TopNotch),
+                                                       MakePhoneWindow(390.0f, 844.0f, kTallPhoneDensity),
+                                                       MakePhoneWindow(360.0f, 640.0f, kSmallPhoneDensity)};
         return windows;
     }
 
@@ -110,16 +159,19 @@ namespace BECore::Mahjong::Tests {
 
     /// The profile of the table the component draws in this window (`TableProfileFor`, with the engine's touch minimum).
     inline TableProfile TableProfileOf(const MatrixWindow& window) {
-        return TableProfileFor(window.outputWidth, window.outputHeight, window.pixelDensity, CoreManager::GetUIEnvironment().GetSettings().minTouchSize);
+        const ActiveSceneView view = ViewOf(window);
+        return TableProfileFor(window.outputWidth, window.outputHeight, window.pixelDensity, CoreManager::GetUIEnvironment().GetSettings().minTouchSize, view.width, view.height);
     }
 
-    /// The layout of the table the component draws for this input in this window: the profile the rule gives the window, the fixed view.
+    /// The layout of the table the component draws for this input in this window: the profile the rule gives the window, the view of its shape.
     inline TableLayout TableLayoutFor(const MatrixWindow& window, TableInput input) {
         input.profile = TableProfileOf(window);
-        return MakeTableLayout(input);
+        const ActiveSceneView view = ViewOf(window);
+        return MakeTableLayout(input, view.width, view.height);
     }
 
-    /// The layout context `ValidateOnMatrix` builds for a window of the matrix, for a scene whose view is the table.
+    /// The layout context `ValidateOnMatrix` builds for a window of the matrix, for a scene whose view is the table (the view of the window's
+    /// shape).
     inline UILayoutContext ContextOf(const MatrixWindow& window, float userScale = 1.0f) {
         UILayoutContext context;
         context.outputWidth = window.outputWidth;
@@ -127,8 +179,9 @@ namespace BECore::Mahjong::Tests {
         context.safeArea = window.safeArea;
         context.userScale = userScale;
         context.pixelDensity = window.pixelDensity;
-        context.sceneViewWidth = kViewWidth;
-        context.sceneViewHeight = kViewHeight;
+        const ActiveSceneView view = ViewOf(window);
+        context.sceneViewWidth = view.width;
+        context.sceneViewHeight = view.height;
         return context;
     }
 
@@ -157,12 +210,13 @@ namespace BECore::Mahjong::Tests {
     /// Whether the buttons of `Actions` are under the engine's touch minimum in this window and the rule shows `ActionsCompact` (at this
     /// user scale: the row is as high as the canvas it lies in makes it, and the user scale makes the canvas smaller).
     inline bool IsCompactWindow(const MatrixWindow& window, float userScale = 1.0f) {
-        return NeedsCompactActions(window.outputWidth, window.outputHeight, window.pixelDensity, EngineTouchMinimum(), userScale);
+        const ActiveSceneView view = ViewOf(window);
+        return NeedsCompactActions(window.outputWidth, window.outputHeight, window.pixelDensity, EngineTouchMinimum(), userScale, view.width, view.height);
     }
 
     /// Whether the buttons of `Actions` are under the engine's touch minimum in this window, whatever canvas the rule shows.
     inline bool ActionButtonsAreUnderTheMinimum(const MatrixWindow& window) {
-        return kActionButtonHeight * TableFit(window).scale / window.pixelDensity < EngineTouchMinimum();
+        return ActionButtonHeightFor(ShapeOf(window)) * TableFit(window).scale / window.pixelDensity < EngineTouchMinimum();
     }
 
     /// Whether `Actions` is the canvas shown in this window at this user scale with buttons under the engine's touch minimum: the rule keeps
@@ -239,6 +293,37 @@ namespace BECore::Mahjong::Tests {
         return TableLayoutFor(window, WorstCaseTableInput(viewer));
     }
 
+    /// The input of the table as the component makes it from the model (the seat at the bottom is seat 0).
+    inline TableInput InputOf(const HandModel& hand) {
+        TableInput input;
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            const PlayerHand& held = hand.GetHand(seat);
+            input.concealedCount[seat] = static_cast<int>(held.concealed.size());
+            input.melds[seat] = held.melds;
+            input.bonusCount[seat] = static_cast<int>(held.bonus.size());
+        }
+        for (const DiscardEntry& entry : hand.Discards()) {
+            input.discardSeats.push_back(entry.seat);
+        }
+        input.wallRemaining = static_cast<int>(hand.GetWall().Remaining());
+        return input;
+    }
+
+    /// Whether the layouts have the same slots in the same places.
+    inline bool SameSlots(const TableLayout& a, const TableLayout& b) {
+        if (a.slots.size() != b.slots.size()) {
+            return false;
+        }
+        for (size_t i = 0; i < a.slots.size(); ++i) {
+            const Rect& ra = a.slots[i].rect;
+            const Rect& rb = b.slots[i].rect;
+            if (ra.x != rb.x || ra.y != rb.y || ra.w != rb.w || ra.h != rb.h || a.slots[i].role != b.slots[i].role || a.slots[i].index != b.slots[i].index) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /// Whether two rects share an area; rects that only touch are apart.
     inline bool Intersects(const Rect& a, const Rect& b) {
         return !(a.x + a.w <= b.x || a.x >= b.x + b.w || a.y + a.h <= b.y || a.y >= b.y + b.h);
@@ -264,8 +349,10 @@ namespace BECore::Mahjong::Tests {
     /// `ValidateOnMatrix` on the canvas, with the `TouchTargetTooSmall` issues dropped in the windows where `skip(window)` is true (the
     /// failure labels of the engine helper cannot be filtered, so the loop over `UILayoutMatrix()` is written out here). A `Screen`
     /// canvas runs with each of the three scale modes and the user scales 1.0 and 1.5, a `SceneView` canvas once, as the engine's helper
-    /// does. Returns the failures, empty when the canvas passes.
-    inline eastl::vector<UIMatrixFailure> MatrixFailuresExceptTouchWhere(UICanvasComponent& canvas, float minTouchSize, const std::function<bool(const MatrixWindow&)>& skip) {
+    /// does. Every canvas is laid out against the view of its window's shape; `portraitWindows` false leaves the portrait windows out (a
+    /// canvas with no portrait variant yet). Returns the failures, empty when the canvas passes.
+    inline eastl::vector<UIMatrixFailure> MatrixFailuresExceptTouchWhere(UICanvasComponent& canvas, float minTouchSize, const std::function<bool(const MatrixWindow&)>& skip,
+                                                                         bool portraitWindows = true) {
         canvas.UpdateLayout(kViewWidth, kViewHeight);
         UICanvasLayout& layout = canvas.GetLayout();
         const UICanvasScaleParams saved = layout.params;
@@ -275,6 +362,9 @@ namespace BECore::Mahjong::Tests {
 
         eastl::vector<UIMatrixFailure> failures;
         ForEachMatrixWindow([&](const MatrixWindow& window) {
+            if (!portraitWindows && ShapeOf(window) == TableShape::Portrait) {
+                return;
+            }
             const bool dropTouch = skip(window);
             for (const CanvasScaleMode mode : modes) {
                 for (const float userScale : userScales) {

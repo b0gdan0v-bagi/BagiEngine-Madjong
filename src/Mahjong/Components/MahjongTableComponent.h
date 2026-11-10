@@ -41,8 +41,8 @@ namespace BECore::Mahjong {
      *        and the wall, and plays the person seats by mouse and buttons and the computer seats by pace.
      *
      * **Drawing** only reads the game. Every frame the component builds a `TableInput` from the model and the session, lays it out
-     * (`MakeTableLayout`, for the view size of its scene) and draws the slots with the tile atlas (`Table/TileAtlas.h`, loaded once in
-     * `OnAttached`). Nothing is drawn but the felt when the active game is not Mahjong or its match was not started.
+     * (`MakeTableLayout`, for the active view of its scene: the landscape table, or the portrait one in a tall window, `TableShape`) and draws the slots with the tile atlas (`Table/TileAtlas.h`,
+     * loaded once in `OnAttached`). Nothing is drawn but the felt when the active game is not Mahjong or its match was not started.
      *
      * **No peeking.** While the hand is played only the concealed tiles of the viewer (`TableSession::Viewer()`) are drawn face up, and
      * none at all while `HandoffPending()` (a hot-seat cover). The other seats show backs, their concealed kongs too. When the hand is
@@ -93,7 +93,7 @@ namespace BECore::Mahjong {
      * hidden kong flies as a back and nothing is face up that the slot would not show; the marks of the slot (the tints, the claimed edge, the
      * frame of the pending discard, the veil, the bars) follow the rectangle, and the blink of a set just laid starts when its tiles have
      * landed (the flight time is added before its `kClaimHighlightSeconds`; nothing waits when nothing of the set flies). A new batch ends
-     * the running flights at their targets, a new hand, match or game, another viewer, view size or layout profile starts without any. The time is the
+     * the running flights at their targets, a new hand, match or game, another viewer, view size, shape or layout profile starts without any. The time is the
      * component's own clock on `SceneUpdateEvent` (it stops with the table pause); `SetTileFlightSeconds(0)` switches the flights off. The model,
      * the session and the control API are not touched.
      *
@@ -209,8 +209,8 @@ namespace BECore::Mahjong {
 
         /// The game when a person has to act and can (Playing, a person to act, no cover), else null.
         [[nodiscard]] MahjongGame* PersonToAct() const;
-        /// Whether a click on a hand tile only selects it: `UsesTapToSelect` over `_touchSeen`, the window as it is now and the hand tile of its
-        /// profile (`TableProfileFor`).
+        /// Whether a click on a hand tile only selects it: `UsesTapToSelect` over `_touchSeen`, the window as it is now, the active view and the hand tile of
+        /// its profile (`TableProfileFor`).
         [[nodiscard]] bool TapToSelect() const;
         /// What a selection must still be to count: the regime on, a person to act in the discard turn of the hand and match it was made in,
         /// at the version of the session it was made at, and the tile at its index still the one selected.

@@ -11,7 +11,8 @@
   284 and end at 420). The top and bottom cells are 328 wide
   and 28 high; the side cells are 104 wide and as high as the middle (72); the round and the wall lie between them. Every label is
   AutoFit, so the worst texts (-9999, the longest round and wall words) shrink in the small windows. MahjongHudTest holds the labels
-  inside the panel and clear of every tile.
+  inside the panel and clear of every tile. In the portrait table the ring and its panel are 280 units left and 84 down (x 192..528, y 366..506)
+  and the portrait variant moves every label by that, so the cells keep the sizes above.
 -->
 <node name="CenterPanel" layer="10">
   <components>
@@ -24,6 +25,18 @@
         <element type="UILabel" name="PanelSeat2" anchor="TopLeft" ignoreSafeArea="true" x="476" y="284" width="328" height="28" text="{panelWind2} {panelScore2}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
         <element type="UILabel" name="PanelSeat3" anchor="TopLeft" ignoreSafeArea="true" x="476" y="316" width="104" height="72" text="{panelWind3} {panelScore3}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
       </elements>
+      <variants>
+        <variant when="orientation:portrait">
+          <overrides>
+            <set element="PanelRound" x="304" y="404" />
+            <set element="PanelWall" x="304" y="440" />
+            <set element="PanelSeat0" x="196" y="476" />
+            <set element="PanelSeat1" x="420" y="400" />
+            <set element="PanelSeat2" x="196" y="368" />
+            <set element="PanelSeat3" x="196" y="400" />
+          </overrides>
+        </variant>
+      </variants>
     </component>
   </components>
 </node>

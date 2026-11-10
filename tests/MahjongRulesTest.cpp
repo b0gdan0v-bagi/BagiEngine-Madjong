@@ -513,6 +513,10 @@ namespace BECore::Mahjong::Tests {
                     ExpectWordsFit("Rules", output.width, output.height, kButtonAir);
                     ExpectWordsFit("RulesAction", output.width, output.height, kButtonAir);
                 }
+                // The same on the whole matrix, each window against the view of its shape (the plate is 94% of the 720 wide portrait view); the bar
+                // is a Screen canvas, which the view does not touch
+                const std::vector<std::string> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Rules"), kButtonAir);
+                EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
                 // The matrix leaves the layout as it ran last: draw again for the next page
                 Draw();
             }

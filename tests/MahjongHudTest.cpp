@@ -388,6 +388,7 @@ namespace BECore::Mahjong::Tests {
         ForEachTableWindow([&](const MatrixWindow& window) {
             SCOPED_TRACE(window.label.c_str());
             const TableLayout layout = MakeWorstCaseTableLayout(0, window);
+            LayOutOnTheTable({"SeatPlates", "CenterPanel"}, window);  // in the view of the window's shape
             for (int position = 0; position < kSeatCount; ++position) {
                 const Rect& plate = layout.zones.seatPlates[SeatAtPosition(layout.viewer, position)];
                 expectInside("SeatPlates", Format("PlateName{}", position).c_str(), plate);
@@ -420,7 +421,8 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
         // Everything that hides in the file is shown, so that its place is asked for
-        for (const char* node : {"Hud", "Actions", "Hints", "HintsButton", "SeatPlates", "CenterPanel"}) {
+        const std::vector<const char*> nodes{"Hud", "Actions", "Hints", "HintsButton", "SeatPlates", "CenterPanel"};
+        for (const char* node : nodes) {
             const auto canvas = Canvas(node);
             ASSERT_TRUE(canvas) << node;
             ShowAll(*canvas, canvas->GetRoot());
@@ -429,6 +431,7 @@ namespace BECore::Mahjong::Tests {
         ForEachTableWindow([&](const MatrixWindow& window) {
             SCOPED_TRACE(window.label.c_str());
             const TableLayout layout = MakeWorstCaseTableLayout(0, window);
+            LayOutOnTheTable(nodes, window);
 
             // The file is by screen position and the viewer of the worst-case layout is seat 0, so position p is seat p: the label of a plate
             // is at its top, inside its padding of 8
@@ -600,6 +603,11 @@ namespace BECore::Mahjong::Tests {
                 ExpectWordsFit("CenterPanel", output.width, output.height, kButtonAir);
                 ExpectWordsFit("HudMenu", output.width, output.height, kButtonAir);
             }
+            // The same on the whole matrix, each canvas against the view of its window's shape (the portrait variants of the files)
+            for (const char* node : {"Hud", "SeatPlates", "CenterPanel", "HudMenu"}) {
+                const std::vector<std::string> cut = WordsThatDoNotFitOnTheMatrix(*Canvas(node), kButtonAir);
+                EXPECT_TRUE(cut.empty()) << node << ": " << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
+            }
             EXPECT_GE(Element("HudMenu", "NewGame")->rect.h, kMinControlHeight);
             // Both buttons of the menu are shown together, the word of each in the language of the table
             ASSERT_TRUE(OnScreen("HudMenu", "Rules"));
@@ -770,7 +778,8 @@ namespace BECore::Mahjong::Tests {
 
             ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
                 SCOPED_TRACE(language.ToStringView().data());
-                Draw();  // laid out again with the words of this language
+                Draw();                                            // laid out again with the words of this language
+                LayOutOnTheTable({"CenterPanel", "Hud"}, window);  // and in the view of the window's shape
                 // The words of the centre panel lie on the plate of the wall ring on purpose (inside the ring: no tile there); the line of the last
                 // move is clear of every plate
                 const auto expectClearOfTiles = [&](const char* node, const char* name) -> const UIElement* {
@@ -925,6 +934,8 @@ namespace BECore::Mahjong::Tests {
             for (const Output& output : kOutputs) {
                 ExpectWordsFit("Hud", output.width, output.height, kButtonAir);
             }
+            const std::vector<std::string> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Hud"), kButtonAir);  // in the portrait view too: the plate is narrower there
+            EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
         });
     }
 
@@ -934,53 +945,58 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
         EXPECT_FALSE(OnScreen("Hud", "SelectedTile")) << "hidden while nothing is selected";
-        const TableLayout layout = MakeWorstCaseTableLayout();
-        const eastl::vector<Rect> plates = ZonePlates(layout);
         // Everything that hides in the files is shown, so that its place is asked for
-        for (const char* node : {"Hud", "Actions", "Hints", "HintsButton"}) {
+        const std::vector<const char*> nodes{"Hud", "Actions", "Hints", "HintsButton"};
+        for (const char* node : nodes) {
             const auto canvas = Canvas(node);
             ASSERT_TRUE(canvas) << node;
             ShowAll(*canvas, canvas->GetRoot());
         }
 
-        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
-            SCOPED_TRACE(language.ToStringView().data());
-            const eastl::string longest = LongestSelectedText();
-            ASSERT_FALSE(longest.empty());
-            CoreManager::GetUIVars().Set("selectedTileText"_intern, eastl::string_view(longest));
-            Canvas("Hud")->UpdateLayout(kViewWidth, kViewHeight);
+        // In the table of each shape: the design window of the landscape view and of the portrait one
+        for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait}) {
+            const MatrixWindow window = DesignWindowOf(shape);
+            const TableLayout layout = MakeWorstCaseTableLayout(0, window);
+            const eastl::vector<Rect> plates = ZonePlates(layout);
+            ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+                SCOPED_TRACE(Format("{} {}", window.label.c_str(), language.ToStringView().data()).c_str());
+                const eastl::string longest = LongestSelectedText();
+                ASSERT_FALSE(longest.empty());
+                CoreManager::GetUIVars().Set("selectedTileText"_intern, eastl::string_view(longest));
+                LayOutOnTheTable(nodes, window);
 
-            const UIElement* label = Element("Hud", "SelectedTile");
-            ASSERT_NE(label, nullptr);
-            ASSERT_FALSE(label->rect.IsEmpty());
-            for (const TileSlot& slot : layout.slots) {
-                EXPECT_TRUE(Apart(slot.rect, label->rect)) << "covers role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
-            }
-            const Rect aired = Grown(label->rect, kGridUnit);
-            for (size_t i = 0; i < plates.size(); ++i) {
-                EXPECT_TRUE(Apart(plates[i], aired)) << "less than one grid unit from plate " << i;
-            }
-            EXPECT_TRUE(Apart(layout.zones.centerPanel, aired));
-            struct Neighbour {
-                const char* node;
-                const char* element;
-            };
-            const Neighbour others[] = {{"Hud", "MoveLine"}, {"Actions", "Hint"}, {"Actions", "ActionRow"}, {"Hints", "WaitPanel"}, {"Hints", "AdviceText"}, {"HintsButton", "HintButton"}};
-            for (const Neighbour& other : others) {
-                EXPECT_TRUE(Apart(Element(other.node, other.element)->rect, label->rect)) << other.element;
-            }
-            // The tile, raised by its rise, does not reach the label either
-            for (const TileSlot& slot : layout.slots) {
-                if (slot.role == SlotRole::HandTile) {
-                    EXPECT_TRUE(Apart(RaisedRect(slot.rect), label->rect)) << "the raised hand tile " << slot.index;
+                const UIElement* label = Element("Hud", "SelectedTile");
+                ASSERT_NE(label, nullptr);
+                ASSERT_FALSE(label->rect.IsEmpty());
+                for (const TileSlot& slot : layout.slots) {
+                    EXPECT_TRUE(Apart(slot.rect, label->rect)) << "covers role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
                 }
-            }
+                const Rect aired = Grown(label->rect, kGridUnit);
+                for (size_t i = 0; i < plates.size(); ++i) {
+                    EXPECT_TRUE(Apart(plates[i], aired)) << "less than one grid unit from plate " << i;
+                }
+                EXPECT_TRUE(Apart(layout.zones.centerPanel, aired));
+                struct Neighbour {
+                    const char* node;
+                    const char* element;
+                };
+                const Neighbour others[] = {{"Hud", "MoveLine"}, {"Actions", "Hint"}, {"Actions", "ActionRow"}, {"Hints", "WaitPanel"}, {"Hints", "AdviceText"}, {"HintsButton", "HintButton"}};
+                for (const Neighbour& other : others) {
+                    EXPECT_TRUE(Apart(Element(other.node, other.element)->rect, label->rect)) << other.element;
+                }
+                // The tile, raised by its rise, does not reach the label either
+                for (const TileSlot& slot : layout.slots) {
+                    if (slot.role == SlotRole::HandTile) {
+                        EXPECT_TRUE(Apart(RaisedRect(slot.rect), label->rect)) << "the raised hand tile " << slot.index;
+                    }
+                }
 
-            ExpectPassesTheMatrix("Hud", EngineTouchMinimum());
-            for (const Output& output : kOutputs) {
-                ExpectWordsFit("Hud", output.width, output.height, kButtonAir);
-            }
-        });
+                ExpectPassesTheMatrix("Hud", EngineTouchMinimum());
+                for (const Output& output : kOutputs) {
+                    ExpectWordsFit("Hud", output.width, output.height, kButtonAir);
+                }
+            });
+        }
     }
 
     // ----- the seat choice -----

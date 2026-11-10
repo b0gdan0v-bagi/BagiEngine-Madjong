@@ -14,6 +14,46 @@ namespace BECore::Mahjong {
     inline constexpr float kViewWidth = 1280.0f;
     inline constexpr float kViewHeight = 720.0f;
 
+    /// The two shapes of the table. A view that is as high as wide or higher is `Portrait`, any other `Landscape`; the scene's second
+    /// view (`orientation:portrait` in `config/SceneConfig.xml`, `MahjongSceneFilesTest` compares the two) is the portrait design size.
+    CORE_ENUM(TableShape, uint8_t, Landscape, Portrait)
+
+    inline constexpr float kPortraitViewWidth = 720.0f;
+    inline constexpr float kPortraitViewHeight = 1280.0f;
+
+    /// The shape of a view of this size: portrait iff `height >= width`; a size that is not positive (the first frame, no output yet) is
+    /// landscape.
+    [[nodiscard]] constexpr TableShape ShapeOfView(float viewWidth, float viewHeight) noexcept {
+        return viewWidth > 0.0f && viewHeight > 0.0f && viewHeight >= viewWidth ? TableShape::Portrait : TableShape::Landscape;
+    }
+
+    /// The shape of the view the scene picks for an output of this size: the same rule as `ShapeOfView` (the `orientation:portrait` of the
+    /// scene file tests the output, so a square output is portrait).
+    [[nodiscard]] constexpr TableShape ShapeOfOutput(float outputWidth, float outputHeight) noexcept {
+        return ShapeOfView(outputWidth, outputHeight);
+    }
+
+    /// The design size of a shape, in view units.
+    [[nodiscard]] constexpr float DesignWidthOf(TableShape shape) noexcept {
+        return shape == TableShape::Portrait ? kPortraitViewWidth : kViewWidth;
+    }
+
+    [[nodiscard]] constexpr float DesignHeightOf(TableShape shape) noexcept {
+        return shape == TableShape::Portrait ? kPortraitViewHeight : kViewHeight;
+    }
+
+    /// The uniform scale that fits the design of the shape of a view of this size into it (view units per design unit); 0 for a size that
+    /// is not positive.
+    [[nodiscard]] constexpr float LayoutScale(float viewWidth, float viewHeight) noexcept {
+        if (!(viewWidth > 0.0f) || !(viewHeight > 0.0f)) {
+            return 0.0f;
+        }
+        const TableShape shape = ShapeOfView(viewWidth, viewHeight);
+        const float scaleX = viewWidth / DesignWidthOf(shape);
+        const float scaleY = viewHeight / DesignHeightOf(shape);
+        return scaleX < scaleY ? scaleX : scaleY;
+    }
+
     /// The viewer's concealed tiles are large; the tiles of the other seats are small. Sizes (width, height) of the upright tiles of each
     /// zone; a side seat draws them turned, so its slots are height x width.
     inline constexpr float kViewerHandTileW = 48.0f;
@@ -114,6 +154,7 @@ namespace BECore::Mahjong {
      * each across the whole view (spread, so the tiles never touch), the viewer's bonus tiles and melds lie in a row of their own above it
      * and the bottom discard block is lower and squeezed. The wall ring, the centre panel, the three other seats and the other plates stay
      * where they are (the bottom plate only moves up to clear the tallest hand tile). Not `phone` is today's table whatever `handTileW` is.
+     * Landscape only: the portrait table (`TableShape::Portrait`) has its own one-row hand and ignores the profile.
      */
     struct TableProfile {
         bool phone = false;
@@ -161,7 +202,10 @@ namespace BECore::Mahjong {
     /// The slots of the four seats and the wall: per seat the hand, the melds, the bonus tiles, then the pile, then the wall stacks.
     struct TableLayout {
         Seat viewer = 0;
-        /// The profile the layout was made with, as used (a desktop one always has `kViewerHandTileW`, a phone one a clamped width).
+        /// The shape the layout was made in: `ShapeOfView(viewWidth, viewHeight)`.
+        TableShape shape = TableShape::Landscape;
+        /// The profile the layout was made with, as used (a desktop one always has `kViewerHandTileW`, a phone one a clamped width; the
+        /// default in portrait).
         TableProfile profile;
         float viewWidth = kViewWidth;
         float viewHeight = kViewHeight;
@@ -182,7 +226,9 @@ namespace BECore::Mahjong {
     /// The number of wall stacks drawn for `wallRemaining` tiles: two tiles a stack, at most `kWallRingCells`.
     [[nodiscard]] int WallStackCount(int wallRemaining) noexcept;
 
-    /// Lays out the table for a view of the given size (see `kViewWidth`). Deterministic: the same input gives the same slots.
+    /// Lays out the table for a view of the given size (see `kViewWidth`) in the shape of that view (`ShapeOfView`): the landscape table
+    /// of `kViewWidth` x `kViewHeight` units or the portrait one of `kPortraitViewWidth` x `kPortraitViewHeight`, fitted into the view
+    /// (`LayoutScale`) and centred. Deterministic: the same input gives the same slots.
     [[nodiscard]] TableLayout MakeTableLayout(const TableInput& input, float viewWidth = kViewWidth, float viewHeight = kViewHeight);
 
     /// The smallest rectangle that holds every slot of `role` of `seat` (`seat` ignored for the wall); empty when there is none.

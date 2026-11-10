@@ -7,7 +7,11 @@ Starts one BagiMahjong (--headless --control --manual-clock) and, for each scene
 frames and writes `<NN>-<scene>-1920x1080.png` (the native output of the headless window) and `<NN>-<scene>-640x360.png` (the same render
 scaled down by `maxSize 640`) into `<out>/<label>/`. The scenes: 01-fresh-table, 02-claim-window, 03-score-table, 04-standings, 05-setup,
 06-handoff, 07-options. A scene that needs a particular state (a claim window, a won hand, the cover) tries the seeds `--seed .. --seed + 29` and
-prints the seed it used. The pictures are never committed: `--out` may not lie inside a git work tree, and the default is
+prints the seed it used. The size is the window of the headless game, 1920 x 1080 from the engine's `SDLWindowConfig.xml`, and no control call changes
+it, so this tool shoots the landscape table only. The portrait table (the scene picks its portrait view for an output at least as high as wide) is
+shot by hand: put a temporary `config/SDLWindowConfig.xml` of the game with a tall window (say 720 x 1280; the game's config overrides the engine's)
+beside `SceneConfig.xml`, run a game and a `screenshot`, and delete the file (never commit it); the scenes of this tool would also need their size
+constants changed, which is why it does not do it. The pictures are never committed: `--out` may not lie inside a git work tree, and the default is
 `~/.claude/plans/mahjong-ui-polish-shots`. The engine's helpers are found through BAGI_ENGINE_DIR (default: `engine` of this repository).
 Exit code: 0 done, 1 failed, 77 skipped (the executable does not exist).
 """

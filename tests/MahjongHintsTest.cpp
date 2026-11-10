@@ -733,9 +733,18 @@ namespace BECore::Mahjong::Tests {
         /// seat's plate, clear of the centre panel. Design units.
         const Rect kHintsCorner(96.0f, 8.0f, 336.0f, 140.0f);
 
-        /// The centre panel of the layout: the inside of the wall ring, which nothing of the hints may touch.
-        Rect CenterPanel() {
-            return MakeTableLayout(TableInput{}).zones.centerPanel;
+        /// The band of the portrait table the hints live in: between the viewer's discards and the viewer's seat plate, the width of the view
+        /// less the margin of 12 each side, down to the row of the name of the selected tile. View units.
+        const Rect kPortraitHintsBand(12.0f, 836.0f, 696.0f, 188.0f);
+
+        /// Where the hints live in the view of this shape.
+        Rect HintsAreaOf(TableShape shape) {
+            return shape == TableShape::Portrait ? kPortraitHintsBand : kHintsCorner;
+        }
+
+        /// The centre panel of the layout of this shape: the inside of the wall ring, which nothing of the hints may touch.
+        Rect CenterPanel(TableShape shape = TableShape::Landscape) {
+            return MakeTableLayout(TableInput{}, DesignWidthOf(shape), DesignHeightOf(shape)).zones.centerPanel;
         }
 
         bool Inside(const Rect& inner, const Rect& outer) {
@@ -758,6 +767,9 @@ namespace BECore::Mahjong::Tests {
             for (const Output& output : kOutputs) {
                 ExpectWordsFit("Hints", output.width, output.height, 0.0f);
             }
+            // The same on the whole matrix, each window against the view of its shape (the portrait variant of the file)
+            const std::vector<std::string> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Hints"), 0.0f);
+            EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
         });
     }
 
@@ -766,31 +778,33 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(Discard("Ew"));
         Draw();
         ASSERT_EQ(ShownRow().size(), static_cast<size_t>(kWaitCells));
-        auto canvas = Canvas("Hints");
-        ASSERT_TRUE(canvas);
-        canvas->UpdateLayout(kViewWidth, kViewHeight);
+        for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait}) {
+            const MatrixWindow window = DesignWindowOf(shape);
+            SCOPED_TRACE(window.label.c_str());
+            LayOutOnTheTable({"Hints"}, window);
 
-        const UIElement* panel = Element("Hints", "WaitPanel");
-        ASSERT_NE(panel, nullptr);
-        EXPECT_TRUE(Inside(panel->rect, kHintsCorner)) << panel->rect.x << "," << panel->rect.y << " " << panel->rect.w << "x" << panel->rect.h;
-        EXPECT_TRUE(Apart(panel->rect, CenterPanel())) << "the waiting row is not on the centre panel";
-        for (int i = 0; i < kWaitCells; ++i) {
-            for (const char* prefix : {"WaitCell", "WaitTile", "WaitCount"}) {
-                const UIElement* part = Element("Hints", CellName(prefix, i).c_str());
-                ASSERT_NE(part, nullptr) << prefix << i;
-                EXPECT_TRUE(Inside(part->rect, panel->rect)) << prefix << i;
-                EXPECT_FALSE(part->IsHitTestable()) << prefix << i << " takes no input";
+            const UIElement* panel = Element("Hints", "WaitPanel");
+            ASSERT_NE(panel, nullptr);
+            EXPECT_TRUE(Inside(panel->rect, HintsAreaOf(shape))) << panel->rect.x << "," << panel->rect.y << " " << panel->rect.w << "x" << panel->rect.h;
+            EXPECT_TRUE(Apart(panel->rect, CenterPanel(shape))) << "the waiting row is not on the centre panel";
+            for (int i = 0; i < kWaitCells; ++i) {
+                for (const char* prefix : {"WaitCell", "WaitTile", "WaitCount"}) {
+                    const UIElement* part = Element("Hints", CellName(prefix, i).c_str());
+                    ASSERT_NE(part, nullptr) << prefix << i;
+                    EXPECT_TRUE(Inside(part->rect, panel->rect)) << prefix << i;
+                    EXPECT_FALSE(part->IsHitTestable()) << prefix << i << " takes no input";
+                }
             }
-        }
-        for (const char* name : {"WaitPanel", "WaitCaption", "WaitRow"}) {
-            EXPECT_FALSE(Element("Hints", name)->IsHitTestable()) << name;
-        }
-        EXPECT_FALSE(Click(panel->rect.x + panel->rect.w * 0.5f, panel->rect.y + panel->rect.h * 0.5f)) << "a click on the row is no canvas's";
+            for (const char* name : {"WaitPanel", "WaitCaption", "WaitRow"}) {
+                EXPECT_FALSE(Element("Hints", name)->IsHitTestable()) << name;
+            }
+            EXPECT_FALSE(Click(panel->rect.x + panel->rect.w * 0.5f, panel->rect.y + panel->rect.h * 0.5f)) << "a click on the row is no canvas's";
 
-        // The worst-case layout: no tile of any table lies where the panel does
-        const TableLayout layout = MakeTableLayout(WorstCaseInput());
-        for (const TileSlot& slot : layout.slots) {
-            EXPECT_TRUE(Apart(slot.rect, panel->rect)) << "role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
+            // The worst-case layout: no tile of any table lies where the panel does
+            const TableLayout layout = MakeTableLayout(WorstCaseInput(), DesignWidthOf(shape), DesignHeightOf(shape));
+            for (const TileSlot& slot : layout.slots) {
+                EXPECT_TRUE(Apart(slot.rect, panel->rect)) << "role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
+            }
         }
     }
 
@@ -953,14 +967,14 @@ namespace BECore::Mahjong::Tests {
     // ----- the button in a narrow window: the row of ActionsCompact -----
 
     TEST_F(MahjongHintsTest, InANarrowWindowTheButtonIsInTheCompactRowAndOfferedExactlyWhereItIsOnTheTable) {
-        // The same state is looked at in the design size (the canvas `HintsButton`) and in 480 x 480 (the row of `ActionsCompact`, `HintsButton`
+        // The same state is looked at in the design size (the canvas `HintsButton`) and in a small landscape window (the row of `ActionsCompact`, `HintsButton`
         // hidden with `Actions`): the button is on the one and on the other exactly together
         const auto expectBoth = [&](bool offered, const char* state) {
             SetOutputSize(*_renderer, kViewWidth, kViewHeight);
             Draw();
             EXPECT_EQ(ButtonShown(), offered) << state << ": on the table";
             EXPECT_FALSE(CompactButtonShown()) << state << ": the row is hidden at the design size";
-            SetOutputSize(*_renderer, 480.0f, 480.0f);
+            SetOutputSize(*_renderer, kCompactWindowWidth, kCompactWindowHeight);
             Draw();
             EXPECT_EQ(CompactButtonShown(), offered) << state << ": in the row";
             EXPECT_FALSE(ButtonShown()) << state << ": the canvas of the table is hidden in a narrow window";
@@ -989,7 +1003,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongHintsTest, AClickOnTheButtonOfTheCompactRowAsksForTheAdviceAndPlaysNothing) {
-        SetOutputSize(*_renderer, 480.0f, 480.0f);
+        SetOutputSize(*_renderer, kCompactWindowWidth, kCompactWindowHeight);
         ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
         ASSERT_TRUE(CompactButtonShown());
         const auto canvas = Canvas("ActionsCompact");
@@ -1334,39 +1348,43 @@ namespace BECore::Mahjong::Tests {
                 ExpectWordsFit("Hints", output.width, output.height, 0.0f);
                 ExpectWordsFit("HintsButton", output.width, output.height, 0.0f);
             }
+            for (const char* node : {"Hints", "HintsButton"}) {
+                const std::vector<std::string> cut = WordsThatDoNotFitOnTheMatrix(*Canvas(node), 0.0f);
+                EXPECT_TRUE(cut.empty()) << node << ": " << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
+            }
             // The button is a 56-unit control on a canvas that the table's fit scales: the engine's minimum holds wherever `Actions` does, and in
             // the narrow windows the button of the row of `ActionsCompact` takes its place (`ExpectPassesTheMatrix("ActionsCompact")` of
             // `MahjongTableScreenTest` holds that one)
             ExpectMatrixExceptTouchWhere(*Canvas("HintsButton"), "HintsButton", EngineTouchMinimum(), ActionsMayBeSmall);
         });
 
-        auto canvas = Canvas("Hints");
-        auto buttonCanvas = Canvas("HintsButton");
-        ASSERT_TRUE(canvas && buttonCanvas);
-        canvas->UpdateLayout(kViewWidth, kViewHeight);
-        buttonCanvas->UpdateLayout(kViewWidth, kViewHeight);
-        const UIElement* button = Element("HintsButton", "HintButton");
-        const UIElement* label = Element("Hints", "AdviceText");
-        const UIElement* panel = Element("Hints", "WaitPanel");
-        ASSERT_NE(button, nullptr);
-        ASSERT_NE(label, nullptr);
-        ASSERT_NE(panel, nullptr);
+        for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait}) {
+            const MatrixWindow window = DesignWindowOf(shape);
+            SCOPED_TRACE(window.label.c_str());
+            LayOutOnTheTable({"Hints", "HintsButton"}, window);
+            const UIElement* button = Element("HintsButton", "HintButton");
+            const UIElement* label = Element("Hints", "AdviceText");
+            const UIElement* panel = Element("Hints", "WaitPanel");
+            ASSERT_NE(button, nullptr);
+            ASSERT_NE(label, nullptr);
+            ASSERT_NE(panel, nullptr);
 
-        EXPECT_TRUE(Inside(button->rect, kHintsCorner));
-        EXPECT_TRUE(Inside(label->rect, kHintsCorner));
-        EXPECT_TRUE(Apart(button->rect, label->rect));
-        EXPECT_TRUE(Apart(button->rect, panel->rect));
-        EXPECT_TRUE(Apart(label->rect, panel->rect));
-        for (const Rect* rect : {&button->rect, &label->rect, &panel->rect}) {
-            EXPECT_TRUE(Apart(*rect, CenterPanel())) << "nothing of the hints is on the centre panel";
-        }
-        EXPECT_TRUE(button->IsHitTestable()) << "the button takes the press";
-        EXPECT_FALSE(label->IsHitTestable()) << "the sentence takes no input";
+            EXPECT_TRUE(Inside(button->rect, HintsAreaOf(shape)));
+            EXPECT_TRUE(Inside(label->rect, HintsAreaOf(shape)));
+            EXPECT_TRUE(Apart(button->rect, label->rect));
+            EXPECT_TRUE(Apart(button->rect, panel->rect));
+            EXPECT_TRUE(Apart(label->rect, panel->rect));
+            for (const Rect* rect : {&button->rect, &label->rect, &panel->rect}) {
+                EXPECT_TRUE(Apart(*rect, CenterPanel(shape))) << "nothing of the hints is on the centre panel";
+            }
+            EXPECT_TRUE(button->IsHitTestable()) << "the button takes the press";
+            EXPECT_FALSE(label->IsHitTestable()) << "the sentence takes no input";
 
-        for (const TileSlot& slot : MakeTableLayout(WorstCaseInput()).slots) {
-            EXPECT_TRUE(Apart(slot.rect, button->rect)) << "role " << static_cast<int>(slot.role);
-            EXPECT_TRUE(Apart(slot.rect, label->rect)) << "role " << static_cast<int>(slot.role) << " slot " << slot.rect.x << "," << slot.rect.y << "," << slot.rect.w << "x" << slot.rect.h
-                                                       << " label " << label->rect.x << "," << label->rect.y << "," << label->rect.w << "x" << label->rect.h;
+            for (const TileSlot& slot : MakeTableLayout(WorstCaseInput(), DesignWidthOf(shape), DesignHeightOf(shape)).slots) {
+                EXPECT_TRUE(Apart(slot.rect, button->rect)) << "role " << static_cast<int>(slot.role);
+                EXPECT_TRUE(Apart(slot.rect, label->rect)) << "role " << static_cast<int>(slot.role) << " slot " << slot.rect.x << "," << slot.rect.y << "," << slot.rect.w << "x" << slot.rect.h
+                                                           << " label " << label->rect.x << "," << label->rect.y << "," << label->rect.w << "x" << label->rect.h;
+            }
         }
     }
 

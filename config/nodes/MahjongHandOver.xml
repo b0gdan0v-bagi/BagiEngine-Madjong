@@ -8,8 +8,7 @@
   is only 24 px high in the smallest window. It is in HandOverAction, a Screen canvas, in the middle of the window, over the empty
   element ButtonGap of this plate (64 high, between the seat rows and the lines: y 334..398 of the view, the middle of the plate and
   of the window). The gap and the two gaps of 8 around it, 80 units, hold the button in every landscape window of the matrix at user scale 1.0 (its
-  scale outgrows the table's by 1.41 at most, 56 x 1.41 = 79); a portrait window puts the button under the table (the variant of
-  HandOverAction). To make room for the gap the lines are in four columns of 24% (124 high for the sixteen, AutoFit down to 12 for
+  scale outgrows the table's by 1.41 at most, 56 x 1.41 = 79). To make room for the gap the lines are in four columns of 24% (124 high for the sixteen, AutoFit down to 12 for
   the longest) instead of three of 32% (188).
   All four hands are face up under the table and must stay readable, so nothing lies over them: there is no Dim (a full-window
   scrim would cover them; the plate is opaque and a modal canvas takes every click) and the plate keeps to the middle of the view.
@@ -21,6 +20,13 @@
   y -8 from the middle: y 102..602, clear of the top sets and 18 above the bottom row of bonus tiles. The plate has ignoreSafeArea, like the
   table it lies on (a fixed design that ignores the safe area): with side insets in a portrait or square window 1072 units do not fit the
   safe area, and the hands do not move either.
+  In a portrait view (720 x 1280, the variant below) the plate is 504 wide (x 108..612, between the columns of the side seats' hands, melds and
+  bonus tiles at x 8..101 and 619..712, which run from y 92 to 500). The lines are in two columns of 48% (eight rows, 252 high); the headline
+  is a size smaller (22), the seat rows too (18), and the headline and the summary two lines high (72), for the words of the narrow plate. The
+  gap is 112 high: the window is as wide as the table or wider than it in a portrait window, so the button, which follows the window's scale,
+  outgrows the table's fit by 1.6 at most (the 1:1 window of 480 px, where the floor of the canvas scale holds), and 56 x 1.6 = 90. The plate
+  is 724 high and 56 under the middle of the view (y 334..1058), which puts the middle of the gap, 312 under its top, 6 units under the middle of
+  the view as in the landscape plate; it ends clear of the viewer's rows (the bonus tiles start at y 1112).
   MahjongEndScreenTest holds the sizes and that no hand, meld or bonus tile of the worst-case table is covered by the plate or the
   button; MahjongTouchSizeTest holds the button against the gap, the plate and the table in every window of the matrix.
 -->
@@ -60,6 +66,37 @@
           </children>
         </element>
       </elements>
+      <variants>
+        <variant when="orientation:portrait">
+          <overrides>
+            <set element="Plate" y="56" width="504" height="724" />
+            <set element="Headline" height="72" fontSize="22" />
+            <set element="SeatRow0" fontSize="18" />
+            <set element="SeatRow1" fontSize="18" />
+            <set element="SeatRow2" fontSize="18" />
+            <set element="SeatRow3" fontSize="18" />
+            <set element="ButtonGap" height="112" />
+            <set element="Summary" height="72" />
+            <set element="Lines" height="252" />
+            <set element="ScoreLine0" width="48%" />
+            <set element="ScoreLine1" width="48%" />
+            <set element="ScoreLine2" width="48%" />
+            <set element="ScoreLine3" width="48%" />
+            <set element="ScoreLine4" width="48%" />
+            <set element="ScoreLine5" width="48%" />
+            <set element="ScoreLine6" width="48%" />
+            <set element="ScoreLine7" width="48%" />
+            <set element="ScoreLine8" width="48%" />
+            <set element="ScoreLine9" width="48%" />
+            <set element="ScoreLine10" width="48%" />
+            <set element="ScoreLine11" width="48%" />
+            <set element="ScoreLine12" width="48%" />
+            <set element="ScoreLine13" width="48%" />
+            <set element="ScoreLine14" width="48%" />
+            <set element="ScoreLine15" width="48%" />
+          </overrides>
+        </variant>
+      </variants>
     </component>
   </components>
 </node>

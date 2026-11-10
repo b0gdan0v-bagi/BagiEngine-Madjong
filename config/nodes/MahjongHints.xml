@@ -17,6 +17,11 @@
   touch size. All start hidden; the component shows the panel and the first N cells exactly while hints apply (MahjongGame::HintsOn(),
   a person at the table, no cover, no Setup, the hand being played) and the hand waits, the button while hints apply and the viewer
   has actions to choose from, and the label while an advice is up.
+  In a portrait view (720 x 1280, the variant below) they lie in the band of free ground between the viewer's discards and the viewer's
+  seat plate (y 836, a grid unit under the plate of the discards): the waiting row left (x 12..348), the button HintButton of HintsButton
+  at x 360..480, and AdviceText right of it (216 wide, 12 in from the right edge). The elements are anchored to the edge they are
+  nearer to, so a window with side insets (65 units each side of a 9:16 view) moves them inwards, where the three no longer fit in a row
+  (they may then overlap, no tile is checked in a window with insets).
 -->
 <node name="Hints" layer="5">
   <components>
@@ -112,6 +117,14 @@
         </element>
         <element type="UILabel" name="AdviceText" anchor="TopLeft" visible="false" x="220" y="92" width="180" height="56" text="{hintAdvice}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" color="0,0,0,200" />
       </elements>
+      <variants>
+        <variant when="orientation:portrait">
+          <overrides>
+            <set element="WaitPanel" x="12" y="836" />
+            <set element="AdviceText" anchor="TopRight" x="-12" y="836" width="216" />
+          </overrides>
+        </variant>
+      </variants>
     </component>
   </components>
 </node>

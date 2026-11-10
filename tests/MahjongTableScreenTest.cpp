@@ -307,6 +307,54 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
+    TEST_F(MahjongTableScreenTest, InThePortraitViewTheButtonsAre68HighInOneRowInTheBandUnderTheWaitingRow) {
+        // The portrait view is 720 wide: a button of kPortraitActionButtonHeight is a touch target from a window 339 px wide
+        constexpr float kPortraitSmallestWindowWidth = 339.0f;
+        constexpr float kBandTop = 924.0f;      // under the waiting row of `Hints` (y 836..916)
+        constexpr float kBandBottom = 1028.0f;  // the plate of the viewer
+        constexpr float kPortraitButtonWidth = 92.0f;
+        constexpr float kPortraitDeclareWidth = 124.0f;
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        const float minTouch = EngineTouchMinimum();
+        ASSERT_FALSE(NeedsCompactActions(kPortraitSmallestWindowWidth, 2000.0f, 1.0f, minTouch, 1.0f, kPortraitViewWidth, kPortraitViewHeight));
+        ASSERT_TRUE(NeedsCompactActions(kPortraitSmallestWindowWidth - 1.0f, 2000.0f, 1.0f, minTouch, 1.0f, kPortraitViewWidth, kPortraitViewHeight));
+
+        auto canvas = Canvas("Actions");
+        ASSERT_TRUE(canvas);
+        const MatrixWindow window = DesignWindowOf(TableShape::Portrait);
+        const TableLayout layout = MakeWorstCaseTableLayout(0, window);
+        for (const std::vector<ButtonKind>& kinds : FullestButtonSets()) {
+            for (int i = 0; i < kButtonCount; ++i) {
+                SetShown(static_cast<ButtonKind>(i), false);
+            }
+            for (const ButtonKind kind : kinds) {
+                SetShown(kind, true);
+            }
+            LayOutInWindow(*canvas, window);
+            const UIElement* row = Element("Actions", "ActionRow");
+            ASSERT_NE(row, nullptr);
+            EXPECT_GE(row->rect.x, 0.0f);
+            EXPECT_LE(row->rect.x + row->rect.w, kPortraitViewWidth);
+            EXPECT_GE(row->rect.y, kBandTop);
+            EXPECT_LE(row->rect.y + row->rect.h, kBandBottom - kGridUnit);
+            float width = 0.0f;
+            for (const ButtonKind kind : kinds) {
+                const UIElement* button = Element("Actions", SpecOf(kind).element);
+                ASSERT_NE(button, nullptr);
+                ASSERT_FALSE(button->rect.IsEmpty()) << SpecOf(kind).element;
+                EXPECT_FLOAT_EQ(button->rect.h, kPortraitActionButtonHeight) << SpecOf(kind).element << ": the scene file and TouchRegime.h agree";
+                EXPECT_FLOAT_EQ(button->rect.y, row->rect.y) << SpecOf(kind).element << ": one row";
+                EXPECT_FLOAT_EQ(button->rect.w, kind == ButtonKind::Declare ? kPortraitDeclareWidth : kPortraitButtonWidth) << SpecOf(kind).element;
+                EXPECT_GE(button->rect.x, row->rect.x);
+                EXPECT_LE(button->rect.x + button->rect.w, row->rect.x + row->rect.w);
+                ExpectClearOfTable(button->rect, layout, SpecOf(kind).element);
+                width += button->rect.w;
+            }
+            EXPECT_LE(width + kButtonGap * static_cast<float>(kinds.size() - 1), row->rect.w) << "the set fits the row without wrapping";
+        }
+        EXPECT_GE(kPortraitActionButtonHeight * kPortraitSmallestWindowWidth / kPortraitViewWidth, minTouch) << "a touch target in the smallest window that keeps `Actions`";
+    }
+
     // ----- the compact canvas -----
 
     TEST_F(MahjongTableScreenTest, TheCompactCanvasHoldsTheSameButtonsAsTheActionsCanvasWithTheSameActionsValuesWordsAndPictures) {
@@ -497,20 +545,20 @@ namespace BECore::Mahjong::Tests {
             }
         });
 
-        canvas->UpdateLayout(kViewWidth, kViewHeight);
-        const Rect& plate = hint->rect;
-        EXPECT_GE(plate.x, 0.0f);
-        EXPECT_GE(plate.y, 0.0f);
-        EXPECT_LE(plate.x + plate.w, kViewWidth);
-        EXPECT_LE(plate.y + plate.h, kViewHeight);
-        const Rect& row = Element("Actions", "ActionRow")->rect;
-        EXPECT_TRUE(Apart(plate, row)) << "the hint does not lie over the buttons it explains";
-        // ... nor over a tile or a plate of the table: a tooltip in the gutter, one grid unit clear of the plates
-        // in the desktop layout and in every window of the table, the phone layouts included (`ActionsCompact` holds the buttons where `Actions` is hidden, and its `Hint` with them)
+        // In the view of each shape the hint lies inside it, apart from the row it explains, and over no tile or plate of the table: a tooltip in the
+        // gutter of the landscape table, in the free ground right of the viewer's discards in the portrait one, one grid unit clear of the plates
+        // in every window of the table, the phone layouts included (`ActionsCompact` holds the buttons where `Actions` is hidden, and its `Hint` with them)
         ForEachTableWindow([&](const MatrixWindow& window) {
             if (IsCompactWindow(window)) {
                 return;
             }
+            LayOutOnTheTable({"Actions"}, window);
+            const Rect plate = hint->rect;
+            EXPECT_GE(plate.x, 0.0f) << window.label.c_str();
+            EXPECT_GE(plate.y, 0.0f) << window.label.c_str();
+            EXPECT_LE(plate.x + plate.w, ViewOf(window).width) << window.label.c_str();
+            EXPECT_LE(plate.y + plate.h, ViewOf(window).height) << window.label.c_str();
+            EXPECT_TRUE(Apart(plate, Element("Actions", "ActionRow")->rect)) << window.label.c_str() << ": the hint does not lie over the buttons it explains";
             const TableLayout layout = MakeWorstCaseTableLayout(0, window);
             for (const TileSlot& slot : layout.slots) {
                 EXPECT_TRUE(Apart(slot.rect, plate)) << window.label.c_str() << ": the hint covers role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
@@ -518,6 +566,9 @@ namespace BECore::Mahjong::Tests {
             const eastl::vector<Rect> plates = ZonePlates(layout);
             for (size_t i = 0; i < plates.size(); ++i) {
                 EXPECT_TRUE(Apart(plates[i], Grown(plate, kGridUnit))) << window.label.c_str() << ": the hint is less than one grid unit from plate " << i;
+            }
+            for (size_t i = 0; i < layout.zones.seatPlates.size(); ++i) {
+                EXPECT_TRUE(Apart(layout.zones.seatPlates[i], Grown(plate, kGridUnit))) << window.label.c_str() << ": the hint is less than one grid unit from the plate of seat " << i;
             }
         });
     }

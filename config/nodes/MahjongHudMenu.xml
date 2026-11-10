@@ -4,8 +4,11 @@
   the pages of the rules, 92 units wide: the top seat's row of bonus tiles of the worst-case table ends at x 980 and a wider button covers it in a 16:10 window) 8 left of it (under it in a canvas of at most 440 units wide, where both do not fit in a row). A Screen canvas with a floor on its scale
   (minScale 0.6: the 56 unit buttons are 33.6 px), so they are touch targets in any window; MahjongHudTest and MahjongTouchSizeTest check them on the
   size matrix and that they cover no tile in a window without insets. With insets they lie nearer the table, as the HUD does. Hidden by the component while
-  HandOver or Rules is shown (HandOver puts its Next hand button in the corner of New game; Rules has a dim that covers only the view). MatchOver and Setup are Screen canvases whose dim
+  HandOver or Rules is shown (HandOver has its own Next hand button in the middle of the window; Rules has a dim that covers only the view). MatchOver and Setup are Screen canvases whose dim
   covers the whole window, so the buttons stay under them.
+  In a portrait window the top right corner is the top seat's row of bonus tiles, so there both buttons are 176 wide (one under the other,
+  16 apart) at the left edge of the middle of the window, where the portrait table has free ground left of the viewer's discards (x 8..252,
+  y 536..1020 in view units; the canvas scale is at most about 1.2 times the table's fit there). It comes after the narrow variant, which it replaces.
 -->
 <node name="HudMenu" layer="10">
   <components>
@@ -18,6 +21,12 @@
         <variant when="maxWidth:440">
           <overrides>
             <set element="Rules" x="-8" y="72" width="176" />
+          </overrides>
+        </variant>
+        <variant when="orientation:portrait">
+          <overrides>
+            <set element="NewGame" anchor="Left" x="8" y="-36" />
+            <set element="Rules" anchor="Left" x="8" y="36" width="176" />
           </overrides>
         </variant>
       </variants>

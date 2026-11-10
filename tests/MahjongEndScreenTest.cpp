@@ -33,6 +33,22 @@ namespace BECore::Mahjong::Tests {
         constexpr float kScoreTableBottom = 612.0f;
         constexpr float kScoreTableHeight = 500.0f;
         constexpr float kScoreButtonGapHeight = 64.0f;  // the gap of the plate that the Next hand button sits in
+        /// The same in the portrait view: the plate lies between the columns of the side seats (x 8..101 and 619..712, from y 92) and above the
+        /// viewer's bonus tiles (from y 1112); two columns of lines and a taller gap, for the ratio of the window scale to the table's fit of 1.6
+        constexpr float kPortraitScoreTableLeft = 108.0f;
+        constexpr float kPortraitScoreTableRight = 612.0f;
+        constexpr float kPortraitScoreTableTop = 92.0f;
+        constexpr float kPortraitScoreTableBottom = 1108.0f;
+        constexpr float kPortraitScoreTableHeight = 724.0f;
+        constexpr float kPortraitScoreBandHeight = 72.0f;  // the headline and the summary: two lines of the narrow plate
+        constexpr float kPortraitScoreButtonGapHeight = 112.0f;
+        constexpr int kPortraitScoreLineColumns = 2;
+        /// The edges the plate of the score table keeps to in a view of this shape.
+        Rect ScoreTableBounds(TableShape shape) {
+            return shape == TableShape::Portrait
+                       ? Rect(kPortraitScoreTableLeft, kPortraitScoreTableTop, kPortraitScoreTableRight - kPortraitScoreTableLeft, kPortraitScoreTableBottom - kPortraitScoreTableTop)
+                       : Rect(kScoreTableLeft, kScoreTableTop, kScoreTableRight - kScoreTableLeft, kScoreTableBottom - kScoreTableTop);
+        }
         constexpr int kScoreLineColumns = 4;
         constexpr float kScoreHeadlineHeight = 48.0f;
         constexpr float kScoreNextHeight = 56.0f;
@@ -578,6 +594,73 @@ namespace BECore::Mahjong::Tests {
         });
     }
 
+    TEST_F(MahjongEndScreenTest, ThePortraitScoreTableLiesBetweenTheSideColumnsInTwoColumnsAndHoldsTheNextHandButtonInItsGap) {
+        ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers));
+        ASSERT_NO_FATAL_FAILURE(PlayHandOver());
+        auto canvas = Canvas("HandOver");
+        auto action = Canvas("HandOverAction");
+        ASSERT_TRUE(canvas && action);
+        for (int i = 0; i < kMaxScoreLines; ++i) {
+            ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(Format("ScoreLine{}", i)), true));
+        }
+        const MatrixWindow window = DesignWindowOf(TableShape::Portrait);
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            const WorstTexts worst = FindWorstTexts(CoreManager::GetUIStrings());
+            CoreManager::GetUIVars().Set("handOverHeadline"_intern, eastl::string_view(worst.headline));
+            LayOutInWindow(*canvas, window);
+            LayOutInWindow(*action, window, CanvasScaleMode::ScaleWithScreen, 1.0f);
+
+            const UIElement* plateElement = Element("HandOver", "Plate");
+            ASSERT_NE(plateElement, nullptr);
+            const Rect& plate = plateElement->rect;
+            const Rect bounds = ScoreTableBounds(TableShape::Portrait);
+            EXPECT_GE(plate.x, bounds.x);
+            EXPECT_LE(plate.x + plate.w, bounds.x + bounds.w);
+            EXPECT_GE(plate.y, bounds.y);
+            EXPECT_LE(plate.y + plate.h, bounds.y + bounds.h);
+            EXPECT_EQ(plate.h, kPortraitScoreTableHeight);
+            EXPECT_EQ(plate.x + plate.w * 0.5f, kPortraitViewWidth * 0.5f) << "in the middle of the table";
+
+            // The anatomy of the landscape plate: padding, the headline, the four seat rows, the gap, the lines, the summary; the gap and the
+            // two bands are taller, the type of the headline and of the seat rows one step smaller
+            const UIElement* headline = Element("HandOver", "Headline");
+            const UIElement* gap = Element("HandOver", "ButtonGap");
+            const UIElement* lines = Element("HandOver", "Lines");
+            const UIElement* summary = Element("HandOver", "Summary");
+            ASSERT_TRUE(headline != nullptr && gap != nullptr && lines != nullptr && summary != nullptr);
+            EXPECT_EQ(headline->rect.y, plate.y + kModalPadding);
+            EXPECT_EQ(headline->rect.w, plate.w - 2.0f * kModalPadding);
+            EXPECT_EQ(headline->rect.h, kPortraitScoreBandHeight);
+            EXPECT_EQ(summary->rect.h, kPortraitScoreBandHeight);
+            EXPECT_EQ(gap->rect.h, kPortraitScoreButtonGapHeight);
+            EXPECT_EQ(GapBelow(gap->rect, lines->rect), kModalGap);
+            EXPECT_EQ(GapBelow(lines->rect, summary->rect), kModalGap);
+            EXPECT_EQ(summary->rect.y + summary->rect.h, plate.y + plate.h - kModalPadding) << "the plate ends with the summary band";
+            std::vector<float> columns;
+            for (int i = 0; i < kMaxScoreLines; ++i) {
+                const UIElement* line = Element("HandOver", Format("ScoreLine{}", i).c_str());
+                ASSERT_NE(line, nullptr) << i;
+                if (std::find(columns.begin(), columns.end(), line->rect.x) == columns.end()) {
+                    columns.push_back(line->rect.x);
+                }
+                EXPECT_GE(line->rect.x, lines->rect.x) << i;
+                EXPECT_LE(line->rect.x + line->rect.w, lines->rect.x + lines->rect.w) << i;
+                EXPECT_LE(line->rect.y + line->rect.h, lines->rect.y + lines->rect.h) << "line " << i << " lies inside its area, all sixteen shown";
+            }
+            EXPECT_EQ(columns.size(), static_cast<size_t>(kPortraitScoreLineColumns)) << "the sixteen lines lie in two columns";
+
+            // The button, in a window the size of the view, is in the gap and in the middle of the table, 6 units under the middle of the view
+            const UIElement* next = Element("HandOverAction", "NextHand");
+            ASSERT_NE(next, nullptr);
+            EXPECT_EQ(next->rect.h, kScoreNextHeight);
+            EXPECT_EQ(next->rect.w, kScoreNextWidth);
+            EXPECT_EQ(next->rect.x + next->rect.w * 0.5f, kPortraitViewWidth * 0.5f);
+            EXPECT_GE(next->rect.y, gap->rect.y) << "inside the gap, not on the seat rows";
+            EXPECT_LE(next->rect.y + next->rect.h, gap->rect.y + gap->rect.h) << "inside the gap, not on the lines";
+        });
+    }
+
     namespace {
 
         /// Whether a slot is part of a hand: its concealed tiles, its sets and its bonus tiles. The discard blocks and the wall are the piles and
@@ -676,10 +759,11 @@ namespace BECore::Mahjong::Tests {
             ASSERT_NE(plate, nullptr);
             ASSERT_FALSE(plate->rect.IsEmpty()) << window.label.c_str();
             const Rect plateRect = ToView(plate->rect, *canvas, window);
-            EXPECT_GE(plateRect.x, kScoreTableLeft - 0.01f) << window.label.c_str();
-            EXPECT_LE(plateRect.x + plateRect.w, kScoreTableRight + 0.01f) << window.label.c_str();
-            EXPECT_GE(plateRect.y, kScoreTableTop - 0.01f) << window.label.c_str();
-            EXPECT_LE(plateRect.y + plateRect.h, kScoreTableBottom + 0.01f) << window.label.c_str();
+            const Rect bounds = ScoreTableBounds(ShapeOf(window));
+            EXPECT_GE(plateRect.x, bounds.x - 0.01f) << window.label.c_str();
+            EXPECT_LE(plateRect.x + plateRect.w, bounds.x + bounds.w + 0.01f) << window.label.c_str();
+            EXPECT_GE(plateRect.y, bounds.y - 0.01f) << window.label.c_str();
+            EXPECT_LE(plateRect.y + plateRect.h, bounds.y + bounds.h + 0.01f) << window.label.c_str();
             const bool phone = TableProfileOf(window).phone;
             for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
                 ExpectNoHandUnder(plateRect, MakeWorstCaseTableLayout(viewer, window), Format("{} viewer {}", window.label.c_str(), viewer).c_str(), phone);
@@ -784,6 +868,8 @@ namespace BECore::Mahjong::Tests {
             }
             ExpectPassesTheMatrix("HandOver", EngineTouchMinimum());
             ExpectPassesTheMatrix("HandOverAction", EngineTouchMinimum());
+            const std::vector<std::string> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("HandOver"), kButtonAir);  // each window against the view of its shape
+            EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
             EXPECT_GE(Element("HandOverAction", "NextHand")->rect.h, kMinControlHeight);
         });
     }
