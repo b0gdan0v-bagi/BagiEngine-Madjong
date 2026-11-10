@@ -1,6 +1,7 @@
 #pragma once
 
 #include <EASTL/array.h>
+#include <Mahjong/Game/ComputerExplain.h>
 #include <Mahjong/Game/ComputerView.h>
 #include <Mahjong/Game/TableSession.h>
 #include <Mahjong/Table/Words.h>
@@ -18,9 +19,6 @@ namespace BECore::Mahjong {
     /// The tiles of the waiting row: the 13 orphans are the most a hand can wait for.
     inline constexpr int kMaxWaitingTiles = 13;
 
-    /// The seed of the computer player that gives the advice: fixed, so the same view always gives the same advice and no rng of the game is touched.
-    inline constexpr uint32_t kAdviceSeed = 1;
-
     /// One tile the hand waits for and the copies of it the viewer cannot see (it may be 0: a dead wait is still shown).
     struct WaitEntry {
         Tile tile;
@@ -36,7 +34,7 @@ namespace BECore::Mahjong {
     /// `declareCalling` (exactly what the `Declare` switch of the table allows). All false when the viewer has no turn.
     [[nodiscard]] eastl::array<bool, kTileIdCount> DeclaringDiscards(const TableView& view);
 
-    /// What the computer player would do in the viewer's place: `ComputerPlayer(kAdviceSeed).Choose(view)`. An element of `view.legal`;
+    /// What the computer player would do in the viewer's place: `ComputerPlayer(kAdviceSeed).Choose(view)` (`kAdviceSeed` is in `Game/ComputerExplain.h`). An element of `view.legal`;
     /// empty when `view.legal` is empty (nothing to do).
     [[nodiscard]] std::optional<HandAction> AdviceFor(const TableView& view);
 
