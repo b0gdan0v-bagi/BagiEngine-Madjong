@@ -110,6 +110,7 @@ namespace BECore::Mahjong {
         const MahjongGame* game = MahjongGame::GetActive();
         PublishNumbers(game);
         PublishSetup(game);
+        PublishOptions(game);
         PublishEndScreens(game);
         PublishRules(game);
     }
@@ -210,6 +211,20 @@ namespace BECore::Mahjong {
             _continueShown = offerContinue;
             UICanvasComponent::SetElementVisibleByName(GetScene(), "Continue"_intern, offerContinue);
         }
+    }
+
+    void MahjongHudComponent::PublishOptions(const MahjongGame* game) {
+        const bool open = game != nullptr && game->IsOptionsOpen();
+        if (open == _optionsShown) {
+            return;
+        }
+        _optionsShown = open;
+        if (open) {
+            // The rows show what the game has now; the hints row is published by the hints component while `Setup` is open
+            PublishLanguage(*game);
+            PublishLevelChoice(*game);
+        }
+        UICanvasComponent::SetVisibleByName(GetScene(), "Options"_intern, open);
     }
 
     void MahjongHudComponent::ShowScoreLines(int count) {

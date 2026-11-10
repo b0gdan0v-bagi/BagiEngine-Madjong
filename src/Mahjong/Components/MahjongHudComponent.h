@@ -48,7 +48,8 @@ namespace BECore::Mahjong {
      * **Options.** `MahjongGame::IsOptionsOpen()` is the page over `Setup`. `MahjongOptions` opens it, only while `Setup` is
      * open; `MahjongOptionsBack` closes it (ignored while it is closed). `MahjongSetLevel` with `easy` | `normal` (`TryParseLevel`; any other text is ignored, and
      * so is the action while the page is closed) calls `SetLevel` and sets the variable `levelChoice` (the name of `GetLevel()`, also set when `Setup` opens). The
-     * level takes effect with the next match: a running session keeps its own. `Setup` stays open under the page and `CloseSetup()` closes it.
+     * level takes effect with the next match: a running session keeps its own. `Setup` stays open under the page and `CloseSetup()` closes it. The canvas `Options` is
+     * shown exactly while the page is open (rows: language, hints, level, and the button `Back`); `language` and `levelChoice` are published when it opens.
      *
      * **Saving.** Every `SceneUpdateEvent` (once per frame, only for the active game) calls `MahjongGame::FlushSave()`, which writes the match and the
      * choices of `Setup` when they changed, so a burst of computer steps is one write.
@@ -109,6 +110,8 @@ namespace BECore::Mahjong {
         void PublishNumbers(const MahjongGame* game);
         /// Shows or hides `Setup` after the game, and takes the setup of the game when the panel opens.
         void PublishSetup(const MahjongGame* game);
+        /// Shows or hides `Options` after `MahjongGame::IsOptionsOpen()`, and publishes `language` and `levelChoice` when it opens.
+        void PublishOptions(const MahjongGame* game);
         /// Shows or hides the plate `MoveLine` (the variable `lastMove` holds its text).
         void ShowMoveLine(bool show);
         void PublishSeatKinds() const;
@@ -135,6 +138,7 @@ namespace BECore::Mahjong {
         SeatSetup _pending = kDefaultSeatSetup;
         int _pendingHands = kFullMatchHands;
         bool _setupShown = false;
+        bool _optionsShown = false;               // the canvas `Options`
         bool _continueShown = false;              // the button `Continue` of the panel
         const MahjongGame* _numbersOf = nullptr;  // the game and the version the variables show
         uint64_t _numbersVersion = 0;
