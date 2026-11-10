@@ -729,7 +729,7 @@ namespace BECore::Mahjong::Tests {
     namespace {
 
         /// The corner of the table the hints live in (`config/nodes/MahjongHints.xml`): the waiting row and the strip under it, left of the top
-        /// seat's plate; the ground the HUD box of the round and the wall had before the centre panel took them. Design units.
+        /// seat's plate, clear of the centre panel. Design units.
         const Rect kHintsCorner(96.0f, 8.0f, 336.0f, 140.0f);
 
         /// The centre panel of the layout: the inside of the wall ring, which nothing of the hints may touch.

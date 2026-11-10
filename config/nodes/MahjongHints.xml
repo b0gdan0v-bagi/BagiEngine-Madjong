@@ -4,10 +4,9 @@
   button HintButton (MahjongHintAdvice; it is in the node HintsButton below and in ActionsCompact), fills the canvas below and
   draws the marks over the viewer's hand; it comes after the table (layer 5: it reads the layout the table drew) and before the
   canvas so that the variables are set when the canvas draws.
-  The canvas lies on the view of the table (SceneView) in the top left corner, x 96..432 and y 8..148, the ground of the HUD box of the
-  round and the wall that the centre panel replaced (the round, the wall and the scores are now in the node CenterPanel inside the wall
-  ring, which the hints leave free; MahjongHintsTest checks the rectangles against the worst-case layout, the plates and the panel). Like
-  that box the elements keep to the safe area: at y 8 they would lie outside it on a screen with a notch, so there they move inwards
+  The canvas lies on the view of the table (SceneView) in the top left corner, x 96..432 and y 8..148, clear of the node CenterPanel
+  inside the wall ring, which the hints leave free (MahjongHintsTest checks the rectangles against the worst-case layout, the plates and
+  the panel). The elements keep to the safe area: at y 8 they would lie outside it on a screen with a notch, so there they move inwards
   together and can cover the nearest tiles. The top 80 units are the waiting row WaitPanel (x 96..432, a scrim plate): the caption (24, font 18)
   and a cell per tile that the viewer's hand waits for (WaitCell0..12, 24 x 56: the tile as a UIImage of 24 x 32 whose sprite
   Tile_<notation> the component sets, and under it the count of the copies the viewer cannot see, {hintCountN}, 24 high, font 18). The
