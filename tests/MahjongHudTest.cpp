@@ -369,7 +369,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongHudTest, TheRowsOfEachPanelLieInsideItWithThePaddingKept) {
-        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
         SetWorstVars();
@@ -419,7 +418,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongHudTest, TheSeatPlatesLieAtTheRectanglesOfTheLayoutAndClearOfEverythingElseOnTheTable) {
-        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
         // Everything that hides in the file is shown, so that its place is asked for
@@ -586,7 +584,6 @@ namespace BECore::Mahjong::Tests {
     // ----- the size matrix -----
 
     TEST_F(MahjongHudTest, TheHudPassesTheSizeMatrixInEveryLanguageWithTheLongestTextsAndEveryWordFits) {
-        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
 
@@ -767,7 +764,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongHudTest, TheHudCoversNoTileOfTheWorstTable) {
-        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
         ForEachTableWindow([&](const MatrixWindow& window) {
@@ -922,7 +918,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongHudTest, TheMoveLinePassesTheSizeMatrixInEveryLanguageWithTheLongestSentenceAndEveryWordFits) {
-        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
         ASSERT_TRUE(_game->GetSession().StepComputer().has_value());
         Draw();
@@ -947,7 +942,6 @@ namespace BECore::Mahjong::Tests {
     // ----- the name of the selected tile -----
 
     TEST_F(MahjongHudTest, TheSelectedTileLabelIsClearOfTheTableAndTheHudAndFitsInEveryLanguageAndWindow) {
-        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
         EXPECT_FALSE(OnScreen("Hud", "SelectedTile")) << "hidden while nothing is selected";

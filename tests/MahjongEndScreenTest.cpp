@@ -707,7 +707,6 @@ namespace BECore::Mahjong::Tests {
     }  // namespace
 
     TEST_F(MahjongEndScreenTest, TheNarrowScoreTableLiesBetweenTheSideColumnsInFourColumnsAndHoldsTheNextHandButtonInItsGap) {
-        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers));
         ASSERT_NO_FATAL_FAILURE(PlayHandOver());
         auto canvas = Canvas("HandOver");
@@ -825,7 +824,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongEndScreenTest, ThePlateOfTheScoreTableCoversNoHandMeldOrBonusTileInAnyWindowOfTheMatrix) {
-        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers));
         ASSERT_NO_FATAL_FAILURE(PlayHandOver());
         auto canvas = Canvas("HandOver");
@@ -908,7 +906,6 @@ namespace BECore::Mahjong::Tests {
     // ----- the size matrix -----
 
     TEST_F(MahjongEndScreenTest, TheScoreTablePassesTheSizeMatrixInEveryLanguageWithTheLongestRowsAndEveryWordFits) {
-        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers));
         ASSERT_NO_FATAL_FAILURE(PlayHandOver());
         auto canvas = Canvas("HandOver");

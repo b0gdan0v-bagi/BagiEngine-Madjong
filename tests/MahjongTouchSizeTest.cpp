@@ -81,14 +81,20 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongTouchSizeTest, AWindowTakesTheViewOfItsShapeAndTheHelpersFollowIt) {
         // The view is the scene's pick over the variants of the file: a window at least as tall as wide gets the portrait view, a square too,
-        // one of aspect 2 or more the wide view
-        for (const MatrixWindow& window : {WindowOf(1280.0f, 720.0f), WindowOf(1600.0f, 1000.0f), WindowOf(721.0f, 720.0f)}) {
+        // a landscape one up to 1.55 the narrow view, one of aspect 2 or more the wide view
+        for (const MatrixWindow& window : {WindowOf(1280.0f, 720.0f), WindowOf(1600.0f, 1000.0f), WindowOf(1000.0f, 600.0f)}) {
             EXPECT_EQ(ViewOf(window).index, -1) << window.label.c_str();
             EXPECT_EQ(ViewOf(window).width, kViewWidth) << window.label.c_str();
             EXPECT_EQ(ShapeOf(window), TableShape::Landscape) << window.label.c_str();
         }
-        for (const MatrixWindow& window : {WindowOf(2560.0f, 1080.0f), WindowOf(2000.0f, 1000.0f), WindowOf(915.0f, 330.0f)}) {
+        for (const MatrixWindow& window : {WindowOf(1024.0f, 768.0f), WindowOf(721.0f, 720.0f), WindowOf(1500.0f, 1000.0f)}) {
             EXPECT_EQ(ViewOf(window).index, 1) << window.label.c_str();
+            EXPECT_EQ(ViewOf(window).width, kNarrowViewWidth) << window.label.c_str();
+            EXPECT_EQ(ViewOf(window).height, kNarrowViewHeight) << window.label.c_str();
+            EXPECT_EQ(ShapeOf(window), TableShape::Narrow) << window.label.c_str();
+        }
+        for (const MatrixWindow& window : {WindowOf(2560.0f, 1080.0f), WindowOf(2000.0f, 1000.0f), WindowOf(915.0f, 330.0f)}) {
+            EXPECT_EQ(ViewOf(window).index, 2) << window.label.c_str();
             EXPECT_EQ(ViewOf(window).width, kWideViewWidth) << window.label.c_str();
             EXPECT_EQ(ViewOf(window).height, kViewHeight) << window.label.c_str();
             EXPECT_EQ(ShapeOf(window), TableShape::Wide) << window.label.c_str();
@@ -108,6 +114,8 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(MakeWorstCaseTableLayout(0, tall).shape, TableShape::Portrait);
         EXPECT_EQ(MakeWorstCaseTableLayout(0, WindowOf(1280.0f, 720.0f)).shape, TableShape::Landscape);
         EXPECT_EQ(MakeWorstCaseTableLayout(0, WindowOf(2560.0f, 1080.0f)).shape, TableShape::Wide);
+        EXPECT_EQ(MakeWorstCaseTableLayout(0, WindowOf(1024.0f, 768.0f)).shape, TableShape::Narrow);
+        EXPECT_EQ(DesignWindowOf(TableShape::Narrow).outputHeight, kNarrowViewHeight);
         EXPECT_EQ(DesignWindowOf(TableShape::Wide).outputWidth, kWideViewWidth);
         EXPECT_EQ(DesignWindowOf(TableShape::Portrait).outputHeight, kPortraitViewHeight);
         size_t portraitMatrixWindows = 0;
@@ -219,7 +227,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTouchSizeTest, TheLoopDropsTheTouchSizeOnlyWhereTheTestAllowsItAndNothingElse) {
-        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         auto actions = Canvas("Actions");
         ASSERT_TRUE(actions);
@@ -256,7 +263,6 @@ namespace BECore::Mahjong::Tests {
     // ----- the hint button -----
 
     TEST_F(MahjongTouchSizeTest, TheHintButtonOfTheTableIsAControlOf56UnitsClearOfTheWorstCaseTableAndNeedsTheCompactRowWhereItIsSmall) {
-        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         auto canvas = Canvas("HintsButton");
         ASSERT_TRUE(canvas);
@@ -350,7 +356,12 @@ namespace BECore::Mahjong::Tests {
             LayOutInWindow(*menu, window, CanvasScaleMode::ScaleWithScreen, 1.0f);
             ExpectClearOfTable(ToView(Element("HudMenu", "Rules")->rect, *menu, window), layout, window.label.c_str());
         });
-        EXPECT_EQ(checked, BECore::Tests::UILayoutMatrix().size() * 6);
+        size_t narrowAtDensityOne = 0;  // the narrow windows join the matrix's in the touch size of the HUD (`IsMatrixWindow`)
+        for (const MatrixWindow& window : NarrowWindows()) {
+            narrowAtDensityOne += IsMatrixWindow(window) ? 1 : 0;
+        }
+        EXPECT_GT(narrowAtDensityOne, 0u);
+        EXPECT_EQ(checked, (BECore::Tests::UILayoutMatrix().size() + narrowAtDensityOne) * 6);
     }
 
     TEST_F(MahjongTouchSizeTest, WhileThePagesAreOpenTheMenuIsHiddenAndItsButtonsLieUnderTheDimOfThePages) {
@@ -556,7 +567,6 @@ namespace BECore::Mahjong::Tests {
     // ----- the Next hand button of the score table -----
 
     TEST_F(MahjongTouchSizeTest, TheNextHandButtonIsATouchTargetInEveryWindowAndLiesInTheGapOfThePlateAndCoversNoTile) {
-        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
         _game->GetSession().RunComputers();
         ASSERT_EQ(_game->GetSession().GetPhase(), SessionPhase::HandOver);
@@ -729,7 +739,6 @@ namespace BECore::Mahjong::Tests {
     };
 
     TEST_F(MahjongCompactRowTest, TheCompactActionButtonsLieOnTheBarUnderTheTableInsideTheWindowWhereTheRuleShowsThem) {
-        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         auto compact = Canvas("ActionsCompact");
         ASSERT_TRUE(compact);
@@ -774,7 +783,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongCompactRowTest, TheRuleIsTheHeightOfTheRowTheFileLaysOutInEveryWindowOfTheMatrixAndTheCompactWindowsAtBothUserScales) {
-        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         auto compact = Canvas("ActionsCompact");
         ASSERT_TRUE(compact);
@@ -812,7 +820,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongCompactRowTest, InAWindowOutsideTheMatrixEitherActionsStaysOrTheCompactRowIsClearOfTheTable) {
-        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         auto compact = Canvas("ActionsCompact");
         auto actions = Canvas("Actions");
@@ -880,7 +887,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(IsCompactWindow(WindowOf(500.0f, 400.0f)));
         EXPECT_FALSE(IsCompactWindow(WindowOf(627.0f, 480.0f)));
         EXPECT_FALSE(IsCompactWindow(WindowOf(650.0f, 500.0f)));
-        EXPECT_TRUE(IsCompactWindow(WindowOf(kNarrowCompactWindowWidth, kNarrowCompactWindowHeight))) << "a button of 31.6 px on a bar of 83 px";
+        EXPECT_TRUE(IsCompactWindow(WindowOf(kCompactWindowWidth, kCompactWindowHeight))) << "a button of 31.6 px on a bar of 83 px";
         EXPECT_FALSE(IsCompactWindow(WindowOf(620.0f, 600.0f))) << "a button of 32.1 px";
         EXPECT_TRUE(IsCompactWindow(WindowOf(600.0f, 580.0f))) << "a bar of 76.7 px for a row of 73 px";
         EXPECT_FALSE(IsCompactWindow(WindowOf(600.0f, 570.0f))) << "a bar of 71.7 px";
@@ -900,7 +907,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTouchSizeTest, EveryWindowOfTheMatrixKeepsActionsAndOnlyTheNearSquareNarrowWindowsShowTheCompactRow) {
-        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         // The buttons of `Actions` are 56 units of the table's fit and the rule says where that is too small and the bar under the table holds the
         // row. The matrix has the short side of 480 px at the least: the landscape and the wide table are 720 high, so a button is 37 px there, and
         // the narrow table (768 high, 1080 wide) gives 33 px in 640 x 480 and 35 in 720 x 480, so none of them is small. In a portrait window the buttons
@@ -929,7 +935,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_FALSE(ActionsMayBeSmall(window)) << window.label.c_str();
         }
         // The compact row is for a window that is nearly square (the narrow table fills its width and leaves a bar of the row's height under it)
-        const MatrixWindow compactWindow = MakePhoneWindow(kNarrowCompactWindowWidth, kNarrowCompactWindowHeight, 1.0f);
+        const MatrixWindow compactWindow = MakePhoneWindow(kCompactWindowWidth, kCompactWindowHeight, 1.0f);
         EXPECT_EQ(ShapeOf(compactWindow), TableShape::Narrow);
         EXPECT_TRUE(ActionButtonsAreUnderTheMinimum(compactWindow));
         EXPECT_TRUE(IsCompactWindow(compactWindow));

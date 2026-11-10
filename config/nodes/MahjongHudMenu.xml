@@ -9,6 +9,13 @@
   In a portrait window the top right corner is the top seat's row of bonus tiles, so there both buttons are 176 wide (one under the other,
   16 apart) at the left edge of the middle of the window, where the portrait table has free ground left of the viewer's discards (x 8..252,
   y 536..1020 in view units; the canvas scale is at most about 1.2 times the table's fit there). It comes after the narrow variant, which it replaces.
+  In a narrow window (aspect up to 1.55, the table 1080 x 768) the top right corner is the top seat's row of bonus tiles (x 752..880) and the
+  line of moves, so from aspect 1.1 both buttons are 176 wide, one over the other, in the bottom left corner of the window: left of the viewer's
+  hand (x 204), under the left seat's columns and the bottom seat plate (y 612), 8 from the edges (the canvas scale is within 12 percent of the
+  table's fit there). In a nearly square window (up to 1.1) the bar under the table holds ActionsCompact along the bottom, so there Rules goes
+  under New game in the top right corner, as in a canvas of at most 440 units, over the end of the line of moves and the last bonus tile by a
+  few units at most (a known deviation of the nearly square window, which no window of the matrix is). The portrait variant comes after them and
+  replaces them.
 -->
 <node name="HudMenu" layer="10">
   <components>
@@ -21,6 +28,17 @@
         <variant when="maxWidth:440">
           <overrides>
             <set element="Rules" x="-8" y="72" width="176" />
+          </overrides>
+        </variant>
+        <variant when="orientation:landscape;maxAspect:1.1">
+          <overrides>
+            <set element="Rules" x="-8" y="72" width="176" />
+          </overrides>
+        </variant>
+        <variant when="orientation:landscape;minAspect:1.1;maxAspect:1.55">
+          <overrides>
+            <set element="NewGame" anchor="BottomLeft" x="8" y="-72" />
+            <set element="Rules" anchor="BottomLeft" x="8" y="-8" width="176" />
           </overrides>
         </variant>
         <variant when="orientation:portrait">

@@ -6,9 +6,11 @@
       Table/TableLayout.h; MahjongTableUiTest compares the two) and the engine fits it to the window. The shape of the table is picked by
       the aspect of the output (ShapeOfOutput in Table/TableLayout.h, which MahjongSceneFilesTest holds the file to): an output as high
       as it is wide or higher (a phone held upright, a narrow window; a square counts) draws the portrait view, the design size of the
-      portrait table (kPortraitViewWidth x kPortraitViewHeight); an output at least kWideMinAspect (2.0) times as wide as high (21:9, 32:9,
+      portrait table (kPortraitViewWidth x kPortraitViewHeight); a landscape output at most kNarrowMaxAspect (1.55) times as wide as high
+      (4:3, 3:2, 5:4) draws the narrow view, the design of the narrow table (kNarrowViewWidth x kNarrowViewHeight: the viewer's hand in one
+      row with the bonus tiles and melds above it); an output at least kWideMinAspect (2.0) times as wide as high (21:9, 32:9,
       every landscape phone) draws the wide view, the landscape table centred with a wing of kWideWingWidth units on each side (the table is as
-      high as before, so the tiles do not grow; the wings are free ground and the felt fills the window). The views exclude each other.
+      high as before, so the tiles do not grow; the wings are free ground and the felt fills the window). Everything between (16:9, 16:10) draws the landscape view of the scene itself. The views exclude each other.
       The component lays the table out for the active view and the canvases choose their own variants by the same conditions.
       MahjongTableComponent draws the felt, the four hands, the melds, the discards and the wall of the active game, plays the person
       seats and paces the computers.
@@ -25,6 +27,7 @@
       viewHeight="720">
       <viewVariants>
         <view name="Portrait" when="orientation:portrait" width="720" height="1280"/>
+        <view name="Narrow" when="orientation:landscape;maxAspect:1.55" width="1080" height="768"/>
         <view name="Wide" when="minAspect:2" width="1560" height="720"/>
       </viewVariants>
       <nodes>

@@ -250,7 +250,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableScreenTest, TheActionButtonsPassTheSizeMatrixInEveryLanguageWithTheirWordsAndPicturesAndEveryButtonIsATouchTarget) {
-        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         auto canvas = Canvas("Actions");
         ASSERT_TRUE(canvas);
@@ -357,7 +356,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableScreenTest, InTheNarrowViewTheButtonsAreInTwoLinesRightOfTheBottomDiscardsAndTheHintLiesLeftOfThem) {
-        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         constexpr float kNarrowButtonWidth = 88.0f;
         constexpr float kNarrowUpgradeWidth = 104.0f;  // "Add to pung" does not fit 88
         constexpr float kNarrowRowWidth = 4.0f * kNarrowButtonWidth + 3.0f * kButtonGap;
@@ -573,7 +571,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableScreenTest, TheCompactButtonsPassTheSizeMatrixInEveryLanguageWithTheEnginesTouchMinimumAndTheirWordsFit) {
-        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         auto canvas = Canvas("ActionsCompact");
         ASSERT_TRUE(canvas);
@@ -600,7 +597,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableScreenTest, TheHintTakesNoInputLiesInTheViewClearOfTheButtonsAndHoldsTheLongestSentenceOfEveryLanguageInEveryWindow) {
-        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         auto canvas = Canvas("Actions");
         ASSERT_TRUE(canvas);
@@ -716,7 +712,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableScreenTest, TheButtonsLieInTheFreeCornerOfTheTableAndCoverNoTile) {
-        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
 

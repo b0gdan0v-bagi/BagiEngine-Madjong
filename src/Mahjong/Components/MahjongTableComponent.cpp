@@ -247,8 +247,8 @@ namespace BECore::Mahjong {
             return input;
         }
 
-        /// The size of the view the scene draws in now (the active view: the portrait one for a tall output); the design size of the
-        /// landscape table before the scene has a view.
+        /// The size of the view the scene draws in now (the active view: the design of the shape the output's aspect gives); the design size of
+        /// the landscape table before the scene has a view.
         struct ViewSize {
             float width = kViewWidth;
             float height = kViewHeight;
@@ -803,7 +803,7 @@ namespace BECore::Mahjong {
 
     void MahjongTableComponent::OnDraw() {
         IRenderer& renderer = *CoreManager::GetRenderer();
-        // The active view: the landscape design or the portrait one (`Scene::Draw` picked it before this draw)
+        // The active view: the design of one of the four shapes (`Scene::Draw` picked it before this draw)
         const ViewSize view = ActiveViewSize(GetScene());
         const float viewWidth = view.width;
         const float viewHeight = view.height;

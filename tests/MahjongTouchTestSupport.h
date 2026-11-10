@@ -33,13 +33,11 @@ namespace BECore::Mahjong::Tests {
     };
 
     /// A landscape window (density 1) where the buttons of `Actions` are under the touch minimum and the bar under the table holds the row of
-    /// `ActionsCompact`: the tests of the compact canvas stand in it. Where the scene has no narrow view yet it is a landscape window
-    /// (640 x 600, a button of 28 px); the narrow table fills its width and leaves a bar of the row's height only in a nearly square window
-    /// (610 x 600: a button of 31.6 px, a bar of 83 px), which is `kNarrowCompactWindowWidth/Height`. A square or a tall output is the portrait view.
-    inline constexpr float kCompactWindowWidth = 640.0f;
+    /// `ActionsCompact`: the tests of the compact canvas stand in it. It is a narrow window: that table fills the width and leaves a bar of the
+    /// row's height only in a nearly square one (610 x 600: a button of 31.6 px, a bar of 83 px; the landscape and the wide table cannot, their
+    /// windows are 1.55 times as wide as high or more). A square or a tall output is the portrait view.
+    inline constexpr float kCompactWindowWidth = 610.0f;
     inline constexpr float kCompactWindowHeight = 600.0f;
-    inline constexpr float kNarrowCompactWindowWidth = 610.0f;
-    inline constexpr float kNarrowCompactWindowHeight = 600.0f;
 
     /// The engine's touch minimum (`minTouchSize`, window units): what every control of the game is held to in the matrix.
     inline float EngineTouchMinimum() {
@@ -151,8 +149,8 @@ namespace BECore::Mahjong::Tests {
     /// windows, and the portrait table's under 339 px wide ones are outside it): the near-square narrow windows, each with and without side
     /// insets (the inset lifts the row onto the table), and two portrait ones. Density 1.
     inline const std::vector<MatrixWindow>& CompactWindows() {
-        static const std::vector<MatrixWindow> windows{MakePhoneWindow(kNarrowCompactWindowWidth, kNarrowCompactWindowHeight, 1.0f),
-                                                       MakePhoneWindow(kNarrowCompactWindowWidth, kNarrowCompactWindowHeight, 1.0f, SafeAreaSimulation::SideInsets),
+        static const std::vector<MatrixWindow> windows{MakePhoneWindow(kCompactWindowWidth, kCompactWindowHeight, 1.0f),
+                                                       MakePhoneWindow(kCompactWindowWidth, kCompactWindowHeight, 1.0f, SafeAreaSimulation::SideInsets),
                                                        MakePhoneWindow(600.0f, 580.0f, 1.0f),
                                                        MakePhoneWindow(560.0f, 550.0f, 1.0f),
                                                        MakePhoneWindow(300.0f, 800.0f, 1.0f),
@@ -160,46 +158,42 @@ namespace BECore::Mahjong::Tests {
         return windows;
     }
 
-    /// The narrow windows (4:3, 3:2, 5:4 landscape): the matrix's own 4:3 and 3:2 windows are in `ForEachMatrixWindow`; these are the ones it
-    /// lacks, at density 1 the sizes a monitor window or a tablet browser has (1024 x 768, 1080 x 768 the design, 1200 x 800, 800 x 600,
-    /// 640 x 480, 1400 x 1000) and a tablet 1024 x 768 at density 2. They are narrow under a `NarrowViewScope`, landscape otherwise.
+    /// The narrow windows (4:3, 3:2, 5:4 landscape) the matrix lacks (its own 4:3 and 3:2 windows are in `ForEachMatrixWindow`): at density 1 the
+    /// sizes a monitor window or a tablet browser has (1024 x 768, 1080 x 768 the design, 1200 x 800, 800 x 600, 640 x 480, 1500 x 1000 and
+    /// 1400 x 1000, a 5:4 monitor) and a tablet 1024 x 768 at density 2. Kept apart from `PhoneWindows` because the loops that run over the
+    /// matrix alone (`ForEachMatrixAndNarrowWindow`) visit them too.
     inline const std::vector<MatrixWindow>& NarrowWindows() {
         constexpr float kTabletDensity = 2.0f;
-        static const std::vector<MatrixWindow> windows{MakePhoneWindow(1024.0f, 768.0f, 1.0f),          MakePhoneWindow(kNarrowViewWidth, kNarrowViewHeight, 1.0f),
-                                                       MakePhoneWindow(1200.0f, 800.0f, 1.0f),          MakePhoneWindow(800.0f, 600.0f, 1.0f),
-                                                       MakePhoneWindow(640.0f, 480.0f, 1.0f),           MakePhoneWindow(1400.0f, 1000.0f, 1.0f),
-                                                       MakePhoneWindow(1024.0f, 768.0f, kTabletDensity)};
+        static const std::vector<MatrixWindow> windows{MakePhoneWindow(1024.0f, 768.0f, 1.0f),  MakePhoneWindow(kNarrowViewWidth, kNarrowViewHeight, 1.0f),
+                                                       MakePhoneWindow(1200.0f, 800.0f, 1.0f),  MakePhoneWindow(800.0f, 600.0f, 1.0f),
+                                                       MakePhoneWindow(640.0f, 480.0f, 1.0f),   MakePhoneWindow(1500.0f, 1000.0f, 1.0f),
+                                                       MakePhoneWindow(1400.0f, 1000.0f, 1.0f), MakePhoneWindow(1024.0f, 768.0f, kTabletDensity)};
         return windows;
     }
 
-    /// Calls `fn(window)` for every window the table is checked in: the matrix of the engine, then the landscape phones (and under a
-    /// `NarrowViewScope` the narrow windows). The rule
-    /// `TableProfileFor` gives the phone profile to some windows of the matrix too (the short ones), so a check of the table takes the
-    /// layout of its window (`TableLayoutFor`).
+    /// Calls `fn(window)` for every window the table is checked in: the matrix of the engine, then the landscape phones, the portrait ones and
+    /// the narrow windows. The rule `TableProfileFor` gives the phone profile to some windows of the matrix too (the short ones), so a check of
+    /// the table takes the layout of its window (`TableLayoutFor`).
     inline void ForEachTableWindow(const std::function<void(const MatrixWindow&)>& fn) {
         ForEachMatrixWindow(fn);
         for (const MatrixWindow& window : PhoneWindows()) {
             fn(window);
         }
-        if (NarrowViewStandIn()) {
-            for (const MatrixWindow& window : NarrowWindows()) {
-                fn(window);
-            }
+        for (const MatrixWindow& window : NarrowWindows()) {
+            fn(window);
         }
     }
 
-    /// Calls `fn(window)` for every case of the matrix and, under a `NarrowViewScope`, for the narrow windows the matrix lacks: what the
-    /// loops of the touch size and of the words (`MatrixFailuresExceptTouchWhere`, `WordsThatDoNotFitOnTheMatrix`) run over.
-    inline void ForEachMatrixOrNarrowWindow(const std::function<void(const MatrixWindow&)>& fn) {
+    /// Calls `fn(window)` for every case of the matrix and for the narrow windows the matrix lacks: what the loops of the touch size and of the
+    /// words (`MatrixFailuresExceptTouchWhere`, `WordsThatDoNotFitOnTheMatrix`) run over.
+    inline void ForEachMatrixAndNarrowWindow(const std::function<void(const MatrixWindow&)>& fn) {
         ForEachMatrixWindow(fn);
-        if (NarrowViewStandIn()) {
-            for (const MatrixWindow& window : NarrowWindows()) {
-                fn(window);
-            }
+        for (const MatrixWindow& window : NarrowWindows()) {
+            fn(window);
         }
     }
 
-    /// Whether the window is one of the engine's matrix (density 1), not one of `PhoneWindows`: the checks of the touch size of the HUD run in those only.
+    /// Whether the window is at density 1, as the engine's matrix and the narrow windows are, not one of `PhoneWindows`: the checks of the touch size of the HUD run in those only.
     inline bool IsMatrixWindow(const MatrixWindow& window) {
         return window.pixelDensity == 1.0f;
     }
@@ -407,7 +401,7 @@ namespace BECore::Mahjong::Tests {
         const float userScales[] = {1.0f, 1.5f};
 
         eastl::vector<UIMatrixFailure> failures;
-        ForEachMatrixOrNarrowWindow([&](const MatrixWindow& window) {
+        ForEachMatrixAndNarrowWindow([&](const MatrixWindow& window) {
             if (!portraitWindows && ShapeOf(window) == TableShape::Portrait) {
                 return;
             }
@@ -465,7 +459,7 @@ namespace BECore::Mahjong::Tests {
         const float userScales[] = {1.0f, 1.5f};
 
         std::vector<std::string> cut;
-        ForEachMatrixOrNarrowWindow([&](const MatrixWindow& window) {
+        ForEachMatrixAndNarrowWindow([&](const MatrixWindow& window) {
             if (only.has_value() && ShapeOf(window) != *only) {
                 return;
             }

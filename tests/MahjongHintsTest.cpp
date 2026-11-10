@@ -766,7 +766,6 @@ namespace BECore::Mahjong::Tests {
     }  // namespace
 
     TEST_F(MahjongHintsTest, TheFullRowPassesTheSizeMatrixAndEveryWordFitsInEveryLanguage) {
-        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(StartEast(kOrphansWait, "Ew"));
         ASSERT_TRUE(Discard("Ew"));
         Draw();
@@ -787,7 +786,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongHintsTest, ThePanelLiesInTheCornerClearOfTheCentrePanelAndOfEveryTileOfTheWorstCaseTableAndTakesNoInput) {
-        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(StartEast(kOrphansWait, "Ew"));
         ASSERT_TRUE(Discard("Ew"));
         Draw();
@@ -1323,7 +1321,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongHintsTest, TheButtonAndTheSentenceFitInEveryLanguageAndTheStripIsClearOfTheTable) {
-        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(StartWindow(kWindowPung, "5p"));
         Press();
         ASSERT_TRUE(AdviceShown());

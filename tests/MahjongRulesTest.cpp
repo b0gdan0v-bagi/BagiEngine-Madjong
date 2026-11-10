@@ -496,7 +496,6 @@ namespace BECore::Mahjong::Tests {
     // ----- the size matrix and the word fit -----
 
     TEST_F(MahjongRulesTest, EveryPageInEveryLanguagePassesTheSizeMatrixAndEveryWordFits) {
-        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         ASSERT_NO_FATAL_FAILURE(PressRules());
 
@@ -711,14 +710,13 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongRulesTest, ThePlateIsClearOfTheBarInEveryWindowOfTheMatrixWithoutInsets) {
-        const NarrowViewScope narrowView;  // the narrow canvases are not in the shipped scene yet (see `NarrowViewScope`)
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         ASSERT_NO_FATAL_FAILURE(PressRules());
         auto plate = Canvas("Rules");
         auto bar = Canvas("RulesAction");
         ASSERT_TRUE(plate && bar);
         size_t checked = 0;
-        ForEachMatrixOrNarrowWindow([&](const MatrixWindow& window) {
+        ForEachMatrixAndNarrowWindow([&](const MatrixWindow& window) {
             if (window.HasInsets()) {
                 return;
             }
