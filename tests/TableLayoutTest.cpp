@@ -1,4 +1,5 @@
 #include <Mahjong/Table/TableLayout.h>
+#include <Mahjong/Table/TapSelect.h>
 #include <Mahjong/Table/UiPalette.h>
 #include <cmath>
 #include <gtest/gtest.h>
@@ -22,7 +23,11 @@ namespace BECore::Mahjong::Tests {
             float width;
             float height;
         };
-        const ViewSize kViewSizes[] = {{kViewWidth, kViewHeight}, {1920.0f, 1080.0f}, {800.0f, 800.0f}, {640.0f, 360.0f}, {1000.0f, 400.0f}};
+        /// Landscape and portrait views: the designs, fitted ones, a square (portrait) and a phone's 390 x 844.
+        const ViewSize kViewSizes[] = {{kViewWidth, kViewHeight}, {1920.0f, 1080.0f}, {800.0f, 800.0f},  {640.0f, 360.0f}, {1000.0f, 400.0f}, {kPortraitViewWidth, kPortraitViewHeight},
+                                       {390.0f, 844.0f},          {360.0f, 640.0f},   {768.0f, 1024.0f}, {480.0f, 480.0f}};
+        /// The two designs, the views the layout is made in unscaled.
+        const ViewSize kDesigns[] = {{kViewWidth, kViewHeight}, {kPortraitViewWidth, kPortraitViewHeight}};
         const SlotRole kSeatRoles[] = {SlotRole::HandTile, SlotRole::MeldTile, SlotRole::BonusTile, SlotRole::DiscardTile};
 
         Meld MakeMeld(MeldKind kind) {
@@ -253,28 +258,32 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(TableLayoutTest, TheWorstTableFitsTheViewAndNoZoneOverlapsAnother) {
-        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
-            for (const Seat discardSeat : {kNoSeat, 0, 1, 2, 3}) {
-                const TableLayout layout = MakeTableLayout(WorstInput(viewer, kWorstPile, discardSeat));
-                ExpectSlotsInsideTheView(layout);
-                ExpectNoZoneOverlaps(layout);
+        for (const ViewSize& design : kDesigns) {
+            for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+                for (const Seat discardSeat : {kNoSeat, 0, 1, 2, 3}) {
+                    const TableLayout layout = MakeTableLayout(WorstInput(viewer, kWorstPile, discardSeat), design.width, design.height);
+                    ExpectSlotsInsideTheView(layout);
+                    ExpectNoZoneOverlaps(layout);
+                }
             }
         }
     }
 
     TEST(TableLayoutTest, TheWorstTableHasTheSlotsItAsksFor) {
-        const TableLayout layout = MakeTableLayout(WorstInput(1, kWorstPile, kNoSeat));
-        const int perSeat = kMaxConcealedTiles + kMaxMeldTiles + kMaxBonusTiles + kWorstPile / kSeatCount;
-        EXPECT_EQ(static_cast<int>(layout.slots.size()), kSeatCount * perSeat + kWallRingCells);
-        int roles[kAllSlotRoles] = {};
-        for (const TileSlot& slot : layout.slots) {
-            ++roles[static_cast<int>(slot.role)];
+        for (const ViewSize& design : kDesigns) {
+            const TableLayout layout = MakeTableLayout(WorstInput(1, kWorstPile, kNoSeat), design.width, design.height);
+            const int perSeat = kMaxConcealedTiles + kMaxMeldTiles + kMaxBonusTiles + kWorstPile / kSeatCount;
+            EXPECT_EQ(static_cast<int>(layout.slots.size()), kSeatCount * perSeat + kWallRingCells);
+            int roles[kAllSlotRoles] = {};
+            for (const TileSlot& slot : layout.slots) {
+                ++roles[static_cast<int>(slot.role)];
+            }
+            EXPECT_EQ(roles[static_cast<int>(SlotRole::HandTile)], kSeatCount * kMaxConcealedTiles);
+            EXPECT_EQ(roles[static_cast<int>(SlotRole::MeldTile)], kSeatCount * kMaxMeldTiles);
+            EXPECT_EQ(roles[static_cast<int>(SlotRole::BonusTile)], kSeatCount * kMaxBonusTiles);
+            EXPECT_EQ(roles[static_cast<int>(SlotRole::DiscardTile)], kWorstPile);
+            EXPECT_EQ(roles[static_cast<int>(SlotRole::WallStack)], kWallRingCells);
         }
-        EXPECT_EQ(roles[static_cast<int>(SlotRole::HandTile)], kSeatCount * kMaxConcealedTiles);
-        EXPECT_EQ(roles[static_cast<int>(SlotRole::MeldTile)], kSeatCount * kMaxMeldTiles);
-        EXPECT_EQ(roles[static_cast<int>(SlotRole::BonusTile)], kSeatCount * kMaxBonusTiles);
-        EXPECT_EQ(roles[static_cast<int>(SlotRole::DiscardTile)], kWorstPile);
-        EXPECT_EQ(roles[static_cast<int>(SlotRole::WallStack)], kWallRingCells);
     }
 
     TEST(TableLayoutTest, TooManyTilesAreSqueezedInsteadOfLeavingTheirZone) {
@@ -287,12 +296,14 @@ namespace BECore::Mahjong::Tests {
             }
         }
         input.wallRemaining = 1000;
-        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
-            input.viewer = viewer;
-            const TableLayout layout = MakeTableLayout(input);
-            ExpectSlotsInsideTheView(layout);
-            ExpectNoZoneOverlaps(layout);
-            EXPECT_EQ(static_cast<int>(SlotsOf(layout, SlotRole::WallStack, 0).size()), kWallRingCells);
+        for (const ViewSize& design : kDesigns) {
+            for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+                input.viewer = viewer;
+                const TableLayout layout = MakeTableLayout(input, design.width, design.height);
+                ExpectSlotsInsideTheView(layout);
+                ExpectNoZoneOverlaps(layout);
+                EXPECT_EQ(static_cast<int>(SlotsOf(layout, SlotRole::WallStack, 0).size()), kWallRingCells);
+            }
         }
     }
 
@@ -469,16 +480,17 @@ namespace BECore::Mahjong::Tests {
 
     TEST(TableLayoutTest, TheSeatPlatesScaleWithAnotherViewSize) {
         const TableInput input = WorstInput(1, 30, kNoSeat);
-        const TableLayout design = MakeTableLayout(input);
         for (const ViewSize& size : kViewSizes) {
             const TableLayout layout = MakeTableLayout(input, size.width, size.height);
-            const float scale = std::min(size.width / kViewWidth, size.height / kViewHeight);
+            const float scale = LayoutScale(size.width, size.height);
+            const TableShape shape = ShapeOfView(size.width, size.height);
+            const TableLayout shapeDesign = MakeTableLayout(input, DesignWidthOf(shape), DesignHeightOf(shape));
             ASSERT_NO_FATAL_FAILURE(ExpectSeatPlatesAreSound(layout, scale)) << "view " << size.width << "x" << size.height;
-            const float offsetX = (size.width - kViewWidth * scale) / 2.0f;
-            const float offsetY = (size.height - kViewHeight * scale) / 2.0f;
+            const float offsetX = (size.width - DesignWidthOf(shape) * scale) / 2.0f;
+            const float offsetY = (size.height - DesignHeightOf(shape) * scale) / 2.0f;
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                EXPECT_NEAR(layout.zones.seatPlates[seat].x, offsetX + design.zones.seatPlates[seat].x * scale, kTolerance) << "seat " << seat;
-                EXPECT_NEAR(layout.zones.seatPlates[seat].y, offsetY + design.zones.seatPlates[seat].y * scale, kTolerance) << "seat " << seat;
+                EXPECT_NEAR(layout.zones.seatPlates[seat].x, offsetX + shapeDesign.zones.seatPlates[seat].x * scale, kTolerance) << "seat " << seat;
+                EXPECT_NEAR(layout.zones.seatPlates[seat].y, offsetY + shapeDesign.zones.seatPlates[seat].y * scale, kTolerance) << "seat " << seat;
             }
         }
     }
@@ -494,13 +506,25 @@ namespace BECore::Mahjong::Tests {
             EXPECT_NEAR(doubled.slots[i].rect.w, design.slots[i].rect.w * 2.0f, kTolerance);
             EXPECT_NEAR(doubled.slots[i].rect.h, design.slots[i].rect.h * 2.0f, kTolerance);
         }
-        // A view twice as high keeps the scale of the width and puts the table in the middle.
-        const TableLayout tall = MakeTableLayout(input, kViewWidth, 2.0f * kViewHeight);
-        ASSERT_EQ(design.slots.size(), tall.slots.size());
+        // A view twice as wide keeps the scale of the height and puts the table in the middle.
+        const TableLayout wide = MakeTableLayout(input, 2.0f * kViewWidth, kViewHeight);
+        ASSERT_EQ(design.slots.size(), wide.slots.size());
         for (size_t i = 0; i < design.slots.size(); ++i) {
-            EXPECT_NEAR(tall.slots[i].rect.x, design.slots[i].rect.x, kTolerance);
-            EXPECT_NEAR(tall.slots[i].rect.y, design.slots[i].rect.y + kViewHeight / 2.0f, kTolerance);
-            EXPECT_NEAR(tall.slots[i].rect.w, design.slots[i].rect.w, kTolerance);
+            EXPECT_NEAR(wide.slots[i].rect.x, design.slots[i].rect.x + kViewWidth / 2.0f, kTolerance);
+            EXPECT_NEAR(wide.slots[i].rect.y, design.slots[i].rect.y, kTolerance);
+            EXPECT_NEAR(wide.slots[i].rect.w, design.slots[i].rect.w, kTolerance);
+        }
+        // A portrait view scales the portrait design the same way.
+        const TableLayout portrait = MakeTableLayout(input, kPortraitViewWidth, kPortraitViewHeight);
+        const TableLayout portraitTall = MakeTableLayout(input, kPortraitViewWidth, kPortraitViewHeight + 200.0f);
+        const TableLayout portraitDoubled = MakeTableLayout(input, 2.0f * kPortraitViewWidth, 2.0f * kPortraitViewHeight);
+        ASSERT_EQ(portrait.slots.size(), portraitTall.slots.size());
+        ASSERT_EQ(portrait.slots.size(), portraitDoubled.slots.size());
+        for (size_t i = 0; i < portrait.slots.size(); ++i) {
+            EXPECT_NEAR(portraitTall.slots[i].rect.x, portrait.slots[i].rect.x, kTolerance);
+            EXPECT_NEAR(portraitTall.slots[i].rect.y, portrait.slots[i].rect.y + 100.0f, kTolerance);
+            EXPECT_NEAR(portraitDoubled.slots[i].rect.x, portrait.slots[i].rect.x * 2.0f, kTolerance);
+            EXPECT_NEAR(portraitDoubled.slots[i].rect.w, portrait.slots[i].rect.w * 2.0f, kTolerance);
         }
     }
 
@@ -589,20 +613,22 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(TableLayoutTest, ThePileOfASideSeatSqueezesItsRowsAlongTheHorizontalAndNeverLeavesItsBlock) {
-        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
-            for (const int position : {1, 3}) {
-                const Seat seat = SeatAtPosition(viewer, position);
-                const TableLayout layout = MakeTableLayout(WorstInput(viewer, kWorstPile, seat));
-                const std::vector<TileSlot> pile = SlotsOf(layout, SlotRole::DiscardTile, seat);
-                const Rect& zone = layout.zones.discards[seat];
-                const int rows = (static_cast<int>(pile.size()) + kDiscardsPerRow - 1) / kDiscardsPerRow;
-                ASSERT_GT(rows, kDiscardRowCapacity) << "the worst pile is longer than the block holds";
-                const float pitch = kDiscardTileH * (kDiscardRowCapacity - 1) / static_cast<float>(rows - 1);
-                for (size_t i = 0; i < pile.size(); ++i) {
-                    const float row = static_cast<float>(i / kDiscardsPerRow);
-                    EXPECT_TRUE(Holds(zone, pile[i].rect)) << "viewer " << viewer << " position " << position << " tile " << i;
-                    const float expectedX = position == 3 ? zone.x + row * pitch : zone.x + zone.w - kDiscardTileH - row * pitch;
-                    EXPECT_NEAR(pile[i].rect.x, expectedX, kTolerance) << "tile " << i;
+        for (const ViewSize& design : kDesigns) {
+            for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+                for (const int position : {1, 3}) {
+                    const Seat seat = SeatAtPosition(viewer, position);
+                    const TableLayout layout = MakeTableLayout(WorstInput(viewer, kWorstPile, seat), design.width, design.height);
+                    const std::vector<TileSlot> pile = SlotsOf(layout, SlotRole::DiscardTile, seat);
+                    const Rect& zone = layout.zones.discards[seat];
+                    const int rows = (static_cast<int>(pile.size()) + kDiscardsPerRow - 1) / kDiscardsPerRow;
+                    ASSERT_GT(rows, kDiscardRowCapacity) << "the worst pile is longer than the block holds";
+                    const float pitch = kDiscardTileH * (kDiscardRowCapacity - 1) / static_cast<float>(rows - 1);
+                    for (size_t i = 0; i < pile.size(); ++i) {
+                        const float row = static_cast<float>(i / kDiscardsPerRow);
+                        EXPECT_TRUE(Holds(zone, pile[i].rect)) << "viewer " << viewer << " position " << position << " tile " << i;
+                        const float expectedX = position == 3 ? zone.x + row * pitch : zone.x + zone.w - kDiscardTileH - row * pitch;
+                        EXPECT_NEAR(pile[i].rect.x, expectedX, kTolerance) << "tile " << i;
+                    }
                 }
             }
         }
@@ -779,8 +805,8 @@ namespace BECore::Mahjong::Tests {
             const std::vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, 0);
             ASSERT_EQ(hand.size(), 14u);
             // the bottom of the table fitted into the view: the table is centred, so there may be a bar under it
-            const float fit = std::min(size.width / kViewWidth, size.height / kViewHeight);
-            const float viewBottom = (size.height + kViewHeight * fit) / 2.0f;
+            const float fit = LayoutScale(size.width, size.height);
+            const float viewBottom = (size.height + DesignHeightOf(ShapeOfView(size.width, size.height)) * fit) / 2.0f;
             for (const TileSlot& slot : hand) {
                 const float x = slot.rect.x + slot.rect.w / 2.0f;
                 EXPECT_EQ(HitHandTile(layout, x, slot.rect.y + 0.1f), slot.index) << "view " << size.width << "x" << size.height;
@@ -1266,8 +1292,7 @@ namespace BECore::Mahjong::Tests {
                 ASSERT_NO_FATAL_FAILURE(ExpectZonesAreSound(layout)) << "view " << size.width << "x" << size.height << " viewer " << viewer;
                 ASSERT_NO_FATAL_FAILURE(ExpectSlotsInsideTheView(layout));
                 ASSERT_NO_FATAL_FAILURE(ExpectNoZoneOverlaps(layout));
-                const float scale = std::min(size.width / kViewWidth, size.height / kViewHeight);
-                ASSERT_NO_FATAL_FAILURE(ExpectSeatPlatesAreSound(layout, scale));
+                ASSERT_NO_FATAL_FAILURE(ExpectSeatPlatesAreSound(layout, LayoutScale(size.width, size.height)));
             }
         }
     }
@@ -1433,6 +1458,309 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(LayoutScale(0.0f, 720.0f), 0.0f);
         EXPECT_EQ(LayoutScale(1280.0f, -1.0f), 0.0f);
         EXPECT_EQ(LayoutScale(std::nanf(""), 720.0f), 0.0f);
+    }
+
+    // The two shapes.
+
+    namespace {
+
+        TableLayout InPortrait(const TableInput& input) {
+            return MakeTableLayout(input, kPortraitViewWidth, kPortraitViewHeight);
+        }
+
+        TableLayout InLandscape(const TableInput& input) {
+            return MakeTableLayout(input, kViewWidth, kViewHeight);
+        }
+
+        const TableInput kAllTables[] = {
+            WorstInput(0, kWorstPile, kNoSeat), WorstInput(0, kWorstPile, 0), WorstInput(0, kWorstPile, 1), WorstInput(0, kWorstPile, 2), WorstInput(0, kWorstPile, 3), BusyInput(0), QuietInput(0)};
+
+        TableInput WithViewer(TableInput input, Seat viewer) {
+            input.viewer = viewer;
+            return input;
+        }
+
+    }  // namespace
+
+    TEST(TableLayoutTest, TheLayoutRecordsTheShapeOfItsView) {
+        for (const ViewSize& size : kViewSizes) {
+            EXPECT_EQ(MakeTableLayout(QuietInput(0), size.width, size.height).shape, ShapeOfView(size.width, size.height)) << size.width << "x" << size.height;
+        }
+        EXPECT_EQ(InLandscape(QuietInput(0)).shape, TableShape::Landscape);
+        EXPECT_EQ(InPortrait(QuietInput(0)).shape, TableShape::Portrait);
+        EXPECT_EQ(MakeTableLayout(QuietInput(0), 480.0f, 480.0f).shape, TableShape::Portrait);
+        EXPECT_EQ(MakeTableLayout(QuietInput(0), 0.0f, 0.0f).shape, TableShape::Landscape);
+    }
+
+    TEST(TableLayoutTest, EachSeatIsInItsZoneOfThePortraitView) {
+        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+            const TableLayout layout = InPortrait(QuietInput(viewer));
+            const Rect bottom = BoundsOf(layout, SlotRole::HandTile, viewer);
+            const Rect right = BoundsOf(layout, SlotRole::HandTile, SeatAtPosition(viewer, 1));
+            const Rect top = BoundsOf(layout, SlotRole::HandTile, SeatAtPosition(viewer, 2));
+            const Rect left = BoundsOf(layout, SlotRole::HandTile, SeatAtPosition(viewer, 3));
+            EXPECT_GT(bottom.y, kPortraitViewHeight * 0.9f) << "viewer " << viewer;
+            EXPECT_LT(top.y + top.h, kPortraitViewHeight * 0.05f);
+            EXPECT_GT(right.x, kPortraitViewWidth * 0.9f);
+            EXPECT_LT(left.x + left.w, kPortraitViewWidth * 0.1f);
+            EXPECT_GT(right.h, right.w);
+            EXPECT_GT(left.h, left.w);
+            EXPECT_GT(top.w, top.h);
+            EXPECT_GT(bottom.w, bottom.h);
+        }
+    }
+
+    TEST(TableLayoutTest, ThePortraitHandIsOneRowOfFourteenTilesOfTheDesktopSizeRestingOnTheRimInsideTheRack) {
+        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+            const TableLayout layout = InPortrait(WorstInput(viewer, kWorstPile, kNoSeat));
+            const std::vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, viewer);
+            ASSERT_EQ(static_cast<int>(hand.size()), kMaxConcealedTiles);
+            for (int i = 0; i < kMaxConcealedTiles; ++i) {
+                EXPECT_EQ(hand[i].index, i);
+                EXPECT_EQ(hand[i].rect.w, kViewerHandTileW);
+                EXPECT_EQ(hand[i].rect.h, kViewerHandTileH);
+                EXPECT_EQ(hand[i].rect.y, hand[0].rect.y);
+                EXPECT_EQ(hand[i].rotation, 0.0f);
+                if (i > 0) {
+                    EXPECT_GE(hand[i].rect.x - (hand[i - 1].rect.x + hand[i - 1].rect.w), -kTolerance) << "tiles overlap";
+                    EXPECT_LE(hand[i].rect.x - (hand[i - 1].rect.x + hand[i - 1].rect.w), 4.0f) << "a spread row, not a loose one";
+                }
+                EXPECT_EQ(HitHandTile(layout, RectCentreX(hand[i].rect), RectCentreY(hand[i].rect)), i);
+            }
+            const Rect bounds = BoundsOf(layout, SlotRole::HandTile, viewer);
+            EXPECT_NEAR(bounds.x, kRimWidth + kRackPadding, kTolerance) << "across the view";
+            EXPECT_NEAR(bounds.x + bounds.w, kPortraitViewWidth - kRimWidth - kRackPadding, kTolerance);
+            EXPECT_NEAR(bounds.y + bounds.h, kPortraitViewHeight - kRimWidth, kTolerance) << "on the rim";
+        }
+        // a short hand keeps its tiles where the full one has them; more tiles are squeezed into the row
+        TableInput input = QuietInput(0);
+        const std::vector<TileSlot> full = SlotsOf(InPortrait(input), SlotRole::HandTile, 0);
+        input.concealedCount[0] = 13;
+        const std::vector<TileSlot> thirteen = SlotsOf(InPortrait(input), SlotRole::HandTile, 0);
+        ASSERT_EQ(thirteen.size(), 13u);
+        for (size_t i = 0; i < thirteen.size(); ++i) {
+            EXPECT_EQ(thirteen[i].rect.x, full[i].rect.x);
+        }
+        input.concealedCount[0] = 40;
+        const Rect squeezed = BoundsOf(InPortrait(input), SlotRole::HandTile, 0);
+        EXPECT_LE(squeezed.x + squeezed.w, kPortraitViewWidth - kRimWidth - kRackPadding + kTolerance);
+    }
+
+    TEST(TableLayoutTest, ThePortraitMeldsAndBonusTilesLieInRowsAboveTheHandClearOfASelectedTileAndOfTheBottomPlate) {
+        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+            const TableLayout layout = InPortrait(WorstInput(viewer, kWorstPile, kNoSeat));
+            const Rect hand = BoundsOf(layout, SlotRole::HandTile, viewer);
+            const Rect melds = BoundsOf(layout, SlotRole::MeldTile, viewer);
+            const Rect bonus = BoundsOf(layout, SlotRole::BonusTile, viewer);
+            const Rect& plate = layout.zones.seatPlates[viewer];
+            const Rect raised = RaisedRect(hand);
+            EXPECT_LE(melds.y + melds.h, raised.y - kTolerance) << "the melds end above a raised tile";
+            EXPECT_LE(bonus.y + bonus.h, melds.y + kTolerance) << "the bonus row lies above the melds";
+            EXPECT_LE(plate.y + plate.h, bonus.y + kTolerance) << "the plate of the viewer ends above its rows";
+            EXPECT_GE(melds.x, kRimWidth - kTolerance);
+            EXPECT_LE(melds.x + melds.w, kPortraitViewWidth - kRimWidth + kTolerance);
+            EXPECT_LE(bonus.x + bonus.w, kPortraitViewWidth - kRimWidth + kTolerance);
+            const Rect& discards = layout.zones.discards[viewer];
+            EXPECT_LE(discards.y + discards.h, plate.y - kTolerance) << "the viewer's discards end above its plate";
+            EXPECT_LT(layout.zones.wall.y + layout.zones.wall.h, discards.y) << "and start under the wall ring";
+        }
+    }
+
+    TEST(TableLayoutTest, ThePortraitLayoutIgnoresTheProfileOfThePhone) {
+        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+            const TableInput desktop = WorstInput(viewer, kWorstPile, kNoSeat);
+            TableInput phone = desktop;
+            phone.profile = TableProfile{true, kPhoneHandTileMaxW};
+            const TableLayout expected = InPortrait(desktop);
+            const TableLayout layout = InPortrait(phone);
+            EXPECT_EQ(layout.profile, TableProfile{});
+            ExpectSameSlots(expected, layout);
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                EXPECT_TRUE(SameRect(expected.zones.seatPlates[seat], layout.zones.seatPlates[seat]));
+                EXPECT_TRUE(SameRect(expected.zones.discards[seat], layout.zones.discards[seat]));
+            }
+            // in a landscape view the same profile is what it always was
+            EXPECT_TRUE(InLandscape(phone).profile.phone);
+        }
+    }
+
+    TEST(TableLayoutTest, EveryZoneAndPlateOfThePortraitTableIsSoundForEveryViewerAndEveryTable) {
+        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+            for (const TableInput& table : kAllTables) {
+                const TableLayout layout = InPortrait(WithViewer(table, viewer));
+                ASSERT_NO_FATAL_FAILURE(ExpectZonesAreSound(layout)) << "viewer " << viewer;
+                ASSERT_NO_FATAL_FAILURE(ExpectSeatPlatesAreSound(layout, 1.0f)) << "viewer " << viewer;
+                ASSERT_NO_FATAL_FAILURE(ExpectSlotsInsideTheView(layout));
+                ASSERT_NO_FATAL_FAILURE(ExpectNoZoneOverlaps(layout));
+            }
+        }
+    }
+
+    TEST(TableLayoutTest, ThePortraitSeatPlatesAreOnTheGridAndLieAtTheScreenPositionOfTheirSeat) {
+        const TableLayout seat0 = InPortrait(QuietInput(0));
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            const Rect& plate = seat0.zones.seatPlates[seat];
+            EXPECT_EQ(std::fmod(plate.x, static_cast<float>(kGridUnit)), 0.0f) << "seat " << seat;
+            EXPECT_EQ(std::fmod(plate.y, static_cast<float>(kGridUnit)), 0.0f) << "seat " << seat;
+            EXPECT_EQ(plate.w, kSeatPlateW);
+            EXPECT_EQ(plate.h, kSeatPlateH);
+        }
+        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+            const TableLayout layout = InPortrait(QuietInput(viewer));
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                EXPECT_TRUE(SameRect(layout.zones.seatPlates[seat], seat0.zones.seatPlates[SeatPosition(viewer, seat)])) << "viewer " << viewer << " seat " << seat;
+                EXPECT_TRUE(SameRect(layout.zones.discards[seat], seat0.zones.discards[SeatPosition(viewer, seat)])) << "viewer " << viewer << " seat " << seat;
+            }
+        }
+        const auto& plates = seat0.zones.seatPlates;
+        EXPECT_GT(plates[0].y, plates[1].y);
+        EXPECT_LT(plates[2].y, plates[0].y);
+        EXPECT_LT(plates[3].x, plates[1].x);
+    }
+
+    TEST(TableLayoutTest, ThePortraitCenterPanelIsTheInsideOfTheWallRingAndTheSameForEveryViewer) {
+        const TableLayout design = InPortrait(QuietInput(0));
+        const Rect& wall = design.zones.wall;
+        const Rect& panel = design.zones.centerPanel;
+        EXPECT_NEAR(panel.x, wall.x + kWallStackSize, kTolerance);
+        EXPECT_NEAR(panel.y, wall.y + kWallStackSize, kTolerance);
+        EXPECT_NEAR(panel.w, wall.w - 2.0f * kWallStackSize, kTolerance);
+        EXPECT_NEAR(panel.h, wall.h - 2.0f * kWallStackSize, kTolerance);
+        EXPECT_NEAR(wall.w, kWallStackSize * kWallRingColumns, kTolerance);
+        EXPECT_NEAR(wall.h, kWallStackSize * kWallRingRows, kTolerance);
+        EXPECT_NEAR(RectCentreX(wall), kPortraitViewWidth / 2.0f, kTolerance);
+        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+            EXPECT_TRUE(SameRect(InPortrait(QuietInput(viewer)).zones.centerPanel, panel));
+        }
+    }
+
+    TEST(TableLayoutTest, ThePortraitWallRingHasTheCellsAndTheOrderOfTheLandscapeOne) {
+        TableInput input = QuietInput(1);
+        input.wallRemaining = kWorstWall;
+        const std::vector<TileSlot> landscape = SlotsOf(InLandscape(input), SlotRole::WallStack, 0);
+        const std::vector<TileSlot> portrait = SlotsOf(InPortrait(input), SlotRole::WallStack, 0);
+        ASSERT_EQ(landscape.size(), portrait.size());
+        ASSERT_EQ(static_cast<int>(portrait.size()), kWallRingCells);
+        const float shiftX = portrait[0].rect.x - landscape[0].rect.x;
+        const float shiftY = portrait[0].rect.y - landscape[0].rect.y;
+        for (size_t i = 0; i < portrait.size(); ++i) {
+            EXPECT_EQ(portrait[i].index, landscape[i].index);
+            EXPECT_NEAR(portrait[i].rect.x - landscape[i].rect.x, shiftX, kTolerance) << "cell " << i;
+            EXPECT_NEAR(portrait[i].rect.y - landscape[i].rect.y, shiftY, kTolerance) << "cell " << i;
+            EXPECT_EQ(portrait[i].rect.w, kWallStackSize);
+        }
+    }
+
+    TEST(TableLayoutTest, TheOpponentsKeepTheirTileSizesAndTurnsInPortraitAndTheViewersDiscardsAreLarger) {
+        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+            const TableInput input = WorstInput(viewer, 60, kNoSeat);
+            const TableLayout landscape = InLandscape(input);
+            const TableLayout portrait = InPortrait(input);
+            ASSERT_EQ(landscape.slots.size(), portrait.slots.size());
+            for (size_t i = 0; i < portrait.slots.size(); ++i) {
+                const TileSlot& a = landscape.slots[i];
+                const TileSlot& b = portrait.slots[i];
+                ASSERT_EQ(a.role, b.role);
+                ASSERT_EQ(a.seat, b.seat);
+                EXPECT_EQ(a.rotation, b.rotation) << "slot " << i;
+                EXPECT_EQ(a.claimEdge, b.claimEdge);
+                const bool viewers = a.role != SlotRole::WallStack && a.seat == viewer;
+                if (viewers && (a.role == SlotRole::HandTile || a.role == SlotRole::MeldTile || a.role == SlotRole::BonusTile)) {
+                    EXPECT_EQ(a.rect.w, b.rect.w) << "the viewer's rows keep the size of the landscape table";
+                } else if (viewers) {
+                    EXPECT_GT(b.rect.w, a.rect.w) << "the viewer's discards are larger";
+                    EXPECT_GT(b.rect.h, a.rect.h);
+                    EXPECT_NEAR(b.rect.w * kDiscardTileH, b.rect.h * kDiscardTileW, kTolerance) << "3 : 4";
+                } else {
+                    EXPECT_EQ(a.rect.w, b.rect.w) << "slot " << i << " role " << static_cast<int>(a.role) << " seat " << a.seat;
+                    EXPECT_EQ(a.rect.h, b.rect.h);
+                }
+            }
+        }
+    }
+
+    TEST(TableLayoutTest, ThePortraitDiscardsOfTheViewerLieInRowsAndSqueezeBeforeLeavingTheirBlock) {
+        for (const int pile : {1, 6, 7, 30, 36, 37, kWorstPile}) {
+            const TableLayout layout = InPortrait(WorstInput(0, pile, 0));
+            const Rect& zone = layout.zones.discards[0];
+            const std::vector<TileSlot> discards = SlotsOf(layout, SlotRole::DiscardTile, 0);
+            ASSERT_EQ(static_cast<int>(discards.size()), pile);
+            const float tileW = discards[0].rect.w;
+            const float tileH = discards[0].rect.h;
+            EXPECT_EQ(discards[0].rect.x, zone.x);
+            EXPECT_EQ(discards[0].rect.y, zone.y);
+            EXPECT_EQ(zone.w, tileW * kDiscardsPerRow);
+            for (const TileSlot& slot : discards) {
+                EXPECT_TRUE(Holds(zone, slot.rect)) << "pile " << pile << " tile " << slot.index;
+                EXPECT_EQ(slot.rect.x, zone.x + static_cast<float>(slot.index % kDiscardsPerRow) * tileW);
+            }
+            if (pile > kDiscardsPerRow) {
+                EXPECT_EQ(discards[kDiscardsPerRow].rect.y, discards[0].rect.y + std::min(tileH, (zone.h - tileH) / static_cast<float>((pile + kDiscardsPerRow - 1) / kDiscardsPerRow - 1)));
+            }
+        }
+    }
+
+    TEST(TableLayoutTest, TheClaimedTilesOfAnOpenMeldAndTheirEdgesAreTheSameInBothShapes) {
+        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+            for (Seat owner = 0; owner < kSeatCount; ++owner) {
+                for (const MeldKind kind : {MeldKind::Pung, MeldKind::Kong}) {
+                    for (int offset = 1; offset < kSeatCount; ++offset) {
+                        TableInput input = QuietInput(viewer);
+                        input.melds[owner] = {MakeMeld(MeldKind::Pung), ClaimedMeld(kind, (owner + offset) % kSeatCount, "5p", "5p")};
+                        const std::vector<std::pair<int, Edge>> claimed = ClaimedTiles(InPortrait(input), owner, 1);
+                        ASSERT_EQ(claimed.size(), 1u) << "viewer " << viewer << " owner " << owner << " offset " << offset;
+                        EXPECT_EQ(claimed[0].first, 3 - offset);
+                        EXPECT_EQ(claimed[0].second, ExpectedEdge(SeatPosition(viewer, owner), offset)) << "viewer " << viewer << " owner " << owner << " offset " << offset;
+                        EXPECT_TRUE(ClaimedTiles(InPortrait(input), owner, 0).empty());
+                    }
+                }
+            }
+        }
+        for (const ViewSize& size : kViewSizes) {
+            TableInput input = QuietInput(2);
+            input.melds[0] = {ClaimedMeld(MeldKind::Chow, 3, "4p", "5p")};
+            const std::vector<std::pair<int, Edge>> claimed = ClaimedTiles(MakeTableLayout(input, size.width, size.height), 0, 0);
+            ASSERT_EQ(claimed.size(), 1u) << size.width << "x" << size.height;
+            EXPECT_EQ(claimed[0].first, 1);
+            EXPECT_EQ(claimed[0].second, ExpectedEdge(SeatPosition(2, 0), 3));
+        }
+    }
+
+    TEST(TableLayoutTest, TheLandscapeTableKeepsTheNumbersOfItsDesign) {
+        // The numbers of the landscape table as they were before the portrait one: a change to the landscape layout fails here.
+        TableInput input = QuietInput(0);
+        input.concealedCount = {14, 14, 14, 14};
+        input.bonusCount = {1, 1, 1, 1};
+        input.wallRemaining = kWorstWall;
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            input.melds[seat] = {MakeMeld(MeldKind::Pung)};
+            input.discardSeats.push_back(seat);
+        }
+        for (const TableLayout& layout : {InLandscape(input), MakeTableLayout(input)}) {
+            const eastl::array<Rect, 4> discards = {Rect(568, 452, 144, 160), Rect(1011, 288, 160, 144), Rect(568, 92, 144, 160), Rect(109, 288, 160, 144)};
+            const eastl::array<Rect, 4> plates = {Rect(76, 532, 152, 80), Rect(1012, 184, 152, 80), Rect(408, 96, 152, 80), Rect(112, 184, 152, 80)};
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                EXPECT_TRUE(SameRect(layout.zones.discards[seat], discards[seat])) << "seat " << seat;
+                EXPECT_TRUE(SameRect(layout.zones.seatPlates[seat], plates[seat])) << "seat " << seat;
+            }
+            EXPECT_TRUE(SameRect(layout.zones.wall, Rect(458, 268, 364, 168)));
+            EXPECT_TRUE(SameRect(layout.zones.centerPanel, Rect(472, 282, 336, 140)));
+            const eastl::array<Rect, 4> firstHand = {Rect(72, 648, 48, 64), Rect(1240, 192, 32, 24), Rect(444, 8, 28, 37), Rect(8, 192, 32, 24)};
+            const eastl::array<Rect, 4> firstMeld = {Rect(764, 672, 30, 40), Rect(1204, 156, 32, 24), Rect(436, 49, 24, 32), Rect(44, 156, 32, 24)};
+            const eastl::array<Rect, 4> firstBonus = {Rect(72, 616, 24, 32), Rect(1179, 192, 21, 16), Rect(852, 16, 16, 21), Rect(80, 192, 21, 16)};
+            const eastl::array<Rect, 4> firstDiscard = {Rect(568, 452, 24, 32), Rect(1139, 408, 32, 24), Rect(568, 92, 24, 32), Rect(109, 288, 32, 24)};
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                EXPECT_TRUE(SameRect(SlotsOf(layout, SlotRole::HandTile, seat)[0].rect, firstHand[seat])) << "hand of seat " << seat;
+                EXPECT_TRUE(SameRect(SlotsOf(layout, SlotRole::MeldTile, seat)[0].rect, firstMeld[seat])) << "melds of seat " << seat;
+                EXPECT_TRUE(SameRect(SlotsOf(layout, SlotRole::BonusTile, seat)[0].rect, firstBonus[seat])) << "bonus of seat " << seat;
+                EXPECT_TRUE(SameRect(SlotsOf(layout, SlotRole::DiscardTile, seat)[0].rect, firstDiscard[seat])) << "discard of seat " << seat;
+            }
+            const std::vector<TileSlot> wall = SlotsOf(layout, SlotRole::WallStack, 0);
+            EXPECT_TRUE(SameRect(wall.front().rect, Rect(458, 268, 14, 14)));
+            EXPECT_TRUE(SameRect(wall.back().rect, Rect(458, 282, 14, 14)));
+        }
+        // the 14th tile of the viewer's hand
+        EXPECT_TRUE(SameRect(SlotsOf(InLandscape(input), SlotRole::HandTile, 0)[13].rect, Rect(696, 648, 48, 64)));
     }
 
 }  // namespace BECore::Mahjong::Tests

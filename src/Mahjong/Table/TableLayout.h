@@ -154,6 +154,7 @@ namespace BECore::Mahjong {
      * each across the whole view (spread, so the tiles never touch), the viewer's bonus tiles and melds lie in a row of their own above it
      * and the bottom discard block is lower and squeezed. The wall ring, the centre panel, the three other seats and the other plates stay
      * where they are (the bottom plate only moves up to clear the tallest hand tile). Not `phone` is today's table whatever `handTileW` is.
+     * Landscape only: the portrait table (`TableShape::Portrait`) has its own one-row hand and ignores the profile.
      */
     struct TableProfile {
         bool phone = false;
@@ -201,7 +202,10 @@ namespace BECore::Mahjong {
     /// The slots of the four seats and the wall: per seat the hand, the melds, the bonus tiles, then the pile, then the wall stacks.
     struct TableLayout {
         Seat viewer = 0;
-        /// The profile the layout was made with, as used (a desktop one always has `kViewerHandTileW`, a phone one a clamped width).
+        /// The shape the layout was made in: `ShapeOfView(viewWidth, viewHeight)`.
+        TableShape shape = TableShape::Landscape;
+        /// The profile the layout was made with, as used (a desktop one always has `kViewerHandTileW`, a phone one a clamped width; the
+        /// default in portrait).
         TableProfile profile;
         float viewWidth = kViewWidth;
         float viewHeight = kViewHeight;
@@ -222,7 +226,9 @@ namespace BECore::Mahjong {
     /// The number of wall stacks drawn for `wallRemaining` tiles: two tiles a stack, at most `kWallRingCells`.
     [[nodiscard]] int WallStackCount(int wallRemaining) noexcept;
 
-    /// Lays out the table for a view of the given size (see `kViewWidth`). Deterministic: the same input gives the same slots.
+    /// Lays out the table for a view of the given size (see `kViewWidth`) in the shape of that view (`ShapeOfView`): the landscape table
+    /// of `kViewWidth` x `kViewHeight` units or the portrait one of `kPortraitViewWidth` x `kPortraitViewHeight`, fitted into the view
+    /// (`LayoutScale`) and centred. Deterministic: the same input gives the same slots.
     [[nodiscard]] TableLayout MakeTableLayout(const TableInput& input, float viewWidth = kViewWidth, float viewHeight = kViewHeight);
 
     /// The smallest rectangle that holds every slot of `role` of `seat` (`seat` ignored for the wall); empty when there is none.
