@@ -13,7 +13,7 @@ Rules of the engine: `engine/.claude/rules/tests-module.md`. New rule code gets 
 | `MatchTestSupport.h` | `SettingsOf(index)`, `ExpectWellFormed`, `MatchAudit` (invariants around every hand) |
 | `StringsTestSupport.h` | `LoadShippedStrings`, `ReadShippedEntries`, `PlaceholderNames`, `ForEachLanguage`, `LongestText` |
 | `ShippedScene.h` | the one place that knows where the scene is and expands the node refs (`LoadShippedSceneDocument`, `ShippedSceneXml`) |
-| `MahjongTableTestSupport.h` | `MahjongTableTestBase`: the shipped scene, the game through `GameManager`, a `RecordingRenderer` as big as the view (a view point is a pixel), `Lay(model)`, `Draw`, `Click`, `ClickHandTile`, `Element` / `ClickElement`, `ExpectPassesTheMatrix`, `ExpectWordsFit`; free `EmitAction`, `Var`. Loads `en`; flights off |
+| `MahjongTableTestSupport.h` | `MahjongTableTestBase`: the shipped scene, the game through `GameManager`, a `TurnRecordingRenderer` (a `RecordingRenderer` that records a turned draw as a `Texture` / `Rect` call over the screen rectangle, the unturned rectangle and the transform in `turned`) as big as the view (a view point is a pixel), `Lay(model)`, `Draw`, `Click`, `ClickHandTile`, `Element` / `ClickElement`, `ExpectPassesTheMatrix`, `ExpectWordsFit`; free `EmitAction`, `Var`. Loads `en`; flights off |
 | `MahjongTouchTestSupport.h` | the size matrix: `ForEachMatrixWindow`, `LayOutInWindow`, `ToView`, `ExpectClearOfTable`, `MakeWorstCaseTableLayout`, `IsCompactWindow`, `ActionsMayBeSmall`, `SetOutputSize`, `ExpectMatrixExceptTouchWhere`, `WordsThatDoNotFitOnTheMatrix` |
 | `UiStyleTestSupport.h` | `SameColor`, `PaletteColor(role)`, `GapBelow`, `Apart`, `Grown`, `ZonePlates` |
 

@@ -15,15 +15,15 @@
   canvas stays, slightly under 32 px but clear of the viewer's hand.
   The label Hint above the row shows the sentence of the button under the pointer ({actionHint}, set by the component in the
   current language from UIElement::hovered and again when the language changes; hidden while there is none). It takes no input, so
-  it never eats a click; it lies in the gutter between the wall and the right seat's discards (x 832..1028, y 256..452: 196 square,
+  it never eats a click; it lies in the gutter between the wall and the right seat's discards (x 832..1000, y 256..452: 168 wide,
   room for the longer words of a translation; clear of their plates and of the row it explains, MahjongTableScreenTest holds the
-  place). A touch screen has no hover.
+  place; the discards of a side seat are turned, which made their columns wider and the gutter narrower). A touch screen has no hover.
 -->
 <node name="Actions" layer="10">
   <components>
     <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
       <elements>
-        <element type="UILabel" name="Hint" anchor="TopLeft" ignoreSafeArea="true" visible="false" x="832" y="256" width="196" height="196" text="{actionHint}" fontSize="18" align="Center" verticalAlign="Center" color="0,0,0,200" />
+        <element type="UILabel" name="Hint" anchor="TopLeft" ignoreSafeArea="true" visible="false" x="832" y="256" width="168" height="196" text="{actionHint}" fontSize="18" align="Center" verticalAlign="Center" color="0,0,0,200" />
         <element type="UIStack" name="ActionRow" anchor="TopLeft" ignoreSafeArea="true" x="724" y="460" width="412" height="184" direction="Horizontal" spacing="8" wrapChildren="true">
           <children>
           <element type="UIButton" name="Win" visible="false" width="132" height="56" text="{#button.Win}" fontSize="22" action="MahjongWin" color="40,110,60,255" />

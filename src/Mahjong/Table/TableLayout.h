@@ -14,13 +14,18 @@ namespace BECore::Mahjong {
     inline constexpr float kViewWidth = 1280.0f;
     inline constexpr float kViewHeight = 720.0f;
 
-    /// The viewer's concealed tiles are large; the tiles of the other seats are small. Sizes (width, height) of the tiles of each zone.
+    /// The viewer's concealed tiles are large; the tiles of the other seats are small. Sizes (width, height) of the upright tiles of each
+    /// zone; a side seat draws them turned, so its slots are height x width.
     inline constexpr float kViewerHandTileW = 45.0f;
     inline constexpr float kViewerHandTileH = 60.0f;
     inline constexpr float kViewerMeldTileW = 30.0f;
     inline constexpr float kViewerMeldTileH = 40.0f;
     inline constexpr float kOpponentHandTileW = 28.0f;
     inline constexpr float kOpponentHandTileH = 37.0f;
+    /// The hands of the left and right seats are backs seen from the side, drawn turned: smaller than the top seat's, so that the two
+    /// columns of turned tiles leave room for the discard blocks (the table is full across: `TableLayout.cpp`).
+    inline constexpr float kSideHandTileW = 24.0f;
+    inline constexpr float kSideHandTileH = 32.0f;
     inline constexpr float kOpponentMeldTileW = 24.0f;
     inline constexpr float kOpponentMeldTileH = 32.0f;
     inline constexpr float kViewerBonusTileW = 24.0f;
@@ -63,8 +68,13 @@ namespace BECore::Mahjong {
      * the meld), `BonusTile` the index in the seat's bonus tiles, `DiscardTile` the index in the pile (`HandModel::Discards()`),
      * `WallStack` the stack counted along the ring from its first cell.
      *
+     * `rect` is the rectangle the eye sees (what a mark covers and a click hits). The tiles of the side seats (screen positions 1 and 3)
+     * are drawn turned to face the table: `rotation` is the turn in degrees clockwise on the screen (90 for the left seat, 270 for the
+     * right one, 0 for every other slot), and `rect` is then wider than high, the bounding box of the turned tile; `UprightRect` gives the
+     * rectangle to hand to a draw that applies the turn about the centre of `rect`.
+     *
      * `claimEdge` is set on one `MeldTile` slot of an open meld that was claimed from a discard: the claimed tile, and the side of it
-     * that faces the seat it came from (`None` on every other slot).
+     * that faces the seat it came from (`None` on every other slot). It is an edge of `rect` (the screen rectangle), whatever the turn.
      */
     struct TileSlot {
         Rect rect;
@@ -73,7 +83,26 @@ namespace BECore::Mahjong {
         int index = 0;
         int part = 0;
         Edge claimEdge = Edge::None;
+        float rotation = 0.0f;
     };
+
+    /// The turn of the tiles of the seat at the left of the screen and at the right of it, in degrees clockwise (so that each reads upright
+    /// for the player who sits there). The top seat's tiles stay upright (the owner's decision).
+    inline constexpr float kLeftSeatRotation = 90.0f;
+    inline constexpr float kRightSeatRotation = 270.0f;
+
+    /// The rectangle of an unturned tile that a turn of `rotation` degrees about the centre of `screenRect` makes `screenRect`: the width and
+    /// the height swapped about the same centre for a quarter or three-quarter turn (the turn is taken modulo 360), `screenRect` itself
+    /// for any other turn. The pivot of that turn is the centre of `screenRect` (`RectCentreX`, `RectCentreY`).
+    [[nodiscard]] Rect UprightRect(const Rect& screenRect, float rotation) noexcept;
+
+    [[nodiscard]] constexpr float RectCentreX(const Rect& rect) noexcept {
+        return rect.x + rect.w / 2.0f;
+    }
+
+    [[nodiscard]] constexpr float RectCentreY(const Rect& rect) noexcept {
+        return rect.y + rect.h / 2.0f;
+    }
 
     /// What is on the table, as numbers. The layout needs no tile identity, only how many of each thing there are.
     struct TableInput {

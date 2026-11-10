@@ -63,7 +63,7 @@ namespace BECore::Mahjong::Tests {
 
         /// Where the tile of a slot arrives, and what it shows there.
         struct Arrival {
-            Rect from;
+            FlightOrigin from;
             SlotRole role = SlotRole::HandTile;
             Seat seat = 0;
             int index = 0;
@@ -109,14 +109,14 @@ namespace BECore::Mahjong::Tests {
             return nullptr;
         }
 
-        static Rect RectOf(const TableLayout& layout, SlotRole role, Seat seat, int index, int part = 0) {
+        static FlightOrigin RectOf(const TableLayout& layout, SlotRole role, Seat seat, int index, int part = 0) {
             const TileSlot* slot = Find(layout, role, seat, index, part);
             EXPECT_NE(slot, nullptr) << "role " << static_cast<int>(role) << " seat " << seat << " index " << index << " part " << part;
-            return slot != nullptr ? slot->rect : Rect();
+            return slot != nullptr ? FlightOrigin{slot->rect, slot->rotation} : FlightOrigin{};
         }
 
         /// The middle hand slot of `seat`, where a tile of a hand that shows no identity leaves from.
-        static Rect MiddleHand(const TableLayout& layout, Seat seat) {
+        static FlightOrigin MiddleHand(const TableLayout& layout, Seat seat) {
             int count = 0;
             for (const TileSlot& slot : layout.slots) {
                 count += slot.role == SlotRole::HandTile && slot.seat == seat ? 1 : 0;
@@ -124,7 +124,7 @@ namespace BECore::Mahjong::Tests {
             return RectOf(layout, SlotRole::HandTile, seat, count / 2);
         }
 
-        static Rect LastWallStack(const TableLayout& layout) {
+        static FlightOrigin LastWallStack(const TableLayout& layout) {
             const TileSlot* last = nullptr;
             for (const TileSlot& slot : layout.slots) {
                 if (slot.role == SlotRole::WallStack && (last == nullptr || slot.index > last->index)) {
@@ -132,7 +132,7 @@ namespace BECore::Mahjong::Tests {
                 }
             }
             EXPECT_NE(last, nullptr) << "the wall has stacks";
-            return last != nullptr ? last->rect : Rect();
+            return last != nullptr ? FlightOrigin{last->rect, last->rotation} : FlightOrigin{};
         }
 
         /// Whether one of the last `last` tile draws is at `rect` and shows `face` (nullopt: a back).
@@ -157,7 +157,21 @@ namespace BECore::Mahjong::Tests {
             if (fraction >= 1.0f) {
                 return slot->rect;
             }
-            return FlightRect(TileFlight{SlotKey::Of(*slot), arrival.from}, slot->rect, Ease(kTileFlightEase, fraction));
+            return FlightRect(TileFlight{SlotKey::Of(*slot), arrival.from.rect, arrival.from.rotation}, slot->rect, Ease(kTileFlightEase, fraction));
+        }
+
+        /// What the draw of an arrival `fraction` of the way covers: the box of the tile as turned on the way (the screen rectangle of the
+        /// slot at either end; between a turned and an unturned slot a tile in the air is turned by a part of the way).
+        Rect BoxWhere(const Arrival& arrival, float fraction) const {
+            const TileSlot* slot = Find(_table->GetLayout(), arrival.role, arrival.seat, arrival.index, arrival.part);
+            if (slot == nullptr) {
+                ADD_FAILURE() << "the layout has no slot role " << static_cast<int>(arrival.role) << " seat " << arrival.seat << " index " << arrival.index << " part " << arrival.part;
+                return Rect();
+            }
+            if (fraction >= 1.0f) {
+                return slot->rect;
+            }
+            return BoxOf(FlightPlacement(TileFlight{SlotKey::Of(*slot), arrival.from.rect, arrival.from.rotation}, *slot, Ease(kTileFlightEase, fraction)));
         }
 
         /// Every slot of the layout is drawn once whatever flies: as many tile draws as slots.
@@ -169,15 +183,54 @@ namespace BECore::Mahjong::Tests {
         void ExpectAt(const std::vector<Arrival>& arrivals, float fraction) const {
             ExpectEverySlotDrawnOnce();
             for (const Arrival& arrival : arrivals) {
-                const Rect expected = Where(arrival, fraction);
+                const Rect expected = BoxWhere(arrival, fraction);
                 EXPECT_TRUE(TileAmongLast(fraction >= 1.0f ? TileCalls().size() : arrivals.size(), expected, arrival.face))
                     << "fraction " << fraction << " role " << static_cast<int>(arrival.role) << " seat " << arrival.seat << " index " << arrival.index << " part " << arrival.part << " at "
                     << expected.x << "," << expected.y;
                 if (fraction > 0.0f && fraction < 1.0f) {
-                    const Rect to = Where(arrival, 1.0f);
+                    const Rect to = BoxWhere(arrival, 1.0f);
                     EXPECT_FALSE(SameRect(expected, arrival.from)) << "moved";
                     EXPECT_FALSE(SameRect(expected, to)) << "not there yet";
                 }
+            }
+        }
+
+        /// The turned draw of the tile draw over `box` that shows `face` (nullopt: a back); null when that draw is not turned or is not there.
+        const TurnedDraw* TurnedAt(const Rect& box, const std::optional<Tile>& face) const {
+            const Rect source = face ? SourceRect(*face) : BackRect();
+            for (size_t i = 0; i < _renderer->calls.size(); ++i) {
+                const DrawCall& call = _renderer->calls[i];
+                if (call.kind == DrawKind::Texture && call.texture == _atlasTexture && SameRect(call.rect, box) && SameSource(call, source)) {
+                    return _renderer->TurnOf(i);
+                }
+            }
+            ADD_FAILURE() << "no tile draw over " << box.x << "," << box.y << " " << box.w << "x" << box.h;
+            return nullptr;
+        }
+
+        /// The draw of an arrival `fraction` of the way is turned by `rotation` (0: not turned) about the centre of what it covers; landed, it is
+        /// the unturned rectangle of its slot; on the way, the unturned size is the mean of the two ends' by the eased progress.
+        void ExpectTurnAt(const Arrival& arrival, float fraction, float rotation) const {
+            const TileSlot* slot = Find(_table->GetLayout(), arrival.role, arrival.seat, arrival.index, arrival.part);
+            ASSERT_NE(slot, nullptr);
+            const Rect box = BoxWhere(arrival, fraction);
+            const TurnedDraw* turn = TurnedAt(box, arrival.face);
+            if (rotation == 0.0f) {
+                EXPECT_EQ(turn, nullptr) << "fraction " << fraction << " seat " << arrival.seat << " index " << arrival.index;
+                return;
+            }
+            ASSERT_NE(turn, nullptr) << "fraction " << fraction << " seat " << arrival.seat << " index " << arrival.index;
+            EXPECT_NEAR(turn->transform.rotation, rotation, 0.01f) << "fraction " << fraction;
+            EXPECT_NEAR(turn->transform.pivotX, RectCentreX(box), 0.01f) << "the box of a quad turned about its centre is centred on the pivot";
+            EXPECT_NEAR(turn->transform.pivotY, RectCentreY(box), 0.01f);
+            const Rect fromUpright = UprightRect(arrival.from.rect, arrival.from.rotation);
+            const Rect toUpright = UprightRect(slot->rect, slot->rotation);
+            const float eased = fraction >= 1.0f ? 1.0f : Ease(kTileFlightEase, fraction);
+            EXPECT_NEAR(turn->upright.w, fromUpright.w + (toUpright.w - fromUpright.w) * eased, 0.01f) << "fraction " << fraction;
+            EXPECT_NEAR(turn->upright.h, fromUpright.h + (toUpright.h - fromUpright.h) * eased, 0.01f) << "fraction " << fraction;
+            if (fraction >= 1.0f) {
+                EXPECT_TRUE(SameRect(turn->upright, toUpright)) << "it lands as its slot";
+                EXPECT_EQ(turn->transform.rotation, slot->rotation);
             }
         }
 
@@ -217,7 +270,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The arrivals of a claimed set of `seat` (meld 0): the claimed tile comes from `claimedFrom`, the other tiles from `fromHand` in order.
-        std::vector<Arrival> ClaimArrivals(Seat seat, const Rect& claimedFrom, const std::vector<Rect>& fromHand, const Tile claimedTile) const {
+        std::vector<Arrival> ClaimArrivals(Seat seat, const FlightOrigin& claimedFrom, const std::vector<FlightOrigin>& fromHand, const Tile claimedTile) const {
             std::vector<Arrival> arrivals;
             size_t next = 0;
             for (const TileSlot* slot : MeldSlots(seat, 0)) {
@@ -242,7 +295,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The arrival of a pile entry.
-        static Arrival Pile(const Rect& from, Seat seat, int entry, Tile tile) {
+        static Arrival Pile(const FlightOrigin& from, Seat seat, int entry, Tile tile) {
             Arrival arrival;
             arrival.from = from;
             arrival.role = SlotRole::DiscardTile;
@@ -383,6 +436,90 @@ namespace BECore::Mahjong::Tests {
         const std::vector<Arrival> arrivals = {Pile(MiddleHand(before, kSeat1), kSeat1, 1, T("Gd")), DrawnBy(before, kSeat2)};
         ASSERT_EQ(Model().DrawnTile(kSeat2), T("Rd"));
         ExpectFlightsRun(arrivals);
+    }
+
+    TEST_F(MahjongTableFlightTest, ADrawIntoASideHandTurnsOnTheWayAndLandsAsItsSlot) {
+        FixedWallSpec spec = SpecOf(kPlainHand, "9p Gd");
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, MakeModel(spec)));
+        const TableLayout before = _table->GetLayout();
+        const int index = IndexOf(kSeat0, T("4s"));
+        ASSERT_GE(index, 0);
+        EXPECT_FALSE(ClickHandTile(index));
+        Draw();
+
+        // Seat 1 sits at the right (turned 270): its drawn tile leaves the unturned wall and turns the short way, 0 -> -90, by the eased progress
+        const Arrival drawn = DrawnBy(before, kSeat1);
+        ASSERT_FLOAT_EQ(drawn.from.rotation, 0.0f);
+        ASSERT_EQ(_table->FlightCount(), 2u);
+        AdvanceTime(kHalfFlight);
+        Draw();
+        ExpectTurnAt(drawn, 0.5f, 360.0f - 90.0f * Ease(kTileFlightEase, 0.5f));
+        AdvanceTime(kHalfFlight);
+        Draw();
+        ASSERT_EQ(_table->FlightCount(), 0u);
+        ExpectTurnAt(drawn, 1.0f, kRightSeatRotation);
+    }
+
+    TEST_F(MahjongTableFlightTest, ATileThatLeavesASideHandForItsPileKeepsItsTurnAndAnUnturnedFlightStaysUnturned) {
+        FixedWallSpec spec = SpecOf(kPlainHand, "9p Gd Rd Wd 8s");
+        HandModel model = MakeModel(spec);
+        Lap(model, "9p");  // seat 1 has drawn a Gd and is to discard
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, model));
+        const TableLayout before = _table->GetLayout();
+        ASSERT_TRUE(Model().Discard(kSeat1, T("Gd")).has_value());
+        Draw();
+
+        // Seat 1's hand and pile are both turned 270; seat 2's draw (wall to the top hand) is not turned at all
+        const Arrival discard = Pile(MiddleHand(before, kSeat1), kSeat1, 1, T("Gd"));
+        const Arrival drawn = DrawnBy(before, kSeat2);
+        ASSERT_FLOAT_EQ(discard.from.rotation, kRightSeatRotation);
+        for (const float fraction : {0.0f, 0.5f}) {
+            if (fraction > 0.0f) {
+                AdvanceTime(kHalfFlight);
+                Draw();
+            }
+            ExpectTurnAt(discard, fraction, kRightSeatRotation);
+            ExpectTurnAt(drawn, fraction, 0.0f);
+        }
+        AdvanceTime(kHalfFlight);
+        Draw();
+        ExpectTurnAt(discard, 1.0f, kRightSeatRotation);
+        ExpectTurnAt(drawn, 1.0f, 0.0f);
+    }
+
+    TEST_F(MahjongTableFlightTest, AClaimedTileTurnsFromTheSideSeatsPileIntoTheUnturnedSetAndTheTilesFromTheHandStayUnturned) {
+        // Seat 0 (the person, at the bottom) holds a pair of Gd; seat 3 (at the left, turned 90) discards the third
+        FixedWallSpec spec = SpecOf("1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Gd Gd", "9m 9p 9s Rd");
+        HandModel model = MakeModel(spec);
+        Lap(model, "9m 9p 9s");
+        ASSERT_NO_FATAL_FAILURE(StartWith(kPersonAtSeat0, model));
+        ASSERT_TRUE(Model().Discard(kSeat3, T("Gd")).has_value());
+        ASSERT_EQ(Model().GetPhase(), Phase::Claim);
+        Draw();
+        AdvanceTime(kTileFlightSeconds);
+        Draw();
+        const TableLayout before = _table->GetLayout();
+        const int gd = IndexOf(kSeat0, T("Gd"));
+        ASSERT_GE(gd, 0);
+        EmitAction("MahjongClaimPung");
+        ASSERT_EQ(Hand().GetHand(kSeat0).melds.size(), 1u);
+        Draw();
+
+        const std::vector<Arrival> arrivals =
+            ClaimArrivals(kSeat0, RectOf(before, SlotRole::DiscardTile, kSeat3, 3), {RectOf(before, SlotRole::HandTile, kSeat0, gd), RectOf(before, SlotRole::HandTile, kSeat0, gd + 1)}, T("Gd"));
+        ASSERT_EQ(arrivals.size(), 3u);
+        for (const float fraction : {0.0f, 0.5f, 1.0f}) {
+            if (fraction > 0.0f) {
+                AdvanceTime(kHalfFlight);
+                Draw();
+            }
+            for (const Arrival& arrival : arrivals) {
+                // The claimed tile starts as it lay in the pile (90) and ends unturned, the others are not turned at any time
+                const bool claimed = arrival.from.rotation != 0.0f;
+                const float eased = fraction >= 1.0f ? 1.0f : Ease(kTileFlightEase, fraction);
+                ExpectTurnAt(arrival, fraction, claimed && fraction < 1.0f ? kLeftSeatRotation * (1.0f - eased) : 0.0f);
+            }
+        }
     }
 
     TEST_F(MahjongTableFlightTest, ThePersonsClickOnATileMakesThatTileFlyOutOfItsOwnSlot) {
@@ -530,7 +667,7 @@ namespace BECore::Mahjong::Tests {
         Draw();
 
         // The discard never was in a frame: the claimed tile leaves the hand of the discarder (the viewer's own slot of that tile)
-        const Rect seat1Middle = MiddleHand(before, kSeat1);
+        const FlightOrigin seat1Middle = MiddleHand(before, kSeat1);
         std::vector<Arrival> arrivals = ClaimArrivals(kSeat1, RectOf(before, SlotRole::HandTile, kSeat0, red), {seat1Middle, seat1Middle}, T("Rd"));
         ASSERT_EQ(Hand().Discards().size(), 1u) << "the claimed tile left the pile";
         arrivals.push_back(Pile(seat1Middle, kSeat1, 0, Hand().Discards()[0].tile));
@@ -579,7 +716,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(Model().DeclareConcealedKong(kSeat1, T("5p")).has_value());
         Draw();
 
-        const Rect middle = MiddleHand(before, kSeat1);
+        const FlightOrigin middle = MiddleHand(before, kSeat1);
         std::vector<Arrival> arrivals;
         for (const TileSlot* slot : MeldSlots(kSeat1, 0)) {
             Arrival arrival;
