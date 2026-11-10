@@ -4,7 +4,6 @@
 #include <Mahjong/Platform.h>
 #include <chrono>
 #include <ctime>
-#include <fmt/chrono.h>
 
 namespace BECore::Mahjong {
 
@@ -31,7 +30,10 @@ namespace BECore::Mahjong {
 #else
             localtime_r(&now, &local);
 #endif
-            return Format("{:%Y-%m-%dT%H-%M-%S}", local).c_str();
+            // strftime, not fmt/chrono: the vendored fmt does not compile its tm formatter with the Emscripten clang (consteval FMT_STRING)
+            char text[32]{};
+            std::strftime(text, sizeof(text), "%Y-%m-%dT%H-%M-%S", &local);
+            return text;
         }
 
         /// `<directory>/<stamp>_seed<seed>.jsonl`, or with `-2`, `-3` ... before the extension while that file exists.
