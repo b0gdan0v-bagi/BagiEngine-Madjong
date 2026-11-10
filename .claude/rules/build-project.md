@@ -49,6 +49,7 @@ The common configure triggers (the skill states them; this repository adds the o
 
 - The engine is another repository: a build never edits `engine/`. A missing engine feature is `needs engine change`, not a patch here.
 - Executables land in `build/{Clang|MSVC}{macOS|Windows}/BagiMahjong[.exe]` and `MahjongTests`, not in the preset folder; Debug and Release overwrite each other.
+- The web presets (`web-release`, `web-release-single-thread`, `-local` ones in worker folders) build `BagiMahjong` only, into `build/ClangWeb` (`ClangWebSingleThread`); there are no tests, no arena and no control server there. `package.py ... --game BagiMahjong` writes `dist/` (git-ignored). The web-like desktop build and the commands: `README.md`, "In a browser".
 - `BagiMahjong` opens a window, so it is never started to check a build (to launch it use the `run` skill). `MahjongTests` opens none.
 
 ### Tests
