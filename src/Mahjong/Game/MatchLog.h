@@ -12,7 +12,8 @@ namespace BECore::Mahjong {
     /**
      * @brief One thing that happened in a match, as plain data. `kind` says which members are meant; the others keep their defaults.
      *
-     * - `Start`: `seed`, `settings`, `seats` (who plays what), the `level` of the computer players; the first event of a match.
+     * - `Start`: `seed`, `settings`, `seats` (who plays what), the `levels` of the seats (one per seat, also the seats a person
+     *   plays); the first event of a match.
      * - `Hand`: a hand was dealt: `number` (hands counted so far), `east`, `roundWind`, `winds` and the dealt tiles of every seat
      *   (`concealed`, East's 14 included, and the `bonus` tiles already laid open). Nothing is hidden: the log is the owner's.
      * - `Action`: `seat` did `action`, a `person` or a `computer` (`by`). Only accepted actions are logged.
@@ -30,7 +31,7 @@ namespace BECore::Mahjong {
         uint32_t seed = 0;
         MahjongSettings settings;
         SeatSetup seats = kDefaultSeatSetup;
-        ComputerLevel level = kDefaultLevel;
+        SeatLevels levels = UniformLevels(kDefaultLevel);
 
         // Hand
         int number = 0;
@@ -111,7 +112,7 @@ namespace BECore::Mahjong {
      *
      * The `Hand`, `Settlement` and `End` events are checked against what the match makes of the actions before them (the deal, the
      * settlement, the final scores), so a log that was changed, or made by other rules, stops at the first event that disagrees. A
-     * second `Start` begins a new match on `match`. The `level` of a `Start` is not needed (the computers' choices are in the `Action`
+     * second `Start` begins a new match on `match`. The `levels` of a `Start` are not needed (the computers' choices are in the `Action`
      * events), so it is read by nobody here. An empty log is `NoStart` at index 0. A log may lack its `Hand` and `End` events: what
      * is missing is not checked.
      *

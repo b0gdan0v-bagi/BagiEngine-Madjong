@@ -39,23 +39,15 @@ namespace BECore::Mahjong::Tests {
         };
         constexpr size_t kRowCount = sizeof(kRows) / sizeof(kRows[0]);
 
-        /// The row of the level: a caption and the dropdown `LevelChoice` of the options `Level1` .. `Level10`, under the rows of segments.
-        constexpr const char* kLevelRow = "LevelRow";
-        constexpr const char* kLevelCaption = "LevelCaption";
-        constexpr const char* kLevelChoice = "LevelChoice";
-        /// The row of the speed: a caption and the three segments `SpeedSlow`, `SpeedNormal`, `SpeedFast` of the group `SpeedChoice`, between hints and level.
+        /// The row of the speed: a caption and the three segments `SpeedSlow`, `SpeedNormal`, `SpeedFast` of the group `SpeedChoice`.
         constexpr const char* kSpeedRow = "SpeedRow";
         constexpr const char* kSpeedCaption = "SpeedCaption";
         constexpr const char* kSpeedChoice = "SpeedChoice";
-        constexpr size_t kPageRowCount = kRowCount + 2;
+        constexpr size_t kPageRowCount = kRowCount + 1;
 
         /// The segments in the order of `EnumUtils<AnimationSpeed>::Values()`.
         constexpr const char* kSpeedSegments[] = {"SpeedSlow", "SpeedNormal", "SpeedFast"};
         static_assert(sizeof(kSpeedSegments) / sizeof(kSpeedSegments[0]) == EnumUtils<AnimationSpeed>::Count());
-
-        std::string LevelOption(ComputerLevel level) {
-            return "Level" + std::string(LevelText(level));
-        }
 
         /// Everything that takes input or shows a word on the page, for the matrix tests.
         std::vector<const char*> Controls() {
@@ -67,7 +59,6 @@ namespace BECore::Mahjong::Tests {
             for (const char* segment : kSpeedSegments) {
                 names.push_back(segment);
             }
-            names.push_back(kLevelChoice);
             names.push_back("Back");
             return names;
         }
@@ -115,22 +106,6 @@ namespace BECore::Mahjong::Tests {
         bool PageShown() const {
             const auto canvas = Canvas("Options");
             return canvas && canvas->TakesInput();
-        }
-
-        UIDropdown* Dropdown() const {
-            UIElement* element = const_cast<UIElement*>(Element("Options", kLevelChoice));
-            return element != nullptr ? element->Cast<UIDropdown>() : nullptr;
-        }
-
-        /// Opens the list by a click on the header, then clicks the option of `level`, as a person does.
-        void ChooseLevel(ComputerLevel level) {
-            ASSERT_TRUE(ClickElement("Options", kLevelChoice));
-            Draw();
-            ASSERT_NE(Dropdown(), nullptr);
-            ASSERT_TRUE(Dropdown()->IsOpen()) << "a click on the header opens the list";
-            ASSERT_TRUE(ClickElement("Options", LevelOption(level).c_str()));
-            Draw();
-            EXPECT_FALSE(Dropdown()->IsOpen()) << "a choice closes the list";
         }
 
         bool SetupShown() const {
@@ -200,7 +175,7 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_EQ(button->action, PoolString::Intern(row.action)) << segment;
             }
         }
-        for (const char* name : {kSpeedRow, kSpeedCaption, kLevelRow, kLevelCaption}) {
+        for (const char* name : {kSpeedRow, kSpeedCaption}) {
             EXPECT_NE(Element("Options", name), nullptr) << name;
         }
         const auto* speedGroup = Element("Options", kSpeedChoice) != nullptr ? Element("Options", kSpeedChoice)->Cast<UISegmented>() : nullptr;
@@ -213,18 +188,6 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(segment->name.ToStringView(), kSpeedSegments[index]);
             EXPECT_EQ(segment->action, "MahjongSetSpeed"_intern);
             EXPECT_EQ(segment->value.ToStringView(), SpeedText(EnumUtils<AnimationSpeed>::Values()[index]).data());
-        }
-        const UIDropdown* level = Dropdown();
-        ASSERT_NE(level, nullptr);
-        EXPECT_EQ(level->bind, "levelChoice"_intern);
-        EXPECT_EQ(level->action, "MahjongSetLevel"_intern);
-        ASSERT_EQ(level->children.size(), static_cast<size_t>(kLevelCount)) << "one option per level, nothing else";
-        for (size_t index = 0; index < level->children.size(); ++index) {
-            const ComputerLevel expected = kAllLevels[index];
-            const auto* option = level->children[index]->Cast<UIButton>();
-            ASSERT_NE(option, nullptr) << index;
-            EXPECT_EQ(option->name.ToStringView(), LevelOption(expected).c_str());
-            EXPECT_EQ(option->value.ToStringView(), LevelText(expected).data()) << "weakest first, the value is the number";
         }
         const auto* back = Element("Options", "Back") != nullptr ? Element("Options", "Back")->Cast<UIButton>() : nullptr;
         ASSERT_NE(back, nullptr);
@@ -265,8 +228,6 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(Text("SpeedSlow"), Tr(strings, "options.speedSlow").c_str());
             EXPECT_EQ(Text("SpeedNormal"), Tr(strings, "options.speedNormal").c_str());
             EXPECT_EQ(Text("SpeedFast"), Tr(strings, "options.speedFast").c_str());
-            EXPECT_EQ(Text("LevelCaption"), Tr(strings, "setup.level").c_str());
-            EXPECT_EQ(Text(kLevelChoice), LevelText(_game->GetLevel())) << "the header shows the level of the game";
         });
     }
 
@@ -279,7 +240,6 @@ namespace BECore::Mahjong::Tests {
             bands.push_back(row.row);
         }
         bands.insert(bands.begin() + 1 + kRowCount, kSpeedRow);
-        bands.push_back(kLevelRow);
         bands.push_back("Back");
 
         const CanvasScaleMode modes[] = {CanvasScaleMode::ConstantPixelSize, CanvasScaleMode::ScaleWithScreen, CanvasScaleMode::ConstantPhysicalSize};
@@ -332,11 +292,11 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(OpenPage());
         auto page = Canvas("Options");
 
-        // The design size: the plate of 448, the title band of 48, the rows of 64, Back of 64 set 16 below the rows
+        // The design size: the plate of 376, the title band of 48, the rows of 64, Back of 64 set 16 below the rows
         LayOutInWindow(*page, DesignWindow());
         const Rect plate = Element("Options", "Plate")->rect;
         EXPECT_NEAR(plate.h, kRoomyPlateHeight, 0.01f);
-        EXPECT_NEAR(plate.h, 448.0f, 0.01f);
+        EXPECT_NEAR(plate.h, 376.0f, 0.01f);
         EXPECT_TRUE(SameColor(Element("Options", "Plate")->color, PaletteColor("surface")));
         EXPECT_TRUE(SameColor(Element("Options", "Dim")->color, PaletteColor("scrim")));
         const UIElement* title = Element("Options", "Title");
@@ -398,25 +358,6 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_EQ(segment->rect.h, group->rect.h) << name;
             }
         }
-        {
-            SCOPED_TRACE(kLevelRow);
-            const UIElement* row = Element("Options", kLevelRow);
-            ASSERT_NE(row, nullptr);
-            EXPECT_NEAR(row->rect.h, 64.0f, 0.01f);
-            EXPECT_TRUE(SameColor(row->color, PaletteColor("surfaceRaised")));
-            EXPECT_EQ(GapBelow(*above, row->rect), kModalGap);
-            above = &row->rect;
-            const UIElement* caption = Element("Options", kLevelCaption);
-            const UIDropdown* group = Dropdown();
-            ASSERT_TRUE(caption != nullptr && group != nullptr);
-            EXPECT_NEAR(caption->rect.w, 112.0f, 0.01f);
-            EXPECT_TRUE(SameColor(caption->Cast<UILabel>()->textColor, PaletteColor("textMuted")));
-            EXPECT_EQ(group->rect.x, caption->rect.x + caption->rect.w + kModalGap);
-            EXPECT_EQ(group->rect.x + group->rect.w, row->rect.x + row->rect.w - kRowPadding);
-            EXPECT_EQ(group->rect.y, row->rect.y + kRowPadding);
-            EXPECT_EQ(group->rect.y + group->rect.h, row->rect.y + row->rect.h - kRowPadding);
-            EXPECT_TRUE(SameColor(group->color, PaletteColor("neutral")));
-        }
         const UIElement* back = Element("Options", "Back");
         ASSERT_NE(back, nullptr);
         EXPECT_TRUE(SameColor(back->color, PaletteColor("primary")));
@@ -428,14 +369,12 @@ namespace BECore::Mahjong::Tests {
         // A canvas of 320 units (a 480 px window at the user scale 1.5): no title, narrower captions, the plate the whole safe width
         LayOutInWindow(*page, WindowOf(480.0f, 480.0f), CanvasScaleMode::ConstantPixelSize, 1.5f);
         EXPECT_TRUE(Element("Options", "Title")->rect.IsEmpty());
-        EXPECT_LT(Element("Options", kLevelCaption)->rect.w, 112.0f);
         EXPECT_TRUE(Element("Options", kSpeedCaption)->rect.IsEmpty()) << "the caption of the speed gives its room to the three words";
         EXPECT_NEAR(Element("Options", "Plate")->rect.w, page->GetLayout().GetResolved().contentBounds.w, 0.01f);
         for (const PageRow& row : kRows) {
             EXPECT_GT(Element("Options", row.row)->rect.h, 0.0f) << row.row << ": nothing but the title is dropped";
         }
         EXPECT_GT(Element("Options", kSpeedRow)->rect.h, 0.0f) << "nothing but the title is dropped";
-        EXPECT_GT(Element("Options", kLevelRow)->rect.h, 0.0f) << "nothing but the title is dropped";
         EXPECT_GT(Element("Options", "Back")->rect.h, 0.0f);
 
         // A canvas that is only narrow keeps the title
@@ -490,14 +429,8 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongOptionsTest, EachRowChangesTheGameAndItsVariableAndSelectsItsSegment) {
         ASSERT_NO_FATAL_FAILURE(OpenPage());
-        ASSERT_EQ(_game->GetLevel(), ComputerLevel::Normal);
         ASSERT_TRUE(_game->HintsOn());
         ASSERT_EQ(_game->GetLanguage(), "en"_intern);
-
-        ASSERT_NO_FATAL_FAILURE(ChooseLevel(ComputerLevel::Easy));
-        EXPECT_EQ(_game->GetLevel(), ComputerLevel::Easy);
-        EXPECT_EQ(Var("levelChoice"), "1");
-        EXPECT_EQ(Text(kLevelChoice), "1");
 
         ASSERT_TRUE(ClickElement("Options", "HintsOff"));
         Draw();
@@ -534,49 +467,8 @@ namespace BECore::Mahjong::Tests {
             EXPECT_TRUE(Selected(row.firstSegment)) << row.firstSegment;
             EXPECT_EQ(Var(row.variable), row.firstValue) << row.variable;
         }
-        EXPECT_EQ(_game->GetLevel(), ComputerLevel::Easy);
         EXPECT_TRUE(_game->HintsOn());
         EXPECT_EQ(_game->GetLanguage(), "en"_intern);
-    }
-
-    TEST_F(MahjongOptionsTest, EveryLevelOfTheListIsChosenByAClickAndShownInTheHeader) {
-        ASSERT_NO_FATAL_FAILURE(OpenPage());
-        for (const ComputerLevel level : kAllLevels) {
-            SCOPED_TRACE(LevelText(level).data());
-            ASSERT_NO_FATAL_FAILURE(ChooseLevel(level));
-            EXPECT_EQ(_game->GetLevel(), level);
-            EXPECT_EQ(Var("levelChoice"), LevelText(level).data());
-            EXPECT_EQ(Text(kLevelChoice), LevelText(level).data());
-        }
-    }
-
-    TEST_F(MahjongOptionsTest, TheOpenListOfTheLevelsPassesTheSizeMatrixInEveryLanguage) {
-        ASSERT_NO_FATAL_FAILURE(OpenPage());
-        ASSERT_TRUE(ClickElement("Options", kLevelChoice));
-        Draw();
-        ASSERT_TRUE(Dropdown()->IsOpen());
-        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
-            SCOPED_TRACE(language.ToStringView().data());
-            ExpectPassesTheMatrix("Options", EngineTouchMinimum());
-            const std::vector<std::string> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Options"), kButtonAir);
-            EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
-        });
-        // In the design window the options are the full touch size and the list lies in the safe area
-        Canvas("Options")->UpdateLayout(kViewWidth, kViewHeight);
-        for (const ComputerLevel level : kAllLevels) {
-            const UIElement* option = Element("Options", LevelOption(level).c_str());
-            ASSERT_NE(option, nullptr);
-            EXPECT_NEAR(option->rect.h, 56.0f, 0.01f) << LevelText(level);
-        }
-    }
-
-    TEST_F(MahjongOptionsTest, TheLevelOfThePageIsThatOfTheNextMatch) {
-        ASSERT_NO_FATAL_FAILURE(OpenPage());
-        ASSERT_NO_FATAL_FAILURE(ChooseLevel(ComputerLevel{3}));
-        ASSERT_TRUE(ClickElement("Options", "Back"));
-        EmitAction("MahjongStart");
-        ASSERT_TRUE(_game->GetMatch().GetPhase() != MatchPhase::NotStarted);
-        EXPECT_EQ(_game->GetSession().Level(), ComputerLevel{3});
     }
 
     TEST_F(MahjongOptionsTest, TheSpeedTakesEffectAtOnceIsKeptByANewMatchAndAnUnknownSpeedIsIgnored) {
@@ -600,18 +492,14 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         _game->OpenSetup();
         Draw();
-        _game->SetLevel(ComputerLevel::Easy);
         _game->SetAnimationSpeed(AnimationSpeed::Slow);
-        CoreManager::GetUIVars().Set("levelChoice"_intern, "5");  // a variable that is out of date
         CoreManager::GetUIVars().Set("speedChoice"_intern, "fast");
         CoreManager::GetUIVars().Set("language"_intern, "ru");
         _game->OpenOptions();
         Draw();
-        EXPECT_EQ(Var("levelChoice"), "1");
         EXPECT_EQ(Var("language"), "en");
         EXPECT_EQ(Var("speedChoice"), "slow");
         EXPECT_TRUE(Selected("SpeedSlow"));
-        EXPECT_EQ(Text(kLevelChoice), "1");
         EXPECT_TRUE(Selected("LanguageEn"));
         EXPECT_TRUE(Selected("HintsOn")) << "the hints component publishes while Setup is open";
     }
@@ -632,7 +520,6 @@ namespace BECore::Mahjong::Tests {
         _game->OpenOptions();
         Draw();
         ASSERT_TRUE(PageShown());
-        ASSERT_NO_FATAL_FAILURE(ChooseLevel(ComputerLevel::Easy));
         ASSERT_TRUE(ClickElement("Options", "Back"));
         Draw();
 
@@ -664,11 +551,8 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(_game->IsOptionsOpen());
         EXPECT_FALSE(_game->IsSetupOpen());
         EXPECT_FALSE(PageShown());
-        const ComputerLevel level = _game->GetLevel();
         const PoolString language = _game->GetLanguage();
-        EmitAction("MahjongSetLevel", level == ComputerLevel::Easy ? "5" : "1");
         EmitAction("MahjongSetLanguage", language == "ru"_intern ? "en" : "ru");
-        EXPECT_EQ(_game->GetLevel(), level);
         EXPECT_EQ(_game->GetLanguage(), language);
     }
 

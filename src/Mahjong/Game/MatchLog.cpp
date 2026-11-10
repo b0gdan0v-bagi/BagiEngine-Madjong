@@ -48,7 +48,7 @@ namespace BECore::Mahjong {
         }
         switch (kind) {
             case MatchLogKind::Start:
-                return seed == other.seed && SameSettings(settings, other.settings) && seats == other.seats && level == other.level;
+                return seed == other.seed && SameSettings(settings, other.settings) && seats == other.seats && levels == other.levels;
             case MatchLogKind::Hand:
                 return number == other.number && east == other.east && roundWind == other.roundWind && winds == other.winds && concealed == other.concealed && bonus == other.bonus;
             case MatchLogKind::Action:

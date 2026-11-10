@@ -26,7 +26,7 @@ namespace BECore::Mahjong {
      * `Start()` and `Reset()` begin a new match with a seed from `std::random_device`: the randomness is chosen here, outside the rules,
      * which only ever see the seed (`StartMatch(seed)` is how a test or a control API replays a match). A match is begun with
      * `GetSettings()` (the defaults, `MahjongSettings{}`, until `SetSettings`) and the seat setup `GetSeats()` (`kDefaultSeatSetup`:
-     * seat 0 a person, the others computers) and the level of the computers `GetLevel()` (`kDefaultLevel`, Normal); all three are kept
+     * seat 0 a person, the others computers) and the level of each seat `GetLevels()` (`kDefaultLevel`, Normal, all four); all three are kept
      * across `Reset()`. `AsControllable()` hands out the control adapter, which drives the match through the session. The seat choice of
      * a new game is the panel `Setup` of the scene (`IsSetupOpen`, with the page `Options` over it, `IsOptionsOpen`), the pages of the
      * rules are `IsRulesOpen`. The language of the words (`GetLanguage`, `kDefaultLanguage`) is kept for the session and applied to
@@ -108,15 +108,20 @@ namespace BECore::Mahjong {
             _seats = seats;
         }
 
-        /// How well the computer seats play in the next match (`Game/ComputerLevel.h`), one level for the whole table; default Normal.
-        ComputerLevel GetLevel() const {
-            return _level;
+        /// How well each seat plays in the next match (`Game/ComputerLevel.h`), one level per seat; default Normal. All four are kept, also
+        /// those of seats a person plays: only computer seats use theirs, and a seat that turns computer again keeps its level.
+        const SeatLevels& GetLevels() const {
+            return _levels;
         }
+        void SetLevels(const SeatLevels& levels) {
+            _levels = levels;
+        }
+        /// All four seats at `level`.
         void SetLevel(ComputerLevel level) {
-            _level = level;
+            _levels = UniformLevels(level);
         }
 
-        /// Begins a new match through the session with `GetSettings()`, `GetSeats()`, `GetLevel()` and `seed` (one seed is one match, the first hand
+        /// Begins a new match through the session with `GetSettings()`, `GetSeats()`, `GetLevels()` and `seed` (one seed is one match, the first hand
         /// included). `BadSettings`, and nothing changes, for settings that are not playable. A match that began closes the setup panel.
         MatchStatus StartMatch(uint32_t seed);
 
@@ -215,7 +220,7 @@ namespace BECore::Mahjong {
         Match _match;
         MahjongSettings _settings;
         SeatSetup _seats = kDefaultSeatSetup;
-        ComputerLevel _level = kDefaultLevel;
+        SeatLevels _levels = UniformLevels(kDefaultLevel);
         bool _setupOpen = false;
         bool _rulesOpen = false;
         bool _optionsOpen = false;

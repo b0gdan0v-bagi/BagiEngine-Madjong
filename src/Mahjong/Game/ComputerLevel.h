@@ -1,5 +1,8 @@
 #pragma once
 
+#include <EASTL/array.h>
+#include <Mahjong/Game/Seats.h>
+
 namespace BECore::Mahjong {
 
     /// How well a computer seat plays: a whole number from `kMinLevel` (1, the weakest) to `kMaxLevel` (10), chosen by the owner
@@ -81,6 +84,15 @@ namespace BECore::Mahjong {
             return ComputerLevel::Normal;
         }
         return std::nullopt;
+    }
+
+    /// The level of each seat of a table, indexed by seat. All four entries are kept, also those of seats a person plays: a seat that
+    /// becomes a computer again plays at the level it had. Only the entries of computer seats play.
+    using SeatLevels = eastl::array<ComputerLevel, kSeatCount>;
+
+    /// Every seat at `level`.
+    [[nodiscard]] constexpr SeatLevels UniformLevels(ComputerLevel level) noexcept {
+        return {level, level, level, level};
     }
 
     /// The base of a percentage: a roll is one `MahjongRng::Below(kPercentBase)` against the percent.

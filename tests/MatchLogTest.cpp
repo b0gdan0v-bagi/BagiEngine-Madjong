@@ -160,12 +160,12 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(MatchLogTest, TheStartEventHoldsTheLevelOfTheSession) {
-        EXPECT_EQ(Play(kSeed).events.front().level, kDefaultLevel);
+        EXPECT_EQ(Play(kSeed).events.front().levels, UniformLevels(kDefaultLevel));
         for (const ComputerLevel level : kAllLevels) {
             const PlayedMatch played = Play(kSeed, level);
             ASSERT_FALSE(played.events.empty());
             EXPECT_EQ(played.events.front().kind, MatchLogKind::Start);
-            EXPECT_EQ(played.events.front().level, level) << Name(level);
+            EXPECT_EQ(played.events.front().levels, UniformLevels(level)) << Name(level);
         }
     }
 
@@ -175,7 +175,11 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(normal == easy);
         MatchLogEvent same = normal;
         EXPECT_TRUE(normal == same);
-        same.level = ComputerLevel::Easy;
+        same.levels = UniformLevels(ComputerLevel::Easy);
+        EXPECT_FALSE(normal == same);
+        // One seat of four is enough to differ
+        same = normal;
+        same.levels[2] = ComputerLevel::Easy;
         EXPECT_FALSE(normal == same);
     }
 

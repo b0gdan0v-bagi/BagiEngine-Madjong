@@ -75,7 +75,9 @@ namespace BECore::Mahjong {
      *  "seats": [{"kind": "person" | "computer", "wind", "score", "concealedCount", "melds": [{"kind": "chow" | "pung" | "kong", "tiles",
      *              "concealed", "from": seat | null, "fromDiscard", "claimed"}], "concealedKongs", "bonus", "discardCount",
      *              "calling"} x 4],
-     *  "discards": [{"tile", "seat"}, ...], "wall": live tiles left, "level": 1..10,
+     *  "discards": [{"tile", "seat"}, ...], "wall": live tiles left,
+     *  "level": 1..10, "levels": [1..10 x 4],           `levels` one per seat, a person's seat too; `level` is the level of the
+     *                                                    lowest computer seat (5 when none), for clients that know one level
      *  "handsPlayed", "handsTotal", "version",
      *  "result": {...}}                                  only in hand_over and match_over
      * ```
@@ -91,9 +93,10 @@ namespace BECore::Mahjong {
      * the hand that ended. `illegal_action` is a well-formed action that is not listed now; `invalid_params` a malformed one.
      *
      * `reset` takes {"seed": 0..4294967295, "seats": "PCCC" (four letters P or C), "hands": 8 | 16, "flowers": bool,
-     * "level": 1..10}, all optional: what is left out keeps the setting of the game (the seed: the one of the last `reset`, or 1). The
-     * seats, the settings and the level of the computer seats stay for the next match. A level that is not a whole number 1..10 (a
-     * string too) is `invalid_params`, which names the range, and nothing changes.
+     * "level": 1..10 (all four seats), "levels": [1..10 x 4] (one per seat)}, all optional: what is left out keeps the setting of the
+     * game (the seed: the one of the last `reset`, or 1). The seats, the settings and the levels stay for the next match. A level that
+     * is not a whole number 1..10 (a string too), `levels` that is not an array of four of them, and `level` together with `levels`
+     * are `invalid_params`, which names the key, and nothing changes.
      * `set_state` is not supported. `no_active_model` before the first match was started.
      */
     class MahjongGameControl : public IControllableGame {

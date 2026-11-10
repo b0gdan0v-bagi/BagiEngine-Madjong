@@ -99,7 +99,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ((*loaded)[index].kind, events[index].kind) << index;
         }
         EXPECT_EQ(loaded->front().seed, kSeed);
-        EXPECT_EQ(loaded->front().level, ComputerLevel::Easy);
+        EXPECT_EQ(loaded->front().levels, UniformLevels(ComputerLevel::Easy));
 
         store->ClearMatch();
         EXPECT_FALSE(fs::exists(folder / "match.save"));

@@ -50,11 +50,32 @@ namespace BECore::Mahjong::Tests {
             return actions;
         }
 
-        /// The same actions as `PlayActions`, made by four players of `level` seeded `SeatSeed(seed, seat)` (what `ComputerTable` is).
-        eastl::vector<HandAction> PlayActionsByPlayers(uint32_t seed, ComputerLevel level) {
+        /// Every (actor, action) of `kWholeHands` hands played by a table, in order.
+        eastl::vector<std::pair<Seat, HandAction>> PlayActed(ComputerTable& table, uint32_t seed) {
+            eastl::vector<std::pair<Seat, HandAction>> acted;
+            Match match;
+            EXPECT_TRUE(match.Start(SettingsOf(0), seed).has_value());
+            for (int hand = 0; hand < kWholeHands && match.GetPhase() == MatchPhase::InHand; ++hand) {
+                while (match.Hand().GetPhase() != Phase::Finished) {
+                    const Seat actor = ComputerTable::NextActor(match.Hand());
+                    const StepResult step = table.Step(match.Hand());
+                    EXPECT_TRUE(step.has_value());
+                    if (!step) {
+                        return acted;
+                    }
+                    acted.emplace_back(actor, *step);
+                }
+                EXPECT_TRUE(match.EndHand().has_value());
+            }
+            return acted;
+        }
+
+        /// The same actions as `PlayActions`, made by four players, seat `i` at `levels[i]`, seeded `SeatSeed(seed, seat)` (what
+        /// `ComputerTable` is).
+        eastl::vector<HandAction> PlayActionsByPlayers(uint32_t seed, const SeatLevels& levels) {
             eastl::vector<ComputerPlayer> players;
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                players.push_back(ComputerPlayer(SeatSeed(seed, seat), level));
+                players.push_back(ComputerPlayer(SeatSeed(seed, seat), levels[static_cast<size_t>(seat)]));
             }
             eastl::vector<HandAction> actions;
             Match match;
@@ -172,7 +193,9 @@ namespace BECore::Mahjong::Tests {
 
     TEST(ComputerLevelTest, TheTableReportsItsLevelAndGivesEverySeatTheLevel) {
         for (const ComputerLevel level : kAllLevels) {
-            EXPECT_EQ(ComputerTable(5, level).Level(), level);
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                EXPECT_EQ(ComputerTable(5, level).LevelOf(seat), level);
+            }
             EXPECT_EQ(ComputerPlayer(5, level).Level(), level);
         }
         // The seat seeds do not depend on the level, so a table of a level plays exactly what four players of that level seeded
@@ -183,10 +206,80 @@ namespace BECore::Mahjong::Tests {
             ComputerTable table(31, level);
             const eastl::vector<HandAction> played = PlayActions(table, 31);
             ASSERT_FALSE(played.empty());
-            EXPECT_EQ(PlayActionsByPlayers(31, level), played) << LevelText(level);
+            EXPECT_EQ(PlayActionsByPlayers(31, UniformLevels(level)), played) << LevelText(level);
             byLevel.push_back(played);
         }
         EXPECT_NE(byLevel[LevelNumber(ComputerLevel::Easy) - kMinLevel], byLevel[LevelNumber(ComputerLevel::Normal) - kMinLevel]);
+    }
+
+    TEST(ComputerLevelTest, SeatLevelsHoldFourLevelsAndUniformLevelsRepeatsOne) {
+        for (const ComputerLevel level : kAllLevels) {
+            const SeatLevels uniform = UniformLevels(level);
+            ASSERT_EQ(uniform.size(), static_cast<size_t>(kSeatCount));
+            for (const ComputerLevel entry : uniform) {
+                EXPECT_EQ(entry, level);
+            }
+        }
+        EXPECT_EQ((SeatLevels{ComputerLevel{1}, ComputerLevel{3}, ComputerLevel{5}, ComputerLevel{10}}[3]), ComputerLevel{10});
+    }
+
+    TEST(ComputerLevelTest, EverySeatOfATableHasItsOwnLevel) {
+        const SeatLevels levels{ComputerLevel{1}, ComputerLevel{3}, ComputerLevel{5}, ComputerLevel{10}};
+        const ComputerTable table(7, levels);
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            EXPECT_EQ(table.LevelOf(seat), levels[static_cast<size_t>(seat)]) << "seat " << seat;
+        }
+        EXPECT_EQ(table.LevelOf(kNoSeat), kDefaultLevel) << "a number that is no seat";
+        EXPECT_EQ(table.LevelOf(kSeatCount), kDefaultLevel);
+        // A table made by a profile reports Normal at every seat.
+        const ComputerTable byProfile(7, kEasyProfile);
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            EXPECT_EQ(byProfile.LevelOf(seat), ComputerLevel::Normal) << "seat " << seat;
+        }
+    }
+
+    TEST(ComputerLevelTest, ATableOfUniformLevelsPlaysExactlyLikeTheTableOfTheOneLevel) {
+        for (const ComputerLevel level : kAllLevels) {
+            ComputerTable one(31, level);
+            ComputerTable uniform(31, UniformLevels(level));
+            const eastl::vector<HandAction> expected = PlayActions(one, 31);
+            ASSERT_FALSE(expected.empty()) << LevelText(level);
+            EXPECT_EQ(PlayActions(uniform, 31), expected) << LevelText(level);
+        }
+    }
+
+    TEST(ComputerLevelTest, AMixedTablePlaysWhatFourPlayersOfTheirOwnLevelsPlay) {
+        for (uint32_t seed = 31; seed < 34; ++seed) {
+            const SeatLevels levels{ComputerLevel{1}, ComputerLevel{3}, ComputerLevel{5}, ComputerLevel{10}};
+            ComputerTable table(seed, levels);
+            const eastl::vector<HandAction> played = PlayActions(table, seed);
+            ASSERT_FALSE(played.empty()) << "seed " << seed;
+            EXPECT_EQ(PlayActionsByPlayers(seed, levels), played) << "seed " << seed;
+        }
+    }
+
+    // The level of a seat is the level of that seat's player and no other: with one seat at Easy and three at Normal, the table plays
+    // as the table of four Normal seats until the first action that differs, and that action is the Easy seat's (up to then the state
+    // and every random stream are the same, so another seat's choice cannot differ).
+    TEST(ComputerLevelTest, AnEasySeatIsTheFirstToPlayOtherwiseThanANormalTable) {
+        constexpr uint32_t kSeed = 31;
+        ComputerTable normal(kSeed, ComputerLevel::Normal);
+        const eastl::vector<std::pair<Seat, HandAction>> expected = PlayActed(normal, kSeed);
+        ASSERT_FALSE(expected.empty());
+        for (Seat easySeat = 0; easySeat < kSeatCount; ++easySeat) {
+            SeatLevels levels = UniformLevels(ComputerLevel::Normal);
+            levels[static_cast<size_t>(easySeat)] = ComputerLevel::Easy;
+            ComputerTable mixed(kSeed, levels);
+            const eastl::vector<std::pair<Seat, HandAction>> played = PlayActed(mixed, kSeed);
+            size_t first = 0;
+            while (first < played.size() && first < expected.size() && played[first] == expected[first]) {
+                ++first;
+            }
+            ASSERT_LT(first, played.size()) << "easy seat " << easySeat << " plays like Normal on six hands";
+            ASSERT_LT(first, expected.size());
+            EXPECT_EQ(played[first].first, expected[first].first) << "easy seat " << easySeat << ": the same actor up to there";
+            EXPECT_EQ(played[first].first, easySeat) << "the first difference is not the Easy seat's";
+        }
     }
 
     TEST(ComputerLevelTest, TheProfilesGoFromEasyToNormalAndNormalAboveIt) {

@@ -149,7 +149,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_GE(kSearchDefaultCandidates, kSearchMinCandidates);
         // A player made from a profile reports Normal as its level (it is no level), and so does a table.
         EXPECT_EQ(ComputerPlayer(kRngSeed, SearchProfile()).Level(), ComputerLevel::Normal);
-        EXPECT_EQ(ComputerTable(kRngSeed, SearchProfile()).Level(), ComputerLevel::Normal);
+        EXPECT_EQ(ComputerTable(kRngSeed, SearchProfile()).LevelOf(kSeat0), ComputerLevel::Normal);
     }
 
     TEST(ComputerSearchTest, WithTheKnobOffNothingIsDrawnAndTheAnswerIsNormals) {

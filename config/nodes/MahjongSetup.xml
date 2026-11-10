@@ -4,9 +4,14 @@
   segment and Start are touch targets in any window), hidden here; MahjongHudComponent shows it exactly while
   MahjongGame::IsSetupOpen() (at the start, and after the New game button). Its Dim covers the whole window, bars and the New game
   button of HudMenu included. Each seat group carries action MahjongSetSeatN and the value person or computer; the row HandsRow
-  below them carries MahjongSetHands and the value 16 or 8. The variables seatKindN and handsChoice are set by the component, which
-  also begins the match on MahjongStart. What a player sets once (language, hints, level) is not here but on the page Options
-  (MahjongOptions.xml), which the full-width button OptionsRow (MahjongOptions, neutral) opens over this panel; the panel stays open
+  below them carries MahjongSetHands and the value 16 or 8. After the segments each seat row has the dropdown SeatLevelN (72 wide,
+  64 or 60 in the narrow variants; the options Seat<N>Level1 .. 10, action MahjongSetSeatLevelN, value the number, variable seatLevelN), which
+  MahjongHudComponent shows exactly while that seat is a computer in the pending setup; a hidden element takes no room, so the
+  segments of a person's seat keep the whole row. The row stays 64 high: the dropdown is in it, the plate does not grow. The open list of
+  ten levels is a popup in the safe area with no scrolling, so its options are as high as the canvas allows: 56 in a canvas of more than
+  601 units high, then 44, 32, 24, 20 and 16 by the height variants (the same steps as MahjongOptions.xml). The variables seatKindN,
+  seatLevelN and handsChoice are set by the component, which also begins the match on MahjongStart. What a player sets once (language,
+  hints, speed) is not here but on the page Options (MahjongOptions.xml), which the full-width button OptionsRow (MahjongOptions, neutral) opens over this panel; the panel stays open
   under it, so the pending seats and hands and Continue are not lost.
   The roomy shape (a canvas of 1280 x 720 units, the design size) is the anatomy of the modal screens: the plate is the safe area
   at most 592 high (32 padding + 48 title band + 5 x 64 rows + 64 OptionsRow + 64 ButtonRow + 8 x 8 spacing; StartGap is empty,
@@ -16,8 +21,12 @@
   where the canvas is short: the smallest one is a 480 px window at the user scale 1.5, 320 x 320 units (262 x 297 of safe area
   with insets), where a control is 32 px from 21.34 units; the seven controls (four seats, hands, OptionsRow, Start) with the gaps
   leave 25.9 units a row with the title still there, so there is no variant for a short canvas and the Title stays everywhere.
-  The variant for a canvas of at most 440 units wide takes the whole safe width for the plate and narrows the captions (52) so
-  that Person / Computer and Человек / Компьютер fit. Every text may shrink (AutoFit, down to 12 units) instead of being cut.
+  The variant for a canvas of at most 480 units wide takes the whole safe width for the plate and narrows the captions (52) so
+  that Person / Computer and Человек / Компьютер fit (a 480 px window with side insets is the case: 262 units of safe width); the
+  dropdowns are 64 there, the least that shows "10" beside its arrow (the arrow and the insets of a header take 50 of the width).
+  The variant for a canvas of at most 360 units wide (a 480 px window at the user scale 1.5) hides the seat captions, the room of
+  one more control: Person / Computer needs 74 units there, so a dropdown is 60 and its text may shrink to 8 units (minFontSize),
+  which is 12 px at that scale. Every other text may shrink (AutoFit, down to 12 units) instead of being cut.
   MahjongHudTest and MahjongTouchSizeTest hold the shapes, the touch size and the words on the whole size matrix.
   Continue (MahjongContinue; the saved match is the table behind the panel, MahjongGame::CanContinue()) is not a new row, because
   the plate has no room for another: Start lives in the horizontal stack ButtonRow (64 high like the rows, 8 between) beside it.
@@ -41,6 +50,20 @@
                     <element type="UIButton" name="Seat0Computer" flex="1" height="100%" text="{#setup.computer}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetSeat0" value="computer" color="70,70,100,255" selectedColor="40,110,60,255" />
                   </children>
                 </element>
+                <element type="UIDropdown" name="SeatLevel0" bind="seatLevel0" action="MahjongSetSeatLevel0" width="72" height="87.5%" optionHeight="56" text="" fontSize="22" overflow="AutoFit" minFontSize="8" verticalAlign="Center" color="70,70,100,255">
+                  <children>
+                    <element type="UIButton" name="Seat0Level1" text="1" fontSize="22" overflow="AutoFit" minFontSize="12" value="1" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat0Level2" text="2" fontSize="22" overflow="AutoFit" minFontSize="12" value="2" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat0Level3" text="3" fontSize="22" overflow="AutoFit" minFontSize="12" value="3" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat0Level4" text="4" fontSize="22" overflow="AutoFit" minFontSize="12" value="4" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat0Level5" text="5" fontSize="22" overflow="AutoFit" minFontSize="12" value="5" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat0Level6" text="6" fontSize="22" overflow="AutoFit" minFontSize="12" value="6" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat0Level7" text="7" fontSize="22" overflow="AutoFit" minFontSize="12" value="7" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat0Level8" text="8" fontSize="22" overflow="AutoFit" minFontSize="12" value="8" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat0Level9" text="9" fontSize="22" overflow="AutoFit" minFontSize="12" value="9" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat0Level10" text="10" fontSize="22" overflow="AutoFit" minFontSize="12" value="10" color="70,70,100,255" />
+                  </children>
+                </element>
               </children>
             </element>
             <element type="UIStack" name="SeatRow1" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255">
@@ -50,6 +73,20 @@
                   <children>
                     <element type="UIButton" name="Seat1Person" flex="1" height="100%" text="{#setup.person}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetSeat1" value="person" color="70,70,100,255" selectedColor="40,110,60,255" />
                     <element type="UIButton" name="Seat1Computer" flex="1" height="100%" text="{#setup.computer}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetSeat1" value="computer" color="70,70,100,255" selectedColor="40,110,60,255" />
+                  </children>
+                </element>
+                <element type="UIDropdown" name="SeatLevel1" bind="seatLevel1" action="MahjongSetSeatLevel1" width="72" height="87.5%" optionHeight="56" text="" fontSize="22" overflow="AutoFit" minFontSize="8" verticalAlign="Center" color="70,70,100,255">
+                  <children>
+                    <element type="UIButton" name="Seat1Level1" text="1" fontSize="22" overflow="AutoFit" minFontSize="12" value="1" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat1Level2" text="2" fontSize="22" overflow="AutoFit" minFontSize="12" value="2" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat1Level3" text="3" fontSize="22" overflow="AutoFit" minFontSize="12" value="3" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat1Level4" text="4" fontSize="22" overflow="AutoFit" minFontSize="12" value="4" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat1Level5" text="5" fontSize="22" overflow="AutoFit" minFontSize="12" value="5" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat1Level6" text="6" fontSize="22" overflow="AutoFit" minFontSize="12" value="6" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat1Level7" text="7" fontSize="22" overflow="AutoFit" minFontSize="12" value="7" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat1Level8" text="8" fontSize="22" overflow="AutoFit" minFontSize="12" value="8" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat1Level9" text="9" fontSize="22" overflow="AutoFit" minFontSize="12" value="9" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat1Level10" text="10" fontSize="22" overflow="AutoFit" minFontSize="12" value="10" color="70,70,100,255" />
                   </children>
                 </element>
               </children>
@@ -63,6 +100,20 @@
                     <element type="UIButton" name="Seat2Computer" flex="1" height="100%" text="{#setup.computer}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetSeat2" value="computer" color="70,70,100,255" selectedColor="40,110,60,255" />
                   </children>
                 </element>
+                <element type="UIDropdown" name="SeatLevel2" bind="seatLevel2" action="MahjongSetSeatLevel2" width="72" height="87.5%" optionHeight="56" text="" fontSize="22" overflow="AutoFit" minFontSize="8" verticalAlign="Center" color="70,70,100,255">
+                  <children>
+                    <element type="UIButton" name="Seat2Level1" text="1" fontSize="22" overflow="AutoFit" minFontSize="12" value="1" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat2Level2" text="2" fontSize="22" overflow="AutoFit" minFontSize="12" value="2" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat2Level3" text="3" fontSize="22" overflow="AutoFit" minFontSize="12" value="3" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat2Level4" text="4" fontSize="22" overflow="AutoFit" minFontSize="12" value="4" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat2Level5" text="5" fontSize="22" overflow="AutoFit" minFontSize="12" value="5" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat2Level6" text="6" fontSize="22" overflow="AutoFit" minFontSize="12" value="6" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat2Level7" text="7" fontSize="22" overflow="AutoFit" minFontSize="12" value="7" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat2Level8" text="8" fontSize="22" overflow="AutoFit" minFontSize="12" value="8" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat2Level9" text="9" fontSize="22" overflow="AutoFit" minFontSize="12" value="9" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat2Level10" text="10" fontSize="22" overflow="AutoFit" minFontSize="12" value="10" color="70,70,100,255" />
+                  </children>
+                </element>
               </children>
             </element>
             <element type="UIStack" name="SeatRow3" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255">
@@ -72,6 +123,20 @@
                   <children>
                     <element type="UIButton" name="Seat3Person" flex="1" height="100%" text="{#setup.person}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetSeat3" value="person" color="70,70,100,255" selectedColor="40,110,60,255" />
                     <element type="UIButton" name="Seat3Computer" flex="1" height="100%" text="{#setup.computer}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetSeat3" value="computer" color="70,70,100,255" selectedColor="40,110,60,255" />
+                  </children>
+                </element>
+                <element type="UIDropdown" name="SeatLevel3" bind="seatLevel3" action="MahjongSetSeatLevel3" width="72" height="87.5%" optionHeight="56" text="" fontSize="22" overflow="AutoFit" minFontSize="8" verticalAlign="Center" color="70,70,100,255">
+                  <children>
+                    <element type="UIButton" name="Seat3Level1" text="1" fontSize="22" overflow="AutoFit" minFontSize="12" value="1" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat3Level2" text="2" fontSize="22" overflow="AutoFit" minFontSize="12" value="2" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat3Level3" text="3" fontSize="22" overflow="AutoFit" minFontSize="12" value="3" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat3Level4" text="4" fontSize="22" overflow="AutoFit" minFontSize="12" value="4" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat3Level5" text="5" fontSize="22" overflow="AutoFit" minFontSize="12" value="5" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat3Level6" text="6" fontSize="22" overflow="AutoFit" minFontSize="12" value="6" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat3Level7" text="7" fontSize="22" overflow="AutoFit" minFontSize="12" value="7" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat3Level8" text="8" fontSize="22" overflow="AutoFit" minFontSize="12" value="8" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat3Level9" text="9" fontSize="22" overflow="AutoFit" minFontSize="12" value="9" color="70,70,100,255" />
+                    <element type="UIButton" name="Seat3Level10" text="10" fontSize="22" overflow="AutoFit" minFontSize="12" value="10" color="70,70,100,255" />
                   </children>
                 </element>
               </children>
@@ -99,7 +164,7 @@
         </element>
       </elements>
       <variants>
-        <variant when="maxWidth:440">
+        <variant when="maxWidth:480">
           <overrides>
             <set element="Plate" width="100%" />
             <set element="SeatCaption0" width="52" />
@@ -107,6 +172,242 @@
             <set element="SeatCaption2" width="52" />
             <set element="SeatCaption3" width="52" />
             <set element="HandsCaption" width="52" />
+            <set element="SeatLevel0" width="64" />
+            <set element="SeatLevel1" width="64" />
+            <set element="SeatLevel2" width="64" />
+            <set element="SeatLevel3" width="64" />
+          </overrides>
+        </variant>
+        <variant when="maxWidth:360">
+          <overrides>
+            <set element="SeatLevel0" width="60" />
+            <set element="SeatLevel1" width="60" />
+            <set element="SeatLevel2" width="60" />
+            <set element="SeatLevel3" width="60" />
+            <set element="SeatCaption0" visible="false" />
+            <set element="SeatCaption1" visible="false" />
+            <set element="SeatCaption2" visible="false" />
+            <set element="SeatCaption3" visible="false" />
+          </overrides>
+        </variant>
+        <variant when="maxHeight:601">
+          <overrides>
+            <set element="Seat0Level1" height="44" />
+            <set element="Seat0Level2" height="44" />
+            <set element="Seat0Level3" height="44" />
+            <set element="Seat0Level4" height="44" />
+            <set element="Seat0Level5" height="44" />
+            <set element="Seat0Level6" height="44" />
+            <set element="Seat0Level7" height="44" />
+            <set element="Seat0Level8" height="44" />
+            <set element="Seat0Level9" height="44" />
+            <set element="Seat0Level10" height="44" />
+            <set element="Seat1Level1" height="44" />
+            <set element="Seat1Level2" height="44" />
+            <set element="Seat1Level3" height="44" />
+            <set element="Seat1Level4" height="44" />
+            <set element="Seat1Level5" height="44" />
+            <set element="Seat1Level6" height="44" />
+            <set element="Seat1Level7" height="44" />
+            <set element="Seat1Level8" height="44" />
+            <set element="Seat1Level9" height="44" />
+            <set element="Seat1Level10" height="44" />
+            <set element="Seat2Level1" height="44" />
+            <set element="Seat2Level2" height="44" />
+            <set element="Seat2Level3" height="44" />
+            <set element="Seat2Level4" height="44" />
+            <set element="Seat2Level5" height="44" />
+            <set element="Seat2Level6" height="44" />
+            <set element="Seat2Level7" height="44" />
+            <set element="Seat2Level8" height="44" />
+            <set element="Seat2Level9" height="44" />
+            <set element="Seat2Level10" height="44" />
+            <set element="Seat3Level1" height="44" />
+            <set element="Seat3Level2" height="44" />
+            <set element="Seat3Level3" height="44" />
+            <set element="Seat3Level4" height="44" />
+            <set element="Seat3Level5" height="44" />
+            <set element="Seat3Level6" height="44" />
+            <set element="Seat3Level7" height="44" />
+            <set element="Seat3Level8" height="44" />
+            <set element="Seat3Level9" height="44" />
+            <set element="Seat3Level10" height="44" />
+          </overrides>
+        </variant>
+        <variant when="maxHeight:472">
+          <overrides>
+            <set element="Seat0Level1" height="32" />
+            <set element="Seat0Level2" height="32" />
+            <set element="Seat0Level3" height="32" />
+            <set element="Seat0Level4" height="32" />
+            <set element="Seat0Level5" height="32" />
+            <set element="Seat0Level6" height="32" />
+            <set element="Seat0Level7" height="32" />
+            <set element="Seat0Level8" height="32" />
+            <set element="Seat0Level9" height="32" />
+            <set element="Seat0Level10" height="32" />
+            <set element="Seat1Level1" height="32" />
+            <set element="Seat1Level2" height="32" />
+            <set element="Seat1Level3" height="32" />
+            <set element="Seat1Level4" height="32" />
+            <set element="Seat1Level5" height="32" />
+            <set element="Seat1Level6" height="32" />
+            <set element="Seat1Level7" height="32" />
+            <set element="Seat1Level8" height="32" />
+            <set element="Seat1Level9" height="32" />
+            <set element="Seat1Level10" height="32" />
+            <set element="Seat2Level1" height="32" />
+            <set element="Seat2Level2" height="32" />
+            <set element="Seat2Level3" height="32" />
+            <set element="Seat2Level4" height="32" />
+            <set element="Seat2Level5" height="32" />
+            <set element="Seat2Level6" height="32" />
+            <set element="Seat2Level7" height="32" />
+            <set element="Seat2Level8" height="32" />
+            <set element="Seat2Level9" height="32" />
+            <set element="Seat2Level10" height="32" />
+            <set element="Seat3Level1" height="32" />
+            <set element="Seat3Level2" height="32" />
+            <set element="Seat3Level3" height="32" />
+            <set element="Seat3Level4" height="32" />
+            <set element="Seat3Level5" height="32" />
+            <set element="Seat3Level6" height="32" />
+            <set element="Seat3Level7" height="32" />
+            <set element="Seat3Level8" height="32" />
+            <set element="Seat3Level9" height="32" />
+            <set element="Seat3Level10" height="32" />
+          </overrides>
+        </variant>
+        <variant when="maxHeight:343">
+          <overrides>
+            <set element="Seat0Level1" height="24" />
+            <set element="Seat0Level2" height="24" />
+            <set element="Seat0Level3" height="24" />
+            <set element="Seat0Level4" height="24" />
+            <set element="Seat0Level5" height="24" />
+            <set element="Seat0Level6" height="24" />
+            <set element="Seat0Level7" height="24" />
+            <set element="Seat0Level8" height="24" />
+            <set element="Seat0Level9" height="24" />
+            <set element="Seat0Level10" height="24" />
+            <set element="Seat1Level1" height="24" />
+            <set element="Seat1Level2" height="24" />
+            <set element="Seat1Level3" height="24" />
+            <set element="Seat1Level4" height="24" />
+            <set element="Seat1Level5" height="24" />
+            <set element="Seat1Level6" height="24" />
+            <set element="Seat1Level7" height="24" />
+            <set element="Seat1Level8" height="24" />
+            <set element="Seat1Level9" height="24" />
+            <set element="Seat1Level10" height="24" />
+            <set element="Seat2Level1" height="24" />
+            <set element="Seat2Level2" height="24" />
+            <set element="Seat2Level3" height="24" />
+            <set element="Seat2Level4" height="24" />
+            <set element="Seat2Level5" height="24" />
+            <set element="Seat2Level6" height="24" />
+            <set element="Seat2Level7" height="24" />
+            <set element="Seat2Level8" height="24" />
+            <set element="Seat2Level9" height="24" />
+            <set element="Seat2Level10" height="24" />
+            <set element="Seat3Level1" height="24" />
+            <set element="Seat3Level2" height="24" />
+            <set element="Seat3Level3" height="24" />
+            <set element="Seat3Level4" height="24" />
+            <set element="Seat3Level5" height="24" />
+            <set element="Seat3Level6" height="24" />
+            <set element="Seat3Level7" height="24" />
+            <set element="Seat3Level8" height="24" />
+            <set element="Seat3Level9" height="24" />
+            <set element="Seat3Level10" height="24" />
+          </overrides>
+        </variant>
+        <variant when="maxHeight:257">
+          <overrides>
+            <set element="Seat0Level1" height="20" />
+            <set element="Seat0Level2" height="20" />
+            <set element="Seat0Level3" height="20" />
+            <set element="Seat0Level4" height="20" />
+            <set element="Seat0Level5" height="20" />
+            <set element="Seat0Level6" height="20" />
+            <set element="Seat0Level7" height="20" />
+            <set element="Seat0Level8" height="20" />
+            <set element="Seat0Level9" height="20" />
+            <set element="Seat0Level10" height="20" />
+            <set element="Seat1Level1" height="20" />
+            <set element="Seat1Level2" height="20" />
+            <set element="Seat1Level3" height="20" />
+            <set element="Seat1Level4" height="20" />
+            <set element="Seat1Level5" height="20" />
+            <set element="Seat1Level6" height="20" />
+            <set element="Seat1Level7" height="20" />
+            <set element="Seat1Level8" height="20" />
+            <set element="Seat1Level9" height="20" />
+            <set element="Seat1Level10" height="20" />
+            <set element="Seat2Level1" height="20" />
+            <set element="Seat2Level2" height="20" />
+            <set element="Seat2Level3" height="20" />
+            <set element="Seat2Level4" height="20" />
+            <set element="Seat2Level5" height="20" />
+            <set element="Seat2Level6" height="20" />
+            <set element="Seat2Level7" height="20" />
+            <set element="Seat2Level8" height="20" />
+            <set element="Seat2Level9" height="20" />
+            <set element="Seat2Level10" height="20" />
+            <set element="Seat3Level1" height="20" />
+            <set element="Seat3Level2" height="20" />
+            <set element="Seat3Level3" height="20" />
+            <set element="Seat3Level4" height="20" />
+            <set element="Seat3Level5" height="20" />
+            <set element="Seat3Level6" height="20" />
+            <set element="Seat3Level7" height="20" />
+            <set element="Seat3Level8" height="20" />
+            <set element="Seat3Level9" height="20" />
+            <set element="Seat3Level10" height="20" />
+          </overrides>
+        </variant>
+        <variant when="maxHeight:214">
+          <overrides>
+            <set element="Seat0Level1" height="16" />
+            <set element="Seat0Level2" height="16" />
+            <set element="Seat0Level3" height="16" />
+            <set element="Seat0Level4" height="16" />
+            <set element="Seat0Level5" height="16" />
+            <set element="Seat0Level6" height="16" />
+            <set element="Seat0Level7" height="16" />
+            <set element="Seat0Level8" height="16" />
+            <set element="Seat0Level9" height="16" />
+            <set element="Seat0Level10" height="16" />
+            <set element="Seat1Level1" height="16" />
+            <set element="Seat1Level2" height="16" />
+            <set element="Seat1Level3" height="16" />
+            <set element="Seat1Level4" height="16" />
+            <set element="Seat1Level5" height="16" />
+            <set element="Seat1Level6" height="16" />
+            <set element="Seat1Level7" height="16" />
+            <set element="Seat1Level8" height="16" />
+            <set element="Seat1Level9" height="16" />
+            <set element="Seat1Level10" height="16" />
+            <set element="Seat2Level1" height="16" />
+            <set element="Seat2Level2" height="16" />
+            <set element="Seat2Level3" height="16" />
+            <set element="Seat2Level4" height="16" />
+            <set element="Seat2Level5" height="16" />
+            <set element="Seat2Level6" height="16" />
+            <set element="Seat2Level7" height="16" />
+            <set element="Seat2Level8" height="16" />
+            <set element="Seat2Level9" height="16" />
+            <set element="Seat2Level10" height="16" />
+            <set element="Seat3Level1" height="16" />
+            <set element="Seat3Level2" height="16" />
+            <set element="Seat3Level3" height="16" />
+            <set element="Seat3Level4" height="16" />
+            <set element="Seat3Level5" height="16" />
+            <set element="Seat3Level6" height="16" />
+            <set element="Seat3Level7" height="16" />
+            <set element="Seat3Level8" height="16" />
+            <set element="Seat3Level9" height="16" />
+            <set element="Seat3Level10" height="16" />
           </overrides>
         </variant>
       </variants>

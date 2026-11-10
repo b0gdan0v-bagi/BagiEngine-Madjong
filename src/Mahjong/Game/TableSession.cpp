@@ -23,12 +23,16 @@ namespace BECore::Mahjong {
     }  // namespace
 
     MatchStatus TableSession::StartMatch(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats, ComputerLevel level) {
+        return StartMatch(settings, seed, seats, UniformLevels(level));
+    }
+
+    MatchStatus TableSession::StartMatch(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats, const SeatLevels& levels) {
         if (const MatchStatus started = _match.Start(settings, seed); !started) {
             return started;
         }
-        _table.emplace(seed, level);
+        _table.emplace(seed, levels);
         _seats = seats;
-        _level = level;
+        _levels = levels;
         _viewer = PersonCount() == 1 ? OnlyPerson(_seats) : kNoSeat;
         ++_version;
         ++_starts;
@@ -38,7 +42,7 @@ namespace BECore::Mahjong {
             start.seed = seed;
             start.settings = settings;
             start.seats = seats;
-            start.level = level;
+            start.levels = levels;
             _sink->OnEvent(start);
             _sink->OnEvent(MakeHandEvent(_match));
         }
@@ -46,6 +50,10 @@ namespace BECore::Mahjong {
     }
 
     ReplayStatus TableSession::ResumeMatch(const eastl::vector<MatchLogEvent>& events, const SeatSetup& seats, ComputerLevel level) {
+        return ResumeMatch(events, seats, UniformLevels(level));
+    }
+
+    ReplayStatus TableSession::ResumeMatch(const eastl::vector<MatchLogEvent>& events, const SeatSetup& seats, const SeatLevels& levels) {
         Match scratch;
         if (ReplayStatus checked = ReplayMatchLog(events, scratch); !checked) {
             return checked;
@@ -59,9 +67,9 @@ namespace BECore::Mahjong {
         if (!replayed) {
             return replayed;
         }
-        _table.emplace(seed, level);
+        _table.emplace(seed, levels);
         _seats = seats;
-        _level = level;
+        _levels = levels;
         _viewer = PersonCount() == 1 ? OnlyPerson(_seats) : kNoSeat;
         ++_version;
         return {};

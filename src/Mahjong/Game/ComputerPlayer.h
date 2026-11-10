@@ -51,17 +51,22 @@ namespace BECore::Mahjong {
      *
      * Seat `i` is a `ComputerPlayer` seeded `SeatSeed(tableSeed, i)`. `Step` asks the next actor for an action and applies it through
      * `HandModel::Apply`; it never falls back to another action, so an action the model refuses is a defect and comes back as the
-     * error. The table does not know a seat setup (which seats are people) yet; it drives whatever model it is given. Every seat has
-     * the table's `ComputerLevel`; the seat seeds do not depend on it, so one table seed gives the same tie-breaks at every level.
+     * error. The table does not know a seat setup (which seats are people) yet; it drives whatever model it is given. Each seat has
+     * a level of its own (`SeatLevels`, `LevelOf`); the seat seeds do not depend on any level, so one table seed gives the same
+     * tie-breaks at every level, and a table of `UniformLevels(l)` plays exactly what the one-level constructor made.
      */
     class ComputerTable {
     public:
+        /// Every seat plays at `level`.
         explicit ComputerTable(uint32_t seed, ComputerLevel level = kDefaultLevel);
-        /// Every seat plays by `profile` (and the table reports `Level()` Normal); the seat seeds are those of the level constructor.
+        /// Seat `i` plays at `levels[i]`.
+        ComputerTable(uint32_t seed, const SeatLevels& levels);
+        /// Every seat plays by `profile` (and `LevelOf` answers Normal for each); the seat seeds are those of the level constructors.
         ComputerTable(uint32_t seed, const LevelProfile& profile);
 
-        [[nodiscard]] ComputerLevel Level() const noexcept {
-            return _level;
+        /// The level of the player of `seat`; the default level for a number that is no seat.
+        [[nodiscard]] ComputerLevel LevelOf(Seat seat) const noexcept {
+            return IsSeat(seat) ? _players[static_cast<size_t>(seat)].Level() : kDefaultLevel;
         }
 
         /// The seat to ask next: `CurrentSeat()` in `Phase::Discard`, the first of `PendingClaimSeats()` in a window, `kNoSeat` when
@@ -80,7 +85,6 @@ namespace BECore::Mahjong {
         HandStatus PlayMatch(Match& match);
 
     private:
-        ComputerLevel _level = kDefaultLevel;
         eastl::array<ComputerPlayer, kSeatCount> _players;
     };
 

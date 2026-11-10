@@ -244,7 +244,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(second->IsSetupOpen());
         EXPECT_EQ(State(*second), State(*game));
         EXPECT_EQ(Actions(*second), Actions(*game));
-        EXPECT_EQ(second->GetLevel(), ComputerLevel::Easy);
+        EXPECT_EQ(second->GetLevels()[0], ComputerLevel::Easy);
         EXPECT_EQ(second->GetSettings().handsPerMatch, kShortMatchHands);
 
         const uint64_t version = second->GetSession().Version();
@@ -254,6 +254,73 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(second->ContinueMatch());
         EXPECT_EQ(second->GetSession().Version(), version);  // continuing plays nothing by itself
         PlayFirstActions(*second, 1);                        // and the match goes on legally
+    }
+
+    TEST_F(MahjongSaveGameTest, ALevelPerSeatIsKeptByTheMatchContinueAndThePrefs) {
+        const SeatLevels mixed{ComputerLevel{2}, ComputerLevel{6}, ComputerLevel::Easy, ComputerLevel{10}};
+        IntrusivePtr<MahjongGame> game = NewGame();
+        game->SetSeats(SeatSetup{SeatKind::Person, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer});
+        game->SetLevels(mixed);
+        MahjongSettings settings;
+        settings.handsPerMatch = kShortMatchHands;
+        game->SetSettings(settings);
+        ASSERT_TRUE(game->StartMatch(kSeed).has_value());
+        PlayFirstActions(*game, kPersonActions);
+        // The panel's choices move on after the match began: the resumed match's own levels win
+        game->SetLevels(UniformLevels(ComputerLevel::Normal));
+        game->FlushSave();
+
+        IntrusivePtr<MahjongGame> second = StartedGame();
+        ASSERT_TRUE(second->CanContinue());
+        EXPECT_EQ(second->GetSession().Levels(), mixed);
+        EXPECT_EQ(second->GetLevels(), mixed) << "the game's levels become those of the resumed Start";
+        EXPECT_EQ(State(*second), State(*game));
+        EXPECT_TRUE(second->ContinueMatch());
+        PlayFirstActions(*second, 1);
+    }
+
+    TEST_F(MahjongSaveGameTest, TheLevelsOfAMatchOfPeopleAreKeptByContinueToo) {
+        const SeatLevels mixed{ComputerLevel{3}, ComputerLevel{4}, ComputerLevel{7}, ComputerLevel{9}};
+        IntrusivePtr<MahjongGame> game = NewGame();
+        game->SetSeats(SeatSetup{SeatKind::Person, SeatKind::Person, SeatKind::Person, SeatKind::Person});
+        game->SetLevels(mixed);
+        ASSERT_TRUE(game->StartMatch(kSeed).has_value());
+        game->FlushSave();
+
+        IntrusivePtr<MahjongGame> second = StartedGame();
+        ASSERT_TRUE(second->CanContinue());
+        EXPECT_EQ(second->GetLevels(), mixed) << "a person's seat turns computer again at the level it had";
+    }
+
+    TEST_F(MahjongSaveGameTest, ThePrefsKeepALevelPerSeatAndAnOldSlotGivesOneLevel) {
+        const SeatLevels mixed{ComputerLevel{1}, ComputerLevel{2}, ComputerLevel{6}, ComputerLevel{10}};
+        IntrusivePtr<MahjongGame> game = NewGame();
+        game->SetLevels(mixed);
+        game->FlushSave();
+        EXPECT_EQ(StartedGame()->GetLevels(), mixed) << "after a restart";
+
+        // A slot of the old kind: `level` only
+        MatchSaveStore store(CoreManager::GetFileSystem());
+        ASSERT_TRUE(store.Open(folder));
+        MahjongPrefsSave old;
+        old.level = "3";
+        ASSERT_TRUE(store.SavePrefs(old));
+        EXPECT_EQ(StartedGame()->GetLevels(), UniformLevels(ComputerLevel{3}));
+    }
+
+    TEST_F(MahjongSaveGameTest, BrokenLevelsInThePrefsApplyNothing) {
+        MatchSaveStore store(CoreManager::GetFileSystem());
+        ASSERT_TRUE(store.Open(folder));
+        for (const char* bad : {"5,5,5", "5,5,5,11", "a"}) {
+            MahjongPrefsSave prefs = MakePrefs("ru", false, kDefaultSeatSetup, kShortMatchHands, ComputerLevel::Easy);
+            prefs.levels = bad;
+            ASSERT_TRUE(store.SavePrefs(prefs));
+            IntrusivePtr<MahjongGame> game = StartedGame();
+            EXPECT_EQ(game->GetLevels(), UniformLevels(kDefaultLevel)) << bad;
+            EXPECT_TRUE(game->HintsOn()) << bad;
+            EXPECT_EQ(game->GetSettings().handsPerMatch, kFullMatchHands) << bad;
+            EXPECT_EQ(game->GetLanguage(), PoolString::Intern(kDefaultLanguage)) << bad;
+        }
     }
 
     TEST_F(MahjongSaveGameTest, TheSeatsLevelAndHandsOfAResumedMatchAreWhatTheGameHasNext) {
@@ -270,9 +337,9 @@ namespace BECore::Mahjong::Tests {
         IntrusivePtr<MahjongGame> second = StartedGame();
         ASSERT_TRUE(second->CanContinue());
         EXPECT_EQ(second->GetSeats(), (SeatSetup{SeatKind::Person, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer})) << "the panel shows the match behind it";
-        EXPECT_EQ(second->GetLevel(), ComputerLevel::Easy);
+        EXPECT_EQ(second->GetLevels()[0], ComputerLevel::Easy);
         EXPECT_EQ(second->GetSettings().handsPerMatch, kShortMatchHands);
-        EXPECT_EQ(second->GetSession().Level(), ComputerLevel::Easy);
+        EXPECT_EQ(second->GetSession().Levels(), UniformLevels(ComputerLevel::Easy));
     }
 
     TEST_F(MahjongSaveGameTest, AClaimWindowIsResumedAsItWas) {
@@ -409,7 +476,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(second->GetSettings().handsPerMatch, kShortMatchHands);
         EXPECT_FALSE(second->GetSettings().flowers);
         EXPECT_EQ(second->GetSettings().limit, MahjongSettings{}.limit);
-        EXPECT_EQ(second->GetLevel(), ComputerLevel::Easy);
+        EXPECT_EQ(second->GetLevels()[0], ComputerLevel::Easy);
         EXPECT_EQ(second->GetAnimationSpeed(), AnimationSpeed::Slow);
         EXPECT_FALSE(fs::exists(Slot(kMatchFile)));
     }
@@ -425,7 +492,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(game->GetLanguage(), PoolString::Intern(kDefaultLanguage));
         EXPECT_FALSE(game->HintsOn());
         EXPECT_EQ(game->GetSettings().handsPerMatch, kShortMatchHands);
-        EXPECT_EQ(game->GetLevel(), ComputerLevel::Easy);
+        EXPECT_EQ(game->GetLevels()[0], ComputerLevel::Easy);
 
         // Hands that are not 16 or 8 are refused: the game keeps 16
         MahjongPrefsSave odd = unknown;

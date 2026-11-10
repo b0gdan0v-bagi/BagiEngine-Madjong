@@ -169,7 +169,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Member(json, "version"), kMatchLogFormatVersion);
         EXPECT_EQ(Member(json, "seed"), kSeed);
         EXPECT_EQ(Member(json, "seats"), "CCCC");
-        EXPECT_EQ(Member(json, "level"), LevelNumber(ComputerLevel::Normal));
+        EXPECT_EQ(Member(json, "levels"), Json::array({5, 5, 5, 5}));
         const Json settings = Member(json, "settings");
         EXPECT_EQ(Member(settings, "handsPerMatch"), kShortMatchHands);
         EXPECT_EQ(Member(settings, "flowers"), false);
@@ -178,73 +178,120 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Member(settings, "startingScore"), kExpectedStartingScore);
     }
 
-    TEST_F(MatchLogJsonTest, TheLevelOfTheStartRoundTripsForEveryLevel) {
+    TEST_F(MatchLogJsonTest, TheLevelsOfTheStartRoundTripForEveryLevel) {
         MatchLogEvent start = PlayedLog(kSeed).front();
         ASSERT_EQ(start.kind, MatchLogKind::Start);
         for (const ComputerLevel level : kAllLevels) {
-            start.level = level;
+            start.levels = UniformLevels(level);
             const Json json = EventToJson(start);
-            EXPECT_EQ(Member(json, "level"), LevelNumber(level)) << "a number, never a name";
+            EXPECT_EQ(Member(json, "levels"), Json::array({LevelNumber(level), LevelNumber(level), LevelNumber(level), LevelNumber(level)})) << "numbers, never names";
+            EXPECT_EQ(FindJsonMember(json, "level"), nullptr) << "version 4 has no single level";
             const auto back = EventFromJson(json);
             ASSERT_TRUE(back.has_value()) << back.error().c_str();
-            EXPECT_EQ(back->level, start.level);
+            EXPECT_EQ(back->levels, start.levels);
             EXPECT_EQ(*back, start);
         }
-        // A match played at a level logs that level, also through the text of the line.
+        // Four different levels, each at its own seat
+        start.levels = {ComputerLevel{1}, ComputerLevel{3}, ComputerLevel{5}, ComputerLevel{10}};
+        const Json json = EventToJson(start);
+        EXPECT_EQ(Member(json, "levels"), Json::array({1, 3, 5, 10}));
+        const auto back = EventFromJson(json);
+        ASSERT_TRUE(back.has_value()) << back.error().c_str();
+        EXPECT_EQ(back->levels, start.levels);
+        EXPECT_EQ(*back, start);
+
+        // A match played at levels logs them, also through the text of the line.
         Match match;
         TableSession session(match);
         MatchLog log;
         session.SetLogSink(&log);
-        ASSERT_TRUE(session.StartMatch(MahjongSettings{}, kSeed, kAllComputers, ComputerLevel::Easy).has_value());
+        const SeatLevels mixed{ComputerLevel::Easy, ComputerLevel{2}, ComputerLevel{7}, ComputerLevel::Normal};
+        ASSERT_TRUE(session.StartMatch(MahjongSettings{}, kSeed, kAllComputers, mixed).has_value());
         const auto parsed = ParseMatchLog(TextOf(log.Events()).c_str());
         ASSERT_TRUE(parsed.has_value()) << parsed.error().c_str();
-        EXPECT_EQ(parsed->front().level, ComputerLevel::Easy);
+        EXPECT_EQ(parsed->front().levels, mixed);
     }
 
     TEST_F(MatchLogJsonTest, AVersionOneStartHasNoLevelAndReadsAsNormal) {
         const MatchLogEvent start = PlayedLog(kSeed).front();
         Json json = EventToJson(start);
         json["version"] = kMatchLogOldestVersion;
-        json.erase("level");
+        json.erase("levels");
         const auto back = EventFromJson(json);
         ASSERT_TRUE(back.has_value()) << back.error().c_str();
-        EXPECT_EQ(back->level, ComputerLevel::Normal);
+        EXPECT_EQ(back->levels, UniformLevels(ComputerLevel::Normal));
         EXPECT_EQ(*back, start);
 
         // A version 1 line does not look at a `level` it should not have.
         json["level"] = "hard";
         const auto ignored = EventFromJson(json);
         ASSERT_TRUE(ignored.has_value()) << ignored.error().c_str();
-        EXPECT_EQ(ignored->level, ComputerLevel::Normal);
+        EXPECT_EQ(ignored->levels, UniformLevels(ComputerLevel::Normal));
     }
 
-    TEST_F(MatchLogJsonTest, AVersionThreeStartNeedsALevelNumberOneToTen) {
+    TEST_F(MatchLogJsonTest, AVersionFourStartNeedsFourLevelsOneToTen) {
         const MatchLogEvent start = PlayedLog(kSeed).front();
         Json without = EventToJson(start);
-        without.erase("level");
+        without.erase("levels");
         const eastl::string missing = ErrorOf(without);
-        EXPECT_NE(missing.find("level"), eastl::string::npos) << missing.c_str();
-        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", 0));
-        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", 11));
-        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", -1));
-        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", "5"));
-        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", "normal"));
-        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", "hard"));
-        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", 2.5));
-        EXPECT_TRUE(ChangedMemberIsRefused(start, "level", nullptr));
+        EXPECT_NE(missing.find("levels"), eastl::string::npos) << missing.c_str();
+
+        // A version 4 line that has only the old `level` is refused: it names `levels`
+        Json onlyLevel = without;
+        onlyLevel["level"] = 3;
+        const eastl::string old = ErrorOf(onlyLevel);
+        EXPECT_NE(old.find("levels"), eastl::string::npos) << old.c_str();
+
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "levels", Json::array({5, 5, 5})));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "levels", Json::array({5, 5, 5, 5, 5})));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "levels", Json::array()));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "levels", Json::array({5, 5, 5, 0})));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "levels", Json::array({11, 5, 5, 5})));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "levels", Json::array({5, -1, 5, 5})));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "levels", Json::array({5, 5, "5", 5})));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "levels", Json::array({5, 5, "normal", 5})));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "levels", Json::array({5, 2.5, 5, 5})));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "levels", Json::array({5, nullptr, 5, 5})));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "levels", 5));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "levels", "5,5,5,5"));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "levels", nullptr));
         // The versions around the known ones are refused.
         EXPECT_TRUE(ChangedMemberIsRefused(start, "version", kMatchLogFormatVersion + 1));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "version", kMatchLogOldestVersion - 1));
+        EXPECT_EQ(kMatchLogFormatVersion, kMatchLogSeatLevelsVersion);
+    }
+
+    TEST_F(MatchLogJsonTest, AVersionThreeStartKeepsItsOneLevelAsFourEqualOnes) {
+        // A line as the game wrote it before the level of each seat
+        const std::string line =
+            R"({"event":"start","version":3,"seed":41,"settings":{"handsPerMatch":4,"flowers":false,"replayDrawnHand":true,"limit":500,"startingScore":2000},"seats":"PCCC","level":3})";
+        const auto json = ParseJson(eastl::string_view(line.data(), line.size()));
+        ASSERT_TRUE(json.has_value());
+        const auto back = EventFromJson(*json);
+        ASSERT_TRUE(back.has_value()) << back.error().c_str();
+        EXPECT_EQ(back->levels, UniformLevels(ComputerLevel{3}));
+        EXPECT_EQ(back->seed, 41u);
+        EXPECT_EQ(back->seats, (SeatSetup{SeatKind::Person, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer}));
+
+        // Version 3 needs its number 1..10; `levels` is not looked at
+        for (const Json& bad : {Json(0), Json(11), Json(-1), Json("5"), Json("normal"), Json(2.5), Json(nullptr)}) {
+            const eastl::string error = ErrorOf(With(*json, "level", bad));
+            EXPECT_NE(error.find("level"), eastl::string::npos) << bad.dump();
+        }
+        Json without = *json;
+        without.erase("level");
+        EXPECT_NE(ErrorOf(without).find("level"), eastl::string::npos);
     }
 
     TEST_F(MatchLogJsonTest, AVersionTwoStartNeedsALevelOfTheTwoNamesAndReadsThemAsOneAndFive) {
         const MatchLogEvent start = PlayedLog(kSeed).front();
         Json versionTwo = EventToJson(start);
+        versionTwo.erase("levels");
         versionTwo["version"] = kMatchLogLevelVersion;
         for (const auto& [name, level] : {std::pair{"easy", ComputerLevel::Easy}, std::pair{"normal", ComputerLevel::Normal}}) {
             const auto back = EventFromJson(With(versionTwo, "level", name));
             ASSERT_TRUE(back.has_value()) << back.error().c_str();
-            EXPECT_EQ(back->level, level) << name;
+            EXPECT_EQ(back->levels, UniformLevels(level)) << name;
         }
         Json without = versionTwo;
         without.erase("level");
@@ -264,12 +311,13 @@ namespace BECore::Mahjong::Tests {
         const eastl::vector<MatchLogEvent> events = PlayedLog(kSeed);
         const MatchLogEvent& start = events.front();
         ASSERT_EQ(start.kind, MatchLogKind::Start);
-        ASSERT_EQ(start.level, ComputerLevel::Normal);
+        ASSERT_EQ(start.levels, UniformLevels(ComputerLevel::Normal));
         Json hard = With(EventToJson(start), "level", std::string(kMatchLogRetiredLevelName));
+        hard.erase("levels");
         hard["version"] = kMatchLogLevelVersion;
         const auto back = EventFromJson(hard);
         ASSERT_TRUE(back.has_value()) << back.error().c_str();
-        EXPECT_EQ(back->level, ComputerLevel::Normal);
+        EXPECT_EQ(back->levels, UniformLevels(ComputerLevel::Normal));
         EXPECT_EQ(*back, start);
 
         // The whole file, with its first line written as an old game wrote it, reads back as the same log and replays.

@@ -21,6 +21,7 @@ namespace BECore::Mahjong {
     namespace {
 
         constexpr eastl::string_view kSetSeatPrefix = "MahjongSetSeat";
+        constexpr eastl::string_view kSetSeatLevelPrefix = "MahjongSetSeatLevel";
         constexpr eastl::string_view kSetHandsAction = "MahjongSetHands";
         // The ids of the two segments of `Hands` (the values of the buttons in the scene file): the numbers of `MahjongSettings.h` as text
         constexpr eastl::string_view kFullHandsId = "16";
@@ -36,7 +37,6 @@ namespace BECore::Mahjong {
         constexpr eastl::string_view kSetLanguageAction = "MahjongSetLanguage";
         constexpr eastl::string_view kOptionsAction = "MahjongOptions";
         constexpr eastl::string_view kOptionsBackAction = "MahjongOptionsBack";
-        constexpr eastl::string_view kSetLevelAction = "MahjongSetLevel";
         constexpr eastl::string_view kSetSpeedAction = "MahjongSetSpeed";
         constexpr eastl::string_view kRulesAction = "MahjongRules";
         constexpr eastl::string_view kRulesNextAction = "MahjongRulesNext";
@@ -70,6 +70,15 @@ namespace BECore::Mahjong {
         /// The seat that `MahjongSetSeatN` is about; nullopt for another action.
         std::optional<Seat> SeatOfAction(eastl::string_view action) {
             if (action.size() != kSetSeatPrefix.size() + 1 || action.substr(0, kSetSeatPrefix.size()) != kSetSeatPrefix) {
+                return std::nullopt;
+            }
+            const int seat = action.back() - '0';
+            return IsSeat(seat) ? std::optional<Seat>(seat) : std::nullopt;
+        }
+
+        /// The seat that `MahjongSetSeatLevelN` is about; nullopt for another action.
+        std::optional<Seat> SeatOfLevelAction(eastl::string_view action) {
+            if (action.size() != kSetSeatLevelPrefix.size() + 1 || action.substr(0, kSetSeatLevelPrefix.size()) != kSetSeatLevelPrefix) {
                 return std::nullopt;
             }
             const int seat = action.back() - '0';
@@ -173,10 +182,21 @@ namespace BECore::Mahjong {
         }
     }
 
-    void MahjongHudComponent::PublishSeatKinds() const {
+    void MahjongHudComponent::PublishSeatKinds() {
         UIVars& vars = CoreManager::GetUIVars();
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             vars.Set(SeatVar("seatKind", seat), KindId(_pending[seat]));
+        }
+        PublishSeatLevels();
+    }
+
+    void MahjongHudComponent::PublishSeatLevels() {
+        // The dropdown of a seat is there exactly while the seat is a computer; the level of a person's seat is kept, only not shown
+        UIVars& vars = CoreManager::GetUIVars();
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            const std::string_view text = LevelText(_pendingLevels[seat]);
+            vars.Set(SeatVar("seatLevel", seat), eastl::string_view(text.data(), text.size()));
+            UICanvasComponent::SetElementVisibleByName(GetScene(), SeatVar("SeatLevel", seat), _pending[seat] == SeatKind::Computer);
         }
     }
 
@@ -189,11 +209,6 @@ namespace BECore::Mahjong {
         CoreManager::GetUIVars().Set("language"_intern, game.GetLanguage().ToStringView());
     }
 
-    void MahjongHudComponent::PublishLevelChoice(const MahjongGame& game) const {
-        const std::string_view text = LevelText(game.GetLevel());
-        CoreManager::GetUIVars().Set("levelChoice"_intern, eastl::string_view(text.data(), text.size()));
-    }
-
     void MahjongHudComponent::PublishSpeedChoice(const MahjongGame& game) const {
         const std::string_view text = SpeedText(game.GetAnimationSpeed());
         CoreManager::GetUIVars().Set("speedChoice"_intern, eastl::string_view(text.data(), text.size()));
@@ -203,11 +218,11 @@ namespace BECore::Mahjong {
         const bool open = game != nullptr && game->IsSetupOpen();
         if (open && !_setupShown) {
             _pending = game->GetSeats();  // the panel opens on the seats of the last match
+            _pendingLevels = game->GetLevels();
             PublishSeatKinds();
             _pendingHands = game->GetSettings().handsPerMatch;
             PublishHandsChoice();
             PublishLanguage(*game);
-            PublishLevelChoice(*game);
         }
         if (open != _setupShown) {
             _setupShown = open;
@@ -230,7 +245,6 @@ namespace BECore::Mahjong {
             // The rows show what the game has now; the hints row is published by the hints component while the page is open
             PublishLanguage(*game);
             PublishSpeedChoice(*game);
-            PublishLevelChoice(*game);
         }
         UICanvasComponent::SetVisibleByName(GetScene(), "Options"_intern, open);
     }
@@ -453,16 +467,6 @@ namespace BECore::Mahjong {
             }
             return;
         }
-        if (action == kSetLevelAction) {
-            // The page is where the level is set; only `1` .. `10` (`LevelText`), client text is parsed by `TryParseLevel`
-            const eastl::string_view text = event.value.ToStringView();
-            const std::optional<ComputerLevel> level = TryParseLevel(std::string_view(text.data(), text.size()));
-            if (game->IsOptionsOpen() && level) {
-                game->SetLevel(*level);
-                PublishLevelChoice(*game);
-            }
-            return;
-        }
         if (action == kContinueAction) {
             game->ContinueMatch();  // ignored by the game when there is nothing to continue
             return;
@@ -471,13 +475,16 @@ namespace BECore::Mahjong {
             // The seats and the number of hands are the game's only when the match began with them (every other setting stays as it
             // is); a refusal leaves the choice open on the old ones
             const SeatSetup seatsBefore = game->GetSeats();
+            const SeatLevels levelsBefore = game->GetLevels();
             const MahjongSettings settingsBefore = game->GetSettings();
             MahjongSettings settings = settingsBefore;
             settings.handsPerMatch = _pendingHands;
             game->SetSeats(_pending);
+            game->SetLevels(_pendingLevels);
             game->SetSettings(settings);
             if (!game->StartRandomMatch().has_value()) {
                 game->SetSeats(seatsBefore);
+                game->SetLevels(levelsBefore);
                 game->SetSettings(settingsBefore);
                 LOG_WARNING("MahjongHudComponent: the match did not start, the seat choice stays open");
             }
@@ -498,6 +505,15 @@ namespace BECore::Mahjong {
             if (value == kFullHandsId || value == kShortHandsId) {
                 _pendingHands = value == kFullHandsId ? kFullMatchHands : kShortMatchHands;
                 PublishHandsChoice();
+            }
+            return;
+        }
+        if (const std::optional<Seat> levelSeat = SeatOfLevelAction(action)) {
+            // Only `1` .. `10` (`TryParseLevel`); the level is the panel's until `Start`
+            const eastl::string_view text = event.value.ToStringView();
+            if (const std::optional<ComputerLevel> level = TryParseLevel(std::string_view(text.data(), text.size()))) {
+                _pendingLevels[*levelSeat] = *level;
+                PublishSeatLevels();
             }
             return;
         }

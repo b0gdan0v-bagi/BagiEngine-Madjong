@@ -48,6 +48,14 @@ namespace BECore::Mahjong {
             return list;
         }
 
+        Json LevelsToJson(const SeatLevels& levels) {
+            Json list = Json::array();
+            for (const ComputerLevel level : levels) {
+                list.push_back(LevelNumber(level));
+            }
+            return list;
+        }
+
         Json SettingsToJson(const MahjongSettings& settings) {
             Json json = Json::object();
             json["handsPerMatch"] = settings.handsPerMatch;
@@ -212,6 +220,25 @@ namespace BECore::Mahjong {
             return scores;
         }
 
+        /// The `levels` of a version 4 `start`: four integers 1..10.
+        std::expected<SeatLevels, eastl::string> ReadSeatLevels(const Json& object, eastl::string_view key) {
+            const auto list = ReadArray(object, key, kSeatCount);
+            if (!list) {
+                return std::unexpected(list.error());
+            }
+            SeatLevels levels = UniformLevels(kDefaultLevel);
+            size_t index = 0;
+            for (const Json& item : **list) {
+                const std::optional<int64_t> number = ReadIntItem(item);
+                const std::optional<ComputerLevel> level = number ? LevelOf(*number) : std::nullopt;
+                if (!level) {
+                    return Fail(key, Format("has to hold integers {}..{}", kMinLevel, kMaxLevel).c_str());
+                }
+                levels[index++] = *level;
+            }
+            return levels;
+        }
+
         std::expected<MahjongSettings, eastl::string> ReadSettings(const Json& object) {
             const Json* member = FindJsonMember(object, "settings");
             if (member == nullptr || !member->is_object()) {
@@ -275,12 +302,18 @@ namespace BECore::Mahjong {
                 return Fail("seats", Format("has to be four letters, P for a person and C for a computer: \"{}\"", *letters).c_str());
             }
             event.seats = *seats;
-            if (*version >= kMatchLogNumberLevelVersion) {
+            if (*version >= kMatchLogSeatLevelsVersion) {
+                const auto levels = ReadSeatLevels(json, "levels");
+                if (!levels) {
+                    return std::unexpected(levels.error());
+                }
+                event.levels = *levels;
+            } else if (*version >= kMatchLogNumberLevelVersion) {
                 const auto number = ReadInt(json, "level", kMinLevel, kMaxLevel);
                 if (!number) {
                     return std::unexpected(number.error());
                 }
-                event.level = *LevelOf(*number);
+                event.levels = UniformLevels(*LevelOf(*number));
             } else if (*version >= kMatchLogLevelVersion) {
                 const auto name = ReadString(json, "level");
                 if (!name) {
@@ -288,14 +321,14 @@ namespace BECore::Mahjong {
                 }
                 const std::string_view levelName(name->c_str(), name->size());
                 if (levelName == kMatchLogRetiredLevelName) {
-                    event.level = ComputerLevel::Normal;
+                    event.levels = UniformLevels(ComputerLevel::Normal);
                     return event;
                 }
                 const std::optional<ComputerLevel> level = TryParseLevelName(levelName);
                 if (!level) {
                     return Fail("level", Format("has to be easy or normal in version {}: \"{}\"", kMatchLogLevelVersion, *name).c_str());
                 }
-                event.level = *level;
+                event.levels = UniformLevels(*level);
             }
             return event;
         }
@@ -467,7 +500,7 @@ namespace BECore::Mahjong {
                 json["seed"] = event.seed;
                 json["settings"] = SettingsToJson(event.settings);
                 json["seats"] = MakeJsonString(SeatsToLetters(event.seats));
-                json["level"] = LevelNumber(event.level);
+                json["levels"] = LevelsToJson(event.levels);
                 break;
             }
             case MatchLogKind::Hand: {
