@@ -458,7 +458,7 @@ namespace BECore::Mahjong::Tests {
 
     // ----- the Next hand button of the score table -----
 
-    TEST_F(MahjongTouchSizeTest, TheNextHandButtonIsATouchTargetInEveryWindowAndTouchesNeitherThePlateNorATile) {
+    TEST_F(MahjongTouchSizeTest, TheNextHandButtonIsATouchTargetInEveryWindowAndLiesInTheGapOfThePlateOrUnderTheTableAndCoversNoTile) {
         ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
         _game->GetSession().RunComputers();
         ASSERT_EQ(_game->GetSession().GetPhase(), SessionPhase::HandOver);
@@ -471,35 +471,53 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(action->GetLayout().params.scaleMode, CanvasScaleMode::ScaleWithScreen);
         EXPECT_GE(action->GetLayout().params.minScale, 0.6f) << "the floor that keeps the 56 unit button a touch target";
         EXPECT_EQ(EngineTouchMinimum(), kEngineTouchMinimum);
+        const UIElement* declared = Element("HandOverAction", "NextHand");
+        ASSERT_NE(declared, nullptr);
+        EXPECT_TRUE(declared->ignoreSafeArea) << "a notch or side insets do not move the button off its gap";
 
         const TableLayout layout = MakeWorstCaseTableLayout();
+        // The parts of the plate that carry text: the button covers none of them (the gap and the two gaps of 8 around it are free)
+        const char* const kTexts[] = {"Headline", "SeatRow0", "SeatRow1", "SeatRow2", "SeatRow3", "Lines", "Summary"};
         size_t checked = 0;
-        size_t withoutInsets = 0;
+        size_t inTheGap = 0;
+        size_t underTheTable = 0;
+        float tallestInTheGap = 0.0f;
         ForEachMatrixWindow([&](const MatrixWindow& window) {
-            withoutInsets += window.HasInsets() ? 0u : 1u;
             // The plate (SceneView) and the button (Screen, ScaleWithScreen, user scale 1.0), both in view units of the table
             LayOutInWindow(*plate, window);
             const UIElement* plateElement = Element("HandOver", "Plate");
-            const UIElement* headlineElement = Element("HandOver", "Headline");
-            ASSERT_TRUE(plateElement != nullptr && headlineElement != nullptr);
+            ASSERT_TRUE(plateElement != nullptr);
             ASSERT_FALSE(plateElement->rect.IsEmpty()) << window.label.c_str();
             const Rect plateRect = ToView(plateElement->rect, *plate, window);
-            const Rect headlineRect = ToView(headlineElement->rect, *plate, window);
+            std::vector<Rect> texts;
+            for (const char* name : kTexts) {
+                const UIElement* element = Element("HandOver", name);
+                ASSERT_NE(element, nullptr) << name;
+                texts.push_back(ToView(element->rect, *plate, window));
+            }
 
             LayOutInWindow(*action, window, CanvasScaleMode::ScaleWithScreen, 1.0f);
             const UIElement* button = Element("HandOverAction", "NextHand");
             ASSERT_NE(button, nullptr);
             ASSERT_FALSE(button->rect.IsEmpty()) << window.label.c_str();
             const Rect buttonRect = ToView(button->rect, *action, window);
-            // The button never touches the headline band. A top notch (7 % of the short side) pushes it down by the inset, and in a 16:9
-            // window that is onto the top padding of the plate (the safe area's call, as for New game): then it stays inside the 16 units.
-            EXPECT_FALSE(Intersects(buttonRect, headlineRect)) << window.label.c_str() << ": the button touches the headline";
-            if (window.simulation == SafeAreaSimulation::TopNotch) {
-                if (Intersects(buttonRect, plateRect)) {
-                    EXPECT_LE(buttonRect.y + buttonRect.h, plateRect.y + kModalPadding + 0.01f) << window.label.c_str() << ": the button reaches into the plate";
-                }
-            } else {
+
+            const bool portrait = window.outputHeight >= window.outputWidth;  // the variant of the file: a height at least the width
+            if (portrait) {
+                // The table is a strip in the middle of the window: the button lies at the bottom, in the bar under it
                 EXPECT_FALSE(Intersects(buttonRect, plateRect)) << window.label.c_str() << ": the button touches the plate";
+                EXPECT_GE(buttonRect.y, kViewHeight) << window.label.c_str() << ": the button is under the table";
+                ++underTheTable;
+            } else {
+                // In the middle of the window, in the gap of the plate: inside the plate's width and touching no text of it
+                EXPECT_GE(buttonRect.x, plateRect.x) << window.label.c_str();
+                EXPECT_LE(buttonRect.x + buttonRect.w, plateRect.x + plateRect.w) << window.label.c_str();
+                for (size_t i = 0; i < texts.size(); ++i) {
+                    EXPECT_FALSE(Intersects(buttonRect, texts[i])) << window.label.c_str() << ": the button covers " << kTexts[i];
+                }
+                EXPECT_NEAR(buttonRect.x + buttonRect.w * 0.5f, kViewWidth * 0.5f, 0.01f) << window.label.c_str() << ": centred across the table";
+                tallestInTheGap = std::max(tallestInTheGap, buttonRect.h);
+                ++inTheGap;
             }
 
             // Inside the window (the validator says the same for every mode and user scale)
@@ -508,17 +526,20 @@ namespace BECore::Mahjong::Tests {
             EXPECT_GE(output.y, -0.01f) << window.label.c_str();
             EXPECT_LE(output.x + output.w, window.outputWidth + 0.01f) << window.label.c_str();
             EXPECT_LE(output.y + output.h, window.outputHeight + 0.01f) << window.label.c_str();
-            // A touch target as the user sees it (the same rule as New game, which has its corner)
+            // A touch target as the user sees it (the same rule as New game)
             EXPECT_GE(std::min(output.w, output.h) / window.pixelDensity, EngineTouchMinimum() - 0.01f) << window.label.c_str();
 
-            if (window.HasInsets()) {
-                return;  // with insets the button lies nearer the table, as the HUD does
-            }
+            // The button has ignoreSafeArea, so no inset moves it: every window is checked against the hands, insets included
             ExpectClearOfTable(buttonRect, layout, window.label.c_str());
             ++checked;
         });
         EXPECT_GT(checked, 0u);
-        EXPECT_EQ(checked, withoutInsets) << "every window without insets was checked";
+        EXPECT_GT(inTheGap, 0u);
+        EXPECT_GT(underTheTable, 0u);
+        // The tallest the button gets in a landscape window of the matrix (32:9, where the window scale outgrows the fit of the table) is what the
+        // gap of 64 and the two gaps of 8 around it hold
+        EXPECT_GT(tallestInTheGap, 56.0f * 1.4f) << "the matrix has a 32:9 window";
+        EXPECT_LE(tallestInTheGap, 64.0f + 2.0f * kModalGap);
     }
 
     namespace {
