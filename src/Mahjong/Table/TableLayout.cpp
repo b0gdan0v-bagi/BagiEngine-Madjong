@@ -1,6 +1,7 @@
 #include "TableLayout.h"
 
 #include <Mahjong/Table/UiPalette.h>
+#include <cmath>
 
 namespace BECore::Mahjong {
 
@@ -10,6 +11,8 @@ namespace BECore::Mahjong {
         /// The space between neighbouring zones of one seat, and between the zones of the side seats.
         constexpr float kZoneGap = 4.0f;
         constexpr float kBlockGap = 16.0f;
+        /// The space between the bonus column of a side seat and its discard block.
+        constexpr float kSideBlockGap = 8.0f;
         constexpr int kMeldTilesPerKong = 4;
         constexpr int kMeldTilesPerSet = 3;
 
@@ -17,7 +20,8 @@ namespace BECore::Mahjong {
             return (total - span) / 2.0f;
         }
 
-        /// Tiles of one zone laid in a line (a row for the bottom and top seats, a column for the side seats).
+        /// Tiles of one zone laid in a line (a row for the bottom and top seats, a column for the side seats). `tileW` x `tileH` is the
+        /// size of the slot on the screen: a side seat's tiles are turned, so it is the upright size swapped.
         struct Strip {
             float x = 0.0f;
             float y = 0.0f;
@@ -35,6 +39,10 @@ namespace BECore::Mahjong {
             /// The top-left corner of the discard block.
             float discardX = 0.0f;
             float discardY = 0.0f;
+            /// The turn of every tile of the seat (degrees clockwise), and the size of the discard block as it is laid.
+            float rotation = 0.0f;
+            float discardW = 0.0f;
+            float discardH = 0.0f;
         };
 
         constexpr float StripCapacity(float tileLength, int tiles, int gaps) noexcept {
@@ -43,6 +51,10 @@ namespace BECore::Mahjong {
 
         constexpr float kDiscardBlockW = kDiscardTileW * kDiscardsPerRow;
         constexpr float kDiscardBlockH = kDiscardTileH * kDiscardRowCapacity;
+        // A side seat's block is the same block turned: a row of six runs along the screen's vertical, so the block is as high as six
+        // tiles are wide and as wide as five tiles are high.
+        constexpr float kSideDiscardBlockW = kDiscardBlockH;
+        constexpr float kSideDiscardBlockH = kDiscardBlockW;
 
         // The bottom row: the hand, then the melds; the bonus tiles above the hand. Starts clear of the left column of melds.
         constexpr float kViewerRowX = 72.0f;
@@ -53,24 +65,25 @@ namespace BECore::Mahjong {
         constexpr float kViewerMeldCapacity = StripCapacity(kViewerMeldTileW, kMeldTilesPerKong* kMaxMelds, kMaxMelds - 1);
         constexpr float kBottomDiscardY = 452.0f;
 
-        // The side columns, from the edge of the view inwards: the hand, the melds, the bonus tiles, the discard block.
-        constexpr float kSideHandSpan = kOpponentHandTileH * kMaxConcealedTiles;
-        constexpr float kSideMeldCapacity = StripCapacity(kOpponentMeldTileH, kMeldTilesPerKong* kMaxMelds, kMaxMelds - 1);
-        constexpr float kSideBonusCapacity = kOpponentBonusTileH * kMaxBonusTiles;
-        // The top seat's bonus tiles lie in a row, so they span the tile width, not the height.
-        constexpr float kTopBonusCapacity = kOpponentBonusTileW * kMaxBonusTiles;
+        // The side columns, from the edge of the view inwards: the hand, the melds, the bonus tiles, the discard block. The tiles are
+        // turned, so a column is as wide as its tiles are high (kOpponent*TileH) and its tiles pitch by their width (kOpponent*TileW).
+        constexpr float kSideHandSpan = kSideHandTileW * kMaxConcealedTiles;
+        constexpr float kSideMeldCapacity = StripCapacity(kOpponentMeldTileW, kMeldTilesPerKong* kMaxMelds, kMaxMelds - 1);
+        constexpr float kSideBonusCapacity = kOpponentBonusTileW * kMaxBonusTiles;
+        // The top seat's bonus tiles lie in a row as long as the side seats' columns.
+        constexpr float kTopBonusCapacity = kSideBonusCapacity;
         constexpr float kSideHandY = Centered(kViewHeight, kSideHandSpan);
         constexpr float kSideMeldY = Centered(kViewHeight, kSideMeldCapacity);
         constexpr float kSideBonusY = kSideHandY;
-        constexpr float kSideDiscardY = Centered(kViewHeight, kDiscardBlockH);
+        constexpr float kSideDiscardY = Centered(kViewHeight, kSideDiscardBlockH);
         constexpr float kLeftHandX = kEdge;
-        constexpr float kLeftMeldX = kLeftHandX + kOpponentHandTileW + kZoneGap;
-        constexpr float kLeftBonusX = kLeftMeldX + kOpponentMeldTileW + kZoneGap;
-        constexpr float kLeftDiscardX = kLeftBonusX + kOpponentBonusTileW + kBlockGap;
-        constexpr float kRightHandX = kViewWidth - kEdge - kOpponentHandTileW;
-        constexpr float kRightMeldX = kRightHandX - kZoneGap - kOpponentMeldTileW;
-        constexpr float kRightBonusX = kRightMeldX - kZoneGap - kOpponentBonusTileW;
-        constexpr float kRightDiscardX = kRightBonusX - kBlockGap - kDiscardBlockW;
+        constexpr float kLeftMeldX = kLeftHandX + kSideHandTileH + kZoneGap;
+        constexpr float kLeftBonusX = kLeftMeldX + kOpponentMeldTileH + kZoneGap;
+        constexpr float kLeftDiscardX = kLeftBonusX + kOpponentBonusTileH + kSideBlockGap;
+        constexpr float kRightHandX = kViewWidth - kEdge - kSideHandTileH;
+        constexpr float kRightMeldX = kRightHandX - kZoneGap - kOpponentMeldTileH;
+        constexpr float kRightBonusX = kRightMeldX - kZoneGap - kOpponentBonusTileH;
+        constexpr float kRightDiscardX = kRightBonusX - kSideBlockGap - kSideDiscardBlockW;
 
         // The top row: the hand with the bonus tiles beside it, the melds below, then the discard block.
         constexpr float kTopHandSpan = kOpponentHandTileW * kMaxConcealedTiles;
@@ -89,38 +102,45 @@ namespace BECore::Mahjong {
         constexpr float kWallRingY = (kTopDiscardY + kDiscardBlockH + kBottomDiscardY - kWallRingH) / 2.0f;
 
         // The seat plates, by screen position (0 bottom, 1 right, 2 top, 3 left), each in the free ground next to its seat's discard block.
-        // Bottom: left of the bottom discard plate, above the viewer's bonus row. Right: above the right discard plate, below the move
-        // line of the HUD (which ends at y 172) and right of the `Hint` label (x 1028). Top: below the top seat's melds and the HUD's
-        // `Info`, left of the top discard plate. Left: above the left discard plate, clear of the left bonus column.
-        constexpr float kSeatPlateBottomX = 72.0f;
+        // Bottom: left of the bottom discard plate, above the viewer's bonus row, right of the left meld column (which ends at x 76). Right: above the right discard plate, below the move
+        // line of the HUD (which ends at y 172), right of the `Hint` label (x 1000) and left of the right bonus column. Top: below the top
+        // seat's melds and the HUD's `Info`, left of the top discard plate. Left: above the left discard plate, clear of the left bonus
+        // column. The side plates start on the grid unit next to their discard block.
+        constexpr float kSeatPlateBottomX = 76.0f;
         constexpr float kSeatPlateBottomY = 532.0f;
-        constexpr float kSeatPlateRightX = 1036.0f;
+        constexpr float kSeatPlateRightX = 1012.0f;
         constexpr float kSeatPlateRightY = 184.0f;
         constexpr float kSeatPlateTopX = 408.0f;
         constexpr float kSeatPlateTopY = 96.0f;
-        constexpr float kSeatPlateLeftX = 96.0f;
+        constexpr float kSeatPlateLeftX = 112.0f;
         constexpr float kSeatPlateLeftY = 184.0f;
 
         // The layout above must fit the zones it names: a change to a size that breaks it fails to compile.
+        // The side columns are the squeeze of the table: with the turned tiles (32 / 32 / 21 wide) and the block of 160 x 144 the right
+        // discard block lies at x 1011, so the `Hint` label of `config/nodes/MahjongActions.xml` ends at x 1000 (a grid unit clear of the
+        // plate under the block, which reaches `kPlatePadding` past it) and the side seat plates sit right at their blocks. The score
+        // table of a hand (`MahjongHandOver.xml`) lies on x 104..1176 and the HUD's move line ends at y 172, x 1188: the columns stay
+        // outside the one and the bonus column starts below the other.
         static_assert(kViewerRowX + kViewerHandSpan + kViewerRowGap + kViewerMeldCapacity <= kViewWidth - kEdge);
         static_assert(kSideMeldY + kSideMeldCapacity <= kViewHeight - kEdge);
+        static_assert(kSideHandY + kSideHandSpan <= kViewHeight - kEdge);
         static_assert(kTopDiscardY > kTopMeldY + kOpponentMeldTileH);
         static_assert(kTopDiscardY + kDiscardBlockH < kWallRingY);
         static_assert(kWallRingY + kWallRingH < kBottomDiscardY);
         static_assert(kBottomDiscardY + kDiscardBlockH < kViewerBonusY);
-        static_assert(kLeftDiscardX + kDiscardBlockW < kWallRingX);
+        static_assert(kLeftDiscardX + kSideDiscardBlockW < kWallRingX);
         static_assert(kRightDiscardX > kWallRingX + kWallRingW);
-        static_assert(kLeftDiscardX > kLeftBonusX + kOpponentBonusTileW);
+        static_assert(kLeftDiscardX > kLeftBonusX + kOpponentBonusTileH);
         static_assert(kSideBonusCapacity <= kSideHandSpan);
         // The seat plates keep clear of the plates under the discard blocks (a plate reaches `kPlatePadding` past its block) and of the
         // tiles round them
         static_assert(kSeatPlateBottomX + kSeatPlateW <= kDiscardBlockX - kPlatePadding);
         static_assert(kSeatPlateBottomY + kSeatPlateH <= kViewerBonusY);
-        static_assert(kSeatPlateBottomX >= kLeftMeldX + kOpponentMeldTileW);
+        static_assert(kSeatPlateBottomX >= kLeftMeldX + kOpponentMeldTileH);
         static_assert(kSeatPlateRightY + kSeatPlateH <= kSideDiscardY - kPlatePadding);
         static_assert(kSeatPlateRightX + kSeatPlateW <= kRightBonusX);
         static_assert(kSeatPlateLeftY + kSeatPlateH <= kSideDiscardY - kPlatePadding);
-        static_assert(kSeatPlateLeftX >= kLeftBonusX + kOpponentBonusTileW);
+        static_assert(kSeatPlateLeftX >= kLeftBonusX + kOpponentBonusTileH);
         static_assert(kSeatPlateTopX + kSeatPlateW <= kDiscardBlockX - kPlatePadding);
         static_assert(kSeatPlateTopY >= kTopMeldY + kOpponentMeldTileH);
 
@@ -133,13 +153,18 @@ namespace BECore::Mahjong {
                     geometry.bonus = {kViewerRowX, kViewerBonusY, kViewerBonusTileW, kViewerBonusTileH, false, kViewerBonusTileW * kMaxBonusTiles};
                     geometry.discardX = kDiscardBlockX;
                     geometry.discardY = kBottomDiscardY;
+                    geometry.discardW = kDiscardBlockW;
+                    geometry.discardH = kDiscardBlockH;
                     break;
                 case 1:
-                    geometry.hand = {kRightHandX, kSideHandY, kOpponentHandTileW, kOpponentHandTileH, true, kSideHandSpan};
-                    geometry.melds = {kRightMeldX, kSideMeldY, kOpponentMeldTileW, kOpponentMeldTileH, true, kSideMeldCapacity};
-                    geometry.bonus = {kRightBonusX, kSideBonusY, kOpponentBonusTileW, kOpponentBonusTileH, true, kSideBonusCapacity};
+                    geometry.hand = {kRightHandX, kSideHandY, kSideHandTileH, kSideHandTileW, true, kSideHandSpan};
+                    geometry.melds = {kRightMeldX, kSideMeldY, kOpponentMeldTileH, kOpponentMeldTileW, true, kSideMeldCapacity};
+                    geometry.bonus = {kRightBonusX, kSideBonusY, kOpponentBonusTileH, kOpponentBonusTileW, true, kSideBonusCapacity};
                     geometry.discardX = kRightDiscardX;
                     geometry.discardY = kSideDiscardY;
+                    geometry.discardW = kSideDiscardBlockW;
+                    geometry.discardH = kSideDiscardBlockH;
+                    geometry.rotation = kRightSeatRotation;
                     break;
                 case 2:
                     geometry.hand = {kTopHandX, kEdge, kOpponentHandTileW, kOpponentHandTileH, false, kTopHandSpan};
@@ -148,13 +173,18 @@ namespace BECore::Mahjong {
                         kTopHandX + kTopHandSpan + kBlockGap, kEdge + Centered(kOpponentHandTileH, kOpponentBonusTileH), kOpponentBonusTileW, kOpponentBonusTileH, false, kTopBonusCapacity};
                     geometry.discardX = kDiscardBlockX;
                     geometry.discardY = kTopDiscardY;
+                    geometry.discardW = kDiscardBlockW;
+                    geometry.discardH = kDiscardBlockH;
                     break;
                 default:
-                    geometry.hand = {kLeftHandX, kSideHandY, kOpponentHandTileW, kOpponentHandTileH, true, kSideHandSpan};
-                    geometry.melds = {kLeftMeldX, kSideMeldY, kOpponentMeldTileW, kOpponentMeldTileH, true, kSideMeldCapacity};
-                    geometry.bonus = {kLeftBonusX, kSideBonusY, kOpponentBonusTileW, kOpponentBonusTileH, true, kSideBonusCapacity};
+                    geometry.hand = {kLeftHandX, kSideHandY, kSideHandTileH, kSideHandTileW, true, kSideHandSpan};
+                    geometry.melds = {kLeftMeldX, kSideMeldY, kOpponentMeldTileH, kOpponentMeldTileW, true, kSideMeldCapacity};
+                    geometry.bonus = {kLeftBonusX, kSideBonusY, kOpponentBonusTileH, kOpponentBonusTileW, true, kSideBonusCapacity};
                     geometry.discardX = kLeftDiscardX;
                     geometry.discardY = kSideDiscardY;
+                    geometry.discardW = kSideDiscardBlockW;
+                    geometry.discardH = kSideDiscardBlockH;
+                    geometry.rotation = kLeftSeatRotation;
                     break;
             }
             return geometry;
@@ -227,15 +257,15 @@ namespace BECore::Mahjong {
             return fit;
         }
 
-        void AddSlot(TableLayout& layout, const ViewFit& fit, const Rect& rect, SlotRole role, Seat seat, int index, int part = 0, Edge claimEdge = Edge::None) {
-            layout.slots.push_back(TileSlot{fit.Map(rect), role, seat, index, part, claimEdge});
+        void AddSlot(TableLayout& layout, const ViewFit& fit, const Rect& rect, SlotRole role, Seat seat, int index, float rotation, int part = 0, Edge claimEdge = Edge::None) {
+            layout.slots.push_back(TileSlot{fit.Map(rect), role, seat, index, part, claimEdge, rotation});
         }
 
         /// The hand in input order, one plain row.
         void AddHand(TableLayout& layout, const ViewFit& fit, const SeatGeometry& geometry, Seat seat, int count) {
             const eastl::vector<float> offsets = StripOffsets(geometry.hand, {count});
             for (int index = 0; index < count; ++index) {
-                AddSlot(layout, fit, StripRect(geometry.hand, offsets[index]), SlotRole::HandTile, seat, index);
+                AddSlot(layout, fit, StripRect(geometry.hand, offsets[index]), SlotRole::HandTile, seat, index, geometry.rotation);
             }
         }
 
@@ -276,7 +306,8 @@ namespace BECore::Mahjong {
                 const int claimedPart = ClaimedPart(melds[meld], seat);
                 const Edge claimEdge = claimedPart >= 0 ? FacingEdge(position, Offset(seat, melds[meld].from)) : Edge::None;
                 for (int part = 0; part < groups[meld]; ++part) {
-                    AddSlot(layout, fit, StripRect(geometry.melds, offsets[next++]), SlotRole::MeldTile, seat, static_cast<int>(meld), part, part == claimedPart ? claimEdge : Edge::None);
+                    AddSlot(layout, fit, StripRect(geometry.melds, offsets[next++]), SlotRole::MeldTile, seat, static_cast<int>(meld), geometry.rotation, part,
+                            part == claimedPart ? claimEdge : Edge::None);
                 }
             }
         }
@@ -284,7 +315,26 @@ namespace BECore::Mahjong {
         void AddBonus(TableLayout& layout, const ViewFit& fit, const SeatGeometry& geometry, Seat seat, int count) {
             const eastl::vector<float> offsets = StripOffsets(geometry.bonus, {count});
             for (int index = 0; index < count; ++index) {
-                AddSlot(layout, fit, StripRect(geometry.bonus, offsets[index]), SlotRole::BonusTile, seat, index);
+                AddSlot(layout, fit, StripRect(geometry.bonus, offsets[index]), SlotRole::BonusTile, seat, index, geometry.rotation);
+            }
+        }
+
+        /// The tile `cell` of a seat's pile, `rows` rows long, as laid in its block. The bottom and top seats lie in rows from left to right,
+        /// the next row below. A side seat's block is turned: a row runs along the screen's vertical the way that seat reads it (the left
+        /// seat top to bottom, the right seat bottom to top) and the next row lies toward the middle of the table, row 0 at the outer side.
+        /// `rowPitch` is the distance between two rows (along the horizontal for a side seat), squeezed when the pile is longer than the
+        /// block holds.
+        Rect DiscardRect(const SeatGeometry& geometry, int position, int cell, float rowPitch) {
+            const float column = static_cast<float>(cell % kDiscardsPerRow);
+            const float row = static_cast<float>(cell / kDiscardsPerRow);
+            switch (position) {
+                case 1:
+                    return Rect(geometry.discardX + geometry.discardW - kDiscardTileH - row * rowPitch, geometry.discardY + geometry.discardH - (column + 1.0f) * kDiscardTileW, kDiscardTileH,
+                                kDiscardTileW);
+                case 3:
+                    return Rect(geometry.discardX + row * rowPitch, geometry.discardY + column * kDiscardTileW, kDiscardTileH, kDiscardTileW);
+                default:
+                    return Rect(geometry.discardX + column * kDiscardTileW, geometry.discardY + row * rowPitch, kDiscardTileW, kDiscardTileH);
             }
         }
 
@@ -297,6 +347,8 @@ namespace BECore::Mahjong {
                 }
             }
             // A pile of more rows than the block holds squeezes its rows together; the pitch is the same for the whole pile of a seat.
+            // A row is as thick as a tile is high, upright or turned: the thickness is `kDiscardTileH` on the screen's vertical for the
+            // bottom and top seats and on its horizontal for the side seats.
             eastl::array<float, kSeatCount> rowPitchOfSeat{};
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 const int rows = (pileOfSeat[seat] + kDiscardsPerRow - 1) / kDiscardsPerRow;
@@ -308,11 +360,10 @@ namespace BECore::Mahjong {
                 if (!IsSeat(seat)) {
                     continue;
                 }
-                const SeatGeometry& geometry = geometries[SeatPosition(layout.viewer, seat)];
+                const int position = SeatPosition(layout.viewer, seat);
+                const SeatGeometry& geometry = geometries[position];
                 const int cell = placed[seat]++;
-                const Rect rect(geometry.discardX + static_cast<float>(cell % kDiscardsPerRow) * kDiscardTileW, geometry.discardY + static_cast<float>(cell / kDiscardsPerRow) * rowPitchOfSeat[seat],
-                                kDiscardTileW, kDiscardTileH);
-                AddSlot(layout, fit, rect, SlotRole::DiscardTile, seat, static_cast<int>(entry));
+                AddSlot(layout, fit, DiscardRect(geometry, position, cell, rowPitchOfSeat[seat]), SlotRole::DiscardTile, seat, static_cast<int>(entry), geometry.rotation);
             }
         }
 
@@ -338,6 +389,23 @@ namespace BECore::Mahjong {
 
     }  // namespace
 
+    Rect UprightRect(const Rect& screenRect, float rotation) noexcept {
+        constexpr float kFullTurn = 360.0f;
+        constexpr float kQuarterTurn = 90.0f;
+        constexpr float kTurnTolerance = 0.5f;
+        float turn = std::fmod(rotation, kFullTurn);
+        if (turn < 0.0f) {
+            turn += kFullTurn;
+        }
+        const float quarters = std::fmod(turn, 2.0f * kQuarterTurn);
+        if (!(std::fabs(quarters - kQuarterTurn) <= kTurnTolerance)) {  // also a turn that is no number
+            return screenRect;
+        }
+        const float centreX = RectCentreX(screenRect);
+        const float centreY = RectCentreY(screenRect);
+        return Rect(centreX - screenRect.h / 2.0f, centreY - screenRect.w / 2.0f, screenRect.h, screenRect.w);
+    }
+
     int WallStackCount(int wallRemaining) noexcept {
         const int stacks = (ClampCount(wallRemaining) + 1) / 2;
         return stacks < kWallRingCells ? stacks : kWallRingCells;
@@ -356,7 +424,7 @@ namespace BECore::Mahjong {
         }
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             const SeatGeometry& geometry = geometries[SeatPosition(layout.viewer, seat)];
-            layout.zones.discards[seat] = fit.Map(Rect(geometry.discardX, geometry.discardY, kDiscardBlockW, kDiscardBlockH));
+            layout.zones.discards[seat] = fit.Map(Rect(geometry.discardX, geometry.discardY, geometry.discardW, geometry.discardH));
             layout.zones.seatPlates[seat] = fit.Map(SeatPlateAt(SeatPosition(layout.viewer, seat)));
             AddHand(layout, fit, geometry, seat, ClampCount(input.concealedCount[seat]));
             AddMelds(layout, fit, geometry, seat, SeatPosition(layout.viewer, seat), input.melds[seat]);
@@ -366,7 +434,7 @@ namespace BECore::Mahjong {
         layout.zones.wall = fit.Map(Rect(kWallRingX, kWallRingY, kWallRingW, kWallRingH));
         const int stacks = WallStackCount(input.wallRemaining);
         for (int stack = 0; stack < stacks; ++stack) {
-            AddSlot(layout, fit, WallCell(stack), SlotRole::WallStack, 0, stack);
+            AddSlot(layout, fit, WallCell(stack), SlotRole::WallStack, 0, stack, 0.0f);
         }
         return layout;
     }
