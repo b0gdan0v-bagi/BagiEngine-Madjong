@@ -803,7 +803,6 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(State(), state) << text;
             EXPECT_EQ(game->GetSeats(), seats) << text;
             EXPECT_EQ(game->GetSettings().handsPerMatch, kFullMatchHands) << text;
-            EXPECT_EQ(game->GetLevel(), ComputerLevel::Normal) << text;
             EXPECT_EQ(game->GetLevels(), UniformLevels(ComputerLevel::Normal)) << text;
             EXPECT_EQ(game->GetSession().Levels(), UniformLevels(ComputerLevel::Normal)) << text;
         }
@@ -829,7 +828,7 @@ namespace BECore::Mahjong::Tests {
         for (const ComputerLevel level : kAllLevels) {
             const int number = LevelNumber(level);
             ASSERT_NO_FATAL_FAILURE(Reset(("{\"seed\": 8, \"seats\": \"PCCC\", \"level\": " + std::to_string(number) + "}").c_str()));
-            EXPECT_EQ(game->GetLevel(), level) << number;
+            EXPECT_EQ(game->GetLevels()[0], level) << number;
             EXPECT_EQ(game->GetLevels(), UniformLevels(level)) << number;
             EXPECT_EQ(game->GetSession().Levels(), UniformLevels(level)) << number;
             EXPECT_EQ(Member(State(), "level").get<int>(), number);
@@ -837,7 +836,7 @@ namespace BECore::Mahjong::Tests {
 
             // What is left out keeps the level of the game, also when the next reset changes other things
             ASSERT_NO_FATAL_FAILURE(Reset("{\"seed\": 9}"));
-            EXPECT_EQ(game->GetLevel(), level) << number;
+            EXPECT_EQ(game->GetLevels()[0], level) << number;
             EXPECT_EQ(Member(State(), "level").get<int>(), number);
         }
         ASSERT_NO_FATAL_FAILURE(Reset("{}"));

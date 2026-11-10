@@ -471,7 +471,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(OpenPage());
         const UIElement* plate = Element("Options", "Plate");
         ASSERT_NE(plate, nullptr);
-        for (const char* name : {"Title", "LanguageRow", "HintsRow", "LevelRow", "Back"}) {
+        for (const char* name : {"Title", "LanguageRow", "HintsRow", "SpeedRow", "Back"}) {
             const UIElement* row = Element("Options", name);
             ASSERT_NE(row, nullptr) << name;
             EXPECT_GE(row->rect.y, plate->rect.y) << name;

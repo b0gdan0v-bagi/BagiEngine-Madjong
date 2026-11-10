@@ -215,7 +215,6 @@
         <string key="setup.start" text="Start"/>
         <string key="setup.continue" text="Continue"/>
         <string key="setup.options" text="Options"/>
-        <string key="setup.level" text="Level"/>
         <string key="options.title" text="Options"/>
         <string key="options.back" text="Back"/>
         <string key="options.speed" text="Speed"/>
@@ -443,7 +442,6 @@
         <string key="setup.start" text="Начать"/>
         <string key="setup.continue" text="Продолжить"/>
         <string key="setup.options" text="Настройки"/>
-        <string key="setup.level" text="Уровень"/>
         <string key="options.title" text="Настройки"/>
         <string key="options.back" text="Назад"/>
         <string key="options.speed" text="Скорость"/>

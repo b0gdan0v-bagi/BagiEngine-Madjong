@@ -37,7 +37,6 @@ namespace BECore::Mahjong {
         constexpr eastl::string_view kSetLanguageAction = "MahjongSetLanguage";
         constexpr eastl::string_view kOptionsAction = "MahjongOptions";
         constexpr eastl::string_view kOptionsBackAction = "MahjongOptionsBack";
-        constexpr eastl::string_view kSetLevelAction = "MahjongSetLevel";
         constexpr eastl::string_view kSetSpeedAction = "MahjongSetSpeed";
         constexpr eastl::string_view kRulesAction = "MahjongRules";
         constexpr eastl::string_view kRulesNextAction = "MahjongRulesNext";
@@ -210,11 +209,6 @@ namespace BECore::Mahjong {
         CoreManager::GetUIVars().Set("language"_intern, game.GetLanguage().ToStringView());
     }
 
-    void MahjongHudComponent::PublishLevelChoice(const MahjongGame& game) const {
-        const std::string_view text = LevelText(game.GetLevel());
-        CoreManager::GetUIVars().Set("levelChoice"_intern, eastl::string_view(text.data(), text.size()));
-    }
-
     void MahjongHudComponent::PublishSpeedChoice(const MahjongGame& game) const {
         const std::string_view text = SpeedText(game.GetAnimationSpeed());
         CoreManager::GetUIVars().Set("speedChoice"_intern, eastl::string_view(text.data(), text.size()));
@@ -229,7 +223,6 @@ namespace BECore::Mahjong {
             _pendingHands = game->GetSettings().handsPerMatch;
             PublishHandsChoice();
             PublishLanguage(*game);
-            PublishLevelChoice(*game);
         }
         if (open != _setupShown) {
             _setupShown = open;
@@ -252,7 +245,6 @@ namespace BECore::Mahjong {
             // The rows show what the game has now; the hints row is published by the hints component while the page is open
             PublishLanguage(*game);
             PublishSpeedChoice(*game);
-            PublishLevelChoice(*game);
         }
         UICanvasComponent::SetVisibleByName(GetScene(), "Options"_intern, open);
     }
@@ -472,18 +464,6 @@ namespace BECore::Mahjong {
             if (game->IsOptionsOpen() && speed) {
                 game->SetAnimationSpeed(*speed);
                 PublishSpeedChoice(*game);
-            }
-            return;
-        }
-        if (action == kSetLevelAction) {
-            // The page is where the level is set; only `1` .. `10` (`LevelText`), client text is parsed by `TryParseLevel`
-            const eastl::string_view text = event.value.ToStringView();
-            const std::optional<ComputerLevel> level = TryParseLevel(std::string_view(text.data(), text.size()));
-            if (game->IsOptionsOpen() && level) {
-                game->SetLevel(*level);
-                PublishLevelChoice(*game);
-                _pendingLevels = game->GetLevels();  // Setup is open under the page: its dropdowns show the same levels
-                PublishSeatLevels();
             }
             return;
         }

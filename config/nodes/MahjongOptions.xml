@@ -5,18 +5,16 @@
   exactly while MahjongGame::IsOptionsOpen(); Back (MahjongOptionsBack) closes it. The rows are the shapes of the rows of Setup: the
   language MahjongSetLanguage (value = the language id, variable language), the hints MahjongSetHints (value on or off, variable
   hintsChoice, published by MahjongHintsComponent), the speed MahjongSetSpeed (value slow, normal or fast, variable
-  speedChoice; the pace of the computers, the flights and the marks of a claim, at once), the level MahjongSetLevel (a dropdown of the levels 1 .. 10, value
-  the number, variable levelChoice; it applies to the game at once and takes effect with the next match). A row is a node edit: the plate's maximum height grows by 72 for it.
-  The roomy shape (a canvas of 1280 x 720 units) is the anatomy of the modal screens: the plate is the safe area at most 448 high
-  (32 padding + 48 title band + 4 x 64 rows + 64 Back + 6 x 8 spacing; BackGap is empty, so the 8 + 8 round it set Back 16 apart
+  speedChoice; the pace of the computers, the flights and the marks of a claim, at once). A row is a node edit: the plate's maximum height grows by 72 for it.
+  The level is not here: each computer seat has its own on Setup.
+  The roomy shape (a canvas of 1280 x 720 units) is the anatomy of the modal screens: the plate is the safe area at most 376 high
+  (32 padding + 48 title band + 3 x 64 rows + 64 Back + 5 x 8 spacing; BackGap is empty, so the 8 + 8 round it set Back 16 apart
   from the rows) and the title, the rows and Back share its height by flex weights that come out at 48 / 64 (0.75 / 1) and stop
   growing there (maxHeight). A row has no vertical padding: its caption and its group are 87.5 % of its height and centred, which
   is the 4 padding round a 56 segment of a row of 64. The variant for a canvas of at most 360 units high hides the Title;
   the variant for a canvas of at most 440 units wide takes the whole safe width for the plate and narrows the captions (64 for
-  Language, 52 for the others) and hides the caption of the speed, whose three words need the room (its caption is 96 wide elsewhere). The open list of the ten levels is a popup in the safe area with no scrolling, so its options
-  are as high as the canvas allows: 56 in a canvas of more than 601 units, then 44, 32, 24, 20 and 16 by the height variants (on
-  the grid, each between a fifteenth and a tenth of the canvas: the list of ten fits the safe area of a notch, and an option stays
-  a 32 px touch target in a window 480 px high). Every text may shrink (AutoFit, down to 12 units) instead of being cut. MahjongOptionsTest holds the
+  Language, 52 for Hints) and hides the caption of the speed, whose three words need the room (its caption is 96 wide elsewhere).
+  Every text may shrink (AutoFit, down to 12 units) instead of being cut. MahjongOptionsTest holds the
   shapes, the touch size and the words on the whole size matrix.
 -->
 <node name="Options" layer="31">
@@ -24,7 +22,7 @@
     <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" modal="true" visible="false">
       <elements>
         <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
-        <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="640" height="100%" maxHeight="448" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
+        <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="640" height="100%" maxHeight="376" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
           <children>
             <element type="UILabel" name="Title" flex="0.75" maxHeight="48" text="{#options.title}" fontSize="28" overflow="AutoFit" minFontSize="12" align="Center" verticalAlign="Center" color="58,66,92,255" />
             <element type="UIStack" name="LanguageRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255">
@@ -61,25 +59,6 @@
                 </element>
               </children>
             </element>
-            <element type="UIStack" name="LevelRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255">
-              <children>
-                <element type="UILabel" name="LevelCaption" width="112" height="87.5%" text="{#setup.level}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" textColor="190,196,190,255" />
-                <element type="UIDropdown" name="LevelChoice" bind="levelChoice" action="MahjongSetLevel" flex="1" height="87.5%" optionHeight="56" text="" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" color="70,70,100,255">
-                  <children>
-                    <element type="UIButton" name="Level1" text="1" fontSize="22" overflow="AutoFit" minFontSize="12" value="1" color="70,70,100,255" />
-                    <element type="UIButton" name="Level2" text="2" fontSize="22" overflow="AutoFit" minFontSize="12" value="2" color="70,70,100,255" />
-                    <element type="UIButton" name="Level3" text="3" fontSize="22" overflow="AutoFit" minFontSize="12" value="3" color="70,70,100,255" />
-                    <element type="UIButton" name="Level4" text="4" fontSize="22" overflow="AutoFit" minFontSize="12" value="4" color="70,70,100,255" />
-                    <element type="UIButton" name="Level5" text="5" fontSize="22" overflow="AutoFit" minFontSize="12" value="5" color="70,70,100,255" />
-                    <element type="UIButton" name="Level6" text="6" fontSize="22" overflow="AutoFit" minFontSize="12" value="6" color="70,70,100,255" />
-                    <element type="UIButton" name="Level7" text="7" fontSize="22" overflow="AutoFit" minFontSize="12" value="7" color="70,70,100,255" />
-                    <element type="UIButton" name="Level8" text="8" fontSize="22" overflow="AutoFit" minFontSize="12" value="8" color="70,70,100,255" />
-                    <element type="UIButton" name="Level9" text="9" fontSize="22" overflow="AutoFit" minFontSize="12" value="9" color="70,70,100,255" />
-                    <element type="UIButton" name="Level10" text="10" fontSize="22" overflow="AutoFit" minFontSize="12" value="10" color="70,70,100,255" />
-                  </children>
-                </element>
-              </children>
-            </element>
             <element type="UIElement" name="BackGap" height="0" />
             <element type="UIButton" name="Back" flex="1" maxHeight="64" text="{#options.back}" fontSize="28" overflow="AutoFit" minFontSize="12" action="MahjongOptionsBack" color="40,110,60,255" />
           </children>
@@ -97,77 +76,6 @@
             <set element="LanguageCaption" width="64" />
             <set element="HintsCaption" width="52" />
             <set element="SpeedCaption" visible="false" />
-            <set element="LevelCaption" width="52" />
-          </overrides>
-        </variant>
-        <variant when="maxHeight:601">
-          <overrides>
-            <set element="Level1" height="44" />
-            <set element="Level2" height="44" />
-            <set element="Level3" height="44" />
-            <set element="Level4" height="44" />
-            <set element="Level5" height="44" />
-            <set element="Level6" height="44" />
-            <set element="Level7" height="44" />
-            <set element="Level8" height="44" />
-            <set element="Level9" height="44" />
-            <set element="Level10" height="44" />
-          </overrides>
-        </variant>
-        <variant when="maxHeight:472">
-          <overrides>
-            <set element="Level1" height="32" />
-            <set element="Level2" height="32" />
-            <set element="Level3" height="32" />
-            <set element="Level4" height="32" />
-            <set element="Level5" height="32" />
-            <set element="Level6" height="32" />
-            <set element="Level7" height="32" />
-            <set element="Level8" height="32" />
-            <set element="Level9" height="32" />
-            <set element="Level10" height="32" />
-          </overrides>
-        </variant>
-        <variant when="maxHeight:343">
-          <overrides>
-            <set element="Level1" height="24" />
-            <set element="Level2" height="24" />
-            <set element="Level3" height="24" />
-            <set element="Level4" height="24" />
-            <set element="Level5" height="24" />
-            <set element="Level6" height="24" />
-            <set element="Level7" height="24" />
-            <set element="Level8" height="24" />
-            <set element="Level9" height="24" />
-            <set element="Level10" height="24" />
-          </overrides>
-        </variant>
-        <variant when="maxHeight:257">
-          <overrides>
-            <set element="Level1" height="20" />
-            <set element="Level2" height="20" />
-            <set element="Level3" height="20" />
-            <set element="Level4" height="20" />
-            <set element="Level5" height="20" />
-            <set element="Level6" height="20" />
-            <set element="Level7" height="20" />
-            <set element="Level8" height="20" />
-            <set element="Level9" height="20" />
-            <set element="Level10" height="20" />
-          </overrides>
-        </variant>
-        <variant when="maxHeight:214">
-          <overrides>
-            <set element="Level1" height="16" />
-            <set element="Level2" height="16" />
-            <set element="Level3" height="16" />
-            <set element="Level4" height="16" />
-            <set element="Level5" height="16" />
-            <set element="Level6" height="16" />
-            <set element="Level7" height="16" />
-            <set element="Level8" height="16" />
-            <set element="Level9" height="16" />
-            <set element="Level10" height="16" />
           </overrides>
         </variant>
       </variants>

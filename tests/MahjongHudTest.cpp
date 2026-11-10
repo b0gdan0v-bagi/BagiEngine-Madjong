@@ -1168,8 +1168,8 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(Hud()->PendingLevels(), pending) << bad;
             EXPECT_EQ(SeatLevelVar(1), var) << bad;
         }
-        for (const char* action : {"MahjongSetSeatLevel4", "MahjongSetSeatLevel9", "MahjongSetSeatLevel", "MahjongSetSeatLevel10", "MahjongSetSeatLevel/", "MahjongSetSeatLevela",
-                                   "MahjongSetSeatLevel-1", "MahjongSetLevel0"}) {
+        for (const char* action :
+             {"MahjongSetSeatLevel4", "MahjongSetSeatLevel9", "MahjongSetSeatLevel", "MahjongSetSeatLevel10", "MahjongSetSeatLevel/", "MahjongSetSeatLevela", "MahjongSetSeatLevel-1"}) {
             EmitAction(action, "1");
             EXPECT_EQ(Hud()->PendingLevels(), pending) << action;
         }
@@ -1247,19 +1247,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(SeatLevelVar(3), "7");
         EXPECT_EQ(Text("Setup", "SeatLevel3"), "7");
         EXPECT_EQ(Hud()->PendingLevels()[2], kDefaultLevel);
-    }
-
-    TEST_F(MahjongHudTest, TheLevelOfThePageOptionsIsTheLevelOfEverySeatOfThePanelToo) {
-        _game->Start();
-        Draw();
-        EmitAction("MahjongSetSeatLevel2", "9");
-        EmitAction("MahjongOptions");
-        EmitAction("MahjongSetLevel", "3");
-        EXPECT_EQ(Hud()->PendingLevels(), UniformLevels(ComputerLevel{3}));
-        EXPECT_EQ(SeatLevelVar(2), "3");
-        EmitAction("MahjongOptionsBack");
-        ASSERT_TRUE(ClickElement("Setup", "Start"));
-        EXPECT_EQ(_game->GetLevels(), UniformLevels(ComputerLevel{3}));
     }
 
     TEST_F(MahjongHudTest, TheLevelVariablesAreNotSetAgainWhileNothingChanges) {
@@ -1778,67 +1765,6 @@ namespace BECore::Mahjong::Tests {
         EmitAction("MahjongOptionsBack");  // closed already
         EXPECT_FALSE(_game->IsOptionsOpen());
         EXPECT_TRUE(_game->IsSetupOpen());
-    }
-
-    TEST_F(MahjongHudTest, TheLevelIsPublishedWhenSetupOpensAndAClickOnThePageChangesTheGameAndTheVariable) {
-        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
-        _game->SetLevel(ComputerLevel::Easy);
-        _game->OpenSetup();
-        Draw();
-        EXPECT_EQ(Var("levelChoice"), "1") << "Setup opens on the level of the game";
-
-        EmitAction("MahjongOptions");
-        for (const ComputerLevel level : kAllLevels) {
-            const std::string text(LevelText(level));
-            EmitAction("MahjongSetLevel", text.c_str());
-            EXPECT_EQ(_game->GetLevel(), level) << text;
-            EXPECT_EQ(Var("levelChoice"), text);
-        }
-        EmitAction("MahjongSetLevel", "1");
-        EXPECT_EQ(_game->GetLevel(), ComputerLevel::Easy);
-        EXPECT_EQ(Var("levelChoice"), "1");
-    }
-
-    TEST_F(MahjongHudTest, ABadLevelAndALevelClickWhileThePageOrSetupIsClosedChangeNothing) {
-        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
-        _game->OpenSetup();
-        Draw();
-        ASSERT_EQ(_game->GetLevel(), ComputerLevel::Normal);
-        ASSERT_EQ(Var("levelChoice"), "5");
-
-        EmitAction("MahjongSetLevel", "1");
-        EXPECT_EQ(_game->GetLevel(), ComputerLevel::Normal) << "the page is closed";
-        EXPECT_EQ(Var("levelChoice"), "5");
-
-        EmitAction("MahjongOptions");
-        for (const char* bad : {"hard", "easy", "normal", "Easy", "", "0", "11", "05", " 1"}) {
-            EmitAction("MahjongSetLevel", bad);
-            EXPECT_EQ(_game->GetLevel(), ComputerLevel::Normal) << bad;
-            EXPECT_EQ(Var("levelChoice"), "5") << bad;
-        }
-
-        EmitAction("MahjongOptionsBack");
-        EmitAction("MahjongSetLevel", "1");
-        EXPECT_EQ(_game->GetLevel(), ComputerLevel::Normal) << "Back closed the page";
-
-        _game->CloseSetup();
-        EmitAction("MahjongSetLevel", "1");
-        EXPECT_EQ(_game->GetLevel(), ComputerLevel::Normal) << "Setup is closed";
-    }
-
-    TEST_F(MahjongHudTest, TheLevelOfThePageReachesTheNextMatchAndNotTheRunningOne) {
-        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
-        ASSERT_EQ(_game->GetSession().Levels(), UniformLevels(ComputerLevel::Normal));
-        _game->OpenSetup();
-        Draw();
-        EmitAction("MahjongOptions");
-        EmitAction("MahjongSetLevel", "1");
-        EXPECT_EQ(_game->GetSession().Levels(), UniformLevels(ComputerLevel::Normal)) << "a running session keeps its level";
-
-        EmitAction("MahjongOptionsBack");
-        EmitAction("MahjongStart");
-        EXPECT_FALSE(_game->IsSetupOpen());
-        EXPECT_EQ(_game->GetSession().Levels(), UniformLevels(ComputerLevel::Easy));
     }
 
     TEST_F(MahjongHudTest, AStartAControlResetAndAControlActionCloseThePage) {

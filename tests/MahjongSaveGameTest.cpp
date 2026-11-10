@@ -244,7 +244,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(second->IsSetupOpen());
         EXPECT_EQ(State(*second), State(*game));
         EXPECT_EQ(Actions(*second), Actions(*game));
-        EXPECT_EQ(second->GetLevel(), ComputerLevel::Easy);
+        EXPECT_EQ(second->GetLevels()[0], ComputerLevel::Easy);
         EXPECT_EQ(second->GetSettings().handsPerMatch, kShortMatchHands);
 
         const uint64_t version = second->GetSession().Version();
@@ -337,7 +337,7 @@ namespace BECore::Mahjong::Tests {
         IntrusivePtr<MahjongGame> second = StartedGame();
         ASSERT_TRUE(second->CanContinue());
         EXPECT_EQ(second->GetSeats(), (SeatSetup{SeatKind::Person, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer})) << "the panel shows the match behind it";
-        EXPECT_EQ(second->GetLevel(), ComputerLevel::Easy);
+        EXPECT_EQ(second->GetLevels()[0], ComputerLevel::Easy);
         EXPECT_EQ(second->GetSettings().handsPerMatch, kShortMatchHands);
         EXPECT_EQ(second->GetSession().Levels(), UniformLevels(ComputerLevel::Easy));
     }
@@ -476,7 +476,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(second->GetSettings().handsPerMatch, kShortMatchHands);
         EXPECT_FALSE(second->GetSettings().flowers);
         EXPECT_EQ(second->GetSettings().limit, MahjongSettings{}.limit);
-        EXPECT_EQ(second->GetLevel(), ComputerLevel::Easy);
+        EXPECT_EQ(second->GetLevels()[0], ComputerLevel::Easy);
         EXPECT_EQ(second->GetAnimationSpeed(), AnimationSpeed::Slow);
         EXPECT_FALSE(fs::exists(Slot(kMatchFile)));
     }
@@ -492,7 +492,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(game->GetLanguage(), PoolString::Intern(kDefaultLanguage));
         EXPECT_FALSE(game->HintsOn());
         EXPECT_EQ(game->GetSettings().handsPerMatch, kShortMatchHands);
-        EXPECT_EQ(game->GetLevel(), ComputerLevel::Easy);
+        EXPECT_EQ(game->GetLevels()[0], ComputerLevel::Easy);
 
         // Hands that are not 16 or 8 are refused: the game keeps 16
         MahjongPrefsSave odd = unknown;

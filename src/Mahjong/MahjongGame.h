@@ -120,13 +120,6 @@ namespace BECore::Mahjong {
         void SetLevel(ComputerLevel level) {
             _levels = UniformLevels(level);
         }
-        /// The level of the lowest computer seat of `GetSeats()` (`FirstComputerLevel`), the first seat's when nobody is a computer: the one
-        /// level a client that knows only one reads. Removed with the `Options` level row.
-        ComputerLevel GetLevel() const {
-            const SeatSetup& seats = GetSeats();
-            const bool anyComputer = std::ranges::any_of(seats, [](SeatKind kind) { return kind == SeatKind::Computer; });
-            return anyComputer ? FirstComputerLevel(seats, _levels) : _levels[0];
-        }
 
         /// Begins a new match through the session with `GetSettings()`, `GetSeats()`, `GetLevels()` and `seed` (one seed is one match, the first hand
         /// included). `BadSettings`, and nothing changes, for settings that are not playable. A match that began closes the setup panel.

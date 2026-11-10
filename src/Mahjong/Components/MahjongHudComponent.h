@@ -38,8 +38,7 @@ namespace BECore::Mahjong {
      * `3` (the number as text; set when `Setup` opens, from `GetLevels()`) and emitting `MahjongSetSeatLevel0` .. `3` with the number
      * (`TryParseLevel`: any other text is ignored); the element is visible exactly while that seat is a computer in the pending setup, and a
      * person's seat keeps its pending level for when it turns computer again. This component changes the pending `SeatSetup`, the pending
-     * `SeatLevels` or the pending number of hands and the variable,
-     * and `MahjongStart` gives the pending seats, levels and number of hands (`handsPerMatch` only: every other setting stays as the game
+     * `SeatLevels` or the pending number of hands and the variable, and `MahjongStart` gives the pending seats, levels and number of hands (`handsPerMatch` only: every other setting stays as the game
      * has it) to the game and begins a match with a random seed (`StartRandomMatch`), which closes the panel; a start the game refuses
      * leaves it open and the seats, levels and settings as they were. `MahjongNewGame` (the HUD button) opens it again, with the pending setup of the
      * last match. `MahjongOptions` (the full-width button `OptionsRow`) opens the page `Options`. The language row of the page is a
@@ -51,11 +50,11 @@ namespace BECore::Mahjong {
      * `MahjongContinue` calls `ContinueMatch()` and is ignored while the panel is closed or there is nothing to continue.
      *
      * **Options.** `MahjongGame::IsOptionsOpen()` is the page over `Setup`. `MahjongOptions` opens it, only while `Setup` is
-     * open; `MahjongOptionsBack` closes it (ignored while it is closed). `MahjongSetLevel` with `1` .. `10` (`TryParseLevel`; any other text is ignored, and
-     * so is the action while the page is closed) calls `SetLevel` (all four seats; the pending levels of `Setup` follow) and sets the variable `levelChoice` (`LevelText` of `GetLevel()`, also set
-     * when `Setup` opens). The level takes effect with the next match: a running session keeps its own. `MahjongSetSpeed` with `slow` | `normal` | `fast` (`TryParseSpeed`, ignored like the level)
+     * open; `MahjongOptionsBack` closes it (ignored while it is closed).
+     * `MahjongSetSpeed` with `slow` | `normal` | `fast` (`TryParseSpeed`; any other text is ignored, and so is the action while the page is closed)
      * calls `SetAnimationSpeed` and sets `speedChoice`; it takes effect at once (`Table/AnimationSpeed.h`). `Setup` stays open under the page and `CloseSetup()` closes it. The canvas `Options` is
-     * shown exactly while the page is open (rows: language, hints, speed, level, and the button `Back`); `language`, `speedChoice` and `levelChoice` are published when it opens.
+     * shown exactly while the page is open (rows: language, hints, speed, and the button `Back`); `language` and `speedChoice` are published when it opens. The level is not set here: it is a choice
+     * of each computer seat on `Setup`.
      *
      * **Saving.** Every `SceneUpdateEvent` (once per frame, only for the active game) calls `MahjongGame::FlushSave()`, which writes the match and the
      * choices of `Setup` when they changed, so a burst of computer steps is one write.
@@ -121,7 +120,7 @@ namespace BECore::Mahjong {
         void PublishNumbers(const MahjongGame* game);
         /// Shows or hides `Setup` after the game, and takes the setup of the game when the panel opens.
         void PublishSetup(const MahjongGame* game);
-        /// Shows or hides `Options` after `MahjongGame::IsOptionsOpen()`, and publishes `language`, `speedChoice` and `levelChoice` when it opens.
+        /// Shows or hides `Options` after `MahjongGame::IsOptionsOpen()`, and publishes `language` and `speedChoice` when it opens.
         void PublishOptions(const MahjongGame* game);
         /// Shows or hides the plate `MoveLine` (the variable `lastMove` holds its text).
         void ShowMoveLine(bool show);
@@ -132,8 +131,6 @@ namespace BECore::Mahjong {
         void PublishHandsChoice() const;
         /// Sets the variable `language` to the language of the game.
         void PublishLanguage(const MahjongGame& game) const;
-        /// Sets the variable `levelChoice` to the text of the level of the game (`1` .. `10`).
-        void PublishLevelChoice(const MahjongGame& game) const;
         /// Sets the variable `speedChoice` to the id of the speed of the game (`SpeedText`).
         void PublishSpeedChoice(const MahjongGame& game) const;
         /// Shows or hides `HandOver` and `MatchOver` after the session, and sets their variables when the session moved.

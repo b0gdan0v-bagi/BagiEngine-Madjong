@@ -26,7 +26,7 @@
   dropdowns are 64 there, the least that shows "10" beside its arrow (the arrow and the insets of a header take 50 of the width).
   The variant for a canvas of at most 360 units wide (a 480 px window at the user scale 1.5) hides the seat captions, the room of
   one more control: Person / Computer needs 74 units there, so a dropdown is 60 and its text may shrink to 8 units (minFontSize),
-  which is 12 px at that scale. Every text may shrink (AutoFit, down to 12 units) instead of being cut.
+  which is 12 px at that scale. Every other text may shrink (AutoFit, down to 12 units) instead of being cut.
   MahjongHudTest and MahjongTouchSizeTest hold the shapes, the touch size and the words on the whole size matrix.
   Continue (MahjongContinue; the saved match is the table behind the panel, MahjongGame::CanContinue()) is not a new row, because
   the plate has no room for another: Start lives in the horizontal stack ButtonRow (64 high like the rows, 8 between) beside it.
