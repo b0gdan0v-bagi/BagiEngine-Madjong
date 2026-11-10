@@ -34,6 +34,8 @@ namespace BECore::Mahjong::Tests {
             eastl::vector<Tile> viewerHand;
             Seat drawSeat = kNoSeat;
             int drawIndex = -1;
+            Seat winSeat = kNoSeat;
+            int winIndex = -1;
             float viewWidth = kViewWidth;
             float viewHeight = kViewHeight;
         };
@@ -58,6 +60,8 @@ namespace BECore::Mahjong::Tests {
             snapshot.wallRemaining = scene.wall;
             snapshot.drawSeat = scene.drawSeat;
             snapshot.drawIndex = scene.drawIndex;
+            snapshot.winSeat = scene.winSeat;
+            snapshot.winIndex = scene.winIndex;
             return snapshot;
         }
 
@@ -672,6 +676,118 @@ namespace BECore::Mahjong::Tests {
         for (size_t i = 0; i < first.size(); ++i) {
             EXPECT_TRUE(first[i].key == second[i].key);
             ExpectRect(first[i].from, second[i].from);
+        }
+    }
+
+    // -- a mahjong on a discard --
+
+    TEST(TileFlightsTest, AMahjongOnADiscardFliesTheWinningTileFromThePileSlotToTheWinnersHandSlotAtEachPosition) {
+        for (Seat winner = 0; winner < kSeatCount; ++winner) {
+            const Seat discarder = NextSeat(winner);
+            Scene before;
+            before.pile = {{discarder, T("5p")}};
+            Scene afterScene = before;
+            afterScene.pile = {};
+            afterScene.concealed[winner] = kHandSize + 1;
+            afterScene.winSeat = winner;
+            afterScene.winIndex = 6;
+            const TableSnapshot beforeSnapshot = Snapshot(before);
+            const TableSnapshot after = Snapshot(afterScene);
+            const auto flights = PlanFlights(beforeSnapshot, after, {});
+            ASSERT_EQ(flights.size(), 1u) << "winner " << winner;
+            EXPECT_TRUE(flights[0].key == Hand(winner, 6)) << "winner " << winner;
+            ExpectRect(flights[0].from, SlotRectOf(beforeSnapshot, Discard(discarder, 0)));
+            ExpectOnlySlotsOfAfter(flights, after);
+        }
+    }
+
+    TEST(TileFlightsTest, AMahjongOnADiscardTakesTheLastPileEntryWhateverTheOtherEntriesAre) {
+        Scene before;
+        before.pile = {{2, T("1s")}, {3, T("9m")}, {1, T("5p")}};
+        Scene afterScene = before;
+        afterScene.pile = {{2, T("1s")}, {3, T("9m")}};
+        afterScene.concealed[0] = kHandSize + 1;
+        afterScene.winSeat = 0;
+        afterScene.winIndex = 13;
+        const TableSnapshot beforeSnapshot = Snapshot(before);
+        const auto flights = PlanFlights(beforeSnapshot, Snapshot(afterScene), {});
+        ASSERT_EQ(flights.size(), 1u);
+        EXPECT_TRUE(flights[0].key == Hand(0, 13));
+        ExpectRect(flights[0].from, SlotRectOf(beforeSnapshot, Discard(1, 2)));
+    }
+
+    TEST(TileFlightsTest, AWinningTileHeldTwiceFliesTheLastCopy) {
+        Scene before;
+        before.viewerHand = Tiles({"1p", "2p", "3p", "5p", "6p", "4s", "5s", "6s", "7m", "8m", "9m", "Ew", "Ew"});
+        before.pile = {{1, T("5p")}};
+        Scene afterScene = before;
+        afterScene.pile = {};
+        afterScene.viewerHand = Tiles({"1p", "2p", "3p", "5p", "5p", "6p", "4s", "5s", "6s", "7m", "8m", "9m", "Ew", "Ew"});
+        afterScene.winSeat = 0;
+        afterScene.winIndex = 4;  // the last 5p
+        const TableSnapshot beforeSnapshot = Snapshot(before);
+        const auto flights = PlanFlights(beforeSnapshot, Snapshot(afterScene), {});
+        ASSERT_EQ(flights.size(), 1u);
+        EXPECT_TRUE(flights[0].key == Hand(0, 4));
+        ExpectRect(flights[0].from, SlotRectOf(beforeSnapshot, Discard(1, 0)));
+    }
+
+    TEST(TileFlightsTest, NoWinFlightWhenBothFramesShowTheWin) {
+        Scene before;
+        before.pile = {{1, T("5p")}};
+        before.concealed[2] = kHandSize + 1;
+        before.winSeat = 2;
+        before.winIndex = 6;
+        Scene afterScene = before;
+        afterScene.pile = {};
+        EXPECT_TRUE(PlanFlights(Snapshot(before), Snapshot(afterScene), {}).empty());
+    }
+
+    TEST(TileFlightsTest, NoWinFlightWhenTheOldPileHasNoSuchEntry) {
+        Scene before;  // the discard and the win fall into one batch: the pile is empty before
+        Scene afterScene = before;
+        afterScene.concealed[2] = kHandSize + 1;
+        afterScene.winSeat = 2;
+        afterScene.winIndex = 6;
+        EXPECT_TRUE(PlanFlights(Snapshot(before), Snapshot(afterScene), {}).empty());
+
+        // the entry is still in the new pile: it did not leave
+        Scene stays = before;
+        stays.pile = {{1, T("5p")}};
+        Scene staysAfter = stays;
+        staysAfter.concealed[2] = kHandSize + 1;
+        staysAfter.winSeat = 2;
+        staysAfter.winIndex = 6;
+        EXPECT_TRUE(PlanFlights(Snapshot(stays), Snapshot(staysAfter), {}).empty());
+    }
+
+    TEST(TileFlightsTest, NoWinFlightForASelfDrawOrWithoutAWinner) {
+        Scene before;
+        before.pile = {{1, T("5p")}};
+        Scene afterScene = before;
+        afterScene.pile = {};  // the entry is gone (a claimed tile, say) but nobody won on it
+        afterScene.concealed[2] = kHandSize + 1;
+        EXPECT_TRUE(PlanFlights(Snapshot(before), Snapshot(afterScene), {}).empty());
+    }
+
+    TEST(TileFlightsTest, TheOtherSlotsOfTheWinnersHandDoNotFlyAndThePlanIsDeterministic) {
+        Scene before;
+        before.pile = {{3, T("2m")}};
+        Scene afterScene = before;
+        afterScene.pile = {};
+        afterScene.concealed[1] = kHandSize + 1;
+        afterScene.winSeat = 1;
+        afterScene.winIndex = 13;
+        const TableSnapshot beforeSnapshot = Snapshot(before);
+        const TableSnapshot after = Snapshot(afterScene);
+        const auto first = PlanFlights(beforeSnapshot, after, {});
+        const auto second = PlanFlights(beforeSnapshot, after, {});
+        ASSERT_EQ(first.size(), 1u);
+        ASSERT_EQ(second.size(), 1u);
+        EXPECT_TRUE(first[0].key == second[0].key);
+        ExpectRect(first[0].from, second[0].from);
+        for (int i = 0; i <= kHandSize; ++i) {
+            EXPECT_EQ(FlightOf(first, Hand(1, i)) != nullptr, i == 13) << "slot " << i;
         }
     }
 

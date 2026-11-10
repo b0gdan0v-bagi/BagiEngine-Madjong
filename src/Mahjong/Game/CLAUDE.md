@@ -33,6 +33,7 @@ The break, the loose tiles and the dead wall are this repository's assumptions (
 - **Kongs:** `DeclareConcealedKong` (four concealed equal tiles), `UpgradeKong` (only with the tile drawn this turn, not a kept copy, not right after a claim). Both draw a loose tile. An upgrade can be robbed (`RobKong`, mahjong only, by a declared seat the tile completes).
 - **Result:** `HandResult { kind, winner, winningTile, source (Discard | SelfDraw | RobbedKong), from, loose, lastLiveTile }`. `loose` = the tile came from the reserve; `lastLiveTile` only for a self-draw on the last live-wall tile.
 - `PendingTile()` is valid only while a window is open. `DrawnTile(seat)` only in `Discard` for the current seat that really drew (invalid after a claimed pung/chow; the loose tile after a kong).
+- `LastClaimWindow()` is how the last `Claim` window was settled (`ClaimWindowResult`: winner, the `beaten` claims, a `serial` per window; `Begin` clears it, the robbing window leaves it): public data, so the table may show it to anyone.
 - `Moves()` is the append-only public log of the hand (`HandMove`: discards, claims, kongs; a concealed kong carries no tile; no passes, wins, bonus tiles).
 - **Actions as data** (the surface of the computer player and the control API): `HandAction` with factories `MakeDiscard`, `MakeDeclareWin`, `MakeConcealedKong`, `MakeUpgradeKong`, `MakeClaim`, `MakePass`. `LegalActions(seat)` lists exactly what `Apply(seat, action)` accepts (tests hold "accepted iff listed").
 
