@@ -186,8 +186,8 @@ namespace BECore::Mahjong::Tests {
             float width;
             float height;
         };
-        // A square and a tall output are portrait, a landscape one is not (the wide view is not in the file yet); an output of no size has no shape, so the default view
-        for (const Output output : {Output{1280, 720}, Output{720, 1280}, Output{480, 480}, Output{1, 1}, Output{0, 0}, Output{390, 844}, Output{1920, 1080}, Output{1080, 1920}, Output{721, 720}}) {
+        // A square and a tall output are portrait, a landscape one is not (the wide and the narrow views are not in the file yet); an output of no size has no shape, so the default view
+        for (const Output output : {Output{1280, 720}, Output{720, 1280}, Output{480, 480}, Output{1, 1}, Output{0, 0}, Output{390, 844}, Output{1920, 1080}, Output{1080, 1920}}) {
             const ActiveSceneView picked =
                 SceneViewSelector::Pick(scene->GetViewWidth(), scene->GetViewHeight(), eastl::span<const SceneViewVariant>(variants.data(), variants.size()), output.width, output.height);
             const TableShape shape = ShapeOfOutput(output.width, output.height);

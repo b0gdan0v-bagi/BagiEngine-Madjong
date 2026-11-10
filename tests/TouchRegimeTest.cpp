@@ -1,4 +1,5 @@
 #include <Common/UILayoutMatrix.h>
+#include <Mahjong/Table/TapSelect.h>
 #include <Mahjong/Table/TouchRegime.h>
 #include <cmath>
 #include <gtest/gtest.h>
@@ -386,6 +387,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(ActionButtonHeightFor(TableShape::Landscape), kActionButtonHeight);
         EXPECT_EQ(ActionButtonHeightFor(TableShape::Portrait), kPortraitActionButtonHeight);
         EXPECT_EQ(ActionButtonHeightFor(TableShape::Wide), kActionButtonHeight);
+        EXPECT_EQ(ActionButtonHeightFor(TableShape::Narrow), kActionButtonHeight);
         EXPECT_EQ(kPortraitActionButtonHeight, 68.0f);
         EXPECT_EQ(std::fmod(kPortraitActionButtonHeight, 4.0f), 0.0f) << "a grid unit of 4";
     }
@@ -477,6 +479,54 @@ namespace BECore::Mahjong::Tests {
         // a window barely wide enough for the wide view with a bar: 1560 x 900 at fit 1 has bars of 90 px, a button of 56 units
         EXPECT_FALSE(NeedsCompactActions(1560.0f, 900.0f, 1.0f, kMinTouch, 1.0f, kWideViewWidth, kViewHeight));
         EXPECT_TRUE(NeedsCompactActions(1560.0f, 900.0f, 1.0f, 64.0f, 1.0f, kWideViewWidth, kViewHeight));
+    }
+
+    // The narrow view (4:3, 3:2): the rules take its size; the profile is the desktop one, a small tile is the tap rule's business.
+
+    TEST(TouchRegimeTest, TheNarrowViewFitsIntoAnOutputByTheSmallerOfTheTwoScales) {
+        EXPECT_FLOAT_EQ(FitScale(1080.0f, 768.0f, kNarrowViewWidth, kNarrowViewHeight), 1.0f);
+        EXPECT_FLOAT_EQ(FitScale(1024.0f, 768.0f, kNarrowViewWidth, kNarrowViewHeight), 1024.0f / 1080.0f) << "4:3: the width limits";
+        EXPECT_FLOAT_EQ(FitScale(1200.0f, 800.0f, kNarrowViewWidth, kNarrowViewHeight), 800.0f / 768.0f) << "3:2: the height limits";
+        EXPECT_NEAR(BarUnderTable(1024.0f, 768.0f, kNarrowViewWidth, kNarrowViewHeight), (768.0f - 768.0f * 1024.0f / 1080.0f) / 2.0f, 0.001f);
+        EXPECT_NEAR(BarUnderTable(1200.0f, 800.0f, kNarrowViewWidth, kNarrowViewHeight), 0.0f, 0.001f);
+    }
+
+    TEST(TouchRegimeTest, ANarrowViewGetsTheDesktopProfileInAnyWindow) {
+        const struct {
+            float width;
+            float height;
+            float density;
+        } windows[] = {{1024.0f, 768.0f, 1.0f}, {2048.0f, 1536.0f, 2.0f}, {640.0f, 480.0f, 1.0f}, {400.0f, 300.0f, 1.0f}, {1200.0f, 800.0f, 2.0f}};
+        for (const auto& window : windows) {
+            EXPECT_EQ(TableProfileFor(window.width, window.height, window.density, kMinTouch, kNarrowViewWidth, kNarrowViewHeight), TableProfile{}) << window.width << " x " << window.height;
+        }
+        // the landscape rule would call the 640 x 480 window a phone: the narrow view is what changes the answer
+        EXPECT_TRUE(TableProfileFor(640.0f, 480.0f, 1.0f, kMinTouch).phone);
+    }
+
+    TEST(TouchRegimeTest, ANarrowWindowSelectsByTapWhereTheHandTileIsUnderTheMinimum) {
+        // 1024 x 768 window units at density 2: the fit is 2048 / 1080, a hand tile of 48 x 1.896 / 2 = 45.5 window units
+        EXPECT_FALSE(UsesTapToSelect(false, 2048.0f, 1536.0f, 2.0f, kMinTouch, kViewerHandTileW, kNarrowViewWidth, kNarrowViewHeight));
+        EXPECT_GE(kViewerHandTileW * FitScale(2048.0f, 1536.0f, kNarrowViewWidth, kNarrowViewHeight) / 2.0f, kMinTouch);
+        // 640 x 480 at density 1: a tile of 48 x 0.5926 = 28.4
+        EXPECT_TRUE(UsesTapToSelect(false, 640.0f, 480.0f, 1.0f, kMinTouch, kViewerHandTileW, kNarrowViewWidth, kNarrowViewHeight));
+        EXPECT_LT(kViewerHandTileW * FitScale(640.0f, 480.0f, kNarrowViewWidth, kNarrowViewHeight), kMinTouch);
+        // a touch selects in any window
+        EXPECT_TRUE(UsesTapToSelect(true, 2048.0f, 1536.0f, 2.0f, kMinTouch, kViewerHandTileW, kNarrowViewWidth, kNarrowViewHeight));
+    }
+
+    TEST(TouchRegimeTest, TheCompactRuleOfANarrowWindowIsTheLandscapeOneOverTheNarrowView) {
+        // the buttons of both windows above reach the minimum (53 and 33 window units): Actions stays
+        EXPECT_FALSE(NeedsCompactActions(2048.0f, 1536.0f, 2.0f, kMinTouch, 1.0f, kNarrowViewWidth, kNarrowViewHeight));
+        EXPECT_FALSE(NeedsCompactActions(640.0f, 480.0f, 1.0f, kMinTouch, 1.0f, kNarrowViewWidth, kNarrowViewHeight));
+        EXPECT_GE(kActionButtonHeight * FitScale(640.0f, 480.0f, kNarrowViewWidth, kNarrowViewHeight), kMinTouch);
+        // a 3:2 window has no bar, so the row would lie on the hand: Actions stays whatever the minimum
+        EXPECT_FALSE(NeedsCompactActions(1200.0f, 800.0f, 1.0f, 64.0f, 1.0f, kNarrowViewWidth, kNarrowViewHeight));
+        // a 5:4 window of 1100 x 900 has a bar of 59 px that holds the row of 58 px at a minimum of 64: compact
+        EXPECT_NEAR(BarUnderTable(1100.0f, 900.0f, kNarrowViewWidth, kNarrowViewHeight), (900.0f - 768.0f * 1100.0f / 1080.0f) / 2.0f, 0.001f);
+        EXPECT_TRUE(NeedsCompactActions(1100.0f, 900.0f, 1.0f, 64.0f, 1.0f, kNarrowViewWidth, kNarrowViewHeight));
+        EXPECT_FALSE(NeedsCompactActions(1100.0f, 900.0f, 1.0f, kMinTouch, 1.0f, kNarrowViewWidth, kNarrowViewHeight));
+        EXPECT_FALSE(NeedsCompactActions(0.0f, 768.0f, 1.0f, kMinTouch, 1.0f, kNarrowViewWidth, kNarrowViewHeight));
     }
 
 }  // namespace BECore::Mahjong::Tests
