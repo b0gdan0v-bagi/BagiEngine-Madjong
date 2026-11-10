@@ -135,6 +135,12 @@ namespace BECore::Mahjong::Tests {
             return found;
         }
 
+        /// Whether the canvas on `node` is shown (a canvas that is shown takes the input).
+        bool Shown(const char* node) const {
+            const auto canvas = Canvas(node);
+            return canvas && canvas->TakesInput();
+        }
+
         Rect PlateOf(Seat seat) const {
             return _table->GetLayout().zones.seatPlates[seat];
         }
@@ -316,10 +322,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(StartWindow(kPersonAtSeat0, WindowModel(WindowSpec(kQuietHand, kSeatPungs, kSeatWaitsAlone), {kSeat2})));
         ASSERT_EQ(Hand().PendingClaimSeats(), (eastl::vector<Seat>{kSeat1, kSeat2}));
         const TableLayout before = _table->GetLayout();
-        AdvanceTime(kComputerStepSeconds);  // seat 1 pungs? it has to decide first, then seat 2
-        if (Hand().GetPhase() == Phase::Claim) {
-            AdvanceTime(kComputerStepSeconds);
-        }
+        AdvanceTime(kComputerStepSeconds);  // the computers decide one after the other within the pause
         ASSERT_EQ(Hand().GetPhase(), Phase::Finished);
         ASSERT_EQ(Hand().Result()->winner, kSeat2);
         Draw();
@@ -388,7 +391,7 @@ namespace BECore::Mahjong::Tests {
         ExpectNoMarks();
     }
 
-    TEST_F(MahjongTableLostClaimTest, TheMarksShowUnderTheHotSeatCoverForASpectatorAndAtTheEndOfTheHand) {
+    TEST_F(MahjongTableLostClaimTest, TheMarksShowUnderTheHotSeatCoverAndForASpectator) {
         // Two people: the cover is up for the first, the model is played behind it (a chow of seat 0 beaten by a pung of seat 1)
         ASSERT_NO_FATAL_FAILURE(StartWindow(kTwoPeople, WindowModel(WindowSpec(kChowHand, kSeatPungs, kSeatWaits), {})));
         ASSERT_TRUE(Session().HandoffPending());
@@ -532,6 +535,136 @@ namespace BECore::Mahjong::Tests {
             EXPECT_FALSE(SameColor(kClaimLostFrame, other));
         }
         EXPECT_FLOAT_EQ(kClaimLostSeconds, kClaimHighlightSeconds);
+    }
+
+    // ----- the score table waits when the person's claim lost to a mahjong -----
+
+    TEST_F(MahjongTableLostClaimTest, TheScoreTableWaitsForTheMarksWhenThePersonsPungLostToAMahjongAndComesAfterwards) {
+        ASSERT_NO_FATAL_FAILURE(PersonPungsAndAComputerWins());
+        ASSERT_EQ(Session().GetPhase(), SessionPhase::HandOver);
+        EXPECT_TRUE(_table->HandOverHeld());
+        Draw();
+        EXPECT_FALSE(Shown("HandOver"));
+        EXPECT_FALSE(Shown("HandOverAction"));
+        EXPECT_TRUE(Shown("HudMenu")) << "the score table is not up, so the menu stays";
+        EXPECT_FALSE(Var("handOverHeadline").empty()) << "the words are published at once";
+        // The flight and the marks are on the table meanwhile
+        EXPECT_EQ(_table->FlightCount(), 1u);
+        EXPECT_TRUE(Framed(kSeat0));
+        EXPECT_TRUE(Blinking(kSeat2));
+
+        AdvanceTime(kClaimLostSeconds - kEndOfPeriod);
+        Draw();
+        EXPECT_TRUE(_table->HandOverHeld());
+        EXPECT_FALSE(Shown("HandOver"));
+        EXPECT_FALSE(Shown("HandOverAction"));
+        EXPECT_EQ(_table->FlightCount(), 0u) << "the tile has landed long ago";
+
+        AdvanceTime(kEndOfPeriod);
+        Draw();
+        EXPECT_FALSE(_table->HandOverHeld());
+        EXPECT_TRUE(Shown("HandOver"));
+        EXPECT_TRUE(Shown("HandOverAction"));
+        EXPECT_FALSE(Shown("HudMenu"));
+        ExpectNoMarks();
+
+        // The button works as it always does
+        const size_t settled = _game->GetMatch().History().size();
+        ASSERT_TRUE(ClickElement("HandOverAction", "NextHand"));
+        EXPECT_EQ(_game->GetMatch().History().size(), settled + 1);
+        EXPECT_EQ(Session().GetPhase(), SessionPhase::Playing);
+        Draw();
+        EXPECT_FALSE(Shown("HandOver"));
+    }
+
+    TEST_F(MahjongTableLostClaimTest, ThePersonsPungBeatenByAMahjongSettledByTheControlApiHoldsNothing) {
+        ASSERT_NO_FATAL_FAILURE(StartWindow(kPersonAtSeat0, WindowModel(WindowSpec(kPungHand, kQuietHand, kSeatWaits), {kSeat2})));
+        const auto action = ParseJson(R"({"type": "claim", "claim": "pung"})").value();
+        const auto outcome = _game->AsControllable()->PerformAction(action);
+        ASSERT_TRUE(outcome.has_value());
+        ASSERT_EQ(Session().GetPhase(), SessionPhase::HandOver);
+        ASSERT_EQ(Hand().Result()->winner, kSeat2);
+
+        EXPECT_FALSE(_table->HandOverHeld());
+        Draw();
+        EXPECT_TRUE(Shown("HandOver"));
+        EXPECT_TRUE(Shown("HandOverAction"));
+        EXPECT_TRUE(Framed(kSeat0)) << "the marks of the window show all the same";
+    }
+
+    TEST_F(MahjongTableLostClaimTest, AClaimOfAComputerThatLostToAMahjongHoldsNothing) {
+        // The person has no claim; seat 1 pungs, seat 2 wins: the beaten seat is a computer
+        ASSERT_NO_FATAL_FAILURE(StartWindow(kPersonAtSeat0, WindowModel(WindowSpec(kQuietHand, kSeatPungs, kSeatWaits), {kSeat2})));
+        ASSERT_EQ(Hand().PendingClaimSeats(), (eastl::vector<Seat>{kSeat1, kSeat2}));
+        AdvanceTime(kComputerStepSeconds);
+        ASSERT_EQ(Hand().GetPhase(), Phase::Finished);
+        ASSERT_EQ(Hand().Result()->winner, kSeat2);
+        ASSERT_TRUE(Hand().LastClaimWindow().has_value());
+        ASSERT_EQ(Hand().LastClaimWindow()->beaten.size(), 1u);
+        ASSERT_EQ(Hand().LastClaimWindow()->beaten[0].seat, kSeat1);
+
+        EXPECT_FALSE(_table->HandOverHeld());
+        Draw();
+        EXPECT_TRUE(Shown("HandOver"));
+        EXPECT_TRUE(Framed(kSeat1)) << "the marks show, the score table does not wait";
+    }
+
+    TEST_F(MahjongTableLostClaimTest, ThePersonsChowBeatenByAPungHoldsNothingAsTheHandGoesOn) {
+        ASSERT_NO_FATAL_FAILURE(PersonChowsAndAComputerPungs());
+        EXPECT_FALSE(_table->HandOverHeld());
+        Draw();
+        EXPECT_FALSE(Shown("HandOver"));
+        EXPECT_NE(Session().GetPhase(), SessionPhase::HandOver);
+    }
+
+    TEST_F(MahjongTableLostClaimTest, TheHoldEndsAtOnceWhenAControlClientLeavesTheHandOver) {
+        ASSERT_NO_FATAL_FAILURE(PersonPungsAndAComputerWins());
+        ASSERT_TRUE(_table->HandOverHeld());
+        const auto action = ParseJson(R"({"type": "next_hand"})").value();
+        ASSERT_TRUE(_game->AsControllable()->PerformAction(action).has_value());
+
+        EXPECT_FALSE(_table->HandOverHeld()) << "no frame has passed";
+        EXPECT_NE(Session().GetPhase(), SessionPhase::HandOver);
+        Draw();
+        EXPECT_FALSE(Shown("HandOver"));
+        // A later hand that ends by itself is not held by what is left
+        EXPECT_FALSE(_table->HandOverHeld());
+    }
+
+    TEST_F(MahjongTableLostClaimTest, TheHoldIsVoidInANewMatchAndAfterReset) {
+        ASSERT_NO_FATAL_FAILURE(PersonPungsAndAComputerWins());
+        ASSERT_TRUE(_table->HandOverHeld());
+        _game->Reset();
+        EXPECT_FALSE(_table->HandOverHeld());
+        Draw();
+        EXPECT_FALSE(Shown("HandOver"));
+    }
+
+    TEST_F(MahjongTableLostClaimTest, TheHoldStandsStillWhileTheSeatChoiceOrTheRulesAreOpenAndGoesOnAfter) {
+        for (const bool rules : {false, true}) {
+            ASSERT_NO_FATAL_FAILURE(PersonPungsAndAComputerWins());
+            ASSERT_TRUE(_table->HandOverHeld());
+            AdvanceTime(kClaimLostSeconds - kEndOfPeriod);
+            ASSERT_TRUE(_table->HandOverHeld());
+
+            if (rules) {
+                _game->OpenRules();
+            } else {
+                _game->OpenSetup();
+            }
+            AdvanceTime(5.0f);
+            EXPECT_TRUE(_table->HandOverHeld()) << (rules ? "rules" : "setup") << ": the time did not run";
+
+            if (rules) {
+                _game->CloseRules();
+            } else {
+                _game->CloseSetup();
+            }
+            AdvanceTime(kEndOfPeriod);
+            EXPECT_FALSE(_table->HandOverHeld());
+            Draw();
+            EXPECT_TRUE(Shown("HandOver"));
+        }
     }
 
 }  // namespace BECore::Mahjong::Tests

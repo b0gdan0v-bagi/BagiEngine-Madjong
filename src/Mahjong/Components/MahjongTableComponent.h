@@ -70,7 +70,11 @@ namespace BECore::Mahjong {
      * just laid) and the plate of every seat whose claim lost has a frame (`kClaimLostFrame`), drawn after the base and the turn mark of the plate,
      * before the tiles; they show under the cover, for a spectator and at the end of the hand, the time runs on `SceneUpdateEvent` (it stops with
      * the table pause) and a new hand, match or game starts without them. A mahjong on a discard also flies from its pile slot into the
-     * winner's hand (a win is no move, so it is seen as a new winner in the snapshot).
+     * winner's hand (a win is no move, so it is seen as a new winner in the snapshot). When the component itself carried out the action that
+     * settled the window (a click on a button, a step of the pace; never a control API action) and a person's claim lost to a mahjong, the
+     * hand is over at once and the score table would cover the flight and the plates: `HandOverHeld()` is true for `kClaimLostSeconds` of
+     * table time (it stops with the table pause, and is void in any other hand, match or game) and `MahjongHudComponent` shows `HandOver`
+     * only when it is false.
      *
      * **Flights** (`Table/TileFlights.h`). The tiles that arrive somewhere new fly there in `kTileFlightSeconds`: a discard from its hand to the
      * pile, a claimed tile from the pile (or, when the discard and the claim fall into one frame, from the discarder's hand) and the tiles of
@@ -147,6 +151,12 @@ namespace BECore::Mahjong {
             return _flights.size();
         }
 
+        /// Whether the score table of the finished hand is held back now: the hand was won on a discard by a claim of a mahjong that beat a
+        /// claim of a person, the component carried out the action that settled the window, and `kClaimLostSeconds` of table time have not
+        /// passed (the time stops with the table pause). The HUD shows `HandOver` only when this is false. False for a hand a control
+        /// client settled, once the hand is left (`next_hand`, a new match, `Reset`) and in every other case.
+        [[nodiscard]] bool HandOverHeld() const;
+
         /// The attached table, if any; the game assumes a single one.
         static MahjongTableComponent* GetActive() noexcept {
             return s_active;
@@ -170,6 +180,20 @@ namespace BECore::Mahjong {
             bool operator==(const DeclareTurn&) const = default;
         };
         [[nodiscard]] static DeclareTurn TurnOf(const MahjongGame& game);
+        /// The hand `_movesSeen` entries of whose `Moves()` the component has looked at (the game, the hands played and the settled hands tell one hand from the next)
+        struct SeenHand {
+            const MahjongGame* game = nullptr;
+            int handsPlayed = -1;
+            size_t settled = 0;
+            uint64_t starts = 0;  // `TableSession::StartCount()`: a new match is not the old one however many moves it has made
+
+            bool operator==(const SeenHand&) const = default;
+        };
+        /// The hand, match and game of the frame.
+        [[nodiscard]] static SeenHand SeenHandOf(const MahjongGame& game);
+        /// Starts the hold of the score table when the claim window settled since `serialBefore` ended the hand with a mahjong that beat the
+        /// claim of a person; called after an action the component carried out itself (a click on a button, a step of a computer).
+        void HoldScoreTableIfBeaten(const MahjongGame& game, int serialBefore);
         /// One action of the computer that has to act; false (and a log line) when the model refused it.
         static bool StepComputerChecked(TableSession& session);
         /// Pushes the buttons, the tile pictures on them, the hint of the hovered button, the choice between `Actions` (with `HintsButton`) and
@@ -209,15 +233,6 @@ namespace BECore::Mahjong {
         bool _declareNext = false;
         DeclareTurn _declareTurn;     // the turn `_declareNext` was set on
         float _computerClock = 0.0f;  // seconds a computer has been waiting to play
-        /// The hand `_movesSeen` entries of whose `Moves()` the component has looked at (the game, the hands played and the settled hands tell one hand from the next)
-        struct SeenHand {
-            const MahjongGame* game = nullptr;
-            int handsPlayed = -1;
-            size_t settled = 0;
-            uint64_t starts = 0;  // `TableSession::StartCount()`: a new match is not the old one however many moves it has made
-
-            bool operator==(const SeenHand&) const = default;
-        };
         SeenHand _seenHand;
         size_t _movesSeen = 0;
         Seat _highlightSeat = kNoSeat;  // the set that blinks: the meld `_highlightMeld` of this seat
@@ -228,6 +243,8 @@ namespace BECore::Mahjong {
         Seat _lostWinner = kNoSeat;                   // the seat that won the window whose losers are marked
         eastl::array<bool, kSeatCount> _lostSeats{};  // the seats whose claim lost in it
         float _lostLeft = 0.0f;                       // seconds of the marks of that window left, 0 for none
+        float _handOverHoldLeft = 0.0f;               // seconds the score table is still held back, 0 for none
+        SeenHand _handOverHoldOf;                     // the hand it is held for: a hold is void in any other
         static MahjongTableComponent* s_active;
     };
 

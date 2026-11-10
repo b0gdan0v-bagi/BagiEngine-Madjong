@@ -6,6 +6,7 @@
 #include <BECore/UI/UIImage.h>
 #include <Events/InputEvents.h>
 #include <Generated/MahjongHudComponent.gen.hpp>
+#include <Mahjong/Components/MahjongTableComponent.h>
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/Table/MoveText.h>
 #include <Mahjong/Table/RulesText.h>
@@ -331,9 +332,13 @@ namespace BECore::Mahjong {
         } else {
             _endScreenPublished = false;
         }
-        if (handOver != _handOverShown) {
-            _handOverShown = handOver;
-            ShowHandOver(handOver);
+        // The score table waits while the table holds it back (a person's claim lost to a mahjong and the flight is on screen); the words
+        // above are published at once
+        const MahjongTableComponent* table = MahjongTableComponent::GetActive();
+        const bool handOverShown = handOver && (table == nullptr || !table->HandOverHeld());
+        if (handOverShown != _handOverShown) {
+            _handOverShown = handOverShown;
+            ShowHandOver(handOverShown);
         }
         if (matchOver != _matchOverShown) {
             _matchOverShown = matchOver;

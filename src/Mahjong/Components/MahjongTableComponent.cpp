@@ -122,8 +122,8 @@ namespace BECore::Mahjong {
             return phase == Phase::Claim || phase == Phase::RobKong;
         }
 
-        /// The index, in the concealed tiles of `seat`, of the tile it has just drawn (the last copy: `AddConcealed` sorts equal tiles
-        /// together and the drawn one is the one that was added last); -1 when it drew none.
+        /// The index of the last copy of `tile` in the sorted `concealed` tiles (`AddConcealed` sorts equal tiles together and the tile that
+        /// was added last, a drawn or a won one, is the last of them).
         int LastCopyIndex(const eastl::vector<Tile>& concealed, Tile tile) {
             for (int i = static_cast<int>(concealed.size()) - 1; i >= 0; --i) {
                 if (concealed[static_cast<size_t>(i)] == tile) {
@@ -134,6 +134,7 @@ namespace BECore::Mahjong {
             return -1;
         }
 
+        /// The index, in the concealed tiles of `seat`, of the tile it has just drawn; -1 when it drew none.
         int DrawnIndexOf(const HandModel& hand, Seat seat) {
             const Tile drawn = hand.DrawnTile(seat);
             return drawn.IsValid() ? LastCopyIndex(hand.GetHand(seat).concealed, drawn) : -1;
@@ -154,6 +155,16 @@ namespace BECore::Mahjong {
                 return -1;
             }
             return static_cast<int>(hand.Discards().size()) - 1;
+        }
+
+        /// The blink of `kClaimHighlight`: on for the first half of each `kClaimBlinkSeconds` of the `elapsed` time of a mark.
+        bool BlinkIsOn(float elapsed) {
+            return std::fmod(elapsed, kClaimBlinkSeconds) < kClaimBlinkSeconds * 0.5f;
+        }
+
+        /// The serial of the last claim window of the hand, 0 for none (`ClaimWindowResult::serial`).
+        int WindowSerial(const HandModel& hand) {
+            return hand.LastClaimWindow() ? hand.LastClaimWindow()->serial : 0;
         }
 
         /// The bar of `kClaimedEdge` along the edge `edge` of `rect`, inside the tile.
@@ -410,8 +421,38 @@ namespace BECore::Mahjong {
             return;
         }
         // A refused action is a button that was out of date; it changes nothing
+        const int serialBefore = WindowSerial(game->GetMatch().Hand());
         if (const HandStatus performed = session.PerformPerson(buttons[*kind].action); !performed.has_value()) {
             LOG_WARNING(Format("MahjongTableComponent: the button '{}' was refused: {}", SpecOf(*kind).element, EnumUtils<HandError>::ToString(performed.error())));
+            return;
+        }
+        HoldScoreTableIfBeaten(*game, serialBefore);
+    }
+
+    bool MahjongTableComponent::HandOverHeld() const {
+        const MahjongGame* game = MahjongGame::GetActive();
+        return _handOverHoldLeft > 0.0f && game != nullptr && SeenHandOf(*game) == _handOverHoldOf;
+    }
+
+    MahjongTableComponent::SeenHand MahjongTableComponent::SeenHandOf(const MahjongGame& game) {
+        const Match& match = game.GetMatch();
+        return SeenHand{&game, match.HandsPlayed(), match.History().size(), game.GetSession().StartCount()};
+    }
+
+    void MahjongTableComponent::HoldScoreTableIfBeaten(const MahjongGame& game, int serialBefore) {
+        const HandModel& hand = game.GetMatch().Hand();
+        const std::optional<ClaimWindowResult>& window = hand.LastClaimWindow();
+        if (!window || window->serial == serialBefore || hand.GetPhase() != Phase::Finished || !hand.Result()) {
+            return;
+        }
+        // The window ended the hand: a mahjong on its discard won it, and a claim of a person lost to it
+        if (hand.Result()->source != WinSource::Discard || hand.Result()->winner != window->winner) {
+            return;
+        }
+        const bool personBeaten = eastl::any_of(window->beaten.begin(), window->beaten.end(), [&](const LostClaim& lost) { return game.GetSession().KindOf(lost.seat) == SeatKind::Person; });
+        if (personBeaten) {
+            _handOverHoldLeft = kClaimLostSeconds;
+            _handOverHoldOf = SeenHandOf(game);
         }
     }
 
@@ -426,7 +467,7 @@ namespace BECore::Mahjong {
     MahjongTableComponent::NewMoves MahjongTableComponent::FollowMoves(const MahjongGame& game) {
         const Match& match = game.GetMatch();
         const eastl::vector<HandMove>& moves = match.Hand().Moves();
-        const SeenHand now{&game, match.HandsPlayed(), match.History().size(), game.GetSession().StartCount()};
+        const SeenHand now = SeenHandOf(game);
         if (now != _seenHand || moves.size() < _movesSeen) {
             // Another hand, match or game: what is on the table now is not news
             _seenHand = now;
@@ -434,7 +475,8 @@ namespace BECore::Mahjong {
             _highlightLeft = 0.0f;
             _highlightWaits = false;
             _lostLeft = 0.0f;
-            _windowSeen = match.Hand().LastClaimWindow() ? match.Hand().LastClaimWindow()->serial : 0;
+            _windowSeen = WindowSerial(match.Hand());
+            _handOverHoldLeft = 0.0f;
             return NewMoves{true, moves.size(), false};
         }
         const size_t first = _movesSeen;
@@ -511,6 +553,9 @@ namespace BECore::Mahjong {
         if (_lostLeft > 0.0f && TableIsLive(*game)) {
             _lostLeft = eastl::max(0.0f, _lostLeft - event.deltaTime);
         }
+        if (_handOverHoldLeft > 0.0f && TableIsLive(*game)) {
+            _handOverHoldLeft = eastl::max(0.0f, _handOverHoldLeft - event.deltaTime);
+        }
         if (!_flights.empty() && TableIsLive(*game)) {
             _flightElapsed += event.deltaTime;
             if (_flightElapsed >= _flightSeconds) {
@@ -528,6 +573,7 @@ namespace BECore::Mahjong {
         }
         _computerClock = 0.0f;  // one action a period, whatever the frame took
         const HandModel& hand = game->GetMatch().Hand();
+        const int serialBefore = WindowSerial(hand);
         const bool window = IsClaimWindow(hand.GetPhase());
         if (!StepComputerChecked(session)) {
             return;
@@ -545,6 +591,7 @@ namespace BECore::Mahjong {
         if (ComputerActs(*game) && !StepComputerChecked(session)) {
             return;
         }
+        HoldScoreTableIfBeaten(*game, serialBefore);
     }
 
     void MahjongTableComponent::SetAtlasTexture(IntrusivePtr<ITexture> texture) {
@@ -637,7 +684,7 @@ namespace BECore::Mahjong {
             // The last claim window (public): the plate of the seat that won it blinks as a set just laid does, the plate of each seat whose
             // claim lost has a frame
             if (_lostLeft > 0.0f) {
-                if (seat == _lostWinner && std::fmod(kClaimLostSeconds - _lostLeft, kClaimBlinkSeconds) < kClaimBlinkSeconds * 0.5f) {
+                if (seat == _lostWinner && BlinkIsOn(kClaimLostSeconds - _lostLeft)) {
                     renderer.DrawFilledRect(box.x, box.y, box.w, box.h, kClaimHighlight);
                 }
                 if (_lostSeats[seat]) {
@@ -659,9 +706,8 @@ namespace BECore::Mahjong {
         // The set that was just laid blinks behind its tiles: on at the moment it is laid (its tiles have landed), then half a period on and
         // half off; nothing while a tile of it is in the air
         if (_highlightLeft > 0.0f && !_highlightWaits) {
-            const float elapsed = kClaimHighlightSeconds - _highlightLeft;
             const Rect bounds = BoundsOfMeld(layout, _highlightSeat, _highlightMeld);
-            if (bounds.w > 0.0f && std::fmod(elapsed, kClaimBlinkSeconds) < kClaimBlinkSeconds * 0.5f) {
+            if (bounds.w > 0.0f && BlinkIsOn(kClaimHighlightSeconds - _highlightLeft)) {
                 const Rect marked = Padded(bounds, kActingMargin * unit);
                 renderer.DrawFilledRect(marked.x, marked.y, marked.w, marked.h, kClaimHighlight);
             }
