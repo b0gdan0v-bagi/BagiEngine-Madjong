@@ -52,7 +52,7 @@ namespace BECore::Mahjong::Tests {
         return Rect(rect.x - margin, rect.y - margin, rect.w + 2.0f * margin, rect.h + 2.0f * margin);
     }
 
-    /// Where the table paints the plates (`kZonePlate`) under the discard blocks and the wall ring: the zones grown by `kPlatePadding`.
+    /// The discard blocks and the wall ring grown by `kPlatePadding`: what the HUD and the seat plates keep clear of (the table paints no plate there).
     inline eastl::vector<Rect> ZonePlates(const TableLayout& layout) {
         eastl::vector<Rect> plates;
         for (const Rect& zone : layout.zones.discards) {

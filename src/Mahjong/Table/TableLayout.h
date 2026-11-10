@@ -16,8 +16,8 @@ namespace BECore::Mahjong {
 
     /// The viewer's concealed tiles are large; the tiles of the other seats are small. Sizes (width, height) of the upright tiles of each
     /// zone; a side seat draws them turned, so its slots are height x width.
-    inline constexpr float kViewerHandTileW = 45.0f;
-    inline constexpr float kViewerHandTileH = 60.0f;
+    inline constexpr float kViewerHandTileW = 48.0f;
+    inline constexpr float kViewerHandTileH = 64.0f;
     inline constexpr float kViewerMeldTileW = 30.0f;
     inline constexpr float kViewerMeldTileH = 40.0f;
     inline constexpr float kOpponentHandTileW = 28.0f;
@@ -123,11 +123,10 @@ namespace BECore::Mahjong {
     inline constexpr float kSeatPlateW = 152.0f;
     inline constexpr float kSeatPlateH = 80.0f;
 
-    /// The ground the component paints plates on, in view units: the block that holds each seat's discards (by seat, whatever the pile
-    /// holds), the ring that holds the wall stacks and the plate of each seat (by seat, for the viewer at the bottom: it lies at the
-    /// screen position `SeatPosition(viewer, seat)`). A zone holds its slots and overlaps no other zone and no hand, meld or bonus slot;
-    /// a seat plate overlaps no slot, no plate under a zone (`kPlatePadding` past it) and no other seat plate, and keeps a grid unit
-    /// clear of the plates.
+    /// The zones of the table, in view units: the block that holds each seat's discards (by seat, whatever the pile holds), the ring
+    /// that holds the wall stacks and the plate of each seat (by seat, for the viewer at the bottom: it lies at the screen position
+    /// `SeatPosition(viewer, seat)`). A zone holds its slots and overlaps no other zone and no hand, meld or bonus slot; a seat plate
+    /// overlaps no slot and no other seat plate, and lies at least `kPlatePadding` clear of every discard block and of the wall ring.
     struct TableZones {
         eastl::array<Rect, kSeatCount> discards{};
         Rect wall;

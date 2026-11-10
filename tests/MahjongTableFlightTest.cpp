@@ -327,11 +327,11 @@ namespace BECore::Mahjong::Tests {
             return session.GetPhase() != SessionPhase::Playing || (!session.HandoffPending() && session.Viewer() == _table->GetLayout().viewer);
         }
 
-        /// The tile draws that show a face, counted from the draw calls (the order of a frame with flights is not the order of the slots).
+        /// The tile draws that show a face (not a back, not a wall stack), counted from the draw calls (the order of a frame with flights is not the order of the slots).
         int FaceUpCalls() const {
             int faces = 0;
             for (const DrawCall& call : TileCalls()) {
-                faces += SameSource(call, BackRect()) ? 0 : 1;
+                faces += SameSource(call, BackRect()) || SameSource(call, StackRect()) ? 0 : 1;
             }
             return faces;
         }

@@ -122,6 +122,22 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(back.rect.h, expectedBack.h);
     }
 
+    TEST_F(TileSpritesTest, TheStackSpriteIsTheSquareOfTheCellAfterTheBack) {
+        ASSERT_EQ(_sprites.size(), static_cast<size_t>(kDrawnCells));
+        EXPECT_EQ(kStackCell, kBackCell + 1);
+        const Sprite& stack = _sprites[kStackCell];
+        const Rect expected = StackRect();
+        EXPECT_EQ(stack.name, eastl::string(kStackSpriteName));
+        EXPECT_EQ(stack.rect.x, expected.x);
+        EXPECT_EQ(stack.rect.y, expected.y);
+        EXPECT_EQ(stack.rect.w, expected.w);
+        EXPECT_EQ(stack.rect.h, expected.h);
+        EXPECT_EQ(expected.x, CellRect(kStackCell).x);
+        EXPECT_EQ(expected.y, CellRect(kStackCell).y);
+        EXPECT_EQ(expected.w, static_cast<float>(kStackSize));
+        EXPECT_EQ(expected.h, static_cast<float>(kStackSize));
+    }
+
     TEST_F(TileSpritesTest, SpriteNamesAreDistinctAndFollowTheNotation) {
         EXPECT_EQ(SpriteName(*TryParse("5p")), eastl::string("Tile_5p"));
         EXPECT_EQ(SpriteName(*TryParse("Ew")), eastl::string("Tile_Ew"));
@@ -154,7 +170,7 @@ namespace BECore::Mahjong::Tests {
     TEST(TileAtlasTest, TheGridHoldsEveryCellAndTheAtlasSizeIsTheGrid) {
         EXPECT_EQ(kAtlasWidth, kAtlasColumns * kCellWidth);
         EXPECT_EQ(kAtlasHeight, kAtlasRows * kCellHeight);
-        EXPECT_EQ(kDrawnCells, kTileIdCount + 1);
+        EXPECT_EQ(kDrawnCells, kTileIdCount + 2);
         EXPECT_EQ(SourceRect(Tile{0}).x, 0.0f);
         EXPECT_EQ(SourceRect(Tile{0}).y, 0.0f);
         // The first cell of the second row and the last drawn one

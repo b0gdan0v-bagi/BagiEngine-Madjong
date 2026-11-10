@@ -7,6 +7,7 @@
 #include <BECore/UI/UIEnvironment.h>
 #include <BECore/UI/UIImage.h>
 #include <CoreSDL/SDLEvents.h>
+#include <Events/ApplicationEvents.h>
 #include <Events/InputEvents.h>
 #include <Events/SceneEvents.h>
 #include <Generated/MahjongTableComponent.gen.hpp>
@@ -14,6 +15,7 @@
 #include <Mahjong/Table/CallingMarks.h>
 #include <Mahjong/Table/SeatName.h>
 #include <Mahjong/Table/SeatPlates.h>
+#include <Mahjong/Table/TableLook.h>
 #include <Mahjong/Table/TileAtlas.h>
 #include <Mahjong/Table/TouchRegime.h>
 #include <Mahjong/Table/UiPalette.h>
@@ -33,9 +35,10 @@ namespace BECore::Mahjong {
         /// The highlight of the acting seat reaches this far past the hand; the pending discard's frame this far past the tile.
         constexpr float kActingMargin = 4.0f;
         constexpr float kPendingMargin = 3.0f;
-        /// The rim along the edge of the view, and a tile's shadow falls this far down and right (a plate's padding is `kPlatePadding`).
-        constexpr float kRimWidth = 8.0f;
+        /// A tile's shadow falls this far down and right.
         constexpr float kShadowOffset = 2.0f;
+        /// How far the soft layer of a tile's shadow reaches past the tight one on every side, in view units.
+        constexpr float kShadowSoftMargin = 2.0f;
         /// The inner mark of a tile drawn without the atlas, as a fraction of the tile.
         constexpr float kPlainMarkInset = 0.25f;
 
@@ -251,9 +254,38 @@ namespace BECore::Mahjong {
     MahjongTableComponent* MahjongTableComponent::s_active = nullptr;
 
     MahjongTableComponent::~MahjongTableComponent() {
+        ReleaseFelt();
         if (s_active == this) {
             s_active = nullptr;
         }
+    }
+
+    void MahjongTableComponent::ReleaseFelt() {
+        if (_felt) {
+            // A frame in flight may still read the texture: the GPU has to be idle before it is freed (and a texture of another renderer is not ours to wait for)
+            const auto& renderer = CoreManager::GetRenderer();
+            if (renderer && renderer->GetId() == _feltRenderer) {
+                renderer->WaitIdle();
+            }
+            _felt = {};
+        }
+        _feltRenderer = 0;
+    }
+
+    void MahjongTableComponent::OnApplicationCleanUp() {
+        // The texture is a GPU object and components outlive the renderer: it goes when the application cleans up, before the renderer is destroyed
+        ReleaseFelt();
+    }
+
+    ITexture* MahjongTableComponent::FeltTexture(IRenderer& renderer) {
+        if (renderer.GetId() != _feltRenderer) {
+            _felt = {};  // made by another renderer, which has its own way of freeing it
+            _feltRenderer = renderer.GetId();
+            // Made once per renderer, even when it fails (the flat felt is drawn then)
+            const FeltPixels pixels = MakeFeltPixels(kFeltTextureWidth, kFeltTextureHeight);
+            _felt = renderer.CreateTexture(pixels.rgba.data(), pixels.width, pixels.height);
+        }
+        return _felt.Get();
     }
 
     void MahjongTableComponent::OnAttached() {
@@ -262,6 +294,7 @@ namespace BECore::Mahjong {
         if (!_atlas) {
             LOG_WARNING(Format("MahjongTableComponent: the tile atlas '{}' did not load, the tiles are drawn as plain rectangles", kAtlasPath));
         }
+        Subscribe<ApplicationEvents::ApplicationCleanUpEvent, &MahjongTableComponent::OnApplicationCleanUp>(this);
         SubscribeInScene<SDLEvents::MouseButtonDownEvent, &MahjongTableComponent::OnMouseDown>(this);
         SubscribeInScene<InputEvents::ActionEvent, &MahjongTableComponent::OnAction>(this);
         SubscribeInScene<SceneEvents::SceneUpdateEvent, &MahjongTableComponent::OnUpdate>(this);
@@ -606,7 +639,12 @@ namespace BECore::Mahjong {
         IRenderer& renderer = *CoreManager::GetRenderer();
         const float viewWidth = GetScene().GetViewWidth() > 0.0f ? GetScene().GetViewWidth() : kViewWidth;
         const float viewHeight = GetScene().GetViewHeight() > 0.0f ? GetScene().GetViewHeight() : kViewHeight;
-        renderer.DrawFilledRect(0.0f, 0.0f, viewWidth, viewHeight, kFelt);
+        // The felt is one soft picture over the view; without a texture (the backend refused it, a test renderer) it is the flat colour
+        if (ITexture* felt = FeltTexture(renderer)) {
+            renderer.DrawTexture(*felt, nullptr, 0.0f, 0.0f, viewWidth, viewHeight);
+        } else {
+            renderer.DrawFilledRect(0.0f, 0.0f, viewWidth, viewHeight, kFelt);
+        }
         // The layout is built in design units and scaled to the view, so what is measured in units here is scaled the same way
         const float unit = eastl::max(0.0f, eastl::min(viewWidth / kViewWidth, viewHeight / kViewHeight));
         const float rim = kRimWidth * unit;
@@ -614,6 +652,12 @@ namespace BECore::Mahjong {
         renderer.DrawFilledRect(0.0f, viewHeight - rim, viewWidth, rim, kFeltRim);
         renderer.DrawFilledRect(0.0f, rim, rim, viewHeight - 2.0f * rim, kFeltRim);
         renderer.DrawFilledRect(viewWidth - rim, rim, rim, viewHeight - 2.0f * rim, kFeltRim);
+        // The lip on the inner side of the rim: four bars, the side ones between the top and the bottom one
+        const float lip = kFeltLipWidth * unit;
+        renderer.DrawFilledRect(rim, rim, viewWidth - 2.0f * rim, lip, kFeltLip);
+        renderer.DrawFilledRect(rim, viewHeight - rim - lip, viewWidth - 2.0f * rim, lip, kFeltLip);
+        renderer.DrawFilledRect(rim, rim + lip, lip, viewHeight - 2.0f * (rim + lip), kFeltLip);
+        renderer.DrawFilledRect(viewWidth - rim - lip, rim + lip, lip, viewHeight - 2.0f * (rim + lip), kFeltLip);
 
         const TableSnapshot before = eastl::move(_shown);
         _shown = TableSnapshot{};
@@ -663,15 +707,16 @@ namespace BECore::Mahjong {
             keepsWaiting = KeepsWaitingDiscards(MakeTableView(hand, bottom));
         }
 
-        // A face (the tile) or the back (nullopt) placed as `place` says: from the atlas, else a plain rectangle. A turned tile (a side seat,
-        // or a tile in the air between two turns) hands the draw the unturned rectangle and the turn about the pivot; a tile that is not
-        // turned is the plain draw of its rectangle (`place.upright`, which is the screen rectangle then).
-        const auto drawFace = [&](const TilePlacement& place, std::optional<Tile> face) {
+        // A face (the tile) or the back (nullopt) placed as `place` says: from the atlas, else a plain rectangle. `stack` draws the wall
+        // stack seen from above (its own cell, a plain back without the atlas) instead of a tile. A turned tile (a side seat, or a tile in
+        // the air between two turns) hands the draw the unturned rectangle and the turn about the pivot; a tile that is not turned is the
+        // plain draw of its rectangle (`place.upright`, which is the screen rectangle then).
+        const auto drawFace = [&](const TilePlacement& place, std::optional<Tile> face, bool stack = false) {
             const Rect& upright = place.upright;
             const DrawTransform turn{place.rotation, place.pivotX, place.pivotY};
             const bool turned = !turn.IsIdentity();
             if (_atlas) {
-                const Rect source = face ? SourceRect(*face) : BackRect();
+                const Rect source = stack ? StackRect() : face ? SourceRect(*face) : BackRect();
                 if (turned) {
                     renderer.DrawTransformedTexture(*_atlas, &source, upright.x, upright.y, upright.w, upright.h, kUntinted, turn);
                 } else {
@@ -693,21 +738,17 @@ namespace BECore::Mahjong {
                 fill(Rect{upright.x + insetX, upright.y + insetY, upright.w - 2.0f * insetX, upright.h - 2.0f * insetY}, PlainMarkColor(*face));
             }
         };
-        // The shadow under a tile (not under a wall stack); the frame of a pending discard lies over it, so the gold is even
-        const auto drawShadow = [&](const Rect& rect) { renderer.DrawFilledRect(rect.x + kShadowOffset * unit, rect.y + kShadowOffset * unit, rect.w, rect.h, kTileShadow); };
+        // The shadow under a tile (not under a wall stack), two layers: the wide faint one, then the tight one at the offset; the frame of
+        // a pending discard lies over both, so the gold is even
+        const auto drawShadow = [&](const Rect& rect) {
+            const float margin = kShadowSoftMargin * unit;
+            renderer.DrawFilledRect(rect.x + kShadowOffset * unit - margin, rect.y + kShadowOffset * unit - margin, rect.w + 2.0f * margin, rect.h + 2.0f * margin, kTileShadowSoft);
+            renderer.DrawFilledRect(rect.x + kShadowOffset * unit, rect.y + kShadowOffset * unit, rect.w, rect.h, kTileShadow);
+        };
         const auto drawTile = [&](const Rect& rect, const TilePlacement& place, std::optional<Tile> face) {
             drawShadow(rect);
             drawFace(place, face);
         };
-
-        // The plates under the discard blocks and the wall ring
-        const float plate = kPlatePadding * unit;
-        for (const Rect& zone : layout.zones.discards) {
-            const Rect plated = Padded(zone, plate);
-            renderer.DrawFilledRect(plated.x, plated.y, plated.w, plated.h, kZonePlate);
-        }
-        const Rect ring = Padded(layout.zones.wall, plate);
-        renderer.DrawFilledRect(ring.x, ring.y, ring.w, ring.h, kZonePlate);
 
         // The seat plates (public data only, so also under the cover, for a spectator and at the end of a hand): the base of each, on the
         // plate of the seat whose turn it is the gold tint and frame, and on the dealer's (East of the hand shown: the same at the end of the
@@ -732,6 +773,19 @@ namespace BECore::Mahjong {
             }
             if (hand.SeatWind(seat) == Wind::East) {
                 renderer.DrawFilledRect(box.x, box.y, box.w, kDealerMarkHeight * unit, kDealerMark);
+            }
+        }
+
+        // The rack under the viewer's hand (public: the seat at the bottom, face up or not): the dark plate, the lighter body on it with the
+        // dark edge left on three sides. It ends at the rim, which the hand's own padding would reach.
+        if (IsSeat(bottom)) {
+            const Rect bounds = BoundsOf(layout, SlotRole::HandTile, bottom);
+            if (bounds.w > 0.0f) {
+                Rect plate = Padded(bounds, kRackPadding * unit);
+                plate.h = eastl::min(plate.h, viewHeight - rim - plate.y);
+                const float edge = kHandRackLipWidth * unit;
+                renderer.DrawFilledRect(plate.x, plate.y, plate.w, plate.h, kHandRackLip);
+                renderer.DrawFilledRect(plate.x + edge, plate.y, plate.w - 2.0f * edge, plate.h - edge, kHandRack);
             }
         }
 
@@ -831,7 +885,7 @@ namespace BECore::Mahjong {
                     }
                     break;
                 case SlotRole::WallStack:
-                    drawFace(place, std::nullopt);
+                    drawFace(place, std::nullopt, /*stack=*/true);
                     break;
             }
         };

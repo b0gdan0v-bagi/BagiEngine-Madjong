@@ -126,6 +126,7 @@ namespace BECore::Mahjong::Tests {
         const auto slot = std::find_if(_table->GetLayout().slots.begin(), _table->GetLayout().slots.end(), [last](const TileSlot& s) { return s.role == SlotRole::DiscardTile && s.index == last; });
         ASSERT_NE(slot, _table->GetLayout().slots.end());
         int shadowAt = -1;
+        int softAt = -1;
         int frameAt = -1;
         for (size_t i = 0; i < _renderer->calls.size(); ++i) {
             const DrawCall& call = _renderer->calls[i];
@@ -136,10 +137,15 @@ namespace BECore::Mahjong::Tests {
                 frameAt = static_cast<int>(i);
             } else if (SameColor(call.color, kTileShadow) && call.rect.x == slot->rect.x + 2.0f && call.rect.y == slot->rect.y + 2.0f) {
                 shadowAt = static_cast<int>(i);
+            } else if (SameColor(call.color, kTileShadowSoft) && call.rect.x < slot->rect.x + 2.0f && call.rect.x + call.rect.w > slot->rect.x + slot->rect.w + 2.0f &&
+                       call.rect.y < slot->rect.y + 2.0f && call.rect.y + call.rect.h > slot->rect.y + slot->rect.h + 2.0f) {
+                softAt = static_cast<int>(i);
             }
         }
         ASSERT_GE(frameAt, 0);
         ASSERT_GE(shadowAt, 0);
+        ASSERT_GE(softAt, 0);
+        EXPECT_LT(softAt, frameAt) << "the wide layer is under the frame too";
         EXPECT_LT(shadowAt, frameAt) << "a shadow drawn over the frame would eat its right and bottom edge";
     }
 
