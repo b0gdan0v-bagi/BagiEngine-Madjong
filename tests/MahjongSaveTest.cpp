@@ -2,9 +2,14 @@
 
 #include <Mahjong/Game/MatchLog.h>
 #include <Mahjong/Game/TableSession.h>
+#include <Mahjong/MahjongGameControl.h>
+#include <Mahjong/MatchLogJson.h>
+#include <Mahjong/Save/MatchSave.h>
 #include <gtest/gtest.h>
 
 /**
+ * The text of a saved match, the prefs and the recorder (`Save/MatchSave.h`), and the way from a played match to a resumed one.
+ *
  * Resuming a match from its log (`TableSession::ResumeMatch`, `ReplayMatchLog` with an echo; `Game/MatchLog.h`, `Game/TableSession.h`):
  * a match played to some step by people and computers is recorded, its events (without the `Hand` and `End` events, as a saved match
  * keeps them) are resumed into a second session, and the second session is where the first was; it plays on to the end of the match
@@ -463,6 +468,268 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(ReplayMatchLog(whole, echoed, &sink).has_value());
         EXPECT_EQ(plain.Scores(), echoed.Scores());
         EXPECT_EQ(plain.History().size(), echoed.History().size());
+    }
+
+    namespace {
+
+        /// A whole match (or its first `steps` steps) of `seats` on `seed`, played through a session with a recorder in front of a log.
+        struct Recorded {
+            Match match;
+            TableSession session{match};
+            MatchLog log;
+            MatchRecorder recorder;
+
+            Recorded(uint32_t seed, const SeatSetup& seats, ComputerLevel level, int steps) {
+                recorder.SetNext(&log);
+                session.SetLogSink(&recorder);
+                EXPECT_TRUE(session.StartMatch(ShortMatch(), seed, seats, level).has_value());
+                MahjongRng rng(seed);
+                for (int step = 0; step < steps; ++step) {
+                    if (session.GetPhase() == SessionPhase::MatchOver) {
+                        break;
+                    }
+                    if (session.GetPhase() == SessionPhase::HandOver) {
+                        EXPECT_TRUE(session.NextHand().has_value());
+                    } else if (session.ActorIsPerson()) {
+                        EXPECT_TRUE(session.PerformPerson(Choose(match.Hand().LegalActions(session.Actor()), Mode::SeekWin, rng)).has_value());
+                    } else {
+                        EXPECT_TRUE(session.StepComputer().has_value());
+                    }
+                }
+            }
+        };
+
+        constexpr int kAllSteps = kStepLimit;
+
+        std::string Plain(const eastl::string& text) {
+            return std::string(text.c_str(), text.size());
+        }
+
+        bool Contains(const eastl::string& text, const char* part) {
+            return Plain(text).find(part) != std::string::npos;
+        }
+
+        /// The text of the full match log (all five kinds with the breakdowns), for the size to be compared with.
+        size_t FullLogSize(const eastl::vector<MatchLogEvent>& events) {
+            size_t size = 0;
+            for (const MatchLogEvent& event : events) {
+                size += EventToJson(event).dump().size() + 1;
+            }
+            return size;
+        }
+
+        /// The error of a text that does not parse as a saved match.
+        std::string ParseError(const std::string& text) {
+            const auto parsed = ParseMatchSaveText(text);
+            EXPECT_FALSE(parsed.has_value());
+            return parsed ? std::string() : Plain(parsed.error());
+        }
+
+        bool Has(const std::string& text, const char* part) {
+            return text.find(part) != std::string::npos;
+        }
+
+    }  // namespace
+
+    TEST(MahjongSaveTest, TheTextOfAMatchReadsBackAsItsEvents) {
+        struct Played {
+            uint32_t seed;
+            SeatSetup seats;
+            ComputerLevel level;
+            int steps;
+        };
+        for (const Played& played : {Played{3, kCCCC, ComputerLevel::Normal, kAllSteps}, Played{11, kPCCC, ComputerLevel::Easy, kAllSteps}, Played{5, kPPCC, ComputerLevel::Normal, 400}}) {
+            const std::string where = "seed " + std::to_string(played.seed) + " " + Plain(SeatsToLetters(played.seats));
+            const Recorded recorded(played.seed, played.seats, played.level, played.steps);
+            const eastl::vector<MatchLogEvent>& all = recorded.log.Events();
+            const eastl::string text = MatchSaveText(all);
+            const auto parsed = ParseMatchSaveText(std::string_view(text.c_str(), text.size()));
+            ASSERT_TRUE(parsed.has_value()) << where << ": " << (parsed ? "" : parsed.error().c_str());
+            const eastl::vector<MatchLogEvent> want = WithoutHandsAndEnd(all);
+            ASSERT_EQ(parsed->size(), want.size()) << where;
+            for (size_t index = 0; index < want.size(); ++index) {
+                EXPECT_TRUE((*parsed)[index] == want[index]) << where << ": event " << index;
+            }
+            EXPECT_EQ((*parsed)[0].seats, played.seats) << where;
+            EXPECT_EQ(Name((*parsed)[0].level), Name(played.level)) << where;
+            // The recorder keeps the same events.
+            EXPECT_TRUE(recorded.recorder.Events() == want) << where;
+            // Only the three kinds, no breakdowns, and smaller than the log file of the match.
+            EXPECT_FALSE(Contains(text, "\"event\":\"hand\"")) << where;
+            EXPECT_FALSE(Contains(text, "\"event\":\"end\"")) << where;
+            EXPECT_FALSE(Contains(text, "breakdown")) << where;
+            EXPECT_TRUE(Contains(text, "\"event\":\"settlement\"") == (IndexOf(want, MatchLogKind::Settlement) < want.size())) << where;
+            EXPECT_LT(text.size(), FullLogSize(all)) << where;
+            // And the text is a match that replays.
+            Match replayed;
+            ASSERT_TRUE(ReplayMatchLog(*parsed, replayed).has_value()) << where;
+            EXPECT_EQ(replayed.Scores(), recorded.match.Scores()) << where;
+        }
+    }
+
+    TEST(MahjongSaveTest, ATextThatIsNoSavedMatchIsRefusedWithItsLine) {
+        const Recorded recorded(3, kCCCC, ComputerLevel::Normal, 60);
+        const std::string text = Plain(MatchSaveText(recorded.log.Events()));
+        const size_t firstBreak = text.find('\n');
+        ASSERT_NE(firstBreak, std::string::npos);
+
+        EXPECT_TRUE(Has(ParseError(""), "empty"));
+        EXPECT_TRUE(Has(ParseError("\n \n"), "empty"));
+        EXPECT_TRUE(Has(ParseError("not json\n"), "line 1"));
+        EXPECT_TRUE(Has(ParseError(text + "{oops\n"), "not JSON"));
+        // The first line is no start.
+        const std::string withoutStart = text.substr(firstBreak + 1);
+        EXPECT_TRUE(Has(ParseError(withoutStart), "line 1")) << ParseError(withoutStart);
+        EXPECT_TRUE(Has(ParseError(withoutStart), "start"));
+        // A hand line (from the full log) or an end line in the middle.
+        const std::string handLine = EventToJson(recorded.log.Events()[1]).dump();
+        const std::string afterHand = text.substr(0, firstBreak + 1) + handLine + "\n" + text.substr(firstBreak + 1);
+        EXPECT_TRUE(Has(ParseError(afterHand), "line 2")) << ParseError(afterHand);
+        EXPECT_TRUE(Has(ParseError(afterHand), "Hand event"));
+        const std::string endLine = EventToJson(MatchLogEvent{.kind = MatchLogKind::End}).dump();
+        EXPECT_TRUE(Has(ParseError(text + endLine + "\n"), "End event"));
+        // A tile that is not one, on the first action (line 2), and a blank line before it does not move the number.
+        const size_t tile = text.find("\"tile\":\"", firstBreak);
+        ASSERT_NE(tile, std::string::npos);
+        std::string badTile = text;
+        badTile.replace(tile + 8, 2, "9z");
+        EXPECT_TRUE(Has(ParseError(badTile), "line 2")) << ParseError(badTile);
+        std::string withBlank = badTile;
+        withBlank.insert(firstBreak + 1, "\n");
+        EXPECT_TRUE(Has(ParseError(withBlank), "line 3")) << ParseError(withBlank);
+        // More lines than the cap, and exactly the cap is not that error.
+        std::string many;
+        for (size_t line = 0; line <= kMaxSavedEvents; ++line) {
+            many += "x\n";
+        }
+        EXPECT_TRUE(Has(ParseError(many), "more than"));
+        EXPECT_FALSE(Has(ParseError(many.substr(2)), "more than"));
+    }
+
+    TEST(MahjongSaveTest, TheRecorderKeepsTheMatchAndPassesEverythingOn) {
+        MatchRecorder recorder;
+        MatchLog next;
+        recorder.SetNext(&next);
+        EXPECT_EQ(recorder.Counter(), 0u);
+        EXPECT_FALSE(recorder.Finished());
+        EXPECT_FALSE(recorder.IsRecording());
+
+        const Recorded first(3, kCCCC, ComputerLevel::Normal, kAllSteps);
+        const eastl::vector<MatchLogEvent>& all = first.log.Events();
+        for (const MatchLogEvent& event : all) {
+            recorder.OnEvent(event);
+        }
+        // Everything reached the next sink, the Hand and End events too.
+        EXPECT_TRUE(next.Events() == all);
+        EXPECT_TRUE(recorder.Events() == WithoutHandsAndEnd(all));
+        EXPECT_TRUE(recorder.IsRecording());
+        EXPECT_TRUE(recorder.Finished());
+        // The counter: one per kept event, per Start and per End.
+        EXPECT_EQ(recorder.Counter(), recorder.Events().size() + 1);
+
+        // A second Start clears the match, the flag and keeps the counter growing.
+        const uint64_t counter = recorder.Counter();
+        recorder.OnEvent(all[0]);
+        EXPECT_EQ(recorder.Events().size(), 1u);
+        EXPECT_FALSE(recorder.Finished());
+        EXPECT_GT(recorder.Counter(), counter);
+
+        // The counter grows with an event, not between two.
+        recorder.OnEvent(all[2]);
+        EXPECT_EQ(recorder.Events().size(), 2u);
+        EXPECT_EQ(recorder.Counter(), counter + 2);
+
+        // Not recording: a match that begins keeps nothing, still forwards, and the flag changes nothing for the match in progress.
+        recorder.SetRecording(false);
+        recorder.OnEvent(all[2]);
+        EXPECT_EQ(recorder.Events().size(), 3u) << "the match in progress is still kept";
+        EXPECT_TRUE(recorder.IsRecording());
+        const size_t forwarded = next.Events().size();
+        recorder.OnEvent(all[0]);
+        recorder.OnEvent(all[1]);
+        recorder.OnEvent(all[2]);
+        EXPECT_TRUE(recorder.Events().empty());
+        EXPECT_FALSE(recorder.IsRecording());
+        EXPECT_EQ(next.Events().size(), forwarded + 3);
+        recorder.OnEvent(all.back());
+        EXPECT_TRUE(recorder.Finished());
+        EXPECT_TRUE(recorder.Events().empty());
+
+        // Back on: the next Start records again.
+        recorder.SetRecording(true);
+        recorder.OnEvent(all[0]);
+        EXPECT_TRUE(recorder.IsRecording());
+        EXPECT_EQ(recorder.Events().size(), 1u);
+
+        // No next sink is fine.
+        recorder.SetNext(nullptr);
+        recorder.OnEvent(all[2]);
+        EXPECT_EQ(recorder.Events().size(), 2u);
+    }
+
+    TEST(MahjongSaveTest, ThePrefsRoundTripAndAreChecked) {
+        for (const SeatSetup& seats : kSetups) {
+            for (const ComputerLevel level : kLevels) {
+                for (const int hands : {kFullMatchHands, kShortMatchHands}) {
+                    const MahjongPrefsSave prefs = MakePrefs("ru", hands == kFullMatchHands, seats, hands, level);
+                    const auto read = ReadPrefs(prefs);
+                    ASSERT_TRUE(read.has_value()) << (read ? "" : read.error().c_str());
+                    EXPECT_EQ(read->language, "ru");
+                    EXPECT_EQ(read->hintsOn, hands == kFullMatchHands);
+                    EXPECT_EQ(read->seats, seats);
+                    EXPECT_EQ(read->handsPerMatch, hands);
+                    EXPECT_EQ(Name(read->level), Name(level));
+                }
+            }
+        }
+        const MahjongPrefsSave defaults;
+        EXPECT_TRUE(ReadPrefs(defaults).has_value());
+        EXPECT_TRUE(defaults == MakePrefs("en", true, kDefaultSeatSetup, kFullMatchHands, kDefaultLevel));
+        EXPECT_FALSE(defaults == MakePrefs("ru", true, kDefaultSeatSetup, kFullMatchHands, kDefaultLevel));
+
+        const auto refused = [&](const char* what, auto change, const char* word) {
+            MahjongPrefsSave prefs;
+            change(prefs);
+            const auto read = ReadPrefs(prefs);
+            ASSERT_FALSE(read.has_value()) << what;
+            EXPECT_NE(Plain(read.error()).find(word), std::string::npos) << what << ": " << read.error().c_str();
+        };
+        refused("seats too short", [](MahjongPrefsSave& prefs) { prefs.seats = "PCC"; }, "seats");
+        refused("seats letter", [](MahjongPrefsSave& prefs) { prefs.seats = "PCCX"; }, "seats");
+        refused("level hard", [](MahjongPrefsSave& prefs) { prefs.level = "hard"; }, "level");
+        refused("level capital", [](MahjongPrefsSave& prefs) { prefs.level = "Easy"; }, "level");
+        refused("hands 12", [](MahjongPrefsSave& prefs) { prefs.hands = 12; }, "hands");
+        refused("hands 0", [](MahjongPrefsSave& prefs) { prefs.hands = 0; }, "hands");
+        refused("language empty", [](MahjongPrefsSave& prefs) { prefs.language.clear(); }, "language");
+    }
+
+    TEST(MahjongSaveTest, AMatchRecordedParsedAndResumedIsTheSameTable) {
+        // From the first deal, the middle of a hand and the end of the match.
+        for (const int steps : {0, 33, 170, kAllSteps}) {
+            for (const SeatSetup& seats : {kPCCC, kPPCC}) {
+                const std::string where = std::to_string(steps) + " steps " + Plain(SeatsToLetters(seats));
+                const Recorded recorded(13, seats, ComputerLevel::Easy, steps);
+                const eastl::string text = MatchSaveText(recorded.recorder.Events());
+                const auto parsed = ParseMatchSaveText(std::string_view(text.c_str(), text.size()));
+                ASSERT_TRUE(parsed.has_value()) << where;
+                Table resumed;
+                const ReplayStatus status = resumed.session.ResumeMatch(*parsed, (*parsed)[0].seats, (*parsed)[0].level);
+                ASSERT_TRUE(status.has_value()) << where << ": event " << status.error().index << " " << Name(status.error().problem);
+                Observation want;
+                want.phase = recorded.session.GetPhase();
+                want.actor = recorded.session.Actor();
+                want.scores = recorded.match.Scores();
+                want.history = recorded.match.History().size();
+                want.handsPlayed = recorded.match.HandsPlayed();
+                want.east = recorded.match.East();
+                want.hand = Snapshot(recorded.match.Hand());
+                want.level = recorded.session.Level();
+                want.seats = recorded.session.Seats();
+                ExpectSame(want, Observe(resumed), where);
+                // And the resumed table's own text is the one it was resumed from.
+                EXPECT_TRUE(MatchSaveText(resumed.log.Events()) == text) << where;
+            }
+        }
     }
 
 }  // namespace BECore::Mahjong::Tests
