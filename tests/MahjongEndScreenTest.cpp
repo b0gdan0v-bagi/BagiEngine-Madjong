@@ -31,7 +31,9 @@ namespace BECore::Mahjong::Tests {
         constexpr float kScoreTableRight = 1184.0f;
         constexpr float kScoreTableTop = 96.0f;
         constexpr float kScoreTableBottom = 612.0f;
-        constexpr float kScoreTableHeight = 492.0f;
+        constexpr float kScoreTableHeight = 500.0f;
+        constexpr float kScoreButtonGapHeight = 64.0f;  // the gap of the plate that the Next hand button sits in
+        constexpr int kScoreLineColumns = 4;
         constexpr float kScoreHeadlineHeight = 48.0f;
         constexpr float kScoreNextHeight = 56.0f;
         constexpr float kScoreNextWidth = 176.0f;
@@ -510,10 +512,19 @@ namespace BECore::Mahjong::Tests {
                 above = &row->rect;
             }
 
+            // The gap for the Next hand button: an empty element of the stack between the seat rows and the lines
+            const UIElement* buttonGap = Element("HandOver", "ButtonGap");
+            ASSERT_NE(buttonGap, nullptr);
+            EXPECT_EQ(GapBelow(*above, buttonGap->rect), kModalGap);
+            EXPECT_EQ(buttonGap->rect.h, kScoreButtonGapHeight);
+            EXPECT_EQ(buttonGap->rect.x, headline->rect.x);
+            EXPECT_EQ(buttonGap->rect.w, headline->rect.w);
+            above = &buttonGap->rect;
+
             const UIElement* lines = Element("HandOver", "Lines");
             ASSERT_NE(lines, nullptr);
             EXPECT_EQ(GapBelow(*above, lines->rect), kModalGap);
-            std::vector<float> columns;  // the distinct left edges of the lines: three columns
+            std::vector<float> columns;  // the distinct left edges of the lines: four columns
             for (int i = 0; i < kMaxScoreLines; ++i) {
                 const UIElement* line = Element("HandOver", Format("ScoreLine{}", i).c_str());
                 ASSERT_NE(line, nullptr) << i;
@@ -525,7 +536,7 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_GE(line->rect.y, lines->rect.y) << i;
                 EXPECT_LE(line->rect.y + line->rect.h, lines->rect.y + lines->rect.h) << "line " << i << " lies inside its area, all sixteen shown";
             }
-            EXPECT_EQ(columns.size(), 3u) << "the sixteen lines lie in three columns";
+            EXPECT_EQ(columns.size(), static_cast<size_t>(kScoreLineColumns)) << "the sixteen lines lie in four columns";
             above = &lines->rect;
 
             const UIElement* summary = Element("HandOver", "Summary");
@@ -535,28 +546,35 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(GapBelow(*above, summary->rect), kModalGap);
             above = &summary->rect;
 
-            EXPECT_EQ(summary->rect.y + summary->rect.h, plate.y + plate.h - kModalPadding) << "the plate ends with the summary band: the button is in the corner";
+            EXPECT_EQ(summary->rect.y + summary->rect.h, plate.y + plate.h - kModalPadding) << "the plate ends with the summary band: the button is in the gap above the lines";
 
             // The score table leaves the hands face up under it: no dim, and the plate is the only thing that blocks the clicks
             EXPECT_EQ(Element("HandOver", "Dim"), nullptr) << "a dim would cover the hands";
             EXPECT_TRUE(plateElement->blocksInput);
             EXPECT_TRUE(canvas->_modal) << "the canvas is still modal: it takes every click";
 
-            // The main button is not in the plate: it is in the corner of New game (HudMenu is hidden meanwhile), in a Screen canvas
-            // whose floor keeps it a touch target. 56 high at 22, because a bar or a button of 64 / 28 would lie on the viewer's hand.
-            auto corner = Canvas("HandOverAction");
-            ASSERT_TRUE(corner);
-            corner->UpdateLayout(kViewWidth, kViewHeight);
+            // The main button is not a child of the plate: it is in a Screen canvas whose floor keeps it a touch target, in the middle of the window,
+            // in the gap of the plate. 56 high at 22, because a button of 64 / 28 would not leave room for the gaps of 8 around it when the window
+            // scale outgrows the fit of the table (32:9: 1.41 times).
+            auto action = Canvas("HandOverAction");
+            ASSERT_TRUE(action);
+            action->UpdateLayout(kViewWidth, kViewHeight);
             EXPECT_EQ(Element("HandOverAction", "Bar"), nullptr) << "no bar: it would cover the viewer's hand";
             const UIElement* next = Element("HandOverAction", "NextHand");
             ASSERT_NE(next, nullptr);
             EXPECT_TRUE(SameColor(next->color, PaletteColor("primary")));
             EXPECT_EQ(next->rect.h, kScoreNextHeight);
             EXPECT_EQ(next->rect.w, kScoreNextWidth);
-            EXPECT_EQ(next->rect.x + next->rect.w, kViewWidth - kViewMargin) << "in the top right corner";
-            EXPECT_EQ(next->rect.y, kViewMargin);
-            EXPECT_GE(GapBelow(next->rect, plate), 0.0f) << "above the plate";
-            EXPECT_FALSE(Intersects(next->rect, plate));
+            EXPECT_EQ(next->rect.x + next->rect.w * 0.5f, kViewWidth * 0.5f) << "in the middle of the table";
+            EXPECT_GE(next->rect.x, plate.x + kModalPadding);
+            EXPECT_LE(next->rect.x + next->rect.w, plate.x + plate.w - kModalPadding);
+            // In the gap at the design size, with room to spare on both sides (a grid unit at least); the gap is 64 and the button 56
+            EXPECT_GE(next->rect.y, buttonGap->rect.y) << "inside the gap, not on the seat rows";
+            EXPECT_LE(next->rect.y + next->rect.h, buttonGap->rect.y + buttonGap->rect.h) << "inside the gap, not on the lines";
+            for (const char* name : {"Headline", "SeatRow0", "SeatRow1", "SeatRow2", "SeatRow3", "Lines", "Summary"}) {
+                EXPECT_FALSE(Intersects(next->rect, Element("HandOver", name)->rect)) << name;
+            }
+            EXPECT_TRUE(Intersects(next->rect, plate)) << "the button lies on the plate";
         });
     }
 
@@ -591,8 +609,8 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers));
         ASSERT_NO_FATAL_FAILURE(PlayHandOver());
         auto canvas = Canvas("HandOver");
-        auto corner = Canvas("HandOverAction");
-        ASSERT_TRUE(canvas && corner);
+        auto action = Canvas("HandOverAction");
+        ASSERT_TRUE(canvas && action);
         ASSERT_TRUE(Shown("HandOver") && Shown("HandOverAction"));
         for (int i = 0; i < kMaxScoreLines; ++i) {
             ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(Format("ScoreLine{}", i)), true));
@@ -613,7 +631,7 @@ namespace BECore::Mahjong::Tests {
                 vars.Set(PoolString::Intern(Format("handOverSeat{}", seat)), eastl::string_view(worst.seatRow));
             }
             canvas->UpdateLayout(kViewWidth, kViewHeight);
-            corner->UpdateLayout(kViewWidth, kViewHeight);
+            action->UpdateLayout(kViewWidth, kViewHeight);
             const UIElement* plate = Element("HandOver", "Plate");
             const UIElement* next = Element("HandOverAction", "NextHand");
             ASSERT_TRUE(plate != nullptr && next != nullptr);
@@ -756,7 +774,7 @@ namespace BECore::Mahjong::Tests {
                     }
                 }
             }
-            // The plate is text only; the button is in the corner canvas, and the longer of its two words fits there
+            // The plate is text only; the button is in the canvas HandOverAction, and the longer of its two words fits there
             for (const Output& output : kOutputs) {
                 ExpectWordsFit("HandOverAction", output.width, output.height, kButtonAir);
             }
@@ -801,7 +819,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(Shown("HudMenu")) << "a hand in play";
 
         ASSERT_NO_FATAL_FAILURE(PlayHandOver());
-        // The Next hand button takes the corner of the New game button of the HUD, so the HUD buttons are hidden
+        // The score table is a screen of its own: the HUD buttons (New game, Rules) are hidden while it is up
         EXPECT_FALSE(Shown("HudMenu"));
         auto plate = Canvas("HandOver");
         ASSERT_TRUE(plate);

@@ -227,7 +227,7 @@ namespace BECore::Mahjong {
         Scene& scene = GetScene();
         UICanvasComponent::SetVisibleByName(scene, "HandOver"_intern, shown);
         UICanvasComponent::SetVisibleByName(scene, "HandOverAction"_intern, shown);
-        // NextHand takes the corner of New game (the score table has no dim, so the hands stay visible), so HudMenu goes while it is up.
+        // The score table is a screen of its own (no dim, so the hands stay visible): HudMenu (New game, Rules) goes while it is up.
         // The standings (MatchOver) are a Screen canvas whose dim covers the whole window, so they need nothing.
         ShowHudMenu();
     }
