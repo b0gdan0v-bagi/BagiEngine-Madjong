@@ -11,4 +11,4 @@ Namespace `BECore::Mahjong::Arena`, plain C++, no engine services. The program i
 | `ArenaReport` | fixed-width text, fixed precision, no locale: the same result is the same bytes on every platform |
 | `ArenaCli` | `ParseArenaArgs` (`--focus`, `--others`, `--first`, `--seeds`, `--jobs` (0 = hardware concurrency), `--time`, `--help`), exit codes 0 / 1 refused action / 2 bad arguments |
 
-Reference numbers: Normal against three random seats on seeds 4000..4999 wins 3288 of 4000 hands, +620620 points; seeds 4000..4059 reproduce `ComputerStrengthTest` (186 / 27 / 27 / +31730). A change of a player is judged by its paired row. The search player's measurements and verdict: `docs/bot-search.md`.
+A change of a player is judged by its paired row. The reference numbers (Normal against random seats, the seeds that reproduce `ComputerStrengthTest`): `docs/bot-arena.md`; the search player's measurements and verdict: `docs/bot-search.md`.

@@ -4,19 +4,19 @@ Classic Chinese mahjong for four seats on BagiEngine (the submodule `engine/`, b
 
 ## State
 
-Every stage of the plan is built: the rules, the match, the computer players (Easy | Normal; a search player exists as knobs, off, since it did not beat Normal: `docs/bot-search.md`), the table session, the control API, the match log, the scene (table, HUD, seat plates, hints, marks, flights, setup, end screens, 13 rules pages), save and Continue, English and Russian. Open work and the owner's pending looks are in the todo store (area `mahjong`), not here.
+Every stage of the plan is built: rules, match, computer players (Easy | Normal), table session, control API, match log, the scene, save and Continue, English and Russian. Open work and the owner's pending looks are in the todo store (area `mahjong`), not here.
 
 ## Where to read
 
-Nested `CLAUDE.md` files load when you work in their folder; read the one for the place you change.
+A nested `CLAUDE.md` loads when you work in its folder.
 
 | Folder | Covers |
 |--------|--------|
 | `src/Mahjong/` | `MahjongGame`, the control API, the match log JSON and file |
 | `src/Mahjong/Save/` | the save of a match and of the `Setup` choices, `Continue` |
-| `src/Mahjong/Game/` | the rules: wall, `HandModel`, scoring and the owner's scoring readings, `Match`, the computer player and levels, `TableSession`, `MatchLog` |
+| `src/Mahjong/Game/` | the rules: wall, `HandModel`, scoring (and the owner's readings), `Match`, the computer player, `TableSession`, `MatchLog` |
 | `src/Mahjong/Table/` | pure scene logic: layout, words, seat plates, buttons, hints, flights, touch regime |
-| `src/Mahjong/Components/` | the scene: table drawing and play, marks, flights, HUD, setup, rules screen, end screens, hints, action buttons |
+| `src/Mahjong/Components/` | the scene: table, marks, flights, action buttons, HUD, setup, rules and end screens, hints |
 | `src/Mahjong/Arena/` | the bot arena (`BagiMahjongArena`, `docs/bot-arena.md`) |
 | `config/` | node files, the string table, **the UI style** (palette by role, type scale, grid, touch size) |
 | `tools/` | tile art (`make_tiles.py`), UI screenshots (`ui_shots.py`) |
@@ -35,4 +35,4 @@ Nested `CLAUDE.md` files load when you work in their folder; read the one for th
 
 ## Docs budget
 
-This file is loaded into every session and every agent: keep it under 12k characters, and every nested `CLAUDE.md` under 20k. Write the contract and the reasons a reader could not get from the code; do not restate what a test checks, a constant's value, or the history of a decision (that goes to the entry's plan in the todo store). `engine/CI/scripts/check_doc_budget.py --root .` checks the limits.
+This file is loaded into every session and every agent: keep it under 12k characters, the rules without `paths:` under 8k together, every nested `CLAUDE.md` under 20k. Write the contract and the reasons a reader could not get from the code; do not restate what a test checks, a constant's value, or the history of a decision (that goes to the entry's plan in the todo store). `engine/CI/scripts/check_doc_budget.py --root .` checks the limits.

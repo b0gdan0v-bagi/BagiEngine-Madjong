@@ -15,7 +15,7 @@ Plain C++ with reflected states: `MatchSave.*` has no scene and no disk, `MatchS
 ## When it is written
 
 - The session's sink is a `MatchRecorder`: it forwards every event to the `MatchLogWriter` and keeps the events of the current match. **No file is written from that hook.**
-- `MahjongGame::FlushSave()` writes, called by `Stop()` and once per frame by `MahjongHudComponent` (`SceneUpdateEvent`). A burst of computer steps is one write; "after every action" means "at the end of the frame that made it". A flush is about 1 ms even for a 16-hand match, so there is no throttle.
+- `MahjongGame::FlushSave()` writes, called by `Stop()` and once per frame by `MahjongHudComponent` (`SceneUpdateEvent`). A burst of computer steps is one write; "after every action" means "at the end of the frame that made it". A flush is cheap even for a 16-hand match, so there is no throttle.
 - It writes only a match that **is being recorded** (`IsRecording()`, not the counter alone: an unrecorded background match moves the counter too); a finished match deletes the slot, so it is never offered. The prefs are written only when they differ from the last copy written or loaded. A failed write is one warning, not retried until something changes.
 
 ## Start and Continue
