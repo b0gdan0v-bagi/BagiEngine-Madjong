@@ -1388,4 +1388,51 @@ namespace BECore::Mahjong::Tests {
         ExpectSameSlots(MakeTableLayout(PhoneInput(WorstInput(1, 30, kNoSeat), 500.0f)), MakeTableLayout(PhoneInput(WorstInput(1, 30, kNoSeat), kPhoneHandTileMaxW)));
     }
 
+    TEST(TableLayoutTest, AViewAsHighAsWideOrHigherIsPortraitAndAnyOtherLandscape) {
+        EXPECT_EQ(ShapeOfView(kViewWidth, kViewHeight), TableShape::Landscape);
+        EXPECT_EQ(ShapeOfView(kPortraitViewWidth, kPortraitViewHeight), TableShape::Portrait);
+        EXPECT_EQ(ShapeOfView(480.0f, 480.0f), TableShape::Portrait) << "a square is portrait, as `orientation:portrait`";
+        EXPECT_EQ(ShapeOfView(480.0f, 479.0f), TableShape::Landscape);
+        EXPECT_EQ(ShapeOfView(390.0f, 844.0f), TableShape::Portrait);
+        EXPECT_EQ(ShapeOfView(2560.0f, 1080.0f), TableShape::Landscape);
+    }
+
+    TEST(TableLayoutTest, AViewThatIsNotPositiveIsLandscape) {
+        EXPECT_EQ(ShapeOfView(0.0f, 0.0f), TableShape::Landscape);
+        EXPECT_EQ(ShapeOfView(0.0f, 100.0f), TableShape::Landscape);
+        EXPECT_EQ(ShapeOfView(100.0f, 0.0f), TableShape::Landscape);
+        EXPECT_EQ(ShapeOfView(-5.0f, -1.0f), TableShape::Landscape) << "-1 >= -5, still not a view";
+        EXPECT_EQ(ShapeOfView(-100.0f, 50.0f), TableShape::Landscape);
+        EXPECT_EQ(ShapeOfView(std::nanf(""), 100.0f), TableShape::Landscape);
+    }
+
+    TEST(TableLayoutTest, TheShapeOfAnOutputIsTheShapeOfAViewOfThatSize) {
+        const ViewSize outputs[] = {{1280.0f, 720.0f}, {720.0f, 1280.0f}, {480.0f, 480.0f}, {1.0f, 1.0f}, {0.0f, 0.0f}, {390.0f, 844.0f}, {2560.0f, 1080.0f}};
+        for (const ViewSize& output : outputs) {
+            EXPECT_EQ(ShapeOfOutput(output.width, output.height), ShapeOfView(output.width, output.height)) << output.width << " x " << output.height;
+        }
+        EXPECT_EQ(ShapeOfOutput(1.0f, 1.0f), TableShape::Portrait);
+        EXPECT_EQ(ShapeOfOutput(0.0f, 0.0f), TableShape::Landscape);
+    }
+
+    TEST(TableLayoutTest, TheDesignOfAShapeIsItsViewSize) {
+        EXPECT_EQ(DesignWidthOf(TableShape::Landscape), kViewWidth);
+        EXPECT_EQ(DesignHeightOf(TableShape::Landscape), kViewHeight);
+        EXPECT_EQ(DesignWidthOf(TableShape::Portrait), 720.0f);
+        EXPECT_EQ(DesignHeightOf(TableShape::Portrait), 1280.0f);
+    }
+
+    TEST(TableLayoutTest, TheLayoutScaleFitsTheDesignOfTheShapeOfTheViewIntoIt) {
+        EXPECT_FLOAT_EQ(LayoutScale(kViewWidth, kViewHeight), 1.0f);
+        EXPECT_FLOAT_EQ(LayoutScale(640.0f, 360.0f), 0.5f);
+        EXPECT_FLOAT_EQ(LayoutScale(1000.0f, 400.0f), 400.0f / 720.0f) << "height limited";
+        EXPECT_FLOAT_EQ(LayoutScale(kPortraitViewWidth, kPortraitViewHeight), 1.0f);
+        EXPECT_FLOAT_EQ(LayoutScale(360.0f, 640.0f), 0.5f);
+        EXPECT_FLOAT_EQ(LayoutScale(390.0f, 844.0f), 390.0f / 720.0f) << "width limited";
+        EXPECT_FLOAT_EQ(LayoutScale(800.0f, 800.0f), 800.0f / 1280.0f) << "a square is portrait: the height limits";
+        EXPECT_EQ(LayoutScale(0.0f, 720.0f), 0.0f);
+        EXPECT_EQ(LayoutScale(1280.0f, -1.0f), 0.0f);
+        EXPECT_EQ(LayoutScale(std::nanf(""), 720.0f), 0.0f);
+    }
+
 }  // namespace BECore::Mahjong::Tests

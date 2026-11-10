@@ -14,6 +14,46 @@ namespace BECore::Mahjong {
     inline constexpr float kViewWidth = 1280.0f;
     inline constexpr float kViewHeight = 720.0f;
 
+    /// The two shapes of the table. A view that is as high as wide or higher is `Portrait`, any other `Landscape`; the scene's second
+    /// view (`orientation:portrait` in `config/SceneConfig.xml`, `MahjongSceneFilesTest` compares the two) is the portrait design size.
+    CORE_ENUM(TableShape, uint8_t, Landscape, Portrait)
+
+    inline constexpr float kPortraitViewWidth = 720.0f;
+    inline constexpr float kPortraitViewHeight = 1280.0f;
+
+    /// The shape of a view of this size: portrait iff `height >= width`; a size that is not positive (the first frame, no output yet) is
+    /// landscape.
+    [[nodiscard]] constexpr TableShape ShapeOfView(float viewWidth, float viewHeight) noexcept {
+        return viewWidth > 0.0f && viewHeight > 0.0f && viewHeight >= viewWidth ? TableShape::Portrait : TableShape::Landscape;
+    }
+
+    /// The shape of the view the scene picks for an output of this size: the same rule as `ShapeOfView` (the `orientation:portrait` of the
+    /// scene file tests the output, so a square output is portrait).
+    [[nodiscard]] constexpr TableShape ShapeOfOutput(float outputWidth, float outputHeight) noexcept {
+        return ShapeOfView(outputWidth, outputHeight);
+    }
+
+    /// The design size of a shape, in view units.
+    [[nodiscard]] constexpr float DesignWidthOf(TableShape shape) noexcept {
+        return shape == TableShape::Portrait ? kPortraitViewWidth : kViewWidth;
+    }
+
+    [[nodiscard]] constexpr float DesignHeightOf(TableShape shape) noexcept {
+        return shape == TableShape::Portrait ? kPortraitViewHeight : kViewHeight;
+    }
+
+    /// The uniform scale that fits the design of the shape of a view of this size into it (view units per design unit); 0 for a size that
+    /// is not positive.
+    [[nodiscard]] constexpr float LayoutScale(float viewWidth, float viewHeight) noexcept {
+        if (!(viewWidth > 0.0f) || !(viewHeight > 0.0f)) {
+            return 0.0f;
+        }
+        const TableShape shape = ShapeOfView(viewWidth, viewHeight);
+        const float scaleX = viewWidth / DesignWidthOf(shape);
+        const float scaleY = viewHeight / DesignHeightOf(shape);
+        return scaleX < scaleY ? scaleX : scaleY;
+    }
+
     /// The viewer's concealed tiles are large; the tiles of the other seats are small. Sizes (width, height) of the upright tiles of each
     /// zone; a side seat draws them turned, so its slots are height x width.
     inline constexpr float kViewerHandTileW = 48.0f;

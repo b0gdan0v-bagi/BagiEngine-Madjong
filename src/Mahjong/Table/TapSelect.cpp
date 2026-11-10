@@ -5,11 +5,11 @@
 
 namespace BECore::Mahjong {
 
-    bool UsesTapToSelect(bool touchSeen, float outputWidth, float outputHeight, float pixelDensity, float minTouchSize, float handTileW) noexcept {
+    bool UsesTapToSelect(bool touchSeen, float outputWidth, float outputHeight, float pixelDensity, float minTouchSize, float handTileW, float viewWidth, float viewHeight) noexcept {
         if (touchSeen) {
             return true;
         }
-        const float fit = FitScale(outputWidth, outputHeight);
+        const float fit = FitScale(outputWidth, outputHeight, viewWidth, viewHeight);
         if (!(fit > 0.0f) || !(pixelDensity > 0.0f)) {
             return false;
         }

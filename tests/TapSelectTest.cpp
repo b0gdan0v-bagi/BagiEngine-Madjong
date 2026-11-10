@@ -97,4 +97,31 @@ namespace BECore::Mahjong::Tests {
         EXPECT_NEAR(kSelectedTileRise, kViewerHandTileH / 4.0f, 0.001f);
     }
 
+    TEST(TouchRegimeTest, APortraitPhoneSelectsFirstBecauseTheHandTileIsUnderTheMinimum) {
+        // 390 x 844 at density 3: the hand tile of 48 units is 48 x 1.625 / 3 = 26 window units
+        constexpr float kWidth = 1170.0f;
+        constexpr float kHeight = 2532.0f;
+        EXPECT_LT(kViewerHandTileW * (kWidth / kPortraitViewWidth) / 3.0f, kMinTouch);
+        EXPECT_TRUE(UsesTapToSelect(false, kWidth, kHeight, 3.0f, kMinTouch, kViewerHandTileW, kPortraitViewWidth, kPortraitViewHeight));
+        // 360 x 640 at density 2: 24 window units
+        EXPECT_TRUE(UsesTapToSelect(false, 720.0f, 1280.0f, 2.0f, kMinTouch, kViewerHandTileW, kPortraitViewWidth, kPortraitViewHeight));
+    }
+
+    TEST(TouchRegimeTest, APortraitWindowWhoseHandTileReachesTheMinimumKeepsTheOneClickDiscard) {
+        // 768 x 1024 at density 1: fit 0.8, a tile of 38.4 units
+        EXPECT_FALSE(UsesTapToSelect(false, 768.0f, 1024.0f, 1.0f, kMinTouch, kViewerHandTileW, kPortraitViewWidth, kPortraitViewHeight));
+        // the boundary is 48 x fit = 32 at fit 2/3: an output 480 wide
+        EXPECT_FALSE(UsesTapToSelect(false, 481.0f, 1280.0f, 1.0f, kMinTouch, kViewerHandTileW, kPortraitViewWidth, kPortraitViewHeight));
+        EXPECT_TRUE(UsesTapToSelect(false, 479.0f, 1280.0f, 1.0f, kMinTouch, kViewerHandTileW, kPortraitViewWidth, kPortraitViewHeight));
+        // the landscape default reads the same pixels differently: 768 x 1024 is width limited there, a tile of 28.8 units
+        EXPECT_TRUE(UsesTapToSelect(false, 768.0f, 1024.0f, 1.0f, kMinTouch));
+    }
+
+    TEST(TouchRegimeTest, ATouchSelectsFirstInAPortraitWindowAndNoSizeIsStillNoSmallWindow) {
+        EXPECT_TRUE(UsesTapToSelect(true, 1440.0f, 2560.0f, 1.0f, kMinTouch, kViewerHandTileW, kPortraitViewWidth, kPortraitViewHeight));
+        EXPECT_FALSE(UsesTapToSelect(false, 0.0f, 2560.0f, 1.0f, kMinTouch, kViewerHandTileW, kPortraitViewWidth, kPortraitViewHeight));
+        EXPECT_FALSE(UsesTapToSelect(false, 720.0f, 1280.0f, 0.0f, kMinTouch, kViewerHandTileW, kPortraitViewWidth, kPortraitViewHeight));
+        EXPECT_FALSE(UsesTapToSelect(false, 720.0f, 1280.0f, 1.0f, kMinTouch, kViewerHandTileW, 0.0f, 0.0f)) << "a view of no size";
+    }
+
 }  // namespace BECore::Mahjong::Tests

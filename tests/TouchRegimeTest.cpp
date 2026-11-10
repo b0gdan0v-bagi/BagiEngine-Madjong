@@ -354,4 +354,79 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(TableProfileFor(915.0f, 330.0f, 1.0f, kMinTouch).phone) << "the same window with a size that counts";
     }
 
+    TEST(TouchRegimeTest, ThePortraitViewFitsIntoAnOutputByTheSmallerOfTheTwoScales) {
+        // worked out here: output pixels over the 720 x 1280 view
+        const struct {
+            float width;
+            float height;
+            float fit;
+        } outputs[] = {
+            {1170.0f, 2532.0f, 1170.0f / 720.0f},  // 390 x 844 at density 3: width limited
+            {720.0f, 1280.0f, 1.0f},               // 360 x 640 at density 2
+            {768.0f, 1024.0f, 1024.0f / 1280.0f},  // 3:4: height limited
+            {480.0f, 480.0f, 480.0f / 1280.0f},    // a square: height limited
+        };
+        for (const auto& output : outputs) {
+            EXPECT_FLOAT_EQ(FitScale(output.width, output.height, kPortraitViewWidth, kPortraitViewHeight), output.fit) << output.width << " x " << output.height;
+        }
+        EXPECT_EQ(FitScale(720.0f, 0.0f, kPortraitViewWidth, kPortraitViewHeight), 0.0f);
+        EXPECT_EQ(FitScale(720.0f, 1280.0f, 0.0f, kPortraitViewHeight), 0.0f) << "a view of no size";
+        EXPECT_EQ(FitScale(720.0f, 1280.0f, kPortraitViewWidth, -1.0f), 0.0f);
+        EXPECT_EQ(FitScale(1280.0f, 720.0f), FitScale(1280.0f, 720.0f, kViewWidth, kViewHeight)) << "the default view is the landscape one";
+    }
+
+    TEST(TouchRegimeTest, TheBarUnderThePortraitTableIsWhatTheViewLeavesOfTheHeight) {
+        EXPECT_FLOAT_EQ(BarUnderTable(720.0f, 1280.0f, kPortraitViewWidth, kPortraitViewHeight), 0.0f);
+        EXPECT_FLOAT_EQ(BarUnderTable(360.0f, 800.0f, kPortraitViewWidth, kPortraitViewHeight), (800.0f - 640.0f) / 2.0f) << "the table is 640 high at fit 0.5";
+        EXPECT_FLOAT_EQ(BarUnderTable(768.0f, 1024.0f, kPortraitViewWidth, kPortraitViewHeight), 0.0f) << "height limited: the bars are at the sides";
+        EXPECT_FLOAT_EQ(BarUnderTable(1280.0f, 800.0f), 40.0f) << "the landscape default";
+    }
+
+    TEST(TouchRegimeTest, AnActionButtonIs56UnitsInLandscapeAnd68InPortrait) {
+        EXPECT_EQ(ActionButtonHeightFor(TableShape::Landscape), kActionButtonHeight);
+        EXPECT_EQ(ActionButtonHeightFor(TableShape::Portrait), kPortraitActionButtonHeight);
+        EXPECT_EQ(kPortraitActionButtonHeight, 68.0f);
+        EXPECT_EQ(std::fmod(kPortraitActionButtonHeight, 4.0f), 0.0f) << "a grid unit of 4";
+    }
+
+    TEST(TouchRegimeTest, APortraitPhoneReachesTheTouchMinimumWithAButtonOf68UnitsSoNoCompactRow) {
+        // 390 x 844 at density 3: the fit is 1.625 over 3, a button of 68 x 0.5417 = 36.8 window units
+        EXPECT_FALSE(NeedsCompactActions(1170.0f, 2532.0f, 3.0f, kMinTouch, 1.0f, kPortraitViewWidth, kPortraitViewHeight));
+        EXPECT_GE(68.0f * (1170.0f / 720.0f) / 3.0f, kMinTouch);
+        // 360 x 640 at density 2: a button of 34 window units
+        EXPECT_FALSE(NeedsCompactActions(720.0f, 1280.0f, 2.0f, kMinTouch, 1.0f, kPortraitViewWidth, kPortraitViewHeight));
+        EXPECT_GE(68.0f * 1.0f / 2.0f, kMinTouch);
+        // 768 x 1024: a button of 54 units
+        EXPECT_FALSE(NeedsCompactActions(768.0f, 1024.0f, 1.0f, kMinTouch, 1.0f, kPortraitViewWidth, kPortraitViewHeight));
+        // the landscape rule would call the 390 x 844 phone compact: the button of 56 units is 30.4 window units
+        EXPECT_TRUE(NeedsCompactActions(1170.0f, 2532.0f, 3.0f, kMinTouch));
+    }
+
+    TEST(TouchRegimeTest, APortraitWindowWhoseButtonIsSmallIsCompactOnlyWhereABarHoldsTheRow) {
+        // 300 x 700 at density 1: fit 0.4167, a button of 28.3 units; the table is 533 high, the bar is 83.3 px; the canvas is 500 units
+        // wide at the floor scale 0.6, the row 184 units (110 px): it does not fit the bar
+        EXPECT_FALSE(NeedsCompactActions(300.0f, 700.0f, 1.0f, kMinTouch, 1.0f, kPortraitViewWidth, kPortraitViewHeight));
+        // 480 x 480: the table fills the height (fit 0.375, a button of 25.5), no bar
+        EXPECT_FALSE(NeedsCompactActions(480.0f, 480.0f, 1.0f, kMinTouch, 1.0f, kPortraitViewWidth, kPortraitViewHeight));
+        // a tall window with a bar that holds the row: 640 x 1600 has fit 0.889 (a button of 60), so no; at a minimum of 64 it is compact:
+        // the bar is (1600 - 1137.8) / 2 = 231 px, the canvas 1066.7 units, a line of 33.6 px
+        EXPECT_FALSE(NeedsCompactActions(640.0f, 1600.0f, 1.0f, kMinTouch, 1.0f, kPortraitViewWidth, kPortraitViewHeight));
+        EXPECT_TRUE(NeedsCompactActions(640.0f, 1600.0f, 1.0f, 64.0f, 1.0f, kPortraitViewWidth, kPortraitViewHeight));
+        EXPECT_FALSE(NeedsCompactActions(0.0f, 1280.0f, 1.0f, kMinTouch, 1.0f, kPortraitViewWidth, kPortraitViewHeight));
+        EXPECT_FALSE(NeedsCompactActions(720.0f, 1280.0f, 0.0f, kMinTouch, 1.0f, kPortraitViewWidth, kPortraitViewHeight));
+    }
+
+    TEST(TouchRegimeTest, APortraitViewGetsTheDesktopProfileInAnyWindow) {
+        const struct {
+            float width;
+            float height;
+            float density;
+        } windows[] = {{1170.0f, 2532.0f, 3.0f}, {720.0f, 1280.0f, 2.0f}, {768.0f, 1024.0f, 1.0f}, {480.0f, 480.0f, 1.0f}, {200.0f, 400.0f, 1.0f}};
+        for (const auto& window : windows) {
+            EXPECT_EQ(TableProfileFor(window.width, window.height, window.density, kMinTouch, kPortraitViewWidth, kPortraitViewHeight), TableProfile{}) << window.width << " x " << window.height;
+        }
+        // the same pixels with the landscape view default are a phone: the portrait view is what changes the answer
+        EXPECT_TRUE(TableProfileFor(720.0f, 1280.0f, 2.0f, kMinTouch).phone);
+    }
+
 }  // namespace BECore::Mahjong::Tests
