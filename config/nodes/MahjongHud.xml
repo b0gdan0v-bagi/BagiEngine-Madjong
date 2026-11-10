@@ -9,7 +9,7 @@
   MahjongHudComponent publishes lastMove (the round, the wall and the seats' winds and points are in the node CenterPanel, the seats'
   names in SeatPlates). MahjongHudTest holds the worst texts and checks that no tile of any game lies under it.
   In a portrait view (720 x 1280, the variant below; Table/TableLayout.cpp, the portrait table) MoveLine lies in the free ground right of the
-  viewer's discards (right edge 8 in, 232 wide, y 540, so it is clear of the discard block and of the wall ring by a grid unit; the label is 144
+  viewer's discards (right edge 8 in, 232 wide, y 588, so it is clear of the discard block, the wall ring and the right seat's columns; the label is 108
   high for the lines the narrow plate wraps to), and SelectedTile right of the viewer's seat plate (x 224, y 1036), above the bonus tiles and
   clear of the hand tile that a tap raises. Both are anchored to an edge, so a window with side insets moves them inwards, as the validator
   wants, and they can cover the nearest tiles there.
@@ -35,8 +35,8 @@
       <variants>
         <variant when="orientation:portrait">
           <overrides>
-            <set element="MoveLine" x="-8" y="540" width="232" height="160" />
-            <set element="MoveText" height="144" />
+            <set element="MoveLine" x="-8" y="588" width="232" height="124" />
+            <set element="MoveText" height="108" />
             <set element="SelectedTile" x="224" y="1036" />
           </overrides>
         </variant>

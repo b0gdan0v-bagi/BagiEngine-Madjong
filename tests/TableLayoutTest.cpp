@@ -1500,7 +1500,8 @@ namespace BECore::Mahjong::Tests {
             const Rect top = BoundsOf(layout, SlotRole::HandTile, SeatAtPosition(viewer, 2));
             const Rect left = BoundsOf(layout, SlotRole::HandTile, SeatAtPosition(viewer, 3));
             EXPECT_GT(bottom.y, kPortraitViewHeight * 0.9f) << "viewer " << viewer;
-            EXPECT_LT(top.y + top.h, kPortraitViewHeight * 0.05f);
+            EXPECT_LT(top.y + top.h, kPortraitViewHeight * 0.07f);
+            EXPECT_GE(top.y, kPortraitViewHeight * 0.02f) << "the top seat keeps a margin for a phone's status bar";
             EXPECT_GT(right.x, kPortraitViewWidth * 0.9f);
             EXPECT_LT(left.x + left.w, kPortraitViewWidth * 0.1f);
             EXPECT_GT(right.h, right.w);
@@ -1651,7 +1652,7 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
-    TEST(TableLayoutTest, TheOpponentsKeepTheirTileSizesAndTurnsInPortraitAndTheViewersDiscardsAreLarger) {
+    TEST(TableLayoutTest, TheOpponentsHandsAreLargerInPortraitTheirOtherTilesKeepTheirSizesAndTheViewersDiscardsAreLarger) {
         for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
             const TableInput input = WorstInput(viewer, 60, kNoSeat);
             const TableLayout landscape = InLandscape(input);
@@ -1671,6 +1672,9 @@ namespace BECore::Mahjong::Tests {
                     EXPECT_GT(b.rect.w, a.rect.w) << "the viewer's discards are larger";
                     EXPECT_GT(b.rect.h, a.rect.h);
                     EXPECT_NEAR(b.rect.w * kDiscardTileH, b.rect.h * kDiscardTileW, kTolerance) << "3 : 4";
+                } else if (a.role == SlotRole::HandTile) {
+                    EXPECT_GT(b.rect.w, a.rect.w) << "an opponent's hand is larger in portrait, slot " << i;
+                    EXPECT_GT(b.rect.h, a.rect.h);
                 } else {
                     EXPECT_EQ(a.rect.w, b.rect.w) << "slot " << i << " role " << static_cast<int>(a.role) << " seat " << a.seat;
                     EXPECT_EQ(a.rect.h, b.rect.h);
