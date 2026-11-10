@@ -49,15 +49,19 @@ one thread (all focus players, all four rotations) into a result slot of its own
 same bytes at any N (only the `--time` table differs between runs, as always; it sums the microseconds of all the threads, so it is the cost
 of a decision, not the wall time of the run). A hand the rules refuse stops the run, and the error printed is that of the lowest seed that
 failed, whatever N is. The default stays 1. A search player (`searchWorlds`) plays hundreds of Normal decisions for each of its own, so use
-`--jobs` for those runs; in Debug on 8 cores `--seeds 150` of two focus players takes 2.8 s instead of 21 s.
+`--jobs` for those runs; for the players without a search (`normal` and `easy`), on 14 cores in Debug, `--seeds 150` of two focus
+players takes 2.8 s instead of 21 s. Time a decision at `--jobs 1`: the `--time` table sums the microseconds of all the threads, which
+over-counts when the threads contend (shared cores, efficiency cores), so the Debug rule of 0.3 s for the slowest search decision
+(`docs/bot-search.md`) is not read from a `--jobs 14` run.
 
 A player is `random`, `easy`, `normal`, or a level with knobs of `LevelProfile`, `<level>:<knob>=<value>,...` (the knobs are
 `skipAcceptancePercent`, `skipDeclarationPercent`, `skipClaimPercent` (0..100), `takeValueClaimsAtEqualShanten` (0 or 1) and the three knobs of
 the search player, `searchWorlds` (0..4096, 0 = no search), `searchCandidates` (0..12, default 4) and `searchMargin` (0..100 tenths of a standard
 error), see `CLAUDE.md`, "Computer player"; the level's profile is the start and the knobs are set on it). A search seat is slow: one decision
-plays `searchWorlds` x candidates whole hands, so `normal:searchWorlds=2,searchCandidates=3` takes minutes on 20 seeds in Debug. In `--focus` a part with an `=` and no `:` goes on the knobs of the player before it,
+plays `searchWorlds` x candidates whole hands, so `normal:searchWorlds=2,searchCandidates=3` takes about 49 s on 20 seeds in Debug (one thread). In `--focus` a part with an `=` and no `:` goes on the knobs of the player before it,
 so `normal,easy:skipClaimPercent=20,skipDeclarationPercent=10` is two players. (Hard was removed on the owner's decision; it
-comes back as the search player of `mahjong-bot-search`.) `random` is the "seek win" seat of `ComputerStrengthTest` (wins when it can, declares when it can, builds a set
+comes back as the search player of `mahjong-bot-search`. The measurements of that player, its budget and the verdict are in
+`docs/bot-search.md`.) `random` is the "seek win" seat of `ComputerStrengthTest` (wins when it can, declares when it can, builds a set
 when it can, else any legal action).
 
 ## The conventions
