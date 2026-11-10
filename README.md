@@ -65,7 +65,7 @@ build/web-venv/bin/python tools/web_smoke.py --dist dist-single --expect-console
 
 Without a browser, the web-like desktop build tests the same code paths: `cmake -S . -B build/webcheck -G Ninja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_BUILD_TYPE=Debug -DENGINE_WITH_VULKAN=OFF -DENGINE_WITH_REMOTE_CONTROL=OFF -DENGINE_STATIC_SDL=ON -DENGINE_SINGLE_THREAD=ON` (and `OFF`), then build `BagiMahjong MahjongTests` and `ctest --test-dir build/webcheck`. The output lands in `build/ClangmacOS/` whatever the folder: delete `build/ClangmacOS/lib/*.a` when switching and build `macos-debug` again afterwards.
 
-**The web app:** `web/app.json` names the page's home-screen app (name, landscape, the felt colour, the icons of `web/icons/`, made by `python3 tools/make_app_icons.py`); `build_and_deploy.py` picks it up by itself. On a phone the first tap asks for fullscreen and locks landscape (`engine/tools/web/CLAUDE.md`).
+**The web app:** `web/app.json` names the page's home-screen app (name, any orientation, the felt colour, the icons of `web/icons/`, made by `python3 tools/make_app_icons.py`); `build_and_deploy.py` picks it up by itself. On a phone the first tap asks for fullscreen and locks no orientation: a phone held upright gets the portrait table (`engine/tools/web/CLAUDE.md`).
 
 **What differs in the browser:** no saves and no `Continue` (the page's file system is memory, lost on reload; the seat choice is not remembered either), no match log, no control API, no bot arena. Persistence needs IDBFS, which is engine work and not done.
 

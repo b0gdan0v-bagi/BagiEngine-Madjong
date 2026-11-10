@@ -1,7 +1,7 @@
 {
   "name": "Mahjong",
   "short_name": "Mahjong",
-  "orientation": "landscape",
+  "orientation": "any",
   "background_color": "#165c3e",
   "theme_color": "#165c3e",
   "icons": [
