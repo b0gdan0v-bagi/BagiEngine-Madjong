@@ -5,9 +5,10 @@
 namespace BECore::Mahjong {
 
     /**
-     * The tile atlas: one PNG of kAtlasColumns x kAtlasRows cells, the cell of a tile is its id (Tile.h), the back is the cell after
-     * the last id and the wall stack (two backs side by side seen from above) the cell after the back. The numbers are those of tools/make_tiles.py (CELL_W, CELL_H, COLUMNS, ROWS), which draws the
-     * atlas and writes config/TextureLibrary.xml; tests/TileSpritesTest.cpp compares them with the XML and the PNG, so they cannot drift apart.
+     * The tile atlas: one PNG of kAtlasColumns x kAtlasRows cells, the cell of a tile is its id (Tile.h), the back is the cell
+     * after the last id and the wall stack (two backs side by side seen from above) the cell after the back. The numbers are
+     * those of tools/make_tiles.py (CELL_W, CELL_H, COLUMNS, ROWS), which draws the atlas and writes config/TextureLibrary.xml;
+     * tests/TileSpritesTest.cpp compares them with the XML and the PNG, so they cannot drift apart.
      */
     inline constexpr const char* kAtlasPath = "assets/tiles/tiles.png";
     inline constexpr int kAtlasColumns = 8;

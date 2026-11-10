@@ -225,24 +225,62 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(SameRect(_renderer->calls[9].rect, _table->GetLayout().zones.seatPlates[0]));
     }
 
-    TEST_F(MahjongTableUiTest, EveryTileThatIsNotAWallStackHasAShadowOffsetBy2) {
+    TEST_F(MahjongTableUiTest, EveryTileThatIsNotAWallStackHasAShadowOfTwoLayersOffsetBy2) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
 
         const TableLayout& layout = _table->GetLayout();
-        const std::vector<DrawCall> shadows = RectsOf(kTileShadow);
-        ASSERT_EQ(static_cast<int>(shadows.size()), NotWallStacks(layout));
+        const std::vector<DrawCall> tight = RectsOf(kTileShadow);
+        const std::vector<DrawCall> soft = RectsOf(kTileShadowSoft);
+        ASSERT_EQ(static_cast<int>(tight.size()), NotWallStacks(layout));
+        ASSERT_EQ(soft.size(), tight.size()) << "one pair per tile";
+        // Every tight layer comes right after its soft one
+        size_t pairs = 0;
+        for (size_t i = 0; i + 1 < _renderer->calls.size(); ++i) {
+            if (_renderer->calls[i].kind == DrawKind::Rect && SameColor(_renderer->calls[i].color, kTileShadowSoft)) {
+                EXPECT_TRUE(SameColor(_renderer->calls[i + 1].color, kTileShadow)) << "call " << i;
+                ++pairs;
+            }
+        }
+        EXPECT_EQ(pairs, tight.size());
         size_t next = 0;
         for (const TileSlot& slot : layout.slots) {
             if (slot.role == SlotRole::WallStack) {
                 continue;
             }
-            EXPECT_EQ(shadows[next].rect.x, slot.rect.x + 2.0f);
-            EXPECT_EQ(shadows[next].rect.y, slot.rect.y + 2.0f);
-            EXPECT_EQ(shadows[next].rect.w, slot.rect.w);
-            EXPECT_EQ(shadows[next].rect.h, slot.rect.h);
+            EXPECT_EQ(tight[next].rect.x, slot.rect.x + 2.0f);
+            EXPECT_EQ(tight[next].rect.y, slot.rect.y + 2.0f);
+            EXPECT_EQ(tight[next].rect.w, slot.rect.w);
+            EXPECT_EQ(tight[next].rect.h, slot.rect.h);
+            // The soft layer reaches past the tight one on every side and is drawn before it
+            EXPECT_LT(soft[next].rect.x, tight[next].rect.x);
+            EXPECT_LT(soft[next].rect.y, tight[next].rect.y);
+            EXPECT_GT(soft[next].rect.x + soft[next].rect.w, tight[next].rect.x + tight[next].rect.w);
+            EXPECT_GT(soft[next].rect.y + soft[next].rect.h, tight[next].rect.y + tight[next].rect.h);
+            EXPECT_LT(kTileShadowSoft.a, kTileShadow.a) << "the wider layer is the fainter";
             ++next;
         }
+    }
+
+    TEST_F(MahjongTableUiTest, TheWallIsDrawnFromTheStackCellAndHasNoShadow) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        Draw();
+
+        const TableLayout& layout = _table->GetLayout();
+        const std::vector<DrawCall> calls = TileCalls();
+        ASSERT_EQ(calls.size(), layout.slots.size());
+        int stacks = 0;
+        for (size_t i = 0; i < calls.size(); ++i) {
+            if (layout.slots[i].role != SlotRole::WallStack) {
+                continue;
+            }
+            ++stacks;
+            ASSERT_TRUE(calls[i].source.has_value());
+            EXPECT_TRUE(SameRect(*calls[i].source, StackRect())) << "stack " << stacks;
+            EXPECT_TRUE(SameRect(calls[i].rect, layout.slots[i].rect));
+        }
+        EXPECT_GT(stacks, 0);
+        EXPECT_EQ(static_cast<int>(RectsOf(kTileShadow).size()), NotWallStacks(layout)) << "no shadow under a stack";
     }
 
     TEST_F(MahjongTableUiTest, TheViewerSeesItsOwnHandFaceUpAndTheOthersFaceDown) {

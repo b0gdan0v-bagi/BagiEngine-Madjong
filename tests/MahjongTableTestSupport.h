@@ -449,7 +449,7 @@ namespace BECore::Mahjong::Tests {
             for (size_t i = 0; i < calls.size(); ++i) {
                 const TileSlot& slot = layout.slots[i];
                 const std::optional<Tile> tile = Expected(slot, allFaces, faceSeat);
-                const Rect expected = tile ? SourceRect(*tile) : BackRect();
+                const Rect expected = slot.role == SlotRole::WallStack ? StackRect() : tile ? SourceRect(*tile) : BackRect();
                 ASSERT_TRUE(calls[i].source.has_value()) << "slot " << i;
                 EXPECT_EQ(calls[i].source->x, expected.x) << "slot " << i << " role " << static_cast<int>(slot.role) << " seat " << slot.seat;
                 EXPECT_EQ(calls[i].source->y, expected.y) << "slot " << i << " role " << static_cast<int>(slot.role) << " seat " << slot.seat;

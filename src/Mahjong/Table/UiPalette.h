@@ -13,10 +13,10 @@ namespace BECore::Mahjong {
      *
      * Roles, not colours, are the rule: a new control takes the role of what it does.
      * - The table: the felt (the picture of `Table/TableLook.h`, `kFelt` as its base and the flat fallback) with a `kFeltRim` round the view
-     *   and a thin lighter `kFeltLip` inside it; no plate under the discard blocks or the wall ring, a `kTileShadow` under each tile. A mark on the table is the gold family (`kTurnMark`,
-     * `kPendingFrame`, the hints `kDeclareMark`, `kAdvisedFrame`, and the marks of the last move `kLastDiscardMark`, `kDrawnTileMark`, `kClaimedEdge`, `kClaimHighlight`, the frame of a seat plate
-     * whose claim lost `kClaimLostFrame`, the frame of a declared hand `kCallingFrame` and the bar of its safe discards `kKeepsWaitingMark`, and the turn plate of a seat: `kSeatTurnFrame` with the
-     * tint `kTurnMark`) and nothing else on the table is gold (the dealer mark `kDealerMark` of a seat plate is red); `kVeil` dims a tile that cannot be discarded now.
+     *   and a thin lighter `kFeltLip` inside it; no plate under the discard blocks or the wall ring, a two-layer shadow (`kTileShadowSoft`, `kTileShadow`) under each tile. A mark on the table is the
+     * gold family (`kTurnMark`, `kPendingFrame`, the hints `kDeclareMark`, `kAdvisedFrame`, and the marks of the last move `kLastDiscardMark`, `kDrawnTileMark`, `kClaimedEdge`, `kClaimHighlight`, the
+     * frame of a seat plate whose claim lost `kClaimLostFrame`, the frame of a declared hand `kCallingFrame` and the bar of its safe discards `kKeepsWaitingMark`, and the turn plate of a seat:
+     * `kSeatTurnFrame` with the tint `kTurnMark`) and nothing else on the table is gold (the dealer mark `kDealerMark` of a seat plate is red); `kVeil` dims a tile that cannot be discarded now.
      * - The screens: `scrim` dims what lies behind a modal screen (and the hint), `surface` is the plate, `header` its headline band,
      *   `surfaceRaised` the rows on it, `hudPanel` the panels of the HUD over the felt.
      * - The buttons: `primary` confirms (Mahjong!, Start, Next hand), `secondary` claims and the HUD's New game, `neutral` the extras of
@@ -30,7 +30,10 @@ namespace BECore::Mahjong {
     /// A thin line on the inner side of the rim, `kFeltLipWidth` units wide; under every tile.
     inline constexpr Color kFeltLip{54, 128, 92, 255};
     inline constexpr float kFeltLipWidth = 2.0f;
+    /// The shadow of a tile has two layers, both under the tile: the tight `kTileShadow` at an offset and the wider, fainter `kTileShadowSoft`
+    /// round it. Neither is a mark.
     inline constexpr Color kTileShadow{0, 0, 0, 70};
+    inline constexpr Color kTileShadowSoft{0, 0, 0, 34};
     /// Behind the hand of the seat whose turn it is.
     inline constexpr Color kTurnMark{255, 214, 80, 90};
     /// Round the discard that waits for a claim.

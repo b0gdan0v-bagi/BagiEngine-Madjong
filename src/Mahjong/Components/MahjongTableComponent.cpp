@@ -38,6 +38,8 @@ namespace BECore::Mahjong {
         /// The rim along the edge of the view (the tiles keep `kEdge` of the layout from it), and a tile's shadow falls this far down and right.
         constexpr float kRimWidth = 8.0f;
         constexpr float kShadowOffset = 2.0f;
+        /// How far the soft layer of a tile's shadow reaches past the tight one on every side, in view units.
+        constexpr float kShadowSoftMargin = 2.0f;
         /// The inner mark of a tile drawn without the atlas, as a fraction of the tile.
         constexpr float kPlainMarkInset = 0.25f;
 
@@ -706,15 +708,16 @@ namespace BECore::Mahjong {
             keepsWaiting = KeepsWaitingDiscards(MakeTableView(hand, bottom));
         }
 
-        // A face (the tile) or the back (nullopt) placed as `place` says: from the atlas, else a plain rectangle. A turned tile (a side seat,
-        // or a tile in the air between two turns) hands the draw the unturned rectangle and the turn about the pivot; a tile that is not
-        // turned is the plain draw of its rectangle (`place.upright`, which is the screen rectangle then).
-        const auto drawFace = [&](const TilePlacement& place, std::optional<Tile> face) {
+        // A face (the tile) or the back (nullopt) placed as `place` says: from the atlas, else a plain rectangle. `stack` draws the wall
+        // stack seen from above (its own cell, a plain back without the atlas) instead of a tile. A turned tile (a side seat, or a tile in
+        // the air between two turns) hands the draw the unturned rectangle and the turn about the pivot; a tile that is not turned is the
+        // plain draw of its rectangle (`place.upright`, which is the screen rectangle then).
+        const auto drawFace = [&](const TilePlacement& place, std::optional<Tile> face, bool stack = false) {
             const Rect& upright = place.upright;
             const DrawTransform turn{place.rotation, place.pivotX, place.pivotY};
             const bool turned = !turn.IsIdentity();
             if (_atlas) {
-                const Rect source = face ? SourceRect(*face) : BackRect();
+                const Rect source = stack ? StackRect() : face ? SourceRect(*face) : BackRect();
                 if (turned) {
                     renderer.DrawTransformedTexture(*_atlas, &source, upright.x, upright.y, upright.w, upright.h, kUntinted, turn);
                 } else {
@@ -736,8 +739,13 @@ namespace BECore::Mahjong {
                 fill(Rect{upright.x + insetX, upright.y + insetY, upright.w - 2.0f * insetX, upright.h - 2.0f * insetY}, PlainMarkColor(*face));
             }
         };
-        // The shadow under a tile (not under a wall stack); the frame of a pending discard lies over it, so the gold is even
-        const auto drawShadow = [&](const Rect& rect) { renderer.DrawFilledRect(rect.x + kShadowOffset * unit, rect.y + kShadowOffset * unit, rect.w, rect.h, kTileShadow); };
+        // The shadow under a tile (not under a wall stack), two layers: the wide faint one, then the tight one at the offset; the frame of
+        // a pending discard lies over both, so the gold is even
+        const auto drawShadow = [&](const Rect& rect) {
+            const float margin = kShadowSoftMargin * unit;
+            renderer.DrawFilledRect(rect.x + kShadowOffset * unit - margin, rect.y + kShadowOffset * unit - margin, rect.w + 2.0f * margin, rect.h + 2.0f * margin, kTileShadowSoft);
+            renderer.DrawFilledRect(rect.x + kShadowOffset * unit, rect.y + kShadowOffset * unit, rect.w, rect.h, kTileShadow);
+        };
         const auto drawTile = [&](const Rect& rect, const TilePlacement& place, std::optional<Tile> face) {
             drawShadow(rect);
             drawFace(place, face);
@@ -865,7 +873,7 @@ namespace BECore::Mahjong {
                     }
                     break;
                 case SlotRole::WallStack:
-                    drawFace(place, std::nullopt);
+                    drawFace(place, std::nullopt, true);
                     break;
             }
         };
