@@ -1,6 +1,6 @@
 #include "ArenaRun.h"
 
-#include <thread>
+#include <Mahjong/Arena/ArenaWorlds.h>
 
 namespace BECore::Mahjong::Arena {
 
@@ -47,7 +47,7 @@ namespace BECore::Mahjong::Arena {
 
         /// Plays the seed `config.first + index` for every focus player into `plays[f]` (`f` the place in the focus list). An empty
         /// string is done; else the error of the first focus player whose hand failed.
-        eastl::string PlaySeed(const ArenaConfig& config, const ArenaHandPlayer& playHand, int index, eastl::span<SeedPlay> plays) {
+        eastl::string PlaySeed(const ArenaConfig& config, const ArenaHandPlayer& playHand, int index, const WorldLoop& worlds, eastl::span<SeedPlay> plays) {
             ArenaPlayers players;
             players.fill(config.others);
             const uint32_t seed = config.first + static_cast<uint32_t>(index);
@@ -57,7 +57,7 @@ namespace BECore::Mahjong::Arena {
                 play.row.seed = seed;
                 for (Seat focusSeat = 0; focusSeat < kSeatCount; ++focusSeat) {
                     players[focusSeat] = focus;
-                    const std::expected<HandRecord, eastl::string> record = playHand(seed, players, config.timing);
+                    const std::expected<HandRecord, eastl::string> record = playHand(seed, players, config.timing, worlds);
                     players[focusSeat] = config.others;
                     if (!record.has_value()) {
                         return Format("focus {}: {}", focus.name.c_str(), record.error().c_str());
@@ -80,9 +80,15 @@ namespace BECore::Mahjong::Arena {
             return {};
         }
 
-        /// The threads to start: `jobs`, never more than there are seeds.
+        /// The threads that play seeds: `jobs`, never more than there are seeds.
         int ThreadsFor(const ArenaConfig& config) {
             return std::min(config.jobs, config.count);
+        }
+
+        /// The threads each seed thread owns for the worlds of a search decision, itself included: what `jobs` has left over when there
+        /// are fewer seeds than threads, so the seed threads together never use more than `jobs`.
+        int WorldThreadsFor(const ArenaConfig& config) {
+            return std::max(1, config.jobs / ThreadsFor(config));
         }
 
     }  // namespace
@@ -105,7 +111,7 @@ namespace BECore::Mahjong::Arena {
     }
 
     std::expected<ArenaResult, eastl::string> RunArena(const ArenaConfig& config) {
-        return RunArena(config, [](uint32_t seed, const ArenaPlayers& players, bool timing) { return PlayArenaHand(seed, players, timing); });
+        return RunArena(config, [](uint32_t seed, const ArenaPlayers& players, bool timing, const WorldLoop& worlds) { return PlayArenaHand(seed, players, timing, &worlds); });
     }
 
     std::expected<ArenaResult, eastl::string> RunArena(const ArenaConfig& config, const ArenaHandPlayer& playHand) {
@@ -122,13 +128,16 @@ namespace BECore::Mahjong::Arena {
         // The lowest seed that failed so far: seeds are taken in order, so every lower seed is already taken and will finish, and a
         // thread that takes a higher one has nothing to add.
         std::atomic<int> lowestFailed{config.count};
+        const int worldThreads = WorldThreadsFor(config);
         const auto work = [&] {
+            WorldThreads pool(worldThreads);
+            const WorldLoop worlds = pool.AsLoop();
             for (;;) {
                 const int index = nextSeed.fetch_add(1);
                 if (index >= config.count || index > lowestFailed.load()) {
                     return;
                 }
-                errors[static_cast<size_t>(index)] = PlaySeed(config, playHand, index, eastl::span<SeedPlay>(plays.data() + static_cast<size_t>(index) * focusCount, focusCount));
+                errors[static_cast<size_t>(index)] = PlaySeed(config, playHand, index, worlds, eastl::span<SeedPlay>(plays.data() + static_cast<size_t>(index) * focusCount, focusCount));
                 if (!errors[static_cast<size_t>(index)].empty()) {
                     int seen = lowestFailed.load();
                     while (index < seen && !lowestFailed.compare_exchange_weak(seen, index)) {

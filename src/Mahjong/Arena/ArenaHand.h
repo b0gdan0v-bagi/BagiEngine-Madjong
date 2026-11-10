@@ -2,6 +2,7 @@
 
 #include <EASTL/array.h>
 #include <Mahjong/Arena/ArenaPlayer.h>
+#include <Mahjong/Game/ComputerSearch.h>
 #include <Mahjong/Game/Payments.h>
 #include <Mahjong/Game/Score.h>
 
@@ -45,10 +46,14 @@ namespace BECore::Mahjong::Arena {
      * seats share one `MahjongRng(seed * kRandomSeatSeedFactor + kRandomSeatSeedOffset)` and choose by `ChooseSeekWin`; the results are `SettleHand` of the finished hand.
      * Deterministic: the same arguments give the same record (the nanoseconds apart, which are measured only with `timing`).
      *
+     * `worlds` is how a search decision plays its worlds (`SearchRun::RunWorlds`): null plays them at once on the calling thread, a loop
+     * (`WorldThreads::AsLoop`) may play them on several. The record is the same either way; the time of a decision (`timing`) is its
+     * wall time, its worlds included.
+     *
      * A refused action, a computer seat with nothing to choose from or a hand that does not end is a defect and comes back as an error
      * text naming the seed and the seat; it is never swallowed.
      */
-    [[nodiscard]] std::expected<HandRecord, eastl::string> PlayArenaHand(uint32_t seed, const ArenaPlayers& players, bool timing = false);
+    [[nodiscard]] std::expected<HandRecord, eastl::string> PlayArenaHand(uint32_t seed, const ArenaPlayers& players, bool timing = false, const WorldLoop* worlds = nullptr);
 
     /// The most actions one hand may take before it counts as stuck (a hand is at most about 4 x 70).
     inline constexpr int kArenaStepLimit = 2000;

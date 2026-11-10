@@ -1,6 +1,9 @@
 #include <Mahjong/Arena/ArenaReport.h>
 #include <Mahjong/Arena/ArenaRun.h>
+#include <Mahjong/Arena/ArenaWorlds.h>
+#include <chrono>
 #include <gtest/gtest.h>
+#include <thread>
 
 /**
  * The run of the arena over seeds (`src/Mahjong/Arena/ArenaRun.h`): `RunArena` plays the seeds `first .. first + count - 1` for every
@@ -9,8 +12,10 @@
  * rotations of a seed), determinism, a focus player's result not depending on the other focus players, the numbers of
  * `ComputerStrengthTest` (seeds 4000..4059, Normal against three random seats: 186 wins of 240, the random seats 27 together, 27 drawn
  * hands, +31730 points), a bad config and the threads: the same config at 1, 2 and 5 jobs gives equal results and the same report text,
- * and a hand that fails gives the error of the lowest seed whatever the number of threads. Pure logic: no engine services; the file takes about 8 s in Debug (few seeds, the 60 seeds of
- * `ComputerStrengthTest` played once for Normal and Easy together).
+ * and a hand that fails gives the error of the lowest seed whatever the number of threads. The second level of threads (`WorldThreads`, the
+ * worlds of a search decision): the pool runs every index once and serves many calls, a search focus player with few seeds gives the same
+ * result and report at 1, 2 and 5 jobs, and the split of `jobs` between the seeds and the worlds is what `ArenaConfig::jobs` says. Pure logic: no engine services; the file takes about 8 s in Debug
+ * (few seeds, the 60 seeds of `ComputerStrengthTest` played once for Normal and Easy together).
  */
 namespace BECore::Mahjong::Arena {
 
@@ -27,6 +32,10 @@ namespace BECore::Mahjong::Arena {
         constexpr int kThreadSeeds = 6;
         constexpr int kJobCounts[] = {1, 2, 5};
         constexpr int kTooManyJobs = kMaxJobs + 1;
+        /// A search focus player that is cheap in Debug; with few seeds the worlds level of the threads is the one that has work.
+        constexpr const char* kSearchFocus = "normal:searchWorlds=1,searchCandidates=2,searchMargin=0";
+        constexpr int kLoopIndexes = 6;
+        constexpr std::chrono::milliseconds kProbeSleep{5};
 
         ArenaPlayer Player(std::string_view spec) {
             const std::expected<ArenaPlayer, eastl::string> player = ParseArenaPlayer(spec);
@@ -321,6 +330,93 @@ namespace BECore::Mahjong::Arena {
         }
     }
 
+    TEST(ArenaRunTest, ASearchFocusPlayerWithFewSeedsGivesTheSameResultAtAnyJobs) {
+        // One seed against 1, 2 and 5 jobs (one seed thread of 1, 2 and 5 world threads), two seeds against 1 and 5 (5 jobs over 2 seeds is
+        // 2 seed threads of 2 world threads each); `jobs` 1 is the run the others are compared with.
+        for (const int count : {1, kTwoSeeds}) {
+            ArenaConfig config = ConfigOf({kSearchFocus}, "random", count);
+            const ArenaResult single = PlayConfig(config);
+            const eastl::string singleReport = FormatArenaReport(single);
+            EXPECT_GT(single.focus.at(0).focus.decisions, 0);
+            for (const int jobs : kJobCounts) {
+                // `jobs` 1 is the run just made; two seeds on 2 jobs is the seed level alone, which the other tests cover.
+                if (jobs == 1 || (count == kTwoSeeds && jobs == 2)) {
+                    continue;
+                }
+                config.jobs = jobs;
+                const ArenaResult threaded = PlayConfig(config);
+                ASSERT_EQ(threaded.focus.size(), single.focus.size());
+                EXPECT_TRUE(SameFocus(single.focus[0], threaded.focus[0])) << "seeds " << count << " jobs " << jobs;
+                EXPECT_EQ(FormatArenaReport(threaded), singleReport) << "seeds " << count << " jobs " << jobs;
+            }
+        }
+    }
+
+    TEST(ArenaRunTest, TheJobsAreSplitBetweenTheSeedsAndTheWorlds) {
+        struct Split {
+            int jobs;
+            int seeds;
+            int worldThreads;
+        };
+        // Seeds first; what is left over (the integer division) goes to the worlds of each seed thread; never more than `jobs` in all.
+        for (const Split split : {Split{1, 3, 1}, Split{3, 6, 1}, Split{5, 2, 2}, Split{5, 1, 5}, Split{9, 4, 2}}) {
+            std::atomic<int> running{0};
+            std::atomic<int> peakOfAll{0};
+            std::atomic<int> peakOfOneLoop{0};
+            const ArenaHandPlayer probing = [&](uint32_t, const ArenaPlayers&, bool, const WorldLoop& worlds) -> std::expected<HandRecord, eastl::string> {
+                std::atomic<int> inLoop{0};
+                std::atomic<int> peak{0};
+                worlds(kLoopIndexes, [&](int) {
+                    const int now = ++inLoop;
+                    const int all = ++running;
+                    for (int seen = peak.load(); now > seen && !peak.compare_exchange_weak(seen, now);) {
+                    }
+                    for (int seen = peakOfAll.load(); all > seen && !peakOfAll.compare_exchange_weak(seen, all);) {
+                    }
+                    std::this_thread::sleep_for(kProbeSleep);
+                    --running;
+                    --inLoop;
+                });
+                for (int seen = peakOfOneLoop.load(); peak.load() > seen && !peakOfOneLoop.compare_exchange_weak(seen, peak.load());) {
+                }
+                return HandRecord{};
+            };
+            ArenaConfig config = ConfigOf({"normal"}, "random", split.seeds);
+            config.jobs = split.jobs;
+            const std::expected<ArenaResult, eastl::string> result = RunArena(config, probing);
+            ASSERT_TRUE(result.has_value()) << result.error().c_str();
+            EXPECT_LE(peakOfOneLoop.load(), split.worldThreads) << "jobs " << split.jobs << " seeds " << split.seeds;
+            EXPECT_LE(peakOfAll.load(), split.jobs) << "jobs " << split.jobs << " seeds " << split.seeds;
+            if (split.worldThreads > 1) {
+                EXPECT_GT(peakOfOneLoop.load(), 1) << "the worlds level is not used at jobs " << split.jobs << " seeds " << split.seeds;
+            }
+        }
+    }
+
+    TEST(ArenaRunTest, WorldThreadsRunEveryIndexOnceAndServeManyCalls) {
+        for (const int threads : {-1, 0, 1, 2, 5}) {
+            WorldThreads pool(threads);
+            EXPECT_EQ(pool.Threads(), std::max(threads, 1));
+            const WorldLoop loop = pool.AsLoop();
+            // `count` 0 does nothing, 1 is not spread, fewer than the threads and many more than the threads are all covered.
+            for (int round = 0; round < 3; ++round) {
+                for (const int count : {0, 1, 3, 50}) {
+                    std::vector<std::atomic<int>> hits(static_cast<size_t>(count));
+                    loop(count, [&](int index) { ++hits[static_cast<size_t>(index)]; });
+                    for (int index = 0; index < count; ++index) {
+                        EXPECT_EQ(hits[static_cast<size_t>(index)].load(), 1) << "threads " << threads << " count " << count << " index " << index;
+                    }
+                }
+            }
+            // The results of the bodies are in the caller's memory when `ForEach` returns, with no other synchronisation.
+            std::vector<int> squares(100);
+            pool.ForEach(100, [&](int index) { squares[static_cast<size_t>(index)] = index * index; });
+            for (int index = 0; index < 100; ++index) {
+                EXPECT_EQ(squares[static_cast<size_t>(index)], index * index);
+            }
+        }
+    }
+
     TEST(ArenaRunTest, TheTimingSumsTheThreads) {
         ArenaConfig config = ConfigOf({"normal"}, "normal", kThreadSeeds);
         config.timing = true;
@@ -336,11 +432,11 @@ namespace BECore::Mahjong::Arena {
 
     TEST(ArenaRunTest, AFailingHandGivesTheErrorOfTheLowestSeedWhateverTheThreads) {
         // Seeds 4002 and 4004 fail (the second one for the second focus player only); the others are played as they are.
-        const ArenaHandPlayer failing = [](uint32_t seed, const ArenaPlayers& players, bool timing) -> std::expected<HandRecord, eastl::string> {
+        const ArenaHandPlayer failing = [](uint32_t seed, const ArenaPlayers& players, bool timing, const WorldLoop& worlds) -> std::expected<HandRecord, eastl::string> {
             if (seed == 4004 || (seed == 4002 && players[0].name != "normal" && players[1].name != "normal" && players[2].name != "normal" && players[3].name != "normal")) {
                 return std::unexpected(Format("seed {}: made up", seed));
             }
-            return PlayArenaHand(seed, players, timing);
+            return PlayArenaHand(seed, players, timing, &worlds);
         };
         ArenaConfig config = ConfigOf({"normal", "easy"}, "random", kThreadSeeds);
         for (const int jobs : kJobCounts) {
@@ -350,11 +446,11 @@ namespace BECore::Mahjong::Arena {
             EXPECT_EQ(std::string(result.error().c_str()), "focus easy: seed 4002: made up") << "jobs " << jobs;
         }
         // Only a later seed fails: it is the error, again for every thread count.
-        const ArenaHandPlayer later = [](uint32_t seed, const ArenaPlayers& players, bool timing) -> std::expected<HandRecord, eastl::string> {
+        const ArenaHandPlayer later = [](uint32_t seed, const ArenaPlayers& players, bool timing, const WorldLoop& worlds) -> std::expected<HandRecord, eastl::string> {
             if (seed >= 4004) {
                 return std::unexpected(Format("seed {}: made up", seed));
             }
-            return PlayArenaHand(seed, players, timing);
+            return PlayArenaHand(seed, players, timing, &worlds);
         };
         for (const int jobs : kJobCounts) {
             config.jobs = jobs;
