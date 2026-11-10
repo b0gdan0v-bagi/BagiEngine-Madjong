@@ -5,7 +5,9 @@
 #include <BECore/UI/UICanvasComponent.h>
 #include <BECore/UI/UIImage.h>
 #include <Events/InputEvents.h>
+#include <Events/SceneEvents.h>
 #include <Generated/MahjongHudComponent.gen.hpp>
+#include <Mahjong/Components/MahjongTableComponent.h>
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/Table/MoveText.h>
 #include <Mahjong/Table/RulesText.h>
@@ -28,6 +30,7 @@ namespace BECore::Mahjong {
         constexpr eastl::string_view kDealerMarkText = "*";
         constexpr eastl::string_view kNewGameAction = "MahjongNewGame";
         constexpr eastl::string_view kStartAction = "MahjongStart";
+        constexpr eastl::string_view kContinueAction = "MahjongContinue";
         constexpr eastl::string_view kNextHandAction = "MahjongNextHand";
         constexpr eastl::string_view kSetLanguageAction = "MahjongSetLanguage";
         constexpr eastl::string_view kRulesAction = "MahjongRules";
@@ -91,6 +94,13 @@ namespace BECore::Mahjong {
     void MahjongHudComponent::OnAttached() {
         s_active = this;
         SubscribeInScene<InputEvents::ActionEvent, &MahjongHudComponent::OnAction>(this);
+        SubscribeInScene<SceneEvents::SceneUpdateEvent, &MahjongHudComponent::OnUpdate>(this);
+    }
+
+    void MahjongHudComponent::OnUpdate(const SceneEvents::SceneUpdateEvent& /*event*/) {
+        if (MahjongGame* game = MahjongGame::GetActive(); game != nullptr) {
+            game->FlushSave();
+        }
     }
 
     void MahjongHudComponent::OnDraw() {
@@ -186,6 +196,11 @@ namespace BECore::Mahjong {
             _setupShown = open;
             UICanvasComponent::SetVisibleByName(GetScene(), "Setup"_intern, open);
         }
+        const bool offerContinue = open && game->CanContinue();
+        if (offerContinue != _continueShown) {
+            _continueShown = offerContinue;
+            UICanvasComponent::SetElementVisibleByName(GetScene(), "Continue"_intern, offerContinue);
+        }
     }
 
     void MahjongHudComponent::ShowScoreLines(int count) {
@@ -227,8 +242,8 @@ namespace BECore::Mahjong {
         Scene& scene = GetScene();
         UICanvasComponent::SetVisibleByName(scene, "HandOver"_intern, shown);
         UICanvasComponent::SetVisibleByName(scene, "HandOverAction"_intern, shown);
-        // The New game button lies on the bar of a narrow window, outside the view that the dim of the score table covers: it would look
-        // clickable. The standings (MatchOver) are a Screen canvas whose dim covers the whole window, so they need nothing.
+        // The score table is a screen of its own (no dim, so the hands stay visible): HudMenu (New game, Rules) goes while it is up.
+        // The standings (MatchOver) are a Screen canvas whose dim covers the whole window, so they need nothing.
         ShowHudMenu();
     }
 
@@ -331,9 +346,13 @@ namespace BECore::Mahjong {
         } else {
             _endScreenPublished = false;
         }
-        if (handOver != _handOverShown) {
-            _handOverShown = handOver;
-            ShowHandOver(handOver);
+        // The score table waits while the table holds it back (a person's claim lost to a mahjong and the flight is on screen); the words
+        // above are published at once
+        const MahjongTableComponent* table = MahjongTableComponent::GetActive();
+        const bool handOverShown = handOver && (table == nullptr || !table->HandOverHeld());
+        if (handOverShown != _handOverShown) {
+            _handOverShown = handOverShown;
+            ShowHandOver(handOverShown);
         }
         if (matchOver != _matchOverShown) {
             _matchOverShown = matchOver;
@@ -382,6 +401,10 @@ namespace BECore::Mahjong {
         }
         // The rest belongs to the panel: a click that reached it while it is not open is out of date
         if (!game->IsSetupOpen()) {
+            return;
+        }
+        if (action == kContinueAction) {
+            game->ContinueMatch();  // ignored by the game when there is nothing to continue
             return;
         }
         if (action == kStartAction) {

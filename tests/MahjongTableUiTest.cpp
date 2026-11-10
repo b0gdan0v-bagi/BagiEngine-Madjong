@@ -2,7 +2,7 @@
 #include "UiStyleTestSupport.h"
 
 /**
- * The table as drawn (`Components/MahjongTableComponent.h`): the shipped `config/SceneConfig.xml` is drawn into a `RecordingRenderer` and
+ * The table as drawn (`Components/MahjongTableComponent.h`): the shipped scene (`config/SceneConfig.xml` and its node files) is drawn into a `RecordingRenderer` and
  * the draw calls are read back (the fixture is `MahjongTableTestSupport.h`). Needs the engine services.
  */
 namespace BECore::Mahjong::Tests {

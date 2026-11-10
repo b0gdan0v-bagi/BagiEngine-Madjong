@@ -8,7 +8,7 @@
 namespace BECore::Mahjong {
 
     /**
-     * The rules screen (the nodes `Rules` and `RulesAction` of `config/SceneConfig.xml`): the pages of text and tile pictures that
+     * The rules screen (the nodes `Rules` and `RulesAction`, `config/nodes/MahjongRules.xml` and `MahjongRulesAction.xml`): the pages of text and tile pictures that
      * explain the game, as plain data. Pure like `ScoreText` / `MoveText`: no scene, no renderer, the component only puts the page into
      * variables. Every word is a key `rules.*` of `config/UIStrings.xml`; **every number a page prints is a `{placeholder}`** that is
      * filled from the named constants of the rules (`kDealtTiles`, `kWinningHandTiles`, `kLooseTiles`, ...), so a rule that changes in the

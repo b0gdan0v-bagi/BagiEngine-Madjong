@@ -7,14 +7,18 @@ The game is started twice, once on the real clock and once with --manual-clock (
 Both runs play the same scenario: the methods of the control API, one whole hand chosen at random among `list_actions`, and a match of
 eight hands between four computers driven by `next_hand` alone; then the scene: the UI tree (the HUD, the seat choice closed by a reset,
 the score table of a finished hand and the standings of a finished match, shown and hidden by the game), a screenshot of the table and,
-on the manual clock, the screenshots of two seeds. The helpers are the engine's (tools/control/tests/smoke.py).
+on the manual clock, the screenshots of two seeds. Then the games are started again on the same save folder (a real restart: the previous game
+quits first) to see the match saved by one come back in the next with `Continue`, a finished match not offered, and a broken save ignored.
+The helpers are the engine's (tools/control/tests/smoke.py).
 Exit code: 0 passed, 1 failed, 77 skipped (the executable does not exist; ctest reads 77 as "skipped").
 """
 
 import json
 import os
 import random
+import shutil
 import sys
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -44,7 +48,7 @@ HAND_LIMIT_PER_MATCH = 100  # 8 counted hands; a drawn hand is dealt again
 TABLE_COLORS = 500  # a table of 150 tiles with antialiased marks and text shows thousands; flat felt, or felt and plain boxes, far fewer
 SCENE_CANVASES = {"Hints", "HintsButton", "Actions", "ActionsCompact", "Hud", "SeatPlates", "HudMenu", "Handoff", "HandOver", "HandOverAction", "MatchOver", "Setup", "Rules", "RulesAction"}
 COMING_AND_GOING_SCREENS = ("Setup", "Handoff", "HandOver", "HandOverAction", "MatchOver", "Rules", "RulesAction")
-HAND_OVER_SCREENS = {"HandOver", "HandOverAction"}  # the score table and its action bar are shown together
+HAND_OVER_SCREENS = {"HandOver", "HandOverAction"}  # the score table and its Next hand button are shown together
 RULES_SCREENS = {"Rules", "RulesAction"}  # the pages of the rules and their bar are shown together
 SETTLE_FRAMES = 2  # frames after a change of the game before the canvases show it
 IDLE_CHECK_SECONDS = 0.3  # how long the manual clock is watched not moving
@@ -244,7 +248,7 @@ def check_state_is_pushed(client: BagiControlClient) -> None:
 
 
 def screens_shown(client: BagiControlClient) -> tuple[set[str], dict[str, Any]]:
-    """Which of the screens that come and go (the modal ones and the action bar of the score table) are shown, after a few frames in which the scene reads the game; and the whole UI tree."""
+    """Which of the screens that come and go (the modal ones and the Next hand button of the score table) are shown, after a few frames in which the scene reads the game; and the whole UI tree."""
     client.call("step", {"frames": SETTLE_FRAMES})
     tree = client.call("ui_tree")
     check(tree["scene"] == "MahjongScene", f"the active scene is {tree['scene']}")
@@ -459,14 +463,109 @@ def run_manual_clock_scenario(client: BagiControlClient, headless: bool) -> None
         check_screenshots_of_two_seeds(client)
 
 
+SAVE_DIR_VARIABLE = "BAGI_MAHJONG_SAVE_DIR"  # where the game keeps the saved match and the choices of Setup (src/Mahjong/Save/MatchSaveStore.h)
+SAVED_ACTIONS = 3  # accepted actions of the person before the first game quits
+SAVE_FILE_NAME = "match.save"  # the slot of the match (src/Mahjong/Save/MatchSave.h, `kMatchSlot`) in the folder of the saves
+RESTART_STEP_FRAMES = 3  # frames after a change before the game has written its save and its canvases show the change
+RESTART_STATE: dict[str, Any] = {}  # what one game of a scenario leaves for the next one (the games are separate processes)
+
+
+def match_save_path() -> Path:
+    return Path(os.environ[SAVE_DIR_VARIABLE]) / SAVE_FILE_NAME
+
+
+def setup_screen(client: BagiControlClient) -> tuple[bool, bool]:
+    """Whether the seat choice is shown and whether its Continue button is, after a few frames in which the scene reads the game."""
+    client.call("step", {"frames": SETTLE_FRAMES})
+    tree = client.call("ui_tree")
+    canvas = next(canvas for canvas in tree["canvases"] if canvas["node"] == "Setup")
+    proceed = find_ui_element({"canvases": [canvas]}, "Continue")
+    check(proceed is not None, "the seat choice has no Continue button in the file")
+    return canvas["visible"], proceed["visible"]
+
+
+def run_save_leaves_a_match(client: BagiControlClient, headless: bool) -> None:
+    """The first game of the restart: a match played by the person for a few actions, a few frames so that the save is written, then the game quits."""
+    client.call("reset", {"seed": SEED, "seats": "PCCC", "hands": SHORT_MATCH_HANDS})
+    for _ in range(SAVED_ACTIONS):
+        actions = client.call("list_actions")["actions"]
+        check(len(actions) > 0, "the person has no action to take")
+        client.call("perform_action", actions[0])
+    client.call("step", {"frames": RESTART_STEP_FRAMES})
+    state = get_state(client)
+    check(state["phase"] == "playing", f"the hand ended after {SAVED_ACTIONS} actions: {state['phase']}")
+    RESTART_STATE["state"] = without_version(state)
+    check(match_save_path().is_file(), f"no {SAVE_FILE_NAME} in {match_save_path().parent} after a few frames")
+
+
+def run_save_continues_the_match(client: BagiControlClient, headless: bool) -> None:
+    """The second game finds the match: the seat choice offers Continue, the click brings back the table of the first game; then a match played to its end is not offered again."""
+    open_panel, can_continue = setup_screen(client)
+    check(open_panel and can_continue, f"after a restart the seat choice is {'open' if open_panel else 'closed'} and Continue is {'shown' if can_continue else 'hidden'}")
+    check(without_version(get_state(client)) == RESTART_STATE["state"], "the table behind the seat choice is not the saved one")
+
+    clicked = client.call("ui_click", {"name": "Continue"})
+    check(clicked["consumed"] and clicked["action"] == "MahjongContinue", f"the click on Continue was not taken: {clicked}")
+    open_panel, _ = setup_screen(client)  # the tree keeps the last layout of a hidden canvas, so its Continue button says nothing now
+    check(not open_panel, "Continue left the seat choice on the screen")
+    check(without_version(get_state(client)) == RESTART_STATE["state"], "the table after Continue is not the saved one")
+    check(len(client.call("list_actions")["actions"]) > 0, "the person has nothing to do on the resumed table")
+
+    # A match played to its end is deleted from the slot, so the next start has nothing to offer
+    client.call("reset", {"seed": SEED, "seats": "CCCC", "hands": SHORT_MATCH_HANDS})
+    for _ in range(HAND_LIMIT_PER_MATCH):
+        if get_state(client)["phase"] == "match_over":
+            break
+        client.call("perform_action", {"type": "next_hand"})
+    else:
+        raise SmokeFailure(f"the match did not end in {HAND_LIMIT_PER_MATCH} hands")
+    client.call("step", {"frames": RESTART_STEP_FRAMES})
+    check(not match_save_path().exists(), "a finished match is still in the save folder")
+
+
+def run_save_offers_nothing_after_a_finished_match(client: BagiControlClient, headless: bool) -> None:
+    """A start after a finished match has nothing to continue; then a broken save is left for the next start."""
+    open_panel, can_continue = setup_screen(client)
+    check(open_panel and not can_continue, f"after a finished match the seat choice is {'open' if open_panel else 'closed'} and Continue is {'shown' if can_continue else 'hidden'}")
+    check_state_shape(get_state(client))  # a random match is dealt behind the panel (with computers only it has played its first hand)
+    match_save_path().write_bytes(b"this is not a save of Mahjong")
+
+
+def run_save_ignores_a_broken_save(client: BagiControlClient, headless: bool) -> None:
+    """Garbage in the slot is no reason to fail: no Continue, a table behind the panel, and the game plays."""
+    open_panel, can_continue = setup_screen(client)
+    check(open_panel and not can_continue, f"with a broken save the seat choice is {'open' if open_panel else 'closed'} and Continue is {'shown' if can_continue else 'hidden'}")
+    check(match_save_path().is_file(), "the broken save was removed")
+    state = get_state(client)
+    check_state_shape(state)
+    clicked = client.call("ui_click", {"name": "Start"})
+    check(clicked["consumed"] and clicked["action"] == "MahjongStart", f"the click on Start was not taken: {clicked}")
+    open_panel, _ = setup_screen(client)
+    check(not open_panel, "Start left the seat choice on the screen")
+    check(get_state(client)["handsPlayed"] == 0, "Start did not begin a match")
+    check_state_shape(get_state(client))  # the seats are those of the last match, computers only: its first hand has been played
+    client.call("step", {"frames": RESTART_STEP_FRAMES})
+    check(match_save_path().read_bytes() != b"this is not a save of Mahjong", "the new match did not replace the broken save")
+
+
 SCENARIOS = [
     ("real clock", [], run_real_clock_scenario),
     ("manual clock", ["--manual-clock"], run_manual_clock_scenario),
+    ("save: a match is left", ["--manual-clock"], run_save_leaves_a_match),
+    ("save: Continue brings it back", ["--manual-clock"], run_save_continues_the_match),
+    ("save: a finished match is not offered", ["--manual-clock"], run_save_offers_nothing_after_a_finished_match),
+    ("save: a broken save is ignored", ["--manual-clock"], run_save_ignores_a_broken_save),
 ]
 
 
 def main() -> int:
-    return run_smoke(__doc__, SCENARIOS)
+    # The games started below save as they play; their saves go to a folder of this run, never to the owner's `saves/`
+    save_dir = tempfile.mkdtemp(prefix="bagi-mahjong-smoke-saves-")
+    os.environ[SAVE_DIR_VARIABLE] = save_dir
+    try:
+        return run_smoke(__doc__, SCENARIOS)
+    finally:
+        shutil.rmtree(save_dir, ignore_errors=True)
 
 
 if __name__ == "__main__":

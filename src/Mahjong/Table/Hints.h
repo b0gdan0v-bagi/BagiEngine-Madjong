@@ -8,7 +8,7 @@
 namespace BECore::Mahjong {
 
     /**
-     * What the hints of the table say (the node `Hints` of `config/SceneConfig.xml`): which tiles the viewer's hand waits for, which
+     * What the hints of the table say (the node `Hints`, `config/nodes/MahjongHints.xml`): which tiles the viewer's hand waits for, which
      * discards declare the calling hand, and what the computer player would do in the viewer's place. Plain C++, no scene: everything
      * is computed from the `TableView` of the viewer (`MakeTableView`), so a hint never knows more than the viewer sees. The words are
      * keys of the string table (`config/UIStrings.xml`), this file holds no English; the captions of the canvas (`hints.waitCaption`,

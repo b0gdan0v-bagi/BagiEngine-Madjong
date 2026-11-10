@@ -7,7 +7,6 @@
 #include <BECore/UI/UIPreview.h>
 #include <Mahjong/Table/TableLayout.h>
 #include <Mahjong/Table/TouchRegime.h>
-#include <functional>
 
 /**
  * What the tests of the touch size share (`MahjongTouchSizeTest`, and the screen tests that run a canvas over the size matrix): the
@@ -152,11 +151,11 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// The table with every zone at its capacity (14 concealed tiles, four kongs and 8 bonus tiles a seat, 100 discards, the 144-tile
-    /// wall), so no tile of any game lies where this does not.
-    inline TableLayout MakeWorstCaseTableLayout() {
+    /// wall), so no tile of any game lies where this does not. `viewer` is the seat at the bottom (the zones are the same, the seats turn).
+    inline TableLayout MakeWorstCaseTableLayout(Seat viewer = 0) {
         constexpr int kMostDiscards = 100;  // longer than any hand leaves (136 tiles, 52 in the hands at the least)
         TableInput worst;
-        worst.viewer = 0;
+        worst.viewer = viewer;
         worst.concealedCount.fill(kMaxConcealedTiles);
         worst.bonusCount.fill(kMaxBonusTiles);
         Meld kong;

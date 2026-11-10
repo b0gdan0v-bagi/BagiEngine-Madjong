@@ -1,15 +1,15 @@
+#include "ShippedScene.h"
 #include "UiStyleTestSupport.h"
 
 #include <BECore/UI/UIValueText.h>
 #include <cmath>
 
 /**
- * The look of the shipped scene file held to the style of `Table/UiPalette.h` (pure logic: the file is read from the source tree and parsed
- * with pugixml, no engine services). Every `element` of `config/SceneConfig.xml` is walked: each colour is an entry of the palette, each
- * `fontSize` is on the type scale, each position and size is a multiple of the grid unit (a percent and the tile pictures of the buttons
- * excepted), and each button and toggle has an action (a segment of a choice group may take its action from the group). A later entry that adds
- * a control with a stray colour, size or number fails here; a deliberately broken copy of the text shows that each check can fail. The `set`
- * nodes of a variant (`<set element=".." fontSize/x/y/width/height=..>`) are held to the font and grid rules too.
+ * The look of the shipped scene file held to the style of `Table/UiPalette.h` (pure logic: the files are read from the source tree and parsed
+ * with pugixml, no engine services). Every `element` of the shipped scene (`config/SceneConfig.xml` with its node files expanded, `ShippedScene.h`) is walked: each colour is an entry of the palette,
+ * each `fontSize` is on the type scale, each position and size is a multiple of the grid unit (a percent and the tile pictures of the buttons excepted), and each button and toggle has an action (a
+ * segment of a choice group may take its action from the group). A later entry that adds a control with a stray colour, size or number fails here; a deliberately broken copy of the text shows that
+ * each check can fail. The `set` nodes of a variant (`<set element=".." fontSize/x/y/width/height=..>`) are held to the font and grid rules too.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -152,12 +152,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         std::string ShippedText() {
-            const std::filesystem::path path = std::filesystem::path(__FILE__).parent_path().parent_path() / "config" / "SceneConfig.xml";
-            std::ifstream file(path);
-            EXPECT_TRUE(file.is_open()) << path.string();
-            std::stringstream text;
-            text << file.rdbuf();
-            return text.str();
+            return ShippedSceneXml();
         }
 
         std::vector<Violation> Of(const Report& report, Rule rule) {

@@ -3,6 +3,7 @@
 #include <BECore/UI/UIButton.h>
 #include <EASTL/map.h>
 #include <Mahjong/Components/MahjongHudComponent.h>
+#include <Mahjong/Table/UiPalette.h>
 #include <set>
 
 /**
@@ -15,6 +16,13 @@ namespace BECore::Mahjong::Tests {
     namespace {
 
         constexpr float kEngineTouchMinimum = 32.0f;
+
+        // The Next hand button and the gap of the score table that holds it (the numbers of MahjongHandOver.xml and MahjongHandOverAction.xml;
+        // MahjongEndScreenTest holds the files to them), and the ratio of the window scale to the fit of the table that the 32:9 window of the matrix
+        // is known to exceed (the largest in a landscape window is 1.42)
+        constexpr float kNextHandButtonHeight = 56.0f;
+        constexpr float kNextHandGapHeight = 64.0f;
+        constexpr float kLandscapeScaleRatioFloor = 1.4f;
 
         /// The window of 1280 x 720 pixels, where the view is the output and a canvas of a scene is the view.
         MatrixWindow DesignWindow() {
@@ -327,6 +335,8 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         _game->OpenSetup();
         Draw();
+        // The button beside Start, as it is when a saved match is on offer (the HUD test shows it by a real save)
+        UICanvasComponent::SetElementVisibleByName(*_manager->GetSceneByName("MahjongScene"_intern), "Continue"_intern, true);
         auto setup = Canvas("Setup");
         ASSERT_TRUE(setup);
         EXPECT_EQ(setup->GetLayout().params.space, CanvasSpace::Screen) << "the seat choice is a Screen canvas";
@@ -336,8 +346,8 @@ namespace BECore::Mahjong::Tests {
         const float minTouch = EngineTouchMinimum();
 
         const char* const rows[] = {"Title", "LanguageRow", "SeatRow0", "SeatRow1", "SeatRow2", "SeatRow3", "HandsRow", "HintsRow", "Start"};
-        const char* const segments[] = {"LanguageEn",    "LanguageRu",  "Seat0Person",   "Seat0Computer", "Seat1Person", "Seat1Computer", "Seat2Person",
-                                        "Seat2Computer", "Seat3Person", "Seat3Computer", "Hands16",       "Hands8",      "HintsOn",       "HintsOff"};
+        const char* const segments[] = {"LanguageEn",  "LanguageRu",    "Seat0Person", "Seat0Computer", "Seat1Person", "Seat1Computer", "Seat2Person", "Seat2Computer",
+                                        "Seat3Person", "Seat3Computer", "Hands16",     "Hands8",        "HintsOn",     "HintsOff",      "Continue"};
         const CanvasScaleMode modes[] = {CanvasScaleMode::ConstantPixelSize, CanvasScaleMode::ScaleWithScreen, CanvasScaleMode::ConstantPhysicalSize};
         size_t cases = 0;
         ForEachMatrixWindow([&](const MatrixWindow& window) {
@@ -382,6 +392,9 @@ namespace BECore::Mahjong::Tests {
                     const UIElement* start = Element("Setup", "Start");
                     ASSERT_NE(start, nullptr);
                     EXPECT_GE(start->rect.h * resolved.scale / window.pixelDensity, minTouch - 0.01f) << label << " Start";
+                    const UIElement* proceed = Element("Setup", "Continue");
+                    ASSERT_NE(proceed, nullptr);
+                    EXPECT_LE(proceed->rect.x + proceed->rect.w, start->rect.x + 0.01f) << label << ": Continue and Start do not overlap";
                     ++cases;
                 }
             }
@@ -457,7 +470,7 @@ namespace BECore::Mahjong::Tests {
 
     // ----- the Next hand button of the score table -----
 
-    TEST_F(MahjongTouchSizeTest, TheActionBarOfTheScoreTableLiesInsideTheWindowAndDoesNotTouchThePlate) {
+    TEST_F(MahjongTouchSizeTest, TheNextHandButtonIsATouchTargetInEveryWindowAndLiesInTheGapOfThePlateOrUnderTheTableAndCoversNoTile) {
         ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
         _game->GetSession().RunComputers();
         ASSERT_EQ(_game->GetSession().GetPhase(), SessionPhase::HandOver);
@@ -468,33 +481,77 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(plate->TakesInput() && action->TakesInput());
         EXPECT_EQ(action->GetLayout().params.space, CanvasSpace::Screen);
         EXPECT_EQ(action->GetLayout().params.scaleMode, CanvasScaleMode::ScaleWithScreen);
+        EXPECT_GE(action->GetLayout().params.minScale, 0.6f) << "the floor that keeps the 56 unit button a touch target";
+        EXPECT_EQ(EngineTouchMinimum(), kEngineTouchMinimum);
+        const UIElement* declared = Element("HandOverAction", "NextHand");
+        ASSERT_NE(declared, nullptr);
+        EXPECT_TRUE(declared->ignoreSafeArea) << "a notch or side insets do not move the button off its gap";
 
+        const TableLayout layout = MakeWorstCaseTableLayout();
+        // The parts of the plate that carry text: the button covers none of them (the gap and the two gaps of 8 around it are free)
+        const char* const kTexts[] = {"Headline", "SeatRow0", "SeatRow1", "SeatRow2", "SeatRow3", "Lines", "Summary"};
         size_t checked = 0;
+        size_t inTheGap = 0;
+        size_t underTheTable = 0;
+        float tallestInTheGap = 0.0f;
         ForEachMatrixWindow([&](const MatrixWindow& window) {
-            // The plate (SceneView) and the bar (Screen, ScaleWithScreen, user scale 1.0), both in view units of the table
+            // The plate (SceneView) and the button (Screen, ScaleWithScreen, user scale 1.0), both in view units of the table
             LayOutInWindow(*plate, window);
             const UIElement* plateElement = Element("HandOver", "Plate");
-            ASSERT_NE(plateElement, nullptr);
+            ASSERT_TRUE(plateElement != nullptr);
             ASSERT_FALSE(plateElement->rect.IsEmpty()) << window.label.c_str();
             const Rect plateRect = ToView(plateElement->rect, *plate, window);
+            std::vector<Rect> texts;
+            for (const char* name : kTexts) {
+                const UIElement* element = Element("HandOver", name);
+                ASSERT_NE(element, nullptr) << name;
+                texts.push_back(ToView(element->rect, *plate, window));
+            }
 
             LayOutInWindow(*action, window, CanvasScaleMode::ScaleWithScreen, 1.0f);
-            const UIElement* bar = Element("HandOverAction", "Bar");
             const UIElement* button = Element("HandOverAction", "NextHand");
-            ASSERT_TRUE(bar != nullptr && button != nullptr);
-            ASSERT_FALSE(bar->rect.IsEmpty()) << window.label.c_str();
-            EXPECT_FALSE(Intersects(ToView(bar->rect, *action, window), plateRect)) << window.label.c_str() << ": the bar touches the plate";
-            EXPECT_FALSE(Intersects(ToView(button->rect, *action, window), plateRect)) << window.label.c_str() << ": the button touches the plate";
+            ASSERT_NE(button, nullptr);
+            ASSERT_FALSE(button->rect.IsEmpty()) << window.label.c_str();
+            const Rect buttonRect = ToView(button->rect, *action, window);
+
+            const bool portrait = window.outputHeight >= window.outputWidth;  // the variant of the file: a height at least the width
+            if (portrait) {
+                // The table is a strip in the middle of the window: the button lies at the bottom, in the bar under it
+                EXPECT_FALSE(Intersects(buttonRect, plateRect)) << window.label.c_str() << ": the button touches the plate";
+                EXPECT_GE(buttonRect.y, kViewHeight) << window.label.c_str() << ": the button is under the table";
+                ++underTheTable;
+            } else {
+                // In the middle of the window, in the gap of the plate: inside the plate's width and touching no text of it
+                EXPECT_GE(buttonRect.x, plateRect.x) << window.label.c_str();
+                EXPECT_LE(buttonRect.x + buttonRect.w, plateRect.x + plateRect.w) << window.label.c_str();
+                for (size_t i = 0; i < texts.size(); ++i) {
+                    EXPECT_FALSE(Intersects(buttonRect, texts[i])) << window.label.c_str() << ": the button covers " << kTexts[i];
+                }
+                EXPECT_NEAR(buttonRect.x + buttonRect.w * 0.5f, kViewWidth * 0.5f, 0.01f) << window.label.c_str() << ": centred across the table";
+                tallestInTheGap = std::max(tallestInTheGap, buttonRect.h);
+                ++inTheGap;
+            }
 
             // Inside the window (the validator says the same for every mode and user scale)
-            const Rect output = action->GetLayout().GetResolved().transform.ToOutput(bar->rect.x, bar->rect.y, bar->rect.w, bar->rect.h);
+            const Rect output = action->GetLayout().GetResolved().transform.ToOutput(button->rect.x, button->rect.y, button->rect.w, button->rect.h);
             EXPECT_GE(output.x, -0.01f) << window.label.c_str();
             EXPECT_GE(output.y, -0.01f) << window.label.c_str();
             EXPECT_LE(output.x + output.w, window.outputWidth + 0.01f) << window.label.c_str();
             EXPECT_LE(output.y + output.h, window.outputHeight + 0.01f) << window.label.c_str();
+            // A touch target as the user sees it (the same rule as New game)
+            EXPECT_GE(std::min(output.w, output.h) / window.pixelDensity, EngineTouchMinimum() - 0.01f) << window.label.c_str();
+
+            // The button has ignoreSafeArea, so no inset moves it: every window is checked against the hands, insets included
+            ExpectClearOfTable(buttonRect, layout, window.label.c_str());
             ++checked;
         });
-        EXPECT_EQ(checked, BECore::Tests::UILayoutMatrix().size());
+        EXPECT_GT(checked, 0u);
+        EXPECT_GT(inTheGap, 0u);
+        EXPECT_GT(underTheTable, 0u);
+        // The tallest the button gets in a landscape window of the matrix (32:9, where the window scale outgrows the fit of the table) is what the
+        // gap of 64 and the two gaps of 8 around it hold
+        EXPECT_GT(tallestInTheGap, kNextHandButtonHeight * kLandscapeScaleRatioFloor) << "the matrix has a 32:9 window";
+        EXPECT_LE(tallestInTheGap, kNextHandGapHeight + 2.0f * kModalGap);
     }
 
     namespace {

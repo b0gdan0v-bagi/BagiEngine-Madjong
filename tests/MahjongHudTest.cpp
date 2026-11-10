@@ -5,6 +5,7 @@
 
 #include <BECore/Control/Json.h>
 #include <BECore/UI/UIButton.h>
+#include <Common/TempPath.h>
 #include <Events/SceneEvents.h>
 #include <Mahjong/Components/MahjongHudComponent.h>
 #include <Mahjong/Table/MoveText.h>
@@ -1277,6 +1278,176 @@ namespace BECore::Mahjong::Tests {
         EmitAction("MahjongWin");
 
         EXPECT_EQ(Snapshot(Hand()), before);
+    }
+
+    TEST_F(MahjongHudTest, ContinueIsHiddenInTheFileAndWhenThereIsNothingToContinue) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        _game->OpenSetup();
+        Draw();
+        ASSERT_TRUE(SetupShown());
+        EXPECT_FALSE(_game->CanContinue());
+        ASSERT_NE(Element("Setup", "Continue"), nullptr);
+        EXPECT_FALSE(OnScreen("Setup", "Continue"));
+        // Start has the whole width of the plate then
+        const UIElement* start = Element("Setup", "Start");
+        ASSERT_NE(start, nullptr);
+        EXPECT_EQ(start->rect.x, Element("Setup", "Plate")->rect.x + kModalPadding);
+        EXPECT_EQ(start->rect.w, Element("Setup", "Plate")->rect.w - 2.0f * kModalPadding);
+
+        // The action does nothing, with the panel open or closed
+        const uint64_t version = _game->GetSession().Version();
+        EmitAction("MahjongContinue");
+        EXPECT_TRUE(_game->IsSetupOpen());
+        _game->CloseSetup();
+        EmitAction("MahjongContinue");
+        EXPECT_FALSE(_game->IsSetupOpen());
+        EXPECT_EQ(_game->GetSession().Version(), version);
+    }
+
+    /// The game starts on a folder that holds a saved match (a game of its own wrote it), as the executable does.
+    class MahjongHudContinueTest : public MahjongHudTest {
+    protected:
+        void SetUp() override {
+            _folder = TestTempDirectory("BagiMahjongHudContinueTest");
+            std::filesystem::remove_all(_folder);
+            SetMatchSaveDirectory(_folder);
+            {
+                IntrusivePtr<MahjongGame> saver = New<MahjongGame>();
+                ASSERT_TRUE(saver->AsControllable()->Reset(ParseJson("{\"seed\": 5, \"seats\": \"PCCC\", \"hands\": 8}").value()).has_value());
+                const auto actions = saver->AsControllable()->GetActions();
+                ASSERT_TRUE(actions.has_value() && !actions->empty());
+                ASSERT_TRUE(saver->AsControllable()->PerformAction((*actions)[0]).has_value());
+                _savedState = StateOf(*saver);
+                saver->FlushSave();
+            }
+            ASSERT_TRUE(std::filesystem::exists(MatchFile()));
+            MahjongHudTest::SetUp();
+        }
+
+        void TearDown() override {
+            MahjongHudTest::TearDown();  // the game stops: its last flush still goes to the folder
+            SetMatchSaveDirectory(std::filesystem::path());
+            std::error_code error;
+            std::filesystem::remove_all(_folder, error);
+        }
+
+        std::filesystem::path MatchFile() const {
+            return _folder / "match.save";
+        }
+
+        /// Whether the button is not hidden by the component (a hidden canvas keeps the rects of its last layout, so `OnScreen` says nothing there).
+        bool ContinueShown() const {
+            const UIElement* proceed = Element("Setup", "Continue");
+            return proceed != nullptr && proceed->style.visible;
+        }
+
+        std::string ReadMatchFile() const {
+            std::ifstream file(MatchFile(), std::ios::binary);
+            return std::string(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
+        }
+
+        static Json StateOf(MahjongGame& game) {
+            auto state = game.AsControllable()->GetState();
+            EXPECT_TRUE(state.has_value());
+            Json json = state ? *state : Json();
+            json.erase("version");  // two games reach one table by different numbers of steps
+            return json;
+        }
+
+        std::filesystem::path _folder;
+        Json _savedState;
+    };
+
+    TEST_F(MahjongHudContinueTest, ContinueIsShownBesideStartExactlyWhileASavedMatchIsOnOfferInBothLanguages) {
+        Draw();
+        ASSERT_TRUE(_game->CanContinue());
+        ASSERT_TRUE(SetupShown());
+        ASSERT_TRUE(OnScreen("Setup", "Continue"));
+        EXPECT_EQ(StateOf(*_game), _savedState) << "the saved match is the table behind the panel";
+
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            Draw();
+            Canvas("Setup")->UpdateLayout(kViewWidth, kViewHeight);
+            const UIElement* proceed = Element("Setup", "Continue");
+            const UIElement* start = Element("Setup", "Start");
+            const UIElement* plate = Element("Setup", "Plate");
+            ASSERT_TRUE(proceed != nullptr && start != nullptr && plate != nullptr);
+            EXPECT_EQ(Text("Setup", "Continue"), Tr(CoreManager::GetUIStrings(), "setup.continue").c_str());
+            EXPECT_TRUE(SameColor(proceed->color, PaletteColor("secondary")));
+            EXPECT_TRUE(SameColor(start->color, PaletteColor("primary")));
+            // Side by side in one row of the main button's height, sharing the width, inside the plate, the gap of 8 between
+            EXPECT_EQ(proceed->rect.y, start->rect.y);
+            EXPECT_EQ(proceed->rect.h, kMainButtonHeight);
+            EXPECT_EQ(start->rect.h, kMainButtonHeight);
+            EXPECT_EQ(proceed->rect.w, start->rect.w);
+            EXPECT_EQ(proceed->rect.x, plate->rect.x + kModalPadding);
+            EXPECT_EQ(proceed->rect.x + proceed->rect.w + kModalGap, start->rect.x);
+            EXPECT_EQ(start->rect.x + start->rect.w, plate->rect.x + plate->rect.w - kModalPadding);
+            EXPECT_GE(proceed->rect.h, kMinControlHeight);
+
+            // The size matrix with both buttons there: the engine's touch minimum and every word whole
+            ExpectPassesTheMatrix("Setup", EngineTouchMinimum());
+            for (const Output& output : kOutputs) {
+                ExpectWordsFit("Setup", output.width, output.height, kButtonAir);
+            }
+            const std::vector<std::string> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Setup"), kButtonAir);
+            EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
+        });
+        ASSERT_TRUE(_game->SetLanguage("ru"_intern));
+        Draw();
+        EXPECT_EQ(Text("Setup", "Continue"), "Продолжить");
+    }
+
+    TEST_F(MahjongHudContinueTest, AClickOnContinueClosesThePanelOnTheSavedMatchAndNothingSteppedMeanwhile) {
+        Draw();
+        const uint64_t version = _game->GetSession().Version();
+        for (int i = 0; i < 3; ++i) {
+            Elapse(kComputerStepSeconds * 2.0f);
+        }
+        EXPECT_EQ(_game->GetSession().Version(), version) << "no computer steps behind the panel";
+
+        ASSERT_TRUE(ClickElement("Setup", "Continue"));
+        Draw();
+        EXPECT_FALSE(_game->IsSetupOpen());
+        EXPECT_FALSE(_game->CanContinue());
+        EXPECT_FALSE(SetupShown());
+        EXPECT_FALSE(ContinueShown());
+        EXPECT_EQ(StateOf(*_game), _savedState);
+        EXPECT_EQ(_game->GetSession().Version(), version);
+
+        EmitAction("MahjongContinue");  // out of date now
+        EXPECT_EQ(_game->GetSession().Version(), version);
+    }
+
+    TEST_F(MahjongHudContinueTest, AControlResetTakesTheOfferAway) {
+        Draw();
+        ASSERT_TRUE(ContinueShown());
+        ASSERT_TRUE(_game->AsControllable()->Reset(ParseJson("{\"seed\": 6, \"seats\": \"PCCC\", \"hands\": 8}").value()).has_value());
+        Draw();
+        EXPECT_FALSE(_game->CanContinue());
+        EXPECT_FALSE(ContinueShown());
+    }
+
+    TEST_F(MahjongHudContinueTest, StartTakesTheOfferAwayAndOverwritesTheSaveAtTheNextFrameAndNotBefore) {
+        Draw();
+        ASSERT_TRUE(ContinueShown());
+        const std::string saved = ReadMatchFile();
+        Elapse(0.01f);
+        EXPECT_EQ(ReadMatchFile(), saved) << "nothing changed, so a frame writes nothing";
+
+        ASSERT_TRUE(ClickElement("Setup", "Start"));
+        EXPECT_EQ(ReadMatchFile(), saved) << "the start itself writes nothing";
+        Elapse(0.01f);
+        EXPECT_NE(ReadMatchFile(), saved) << "the frame writes the new match";
+
+        Draw();
+        EXPECT_FALSE(_game->CanContinue());
+        EXPECT_FALSE(ContinueShown());
+        _game->OpenSetup();  // New game
+        Draw();
+        ASSERT_TRUE(SetupShown());
+        EXPECT_FALSE(ContinueShown()) << "the offer is made at the start of the game only";
     }
 
 }  // namespace BECore::Mahjong::Tests

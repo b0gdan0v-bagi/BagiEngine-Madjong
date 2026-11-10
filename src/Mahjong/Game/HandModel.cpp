@@ -182,6 +182,8 @@ namespace BECore::Mahjong {
         state.claims = _claims;
         state.pendingTile = _pendingTile;
         state.result = _result;
+        state.lastWindow = _lastWindow;
+        state.windowSerial = _windowSerial;
         return state;
     }
 
@@ -340,6 +342,8 @@ namespace BECore::Mahjong {
         model._claims = state.claims;
         model._pendingTile = state.pendingTile;
         model._result = state.result;
+        model._lastWindow = eastl::move(state.lastWindow);
+        model._windowSerial = state.windowSerial;
 
         if (window) {
             bool someoneToDecide = false;
@@ -676,6 +680,15 @@ namespace BECore::Mahjong {
         const ClaimOption claim = winner == kNoSeat ? ClaimOption{} : _claims[winner];
         const bool robbing = _phase == Phase::RobKong;
         const Tile tile = _pendingTile;
+        if (!robbing) {
+            ClaimWindowResult record{.serial = ++_windowSerial, .from = from, .tile = tile, .winner = winner, .winningKind = claim.kind};
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                if (_claimStatus[seat] == ClaimStatus::Claimed && seat != winner) {
+                    record.beaten.push_back({seat, _claims[seat].kind, _claims[seat].chowFirst});
+                }
+            }
+            _lastWindow = eastl::move(record);
+        }
         _claimStatus = {};
         _claims = {};
         _pendingTile = Tile{};

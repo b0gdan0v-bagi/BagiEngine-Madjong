@@ -50,6 +50,7 @@ The game opens on **New game: who plays?**: for each of the four seats pick `Per
 - **Computers** play one step every 0.6 seconds (`kComputerStepSeconds`); nothing moves while the seat choice is open.
 - **Hot seat:** with two or more people at one screen the table is covered between turns ("Pass the screen to Seat 2 (South)"); the next person presses `Show`.
 - **The end of a hand:** a score table covers the table: who won and how, the points of every seat in the hand, what each seat paid or got and its total, the winner's lines (`Pung of 5 Dots: 8`, `One suit, no honours: x8`) and the sum. All four hands are face up. `Next hand` settles it and deals on (`Finish match` on the last one); after the last hand the standings show the seats by points and `New game` opens the seat choice.
+- **Saves:** the match in progress and the choices of the seat choice (language, seats, hands, level, hints) are saved as you play, in `saves/` beside the working directory (git-ignored; `BAGI_MAHJONG_SAVE_DIR` names another folder, empty switches saving off). When the game starts again with a match to go on, the seat choice shows `Continue` beside `Start`: it brings back the table as it was; `Start` begins a new match and replaces the saved one. The match logs for reading are in `logs/matches/`.
 - The HUD (top left of the table) shows the round and the hand number and the tiles left in the wall. Each seat has a plate at its side of the table with its number, its wind (a `*` and a red bar on the plate of East, the dealer) and its score; the plate of the seat whose turn it is is gold.
 
 ## Layout
@@ -57,7 +58,7 @@ The game opens on **New game: who plays?**: for each of the four seats pick `Per
 | Path | What |
 |------|------|
 | `src/Mahjong/` | the game: `MahjongGame` and its control adapter, the rules and the computer players (`Game/`), the pure side of the scene (`Table/`: layout, tile atlas cells, action buttons, the words of the score table) and the scene components (`Components/`: the table, the HUD). `CLAUDE.md` describes it |
-| `config/`, `assets/` | scene, application config, the tile sprite library; the tile atlas (`assets/tiles/tiles.png`) |
+| `config/`, `assets/` | scene (`SceneConfig.xml` with the references and one file per node in `config/nodes/`), application config, the tile sprite library; the tile atlas (`assets/tiles/tiles.png`) |
 | `tools/` | `make_tiles.py`, the generator of our own tile art (`config/TextureLibrary.xml` and the atlas are its output); `arena/main.cpp`, the bot arena program |
 | `docs/` | `bot-arena.md`: how to run the arena and read its intervals |
 | `tests/` | gtest cases and `control_smoke.py`, the smoke test of the control API (plays a hand and a match over WebSocket) |

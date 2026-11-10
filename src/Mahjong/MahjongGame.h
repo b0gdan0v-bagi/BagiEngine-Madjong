@@ -6,6 +6,8 @@
 #include <Mahjong/Game/TableSession.h>
 #include <Mahjong/MahjongGameControl.h>
 #include <Mahjong/MatchLogWriter.h>
+#include <Mahjong/Save/MatchSave.h>
+#include <Mahjong/Save/MatchSaveStore.h>
 
 namespace BECore::Mahjong {
 
@@ -30,6 +32,12 @@ namespace BECore::Mahjong {
      * `HintsOn()` is the switch of the hints (default on, kept for the session, changed in `Setup`). Every match begun through the
      * session is written down by the `MatchLogWriter` the game owns (`GetMatchLog()`); a match started through the non-const `GetMatch()`
      * is not.
+     *
+     * **Saving** (`Save/MatchSave.h`, `Save/MatchSaveStore.h`): the session's sink is a `MatchRecorder` that keeps the events of the
+     * match begun by `StartMatch` (and passes every one on to the match log writer), and `FlushSave()` writes the `match` slot (and the
+     * `settings` slot, the choices of `Setup`) when something changed; `MahjongHudComponent` calls it once per frame (a `SceneUpdateEvent`) and `Stop()` calls it, so a burst
+     * of computer steps is one write. `Start()` reads the prefs and offers a saved match that replays (`CanContinue()`, taken by
+     * `ContinueMatch()`); the background match it deals otherwise is not recorded, so it cannot overwrite the saved one.
      */
     class MahjongGame : public IGame {
         BE_CLASS(MahjongGame)
@@ -43,8 +51,24 @@ namespace BECore::Mahjong {
         /// The adapter of the external control API (`MahjongGameControl.h`): a client plays the person seats of the session.
         IControllableGame* AsControllable() override;
 
+        /// Applies the saved choices of `Setup` and opens the panel over a match: the saved one when there is one that replays
+        /// (`CanContinue()`), else a new random one that is not saved (the panel's `Start` begins the one that is).
         void Start() override;
+        /// Writes what changed (`FlushSave()`).
+        void Stop() override;
         void Reset() override;
+
+        /// Writes the match in progress and the choices of `Setup` to the save folder (`MatchSaveDirectory()`) when they differ from what
+        /// was written last; the end of a match deletes the match slot. Cheap when nothing changed, so a frame hook can call it.
+        void FlushSave();
+
+        /// Whether `Start()` found a saved match and put it on the table behind `Setup`. Cleared by `ContinueMatch()`, by any new match
+        /// and by the panel closing.
+        bool CanContinue() const {
+            return _canContinue;
+        }
+        /// Closes `Setup` (and the rules) and plays the saved match on. Ignored, false, when `CanContinue()` is not true.
+        bool ContinueMatch();
 
         /// The match: started by `Start()` / `Reset()` / `StartMatch`, `NotStarted` before the game is first started.
         Match& GetMatch() {
@@ -110,6 +134,7 @@ namespace BECore::Mahjong {
         }
         void CloseSetup() {
             _setupOpen = false;
+            _canContinue = false;  // whoever closes the panel has moved on from the offer
         }
 
         /// Whether the rules screen (the modal pages `Rules` of the scene, `Table/RulesText.h`) is open. The HUD button `Rules` opens it; a
@@ -154,6 +179,14 @@ namespace BECore::Mahjong {
         /// Puts the stored language into the string table; an empty table (or one without the language) is left alone.
         void ApplyLanguage() const;
 
+        /// `StartMatch` with `record` saying whether the match is kept for the save.
+        MatchStatus BeginMatch(uint32_t seed, bool record);
+        MatchStatus BeginRandomMatch(bool record);
+        /// The saved choices of `Setup` into the game; one warning for a slot that cannot be used.
+        void ApplySavedPrefs();
+        /// The saved match onto the table; false (one warning unless nothing is saved or it is finished) when it cannot be.
+        bool ResumeSavedMatch();
+
         Match _match;
         MahjongSettings _settings;
         SeatSetup _seats = kDefaultSeatSetup;
@@ -162,7 +195,12 @@ namespace BECore::Mahjong {
         bool _rulesOpen = false;
         bool _hintsOn = true;
         PoolString _language = PoolString::Intern(kDefaultLanguage);
-        MatchLogWriter _log;            // before _session: the session reports to it, so it goes last
+        MatchLogWriter _log;      // before _session: the session reports to it, so it goes last
+        MatchRecorder _recorder;  // the session's sink; forwards to _log
+        MatchSaveStore _store;
+        uint64_t _savedCounter = 0;    // the recorder's counter at the last write of the match slot
+        MahjongPrefsSave _savedPrefs;  // what the prefs slot holds (the defaults while there is none)
+        bool _canContinue = false;
         TableSession _session{_match};  // after _match: it keeps a reference
         MahjongGameControl _control{*this};
     };

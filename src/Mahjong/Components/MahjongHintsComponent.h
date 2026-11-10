@@ -16,7 +16,7 @@ namespace BECore::Mahjong {
     class MahjongGame;
 
     /**
-     * @brief The hints of the table (`Table/Hints.h`): the node `Hints` of `config/SceneConfig.xml` carries this component and the canvas it
+     * @brief The hints of the table (`Table/Hints.h`): the node `Hints` (`config/nodes/MahjongHints.xml`) carries this component and the canvas it
      *        fills. It reads the game and the viewer's view and never changes the match.
      *
      * **The switch.** The panel `Setup` has the row `HintsRow`: a `UISegmented` bound to the variable `hintsChoice` (`on` | `off`) whose

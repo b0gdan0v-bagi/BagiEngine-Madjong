@@ -58,6 +58,9 @@ namespace BECore::Mahjong {
     /// The `Hand` event of the hand `match` has just dealt: what the session logs, and what a replay compares the log's `Hand` with.
     [[nodiscard]] MatchLogEvent MakeHandEvent(const Match& match);
 
+    /// The `End` event of a match whose last hand was just settled: the final scores and standings.
+    [[nodiscard]] MatchLogEvent MakeEndEvent(const Match& match);
+
     /// Receives the events of a session in order. The session calls it on the thread that drives the table.
     class IMatchLogSink {
     public:
@@ -109,8 +112,15 @@ namespace BECore::Mahjong {
      * The `Hand`, `Settlement` and `End` events are checked against what the match makes of the actions before them (the deal, the
      * settlement, the final scores), so a log that was changed, or made by other rules, stops at the first event that disagrees. A
      * second `Start` begins a new match on `match`. The `level` of a `Start` is not needed (the computers' choices are in the `Action`
-     * events), so it is read by nobody here. An empty log is `NoStart` at index 0.
+     * events), so it is read by nobody here. An empty log is `NoStart` at index 0. A log may lack its `Hand` and `End` events: what
+     * is missing is not checked.
+     *
+     * With an `echo` every event that was applied is passed on in order, exactly as `TableSession` emits them live: the `Start`
+     * and then the `Hand` the match dealt, each `Action`, each `Settlement` (the one the match made, with its breakdowns) and then
+     * the next `Hand` or the `End`. The `Hand` and `End` events of the log itself are checked but not echoed (the match makes them
+     * again), so a log with and a log without them echo the same events. Events reach the echo before a later event is found wrong:
+     * validate on a scratch match first when a failure must leave no trace.
      */
-    [[nodiscard]] ReplayStatus ReplayMatchLog(const eastl::vector<MatchLogEvent>& events, Match& match);
+    [[nodiscard]] ReplayStatus ReplayMatchLog(const eastl::vector<MatchLogEvent>& events, Match& match, IMatchLogSink* echo = nullptr);
 
 }  // namespace BECore::Mahjong

@@ -1,0 +1,143 @@
+<?xml version="1.0"?>
+<!--
+  The seat choice of a new game: a modal Screen canvas (ScaleWithScreen, minScale 0.6: a 56 unit control is 33.6 px, so every
+  segment and Start are touch targets in any window), hidden here; MahjongHudComponent shows it exactly while
+  MahjongGame::IsSetupOpen() (at the start, and after the New game button). Its Dim covers the whole window, bars and the New game
+  button of HudMenu included. Each seat group carries action MahjongSetSeatN and the value person or computer; the row HandsRow
+  below them carries MahjongSetHands and the value 16 or 8, the row HintsRow MahjongSetHints and the value on or off
+  (MahjongHintsComponent, variable hintsChoice; it takes effect at once, no Start needed), the row LanguageRow above them
+  MahjongSetLanguage (value = the language id, variable language). The variables seatKindN, handsChoice and language are set by
+  the component, which also begins the match on MahjongStart.
+  The roomy shape (a canvas of 1280 x 720 units, the design size) is the anatomy of the modal screens: the plate is the safe area
+  at most 664 high (32 padding + 48 title band + 7 x 64 rows + 64 ButtonRow + 9 x 8 spacing; StartGap is empty, so the 8 + 8 round
+  it set the row of Start 16 apart from the rows) and the title, the rows and Start share its height by flex weights that come out at 48 / 64
+  (0.75 / 1) and stop growing there (maxHeight). A row has no vertical padding: its caption and its group are 87.5 % of its
+  height and centred, which is the 4 padding round a 56 segment of a row of 64. The shape gives way where the canvas is short: the
+  smallest one is a 480 px window at the user scale 1.5, 320 x 320 units (262 x 297 of safe area with insets), where a control is
+  32 px from 21.34 units, and eight controls (seven rows and Start) with the gaps leave 25 units a row once the title is gone, so
+  the variant for a canvas of at most 360 units high hides the Title. The variant for a canvas of at most 440 units wide takes
+  the whole safe width for the plate and narrows the captions (64 for Language, 52 for the others) so that Person / Computer and
+  Человек / Компьютер fit. Every text may shrink (AutoFit, down to 12 units) instead of being cut. MahjongHudTest and
+  MahjongTouchSizeTest hold the shapes, the touch size and the words on the whole size matrix.
+  Continue (MahjongContinue; the saved match is the table behind the panel, MahjongGame::CanContinue()) is not a new row, because
+  the plate has no room for another: Start lives in the horizontal stack ButtonRow (64 high like the rows, 8 between) beside it.
+  Continue is hidden here and shown by MahjongHudComponent exactly while the panel is open and there is a match to continue; a hidden
+  element takes no room, so Start keeps the whole width otherwise, and the two share it half and half when both are there.
+-->
+<node name="Setup" layer="30">
+  <components>
+    <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" modal="true" visible="false">
+      <elements>
+        <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
+        <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="640" height="100%" maxHeight="664" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
+          <children>
+            <element type="UILabel" name="Title" flex="0.75" maxHeight="48" text="{#setup.title}" fontSize="28" overflow="AutoFit" minFontSize="12" align="Center" verticalAlign="Center" color="58,66,92,255" />
+            <element type="UIStack" name="LanguageRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255">
+              <children>
+                <element type="UILabel" name="LanguageCaption" width="112" height="87.5%" text="{#setup.language}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" textColor="190,196,190,255" />
+                <element type="UISegmented" name="Language" bind="language" flex="1" height="87.5%" direction="Horizontal" spacing="4" color="48,54,72,255">
+                  <children>
+                    <element type="UIButton" name="LanguageEn" flex="1" height="100%" text="{#lang.en}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetLanguage" value="en" color="70,70,100,255" selectedColor="40,110,60,255" />
+                    <element type="UIButton" name="LanguageRu" flex="1" height="100%" text="{#lang.ru}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetLanguage" value="ru" color="70,70,100,255" selectedColor="40,110,60,255" />
+                  </children>
+                </element>
+              </children>
+            </element>
+            <element type="UIStack" name="SeatRow0" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255">
+              <children>
+                <element type="UILabel" name="SeatCaption0" width="112" height="87.5%" text="{#setup.seat1}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" textColor="190,196,190,255" />
+                <element type="UISegmented" name="SeatKind0" bind="seatKind0" flex="1" height="87.5%" direction="Horizontal" spacing="4" color="48,54,72,255">
+                  <children>
+                    <element type="UIButton" name="Seat0Person" flex="1" height="100%" text="{#setup.person}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetSeat0" value="person" color="70,70,100,255" selectedColor="40,110,60,255" />
+                    <element type="UIButton" name="Seat0Computer" flex="1" height="100%" text="{#setup.computer}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetSeat0" value="computer" color="70,70,100,255" selectedColor="40,110,60,255" />
+                  </children>
+                </element>
+              </children>
+            </element>
+            <element type="UIStack" name="SeatRow1" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255">
+              <children>
+                <element type="UILabel" name="SeatCaption1" width="112" height="87.5%" text="{#setup.seat2}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" textColor="190,196,190,255" />
+                <element type="UISegmented" name="SeatKind1" bind="seatKind1" flex="1" height="87.5%" direction="Horizontal" spacing="4" color="48,54,72,255">
+                  <children>
+                    <element type="UIButton" name="Seat1Person" flex="1" height="100%" text="{#setup.person}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetSeat1" value="person" color="70,70,100,255" selectedColor="40,110,60,255" />
+                    <element type="UIButton" name="Seat1Computer" flex="1" height="100%" text="{#setup.computer}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetSeat1" value="computer" color="70,70,100,255" selectedColor="40,110,60,255" />
+                  </children>
+                </element>
+              </children>
+            </element>
+            <element type="UIStack" name="SeatRow2" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255">
+              <children>
+                <element type="UILabel" name="SeatCaption2" width="112" height="87.5%" text="{#setup.seat3}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" textColor="190,196,190,255" />
+                <element type="UISegmented" name="SeatKind2" bind="seatKind2" flex="1" height="87.5%" direction="Horizontal" spacing="4" color="48,54,72,255">
+                  <children>
+                    <element type="UIButton" name="Seat2Person" flex="1" height="100%" text="{#setup.person}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetSeat2" value="person" color="70,70,100,255" selectedColor="40,110,60,255" />
+                    <element type="UIButton" name="Seat2Computer" flex="1" height="100%" text="{#setup.computer}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetSeat2" value="computer" color="70,70,100,255" selectedColor="40,110,60,255" />
+                  </children>
+                </element>
+              </children>
+            </element>
+            <element type="UIStack" name="SeatRow3" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255">
+              <children>
+                <element type="UILabel" name="SeatCaption3" width="112" height="87.5%" text="{#setup.seat4}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" textColor="190,196,190,255" />
+                <element type="UISegmented" name="SeatKind3" bind="seatKind3" flex="1" height="87.5%" direction="Horizontal" spacing="4" color="48,54,72,255">
+                  <children>
+                    <element type="UIButton" name="Seat3Person" flex="1" height="100%" text="{#setup.person}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetSeat3" value="person" color="70,70,100,255" selectedColor="40,110,60,255" />
+                    <element type="UIButton" name="Seat3Computer" flex="1" height="100%" text="{#setup.computer}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetSeat3" value="computer" color="70,70,100,255" selectedColor="40,110,60,255" />
+                  </children>
+                </element>
+              </children>
+            </element>
+            <element type="UIStack" name="HandsRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255">
+              <children>
+                <element type="UILabel" name="HandsCaption" width="112" height="87.5%" text="{#setup.hands}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" textColor="190,196,190,255" />
+                <element type="UISegmented" name="HandsChoice" bind="handsChoice" flex="1" height="87.5%" direction="Horizontal" spacing="4" color="48,54,72,255">
+                  <children>
+                    <element type="UIButton" name="Hands16" flex="1" height="100%" text="16" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetHands" value="16" color="70,70,100,255" selectedColor="40,110,60,255" />
+                    <element type="UIButton" name="Hands8" flex="1" height="100%" text="8" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetHands" value="8" color="70,70,100,255" selectedColor="40,110,60,255" />
+                  </children>
+                </element>
+              </children>
+            </element>
+            <element type="UIStack" name="HintsRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255">
+              <children>
+                <element type="UILabel" name="HintsCaption" width="112" height="87.5%" text="{#setup.hints}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" textColor="190,196,190,255" />
+                <element type="UISegmented" name="HintsChoice" bind="hintsChoice" flex="1" height="87.5%" direction="Horizontal" spacing="4" color="48,54,72,255">
+                  <children>
+                    <element type="UIButton" name="HintsOn" flex="1" height="100%" text="{#setup.on}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetHints" value="on" color="70,70,100,255" selectedColor="40,110,60,255" />
+                    <element type="UIButton" name="HintsOff" flex="1" height="100%" text="{#setup.off}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetHints" value="off" color="70,70,100,255" selectedColor="40,110,60,255" />
+                  </children>
+                </element>
+              </children>
+            </element>
+            <element type="UIElement" name="StartGap" height="0" />
+            <element type="UIStack" name="ButtonRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" crossAlign="Stretch">
+              <children>
+                <element type="UIButton" name="Continue" flex="1" text="{#setup.continue}" fontSize="28" overflow="AutoFit" minFontSize="12" action="MahjongContinue" color="45,75,120,255" visible="false" />
+                <element type="UIButton" name="Start" flex="1" text="{#setup.start}" fontSize="28" overflow="AutoFit" minFontSize="12" action="MahjongStart" color="40,110,60,255" />
+              </children>
+            </element>
+          </children>
+        </element>
+      </elements>
+      <variants>
+        <variant when="maxHeight:360">
+          <overrides>
+            <set element="Title" visible="false" />
+          </overrides>
+        </variant>
+        <variant when="maxWidth:440">
+          <overrides>
+            <set element="Plate" width="100%" />
+            <set element="LanguageCaption" width="64" />
+            <set element="SeatCaption0" width="52" />
+            <set element="SeatCaption1" width="52" />
+            <set element="SeatCaption2" width="52" />
+            <set element="SeatCaption3" width="52" />
+            <set element="HandsCaption" width="52" />
+            <set element="HintsCaption" width="52" />
+          </overrides>
+        </variant>
+      </variants>
+    </component>
+  </components>
+</node>

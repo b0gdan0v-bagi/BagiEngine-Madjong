@@ -7,7 +7,7 @@
 namespace BECore::Mahjong {
 
     /**
-     * The action buttons of the table (the node and canvas `Actions` of `config/SceneConfig.xml`): what the person to act can do besides
+     * The action buttons of the table (the node and canvas `Actions`, `config/nodes/MahjongActions.xml`): what the person to act can do besides
      * clicking a tile to discard it. Plain C++, no scene: `MakeActionButtons` turns `HandModel::LegalActions` into the buttons that are
      * shown, the `HandAction` each one performs, the tiles to picture on it and the key of the sentence that explains it. The words themselves
      * (the label of a button, its hint) are keys of the string table (`config/UIStrings.xml`): this file holds no English.

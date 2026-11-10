@@ -83,6 +83,15 @@ namespace BECore::Mahjong::Tests {
             } else {
                 text += " open";
             }
+            text += " | windows " + std::to_string(state.windowSerial);
+            if (state.lastWindow.has_value()) {
+                const ClaimWindowResult& window = *state.lastWindow;
+                text += " last " + std::to_string(window.serial) + "/" + std::to_string(window.from) + "/" + std::string(ToString(window.tile)) + "/" + std::to_string(window.winner) + "/" +
+                        std::to_string(static_cast<int>(window.winningKind)) + " beaten";
+                for (const LostClaim& lost : window.beaten) {
+                    text += " " + std::to_string(lost.seat) + "/" + std::to_string(static_cast<int>(lost.kind)) + "/" + std::string(ToString(lost.chowFirst));
+                }
+            }
             return text;
         }
 
