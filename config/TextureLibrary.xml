@@ -131,5 +131,8 @@
     <sprite name="Tile_Back" texturePath="assets/tiles/tiles.png">
       <srcRect x="192" y="640" w="96" h="128" />
     </sprite>
+    <sprite name="Tile_Stack" texturePath="assets/tiles/tiles.png">
+      <srcRect x="288" y="640" w="96" h="96" />
+    </sprite>
   </sprites>
 </TextureLibrary>

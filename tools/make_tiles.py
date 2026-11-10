@@ -18,7 +18,8 @@ Standard library only (zlib, struct). The geometry below (CELL_W, CELL_H, COLUMN
 src/Mahjong/Table/TileAtlas.h mirrors them and tests/TileSpritesTest.cpp compares the two.
 
 Atlas: COLUMNS x ROWS cells of CELL_W x CELL_H pixels, RGBA, transparent outside the tiles. Cell index = tile id of Tile.h
-(0..8 dots, 9..17 bamboo, 18..26 characters, 27..30 winds, 31..33 dragons, 34..37 flowers, 38..41 seasons), cell 42 = the back.
+(0..8 dots, 9..17 bamboo, 18..26 characters, 27..30 winds, 31..33 dragons, 34..37 flowers, 38..41 seasons), cell 42 = the back,
+cell 43 = a wall stack seen from above (a STACK_SIZE square in the corner of its cell, the rest transparent).
 """
 
 import argparse
@@ -36,7 +37,9 @@ ATLAS_W = CELL_W * COLUMNS
 ATLAS_H = CELL_H * ROWS
 TILE_ID_COUNT = 42
 BACK_INDEX = TILE_ID_COUNT
-CELL_COUNT = TILE_ID_COUNT + 1
+STACK_INDEX = BACK_INDEX + 1
+CELL_COUNT = TILE_ID_COUNT + 2
+STACK_SIZE = 96  # the stack is a square of this many pixels at the top left corner of its cell
 SUPERSAMPLE = 2
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -45,12 +48,15 @@ XML_PATH = ROOT / "config" / "TextureLibrary.xml"
 TEXTURE_PATH = "assets/tiles/tiles.png"
 SPRITE_PREFIX = "Tile_"
 BACK_SPRITE = "Tile_Back"
+STACK_SPRITE = "Tile_Stack"
 
 Color = tuple[int, int, int]
 
 # ----- palette -----
 OUTLINE: Color = (38, 46, 42)
-SIDE: Color = (196, 186, 156)
+SIDE_LIGHT: Color = (226, 216, 186)  # the ivory side next to the face, lit from the top left
+SIDE: Color = (200, 189, 158)
+SIDE_SHADE: Color = (150, 138, 108)  # the outer edge of the bottom and right sides
 FACE: Color = (248, 244, 228)
 INK: Color = (28, 28, 36)
 RED: Color = (196, 40, 40)
@@ -61,6 +67,7 @@ LIGHT_GREEN: Color = (120, 200, 120)
 BACK_FACE: Color = (22, 120, 104)
 BACK_RIM: Color = (88, 176, 156)
 BACK_DARK: Color = (12, 80, 70)
+BACK_LIGHT: Color = (44, 146, 126)
 
 # The corner index: a glyph of the 5x7 font at INDEX_PIXEL cell units per font pixel with its top left corner at (INDEX_X, INDEX_Y), and
 # below it a sign of INDEX_SIGN_HEIGHT units. The patterns are scaled by ART_SCALE toward the bottom right corner of the face so that they
@@ -70,15 +77,24 @@ INDEX_X = 8.0  # a multiple of 4, so that at a quarter size (a discard) a font p
 INDEX_Y = 8.0
 INDEX_GAP = 4.0
 INDEX_SIGN_HEIGHT = 16.0
-ART_SCALE = 0.72
+ART_SCALE = 0.68
 INDEX_OUTLINE = 1.0
 
-# The body of a tile: an outline, the thick side and the face on top of it (the face is the area the patterns use).
+# The body of a tile: an outline, the ivory side and the face on top of it. The side shows at the bottom (SIDE_BOTTOM units) and at the
+# right (SIDE_RIGHT units) as a bevel, lighter next to the face and darker at the outer edge: about 2.5 to 3 pixels at discard size
+# (a quarter of the cell). The patterns are laid out in ART_FACE, the face of the first design, and mapped into BODY_FACE by art_view.
+SIDE_BOTTOM = 11.0
+SIDE_RIGHT = 10.0
 BODY_OUTLINE = (1.0, 1.0, CELL_W - 1.0, CELL_H - 1.0, 11.0)
 BODY_SIDE = (2.0, 2.0, CELL_W - 2.0, CELL_H - 2.0, 10.0)
-BODY_FACE = (4.0, 4.0, CELL_W - 4.0, CELL_H - 10.0, 8.0)
+BODY_FACE = (4.0, 4.0, CELL_W - 2.0 - SIDE_RIGHT, CELL_H - 2.0 - SIDE_BOTTOM, 8.0)
+ART_FACE = (4.0, 4.0, CELL_W - 4.0, CELL_H - 10.0)
+ART_EXTENT = (86.0, 112.0)  # the right and bottom edge of the art in art coordinates (outlines included)
+ART_MARGIN = (2.0, 3.0)  # the room the art keeps to the right and to the bottom edge of the face
 CENTER_X = CELL_W / 2
-CENTER_Y = (BODY_FACE[1] + BODY_FACE[3]) / 2
+CENTER_Y = (ART_FACE[1] + ART_FACE[3]) / 2  # the centre of the art, in art coordinates
+FACE_CENTER_X = (BODY_FACE[0] + BODY_FACE[2]) / 2  # the centre of the face, in cell coordinates
+FACE_CENTER_Y = (BODY_FACE[1] + BODY_FACE[3]) / 2
 INDEX_GLYPH_W = 5 * INDEX_PIXEL
 INDEX_GLYPH_H = 7 * INDEX_PIXEL
 INDEX_CENTER_X = INDEX_X + INDEX_GLYPH_W / 2
@@ -297,8 +313,13 @@ def cell_origin(index: int) -> tuple[int, int]:
 # ----- the tile body -----
 
 def draw_body(canvas: Canvas, face: Color = FACE) -> None:
+    right = BODY_SIDE[2]
+    bottom = BODY_SIDE[3]
     canvas.rrect(*BODY_OUTLINE, OUTLINE)
-    canvas.rrect(*BODY_SIDE, SIDE)
+    # the side in three bands that narrow toward the top left: dark at the outer edge, the ivory, a light one next to the face
+    canvas.rrect(*BODY_SIDE, SIDE_SHADE)
+    canvas.rrect(BODY_SIDE[0], BODY_SIDE[1], right - 2.0, bottom - 4.0, 10.0, SIDE)
+    canvas.rrect(BODY_SIDE[0], BODY_SIDE[1], BODY_FACE[2] + 5.0, BODY_FACE[3] + 3.0, 10.0, SIDE_LIGHT)
     canvas.rrect(*BODY_FACE, face)
     # a thin light edge along the top of the face gives the bevel
     canvas.line(BODY_FACE[0] + 7, BODY_FACE[1] + 1.5, BODY_FACE[2] - 7, BODY_FACE[1] + 1.5, 1.6, (255, 253, 244))
@@ -475,9 +496,32 @@ def draw_back(canvas: Canvas) -> None:
     draw_body(canvas, BACK_FACE)
     canvas.rrect_frame(BODY_FACE[0] + 5, BODY_FACE[1] + 5, BODY_FACE[2] - 5, BODY_FACE[3] - 5, 5, 2, BACK_RIM)
     # a lattice of diamonds in the middle
-    for x in (CENTER_X - 22, CENTER_X, CENTER_X + 22):
-        for y in (CENTER_Y - 33, CENTER_Y - 11, CENTER_Y + 11, CENTER_Y + 33):
+    for x in (FACE_CENTER_X - 22, FACE_CENTER_X, FACE_CENTER_X + 22):
+        for y in (FACE_CENTER_Y - 33, FACE_CENTER_Y - 11, FACE_CENTER_Y + 11, FACE_CENTER_Y + 33):
             canvas.polygon([(x, y - 8), (x + 8, y), (x, y + 8), (x - 8, y)], BACK_DARK)
+
+
+# ----- the wall stack, seen from above -----
+
+# Two tiles side by side, their teal backs up: an ivory edge shows on the right and at the bottom, a soft shade line lies between them.
+STACK_EDGE = 12.0
+STACK_GAP = 4.0
+
+
+def draw_stack(canvas: Canvas) -> None:
+    size = float(STACK_SIZE)
+    canvas.rrect(0.0, 0.0, size, size, 16.0, OUTLINE)
+    canvas.rrect(1.5, 1.5, size - 1.5, size - 1.5, 14.5, SIDE_SHADE)
+    canvas.rrect(1.5, 1.5, size - 1.5 - 3.0, size - 1.5 - 3.0, 14.5, SIDE)
+    canvas.rrect(1.5, 1.5, size - STACK_EDGE + 4.0, size - STACK_EDGE + 4.0, 14.5, SIDE_LIGHT)
+    top = (4.0, 4.0, size - STACK_EDGE, size - STACK_EDGE)
+    middle = (top[0] + top[2]) / 2
+    canvas.rrect(top[0], top[1], middle - STACK_GAP / 2, top[3], 9.0, BACK_FACE)
+    canvas.rrect(middle + STACK_GAP / 2, top[1], top[2], top[3], 9.0, BACK_FACE)
+    canvas.line(middle, top[1] + 2.0, middle, top[3] - 2.0, STACK_GAP, BACK_DARK)
+    for x0, x1 in ((top[0], middle - STACK_GAP / 2), (middle + STACK_GAP / 2, top[2])):
+        canvas.rrect_frame(x0 + 4.0, top[1] + 4.0, x1 - 4.0, top[3] - 4.0, 5.0, 2.0, BACK_RIM)
+        canvas.line(x0 + 9.0, top[1] + 1.8, x1 - 9.0, top[1] + 1.8, 1.6, BACK_LIGHT)
 
 
 # ----- the atlas -----
@@ -568,7 +612,8 @@ def draw_index(canvas: Canvas, tile_id: int) -> None:
 
 def art_view() -> tuple[float, float, float]:
     """The view of the patterns: scaled toward the bottom right corner of the face, which leaves the top left corner free."""
-    return ART_SCALE, BODY_FACE[2] * (1 - ART_SCALE), BODY_FACE[3] * (1 - ART_SCALE)
+    return (ART_SCALE, BODY_FACE[2] - ART_MARGIN[0] - ART_SCALE * ART_EXTENT[0],
+            BODY_FACE[3] - ART_MARGIN[1] - ART_SCALE * ART_EXTENT[1])
 
 
 def draw_face(tile_id: int, template: Canvas, with_index: bool = True) -> Canvas:
@@ -587,6 +632,9 @@ def render_cells() -> list[bytearray]:
     back = Canvas()
     draw_back(back)
     cells.append(back.downsample())
+    stack = Canvas()
+    draw_stack(stack)
+    cells.append(stack.downsample())
     return cells
 
 
@@ -647,7 +695,7 @@ def decode_png(data: bytes) -> list[bytes]:
 # ----- TextureLibrary.xml -----
 
 def sprite_names() -> list[str]:
-    return [SPRITE_PREFIX + notation(tile_id) for tile_id in range(TILE_ID_COUNT)] + [BACK_SPRITE]
+    return [SPRITE_PREFIX + notation(tile_id) for tile_id in range(TILE_ID_COUNT)] + [BACK_SPRITE, STACK_SPRITE]
 
 
 def library_xml() -> str:
@@ -660,7 +708,8 @@ def library_xml() -> str:
     for index, name in enumerate(sprite_names()):
         x, y = cell_origin(index)
         lines.append(f'    <sprite name="{name}" texturePath="{TEXTURE_PATH}">')
-        lines.append(f'      <srcRect x="{x}" y="{y}" w="{CELL_W}" h="{CELL_H}" />')
+        width, height = (STACK_SIZE, STACK_SIZE) if index == STACK_INDEX else (CELL_W, CELL_H)
+        lines.append(f'      <srcRect x="{x}" y="{y}" w="{width}" h="{height}" />')
         lines.append("    </sprite>")
     lines.append("  </sprites>")
     lines.append("</TextureLibrary>")
@@ -679,7 +728,8 @@ def alpha_at(rows: list[bytes], x: int, y: int) -> int:
 
 
 def problems_of(rows: list[bytes]) -> list[str]:
-    """What is wrong with an atlas: equal cells, a face that is not opaque in the middle, a back that is a face, stray pixels."""
+    """What is wrong with an atlas: equal cells, a face that is not opaque in the middle, a tile or the stack that touches a corner of its
+    cell, a stack that is not opaque inside its square or paints outside it, stray pixels."""
     problems = []
     cells = [cell_bytes(rows, index) for index in range(CELL_COUNT)]
     names = sprite_names()
@@ -694,6 +744,13 @@ def problems_of(rows: list[bytes]) -> list[str]:
             problems.append(f"{names[index]} is not opaque in the middle")
         if alpha_at(rows, x0, y0) != 0 or alpha_at(rows, x0 + CELL_W - 1, y0 + CELL_H - 1) != 0:
             problems.append(f"{names[index]} has no transparent corners")
+    x0, y0 = cell_origin(STACK_INDEX)
+    inset = 6  # the corners of the square are rounded; this far in from each corner the stack is solid
+    for dx, dy in ((inset, inset), (STACK_SIZE - 1 - inset, inset), (inset, STACK_SIZE - 1 - inset), (STACK_SIZE - 1 - inset, STACK_SIZE - 1 - inset)):
+        if alpha_at(rows, x0 + dx, y0 + dy) != 255:
+            problems.append(f"{names[STACK_INDEX]} is not opaque inside its square at ({dx}, {dy})")
+    if any(alpha_at(rows, x0 + x, y0 + y) for y in range(CELL_H) for x in range(CELL_W) if x >= STACK_SIZE or y >= STACK_SIZE):
+        problems.append(f"{names[STACK_INDEX]} paints outside its {STACK_SIZE} x {STACK_SIZE} square")
     for index in range(CELL_COUNT, COLUMNS * ROWS):
         if any(cell_bytes(rows, index)[3::4]):
             problems.append(f"the unused cell {index} is not transparent")
