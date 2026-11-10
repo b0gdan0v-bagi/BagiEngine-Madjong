@@ -16,8 +16,8 @@ namespace BECore::Mahjong {
 
     /// The viewer's concealed tiles are large; the tiles of the other seats are small. Sizes (width, height) of the upright tiles of each
     /// zone; a side seat draws them turned, so its slots are height x width.
-    inline constexpr float kViewerHandTileW = 45.0f;
-    inline constexpr float kViewerHandTileH = 60.0f;
+    inline constexpr float kViewerHandTileW = 48.0f;
+    inline constexpr float kViewerHandTileH = 64.0f;
     inline constexpr float kViewerMeldTileW = 30.0f;
     inline constexpr float kViewerMeldTileH = 40.0f;
     inline constexpr float kOpponentHandTileW = 28.0f;

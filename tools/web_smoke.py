@@ -30,8 +30,8 @@ kViewWidth x kViewHeight of Table/TableLayout.h, so one design unit is one pixel
   START_CLICK      the middle of Start: the last row of the Plate of config/nodes/MahjongSetup.xml. The plate is at most 664 high
                    (centred: y 28..692), padding 16, so the row of Start is y 612..676 and its middle 644; Continue is hidden at a
                    first start, so Start has the whole width: x 640.
-  HAND_TILE_CLICK  the middle of the first tile of the viewer's hand (kViewerHandTileW x kViewerHandTileH = 45 x 60, the hand starts
-                   at x 73, y 653).
+  HAND_TILE_CLICK  the middle of the first tile of the viewer's hand (kViewerHandTileW x kViewerHandTileH = 48 x 64, the hand starts
+                   at x 72, y 648).
   CLAIM_ANSWER_CLICKS  the buttons of config/nodes/MahjongActions.xml: ActionRow at x 724, y 460, three buttons of 132 x 56 per
                    row, 8 apart.
 `--start-click X,Y`, `--tile-click X,Y` replace the first two. **When the Setup screen changes (the entry mahjong-setup-options
@@ -314,8 +314,8 @@ def run_checks() -> int:
     assert all(724 <= x < 724 + 412 for x, _ in CLAIM_ANSWER_CLICKS)
     assert len(set(CLAIM_ANSWER_CLICKS)) == len(CLAIM_ANSWER_CLICKS)
 
-    # the hand tile is on the first tile of the viewer's hand: 45 x 60 from (73, 653)
-    assert 73 <= HAND_TILE_CLICK[0] < 73 + 45 and 653 <= HAND_TILE_CLICK[1] < 653 + 60
+    # the hand tile is on the first tile of the viewer's hand: 48 x 64 from (72, 648)
+    assert 72 <= HAND_TILE_CLICK[0] < 72 + 48 and 648 <= HAND_TILE_CLICK[1] < 648 + 64
 
     # parsing: the engine's point and size parsers, and the arguments handed to the engine's smoke
     parsed = build_parser().parse_args(["--dist", "dist", "--start-click", "10, 20", "--allow-console", "x", "--expect-console", "y",

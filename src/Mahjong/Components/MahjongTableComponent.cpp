@@ -777,6 +777,19 @@ namespace BECore::Mahjong {
             }
         }
 
+        // The rack under the viewer's hand (public: the seat at the bottom, face up or not): the dark plate, the lighter body on it with the
+        // dark edge left on three sides. It ends at the rim, which the hand's own padding would reach.
+        if (IsSeat(bottom)) {
+            const Rect bounds = BoundsOf(layout, SlotRole::HandTile, bottom);
+            if (bounds.w > 0.0f) {
+                Rect plate = Padded(bounds, kRackPadding * unit);
+                plate.h = eastl::min(plate.h, viewHeight - rim - plate.y);
+                const float edge = kHandRackLipWidth * unit;
+                renderer.DrawFilledRect(plate.x, plate.y, plate.w, plate.h, kHandRackLip);
+                renderer.DrawFilledRect(plate.x + edge, plate.y, plate.w - 2.0f * edge, plate.h - edge, kHandRack);
+            }
+        }
+
         if (IsSeat(turnSeat)) {
             const Rect bounds = BoundsOf(layout, SlotRole::HandTile, turnSeat);
             if (bounds.w > 0.0f) {
