@@ -1,3 +1,4 @@
+#include "ComputerTestSupport.h"
 #include "MahjongTableTestSupport.h"
 #include "UiStyleTestSupport.h"
 
@@ -13,6 +14,13 @@ namespace BECore::Mahjong::Tests {
         constexpr uint32_t kSeedsToTry = 40;
         /// Steps after which the live wall has certainly shrunk by a few stacks.
         constexpr int kStepsForTheWall = 40;
+        /// East's hand and seats 1 and 3 holding a pair of 5p that a pung of East's 5p completes (a claimed tile on the side seats).
+        constexpr const char* kEastPlainHand = "1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Gd Rd";
+        constexpr const char* kPairOfFives = "4p 5p 5p 6p 7p 2s 5s 8s 2m 5m 8m Ww Nw";
+        /// The turn of the tiles of a seat at screen position `position`, worked out here and not taken from the layout.
+        constexpr float TurnAt(int position) {
+            return position == 1 ? 270.0f : (position == 3 ? 90.0f : 0.0f);
+        }
 
     }  // namespace
 
@@ -27,6 +35,37 @@ namespace BECore::Mahjong::Tests {
                 }
             }
             return found;
+        }
+
+        /// A hand of four computers played until it has an open set, a bonus tile and discards (a copy of the model: any viewer can lay it).
+        HandModel TableWithMeldBonusAndDiscards() {
+            for (uint32_t seed = 1; seed <= kSeedsToTry; ++seed) {
+                Start(kAllComputers, seed, true);
+                const bool found = StepUntil([&] {
+                    int melds = 0;
+                    int bonus = 0;
+                    for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                        melds += static_cast<int>(Hand().GetHand(seat).melds.size());
+                        bonus += static_cast<int>(Hand().GetHand(seat).bonus.size());
+                    }
+                    return melds > 0 && bonus > 0 && Hand().Discards().size() > 2;
+                });
+                if (found) {
+                    return Hand();
+                }
+            }
+            ADD_FAILURE() << "a table with an open set and a bonus tile";
+            return Hand();
+        }
+
+        /// Seat `claimer` pungs the 5p that East (seat 0) discards; the person at seat 0 is the viewer.
+        HandModel ClaimedPung(Seat claimer) {
+            FixedWallSpec spec = SpecOf(kEastPlainHand, "5p");
+            spec.hands[claimer] = kPairOfFives;
+            HandModel model = MakeModel(spec);
+            EXPECT_TRUE(model.Discard(kSeat0, T("5p")).has_value());
+            EXPECT_TRUE(model.Claim(claimer, ClaimKind::Pung).has_value());
+            return model;
         }
 
         static int NotWallStacks(const TableLayout& layout) {
@@ -315,6 +354,110 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(TileCalls().empty());
         EXPECT_EQ(_table->GetLayout().slots.size(), slots);
         EXPECT_GE(_renderer->calls.size(), slots) << "a rectangle for every tile";
+    }
+
+    TEST_F(MahjongTableUiTest, TheTilesOfTheSideSeatsAreTurnedTowardsTheTableForEveryViewerAndNoOtherTileIs) {
+        const HandModel table = TableWithMeldBonusAndDiscards();
+        for (const Seat viewer : {kSeat0, kSeat2}) {
+            SeatSetup seats = kAllComputers;
+            seats[viewer] = SeatKind::Person;
+            ASSERT_NO_FATAL_FAILURE(Start(seats));
+            Lay(table);
+            Draw();
+
+            const TableLayout& layout = _table->GetLayout();
+            ASSERT_EQ(layout.viewer, viewer);
+            size_t sideSlots = 0;
+            for (const TileSlot& slot : layout.slots) {
+                const int position = slot.role == SlotRole::WallStack ? 0 : SeatPosition(viewer, slot.seat);
+                EXPECT_EQ(slot.rotation, TurnAt(position)) << "viewer " << viewer << " seat " << slot.seat << " role " << static_cast<int>(slot.role);
+                sideSlots += slot.rotation != 0.0f ? 1 : 0;
+                if (slot.rotation != 0.0f) {
+                    EXPECT_GT(slot.rect.w, slot.rect.h) << "a turned tile lies on its side";
+                }
+            }
+            ASSERT_GT(sideSlots, 0u);
+            ASSERT_NO_FATAL_FAILURE(ExpectTableDrawn(false, viewer));
+            // Every turned draw is a tile of a side seat: the viewer's and the top seat's tiles are plain texture calls (`ExpectTableDrawn`)
+            EXPECT_EQ(_renderer->turned.size(), sideSlots) << "viewer " << viewer;
+            for (const TurnedDraw& draw : _renderer->turned) {
+                EXPECT_EQ(_renderer->calls[draw.call].kind, DrawKind::Texture);
+                EXPECT_TRUE(draw.transform.rotation == 90.0f || draw.transform.rotation == 270.0f);
+            }
+        }
+    }
+
+    TEST_F(MahjongTableUiTest, WithoutAnAtlasTheSideSeatsFacesAreTurnedRectanglesOverTheSameScreenRectangle) {
+        const HandModel table = TableWithMeldBonusAndDiscards();
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        Draw();
+        Lay(table);
+        _table->SetAtlasTexture({});
+        Draw();
+
+        const TableLayout& layout = _table->GetLayout();
+        EXPECT_TRUE(TileCalls().empty());
+        size_t sideSlots = 0;
+        for (const TileSlot& slot : layout.slots) {
+            if (slot.rotation == 0.0f) {
+                continue;
+            }
+            ++sideSlots;
+            const Rect upright = UprightRect(slot.rect, slot.rotation);
+            // The face: a turned rectangle with the unturned rectangle of the slot, about the centre of the slot, over the slot's screen rectangle
+            bool found = false;
+            for (const TurnedDraw& draw : _renderer->turned) {
+                const DrawCall& call = _renderer->calls[draw.call];
+                if (draw.upright.x == upright.x && draw.upright.y == upright.y && draw.upright.w == upright.w && draw.upright.h == upright.h && draw.transform.rotation == slot.rotation) {
+                    EXPECT_EQ(call.kind, DrawKind::Rect);
+                    EXPECT_EQ(draw.transform.pivotX, RectCentreX(slot.rect));
+                    EXPECT_EQ(draw.transform.pivotY, RectCentreY(slot.rect));
+                    EXPECT_EQ(call.rect.x, slot.rect.x);
+                    EXPECT_EQ(call.rect.y, slot.rect.y);
+                    EXPECT_EQ(call.rect.w, slot.rect.w);
+                    EXPECT_EQ(call.rect.h, slot.rect.h);
+                    found = true;
+                    break;
+                }
+            }
+            EXPECT_TRUE(found) << "seat " << slot.seat << " role " << static_cast<int>(slot.role) << " index " << slot.index;
+        }
+        ASSERT_GT(sideSlots, 0u);
+        // A turned face is never drawn upright, and a turned draw is of a side seat only
+        for (const TurnedDraw& draw : _renderer->turned) {
+            EXPECT_TRUE(draw.transform.rotation == 90.0f || draw.transform.rotation == 270.0f);
+            EXPECT_EQ(_renderer->calls[draw.call].kind, DrawKind::Rect);
+        }
+    }
+
+    TEST_F(MahjongTableUiTest, TheClaimedEdgeBarOfASideSeatSetLiesInsideTheScreenRectangleOnTheSideOfTheClaimEdge) {
+        for (const Seat claimer : {kSeat1, kSeat3}) {
+            ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+            Lay(ClaimedPung(claimer));
+            Draw();
+
+            const TileSlot* claimed = nullptr;
+            for (const TileSlot& slot : _table->GetLayout().slots) {
+                if (slot.claimEdge != Edge::None) {
+                    ASSERT_EQ(claimed, nullptr) << "one claimed tile";
+                    claimed = &slot;
+                }
+            }
+            ASSERT_NE(claimed, nullptr) << "seat " << claimer;
+            ASSERT_EQ(claimed->seat, claimer);
+            ASSERT_NE(claimed->rotation, 0.0f);
+            EXPECT_EQ(claimed->claimEdge, Edge::Bottom) << "seat 0, where the claim came from, is at the bottom of the screen";
+            const std::vector<DrawCall> bars = RectsOf(kClaimedEdge);
+            ASSERT_EQ(bars.size(), 1u) << "seat " << claimer;
+            const Rect& bar = bars[0].rect;
+            const Rect& tile = claimed->rect;
+            EXPECT_GE(bar.x, tile.x);
+            EXPECT_LE(bar.x + bar.w, tile.x + tile.w);
+            EXPECT_GE(bar.y, tile.y);
+            EXPECT_EQ(bar.y + bar.h, tile.y + tile.h) << "flush with the bottom edge of the screen rectangle";
+            EXPECT_EQ(bar.w, tile.w) << "the whole width of the lying tile";
+            EXPECT_LT(bar.h, tile.h);
+        }
     }
 
     TEST_F(MahjongTableUiTest, DrawingChangesNothing) {

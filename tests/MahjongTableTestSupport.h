@@ -69,6 +69,121 @@ namespace BECore::Mahjong::Tests {
         return std::string(value.data(), value.size());
     }
 
+    /// A turned draw as the renderer was asked for it: the index of its call in `calls`, the unturned rectangle and the transform as passed.
+    struct TurnedDraw {
+        size_t call = 0;
+        Rect upright;
+        DrawTransform transform;
+    };
+
+    /**
+     * A `RecordingRenderer` that records a turned tile the way it records an upright one: `DrawTransformedTexture` / `DrawTransformedRect`
+     * with a transform that is not the identity arrive as `DrawKind::Texture` / `DrawKind::Rect` (source, tint, texture, color as in the plain
+     * call) whose `rect` is the bounding box of the turned quad in output pixels, that is the screen rectangle of the slot; the unturned
+     * rectangle and the transform go to `turned`, under the index of the call. An identity transform goes to the base class, as the engine does.
+     * The engine's helper stays as it is (it records a turned draw as geometry, which says nothing about a slot).
+     */
+    class TurnRecordingRenderer : public RecordingRenderer {
+    public:
+        void DrawTransformedTexture(ITexture& texture, const Rect* srcRect, float dstX, float dstY, float dstW, float dstH, const Color& tint, const DrawTransform& transform) override {
+            if (transform.IsIdentity()) {
+                RecordingRenderer::DrawTransformedTexture(texture, srcRect, dstX, dstY, dstW, dstH, tint, transform);
+                return;
+            }
+            if (IsClipEmpty()) {
+                return;
+            }
+            DrawCall call;
+            call.kind = DrawKind::Texture;
+            call.rect = BoundingBox(Rect{dstX, dstY, dstW, dstH}, transform);
+            call.color = tint;
+            call.texture = &texture;
+            if (srcRect) {
+                call.source = *srcRect;
+            }
+            call.clip = GetClipRect();
+            call.blend = GetBlendMode();
+            Record(std::move(call), Rect{dstX, dstY, dstW, dstH}, transform);
+        }
+
+        void DrawTransformedRect(float x, float y, float w, float h, const Color& color, const DrawTransform& transform) override {
+            if (transform.IsIdentity()) {
+                RecordingRenderer::DrawTransformedRect(x, y, w, h, color, transform);
+                return;
+            }
+            if (IsClipEmpty()) {
+                return;
+            }
+            DrawCall call;
+            call.kind = DrawKind::Rect;
+            call.rect = BoundingBox(Rect{x, y, w, h}, transform);
+            call.color = color;
+            call.clip = GetClipRect();
+            call.blend = GetBlendMode();
+            Record(std::move(call), Rect{x, y, w, h}, transform);
+        }
+
+        void ClearCalls() {
+            RecordingRenderer::ClearCalls();
+            turned.clear();
+        }
+
+        /// The turned draw of the call `index`, null when that call was not turned.
+        const TurnedDraw* TurnOf(size_t index) const {
+            for (const TurnedDraw& draw : turned) {
+                if (draw.call == index) {
+                    return &draw;
+                }
+            }
+            return nullptr;
+        }
+
+        eastl::vector<TurnedDraw> turned;
+
+    private:
+        void Record(DrawCall&& call, const Rect& upright, const DrawTransform& transform) {
+            turned.push_back(TurnedDraw{calls.size(), upright, transform});
+            calls.push_back(std::move(call));
+        }
+
+        /// The box around the quad `upright` turned by `transform`, in output pixels. A quarter or three-quarter turn is worked out with exact
+        /// sine and cosine so that the box is the screen rectangle to the last bit, not to a few ulps.
+        Rect BoundingBox(const Rect& upright, const DrawTransform& transform) const {
+            const float turn = std::fmod(std::fmod(transform.rotation, 360.0f) + 360.0f, 360.0f);
+            float cosine = 0.0f;
+            float sine = 0.0f;
+            const bool exact = turn == 0.0f || turn == 90.0f || turn == 180.0f || turn == 270.0f;
+            if (exact) {
+                cosine = turn == 0.0f ? 1.0f : (turn == 180.0f ? -1.0f : 0.0f);
+                sine = turn == 90.0f ? 1.0f : (turn == 270.0f ? -1.0f : 0.0f);
+            }
+            std::array<Vec2, 4> corners = MakeTransformedQuad(upright, transform);
+            if (exact) {
+                const float xs[2] = {upright.x, upright.x + upright.w};
+                const float ys[2] = {upright.y, upright.y + upright.h};
+                size_t at = 0;
+                for (const float y : ys) {
+                    for (const float x : xs) {
+                        const float dx = x - transform.pivotX;
+                        const float dy = y - transform.pivotY;
+                        corners[at++] = Vec2{transform.pivotX + dx * cosine - dy * sine, transform.pivotY + dx * sine + dy * cosine};
+                    }
+                }
+            }
+            float left = corners[0].x;
+            float top = corners[0].y;
+            float right = corners[0].x;
+            float bottom = corners[0].y;
+            for (const Vec2& corner : corners) {
+                left = std::min(left, corner.x);
+                top = std::min(top, corner.y);
+                right = std::max(right, corner.x);
+                bottom = std::max(bottom, corner.y);
+            }
+            return GetViewTransform().ToOutput(left, top, right - left, bottom - top);
+        }
+    };
+
     class MahjongTableTestBase : public ::testing::Test {
     protected:
         static void SetUpTestSuite() {
@@ -80,7 +195,7 @@ namespace BECore::Mahjong::Tests {
             CoreManager::GetUIVars().Clear();
             EXPECT_TRUE(LoadShippedStrings(CoreManager::GetUIStrings()).empty());
             ASSERT_TRUE(CoreManager::GetUIStrings().SetLanguage("en"_intern));  // the expectations of the tests are English
-            _renderer = New<RecordingRenderer>();
+            _renderer = New<TurnRecordingRenderer>();
             _renderer->width = kViewWidth;
             _renderer->height = kViewHeight;
             CoreManager::GetRendererManager().SetRenderer(_renderer);
@@ -296,11 +411,13 @@ namespace BECore::Mahjong::Tests {
             return std::nullopt;
         }
 
-        /// Every slot of the layout was drawn once, in order, at its rect, with the face the model allows; nothing else was a tile.
+        /// Every slot of the layout was drawn once, in order, at its rect, with the face the model allows; nothing else was a tile. A slot is
+        /// drawn turned exactly when its `rotation` is not 0, about the centre of its rect, with the unturned rectangle `UprightRect`.
         void ExpectTableDrawn(bool allFaces, Seat faceSeat) {
             const std::vector<DrawCall> calls = TileCalls();
             const TableLayout& layout = _table->GetLayout();
             ASSERT_EQ(calls.size(), layout.slots.size());
+            size_t callIndex = 0;
             for (size_t i = 0; i < calls.size(); ++i) {
                 const TileSlot& slot = layout.slots[i];
                 const std::optional<Tile> tile = Expected(slot, allFaces, faceSeat);
@@ -312,6 +429,25 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_EQ(calls[i].rect.y, slot.rect.y) << "slot " << i;
                 EXPECT_EQ(calls[i].rect.w, slot.rect.w) << "slot " << i;
                 EXPECT_EQ(calls[i].rect.h, slot.rect.h) << "slot " << i;
+                // The turn of the call: found by the position of the call in the recording
+                while (callIndex < _renderer->calls.size() && !(_renderer->calls[callIndex].kind == DrawKind::Texture && _renderer->calls[callIndex].texture == _atlasTexture)) {
+                    ++callIndex;
+                }
+                ASSERT_LT(callIndex, _renderer->calls.size()) << "slot " << i;
+                const TurnedDraw* turn = _renderer->TurnOf(callIndex);
+                ++callIndex;
+                EXPECT_EQ(turn != nullptr, slot.rotation != 0.0f) << "slot " << i << " role " << static_cast<int>(slot.role) << " seat " << slot.seat;
+                if (turn != nullptr && slot.rotation != 0.0f) {
+                    const Rect upright = UprightRect(slot.rect, slot.rotation);
+                    EXPECT_EQ(turn->transform.rotation, slot.rotation) << "slot " << i;
+                    EXPECT_EQ(turn->transform.pivotX, RectCentreX(slot.rect)) << "slot " << i;
+                    EXPECT_EQ(turn->transform.pivotY, RectCentreY(slot.rect)) << "slot " << i;
+                    EXPECT_FALSE(turn->transform.flipX || turn->transform.flipY) << "slot " << i;
+                    EXPECT_EQ(turn->upright.x, upright.x) << "slot " << i;
+                    EXPECT_EQ(turn->upright.y, upright.y) << "slot " << i;
+                    EXPECT_EQ(turn->upright.w, upright.w) << "slot " << i;
+                    EXPECT_EQ(turn->upright.h, upright.h) << "slot " << i;
+                }
             }
         }
 
@@ -345,7 +481,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         const ITexture* _atlasTexture = nullptr;
-        IntrusivePtr<RecordingRenderer> _renderer;
+        IntrusivePtr<TurnRecordingRenderer> _renderer;
         IntrusivePtrAtomic<SceneManager> _manager;
         MahjongGame* _game = nullptr;
         MahjongTableComponent* _table = nullptr;

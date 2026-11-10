@@ -23,6 +23,8 @@ namespace BECore::Mahjong {
     namespace {
 
         constexpr eastl::string_view kRevealAction = "MahjongReveal";
+        /// The tint of a turned tile: white leaves the atlas as it is (the plain `DrawTexture` has the same default).
+        constexpr Color kUntinted{255, 255, 255, 255};
         constexpr Color kPlainFace{238, 230, 205, 255};
         constexpr Color kPlainBack{36, 120, 118, 255};
         constexpr Color kPlainSuit{70, 110, 200, 255};
@@ -661,25 +663,40 @@ namespace BECore::Mahjong {
             keepsWaiting = KeepsWaitingDiscards(MakeTableView(hand, bottom));
         }
 
-        // A face (the tile) or the back (nullopt) at `rect`: from the atlas, else a plain rectangle.
-        const auto drawFace = [&](const Rect& rect, std::optional<Tile> face) {
+        // A face (the tile) or the back (nullopt) at the screen rectangle `rect`: from the atlas, else a plain rectangle. A turned slot
+        // (`rotation` != 0, a side seat) hands the draw the unturned rectangle and the turn about the centre of `rect`, so the quad covers `rect`.
+        const auto drawFace = [&](const Rect& rect, std::optional<Tile> face, float rotation) {
+            const Rect upright = UprightRect(rect, rotation);
+            const DrawTransform turn{rotation, RectCentreX(rect), RectCentreY(rect)};
+            const bool turned = !turn.IsIdentity();
             if (_atlas) {
                 const Rect source = face ? SourceRect(*face) : BackRect();
-                renderer.DrawTexture(*_atlas, &source, rect.x, rect.y, rect.w, rect.h);
+                if (turned) {
+                    renderer.DrawTransformedTexture(*_atlas, &source, upright.x, upright.y, upright.w, upright.h, kUntinted, turn);
+                } else {
+                    renderer.DrawTexture(*_atlas, &source, rect.x, rect.y, rect.w, rect.h);
+                }
                 return;
             }
-            renderer.DrawFilledRect(rect.x, rect.y, rect.w, rect.h, face ? kPlainFace : kPlainBack);
+            const auto fill = [&](const Rect& part, const Color& color) {
+                if (turned) {
+                    renderer.DrawTransformedRect(part.x, part.y, part.w, part.h, color, turn);
+                } else {
+                    renderer.DrawFilledRect(part.x, part.y, part.w, part.h, color);
+                }
+            };
+            fill(upright, face ? kPlainFace : kPlainBack);
             if (face) {
-                const float insetX = rect.w * kPlainMarkInset;
-                const float insetY = rect.h * kPlainMarkInset;
-                renderer.DrawFilledRect(rect.x + insetX, rect.y + insetY, rect.w - 2.0f * insetX, rect.h - 2.0f * insetY, PlainMarkColor(*face));
+                const float insetX = upright.w * kPlainMarkInset;
+                const float insetY = upright.h * kPlainMarkInset;
+                fill(Rect{upright.x + insetX, upright.y + insetY, upright.w - 2.0f * insetX, upright.h - 2.0f * insetY}, PlainMarkColor(*face));
             }
         };
         // The shadow under a tile (not under a wall stack); the frame of a pending discard lies over it, so the gold is even
         const auto drawShadow = [&](const Rect& rect) { renderer.DrawFilledRect(rect.x + kShadowOffset * unit, rect.y + kShadowOffset * unit, rect.w, rect.h, kTileShadow); };
-        const auto drawTile = [&](const Rect& rect, std::optional<Tile> face) {
+        const auto drawTile = [&](const Rect& rect, std::optional<Tile> face, float rotation) {
             drawShadow(rect);
-            drawFace(rect, face);
+            drawFace(rect, face, rotation);
         };
 
         // The plates under the discard blocks and the wall ring
@@ -769,7 +786,7 @@ namespace BECore::Mahjong {
             const PlayerHand& held = hand.GetHand(slot.seat);
             switch (slot.role) {
                 case SlotRole::HandTile:
-                    drawTile(rect, faces.Shows(slot.seat) ? std::optional<Tile>(held.concealed[slot.index]) : std::nullopt);
+                    drawTile(rect, faces.Shows(slot.seat) ? std::optional<Tile>(held.concealed[slot.index]) : std::nullopt, slot.rotation);
                     if (slot.seat == bottom && slot.index == drawnIndex) {
                         renderer.DrawFilledRect(rect.x, rect.y, rect.w, rect.h, kDrawnTileMark);
                     }
@@ -788,7 +805,7 @@ namespace BECore::Mahjong {
                     const Meld& meld = held.melds[slot.index];
                     // An open set is public; a concealed kong is as hidden as the hand it was made from.
                     const bool shown = !meld.concealed || faces.Shows(slot.seat);
-                    drawTile(rect, shown ? std::optional<Tile>(MeldTileAt(meld, slot.part)) : std::nullopt);
+                    drawTile(rect, shown ? std::optional<Tile>(MeldTileAt(meld, slot.part)) : std::nullopt, slot.rotation);
                     if (slot.claimEdge != Edge::None) {
                         const Rect bar = EdgeBar(rect, slot.claimEdge, kClaimedEdgeWidth * unit);
                         renderer.DrawFilledRect(bar.x, bar.y, bar.w, bar.h, kClaimedEdge);
@@ -796,23 +813,23 @@ namespace BECore::Mahjong {
                     break;
                 }
                 case SlotRole::BonusTile:
-                    drawTile(rect, held.bonus[slot.index]);
+                    drawTile(rect, held.bonus[slot.index], slot.rotation);
                     break;
                 case SlotRole::DiscardTile:
                     if (claimPending && slot.index == pendingEntry) {
                         drawShadow(rect);
                         const Rect framed = Padded(rect, kPendingMargin * unit);
                         renderer.DrawFilledRect(framed.x, framed.y, framed.w, framed.h, kPendingFrame);
-                        drawFace(rect, hand.Discards()[slot.index].tile);
+                        drawFace(rect, hand.Discards()[slot.index].tile, slot.rotation);
                     } else {
-                        drawTile(rect, hand.Discards()[slot.index].tile);
+                        drawTile(rect, hand.Discards()[slot.index].tile, slot.rotation);
                     }
                     if (slot.index == lastDiscard) {
                         renderer.DrawFilledRect(rect.x, rect.y, rect.w, rect.h, kLastDiscardMark);
                     }
                     break;
                 case SlotRole::WallStack:
-                    drawFace(rect, std::nullopt);
+                    drawFace(rect, std::nullopt, slot.rotation);
                     break;
             }
         };
