@@ -50,6 +50,17 @@ namespace BECore::Mahjong {
     /// four-sets-and-a-pair shape.
     [[nodiscard]] int AcceptanceOf(const TableView& view, const TileCounts& counts, int meldCount);
 
+    /// A discard that leaves the hand waiting: the tile, the unseen copies of the tiles it waits on, and its `KeepValue`.
+    struct WaitingDiscard {
+        Tile tile;
+        int copies = 0;
+        int keep = 0;
+    };
+
+    /// The listed discards with `declareCalling == declaring` that leave a waiting hand (steps 2 and 4 of the turn, and the candidates of
+    /// the search), in the order of `view.legal`.
+    [[nodiscard]] eastl::vector<WaitingDiscard> WaitingDiscards(const TableView& view, bool declaring);
+
     /// How good the best discard of a hand of `3n + 2` tiles is: the tile, the shanten and the acceptance of the `3n + 1` tiles left.
     struct DiscardRating {
         Tile tile;
@@ -85,7 +96,8 @@ namespace BECore::Mahjong {
      * 5. Otherwise `BestDiscard` of the concealed tiles; with `profile.skipAcceptancePercent` a roll leaves out the acceptance (the
      *    lowest shanten, then `KeepValue`, then `rng`).
      *
-     * `profile` is the level's numbers (`kNormalProfile`: every knob off, no number drawn besides the tie-breaks). Always an element
+     * `profile` is the level's numbers (`kNormalProfile`: every knob off, no number drawn besides the tie-breaks). With
+     * `profile.searchWorlds` above 0 the search (`ComputerSearch.h`) runs after step 1 and may replace the choice of steps 2 to 5. Always an element
      * of `view.legal`. Seven pairs and thirteen orphans are not aimed at (`Shanten` does not look at them), but
      * step 1 to 2 take them whenever the model lists them.
      */

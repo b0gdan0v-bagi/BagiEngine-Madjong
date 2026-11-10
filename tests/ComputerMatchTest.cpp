@@ -13,7 +13,9 @@
  * well formed); at the end the match is finished after exactly `handsPerMatch` counted hands. The same seed played again, this time by
  * `ComputerTable::PlayMatch`, gives the same history and the same scores; another table seed plays another match. Normal plays all
  * eight combinations, Easy the three of `kLevelSubset` (flowers off with 16 hands, flowers on with 8, flowers off with 8 and
- * counted draws), so the whole first test takes about 8 s in Debug. Easy plays another match than Normal on the same seed. Pure
+ * counted draws), so the whole first test takes about 8 s in Debug. Easy plays another match than Normal on the same seed. One short
+ * match of 4 hands is played with a search seat among three Normal ones (the search is a profile knob, no level: the entry
+ * `mahjong-bot-search` found it no stronger than Normal, this keeps it working), with the same legality and audit checks. Pure
  * logic: no engine services.
  */
 namespace BECore::Mahjong::Tests {
@@ -28,6 +30,13 @@ namespace BECore::Mahjong::Tests {
         constexpr int kStepLimitPerHand = 2000;
         /// Far more hands than a match of 16 counted ones needs, replayed draws included.
         constexpr int kHandLimit = 400;
+        /// The match with a search seat: 4 hands (a round is one hand), the seat that searches, a small budget (a search decision plays
+        /// worlds x candidates whole hands, in Debug about 10 ms each).
+        constexpr int kSearchMatchHands = 4;
+        constexpr Seat kSearchSeat = 1;
+        constexpr uint32_t kSearchMatchSeed = 710;
+        constexpr int kSearchTestWorlds = 2;
+        constexpr int kSearchTestCandidates = 3;
 
         struct PlayedMatch {
             eastl::vector<HandSettlement> history;
@@ -92,6 +101,25 @@ namespace BECore::Mahjong::Tests {
             played.scores = match.Scores();
         }
 
+        /// One hand by four `ComputerPlayer`s that need not share a profile: the actor's own player decides, its action is listed and accepted.
+        void StepMixedHand(eastl::array<ComputerPlayer, kSeatCount>& players, HandModel& hand, const std::string& where, int& steps, int& searchSteps) {
+            int handSteps = 0;
+            while (hand.GetPhase() != Phase::Finished) {
+                ASSERT_LT(handSteps, kStepLimitPerHand) << where << ": the hand does not end";
+                const Seat actor = ComputerTable::NextActor(hand);
+                ASSERT_TRUE(IsSeat(actor)) << where;
+                const eastl::vector<HandAction> legal = hand.LegalActions(actor);
+                const std::optional<HandAction> action = players[actor].Decide(hand, actor);
+                ASSERT_TRUE(action.has_value()) << where << " seat " << actor;
+                EXPECT_TRUE(Has(legal, *action)) << where << " seat " << actor << " chose " << Name(action->kind) << " " << ToString(action->tile);
+                const auto applied = hand.Apply(actor, *action);
+                ASSERT_TRUE(applied.has_value()) << where << " seat " << actor << ": " << Name(applied.error());
+                ++handSteps;
+                ++steps;
+                searchSteps += actor == kSearchSeat ? 1 : 0;
+            }
+        }
+
     }  // namespace
 
     TEST(ComputerMatchTest, WholeMatchesByFourComputerPlayersNeverMakeAnIllegalMoveAndKeepEveryInvariant) {
@@ -139,6 +167,38 @@ namespace BECore::Mahjong::Tests {
             ASSERT_NO_FATAL_FAILURE(PlayWithTheTable(index, ComputerLevel::Easy, easy));
             EXPECT_NE(easy.scores, normal.scores) << WhereOf(index);
         }
+    }
+
+    TEST(ComputerMatchTest, OneSearchSeatAmongThreeNormalSeatsPlaysAShortMatchLegally) {
+        MahjongSettings settings;
+        settings.handsPerMatch = kSearchMatchHands;
+        const std::string where = "search match (seed " + std::to_string(kSearchMatchSeed) + ")";
+        Match match;
+        ASSERT_TRUE(match.Start(settings, kSearchMatchSeed).has_value()) << where;
+
+        LevelProfile search = kNormalProfile;
+        search.searchWorlds = kSearchTestWorlds;
+        search.searchCandidates = kSearchTestCandidates;
+        auto playerOf = [&](Seat seat) { return seat == kSearchSeat ? ComputerPlayer(SeatSeed(kSearchMatchSeed, seat), search) : ComputerPlayer(SeatSeed(kSearchMatchSeed, seat)); };
+        eastl::array<ComputerPlayer, kSeatCount> players{playerOf(0), playerOf(1), playerOf(2), playerOf(3)};
+
+        MatchTotals totals;
+        MatchAudit audit(settings, where, totals);
+        int steps = 0;
+        int searchSteps = 0;
+        while (match.GetPhase() == MatchPhase::InHand) {
+            ASSERT_LT(audit.HandIndex(), kHandLimit) << where << ": the match does not end";
+            ASSERT_NO_FATAL_FAILURE(audit.BeforeHand(match));
+            ASSERT_NO_FATAL_FAILURE(StepMixedHand(players, match.Hand(), where + " hand " + std::to_string(audit.HandIndex()), steps, searchSteps));
+            const auto ended = match.EndHand();
+            ASSERT_TRUE(ended.has_value()) << where << ": " << Name(ended.error());
+            ASSERT_NO_FATAL_FAILURE(audit.AfterHand(match, ended.value()));
+        }
+        ASSERT_NO_FATAL_FAILURE(audit.AtEnd(match));
+        EXPECT_EQ(match.HandsPlayed(), kSearchMatchHands) << where;
+        EXPECT_GT(searchSteps, 0) << "the search seat never acted";
+        RecordProperty("SearchMatchSteps", steps);
+        RecordProperty("SearchSeatSteps", searchSteps);
     }
 
     TEST(ComputerMatchTest, ADifferentTableSeedPlaysADifferentMatchOnTheSameWalls) {

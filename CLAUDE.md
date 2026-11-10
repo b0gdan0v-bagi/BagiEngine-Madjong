@@ -4,7 +4,7 @@ Classic Chinese mahjong for four seats on BagiEngine (the submodule `engine/`, b
 
 ## State
 
-Every stage of the plan is built: the rules, the match, the computer players (Easy | Normal), the table session, the control API, the match log, the scene (table, HUD, seat plates, hints, marks, flights, setup, end screens, 13 rules pages), save and Continue, English and Russian. Open work and the owner's pending looks are in the todo store (area `mahjong`), not here.
+Every stage of the plan is built: the rules, the match, the computer players (Easy | Normal; a search player exists as knobs, off, since it did not beat Normal: `docs/bot-search.md`), the table session, the control API, the match log, the scene (table, HUD, seat plates, hints, marks, flights, setup, end screens, 13 rules pages), save and Continue, English and Russian. Open work and the owner's pending looks are in the todo store (area `mahjong`), not here.
 
 ## Where to read
 

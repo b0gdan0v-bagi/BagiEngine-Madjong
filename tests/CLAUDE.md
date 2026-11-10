@@ -19,8 +19,8 @@ Rules of the engine: `engine/.claude/rules/tests-module.md`. New rule code gets 
 
 ## Files
 
-- **Rules (pure logic):** `Tile`, `MahjongRng` (golden values), `Seats`, `Wall`, `Deal`, `FixedWall`, `HandShape`, `HandWaiting` (pruned vs reference), `Shanten`, `HandModel{Turn,Claim,Kong,Moves,Actions,Playout,Window}`, `Score{Points,Doubles,Winner,Limit}`, `Payments`, `ScoreHand`, `Match`, `MatchPlayout`.
-- **Computer players:** `ComputerView` (no peeking), `ComputerTurn`, `ComputerClaim`, `ComputerPlayer`, `ComputerLevel` (**golden scores of Normal, seeds 700..703**), `ComputerMatch` (whole matches, ~8 s Debug), `ComputerStrength` (vs random seats, the numbers in the file, ~3 s).
+- **Rules (pure logic):** `Tile`, `MahjongRng` (golden values), `Seats`, `Wall`, `Deal`, `FixedWall`, `HandShape`, `HandWaiting` (pruned vs reference), `Shanten`, `HandModel{Turn,Claim,Kong,Moves,Actions,Playout,Window,Restore}`, `Score{Points,Doubles,Winner,Limit}`, `Payments`, `ScoreHand`, `Match`, `MatchPlayout`.
+- **Computer players:** `ComputerView` (no peeking), `ComputerTurn`, `ComputerClaim`, `ComputerPlayer`, `ComputerLevel` (**golden scores of Normal, seeds 700..703**), `ComputerMatch` (whole matches, ~8 s Debug), `ComputerStrength` (vs random seats, the numbers in the file, ~3 s), `ComputerWorld` (a sampled world gives back the same view), `ComputerSearch` (~7 s); `ComputerMatch` also plays one search seat among three Normal ones.
 - **Arena:** `ArenaPlayer`, `ArenaRun`, `ArenaStats`, `ArenaCli`.
 - **Session, log, control:** `TableSession`, `MatchLog`, `MatchLogJson`, `MatchLogFile` (its global environment points the log folder at a temp dir for the whole binary), `MahjongSave` (resume from a log, ~20 s Debug), `MahjongSaveStore`, `MahjongSaveGame` (its global environment switches saving off for the whole binary), `MahjongGameControl`, `MahjongGame`.
 - **Pure scene logic:** `TableLayout`, `SeatPlates`, `ActionButtons`, `MoveText`, `RulesText` (the drift guard: no digit outside a placeholder), `ScoreText`, `Hints`, `CallingMarks`, `TileFlights`, `TouchRegime`, `TileSprites`, `Strings`.

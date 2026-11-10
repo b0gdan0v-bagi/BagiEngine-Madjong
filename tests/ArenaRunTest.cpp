@@ -1,3 +1,4 @@
+#include <Mahjong/Arena/ArenaReport.h>
 #include <Mahjong/Arena/ArenaRun.h>
 #include <gtest/gtest.h>
 
@@ -7,7 +8,8 @@
  * one seed equals the four `PlayArenaHand` calls, the mirror identity (Normal against three Normal wins exactly one hand of the four
  * rotations of a seed), determinism, a focus player's result not depending on the other focus players, the numbers of
  * `ComputerStrengthTest` (seeds 4000..4059, Normal against three random seats: 186 wins of 240, the random seats 27 together, 27 drawn
- * hands, +31730 points) and a bad config. Pure logic: no engine services; the file takes about 5.5 s in Debug (few seeds, the 60 seeds of
+ * hands, +31730 points), a bad config and the threads: the same config at 1, 2 and 5 jobs gives equal results and the same report text,
+ * and a hand that fails gives the error of the lowest seed whatever the number of threads. Pure logic: no engine services; the file takes about 8 s in Debug (few seeds, the 60 seeds of
  * `ComputerStrengthTest` played once for Normal and Easy together).
  */
 namespace BECore::Mahjong::Arena {
@@ -21,6 +23,10 @@ namespace BECore::Mahjong::Arena {
         constexpr int kTwoSeeds = 2;
         constexpr int kNoSeeds = 0;
         constexpr int kNegativeSeeds = -3;
+        /// The seeds of the thread tests (cheap in Debug) and the thread counts: one, two, and more than a seed per thread cannot be.
+        constexpr int kThreadSeeds = 6;
+        constexpr int kJobCounts[] = {1, 2, 5};
+        constexpr int kTooManyJobs = kMaxJobs + 1;
 
         ArenaPlayer Player(std::string_view spec) {
             const std::expected<ArenaPlayer, eastl::string> player = ParseArenaPlayer(spec);
@@ -296,6 +302,79 @@ namespace BECore::Mahjong::Arena {
         // The seeds run past the largest one.
         const std::string past = ErrorOf(ConfigOf({"normal"}, "random", kTwoSeeds, std::numeric_limits<uint32_t>::max()));
         EXPECT_NE(past.find("4294967295"), std::string::npos) << past;
+    }
+
+    TEST(ArenaRunTest, TheThreadsDoNotChangeTheResult) {
+        ArenaConfig config = ConfigOf({"normal", "easy:skipClaimPercent=20"}, "random", kThreadSeeds);
+        EXPECT_EQ(config.jobs, kDefaultJobs) << "the default is one thread";
+        const ArenaResult single = PlayConfig(config);
+        const eastl::string singleReport = FormatArenaReport(single);
+        EXPECT_FALSE(singleReport.empty());
+        for (const int jobs : kJobCounts) {
+            config.jobs = jobs;
+            const ArenaResult threaded = PlayConfig(config);
+            ASSERT_EQ(threaded.focus.size(), single.focus.size()) << jobs;
+            for (size_t index = 0; index < single.focus.size(); ++index) {
+                EXPECT_TRUE(SameFocus(single.focus[index], threaded.focus[index])) << "jobs " << jobs << " focus " << index;
+            }
+            EXPECT_EQ(FormatArenaReport(threaded), singleReport) << "jobs " << jobs;
+        }
+    }
+
+    TEST(ArenaRunTest, TheTimingSumsTheThreads) {
+        ArenaConfig config = ConfigOf({"normal"}, "normal", kThreadSeeds);
+        config.timing = true;
+        const ArenaResult single = PlayConfig(config);
+        config.jobs = 2;
+        const ArenaResult threaded = PlayConfig(config);
+        EXPECT_GT(threaded.focus[0].focus.nanoseconds, 0);
+        EXPECT_GT(threaded.focus[0].others.nanoseconds, 0);
+        // The clock is the only difference: the decisions and the rows are those of one thread.
+        EXPECT_EQ(threaded.focus[0].focus.decisions, single.focus[0].focus.decisions);
+        EXPECT_TRUE(SameRows(threaded.focus[0].rows, single.focus[0].rows));
+    }
+
+    TEST(ArenaRunTest, AFailingHandGivesTheErrorOfTheLowestSeedWhateverTheThreads) {
+        // Seeds 4002 and 4004 fail (the second one for the second focus player only); the others are played as they are.
+        const ArenaHandPlayer failing = [](uint32_t seed, const ArenaPlayers& players, bool timing) -> std::expected<HandRecord, eastl::string> {
+            if (seed == 4004 || (seed == 4002 && players[0].name != "normal" && players[1].name != "normal" && players[2].name != "normal" && players[3].name != "normal")) {
+                return std::unexpected(Format("seed {}: made up", seed));
+            }
+            return PlayArenaHand(seed, players, timing);
+        };
+        ArenaConfig config = ConfigOf({"normal", "easy"}, "random", kThreadSeeds);
+        for (const int jobs : kJobCounts) {
+            config.jobs = jobs;
+            const std::expected<ArenaResult, eastl::string> result = RunArena(config, failing);
+            ASSERT_FALSE(result.has_value()) << jobs;
+            EXPECT_EQ(std::string(result.error().c_str()), "focus easy: seed 4002: made up") << "jobs " << jobs;
+        }
+        // Only a later seed fails: it is the error, again for every thread count.
+        const ArenaHandPlayer later = [](uint32_t seed, const ArenaPlayers& players, bool timing) -> std::expected<HandRecord, eastl::string> {
+            if (seed >= 4004) {
+                return std::unexpected(Format("seed {}: made up", seed));
+            }
+            return PlayArenaHand(seed, players, timing);
+        };
+        for (const int jobs : kJobCounts) {
+            config.jobs = jobs;
+            const std::expected<ArenaResult, eastl::string> result = RunArena(config, later);
+            ASSERT_FALSE(result.has_value()) << jobs;
+            EXPECT_EQ(std::string(result.error().c_str()), "focus normal: seed 4004: made up") << "jobs " << jobs;
+        }
+    }
+
+    TEST(ArenaRunTest, TheNumberOfThreadsIsChecked) {
+        ArenaConfig config = ConfigOf({"normal"}, "random", kTwoSeeds);
+        config.jobs = 0;
+        EXPECT_NE(ErrorOf(config).find("number of threads is 0"), std::string::npos);
+        config.jobs = kTooManyJobs;
+        EXPECT_NE(ErrorOf(config).find("from 1 to 256"), std::string::npos);
+        config.jobs = -1;
+        EXPECT_FALSE(ErrorOf(config).empty());
+        // More threads than seeds is fine: the extra ones are not started.
+        config.jobs = kMaxJobs;
+        EXPECT_EQ(PlayConfig(config).focus.at(0).rows.size(), static_cast<size_t>(kTwoSeeds));
     }
 
 }  // namespace BECore::Mahjong::Arena

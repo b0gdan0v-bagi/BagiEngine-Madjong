@@ -44,6 +44,8 @@ namespace BECore::Mahjong {
      *    case does not count. With `profile.skipClaimPercent` a roll passes the claim that was chosen.
      * 4. No acceptable claim: `Pass`.
      *
+     * With `profile.searchWorlds` above 0 the search (`ComputerSearch.h`) runs after step 2 and may replace the choice of steps 3 and 4.
+     *
      * No defence: every loser pays the winner the same, so a discard that wins for another seat costs the discarder nothing extra.
      * Always an element of `view.legal` (`Pass` is, for a seat that has not decided).
      */

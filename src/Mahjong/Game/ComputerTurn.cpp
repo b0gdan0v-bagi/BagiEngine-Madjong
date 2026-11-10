@@ -1,5 +1,7 @@
 #include "ComputerTurn.h"
 
+#include <Mahjong/Game/ComputerSearch.h>
+
 namespace BECore::Mahjong {
 
     namespace {
@@ -53,28 +55,12 @@ namespace BECore::Mahjong {
             return copies;
         }
 
-        /// The listed discards (with the declaration, or without it) that leave a waiting hand, scored by the unseen winning copies.
-        eastl::vector<Candidate> WaitingDiscards(const TableView& view, bool declaring) {
-            TileCounts counts = CountTiles(view.own.concealed);
-            const TileCounts meldTiles = CountMeldTiles(view.own.melds);
-            eastl::vector<Candidate> candidates;
-            for (const HandAction& action : view.legal) {
-                if (action.kind != ActionKind::Discard || action.declareCalling != declaring) {
-                    continue;
-                }
-                --counts[action.tile.Id()];
-                const int copies = UnseenWinningCopies(view, counts, MeldCountOf(view), meldTiles);
-                ++counts[action.tile.Id()];
-                if (copies != kNotWaiting) {
-                    candidates.push_back({action.tile, copies, KeepValue(action.tile, view.seatWind, view.roundWind)});
-                }
-            }
-            return candidates;
-        }
-
         /// Step 2 and 4: the discard that declares the calling hand (`declaring`), or keeps the declared hand waiting.
         std::optional<HandAction> ChooseWaitingDiscard(const TableView& view, MahjongRng& rng, bool declaring) {
-            const eastl::vector<Candidate> candidates = WaitingDiscards(view, declaring);
+            eastl::vector<Candidate> candidates;
+            for (const WaitingDiscard& discard : WaitingDiscards(view, declaring)) {
+                candidates.push_back({discard.tile, discard.copies, discard.keep});
+            }
             if (candidates.empty()) {
                 return std::nullopt;
             }
@@ -248,6 +234,24 @@ namespace BECore::Mahjong {
         return copies;
     }
 
+    eastl::vector<WaitingDiscard> WaitingDiscards(const TableView& view, bool declaring) {
+        TileCounts counts = CountTiles(view.own.concealed);
+        const TileCounts meldTiles = CountMeldTiles(view.own.melds);
+        eastl::vector<WaitingDiscard> discards;
+        for (const HandAction& action : view.legal) {
+            if (action.kind != ActionKind::Discard || action.declareCalling != declaring) {
+                continue;
+            }
+            --counts[action.tile.Id()];
+            const int copies = UnseenWinningCopies(view, counts, MeldCountOf(view), meldTiles);
+            ++counts[action.tile.Id()];
+            if (copies != kNotWaiting) {
+                discards.push_back({action.tile, copies, KeepValue(action.tile, view.seatWind, view.roundWind)});
+            }
+        }
+        return discards;
+    }
+
     DiscardRating BestDiscard(const TileCounts& counts, int meldCount, const TableView& view, MahjongRng& rng) {
         const BestDiscards best = FindBestDiscards(counts, meldCount, view);
         if (best.candidates.empty()) {
@@ -273,6 +277,11 @@ namespace BECore::Mahjong {
     HandAction ChooseTurnAction(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
         if (const HandAction* win = FindAction(view, ActionKind::DeclareWin)) {
             return *win;
+        }
+        if (profile.searchWorlds > 0) {
+            if (const std::optional<HandAction> searched = SearchTurnAction(view, rng, profile)) {
+                return *searched;
+            }
         }
         if (const std::optional<HandAction> declaration = ChooseWaitingDiscard(view, rng, true)) {
             if (!Roll(rng, profile.skipDeclarationPercent)) {

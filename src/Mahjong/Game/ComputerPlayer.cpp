@@ -13,9 +13,9 @@ namespace BECore::Mahjong {
         switch (view.phase) {
             case Phase::Claim:
             case Phase::RobKong:
-                return ChooseClaimAction(view, _rng, ProfileOf(_level));
+                return ChooseClaimAction(view, _rng, _profile);
             case Phase::Discard:
-                return ChooseTurnAction(view, _rng, ProfileOf(_level));
+                return ChooseTurnAction(view, _rng, _profile);
             case Phase::Finished:
                 break;
         }
@@ -38,6 +38,9 @@ namespace BECore::Mahjong {
     ComputerTable::ComputerTable(uint32_t seed, ComputerLevel level)
         : _level(level),
           _players{ComputerPlayer(SeatSeed(seed, 0), level), ComputerPlayer(SeatSeed(seed, 1), level), ComputerPlayer(SeatSeed(seed, 2), level), ComputerPlayer(SeatSeed(seed, 3), level)} {}
+
+    ComputerTable::ComputerTable(uint32_t seed, const LevelProfile& profile)
+        : _players{ComputerPlayer(SeatSeed(seed, 0), profile), ComputerPlayer(SeatSeed(seed, 1), profile), ComputerPlayer(SeatSeed(seed, 2), profile), ComputerPlayer(SeatSeed(seed, 3), profile)} {}
 
     Seat ComputerTable::NextActor(const HandModel& model) {
         switch (model.GetPhase()) {

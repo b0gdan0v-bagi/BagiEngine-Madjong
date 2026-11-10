@@ -1,5 +1,7 @@
 #include "ComputerClaim.h"
 
+#include <Mahjong/Game/ComputerSearch.h>
+
 namespace BECore::Mahjong {
 
     namespace {
@@ -107,6 +109,11 @@ namespace BECore::Mahjong {
         const int shantenBefore = Shanten(CountTiles(view.own.concealed), MeldCountOf(view));
         if (shantenBefore <= kWaitingShanten) {
             return HandAction::MakePass();
+        }
+        if (profile.searchWorlds > 0) {
+            if (const std::optional<HandAction> searched = SearchClaimAction(view, rng, profile)) {
+                return *searched;
+            }
         }
         const eastl::vector<HandAction> best = BestClaims(view, shantenBefore, profile);
         if (best.empty()) {

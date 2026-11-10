@@ -178,6 +178,39 @@ namespace BECore::Mahjong {
         eastl::vector<LostClaim> beaten;
     };
 
+    /**
+     * @brief Everything a `HandModel` keeps, as plain data (`HandModel::Capture`, `HandModel::Restore`).
+     *
+     * For the search player and the tests: the rules never build a hand from it. The wall is the three lists in draw order (the front
+     * of `loose` is the next loose draw, the front of `live` the next regular draw; `Wall::FromParts`); how the wall was broken is not
+     * kept. The fields are those of the model of the same name; `east` has to be the seat that holds East in `seatWinds`, `claims`
+     * holds only the claims of the seats whose status is `Claimed` (the others stay `ClaimOption{}`), `pendingTile` is the tile of the
+     * open window and invalid outside one, `result` is set exactly when the phase is `Finished`, and `lastWindow` / `windowSerial` are
+     * the record of `LastClaimWindow()` and the count of the settled windows (public data, taken over as they are).
+     */
+    struct HandState {
+        MahjongSettings settings;
+        SeatWinds seatWinds{};
+        Wind roundWind = Wind::East;
+        Seat east = 0;
+        eastl::vector<Tile> loose;
+        eastl::vector<Tile> live;
+        eastl::vector<Tile> dead;
+        eastl::array<PlayerHand, kSeatCount> hands;
+        eastl::vector<DiscardEntry> discards;
+        eastl::vector<HandMove> moves;
+        Phase phase = Phase::Finished;
+        Seat current = 0;
+        Tile drawnTile;
+        bool drawnLoose = false;
+        eastl::array<ClaimStatus, kSeatCount> claimStatus{};
+        eastl::array<ClaimOption, kSeatCount> claims;
+        Tile pendingTile;
+        std::optional<HandResult> result;
+        std::optional<ClaimWindowResult> lastWindow;
+        int windowSerial = 0;
+    };
+
     /// What an action returns: nothing, or why it was refused.
     using HandStatus = std::expected<void, HandError>;
 
@@ -281,6 +314,23 @@ namespace BECore::Mahjong {
         [[nodiscard]] Seat East() const noexcept {
             return _east;
         }
+
+        /// The whole state of the hand as data, for `Restore`. For the search player and the tests; the rules never call it.
+        [[nodiscard]] HandState Capture() const;
+        /**
+         * @brief Builds a hand in any state from plain data. For the search player and the tests; the rules never call it.
+         *
+         * Refuses, with a text that names what is wrong, a state no play could reach: seat winds without exactly one East or an `east`
+         * that is not it, a tile that is not a tile, a meld that cannot exist, a tile kind over its copies or missing (every kind of
+         * the set has all its copies, 144 tiles with `settings.flowers`, 136 without, counted over the hands, melds, bonus tiles, the
+         * pile and the three parts of the wall), a loose reserve over `kLooseTiles` or a dead wall that is not `kDeadWallTiles`, a hand
+         * of the wrong size for the phase (13 tiles, and 14 for the seat to act and for a winner), a seat to act that is no seat, a
+         * claim window with no pending tile, with the pending tile not at the end of the pile (`Claim`) or not the owner's fourth tile
+         * of a pung (`RobKong`), with a seat in it that has no claim or one out of it that has, with a claimed option that the seat
+         * could not make, or with nobody left to decide; a result that does not fit the phase. Concealed tiles are sorted. The model
+         * is then exactly the one that was captured: the same actions are legal and the same play follows.
+         */
+        [[nodiscard]] static std::expected<HandModel, eastl::string> Restore(HandState state);
 
         /**
          * @brief The current seat discards `tile`; the hand goes on to the next seat's draw.
