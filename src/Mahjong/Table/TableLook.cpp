@@ -21,7 +21,7 @@ namespace BECore::Mahjong {
             return h & kHashByteMask;
         }
 
-        /// How far from the middle `index` of `size` pixels is, 0 in the middle and nearly 1 at the edge; the same for an index and its mirror.
+        /// How far from the middle `nearest` of `size` pixels is, 0 in the middle and nearly 1 at the edge; the same for a pixel and its mirror.
         float DistanceFromMiddle(uint32_t nearest, uint32_t size) {
             return 1.0f - static_cast<float>(2 * nearest + 1) / static_cast<float>(size);
         }

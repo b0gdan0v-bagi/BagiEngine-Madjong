@@ -885,7 +885,7 @@ namespace BECore::Mahjong {
                     }
                     break;
                 case SlotRole::WallStack:
-                    drawFace(place, std::nullopt, true);
+                    drawFace(place, std::nullopt, /*stack=*/true);
                     break;
             }
         };

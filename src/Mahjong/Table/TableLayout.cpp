@@ -94,17 +94,17 @@ namespace BECore::Mahjong {
 
         constexpr float kDiscardBlockX = Centered(kViewWidth, kDiscardBlockW);
 
-        // The wall: a rectangle ring of cells in the middle, centred between the top and the bottom discard blocks (so the plates that
-        // the table paints under the three keep the same gap).
+        // The wall: a rectangle ring of cells in the middle, centred between the top and the bottom discard blocks (so the gap to the
+        // top and to the bottom discard block is the same).
         constexpr float kWallRingW = kWallStackSize * kWallRingColumns;
         constexpr float kWallRingH = kWallStackSize * kWallRingRows;
         constexpr float kWallRingX = Centered(kViewWidth, kWallRingW);
         constexpr float kWallRingY = (kTopDiscardY + kDiscardBlockH + kBottomDiscardY - kWallRingH) / 2.0f;
 
         // The seat plates, by screen position (0 bottom, 1 right, 2 top, 3 left), each in the free ground next to its seat's discard block.
-        // Bottom: left of the bottom discard plate, above the viewer's bonus row, right of the left meld column (which ends at x 76). Right: above the right discard plate, below the move
+        // Bottom: left of the bottom discard block, above the viewer's bonus row, right of the left meld column (which ends at x 76). Right: above the right discard block, below the move
         // line of the HUD (which ends at y 172), right of the `Hint` label (x 1000) and left of the right bonus column. Top: below the top
-        // seat's melds and the HUD's `Info`, left of the top discard plate. Left: above the left discard plate, clear of the left bonus
+        // seat's melds and the HUD's `Info`, left of the top discard block. Left: above the left discard block, clear of the left bonus
         // column. The side plates start on the grid unit next to their discard block.
         constexpr float kSeatPlateBottomX = 76.0f;
         constexpr float kSeatPlateBottomY = 532.0f;
@@ -118,7 +118,7 @@ namespace BECore::Mahjong {
         // The layout above must fit the zones it names: a change to a size that breaks it fails to compile.
         // The side columns are the squeeze of the table: with the turned tiles (32 / 32 / 21 wide) and the block of 160 x 144 the right
         // discard block lies at x 1011, so the `Hint` label of `config/nodes/MahjongActions.xml` ends at x 1000 (a grid unit clear of the
-        // plate under the block, which reaches `kPlatePadding` past it) and the side seat plates sit right at their blocks. The score
+        // block, which the seat plates keep `kPlatePadding` away from) and the side seat plates sit right at their blocks. The score
         // table of a hand (`MahjongHandOver.xml`) lies on x 104..1176 and the HUD's move line ends at y 172, x 1188: the columns stay
         // outside the one and the bonus column starts below the other.
         static_assert(kViewerRowX + kViewerHandSpan + kViewerRowGap + kViewerMeldCapacity <= kViewWidth - kEdge);
@@ -132,8 +132,7 @@ namespace BECore::Mahjong {
         static_assert(kRightDiscardX > kWallRingX + kWallRingW);
         static_assert(kLeftDiscardX > kLeftBonusX + kOpponentBonusTileH);
         static_assert(kSideBonusCapacity <= kSideHandSpan);
-        // The seat plates keep clear of the plates under the discard blocks (a plate reaches `kPlatePadding` past its block) and of the
-        // tiles round them
+        // The seat plates keep `kPlatePadding` clear of the discard blocks and clear of the tiles round them
         static_assert(kSeatPlateBottomX + kSeatPlateW <= kDiscardBlockX - kPlatePadding);
         static_assert(kSeatPlateBottomY + kSeatPlateH <= kViewerBonusY);
         static_assert(kSeatPlateBottomX >= kLeftMeldX + kOpponentMeldTileH);

@@ -354,8 +354,8 @@ namespace BECore::Mahjong::Tests {
             return Rect(rect.x - margin, rect.y - margin, rect.w + 2.0f * margin, rect.h + 2.0f * margin);
         }
 
-        /// The four plates of `layout` are of one size, inside the view, hold no slot, keep a grid unit clear of the plates under the zones
-        /// (the zones grown by `kPlatePadding`) and of each other; `scale` is the factor of the view over the design.
+        /// The four seat plates of `layout` are of one size, inside the view, hold no slot, keep `kPlatePadding` clear of the zones
+        /// (the zones grown by it) and of each other; `scale` is the factor of the view over the design.
         void ExpectSeatPlatesAreSound(const TableLayout& layout, float scale) {
             const float unit = static_cast<float>(kGridUnit) * scale;
             for (Seat seat = 0; seat < kSeatCount; ++seat) {

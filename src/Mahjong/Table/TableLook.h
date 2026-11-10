@@ -1,6 +1,5 @@
 #pragma once
 
-
 namespace BECore::Mahjong {
 
     /// The size of the felt texture in pixels (the view is 1280 x 720: the texture is stretched over it, so the grain is a few units wide).
