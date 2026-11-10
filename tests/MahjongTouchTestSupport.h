@@ -103,6 +103,11 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
+    /// Whether the window is one of the engine's matrix (density 1), not one of `PhoneWindows`: the checks of the touch size of the HUD run in those only.
+    inline bool IsMatrixWindow(const MatrixWindow& window) {
+        return window.pixelDensity == 1.0f;
+    }
+
     /// The profile of the table the component draws in this window (`TableProfileFor`, with the engine's touch minimum).
     inline TableProfile TableProfileOf(const MatrixWindow& window) {
         return TableProfileFor(window.outputWidth, window.outputHeight, window.pixelDensity, CoreManager::GetUIEnvironment().GetSettings().minTouchSize);

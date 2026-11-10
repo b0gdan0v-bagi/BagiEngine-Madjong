@@ -239,10 +239,10 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongUiStyleTest, ASizeOffTheGridIsCaught) {
-        for (const auto& [from, to] : {std::pair<const char*, const char*>{"width=\"132\"", "width=\"130\""},
+        for (const auto& [from, to] : {std::pair<const char*, const char*>{"width=\"104\"", "width=\"102\""},
                                        {"spacing=\"8\"", "spacing=\"6\""},
                                        {"padding=\"16\"", "padding=\"15\""},
-                                       {"y=\"460\"", "y=\"461\""},
+                                       {"y=\"440\"", "y=\"441\""},
                                        {"maxWidth=\"640\"", "maxWidth=\"642\""}}) {
             const Report report = CheckStyle(Broken(_text, from, to));
             EXPECT_FALSE(Of(report, Rule::Grid).empty()) << to;
