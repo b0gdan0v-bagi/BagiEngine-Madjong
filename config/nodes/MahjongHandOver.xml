@@ -7,7 +7,7 @@
   last hand); MahjongNextHand settles the hand and deals on. The button is not in this canvas: a control of a SceneView canvas
   is only 24 px high in the smallest window. It is in HandOverAction, a Screen canvas, in the middle of the window, over the empty
   element ButtonGap of this plate (64 high, between the seat rows and the lines: y 334..398 of the view, the middle of the plate and
-  of the window). The gap and the two gaps of 8 around it, 80 units, hold the button in every landscape window of the matrix (its
+  of the window). The gap and the two gaps of 8 around it, 80 units, hold the button in every landscape window of the matrix at user scale 1.0 (its
   scale outgrows the table's by 1.41 at most, 56 x 1.41 = 79); a portrait window puts the button under the table (the variant of
   HandOverAction). To make room for the gap the lines are in four columns of 24% (124 high for the sixteen, AutoFit down to 12 for
   the longest) instead of three of 32% (188).

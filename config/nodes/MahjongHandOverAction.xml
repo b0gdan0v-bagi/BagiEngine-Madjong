@@ -6,7 +6,7 @@
   and hidden by MahjongHudComponent together with HandOver, which is modal and takes every click that the button does not. It is 56 high at
   22, 176 wide, and its word shrinks (AutoFit): "Следующая раздача" does not fit 176 at 22. The button and the plate are on two scales (the
   canvas follows the window with a floor, the plate follows the fit of the table), so the button is as tall in view units as 56 times the ratio
-  of the two, which is 1.0 in a 16:9 window and at most 1.42 in a landscape one of the matrix (32:9): the gap and the two gaps of 8 of the
+  of the two, which is 1.0 in a 16:9 window and at most 1.42 in a landscape one of the matrix at user scale 1.0 (32:9): the gap and the two gaps of 8 of the
   plate around it, 80 units, hold that. The button has ignoreSafeArea (a child of the root: the validator lets it) and is anchored to the
   centre, so a notch or side insets do not move it off the gap; y 4 centres it in the gap of the plate (the gap's middle is 6 units
   under the middle of the view).

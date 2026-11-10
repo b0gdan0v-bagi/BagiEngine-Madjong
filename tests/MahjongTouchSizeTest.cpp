@@ -17,6 +17,13 @@ namespace BECore::Mahjong::Tests {
 
         constexpr float kEngineTouchMinimum = 32.0f;
 
+        // The Next hand button and the gap of the score table that holds it (the numbers of MahjongHandOver.xml and MahjongHandOverAction.xml;
+        // MahjongEndScreenTest holds the files to them), and the ratio of the window scale to the fit of the table that the 32:9 window of the matrix
+        // is known to exceed (the largest in a landscape window is 1.42)
+        constexpr float kNextHandButtonHeight = 56.0f;
+        constexpr float kNextHandGapHeight = 64.0f;
+        constexpr float kLandscapeScaleRatioFloor = 1.4f;
+
         /// The window of 1280 x 720 pixels, where the view is the output and a canvas of a scene is the view.
         MatrixWindow DesignWindow() {
             MatrixWindow window;
@@ -538,8 +545,8 @@ namespace BECore::Mahjong::Tests {
         EXPECT_GT(underTheTable, 0u);
         // The tallest the button gets in a landscape window of the matrix (32:9, where the window scale outgrows the fit of the table) is what the
         // gap of 64 and the two gaps of 8 around it hold
-        EXPECT_GT(tallestInTheGap, 56.0f * 1.4f) << "the matrix has a 32:9 window";
-        EXPECT_LE(tallestInTheGap, 64.0f + 2.0f * kModalGap);
+        EXPECT_GT(tallestInTheGap, kNextHandButtonHeight * kLandscapeScaleRatioFloor) << "the matrix has a 32:9 window";
+        EXPECT_LE(tallestInTheGap, kNextHandGapHeight + 2.0f * kModalGap);
     }
 
     namespace {
