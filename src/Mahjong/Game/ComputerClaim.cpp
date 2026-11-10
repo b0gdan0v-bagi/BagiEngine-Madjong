@@ -4,57 +4,35 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        /// A claim that may be made: the action, the rating of the hand after it and its rank at a tie.
-        struct ClaimCandidate {
-            HandAction action;
-            DiscardRating after;
-            int rank = 0;
-        };
-
         /// Whether a claim of `kind` at a rating that is no better than the hand as it is (`s1 == s0`) is still worth it.
         bool KeepsValueAtEqualShanten(const TableView& view, ClaimKind kind) noexcept {
             return (kind == ClaimKind::Pung || kind == ClaimKind::Kong) && IsValueTile(view.pendingTile, view.seatWind, view.roundWind);
         }
 
-        bool IsAcceptable(const TableView& view, const ClaimCandidate& candidate, int shantenBefore, const LevelProfile& profile) noexcept {
-            if (candidate.after.shanten != shantenBefore) {
-                return candidate.after.shanten < shantenBefore;
+        bool IsAcceptable(const TableView& view, const HandAction& action, const DiscardRating& after, int shantenBefore, const LevelProfile& profile) noexcept {
+            if (after.shanten != shantenBefore) {
+                return after.shanten < shantenBefore;
             }
-            return profile.takeValueClaimsAtEqualShanten && KeepsValueAtEqualShanten(view, candidate.action.claim);
-        }
-
-        /// Whether `a` is a better claim than `b`: the lower shanten, then the higher acceptance, then the higher rank.
-        bool IsBetter(const ClaimCandidate& a, const ClaimCandidate& b) noexcept {
-            if (a.after.shanten != b.after.shanten) {
-                return a.after.shanten < b.after.shanten;
-            }
-            if (a.after.acceptance != b.after.acceptance) {
-                return a.after.acceptance > b.after.acceptance;
-            }
-            return a.rank > b.rank;
+            return profile.takeValueClaimsAtEqualShanten && KeepsValueAtEqualShanten(view, action.claim);
         }
 
         /// The acceptable claims no other acceptable claim beats (several when they are equal in every respect).
         eastl::vector<HandAction> BestClaims(const TableView& view, int shantenBefore, const LevelProfile& profile) {
-            eastl::vector<ClaimCandidate> best;
-            for (const HandAction& action : view.legal) {
-                if (action.kind != ActionKind::Claim || action.claim == ClaimKind::Mahjong) {
+            eastl::vector<RatedClaim> best;
+            for (const RatedClaim& candidate : RateClaims(view, shantenBefore, profile)) {
+                if (!candidate.acceptable) {
                     continue;
                 }
-                const ClaimCandidate candidate{action, RateClaim(view, action), ClaimRank(action.claim)};
-                if (!IsAcceptable(view, candidate, shantenBefore, profile)) {
+                if (!best.empty() && IsBetterClaim(best.front(), candidate)) {
                     continue;
                 }
-                if (!best.empty() && IsBetter(best.front(), candidate)) {
-                    continue;
-                }
-                if (!best.empty() && IsBetter(candidate, best.front())) {
+                if (!best.empty() && IsBetterClaim(candidate, best.front())) {
                     best.clear();
                 }
                 best.push_back(candidate);
             }
             eastl::vector<HandAction> actions;
-            for (const ClaimCandidate& candidate : best) {
+            for (const RatedClaim& candidate : best) {
                 actions.push_back(candidate.action);
             }
             return actions;
@@ -100,29 +78,55 @@ namespace BECore::Mahjong {
         return BestDiscardRating(counts, melds, view);
     }
 
-    HandAction ChooseClaimAction(const TableView& view, MahjongRng& rng, const LevelProfile& profile, SearchHandoff* handoff) {
+    bool IsBetterClaim(const RatedClaim& a, const RatedClaim& b) noexcept {
+        if (a.after.shanten != b.after.shanten) {
+            return a.after.shanten < b.after.shanten;
+        }
+        if (a.after.acceptance != b.after.acceptance) {
+            return a.after.acceptance > b.after.acceptance;
+        }
+        return a.rank > b.rank;
+    }
+
+    eastl::vector<RatedClaim> RateClaims(const TableView& view, int shantenBefore, const LevelProfile& profile) {
+        eastl::vector<RatedClaim> options;
+        for (const HandAction& action : view.legal) {
+            if (action.kind != ActionKind::Claim || action.claim == ClaimKind::Mahjong) {
+                continue;
+            }
+            const DiscardRating after = RateClaim(view, action);
+            options.push_back({action, after, ClaimRank(action.claim), IsAcceptable(view, action, after, shantenBefore, profile)});
+        }
+        return options;
+    }
+
+    ClaimDecision DecideClaim(const TableView& view, MahjongRng& rng, const LevelProfile& profile, SearchHandoff* handoff) {
         if (const HandAction* mahjong = FindMahjong(view)) {
-            return *mahjong;
+            return {*mahjong, ClaimStep::Mahjong};
         }
         const int shantenBefore = Shanten(CountTiles(view.own.concealed), MeldCountOf(view));
         if (shantenBefore <= kWaitingShanten) {
-            return HandAction::MakePass();
+            return {HandAction::MakePass(), ClaimStep::WaitingHand};
         }
         if (profile.searchWorlds > 0) {
             if (handoff != nullptr) {
                 if ((handoff->run = BeginClaimSearch(view, rng, profile))) {
-                    return HandAction::MakePass();
+                    return {HandAction::MakePass(), ClaimStep::Claim};
                 }
             } else if (const std::optional<HandAction> searched = SearchClaimAction(view, rng, profile)) {
-                return *searched;
+                return {*searched, searched->kind == ActionKind::Claim ? ClaimStep::Claim : ClaimStep::NoGain};
             }
         }
         const eastl::vector<HandAction> best = BestClaims(view, shantenBefore, profile);
         if (best.empty()) {
-            return HandAction::MakePass();
+            return {HandAction::MakePass(), ClaimStep::NoGain};
         }
         const HandAction& chosen = PickOne(best, rng);
-        return Roll(rng, profile.skipClaimPercent) ? HandAction::MakePass() : chosen;
+        return {Roll(rng, profile.skipClaimPercent) ? HandAction::MakePass() : chosen, ClaimStep::Claim};
+    }
+
+    HandAction ChooseClaimAction(const TableView& view, MahjongRng& rng, const LevelProfile& profile, SearchHandoff* handoff) {
+        return DecideClaim(view, rng, profile, handoff).action;
     }
 
 }  // namespace BECore::Mahjong

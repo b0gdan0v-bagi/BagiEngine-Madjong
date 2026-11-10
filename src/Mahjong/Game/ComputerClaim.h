@@ -31,6 +31,39 @@ namespace BECore::Mahjong {
      */
     [[nodiscard]] DiscardRating RateClaim(const TableView& view, const HandAction& claim);
 
+    /// A listed pung, kong or chow as `ChooseClaimAction` sees it: the action, the rating of the hand after it, its tie-break rank
+    /// (`ClaimRank`) and whether it is acceptable (`s1 < s0`, or equal for a value pung/kong when the profile takes those).
+    struct RatedClaim {
+        HandAction action;
+        DiscardRating after;
+        int rank = 0;
+        bool acceptable = false;
+    };
+
+    /// Whether claim `a` is better than `b`: the lower shanten after it, then the higher acceptance, then the higher rank.
+    [[nodiscard]] bool IsBetterClaim(const RatedClaim& a, const RatedClaim& b) noexcept;
+
+    /// Every pung, kong and chow of `view.legal` (no mahjong, no pass), in that order, rated with `RateClaim`; `shantenBefore` is the
+    /// shanten of the hand as it is. `ChooseClaimAction` keeps the best of the acceptable ones.
+    [[nodiscard]] eastl::vector<RatedClaim> RateClaims(const TableView& view, int shantenBefore, const LevelProfile& profile);
+
+    /// The rule of the window that decided (the numbers of the list in `ChooseClaimAction`).
+    enum class ClaimStep {
+        Mahjong,      // 1
+        WaitingHand,  // 2
+        Claim,        // 3: an acceptable claim was chosen (also when a roll of `skipClaimPercent` passed it, and a handoff placeholder)
+        NoGain,       // 4: nothing acceptable
+    };
+
+    /// The chosen action and the rule that chose it.
+    struct ClaimDecision {
+        HandAction action;
+        ClaimStep step = ClaimStep::NoGain;
+    };
+
+    /// `ChooseClaimAction` with the rule that decided; the same draws of `rng` in the same order.
+    [[nodiscard]] ClaimDecision DecideClaim(const TableView& view, MahjongRng& rng, const LevelProfile& profile = kNormalProfile, SearchHandoff* handoff = nullptr);
+
     /**
      * @brief The action of a seat that has to decide a window (`Phase::Claim` or `Phase::RobKong`, `view.legal` holds `Pass`).
      *

@@ -327,4 +327,129 @@ namespace BECore::Mahjong::Tests {
         EXPECT_GT(passes, 0);
     }
 
+    // ----- the rule that decided, and the ratings -----
+
+    namespace {
+
+        ClaimDecision Decision(const HandModel& model, Seat seat, uint32_t rngSeed = kRngSeed) {
+            const TableView view = MakeTableView(model, seat);
+            MahjongRng rng(rngSeed);
+            return DecideClaim(view, rng);
+        }
+
+    }  // namespace
+
+    TEST(ComputerClaimTest, DecideClaimNamesTheRuleThatDecided) {
+        HandModel robbed = OpenPungModel("5p 5p 8p 2s 5s 8s 2m 5m 8m Ww Nw Gd Wd", "4p 6p 1s 2s 3s 4m 5m 6m 7s 8s 9s Ew Ew", kQuiet3, {kSeat2});
+        ASSERT_TRUE(robbed.UpgradeKong(kSeat1, T("5p")).has_value());
+        EXPECT_EQ(Decision(robbed, kSeat2).step, ClaimStep::Mahjong);
+
+        const HandModel waiting = WindowModel("Rd Rd 1s 2s 3s 4s 5s 6s 7m 8m 9m 4p 4p", "Rd");
+        const ClaimDecision passed = Decision(waiting, kSeat1);
+        EXPECT_EQ(passed.step, ClaimStep::WaitingHand);
+        EXPECT_EQ(passed.action, kPass);
+
+        const HandModel claim = WindowModel("5p 5p 1s 2s 3s 4s 5s 6s 7m 8m 9m Nw Wd", "5p");
+        const ClaimDecision claimed = Decision(claim, kSeat1);
+        EXPECT_EQ(claimed.step, ClaimStep::Claim);
+        EXPECT_EQ(claimed.action, kPung);
+
+        const HandModel noGain = WindowModel(WithPair("5m 5m"), "5m");
+        const ClaimDecision declined = Decision(noGain, kSeat1);
+        EXPECT_EQ(declined.step, ClaimStep::NoGain);
+        EXPECT_EQ(declined.action, kPass);
+    }
+
+    TEST(ComputerClaimTest, AClaimPassedByTheRollOfSkipClaimPercentKeepsTheStepClaim) {
+        const HandModel model = WindowModel("5p 5p 1s 2s 3s 4s 5s 6s 7m 8m 9m Nw Wd", "5p");
+        const TableView view = MakeTableView(model, kSeat1);
+        LevelProfile profile = kNormalProfile;
+        profile.skipClaimPercent = 100;
+        MahjongRng rng(kRngSeed);
+
+        const ClaimDecision decision = DecideClaim(view, rng, profile);
+
+        EXPECT_EQ(decision.action, kPass);
+        EXPECT_EQ(decision.step, ClaimStep::Claim);
+    }
+
+    TEST(ComputerClaimTest, RateClaimsListsThePungKongAndChowsInTheOrderOfTheWindowWithTheirRatings) {
+        // 4p 6p and 5p 5p: a chow (4p 5p 6p), a pung and no kong for the 5p thrown.
+        const HandModel model = WindowModel("4p 6p 5p 5p 1s 2s 3s 7s 8s 9s Nw Nw Wd", "5p");
+        const TableView view = MakeTableView(model, kSeat1);
+        const int before = Shanten(CountTiles(view.own.concealed), 0);
+
+        const eastl::vector<RatedClaim> options = RateClaims(view, before, kNormalProfile);
+
+        size_t listed = 0;
+        for (const HandAction& action : view.legal) {
+            listed += action.kind == ActionKind::Claim && action.claim != ClaimKind::Mahjong ? 1u : 0u;
+        }
+        ASSERT_EQ(options.size(), listed);
+        ASSERT_GE(options.size(), 2u);
+        size_t at = 0;
+        for (const HandAction& action : view.legal) {
+            if (action.kind != ActionKind::Claim || action.claim == ClaimKind::Mahjong) {
+                continue;
+            }
+            const RatedClaim& option = options[at++];
+            EXPECT_EQ(option.action, action);
+            EXPECT_EQ(option.rank, ClaimRank(action.claim));
+            const DiscardRating rated = RateClaim(view, action);
+            EXPECT_EQ(option.after.shanten, rated.shanten);
+            EXPECT_EQ(option.after.acceptance, rated.acceptance);
+            EXPECT_EQ(option.acceptable, rated.shanten < before);
+        }
+    }
+
+    TEST(ComputerClaimTest, TheChoiceIsABestAcceptableOneOfRateClaimsOnRandomWindows) {
+        int compared = 0;
+        int acceptable = 0;
+        for (int index = 0; index < kRandomHands; ++index) {
+            const uint32_t seed = kRandomFirstSeed + static_cast<uint32_t>(index);
+            Match match;
+            ASSERT_TRUE(match.Start(MahjongSettings{}, seed).has_value());
+            MahjongRng rng(seed);
+            HandModel& hand = match.Hand();
+            while (hand.GetPhase() != Phase::Finished) {
+                if (hand.GetPhase() == Phase::Discard) {
+                    const Seat actor = hand.CurrentSeat();
+                    ASSERT_TRUE(hand.Apply(actor, Choose(hand.LegalActions(actor), Mode::SeekWin, rng)).has_value());
+                    continue;
+                }
+                for (const Seat seat : hand.PendingClaimSeats()) {
+                    const TableView view = MakeTableView(hand, seat);
+                    const int before = Shanten(CountTiles(view.own.concealed), MeldCountOf(view));
+                    MahjongRng chooser(seed + static_cast<uint32_t>(compared));
+                    const HandAction answer = ChooseClaimAction(view, chooser);
+                    if (FindMahjong(view) == nullptr && before > kWaitingShanten) {
+                        const eastl::vector<RatedClaim> options = RateClaims(view, before, kNormalProfile);
+                        const RatedClaim* best = nullptr;
+                        for (const RatedClaim& option : options) {
+                            if (option.acceptable && (best == nullptr || IsBetterClaim(option, *best))) {
+                                best = &option;
+                            }
+                        }
+                        ++compared;
+                        if (best == nullptr) {
+                            EXPECT_EQ(answer, kPass);
+                        } else {
+                            ++acceptable;
+                            bool isBest = false;
+                            for (const RatedClaim& option : options) {
+                                if (option.action == answer) {
+                                    isBest = option.acceptable && !IsBetterClaim(*best, option);
+                                }
+                            }
+                            EXPECT_TRUE(isBest) << "hand " << index << " seat " << seat;
+                        }
+                    }
+                    ASSERT_TRUE(hand.Apply(seat, answer).has_value());
+                }
+            }
+        }
+        EXPECT_GT(compared, kRandomHands);
+        EXPECT_GT(acceptable, 0);
+    }
+
 }  // namespace BECore::Mahjong::Tests
