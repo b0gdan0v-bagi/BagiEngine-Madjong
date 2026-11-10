@@ -48,7 +48,9 @@ namespace BECore::Mahjong {
      *
      * No defence: every loser pays the winner the same, so a discard that wins for another seat costs the discarder nothing extra.
      * Always an element of `view.legal` (`Pass` is, for a seat that has not decided).
+     *
+     * `handoff` as in `ChooseTurnAction`: a searched decision is handed back as a begun run and `Pass` is a placeholder.
      */
-    [[nodiscard]] HandAction ChooseClaimAction(const TableView& view, MahjongRng& rng, const LevelProfile& profile = kNormalProfile);
+    [[nodiscard]] HandAction ChooseClaimAction(const TableView& view, MahjongRng& rng, const LevelProfile& profile = kNormalProfile, SearchHandoff* handoff = nullptr);
 
 }  // namespace BECore::Mahjong

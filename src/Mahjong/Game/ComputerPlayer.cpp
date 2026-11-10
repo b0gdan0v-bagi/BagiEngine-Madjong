@@ -22,6 +22,30 @@ namespace BECore::Mahjong {
         return HandAction::MakePass();
     }
 
+    PlayerDecision ComputerPlayer::Begin(const TableView& view) {
+        ASSERT(!view.legal.empty());
+        if (view.legal.empty()) {
+            return {HandAction::MakePass(), std::nullopt};
+        }
+        SearchHandoff handoff;
+        HandAction action = HandAction::MakePass();
+        switch (view.phase) {
+            case Phase::Claim:
+            case Phase::RobKong:
+                action = ChooseClaimAction(view, _rng, _profile, &handoff);
+                break;
+            case Phase::Discard:
+                action = ChooseTurnAction(view, _rng, _profile, &handoff);
+                break;
+            case Phase::Finished:
+                break;
+        }
+        if (handoff.run) {
+            return {std::nullopt, std::move(handoff.run)};
+        }
+        return {action, std::nullopt};
+    }
+
     std::optional<HandAction> ComputerPlayer::Decide(const HandModel& model, Seat seat) {
         const TableView view = MakeTableView(model, seat);
         if (view.legal.empty()) {
@@ -59,19 +83,38 @@ namespace BECore::Mahjong {
         return kNoSeat;
     }
 
-    StepResult ComputerTable::Step(HandModel& model) {
+    std::expected<ComputerTable::BegunStep, HandError> ComputerTable::BeginStep(const HandModel& model) {
         const Seat actor = NextActor(model);
         if (actor == kNoSeat) {
             return std::unexpected(HandError::WrongPhase);
         }
-        const std::optional<HandAction> action = _players[actor].Decide(model, actor);
-        if (!action) {
+        const TableView view = MakeTableView(model, actor);
+        if (view.legal.empty()) {
             return std::unexpected(HandError::NotYourTurn);
         }
-        if (const HandStatus applied = model.Apply(actor, *action); !applied) {
+        return BegunStep{actor, _players[actor].Begin(view)};
+    }
+
+    StepResult ComputerTable::FinishStep(HandModel& model, Seat actor, const HandAction& action) {
+        if (const HandStatus applied = model.Apply(actor, action); !applied) {
             return std::unexpected(applied.error());
         }
-        return *action;
+        return action;
+    }
+
+    StepResult ComputerTable::Step(HandModel& model) {
+        std::expected<BegunStep, HandError> begun = BeginStep(model);
+        if (!begun) {
+            return std::unexpected(begun.error());
+        }
+        PlayerDecision& decision = begun->decision;
+        if (decision.run) {
+            while (!decision.run->Done()) {
+                decision.run->Step();
+            }
+            return FinishStep(model, begun->actor, decision.run->Result());
+        }
+        return FinishStep(model, begun->actor, *decision.action);
     }
 
     HandStatus ComputerTable::PlayHand(HandModel& model) {

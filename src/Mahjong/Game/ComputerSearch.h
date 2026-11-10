@@ -105,6 +105,13 @@ namespace BECore::Mahjong {
     /// Not searched: a window whose only action is `Pass`.
     [[nodiscard]] std::optional<SearchRun> BeginClaimSearch(const TableView& view, MahjongRng& rng, const LevelProfile& profile);
 
+    /// Where a chooser puts a search it did not run (`ChooseTurnAction` / `ChooseClaimAction` with a non-null handoff): the run that
+    /// `SearchTurnAction` / `SearchClaimAction` would have stepped to its end. Empty when the decision is not a search; the chooser's
+    /// return value is then the answer, and when it is set the return value is a placeholder the caller discards.
+    struct SearchHandoff {
+        std::optional<SearchRun> run;
+    };
+
     /// `BeginTurnSearch`, then every step at once: what a caller that does not wait gets. Same draws, same answer.
     [[nodiscard]] std::optional<HandAction> SearchTurnAction(const TableView& view, MahjongRng& rng, const LevelProfile& profile);
 
