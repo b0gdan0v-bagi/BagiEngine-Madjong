@@ -333,7 +333,7 @@ namespace BECore::Mahjong::Tests {
 
             ASSERT_FALSE(log.Events().empty()) << Name(level);
             EXPECT_EQ(log.Events().front().kind, MatchLogKind::Start) << Name(level);
-            EXPECT_EQ(log.Events().front().level, level) << Name(level);
+            EXPECT_EQ(log.Events().front().levels, UniformLevels(level)) << Name(level);
             EXPECT_EQ(log.Events().back().kind, MatchLogKind::End) << Name(level);
             Match replayed;
             const ReplayStatus status = ReplayMatchLog(log.Events(), replayed);

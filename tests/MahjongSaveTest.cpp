@@ -28,6 +28,7 @@ namespace BECore::Mahjong::Tests {
         constexpr SeatSetup kPCCC{SeatKind::Person, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
         constexpr SeatSetup kPPCC{SeatKind::Person, SeatKind::Person, SeatKind::Computer, SeatKind::Computer};
         constexpr SeatSetup kCCCC{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
+        constexpr SeatSetup kPPPP{SeatKind::Person, SeatKind::Person, SeatKind::Person, SeatKind::Person};
         constexpr SeatSetup kCCCP{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Person};
         constexpr SeatSetup kSetups[] = {kPCCC, kPPCC, kCCCC, kCCCP};
         constexpr ComputerLevel kLevels[] = {ComputerLevel::Normal, ComputerLevel::Easy};
@@ -479,10 +480,12 @@ namespace BECore::Mahjong::Tests {
             MatchLog log;
             MatchRecorder recorder;
 
-            Recorded(uint32_t seed, const SeatSetup& seats, ComputerLevel level, int steps) {
+            Recorded(uint32_t seed, const SeatSetup& seats, ComputerLevel level, int steps) : Recorded(seed, seats, UniformLevels(level), steps) {}
+
+            Recorded(uint32_t seed, const SeatSetup& seats, const SeatLevels& levels, int steps) {
                 recorder.SetNext(&log);
                 session.SetLogSink(&recorder);
-                EXPECT_TRUE(session.StartMatch(ShortMatch(), seed, seats, level).has_value());
+                EXPECT_TRUE(session.StartMatch(ShortMatch(), seed, seats, levels).has_value());
                 MahjongRng rng(seed);
                 for (int step = 0; step < steps; ++step) {
                     if (session.GetPhase() == SessionPhase::MatchOver) {
@@ -551,7 +554,7 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_TRUE((*parsed)[index] == want[index]) << where << ": event " << index;
             }
             EXPECT_EQ((*parsed)[0].seats, played.seats) << where;
-            EXPECT_EQ(std::string(LevelText((*parsed)[0].level)), std::string(LevelText(played.level))) << where;
+            EXPECT_EQ((*parsed)[0].levels, UniformLevels(played.level)) << where;
             // The recorder keeps the same events.
             EXPECT_TRUE(recorded.recorder.Events() == want) << where;
             // Only the three kinds, no breakdowns, and smaller than the log file of the match.
@@ -565,6 +568,48 @@ namespace BECore::Mahjong::Tests {
             ASSERT_TRUE(ReplayMatchLog(*parsed, replayed).has_value()) << where;
             EXPECT_EQ(replayed.Scores(), recorded.match.Scores()) << where;
         }
+    }
+
+    TEST(MahjongSaveTest, TheTextOfAMatchWithMixedLevelsReadsBackWithThemAndResumes) {
+        // A person's seat keeps its level too (it plays again when the seat becomes a computer)
+        const SeatLevels mixed{ComputerLevel{2}, ComputerLevel{6}, ComputerLevel::Easy, ComputerLevel{10}};
+        for (const SeatSetup& seats : {kCCCC, kPCCC, kPPPP}) {
+            const std::string where = Plain(SeatsToLetters(seats));
+            const Recorded recorded(5, seats, mixed, 120);
+            const eastl::string text = MatchSaveText(recorded.log.Events());
+            const auto parsed = ParseMatchSaveText(std::string_view(text.c_str(), text.size()));
+            ASSERT_TRUE(parsed.has_value()) << where << ": " << (parsed ? "" : parsed.error().c_str());
+            EXPECT_EQ((*parsed)[0].levels, mixed) << where;
+
+            Table resumed;
+            ASSERT_TRUE(resumed.session.ResumeMatch(*parsed, seats, (*parsed)[0].levels).has_value()) << where;
+            EXPECT_EQ(resumed.session.Levels(), mixed) << where;
+            EXPECT_EQ(resumed.session.LevelOf(1), ComputerLevel{6}) << where;
+        }
+    }
+
+    TEST(MahjongSaveTest, AMatchSavedBeforeTheLevelOfEachSeatStillResumes) {
+        // The text of a version 3 save: its `start` has one `level`, the rest is as written now
+        const Recorded recorded(3, kPCCC, ComputerLevel{3}, 120);
+        const std::string current = Plain(MatchSaveText(recorded.log.Events()));
+        const size_t firstBreak = current.find('\n');
+        ASSERT_NE(firstBreak, std::string::npos);
+        const std::string startLine = current.substr(0, firstBreak);
+        ASSERT_NE(startLine.find("\"version\":4"), std::string::npos) << startLine;
+        ASSERT_NE(startLine.find("\"levels\":[3,3,3,3]"), std::string::npos) << startLine;
+        std::string old = startLine;
+        old.replace(old.find("\"version\":4"), 11, "\"version\":3");
+        old.replace(old.find("\"levels\":[3,3,3,3]"), 18, "\"level\":3");
+        const std::string oldText = old + current.substr(firstBreak);
+
+        const auto parsed = ParseMatchSaveText(oldText);
+        ASSERT_TRUE(parsed.has_value()) << parsed.error().c_str();
+        EXPECT_EQ((*parsed)[0].levels, UniformLevels(ComputerLevel{3}));
+        EXPECT_TRUE(*parsed == WithoutHandsAndEnd(recorded.log.Events()));
+        Table resumed;
+        ASSERT_TRUE(resumed.session.ResumeMatch(*parsed, kPCCC, (*parsed)[0].levels).has_value());
+        EXPECT_EQ(resumed.session.Levels(), UniformLevels(ComputerLevel{3}));
+        EXPECT_EQ(resumed.match.Scores(), recorded.match.Scores());
     }
 
     TEST(MahjongSaveTest, ATextThatIsNoSavedMatchIsRefusedWithItsLine) {
@@ -732,7 +777,7 @@ namespace BECore::Mahjong::Tests {
                 const auto parsed = ParseMatchSaveText(std::string_view(text.c_str(), text.size()));
                 ASSERT_TRUE(parsed.has_value()) << where;
                 Table resumed;
-                const ReplayStatus status = resumed.session.ResumeMatch(*parsed, (*parsed)[0].seats, (*parsed)[0].level);
+                const ReplayStatus status = resumed.session.ResumeMatch(*parsed, (*parsed)[0].seats, (*parsed)[0].levels);
                 ASSERT_TRUE(status.has_value()) << where << ": event " << status.error().index << " " << Name(status.error().problem);
                 Observation want;
                 want.phase = recorded.session.GetPhase();

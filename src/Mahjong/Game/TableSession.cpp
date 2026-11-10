@@ -42,7 +42,7 @@ namespace BECore::Mahjong {
             start.seed = seed;
             start.settings = settings;
             start.seats = seats;
-            start.level = FirstComputerLevel(seats, levels);  // one level until the match log keeps one per seat
+            start.levels = levels;
             _sink->OnEvent(start);
             _sink->OnEvent(MakeHandEvent(_match));
         }

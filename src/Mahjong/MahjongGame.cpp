@@ -145,14 +145,16 @@ namespace BECore::Mahjong {
         ApplyLanguage();
         _recorder.SetRecording(true);  // the match goes on being saved
         const MatchLogEvent& start = events.front();
-        if (const ReplayStatus resumed = _session.ResumeMatch(events, start.seats, start.level); !resumed) {
+        if (const ReplayStatus resumed = _session.ResumeMatch(events, start.seats, start.levels); !resumed) {
             LOG_WARNING(Format("MahjongGame: the saved match is not used: event {} was refused ({})", resumed.error().index, EnumUtils<ReplayProblem>::ToString(resumed.error().problem)));
             return false;
         }
         _savedCounter = _recorder.Counter();  // the slot already holds exactly this
         // The panel shows the resumed match's own choices when it opens again (the prefs may be newer than the match)
         _seats = start.seats;
-        _level = start.level;
+        // One level until the game keeps one per seat: the lowest computer seat's, the first seat's when nobody is a computer
+        const bool anyComputer = std::ranges::any_of(start.seats, [](SeatKind kind) { return kind == SeatKind::Computer; });
+        _level = anyComputer ? FirstComputerLevel(start.seats, start.levels) : start.levels[0];
         if (start.settings.handsPerMatch == kFullMatchHands || start.settings.handsPerMatch == kShortMatchHands) {
             _settings.handsPerMatch = start.settings.handsPerMatch;
         }
