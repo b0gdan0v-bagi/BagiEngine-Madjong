@@ -18,7 +18,7 @@ namespace BECore::Mahjong {
 
         constexpr eastl::string_view kSetHintsAction = "MahjongSetHints";
         constexpr eastl::string_view kAdviceAction = "MahjongHintAdvice";
-        // The ids of the two segments of `Hints` in `Setup` (the values of the buttons `HintsOn` / `HintsOff` in the scene file)
+        // The ids of the two segments of `Hints` on the page `Options` (the values of the buttons `HintsOn` / `HintsOff` in the scene file)
         constexpr eastl::string_view kOnId = "on";
         constexpr eastl::string_view kOffId = "off";
         // The names of the canvas on the node `Hints`: the cells of the row (`WaitCell<i>` holds `WaitTile<i>` and `WaitCount<i>`), the
@@ -87,7 +87,7 @@ namespace BECore::Mahjong {
 
     void MahjongHintsComponent::OnDraw() {
         const MahjongGame* game = MahjongGame::GetActive();
-        if (game != nullptr && game->IsSetupOpen()) {
+        if (game != nullptr && game->IsOptionsOpen()) {
             PublishChoice(*game);  // an equal value changes nothing (the version of the variables stays)
         }
         const Key key = KeyOf(game);
@@ -230,8 +230,8 @@ namespace BECore::Mahjong {
             _adviceDirty = true;
             return;
         }
-        if (action != kSetHintsAction || !game->IsSetupOpen()) {
-            return;  // not ours, or a click that arrives while the panel is not open
+        if (action != kSetHintsAction || !game->IsOptionsOpen()) {
+            return;  // not ours, or a click that arrives while the page is not open
         }
         // Only the two values the panel offers; client text is never read as anything else
         const eastl::string_view value = event.value.ToStringView();

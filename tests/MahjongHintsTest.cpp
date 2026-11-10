@@ -12,8 +12,8 @@
 #include <Mahjong/Table/UiPalette.h>
 
 /**
- * The hints of the shipped scene (`Components/MahjongHintsComponent.h`, `Table/Hints.h`): the switch `Hints` On | Off of the panel
- * `Setup`, which the component answers and the game keeps (`MahjongGame::HintsOn()`), and the waiting row inside the wall ring. Fixed
+ * The hints of the shipped scene (`Components/MahjongHintsComponent.h`, `Table/Hints.h`): the switch `Hints` On | Off of the page
+ * `Options`, which the component answers and the game keeps (`MahjongGame::HintsOn()`), and the waiting row inside the wall ring. Fixed
  * hands (`FixedWall.h`) are laid into the hand in progress; the pure helper has its own test (`HintsTest`).
  */
 namespace BECore::Mahjong::Tests {
@@ -67,13 +67,18 @@ namespace BECore::Mahjong::Tests {
         }
 
         bool Selected(const char* segment) const {
-            const UIElement* element = Element("Setup", segment);
+            const UIElement* element = Element("Options", segment);
             const auto* button = element != nullptr ? element->Cast<UIButton>() : nullptr;
             return button != nullptr && button->selected;
         }
 
         bool SetupShown() const {
             const auto canvas = Canvas("Setup");
+            return canvas && canvas->TakesInput();
+        }
+
+        bool OptionsShown() const {
+            const auto canvas = Canvas("Options");
             return canvas && canvas->TakesInput();
         }
 
@@ -211,6 +216,14 @@ namespace BECore::Mahjong::Tests {
             Draw();
             ASSERT_TRUE(SetupShown());
         }
+
+        /// The page `Options` (where the hints row is) open over `Setup` and drawn on the game as it is.
+        void OpenPage() {
+            _game->OpenSetup();
+            _game->OpenOptions();
+            Draw();
+            ASSERT_TRUE(OptionsShown());
+        }
     };
 
     // ----- the flag on the game -----
@@ -235,30 +248,28 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(after.startingScore, before.startingScore);
     }
 
-    // ----- the panel shows the flag -----
+    // ----- the page shows the flag -----
 
-    TEST_F(MahjongHintsTest, ThePanelOpensOnTheFlagOfTheGameOn) {
+    TEST_F(MahjongHintsTest, ThePageOpensOnTheFlagOfTheGameOn) {
         _game->Start();
-        Draw();
-        ASSERT_TRUE(SetupShown());
+        ASSERT_NO_FATAL_FAILURE(OpenPage());
         EXPECT_EQ(HintsChoiceVar(), "on");
         EXPECT_TRUE(Selected("HintsOn"));
         EXPECT_FALSE(Selected("HintsOff"));
     }
 
-    TEST_F(MahjongHintsTest, ThePanelOpensOnTheFlagOfTheGameOff) {
+    TEST_F(MahjongHintsTest, ThePageOpensOnTheFlagOfTheGameOff) {
         _game->SetHintsOn(false);
         _game->Start();
-        Draw();
-        ASSERT_TRUE(SetupShown());
+        ASSERT_NO_FATAL_FAILURE(OpenPage());
         EXPECT_EQ(HintsChoiceVar(), "off");
         EXPECT_FALSE(Selected("HintsOn"));
         EXPECT_TRUE(Selected("HintsOff"));
     }
 
-    TEST_F(MahjongHintsTest, ThePanelHasTheRowWithTheWordsOfBothLanguages) {
+    TEST_F(MahjongHintsTest, ThePageHasTheRowWithTheWordsOfBothLanguages) {
         _game->Start();
-        Draw();
+        ASSERT_NO_FATAL_FAILURE(OpenPage());
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             Draw();
@@ -266,11 +277,11 @@ namespace BECore::Mahjong::Tests {
             const eastl::string off = Tr(CoreManager::GetUIStrings(), "setup.off");
             const eastl::string caption = Tr(CoreManager::GetUIStrings(), "setup.hints");
             const auto text = [&](const char* element) {
-                const auto* label = Element("Setup", element) != nullptr ? Element("Setup", element)->Cast<UILabel>() : nullptr;
+                const auto* label = Element("Options", element) != nullptr ? Element("Options", element)->Cast<UILabel>() : nullptr;
                 return label != nullptr ? std::string(label->GetDisplayText().data(), label->GetDisplayText().size()) : std::string("<none>");
             };
             const auto buttonText = [&](const char* element) {
-                const auto* button = Element("Setup", element) != nullptr ? Element("Setup", element)->Cast<UIButton>() : nullptr;
+                const auto* button = Element("Options", element) != nullptr ? Element("Options", element)->Cast<UIButton>() : nullptr;
                 return button != nullptr ? std::string(button->GetDisplayText().data(), button->GetDisplayText().size()) : std::string("<none>");
             };
             EXPECT_EQ(text("HintsCaption"), std::string(caption.data(), caption.size()));
@@ -283,17 +294,17 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongHintsTest, AClickOnASegmentChangesTheGameAndTheVariableAtOnce) {
         _game->Start();
-        Draw();
+        ASSERT_NO_FATAL_FAILURE(OpenPage());
 
-        ASSERT_TRUE(ClickElement("Setup", "HintsOff"));
+        ASSERT_TRUE(ClickElement("Options", "HintsOff"));
         EXPECT_FALSE(_game->HintsOn()) << "no Start needed";
         EXPECT_EQ(HintsChoiceVar(), "off");
         Draw();
         EXPECT_TRUE(Selected("HintsOff"));
         EXPECT_FALSE(Selected("HintsOn"));
-        EXPECT_TRUE(SetupShown()) << "the panel stays open";
+        EXPECT_TRUE(OptionsShown()) << "the page stays open";
 
-        ASSERT_TRUE(ClickElement("Setup", "HintsOn"));
+        ASSERT_TRUE(ClickElement("Options", "HintsOn"));
         EXPECT_TRUE(_game->HintsOn());
         EXPECT_EQ(HintsChoiceVar(), "on");
         Draw();
@@ -303,12 +314,12 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongHintsTest, AClickChangesNeitherTheMatchNorThePendingSetup) {
         _game->Start();
-        Draw();
+        ASSERT_NO_FATAL_FAILURE(OpenPage());
         const uint64_t version = _game->GetSession().Version();
         const SeatSetup seats = _game->GetSeats();
         const int hands = _game->GetSettings().handsPerMatch;
 
-        ASSERT_TRUE(ClickElement("Setup", "HintsOff"));
+        ASSERT_TRUE(ClickElement("Options", "HintsOff"));
         Draw();
 
         EXPECT_EQ(_game->GetSession().Version(), version);
@@ -317,10 +328,9 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(_game->IsSetupOpen());
     }
 
-    TEST_F(MahjongHintsTest, AnyOtherValueAndAClosedPanelChangeNothing) {
+    TEST_F(MahjongHintsTest, AnyOtherValueAndAClosedPageChangeNothing) {
         _game->Start();
-        Draw();
-        ASSERT_TRUE(SetupShown());
+        ASSERT_NO_FATAL_FAILURE(OpenPage());
 
         for (const char* value : {"", "ON", "Off", "1", "0", "true", "false", "on ", " off", "yes", "no"}) {
             EmitAction("MahjongSetHints", value);
@@ -328,29 +338,37 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(HintsChoiceVar(), "on") << "'" << value << "'";
         }
 
+        _game->CloseOptions();
+        Draw();
+        ASSERT_TRUE(SetupShown());
+        ASSERT_FALSE(OptionsShown());
+        EmitAction("MahjongSetHints", "off");
+        EXPECT_TRUE(_game->HintsOn()) << "Setup alone has no hints row";
+        EXPECT_EQ(HintsChoiceVar(), "on");
+
         _game->CloseSetup();
         Draw();
         ASSERT_FALSE(SetupShown());
         EmitAction("MahjongSetHints", "off");
-        EXPECT_TRUE(_game->HintsOn()) << "the panel is closed";
+        EXPECT_TRUE(_game->HintsOn()) << "both panels are closed";
         EXPECT_EQ(HintsChoiceVar(), "on");
     }
 
     TEST_F(MahjongHintsTest, TheVariableKeepsTheTruthWhenTheGameChangesTheFlag) {
         _game->Start();
-        Draw();
+        ASSERT_NO_FATAL_FAILURE(OpenPage());
         ASSERT_EQ(HintsChoiceVar(), "on");
 
-        _game->SetHintsOn(false);  // not through the panel
+        _game->SetHintsOn(false);  // not through the page
         Draw();
 
         EXPECT_EQ(HintsChoiceVar(), "off");
         EXPECT_TRUE(Selected("HintsOff"));
     }
 
-    TEST_F(MahjongHintsTest, AnUnchangedPanelSetsNothingAgain) {
+    TEST_F(MahjongHintsTest, AnUnchangedPageSetsNothingAgain) {
         _game->Start();
-        Draw();
+        ASSERT_NO_FATAL_FAILURE(OpenPage());
         const uint64_t version = CoreManager::GetUIVars().GetVersion();
 
         Draw();
@@ -363,8 +381,10 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongHintsTest, TheChoiceIsKeptByStartNewGameResetAndAControlReset) {
         _game->Start();
+        ASSERT_NO_FATAL_FAILURE(OpenPage());
+        ASSERT_TRUE(ClickElement("Options", "HintsOff"));
+        ASSERT_TRUE(ClickElement("Options", "Back"));
         Draw();
-        ASSERT_TRUE(ClickElement("Setup", "HintsOff"));
         ASSERT_TRUE(ClickElement("Setup", "Start"));
         Draw();
         ASSERT_FALSE(SetupShown());
@@ -374,6 +394,8 @@ namespace BECore::Mahjong::Tests {
         Draw();
         ASSERT_TRUE(SetupShown());
         EXPECT_FALSE(_game->HintsOn()) << "New game";
+        _game->OpenOptions();
+        Draw();
         EXPECT_EQ(HintsChoiceVar(), "off");
         EXPECT_TRUE(Selected("HintsOff"));
 
@@ -390,6 +412,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(_game->HintsOn()) << "a control reset leaves it alone";
         Draw();
         ASSERT_TRUE(ClickElement("HudMenu", "NewGame"));
+        _game->OpenOptions();
         Draw();
         EXPECT_EQ(HintsChoiceVar(), "off");
     }
@@ -423,44 +446,42 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(onActions->dump(), offActions->dump());
     }
 
-    // ----- the panel with the new row -----
+    // ----- the page with the row -----
 
-    TEST_F(MahjongHintsTest, TheSetupPanelPassesTheSizeMatrixAndEveryWordFitsInEveryLanguage) {
+    TEST_F(MahjongHintsTest, ThePagePassesTheSizeMatrixAndEveryWordFitsInEveryLanguage) {
         _game->Start();
-        Draw();
-        ASSERT_TRUE(SetupShown());
+        ASSERT_NO_FATAL_FAILURE(OpenPage());
 
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
-            ExpectPassesTheMatrix("Setup", EngineTouchMinimum());
+            ExpectPassesTheMatrix("Options", EngineTouchMinimum());
             for (const Output& output : kOutputs) {
-                ExpectWordsFit("Setup", output.width, output.height, kButtonAir);
+                ExpectWordsFit("Options", output.width, output.height, kButtonAir);
             }
             for (const char* segmentName : {"HintsOn", "HintsOff"}) {
-                const UIElement* segment = Element("Setup", segmentName);
+                const UIElement* segment = Element("Options", segmentName);
                 ASSERT_NE(segment, nullptr) << segmentName;
                 EXPECT_GE(segment->rect.h, kMinControlHeight) << segmentName;
             }
         });
     }
 
-    TEST_F(MahjongHintsTest, ThePlateHoldsEveryRowOfThePanel) {
+    TEST_F(MahjongHintsTest, ThePlateHoldsEveryRowOfThePage) {
         _game->Start();
-        Draw();
-        ASSERT_TRUE(SetupShown());
-        const UIElement* plate = Element("Setup", "Plate");
+        ASSERT_NO_FATAL_FAILURE(OpenPage());
+        const UIElement* plate = Element("Options", "Plate");
         ASSERT_NE(plate, nullptr);
-        for (const char* name : {"Title", "LanguageRow", "SeatRow0", "SeatRow3", "HandsRow", "HintsRow", "Start"}) {
-            const UIElement* row = Element("Setup", name);
+        for (const char* name : {"Title", "LanguageRow", "HintsRow", "LevelRow", "Back"}) {
+            const UIElement* row = Element("Options", name);
             ASSERT_NE(row, nullptr) << name;
             EXPECT_GE(row->rect.y, plate->rect.y) << name;
             EXPECT_LE(row->rect.y + row->rect.h, plate->rect.y + plate->rect.h) << name;
         }
-        const UIElement* hints = Element("Setup", "HintsRow");
-        const UIElement* hands = Element("Setup", "HandsRow");
-        const UIElement* start = Element("Setup", "Start");
-        EXPECT_GE(hints->rect.y, hands->rect.y + hands->rect.h) << "the row lies after HandsRow";
-        EXPECT_LE(hints->rect.y + hints->rect.h, start->rect.y) << "and before Start";
+        const UIElement* hints = Element("Options", "HintsRow");
+        const UIElement* language = Element("Options", "LanguageRow");
+        const UIElement* back = Element("Options", "Back");
+        EXPECT_GE(hints->rect.y, language->rect.y + language->rect.h) << "the row lies after LanguageRow";
+        EXPECT_LE(hints->rect.y + hints->rect.h, back->rect.y) << "and before Back";
     }
 
     // ----- the waiting row -----

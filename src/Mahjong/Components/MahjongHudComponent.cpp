@@ -33,6 +33,9 @@ namespace BECore::Mahjong {
         constexpr eastl::string_view kContinueAction = "MahjongContinue";
         constexpr eastl::string_view kNextHandAction = "MahjongNextHand";
         constexpr eastl::string_view kSetLanguageAction = "MahjongSetLanguage";
+        constexpr eastl::string_view kOptionsAction = "MahjongOptions";
+        constexpr eastl::string_view kOptionsBackAction = "MahjongOptionsBack";
+        constexpr eastl::string_view kSetLevelAction = "MahjongSetLevel";
         constexpr eastl::string_view kRulesAction = "MahjongRules";
         constexpr eastl::string_view kRulesNextAction = "MahjongRulesNext";
         constexpr eastl::string_view kRulesBackAction = "MahjongRulesBack";
@@ -107,6 +110,7 @@ namespace BECore::Mahjong {
         const MahjongGame* game = MahjongGame::GetActive();
         PublishNumbers(game);
         PublishSetup(game);
+        PublishOptions(game);
         PublishEndScreens(game);
         PublishRules(game);
     }
@@ -183,6 +187,11 @@ namespace BECore::Mahjong {
         CoreManager::GetUIVars().Set("language"_intern, game.GetLanguage().ToStringView());
     }
 
+    void MahjongHudComponent::PublishLevelChoice(const MahjongGame& game) const {
+        const std::string_view name = LevelName(game.GetLevel());
+        CoreManager::GetUIVars().Set("levelChoice"_intern, eastl::string_view(name.data(), name.size()));
+    }
+
     void MahjongHudComponent::PublishSetup(const MahjongGame* game) {
         const bool open = game != nullptr && game->IsSetupOpen();
         if (open && !_setupShown) {
@@ -191,6 +200,7 @@ namespace BECore::Mahjong {
             _pendingHands = game->GetSettings().handsPerMatch;
             PublishHandsChoice();
             PublishLanguage(*game);
+            PublishLevelChoice(*game);
         }
         if (open != _setupShown) {
             _setupShown = open;
@@ -201,6 +211,20 @@ namespace BECore::Mahjong {
             _continueShown = offerContinue;
             UICanvasComponent::SetElementVisibleByName(GetScene(), "Continue"_intern, offerContinue);
         }
+    }
+
+    void MahjongHudComponent::PublishOptions(const MahjongGame* game) {
+        const bool open = game != nullptr && game->IsOptionsOpen();
+        if (open == _optionsShown) {
+            return;
+        }
+        _optionsShown = open;
+        if (open) {
+            // The rows show what the game has now; the hints row is published by the hints component while the page is open
+            PublishLanguage(*game);
+            PublishLevelChoice(*game);
+        }
+        UICanvasComponent::SetVisibleByName(GetScene(), "Options"_intern, open);
     }
 
     void MahjongHudComponent::ShowScoreLines(int count) {
@@ -403,6 +427,24 @@ namespace BECore::Mahjong {
         if (!game->IsSetupOpen()) {
             return;
         }
+        if (action == kOptionsAction) {
+            game->OpenOptions();
+            return;
+        }
+        if (action == kOptionsBackAction) {
+            game->CloseOptions();  // a click while the page is closed finds it closed
+            return;
+        }
+        if (action == kSetLevelAction) {
+            // The page is where the level is set; only the two names of `LevelName`, client text is parsed by `TryParseLevel`
+            const eastl::string_view text = event.value.ToStringView();
+            const std::optional<ComputerLevel> level = TryParseLevel(std::string_view(text.data(), text.size()));
+            if (game->IsOptionsOpen() && level) {
+                game->SetLevel(*level);
+                PublishLevelChoice(*game);
+            }
+            return;
+        }
         if (action == kContinueAction) {
             game->ContinueMatch();  // ignored by the game when there is nothing to continue
             return;
@@ -424,9 +466,12 @@ namespace BECore::Mahjong {
             return;
         }
         if (action == kSetLanguageAction) {
-            // The game keeps the language and applies it to the table; an id the table does not have changes nothing, the variable keeps the truth
-            game->SetLanguage(event.value);
-            PublishLanguage(*game);
+            // The language row is on the page: a click that arrives while the page is closed is out of date. The game keeps the language
+            // and applies it to the table; an id the table does not have changes nothing, the variable keeps the truth
+            if (game->IsOptionsOpen()) {
+                game->SetLanguage(event.value);
+                PublishLanguage(*game);
+            }
             return;
         }
         if (action == kSetHandsAction) {

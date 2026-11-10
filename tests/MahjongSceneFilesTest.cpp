@@ -22,8 +22,8 @@ namespace BECore::Mahjong::Tests {
 
         /// The nodes of `MahjongScene` in scene order, which is the order of the references, the draw order and the input order.
         constexpr SceneNode kSceneNodes[] = {
-            {"Table", 0},    {"Hints", 5},     {"HintsButton", 6},     {"Actions", 10},   {"ActionsCompact", 10}, {"Hud", 10},   {"SeatPlates", 10},  {"HudMenu", 10},
-            {"Handoff", 20}, {"HandOver", 25}, {"HandOverAction", 26}, {"MatchOver", 25}, {"Setup", 30},          {"Rules", 35}, {"RulesAction", 36},
+            {"Table", 0},    {"Hints", 5},     {"HintsButton", 6},     {"Actions", 10},   {"ActionsCompact", 10}, {"Hud", 10},     {"SeatPlates", 10}, {"HudMenu", 10},
+            {"Handoff", 20}, {"HandOver", 25}, {"HandOverAction", 26}, {"MatchOver", 25}, {"Setup", 30},          {"Options", 31}, {"Rules", 35},      {"RulesAction", 36},
         };
 
         std::string NodeFileStem(const char* name) {

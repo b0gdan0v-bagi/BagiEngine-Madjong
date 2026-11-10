@@ -310,6 +310,45 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(fresh.IsTablePaused());
     }
 
+    TEST_F(MahjongGameTest, TheOptionsPageIsClosedByDefaultPausesTheTableAndIsClosedByCloseSetup) {
+        MahjongGame fresh;
+        EXPECT_FALSE(fresh.IsOptionsOpen());
+
+        fresh.OpenSetup();
+        fresh.OpenOptions();
+        EXPECT_TRUE(fresh.IsOptionsOpen());
+        EXPECT_TRUE(fresh.IsSetupOpen()) << "Setup stays open under the page";
+        EXPECT_TRUE(fresh.IsTablePaused());
+        fresh.CloseOptions();
+        EXPECT_FALSE(fresh.IsOptionsOpen());
+        EXPECT_TRUE(fresh.IsSetupOpen());
+        EXPECT_TRUE(fresh.IsTablePaused());
+
+        fresh.OpenOptions();
+        fresh.CloseSetup();
+        EXPECT_FALSE(fresh.IsOptionsOpen());
+        EXPECT_FALSE(fresh.IsTablePaused());
+    }
+
+    TEST_F(MahjongGameTest, AMatchThatBeganClosesTheOptionsPageAndARefusedStartDoesNot) {
+        MahjongGame* game = MahjongGame::GetActive();
+        ASSERT_NE(game, nullptr);
+        game->OpenSetup();
+        game->OpenOptions();
+
+        MahjongSettings broken = game->GetSettings();
+        broken.handsPerMatch = 3;  // not a multiple of four
+        const MahjongSettings playable = game->GetSettings();
+        game->SetSettings(broken);
+        EXPECT_FALSE(game->StartMatch(kSeed).has_value());
+        EXPECT_TRUE(game->IsOptionsOpen()) << "nothing began";
+
+        game->SetSettings(playable);
+        ASSERT_TRUE(game->StartMatch(kSeed).has_value());
+        EXPECT_FALSE(game->IsOptionsOpen());
+        EXPECT_FALSE(game->IsTablePaused());
+    }
+
     TEST_F(MahjongGameTest, AMatchThatBeganClosesTheRulesAndARefusedStartDoesNot) {
         MahjongGame* game = MahjongGame::GetActive();
         ASSERT_NE(game, nullptr);

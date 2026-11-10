@@ -120,6 +120,11 @@ namespace BECore::Mahjong::Tests {
             return canvas && canvas->TakesInput();
         }
 
+        bool OptionsShown() const {
+            const auto canvas = Canvas("Options");
+            return canvas && canvas->TakesInput();
+        }
+
         MahjongHudComponent* Hud() const {
             return MahjongHudComponent::GetActive();
         }
@@ -557,7 +562,7 @@ namespace BECore::Mahjong::Tests {
                     EXPECT_GE(segment->rect.h, kMinControlHeight) << seat << kind;
                 }
             }
-            for (const char* segmentName : {"LanguageEn", "LanguageRu", "Hands16", "Hands8", "HintsOn", "HintsOff"}) {
+            for (const char* segmentName : {"Hands16", "Hands8", "OptionsRow"}) {
                 const UIElement* segment = Element("Setup", segmentName);
                 ASSERT_NE(segment, nullptr) << segmentName;
                 EXPECT_GE(segment->rect.h, kMinControlHeight) << segmentName;
@@ -575,7 +580,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongHudTest, TheSeatChoiceFollowsTheModalAnatomyAndTheGridGaps) {
-        constexpr float kRowPadding = 4.0f;  // the seven rows of 64 round a 56 segment: rows of 72 would not leave room for the plate
+        constexpr float kRowPadding = 4.0f;  // the rows of 64 round a 56 segment: rows of 72 would not leave room for the plate
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         _game->OpenSetup();
         Draw();
@@ -591,12 +596,12 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(title->rect.y, plate.y + kModalPadding);
         EXPECT_EQ(title->rect.h, kModalTitleHeight);
 
-        // The rows from the top: the language, the four seats, the number of hands, the hints; each a raised band with a muted caption and a group
+        // The rows from the top: the four seats and the number of hands; each a raised band with a muted caption and a group
         struct Row {
             std::string row, caption, group;
             std::vector<std::string> segments;
         };
-        std::vector<Row> rows{{"LanguageRow", "LanguageCaption", "Language", {"LanguageEn", "LanguageRu"}}};
+        std::vector<Row> rows;
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             rows.push_back({Format("SeatRow{}", seat).c_str(),
                             Format("SeatCaption{}", seat).c_str(),
@@ -604,7 +609,6 @@ namespace BECore::Mahjong::Tests {
                             {Format("Seat{}Person", seat).c_str(), Format("Seat{}Computer", seat).c_str()}});
         }
         rows.push_back({"HandsRow", "HandsCaption", "HandsChoice", {"Hands16", "Hands8"}});
-        rows.push_back({"HintsRow", "HintsCaption", "HintsChoice", {"HintsOn", "HintsOff"}});
 
         const Rect* above = &title->rect;
         for (const Row& entry : rows) {
@@ -637,6 +641,16 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_EQ(segment->rect.h, group->rect.h);
             }
         }
+
+        // The button of the page Options: a neutral control of the whole row's width under the rows
+        const UIElement* options = Element("Setup", "OptionsRow");
+        ASSERT_NE(options, nullptr);
+        EXPECT_TRUE(SameColor(options->color, PaletteColor("neutral")));
+        EXPECT_EQ(options->rect.h, kMainButtonHeight);
+        EXPECT_EQ(GapBelow(*above, options->rect), kModalGap);
+        EXPECT_EQ(options->rect.x, plate.x + kModalPadding);
+        EXPECT_EQ(options->rect.w, plate.w - 2 * kModalPadding);
+        above = &options->rect;
 
         const UIElement* start = Element("Setup", "Start");
         ASSERT_NE(start, nullptr);
@@ -825,50 +839,52 @@ namespace BECore::Mahjong::Tests {
 
     // ----- the seat choice -----
 
-    // ----- the language row -----
+    // ----- the language row (on the page Options) -----
 
     TEST_F(MahjongHudTest, TheLanguageRowShowsTheLanguageOfTheGameAndEachLanguageIsWrittenInItself) {
         _game->Start();
+        _game->OpenOptions();
         Draw();
-        ASSERT_TRUE(SetupShown());
+        ASSERT_TRUE(OptionsShown());
 
         EXPECT_EQ(Var("language"), "en");
-        EXPECT_EQ(Text("Setup", "LanguageCaption"), "Language");
-        EXPECT_EQ(Text("Setup", "LanguageEn"), "English");
-        EXPECT_EQ(Text("Setup", "LanguageRu"), "Русский");
-        EXPECT_TRUE(Element("Setup", "LanguageEn")->Cast<UIButton>()->selected);
-        EXPECT_FALSE(Element("Setup", "LanguageRu")->Cast<UIButton>()->selected);
-        EXPECT_GE(Element("Setup", "LanguageEn")->rect.h, kMinControlHeight);
-        EXPECT_GE(Element("Setup", "LanguageRu")->rect.h, kMinControlHeight);
+        EXPECT_EQ(Text("Options", "LanguageCaption"), "Language");
+        EXPECT_EQ(Text("Options", "LanguageEn"), "English");
+        EXPECT_EQ(Text("Options", "LanguageRu"), "Русский");
+        EXPECT_TRUE(Element("Options", "LanguageEn")->Cast<UIButton>()->selected);
+        EXPECT_FALSE(Element("Options", "LanguageRu")->Cast<UIButton>()->selected);
+        EXPECT_GE(Element("Options", "LanguageEn")->rect.h, kMinControlHeight);
+        EXPECT_GE(Element("Options", "LanguageRu")->rect.h, kMinControlHeight);
 
         ASSERT_TRUE(_game->SetLanguage("ru"_intern));
         Draw();
-        EXPECT_EQ(Text("Setup", "LanguageEn"), "English") << "a language is written the same in both";
-        EXPECT_EQ(Text("Setup", "LanguageRu"), "Русский");
-        EXPECT_EQ(Text("Setup", "LanguageCaption"), "Язык");
+        EXPECT_EQ(Text("Options", "LanguageEn"), "English") << "a language is written the same in both";
+        EXPECT_EQ(Text("Options", "LanguageRu"), "Русский");
+        EXPECT_EQ(Text("Options", "LanguageCaption"), "Язык");
     }
 
     TEST_F(MahjongHudTest, AClickOnRussianChangesTheGameAndTheWordsOfSetupAndTheHud) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         _game->OpenSetup();
+        _game->OpenOptions();
         Draw();
         ASSERT_EQ(_game->GetLanguage(), "en"_intern);
 
-        ASSERT_TRUE(ClickElement("Setup", "LanguageRu"));
+        ASSERT_TRUE(ClickElement("Options", "LanguageRu"));
         Draw();
 
         EXPECT_EQ(_game->GetLanguage(), "ru"_intern);
         EXPECT_EQ(CoreManager::GetUIStrings().GetLanguage(), "ru"_intern);
         EXPECT_EQ(Var("language"), "ru");
-        EXPECT_TRUE(Element("Setup", "LanguageRu")->Cast<UIButton>()->selected);
-        EXPECT_FALSE(Element("Setup", "LanguageEn")->Cast<UIButton>()->selected);
+        EXPECT_TRUE(Element("Options", "LanguageRu")->Cast<UIButton>()->selected);
+        EXPECT_FALSE(Element("Options", "LanguageEn")->Cast<UIButton>()->selected);
         EXPECT_EQ(Text("Setup", "Title"), "Новая игра: кто играет?");
         EXPECT_EQ(Text("Setup", "Seat3Computer"), "Компьютер");
         EXPECT_EQ(Text("Hud", "RoundLabel"), "Раунд: Восток, раздача 1 из 16");
         EXPECT_EQ(Var("round"), "Восток");
         EXPECT_EQ(SeatKindVar(1), "computer") << "the seats are untouched";
 
-        ASSERT_TRUE(ClickElement("Setup", "LanguageEn"));
+        ASSERT_TRUE(ClickElement("Options", "LanguageEn"));
         Draw();
         EXPECT_EQ(_game->GetLanguage(), "en"_intern);
         EXPECT_EQ(Text("Setup", "Title"), "New game: who plays?");
@@ -878,19 +894,26 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongHudTest, TheChoiceIsKeptByStartNewGameAndAControlReset) {
         _game->Start();
         Draw();
-        ASSERT_TRUE(ClickElement("Setup", "LanguageRu"));
+        _game->OpenOptions();
+        Draw();
+        ASSERT_TRUE(ClickElement("Options", "LanguageRu"));
+        ASSERT_TRUE(ClickElement("Options", "Back"));
+        Draw();
         ASSERT_TRUE(ClickElement("Setup", "Start"));
         Draw();
 
         EXPECT_FALSE(SetupShown());
+        EXPECT_FALSE(OptionsShown());
         EXPECT_EQ(CoreManager::GetUIStrings().GetLanguage(), "ru"_intern) << "a started match speaks the language of the game";
         EXPECT_EQ(Text("HudMenu", "NewGame"), "Новая игра");
 
         ASSERT_TRUE(ClickElement("HudMenu", "NewGame"));
         Draw();
         EXPECT_TRUE(SetupShown());
+        _game->OpenOptions();
+        Draw();
         EXPECT_EQ(Var("language"), "ru") << "the row shows the language the game has";
-        EXPECT_TRUE(Element("Setup", "LanguageRu")->Cast<UIButton>()->selected);
+        EXPECT_TRUE(Element("Options", "LanguageRu")->Cast<UIButton>()->selected);
         EXPECT_EQ(Text("Setup", "Start"), "Начать");
 
         Json options = Json::object();
@@ -904,6 +927,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongHudTest, AnUnknownLanguageChangesNothingAndNeitherDoesAClickWhileThePanelIsClosed) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         _game->OpenSetup();
+        _game->OpenOptions();
         Draw();
         EmitAction("MahjongSetLanguage", "de");
         EmitAction("MahjongSetLanguage", "");
@@ -911,20 +935,29 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_game->GetLanguage(), "en"_intern);
         EXPECT_EQ(CoreManager::GetUIStrings().GetLanguage(), "en"_intern);
         EXPECT_EQ(Var("language"), "en") << "the variable keeps the truth";
-        EXPECT_TRUE(Element("Setup", "LanguageEn")->Cast<UIButton>()->selected);
+        EXPECT_TRUE(Element("Options", "LanguageEn")->Cast<UIButton>()->selected);
+
+        const uint64_t strings = CoreManager::GetUIStrings().GetVersion();
+        _game->CloseOptions();
+        Draw();
+        ASSERT_TRUE(SetupShown());
+        ASSERT_FALSE(OptionsShown());
+        EmitAction("MahjongSetLanguage", "ru");
+        Draw();
+        EXPECT_EQ(_game->GetLanguage(), "en"_intern) << "a stale click under Setup alone is ignored";
+        EXPECT_EQ(CoreManager::GetUIStrings().GetVersion(), strings);
 
         _game->CloseSetup();
         Draw();
         ASSERT_FALSE(SetupShown());
-        const uint64_t strings = CoreManager::GetUIStrings().GetVersion();
         EmitAction("MahjongSetLanguage", "ru");
         Draw();
-        EXPECT_EQ(_game->GetLanguage(), "en"_intern) << "a stale click is ignored";
+        EXPECT_EQ(_game->GetLanguage(), "en"_intern) << "and with both panels closed";
         EXPECT_EQ(CoreManager::GetUIStrings().GetVersion(), strings);
         EXPECT_EQ(Text("HudMenu", "NewGame"), "New game");
     }
 
-    TEST_F(MahjongHudTest, TheLanguageOfTheScoreTableAndTheStandingsFollowsTheRowOfSetup) {
+    TEST_F(MahjongHudTest, TheLanguageOfTheScoreTableAndTheStandingsFollowsTheLanguageRowOfTheOptions) {
         MahjongSettings settings = _game->GetSettings();
         settings.handsPerMatch = kRoundsPerMatch;
         _game->SetSettings(settings);
@@ -935,8 +968,9 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Text("HandOverAction", "NextHand"), "Next hand");
 
         _game->OpenSetup();  // New game over the score table
+        _game->OpenOptions();
         Draw();
-        ASSERT_TRUE(ClickElement("Setup", "LanguageRu"));
+        ASSERT_TRUE(ClickElement("Options", "LanguageRu"));
         Draw();
         EXPECT_EQ(Text("HandOverAction", "NextHand"), "Следующая раздача");
 
@@ -1448,6 +1482,144 @@ namespace BECore::Mahjong::Tests {
         Draw();
         ASSERT_TRUE(SetupShown());
         EXPECT_FALSE(ContinueShown()) << "the offer is made at the start of the game only";
+    }
+
+    // ----- the page Options -----
+
+    TEST_F(MahjongHudTest, OptionsOpensOnlyOverSetupAndBackClosesItAndSetupStaysOpen) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        ASSERT_FALSE(_game->IsSetupOpen());
+        EmitAction("MahjongOptions");
+        EXPECT_FALSE(_game->IsOptionsOpen()) << "a click that reached the HUD with Setup closed is out of date";
+
+        _game->OpenSetup();
+        Draw();
+        EmitAction("MahjongOptions");
+        EXPECT_TRUE(_game->IsOptionsOpen());
+        EXPECT_TRUE(_game->IsSetupOpen());
+        EXPECT_TRUE(_game->IsTablePaused());
+
+        EmitAction("MahjongOptionsBack");
+        EXPECT_FALSE(_game->IsOptionsOpen());
+        EXPECT_TRUE(_game->IsSetupOpen());
+        EmitAction("MahjongOptionsBack");  // closed already
+        EXPECT_FALSE(_game->IsOptionsOpen());
+        EXPECT_TRUE(_game->IsSetupOpen());
+    }
+
+    TEST_F(MahjongHudTest, TheLevelIsPublishedWhenSetupOpensAndAClickOnThePageChangesTheGameAndTheVariable) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        _game->SetLevel(ComputerLevel::Easy);
+        _game->OpenSetup();
+        Draw();
+        EXPECT_EQ(Var("levelChoice"), "easy") << "Setup opens on the level of the game";
+
+        EmitAction("MahjongOptions");
+        EmitAction("MahjongSetLevel", "normal");
+        EXPECT_EQ(_game->GetLevel(), ComputerLevel::Normal);
+        EXPECT_EQ(Var("levelChoice"), "normal");
+        EmitAction("MahjongSetLevel", "easy");
+        EXPECT_EQ(_game->GetLevel(), ComputerLevel::Easy);
+        EXPECT_EQ(Var("levelChoice"), "easy");
+    }
+
+    TEST_F(MahjongHudTest, ABadLevelAndALevelClickWhileThePageOrSetupIsClosedChangeNothing) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        _game->OpenSetup();
+        Draw();
+        ASSERT_EQ(_game->GetLevel(), ComputerLevel::Normal);
+        ASSERT_EQ(Var("levelChoice"), "normal");
+
+        EmitAction("MahjongSetLevel", "easy");
+        EXPECT_EQ(_game->GetLevel(), ComputerLevel::Normal) << "the page is closed";
+        EXPECT_EQ(Var("levelChoice"), "normal");
+
+        EmitAction("MahjongOptions");
+        for (const char* bad : {"hard", "Easy", "EASY", " easy", "", "1"}) {
+            EmitAction("MahjongSetLevel", bad);
+            EXPECT_EQ(_game->GetLevel(), ComputerLevel::Normal) << bad;
+            EXPECT_EQ(Var("levelChoice"), "normal") << bad;
+        }
+
+        EmitAction("MahjongOptionsBack");
+        EmitAction("MahjongSetLevel", "easy");
+        EXPECT_EQ(_game->GetLevel(), ComputerLevel::Normal) << "Back closed the page";
+
+        _game->CloseSetup();
+        EmitAction("MahjongSetLevel", "easy");
+        EXPECT_EQ(_game->GetLevel(), ComputerLevel::Normal) << "Setup is closed";
+    }
+
+    TEST_F(MahjongHudTest, TheLevelOfThePageReachesTheNextMatchAndNotTheRunningOne) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        ASSERT_EQ(_game->GetSession().Level(), ComputerLevel::Normal);
+        _game->OpenSetup();
+        Draw();
+        EmitAction("MahjongOptions");
+        EmitAction("MahjongSetLevel", "easy");
+        EXPECT_EQ(_game->GetSession().Level(), ComputerLevel::Normal) << "a running session keeps its level";
+
+        EmitAction("MahjongOptionsBack");
+        EmitAction("MahjongStart");
+        EXPECT_FALSE(_game->IsSetupOpen());
+        EXPECT_EQ(_game->GetSession().Level(), ComputerLevel::Easy);
+    }
+
+    TEST_F(MahjongHudTest, AStartAControlResetAndAControlActionCloseThePage) {
+        IControllableGame* control = _game->AsControllable();
+        ASSERT_NE(control, nullptr);
+        _game->Start();
+        Draw();
+
+        EmitAction("MahjongOptions");
+        ASSERT_TRUE(_game->IsOptionsOpen());
+        EmitAction("MahjongStart");
+        EXPECT_FALSE(_game->IsOptionsOpen());
+
+        _game->OpenSetup();
+        Draw();
+        EmitAction("MahjongOptions");
+        ASSERT_TRUE(_game->IsOptionsOpen());
+        Json options = Json::object();
+        options["seed"] = 3;
+        options["seats"] = "PCCC";
+        ASSERT_TRUE(control->Reset(options).has_value());
+        EXPECT_FALSE(_game->IsOptionsOpen());
+
+        _game->OpenSetup();
+        Draw();
+        EmitAction("MahjongOptions");
+        ASSERT_TRUE(_game->IsOptionsOpen());
+        const auto actions = control->GetActions();
+        ASSERT_TRUE(actions.has_value() && !actions->empty());
+        ASSERT_TRUE(control->PerformAction((*actions)[0]).has_value());
+        EXPECT_FALSE(_game->IsOptionsOpen());
+        EXPECT_FALSE(_game->IsSetupOpen());
+    }
+
+    TEST_F(MahjongHudTest, TheLevelVariableIsNotSetAgainWhileNothingChanges) {
+        _game->Start();
+        Draw();
+        EmitAction("MahjongOptions");
+        Draw();
+        const uint64_t version = CoreManager::GetUIVars().GetVersion();
+        Draw();
+        Draw();
+        EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), version);
+    }
+
+    TEST_F(MahjongHudContinueTest, ContinueWithThePageOpenClosesBothAndKeepsTheSavedMatch) {
+        Draw();
+        ASSERT_TRUE(_game->CanContinue());
+        EmitAction("MahjongOptions");
+        ASSERT_TRUE(_game->IsOptionsOpen());
+        EXPECT_TRUE(_game->CanContinue()) << "the page does not take the offer away";
+
+        EmitAction("MahjongContinue");
+        EXPECT_FALSE(_game->IsOptionsOpen());
+        EXPECT_FALSE(_game->IsSetupOpen());
+        EXPECT_FALSE(_game->IsTablePaused());
+        EXPECT_EQ(StateOf(*_game), _savedState);
     }
 
 }  // namespace BECore::Mahjong::Tests

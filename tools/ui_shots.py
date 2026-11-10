@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Screenshots of the Mahjong UI for a review: six scenes, each in two sizes, into a folder outside the repository.
+"""Screenshots of the Mahjong UI for a review: seven scenes, each in two sizes, into a folder outside the repository.
 
     python3 tools/ui_shots.py --exe build/ClangmacOS/BagiMahjong --label before
 
 Starts one BagiMahjong (--headless --control --manual-clock) and, for each scene, sets up the state through the control API, steps a few
 frames and writes `<NN>-<scene>-1920x1080.png` (the native output of the headless window) and `<NN>-<scene>-640x360.png` (the same render
 scaled down by `maxSize 640`) into `<out>/<label>/`. The scenes: 01-fresh-table, 02-claim-window, 03-score-table, 04-standings, 05-setup,
-06-handoff. A scene that needs a particular state (a claim window, a won hand, the cover) tries the seeds `--seed .. --seed + 29` and
+06-handoff, 07-options. A scene that needs a particular state (a claim window, a won hand, the cover) tries the seeds `--seed .. --seed + 29` and
 prints the seed it used. The pictures are never committed: `--out` may not lie inside a git work tree, and the default is
 `~/.claude/plans/mahjong-ui-polish-shots`. The engine's helpers are found through BAGI_ENGINE_DIR (default: `engine` of this repository).
 Exit code: 0 done, 1 failed, 77 skipped (the executable does not exist).
@@ -148,6 +148,18 @@ def setup_screen(client: BagiControlClient, seed: int) -> str:
     return f"seed {seed}"
 
 
+def options_screen(client: BagiControlClient, seed: int) -> str:
+    """The page Options over Setup: New game, then the button Options of Setup."""
+    reset(client, seed, "PCCC")
+    settle(client)
+    client.call("ui_click", {"name": "NewGame", "canvas": "HudMenu"})
+    settle(client)
+    client.call("ui_click", {"name": "OptionsRow", "canvas": "Setup"})
+    tree = settle(client)
+    check(canvas_visible(tree, "Options"), "the button Options did not open the page")
+    return f"seed {seed}"
+
+
 def handoff(client: BagiControlClient, seed: int) -> str:
     """Two people at seats 0 and 1: the cover is up right after the start, the screen is to be passed to the person who acts first."""
     reset(client, seed, "PPCC")
@@ -163,6 +175,7 @@ SCENES = [
     ("04-standings", standings),
     ("05-setup", setup_screen),
     ("06-handoff", handoff),
+    ("07-options", options_screen),
 ]
 
 

@@ -345,9 +345,9 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(setup->GetLayout().params.maxScale, UICanvasScaleParams{}.maxScale) << "no cap of our own: the scale is in output pixels and does not know the density";
         const float minTouch = EngineTouchMinimum();
 
-        const char* const rows[] = {"Title", "LanguageRow", "SeatRow0", "SeatRow1", "SeatRow2", "SeatRow3", "HandsRow", "HintsRow", "Start"};
-        const char* const segments[] = {"LanguageEn",  "LanguageRu",    "Seat0Person", "Seat0Computer", "Seat1Person", "Seat1Computer", "Seat2Person", "Seat2Computer",
-                                        "Seat3Person", "Seat3Computer", "Hands16",     "Hands8",        "HintsOn",     "HintsOff",      "Continue"};
+        const char* const rows[] = {"Title", "SeatRow0", "SeatRow1", "SeatRow2", "SeatRow3", "HandsRow", "OptionsRow", "Start"};
+        const char* const segments[] = {"Seat0Person", "Seat0Computer", "Seat1Person", "Seat1Computer", "Seat2Person", "Seat2Computer",
+                                        "Seat3Person", "Seat3Computer", "Hands16",     "Hands8",        "OptionsRow",  "Continue"};
         const CanvasScaleMode modes[] = {CanvasScaleMode::ConstantPixelSize, CanvasScaleMode::ScaleWithScreen, CanvasScaleMode::ConstantPhysicalSize};
         size_t cases = 0;
         ForEachMatrixWindow([&](const MatrixWindow& window) {
@@ -364,15 +364,12 @@ namespace BECore::Mahjong::Tests {
                     EXPECT_LE(plate->rect.x + plate->rect.w, safe.x + safe.w + 0.01f) << label;
                     EXPECT_LE(plate->rect.y + plate->rect.h, safe.y + safe.h + 0.01f) << label;
 
-                    // The rows lie in the plate, one under the other (the title is gone in a short canvas)
+                    // The rows lie in the plate, one under the other
                     const UIElement* previous = nullptr;
                     for (const char* name : rows) {
                         const UIElement* row = Element("Setup", name);
                         ASSERT_NE(row, nullptr) << name;
-                        if (row->rect.IsEmpty()) {
-                            EXPECT_STREQ(name, "Title") << label << ": only the title may give way";
-                            continue;
-                        }
+                        ASSERT_FALSE(row->rect.IsEmpty()) << label << " " << name << ": with seven controls nothing gives way, the title included";
                         EXPECT_GE(row->rect.y, plate->rect.y - 0.01f) << label << " " << name;
                         EXPECT_LE(row->rect.y + row->rect.h, plate->rect.y + plate->rect.h + 0.01f) << label << " " << name;
                         if (previous != nullptr) {
@@ -402,31 +399,69 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(cases, BECore::Tests::UILayoutMatrix().size() * 6);
     }
 
-    TEST_F(MahjongTouchSizeTest, TheSeatChoiceIsMainsAnatomyWhereThereIsRoomAndTheTitleGivesWayInAShortCanvas) {
+    TEST_F(MahjongTouchSizeTest, TheSeatChoiceIsMainsAnatomyWhereThereIsRoomAndKeepsItsTitleInAShortCanvas) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         _game->OpenSetup();
         Draw();
         auto setup = Canvas("Setup");
         ASSERT_TRUE(setup);
 
-        // The design size: the plate of 664, the title band of 48, the rows of 64 and a Start of 64
+        // The design size: the plate of 592, the title band of 48, the rows of 64 and a Start of 64
         LayOutInWindow(*setup, DesignWindow());
-        EXPECT_NEAR(Element("Setup", "Plate")->rect.h, 664.0f, 0.01f);
+        EXPECT_NEAR(Element("Setup", "Plate")->rect.h, 592.0f, 0.01f);
         EXPECT_NEAR(Element("Setup", "Title")->rect.h, 48.0f, 0.01f);
-        for (const char* row : {"LanguageRow", "SeatRow0", "SeatRow1", "SeatRow2", "SeatRow3", "HandsRow", "HintsRow", "Start"}) {
+        for (const char* row : {"SeatRow0", "SeatRow1", "SeatRow2", "SeatRow3", "HandsRow", "OptionsRow", "Start"}) {
             EXPECT_NEAR(Element("Setup", row)->rect.h, 64.0f, 0.01f) << row;
         }
         EXPECT_NEAR(Element("Setup", "SeatCaption0")->rect.w, 112.0f, 0.01f);
 
-        // A canvas of 320 units (a 480 px window at the user scale 1.5): no title, narrower captions, the plate the whole safe width
+        // A canvas of 320 units (a 480 px window at the user scale 1.5): the title stays (seven controls leave 25 units a row with it),
+        // the captions are narrower, the plate has the whole safe width
         const MatrixWindow tight = WindowOf(480.0f, 480.0f);
         LayOutInWindow(*setup, tight, CanvasScaleMode::ConstantPixelSize, 1.5f);
-        EXPECT_TRUE(Element("Setup", "Title")->rect.IsEmpty());
+        EXPECT_FALSE(Element("Setup", "Title")->rect.IsEmpty());
         EXPECT_LT(Element("Setup", "SeatCaption0")->rect.w, 112.0f);
         EXPECT_NEAR(Element("Setup", "Plate")->rect.w, setup->GetLayout().GetResolved().contentBounds.w, 0.01f);
-        for (const char* row : {"LanguageRow", "SeatRow0", "HintsRow", "Start"}) {
-            EXPECT_GT(Element("Setup", row)->rect.h, 0.0f) << row << ": nothing but the title is dropped";
+        for (const char* row : {"SeatRow0", "OptionsRow", "Start"}) {
+            EXPECT_GT(Element("Setup", row)->rect.h, 0.0f) << row << ": nothing is dropped";
         }
+    }
+
+    TEST_F(MahjongTouchSizeTest, TheOptionsButtonLiesAboveTheButtonRowCoversNeitherContinueNorStartAndOpensThePageOverThePendingChoice) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        _game->OpenSetup();
+        Draw();
+        UICanvasComponent::SetElementVisibleByName(*_manager->GetSceneByName("MahjongScene"_intern), "Continue"_intern, true);
+        auto setup = Canvas("Setup");
+        ASSERT_TRUE(setup);
+
+        ForEachMatrixWindow([&](const MatrixWindow& window) {
+            LayOutInWindow(*setup, window);
+            const UIElement* options = Element("Setup", "OptionsRow");
+            const UIElement* proceed = Element("Setup", "Continue");
+            const UIElement* start = Element("Setup", "Start");
+            const UIElement* plate = Element("Setup", "Plate");
+            ASSERT_TRUE(options != nullptr && proceed != nullptr && start != nullptr && plate != nullptr);
+            EXPECT_GE(proceed->rect.y, options->rect.y + options->rect.h - 0.01f) << window.label.c_str() << ": Continue is under the button";
+            EXPECT_GE(start->rect.y, options->rect.y + options->rect.h - 0.01f) << window.label.c_str() << ": Start is under the button";
+            EXPECT_GE(options->rect.x, plate->rect.x - 0.01f) << window.label.c_str();
+            EXPECT_LE(options->rect.x + options->rect.w, plate->rect.x + plate->rect.w + 0.01f) << window.label.c_str();
+        });
+
+        // The page opened and closed leaves the pending seats and hands as they were
+        Draw();
+        ASSERT_TRUE(ClickElement("Setup", "Seat2Person"));
+        ASSERT_TRUE(ClickElement("Setup", "Hands8"));
+        const SeatSetup seats = MahjongHudComponent::GetActive()->PendingSeats();
+        const int hands = MahjongHudComponent::GetActive()->PendingHands();
+        ASSERT_TRUE(ClickElement("Setup", "OptionsRow"));
+        EXPECT_TRUE(_game->IsOptionsOpen());
+        Draw();
+        ASSERT_TRUE(ClickElement("Options", "Back"));
+        EXPECT_FALSE(_game->IsOptionsOpen());
+        EXPECT_TRUE(_game->IsSetupOpen());
+        EXPECT_EQ(MahjongHudComponent::GetActive()->PendingSeats(), seats);
+        EXPECT_EQ(MahjongHudComponent::GetActive()->PendingHands(), hands);
     }
 
     TEST_F(MahjongTouchSizeTest, TheSeatChoiceDimsTheWholeWindowAndTheNewGameButtonUnderItTakesNoClick) {

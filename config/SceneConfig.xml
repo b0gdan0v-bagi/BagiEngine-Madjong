@@ -30,6 +30,7 @@
         <node ref="nodes/MahjongHandOverAction"/>
         <node ref="nodes/MahjongMatchOver"/>
         <node ref="nodes/MahjongSetup"/>
+        <node ref="nodes/MahjongOptions"/>
         <node ref="nodes/MahjongRules"/>
         <node ref="nodes/MahjongRulesAction"/>
       </nodes>
