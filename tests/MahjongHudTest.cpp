@@ -663,13 +663,16 @@ namespace BECore::Mahjong::Tests {
         Canvas("Setup")->UpdateLayout(kViewWidth, kViewHeight);
 
         const Rect& plate = Element("Setup", "Plate")->rect;
-        const UIElement* title = Element("Setup", "Title");
+        // The header band is a row that holds the title and the close cross, 56 high so the cross is a touch target (the other screens' 48)
+        constexpr float kSetupTitleHeight = 56.0f;
+        const UIElement* title = Element("Setup", "TitleRow");
         ASSERT_NE(title, nullptr);
         EXPECT_TRUE(SameColor(title->color, PaletteColor("header")));
         EXPECT_TRUE(SameColor(Element("Setup", "Plate")->color, PaletteColor("surface")));
         EXPECT_EQ(title->rect.x, plate.x + kModalPadding);
         EXPECT_EQ(title->rect.y, plate.y + kModalPadding);
-        EXPECT_EQ(title->rect.h, kModalTitleHeight);
+        EXPECT_EQ(title->rect.h, kSetupTitleHeight);
+        EXPECT_EQ(title->rect.w, plate.w - 2 * kModalPadding);
 
         // The rows from the top: the four seats and the number of hands; each a raised band with a muted caption and a group
         struct Row {

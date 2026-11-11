@@ -14,9 +14,9 @@
   hints, speed) is not here but on the page Options (MahjongOptions.xml), which the full-width button OptionsRow (MahjongOptions, neutral) opens over this panel; the panel stays open
   under it, so the pending seats and hands and Continue are not lost.
   The roomy shape (a canvas of 1280 x 720 units, the design size) is the anatomy of the modal screens: the plate is the safe area
-  at most 592 high (32 padding + 48 title band + 5 x 64 rows + 64 OptionsRow + 64 ButtonRow + 8 x 8 spacing; StartGap is empty,
+  at most 600 high (32 padding + 56 title band + 5 x 64 rows + 64 OptionsRow + 64 ButtonRow + 8 x 8 spacing; StartGap is empty,
   so the 8 + 8 round it set the row of Start 16 apart from the rows) and the title, the rows, OptionsRow and Start share its height
-  by flex weights that come out at 48 / 64 (0.75 / 1) and stop growing there (maxHeight). A row has no vertical padding: its caption
+  by flex weights that come out at 56 / 64 (0.875 / 1) and stop growing there (maxHeight). A row has no vertical padding: its caption
   and its group are 87.5 % of its height and centred, which is the 4 padding round a 56 segment of a row of 64. The shape gives way
   where the canvas is short: the smallest one is a 480 px window at the user scale 1.5, 320 x 320 units (262 x 297 of safe area
   with insets), where a control is 32 px from 21.34 units; the seven controls (four seats, hands, OptionsRow, Start) with the gaps
@@ -28,6 +28,11 @@
   one more control: Person / Computer needs 74 units there, so a dropdown is 60 and its text may shrink to 8 units (minFontSize),
   which is 12 px at that scale. Every other text may shrink (AutoFit, down to 12 units) instead of being cut.
   MahjongHudTest and MahjongTouchSizeTest hold the shapes, the touch size and the words on the whole size matrix.
+  The close cross SetupClose (MahjongSetupClose; the same close as Escape) is the right end of the title band TitleRow, as high as the band
+  (56 in the roomy shape, so a touch target at the floor scale 0.6, and as high as a segment of a row in every other: the band is 0.875 of a
+  row like the segments) and 56 wide; the empty TitleSpacer of the same width on the left keeps the Title centred (it is 0 in a canvas of at
+  most 480 units wide: the Russian title needs the room, and the Title leans left of the middle there). It only closes the panel:
+  it starts nothing and sets none of the choices. Its glyph and its tooltip are keys (setup.closeMark, setup.close).
   Continue (MahjongContinue; the saved match is the table behind the panel, MahjongGame::CanContinue()) is not a new row, because
   the plate has no room for another: Start lives in the horizontal stack ButtonRow (64 high like the rows, 8 between) beside it.
   Continue is hidden here and shown by MahjongHudComponent exactly while the panel is open and there is a match to continue; a hidden
@@ -38,9 +43,15 @@
     <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" modal="true" visible="false">
       <elements>
         <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
-        <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="640" height="100%" maxHeight="592" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
+        <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="640" height="100%" maxHeight="600" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
           <children>
-            <element type="UILabel" name="Title" flex="0.75" maxHeight="48" text="{#setup.title}" fontSize="28" overflow="AutoFit" minFontSize="12" align="Center" verticalAlign="Center" color="58,66,92,255" />
+            <element type="UIStack" name="TitleRow" flex="0.875" maxHeight="56" direction="Horizontal" spacing="0" crossAlign="Stretch" color="58,66,92,255">
+              <children>
+                <element type="UIElement" name="TitleSpacer" width="56" />
+                <element type="UILabel" name="Title" flex="1" text="{#setup.title}" fontSize="28" overflow="AutoFit" minFontSize="12" align="Center" verticalAlign="Center" />
+                <element type="UIButton" name="SetupClose" width="56" text="{#setup.closeMark}" tooltip="{#setup.close}" fontSize="28" overflow="AutoFit" minFontSize="12" action="MahjongSetupClose" color="70,70,100,255" />
+              </children>
+            </element>
             <element type="UIStack" name="SeatRow0" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255">
               <children>
                 <element type="UILabel" name="SeatCaption0" width="112" height="87.5%" text="{#setup.seat1}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" textColor="190,196,190,255" />
@@ -167,6 +178,7 @@
         <variant when="maxWidth:480">
           <overrides>
             <set element="Plate" width="100%" />
+            <set element="TitleSpacer" width="0" />
             <set element="SeatCaption0" width="52" />
             <set element="SeatCaption1" width="52" />
             <set element="SeatCaption2" width="52" />
