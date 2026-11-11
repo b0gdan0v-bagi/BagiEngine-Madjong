@@ -122,6 +122,11 @@ namespace BECore::Mahjong {
         return {context.startCount, context.handsPlayed, context.historySize};
     }
 
+    /// The key of the hand the session is in now.
+    [[nodiscard]] inline CoachHandKey HandKeyOf(const TableSession& session) {
+        return HandKeyOf(session.Context());
+    }
+
     /**
      * @brief The note and the tally of the coach, fed by the session (`TableSession::SetMoveObserver`).
      *

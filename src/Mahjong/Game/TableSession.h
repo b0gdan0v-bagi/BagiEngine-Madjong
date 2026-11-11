@@ -280,6 +280,10 @@ namespace BECore::Mahjong {
         [[nodiscard]] uint64_t StartCount() const noexcept {
             return _starts;
         }
+        /// The `MoveContext` of the hand as it stands now (what the observer is told with a move).
+        [[nodiscard]] MoveContext Context() const {
+            return MoveContext{_starts, _match.HandsPlayed(), _match.History().size(), PersonCount()};
+        }
 
     private:
         /// `StartMatch` with the table of `levels`, or of `profile` when it is not null.

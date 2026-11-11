@@ -150,7 +150,7 @@ namespace BECore::Mahjong {
             return Format("{}", value);
         }
 
-        /// The sentence of one side of a note (`owner`: "mine" or "computer" in the key) for `action`; empty when the side has nothing to say.
+        /// The sentence of one side of a note (`computer`: the key is "computer" or "mine") for `action`; empty when the side has nothing to say.
         eastl::string SideLine(const UIStrings& strings, const CoachNote& note, const HandAction& action, const CoachSide& side, bool computer) {
             const eastl::string before = Num(note.stepsBefore);
             const eastl::string after = Num(side.steps);

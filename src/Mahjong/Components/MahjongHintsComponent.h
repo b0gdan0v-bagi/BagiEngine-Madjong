@@ -122,9 +122,10 @@ namespace BECore::Mahjong {
         uint64_t _adviceStringsVersion = 0;
 
         bool _coachShown = false;
-        uint64_t _coachSeen = 0;       ///< `CoachLedger::Version()` of the note last looked at
-        CoachHandKey _coachHand;       ///< the hand that note was first seen in
-        uint64_t _coachPublished = 0;  ///< the version whose words are in the variables
+        const MahjongGame* _coachOf = nullptr;  ///< the game whose note was last looked at
+        uint64_t _coachSeen = 0;                ///< `CoachLedger::Version()` of the note last looked at
+        CoachHandKey _coachHand;                ///< the hand that note was first seen in
+        uint64_t _coachPublished = 0;           ///< the version whose words are in the variables
         uint64_t _coachStringsVersion = 0;
 
         static MahjongHintsComponent* s_active;

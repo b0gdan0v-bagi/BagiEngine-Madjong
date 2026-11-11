@@ -283,9 +283,7 @@ namespace BECore::Mahjong {
         const MatchProgress after = NextProgress(MatchProgress{match.HandsPlayed(), match.East()}, settlement.kind, settlement.winner, match.GetSettings());
         vars.Set("handOverButton"_intern, eastl::string_view(Tr(strings, IsMatchOver(after.handsPlayed, match.GetSettings()) ? "handover.finish" : "handover.next")));
         const CoachLedger& coach = game.GetCoach();
-        const eastl::string tally =
-            game.CoachOn() ? FormatCoachTally(strings, coach.HandTallyOf(CoachHandKey{session.StartCount(), match.HandsPlayed(), match.History().size()}), coach.MatchTallyOf(session.StartCount()))
-                           : eastl::string();
+        const eastl::string tally = game.CoachOn() ? FormatCoachTally(strings, coach.HandTallyOf(HandKeyOf(session)), coach.MatchTallyOf(session.StartCount())) : eastl::string();
         vars.Set("handOverCoach"_intern, eastl::string_view(tally));
         UICanvasComponent::SetElementVisibleByName(GetScene(), "HandCoachRow"_intern, !tally.empty());
     }

@@ -214,7 +214,7 @@ namespace BECore::Mahjong {
         CoverForNextPerson();
         ++_version;
         if (_observer != nullptr) {
-            _observer->OnPersonMove(*before, action, MoveContext{_starts, _match.HandsPlayed(), _match.History().size(), PersonCount()});
+            _observer->OnPersonMove(*before, action, Context());
         }
         return {};
     }

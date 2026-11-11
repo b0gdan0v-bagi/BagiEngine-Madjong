@@ -236,9 +236,9 @@ namespace BECore::Mahjong {
         CoachLedger* ledger = game != nullptr ? &game->GetCoach() : nullptr;
         bool show = false;
         if (ledger != nullptr && ledger->Note().has_value()) {
-            const Match& match = game->GetMatch();
-            const CoachHandKey hand{game->GetSession().StartCount(), match.HandsPlayed(), match.History().size()};
-            if (ledger->Version() != _coachSeen) {
+            const CoachHandKey hand = HandKeyOf(game->GetSession());
+            if (_coachOf != game || ledger->Version() != _coachSeen) {
+                _coachOf = game;
                 _coachSeen = ledger->Version();  // a note not seen yet belongs to the hand it is first seen in
                 _coachHand = hand;
             }

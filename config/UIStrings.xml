@@ -165,8 +165,8 @@
         <string key="coach.computer.kong" text="Computer's kong of {tile}: steps {before} -&gt; {after}, helps {copies}"/>
         <string key="coach.computer.pung" text="Computer's pung of {tile}: steps {before} -&gt; {after}, helps {copies}"/>
         <string key="coach.computer.chow" text="Computer's chow {first} - {third}: steps {before} -&gt; {after}, helps {copies}"/>
-        <string key="coach.computer.pass" text="Computer passes: the hand stays at {before} steps."/>
-        <string key="coach.computer.waiting" text="Computer passes: your hand was waiting."/>
+        <string key="coach.computer.pass" text="Computer would pass: steps to ready: {before}."/>
+        <string key="coach.computer.waiting" text="Computer would pass: your hand is already waiting."/>
         <string key="coach.tally.hand" text="Moves like the computer's: {agreed} of {moves} this hand, {matchAgreed} of {matchMoves} in the match"/>
         <string key="coach.tally.match" text="Moves like the computer's: {agreed} of {moves} in the match"/>
         <string key="cover.text" text="Pass the screen to {handoffSeat}"/>

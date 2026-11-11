@@ -268,10 +268,9 @@ namespace BECore::Mahjong::Tests {
 
         /// The tally line a hand of the person, shown now, must carry: from the ledger, in the current language.
         eastl::string ExpectedHandTally() const {
-            const Match& match = _game->GetMatch();
             const CoachLedger& coach = _game->GetCoach();
-            const uint64_t start = _game->GetSession().StartCount();
-            return FormatCoachTally(CoreManager::GetUIStrings(), coach.HandTallyOf(CoachHandKey{start, match.HandsPlayed(), match.History().size()}), coach.MatchTallyOf(start));
+            const TableSession& session = _game->GetSession();
+            return FormatCoachTally(CoreManager::GetUIStrings(), coach.HandTallyOf(HandKeyOf(session)), coach.MatchTallyOf(session.StartCount()));
         }
 
         /// Plays whole hands (the person clicking `Next hand` each time) until the match is over.

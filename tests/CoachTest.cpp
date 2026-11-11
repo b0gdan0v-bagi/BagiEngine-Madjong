@@ -352,7 +352,7 @@ namespace BECore::Mahjong::Tests {
         const std::vector<std::string> lines = LinesOf(Words(), note);
         ASSERT_EQ(lines.size(), 3u);
         EXPECT_NE(lines[1].find("Your pung of 5 Characters"), std::string::npos) << lines[1];
-        EXPECT_NE(lines[2].find("passes"), std::string::npos) << lines[2];
+        EXPECT_NE(lines[2].find("would pass"), std::string::npos) << lines[2];
     }
 
     TEST(CoachTest, ClaimingWithAHandThatWaitsDiffersAndSaysTheHandWaited) {
@@ -364,7 +364,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(note.handWaits);
         const std::vector<std::string> lines = LinesOf(Words(), note);
         ASSERT_EQ(lines.size(), 3u);
-        EXPECT_NE(lines[2].find("was waiting"), std::string::npos) << lines[2];
+        EXPECT_NE(lines[2].find("already waiting"), std::string::npos) << lines[2];
     }
 
     TEST(CoachTest, TheOtherClaimIsJudgedByTheNumbersAfterIt) {
