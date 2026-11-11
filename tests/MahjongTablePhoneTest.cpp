@@ -2,6 +2,7 @@
 #include "MahjongTouchTestSupport.h"
 
 #include <Events/SceneEvents.h>
+#include <Mahjong/Table/SeatPlates.h>
 #include <Mahjong/Table/TapSelect.h>
 
 /**
@@ -103,8 +104,8 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongTablePhoneTest, TheWordsOfEveryPlateLieOnItInEveryWindow) {
         // The labels of `MahjongSeatPlates.xml` are fixed in view units (the plate is not moved for them, with one exception: the bottom plate
-        // of the phone profile is lifted to end where the tallest hand tile starts), so each must still lie inside its plate, padded
-        constexpr float kPlatePad = 8.0f;
+        // of the phone profile is lifted to end where the tallest hand tile starts), so each must still lie inside its plate, under the ring box
+        // of its emblem
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
         ForEachTableWindow([&](const MatrixWindow& window) {
@@ -114,10 +115,10 @@ namespace BECore::Mahjong::Tests {
                 const UIElement* name = Element("SeatPlates", Format("PlateName{}", position).c_str());
                 ASSERT_NE(name, nullptr) << position;
                 const Rect& plate = layout.zones.seatPlates[SeatAtPosition(layout.viewer, position)];
-                EXPECT_GE(name->rect.x, plate.x + kPlatePad) << window.label.c_str() << " plate " << position;
-                EXPECT_GE(name->rect.y, plate.y + kPlatePad) << window.label.c_str() << " plate " << position;
-                EXPECT_LE(name->rect.x + name->rect.w, plate.x + plate.w - kPlatePad) << window.label.c_str() << " plate " << position;
-                EXPECT_LE(name->rect.y + name->rect.h, plate.y + plate.h - kPlatePad) << window.label.c_str() << " plate " << position;
+                EXPECT_GE(name->rect.x, plate.x) << window.label.c_str() << " plate " << position;
+                EXPECT_GE(name->rect.y, EmblemBox(plate, 1.0f).y + EmblemBox(plate, 1.0f).h) << window.label.c_str() << " plate " << position << ": under the emblem";
+                EXPECT_LE(name->rect.x + name->rect.w, plate.x + plate.w) << window.label.c_str() << " plate " << position;
+                EXPECT_LE(name->rect.y + name->rect.h, plate.y + plate.h) << window.label.c_str() << " plate " << position;
             }
         });
     }
