@@ -660,8 +660,8 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableActionsTest, PassInTheCompactCanvasLeavesTheDiscard) {
-        ASSERT_NO_FATAL_FAILURE(StartInWindow(650.0f, 500.0f, kPersonAtSeat1, ClaimWindowModel()));
-        ASSERT_TRUE(CanvasShown("ActionsCompact")) << "the canvas is 1083 units wide: the row is one line on a bar of 67 px";
+        ASSERT_NO_FATAL_FAILURE(StartInWindow(600.0f, 580.0f, kPersonAtSeat1, ClaimWindowModel()));
+        ASSERT_TRUE(CanvasShown("ActionsCompact")) << "the canvas is 976 units wide: the row is two lines (73.7 px) on a bar of 76.7 px";
         EXPECT_TRUE(ClickCompact("Pass"));
         EXPECT_TRUE(Hand().GetHand(kSeat1).melds.empty());
         EXPECT_NE(Hand().GetPhase(), Phase::Claim);
@@ -700,15 +700,20 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(OnScreenButtons().size(), 4u);
         EXPECT_TRUE(OnCompactScreen().empty());
 
-        // The boundary of the size: 732 x 700 keeps `Actions` (a button of 32.03 px), 731 x 700 does not (31.98 px) and has a bar for the row
-        SetOutputSize(*_renderer, 732.0f, 700.0f);
+        // The boundary of the size, in the narrow view (the table is 1080 wide, so a button is 56 x w / 1080 px): 618 x 600 keeps `Actions` (a button of
+        // 32.04 px), 617 x 600 does not (31.99 px) and has a bar for the row
+        SetOutputSize(*_renderer, 618.0f, 600.0f);
         Draw();
         EXPECT_TRUE(CanvasShown("Actions"));
         EXPECT_FALSE(CanvasShown("ActionsCompact"));
-        SetOutputSize(*_renderer, 731.0f, 700.0f);
+        SetOutputSize(*_renderer, 617.0f, 600.0f);
         Draw();
         EXPECT_FALSE(CanvasShown("Actions"));
         EXPECT_TRUE(CanvasShown("ActionsCompact"));
+        // In the landscape view the boundary is 732 x 412 (a button of 32.03 px)
+        SetOutputSize(*_renderer, 732.0f, 412.0f);
+        Draw();
+        EXPECT_TRUE(CanvasShown("Actions"));
     }
 
     TEST_F(MahjongTableActionsTest, AWindowAsHighAsTheTableKeepsActionsWhateverSizeTheButtonsHave) {
@@ -730,9 +735,10 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(StartInWindow(kCompactWindowWidth, kCompactWindowHeight, kPersonAtSeat1, ClaimWindowModel()));
         ASSERT_TRUE(CanvasShown("ActionsCompact"));
 
-        // The row is as high as the width of its canvas makes it (the stack starts its lines at its top): 72 px under 1043.91 units, on bars of 41
-        // to 64 px. (640 x 480 and 720 x 480 of the matrix keep `Actions` for it at the user scale 1.5 only, which this window does not set.)
-        for (const auto& [width, height] : {std::pair{600.0f, 420.0f}, std::pair{480.0f, 360.0f}, std::pair{500.0f, 400.0f}, std::pair{626.0f, 480.0f}}) {
+        // The row is as high as the width of its canvas makes it (the stack starts its lines at its top): 72 px under 1043.91 units. The narrow table
+        // has buttons of 32 px or more from 617 px wide, so what keeps `Actions` is a bar under the row: 480 x 360 and 500 x 400 (bars of 9 and 22
+        // px), 600 x 570 (71.7 px for 73.7), or no bar at all (600 x 420, the table fills the height)
+        for (const auto& [width, height] : {std::pair{600.0f, 420.0f}, std::pair{480.0f, 360.0f}, std::pair{500.0f, 400.0f}, std::pair{600.0f, 570.0f}}) {
             SetOutputSize(*_renderer, width, height);
             Draw();
             EXPECT_TRUE(CanvasShown("Actions")) << width << " x " << height;
@@ -740,8 +746,8 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(OnScreenButtons().size(), 4u) << width << " x " << height;
             EXPECT_TRUE(OnCompactScreen().empty()) << width << " x " << height;
         }
-        // One pixel of width more and the canvas is wide enough for one line (1045 units, 33.6 px on a bar of 63.7 px)
-        SetOutputSize(*_renderer, 627.0f, 480.0f);
+        // Ten pixels of height more and the bar holds the row (76.7 px)
+        SetOutputSize(*_renderer, 600.0f, 580.0f);
         Draw();
         EXPECT_FALSE(CanvasShown("Actions"));
         EXPECT_TRUE(CanvasShown("ActionsCompact"));

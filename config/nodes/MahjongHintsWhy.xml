@@ -5,7 +5,8 @@
   WhyPanel lies on the wall ring (TableLayout::zones.wall, x 458..822, y 268..436 in view units; the panel is 2 in from each side, so that
   it sits on the grid of 4): the one place of the table with no hand, meld or discard tile, so it covers only the centre panel (round, wall count, points) and the wall stacks while it is open. Its plate
   is opaque (the palette's surface), so the centre panel does not show through. In the portrait table the ring is 280 units left and 132
-  down (x 180, y 400), like the variant of MahjongCenterPanel.xml, and the variant moves the panel by that. It is 360 x 168: six
+  down (x 180, y 400), like the variant of MahjongCenterPanel.xml, and the variant moves the panel by that; the narrow
+  variant moves it 100 left (x 360) and the wide one 140 right (x 600), as the ring. It is 360 x 168: six
   labels of 360 x 28 (font 18, AutoFit down to 12) hold the lines {hintWhy0}..{hintWhy5}, empty ones included. Layer 11: over the HUD
   (10), under the covers and the modal screens (20 and up). A SceneView canvas whose panel ignores the safe area like CenterPanel, so
   it stays on the ring. MahjongHintsTest holds it inside the ring, clear of every slot but the wall stacks, free of input, and every
@@ -30,6 +31,16 @@
         <variant when="orientation:portrait">
           <overrides>
             <set element="WhyPanel" x="180" y="400" />
+          </overrides>
+        </variant>
+        <variant when="orientation:landscape;maxAspect:1.55">
+          <overrides>
+            <set element="WhyPanel" x="360" />
+          </overrides>
+        </variant>
+        <variant when="minAspect:2">
+          <overrides>
+            <set element="WhyPanel" x="600" />
           </overrides>
         </variant>
       </variants>

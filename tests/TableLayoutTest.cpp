@@ -23,11 +23,16 @@ namespace BECore::Mahjong::Tests {
             float width;
             float height;
         };
-        /// Landscape and portrait views: the designs, fitted ones, a square (portrait) and a phone's 390 x 844.
-        const ViewSize kViewSizes[] = {{kViewWidth, kViewHeight}, {1920.0f, 1080.0f}, {800.0f, 800.0f},  {640.0f, 360.0f}, {1000.0f, 400.0f}, {kPortraitViewWidth, kPortraitViewHeight},
-                                       {390.0f, 844.0f},          {360.0f, 640.0f},   {768.0f, 1024.0f}, {480.0f, 480.0f}};
-        /// The two designs, the views the layout is made in unscaled.
-        const ViewSize kDesigns[] = {{kViewWidth, kViewHeight}, {kPortraitViewWidth, kPortraitViewHeight}};
+        /// Landscape, wide, narrow (4:3, 3:2, 5:4) and portrait views: the designs, fitted ones, the wide boundary (2000 x 1000), a square (portrait) and a phone's 390 x 844.
+        const ViewSize kViewSizes[] = {{kViewWidth, kViewHeight}, {1920.0f, 1080.0f},
+                                       {800.0f, 800.0f},          {640.0f, 360.0f},
+                                       {1000.0f, 400.0f},         {kWideViewWidth, kViewHeight},
+                                       {2560.0f, 1080.0f},        {3200.0f, 900.0f},
+                                       {2000.0f, 1000.0f},        {kPortraitViewWidth, kPortraitViewHeight},
+                                       {390.0f, 844.0f},          {360.0f, 640.0f},
+                                       {768.0f, 1024.0f},         {480.0f, 480.0f}};
+        /// The designs of the shapes, the views the layout is made in unscaled.
+        const ViewSize kDesigns[] = {{kViewWidth, kViewHeight}, {kWideViewWidth, kViewHeight}, {kNarrowViewWidth, kNarrowViewHeight}, {kPortraitViewWidth, kPortraitViewHeight}};
         const SlotRole kSeatRoles[] = {SlotRole::HandTile, SlotRole::MeldTile, SlotRole::BonusTile, SlotRole::DiscardTile};
 
         Meld MakeMeld(MeldKind kind) {
@@ -506,7 +511,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_NEAR(doubled.slots[i].rect.w, design.slots[i].rect.w * 2.0f, kTolerance);
             EXPECT_NEAR(doubled.slots[i].rect.h, design.slots[i].rect.h * 2.0f, kTolerance);
         }
-        // A view twice as wide keeps the scale of the height and puts the table in the middle.
+        // A view twice as wide (a wide view) keeps the scale of the height and puts the table in the middle: the wing is the same ground.
         const TableLayout wide = MakeTableLayout(input, 2.0f * kViewWidth, kViewHeight);
         ASSERT_EQ(design.slots.size(), wide.slots.size());
         for (size_t i = 0; i < design.slots.size(); ++i) {
@@ -1412,13 +1417,25 @@ namespace BECore::Mahjong::Tests {
         ExpectSameSlots(MakeTableLayout(PhoneInput(WorstInput(1, 30, kNoSeat), 500.0f)), MakeTableLayout(PhoneInput(WorstInput(1, 30, kNoSeat), kPhoneHandTileMaxW)));
     }
 
-    TEST(TableLayoutTest, AViewAsHighAsWideOrHigherIsPortraitAndAnyOtherLandscape) {
+    TEST(TableLayoutTest, TheShapeOfAViewIsPortraitNarrowWideOrLandscapeByItsAspect) {
         EXPECT_EQ(ShapeOfView(kViewWidth, kViewHeight), TableShape::Landscape);
+        EXPECT_EQ(ShapeOfView(1920.0f, 1080.0f), TableShape::Landscape);
         EXPECT_EQ(ShapeOfView(kPortraitViewWidth, kPortraitViewHeight), TableShape::Portrait);
         EXPECT_EQ(ShapeOfView(480.0f, 480.0f), TableShape::Portrait) << "a square is portrait, as `orientation:portrait`";
-        EXPECT_EQ(ShapeOfView(480.0f, 479.0f), TableShape::Landscape);
+        EXPECT_EQ(ShapeOfView(480.0f, 479.0f), TableShape::Narrow) << "just under a square is the narrowest landscape";
         EXPECT_EQ(ShapeOfView(390.0f, 844.0f), TableShape::Portrait);
-        EXPECT_EQ(ShapeOfView(2560.0f, 1080.0f), TableShape::Landscape);
+        EXPECT_EQ(ShapeOfView(1024.0f, 768.0f), TableShape::Narrow) << "4:3";
+        EXPECT_EQ(ShapeOfView(1200.0f, 800.0f), TableShape::Narrow) << "3:2";
+        EXPECT_EQ(ShapeOfView(1280.0f, 1024.0f), TableShape::Narrow) << "5:4";
+        EXPECT_EQ(ShapeOfView(kNarrowViewWidth, kNarrowViewHeight), TableShape::Narrow);
+        EXPECT_EQ(ShapeOfView(1500.0f, 1000.0f), TableShape::Narrow) << "3:2 again";
+        EXPECT_EQ(ShapeOfView(1600.0f, 1000.0f), TableShape::Landscape) << "16:10 is not narrow";
+        EXPECT_EQ(ShapeOfView(1999.0f, 1000.0f), TableShape::Landscape);
+        EXPECT_EQ(ShapeOfView(2000.0f, 1000.0f), TableShape::Wide) << "the boundary is wide, as `minAspect:2`";
+        EXPECT_EQ(ShapeOfView(2560.0f, 1080.0f), TableShape::Wide);
+        EXPECT_EQ(ShapeOfView(3200.0f, 900.0f), TableShape::Wide);
+        EXPECT_EQ(ShapeOfView(kWideViewWidth, kViewHeight), TableShape::Wide);
+        EXPECT_EQ(ShapeOfView(915.0f, 330.0f), TableShape::Wide) << "a landscape phone";
     }
 
     TEST(TableLayoutTest, AViewThatIsNotPositiveIsLandscape) {
@@ -1431,12 +1448,15 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(TableLayoutTest, TheShapeOfAnOutputIsTheShapeOfAViewOfThatSize) {
-        const ViewSize outputs[] = {{1280.0f, 720.0f}, {720.0f, 1280.0f}, {480.0f, 480.0f}, {1.0f, 1.0f}, {0.0f, 0.0f}, {390.0f, 844.0f}, {2560.0f, 1080.0f}};
+        const ViewSize outputs[] = {{1280.0f, 720.0f},  {720.0f, 1280.0f},  {480.0f, 480.0f},   {1.0f, 1.0f},      {0.0f, 0.0f},     {390.0f, 844.0f},
+                                    {2560.0f, 1080.0f}, {2000.0f, 1000.0f}, {1600.0f, 1000.0f}, {1024.0f, 768.0f}, {1200.0f, 800.0f}};
         for (const ViewSize& output : outputs) {
             EXPECT_EQ(ShapeOfOutput(output.width, output.height), ShapeOfView(output.width, output.height)) << output.width << " x " << output.height;
         }
         EXPECT_EQ(ShapeOfOutput(1.0f, 1.0f), TableShape::Portrait);
         EXPECT_EQ(ShapeOfOutput(0.0f, 0.0f), TableShape::Landscape);
+        EXPECT_EQ(ShapeOfOutput(2560.0f, 1080.0f), TableShape::Wide);
+        EXPECT_EQ(ShapeOfOutput(1024.0f, 768.0f), TableShape::Narrow);
     }
 
     TEST(TableLayoutTest, TheDesignOfAShapeIsItsViewSize) {
@@ -1444,6 +1464,20 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(DesignHeightOf(TableShape::Landscape), kViewHeight);
         EXPECT_EQ(DesignWidthOf(TableShape::Portrait), 720.0f);
         EXPECT_EQ(DesignHeightOf(TableShape::Portrait), 1280.0f);
+        EXPECT_EQ(DesignWidthOf(TableShape::Wide), 1560.0f);
+        EXPECT_EQ(DesignHeightOf(TableShape::Wide), kViewHeight);
+        EXPECT_EQ(kWideWingWidth, 140.0f);
+        EXPECT_EQ(DesignWidthOf(TableShape::Narrow), 1080.0f);
+        EXPECT_EQ(DesignHeightOf(TableShape::Narrow), 768.0f);
+        EXPECT_EQ(ShapeOfView(DesignWidthOf(TableShape::Narrow), DesignHeightOf(TableShape::Narrow)), TableShape::Narrow);
+        for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait, TableShape::Wide, TableShape::Narrow}) {
+            EXPECT_EQ(ShapeOfView(DesignWidthOf(shape), DesignHeightOf(shape)), shape) << "each design size maps to its own shape";
+        }
+        EXPECT_FALSE(IsLandscapeLike(TableShape::Narrow));
+        EXPECT_EQ(ShapeOfView(DesignWidthOf(TableShape::Wide), DesignHeightOf(TableShape::Wide)), TableShape::Wide);
+        EXPECT_TRUE(IsLandscapeLike(TableShape::Landscape));
+        EXPECT_TRUE(IsLandscapeLike(TableShape::Wide));
+        EXPECT_FALSE(IsLandscapeLike(TableShape::Portrait));
     }
 
     TEST(TableLayoutTest, TheLayoutScaleFitsTheDesignOfTheShapeOfTheViewIntoIt) {
@@ -1454,6 +1488,15 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FLOAT_EQ(LayoutScale(360.0f, 640.0f), 0.5f);
         EXPECT_FLOAT_EQ(LayoutScale(390.0f, 844.0f), 390.0f / 720.0f) << "width limited";
         EXPECT_FLOAT_EQ(LayoutScale(800.0f, 800.0f), 800.0f / 1280.0f) << "a square is portrait: the height limits";
+        EXPECT_FLOAT_EQ(LayoutScale(kWideViewWidth, kViewHeight), 1.0f);
+        EXPECT_FLOAT_EQ(LayoutScale(kNarrowViewWidth, kNarrowViewHeight), 1.0f);
+        EXPECT_FLOAT_EQ(LayoutScale(1024.0f, 768.0f), 1024.0f / 1080.0f) << "4:3: the width limits";
+        EXPECT_FLOAT_EQ(LayoutScale(1200.0f, 800.0f), 800.0f / 768.0f) << "3:2: the height limits";
+        EXPECT_FLOAT_EQ(LayoutScale(640.0f, 480.0f), 640.0f / 1080.0f);
+        EXPECT_FLOAT_EQ(LayoutScale(2560.0f, 1080.0f), 1.5f) << "wide: the height limits";
+        EXPECT_FLOAT_EQ(LayoutScale(1000.0f, 400.0f), 400.0f / 720.0f);
+        EXPECT_FLOAT_EQ(LayoutScale(915.0f, 330.0f), 330.0f / 720.0f) << "a landscape phone is wider than 19.5:9: the height limits";
+        EXPECT_FLOAT_EQ(LayoutScale(2000.0f, 1000.0f), 2000.0f / 1560.0f) << "the boundary of the wide view is narrower than 19.5:9: the width limits";
         EXPECT_EQ(LayoutScale(0.0f, 720.0f), 0.0f);
         EXPECT_EQ(LayoutScale(1280.0f, -1.0f), 0.0f);
         EXPECT_EQ(LayoutScale(std::nanf(""), 720.0f), 0.0f);
@@ -1489,6 +1532,229 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(InPortrait(QuietInput(0)).shape, TableShape::Portrait);
         EXPECT_EQ(MakeTableLayout(QuietInput(0), 480.0f, 480.0f).shape, TableShape::Portrait);
         EXPECT_EQ(MakeTableLayout(QuietInput(0), 0.0f, 0.0f).shape, TableShape::Landscape);
+    }
+
+    TEST(TableLayoutTest, TheWideLayoutIsTheLandscapeOneShiftedByTheWingAtTheScaleOfTheView) {
+        const auto expectShifted = [](const TableInput& input, float width, float height) {
+            const TableShape shape = ShapeOfView(width, height);
+            ASSERT_EQ(shape, TableShape::Wide) << width << "x" << height;
+            const TableLayout landscape = InLandscape(input);
+            const TableLayout wide = MakeTableLayout(input, width, height);
+            const float scale = LayoutScale(width, height);
+            const float offsetX = (width - kWideViewWidth * scale) / 2.0f + kWideWingWidth * scale;
+            const float offsetY = (height - kViewHeight * scale) / 2.0f;
+            const auto expectRect = [&](const Rect& actual, const Rect& expected, const char* what) {
+                EXPECT_NEAR(actual.x, offsetX + expected.x * scale, kTolerance) << what << " " << width << "x" << height;
+                EXPECT_NEAR(actual.y, offsetY + expected.y * scale, kTolerance) << what << " " << width << "x" << height;
+                EXPECT_NEAR(actual.w, expected.w * scale, kTolerance) << what << " " << width << "x" << height;
+                EXPECT_NEAR(actual.h, expected.h * scale, kTolerance) << what << " " << width << "x" << height;
+            };
+            EXPECT_EQ(wide.shape, TableShape::Wide);
+            EXPECT_EQ(wide.profile, landscape.profile);
+            ASSERT_EQ(wide.slots.size(), landscape.slots.size());
+            for (size_t i = 0; i < wide.slots.size(); ++i) {
+                expectRect(wide.slots[i].rect, landscape.slots[i].rect, "slot");
+                EXPECT_EQ(wide.slots[i].role, landscape.slots[i].role);
+                EXPECT_EQ(wide.slots[i].seat, landscape.slots[i].seat);
+                EXPECT_EQ(wide.slots[i].index, landscape.slots[i].index);
+                EXPECT_EQ(wide.slots[i].part, landscape.slots[i].part);
+                EXPECT_EQ(wide.slots[i].claimEdge, landscape.slots[i].claimEdge);
+                EXPECT_EQ(wide.slots[i].rotation, landscape.slots[i].rotation);
+            }
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                expectRect(wide.zones.discards[seat], landscape.zones.discards[seat], "discards");
+                expectRect(wide.zones.seatPlates[seat], landscape.zones.seatPlates[seat], "plate");
+            }
+            expectRect(wide.zones.wall, landscape.zones.wall, "wall");
+            expectRect(wide.zones.centerPanel, landscape.zones.centerPanel, "panel");
+        };
+        const ViewSize wideViews[] = {{kWideViewWidth, kViewHeight}, {2560.0f, 1080.0f}, {3200.0f, 900.0f}, {2000.0f, 1000.0f}, {915.0f, 330.0f}};
+        for (const ViewSize& size : wideViews) {
+            for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+                for (const TableInput& table : kAllTables) {
+                    expectShifted(WithViewer(table, viewer), size.width, size.height);
+                    expectShifted(PhoneInput(WithViewer(table, viewer), 60.0f), size.width, size.height);
+                    expectShifted(PhoneInput(WithViewer(table, viewer), kPhoneHandTileMaxW), size.width, size.height);
+                }
+            }
+        }
+    }
+
+    TEST(TableLayoutTest, TheWideTableKeepsTheNumbersOfTheLandscapeOneAWingFromTheLeftEdge) {
+        const TableLayout layout = MakeTableLayout(QuietInput(0), kWideViewWidth, kViewHeight);
+        EXPECT_TRUE(SameRect(layout.zones.wall, Rect(458.0f + kWideWingWidth, 268, 364, 168)));
+        EXPECT_TRUE(SameRect(layout.zones.centerPanel, Rect(472.0f + kWideWingWidth, 282, 336, 140)));
+        EXPECT_TRUE(SameRect(SlotsOf(layout, SlotRole::HandTile, 0)[0].rect, Rect(72.0f + kWideWingWidth, 648, 48, 64)));
+        EXPECT_NEAR(RectCentreX(layout.zones.wall), kWideViewWidth / 2.0f, kTolerance);
+    }
+
+    TEST(TableLayoutTest, TheWideViewHoldsThePhoneProfileLikeTheLandscapeOne) {
+        TableInput input = WorstInput(0, kWorstPile, kNoSeat);
+        input.profile = TableProfile{true, 60.0f};
+        const TableLayout wide = MakeTableLayout(input, kWideViewWidth, kViewHeight);
+        EXPECT_TRUE(wide.profile.phone);
+        EXPECT_EQ(wide.profile.handTileW, 60.0f);
+        const Rect hand = BoundsOf(wide, SlotRole::HandTile, 0);
+        EXPECT_NEAR(hand.y + hand.h, kViewHeight - kRimWidth, kTolerance);
+        const Rect landscapeHand = BoundsOf(MakeTableLayout(input, kViewWidth, kViewHeight), SlotRole::HandTile, 0);
+        EXPECT_NEAR(hand.x, landscapeHand.x + kWideWingWidth, kTolerance);
+        EXPECT_NEAR(hand.w, landscapeHand.w, kTolerance);
+        EXPECT_LE(hand.x + hand.w, kWideWingWidth + kViewWidth);
+    }
+
+    // The narrow view: the landscape table's middle and side columns, the viewer's side in rows of its own.
+
+    namespace {
+
+        TableLayout InNarrow(const TableInput& input) {
+            return MakeTableLayout(input, kNarrowViewWidth, kNarrowViewHeight);
+        }
+
+        TableInput WithPhoneProfile(TableInput input) {
+            input.profile = TableProfile{true, 60.0f};
+            return input;
+        }
+
+    }  // namespace
+
+    TEST(TableLayoutTest, TheNarrowLayoutRecordsItsShapeAndIgnoresTheProfileOfThePhone) {
+        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+            for (const TableInput& table : kAllTables) {
+                const TableInput desktop = WithViewer(table, viewer);
+                const TableLayout expected = InNarrow(desktop);
+                EXPECT_EQ(expected.shape, TableShape::Narrow);
+                EXPECT_EQ(expected.profile, TableProfile{});
+                ExpectSameSlots(expected, InNarrow(WithPhoneProfile(desktop)));
+                ExpectSameSlots(expected, InNarrow(PhoneInput(desktop, kPhoneHandTileMaxW)));
+                EXPECT_EQ(InNarrow(WithPhoneProfile(desktop)).profile, TableProfile{});
+                EXPECT_TRUE(SameRect(expected.zones.seatPlates[viewer], InNarrow(WithPhoneProfile(desktop)).zones.seatPlates[viewer]));
+                // a window of the shape, not only its design
+                EXPECT_EQ(MakeTableLayout(WithPhoneProfile(desktop), 1024.0f, 768.0f).profile, TableProfile{});
+            }
+        }
+    }
+
+    TEST(TableLayoutTest, TheNarrowViewersHandIsOneRowOfFourteenTilesOfTheDesktopSizeInsideTheRackAndTheRimAndHitsByItsIndex) {
+        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+            const TableLayout layout = InNarrow(WorstInput(viewer, kWorstPile, kNoSeat));
+            const std::vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, viewer);
+            ASSERT_EQ(static_cast<int>(hand.size()), kMaxConcealedTiles);
+            for (int i = 0; i < kMaxConcealedTiles; ++i) {
+                EXPECT_EQ(hand[i].rect.w, kViewerHandTileW);
+                EXPECT_EQ(hand[i].rect.h, kViewerHandTileH);
+                EXPECT_EQ(hand[i].rect.y, hand[0].rect.y);
+                EXPECT_EQ(hand[i].rotation, 0.0f);
+                if (i > 0) {
+                    EXPECT_GE(hand[i].rect.x - (hand[i - 1].rect.x + hand[i - 1].rect.w), -kTolerance) << "tiles overlap";
+                }
+                EXPECT_EQ(HitHandTile(layout, RectCentreX(hand[i].rect), RectCentreY(hand[i].rect)), i);
+            }
+            const Rect bounds = BoundsOf(layout, SlotRole::HandTile, viewer);
+            EXPECT_NEAR(bounds.y + bounds.h, kNarrowViewHeight - kRimWidth, kTolerance) << "on the rim";
+            EXPECT_NEAR(RectCentreX(bounds), kNarrowViewWidth / 2.0f, kTolerance) << "centred";
+            EXPECT_GE(bounds.x, kRimWidth + kRackPadding);
+            EXPECT_LE(bounds.x + bounds.w, kNarrowViewWidth - kRimWidth - kRackPadding + kTolerance);
+        }
+    }
+
+    TEST(TableLayoutTest, TheNarrowBonusTilesAndMeldsLieInOneRowAboveTheHandClearOfASelectedTileTheBottomPlateAndTheDiscardBlock) {
+        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+            const TableLayout layout = InNarrow(WorstInput(viewer, kWorstPile, kNoSeat));
+            const Rect hand = BoundsOf(layout, SlotRole::HandTile, viewer);
+            const Rect bonus = BoundsOf(layout, SlotRole::BonusTile, viewer);
+            const Rect melds = BoundsOf(layout, SlotRole::MeldTile, viewer);
+            const Rect& plate = layout.zones.seatPlates[viewer];
+            const Rect& discards = layout.zones.discards[viewer];
+            EXPECT_LE(bonus.y + bonus.h, hand.y - kSelectedTileRise + kTolerance) << "viewer " << viewer;
+            EXPECT_LE(melds.y + melds.h, hand.y - kSelectedTileRise + kTolerance);
+            EXPECT_NEAR(bonus.y + bonus.h, melds.y + melds.h, kTolerance) << "the two share the bottom line of the row";
+            EXPECT_LE(bonus.x + bonus.w, melds.x) << "the bonus tiles are at the left of the melds";
+            EXPECT_GE(bonus.x, kRimWidth);
+            EXPECT_LE(melds.x + melds.w, kNarrowViewWidth - kRimWidth + kTolerance);
+            EXPECT_GE(std::min(bonus.y, melds.y), plate.y + plate.h + kPlatePadding - kTolerance) << "clear of the bottom plate";
+            EXPECT_GE(std::min(bonus.y, melds.y), discards.y + discards.h - kTolerance) << "under the discard block";
+            for (const TileSlot& slot : layout.slots) {
+                if (slot.role == SlotRole::HandTile && slot.seat == viewer) {
+                    const Rect raised = RaisedRect(slot.rect);
+                    EXPECT_FALSE(Overlaps(raised, bonus)) << "tile " << slot.index;
+                    EXPECT_FALSE(Overlaps(raised, melds)) << "tile " << slot.index;
+                }
+            }
+            EXPECT_FALSE(Overlaps(plate, hand));
+            EXPECT_FALSE(Overlaps(plate, bonus));
+            EXPECT_FALSE(Overlaps(plate, melds));
+        }
+    }
+
+    TEST(TableLayoutTest, TheNarrowMiddleOfTheTableIsTheLandscapeOneCentredInTheNarrowerView) {
+        TableInput input = BusyInput(1);
+        input.wallRemaining = kWorstWall;
+        const TableLayout landscape = InLandscape(input);
+        const TableLayout narrow = InNarrow(input);
+        const float shiftX = (kNarrowViewWidth - kViewWidth) / 2.0f;
+        for (const Seat seat : {static_cast<Seat>(0), static_cast<Seat>(2), static_cast<Seat>(1), static_cast<Seat>(3)}) {
+            const int position = SeatPosition(input.viewer, seat);
+            const Rect& before = landscape.zones.discards[seat];
+            const Rect& after = narrow.zones.discards[seat];
+            EXPECT_EQ(after.w, before.w);
+            EXPECT_EQ(after.h, before.h);
+            if (position == 0 || position == 2) {
+                EXPECT_NEAR(after.x, before.x + shiftX, kTolerance) << "the top and the bottom block stay in the middle";
+                EXPECT_NEAR(after.y, before.y, kTolerance);
+            }
+        }
+        EXPECT_NEAR(narrow.zones.wall.x, landscape.zones.wall.x + shiftX, kTolerance);
+        EXPECT_NEAR(narrow.zones.wall.y, landscape.zones.wall.y, kTolerance);
+        EXPECT_EQ(narrow.zones.wall.w, landscape.zones.wall.w);
+        EXPECT_EQ(narrow.zones.wall.h, landscape.zones.wall.h);
+        EXPECT_NEAR(RectCentreX(narrow.zones.wall), kNarrowViewWidth / 2.0f, kTolerance);
+        const std::vector<TileSlot> landscapeWall = SlotsOf(landscape, SlotRole::WallStack, 0);
+        const std::vector<TileSlot> narrowWall = SlotsOf(narrow, SlotRole::WallStack, 0);
+        ASSERT_EQ(landscapeWall.size(), narrowWall.size());
+        for (size_t i = 0; i < narrowWall.size(); ++i) {
+            EXPECT_EQ(narrowWall[i].index, landscapeWall[i].index);
+            EXPECT_NEAR(narrowWall[i].rect.x, landscapeWall[i].rect.x + shiftX, kTolerance) << "cell " << i;
+            EXPECT_NEAR(narrowWall[i].rect.y, landscapeWall[i].rect.y, kTolerance) << "cell " << i;
+        }
+        const Rect& panel = narrow.zones.centerPanel;
+        const Rect& wall = narrow.zones.wall;
+        EXPECT_NEAR(panel.x, wall.x + kWallStackSize, kTolerance);
+        EXPECT_NEAR(panel.y, wall.y + kWallStackSize, kTolerance);
+        EXPECT_NEAR(panel.w, wall.w - 2.0f * kWallStackSize, kTolerance);
+        EXPECT_NEAR(panel.h, wall.h - 2.0f * kWallStackSize, kTolerance);
+    }
+
+    TEST(TableLayoutTest, TheNarrowSideSeatsKeepTheirTurnsAndTheirColumnsAtTheEdgesOfTheView) {
+        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+            const TableLayout layout = InNarrow(WorstInput(viewer, kWorstPile, kNoSeat));
+            for (const TileSlot& slot : layout.slots) {
+                if (slot.role == SlotRole::WallStack) {
+                    EXPECT_EQ(slot.rotation, 0.0f);
+                    continue;
+                }
+                const int position = SeatPosition(viewer, slot.seat);
+                const float expected = position == 3 ? kLeftSeatRotation : position == 1 ? kRightSeatRotation : 0.0f;
+                EXPECT_EQ(slot.rotation, expected) << "role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
+            }
+            const Rect left = BoundsOf(layout, SlotRole::HandTile, SeatAtPosition(viewer, 3));
+            const Rect right = BoundsOf(layout, SlotRole::HandTile, SeatAtPosition(viewer, 1));
+            EXPECT_NEAR(left.x, kRimWidth, kTolerance);
+            EXPECT_NEAR(right.x + right.w, kNarrowViewWidth - kRimWidth, kTolerance);
+            EXPECT_NEAR(RectCentreY(left), kNarrowViewHeight / 2.0f, kTolerance);
+            EXPECT_NEAR(RectCentreY(right), kNarrowViewHeight / 2.0f, kTolerance);
+        }
+    }
+
+    TEST(TableLayoutTest, TheNarrowTableFitsEveryZoneAndEveryPlateForEveryViewerAndEveryTable) {
+        for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+            for (const TableInput& table : kAllTables) {
+                const TableLayout layout = InNarrow(WithViewer(table, viewer));
+                ASSERT_NO_FATAL_FAILURE(ExpectZonesAreSound(layout)) << "viewer " << viewer;
+                ASSERT_NO_FATAL_FAILURE(ExpectSeatPlatesAreSound(layout, 1.0f)) << "viewer " << viewer;
+                ASSERT_NO_FATAL_FAILURE(ExpectSlotsInsideTheView(layout));
+                ASSERT_NO_FATAL_FAILURE(ExpectNoZoneOverlaps(layout));
+            }
+        }
     }
 
     TEST(TableLayoutTest, EachSeatIsInItsZoneOfThePortraitView) {

@@ -355,6 +355,93 @@ namespace BECore::Mahjong::Tests {
         EXPECT_GE(kPortraitActionButtonHeight * kPortraitSmallestWindowWidth / kPortraitViewWidth, minTouch) << "a touch target in the smallest window that keeps `Actions`";
     }
 
+    TEST_F(MahjongTableScreenTest, InTheNarrowViewTheButtonsAreInTwoLinesRightOfTheBottomDiscardsAndTheHintLiesLeftOfThem) {
+        constexpr float kNarrowButtonWidth = 88.0f;
+        constexpr float kNarrowUpgradeWidth = 104.0f;  // "Add to pung" does not fit 88
+        constexpr float kNarrowRowWidth = 4.0f * kNarrowButtonWidth + 3.0f * kButtonGap;
+        constexpr float kNarrowRowLines = 2.0f;
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        auto canvas = Canvas("Actions");
+        ASSERT_TRUE(canvas);
+        ASSERT_TRUE(canvas->SetElementVisible("Hint"_intern, true));
+
+        const MatrixWindow design = DesignWindowOf(TableShape::Narrow);
+        const TableLayout layout = MakeWorstCaseTableLayout(0, design);
+        ASSERT_EQ(layout.shape, TableShape::Narrow);
+        const Rect& block = layout.zones.discards[0];  // the viewer's discards, the row's neighbour on the left
+        for (const std::vector<ButtonKind>& kinds : FullestButtonSets()) {
+            for (int i = 0; i < kButtonCount; ++i) {
+                SetShown(static_cast<ButtonKind>(i), false);
+            }
+            for (const ButtonKind kind : kinds) {
+                SetShown(kind, true);
+            }
+            LayOutInWindow(*canvas, design);
+            const UIElement* row = Element("Actions", "ActionRow");
+            ASSERT_NE(row, nullptr);
+            EXPECT_EQ(row->rect.w, kNarrowRowWidth) << "four buttons and three gaps make a line";
+            EXPECT_GE(row->rect.x, block.x + block.w + kPlatePadding) << "right of the bottom discards";
+            EXPECT_LE(row->rect.x + row->rect.w, layout.viewWidth);
+            EXPECT_GE(row->rect.y, layout.zones.wall.y + layout.zones.wall.h);
+            // The row ends above the viewer's bonus tiles and melds (their top is the least y of the viewer's meld and bonus slots)
+            float rowOfTilesTop = layout.viewHeight;
+            for (const TileSlot& slot : layout.slots) {
+                if (slot.seat == 0 && (slot.role == SlotRole::MeldTile || slot.role == SlotRole::BonusTile)) {
+                    rowOfTilesTop = std::min(rowOfTilesTop, slot.rect.y);
+                }
+            }
+            EXPECT_LE(row->rect.y + row->rect.h, rowOfTilesTop - kGridUnit);
+            EXPECT_EQ(row->rect.h, kNarrowRowLines * kActionButtonHeight + (kNarrowRowLines - 1.0f) * kButtonGap) << "two lines of buttons";
+            for (const ButtonKind kind : kinds) {
+                const UIElement* button = Element("Actions", SpecOf(kind).element);
+                ASSERT_NE(button, nullptr);
+                ASSERT_FALSE(button->rect.IsEmpty()) << SpecOf(kind).element;
+                EXPECT_FLOAT_EQ(button->rect.w, kind == ButtonKind::UpgradeKong ? kNarrowUpgradeWidth : kNarrowButtonWidth) << SpecOf(kind).element;
+                EXPECT_FLOAT_EQ(button->rect.h, kActionButtonHeight) << SpecOf(kind).element << ": the scene file and TouchRegime.h agree";
+                EXPECT_GE(button->rect.x, row->rect.x) << SpecOf(kind).element;
+                EXPECT_LE(button->rect.x + button->rect.w, row->rect.x + row->rect.w) << SpecOf(kind).element;
+                EXPECT_LE(button->rect.y + button->rect.h, row->rect.y + row->rect.h) << SpecOf(kind).element << " lies inside the two lines of the row";
+            }
+        }
+
+        // The longest sentence in the hint, the fullest turn and window shown: every word of the canvas fits in every narrow window of every language
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            std::vector<eastl::string> sentences;
+            for (int i = 0; i < kButtonCount; ++i) {
+                sentences.push_back(HintOf(CoreManager::GetUIStrings(), static_cast<ButtonKind>(i)));
+            }
+            CoreManager::GetUIVars().Set("actionHint"_intern, eastl::string_view(Longest(sentences)));
+            for (const std::vector<ButtonKind>& kinds : FullestButtonSets()) {
+                for (int i = 0; i < kButtonCount; ++i) {
+                    SetShown(static_cast<ButtonKind>(i), false);
+                }
+                for (const ButtonKind kind : kinds) {
+                    SetShown(kind, true);
+                }
+                const std::vector<std::string> cut = WordsThatDoNotFitOnTheMatrix(*canvas, 0.0f, TableShape::Narrow);
+                for (const std::string& line : cut) {
+                    ADD_FAILURE() << line;
+                }
+            }
+        });
+
+        // In every narrow window (the touch size is left out where the buttons are small: `ActionsMayBeSmall`)
+        ExpectMatrixExceptTouchWhere(*canvas, "Actions", EngineTouchMinimum(), ActionsMayBeSmall);
+        for (const MatrixWindow& window : NarrowWindows()) {
+            ASSERT_EQ(ShapeOf(window), TableShape::Narrow) << window.label.c_str();
+            const TableLayout worst = MakeWorstCaseTableLayout(0, window);
+            for (const ButtonKind kind : FullestButtonSets()[1]) {
+                SetShown(kind, true);
+            }
+            LayOutOnTheTable({"Actions"}, window);
+            for (const char* name : {"ActionRow", "Hint"}) {
+                ExpectClearOfTable(Element("Actions", name)->rect, worst, window.label.c_str());
+            }
+            EXPECT_TRUE(Apart(Element("Actions", "Hint")->rect, Element("Actions", "ActionRow")->rect)) << window.label.c_str();
+        }
+    }
+
     // ----- the compact canvas -----
 
     TEST_F(MahjongTableScreenTest, TheCompactCanvasHoldsTheSameButtonsAsTheActionsCanvasWithTheSameActionsValuesWordsAndPictures) {
@@ -627,51 +714,45 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongTableScreenTest, TheButtonsLieInTheFreeCornerOfTheTableAndCoverNoTile) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
-        const UIElement* row = Element("Actions", "ActionRow");
-        ASSERT_NE(row, nullptr);
 
-        // the table of every window where `Actions` is shown: the desktop one and the phone ones (the row is a `SceneView` canvas: the same rect everywhere)
-        std::vector<std::pair<std::string, TableLayout>> layouts;
+        // In every window where `Actions` is shown (the desktop table, the phone ones and the wide ones, whose view puts the row a wing further
+        // right): the row, and the buttons of the fullest turn and of the fullest claim window, lie inside it and so clear of every slot
+        size_t windows = 0;
         ForEachTableWindow([&](const MatrixWindow& window) {
-            if (!IsCompactWindow(window)) {
-                layouts.emplace_back(window.label.c_str(), MakeWorstCaseTableLayout(0, window));
+            if (IsCompactWindow(window)) {
+                return;
             }
-        });
-        ASSERT_FALSE(layouts.empty());
-        for (const auto& [label, layout] : layouts) {
-            for (const TileSlot& slot : layout.slots) {
-                EXPECT_TRUE(Apart(slot.rect, row->rect)) << label << ": role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
-            }
-        }
-
-        // The row holds what is in it: the buttons of the fullest turn and of the fullest claim window lie inside the row
-        // (the gap of the stack is also between its lines) and so clear of every slot
-        for (const std::vector<ButtonKind>& kinds :
-             {std::vector<ButtonKind>{ButtonKind::Win, ButtonKind::Declare, ButtonKind::ConcealedKong0, ButtonKind::ConcealedKong1, ButtonKind::ConcealedKong2, ButtonKind::UpgradeKong},
-              std::vector<ButtonKind>{ButtonKind::ClaimMahjong, ButtonKind::ClaimKong, ButtonKind::ClaimPung, ButtonKind::ClaimChow0, ButtonKind::ClaimChow1, ButtonKind::ClaimChow2,
-                                      ButtonKind::Pass}}) {
-            for (int i = 0; i < kButtonCount; ++i) {
-                SetShown(static_cast<ButtonKind>(i), false);
-            }
-            for (const ButtonKind kind : kinds) {
-                SetShown(kind, true);
-            }
-            Canvas("Actions")->UpdateLayout(kViewWidth, kViewHeight);
-            for (const ButtonKind kind : kinds) {
-                const UIElement* button = Element("Actions", SpecOf(kind).element);
-                ASSERT_NE(button, nullptr) << SpecOf(kind).element;
-                const Rect& r = button->rect;
-                EXPECT_GE(r.x, row->rect.x) << SpecOf(kind).element;
-                EXPECT_GE(r.y, row->rect.y) << SpecOf(kind).element;
-                EXPECT_LE(r.x + r.w, row->rect.x + row->rect.w) << SpecOf(kind).element;
-                EXPECT_LE(r.y + r.h, row->rect.y + row->rect.h) << SpecOf(kind).element << " lies below the row";
-                for (const auto& [label, layout] : layouts) {
+            const TableLayout layout = MakeWorstCaseTableLayout(0, window);
+            for (const std::vector<ButtonKind>& kinds : FullestButtonSets()) {
+                for (int i = 0; i < kButtonCount; ++i) {
+                    SetShown(static_cast<ButtonKind>(i), false);
+                }
+                for (const ButtonKind kind : kinds) {
+                    SetShown(kind, true);
+                }
+                LayOutOnTheTable({"Actions"}, window);
+                const UIElement* row = Element("Actions", "ActionRow");
+                ASSERT_NE(row, nullptr);
+                const std::string label = window.label.c_str();
+                for (const TileSlot& slot : layout.slots) {
+                    EXPECT_TRUE(Apart(slot.rect, row->rect)) << label << ": role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
+                }
+                for (const ButtonKind kind : kinds) {
+                    const UIElement* button = Element("Actions", SpecOf(kind).element);
+                    ASSERT_NE(button, nullptr) << SpecOf(kind).element;
+                    const Rect& r = button->rect;
+                    EXPECT_GE(r.x, row->rect.x) << label << ": " << SpecOf(kind).element;
+                    EXPECT_GE(r.y, row->rect.y) << label << ": " << SpecOf(kind).element;
+                    EXPECT_LE(r.x + r.w, row->rect.x + row->rect.w) << label << ": " << SpecOf(kind).element;
+                    EXPECT_LE(r.y + r.h, row->rect.y + row->rect.h) << label << ": " << SpecOf(kind).element << " lies below the row";
                     for (const TileSlot& slot : layout.slots) {
                         EXPECT_TRUE(Apart(slot.rect, r)) << label << ": " << SpecOf(kind).element << " covers role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
                     }
                 }
             }
-        }
+            ++windows;
+        });
+        EXPECT_GT(windows, 0u);
     }
 
 }  // namespace BECore::Mahjong::Tests

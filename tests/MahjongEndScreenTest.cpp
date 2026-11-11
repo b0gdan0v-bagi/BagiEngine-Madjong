@@ -43,11 +43,24 @@ namespace BECore::Mahjong::Tests {
         constexpr float kPortraitScoreBandHeight = 72.0f;  // the headline and the summary: two lines of the narrow plate
         constexpr float kPortraitScoreButtonGapHeight = 112.0f;
         constexpr int kPortraitScoreLineColumns = 2;
-        /// The edges the plate of the score table keeps to in a view of this shape.
+        /// The same in the narrow view: between the columns of the side seats (x 8..101 and 979..1072, their bonus tiles the inner ones), under the
+        /// top seat's rows (to y 81) and above the viewer's melds and bonus tiles (from y 636); the plate is 856 wide, 500 high as in landscape
+        constexpr float kNarrowScoreTableLeft = 108.0f;
+        constexpr float kNarrowScoreTableRight = 972.0f;
+        constexpr float kNarrowScoreTableTop = 92.0f;
+        constexpr float kNarrowScoreTableBottom = 628.0f;
+        constexpr float kNarrowScoreTableWidth = 856.0f;
+        /// The edges the plate of the score table keeps to in a view of this shape (the wide view is the landscape table a wing in from the
+        /// side, and the plate is centred on the view, so its edges move by the wing).
         Rect ScoreTableBounds(TableShape shape) {
-            return shape == TableShape::Portrait
-                       ? Rect(kPortraitScoreTableLeft, kPortraitScoreTableTop, kPortraitScoreTableRight - kPortraitScoreTableLeft, kPortraitScoreTableBottom - kPortraitScoreTableTop)
-                       : Rect(kScoreTableLeft, kScoreTableTop, kScoreTableRight - kScoreTableLeft, kScoreTableBottom - kScoreTableTop);
+            if (shape == TableShape::Portrait) {
+                return Rect(kPortraitScoreTableLeft, kPortraitScoreTableTop, kPortraitScoreTableRight - kPortraitScoreTableLeft, kPortraitScoreTableBottom - kPortraitScoreTableTop);
+            }
+            if (shape == TableShape::Narrow) {
+                return Rect(kNarrowScoreTableLeft, kNarrowScoreTableTop, kNarrowScoreTableRight - kNarrowScoreTableLeft, kNarrowScoreTableBottom - kNarrowScoreTableTop);
+            }
+            const float wing = shape == TableShape::Wide ? kWideWingWidth : 0.0f;
+            return Rect(kScoreTableLeft + wing, kScoreTableTop, kScoreTableRight - kScoreTableLeft, kScoreTableBottom - kScoreTableTop);
         }
         constexpr int kScoreLineColumns = 4;
         constexpr float kScoreHeadlineHeight = 48.0f;
@@ -692,6 +705,75 @@ namespace BECore::Mahjong::Tests {
         }
 
     }  // namespace
+
+    TEST_F(MahjongEndScreenTest, TheNarrowScoreTableLiesBetweenTheSideColumnsInFourColumnsAndHoldsTheNextHandButtonInItsGap) {
+        ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers));
+        ASSERT_NO_FATAL_FAILURE(PlayHandOver());
+        auto canvas = Canvas("HandOver");
+        auto action = Canvas("HandOverAction");
+        ASSERT_TRUE(canvas && action);
+        for (int i = 0; i < kMaxScoreLines; ++i) {
+            ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(Format("ScoreLine{}", i)), true));
+        }
+        const MatrixWindow window = DesignWindowOf(TableShape::Narrow);
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            const WorstTexts worst = FindWorstTexts(CoreManager::GetUIStrings());
+            CoreManager::GetUIVars().Set("handOverHeadline"_intern, eastl::string_view(worst.headline));
+            LayOutInWindow(*canvas, window);
+            LayOutInWindow(*action, window, CanvasScaleMode::ScaleWithScreen, 1.0f);
+
+            const UIElement* plateElement = Element("HandOver", "Plate");
+            ASSERT_NE(plateElement, nullptr);
+            const Rect& plate = plateElement->rect;
+            const Rect bounds = ScoreTableBounds(TableShape::Narrow);
+            EXPECT_GE(plate.x, bounds.x);
+            EXPECT_LE(plate.x + plate.w, bounds.x + bounds.w);
+            EXPECT_GE(plate.y, bounds.y);
+            EXPECT_LE(plate.y + plate.h, bounds.y + bounds.h);
+            EXPECT_EQ(plate.w, kNarrowScoreTableWidth);
+            EXPECT_EQ(plate.h, kScoreTableHeight);
+            EXPECT_EQ(plate.x + plate.w * 0.5f, kNarrowViewWidth * 0.5f) << "in the middle of the table";
+
+            // The anatomy of the landscape plate in a narrower one: the same bands, the gap and the four columns of lines
+            const UIElement* headline = Element("HandOver", "Headline");
+            const UIElement* gap = Element("HandOver", "ButtonGap");
+            const UIElement* lines = Element("HandOver", "Lines");
+            ASSERT_TRUE(headline != nullptr && gap != nullptr && lines != nullptr);
+            EXPECT_EQ(headline->rect.w, plate.w - 2.0f * kModalPadding);
+            EXPECT_EQ(headline->rect.h, kScoreHeadlineHeight);
+            EXPECT_EQ(gap->rect.h, kScoreButtonGapHeight);
+            std::vector<float> columns;
+            for (int i = 0; i < kMaxScoreLines; ++i) {
+                const UIElement* line = Element("HandOver", Format("ScoreLine{}", i).c_str());
+                ASSERT_NE(line, nullptr) << i;
+                if (std::find(columns.begin(), columns.end(), line->rect.x) == columns.end()) {
+                    columns.push_back(line->rect.x);
+                }
+                EXPECT_GE(line->rect.x, lines->rect.x) << i;
+                EXPECT_LE(line->rect.x + line->rect.w, lines->rect.x + lines->rect.w) << i;
+                EXPECT_LE(line->rect.y + line->rect.h, lines->rect.y + lines->rect.h) << "line " << i << " lies inside its area, all sixteen shown";
+            }
+            EXPECT_EQ(columns.size(), static_cast<size_t>(kScoreLineColumns)) << "the sixteen lines lie in four columns";
+
+            // The button (a Screen canvas: its own scale, 0.95 in this window) is in the gap and in the middle of the table, in view units
+            const UIElement* next = Element("HandOverAction", "NextHand");
+            ASSERT_NE(next, nullptr);
+            EXPECT_EQ(next->rect.w, kScoreNextWidth);
+            const Rect button = ToView(next->rect, *action, window);
+            EXPECT_NEAR(button.x + button.w * 0.5f, kNarrowViewWidth * 0.5f, 0.01f);
+            EXPECT_GE(button.y, gap->rect.y) << "inside the gap, not on the seat rows";
+            EXPECT_LE(button.y + button.h, gap->rect.y + gap->rect.h) << "inside the gap, not on the lines";
+
+            // No hand, meld or bonus tile of the worst-case table, from any seat, lies under the plate or the button
+            for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+                const TableLayout seen = MakeWorstCaseTableLayout(viewer, window);
+                ASSERT_EQ(seen.shape, TableShape::Narrow);
+                ExpectNoHandUnder(plate, seen, Format("narrow plate, viewer {}", viewer).c_str());
+                ExpectNoHandUnder(button, seen, Format("narrow Next hand, viewer {}", viewer).c_str());
+            }
+        });
+    }
 
     TEST_F(MahjongEndScreenTest, TheScoreTableCoversNoHandMeldOrBonusTileAtTheDesignSize) {
         ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers));

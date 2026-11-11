@@ -716,7 +716,7 @@ namespace BECore::Mahjong::Tests {
         auto bar = Canvas("RulesAction");
         ASSERT_TRUE(plate && bar);
         size_t checked = 0;
-        ForEachMatrixWindow([&](const MatrixWindow& window) {
+        ForEachMatrixAndNarrowWindow([&](const MatrixWindow& window) {
             if (window.HasInsets()) {
                 return;
             }

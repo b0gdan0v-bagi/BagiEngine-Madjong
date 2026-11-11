@@ -12,13 +12,13 @@ namespace BECore::Mahjong {
     /// are 34..40 pt); a grid unit of 4.
     inline constexpr float kPortraitActionButtonHeight = 68.0f;
 
-    /// The height of an action button of `Actions` in view units in the view of this shape.
+    /// The height of an action button of `Actions` in view units in the view of this shape (56 in every landscape-like shape).
     [[nodiscard]] constexpr float ActionButtonHeightFor(TableShape shape) noexcept {
         return shape == TableShape::Portrait ? kPortraitActionButtonHeight : kActionButtonHeight;
     }
 
     /// The scale that fits the view of the table (`viewWidth` x `viewHeight`, the size of the active view of the scene: landscape by
-    /// default, `kPortraitViewWidth` x `kPortraitViewHeight` in the portrait view) into an output of the given size, the bars left over;
+    /// default, the design of the active shape otherwise: `TableShape`) into an output of the given size, the bars left over;
     /// 0 for a size that is not positive. The same number as `ViewTransform::Fit`, which scales a `SceneView` canvas. Every function below
     /// that takes a view size takes the active view's: the defaults are the landscape view, so a landscape caller passes nothing.
     [[nodiscard]] constexpr float FitScale(float outputWidth, float outputHeight, float viewWidth = kViewWidth, float viewHeight = kViewHeight) noexcept {
@@ -132,14 +132,14 @@ namespace BECore::Mahjong {
      * FitScale` view units), at most `kPhoneHandTileMaxW`: a window too small to reach the minimum gets the widest tile the view holds,
      * the best it can give. `outputWidth` and `outputHeight` are in output pixels, `pixelDensity` the output pixels per window unit (as in
      * `NeedsCompactActions`). Desktop for an output of no size, a density that is not positive and a minimum that is not positive, so the
-     * first frame, before anything was drawn, shows today's table; and desktop for a portrait view (`viewWidth` x `viewHeight`), whose
-     * layout ignores the profile (its hand is one row of 14 tiles whatever the window; `UsesTapToSelect` covers the small tile). The
+     * first frame, before anything was drawn, shows today's table; and desktop for a portrait or a narrow view (`viewWidth` x `viewHeight`; the landscape and the wide view have the phone profile),
+     * whose layout ignores the profile (its hand is one row of 14 tiles whatever the window; `UsesTapToSelect` covers the small tile). The
      * component and the tests use this one rule.
      */
     [[nodiscard]] inline TableProfile TableProfileFor(float outputWidth, float outputHeight, float pixelDensity, float minTouchSize, float viewWidth = kViewWidth,
                                                       float viewHeight = kViewHeight) noexcept {
         const float fit = FitScale(outputWidth, outputHeight, viewWidth, viewHeight);
-        if (ShapeOfView(viewWidth, viewHeight) == TableShape::Portrait || !(fit > 0.0f) || !(pixelDensity > 0.0f) || !(kViewerHandTileW * fit / pixelDensity < minTouchSize)) {
+        if (!IsLandscapeLike(ShapeOfView(viewWidth, viewHeight)) || !(fit > 0.0f) || !(pixelDensity > 0.0f) || !(kViewerHandTileW * fit / pixelDensity < minTouchSize)) {
             return TableProfile{};
         }
         const float wanted = minTouchSize * pixelDensity / fit;

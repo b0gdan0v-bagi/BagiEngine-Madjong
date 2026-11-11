@@ -41,8 +41,10 @@ namespace BECore::Mahjong {
      *        and the wall, and plays the person seats by mouse and buttons and the computer seats by pace.
      *
      * **Drawing** only reads the game. Every frame the component builds a `TableInput` from the model and the session, lays it out
-     * (`MakeTableLayout`, for the active view of its scene: the landscape table, or the portrait one in a tall window, `TableShape`) and draws the slots with the tile atlas (`Table/TileAtlas.h`,
-     * loaded once in `OnAttached`). Nothing is drawn but the felt when the active game is not Mahjong or its match was not started.
+     * (`MakeTableLayout`, for the active view of its scene, one of four shapes picked by the aspect of the window: landscape, portrait, narrow
+     * or wide, `TableShape`) and draws the slots with the tile atlas (`Table/TileAtlas.h`, loaded once in `OnAttached`). The felt is one soft
+     * picture (a vignette and a grain of 3 levels) stretched over whichever view is active: 22 percent wider than its design in the wide view, 21 percent
+     * narrower in the narrow one, which a vignette hides; no screenshot of those two was looked at. Nothing is drawn but the felt when the active game is not Mahjong or its match was not started.
      *
      * **No peeking.** While the hand is played only the concealed tiles of the viewer (`TableSession::Viewer()`) are drawn face up, and
      * none at all while `HandoffPending()` (a hot-seat cover). The other seats show backs, their concealed kongs too. When the hand is

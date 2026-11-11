@@ -149,7 +149,7 @@ namespace BECore::Mahjong::Tests {
         }
     };
 
-    TEST_F(MahjongTablePortraitTest, ATallOutputDrawsThePortraitViewAndAWideOneTheLandscapeOne) {
+    TEST_F(MahjongTablePortraitTest, ATallOutputDrawsThePortraitViewAndALandscapeOneNot) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         for (const MatrixWindow& window : PortraitWindows()) {
             SetWindow(*_renderer, window);
@@ -160,7 +160,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(_table->GetLayout().viewWidth, kPortraitViewWidth) << window.label.c_str();
             EXPECT_EQ(_table->GetLayout().viewHeight, kPortraitViewHeight) << window.label.c_str();
         }
-        for (const MatrixWindow& window : {DesignWindowOf(TableShape::Landscape), MakePhoneWindow(915.0f, 330.0f, 2.6f)}) {
+        for (const MatrixWindow& window : {DesignWindowOf(TableShape::Landscape), MakePhoneWindow(1920.0f, 1080.0f, 1.0f)}) {
             SetWindow(*_renderer, window);
             Draw();
             EXPECT_EQ(MahjongScene().GetViewWidth(), kViewWidth) << window.label.c_str();

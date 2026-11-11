@@ -790,9 +790,21 @@ namespace BECore::Mahjong::Tests {
         /// less the margin of 12 each side, down to the row of the name of the selected tile. View units.
         const Rect kPortraitHintsBand(12.0f, 836.0f, 696.0f, 188.0f);
 
-        /// Where the hints live in the view of this shape.
+        /// The corner of the narrow table the hints live in: left of the top seat's hand and melds (x 336), over the left seat's melds (y 180).
+        const Rect kNarrowHintsCorner(8.0f, 8.0f, 320.0f, 168.0f);
+
+        /// Where the hints live in the view of this shape: in the wide view the corner of the landscape table, a wing in from the side.
         Rect HintsAreaOf(TableShape shape) {
-            return shape == TableShape::Portrait ? kPortraitHintsBand : kHintsCorner;
+            switch (shape) {
+                case TableShape::Portrait:
+                    return kPortraitHintsBand;
+                case TableShape::Wide:
+                    return Rect(kHintsCorner.x + kWideWingWidth, kHintsCorner.y, kHintsCorner.w, kHintsCorner.h);
+                case TableShape::Narrow:
+                    return kNarrowHintsCorner;
+                default:
+                    return kHintsCorner;
+            }
         }
 
         /// The centre panel of the layout of this shape: the inside of the wall ring, which nothing of the hints may touch.
@@ -831,7 +843,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(Discard("Ew"));
         Draw();
         ASSERT_EQ(ShownRow().size(), static_cast<size_t>(kWaitCells));
-        for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait}) {
+        for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait, TableShape::Wide, TableShape::Narrow}) {
             const MatrixWindow window = DesignWindowOf(shape);
             SCOPED_TRACE(window.label.c_str());
             LayOutOnTheTable({"Hints"}, window);
@@ -1413,7 +1425,7 @@ namespace BECore::Mahjong::Tests {
             ExpectMatrixExceptTouchWhere(*Canvas("HintsButton"), "HintsButton", EngineTouchMinimum(), ActionsMayBeSmall);
         });
 
-        for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait}) {
+        for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait, TableShape::Wide, TableShape::Narrow}) {
             const MatrixWindow window = DesignWindowOf(shape);
             SCOPED_TRACE(window.label.c_str());
             LayOutOnTheTable({"Hints", "HintsButton"}, window);
@@ -1697,7 +1709,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongHintsTest, ThePanelLiesOnTheWallRingClearOfEveryTileButTheWallAndTakesNoInput) {
         ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
         ASSERT_NO_FATAL_FAILURE(OpenWhy());
-        for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait}) {
+        for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait, TableShape::Narrow, TableShape::Wide}) {
             const MatrixWindow window = DesignWindowOf(shape);
             SCOPED_TRACE(window.label.c_str());
             LayOutOnTheTable({"HintsWhy"}, window);
@@ -1706,7 +1718,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_NE(panel, nullptr);
             const Rect ring = MakeTableLayout(TableInput{}, DesignWidthOf(shape), DesignHeightOf(shape)).zones.wall;
             EXPECT_TRUE(Inside(panel->rect, ring)) << panel->rect.x << "," << panel->rect.y << " " << panel->rect.w << "x" << panel->rect.h;
-            EXPECT_EQ(panel->rect.x, shape == TableShape::Portrait ? 180.0f : 460.0f);
+            EXPECT_EQ(panel->rect.x, ring.x + 2.0f);
             EXPECT_EQ(panel->rect.y, shape == TableShape::Portrait ? 400.0f : 268.0f);
             for (size_t i = 0; i < kMaxReasonLines; ++i) {
                 const UIElement* line = Element("HintsWhy", CellName("WhyLine", static_cast<int>(i)).c_str());

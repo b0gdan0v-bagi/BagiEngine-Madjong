@@ -456,7 +456,7 @@ namespace BECore::Mahjong::Tests {
                 const char* node;
                 const char* element;
             };
-            const Neighbour neighbours[] = {{"Hud", "MoveLine"}, {"Actions", "Hint"}, {"Actions", "ActionRow"}, {"Hints", "WaitPanel"}, {"Hints", "AdviceText"}, {"HintsButton", "HintButton"}};
+            const std::vector<Neighbour> neighbours{{"Hud", "MoveLine"}, {"Actions", "Hint"}, {"Actions", "ActionRow"}, {"Hints", "WaitPanel"}, {"Hints", "AdviceText"}, {"HintsButton", "HintButton"}};
             for (const Neighbour& neighbour : neighbours) {
                 const UIElement* element = Element(neighbour.node, neighbour.element);
                 ASSERT_NE(element, nullptr) << neighbour.element;
@@ -953,8 +953,8 @@ namespace BECore::Mahjong::Tests {
             ShowAll(*canvas, canvas->GetRoot());
         }
 
-        // In the table of each shape: the design window of the landscape view and of the portrait one
-        for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait}) {
+        // In the table of each shape: the design window of the landscape view, of the portrait one, of the wide one and of the narrow one
+        for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait, TableShape::Wide, TableShape::Narrow}) {
             const MatrixWindow window = DesignWindowOf(shape);
             const TableLayout layout = MakeWorstCaseTableLayout(0, window);
             const eastl::vector<Rect> plates = ZonePlates(layout);

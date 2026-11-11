@@ -22,6 +22,12 @@
   at x 360..480, and AdviceText right of it (216 wide, 12 in from the right edge). The elements are anchored to the edge they are
   nearer to, so a window with side insets (65 units each side of a 9:16 view) moves them inwards, where the three no longer fit in a row
   (they may then overlap, no tile is checked in a window with insets).
+  In a wide view (1560 x 720, the variant with minAspect:2) the landscape table lies 140 units in from each side, so the waiting row
+  (x 236..572) and AdviceText (x 360..540) move right by that wing and keep the place of the corner of the table they have in landscape.
+  In a narrow view (1080 x 768, the variant with orientation:landscape;maxAspect:1.55; Table/TableLayout.cpp, the narrow table) the corner
+  is x 8..328, y 8..176: the top seat's hand and melds start at x 336, its seat plate at x 308 (y 96..176) and the left seat's melds at y 180.
+  The waiting row is 320 wide there (caption and cells as before, the 13 cells are 312), x 8, y 8; the strip under it holds HintButton
+  (node HintsButton, x 8..128) and AdviceText (x 136..300, 8 clear of the plate).
 -->
 <node name="Hints" layer="5">
   <components>
@@ -122,6 +128,19 @@
           <overrides>
             <set element="WaitPanel" x="12" y="836" />
             <set element="AdviceText" anchor="TopRight" x="-12" y="836" width="216" />
+          </overrides>
+        </variant>
+        <variant when="orientation:landscape;maxAspect:1.55">
+          <overrides>
+            <set element="WaitPanel" x="8" y="8" width="320" />
+            <set element="WaitCaption" width="320" />
+            <set element="AdviceText" x="136" width="164" />
+          </overrides>
+        </variant>
+        <variant when="minAspect:2">
+          <overrides>
+            <set element="WaitPanel" x="236" />
+            <set element="AdviceText" x="360" />
           </overrides>
         </variant>
       </variants>

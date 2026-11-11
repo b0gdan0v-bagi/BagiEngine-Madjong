@@ -348,9 +348,138 @@ namespace BECore::Mahjong {
             }
         }
 
+        // The narrow table, a design of kNarrowViewWidth x kNarrowViewHeight (`TableShape::Narrow`): the landscape table with the viewer's side
+        // arranged the way the phone profile does it. The middle (the three other seats' discard blocks, the wall ring, the centre panel)
+        // keeps its heights and is centred in the narrower view, and the side seats' columns stay at the edges (the view is 200 units
+        // narrower than the landscape one: the middle gives them up). The viewer's hand is one row of 14 tiles of the desktop size resting on the
+        // rim, the bonus tiles and melds one row above it (the 48 units of height the view has more than the landscape one), clear of the
+        // tile a tap raises.
+        constexpr float kNarrowDiscardBlockX = Centered(kNarrowViewWidth, kDiscardBlockW);
+        // The top hand starts right of the hints' `WaitPanel` (x 8..328 in this view) as in landscape: centred, the larger tiles reach under it.
+        constexpr float kNarrowTopHandX = 340.0f;
+        constexpr float kNarrowSideHandY = Centered(kNarrowViewHeight, kSideHandSpan);
+        constexpr float kNarrowSideMeldY = Centered(kNarrowViewHeight, kSideMeldCapacity);
+        constexpr float kNarrowSideDiscardY = Centered(kNarrowViewHeight, kSideDiscardBlockH);
+        constexpr float kNarrowRightHandX = kNarrowViewWidth - kEdge - kSideHandTileH;
+        constexpr float kNarrowRightMeldX = kNarrowRightHandX - kZoneGap - kOpponentMeldTileH;
+        constexpr float kNarrowRightBonusX = kNarrowRightMeldX - kZoneGap - kOpponentBonusTileH;
+        constexpr float kNarrowRightDiscardX = kNarrowRightBonusX - kSideBlockGap - kSideDiscardBlockW;
+        constexpr float kNarrowWallRingX = Centered(kNarrowViewWidth, kWallRingW);
+
+        // The viewer: the hand centred, the bonus tiles at its left edge and the melds right of them in one row, bottom aligned, above the
+        // raised tile.
+        constexpr float kNarrowHandX = Centered(kNarrowViewWidth, kViewerHandSpan);
+        constexpr float kNarrowHandY = kNarrowViewHeight - kEdge - kViewerHandTileH;
+        constexpr float kNarrowRowBottom = kNarrowHandY - kSelectedTileRise - kZoneGap;
+        constexpr float kNarrowMeldY = kNarrowRowBottom - kViewerMeldTileH;
+        constexpr float kNarrowBonusY = kNarrowRowBottom - kViewerBonusTileH;
+        constexpr float kNarrowMeldX = kNarrowHandX + kViewerBonusTileW * kMaxBonusTiles + kViewerRowGap;
+
+        // The plates: the bottom one and the two above the side blocks as in landscape (the same places clear the same things), the top one
+        // left of the top block.
+        constexpr float kNarrowSeatPlateRightX = kNarrowRightDiscardX + 2.0f;
+        constexpr float kNarrowSeatPlateTopX = 308.0f;
+
+        static_assert(kNarrowHandX + kViewerHandSpan <= kNarrowViewWidth - kEdge - kRackPadding);
+        static_assert(kNarrowMeldX + kViewerMeldCapacity <= kNarrowViewWidth - kEdge);
+        static_assert(kNarrowMeldY + kViewerMeldTileH + kSelectedTileRise < kNarrowHandY);
+        static_assert(kNarrowBonusY + kViewerBonusTileH + kSelectedTileRise < kNarrowHandY);
+        // the middle: the bottom block lies between the ring and the viewer's row, the side columns end above that row
+        static_assert(kBottomDiscardY + kDiscardBlockH + kZoneGap <= kNarrowBonusY);
+        static_assert(kBottomDiscardY + kDiscardBlockH + kZoneGap <= kNarrowMeldY);
+        static_assert(kNarrowSideMeldY + kSideMeldCapacity < kNarrowBonusY);
+        static_assert(kNarrowSideMeldY + kSideMeldCapacity < kNarrowMeldY);
+        static_assert(kNarrowSideMeldY + kSideMeldCapacity <= kNarrowViewHeight - kEdge);
+        static_assert(kNarrowSideHandY + kSideHandSpan <= kNarrowViewHeight - kEdge);
+        static_assert(kNarrowTopHandX + kTopHandSpan + kBlockGap + kTopBonusCapacity <= kNarrowViewWidth - kEdge);
+        static_assert(kNarrowRightBonusX - kSideBlockGap == kNarrowRightDiscardX + kSideDiscardBlockW);
+        // the blocks of the side seats lie between the edges and the middle, which is as wide as the wall ring
+        static_assert(kLeftDiscardX + kSideDiscardBlockW < kNarrowWallRingX);
+        static_assert(kNarrowRightDiscardX > kNarrowWallRingX + kWallRingW);
+        static_assert(kLeftDiscardX + kSideDiscardBlockW < kNarrowDiscardBlockX);
+        static_assert(kNarrowDiscardBlockX + kDiscardBlockW < kNarrowRightDiscardX);
+        static_assert(kNarrowSideDiscardY >= kTopDiscardY + kDiscardBlockH);
+        // the plates keep `kPlatePadding` clear of the blocks, of the ring and of each other, and clear of the bonus columns and the rows
+        static_assert(kSeatPlateBottomX + kSeatPlateW + kPlatePadding <= kNarrowDiscardBlockX);
+        static_assert(kSeatPlateBottomX >= kLeftMeldX + kOpponentMeldTileH);
+        static_assert(kSeatPlateBottomY + kSeatPlateH + kPlatePadding <= kNarrowBonusY);
+        static_assert(kSeatPlateBottomY >= kNarrowSideDiscardY + kSideDiscardBlockH + kPlatePadding);
+        static_assert(kSeatPlateLeftX + kSeatPlateW + kPlatePadding <= kNarrowSeatPlateTopX);
+        static_assert(kNarrowSeatPlateTopX + kSeatPlateW + kPlatePadding <= kNarrowDiscardBlockX);
+        static_assert(kNarrowSeatPlateTopX >= kSeatPlateLeftX);
+        static_assert(kNarrowSeatPlateRightX >= kNarrowDiscardBlockX + kDiscardBlockW + kPlatePadding);
+        static_assert(kNarrowSeatPlateRightX + kSeatPlateW <= kNarrowRightBonusX);
+        static_assert(kSeatPlateRightY + kSeatPlateH + kPlatePadding <= kNarrowSideDiscardY);
+        static_assert(kSeatPlateLeftY + kSeatPlateH + kPlatePadding <= kNarrowSideDiscardY);
+        static_assert(kSeatPlateTopY + kSeatPlateH + kPlatePadding <= kWallRingY);
+        static_assert(kSeatPlateTopY >= kTopMeldY + kOpponentMeldTileH);
+        static_assert(kSeatPlateBottomX + kSeatPlateW + kPlatePadding <= kNarrowWallRingX);
+
+        SeatGeometry NarrowGeometryAt(int position) {
+            SeatGeometry geometry;
+            switch (position) {
+                case 0:
+                    geometry.hand = {kNarrowHandX, kNarrowHandY, kViewerHandTileW, kViewerHandTileH, false, kViewerHandSpan};
+                    geometry.melds = {kNarrowMeldX, kNarrowMeldY, kViewerMeldTileW, kViewerMeldTileH, false, kViewerMeldCapacity};
+                    geometry.bonus = {kNarrowHandX, kNarrowBonusY, kViewerBonusTileW, kViewerBonusTileH, false, kViewerBonusTileW * kMaxBonusTiles};
+                    geometry.discardX = kNarrowDiscardBlockX;
+                    geometry.discardY = kBottomDiscardY;
+                    geometry.discardW = kDiscardBlockW;
+                    geometry.discardH = kDiscardBlockH;
+                    break;
+                case 1:
+                    geometry.hand = {kNarrowRightHandX, kNarrowSideHandY, kSideHandTileH, kSideHandTileW, true, kSideHandSpan};
+                    geometry.melds = {kNarrowRightMeldX, kNarrowSideMeldY, kOpponentMeldTileH, kOpponentMeldTileW, true, kSideMeldCapacity};
+                    geometry.bonus = {kNarrowRightBonusX, kNarrowSideHandY, kOpponentBonusTileH, kOpponentBonusTileW, true, kSideBonusCapacity};
+                    geometry.discardX = kNarrowRightDiscardX;
+                    geometry.discardY = kNarrowSideDiscardY;
+                    geometry.discardW = kSideDiscardBlockW;
+                    geometry.discardH = kSideDiscardBlockH;
+                    geometry.rotation = kRightSeatRotation;
+                    break;
+                case 2:
+                    geometry.hand = {kNarrowTopHandX, kEdge, kOpponentHandTileW, kOpponentHandTileH, false, kTopHandSpan};
+                    geometry.melds = {Centered(kNarrowViewWidth, kTopMeldCapacity), kTopMeldY, kOpponentMeldTileW, kOpponentMeldTileH, false, kTopMeldCapacity};
+                    geometry.bonus = {
+                        kNarrowTopHandX + kTopHandSpan + kBlockGap, kEdge + Centered(kOpponentHandTileH, kOpponentBonusTileH), kOpponentBonusTileW, kOpponentBonusTileH, false, kTopBonusCapacity};
+                    geometry.discardX = kNarrowDiscardBlockX;
+                    geometry.discardY = kTopDiscardY;
+                    geometry.discardW = kDiscardBlockW;
+                    geometry.discardH = kDiscardBlockH;
+                    break;
+                default:
+                    geometry.hand = {kLeftHandX, kNarrowSideHandY, kSideHandTileH, kSideHandTileW, true, kSideHandSpan};
+                    geometry.melds = {kLeftMeldX, kNarrowSideMeldY, kOpponentMeldTileH, kOpponentMeldTileW, true, kSideMeldCapacity};
+                    geometry.bonus = {kLeftBonusX, kNarrowSideHandY, kOpponentBonusTileH, kOpponentBonusTileW, true, kSideBonusCapacity};
+                    geometry.discardX = kLeftDiscardX;
+                    geometry.discardY = kNarrowSideDiscardY;
+                    geometry.discardW = kSideDiscardBlockW;
+                    geometry.discardH = kSideDiscardBlockH;
+                    geometry.rotation = kLeftSeatRotation;
+                    break;
+            }
+            return geometry;
+        }
+
+        Rect NarrowSeatPlateAt(int position) {
+            switch (position) {
+                case 0:
+                    return Rect(kSeatPlateBottomX, kSeatPlateBottomY, kSeatPlateW, kSeatPlateH);
+                case 1:
+                    return Rect(kNarrowSeatPlateRightX, kSeatPlateRightY, kSeatPlateW, kSeatPlateH);
+                case 2:
+                    return Rect(kNarrowSeatPlateTopX, kSeatPlateTopY, kSeatPlateW, kSeatPlateH);
+                default:
+                    return Rect(kSeatPlateLeftX, kSeatPlateLeftY, kSeatPlateW, kSeatPlateH);
+            }
+        }
+
         SeatGeometry GeometryAt(TableShape shape, int position, const TableProfile& profile) {
             if (shape == TableShape::Portrait) {
                 return PortraitGeometryAt(position);
+            }
+            if (shape == TableShape::Narrow) {
+                return NarrowGeometryAt(position);
             }
             SeatGeometry geometry;
             switch (position) {
@@ -410,6 +539,9 @@ namespace BECore::Mahjong {
         Rect SeatPlateAt(TableShape shape, int position, const TableProfile& profile) {
             if (shape == TableShape::Portrait) {
                 return PortraitSeatPlateAt(position);
+            }
+            if (shape == TableShape::Narrow) {
+                return NarrowSeatPlateAt(position);
             }
             switch (position) {
                 case 0:
@@ -475,6 +607,10 @@ namespace BECore::Mahjong {
             fit.scale = LayoutScale(viewWidth, viewHeight);
             fit.offsetX = Centered(viewWidth, DesignWidthOf(shape) * fit.scale);
             fit.offsetY = Centered(viewHeight, DesignHeightOf(shape) * fit.scale);
+            if (shape == TableShape::Wide) {
+                // the landscape table lies in the middle of the wide design, a wing from its left edge
+                fit.offsetX += kWideWingWidth * fit.scale;
+            }
             return fit;
         }
 
@@ -605,15 +741,23 @@ namespace BECore::Mahjong {
         }
 
         Rect WallRingRect(TableShape shape) {
-            return shape == TableShape::Portrait ? Rect(kPortraitWallRingX, kPortraitWallRingY, kWallRingW, kWallRingH) : Rect(kWallRingX, kWallRingY, kWallRingW, kWallRingH);
+            switch (shape) {
+                case TableShape::Portrait:
+                    return Rect(kPortraitWallRingX, kPortraitWallRingY, kWallRingW, kWallRingH);
+                case TableShape::Narrow:
+                    return Rect(kNarrowWallRingX, kWallRingY, kWallRingW, kWallRingH);
+                default:
+                    return Rect(kWallRingX, kWallRingY, kWallRingW, kWallRingH);
+            }
         }
 
         /// The inside of the wall ring: where the centre panel lies.
         Rect CenterPanelRect(TableShape shape) {
-            if (shape == TableShape::Portrait) {
-                return Rect(kPortraitWallRingX + kWallStackSize, kPortraitWallRingY + kWallStackSize, kWallRingW - 2.0f * kWallStackSize, kWallRingH - 2.0f * kWallStackSize);
+            if (shape == TableShape::Landscape || shape == TableShape::Wide) {
+                return Rect(kCenterPanelX, kCenterPanelY, kCenterPanelW, kCenterPanelH);
             }
-            return Rect(kCenterPanelX, kCenterPanelY, kCenterPanelW, kCenterPanelH);
+            const Rect ring = WallRingRect(shape);
+            return Rect(ring.x + kWallStackSize, ring.y + kWallStackSize, ring.w - 2.0f * kWallStackSize, ring.h - 2.0f * kWallStackSize);
         }
 
         /// The cell `n` along the ring, clockwise from the top left corner: the top side, the right, the bottom, the left.
@@ -666,7 +810,7 @@ namespace BECore::Mahjong {
         layout.viewer = IsSeat(input.viewer) ? input.viewer : 0;
         const TableShape shape = ShapeOfView(viewWidth, viewHeight);
         layout.shape = shape;
-        if (shape == TableShape::Landscape && input.profile.phone) {
+        if (IsLandscapeLike(shape) && input.profile.phone) {
             layout.profile.phone = true;
             layout.profile.handTileW = eastl::max(kViewerHandTileW, eastl::min(input.profile.handTileW, kPhoneHandTileMaxW));
         }
