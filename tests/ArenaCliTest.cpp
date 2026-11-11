@@ -5,7 +5,7 @@
 /**
  * The command line of the arena (`src/Mahjong/Arena/ArenaCli.h`, the program `BagiMahjongArena`): the arguments (defaults, every option,
  * a list of focus players with knobs, every refusal with its message), and the whole program on a few seeds: the report, twice the same
- * text, `--help`, the exit codes, `--time`. Pure logic: no engine services; the file takes about 1.7 s in Debug (three seeds).
+ * text, `--help`, the exit codes, `--time`. Pure logic: no engine services; the file takes about 6 s in Debug (three seeds; 4 s of it the one seed of a search focus player at `--jobs` 1 and 3).
  */
 namespace BECore::Mahjong::Arena {
 
@@ -223,6 +223,17 @@ namespace BECore::Mahjong::Arena {
             EXPECT_EQ(threaded.out, single.out) << "jobs " << std::string(jobs);
             EXPECT_TRUE(threaded.err.empty());
         }
+    }
+
+    TEST(ArenaCliTest, TheWorldsOfOneSeedDoNotChangeTheBytes) {
+        constexpr std::string_view kSearchFocus = "normal:searchWorlds=2,searchCandidates=2,searchMargin=0";
+        ArenaCliOutput single;
+        EXPECT_EQ(RunProgram({"--seeds", "1", "--focus", kSearchFocus, "--jobs", "1"}, single), kExitOk);
+        EXPECT_FALSE(single.out.empty());
+        ArenaCliOutput threaded;
+        EXPECT_EQ(RunProgram({"--seeds", "1", "--focus", kSearchFocus, "--jobs", "3"}, threaded), kExitOk);
+        EXPECT_EQ(threaded.out, single.out);
+        EXPECT_TRUE(threaded.err.empty());
     }
 
     TEST(ArenaCliTest, TimeAddsTheTimingTable) {

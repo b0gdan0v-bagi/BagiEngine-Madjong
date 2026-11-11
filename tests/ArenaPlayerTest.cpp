@@ -2,6 +2,7 @@
 
 #include <Mahjong/Arena/ArenaHand.h>
 #include <Mahjong/Arena/ArenaPlayer.h>
+#include <Mahjong/Arena/ArenaWorlds.h>
 #include <Mahjong/Game/ComputerPlayer.h>
 #include <Mahjong/Game/ScoreHand.h>
 #include <Mahjong/Game/Wall.h>
@@ -12,7 +13,7 @@
  * `LevelProfile`, the random "seek win" chooser and `PlayArenaHand`. The last part is the point of the arena: it plays the hands of
  * `ComputerStrengthTest` (seeds 4000..4059, Normal on each seat in turn against three random seats) to the same numbers, 186 wins of
  * 240, 27 won by the random seats together, 27 drawn hands, +31730 points for the focus seat. Pure logic: no engine services; about
- * 3 s in Debug.
+ * 6 s in Debug (2 s of it the search seat with and without a loop over its worlds).
  */
 namespace BECore::Mahjong::Arena {
 
@@ -224,6 +225,43 @@ namespace BECore::Mahjong::Arena {
                 EXPECT_EQ(first->nanoseconds[seat], 0) << "no timing asked for";
             }
         }
+    }
+
+    TEST(ArenaPlayerTest, ASearchSeatPlaysTheSameHandWithAndWithoutALoopOverItsWorlds) {
+        // Seat 1 searches (one world, two candidates, no margin: it leaves Normal's choice where the world says so), the others are random.
+        const ArenaPlayers players = Table(Player("normal:searchWorlds=1,searchCandidates=2,searchMargin=0"), 1, Player("random"));
+        constexpr uint32_t kSearchSeeds = 2;
+        for (uint32_t seed = kFirstSeed; seed < kFirstSeed + kSearchSeeds; ++seed) {
+            const std::expected<HandRecord, eastl::string> plain = PlayArenaHand(seed, players);
+            ASSERT_TRUE(plain.has_value()) << plain.error().c_str();
+            EXPECT_GT(plain->decisions[1], 0);
+            for (const int threads : {1, 2, 5}) {
+                WorldThreads pool(threads);
+                const WorldLoop loop = pool.AsLoop();
+                const std::expected<HandRecord, eastl::string> looped = PlayArenaHand(seed, players, false, &loop);
+                ASSERT_TRUE(looped.has_value()) << looped.error().c_str();
+                EXPECT_EQ(looped->kind, plain->kind) << "seed " << seed << " threads " << threads;
+                EXPECT_EQ(looped->winner, plain->winner) << "seed " << seed << " threads " << threads;
+                EXPECT_EQ(looped->scores, plain->scores) << "seed " << seed << " threads " << threads;
+                EXPECT_EQ(looped->deltas, plain->deltas) << "seed " << seed << " threads " << threads;
+                EXPECT_EQ(looped->declared, plain->declared) << "seed " << seed << " threads " << threads;
+                EXPECT_EQ(looped->decisions, plain->decisions) << "seed " << seed << " threads " << threads;
+                EXPECT_EQ(looped->winKinds, plain->winKinds) << "seed " << seed << " threads " << threads;
+            }
+        }
+    }
+
+    TEST(ArenaPlayerTest, ALoopChangesNothingForPlayersThatDoNotSearch) {
+        const ArenaPlayers players = Table(Player("normal"), 0, Player("random"));
+        WorldThreads pool(3);
+        const WorldLoop loop = pool.AsLoop();
+        const std::expected<HandRecord, eastl::string> plain = PlayArenaHand(kFirstSeed, players);
+        const std::expected<HandRecord, eastl::string> looped = PlayArenaHand(kFirstSeed, players, true, &loop);
+        ASSERT_TRUE(plain.has_value());
+        ASSERT_TRUE(looped.has_value());
+        EXPECT_EQ(looped->deltas, plain->deltas);
+        EXPECT_EQ(looped->decisions, plain->decisions);
+        EXPECT_GT(looped->nanoseconds[0], 0) << "the timing is kept with a loop";
     }
 
     TEST(ArenaPlayerTest, TimingIsKeptOnlyWhenAskedFor) {

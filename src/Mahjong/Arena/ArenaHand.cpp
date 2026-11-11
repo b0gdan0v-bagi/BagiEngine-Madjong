@@ -14,18 +14,29 @@ namespace BECore::Mahjong::Arena {
             return Format("seed {} seat {}", seed, static_cast<int>(seat));
         }
 
-        /// The action a computer seat of `profile` chooses on `view` (what `ComputerPlayer::Choose` does with the profile of its level).
-        HandAction ChooseComputer(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
+        /// The action a computer seat of `profile` chooses on `view` (what `ComputerPlayer::Choose` does with the profile of its level),
+        /// at once; with `worlds` a search decision is handed back by the chooser and its worlds are played through the loop (the same
+        /// draws and the same answer).
+        HandAction ChooseComputer(const TableView& view, MahjongRng& rng, const LevelProfile& profile, const WorldLoop* worlds) {
+            SearchHandoff handoff;
+            SearchHandoff* const asked = worlds != nullptr ? &handoff : nullptr;
+            HandAction action = HandAction::MakePass();
             switch (view.phase) {
                 case Phase::Claim:
                 case Phase::RobKong:
-                    return ChooseClaimAction(view, rng, profile);
+                    action = ChooseClaimAction(view, rng, profile, asked);
+                    break;
                 case Phase::Discard:
-                    return ChooseTurnAction(view, rng, profile);
+                    action = ChooseTurnAction(view, rng, profile, asked);
+                    break;
                 case Phase::Finished:
                     break;
             }
-            return HandAction::MakePass();
+            if (handoff.run.has_value()) {
+                handoff.run->RunWorlds(*worlds);
+                return handoff.run->Result();
+            }
+            return action;
         }
 
         /// Fills the outcome of a finished hand into `record` (which already holds the decisions and the times).
@@ -48,7 +59,7 @@ namespace BECore::Mahjong::Arena {
 
     }  // namespace
 
-    std::expected<HandRecord, eastl::string> PlayArenaHand(uint32_t seed, const ArenaPlayers& players, bool timing) {
+    std::expected<HandRecord, eastl::string> PlayArenaHand(uint32_t seed, const ArenaPlayers& players, bool timing, const WorldLoop* worlds) {
         const MahjongSettings settings;
         MahjongRng wallRng(seed);
         const Seat east = static_cast<Seat>(seed % kSeatCount);
@@ -87,7 +98,7 @@ namespace BECore::Mahjong::Arena {
                 if (view.legal.empty()) {
                     return std::unexpected(Format("{}: the computer seat has no legal action", Where(seed, actor)));
                 }
-                action = ChooseComputer(view, seatRngs[actor], player.profile);
+                action = ChooseComputer(view, seatRngs[actor], player.profile, worlds);
             }
             if (timing) {
                 record.nanoseconds[actor] += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - started).count();

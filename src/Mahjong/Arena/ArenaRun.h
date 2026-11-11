@@ -25,8 +25,10 @@ namespace BECore::Mahjong::Arena {
         ArenaPlayer others;
         /// Measure the time of the decisions (the one number that is not a function of the config).
         bool timing = false;
-        /// The threads that play the seeds, 1 to `kMaxJobs` (never more than `count` are started). The result does not depend on it:
-        /// each seed is played whole by one thread into a slot of its own and the slots are merged in seed order.
+        /// The threads in all, 1 to `kMaxJobs`. The seeds come first: `min(jobs, count)` threads each play a seed whole into a slot of its
+        /// own, and when there are fewer seeds than `jobs` each of them also owns `jobs / seedThreads` threads (the integer division) that
+        /// play the worlds of a search decision, so the total never exceeds `jobs`. The result does not depend on it: the slots are merged
+        /// in seed order and a search decision's answer does not depend on the order or the threads of its worlds.
         int jobs = kDefaultJobs;
     };
 
@@ -97,7 +99,9 @@ namespace BECore::Mahjong::Arena {
      * focus player does not depend on the others in the list, because every hand is `PlayArenaHand(seed, players)` with the seed and the
      * players alone. With `jobs` above 1 the seeds are taken in order by plain `std::thread`s; a seed (all its focus players and
      * rotations) is played by one thread, writes only its own result slot, and the slots are merged in seed order, so the totals, the
-     * rows and the report are the bytes of `jobs` 1 (the timing sums the threads' nanoseconds). A config with no focus player, a `count`
+     * rows and the report are the bytes of `jobs` 1 (the timing sums the threads' nanoseconds). A seed thread owns a `WorldThreads` of
+     * `jobs / min(jobs, count)` threads (at least 1) for the worlds of its search decisions: the second level appears only when there
+     * are fewer seeds than `jobs`, and the time of a decision is then lower than the work in it. A config with no focus player, a `count`
      * below 1, a range that runs past the largest seed or a `jobs` out of range is an error text, and so is a refused action of the
      * model (the error of `PlayArenaHand`, with the name of the focus player in front): the run stops, and the error is that of the
      * lowest seed (then the first focus player in the list) that failed, whatever the number of threads.
@@ -105,8 +109,9 @@ namespace BECore::Mahjong::Arena {
     [[nodiscard]] std::expected<ArenaResult, eastl::string> RunArena(const ArenaConfig& config);
 
     /// How a hand is played: `PlayArenaHand` for the program. `RunArena` calls it from several threads when `jobs` is above 1, so it must
-    /// not write anything shared.
-    using ArenaHandPlayer = std::function<std::expected<HandRecord, eastl::string>(uint32_t seed, const ArenaPlayers& players, bool timing)>;
+    /// not write anything shared. `worlds` is the loop of the calling seed thread's `WorldThreads`, for the search decisions of the hand
+    /// (`PlayArenaHand`'s fourth parameter); it lives for the call.
+    using ArenaHandPlayer = std::function<std::expected<HandRecord, eastl::string>(uint32_t seed, const ArenaPlayers& players, bool timing, const WorldLoop& worlds)>;
 
     /// `RunArena` with another way to play a hand (a seam for the tests: a hand that fails on chosen seeds). The error rules are the same.
     [[nodiscard]] std::expected<ArenaResult, eastl::string> RunArena(const ArenaConfig& config, const ArenaHandPlayer& playHand);

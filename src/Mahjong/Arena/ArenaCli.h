@@ -31,8 +31,9 @@ namespace BECore::Mahjong::Arena {
      *
      * `--focus LIST` (players separated by commas; a part with an `=` and no `:` goes on the knobs of the player before it, so
      * `easy:skipClaimPercent=20,skipDeclarationPercent=10,normal` is two players), `--others SPEC`, `--first N`, `--seeds COUNT`,
-     * `--jobs N` (1 to `kMaxJobs` threads; 0 is the hardware concurrency, at least 1), `--time` and `--help` (which wins over everything after it). A bad argument is an error text that names it: an
-     * unknown option, a missing or malformed value, a bad player spec, a range of seeds that `ValidateArenaConfig` refuses, a word that is no option.
+     * `--jobs N` (1 to `kMaxJobs` threads in all, for the seeds and then the worlds of a search decision; 0 is the hardware concurrency, at least 1), `--time` and `--help` (which wins over everything
+     * after it). A bad argument is an error text that names it: an unknown option, a missing or malformed value, a bad player spec, a range of seeds that `ValidateArenaConfig` refuses, a word that is
+     * no option.
      */
     [[nodiscard]] std::expected<ArenaArgs, eastl::string> ParseArenaArgs(eastl::span<const std::string_view> args);
 

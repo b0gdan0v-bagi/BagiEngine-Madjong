@@ -90,6 +90,23 @@ namespace BECore::Mahjong {
             return mixer.Below(std::numeric_limits<uint32_t>::max());
         }
 
+        /// World `worldIndex` of a decision: the sampled hand and the seed of its rollout table. Both `Step()` and `PlayWorld()` take
+        /// it from here, so the two ways cannot draw differently. nullopt when the view does not fit a sample.
+        struct SampledWorld {
+            HandModel model;
+            uint32_t tableSeed = 0;
+        };
+
+        std::optional<SampledWorld> SampleWorldOf(const TableView& view, uint32_t base, int worldIndex) {
+            const uint32_t index = static_cast<uint32_t>(worldIndex) * kSeedsPerWorld;
+            MahjongRng worldRng(DerivedSeed(base, index));
+            std::optional<HandModel> sampled = SampleWorld(view, worldRng);
+            if (!sampled.has_value()) {
+                return std::nullopt;
+            }
+            return SampledWorld{eastl::move(*sampled), DerivedSeed(base, index + kRolloutSeedOffset)};
+        }
+
         /// The points of `seat` when `action` is applied in `world` and four Normal players play the hand out with `tableSeed`; nullopt
         /// when the model refuses a step (a defect of the sample, not a result).
         std::optional<int> Rollout(const HandModel& world, Seat seat, const HandAction& action, uint32_t tableSeed) {
@@ -228,14 +245,13 @@ namespace BECore::Mahjong {
             return;
         }
         if (_candidateIndex == 0) {
-            const uint32_t index = static_cast<uint32_t>(_worldIndex) * kSeedsPerWorld;
-            MahjongRng worldRng(DerivedSeed(_base, index));
-            _sampled = SampleWorld(_view, worldRng);
-            if (!_sampled.has_value()) {
+            std::optional<SampledWorld> sampled = SampleWorldOf(_view, _base, _worldIndex);
+            if (!sampled.has_value()) {
                 NextWorld();
                 return;
             }
-            _tableSeed = DerivedSeed(_base, index + kRolloutSeedOffset);
+            _sampled = eastl::move(sampled->model);
+            _tableSeed = sampled->tableSeed;
             _row.clear();
         }
         const std::optional<int> value = Rollout(*_sampled, _view.seat, _candidates[static_cast<size_t>(_candidateIndex)], _tableSeed);
@@ -251,6 +267,66 @@ namespace BECore::Mahjong {
             }
             NextWorld();
         }
+    }
+
+    int SearchRun::WorldCount() const noexcept {
+        return _worlds;
+    }
+
+    bool SearchRun::Untouched() const noexcept {
+        return _worldIndex == 0 && _candidateIndex == 0;
+    }
+
+    SearchWorld SearchRun::PlayWorld(int index) const {
+        SearchWorld world;
+        if (index < 0 || index >= _worlds) {
+            return world;
+        }
+        const std::optional<SampledWorld> sampled = SampleWorldOf(_view, _base, index);
+        if (!sampled.has_value()) {
+            return world;
+        }
+        world.values.reserve(_candidates.size());
+        for (const HandAction& candidate : _candidates) {
+            const std::optional<int> value = Rollout(sampled->model, _view.seat, candidate, sampled->tableSeed);
+            if (!value.has_value()) {
+                // A defect of the sample: the world is dropped with its partial row, as `Step()` drops it.
+                world.values.clear();
+                return world;
+            }
+            world.values.push_back(*value);
+        }
+        world.played = true;
+        return world;
+    }
+
+    void SearchRun::Finish(eastl::span<const SearchWorld> worlds) {
+        if (!Untouched() || Done() || static_cast<int>(worlds.size()) != _worlds) {
+            return;
+        }
+        for (const SearchWorld& world : worlds) {
+            if (world.played && world.values.size() != _candidates.size()) {
+                return;
+            }
+        }
+        for (const SearchWorld& world : worlds) {
+            if (!world.played) {
+                continue;
+            }
+            for (size_t i = 0; i < world.values.size(); ++i) {
+                _values[i].push_back(world.values[i]);
+            }
+        }
+        _worldIndex = _worlds;
+    }
+
+    void SearchRun::RunWorlds(const WorldLoop& loop) {
+        if (!Untouched() || Done()) {
+            return;
+        }
+        eastl::vector<SearchWorld> worlds(static_cast<size_t>(_worlds));
+        loop(_worlds, [this, &worlds](int index) { worlds[static_cast<size_t>(index)] = PlayWorld(index); });
+        Finish(worlds);
     }
 
     HandAction SearchRun::Result() const {

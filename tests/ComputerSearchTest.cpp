@@ -9,6 +9,7 @@
 #include <Mahjong/Game/ComputerWorld.h>
 #include <Mahjong/Game/Shanten.h>
 #include <gtest/gtest.h>
+#include <thread>
 
 /**
  * The search chooser (Game/ComputerSearch.h) and the profile knobs it hangs on: with `searchWorlds` 0 nothing is drawn and the answer is
@@ -159,6 +160,48 @@ namespace BECore::Mahjong::Tests {
 
         HandAction Searching(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
             return view.phase == Phase::Discard ? ChooseTurnAction(view, rng, profile) : ChooseClaimAction(view, rng, profile);
+        }
+
+        /// The loops of `RunWorlds`: in order, backwards, and on real threads (the caller and `threads - 1` more, taking the next index
+        /// from an atomic counter, as the arena's pool does).
+        void SerialLoop(int count, const std::function<void(int)>& body) {
+            for (int i = 0; i < count; ++i) {
+                body(i);
+            }
+        }
+
+        void ReversedLoop(int count, const std::function<void(int)>& body) {
+            for (int i = count - 1; i >= 0; --i) {
+                body(i);
+            }
+        }
+
+        WorldLoop ThreadLoop(int threads) {
+            return [threads](int count, const std::function<void(int)>& body) {
+                std::atomic<int> next{0};
+                const auto work = [&] {
+                    for (int i = next.fetch_add(1); i < count; i = next.fetch_add(1)) {
+                        body(i);
+                    }
+                };
+                std::vector<std::thread> helpers;
+                for (int t = 1; t < threads; ++t) {
+                    helpers.emplace_back(work);
+                }
+                work();
+                for (std::thread& helper : helpers) {
+                    helper.join();
+                }
+            };
+        }
+
+        bool SameWorld(const SearchWorld& a, const SearchWorld& b) {
+            return a.played == b.played && a.values == b.values;
+        }
+
+        /// What a `Finish` that must do nothing leaves: the answer, the counters and `Done()`.
+        std::string Shown(const SearchRun& run) {
+            return std::to_string(run.StepsDone()) + "/" + std::to_string(run.StepsTotal()) + (run.Done() ? " done" : " open");
         }
 
     }  // namespace
@@ -492,6 +535,193 @@ namespace BECore::Mahjong::Tests {
             expectNone(*view, kNormalProfile, "knob off");
             expectNone(*view, SearchProfile(kWorlds, 1), "one candidate asked for");
             expectNone(*view, SearchProfile(0, kCandidates), "no worlds");
+        }
+    }
+
+    // ----- the worlds played in any order -----
+
+    TEST(ComputerSearchTest, AnyLoopOverTheWorldsGivesTheSteppedRunsAnswerAndCounters) {
+        constexpr size_t kViewsPerPhase = 2;
+        struct Knobs {
+            int worlds;
+            int margin;
+        };
+        const eastl::vector<std::pair<const char*, WorldLoop>> loops = {
+            {"serial", SerialLoop}, {"reversed", ReversedLoop}, {"1 thread", ThreadLoop(1)}, {"2 threads", ThreadLoop(2)}, {"5 threads", ThreadLoop(5)}};
+        for (const bool turn : {true, false}) {
+            const eastl::vector<TableView> views = FindDecisions(turn);
+            ASSERT_GE(views.size(), kViewsPerPhase);
+            for (size_t i = 0; i < kViewsPerPhase; ++i) {
+                for (const Knobs knobs : {Knobs{3, 0}, Knobs{5, 30}}) {
+                    const LevelProfile profile = SearchProfile(knobs.worlds, kCandidates, knobs.margin);
+                    const std::string where = std::string(turn ? "turn " : "window ") + std::to_string(i) + " worlds " + std::to_string(knobs.worlds) + " margin " + std::to_string(knobs.margin);
+                    MahjongRng atOnce(kRngSeed + static_cast<uint32_t>(i));
+                    const std::optional<HandAction> expected = AtOnce(views[i], atOnce, profile);
+                    ASSERT_TRUE(expected.has_value()) << where;
+                    MahjongRng stepping(kRngSeed + static_cast<uint32_t>(i));
+                    std::optional<SearchRun> stepped = Begin(views[i], stepping, profile);
+                    ASSERT_TRUE(stepped.has_value()) << where;
+                    StepToEnd(*stepped, where);
+
+                    for (const auto& [name, loop] : loops) {
+                        MahjongRng rng(kRngSeed + static_cast<uint32_t>(i));
+                        std::optional<SearchRun> run = Begin(views[i], rng, profile);
+                        ASSERT_TRUE(run.has_value()) << where << " " << name;
+                        EXPECT_EQ(run->WorldCount(), knobs.worlds) << where;
+                        run->RunWorlds(loop);
+                        EXPECT_TRUE(run->Done()) << where << " " << name;
+                        EXPECT_EQ(run->Result(), *expected) << where << " " << name;
+                        EXPECT_EQ(run->StepsDone(), stepped->StepsDone()) << where << " " << name;
+                        EXPECT_EQ(run->StepsTotal(), stepped->StepsTotal()) << where << " " << name;
+                        EXPECT_EQ(RngState(rng), RngState(atOnce)) << where << " " << name;
+                    }
+                }
+            }
+        }
+    }
+
+    TEST(ComputerSearchTest, APlayedWorldIsRepeatableAndChangesNothingOfTheRun) {
+        for (const bool turn : {true, false}) {
+            const eastl::vector<TableView> views = FindDecisions(turn);
+            ASSERT_FALSE(views.empty());
+            MahjongRng rng(kRngSeed);
+            std::optional<SearchRun> run = Begin(views.front(), rng, SearchProfile(3, kCandidates));
+            ASSERT_TRUE(run.has_value());
+            const std::string before = Shown(*run);
+            const int candidates = run->StepsTotal() / run->WorldCount();
+            for (int index = 0; index < run->WorldCount(); ++index) {
+                const SearchWorld first = run->PlayWorld(index);
+                EXPECT_TRUE(SameWorld(first, run->PlayWorld(index))) << "world " << index;
+                EXPECT_TRUE(first.played) << "world " << index;
+                EXPECT_EQ(static_cast<int>(first.values.size()), candidates) << "world " << index;
+            }
+            EXPECT_EQ(Shown(*run), before);
+            // A world outside the run is no world.
+            EXPECT_FALSE(run->PlayWorld(-1).played);
+            EXPECT_FALSE(run->PlayWorld(run->WorldCount()).played);
+            // The run still steps to the answer it would have had untouched.
+            MahjongRng reference(kRngSeed);
+            const std::optional<HandAction> expected = AtOnce(views.front(), reference, SearchProfile(3, kCandidates));
+            StepToEnd(*run, "after PlayWorld");
+            EXPECT_EQ(run->Result(), *expected);
+        }
+    }
+
+    TEST(ComputerSearchTest, WhenNoWorldCanBeSampledTheWorldsAreNotPlayedAndTheRunFinishesToNormal) {
+        TableView turn = MakeTableView(TurnModel(), kSeat0);
+        turn.liveCount += 5;
+        TableView window = MakeTableView(WindowModel(kPungHand, "5p"), kSeat1);
+        window.liveCount += 5;
+        for (const TableView& view : {turn, window}) {
+            MahjongRng rng(kRngSeed);
+            std::optional<SearchRun> run = Begin(view, rng, SearchProfile());
+            ASSERT_TRUE(run.has_value());
+            for (int index = 0; index < run->WorldCount(); ++index) {
+                EXPECT_FALSE(run->PlayWorld(index).played);
+            }
+            run->RunWorlds(ThreadLoop(2));
+            EXPECT_TRUE(run->Done());
+            EXPECT_EQ(run->StepsDone(), run->StepsTotal());
+            EXPECT_EQ(run->Result(), Normal(view, MahjongRng(kRngSeed)));
+        }
+    }
+
+    TEST(ComputerSearchTest, FinishSkipsTheWorldsNotPlayedAndCountsTheOthersInOrder) {
+        const TableView view = MakeTableView(TurnModel(), kSeat0);
+        constexpr int kRunWorlds = 3;
+        const auto begin = [&](int margin) {
+            MahjongRng rng(kRngSeed);
+            std::optional<SearchRun> run = BeginTurnSearch(view, rng, SearchProfile(kRunWorlds, kCandidates, margin));
+            EXPECT_TRUE(run.has_value());
+            return *run;
+        };
+        const int candidates = begin(0).StepsTotal() / kRunWorlds;
+        ASSERT_GE(candidates, kSearchMinCandidates);
+        MahjongRng baselineRng(kRngSeed);
+        const eastl::vector<HandAction> listed = TurnCandidates(view, Normal(view, baselineRng), kCandidates);
+        ASSERT_EQ(static_cast<int>(listed.size()), candidates);
+
+        // Candidate 1 is 10 points better than the baseline in every world that was played, the middle world was not.
+        SearchWorld better;
+        better.played = true;
+        better.values.assign(static_cast<size_t>(candidates), 0);
+        better.values[1] = 10;
+        const SearchWorld skipped;
+        {
+            SearchRun run = begin(0);
+            const eastl::array<SearchWorld, kRunWorlds> worlds = {better, skipped, better};
+            run.Finish(worlds);
+            EXPECT_TRUE(run.Done());
+            EXPECT_EQ(run.StepsDone(), run.StepsTotal());
+            EXPECT_EQ(run.Result(), listed[1]);
+        }
+        {
+            // One played world has no spread to measure, so a margin keeps the baseline; so does a run where none was played.
+            SearchRun one = begin(30);
+            const eastl::array<SearchWorld, kRunWorlds> single = {skipped, better, skipped};
+            one.Finish(single);
+            EXPECT_TRUE(one.Done());
+            EXPECT_EQ(one.Result(), listed[0]);
+            SearchRun none = begin(0);
+            const eastl::array<SearchWorld, kRunWorlds> nothing = {skipped, skipped, skipped};
+            none.Finish(nothing);
+            EXPECT_TRUE(none.Done());
+            EXPECT_EQ(none.Result(), listed[0]);
+        }
+    }
+
+    TEST(ComputerSearchTest, FinishOnASteppedRunAFinishedRunOrTheWrongWorldsChangesNothing) {
+        const TableView view = MakeTableView(TurnModel(), kSeat0);
+        const LevelProfile profile = SearchProfile(3, kCandidates);
+        const auto begin = [&] {
+            MahjongRng rng(kRngSeed);
+            return *BeginTurnSearch(view, rng, profile);
+        };
+        SearchRun source = begin();
+        eastl::vector<SearchWorld> worlds;
+        for (int i = 0; i < source.WorldCount(); ++i) {
+            worlds.push_back(source.PlayWorld(i));
+        }
+
+        // A stepped run (one step is enough) ignores the worlds and steps on to the same answer.
+        {
+            SearchRun run = begin();
+            run.Step();
+            const std::string before = Shown(run);
+            run.Finish(worlds);
+            EXPECT_EQ(Shown(run), before);
+            EXPECT_FALSE(run.Done());
+            StepToEnd(run, "stepped then finished");
+            SearchRun whole = begin();
+            StepToEnd(whole, "whole");
+            EXPECT_EQ(run.Result(), whole.Result());
+        }
+        // The wrong count, a played world with a short row.
+        {
+            SearchRun run = begin();
+            run.Finish(eastl::span<const SearchWorld>(worlds.data(), worlds.size() - 1));
+            EXPECT_EQ(Shown(run), Shown(begin()));
+            eastl::vector<SearchWorld> shortRow = worlds;
+            shortRow[1].values.pop_back();
+            run.Finish(shortRow);
+            EXPECT_EQ(Shown(run), Shown(begin()));
+            run.Finish(worlds);
+            EXPECT_TRUE(run.Done());
+        }
+        // Twice: the second call, with worlds that would say otherwise, changes nothing.
+        {
+            SearchRun run = begin();
+            run.Finish(worlds);
+            const HandAction answer = run.Result();
+            const std::string shown = Shown(run);
+            eastl::vector<SearchWorld> rigged = worlds;
+            for (SearchWorld& world : rigged) {
+                world.values.front() = -1000000;
+            }
+            run.Finish(rigged);
+            run.RunWorlds(SerialLoop);
+            EXPECT_EQ(Shown(run), shown);
+            EXPECT_EQ(run.Result(), answer);
         }
     }
 
