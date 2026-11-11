@@ -29,7 +29,7 @@
   The waiting row is 320 wide there (caption and cells as before, the 13 cells are 312), x 8, y 8; the strip under it holds HintButton
   (node HintsButton, x 8..128) and AdviceText (x 136..292, 8 clear of the plate).
 -->
-<node name="Hints" layer="5">
+<node name="Hints" layer="5" contentVersion="2">
   <components>
     <component type="MahjongHintsComponent" />
     <component type="UICanvasComponent" space="SceneView" useSafeArea="true">

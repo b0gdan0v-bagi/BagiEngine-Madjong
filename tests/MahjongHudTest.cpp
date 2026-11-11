@@ -1,10 +1,10 @@
 #include "ComputerTestSupport.h"
+#include "MahjongButtonSupport.h"
 #include "MahjongTableTestSupport.h"
 #include "MahjongTouchTestSupport.h"
 #include "UiStyleTestSupport.h"
 
 #include <BECore/Control/Json.h>
-#include <BECore/UI/UIButton.h>
 #include <BECore/UI/UIDropdown.h>
 #include <Common/TempPath.h>
 #include <Events/SceneEvents.h>
@@ -76,15 +76,11 @@ namespace BECore::Mahjong::Tests {
 
         std::string Text(const char* node, const char* element) const {
             const UIElement* found = Element(node, element);
-            const UILabel* label = found != nullptr ? found->Cast<UILabel>() : nullptr;
-            if (label == nullptr && found != nullptr) {
-                label = found->Cast<UIButton>();  // a button is a label by inheritance, but `Cast` is exact
-            }
             if (found != nullptr && found->Cast<UIDropdown>() != nullptr) {
                 const UIButton* chosen = found->Cast<UIDropdown>()->FindChosenOption();  // the header shows the chosen option
                 return chosen != nullptr ? std::string(chosen->GetDisplayText().data(), chosen->GetDisplayText().size()) : std::string("<none chosen>");
             }
-            return label != nullptr ? std::string(label->GetDisplayText().data(), label->GetDisplayText().size()) : std::string("<no label>");
+            return DisplayText(found);
         }
 
         /// The Russian words of the winds, written out here and not taken from the table

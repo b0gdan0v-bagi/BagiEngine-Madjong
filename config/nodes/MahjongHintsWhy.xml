@@ -12,7 +12,7 @@
   it stays on the ring. MahjongHintsTest holds it inside the ring, clear of every slot but the wall stacks, free of input, and every
   line of the longest text in both languages fitting on the size matrix.
 -->
-<node name="HintsWhy" layer="11">
+<node name="HintsWhy" layer="11" contentVersion="2">
   <components>
     <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
       <elements>

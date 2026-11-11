@@ -1,10 +1,10 @@
 #include "ComputerTestSupport.h"
+#include "MahjongButtonSupport.h"
 #include "MahjongTableTestSupport.h"
 #include "MahjongTouchTestSupport.h"
 #include "UiStyleTestSupport.h"
 
 #include <BECore/Control/Json.h>
-#include <BECore/UI/UIButton.h>
 #include <BECore/UI/UIImage.h>
 #include <BECore/UI/UILabel.h>
 #include <Events/SceneEvents.h>
@@ -69,11 +69,7 @@ namespace BECore::Mahjong::Tests {
 
         std::string Text(const char* node, const char* element) const {
             const UIElement* found = Element(node, element);
-            const UILabel* label = found != nullptr ? found->Cast<UILabel>() : nullptr;
-            if (label == nullptr && found != nullptr) {
-                label = found->Cast<UIButton>();  // a button is a label by inheritance, but `Cast` is exact
-            }
-            return label != nullptr ? StdString(label->GetDisplayText()) : std::string("<none>");
+            return DisplayText(found, "<none>");
         }
 
         std::string SpriteOf(const char* element) const {
@@ -741,11 +737,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         ASSERT_NO_FATAL_FAILURE(PressRules());
         ASSERT_NO_FATAL_FAILURE(GoToPage(1));
-        const auto action = [&](const char* node, const char* element) {
-            const UIElement* found = Element(node, element);
-            const UIButton* button = found != nullptr ? found->Cast<UIButton>() : nullptr;
-            return button != nullptr ? button->action : PoolString();
-        };
+        const auto action = [&](const char* node, const char* element) { return ButtonAction(Element(node, element)); };
         EXPECT_EQ(action("HudMenu", "Rules"), "MahjongRules"_intern);
         EXPECT_EQ(action("RulesAction", "RulesBack"), "MahjongRulesBack"_intern);
         EXPECT_EQ(action("RulesAction", "RulesNext"), "MahjongRulesNext"_intern);
@@ -759,7 +751,7 @@ namespace BECore::Mahjong::Tests {
         std::vector<const UIElement*> controls;
         CollectControls(plate->GetRoot(), controls);
         for (const UIElement* control : controls) {
-            EXPECT_FALSE(control->interactive) << control->name.ToStringView().data() << ": the pages are text, the buttons are in RulesAction";
+            EXPECT_FALSE(control->IsInteractive()) << control->name.ToStringView().data() << ": the pages are text, the buttons are in RulesAction";
         }
     }
 

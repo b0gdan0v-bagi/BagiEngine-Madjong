@@ -1,3 +1,4 @@
+#include "MahjongButtonSupport.h"
 #include "MahjongTableTestSupport.h"
 #include "MahjongTouchTestSupport.h"
 #include "UiStyleTestSupport.h"
@@ -217,11 +218,7 @@ namespace BECore::Mahjong::Tests {
 
         std::string Text(const char* node, const char* element) const {
             const UIElement* found = Element(node, element);
-            const UILabel* label = found != nullptr ? found->Cast<UILabel>() : nullptr;
-            if (label == nullptr && found != nullptr) {
-                label = found->Cast<UIButton>();  // a button is a label by inheritance, but `Cast` is exact
-            }
-            return label != nullptr ? std::string(label->GetDisplayText().data(), label->GetDisplayText().size()) : std::string("<no label>");
+            return DisplayText(found);
         }
 
         bool Shown(const char* node) const {
@@ -982,8 +979,8 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongEndScreenTest, TheButtonsOfBothPanelsCarryTheirActions) {
         ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers));
         Draw();
-        EXPECT_EQ(Element("HandOverAction", "NextHand")->Cast<UIButton>()->action, "MahjongNextHand"_intern);
-        EXPECT_EQ(Element("MatchOver", "NewGame")->Cast<UIButton>()->action, "MahjongNewGame"_intern);
+        EXPECT_EQ(ButtonAction(Element("HandOverAction", "NextHand")), "MahjongNextHand"_intern);
+        EXPECT_EQ(ButtonAction(Element("MatchOver", "NewGame")), "MahjongNewGame"_intern);
     }
 
     TEST_F(MahjongEndScreenTest, TheScoreTableHasNoControlAndTheNewGameButtonOfTheHudIsHiddenWhileItIsShown) {
@@ -999,7 +996,7 @@ namespace BECore::Mahjong::Tests {
         std::vector<const UIElement*> controls;
         CollectControls(plate->GetRoot(), controls);
         for (const UIElement* control : controls) {
-            EXPECT_FALSE(control->interactive) << control->name.ToStringView().data() << ": the plate is text, the button is in HandOverAction";
+            EXPECT_FALSE(control->IsInteractive()) << control->name.ToStringView().data() << ": the plate is text, the button is in HandOverAction";
         }
 
         ASSERT_TRUE(ClickElement("HandOverAction", "NextHand"));

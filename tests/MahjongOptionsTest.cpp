@@ -1,8 +1,8 @@
+#include "MahjongButtonSupport.h"
 #include "MahjongTableTestSupport.h"
 #include "MahjongTouchTestSupport.h"
 #include "UiStyleTestSupport.h"
 
-#include <BECore/UI/UIButton.h>
 #include <BECore/UI/UIDropdown.h>
 #include <BECore/UI/UISegmented.h>
 #include <Mahjong/Components/MahjongHudComponent.h>
@@ -121,15 +121,11 @@ namespace BECore::Mahjong::Tests {
 
         std::string Text(const char* element) const {
             const UIElement* found = Element("Options", element);
-            const UILabel* label = found != nullptr ? found->Cast<UILabel>() : nullptr;
-            if (label == nullptr && found != nullptr) {
-                label = found->Cast<UIButton>();  // a button is a label by inheritance, but `Cast` is exact
-            }
             if (found != nullptr && found->Cast<UIDropdown>() != nullptr) {
                 const UIButton* chosen = found->Cast<UIDropdown>()->FindChosenOption();  // the header shows the chosen option
                 return chosen != nullptr ? std::string(chosen->GetDisplayText().data(), chosen->GetDisplayText().size()) : std::string("<none chosen>");
             }
-            return label != nullptr ? std::string(label->GetDisplayText().data(), label->GetDisplayText().size()) : std::string("<no label>");
+            return DisplayText(found);
         }
     };
 
@@ -189,9 +185,8 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(segment->action, "MahjongSetSpeed"_intern);
             EXPECT_EQ(segment->value.ToStringView(), SpeedText(EnumUtils<AnimationSpeed>::Values()[index]).data());
         }
-        const auto* back = Element("Options", "Back") != nullptr ? Element("Options", "Back")->Cast<UIButton>() : nullptr;
-        ASSERT_NE(back, nullptr);
-        EXPECT_EQ(back->action, "MahjongOptionsBack"_intern);
+        ASSERT_TRUE(IsButton(Element("Options", "Back")));
+        EXPECT_EQ(ButtonAction(Element("Options", "Back")), "MahjongOptionsBack"_intern);
     }
 
     TEST_F(MahjongOptionsTest, ThePagePassesTheSizeMatrixInEveryLanguageAndEveryWordFitsAndEveryControlIsATouchTarget) {

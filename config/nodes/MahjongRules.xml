@@ -15,7 +15,7 @@
   In a narrow view (1080 x 768) 94% of the width is 1015, so maxWidth holds the plate to 960 (x 60..1020, y 50..638) and the pages fit as in
   landscape: no variant (MahjongRulesTest holds the matrix and the narrow windows).
 -->
-<node name="Rules" layer="35">
+<node name="Rules" layer="35" contentVersion="2">
   <components>
     <component type="UICanvasComponent" space="SceneView" useSafeArea="true" modal="true" visible="false">
       <elements>

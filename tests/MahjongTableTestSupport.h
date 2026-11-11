@@ -1,6 +1,7 @@
 #pragma once
 
 #include "HandTestSupport.h"
+#include "MahjongButtonSupport.h"
 #include "ShippedScene.h"
 #include "StringsTestSupport.h"
 
@@ -9,7 +10,6 @@
 #include <BECore/Scene/Scene.h>
 #include <BECore/Scene/SceneManager.h>
 #include <BECore/Text/FontAtlasLibrary.h>
-#include <BECore/UI/UIButton.h>
 #include <BECore/UI/UICanvasComponent.h>
 #include <BECore/UI/UILabel.h>
 #include <Common/EngineEnvironment.h>
@@ -439,7 +439,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         static void CollectControls(const UIElement& element, std::vector<const UIElement*>& found) {
-            if (element.Cast<UILabel>() != nullptr || element.Cast<UIButton>() != nullptr) {
+            if (ShowsText(element)) {
                 found.push_back(&element);
             }
             for (const auto& child : element.children) {
@@ -498,7 +498,7 @@ namespace BECore::Mahjong::Tests {
                 if (control->rect.IsEmpty()) {
                     continue;  // a hidden element
                 }
-                const float spare = control->interactive ? air : 0.0f;
+                const float spare = control->IsInteractive() ? air : 0.0f;
                 const UIContentFit fit = control->CheckContent(control->rect.w - 2.0f * spare, control->rect.h, scale);
                 EXPECT_TRUE(!fit.hasContent || fit.fits) << node << " " << control->name.ToStringView().data() << " cuts its text at " << outputWidth << "x" << outputHeight;
             }

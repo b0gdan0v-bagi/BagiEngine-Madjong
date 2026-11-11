@@ -1,5 +1,6 @@
 #include "MahjongTableTestSupport.h"
 
+#include <Common/ContentFilesCheck.h>
 #include <Mahjong/Table/TableLayout.h>
 #include <iterator>
 #include <map>
@@ -121,6 +122,12 @@ namespace BECore::Mahjong::Tests {
             EXPECT_FALSE(root.attribute("ref")) << path.string() << ": a node file is not a reference";
             EXPECT_EQ(stems[NodeFileStem(node.name)], 1) << NodeFileStem(node.name) << ": another config has the same name";
         }
+    }
+
+    /// The game's content files are at the version the engine's loaders read: an engine update that bumps it is followed by
+    /// `python3 engine/tools/migrate/migrate.py .` in this repository (engine/tools/migrate/CLAUDE.md), or the scene loads empty
+    TEST(MahjongSceneFilesTest, TheContentFilesAreAtTheVersionOfTheEngine) {
+        ExpectContentFilesAtCurrentVersion(ShippedConfigDirectory());
     }
 
     TEST(MahjongSceneFilesTest, NoNodeFileIsLeftOut) {

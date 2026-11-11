@@ -1,6 +1,7 @@
+#include "MahjongButtonSupport.h"
 #include "MahjongTableTestSupport.h"
 
-#include <BECore/UI/UIButton.h>
+#include <BECore/UI/UITooltipComponent.h>
 #include <CoreSDL/SDLEvents.h>
 #include <Mahjong/Components/MahjongHudComponent.h>
 
@@ -186,10 +187,10 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(cross->rect.w, cross->rect.h) << "a square";
             EXPECT_NEAR(title->rect.x + title->rect.w * 0.5f, band->rect.x + band->rect.w * 0.5f, 0.01f);
 
-            const UIButton* button = cross->Cast<UIButton>();
-            ASSERT_NE(button, nullptr);
-            EXPECT_EQ(button->action, "MahjongSetupClose"_intern);
-            EXPECT_FALSE(button->tooltip.empty()) << "a cross has no word on it: the tooltip says what it does";
+            ASSERT_TRUE(IsButton(cross));
+            EXPECT_EQ(ButtonAction(cross), "MahjongSetupClose"_intern);
+            const auto* tooltip = cross->GetComponent<UITooltipComponent>();
+            EXPECT_TRUE(tooltip != nullptr && !tooltip->text.empty()) << "a cross has no word on it: the tooltip says what it does";
             const UIStrings& strings = CoreManager::GetUIStrings();
             EXPECT_NE(Tr(strings, "setup.close"), "setup.close");
         }

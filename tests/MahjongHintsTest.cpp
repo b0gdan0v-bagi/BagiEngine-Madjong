@@ -1,4 +1,5 @@
 #include "ComputerTestSupport.h"
+#include "MahjongButtonSupport.h"
 #include "MahjongTableTestSupport.h"
 #include "MahjongTouchTestSupport.h"
 #include "UiStyleTestSupport.h"
@@ -334,10 +335,7 @@ namespace BECore::Mahjong::Tests {
                 const auto* label = Element("Options", element) != nullptr ? Element("Options", element)->Cast<UILabel>() : nullptr;
                 return label != nullptr ? std::string(label->GetDisplayText().data(), label->GetDisplayText().size()) : std::string("<none>");
             };
-            const auto buttonText = [&](const char* element) {
-                const auto* button = Element("Options", element) != nullptr ? Element("Options", element)->Cast<UIButton>() : nullptr;
-                return button != nullptr ? std::string(button->GetDisplayText().data(), button->GetDisplayText().size()) : std::string("<none>");
-            };
+            const auto buttonText = [&](const char* element) { return DisplayText(Element("Options", element), "<none>"); };
             EXPECT_EQ(text("HintsCaption"), std::string(caption.data(), caption.size()));
             EXPECT_EQ(buttonText("HintsOn"), std::string(on.data(), on.size()));
             EXPECT_EQ(buttonText("HintsOff"), std::string(off.data(), off.size()));

@@ -8,16 +8,31 @@
   and hidden by MahjongHudComponent together with Rules, which also hides Back on the first page and Next on the last (the others
   widen: a hidden element takes no room in a stack). Back and Close are neutral, Next confirms (primary).
 -->
-<node name="RulesAction" layer="36">
+<node name="RulesAction" layer="36" contentVersion="2">
   <components>
     <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="1" minScale="0.6" useSafeArea="true" visible="false">
       <elements>
         <element type="UIElement" name="Bar" anchor="Bottom" width="100%" height="80" color="36,40,52,255" blocksInput="true" />
         <element type="UIStack" name="Buttons" anchor="Bottom" y="-8" width="94%" maxWidth="640" height="64" direction="Horizontal" spacing="8" crossAlign="Stretch">
           <children>
-            <element type="UIButton" name="RulesBack" flex="1" height="64" text="{#rules.back}" fontSize="28" overflow="AutoFit" minFontSize="18" action="MahjongRulesBack" color="70,70,100,255" />
-            <element type="UIButton" name="RulesNext" flex="1" height="64" text="{#rules.next}" fontSize="28" overflow="AutoFit" minFontSize="18" action="MahjongRulesNext" color="40,110,60,255" />
-            <element type="UIButton" name="RulesClose" flex="1" height="64" text="{#rules.close}" fontSize="28" overflow="AutoFit" minFontSize="18" action="MahjongRulesClose" color="70,70,100,255" />
+            <element type="UIElement" name="RulesBack" flex="1" height="64" fontSize="28" color="70,70,100,255">
+              <components>
+                <component type="UITextComponent" text="{#rules.back}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="18"/>
+                <component type="UIInputClicker" action="MahjongRulesBack"/>
+              </components>
+            </element>
+            <element type="UIElement" name="RulesNext" flex="1" height="64" fontSize="28" color="40,110,60,255">
+              <components>
+                <component type="UITextComponent" text="{#rules.next}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="18"/>
+                <component type="UIInputClicker" action="MahjongRulesNext"/>
+              </components>
+            </element>
+            <element type="UIElement" name="RulesClose" flex="1" height="64" fontSize="28" color="70,70,100,255">
+              <components>
+                <component type="UITextComponent" text="{#rules.close}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="18"/>
+                <component type="UIInputClicker" action="MahjongRulesClose"/>
+              </components>
+            </element>
           </children>
         </element>
       </elements>

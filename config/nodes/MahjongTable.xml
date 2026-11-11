@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<node name="Table">
+<node name="Table" contentVersion="2">
   <components>
     <component type="MahjongTableComponent" />
   </components>

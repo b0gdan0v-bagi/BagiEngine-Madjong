@@ -13,11 +13,16 @@
   side) it moves right by the wing (x 236), so it stays under the waiting row and clear of every tile as in landscape. In a narrow view (1080 x 768,
   orientation:landscape;maxAspect:1.55) it is the left end of the strip in the top left corner (x 8, y 92).
 -->
-<node name="HintsButton" layer="6">
+<node name="HintsButton" layer="6" contentVersion="2">
   <components>
     <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
       <elements>
-        <element type="UIButton" name="HintButton" anchor="TopLeft" visible="false" x="96" y="92" width="120" height="56" text="{#hints.adviseButton}" fontSize="22" action="MahjongHintAdvice" color="70,70,100,255" />
+        <element type="UIElement" name="HintButton" anchor="TopLeft" visible="false" x="96" y="92" width="120" height="56" fontSize="22" color="70,70,100,255">
+          <components>
+            <component type="UITextComponent" text="{#hints.adviseButton}" align="Center" verticalAlign="Center" wrap="false"/>
+            <component type="UIInputClicker" action="MahjongHintAdvice"/>
+          </components>
+        </element>
       </elements>
       <variants>
         <variant when="orientation:portrait">

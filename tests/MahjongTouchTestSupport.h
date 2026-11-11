@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MahjongButtonSupport.h"
 #include "MahjongTableTestSupport.h"
 
 #include <BECore/Renderer/ViewTransform.h>
@@ -438,7 +439,7 @@ namespace BECore::Mahjong::Tests {
 
     /// Every label and button of the canvas, shown or not, in tree order.
     inline void CollectTextControls(const UIElement& element, std::vector<const UIElement*>& found) {
-        if (element.Cast<UILabel>() != nullptr || element.Cast<UIButton>() != nullptr) {
+        if (ShowsText(element)) {
             found.push_back(&element);
         }
         for (const auto& child : element.children) {
@@ -480,7 +481,7 @@ namespace BECore::Mahjong::Tests {
                         if (control->rect.IsEmpty()) {
                             continue;  // hidden
                         }
-                        const float spare = control->interactive ? air : 0.0f;
+                        const float spare = control->IsInteractive() ? air : 0.0f;
                         const UIContentFit fit = control->CheckContent(control->rect.w - 2.0f * spare, control->rect.h, scale);
                         if (fit.hasContent && !fit.fits) {
                             const eastl::string_view modeName = screen ? EnumUtils<CanvasScaleMode>::ToString(mode) : eastl::string_view("-");

@@ -4,7 +4,7 @@
   A 480 px window at the user scale 1.5 is 320 units high (296 with a notch), so the plate is 296: 32 padding + 40 headline band +
   4 x 32 rows + 64 button + 8 NewGameGap + 6 x 4 spacing (7 children: the rows lie 4 apart and the button 4 + 8 + 4 = 16 below them).
 -->
-<node name="MatchOver" layer="25">
+<node name="MatchOver" layer="25" contentVersion="2">
   <components>
     <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.7" useSafeArea="true" modal="true" visible="false">
       <elements>
@@ -17,7 +17,12 @@
             <element type="UILabel" name="Standing2" height="32" text="{standing2}" fontSize="22" align="Center" verticalAlign="Center" color="48,54,72,255" />
             <element type="UILabel" name="Standing3" height="32" text="{standing3}" fontSize="22" align="Center" verticalAlign="Center" color="48,54,72,255" />
             <element type="UIElement" name="NewGameGap" height="8" />
-            <element type="UIButton" name="NewGame" height="64" text="{#matchover.newGame}" fontSize="28" action="MahjongNewGame" color="40,110,60,255" />
+            <element type="UIElement" name="NewGame" height="64" fontSize="28" color="40,110,60,255">
+              <components>
+                <component type="UITextComponent" text="{#matchover.newGame}" align="Center" verticalAlign="Center" wrap="false"/>
+                <component type="UIInputClicker" action="MahjongNewGame"/>
+              </components>
+            </element>
           </children>
         </element>
       </elements>

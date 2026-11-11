@@ -120,6 +120,12 @@ namespace BECore::Mahjong::Tests {
             if ((type == "UIButton" || type == "UIToggle") && AttributeOf(element, "action").empty() && parentType != "UISegmented" && parentType != "UIDropdown") {
                 flag(Rule::Action, "action");
             }
+            // A composed button (an element with a `UIInputClicker`, the form of a plain button since content version 2) keeps its action on the clicker
+            for (const pugi::xml_node component : element.child("components").children("component")) {
+                if (AttributeOf(component, "type") == "UIInputClicker" && AttributeOf(component, "action").empty()) {
+                    flag(Rule::Action, "action");
+                }
+            }
         }
 
         /// Every `element` of the document, at any depth (they sit in `elements` and `children`, inside components, inside nodes).
@@ -279,6 +285,8 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(CheckStyle(OneElement("type=\"UIButton\" name=\"B\" action=\"A\" padding=\"8,4,8,5\"")).violations.empty());
         // A button of a choice group may take its action from the group; a button anywhere else may not go without
         EXPECT_FALSE(CheckStyle(OneElement("type=\"UIButton\" name=\"B\"")).violations.empty());
+        const Report clicker = CheckStyle("<root><element type=\"UIElement\" name=\"C\"><components><component type=\"UIInputClicker\" /></components></element></root>");
+        EXPECT_EQ(Of(clicker, Rule::Action).size(), 1u) << "a composed button without an action";
         const Report segment = CheckStyle("<root><element type=\"UISegmented\" name=\"G\"><children><element type=\"UIButton\" name=\"S\" /></children></element></root>");
         EXPECT_TRUE(segment.violations.empty());
     }

@@ -1,6 +1,5 @@
 #include "MahjongTouchTestSupport.h"
 
-#include <BECore/UI/UIButton.h>
 #include <EASTL/map.h>
 #include <Mahjong/Components/MahjongHudComponent.h>
 #include <Mahjong/Table/UiPalette.h>
@@ -949,7 +948,7 @@ namespace BECore::Mahjong::Tests {
 
         /// The names of the interactive elements (those that take clicks: buttons, toggles, segments) of `element` and below.
         void CollectInteractive(const UIElement& element, std::set<std::string>& names) {
-            if (element.interactive) {
+            if (element.IsInteractive()) {
                 names.insert(std::string(element.name.ToStringView().data(), element.name.ToStringView().size()));
             }
             for (const auto& child : element.children) {

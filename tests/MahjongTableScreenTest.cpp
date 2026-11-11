@@ -1,8 +1,8 @@
+#include "MahjongButtonSupport.h"
 #include "MahjongTouchTestSupport.h"
 #include "UiStyleTestSupport.h"
 
 #include <BECore/Text/Utf8.h>
-#include <BECore/UI/UIButton.h>
 #include <BECore/UI/UIImage.h>
 #include <BECore/UI/UILabel.h>
 #include <BECore/UI/UIToggle.h>
@@ -182,11 +182,11 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_EQ(toggle->text, eastl::string("{#") + spec.wordKey + "}") << "the toggle says the word of the string table";
                 continue;
             }
-            const auto* button = element->Cast<UIButton>();
-            ASSERT_NE(button, nullptr) << spec.element;
-            EXPECT_EQ(button->action, PoolString::Intern(spec.action)) << spec.element;
-            EXPECT_EQ(button->value, PoolString::Intern(spec.value)) << spec.element;
-            EXPECT_EQ(button->text, eastl::string("{#") + spec.wordKey + "}") << spec.element << " says a word of the string table";
+            const UIElement* button = element;
+            ASSERT_TRUE(IsButton(button)) << spec.element;
+            EXPECT_EQ(ButtonAction(button), PoolString::Intern(spec.action)) << spec.element;
+            EXPECT_EQ(ButtonValue(button), PoolString::Intern(spec.value)) << spec.element;
+            EXPECT_EQ(ElementText(button), eastl::string("{#") + spec.wordKey + "}") << spec.element << " says a word of the string table";
             // The pictures of its tiles: `maxTiles` hidden images named after the button, and no more
             int images = 0;
             for (const auto& child : button->children) {
@@ -200,8 +200,8 @@ namespace BECore::Mahjong::Tests {
             }
         }
         EXPECT_NE(Element("Handoff", "Reveal"), nullptr);
-        EXPECT_EQ(Element("Handoff", "Reveal")->Cast<UIButton>()->action, "MahjongReveal"_intern);
-        EXPECT_EQ(Element("Handoff", "Reveal")->Cast<UIButton>()->text, eastl::string("{#cover.show}"));
+        EXPECT_EQ(ButtonAction(Element("Handoff", "Reveal")), "MahjongReveal"_intern);
+        EXPECT_EQ(ElementText(Element("Handoff", "Reveal")), eastl::string("{#cover.show}"));
         EXPECT_EQ(Element("Handoff", "HandoffText")->Cast<UILabel>()->text, eastl::string("{#cover.text}"));
     }
 
@@ -497,14 +497,14 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_EQ(b->text, a->text);
                 continue;
             }
-            const auto* a = wide->Cast<UIButton>();
-            const auto* b = narrow->Cast<UIButton>();
-            ASSERT_TRUE(a != nullptr && b != nullptr) << spec.element;
-            EXPECT_EQ(b->action, a->action) << spec.element;
-            EXPECT_EQ(b->value, a->value) << spec.element;
-            EXPECT_EQ(b->action, PoolString::Intern(spec.action)) << spec.element;
-            EXPECT_EQ(b->value, PoolString::Intern(spec.value)) << spec.element;
-            EXPECT_EQ(b->text, eastl::string("{#") + spec.wordKey + "}") << spec.element << " says a word of the string table";
+            const UIElement* a = wide;
+            const UIElement* b = narrow;
+            ASSERT_TRUE(IsButton(a) && IsButton(b)) << spec.element;
+            EXPECT_EQ(ButtonAction(b), ButtonAction(a)) << spec.element;
+            EXPECT_EQ(ButtonValue(b), ButtonValue(a)) << spec.element;
+            EXPECT_EQ(ButtonAction(b), PoolString::Intern(spec.action)) << spec.element;
+            EXPECT_EQ(ButtonValue(b), PoolString::Intern(spec.value)) << spec.element;
+            EXPECT_EQ(ElementText(b), eastl::string("{#") + spec.wordKey + "}") << spec.element << " says a word of the string table";
             EXPECT_EQ(b->children.size(), a->children.size()) << spec.element;
             for (int t = 0; t < kMaxButtonTiles; ++t) {
                 const std::string name = TileImageName(kind, t).c_str();
@@ -522,13 +522,11 @@ namespace BECore::Mahjong::Tests {
         const UIElement* tableHint = Element("HintsButton", "HintButton");
         const UIElement* rowHint = Element("ActionsCompact", "HintButton");
         ASSERT_TRUE(tableHint != nullptr && rowHint != nullptr);
-        const auto* tableHintButton = tableHint->Cast<UIButton>();
-        const auto* rowHintButton = rowHint->Cast<UIButton>();
-        ASSERT_TRUE(tableHintButton != nullptr && rowHintButton != nullptr);
-        EXPECT_EQ(rowHintButton->action, PoolString::Intern("MahjongHintAdvice"));
-        EXPECT_EQ(rowHintButton->action, tableHintButton->action);
-        EXPECT_EQ(rowHintButton->text, tableHintButton->text);
-        EXPECT_EQ(rowHintButton->text, "{#hints.adviseButton}");
+        ASSERT_TRUE(IsButton(tableHint) && IsButton(rowHint));
+        EXPECT_EQ(ButtonAction(rowHint), PoolString::Intern("MahjongHintAdvice"));
+        EXPECT_EQ(ButtonAction(rowHint), ButtonAction(tableHint));
+        EXPECT_EQ(ElementText(rowHint), ElementText(tableHint));
+        EXPECT_EQ(ElementText(rowHint), "{#hints.adviseButton}");
         EXPECT_TRUE(SameColor(rowHint->color, PaletteColor("neutral")));
         EXPECT_TRUE(SameColor(rowHint->color, tableHint->color));
         EXPECT_TRUE(rowHint->children.empty());

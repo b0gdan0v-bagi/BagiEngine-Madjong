@@ -17,12 +17,22 @@
   few units at most (a known deviation of the nearly square window, which no window of the matrix is). The portrait variant comes after them and
   replaces them.
 -->
-<node name="HudMenu" layer="10">
+<node name="HudMenu" layer="10" contentVersion="2">
   <components>
     <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true">
       <elements>
-        <element type="UIButton" name="NewGame" anchor="TopRight" x="-8" y="8" width="176" height="56" text="{#hud.newGame}" fontSize="22" action="MahjongNewGame" color="45,75,120,255" />
-        <element type="UIButton" name="Rules" anchor="TopRight" x="-192" y="8" width="92" height="56" text="{#hud.rules}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongRules" color="45,75,120,255" />
+        <element type="UIElement" name="NewGame" anchor="TopRight" x="-8" y="8" width="176" height="56" fontSize="22" color="45,75,120,255">
+          <components>
+            <component type="UITextComponent" text="{#hud.newGame}" align="Center" verticalAlign="Center" wrap="false"/>
+            <component type="UIInputClicker" action="MahjongNewGame"/>
+          </components>
+        </element>
+        <element type="UIElement" name="Rules" anchor="TopRight" x="-192" y="8" width="92" height="56" fontSize="22" color="45,75,120,255">
+          <components>
+            <component type="UITextComponent" text="{#hud.rules}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+            <component type="UIInputClicker" action="MahjongRules"/>
+          </components>
+        </element>
       </elements>
       <variants>
         <variant when="maxWidth:440">

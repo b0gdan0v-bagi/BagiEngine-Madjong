@@ -1,8 +1,8 @@
 #include "ComputerTestSupport.h"
+#include "MahjongButtonSupport.h"
 #include "MahjongTableTestSupport.h"
 #include "MahjongTouchTestSupport.h"
 
-#include <BECore/UI/UIButton.h>
 #include <BECore/UI/UIImage.h>
 #include <BECore/UI/UILabel.h>
 #include <Events/InputEvents.h>
@@ -189,9 +189,9 @@ namespace BECore::Mahjong::Tests {
         }
 
         std::string LabelOf(const char* element) const {
-            const auto* button = Element("Actions", element) != nullptr ? Element("Actions", element)->Cast<UIButton>() : nullptr;
-            EXPECT_NE(button, nullptr) << element;
-            return button != nullptr ? std::string(button->GetDisplayText().data(), button->GetDisplayText().size()) : std::string();
+            const UIElement* button = Element("Actions", element);
+            EXPECT_TRUE(IsButton(button)) << element;
+            return DisplayText(button, "");
         }
     };
 

@@ -16,7 +16,7 @@
   1560 x 720 whose table is the landscape one 140 units in from each side) moves every label right by that wing (the panel is x 612..948). The narrow variant (orientation:landscape;maxAspect:1.55, the view of
   1080 x 768, whose ring and panel are 100 left of the landscape ones, x 372..708 at the same y) moves every label 100 left.
 -->
-<node name="CenterPanel" layer="10">
+<node name="CenterPanel" layer="10" contentVersion="2">
   <components>
     <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
       <elements>

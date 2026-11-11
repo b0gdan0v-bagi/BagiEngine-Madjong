@@ -1,10 +1,10 @@
 #include "ComputerTestSupport.h"
+#include "MahjongButtonSupport.h"
 #include "MahjongTableTestSupport.h"
 #include "MahjongTouchTestSupport.h"
 #include "UiStyleTestSupport.h"
 
 #include <BECore/Control/Json.h>
-#include <BECore/UI/UIButton.h>
 #include <BECore/UI/UILabel.h>
 #include <BECore/UI/UIToggle.h>
 #include <Events/InputEvents.h>
@@ -660,12 +660,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongTableInputTest, TheCoverSpeaksTheLanguageOfTheTableAndFollowsASwitchWhileItIsUp) {
         ASSERT_NO_FATAL_FAILURE(StartWith(kTwoPeople, kWaitingHand));
         ASSERT_TRUE(CoverShown());
-        const auto textOf = [this](const char* element) {
-            const auto* label = Element("Handoff", element)->Cast<UILabel>();
-            const auto* button = Element("Handoff", element)->Cast<UIButton>();
-            const eastl::string_view text = label != nullptr ? label->GetDisplayText() : button->GetDisplayText();
-            return std::string(text.data(), text.size());
-        };
+        const auto textOf = [this](const char* element) { return DisplayText(Element("Handoff", element)); };
         Draw();
         EXPECT_EQ(textOf("HandoffText"), "Pass the screen to Seat 1 (East)");
         EXPECT_EQ(textOf("Reveal"), "Show");
