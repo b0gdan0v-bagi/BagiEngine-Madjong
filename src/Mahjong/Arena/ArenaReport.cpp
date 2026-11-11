@@ -13,6 +13,10 @@ namespace BECore::Mahjong::Arena {
         constexpr int kPointsCellWidth = 20;
         constexpr int kPercentWidth = 10;
         constexpr int kScoreWidth = 14;
+        /// "self-draw % of wins", "-1234.56 +- 123.45", "points/lost hand".
+        constexpr int kSelfDrawWidth = 19;
+        constexpr int kStandingCellWidth = 18;
+        constexpr int kLostPointsWidth = 16;
         constexpr int kDecisionsWidth = 12;
         constexpr int kMicrosecondsWidth = 15;
         constexpr int kShareMinWidth = 10;
@@ -130,6 +134,40 @@ namespace BECore::Mahjong::Arena {
             }
         }
 
+        /// The table "how the hands end": per focus player and for its others, how often the seat gave the win, how often a win of the
+        /// seat was a self-draw, and what the seat's hands cost it when another seat won. The columns with intervals are the two that
+        /// have a per-seed value (`GaveWinPercent`, `StandingScore`); the others are ratios of the totals.
+        void AddStyleTable(eastl::string& text, const ArenaResult& result, int nameWidth) {
+            text.append("\nhow the hands end\n");
+            size_t start = text.size();
+            AddLeft(text, "player", nameWidth);
+            AddRight(text, "gave win %", kWinsCellWidth);
+            AddRight(text, "self-draw % of wins", kSelfDrawWidth);
+            AddRight(text, "standing score", kStandingCellWidth);
+            AddRight(text, "points/lost hand", kLostPointsWidth);
+            EndLine(text, start);
+            for (const FocusResult& focus : result.focus) {
+                start = text.size();
+                AddLeft(text, focus.player.name, nameWidth);
+                AddRight(text, WithInterval(MetricInterval(focus, SeedMetric::GaveWinPercent)), kWinsCellWidth);
+                AddRight(text, Plain(PercentOf(focus.focus.selfDraws, focus.focus.wins)), kSelfDrawWidth);
+                AddRight(text, WithInterval(MetricInterval(focus, SeedMetric::StandingScore)), kStandingCellWidth);
+                AddRight(text, Plain(AverageOf(focus.focus.lostPoints, focus.focus.lost)), kLostPointsWidth);
+                EndLine(text, start);
+
+                const ArenaTally& others = focus.others;
+                start = text.size();
+                AddLeft(text, Format("{}{}", kIndent, kOthersLabel), nameWidth);
+                AddRight(text, Plain(PercentOf(others.gaveWin, others.hands)), kWinsCellWidth);
+                AddRight(text, Plain(PercentOf(others.selfDraws, others.wins)), kSelfDrawWidth);
+                AddRight(text, Plain(AverageOf(others.standingScore, others.lost)), kStandingCellWidth);
+                AddRight(text, Plain(AverageOf(others.lostPoints, others.lost)), kLostPointsWidth);
+                EndLine(text, start);
+            }
+            text.append("gave win %: the hands another seat won on the seat's discard (or by robbing its kong), of all its hands\n");
+            text.append("lost hand: a hand another seat won; standing score: the seat's mean score over its lost hands; points/lost hand: its mean change of points over them\n");
+        }
+
         void AddPairedCell(eastl::string& text, const MeanInterval& interval, int cellWidth) {
             AddRight(text, SignedWithInterval(interval), cellWidth);
             AddRight(text, IsSignificant(interval) ? Format("{}", kSignificantWord) : eastl::string(), kSignificantWidth);
@@ -150,6 +188,25 @@ namespace BECore::Mahjong::Arena {
                 AddLeft(text, focus.player.name, nameWidth);
                 AddPairedCell(text, PairedDifference(focus, baseline, SeedMetric::PointsPerHand), kPointsCellWidth);
                 AddPairedCell(text, PairedDifference(focus, baseline, SeedMetric::WinPercent), kWinsCellWidth);
+                EndLine(text, start);
+            }
+        }
+
+        void AddStylePairedTable(eastl::string& text, const ArenaResult& result, int nameWidth) {
+            const FocusResult& baseline = result.focus.front();
+            text.append(Format("\npaired difference against {} (the same seeds), how the hands end\n", baseline.player.name));
+            size_t start = text.size();
+            AddLeft(text, "player", nameWidth);
+            AddRight(text, "gave win %", kWinsCellWidth);
+            AddRight(text, "", kSignificantWidth);
+            AddRight(text, "standing score", kStandingCellWidth);
+            EndLine(text, start);
+            for (size_t index = 1; index < result.focus.size(); ++index) {
+                const FocusResult& focus = result.focus[index];
+                start = text.size();
+                AddLeft(text, focus.player.name, nameWidth);
+                AddPairedCell(text, PairedDifference(focus, baseline, SeedMetric::GaveWinPercent), kWinsCellWidth);
+                AddPairedCell(text, PairedDifference(focus, baseline, SeedMetric::StandingScore), kStandingCellWidth);
                 EndLine(text, start);
             }
         }
@@ -214,8 +271,10 @@ namespace BECore::Mahjong::Arena {
         AddHeader(text, result);
         text.append("\n");
         AddMainTable(text, result, nameWidth);
+        AddStyleTable(text, result, nameWidth);
         if (result.focus.size() > 1) {
             AddPairedTable(text, result, nameWidth);
+            AddStylePairedTable(text, result, nameWidth);
         }
         if (options.kinds) {
             for (const FocusResult& focus : result.focus) {

@@ -23,8 +23,11 @@ namespace BECore::Mahjong::Arena {
         bool hasInterval = false;
     };
 
-    /// A number of a seed's four rotations, per hand: what the per-seed series hold.
-    CORE_ENUM(SeedMetric, uint8_t, PointsPerHand, WinPercent, DrawnPercent, DeclaredPercent)
+    /// A number of a seed's four rotations: what the per-seed series hold. `PointsPerHand` and the percents are per hand;
+    /// `GaveWinPercent` is the share of the four hands in which the focus player gave the win (`SeedRow::gaveWin`); `StandingScore` is
+    /// the mean score of the focus player over the seed's lost hands (`SeedRow::standingScore / lostHands`) and has no value for a seed
+    /// in which it lost none.
+    CORE_ENUM(SeedMetric, uint8_t, PointsPerHand, WinPercent, DrawnPercent, DeclaredPercent, GaveWinPercent, StandingScore)
 
     /**
      * @brief The mean of `values`, its sample standard deviation and `half = kIntervalZ * sd / sqrt(n)`.
@@ -35,7 +38,8 @@ namespace BECore::Mahjong::Arena {
     [[nodiscard]] MeanInterval MeanCi(const eastl::vector<double>& values);
 
     /// The per-seed value of `metric` for one focus player, in seed order: the number of the seed's four rotations divided by
-    /// `kSeatCount` (`PointsPerHand` in points, the others in percent of the hands).
+    /// `kSeatCount` (`PointsPerHand` in points, the percents in percent of the hands). A seed without a value (`StandingScore` of a seed
+    /// with no lost hand) is left out, so the series can be shorter than the rows.
     [[nodiscard]] eastl::vector<double> SeedSeries(const FocusResult& focus, SeedMetric metric);
 
     /// `MeanCi` of the series of `metric` of one focus player.
@@ -46,7 +50,8 @@ namespace BECore::Mahjong::Arena {
      *
      * Both players played the same walls, so the seeds are paired and the difference of a seed is a sample of its own; its interval is
      * much tighter than that of two plain means. The two results must hold the same seeds in the same order; if they do not (or are
-     * empty) the answer has `n` 0.
+     * empty) the answer has `n` 0. A seed where either player has no value for the metric (`StandingScore` with no lost hand) is left
+     * out of the differences.
      */
     [[nodiscard]] MeanInterval PairedDifference(const FocusResult& a, const FocusResult& b, SeedMetric metric);
 

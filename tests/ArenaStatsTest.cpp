@@ -29,7 +29,7 @@ namespace BECore::Mahjong::Arena {
             return player.value_or(ArenaPlayer{});
         }
 
-        SeedRow Row(uint32_t seed, int points, int wins, int drawn, int declared, int winScore) {
+        SeedRow Row(uint32_t seed, int points, int wins, int drawn, int declared, int winScore, int gaveWin, int lostHands, int standingScore) {
             SeedRow row;
             row.seed = seed;
             row.pointsOfFocus = points;
@@ -37,6 +37,9 @@ namespace BECore::Mahjong::Arena {
             row.drawn = drawn;
             row.declared = declared;
             row.winScore = winScore;
+            row.gaveWin = gaveWin;
+            row.lostHands = lostHands;
+            row.standingScore = standingScore;
             return row;
         }
 
@@ -45,17 +48,25 @@ namespace BECore::Mahjong::Arena {
         }
 
         /// Normal over four seeds, worked out by hand: points a hand 100, 50, 0, -50 (mean 25, sd 64.5497), wins % 50, 25, 0, 25 (mean 25,
-        /// sd 20.4124), 4 wins of 16 hands, 1 drawn hand, 8 declarations, winning scores 80 + 40 + 30 = 150.
+        /// sd 20.4124), 4 wins of 16 hands, 1 drawn hand, 8 declarations, winning scores 80 + 40 + 30 = 150. How the hands end: the lost
+        /// hands are the 4 hands of a seed less its wins and drawn ones (2, 3, 3, 3); gave win % 25, 25, 0, 50 (mean 25, sd 20.4124), the
+        /// standing score of a seed 40, 30, 50, 20 (mean 35, sd 12.9099, half 12.6517); 3 of the 4 wins are self-draws.
         FocusResult NormalFocus() {
             FocusResult focus;
             focus.player = Player(kNormal);
-            focus.rows = {Row(kFirstSeed, 400, 2, 0, 3, 80), Row(kFirstSeed + 1, 200, 1, 0, 2, 40), Row(kFirstSeed + 2, 0, 0, 1, 1, 0), Row(kFirstSeed + 3, -200, 1, 0, 2, 30)};
+            focus.rows = {Row(kFirstSeed, 400, 2, 0, 3, 80, 1, 2, 80), Row(kFirstSeed + 1, 200, 1, 0, 2, 40, 1, 3, 90), Row(kFirstSeed + 2, 0, 0, 1, 1, 0, 0, 3, 150),
+                          Row(kFirstSeed + 3, -200, 1, 0, 2, 30, 2, 3, 60)};
             focus.focus.hands = 16;
             focus.focus.wins = 4;
             focus.focus.points = 400;
             focus.focus.drawn = 1;
             focus.focus.declared = 8;
             focus.focus.winScore = 150;
+            focus.focus.selfDraws = 3;
+            focus.focus.lost = 11;
+            focus.focus.gaveWin = 4;
+            focus.focus.lostPoints = -870;
+            focus.focus.standingScore = 380;
             focus.focus.winsByKind[Index(ScoreKind::Win)] = 4;
             focus.focus.winsByKind[Index(ScoreKind::WinTileFromWall)] = 1;
             focus.focus.decisions = 400;
@@ -67,6 +78,13 @@ namespace BECore::Mahjong::Arena {
             focus.others.drawn = 3;
             focus.others.declared = 24;
             focus.others.winScore = 330;
+            // 48 seat-hands less 11 won and 3 drawn are lost: 34 of them, 5 of the 11 wins self-drawn, 3 given by an other seat (the 7
+            // wins that were not self-draws were given 4 times by the focus player and 3 times by the others).
+            focus.others.selfDraws = 5;
+            focus.others.lost = 34;
+            focus.others.gaveWin = 3;
+            focus.others.lostPoints = -2635;
+            focus.others.standingScore = 1411;
             focus.others.winsByKind[Index(ScoreKind::Win)] = 11;
             focus.others.winsByKind[Index(ScoreKind::OnlyPungs)] = 2;
             focus.others.decisions = 1200;
@@ -76,20 +94,33 @@ namespace BECore::Mahjong::Arena {
         }
 
         /// Easy on the same seeds, with no win at all: the wins % differ from Normal's by -50, -25, 0, -25 (mean -25, sd 20.4124, half
-        /// 20.0043, significant), the points a hand by -150, -75, -25, 25 (mean -56.25, half 73.16, not significant).
+        /// 20.0043, significant), the points a hand by -150, -75, -25, 25 (mean -56.25, half 73.16, not significant). Its lost hands are 4,
+        /// 4, 3, 4: gave win % 75, 25, 25, 50 (mean 43.75, half 23.4569; against Normal +18.75, half 23.4569, not significant), standing
+        /// score of a seed 60, 50, 55, 65 (mean 57.5, half 6.3259; against Normal 20, 20, 5, 45: mean 22.5, sd 16.5831, half 16.2514,
+        /// significant).
         FocusResult EasyFocus() {
             FocusResult focus;
             focus.player = Player(kEasy);
-            focus.rows = {Row(kFirstSeed, -200, 0, 0, 1, 0), Row(kFirstSeed + 1, -100, 0, 0, 1, 0), Row(kFirstSeed + 2, -100, 0, 1, 0, 0), Row(kFirstSeed + 3, -100, 0, 0, 1, 0)};
+            focus.rows = {Row(kFirstSeed, -200, 0, 0, 1, 0, 3, 4, 240), Row(kFirstSeed + 1, -100, 0, 0, 1, 0, 1, 4, 200), Row(kFirstSeed + 2, -100, 0, 1, 0, 0, 1, 3, 165),
+                          Row(kFirstSeed + 3, -100, 0, 0, 1, 0, 2, 4, 260)};
             focus.focus.hands = 16;
             focus.focus.points = -500;
             focus.focus.drawn = 1;
             focus.focus.declared = 3;
+            focus.focus.lost = 15;
+            focus.focus.gaveWin = 7;
+            focus.focus.lostPoints = -1180;
+            focus.focus.standingScore = 865;
             focus.others.hands = 48;
             focus.others.wins = 15;
             focus.others.points = 500;
             focus.others.drawn = 3;
             focus.others.winScore = 600;
+            focus.others.selfDraws = 6;
+            focus.others.lost = 30;
+            focus.others.gaveWin = 2;
+            focus.others.lostPoints = -2301;
+            focus.others.standingScore = 1272;
             focus.others.winsByKind[Index(ScoreKind::Win)] = 15;
             focus.focus.decisions = 500;
             focus.focus.nanoseconds = 1000000;
@@ -240,6 +271,79 @@ namespace BECore::Mahjong::Arena {
         EXPECT_FALSE(PairedDifference(shorter, normal, SeedMetric::WinPercent).hasInterval);
     }
 
+    TEST(ArenaStatsTest, TheStyleSeriesAreThePerSeedShareAndStandingScore) {
+        const FocusResult normal = NormalFocus();
+        // gave win %: 1, 1, 0, 2 of 4 hands.
+        const eastl::vector<double> gave = SeedSeries(normal, SeedMetric::GaveWinPercent);
+        ASSERT_EQ(gave.size(), 4u);
+        EXPECT_EQ(gave[0], 25.0);
+        EXPECT_EQ(gave[2], 0.0);
+        EXPECT_EQ(gave[3], 50.0);
+        EXPECT_NEAR(MetricInterval(normal, SeedMetric::GaveWinPercent).mean, 25.0, kTolerance);
+        EXPECT_NEAR(MetricInterval(normal, SeedMetric::GaveWinPercent).sd, std::sqrt(1250.0 / 3.0), kTolerance);
+        // standing score: the sum over the lost hands of the seed divided by their number, 80 / 2, 90 / 3, 150 / 3, 60 / 3.
+        const eastl::vector<double> standing = SeedSeries(normal, SeedMetric::StandingScore);
+        ASSERT_EQ(standing.size(), 4u);
+        EXPECT_EQ(standing[0], 40.0);
+        EXPECT_EQ(standing[1], 30.0);
+        EXPECT_EQ(standing[2], 50.0);
+        EXPECT_EQ(standing[3], 20.0);
+        const MeanInterval interval = MetricInterval(normal, SeedMetric::StandingScore);
+        EXPECT_NEAR(interval.mean, 35.0, kTolerance);
+        EXPECT_NEAR(interval.sd, std::sqrt(500.0 / 3.0), kTolerance);
+        EXPECT_NEAR(interval.half, 12.6517, 1e-4);
+    }
+
+    TEST(ArenaStatsTest, ASeedWithNoLostHandHasNoStandingScore) {
+        FocusResult normal = NormalFocus();
+        normal.rows[2] = Row(kFirstSeed + 2, 0, 4, 0, 1, 0, 0, 0, 0);
+        // The seed is left out of the series, so the series is shorter than the rows; the share of the given wins keeps it (0 %).
+        const eastl::vector<double> standing = SeedSeries(normal, SeedMetric::StandingScore);
+        ASSERT_EQ(standing.size(), 3u);
+        EXPECT_EQ(standing[0], 40.0);
+        EXPECT_EQ(standing[1], 30.0);
+        EXPECT_EQ(standing[2], 20.0);
+        EXPECT_EQ(MetricInterval(normal, SeedMetric::StandingScore).n, 3u);
+        EXPECT_EQ(SeedSeries(normal, SeedMetric::GaveWinPercent).size(), 4u);
+
+        // Easy against it: the seeds where both have a value are 0, 1 and 3 (60 - 40, 50 - 30, 65 - 20).
+        const FocusResult easy = EasyFocus();
+        const MeanInterval difference = PairedDifference(easy, normal, SeedMetric::StandingScore);
+        EXPECT_EQ(difference.n, 3u);
+        EXPECT_NEAR(difference.mean, 85.0 / 3.0, kTolerance);
+        EXPECT_NEAR(difference.sd, std::sqrt(625.0 / 3.0), kTolerance);
+        EXPECT_NEAR(difference.half, kIntervalZ * std::sqrt(625.0 / 3.0) / std::sqrt(3.0), kTolerance);
+        EXPECT_TRUE(IsSignificant(difference));
+        // The other side has none in seed 3: the seeds are 0, 1 and 2 (60 - 40, 50 - 30, 55 - 50).
+        FocusResult easyWithout = EasyFocus();
+        easyWithout.rows[3] = Row(kFirstSeed + 3, 0, 0, 4, 0, 0, 0, 0, 0);
+        const MeanInterval other = PairedDifference(easyWithout, NormalFocus(), SeedMetric::StandingScore);
+        EXPECT_EQ(other.n, 3u);
+        EXPECT_NEAR(other.mean, 15.0, kTolerance);
+        // The seeds that differ still give no answer.
+        FocusResult shifted = EasyFocus();
+        shifted.rows[1].seed += 1;
+        EXPECT_EQ(PairedDifference(shifted, normal, SeedMetric::StandingScore).n, 0u);
+    }
+
+    TEST(ArenaStatsTest, ThePairedDifferenceOfTheStyleMetrics) {
+        const FocusResult normal = NormalFocus();
+        const FocusResult easy = EasyFocus();
+        // gave win %: 75 - 25, 25 - 25, 25 - 0, 50 - 50 = 50, 0, 25, 0: mean 18.75, sum of squares 1718.75, half 1.96 * sd / 2.
+        const MeanInterval gave = PairedDifference(easy, normal, SeedMetric::GaveWinPercent);
+        EXPECT_EQ(gave.n, 4u);
+        EXPECT_NEAR(gave.mean, 18.75, kTolerance);
+        EXPECT_NEAR(gave.half, kIntervalZ * std::sqrt(1718.75 / 3.0) / 2.0, kTolerance);
+        EXPECT_FALSE(IsSignificant(gave));
+        // standing score: 20, 20, 5, 45: mean 22.5, sum of squares 825, the interval excludes 0.
+        const MeanInterval standing = PairedDifference(easy, normal, SeedMetric::StandingScore);
+        EXPECT_EQ(standing.n, 4u);
+        EXPECT_NEAR(standing.mean, 22.5, kTolerance);
+        EXPECT_NEAR(standing.half, kIntervalZ * std::sqrt(825.0 / 3.0) / 2.0, kTolerance);
+        EXPECT_TRUE(IsSignificant(standing));
+        EXPECT_NEAR(PairedDifference(normal, easy, SeedMetric::StandingScore).mean, -22.5, kTolerance);
+    }
+
     TEST(ArenaStatsTest, TheMirrorHasPointsOfZeroAndAnIntervalOfZero) {
         // Normal against three Normal on the same walls: the four rotations replay one game, so every seed has points 0.
         ArenaConfig config;
@@ -261,6 +365,12 @@ namespace BECore::Mahjong::Arena {
         EXPECT_EQ(difference.mean, 0.0);
         EXPECT_EQ(difference.half, 0.0);
         EXPECT_FALSE(IsSignificant(PairedDifference(run->focus[1], run->focus[0], SeedMetric::WinPercent)));
+        for (const SeedMetric metric : {SeedMetric::GaveWinPercent, SeedMetric::StandingScore}) {
+            const MeanInterval same = PairedDifference(run->focus[1], run->focus[0], metric);
+            EXPECT_EQ(same.mean, 0.0) << static_cast<int>(metric);
+            EXPECT_EQ(same.half, 0.0) << static_cast<int>(metric);
+            EXPECT_FALSE(IsSignificant(same)) << static_cast<int>(metric);
+        }
         // The report of that run says so.
         const eastl::string text = FormatArenaReport(*run);
         EXPECT_TRUE(Contains(text, "+0.00 +- 0.00")) << Std(text);
@@ -279,9 +389,22 @@ namespace BECore::Mahjong::Arena {
                                      "easy                         16      0.00 +- 0.00       -31.25 +- 12.25        6.25       18.75            0.00\n"
                                      "  others (per seat)          16             31.25                 10.42        6.25        0.00           40.00\n"
                                      "\n"
+                                     "how the hands end\n"
+                                     "player                        gave win %  self-draw % of wins      standing score  points/lost hand\n"
+                                     "normal                    25.00 +- 20.00                75.00      35.00 +- 12.65            -79.09\n"
+                                     "  others (per seat)                 6.25                45.45               41.50            -77.50\n"
+                                     "easy                      43.75 +- 23.46                 0.00       57.50 +- 6.33            -78.67\n"
+                                     "  others (per seat)                 4.17                40.00               42.40            -76.70\n"
+                                     "gave win %: the hands another seat won on the seat's discard (or by robbing its kong), of all its hands\n"
+                                     "lost hand: a hand another seat won; standing score: the seat's mean score over its lost hands; points/lost hand: its mean change of points over them\n"
+                                     "\n"
                                      "paired difference against normal (the same seeds)\n"
                                      "player                           points/hand                         wins %\n"
                                      "easy                         -56.25 +- 73.16                -25.00 +- 20.00  significant\n"
+                                     "\n"
+                                     "paired difference against normal (the same seeds), how the hands end\n"
+                                     "player                        gave win %                   standing score\n"
+                                     "easy                     +18.75 +- 23.46                  +22.50 +- 16.25  significant\n"
                                      "\n"
                                      "score lines in the won hands, % of the won hands (normal: 4 wins, others: 11 wins)\n"
                                      "line                          normal      others\n"
@@ -324,6 +447,7 @@ namespace BECore::Mahjong::Arena {
 
     TEST(ArenaStatsTest, OneFocusPlayerHasNoPairedTable) {
         const eastl::string text = FormatArenaReport(MadeUp(false, false));
+        EXPECT_TRUE(Contains(text, "how the hands end")) << "the table of the hands is there for one player too";
         EXPECT_FALSE(Contains(text, "paired difference"));
         EXPECT_FALSE(Contains(text, "significant"));
     }
