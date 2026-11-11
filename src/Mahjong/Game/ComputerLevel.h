@@ -152,6 +152,11 @@ namespace BECore::Mahjong {
         /// Step 2 of the own turn: the discard that declares the calling hand is the one with the best expected value (`ValueWaits`), not
         /// the one with the most unseen winning copies; false = Normal's step 2. Draws nothing from the rng when on. Off in every level.
         bool ownDrawsPickWait = false;
+        /// Steps 2, 4 and 5 of the own turn: among discards equal in what each step ranks by (unseen winning copies; shanten and
+        /// acceptance), the one with the lowest `Danger` against the declared opponents (`DiscardDanger.h`) is chosen, then the lowest
+        /// `KeepValue`, then the rng. A tie-break only: it never changes the shanten or the acceptance of the choice. Draws nothing from
+        /// the rng, and with no declared opponent the play is Normal's exactly. Off in every level.
+        bool readDanger = false;
     };
 
     /// The Normal player: every knob off.

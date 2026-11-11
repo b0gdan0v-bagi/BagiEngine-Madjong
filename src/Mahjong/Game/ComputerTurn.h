@@ -51,16 +51,18 @@ namespace BECore::Mahjong {
     /// four-sets-and-a-pair shape.
     [[nodiscard]] int AcceptanceOf(const TableView& view, const TileCounts& counts, int meldCount);
 
-    /// A discard that leaves the hand waiting: the tile, the unseen copies of the tiles it waits on, and its `KeepValue`.
+    /// A discard that leaves the hand waiting: the tile, the unseen copies of the tiles it waits on, its `KeepValue` and its danger
+    /// (the number of the `Danger` grade; 0 unless the reading is asked for and an opponent has declared).
     struct WaitingDiscard {
         Tile tile;
         int copies = 0;
         int keep = 0;
+        int danger = 0;
     };
 
     /// The listed discards with `declareCalling == declaring` that leave a waiting hand (steps 2 and 4 of the turn, and the candidates of
-    /// the search), in the order of `view.legal`.
-    [[nodiscard]] eastl::vector<WaitingDiscard> WaitingDiscards(const TableView& view, bool declaring);
+    /// the search), in the order of `view.legal`. With `readDanger` each carries the danger of its tile (`LevelProfile::readDanger`).
+    [[nodiscard]] eastl::vector<WaitingDiscard> WaitingDiscards(const TableView& view, bool declaring, bool readDanger = false);
 
     /// How good the best discard of a hand of `3n + 2` tiles is: the tile, the shanten and the acceptance of the `3n + 1` tiles left.
     struct DiscardRating {
@@ -70,31 +72,34 @@ namespace BECore::Mahjong {
     };
 
     /// One discard of a hand of `3n + 2` tiles as `BestDiscard` rates it: the kind, the shanten and the acceptance of the `3n + 1` tiles
-    /// left, and its `KeepValue`.
+    /// left, its `KeepValue` and its danger (the number of the `Danger` grade; 0 unless `readDanger` and an opponent has declared).
     struct DiscardOption {
         Tile tile;
         int shanten = 0;
         int acceptance = 0;
         int keep = 0;
+        int danger = 0;
     };
 
     /**
      * @brief The best discard of the concealed tiles `counts` with `meldCount` melds (hand of `3n + 2` tiles).
      *
      * Of every kind held, the discards that leave the lowest `Shanten` are candidates; among them the highest `AcceptanceOf`; among
-     * those the lowest `KeepValue`; the rest of the ties go to `rng`. `view` gives the unseen copies and the winds. Used for the own
-     * turn and, with the hand after a claim, for the claims. An empty `counts` gives an invalid tile.
+     * those the lowest danger (only with `readDanger`: `DiscardDanger.h`; a tie-break, so shanten and acceptance are never given up);
+     * among those the lowest `KeepValue`; the rest of the ties go to `rng`. `view` gives the unseen copies and the winds. Used for the own
+     * turn and, with the hand after a claim (`readDanger` off), for the claims. An empty `counts` gives an invalid tile.
      */
-    [[nodiscard]] DiscardRating BestDiscard(const TileCounts& counts, int meldCount, const TableView& view, MahjongRng& rng);
+    [[nodiscard]] DiscardRating BestDiscard(const TileCounts& counts, int meldCount, const TableView& view, MahjongRng& rng, bool readDanger = false);
 
-    /// The shanten and the acceptance `BestDiscard` finds, with no rng: `tile` is the first of the tied discards (the lowest `KeepValue`,
-    /// then the lowest id). For comparing hands.
-    [[nodiscard]] DiscardRating BestDiscardRating(const TileCounts& counts, int meldCount, const TableView& view);
+    /// The shanten and the acceptance `BestDiscard` finds, with no rng: `tile` is the first of the tied discards (the lowest danger when
+    /// `readDanger`, then the lowest `KeepValue`, then the lowest id). For comparing hands.
+    [[nodiscard]] DiscardRating BestDiscardRating(const TileCounts& counts, int meldCount, const TableView& view, bool readDanger = false);
 
     /// Every kind held, rated as `BestDiscard` rates it and sorted in its order: the lowest shanten, the highest acceptance, the lowest
-    /// `KeepValue`, then the lowest tile id. The first entry is `BestDiscardRating`; the entries equal to it in all three numbers are the
-    /// candidates `BestDiscard` picks from. Unlike `BestDiscard` it computes the acceptance of every kind.
-    [[nodiscard]] eastl::vector<DiscardOption> RateDiscards(const TileCounts& counts, int meldCount, const TableView& view);
+    /// danger (all 0 without `readDanger`), the lowest `KeepValue`, then the lowest tile id. The first entry is `BestDiscardRating`; the
+    /// entries equal to it in all four numbers are the candidates `BestDiscard` picks from. Unlike `BestDiscard` it computes the
+    /// acceptance of every kind.
+    [[nodiscard]] eastl::vector<DiscardOption> RateDiscards(const TileCounts& counts, int meldCount, const TableView& view, bool readDanger = false);
 
     /// What `KongIsNoWorse` compares for a listed kong `action` (`ConcealedKong` or `UpgradeKong`) of the hand `counts`: the shanten and the
     /// acceptance of the hand without the kong (the four tiles, or the one drawn, out, a meld more); `tile` invalid.
@@ -125,13 +130,13 @@ namespace BECore::Mahjong {
      * The steps, the first that applies wins:
      * 1. `DeclareWin` when it is listed.
      * 2. The calling hand: of the discards that declare it, the one that leaves the most unseen winning copies (`WinningTiles` of the
-     *    13 tiles that stay); ties by the lowest `KeepValue`, then `rng`. With `profile.skipDeclarationPercent` a roll can skip this
+     *    13 tiles that stay); ties by the lowest danger (`profile.readDanger`), then the lowest `KeepValue`, then `rng`. With `profile.skipDeclarationPercent` a roll can skip this
      *    step for the turn.
      * 3. A kong (`ConcealedKong`, `UpgradeKong`) when the hand without it is no worse: the best discard of the hand as it is, against
      *    the hand without the four tiles and one more meld (the fourth tile of an upgrade leaves), the shanten not higher and, for a
      *    waiting hand, the acceptance not lower.
      * 4. After the declaration: the discard that keeps the hand waiting with the most unseen winning copies (the tie-breaks as in 2).
-     * 5. Otherwise `BestDiscard` of the concealed tiles; with `profile.skipAcceptancePercent` a roll leaves out the acceptance (the
+     * 5. Otherwise `BestDiscard` of the concealed tiles (with `profile.readDanger`, the lowest danger of the equal ones); with `profile.skipAcceptancePercent` a roll leaves out the acceptance (the
      *    lowest shanten, then `KeepValue`, then `rng`).
      *
      * `profile` is the level's numbers (`kNormalProfile`: every knob off, no number drawn besides the tie-breaks). With

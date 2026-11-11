@@ -7,7 +7,8 @@ namespace BECore::Mahjong::Arena {
         // A new field of `LevelProfile` needs a row of `kProfileKnobs`: the binding below names every field, so it stops compiling
         // when the count changes, and `ArenaPlayerTest` checks that each row sets its own field.
         constexpr bool ProfileHasKnownFields() {
-            [[maybe_unused]] const auto& [skipAcceptance, skipDeclaration, skipClaim, takeValue, searchWorlds, searchCandidates, searchMargin, ownDrawsDepth, ownDrawsPickWait] = kNormalProfile;
+            [[maybe_unused]] const auto& [skipAcceptance, skipDeclaration, skipClaim, takeValue, searchWorlds, searchCandidates, searchMargin, ownDrawsDepth, ownDrawsPickWait, readDanger] =
+                kNormalProfile;
             return true;
         }
         static_assert(ProfileHasKnownFields());

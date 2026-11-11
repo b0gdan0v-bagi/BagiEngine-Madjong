@@ -3,8 +3,10 @@
 #include "HandTestSupport.h"
 
 #include <EASTL/algorithm.h>
+#include <EASTL/sort.h>
 #include <Mahjong/Game/ComputerTurn.h>
 #include <Mahjong/Game/ComputerView.h>
+#include <Mahjong/Game/DiscardDanger.h>
 #include <Mahjong/Game/HandModel.h>
 #include <Mahjong/Game/HandShape.h>
 #include <Mahjong/Game/Match.h>
@@ -609,6 +611,207 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(after.tile.IsPlayable());
         EXPECT_EQ(after.shanten, 0);
         EXPECT_EQ(after.acceptance, UnseenCopies(view, T("5p")));
+    }
+
+    // ----- the danger tie-break (the knob `readDanger`) -----
+
+    namespace {
+
+        constexpr Seat kDeclaredOpponent = kSeat1;
+
+        /// The view of seat 0 on its turn holding `hand` (14 tiles), `kDeclaredOpponent` declared (unless `declared` is false), nothing else
+        /// seen but the own tiles. Every kind held is listed as a discard, each with and without the declaration (the chooser filters; once `ownDeclared`, without only).
+        TableView DangerView(const char* hand, bool declared = true, bool ownDeclared = false) {
+            TableView view;
+            view.seat = kSeat0;
+            view.phase = Phase::Discard;
+            view.currentSeat = kSeat0;
+            view.own.concealed = ParseTiles(hand).value();
+            eastl::sort(view.own.concealed.begin(), view.own.concealed.end());
+            view.own.callingDeclared = ownDeclared;
+            view.visible = CountTiles(view.own.concealed);
+            view.seats[kDeclaredOpponent].callingDeclared = declared;
+            for (uint8_t id = 0; id < kKindCount; ++id) {
+                if (view.visible[id] > 0) {
+                    view.legal.push_back(HandAction::MakeDiscard(Tile{id}));
+                    if (!ownDeclared) {
+                        view.legal.push_back(HandAction::MakeDiscard(Tile{id}, true));
+                    }
+                }
+            }
+            return view;
+        }
+
+        void MarkPassed(TableView& view, const char* tile) {
+            view.seats[kDeclaredOpponent].passedKinds[T(tile).Id()] = 1;
+        }
+
+        LevelProfile DangerProfile(bool on) {
+            LevelProfile profile = kNormalProfile;
+            profile.readDanger = on;
+            return profile;
+        }
+
+        HandAction DecideWith(const TableView& view, bool readDanger, uint32_t seed = kRngSeed) {
+            MahjongRng rng(seed);
+            return DecideTurn(view, rng, DangerProfile(readDanger)).action;
+        }
+
+        // Three sets, 12m and three lone tiles: any of the three can go with the same shanten and acceptance, so only danger and keep decide.
+        constexpr const char* kThreeLoneTiles = "1p 2p 3p 4p 5p 6p 7p 8p 9p 1m 2m Gd Rd 5s";
+        // A waiting hand of four sets and two lone tiles: discarding either one leaves a tanki wait on the other (the same unseen copies).
+        constexpr const char* kTwoTankiWaits = "1p 2p 3p 4p 5p 6p 7p 8p 9p 1s 2s 3s 5m Gd";
+
+    }  // namespace
+
+    TEST(ComputerTurnTest, TheDangerTieBreakDiscardsTheSafeKindWhereTheKnobOffDiscardsTheDangerousOne) {
+        TableView view = DangerView(kThreeLoneTiles);
+        MarkPassed(view, "Gd");
+        const eastl::vector<DiscardOption> rated = RateDiscards(CountTiles(view.own.concealed), 0, view);
+        // The three lone tiles are equal in shanten and acceptance: only the keep value (5s 2, the dragons 3) tells them apart without danger.
+        ASSERT_GE(rated.size(), 3u);
+        EXPECT_EQ(rated[0].tile, T("5s"));
+        EXPECT_EQ(rated[0].shanten, rated[1].shanten);
+        EXPECT_EQ(rated[0].acceptance, rated[1].acceptance);
+        EXPECT_EQ(rated[0].acceptance, rated[2].acceptance);
+        ASSERT_EQ(DangerOf(view, T("5s")), Danger::High);
+        ASSERT_EQ(DangerOf(view, T("Gd")), Danger::Safe);
+
+        for (uint32_t seed = 1; seed <= 8; ++seed) {
+            EXPECT_EQ(DecideWith(view, false, seed), HandAction::MakeDiscard(T("5s"))) << "knob off, rng seed " << seed;
+            EXPECT_EQ(DecideWith(view, true, seed), HandAction::MakeDiscard(T("Gd"))) << "knob on, rng seed " << seed;
+        }
+    }
+
+    TEST(ComputerTurnTest, TheDangerTieBreakDrawsNothingFromTheRngAndAnEqualDangerLeavesTheRngItsTie) {
+        TableView view = DangerView("1p 2p 3p 4p 5p 6p 7p 8p 9p 1m 2m Gd Rd Wd");
+        MarkPassed(view, "Gd");
+        for (uint32_t seed = 1; seed <= 8; ++seed) {
+            MahjongRng on(seed);
+            EXPECT_EQ(DecideTurn(view, on, DangerProfile(true)).action, HandAction::MakeDiscard(T("Gd"))) << "rng seed " << seed;
+            EXPECT_TRUE(IsUntouched(on, seed)) << "one safe candidate: no number is drawn, seed " << seed;
+        }
+        // The dragons Rd and Wd are equal in danger and keep value, so the rng breaks the tie as it does with the knob off.
+        MarkPassed(view, "Rd");
+        MarkPassed(view, "Wd");
+        std::set<uint8_t> picked;
+        for (uint32_t seed = 1; seed <= 16; ++seed) {
+            picked.insert(DecideWith(view, true, seed).tile.Id());
+        }
+        EXPECT_EQ(picked.size(), 3u);
+    }
+
+    TEST(ComputerTurnTest, WithNoDeclaredOpponentTheKnobOnPlaysAndDrawsLikeTheKnobOff) {
+        for (const char* hand : {kThreeLoneTiles, "1p 2p 3p 4p 5p 6p 7p 8p 9p 1m 2m Gd Rd Wd", kTwoTankiWaits}) {
+            TableView view = DangerView(hand, false);
+            MarkPassed(view, "Gd");  // history of a seat that has not declared: no reading uses it
+            for (uint32_t seed = 1; seed <= 8; ++seed) {
+                MahjongRng off(seed);
+                MahjongRng on(seed);
+                const TurnDecision decisionOff = DecideTurn(view, off, DangerProfile(false));
+                const TurnDecision decisionOn = DecideTurn(view, on, DangerProfile(true));
+                EXPECT_EQ(decisionOn.action, decisionOff.action) << hand << ", rng seed " << seed;
+                EXPECT_EQ(decisionOn.step, decisionOff.step);
+                EXPECT_EQ(on.Below(1000000), off.Below(1000000)) << hand << ": the same state afterwards, seed " << seed;
+            }
+        }
+    }
+
+    TEST(ComputerTurnTest, DangerNeverBeatsABetterAcceptance) {
+        // The 5s has all four copies visible: kept, it gives no pair to wait for, so the discard of the 5s leaves the better acceptance,
+        // and it is the dangerous one (a live sequence way on each side); the dragon the safe kind.
+        TableView view = DangerView(kThreeLoneTiles);
+        view.visible[T("5s").Id()] = kCopiesPerTile;
+        MarkPassed(view, "Gd");
+        const eastl::vector<DiscardOption> rated = RateDiscards(CountTiles(view.own.concealed), 0, view);
+        ASSERT_EQ(rated.front().tile, T("5s"));
+        ASSERT_GT(rated.front().acceptance, rated[1].acceptance);
+        ASSERT_EQ(DangerOf(view, T("5s")), Danger::High);
+        ASSERT_EQ(DangerOf(view, T("Gd")), Danger::Safe);
+
+        EXPECT_EQ(DecideWith(view, true), HandAction::MakeDiscard(T("5s")));
+        EXPECT_EQ(DecideWith(view, false), HandAction::MakeDiscard(T("5s")));
+    }
+
+    TEST(ComputerTurnTest, DangerNeverBeatsABetterShanten) {
+        // The 6s and the dragon are the two lone tiles of a hand one step from waiting (equal acceptance); every other discard leaves a
+        // higher shanten. All of those are made safe: the knob still chooses between the two (the dragon, the lower danger), not a safe one.
+        TableView view = DangerView("1p 2p 3p 4p 5p 6p 7p 8p 2m 3m 5s 5s 6s Gd");
+        const eastl::vector<DiscardOption> rated = RateDiscards(CountTiles(view.own.concealed), 0, view);
+        ASSERT_GE(rated.size(), 3u);
+        ASSERT_EQ(rated[0].shanten, rated[1].shanten);
+        ASSERT_EQ(rated[0].acceptance, rated[1].acceptance);
+        ASSERT_LT(rated[1].shanten, rated[2].shanten);
+        for (size_t index = 2; index < rated.size(); ++index) {
+            view.seats[kDeclaredOpponent].passedKinds[rated[index].tile.Id()] = 1;
+            ASSERT_EQ(DangerOf(view, rated[index].tile), Danger::Safe);
+        }
+        ASSERT_EQ(DangerOf(view, T("6s")), Danger::High);
+        ASSERT_EQ(DangerOf(view, T("Gd")), Danger::Low);
+
+        EXPECT_EQ(DecideWith(view, false), HandAction::MakeDiscard(T("6s")));
+        EXPECT_EQ(DecideWith(view, true), HandAction::MakeDiscard(T("Gd")));
+    }
+
+    TEST(ComputerTurnTest, ADeclaringDiscardOfEqualCopiesGoesToTheSaferWaitWhenTheKnobIsOn) {
+        // Discarding the 5m waits on the dragon, discarding the dragon waits on the 5m: 3 unseen copies each. The 5m is the dangerous one.
+        const TableView view = DangerView(kTwoTankiWaits);
+        const eastl::vector<WaitingDiscard> waiting = WaitingDiscards(view, true, true);
+        ASSERT_EQ(waiting.size(), 2u);
+        ASSERT_EQ(waiting[0].copies, waiting[1].copies);
+        ASSERT_EQ(DangerOf(view, T("5m")), Danger::High);
+        ASSERT_EQ(DangerOf(view, T("Gd")), Danger::Low);
+
+        for (uint32_t seed = 1; seed <= 8; ++seed) {
+            MahjongRng off(seed);
+            const TurnDecision decisionOff = DecideTurn(view, off, DangerProfile(false));
+            EXPECT_EQ(decisionOff.action, HandAction::MakeDiscard(T("5m"), true)) << "the lower keep value, seed " << seed;
+            MahjongRng on(seed);
+            const TurnDecision decisionOn = DecideTurn(view, on, DangerProfile(true));
+            EXPECT_EQ(decisionOn.action, HandAction::MakeDiscard(T("Gd"), true)) << "rng seed " << seed;
+            EXPECT_EQ(decisionOn.step, TurnStep::Declare);
+        }
+    }
+
+    TEST(ComputerTurnTest, AKeepingDiscardOfEqualCopiesGoesToTheSaferWaitWhenTheKnobIsOn) {
+        const TableView view = DangerView(kTwoTankiWaits, true, true);
+
+        for (uint32_t seed = 1; seed <= 8; ++seed) {
+            MahjongRng off(seed);
+            const TurnDecision decisionOff = DecideTurn(view, off, DangerProfile(false));
+            EXPECT_EQ(decisionOff.action, HandAction::MakeDiscard(T("5m"))) << "rng seed " << seed;
+            EXPECT_EQ(decisionOff.step, TurnStep::KeepWaiting);
+            MahjongRng on(seed);
+            const TurnDecision decisionOn = DecideTurn(view, on, DangerProfile(true));
+            EXPECT_EQ(decisionOn.action, HandAction::MakeDiscard(T("Gd"))) << "rng seed " << seed;
+            EXPECT_EQ(decisionOn.step, TurnStep::KeepWaiting);
+        }
+    }
+
+    TEST(ComputerTurnTest, DangerNeverBeatsMoreUnseenWinningCopies) {
+        // The 5m has one copy unseen, the dragon three: the discard of the 5m waits on the dragon (3 copies), the better wait, though it is
+        // the dangerous tile.
+        TableView view = DangerView(kTwoTankiWaits);
+        view.visible[T("5m").Id()] = kCopiesPerTile - 1;
+        ASSERT_EQ(DangerOf(view, T("5m")), Danger::High);
+        ASSERT_EQ(DangerOf(view, T("Gd")), Danger::Low);
+
+        EXPECT_EQ(DecideWith(view, true), HandAction::MakeDiscard(T("5m"), true));
+        EXPECT_EQ(DecideWith(view, false), HandAction::MakeDiscard(T("5m"), true));
+    }
+
+    TEST(ComputerTurnTest, TheRatingsTheClaimsUseHaveTheKnobOffByDefault) {
+        // `RateClaim` and `BestDiscardRating` called by the claims have the knob off by default: the numbers do not move with a declared seat.
+        TableView view = DangerView(kThreeLoneTiles);
+        const TileCounts counts = CountTiles(view.own.concealed);
+        const DiscardRating plain = BestDiscardRating(counts, 0, view);
+        TableView quiet = view;
+        quiet.seats[kDeclaredOpponent].callingDeclared = false;
+        const DiscardRating withoutDeclared = BestDiscardRating(counts, 0, quiet);
+
+        EXPECT_EQ(plain.tile, withoutDeclared.tile);
+        EXPECT_EQ(plain.shanten, withoutDeclared.shanten);
+        EXPECT_EQ(plain.acceptance, withoutDeclared.acceptance);
     }
 
 }  // namespace BECore::Mahjong::Tests

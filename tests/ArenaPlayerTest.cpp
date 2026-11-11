@@ -130,15 +130,15 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaPlayerTest, TheKnobsTableCoversEveryFieldOfTheProfile) {
-        // Each row sets its own field and no other; between them the rows set all nine fields of `LevelProfile` (an eighth field
+        // Each row sets its own field and no other; between them the rows set all ten fields of `LevelProfile` (an eleventh field
         // without a row stops the build in ArenaPlayer.cpp, which names every field).
         eastl::array<bool, kProfileFieldCount> moved{};
         for (const ProfileKnob& knob : kProfileKnobs) {
             ASSERT_NE(knob.percent == nullptr, knob.flag == nullptr) << knob.name.data() << ": exactly one member";
             const std::string name(knob.name.data(), knob.name.size());
-            // Normal has every percent, the worlds, the margin and the depth at 0, the candidates at their default and the flag on (the pick-wait flag off): the
-            // other value is the largest value, and for a flag the opposite of Normal's.
-            const int other = knob.percent != nullptr ? knob.maxValue : (knob.flag == &LevelProfile::ownDrawsPickWait ? 1 : 0);
+            // Normal has every percent, the worlds, the margin and the depth at 0, the candidates at their default and the take-value flag on (the pick-wait and
+            // danger flags off): the other value is the largest value, and for a flag the opposite of Normal's.
+            const int other = knob.percent != nullptr ? knob.maxValue : (kNormalProfile.*knob.flag ? 0 : 1);
             const ArenaPlayer player = Player("normal:" + name + "=" + std::to_string(other));
             const LevelProfile& set = player.profile;
             const bool changed[kProfileFieldCount] = {set.skipAcceptancePercent != kNormalProfile.skipAcceptancePercent,
@@ -149,7 +149,8 @@ namespace BECore::Mahjong::Arena {
                                                       set.searchCandidates != kNormalProfile.searchCandidates,
                                                       set.searchMargin != kNormalProfile.searchMargin,
                                                       set.ownDrawsDepth != kNormalProfile.ownDrawsDepth,
-                                                      set.ownDrawsPickWait != kNormalProfile.ownDrawsPickWait};
+                                                      set.ownDrawsPickWait != kNormalProfile.ownDrawsPickWait,
+                                                      set.readDanger != kNormalProfile.readDanger};
             EXPECT_EQ(std::count(changed, changed + kProfileFieldCount, true), 1) << name;
             for (size_t index = 0; index < kProfileFieldCount; ++index) {
                 moved[index] = moved[index] || changed[index];
