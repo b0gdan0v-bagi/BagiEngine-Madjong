@@ -23,6 +23,7 @@
 #include <Mahjong/Table/TileAtlas.h>
 #include <Mahjong/Table/TouchRegime.h>
 #include <Mahjong/Table/UiPalette.h>
+#include <Mahjong/Table/WindMarks.h>
 
 namespace BECore::Mahjong {
 
@@ -954,6 +955,12 @@ namespace BECore::Mahjong {
             keepsWaiting = KeepsWaitingDiscards(MakeTableView(hand, bottom));
         }
 
+        // The winds that score for the viewer, marked on its own face-up tiles while the hand is played: under the cover and for a spectator
+        // nothing marks them (the winds are read from the model only then)
+        const bool windMarks = IsSeat(bottom) && session.GetPhase() == SessionPhase::Playing && faces.Shows(bottom);
+        const Wind seatWind = windMarks ? hand.SeatWind(bottom) : Wind::East;
+        const Wind roundWind = windMarks ? hand.RoundWind() : Wind::East;
+
         // A face (the tile) or the back (nullopt) placed as `place` says: from the atlas, else a plain rectangle. `stack` draws the wall
         // stack seen from above (its own cell, a plain back without the atlas) instead of a tile. A turned tile (a side seat, or a tile in
         // the air between two turns) hands the draw the unturned rectangle and the turn about the pivot; a tile that is not turned is the
@@ -1098,6 +1105,21 @@ namespace BECore::Mahjong {
         const int pendingEntry = static_cast<int>(hand.Discards().size()) - 1;
         const int lastDiscard = LastDiscardEntry(hand);
 
+        // The bar along the top edge of a hand tile that is the own wind (left half the seat's colour, right half the round's when it is both)
+        const auto drawWindMark = [&](const Rect& rect, WindMark mark) {
+            if (mark == WindMark::None) {
+                return;
+            }
+            const float bar = kWindMarkBarHeight * unit;
+            if (mark == WindMark::Both) {
+                const float half = rect.w * 0.5f;
+                renderer.DrawFilledRect(rect.x, rect.y, half, bar, kSeatWindMark);
+                renderer.DrawFilledRect(rect.x + half, rect.y, rect.w - half, bar, kRoundWindMark);
+                return;
+            }
+            renderer.DrawFilledRect(rect.x, rect.y, rect.w, bar, mark == WindMark::Seat ? kSeatWindMark : kRoundWindMark);
+        };
+
         // One slot at the screen rectangle `rect` placed as `place`: its own, or where it is in the air; the face turns as `place` says and
         // every mark of the slot follows the screen rectangle
         const auto drawSlot = [&](const TileSlot& slot, const Rect& rect, const TilePlacement& place) {
@@ -1114,6 +1136,9 @@ namespace BECore::Mahjong {
                     if (slot.seat == bottom && keepsWaiting[held.concealed[slot.index].Id()]) {
                         const float bar = kKeepsWaitingBarHeight * unit;
                         renderer.DrawFilledRect(rect.x, rect.y + rect.h - bar, rect.w, bar, kKeepsWaitingMark);
+                    }
+                    if (windMarks && slot.seat == bottom) {
+                        drawWindMark(rect, WindMarkOf(held.concealed[slot.index], seatWind, roundWind));
                     }
                     if (_declareNext && slot.seat == session.Actor() && cannotDeclare[held.concealed[slot.index].Id()]) {
                         renderer.DrawFilledRect(rect.x, rect.y, rect.w, rect.h, kVeil);

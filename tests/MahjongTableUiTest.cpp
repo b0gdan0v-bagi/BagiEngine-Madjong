@@ -3,6 +3,8 @@
 #include "UiStyleTestSupport.h"
 
 #include <Mahjong/Table/TableLook.h>
+#include <Mahjong/Table/UiPalette.h>
+#include <Mahjong/Table/WindMarks.h>
 
 /**
  * The table as drawn (`Components/MahjongTableComponent.h`): the shipped scene (`config/SceneConfig.xml` and its node files) is drawn into a `RecordingRenderer` and
@@ -18,6 +20,8 @@ namespace BECore::Mahjong::Tests {
         constexpr int kStepsForTheWall = 40;
         /// East's hand and seats 1 and 3 holding a pair of 5p that a pung of East's 5p completes (a claimed tile on the side seats).
         constexpr const char* kEastPlainHand = "1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Gd Rd";
+        /// Four winds, a dragon and plain tiles: 13 tiles.
+        constexpr const char* kAllWindsHand = "Ew Sw Ww Nw Gd 1p 2p 3p 4s 5s 6s 7m 8m";
         constexpr const char* kPairOfFives = "4p 5p 5p 6p 7p 2s 5s 8s 2m 5m 8m Ww Nw";
         /// The turn of the tiles of a seat at screen position `position`, worked out here and not taken from the layout.
         constexpr float TurnAt(int position) {
@@ -68,6 +72,36 @@ namespace BECore::Mahjong::Tests {
             EXPECT_TRUE(model.Discard(kSeat0, T("5p")).has_value());
             EXPECT_TRUE(model.Claim(claimer, ClaimKind::Pung).has_value());
             return model;
+        }
+
+        /// The viewer (seat 0) holds all four winds, a dragon and plain tiles (13, and `9s` drawn by the dealer); the others hold quiet hands.
+        HandModel TableWithAllWinds(Seat east, Wind roundWind) {
+            FixedWallSpec spec = SpecOf(kAllWindsHand, "9s");
+            return MakeModel(spec, east, roundWind);
+        }
+
+        /// What the bars of `kSeatWindMark` and `kRoundWindMark` along the top edge of `slot` say in the last draw: one bar over the whole width
+        /// is `Seat` or `Round`, the seat bar over the left half and the round bar over the right half is `Both`.
+        WindMark MarkDrawnOn(const TileSlot& slot) const {
+            const float bar = kWindMarkBarHeight * LayoutScale(kViewWidth, kViewHeight);
+            const auto covers = [&](const Color& color, float x0, float x1) {
+                for (const DrawCall& call : RectsOf(color)) {
+                    if (call.rect.y == slot.rect.y && call.rect.h == bar && call.rect.x == x0 && call.rect.x + call.rect.w == x1) {
+                        return true;
+                    }
+                }
+                return false;
+            };
+            const float left = slot.rect.x;
+            const float right = slot.rect.x + slot.rect.w;
+            const float middle = slot.rect.x + slot.rect.w * 0.5f;
+            if (covers(kSeatWindMark, left, middle) && covers(kRoundWindMark, middle, right)) {
+                return WindMark::Both;
+            }
+            if (covers(kSeatWindMark, left, right)) {
+                return WindMark::Seat;
+            }
+            return covers(kRoundWindMark, left, right) ? WindMark::Round : WindMark::None;
         }
 
         static int NotWallStacks(const TableLayout& layout) {
@@ -573,6 +607,69 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(bar.w, tile.w) << "the whole width of the lying tile";
             EXPECT_LT(bar.h, tile.h);
         }
+    }
+
+    TEST_F(MahjongTableUiTest, TheOwnWindAndTheRoundWindOfTheViewerAreMarkedOnItsHandTilesAndNoOtherTile) {
+        struct Case {
+            const char* name;
+            Seat east;
+            Wind roundWind;
+            WindMark east_, south, west, north;
+        };
+        // Seat 0 is East when it deals and South when seat 3 does; the round is East or South
+        const Case cases[] = {
+            {"East in the East round", kSeat0, Wind::East, WindMark::Both, WindMark::None, WindMark::None, WindMark::None},
+            {"East in the South round", kSeat0, Wind::South, WindMark::Seat, WindMark::Round, WindMark::None, WindMark::None},
+            {"South in the East round", kSeat3, Wind::East, WindMark::Round, WindMark::Seat, WindMark::None, WindMark::None},
+            {"South in the South round", kSeat3, Wind::South, WindMark::None, WindMark::Both, WindMark::None, WindMark::None},
+            {"North in the West round", kSeat1, Wind::West, WindMark::None, WindMark::None, WindMark::Round, WindMark::Seat},
+        };
+        for (const Case& test : cases) {
+            ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+            Lay(TableWithAllWinds(test.east, test.roundWind));
+            Draw();
+
+            const Seat viewer = _table->GetLayout().viewer;
+            ASSERT_EQ(viewer, kSeat0) << test.name;
+            ASSERT_EQ(Hand().SeatWind(viewer), MakeSeatWinds(test.east)[viewer]) << test.name;
+            const PlayerHand& own = Hand().GetHand(viewer);
+            int rects = 0;
+            int hand = 0;
+            for (const TileSlot& slot : _table->GetLayout().slots) {
+                if (slot.role != SlotRole::HandTile || slot.seat != viewer) {
+                    continue;
+                }
+                ++hand;
+                const Tile tile = own.concealed[static_cast<size_t>(slot.index)];
+                const WindMark want = tile == T("Ew") ? test.east_ : tile == T("Sw") ? test.south : tile == T("Ww") ? test.west : tile == T("Nw") ? test.north : WindMark::None;
+                EXPECT_EQ(MarkDrawnOn(slot), want) << test.name << ", " << ToString(tile);
+                rects += want == WindMark::None ? 0 : (want == WindMark::Both ? 2 : 1);
+            }
+            EXPECT_EQ(hand, static_cast<int>(own.concealed.size())) << test.name;
+            // A tile that is both has two rectangles, the others one each, and nothing else is drawn in these colours
+            EXPECT_EQ(static_cast<int>(RectsOf(kSeatWindMark).size() + RectsOf(kRoundWindMark).size()), rects) << test.name;
+        }
+    }
+
+    TEST_F(MahjongTableUiTest, NoWindIsMarkedForASpectatorOrUnderTheCover) {
+        const HandModel model = TableWithAllWinds(kSeat0, Wind::South);
+        ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
+        Lay(model);
+        Draw();
+        EXPECT_TRUE(RectsOf(kSeatWindMark).empty());
+        EXPECT_TRUE(RectsOf(kRoundWindMark).empty());
+
+        ASSERT_NO_FATAL_FAILURE(Start(kTwoPeople));
+        Lay(model);
+        _game->GetSession().RunComputers();
+        ASSERT_TRUE(_game->GetSession().HandoffPending());
+        Draw();
+        EXPECT_TRUE(RectsOf(kSeatWindMark).empty());
+        EXPECT_TRUE(RectsOf(kRoundWindMark).empty());
+
+        _game->GetSession().Reveal();
+        Draw();
+        EXPECT_FALSE(RectsOf(kSeatWindMark).empty()) << "the person who pressed Show sees the marks of its hand";
     }
 
     TEST_F(MahjongTableUiTest, DrawingChangesNothing) {
