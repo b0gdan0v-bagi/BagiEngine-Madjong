@@ -1084,13 +1084,13 @@ namespace BECore::Mahjong::Tests {
             const TableLayout layout = MakeTableLayout(WorstInput(viewer, kWorstPile, kNoSeat));
             const Rect hand = BoundsOf(layout, SlotRole::HandTile, viewer);
             const Rect melds = BoundsOf(layout, SlotRole::MeldTile, viewer);
-            EXPECT_NEAR(hand.x, 72.0f, kTolerance);
-            EXPECT_NEAR(hand.x + hand.w, 72.0f + static_cast<float>(kMaxConcealedTiles) * kViewerHandTileW, kTolerance);
+            const TileSize tile = ExpectOneTileSize(layout, SlotRole::HandTile, viewer);
+            EXPECT_NEAR(hand.w, static_cast<float>(kMaxConcealedTiles) * tile.w, kTolerance) << "14 tiles side by side, none left over";
             EXPECT_LE(hand.x + hand.w, melds.x + kTolerance);
             const std::vector<TileSlot> tiles = SlotsOf(layout, SlotRole::HandTile, viewer);
             ASSERT_EQ(static_cast<int>(tiles.size()), kMaxConcealedTiles);
             for (size_t i = 1; i < tiles.size(); ++i) {
-                EXPECT_NEAR(tiles[i].rect.x - tiles[i - 1].rect.x, kViewerHandTileW, kTolerance) << "tile " << i;
+                EXPECT_NEAR(tiles[i].rect.x - tiles[i - 1].rect.x, tile.w, kTolerance) << "tile " << i;
             }
         }
     }
@@ -1166,21 +1166,25 @@ namespace BECore::Mahjong::Tests {
         input.melds[2] = {MakeMeld(MeldKind::Pung)};
         const TableLayout layout = MakeTableLayout(input);
         const std::vector<TileSlot> melds = SlotsOf(layout, SlotRole::MeldTile, 0);
+        const TileSize tile = ExpectOneTileSize(layout, SlotRole::MeldTile, 0);
         const Rect chow = BoundsOfMeld(layout, 0, 0);
         const Rect kong = BoundsOfMeld(layout, 0, 1);
         EXPECT_NEAR(chow.x, melds[0].rect.x, kTolerance);
-        EXPECT_NEAR(chow.w, 3 * kViewerMeldTileW, kTolerance);
-        EXPECT_NEAR(chow.h, kViewerMeldTileH, kTolerance);
+        EXPECT_NEAR(chow.w, 3.0f * tile.w, kTolerance);
+        EXPECT_NEAR(chow.h, tile.h, kTolerance);
         EXPECT_NEAR(kong.x, melds[3].rect.x, kTolerance);
-        EXPECT_NEAR(kong.w, 4 * kViewerMeldTileW, kTolerance);
+        EXPECT_NEAR(kong.w, 4.0f * tile.w, kTolerance);
         EXPECT_FALSE(Overlaps(chow, kong));
         // the top seat's meld is laid in a row of its own size
-        EXPECT_NEAR(BoundsOfMeld(layout, 2, 0).w, 3 * kOpponentMeldTileW, kTolerance);
+        const TileSize topTile = ExpectOneTileSize(layout, SlotRole::MeldTile, 2);
+        EXPECT_NEAR(BoundsOfMeld(layout, 2, 0).w, 3.0f * topTile.w, kTolerance);
         // a side seat's meld is a column of turned tiles
         input.melds[1] = {MakeMeld(MeldKind::Pung)};
-        const Rect column = BoundsOfMeld(MakeTableLayout(input), 1, 0);
-        EXPECT_NEAR(column.h, 3 * kOpponentMeldTileW, kTolerance);
-        EXPECT_NEAR(column.w, kOpponentMeldTileH, kTolerance);
+        const TableLayout withColumn = MakeTableLayout(input);
+        const TileSize sideTile = ExpectOneTileSize(withColumn, SlotRole::MeldTile, 1);
+        const Rect column = BoundsOfMeld(withColumn, 1, 0);
+        EXPECT_NEAR(column.h, 3.0f * sideTile.w, kTolerance);
+        EXPECT_NEAR(column.w, sideTile.h, kTolerance);
     }
 
     TEST(TableLayoutTest, BoundsOfMeldIsEmptyWhenThereIsNoSuchMeld) {
@@ -1225,25 +1229,28 @@ namespace BECore::Mahjong::Tests {
         for (const Seat seat : {1, 3}) {
             const std::vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, seat);
             ASSERT_EQ(hand.size(), 13u);
+            const TileSize handTile = ExpectOneTileSize(layout, SlotRole::HandTile, seat);
             for (size_t i = 0; i < hand.size(); ++i) {
-                EXPECT_EQ(hand[i].rect.w, kSideHandTileH) << "seat " << seat;
-                EXPECT_EQ(hand[i].rect.h, kSideHandTileW);
+                EXPECT_EQ(hand[i].rect.w, handTile.h) << "seat " << seat << ": the tile lies on its side";
+                EXPECT_EQ(hand[i].rect.h, handTile.w);
                 EXPECT_EQ(hand[i].rect.x, hand[0].rect.x);
                 if (i > 0) {
-                    EXPECT_NEAR(hand[i].rect.y - hand[i - 1].rect.y, kSideHandTileW, kTolerance) << "the pitch is the height of the turned tile";
+                    EXPECT_NEAR(hand[i].rect.y - hand[i - 1].rect.y, hand[i].rect.h, kTolerance) << "the pitch is the height of the turned tile";
                 }
             }
             const std::vector<TileSlot> bonus = SlotsOf(layout, SlotRole::BonusTile, seat);
             ASSERT_EQ(bonus.size(), 3u);
+            ExpectOneTileSize(layout, SlotRole::BonusTile, seat);
             for (size_t i = 1; i < bonus.size(); ++i) {
                 EXPECT_EQ(bonus[i].rect.x, bonus[0].rect.x);
-                EXPECT_NEAR(bonus[i].rect.y - bonus[i - 1].rect.y, kOpponentBonusTileW, kTolerance);
+                EXPECT_NEAR(bonus[i].rect.y - bonus[i - 1].rect.y, bonus[i].rect.h, kTolerance);
             }
             const std::vector<TileSlot> melds = SlotsOf(layout, SlotRole::MeldTile, seat);
             ASSERT_GE(melds.size(), 6u);
+            ExpectOneTileSize(layout, SlotRole::MeldTile, seat);
             for (size_t i = 1; i < melds.size(); ++i) {
                 EXPECT_EQ(melds[i].rect.x, melds[0].rect.x);
-                EXPECT_EQ(melds[i].rect.w, kOpponentMeldTileH);
+                EXPECT_EQ(melds[i].rect.w, melds[0].rect.w);
                 const float gap = melds[i].rect.y - (melds[i - 1].rect.y + melds[i - 1].rect.h);
                 EXPECT_NEAR(gap, melds[i].index == melds[i - 1].index ? 0.0f : kMeldGap, kTolerance) << "seat " << seat << " tile " << i;
             }
@@ -1264,13 +1271,18 @@ namespace BECore::Mahjong::Tests {
         EXPECT_GT(rightHand.x, rightMelds.x + rightMelds.w);
         EXPECT_GT(rightMelds.x, rightBonus.x + rightBonus.w);
         EXPECT_GT(rightBonus.x, layout.zones.discards[1].x + layout.zones.discards[1].w);
-        // the block is the block of six by five tiles, turned
+        // the block holds six by five tiles, turned for the side seats
+        const TableLayout worstLayout = MakeTableLayout(WorstInput(0, kWorstPile, kNoSeat));
         for (const Seat seat : {1, 3}) {
-            EXPECT_EQ(layout.zones.discards[seat].w, kDiscardTileH * kDiscardRowCapacity);
-            EXPECT_EQ(layout.zones.discards[seat].h, kDiscardTileW * kDiscardsPerRow);
+            const TileSize tile = ExpectOneTileSize(worstLayout, SlotRole::DiscardTile, seat);
+            EXPECT_GE(worstLayout.zones.discards[seat].w, tile.h * kDiscardRowCapacity - kTolerance);
+            EXPECT_GE(worstLayout.zones.discards[seat].h, tile.w * kDiscardsPerRow - kTolerance);
         }
-        EXPECT_EQ(layout.zones.discards[0].w, kDiscardTileW * kDiscardsPerRow);
-        EXPECT_EQ(layout.zones.discards[2].h, kDiscardTileH * kDiscardRowCapacity);
+        const TileSize bottom = ExpectOneTileSize(worstLayout, SlotRole::DiscardTile, 0);
+        EXPECT_GE(worstLayout.zones.discards[0].w, bottom.w * kDiscardsPerRow - kTolerance);
+        const TileSize top = ExpectOneTileSize(worstLayout, SlotRole::DiscardTile, 2);
+        EXPECT_GE(worstLayout.zones.discards[2].w, top.w * kDiscardsPerRow - kTolerance);
+        EXPECT_GE(worstLayout.zones.discards[2].h, top.h * kDiscardRowCapacity - kTolerance);
     }
 
     TEST(TableLayoutTest, TheUprightRectangleOfATurnedSlotSwapsWidthAndHeightAboutTheCentre) {
@@ -1297,8 +1309,10 @@ namespace BECore::Mahjong::Tests {
         const TableLayout layout = MakeTableLayout(QuietInput(0));
         for (const TileSlot& slot : SlotsOf(layout, SlotRole::HandTile, 1)) {
             const Rect upright = UprightRect(slot.rect, slot.rotation);
-            EXPECT_EQ(upright.w, kSideHandTileW);
-            EXPECT_EQ(upright.h, kSideHandTileH);
+            EXPECT_EQ(upright.w, slot.rect.h) << "the tile as designed, on its side on the screen";
+            EXPECT_EQ(upright.h, slot.rect.w);
+            ExpectAtlasProportions(TileSize{upright.w, upright.h});
+            EXPECT_GE(upright.w, static_cast<float>(MinTileWOf(layout, SlotRole::HandTile, 1)));
         }
         for (const TileSlot& slot : SlotsOf(layout, SlotRole::HandTile, 2)) {
             EXPECT_EQ(UprightRect(slot.rect, slot.rotation).x, slot.rect.x);
