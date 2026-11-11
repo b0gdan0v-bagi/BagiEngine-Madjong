@@ -43,6 +43,10 @@ namespace BECore::Mahjong {
      *   `kongAcceptanceAfter` those of the hand without the kong (`RateKong`); `chosen.tile` is the kong's tile, the other numbers of
      *   `chosen` and `alternatives` are not used.
      * - `DeclareWin`: only the step.
+     *
+     * `declaredOpponents` counts the opponents whose calling hand is declared (0: the `danger` of every option is `Safe` and means nothing);
+     * `readDanger` is the knob of the profile the advice was made with, so whether the danger was part of the order (`TurnOption::danger`
+     * decided between equal options only with it on).
      */
     struct TurnExplanation {
         HandAction action;
@@ -55,6 +59,8 @@ namespace BECore::Mahjong {
         int kongShantenAfter = 0;
         int kongAcceptanceBefore = 0;
         int kongAcceptanceAfter = 0;
+        int declaredOpponents = 0;
+        bool readDanger = false;
     };
 
     /**

@@ -98,6 +98,10 @@ namespace BECore::Mahjong {
             const int melds = MeldCountOf(view);
             const DangerTable dangers = DiscardDangers(view);
             explanation.shantenBefore = Shanten(counts, melds);
+            explanation.readDanger = profile.readDanger;
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                explanation.declaredOpponents += seat != view.seat && view.seats[seat].callingDeclared ? 1 : 0;
+            }
             switch (decision.step) {
                 case TurnStep::DeclareWin:
                     break;

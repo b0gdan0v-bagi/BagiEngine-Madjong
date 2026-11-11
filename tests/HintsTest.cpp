@@ -11,10 +11,8 @@
 #include <Mahjong/Game/TableSession.h>
 #include <Mahjong/Table/Hints.h>
 #include <Mahjong/Table/ScoreText.h>
-#include <algorithm>
 #include <gtest/gtest.h>
 #include <set>
-#include <string>
 #include <vector>
 
 /**
@@ -176,6 +174,41 @@ namespace BECore::Mahjong::Tests {
             EXPECT_TRUE(robbed.UpgradeKong(kSeat1, T("5p")).has_value());
             cases.push_back(ClaimCase("robbedKong", robbed, kSeat2, ClaimStep::Mahjong));
             return cases;
+        }
+
+        /// The same table as seen with `opponent` declared (a hand-made change of the view: the reading is of the declarations of `view.seats`).
+        TableView WithDeclaredOpponent(TableView view) {
+            view.seats[(view.seat + 1) % kSeatCount].callingDeclared = true;
+            return view;
+        }
+
+        /// The sentences of the danger line in English, one per grade.
+        const char* const kDangerSentences[] = {"Safe against the ready hand.", "Low danger from the ready hand.", "Risky against the ready hand.", "Dangerous against the ready hand."};
+        constexpr const char* kSafestTie = "this one is the safest.";
+
+        bool HasDangerLine(const std::vector<std::string>& lines) {
+            return std::any_of(lines.begin(), lines.end(),
+                               [](const std::string& line) { return std::any_of(std::begin(kDangerSentences), std::end(kDangerSentences), [&](const char* sentence) { return line == sentence; }); });
+        }
+
+        /// Four sets and the lone 5m and green dragon, seat 1 declared: both discards declare, a tanki wait on the other (`ComputerExplainTest`).
+        TableView TwoDeclaringDiscardsView() {
+            TableView view;
+            view.seat = kSeat0;
+            view.phase = Phase::Discard;
+            view.currentSeat = kSeat0;
+            view.own.concealed = ParseTiles("1p 2p 3p 4p 5p 6p 7p 8p 9p 1s 2s 3s 5m Gd").value();
+            view.visible = CountTiles(view.own.concealed);
+            view.seats[kSeat1].callingDeclared = true;
+            for (const char* tile : {"5m", "Gd"}) {
+                view.legal.push_back(HandAction::MakeDiscard(T(tile), true));
+            }
+            return view;
+        }
+
+        /// The length of a text in letters (the Cyrillic ones are two bytes of UTF-8).
+        size_t Letters(const std::string& text) {
+            return static_cast<size_t>(std::count_if(text.begin(), text.end(), [](char c) { return (static_cast<unsigned char>(c) & 0xC0) != 0x80; }));
         }
 
         std::vector<std::string> Lines(const UIStrings& strings, const TableView& view) {
@@ -541,6 +574,11 @@ namespace BECore::Mahjong::Tests {
                                             "hints.why.tie.none",
                                             "hints.why.tie.keep",
                                             "hints.why.tie.chance",
+                                            "hints.why.tie.danger",
+                                            "hints.why.danger.safe",
+                                            "hints.why.danger.low",
+                                            "hints.why.danger.medium",
+                                            "hints.why.danger.high",
                                             "hints.why.keep.worthless",
                                             "hints.why.keep.terminal",
                                             "hints.why.keep.simple",
@@ -738,6 +776,139 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(Lines(strings, viewA), Lines(strings, viewB));
             EXPECT_FALSE(Lines(strings, viewA).empty());
         });
+    }
+
+    // ----- the danger in the reasons -----
+
+    TEST(HintsTest, ADiscardAdviceAgainstADeclaredOpponentSaysTheDangerOfTheAdvisedTileBeforeTheTie) {
+        UIStrings strings;
+        ASSERT_TRUE(LoadShippedStrings(strings).empty());
+        ASSERT_TRUE(strings.SetLanguage("en"_intern));
+        const TableView view = WithDeclaredOpponent(ReasonCases().front().view);
+        const TurnExplanation turn = *ExplainAdviceFor(view)->turn;
+        ASSERT_EQ(turn.step, TurnStep::Discard);
+        ASSERT_EQ(turn.declaredOpponents, 1);
+
+        const std::vector<std::string> lines = Lines(strings, view);
+
+        ASSERT_EQ(lines.size(), kMaxReasonLines) << "a discard turn is exactly the six lines of the panel";
+        EXPECT_EQ(lines[2], kDangerSentences[static_cast<size_t>(turn.chosen.danger)]);
+        EXPECT_EQ(lines[3].find("Equal tiles: "), 0u) << "the tie line follows the danger";
+        EXPECT_EQ(lines[0].find("Steps to ready"), 0u);
+        EXPECT_EQ(lines[1].find("Unseen tiles that help"), 0u);
+        EXPECT_EQ(lines[4].find("Instead "), 0u);
+    }
+
+    TEST(HintsTest, TheDangerLineIsThereExactlyForADiscardStepWithADeclaredOpponent) {
+        UIStrings strings;
+        ASSERT_TRUE(LoadShippedStrings(strings).empty());
+        ASSERT_TRUE(strings.SetLanguage("en"_intern));
+        size_t withLine = 0;
+        for (const ReasonCase& one : ReasonCases()) {
+            EXPECT_FALSE(HasDangerLine(Lines(strings, one.view))) << one.name << ": nobody has declared";
+
+            const std::vector<std::string> lines = Lines(strings, WithDeclaredOpponent(one.view));
+            const bool discards = one.turnStep.has_value() && (*one.turnStep == TurnStep::Discard || *one.turnStep == TurnStep::Declare || *one.turnStep == TurnStep::KeepWaiting);
+            EXPECT_EQ(HasDangerLine(lines), discards) << one.name;
+            EXPECT_LE(lines.size(), kMaxReasonLines) << one.name;
+            withLine += HasDangerLine(lines) ? 1 : 0;
+        }
+        EXPECT_EQ(withLine, 3u) << "a discard, a declaration and the keeping of a wait";
+    }
+
+    TEST(HintsTest, TheDangerLineFollowsTheGradeOfTheAdvisedTile) {
+        UIStrings strings;
+        ASSERT_TRUE(LoadShippedStrings(strings).empty());
+        ASSERT_TRUE(strings.SetLanguage("en"_intern));
+        TableView view = WithDeclaredOpponent(ReasonCases().front().view);
+        const Tile advised = ExplainAdviceFor(view)->Action().tile;
+        std::set<std::string> said;
+
+        for (const uint8_t copies : {static_cast<uint8_t>(0), kCopiesPerTile}) {
+            view.visible[advised.Id()] = std::max(view.visible[advised.Id()], copies);
+            const TurnExplanation turn = *ExplainAdviceFor(view)->turn;
+            ASSERT_EQ(turn.chosen.tile, advised);
+            const std::vector<std::string> lines = Lines(strings, view);
+            ASSERT_GE(lines.size(), 3u);
+            EXPECT_EQ(lines[2], kDangerSentences[static_cast<size_t>(turn.chosen.danger)]);
+            said.insert(lines[2]);
+        }
+        EXPECT_EQ(said.size(), 2u) << "an honour with every copy seen is safe, one with copies unseen is not";
+        EXPECT_TRUE(said.contains(kDangerSentences[static_cast<size_t>(Danger::Safe)]));
+    }
+
+    TEST(HintsTest, TheTieLineNamesTheDangerOnlyWhenTheDangerDecided) {
+        UIStrings strings;
+        ASSERT_TRUE(LoadShippedStrings(strings).empty());
+        ASSERT_TRUE(strings.SetLanguage("en"_intern));
+        const TableView view = TwoDeclaringDiscardsView();
+        const auto tieLine = [&](const LevelProfile& profile) {
+            const Explanation explained = *ExplainAdvice(view, profile);
+            for (const eastl::string& line : ReasonLines(strings, view, explained)) {
+                if (Std(line).find("Equal tiles: ") == 0) {
+                    return Std(line);
+                }
+            }
+            return std::string();
+        };
+        LevelProfile careful = kNormalProfile;
+        careful.readDanger = true;
+
+        // The 5m is chosen by the keep value when the danger is not read; the green dragon, the safer, when it is
+        const TurnExplanation plain = *ExplainAdvice(view)->turn;
+        const TurnExplanation reading = *ExplainAdvice(view, careful)->turn;
+        ASSERT_EQ(plain.equalChoices, 1);
+        ASSERT_NE(plain.alternatives.front().danger, plain.chosen.danger) << "the two discards differ in danger";
+        EXPECT_EQ(tieLine(careful), "Equal tiles: 1; " + std::string(kSafestTie));
+        EXPECT_EQ(reading.chosen.tile, T("Gd"));
+        EXPECT_EQ(tieLine(kNormalProfile).find(kSafestTie), std::string::npos) << "the advice player does not read the danger: it did not decide";
+        EXPECT_NE(tieLine(kNormalProfile), "");
+
+        // With nobody declared the knob has nothing to read
+        TableView quiet = view;
+        quiet.seats[kSeat1].callingDeclared = false;
+        const Explanation explained = *ExplainAdvice(quiet, careful);
+        for (const eastl::string& line : ReasonLines(strings, quiet, explained)) {
+            EXPECT_EQ(Std(line).find(kSafestTie), std::string::npos) << Std(line);
+            EXPECT_FALSE(HasDangerLine({Std(line)}));
+        }
+    }
+
+    TEST(HintsTest, TheDangerSentencesAreInBothLanguagesAndNoLongerThanTheLongestReasonLine) {
+        UIStrings strings;
+        ASSERT_TRUE(LoadShippedStrings(strings).empty());
+        const std::vector<std::string> mine{"hints.why.danger.safe", "hints.why.danger.low", "hints.why.danger.medium", "hints.why.danger.high", "hints.why.tie.danger"};
+        const std::vector<std::string> others{"hints.why.steps",       "hints.why.help",          "hints.why.help.change", "hints.why.waits",        "hints.why.declare",
+                                              "hints.why.keepWaiting", "hints.why.tie.none",      "hints.why.tie.keep",    "hints.why.tie.chance",   "hints.why.alt.discard",
+                                              "hints.why.alt.wait",    "hints.why.alt.pung",      "hints.why.alt.kong",    "hints.why.alt.chow",     "hints.why.kong.noWorse",
+                                              "hints.why.win",         "hints.why.claim.mahjong", "hints.why.claim.value", "hints.why.pass.waiting", "hints.why.pass.noGain"};
+        ForEachLanguage(strings, [&](PoolString language) {
+            size_t longest = 0;
+            for (const std::string& key : others) {
+                longest = std::max(longest, Letters(Std(Tr(strings, key.c_str()))));
+            }
+            for (const std::string& key : mine) {
+                const std::string text = Std(Tr(strings, key.c_str()));
+                EXPECT_NE(text, key) << language.ToStringView().data();
+                EXPECT_LE(Letters(text), longest) << language.ToStringView().data() << " " << key;
+            }
+        });
+    }
+
+    TEST(HintsTest, TheDangerLinesFollowTheLanguageAndStayWithinTheSixLinesOfThePanel) {
+        UIStrings strings;
+        ASSERT_TRUE(LoadShippedStrings(strings).empty());
+        const TableView view = WithDeclaredOpponent(ReasonCases().front().view);
+
+        ASSERT_TRUE(strings.SetLanguage("en"_intern));
+        const std::vector<std::string> english = Lines(strings, view);
+        ASSERT_TRUE(strings.SetLanguage("ru"_intern));
+        const std::vector<std::string> russian = Lines(strings, view);
+
+        ASSERT_EQ(english.size(), kMaxReasonLines);
+        EXPECT_EQ(russian.size(), kMaxReasonLines);
+        EXPECT_NE(english[2], russian[2]);
+        EXPECT_NE(russian[2].find("готов"), std::string::npos);
     }
 
     // ----- when hints apply -----

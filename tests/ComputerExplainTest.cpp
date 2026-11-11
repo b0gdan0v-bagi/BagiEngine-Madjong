@@ -7,7 +7,6 @@
 #include <Mahjong/Game/HandModel.h>
 #include <Mahjong/Game/Match.h>
 #include <gtest/gtest.h>
-#include <string>
 
 /**
  * `ExplainAdvice`: the numbers the advice is chosen by, on fixed hands worked out by hand first (the waits of each hand, the unseen
@@ -612,6 +611,8 @@ namespace BECore::Mahjong::Tests {
         const std::optional<Explanation> withKnob = ExplainAdvice(view, on);
 
         const TurnExplanation& plain = TurnOf(off);
+        EXPECT_EQ(plain.declaredOpponents, 1);
+        EXPECT_FALSE(plain.readDanger);
         EXPECT_EQ(plain.step, TurnStep::Declare);
         EXPECT_EQ(plain.chosen.tile, T("5m"));
         EXPECT_EQ(plain.chosen.danger, Danger::High);
@@ -620,6 +621,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(plain.alternatives[0].danger, Danger::Low);
 
         const TurnExplanation& careful = TurnOf(withKnob);
+        EXPECT_TRUE(careful.readDanger);
         EXPECT_EQ(careful.chosen.tile, T("Gd"));
         EXPECT_EQ(careful.chosen.danger, Danger::Low);
         ASSERT_EQ(careful.alternatives.size(), 1u);
@@ -634,10 +636,32 @@ namespace BECore::Mahjong::Tests {
         const std::optional<Explanation> explained = ExplainAdvice(MakeTableView(model, kSeat0));
 
         const TurnExplanation& turn = TurnOf(explained);
+        EXPECT_EQ(turn.declaredOpponents, 0);
         EXPECT_EQ(turn.chosen.danger, Danger::Safe);
         for (const TurnOption& option : turn.alternatives) {
             EXPECT_EQ(option.danger, Danger::Safe);
         }
+    }
+
+    TEST(ComputerExplainTest, TheDeclaredOpponentsAreCountedWithoutTheViewersOwnDeclaration) {
+        TableView view;
+        view.seat = kSeat0;
+        view.phase = Phase::Discard;
+        view.currentSeat = kSeat0;
+        view.own.concealed = ParseTiles("1p 2p 3p 4p 5p 6p 7p 8p 9p 1s 2s 3s 5m Gd").value();
+        view.visible = CountTiles(view.own.concealed);
+        view.legal.push_back(HandAction::MakeDiscard(T("5m")));
+        view.legal.push_back(HandAction::MakeDiscard(T("Gd")));
+        EXPECT_EQ(TurnOf(ExplainAdvice(view)).declaredOpponents, 0);
+
+        view.seats[kSeat0].callingDeclared = true;  // the viewer's own declaration is no opponent
+        EXPECT_EQ(TurnOf(ExplainAdvice(view)).declaredOpponents, 0);
+        view.seats[kSeat1].callingDeclared = true;
+        EXPECT_EQ(TurnOf(ExplainAdvice(view)).declaredOpponents, 1);
+        view.seats[kSeat3].callingDeclared = true;
+        EXPECT_EQ(TurnOf(ExplainAdvice(view)).declaredOpponents, 2);
+        view.seats[kSeat2].callingDeclared = true;
+        EXPECT_EQ(TurnOf(ExplainAdvice(view)).declaredOpponents, 3);
     }
 
 }  // namespace BECore::Mahjong::Tests

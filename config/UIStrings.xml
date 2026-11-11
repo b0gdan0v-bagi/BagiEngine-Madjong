@@ -131,6 +131,11 @@
         <string key="hints.why.tie.none" text="No other tile rates as well."/>
         <string key="hints.why.tie.keep" text="Equal tiles: {n}; least wanted: {keep}."/>
         <string key="hints.why.tie.chance" text="Equal tiles: {n}; any of them will do."/>
+        <string key="hints.why.tie.danger" text="Equal tiles: {n}; this one is the safest."/>
+        <string key="hints.why.danger.safe" text="Safe against the ready hand."/>
+        <string key="hints.why.danger.low" text="Low danger from the ready hand."/>
+        <string key="hints.why.danger.medium" text="Risky against the ready hand."/>
+        <string key="hints.why.danger.high" text="Dangerous against the ready hand."/>
         <string key="hints.why.keep.worthless" text="a useless honour"/>
         <string key="hints.why.keep.terminal" text="a terminal"/>
         <string key="hints.why.keep.simple" text="a simple tile"/>
@@ -389,6 +394,11 @@
         <string key="hints.why.tie.none" text="Другой сброс не лучше."/>
         <string key="hints.why.tie.keep" text="Равных костей: {n}; менее нужна: {keep}."/>
         <string key="hints.why.tie.chance" text="Равных костей: {n}; подойдёт любая."/>
+        <string key="hints.why.tie.danger" text="Равных костей: {n}; эта самая безопасная."/>
+        <string key="hints.why.danger.safe" text="Безопасно против готовой руки."/>
+        <string key="hints.why.danger.low" text="Малая опасность от готовой руки."/>
+        <string key="hints.why.danger.medium" text="Рискованно против готовой руки."/>
+        <string key="hints.why.danger.high" text="Опасно против готовой руки."/>
         <string key="hints.why.keep.worthless" text="почётная без ценности"/>
         <string key="hints.why.keep.terminal" text="крайняя"/>
         <string key="hints.why.keep.simple" text="простая"/>
