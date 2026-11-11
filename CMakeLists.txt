@@ -78,4 +78,12 @@ if(ENGINE_BUILD_TESTS)
     if(ENGINE_WITH_REMOTE_CONTROL)
         be_add_game_control_tests(BagiMahjong SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/tests/control_smoke.py)
     endif()
+
+    # tools/collect_logs.py with a fake verifier and temp folders (no build needed); Python 3 standard library only
+    if(Python3_FOUND)
+        add_test(NAME MahjongCollectLogs COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/collect_logs_test.py)
+        set_tests_properties(MahjongCollectLogs PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 60)
+    else()
+        message(WARNING "Python3 not found, the test MahjongCollectLogs is not registered")
+    endif()
 endif()
