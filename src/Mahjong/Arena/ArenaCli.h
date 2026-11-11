@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Mahjong/Arena/ArenaLogs.h>
 #include <Mahjong/Arena/ArenaReport.h>
 
 namespace BECore::Mahjong::Arena {
@@ -8,6 +9,8 @@ namespace BECore::Mahjong::Arena {
     inline constexpr int kExitOk = 0;
     /// The model refused an action of a player (a defect of the rules or of a player; the error names the seed and the seat).
     inline constexpr int kExitRefusedAction = 1;
+    /// The path of `--logs` cannot be read (the error names it). The same number as a refused action: both are "the work could not be done".
+    inline constexpr int kExitCannotRead = 1;
     /// The arguments are wrong (the error and the usage are printed).
     inline constexpr int kExitBadArguments = 2;
 
@@ -21,6 +24,11 @@ namespace BECore::Mahjong::Arena {
         ArenaConfig config;
         /// `--help` was given: print the usage and play nothing.
         bool help = false;
+        /// `--logs PATH`: read the match logs of a folder or a file instead of playing (`config` is then only `focus`, the bots of the
+        /// analysis); `--check` prints the verdicts only.
+        bool logMode = false;
+        eastl::string logsPath;
+        bool check = false;
     };
 
     /// The text of `--help`: the options with their defaults, the exit codes and the interval rule in two lines.
@@ -32,8 +40,9 @@ namespace BECore::Mahjong::Arena {
      * `--focus LIST` (players separated by commas; a part with an `=` and no `:` goes on the knobs of the player before it, so
      * `easy:skipClaimPercent=20,skipDeclarationPercent=10,normal` is two players), `--others SPEC`, `--first N`, `--seeds COUNT`,
      * `--jobs N` (1 to `kMaxJobs` threads in all, for the seeds and then the worlds of a search decision; 0 is the hardware concurrency, at least 1), `--time` and `--help` (which wins over everything
-     * after it). A bad argument is an error text that names it: an unknown option, a missing or malformed value, a bad player spec, a range of seeds that `ValidateArenaConfig` refuses, a word that is
-     * no option.
+     * after it), `--logs PATH` (the log mode: `--first`, `--seeds`, `--others` and `--time` are refused with it) and `--check` (the log
+     * mode only). A bad argument is an error text that names it: an unknown option, a missing or malformed value, a bad player spec, a range of seeds that `ValidateArenaConfig` refuses, a word that
+     * is no option.
      */
     [[nodiscard]] std::expected<ArenaArgs, eastl::string> ParseArenaArgs(eastl::span<const std::string_view> args);
 
@@ -51,5 +60,14 @@ namespace BECore::Mahjong::Arena {
      * `FormatArenaReport` goes to `out`. The same arguments give the same bytes, `--time` apart.
      */
     [[nodiscard]] int RunArenaCli(eastl::span<const std::string_view> args, ArenaCliOutput& output);
+
+    /**
+     * @brief The same program with a reader of files, which `--logs` needs (the overload above has none: `--logs` is then `kExitCannotRead`).
+     *
+     * `--logs PATH --check` prints `FormatCheckLines` (exit `kExitOk` even when files are bad); `--logs PATH` prints `FormatCorpusSummary`
+     * of the logs that replay; a path the source cannot read prints its error to `err` (`kExitCannotRead`). The same files give the same
+     * bytes, whatever order the source lists them in.
+     */
+    [[nodiscard]] int RunArenaCli(eastl::span<const std::string_view> args, const LogSource& source, ArenaCliOutput& output);
 
 }  // namespace BECore::Mahjong::Arena

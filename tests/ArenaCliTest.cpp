@@ -1,3 +1,5 @@
+#include "ArenaLogTestSupport.h"
+
 #include <Mahjong/Arena/ArenaCli.h>
 #include <gtest/gtest.h>
 #include <thread>
@@ -5,7 +7,8 @@
 /**
  * The command line of the arena (`src/Mahjong/Arena/ArenaCli.h`, the program `BagiMahjongArena`): the arguments (defaults, every option,
  * a list of focus players with knobs, every refusal with its message), and the whole program on a few seeds: the report, twice the same
- * text, `--help`, the exit codes, `--time`. Pure logic: no engine services; the file takes about 6 s in Debug (three seeds; 4 s of it the one seed of a search focus player at `--jobs` 1 and 3).
+ * text, `--help`, the exit codes, `--time`; the log mode (`--logs`, `--check`) over a source of strings. Pure logic: no engine services; the file takes about 6 s in Debug (three seeds; 4 s of it the
+ * one seed of a search focus player at `--jobs` 1 and 3).
  */
 namespace BECore::Mahjong::Arena {
 
@@ -39,6 +42,26 @@ namespace BECore::Mahjong::Arena {
 
         bool Contains(const eastl::string& text, std::string_view part) {
             return std::string_view(text.data(), text.size()).find(part) != std::string_view::npos;
+        }
+
+        constexpr uint32_t kLogSeed = 41;
+
+        int RunLogs(const Args& args, const LogSource& source, ArenaCliOutput& output) {
+            return RunArenaCli(eastl::span<const std::string_view>(args.data(), args.size()), source, output);
+        }
+
+        LogSource SourceOf(eastl::vector<LogFile> files) {
+            return [files](std::string_view) -> std::expected<eastl::vector<LogFile>, eastl::string> { return files; };
+        }
+
+        /// A good log, a log cut short and a log that is no log, in an order that is not the sorted one.
+        eastl::vector<LogFile> SomeLogs() {
+            Tests::LogSpec played;
+            played.seed = kLogSeed;
+            played.seats = Tests::kLogPersonFirst;
+            Tests::LogSpec given = played;
+            given.stopAfterHands = 1;
+            return {{"z/given.jsonl", Tests::LogText(Tests::PlayLog(given))}, {"a/broken.jsonl", "nonsense\n"}, {"m.jsonl", Tests::LogText(Tests::PlayLog(played))}};
         }
 
         /// The option and the count of seeds that every run of the program in this file uses.
@@ -244,6 +267,97 @@ namespace BECore::Mahjong::Arena {
         ArenaCliOutput quiet;
         EXPECT_EQ(RunProgram(FewSeeds(), quiet), kExitOk);
         EXPECT_FALSE(Contains(quiet.out, "us per decision"));
+    }
+
+    TEST(ArenaCliTest, TheLogOptionsAreRead) {
+        const ArenaArgs plain = ArgsOf({});
+        EXPECT_FALSE(plain.logMode);
+        EXPECT_FALSE(plain.check);
+        const ArenaArgs logs = ArgsOf({"--logs", "logs/matches"});
+        EXPECT_TRUE(logs.logMode);
+        EXPECT_FALSE(logs.check);
+        EXPECT_EQ(logs.logsPath, "logs/matches");
+        const ArenaArgs checked = ArgsOf({"--check", "--logs", "one.jsonl"});
+        EXPECT_TRUE(checked.logMode);
+        EXPECT_TRUE(checked.check);
+        EXPECT_EQ(checked.logsPath, "one.jsonl");
+        // The bots of the analysis are named by --focus, as for the games.
+        const ArenaArgs focused = ArgsOf({"--logs", "x", "--focus", "easy,normal"});
+        EXPECT_EQ(focused.config.focus.size(), size_t{2});
+        EXPECT_TRUE(ArgsOf({"--logs", "x", "--jobs", "3"}).logMode);
+    }
+
+    TEST(ArenaCliTest, TheLogModeRefusesTheOptionsThatPlaySeeds) {
+        EXPECT_NE(ErrorOf({"--logs", "x", "--first", "5"}).find("--first cannot be used with --logs"), std::string::npos);
+        EXPECT_NE(ErrorOf({"--seeds", "5", "--logs", "x"}).find("--seeds cannot be used with --logs"), std::string::npos);
+        EXPECT_NE(ErrorOf({"--logs", "x", "--others", "normal"}).find("--others cannot be used with --logs"), std::string::npos);
+        EXPECT_NE(ErrorOf({"--logs", "x", "--time"}).find("--time cannot be used with --logs"), std::string::npos);
+        EXPECT_NE(ErrorOf({"--check"}).find("--check needs --logs"), std::string::npos);
+        EXPECT_NE(ErrorOf({"--logs"}).find("--logs needs a value"), std::string::npos);
+    }
+
+    TEST(ArenaCliTest, TheUsageSaysTheLogMode) {
+        const eastl::string usage = ArenaUsage();
+        EXPECT_TRUE(Contains(usage, "--logs PATH"));
+        EXPECT_TRUE(Contains(usage, "--check"));
+        EXPECT_TRUE(Contains(usage, "ok<TAB>name or bad<TAB>name<TAB>reason"));
+    }
+
+    TEST(ArenaCliTest, CheckPrintsOneLinePerFileInNameOrderAndExitsOkWhenFilesAreBad) {
+        ArenaCliOutput output;
+        EXPECT_EQ(RunLogs({"--logs", "folder", "--check"}, SourceOf(SomeLogs()), output), kExitOk);
+        EXPECT_TRUE(output.err.empty());
+        const std::string text(output.out.c_str());
+        EXPECT_EQ(text.rfind("bad\ta/broken.jsonl\tunreadable: line 1: not JSON", 0), size_t{0}) << text;
+        EXPECT_EQ(std::count(text.begin(), text.end(), '\n'), 3);
+        EXPECT_NE(text.find("\nok\tm.jsonl\nok\tz/given.jsonl\n"), std::string::npos) << text;
+    }
+
+    TEST(ArenaCliTest, TheSummaryIsPrintedWithoutCheckAndDoesNotDependOnTheOrderOfTheSource) {
+        eastl::vector<LogFile> files = SomeLogs();
+        ArenaCliOutput one;
+        EXPECT_EQ(RunLogs({"--logs", "folder"}, SourceOf(files), one), kExitOk);
+        EXPECT_TRUE(Contains(one.out, "files read        3\n"));
+        EXPECT_TRUE(Contains(one.out, "replayed          2\n"));
+        EXPECT_TRUE(Contains(one.out, "matches           complete 1, abandoned 1\n"));
+        EXPECT_TRUE(Contains(one.out, "  a/broken.jsonl: unreadable: line 1:"));
+        eastl::reverse(files.begin(), files.end());
+        ArenaCliOutput other;
+        EXPECT_EQ(RunLogs({"--logs", "folder"}, SourceOf(files), other), kExitOk);
+        EXPECT_EQ(other.out, one.out);
+    }
+
+    TEST(ArenaCliTest, APathThatCannotBeReadIsExitOne) {
+        const LogSource missing = [](std::string_view path) -> std::expected<eastl::vector<LogFile>, eastl::string> {
+            return std::unexpected(eastl::string("cannot read \"") + eastl::string(path.data(), path.size()) + "\"");
+        };
+        for (const bool check : {true, false}) {
+            ArenaCliOutput output;
+            Args args{"--logs", "nowhere"};
+            if (check) {
+                args.push_back("--check");
+            }
+            EXPECT_EQ(RunLogs(args, missing, output), kExitCannotRead);
+            EXPECT_TRUE(output.out.empty());
+            EXPECT_EQ(output.err, "error: cannot read \"nowhere\"\n");
+        }
+        // The program without a reader of files cannot read any.
+        ArenaCliOutput output;
+        EXPECT_EQ(RunProgram({"--logs", "x"}, output), kExitCannotRead);
+        EXPECT_TRUE(output.out.empty());
+    }
+
+    TEST(ArenaCliTest, BadLogArgumentsPrintTheErrorAndReadNothing) {
+        bool read = false;
+        const LogSource watching = [&read](std::string_view) -> std::expected<eastl::vector<LogFile>, eastl::string> {
+            read = true;
+            return eastl::vector<LogFile>{};
+        };
+        ArenaCliOutput output;
+        EXPECT_EQ(RunLogs({"--logs", "x", "--seeds", "3"}, watching, output), kExitBadArguments);
+        EXPECT_FALSE(read);
+        EXPECT_TRUE(output.out.empty());
+        EXPECT_TRUE(Contains(output.err, "--seeds cannot be used with --logs"));
     }
 
 }  // namespace BECore::Mahjong::Arena

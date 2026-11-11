@@ -1,6 +1,6 @@
 # Arena/ — measuring the computer players
 
-Namespace `BECore::Mahjong::Arena`, plain C++, no engine services. The program is `BagiMahjongArena` (`tools/arena/main.cpp` only forwards `argv`); usage and examples: `docs/bot-arena.md`.
+Namespace `BECore::Mahjong::Arena`, plain C++, no engine services. The program is `BagiMahjongArena` (`tools/arena/main.cpp` forwards `argv` and supplies the reader of log files); usage and examples: `docs/bot-arena.md`.
 
 | File | What |
 |------|------|
@@ -10,6 +10,8 @@ Namespace `BECore::Mahjong::Arena`, plain C++, no engine services. The program i
 | `ArenaWorlds` | `WorldThreads(n)`: a persistent pool (`n - 1` threads plus the caller) behind `ForEach(count, body)` / `AsLoop()`, the `WorldLoop` of `SearchRun`; one call at a time, the body must not throw; with `n` 1 a plain loop, no thread |
 | `ArenaStats` | `MeanCi` (95 %, `kIntervalZ` 1.96), per-seed series, `PairedDifference` on the same seeds, `IsSignificant` (the interval excludes 0) |
 | `ArenaReport` | fixed-width text, fixed precision, no locale: the same result is the same bytes on every platform |
-| `ArenaCli` | `ParseArenaArgs` (`--focus`, `--others`, `--first`, `--seeds`, `--jobs` (0 = hardware concurrency), `--time`, `--help`), exit codes 0 / 1 refused action / 2 bad arguments |
+| `ArenaLogs` | the **log mode** (`--logs PATH`, tester match logs, `docs/tester-match-logs.md`): `LogSource` is the seam for the files (a function giving `(name, text)` of a folder or a file; `tools/arena/main.cpp` supplies `std::filesystem`, a test supplies strings), `ReadLogs` sorts by name and checks each, `CheckMatchLog(text)` = parse + `ReplayMatchLog` on a fresh `Match`: `ok` (a log that stops without `End` is ok, `complete` false) or a reason (`unreadable: line N: ...` / `does not replay: event N (Problem)`, so that a rules change that stops old logs replaying is told), `SummariseLogs` counts the corpus |
+| `ArenaLogsReport` | the text of the log mode: `FormatCheckLines` (**`--check`**: `ok<TAB>name` / `bad<TAB>name<TAB>reason`, nothing else, name order; `tools/collect_logs.py` relies on it byte for byte) and `FormatCorpusSummary` (fixed width, no locale) |
+| `ArenaCli` | `ParseArenaArgs` (`--focus`, `--others`, `--first`, `--seeds`, `--jobs` (0 = hardware concurrency), `--time`, `--logs`, `--check`, `--help`; with `--logs` the options that play seeds are refused), exit codes 0 / 1 refused action or a path that cannot be read / 2 bad arguments; `RunArenaCli(args, source, output)` is what the program calls |
 
 A change of a player is judged by its paired row. The reference numbers (Normal against random seats, the seeds that reproduce `ComputerStrengthTest`): `docs/bot-arena.md`; the search player's measurements and verdict: `docs/bot-search.md`.
