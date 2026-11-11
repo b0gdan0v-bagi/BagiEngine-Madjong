@@ -1,5 +1,6 @@
 #include "MahjongTableComponent.h"
 
+#include <BECore/Config/ConfigManager.h>
 #include <BECore/GameManager/CoreManager.h>
 #include <BECore/Renderer/IRenderer.h>
 #include <BECore/Scene/Scene.h>
@@ -16,6 +17,7 @@
 #include <Mahjong/Table/CenterPanel.h>
 #include <Mahjong/Table/SeatName.h>
 #include <Mahjong/Table/SeatPlates.h>
+#include <Mahjong/Table/TableLayoutSpecXml.h>
 #include <Mahjong/Table/TableLook.h>
 #include <Mahjong/Table/TapSelect.h>
 #include <Mahjong/Table/TileAtlas.h>
@@ -333,10 +335,73 @@ namespace BECore::Mahjong {
         if (!_atlas) {
             LOG_WARNING(Format("MahjongTableComponent: the tile atlas '{}' did not load, the tiles are drawn as plain rectangles", kAtlasPath));
         }
+        LoadTableLayoutSpec();
         Subscribe<ApplicationEvents::ApplicationCleanUpEvent, &MahjongTableComponent::OnApplicationCleanUp>(this);
         SubscribeInScene<SDLEvents::MouseButtonDownEvent, &MahjongTableComponent::OnMouseDown>(this);
         SubscribeInScene<InputEvents::ActionEvent, &MahjongTableComponent::OnAction>(this);
         SubscribeInScene<SceneEvents::SceneUpdateEvent, &MahjongTableComponent::OnUpdate>(this);
+    }
+
+    bool MahjongTableComponent::OfferTableLayoutConfig() {
+        ConfigManager& configs = CoreManager::GetConfigManager();
+        const PoolString name = "TableLayout"_intern;
+        if (!configs.HasConfig(name)) {
+            return false;
+        }
+        const TableLayoutOfferResult offer = OfferTableLayoutSpec(configs.GetConfig(name).GetPugiNode());
+        if (offer.outcome != TableLayoutOffer::Rejected) {
+            _layoutRefused.clear();
+            if (offer.outcome == TableLayoutOffer::Applied) {
+                LOG_INFO("MahjongTableComponent: the table layout of 'TableLayout' is in use");
+            }
+            return true;
+        }
+        eastl::string text;
+        for (const eastl::string& error : offer.errors) {
+            text += error;
+            text += '\n';
+        }
+        if (text != _layoutRefused) {
+            _layoutRefused = text;
+            for (const eastl::string& error : offer.errors) {
+                LOG_ERROR(Format("MahjongTableComponent: the table layout is refused, the last good one stays: {}", error));
+            }
+        }
+        return true;
+    }
+
+    void MahjongTableComponent::LoadTableLayoutSpec() {
+        _layoutPolled = std::chrono::steady_clock::now();
+        if (!OfferTableLayoutConfig()) {
+            return;
+        }
+        std::error_code error;
+        const std::filesystem::path file = CoreManager::GetConfigManager().GetConfigFilePath("TableLayout"_intern);
+        const std::filesystem::file_time_type stamp = std::filesystem::last_write_time(file, error);
+        _layoutStamp = error ? std::nullopt : std::optional(stamp);
+    }
+
+    void MahjongTableComponent::PollTableLayoutSpec() {
+        const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+        if (std::chrono::duration<float>(now - _layoutPolled).count() < kTableLayoutPollSeconds) {
+            return;
+        }
+        _layoutPolled = now;
+        ConfigManager& configs = CoreManager::GetConfigManager();
+        const PoolString name = "TableLayout"_intern;
+        if (!configs.HasConfig(name)) {
+            return;
+        }
+        // A file that cannot be asked (a virtual file, as in the browser; deleted since) is silent: the cached document is all there is
+        std::error_code error;
+        const std::filesystem::file_time_type stamp = std::filesystem::last_write_time(configs.GetConfigFilePath(name), error);
+        if (!error && (!_layoutStamp || *_layoutStamp != stamp)) {
+            // The stamp is kept only when the reload worked, so a failed one is tried again at the next look
+            if (configs.ReloadConfig(name)) {
+                _layoutStamp = stamp;
+            }
+        }
+        OfferTableLayoutConfig();
     }
 
     MahjongGame* MahjongTableComponent::PersonToAct() const {
@@ -802,6 +867,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongTableComponent::OnDraw() {
+        PollTableLayoutSpec();
         IRenderer& renderer = *CoreManager::GetRenderer();
         // The active view: the design of one of the four shapes (`Scene::Draw` picked it before this draw)
         const ViewSize view = ActiveViewSize(GetScene());
