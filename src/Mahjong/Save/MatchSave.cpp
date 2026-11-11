@@ -111,14 +111,15 @@ namespace BECore::Mahjong {
         return events;
     }
 
-    MahjongPrefsSave MakePrefs(eastl::string_view language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, ComputerLevel level, AnimationSpeed speed) {
-        return MakePrefs(language, hintsOn, seats, handsPerMatch, UniformLevels(level), speed);
+    MahjongPrefsSave MakePrefs(eastl::string_view language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, ComputerLevel level, AnimationSpeed speed, bool coach) {
+        return MakePrefs(language, hintsOn, seats, handsPerMatch, UniformLevels(level), speed, coach);
     }
 
-    MahjongPrefsSave MakePrefs(eastl::string_view language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, const SeatLevels& levels, AnimationSpeed speed) {
+    MahjongPrefsSave MakePrefs(eastl::string_view language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, const SeatLevels& levels, AnimationSpeed speed, bool coach) {
         MahjongPrefsSave prefs;
         prefs.language.assign(language.data(), language.size());
-        prefs.hintsOn = hintsOn;
+        prefs.hintsOn = hintsOn || coach;
+        prefs.coach = coach;
         prefs.seats = SeatsToLetters(seats);
         prefs.hands = handsPerMatch;
         const std::string_view text = LevelText(FirstComputerLevel(seats, levels));
@@ -147,7 +148,7 @@ namespace BECore::Mahjong {
             return std::unexpected(eastl::string("the language is empty"));
         }
         values.language = prefs.language;
-        values.hintsOn = prefs.hintsOn;
+        values.hintsMode = prefs.coach ? HintsMode::Coach : (prefs.hintsOn ? HintsMode::Hints : HintsMode::Off);
         const std::optional<SeatSetup> seats = ReadSeats(prefs.seats);
         if (!seats) {
             return std::unexpected(Format("the seats '{}' are not four letters P or C", prefs.seats));

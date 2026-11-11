@@ -744,7 +744,7 @@ namespace BECore::Mahjong::Tests {
                     const auto read = ReadPrefs(prefs);
                     ASSERT_TRUE(read.has_value()) << (read ? "" : read.error().c_str());
                     EXPECT_EQ(read->language, "ru");
-                    EXPECT_EQ(read->hintsOn, hands == kFullMatchHands);
+                    EXPECT_EQ(read->hintsMode != HintsMode::Off, hands == kFullMatchHands);
                     EXPECT_EQ(read->seats, seats);
                     EXPECT_EQ(read->handsPerMatch, hands);
                     EXPECT_EQ(read->levels, UniformLevels(level));
@@ -789,6 +789,26 @@ namespace BECore::Mahjong::Tests {
         refused("hands 12", [](MahjongPrefsSave& prefs) { prefs.hands = 12; }, "hands");
         refused("hands 0", [](MahjongPrefsSave& prefs) { prefs.hands = 0; }, "hands");
         refused("language empty", [](MahjongPrefsSave& prefs) { prefs.language.clear(); }, "language");
+    }
+
+    TEST(MahjongSaveTest, ThePrefsCarryTheCoachAndAnOldFileReadsItFalse) {
+        const MahjongPrefsSave coach = MakePrefs("en", false, kDefaultSeatSetup, kFullMatchHands, kDefaultLevel, kDefaultAnimationSpeed, true);
+        EXPECT_TRUE(coach.coach);
+        EXPECT_TRUE(coach.hintsOn) << "the coach implies the hints";
+        ASSERT_TRUE(ReadPrefs(coach).has_value());
+        EXPECT_EQ(ReadPrefs(coach)->hintsMode, HintsMode::Coach);
+        EXPECT_FALSE(coach == MakePrefs("en", true, kDefaultSeatSetup, kFullMatchHands, kDefaultLevel));
+
+        const MahjongPrefsSave older;  // a copy written before the mode has no `coach`
+        EXPECT_FALSE(older.coach);
+        EXPECT_EQ(ReadPrefs(older)->hintsMode, HintsMode::Hints);
+        MahjongPrefsSave off;
+        off.hintsOn = false;
+        EXPECT_EQ(ReadPrefs(off)->hintsMode, HintsMode::Off);
+        MahjongPrefsSave coachOnly;
+        coachOnly.hintsOn = false;
+        coachOnly.coach = true;
+        EXPECT_EQ(ReadPrefs(coachOnly)->hintsMode, HintsMode::Coach) << "a hand-made file with the coach and no hints reads as the coach";
     }
 
     TEST(MahjongSaveTest, ThePrefsKeepALevelPerSeat) {

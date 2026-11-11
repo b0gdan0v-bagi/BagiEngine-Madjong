@@ -10,6 +10,7 @@
 #include <Mahjong/Save/MatchSave.h>
 #include <Mahjong/Save/MatchSaveStore.h>
 #include <Mahjong/Table/AnimationSpeed.h>
+#include <Mahjong/Table/Coach.h>
 
 namespace BECore::Mahjong {
 
@@ -31,8 +32,8 @@ namespace BECore::Mahjong {
      * across `Reset()`. `AsControllable()` hands out the control adapter, which drives the match through the session. The seat choice of
      * a new game is the panel `Setup` of the scene (`IsSetupOpen`, with the page `Options` over it, `IsOptionsOpen`), the pages of the
      * rules are `IsRulesOpen`. The language of the words (`GetLanguage`, `kDefaultLanguage`) is kept for the session and applied to
-     * `CoreManager::GetUIStrings()` at every start. `HintsOn()` is the switch of the hints (default on, kept for the session, changed
-     * on the page `Options`). Every match begun through the session is written down by the `MatchLogWriter` the game owns
+     * `CoreManager::GetUIStrings()` at every start. `GetHintsMode()` is the switch of the hints (`Off | Hints | Coach`, default Hints, kept for the
+     * session, changed on the page `Options`). Every match begun through the session is written down by the `MatchLogWriter` the game owns
      * (`GetMatchLog()`); a match started through the non-const `GetMatch()` is not.
      *
      * **Saving** (`Save/MatchSave.h`, `Save/MatchSaveStore.h`): the session's sink is a `MatchRecorder` that keeps the events of the
@@ -45,7 +46,7 @@ namespace BECore::Mahjong {
         BE_CLASS(MahjongGame)
     public:
         MahjongGame();
-        ~MahjongGame() override = default;
+        ~MahjongGame() override;
 
         PoolString GetName() const override;
         PoolString GetSceneName() const override;
@@ -193,14 +194,31 @@ namespace BECore::Mahjong {
         /// Picks the language and applies it to the string table. False, and nothing changes, for a language the table does not have.
         bool SetLanguage(PoolString language);
 
-        /// Whether the table shows hints (`Table/Hints.h`: the tiles the hand waits for, the discards that declare, the advice). On by
-        /// default, kept across `Reset()`, `StartMatch` and `New game`, takes effect at once. It is no rule, so it is not in the settings,
-        /// and the control API does not know it.
-        bool HintsOn() const {
-            return _hintsOn;
+        /// What the hints of the table do (`Table/Coach.h`): nothing, the hints (`Table/Hints.h`: the tiles the hand waits for, the discards
+        /// that declare, the advice), or the hints and the coach's notes. Hints by default, kept across `Reset()`, `StartMatch` and `New
+        /// game`, takes effect at once. It is no rule, so it is not in the settings, and the control API does not know it. A change drops
+        /// the note and the tally of the coach (`GetCoach()` is enabled exactly while the mode is Coach).
+        HintsMode GetHintsMode() const {
+            return _hintsMode;
         }
+        void SetHintsMode(HintsMode mode);
+        /// The hints are on: Hints and Coach (so every hint rule is the same in both).
+        bool HintsOn() const {
+            return _hintsMode != HintsMode::Off;
+        }
+        /// Hints or Off, as `SetHintsMode`.
         void SetHintsOn(bool on) {
-            _hintsOn = on;
+            SetHintsMode(on ? HintsMode::Hints : HintsMode::Off);
+        }
+        bool CoachOn() const {
+            return _hintsMode == HintsMode::Coach;
+        }
+        /// The note and the tally of the coach: fed by the session while the mode is Coach and one person sits at the table.
+        const CoachLedger& GetCoach() const {
+            return _coach;
+        }
+        CoachLedger& GetCoach() {
+            return _coach;
         }
 
         /// The speed of the table (`Table/AnimationSpeed.h`): the pause of the computers, the flights and the marks of a claim, at once.
@@ -235,7 +253,7 @@ namespace BECore::Mahjong {
         bool _setupOpen = false;
         bool _rulesOpen = false;
         bool _optionsOpen = false;
-        bool _hintsOn = true;
+        HintsMode _hintsMode = kDefaultHintsMode;
         AnimationSpeed _animationSpeed = kDefaultAnimationSpeed;
         PoolString _language = PoolString::Intern(kDefaultLanguage);
         MatchLogWriter _log;      // before _session: the session reports to it, so it goes last
@@ -246,6 +264,7 @@ namespace BECore::Mahjong {
         MahjongPrefsSave _savedPrefs;  // what the prefs slot holds (the defaults while there is none)
         bool _canContinue = false;
         TableSession _session{_match};  // after _match: it keeps a reference
+        CoachLedger _coach;             // after _session, which holds a pointer to it (the destructor lets it go)
         MahjongGameControl _control{*this};
     };
 

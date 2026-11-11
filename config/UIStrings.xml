@@ -256,7 +256,6 @@
         <string key="setup.language" text="Language"/>
         <string key="setup.hands" text="Hands"/>
         <string key="setup.hints" text="Hints"/>
-        <string key="setup.on" text="On"/>
         <string key="setup.off" text="Off"/>
         <string key="setup.seat1" text="Seat 1"/>
         <string key="setup.seat2" text="Seat 2"/>
@@ -269,6 +268,8 @@
         <string key="setup.options" text="Options"/>
         <string key="options.title" text="Options"/>
         <string key="options.back" text="Back"/>
+        <string key="options.hintsHints" text="Hints"/>
+        <string key="options.hintsCoach" text="Coach"/>
         <string key="options.speed" text="Speed"/>
         <string key="options.speedSlow" text="Slow"/>
         <string key="options.speedNormal" text="Normal"/>
@@ -535,7 +536,6 @@
         <string key="setup.language" text="Язык"/>
         <string key="setup.hands" text="Раздачи"/>
         <string key="setup.hints" text="Помощь"/>
-        <string key="setup.on" text="Вкл"/>
         <string key="setup.off" text="Выкл"/>
         <string key="setup.seat1" text="Место 1"/>
         <string key="setup.seat2" text="Место 2"/>
@@ -548,6 +548,8 @@
         <string key="setup.options" text="Настройки"/>
         <string key="options.title" text="Настройки"/>
         <string key="options.back" text="Назад"/>
+        <string key="options.hintsHints" text="Советы"/>
+        <string key="options.hintsCoach" text="Тренер"/>
         <string key="options.speed" text="Скорость"/>
         <string key="options.speedSlow" text="Медленно"/>
         <string key="options.speedNormal" text="Обычно"/>

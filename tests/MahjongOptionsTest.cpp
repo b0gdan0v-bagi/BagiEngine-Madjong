@@ -12,30 +12,31 @@
 /**
  * The page `Options` of the shipped scene (`config/nodes/MahjongOptions.xml`): its shape on the whole size matrix in every language, the
  * words, the touch size, that nothing behind it takes input, the effect of each row on the game, and that `Back` and `CloseSetup`
- * close it with `Setup` and its pending choice left as they were. The rows of segments are one list (an advisor or a coach row is one
- * entry more); the level is the dropdown of the ten levels, whose open list is checked on the matrix too.
+ * close it with `Setup` and its pending choice left as they were. The rows of segments are one list (the hints row has three segments); the level is the dropdown of the ten levels, whose open list is
+ * checked on the matrix too.
  */
 namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        /// A row of segments of the page: the names in the file, the action and variable it carries and a segment (not the chosen one)
-        /// with the value that segment sets.
+        /// A row of segments of the page: the names in the file, the action and variable it carries, its segments with the value each one
+        /// sets, and the segment a fresh game starts on.
         struct PageRow {
+            static constexpr size_t kMaxSegments = 3;
             const char* row;
             const char* caption;
             const char* group;
             const char* variable;
             const char* action;
-            const char* firstSegment;
-            const char* firstValue;
-            const char* secondSegment;
-            const char* secondValue;
+            size_t count;
+            const char* segments[kMaxSegments];
+            const char* values[kMaxSegments];
+            size_t defaultSegment;
         };
 
         constexpr PageRow kRows[] = {
-            {"LanguageRow", "LanguageCaption", "Language", "language", "MahjongSetLanguage", "LanguageEn", "en", "LanguageRu", "ru"},
-            {"HintsRow", "HintsCaption", "HintsChoice", "hintsChoice", "MahjongSetHints", "HintsOn", "on", "HintsOff", "off"},
+            {"LanguageRow", "LanguageCaption", "Language", "language", "MahjongSetLanguage", 2, {"LanguageEn", "LanguageRu"}, {"en", "ru"}, 0},
+            {"HintsRow", "HintsCaption", "HintsChoice", "hintsChoice", "MahjongSetHints", 3, {"HintsOff", "HintsHints", "HintsCoach"}, {"off", "hints", "coach"}, 1},
         };
         constexpr size_t kRowCount = sizeof(kRows) / sizeof(kRows[0]);
 
@@ -53,8 +54,7 @@ namespace BECore::Mahjong::Tests {
         std::vector<const char*> Controls() {
             std::vector<const char*> names;
             for (const PageRow& row : kRows) {
-                names.push_back(row.firstSegment);
-                names.push_back(row.secondSegment);
+                names.insert(names.end(), row.segments, row.segments + row.count);
             }
             for (const char* segment : kSpeedSegments) {
                 names.push_back(segment);
@@ -158,17 +158,19 @@ namespace BECore::Mahjong::Tests {
         EXPECT_GE(page->GetLayout().params.minScale, 0.6f) << "a floor keeps a 56 unit control above 32 px";
         EXPECT_EQ(page->GetLayout().params.maxScale, UICanvasScaleParams{}.maxScale);
         for (const PageRow& row : kRows) {
-            for (const char* name : {row.row, row.caption, row.group, row.firstSegment, row.secondSegment}) {
+            for (const char* name : {row.row, row.caption, row.group}) {
                 EXPECT_NE(Element("Options", name), nullptr) << name;
             }
             const auto* group = Element("Options", row.group) != nullptr ? Element("Options", row.group)->Cast<UISegmented>() : nullptr;
             ASSERT_NE(group, nullptr) << row.group;
             EXPECT_EQ(group->bind, PoolString::Intern(row.variable)) << row.group;
-            for (const auto* segment : {row.firstSegment, row.secondSegment}) {
-                const UIElement* element = Element("Options", segment);
-                const auto* button = element != nullptr ? element->Cast<UIButton>() : nullptr;
-                ASSERT_NE(button, nullptr) << segment;
-                EXPECT_EQ(button->action, PoolString::Intern(row.action)) << segment;
+            ASSERT_EQ(group->children.size(), row.count) << row.group;
+            for (size_t index = 0; index < row.count; ++index) {
+                const auto* button = group->children[index]->Cast<UIButton>();
+                ASSERT_NE(button, nullptr) << row.segments[index];
+                EXPECT_EQ(button->name.ToStringView(), row.segments[index]);
+                EXPECT_EQ(button->action, PoolString::Intern(row.action)) << row.segments[index];
+                EXPECT_EQ(button->value.ToStringView(), row.values[index]) << row.segments[index];
             }
         }
         for (const char* name : {kSpeedRow, kSpeedCaption}) {
@@ -219,6 +221,9 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(Text("Back"), Tr(strings, "options.back").c_str());
             EXPECT_EQ(Text("LanguageCaption"), Tr(strings, "setup.language").c_str());
             EXPECT_EQ(Text("HintsCaption"), Tr(strings, "setup.hints").c_str());
+            EXPECT_EQ(Text("HintsOff"), Tr(strings, "setup.off").c_str());
+            EXPECT_EQ(Text("HintsHints"), Tr(strings, "options.hintsHints").c_str());
+            EXPECT_EQ(Text("HintsCoach"), Tr(strings, "options.hintsCoach").c_str());
             EXPECT_EQ(Text(kSpeedCaption), Tr(strings, "options.speed").c_str());
             EXPECT_EQ(Text("SpeedSlow"), Tr(strings, "options.speedSlow").c_str());
             EXPECT_EQ(Text("SpeedNormal"), Tr(strings, "options.speedNormal").c_str());
@@ -320,7 +325,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(group->rect.x + group->rect.w, row->rect.x + row->rect.w - kRowPadding);
             EXPECT_EQ(group->rect.y, row->rect.y + kRowPadding);
             EXPECT_EQ(group->rect.y + group->rect.h, row->rect.y + row->rect.h - kRowPadding);
-            for (const char* name : {entry.firstSegment, entry.secondSegment}) {
+            for (const char* name : std::span<const char* const>(entry.segments, entry.count)) {
                 const auto* segment = Element("Options", name)->Cast<UIButton>();
                 ASSERT_NE(segment, nullptr) << name;
                 EXPECT_TRUE(SameColor(segment->selectedColor, PaletteColor("primary"))) << name;
@@ -375,7 +380,8 @@ namespace BECore::Mahjong::Tests {
         // A canvas that is only narrow keeps the title
         LayOutInWindow(*page, WindowOf(480.0f, 853.0f), CanvasScaleMode::ConstantPixelSize, 1.5f);
         EXPECT_FALSE(Element("Options", "Title")->rect.IsEmpty());
-        EXPECT_LT(Element("Options", "HintsCaption")->rect.w, 112.0f);
+        EXPECT_TRUE(Element("Options", "HintsCaption")->rect.IsEmpty()) << "the three words of the hints need the room of the caption";
+        EXPECT_LT(Element("Options", "LanguageCaption")->rect.w, 112.0f);
     }
 
     // ----- nothing behind the page takes input -----
@@ -427,12 +433,20 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(_game->HintsOn());
         ASSERT_EQ(_game->GetLanguage(), "en"_intern);
 
-        ASSERT_TRUE(ClickElement("Options", "HintsOff"));
-        Draw();
+        ASSERT_EQ(_game->GetHintsMode(), HintsMode::Hints);
+        EXPECT_TRUE(Selected("HintsHints"));
+        for (const HintsMode mode : {HintsMode::Off, HintsMode::Coach, HintsMode::Hints, HintsMode::Off}) {
+            SCOPED_TRACE(HintsModeText(mode).data());
+            const char* segment = mode == HintsMode::Off ? "HintsOff" : (mode == HintsMode::Hints ? "HintsHints" : "HintsCoach");
+            ASSERT_TRUE(ClickElement("Options", segment));
+            Draw();
+            EXPECT_EQ(_game->GetHintsMode(), mode);
+            EXPECT_EQ(Var("hintsChoice"), HintsModeText(mode).data());
+            for (const char* other : {"HintsOff", "HintsHints", "HintsCoach"}) {
+                EXPECT_EQ(Selected(other), other == segment) << other;
+            }
+        }
         EXPECT_FALSE(_game->HintsOn());
-        EXPECT_EQ(Var("hintsChoice"), "off");
-        EXPECT_TRUE(Selected("HintsOff"));
-        EXPECT_FALSE(Selected("HintsOn"));
 
         ASSERT_EQ(_game->GetAnimationSpeed(), AnimationSpeed::Normal);
         EXPECT_TRUE(Selected("SpeedNormal"));
@@ -457,13 +471,28 @@ namespace BECore::Mahjong::Tests {
 
         // And back: every row, both ways, goes through the one list
         for (const PageRow& row : kRows) {
-            ASSERT_TRUE(ClickElement("Options", row.firstSegment)) << row.firstSegment;
+            const char* segment = row.segments[row.defaultSegment];
+            ASSERT_TRUE(ClickElement("Options", segment)) << segment;
             Draw();
-            EXPECT_TRUE(Selected(row.firstSegment)) << row.firstSegment;
-            EXPECT_EQ(Var(row.variable), row.firstValue) << row.variable;
+            EXPECT_TRUE(Selected(segment)) << segment;
+            EXPECT_EQ(Var(row.variable), row.values[row.defaultSegment]) << row.variable;
         }
         EXPECT_TRUE(_game->HintsOn());
         EXPECT_EQ(_game->GetLanguage(), "en"_intern);
+    }
+
+    TEST_F(MahjongOptionsTest, TheHintsRowTakesOnlyItsThreeIdsAndOnlyWhileThePageIsOpen) {
+        ASSERT_NO_FATAL_FAILURE(OpenPage());
+        for (const char* value : {"", "on", "coach ", "Coach", "HINTS", "1", "warp"}) {
+            EmitAction("MahjongSetHints", value);
+            EXPECT_EQ(_game->GetHintsMode(), HintsMode::Hints) << "'" << value << "'";
+        }
+        EmitAction("MahjongSetHints", "coach");
+        EXPECT_EQ(_game->GetHintsMode(), HintsMode::Coach);
+        EXPECT_TRUE(_game->HintsOn()) << "the coach includes the hints";
+        ASSERT_TRUE(ClickElement("Options", "Back"));
+        EmitAction("MahjongSetHints", "off");
+        EXPECT_EQ(_game->GetHintsMode(), HintsMode::Coach) << "the page is closed: the event is out of date";
     }
 
     TEST_F(MahjongOptionsTest, TheSpeedTakesEffectAtOnceIsKeptByANewMatchAndAnUnknownSpeedIsIgnored) {
@@ -496,7 +525,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Var("speedChoice"), "slow");
         EXPECT_TRUE(Selected("SpeedSlow"));
         EXPECT_TRUE(Selected("LanguageEn"));
-        EXPECT_TRUE(Selected("HintsOn")) << "the hints component publishes while Setup is open";
+        EXPECT_TRUE(Selected("HintsHints")) << "the hints component publishes while Setup is open";
     }
 
     // ----- Back and the end of Setup -----

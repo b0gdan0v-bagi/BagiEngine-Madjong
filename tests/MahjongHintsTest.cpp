@@ -308,8 +308,8 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongHintsTest, ThePageOpensOnTheFlagOfTheGameOn) {
         _game->Start();
         ASSERT_NO_FATAL_FAILURE(OpenPage());
-        EXPECT_EQ(HintsChoiceVar(), "on");
-        EXPECT_TRUE(Selected("HintsOn"));
+        EXPECT_EQ(HintsChoiceVar(), "hints");
+        EXPECT_TRUE(Selected("HintsHints"));
         EXPECT_FALSE(Selected("HintsOff"));
     }
 
@@ -318,8 +318,30 @@ namespace BECore::Mahjong::Tests {
         _game->Start();
         ASSERT_NO_FATAL_FAILURE(OpenPage());
         EXPECT_EQ(HintsChoiceVar(), "off");
-        EXPECT_FALSE(Selected("HintsOn"));
+        EXPECT_FALSE(Selected("HintsHints"));
         EXPECT_TRUE(Selected("HintsOff"));
+    }
+
+    TEST_F(MahjongHintsTest, ThePageOpensOnTheCoachAndTheThreeModesApplyTheHintsExceptOff) {
+        _game->SetHintsMode(HintsMode::Coach);
+        EXPECT_TRUE(_game->HintsOn());
+        EXPECT_TRUE(_game->CoachOn());
+        _game->Start();
+        ASSERT_NO_FATAL_FAILURE(OpenPage());
+        EXPECT_EQ(HintsChoiceVar(), "coach");
+        EXPECT_TRUE(Selected("HintsCoach"));
+        EXPECT_FALSE(Selected("HintsHints"));
+        EXPECT_FALSE(Selected("HintsOff"));
+        for (const HintsMode mode : {HintsMode::Off, HintsMode::Hints, HintsMode::Coach}) {
+            _game->SetHintsMode(mode);
+            EXPECT_EQ(HintsApply(_game->HintsOn(), false, _game->GetSession()), mode != HintsMode::Off) << HintsModeText(mode).data();
+            EXPECT_EQ(_game->GetCoach().Enabled(), mode == HintsMode::Coach);
+            EXPECT_EQ(_game->CoachOn(), mode == HintsMode::Coach);
+        }
+        _game->SetHintsOn(true);
+        EXPECT_EQ(_game->GetHintsMode(), HintsMode::Hints) << "SetHintsOn(true) is Hints";
+        _game->SetHintsOn(false);
+        EXPECT_EQ(_game->GetHintsMode(), HintsMode::Off);
     }
 
     TEST_F(MahjongHintsTest, ThePageHasTheRowWithTheWordsOfBothLanguages) {
@@ -328,7 +350,8 @@ namespace BECore::Mahjong::Tests {
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             Draw();
-            const eastl::string on = Tr(CoreManager::GetUIStrings(), "setup.on");
+            const eastl::string on = Tr(CoreManager::GetUIStrings(), "options.hintsHints");
+            const eastl::string coach = Tr(CoreManager::GetUIStrings(), "options.hintsCoach");
             const eastl::string off = Tr(CoreManager::GetUIStrings(), "setup.off");
             const eastl::string caption = Tr(CoreManager::GetUIStrings(), "setup.hints");
             const auto text = [&](const char* element) {
@@ -337,8 +360,9 @@ namespace BECore::Mahjong::Tests {
             };
             const auto buttonText = [&](const char* element) { return DisplayText(Element("Options", element), "<none>"); };
             EXPECT_EQ(text("HintsCaption"), std::string(caption.data(), caption.size()));
-            EXPECT_EQ(buttonText("HintsOn"), std::string(on.data(), on.size()));
+            EXPECT_EQ(buttonText("HintsHints"), std::string(on.data(), on.size()));
             EXPECT_EQ(buttonText("HintsOff"), std::string(off.data(), off.size()));
+            EXPECT_EQ(buttonText("HintsCoach"), std::string(coach.data(), coach.size()));
         });
     }
 
@@ -353,14 +377,14 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(HintsChoiceVar(), "off");
         Draw();
         EXPECT_TRUE(Selected("HintsOff"));
-        EXPECT_FALSE(Selected("HintsOn"));
+        EXPECT_FALSE(Selected("HintsHints"));
         EXPECT_TRUE(OptionsShown()) << "the page stays open";
 
-        ASSERT_TRUE(ClickElement("Options", "HintsOn"));
+        ASSERT_TRUE(ClickElement("Options", "HintsHints"));
         EXPECT_TRUE(_game->HintsOn());
-        EXPECT_EQ(HintsChoiceVar(), "on");
+        EXPECT_EQ(HintsChoiceVar(), "hints");
         Draw();
-        EXPECT_TRUE(Selected("HintsOn"));
+        EXPECT_TRUE(Selected("HintsHints"));
         EXPECT_FALSE(Selected("HintsOff"));
     }
 
@@ -384,10 +408,10 @@ namespace BECore::Mahjong::Tests {
         _game->Start();
         ASSERT_NO_FATAL_FAILURE(OpenPage());
 
-        for (const char* value : {"", "ON", "Off", "1", "0", "true", "false", "on ", " off", "yes", "no"}) {
+        for (const char* value : {"", "ON", "Off", "on", "Coach", "hints ", "1", "0", "true", "false", "on ", " off", "yes", "no"}) {
             EmitAction("MahjongSetHints", value);
             EXPECT_TRUE(_game->HintsOn()) << "'" << value << "'";
-            EXPECT_EQ(HintsChoiceVar(), "on") << "'" << value << "'";
+            EXPECT_EQ(HintsChoiceVar(), "hints") << "'" << value << "'";
         }
 
         _game->CloseOptions();
@@ -396,20 +420,20 @@ namespace BECore::Mahjong::Tests {
         ASSERT_FALSE(OptionsShown());
         EmitAction("MahjongSetHints", "off");
         EXPECT_TRUE(_game->HintsOn()) << "Setup alone has no hints row";
-        EXPECT_EQ(HintsChoiceVar(), "on");
+        EXPECT_EQ(HintsChoiceVar(), "hints");
 
         _game->CloseSetup();
         Draw();
         ASSERT_FALSE(SetupShown());
         EmitAction("MahjongSetHints", "off");
         EXPECT_TRUE(_game->HintsOn()) << "both panels are closed";
-        EXPECT_EQ(HintsChoiceVar(), "on");
+        EXPECT_EQ(HintsChoiceVar(), "hints");
     }
 
     TEST_F(MahjongHintsTest, TheVariableKeepsTheTruthWhenTheGameChangesTheFlag) {
         _game->Start();
         ASSERT_NO_FATAL_FAILURE(OpenPage());
-        ASSERT_EQ(HintsChoiceVar(), "on");
+        ASSERT_EQ(HintsChoiceVar(), "hints");
 
         _game->SetHintsOn(false);  // not through the page
         Draw();
@@ -510,7 +534,7 @@ namespace BECore::Mahjong::Tests {
             for (const Output& output : kOutputs) {
                 ExpectWordsFit("Options", output.width, output.height, kButtonAir);
             }
-            for (const char* segmentName : {"HintsOn", "HintsOff"}) {
+            for (const char* segmentName : {"HintsOff", "HintsHints", "HintsCoach"}) {
                 const UIElement* segment = Element("Options", segmentName);
                 ASSERT_NE(segment, nullptr) << segmentName;
                 EXPECT_GE(segment->rect.h, kMinControlHeight) << segmentName;

@@ -6,9 +6,7 @@
 #include <Common/TempPath.h>
 #include <Mahjong/Game/ComputerPlayer.h>
 #include <Mahjong/MahjongGame.h>
-#include <fstream>
 #include <gtest/gtest.h>
-#include <sstream>
 
 /**
  * `MahjongGame` saves and loads (`Save/MatchSave.h`, `Save/MatchSaveStore.h`): the match slot is written by `FlushSave()` and only
@@ -479,6 +477,18 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(second->GetLevels()[0], ComputerLevel::Easy);
         EXPECT_EQ(second->GetAnimationSpeed(), AnimationSpeed::Slow);
         EXPECT_FALSE(fs::exists(Slot(kMatchFile)));
+    }
+
+    TEST_F(MahjongSaveGameTest, TheHintsModeIsKeptWhateverItIs) {
+        IntrusivePtr<MahjongGame> game = NewGame();
+        for (const HintsMode mode : {HintsMode::Coach, HintsMode::Off, HintsMode::Hints}) {  // each differs from the one saved before it
+            SCOPED_TRACE(HintsModeText(mode).data());
+            game->SetHintsMode(mode);
+            game->FlushSave();
+            IntrusivePtr<MahjongGame> second = StartedGame();
+            EXPECT_EQ(second->GetHintsMode(), mode);
+            EXPECT_EQ(second->GetCoach().Enabled(), mode == HintsMode::Coach) << "the ledger follows the mode";
+        }
     }
 
     TEST_F(MahjongSaveGameTest, APrefsSlotThatCannotBeUsedLeavesTheDefaults) {

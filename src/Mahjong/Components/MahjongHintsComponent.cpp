@@ -20,9 +20,6 @@ namespace BECore::Mahjong {
 
         constexpr eastl::string_view kSetHintsAction = "MahjongSetHints";
         constexpr eastl::string_view kAdviceAction = "MahjongHintAdvice";
-        // The ids of the two segments of `Hints` on the page `Options` (the values of the buttons `HintsOn` / `HintsOff` in the scene file)
-        constexpr eastl::string_view kOnId = "on";
-        constexpr eastl::string_view kOffId = "off";
         // The names of the canvas on the node `Hints`: the cells of the row (`WaitCell<i>` holds `WaitTile<i>` and `WaitCount<i>`), the
         // variable of each count (`hintCount<i>`), the panel, the button and the label of the advice (its variable is `hintAdvice`)
         constexpr eastl::string_view kWaitCellPrefix = "WaitCell";
@@ -269,7 +266,8 @@ namespace BECore::Mahjong {
     }
 
     void MahjongHintsComponent::PublishChoice(const MahjongGame& game) {
-        CoreManager::GetUIVars().Set("hintsChoice"_intern, game.HintsOn() ? kOnId : kOffId);
+        const std::string_view id = HintsModeText(game.GetHintsMode());
+        CoreManager::GetUIVars().Set("hintsChoice"_intern, eastl::string_view(id.data(), id.size()));
     }
 
     void MahjongHintsComponent::OnAction(const InputEvents::ActionEvent& event) {
@@ -303,10 +301,10 @@ namespace BECore::Mahjong {
         if (action != kSetHintsAction || !game->IsOptionsOpen()) {
             return;  // not ours, or a click that arrives while the page is not open
         }
-        // Only the two values the panel offers; client text is never read as anything else
+        // Only the three values the panel offers; client text is never read as anything else
         const eastl::string_view value = event.value.ToStringView();
-        if (value == kOnId || value == kOffId) {
-            game->SetHintsOn(value == kOnId);
+        if (const std::optional<HintsMode> mode = TryParseHintsMode(std::string_view(value.data(), value.size()))) {
+            game->SetHintsMode(*mode);
         }
         PublishChoice(*game);
     }
