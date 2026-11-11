@@ -8,8 +8,7 @@
 
 /**
  * `config/TableLayout.xml` and its reader (`Table/TableLayoutSpecXml.h`): the shipped file parses with no error, a small text gives the spec
- * it says, and every kind of mistake in a file is one message that names the place and the attribute. The table that the spec lays out is the
- * table that the constants of the code laid out before (`MakeLegacyTableLayout`), for every shape, profile and viewer; `CheckTableLayoutSpec`
+ * it says, and every kind of mistake in a file is one message that names the place and the attribute; `CheckTableLayoutSpec`
  * refuses a spec whose table is not sound. Also the global environment that reads
  * the shipped spec once and makes it the active one for the whole test binary: the game's `config/` is not mounted here.
  */
@@ -145,7 +144,6 @@ namespace BECore::Mahjong::Tests {
         }
 
         constexpr float kSameRectTolerance = 0.01f;
-        constexpr float kNaN = std::numeric_limits<float>::quiet_NaN();
 
         Meld MakeMeld(MeldKind kind, Seat from, bool fromDiscard, const char* first, const char* claimed) {
             Meld meld;
@@ -161,14 +159,6 @@ namespace BECore::Mahjong::Tests {
             TableInput input;
             input.viewer = viewer;
             input.profile = profile;
-            return input;
-        }
-
-        /// The table of an early hand: nothing laid yet.
-        TableInput QuietTable(Seat viewer, const TableProfile& profile) {
-            TableInput input = InputWith(viewer, profile);
-            input.concealedCount = {14, 13, 13, 13};
-            input.wallRemaining = 83;
             return input;
         }
 
@@ -207,74 +197,31 @@ namespace BECore::Mahjong::Tests {
             return input;
         }
 
-        std::vector<TableInput> InputsFor(Seat viewer, const TableProfile& profile) {
-            std::vector<TableInput> inputs = {QuietTable(viewer, profile), MixedTable(viewer, profile), WorstTable(viewer, profile, false), WorstTable(viewer, profile, true)};
-            for (const int wall : {0, 1, 2, 25, 26, 71, 72, 73, 100, 143, 144}) {
-                inputs.push_back(QuietTable(viewer, profile));
-                inputs.back().wallRemaining = wall;
-            }
-            return inputs;
-        }
-
         bool SameRect(const Rect& a, const Rect& b) {
             return std::fabs(a.x - b.x) <= kSameRectTolerance && std::fabs(a.y - b.y) <= kSameRectTolerance && std::fabs(a.w - b.w) <= kSameRectTolerance && std::fabs(a.h - b.h) <= kSameRectTolerance;
         }
 
-        struct ViewSize {
-            float width;
-            float height;
-        };
-
-        /// The design of each shape and two other views of it.
-        const ViewSize kViews[] = {{kViewWidth, kViewHeight},
-                                   {1920.0f, 1080.0f},
-                                   {640.0f, 360.0f},
-                                   {kWideViewWidth, kViewHeight},
-                                   {2560.0f, 1080.0f},
-                                   {2000.0f, 1000.0f},
-                                   {kNarrowViewWidth, kNarrowViewHeight},
-                                   {800.0f, 600.0f},
-                                   {1024.0f, 768.0f},
-                                   {kPortraitViewWidth, kPortraitViewHeight},
-                                   {390.0f, 844.0f},
-                                   {768.0f, 1024.0f}};
-
-        /// The desktop profile and the phone one at the least, a width between, the greatest, and out of range both ways and not a number
-        /// (clamped into the range).
-        std::vector<TableProfile> Profiles() {
-            std::vector<TableProfile> profiles = {TableProfile{}};
-            for (const float width : {kViewerHandTileW, 52.5f, 60.0f, 66.6667f, kPhoneHandTileMaxW, 30.0f, 100.0f, kNaN}) {
-                profiles.push_back(TableProfile{true, width});
-            }
-            return profiles;
-        }
-
-        std::string Describe(const TableInput& input, float width, float height) {
-            return "viewer " + std::to_string(input.viewer) + " view " + std::to_string(width) + "x" + std::to_string(height) + " profile " + (input.profile.phone ? "phone " : "desktop ") +
-                   std::to_string(input.profile.handTileW) + " wall " + std::to_string(input.wallRemaining) + " discards " + std::to_string(input.discardSeats.size());
-        }
-
-        void ExpectSameLayouts(const TableLayout& data, const TableLayout& legacy, const std::string& where) {
-            ASSERT_EQ(data.slots.size(), legacy.slots.size()) << where;
-            EXPECT_EQ(data.viewer, legacy.viewer) << where;
-            EXPECT_EQ(data.shape, legacy.shape) << where;
-            EXPECT_EQ(data.profile.phone, legacy.profile.phone) << where;
-            EXPECT_EQ(data.profile.handTileW, legacy.profile.handTileW) << where;
-            EXPECT_EQ(data.viewWidth, legacy.viewWidth) << where;
-            EXPECT_EQ(data.viewHeight, legacy.viewHeight) << where;
+        void ExpectSameLayouts(const TableLayout& data, const TableLayout& other, const std::string& where) {
+            ASSERT_EQ(data.slots.size(), other.slots.size()) << where;
+            EXPECT_EQ(data.viewer, other.viewer) << where;
+            EXPECT_EQ(data.shape, other.shape) << where;
+            EXPECT_EQ(data.profile.phone, other.profile.phone) << where;
+            EXPECT_EQ(data.profile.handTileW, other.profile.handTileW) << where;
+            EXPECT_EQ(data.viewWidth, other.viewWidth) << where;
+            EXPECT_EQ(data.viewHeight, other.viewHeight) << where;
             for (size_t index = 0; index < data.slots.size(); ++index) {
                 const TileSlot& a = data.slots[index];
-                const TileSlot& b = legacy.slots[index];
+                const TileSlot& b = other.slots[index];
                 ASSERT_TRUE(SameRect(a.rect, b.rect) && a.role == b.role && a.seat == b.seat && a.index == b.index && a.part == b.part && a.claimEdge == b.claimEdge && a.rotation == b.rotation)
                     << where << ": slot " << index << " role " << static_cast<int>(a.role) << " seat " << a.seat << " index " << a.index << " at " << a.rect.x << "," << a.rect.y << " " << a.rect.w
                     << "x" << a.rect.h << " against " << b.rect.x << "," << b.rect.y << " " << b.rect.w << "x" << b.rect.h;
             }
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                EXPECT_TRUE(SameRect(data.zones.discards[seat], legacy.zones.discards[seat])) << where << ": the discard block of seat " << seat;
-                EXPECT_TRUE(SameRect(data.zones.seatPlates[seat], legacy.zones.seatPlates[seat])) << where << ": the plate of seat " << seat;
+                EXPECT_TRUE(SameRect(data.zones.discards[seat], other.zones.discards[seat])) << where << ": the discard block of seat " << seat;
+                EXPECT_TRUE(SameRect(data.zones.seatPlates[seat], other.zones.seatPlates[seat])) << where << ": the plate of seat " << seat;
             }
-            EXPECT_TRUE(SameRect(data.zones.wall, legacy.zones.wall)) << where << ": the wall ring";
-            EXPECT_TRUE(SameRect(data.zones.centerPanel, legacy.zones.centerPanel)) << where << ": the centre panel";
+            EXPECT_TRUE(SameRect(data.zones.wall, other.zones.wall)) << where << ": the wall ring";
+            EXPECT_TRUE(SameRect(data.zones.centerPanel, other.zones.centerPanel)) << where << ": the centre panel";
         }
 
     }  // namespace
@@ -451,23 +398,6 @@ namespace BECore::Mahjong::Tests {
         ExpectError(Replaced(FileXml(), ShapeXml("Portrait"), ShapeXml("Portrait", phone)), {"shape 'Portrait'", "Phone", "landscape shapes only"});
         ExpectError(Replaced(FileXml(), ShapeXml("Landscape"), ShapeXml("Landscape", "<Phone><Hand x=\"0.25\" y=\"0.5\" w=\"0.125\" h=\"0.0625\"/></Phone>")), {"Phone", "'Melds' is missing"});
         ExpectError(Replaced(FileXml(), ShapeXml("Landscape"), ShapeXml("Landscape", phone + phone)), {"shape 'Landscape'", "'Phone' is given twice"});
-    }
-
-    // No difference between the data design and the old code is allowed to stay: none is known.
-    TEST(TableLayoutSpecTest, TheSpecLaysOutExactlyLikeTheLegacyCode) {
-        for (const ViewSize& view : kViews) {
-            for (const TableProfile& profile : Profiles()) {
-                for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
-                    for (const TableInput& input : InputsFor(viewer, profile)) {
-                        const std::string where = Describe(input, view.width, view.height);
-                        ExpectSameLayouts(MakeTableLayout(input, ShippedTableLayoutSpec(), view.width, view.height), MakeLegacyTableLayout(input, view.width, view.height), where);
-                        if (::testing::Test::HasFatalFailure()) {
-                            return;
-                        }
-                    }
-                }
-            }
-        }
     }
 
     TEST(TableLayoutSpecTest, TheLayoutWithoutASpecReadsTheActiveOne) {

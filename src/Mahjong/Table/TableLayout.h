@@ -102,28 +102,11 @@ namespace BECore::Mahjong {
         return scaleX < scaleY ? scaleX : scaleY;
     }
 
-    /// The viewer's concealed tiles are large; the tiles of the other seats are small. Sizes (width, height) of the upright tiles of each
-    /// zone; a side seat draws them turned, so its slots are height x width.
+    /// Named golden numbers, the few the layout is held to by code outside the file: the viewer's hand tile at the desktop (the zone of
+    /// `config/TableLayout.xml` must solve to it: `CheckTableLayoutSpec`; `TapSelect.h` and `TouchRegime.h` decide the touch rules by it).
+    /// Every other tile is the largest that fits its zone (`TableSolver.h`); no constant of its size is kept.
     inline constexpr float kViewerHandTileW = 48.0f;
     inline constexpr float kViewerHandTileH = 64.0f;
-    inline constexpr float kViewerMeldTileW = 30.0f;
-    inline constexpr float kViewerMeldTileH = 40.0f;
-    inline constexpr float kOpponentHandTileW = 32.0f;
-    inline constexpr float kOpponentHandTileH = 42.0f;
-    /// The hands of the left and right seats are backs seen from the side, drawn turned: smaller than the top seat's, so that the two
-    /// columns of turned tiles leave room for the discard blocks and the score table (the table is full across: `TableLayout.cpp`).
-    inline constexpr float kSideHandTileW = 28.0f;
-    inline constexpr float kSideHandTileH = 37.0f;
-    inline constexpr float kOpponentMeldTileW = 24.0f;
-    inline constexpr float kOpponentMeldTileH = 32.0f;
-    inline constexpr float kViewerBonusTileW = 24.0f;
-    inline constexpr float kViewerBonusTileH = 32.0f;
-    inline constexpr float kOpponentBonusTileW = 16.0f;
-    inline constexpr float kOpponentBonusTileH = 21.0f;
-    inline constexpr float kDiscardTileW = 24.0f;
-    inline constexpr float kDiscardTileH = 32.0f;
-    /// A wall stack (two tiles, seen from above) is a square of this side.
-    inline constexpr float kWallStackSize = 14.0f;
     /// The space between two melds of a seat.
     inline constexpr float kMeldGap = 8.0f;
 
@@ -230,7 +213,8 @@ namespace BECore::Mahjong {
     };
 
     /// A seat plate (the seat's number, wind, dealer mark and score, at the side of the table where the seat sits): all four are of this
-    /// size, in design units. The places are in `TableLayout.cpp`, each with the things it stays clear of.
+    /// size, in design units; `MahjongSeatPlates.xml` repeats it (`TableLayoutTest` holds the size). The places are the `Plate` zones
+    /// of `config/TableLayout.xml`, each with the things it stays clear of.
     inline constexpr float kSeatPlateW = 152.0f;
     inline constexpr float kSeatPlateH = 80.0f;
 
@@ -301,10 +285,6 @@ namespace BECore::Mahjong {
     /// `kPlatePadding` to a discard block or the wall ring, a tile under its zone's `minTileW`, a zone too small for its tiles, the
     /// viewer's hand tile under `kViewerHandTileW`, the widest phone tile other than `kPhoneHandTileMaxW`. Empty when the spec is sound.
     [[nodiscard]] eastl::vector<eastl::string> CheckTableLayoutSpec(const TableLayoutSpec& spec);
-
-    /// The layout as it was before the zones became data, from constants in `TableLayout.cpp`. Kept only to prove that the data design lays
-    /// out the same table (`TableLayoutSpecTest`); removed in WP 8 of the plan `mahjong-table-layout-data`, with the constants.
-    [[nodiscard]] TableLayout MakeLegacyTableLayout(const TableInput& input, float viewWidth = kViewWidth, float viewHeight = kViewHeight);
 
     /// The smallest rectangle that holds every slot of `role` of `seat` (`seat` ignored for the wall); empty when there is none.
     [[nodiscard]] Rect BoundsOf(const TableLayout& layout, SlotRole role, Seat seat);
