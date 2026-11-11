@@ -12,7 +12,7 @@
   Tile_<notation> the component sets, and under it the count of the copies the viewer cannot see, {hintCountN}, 24 high, font 18). The
   caption, the counts and the sentence are AutoFit: at 18 they fill their lines in a window of 1280 x 720 and shrink in the smallest
   windows, where a line of 18 units is taller than the 24 the row has. The strip y 92..148 below it (56 units, left of the top seat's
-  plate) holds the label AdviceText (a scrim plate, x 220..400) with the sentence {hintAdvice} of the advice, right of the place of the
+  plate) holds the label AdviceText (a scrim plate, x 220..392) with the sentence {hintAdvice} of the advice, right of the place of the
   button HintButton (x 96..216), which is in the node HintsButton and not here: nothing on this canvas takes input, so it needs no
   touch size. All start hidden; the component shows the panel and the first N cells exactly while hints apply (MahjongGame::HintsOn(),
   a person at the table, no cover, no Setup, the hand being played) and the hand waits, the button while hints apply and the viewer
@@ -23,11 +23,11 @@
   nearer to, so a window with side insets (65 units each side of a 9:16 view) moves them inwards, where the three no longer fit in a row
   (they may then overlap, no tile is checked in a window with insets).
   In a wide view (1560 x 720, the variant with minAspect:2) the landscape table lies 140 units in from each side, so the waiting row
-  (x 236..572) and AdviceText (x 360..540) move right by that wing and keep the place of the corner of the table they have in landscape.
+  (x 236..572) and AdviceText (x 360..532) move right by that wing and keep the place of the corner of the table they have in landscape.
   In a narrow view (1080 x 768, the variant with orientation:landscape;maxAspect:1.55; config/TableLayout.xml, the narrow table) the corner
-  is x 8..328, y 8..176: the top seat's hand and melds start at x 336, its seat plate at x 308 (y 96..176) and the left seat's melds at y 180.
+  is x 8..328, y 8..176: the top seat's hand and melds start at x 336, its seat plate at x 300 (y 96..176) and the left seat's melds at y 180.
   The waiting row is 320 wide there (caption and cells as before, the 13 cells are 312), x 8, y 8; the strip under it holds HintButton
-  (node HintsButton, x 8..128) and AdviceText (x 136..300, 8 clear of the plate).
+  (node HintsButton, x 8..128) and AdviceText (x 136..292, 8 clear of the plate).
 -->
 <node name="Hints" layer="5">
   <components>
@@ -121,7 +121,7 @@
             </element>
           </children>
         </element>
-        <element type="UILabel" name="AdviceText" anchor="TopLeft" visible="false" x="220" y="92" width="180" height="56" text="{hintAdvice}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" color="0,0,0,200" />
+        <element type="UILabel" name="AdviceText" anchor="TopLeft" visible="false" x="220" y="92" width="172" height="56" text="{hintAdvice}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" color="0,0,0,200" />
       </elements>
       <variants>
         <variant when="orientation:portrait">
@@ -134,7 +134,7 @@
           <overrides>
             <set element="WaitPanel" x="8" y="8" width="320" />
             <set element="WaitCaption" width="320" />
-            <set element="AdviceText" x="136" width="164" />
+            <set element="AdviceText" x="136" width="156" />
           </overrides>
         </variant>
         <variant when="minAspect:2">
