@@ -22,6 +22,9 @@ config/imgui.ini
 config/*.local.xml
 engine.log
 
+# Chrome traces of the profiler (macos-profile, /perf-investigate)
+/trace.json
+
 # macOS
 .DS_Store
 ._*
