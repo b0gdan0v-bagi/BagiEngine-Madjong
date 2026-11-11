@@ -111,8 +111,11 @@ namespace BECore::Mahjong {
         }
 
         eastl::string ClaimAlternativeLine(const UIStrings& strings, const TableView& view, const RatedClaim& option, int before) {
-            const WordArg beforeArg{"before", Num(before)};
-            const WordArg afterArg{"after", Num(option.after.shanten)};
+            // A `WordArg` is a pair of views: the numbers live in these strings for the whole function, not in temporaries
+            const eastl::string beforeText = Num(before);
+            const eastl::string afterText = Num(option.after.shanten);
+            const WordArg beforeArg{"before", beforeText};
+            const WordArg afterArg{"after", afterText};
             if (option.action.claim == ClaimKind::Chow) {
                 const auto tiles = option.action.chowFirst.IsValid() ? ChowTiles(option.action.chowFirst) : eastl::array<Tile, kTilesPerSet>{};
                 return Tr(strings, "hints.why.alt.chow", {{"first", TileName(strings, tiles[0])}, {"third", TileName(strings, tiles[2])}, beforeArg, afterArg});

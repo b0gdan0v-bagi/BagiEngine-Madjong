@@ -527,10 +527,10 @@ namespace BECore::Mahjong::Tests {
                         ++seen.discards;
                         seen.againstDeclared += HasDeclaredOpponent(view) ? 1 : 0;
                         const TurnExplanation& turn = *explained->turn;
-                        const DangerTable dangers = DiscardDangers(view);
-                        EXPECT_EQ(turn.chosen.danger, dangers[turn.chosen.tile.Id()]) << "hand " << index << " step " << step;
+                        // `DangerOf`, not the table: a win leaves `chosen.tile` empty, and an empty tile is no index of the table
+                        EXPECT_EQ(turn.chosen.danger, DangerOf(view, turn.chosen.tile)) << "hand " << index << " step " << step;
                         for (const TurnOption& option : turn.alternatives) {
-                            EXPECT_EQ(option.danger, dangers[option.tile.Id()]) << "hand " << index << " step " << step;
+                            EXPECT_EQ(option.danger, DangerOf(view, option.tile)) << "hand " << index << " step " << step;
                         }
                         const TileCounts counts = CountTiles(view.own.concealed);
                         if (turn.step == TurnStep::Discard) {
