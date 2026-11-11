@@ -45,6 +45,7 @@ namespace BECore::Mahjong::Arena {
             record.east = settlement.east;
             if (hand.Result().has_value()) {
                 record.source = hand.Result()->source;
+                record.from = hand.Result()->from;
             }
             record.winner = settlement.winner;
             record.scores = settlement.scores;
