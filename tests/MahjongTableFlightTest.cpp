@@ -759,23 +759,25 @@ namespace BECore::Mahjong::Tests {
 
     // ----- no peeking -----
 
-    TEST_F(MahjongTableFlightTest, ForASpectatorNoTileInTheAirShowsAFaceBeforeItIsPublic) {
-        ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
-        Draw();
+    TEST_F(MahjongTableFlightTest, ForAPersonNoTileOfAnOpponentInTheAirShowsAFaceBeforeItIsPublic) {
+        constexpr SeatSetup kPersonAtSeat3{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Person};
+        ASSERT_NO_FATAL_FAILURE(StartWith(kPersonAtSeat3, MakeModel(SpecOf(kPlainHand, "9p Gd Rd Wd"))));
+        // The viewer's own concealed tiles are faces; everything else that shows a face is public
+        const auto own = [&] { return static_cast<int>(Hand().GetHand(kSeat3).concealed.size()); };
         // Three steps: the clock of the pace has run 0.3 s after each, and a fourth would make the component step on its own
         for (int step = 0; step < 3; ++step) {
             ASSERT_TRUE(Session().StepComputer().has_value());
             Draw();
             EXPECT_GT(_table->FlightCount(), 0u) << "step " << step;
-            ExpectNoConcealedFace();
+            EXPECT_EQ(FaceUpCalls(), PublicFaces() + own());
             ExpectEverySlotDrawnOnce();
             AdvanceTime(kHalfFlight);
             Draw();
-            ExpectNoConcealedFace();
+            EXPECT_EQ(FaceUpCalls(), PublicFaces() + own());
             AdvanceTime(kHalfFlight);
             Draw();
             ASSERT_EQ(_table->FlightCount(), 0u) << "step " << step << " moves " << Hand().Moves().size();
-            ExpectNoConcealedFace();
+            EXPECT_EQ(FaceUpCalls(), PublicFaces() + own());
         }
     }
 
