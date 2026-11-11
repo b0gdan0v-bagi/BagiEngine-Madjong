@@ -8,6 +8,7 @@
 #include <Mahjong/Game/HandModel.h>
 #include <Mahjong/Game/HandShape.h>
 #include <Mahjong/Game/Match.h>
+#include <Mahjong/Game/OwnDraws.h>
 #include <gtest/gtest.h>
 #include <set>
 
@@ -283,6 +284,99 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(view.visible[T("5m").Id()], 1);
 
         ExpectChoiceForEverySeed(model, kSeat0, HandAction::MakeDiscard(T("5m")));
+    }
+
+    // ----- the own-draws value (the knobs `ownDrawsDepth`, `ownDrawsPickWait`) -----
+
+    namespace {
+
+        constexpr int kOwnDrawsTestDepth = 2;
+
+        /// East holds the pairs hand of `OwnDrawsTest` (123p 456s and the pairs Rd, 5m, 8m, 2s) on its second turn, with one Rd lying in the
+        /// pile (seat 1 discarded it; East passes the pung): the dragon pair has 1 copy unseen, each simple pair 2.
+        HandModel PairsModel() {
+            FixedWallSpec spec = SpecOf("1p 2p 3p 4s 5s 6s Rd Rd 5m 5m 8m 8m 2s", "9p Nw Sw Ww 2s");
+            spec.hands[kSeat1] = "2p 5p 8p 2s 5s 8s 2m 5m 8m Ww Nw Rd Wd";
+            HandModel model = MakeModel(spec);
+            EXPECT_TRUE(model.Discard(kSeat0, T("9p")).has_value());
+            EXPECT_TRUE(model.Discard(kSeat1, T("Rd")).has_value());
+            EXPECT_EQ(model.GetPhase(), Phase::Claim);
+            EXPECT_TRUE(model.Apply(kSeat0, HandAction::MakePass()).has_value());
+            EXPECT_TRUE(model.Discard(kSeat2, T("Sw")).has_value());
+            EXPECT_TRUE(model.Discard(kSeat3, T("Ww")).has_value());
+            EXPECT_EQ(model.CurrentSeat(), kSeat0);
+            return model;
+        }
+
+        LevelProfile OwnDrawsProfile(int depth, bool pickWait) {
+            LevelProfile profile = kNormalProfile;
+            profile.ownDrawsDepth = depth;
+            profile.ownDrawsPickWait = pickWait;
+            return profile;
+        }
+
+        /// Whether `rng` is where a fresh generator of `seed` is.
+        bool IsUntouched(MahjongRng& rng, uint32_t seed) {
+            MahjongRng fresh(seed);
+            return rng.Below(1000000) == fresh.Below(1000000);
+        }
+    }  // namespace
+
+    TEST(ComputerTurnTest, TheDepthKnobPlaysTheBestValuedDiscardWhereNormalBreaksTheValuePung) {
+        const HandModel model = PairsModel();
+        const TableView view = MakeTableView(model, kSeat0);
+        ASSERT_EQ(view.visible[T("Rd").Id()], 3);
+        ASSERT_EQ(RateDiscards(CountTiles(view.own.concealed), 0, view).front().tile, T("Rd"));
+        const eastl::vector<DiscardValue> values = ValueDiscards(view, kOwnDrawsTestDepth);
+        ASSERT_FALSE(values.empty());
+        ASSERT_NE(values.front().tile, T("Rd"));
+
+        for (uint32_t seed = 1; seed <= 8; ++seed) {
+            MahjongRng normalRng(seed);
+            EXPECT_EQ(ChooseTurnAction(view, normalRng), HandAction::MakeDiscard(T("Rd"))) << "rng seed " << seed;
+            MahjongRng valuedRng(seed);
+            const TurnDecision decision = DecideTurn(view, valuedRng, OwnDrawsProfile(kOwnDrawsTestDepth, false));
+            EXPECT_EQ(decision.action, HandAction::MakeDiscard(values.front().tile)) << "rng seed " << seed;
+            EXPECT_EQ(decision.step, TurnStep::Discard);
+            EXPECT_TRUE(IsUntouched(valuedRng, seed)) << "the own-draws step drew from the rng, seed " << seed;
+        }
+    }
+
+    TEST(ComputerTurnTest, TheKnobsOffChooseWhatNormalChoosesAndDrawTheSameNumbers) {
+        const HandModel pairs = PairsModel();
+        const HandModel waiting = MakeModel(SpecOf("1s 2s 3s 4s 5s 6s 7m 8m 9m 5p 6p 6p Ew", "Ew"));
+        for (const HandModel* model : {&pairs, &waiting}) {
+            const TableView view = MakeTableView(*model, kSeat0);
+            for (uint32_t seed = 1; seed <= 8; ++seed) {
+                MahjongRng normalRng(seed);
+                MahjongRng offRng(seed);
+                const TurnDecision normal = DecideTurn(view, normalRng);
+                const TurnDecision off = DecideTurn(view, offRng, OwnDrawsProfile(0, false));
+                EXPECT_EQ(off.action, normal.action) << "rng seed " << seed;
+                EXPECT_EQ(off.step, normal.step) << "rng seed " << seed;
+                EXPECT_EQ(offRng.Below(1000000), normalRng.Below(1000000)) << "rng seed " << seed;
+            }
+        }
+    }
+
+    TEST(ComputerTurnTest, ThePickWaitKnobDeclaresTheBestValuedWaitWithoutDrawing) {
+        // 1s 2s 3s 4s 5s 6s 7m 8m 9m 5p 6p 6p Ew + Ew: discarding the 5p leaves the pair wait on 6p and Ew (2 + 2 unseen copies),
+        // discarding a 6p the two-sided wait on 4p and 7p (4 + 4) that Normal declares for its copies. A pung of Ew is a double twice (the
+        // own wind and the round wind), so the pair wait is worth more though it wins less often.
+        const HandModel model = MakeModel(SpecOf("1s 2s 3s 4s 5s 6s 7m 8m 9m 5p 6p 6p Ew", "Ew"));
+        const TableView view = MakeTableView(model, kSeat0);
+        const eastl::vector<DiscardValue> waits = ValueWaits(view);
+        ASSERT_EQ(waits.size(), 2u);
+        ASSERT_EQ(waits.front().tile, T("5p"));
+        MahjongRng normalRng(kRngSeed);
+        ASSERT_EQ(ChooseTurnAction(view, normalRng), HandAction::MakeDiscard(T("6p"), true));
+        for (uint32_t seed = 1; seed <= 8; ++seed) {
+            MahjongRng rng(seed);
+            const TurnDecision decision = DecideTurn(view, rng, OwnDrawsProfile(0, true));
+            EXPECT_EQ(decision.action, HandAction::MakeDiscard(waits.front().tile, true)) << "rng seed " << seed;
+            EXPECT_EQ(decision.step, TurnStep::Declare);
+            EXPECT_TRUE(IsUntouched(rng, seed)) << "rng seed " << seed;
+        }
     }
 
     // ----- the helpers -----

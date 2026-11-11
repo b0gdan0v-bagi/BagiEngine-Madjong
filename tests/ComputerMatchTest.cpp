@@ -37,6 +37,8 @@ namespace BECore::Mahjong::Tests {
         constexpr uint32_t kSearchMatchSeed = 710;
         constexpr int kSearchTestWorlds = 2;
         constexpr int kSearchTestCandidates = 3;
+        /// The depth of the own-draws seat's match.
+        constexpr int kOwnDrawsTestDepth = 2;
 
         struct PlayedMatch {
             eastl::vector<HandSettlement> history;
@@ -199,6 +201,36 @@ namespace BECore::Mahjong::Tests {
         EXPECT_GT(searchSteps, 0) << "the search seat never acted";
         RecordProperty("SearchMatchSteps", steps);
         RecordProperty("SearchSeatSteps", searchSteps);
+    }
+
+    TEST(ComputerMatchTest, OneOwnDrawsSeatAmongThreeNormalSeatsPlaysAShortMatchLegally) {
+        MahjongSettings settings;
+        settings.handsPerMatch = kSearchMatchHands;
+        const std::string where = "own-draws match (seed " + std::to_string(kSearchMatchSeed) + ")";
+        Match match;
+        ASSERT_TRUE(match.Start(settings, kSearchMatchSeed).has_value()) << where;
+
+        LevelProfile valued = kNormalProfile;
+        valued.ownDrawsDepth = kOwnDrawsTestDepth;
+        valued.ownDrawsPickWait = true;
+        auto playerOf = [&](Seat seat) { return seat == kSearchSeat ? ComputerPlayer(SeatSeed(kSearchMatchSeed, seat), valued) : ComputerPlayer(SeatSeed(kSearchMatchSeed, seat)); };
+        eastl::array<ComputerPlayer, kSeatCount> players{playerOf(0), playerOf(1), playerOf(2), playerOf(3)};
+
+        MatchTotals totals;
+        MatchAudit audit(settings, where, totals);
+        int steps = 0;
+        int valuedSteps = 0;
+        while (match.GetPhase() == MatchPhase::InHand) {
+            ASSERT_LT(audit.HandIndex(), kHandLimit) << where << ": the match does not end";
+            ASSERT_NO_FATAL_FAILURE(audit.BeforeHand(match));
+            ASSERT_NO_FATAL_FAILURE(StepMixedHand(players, match.Hand(), where + " hand " + std::to_string(audit.HandIndex()), steps, valuedSteps));
+            const auto ended = match.EndHand();
+            ASSERT_TRUE(ended.has_value()) << where << ": " << Name(ended.error());
+            ASSERT_NO_FATAL_FAILURE(audit.AfterHand(match, ended.value()));
+        }
+        ASSERT_NO_FATAL_FAILURE(audit.AtEnd(match));
+        EXPECT_EQ(match.HandsPlayed(), kSearchMatchHands) << where;
+        EXPECT_GT(valuedSteps, 0) << "the own-draws seat never acted";
     }
 
     TEST(ComputerMatchTest, ADifferentTableSeedPlaysADifferentMatchOnTheSameWalls) {
