@@ -185,14 +185,14 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
-    TEST_F(MahjongTableHoverTest, ASpectatorSeesNoNameOnAnyHandButOnTheDiscards) {
-        ASSERT_NO_FATAL_FAILURE(StartSpectating());
+    TEST_F(MahjongTableHoverTest, ASpectatorSeesTheNamesOfTheOpenHandsAndTheDiscards) {
+        ASSERT_NO_FATAL_FAILURE(StartSpectating());  // a watched match: every hand is face up
         const std::vector<TileSlot> slots(_table->GetLayout().slots.begin(), _table->GetLayout().slots.end());
         int discards = 0;
         for (const TileSlot& slot : slots) {
             if (slot.role == SlotRole::HandTile) {
                 PointAt(slot.rect);
-                EXPECT_EQ(PlateText(), "") << "seat " << slot.seat << " tile " << slot.index;
+                EXPECT_EQ(PlateText(), NameOf(Hand().GetHand(slot.seat).concealed[slot.index])) << "seat " << slot.seat << " tile " << slot.index;
             } else if (slot.role == SlotRole::DiscardTile && discards++ == 0) {
                 PointAt(slot.rect);
                 EXPECT_EQ(PlateText(), NameOf(Hand().Discards()[slot.index].tile));
