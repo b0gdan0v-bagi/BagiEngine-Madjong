@@ -5,8 +5,9 @@
 
 namespace BECore::Mahjong::Analyzer {
 
-    /// The worlds of a run that names none. A placeholder until the measurement of the docs sets it (`docs/ev-analyzer.md`).
-    inline constexpr int kDefaultWorlds = 1000;
+    /// The worlds of a run that names none: about 2 points of half-width (95 %) for the EV of an action in a typical position, from the
+    /// measurement table of `docs/ev-analyzer.md`. The half-width falls with the square root of the worlds, so a scan wants fewer.
+    inline constexpr int kDefaultWorlds = 16000;
     /// The seed of a run that names none.
     inline constexpr uint32_t kDefaultSeed = 1;
     /// The seed of the rng that breaks the ties of Normal's choice on the position (a tie of `BestDiscard` is decided by an rng, so

@@ -18,6 +18,7 @@ A nested `CLAUDE.md` loads when you work in its folder.
 | `src/Mahjong/Table/` | pure scene logic: layout, words, seat plates, buttons, hints, flights, touch regime |
 | `src/Mahjong/Components/` | the scene: table, marks, flights, action buttons, HUD, setup, rules and end screens, hints |
 | `src/Mahjong/Arena/` | the bot arena (`BagiMahjongArena`, `docs/bot-arena.md`) |
+| `src/Mahjong/Analyzer/` | the EV of every legal action of one position (`BagiMahjongAnalyzer`, `docs/ev-analyzer.md`) |
 | `config/` | node files, the string table, **the UI style** (palette by role, type scale, grid, touch size) |
 | `tools/` | tile art (`make_tiles.py`), UI screenshots (`ui_shots.py`) |
 | `tests/` | the test helpers and what each test file is for |

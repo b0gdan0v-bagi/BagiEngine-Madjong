@@ -1,6 +1,7 @@
 # tools/
 
 - `arena/main.cpp` — `BagiMahjongArena`, see `src/Mahjong/Arena/CLAUDE.md` and `docs/bot-arena.md`.
+- `analyzer/main.cpp` — `BagiMahjongAnalyzer`, see `src/Mahjong/Analyzer/CLAUDE.md` and `docs/ev-analyzer.md`; it reads the files and `-` (stdin) and hands them to `RunAnalyzerCli`.
 - `ui_shots.py` — seven UI scenes (`01-fresh-table` ... `07-options`) at 1920 x 1080 and scaled to 640, from `BagiMahjong --headless --control --manual-clock`. `--exe`, `--label`, `--out` (a folder outside the repository; the tool refuses one inside a git work tree). Pictures are never committed. The size is the headless window's (`SDLWindowConfig.xml`, 1920 x 1080); no control call changes it, so a **portrait** picture needs a `config/SDLWindowConfig.xml` of the game with a tall window (e.g. 720 x 1280), temporary and never committed (the game's config overrides the engine's); the shots tool does not do it.
 - `make_tiles.py` — the tile art (below).
 - `make_app_icons.py` — the icons of the web app (`web/icons/`, listed in `web/app.json`): the Red Dragon cell of the atlas on `kFelt`, scaled to 192 and 512. Run it after a change of the art; `--check` compares the pixels.
