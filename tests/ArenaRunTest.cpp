@@ -71,7 +71,8 @@ namespace BECore::Mahjong::Arena {
 
         bool SameTally(const ArenaTally& left, const ArenaTally& right) {
             return left.hands == right.hands && left.wins == right.wins && left.points == right.points && left.drawn == right.drawn && left.declared == right.declared &&
-                   left.winScore == right.winScore && left.winsByKind == right.winsByKind && left.decisions == right.decisions;
+                   left.winScore == right.winScore && left.selfDraws == right.selfDraws && left.lost == right.lost && left.gaveWin == right.gaveWin && left.lostPoints == right.lostPoints &&
+                   left.standingScore == right.standingScore && left.winsByKind == right.winsByKind && left.decisions == right.decisions;
         }
 
         bool SameRows(const eastl::vector<SeedRow>& left, const eastl::vector<SeedRow>& right) {
@@ -81,7 +82,8 @@ namespace BECore::Mahjong::Arena {
             for (size_t index = 0; index < left.size(); ++index) {
                 const SeedRow& a = left[index];
                 const SeedRow& b = right[index];
-                if (a.seed != b.seed || a.pointsOfFocus != b.pointsOfFocus || a.winsOfFocus != b.winsOfFocus || a.drawn != b.drawn || a.declared != b.declared || a.winScore != b.winScore) {
+                if (a.seed != b.seed || a.pointsOfFocus != b.pointsOfFocus || a.winsOfFocus != b.winsOfFocus || a.drawn != b.drawn || a.declared != b.declared || a.winScore != b.winScore ||
+                    a.gaveWin != b.gaveWin || a.lostHands != b.lostHands || a.standingScore != b.standingScore) {
                     return false;
                 }
             }
@@ -102,6 +104,142 @@ namespace BECore::Mahjong::Arena {
 
     }  // namespace
 
+    namespace {
+
+        /// The made-up hands of the tests of the counts: the focus player is "normal" among "random" seats, and the player puts a record
+        /// made from the seat the focus player sits on in each of its four rotations.
+        using MakeRecord = HandRecord (*)(Seat focusSeat);
+
+        /// Scores and changes of points that tell the seats apart in any sum: every subset of the seats has a sum of its own.
+        constexpr SeatScores kMadeUpScores = {10, 20, 40, 80};
+        constexpr SeatScores kMadeUpDeltas = {1, 2, 4, 8};
+        constexpr int64_t kAllScores = 150;
+        constexpr int64_t kAllDeltas = 15;
+
+        HandRecord WonBy(Seat winner, WinSource source, Seat from) {
+            HandRecord record;
+            record.kind = ResultKind::Win;
+            record.winner = winner;
+            record.source = source;
+            record.from = from;
+            record.scores = kMadeUpScores;
+            record.deltas = kMadeUpDeltas;
+            return record;
+        }
+
+        Seat After(Seat seat, int steps) {
+            return static_cast<Seat>((seat + steps) % kSeatCount);
+        }
+
+        FocusResult PlayMadeUp(MakeRecord make) {
+            const ArenaHandPlayer player = [make](uint32_t, const ArenaPlayers& players, bool, const WorldLoop&) -> std::expected<HandRecord, eastl::string> {
+                for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                    if (players[seat].name == "normal") {
+                        return make(seat);
+                    }
+                }
+                return std::unexpected(eastl::string("no focus seat"));
+            };
+            const std::expected<ArenaResult, eastl::string> result = RunArena(ConfigOf({"normal"}, "random", 1), player);
+            EXPECT_TRUE(result.has_value()) << (result.has_value() ? "" : result.error().c_str());
+            return result.has_value() ? result->focus.at(0) : FocusResult{};
+        }
+
+    }  // namespace
+
+    TEST(ArenaRunTest, AnotherSeatWinsOnTheFocusSeatsDiscard) {
+        const FocusResult result = PlayMadeUp([](Seat focusSeat) { return WonBy(After(focusSeat, 1), WinSource::Discard, focusSeat); });
+        // The focus player loses all four hands and gives the win in each; its scores and changes of points are all four seats' ones.
+        EXPECT_EQ(result.focus.lost, 4);
+        EXPECT_EQ(result.focus.gaveWin, 4);
+        EXPECT_EQ(result.focus.selfDraws, 0);
+        EXPECT_EQ(result.focus.wins, 0);
+        EXPECT_EQ(result.focus.standingScore, kAllScores);
+        EXPECT_EQ(result.focus.lostPoints, kAllDeltas);
+        // The three others: one wins, two lose, and none of them discarded the winning tile; each seat is a loser in two rotations.
+        EXPECT_EQ(result.others.wins, 4);
+        EXPECT_EQ(result.others.lost, 8);
+        EXPECT_EQ(result.others.gaveWin, 0);
+        EXPECT_EQ(result.others.standingScore, 2 * kAllScores);
+        EXPECT_EQ(result.others.lostPoints, 2 * kAllDeltas);
+        ASSERT_EQ(result.rows.size(), 1u);
+        EXPECT_EQ(result.rows[0].gaveWin, 4);
+        EXPECT_EQ(result.rows[0].lostHands, 4);
+        EXPECT_EQ(result.rows[0].standingScore, kAllScores);
+    }
+
+    TEST(ArenaRunTest, AnotherSeatWinsOnAThirdSeatsDiscard) {
+        const FocusResult result = PlayMadeUp([](Seat focusSeat) { return WonBy(After(focusSeat, 1), WinSource::Discard, After(focusSeat, 2)); });
+        // The focus player loses but did not give the win; in every rotation one of the others did.
+        EXPECT_EQ(result.focus.lost, 4);
+        EXPECT_EQ(result.focus.gaveWin, 0);
+        EXPECT_EQ(result.focus.standingScore, kAllScores);
+        EXPECT_EQ(result.others.lost, 8);
+        EXPECT_EQ(result.others.gaveWin, 4);
+        EXPECT_EQ(result.rows.at(0).gaveWin, 0);
+        EXPECT_EQ(result.rows.at(0).lostHands, 4);
+    }
+
+    TEST(ArenaRunTest, TheFocusSeatDrawsTheWinningTileItself) {
+        const FocusResult result = PlayMadeUp([](Seat focusSeat) { return WonBy(focusSeat, WinSource::SelfDraw, focusSeat); });
+        EXPECT_EQ(result.focus.wins, 4);
+        EXPECT_EQ(result.focus.selfDraws, 4);
+        EXPECT_EQ(result.focus.winScore, kAllScores);
+        EXPECT_EQ(result.focus.lost, 0);
+        EXPECT_EQ(result.focus.gaveWin, 0);
+        EXPECT_EQ(result.focus.standingScore, 0);
+        EXPECT_EQ(result.focus.lostPoints, 0);
+        // The three others lose every hand and discarded nothing; each seat is a loser in three rotations.
+        EXPECT_EQ(result.others.lost, 12);
+        EXPECT_EQ(result.others.gaveWin, 0);
+        EXPECT_EQ(result.others.selfDraws, 0);
+        EXPECT_EQ(result.others.standingScore, 3 * kAllScores);
+        EXPECT_EQ(result.others.lostPoints, 3 * kAllDeltas);
+        EXPECT_EQ(result.rows.at(0).winsOfFocus, 4);
+        EXPECT_EQ(result.rows.at(0).lostHands, 0);
+        EXPECT_EQ(result.rows.at(0).standingScore, 0);
+    }
+
+    TEST(ArenaRunTest, AnotherSeatDrawsTheWinningTileItself) {
+        const FocusResult result = PlayMadeUp([](Seat focusSeat) { return WonBy(After(focusSeat, 1), WinSource::SelfDraw, After(focusSeat, 1)); });
+        // Nobody gave the win: the focus player lost, and the self-draws are the others'.
+        EXPECT_EQ(result.focus.lost, 4);
+        EXPECT_EQ(result.focus.gaveWin, 0);
+        EXPECT_EQ(result.focus.selfDraws, 0);
+        EXPECT_EQ(result.others.selfDraws, 4);
+        EXPECT_EQ(result.others.gaveWin, 0);
+        EXPECT_EQ(result.rows.at(0).gaveWin, 0);
+        EXPECT_EQ(result.rows.at(0).lostHands, 4);
+    }
+
+    TEST(ArenaRunTest, ARobbedKongOfTheFocusSeatIsAGivenWin) {
+        const FocusResult result = PlayMadeUp([](Seat focusSeat) { return WonBy(After(focusSeat, 1), WinSource::RobbedKong, focusSeat); });
+        EXPECT_EQ(result.focus.gaveWin, 4);
+        EXPECT_EQ(result.focus.lost, 4);
+        EXPECT_EQ(result.others.gaveWin, 0);
+        EXPECT_EQ(result.rows.at(0).gaveWin, 4);
+    }
+
+    TEST(ArenaRunTest, ADrawnHandIsNeitherWonNorLost) {
+        const FocusResult result = PlayMadeUp([](Seat) {
+            HandRecord record;
+            record.scores = kMadeUpScores;
+            return record;
+        });
+        for (const ArenaTally* tally : {&result.focus, &result.others}) {
+            EXPECT_EQ(tally->wins, 0);
+            EXPECT_EQ(tally->lost, 0);
+            EXPECT_EQ(tally->gaveWin, 0);
+            EXPECT_EQ(tally->selfDraws, 0);
+            EXPECT_EQ(tally->standingScore, 0);
+            EXPECT_EQ(tally->lostPoints, 0);
+        }
+        EXPECT_EQ(result.focus.drawn, 4);
+        EXPECT_EQ(result.rows.at(0).drawn, 4);
+        EXPECT_EQ(result.rows.at(0).lostHands, 0);
+        EXPECT_EQ(result.rows.at(0).gaveWin, 0);
+    }
+
     TEST(ArenaRunTest, TheTotalsAreTheSumsOfTheRows) {
         const ArenaResult run = PlayConfig(ConfigOf({"normal"}, "random", kFewSeeds));
         ASSERT_EQ(run.focus.size(), 1u);
@@ -115,6 +253,9 @@ namespace BECore::Mahjong::Arena {
         int64_t drawn = 0;
         int64_t declared = 0;
         int64_t winScore = 0;
+        int64_t gaveWin = 0;
+        int64_t lostHands = 0;
+        int64_t standingScore = 0;
         for (size_t index = 0; index < result.rows.size(); ++index) {
             const SeedRow& row = result.rows[index];
             EXPECT_EQ(row.seed, kFirstSeed + index);
@@ -126,12 +267,20 @@ namespace BECore::Mahjong::Arena {
             drawn += row.drawn;
             declared += row.declared;
             winScore += row.winScore;
+            gaveWin += row.gaveWin;
+            lostHands += row.lostHands;
+            standingScore += row.standingScore;
+            EXPECT_LE(row.gaveWin, row.lostHands);
+            EXPECT_LE(row.lostHands, kSeatCount);
         }
         EXPECT_EQ(result.focus.points, points);
         EXPECT_EQ(result.focus.wins, wins);
         EXPECT_EQ(result.focus.drawn, drawn);
         EXPECT_EQ(result.focus.declared, declared);
         EXPECT_EQ(result.focus.winScore, winScore);
+        EXPECT_EQ(result.focus.gaveWin, gaveWin);
+        EXPECT_EQ(result.focus.lost, lostHands);
+        EXPECT_EQ(result.focus.standingScore, standingScore);
 
         // The hands: 4 per seed for the focus player, 12 seat-hands per seed for the three others.
         EXPECT_EQ(result.focus.hands, kSeatCount * kFewSeeds);
@@ -214,6 +363,38 @@ namespace BECore::Mahjong::Arena {
         EXPECT_EQ(result.focus.drawn, drawnSeeds * kSeatCount);
         // In each of the other three rotations of a won seed one of the others wins.
         EXPECT_EQ(result.others.wins, (kSeatCount - 1) * result.focus.wins);
+        // The four rotations replay one game, so the three others do what the focus player does, three times.
+        EXPECT_EQ(result.others.gaveWin, (kSeatCount - 1) * result.focus.gaveWin);
+        EXPECT_EQ(result.others.selfDraws, (kSeatCount - 1) * result.focus.selfDraws);
+        EXPECT_EQ(result.others.lost, (kSeatCount - 1) * result.focus.lost);
+        EXPECT_EQ(result.others.standingScore, (kSeatCount - 1) * result.focus.standingScore);
+        EXPECT_EQ(result.others.lostPoints, (kSeatCount - 1) * result.focus.lostPoints);
+    }
+
+    TEST(ArenaRunTest, AWonHandIsASelfDrawOrSomeoneGaveTheWin) {
+        const FocusResult& result = StrengthRun().focus.at(0);
+        // Over all four seats every won hand that was not a self-draw was given by exactly one seat.
+        EXPECT_EQ(result.focus.gaveWin + result.others.gaveWin, result.focus.wins + result.others.wins - result.focus.selfDraws - result.others.selfDraws);
+        for (const ArenaTally* tally : {&result.focus, &result.others}) {
+            EXPECT_LE(tally->selfDraws, tally->wins);
+            EXPECT_LE(tally->gaveWin, tally->lost);
+        }
+        // Every hand is won by the focus player (it did not lose it) or by another seat (it lost it) or drawn.
+        EXPECT_EQ(result.focus.lost, result.others.wins);
+        EXPECT_EQ(result.focus.wins + result.focus.lost + result.focus.drawn, result.focus.hands);
+        EXPECT_GT(result.focus.selfDraws, 0);
+        EXPECT_GT(result.focus.gaveWin, 0);
+        EXPECT_LT(result.focus.lostPoints, 0);
+        for (uint32_t seed = kFirstSeed; seed < kFirstSeed + kFewSeeds; ++seed) {
+            ArenaPlayers players;
+            players.fill(Player("normal"));
+            const std::expected<HandRecord, eastl::string> record = PlayArenaHand(seed, players);
+            ASSERT_TRUE(record.has_value());
+            EXPECT_EQ(IsSeat(record->from), record->kind == ResultKind::Win) << "seed " << seed;
+            if (record->source == WinSource::SelfDraw && IsSeat(record->winner)) {
+                EXPECT_EQ(record->from, record->winner);
+            }
+        }
     }
 
     TEST(ArenaRunTest, TheSameConfigGivesTheSameResult) {

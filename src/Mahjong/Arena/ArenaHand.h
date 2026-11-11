@@ -29,6 +29,9 @@ namespace BECore::Mahjong::Arena {
         Seat east = 0;
         /// How the hand was won (meaningful when `winner` is a seat).
         WinSource source = WinSource::SelfDraw;
+        /// Who discarded the winning tile (`HandResult::from`): the owner of the kong for a robbed kong, the winner for a self-draw,
+        /// `kNoSeat` for a drawn hand.
+        Seat from = kNoSeat;
         /// The kinds of the lines of the winner's breakdown, each once, in the order of the breakdown (empty for a drawn hand; a limit
         /// hand is its one line).
         eastl::vector<ScoreKind> winKinds;

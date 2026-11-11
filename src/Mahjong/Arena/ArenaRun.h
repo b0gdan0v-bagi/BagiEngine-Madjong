@@ -46,6 +46,12 @@ namespace BECore::Mahjong::Arena {
         int declared = 0;
         /// The sum of the focus player's winning scores (the rounded score of the winner, `HandSettlement::scores`).
         int winScore = 0;
+        /// The hands (0..4) another seat won on the focus player's discard or by robbing its kong ("gave the win").
+        int gaveWin = 0;
+        /// The hands (0..4) another seat won ("lost" hands; a drawn hand is neither won nor lost).
+        int lostHands = 0;
+        /// The sum of the focus player's rounded scores (`HandSettlement::scores`) over its lost hands.
+        int standingScore = 0;
     };
 
     /// Counts over seat-hands: one hand played by a group of seats counts once per seat of the group.
@@ -57,6 +63,16 @@ namespace BECore::Mahjong::Arena {
         int64_t declared = 0;
         /// The sum of the winning scores of the won hands.
         int64_t winScore = 0;
+        /// The won hands the seat won by drawing the tile itself (`WinSource::SelfDraw`).
+        int64_t selfDraws = 0;
+        /// The hands another seat won ("lost" by the seat; a drawn hand is neither won nor lost).
+        int64_t lost = 0;
+        /// The lost hands whose winning tile the seat discarded or whose kong it owned (`source` not `SelfDraw`, `from` the seat).
+        int64_t gaveWin = 0;
+        /// The sum of the seat's change of points (`deltas`) over its lost hands.
+        int64_t lostPoints = 0;
+        /// The sum of the seat's rounded scores (`scores`) over its lost hands: the "standing" score of `ArenaTable`.
+        int64_t standingScore = 0;
         /// The won hands whose winner's breakdown has the kind (a kind once per won hand).
         eastl::array<int64_t, kScoreKindCount> winsByKind{};
         /// The actions chosen, and (only with timing) the nanoseconds spent choosing them.
