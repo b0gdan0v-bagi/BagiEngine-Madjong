@@ -2,6 +2,7 @@
 #include "FixedWall.h"
 #include "HandTestSupport.h"
 
+#include <EASTL/algorithm.h>
 #include <Mahjong/Game/ComputerTurn.h>
 #include <Mahjong/Game/ComputerView.h>
 #include <Mahjong/Game/HandModel.h>
@@ -365,6 +366,155 @@ namespace BECore::Mahjong::Tests {
         }
         EXPECT_GT(turns, kRandomHands * kTurnsPerHand / 2);
         EXPECT_EQ(kinds.count(ActionKind::Discard), 1u);
+    }
+
+    // ----- the rule that decided, and the ratings -----
+
+    namespace {
+
+        TurnDecision Decision(const HandModel& model, Seat seat, uint32_t rngSeed = kRngSeed) {
+            const TableView view = MakeTableView(model, seat);
+            MahjongRng rng(rngSeed);
+            return DecideTurn(view, rng);
+        }
+
+        /// The tied group of `RateDiscards`: the entries equal to the first in shanten, acceptance and keep.
+        eastl::vector<Tile> BestGroup(const eastl::vector<DiscardOption>& options) {
+            eastl::vector<Tile> group;
+            for (const DiscardOption& option : options) {
+                if (option.shanten == options.front().shanten && option.acceptance == options.front().acceptance && option.keep == options.front().keep) {
+                    group.push_back(option.tile);
+                }
+            }
+            return group;
+        }
+
+    }  // namespace
+
+    TEST(ComputerTurnTest, DecideTurnNamesTheRuleThatDecided) {
+        const HandModel win = WinningModel();
+        EXPECT_EQ(Decision(win, kSeat0).step, TurnStep::DeclareWin);
+
+        const HandModel declare = MakeModel(SpecOf("1s 2s 3s 4s 5s 6s 7m 8m 9m 5p 6p 6p Ew", "Ew"));
+        const TurnDecision declared = Decision(declare, kSeat0);
+        EXPECT_EQ(declared.step, TurnStep::Declare);
+        EXPECT_EQ(declared.action, HandAction::MakeDiscard(T("6p"), true));
+
+        const HandModel kong = MakeModel(SpecOf("Ew Ew Ew 1p 4p 7p 1s 4s 7s 1m 4m 7m Gd", "Ew"));
+        const TurnDecision konged = Decision(kong, kSeat0);
+        EXPECT_EQ(konged.step, TurnStep::Kong);
+        EXPECT_EQ(konged.action, HandAction::MakeConcealedKong(T("Ew")));
+
+        HandModel keeping = MakeModel(SpecOf(kTwoSided, "Gd Wd Gd Nw 6p"));
+        Lap(keeping, "Gd Wd Gd Nw", {kSeat0});
+        const TurnDecision kept = Decision(keeping, kSeat0);
+        EXPECT_EQ(kept.step, TurnStep::KeepWaiting);
+        EXPECT_EQ(kept.action, HandAction::MakeDiscard(T("6p")));
+
+        const HandModel discard = MakeModel(SpecOf("1s 2s 3s 4s 5s 6s 7m 8m 9m 5p 5p Rd Ew", "Nw"));
+        const TurnDecision discarded = Decision(discard, kSeat0);
+        EXPECT_EQ(discarded.step, TurnStep::Discard);
+        EXPECT_EQ(discarded.action, HandAction::MakeDiscard(T("Nw")));
+    }
+
+    TEST(ComputerTurnTest, DecideTurnGivesWhatChooseTurnActionGivesWithTheSameDraws) {
+        for (int index = 0; index < kRandomHands; ++index) {
+            const uint32_t seed = kRandomFirstSeed + static_cast<uint32_t>(index);
+            Match match;
+            ASSERT_TRUE(match.Start(MahjongSettings{}, seed).has_value());
+            MahjongRng rng(seed);
+            HandModel& hand = match.Hand();
+            for (int step = 0; step < kTurnsPerHand * kSeatCount && hand.GetPhase() != Phase::Finished; ++step) {
+                const Seat actor = NextActor(hand, rng);
+                ASSERT_NE(actor, kNoSeat);
+                if (hand.GetPhase() == Phase::Discard) {
+                    const TableView view = MakeTableView(hand, actor);
+                    MahjongRng chooser(seed + static_cast<uint32_t>(step));
+                    MahjongRng decider(seed + static_cast<uint32_t>(step));
+                    EXPECT_EQ(ChooseTurnAction(view, chooser), DecideTurn(view, decider).action);
+                    EXPECT_EQ(chooser.Below(1000), decider.Below(1000)) << "the same number of draws";
+                }
+                ASSERT_TRUE(hand.Apply(actor, Choose(hand.LegalActions(actor), Mode::SeekWin, rng)).has_value());
+            }
+        }
+    }
+
+    TEST(ComputerTurnTest, RateDiscardsListsEveryKindHeldInTheOrderOfTheChooser) {
+        const HandModel model = MakeModel(SpecOf("1s 2s 3s 4s 5s 6s 5p 5p 3m 4m 7p 8p Nw", "Gd"));
+        const TableView view = MakeTableView(model, kSeat0);
+        const TileCounts counts = CountTiles(view.own.concealed);
+
+        const eastl::vector<DiscardOption> options = RateDiscards(counts, 0, view);
+
+        size_t kinds = 0;
+        for (const uint8_t count : counts) {
+            kinds += count != 0 ? 1u : 0u;
+        }
+        ASSERT_EQ(options.size(), kinds);
+        for (size_t i = 1; i < options.size(); ++i) {
+            const DiscardOption& a = options[i - 1];
+            const DiscardOption& b = options[i];
+            const bool inOrder = a.shanten != b.shanten         ? a.shanten < b.shanten
+                                 : a.acceptance != b.acceptance ? a.acceptance > b.acceptance
+                                 : a.keep != b.keep             ? a.keep < b.keep
+                                                                : a.tile.Id() < b.tile.Id();
+            EXPECT_TRUE(inOrder) << "entry " << i;
+        }
+        EXPECT_EQ(options.front().tile, T("Nw"));
+        EXPECT_EQ(options.front().keep, kKeepWorthless);
+    }
+
+    TEST(ComputerTurnTest, RateDiscardsAgreesWithBestDiscardOnRandomHands) {
+        int hands = 0;
+        int ties = 0;
+        for (int index = 0; index < kRandomHands; ++index) {
+            const uint32_t seed = kRandomFirstSeed + static_cast<uint32_t>(index);
+            Match match;
+            ASSERT_TRUE(match.Start(MahjongSettings{}, seed).has_value());
+            MahjongRng rng(seed);
+            HandModel& hand = match.Hand();
+            for (int step = 0; step < kTurnsPerHand * kSeatCount && hand.GetPhase() != Phase::Finished; ++step) {
+                const Seat actor = NextActor(hand, rng);
+                ASSERT_NE(actor, kNoSeat);
+                if (hand.GetPhase() == Phase::Discard) {
+                    const TableView view = MakeTableView(hand, actor);
+                    const TileCounts counts = CountTiles(view.own.concealed);
+                    const eastl::vector<DiscardOption> options = RateDiscards(counts, MeldCountOf(view), view);
+                    ASSERT_FALSE(options.empty());
+                    const DiscardRating best = BestDiscardRating(counts, MeldCountOf(view), view);
+                    EXPECT_EQ(options.front().tile, best.tile) << "hand " << index << " step " << step;
+                    EXPECT_EQ(options.front().shanten, best.shanten);
+                    EXPECT_EQ(options.front().acceptance, best.acceptance);
+
+                    const eastl::vector<Tile> group = BestGroup(options);
+                    ties += group.size() > 1 ? 1 : 0;
+                    for (uint32_t pick = 1; pick <= 4; ++pick) {
+                        MahjongRng picker(pick);
+                        const DiscardRating picked = BestDiscard(counts, MeldCountOf(view), view, picker);
+                        EXPECT_EQ(picked.shanten, best.shanten);
+                        EXPECT_EQ(picked.acceptance, best.acceptance);
+                        EXPECT_NE(eastl::find(group.begin(), group.end(), picked.tile), group.end()) << "hand " << index << " step " << step;
+                    }
+                    ++hands;
+                }
+                ASSERT_TRUE(hand.Apply(actor, Choose(hand.LegalActions(actor), Mode::SeekWin, rng)).has_value());
+            }
+        }
+        EXPECT_GT(hands, kRandomHands * kTurnsPerHand / 2);
+        EXPECT_GT(ties, 0);
+    }
+
+    TEST(ComputerTurnTest, RateKongGivesTheShantenAndAcceptanceOfTheHandWithoutTheKong) {
+        // 4p 4p 4p 5p 1s-6s 7m-9m with the fourth 4p: without the kong the hand is 5p 1s-6s 7m-9m and a meld, waiting on 5p alone.
+        const HandModel model = DeclaredPungModel("4p 4p 4p 5p 1s 2s 3s 4s 5s 6s 7m 8m 9m", "4p");
+        const TableView view = MakeTableView(model, kSeat0);
+        const TileCounts counts = CountTiles(view.own.concealed);
+
+        const DiscardRating after = RateKong(view, counts, HandAction::MakeConcealedKong(T("4p")));
+
+        EXPECT_FALSE(after.tile.IsPlayable());
+        EXPECT_EQ(after.shanten, 0);
+        EXPECT_EQ(after.acceptance, UnseenCopies(view, T("5p")));
     }
 
 }  // namespace BECore::Mahjong::Tests

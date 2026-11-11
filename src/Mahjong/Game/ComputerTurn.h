@@ -69,6 +69,15 @@ namespace BECore::Mahjong {
         int acceptance = 0;
     };
 
+    /// One discard of a hand of `3n + 2` tiles as `BestDiscard` rates it: the kind, the shanten and the acceptance of the `3n + 1` tiles
+    /// left, and its `KeepValue`.
+    struct DiscardOption {
+        Tile tile;
+        int shanten = 0;
+        int acceptance = 0;
+        int keep = 0;
+    };
+
     /**
      * @brief The best discard of the concealed tiles `counts` with `meldCount` melds (hand of `3n + 2` tiles).
      *
@@ -81,6 +90,34 @@ namespace BECore::Mahjong {
     /// The shanten and the acceptance `BestDiscard` finds, with no rng: `tile` is the first of the tied discards (the lowest `KeepValue`,
     /// then the lowest id). For comparing hands.
     [[nodiscard]] DiscardRating BestDiscardRating(const TileCounts& counts, int meldCount, const TableView& view);
+
+    /// Every kind held, rated as `BestDiscard` rates it and sorted in its order: the lowest shanten, the highest acceptance, the lowest
+    /// `KeepValue`, then the lowest tile id. The first entry is `BestDiscardRating`; the entries equal to it in all three numbers are the
+    /// candidates `BestDiscard` picks from. Unlike `BestDiscard` it computes the acceptance of every kind.
+    [[nodiscard]] eastl::vector<DiscardOption> RateDiscards(const TileCounts& counts, int meldCount, const TableView& view);
+
+    /// What `KongIsNoWorse` compares for a listed kong `action` (`ConcealedKong` or `UpgradeKong`) of the hand `counts`: the shanten and the
+    /// acceptance of the hand without the kong (the four tiles, or the one drawn, out, a meld more); `tile` invalid.
+    [[nodiscard]] DiscardRating RateKong(const TableView& view, const TileCounts& counts, const HandAction& action);
+
+    /// The rule of the turn that decided (the numbers of the list in `ChooseTurnAction`).
+    enum class TurnStep {
+        DeclareWin,   // 1
+        Declare,      // 2: the calling hand is declared with the discard
+        Kong,         // 3
+        KeepWaiting,  // 4: a declared hand keeps its wait
+        Discard,      // 5: `BestDiscard` (also what a handoff placeholder says)
+    };
+
+    /// The chosen action and the rule that chose it.
+    struct TurnDecision {
+        HandAction action;
+        TurnStep step = TurnStep::Discard;
+    };
+
+    /// `ChooseTurnAction` with the rule that decided; the same draws of `rng` in the same order. A search that replaces the choice reports
+    /// the step of its kind of action.
+    [[nodiscard]] TurnDecision DecideTurn(const TableView& view, MahjongRng& rng, const LevelProfile& profile = kNormalProfile, SearchHandoff* handoff = nullptr);
 
     /**
      * @brief The action of a seat that has to discard (`Phase::Discard`, `view.currentSeat == view.seat`, `view.legal` not empty).

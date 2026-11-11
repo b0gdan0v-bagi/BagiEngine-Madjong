@@ -33,6 +33,7 @@
         <node ref="nodes/MahjongSeatPlates"/>
         <node ref="nodes/MahjongCenterPanel"/>
         <node ref="nodes/MahjongHudMenu"/>
+        <node ref="nodes/MahjongHintsWhy"/>
         <node ref="nodes/MahjongHandoff"/>
         <node ref="nodes/MahjongHandOver"/>
         <node ref="nodes/MahjongHandOverAction"/>

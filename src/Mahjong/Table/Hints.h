@@ -1,6 +1,7 @@
 #pragma once
 
 #include <EASTL/array.h>
+#include <Mahjong/Game/ComputerExplain.h>
 #include <Mahjong/Game/ComputerView.h>
 #include <Mahjong/Game/TableSession.h>
 #include <Mahjong/Table/Words.h>
@@ -18,9 +19,6 @@ namespace BECore::Mahjong {
     /// The tiles of the waiting row: the 13 orphans are the most a hand can wait for.
     inline constexpr int kMaxWaitingTiles = 13;
 
-    /// The seed of the computer player that gives the advice: fixed, so the same view always gives the same advice and no rng of the game is touched.
-    inline constexpr uint32_t kAdviceSeed = 1;
-
     /// One tile the hand waits for and the copies of it the viewer cannot see (it may be 0: a dead wait is still shown).
     struct WaitEntry {
         Tile tile;
@@ -36,13 +34,31 @@ namespace BECore::Mahjong {
     /// `declareCalling` (exactly what the `Declare` switch of the table allows). All false when the viewer has no turn.
     [[nodiscard]] eastl::array<bool, kTileIdCount> DeclaringDiscards(const TableView& view);
 
-    /// What the computer player would do in the viewer's place: `ComputerPlayer(kAdviceSeed).Choose(view)`. An element of `view.legal`;
+    /// What the computer player would do in the viewer's place: `ComputerPlayer(kAdviceSeed).Choose(view)` (`kAdviceSeed` is in `Game/ComputerExplain.h`). An element of `view.legal`;
     /// empty when `view.legal` is empty (nothing to do).
     [[nodiscard]] std::optional<HandAction> AdviceFor(const TableView& view);
 
     /// One sentence that says `advice` in the language of `strings` ("Discard 5 Dots.", "Take the discard to make a pung of 5 Dots."):
     /// one key `hints.advice.*` per kind with placeholders. `view` names the pending discard of a claim. Never empty.
     [[nodiscard]] eastl::string AdviceText(const UIStrings& strings, const TableView& view, const HandAction& advice);
+
+    /// The most sentences `ReasonLines` gives: the labels of the panel of the reasons.
+    inline constexpr size_t kMaxReasonLines = 6;
+
+    /// The advice of `AdviceFor(view)` with the numbers it was chosen by (`ExplainAdvice`); its action equals `AdviceFor(view)`.
+    /// Empty when there is nothing to do.
+    [[nodiscard]] std::optional<Explanation> ExplainAdviceFor(const TableView& view);
+
+    /**
+     * @brief The reasons of an advice as sentences in the language of `strings`, at most `kMaxReasonLines`, none empty.
+     *
+     * In this order, as far as there is something to say: what the deciding rule of the chooser saw (the steps to a ready hand before and
+     * after, the unseen tiles that help or the waiting tiles), how a tie of equal discards was settled (the keep class, or chance), then
+     * one line for each of the two best alternatives with the same numbers; a pass says why. One key `hints.why.*` per sentence, so the
+     * word order is the translation's; a number is never part of a plural form (it follows a colon), and tiles are named by `TileName`.
+     * `view` names the pending discard of a claim. The numbers are those of `explained`, nothing is computed again.
+     */
+    [[nodiscard]] eastl::vector<eastl::string> ReasonLines(const UIStrings& strings, const TableView& view, const Explanation& explained);
 
     /**
      * @brief Whether the hints are on screen now: `hintsOn` (`MahjongGame::HintsOn()`), the table is not paused behind a modal screen

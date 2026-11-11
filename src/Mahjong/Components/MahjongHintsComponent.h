@@ -37,8 +37,10 @@ namespace BECore::Mahjong {
      * shown by name in both, `MahjongTableComponent` swaps the canvases) is shown exactly while hints apply and the
      * viewer has actions to choose from; `MahjongHintAdvice` (ignored when the button is not offered) stores `AdviceFor(view)` and the
      * component publishes the sentence `AdviceText` as the variable `hintAdvice` for the label `AdviceText`; a discard that is advised is
-     * framed on the hand. The advice belongs to the table it was asked on: any change of the session `Version()`, a cover, hints off or
-     * `Setup` open drop it, and a new language words it again. **It never acts:** it performs no action, moves no version and the
+     * framed on the hand. A second press while that advice is up opens the reasons (`ExplainAdviceFor`, `ReasonLines`) in the panel
+     * `WhyPanel` of the node `HintsWhy` (`config/nodes/MahjongHintsWhy.xml`, on the wall ring, text only, no input), as the variables `hintWhy0..5`; a third
+     * press closes it. The advice belongs to the table it was asked on: any change of the session `Version()`, a cover, hints off or
+     * `Setup` open drop it and the reasons with it, and a new language words both again. **It never acts:** it performs no action, moves no version and the
      * control API does not know it.
      */
     class MahjongHintsComponent : public IComponent {
@@ -77,6 +79,8 @@ namespace BECore::Mahjong {
         void PushWaitingRow();
         /// The button and the sentence of the advice.
         void PushAdvice();
+        /// The panel of the reasons (`HintsWhy`): the lines and the plate while `open`, empty variables and no plate otherwise.
+        void PushWhy(bool open);
         void DropAdvice();
         void DrawMarks(const MahjongGame& game) const;
 
@@ -91,6 +95,11 @@ namespace BECore::Mahjong {
         std::optional<HandAction> _advice;  ///< the advice that was asked for on the table of `_adviceKey`
         TableView _adviceView;              ///< the view it was asked on (the sentence names the pending discard of a window)
         Key _adviceKey;
+        std::optional<Explanation> _explained;  ///< the reasons of `_advice`, asked on the same table
+        bool _whyOpen = false;                  ///< a second press opened the reasons, a third closes them
+        bool _whyDirty = false;                 ///< the lines are to be published again (opened)
+        bool _whyShown = false;
+        uint64_t _whyStringsVersion = 0;
         bool _adviceDirty = false;  ///< the sentence is to be published again (asked again)
         bool _adviceShown = false;
         uint64_t _adviceStringsVersion = 0;

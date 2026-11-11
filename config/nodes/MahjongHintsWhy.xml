@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<!--
+  The reasons of the advice (Table/Hints.h, ReasonLines): up to six lines in a panel that a second press of HintButton opens and a third
+  closes (MahjongHintsComponent). Text only, no control: nothing here takes input, so a click on it is the table's.
+  WhyPanel lies on the wall ring (TableLayout::zones.wall, x 458..822, y 268..436 in view units; the panel is 2 in from each side, so that
+  it sits on the grid of 4): the one place of the table with no hand, meld or discard tile, so it covers only the centre panel (round, wall count, points) and the wall stacks while it is open. Its plate
+  is opaque (the palette's surface), so the centre panel does not show through. In the portrait table the ring is 280 units left and 84
+  down (x 180, y 352), like the variant of MahjongCenterPanel.xml, and the variant moves the panel by that. It is 360 x 168: six
+  labels of 360 x 28 (font 18, AutoFit down to 12) hold the lines {hintWhy0}..{hintWhy5}, empty ones included. Layer 11: over the HUD
+  (10), under the covers and the modal screens (20 and up). A SceneView canvas whose panel ignores the safe area like CenterPanel, so
+  it stays on the ring. MahjongHintsTest holds it inside the ring, clear of every slot but the wall stacks, free of input, and every
+  line of the longest text in both languages fitting on the size matrix.
+-->
+<node name="HintsWhy" layer="11">
+  <components>
+    <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
+      <elements>
+        <element type="UIStack" name="WhyPanel" anchor="TopLeft" ignoreSafeArea="true" visible="false" x="460" y="268" width="360" height="168" direction="Vertical" spacing="0" padding="0" crossAlign="Start" color="36,40,52,255">
+          <children>
+            <element type="UILabel" name="WhyLine0" width="360" height="28" text="{hintWhy0}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" />
+            <element type="UILabel" name="WhyLine1" width="360" height="28" text="{hintWhy1}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" />
+            <element type="UILabel" name="WhyLine2" width="360" height="28" text="{hintWhy2}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" />
+            <element type="UILabel" name="WhyLine3" width="360" height="28" text="{hintWhy3}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" />
+            <element type="UILabel" name="WhyLine4" width="360" height="28" text="{hintWhy4}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" />
+            <element type="UILabel" name="WhyLine5" width="360" height="28" text="{hintWhy5}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" />
+          </children>
+        </element>
+      </elements>
+      <variants>
+        <variant when="orientation:portrait">
+          <overrides>
+            <set element="WhyPanel" x="180" y="352" />
+          </overrides>
+        </variant>
+      </variants>
+    </component>
+  </components>
+</node>

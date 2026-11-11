@@ -6,6 +6,7 @@
 #include <BECore/Control/Json.h>
 #include <BECore/UI/UIImage.h>
 #include <Mahjong/Components/MahjongHintsComponent.h>
+#include <Mahjong/Game/ComputerExplain.h>
 #include <Mahjong/Game/ComputerPlayer.h>
 #include <Mahjong/Table/Hints.h>
 #include <Mahjong/Table/TableLayout.h>
@@ -209,6 +210,58 @@ namespace BECore::Mahjong::Tests {
             Refresh();
             ASSERT_EQ(Hand().GetPhase(), Phase::Claim);
             ASSERT_EQ(_game->GetSession().Actor(), kSeat1);
+        }
+
+        /// Line `index` of the panel of the reasons as the variable holds it.
+        std::string WhyVar(size_t index) const {
+            return Var(CellName("hintWhy", static_cast<int>(index)).c_str());
+        }
+
+        bool WhyShown() const {
+            return OnScreen("HintsWhy", "WhyPanel");
+        }
+
+        /// The six variables of the panel: what `ReasonLines` says for `seat`'s view now, in the current language, padded with empty lines.
+        std::vector<std::string> ExpectedWhy(Seat seat) const {
+            const TableView view = ViewOf(seat);
+            std::vector<std::string> lines(kMaxReasonLines);
+            if (const std::optional<Explanation> explained = ExplainAdviceFor(view)) {
+                const eastl::vector<eastl::string> said = ReasonLines(CoreManager::GetUIStrings(), view, *explained);
+                for (size_t i = 0; i < said.size() && i < lines.size(); ++i) {
+                    lines[i].assign(said[i].data(), said[i].size());
+                }
+            }
+            return lines;
+        }
+
+        std::vector<std::string> WhyVars() const {
+            std::vector<std::string> lines;
+            for (size_t i = 0; i < kMaxReasonLines; ++i) {
+                lines.push_back(WhyVar(i));
+            }
+            return lines;
+        }
+
+        static PoolString IndexedVar(const char* prefix, size_t index) {
+            const std::string name = std::string(prefix) + std::to_string(index);
+            return PoolString::Intern(eastl::string_view(name.data(), name.size()));
+        }
+
+        bool NoWhyText() const {
+            for (const std::string& line : WhyVars()) {
+                if (!line.empty()) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        /// The panel open: two presses on the table as it is.
+        void OpenWhy() {
+            Press();
+            Press();
+            ASSERT_TRUE(AdviceShown());
+            ASSERT_TRUE(WhyShown());
         }
 
         /// The panel open and drawn on the game as it is.
@@ -1134,15 +1187,17 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(RectsOf(kDeclareMark).size(), 2u);
     }
 
-    TEST_F(MahjongHintsTest, PressingAgainGivesTheSameAnswer) {
+    TEST_F(MahjongHintsTest, PressingAgainKeepsTheSentenceAndOpensTheReasons) {
         ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
         Press();
         const std::string first = AdviceVar();
         const uint64_t varsVersion = CoreManager::GetUIVars().GetVersion();
+        Draw();
+        EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), varsVersion) << "an unchanged frame sets nothing";
         Press();
         EXPECT_EQ(AdviceVar(), first);
         EXPECT_TRUE(AdviceShown());
-        EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), varsVersion) << "an equal sentence sets nothing";
+        EXPECT_TRUE(WhyShown());
     }
 
     TEST_F(MahjongHintsTest, InAClaimWindowTheSentenceNamesTheClaimTheComputerWouldMake) {
@@ -1386,6 +1441,310 @@ namespace BECore::Mahjong::Tests {
                                                            << " label " << label->rect.x << "," << label->rect.y << "," << label->rect.w << "x" << label->rect.h;
             }
         }
+    }
+
+    // ----- the reasons of the advice -----
+
+    namespace {
+
+        /// The reasons of every kind of advice over every tile and big numbers, in the language of `strings`: the lines the panel may have to hold.
+        std::vector<eastl::string> EveryReasonLine(const UIStrings& strings) {
+            constexpr int kBig = 99;
+            constexpr int kKeepClasses[] = {kKeepWorthless, kKeepTerminal, kKeepSimple, kKeepValueTile};
+            std::vector<eastl::string> lines;
+            TableView view;
+            const auto say = [&](const Explanation& explained) {
+                for (const eastl::string& line : ReasonLines(strings, view, explained)) {
+                    lines.push_back(line);
+                }
+            };
+            for (int id = 0; id < kTileIdCount; ++id) {
+                const Tile tile = Tile(static_cast<uint8_t>(id));
+                view.pendingTile = tile;
+                for (const TurnStep step : {TurnStep::Discard, TurnStep::Declare, TurnStep::KeepWaiting, TurnStep::Kong, TurnStep::DeclareWin}) {
+                    for (const int keep : kKeepClasses) {
+                        TurnExplanation turn;
+                        turn.step = step;
+                        turn.action = HandAction::MakeDiscard(tile);
+                        turn.shantenBefore = 8;
+                        turn.kongShantenAfter = 8;
+                        turn.kongAcceptanceBefore = kBig;
+                        turn.kongAcceptanceAfter = kBig;
+                        turn.chosen = TurnOption{tile, 8, kBig, keep, 13, kBig};
+                        turn.equalChoices = 13;
+                        turn.alternatives = {TurnOption{tile, 8, kBig, keep, 13, kBig}, TurnOption{tile, 8, kBig, keep + 1, 13, kBig}};
+                        Explanation explained;
+                        explained.turn = turn;
+                        say(explained);
+                    }
+                }
+                for (const ClaimStep step : {ClaimStep::Mahjong, ClaimStep::WaitingHand, ClaimStep::Claim, ClaimStep::NoGain}) {
+                    ClaimExplanation claim;
+                    claim.step = step;
+                    claim.shantenBefore = 8;
+                    claim.waits.assign(13, TileCopies{tile, kBig});
+                    claim.chosen = RatedClaim{HandAction::MakeClaim(ClaimKind::Pung), DiscardRating{tile, 8, kBig}, 0, true};
+                    for (const ClaimKind kind : {ClaimKind::Pung, ClaimKind::Kong, ClaimKind::Chow}) {
+                        const HandAction action = kind == ClaimKind::Chow ? HandAction::MakeClaim(kind, tile) : HandAction::MakeClaim(kind);
+                        claim.alternatives = {RatedClaim{action, DiscardRating{tile, 8, kBig}, 0, true}, RatedClaim{action, DiscardRating{tile, 8, kBig}, 0, false}};
+                        Explanation explained;
+                        explained.claim = claim;
+                        say(explained);
+                    }
+                }
+            }
+            return lines;
+        }
+
+    }  // namespace
+
+    TEST_F(MahjongHintsTest, TheSecondPressOpensTheReasonsAndTheThirdClosesThem) {
+        ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
+        EXPECT_FALSE(WhyShown());
+        EXPECT_TRUE(NoWhyText());
+        const uint64_t version = _game->GetSession().Version();
+
+        Press();
+        EXPECT_TRUE(AdviceShown());
+        EXPECT_FALSE(WhyShown()) << "the first press gives the sentence only";
+        EXPECT_TRUE(NoWhyText());
+
+        Press();
+        EXPECT_TRUE(AdviceShown()) << "the sentence stays";
+        EXPECT_EQ(AdviceVar(), SentenceFor(kSeat0));
+        ASSERT_TRUE(WhyShown());
+        EXPECT_EQ(WhyVars(), ExpectedWhy(kSeat0));
+        EXPECT_FALSE(WhyVar(0).empty());
+        EXPECT_FALSE(WhyVar(1).empty());
+        EXPECT_EQ(RectsOf(kAdvisedFrame).size(), 4u) << "the frame of the advised tile stays";
+
+        Press();
+        EXPECT_TRUE(AdviceShown());
+        EXPECT_FALSE(WhyShown());
+        EXPECT_TRUE(NoWhyText()) << "nothing of the reasons stays in a variable";
+
+        Press();
+        EXPECT_TRUE(WhyShown()) << "and it opens again";
+        EXPECT_EQ(WhyVars(), ExpectedWhy(kSeat0));
+        EXPECT_EQ(_game->GetSession().Version(), version) << "the reasons never move the session";
+        EXPECT_EQ(Hand().GetHand(kSeat0).concealed.size(), 14u);
+    }
+
+    TEST_F(MahjongHintsTest, TheReasonsOfAClaimWindowAreThePersonsOwn) {
+        ASSERT_NO_FATAL_FAILURE(StartWindow(kWindowPung, "5p"));
+        ASSERT_NO_FATAL_FAILURE(OpenWhy());
+        EXPECT_EQ(WhyVars(), ExpectedWhy(kSeat1));
+        EXPECT_FALSE(WhyVar(0).empty());
+    }
+
+    TEST_F(MahjongHintsTest, ThePanelOfTheReasonsGoesWithTheAdvice) {
+        // A discard
+        ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
+        ASSERT_NO_FATAL_FAILURE(OpenWhy());
+        ASSERT_TRUE(Discard("Nw"));
+        Draw();
+        EXPECT_FALSE(WhyShown());
+        EXPECT_TRUE(NoWhyText());
+
+        // Hints off, and they do not come back by themselves
+        ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
+        ASSERT_NO_FATAL_FAILURE(OpenWhy());
+        _game->SetHintsOn(false);
+        Draw();
+        EXPECT_FALSE(WhyShown());
+        EXPECT_TRUE(NoWhyText());
+        _game->SetHintsOn(true);
+        Draw();
+        EXPECT_FALSE(WhyShown());
+        EXPECT_FALSE(AdviceShown());
+        Press();
+        EXPECT_FALSE(WhyShown()) << "a first press again";
+        EXPECT_TRUE(AdviceShown());
+
+        // Setup, the page Options and the rules
+        ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
+        ASSERT_NO_FATAL_FAILURE(OpenWhy());
+        _game->OpenSetup();
+        Draw();
+        EXPECT_FALSE(WhyShown());
+        EXPECT_TRUE(NoWhyText());
+        _game->CloseSetup();
+        Draw();
+        EXPECT_FALSE(WhyShown());
+
+        ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
+        ASSERT_NO_FATAL_FAILURE(OpenWhy());
+        _game->OpenRules();
+        Draw();
+        EXPECT_FALSE(WhyShown());
+        EXPECT_TRUE(NoWhyText());
+        _game->CloseRules();
+        Draw();
+        EXPECT_FALSE(WhyShown());
+
+        // Hot seat: person 0 opens it, discards; the cover goes up for person 2, who does not inherit it
+        const SeatSetup twoPeople{SeatKind::Person, SeatKind::Computer, SeatKind::Person, SeatKind::Computer};
+        ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw", twoPeople));
+        _game->GetSession().Reveal();
+        Refresh();
+        ASSERT_NO_FATAL_FAILURE(OpenWhy());
+        ASSERT_TRUE(Discard("Nw"));
+        ASSERT_TRUE(StepUntil([&] { return _game->GetSession().ActorIsPerson(); }));
+        Draw();
+        ASSERT_TRUE(_game->GetSession().HandoffPending());
+        EXPECT_FALSE(WhyShown());
+        EXPECT_TRUE(NoWhyText());
+        _game->GetSession().Reveal();
+        Draw();
+        EXPECT_FALSE(WhyShown());
+        EXPECT_TRUE(NoWhyText());
+        EXPECT_NE(_game->GetSession().Viewer(), kSeat0);
+        Press();
+        EXPECT_FALSE(WhyShown()) << "the next person's first press gives the sentence only";
+    }
+
+    TEST_F(MahjongHintsTest, APressThatIsNotOfferedOpensNoReasons) {
+        ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
+        ASSERT_TRUE(Discard("Nw"));
+        Draw();
+        ASSERT_FALSE(_game->GetSession().ActorIsPerson());
+        const uint64_t varsVersion = CoreManager::GetUIVars().GetVersion();
+        Press();
+        Press();
+        EXPECT_FALSE(WhyShown());
+        EXPECT_FALSE(AdviceShown());
+        EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), varsVersion);
+
+        ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
+        _game->SetHintsOn(false);
+        Press();
+        Press();
+        EXPECT_FALSE(WhyShown());
+        EXPECT_TRUE(NoWhyText());
+    }
+
+    TEST_F(MahjongHintsTest, TheLanguageSwitchWordsTheReasonsAgain) {
+        ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
+        ASSERT_NO_FATAL_FAILURE(OpenWhy());
+        std::vector<std::string> seen;
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            Draw();
+            EXPECT_TRUE(WhyShown());
+            EXPECT_EQ(WhyVars(), ExpectedWhy(kSeat0));
+            EXPECT_FALSE(WhyVar(0).empty());
+            seen.push_back(WhyVar(0));
+        });
+        ASSERT_GE(seen.size(), 2u);
+        EXPECT_NE(seen[0], seen[1]);
+    }
+
+    TEST_F(MahjongHintsTest, AnUnchangedFrameWithTheReasonsOpenSetsNothingAgain) {
+        ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
+        ASSERT_NO_FATAL_FAILURE(OpenWhy());
+        const uint64_t version = CoreManager::GetUIVars().GetVersion();
+        Draw();
+        Draw();
+        EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), version);
+    }
+
+    TEST_F(MahjongHintsTest, TheControlStateIsTheSameWithTheReasonsOpenAndWithHintsOff) {
+        const auto play = [&](bool hintsOn) {
+            std::string state;
+            [&] {
+                _game->SetHintsOn(hintsOn);
+                ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
+                const uint64_t version = _game->GetSession().Version();
+                Press();
+                Press();
+                EXPECT_EQ(hintsOn, WhyShown());
+                EXPECT_EQ(_game->GetSession().Version(), version);
+                const auto got = _game->AsControllable()->GetState();
+                ASSERT_TRUE(got.has_value());
+                Json shown = *got;
+                shown.erase("version");
+                state = shown.dump();
+            }();
+            return state;
+        };
+        const std::string withReasons = play(true);
+        EXPECT_EQ(withReasons, play(false));
+    }
+
+    TEST_F(MahjongHintsTest, TheReasonsDoNotSeeTheOtherHands) {
+        // Two tables that differ only in the hands of the other seats and the live wall after the viewer's draw
+        const auto run = [&](const char* seat1, const char* seat3, const std::string& live) {
+            std::vector<std::string> lines;
+            [&] {
+                ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+                FixedWallSpec spec = SpecOf(kBestIsTheNorthWind, "Nw");
+                spec.hands[kSeat1] = seat1;
+                spec.hands[kSeat3] = seat3;
+                spec.live = live;
+                Lay(MakeModel(spec));
+                Draw();
+                ASSERT_NO_FATAL_FAILURE(OpenWhy());
+                lines = WhyVars();
+            }();
+            return lines;
+        };
+        const std::vector<std::string> plain = run(kQuiet1, kQuiet3, "4p Rd Gd Wd");
+        const std::vector<std::string> loaded = run("7p 7p 7p 2s 5s 8s 2m 5m 8m Ww Nw Gd Wd", "4p 4p 3s 6s 9s 3m 6m 9m Sw Ww Nw Gd Rd", "4p Gd Rd Wd");
+        EXPECT_FALSE(plain.front().empty());
+        EXPECT_EQ(plain, loaded);
+    }
+
+    TEST_F(MahjongHintsTest, ThePanelLiesOnTheWallRingClearOfEveryTileButTheWallAndTakesNoInput) {
+        ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
+        ASSERT_NO_FATAL_FAILURE(OpenWhy());
+        for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait}) {
+            const MatrixWindow window = DesignWindowOf(shape);
+            SCOPED_TRACE(window.label.c_str());
+            LayOutOnTheTable({"HintsWhy"}, window);
+
+            const UIElement* panel = Element("HintsWhy", "WhyPanel");
+            ASSERT_NE(panel, nullptr);
+            const Rect ring = MakeTableLayout(TableInput{}, DesignWidthOf(shape), DesignHeightOf(shape)).zones.wall;
+            EXPECT_TRUE(Inside(panel->rect, ring)) << panel->rect.x << "," << panel->rect.y << " " << panel->rect.w << "x" << panel->rect.h;
+            EXPECT_EQ(panel->rect.x, shape == TableShape::Portrait ? 180.0f : 460.0f);
+            EXPECT_EQ(panel->rect.y, shape == TableShape::Portrait ? 352.0f : 268.0f);
+            for (size_t i = 0; i < kMaxReasonLines; ++i) {
+                const UIElement* line = Element("HintsWhy", CellName("WhyLine", static_cast<int>(i)).c_str());
+                ASSERT_NE(line, nullptr) << i;
+                EXPECT_TRUE(Inside(line->rect, panel->rect)) << i;
+                EXPECT_FALSE(line->IsHitTestable()) << i << " takes no input";
+            }
+            EXPECT_FALSE(panel->IsHitTestable());
+            EXPECT_FALSE(Click(panel->rect.x + panel->rect.w * 0.5f, panel->rect.y + panel->rect.h * 0.5f)) << "a click on the panel is no canvas's";
+
+            for (const TileSlot& slot : MakeTableLayout(WorstCaseInput(), DesignWidthOf(shape), DesignHeightOf(shape)).slots) {
+                if (slot.role != SlotRole::WallStack) {
+                    EXPECT_TRUE(Apart(slot.rect, panel->rect)) << "role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
+                }
+            }
+        }
+    }
+
+    TEST_F(MahjongHintsTest, ThePanelOfTheReasonsPassesTheSizeMatrixAndTheLongestLinesFitInEveryLanguage) {
+        ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
+        ASSERT_NO_FATAL_FAILURE(OpenWhy());
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            Draw();  // the words of the language
+            const eastl::string longest = LongestText(EveryReasonLine(CoreManager::GetUIStrings()));
+            ASSERT_FALSE(longest.empty());
+            for (size_t i = 0; i < kMaxReasonLines; ++i) {
+                CoreManager::GetUIVars().Set(IndexedVar("hintWhy", i), eastl::string_view(longest));
+            }
+            Draw();
+            ASSERT_TRUE(WhyShown());
+            ExpectPassesTheMatrix("HintsWhy", EngineTouchMinimum());
+            for (const Output& output : kOutputs) {
+                ExpectWordsFit("HintsWhy", output.width, output.height, 0.0f);
+            }
+            const std::vector<std::string> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("HintsWhy"), 0.0f);
+            EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
+        });
     }
 
 }  // namespace BECore::Mahjong::Tests

@@ -1,5 +1,7 @@
 #include "ComputerTurn.h"
 
+#include <EASTL/sort.h>
+
 namespace BECore::Mahjong {
 
     namespace {
@@ -67,19 +69,11 @@ namespace BECore::Mahjong {
 
         /// Whether the hand without the kong of `action` is no worse than the hand as it is (`current`, its best discard).
         bool KongIsNoWorse(const TableView& view, const TileCounts& counts, const HandAction& action, const DiscardRating& current) {
-            TileCounts rest = counts;
-            int melds = MeldCountOf(view);
-            if (action.kind == ActionKind::ConcealedKong) {
-                rest[action.tile.Id()] = static_cast<uint8_t>(rest[action.tile.Id()] - kConcealedKongTiles);
-                ++melds;
-            } else {
-                --rest[action.tile.Id()];
+            const DiscardRating after = RateKong(view, counts, action);
+            if (after.shanten != current.shanten) {
+                return after.shanten < current.shanten;
             }
-            const int shanten = Shanten(rest, melds);
-            if (shanten != current.shanten) {
-                return shanten < current.shanten;
-            }
-            return shanten != 0 || AcceptanceOf(view, rest, melds) >= current.acceptance;
+            return after.shanten != 0 || after.acceptance >= current.acceptance;
         }
 
         /// Step 3: the first listed kong that does not hurt the hand.
@@ -100,6 +94,24 @@ namespace BECore::Mahjong {
             return std::nullopt;
         }
 
+        /// The shanten of `counts` after the discard of kind `id` (`counts` is left as it was).
+        int ShantenAfterDiscard(TileCounts& counts, int meldCount, uint8_t id) {
+            --counts[id];
+            const int shanten = Shanten(counts, meldCount);
+            ++counts[id];
+            return shanten;
+        }
+
+        /// The rating of the discard of kind `id`, whose shanten after it is `shanten`: the one place that rates a discard
+        /// (`FindBestDiscards` and `RateDiscards` both call it). `counts` is left as it was.
+        DiscardOption RateDiscard(TileCounts& counts, int meldCount, const TableView& view, uint8_t id, int shanten) {
+            --counts[id];
+            const int acceptance = AcceptanceOf(view, counts, meldCount);
+            ++counts[id];
+            const Tile tile{id};
+            return {tile, shanten, acceptance, KeepValue(tile, view.seatWind, view.roundWind)};
+        }
+
         /// The kinds whose discard leaves the lowest shanten, and that shanten.
         struct LowestShanten {
             int shanten = 0;
@@ -114,9 +126,7 @@ namespace BECore::Mahjong {
                 if (counts[id] == 0) {
                     continue;
                 }
-                --rest[id];
-                const int shanten = Shanten(rest, meldCount);
-                ++rest[id];
+                const int shanten = ShantenAfterDiscard(rest, meldCount, id);
                 if (shanten < lowest.shanten) {
                     lowest.shanten = shanten;
                     lowest.kinds.clear();
@@ -126,6 +136,14 @@ namespace BECore::Mahjong {
                 }
             }
             return lowest;
+        }
+
+        /// Whether discard `a` is better than `b`: the lower shanten after it, then `IsBetter` (the higher acceptance, the lower keep).
+        bool IsBetterDiscard(const DiscardOption& a, const DiscardOption& b) noexcept {
+            if (a.shanten != b.shanten) {
+                return a.shanten < b.shanten;
+            }
+            return IsBetter({a.tile, a.acceptance, a.keep}, {b.tile, b.acceptance, b.keep});
         }
 
         /// The discards of the lowest shanten and the highest acceptance, each with its `KeepValue`; `acceptance` is theirs.
@@ -142,16 +160,13 @@ namespace BECore::Mahjong {
             best.acceptance = kNoAcceptance;
             TileCounts rest = counts;
             for (const uint8_t id : lowest.kinds) {
-                --rest[id];
-                const int acceptance = AcceptanceOf(view, rest, meldCount);
-                ++rest[id];
-                if (acceptance > best.acceptance) {
-                    best.acceptance = acceptance;
+                const DiscardOption option = RateDiscard(rest, meldCount, view, id, lowest.shanten);
+                if (option.acceptance > best.acceptance) {
+                    best.acceptance = option.acceptance;
                     best.candidates.clear();
                 }
-                if (acceptance == best.acceptance) {
-                    const Tile tile{id};
-                    best.candidates.push_back({tile, acceptance, KeepValue(tile, view.seatWind, view.roundWind)});
+                if (option.acceptance == best.acceptance) {
+                    best.candidates.push_back({option.tile, option.acceptance, option.keep});
                 }
             }
             return best;
@@ -176,6 +191,21 @@ namespace BECore::Mahjong {
             }
             const DiscardRating best = BestDiscard(counts, MeldCountOf(view), view, rng);
             return HandAction::MakeDiscard(best.tile);
+        }
+
+        /// The step a searched choice stands for: the rule whose kind of action it is (the search picks among the candidates of those
+        /// rules; the advice never searches, so this only has to be defined).
+        TurnStep StepOfSearched(const TableView& view, const HandAction& action) noexcept {
+            if (action.kind == ActionKind::ConcealedKong || action.kind == ActionKind::UpgradeKong) {
+                return TurnStep::Kong;
+            }
+            if (action.kind != ActionKind::Discard) {
+                return TurnStep::Discard;
+            }
+            if (action.declareCalling) {
+                return TurnStep::Declare;
+            }
+            return view.own.callingDeclared ? TurnStep::KeepWaiting : TurnStep::Discard;
         }
 
     }  // namespace
@@ -250,6 +280,31 @@ namespace BECore::Mahjong {
         return discards;
     }
 
+    eastl::vector<DiscardOption> RateDiscards(const TileCounts& counts, int meldCount, const TableView& view) {
+        eastl::vector<DiscardOption> options;
+        TileCounts rest = counts;
+        for (uint8_t id = 0; id < kKindCount; ++id) {
+            if (counts[id] != 0) {
+                options.push_back(RateDiscard(rest, meldCount, view, id, ShantenAfterDiscard(rest, meldCount, id)));
+            }
+        }
+        // The chooser's order, then the lowest tile id: the first entry is what `BestDiscardRating` reports.
+        eastl::sort(options.begin(), options.end(), [](const DiscardOption& a, const DiscardOption& b) { return IsBetterDiscard(a, b) || (!IsBetterDiscard(b, a) && a.tile.Id() < b.tile.Id()); });
+        return options;
+    }
+
+    DiscardRating RateKong(const TableView& view, const TileCounts& counts, const HandAction& action) {
+        TileCounts rest = counts;
+        int melds = MeldCountOf(view);
+        if (action.kind == ActionKind::ConcealedKong) {
+            rest[action.tile.Id()] = static_cast<uint8_t>(rest[action.tile.Id()] - kConcealedKongTiles);
+            ++melds;
+        } else {
+            --rest[action.tile.Id()];
+        }
+        return {Tile{}, Shanten(rest, melds), AcceptanceOf(view, rest, melds)};
+    }
+
     DiscardRating BestDiscard(const TileCounts& counts, int meldCount, const TableView& view, MahjongRng& rng) {
         const BestDiscards best = FindBestDiscards(counts, meldCount, view);
         if (best.candidates.empty()) {
@@ -272,33 +327,37 @@ namespace BECore::Mahjong {
         return {first, best.shanten, best.acceptance};
     }
 
-    HandAction ChooseTurnAction(const TableView& view, MahjongRng& rng, const LevelProfile& profile, SearchHandoff* handoff) {
+    TurnDecision DecideTurn(const TableView& view, MahjongRng& rng, const LevelProfile& profile, SearchHandoff* handoff) {
         if (const HandAction* win = FindAction(view, ActionKind::DeclareWin)) {
-            return *win;
+            return {*win, TurnStep::DeclareWin};
         }
         if (profile.searchWorlds > 0) {
             if (handoff != nullptr) {
                 if ((handoff->run = BeginTurnSearch(view, rng, profile))) {
-                    return HandAction::MakePass();
+                    return {HandAction::MakePass(), TurnStep::Discard};
                 }
             } else if (const std::optional<HandAction> searched = SearchTurnAction(view, rng, profile)) {
-                return *searched;
+                return {*searched, StepOfSearched(view, *searched)};
             }
         }
         if (const std::optional<HandAction> declaration = ChooseWaitingDiscard(view, rng, true)) {
             if (!Roll(rng, profile.skipDeclarationPercent)) {
-                return *declaration;
+                return {*declaration, TurnStep::Declare};
             }
         }
         if (const std::optional<HandAction> kong = ChooseKong(view)) {
-            return *kong;
+            return {*kong, TurnStep::Kong};
         }
         if (view.own.callingDeclared) {
             if (const std::optional<HandAction> keeping = ChooseWaitingDiscard(view, rng, false)) {
-                return *keeping;
+                return {*keeping, TurnStep::KeepWaiting};
             }
         }
-        return ChooseDiscard(view, rng, profile);
+        return {ChooseDiscard(view, rng, profile), TurnStep::Discard};
+    }
+
+    HandAction ChooseTurnAction(const TableView& view, MahjongRng& rng, const LevelProfile& profile, SearchHandoff* handoff) {
+        return DecideTurn(view, rng, profile, handoff).action;
     }
 
 }  // namespace BECore::Mahjong
