@@ -1,9 +1,12 @@
 #include "ComputerTestSupport.h"
 #include "MahjongTableTestSupport.h"
+#include "MahjongTouchTestSupport.h"
 #include "UiStyleTestSupport.h"
 
 #include <Events/SceneEvents.h>
 #include <Mahjong/Table/CallingMarks.h>
+#include <Mahjong/Table/EmblemAtlas.h>
+#include <Mahjong/Table/SeatPlates.h>
 #include <Mahjong/Table/UiPalette.h>
 #include <set>
 
@@ -317,6 +320,47 @@ namespace BECore::Mahjong::Tests {
             EXPECT_TRUE(model.Discard(kSeat0, T("5p")).has_value());
             EXPECT_EQ(model.GetPhase(), Phase::Claim);
             return model;
+        }
+
+        // ----- the seat emblems -----
+
+        /// The draws of the emblem atlas whose rectangle is the ring box of the plate of `seat` and whose source is `cell` (design window:
+        /// the view is the output and a unit is one pixel).
+        std::vector<DrawCall> EmblemDraws(Seat seat, int cell) const {
+            const Rect box = EmblemBox(PlateOf(seat), 1.0f);
+            const Rect source = EmblemRect(cell);
+            std::vector<DrawCall> found;
+            for (const DrawCall& call : EmblemCalls()) {
+                if (SameRect(call.rect, box) && call.source.has_value() && SameRect(*call.source, source)) {
+                    found.push_back(call);
+                }
+            }
+            return found;
+        }
+
+        /// How many cells of the emblem atlas the seat shows in its ring box, of any kind.
+        size_t EmblemDrawCount(Seat seat) const {
+            size_t count = 0;
+            for (const DrawCall& call : EmblemCalls()) {
+                count += SameRect(call.rect, EmblemBox(PlateOf(seat), 1.0f)) ? 1 : 0;
+            }
+            return count;
+        }
+
+        /// The seat shows exactly the picture `cell` and the rings in `rings` (tints worked out from the palette roles), nothing else.
+        void ExpectEmblem(Seat seat, int cell, bool turnRing, bool callingRing) const {
+            ASSERT_EQ(EmblemDraws(seat, cell).size(), 1u) << "picture, seat " << seat;
+            const std::vector<DrawCall> turn = EmblemDraws(seat, kTurnRingCell);
+            ASSERT_EQ(turn.size(), turnRing ? 1u : 0u) << "turn ring, seat " << seat;
+            if (turnRing) {
+                EXPECT_TRUE(SameColor(turn[0].color, kSeatTurnFrame)) << "seat " << seat;
+            }
+            const std::vector<DrawCall> calling = EmblemDraws(seat, kCallingRingCell);
+            ASSERT_EQ(calling.size(), callingRing ? 1u : 0u) << "calling ring, seat " << seat;
+            if (callingRing) {
+                EXPECT_TRUE(SameColor(calling[0].color, kCallingFrame)) << "seat " << seat;
+            }
+            EXPECT_EQ(EmblemDrawCount(seat), 1u + (turnRing ? 1u : 0u) + (callingRing ? 1u : 0u)) << "seat " << seat;
         }
 
         // ----- the seat plates -----
@@ -1453,6 +1497,193 @@ namespace BECore::Mahjong::Tests {
         }
         EXPECT_FALSE(SameColor(kPanelTurnLight, kPanelDealerMark));
         EXPECT_GT(kPanelTurnLightWidth, 0.0f);
+    }
+
+    TEST_F(MahjongTableMarksTest, EverySeatPlateHasTheEmblemOfItsSeatAPersonOrAComputerOfItsLevel) {
+        // Seat 1 is the person; the three computers play at levels of their own
+        _game->SetLevels(SeatLevels{{{3}, {4}, {7}, {10}}});
+        ASSERT_NO_FATAL_FAILURE(StartWith(kPersonAtSeat1, MakeModel(SpecOf(kPlainHand, "9p"), kSeat3)));
+        EXPECT_EQ(EmblemCalls().size(), 4u + 1u) << "four pictures and the turn ring of seat 3";
+        ASSERT_NO_FATAL_FAILURE(ExpectEmblem(kSeat0, ComputerCell(ComputerLevel{3}), false, false));
+        ASSERT_NO_FATAL_FAILURE(ExpectEmblem(kSeat1, PersonCell(), false, false));
+        ASSERT_NO_FATAL_FAILURE(ExpectEmblem(kSeat2, ComputerCell(ComputerLevel{7}), false, false));
+        ASSERT_NO_FATAL_FAILURE(ExpectEmblem(kSeat3, ComputerCell(ComputerLevel{10}), true, false));
+    }
+
+    TEST_F(MahjongTableMarksTest, EveryLevelHasItsOwnPictureOnAComputerPlate) {
+        std::set<int> cells;
+        for (const ComputerLevel level : kAllLevels) {
+            _game->SetLevel(level);
+            ASSERT_NO_FATAL_FAILURE(StartWith(kAllComputers, MakeModel(SpecOf(kPlainHand, "9p"))));
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                ASSERT_EQ(EmblemDraws(seat, ComputerCell(level)).size(), 1u) << "level " << LevelNumber(level) << " seat " << seat;
+            }
+            cells.insert(ComputerCell(level));
+        }
+        EXPECT_EQ(cells.size(), static_cast<size_t>(kLevelCount));
+    }
+
+    TEST_F(MahjongTableMarksTest, TheTurnRingIsOnThePlateOfTheSeatWhoseTurnItIsAndOnTheDiscarderInAClaimWindow) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, MakeModel(SpecOf(kPlainHand, "9p"))));
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            EXPECT_EQ(EmblemDraws(seat, kTurnRingCell).size(), seat == kSeat0 ? 1u : 0u) << "seat " << seat;
+        }
+
+        // East discards a 5p that seat 1 may claim: seat 1 is asked first, the ring stays on the discarder
+        Lay(EastDiscardsFive(kSeat1HoldsPairOf5p));
+        Draw();
+        ASSERT_EQ(Hand().GetPhase(), Phase::Claim);
+        ASSERT_EQ(_game->GetSession().Actor(), kSeat1);
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            EXPECT_EQ(EmblemDraws(seat, kTurnRingCell).size(), seat == kSeat0 ? 1u : 0u) << "seat " << seat;
+        }
+    }
+
+    TEST_F(MahjongTableMarksTest, NoTurnRingAfterTheHandWhileTheCallingRingsOfTheDeclaredSeatsStay) {
+        HandModel won = AllDeclaredModel("5p");
+        ASSERT_TRUE(won.DeclareWin(kSeat0).has_value());
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, won));
+        ASSERT_EQ(_game->GetSession().GetPhase(), SessionPhase::HandOver);
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            EXPECT_TRUE(EmblemDraws(seat, kTurnRingCell).empty()) << "seat " << seat;
+            EXPECT_EQ(EmblemDraws(seat, kCallingRingCell).size(), 1u) << "seat " << seat;
+        }
+    }
+
+    TEST_F(MahjongTableMarksTest, TheCallingRingIsOnlyOnASeatThatHasDeclaredAndShowsWithTheTurnRing) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, MakeModel(SpecOf(kPlainHand, "9p"))));
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            EXPECT_TRUE(EmblemDraws(seat, kCallingRingCell).empty()) << "nobody has declared, seat " << seat;
+        }
+
+        // Seat 2 declares and is not to act; seat 1 is
+        HandModel model = OpenPungModel(kSeat1Hand, kSeat2Waits, kSeat3Waits, {kSeat2});
+        ASSERT_TRUE(model.GetHand(kSeat2).callingDeclared);
+        Lay(model);
+        Draw();
+        ASSERT_NE(Hand().CurrentSeat(), kSeat2);
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            EXPECT_EQ(EmblemDraws(seat, kCallingRingCell).size(), seat == kSeat2 ? 1u : 0u) << "seat " << seat;
+            EXPECT_EQ(EmblemDraws(seat, kTurnRingCell).size(), seat == Hand().CurrentSeat() ? 1u : 0u) << "seat " << seat;
+        }
+
+        // Every seat declared and seat 0 (the person) to act: seat 0 shows both rings, the others the calling ring only
+        Lay(AllDeclaredModel());
+        Draw();
+        ASSERT_EQ(Hand().CurrentSeat(), kSeat0);
+        ASSERT_NO_FATAL_FAILURE(ExpectEmblem(kSeat0, PersonCell(), true, true));
+        for (Seat seat = 1; seat < kSeatCount; ++seat) {
+            ASSERT_NO_FATAL_FAILURE(ExpectEmblem(seat, ComputerCell(kDefaultLevel), false, true));
+        }
+    }
+
+    TEST_F(MahjongTableMarksTest, TheEmblemsArePublicSoTheyShowUnderTheCoverAndForASpectator) {
+        // Two people, seat 1 is East and to act: the screen is covered, the plates and their rings are not
+        ASSERT_NO_FATAL_FAILURE(StartWith(kTwoPeople, MakeModel(SpecOf(kPlainHand, "5p"), kSeat1)));
+        ASSERT_TRUE(_game->GetSession().HandoffPending());
+        ASSERT_NO_FATAL_FAILURE(ExpectEmblem(kSeat1, PersonCell(), true, false));
+        ASSERT_NO_FATAL_FAILURE(ExpectEmblem(kSeat0, PersonCell(), false, false));
+        ASSERT_NO_FATAL_FAILURE(ExpectEmblem(kSeat2, ComputerCell(kDefaultLevel), false, false));
+
+        ASSERT_NO_FATAL_FAILURE(StartWith(kAllComputers, AllDeclaredModel()));
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            ASSERT_NO_FATAL_FAILURE(ExpectEmblem(seat, ComputerCell(kDefaultLevel), seat == kSeat0, true));
+        }
+    }
+
+    TEST_F(MahjongTableMarksTest, TheEmblemsAreDrawnAfterThePlateBaseAndBeforeTheTiles) {
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, AllDeclaredModel()));
+        const size_t firstEmblem = [&] {
+            for (size_t i = 0; i < _renderer->calls.size(); ++i) {
+                if (_renderer->calls[i].kind == DrawKind::Texture && _renderer->calls[i].texture == _emblemTexture) {
+                    return i;
+                }
+            }
+            return _renderer->calls.size();
+        }();
+        ASSERT_LT(firstEmblem, _renderer->calls.size());
+        size_t firstTile = _renderer->calls.size();
+        for (size_t i = 0; i < _renderer->calls.size(); ++i) {
+            if (_renderer->calls[i].kind == DrawKind::Texture && _renderer->calls[i].texture == _atlasTexture) {
+                firstTile = i;
+                break;
+            }
+        }
+        EXPECT_LT(firstEmblem, firstTile);
+        EXPECT_GT(firstEmblem, CallsOf(kSeatPlate).front()) << "after a plate base";
+        // The base of each plate is drawn before the emblem of the same plate
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            size_t base = _renderer->calls.size();
+            size_t emblem = _renderer->calls.size();
+            for (size_t i = 0; i < _renderer->calls.size(); ++i) {
+                const DrawCall& call = _renderer->calls[i];
+                if (base == _renderer->calls.size() && call.kind == DrawKind::Rect && SameColor(call.color, kSeatPlate) && SameRect(call.rect, PlateOf(seat))) {
+                    base = i;
+                }
+                if (emblem == _renderer->calls.size() && call.kind == DrawKind::Texture && call.texture == _emblemTexture && SameRect(call.rect, EmblemBox(PlateOf(seat), 1.0f))) {
+                    emblem = i;
+                }
+            }
+            ASSERT_LT(base, _renderer->calls.size()) << "seat " << seat;
+            EXPECT_LT(base, emblem) << "seat " << seat;
+        }
+    }
+
+    TEST_F(MahjongTableMarksTest, WithoutTheEmblemAtlasThePlatesAreDrawnAsBeforeAndTheCallingRingIsAFrame) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        _table->SetEmblemTexture({});
+        Lay(UpgradeModel({kSeat2}));
+        Draw();
+        // The freed texture's address may be the felt's now, so look for the cells of the atlas by their source rectangles
+        for (const DrawCall& call : _renderer->calls) {
+            for (int cell = 0; cell < kDrawnEmblemCells; ++cell) {
+                EXPECT_FALSE(call.kind == DrawKind::Texture && call.texture != _atlasTexture && call.source.has_value() && SameRect(*call.source, EmblemRect(cell))) << "cell " << cell;
+            }
+        }
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            EXPECT_EQ(CountOf(kSeatPlate, PlateOf(seat)), 1) << "the base of the plate of seat " << seat;
+        }
+        // The frame round the hand and the frame on the ring box of the declared seat
+        EXPECT_EQ(RectsOf(kCallingFrame).size(), 8u);
+        const Rect box = EmblemBox(PlateOf(kSeat2), 1.0f);
+        EXPECT_EQ(CountOf(kCallingFrame, Rect(box.x, box.y, box.w, kCallingFrameWidth)), 1);
+    }
+
+    TEST_F(MahjongTableMarksTest, EveryEmblemDrawLiesInsideItsPlateInEveryWindowOfTheMatrix) {
+        ASSERT_NO_FATAL_FAILURE(Start(kPersonAtSeat1));
+        Lay(AllDeclaredModel());
+        size_t windows = 0;
+        ForEachTableWindow([&](const MatrixWindow& window) {
+            SetWindow(*_renderer, window);
+            Draw();
+            ++windows;
+            // Four pictures, four calling rings and the turn ring of seat 0, each in the ring box of one plate
+            const std::vector<DrawCall> emblems = EmblemCalls();
+            EXPECT_EQ(emblems.size(), 9u) << window.label.c_str();
+            const ViewTransform fit = TableFit(window);
+            const float unit = LayoutScale(ViewOf(window).width, ViewOf(window).height);
+            std::array<size_t, kSeatCount> perPlate{};
+            for (const DrawCall& call : emblems) {
+                bool inside = false;
+                for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                    const Rect plate = _table->GetLayout().zones.seatPlates[static_cast<size_t>(seat)];
+                    const Rect plateOut = fit.ToOutput(plate.x, plate.y, plate.w, plate.h);
+                    const Rect boxOut = fit.ToOutput(EmblemBox(plate, unit).x, EmblemBox(plate, unit).y, EmblemBox(plate, unit).w, EmblemBox(plate, unit).h);
+                    if (call.rect.x >= plateOut.x - kEpsilon && call.rect.y >= plateOut.y - kEpsilon && call.rect.x + call.rect.w <= plateOut.x + plateOut.w + kEpsilon &&
+                        call.rect.y + call.rect.h <= plateOut.y + plateOut.h + kEpsilon) {
+                        inside = true;
+                        EXPECT_TRUE(SameRect(call.rect, boxOut)) << window.label.c_str() << " seat " << seat << ": the draw is the ring box";
+                        ++perPlate[static_cast<size_t>(seat)];
+                    }
+                }
+                EXPECT_TRUE(inside) << window.label.c_str() << ": an emblem draw outside its plate";
+            }
+            EXPECT_EQ(perPlate[0], 3u) << window.label.c_str();
+            for (size_t seat = 1; seat < perPlate.size(); ++seat) {
+                EXPECT_EQ(perPlate[seat], 2u) << window.label.c_str() << " seat " << seat;
+            }
+        });
+        EXPECT_GT(windows, 10u);
     }
 
 }  // namespace BECore::Mahjong::Tests

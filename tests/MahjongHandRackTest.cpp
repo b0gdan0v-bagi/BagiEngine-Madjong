@@ -29,11 +29,11 @@ namespace BECore::Mahjong::Tests {
             return found;
         }
 
-        /// The first call that is a tile: a shadow or a texture other than the felt.
+        /// The first call that is a tile: a shadow or a texture other than the felt and the seat emblems.
         size_t FirstTile() const {
             for (size_t i = 1; i < _renderer->calls.size(); ++i) {
                 const DrawCall& call = _renderer->calls[i];
-                if (call.kind == DrawKind::Texture || (call.kind == DrawKind::Rect && SameColor(call.color, kTileShadowSoft))) {
+                if ((call.kind == DrawKind::Texture && call.texture != _emblemTexture) || (call.kind == DrawKind::Rect && SameColor(call.color, kTileShadowSoft))) {
                     return i;
                 }
             }

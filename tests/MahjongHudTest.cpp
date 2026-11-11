@@ -374,13 +374,15 @@ namespace BECore::Mahjong::Tests {
         SetWorstVars();
         constexpr float kPanelPadding = 8.0f;
 
-        const auto expectInside = [&](const char* node, const char* name, const Rect& plate) {
+        // The label of a seat plate is the plate's name box: it lies on the plate's lower part, so it keeps no padding at the bottom (the
+        // bottom plate of the phone profile, lifted, ends where its label does)
+        const auto expectInside = [&](const char* node, const char* name, const Rect& plate, float bottomPadding = kPanelPadding) {
             const UIElement* row = Element(node, name);
             ASSERT_NE(row, nullptr) << name;
             EXPECT_GE(row->rect.x, plate.x + kPanelPadding) << name;
             EXPECT_GE(row->rect.y, plate.y + kPanelPadding) << name;
             EXPECT_LE(row->rect.x + row->rect.w, plate.x + plate.w - kPanelPadding) << name;
-            EXPECT_LE(row->rect.y + row->rect.h, plate.y + plate.h - kPanelPadding) << name;
+            EXPECT_LE(row->rect.y + row->rect.h, plate.y + plate.h - bottomPadding) << name;
         };
         // The plate of a seat and the panel are painted by the table: their rectangles are the layout's (the viewer of the worst-case
         // layout is seat 0). The words of the panel lie inside it (its top, 282, is off the grid of 4, so the labels start at 284) and do not touch
@@ -391,7 +393,7 @@ namespace BECore::Mahjong::Tests {
             LayOutOnTheTable({"SeatPlates", "CenterPanel"}, window);  // in the view of the window's shape
             for (int position = 0; position < kSeatCount; ++position) {
                 const Rect& plate = layout.zones.seatPlates[SeatAtPosition(layout.viewer, position)];
-                expectInside("SeatPlates", Format("PlateName{}", position).c_str(), plate);
+                expectInside("SeatPlates", Format("PlateName{}", position).c_str(), plate, 0.0f);
             }
             const char* const panelLabels[] = {"PanelRound", "PanelWall", "PanelSeat0", "PanelSeat1", "PanelSeat2", "PanelSeat3"};
             for (const char* name : panelLabels) {
@@ -434,19 +436,22 @@ namespace BECore::Mahjong::Tests {
             LayOutOnTheTable(nodes, window);
 
             // The file is by screen position and the viewer of the worst-case layout is seat 0, so position p is seat p: the label of a plate
-            // is at its top, inside its padding of 8
-            constexpr float kPlatePad = 8.0f;
+            // is its `NameBox` (the view of a shape is its design, so a unit is one view unit), the bottom plate of the phone profile lifted
+            // by a few units under it
             constexpr float kPhonePlateShift = 4.0f;
             eastl::vector<Rect> plates;
             for (int position = 0; position < kSeatCount; ++position) {
                 const UIElement* name = Element("SeatPlates", Format("PlateName{}", position).c_str());
                 ASSERT_NE(name, nullptr) << position;
                 const Rect& expected = layout.zones.seatPlates[SeatAtPosition(layout.viewer, position)];
-                EXPECT_FLOAT_EQ(name->rect.x, expected.x + kPlatePad) << position;
-                // The file's label is the desktop one; the bottom plate of the phone profile is a few units higher and the label stays inside it
-                EXPECT_NEAR(name->rect.y, expected.y + kPlatePad, layout.profile.phone && position == 0 ? kPhonePlateShift : 0.0f) << position;
-                EXPECT_LE(name->rect.y + name->rect.h, expected.y + expected.h - kPlatePad) << position << ": the label lies inside the plate";
-                EXPECT_FLOAT_EQ(name->rect.w, expected.w - 2 * kPlatePad) << position;
+                const Rect nameBox = NameBox(expected, 1.0f);
+                EXPECT_FLOAT_EQ(name->rect.x, nameBox.x) << position;
+                // The file's label is the desktop one; the bottom plate of the phone profile is a few units higher and the label stays on it
+                EXPECT_NEAR(name->rect.y, nameBox.y, layout.profile.phone && position == 0 ? kPhonePlateShift : 0.0f) << position;
+                EXPECT_LE(name->rect.y + name->rect.h, expected.y + expected.h) << position << ": the label lies inside the plate";
+                EXPECT_FLOAT_EQ(name->rect.w, nameBox.w) << position;
+                EXPECT_FLOAT_EQ(name->rect.h, nameBox.h) << position;
+                EXPECT_TRUE(Apart(name->rect, EmblemBox(expected, 1.0f))) << position << ": the label never overlaps the ring box of the emblem";
                 EXPECT_FALSE(name->IsHitTestable()) << "a plate takes no input";
                 plates.push_back(expected);
             }

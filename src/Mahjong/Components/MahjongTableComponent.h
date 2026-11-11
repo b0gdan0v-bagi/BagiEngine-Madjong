@@ -71,8 +71,9 @@ namespace BECore::Mahjong {
      *
      * **The seat plates.** Each seat has a plate (`TableLayout::zones.seatPlates`, indexed by seat: each lies at `SeatPosition(viewer, seat)`) painted after the felt: the base `kSeatPlate`, on the
      * plate of the seat whose turn it is (`TurnSeat`, never the seat asked to claim) the tint `kTurnMark` and a frame `kSeatTurnFrame`, and along the top edge of the dealer's plate (East of the hand
-     * shown) a bar `kDealerMark`, which is red, not gold. All public data, so they show under the cover, for a spectator and at the end of a hand; the words on the plates are the labels of the node
-     * `SeatPlates` (`MahjongHudComponent`).
+     * shown) a bar `kDealerMark`, which is red, not gold. Then the seat's emblem in `EmblemBox` (a person, or the computer of the seat's level; `Table/EmblemAtlas.h`) with the turn ring tinted
+     * `kSeatTurnFrame` while it is the seat's turn and the calling ring tinted `kCallingFrame` while its hand is declared; the blink and the frame of a lost claim go over that. All public data, so
+     * they show under the cover, for a spectator and at the end of a hand; the words on the plates are the labels of the node `SeatPlates` (`MahjongHudComponent`).
      *
      * **The last move.** Three marks of the gold family (`Table/UiPalette.h`) show what has just happened, from the public data of `HandModel`
      * (`Moves()`, `Discards()`, the open sets): a tint over the last discard (`kLastDiscardMark`; the frame of a pending discard shows
@@ -173,6 +174,9 @@ namespace BECore::Mahjong {
 
         /// Draws with `texture` (made from pixels, `IRenderer::CreateTexture()`) instead of the atlas from the file; a test hands one.
         void SetAtlasTexture(IntrusivePtr<ITexture> texture);
+
+        /// The same for the emblem atlas of the seat plates (`Table/EmblemAtlas.h`); an empty texture draws the plates without emblems.
+        void SetEmblemTexture(IntrusivePtr<ITexture> texture);
 
         /// The index (in the concealed tiles of the viewer) of the tile drawn raised by the last `OnDraw`; none when no tile is selected. The
         /// hints draw their marks on `RaisedRect` of that slot.
@@ -304,6 +308,7 @@ namespace BECore::Mahjong {
         void EndFlights();
 
         ResourceHandle<ITexture> _atlas;
+        ResourceHandle<ITexture> _emblems;               // the emblem atlas of the seat plates
         IntrusivePtr<ITexture> _felt;                    // the felt made from pixels (`Table/TableLook.h`); empty when the renderer gave none
         uint64_t _feltRenderer = 0;                      // `IRenderer::GetId()` of the renderer `_felt` was asked of, 0 for none yet
         TableSnapshot _shown;                            // what the last `OnDraw` drew: its layout is `GetLayout()`, empty while nothing is drawn

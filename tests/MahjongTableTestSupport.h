@@ -279,6 +279,9 @@ namespace BECore::Mahjong::Tests {
             IntrusivePtr<ITexture> atlas = _renderer->CreateTexture(pixels.data(), kTextureSide, kTextureSide);
             _atlasTexture = atlas.Get();
             _table->SetAtlasTexture(std::move(atlas));
+            IntrusivePtr<ITexture> emblems = _renderer->CreateTexture(pixels.data(), kTextureSide, kTextureSide);
+            _emblemTexture = emblems.Get();
+            _table->SetEmblemTexture(std::move(emblems));
             // Tiles are at their slots in every test but those of the flights (`MahjongTableFlightTest`), which switch them on
             _table->SetTileFlightSeconds(0.0f);
         }
@@ -315,6 +318,17 @@ namespace BECore::Mahjong::Tests {
         /// Time passes on the clock of the table (the pace of the computers, the highlight and the flights run on it).
         static void AdvanceTime(float seconds) {
             SceneEvents::SceneUpdateEvent::Emit(seconds);
+        }
+
+        /// The draw calls of the seat emblems and their rings, in draw order.
+        std::vector<DrawCall> EmblemCalls() const {
+            std::vector<DrawCall> calls;
+            for (const DrawCall& call : _renderer->calls) {
+                if (call.kind == DrawKind::Texture && call.texture == _emblemTexture) {
+                    calls.push_back(call);
+                }
+            }
+            return calls;
         }
 
         /// The draw calls of tiles, in the order of the layout's slots.
@@ -571,6 +585,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         const ITexture* _atlasTexture = nullptr;
+        const ITexture* _emblemTexture = nullptr;  // the emblem atlas of the seat plates (`MahjongTableComponent::SetEmblemTexture`)
         IntrusivePtr<TurnRecordingRenderer> _renderer;
         IntrusivePtrAtomic<SceneManager> _manager;
         MahjongGame* _game = nullptr;

@@ -1,4 +1,5 @@
 #include "HandTestSupport.h"
+#include "ShippedTableLayout.h"
 #include "StringsTestSupport.h"
 #include "UiStyleTestSupport.h"
 
@@ -6,14 +7,14 @@
 #include <Mahjong/Table/SeatPlates.h>
 #include <Mahjong/Table/TableLayout.h>
 #include <Mahjong/Table/UiPalette.h>
+#include <cmath>
 #include <gtest/gtest.h>
 #include <set>
 
 /**
  * The plates of the seats (`Table/SeatPlates.h`): which seat lies at each side of the table, and what its plate says (the name and the
- * turn; the wind, the score and the dealer are the centre panel's, `CenterPanelTest`). Pure logic over a `Match` and its `TableSession`; the shipped words are loaded into a
- * `UIStrings` of the test, so no engine services are needed. The expectations are worked out here from the match and the session, not
- * taken from the function under test.
+ * turn, the kind, the level and the declared hand; the wind, the score and the dealer are the centre panel's, `CenterPanelTest`). Pure logic over a `Match` and its `TableSession`; the shipped words
+ * are loaded into a `UIStrings` of the test, so no engine services are needed. The expectations are worked out here from the match and the session, not taken from the function under test.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -46,6 +47,12 @@ namespace BECore::Mahjong::Tests {
                 MahjongSettings settings;
                 settings.handsPerMatch = hands;
                 ASSERT_TRUE(session.StartMatch(settings, seed, seats).has_value());
+            }
+
+            void Start(const SeatSetup& seats, const SeatLevels& levels) {
+                MahjongSettings settings;
+                settings.handsPerMatch = kShortMatchHands;
+                ASSERT_TRUE(session.StartMatch(settings, kSeed, seats, levels).has_value());
             }
         };
 
@@ -220,6 +227,110 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(ExpectPlates(Words(), table, 0));
         for (const SeatPlateText& plate : MakeSeatPlates(Words(), table.session, table.match)) {
             EXPECT_FALSE(plate.turn);
+        }
+    }
+
+    TEST(SeatPlatesTest, TheKindOfAPlateIsTheKindOfItsSeatAtEverySetup) {
+        const SeatSetup setups[] = {kAllComputers, kTwoPeople, PersonAt(0), PersonAt(3), {SeatKind::Computer, SeatKind::Person, SeatKind::Person, SeatKind::Person}};
+        for (const SeatSetup& setup : setups) {
+            Table table;
+            ASSERT_NO_FATAL_FAILURE(table.Start(setup));
+            for (const SeatPlateText& plate : MakeSeatPlates(Words(), table.session, table.match)) {
+                EXPECT_EQ(plate.kind, setup[static_cast<size_t>(plate.seat)]) << "seat " << plate.seat;
+            }
+        }
+    }
+
+    TEST(SeatPlatesTest, TheLevelOfAPlateIsTheLevelOfItsSeat) {
+        // Every seat a level of its own, the numbers apart, and a table where the seats at the bottom differ
+        const SeatLevels levelSets[] = {{{{1}, {4}, {7}, {10}}}, {{{10}, {9}, {2}, {5}}}, UniformLevels(ComputerLevel{3})};
+        for (const SeatLevels& levels : levelSets) {
+            for (Seat person = 0; person < kSeatCount; ++person) {
+                Table table;
+                ASSERT_NO_FATAL_FAILURE(table.Start(PersonAt(person), levels));
+                for (const SeatPlateText& plate : MakeSeatPlates(Words(), table.session, table.match)) {
+                    EXPECT_EQ(LevelNumber(plate.level), LevelNumber(levels[static_cast<size_t>(plate.seat)])) << "person " << person << " seat " << plate.seat;
+                }
+            }
+        }
+    }
+
+    TEST(SeatPlatesTest, CallingIsOnTheSeatsThatDeclaredAndStaysAtTheEndOfTheHand) {
+        int declaredPlates = 0;
+        int seatsWithout = 0;
+        for (uint32_t seed = 1; seed <= 8; ++seed) {
+            Table table;
+            ASSERT_NO_FATAL_FAILURE(table.Start(kAllComputers, seed));
+            for (int actions = 0; actions < kActionLimit && table.session.GetPhase() != SessionPhase::MatchOver; ++actions) {
+                for (const SeatPlateText& plate : MakeSeatPlates(Words(), table.session, table.match)) {
+                    const bool declared = table.match.Hand().GetHand(plate.seat).callingDeclared;
+                    EXPECT_EQ(plate.calling, declared) << "seed " << seed << " seat " << plate.seat;
+                    declaredPlates += plate.calling ? 1 : 0;
+                    seatsWithout += plate.calling ? 0 : 1;
+                }
+                if (table.session.GetPhase() == SessionPhase::HandOver) {
+                    ASSERT_TRUE(table.session.NextHand().has_value());
+                } else {
+                    ASSERT_TRUE(table.session.StepComputer().has_value());
+                }
+            }
+        }
+        EXPECT_GT(declaredPlates, 0) << "no seat ever declared";
+        EXPECT_GT(seatsWithout, 0);
+    }
+
+    TEST(SeatPlatesTest, AtTheHandsEndTheCallingStaysOnTheSeatThatDeclared) {
+        bool seen = false;
+        for (uint32_t seed = 1; seed <= 12 && !seen; ++seed) {
+            Table table;
+            ASSERT_NO_FATAL_FAILURE(table.Start(kAllComputers, seed));
+            ASSERT_TRUE(PlayComputersUntil(table, [](const Table& t) { return t.session.GetPhase() == SessionPhase::HandOver; }));
+            for (const SeatPlateText& plate : MakeSeatPlates(Words(), table.session, table.match)) {
+                EXPECT_EQ(plate.calling, table.match.Hand().GetHand(plate.seat).callingDeclared);
+                seen = seen || plate.calling;
+            }
+        }
+        EXPECT_TRUE(seen) << "no hand ended with a declared seat";
+    }
+
+    TEST(SeatPlatesTest, TheEmblemBoxAndTheNameBoxLieInsideEveryPlateOfEveryShapeAndApart) {
+        const TableLayoutSpec& spec = ShippedTableLayoutSpec();
+        struct ViewSize {
+            float width;
+            float height;
+        };
+        const ViewSize views[] = {
+            {kViewWidth, kViewHeight}, {kWideViewWidth, kViewHeight}, {kNarrowViewWidth, kNarrowViewHeight}, {kPortraitViewWidth, kPortraitViewHeight}, {1000.0f, 400.0f}, {640.0f, 480.0f},
+            {390.0f, 844.0f}};
+        constexpr float kTolerance = 0.001f;
+        const auto OnTheGrid = [](float units) { return std::fabs(units - std::round(units / kGridUnit) * kGridUnit) < kTolerance; };
+        for (const ViewSize& view : views) {
+            const float unit = LayoutScale(view.width, view.height);
+            for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+                TableInput input;
+                input.viewer = viewer;
+                const TableLayout layout = MakeTableLayout(input, spec, view.width, view.height);
+                for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                    const Rect& plate = layout.zones.seatPlates[static_cast<size_t>(seat)];
+                    ASSERT_GT(plate.w, 0.0f) << view.width << "x" << view.height;
+                    const Rect emblem = EmblemBox(plate, unit);
+                    const Rect name = NameBox(plate, unit);
+                    for (const Rect& box : {emblem, name}) {
+                        EXPECT_GE(box.x, plate.x - kTolerance);
+                        EXPECT_GE(box.y, plate.y - kTolerance);
+                        EXPECT_LE(box.x + box.w, plate.x + plate.w + kTolerance);
+                        EXPECT_LE(box.y + box.h, plate.y + plate.h + kTolerance);
+                    }
+                    // The emblem lies above the name, below the dealer bar, and the two do not overlap
+                    EXPECT_LE(emblem.y + emblem.h, name.y + kTolerance) << view.width << "x" << view.height << " seat " << seat;
+                    EXPECT_GE(emblem.y, plate.y + kDealerMarkHeight * unit - kTolerance);
+                    // Both are on the grid of the design, in plate units
+                    EXPECT_TRUE(OnTheGrid((emblem.y - plate.y) / unit));
+                    EXPECT_TRUE(OnTheGrid((name.y - plate.y) / unit));
+                    EXPECT_TRUE(OnTheGrid(emblem.h / unit));
+                    EXPECT_TRUE(OnTheGrid(name.h / unit));
+                }
+            }
         }
     }
 
