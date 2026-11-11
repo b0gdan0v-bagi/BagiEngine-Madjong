@@ -2,6 +2,7 @@
 
 #include <Mahjong/Game/ComputerClaim.h>
 #include <Mahjong/Game/ComputerTurn.h>
+#include <Mahjong/Game/DiscardDanger.h>
 
 namespace BECore::Mahjong {
 
@@ -18,7 +19,9 @@ namespace BECore::Mahjong {
     };
 
     /// One discard with the numbers the chooser rated it by (`DiscardOption`) and, when the 13 tiles that stay are waiting, the number of
-    /// kinds they wait on and the unseen copies of those (both 0 otherwise).
+    /// kinds they wait on and the unseen copies of those (both 0 otherwise). `danger` is the reading of the tile (`DiscardDangers`,
+    /// `Safe` with no declared opponent), shown whatever the advice player's `readDanger` knob says; the knob only decides whether the
+    /// advice (`RateDiscards`' order) uses it as a tie-break.
     struct TurnOption {
         Tile tile;
         int shanten = 0;
@@ -26,6 +29,7 @@ namespace BECore::Mahjong {
         int keep = 0;
         int waitKinds = 0;
         int waitCopies = 0;
+        Danger danger = Danger::Safe;
     };
 
     /**
@@ -39,6 +43,10 @@ namespace BECore::Mahjong {
      *   `kongAcceptanceAfter` those of the hand without the kong (`RateKong`); `chosen.tile` is the kong's tile, the other numbers of
      *   `chosen` and `alternatives` are not used.
      * - `DeclareWin`: only the step.
+     *
+     * `declaredOpponents` counts the opponents whose calling hand is declared (0: the `danger` of every option is `Safe` and means nothing);
+     * `readDanger` is the knob of the profile the advice was made with, so whether the danger was part of the order (`TurnOption::danger`
+     * decided between equal options only with it on).
      */
     struct TurnExplanation {
         HandAction action;
@@ -51,6 +59,8 @@ namespace BECore::Mahjong {
         int kongShantenAfter = 0;
         int kongAcceptanceBefore = 0;
         int kongAcceptanceAfter = 0;
+        int declaredOpponents = 0;
+        bool readDanger = false;
     };
 
     /**
@@ -83,13 +93,14 @@ namespace BECore::Mahjong {
     };
 
     /**
-     * @brief The advice `ComputerPlayer(kAdviceSeed).Choose(view)` gives, with the numbers it was chosen by.
+     * @brief The advice `ComputerPlayer(kAdviceSeed, profile).Choose(view)` gives, with the numbers it was chosen by (`profile`: the
+     *        default level's, the advice player; a test passes another).
      *
      * Built only from the public rating functions of the chooser (`DecideTurn` / `DecideClaim`, `RateDiscards`, `RateKong`,
      * `RateClaims`, `WaitingDiscards`), so the numbers are the chooser's and there is no second rule: a new rule of the chooser has to be
      * reflected in `TurnStep` / `ClaimStep` and here. Dispatches on `view.phase` as `ComputerPlayer::Choose` does; nullopt when
      * `view.legal` is empty or the phase is `Finished`. Sees only the view, so it cannot peek.
      */
-    [[nodiscard]] std::optional<Explanation> ExplainAdvice(const TableView& view);
+    [[nodiscard]] std::optional<Explanation> ExplainAdvice(const TableView& view, const LevelProfile& profile = ProfileOf(kDefaultLevel));
 
 }  // namespace BECore::Mahjong

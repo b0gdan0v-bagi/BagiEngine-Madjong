@@ -152,6 +152,14 @@ namespace BECore::Mahjong {
         /// Step 2 of the own turn: the discard that declares the calling hand is the one with the best expected value (`ValueWaits`), not
         /// the one with the most unseen winning copies; false = Normal's step 2. Draws nothing from the rng when on. Off in every level.
         bool ownDrawsPickWait = false;
+        /// Steps 2, 4 and 5 of the own turn: among discards equal in what each step ranks by (unseen winning copies; shanten and
+        /// acceptance), the one with the lowest `Danger` against the declared opponents (`DiscardDanger.h`) is chosen, then the lowest
+        /// `KeepValue`, then the rng. A tie-break only: it never changes the shanten or the acceptance of the choice. Draws nothing from
+        /// the rng, and with no declared opponent the play is Normal's exactly. Off in every level: paired with Normal against three
+        /// Normal seats (1000 seeds, `docs/bot-arena.md`) it gives the win on 1.7 percent fewer hands (`significant`) but wins and points
+        /// a hand stay level (seeds 4000..: -1.09 +- 1.30 points, +0.05 +- 0.39 wins %; seeds 12000..: +0.03 +- 1.52, +0.33 +- 0.36), the
+        /// pooled points are -0.53, so the rule of the entry (pooled points not below 0) kept it off.
+        bool readDanger = false;
     };
 
     /// The Normal player: every knob off.

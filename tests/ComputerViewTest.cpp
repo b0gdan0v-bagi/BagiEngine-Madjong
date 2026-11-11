@@ -57,6 +57,14 @@ namespace BECore::Mahjong::Tests {
                 }
                 text += " ck " + std::to_string(seat.concealedKongs) + " bonus " + std::to_string(seat.bonusCount) + " disc " + std::to_string(seat.discardCount) + " calling " +
                         std::to_string(seat.callingDeclared);
+                text += " discarded";
+                for (const uint8_t copies : seat.discardedKinds) {
+                    text += " " + std::to_string(copies);
+                }
+                text += " passed";
+                for (const uint8_t copies : seat.passedKinds) {
+                    text += " " + std::to_string(copies);
+                }
             }
             text += " visible";
             for (const uint8_t copies : view.visible) {
@@ -193,6 +201,26 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(view.phase, Phase::Discard);
         EXPECT_EQ(view.currentSeat, kSeat0);
         EXPECT_TRUE(view.legal.empty());  // seat 1 has nothing to do
+    }
+
+    TEST(ComputerViewTest, ClaimedDiscardsStayInTheDiscardedKindsOfTheirSeat) {
+        const HandModel model = UpgradeModel();  // seat 0 discarded the 5p (claimed by seat 1) and the white dragon
+
+        const TableView view = MakeTableView(model, kSeat2);
+
+        EXPECT_EQ(view.seats[kSeat0].discardedKinds[T("5p").Id()], 1);
+        EXPECT_EQ(view.visible[T("5p").Id()], kPungTiles) << "the claimed tile left the pile and shows in the pung";
+        EXPECT_EQ(view.seats[kSeat0].discardedKinds[T("Wd").Id()], 1);
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            int discarded = 0;
+            for (const uint8_t copies : view.seats[seat].discardedKinds) {
+                discarded += copies;
+            }
+            EXPECT_EQ(discarded, view.seats[seat].discardCount) << "seat " << seat;
+            for (const uint8_t copies : view.seats[seat].passedKinds) {
+                EXPECT_EQ(copies, 0) << "nobody has declared";
+            }
+        }
     }
 
     TEST(ComputerViewTest, TheLiveCountAndTheLegalActionsAreTheModels) {

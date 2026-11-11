@@ -58,7 +58,7 @@ over-counts when the threads contend (shared cores, efficiency cores), so the De
 (`docs/bot-search.md`) is not read from a `--jobs 14` run.
 
 A player is `random`, a level `1` .. `10` (`easy` and `normal` are the names of 1 and 5), or a level with knobs of `LevelProfile`, `<level>:<knob>=<value>,...` (the knobs are
-`skipAcceptancePercent`, `skipDeclarationPercent`, `skipClaimPercent` (0..100), `takeValueClaimsAtEqualShanten` (0 or 1) and the three knobs of
+`skipAcceptancePercent`, `skipDeclarationPercent`, `skipClaimPercent` (0..100), `takeValueClaimsAtEqualShanten` and `readDanger` (0 or 1: the danger tie-break against declared opponents, `DiscardDanger.h`; the two own-draws knobs, `ownDrawsDepth` and `ownDrawsPickWait`, are rated in `docs/own-draws-ev.md`) and the three knobs of
 the search player, `searchWorlds` (0..4096, 0 = no search), `searchCandidates` (0..12, default 4) and `searchMargin` (0..100 tenths of a standard
 error), see `CLAUDE.md`, "Computer player"; the level's profile is the start and the knobs are set on it). A search seat is slow: one decision
 plays `searchWorlds` x candidates whole hands, so `normal:searchWorlds=2,searchCandidates=3` takes about 49 s on 20 seeds in Debug (one thread). In `--focus` a part with an `=` and no `:` goes on the knobs of the player before it,
@@ -254,6 +254,23 @@ the command line, add one row to `kProfileKnobs` in `src/Mahjong/Arena/ArenaPlay
 value) and raise `kProfileFieldCount`; the structured binding in `ArenaPlayer.cpp` that names every field stops compiling until it
 lists the new one, and `ArenaPlayerTest` fails when a row does not move its own field. Then `--focus normal,normal:<knob>=<value>`
 measures it against Normal, paired.
+
+## The danger tie-break (`readDanger`)
+
+`A --focus normal,normal:readDanger=1 --others normal --jobs 0 --seeds 1000 --first F`, Release, paired against plain Normal (decided
+before the run: on in Normal only if wins and points are not negative beyond their interval on both ranges and the pooled points are
+not below 0):
+
+```
+                          points/hand           wins %             gave win %
+F=4000,  others normal    -1.09 +- 1.30         +0.05 +- 0.39      -1.77 +- 0.63 significant
+F=12000, others normal    +0.03 +- 1.52         +0.33 +- 0.36      -1.70 +- 0.61 significant
+F=4000,  others random    -0.59 +- 1.24         +0.00 +- 0.30      -0.17 +- 0.20
+```
+
+The seat gives the win on about 1.7 hands in 100 fewer, and that does not show in wins or points: the two ranges pool to -0.53 points a
+hand, so the rule says off and no level plays it (levels 1..4 stay off by design). The hints, the reasons and the marks read the danger
+whatever the knob says.
 
 ## The table statistics
 

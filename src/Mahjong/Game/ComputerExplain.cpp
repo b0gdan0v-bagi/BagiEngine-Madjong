@@ -22,9 +22,10 @@ namespace BECore::Mahjong {
         }
 
         /// The rated discard of kind `tile`, with the waits of the hand that stays.
-        TurnOption MakeTurnOption(const TableView& view, const TileCounts& counts, const eastl::vector<DiscardOption>& rated, Tile tile) {
+        TurnOption MakeTurnOption(const TableView& view, const TileCounts& counts, const eastl::vector<DiscardOption>& rated, const DangerTable& dangers, Tile tile) {
             TurnOption option;
             option.tile = tile;
+            option.danger = dangers[tile.Id()];
             for (const DiscardOption& entry : rated) {
                 if (entry.tile == tile) {
                     option.shanten = entry.shanten;
@@ -41,57 +42,66 @@ namespace BECore::Mahjong {
         }
 
         /// The discards that leave a waiting hand, best first as the chooser ranks them: the most unseen winning copies, then the lowest
-        /// keep value, then the lowest tile id.
-        eastl::vector<WaitingDiscard> RankWaitingDiscards(const TableView& view, bool declaring) {
-            eastl::vector<WaitingDiscard> discards = WaitingDiscards(view, declaring);
+        /// danger (with the knob), then the lowest keep value, then the lowest tile id.
+        eastl::vector<WaitingDiscard> RankWaitingDiscards(const TableView& view, bool declaring, bool readDanger) {
+            eastl::vector<WaitingDiscard> discards = WaitingDiscards(view, declaring, readDanger);
             eastl::sort(discards.begin(), discards.end(), [](const WaitingDiscard& a, const WaitingDiscard& b) {
                 if (a.copies != b.copies) {
                     return a.copies > b.copies;
+                }
+                if (a.danger != b.danger) {
+                    return a.danger < b.danger;
                 }
                 return a.keep != b.keep ? a.keep < b.keep : a.tile.Id() < b.tile.Id();
             });
             return discards;
         }
 
-        void ExplainWaitingDiscard(const TableView& view, const TileCounts& counts, const eastl::vector<DiscardOption>& rated, TurnExplanation& explanation) {
+        void ExplainWaitingDiscard(const TableView& view, const TileCounts& counts, const eastl::vector<DiscardOption>& rated, const DangerTable& dangers, bool readDanger,
+                                   TurnExplanation& explanation) {
             const bool declaring = explanation.step == TurnStep::Declare;
             const Tile advised = explanation.action.tile;
-            explanation.chosen = MakeTurnOption(view, counts, rated, advised);
+            explanation.chosen = MakeTurnOption(view, counts, rated, dangers, advised);
             explanation.waits = WaitsAfterDiscard(view, counts, advised);
-            for (const WaitingDiscard& discard : RankWaitingDiscards(view, declaring)) {
+            for (const WaitingDiscard& discard : RankWaitingDiscards(view, declaring, readDanger)) {
                 if (discard.tile == advised) {
                     continue;
                 }
                 explanation.equalChoices += discard.copies == explanation.chosen.waitCopies ? 1 : 0;
                 if (static_cast<int>(explanation.alternatives.size()) < kExplainAlternatives) {
-                    explanation.alternatives.push_back(MakeTurnOption(view, counts, rated, discard.tile));
+                    explanation.alternatives.push_back(MakeTurnOption(view, counts, rated, dangers, discard.tile));
                 }
             }
         }
 
-        void ExplainDiscard(const TableView& view, const TileCounts& counts, const eastl::vector<DiscardOption>& rated, TurnExplanation& explanation) {
+        void ExplainDiscard(const TableView& view, const TileCounts& counts, const eastl::vector<DiscardOption>& rated, const DangerTable& dangers, TurnExplanation& explanation) {
             const Tile advised = explanation.action.tile;
-            explanation.chosen = MakeTurnOption(view, counts, rated, advised);
+            explanation.chosen = MakeTurnOption(view, counts, rated, dangers, advised);
             for (const DiscardOption& entry : rated) {
                 if (entry.tile == advised) {
                     continue;
                 }
                 explanation.equalChoices += entry.shanten == explanation.chosen.shanten && entry.acceptance == explanation.chosen.acceptance ? 1 : 0;
                 if (static_cast<int>(explanation.alternatives.size()) < kExplainAlternatives) {
-                    explanation.alternatives.push_back(MakeTurnOption(view, counts, rated, entry.tile));
+                    explanation.alternatives.push_back(MakeTurnOption(view, counts, rated, dangers, entry.tile));
                 }
             }
         }
 
-        TurnExplanation ExplainTurn(const TableView& view) {
+        TurnExplanation ExplainTurn(const TableView& view, const LevelProfile& profile) {
             MahjongRng rng(kAdviceSeed);
-            const TurnDecision decision = DecideTurn(view, rng, ProfileOf(kDefaultLevel));
+            const TurnDecision decision = DecideTurn(view, rng, profile);
             TurnExplanation explanation;
             explanation.action = decision.action;
             explanation.step = decision.step;
             const TileCounts counts = CountTiles(view.own.concealed);
             const int melds = MeldCountOf(view);
+            const DangerTable dangers = DiscardDangers(view);
             explanation.shantenBefore = Shanten(counts, melds);
+            explanation.readDanger = profile.readDanger;
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                explanation.declaredOpponents += seat != view.seat && view.seats[seat].callingDeclared ? 1 : 0;
+            }
             switch (decision.step) {
                 case TurnStep::DeclareWin:
                     break;
@@ -107,10 +117,10 @@ namespace BECore::Mahjong {
                 }
                 case TurnStep::Declare:
                 case TurnStep::KeepWaiting:
-                    ExplainWaitingDiscard(view, counts, RateDiscards(counts, melds, view), explanation);
+                    ExplainWaitingDiscard(view, counts, RateDiscards(counts, melds, view, profile.readDanger), dangers, profile.readDanger, explanation);
                     break;
                 case TurnStep::Discard:
-                    ExplainDiscard(view, counts, RateDiscards(counts, melds, view), explanation);
+                    ExplainDiscard(view, counts, RateDiscards(counts, melds, view, profile.readDanger), dangers, explanation);
                     break;
             }
             return explanation;
@@ -133,9 +143,8 @@ namespace BECore::Mahjong {
             return ranked;
         }
 
-        ClaimExplanation ExplainClaim(const TableView& view) {
+        ClaimExplanation ExplainClaim(const TableView& view, const LevelProfile& profile) {
             MahjongRng rng(kAdviceSeed);
-            const LevelProfile& profile = ProfileOf(kDefaultLevel);
             const ClaimDecision decision = DecideClaim(view, rng, profile);
             ClaimExplanation explanation;
             explanation.action = decision.action;
@@ -172,7 +181,7 @@ namespace BECore::Mahjong {
 
     }  // namespace
 
-    std::optional<Explanation> ExplainAdvice(const TableView& view) {
+    std::optional<Explanation> ExplainAdvice(const TableView& view, const LevelProfile& profile) {
         if (view.legal.empty()) {
             return std::nullopt;
         }
@@ -180,10 +189,10 @@ namespace BECore::Mahjong {
         switch (view.phase) {
             case Phase::Claim:
             case Phase::RobKong:
-                explanation.claim = ExplainClaim(view);
+                explanation.claim = ExplainClaim(view, profile);
                 return explanation;
             case Phase::Discard:
-                explanation.turn = ExplainTurn(view);
+                explanation.turn = ExplainTurn(view, profile);
                 return explanation;
             case Phase::Finished:
                 break;

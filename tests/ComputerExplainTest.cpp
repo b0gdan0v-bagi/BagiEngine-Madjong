@@ -7,7 +7,6 @@
 #include <Mahjong/Game/HandModel.h>
 #include <Mahjong/Game/Match.h>
 #include <gtest/gtest.h>
-#include <string>
 
 /**
  * `ExplainAdvice`: the numbers the advice is chosen by, on fixed hands worked out by hand first (the waits of each hand, the unseen
@@ -65,14 +64,14 @@ namespace BECore::Mahjong::Tests {
             return explained.has_value() && explained->claim.has_value() ? *explained->claim : kEmpty;
         }
 
-        HandAction PlayersChoice(const TableView& view) {
-            ComputerPlayer player(kAdviceSeed);
+        HandAction PlayersChoice(const TableView& view, const LevelProfile& profile = kNormalProfile) {
+            ComputerPlayer player(kAdviceSeed, profile);
             return player.Choose(view);
         }
 
-        /// The rating of `tile` among `RateDiscards`.
-        DiscardOption RatedDiscard(const TableView& view, Tile tile) {
-            for (const DiscardOption& option : RateDiscards(CountTiles(view.own.concealed), MeldCountOf(view), view)) {
+        /// The rating of `tile` among `RateDiscards` (with the danger tie-break when `readDanger`).
+        DiscardOption RatedDiscard(const TableView& view, Tile tile, bool readDanger = false) {
+            for (const DiscardOption& option : RateDiscards(CountTiles(view.own.concealed), MeldCountOf(view), view, readDanger)) {
                 if (option.tile == tile) {
                     return option;
                 }
@@ -497,65 +496,172 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Digest(windowA), Digest(ExplainAdvice(MakeTableView(d, kSeat1))));
     }
 
-    TEST(ComputerExplainTest, TheExplainedActionAndItsNumbersAreTheChoosersOnRandomHands) {
-        int discards = 0;
-        int claims = 0;
-        for (int index = 0; index < kRandomHands; ++index) {
-            const uint32_t seed = kRandomFirstSeed + static_cast<uint32_t>(index);
-            MahjongSettings settings;
-            settings.flowers = (index & 1) != 0;
-            Match match;
-            ASSERT_TRUE(match.Start(settings, seed).has_value());
-            ComputerTable table(seed);
-            for (int step = 0; step < kStepsPerHand && match.Hand().GetPhase() != Phase::Finished; ++step) {
-                const Seat actor = ComputerTable::NextActor(match.Hand());
-                ASSERT_NE(actor, kNoSeat);
-                const TableView view = MakeTableView(match.Hand(), actor);
-                const std::optional<Explanation> explained = ExplainAdvice(view);
-                ASSERT_TRUE(explained.has_value()) << "hand " << index << " step " << step;
-                EXPECT_EQ(explained->Action(), PlayersChoice(view)) << "hand " << index << " step " << step;
-                if (explained->turn.has_value()) {
-                    ++discards;
-                    const TurnExplanation& turn = *explained->turn;
-                    const TileCounts counts = CountTiles(view.own.concealed);
-                    if (turn.step == TurnStep::Discard) {
-                        const DiscardRating best = BestDiscardRating(counts, MeldCountOf(view), view);
-                        EXPECT_EQ(turn.chosen.shanten, best.shanten) << "hand " << index << " step " << step;
-                        EXPECT_EQ(turn.chosen.acceptance, best.acceptance) << "hand " << index << " step " << step;
-                        ExpectNumbersOf(turn.chosen, RatedDiscard(view, turn.action.tile));
+    namespace {
+
+        /// What `ExpectExplanationsAreTheChoosers` saw: the discard explanations (those against a declared opponent among them) and the
+        /// claim explanations.
+        struct ExplainedCounts {
+            int discards = 0;
+            int againstDeclared = 0;
+            int claims = 0;
+        };
+
+        /// Over seeded playouts the explanation of every decision is the chooser's of `profile`: the same action, the numbers of its rating
+        /// functions (with the danger tie-break when `profile.readDanger`) and the reading of every option.
+        void ExpectExplanationsAreTheChoosers(const LevelProfile& profile, ExplainedCounts& seen) {
+            for (int index = 0; index < kRandomHands; ++index) {
+                const uint32_t seed = kRandomFirstSeed + static_cast<uint32_t>(index);
+                MahjongSettings settings;
+                settings.flowers = (index & 1) != 0;
+                Match match;
+                ASSERT_TRUE(match.Start(settings, seed).has_value());
+                ComputerTable table(seed);
+                for (int step = 0; step < kStepsPerHand && match.Hand().GetPhase() != Phase::Finished; ++step) {
+                    const Seat actor = ComputerTable::NextActor(match.Hand());
+                    ASSERT_NE(actor, kNoSeat);
+                    const TableView view = MakeTableView(match.Hand(), actor);
+                    const std::optional<Explanation> explained = ExplainAdvice(view, profile);
+                    ASSERT_TRUE(explained.has_value()) << "hand " << index << " step " << step;
+                    EXPECT_EQ(explained->Action(), PlayersChoice(view, profile)) << "hand " << index << " step " << step;
+                    if (explained->turn.has_value()) {
+                        ++seen.discards;
+                        seen.againstDeclared += HasDeclaredOpponent(view) ? 1 : 0;
+                        const TurnExplanation& turn = *explained->turn;
+                        const DangerTable dangers = DiscardDangers(view);
+                        EXPECT_EQ(turn.chosen.danger, dangers[turn.chosen.tile.Id()]) << "hand " << index << " step " << step;
                         for (const TurnOption& option : turn.alternatives) {
-                            ExpectNumbersOf(option, RatedDiscard(view, option.tile));
-                            EXPECT_NE(option.tile, turn.action.tile);
+                            EXPECT_EQ(option.danger, dangers[option.tile.Id()]) << "hand " << index << " step " << step;
+                        }
+                        const TileCounts counts = CountTiles(view.own.concealed);
+                        if (turn.step == TurnStep::Discard) {
+                            const DiscardRating best = BestDiscardRating(counts, MeldCountOf(view), view);
+                            EXPECT_EQ(turn.chosen.shanten, best.shanten) << "hand " << index << " step " << step;
+                            EXPECT_EQ(turn.chosen.acceptance, best.acceptance) << "hand " << index << " step " << step;
+                            ExpectNumbersOf(turn.chosen, RatedDiscard(view, turn.action.tile, profile.readDanger));
+                            for (const TurnOption& option : turn.alternatives) {
+                                ExpectNumbersOf(option, RatedDiscard(view, option.tile, profile.readDanger));
+                                EXPECT_NE(option.tile, turn.action.tile);
+                            }
+                        }
+                        if (turn.step == TurnStep::Declare || turn.step == TurnStep::KeepWaiting) {
+                            EXPECT_EQ(Listed(turn.waits), WaitsOfThirteen(view, turn.action.tile));
+                        }
+                        if (turn.step == TurnStep::Kong) {
+                            const DiscardRating after = RateKong(view, counts, turn.action);
+                            EXPECT_EQ(turn.kongShantenAfter, after.shanten);
+                            EXPECT_EQ(turn.kongAcceptanceAfter, after.acceptance);
+                        }
+                    } else {
+                        ++seen.claims;
+                        const ClaimExplanation& claim = *explained->claim;
+                        if (claim.step == ClaimStep::Claim) {
+                            ASSERT_TRUE(claim.chosen.has_value());
+                            EXPECT_EQ(claim.chosen->after.shanten, RateClaim(view, claim.action).shanten);
+                            EXPECT_EQ(claim.chosen->after.acceptance, RateClaim(view, claim.action).acceptance);
+                        }
+                        if (claim.step == ClaimStep::NoGain) {
+                            EXPECT_EQ(claim.action, kPass);
+                            for (const RatedClaim& option : claim.alternatives) {
+                                EXPECT_FALSE(option.acceptable);
+                            }
                         }
                     }
-                    if (turn.step == TurnStep::Declare || turn.step == TurnStep::KeepWaiting) {
-                        EXPECT_EQ(Listed(turn.waits), WaitsOfThirteen(view, turn.action.tile));
-                    }
-                    if (turn.step == TurnStep::Kong) {
-                        const DiscardRating after = RateKong(view, counts, turn.action);
-                        EXPECT_EQ(turn.kongShantenAfter, after.shanten);
-                        EXPECT_EQ(turn.kongAcceptanceAfter, after.acceptance);
-                    }
-                } else {
-                    ++claims;
-                    const ClaimExplanation& claim = *explained->claim;
-                    if (claim.step == ClaimStep::Claim) {
-                        ASSERT_TRUE(claim.chosen.has_value());
-                        EXPECT_EQ(claim.chosen->after.shanten, RateClaim(view, claim.action).shanten);
-                        EXPECT_EQ(claim.chosen->after.acceptance, RateClaim(view, claim.action).acceptance);
-                    }
-                    if (claim.step == ClaimStep::NoGain) {
-                        EXPECT_EQ(claim.action, kPass);
-                        for (const RatedClaim& option : claim.alternatives) {
-                            EXPECT_FALSE(option.acceptable);
-                        }
-                    }
+                    ASSERT_TRUE(table.Step(match.Hand()).has_value());
                 }
-                ASSERT_TRUE(table.Step(match.Hand()).has_value());
             }
         }
-        EXPECT_GT(discards, kRandomHands);
-        EXPECT_GT(claims, 0);
+
+    }  // namespace
+
+    TEST(ComputerExplainTest, TheExplainedActionAndItsNumbersAreTheChoosersOnRandomHands) {
+        ExplainedCounts seen;
+        ExpectExplanationsAreTheChoosers(kNormalProfile, seen);
+
+        EXPECT_GT(seen.discards, kRandomHands);
+        EXPECT_GT(seen.claims, 0);
+    }
+
+    TEST(ComputerExplainTest, WithTheDangerTieBreakOnTheExplanationIsStillTheChoosersAlsoAgainstDeclaredOpponents) {
+        LevelProfile profile = kNormalProfile;
+        profile.readDanger = true;
+
+        ExplainedCounts seen;
+        ExpectExplanationsAreTheChoosers(profile, seen);
+
+        EXPECT_GT(seen.discards, kRandomHands);
+        EXPECT_GT(seen.againstDeclared, kRandomHands) << "the playouts must have declared opponents to mean anything";
+    }
+
+    TEST(ComputerExplainTest, TheDangerOfEveryOptionIsShownWhateverTheKnobSaysAndTheKnobOnlyOrdersThem) {
+        // Four sets and the lone 5m and green dragon, seat 1 declared: discarding either leaves a tanki wait on the other, 3 unseen copies each.
+        TableView view;
+        view.seat = kSeat0;
+        view.phase = Phase::Discard;
+        view.currentSeat = kSeat0;
+        view.own.concealed = ParseTiles("1p 2p 3p 4p 5p 6p 7p 8p 9p 1s 2s 3s 5m Gd").value();
+        view.visible = CountTiles(view.own.concealed);
+        view.seats[kSeat1].callingDeclared = true;
+        for (const char* tile : {"5m", "Gd"}) {
+            view.legal.push_back(HandAction::MakeDiscard(T(tile), true));
+        }
+
+        const std::optional<Explanation> off = ExplainAdvice(view);
+        LevelProfile on = kNormalProfile;
+        on.readDanger = true;
+        const std::optional<Explanation> withKnob = ExplainAdvice(view, on);
+
+        const TurnExplanation& plain = TurnOf(off);
+        EXPECT_EQ(plain.declaredOpponents, 1);
+        EXPECT_FALSE(plain.readDanger);
+        EXPECT_EQ(plain.step, TurnStep::Declare);
+        EXPECT_EQ(plain.chosen.tile, T("5m"));
+        EXPECT_EQ(plain.chosen.danger, Danger::High);
+        ASSERT_EQ(plain.alternatives.size(), 1u);
+        EXPECT_EQ(plain.alternatives[0].tile, T("Gd"));
+        EXPECT_EQ(plain.alternatives[0].danger, Danger::Low);
+
+        const TurnExplanation& careful = TurnOf(withKnob);
+        EXPECT_TRUE(careful.readDanger);
+        EXPECT_EQ(careful.chosen.tile, T("Gd"));
+        EXPECT_EQ(careful.chosen.danger, Danger::Low);
+        ASSERT_EQ(careful.alternatives.size(), 1u);
+        EXPECT_EQ(careful.alternatives[0].tile, T("5m"));
+        EXPECT_EQ(careful.alternatives[0].danger, Danger::High);
+        EXPECT_EQ(careful.equalChoices, 1);
+        EXPECT_EQ(careful.action, PlayersChoice(view, on));
+    }
+
+    TEST(ComputerExplainTest, WithNoDeclaredOpponentEveryOptionIsSafe) {
+        const HandModel model = MakeModel(SpecOf(kTwoSided, "Gd"));
+        const std::optional<Explanation> explained = ExplainAdvice(MakeTableView(model, kSeat0));
+
+        const TurnExplanation& turn = TurnOf(explained);
+        EXPECT_EQ(turn.declaredOpponents, 0);
+        EXPECT_EQ(turn.chosen.danger, Danger::Safe);
+        for (const TurnOption& option : turn.alternatives) {
+            EXPECT_EQ(option.danger, Danger::Safe);
+        }
+    }
+
+    TEST(ComputerExplainTest, TheDeclaredOpponentsAreCountedWithoutTheViewersOwnDeclaration) {
+        TableView view;
+        view.seat = kSeat0;
+        view.phase = Phase::Discard;
+        view.currentSeat = kSeat0;
+        view.own.concealed = ParseTiles("1p 2p 3p 4p 5p 6p 7p 8p 9p 1s 2s 3s 5m Gd").value();
+        view.visible = CountTiles(view.own.concealed);
+        view.legal.push_back(HandAction::MakeDiscard(T("5m")));
+        view.legal.push_back(HandAction::MakeDiscard(T("Gd")));
+        EXPECT_EQ(TurnOf(ExplainAdvice(view)).declaredOpponents, 0);
+
+        view.seats[kSeat0].callingDeclared = true;  // the viewer's own declaration is no opponent
+        EXPECT_EQ(TurnOf(ExplainAdvice(view)).declaredOpponents, 0);
+        view.seats[kSeat1].callingDeclared = true;
+        EXPECT_EQ(TurnOf(ExplainAdvice(view)).declaredOpponents, 1);
+        view.seats[kSeat3].callingDeclared = true;
+        EXPECT_EQ(TurnOf(ExplainAdvice(view)).declaredOpponents, 2);
+        view.seats[kSeat2].callingDeclared = true;
+        EXPECT_EQ(TurnOf(ExplainAdvice(view)).declaredOpponents, 3);
     }
 
 }  // namespace BECore::Mahjong::Tests

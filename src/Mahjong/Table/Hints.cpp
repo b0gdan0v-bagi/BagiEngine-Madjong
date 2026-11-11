@@ -70,11 +70,31 @@ namespace BECore::Mahjong {
             return keep == kKeepSimple ? "hints.why.keep.simple" : "hints.why.keep.value";
         }
 
+        /// The line about the danger of the advised discard (only with a declared opponent, for a step that discards).
+        eastl::string DangerLine(const UIStrings& strings, Danger danger) {
+            switch (danger) {
+                case Danger::Safe:
+                    return Tr(strings, "hints.why.danger.safe");
+                case Danger::Low:
+                    return Tr(strings, "hints.why.danger.low");
+                case Danger::Medium:
+                    return Tr(strings, "hints.why.danger.medium");
+                case Danger::High:
+                    break;
+            }
+            return Tr(strings, "hints.why.danger.high");
+        }
+
         /// How the tie of equal choices was settled. The first alternative is the best of the others, so it is the equal one with the
-        /// lowest keep value: an equal keep value too leaves the choice to chance.
+        /// danger and then the keep value that come first: when the danger (read only with the knob of the advice player, against a
+        /// declared opponent) differs, it decided; an equal keep value too leaves the choice to chance.
         eastl::string TieLine(const UIStrings& strings, const TurnExplanation& turn) {
             if (turn.equalChoices == 0) {
                 return Tr(strings, "hints.why.tie.none");
+            }
+            const bool dangerDecided = turn.readDanger && turn.declaredOpponents > 0 && !turn.alternatives.empty() && turn.alternatives.front().danger != turn.chosen.danger;
+            if (dangerDecided) {
+                return Tr(strings, "hints.why.tie.danger", {{"n", Num(turn.equalChoices)}});
             }
             const bool alike = !turn.alternatives.empty() && turn.alternatives.front().keep == turn.chosen.keep;
             if (alike) {
@@ -126,6 +146,9 @@ namespace BECore::Mahjong {
                 AddLine(lines, WaitsLine(strings, turn.chosen.waitKinds, turn.chosen.waitCopies));
             } else {
                 AddLine(lines, Tr(strings, "hints.why.help", {{"copies", Num(turn.chosen.acceptance)}}));
+            }
+            if (turn.declaredOpponents > 0) {
+                AddLine(lines, DangerLine(strings, turn.chosen.danger));
             }
             AddLine(lines, TieLine(strings, turn));
             for (const TurnOption& option : turn.alternatives) {

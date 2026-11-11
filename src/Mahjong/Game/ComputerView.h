@@ -18,6 +18,13 @@ namespace BECore::Mahjong {
         int bonusCount = 0;
         int discardCount = 0;
         bool callingDeclared = false;
+        /// Per kind, the copies this seat discarded in this hand, the claimed ones too (public: the pile shows them, a claim leaves
+        /// the pile but stays in `HandModel::Moves()`). A view of a sampled world leaves it zero.
+        TileCounts discardedKinds{};
+        /// Per kind, the copies discarded by the other seats after this seat's declaring discard (the declaring discard itself is
+        /// not one): the tiles this seat could have won on and did not. All zero while `callingDeclared` is false and in a view of a
+        /// sampled world.
+        TileCounts passedKinds{};
     };
 
     /**
@@ -31,6 +38,10 @@ namespace BECore::Mahjong {
      * too), the open melds of the others, the pile (`Discards()`, the pending discard included) and, in `Phase::RobKong`, the tile of
      * the kong that is being robbed (the owner holds it in hand, everybody else sees it). Bonus tiles are not counted. What is not
      * visible is unseen: `UnseenCopies` (`ComputerTurn.h`).
+     *
+     * `PublicSeat::discardedKinds` and `passedKinds` come from `HandModel::Moves()` (public data); a view of a sampled world
+     * (`ComputerWorld.h`) has no moves, so it leaves them empty. In `Phase::Claim` the pending discard already counts as passed for a
+     * declared seat, so the reading of `DiscardDanger.h` is meant for `Phase::Discard`.
      *
      * A default view is the view of no seat (`MakeTableView` for a number that is no seat): nothing in it, no actions.
      */
