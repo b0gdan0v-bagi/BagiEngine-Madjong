@@ -6,6 +6,7 @@
 #include <BECore/Control/Json.h>
 #include <Mahjong/Components/MahjongHintsComponent.h>
 #include <Mahjong/Table/Coach.h>
+#include <Mahjong/Table/ScoreText.h>
 #include <Mahjong/Table/TableLayout.h>
 #include <Mahjong/Table/UiPalette.h>
 
@@ -367,6 +368,76 @@ namespace BECore::Mahjong::Tests {
         const std::vector<std::string> loaded = run("7p 7p 7p 2s 5s 8s 2m 5m 8m Ww Nw Gd Wd", "4p 4p 3s 6s 9s 3m 6m 9m Sw Ww Nw Gd Rd");
         EXPECT_FALSE(plain.front().empty());
         EXPECT_EQ(plain, loaded);
+    }
+
+    // ----- the whole path -----
+
+    /// A match of four hands on a fixed seed, the person at seat 0 playing through the table: a pass or the win by the buttons of the
+    /// action bar, a discard of the drawn tile by a click on it, `Next hand` by its button. The tally is kept here from `JudgeMove` on the
+    /// view before each move, so it is no copy of the ledger.
+    TEST_F(MahjongCoachTest, AShortMatchPlayedThroughTheTableCountsEveryMoveAndSaysTheTallyOnBothScreens) {
+        _game->SetHintsMode(HintsMode::Coach);
+        MahjongSettings settings = _game->GetSettings();
+        settings.handsPerMatch = kRoundsPerMatch;
+        _game->SetSettings(settings);
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        TableSession& session = _game->GetSession();
+
+        CoachTally hand;
+        CoachTally match;
+        int handsSeen = 0;
+        for (int guard = 0; guard < kActionLimit * kRoundsPerMatch && _game->GetMatch().GetPhase() != MatchPhase::Finished; ++guard) {
+            session.RunComputers();
+            Draw();
+            if (session.GetPhase() == SessionPhase::HandOver) {
+                // The score table says the tally of the hand and of the match as counted here (it may wait for a lost claim to be seen)
+                for (int wait = 0; wait < 4 && !OnScreen("HandOverAction", "NextHand"); ++wait) {
+                    AdvanceTime(kClaimLostSeconds);
+                    Draw();
+                }
+                ASSERT_TRUE(OnScreen("HandOver", "HandCoachRow") == (match.moves > 0)) << "hand " << handsSeen;
+                const eastl::string expected = FormatCoachTally(CoreManager::GetUIStrings(), hand, match);
+                EXPECT_STREQ(Var("handOverCoach").c_str(), expected.c_str()) << "hand " << handsSeen;
+                EXPECT_EQ(_game->GetCoach().HandTally(), hand) << "hand " << handsSeen;
+                EXPECT_EQ(_game->GetCoach().MatchTally(), match) << "hand " << handsSeen;
+                ASSERT_TRUE(ClickElement("HandOverAction", "NextHand")) << "hand " << handsSeen;
+                ++handsSeen;
+                hand = {};
+                continue;
+            }
+            ASSERT_TRUE(session.ActorIsPerson());
+            const Seat actor = session.Actor();
+            const TableView view = MakeTableView(Hand(), actor);
+            std::optional<HandAction> chosen;
+            const uint64_t version = session.Version();
+            if (std::any_of(view.legal.begin(), view.legal.end(), [](const HandAction& action) { return action.kind == ActionKind::Pass; })) {
+                chosen = HandAction::MakePass();
+                EmitAction("MahjongPass");
+            } else if (std::any_of(view.legal.begin(), view.legal.end(), [](const HandAction& action) { return action.kind == ActionKind::DeclareWin; })) {
+                chosen = HandAction::MakeDeclareWin();
+                EmitAction("MahjongWin");
+            } else {
+                const eastl::vector<Tile>& concealed = Hand().GetHand(actor).concealed;
+                const int index = static_cast<int>(concealed.size()) - 1;
+                chosen = HandAction::MakeDiscard(concealed[static_cast<size_t>(index)], false);
+                ClickHandTile(index);  // no canvas takes it: the table does
+            }
+            ASSERT_GT(session.Version(), version) << "the move was accepted";
+            const bool agrees = !JudgeMove(view, *chosen).has_value();
+            ++hand.moves;
+            ++match.moves;
+            hand.agreed += agrees ? 1 : 0;
+            match.agreed += agrees ? 1 : 0;
+        }
+        ASSERT_EQ(_game->GetMatch().GetPhase(), MatchPhase::Finished);
+        ASSERT_EQ(handsSeen, kRoundsPerMatch);
+        ASSERT_GT(match.moves, 0);
+        Draw();
+
+        ASSERT_TRUE(OnScreen("MatchOver", "MatchCoachRow"));
+        const eastl::string expected = FormatCoachTally(CoreManager::GetUIStrings(), CoachTally{}, match);
+        EXPECT_STREQ(Var("matchOverCoach").c_str(), expected.c_str());
+        EXPECT_EQ(_game->GetCoach().MatchTally(), match);
     }
 
     // ----- the place and the words -----
