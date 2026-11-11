@@ -307,6 +307,8 @@ namespace BECore::Mahjong {
         IntrusivePtr<ITexture> _felt;                    // the felt made from pixels (`Table/TableLook.h`); empty when the renderer gave none
         uint64_t _feltRenderer = 0;                      // `IRenderer::GetId()` of the renderer `_felt` was asked of, 0 for none yet
         TableSnapshot _shown;                            // what the last `OnDraw` drew: its layout is `GetLayout()`, empty while nothing is drawn
+        TableSnapshot _previous;                         // the snapshot drawn before `_shown`; `OnDraw` swaps the two and refills one, so its lists keep their capacity
+        TableInput _input;                               // the input of the last layout, kept for the capacity of its lists
         eastl::vector<TileFlight> _flights;              // the tiles in the air, flying to slots of `_shown.layout`
         float _flightElapsed = 0.0f;                     // seconds since the batch of `_flights` was planned
         float _flightSeconds = kTileFlightSeconds;       // at Normal speed: `Seconds(_flightSeconds)` is the length of a flight

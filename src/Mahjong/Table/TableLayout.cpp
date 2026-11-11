@@ -49,10 +49,13 @@ namespace BECore::Mahjong {
             bool spreadHand = false;
         };
 
+        /// The offsets of one strip: as many as the most a strip holds (four kongs) without the heap, more only for an input past the rules
+        using StripOffsetList = eastl::fixed_vector<float, kMaxMeldTiles, true>;
+
         /// The offsets along the strip's axis of `groups` of tiles (`kMeldGap` between two groups), squeezed to the capacity.
-        eastl::vector<float> StripOffsets(const Strip& strip, const eastl::vector<int>& groups) {
+        StripOffsetList StripOffsets(const Strip& strip, eastl::span<const int> groups) {
             const float length = strip.vertical ? strip.tileH : strip.tileW;
-            eastl::vector<float> offsets;
+            StripOffsetList offsets;
             float position = 0.0f;
             for (size_t group = 0; group < groups.size(); ++group) {
                 if (group > 0 && !offsets.empty()) {
@@ -113,7 +116,8 @@ namespace BECore::Mahjong {
         /// The hand in input order, one plain row; a spread one (the portrait table) puts tile `i` at `i` times the pitch that makes 14
         /// tiles span the strip, a longer hand squeezes to the strip.
         void AddHand(TableLayout& layout, const ViewFit& fit, const SeatGeometry& geometry, Seat seat, int count) {
-            eastl::vector<float> offsets = StripOffsets(geometry.hand, {count});
+            const int groups[] = {count};
+            StripOffsetList offsets = StripOffsets(geometry.hand, groups);
             if (geometry.spreadHand) {
                 const float pitch = (geometry.hand.capacity - geometry.hand.tileW) / static_cast<float>(eastl::max(count, kMaxConcealedTiles) - 1);
                 for (int index = 0; index < count; ++index) {
@@ -152,11 +156,11 @@ namespace BECore::Mahjong {
         }
 
         void AddMelds(TableLayout& layout, const ViewFit& fit, const SeatGeometry& geometry, Seat seat, int position, const eastl::vector<Meld>& melds) {
-            eastl::vector<int> groups;
+            eastl::fixed_vector<int, kMaxMelds, true> groups;
             for (const Meld& meld : melds) {
                 groups.push_back(MeldTileCount(meld));
             }
-            const eastl::vector<float> offsets = StripOffsets(geometry.melds, groups);
+            const StripOffsetList offsets = StripOffsets(geometry.melds, groups);
             size_t next = 0;
             for (size_t meld = 0; meld < groups.size(); ++meld) {
                 const int claimedPart = ClaimedPart(melds[meld], seat);
@@ -169,7 +173,8 @@ namespace BECore::Mahjong {
         }
 
         void AddBonus(TableLayout& layout, const ViewFit& fit, const SeatGeometry& geometry, Seat seat, int count) {
-            const eastl::vector<float> offsets = StripOffsets(geometry.bonus, {count});
+            const int groups[] = {count};
+            const StripOffsetList offsets = StripOffsets(geometry.bonus, groups);
             for (int index = 0; index < count; ++index) {
                 AddSlot(layout, fit, StripRect(geometry.bonus, offsets[index]), SlotRole::BonusTile, seat, index, geometry.rotation);
             }
@@ -422,6 +427,16 @@ namespace BECore::Mahjong {
 
     TableLayout MakeTableLayout(const TableInput& input, const TableLayoutSpec& spec, float viewWidth, float viewHeight) {
         TableLayout layout;
+        RebuildTableLayout(layout, input, spec, viewWidth, viewHeight);
+        return layout;
+    }
+
+    void RebuildTableLayout(TableLayout& layout, const TableInput& input, const TableLayoutSpec& spec, float viewWidth, float viewHeight) {
+        BE_PROFILE_SCOPE("RebuildTableLayout");
+        eastl::vector<TileSlot> slots = eastl::move(layout.slots);
+        slots.clear();  // the capacity stays: a table drawn every frame builds its slots without the heap
+        layout = TableLayout{};
+        layout.slots = eastl::move(slots);
         layout.viewer = IsSeat(input.viewer) ? input.viewer : 0;
         const TableShape shape = ShapeOfView(viewWidth, viewHeight);
         layout.shape = shape;
@@ -429,7 +444,7 @@ namespace BECore::Mahjong {
         layout.viewHeight = viewHeight;
         const ShapeSpec* zones = ZonesOf(spec, shape);
         if (zones == nullptr) {
-            return layout;
+            return;
         }
         const TableShape zoneShape = ZoneShapeOf(spec, shape);
         const ZoneDesign design{DesignWidthOf(zoneShape), DesignHeightOf(zoneShape)};
@@ -466,7 +481,6 @@ namespace BECore::Mahjong {
         for (int stack = 0; stack < stacks; ++stack) {
             AddSlot(layout, fit, WallCellIn(Rect(ring.x, ring.y, ring.w, ring.h), ring.stack, stack), SlotRole::WallStack, 0, stack, 0.0f);
         }
-        return layout;
     }
 
     namespace {
@@ -484,20 +498,29 @@ namespace BECore::Mahjong {
     }
 
     TableLayout MakeTableLayout(const TableInput& input, float viewWidth, float viewHeight) {
-        if (gActiveTableLayoutSpec == nullptr) {
-            static bool logged = false;
-            if (!logged) {
-                logged = true;
-                LOG_ERROR("TableLayout: no layout spec is set, the table has no tiles (SetActiveTableLayoutSpec)");
-            }
-            TableLayout layout;
-            layout.viewer = IsSeat(input.viewer) ? input.viewer : 0;
-            layout.shape = ShapeOfView(viewWidth, viewHeight);
-            layout.viewWidth = viewWidth;
-            layout.viewHeight = viewHeight;
-            return layout;
+        TableLayout layout;
+        RebuildTableLayout(layout, input, viewWidth, viewHeight);
+        return layout;
+    }
+
+    void RebuildTableLayout(TableLayout& layout, const TableInput& input, float viewWidth, float viewHeight) {
+        if (gActiveTableLayoutSpec != nullptr) {
+            RebuildTableLayout(layout, input, *gActiveTableLayoutSpec, viewWidth, viewHeight);
+            return;
         }
-        return MakeTableLayout(input, *gActiveTableLayoutSpec, viewWidth, viewHeight);
+        static bool logged = false;
+        if (!logged) {
+            logged = true;
+            LOG_ERROR("TableLayout: no layout spec is set, the table has no tiles (SetActiveTableLayoutSpec)");
+        }
+        eastl::vector<TileSlot> slots = eastl::move(layout.slots);
+        slots.clear();
+        layout = TableLayout{};
+        layout.slots = eastl::move(slots);
+        layout.viewer = IsSeat(input.viewer) ? input.viewer : 0;
+        layout.shape = ShapeOfView(viewWidth, viewHeight);
+        layout.viewWidth = viewWidth;
+        layout.viewHeight = viewHeight;
     }
 
     // The check of a spec: the worst table built from it, for every shape, and the properties the table must have.
