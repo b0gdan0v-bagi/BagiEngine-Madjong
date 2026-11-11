@@ -11,7 +11,7 @@
   284 and end at 420). The top and bottom cells are 328 wide
   and 28 high; the side cells are 104 wide and as high as the middle (72); the round and the wall lie between them. Every label is
   AutoFit, so the worst texts (-9999, the longest round and wall words) shrink in the small windows. MahjongHudTest holds the labels
-  inside the panel and clear of every tile. In the portrait table the ring and its panel are 280 units left and 84 down (x 192..528, y 366..506)
+  inside the panel and clear of every tile. In the portrait table the ring and its panel are 280 units left and 132 down (x 192..528, y 414..554)
   and the portrait variant moves every label by that, so the cells keep the sizes above.
 -->
 <node name="CenterPanel" layer="10">

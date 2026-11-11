@@ -1707,7 +1707,7 @@ namespace BECore::Mahjong::Tests {
             const Rect ring = MakeTableLayout(TableInput{}, DesignWidthOf(shape), DesignHeightOf(shape)).zones.wall;
             EXPECT_TRUE(Inside(panel->rect, ring)) << panel->rect.x << "," << panel->rect.y << " " << panel->rect.w << "x" << panel->rect.h;
             EXPECT_EQ(panel->rect.x, shape == TableShape::Portrait ? 180.0f : 460.0f);
-            EXPECT_EQ(panel->rect.y, shape == TableShape::Portrait ? 352.0f : 268.0f);
+            EXPECT_EQ(panel->rect.y, shape == TableShape::Portrait ? 400.0f : 268.0f);
             for (size_t i = 0; i < kMaxReasonLines; ++i) {
                 const UIElement* line = Element("HintsWhy", CellName("WhyLine", static_cast<int>(i)).c_str());
                 ASSERT_NE(line, nullptr) << i;
