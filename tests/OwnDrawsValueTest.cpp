@@ -149,7 +149,12 @@ namespace BECore::Mahjong::Tests {
             int64_t previous = Alive(0, opponents);
             for (int draws = 1; draws <= 30; ++draws) {
                 const int64_t alive = Alive(draws, opponents);
-                EXPECT_LT(alive, previous) << "opponents " << opponents << " draws " << draws;
+                // Rounding half up keeps a positive chance at the end of a long horizon: it falls strictly until it is one millionth.
+                if (previous > 1) {
+                    EXPECT_LT(alive, previous) << "opponents " << opponents << " draws " << draws;
+                } else {
+                    EXPECT_EQ(alive, previous) << "opponents " << opponents << " draws " << draws;
+                }
                 EXPECT_GT(alive, 0);
                 previous = alive;
             }

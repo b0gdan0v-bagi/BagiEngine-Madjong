@@ -25,10 +25,12 @@ namespace BECore::Mahjong {
     inline constexpr int kMaxDeclaredOpponents = kSeatCount - 1;
 
     /**
-     * Provisional until WP 5 of the slice (`--table-stats` replaces them): the chance, in thousandths, that another seat wins in one round
-     * (one draw of each seat), by the number of the other seats that have declared the calling hand (0..3).
+     * The chance, in thousandths, that another seat wins in one round (the three other seats act once), by the number of the other seats
+     * that have declared the calling hand (0..3). Measured by `BagiMahjongArena --table-stats --first 4000 --seeds 1000 --jobs 14` (four Normal
+     * seats, Release): the first column of the table, rounded. `docs/own-draws-ev.md` says what the table shows beyond round 1: the number of
+     * declared opponents grows during the horizon, so the survival after two rounds is lower than `(1 - h)^2`.
      */
-    inline constexpr int kOpponentWinPerRoundPermille[kSeatCount] = {15, 25, 40, 70};
+    inline constexpr int kOpponentWinPerRoundPermille[kSeatCount] = {7, 188, 336, 475};
 
     /// A typical winner's score and a typical score of a seat that stands next to it (the losers' pairwise settlement is by the difference).
     struct TypicalScores {
@@ -36,9 +38,11 @@ namespace BECore::Mahjong {
         int loser = 0;
     };
 
-    /// Provisional until WP 5 of the slice (`--table-stats` replaces them): for a seat that is East and for the other seats.
-    inline constexpr TypicalScores kTypicalScoresEast{60, 10};
-    inline constexpr TypicalScores kTypicalScoresOther{60, 10};
+    /// The winner's score and the standing score of a seat that did not win, measured by the same command (the means of the rounded scores
+    /// over the won hands, 45.5 and 9.2 pooled, rounded): East and the other seats do not differ significantly (47.9 +- 4.1 against 44.5 +-
+    /// 2.0 for a winner, 9.4 +- 1.0 against 9.1 +- 0.4 standing), so one pair serves both.
+    inline constexpr TypicalScores kTypicalScoresEast{45, 9};
+    inline constexpr TypicalScores kTypicalScoresOther{45, 9};
 
     /// `numerator / denominator` rounded half up; both are not negative and `denominator` is positive. The one rounding of this file.
     [[nodiscard]] int64_t RoundedDiv(int64_t numerator, int64_t denominator) noexcept;

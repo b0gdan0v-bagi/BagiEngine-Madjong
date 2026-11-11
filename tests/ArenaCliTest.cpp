@@ -246,4 +246,32 @@ namespace BECore::Mahjong::Arena {
         EXPECT_FALSE(Contains(quiet.out, "us per decision"));
     }
 
+    TEST(ArenaCliTest, TableStatsParsesAndExcludesThePlayers) {
+        const ArenaArgs parsed = ArgsOf({"--table-stats", "--first", "10", "--seeds", "5", "--jobs", "2"});
+        EXPECT_TRUE(parsed.tableStats);
+        EXPECT_EQ(parsed.config.first, 10U);
+        EXPECT_EQ(parsed.config.count, 5);
+        EXPECT_EQ(parsed.config.jobs, 2);
+        EXPECT_FALSE(ArgsOf({}).tableStats);
+        for (const std::string_view other : {"--focus", "--others"}) {
+            const std::string error = ErrorOf({"--table-stats", other, "normal"});
+            EXPECT_NE(error.find("--table-stats"), std::string::npos) << error;
+            EXPECT_NE(error.find(std::string(other)), std::string::npos) << error;
+            EXPECT_FALSE(Parse({other, "normal", "--table-stats"}).has_value());
+        }
+        EXPECT_FALSE(Parse({"--table-stats", "--time"}).has_value());
+    }
+
+    TEST(ArenaCliTest, TableStatsPrintsTheStatisticsAtAnyJobs) {
+        ArenaCliOutput single;
+        EXPECT_EQ(RunProgram(FewSeeds({"--table-stats"}), single), kExitOk);
+        EXPECT_TRUE(Contains(single.out, "Table statistics: four normal seats, seeds 4000 .. 4002")) << single.out.c_str();
+        EXPECT_FALSE(Contains(single.out, "Bot arena"));
+        EXPECT_TRUE(single.err.empty());
+        ArenaCliOutput threaded;
+        EXPECT_EQ(RunProgram(FewSeeds({"--table-stats", "--jobs", "3"}), threaded), kExitOk);
+        EXPECT_EQ(threaded.out, single.out);
+        EXPECT_TRUE(Contains(ArenaUsage(), "--table-stats"));
+    }
+
 }  // namespace BECore::Mahjong::Arena
