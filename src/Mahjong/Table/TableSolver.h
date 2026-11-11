@@ -59,6 +59,11 @@ namespace BECore::Mahjong {
     /// tiles are turned, so the zone's width must hold the tile's height. `align` puts the tile across the line when the zone is wider.
     [[nodiscard]] SolvedStrip SolveStrip(const Rect& zone, ZoneAlign align, bool vertical, int tiles, int gaps) noexcept;
 
+    /// A horizontal strip whose tile is asked for, not solved (the phone profile's hand): tiles `tileW` x `tileH`, the zone's corner moved down
+    /// by `align` across the line, `capacity` the zone's width. Size 0 when the tile is not a usable size; a tile higher than the zone rests
+    /// on the zone's top edge.
+    [[nodiscard]] SolvedStrip PlaceStrip(const Rect& zone, ZoneAlign align, float tileW, float tileH) noexcept;
+
     /// A block of discards. `tileW` x `tileH` is the upright tile; the block, on the screen, is `blockW` x `blockH` at (`x`, `y`) of the zone's
     /// corner. A horizontal block has `kDiscardsPerRow` tiles in a row and `rows` rows below one another; a vertical one (a side seat)
     /// is the same block turned, a row running along the height.

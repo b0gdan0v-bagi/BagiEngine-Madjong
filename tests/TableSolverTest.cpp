@@ -1,7 +1,6 @@
 #include <Mahjong/Table/TableSolver.h>
 #include <cmath>
 #include <gtest/gtest.h>
-#include <limits>
 
 /**
  * `Table/TableSolver.h`: the largest tile a zone holds for what the rules allow it to hold. Pure logic over rectangles. The sizes of the
@@ -177,6 +176,23 @@ namespace BECore::Mahjong::Tests {
         const Rect column(100.0f, 200.0f, 100.0f, 400.0f);
         EXPECT_EQ(SolveStrip(column, ZoneAlign::End, true, 8, 0).x, 100.0f + (100.0f - 66.0f));
         EXPECT_EQ(SolveStrip(column, ZoneAlign::End, true, 8, 0).y, 200.0f);
+    }
+
+    TEST(TableSolverTest, AStripWithTheTileAskedForRestsWhereTheAlignmentSays) {
+        const Rect zone(12.0f, 608.0f, 1256.0f, 104.0f);
+        const SolvedStrip end = PlaceStrip(zone, ZoneAlign::End, 60.5f, 80.0f);
+        EXPECT_EQ(end.tileW, 60.5f);
+        EXPECT_EQ(end.slotW, 60.5f);
+        EXPECT_EQ(end.slotH, 80.0f);
+        EXPECT_EQ(end.x, 12.0f);
+        EXPECT_EQ(end.y + end.slotH, zone.y + zone.h);
+        EXPECT_EQ(end.capacity, 1256.0f);
+        EXPECT_EQ(PlaceStrip(zone, ZoneAlign::Start, 60.5f, 80.0f).y, 608.0f);
+        // a tile higher than the zone rests on its top edge, and a tile that is no size gives nothing
+        EXPECT_EQ(PlaceStrip(zone, ZoneAlign::End, 90.0f, 120.0f).y, 608.0f);
+        EXPECT_FALSE(PlaceStrip(zone, ZoneAlign::End, kNaN, 80.0f).Fits());
+        EXPECT_FALSE(PlaceStrip(zone, ZoneAlign::End, 60.0f, -1.0f).Fits());
+        EXPECT_FALSE(PlaceStrip(Rect(0, 0, 0, 104), ZoneAlign::End, 60.0f, 80.0f).Fits());
     }
 
     TEST(TableSolverTest, AMeldStripKeepsRoomForItsGaps) {

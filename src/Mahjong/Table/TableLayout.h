@@ -274,12 +274,37 @@ namespace BECore::Mahjong {
     /// The number of wall stacks drawn for `wallRemaining` tiles: two tiles a stack, at most `kWallRingCells`.
     [[nodiscard]] int WallStackCount(int wallRemaining) noexcept;
 
+    struct TableLayoutSpec;
+
     /// Lays out the table for a view of the given size (see `kViewWidth`) in the shape of that view (`ShapeOfView`): the landscape table
     /// of `kViewWidth` x `kViewHeight` units, the portrait one of `kPortraitViewWidth` x `kPortraitViewHeight`, the wide view of
     /// `kWideViewWidth` x `kViewHeight` (the landscape table `kWideWingWidth` from its left edge) or the narrow one of `kNarrowViewWidth`
     /// x `kNarrowViewHeight`, fitted into the view (`LayoutScale`) and
-    /// centred. Deterministic: the same input gives the same slots.
+    /// centred. Deterministic: the same input gives the same slots. The zones come from the active spec (`ActiveTableLayoutSpec`); with none
+    /// set the layout has its shape and no slots (and the first such call logs it).
     [[nodiscard]] TableLayout MakeTableLayout(const TableInput& input, float viewWidth = kViewWidth, float viewHeight = kViewHeight);
+
+    /// The same from a spec: the zones are `spec`'s (fractions of the design view of the shape, `TableLayoutSpec.h`), the tile in each is
+    /// the largest that the zone holds for what the rules allow (`TableSolver.h`). A shape the spec does not describe gives a layout with
+    /// no slots. Pure: no active spec, no log.
+    [[nodiscard]] TableLayout MakeTableLayout(const TableInput& input, const TableLayoutSpec& spec, float viewWidth = kViewWidth, float viewHeight = kViewHeight);
+
+    /// The spec the overload without one reads (a pointer: the caller keeps the spec alive until it sets another or null). Set and read on
+    /// the main thread only. The game sets it from `config/TableLayout.xml` (`MahjongTableComponent`), the tests from the source tree.
+    void SetActiveTableLayoutSpec(const TableLayoutSpec* spec) noexcept;
+    [[nodiscard]] const TableLayoutSpec* ActiveTableLayoutSpec() noexcept;
+
+    /// What is wrong with a spec as a table: for every shape, the worst table (every zone at what the rules allow) for every viewer and,
+    /// for the landscape-like shapes that have a phone override, the phone profile at the least, a middle and the greatest tile width, is
+    /// built and checked. One message per distinct problem, each naming the shape (and the profile) and what: a slot outside the design
+    /// view, zones that overlap each other or a hand, meld or bonus row, a seat plate that overlaps a slot or lies nearer than
+    /// `kPlatePadding` to a discard block or the wall ring, a tile under its zone's `minTileW`, a zone too small for its tiles, the
+    /// viewer's hand tile under `kViewerHandTileW`, the widest phone tile other than `kPhoneHandTileMaxW`. Empty when the spec is sound.
+    [[nodiscard]] eastl::vector<eastl::string> CheckTableLayoutSpec(const TableLayoutSpec& spec);
+
+    /// The layout as it was before the zones became data, from constants in `TableLayout.cpp`. Kept only to prove that the data design lays
+    /// out the same table (`TableLayoutSpecTest`); removed in WP 8 of the plan `mahjong-table-layout-data`, with the constants.
+    [[nodiscard]] TableLayout MakeLegacyTableLayout(const TableInput& input, float viewWidth = kViewWidth, float viewHeight = kViewHeight);
 
     /// The smallest rectangle that holds every slot of `role` of `seat` (`seat` ignored for the wall); empty when there is none.
     [[nodiscard]] Rect BoundsOf(const TableLayout& layout, SlotRole role, Seat seat);

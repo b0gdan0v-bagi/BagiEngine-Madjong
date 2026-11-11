@@ -90,6 +90,21 @@ namespace BECore::Mahjong {
         return strip;
     }
 
+    SolvedStrip PlaceStrip(const Rect& zone, ZoneAlign align, float tileW, float tileH) noexcept {
+        SolvedStrip strip;
+        if (!IsUsable(tileW) || !IsUsable(tileH) || !IsUsable(zone.w) || !IsUsable(zone.h)) {
+            return strip;
+        }
+        strip.tileW = tileW;
+        strip.tileH = tileH;
+        strip.slotW = tileW;
+        strip.slotH = tileH;
+        strip.x = zone.x;
+        strip.y = zone.y + AlignedOffset(align, eastl::max(zone.h - tileH, 0.0f));
+        strip.capacity = zone.w;
+        return strip;
+    }
+
     SolvedBlock SolveDiscardBlock(const Rect& zone, bool vertical, int rows) noexcept {
         SolvedBlock block;
         if (rows < 1 || !IsUsable(zone.w) || !IsUsable(zone.h)) {
