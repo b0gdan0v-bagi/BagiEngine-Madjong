@@ -364,6 +364,17 @@ namespace BECore::Mahjong::Tests {
             return Click(x, y, SDL_TOUCH_MOUSEID);
         }
 
+        /// The mouse pointer moves to a point of the view through the engine's input path (`which`: the device, `SDL_TOUCH_MOUSEID` for a touch): a canvas
+        /// that takes the motion consumes it and the table never hears of it. True when a canvas took it.
+        bool HoverAt(float x, float y, SDL_MouseID which = 0) {
+            SDL_MouseMotionEvent motion{};
+            motion.type = SDL_EVENT_MOUSE_MOTION;
+            motion.which = which;
+            motion.x = x;
+            motion.y = y;
+            return CoreManager::GetUIInput().DispatchMouseMotion(motion);
+        }
+
         /// The slot of the `index`-th concealed tile of the bottom seat in the last layout.
         const TileSlot* HandSlot(int index) const {
             for (const TileSlot& slot : _table->GetLayout().slots) {

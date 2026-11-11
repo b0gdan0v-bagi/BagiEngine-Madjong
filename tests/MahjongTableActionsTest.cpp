@@ -115,14 +115,6 @@ namespace BECore::Mahjong::Tests {
             HoverAt(found->rect.x + found->rect.w * 0.5f, found->rect.y + found->rect.h * 0.5f);
         }
 
-        void HoverAt(float x, float y) {
-            SDL_MouseMotionEvent motion{};
-            motion.type = SDL_EVENT_MOUSE_MOTION;
-            motion.x = x;
-            motion.y = y;
-            CoreManager::GetUIInput().DispatchMouseMotion(motion);
-        }
-
         /// The hint as the player sees it: the text of the label `Hint` when it is on screen, else empty. The variable has to agree.
         std::string HintOnScreen() const {
             const bool shown = OnScreen("Actions", "Hint");

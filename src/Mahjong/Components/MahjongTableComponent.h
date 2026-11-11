@@ -16,7 +16,8 @@ namespace BECore {
 
     namespace SDLEvents {
         struct MouseButtonDownEvent;
-    }
+        struct MouseMotionEvent;
+    }  // namespace SDLEvents
 
     namespace InputEvents {
         struct ActionEvent;
@@ -131,6 +132,11 @@ namespace BECore::Mahjong {
      * `selectedTileText` is the name of the selected tile, empty with none; the label `SelectedTile` of the node `Hud` shows it and is shown
      * by this component exactly while a tile is selected.
      *
+     * **The name on hover.** While the mouse pointer is over a tile that is drawn face up (`TileOfSlot`: the draw's own rule, so never a back, a wall
+     * stack or a tile in the air) the variable `tileHoverText` is its `TileName` and the plate `TileHoverPlate` of the node `TileHover` is shown below
+     * it (`HoverPlateRect`). The hit test runs on the layout of the frame; the pointer is forgotten while the table is paused, under the cover,
+     * on a touch or a pen and whenever a canvas has it (a modal one, or a shown element reports it hovered).
+     *
      * The other actions are the buttons of the canvas `Actions` (`Table/ActionButtons.h`; `ActionsCompact` holds the same buttons by name for the windows where those would be under the
      * touch minimum and the bar under the table holds the row at its height there, `NeedsCompactActions`, and exactly one of the two is shown; the node `HintsButton`, the button of the hints on the
      * table, is shown with `Actions`, and `ActionsCompact` holds a `HintButton` of its own), shown from `LegalActions` every frame
@@ -216,6 +222,8 @@ namespace BECore::Mahjong {
 
     private:
         void OnMouseDown(const SDLEvents::MouseButtonDownEvent& event);
+        /// Keeps the position of the pointer (output pixels; a touch or a pen forgets it); only a motion no canvas took gets here.
+        void OnMouseMotion(const SDLEvents::MouseMotionEvent& event);
         void OnAction(const InputEvents::ActionEvent& event);
         void OnUpdate(const SceneEvents::SceneUpdateEvent& event);
         void OnApplicationCleanUp();
@@ -280,6 +288,9 @@ namespace BECore::Mahjong {
         bool BeginComputerStep(TableSession& session, const HandModel& hand);
         /// Sets the variable `selectedTileText` to the name of `tile` (empty for none), only when the tile or the language changed.
         void PublishSelectedText(Tile tile);
+        /// The name on hover, from the layout just built: sets `tileHoverText`, shows the plate `TileHoverPlate` exactly while the pointer is over a
+        /// face-up tile (`Table/TileHover.h`) and moves it only when its place changed. `game` null: nothing is hovered.
+        void PublishHover(const MahjongGame* game, float viewWidth, float viewHeight);
         /// Pushes the buttons, the tile pictures on them, the hint of the hovered button, the choice between `Actions` (with `HintsButton`) and
         /// `ActionsCompact` and the cover to the canvases of the scene, only what changed.
         void PublishScreen(const MahjongGame* game);
@@ -338,6 +349,12 @@ namespace BECore::Mahjong {
         bool _selectedLabelShown = false;   // the label `SelectedTile` is shown
         Tile _textTile;                     // the tile `selectedTileText` names now (invalid for none) and the string table version it was worded at
         uint64_t _textStringsVersion = 0;
+        float _pointerX = 0.0f;  // the pointer of the mouse in output pixels, valid while `_pointerSeen`: the last motion the table got (converted to the view when
+        float _pointerY = 0.0f;  // it is used, so a resized window keeps it where it is on the screen)
+        bool _pointerSeen = false;
+        bool _hoverShown = false;  // the plate `TileHoverPlate` is shown
+        Tile _hoverTile;           // the tile `tileHoverText` names now (invalid for none) and the string table version it was worded at
+        uint64_t _hoverStringsVersion = 0;
         DeclareTurn _declareTurn;     // the turn `_declareNext` was set on
         float _computerClock = 0.0f;  // seconds a computer has been waiting to play
         /// The step of a computer that was begun and is not applied yet: the session `Version()` and `StartCount()` it was begun at (the job
