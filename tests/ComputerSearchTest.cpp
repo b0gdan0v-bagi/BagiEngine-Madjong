@@ -195,6 +195,11 @@ namespace BECore::Mahjong::Tests {
             };
         }
 
+        /// The base seed a search decision draws from `rng`, read from a copy.
+        uint32_t BaseSeedOf(MahjongRng rng) {
+            return rng.Below(kSearchBaseSeedRange);
+        }
+
         bool SameWorld(const SearchWorld& a, const SearchWorld& b) {
             return a.played == b.played && a.values == b.values;
         }
@@ -577,6 +582,138 @@ namespace BECore::Mahjong::Tests {
                     }
                 }
             }
+        }
+    }
+
+    // ----- the seam of an analyzer: any list of actions in the search's worlds -----
+
+    TEST(ComputerSearchTest, ARunOverTheCandidatesOfASearchHasThatSearchsValuesInAnyOrder) {
+        constexpr int kSeamWorlds = 4;
+        for (const bool turn : {true, false}) {
+            const eastl::vector<TableView> views = FindDecisions(turn);
+            ASSERT_FALSE(views.empty());
+            const TableView& view = views.front();
+            const LevelProfile profile = SearchProfile(kSeamWorlds);
+            MahjongRng rng(kRngSeed);
+            std::optional<SearchRun> search = Begin(view, rng, profile);
+            ASSERT_TRUE(search.has_value());
+            StepToEnd(*search, "search");
+            ASSERT_FALSE(search->Values().front().empty());
+
+            const auto over = [&] {
+                std::optional<SearchRun> run = BeginSearchOver(view, search->Candidates(), BaseSeedOf(MahjongRng(kRngSeed)), kSeamWorlds);
+                EXPECT_TRUE(run.has_value());
+                return run;
+            };
+            std::optional<SearchRun> serial = over();
+            std::optional<SearchRun> backwards = over();
+            std::optional<SearchRun> stepped = over();
+            ASSERT_TRUE(serial.has_value() && backwards.has_value() && stepped.has_value());
+            EXPECT_EQ(serial->WorldCount(), kSeamWorlds);
+            EXPECT_EQ(serial->Candidates(), search->Candidates());
+            serial->RunWorlds(SerialLoop);
+            backwards->RunWorlds(ReversedLoop);
+            StepToEnd(*stepped, "stepped");
+            for (const SearchRun* run : {&*serial, &*backwards, &*stepped}) {
+                EXPECT_TRUE(run->Done());
+                EXPECT_EQ(run->Values(), search->Values()) << (turn ? "turn" : "window");
+                EXPECT_EQ(run->DroppedWorlds(), search->DroppedWorlds());
+                EXPECT_EQ(run->DroppedWorlds(), 0);
+                for (const eastl::vector<int>& row : run->Values()) {
+                    EXPECT_EQ(static_cast<int>(row.size()), kSeamWorlds);
+                }
+            }
+        }
+    }
+
+    TEST(ComputerSearchTest, TheSeamTakesTheCallersListWithNoBaselineAndNoSecondCandidate) {
+        const TableView view = MakeTableView(TurnModel(), kSeat0);
+        const eastl::vector<HandAction> one = {view.legal.back()};
+        std::optional<SearchRun> run = BeginSearchOver(view, one, kRngSeed, 3);
+        ASSERT_TRUE(run.has_value());
+        run->RunWorlds(SerialLoop);
+        ASSERT_EQ(run->Values().size(), 1U);
+        EXPECT_EQ(run->Values().front().size(), 3U);
+        // The list is kept as given, in order: the first element is no "Normal choice".
+        const eastl::vector<HandAction> reversed = {view.legal.back(), view.legal.front()};
+        std::optional<SearchRun> two = BeginSearchOver(view, reversed, kRngSeed, 3);
+        ASSERT_TRUE(two.has_value());
+        EXPECT_EQ(two->Candidates(), reversed);
+        two->RunWorlds(SerialLoop);
+        EXPECT_EQ(two->Values().front(), run->Values().front());
+    }
+
+    TEST(ComputerSearchTest, TheSeamRefusesNoLegalActionAnEmptyListAndNoWorld) {
+        const TableView view = MakeTableView(TurnModel(), kSeat0);
+        ASSERT_FALSE(view.legal.empty());
+        EXPECT_FALSE(BeginSearchOver(view, view.legal, kRngSeed, 0).has_value());
+        EXPECT_FALSE(BeginSearchOver(view, view.legal, kRngSeed, -1).has_value());
+        EXPECT_FALSE(BeginSearchOver(view, {}, kRngSeed, 3).has_value());
+        const TableView outside = MakeTableView(UpgradeModel({kSeat2}), kSeat3);
+        ASSERT_TRUE(outside.legal.empty());
+        EXPECT_FALSE(BeginSearchOver(outside, {HandAction::MakePass()}, kRngSeed, 3).has_value());
+        EXPECT_TRUE(BeginSearchOver(view, view.legal, kRngSeed, 1).has_value());
+    }
+
+    TEST(ComputerSearchTest, TheSeamPlaysEveryLegalActionOfAPositionIncludingDeclarationsAWinAndAWindow) {
+        constexpr int kSeamWorlds = 3;
+        // A turn: the same discard with and without the declaration are two actions.
+        const TableView turn = MakeTableView(TurnModel(), kSeat0);
+        // The win: East has declared and draws its winning tile.
+        HandModel winning = MakeModel(SpecOf("1p 2p 3p 4s 5s 6s 7m 8m 9m Ew Ew Ew Rd", "9p Wd Gd Nw Rd"));
+        Lap(winning, "9p Wd Gd Nw", {kSeat0});
+        const TableView win = MakeTableView(winning, kSeat0);
+        // A claim window: Pass and a pung.
+        const TableView window = MakeTableView(WindowModel(kPungHand, "5p"), kSeat1);
+
+        ASSERT_NE(FindAction(win, ActionKind::DeclareWin), nullptr);
+        const auto declaring = [&](bool with) {
+            return eastl::any_of(turn.legal.begin(), turn.legal.end(), [with](const HandAction& a) { return a.kind == ActionKind::Discard && a.declareCalling == with; });
+        };
+        ASSERT_TRUE(declaring(true) && declaring(false));
+        ASSERT_NE(FindAction(window, ActionKind::Claim), nullptr);
+        ASSERT_TRUE(Has(window.legal, HandAction::MakePass()));
+
+        for (const TableView* view : {&turn, &win, &window}) {
+            std::optional<SearchRun> run = BeginSearchOver(*view, view->legal, kRngSeed, kSeamWorlds);
+            ASSERT_TRUE(run.has_value());
+            EXPECT_EQ(run->Candidates(), view->legal);
+            run->RunWorlds(SerialLoop);
+            EXPECT_EQ(run->DroppedWorlds(), 0);
+            ASSERT_EQ(run->Values().size(), view->legal.size());
+            for (const eastl::vector<int>& row : run->Values()) {
+                EXPECT_EQ(static_cast<int>(row.size()), kSeamWorlds);
+            }
+        }
+
+        // The win pays: it is the best row in every world, and the same points whichever world it is played in.
+        std::optional<SearchRun> run = BeginSearchOver(win, win.legal, kRngSeed, kSeamWorlds);
+        ASSERT_TRUE(run.has_value());
+        run->RunWorlds(SerialLoop);
+        for (size_t c = 0; c < win.legal.size(); ++c) {
+            if (win.legal[c].kind != ActionKind::DeclareWin) {
+                continue;
+            }
+            for (size_t w = 0; w < static_cast<size_t>(kSeamWorlds); ++w) {
+                EXPECT_GT(run->Values()[c][w], 0);
+                EXPECT_EQ(run->Values()[c][w], run->Values()[c].front());
+                for (size_t other = 0; other < win.legal.size(); ++other) {
+                    EXPECT_GE(run->Values()[c][w], run->Values()[other][w]);
+                }
+            }
+        }
+    }
+
+    TEST(ComputerSearchTest, TheSeamCountsTheWorldsThatCannotBeSampled) {
+        TableView view = MakeTableView(TurnModel(), kSeat0);
+        view.liveCount += 5;
+        std::optional<SearchRun> run = BeginSearchOver(view, view.legal, kRngSeed, 3);
+        ASSERT_TRUE(run.has_value());
+        run->RunWorlds(SerialLoop);
+        EXPECT_TRUE(run->Done());
+        EXPECT_EQ(run->DroppedWorlds(), 3);
+        for (const eastl::vector<int>& row : run->Values()) {
+            EXPECT_TRUE(row.empty());
         }
     }
 

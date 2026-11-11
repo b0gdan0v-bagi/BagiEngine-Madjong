@@ -50,7 +50,8 @@ namespace BECore::Mahjong {
     /**
      * @brief A search decision as a resumable object: `Step()` plays one rollout, `Result()` is the answer when `Done()`.
      *
-     * Made only by `BeginTurnSearch` / `BeginClaimSearch`, which draw the one number from the player's rng; after that the run holds
+     * Made only by `BeginTurnSearch` / `BeginClaimSearch`, which draw the one number from the player's rng, or by `BeginSearchOver`
+     * (a tool's own list of actions and base seed, no rng); after that the run holds
      * copies only (the view, the candidates, the margin, the base seed, the values so far) and touches no rng, session, model or scene,
      * so it can be stepped on another thread and dropped with nothing changed. A step is candidate `i` of world `w`; the world is
      * sampled when `i` is 0. A world that cannot be sampled, or one whose rollout the model refuses, is skipped whole in the step that
@@ -84,8 +85,19 @@ namespace BECore::Mahjong {
         void RunWorlds(const WorldLoop& loop);
 
         /// The answer: the best candidate when its advantage clears the margin, else the baseline (also when no world could be sampled).
-        /// Valid when `Done()`.
+        /// Valid when `Done()`. It takes the front candidate for Normal's choice: a run made by `BeginSearchOver` has no such baseline,
+        /// so its reader ignores `Result()` and reads `Values()`.
         [[nodiscard]] HandAction Result() const;
+
+        /// The candidates in the order the values are listed in (the order `BeginSearchOver` was given).
+        [[nodiscard]] const eastl::vector<HandAction>& Candidates() const noexcept;
+
+        /// `Values()[c]` is the points of candidate `c` in every world that was played, the same worlds in the same order for every
+        /// candidate (so the rows have one length and pair by index). Complete when `Done()`.
+        [[nodiscard]] const eastl::vector<eastl::vector<int>>& Values() const noexcept;
+
+        /// The worlds that could not be played (`WorldCount()` minus the length of one row of `Values()`). Valid when `Done()`.
+        [[nodiscard]] int DroppedWorlds() const noexcept;
 
         /// The rollouts played and the most there can be (a skipped world counts all its rollouts as played).
         [[nodiscard]] int StepsDone() const noexcept;
@@ -94,6 +106,7 @@ namespace BECore::Mahjong {
     private:
         friend std::optional<SearchRun> BeginTurnSearch(const TableView& view, MahjongRng& rng, const LevelProfile& profile);
         friend std::optional<SearchRun> BeginClaimSearch(const TableView& view, MahjongRng& rng, const LevelProfile& profile);
+        friend std::optional<SearchRun> BeginSearchOver(const TableView& view, eastl::vector<HandAction> actions, uint32_t baseSeed, int worlds);
 
         SearchRun(const TableView& view, eastl::vector<HandAction> candidates, uint32_t base, const LevelProfile& profile);
 
@@ -136,6 +149,17 @@ namespace BECore::Mahjong {
     /// `BeginTurnSearch` for a claim window (`ChooseClaimAction` calls it after the mahjong claim and the pass of a waiting hand).
     /// Not searched: a window whose only action is `Pass`.
     [[nodiscard]] std::optional<SearchRun> BeginClaimSearch(const TableView& view, MahjongRng& rng, const LevelProfile& profile);
+
+    /**
+     * @brief A run over a list of actions the caller chose (the EV analyzer's way in): every action is played in `worlds` sampled worlds
+     *        with the rollouts of the search, the base seed given instead of drawn.
+     *
+     * The worlds, their rollout seeds and the rollouts are those of `BeginTurnSearch` for the same base seed, so a value here is the
+     * value that search would have computed. Draws from no rng; asks for no Normal baseline and no second candidate, and does not check
+     * that the actions are listed (an action the model refuses drops its world, as in any run). `nullopt` for a view with no legal
+     * action, an empty list or fewer than one world. The margin is 0; read `Values()` after `RunWorlds` (or the steps), not `Result()`.
+     */
+    [[nodiscard]] std::optional<SearchRun> BeginSearchOver(const TableView& view, eastl::vector<HandAction> actions, uint32_t baseSeed, int worlds);
 
     /// Where a chooser puts a search it did not run (`ChooseTurnAction` / `ChooseClaimAction` with a non-null handoff): the run that
     /// `SearchTurnAction` / `SearchClaimAction` would have stepped to its end. Empty when the decision is not a search; the chooser's
