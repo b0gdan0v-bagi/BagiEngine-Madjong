@@ -169,6 +169,47 @@ the old harness. The reading is the one of the entry: the lever earns about 8 mo
 wins, and against equal seats it wins fewer hands (the points are not significantly below Normal's here, the wins are), so it is no
 stronger than Normal head to head.
 
+## How a player wins and loses
+
+Under the main table the report prints a second one, "how the hands end", with the same rows (the focus player, and `others (per seat)`
+without intervals). The main table says how often a player wins; this one says how it wins and what it pays when another seat does.
+Terms:
+
+- **Lost hand:** a hand another seat won (a drawn hand is neither won nor lost). This is the "standing" of `docs/own-draws-ev.md`.
+- **gave win %:** the lost hands whose winning tile the seat discarded (a win on a discard) or whose kong it owned (a robbed kong), as a
+  percent of all the seat's hands. A win by a self-draw is nobody's gift. It has an interval, and a paired row.
+- **self-draw % of wins:** the seat's wins that were self-draws, of its wins (a ratio of the totals, no interval).
+- **standing score:** the mean rounded score (`ScoreSeat`) the seat holds over its lost hands: the number the own-draws value uses for the
+  hand it does not win. It has an interval over the seeds (a seed's standing scores divided by the seed's lost hands; a seed in which the
+  focus player lost no hand has no value and is left out, and a paired difference uses the seeds where both players have one), and a
+  paired row.
+- **points/lost hand:** the mean change of the seat's points over its lost hands (a ratio of the totals, no interval).
+
+Read the columns together with the win rate: a player can win often and still give many wins.
+(The Suphx paper, arXiv 2003.13590, reads the win rate with the deal-in rate for the same reason.) The table is always printed; the main
+table and the paired table are the same bytes with or without it.
+
+Normal and Easy against three Normal seats, `A --focus normal,easy --others normal --first 4000 --seeds 1000`, Release (the main-table
+lines are those of "The first check" (2) and (3)):
+
+```
+how the hands end
+player                        gave win %  self-draw % of wins      standing score  points/lost hand
+normal                     19.10 +- 0.66                23.60        9.18 +- 0.40            -69.65
+  others (per seat)                19.10                23.60                9.18            -69.65
+easy                       23.98 +- 1.32                22.18        8.71 +- 0.33            -68.15
+  others (per seat)                17.28                24.00                9.46            -66.09
+
+paired difference against normal (the same seeds), how the hands end
+player                        gave win %                   standing score
+easy                       +4.88 +- 1.42  significant       -0.47 +- 0.35  significant
+```
+
+Normal against three Normal is the mirror, so its row and its others' row are equal. Easy gives the win on about 24 of 100 hands against
+Normal's 19 (the paired row, `significant`) and wins 7.33 % of its hands against 25.00 %, while the share of its wins that are self-draws
+(22.18 against 23.60) and what a lost hand costs it (-68.15 against -69.65 points) are close to Normal's: the standing score differs by
+half a point of about nine.
+
 ## Adding a knob for an experiment
 
 A knob is a field of `LevelProfile` (`src/Mahjong/Game/ComputerLevel.h`) that the choosers read. To make it a thing the arena can set from
