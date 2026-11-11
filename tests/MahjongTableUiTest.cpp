@@ -614,7 +614,7 @@ namespace BECore::Mahjong::Tests {
             const char* name;
             Seat east;
             Wind roundWind;
-            WindMark east_, south, west, north;
+            WindMark onEastTile, onSouthTile, onWestTile, onNorthTile;
         };
         // Seat 0 is East when it deals and South when seat 3 does; the round is East or South
         const Case cases[] = {
@@ -641,7 +641,7 @@ namespace BECore::Mahjong::Tests {
                 }
                 ++hand;
                 const Tile tile = own.concealed[static_cast<size_t>(slot.index)];
-                const WindMark want = tile == T("Ew") ? test.east_ : tile == T("Sw") ? test.south : tile == T("Ww") ? test.west : tile == T("Nw") ? test.north : WindMark::None;
+                const WindMark want = tile == T("Ew") ? test.onEastTile : tile == T("Sw") ? test.onSouthTile : tile == T("Ww") ? test.onWestTile : tile == T("Nw") ? test.onNorthTile : WindMark::None;
                 EXPECT_EQ(MarkDrawnOn(slot), want) << test.name << ", " << ToString(tile);
                 rects += want == WindMark::None ? 0 : (want == WindMark::Both ? 2 : 1);
             }
