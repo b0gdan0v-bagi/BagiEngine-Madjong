@@ -43,13 +43,13 @@ namespace BECore::Mahjong::Tests {
         constexpr float kPortraitScoreBandHeight = 72.0f;  // the headline and the summary: two lines of the narrow plate
         constexpr float kPortraitScoreButtonGapHeight = 112.0f;
         constexpr int kPortraitScoreLineColumns = 2;
-        /// The same in the narrow view: between the columns of the side seats (x 8..101 and 979..1072, their bonus tiles the inner ones), under the
-        /// top seat's rows (to y 81) and above the viewer's melds and bonus tiles (from y 636); the plate is 856 wide, 500 high as in landscape
-        constexpr float kNarrowScoreTableLeft = 108.0f;
-        constexpr float kNarrowScoreTableRight = 972.0f;
+        /// The same in the narrow view: between the columns of the side seats (x 8..112 and 968..1072, their bonus tiles the inner ones), under the
+        /// top seat's rows (to y 90) and above the viewer's melds and bonus tiles (from y 636); the plate is 852 wide, 500 high as in landscape
+        constexpr float kNarrowScoreTableLeft = 114.0f;
+        constexpr float kNarrowScoreTableRight = 966.0f;
         constexpr float kNarrowScoreTableTop = 92.0f;
         constexpr float kNarrowScoreTableBottom = 628.0f;
-        constexpr float kNarrowScoreTableWidth = 856.0f;
+        constexpr float kNarrowScoreTableWidth = 852.0f;
         /// The edges the plate of the score table keeps to in a view of this shape (the wide view is the landscape table a wing in from the
         /// side, and the plate is centred on the view, so its edges move by the wing).
         Rect ScoreTableBounds(TableShape shape) {

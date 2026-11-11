@@ -101,28 +101,32 @@
       <Discards x="0.35" y="0.45625" w="0.3" h="0.1875"/>  <!-- 252 584 216x240 -->
       <Plate x="0.01666667" y="0.803125" w="0.2111111" h="0.0625"/>  <!-- 12 1028 152x80 -->
     </Seat>
-    <!-- The side seats: columns at the edges as in Landscape, from the band down; the plates in one row under the blocks. -->
+    <!-- The side seats: columns at the edges as in Landscape, from the band down; the plates in one row under the blocks. The band is full: the
+         columns (98 wide each side), the side blocks (160) and the top block (156) with their gaps fill the 720 units, so the side seats keep the
+         sizes they had before the landscape table grew; only the top seat, which has the height, is as large as in Landscape. -->
     <Seat position="1">
       <Hand x="0.9375" y="0.109375" w="0.05138889" h="0.30625" minTileW="28"/>  <!-- 675 140 37x392 -->
       <Melds x="0.8875" y="0.109375" w="0.04444445" h="0.31875" minTileW="24"/>  <!-- 639 140 32x408 -->
       <Bonus x="0.8527778" y="0.109375" w="0.02916667" h="0.1" minTileW="16"/>  <!-- 614 140 21x128 -->
       <Discards x="0.6194444" y="0.109375" w="0.2222222" h="0.1125"/>  <!-- 446 140 160x144 -->
-      <Plate x="0.6333333" y="0.240625" w="0.2111111" h="0.0625"/>  <!-- 456 308 152x80 -->
+      <Plate x="0.63333333" y="0.240625" w="0.21111111" h="0.0625"/>  <!-- 456 308 152x80 -->
     </Seat>
-    <!-- The top seat starts 32 units below the edge, where a phone's status bar sits. The Bonus tiles lie beside the Hand, centred on it. -->
+    <!-- The top seat starts 32 units below the edge, where a phone's status bar sits. The Bonus tiles lie beside the Hand, centred on it. The
+         Discards start 8 under the Melds (y 124) and end at y 294, 14 above the plates (they keep 8 clear of a block); the block is 156 wide,
+         the room between the side blocks. -->
     <Seat position="2">
       <Hand x="0.05" y="0.025" w="0.7" h="0.0375" minTileW="36"/>  <!-- 36 32 504x48 -->
       <Melds x="0.2166667" y="0.065625" w="0.5666667" h="0.025" minTileW="24"/>  <!-- 156 84 408x32 -->
-      <Bonus x="0.7722222" y="0.025" w="0.1777778" h="0.0375" align="center" minTileW="16"/>  <!-- 556 32 128x48; the tiles centre on the hand -->
-      <Discards x="0.4" y="0.109375" w="0.2" h="0.125"/>  <!-- 288 140 144x160 -->
-      <Plate x="0.3944444" y="0.240625" w="0.2111111" h="0.0625"/>  <!-- 284 308 152x80 -->
+      <Bonus x="0.76111111" y="0.025" w="0.18888889" h="0.0375" align="center" minTileW="17"/>  <!-- 548 32 136x48; the tiles centre on the hand -->
+      <Discards x="0.39166667" y="0.096875" w="0.21666667" h="0.1328125"/>  <!-- 282 124 156x170 -->
+      <Plate x="0.39444444" y="0.240625" w="0.21111111" h="0.0625"/>  <!-- 284 308 152x80 -->
     </Seat>
     <Seat position="3">
       <Hand x="0.01111111" y="0.109375" w="0.05138889" h="0.30625" minTileW="28"/>  <!-- 8 140 37x392 -->
       <Melds x="0.06805556" y="0.109375" w="0.04444445" h="0.31875" minTileW="24"/>  <!-- 49 140 32x408 -->
       <Bonus x="0.1180556" y="0.109375" w="0.02916667" h="0.1" minTileW="16"/>  <!-- 85 140 21x128 -->
       <Discards x="0.1583333" y="0.109375" w="0.2222222" h="0.1125"/>  <!-- 114 140 160x144 -->
-      <Plate x="0.1555556" y="0.240625" w="0.2111111" h="0.0625"/>  <!-- 112 308 152x80 -->
+      <Plate x="0.15555556" y="0.240625" w="0.21111111" h="0.0625"/>  <!-- 112 308 152x80 -->
     </Seat>
     <Wall x="0.2472222" y="0.3125" w="0.5055556" h="0.13125"/>  <!-- 178 400 364x168 -->
   </Shape>
@@ -130,35 +134,40 @@
   <!-- Narrow: 1080 x 768 (4:3, 3:2, 5:4). The landscape table with the viewer's side as the phone profile lays it out: the Hand one row resting
        on the rim, the Bonus tiles and Melds in a row of their own above it (the 48 units of height pay for it), clear of a raised tile. -->
   <Shape name="Narrow">
-    <!-- The Hand is centred; the Bonus row starts at its left edge and the Melds lie right of it, bottom aligned above the raised tile. -->
+    <!-- The Hand is centred; the Bonus row starts at its left edge and the Melds lie right of it, bottom aligned above the raised tile. The plate
+         lies right of the left seat's Melds column (it ends at x 85). -->
     <Seat position="0">
       <Hand x="0.1888889" y="0.90625" w="0.6222222" h="0.08333334" minTileW="48"/>  <!-- 204 696 672x64 -->
       <Melds x="0.3851852" y="0.828125" w="0.4666667" h="0.05208333" minTileW="30"/>  <!-- 416 636 504x40 -->
       <Bonus x="0.1888889" y="0.8385417" w="0.1777778" h="0.04166667" minTileW="24"/>  <!-- 204 644 192x32 -->
       <Discards x="0.41111111" y="0.57552083" w="0.15555556" h="0.24088542"/>  <!-- 444 442 168x185 -->
-      <Plate x="0.07777778" y="0.6927083" w="0.1407407" h="0.1041667"/>  <!-- 84 532 152x80 -->
+      <Plate x="0.081481481" y="0.69270833" w="0.14074074" h="0.10416667"/>  <!-- 88 532 152x80 -->
     </Seat>
+    <!-- The side columns run from y 180, below the move line of MahjongHud.xml (it ends at y 172), and end at y 604: the buttons of HudMenu lie
+         in the bottom left corner from y 612. Their length is what the left column allows (14 and 16 tiles and three gaps in 432), so the right
+         one has the same sizes. The Melds column ends at x 1028 and the action row of MahjongActions.xml (x 620..980) lies 15 left of it. -->
     <Seat position="1">
-      <Hand x="0.9583333" y="0.2447917" w="0.03425926" h="0.5104167" minTileW="28"/>  <!-- 1035 188 37x392 -->
-      <Melds x="0.925" y="0.234375" w="0.02962963" h="0.53125" minTileW="24"/>  <!-- 999 180 32x408 -->
-      <Bonus x="0.9018518" y="0.2447917" w="0.01944445" h="0.1666667" minTileW="16"/>  <!-- 974 188 21x128 -->
-      <Discards x="0.71851852" y="0.34895833" w="0.1712963" h="0.21875"/>  <!-- 776 268 185x168 -->
-      <Plate x="0.74814815" y="0.234375" w="0.14074074" h="0.10416667"/>  <!-- 808 180 152x80 -->
+      <Hand x="0.95555556" y="0.23697917" w="0.037037037" h="0.546875" minTileW="30"/>  <!-- 1032 182 40x420 -->
+      <Melds x="0.9212963" y="0.234375" w="0.030555556" h="0.55208333" minTileW="25"/>  <!-- 995 180 33x424 -->
+      <Bonus x="0.89629630" y="0.24479167" w="0.022222222" h="0.1875" minTileW="18"/>  <!-- 968 188 24x144 -->
+      <Discards x="0.71111111" y="0.34895833" w="0.1712963" h="0.21875"/>  <!-- 768 268 185x168 -->
+      <Plate x="0.74074074" y="0.234375" w="0.14074074" h="0.10416667"/>  <!-- 800 180 152x80 -->
     </Seat>
-    <!-- The top Hand starts at x 340, right of the WaitPanel (x 8..328 in this view); the Bonus tiles lie beside it, centred on it. -->
+    <!-- The top Hand starts at x 340, right of the WaitPanel (x 8..328 in this view); the Bonus tiles lie beside it, centred on it. The Hand
+         (46 high), the Melds (32) and the Discards (170) are those of the landscape table. -->
     <Seat position="2">
-      <Hand x="0.3148148" y="0.01041667" w="0.4148148" h="0.0546875" minTileW="32"/>  <!-- 340 8 448x42 -->
-      <Melds x="0.3111111" y="0.0703125" w="0.3777778" h="0.04166667" minTileW="24"/>  <!-- 336 54 408x32 -->
-      <Bonus x="0.7444444" y="0.01041667" w="0.1185185" h="0.0546875" align="center" minTileW="16"/>  <!-- 804 8 128x42; the tiles centre on the hand -->
+      <Hand x="0.31481481" y="0.010416667" w="0.4537037" h="0.059895833" minTileW="35"/>  <!-- 340 8 490x46 -->
+      <Melds x="0.31111111" y="0.075520833" w="0.37777778" h="0.041666667" minTileW="24"/>  <!-- 336 58 408x32 -->
+      <Bonus x="0.77592593" y="0.010416667" w="0.12592593" h="0.059895833" align="center" minTileW="17"/>  <!-- 838 8 136x46; the tiles centre on the hand -->
       <Discards x="0.42777778" y="0.12239583" w="0.14444444" h="0.22135417"/>  <!-- 462 94 156x170 -->
       <Plate x="0.27777778" y="0.125" w="0.14074074" h="0.10416667"/>  <!-- 300 96 152x80 -->
     </Seat>
     <Seat position="3">
-      <Hand x="0.007407407" y="0.2447917" w="0.03425926" h="0.5104167" minTileW="28"/>  <!-- 8 188 37x392 -->
-      <Melds x="0.04537037" y="0.234375" w="0.02962963" h="0.53125" minTileW="24"/>  <!-- 49 180 32x408 -->
-      <Bonus x="0.0787037" y="0.2447917" w="0.01944445" h="0.1666667" minTileW="16"/>  <!-- 85 188 21x128 -->
-      <Discards x="0.10555556" y="0.34895833" w="0.1712963" h="0.21875"/>  <!-- 114 268 185x168 -->
-      <Plate x="0.1037037" y="0.234375" w="0.14074074" h="0.10416667"/>  <!-- 112 180 152x80 -->
+      <Hand x="0.0074074074" y="0.23697917" w="0.037037037" h="0.546875" minTileW="30"/>  <!-- 8 182 40x420 -->
+      <Melds x="0.048148148" y="0.234375" w="0.030555556" h="0.55208333" minTileW="25"/>  <!-- 52 180 33x424 -->
+      <Bonus x="0.081481481" y="0.24479167" w="0.022222222" h="0.1875" minTileW="18"/>  <!-- 88 188 24x144 -->
+      <Discards x="0.11111111" y="0.34895833" w="0.1712963" h="0.21875"/>  <!-- 120 268 185x168 -->
+      <Plate x="0.11111111" y="0.234375" w="0.14074074" h="0.10416667"/>  <!-- 120 180 152x80 -->
     </Seat>
     <Wall x="0.3314815" y="0.3489583" w="0.337037" h="0.21875"/>  <!-- 358 268 364x168 -->
   </Shape>

@@ -19,8 +19,8 @@
   In a narrow view (1080 x 768, the variant with orientation:landscape;maxAspect:1.55; config/TableLayout.xml, the narrow table) MoveLine
   lies right of the top discard block (x 462..618) and above the right seat's melds (they start at y 180): right edge 8 in, 440 wide,
   y 92..172, so it is clear of the block by 14 and of every tile of the right seat by 8. SelectedTile lies in the ground between the
-  bottom seat plate (right edge 228) and the bottom discard block (x 444), under the wall ring and over the viewer's row of bonus tiles
-  and melds (y 636): x 236, y 572, 200 wide, which leaves the tile a tap raises and the row clear.
+  bottom seat plate (right edge 240) and the bottom discard block (x 444), under the wall ring and over the viewer's row of bonus tiles
+  and melds (y 636): x 248, y 572, 188 wide, which leaves the tile a tap raises and the row clear.
 -->
 <node name="Hud" layer="10">
   <components>
@@ -51,7 +51,7 @@
         <variant when="orientation:landscape;maxAspect:1.55">
           <overrides>
             <set element="MoveLine" x="-8" width="440" />
-            <set element="SelectedTile" x="236" y="572" width="200" />
+            <set element="SelectedTile" x="248" y="572" width="188" />
           </overrides>
         </variant>
         <variant when="minAspect:2">

@@ -1838,6 +1838,8 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(TableLayoutTest, TheNarrowSideSeatsKeepTheirTurnsAndTheirColumnsAtTheEdgesOfTheView) {
+        constexpr float kNarrowMoveLineBottom = 172.0f;    // MahjongHud.xml, narrow: the move line ends here
+        constexpr float kNarrowBottomButtonsTop = 612.0f;  // MahjongHudMenu.xml, narrow: the buttons in the bottom left corner start under here
         for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
             const TableLayout layout = InNarrow(WorstInput(viewer, kWorstPile, kNoSeat));
             for (const TileSlot& slot : layout.slots) {
@@ -1853,8 +1855,16 @@ namespace BECore::Mahjong::Tests {
             const Rect right = BoundsOf(layout, SlotRole::HandTile, SeatAtPosition(viewer, 1));
             EXPECT_NEAR(left.x, kRimWidth, kTolerance);
             EXPECT_NEAR(right.x + right.w, kNarrowViewWidth - kRimWidth, kTolerance);
-            EXPECT_NEAR(RectCentreY(left), kNarrowViewHeight / 2.0f, kTolerance);
-            EXPECT_NEAR(RectCentreY(right), kNarrowViewHeight / 2.0f, kTolerance);
+            // The columns lie between the move line of MahjongHud.xml (ends y 172) and the buttons of HudMenu.xml (the bottom left corner from y 612),
+            // the hand column on the middle of the melds column, the same on both sides
+            for (const Seat seat : {SeatAtPosition(viewer, 1), SeatAtPosition(viewer, 3)}) {
+                const Rect hand = BoundsOf(layout, SlotRole::HandTile, seat);
+                const Rect melds = BoundsOf(layout, SlotRole::MeldTile, seat);
+                EXPECT_NEAR(RectCentreY(hand), RectCentreY(melds), kTolerance) << "seat " << seat;
+                EXPECT_GE(std::min(hand.y, melds.y), kNarrowMoveLineBottom) << "seat " << seat;
+                EXPECT_LE(std::max(hand.y + hand.h, melds.y + melds.h), kNarrowBottomButtonsTop) << "seat " << seat;
+            }
+            EXPECT_NEAR(RectCentreY(left), RectCentreY(right), kTolerance);
         }
     }
 
@@ -2033,9 +2043,11 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
-    TEST(TableLayoutTest, TheOpponentsTilesInPortraitKeepAFloorAndTheViewersDiscardsAreLarger) {
-        // Tile widths by SlotRole (HandTile, MeldTile, BonusTile, DiscardTile, WallStack): the least an opponent's piece solves to in the portrait table
-        constexpr float kPortraitOpponentFloorW[] = {28.0f, 24.0f, 16.0f, 24.0f, 0.0f};
+    TEST(TableLayoutTest, TheTopSeatsTilesInPortraitAreNoSmallerThanLandscapesTheSideSeatsKeepAFloorAndTheViewersDiscardsAreLarger) {
+        // Tile widths by SlotRole (HandTile, MeldTile, BonusTile, DiscardTile, WallStack): the least a side seat's piece solves to in the portrait table.
+        // The band of the three discard blocks and the side columns fills the 720 units (the columns are 98 wide, the blocks 160 and 144), so the
+        // side seats could not grow with the landscape table (32 / 28 / 18 / 28) and keep the sizes they had before it.
+        constexpr float kPortraitSideFloorW[] = {28.0f, 24.0f, 16.0f, 24.0f, 0.0f};
         for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
             const TableInput input = WorstInput(viewer, 60, kNoSeat);
             const TableLayout landscape = InLandscape(input);
@@ -2049,17 +2061,18 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_EQ(a.rotation, b.rotation) << "slot " << i;
                 EXPECT_EQ(a.claimEdge, b.claimEdge);
                 const bool viewers = a.role != SlotRole::WallStack && a.seat == viewer;
+                const float upright = b.rotation == 0 ? b.rect.w : b.rect.h;
+                const float landscapeUpright = a.rotation == 0 ? a.rect.w : a.rect.h;
                 if (viewers && (a.role == SlotRole::HandTile || a.role == SlotRole::MeldTile || a.role == SlotRole::BonusTile)) {
                     EXPECT_EQ(a.rect.w, b.rect.w) << "the viewer's rows keep the size of the landscape table";
                 } else if (viewers) {
                     EXPECT_GT(b.rect.w, a.rect.w) << "the viewer's discards are larger";
                     EXPECT_GT(b.rect.h, a.rect.h);
                     ExpectAtlasProportions(TileSize{b.rect.w, b.rect.h});
+                } else if (a.role != SlotRole::WallStack && SeatPosition(viewer, a.seat) == 2) {
+                    EXPECT_GE(upright, landscapeUpright) << "slot " << i << " role " << static_cast<int>(a.role) << ": the top seat is as large as in landscape";
                 } else {
-                    // The portrait table has not grown with the landscape one: an opponent's melds, bonus tiles and discards keep at least
-                    // the sizes they had before the landscape table's zones grew (its band of three discard blocks has no room for them yet).
-                    const float upright = b.rotation == 0 ? b.rect.w : b.rect.h;
-                    EXPECT_GE(upright, kPortraitOpponentFloorW[static_cast<int>(a.role)]) << "slot " << i << " role " << static_cast<int>(a.role) << " seat " << a.seat;
+                    EXPECT_GE(upright, kPortraitSideFloorW[static_cast<int>(a.role)]) << "slot " << i << " role " << static_cast<int>(a.role) << " seat " << a.seat;
                 }
             }
         }
@@ -2161,7 +2174,7 @@ namespace BECore::Mahjong::Tests {
             eastl::array<Rect, 4> plates;
         };
         const Golden goldens[] = {
-            {"narrow", kNarrowViewWidth, kNarrowViewHeight, Rect(204, 696, 48, 64), {Rect(84, 532, 152, 80), Rect(808, 180, 152, 80), Rect(300, 96, 152, 80), Rect(112, 180, 152, 80)}},
+            {"narrow", kNarrowViewWidth, kNarrowViewHeight, Rect(204, 696, 48, 64), {Rect(88, 532, 152, 80), Rect(800, 180, 152, 80), Rect(300, 96, 152, 80), Rect(120, 180, 152, 80)}},
             {"portrait", kPortraitViewWidth, kPortraitViewHeight, Rect(12, 1208, 48, 64), {Rect(12, 1028, 152, 80), Rect(456, 308, 152, 80), Rect(284, 308, 152, 80), Rect(112, 308, 152, 80)}},
             {"wide",
              kWideViewWidth,
@@ -2173,6 +2186,40 @@ namespace BECore::Mahjong::Tests {
             EXPECT_TRUE(SameRect(SlotsOf(layout, SlotRole::HandTile, 0)[0].rect, golden.hand)) << golden.name << " hand";
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 EXPECT_TRUE(SameRect(layout.zones.seatPlates[seat], golden.plates[seat])) << golden.name << " plate of seat " << seat;
+            }
+        }
+    }
+
+    TEST(TableLayoutTest, TheNarrowAndPortraitTablesSolveTheTileSizesOfTheirDesign) {
+        // The upright width of the first tile of each piece of an opponent, by screen position 1 (right), 2 (top), 3 (left): {hand, melds, bonus, discards}.
+        // The narrow side columns are as long as the bottom left buttons of HudMenu.xml allow; the portrait band has no room for larger side seats.
+        struct Sizes {
+            float hand;
+            float melds;
+            float bonus;
+            float discards;
+        };
+        struct Golden {
+            const char* name;
+            float width;
+            float height;
+            eastl::array<Sizes, 3> opponents;
+        };
+        const Golden goldens[] = {{"narrow", kNarrowViewWidth, kNarrowViewHeight, {{{30, 25, 18, 28}, {35, 24, 17, 26}, {30, 25, 18, 28}}}},
+                                  {"portrait", kPortraitViewWidth, kPortraitViewHeight, {{{28, 24, 16, 24}, {36, 24, 17, 26}, {28, 24, 16, 24}}}}};
+        TableInput input = WorstInput(0, 60, kNoSeat);
+        for (const Golden& golden : goldens) {
+            const TableLayout layout = MakeTableLayout(input, golden.width, golden.height);
+            for (Seat seat = 1; seat < kSeatCount; ++seat) {
+                const Sizes& expected = golden.opponents[static_cast<size_t>(seat - 1)];
+                const auto upright = [&](SlotRole role) {
+                    const TileSlot slot = SlotsOf(layout, role, seat)[0];
+                    return slot.rotation == 0 ? slot.rect.w : slot.rect.h;
+                };
+                EXPECT_EQ(upright(SlotRole::HandTile), expected.hand) << golden.name << " hand of seat " << seat;
+                EXPECT_EQ(upright(SlotRole::MeldTile), expected.melds) << golden.name << " melds of seat " << seat;
+                EXPECT_EQ(upright(SlotRole::BonusTile), expected.bonus) << golden.name << " bonus of seat " << seat;
+                EXPECT_EQ(upright(SlotRole::DiscardTile), expected.discards) << golden.name << " discards of seat " << seat;
             }
         }
     }

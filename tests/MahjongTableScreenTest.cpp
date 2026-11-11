@@ -356,8 +356,8 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableScreenTest, InTheNarrowViewTheButtonsAreInTwoLinesRightOfTheBottomDiscardsAndTheHintLiesLeftOfThem) {
-        constexpr float kNarrowButtonWidth = 88.0f;
-        constexpr float kNarrowUpgradeWidth = 104.0f;  // "Add to pung" does not fit 88
+        constexpr float kNarrowButtonWidth = 84.0f;
+        constexpr float kNarrowUpgradeWidth = 104.0f;  // "Add to pung" does not fit 84
         constexpr float kNarrowRowWidth = 4.0f * kNarrowButtonWidth + 3.0f * kButtonGap;
         constexpr float kNarrowRowLines = 2.0f;
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
