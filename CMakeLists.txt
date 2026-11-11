@@ -17,6 +17,25 @@ be_add_module(Mahjong LINK
 )
 be_add_game_reflection(MahjongModule)
 
+# The build id that every match log carries (src/Mahjong/BuildInfo.h): the short git hash, read now, at configure time, and given to
+# BuildInfo.cpp alone so that nothing else recompiles. A commit made after this step shows only after the next `cmake --preset`.
+set(MAHJONG_BUILD_ID unknown)
+find_package(Git QUIET)
+if(GIT_FOUND)
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        OUTPUT_VARIABLE MAHJONG_GIT_HASH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+        RESULT_VARIABLE MAHJONG_GIT_RESULT
+    )
+    if(MAHJONG_GIT_RESULT EQUAL 0 AND MAHJONG_GIT_HASH MATCHES "^[0-9a-f]+$")
+        set(MAHJONG_BUILD_ID ${MAHJONG_GIT_HASH})
+    endif()
+endif()
+set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/src/Mahjong/BuildInfo.cpp PROPERTIES COMPILE_DEFINITIONS MAHJONG_BUILD_ID=${MAHJONG_BUILD_ID})
+
 be_add_game_executable(BagiMahjong
     GAME_ROOT ${CMAKE_CURRENT_SOURCE_DIR}
     MODULES MahjongModule

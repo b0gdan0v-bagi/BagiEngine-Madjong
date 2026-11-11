@@ -3,9 +3,11 @@
 #include <BECore/Control/Json.h>
 #include <Common/EngineEnvironment.h>
 #include <Common/TempPath.h>
+#include <Mahjong/BuildInfo.h>
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/MatchLogJson.h>
 #include <Mahjong/MatchLogWriter.h>
+#include <Mahjong/Platform.h>
 #include <gtest/gtest.h>
 #include <regex>
 #include <vector>
@@ -369,6 +371,24 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(ActionToJson(person->action), actions.front());
         // and the computers' answers follow it
         EXPECT_TRUE(std::any_of(person, events->end(), [](const MatchLogEvent& event) { return event.kind == MatchLogKind::Action && event.by == SeatKind::Computer; }));
+    }
+
+    TEST_F(MahjongGameLogTest, TheStartLineOfAFileTheGameWroteSaysWhereAndByWhichBuildItWasPlayed) {
+        auto game = New<MahjongGame>();
+        ASSERT_TRUE(game->StartMatch(kSeed).has_value());
+        const auto events = ParseMatchLog(ReadFile(game->GetMatchLog().Path()).c_str());
+        ASSERT_TRUE(events.has_value()) << events.error().c_str();
+        const MatchLogOrigin& origin = events->front().origin;
+        EXPECT_EQ(origin.platform, MatchPlatform::Desktop) << "a desktop build of the tests";
+        EXPECT_EQ(std::string_view(origin.gameVersion.c_str(), origin.gameVersion.size()), kGameVersion);
+        EXPECT_FALSE(origin.build.empty());
+        EXPECT_EQ(origin, MakeMatchOrigin(kBrowserBuild));
+
+        // a control reset is stamped as well
+        ASSERT_TRUE(game->AsControllable()->Reset(ParseJson(R"({"seed": 5, "seats": "PCCC"})").value()).has_value());
+        const auto again = ParseMatchLog(ReadFile(game->GetMatchLog().Path()).c_str());
+        ASSERT_TRUE(again.has_value()) << again.error().c_str();
+        EXPECT_EQ(again->front().origin, origin);
     }
 
     TEST_F(MahjongGameLogTest, TheControlStateIsTheSameWithTheLogOnAndOff) {

@@ -3,6 +3,8 @@
 #include <BECore/GameManager/CoreManager.h>
 #include <Games/GameManager.h>
 #include <Generated/MahjongGame.gen.hpp>
+#include <Mahjong/BuildInfo.h>
+#include <Mahjong/Platform.h>
 #include <random>
 
 namespace BECore::Mahjong {
@@ -10,6 +12,7 @@ namespace BECore::Mahjong {
     MahjongGame::MahjongGame() : _store(CoreManager::GetFileSystem()) {
         _recorder.SetNext(&_log);
         _session.SetLogSink(&_recorder);
+        _session.SetLogOrigin(MakeMatchOrigin(kBrowserBuild));  // every front end is stamped: the session writes it into each Start
     }
 
     MahjongGame* MahjongGame::GetActive() {
