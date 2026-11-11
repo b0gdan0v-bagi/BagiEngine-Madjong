@@ -329,6 +329,18 @@ namespace BECore::Mahjong {
         Finish(worlds);
     }
 
+    const eastl::vector<HandAction>& SearchRun::Candidates() const noexcept {
+        return _candidates;
+    }
+
+    const eastl::vector<eastl::vector<int>>& SearchRun::Values() const noexcept {
+        return _values;
+    }
+
+    int SearchRun::DroppedWorlds() const noexcept {
+        return _values.empty() ? _worlds : _worlds - static_cast<int>(_values.front().size());
+    }
+
     HandAction SearchRun::Result() const {
         if (_values.front().empty()) {
             // No world could be made (the view does not fit the rules of a sample): Normal's choice, after the one draw.
@@ -371,6 +383,16 @@ namespace BECore::Mahjong {
             return std::nullopt;
         }
         return SearchRun(view, eastl::move(candidates), rng.Below(kSearchBaseSeedRange), profile);
+    }
+
+    std::optional<SearchRun> BeginSearchOver(const TableView& view, eastl::vector<HandAction> actions, uint32_t baseSeed, int worlds) {
+        if (view.legal.empty() || actions.empty() || worlds < 1) {
+            return std::nullopt;
+        }
+        LevelProfile profile = kNormalProfile;
+        profile.searchWorlds = worlds;
+        profile.searchMargin = 0;
+        return SearchRun(view, eastl::move(actions), baseSeed, profile);
     }
 
     namespace {

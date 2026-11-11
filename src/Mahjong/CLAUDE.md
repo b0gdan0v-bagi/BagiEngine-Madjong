@@ -1,6 +1,6 @@
 # src/Mahjong — the game object, the control API, the match log
 
-Subfolders have their own `CLAUDE.md`: `Game/` (the rules), `Save/` (save and Continue), `Table/` (pure scene logic), `Components/` (the scene), `Arena/` (bot measurement).
+Subfolders have their own `CLAUDE.md`: `Game/` (the rules), `Save/` (save and Continue), `Table/` (pure scene logic), `Components/` (the scene), `Arena/` (bot measurement), `Analyzer/` (the EV of a position).
 
 ## MahjongGame
 
