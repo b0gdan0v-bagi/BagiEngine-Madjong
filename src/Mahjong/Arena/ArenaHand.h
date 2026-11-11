@@ -25,6 +25,13 @@ namespace BECore::Mahjong::Arena {
         SeatScores scores{};
         /// The change of each seat's points (`HandSettlement::deltas`; zeros for a drawn hand).
         SeatScores deltas{};
+        /// The East seat of the hand (`seed % kSeatCount`).
+        Seat east = 0;
+        /// How the hand was won (meaningful when `winner` is a seat).
+        WinSource source = WinSource::SelfDraw;
+        /// Who discarded the winning tile (`HandResult::from`): the owner of the kong for a robbed kong, the winner for a self-draw,
+        /// `kNoSeat` for a drawn hand.
+        Seat from = kNoSeat;
         /// The kinds of the lines of the winner's breakdown, each once, in the order of the breakdown (empty for a drawn hand; a limit
         /// hand is its one line).
         eastl::vector<ScoreKind> winKinds;
@@ -36,6 +43,10 @@ namespace BECore::Mahjong::Arena {
         /// that is not a function of the arguments).
         eastl::array<int64_t, kSeatCount> nanoseconds{};
     };
+
+    /// Called before each action of a hand with the model as it stands and the seat that is about to act (`PlayArenaHand`'s observer);
+    /// it reads only, so the hand and its record are the same with or without one.
+    using HandObserver = std::function<void(const HandModel& hand, Seat actor)>;
 
     /**
      * @brief Plays the hand of `seed` with `players` on the four seats and says what happened.
@@ -50,10 +61,14 @@ namespace BECore::Mahjong::Arena {
      * (`WorldThreads::AsLoop`) may play them on several. The record is the same either way; the time of a decision (`timing`) is its
      * wall time, its worlds included.
      *
+     * A non-null `observer` is called before every action (the table statistics of `ArenaTable.h` read the hand through it); it is outside the
+     * timed decision and changes nothing.
+     *
      * A refused action, a computer seat with nothing to choose from or a hand that does not end is a defect and comes back as an error
      * text naming the seed and the seat; it is never swallowed.
      */
-    [[nodiscard]] std::expected<HandRecord, eastl::string> PlayArenaHand(uint32_t seed, const ArenaPlayers& players, bool timing = false, const WorldLoop* worlds = nullptr);
+    [[nodiscard]] std::expected<HandRecord, eastl::string> PlayArenaHand(uint32_t seed, const ArenaPlayers& players, bool timing = false, const WorldLoop* worlds = nullptr,
+                                                                         const HandObserver* observer = nullptr);
 
     /// The most actions one hand may take before it counts as stuck (a hand is at most about 4 x 70).
     inline constexpr int kArenaStepLimit = 2000;

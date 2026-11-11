@@ -42,6 +42,11 @@ namespace BECore::Mahjong::Arena {
         /// Fills the outcome of a finished hand into `record` (which already holds the decisions and the times).
         void FillResult(const HandModel& hand, const HandSettlement& settlement, HandRecord& record) {
             record.kind = settlement.kind;
+            record.east = settlement.east;
+            if (hand.Result().has_value()) {
+                record.source = hand.Result()->source;
+                record.from = hand.Result()->from;
+            }
             record.winner = settlement.winner;
             record.scores = settlement.scores;
             record.deltas = settlement.deltas;
@@ -59,7 +64,7 @@ namespace BECore::Mahjong::Arena {
 
     }  // namespace
 
-    std::expected<HandRecord, eastl::string> PlayArenaHand(uint32_t seed, const ArenaPlayers& players, bool timing, const WorldLoop* worlds) {
+    std::expected<HandRecord, eastl::string> PlayArenaHand(uint32_t seed, const ArenaPlayers& players, bool timing, const WorldLoop* worlds, const HandObserver* observer) {
         const MahjongSettings settings;
         MahjongRng wallRng(seed);
         const Seat east = static_cast<Seat>(seed % kSeatCount);
@@ -83,6 +88,9 @@ namespace BECore::Mahjong::Arena {
             const Seat actor = ComputerTable::NextActor(hand);
             if (!IsSeat(actor)) {
                 return std::unexpected(Format("seed {}: nobody is to act", seed));
+            }
+            if (observer != nullptr) {
+                (*observer)(hand, actor);
             }
             const ArenaPlayer& player = players[actor];
             const auto started = timing ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point();

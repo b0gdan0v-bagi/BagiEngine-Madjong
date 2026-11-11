@@ -6,8 +6,8 @@ namespace BECore::Mahjong::Arena {
 
     namespace {
 
-        /// The number of `metric` in one seed row (over its `kSeatCount` hands).
-        double RowNumber(const SeedRow& row, SeedMetric metric) {
+        /// The number of `metric` in one seed row (over its `kSeatCount` hands); empty when the row has none.
+        std::optional<double> RowNumber(const SeedRow& row, SeedMetric metric) {
             switch (metric) {
                 case SeedMetric::PointsPerHand:
                     return static_cast<double>(row.pointsOfFocus) / kSeatCount;
@@ -17,6 +17,13 @@ namespace BECore::Mahjong::Arena {
                     return kPercent * row.drawn / kSeatCount;
                 case SeedMetric::DeclaredPercent:
                     return kPercent * row.declared / kSeatCount;
+                case SeedMetric::GaveWinPercent:
+                    return kPercent * row.gaveWin / kSeatCount;
+                case SeedMetric::StandingScore:
+                    if (row.lostHands == 0) {
+                        return std::nullopt;
+                    }
+                    return static_cast<double>(row.standingScore) / row.lostHands;
             }
             return 0.0;
         }
@@ -53,7 +60,9 @@ namespace BECore::Mahjong::Arena {
         eastl::vector<double> series;
         series.reserve(focus.rows.size());
         for (const SeedRow& row : focus.rows) {
-            series.push_back(RowNumber(row, metric));
+            if (const std::optional<double> value = RowNumber(row, metric)) {
+                series.push_back(*value);
+            }
         }
         return series;
     }
@@ -72,7 +81,11 @@ namespace BECore::Mahjong::Arena {
             if (a.rows[index].seed != b.rows[index].seed) {
                 return {};
             }
-            differences.push_back(RowNumber(a.rows[index], metric) - RowNumber(b.rows[index], metric));
+            const std::optional<double> left = RowNumber(a.rows[index], metric);
+            const std::optional<double> right = RowNumber(b.rows[index], metric);
+            if (left && right) {
+                differences.push_back(*left - *right);
+            }
         }
         return MeanCi(differences);
     }

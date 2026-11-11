@@ -6,6 +6,11 @@ namespace BECore::Mahjong::Arena {
 
     namespace {
 
+        /// Whether `seat` gave the win of `record`: another seat won on the seat's discard or by robbing its kong.
+        bool IsGaveWin(const HandRecord& record, Seat seat) {
+            return IsSeat(record.winner) && record.winner != seat && record.source != WinSource::SelfDraw && record.from == seat;
+        }
+
         /// Adds the seat `seat` of `record` to `tally` as one seat-hand.
         void AddSeat(ArenaTally& tally, const HandRecord& record, Seat seat) {
             ++tally.hands;
@@ -20,6 +25,12 @@ namespace BECore::Mahjong::Arena {
                 for (const ScoreKind kind : record.winKinds) {
                     ++tally.winsByKind[static_cast<size_t>(kind)];
                 }
+                tally.selfDraws += record.source == WinSource::SelfDraw ? 1 : 0;
+            } else if (IsSeat(record.winner)) {
+                ++tally.lost;
+                tally.lostPoints += record.deltas[seat];
+                tally.standingScore += record.scores[seat];
+                tally.gaveWin += IsGaveWin(record, seat) ? 1 : 0;
             }
         }
 
@@ -38,6 +49,11 @@ namespace BECore::Mahjong::Arena {
             total.drawn += part.drawn;
             total.declared += part.declared;
             total.winScore += part.winScore;
+            total.selfDraws += part.selfDraws;
+            total.lost += part.lost;
+            total.gaveWin += part.gaveWin;
+            total.lostPoints += part.lostPoints;
+            total.standingScore += part.standingScore;
             for (size_t kind = 0; kind < kScoreKindCount; ++kind) {
                 total.winsByKind[kind] += part.winsByKind[kind];
             }
@@ -74,6 +90,10 @@ namespace BECore::Mahjong::Arena {
                     play.row.drawn += record->kind == ResultKind::Drawn ? 1 : 0;
                     play.row.declared += record->declared[focusSeat] ? 1 : 0;
                     play.row.winScore += won ? record->scores[focusSeat] : 0;
+                    const bool lost = IsSeat(record->winner) && !won;
+                    play.row.lostHands += lost ? 1 : 0;
+                    play.row.standingScore += lost ? record->scores[focusSeat] : 0;
+                    play.row.gaveWin += IsGaveWin(*record, focusSeat) ? 1 : 0;
                     play.winsBySeat[focusSeat] += won ? 1 : 0;
                 }
             }

@@ -17,6 +17,7 @@ namespace BECore::Mahjong::Arena {
         constexpr std::string_view kLogsOption = "--logs";
         constexpr std::string_view kCheckOption = "--check";
         constexpr std::string_view kDifferencesOption = "--differences";
+        constexpr std::string_view kTableStatsOption = "--table-stats";
         constexpr std::string_view kHelpOption = "--help";
 
         constexpr char kListSeparator = ',';
@@ -116,6 +117,9 @@ namespace BECore::Mahjong::Arena {
                       "  {differences} N list the first N differences between the people and the first bot of {focus}; default {differencesDefault}, 0 lists none\n"
                       "                  (the count of all is always printed)\n"
                       "  {check}         with {logs}: only one line per file, ok<TAB>name or bad<TAB>name<TAB>reason (exit {ok} even when files are bad)\n"
+                      "  {tableStats}    instead of the table of players: plays the seeds once with four normal seats and prints the table statistics\n"
+                      "                  (the chance that another seat wins in a round, the mean scores, how hands are won); with {first}, {seeds}, {jobs}; not with\n"
+                      "                  {focus}, {others}, {time} or {logs}\n"
                       "  {help}          this text\n"
                       "\n"
                       "exit code: {ok} done, {refused} an action was refused by the rules (a defect; the seed and the seat are printed) or the path of {logs} cannot be read,\n"
@@ -126,9 +130,9 @@ namespace BECore::Mahjong::Arena {
                       fmt::arg("levels", Format("1..{}, easy = 1, normal = {}", kMaxLevel, LevelNumber(ComputerLevel::Normal)).c_str()), fmt::arg("focus", kFocusOption),
                       fmt::arg("others", kOthersOption), fmt::arg("first", kFirstOption), fmt::arg("seeds", kSeedsOption), fmt::arg("jobs", kJobsOption), fmt::arg("maxJobs", kMaxJobs),
                       fmt::arg("jobsDefault", kDefaultJobs), fmt::arg("time", kTimeOption), fmt::arg("logs", kLogsOption), fmt::arg("check", kCheckOption), fmt::arg("differences", kDifferencesOption),
-                      fmt::arg("differencesDefault", kDefaultDifferences), fmt::arg("help", kHelpOption), fmt::arg("focusDefault", kDefaultFocusSpec), fmt::arg("othersDefault", kDefaultOthersSpec),
-                      fmt::arg("firstDefault", kDefaultFirstSeed), fmt::arg("seedsDefault", kDefaultSeedCount), fmt::arg("ok", kExitOk), fmt::arg("refused", kExitRefusedAction),
-                      fmt::arg("bad", kExitBadArguments));
+                      fmt::arg("differencesDefault", kDefaultDifferences), fmt::arg("tableStats", kTableStatsOption), fmt::arg("help", kHelpOption), fmt::arg("focusDefault", kDefaultFocusSpec),
+                      fmt::arg("othersDefault", kDefaultOthersSpec), fmt::arg("firstDefault", kDefaultFirstSeed), fmt::arg("seedsDefault", kDefaultSeedCount), fmt::arg("ok", kExitOk),
+                      fmt::arg("refused", kExitRefusedAction), fmt::arg("bad", kExitBadArguments));
     }
 
     std::expected<ArenaArgs, eastl::string> ParseArenaArgs(eastl::span<const std::string_view> args) {
@@ -142,6 +146,8 @@ namespace BECore::Mahjong::Arena {
         bool gaveSeeds = false;
         bool gaveOthers = false;
         bool gaveDifferences = false;
+        bool timeGiven = false;
+        bool playersGiven = false;
         for (size_t index = 0; index < args.size(); ++index) {
             const std::string_view option = args[index];
             if (option == kHelpOption) {
@@ -150,6 +156,11 @@ namespace BECore::Mahjong::Arena {
             }
             if (option == kTimeOption) {
                 parsed.config.timing = true;
+                timeGiven = true;
+                continue;
+            }
+            if (option == kTableStatsOption) {
+                parsed.tableStats = true;
                 continue;
             }
             if (option == kCheckOption) {
@@ -165,6 +176,7 @@ namespace BECore::Mahjong::Arena {
                 return std::unexpected(Format("{} needs a value", option));
             }
             const std::string_view value = args[++index];
+            playersGiven = playersGiven || option == kFocusOption || option == kOthersOption;
             if (option == kFocusOption) {
                 std::expected<eastl::vector<ArenaPlayer>, eastl::string> focus = ParseFocusList(value);
                 if (!focus.has_value()) {
@@ -213,6 +225,12 @@ namespace BECore::Mahjong::Arena {
                 parsed.config.count = *count;
             }
         }
+        if (parsed.tableStats && (playersGiven || timeGiven)) {
+            return std::unexpected(Format("{} plays four normal seats on its own and does not go with {}, {} or {}", kTableStatsOption, kFocusOption, kOthersOption, kTimeOption));
+        }
+        if (parsed.tableStats && parsed.logMode) {
+            return std::unexpected(NotWithLogs(kTableStatsOption, "it plays seeds on its own, and the logs are already played"));
+        }
         if (parsed.check && !parsed.logMode) {
             return std::unexpected(Format("{} needs {}", kCheckOption, kLogsOption));
         }
@@ -257,6 +275,19 @@ namespace BECore::Mahjong::Arena {
         }
         if (parsed->help) {
             output.out = ArenaUsage();
+            return kExitOk;
+        }
+        if (parsed->tableStats) {
+            TableStatsConfig tableConfig;
+            tableConfig.first = parsed->config.first;
+            tableConfig.count = parsed->config.count;
+            tableConfig.jobs = parsed->config.jobs;
+            const std::expected<TableStats, eastl::string> stats = RunTableStats(tableConfig);
+            if (!stats.has_value()) {
+                output.err = Format("error: {}\n", stats.error().c_str());
+                return kExitRefusedAction;
+            }
+            output.out = FormatTableStats(*stats);
             return kExitOk;
         }
         if (parsed->logMode) {

@@ -145,6 +145,13 @@ namespace BECore::Mahjong {
         /// Normal's choice is replaced only when the best candidate's mean advantage in points is above this many tenths of the standard
         /// error of the paired difference (0: the best mean wins, if it is above 0). Unused while `searchWorlds` is 0.
         int searchMargin = 0;
+        /// Step 5 of the own turn: the number of the seat's own next draws the discard is rated over (`ValueDiscards`, `OwnDraws.h`, at most
+        /// `kOwnDrawsMaxDepth`), in expected points; 0 = Normal's step 5, nothing of the new code runs. A decision with no rated discard
+        /// falls back to Normal's. Draws nothing from the rng (ties go to Normal's order). Off in every level.
+        int ownDrawsDepth = 0;
+        /// Step 2 of the own turn: the discard that declares the calling hand is the one with the best expected value (`ValueWaits`), not
+        /// the one with the most unseen winning copies; false = Normal's step 2. Draws nothing from the rng when on. Off in every level.
+        bool ownDrawsPickWait = false;
     };
 
     /// The Normal player: every knob off.

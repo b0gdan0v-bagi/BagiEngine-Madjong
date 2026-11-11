@@ -3,6 +3,7 @@
 #include <Mahjong/Arena/ArenaLogs.h>
 #include <Mahjong/Arena/ArenaLogsReport.h>
 #include <Mahjong/Arena/ArenaReport.h>
+#include <Mahjong/Arena/ArenaTable.h>
 
 namespace BECore::Mahjong::Arena {
 
@@ -32,6 +33,9 @@ namespace BECore::Mahjong::Arena {
         bool check = false;
         /// `--differences N`: how many of the differences between the people and the first bot the log report lists.
         int differences = kDefaultDifferences;
+        /// `--table-stats` was given: play four Normal seats over `config.first` / `config.count` / `config.jobs` and print `FormatTableStats`
+        /// (`config` holds the defaults of the other fields; `--focus`, `--others` and `--time` are refused with it).
+        bool tableStats = false;
     };
 
     /// The text of `--help`: the options with their defaults, the exit codes and the interval rule in two lines.
@@ -42,9 +46,10 @@ namespace BECore::Mahjong::Arena {
      *
      * `--focus LIST` (players separated by commas; a part with an `=` and no `:` goes on the knobs of the player before it, so
      * `easy:skipClaimPercent=20,skipDeclarationPercent=10,normal` is two players), `--others SPEC`, `--first N`, `--seeds COUNT`,
-     * `--jobs N` (1 to `kMaxJobs` threads in all, for the seeds and then the worlds of a search decision; 0 is the hardware concurrency, at least 1), `--time` and `--help` (which wins over everything
-     * after it), `--logs PATH` (the log mode: `--first`, `--seeds`, `--others` and `--time` are refused with it, and so is a `random` in `--focus`, which names the bots the people are compared with)
-     * `--check` and `--differences N` (the log mode only; `--jobs` then plays whole matches in threads). A bad argument is an error text that names it: an unknown option, a missing or malformed
+     * `--jobs N` (1 to `kMaxJobs` threads in all, for the seeds and then the worlds of a search decision; 0 is the hardware concurrency, at least 1), `--time`, `--table-stats` (the measurement of the
+     * own-draws value's constants, `docs/own-draws-ev.md`; it refuses `--focus`, `--others`, `--time` and `--logs`) and `--help` (which wins over everything after it), `--logs PATH` (the log mode:
+     * `--first`, `--seeds`, `--others` and `--time` are refused with it, and so is a `random` in `--focus`, which names the bots the people are compared with), `--check` and
+     * `--differences N` (the log mode only; `--jobs` then plays whole matches in threads). A bad argument is an error text that names it: an unknown option, a missing or malformed
      * value, a bad player spec, a range of seeds that `ValidateArenaConfig` refuses, a word that is no option.
      */
     [[nodiscard]] std::expected<ArenaArgs, eastl::string> ParseArenaArgs(eastl::span<const std::string_view> args);
