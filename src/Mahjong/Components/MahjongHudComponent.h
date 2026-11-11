@@ -72,8 +72,9 @@ namespace BECore::Mahjong {
      * `HudMenu` is hidden; the two wait while `MahjongTableComponent::HandOverHeld()`, i.e. while the table shows a person's claim that lost to a
      * mahjong, for `kClaimLostSeconds`; the variables are published at once); `MahjongNextHand` settles the hand (`TableSession::NextHand`) and deals on. While the match is
      * finished the canvas `MatchOver` is shown with `matchOverHeadline` and `standing0` .. `3` (`FormatStandings`); its button
-     * `MahjongNewGame` opens `Setup`. Both are published when the version of the session or of the string table moved and read only public data (the hands
-     * are open once the hand is over).
+     * `MahjongNewGame` opens `Setup`. In Coach mode, once the match tally has a move, each also has `handOverCoach` / `matchOverCoach`
+     * (`FormatCoachTally`; the labels `HandCoachRow` / `MatchCoachRow` are visible exactly while it has text). Both are published when the version of the session or of the string table moved and read
+     * only public data (the hands are open once the hand is over).
      *
      * **The rules screen.** `MahjongGame::IsRulesOpen()` (the HUD button `Rules`, action `MahjongRules`) decides whether the modal canvas
      * `Rules` (text and tile pictures only) and its action bar `RulesAction` are shown; `HudMenu` is hidden meanwhile. The page number is
@@ -173,6 +174,7 @@ namespace BECore::Mahjong {
         const MahjongGame* _endScreenOf = nullptr;  // the game and the version the variables of the end screens show
         uint64_t _endScreenVersion = 0;
         uint64_t _endScreenStrings = 0;
+        bool _endScreenCoach = false;  // the mode the tally line was published for
         bool _endScreenPublished = false;
         int _rulesPage = 0;  // the page the rules show; 0 whenever they are closed
         bool _rulesShown = false;

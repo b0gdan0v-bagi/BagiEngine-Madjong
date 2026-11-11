@@ -494,4 +494,20 @@ namespace BECore::Mahjong::Tests {
         EXPECT_STREQ(one.rows[3].c_str(), "4. Место 1 Вы: 1700");
     }
 
+    TEST(ScoreTextTest, TheCoachTallyNamesTheHandAndTheMatch) {
+        EXPECT_STREQ(FormatCoachTally(En(), CoachTally{3, 5}, CoachTally{9, 12}).c_str(), "Moves like the computer's: 3 of 5 this hand, 9 of 12 in the match");
+        EXPECT_STREQ(FormatCoachTally(Ru(), CoachTally{3, 5}, CoachTally{9, 12}).c_str(), "Ходы как у компьютера: 3 из 5 в раздаче, 9 из 12 в матче");
+    }
+
+    TEST(ScoreTextTest, TheCoachTallyOfAHandWithNoMoveSaysTheMatchOnly) {
+        EXPECT_STREQ(FormatCoachTally(En(), CoachTally{}, CoachTally{9, 12}).c_str(), "Moves like the computer's: 9 of 12 in the match");
+        EXPECT_STREQ(FormatCoachTally(Ru(), CoachTally{}, CoachTally{0, 4}).c_str(), "Ходы как у компьютера: 0 из 4 в матче");
+    }
+
+    TEST(ScoreTextTest, TheCoachTallyIsEmptyWhenTheMatchHasNoMove) {
+        EXPECT_TRUE(FormatCoachTally(En(), CoachTally{}, CoachTally{}).empty());
+        EXPECT_TRUE(FormatCoachTally(Ru(), CoachTally{}, CoachTally{}).empty());
+        EXPECT_TRUE(FormatCoachTally(En(), CoachTally{1, 1}, CoachTally{}).empty()) << "the match tally is what decides";
+    }
+
 }  // namespace BECore::Mahjong::Tests

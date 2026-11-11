@@ -282,6 +282,12 @@ namespace BECore::Mahjong {
         // The last hand of the match ends it: the button says so
         const MatchProgress after = NextProgress(MatchProgress{match.HandsPlayed(), match.East()}, settlement.kind, settlement.winner, match.GetSettings());
         vars.Set("handOverButton"_intern, eastl::string_view(Tr(strings, IsMatchOver(after.handsPlayed, match.GetSettings()) ? "handover.finish" : "handover.next")));
+        const CoachLedger& coach = game.GetCoach();
+        const eastl::string tally =
+            game.CoachOn() ? FormatCoachTally(strings, coach.HandTallyOf(CoachHandKey{session.StartCount(), match.HandsPlayed(), match.History().size()}), coach.MatchTallyOf(session.StartCount()))
+                           : eastl::string();
+        vars.Set("handOverCoach"_intern, eastl::string_view(tally));
+        UICanvasComponent::SetElementVisibleByName(GetScene(), "HandCoachRow"_intern, !tally.empty());
     }
 
     void MahjongHudComponent::ShowHandOver(bool shown) {
@@ -371,6 +377,10 @@ namespace BECore::Mahjong {
         for (Seat row = 0; row < kSeatCount; ++row) {
             vars.Set(SeatVar("standing", row), eastl::string_view(table.rows[row]));
         }
+        const UIStrings& strings = CoreManager::GetUIStrings();
+        const eastl::string tally = game.CoachOn() ? FormatCoachTally(strings, CoachTally{}, game.GetCoach().MatchTallyOf(game.GetSession().StartCount())) : eastl::string();
+        vars.Set("matchOverCoach"_intern, eastl::string_view(tally));
+        UICanvasComponent::SetElementVisibleByName(GetScene(), "MatchCoachRow"_intern, !tally.empty());
     }
 
     void MahjongHudComponent::PublishEndScreens(const MahjongGame* game) {
@@ -380,8 +390,10 @@ namespace BECore::Mahjong {
         const bool matchOver = started && game->GetMatch().GetPhase() == MatchPhase::Finished;
         if (handOver || matchOver) {
             const uint64_t stringsVersion = CoreManager::GetUIStrings().GetVersion();
-            if (!_endScreenPublished || _endScreenOf != game || _endScreenVersion != game->GetSession().Version() || _endScreenStrings != stringsVersion) {
+            const bool coachOn = game->CoachOn();
+            if (!_endScreenPublished || _endScreenOf != game || _endScreenVersion != game->GetSession().Version() || _endScreenStrings != stringsVersion || _endScreenCoach != coachOn) {
                 _endScreenOf = game;
+                _endScreenCoach = coachOn;
                 _endScreenVersion = game->GetSession().Version();
                 _endScreenStrings = stringsVersion;
                 _endScreenPublished = true;

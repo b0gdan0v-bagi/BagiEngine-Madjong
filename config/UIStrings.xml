@@ -167,6 +167,8 @@
         <string key="coach.computer.chow" text="Computer's chow {first} - {third}: steps {before} -&gt; {after}, helps {copies}"/>
         <string key="coach.computer.pass" text="Computer passes: the hand stays at {before} steps."/>
         <string key="coach.computer.waiting" text="Computer passes: your hand was waiting."/>
+        <string key="coach.tally.hand" text="Moves like the computer's: {agreed} of {moves} this hand, {matchAgreed} of {matchMoves} in the match"/>
+        <string key="coach.tally.match" text="Moves like the computer's: {agreed} of {moves} in the match"/>
         <string key="cover.text" text="Pass the screen to {handoffSeat}"/>
         <string key="cover.show" text="Show"/>
         <string key="panel.round" text="{wind} {n}"/>
@@ -447,6 +449,8 @@
         <string key="coach.computer.chow" text="Чи компьютера {first} - {third}: шагов {before} -&gt; {after}, помогут {copies}"/>
         <string key="coach.computer.pass" text="Компьютер пропустил бы: шагов до готовности {before}."/>
         <string key="coach.computer.waiting" text="Компьютер пропустил бы: ваша рука уже ждёт."/>
+        <string key="coach.tally.hand" text="Ходы как у компьютера: {agreed} из {moves} в раздаче, {matchAgreed} из {matchMoves} в матче"/>
+        <string key="coach.tally.match" text="Ходы как у компьютера: {agreed} из {moves} в матче"/>
         <string key="cover.text" text="Передайте экран: {handoffSeat}"/>
         <string key="cover.show" text="Показать"/>
         <string key="panel.round" text="{wind} {n}"/>
