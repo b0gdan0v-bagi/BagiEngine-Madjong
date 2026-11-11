@@ -1,5 +1,6 @@
 #include "MahjongGameControl.h"
 
+#include <BECore/Control/Json.h>
 #include <Mahjong/MahjongGame.h>
 
 namespace BECore::Mahjong {

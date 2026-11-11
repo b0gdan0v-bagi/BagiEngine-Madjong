@@ -2,6 +2,7 @@
 #include "MahjongTouchTestSupport.h"
 #include "UiStyleTestSupport.h"
 
+#include <BECore/Control/Json.h>
 #include <BECore/Text/Utf8.h>
 #include <Events/SceneEvents.h>
 #include <Mahjong/Components/MahjongHudComponent.h>
