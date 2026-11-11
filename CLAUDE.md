@@ -32,6 +32,7 @@ A nested `CLAUDE.md` loads when you work in its folder.
 - Every visible word is a key of `config/UIStrings.xml` in both languages.
 - No `ImGui::` in a game component without `ImGui::GetCurrentContext()`; the UI is the engine's canvases.
 - Per-frame work belongs in a component (`SubscribeInScene`); `IGame` has no per-frame hook.
+- **Zero allocations in a steady frame:** a frame in which nothing changed allocates nothing, the whole scene in every state (a person's turn, hints, modal screens, either language). Make a thing again only when its key moved (`TableSession::Version()`, `StartCount()`, the `UIStrings` version, the window), keep lists as members so they keep their capacity. The reason: a phone and the browser build pay for every allocation in frame time and battery, and an allocation per frame hides until a profile shows it. `MahjongTableAllocTest` holds it in `macos-profile` (`ENGINE_PROFILER_ALLOC`); a new screen or state gets a case there.
 - New or moved sources, and any change to a file with `BE_CLASS` / `BE_REFLECT_FIELD`, need `cmake --preset <p>` again.
 - The `LSP` tool (clangd plugin) reads `build/macos-debug/compile_commands.json` through `.clangd`: a new source has no flags there until `cmake --preset macos-debug`. Its diagnostics are a hint (PCH-reliant headers can show false errors); the build and the tests decide.
 
