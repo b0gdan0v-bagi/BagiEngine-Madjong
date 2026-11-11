@@ -1494,7 +1494,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_LE(discards.y + discards.h, melds.y + kTolerance) << "the discards end above the row";
             EXPECT_LE(discards.y + discards.h, bonus.y + kTolerance);
             EXPECT_GE(discards.y, layout.zones.wall.y + layout.zones.wall.h - kTolerance) << "and start below the wall ring";
-            EXPECT_LE(discards.h, kDiscardTileH * kDiscardRowCapacity) << "a zone never grows";
+            EXPECT_LT(discards.h, MakeTableLayout(WorstInput(2, kWorstPile, kNoSeat)).zones.discards[2].h) << "the lower block is lower than the desktop one";
             EXPECT_LE(plate.y + plate.h, kViewHeight - kRimWidth - kPhoneHandTileMaxW * 4.0f / 3.0f + kTolerance) << "the plate ends where the tallest hand tile starts";
         }
     }
@@ -1511,12 +1511,12 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(discards[0].rect.x, zone.x);
             EXPECT_EQ(discards[0].rect.y, zone.y);
             if (pile > kDiscardsPerRow) {
-                EXPECT_LE(discards[kDiscardsPerRow].rect.y - discards[0].rect.y, kDiscardTileH + kTolerance) << "a row pitch is at most a tile's height";
+                EXPECT_LE(discards[kDiscardsPerRow].rect.y - discards[0].rect.y, discards[0].rect.h + kTolerance) << "a row pitch is at most a tile's height";
             }
         }
-        // three rows lie as the desktop block's rows do, without overlap
+        // three rows lie as the desktop block's rows do, without overlap: the block is as high as its three rows
         const std::vector<TileSlot> three = SlotsOf(MakeTableLayout(PhoneInput(WorstInput(0, 18, 0), kPhoneHandTileMaxW)), SlotRole::DiscardTile, 0);
-        EXPECT_EQ(three[kDiscardsPerRow].rect.y - three[0].rect.y, kDiscardTileH);
+        EXPECT_EQ(three[kDiscardsPerRow].rect.y - three[0].rect.y, three[0].rect.h);
     }
 
     TEST(TableLayoutTest, ThePhoneTileWidthIsClampedBetweenTheDesktopTileAndTheWidestTheViewHolds) {
@@ -1690,12 +1690,14 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
-    TEST(TableLayoutTest, TheWideTableKeepsTheNumbersOfTheLandscapeOneAWingFromTheLeftEdge) {
+    TEST(TableLayoutTest, TheWideTableIsCentredOnItsViewAWingFromTheLeftEdge) {
         const TableLayout layout = MakeTableLayout(QuietInput(0), kWideViewWidth, kViewHeight);
-        EXPECT_TRUE(SameRect(layout.zones.wall, Rect(458.0f + kWideWingWidth, 268, 364, 168)));
-        EXPECT_TRUE(SameRect(layout.zones.centerPanel, Rect(472.0f + kWideWingWidth, 282, 336, 140)));
-        EXPECT_TRUE(SameRect(SlotsOf(layout, SlotRole::HandTile, 0)[0].rect, Rect(72.0f + kWideWingWidth, 648, 48, 64)));
         EXPECT_NEAR(RectCentreX(layout.zones.wall), kWideViewWidth / 2.0f, kTolerance);
+        EXPECT_NEAR(RectCentreX(layout.zones.centerPanel), kWideViewWidth / 2.0f, kTolerance);
+        for (const TileSlot& slot : layout.slots) {
+            EXPECT_GE(slot.rect.x, kWideWingWidth - kTolerance) << "no tile in the wing";
+            EXPECT_LE(slot.rect.x + slot.rect.w, kWideWingWidth + kViewWidth + kTolerance);
+        }
     }
 
     TEST(TableLayoutTest, TheWideViewHoldsThePhoneProfileLikeTheLandscapeOne) {
@@ -1828,10 +1830,11 @@ namespace BECore::Mahjong::Tests {
         }
         const Rect& panel = narrow.zones.centerPanel;
         const Rect& wall = narrow.zones.wall;
-        EXPECT_NEAR(panel.x, wall.x + kWallStackSize, kTolerance);
-        EXPECT_NEAR(panel.y, wall.y + kWallStackSize, kTolerance);
-        EXPECT_NEAR(panel.w, wall.w - 2.0f * kWallStackSize, kTolerance);
-        EXPECT_NEAR(panel.h, wall.h - 2.0f * kWallStackSize, kTolerance);
+        const float stack = TileSizeOf(narrow, SlotRole::WallStack, 0).w;
+        EXPECT_NEAR(panel.x, wall.x + stack, kTolerance);
+        EXPECT_NEAR(panel.y, wall.y + stack, kTolerance);
+        EXPECT_NEAR(panel.w, wall.w - 2.0f * stack, kTolerance);
+        EXPECT_NEAR(panel.h, wall.h - 2.0f * stack, kTolerance);
     }
 
     TEST(TableLayoutTest, TheNarrowSideSeatsKeepTheirTurnsAndTheirColumnsAtTheEdgesOfTheView) {
@@ -1995,15 +1998,18 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(TableLayoutTest, ThePortraitCenterPanelIsTheInsideOfTheWallRingAndTheSameForEveryViewer) {
-        const TableLayout design = InPortrait(QuietInput(0));
+        TableInput input = QuietInput(0);
+        input.wallRemaining = kWorstWall;
+        const TableLayout design = InPortrait(input);
         const Rect& wall = design.zones.wall;
         const Rect& panel = design.zones.centerPanel;
-        EXPECT_NEAR(panel.x, wall.x + kWallStackSize, kTolerance);
-        EXPECT_NEAR(panel.y, wall.y + kWallStackSize, kTolerance);
-        EXPECT_NEAR(panel.w, wall.w - 2.0f * kWallStackSize, kTolerance);
-        EXPECT_NEAR(panel.h, wall.h - 2.0f * kWallStackSize, kTolerance);
-        EXPECT_NEAR(wall.w, kWallStackSize * kWallRingColumns, kTolerance);
-        EXPECT_NEAR(wall.h, kWallStackSize * kWallRingRows, kTolerance);
+        const float stack = ExpectOneTileSize(design, SlotRole::WallStack, 0).w;
+        EXPECT_NEAR(panel.x, wall.x + stack, kTolerance);
+        EXPECT_NEAR(panel.y, wall.y + stack, kTolerance);
+        EXPECT_NEAR(panel.w, wall.w - 2.0f * stack, kTolerance);
+        EXPECT_NEAR(panel.h, wall.h - 2.0f * stack, kTolerance);
+        EXPECT_NEAR(wall.w, stack * kWallRingColumns, kTolerance);
+        EXPECT_NEAR(wall.h, stack * kWallRingRows, kTolerance);
         EXPECT_NEAR(RectCentreX(wall), kPortraitViewWidth / 2.0f, kTolerance);
         for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
             EXPECT_TRUE(SameRect(InPortrait(QuietInput(viewer)).zones.centerPanel, panel));
@@ -2023,7 +2029,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(portrait[i].index, landscape[i].index);
             EXPECT_NEAR(portrait[i].rect.x - landscape[i].rect.x, shiftX, kTolerance) << "cell " << i;
             EXPECT_NEAR(portrait[i].rect.y - landscape[i].rect.y, shiftY, kTolerance) << "cell " << i;
-            EXPECT_EQ(portrait[i].rect.w, kWallStackSize);
+            EXPECT_EQ(portrait[i].rect.w, landscape[i].rect.w) << "a stack is as large as in the landscape ring";
         }
     }
 
@@ -2046,7 +2052,7 @@ namespace BECore::Mahjong::Tests {
                 } else if (viewers) {
                     EXPECT_GT(b.rect.w, a.rect.w) << "the viewer's discards are larger";
                     EXPECT_GT(b.rect.h, a.rect.h);
-                    EXPECT_NEAR(b.rect.w * kDiscardTileH, b.rect.h * kDiscardTileW, kTolerance) << "3 : 4";
+                    ExpectAtlasProportions(TileSize{b.rect.w, b.rect.h});
                 } else if (a.role == SlotRole::HandTile) {
                     EXPECT_GE(b.rect.w, a.rect.w) << "an opponent's hand is no smaller in portrait, slot " << i;
                     EXPECT_GE(b.rect.h, a.rect.h);
@@ -2140,6 +2146,60 @@ namespace BECore::Mahjong::Tests {
         }
         // the 14th tile of the viewer's hand
         EXPECT_TRUE(SameRect(SlotsOf(InLandscape(input), SlotRole::HandTile, 0)[13].rect, Rect(696, 648, 48, 64)));
+    }
+
+    TEST(TableLayoutTest, TheOtherShapesKeepTheViewersHandTileAndThePlatesOfTheirDesign) {
+        // One named golden per shape besides the landscape one: a change to a zone of the file that moves the viewer's hand or a plate fails here.
+        TableInput input = QuietInput(0);
+        input.concealedCount = {14, 14, 14, 14};
+        struct Golden {
+            const char* name;
+            float width;
+            float height;
+            Rect hand;
+            eastl::array<Rect, 4> plates;
+        };
+        const Golden goldens[] = {
+            {"narrow", kNarrowViewWidth, kNarrowViewHeight, Rect(204, 696, 48, 64), {Rect(84, 532, 152, 80), Rect(808, 184, 152, 80), Rect(308, 96, 152, 80), Rect(112, 184, 152, 80)}},
+            {"portrait", kPortraitViewWidth, kPortraitViewHeight, Rect(12, 1208, 48, 64), {Rect(12, 1028, 152, 80), Rect(456, 308, 152, 80), Rect(284, 308, 152, 80), Rect(112, 308, 152, 80)}},
+            {"wide",
+             kWideViewWidth,
+             kViewHeight,
+             Rect(72.0f + kWideWingWidth, 648, 48, 64),
+             {Rect(84.0f + kWideWingWidth, 532, 152, 80), Rect(1012.0f + kWideWingWidth, 184, 152, 80), Rect(408.0f + kWideWingWidth, 96, 152, 80), Rect(112.0f + kWideWingWidth, 184, 152, 80)}}};
+        for (const Golden& golden : goldens) {
+            const TableLayout layout = MakeTableLayout(input, golden.width, golden.height);
+            EXPECT_TRUE(SameRect(SlotsOf(layout, SlotRole::HandTile, 0)[0].rect, golden.hand)) << golden.name << " hand";
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                EXPECT_TRUE(SameRect(layout.zones.seatPlates[seat], golden.plates[seat])) << golden.name << " plate of seat " << seat;
+            }
+        }
+    }
+
+    TEST(TableLayoutTest, TheSceneClearancesHold) {
+        // What the node files of the scene rely on, in the landscape view and, a wing further right, in the wide one (a widget of the scene's wide
+        // variant either moves by the wing or lies nearer the edge of the view, so the shifted clearance is the strict one). The numbers are those of the node files; a zone of config/TableLayout.xml
+        // that crosses one fails here.
+        constexpr float kHintLabelRight = 1000.0f;  // MahjongActions.xml: the Hint label ends here, left of the right seat's discard block
+        constexpr float kWaitPanelRight = 432.0f;   // MahjongHints.xml: the WaitPanel ends here, left of the top seat's hand
+        constexpr float kMoveLineBottom = 172.0f;   // MahjongHud.xml: the move line reaches over the side columns down to here
+        constexpr float kRulesButtonLeft = 996.0f;  // MahjongHudMenu.xml: the Rules button starts here, right of the top seat's bonus row
+        for (const float wing : {0.0f, kWideWingWidth}) {
+            const float width = kViewWidth + 2.0f * wing;
+            for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
+                const TableLayout layout = MakeTableLayout(WorstInput(viewer, kWorstPile, kNoSeat), width, kViewHeight);
+                ASSERT_EQ(layout.shape, wing == 0.0f ? TableShape::Landscape : TableShape::Wide);
+                const Seat right = SeatAtPosition(viewer, 1);
+                const Seat top = SeatAtPosition(viewer, 2);
+                const Seat left = SeatAtPosition(viewer, 3);
+                EXPECT_GE(layout.zones.discards[right].x, wing + kHintLabelRight) << "MahjongActions.xml Hint label, viewer " << viewer;
+                EXPECT_GE(BoundsOf(layout, SlotRole::HandTile, top).x, wing + kWaitPanelRight) << "MahjongHints.xml WaitPanel, viewer " << viewer;
+                EXPECT_GE(BoundsOf(layout, SlotRole::BonusTile, right).y, kMoveLineBottom) << "MahjongHud.xml move line, right seat, viewer " << viewer;
+                EXPECT_GE(BoundsOf(layout, SlotRole::BonusTile, left).y, kMoveLineBottom) << "MahjongHud.xml move line, left seat, viewer " << viewer;
+                const Rect topBonus = BoundsOf(layout, SlotRole::BonusTile, top);
+                EXPECT_LE(topBonus.x + topBonus.w, wing + kRulesButtonLeft) << "MahjongHudMenu.xml Rules button, viewer " << viewer;
+            }
+        }
     }
 
 }  // namespace BECore::Mahjong::Tests
