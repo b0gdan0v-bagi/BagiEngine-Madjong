@@ -247,4 +247,48 @@ namespace BECore::Mahjong {
         return lines;
     }
 
+    void CoachLedger::SetEnabled(bool enabled) {
+        if (enabled == _enabled) {
+            return;
+        }
+        _enabled = enabled;
+        ClearNote();
+        _keyed = false;
+        _hand = {};
+        _match = {};
+    }
+
+    void CoachLedger::ClearNote() {
+        if (_note.has_value()) {
+            _note.reset();
+            ++_version;
+        }
+    }
+
+    void CoachLedger::OnPersonMove(const TableView& before, const HandAction& action, const MoveContext& context) {
+        if (!_enabled || context.personCount != 1 || !CanJudge(before, action)) {
+            return;
+        }
+        ClearNote();
+        const CoachHandKey key = HandKeyOf(context);
+        if (!_keyed || key.starts != _key.starts) {
+            _match = {};
+            _hand = {};
+        } else if (key != _key) {
+            _hand = {};
+        }
+        _key = key;
+        _keyed = true;
+        std::optional<CoachNote> note = JudgeMove(before, action);
+        ++_hand.moves;
+        ++_match.moves;
+        if (!note.has_value()) {
+            ++_hand.agreed;
+            ++_match.agreed;
+            return;
+        }
+        _note = eastl::move(note);
+        ++_version;
+    }
+
 }  // namespace BECore::Mahjong

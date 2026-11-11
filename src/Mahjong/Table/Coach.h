@@ -8,7 +8,8 @@ namespace BECore::Mahjong {
      * The coach: after an accepted action of a person that is not what the computer player would have done, a short note says what it
      * would have done and what the two cost. Plain C++ over the `TableView` the person had **before** the action (`MakeTableView`), so
      * the judge knows nothing the person did not see; no scene, no game. The words are keys `coach.*` of `config/UIStrings.xml`.
-     * The judge (`JudgeMove`) and the words (`CoachNoteLines`) are here.
+     * The judge (`JudgeMove`) and the words (`CoachNoteLines`) are here; the ledger (`CoachLedger`) holds the note and the tally for
+     * the table (`MahjongGame` owns one, the components read it).
      */
 
     /// What the hints of the table do: nothing, the hints (`Hint`, the waiting row, the marks), or the hints and the coach's notes. Kept on
@@ -98,5 +99,81 @@ namespace BECore::Mahjong {
     /// your move with its numbers, the computer's with its numbers (a complete hand says so in one more line instead). One key `coach.*`
     /// per sentence, tiles by `TileName`, a number never in a plural form.
     [[nodiscard]] eastl::vector<eastl::string> CoachNoteLines(const UIStrings& strings, const CoachNote& note);
+
+    /// The moves that agreed with the computer's choice and all the moves judged.
+    struct CoachTally {
+        int agreed = 0;
+        int moves = 0;
+
+        bool operator==(const CoachTally&) const = default;
+    };
+
+    /// One hand of one match, as `MahjongTableComponent::SeenHand` tells it: a replayed drawn hand is not the hand it replays.
+    struct CoachHandKey {
+        uint64_t starts = 0;
+        int handsPlayed = 0;
+        size_t settled = 0;
+
+        bool operator==(const CoachHandKey&) const = default;
+    };
+
+    /// The key of the hand a move was made in.
+    [[nodiscard]] constexpr CoachHandKey HandKeyOf(const MoveContext& context) noexcept {
+        return {context.startCount, context.handsPlayed, context.historySize};
+    }
+
+    /**
+     * @brief The note and the tally of the coach, fed by the session (`TableSession::SetMoveObserver`).
+     *
+     * Records only while enabled and with exactly one person at the table (two would see each other's hand in a note). Every recorded move
+     * drops the note before it and judges itself (`JudgeMove`): an agreeing one counts, a differing one counts and keeps its note. A new
+     * hand starts the hand tally over, a new match both. `SetEnabled` with a changed value drops the note and the tallies (a mode change
+     * starts no tally of the past); while disabled nothing is held. `Version()` grows whenever the note changes, so a front end
+     * publishes only when it moved.
+     */
+    class CoachLedger final : public IPersonMoveObserver {
+    public:
+        void SetEnabled(bool enabled);
+        [[nodiscard]] bool Enabled() const noexcept {
+            return _enabled;
+        }
+
+        void OnPersonMove(const TableView& before, const HandAction& action, const MoveContext& context) override;
+
+        /// The note of the last recorded move, empty when it agreed, when it was dropped or while disabled.
+        [[nodiscard]] const std::optional<CoachNote>& Note() const noexcept {
+            return _note;
+        }
+        void ClearNote();
+        /// Grows with every change of `Note()`.
+        [[nodiscard]] uint64_t Version() const noexcept {
+            return _version;
+        }
+
+        /// The tally of the last hand a move was recorded in and of its match; nothing before the first one.
+        [[nodiscard]] CoachTally HandTally() const noexcept {
+            return _hand;
+        }
+        [[nodiscard]] CoachTally MatchTally() const noexcept {
+            return _match;
+        }
+        /// The same, but nothing unless that hand (that match, by `TableSession::StartCount()`) is the one recorded in: a hand a person made
+        /// no move in has no tally, not the last one's.
+        [[nodiscard]] CoachTally HandTallyOf(const CoachHandKey& key) const noexcept {
+            return _keyed && key == _key ? _hand : CoachTally{};
+        }
+        [[nodiscard]] CoachTally MatchTallyOf(uint64_t startCount) const noexcept {
+            return _keyed && startCount == _key.starts ? _match : CoachTally{};
+        }
+
+    private:
+        bool _enabled = false;
+        std::optional<CoachNote> _note;
+        uint64_t _version = 0;
+        bool _keyed = false;
+        CoachHandKey _key;
+        CoachTally _hand;
+        CoachTally _match;
+    };
 
 }  // namespace BECore::Mahjong

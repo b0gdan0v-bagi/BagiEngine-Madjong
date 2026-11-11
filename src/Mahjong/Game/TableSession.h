@@ -104,6 +104,23 @@ namespace BECore::Mahjong {
         uint64_t _starts = 0;
     };
 
+    /// What a front end needs to key the hand an accepted action of a person was made in (`IPersonMoveObserver`): the session's
+    /// `StartCount()`, the match's `HandsPlayed()` and the number of its settled hands (a replayed drawn hand has the same
+    /// `HandsPlayed()` and one more settlement), and how many people sit at the table.
+    struct MoveContext {
+        uint64_t startCount = 0;
+        int handsPlayed = 0;
+        size_t historySize = 0;
+        int personCount = 0;
+    };
+
+    /// Told of every accepted action of a person (`TableSession::SetMoveObserver`), with the view of the actor from before the action.
+    class IPersonMoveObserver {
+    public:
+        virtual ~IPersonMoveObserver() = default;
+        virtual void OnPersonMove(const TableView& before, const HandAction& action, const MoveContext& context) = 0;
+    };
+
     /**
      * @brief The one object every front end drives: a `Match` with the seats set up as people and computers. Plain C++, no scene.
      *
@@ -133,6 +150,9 @@ namespace BECore::Mahjong {
      *   refused call, `Reveal` and a start with bad settings report nothing. A match started behind the session's back (through the
      *   non-const `Match::Start`) is not seen and so not logged.
      * - `ResumeMatch` puts the session where a recorded log left it (a saved match), see there.
+     * - The move observer (`SetMoveObserver`) is told of an accepted `PerformPerson` only, after the version moved and the log line
+     *   went out, with `MakeTableView(hand, actor)` made before the action; with none set no view is made. Computer steps, `Reveal`,
+     *   `NextHand` and `ResumeMatch` never report, a refused action reports nothing.
      */
     class TableSession {
     public:
@@ -194,6 +214,12 @@ namespace BECore::Mahjong {
         }
         [[nodiscard]] IMatchLogSink* GetLogSink() const noexcept {
             return _sink;
+        }
+
+        /// Who is told of the accepted actions of the people (see the class comment); null (the default) for none. Not owned: it outlives
+        /// its use by the session. May be changed at any time.
+        void SetMoveObserver(IPersonMoveObserver* observer) noexcept {
+            _observer = observer;
         }
 
         /// `MatchOver` before the first start, too.
@@ -277,6 +303,7 @@ namespace BECore::Mahjong {
         uint64_t _version = 0;
         uint64_t _starts = 0;
         IMatchLogSink* _sink = nullptr;
+        IPersonMoveObserver* _observer = nullptr;
         MatchLogOrigin _origin;
     };
 

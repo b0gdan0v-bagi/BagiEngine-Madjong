@@ -118,6 +118,10 @@ namespace BECore::Mahjong::Tests {
             return note.value_or(CoachNote{});
         }
 
+        MoveContext ContextOf(uint64_t starts, int hands, size_t settled, int persons = 1) {
+            return {starts, hands, settled, persons};
+        }
+
         size_t Letters(const std::string& text) {
             return static_cast<size_t>(std::count_if(text.begin(), text.end(), [](char c) { return (static_cast<unsigned char>(c) & 0xC0) != 0x80; }));
         }
@@ -515,6 +519,167 @@ namespace BECore::Mahjong::Tests {
 
         ASSERT_GE(byLanguage.size(), 2u);
         EXPECT_NE(byLanguage[0], byLanguage[1]);
+    }
+
+    // ----- the ledger -----
+
+    namespace {
+
+        /// A ledger that is enabled, with `PairedView()` ready to be judged.
+        struct Ledger {
+            CoachLedger ledger;
+            TableView view = PairedView();
+
+            Ledger() {
+                ledger.SetEnabled(true);
+            }
+            void Move(const char* tile, const MoveContext& context) {
+                ledger.OnPersonMove(view, Discard(tile), context);
+            }
+        };
+
+    }  // namespace
+
+    TEST(CoachTest, TheLedgerCountsAgreedAndDifferingMovesAndKeepsTheNoteOfTheLastDifferingOne) {
+        Ledger table;
+
+        table.Move("Nw", ContextOf(1, 0, 0));
+        EXPECT_EQ(table.ledger.HandTally(), (CoachTally{1, 1}));
+        EXPECT_FALSE(table.ledger.Note().has_value());
+        const uint64_t quiet = table.ledger.Version();
+
+        table.Move("5p", ContextOf(1, 0, 0));
+        EXPECT_EQ(table.ledger.HandTally(), (CoachTally{1, 2}));
+        EXPECT_EQ(table.ledger.MatchTally(), (CoachTally{1, 2}));
+        ASSERT_TRUE(table.ledger.Note().has_value());
+        EXPECT_EQ(table.ledger.Note()->taken, Discard("5p"));
+        EXPECT_GT(table.ledger.Version(), quiet);
+
+        // The next move drops the note before it is judged; an agreeing one leaves none.
+        const uint64_t withNote = table.ledger.Version();
+        table.Move("Rd", ContextOf(1, 0, 0));
+        EXPECT_FALSE(table.ledger.Note().has_value());
+        EXPECT_GT(table.ledger.Version(), withNote);
+        EXPECT_EQ(table.ledger.MatchTally(), (CoachTally{2, 3}));
+    }
+
+    TEST(CoachTest, ANewHandStartsTheHandTallyOverAndANewMatchBoth) {
+        Ledger table;
+        table.Move("5p", ContextOf(1, 0, 0));
+        table.Move("Nw", ContextOf(1, 0, 0));
+
+        table.Move("Nw", ContextOf(1, 1, 1));
+        EXPECT_EQ(table.ledger.HandTally(), (CoachTally{1, 1}));
+        EXPECT_EQ(table.ledger.MatchTally(), (CoachTally{2, 3}));
+
+        // A replayed drawn hand: the same hands played, one more settled hand.
+        table.Move("5p", ContextOf(1, 1, 2));
+        EXPECT_EQ(table.ledger.HandTally(), (CoachTally{0, 1}));
+        EXPECT_EQ(table.ledger.MatchTally(), (CoachTally{2, 4}));
+
+        table.Move("Nw", ContextOf(2, 0, 0));
+        EXPECT_EQ(table.ledger.HandTally(), (CoachTally{1, 1}));
+        EXPECT_EQ(table.ledger.MatchTally(), (CoachTally{1, 1}));
+    }
+
+    TEST(CoachTest, TheTallyOfAHandNobodyMovedInIsEmptyNotTheLastOnes) {
+        Ledger table;
+        table.Move("Nw", ContextOf(3, 2, 2));
+
+        EXPECT_EQ(table.ledger.HandTallyOf(HandKeyOf(ContextOf(3, 2, 2))), (CoachTally{1, 1}));
+        EXPECT_EQ(table.ledger.HandTallyOf(HandKeyOf(ContextOf(3, 3, 3))), (CoachTally{}));
+        EXPECT_EQ(table.ledger.MatchTallyOf(3), (CoachTally{1, 1}));
+        EXPECT_EQ(table.ledger.MatchTallyOf(4), (CoachTally{}));
+    }
+
+    TEST(CoachTest, ADisabledLedgerCountsNothingAndKeepsNoNote) {
+        Ledger table;
+        table.ledger.SetEnabled(false);
+
+        table.Move("5p", ContextOf(1, 0, 0));
+        EXPECT_FALSE(table.ledger.Note().has_value());
+        EXPECT_EQ(table.ledger.MatchTally(), (CoachTally{}));
+        EXPECT_FALSE(table.ledger.Enabled());
+
+        // Turning it on starts no tally of the past, turning it off drops the note and the counts.
+        table.ledger.SetEnabled(true);
+        table.Move("5p", ContextOf(1, 0, 0));
+        ASSERT_TRUE(table.ledger.Note().has_value());
+        EXPECT_EQ(table.ledger.MatchTally(), (CoachTally{0, 1}));
+        const uint64_t version = table.ledger.Version();
+        table.ledger.SetEnabled(false);
+        EXPECT_FALSE(table.ledger.Note().has_value());
+        EXPECT_GT(table.ledger.Version(), version);
+        EXPECT_EQ(table.ledger.MatchTally(), (CoachTally{}));
+        table.ledger.SetEnabled(true);
+        EXPECT_EQ(table.ledger.MatchTally(), (CoachTally{}));
+    }
+
+    TEST(CoachTest, TwoPeopleAtTheTableCountNothing) {
+        Ledger table;
+
+        table.ledger.OnPersonMove(table.view, Discard("5p"), ContextOf(1, 0, 0, 2));
+        table.ledger.OnPersonMove(table.view, Discard("Nw"), ContextOf(1, 0, 0, 0));
+
+        EXPECT_FALSE(table.ledger.Note().has_value());
+        EXPECT_EQ(table.ledger.MatchTally(), (CoachTally{}));
+    }
+
+    TEST(CoachTest, ClearingTheNoteMovesTheVersionOnlyWhenThereWasOne) {
+        Ledger table;
+        table.Move("5p", ContextOf(1, 0, 0));
+        const uint64_t withNote = table.ledger.Version();
+
+        table.ledger.ClearNote();
+        EXPECT_GT(table.ledger.Version(), withNote);
+        EXPECT_FALSE(table.ledger.Note().has_value());
+        const uint64_t cleared = table.ledger.Version();
+        table.ledger.ClearNote();
+        EXPECT_EQ(table.ledger.Version(), cleared);
+        EXPECT_EQ(table.ledger.MatchTally(), (CoachTally{0, 1}));
+    }
+
+    TEST(CoachTest, AMoveThatIsNotListedIsNotCounted) {
+        Ledger table;
+
+        table.Move("9p", ContextOf(1, 0, 0));
+
+        EXPECT_EQ(table.ledger.MatchTally(), (CoachTally{}));
+        EXPECT_FALSE(table.ledger.Note().has_value());
+    }
+
+    TEST(CoachTest, ThroughASessionAPersonWhoFollowsTheAdviceAgreesEveryTimeAndOtherwiseGetsNotes) {
+        const auto play = [](bool follow, CoachLedger& ledger) {
+            Match match;
+            TableSession session(match);
+            session.SetMoveObserver(&ledger);
+            EXPECT_TRUE(session.StartMatch(MahjongSettings{}, 17, kDefaultSeatSetup).has_value());
+            int moves = 0;
+            for (int step = 0; step < 400 && session.GetPhase() == SessionPhase::Playing; ++step) {
+                if (!session.ActorIsPerson()) {
+                    EXPECT_TRUE(session.StepComputer().has_value());
+                    continue;
+                }
+                const TableView view = MakeTableView(match.Hand(), session.Actor());
+                const HandAction action = follow ? *AdviceFor(view) : view.legal.back();
+                EXPECT_TRUE(session.PerformPerson(action).has_value());
+                ++moves;
+            }
+            return moves;
+        };
+
+        CoachLedger following;
+        following.SetEnabled(true);
+        const int moves = play(true, following);
+        EXPECT_GT(moves, 0);
+        EXPECT_EQ(following.MatchTally(), (CoachTally{moves, moves}));
+        EXPECT_FALSE(following.Note().has_value());
+
+        CoachLedger careless;
+        careless.SetEnabled(true);
+        const int carelessMoves = play(false, careless);
+        EXPECT_EQ(careless.MatchTally().moves, carelessMoves);
+        EXPECT_LT(careless.MatchTally().agreed, carelessMoves);
     }
 
 }  // namespace BECore::Mahjong::Tests
