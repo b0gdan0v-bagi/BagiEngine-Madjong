@@ -467,8 +467,8 @@ namespace BECore::Mahjong::Tests {
 
     TEST(TableLayoutSpecTest, AMinimumAboveTheSolvedTileIsRefusedWithTheTileAndTheMinimum) {
         TableLayoutSpec spec = ShippedTableLayoutSpec();
-        spec.Shape(TableShape::Landscape).seats[2].hand.minTileW = 33;
-        ExpectProblem(CheckTableLayoutSpec(spec), {"shape 'Landscape'", "the hand tile of position 2 is 32 wide", "minTileW 33"});
+        spec.Shape(TableShape::Landscape).seats[2].hand.minTileW = 36;
+        ExpectProblem(CheckTableLayoutSpec(spec), {"shape 'Landscape'", "the hand tile of position 2 is 35 wide", "minTileW 36"});
     }
 
     TEST(TableLayoutSpecTest, AViewersHandUnderTheTouchTileIsRefused) {

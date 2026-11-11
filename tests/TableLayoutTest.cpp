@@ -2123,18 +2123,18 @@ namespace BECore::Mahjong::Tests {
             input.discardSeats.push_back(seat);
         }
         for (const TableLayout& layout : {InLandscape(input), MakeTableLayout(input)}) {
-            const eastl::array<Rect, 4> discards = {Rect(568, 452, 144, 160), Rect(968, 268, 185, 168), Rect(568, 92, 144, 160), Rect(124, 268, 185, 168)};
-            const eastl::array<Rect, 4> plates = {Rect(96, 532, 152, 80), Rect(1000, 180, 152, 80), Rect(408, 96, 152, 80), Rect(124, 180, 152, 80)};
+            const eastl::array<Rect, 4> discards = {Rect(544, 442, 168, 185), Rect(968, 268, 185, 168), Rect(562, 94, 156, 170), Rect(124, 268, 185, 168)};
+            const eastl::array<Rect, 4> plates = {Rect(96, 532, 152, 80), Rect(1000, 180, 152, 80), Rect(400, 100, 152, 80), Rect(124, 180, 152, 80)};
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 EXPECT_TRUE(SameRect(layout.zones.discards[seat], discards[seat])) << "seat " << seat;
                 EXPECT_TRUE(SameRect(layout.zones.seatPlates[seat], plates[seat])) << "seat " << seat;
             }
             EXPECT_TRUE(SameRect(layout.zones.wall, Rect(458, 268, 364, 168)));
             EXPECT_TRUE(SameRect(layout.zones.centerPanel, Rect(472, 282, 336, 140)));
-            const eastl::array<Rect, 4> firstHand = {Rect(72, 648, 48, 64), Rect(1230, 128, 42, 32), Rect(444, 8, 32, 42), Rect(8, 128, 42, 32)};
-            const eastl::array<Rect, 4> firstMeld = {Rect(764, 672, 30, 40), Rect(1189, 128, 37, 28), Rect(436, 54, 24, 32), Rect(54, 128, 37, 28)};
-            const eastl::array<Rect, 4> firstBonus = {Rect(72, 616, 24, 32), Rect(1161, 192, 24, 18), Rect(860, 54, 16, 21), Rect(95, 192, 24, 18)};
-            const eastl::array<Rect, 4> firstDiscard = {Rect(568, 452, 24, 32), Rect(1116, 408, 37, 28), Rect(568, 92, 24, 32), Rect(124, 268, 37, 28)};
+            const eastl::array<Rect, 4> firstHand = {Rect(72, 648, 48, 64), Rect(1230, 128, 42, 32), Rect(444, 8, 35, 46), Rect(8, 128, 42, 32)};
+            const eastl::array<Rect, 4> firstMeld = {Rect(764, 672, 30, 40), Rect(1189, 128, 37, 28), Rect(436, 58, 24, 32), Rect(54, 128, 37, 28)};
+            const eastl::array<Rect, 4> firstBonus = {Rect(72, 616, 24, 32), Rect(1161, 192, 24, 18), Rect(852, 58, 17, 22), Rect(95, 192, 24, 18)};
+            const eastl::array<Rect, 4> firstDiscard = {Rect(544, 442, 28, 37), Rect(1116, 408, 37, 28), Rect(562, 94, 26, 34), Rect(124, 268, 37, 28)};
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 EXPECT_TRUE(SameRect(SlotsOf(layout, SlotRole::HandTile, seat)[0].rect, firstHand[seat])) << "hand of seat " << seat;
                 EXPECT_TRUE(SameRect(SlotsOf(layout, SlotRole::MeldTile, seat)[0].rect, firstMeld[seat])) << "melds of seat " << seat;
@@ -2161,13 +2161,13 @@ namespace BECore::Mahjong::Tests {
             eastl::array<Rect, 4> plates;
         };
         const Golden goldens[] = {
-            {"narrow", kNarrowViewWidth, kNarrowViewHeight, Rect(204, 696, 48, 64), {Rect(84, 532, 152, 80), Rect(808, 180, 152, 80), Rect(308, 96, 152, 80), Rect(112, 180, 152, 80)}},
+            {"narrow", kNarrowViewWidth, kNarrowViewHeight, Rect(204, 696, 48, 64), {Rect(84, 532, 152, 80), Rect(808, 180, 152, 80), Rect(300, 96, 152, 80), Rect(112, 180, 152, 80)}},
             {"portrait", kPortraitViewWidth, kPortraitViewHeight, Rect(12, 1208, 48, 64), {Rect(12, 1028, 152, 80), Rect(456, 308, 152, 80), Rect(284, 308, 152, 80), Rect(112, 308, 152, 80)}},
             {"wide",
              kWideViewWidth,
              kViewHeight,
              Rect(72.0f + kWideWingWidth, 648, 48, 64),
-             {Rect(96.0f + kWideWingWidth, 532, 152, 80), Rect(1000.0f + kWideWingWidth, 180, 152, 80), Rect(408.0f + kWideWingWidth, 96, 152, 80), Rect(124.0f + kWideWingWidth, 180, 152, 80)}}};
+             {Rect(96.0f + kWideWingWidth, 532, 152, 80), Rect(1000.0f + kWideWingWidth, 180, 152, 80), Rect(400.0f + kWideWingWidth, 100, 152, 80), Rect(124.0f + kWideWingWidth, 180, 152, 80)}}};
         for (const Golden& golden : goldens) {
             const TableLayout layout = MakeTableLayout(input, golden.width, golden.height);
             EXPECT_TRUE(SameRect(SlotsOf(layout, SlotRole::HandTile, 0)[0].rect, golden.hand)) << golden.name << " hand";
@@ -2181,10 +2181,11 @@ namespace BECore::Mahjong::Tests {
         // What the node files of the scene rely on, in the landscape view and, a wing further right, in the wide one (a widget of the scene's wide
         // variant either moves by the wing or lies nearer the edge of the view, so the shifted clearance is the strict one). The numbers are those of the node files; a zone of config/TableLayout.xml
         // that crosses one fails here.
-        constexpr float kHintLabelRight = 960.0f;   // MahjongActions.xml: the Hint label ends here, left of the right seat's discard block
-        constexpr float kWaitPanelRight = 432.0f;   // MahjongHints.xml: the WaitPanel ends here, left of the top seat's hand
-        constexpr float kMoveLineBottom = 172.0f;   // MahjongHud.xml: the move line reaches over the side columns down to here
-        constexpr float kRulesButtonLeft = 996.0f;  // MahjongHudMenu.xml: the Rules button starts here, right of the top seat's bonus row
+        constexpr float kHintLabelRight = 960.0f;     // MahjongActions.xml: the Hint label ends here, left of the right seat's discard block
+        constexpr float kSelectedTileRight = 536.0f;  // MahjongHud.xml: the SelectedTile label ends here, left of the viewer's discard block
+        constexpr float kWaitPanelRight = 432.0f;     // MahjongHints.xml: the WaitPanel ends here, left of the top seat's hand
+        constexpr float kMoveLineBottom = 172.0f;     // MahjongHud.xml: the move line reaches over the side columns down to here
+        constexpr float kRulesButtonLeft = 996.0f;    // MahjongHudMenu.xml: the Rules button starts here, right of the top seat's bonus row
         for (const float wing : {0.0f, kWideWingWidth}) {
             const float width = kViewWidth + 2.0f * wing;
             for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
@@ -2194,6 +2195,7 @@ namespace BECore::Mahjong::Tests {
                 const Seat top = SeatAtPosition(viewer, 2);
                 const Seat left = SeatAtPosition(viewer, 3);
                 EXPECT_GE(layout.zones.discards[right].x, wing + kHintLabelRight) << "MahjongActions.xml Hint label, viewer " << viewer;
+                EXPECT_GE(layout.zones.discards[viewer].x, wing + kSelectedTileRight) << "MahjongHud.xml SelectedTile label, viewer " << viewer;
                 EXPECT_GE(BoundsOf(layout, SlotRole::HandTile, top).x, wing + kWaitPanelRight) << "MahjongHints.xml WaitPanel, viewer " << viewer;
                 EXPECT_GE(BoundsOf(layout, SlotRole::BonusTile, right).y, kMoveLineBottom) << "MahjongHud.xml move line, right seat, viewer " << viewer;
                 EXPECT_GE(BoundsOf(layout, SlotRole::BonusTile, left).y, kMoveLineBottom) << "MahjongHud.xml move line, left seat, viewer " << viewer;

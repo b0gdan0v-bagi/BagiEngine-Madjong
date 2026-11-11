@@ -12,7 +12,7 @@
   284 / 456 at y 308 and x 12 at y 1028; the label 8 in from the plate's side, 52 down). The wide variant (minAspect:2, the view of 1560 x
   720 whose table is the landscape one 140 units in from each side) moves every label right by that wing, so each lies on its plate where
   it lay in landscape. The narrow variant (orientation:landscape;maxAspect:1.55, the view of 1080 x 768) puts each label so on the plate
-  of the narrow layout (bottom (84, 532), right (808, 180), top (308, 96), left (112, 180)). The bottom plate of the phone profile is
+  of the narrow layout (bottom (84, 532), right (808, 180), top (300, 96), left (112, 180)). The bottom plate of the phone profile is
   lifted by a few units and keeps its label: the label then ends at the plate's bottom edge.
 -->
 <node name="SeatPlates" layer="10">
@@ -21,7 +21,7 @@
       <elements>
         <element type="UILabel" name="PlateName0" anchor="TopLeft" ignoreSafeArea="true" x="104" y="584" width="136" height="24" text="{plateName0}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
         <element type="UILabel" name="PlateName1" anchor="TopLeft" ignoreSafeArea="true" x="1008" y="232" width="136" height="24" text="{plateName1}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
-        <element type="UILabel" name="PlateName2" anchor="TopLeft" ignoreSafeArea="true" x="416" y="148" width="136" height="24" text="{plateName2}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
+        <element type="UILabel" name="PlateName2" anchor="TopLeft" ignoreSafeArea="true" x="408" y="152" width="136" height="24" text="{plateName2}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
         <element type="UILabel" name="PlateName3" anchor="TopLeft" ignoreSafeArea="true" x="132" y="232" width="136" height="24" text="{plateName3}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
       </elements>
       <variants>
@@ -37,7 +37,7 @@
           <overrides>
             <set element="PlateName0" x="92" y="584" />
             <set element="PlateName1" x="816" y="232" />
-            <set element="PlateName2" x="316" y="148" />
+            <set element="PlateName2" x="308" y="148" />
             <set element="PlateName3" x="120" y="232" />
           </overrides>
         </variant>
@@ -45,7 +45,7 @@
           <overrides>
             <set element="PlateName0" x="244" />
             <set element="PlateName1" x="1148" />
-            <set element="PlateName2" x="556" />
+            <set element="PlateName2" x="548" />
             <set element="PlateName3" x="272" />
           </overrides>
         </variant>

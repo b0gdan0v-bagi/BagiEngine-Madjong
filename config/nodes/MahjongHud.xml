@@ -17,10 +17,10 @@
   their place on the landscape table: SelectedTile moves right by the wing (x 416) and MoveLine, which is anchored to the right edge,
   in by the wing (x -232), so each is clear of the tiles as in landscape.
   In a narrow view (1080 x 768, the variant with orientation:landscape;maxAspect:1.55; config/TableLayout.xml, the narrow table) MoveLine
-  lies right of the top discard block (x 468..612) and above the right seat's melds (they start at y 180): right edge 8 in, 448 wide,
-  y 92..172, so it is clear of the block by 12 and of every tile of the right seat by 8. SelectedTile lies in the ground between the
-  bottom seat plate (right edge 228) and the bottom discard block (x 468), under the wall ring and over the viewer's row of bonus tiles
-  and melds (y 636): x 236, y 572, 224 wide, which leaves the tile a tap raises and the row clear.
+  lies right of the top discard block (x 462..618) and above the right seat's melds (they start at y 180): right edge 8 in, 440 wide,
+  y 92..172, so it is clear of the block by 14 and of every tile of the right seat by 8. SelectedTile lies in the ground between the
+  bottom seat plate (right edge 228) and the bottom discard block (x 444), under the wall ring and over the viewer's row of bonus tiles
+  and melds (y 636): x 236, y 572, 200 wide, which leaves the tile a tap raises and the row clear.
 -->
 <node name="Hud" layer="10">
   <components>
@@ -33,8 +33,8 @@
             <element type="UILabel" name="MoveText" height="64" text="{lastMove}" fontSize="18" verticalAlign="Center" />
           </children>
         </element>
-        <!-- The name of the tile selected by a tap (selectedTileText, Table/TapSelect.h), shown by MahjongTableComponent exactly while a tile is selected: above the viewer's hand, right of the bonus row and the bottom seat plate, left of the bottom discard block -->
-        <element type="UIStack" name="SelectedTile" anchor="TopLeft" x="276" y="568" width="280" height="48" visible="false" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170">
+        <!-- The name of the tile selected by a tap (selectedTileText, Table/TapSelect.h), shown by MahjongTableComponent exactly while a tile is selected: above the viewer's hand, right of the bonus row and the bottom seat plate, left of the bottom discard block (x 544; the label ends at x 536) -->
+        <element type="UIStack" name="SelectedTile" anchor="TopLeft" x="276" y="568" width="260" height="48" visible="false" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170">
           <children>
             <element type="UILabel" name="SelectedTileLabel" height="32" text="{selectedTileText}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" />
           </children>
@@ -50,8 +50,8 @@
         </variant>
         <variant when="orientation:landscape;maxAspect:1.55">
           <overrides>
-            <set element="MoveLine" x="-8" />
-            <set element="SelectedTile" x="236" y="572" width="224" />
+            <set element="MoveLine" x="-8" width="440" />
+            <set element="SelectedTile" x="236" y="572" width="200" />
           </overrides>
         </variant>
         <variant when="minAspect:2">

@@ -13,7 +13,7 @@
   All four hands are face up under the table and must stay readable, so nothing lies over them: there is no Dim (a full-window
   scrim would cover them; the plate is opaque and a modal canvas takes every click) and the plate keeps to the middle of the view.
   The hands, melds and bonus tiles of the four seats take the edges of the view (left columns x 8..119, right columns x 1161..1272,
-  the top rows y 8..86, the bottom rows y 620..712 at the design size), so the ground left is about x 120..1160 and y 92..616. It holds
+  the top rows y 8..90, the bottom rows y 620..712 at the design size), so the ground left is about x 120..1160 and y 92..616. It holds
   the discard blocks, the wall ring and the seat plates, which the plate covers on purpose while it is up.
   The plate is 1032 wide (x 124..1156, clear of the side columns) and 32 padding + 48 headline band (one line of 28) + 4 x 32 seat
   rows + 64 gap + 124 lines (four columns, 4 rows of 28 with 4 between) + 48 summary band + 7 x 8 spacing (8 children) = 500 units, at
