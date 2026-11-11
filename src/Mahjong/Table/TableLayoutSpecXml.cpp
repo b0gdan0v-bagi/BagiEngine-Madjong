@@ -56,9 +56,10 @@ namespace BECore::Mahjong {
                     return std::nullopt;
                 }
                 const char* text = attribute.value();
-                char* end = nullptr;
-                const float value = std::strtof(text, &end);
-                if (end == text || *end != '\0' || !std::isfinite(value)) {
+                const char* const last = text + std::strlen(text);
+                float value = 0.0f;
+                const auto [end, parsed] = std::from_chars(text, last, value);
+                if (parsed != std::errc() || end != last || !std::isfinite(value)) {
                     Fail(where, Format("attribute '{}': '{}' is not a number", name, text));
                     return std::nullopt;
                 }
@@ -68,7 +69,7 @@ namespace BECore::Mahjong {
             std::optional<float> ReadFraction(const pugi::xml_node& node, const eastl::string& where, const char* name, bool required) {
                 const std::optional<float> value = ReadFloat(node, where, name, required);
                 if (value && !(*value >= 0.0f && *value <= 1.0f)) {
-                    Fail(where, Format("attribute '{}': {} is outside 0..1", name, attribute(node, name)));
+                    Fail(where, Format("attribute '{}': {} is outside 0..1", name, node.attribute(name).value()));
                     return std::nullopt;
                 }
                 return value;
@@ -288,11 +289,6 @@ namespace BECore::Mahjong {
                 }
                 seatsSeen |= 1U << *position;
                 ReadSeatZones(node, where, shape.seats[static_cast<size_t>(*position)]);
-            }
-
-        private:
-            static const char* attribute(const pugi::xml_node& node, const char* name) {
-                return node.attribute(name).value();
             }
         };
 

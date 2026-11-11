@@ -210,8 +210,8 @@ namespace BECore::Mahjong {
                 }
             }
             // A pile of more rows than the block holds squeezes its rows together; the pitch is the same for the whole pile of a seat.
-            // A row is as thick as a tile is high, upright or turned: the thickness is `kDiscardTileH` on the screen's vertical for the
-            // bottom and top seats and on its horizontal for the side seats.
+            // A row is as thick as a tile is high, upright or turned: the thickness is `discardTileH` of the seat's geometry on the
+            // screen's vertical for the bottom and top seats and on its horizontal for the side seats.
             eastl::array<float, kSeatCount> rowPitchOfSeat{};
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 const int rows = (pileOfSeat[seat] + kDiscardsPerRow - 1) / kDiscardsPerRow;

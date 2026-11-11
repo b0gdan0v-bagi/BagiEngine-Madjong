@@ -358,7 +358,8 @@ namespace BECore::Mahjong {
         }
         eastl::string text;
         for (const eastl::string& error : offer.errors) {
-            text += error + "\n";
+            text += error;
+            text += '\n';
         }
         if (text != _layoutRefused) {
             _layoutRefused = text;
@@ -395,8 +396,10 @@ namespace BECore::Mahjong {
         std::error_code error;
         const std::filesystem::file_time_type stamp = std::filesystem::last_write_time(configs.GetConfigFilePath(name), error);
         if (!error && (!_layoutStamp || *_layoutStamp != stamp)) {
-            _layoutStamp = stamp;
-            configs.ReloadConfig(name);
+            // The stamp is kept only when the reload worked, so a failed one is tried again at the next look
+            if (configs.ReloadConfig(name)) {
+                _layoutStamp = stamp;
+            }
         }
         OfferTableLayoutConfig();
     }

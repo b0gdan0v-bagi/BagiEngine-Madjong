@@ -23,11 +23,10 @@ namespace BECore::Mahjong {
     /// when `Ok()`; what could be read is in it otherwise, for a message to point at.
     [[nodiscard]] TableLayoutSpecParse ParseTableLayoutSpec(const pugi::xml_node& root);
 
-    enum class TableLayoutOffer : uint8_t {
-        Applied,    // the file is sound and differs from the active spec: it is the active spec now
-        Unchanged,  // the file is sound and says what the active spec says
-        Rejected    // the file does not read or is not a sound table: the active spec stays
-    };
+    // Applied: the file is sound and differs from the active spec, it is the active spec now.
+    // Unchanged: the file is sound and says what the active spec says.
+    // Rejected: the file does not read or is not a sound table, the active spec stays.
+    CORE_ENUM(TableLayoutOffer, uint8_t, Applied, Unchanged, Rejected)
 
     struct TableLayoutOfferResult {
         TableLayoutOffer outcome = TableLayoutOffer::Unchanged;
