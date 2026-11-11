@@ -356,15 +356,15 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(FaceUpHandTiles(2), static_cast<int>(Hand().GetHand(2).concealed.size()));
     }
 
-    TEST_F(MahjongTableUiTest, ASpectatorSeesNoConcealedTileWhileThePlayIsOn) {
+    TEST_F(MahjongTableUiTest, ASpectatorSeesEveryConcealedTileWhileThePlayIsOn) {
         ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
         ASSERT_TRUE(StepUntil([&] { return !Hand().Discards().empty(); }));
 
         Draw();
 
-        ASSERT_NO_FATAL_FAILURE(ExpectTableDrawn(false, kNoSeat));
+        ASSERT_NO_FATAL_FAILURE(ExpectTableDrawn(true, kNoSeat));
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            EXPECT_EQ(FaceUpHandTiles(seat), 0) << "seat " << seat;
+            EXPECT_EQ(FaceUpHandTiles(seat), static_cast<int>(Hand().GetHand(seat).concealed.size())) << "seat " << seat;
         }
     }
 
@@ -448,7 +448,7 @@ namespace BECore::Mahjong::Tests {
 
         Draw();
 
-        ASSERT_NO_FATAL_FAILURE(ExpectTableDrawn(false, kNoSeat));
+        ASSERT_NO_FATAL_FAILURE(ExpectTableDrawn(true, kNoSeat));
         TableInput input;
         input.viewer = 0;
         for (Seat seat = 0; seat < kSeatCount; ++seat) {

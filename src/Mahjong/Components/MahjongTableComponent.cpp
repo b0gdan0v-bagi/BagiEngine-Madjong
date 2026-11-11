@@ -48,7 +48,9 @@ namespace BECore::Mahjong {
         /// The inner mark of a tile drawn without the atlas, as a fraction of the tile.
         constexpr float kPlainMarkInset = 0.25f;
 
-        /// Whose concealed tiles are drawn face up: all of them once the hand is over, otherwise those of one seat (or of none).
+        /// Whose concealed tiles are drawn face up: all of them once the hand is over and while no seat is a person (a watched match),
+        /// otherwise those of the viewer (or of none). `seat` is the viewer alone, whom every mark that follows the viewer is for: a
+        /// spectator and the cover have none, so no such mark is drawn then, however many hands are face up.
         struct Faces {
             bool all = false;
             Seat seat = kNoSeat;
@@ -123,7 +125,7 @@ namespace BECore::Mahjong {
         Faces FacesOf(const TableSession& session) {
             BE_PROFILE_SCOPE("MahjongTable::FacesOf");
             Faces faces;
-            faces.all = session.GetPhase() != SessionPhase::Playing;
+            faces.all = session.GetPhase() != SessionPhase::Playing || session.PersonCount() == 0;
             faces.seat = session.HandoffPending() ? kNoSeat : session.Viewer();
             return faces;
         }
@@ -212,18 +214,18 @@ namespace BECore::Mahjong {
             return Rect();
         }
 
-        /// What the frame shows besides its layout, as far as the flights need it (`TableSnapshot`): the viewer's face-up tiles, the pile, the open
+        /// What the frame shows besides its layout, as far as the flights need it (`TableSnapshot`): the face-up hands, the pile, the open
         /// sets, the wall and the tile that was just drawn (for an opponent only that it was, never which: its slot is the last of its backs).
         void FillSnapshot(TableSnapshot& snapshot, const HandModel& hand, const Faces& faces, Seat bottom) {
             BE_PROFILE_SCOPE("MahjongTable::FillSnapshot");
-            if (IsSeat(bottom) && faces.Shows(bottom)) {
-                snapshot.viewerHand = hand.GetHand(bottom).concealed;
-            }
             for (const DiscardEntry& entry : hand.Discards()) {
                 snapshot.pile.push_back(entry.tile);
             }
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 snapshot.melds[seat] = hand.GetHand(seat).melds;
+                if (faces.Shows(seat)) {
+                    snapshot.openHand[seat] = hand.GetHand(seat).concealed;
+                }
                 if (snapshot.drawSeat == kNoSeat && hand.DrawnTile(seat).IsValid()) {
                     snapshot.drawSeat = seat;
                     snapshot.drawIndex = faces.Shows(seat) ? DrawnIndexOf(hand, seat) : static_cast<int>(hand.GetHand(seat).concealed.size()) - 1;
@@ -261,13 +263,13 @@ namespace BECore::Mahjong {
             TableSnapshot cleared;
             cleared.layout.slots = eastl::move(snapshot.layout.slots);
             cleared.layout.slots.clear();
-            cleared.viewerHand = eastl::move(snapshot.viewerHand);
-            cleared.viewerHand.clear();
             cleared.pile = eastl::move(snapshot.pile);
             cleared.pile.clear();
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 cleared.melds[seat] = eastl::move(snapshot.melds[seat]);
                 cleared.melds[seat].clear();
+                cleared.openHand[seat] = eastl::move(snapshot.openHand[seat]);
+                cleared.openHand[seat].clear();
             }
             snapshot = eastl::move(cleared);
         }
@@ -1000,7 +1002,7 @@ namespace BECore::Mahjong {
         // The two tiles of the viewer's hand that the offered chow takes (the hovered one; the only one when a single chow is on offer) are
         // framed in place: only in a hand that is face up and while the viewer is the person to act (so not under the cover)
         eastl::array<int, 2> chowIndex{-1, -1};
-        if (IsSeat(bottom) && PersonActs(*game) && session.Actor() == bottom && faces.Shows(bottom)) {
+        if (IsSeat(bottom) && PersonActs(*game) && session.Actor() == bottom && faces.seat == bottom) {
             _chowTakes = ChowTilesTaken(_published, hand.PendingTile(), _hoveredButton);
             const PlayerHand& viewer = hand.GetHand(bottom);
             for (int k = 0; k < _chowTakes.count; ++k) {
@@ -1013,25 +1015,25 @@ namespace BECore::Mahjong {
             }
         }
         // The selected tile (a tap in the touch regime) is the viewer's own and drawn raised, in a hand that is face up
-        if (_selected && IsSeat(bottom) && PersonActs(*game) && session.Actor() == bottom && faces.Shows(bottom)) {
+        if (_selected && IsSeat(bottom) && PersonActs(*game) && session.Actor() == bottom && faces.seat == bottom) {
             _drawnSelected = _selected;
         }
         PublishSelectedText(_drawnSelected ? _selectedTile : Tile{});
         // The tile the viewer has just drawn is tinted in its place, only in a hand that is face up: under the cover and for a spectator
         // nothing marks it (and the layout is the same plain row either way)
-        const int drawnIndex = IsSeat(bottom) && session.GetPhase() == SessionPhase::Playing && faces.Shows(bottom) ? DrawnIndexOf(hand, bottom) : -1;
+        const int drawnIndex = IsSeat(bottom) && session.GetPhase() == SessionPhase::Playing && faces.seat == bottom ? DrawnIndexOf(hand, bottom) : -1;
 
         // The discards that keep a declared hand waiting: only on the viewer's own turn in a hand that is face up (the guard is cheap, the
         // view is made only when it can say something); not tied to the hints switch
         eastl::array<bool, kTileIdCount> keepsWaiting{};
-        if (IsSeat(bottom) && session.GetPhase() == SessionPhase::Playing && faces.Shows(bottom) && hand.GetPhase() == Phase::Discard && hand.CurrentSeat() == bottom &&
+        if (IsSeat(bottom) && session.GetPhase() == SessionPhase::Playing && faces.seat == bottom && hand.GetPhase() == Phase::Discard && hand.CurrentSeat() == bottom &&
             hand.GetHand(bottom).callingDeclared) {
             keepsWaiting = KeepsWaitingDiscards(MakeTableView(hand, bottom));
         }
 
         // The winds that score for the viewer, marked on its own face-up tiles while the hand is played: under the cover and for a spectator
         // nothing marks them (the winds are read from the model only then)
-        const bool windMarks = IsSeat(bottom) && session.GetPhase() == SessionPhase::Playing && faces.Shows(bottom);
+        const bool windMarks = IsSeat(bottom) && session.GetPhase() == SessionPhase::Playing && faces.seat == bottom;
         const Wind seatWind = windMarks ? hand.SeatWind(bottom) : Wind::East;
         const Wind roundWind = windMarks ? hand.RoundWind() : Wind::East;
 

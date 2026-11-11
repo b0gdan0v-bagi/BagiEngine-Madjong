@@ -58,7 +58,9 @@ namespace BECore::Mahjong {
      *
      * **No peeking.** While the hand is played only the concealed tiles of the viewer (`TableSession::Viewer()`) are drawn face up, and
      * none at all while `HandoffPending()` (a hot-seat cover). The other seats show backs, their concealed kongs too. When the hand is
-     * over (`SessionPhase::HandOver` and `MatchOver`) all four hands are face up. Open sets, bonus tiles and discards are public.
+     * over (`SessionPhase::HandOver` and `MatchOver`) all four hands are face up, and so they are all the time while no seat is a person
+     * (`PersonCount() == 0`, a watched match): a choice of the screen only, the computers still decide from `MakeTableView`. The marks
+     * that follow the viewer stay the viewer's, so a spectator has none. Open sets, bonus tiles and discards are public.
      *
      * Without an atlas texture (the file did not load, or a test did not give one) the tiles are coloured rectangles, so the layout
      * stays visible. The seat whose turn it is has a highlight behind its hand (in a claim window the discarder, never the seat that is

@@ -43,12 +43,12 @@ namespace BECore::Mahjong {
         }
     };
 
-    /// What the table showed in one frame, as far as flights need it: the layout and the public facts (plus the viewer's own tiles, to
-    /// find the slot a tile of the viewer leaves).
+    /// What the table showed in one frame, as far as flights need it: the layout and the public facts (plus the concealed tiles of the
+    /// hands that were face up, to find the slot a tile of such a hand leaves).
     struct TableSnapshot {
         TableLayout layout;
-        /// The viewer's concealed tiles in order (slot `HandTile` `i` is tile `i`); empty when that hand is not face up.
-        eastl::vector<Tile> viewerHand;
+        /// Per seat its concealed tiles in order (slot `HandTile` `i` is tile `i`); empty when that hand was not face up (a row of backs).
+        eastl::array<eastl::vector<Tile>, kSeatCount> openHand;
         /// `Discards()` by entry (the seat of an entry is that of its `DiscardTile` slot).
         eastl::vector<Tile> pile;
         eastl::array<eastl::vector<Meld>, kSeatCount> melds;
@@ -87,8 +87,8 @@ namespace BECore::Mahjong {
      * - A mahjong on a discard (`after.winSeat` is a seat, `before.winSeat` is not) flies the hand slot `winIndex` of the winner from the
      *   pile slot of the last entry of `before`'s pile when that entry is gone from `after`'s pile; no such pile slot (the discard and the
      *   win fall into one batch), no flight. The other tiles of the winner's hand do not fly.
-     * - A tile that leaves a hand comes from the slot of the first unused copy of it in the viewer's face-up hand, else from the middle
-     *   hand slot of its seat in `before` (no identity: an opponent's hand is backs); no hand slot in `before`, no flight for that tile.
+     * - A tile that leaves a hand comes from the slot of the first unused copy of it in the face-up hand of its seat (`openHand`), else
+     *   from the middle hand slot of its seat in `before` (no identity: a hand of backs); no hand slot in `before`, no flight for that tile.
      *
      * Empty when `before` has no slots, the viewer or the view size differ, or nothing is new. In the order of the slots of `after`.
      */

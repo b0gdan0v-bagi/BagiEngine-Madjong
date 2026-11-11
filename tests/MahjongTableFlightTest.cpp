@@ -759,24 +759,48 @@ namespace BECore::Mahjong::Tests {
 
     // ----- no peeking -----
 
-    TEST_F(MahjongTableFlightTest, ForASpectatorNoTileInTheAirShowsAFaceBeforeItIsPublic) {
-        ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
-        Draw();
+    TEST_F(MahjongTableFlightTest, ForAPersonNoTileOfAnOpponentInTheAirShowsAFaceBeforeItIsPublic) {
+        constexpr SeatSetup kPersonAtSeat3{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Person};
+        ASSERT_NO_FATAL_FAILURE(StartWith(kPersonAtSeat3, MakeModel(SpecOf(kPlainHand, "9p Gd Rd Wd"))));
+        // The viewer's own concealed tiles are faces; everything else that shows a face is public
+        const auto own = [&] { return static_cast<int>(Hand().GetHand(kSeat3).concealed.size()); };
         // Three steps: the clock of the pace has run 0.3 s after each, and a fourth would make the component step on its own
         for (int step = 0; step < 3; ++step) {
             ASSERT_TRUE(Session().StepComputer().has_value());
             Draw();
             EXPECT_GT(_table->FlightCount(), 0u) << "step " << step;
-            ExpectNoConcealedFace();
+            EXPECT_EQ(FaceUpCalls(), PublicFaces() + own());
             ExpectEverySlotDrawnOnce();
             AdvanceTime(kHalfFlight);
             Draw();
-            ExpectNoConcealedFace();
+            EXPECT_EQ(FaceUpCalls(), PublicFaces() + own());
             AdvanceTime(kHalfFlight);
             Draw();
             ASSERT_EQ(_table->FlightCount(), 0u) << "step " << step << " moves " << Hand().Moves().size();
-            ExpectNoConcealedFace();
+            EXPECT_EQ(FaceUpCalls(), PublicFaces() + own());
         }
+    }
+
+    TEST_F(MahjongTableFlightTest, ForASpectatorADiscardLeavesFromTheOldSlotOfThatTileInTheOpenHandAndTheDrawComesAsAFace) {
+        FixedWallSpec spec = SpecOf(kPlainHand, "9p Gd Rd Wd 8s");
+        HandModel model = MakeModel(spec);
+        Lap(model, "9p");  // seat 1 has drawn a Gd and is to discard
+        ASSERT_NO_FATAL_FAILURE(StartWith(kAllComputers, model));
+        const TableLayout before = _table->GetLayout();
+        const int index = IndexOf(kSeat1, T("Gd"));
+        ASSERT_GE(index, 0);
+
+        ASSERT_TRUE(Model().Discard(kSeat1, T("Gd")).has_value());
+        ASSERT_EQ(Model().DrawnTile(kSeat2), T("Rd"));
+        Draw();
+
+        Arrival drawn;
+        drawn.from = LastWallStack(before);
+        drawn.role = SlotRole::HandTile;
+        drawn.seat = kSeat2;
+        drawn.index = IndexOf(kSeat2, T("Rd"));
+        drawn.face = T("Rd");
+        ExpectFlightsRun({Pile(RectOf(before, SlotRole::HandTile, kSeat1, index), kSeat1, 1, T("Gd")), drawn});
     }
 
     TEST_F(MahjongTableFlightTest, UnderTheHotSeatCoverNothingFliesAndNoConcealedTileIsFaceUpThenRevealOpensTheViewersFlights) {
