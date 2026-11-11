@@ -20,6 +20,7 @@ namespace BECore::Mahjong::Analyzer {
         constexpr eastl::string_view kNoteWorseThanNormal = "worse than Normal";
         constexpr eastl::string_view kNoteSeparator = ", ";
         constexpr eastl::string_view kOpponentsKind = "normal";
+        constexpr eastl::string_view kSeatAfterActionKind = "normal";
         constexpr eastl::string_view kHiddenKind = "uniform";
         constexpr eastl::string_view kPointsKind = "this hand";
 
@@ -354,10 +355,10 @@ namespace BECore::Mahjong::Analyzer {
         json["worldsDropped"] = analysis.worldsDropped;
         json["seed"] = analysis.config.seed;
         json["normalSeed"] = analysis.config.normalSeed;
-        json["intervalZ"] = Arena::kIntervalZ;
+        json["intervalZ"] = Rounded(Arena::kIntervalZ);
         json["opponents"] = MakeJsonString(kOpponentsKind);
         json["opponentLevel"] = LevelNumber(ComputerLevel::Normal);
-        json["seatAfterAction"] = MakeJsonString(kOpponentsKind);
+        json["seatAfterAction"] = MakeJsonString(kSeatAfterActionKind);
         json["hiddenTiles"] = MakeJsonString(kHiddenKind);
         json["points"] = MakeJsonString(kPointsKind);
         Json actions = Json::array();

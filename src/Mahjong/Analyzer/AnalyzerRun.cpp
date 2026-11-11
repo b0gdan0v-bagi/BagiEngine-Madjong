@@ -24,6 +24,7 @@ namespace BECore::Mahjong::Analyzer {
 
         /// `a - b` world by world; the rows have one length (the same worlds for every action).
         ActionDifference PairedDifference(const eastl::vector<int>& a, const eastl::vector<int>& b) {
+            ASSERT(a.size() == b.size(), "PairedDifference: the rows are of different worlds");
             eastl::vector<double> differences;
             differences.reserve(a.size());
             for (size_t world = 0; world < a.size(); ++world) {

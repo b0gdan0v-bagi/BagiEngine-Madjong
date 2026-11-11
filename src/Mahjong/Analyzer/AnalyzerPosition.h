@@ -18,7 +18,7 @@ namespace BECore::Mahjong::Analyzer {
     struct LogPosition {
         TableView view;
         Seat seat = kNoSeat;
-        /// The action the log's player took in this position (always one of `view.legal`).
+        /// The action the log's player took in this position (as the log has it: not checked against `view.legal`).
         HandAction logged;
         int hand = 0;
         int actionIndex = 0;
@@ -59,7 +59,7 @@ namespace BECore::Mahjong::Analyzer {
      * | `wall N` | the live tiles left (default: what the named tiles leave, with the loose reserve full) |
      *
      * Every key but `meld` is given once (`discards`, `calling` and `bonus` once per seat). The number of discards of a seat is its
-     * `discards` tiles, the pending one, and the tiles of it that other seats' melds claim (`from`). Tiles that are not named are
+     * `discards` tiles, the pending one, and the tiles of it that other seats' melds claim (`from`); the counts are taken as written, not checked against the turn order. Tiles that are not named are
      * unseen: they fill the other hands, then the wall, in a fixed order (the model needs an arbitrary consistent fill, and it never
      * reaches the analysis: the result is `MakeTableView`). `HandModel::Restore` is the judge of what can exist, and `legal` comes
      * from the model, not from the text.

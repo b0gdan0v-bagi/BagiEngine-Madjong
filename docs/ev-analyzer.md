@@ -75,7 +75,7 @@ seats are 0..3 counter-clockwise.
 | `bonus S <tiles>` | flowers and seasons laid open by seat S; any such line plays with the 144-tile set |
 | `wall N` | the live tiles left (default: what the named tiles leave, with the loose reserve full) |
 
-Every key but `meld` is given once (`discards`, `calling` and `bonus` once per seat). Tiles that are not named are unseen: they fill the other
+Every key but `meld` is given once (`discards`, `calling` and `bonus` once per seat). The discard counts are taken as written, not checked against the turn order. Tiles that are not named are unseen: they fill the other
 hands and the wall, in a fixed order, because the model needs a consistent fill; it never reaches the analysis. The model judges what can
 exist: more than four copies of a tile, a wrong hand size or a meld that cannot be is an error that names the line. The legal actions
 come from the model, not from the text. A robbed-kong window cannot be written by hand (a log position in that window works).
