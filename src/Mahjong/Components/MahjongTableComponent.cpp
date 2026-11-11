@@ -15,6 +15,7 @@
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/Table/CallingMarks.h>
 #include <Mahjong/Table/CenterPanel.h>
+#include <Mahjong/Table/EmblemAtlas.h>
 #include <Mahjong/Table/SeatName.h>
 #include <Mahjong/Table/SeatPlates.h>
 #include <Mahjong/Table/TableLayoutSpecXml.h>
@@ -312,6 +313,29 @@ namespace BECore::Mahjong {
             renderer.DrawFilledRect(rect.x + rect.w - width, rect.y + width, width, rect.h - 2.0f * width, color);
         }
 
+        /// The emblem of a seat in its ring box, then the turn ring and the calling ring over it (white cells of the atlas, tinted by the palette
+        /// roles); both rings can show together. Without the atlas the calling ring falls back to a frame on the box (the turn is the plate's own
+        /// frame then), and a person or a computer has no picture.
+        void DrawEmblem(IRenderer& renderer, ITexture* atlas, const Rect& box, SeatKind kind, ComputerLevel level, bool turn, bool calling, float unit) {
+            const auto drawCell = [&](int cell, const Color& tint) {
+                const Rect source = EmblemRect(cell);
+                renderer.DrawTexture(*atlas, &source, box.x, box.y, box.w, box.h, tint);
+            };
+            if (atlas == nullptr) {
+                if (calling) {
+                    DrawFrame(renderer, box, kCallingFrameWidth * unit, kCallingFrame);
+                }
+                return;
+            }
+            drawCell(kind == SeatKind::Computer ? ComputerCell(level) : PersonCell(), kUntinted);
+            if (turn) {
+                drawCell(kTurnRingCell, kSeatTurnFrame);
+            }
+            if (calling) {
+                drawCell(kCallingRingCell, kCallingFrame);
+            }
+        }
+
     }  // namespace
 
     MahjongTableComponent* MahjongTableComponent::s_active = nullptr;
@@ -357,6 +381,10 @@ namespace BECore::Mahjong {
         _atlas = CoreManager::GetResourceManager().Load<ITexture>(kAtlasPath);
         if (!_atlas) {
             LOG_WARNING(Format("MahjongTableComponent: the tile atlas '{}' did not load, the tiles are drawn as plain rectangles", kAtlasPath));
+        }
+        _emblems = CoreManager::GetResourceManager().Load<ITexture>(kEmblemAtlasPath);
+        if (!_emblems) {
+            LOG_WARNING(Format("MahjongTableComponent: the emblem atlas '{}' did not load, the seat plates have no emblems", kEmblemAtlasPath));
         }
         LoadTableLayoutSpec();
         Subscribe<ApplicationEvents::ApplicationCleanUpEvent, &MahjongTableComponent::OnApplicationCleanUp>(this);
@@ -904,6 +932,10 @@ namespace BECore::Mahjong {
         _atlas = ResourceHandle<ITexture>(std::move(texture));
     }
 
+    void MahjongTableComponent::SetEmblemTexture(IntrusivePtr<ITexture> texture) {
+        _emblems = ResourceHandle<ITexture>(std::move(texture));
+    }
+
     void MahjongTableComponent::OnDraw() {
         BE_PROFILE_SCOPE("MahjongTable::OnDraw");
         PollTableLayoutSpec();
@@ -1063,8 +1095,9 @@ namespace BECore::Mahjong {
         }
 
         // The seat plates (public data only, so also under the cover, for a spectator and at the end of a hand): the base of each, on the
-        // plate of the seat whose turn it is the gold tint and frame, and on the dealer's (East of the hand shown: the same at the end of the
-        // match as in the hand) the bar of the dealer
+        // plate of the seat whose turn it is the gold tint and frame, on the dealer's (East of the hand shown: the same at the end of the
+        // match as in the hand) the bar of the dealer, then the emblem of the seat with its rings (the turn ring while it is the seat's turn,
+        // the calling ring while its hand is declared); the last claim window's blink and frame go over all of it
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             const Rect& box = layout.zones.seatPlates[seat];
             renderer.DrawFilledRect(box.x, box.y, box.w, box.h, kSeatPlate);
@@ -1072,6 +1105,11 @@ namespace BECore::Mahjong {
                 renderer.DrawFilledRect(box.x, box.y, box.w, box.h, kTurnMark);
                 DrawFrame(renderer, box, kSeatTurnFrameWidth * unit, kSeatTurnFrame);
             }
+            if (hand.SeatWind(seat) == Wind::East) {
+                renderer.DrawFilledRect(box.x, box.y, box.w, kDealerMarkHeight * unit, kDealerMark);
+            }
+            // The same public reads as `MakeSeatPlates` (kind, level, turn, declared hand), without its words: no string is made per frame
+            DrawEmblem(renderer, _emblems.Get(), EmblemBox(box, unit), session.KindOf(seat), session.LevelOf(seat), seat == turnSeat, hand.GetHand(seat).callingDeclared, unit);
             // The last claim window (public): the plate of the seat that won it blinks as a set just laid does, the plate of each seat whose
             // claim lost has a frame
             if (_lostLeft > 0.0f) {
@@ -1081,9 +1119,6 @@ namespace BECore::Mahjong {
                 if (_lostSeats[seat]) {
                     DrawFrame(renderer, box, kSeatTurnFrameWidth * unit, kClaimLostFrame);
                 }
-            }
-            if (hand.SeatWind(seat) == Wind::East) {
-                renderer.DrawFilledRect(box.x, box.y, box.w, kDealerMarkHeight * unit, kDealerMark);
             }
         }
 
