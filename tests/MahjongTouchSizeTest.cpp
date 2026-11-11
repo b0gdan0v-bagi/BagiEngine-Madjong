@@ -406,9 +406,9 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(setup->GetLayout().params.maxScale, UICanvasScaleParams{}.maxScale) << "no cap of our own: the scale is in output pixels and does not know the density";
         const float minTouch = EngineTouchMinimum();
 
-        const char* const rows[] = {"Title", "SeatRow0", "SeatRow1", "SeatRow2", "SeatRow3", "HandsRow", "OptionsRow", "Start"};
-        const char* const segments[] = {"Seat0Person",   "Seat0Computer", "Seat1Person", "Seat1Computer", "Seat2Person", "Seat2Computer", "Seat3Person",
-                                        "Seat3Computer", "SeatLevel2",    "SeatLevel3",  "Hands16",       "Hands8",      "OptionsRow",    "Continue"};
+        const char* const rows[] = {"TitleRow", "SeatRow0", "SeatRow1", "SeatRow2", "SeatRow3", "HandsRow", "OptionsRow", "Start"};
+        const char* const segments[] = {"Seat0Person", "Seat0Computer", "Seat1Person", "Seat1Computer", "Seat2Person", "Seat2Computer", "Seat3Person", "Seat3Computer",
+                                        "SeatLevel2",  "SeatLevel3",    "Hands16",     "Hands8",        "OptionsRow",  "Continue",      "SetupClose"};
         const CanvasScaleMode modes[] = {CanvasScaleMode::ConstantPixelSize, CanvasScaleMode::ScaleWithScreen, CanvasScaleMode::ConstantPhysicalSize};
         size_t cases = 0;
         ForEachMatrixWindow([&](const MatrixWindow& window) {
@@ -467,10 +467,10 @@ namespace BECore::Mahjong::Tests {
         auto setup = Canvas("Setup");
         ASSERT_TRUE(setup);
 
-        // The design size: the plate of 592, the title band of 48, the rows of 64 and a Start of 64
+        // The design size: the plate of 600, the title band of 56 (the close cross is a touch target in it), the rows of 64 and a Start of 64
         LayOutInWindow(*setup, DesignWindow());
-        EXPECT_NEAR(Element("Setup", "Plate")->rect.h, 592.0f, 0.01f);
-        EXPECT_NEAR(Element("Setup", "Title")->rect.h, 48.0f, 0.01f);
+        EXPECT_NEAR(Element("Setup", "Plate")->rect.h, 600.0f, 0.01f);
+        EXPECT_NEAR(Element("Setup", "TitleRow")->rect.h, 56.0f, 0.01f);
         for (const char* row : {"SeatRow0", "SeatRow1", "SeatRow2", "SeatRow3", "HandsRow", "OptionsRow", "Start"}) {
             EXPECT_NEAR(Element("Setup", row)->rect.h, 64.0f, 0.01f) << row;
         }

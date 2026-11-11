@@ -230,6 +230,8 @@
         <string key="rules.match.line3" text="East deals. When East wins, East deals again; when another seat wins, the deal and the winds move on to the next seat. An East repeat counts as a hand."/>
         <string key="rules.match.line4" text="A drawn hand is played again with the same dealer and does not count. After the last hand the seat with the most points wins the match."/>
         <string key="setup.title" text="New game: who plays?"/>
+        <string key="setup.close" text="Close"/>
+        <string key="setup.closeMark" text="×"/>
         <string key="setup.language" text="Language"/>
         <string key="setup.hands" text="Hands"/>
         <string key="setup.hints" text="Hints"/>
@@ -486,6 +488,8 @@
         <string key="rules.match.line3" text="Сдаёт Восток. Если выиграл Восток, он сдаёт снова; если другое место, сдача и ветра переходят к следующему месту. Повтор Востока считается раздачей."/>
         <string key="rules.match.line4" text="Ничья переигрывается с тем же сдающим и не считается. После последней раздачи побеждает место с наибольшим числом очков."/>
         <string key="setup.title" text="Новая игра: кто играет?"/>
+        <string key="setup.close" text="Закрыть"/>
+        <string key="setup.closeMark" text="×"/>
         <string key="setup.language" text="Язык"/>
         <string key="setup.hands" text="Раздачи"/>
         <string key="setup.hints" text="Помощь"/>

@@ -4,6 +4,7 @@
 #include <BECore/Scene/Scene.h>
 #include <BECore/UI/UICanvasComponent.h>
 #include <BECore/UI/UIImage.h>
+#include <CoreSDL/SDLEvents.h>
 #include <Events/InputEvents.h>
 #include <Events/SceneEvents.h>
 #include <Generated/MahjongHudComponent.gen.hpp>
@@ -37,6 +38,7 @@ namespace BECore::Mahjong {
         constexpr eastl::string_view kSetLanguageAction = "MahjongSetLanguage";
         constexpr eastl::string_view kOptionsAction = "MahjongOptions";
         constexpr eastl::string_view kOptionsBackAction = "MahjongOptionsBack";
+        constexpr eastl::string_view kSetupCloseAction = "MahjongSetupClose";
         constexpr eastl::string_view kSetSpeedAction = "MahjongSetSpeed";
         constexpr eastl::string_view kRulesAction = "MahjongRules";
         constexpr eastl::string_view kRulesNextAction = "MahjongRulesNext";
@@ -108,6 +110,7 @@ namespace BECore::Mahjong {
     void MahjongHudComponent::OnAttached() {
         s_active = this;
         SubscribeInScene<InputEvents::ActionEvent, &MahjongHudComponent::OnAction>(this);
+        SubscribeInScene<SDLEvents::KeyDownEvent, &MahjongHudComponent::OnKeyDown>(this);
         SubscribeInScene<SceneEvents::SceneUpdateEvent, &MahjongHudComponent::OnUpdate>(this);
     }
 
@@ -405,6 +408,22 @@ namespace BECore::Mahjong {
         }
     }
 
+    void MahjongHudComponent::OnKeyDown(const SDLEvents::KeyDownEvent& event) {
+        if (event.key != SDLK_ESCAPE || event.repeat) {
+            return;
+        }
+        // Escape steps back one screen: the page `Options` first, then `Setup`; with neither open it is not ours
+        MahjongGame* game = MahjongGame::GetActive();
+        if (game == nullptr || !game->IsSetupOpen()) {
+            return;
+        }
+        if (game->IsOptionsOpen()) {
+            game->CloseOptions();
+        } else {
+            game->CloseSetup();
+        }
+    }
+
     void MahjongHudComponent::OnAction(const InputEvents::ActionEvent& event) {
         BE_PROFILE_SCOPE("MahjongHud::OnAction");
         MahjongGame* game = MahjongGame::GetActive();
@@ -447,6 +466,14 @@ namespace BECore::Mahjong {
         }
         // The rest belongs to the panel: a click that reached it while it is not open is out of date
         if (!game->IsSetupOpen()) {
+            return;
+        }
+        if (action == kSetupCloseAction) {
+            // The cross only goes back to where the player was: nothing of the pending choice is applied, nothing starts. A click that
+            // arrives while the page `Options` is over the panel is out of date
+            if (!game->IsOptionsOpen()) {
+                game->CloseSetup();
+            }
             return;
         }
         if (action == kOptionsAction) {

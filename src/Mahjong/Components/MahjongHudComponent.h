@@ -9,6 +9,10 @@ namespace BECore {
         struct ActionEvent;
     }
 
+    namespace SDLEvents {
+        struct KeyDownEvent;
+    }
+
     namespace SceneEvents {
         struct SceneUpdateEvent;
     }
@@ -40,7 +44,9 @@ namespace BECore::Mahjong {
      * person's seat keeps its pending level for when it turns computer again. This component changes the pending `SeatSetup`, the pending
      * `SeatLevels` or the pending number of hands and the variable, and `MahjongStart` gives the pending seats, levels and number of hands (`handsPerMatch` only: every other setting stays as the game
      * has it) to the game and begins a match with a random seed (`StartRandomMatch`), which closes the panel; a start the game refuses
-     * leaves it open and the seats, levels and settings as they were. `MahjongNewGame` (the HUD button) opens it again, with the pending setup of the
+     * leaves it open and the seats, levels and settings as they were. The cross `SetupClose` (`MahjongSetupClose`) closes the panel with
+     * none of the pending choices applied and no match begun (ignored while `Options` is over it), and Escape does the same on the keyboard, closing `Options` first when it is open;
+     * either way the player is where they were (the table behind the panel). `MahjongNewGame` (the HUD button) opens it again, with the pending setup of the
      * last match. `MahjongOptions` (the full-width button `OptionsRow`) opens the page `Options`. The language row of the page is a
      * `UISegmented` bound to `language` (the id of the language) and emits `MahjongSetLanguage` with the id, which is accepted only while the page is open;
      * `MahjongGame::SetLanguage` applies it to the string table (an id the table does not have is refused and
@@ -114,6 +120,8 @@ namespace BECore::Mahjong {
 
     private:
         void OnAction(const InputEvents::ActionEvent& event);
+        /// Escape closes the page `Options` while it is open, else `Setup` (the same as `MahjongSetupClose`).
+        void OnKeyDown(const SDLEvents::KeyDownEvent& event);
         /// The frame hook of the save: writes what changed since the last frame.
         void OnUpdate(const SceneEvents::SceneUpdateEvent& event);
         /// Sets the variables of the HUD when the version of the session (or the game) moved since the last time.
