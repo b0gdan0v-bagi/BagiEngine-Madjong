@@ -27,7 +27,7 @@ build/ClangmacOS/BagiMahjongArena --help
 **A Release build overwrites the Debug executables and libraries in `build/ClangmacOS/`** (the same folder for every preset). Before the
 next `MahjongTests` run: delete `build/ClangmacOS/lib/*.a` and build again with `macos-debug`. Run the arena in Release: a Debug
 build is much slower. The program is not part of `ctest`; the library it is made of (`src/Mahjong/Arena/`) is tested by
-`ArenaPlayerTest`, `ArenaRunTest`, `ArenaStatsTest` and `ArenaCliTest` in `MahjongTests`.
+`ArenaPlayerTest`, `ArenaRunTest`, `ArenaStatsTest`, `ArenaTableTest` and `ArenaCliTest` in `MahjongTests`.
 
 Commands (`A` is `build/ClangmacOS/BagiMahjongArena`; every run prints the same bytes twice, `--time` apart):
 
@@ -38,10 +38,11 @@ A --focus normal,easy --others random --seeds 1000                 # several pla
 A --focus normal,normal:skipClaimPercent=20 --others normal        # a profile with knobs against the plain Normal
 A --focus normal --seeds 100 --time                                # add the time per decision
 A --focus normal,normal:searchWorlds=8 --others normal --seeds 1000 --jobs 0   # all the cores, the same bytes as --jobs 1
+A --table-stats --first 4000 --seeds 1000 --jobs 14                # the table constants of the own-draws value (below)
 ```
 
 Options: `--focus LIST` (default `normal`), `--others SPEC` (default `random`), `--first N` (default 4000), `--seeds COUNT` (default 250: 1000
-hands per focus player), `--jobs N` (default 1; see below), `--time`, `--help`. Exit code 0 is done, 1 is an action the rules refused (a defect: the seed and the seat are
+hands per focus player), `--jobs N` (default 1; see below), `--time`, `--table-stats`, `--help`. Exit code 0 is done, 1 is an action the rules refused (a defect: the seed and the seat are
 printed), 2 is a bad argument (printed with the usage).
 
 **Threads.** `--jobs N` is N threads in all (1 to 256; `--jobs 0` is one thread per core, the hardware concurrency). The seeds come first: a seed is played whole by
@@ -175,6 +176,15 @@ the command line, add one row to `kProfileKnobs` in `src/Mahjong/Arena/ArenaPlay
 value) and raise `kProfileFieldCount`; the structured binding in `ArenaPlayer.cpp` that names every field stops compiling until it
 lists the new one, and `ArenaPlayerTest` fails when a row does not move its own field. Then `--focus normal,normal:<knob>=<value>`
 measures it against Normal, paired.
+
+## The table statistics
+
+`--table-stats` does not compare players: it plays each seed once with four Normal seats (`--first`, `--seeds`, `--jobs`; it refuses `--focus`,
+`--others` and `--time`) and prints what the own-draws value of `docs/own-draws-ev.md` needs as constants: for each number of declared
+opponents `d` (0..3) the own turns observed, the per mille chance that another seat wins in the next round and the survival after 1..4 rounds
+next to `(1 - h)^i`; the mean score of a winner and the mean standing score of a seat that did not win, East and not East, with intervals; the
+share of the won hands won on a discard, on a self-draw and on a robbed kong. A round is the stretch between a seat's own turn and its next one.
+The same bytes at any `--jobs`; the measured numbers are in `docs/own-draws-ev.md`.
 
 ## What is not built
 

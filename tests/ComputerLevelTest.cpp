@@ -301,6 +301,8 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_LE(percent, kPercentBase) << LevelText(level);
             }
             EXPECT_EQ(profile.searchWorlds, 0) << LevelText(level);
+            EXPECT_EQ(profile.ownDrawsDepth, 0) << LevelText(level) << ": the own-draws value is off in every level";
+            EXPECT_FALSE(profile.ownDrawsPickWait) << LevelText(level);
             if (LevelNumber(level) >= LevelNumber(ComputerLevel::Normal)) {
                 EXPECT_EQ(&profile, &kNormalProfile) << LevelText(level) << ": no player above Normal exists inside the time rule (docs/bot-search.md)";
             } else if (weaker != nullptr) {

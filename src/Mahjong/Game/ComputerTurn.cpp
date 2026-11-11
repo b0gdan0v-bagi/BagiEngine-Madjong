@@ -1,6 +1,7 @@
 #include "ComputerTurn.h"
 
 #include <EASTL/sort.h>
+#include <Mahjong/Game/OwnDraws.h>
 
 namespace BECore::Mahjong {
 
@@ -65,6 +66,16 @@ namespace BECore::Mahjong {
                 return std::nullopt;
             }
             return HandAction::MakeDiscard(PickBest(candidates, rng), declaring);
+        }
+
+        /// Step 2 with `ownDrawsPickWait`: the discard that declares the calling hand and has the best expected value (no rng: ties are
+        /// `ValueWaits`' order).
+        std::optional<HandAction> ChooseValuedDeclaration(const TableView& view) {
+            const eastl::vector<DiscardValue> waits = ValueWaits(view);
+            if (waits.empty()) {
+                return std::nullopt;
+            }
+            return HandAction::MakeDiscard(waits.front().tile, true);
         }
 
         /// Whether the hand without the kong of `action` is no worse than the hand as it is (`current`, its best discard).
@@ -188,6 +199,12 @@ namespace BECore::Mahjong {
             const TileCounts counts = CountTiles(view.own.concealed);
             if (Roll(rng, profile.skipAcceptancePercent)) {
                 return HandAction::MakeDiscard(DiscardWithoutAcceptance(counts, view, rng));
+            }
+            if (profile.ownDrawsDepth > 0) {
+                const eastl::vector<DiscardValue> values = ValueDiscards(view, profile.ownDrawsDepth);
+                if (!values.empty()) {
+                    return HandAction::MakeDiscard(values.front().tile);
+                }
             }
             const DiscardRating best = BestDiscard(counts, MeldCountOf(view), view, rng);
             return HandAction::MakeDiscard(best.tile);
@@ -340,7 +357,8 @@ namespace BECore::Mahjong {
                 return {*searched, StepOfSearched(view, *searched)};
             }
         }
-        if (const std::optional<HandAction> declaration = ChooseWaitingDiscard(view, rng, true)) {
+        const std::optional<HandAction> declaration = profile.ownDrawsPickWait ? ChooseValuedDeclaration(view) : ChooseWaitingDiscard(view, rng, true);
+        if (declaration.has_value()) {
             if (!Roll(rng, profile.skipDeclarationPercent)) {
                 return {*declaration, TurnStep::Declare};
             }
