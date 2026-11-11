@@ -151,6 +151,22 @@
         <string key="hints.why.claim.value" text="A value tile: its set scores a double."/>
         <string key="hints.why.pass.waiting" text="Your hand waits: a claim would break it."/>
         <string key="hints.why.pass.noGain" text="No claim brings the hand closer to ready."/>
+        <string key="coach.would" text="Computer: {advice}"/>
+        <string key="coach.complete" text="Your hand was complete: nothing beats a win."/>
+        <string key="coach.mine.discard" text="Your discard {tile}: steps {before} -&gt; {after}, helps {copies}"/>
+        <string key="coach.mine.wait" text="Your discard {tile}: waiting copies {copies}"/>
+        <string key="coach.mine.undeclared" text="Your discard {tile}, not declared: waiting copies {copies}"/>
+        <string key="coach.mine.kong" text="Your kong of {tile}: steps {before} -&gt; {after}, helps {copies}"/>
+        <string key="coach.mine.pung" text="Your pung of {tile}: steps {before} -&gt; {after}, helps {copies}"/>
+        <string key="coach.mine.chow" text="Your chow {first} - {third}: steps {before} -&gt; {after}, helps {copies}"/>
+        <string key="coach.mine.pass" text="You let the discard go."/>
+        <string key="coach.computer.discard" text="Computer's discard {tile}: steps {before} -&gt; {after}, helps {copies}"/>
+        <string key="coach.computer.wait" text="Computer's discard {tile}: waiting copies {copies}"/>
+        <string key="coach.computer.kong" text="Computer's kong of {tile}: steps {before} -&gt; {after}, helps {copies}"/>
+        <string key="coach.computer.pung" text="Computer's pung of {tile}: steps {before} -&gt; {after}, helps {copies}"/>
+        <string key="coach.computer.chow" text="Computer's chow {first} - {third}: steps {before} -&gt; {after}, helps {copies}"/>
+        <string key="coach.computer.pass" text="Computer passes: the hand stays at {before} steps."/>
+        <string key="coach.computer.waiting" text="Computer passes: your hand was waiting."/>
         <string key="cover.text" text="Pass the screen to {handoffSeat}"/>
         <string key="cover.show" text="Show"/>
         <string key="panel.round" text="{wind} {n}"/>
@@ -414,6 +430,22 @@
         <string key="hints.why.claim.value" text="Ценная кость: набор даёт удвоение."/>
         <string key="hints.why.pass.waiting" text="Рука уже ждёт: взяв сброс, вы её сломаете."/>
         <string key="hints.why.pass.noGain" text="Взятие сброса не приближает руку к готовности."/>
+        <string key="coach.would" text="Компьютер: {advice}"/>
+        <string key="coach.complete" text="Ваша рука была собрана: лучше победы нет."/>
+        <string key="coach.mine.discard" text="Ваш сброс {tile}: шагов {before} -&gt; {after}, помогут {copies}"/>
+        <string key="coach.mine.wait" text="Ваш сброс {tile}: не видно копий {copies}"/>
+        <string key="coach.mine.undeclared" text="Ваш сброс {tile} без заявки: не видно копий {copies}"/>
+        <string key="coach.mine.kong" text="Ваш конг {tile}: шагов {before} -&gt; {after}, помогут {copies}"/>
+        <string key="coach.mine.pung" text="Ваш пун {tile}: шагов {before} -&gt; {after}, помогут {copies}"/>
+        <string key="coach.mine.chow" text="Ваше чи {first} - {third}: шагов {before} -&gt; {after}, помогут {copies}"/>
+        <string key="coach.mine.pass" text="Вы пропустили сброс."/>
+        <string key="coach.computer.discard" text="Сброс компьютера {tile}: шагов {before} -&gt; {after}, помогут {copies}"/>
+        <string key="coach.computer.wait" text="Сброс компьютера {tile}: не видно копий {copies}"/>
+        <string key="coach.computer.kong" text="Конг компьютера {tile}: шагов {before} -&gt; {after}, помогут {copies}"/>
+        <string key="coach.computer.pung" text="Пун компьютера {tile}: шагов {before} -&gt; {after}, помогут {copies}"/>
+        <string key="coach.computer.chow" text="Чи компьютера {first} - {third}: шагов {before} -&gt; {after}, помогут {copies}"/>
+        <string key="coach.computer.pass" text="Компьютер пропустил бы: шагов до готовности {before}."/>
+        <string key="coach.computer.waiting" text="Компьютер пропустил бы: ваша рука уже ждёт."/>
         <string key="cover.text" text="Передайте экран: {handoffSeat}"/>
         <string key="cover.show" text="Показать"/>
         <string key="panel.round" text="{wind} {n}"/>

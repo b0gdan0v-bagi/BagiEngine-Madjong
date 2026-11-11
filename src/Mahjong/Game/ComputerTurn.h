@@ -105,6 +105,10 @@ namespace BECore::Mahjong {
     /// acceptance of the hand without the kong (the four tiles, or the one drawn, out, a meld more); `tile` invalid.
     [[nodiscard]] DiscardRating RateKong(const TableView& view, const TileCounts& counts, const HandAction& action);
 
+    /// Step 3's test: whether the hand without the kong of `action` is no worse than the hand as it is (`current`, its best discard): a lower
+    /// shanten, or the same one (at shanten 0 only with no lower acceptance). The coach judges a person's kong by it.
+    [[nodiscard]] bool KongIsNoWorse(const TableView& view, const TileCounts& counts, const HandAction& action, const DiscardRating& current);
+
     /// The rule of the turn that decided (the numbers of the list in `ChooseTurnAction`).
     enum class TurnStep {
         DeclareWin,   // 1

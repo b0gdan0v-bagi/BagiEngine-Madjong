@@ -17,6 +17,7 @@ Everything here is plain C++ over the model, a `TableView` or a `UIStrings&`: no
 | `ScoreText`, `MoveText`, `RulesText` | the sentences of the end screens, the move line and the 13 rules pages |
 | `ActionButtons` | `SpecOf` (element, action, value, word and hint keys, pictured tiles), `ButtonOf`, `MakeActionButtons(legal, pendingTile)`, `ChowTilesTaken` (the hand tiles a chow takes) |
 | `Hints`, `CallingMarks` | `WaitingTiles`, `DeclaringDiscards`, `AdviceFor` (= `ComputerPlayer(kAdviceSeed)`, Normal), `AdviceText`, `HintsApply`; `ExplainAdviceFor` / `ReasonLines` (the reasons of the advice as at most `kMaxReasonLines` sentences, keys `hints.why.*`, numbers from `Game/ComputerExplain.h`, never a plural form: a number follows a colon; a discard step with a declared opponent adds the danger line, and the tie line says it when the advice player's `readDanger` decided); `KeepsWaitingDiscards` |
+| `Coach` | `HintsMode` (`Off | Hints | Coach`), `JudgeMove(before, taken)` (nullopt when a person's accepted action agrees with `AdviceFor(before)` or has its numbers; else a `CoachNote`: both actions and both sides' numbers), `CoachNoteLines` (at most `kMaxCoachLines`, keys `coach.*`) |
 | `DangerMarks` | `DangerMarks(view)`: per held kind `Safe` / `Risky` / `Dangerous` from `Game/DiscardDanger.h` (a `Low` kind none), all none unless an opponent has declared and the viewer is to discard; the hints draw a bar on those tiles |
 | `WindMarks` | `WindMarkOf(tile, seatWind, roundWind)`: which hand tiles are the own wind, the round wind or both (the table draws a bar on them) |
 | `AnimationSpeed.h` | the player's speed Slow / Normal / Fast: `SpeedFactor`, `ScaledSeconds`, `SpeedText` / `TryParseSpeed`; the base times stay the Normal ones |
@@ -28,6 +29,7 @@ Everything here is plain C++ over the model, a `TableView` or a `UIStrings&`: no
 ## Rules
 
 - **No peeking.** Hints, marks and advice read only `MakeTableView(hand, viewer)` or public data (open melds, the pile, declarations, `Moves()`), never another seat's hand or the live wall. Tests compare models that differ only in hidden data.
+- **The coach judges by the chooser's own pieces** (`ExplainAdviceFor`, `RateDiscards`, `WaitingDiscards`, `RateKong` / `KongIsNoWorse`, `RateClaims`), never a second rule, and only on the view the person had before the action: equal numbers agree, so the note never blames a tie. The advice that ends the hand (`DeclareWin`, a mahjong claim) differs from everything else.
 - **Words:** one key with `{placeholders}` per sentence; word order belongs to the translation, never pieces joined in code. Rules pages never retype a number or a button word: numbers are placeholders filled from the rule constants, button words come from `WordOf` (`RulesTextTest` fails on a digit outside a placeholder).
 
 ## The table layout
