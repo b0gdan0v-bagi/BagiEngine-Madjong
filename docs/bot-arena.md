@@ -255,6 +255,23 @@ value) and raise `kProfileFieldCount`; the structured binding in `ArenaPlayer.cp
 lists the new one, and `ArenaPlayerTest` fails when a row does not move its own field. Then `--focus normal,normal:<knob>=<value>`
 measures it against Normal, paired.
 
+## The danger tie-break (`readDanger`)
+
+`A --focus normal,normal:readDanger=1 --others normal --jobs 0 --seeds 1000 --first F`, Release, paired against plain Normal (decided
+before the run: on in Normal only if wins and points are not negative beyond their interval on both ranges and the pooled points are
+not below 0):
+
+```
+                          points/hand           wins %             gave win %
+F=4000,  others normal    -1.09 +- 1.30         +0.05 +- 0.39      -1.77 +- 0.63 significant
+F=12000, others normal    +0.03 +- 1.52         +0.33 +- 0.36      -1.70 +- 0.61 significant
+F=4000,  others random    -0.59 +- 1.24         +0.00 +- 0.30      -0.17 +- 0.20
+```
+
+The seat gives the win on about 1.7 hands in 100 fewer, and that does not show in wins or points: the two ranges pool to -0.53 points a
+hand, so the rule says off and no level plays it (levels 1..4 stay off by design). The hints, the reasons and the marks read the danger
+whatever the knob says.
+
 ## The table statistics
 
 `--table-stats` does not compare players: it plays each seed once with four Normal seats (`--first`, `--seeds`, `--jobs`; it refuses `--focus`,
