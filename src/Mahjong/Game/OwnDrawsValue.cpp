@@ -11,15 +11,14 @@ namespace BECore::Mahjong {
         /// The survival of one round in `kOwnDrawsProbBase` per thousandth of the win chance.
         constexpr int64_t kProbPerPermille = kOwnDrawsProbBase / kPermilleBase;
 
-        /// `numerator / denominator` rounded half away from zero (`RoundedDiv` of the magnitude); `denominator` is positive.
-        int64_t RoundedDivSigned(int64_t numerator, int64_t denominator) noexcept {
-            return numerator < 0 ? -RoundedDiv(-numerator, denominator) : RoundedDiv(numerator, denominator);
-        }
-
     }  // namespace
 
     int64_t RoundedDiv(int64_t numerator, int64_t denominator) noexcept {
         return (numerator + denominator / 2) / denominator;
+    }
+
+    int64_t RoundedDivSigned(int64_t numerator, int64_t denominator) noexcept {
+        return numerator < 0 ? -RoundedDiv(-numerator, denominator) : RoundedDiv(numerator, denominator);
     }
 
     int64_t WinPayoff(int score, bool seatIsEast) noexcept {

@@ -43,6 +43,9 @@ namespace BECore::Mahjong {
     /// `numerator / denominator` rounded half up; both are not negative and `denominator` is positive. The one rounding of this file.
     [[nodiscard]] int64_t RoundedDiv(int64_t numerator, int64_t denominator) noexcept;
 
+    /// `numerator / denominator` rounded half away from zero (`RoundedDiv` of the magnitude); `denominator` is positive.
+    [[nodiscard]] int64_t RoundedDivSigned(int64_t numerator, int64_t denominator) noexcept;
+
     /// What a win of `score` points pays the seat, in milli-points: the winner receives `score` from each of the three others, and a
     /// payment with East is `kEastPaymentFactor` times larger. So East gets three doubled payments and any other seat one doubled (East's)
     /// and two plain ones. Derived from `kEastPaymentFactor`; `Settle` agrees.

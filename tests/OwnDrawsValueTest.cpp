@@ -54,6 +54,15 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(RoundedDiv(5, 1), 5);
     }
 
+    TEST(OwnDrawsValueTest, TheSignedRoundingIsHalfAwayFromZero) {
+        EXPECT_EQ(RoundedDivSigned(1, 2), 1);
+        EXPECT_EQ(RoundedDivSigned(-1, 2), -1);
+        EXPECT_EQ(RoundedDivSigned(-4, 3), -1);
+        EXPECT_EQ(RoundedDivSigned(-5, 3), -2);
+        EXPECT_EQ(RoundedDivSigned(5, 3), 2);
+        EXPECT_EQ(RoundedDivSigned(0, 3), 0);
+    }
+
     TEST(OwnDrawsValueTest, AWinPaysWhatSettleGivesTheWinner) {
         for (const int score : kScores) {
             for (Seat winner = 0; winner < kSeatCount; ++winner) {
