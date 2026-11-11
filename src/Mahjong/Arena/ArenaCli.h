@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Mahjong/Arena/ArenaLogs.h>
+#include <Mahjong/Arena/ArenaLogsReport.h>
 #include <Mahjong/Arena/ArenaReport.h>
 
 namespace BECore::Mahjong::Arena {
@@ -29,6 +30,8 @@ namespace BECore::Mahjong::Arena {
         bool logMode = false;
         eastl::string logsPath;
         bool check = false;
+        /// `--differences N`: how many of the differences between the people and the first bot the log report lists.
+        int differences = kDefaultDifferences;
     };
 
     /// The text of `--help`: the options with their defaults, the exit codes and the interval rule in two lines.
@@ -41,8 +44,8 @@ namespace BECore::Mahjong::Arena {
      * `easy:skipClaimPercent=20,skipDeclarationPercent=10,normal` is two players), `--others SPEC`, `--first N`, `--seeds COUNT`,
      * `--jobs N` (1 to `kMaxJobs` threads in all, for the seeds and then the worlds of a search decision; 0 is the hardware concurrency, at least 1), `--time` and `--help` (which wins over everything
      * after it), `--logs PATH` (the log mode: `--first`, `--seeds`, `--others` and `--time` are refused with it, and so is a `random` in `--focus`, which names the bots the people are compared with)
-     * and `--check` (the log mode only). A bad argument is an error text that names it: an unknown option, a missing or malformed value, a bad player spec, a range of seeds that `ValidateArenaConfig`
-     * refuses, a word that is no option.
+     * `--check` and `--differences N` (the log mode only; `--jobs` then plays whole matches in threads). A bad argument is an error text that names it: an unknown option, a missing or malformed
+     * value, a bad player spec, a range of seeds that `ValidateArenaConfig` refuses, a word that is no option.
      */
     [[nodiscard]] std::expected<ArenaArgs, eastl::string> ParseArenaArgs(eastl::span<const std::string_view> args);
 
@@ -65,8 +68,8 @@ namespace BECore::Mahjong::Arena {
      * @brief The same program with a reader of files, which `--logs` needs (the overload above has none: `--logs` is then `kExitCannotRead`).
      *
      * `--logs PATH --check` prints `FormatCheckLines` (exit `kExitOk` even when files are bad); `--logs PATH` prints `FormatCorpusSummary`
-     * of the logs that replay; a path the source cannot read prints its error to `err` (`kExitCannotRead`). The same files give the same
-     * bytes, whatever order the source lists them in.
+     * of the logs that replay and then `FormatLogAnalysis` (the agreement with the bots of `--focus`, the real-game numbers, the differences); a path the source cannot read prints its error to `err`
+     * (`kExitCannotRead`). The same files give the same bytes, whatever order the source lists them in.
      */
     [[nodiscard]] int RunArenaCli(eastl::span<const std::string_view> args, const LogSource& source, ArenaCliOutput& output);
 

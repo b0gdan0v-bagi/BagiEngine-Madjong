@@ -72,6 +72,21 @@ namespace BECore::Mahjong::Tests {
         return text;
     }
 
+    /// A log of a format before the origin: version 4, no `platform`, `build` or `gameVersion`.
+    inline eastl::string LogTextVersionFour(const eastl::vector<MatchLogEvent>& events) {
+        constexpr int kOlderVersion = 4;
+        Json start = EventToJson(events.front());
+        start["version"] = kOlderVersion;
+        start.erase("platform");
+        start.erase("build");
+        start.erase("gameVersion");
+        eastl::string text = DumpJson(start);
+        text.push_back('\n');
+        const eastl::vector<MatchLogEvent> rest(events.begin() + 1, events.end());
+        text.append(LogText(rest));
+        return text;
+    }
+
     inline int CountEvents(const eastl::vector<MatchLogEvent>& events, MatchLogKind kind) {
         int count = 0;
         for (const MatchLogEvent& event : events) {

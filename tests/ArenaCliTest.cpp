@@ -328,6 +328,60 @@ namespace BECore::Mahjong::Arena {
         EXPECT_EQ(other.out, one.out);
     }
 
+    TEST(ArenaCliTest, TheDifferencesOptionIsReadAndNeedsTheLogMode) {
+        EXPECT_EQ(ArgsOf({"--logs", "x"}).differences, kDefaultDifferences);
+        EXPECT_EQ(ArgsOf({"--logs", "x", "--differences", "0"}).differences, 0);
+        EXPECT_EQ(ArgsOf({"--differences", "7", "--logs", "x"}).differences, 7);
+        EXPECT_NE(ErrorOf({"--differences", "3"}).find("--differences needs --logs"), std::string::npos);
+        EXPECT_NE(ErrorOf({"--logs", "x", "--differences", "-1"}).find("--differences: \"-1\" is not a whole number"), std::string::npos);
+        EXPECT_NE(ErrorOf({"--logs", "x", "--differences", "many"}).find("--differences: \"many\" is not a whole number"), std::string::npos);
+        EXPECT_NE(ErrorOf({"--logs", "x", "--differences"}).find("--differences needs a value"), std::string::npos);
+    }
+
+    TEST(ArenaCliTest, TheUsageSaysWhatTheLogReportHolds) {
+        const eastl::string usage = ArenaUsage();
+        EXPECT_TRUE(Contains(usage, "--differences N"));
+        EXPECT_TRUE(Contains(usage, "the agreement of the people with the bots"));
+        EXPECT_TRUE(Contains(usage, "the logged results by the level of the computers met"));
+        EXPECT_TRUE(Contains(usage, "plays whole matches in threads"));
+    }
+
+    TEST(ArenaCliTest, TheLogReportFollowsTheSummaryAndTheThreadsDoNotChangeTheBytes) {
+        ArenaCliOutput single;
+        EXPECT_EQ(RunLogs({"--logs", "folder", "--jobs", "1"}, SourceOf(SomeLogs()), single), kExitOk);
+        EXPECT_TRUE(single.err.empty());
+        const std::string text(single.out.c_str());
+        const size_t summary = text.find("Match logs\n");
+        const size_t agreement = text.find("Agreement of the people with the bots");
+        const size_t real = text.find("Real games by the level of the computers met");
+        const size_t differences = text.find("Differences from normal:");
+        EXPECT_EQ(summary, size_t{0});
+        EXPECT_LT(summary, agreement);
+        EXPECT_LT(agreement, real);
+        EXPECT_LT(real, differences);
+        for (const std::string_view jobs : {"2", "5", "0"}) {
+            ArenaCliOutput threaded;
+            EXPECT_EQ(RunLogs({"--logs", "folder", "--jobs", jobs}, SourceOf(SomeLogs()), threaded), kExitOk) << std::string(jobs);
+            EXPECT_EQ(threaded.out, single.out) << "jobs " << std::string(jobs);
+        }
+    }
+
+    TEST(ArenaCliTest, TheDifferencesOptionCapsTheListAndCheckPrintsNoReport) {
+        ArenaCliOutput none;
+        EXPECT_EQ(RunLogs({"--logs", "folder", "--focus", "easy", "--differences", "0"}, SourceOf(SomeLogs()), none), kExitOk);
+        EXPECT_TRUE(Contains(none.out, " listed (log order)\n"));
+        EXPECT_TRUE(Contains(none.out, ", 0 listed"));
+        EXPECT_FALSE(Contains(none.out, "--hand"));
+        ArenaCliOutput one;
+        EXPECT_EQ(RunLogs({"--logs", "folder", "--focus", "easy", "--differences", "1"}, SourceOf(SomeLogs()), one), kExitOk);
+        EXPECT_TRUE(Contains(one.out, ", 1 listed"));
+        EXPECT_EQ(std::count(one.out.begin(), one.out.end(), '\n') - std::count(none.out.begin(), none.out.end(), '\n'), 2);
+        // --check is only the verdicts.
+        ArenaCliOutput checked;
+        EXPECT_EQ(RunLogs({"--logs", "folder", "--check", "--differences", "1"}, SourceOf(SomeLogs()), checked), kExitOk);
+        EXPECT_FALSE(Contains(checked.out, "Agreement"));
+    }
+
     TEST(ArenaCliTest, APathThatCannotBeReadIsExitOne) {
         const LogSource missing = [](std::string_view path) -> std::expected<eastl::vector<LogFile>, eastl::string> {
             return std::unexpected(eastl::string("cannot read \"") + eastl::string(path.data(), path.size()) + "\"");

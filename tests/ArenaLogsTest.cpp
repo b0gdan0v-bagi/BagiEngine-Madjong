@@ -18,7 +18,6 @@ namespace BECore::Mahjong::Arena {
         constexpr uint32_t kSeedB = 77;
         constexpr uint32_t kSeedC = 123;
         constexpr int kGivenUpAfter = 1;
-        constexpr int kOlderVersion = 4;
 
         std::string_view View(const eastl::string& text) {
             return std::string_view(text.data(), text.size());
@@ -39,20 +38,6 @@ namespace BECore::Mahjong::Arena {
                 }
             }
             return events.size();
-        }
-
-        /// A log of a format before the origin: version 4, no `platform`, `build` or `gameVersion`.
-        eastl::string VersionFourText(const eastl::vector<MatchLogEvent>& events) {
-            Json start = EventToJson(events.front());
-            start["version"] = kOlderVersion;
-            start.erase("platform");
-            start.erase("build");
-            start.erase("gameVersion");
-            eastl::string text = DumpJson(start);
-            text.push_back('\n');
-            eastl::vector<MatchLogEvent> rest(events.begin() + 1, events.end());
-            text.append(LogText(rest));
-            return text;
         }
 
         LogFile FileOf(const char* name, const eastl::string& text) {
@@ -92,7 +77,7 @@ namespace BECore::Mahjong::Arena {
 
     TEST(ArenaLogsTest, ALogOfAnOlderVersionIsOkWithAnUnknownPlatform) {
         const eastl::vector<MatchLogEvent> events = PlayLog(PersonMatch(kSeedB, MatchPlatform::Web, "a1b2c3d"));
-        const LogVerdict verdict = CheckMatchLog(View(VersionFourText(events)));
+        const LogVerdict verdict = CheckMatchLog(View(LogTextVersionFour(events)));
         ASSERT_TRUE(verdict.ok) << verdict.reason.c_str();
         EXPECT_EQ(verdict.events.front().origin.platform, MatchPlatform::Unknown);
         EXPECT_TRUE(verdict.events.front().origin.build.empty());
@@ -180,7 +165,7 @@ namespace BECore::Mahjong::Arena {
         const eastl::vector<MatchLogEvent> second = PlayLog(mixed);
         const eastl::vector<MatchLogEvent> third = PlayLog(given);
         const eastl::vector<MatchLogEvent> older = PlayLog(PersonMatch(kSeedC, MatchPlatform::Web, "z"));
-        const LogSource source = SourceOf({FileOf("1.jsonl", LogText(first)), FileOf("2.jsonl", LogText(second)), FileOf("3.jsonl", LogText(third)), FileOf("4.jsonl", VersionFourText(older)),
+        const LogSource source = SourceOf({FileOf("1.jsonl", LogText(first)), FileOf("2.jsonl", LogText(second)), FileOf("3.jsonl", LogText(third)), FileOf("4.jsonl", LogTextVersionFour(older)),
                                            FileOf("5.jsonl", "nonsense"), FileOf("6.jsonl", "")});
         const auto logs = ReadLogs(source, ".");
         ASSERT_TRUE(logs.has_value());
