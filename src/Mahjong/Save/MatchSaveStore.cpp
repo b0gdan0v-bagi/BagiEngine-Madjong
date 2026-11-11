@@ -78,6 +78,7 @@ namespace BECore::Mahjong {
     }
 
     bool MatchSaveStore::SaveMatch(const eastl::vector<MatchLogEvent>& events) {
+        BE_PROFILE_SCOPE("MatchSave::SaveMatch");
         if (!IsOn()) {
             return false;
         }
@@ -87,6 +88,7 @@ namespace BECore::Mahjong {
     }
 
     std::expected<eastl::vector<MatchLogEvent>, SaveProblem> MatchSaveStore::LoadMatch() const {
+        BE_PROFILE_SCOPE("MatchSave::LoadMatch");
         if (!IsOn()) {
             return std::unexpected(SavingIsOff());
         }

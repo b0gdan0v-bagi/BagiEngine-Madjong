@@ -35,6 +35,7 @@ namespace BECore::Mahjong {
     }
 
     MatchStatus TableSession::StartWith(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats, const SeatLevels& levels, const LevelProfile* profile) {
+        BE_PROFILE_SCOPE("TableSession::StartMatch");
         if (const MatchStatus started = _match.Start(settings, seed); !started) {
             return started;
         }
@@ -67,6 +68,7 @@ namespace BECore::Mahjong {
     }
 
     ReplayStatus TableSession::ResumeMatch(const eastl::vector<MatchLogEvent>& events, const SeatSetup& seats, const SeatLevels& levels) {
+        BE_PROFILE_SCOPE("TableSession::ResumeMatch");
         Match scratch;
         if (ReplayStatus checked = ReplayMatchLog(events, scratch); !checked) {
             return checked;
@@ -117,6 +119,7 @@ namespace BECore::Mahjong {
     }
 
     std::expected<ComputerStepJob, HandError> TableSession::MakeComputerJob() {
+        BE_PROFILE_SCOPE("TableSession::MakeComputerJob");
         if (GetPhase() != SessionPhase::Playing || !_table) {
             return std::unexpected(HandError::WrongPhase);
         }
@@ -136,6 +139,7 @@ namespace BECore::Mahjong {
     }
 
     StepResult TableSession::ApplyComputerJob(const ComputerStepJob& job) {
+        BE_PROFILE_SCOPE("TableSession::ApplyComputerJob");
         const HandAction action = job.Action();
         const StepResult step = ComputerTable::FinishStep(_match.Hand(), job.Actor(), action);
         if (step) {
@@ -188,6 +192,7 @@ namespace BECore::Mahjong {
     }
 
     HandStatus TableSession::PerformPerson(const HandAction& action) {
+        BE_PROFILE_SCOPE("TableSession::PerformPerson");
         if (GetPhase() != SessionPhase::Playing) {
             return std::unexpected(HandError::WrongPhase);
         }
@@ -208,6 +213,7 @@ namespace BECore::Mahjong {
     }
 
     std::expected<HandSettlement, MatchError> TableSession::NextHand() {
+        BE_PROFILE_SCOPE("TableSession::NextHand");
         std::expected<HandSettlement, MatchError> settled = _match.EndHand();
         if (settled) {
             if (_sink != nullptr) {

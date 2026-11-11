@@ -90,6 +90,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongHintsComponent::OnDraw() {
+        BE_PROFILE_SCOPE("MahjongHints::OnDraw");
         const MahjongGame* game = MahjongGame::GetActive();
         if (game != nullptr && game->IsOptionsOpen()) {
             PublishChoice(*game);  // an equal value changes nothing (the version of the variables stays)
@@ -109,6 +110,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongHintsComponent::Refresh(const MahjongGame* game, const Key& key) {
+        BE_PROFILE_SCOPE("MahjongHints::Refresh");
         _known = true;
         _key = key;
         _row.clear();
@@ -246,6 +248,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongHintsComponent::OnAction(const InputEvents::ActionEvent& event) {
+        BE_PROFILE_SCOPE("MahjongHints::OnAction");
         MahjongGame* game = MahjongGame::GetActive();
         if (game == nullptr) {
             return;

@@ -36,6 +36,7 @@ namespace BECore::Mahjong {
     }
 
     MatchStatus Match::DealHand(const MatchProgress& progress, HandModel& hand) {
+        BE_PROFILE_SCOPE("Match::DealHand");
         Wall wall = MakeWall(_rng, _settings, progress.east);
         const HandStatus begun = hand.Begin(_settings, eastl::move(wall), MakeSeatWinds(progress.east), RoundWindOf(progress.handsPlayed, _settings));
         if (!begun.has_value()) {
@@ -63,6 +64,7 @@ namespace BECore::Mahjong {
     }
 
     std::expected<HandSettlement, MatchError> Match::EndHand() {
+        BE_PROFILE_SCOPE("Match::EndHand");
         if (_phase != MatchPhase::InHand) {
             return std::unexpected(MatchError::NotInHand);
         }

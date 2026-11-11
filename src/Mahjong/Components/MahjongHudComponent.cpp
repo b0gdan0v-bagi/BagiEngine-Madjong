@@ -112,12 +112,14 @@ namespace BECore::Mahjong {
     }
 
     void MahjongHudComponent::OnUpdate(const SceneEvents::SceneUpdateEvent& /*event*/) {
+        BE_PROFILE_SCOPE("MahjongHud::OnUpdate");
         if (MahjongGame* game = MahjongGame::GetActive(); game != nullptr) {
             game->FlushSave();
         }
     }
 
     void MahjongHudComponent::OnDraw() {
+        BE_PROFILE_SCOPE("MahjongHud::OnDraw");
         const MahjongGame* game = MahjongGame::GetActive();
         PublishNumbers(game);
         PublishSetup(game);
@@ -127,6 +129,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongHudComponent::PublishNumbers(const MahjongGame* game) {
+        BE_PROFILE_SCOPE("MahjongHud::PublishNumbers");
         const bool started = game != nullptr && game->GetMatch().GetPhase() != MatchPhase::NotStarted;
         if (!started) {
             _numbersOf = nullptr;
@@ -336,6 +339,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongHudComponent::PublishRules(const MahjongGame* game) {
+        BE_PROFILE_SCOPE("MahjongHud::PublishRules");
         const bool open = game != nullptr && game->IsRulesOpen();
         if (!open) {
             _rulesPage = 0;
@@ -367,6 +371,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongHudComponent::PublishEndScreens(const MahjongGame* game) {
+        BE_PROFILE_SCOPE("MahjongHud::PublishEndScreens");
         const bool started = game != nullptr && game->GetMatch().GetPhase() != MatchPhase::NotStarted;
         const bool handOver = started && game->GetSession().GetPhase() == SessionPhase::HandOver;
         const bool matchOver = started && game->GetMatch().GetPhase() == MatchPhase::Finished;
@@ -401,6 +406,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongHudComponent::OnAction(const InputEvents::ActionEvent& event) {
+        BE_PROFILE_SCOPE("MahjongHud::OnAction");
         MahjongGame* game = MahjongGame::GetActive();
         if (game == nullptr) {
             return;
