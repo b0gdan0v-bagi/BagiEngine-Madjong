@@ -6,6 +6,7 @@
 #include <Mahjong/Game/TableSession.h>
 #include <Mahjong/MahjongGameControl.h>
 #include <Mahjong/MatchLogWriter.h>
+#include <Mahjong/MatchUpload.h>
 #include <Mahjong/Save/MatchSave.h>
 #include <Mahjong/Save/MatchSaveStore.h>
 #include <Mahjong/Table/AnimationSpeed.h>
@@ -91,6 +92,16 @@ namespace BECore::Mahjong {
         /// `Path()` is the file of the current (or last) match.
         const MatchLogWriter& GetMatchLog() const {
             return _log;
+        }
+
+        /// The recorder of the match for the tester upload (`MatchUpload.h`), in the session's sink chain between the save recorder and the
+        /// log writer. Off until a sink, a match id source (set here) and a consent of `Granted` are given: with the defaults nothing is
+        /// buffered or sent. The glue that has the real sink and the consent UI sets them through this.
+        MatchUploader& GetUpload() {
+            return _upload;
+        }
+        const MatchUploader& GetUpload() const {
+            return _upload;
         }
 
         /// The settings of the next match; a match in progress keeps the ones it was started with.
@@ -228,7 +239,8 @@ namespace BECore::Mahjong {
         AnimationSpeed _animationSpeed = kDefaultAnimationSpeed;
         PoolString _language = PoolString::Intern(kDefaultLanguage);
         MatchLogWriter _log;      // before _session: the session reports to it, so it goes last
-        MatchRecorder _recorder;  // the session's sink; forwards to _log
+        MatchUploader _upload;    // forwards to _log
+        MatchRecorder _recorder;  // the session's sink; forwards to _upload
         MatchSaveStore _store;
         uint64_t _savedCounter = 0;    // the recorder's counter at the last write of the match slot
         MahjongPrefsSave _savedPrefs;  // what the prefs slot holds (the defaults while there is none)

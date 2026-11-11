@@ -60,7 +60,7 @@ namespace BECore::Mahjong {
     }
 
     bool MatchUploader::CanRecord() const {
-        return _consent == UploadConsent::Granted && _sink != nullptr && static_cast<bool>(_idSource);
+        return _wanted && _consent == UploadConsent::Granted && _sink != nullptr && static_cast<bool>(_idSource);
     }
 
     void MatchUploader::Drop() {

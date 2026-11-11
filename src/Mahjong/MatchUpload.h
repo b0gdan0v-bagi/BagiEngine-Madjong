@@ -37,8 +37,8 @@ namespace BECore::Mahjong {
      * @brief Keeps the match in progress in memory, cut in pieces, and hands the pieces to a sink. A match log sink, so it sits in the chain
      * of a session; every event also goes to `next`, whatever the consent.
      *
-     * **Off means nothing leaves.** A match is recorded only if the consent is `Granted` and a sink and a match id source are set **at its
-     * `Start`** (and the source gives a non-empty id). Otherwise nothing is buffered and nothing is sent, and no id is drawn.
+     * **Off means nothing leaves.** A match is recorded only if the consent is `Granted`, `SetRecording` allows it and a sink and a match id
+     * source are set **at its `Start`** (and the source gives a non-empty id). Otherwise nothing is buffered and nothing is sent, and no id is drawn.
      *
      * - A piece is cut after each `Settlement` (a closed tab loses at most the last hand) and at `End` (`Ended`). A new `Start`, or
      *   `Abandon()`, while a match is recorded sends what is buffered as an `Abandoned` piece (an empty remainder too, so that the store
@@ -65,6 +65,12 @@ namespace BECore::Mahjong {
         /// of the seed, the time or the machine in it), as the seed is chosen by the game and never here.
         void SetMatchIdSource(std::function<eastl::string()> source);
 
+        /// Whether the matches that begin from now on may be recorded (the flag as it was at their `Start`, like `MatchRecorder`); default
+        /// true. The game turns it off for the match it deals behind the panel, which nobody plays.
+        void SetRecording(bool wanted) noexcept {
+            _wanted = wanted;
+        }
+
         /// The match in progress is given up (the game stops): sends the `Abandoned` piece when one is recorded, else does nothing
         void Abandon();
 
@@ -85,6 +91,7 @@ namespace BECore::Mahjong {
         IMatchUploadSink* _sink = nullptr;
         UploadConsent _consent = UploadConsent::Unasked;
         bool _remembered = false;
+        bool _wanted = true;
         std::function<eastl::string()> _idSource;
         bool _recording = false;
         eastl::string _matchId;
