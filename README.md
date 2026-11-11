@@ -4,7 +4,7 @@ Classic Chinese mahjong for four seats on the [BagiEngine](https://github.com/b0
 
 ## Principles
 
-- **Zero allocations in a steady frame.** A frame in which nothing changed allocates nothing, in every state of the game; what the table shows is made again only when the match moved. `MahjongTableAllocTest` holds it in the `macos-profile` build; the engine's rule: `engine/README.md`.
+- **Zero allocations in a steady frame:** a frame in which nothing changed allocates nothing (`MahjongTableAllocTest`).
 - **No peeking:** computer players, hints and the control API see only what their seat could see.
 - **One seed, one match on every platform:** the rules draw only from their own seeded generator.
 
