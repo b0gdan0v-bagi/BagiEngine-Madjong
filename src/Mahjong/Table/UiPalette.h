@@ -18,7 +18,8 @@ namespace BECore::Mahjong {
      * gold family (`kTurnMark`, `kPendingFrame`, the hints `kDeclareMark`, `kAdvisedFrame`, and the marks of the last move `kLastDiscardMark`, `kDrawnTileMark`, `kClaimedEdge`, `kClaimHighlight`, the
      * frame of a seat plate whose claim lost `kClaimLostFrame`, the frame of a declared hand `kCallingFrame` and the bar of its safe discards `kKeepsWaitingMark`, and the turn plate of a seat:
      * `kSeatTurnFrame` with the tint `kTurnMark`, and the turn light of the centre panel `kPanelTurnLight`) and nothing else on the table is gold (the dealer mark `kDealerMark`, of a seat plate and
-     * of the centre panel, is red); `kVeil` dims a tile that cannot be discarded now.
+     * of the centre panel, is red); `kVeil` dims a tile that cannot be discarded now. The two winds that score for the viewer are marked on its hand tiles in blue (`kSeatWindMark`, the own
+     * seat wind) and violet (`kRoundWindMark`, the round wind), the one mark of the hand that is not gold, so it stays apart from every gold mark.
      * - The screens: `scrim` dims what lies behind a modal screen (and the hint), `surface` is the plate, `header` its headline band,
      *   `surfaceRaised` the rows on it, `hudPanel` the panels of the HUD over the felt.
      * - The buttons: `primary` confirms (Mahjong!, Start, Next hand), `secondary` claims and the HUD's New game, `neutral` the extras of
@@ -77,6 +78,12 @@ namespace BECore::Mahjong {
     /// bar of the hints (under the tile), which shows only before the declaration.
     inline constexpr Color kKeepsWaitingMark{255, 214, 80, 220};
     inline constexpr float kKeepsWaitingBarHeight = 6.0f;
+    /// A bar along the top edge of a tile of the viewer's hand that is the own seat wind (`kSeatWindMark`) or the round wind (`kRoundWindMark`; `WindMarkOf`), `kWindMarkBarHeight`
+    /// units high, the full width of the tile; a tile that is both has the left half in the first and the right half in the second. Inside the tile, at the edge the
+    /// bars of the hints and of the keeps-waiting mark do not use. Not gold: they say what the tile is worth, not what to do.
+    inline constexpr Color kSeatWindMark{90, 180, 255, 255};
+    inline constexpr Color kRoundWindMark{200, 140, 255, 255};
+    inline constexpr float kWindMarkBarHeight = 6.0f;
     /// Over a tile whose declaring discard is not legal while the next discard declares the calling hand.
     inline constexpr Color kVeil{0, 0, 0, 140};
     /// The hints (`MahjongHintsComponent`), marks on the viewer's hand and so in the gold family: a bar under a tile whose discard declares
@@ -87,7 +94,7 @@ namespace BECore::Mahjong {
     /// The seat plates (the table paints them; the words on them are labels of the node `SeatPlates`): the base is the `hudPanel` colour
     /// (a test holds them equal), the plate of the seat whose turn it is gets the tint `kTurnMark` over it and a frame
     /// `kSeatTurnFrame` of `kSeatTurnFrameWidth` units on its border (the gold family), the dealer a bar `kDealerMark` of
-    /// `kDealerMarkHeight` units along the top edge: the one mark of the table that is neither gold nor a plate. The frame has an alpha
+    /// `kDealerMarkHeight` units along the top edge: a mark that is neither gold nor a plate (the wind bars of the viewer's hand are the other). The frame has an alpha
     /// of its own, so no other gold mark is drawn in its colour (the tests find a mark by colour).
     inline constexpr Color kSeatPlate{10, 30, 22, 170};
     inline constexpr Color kSeatTurnFrame{255, 214, 80, 240};
