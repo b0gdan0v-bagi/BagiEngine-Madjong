@@ -1,6 +1,7 @@
 #pragma once
 
 #include <BECore/Scene/IComponent.h>
+#include <Mahjong/Table/Coach.h>
 #include <Mahjong/Table/DangerMarks.h>
 #include <Mahjong/Table/Hints.h>
 
@@ -8,6 +9,10 @@ namespace BECore {
 
     namespace InputEvents {
         struct ActionEvent;
+    }
+
+    namespace SDLEvents {
+        struct MouseButtonDownEvent;
     }
 
 }  // namespace BECore
@@ -41,7 +46,14 @@ namespace BECore::Mahjong {
      * framed on the hand. A second press while that advice is up opens the reasons (`ExplainAdviceFor`, `ReasonLines`) in the panel
      * `WhyPanel` of the node `HintsWhy` (`config/nodes/MahjongHintsWhy.xml`, on the wall ring, text only, no input), as the variables `hintWhy0..5`; a third
      * press closes it. The advice belongs to the table it was asked on: any change of the session `Version()`, a cover, hints off or
-     * `Setup` open drop it and the reasons with it, and a new language words both again. **It never acts:** it performs no action, moves no version and the
+     * `Setup` open drop it and the reasons with it, and a new language words both again.
+     *
+     * **The coach's note.** In the mode Coach the ledger of the game (`MahjongGame::GetCoach()`, fed by the session) holds the note of the
+     * person's last differing move; the panel `CoachPanel` of the same node shows its lines (`CoachNoteLines`, the variables `coachNote0..2`)
+     * exactly while the hints apply, the note is of this hand and of the viewer. The note stays through the computers' turns (they move within a
+     * second of the person's action) and goes with the next accepted action of the person (the ledger), a left or touch mouse-down that the
+     * panel was up for, the press of `Hint`, the end of the hand, a new match, a pause, a cover and a change of the mode. The component only
+     * reads the ledger and clears it, and publishes only when the note, the language or the shown state changed. **It never acts:** it performs no action, moves no version and the
      * control API does not know it.
      */
     class MahjongHintsComponent : public IComponent {
@@ -60,6 +72,7 @@ namespace BECore::Mahjong {
 
     private:
         void OnAction(const InputEvents::ActionEvent& event);
+        void OnMouseDown(const SDLEvents::MouseButtonDownEvent& event);
         /// Sets the variable `hintsChoice` to the flag of the game.
         static void PublishChoice(const MahjongGame& game);
 
@@ -82,6 +95,8 @@ namespace BECore::Mahjong {
         void PushAdvice();
         /// The panel of the reasons (`HintsWhy`): the lines and the plate while `open`, empty variables and no plate otherwise.
         void PushWhy(bool open);
+        /// The note of the coach: drops what no longer holds (and clears the ledger), publishes the lines and the plate when they changed.
+        void PushCoach(MahjongGame* game, const Key& key);
         void DropAdvice();
         void DrawMarks(const MahjongGame& game) const;
 
@@ -105,6 +120,12 @@ namespace BECore::Mahjong {
         bool _adviceDirty = false;  ///< the sentence is to be published again (asked again)
         bool _adviceShown = false;
         uint64_t _adviceStringsVersion = 0;
+
+        bool _coachShown = false;
+        uint64_t _coachSeen = 0;       ///< `CoachLedger::Version()` of the note last looked at
+        CoachHandKey _coachHand;       ///< the hand that note was first seen in
+        uint64_t _coachPublished = 0;  ///< the version whose words are in the variables
+        uint64_t _coachStringsVersion = 0;
 
         static MahjongHintsComponent* s_active;
     };

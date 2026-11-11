@@ -5,6 +5,7 @@
 #include <BECore/Scene/Scene.h>
 #include <BECore/UI/UICanvasComponent.h>
 #include <BECore/UI/UIImage.h>
+#include <CoreSDL/SDLEvents.h>
 #include <Events/InputEvents.h>
 #include <Generated/MahjongHintsComponent.gen.hpp>
 #include <Mahjong/Components/MahjongTableComponent.h>
@@ -32,6 +33,9 @@ namespace BECore::Mahjong {
         // The panel of the reasons (node `HintsWhy`): its plate and the variable of line `i` (`hintWhy<i>`, `kMaxReasonLines` of them)
         constexpr eastl::string_view kWhyPanel = "WhyPanel";
         constexpr eastl::string_view kWhyVarPrefix = "hintWhy";
+        // The panel of the coach's note (same node): its plate and the variable of sentence `i` (`coachNote<i>`, `kMaxCoachLines` of them)
+        constexpr eastl::string_view kCoachPanel = "CoachPanel";
+        constexpr eastl::string_view kCoachVarPrefix = "coachNote";
 
         constexpr float kMarkGap = 1.0f;         ///< between the tile and its bar
         constexpr float kMarkThickness = 4.0f;   ///< the bar, and below the hand there are 8 units to the edge of the view
@@ -76,6 +80,7 @@ namespace BECore::Mahjong {
     void MahjongHintsComponent::OnAttached() {
         s_active = this;
         SubscribeInScene<InputEvents::ActionEvent, &MahjongHintsComponent::OnAction>(this);
+        SubscribeInScene<SDLEvents::MouseButtonDownEvent, &MahjongHintsComponent::OnMouseDown>(this);
     }
 
     MahjongHintsComponent::Key MahjongHintsComponent::KeyOf(const MahjongGame* game) {
@@ -102,7 +107,7 @@ namespace BECore::Mahjong {
 
     void MahjongHintsComponent::OnDraw() {
         BE_PROFILE_SCOPE("MahjongHints::OnDraw");
-        const MahjongGame* game = MahjongGame::GetActive();
+        MahjongGame* game = MahjongGame::GetActive();
         if (game != nullptr && game->IsOptionsOpen()) {
             PublishChoice(*game);  // an equal value changes nothing (the version of the variables stays)
         }
@@ -115,6 +120,7 @@ namespace BECore::Mahjong {
             DropAdvice();
         }
         PushAdvice();
+        PushCoach(game, key);
         if (key.applies) {
             DrawMarks(*game);
         }
@@ -226,6 +232,52 @@ namespace BECore::Mahjong {
         }
     }
 
+    void MahjongHintsComponent::PushCoach(MahjongGame* game, const Key& key) {
+        CoachLedger* ledger = game != nullptr ? &game->GetCoach() : nullptr;
+        bool show = false;
+        if (ledger != nullptr && ledger->Note().has_value()) {
+            const Match& match = game->GetMatch();
+            const CoachHandKey hand{game->GetSession().StartCount(), match.HandsPlayed(), match.History().size()};
+            if (ledger->Version() != _coachSeen) {
+                _coachSeen = ledger->Version();  // a note not seen yet belongs to the hand it is first seen in
+                _coachHand = hand;
+            }
+            show = game->CoachOn() && key.applies && hand == _coachHand && ledger->Note()->seat == key.viewer;
+            if (!show) {
+                ledger->ClearNote();  // the hand is over, the match is another, the table is covered or paused, the mode changed
+            }
+        }
+        UIVars& vars = CoreManager::GetUIVars();
+        const UIStrings& strings = CoreManager::GetUIStrings();
+        if (show && (!_coachShown || ledger->Version() != _coachPublished || strings.GetVersion() != _coachStringsVersion)) {
+            _coachPublished = ledger->Version();
+            _coachStringsVersion = strings.GetVersion();
+            const eastl::vector<eastl::string> lines = CoachNoteLines(strings, *ledger->Note());
+            for (size_t i = 0; i < kMaxCoachLines; ++i) {
+                vars.Set(IndexedName(kCoachVarPrefix, static_cast<int>(i)), i < lines.size() ? eastl::string_view(lines[i]) : eastl::string_view());
+            }
+        }
+        if (show != _coachShown) {
+            _coachShown = show;
+            if (!show) {
+                // Nothing of the last note stays in a variable
+                for (size_t i = 0; i < kMaxCoachLines; ++i) {
+                    vars.Set(IndexedName(kCoachVarPrefix, static_cast<int>(i)), eastl::string_view());
+                }
+            }
+            UICanvasComponent::SetElementVisibleByName(GetScene(), NameOf(kCoachPanel), show);
+        }
+    }
+
+    void MahjongHintsComponent::OnMouseDown(const SDLEvents::MouseButtonDownEvent& event) {
+        MahjongGame* game = MahjongGame::GetActive();
+        // A left or touch press (a touch makes a left press too) takes the note that is on screen; a note this very press made (the discard it
+        // is) was never shown and stays
+        if (event.button.button == SDL_BUTTON_LEFT && game != nullptr && _coachShown && game->GetCoach().Version() == _coachPublished) {
+            game->GetCoach().ClearNote();
+        }
+    }
+
     void MahjongHintsComponent::DrawMarks(const MahjongGame& game) const {
         const MahjongTableComponent* table = MahjongTableComponent::GetActive();
         IRenderer* renderer = CoreManager::GetRenderer().Get();
@@ -290,6 +342,7 @@ namespace BECore::Mahjong {
                 _whyDirty = true;
                 return;
             }
+            game->GetCoach().ClearNote();  // the advice takes the place of the note
             _explained = ExplainAdviceFor(*view);
             _advice = _explained ? std::optional<HandAction>(_explained->Action()) : AdviceFor(*view);
             _adviceKey = key;
