@@ -8,6 +8,7 @@ Everything here is plain C++ over the model, a `TableView` or a `UIStrings&`: no
 |------|------|
 | `TableLayout`, `TableLayoutSpec`, `TableLayoutSpecXml`, `TableSolver` | the table as rectangles in view units, the zones as data, the reader of `config/TableLayout.xml`, the tile solver (below) |
 | `TileAtlas.h` | atlas cells by arithmetic (`SourceRect`, `BackRect`, `StackRect` (the wall stack seen from above, a square of its cell), `SpriteName`); must match `tools/make_tiles.py` (`TileSpritesTest`) |
+| `EmblemAtlas.h` | the seat emblem atlas by arithmetic (`EmblemRect`, `PersonCell`, `ComputerCell(level)`, `kTurnRingCell`, `kCallingRingCell`); must match `tools/make_emblems.py` (`EmblemSpritesTest`) |
 | `UiPalette.h` | every colour, the type scale `kFontScale`, the grid `kGridUnit` / `kGridStep`, the modal numbers; see `config/CLAUDE.md` ("UI style") |
 | `TableLook` | the felt as RGBA8 pixels (`MakeFeltPixels`: vignette, symmetric grain, no random generator); the component makes the texture |
 | `Words` | `Tr(strings, key[, args])`, `Subst`, `WindName`, `WindLetter` |
