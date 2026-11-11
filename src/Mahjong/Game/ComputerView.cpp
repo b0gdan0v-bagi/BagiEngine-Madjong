@@ -48,6 +48,26 @@ namespace BECore::Mahjong {
             return visible;
         }
 
+        /// `discardedKinds` and `passedKinds` of every seat from the log of the hand: a discard with `declaredCalling` starts the "after"
+        /// of its seat (claims and kongs are not discards).
+        void FillDiscardHistory(const HandModel& model, eastl::array<PublicSeat, kSeatCount>& seats) {
+            eastl::array<bool, kSeatCount> declared{};
+            for (const HandMove& move : model.Moves()) {
+                if (move.kind != MoveKind::Discard || !move.tile.IsPlayable()) {
+                    continue;
+                }
+                for (Seat other = 0; other < kSeatCount; ++other) {
+                    if (other != move.seat && declared[other]) {
+                        ++seats[other].passedKinds[move.tile.Id()];
+                    }
+                }
+                ++seats[move.seat].discardedKinds[move.tile.Id()];
+                if (move.declaredCalling) {
+                    declared[move.seat] = true;
+                }
+            }
+        }
+
     }  // namespace
 
     TableView MakeTableView(const HandModel& model, Seat seat) {
@@ -65,6 +85,7 @@ namespace BECore::Mahjong {
         for (Seat other = 0; other < kSeatCount; ++other) {
             view.seats[other] = MakePublicSeat(model.GetHand(other));
         }
+        FillDiscardHistory(model, view.seats);
         view.visible = CountVisible(model, seat, view.seats);
         view.liveCount = static_cast<int>(model.GetWall().LiveCount());
         view.legal = model.LegalActions(seat);
