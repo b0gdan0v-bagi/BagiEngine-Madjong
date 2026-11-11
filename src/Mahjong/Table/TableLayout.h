@@ -273,6 +273,11 @@ namespace BECore::Mahjong {
     /// no slots. Pure: no active spec, no log.
     [[nodiscard]] TableLayout MakeTableLayout(const TableInput& input, const TableLayoutSpec& spec, float viewWidth = kViewWidth, float viewHeight = kViewHeight);
 
+    /// `MakeTableLayout` into `layout`, which keeps the capacity of its slots: the table drawn every frame lays itself out without the heap
+    /// (the result is equal to what `MakeTableLayout` returns).
+    void RebuildTableLayout(TableLayout& layout, const TableInput& input, float viewWidth = kViewWidth, float viewHeight = kViewHeight);
+    void RebuildTableLayout(TableLayout& layout, const TableInput& input, const TableLayoutSpec& spec, float viewWidth = kViewWidth, float viewHeight = kViewHeight);
+
     /// The spec the overload without one reads (a pointer: the caller keeps the spec alive until it sets another or null). Set and read on
     /// the main thread only. The game sets it from `config/TableLayout.xml` (`MahjongTableComponent`), the tests from the source tree.
     void SetActiveTableLayoutSpec(const TableLayoutSpec* spec) noexcept;

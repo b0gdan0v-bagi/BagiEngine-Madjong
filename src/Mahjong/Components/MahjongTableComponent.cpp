@@ -120,6 +120,7 @@ namespace BECore::Mahjong {
         }
 
         Faces FacesOf(const TableSession& session) {
+            BE_PROFILE_SCOPE("MahjongTable::FacesOf");
             Faces faces;
             faces.all = session.GetPhase() != SessionPhase::Playing;
             faces.seat = session.HandoffPending() ? kNoSeat : session.Viewer();
@@ -213,6 +214,7 @@ namespace BECore::Mahjong {
         /// What the frame shows besides its layout, as far as the flights need it (`TableSnapshot`): the viewer's face-up tiles, the pile, the open
         /// sets, the wall and the tile that was just drawn (for an opponent only that it was, never which: its slot is the last of its backs).
         void FillSnapshot(TableSnapshot& snapshot, const HandModel& hand, const Faces& faces, Seat bottom) {
+            BE_PROFILE_SCOPE("MahjongTable::FillSnapshot");
             if (IsSeat(bottom) && faces.Shows(bottom)) {
                 snapshot.viewerHand = hand.GetHand(bottom).concealed;
             }
@@ -234,20 +236,39 @@ namespace BECore::Mahjong {
             }
         }
 
-        TableInput MakeInput(const HandModel& hand, Seat viewer) {
-            TableInput input;
+        /// The input of the layout of `hand` for `viewer`, written over `input` whose lists keep their capacity (the table is laid out every
+        /// frame; a fresh input would allocate the melds and the pile each time)
+        void FillInput(TableInput& input, const HandModel& hand, Seat viewer) {
+            BE_PROFILE_SCOPE("MahjongTable::FillInput");
             input.viewer = viewer;
+            input.profile = TableProfile{};
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 const PlayerHand& held = hand.GetHand(seat);
                 input.concealedCount[seat] = static_cast<int>(held.concealed.size());
                 input.melds[seat] = held.melds;
                 input.bonusCount[seat] = static_cast<int>(held.bonus.size());
             }
+            input.discardSeats.clear();
             for (const DiscardEntry& entry : hand.Discards()) {
                 input.discardSeats.push_back(entry.seat);
             }
             input.wallRemaining = static_cast<int>(hand.GetWall().Remaining());
-            return input;
+        }
+
+        /// `snapshot` emptied for the next draw, the capacity of its lists kept, so refilling it every frame does not allocate
+        void ClearSnapshot(TableSnapshot& snapshot) {
+            TableSnapshot cleared;
+            cleared.layout.slots = eastl::move(snapshot.layout.slots);
+            cleared.layout.slots.clear();
+            cleared.viewerHand = eastl::move(snapshot.viewerHand);
+            cleared.viewerHand.clear();
+            cleared.pile = eastl::move(snapshot.pile);
+            cleared.pile.clear();
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                cleared.melds[seat] = eastl::move(snapshot.melds[seat]);
+                cleared.melds[seat].clear();
+            }
+            snapshot = eastl::move(cleared);
         }
 
         /// The size of the view the scene draws in now (the active view: the design of the shape the output's aspect gives); the design size of
@@ -385,6 +406,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongTableComponent::PollTableLayoutSpec() {
+        BE_PROFILE_SCOPE("MahjongTable::PollTableLayoutSpec");
         const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
         if (std::chrono::duration<float>(now - _layoutPolled).count() < kTableLayoutPollSeconds) {
             return;
@@ -435,6 +457,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongTableComponent::PublishScreen(const MahjongGame* game) {
+        BE_PROFILE_SCOPE("MahjongTable::PublishScreen");
         BE_PROFILE_SCOPE("MahjongTable::PublishScreen");
         const ActionButtons buttons = game != nullptr ? CurrentButtons(*game) : ActionButtons{};
         UIVars& vars = CoreManager::GetUIVars();
@@ -536,6 +559,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongTableComponent::RefreshSelection(const MahjongGame* game) {
+        BE_PROFILE_SCOPE("MahjongTable::RefreshSelection");
         if (_selected && (game == nullptr || !SelectionHolds(*game))) {
             _selected.reset();
         }
@@ -659,6 +683,7 @@ namespace BECore::Mahjong {
 
     MahjongTableComponent::NewMoves MahjongTableComponent::FollowMoves(const MahjongGame& game) {
         BE_PROFILE_SCOPE("MahjongTable::FollowMoves");
+        BE_PROFILE_SCOPE("MahjongTable::FollowMoves");
         const Match& match = game.GetMatch();
         const eastl::vector<HandMove>& moves = match.Hand().Moves();
         const SeenHand now = SeenHandOf(game);
@@ -704,6 +729,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongTableComponent::PlanBatch(const TableSnapshot& before, const NewMoves& news, const HandModel& hand) {
+        BE_PROFILE_SCOPE("MahjongTable::PlanBatch");
         BE_PROFILE_SCOPE("MahjongTable::PlanBatch");
         const TableLayout& was = before.layout;
         const TableLayout& now = _shown.layout;
@@ -856,6 +882,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongTableComponent::PublishSelectedText(Tile tile) {
+        BE_PROFILE_SCOPE("MahjongTable::PublishSelectedText");
         UIVars& vars = CoreManager::GetUIVars();
         const UIStrings& strings = CoreManager::GetUIStrings();
         const PoolString name = "selectedTileText"_intern;
@@ -908,8 +935,11 @@ namespace BECore::Mahjong {
         renderer.DrawFilledRect(rim, rim + lip, lip, viewHeight - 2.0f * (rim + lip), kFeltLip);
         renderer.DrawFilledRect(viewWidth - rim - lip, rim + lip, lip, viewHeight - 2.0f * (rim + lip), kFeltLip);
 
-        const TableSnapshot before = eastl::move(_shown);
-        _shown = TableSnapshot{};
+        // The two snapshots trade places: `_previous` is what the last draw drew, `_shown` the one before it, emptied and refilled below with
+        // the capacity it has (no snapshot is made new, so a table at rest draws without the heap)
+        eastl::swap(_previous, _shown);
+        ClearSnapshot(_shown);
+        const TableSnapshot& before = _previous;
         _chowTakes = ChowTakes{};
         _drawnSelected.reset();
         const MahjongGame* game = MahjongGame::GetActive();
@@ -928,9 +958,10 @@ namespace BECore::Mahjong {
         const NewMoves news = FollowMoves(*game);
         const Faces faces = FacesOf(session);
         const Seat bottom = BottomSeat(session);
-        TableInput input = MakeInput(hand, bottom);
+        FillInput(_input, hand, bottom);
+        TableInput& input = _input;
         input.profile = CurrentTableProfile(view);
-        _shown.layout = MakeTableLayout(input, viewWidth, viewHeight);
+        RebuildTableLayout(_shown.layout, input, viewWidth, viewHeight);
         FillSnapshot(_shown, hand, faces, bottom);
         PlanBatch(before, news, hand);
         const TableLayout& layout = _shown.layout;

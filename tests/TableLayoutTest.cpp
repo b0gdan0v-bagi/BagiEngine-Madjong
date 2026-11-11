@@ -2202,4 +2202,31 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
+    TEST(TableLayoutTest, ARebuildIntoAUsedLayoutEqualsANewOneAndKeepsItsStorage) {
+        TableLayout reused = MakeTableLayout(WorstInput(2, kWorstPile, 1), kPortraitViewWidth, kPortraitViewHeight);  // more slots than below
+        const TileSlot* storage = reused.slots.data();
+        const TableInput input = WorstInput(0, 10, 3);
+
+        RebuildTableLayout(reused, input, kViewWidth, kViewHeight);
+        const TableLayout fresh = MakeTableLayout(input, kViewWidth, kViewHeight);
+
+        EXPECT_EQ(reused.slots.data(), storage);
+        EXPECT_EQ(reused.viewer, fresh.viewer);
+        EXPECT_EQ(reused.shape, fresh.shape);
+        EXPECT_TRUE(reused.profile == fresh.profile);
+        ASSERT_EQ(reused.slots.size(), fresh.slots.size());
+        for (size_t i = 0; i < fresh.slots.size(); ++i) {
+            const TileSlot& a = reused.slots[i];
+            const TileSlot& b = fresh.slots[i];
+            EXPECT_TRUE(SameRect(a.rect, b.rect)) << "slot " << i;
+            EXPECT_TRUE(a.role == b.role && a.seat == b.seat && a.index == b.index && a.part == b.part && a.claimEdge == b.claimEdge && a.rotation == b.rotation) << "slot " << i;
+        }
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            EXPECT_TRUE(SameRect(reused.zones.discards[seat], fresh.zones.discards[seat]));
+            EXPECT_TRUE(SameRect(reused.zones.seatPlates[seat], fresh.zones.seatPlates[seat]));
+        }
+        EXPECT_TRUE(SameRect(reused.zones.wall, fresh.zones.wall));
+        EXPECT_TRUE(SameRect(reused.zones.centerPanel, fresh.zones.centerPanel));
+    }
+
 }  // namespace BECore::Mahjong::Tests
