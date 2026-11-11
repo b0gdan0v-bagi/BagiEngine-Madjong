@@ -2,6 +2,12 @@
 
 Mahjong on the [BagiEngine](https://github.com/b0gdan0v-bagi/BagiEngine). The engine is the git submodule `engine/`, on the permanent branch `games/mahjong` of the engine repository. It is classic Chinese mahjong for four seats: the rules (the hand, the three kongs, robbing a kong, scoring and payments, a match of 16 or 8 hands), computer players, a control API for external clients (`engine/tools/control`) and a table on screen that you play with the mouse, alone against three computers or hot seat at one screen. The tile art is drawn by a script in this repository.
 
+## Principles
+
+- **Zero allocations in a steady frame.** A frame in which nothing changed allocates nothing, in every state of the game: the computers playing, a person's turn, the hints and their reasons, the rules, setup and options, the end screens, either language. What the table shows is made again only when the match moved (the session's version), and lists keep their capacity between frames. `MahjongTableAllocTest` holds it in the `macos-profile` build, which counts every allocation; the engine's rule: `engine/README.md`.
+- **No peeking:** a computer player, the hints and the control API see only what the seat could see on the table.
+- **One seed, one match on every platform:** the rules draw only from their own seeded generator.
+
 ## Get it
 
 ```bash
