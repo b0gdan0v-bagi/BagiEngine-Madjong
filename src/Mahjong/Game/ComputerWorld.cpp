@@ -89,6 +89,7 @@ namespace BECore::Mahjong {
     }  // namespace
 
     std::optional<HandModel> SampleWorld(const TableView& view, MahjongRng& rng) {
+        BE_PROFILE_SCOPE("Search::SampleWorld");
         const bool window = view.phase == Phase::Claim || view.phase == Phase::RobKong;
         if (!IsSeat(view.seat) || view.legal.empty() || view.phase == Phase::Finished || view.own.concealed.empty()) {
             return std::nullopt;

@@ -110,6 +110,7 @@ namespace BECore::Mahjong {
         /// The points of `seat` when `action` is applied in `world` and four Normal players play the hand out with `tableSeed`; nullopt
         /// when the model refuses a step (a defect of the sample, not a result).
         std::optional<int> Rollout(const HandModel& world, Seat seat, const HandAction& action, uint32_t tableSeed) {
+            BE_PROFILE_SCOPE("Search::Rollout");
             HandModel model = world;
             if (!model.Apply(seat, action).has_value()) {
                 return std::nullopt;
@@ -241,6 +242,7 @@ namespace BECore::Mahjong {
     }
 
     void SearchRun::Step() {
+        BE_PROFILE_SCOPE("SearchRun::Step");
         if (Done()) {
             return;
         }
@@ -278,6 +280,7 @@ namespace BECore::Mahjong {
     }
 
     SearchWorld SearchRun::PlayWorld(int index) const {
+        BE_PROFILE_SCOPE("SearchRun::PlayWorld");
         SearchWorld world;
         if (index < 0 || index >= _worlds) {
             return world;

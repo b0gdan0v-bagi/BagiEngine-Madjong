@@ -320,6 +320,7 @@ namespace BECore::Mahjong {
     }
 
     ITexture* MahjongTableComponent::FeltTexture(IRenderer& renderer) {
+        BE_PROFILE_SCOPE("MahjongTable::FeltTexture");
         if (renderer.GetId() != _feltRenderer) {
             _felt = {};  // made by another renderer, which has its own way of freeing it
             _feltRenderer = renderer.GetId();
@@ -372,6 +373,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongTableComponent::LoadTableLayoutSpec() {
+        BE_PROFILE_SCOPE("MahjongTable::LoadTableLayoutSpec");
         _layoutPolled = std::chrono::steady_clock::now();
         if (!OfferTableLayoutConfig()) {
             return;
@@ -433,6 +435,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongTableComponent::PublishScreen(const MahjongGame* game) {
+        BE_PROFILE_SCOPE("MahjongTable::PublishScreen");
         const ActionButtons buttons = game != nullptr ? CurrentButtons(*game) : ActionButtons{};
         UIVars& vars = CoreManager::GetUIVars();
         Scene& scene = GetScene();
@@ -568,6 +571,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongTableComponent::OnMouseDown(const SDLEvents::MouseButtonDownEvent& event) {
+        BE_PROFILE_SCOPE("MahjongTable::OnMouseDown");
         if (IsTouchClick(event.button)) {
             _touchSeen = true;
         }
@@ -590,6 +594,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongTableComponent::OnAction(const InputEvents::ActionEvent& event) {
+        BE_PROFILE_SCOPE("MahjongTable::OnAction");
         MahjongGame* game = MahjongGame::GetActive();
         if (game == nullptr) {
             return;
@@ -653,6 +658,7 @@ namespace BECore::Mahjong {
     }
 
     MahjongTableComponent::NewMoves MahjongTableComponent::FollowMoves(const MahjongGame& game) {
+        BE_PROFILE_SCOPE("MahjongTable::FollowMoves");
         const Match& match = game.GetMatch();
         const eastl::vector<HandMove>& moves = match.Hand().Moves();
         const SeenHand now = SeenHandOf(game);
@@ -698,6 +704,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongTableComponent::PlanBatch(const TableSnapshot& before, const NewMoves& news, const HandModel& hand) {
+        BE_PROFILE_SCOPE("MahjongTable::PlanBatch");
         const TableLayout& was = before.layout;
         const TableLayout& now = _shown.layout;
         const bool sameView = was.viewer == now.viewer && was.shape == now.shape && was.viewWidth == now.viewWidth && was.viewHeight == now.viewHeight && was.profile == now.profile;
@@ -731,6 +738,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongTableComponent::OnUpdate(const SceneEvents::SceneUpdateEvent& event) {
+        BE_PROFILE_SCOPE("MahjongTable::OnUpdate");
         MahjongGame* game = MahjongGame::GetActive();
         if (game == nullptr) {
             DropComputerStep();
@@ -764,6 +772,7 @@ namespace BECore::Mahjong {
     }
 
     bool MahjongTableComponent::BeginComputerStep(TableSession& session, const HandModel& hand) {
+        BE_PROFILE_SCOPE("MahjongTable::BeginComputerStep");
         std::optional<ComputerStepJob> job = session.BeginComputerStep();
         if (!job) {
             return false;
@@ -781,6 +790,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongTableComponent::PlayComputers(MahjongGame& game, float deltaTime) {
+        BE_PROFILE_SCOPE("MahjongTable::PlayComputers");
         TableSession& session = game.GetSession();
         if (!ComputerActs(game)) {
             DropComputerStep();
@@ -868,6 +878,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongTableComponent::OnDraw() {
+        BE_PROFILE_SCOPE("MahjongTable::OnDraw");
         PollTableLayoutSpec();
         IRenderer& renderer = *CoreManager::GetRenderer();
         // The active view: the design of one of the four shapes (`Scene::Draw` picked it before this draw)
