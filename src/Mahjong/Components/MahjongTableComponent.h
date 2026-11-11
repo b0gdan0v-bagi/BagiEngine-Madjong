@@ -8,6 +8,7 @@
 #include <Mahjong/Table/AnimationSpeed.h>
 #include <Mahjong/Table/TableLayout.h>
 #include <Mahjong/Table/TileFlights.h>
+#include <chrono>
 
 namespace BECore {
 
@@ -36,6 +37,9 @@ namespace BECore::Mahjong {
     /// `MahjongGame::GetAnimationSpeed()` scales it, and the flights and the claim marks with it (`Table/AnimationSpeed.h`).
     inline constexpr float kComputerStepSeconds = 1.0f;
 
+    /// How often the table looks at `config/TableLayout.xml` (wall-clock seconds), see the class comment.
+    inline constexpr float kTableLayoutPollSeconds = 0.5f;
+
     /**
      * @brief The table of the active `MahjongGame` on screen: draws the felt, the four hands, the open sets, the bonus tiles, the discards
      *        and the wall, and plays the person seats by mouse and buttons and the computer seats by pace.
@@ -45,6 +49,12 @@ namespace BECore::Mahjong {
      * or wide, `TableShape`) and draws the slots with the tile atlas (`Table/TileAtlas.h`, loaded once in `OnAttached`). The felt is one soft
      * picture (a vignette and a grain of 3 levels) stretched over whichever view is active: 22 percent wider than its design in the wide view, 21 percent
      * narrower in the narrow one, which a vignette hides; no screenshot of those two was looked at. Nothing is drawn but the felt when the active game is not Mahjong or its match was not started.
+     *
+     * **The zones come from data.** `MakeTableLayout` reads the active spec (`ActiveTableLayoutSpec`), which this component fills from the config
+     * `TableLayout` when the game has one (`OnAttached`; the tests have none and set it themselves). While the table is drawn it looks every
+     * `kTableLayoutPollSeconds` of wall-clock time (not the scene's time, so a paused table or an open modal keep polling) at the file stamp, reloads the config when
+     * it changed and offers the document to `OfferTableLayoutSpec` (also when the stamp did not change, so an edit of the Config Editor shows without a save): the spec is
+     * replaced only by one that reads and passes `CheckTableLayoutSpec`, and a refused file keeps the last good spec and is logged once per distinct text.
      *
      * **No peeking.** While the hand is played only the concealed tiles of the viewer (`TableSession::Viewer()`) are drawn face up, and
      * none at all while `HandoffPending()` (a hot-seat cover). The other seats show backs, their concealed kongs too. When the hand is
@@ -209,6 +219,14 @@ namespace BECore::Mahjong {
         /// Frees the felt texture, with the GPU idle when the renderer is the one that made it.
         void ReleaseFelt();
 
+        /// Offers the config `TableLayout` to `OfferTableLayoutSpec` (never keeps the node: a reload invalidates it) and reports what came of it, a refusal once per
+        /// distinct text. False when the game has no such config.
+        bool OfferTableLayoutConfig();
+        /// The start of the table: takes the config `TableLayout` as the active spec and remembers the stamp of its file.
+        void LoadTableLayoutSpec();
+        /// Once per `kTableLayoutPollSeconds`: reloads the config when its file changed and offers it.
+        void PollTableLayoutSpec();
+
         /// The game when a person has to act and can (Playing, a person to act, no cover), else null.
         [[nodiscard]] MahjongGame* PersonToAct() const;
         /// Whether a click on a hand tile only selects it: `UsesTapToSelect` over `_touchSeen`, the window as it is now, the active view and the hand tile of
@@ -339,6 +357,10 @@ namespace BECore::Mahjong {
         float _lostLeft = 0.0f;                       // seconds of the marks of that window left, 0 for none
         float _handOverHoldLeft = 0.0f;               // seconds the score table is still held back, 0 for none
         SeenHand _handOverHoldOf;                     // the hand it is held for: a hold is void in any other
+
+        std::optional<std::filesystem::file_time_type> _layoutStamp;  // the stamp of the file of the config `TableLayout` at the last look, none when it has none
+        std::chrono::steady_clock::time_point _layoutPolled;          // the last look
+        eastl::string _layoutRefused;                                 // the text of the refusal that was logged last, empty when the last offer was not refused
         static MahjongTableComponent* s_active;
     };
 

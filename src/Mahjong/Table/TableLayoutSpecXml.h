@@ -23,4 +23,21 @@ namespace BECore::Mahjong {
     /// when `Ok()`; what could be read is in it otherwise, for a message to point at.
     [[nodiscard]] TableLayoutSpecParse ParseTableLayoutSpec(const pugi::xml_node& root);
 
+    enum class TableLayoutOffer : uint8_t {
+        Applied,    // the file is sound and differs from the active spec: it is the active spec now
+        Unchanged,  // the file is sound and says what the active spec says
+        Rejected    // the file does not read or is not a sound table: the active spec stays
+    };
+
+    struct TableLayoutOfferResult {
+        TableLayoutOffer outcome = TableLayoutOffer::Unchanged;
+        eastl::vector<eastl::string> errors;  // only when `Rejected`: what `ParseTableLayoutSpec` or `CheckTableLayoutSpec` found
+    };
+
+    /// Reads the file as `ParseTableLayoutSpec` does and makes it the active spec (`SetActiveTableLayoutSpec`) only when it reads with no
+    /// error, differs from the active spec and passes `CheckTableLayoutSpec`: a bad edit never replaces the last good spec. The equal file
+    /// is answered before the check, so offering the same document again and again (the poll of `MahjongTableComponent`) costs a parse and a
+    /// comparison. The spec that is set lives in this module until the next one (main thread only, like `SetActiveTableLayoutSpec`).
+    [[nodiscard]] TableLayoutOfferResult OfferTableLayoutSpec(const pugi::xml_node& root);
+
 }  // namespace BECore::Mahjong

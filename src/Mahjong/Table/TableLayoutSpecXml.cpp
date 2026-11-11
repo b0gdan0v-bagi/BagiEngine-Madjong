@@ -1,5 +1,6 @@
 #include "TableLayoutSpecXml.h"
 
+#include <Mahjong/Table/TableLayout.h>
 #include <Mahjong/Table/TableSolver.h>
 #include <cerrno>
 #include <cmath>
@@ -347,6 +348,30 @@ namespace BECore::Mahjong {
         }
         parse.errors = eastl::move(reader.errors);
         return parse;
+    }
+
+    TableLayoutOfferResult OfferTableLayoutSpec(const pugi::xml_node& root) {
+        static TableLayoutSpec offered;
+        TableLayoutOfferResult result;
+        TableLayoutSpecParse parse = ParseTableLayoutSpec(root);
+        if (!parse.Ok()) {
+            result.outcome = TableLayoutOffer::Rejected;
+            result.errors = eastl::move(parse.errors);
+            return result;
+        }
+        const TableLayoutSpec* active = ActiveTableLayoutSpec();
+        if (active != nullptr && *active == parse.spec) {
+            return result;
+        }
+        result.errors = CheckTableLayoutSpec(parse.spec);
+        if (!result.errors.empty()) {
+            result.outcome = TableLayoutOffer::Rejected;
+            return result;
+        }
+        offered = eastl::move(parse.spec);
+        SetActiveTableLayoutSpec(&offered);
+        result.outcome = TableLayoutOffer::Applied;
+        return result;
     }
 
 }  // namespace BECore::Mahjong

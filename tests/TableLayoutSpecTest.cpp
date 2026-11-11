@@ -572,4 +572,77 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(problems.empty());
     }
 
+    /// `OfferTableLayoutSpec` sets a process-wide spec: each test puts the shipped one back.
+    class TableLayoutOfferTest : public ::testing::Test {
+    protected:
+        void SetUp() override {
+            ASSERT_TRUE(LoadShippedTableLayoutDocument(_document));
+        }
+
+        void TearDown() override {
+            SetActiveTableLayoutSpec(&ShippedTableLayoutSpec());
+        }
+
+        /// The `attribute` of the `zone` of seat `position` in the shape `shape` of the document.
+        pugi::xml_attribute Attribute(const char* shape, int position, const char* zone, const char* attribute) {
+            pugi::xml_node shapeNode = _document.document_element().find_child_by_attribute("Shape", "name", shape);
+            pugi::xml_node seat = shapeNode.find_child_by_attribute("Seat", "position", std::to_string(position).c_str());
+            return seat.child(zone).attribute(attribute);
+        }
+
+        pugi::xml_document _document;
+    };
+
+    TEST_F(TableLayoutOfferTest, ASoundFileThatIsTheActiveSpecIsUnchanged) {
+        const TableLayoutOfferResult offer = OfferTableLayoutSpec(_document.document_element());
+        EXPECT_EQ(offer.outcome, TableLayoutOffer::Unchanged);
+        EXPECT_TRUE(offer.errors.empty());
+        EXPECT_EQ(ActiveTableLayoutSpec(), &ShippedTableLayoutSpec());
+    }
+
+    TEST_F(TableLayoutOfferTest, ASoundFileThatDiffersBecomesTheActiveSpecOnce) {
+        ASSERT_TRUE(Attribute("Landscape", 2, "Hand", "x").set_value("0.35"));
+        const TableLayoutOfferResult offer = OfferTableLayoutSpec(_document.document_element());
+        ASSERT_EQ(offer.outcome, TableLayoutOffer::Applied) << (offer.errors.empty() ? "" : offer.errors.front().c_str());
+        ASSERT_NE(ActiveTableLayoutSpec(), nullptr);
+        EXPECT_NE(ActiveTableLayoutSpec(), &ShippedTableLayoutSpec());
+        EXPECT_FLOAT_EQ(ActiveTableLayoutSpec()->Shape(TableShape::Landscape).seats[2].hand.rect.x, 0.35f);
+        EXPECT_EQ(OfferTableLayoutSpec(_document.document_element()).outcome, TableLayoutOffer::Unchanged);
+        // and back to what the file said
+        ASSERT_TRUE(Attribute("Landscape", 2, "Hand", "x").set_value("0.346875"));
+        EXPECT_EQ(OfferTableLayoutSpec(_document.document_element()).outcome, TableLayoutOffer::Applied);
+        EXPECT_EQ(*ActiveTableLayoutSpec(), ShippedTableLayoutSpec());
+    }
+
+    TEST_F(TableLayoutOfferTest, AFileThatDoesNotReadIsRefusedAndTheLastGoodSpecStays) {
+        ASSERT_TRUE(Attribute("Portrait", 1, "Bonus", "w").set_value("wide"));
+        const TableLayoutOfferResult offer = OfferTableLayoutSpec(_document.document_element());
+        EXPECT_EQ(offer.outcome, TableLayoutOffer::Rejected);
+        ExpectProblem(offer.errors, {"shape 'Portrait'", "seat 1", "Bonus", "attribute 'w'", "'wide' is not a number"});
+        EXPECT_EQ(ActiveTableLayoutSpec(), &ShippedTableLayoutSpec());
+    }
+
+    TEST_F(TableLayoutOfferTest, AFileThatReadsButIsNotASoundTableIsRefusedAndTheLastGoodSpecStays) {
+        // the discards of the viewer on the discards of the top seat
+        for (const char* attribute : {"x", "y", "w", "h"}) {
+            ASSERT_TRUE(Attribute("Landscape", 0, "Discards", attribute).set_value(Attribute("Landscape", 2, "Discards", attribute).value()));
+        }
+        const TableLayoutOfferResult offer = OfferTableLayoutSpec(_document.document_element());
+        EXPECT_EQ(offer.outcome, TableLayoutOffer::Rejected);
+        ExpectProblem(offer.errors, {"shape 'Landscape'", "the discard block of position 0", "overlaps", "the discard block of position 2"});
+        EXPECT_EQ(ActiveTableLayoutSpec(), &ShippedTableLayoutSpec());
+    }
+
+    TEST_F(TableLayoutOfferTest, AnOfferWithNoActiveSpecAppliesAndARefusalAfterAnApplyKeepsTheApplied) {
+        SetActiveTableLayoutSpec(nullptr);
+        ASSERT_EQ(OfferTableLayoutSpec(_document.document_element()).outcome, TableLayoutOffer::Applied);
+        const TableLayoutSpec* applied = ActiveTableLayoutSpec();
+        ASSERT_NE(applied, nullptr);
+        EXPECT_EQ(*applied, ShippedTableLayoutSpec());
+        ASSERT_TRUE(Attribute("Narrow", 3, "Hand", "x").set_value("2"));
+        EXPECT_EQ(OfferTableLayoutSpec(_document.document_element()).outcome, TableLayoutOffer::Rejected);
+        EXPECT_EQ(ActiveTableLayoutSpec(), applied);
+        EXPECT_EQ(*applied, ShippedTableLayoutSpec());
+    }
+
 }  // namespace BECore::Mahjong::Tests
