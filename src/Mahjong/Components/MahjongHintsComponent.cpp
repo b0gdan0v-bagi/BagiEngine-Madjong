@@ -9,6 +9,7 @@
 #include <Generated/MahjongHintsComponent.gen.hpp>
 #include <Mahjong/Components/MahjongTableComponent.h>
 #include <Mahjong/MahjongGame.h>
+#include <Mahjong/Table/TableLayout.h>
 #include <Mahjong/Table/TapSelect.h>
 #include <Mahjong/Table/TileAtlas.h>
 #include <Mahjong/Table/UiPalette.h>
@@ -50,6 +51,19 @@ namespace BECore::Mahjong {
         /// The button `Hint` is offered: a person acts and it is the viewer, with something to choose from (a non-empty `legal`).
         bool IsOffered(const TableSession& session, Seat viewer, const TableView& view) {
             return session.ActorIsPerson() && session.Actor() == viewer && !view.legal.empty();
+        }
+
+        Color DangerColor(DangerMark mark) {
+            switch (mark) {
+                case DangerMark::Safe:
+                    return kSafeMark;
+                case DangerMark::Risky:
+                    return kRiskyMark;
+                case DangerMark::Dangerous:
+                case DangerMark::None:
+                    break;
+            }
+            return kDangerMark;
         }
 
     }  // namespace
@@ -115,6 +129,7 @@ namespace BECore::Mahjong {
         _key = key;
         _row.clear();
         _declaring.fill(false);
+        _dangers.fill(DangerMark::None);
         _offered = false;
         if (!key.applies) {
             return;
@@ -125,6 +140,7 @@ namespace BECore::Mahjong {
         _offered = IsOffered(session, key.viewer, view);
         if (_offered) {
             _declaring = DeclaringDiscards(view);
+            _dangers = DangerMarks(view);
         }
     }
 
@@ -223,6 +239,11 @@ namespace BECore::Mahjong {
         const auto& concealed = game.GetMatch().Hand().GetHand(viewer).concealed;
         const Tile advised = _advice && _advice->kind == ActionKind::Discard ? _advice->tile : Tile{};
         const std::optional<int> raised = table->SelectedHandIndex();
+        // The bar of the danger sits between the bars the table draws along the top and the bottom edge of a hand tile (scaled with the view)
+        const Scene& scene = GetScene();
+        const float unit = LayoutScale(scene.GetViewWidth(), scene.GetViewHeight());
+        const float dangerTop = eastl::max(kWindMarkBarHeight * unit, kFrameThickness);
+        const float dangerBottom = eastl::max(kKeepsWaitingBarHeight * unit, kFrameThickness);
         for (const TileSlot& slot : table->GetLayout().slots) {
             // The layout is of the last draw of the table: it has to be of this hand
             if (slot.role != SlotRole::HandTile || slot.seat != viewer || slot.index < 0 || slot.index >= static_cast<int>(concealed.size())) {
@@ -233,6 +254,10 @@ namespace BECore::Mahjong {
             const Rect rect = raised && *raised == slot.index ? RaisedRect(slot.rect) : slot.rect;
             if (_declaring[tile.Id()]) {
                 renderer->DrawFilledRect(rect.x, rect.y + rect.h + kMarkGap, rect.w, kMarkThickness, kDeclareMark);
+            }
+            if (const DangerMark danger = _dangers[tile.Id()]; danger != DangerMark::None) {
+                // Inside the left edge, clear of the advised frame that runs along the edge
+                renderer->DrawFilledRect(rect.x + kFrameThickness, rect.y + dangerTop, kDangerMarkWidth, rect.h - dangerTop - dangerBottom, DangerColor(danger));
             }
             if (advised.IsValid() && tile == advised) {
                 renderer->DrawFilledRect(rect.x, rect.y, rect.w, kFrameThickness, kAdvisedFrame);

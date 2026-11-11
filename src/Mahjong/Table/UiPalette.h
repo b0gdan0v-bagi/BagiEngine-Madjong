@@ -8,8 +8,8 @@ namespace BECore::Mahjong {
      * The look of the game in numbers: the palette, the type scale and the spacing grid. The scene and its node files (`config/SceneConfig.xml`, `config/nodes/`) write the colours of
      * `kUiPalette` as text (`r,g,b,a`) and the sizes of `kFontScale` (`fontSize`), and every position and size on the grid of
      * `kGridUnit`; `MahjongUiStyleTest` holds the file to all three, so a stray colour, size or number fails. The colours of the table
-     * (`kFelt` ... `kVeil`) are drawn by `MahjongTableComponent`, the two marks of the hints (`kDeclareMark`, `kAdvisedFrame`) by `MahjongHintsComponent`, and none is in the file; the modal numbers
-     * below are the anatomy that the file's screens follow and the tests of the screens check.
+     * (`kFelt` ... `kVeil`) are drawn by `MahjongTableComponent`, the marks of the hints (`kDeclareMark`, `kAdvisedFrame`, the danger marks) by `MahjongHintsComponent`, and none is in the file; the
+     * modal numbers below are the anatomy that the file's screens follow and the tests of the screens check.
      *
      * Roles, not colours, are the rule: a new control takes the role of what it does.
      * - The table: the felt (the picture of `Table/TableLook.h`, `kFelt` as its base and the flat fallback) with a `kFeltRim` round the view
@@ -86,6 +86,13 @@ namespace BECore::Mahjong {
     inline constexpr float kWindMarkBarHeight = 6.0f;
     /// Over a tile whose declaring discard is not legal while the next discard declares the calling hand.
     inline constexpr Color kVeil{0, 0, 0, 140};
+    /// The danger marks of the hints (`MahjongHintsComponent`, `DangerMarks`): a bar `kDangerMarkWidth` units wide inside the left edge of a hand tile
+    /// while an opponent has declared. Each is a role of its own and none is gold, a wind bar or the dealer's red: `kSafeMark` (green) says the tile
+    /// is safe to discard, `kRiskyMark` (amber, with no gold in its colour) that it is risky, `kDangerMark` (red, not `kDealerMark`) that it is dangerous.
+    inline constexpr Color kSafeMark{70, 200, 110, 255};
+    inline constexpr Color kRiskyMark{255, 140, 30, 255};
+    inline constexpr Color kDangerMark{235, 40, 70, 255};
+    inline constexpr float kDangerMarkWidth = 5.0f;
     /// The hints (`MahjongHintsComponent`), marks on the viewer's hand and so in the gold family: a bar under a tile whose discard declares
     /// the calling hand, and the frame on the tile the computer would discard (the two differ in shape and in alpha).
     inline constexpr Color kDeclareMark{255, 214, 80, 255};

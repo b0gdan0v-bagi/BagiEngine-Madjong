@@ -1,6 +1,7 @@
 #pragma once
 
 #include <BECore/Scene/IComponent.h>
+#include <Mahjong/Table/DangerMarks.h>
 #include <Mahjong/Table/Hints.h>
 
 namespace BECore {
@@ -33,10 +34,10 @@ namespace BECore::Mahjong {
      *
      * **The marks and the advice.** On the viewer's turn the component draws over the hand of the table (it reads the layout of the last
      * draw of `MahjongTableComponent`, which draws first): a bar under every tile whose discard declares the calling hand
-     * (`DeclaringDiscards`, exactly what the `Declare` switch allows). The button `HintButton` (in the nodes `HintsButton` on the table and `ActionsCompact` in the narrow windows,
-     * shown by name in both, `MahjongTableComponent` swaps the canvases) is shown exactly while hints apply and the
-     * viewer has actions to choose from; `MahjongHintAdvice` (ignored when the button is not offered) stores `AdviceFor(view)` and the
-     * component publishes the sentence `AdviceText` as the variable `hintAdvice` for the label `AdviceText`; a discard that is advised is
+     * (`DeclaringDiscards`, exactly what the `Declare` switch allows) and, while an opponent has declared, a bar inside the left edge of each hand tile that is safe to
+     * discard (green), risky (amber) or dangerous (red) (`DangerMarks`; an ordinary tile has none). The button `HintButton` (in the nodes `HintsButton` on the table and `ActionsCompact` in the narrow
+     * windows, shown by name in both, `MahjongTableComponent` swaps the canvases) is shown exactly while hints apply and the viewer has actions to choose from; `MahjongHintAdvice` (ignored when the
+     * button is not offered) stores `AdviceFor(view)` and the component publishes the sentence `AdviceText` as the variable `hintAdvice` for the label `AdviceText`; a discard that is advised is
      * framed on the hand. A second press while that advice is up opens the reasons (`ExplainAdviceFor`, `ReasonLines`) in the panel
      * `WhyPanel` of the node `HintsWhy` (`config/nodes/MahjongHintsWhy.xml`, on the wall ring, text only, no input), as the variables `hintWhy0..5`; a third
      * press closes it. The advice belongs to the table it was asked on: any change of the session `Version()`, a cover, hints off or
@@ -84,10 +85,11 @@ namespace BECore::Mahjong {
         void DropAdvice();
         void DrawMarks(const MahjongGame& game) const;
 
-        eastl::vector<WaitEntry> _row;                  ///< the row as it should be on screen
-        eastl::vector<WaitEntry> _published;            ///< the row as it is on the canvas
-        eastl::array<bool, kTileIdCount> _declaring{};  ///< the tiles whose discard declares the calling hand
-        bool _offered = false;                          ///< the button is offered: hints apply and the viewer has actions
+        eastl::vector<WaitEntry> _row;                      ///< the row as it should be on screen
+        eastl::vector<WaitEntry> _published;                ///< the row as it is on the canvas
+        eastl::array<bool, kTileIdCount> _declaring{};      ///< the tiles whose discard declares the calling hand
+        eastl::array<DangerMark, kTileIdCount> _dangers{};  ///< the danger of each tile of the hand while an opponent has declared
+        bool _offered = false;                              ///< the button is offered: hints apply and the viewer has actions
         bool _offeredShown = false;
         bool _known = false;  ///< `_key` and what follows from it are worked out
         Key _key;
