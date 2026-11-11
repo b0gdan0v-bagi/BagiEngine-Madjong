@@ -214,18 +214,18 @@ namespace BECore::Mahjong {
             return Rect();
         }
 
-        /// What the frame shows besides its layout, as far as the flights need it (`TableSnapshot`): the viewer's face-up tiles, the pile, the open
+        /// What the frame shows besides its layout, as far as the flights need it (`TableSnapshot`): the face-up hands, the pile, the open
         /// sets, the wall and the tile that was just drawn (for an opponent only that it was, never which: its slot is the last of its backs).
         void FillSnapshot(TableSnapshot& snapshot, const HandModel& hand, const Faces& faces, Seat bottom) {
             BE_PROFILE_SCOPE("MahjongTable::FillSnapshot");
-            if (IsSeat(bottom) && faces.Shows(bottom)) {
-                snapshot.viewerHand = hand.GetHand(bottom).concealed;
-            }
             for (const DiscardEntry& entry : hand.Discards()) {
                 snapshot.pile.push_back(entry.tile);
             }
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 snapshot.melds[seat] = hand.GetHand(seat).melds;
+                if (faces.Shows(seat)) {
+                    snapshot.openHand[seat] = hand.GetHand(seat).concealed;
+                }
                 if (snapshot.drawSeat == kNoSeat && hand.DrawnTile(seat).IsValid()) {
                     snapshot.drawSeat = seat;
                     snapshot.drawIndex = faces.Shows(seat) ? DrawnIndexOf(hand, seat) : static_cast<int>(hand.GetHand(seat).concealed.size()) - 1;
@@ -263,13 +263,13 @@ namespace BECore::Mahjong {
             TableSnapshot cleared;
             cleared.layout.slots = eastl::move(snapshot.layout.slots);
             cleared.layout.slots.clear();
-            cleared.viewerHand = eastl::move(snapshot.viewerHand);
-            cleared.viewerHand.clear();
             cleared.pile = eastl::move(snapshot.pile);
             cleared.pile.clear();
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 cleared.melds[seat] = eastl::move(snapshot.melds[seat]);
                 cleared.melds[seat].clear();
+                cleared.openHand[seat] = eastl::move(snapshot.openHand[seat]);
+                cleared.openHand[seat].clear();
             }
             snapshot = eastl::move(cleared);
         }

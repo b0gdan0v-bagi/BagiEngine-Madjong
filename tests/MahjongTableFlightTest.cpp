@@ -781,6 +781,28 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
+    TEST_F(MahjongTableFlightTest, ForASpectatorADiscardLeavesFromTheOldSlotOfThatTileInTheOpenHandAndTheDrawComesAsAFace) {
+        FixedWallSpec spec = SpecOf(kPlainHand, "9p Gd Rd Wd 8s");
+        HandModel model = MakeModel(spec);
+        Lap(model, "9p");  // seat 1 has drawn a Gd and is to discard
+        ASSERT_NO_FATAL_FAILURE(StartWith(kAllComputers, model));
+        const TableLayout before = _table->GetLayout();
+        const int index = IndexOf(kSeat1, T("Gd"));
+        ASSERT_GE(index, 0);
+
+        ASSERT_TRUE(Model().Discard(kSeat1, T("Gd")).has_value());
+        ASSERT_EQ(Model().DrawnTile(kSeat2), T("Rd"));
+        Draw();
+
+        Arrival drawn;
+        drawn.from = LastWallStack(before);
+        drawn.role = SlotRole::HandTile;
+        drawn.seat = kSeat2;
+        drawn.index = IndexOf(kSeat2, T("Rd"));
+        drawn.face = T("Rd");
+        ExpectFlightsRun({Pile(RectOf(before, SlotRole::HandTile, kSeat1, index), kSeat1, 1, T("Gd")), drawn});
+    }
+
     TEST_F(MahjongTableFlightTest, UnderTheHotSeatCoverNothingFliesAndNoConcealedTileIsFaceUpThenRevealOpensTheViewersFlights) {
         FixedWallSpec spec = SpecOf(kPlainHand, "9p Gd Rd");
         ASSERT_NO_FATAL_FAILURE(Start(kTwoPeople));

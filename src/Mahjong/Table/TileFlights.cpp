@@ -51,11 +51,13 @@ namespace BECore::Mahjong {
             return kind == MoveKind::ClaimChow || kind == MoveKind::ClaimPung || kind == MoveKind::ClaimKong;
         }
 
-        /// One planning pass: it remembers which copies of the viewer's tiles are already flying out of the hand.
+        /// One planning pass: it remembers which copies of the tiles of the face-up hands are already flying out of their hands.
         class Planner {
         public:
-            Planner(const TableSnapshot& before, const TableSnapshot& after, eastl::span<const HandMove> newMoves)
-                : _before(before), _after(after), _moves(newMoves), _used(before.viewerHand.size(), false), _beforePile(PileOf(before)) {
+            Planner(const TableSnapshot& before, const TableSnapshot& after, eastl::span<const HandMove> newMoves) : _before(before), _after(after), _moves(newMoves), _beforePile(PileOf(before)) {
+                for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                    _used[seat].assign(before.openHand[seat].size(), false);
+                }
                 const eastl::vector<PileEntry> afterPile = PileOf(after);
                 while (_shared < _beforePile.size() && _shared < afterPile.size() && _beforePile[_shared] == afterPile[_shared]) {
                     ++_shared;
@@ -90,13 +92,14 @@ namespace BECore::Mahjong {
 
             /// The slot of `before` a tile of `seat` leaves its hand from; null when the seat has no hand slot there.
             const TileSlot* HandSource(Seat seat, Tile tile) {
-                if (seat == _before.layout.viewer) {
-                    for (size_t i = 0; i < _before.viewerHand.size(); ++i) {
-                        if (_used[i] || _before.viewerHand[i] != tile) {
+                if (IsSeat(seat)) {
+                    const eastl::vector<Tile>& open = _before.openHand[seat];
+                    for (size_t i = 0; i < open.size(); ++i) {
+                        if (_used[seat][i] || open[i] != tile) {
                             continue;
                         }
                         if (const TileSlot* slot = FindSlot(_before.layout, SlotKey{SlotRole::HandTile, seat, static_cast<int>(i), 0})) {
-                            _used[i] = true;
+                            _used[seat][i] = true;
                             return slot;
                         }
                     }
@@ -191,7 +194,7 @@ namespace BECore::Mahjong {
             const TableSnapshot& _before;
             const TableSnapshot& _after;
             eastl::span<const HandMove> _moves;
-            eastl::vector<bool> _used;
+            eastl::array<eastl::vector<bool>, kSeatCount> _used;
             eastl::vector<PileEntry> _beforePile;
             size_t _shared = 0;
             eastl::vector<TileFlight> _flights;

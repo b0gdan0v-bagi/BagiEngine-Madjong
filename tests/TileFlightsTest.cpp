@@ -33,6 +33,8 @@ namespace BECore::Mahjong::Tests {
             eastl::vector<PileItem> pile;
             int wall = kWallTiles;
             eastl::vector<Tile> viewerHand;
+            /// The face-up concealed tiles of the other seats (`viewerHand` is the viewer's); a hand of backs has none.
+            eastl::array<eastl::vector<Tile>, kSeatCount> openHand;
             Seat drawSeat = kNoSeat;
             int drawIndex = -1;
             Seat winSeat = kNoSeat;
@@ -45,8 +47,14 @@ namespace BECore::Mahjong::Tests {
             TableInput input;
             input.viewer = scene.viewer;
             input.concealedCount = scene.concealed;
+            eastl::array<eastl::vector<Tile>, kSeatCount> open = scene.openHand;
             if (!scene.viewerHand.empty()) {
-                input.concealedCount[scene.viewer] = static_cast<int>(scene.viewerHand.size());
+                open[scene.viewer] = scene.viewerHand;
+            }
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                if (!open[seat].empty()) {
+                    input.concealedCount[seat] = static_cast<int>(open[seat].size());
+                }
             }
             input.melds = scene.melds;
             input.wallRemaining = scene.wall;
@@ -56,7 +64,7 @@ namespace BECore::Mahjong::Tests {
                 snapshot.pile.push_back(item.tile);
             }
             snapshot.layout = MakeTableLayout(input, scene.viewWidth, scene.viewHeight);
-            snapshot.viewerHand = scene.viewerHand;
+            snapshot.openHand = open;
             snapshot.melds = scene.melds;
             snapshot.wallRemaining = scene.wall;
             snapshot.drawSeat = scene.drawSeat;
@@ -652,6 +660,48 @@ namespace BECore::Mahjong::Tests {
         const auto flights = PlanFlights(beforeSnapshot, Snapshot(afterScene), {});
         ASSERT_EQ(flights.size(), 1u);
         ExpectRect(flights[0].from, MiddleOf(beforeSnapshot, 0));
+    }
+
+    TEST(TileFlightsTest, AFaceUpHandOfAnotherSeatDiscardsFromTheSlotOfThatTileAtEachPosition) {
+        for (Seat seat = 1; seat < kSeatCount; ++seat) {
+            Scene before;
+            before.openHand[seat] = Tiles({"1p", "2p", "3p", "4s", "5s", "6s", "7m", "8m", "9m", "Ew", "Ew", "Rd", "Rd", "Gd"});
+            Scene afterScene = before;
+            afterScene.openHand[seat] = Tiles({"1p", "2p", "3p", "4s", "6s", "7m", "8m", "9m", "Ew", "Ew", "Rd", "Rd", "Gd"});
+            afterScene.pile = {{seat, T("5s")}};
+            const TableSnapshot beforeSnapshot = Snapshot(before);
+            const auto flights = PlanFlights(beforeSnapshot, Snapshot(afterScene), {});
+            ASSERT_EQ(flights.size(), 1u) << "seat " << seat;
+            EXPECT_TRUE(flights[0].key == Discard(seat, 0)) << "seat " << seat;
+            ExpectRect(flights[0].from, SlotRectOf(beforeSnapshot, Hand(seat, 4)));
+            // the tile leaves the slot as it lay: a side seat keeps the turn of its source slot
+            EXPECT_FLOAT_EQ(flights[0].fromRotation, Find(beforeSnapshot, Hand(seat, 4))->rotation) << "seat " << seat;
+        }
+    }
+
+    TEST(TileFlightsTest, ADuplicateInAFaceUpHandOfAnotherSeatUsesTheNextUnusedCopy) {
+        Scene before;
+        before.openHand[2] = Tiles({"1p", "2p", "5p", "5p", "6p", "4s", "5s", "6s", "7m", "8m", "9m", "Ew", "Ew", "Rd"});
+        Scene afterScene = before;
+        afterScene.openHand[2] = Tiles({"1p", "2p", "6p", "4s", "5s", "6s", "7m", "8m", "9m", "Ew", "Ew", "Rd"});
+        afterScene.pile = {{2, T("5p")}, {2, T("5p")}};
+        const TableSnapshot beforeSnapshot = Snapshot(before);
+        const auto flights = PlanFlights(beforeSnapshot, Snapshot(afterScene), {});
+        ASSERT_EQ(flights.size(), 2u);
+        ExpectRect(flights[0].from, SlotRectOf(beforeSnapshot, Hand(2, 2)));
+        ExpectRect(flights[1].from, SlotRectOf(beforeSnapshot, Hand(2, 3)));
+    }
+
+    TEST(TileFlightsTest, TheFaceUpHandOfOneSeatDoesNotLendItsTilesToAnotherSeatOrToAHandOfBacks) {
+        Scene before;
+        before.openHand[2] = Tiles({"1p", "2p", "3p", "4s", "5s", "6s", "7m", "8m", "9m", "Ew", "Ew", "Rd", "Rd"});
+        Scene afterScene = before;
+        afterScene.pile = {{1, T("2p")}, {3, T("5s")}};  // seats 1 and 3 show backs; the tiles are in the hand of seat 2 only
+        const TableSnapshot beforeSnapshot = Snapshot(before);
+        const auto flights = PlanFlights(beforeSnapshot, Snapshot(afterScene), {});
+        ASSERT_EQ(flights.size(), 2u);
+        ExpectRect(flights[0].from, MiddleOf(beforeSnapshot, 1));
+        ExpectRect(flights[1].from, MiddleOf(beforeSnapshot, 3));
     }
 
     TEST(TileFlightsTest, EveryFlightNamesASlotOfTheNewFrameAndTheResultIsDeterministic) {
