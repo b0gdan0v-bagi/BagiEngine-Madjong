@@ -32,8 +32,8 @@ namespace BECore::Mahjong {
 
     /// The source rectangle of a cell in the atlas, in pixels.
     [[nodiscard]] constexpr Rect EmblemRect(int cell) noexcept {
-        return Rect(static_cast<float>(cell % kEmblemColumns * kEmblemCellSize), static_cast<float>(cell / kEmblemColumns * kEmblemCellSize), static_cast<float>(kEmblemCellSize),
-                    static_cast<float>(kEmblemCellSize));
+        constexpr float size = static_cast<float>(kEmblemCellSize);
+        return Rect(static_cast<float>(cell % kEmblemColumns) * size, static_cast<float>(cell / kEmblemColumns) * size, size, size);
     }
 
     [[nodiscard]] constexpr int PersonCell() noexcept {
