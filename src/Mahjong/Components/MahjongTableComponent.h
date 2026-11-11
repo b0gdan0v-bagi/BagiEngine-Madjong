@@ -332,10 +332,21 @@ namespace BECore::Mahjong {
         float _flightSeconds = kTileFlightSeconds;       // at Normal speed: `Seconds(_flightSeconds)` is the length of a flight
         AnimationSpeed _speed = kDefaultAnimationSpeed;  // the game's speed as of the last update or draw (the table does not move while `Options` is open)
         ActionButtons _published;                        // what the canvases show; the scene file starts with every button hidden
-        std::optional<ButtonKind> _hoveredButton;        // the shown button of `Actions` under the pointer at the last publication
-        ChowTakes _chowTakes;                            // what the last `OnDraw` framed in the hand for the offered chow
-        eastl::string_view _hintKey;                     // the key of the sentence in `actionHint` (a literal of `SpecOf`, which lives as long as the program)
-        uint64_t _hintStringsVersion = 0;                // the version of the string table that sentence was looked up at
+        /// What the buttons were made from: `LegalActions` allocates, and the model moves only through the session, which bumps its version
+        struct ButtonsKey {
+            const MahjongGame* game = nullptr;
+            uint64_t version = 0;
+            uint64_t starts = 0;
+            Seat actor = kNoSeat;
+
+            bool operator==(const ButtonsKey&) const = default;
+        };
+        std::optional<ButtonsKey> _offeredKey;     // the key of `_offered`; none while no person acts
+        ActionButtons _offered;                    // `MakeActionButtons` of the person to act, made again only when the key moves
+        std::optional<ButtonKind> _hoveredButton;  // the shown button of `Actions` under the pointer at the last publication
+        ChowTakes _chowTakes;                      // what the last `OnDraw` framed in the hand for the offered chow
+        eastl::string_view _hintKey;               // the key of the sentence in `actionHint` (a literal of `SpecOf`, which lives as long as the program)
+        uint64_t _hintStringsVersion = 0;          // the version of the string table that sentence was looked up at
         bool _handoffShown = false;
         bool _compactActions = false;  // `ActionsCompact` is the shown canvas of the buttons; the scene file starts with `Actions`
         bool _declareNext = false;

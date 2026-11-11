@@ -58,6 +58,31 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), version);
     }
 
+    /// The whole frame (every node of the scene, not only the table) on a person's turn, with the advice and its reasons up: the buttons
+    /// on offer are made again only when the session moved (`LegalActions` allocates)
+    TEST_F(MahjongTableAllocTest, APersonsTurnWithTheReasonsUpAllocatesNothingInTheWholeFrame) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        for (int step = 0; step < kStepsIntoTheHand && _game->GetSession().GetPhase() == SessionPhase::Playing; ++step) {
+            if (!_game->GetSession().StepComputer().has_value()) {
+                break;  // the person is to act
+            }
+        }
+        ASSERT_EQ(_game->GetSeats()[static_cast<size_t>(_game->GetSession().Actor())], SeatKind::Person);
+        Draw();
+        EmitAction("MahjongHintAdvice");
+        Draw();
+        EmitAction("MahjongHintAdvice");  // the second press opens the reasons
+        Draw();
+        Draw();
+        ASSERT_TRUE(OnScreen("HintsWhy", "WhyPanel"));
+
+        const uint64_t before = AllocTracker::GetThreadCounters().count;
+        Draw();
+        const uint64_t allocations = AllocTracker::GetThreadCounters().count - before;
+
+        EXPECT_EQ(allocations, 0u);
+    }
+
 }  // namespace BECore::Mahjong::Tests
 
 #endif

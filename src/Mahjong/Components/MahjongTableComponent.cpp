@@ -512,9 +512,14 @@ namespace BECore::Mahjong {
         ActionButtons buttons;
         const TableSession& session = game.GetSession();
         if (PersonActs(game)) {
-            const HandModel& hand = game.GetMatch().Hand();
-            // The tile of the window: the discard that waits for a claim, the tile of a kong that waits to be robbed (invalid in a turn)
-            buttons = MakeActionButtons(hand.LegalActions(session.Actor()), hand.PendingTile());
+            const ButtonsKey key{&game, session.Version(), session.StartCount(), session.Actor()};
+            if (_offeredKey != key) {
+                const HandModel& hand = game.GetMatch().Hand();
+                // The tile of the window: the discard that waits for a claim, the tile of a kong that waits to be robbed (invalid in a turn)
+                _offered = MakeActionButtons(hand.LegalActions(key.actor), hand.PendingTile());
+                _offeredKey = key;
+            }
+            buttons = _offered;
         }
         // The flag belongs to the turn it was set on: gone when the button goes, and when the turn moved on without the table's discard
         if (!buttons[ButtonKind::Declare].shown || TurnOf(game) != _declareTurn) {
@@ -524,7 +529,6 @@ namespace BECore::Mahjong {
     }
 
     void MahjongTableComponent::PublishScreen(const MahjongGame* game) {
-        BE_PROFILE_SCOPE("MahjongTable::PublishScreen");
         BE_PROFILE_SCOPE("MahjongTable::PublishScreen");
         const ActionButtons buttons = game != nullptr ? CurrentButtons(*game) : ActionButtons{};
         UIVars& vars = CoreManager::GetUIVars();

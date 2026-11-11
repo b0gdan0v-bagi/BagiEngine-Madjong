@@ -244,6 +244,11 @@ namespace BECore::Mahjong {
         [[nodiscard]] uint64_t Version() const noexcept {
             return _version;
         }
+        /// The hand of `GetMatch()` was replaced from outside the session (a test that lays a model): `Version()` grows, so every view
+        /// a front end keeps by the version is made again. The rules never call it.
+        void MarkChanged() noexcept {
+            ++_version;
+        }
         /// The number of matches begun through `StartMatch` (a refused start is not counted): a front end tells a new match from the old one
         /// by it, whatever the new match has played since.
         [[nodiscard]] uint64_t StartCount() const noexcept {

@@ -349,6 +349,7 @@ namespace BECore::Mahjong::Tests {
         /// Puts a hand built on a fixed wall in place of the one in progress (the session reads the hand, so it follows).
         void Lay(const HandModel& model) {
             _game->GetMatch().Hand() = model;
+            _game->GetSession().MarkChanged();  // as a move would: what the components keep by the version is made again
         }
 
         /// A left click (press and release) at a point of the view through the engine's input path: a canvas that takes it consumes
