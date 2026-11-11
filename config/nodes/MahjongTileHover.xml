@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<!--
+  The name of the face-up tile under the mouse pointer (tileHoverText: the TileName of Table/TileHover.h, no key of its own). MahjongTableComponent
+  shows the plate exactly while the pointer is over such a tile and sets its place each time the tile under the pointer or the view changes
+  (HoverPlateRect: below the tile, above it where that does not fit, inside the view), so the plate holds no static place and there is nothing for
+  MahjongHudTest or MahjongTableScreenTest to keep clear: x and y below are only where it starts. It takes no input (no blocksInput, not interactive):
+  the pointer over it is still over the tile under it, and a click goes to the table. A SceneView canvas without the safe area, so the offset
+  is from the corner of the view, as the layout's rectangles are (the table is a fixed design that the safe area does not move). Layer 12: over
+  the reasons of the advice (11), under the cover and the modal screens (20 and up). The look is that of SelectedTile in MahjongHud.xml; 200 x 48
+  holds the longest name of either language (MahjongTableHoverTest).
+-->
+<node name="TileHover" layer="12">
+  <components>
+    <component type="UICanvasComponent" space="SceneView">
+      <elements>
+        <element type="UIStack" name="TileHoverPlate" anchor="TopLeft" x="0" y="0" width="200" height="48" visible="false" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170">
+          <children>
+            <element type="UILabel" name="TileHoverLabel" height="32" text="{tileHoverText}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" />
+          </children>
+        </element>
+      </elements>
+    </component>
+  </components>
+</node>

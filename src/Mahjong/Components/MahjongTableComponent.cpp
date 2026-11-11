@@ -16,12 +16,14 @@
 #include <Mahjong/Table/CallingMarks.h>
 #include <Mahjong/Table/CenterPanel.h>
 #include <Mahjong/Table/EmblemAtlas.h>
+#include <Mahjong/Table/ScoreText.h>
 #include <Mahjong/Table/SeatName.h>
 #include <Mahjong/Table/SeatPlates.h>
 #include <Mahjong/Table/TableLayoutSpecXml.h>
 #include <Mahjong/Table/TableLook.h>
 #include <Mahjong/Table/TapSelect.h>
 #include <Mahjong/Table/TileAtlas.h>
+#include <Mahjong/Table/TileHover.h>
 #include <Mahjong/Table/TouchRegime.h>
 #include <Mahjong/Table/UiPalette.h>
 #include <Mahjong/Table/WindMarks.h>
@@ -115,9 +117,43 @@ namespace BECore::Mahjong {
             return WindowNumbers{environment.MakeContext(CoreManager::GetMainWindow().Get(), renderer.GetOutputWidth(), renderer.GetOutputHeight()), environment.GetSettings().minTouchSize};
         }
 
-        /// A click that SDL made from a touch or a pen (a real mouse never has these ids).
+        /// Whether SDL made an event from a touch or a pen (a real mouse never has these ids).
+        bool IsTouchDevice(SDL_MouseID which) {
+            return which == SDL_TOUCH_MOUSEID || which == SDL_PEN_MOUSEID;
+        }
+
         bool IsTouchClick(const SDL_MouseButtonEvent& button) {
-            return button.which == SDL_TOUCH_MOUSEID || button.which == SDL_PEN_MOUSEID;
+            return IsTouchDevice(button.which);
+        }
+
+        /// Whether `element` or a shown element below it reports the pointer over it (the canvas sets `UIElement::hovered` from the motion it
+        /// consumed; a hidden element may still carry the flag of its last motion).
+        bool HasHoveredElement(const UIElement& element) {
+            if (!element.active.visible) {
+                return false;
+            }
+            if (element.hovered) {
+                return true;
+            }
+            for (const auto& child : element.children) {
+                if (HasHoveredElement(*child)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// Whether a canvas of the scene has the pointer: one that takes input and is modal (it consumes every motion) or has a shown
+        /// element under the pointer. A canvas that consumes a motion keeps it from the table, so the table cannot see the pointer move onto
+        /// it from a tile; this is how it finds out.
+        bool CanvasHasPointer(Scene& scene) {
+            for (const auto& child : scene.GetRootNode().GetChildren()) {
+                const IntrusivePtr<UICanvasComponent> canvas = child->GetComponent<UICanvasComponent>();
+                if (canvas && canvas->TakesInput() && (canvas->_modal || HasHoveredElement(canvas->GetRoot()))) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         Faces FacesOf(const TableSession& session) {
@@ -389,6 +425,7 @@ namespace BECore::Mahjong {
         LoadTableLayoutSpec();
         Subscribe<ApplicationEvents::ApplicationCleanUpEvent, &MahjongTableComponent::OnApplicationCleanUp>(this);
         SubscribeInScene<SDLEvents::MouseButtonDownEvent, &MahjongTableComponent::OnMouseDown>(this);
+        SubscribeInScene<SDLEvents::MouseMotionEvent, &MahjongTableComponent::OnMouseMotion>(this);
         SubscribeInScene<InputEvents::ActionEvent, &MahjongTableComponent::OnAction>(this);
         SubscribeInScene<SceneEvents::SceneUpdateEvent, &MahjongTableComponent::OnUpdate>(this);
     }
@@ -643,6 +680,14 @@ namespace BECore::Mahjong {
             return;
         }
         TapHandTile(*game, hit);
+    }
+
+    void MahjongTableComponent::OnMouseMotion(const SDLEvents::MouseMotionEvent& event) {
+        const SDL_MouseMotionEvent& motion = event.motion;
+        // A touch or a pen has no pointer to rest on a tile
+        _pointerSeen = !IsTouchDevice(motion.which);
+        _pointerX = motion.x;
+        _pointerY = motion.y;
     }
 
     void MahjongTableComponent::OnAction(const InputEvents::ActionEvent& event) {
@@ -928,6 +973,61 @@ namespace BECore::Mahjong {
         vars.Set(name, eastl::string_view(text));
     }
 
+    void MahjongTableComponent::PublishHover(const MahjongGame* game, float viewWidth, float viewHeight) {
+        BE_PROFILE_SCOPE("MahjongTable::PublishHover");
+        Scene& scene = GetScene();
+        const bool live = game != nullptr && game->GetMatch().GetPhase() != MatchPhase::NotStarted;
+        // A pointer that the table cannot follow any more is forgotten, not kept: something else took it (the pause, the cover, a canvas
+        // that consumes its motion), so it can have moved on without the table hearing of it
+        if (_pointerSeen && (!live || game->IsTablePaused() || game->GetSession().HandoffPending() || CanvasHasPointer(scene))) {
+            _pointerSeen = false;
+        }
+        const TileSlot* slot = nullptr;
+        Tile tile;
+        if (_pointerSeen) {
+            slot = SlotAt(_shown.layout, scene.ScreenToSceneX(_pointerX), scene.ScreenToSceneY(_pointerY));
+            // A tile in the air is not where its slot is
+            if (slot != nullptr && eastl::any_of(_flights.begin(), _flights.end(), [&](const TileFlight& flight) { return flight.key.Matches(*slot); })) {
+                slot = nullptr;
+            }
+            if (slot != nullptr) {
+                const std::optional<Tile> shown = TileOfSlot(game->GetMatch().Hand(), *slot, FacesOf(game->GetSession()).Shows(slot->seat));
+                tile = shown.value_or(Tile{});
+            }
+            if (!tile.IsValid()) {
+                slot = nullptr;
+            }
+        }
+
+        UIVars& vars = CoreManager::GetUIVars();
+        const UIStrings& strings = CoreManager::GetUIStrings();
+        const PoolString name = "tileHoverText"_intern;
+        if (tile.IsValid() != _hoverShown) {
+            _hoverShown = tile.IsValid();
+            UICanvasComponent::SetElementVisibleByName(scene, "TileHoverPlate"_intern, _hoverShown);
+        }
+        if (tile != _hoverTile || (tile.IsValid() && strings.GetVersion() != _hoverStringsVersion) || !vars.Has(name)) {
+            _hoverTile = tile;
+            _hoverStringsVersion = strings.GetVersion();
+            const eastl::string text = tile.IsValid() ? TileName(strings, tile) : eastl::string();
+            vars.Set(name, eastl::string_view(text));
+        }
+        if (slot == nullptr) {
+            return;
+        }
+        // The plate is laid out again each time it moves; it is in place when the canvas of the node draws, later in this frame
+        const IntrusivePtr<UICanvasComponent> canvas = FindCanvasOf(scene, "TileHover"_intern);
+        if (UIElement* plate = FindElementIn(canvas, "TileHoverPlate"_intern)) {
+            UIRectSpec& spec = plate->style.rect;
+            const Rect place = HoverPlateRect(slot->rect, spec.width.value, spec.height.value, viewWidth, viewHeight);
+            if (spec.x.value != place.x || spec.y.value != place.y) {
+                spec.x = UILength::Px(place.x);
+                spec.y = UILength::Px(place.y);
+                canvas->Invalidate();
+            }
+        }
+    }
+
     void MahjongTableComponent::SetAtlasTexture(IntrusivePtr<ITexture> texture) {
         _atlas = ResourceHandle<ITexture>(std::move(texture));
     }
@@ -982,6 +1082,7 @@ namespace BECore::Mahjong {
         RefreshSelection(game);
         if (game == nullptr || game->GetMatch().GetPhase() == MatchPhase::NotStarted) {
             PublishSelectedText(Tile{});
+            PublishHover(nullptr, viewWidth, viewHeight);
             EndFlights();
             return;
         }
@@ -1288,6 +1389,7 @@ namespace BECore::Mahjong {
                 }
             }
         }
+        PublishHover(game, viewWidth, viewHeight);
     }
 
 }  // namespace BECore::Mahjong

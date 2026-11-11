@@ -35,6 +35,29 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(_renderer->calls.empty());
     }
 
+    TEST_F(MahjongTableAllocTest, ThePointerAtRestOnATileAllocatesNothing) {
+        ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
+        for (int step = 0; step < kStepsIntoTheHand && _game->GetSession().GetPhase() == SessionPhase::Playing; ++step) {
+            ASSERT_TRUE(_game->GetSession().StepComputer().has_value());
+        }
+        Draw();
+        const auto discard = std::find_if(_table->GetLayout().slots.begin(), _table->GetLayout().slots.end(), [](const TileSlot& slot) { return slot.role == SlotRole::DiscardTile; });
+        ASSERT_NE(discard, _table->GetLayout().slots.end());
+        HoverAt(discard->rect.x + discard->rect.w * 0.5f, discard->rect.y + discard->rect.h * 0.5f);
+        Draw();
+        Draw();  // the name is worded and the plate placed; from here on nothing changes
+        ASSERT_TRUE(OnScreen("TileHover", "TileHoverPlate"));
+
+        _renderer->ClearCalls();
+        const uint64_t version = CoreManager::GetUIVars().GetVersion();
+        const uint64_t before = AllocTracker::GetThreadCounters().count;
+        _table->OnDraw();
+        const uint64_t allocations = AllocTracker::GetThreadCounters().count - before;
+
+        EXPECT_EQ(allocations, 0u);
+        EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), version);
+    }
+
 }  // namespace BECore::Mahjong::Tests
 
 #endif
