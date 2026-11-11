@@ -18,9 +18,9 @@
   clear of the viewer's hand.
   The label Hint above the row shows the sentence of the button under the pointer ({actionHint}, set by the component in the
   current language from UIElement::hovered and again when the language changes; hidden while there is none). It takes no input, so
-  it never eats a click; it lies in the gutter between the wall and the right seat's discards (x 832..992, y 256..436: 160 wide,
-  room for the longer words of a translation; clear of their plates and of the row it explains, MahjongTableScreenTest holds the
-  place; the discards of a side seat are turned, which made their columns wider and the gutter narrower). A touch screen has no hover.
+  it never eats a click; it lies in the gutter between the wall and the right seat's discards (x 832..960, y 256..432: 128 wide,
+  the longer words of a translation wrap to its height; clear of their plates and of the row it explains, MahjongTableScreenTest holds the
+  place; the discards of a side seat are turned and as large as the zones allow, which made their columns wider and the gutter narrower). A touch screen has no hover.
   In a portrait view (720 x 1280, the variant below) the buttons are 68 high (kPortraitActionButtonHeight, Table/TouchRegime.h: the view is
   720 wide, so a 68 unit button is 34 pt on a phone of 360 pt and a touch target without ActionsCompact) and 92 wide (the toggle Declare 124: its word and box need it), so that the fullest
   claim window, seven buttons, is one row of 692 units (x 12..704, y 924..992; the fullest turn is 628) in the band of free ground between the viewer's discards and
@@ -35,9 +35,9 @@
   (8 clear of the block, of the right seat's meld column at x 1004 and 16 of the melds), and the buttons are 88 wide, so four make a line
   of 376 and the fullest claim window, seven, two lines (the Declare toggle too). The fullest turn, six, is two lines as well, with
   UpgradeKong 104 wide because "Add to pung" does not fit 88; the word of Win is the small size, "Маджонг!" at 22 does not fit 88 in a window of
-  720 x 480. The Hint label has no room beside that row (the gutter between the wall and the right seat's discards is 73 wide), so it lies left of
+  720 x 480. The Hint label has no room beside that row (the gutter between the wall and the right seat's discards is 54 wide), so it lies left of
   the bottom discard block, under the wall ring and over SelectedTile of Hud: x 288..460, y 444..568, 8 clear of the wall ring (y 436), of the
-  left seat's discards (x 114..274, y 312..456) and of the block (x 468).
+  left seat's discards (x 114..299, y 268..436) and of the block (x 468).
   The narrow table is 768 high, so a button is 33 px or more in every window from 640 x 480 up and ActionsCompact takes over only in a nearly
   square window (610 x 600: a bar of 83 px under the table holds its row).
 -->
@@ -45,7 +45,7 @@
   <components>
     <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
       <elements>
-        <element type="UILabel" name="Hint" anchor="TopLeft" ignoreSafeArea="true" visible="false" x="832" y="256" width="160" height="180" text="{actionHint}" fontSize="18" align="Center" verticalAlign="Center" color="0,0,0,200" />
+        <element type="UILabel" name="Hint" anchor="TopLeft" ignoreSafeArea="true" visible="false" x="832" y="256" width="128" height="176" text="{actionHint}" fontSize="18" align="Center" verticalAlign="Center" color="0,0,0,200" />
         <element type="UIStack" name="ActionRow" anchor="TopLeft" ignoreSafeArea="true" x="720" y="440" width="440" height="120" direction="Horizontal" spacing="8" wrapChildren="true">
           <children>
           <element type="UIButton" name="Win" visible="false" width="104" height="56" text="{#button.Win}" fontSize="22" action="MahjongWin" color="40,110,60,255" />

@@ -27,25 +27,26 @@
 
   <!-- Landscape: 1280 x 720 (16:9, 16:10 and what lies between). -->
   <Shape name="Landscape">
-    <!-- The viewer: the Hand rests 8 units above the bottom edge and starts at x 72, right of the left melds column (it ends at x 81); the Melds lie
+    <!-- The viewer: the Hand rests 8 units above the bottom edge and starts at x 72, under the left melds column (it ends at y 600); the Melds lie
          right of it and end at x 1268, the Bonus row above the hand. The plate lies left of the Discards, above the Bonus row and right of the left
-         melds column. The Discards lie between the wall ring (ends y 436) and the Bonus row (y 616). -->
+         melds column (it ends at x 91). The Discards lie between the wall ring (ends y 436) and the Bonus row (y 616). -->
     <Seat position="0">
       <Hand x="0.05625" y="0.9" w="0.525" h="0.08888889" minTileW="48"/>  <!-- 72 648 672x64 -->
       <Melds x="0.596875" y="0.9333333" w="0.39375" h="0.05555556" minTileW="30"/>  <!-- 764 672 504x40 -->
       <Bonus x="0.05625" y="0.8555555" w="0.15" h="0.04444445" minTileW="24"/>  <!-- 72 616 192x32 -->
       <Discards x="0.44375" y="0.6277778" w="0.1125" h="0.2222222"/>  <!-- 568 452 144x160 -->
-      <Plate x="0.065625" y="0.7388889" w="0.11875" h="0.1111111"/>  <!-- 84 532 152x80 -->
+      <Plate x="0.075" y="0.73888889" w="0.11875" h="0.11111111"/>  <!-- 96 532 152x80 -->
     </Seat>
     <!-- The right seat, turned: the columns hand, melds, bonus from the edge inwards. The Bonus starts at y 192, below the move line of the HUD
-         (MahjongHud.xml; it ends at y 172 and reaches over this column). The Discards start at x 1006: the Hint label of MahjongActions.xml
-         ends at x 1000. The plate lies right of that label, below the move line and left of the Bonus column. -->
+         (MahjongHud.xml; it ends at y 172 and reaches over this column). The Hand and the Melds end at y 576 and 600: the hand row of the
+         phone profile starts at y 608. The Discards start at x 968: the Hint label of MahjongActions.xml ends at x 960, and the block ends at
+         y 436, above the action row (y 440). The plate lies right of that label, below the move line and left of the Bonus column. -->
     <Seat position="1">
-      <Hand x="0.9648438" y="0.2277778" w="0.02890625" h="0.5444444" minTileW="28"/>  <!-- 1235 164 37x392 -->
-      <Melds x="0.9367188" y="0.2166667" w="0.025" h="0.5666667" minTileW="24"/>  <!-- 1199 156 32x408 -->
-      <Bonus x="0.9171875" y="0.2666667" w="0.01640625" h="0.1777778" minTileW="16"/>  <!-- 1174 192 21x128 -->
-      <Discards x="0.7859375" y="0.4" w="0.125" h="0.2"/>  <!-- 1006 288 160x144 -->
-      <Plate x="0.790625" y="0.2555556" w="0.11875" h="0.1111111"/>  <!-- 1012 184 152x80 -->
+      <Hand x="0.9609375" y="0.17777778" w="0.0328125" h="0.62222222" minTileW="32"/>  <!-- 1230 128 42x448 -->
+      <Melds x="0.92890625" y="0.17777778" w="0.02890625" h="0.65555556" minTileW="28"/>  <!-- 1189 128 37x472 -->
+      <Bonus x="0.90703125" y="0.26666667" w="0.01875" h="0.2" minTileW="18"/>  <!-- 1161 192 24x144 -->
+      <Discards x="0.75625" y="0.37222222" w="0.14453125" h="0.23333333"/>  <!-- 968 268 185x168 -->
+      <Plate x="0.78125" y="0.25" w="0.11875" h="0.11111111"/>  <!-- 1000 180 152x80 -->
     </Seat>
     <!-- The top seat: the Hand starts at x 444, right of the WaitPanel of MahjongHints.xml (x 96..432), and is not centred. The Bonus tiles lie
          in the row of the Melds, right of them, and end at x 988, left of the Rules button (x 996). The plate lies below the Melds and left of the Discards. -->
@@ -56,13 +57,14 @@
       <Discards x="0.44375" y="0.1277778" w="0.1125" h="0.2222222"/>  <!-- 568 92 144x160 -->
       <Plate x="0.31875" y="0.1333333" w="0.11875" h="0.1111111"/>  <!-- 408 96 152x80 -->
     </Seat>
-    <!-- The left seat, turned; the plate lies right of the Bonus column (ends x 106) and above the Discards. -->
+    <!-- The left seat, turned, the right one mirrored; the plate lies right of the Bonus column (ends x 119) and above the Discards, and the
+         viewer's plate (x 96) right of the Melds column (ends x 91). -->
     <Seat position="3">
-      <Hand x="0.00625" y="0.2277778" w="0.02890625" h="0.5444444" minTileW="28"/>  <!-- 8 164 37x392 -->
-      <Melds x="0.03828125" y="0.2166667" w="0.025" h="0.5666667" minTileW="24"/>  <!-- 49 156 32x408 -->
-      <Bonus x="0.06640625" y="0.2666667" w="0.01640625" h="0.1777778" minTileW="16"/>  <!-- 85 192 21x128 -->
-      <Discards x="0.0890625" y="0.4" w="0.125" h="0.2"/>  <!-- 114 288 160x144 -->
-      <Plate x="0.0875" y="0.2555556" w="0.11875" h="0.1111111"/>  <!-- 112 184 152x80 -->
+      <Hand x="0.00625" y="0.17777778" w="0.0328125" h="0.62222222" minTileW="32"/>  <!-- 8 128 42x448 -->
+      <Melds x="0.0421875" y="0.17777778" w="0.02890625" h="0.65555556" minTileW="28"/>  <!-- 54 128 37x472 -->
+      <Bonus x="0.07421875" y="0.26666667" w="0.01875" h="0.2" minTileW="18"/>  <!-- 95 192 24x144 -->
+      <Discards x="0.096875" y="0.37222222" w="0.14453125" h="0.23333333"/>  <!-- 124 268 185x168 -->
+      <Plate x="0.096875" y="0.25" w="0.11875" h="0.11111111"/>  <!-- 124 180 152x80 -->
     </Seat>
     <Wall x="0.3578125" y="0.3722222" w="0.284375" h="0.2333333"/>  <!-- 458 268 364x168 -->
 
@@ -78,7 +80,7 @@
       <Melds x="0.3625" y="0.7833334" w="0.39375" h="0.05555556" minTileW="30"/>  <!-- 464 564 504x40 -->
       <Bonus x="0.196875" y="0.7944444" w="0.15" h="0.04444445" minTileW="24"/>  <!-- 252 572 192x32 -->
       <Discards x="0.44375" y="0.6111111" w="0.1125" h="0.1666667" rows="3"/>  <!-- 568 440 144x120 -->
-      <Plate x="0.065625" y="0.7333333" w="0.11875" h="0.1111111"/>  <!-- 84 528 152x80 -->
+      <Plate x="0.075" y="0.73333333" w="0.11875" h="0.11111111"/>  <!-- 96 528 152x80 -->
     </Phone>
   </Shape>
 
@@ -136,8 +138,8 @@
       <Hand x="0.9583333" y="0.2447917" w="0.03425926" h="0.5104167" minTileW="28"/>  <!-- 1035 188 37x392 -->
       <Melds x="0.925" y="0.234375" w="0.02962963" h="0.53125" minTileW="24"/>  <!-- 999 180 32x408 -->
       <Bonus x="0.9018518" y="0.2447917" w="0.01944445" h="0.1666667" minTileW="16"/>  <!-- 974 188 21x128 -->
-      <Discards x="0.7462963" y="0.40625" w="0.1481481" h="0.1875"/>  <!-- 806 312 160x144 -->
-      <Plate x="0.7481481" y="0.2395833" w="0.1407407" h="0.1041667"/>  <!-- 808 184 152x80 -->
+      <Discards x="0.71851852" y="0.34895833" w="0.1712963" h="0.21875"/>  <!-- 776 268 185x168 -->
+      <Plate x="0.74814815" y="0.234375" w="0.14074074" h="0.10416667"/>  <!-- 808 180 152x80 -->
     </Seat>
     <!-- The top Hand starts at x 340, right of the WaitPanel (x 8..328 in this view); the Bonus tiles lie beside it, centred on it. -->
     <Seat position="2">
@@ -151,8 +153,8 @@
       <Hand x="0.007407407" y="0.2447917" w="0.03425926" h="0.5104167" minTileW="28"/>  <!-- 8 188 37x392 -->
       <Melds x="0.04537037" y="0.234375" w="0.02962963" h="0.53125" minTileW="24"/>  <!-- 49 180 32x408 -->
       <Bonus x="0.0787037" y="0.2447917" w="0.01944445" h="0.1666667" minTileW="16"/>  <!-- 85 188 21x128 -->
-      <Discards x="0.1055556" y="0.40625" w="0.1481481" h="0.1875"/>  <!-- 114 312 160x144 -->
-      <Plate x="0.1037037" y="0.2395833" w="0.1407407" h="0.1041667"/>  <!-- 112 184 152x80 -->
+      <Discards x="0.10555556" y="0.34895833" w="0.1712963" h="0.21875"/>  <!-- 114 268 185x168 -->
+      <Plate x="0.1037037" y="0.234375" w="0.14074074" h="0.10416667"/>  <!-- 112 180 152x80 -->
     </Seat>
     <Wall x="0.3314815" y="0.3489583" w="0.337037" h="0.21875"/>  <!-- 358 268 364x168 -->
   </Shape>
