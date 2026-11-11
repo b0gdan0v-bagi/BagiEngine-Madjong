@@ -292,6 +292,7 @@ namespace BECore::Mahjong::Arena {
         EXPECT_NE(ErrorOf({"--seeds", "5", "--logs", "x"}).find("--seeds cannot be used with --logs"), std::string::npos);
         EXPECT_NE(ErrorOf({"--logs", "x", "--others", "normal"}).find("--others cannot be used with --logs"), std::string::npos);
         EXPECT_NE(ErrorOf({"--logs", "x", "--time"}).find("--time cannot be used with --logs"), std::string::npos);
+        EXPECT_NE(ErrorOf({"--logs", "x", "--focus", "normal,random"}).find("--focus: random is no bot to compare with"), std::string::npos);
         EXPECT_NE(ErrorOf({"--check"}).find("--check needs --logs"), std::string::npos);
         EXPECT_NE(ErrorOf({"--logs"}).find("--logs needs a value"), std::string::npos);
     }

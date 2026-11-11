@@ -1,6 +1,7 @@
 #include "ArenaCli.h"
 
 #include <Mahjong/Arena/ArenaLogsReport.h>
+#include <Mahjong/Arena/ArenaTester.h>
 #include <thread>
 
 namespace BECore::Mahjong::Arena {
@@ -107,7 +108,8 @@ namespace BECore::Mahjong::Arena {
                       "                  rest play the worlds of a search decision; the report is the same bytes whatever N is; default {jobsDefault}\n"
                       "  {time}          also print the time per decision (wall clock: the one number that differs between runs)\n"
                       "  {logs} PATH     read the match logs (*.jsonl) of a folder, or one file, instead of playing: replays each, prints a summary of the\n"
-                      "                  ones that replay; {first}, {seeds}, {others} and {time} are not used with it\n"
+                      "                  ones that replay; {first}, {seeds}, {others} and {time} are not used with it; {focus} then names the bots the people are\n"
+                      "                  compared with (no random)\n"
                       "  {check}         with {logs}: only one line per file, ok<TAB>name or bad<TAB>name<TAB>reason (exit {ok} even when files are bad)\n"
                       "  {help}          this text\n"
                       "\n"
@@ -209,6 +211,9 @@ namespace BECore::Mahjong::Arena {
             }
             if (parsed.config.timing) {
                 return std::unexpected(NotWithLogs(kTimeOption, "there is nothing to time"));
+            }
+            if (const eastl::string problem = ValidateTesterBots(parsed.config.focus); !problem.empty()) {
+                return std::unexpected(Format("{}: {}", kFocusOption, problem.c_str()));
             }
         }
         const eastl::string problem = ValidateArenaConfig(parsed.config);
