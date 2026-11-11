@@ -1,0 +1,9 @@
+# clangd (the editor and Claude Code's LSP tool) reads the database of the macos-debug preset.
+CompileFlags:
+  CompilationDatabase: build/macos-debug
+---
+# The vendored libraries are not indexed in the background (they are only opened, never changed).
+If:
+  PathMatch: engine/external/.*
+Index:
+  Background: Skip

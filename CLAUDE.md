@@ -33,6 +33,7 @@ A nested `CLAUDE.md` loads when you work in its folder.
 - No `ImGui::` in a game component without `ImGui::GetCurrentContext()`; the UI is the engine's canvases.
 - Per-frame work belongs in a component (`SubscribeInScene`); `IGame` has no per-frame hook.
 - New or moved sources, and any change to a file with `BE_CLASS` / `BE_REFLECT_FIELD`, need `cmake --preset <p>` again.
+- The `LSP` tool (clangd plugin) reads `build/macos-debug/compile_commands.json` through `.clangd`: a new source has no flags there until `cmake --preset macos-debug`. Its diagnostics are a hint (PCH-reliant headers can show false errors); the build and the tests decide.
 
 ## Docs budget
 
