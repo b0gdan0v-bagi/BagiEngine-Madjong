@@ -169,6 +169,42 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
+    TEST(MatchLogTest, TheStartEventCarriesTheOriginTheSessionWasGiven) {
+        const MatchLogOrigin origin{MatchPlatform::Web, "a1b2c3d", "0.1.0"};
+        LoggedTable table;
+        EXPECT_EQ(table.session.LogOrigin(), MatchLogOrigin{}) << "unknown, empty, empty until told";
+        ASSERT_NO_FATAL_FAILURE(table.Start(kAllComputers));
+        EXPECT_EQ(table.log.Events().front().origin, MatchLogOrigin{});
+
+        table.session.SetLogOrigin(origin);
+        table.log.Clear();
+        ASSERT_NO_FATAL_FAILURE(table.Start(kAllComputers));
+        EXPECT_EQ(table.log.Events().front().origin, origin);
+        table.PlayMatch();
+
+        // A later match is stamped as well, and the origin follows a change.
+        const MatchLogOrigin changed{MatchPlatform::Desktop, "ffff000", "0.2.0"};
+        table.session.SetLogOrigin(changed);
+        table.log.Clear();
+        ASSERT_NO_FATAL_FAILURE(table.Start(kAllComputers, kSeed + 1));
+        EXPECT_EQ(table.log.Events().front().origin, changed);
+    }
+
+    TEST(MatchLogTest, AResumedMatchEchoesTheOriginOfItsLogNotTheSessions) {
+        const MatchLogOrigin began{MatchPlatform::Web, "a1b2c3d", "0.1.0"};
+        LoggedTable recorded;
+        recorded.session.SetLogOrigin(began);
+        ASSERT_NO_FATAL_FAILURE(recorded.Start(kAllComputers));
+        recorded.PlayMatch();
+
+        LoggedTable resumed;
+        resumed.session.SetLogOrigin({MatchPlatform::Desktop, "other", "9.9.9"});
+        ASSERT_TRUE(resumed.session.ResumeMatch(recorded.log.Events(), kAllComputers, kDefaultLevel).has_value());
+        ASSERT_FALSE(resumed.log.Events().empty());
+        EXPECT_EQ(resumed.log.Events().front().origin, began) << "a save keeps the origin of the build that began the match";
+        EXPECT_EQ(resumed.log.Events(), recorded.log.Events());
+    }
+
     TEST(MatchLogTest, TheStartsOfTwoLevelsAreUnequal) {
         const MatchLogEvent normal = Play(kSeed, ComputerLevel::Normal).events.front();
         const MatchLogEvent easy = Play(kSeed, ComputerLevel::Easy).events.front();

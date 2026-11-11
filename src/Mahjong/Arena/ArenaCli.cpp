@@ -1,5 +1,7 @@
 #include "ArenaCli.h"
 
+#include <Mahjong/Arena/ArenaLogsReport.h>
+#include <Mahjong/Arena/ArenaTester.h>
 #include <thread>
 
 namespace BECore::Mahjong::Arena {
@@ -12,6 +14,9 @@ namespace BECore::Mahjong::Arena {
         constexpr std::string_view kSeedsOption = "--seeds";
         constexpr std::string_view kJobsOption = "--jobs";
         constexpr std::string_view kTimeOption = "--time";
+        constexpr std::string_view kLogsOption = "--logs";
+        constexpr std::string_view kCheckOption = "--check";
+        constexpr std::string_view kDifferencesOption = "--differences";
         constexpr std::string_view kTableStatsOption = "--table-stats";
         constexpr std::string_view kHelpOption = "--help";
 
@@ -82,6 +87,11 @@ namespace BECore::Mahjong::Arena {
             return static_cast<int>(*number);
         }
 
+        /// The refusal of an option that plays seeds when the program reads logs.
+        eastl::string NotWithLogs(std::string_view option, std::string_view why) {
+            return Format("{} cannot be used with {}: {}", option, kLogsOption, why);
+        }
+
     }  // namespace
 
     eastl::string ArenaUsage() {
@@ -99,20 +109,30 @@ namespace BECore::Mahjong::Arena {
                       "  {jobs} N        N threads in all (1 to {maxJobs}; 0 is one per core): the seeds first; when there are fewer seeds than threads, the\n"
                       "                  rest play the worlds of a search decision; the report is the same bytes whatever N is; default {jobsDefault}\n"
                       "  {time}          also print the time per decision (wall clock: the one number that differs between runs)\n"
+                      "  {logs} PATH     read the match logs (*.jsonl) of a folder, or one file, instead of playing: replays each, prints a summary of the\n"
+                      "                  ones that replay, the agreement of the people with the bots ({focus}), the logged results by the level of the computers met and the\n"
+                      "                  differences; {jobs} plays whole matches in threads, the same bytes whatever N is; {first}, {seeds}, {others} and {time} are not used with it; {focus} then "
+                      "names the bots the people are\n"
+                      "                  compared with (no random)\n"
+                      "  {differences} N list the first N differences between the people and the first bot of {focus}; default {differencesDefault}, 0 lists none\n"
+                      "                  (the count of all is always printed)\n"
+                      "  {check}         with {logs}: only one line per file, ok<TAB>name or bad<TAB>name<TAB>reason (exit {ok} even when files are bad)\n"
                       "  {tableStats}    instead of the table of players: plays the seeds once with four normal seats and prints the table statistics\n"
                       "                  (the chance that another seat wins in a round, the mean scores, how hands are won); with {first}, {seeds}, {jobs}; not with\n"
-                      "                  {focus}, {others} or {time}\n"
+                      "                  {focus}, {others}, {time} or {logs}\n"
                       "  {help}          this text\n"
                       "\n"
-                      "exit code: {ok} done, {refused} an action was refused by the rules (a defect; the seed and the seat are printed), {bad} bad arguments.\n"
+                      "exit code: {ok} done, {refused} an action was refused by the rules (a defect; the seed and the seat are printed) or the path of {logs} cannot be read,\n"
+                      "{bad} bad arguments.\n"
                       "\n"
                       "interval: the four rotations of a seed share one wall, so the seed is the sample; a number is the mean over the seeds and\n"
                       "+- is 1.96 standard errors (normal approximation, fine from about 100 seeds). Read the paired rows for a difference.\n",
                       fmt::arg("levels", Format("1..{}, easy = 1, normal = {}", kMaxLevel, LevelNumber(ComputerLevel::Normal)).c_str()), fmt::arg("focus", kFocusOption),
                       fmt::arg("others", kOthersOption), fmt::arg("first", kFirstOption), fmt::arg("seeds", kSeedsOption), fmt::arg("jobs", kJobsOption), fmt::arg("maxJobs", kMaxJobs),
-                      fmt::arg("jobsDefault", kDefaultJobs), fmt::arg("time", kTimeOption), fmt::arg("tableStats", kTableStatsOption), fmt::arg("help", kHelpOption),
-                      fmt::arg("focusDefault", kDefaultFocusSpec), fmt::arg("othersDefault", kDefaultOthersSpec), fmt::arg("firstDefault", kDefaultFirstSeed),
-                      fmt::arg("seedsDefault", kDefaultSeedCount), fmt::arg("ok", kExitOk), fmt::arg("refused", kExitRefusedAction), fmt::arg("bad", kExitBadArguments));
+                      fmt::arg("jobsDefault", kDefaultJobs), fmt::arg("time", kTimeOption), fmt::arg("logs", kLogsOption), fmt::arg("check", kCheckOption), fmt::arg("differences", kDifferencesOption),
+                      fmt::arg("differencesDefault", kDefaultDifferences), fmt::arg("tableStats", kTableStatsOption), fmt::arg("help", kHelpOption), fmt::arg("focusDefault", kDefaultFocusSpec),
+                      fmt::arg("othersDefault", kDefaultOthersSpec), fmt::arg("firstDefault", kDefaultFirstSeed), fmt::arg("seedsDefault", kDefaultSeedCount), fmt::arg("ok", kExitOk),
+                      fmt::arg("refused", kExitRefusedAction), fmt::arg("bad", kExitBadArguments));
     }
 
     std::expected<ArenaArgs, eastl::string> ParseArenaArgs(eastl::span<const std::string_view> args) {
@@ -122,6 +142,10 @@ namespace BECore::Mahjong::Arena {
         ASSERT(defaultFocus.has_value() && defaultOthers.has_value());
         parsed.config.focus.push_back(*defaultFocus);
         parsed.config.others = *defaultOthers;
+        bool gaveFirst = false;
+        bool gaveSeeds = false;
+        bool gaveOthers = false;
+        bool gaveDifferences = false;
         bool timeGiven = false;
         bool playersGiven = false;
         for (size_t index = 0; index < args.size(); ++index) {
@@ -139,7 +163,12 @@ namespace BECore::Mahjong::Arena {
                 parsed.tableStats = true;
                 continue;
             }
-            const bool takesValue = option == kFocusOption || option == kOthersOption || option == kFirstOption || option == kSeedsOption || option == kJobsOption;
+            if (option == kCheckOption) {
+                parsed.check = true;
+                continue;
+            }
+            const bool takesValue =
+                option == kFocusOption || option == kOthersOption || option == kFirstOption || option == kSeedsOption || option == kJobsOption || option == kLogsOption || option == kDifferencesOption;
             if (!takesValue) {
                 return std::unexpected(Format("unknown argument \"{}\"", option));
             }
@@ -154,13 +183,28 @@ namespace BECore::Mahjong::Arena {
                     return std::unexpected(focus.error());
                 }
                 parsed.config.focus = std::move(*focus);
+            } else if (option == kDifferencesOption) {
+                gaveDifferences = true;
+                const std::expected<int, eastl::string> count = ParseNumberOption<int>(option, value, 0);
+                if (!count.has_value()) {
+                    return std::unexpected(count.error());
+                }
+                if (*count < 0) {
+                    return std::unexpected(Format("{}: \"{}\" is not a whole number from 0 to {}", option, value, std::numeric_limits<int>::max()));
+                }
+                parsed.differences = *count;
+            } else if (option == kLogsOption) {
+                parsed.logMode = true;
+                parsed.logsPath.assign(value.data(), value.size());
             } else if (option == kOthersOption) {
+                gaveOthers = true;
                 std::expected<ArenaPlayer, eastl::string> others = ParseArenaPlayer(value);
                 if (!others.has_value()) {
                     return std::unexpected(Format("{}: {}", option, others.error().c_str()));
                 }
                 parsed.config.others = std::move(*others);
             } else if (option == kFirstOption) {
+                gaveFirst = true;
                 const std::expected<uint32_t, eastl::string> first = ParseNumberOption<uint32_t>(option, value, 0);
                 if (!first.has_value()) {
                     return std::unexpected(first.error());
@@ -173,6 +217,7 @@ namespace BECore::Mahjong::Arena {
                 }
                 parsed.config.jobs = *jobs;
             } else {
+                gaveSeeds = true;
                 const std::expected<int, eastl::string> count = ParseNumberOption<int>(option, value, 1);
                 if (!count.has_value()) {
                     return std::unexpected(count.error());
@@ -183,6 +228,33 @@ namespace BECore::Mahjong::Arena {
         if (parsed.tableStats && (playersGiven || timeGiven)) {
             return std::unexpected(Format("{} plays four normal seats on its own and does not go with {}, {} or {}", kTableStatsOption, kFocusOption, kOthersOption, kTimeOption));
         }
+        if (parsed.tableStats && parsed.logMode) {
+            return std::unexpected(NotWithLogs(kTableStatsOption, "it plays seeds on its own, and the logs are already played"));
+        }
+        if (parsed.check && !parsed.logMode) {
+            return std::unexpected(Format("{} needs {}", kCheckOption, kLogsOption));
+        }
+        if (gaveDifferences && !parsed.logMode) {
+            return std::unexpected(Format("{} needs {}", kDifferencesOption, kLogsOption));
+        }
+        if (parsed.logMode) {
+            const std::string_view why = "it plays seeds, and the logs are already played";
+            if (gaveFirst) {
+                return std::unexpected(NotWithLogs(kFirstOption, why));
+            }
+            if (gaveSeeds) {
+                return std::unexpected(NotWithLogs(kSeedsOption, why));
+            }
+            if (gaveOthers) {
+                return std::unexpected(NotWithLogs(kOthersOption, why));
+            }
+            if (parsed.config.timing) {
+                return std::unexpected(NotWithLogs(kTimeOption, "there is nothing to time"));
+            }
+            if (const eastl::string problem = ValidateTesterBots(parsed.config.focus); !problem.empty()) {
+                return std::unexpected(Format("{}: {}", kFocusOption, problem.c_str()));
+            }
+        }
         const eastl::string problem = ValidateArenaConfig(parsed.config);
         if (!problem.empty()) {
             return std::unexpected(problem);
@@ -191,6 +263,11 @@ namespace BECore::Mahjong::Arena {
     }
 
     int RunArenaCli(eastl::span<const std::string_view> args, ArenaCliOutput& output) {
+        const LogSource noFiles = [](std::string_view) -> std::expected<eastl::vector<LogFile>, eastl::string> { return std::unexpected(eastl::string("this program cannot read files")); };
+        return RunArenaCli(args, noFiles, output);
+    }
+
+    int RunArenaCli(eastl::span<const std::string_view> args, const LogSource& source, ArenaCliOutput& output) {
         const std::expected<ArenaArgs, eastl::string> parsed = ParseArenaArgs(args);
         if (!parsed.has_value()) {
             output.err = Format("error: {}\n\n{}", parsed.error().c_str(), ArenaUsage().c_str());
@@ -211,6 +288,20 @@ namespace BECore::Mahjong::Arena {
                 return kExitRefusedAction;
             }
             output.out = FormatTableStats(*stats);
+            return kExitOk;
+        }
+        if (parsed->logMode) {
+            const std::expected<eastl::vector<CheckedLog>, eastl::string> logs = ReadLogs(source, std::string_view(parsed->logsPath.data(), parsed->logsPath.size()));
+            if (!logs.has_value()) {
+                output.err = Format("error: {}\n", logs.error().c_str());
+                return kExitCannotRead;
+            }
+            if (parsed->check) {
+                output.out = FormatCheckLines(*logs);
+                return kExitOk;
+            }
+            output.out = FormatCorpusSummary(SummariseLogs(*logs));
+            output.out.append(FormatLogAnalysis(AnalyseLogs(*logs, parsed->config.focus, parsed->config.jobs), parsed->differences));
             return kExitOk;
         }
         const std::expected<ArenaResult, eastl::string> result = RunArena(parsed->config);

@@ -26,6 +26,20 @@ namespace BECore::Mahjong {
         return kDefaultLevel;
     }
 
+    /// Where a match was played; `Unknown` is what a log of an older format says (the origin was not recorded).
+    CORE_ENUM(MatchPlatform, uint8_t, Unknown, Desktop, Web)
+
+    /// Where and by which build a match was played, plain data of the `Start` event (kept here, like `SeatSetup`, because the session
+    /// stores it and `MatchLog.h` includes this header). The game fills it; the rules know no platform: a session only copies what it
+    /// was given (`TableSession::SetLogOrigin`).
+    struct MatchLogOrigin {
+        MatchPlatform platform = MatchPlatform::Unknown;
+        eastl::string build;        // the build id (a short git hash), empty when not known
+        eastl::string gameVersion;  // the version for testers, empty when not known
+
+        bool operator==(const MatchLogOrigin&) const = default;
+    };
+
     /// Where the table stands for a front end: some seat has to act, the hand is over and waits for `NextHand`, or the match is over.
     CORE_ENUM(SessionPhase, uint8_t, Playing, HandOver, MatchOver)
 
@@ -115,7 +129,7 @@ namespace BECore::Mahjong {
      *   (`HandoffPending`) until that person calls `Reveal`. The same person acting again keeps the viewer. In `HandOver` and
      *   `MatchOver` every hand is shown: front ends read `GetPhase()` then and not the viewer.
      * - The match log (`Game/MatchLog.h`): with a sink set (`SetLogSink`), every accepted change is reported to it as an event, in
-     *   order: `StartMatch` (Start, Hand), `StepComputer` / `PerformPerson` (Action), `NextHand` (Settlement, then Hand or End). A
+     *   order (the `Start` carries the origin set by `SetLogOrigin`): `StartMatch` (Start, Hand), `StepComputer` / `PerformPerson` (Action), `NextHand` (Settlement, then Hand or End). A
      *   refused call, `Reveal` and a start with bad settings report nothing. A match started behind the session's back (through the
      *   non-const `Match::Start`) is not seen and so not logged.
      * - `ResumeMatch` puts the session where a recorded log left it (a saved match), see there.
@@ -162,6 +176,15 @@ namespace BECore::Mahjong {
         /// `Levels()` of `seat`; `kDefaultLevel` for a number that is no seat.
         [[nodiscard]] ComputerLevel LevelOf(Seat seat) const noexcept {
             return IsSeat(seat) ? _levels[static_cast<size_t>(seat)] : kDefaultLevel;
+        }
+
+        /// Where the matches begun from now on say they were played: stamped into every `Start` event. A resumed match echoes the `Start`
+        /// of its log, so a save keeps the origin of the build that began the match. Default: `Unknown`, empty, empty.
+        void SetLogOrigin(const MatchLogOrigin& origin) {
+            _origin = origin;
+        }
+        [[nodiscard]] const MatchLogOrigin& LogOrigin() const noexcept {
+            return _origin;
         }
 
         /// Where the events of the match go (see the class comment); null (the default) for none. Not owned: the sink outlives its use
@@ -249,6 +272,7 @@ namespace BECore::Mahjong {
         uint64_t _version = 0;
         uint64_t _starts = 0;
         IMatchLogSink* _sink = nullptr;
+        MatchLogOrigin _origin;
     };
 
 }  // namespace BECore::Mahjong

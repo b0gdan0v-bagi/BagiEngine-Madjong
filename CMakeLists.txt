@@ -17,6 +17,25 @@ be_add_module(Mahjong LINK
 )
 be_add_game_reflection(MahjongModule)
 
+# The build id that every match log carries (src/Mahjong/BuildInfo.h): the short git hash, read now, at configure time, and given to
+# BuildInfo.cpp alone so that nothing else recompiles. A commit made after this step shows only after the next `cmake --preset`.
+set(MAHJONG_BUILD_ID unknown)
+find_package(Git QUIET)
+if(GIT_FOUND)
+    execute_process(
+        COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        OUTPUT_VARIABLE MAHJONG_GIT_HASH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+        RESULT_VARIABLE MAHJONG_GIT_RESULT
+    )
+    if(MAHJONG_GIT_RESULT EQUAL 0 AND MAHJONG_GIT_HASH MATCHES "^[0-9a-f]+$")
+        set(MAHJONG_BUILD_ID ${MAHJONG_GIT_HASH})
+    endif()
+endif()
+set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/src/Mahjong/BuildInfo.cpp PROPERTIES COMPILE_DEFINITIONS "MAHJONG_BUILD_ID=\"${MAHJONG_BUILD_ID}\"")
+
 be_add_game_executable(BagiMahjong
     GAME_ROOT ${CMAKE_CURRENT_SOURCE_DIR}
     MODULES MahjongModule
@@ -58,5 +77,13 @@ if(ENGINE_BUILD_TESTS)
     # without the control server (ENGINE_WITH_REMOTE_CONTROL=OFF) the smoke could never connect
     if(ENGINE_WITH_REMOTE_CONTROL)
         be_add_game_control_tests(BagiMahjong SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/tests/control_smoke.py)
+    endif()
+
+    # tools/collect_logs.py with a fake verifier and temp folders (no build needed); Python 3 standard library only
+    if(Python3_FOUND)
+        add_test(NAME MahjongCollectLogs COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/collect_logs_test.py)
+        set_tests_properties(MahjongCollectLogs PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 60)
+    else()
+        message(WARNING "Python3 not found, the test MahjongCollectLogs is not registered")
     endif()
 endif()

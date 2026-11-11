@@ -596,10 +596,10 @@ namespace BECore::Mahjong::Tests {
         const size_t firstBreak = current.find('\n');
         ASSERT_NE(firstBreak, std::string::npos);
         const std::string startLine = current.substr(0, firstBreak);
-        ASSERT_NE(startLine.find("\"version\":4"), std::string::npos) << startLine;
+        ASSERT_NE(startLine.find("\"version\":5"), std::string::npos) << startLine;
         ASSERT_NE(startLine.find("\"levels\":[3,3,3,3]"), std::string::npos) << startLine;
         std::string old = startLine;
-        old.replace(old.find("\"version\":4"), 11, "\"version\":3");
+        old.replace(old.find("\"version\":5"), 11, "\"version\":3");
         old.replace(old.find("\"levels\":[3,3,3,3]"), 18, "\"level\":3");
         const std::string oldText = old + current.substr(firstBreak);
 
@@ -610,6 +610,29 @@ namespace BECore::Mahjong::Tests {
         Table resumed;
         ASSERT_TRUE(resumed.session.ResumeMatch(*parsed, kPCCC, (*parsed)[0].levels).has_value());
         EXPECT_EQ(resumed.session.Levels(), UniformLevels(ComputerLevel{3}));
+        EXPECT_EQ(resumed.match.Scores(), recorded.match.Scores());
+    }
+
+    TEST(MahjongSaveTest, AMatchSavedBeforeTheOriginStillResumesAndItsOriginIsUnknown) {
+        // The text of a version 4 save: its `start` has no `platform`, `build` and `gameVersion`
+        Recorded recorded(3, kPCCC, ComputerLevel{3}, 120);
+        const std::string current = Plain(MatchSaveText(recorded.log.Events()));
+        const size_t firstBreak = current.find('\n');
+        ASSERT_NE(firstBreak, std::string::npos);
+        Json start = Json::parse(current.substr(0, firstBreak));
+        start["version"] = 4;
+        for (const char* member : {"platform", "build", "gameVersion"}) {
+            ASSERT_EQ(start.erase(member), 1u) << member;
+        }
+        const std::string startLine = start.dump();
+        const std::string oldText = startLine + current.substr(firstBreak);
+
+        const auto parsed = ParseMatchSaveText(oldText);
+        ASSERT_TRUE(parsed.has_value()) << parsed.error().c_str();
+        EXPECT_EQ((*parsed)[0].origin, MatchLogOrigin{});
+        EXPECT_TRUE(*parsed == WithoutHandsAndEnd(recorded.log.Events())) << "the recorded match was made with no origin set";
+        Table resumed;
+        ASSERT_TRUE(resumed.session.ResumeMatch(*parsed, kPCCC, (*parsed)[0].levels).has_value());
         EXPECT_EQ(resumed.match.Scores(), recorded.match.Scores());
     }
 

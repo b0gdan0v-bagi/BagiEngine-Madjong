@@ -170,6 +170,9 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Member(json, "seed"), kSeed);
         EXPECT_EQ(Member(json, "seats"), "CCCC");
         EXPECT_EQ(Member(json, "levels"), Json::array({5, 5, 5, 5}));
+        EXPECT_EQ(Member(json, "platform"), "unknown") << "a session that was told no origin says so";
+        EXPECT_EQ(Member(json, "build"), "");
+        EXPECT_EQ(Member(json, "gameVersion"), "");
         const Json settings = Member(json, "settings");
         EXPECT_EQ(Member(settings, "handsPerMatch"), kShortMatchHands);
         EXPECT_EQ(Member(settings, "flowers"), false);
@@ -229,7 +232,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(ignored->levels, UniformLevels(ComputerLevel::Normal));
     }
 
-    TEST_F(MatchLogJsonTest, AVersionFourStartNeedsFourLevelsOneToTen) {
+    TEST_F(MatchLogJsonTest, AStartNeedsFourLevelsOneToTen) {
         const MatchLogEvent start = PlayedLog(kSeed).front();
         Json without = EventToJson(start);
         without.erase("levels");
@@ -258,7 +261,120 @@ namespace BECore::Mahjong::Tests {
         // The versions around the known ones are refused.
         EXPECT_TRUE(ChangedMemberIsRefused(start, "version", kMatchLogFormatVersion + 1));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "version", kMatchLogOldestVersion - 1));
-        EXPECT_EQ(kMatchLogFormatVersion, kMatchLogSeatLevelsVersion);
+        EXPECT_GT(kMatchLogFormatVersion, kMatchLogSeatLevelsVersion);
+    }
+
+    TEST_F(MatchLogJsonTest, AVersionFiveStartHoldsEverythingTheTestersLogsNeed) {
+        // A match of a person and three computers at known levels from a known origin: the start line says seed, settings, who plays
+        // what, the level of each seat and where the match was played; `by` of each action tells the person from the computer.
+        Match match;
+        TableSession session(match);
+        MatchLog log;
+        session.SetLogSink(&log);
+        session.SetLogOrigin({MatchPlatform::Web, "a1b2c3d", "0.1.0"});
+        const SeatLevels levels{ComputerLevel::Normal, ComputerLevel{2}, ComputerLevel{7}, ComputerLevel::Easy};
+        ASSERT_TRUE(session.StartMatch(MahjongSettings{}, kSeed, kDefaultSeatSetup, levels).has_value());
+        const Json json = EventToJson(log.Events().front());
+        for (const char* key : {"event", "version", "seed", "settings", "seats", "levels", "platform", "build", "gameVersion"}) {
+            EXPECT_NE(FindJsonMember(json, key), nullptr) << key;
+        }
+        EXPECT_EQ(Member(json, "version"), kMatchLogOriginVersion);
+        EXPECT_EQ(Member(json, "seats"), "PCCC");
+        EXPECT_EQ(Member(json, "levels"), Json::array({5, 2, 7, 1}));
+        EXPECT_EQ(Member(json, "platform"), "web");
+        EXPECT_EQ(Member(json, "build"), "a1b2c3d");
+        EXPECT_EQ(Member(json, "gameVersion"), "0.1.0");
+    }
+
+    TEST_F(MatchLogJsonTest, ActionsSayWhetherAPersonOrAComputerActed) {
+        Match match;
+        TableSession session(match);
+        MatchLog log;
+        session.SetLogSink(&log);
+        ASSERT_TRUE(session.StartMatch(MahjongSettings{}, kSeed, kDefaultSeatSetup).has_value());
+        const Seat person = session.Actor();
+        ASSERT_TRUE(session.ActorIsPerson()) << "seat 0, a person, acts first";
+        const auto legal = match.Hand().LegalActions(person);
+        ASSERT_FALSE(legal.empty());
+        ASSERT_TRUE(session.PerformPerson(legal.front()).has_value());
+        session.RunComputers();
+        std::set<std::string> seen;
+        for (const MatchLogEvent& event : log.Events()) {
+            if (event.kind == MatchLogKind::Action) {
+                const Json json = EventToJson(event);
+                seen.insert(Member(json, "by").get<std::string>());
+                EXPECT_EQ(Member(json, "by"), event.seat == person ? "person" : "computer");
+            }
+        }
+        EXPECT_EQ(seen, (std::set<std::string>{"person", "computer"}));
+    }
+
+    TEST_F(MatchLogJsonTest, TheOriginRoundTripsForEveryPlatformAndEmptyStrings) {
+        MatchLogEvent start = PlayedLog(kSeed).front();
+        for (const MatchPlatform platform : {MatchPlatform::Unknown, MatchPlatform::Desktop, MatchPlatform::Web}) {
+            for (const MatchLogOrigin& origin : {MatchLogOrigin{platform, "", ""}, MatchLogOrigin{platform, "9f8e7d6", "0.1.0"}}) {
+                start.origin = origin;
+                const Json json = EventToJson(start);
+                const auto back = EventFromJson(json);
+                ASSERT_TRUE(back.has_value()) << back.error().c_str();
+                EXPECT_EQ(back->origin, origin);
+                EXPECT_EQ(*back, start);
+                const auto parsed = ParseMatchLog(TextOf({start}).c_str());
+                ASSERT_TRUE(parsed.has_value()) << parsed.error().c_str();
+                EXPECT_EQ(parsed->front().origin, origin);
+            }
+        }
+        // `==` of a start looks at the origin.
+        MatchLogEvent other = start;
+        other.origin.build = "different";
+        EXPECT_FALSE(other == start);
+        other = start;
+        other.origin.platform = MatchPlatform::Desktop;
+        EXPECT_FALSE(other == start);
+        other = start;
+        other.origin.gameVersion = "9.9.9";
+        EXPECT_FALSE(other == start);
+    }
+
+    TEST_F(MatchLogJsonTest, AVersionFourStartReadsWithAnUnknownOrigin) {
+        MatchLogEvent start = PlayedLog(kSeed).front();
+        start.origin = {MatchPlatform::Web, "abc", "1.0"};
+        Json json = EventToJson(start);
+        json["version"] = 4;
+        json.erase("platform");
+        json.erase("build");
+        json.erase("gameVersion");
+        const auto back = EventFromJson(json);
+        ASSERT_TRUE(back.has_value()) << back.error().c_str();
+        EXPECT_EQ(back->origin, MatchLogOrigin{});
+        EXPECT_EQ(back->levels, start.levels);
+
+        // A version 4 line does not look at origin members it should not have.
+        json["platform"] = "mainframe";
+        const auto ignored = EventFromJson(json);
+        ASSERT_TRUE(ignored.has_value()) << ignored.error().c_str();
+        EXPECT_EQ(ignored->origin, MatchLogOrigin{});
+    }
+
+    TEST_F(MatchLogJsonTest, AVersionFiveStartNeedsItsThreeOriginMembers) {
+        MatchLogEvent start = PlayedLog(kSeed).front();
+        start.origin = {MatchPlatform::Desktop, "abc", "1.0"};
+        for (const char* key : {"platform", "build", "gameVersion"}) {
+            Json without = EventToJson(start);
+            without.erase(key);
+            const eastl::string missing = ErrorOf(without);
+            EXPECT_NE(missing.find(key), eastl::string::npos) << key << ": " << missing.c_str();
+            EXPECT_TRUE(ChangedMemberIsRefused(start, key, 5));
+            EXPECT_TRUE(ChangedMemberIsRefused(start, key, nullptr));
+            EXPECT_TRUE(ChangedMemberIsRefused(start, key, Json::array()));
+        }
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "platform", "mainframe"));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "platform", "Desktop")) << "the names are lower case";
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "platform", ""));
+        // Versions 0 and 6 are refused.
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "version", 0));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "version", kMatchLogFormatVersion + 1));
+        EXPECT_EQ(kMatchLogFormatVersion, 5);
     }
 
     TEST_F(MatchLogJsonTest, AVersionThreeStartKeepsItsOneLevelAsFourEqualOnes) {

@@ -27,7 +27,7 @@ build/ClangmacOS/BagiMahjongArena --help
 **A Release build overwrites the Debug executables and libraries in `build/ClangmacOS/`** (the same folder for every preset). Before the
 next `MahjongTests` run: delete `build/ClangmacOS/lib/*.a` and build again with `macos-debug`. Run the arena in Release: a Debug
 build is much slower. The program is not part of `ctest`; the library it is made of (`src/Mahjong/Arena/`) is tested by
-`ArenaPlayerTest`, `ArenaRunTest`, `ArenaStatsTest`, `ArenaTableTest` and `ArenaCliTest` in `MahjongTests`.
+`ArenaPlayerTest`, `ArenaRunTest`, `ArenaStatsTest`, `ArenaTableTest`, `ArenaCliTest` and, for the log mode, `ArenaLogsTest`, `ArenaLogsReportTest` and `ArenaTesterTest` in `MahjongTests`.
 
 Commands (`A` is `build/ClangmacOS/BagiMahjongArena`; every run prints the same bytes twice, `--time` apart):
 
@@ -96,6 +96,43 @@ They are those of `ComputerStrengthTest`, so the old numbers come out exactly:
 - **One `significant` row among twenty tried is expected by chance** (95 percent is one in twenty). Every knob value you try is one more
   try.
 - Wins %, drawn % and declared % are per-seed means in the same way, not a binomial interval over the hands.
+
+## Logs of real games
+
+`A --logs PATH` reads match logs (`*.jsonl`, a folder searched recursively, or one file) instead of playing; what a log holds and how
+the logs of testers are collected: `docs/tester-match-logs.md`. Options with it: `--check`, `--focus LIST` (the bots the people are
+compared with; default `normal`; `random` is refused), `--differences N` (default 20; 0 lists none, the count of all is always
+printed), `--jobs N`; `--first`, `--seeds`, `--others` and `--time` are refused. Exit code 0 done (also when files do not replay: they
+are counted), 1 the path cannot be read, 2 a bad argument.
+
+```bash
+A --logs logs/matches --check                                  # one line per file: ok<TAB>name or bad<TAB>name<TAB>reason
+A --logs logs/collected --focus normal,easy --jobs 0           # the corpus, the agreement, the real-game numbers, the differences
+A --logs logs/matches/2026-11-09T18-30-10_seed1.jsonl --differences 0
+```
+
+- **`--check`** prints nothing but those lines, in name order, and exits 0 even when files are bad (`tools/collect_logs.py` relies on this
+  format byte for byte). A log that does not parse is `unreadable: line N: ...`; one that parses and does not replay on the rules of
+  this build is `does not replay: event N (Problem)`, so that a rules change that stops old logs replaying is told, not lost. A log that
+  stops early (given up) is ok.
+- **The corpus** is counted over the logs that replay; the dropped ones are counted by the kind of reason.
+- **Agreement.** Every decision of a person seat (`by: person` in the log) with more than one legal action is a `TableView` built by the
+  analyzer's `PositionsOfSeat` from what that seat saw, and each bot chooses on that view and nothing else; the tie-breaking rng is seeded
+  from the log name, the hand and the action index, so a log gives one answer. Equal means the same action, `declareCalling` included.
+  Shown for discards and claim windows apart and together, with a 95 % interval whose unit is the **match** (the mean of the per-match
+  shares). Testers are not experts: this is how people play, not what is best.
+- **Real games by the level of the computers met.** For every seat-hand of a person at a table with at least one computer seat, from
+  the logged settlements: wins % (the person won), points a hand (the person's change), drawn %, declared % (the person declared a
+  calling in that hand) and the average winning score; the same definitions as the arena's own table. The group is the level 1..10 when
+  all the computers of the table have one level, else `mixed`; the match is the unit of the intervals; a hand that was not finished is
+  not counted. Put beside each row the arena run with the computers of that level on the other seats, for example
+  `A --focus normal --others <L> --first 4000 --seeds 1000`: the arena player takes each seat in turn, so as strong as the others it wins
+  25 % of the hands. The sample of testers is small and the walls differ: read the order of magnitude.
+- **Differences.** Where a person's action differs from the first bot, in log order: the log, the hand (from 1), the action index (from
+  0), the seat, both actions in the notation of the analyzer, and the line `--log NAME --hand K --action I` for `BagiMahjongAnalyzer`.
+- **`--jobs N`** plays whole matches in threads into slots of their own and merges them in name order: the same bytes at any N, and for
+  files in any order (the report sorts by name). A match that replayed but whose positions cannot be built is named and counted, not
+  hidden; its real-game numbers, which need no positions, still count.
 
 ## The first check
 

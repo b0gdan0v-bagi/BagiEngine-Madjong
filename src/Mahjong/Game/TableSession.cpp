@@ -55,6 +55,7 @@ namespace BECore::Mahjong {
             start.settings = settings;
             start.seats = seats;
             start.levels = levels;
+            start.origin = _origin;
             _sink->OnEvent(start);
             _sink->OnEvent(MakeHandEvent(_match));
         }

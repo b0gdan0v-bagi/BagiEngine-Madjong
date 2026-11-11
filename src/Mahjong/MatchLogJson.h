@@ -10,7 +10,7 @@ namespace BECore::Mahjong {
      * this is its text form, written by `MatchLogWriter`.
      *
      * ```
-     * {"event":"start","version":4,"seed":N,"settings":{"handsPerMatch","flowers","replayDrawnHand","limit","startingScore"},"seats":"PCCC","levels":[5,5,2,10]}
+     * {"event":"start","version":5,"seed":N,"settings":{"handsPerMatch","flowers","replayDrawnHand","limit","startingScore"},"seats":"PCCC","levels":[5,5,2,10],"platform":"desktop"|"web"|"unknown","build":"a1b2c3d","gameVersion":"0.1.0"}
      * {"event":"hand","number":handsPlayed,"east":s,"roundWind":"East","winds":["East",...],"deal":[{"concealed":["1p",...],"bonus":[...]} x4]}
      * {"event":"action","seat":s,"by":"person"|"computer","action":{...}}
      * {"event":"settlement","kind":"win"|"drawn","winner":s|null,"east":s,"roundWind":"..","scores":[4],"deltas":[4],"seats":[{"breakdown":{...}} x4]}
@@ -25,8 +25,10 @@ namespace BECore::Mahjong {
      * they sum up to are in the line). Reading is checked: a missing or wrong-typed member, an unknown `event`, a bad tile, seat letter,
      * wind name or level is an error text that names the member; nothing aborts.
      *
-     * Versions: 4 (`kMatchLogFormatVersion`, `kMatchLogSeatLevelsVersion`) writes `levels`, the strength of each seat as four numbers
-     * 1..10 in seat order (`LevelNumber`; a person's seat has one too, it is kept for when the seat becomes a computer). Version 3
+     * Versions: 5 (`kMatchLogFormatVersion`, `kMatchLogOriginVersion`) adds the origin of the match to `start`: `platform`, the `build`
+     * id and the `gameVersion` (strings, empty when not known; `unknown` is a legal platform so that every event round-trips). Versions
+     * 1..4 have none and read as `Unknown`, empty, empty. Version 4 (`kMatchLogSeatLevelsVersion`) writes `levels`, the strength of each
+     * seat as four numbers 1..10 in seat order (`LevelNumber`; a person's seat has one too, it is kept for when the seat becomes a computer). Version 3
      * (`kMatchLogNumberLevelVersion`) wrote one number `level` for the table, read as four equal levels. Version 2
      * (`kMatchLogLevelVersion`) wrote it as a name, `easy` (read as 1) or `normal` (5), and a `hard` of version 2
      * (`kMatchLogRetiredLevelName`) is read as 5. Version 1 files (`kMatchLogOldestVersion`) have no level and are read as `Normal`, the
@@ -34,7 +36,7 @@ namespace BECore::Mahjong {
      */
 
     /// The `version` of the `start` line that is written.
-    inline constexpr int kMatchLogFormatVersion = 4;
+    inline constexpr int kMatchLogFormatVersion = 5;
 
     /// The oldest `version` that is still read; a log with a version outside `kMatchLogOldestVersion..kMatchLogFormatVersion` is not read.
     inline constexpr int kMatchLogOldestVersion = 1;
@@ -51,9 +53,16 @@ namespace BECore::Mahjong {
     inline constexpr int kMatchLogSeatLevelsVersion = 4;
     static_assert(kMatchLogSeatLevelsVersion > kMatchLogNumberLevelVersion && kMatchLogSeatLevelsVersion <= kMatchLogFormatVersion);
 
+    /// The first `version` whose `start` line has `platform`, `build` and `gameVersion`.
+    inline constexpr int kMatchLogOriginVersion = 5;
+    static_assert(kMatchLogOriginVersion > kMatchLogSeatLevelsVersion && kMatchLogOriginVersion <= kMatchLogFormatVersion);
+
     /// The name of the level `Hard` of the first slice of the computer levels. It played exactly like Normal and is gone, but files were
     /// written with it: a version 2 `start` that names it is read as `Normal`, not refused. Only version 2 has names.
     inline constexpr std::string_view kMatchLogRetiredLevelName = "hard";
+
+    /// The `platform` text of a `start`: `desktop`, `web` or `unknown`.
+    [[nodiscard]] eastl::string_view PlatformName(MatchPlatform platform);
 
     /// One event as the object of its line.
     [[nodiscard]] Json EventToJson(const MatchLogEvent& event);

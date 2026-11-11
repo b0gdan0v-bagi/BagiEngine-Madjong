@@ -3,13 +3,34 @@
 #include <BECore/GameManager/CoreManager.h>
 #include <Games/GameManager.h>
 #include <Generated/MahjongGame.gen.hpp>
+#include <Mahjong/BuildInfo.h>
+#include <Mahjong/Platform.h>
 #include <random>
 
 namespace BECore::Mahjong {
 
+    namespace {
+
+        constexpr int kMatchIdWords = 4;  // 4 x 32 bits
+
+        /// A random id of 128 bits as 32 hex digits, from `std::random_device` alone: nothing of the seed, the time or the machine.
+        eastl::string RandomMatchId() {
+            std::random_device device;
+            eastl::string id;
+            for (int word = 0; word < kMatchIdWords; ++word) {
+                id.append(Format("{:08x}", static_cast<uint32_t>(device())));
+            }
+            return id;
+        }
+
+    }  // namespace
+
     MahjongGame::MahjongGame() : _store(CoreManager::GetFileSystem()) {
-        _recorder.SetNext(&_log);
+        _recorder.SetNext(&_upload);
+        _upload.SetNext(&_log);
+        _upload.SetMatchIdSource(RandomMatchId);  // used only for a match that is recorded: with no sink or consent it is never called
         _session.SetLogSink(&_recorder);
+        _session.SetLogOrigin(MakeMatchOrigin(kBrowserBuild));  // every front end is stamped: the session writes it into each Start
     }
 
     MahjongGame* MahjongGame::GetActive() {
@@ -60,6 +81,7 @@ namespace BECore::Mahjong {
 
     void MahjongGame::Stop() {
         FlushSave();
+        _upload.Abandon();  // a match given up by the game closing tells the store so
     }
 
     void MahjongGame::Reset() {
@@ -86,6 +108,7 @@ namespace BECore::Mahjong {
     MatchStatus MahjongGame::BeginMatch(uint32_t seed, bool record) {
         ApplyLanguage();
         _recorder.SetRecording(record);
+        _upload.SetRecording(record);  // the match dealt behind the panel is nobody's game
         const MatchStatus started = _session.StartMatch(_settings, seed, _seats, _levels);
         if (started.has_value()) {
             CloseSetup();
@@ -144,6 +167,7 @@ namespace BECore::Mahjong {
         }
         ApplyLanguage();
         _recorder.SetRecording(true);  // the match goes on being saved
+        _upload.SetRecording(true);
         const MatchLogEvent& start = events.front();
         if (const ReplayStatus resumed = _session.ResumeMatch(events, start.seats, start.levels); !resumed) {
             LOG_WARNING(Format("MahjongGame: the saved match is not used: event {} was refused ({})", resumed.error().index, EnumUtils<ReplayProblem>::ToString(resumed.error().problem)));

@@ -13,7 +13,7 @@ namespace BECore::Mahjong {
      * @brief One thing that happened in a match, as plain data. `kind` says which members are meant; the others keep their defaults.
      *
      * - `Start`: `seed`, `settings`, `seats` (who plays what), the `levels` of the seats (one per seat, also the seats a person
-     *   plays); the first event of a match.
+     *   plays) and the `origin` (platform, build, game version); the first event of a match.
      * - `Hand`: a hand was dealt: `number` (hands counted so far), `east`, `roundWind`, `winds` and the dealt tiles of every seat
      *   (`concealed`, East's 14 included, and the `bonus` tiles already laid open). Nothing is hidden: the log is the owner's.
      * - `Action`: `seat` did `action`, a `person` or a `computer` (`by`). Only accepted actions are logged.
@@ -32,6 +32,7 @@ namespace BECore::Mahjong {
         MahjongSettings settings;
         SeatSetup seats = kDefaultSeatSetup;
         SeatLevels levels = UniformLevels(kDefaultLevel);
+        MatchLogOrigin origin;
 
         // Hand
         int number = 0;
