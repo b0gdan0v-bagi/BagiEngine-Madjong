@@ -33,10 +33,10 @@ namespace BECore::Mahjong::Tests {
         constexpr float kScoreTableBottom = 612.0f;
         constexpr float kScoreTableHeight = 500.0f;
         constexpr float kScoreButtonGapHeight = 64.0f;  // the gap of the plate that the Next hand button sits in
-        /// The same in the portrait view: the plate lies between the columns of the side seats (x 8..101 and 619..712, from y 92) and above the
+        /// The same in the portrait view: the plate lies between the bonus columns of the side seats (x 94..118 and 602..626, y 308..452) and above the
         /// viewer's bonus tiles (from y 1112); two columns of lines and a taller gap, for the ratio of the window scale to the table's fit of 1.6
-        constexpr float kPortraitScoreTableLeft = 108.0f;
-        constexpr float kPortraitScoreTableRight = 612.0f;
+        constexpr float kPortraitScoreTableLeft = 124.0f;
+        constexpr float kPortraitScoreTableRight = 596.0f;
         constexpr float kPortraitScoreTableTop = 92.0f;
         constexpr float kPortraitScoreTableBottom = 1108.0f;
         constexpr float kPortraitScoreTableHeight = 724.0f;
@@ -44,12 +44,12 @@ namespace BECore::Mahjong::Tests {
         constexpr float kPortraitScoreButtonGapHeight = 112.0f;
         constexpr int kPortraitScoreLineColumns = 2;
         /// The same in the narrow view: between the columns of the side seats (x 8..112 and 968..1072, their bonus tiles the inner ones), under the
-        /// top seat's rows (to y 90) and above the viewer's melds and bonus tiles (from y 636); the plate is 852 wide, 500 high as in landscape
-        constexpr float kNarrowScoreTableLeft = 114.0f;
-        constexpr float kNarrowScoreTableRight = 966.0f;
+        /// top seat's rows (to y 90) and above the viewer's melds and bonus tiles (from y 636); the plate is 840 wide, 500 high as in landscape
+        constexpr float kNarrowScoreTableLeft = 120.0f;
+        constexpr float kNarrowScoreTableRight = 960.0f;
         constexpr float kNarrowScoreTableTop = 92.0f;
         constexpr float kNarrowScoreTableBottom = 628.0f;
-        constexpr float kNarrowScoreTableWidth = 852.0f;
+        constexpr float kNarrowScoreTableWidth = 840.0f;
         /// The edges the plate of the score table keeps to in a view of this shape (the wide view is the landscape table a wing in from the
         /// side, and the plate is centred on the view, so its edges move by the wing).
         Rect ScoreTableBounds(TableShape shape) {

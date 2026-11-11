@@ -2043,11 +2043,7 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
-    TEST(TableLayoutTest, TheTopSeatsTilesInPortraitAreNoSmallerThanLandscapesTheSideSeatsKeepAFloorAndTheViewersDiscardsAreLarger) {
-        // Tile widths by SlotRole (HandTile, MeldTile, BonusTile, DiscardTile, WallStack): the least a side seat's piece solves to in the portrait table.
-        // The band of the three discard blocks and the side columns fills the 720 units (the columns are 98 wide, the blocks 160 and 144), so the
-        // side seats could not grow with the landscape table (32 / 28 / 18 / 28) and keep the sizes they had before it.
-        constexpr float kPortraitSideFloorW[] = {28.0f, 24.0f, 16.0f, 24.0f, 0.0f};
+    TEST(TableLayoutTest, TheOpponentsTilesInPortraitAreNoSmallerThanLandscapesAndTheViewersDiscardsAreLarger) {
         for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
             const TableInput input = WorstInput(viewer, 60, kNoSeat);
             const TableLayout landscape = InLandscape(input);
@@ -2060,7 +2056,10 @@ namespace BECore::Mahjong::Tests {
                 ASSERT_EQ(a.seat, b.seat);
                 EXPECT_EQ(a.rotation, b.rotation) << "slot " << i;
                 EXPECT_EQ(a.claimEdge, b.claimEdge);
-                const bool viewers = a.role != SlotRole::WallStack && a.seat == viewer;
+                if (a.role == SlotRole::WallStack) {
+                    continue;  // the ring is held by its own test above
+                }
+                const bool viewers = a.seat == viewer;
                 const float upright = b.rotation == 0 ? b.rect.w : b.rect.h;
                 const float landscapeUpright = a.rotation == 0 ? a.rect.w : a.rect.h;
                 if (viewers && (a.role == SlotRole::HandTile || a.role == SlotRole::MeldTile || a.role == SlotRole::BonusTile)) {
@@ -2069,10 +2068,8 @@ namespace BECore::Mahjong::Tests {
                     EXPECT_GT(b.rect.w, a.rect.w) << "the viewer's discards are larger";
                     EXPECT_GT(b.rect.h, a.rect.h);
                     ExpectAtlasProportions(TileSize{b.rect.w, b.rect.h});
-                } else if (a.role != SlotRole::WallStack && SeatPosition(viewer, a.seat) == 2) {
-                    EXPECT_GE(upright, landscapeUpright) << "slot " << i << " role " << static_cast<int>(a.role) << ": the top seat is as large as in landscape";
                 } else {
-                    EXPECT_GE(upright, kPortraitSideFloorW[static_cast<int>(a.role)]) << "slot " << i << " role " << static_cast<int>(a.role) << " seat " << a.seat;
+                    EXPECT_GE(upright, landscapeUpright) << "slot " << i << " role " << static_cast<int>(a.role) << " seat " << a.seat;
                 }
             }
         }
@@ -2175,7 +2172,7 @@ namespace BECore::Mahjong::Tests {
         };
         const Golden goldens[] = {
             {"narrow", kNarrowViewWidth, kNarrowViewHeight, Rect(204, 696, 48, 64), {Rect(88, 532, 152, 80), Rect(800, 180, 152, 80), Rect(300, 96, 152, 80), Rect(120, 180, 152, 80)}},
-            {"portrait", kPortraitViewWidth, kPortraitViewHeight, Rect(12, 1208, 48, 64), {Rect(12, 1028, 152, 80), Rect(456, 308, 152, 80), Rect(284, 308, 152, 80), Rect(112, 308, 152, 80)}},
+            {"portrait", kPortraitViewWidth, kPortraitViewHeight, Rect(12, 1208, 48, 64), {Rect(12, 1028, 152, 80), Rect(444, 308, 152, 80), Rect(284, 308, 152, 80), Rect(124, 308, 152, 80)}},
             {"wide",
              kWideViewWidth,
              kViewHeight,
@@ -2192,7 +2189,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(TableLayoutTest, TheNarrowAndPortraitTablesSolveTheTileSizesOfTheirDesign) {
         // The upright width of the first tile of each piece of an opponent, by screen position 1 (right), 2 (top), 3 (left): {hand, melds, bonus, discards}.
-        // The narrow side columns are as long as the bottom left buttons of HudMenu.xml allow; the portrait band has no room for larger side seats.
+        // The narrow side columns are as long as the bottom left buttons of HudMenu.xml allow; the portrait side seats are the landscape ones.
         struct Sizes {
             float hand;
             float melds;
@@ -2206,7 +2203,7 @@ namespace BECore::Mahjong::Tests {
             eastl::array<Sizes, 3> opponents;
         };
         const Golden goldens[] = {{"narrow", kNarrowViewWidth, kNarrowViewHeight, {{{30, 25, 18, 28}, {35, 24, 17, 26}, {30, 25, 18, 28}}}},
-                                  {"portrait", kPortraitViewWidth, kPortraitViewHeight, {{{28, 24, 16, 24}, {36, 24, 17, 26}, {28, 24, 16, 24}}}}};
+                                  {"portrait", kPortraitViewWidth, kPortraitViewHeight, {{{32, 28, 18, 28}, {36, 24, 17, 26}, {32, 28, 18, 28}}}}};
         TableInput input = WorstInput(0, 60, kNoSeat);
         for (const Golden& golden : goldens) {
             const TableLayout layout = MakeTableLayout(input, golden.width, golden.height);

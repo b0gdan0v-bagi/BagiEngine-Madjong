@@ -20,8 +20,8 @@
   y -8 from the middle: y 102..602, clear of the top sets and 18 above the bottom row of bonus tiles. The plate has ignoreSafeArea, like the
   table it lies on (a fixed design that ignores the safe area): with side insets in a portrait or square window 1032 units do not fit the
   safe area, and the hands do not move either.
-  In a portrait view (720 x 1280, the variant below) the plate is 504 wide (x 108..612, between the columns of the side seats' hands, melds and
-  bonus tiles at x 8..101 and 619..712, which run from y 92 to 500). The lines are in two columns of 48% (eight rows, 252 high); the headline
+  In a portrait view (720 x 1280, the variant below) the plate is 472 wide (x 124..596, 6 clear of the side seats' bonus columns at x 94..118 and 602..626,
+  which lie at y 308..452; their hand and meld columns, x 8..90 and 630..712, are further out). The lines are in two columns of 48% (eight rows, 252 high); the headline
   is a size smaller (22), the seat rows too (18), and the headline and the summary two lines high (72), for the words of the narrow plate. The
   gap is 112 high: the window is as wide as the table or wider than it in a portrait window, so the button, which follows the window's scale,
   outgrows the table's fit by 1.6 at most (the 1:1 window of 480 px, where the floor of the canvas scale holds), and 56 x 1.6 = 90. The plate
@@ -29,7 +29,7 @@
   the view as in the landscape plate; it ends clear of the viewer's rows (the bonus tiles start at y 1112).
   In a narrow view (1080 x 768, the variant with orientation:landscape;maxAspect:1.55; config/TableLayout.xml, the narrow table) the side seats'
   columns are at x 8..112 and 968..1072 (the bonus tiles are the inner ones), the top rows end at y 90 and the viewer's row of melds and bonus
-  tiles starts at y 636, so the plate is 852 wide (x 114..966, 2 clear of the columns) and keeps its height and its place (y -8 from the
+  tiles starts at y 636, so the plate is 840 wide (x 120..960, 8 clear of the columns) and keeps its height and its place (y -8 from the
   middle: y 126..626, 10 above the viewer's row); the lines are 24 % of it (197 units, AutoFit down to 12); the Headline (28) shrinks to 22 where the Russian text does not fit. The button of HandOverAction follows the
   window and stays in the gap: in a narrow window the ratio of its scale to the table's is 1.0 to 1.02, far under the 1.41 the gap holds.
   MahjongEndScreenTest holds the sizes and that no hand, meld or bonus tile of the worst-case table is covered by the plate or the
@@ -74,7 +74,7 @@
       <variants>
         <variant when="orientation:portrait">
           <overrides>
-            <set element="Plate" y="56" width="504" height="724" />
+            <set element="Plate" y="56" width="472" height="724" />
             <set element="Headline" height="72" fontSize="22" />
             <set element="SeatRow0" fontSize="18" />
             <set element="SeatRow1" fontSize="18" />
@@ -103,7 +103,7 @@
         </variant>
         <variant when="orientation:landscape;maxAspect:1.55">
           <overrides>
-            <set element="Plate" width="852" />
+            <set element="Plate" width="840" />
           </overrides>
         </variant>
       </variants>

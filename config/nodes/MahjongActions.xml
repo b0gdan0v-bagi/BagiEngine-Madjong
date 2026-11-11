@@ -20,7 +20,7 @@
   current language from UIElement::hovered and again when the language changes; hidden while there is none). It takes no input, so
   it never eats a click; it lies in the gutter between the wall and the right seat's discards (x 832..960, y 256..432: 128 wide,
   the longer words of a translation wrap to its height; clear of their plates and of the row it explains, MahjongTableScreenTest holds the
-  place; the discards of a side seat are turned and as large as the zones allow, which made their columns wider and the gutter narrower). A touch screen has no hover.
+  place). A touch screen has no hover.
   In a portrait view (720 x 1280, the variant below) the buttons are 68 high (kPortraitActionButtonHeight, Table/TouchRegime.h: the view is
   720 wide, so a 68 unit button is 34 pt on a phone of 360 pt and a touch target without ActionsCompact) and 92 wide (the toggle Declare 124: its word and box need it), so that the fullest
   claim window, seven buttons, is one row of 692 units (x 12..704, y 924..992; the fullest turn is 628) in the band of free ground between the viewer's discards and
@@ -32,10 +32,10 @@
   Hint label move right by the wing (x 860 and 972) and keep every place they have in landscape; the buttons are as they were.
   In a narrow view (1080 x 768, the variant with orientation:landscape;maxAspect:1.55; config/TableLayout.xml, the narrow table) the free
   ground is right of the bottom discard block (x 444..612) and above the viewer's row of melds (y 636): the row is x 620..980, y 500..620
-  (8 clear of the block, of the right seat's meld column at x 995 and 16 of the melds), and the buttons are 84 wide, so four make a line
+  (8 clear of the block, 15 of the right seat's meld column at x 995 and 16 of the melds), and the buttons are 84 wide, so four make a line
   of 360 and the fullest claim window, seven, two lines (the Declare toggle too). The fullest turn, six, is two lines as well, with
   UpgradeKong 104 wide because "Add to pung" does not fit 84; the word of Win is the small size, "Маджонг!" at 22 does not fit 84 in a window of
-  720 x 480. The Hint label has no room beside that row (the gutter between the wall and the right seat's discards is 54 wide), so it lies left of
+  720 x 480. The Hint label has no room beside that row (the gutter between the wall and the right seat's discards is 46 wide), so it lies left of
   the bottom discard block, under the wall ring and over SelectedTile of Hud: x 260..436, y 444..568, 8 clear of the wall ring (y 436), of the
   left seat's discards (x 120..305, y 268..436), of the seat plate (x 88..240) and of the block (x 444).
   The narrow table is 768 high, so a button is 33 px or more in every window from 640 x 480 up and ActionsCompact takes over only in a nearly

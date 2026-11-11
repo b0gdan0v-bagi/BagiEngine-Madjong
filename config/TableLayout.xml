@@ -88,8 +88,8 @@
     </Phone>
   </Shape>
 
-  <!-- Portrait: 720 x 1280 (a view at least as high as wide). From the top: the top seat, a band (y 140) of the three opponents' Discards with the
-       side seats' columns at the edges, a row of three plates (y 308), the wall ring (y 400), the viewer's Discards, then free ground for the
+  <!-- Portrait: 720 x 1280 (a view at least as high as wide). From the top: the top seat, a band (y 124..296) of the three opponents' Discards with the
+       side seats' Hand and Melds columns at the edges (from y 84), a row of three plates (y 308) with the side seats' Bonus columns beside them, the wall ring (y 400), the viewer's Discards, then free ground for the
        canvases of the table (config/nodes/), the viewer's plate, Bonus row, Melds row and the Hand at the foot. -->
   <Shape name="Portrait">
     <!-- The viewer: the Hand is one row of 14 tiles spread over the width inside the rim and the rack, resting on the rim; the Melds and Bonus rows
@@ -101,15 +101,17 @@
       <Discards x="0.35" y="0.45625" w="0.3" h="0.1875"/>  <!-- 252 584 216x240 -->
       <Plate x="0.01666667" y="0.803125" w="0.2111111" h="0.0625"/>  <!-- 12 1028 152x80 -->
     </Seat>
-    <!-- The side seats: columns at the edges as in Landscape, from the band down; the plates in one row under the blocks. The band is full: the
-         columns (98 wide each side), the side blocks (160) and the top block (156) with their gaps fill the 720 units, so the side seats keep the
-         sizes they had before the landscape table grew; only the top seat, which has the height, is as large as in Landscape. -->
+    <!-- The side seats, as large as in Landscape: the Hand and Melds columns at the edges start at y 84, under the top seat's Hand (it ends at y 80;
+         the Melds of the top seat start at x 156), and end at y 532 and 556, above the MoveLine of MahjongHud.xml (y 588) and the buttons of HudMenu. The
+         Discards blocks (185 x 168) fill the band between the columns and the top block, 3 or 4 units apart: the columns (91 wide each side), the two
+         side blocks and the top block are the 720 units but for 12. The Bonus tiles do not fit the band, so their column lies below the block,
+         next to the plate (left of the right plate, right of the left one), and the plates in one row under the blocks. -->
     <Seat position="1">
-      <Hand x="0.9375" y="0.109375" w="0.05138889" h="0.30625" minTileW="28"/>  <!-- 675 140 37x392 -->
-      <Melds x="0.8875" y="0.109375" w="0.04444445" h="0.31875" minTileW="24"/>  <!-- 639 140 32x408 -->
-      <Bonus x="0.8527778" y="0.109375" w="0.02916667" h="0.1" minTileW="16"/>  <!-- 614 140 21x128 -->
-      <Discards x="0.6194444" y="0.109375" w="0.2222222" h="0.1125"/>  <!-- 446 140 160x144 -->
-      <Plate x="0.63333333" y="0.240625" w="0.21111111" h="0.0625"/>  <!-- 456 308 152x80 -->
+      <Hand x="0.93055556" y="0.065625" w="0.05833333" h="0.35" minTileW="32"/>  <!-- 670 84 42x448 -->
+      <Melds x="0.875" y="0.065625" w="0.05138889" h="0.36875" minTileW="28"/>  <!-- 630 84 37x472 -->
+      <Bonus x="0.83611111" y="0.240625" w="0.03333333" h="0.1125" minTileW="18"/>  <!-- 602 308 24x144 -->
+      <Discards x="0.6125" y="0.1" w="0.25694444" h="0.13125"/>  <!-- 441 128 185x168 -->
+      <Plate x="0.61666667" y="0.240625" w="0.21111111" h="0.0625"/>  <!-- 444 308 152x80 -->
     </Seat>
     <!-- The top seat starts 32 units below the edge, where a phone's status bar sits. The Bonus tiles lie beside the Hand, centred on it. The
          Discards start 8 under the Melds (y 124) and end at y 294, 14 above the plates (they keep 8 clear of a block); the block is 156 wide,
@@ -122,11 +124,11 @@
       <Plate x="0.39444444" y="0.240625" w="0.21111111" h="0.0625"/>  <!-- 284 308 152x80 -->
     </Seat>
     <Seat position="3">
-      <Hand x="0.01111111" y="0.109375" w="0.05138889" h="0.30625" minTileW="28"/>  <!-- 8 140 37x392 -->
-      <Melds x="0.06805556" y="0.109375" w="0.04444445" h="0.31875" minTileW="24"/>  <!-- 49 140 32x408 -->
-      <Bonus x="0.1180556" y="0.109375" w="0.02916667" h="0.1" minTileW="16"/>  <!-- 85 140 21x128 -->
-      <Discards x="0.1583333" y="0.109375" w="0.2222222" h="0.1125"/>  <!-- 114 140 160x144 -->
-      <Plate x="0.15555556" y="0.240625" w="0.21111111" h="0.0625"/>  <!-- 112 308 152x80 -->
+      <Hand x="0.01111111" y="0.065625" w="0.05833333" h="0.35" minTileW="32"/>  <!-- 8 84 42x448 -->
+      <Melds x="0.07361111" y="0.065625" w="0.05138889" h="0.36875" minTileW="28"/>  <!-- 53 84 37x472 -->
+      <Bonus x="0.13055556" y="0.240625" w="0.03333333" h="0.1125" minTileW="18"/>  <!-- 94 308 24x144 -->
+      <Discards x="0.13055556" y="0.1" w="0.25694444" h="0.13125"/>  <!-- 94 128 185x168 -->
+      <Plate x="0.17222222" y="0.240625" w="0.21111111" h="0.0625"/>  <!-- 124 308 152x80 -->
     </Seat>
     <Wall x="0.2472222" y="0.3125" w="0.5055556" h="0.13125"/>  <!-- 178 400 364x168 -->
   </Shape>
