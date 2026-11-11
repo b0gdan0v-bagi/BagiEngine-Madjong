@@ -13,6 +13,9 @@ namespace BECore::Mahjong {
         constexpr eastl::string_view kEventEnd = "end";
         constexpr eastl::string_view kByPerson = "person";
         constexpr eastl::string_view kByComputer = "computer";
+        constexpr eastl::string_view kPlatformDesktop = "desktop";
+        constexpr eastl::string_view kPlatformWeb = "web";
+        constexpr eastl::string_view kPlatformUnknown = "unknown";
         constexpr eastl::string_view kKindWin = "win";
         constexpr eastl::string_view kKindDrawn = "drawn";
 
@@ -54,6 +57,19 @@ namespace BECore::Mahjong {
                 list.push_back(LevelNumber(level));
             }
             return list;
+        }
+
+        /// The `platform` text of a version 5 `start`.
+        eastl::string_view PlatformName(MatchPlatform platform) {
+            switch (platform) {
+                case MatchPlatform::Desktop:
+                    return kPlatformDesktop;
+                case MatchPlatform::Web:
+                    return kPlatformWeb;
+                case MatchPlatform::Unknown:
+                    break;
+            }
+            return kPlatformUnknown;
         }
 
         Json SettingsToJson(const MahjongSettings& settings) {
@@ -239,6 +255,33 @@ namespace BECore::Mahjong {
             return levels;
         }
 
+        /// The `platform`, `build` and `gameVersion` of a version 5 `start`.
+        std::expected<MatchLogOrigin, eastl::string> ReadOrigin(const Json& object) {
+            const auto platform = ReadString(object, "platform");
+            if (!platform) {
+                return std::unexpected(platform.error());
+            }
+            MatchLogOrigin origin;
+            if (EaView(*platform) == kPlatformDesktop) {
+                origin.platform = MatchPlatform::Desktop;
+            } else if (EaView(*platform) == kPlatformWeb) {
+                origin.platform = MatchPlatform::Web;
+            } else if (EaView(*platform) != kPlatformUnknown) {
+                return Fail("platform", Format("has to be desktop, web or unknown: \"{}\"", *platform).c_str());
+            }
+            const auto build = ReadString(object, "build");
+            if (!build) {
+                return std::unexpected(build.error());
+            }
+            const auto gameVersion = ReadString(object, "gameVersion");
+            if (!gameVersion) {
+                return std::unexpected(gameVersion.error());
+            }
+            origin.build = *build;
+            origin.gameVersion = *gameVersion;
+            return origin;
+        }
+
         std::expected<MahjongSettings, eastl::string> ReadSettings(const Json& object) {
             const Json* member = FindJsonMember(object, "settings");
             if (member == nullptr || !member->is_object()) {
@@ -302,6 +345,13 @@ namespace BECore::Mahjong {
                 return Fail("seats", Format("has to be four letters, P for a person and C for a computer: \"{}\"", *letters).c_str());
             }
             event.seats = *seats;
+            if (*version >= kMatchLogOriginVersion) {
+                const auto origin = ReadOrigin(json);
+                if (!origin) {
+                    return std::unexpected(origin.error());
+                }
+                event.origin = *origin;
+            }
             if (*version >= kMatchLogSeatLevelsVersion) {
                 const auto levels = ReadSeatLevels(json, "levels");
                 if (!levels) {
@@ -501,6 +551,9 @@ namespace BECore::Mahjong {
                 json["settings"] = SettingsToJson(event.settings);
                 json["seats"] = MakeJsonString(SeatsToLetters(event.seats));
                 json["levels"] = LevelsToJson(event.levels);
+                json["platform"] = MakeJsonString(PlatformName(event.origin.platform));
+                json["build"] = MakeJsonString(event.origin.build);
+                json["gameVersion"] = MakeJsonString(event.origin.gameVersion);
                 break;
             }
             case MatchLogKind::Hand: {
