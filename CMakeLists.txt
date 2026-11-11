@@ -34,7 +34,7 @@ if(GIT_FOUND)
         set(MAHJONG_BUILD_ID ${MAHJONG_GIT_HASH})
     endif()
 endif()
-set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/src/Mahjong/BuildInfo.cpp PROPERTIES COMPILE_DEFINITIONS MAHJONG_BUILD_ID=${MAHJONG_BUILD_ID})
+set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/src/Mahjong/BuildInfo.cpp PROPERTIES COMPILE_DEFINITIONS "MAHJONG_BUILD_ID=\"${MAHJONG_BUILD_ID}\"")
 
 be_add_game_executable(BagiMahjong
     GAME_ROOT ${CMAKE_CURRENT_SOURCE_DIR}

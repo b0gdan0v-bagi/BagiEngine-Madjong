@@ -15,6 +15,9 @@ namespace BECore::Mahjong::Arena {
     /// The order is the reader's own: `ReadLogs` sorts by name, so the report does not depend on it.
     using LogSource = std::function<std::expected<eastl::vector<LogFile>, eastl::string>(std::string_view path)>;
 
+    /// `text` with every tab and line break turned into a space: a cell of a tab separated line, a reason on one line.
+    [[nodiscard]] eastl::string OneLine(eastl::string text);
+
     /// Why a log is dropped from the corpus.
     CORE_ENUM(LogProblem, uint8_t, Unreadable, DoesNotReplay)
 

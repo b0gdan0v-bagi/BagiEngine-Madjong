@@ -2,7 +2,7 @@
 
 #include <EASTL/algorithm.h>
 #include <Mahjong/Analyzer/AnalyzerReport.h>
-#include <atomic>
+#include <Mahjong/MatchLogJson.h>
 #include <thread>
 
 namespace BECore::Mahjong::Arena {
@@ -30,16 +30,6 @@ namespace BECore::Mahjong::Arena {
         constexpr std::string_view kColumnGap = "  ";
         constexpr std::string_view kNone = "-";
 
-        eastl::string OneCell(const eastl::string& text) {
-            eastl::string cell = text;
-            for (char& letter : cell) {
-                if (letter == '\t' || letter == '\n' || letter == '\r') {
-                    letter = ' ';
-                }
-            }
-            return cell;
-        }
-
         void AddLine(eastl::string& text, std::string_view label, const eastl::string& value) {
             text.append(Format("{:<{}}{}\n", label, kLabelWidth, value));
         }
@@ -66,11 +56,10 @@ namespace BECore::Mahjong::Arena {
 
         void AddPlatforms(eastl::string& text, const LogCorpus& corpus) {
             constexpr eastl::array<MatchPlatform, 3> kOrder{MatchPlatform::Desktop, MatchPlatform::Web, MatchPlatform::Unknown};
-            constexpr eastl::array<std::string_view, 3> kNames{"desktop", "web", "unknown"};
             static_assert(kOrder.size() == EnumUtils<MatchPlatform>::Count());
             eastl::string value;
             for (size_t index = 0; index < kOrder.size(); ++index) {
-                value.append(Format("{}{} {}", index == 0 ? "" : ", ", kNames[index], corpus.platforms[static_cast<size_t>(kOrder[index])]));
+                value.append(Format("{}{} {}", index == 0 ? "" : ", ", PlatformName(kOrder[index]), corpus.platforms[static_cast<size_t>(kOrder[index])]));
             }
             AddLine(text, "platforms", value);
         }
@@ -163,7 +152,7 @@ namespace BECore::Mahjong::Arena {
             text.append("\nAgreement of the people with the bots (the logged action is the same as the bot's choice)\n");
             text.append(Format("matches analysed {}, not analysed {}\n", tester.matches, analysis.notAnalysed.size()));
             for (const eastl::string& reason : analysis.notAnalysed) {
-                text.append(Format("{}{}\n", kIndent, OneCell(reason)));
+                text.append(Format("{}{}\n", kIndent, OneLine(reason)));
             }
             text.append(Format("+- is {} standard errors over the matches (a 95 percent interval); the match is the sample, not the decision\n", kIntervalZ));
             text.append("Testers are not experts: the share says how people play, not what is best\n");
@@ -224,9 +213,9 @@ namespace BECore::Mahjong::Arena {
             text.append(Format("\nDifferences from {}: {} in all, {} listed (log order)\n", tester.bots.empty() ? "-" : tester.bots.front().player.name.c_str(), tester.differences.size(), shown));
             for (size_t index = 0; index < shown; ++index) {
                 const TesterDifference& difference = tester.differences[index];
-                text.append(Format("{}{} hand {} action {} seat {}: logged {}, bot chose {}\n", kIndent, OneCell(difference.log), difference.hand, difference.actionIndex, difference.seat,
+                text.append(Format("{}{} hand {} action {} seat {}: logged {}, bot chose {}\n", kIndent, OneLine(difference.log), difference.hand, difference.actionIndex, difference.seat,
                                    Analyzer::ActionNotation(difference.logged).c_str(), Analyzer::ActionNotation(difference.chosen).c_str()));
-                text.append(Format("{}{}--log {} --hand {} --action {}\n", kIndent, kIndent, OneCell(difference.log), difference.hand, difference.actionIndex));
+                text.append(Format("{}{}--log {} --hand {} --action {}\n", kIndent, kIndent, OneLine(difference.log), difference.hand, difference.actionIndex));
             }
         }
 
@@ -236,9 +225,9 @@ namespace BECore::Mahjong::Arena {
         eastl::string text;
         for (const CheckedLog& log : logs) {
             if (log.verdict.ok) {
-                text.append(Format("{}\t{}\n", kCheckOk, OneCell(log.name)));
+                text.append(Format("{}\t{}\n", kCheckOk, OneLine(log.name)));
             } else {
-                text.append(Format("{}\t{}\t{}\n", kCheckBad, OneCell(log.name), OneCell(log.verdict.reason)));
+                text.append(Format("{}\t{}\t{}\n", kCheckBad, OneLine(log.name), OneLine(log.verdict.reason)));
             }
         }
         return text;
@@ -250,7 +239,7 @@ namespace BECore::Mahjong::Arena {
         AddLine(text, "replayed", Format("{}", corpus.replayed));
         AddLine(text, "dropped", Format("{} ({})", corpus.files - corpus.replayed, DroppedText(corpus)));
         for (const auto& [name, reason] : corpus.droppedFiles) {
-            text.append(Format("{}{}: {}\n", kIndent, OneCell(name), OneCell(reason)));
+            text.append(Format("{}{}: {}\n", kIndent, OneLine(name), OneLine(reason)));
         }
         AddLine(text, "matches", Format("complete {}, abandoned {}", corpus.complete, corpus.abandoned));
         AddLine(text, "hands", Format("{}", corpus.hands));

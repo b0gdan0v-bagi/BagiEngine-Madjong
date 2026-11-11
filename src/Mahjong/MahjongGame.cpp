@@ -18,7 +18,7 @@ namespace BECore::Mahjong {
             std::random_device device;
             eastl::string id;
             for (int word = 0; word < kMatchIdWords; ++word) {
-                id += Format("{:08x}", static_cast<uint32_t>(device()));
+                id.append(Format("{:08x}", static_cast<uint32_t>(device())));
             }
             return id;
         }

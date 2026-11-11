@@ -22,8 +22,8 @@ namespace BECore::Mahjong {
         if (!_recording) {
             return;
         }
-        _buffer += EventToJson(event).dump().c_str();
-        _buffer += '\n';
+        _buffer.append(EventToJson(event).dump().c_str());
+        _buffer.push_back('\n');
         if (event.kind == MatchLogKind::Settlement) {
             Cut(UploadPieceEnd::Open);
         } else if (event.kind == MatchLogKind::End) {
@@ -106,7 +106,7 @@ namespace BECore::Mahjong {
             if (position > 0 && ordered[position - 1]->end != UploadPieceEnd::Open) {
                 return std::unexpected(Format("piece {} comes after the piece that ended the match", piece.index));
             }
-            log += piece.lines;
+            log.append(piece.lines);
         }
         return log;
     }

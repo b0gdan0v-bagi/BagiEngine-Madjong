@@ -7,17 +7,16 @@
 
 namespace BECore::Mahjong::Arena {
 
-    namespace {
-
-        /// A reason is one cell of a tab separated line: no tab and no line break in it.
-        eastl::string OneLine(eastl::string text) {
-            for (char& letter : text) {
-                if (letter == '\t' || letter == '\n' || letter == '\r') {
-                    letter = ' ';
-                }
+    eastl::string OneLine(eastl::string text) {
+        for (char& letter : text) {
+            if (letter == '\t' || letter == '\n' || letter == '\r') {
+                letter = ' ';
             }
-            return text;
         }
+        return text;
+    }
+
+    namespace {
 
         LogVerdict Rejected(LogProblem problem, const eastl::string& reason) {
             LogVerdict verdict;
@@ -62,7 +61,7 @@ namespace BECore::Mahjong::Arena {
     LogVerdict CheckMatchLog(std::string_view text) {
         std::expected<eastl::vector<MatchLogEvent>, eastl::string> parsed = ParseMatchLog(text);
         if (!parsed.has_value()) {
-            return Rejected(LogProblem::Unreadable, "unreadable: " + parsed.error());
+            return Rejected(LogProblem::Unreadable, Format("unreadable: {}", parsed.error()));
         }
         Match match;
         if (const ReplayStatus replayed = ReplayMatchLog(*parsed, match); !replayed.has_value()) {

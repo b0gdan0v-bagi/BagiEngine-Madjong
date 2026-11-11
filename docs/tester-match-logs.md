@@ -84,8 +84,8 @@ Read the numbers with these limits in mind:
 
 ## Not built yet
 
-Plainly what is open. The entry is `mahjong-tester-match-logs` of the todo store (area `mahjong`); this page and the slice before it are
-the game side that needs neither an engine change nor a decision of the owner.
+Plainly what is open. The entry is `mahjong-tester-match-logs` of the todo store (area `mahjong`); what is built so far is the game side
+that needs neither an engine change nor a decision of the owner.
 
 - **The receiving endpoint and the upload call in the browser** (an engine entry): nothing is sent today. `GetUpload()` of `MahjongGame`
   has no sink behind it, so even a `Granted` consent records nothing.
@@ -93,6 +93,9 @@ the game side that needs neither an engine change nor a decision of the owner.
   and is lost on a reload, so today the choice would be asked at every visit: the reason of `consentRemembered`).
 - **Retention** (how long matches are kept), **deletion** of one match by its id on a request, the size limit of a match, the rate limit
   per client, the hosting.
+- **A continued saved match is sent twice** once a sink exists: `ResumeSavedMatch` replays the whole log through the chain, so the uploader
+  records it again under a new match id, and the pieces of the part already played go out a second time. The glue that sets the sink has
+  to decide (skip the replayed events, or send the resumed match as one that is marked as continued).
 - Whether a tester may give a **nickname**.
 - **The downloader** of the store for `collect_logs.py`.
 - **The rows for the neural net** (`mahjong-bot-neural-net`): the decisions of people as rows. The decision list of `ArenaTester` is the

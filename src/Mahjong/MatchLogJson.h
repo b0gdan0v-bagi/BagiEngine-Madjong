@@ -61,6 +61,9 @@ namespace BECore::Mahjong {
     /// written with it: a version 2 `start` that names it is read as `Normal`, not refused. Only version 2 has names.
     inline constexpr std::string_view kMatchLogRetiredLevelName = "hard";
 
+    /// The `platform` text of a `start`: `desktop`, `web` or `unknown`.
+    [[nodiscard]] eastl::string_view PlatformName(MatchPlatform platform);
+
     /// One event as the object of its line.
     [[nodiscard]] Json EventToJson(const MatchLogEvent& event);
 

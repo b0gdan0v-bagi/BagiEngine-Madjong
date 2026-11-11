@@ -59,19 +59,6 @@ namespace BECore::Mahjong {
             return list;
         }
 
-        /// The `platform` text of a version 5 `start`.
-        eastl::string_view PlatformName(MatchPlatform platform) {
-            switch (platform) {
-                case MatchPlatform::Desktop:
-                    return kPlatformDesktop;
-                case MatchPlatform::Web:
-                    return kPlatformWeb;
-                case MatchPlatform::Unknown:
-                    break;
-            }
-            return kPlatformUnknown;
-        }
-
         Json SettingsToJson(const MahjongSettings& settings) {
             Json json = Json::object();
             json["handsPerMatch"] = settings.handsPerMatch;
@@ -540,6 +527,18 @@ namespace BECore::Mahjong {
         }
 
     }  // namespace
+
+    eastl::string_view PlatformName(MatchPlatform platform) {
+        switch (platform) {
+            case MatchPlatform::Desktop:
+                return kPlatformDesktop;
+            case MatchPlatform::Web:
+                return kPlatformWeb;
+            case MatchPlatform::Unknown:
+                break;
+        }
+        return kPlatformUnknown;
+    }
 
     Json EventToJson(const MatchLogEvent& event) {
         Json json = Json::object();
