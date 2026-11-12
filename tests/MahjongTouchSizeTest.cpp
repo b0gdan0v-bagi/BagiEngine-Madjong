@@ -266,6 +266,7 @@ namespace BECore::Mahjong::Tests {
         auto canvas = Canvas("HintsButton");
         ASSERT_TRUE(canvas);
         ASSERT_TRUE(canvas->SetElementVisible("HintButton"_intern, true));
+        Draw();  // the table publishes its regions to the canvas, the button lies in its own
         canvas->UpdateLayout(kViewWidth, kViewHeight);
         const UIElement* button = Element("HintsButton", "HintButton");
         ASSERT_NE(button, nullptr);

@@ -1,66 +1,36 @@
 <?xml version="1.0"?>
 <!--
-  The HUD lies in the free parts of the table (config/TableLayout.xml): the line of the last move right of the top discards. It is a label
-  only (not a touch target), on the view of the table. It keeps to the safe area (the table is a fixed design that the safe area does not
-  move), so on a screen with a notch or side insets it moves inwards and can cover the nearest tiles. The New game button is in the node
-  HudMenu below, a Screen canvas, because a control of a SceneView canvas is only 21 px high in a small window.
-  The label SelectedTile (the name of the tile selected by a tap) lies above the viewer's hand; MahjongTableComponent publishes
-  selectedTileText and shows it while a tile is selected.
-  MahjongHudComponent publishes lastMove (the round, the wall and the seats' winds and points are in the node CenterPanel, the seats'
-  names in SeatPlates). MahjongHudTest holds the worst texts and checks that no tile of any game lies under it.
-  In a portrait view (720 x 1280, the variant below; config/TableLayout.xml, the portrait table) MoveLine lies in the free ground right of the
-  viewer's discards (right edge 8 in, 232 wide, y 588, so it is clear of the discard block, the wall ring and the right seat's columns; the label is 108
-  high for the lines the narrow plate wraps to), and SelectedTile right of the viewer's seat plate (x 224, y 1036), above the bonus tiles and
-  clear of the hand tile that a tap raises. Both are anchored to an edge, so a window with side insets moves them inwards, as the validator
-  wants, and they can cover the nearest tiles there.
-  In a wide view (1560 x 720, the variant with minAspect:2; the table is the landscape one 140 units in from each side) both keep
-  their place on the landscape table: SelectedTile moves right by the wing (x 416) and MoveLine, which is anchored to the right edge,
-  in by the wing (x -232), so each is clear of the tiles as in landscape.
-  In a narrow view (1080 x 768, the variant with orientation:landscape;maxAspect:1.55; config/TableLayout.xml, the narrow table) MoveLine
-  lies right of the top discard block (x 462..618) and above the right seat's melds (they start at y 180): right edge 8 in, 440 wide,
-  y 92..172, so it is clear of the block by 14 and of every tile of the right seat by 8. SelectedTile lies in the ground between the
-  bottom seat plate (right edge 240) and the bottom discard block (x 444), under the wall ring and over the viewer's row of bonus tiles
-  and melds (y 636): x 248, y 572, 188 wide, which leaves the tile a tap raises and the row clear.
+  The HUD lies in the free parts of the table: the line of the last move and the name of the selected tile. Both are labels only (not a touch
+  target), on the view of the table, and each fills a free region that config/TableLayout.xml gives its shape (Table/TableRegions.h), so
+  where it lies in the landscape, portrait, narrow and wide table, and what it stays clear of, is the file's, and there is no variant here.
+  A region wins over the safe area: the table is a fixed design that the safe area does not move, so on a screen with a notch or side insets
+  the labels stay where they are, like the tiles. The New game button is in the node HudMenu, a Screen canvas, because a control of a
+  SceneView canvas is only 21 px high in a small window.
+  MoveLine (region table.moveLine) holds the last move in words, right of the top discards (its text fills what the plate leaves inside its
+  padding, so the tall portrait region holds more lines).
+  SelectedTile (region table.selectedTile) is the name of the tile selected by a tap, above the viewer's hand; MahjongTableComponent
+  publishes selectedTileText and shows it while a tile is selected. MahjongHudComponent publishes lastMove (the round, the wall and the
+  seats' winds and points are in the node CenterPanel, the seats' names in SeatPlates). MahjongHudTest holds the worst texts and checks that
+  each label lies in its region and that no tile of any game lies under it.
 -->
 <node name="Hud" layer="10" contentVersion="2">
   <components>
     <component type="MahjongHudComponent" />
-    <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
+    <component type="UICanvasComponent" space="SceneView">
       <elements>
-        <!-- The last move in words (lastMove), shown by the component exactly while it has a text: right of the top discards and below the top seat sets, clear of the right seat columns -->
-        <element type="UIStack" name="MoveLine" anchor="TopRight" x="-92" y="92" width="448" height="80" visible="false" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170">
+        <!-- The last move in words (lastMove), shown by the component exactly while it has a text -->
+        <element type="UIStack" name="MoveLine" region="table.moveLine" anchor="Stretch" visible="false" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170">
           <children>
-            <element type="UILabel" name="MoveText" height="64" text="{lastMove}" fontSize="18" verticalAlign="Center" />
+            <element type="UILabel" name="MoveText" flex="1" text="{lastMove}" fontSize="18" verticalAlign="Center" />
           </children>
         </element>
-        <!-- The name of the tile selected by a tap (selectedTileText, Table/TapSelect.h), shown by MahjongTableComponent exactly while a tile is selected: above the viewer's hand, right of the bonus row and the bottom seat plate, left of the bottom discard block (x 544; the label ends at x 536) -->
-        <element type="UIStack" name="SelectedTile" anchor="TopLeft" x="276" y="568" width="260" height="48" visible="false" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170">
+        <!-- The name of the tile selected by a tap (selectedTileText, Table/TapSelect.h), shown by MahjongTableComponent exactly while a tile is selected -->
+        <element type="UIStack" name="SelectedTile" region="table.selectedTile" anchor="Stretch" visible="false" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170">
           <children>
-            <element type="UILabel" name="SelectedTileLabel" height="32" text="{selectedTileText}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" />
+            <element type="UILabel" name="SelectedTileLabel" flex="1" text="{selectedTileText}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" />
           </children>
         </element>
       </elements>
-      <variants>
-        <variant when="orientation:portrait">
-          <overrides>
-            <set element="MoveLine" x="-8" y="588" width="232" height="124" />
-            <set element="MoveText" height="108" />
-            <set element="SelectedTile" x="224" y="1036" />
-          </overrides>
-        </variant>
-        <variant when="orientation:landscape;maxAspect:1.55">
-          <overrides>
-            <set element="MoveLine" x="-8" width="440" />
-            <set element="SelectedTile" x="248" y="572" width="188" />
-          </overrides>
-        </variant>
-        <variant when="minAspect:2">
-          <overrides>
-            <set element="MoveLine" x="-232" />
-            <set element="SelectedTile" x="416" />
-          </overrides>
-        </variant>
-      </variants>
     </component>
   </components>
 </node>
