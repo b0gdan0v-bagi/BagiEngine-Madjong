@@ -10,7 +10,7 @@
   shows and hides the element by name, so both follow. It comes after Hints (layer 6) so that it lies over the label's plate. A region wins
   over the safe area: the table does not move with it, so neither does the button.
 -->
-<node name="HintsButton" layer="6" contentVersion="3">
+<node name="HintsButton" layer="6" contentVersion="4">
   <components>
     <component type="UICanvasComponent" space="SceneView">
       <elements>

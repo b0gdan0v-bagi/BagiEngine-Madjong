@@ -18,7 +18,7 @@
   Every text may shrink (AutoFit, down to 12 units) instead of being cut. MahjongOptionsTest holds the
   shapes, the touch size and the words on the whole size matrix.
 -->
-<node name="Options" layer="31" contentVersion="3">
+<node name="Options" layer="31" contentVersion="4">
   <components>
     <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" modal="true" visible="false">
       <elements>

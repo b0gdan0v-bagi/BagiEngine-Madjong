@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!-- The cover of a hot seat: shown by the component exactly while the screen waits for the next person (HandoffPending). A Screen canvas that keeps its buttons touch targets in any window. -->
-<node name="Handoff" layer="20" contentVersion="3">
+<node name="Handoff" layer="20" contentVersion="4">
   <components>
     <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.7" useSafeArea="true" modal="true" visible="false">
       <elements>

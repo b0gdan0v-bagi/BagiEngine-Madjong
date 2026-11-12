@@ -36,7 +36,7 @@
   button is 33 px or more in every window from 640 x 480 up and ActionsCompact takes over only in a nearly square window (610 x 600: a bar of
   83 px under the table holds its row).
 -->
-<node name="Actions" layer="10" contentVersion="3">
+<node name="Actions" layer="10" contentVersion="4">
   <components>
     <component type="UICanvasComponent" space="SceneView">
       <elements>
@@ -151,7 +151,24 @@
               <component type="UIInputClicker" action="MahjongPass"/>
             </components>
           </element>
-          <element type="UIToggle" name="Declare" visible="false" bind="declareNext" onValue="on" offValue="off" width="104" height="56" text="{#button.Declare}" fontSize="22" action="MahjongDeclare" color="70,70,100,255" />
+          <element type="UIElement" name="Declare" visible="false" width="104" height="56" color="70,70,100,255" layout="Stack" direction="Horizontal" spacing="8" crossAlign="Center">
+            <components>
+              <component type="UIInputClicker"/>
+              <component type="UIToggleComponent" bind="declareNext" action="MahjongDeclare" onValue="on" offValue="off"/>
+            </components>
+            <children>
+              <element type="UIElement" name="DeclareCaption" flex="1" height="100%" fontSize="22">
+                <components>
+                  <component type="UITextComponent" text="{#button.Declare}" verticalAlign="Center" wrap="false" fadeWhenDisabled="true"/>
+                </components>
+              </element>
+              <element type="UIElement" name="DeclareSwitch" height="100%" aspectRatio="1.25">
+                <components>
+                  <component type="UISwitchComponent"/>
+                </components>
+              </element>
+            </children>
+          </element>
           </children>
         </element>
       </elements>

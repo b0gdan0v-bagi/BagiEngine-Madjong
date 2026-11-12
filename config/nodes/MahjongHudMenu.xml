@@ -17,7 +17,7 @@
   few units at most (a known deviation of the nearly square window, which no window of the matrix is). The portrait variant comes after them and
   replaces them.
 -->
-<node name="HudMenu" layer="10" contentVersion="3">
+<node name="HudMenu" layer="10" contentVersion="4">
   <components>
     <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true">
       <elements>

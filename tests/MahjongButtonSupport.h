@@ -5,9 +5,10 @@
 #include <BECore/UI/UIInputClicker.h>
 #include <BECore/UI/UILabel.h>
 #include <BECore/UI/UITextComponent.h>
-
+#include <BECore/UI/UIToggleComponent.h>
 #include <optional>
 #include <string>
+#include <vector>
 
 /**
  * A button of the shipped scene in either form: a composed element (`UIElement` with a `UITextComponent` and a `UIInputClicker`, what
@@ -64,6 +65,21 @@ namespace BECore::Mahjong::Tests {
     /// Whether the element shows a text: a label, a button or an element with a text component.
     inline bool ShowsText(const UIElement& element) {
         return element.Cast<UILabel>() != nullptr || element.Cast<UIButton>() != nullptr || element.GetComponent<UITextComponent>() != nullptr;
+    }
+
+    /// Every label and button of the tree, shown or not, in tree order. A toggle row (`UIToggleComponent`) is one control: its caption
+    /// is not asked, since the switch beside it may cut it (the look the owner keeps for `Declare`; the class toggle flagged a caption
+    /// only when it had no room at all).
+    inline void CollectTextControls(const UIElement& element, std::vector<const UIElement*>& found) {
+        if (ShowsText(element)) {
+            found.push_back(&element);
+        }
+        if (element.GetComponent<UIToggleComponent>() != nullptr) {
+            return;
+        }
+        for (const auto& child : element.children) {
+            CollectTextControls(*child, found);
+        }
     }
 
     /// The text as shown (`{#key}` and `{name}` expanded); nothing when the element shows none.

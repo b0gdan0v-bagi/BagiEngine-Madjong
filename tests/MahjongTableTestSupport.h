@@ -480,12 +480,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         static void CollectControls(const UIElement& element, std::vector<const UIElement*>& found) {
-            if (ShowsText(element)) {
-                found.push_back(&element);
-            }
-            for (const auto& child : element.children) {
-                CollectControls(*child, found);
-            }
+            CollectTextControls(element, found);
         }
 
         /// Whether the cover of a hot seat is shown: a canvas that is shown takes the input (a hidden one keeps its old rects).

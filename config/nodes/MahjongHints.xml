@@ -20,7 +20,7 @@
   hand being played) and the hand waits, the button while hints apply and the viewer has actions to choose from, and the label while an
   advice is up in the mode Hints (in Coach the sentence is the title of the card CoachCard, node HintsWhy).
 -->
-<node name="Hints" layer="5" contentVersion="3">
+<node name="Hints" layer="5" contentVersion="4">
   <components>
     <component type="MahjongHintsComponent" />
     <component type="UICanvasComponent" space="SceneView">

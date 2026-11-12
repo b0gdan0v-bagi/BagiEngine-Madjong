@@ -22,7 +22,7 @@
   area, so the card stays on the ring. MahjongHintsTest and MahjongCoachTest hold it on the ring, clear of every slot but the wall
   stacks, free of input, and the longest text of every line fitting on the size matrix in both languages.
 -->
-<node name="HintsWhy" layer="11" contentVersion="3">
+<node name="HintsWhy" layer="11" contentVersion="4">
   <components>
     <component type="UICanvasComponent" space="SceneView">
       <elements>
