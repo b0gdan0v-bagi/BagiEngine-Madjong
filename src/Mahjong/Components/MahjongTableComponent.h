@@ -257,9 +257,11 @@ namespace BECore::Mahjong {
 
         /// The game when a person has to act and can (Playing, a person to act, no cover), else null.
         [[nodiscard]] MahjongGame* PersonToAct() const;
-        /// Whether a click on a hand tile only selects it: `UsesTapToSelect` over `_touchSeen`, the window as it is now, the active view and the hand tile of
-        /// its profile (`TableProfileFor`).
+        /// Whether a click on a hand tile only selects it: `_touchSeen`, or a hand tile under the touch minimum in the window of the last draw
+        /// (`UsesTapToSelect`, the active view and the hand tile of its profile, `TableProfileFor`); before any draw the window as it is now.
         [[nodiscard]] bool TapToSelect() const;
+        /// The size part of the regime for the renderer's output as it is now (a hand tile under the touch minimum); `OnDraw` keeps it.
+        [[nodiscard]] bool SmallHandTileNow() const;
         /// What a selection must still be to count: the regime on, a person to act in the discard turn of the hand and match it was made in,
         /// at the version of the session it was made at, and the tile at its index still the one selected.
         [[nodiscard]] bool SelectionHolds(const MahjongGame& game) const;
@@ -376,15 +378,16 @@ namespace BECore::Mahjong {
         bool _handoffShown = false;
         bool _compactActions = false;  // `ActionsCompact` is the shown canvas of the buttons; the scene file starts with `Actions`
         bool _declareNext = false;
-        bool _touchSeen = false;            // a click made by a touch or a pen was seen: the tap regime stays on from then
-        std::optional<int> _selected;       // the selected hand tile (an index of the concealed tiles of the person to act) and what it holds for
-        Tile _selectedTile;                 // the tile it was made on
-        DeclareTurn _selectedTurn;          // the turn,
-        uint64_t _selectedVersion = 0;      // the version of the session
-        SeenHand _selectedHand;             // and the hand and match
-        std::optional<int> _drawnSelected;  // the tile the last `OnDraw` raised
-        bool _selectedLabelShown = false;   // the label `SelectedTile` is shown
-        Tile _textTile;                     // the tile `selectedTileText` names now (invalid for none) and the string table version it was worded at
+        bool _touchSeen = false;                  // a click made by a touch or a pen was seen: the tap regime stays on from then
+        std::optional<bool> _drawnSmallHandTile;  // `SmallHandTileNow()` of the last draw: what the regime reads between draws
+        std::optional<int> _selected;             // the selected hand tile (an index of the concealed tiles of the person to act) and what it holds for
+        Tile _selectedTile;                       // the tile it was made on
+        DeclareTurn _selectedTurn;                // the turn,
+        uint64_t _selectedVersion = 0;            // the version of the session
+        SeenHand _selectedHand;                   // and the hand and match
+        std::optional<int> _drawnSelected;        // the tile the last `OnDraw` raised
+        bool _selectedLabelShown = false;         // the label `SelectedTile` is shown
+        Tile _textTile;                           // the tile `selectedTileText` names now (invalid for none) and the string table version it was worded at
         uint64_t _textStringsVersion = 0;
         float _pointerX = 0.0f;  // the pointer of the mouse in output pixels, valid while `_pointerSeen`: the last motion the table got (converted to the view when
         float _pointerY = 0.0f;  // it is used, so a resized window keeps it where it is on the screen)

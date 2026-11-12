@@ -378,6 +378,38 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Hand().Discards().front().tile, T("9p"));
     }
 
+    TEST_F(MahjongTableInputTest, TheRegimeIsTheOneOfTheLastDrawWhenTheOutputDiffersBetweenDraws) {
+        // The editor: the table is drawn into the viewport's small target, while a click and the scene update see the whole editor window.
+        // The regime of the draw holds between draws, so the first click selects, the update keeps it and the second click discards
+        ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup));
+        SetOutputSize(*_renderer, 480.0f, 270.0f);
+        Draw();
+        const int index = IndexOf(kSeat0, T("9p"));
+        const TileSlot* slot = HandSlot(index);
+        ASSERT_NE(slot, nullptr);
+        const float scale = 480.0f / kViewWidth;
+        const float x = (slot->rect.x + slot->rect.w * 0.5f) * scale;
+        const float y = (slot->rect.y + slot->rect.h * 0.5f) * scale;
+        const auto atEditorWindow = [&] { SetOutputSize(*_renderer, kViewWidth * 2.0f, kViewHeight * 2.0f); };
+        const auto atTarget = [&] { SetOutputSize(*_renderer, 480.0f, 270.0f); };
+
+        atEditorWindow();
+        Click(x, y);
+        AdvanceTime(0.01f);
+        atTarget();
+        Draw();
+
+        EXPECT_TRUE(Hand().Discards().empty());
+        ASSERT_EQ(_table->SelectedHandIndex(), index);
+
+        atEditorWindow();
+        AdvanceTime(0.01f);
+        Click(x, y);
+
+        ASSERT_FALSE(Hand().Discards().empty());
+        EXPECT_EQ(Hand().Discards().front().tile, T("9p"));
+    }
+
     TEST_F(MahjongTableInputTest, TheSelectionIsGoneWhenTheWindowGrowsAndTheRegimeIsOffAgain) {
         ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup));
         SetOutputSize(*_renderer, 480.0f, 270.0f);  // under the touch minimum even with the phone profile
