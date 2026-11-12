@@ -73,10 +73,11 @@ namespace BECore::Mahjong::Tests {
             return done();
         }
 
-        /// The game's client hosts a room of @p hands hands with @p others more people (the seats left over are computers), starts it, and waits for the table.
-        void StartRoom(int hands = kShortMatchHands, int others = 3) {
+        /// The game's client hosts a room of @p hands hands with @p others more people (the seats left over are computers; @p hintsAllowed is the host's choice for the room), starts it, and waits for
+        /// the table.
+        void StartRoom(int hands = kShortMatchHands, int others = 3, bool hintsAllowed = false) {
             OnlineClient& client = _game->GetOnline();
-            ASSERT_TRUE(client.Host(kUrl, kHostName, OnlineRoomOptions{hands, kMinLevel}));
+            ASSERT_TRUE(client.Host(kUrl, kHostName, OnlineRoomOptions{hands, kMinLevel, hintsAllowed}));
             ASSERT_TRUE(PumpUntil([&] { return client.Stage() == OnlineStage::Lobby; }));
             for (const char* name : {"Bo", "Cy", "Di"}) {
                 if (static_cast<int>(_others.size()) == others) {

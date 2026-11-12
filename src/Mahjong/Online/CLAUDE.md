@@ -11,7 +11,7 @@
 - **Computers are stateless.** `ChooseComputerAction(seat)` is `const`: a `ComputerPlayer` at the room's level, seeded `SeatSeed(MixSeed(matchSeed, GetStateVersion()), seat)` for that one call, chooses from `MakeTableView(hand, seat).legal`. The same state gives the same answer, a returning person loses nothing, nothing is mutated behind the room's back.
 - **Version:** grows on `Start`, on every applied action (a `pass` too) and every `next_hand` flag; never goes back. So when several seats answer in one claim window, the second one's message carries the old version: `stale_action`, and a client re-sends while its action is still listed.
 - **A client reads `actions`, not `turn.yourTurn`:** in `hand_over` `yourTurn` is false while `actions` lists `next_hand`.
-- **Test seams** `GetMatch()` (both constness) are for tests, never for the server.
+- **Test seams** `GetMatch()` (both constness) and `AnnounceChange()` (moves the version, so a position laid through `GetMatch()` reaches the clients) are for tests, never for the server.
 - **The proof** is `tests/MahjongRoomsTest.cpp`: a `RoomHub` plays rooms and a judge (`tests/MahjongRoomsJudge.h`) checks the schema of every text a client gets. Tiles have no ids, so the judge cannot spot a copied hand by name; the equal-views test (hidden tiles shuffled through `HandModel::Capture` / `Restore`, same view for the seat) covers what the schema cannot see. A new key in a view is a change of the judge too, in C++ and in `tests/rooms_smoke.py`. The executable `BagiMahjongServer` (`tools/server/main.cpp`, the engine's `RunRoomServer` with this game in the registry) is proved end to end by that script (ctest `BagiMahjongRoomSmoke`).
 
 ## The client model

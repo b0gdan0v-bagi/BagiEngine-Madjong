@@ -103,7 +103,8 @@ namespace BECore::Mahjong {
             return kUiPalette[9];  // text
         }
 
-        /// The button `Hint` is offered: a person acts and it is the viewer, with something to choose from (a non-empty `legal`).
+        /// The button `Hint` is offered: a person acts and it is the viewer, with something to choose from (a non-empty `legal`). In a room the
+        /// display session names the viewer as the actor exactly while the server lists an action, and `legal` is that list.
         bool IsOffered(const TableSession& session, Seat viewer, const TableView& view) {
             return session.ActorIsPerson() && session.Actor() == viewer && !view.legal.empty();
         }
@@ -124,6 +125,17 @@ namespace BECore::Mahjong {
 
     MahjongHintsComponent* MahjongHintsComponent::s_active = nullptr;
 
+    TableView MahjongHintsComponent::ViewOf(const MahjongGame& game, Seat viewer) {
+        TableView view = MakeTableView(game.GetMatch().Hand(), viewer);
+        if (game.IsOnlineTable()) {
+            const OnlineClient* client = game.FindOnline();
+            if (client != nullptr && client->Stage() == OnlineStage::Game) {
+                ListHandActions(client->Table(), view.legal);
+            }
+        }
+        return view;
+    }
+
     MahjongHintsComponent::~MahjongHintsComponent() {
         if (s_active == this) {
             s_active = nullptr;
@@ -138,7 +150,8 @@ namespace BECore::Mahjong {
 
     MahjongHintsComponent::Key MahjongHintsComponent::KeyOf(const MahjongGame* game) {
         Key key;
-        key.applies = game != nullptr && HintsApply(game->HintsOn() && !game->IsOnlineTable(), game->IsTablePaused(), game->GetSession());  // no hints in a room
+        // The mode that applies at this table (`EffectiveHintsMode`): in a room the host's decision comes first, so a view that changes it moves `applies`
+        key.applies = game != nullptr && HintsApply(game->HintsActive(), game->IsTablePaused(), game->GetSession());
         if (key.applies) {
             key.viewer = game->GetSession().Viewer();
             key.version = game->GetSession().Version();
@@ -151,7 +164,7 @@ namespace BECore::Mahjong {
             return std::nullopt;
         }
         const TableSession& session = game->GetSession();
-        TableView view = MakeTableView(game->GetMatch().Hand(), session.Viewer());
+        TableView view = ViewOf(*game, session.Viewer());
         if (!IsOffered(session, session.Viewer(), view)) {
             return std::nullopt;
         }
@@ -175,7 +188,7 @@ namespace BECore::Mahjong {
         if (_adviceOn && _offered && !_advised) {
             Advise(*game, key);  // `_offered` holds only with a game whose hints apply
         }
-        const bool coach = game != nullptr && game->CoachOn();
+        const bool coach = game != nullptr && game->CoachActive();
         PushCoach(game, key);  // first: the advice gives way on the card to a note that is up
         PushAdvice(coach);
         PushCard(game, coach);
@@ -195,7 +208,7 @@ namespace BECore::Mahjong {
         if (!key.applies) {
             return;
         }
-        const TableView view = MakeTableView(game->GetMatch().Hand(), key.viewer);
+        const TableView view = ViewOf(*game, key.viewer);
         _row = WaitingTiles(view);
         const TableSession& session = game->GetSession();
         _offered = IsOffered(session, key.viewer, view);
@@ -236,7 +249,7 @@ namespace BECore::Mahjong {
 
     void MahjongHintsComponent::Advise(const MahjongGame& game, const Key& key) {
         BE_PROFILE_SCOPE("MahjongHints::Advise");
-        TableView view = MakeTableView(game.GetMatch().Hand(), key.viewer);
+        TableView view = ViewOf(game, key.viewer);
         _explained = ExplainAdviceFor(view);
         _advice = _explained ? std::optional<HandAction>(_explained->Action()) : AdviceFor(view);
         _advised = true;
@@ -292,7 +305,7 @@ namespace BECore::Mahjong {
                 _coachSeen = ledger->Version();  // a note not seen yet belongs to the hand it is first seen in
                 _coachHand = hand;
             }
-            show = game->CoachOn() && key.applies && hand == _coachHand && ledger->Note()->seat == key.viewer;
+            show = game->CoachActive() && key.applies && hand == _coachHand && ledger->Note()->seat == key.viewer;
             if (!show) {
                 ledger->ClearNote();  // the hand is over, the match is another, the table is covered or paused, the mode changed
             }

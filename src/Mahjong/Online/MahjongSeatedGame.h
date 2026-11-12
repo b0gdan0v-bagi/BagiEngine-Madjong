@@ -55,12 +55,16 @@ namespace BECore::Mahjong {
         [[nodiscard]] uint64_t GetStateVersion() const override;
 
         /// For tests, never from the server: the truth behind the views. A test that changes the match through the non-const one
-        /// keeps the version in step itself (it does not move).
+        /// keeps the version in step itself (it does not move; `AnnounceChange()` does).
         [[nodiscard]] const Match& GetMatch() const noexcept {
             return _match;
         }
         [[nodiscard]] Match& GetMatch() noexcept {
             return _match;
+        }
+        /// For tests: moves the version, so that a position laid through `GetMatch()` is sent to the clients as if a move had made it.
+        void AnnounceChange() noexcept {
+            ++_version;
         }
 
     private:

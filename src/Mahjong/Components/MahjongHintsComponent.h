@@ -28,7 +28,9 @@ namespace BECore::Mahjong {
      * Coach includes the hints) whose buttons emit `MahjongSetHints` with that value. The mode lives on the game (`MahjongGame::GetHintsMode()`),
      * is not part of the settings and takes effect at once (unlike the seats, nothing waits for `Start`). The component ignores the action
      * while the page is not open (a click that arrives late), accepts only those three ids and sets `hintsChoice` from the game while the page is open and after each
-     * click, so the variable keeps the truth.
+     * click, so the variable keeps the truth. **In a room** that choice counts only where the host allowed hints (`MahjongGame::HintsActive()` /
+     * `CoachActive()`, the effective mode; a client cannot turn them on against the room), and every hint is worked out from the viewer's view of the
+     * display copy with the server's list of actions as `legal` and nothing else.
      *
      * **The waiting row.** While `HintsApply` holds (hints on, neither `Setup` nor the rules open, a person at the table, no cover, the hand being played) and
      * the viewer's hand waits, the canvas shows the caption and a cell per tile (`WaitCell0..12`: the picture `WaitTile<i>`, whose sprite
@@ -78,6 +80,11 @@ namespace BECore::Mahjong {
             return _key.applies && tile.IsValid() ? _dangers[tile.Id()] : DangerMark::None;
         }
 
+        /// The view of @p viewer on the table on screen, the one thing every hint is worked out from: `MakeTableView` of the displayed hand (in a
+        /// room a display copy: the viewer's own tiles and what lies open, the other hands counts only). A display hand lists no action, so in a
+        /// room `legal` is the server's list (`ListHandActions`) and nothing else is added; none while the link is down (`Reconnecting`).
+        [[nodiscard]] static TableView ViewOf(const MahjongGame& game, Seat viewer);
+
     private:
         void OnAction(const InputEvents::ActionEvent& event);
         void OnMouseDown(const SDLEvents::MouseButtonDownEvent& event);
@@ -86,7 +93,7 @@ namespace BECore::Mahjong {
 
         /// What the hints depend on: when it is equal to the last frame's, nothing needs to be worked out again.
         struct Key {
-            bool applies = false;  ///< `HintsApply`
+            bool applies = false;  ///< `HintsApply` of the effective mode, so a room's setting or the player's mode that moves it moves the key
             Seat viewer = kNoSeat;
             uint64_t version = 0;  ///< `TableSession::Version()`
             bool operator==(const Key&) const = default;

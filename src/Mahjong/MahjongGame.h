@@ -281,6 +281,18 @@ namespace BECore::Mahjong {
         bool CoachOn() const {
             return _hintsMode == HintsMode::Coach;
         }
+        /// The mode that applies at the table on screen: the player's own choice outside a room; in a room `Off` unless the room allows hints
+        /// (`OnlineTable::hintsAllowed`, the host's decision), else the player's choice. The three above stay the player's own choice (the Options
+        /// page, the saved choices); everything that decides whether a hint is on screen asks `HintsActive()` / `CoachActive()`.
+        HintsMode EffectiveHintsMode() const {
+            return _onlineTable && !_online->Table().hintsAllowed ? HintsMode::Off : _hintsMode;
+        }
+        bool HintsActive() const {
+            return EffectiveHintsMode() != HintsMode::Off;
+        }
+        bool CoachActive() const {
+            return EffectiveHintsMode() == HintsMode::Coach;
+        }
         /// The note and the tally of the coach: fed by the session while the mode is Coach and one person sits at the table.
         const CoachLedger& GetCoach() const {
             return _coach;
