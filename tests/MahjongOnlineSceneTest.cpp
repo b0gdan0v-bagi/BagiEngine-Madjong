@@ -5,8 +5,10 @@
 #include "MahjongTouchTestSupport.h"
 #include "StringsTestSupport.h"
 
+#include <BECore/Clipboard/FakeClipboard.h>
 #include <Common/TempPath.h>
 #include <CoreSDL/SDLEvents.h>
+#include <Events/ClipboardEvents.h>
 #include <Mahjong/Components/MahjongOnlineComponent.h>
 #include <Mahjong/Online/OnlineWords.h>
 #include <Mahjong/Online/TextEntry.h>
@@ -34,6 +36,18 @@ namespace BECore::Mahjong::Tests {
 
         void PressKeyboard(SDL_Keycode key, bool shift = false, bool repeat = false) {
             SDLEvents::KeyDownEvent::Emit(key, shift ? SDL_KMOD_LSHIFT : SDL_KMOD_NONE, repeat);
+        }
+
+        std::string Std(eastl::string_view text) {
+            return std::string(text.data(), text.size());
+        }
+
+        void PressWith(SDL_Keycode key, SDL_Keymod mod) {
+            SDLEvents::KeyDownEvent::Emit(key, mod, false);
+        }
+
+        void Paste(eastl::string_view text) {
+            ClipboardEvents::PasteEvent::Emit(text);
         }
 
     }  // namespace
@@ -83,6 +97,28 @@ namespace BECore::Mahjong::Tests {
             Draw();
         }
 
+        /// A clipboard in memory instead of the system's, for the rest of the test.
+        void UseClipboard(eastl::string_view content = {}) {
+            _clipboard = New<FakeClipboard>(content);
+            _clipboardScope.emplace(_clipboard);
+        }
+
+        /// A frame with the clipboard answering first, as the application's input stage does: a read is never answered inside the call that asked.
+        void ClipboardFrame() {
+            CoreManager::GetClipboard().Update();
+            Frame();
+        }
+
+        /// The code pad of the Join form, open.
+        void OpenTheCodePad() {
+            ASSERT_NO_FATAL_FAILURE(OpenPanel());
+            ASSERT_NO_FATAL_FAILURE(GoToTheJoinForm());
+            ASSERT_TRUE(ClickElement(kOnline, "OnlineCode"));
+            Draw();
+            ASSERT_EQ(Screens().Page(), OnlinePage::Entry);
+            ASSERT_EQ(Screens().Focus(), OnlineField::Code);
+        }
+
         void Act(const char* action, const char* value = "") {
             EmitAction(action, value);
             Draw();
@@ -109,6 +145,9 @@ namespace BECore::Mahjong::Tests {
             EXPECT_TRUE(cut.empty()) << node << ": " << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
             Draw();  // the checks laid the canvas out for other windows: the next click needs the rects of this one
         }
+
+        IntrusivePtr<FakeClipboard> _clipboard;
+        std::optional<ScopedClipboardBackend> _clipboardScope;
     };
 
     TEST_F(MahjongOnlineSceneTest, TheOnlineButtonOpensThePanelOverSetupAndClosingItGivesSetupBack) {
@@ -310,6 +349,181 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Screens().Page(), OnlinePage::Join);
     }
 
+    TEST_F(MahjongOnlineSceneTest, ACodePastedOnTheJoinFormFillsTheFieldAndATextWithNoCodeSaysSoInTheNoticeLine) {
+        ASSERT_NO_FATAL_FAILURE(OpenPanel());
+        ASSERT_NO_FATAL_FAILURE(GoToTheJoinForm());
+        Paste("  ab3k9 ");
+        Frame();
+        EXPECT_EQ(Screens().Page(), OnlinePage::Join) << "the pad stays shut";
+        EXPECT_EQ(Screens().Code().Text(), "AB3K9");
+        EXPECT_EQ(Var("onlineCode"), "AB3K9");
+
+        Paste("hello world");
+        Frame();
+        EXPECT_EQ(Screens().Code().Text(), "AB3K9") << "a text with no code changes nothing";
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineNotice"));
+        EXPECT_EQ(Var("onlineNotice"), "No room code in the text");
+        Paste("Join my mahjong room mm7nn, please");
+        Frame();
+        EXPECT_EQ(Screens().Code().Text(), "MM7NN");
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineNotice")) << "a paste that worked is a move of the player";
+    }
+
+    TEST_F(MahjongOnlineSceneTest, APasteGoesNowhereOnTheMenuTheHostFormOrWithTheOnlinePanelClosed) {
+        ASSERT_NO_FATAL_FAILURE(OpenPanel());
+        Paste("ab3k9");
+        Frame();
+        EXPECT_EQ(Screens().Code().Text(), "") << "the Menu";
+        ASSERT_NO_FATAL_FAILURE(GoToTheHostForm());
+        Paste("ab3k9");
+        Frame();
+        EXPECT_EQ(Screens().Code().Text(), "") << "the Host form has no code";
+        Act("MahjongOnlineClose");
+        ASSERT_FALSE(_game->IsOnlineOpen());
+        Paste("ab3k9");
+        Frame();
+        EXPECT_EQ(Screens().Code().Text(), "") << "a closed panel";
+    }
+
+    TEST_F(MahjongOnlineSceneTest, ThePasteKeyIsOnTheCodePadOnlyAndTheNoteShowsOnlyWhileAPasteHasSaidSomething) {
+        ASSERT_NO_FATAL_FAILURE(OpenTheCodePad());
+        EXPECT_TRUE(ItemShown(kEntry, "EntryPaste"));
+        EXPECT_EQ(Text(kEntry, "EntryPaste"), "Paste");
+        EXPECT_FALSE(ItemShown(kEntry, "EntryNote"));
+
+        Paste("ab3k9");
+        Frame();
+        EXPECT_EQ(Var("onlineEntryValue"), "AB3K9");
+        EXPECT_FALSE(ItemShown(kEntry, "EntryNote"));
+        Paste("hello world");
+        Frame();
+        EXPECT_EQ(Var("onlineEntryValue"), "AB3K9") << "garbage changes nothing";
+        EXPECT_TRUE(ItemShown(kEntry, "EntryNote"));
+        EXPECT_EQ(Text(kEntry, "EntryNote"), "No room code in the text");
+
+        PressKeyboard(SDLK_A);  // the code is full, but a key is a move
+        Frame();
+        EXPECT_FALSE(ItemShown(kEntry, "EntryNote"));
+        Paste("hello world");
+        Frame();
+        ASSERT_TRUE(ItemShown(kEntry, "EntryNote"));
+        PressKeyboard(SDLK_BACKSPACE);
+        Frame();
+        EXPECT_FALSE(ItemShown(kEntry, "EntryNote"));
+        EXPECT_EQ(Var("onlineEntryValue"), "AB3K");
+
+        // The name pad: no Paste key, no note, and a paste is not for it
+        Act("MahjongOnlineDone");
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineName"));
+        Draw();
+        ASSERT_EQ(Screens().Focus(), OnlineField::Name);
+        EXPECT_FALSE(ItemShown(kEntry, "EntryPaste"));
+        EXPECT_FALSE(ItemShown(kEntry, "EntryNote"));
+        Paste("ab3k9");
+        Frame();
+        EXPECT_EQ(Screens().Code().Text(), "AB3K");
+        EXPECT_FALSE(ItemShown(kEntry, "EntryNote"));
+    }
+
+    TEST_F(MahjongOnlineSceneTest, ThePasteKeyFillsTheCodeFromTheClipboardAtTheNextUpdateAndSaysWhyWhenItCannot) {
+        ASSERT_NO_FATAL_FAILURE(OpenTheCodePad());
+        UseClipboard("  ab3-k9\n");
+        ASSERT_TRUE(ClickElement(kEntry, "EntryPaste"));
+        Draw();
+        EXPECT_EQ(Var("onlineEntryValue"), "") << "a read is answered from the clipboard's Update, not inside the click";
+        ClipboardFrame();
+        EXPECT_EQ(Var("onlineEntryValue"), "AB3K9");
+        EXPECT_EQ(_clipboard->ReadCount(), 1);
+        EXPECT_FALSE(ItemShown(kEntry, "EntryNote"));
+
+        // A clipboard that holds no code: the field stays, the note says it
+        _clipboard->SetContent("only words here");
+        ASSERT_TRUE(ClickElement(kEntry, "EntryPaste"));
+        ClipboardFrame();
+        EXPECT_EQ(Var("onlineEntryValue"), "AB3K9");
+        EXPECT_EQ(Text(kEntry, "EntryNote"), "No room code in the text");
+
+        // Empty
+        _clipboard->SetContent("");
+        ASSERT_TRUE(ClickElement(kEntry, "EntryPaste"));
+        ClipboardFrame();
+        EXPECT_EQ(Var("onlineEntryValue"), "AB3K9");
+        EXPECT_EQ(Text(kEntry, "EntryNote"), "Nothing to paste");
+
+        // Refused (Safari outside a gesture, a denied permission), and no clipboard at all
+        _clipboard->SetContent("mm7nn");
+        _clipboard->SetRefuse(true);
+        ASSERT_TRUE(ClickElement(kEntry, "EntryPaste"));
+        ClipboardFrame();
+        EXPECT_EQ(Var("onlineEntryValue"), "AB3K9");
+        EXPECT_EQ(Text(kEntry, "EntryNote"), "Cannot paste here. Type the code");
+        _clipboard->SetRefuse(false);
+        _clipboard->SetAvailable(false);
+        PressKeyboard(SDLK_BACKSPACE);
+        Frame();
+        ASSERT_FALSE(ItemShown(kEntry, "EntryNote"));
+        ASSERT_TRUE(ClickElement(kEntry, "EntryPaste"));
+        ClipboardFrame();
+        EXPECT_EQ(Text(kEntry, "EntryNote"), "Cannot paste here. Type the code");
+
+        // A read that takes a few updates still lands, and the note of a refused one goes with the success
+        _clipboard->SetAvailable(true);
+        _clipboard->SetDeferred(2);
+        ASSERT_TRUE(ClickElement(kEntry, "EntryPaste"));
+        int frames = 0;
+        while (Var("onlineEntryValue") != "MM7NN" && frames < 10) {
+            ClipboardFrame();
+            ++frames;
+        }
+        EXPECT_EQ(Var("onlineEntryValue"), "MM7NN");
+        EXPECT_GT(frames, 1) << "the read was deferred";
+        EXPECT_FALSE(ItemShown(kEntry, "EntryNote"));
+    }
+
+    TEST_F(MahjongOnlineSceneTest, AReadStillPendingWhenTheSceneIsTornDownCallsNothing) {
+        ASSERT_NO_FATAL_FAILURE(OpenTheCodePad());
+        UseClipboard("ab3k9");
+        _clipboard->SetDeferred(3);
+        ASSERT_TRUE(ClickElement(kEntry, "EntryPaste"));
+        ClipboardFrame();
+        ASSERT_TRUE(CoreManager::GetClipboard().HasPending());
+
+        GameManager::GetInstance().Shutdown();
+        EngineEnvironment::UseSceneManager({});
+        _manager.Reset();
+        ASSERT_EQ(MahjongOnlineComponent::GetActive(), nullptr) << "the component is gone, the read is not";
+        for (int count = 0; count < 6; ++count) {
+            CoreManager::GetClipboard().Update();
+        }
+        EXPECT_FALSE(CoreManager::GetClipboard().HasPending());
+        EXPECT_EQ(_clipboard->ReadCount(), 1);
+    }
+
+    TEST_F(MahjongOnlineSceneTest, ControlOrCommandWithAKeyTypesNothingIntoTheCodeOrTheName) {
+        ASSERT_NO_FATAL_FAILURE(OpenTheCodePad());
+        PressKeyboard(SDLK_V);
+        EXPECT_EQ(Var("onlineEntryValue"), "") << "V alone is a letter of the alphabet";
+        Frame();
+        EXPECT_EQ(Var("onlineEntryValue"), "V");
+        for (const SDL_Keymod mod : {SDL_KMOD_LCTRL, SDL_KMOD_RCTRL, SDL_KMOD_LGUI, SDL_KMOD_RGUI}) {
+            PressWith(SDLK_V, mod);
+            PressWith(SDLK_A, mod);
+        }
+        PressWith(SDLK_V, static_cast<SDL_Keymod>(SDL_KMOD_LCTRL | SDL_KMOD_LSHIFT));
+        Frame();
+        EXPECT_EQ(Var("onlineEntryValue"), "V");
+
+        Act("MahjongOnlineDone");
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineName"));
+        Draw();
+        ASSERT_EQ(Screens().Focus(), OnlineField::Name);
+        const std::string name = Var("onlineEntryValue");
+        PressWith(SDLK_V, SDL_KMOD_LCTRL);
+        PressWith(SDLK_A, SDL_KMOD_LGUI);
+        Frame();
+        EXPECT_EQ(Var("onlineEntryValue"), name);
+    }
+
     TEST_F(MahjongOnlineSceneTest, EscapeGoesOnePageBackAndTheLastOneClosesThePanelOnly) {
         ASSERT_NO_FATAL_FAILURE(OpenPanel());
         ASSERT_NO_FATAL_FAILURE(GoToTheJoinForm());
@@ -395,6 +609,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongOnlineSceneTest, EveryPagePassesTheSizeMatrixInBothLanguages) {
+        UseClipboard();
         ASSERT_NO_FATAL_FAILURE(OpenPanel());
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
@@ -431,6 +646,25 @@ namespace BECore::Mahjong::Tests {
             {
                 SCOPED_TRACE("entry, the code");
                 ExpectTheCanvasFits(kEntry, kKeyAir);
+                ASSERT_TRUE(ItemShown(kEntry, "EntryPaste"));
+            }
+            {
+                SCOPED_TRACE("entry, the code, with a note");
+                Paste("hello world");
+                Frame();
+                ASSERT_TRUE(ItemShown(kEntry, "EntryNote"));
+                ExpectTheCanvasFits(kEntry, kKeyAir);
+                _clipboard->SetContent("");
+                ASSERT_TRUE(ClickElement(kEntry, "EntryPaste"));
+                ClipboardFrame();
+                ASSERT_EQ(Text(kEntry, "EntryNote"), Tr(CoreManager::GetUIStrings(), kOnlinePasteEmptyKey).c_str());
+                ExpectTheCanvasFits(kEntry, kKeyAir);
+                _clipboard->SetRefuse(true);
+                ASSERT_TRUE(ClickElement(kEntry, "EntryPaste"));
+                ClipboardFrame();
+                ASSERT_EQ(Text(kEntry, "EntryNote"), Tr(CoreManager::GetUIStrings(), kOnlinePasteRefusedKey).c_str());
+                ExpectTheCanvasFits(kEntry, kKeyAir);
+                _clipboard->SetRefuse(false);
             }
             Act("MahjongOnlineDone");
             Act("MahjongOnlineClose");
@@ -667,6 +901,109 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(PumpUntil([&] { return _game->IsOnlineTable() && bo.Client().HasTable(); }, {&bo}));
         EXPECT_TRUE(bo.Table().hintsAllowed);
         EXPECT_TRUE(_game->GetOnline().Table().hintsAllowed);
+    }
+
+    TEST_F(MahjongOnlineRoomTest, TheCopyButtonAndTheTitleOfTheLobbyPutTheRoomCodeOnTheClipboardAndTheButtonSaysHowItWent) {
+        UseClipboard("not the code");
+        ASSERT_NO_FATAL_FAILURE(OpenPanel());
+        ASSERT_NO_FATAL_FAILURE(GoToTheHostForm());
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineCreate"));
+        ASSERT_TRUE(PumpUntil([&] { return Screens().Page() == OnlinePage::Lobby && _game->GetOnline().Stage() == OnlineStage::Lobby; }));
+        const std::string code = Var("onlineRoom");
+        ASSERT_EQ(code.size(), kRoomCodeLength);
+
+        ASSERT_TRUE(ItemShown(kOnline, "OnlineCopy"));
+        EXPECT_EQ(Text(kOnline, "OnlineCopy"), "Copy code");
+        EXPECT_EQ(_clipboard->WriteCount(), 0);
+
+        // The button: exactly the code on the clipboard
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineCopy"));
+        Frame();
+        EXPECT_EQ(Std(_clipboard->Content()), code);
+        EXPECT_EQ(Text(kOnline, "OnlineCopy"), "Copied");
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineNotice")) << "the notice line is not used";
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineHostLine")) << "the line of the host stays";
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            ASSERT_TRUE(_game->SetLanguage(language));
+            Frame();
+            ExpectTheCanvasFits(kOnline);
+        });
+        ASSERT_TRUE(_game->SetLanguage("en"_intern));
+        Frame();
+        EXPECT_EQ(Text(kOnline, "OnlineCopy"), "Copied");
+
+        // The next move of the player puts the words back
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineSit1"));
+        ASSERT_TRUE(PumpUntil([&] { return SeatText(1) == "Anna (you)" || SeatText(1) == "Player (you)"; }));
+        EXPECT_EQ(Text(kOnline, "OnlineCopy"), "Copy code");
+
+        // The title does the same
+        _clipboard->SetContent("not the code");
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineTitleLobby"));
+        Frame();
+        EXPECT_EQ(Std(_clipboard->Content()), code);
+        EXPECT_EQ(Text(kOnline, "OnlineCopy"), "Copied");
+
+        // A refusal and a missing clipboard are words, not a crash
+        _clipboard->SetContent("not the code");
+        _clipboard->SetRefuse(true);
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineCopy"));
+        Frame();
+        EXPECT_EQ(Std(_clipboard->Content()), "not the code");
+        EXPECT_EQ(Text(kOnline, "OnlineCopy"), "Cannot copy");
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            ASSERT_TRUE(_game->SetLanguage(language));
+            Frame();
+            ExpectTheCanvasFits(kOnline);
+        });
+        ASSERT_TRUE(_game->SetLanguage("en"_intern));
+        _clipboard->SetRefuse(false);
+        _clipboard->SetAvailable(false);
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineTitleLobby"));
+        Frame();
+        EXPECT_EQ(Text(kOnline, "OnlineCopy"), "Cannot copy");
+        _clipboard->SetAvailable(true);
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineCopy"));
+        Frame();
+        EXPECT_EQ(Text(kOnline, "OnlineCopy"), "Copied");
+
+        // Leaving the room ends it
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineLeave"));
+        ASSERT_TRUE(PumpUntil([&] { return Screens().Page() == OnlinePage::Menu; }));
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineCopy"));
+        EXPECT_EQ(Screens().CopyState(), OnlineCopyState::None);
+    }
+
+    TEST_F(MahjongOnlineRoomTest, AGuestCopiesTheCodeToo) {
+        UseClipboard();
+        ASSERT_NO_FATAL_FAILURE(OpenPanel());
+
+        // Another person keeps the room alive; the game's player enters by the code with the Join form and the pasted code
+        HubPlayer bo(_world);
+        ASSERT_TRUE(bo.Client().Host(kUrl, "Bo", OnlineRoomOptions{}));
+        ASSERT_TRUE(PumpUntil([&] { return bo.Client().Stage() == OnlineStage::Lobby; }, {&bo}));
+        const std::string boRoom(bo.Client().Room().c_str());
+        _clipboard->SetContent(("Join my room " + boRoom + ", please").c_str());
+        ASSERT_NO_FATAL_FAILURE(GoToTheJoinForm());
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineCode"));
+        Draw();
+        ASSERT_TRUE(ClickElement(kEntry, "EntryPaste"));
+        ClipboardFrame();
+        ASSERT_EQ(Var("onlineEntryValue"), boRoom);
+        Act("MahjongOnlineDone");
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineEnter"));
+        ASSERT_TRUE(PumpUntil([&] { return Screens().Page() == OnlinePage::Lobby && _game->GetOnline().Stage() == OnlineStage::Lobby; }, {&bo}));
+        EXPECT_EQ(Var("onlineRoom"), boRoom);
+
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineStart")) << "a guest has no Start";
+        ASSERT_TRUE(ItemShown(kOnline, "OnlineCopy"));
+        _clipboard->SetContent("");
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineCopy"));
+        Frame();
+        EXPECT_EQ(Std(_clipboard->Content()), boRoom);
+        EXPECT_EQ(Text(kOnline, "OnlineCopy"), "Copied");
     }
 
     TEST_F(MahjongOnlineRoomTest, ARoomMadeWithoutAChoiceSaysNotAllowedToTheHostAndTheGuestKeepsHisWaitingLine) {

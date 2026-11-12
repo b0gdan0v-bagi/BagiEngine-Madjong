@@ -40,9 +40,10 @@ namespace BECore::Mahjong::Tests {
 
         /// The elements the pages of the panel show and hide among themselves (the rest of the canvas is always there).
         const char* const kPageElements[] = {
-            "OnlineTitleMenu",  "OnlineTitleHost", "OnlineTitleJoin", "OnlineTitleLobby", "OnlineNotice",   "OnlineStatus",   "OnlineWaiting",  "OnlineHostLine", "OnlineMenuHost", "OnlineMenuJoin",
-            "OnlineMenuReturn", "OnlineNameRow",   "OnlineCodeRow",   "OnlineHandsRow",   "OnlineLevelRow", "OnlineHintsRow", "OnlineSeatRow0", "OnlineSeatRow1", "OnlineSeatRow2", "OnlineSeatRow3",
-            "OnlineSit0",       "OnlineSit1",      "OnlineSit2",      "OnlineSit3",       "OnlineGap",      "OnlineButtons",  "OnlineCreate",   "OnlineEnter",    "OnlineStart",    "OnlineLeave",
+            "OnlineTitleMenu", "OnlineTitleHost", "OnlineTitleJoin",  "OnlineTitleLobby", "OnlineNotice",  "OnlineStatus",   "OnlineWaiting",  "OnlineHostLine",
+            "OnlineMenuHost",  "OnlineMenuJoin",  "OnlineMenuReturn", "OnlineNameRow",    "OnlineCodeRow", "OnlineHandsRow", "OnlineLevelRow", "OnlineHintsRow",
+            "OnlineSeatRow0",  "OnlineSeatRow1",  "OnlineSeatRow2",   "OnlineSeatRow3",   "OnlineSit0",    "OnlineSit1",     "OnlineSit2",     "OnlineSit3",
+            "OnlineGap",       "OnlineButtons",   "OnlineCreate",     "OnlineEnter",      "OnlineStart",   "OnlineLeave",    "OnlineCopy",
         };
 
         /// The page `Menu` (with `Return` offered), `Host`, `Join` and the `Lobby` (a seat that can be taken on every row, the host's `Start`): the elements each shows.
@@ -50,7 +51,7 @@ namespace BECore::Mahjong::Tests {
         const std::vector<const char*> kHostPage = {"OnlineTitleHost", "OnlineNameRow", "OnlineHandsRow", "OnlineLevelRow", "OnlineHintsRow", "OnlineGap", "OnlineButtons", "OnlineCreate"};
         const std::vector<const char*> kJoinPage = {"OnlineTitleJoin", "OnlineNameRow", "OnlineCodeRow", "OnlineGap", "OnlineButtons", "OnlineEnter"};
         const std::vector<const char*> kLobbyPage = {"OnlineTitleLobby", "OnlineSeatRow0", "OnlineSeatRow1", "OnlineSeatRow2", "OnlineSeatRow3", "OnlineSit0", "OnlineSit1",
-                                                     "OnlineSit2",       "OnlineSit3",     "OnlineGap",      "OnlineButtons",  "OnlineStart",    "OnlineLeave"};
+                                                     "OnlineSit2",       "OnlineSit3",     "OnlineGap",      "OnlineButtons",  "OnlineStart",    "OnlineCopy", "OnlineLeave"};
         /// The lines that take the place under the title, one at a time.
         const char* const kInfoLines[] = {"OnlineNotice", "OnlineStatus", "OnlineWaiting", "OnlineHostLine"};
 
@@ -124,6 +125,8 @@ namespace BECore::Mahjong::Tests {
             for (size_t seat = 0; seat < kSeats; ++seat) {
                 vars.Set(PoolString::Intern(Format("onlineSeat{}", seat)), eastl::string_view(LongestText(seats)));
             }
+            vars.Set("onlineCopy"_intern, eastl::string_view(LongestText({Tr(strings, kOnlineCopyKey), Tr(strings, kOnlineCopiedKey), Tr(strings, kOnlineCopyFailedKey)})));
+            vars.Set("onlineEntryNote"_intern, eastl::string_view(LongestText({Tr(strings, kOnlinePasteNotCodeKey), Tr(strings, kOnlinePasteEmptyKey), Tr(strings, kOnlinePasteRefusedKey)})));
             vars.Set("onlineName"_intern, eastl::string_view(name));
             vars.Set("onlineEntryValue"_intern, eastl::string_view(name));
             vars.Set("onlineCode"_intern, "WWWWW");
@@ -186,6 +189,8 @@ namespace BECore::Mahjong::Tests {
             {kOnline, "OnlineHintsOff", "MahjongOnlineHints", "off"}, {kOnline, "OnlineEnter", "MahjongOnlineEnter", ""},
             {kOnline, "OnlineStart", "MahjongOnlineStart", ""},       {kOnline, "OnlineLeave", "MahjongOnlineLeave", ""},
             {kEntry, "EntryDelete", "MahjongOnlineBackspace", ""},    {kEntry, "EntryDone", "MahjongOnlineDone", ""},
+            {kOnline, "OnlineCopy", "MahjongOnlineCopy", ""},         {kOnline, "OnlineTitleLobby", "MahjongOnlineCopy", ""},
+            {kEntry, "EntryPaste", "MahjongOnlinePaste", ""},
         };
         for (size_t seat = 0; seat < kSeats; ++seat) {
             controls.push_back({kOnline, Format("OnlineSit{}", seat).c_str(), "MahjongOnlineSit", Format("{}", seat).c_str()});
@@ -262,6 +267,8 @@ namespace BECore::Mahjong::Tests {
                 SCOPED_TRACE(code ? "code" : "name");
                 ASSERT_TRUE(canvas->SetElementVisible("EntryCaptionName"_intern, !code));
                 ASSERT_TRUE(canvas->SetElementVisible("EntryCaptionCode"_intern, code));
+                // the Paste key belongs to the room code pad (its note is held with a pad of 32 keys, the code pad's own, in MahjongOnlineSceneTest)
+                ASSERT_TRUE(canvas->SetElementVisible("EntryPaste"_intern, code));
                 Draw();
                 canvas->UpdateLayout(kViewWidth, kViewHeight);
                 for (size_t key = 0; key < TextEntry::kPadMaxKeys; ++key) {
@@ -291,6 +298,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Text(kOnline, "OnlineSeatCaption3"), "Seat 4");
         EXPECT_EQ(Text(kOnline, "OnlineStart"), "Start");
         EXPECT_EQ(Text(kOnline, "OnlineLeave"), "Leave");
+        EXPECT_EQ(Text(kEntry, "EntryPaste"), "Paste");
 
         ASSERT_TRUE(_game->SetLanguage("ru"_intern));
         Draw();
@@ -306,6 +314,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Text(kOnline, "OnlineEnter"), "Войти");
         EXPECT_EQ(Text(kEntry, "EntryDone"), "Готово");
         EXPECT_EQ(Text(kEntry, "EntryDelete"), "Стереть");
+        EXPECT_EQ(Text(kEntry, "EntryPaste"), "Вставить");
         CoreManager::GetUIVars().Set("onlineRoom"_intern, "");
     }
 
