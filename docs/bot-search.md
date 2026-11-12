@@ -228,15 +228,15 @@ first set of these runs, while other sessions ran their tests, gave 15 s at `--j
 
 ```bash
 cmake --preset macos-release && cmake --build --preset macos-release --target BagiMahjongArena
-A=build/ClangmacOS/BagiMahjongArena
+A=build/macos-release/bin/BagiMahjongArena
 $A --first 30000 --seeds 1000 --jobs 14 --others normal \
    --focus normal,normal:searchWorlds=2,searchCandidates=4,searchMargin=30         # decision range (45 s)
 $A --first 60000 --seeds 1000 --jobs 14 --others normal --focus normal,normal:searchWorlds=2,searchCandidates=4,searchMargin=30
 $A --first 30000 --seeds 250  --jobs 14 --others random --focus normal,normal:searchWorlds=2,searchCandidates=4,searchMargin=30
 ```
 
-`searchWorlds=8` and `searchWorlds=32` are 4 times and 16 times (the 32-world runs used `--seeds 250` on both ranges). A Release build overwrites the Debug executables
-(`docs/bot-arena.md`). The Debug time rule needs a Debug arena at `--jobs 1`.
+`searchWorlds=8` and `searchWorlds=32` are 4 times and 16 times (the 32-world runs used `--seeds 250` on both ranges).
+The Debug time rule needs the Debug arena (`build/macos-debug/bin/BagiMahjongArena`) at `--jobs 1`.
 
 ## What was decided
 
@@ -256,7 +256,7 @@ three Normal seats (`--others 5`); the **knobs are tuned only on the exploration
 range is `--first 100000` and the confirmation range `--first 130000` (1000 seeds each, played once as they stand); a level is
 "stronger than the level below" only when, on **both** the decision and the confirmation range, the paired difference of points a
 hand and of wins % is significant and positive and the pooled (mean of the two) difference is positive; anything else is reported as
-"not significantly above". All runs below are Release, `--jobs 14`, `A=build/ClangmacOS/BagiMahjongArena`, on a machine shared with
+"not significantly above". All runs below are Release, `--jobs 14`, `A=build/macos-release/bin/BagiMahjongArena`, on a machine shared with
 other sessions (the wall times are indicative).
 
 ### Levels 1..5 against three Normal seats (step 1: the scale today)
@@ -437,7 +437,7 @@ Decided by the rule written before the numbers (plan, WP 3), from the two sectio
 
 The table of `ComputerLevel.h` as it ships (WP 3: levels 1..4 skip knobs, 5..10 `kNormalProfile`), against three Normal seats
 (`--others 5`), 1000 seeds on each of two ranges that nothing was tuned on, each played once as it stands. Release,
-`--jobs 14`, `A=build/ClangmacOS/BagiMahjongArena`:
+`--jobs 14`, `A=build/macos-release/bin/BagiMahjongArena`:
 
 ```bash
 for R in 100000 130000; do                                                  # decision, confirmation

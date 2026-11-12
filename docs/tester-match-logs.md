@@ -44,7 +44,7 @@ in pieces for a sink that does not exist yet:
 
 ## How to collect
 
-`python3 tools/collect_logs.py --from DIR [--from DIR ...] [--to logs/collected] [--verifier build/ClangmacOS/BagiMahjongArena] [--recheck]`
+`python3 tools/collect_logs.py --from DIR [--from DIR ...] [--to logs/collected] [--verifier build/macos-release/bin/BagiMahjongArena] [--recheck]`
 (standard library only). For each folder it runs the arena's `--logs DIR --check` and copies the logs that replay to
 `logs/collected/<16 hex digits of the SHA-256>.jsonl`, each once, and keeps `logs/collected/index.json` (per hash: file, first source,
 `kept` or `dropped`, the reason for a dropped one). **A log that does not replay is never dropped silently:** it is not copied, it is
