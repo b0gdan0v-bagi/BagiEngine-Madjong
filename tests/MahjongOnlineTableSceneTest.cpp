@@ -9,7 +9,9 @@
 #include <Mahjong/Save/MatchSave.h>
 #include <Mahjong/Table/ActionButtons.h>
 #include <Mahjong/Table/ScoreText.h>
+#include <Mahjong/Table/TileAtlas.h>
 #include <Mahjong/Table/TileHover.h>
+#include <Rooms/RoomProtocol.h>
 #include <memory>
 #include <thread>
 
@@ -158,6 +160,110 @@ namespace BECore::Mahjong::Tests {
             return PlayUntil([&] { return _game->GetSession().GetPhase() == SessionPhase::HandOver; });
         }
 
+        /// The tile an atlas cell shows face up; none for the back, the wall stack and anything else.
+        static std::optional<Tile> FaceOfCell(const Rect& source) {
+            const int cell = static_cast<int>(source.y) / kCellHeight * kAtlasColumns + static_cast<int>(source.x) / kCellWidth;
+            return cell < kTileIdCount ? std::optional<Tile>(Tile(static_cast<uint8_t>(cell))) : std::nullopt;
+        }
+
+        /// **No peeking in the scene:** the faces of the hand slots of this frame's draw, by seat, set against what the server told this client and nothing else: while a hand is played
+        /// its own tiles face up and no other seat's, once it is over the four hands of `result`.
+        void ExpectNoPeeking() {
+            const OnlineTable& table = Table();
+            const std::vector<DrawCall> calls = TileCalls();
+            const TableLayout& layout = _table->GetLayout();
+            ASSERT_EQ(calls.size(), layout.slots.size());
+            std::array<std::vector<uint8_t>, kSeatCount> faces;
+            for (size_t i = 0; i < calls.size(); ++i) {
+                const TileSlot& slot = layout.slots[i];
+                if (slot.role != SlotRole::HandTile || !calls[i].source.has_value()) {
+                    continue;
+                }
+                if (const std::optional<Tile> face = FaceOfCell(*calls[i].source)) {
+                    faces[static_cast<size_t>(slot.seat)].push_back(face->Id());
+                }
+            }
+            const auto idsOf = [](const eastl::vector<Tile>& tiles) {
+                std::vector<uint8_t> ids;
+                for (const Tile tile : tiles) {
+                    ids.push_back(tile.Id());
+                }
+                std::sort(ids.begin(), ids.end());
+                return ids;
+            };
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                std::vector<uint8_t>& drawn = faces[static_cast<size_t>(seat)];
+                std::sort(drawn.begin(), drawn.end());
+                std::vector<uint8_t> allowed;
+                if (table.phase != SessionPhase::Playing && table.result.has_value()) {
+                    allowed = idsOf(table.result->seats[static_cast<size_t>(seat)].concealed);
+                } else if (seat == table.seat) {
+                    allowed = idsOf(table.hand);
+                }
+                EXPECT_EQ(drawn, allowed) << "seat " << seat << " phase " << static_cast<int>(table.phase) << " version " << table.version;
+                (seat == table.seat ? _ownFacesSeen : _otherFacesSeen) += static_cast<int>(drawn.size());
+            }
+        }
+
+        /// The game's client acts through the scene: the first action the server lists is clicked on its tile or its button, a `next_hand` on the button of the score table.
+        /// Once per view.
+        void ViewerActsThroughTheScene() {
+            OnlineClient& client = _game->GetOnline();
+            if (client.Stage() != OnlineStage::Game || Table().actions.empty() || Table().version == _viewerActed) {
+                return;
+            }
+            _viewerActed = Table().version;
+            const ControlAction& first = Table().actions.front();
+            if (first.nextHand) {
+                ClickElement("HandOverAction", "NextHand");
+                return;
+            }
+            const HandAction& action = first.hand;
+            if (action.kind == ActionKind::Discard) {
+                const auto& held = Hand().GetHand(Viewer()).concealed;
+                const auto found = eastl::find(held.begin(), held.end(), action.tile);
+                ASSERT_NE(found, held.end());
+                if (action.declareCalling) {
+                    EmitAction(SpecOf(ButtonKind::Declare).action, SpecOf(ButtonKind::Declare).value);
+                }
+                ClickHandTile(static_cast<int>(found - held.begin()));
+                return;
+            }
+            for (const ButtonKind kind : EnumUtils<ButtonKind>::Values()) {
+                const ButtonState& button = _table->GetButtons()[kind];
+                if (button.shown && button.action == action) {
+                    EmitAction(SpecOf(kind).action, SpecOf(kind).value);
+                    return;
+                }
+            }
+            ADD_FAILURE() << "no button for the listed action of kind " << static_cast<int>(action.kind);
+        }
+
+        /// Frames in which everybody plays by the first action of their list (the game's client through the scene), with the no-peeking check of every frame, until @p done.
+        template <typename Done>
+        bool PlayThroughTheScene(Done done, int limit = kMatchFrames) {
+            for (int count = 0; count < limit; ++count) {
+                if (_game->GetOnline().Stage() == OnlineStage::Reconnecting) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(2));  // the client reconnects on the real clock
+                }
+                Frame();
+                if (_game->IsOnlineTable()) {
+                    ExpectNoPeeking();
+                    if (::testing::Test::HasFatalFailure()) {
+                        return false;
+                    }
+                }
+                if (done()) {
+                    return true;
+                }
+                for (const std::unique_ptr<HubPlayer>& other : _others) {
+                    other->ActFirst();
+                }
+                ViewerActsThroughTheScene();
+            }
+            return false;
+        }
+
         /// The files of the save folder that hold the match, by name.
         std::vector<std::pair<std::string, std::string>> MatchSlot() const {
             std::vector<std::pair<std::string, std::string>> files;
@@ -174,7 +280,12 @@ namespace BECore::Mahjong::Tests {
             return files;
         }
 
+        static constexpr int kMatchFrames = 40000;
+
         MahjongHubWorld _world;
+        uint64_t _viewerActed = std::numeric_limits<uint64_t>::max();
+        int _ownFacesSeen = 0;    // what `ExpectNoPeeking` has looked at: the check is no empty one
+        int _otherFacesSeen = 0;  // the faces of other seats drawn once a hand was over
         HubClientLinks _links;
         std::vector<std::unique_ptr<HubPlayer>> _others;
         std::filesystem::path _folder;
@@ -522,8 +633,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongOnlineTableSceneTest, TheScoreTableOfARoomPaysWhatTheServerPaysAndTheStandingsOfAMatchOfTheRoomOfferLeaveRoom) {
         ASSERT_NO_FATAL_FAILURE(StartRoom(kShortMatchHands, 0));  // computers play the other seats: they win hands, and a hand won counts
-        constexpr int kMatchFrames = 40000;
-        constexpr int kMostHands = 40;  // a drawn hand is dealt again and counts for nothing
+        constexpr int kMostHands = 40;                            // a drawn hand is dealt again and counts for nothing
         int hands = 0;
         while (_game->GetSession().GetPhase() != SessionPhase::MatchOver && hands < kMostHands) {
             ASSERT_TRUE(PlayUntil([&] { return _game->GetSession().GetPhase() != SessionPhase::Playing; }, true, kMatchFrames)) << "hand " << hands;
@@ -567,6 +677,78 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(PumpUntil([&] { return !_game->IsOnlineTable(); }));
         EXPECT_TRUE(_game->IsSetupOpen());
         EXPECT_FALSE(_game->IsOnlineOpen());
+    }
+
+    // ----- a room played through the scene -----
+
+    TEST_F(MahjongOnlineTableSceneTest, AnEightHandRoomIsPlayedToItsEndByTheSceneAndAConnectionCutInTheMiddleIsResumed) {
+        // The game's client, one other person (who plays the first action of each list) and two computers: a table of four people who play the first action never wins a hand
+        ASSERT_NO_FATAL_FAILURE(StartRoom(kShortMatchHands, 1));
+        const uint64_t localStarts = _game->GetLocalSession().StartCount();
+        bool severed = false;
+        bool resumed = false;
+        uint64_t startsBefore = 0;
+        uint64_t frozenVersion = 0;
+        int handsSeen = 0;
+        uint64_t lastStart = _game->GetSession().StartCount();
+        const bool ended = PlayThroughTheScene([&] {
+            const TableSession& session = _game->GetSession();
+            if (session.StartCount() != lastStart) {
+                lastStart = session.StartCount();
+                ++handsSeen;
+            }
+            if (!severed && handsSeen >= 2 && session.GetPhase() == SessionPhase::Playing && Hand().Discards().size() >= 3 && _game->GetOnline().Stage() == OnlineStage::Game) {
+                severed = true;
+                startsBefore = session.StartCount();
+                frozenVersion = _game->GetOnline().Table().version;
+                _world.Sever(_links.Last());
+            }
+            if (severed && !resumed && _game->GetOnline().Stage() == OnlineStage::Game && _game->GetOnline().Table().version > frozenVersion) {
+                resumed = true;
+                EXPECT_EQ(session.StartCount(), startsBefore) << "the table the client came back to is the one it left";
+            }
+            return session.GetPhase() == SessionPhase::MatchOver;
+        });
+        ASSERT_TRUE(ended) << "after " << handsSeen << " hands";
+        ASSERT_TRUE(severed);
+        EXPECT_TRUE(resumed);
+        EXPECT_GT(startsBefore, 0u);
+        EXPECT_EQ(_world.Judge().Offences().size(), 0u) << (_world.Judge().Offences().empty() ? "" : _world.Judge().Offences().front());
+
+        Frame();
+        Frame();
+        EXPECT_TRUE(_game->IsOnlineTable());
+        EXPECT_EQ(_game->GetOnline().Stage(), OnlineStage::Game) << "the link came back by itself";
+        EXPECT_TRUE(Canvas("MatchOver")->TakesInput());
+        EXPECT_GT(_ownFacesSeen, 0);
+        EXPECT_GT(_otherFacesSeen, 0) << "the hands of the others were drawn face up once a hand was over, and then only";
+        EXPECT_EQ(_game->GetLocalSession().StartCount(), localStarts) << "the local match was never touched";
+        EXPECT_EQ(_game->GetMatch().GetPhase(), MatchPhase::Finished);
+        EXPECT_EQ(_game->GetMatch().HandsPlayed(), kShortMatchHands);
+
+        ASSERT_TRUE(ClickElement("MatchOver", "NewGame"));
+        ASSERT_TRUE(PumpUntil([&] { return !_game->IsOnlineTable(); }));
+        EXPECT_TRUE(_game->IsSetupOpen());
+    }
+
+    TEST_F(MahjongOnlineTableSceneTest, AViewOfAnotherFormatClosesTheTableAndSetupComesBackWithTheWord) {
+        ASSERT_NO_FATAL_FAILURE(StartRoom());
+        ASSERT_TRUE(PlayThroughTheScene([&] { return Hand().Discards().size() >= 3; }));
+        Frame();
+        ASSERT_TRUE(_game->IsOnlineTable());
+        const Seat seat = _game->GetOnline().Seat();
+        Json view = _world.Game()->GetSeatView(seat).value();
+        view["format"] = kOnlineViewFormat + 1;
+        _links.Last().QueueText(MakeViewMessage(_game->GetOnline().Room(), seat, _world.Game()->GetStateVersion() + 1, false, view, _world.Game()->GetSeatActions(seat).value()));
+        ASSERT_TRUE(PumpUntil([&] { return !_game->IsOnlineTable(); }));
+        Frame();
+        EXPECT_TRUE(_game->IsSetupOpen());
+        EXPECT_TRUE(_game->IsOnlineOpen());
+        EXPECT_EQ(Var("onlineNotice"), std::string(OnlineNoticeText(CoreManager::GetUIStrings(), kOnlineViewFormatKey).c_str()));
+        EXPECT_TRUE(OnScreen("Online", "OnlineNotice"));
+        EXPECT_EQ(_game->GetOnline().Stage(), OnlineStage::Idle);
+        EXPECT_FALSE(_game->GetSession().IsRemote()) << "the local game is back";
+        EXPECT_FALSE(_game->GetOnline().SessionToKeep().IsValid()) << "a room this client cannot read is not offered again";
     }
 
 }  // namespace BECore::Mahjong::Tests
