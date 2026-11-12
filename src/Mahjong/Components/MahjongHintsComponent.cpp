@@ -5,6 +5,7 @@
 #include <BECore/Scene/Scene.h>
 #include <BECore/UI/UICanvasComponent.h>
 #include <BECore/UI/UIImage.h>
+#include <BECore/UI/UILabel.h>
 #include <CoreSDL/SDLEvents.h>
 #include <Events/InputEvents.h>
 #include <Generated/MahjongHintsComponent.gen.hpp>
@@ -30,12 +31,19 @@ namespace BECore::Mahjong {
         constexpr eastl::string_view kHintButton = "HintButton";
         constexpr eastl::string_view kAdviceLabel = "AdviceText";
         constexpr eastl::string_view kAdviceVar = "hintAdvice";
-        // The panel of the reasons (node `HintsWhy`): its plate and the variable of line `i` (`hintWhy<i>`, `kMaxReasonLines` of them)
-        constexpr eastl::string_view kWhyPanel = "WhyPanel";
-        constexpr eastl::string_view kWhyVarPrefix = "hintWhy";
-        // The panel of the coach's note (same node): its plate and the variable of sentence `i` (`coachNote<i>`, `kMaxCoachLines` of them)
-        constexpr eastl::string_view kCoachPanel = "CoachPanel";
-        constexpr eastl::string_view kCoachVarPrefix = "coachNote";
+        // The card of the coach (node `HintsWhy`, `Table/HintCard.h`): the plate, the head row, row `i` (`CardRow<i>` with the label
+        // `CardSteps<i>` and the pictures `Card<i>Tile<k>`) and the variables of the words
+        constexpr eastl::string_view kCoachCard = "CoachCard";
+        constexpr eastl::string_view kCardHead = "CardHead";
+        constexpr eastl::string_view kCardRowPrefix = "CardRow";
+        constexpr eastl::string_view kCardStepsPrefix = "CardSteps";
+        constexpr eastl::string_view kCardTitleVar = "cardTitle";
+        constexpr eastl::string_view kCardNowVar = "cardNow";
+        constexpr eastl::string_view kCardWhoVar = "cardWho";
+        constexpr eastl::string_view kCardMoveVar = "cardMove";
+        constexpr eastl::string_view kCardStepsVar = "cardSteps";
+        constexpr eastl::string_view kCardUsefulVar = "cardUseful";
+        constexpr eastl::string_view kCardFootVar = "cardFoot";
 
         constexpr float kMarkGap = 1.0f;         ///< between the tile and its bar
         constexpr float kMarkThickness = 4.0f;   ///< the bar, and below the hand there are 8 units to the edge of the view
@@ -47,6 +55,52 @@ namespace BECore::Mahjong {
 
         PoolString NameOf(eastl::string_view name) {
             return PoolString::Intern(name);
+        }
+
+        PoolString CardTileName(int row, int tile) {
+            return PoolString::Intern(Format("Card{}Tile{}", row, tile));
+        }
+
+        /// The canvas under `node` (or a child of it) that holds the element `name`.
+        UICanvasComponent* CanvasWith(SceneNode& node, PoolString name) {
+            if (auto canvas = node.GetComponent<UICanvasComponent>()) {
+                if (canvas->GetRoot().FindByName(name) != nullptr) {
+                    return canvas.Get();
+                }
+            }
+            for (const auto& child : node.GetChildren()) {
+                if (UICanvasComponent* found = CanvasWith(*child, name)) {
+                    return found;
+                }
+            }
+            return nullptr;
+        }
+
+        /// The fill of a row of the card: the computer's choice raised, the person's own move in the colour of a pass, the others none.
+        Color RowFill(CardRowKind kind) {
+            switch (kind) {
+                case CardRowKind::Best:
+                    return kUiPalette[2];  // surfaceRaised
+                case CardRowKind::Yours:
+                    return kUiPalette[8];  // danger
+                case CardRowKind::Other:
+                    break;
+            }
+            return Color{0, 0, 0, 0};
+        }
+
+        /// The colour of the steps of a row: green closer to a ready hand, amber farther, white the same.
+        Color TrendColor(CardTrend trend) {
+            switch (trend) {
+                case CardTrend::Closer:
+                    return kSafeMark;
+                case CardTrend::Farther:
+                    return kRiskyMark;
+                case CardTrend::Same:
+                case CardTrend::None:
+                    break;
+            }
+            return kUiPalette[9];  // text
         }
 
         /// The button `Hint` is offered: a person acts and it is the viewer, with something to choose from (a non-empty `legal`).
@@ -64,19 +118,6 @@ namespace BECore::Mahjong {
             for (const auto& child : node.GetChildren()) {
                 SetSelectedIn(*child, name, selected);
             }
-        }
-
-        Color DangerColor(DangerMark mark) {
-            switch (mark) {
-                case DangerMark::Safe:
-                    return kSafeMark;
-                case DangerMark::Risky:
-                    return kRiskyMark;
-                case DangerMark::Dangerous:
-                case DangerMark::None:
-                    break;
-            }
-            return kDangerMark;
         }
 
     }  // namespace
@@ -134,8 +175,10 @@ namespace BECore::Mahjong {
         if (_adviceOn && _offered && !_advised) {
             Advise(*game, key);  // `_offered` holds only with a game whose hints apply
         }
-        PushCoach(game, key);  // first: the reasons give way to a note that is up
-        PushAdvice(game != nullptr && game->CoachOn());
+        const bool coach = game != nullptr && game->CoachOn();
+        PushCoach(game, key);  // first: the advice gives way on the card to a note that is up
+        PushAdvice(coach);
+        PushCard(game, coach);
         if (key.applies) {
             DrawMarks(*game);
         }
@@ -200,14 +243,13 @@ namespace BECore::Mahjong {
         _adviceKey = key;
         _adviceView = std::move(view);
         _adviceDirty = true;
-        _whyDirty = true;
+        ++_adviceGeneration;
     }
 
     void MahjongHintsComponent::DropAdvice() {
         _advised = false;
         _advice.reset();
         _explained.reset();
-        _whyDirty = false;
         _adviceView = TableView{};
         _adviceDirty = false;
     }
@@ -222,7 +264,8 @@ namespace BECore::Mahjong {
             _adviceOnShown = _adviceOn;
             SetSelectedIn(scene.GetRootNode(), NameOf(kHintButton), _adviceOn);
         }
-        const bool show = _advice.has_value();
+        // In the mode Coach the sentence is the title of the card in the middle of the table, not a label of its own
+        const bool show = _advice.has_value() && !coach;
         UIVars& vars = CoreManager::GetUIVars();
         const UIStrings& strings = CoreManager::GetUIStrings();
         if (show && (!_adviceShown || _adviceDirty || strings.GetVersion() != _adviceStringsVersion)) {
@@ -236,30 +279,6 @@ namespace BECore::Mahjong {
                 vars.Set(NameOf(kAdviceVar), eastl::string_view());  // nothing of the last advice stays in a variable
             }
             UICanvasComponent::SetElementVisibleByName(scene, NameOf(kAdviceLabel), show);
-        }
-        PushWhy(show && coach && _explained.has_value() && !_coachShown);
-    }
-
-    void MahjongHintsComponent::PushWhy(bool open) {
-        UIVars& vars = CoreManager::GetUIVars();
-        const UIStrings& strings = CoreManager::GetUIStrings();
-        if (open && (!_whyShown || _whyDirty || strings.GetVersion() != _whyStringsVersion)) {
-            _whyDirty = false;
-            _whyStringsVersion = strings.GetVersion();
-            const eastl::vector<eastl::string> lines = ReasonLines(strings, _adviceView, *_explained);
-            for (size_t i = 0; i < kMaxReasonLines; ++i) {
-                vars.Set(IndexedName(kWhyVarPrefix, static_cast<int>(i)), i < lines.size() ? eastl::string_view(lines[i]) : eastl::string_view());
-            }
-        }
-        if (open != _whyShown) {
-            _whyShown = open;
-            if (!open) {
-                // Nothing of the last advice stays in a variable
-                for (size_t i = 0; i < kMaxReasonLines; ++i) {
-                    vars.Set(IndexedName(kWhyVarPrefix, static_cast<int>(i)), eastl::string_view());
-                }
-            }
-            UICanvasComponent::SetElementVisibleByName(GetScene(), NameOf(kWhyPanel), open);
         }
     }
 
@@ -278,34 +297,108 @@ namespace BECore::Mahjong {
                 ledger->ClearNote();  // the hand is over, the match is another, the table is covered or paused, the mode changed
             }
         }
+        _coachShown = show;
+        if (show) {
+            _coachPublished = ledger->Version();  // the note a press may take down: one this very press made was never shown
+        }
+    }
+
+    void MahjongHintsComponent::PushCard(MahjongGame* game, bool coach) {
+        CardKey next;
+        if (_coachShown) {
+            next.source = CardSource::Note;
+            next.version = game->GetCoach().Version();
+        } else if (coach && _advice.has_value() && _explained.has_value()) {
+            next.source = CardSource::Advice;
+            next.version = _adviceGeneration;
+        }
+        if (next.source != CardSource::None) {
+            const TableSession& session = game->GetSession();
+            next.strings = CoreManager::GetUIStrings().GetVersion();
+            next.hand = game->GetCoach().HandTallyOf(HandKeyOf(session));
+            next.match = game->GetCoach().MatchTallyOf(session.StartCount());
+        }
+        if (next == _cardKey) {
+            return;
+        }
+        BE_PROFILE_SCOPE("MahjongHints::PushCard");
+        _cardKey = next;
+        HintCard card;
+        if (next.source != CardSource::None) {
+            const UIStrings& strings = CoreManager::GetUIStrings();
+            const eastl::string tally = CardTallyText(strings, next.hand, next.match);
+            card = next.source == CardSource::Note ? MakeNoteCard(strings, *game->GetCoach().Note(), tally) : MakeAdviceCard(strings, _adviceView, *_explained, tally);
+        }
+        PublishCard(card, next.source != CardSource::None);
+    }
+
+    void MahjongHintsComponent::PublishCard(const HintCard& card, bool open) {
         UIVars& vars = CoreManager::GetUIVars();
-        const UIStrings& strings = CoreManager::GetUIStrings();
-        if (show && (!_coachShown || ledger->Version() != _coachPublished || strings.GetVersion() != _coachStringsVersion)) {
-            _coachPublished = ledger->Version();
-            _coachStringsVersion = strings.GetVersion();
-            const eastl::vector<eastl::string> lines = CoachNoteLines(strings, *ledger->Note());
-            for (size_t i = 0; i < kMaxCoachLines; ++i) {
-                vars.Set(IndexedName(kCoachVarPrefix, static_cast<int>(i)), i < lines.size() ? eastl::string_view(lines[i]) : eastl::string_view());
-            }
+        // Nothing of the last card stays in a variable once it is down: every variable is set, empty where the card has nothing
+        vars.Set(NameOf(kCardTitleVar), eastl::string_view(card.title));
+        vars.Set(NameOf(kCardNowVar), eastl::string_view(card.now));
+        UICanvasComponent* canvas = CanvasWith(GetScene().GetRootNode(), NameOf(kCoachCard));
+        if (canvas == nullptr) {
+            return;
         }
-        if (show != _coachShown) {
-            _coachShown = show;
-            if (!show) {
-                // Nothing of the last note stays in a variable
-                for (size_t i = 0; i < kMaxCoachLines; ++i) {
-                    vars.Set(IndexedName(kCoachVarPrefix, static_cast<int>(i)), eastl::string_view());
+        UIElement& root = canvas->GetRoot();
+        for (size_t i = 0; i < kMaxCardRows; ++i) {
+            const int at = static_cast<int>(i);
+            const CardRow* row = i < card.rows.size() ? &card.rows[i] : nullptr;
+            vars.Set(IndexedName(kCardWhoVar, at), row != nullptr ? eastl::string_view(row->who) : eastl::string_view());
+            vars.Set(IndexedName(kCardMoveVar, at), row != nullptr ? eastl::string_view(row->move) : eastl::string_view());
+            vars.Set(IndexedName(kCardStepsVar, at), row != nullptr ? eastl::string_view(row->steps) : eastl::string_view());
+            vars.Set(IndexedName(kCardUsefulVar, at), row != nullptr ? eastl::string_view(row->useful) : eastl::string_view());
+            const PoolString rowName = IndexedName(kCardRowPrefix, at);
+            if (UIElement* element = root.FindByName(rowName)) {
+                element->color = RowFill(row != nullptr ? row->kind : CardRowKind::Other);
+            }
+            if (UIElement* steps = root.FindByName(IndexedName(kCardStepsPrefix, at)); UILabel* label = steps != nullptr ? steps->Cast<UILabel>() : nullptr) {
+                label->textColor = TrendColor(row != nullptr ? row->trend : CardTrend::None);
+            }
+            for (size_t k = 0; k < kMaxCardTiles; ++k) {
+                const PoolString name = CardTileName(at, static_cast<int>(k));
+                const bool shown = row != nullptr && row->tiles[k].IsValid();
+                if (UIElement* element = root.FindByName(name); UIImage* image = element != nullptr ? element->Cast<UIImage>() : nullptr) {
+                    image->sprite = shown ? PoolString::Intern(SpriteName(row->tiles[k])) : PoolString();
                 }
+                canvas->SetElementVisible(name, shown);
             }
-            UICanvasComponent::SetElementVisibleByName(GetScene(), NameOf(kCoachPanel), show);
+            canvas->SetElementVisible(rowName, row != nullptr);
         }
+        for (size_t i = 0; i < kMaxCardFooter; ++i) {
+            vars.Set(IndexedName(kCardFootVar, static_cast<int>(i)), i < card.footer.size() ? eastl::string_view(card.footer[i]) : eastl::string_view());
+        }
+        canvas->SetElementVisible(NameOf(kCardHead), !card.rows.empty());
+        canvas->SetElementVisible(NameOf(kCoachCard), open);
     }
 
     void MahjongHintsComponent::OnMouseDown(const SDLEvents::MouseButtonDownEvent& event) {
         MahjongGame* game = MahjongGame::GetActive();
         // A left or touch press (a touch makes a left press too) takes the note that is on screen; a note this very press made (the discard it
         // is) was never shown and stays
-        if (event.button.button == SDL_BUTTON_LEFT && game != nullptr && _coachShown && game->GetCoach().Version() == _coachPublished) {
+        if (event.button.button != SDL_BUTTON_LEFT || game == nullptr) {
+            return;
+        }
+        if (_coachShown && game->GetCoach().Version() == _coachPublished) {
             game->GetCoach().ClearNote();
+            return;
+        }
+        // A press on the card of the advice takes it down, as the button Hint does (the card says so: CardClose); the card is no control
+        // (a SceneView canvas is under the touch size), so the press is read here
+        if (_cardKey.source == CardSource::Advice && _adviceOn) {
+            Scene& scene = GetScene();
+            UICanvasComponent* canvas = CanvasWith(scene.GetRootNode(), NameOf(kCoachCard));
+            const UIElement* card = canvas != nullptr ? canvas->GetRoot().FindByName(NameOf(kCoachCard)) : nullptr;
+            // A hidden card has an empty rect, which no point is inside
+            if (card != nullptr) {
+                const float x = scene.ScreenToSceneX(event.button.x);
+                const float y = scene.ScreenToSceneY(event.button.y);
+                const Rect& r = card->rect;
+                if (x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) {
+                    _adviceOn = false;
+                }
+            }
         }
     }
 
@@ -337,7 +430,7 @@ namespace BECore::Mahjong {
             }
             if (const DangerMark danger = _dangers[tile.Id()]; danger != DangerMark::None) {
                 // Inside the left edge, clear of the advised frame that runs along the edge
-                renderer->DrawFilledRect(rect.x + kFrameThickness, rect.y + dangerTop, kDangerMarkWidth, rect.h - dangerTop - dangerBottom, DangerColor(danger));
+                renderer->DrawFilledRect(rect.x + kFrameThickness, rect.y + dangerTop, kDangerMarkWidth, rect.h - dangerTop - dangerBottom, DangerMarkColor(danger));
             }
             if (advised.IsValid() && tile == advised) {
                 renderer->DrawFilledRect(rect.x, rect.y, rect.w, kFrameThickness, kAdvisedFrame);

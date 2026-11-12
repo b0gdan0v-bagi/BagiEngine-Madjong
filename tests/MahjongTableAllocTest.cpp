@@ -82,9 +82,9 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), version);
     }
 
-    /// The whole frame (every node of the scene, not only the table) on a person's turn, with the advice and its reasons up: the buttons
+    /// The whole frame (every node of the scene, not only the table) on a person's turn, with the card of the advice up: the buttons
     /// on offer are made again only when the session moved (`LegalActions` allocates)
-    TEST_F(MahjongTableAllocTest, APersonsTurnWithTheReasonsUpAllocatesNothingInTheWholeFrame) {
+    TEST_F(MahjongTableAllocTest, APersonsTurnWithTheCardOfTheAdviceUpAllocatesNothingInTheWholeFrame) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         for (int step = 0; step < kStepsIntoTheHand && _game->GetSession().GetPhase() == SessionPhase::Playing; ++step) {
             if (!_game->GetSession().StepComputer().has_value()) {
@@ -92,12 +92,12 @@ namespace BECore::Mahjong::Tests {
             }
         }
         ASSERT_EQ(_game->GetSeats()[static_cast<size_t>(_game->GetSession().Actor())], SeatKind::Person);
-        _game->SetHintsMode(HintsMode::Coach);  // the switch on in Coach gives the sentence and the reasons
+        _game->SetHintsMode(HintsMode::Coach);  // the switch on in Coach puts the advice on the card
         Draw();
         EmitAction("MahjongHintAdvice");
         Draw();
         Draw();
-        ASSERT_TRUE(OnScreen("HintsWhy", "WhyPanel"));
+        ASSERT_TRUE(OnScreen("HintsWhy", "CoachCard"));
 
         const uint64_t before = AllocTracker::GetThreadCounters().count;
         Draw();
@@ -119,7 +119,7 @@ namespace BECore::Mahjong::Tests {
         Draw();
         Draw();
         ASSERT_TRUE(_game->GetCoach().Note().has_value());
-        ASSERT_TRUE(OnScreen("HintsWhy", "CoachPanel"));
+        ASSERT_TRUE(OnScreen("HintsWhy", "CoachCard"));
 
         const uint64_t version = CoreManager::GetUIVars().GetVersion();
         const uint64_t before = AllocTracker::GetThreadCounters().count;
@@ -128,7 +128,7 @@ namespace BECore::Mahjong::Tests {
 
         EXPECT_EQ(allocations, 0u);
         EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), version);
-        EXPECT_TRUE(OnScreen("HintsWhy", "CoachPanel"));
+        EXPECT_TRUE(OnScreen("HintsWhy", "CoachCard"));
     }
 
     /// The score table with the tally row up: after the words are published, a frame allocates nothing.
