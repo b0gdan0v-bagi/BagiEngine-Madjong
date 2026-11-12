@@ -33,6 +33,19 @@ build/ClangmacOS/BagiMahjong
 - **Browser** (Emscripten, `docs/web.md`): build, smoke, deploy. No saves, match log or control API there.
 - **Tile art:** `python3 tools/make_tiles.py` (`--check` tells whether the committed atlas is up to date).
 
+## Online play, the server
+
+The server side of online rooms (`src/Mahjong/Online/CLAUDE.md`) is built; the game has no screens for it yet. `BagiMahjongServer` is a headless program (no window, no renderer) that keeps rooms of the game `mahjong` in memory; it is not built for the browser.
+
+```bash
+cmake --build --preset macos-debug --target BagiMahjongServer
+build/macos-debug/bin/BagiMahjongServer --port 8080                 # --help lists the flags; PORT and BAGI_ROOMS_* are read too
+ctest --preset macos-debug -R BagiMahjongRoomSmoke                  # starts it, plays hands with four clients, a reconnect
+docker build -f engine/tools/rooms/Dockerfile --build-arg SERVER_TARGET=BagiMahjongServer -t bagi-mahjong-server .
+```
+
+Hosting (Railway, the settings, the proxy): the engine README, "Hosting the room server". The server runs the rules, so a change in `src/Mahjong/Game/` needs a new image together with the client.
+
 ## How to play
 
 Pick `Person` or `Computer` for each seat, then `Start`. Click a tile of your hand to discard it; everything else (`Mahjong!`, `Pung`, `Kong`, `Chow`, `Add to pung`, `Pass`, the `Ready hand` switch) is a button that shows only when it is legal. **Hints** show the tiles your waiting hand needs and what a computer would do in your place; they never play for you. The match and the seat choice are saved as you play (`saves/`), so the game offers `Continue`.
