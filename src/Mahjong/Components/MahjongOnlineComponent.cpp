@@ -37,10 +37,6 @@ namespace BECore::Mahjong {
         constexpr eastl::string_view kNameValue = "name";
         constexpr eastl::string_view kCodeValue = "code";
 
-        constexpr size_t kPadKeysPerRow = 8;
-        constexpr int kFullHands = 16;
-        constexpr int kShortHands = 8;
-
         /// The elements of the canvas `Online` the pages show and hide among themselves, in the order of `kItemNames`.
         enum Item : size_t {
             TitleMenu,
@@ -133,7 +129,7 @@ namespace BECore::Mahjong {
             _padKeyNames[i] = IndexedName("PadKey", i);
             _padKeys[i] = -1;
         }
-        for (size_t i = 0; i < TextEntry::kPadMaxKeys / kPadKeysPerRow; ++i) {
+        for (size_t i = 0; i < TextEntry::kPadRowCount; ++i) {
             _padRowNames[i] = IndexedName("PadRow", i);
             _padRows[i] = -1;
         }
@@ -281,7 +277,7 @@ namespace BECore::Mahjong {
             }
         } else if (action == kHandsAction) {
             // Only the two numbers the panel offers; client text is never parsed into another number
-            if (const std::optional<size_t> hands = ParseIndex(value); hands && (*hands == kFullHands || *hands == kShortHands)) {
+            if (const std::optional<size_t> hands = ParseIndex(value); hands && (*hands == kFullMatchHands || *hands == kShortMatchHands)) {
                 _screens.SetHands(static_cast<int>(*hands));
             }
         } else if (action == kLevelAction) {
@@ -447,8 +443,8 @@ namespace BECore::Mahjong {
             vars.Set(_padVars[key], has ? eastl::string_view(pad[key]) : eastl::string_view());
             SetPadKey(key, has);
         }
-        for (size_t row = 0; row < TextEntry::kPadMaxKeys / kPadKeysPerRow; ++row) {
-            SetPadRow(row, row * kPadKeysPerRow < pad.size());
+        for (size_t row = 0; row < TextEntry::kPadRowCount; ++row) {
+            SetPadRow(row, row * TextEntry::kPadKeysPerRow < pad.size());
         }
     }
 

@@ -88,12 +88,12 @@ namespace BECore::Mahjong {
         PoolString _seatVars[kSeatCount];
         PoolString _padVars[TextEntry::kPadMaxKeys];
         PoolString _padKeyNames[TextEntry::kPadMaxKeys];
-        PoolString _padRowNames[TextEntry::kPadMaxKeys / 8];
+        PoolString _padRowNames[TextEntry::kPadRowCount];
         PoolString _itemNames[kItemCount];
         // What the scene shows now: -1 not known yet, else 0 / 1
         int8_t _items[kItemCount];
         int8_t _padKeys[TextEntry::kPadMaxKeys];
-        int8_t _padRows[TextEntry::kPadMaxKeys / 8];
+        int8_t _padRows[TextEntry::kPadRowCount];
         bool _onlineShown = false;
         bool _entryShown = false;
         bool _setupButtonChecked = false;

@@ -20,6 +20,9 @@ namespace BECore::Mahjong {
 
         /// The most keys a pad has (the node file has this many elements).
         static constexpr size_t kPadMaxKeys = 48;
+        /// Keys in one row of the pad's node file, and the rows that make `kPadMaxKeys`.
+        static constexpr size_t kPadKeysPerRow = 8;
+        static constexpr size_t kPadRowCount = kPadMaxKeys / kPadKeysPerRow;
 
         explicit TextEntry(Kind kind);
 

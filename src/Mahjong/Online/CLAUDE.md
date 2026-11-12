@@ -1,4 +1,4 @@
-# Online/ — Mahjong in a room (the server side and the client model)
+# Online/ — Mahjong in a room (the server side, the client model, the screens)
 
 `MahjongSeatedGame` is the game's `ISeatedGame` (contract: `engine/src/Modules/Games/CLAUDE.md`, "Seats"), registered by a server as `mahjong` (`MahjongSeatedGame::Info()`). It drives `Match` and `HandModel::Apply` directly, with no `TableSession`, `MahjongGame`, scene or `ImGui`: it compiles into `MahjongModule` and the headless server links it. Not here: the match log, saves (a server restart ends the rooms). The client side is "The client model" below.
 
