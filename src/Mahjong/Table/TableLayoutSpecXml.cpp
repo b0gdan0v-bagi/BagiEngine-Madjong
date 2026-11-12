@@ -1,6 +1,7 @@
 #include "TableLayoutSpecXml.h"
 
 #include <Mahjong/Table/TableLayout.h>
+#include <Mahjong/Table/TableRegions.h>
 #include <Mahjong/Table/TableSolver.h>
 #include <cerrno>
 #include <cmath>
@@ -176,6 +177,8 @@ namespace BECore::Mahjong {
                     Fail(where, "attribute 'name' is empty");
                 } else if (name.size() > kMaxRegionNameLength) {
                     Fail(where, Format("attribute 'name': longer than {} characters", kMaxRegionNameLength));
+                } else if (IsZoneRegionName(name)) {
+                    Fail(where, "the name is that of a zone region (the table publishes it)");
                 } else {
                     region.name = RegionName(name.data(), name.size());
                     for (const FreeRegion& known : shape.freeRegions) {

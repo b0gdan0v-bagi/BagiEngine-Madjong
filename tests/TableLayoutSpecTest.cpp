@@ -432,6 +432,7 @@ namespace BECore::Mahjong::Tests {
     TEST(TableLayoutSpecTest, ABadFreeRegionIsRefusedAndNamedByShapeAndRegion) {
         const auto withFree = [&](const std::string& regions) { return Replaced(FileXml(), ShapeXml("Narrow"), ShapeXml("Narrow", regions)); };
         ExpectError(withFree(kFreeXml + FreeXml("table.hint")), {"shape 'Narrow'", "Free 'table.hint'", "given twice"});
+        ExpectError(withFree(FreeXml("table.wall")), {"shape 'Narrow'", "Free 'table.wall'", "zone region"});
         ExpectError(withFree(FreeXml("")), {"shape 'Narrow'", "Free", "attribute 'name' is empty"});
         ExpectError(withFree("<Free x=\"0.1\" y=\"0.1\" w=\"0.1\" h=\"0.1\"/>"), {"shape 'Narrow'", "Free", "missing attribute 'name'"});
         ExpectError(withFree(FreeXml("table.aVeryLongNameThatNoLayoutCouldKeepWithoutTheHeap")), {"shape 'Narrow'", "Free", "longer than 31"});

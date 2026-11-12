@@ -467,9 +467,12 @@ namespace BECore::Mahjong {
     void RebuildTableLayout(TableLayout& layout, const TableInput& input, const TableLayoutSpec& spec, float viewWidth, float viewHeight) {
         BE_PROFILE_SCOPE("RebuildTableLayout");
         eastl::vector<TileSlot> slots = eastl::move(layout.slots);
+        eastl::vector<FreeZone> freeRegions = eastl::move(layout.zones.freeRegions);
         slots.clear();  // the capacity stays: a table drawn every frame builds its slots without the heap
+        freeRegions.clear();
         layout = TableLayout{};
         layout.slots = eastl::move(slots);
+        layout.zones.freeRegions = eastl::move(freeRegions);
         layout.viewer = IsSeat(input.viewer) ? input.viewer : 0;
         const TableShape shape = ShapeOfView(viewWidth, viewHeight);
         layout.shape = shape;
@@ -509,6 +512,7 @@ namespace BECore::Mahjong {
         const SolvedWall ring = SolveWall(SnapZone(zones->wall, design.width, design.height));
         layout.zones.wall = fit.Map(Rect(ring.x, ring.y, ring.w, ring.h));
         layout.zones.centerPanel = fit.Map(Rect(ring.x + ring.stack, ring.y + ring.stack, ring.w - 2.0f * ring.stack, ring.h - 2.0f * ring.stack));
+        FitFreeZones(frame, layout.zones.freeRegions);
         const int stacks = WallStackCount(input.wallRemaining);
         for (int stack = 0; stack < stacks; ++stack) {
             AddSlot(layout, fit, WallCellIn(Rect(ring.x, ring.y, ring.w, ring.h), ring.stack, stack), SlotRole::WallStack, 0, stack, 0.0f);
@@ -546,9 +550,12 @@ namespace BECore::Mahjong {
             LOG_ERROR("TableLayout: no layout spec is set, the table has no tiles (SetActiveTableLayoutSpec)");
         }
         eastl::vector<TileSlot> slots = eastl::move(layout.slots);
+        eastl::vector<FreeZone> freeRegions = eastl::move(layout.zones.freeRegions);
         slots.clear();
+        freeRegions.clear();
         layout = TableLayout{};
         layout.slots = eastl::move(slots);
+        layout.zones.freeRegions = eastl::move(freeRegions);
         layout.viewer = IsSeat(input.viewer) ? input.viewer : 0;
         layout.shape = ShapeOfView(viewWidth, viewHeight);
         layout.viewWidth = viewWidth;

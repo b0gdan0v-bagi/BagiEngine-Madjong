@@ -240,6 +240,9 @@ namespace BECore::Mahjong {
         Rect wall;
         eastl::array<Rect, kSeatCount> seatPlates{};
         Rect centerPanel;
+        /// The free-ground regions of the spec for this shape, fitted like the zones (`ShapeSpec::freeRegions`, in the order of the file);
+        /// empty for a spec without any. Clear of every slot and zone above for the worst-case table (`CheckTableLayoutSpec`).
+        eastl::vector<FreeZone> freeRegions;
     };
 
     /// The slots of the four seats and the wall: per seat the hand, the melds, the bonus tiles, then the pile, then the wall stacks.

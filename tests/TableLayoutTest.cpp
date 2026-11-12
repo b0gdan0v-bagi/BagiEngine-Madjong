@@ -1,3 +1,5 @@
+#include "ShippedTableLayout.h"
+
 #include <Mahjong/Table/TableLayout.h>
 #include <Mahjong/Table/TableLayoutSpec.h>
 #include <Mahjong/Table/TapSelect.h>
@@ -1677,6 +1679,11 @@ namespace BECore::Mahjong::Tests {
             }
             expectRect(wide.zones.wall, landscape.zones.wall, "wall");
             expectRect(wide.zones.centerPanel, landscape.zones.centerPanel, "panel");
+            ASSERT_EQ(wide.zones.freeRegions.size(), landscape.zones.freeRegions.size());
+            for (size_t i = 0; i < wide.zones.freeRegions.size(); ++i) {
+                EXPECT_EQ(wide.zones.freeRegions[i].name, landscape.zones.freeRegions[i].name);
+                expectRect(wide.zones.freeRegions[i].rect, landscape.zones.freeRegions[i].rect, "free region");
+            }
         };
         const ViewSize wideViews[] = {{kWideViewWidth, kViewHeight}, {2560.0f, 1080.0f}, {3200.0f, 900.0f}, {2000.0f, 1000.0f}, {915.0f, 330.0f}};
         for (const ViewSize& size : wideViews) {
@@ -2250,14 +2257,18 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(TableLayoutTest, ARebuildIntoAUsedLayoutEqualsANewOneAndKeepsItsStorage) {
-        TableLayout reused = MakeTableLayout(WorstInput(2, kWorstPile, 1), kPortraitViewWidth, kPortraitViewHeight);  // more slots than below
+        const TableLayoutSpec spec = ShippedSpecWithTestRegions();
+        TableLayout reused = MakeTableLayout(WorstInput(2, kWorstPile, 1), spec, kPortraitViewWidth, kPortraitViewHeight);  // more slots than below
         const TileSlot* storage = reused.slots.data();
+        const FreeZone* freeStorage = reused.zones.freeRegions.data();
+        ASSERT_FALSE(reused.zones.freeRegions.empty());
         const TableInput input = WorstInput(0, 10, 3);
 
-        RebuildTableLayout(reused, input, kViewWidth, kViewHeight);
-        const TableLayout fresh = MakeTableLayout(input, kViewWidth, kViewHeight);
+        RebuildTableLayout(reused, input, spec, kViewWidth, kViewHeight);
+        const TableLayout fresh = MakeTableLayout(input, spec, kViewWidth, kViewHeight);
 
         EXPECT_EQ(reused.slots.data(), storage);
+        EXPECT_EQ(reused.zones.freeRegions.data(), freeStorage);
         EXPECT_EQ(reused.viewer, fresh.viewer);
         EXPECT_EQ(reused.shape, fresh.shape);
         EXPECT_TRUE(reused.profile == fresh.profile);
@@ -2274,6 +2285,23 @@ namespace BECore::Mahjong::Tests {
         }
         EXPECT_TRUE(SameRect(reused.zones.wall, fresh.zones.wall));
         EXPECT_TRUE(SameRect(reused.zones.centerPanel, fresh.zones.centerPanel));
+        ASSERT_EQ(reused.zones.freeRegions.size(), fresh.zones.freeRegions.size());
+        for (size_t i = 0; i < fresh.zones.freeRegions.size(); ++i) {
+            EXPECT_EQ(reused.zones.freeRegions[i].name, fresh.zones.freeRegions[i].name);
+            EXPECT_TRUE(SameRect(reused.zones.freeRegions[i].rect, fresh.zones.freeRegions[i].rect)) << "free region " << i;
+        }
+    }
+
+    TEST(TableLayoutTest, ARebuildForAShapeWithoutFreeRegionsOrASpecDropsThemAndKeepsTheStorage) {
+        const TableLayoutSpec spec = ShippedSpecWithTestRegions();
+        TableLayout layout = MakeTableLayout(WorstInput(0, 10, 3), spec, kViewWidth, kViewHeight);
+        const FreeZone* storage = layout.zones.freeRegions.data();
+        ASSERT_FALSE(layout.zones.freeRegions.empty());
+        RebuildTableLayout(layout, WorstInput(0, 10, 3), TableLayoutSpec{}, kViewWidth, kViewHeight);
+        EXPECT_TRUE(layout.zones.freeRegions.empty());
+        RebuildTableLayout(layout, WorstInput(0, 10, 3), spec, kViewWidth, kViewHeight);
+        EXPECT_EQ(layout.zones.freeRegions.data(), storage);
+        EXPECT_FALSE(layout.zones.freeRegions.empty());
     }
 
 }  // namespace BECore::Mahjong::Tests
