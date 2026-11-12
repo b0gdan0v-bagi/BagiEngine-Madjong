@@ -85,6 +85,10 @@ namespace BECore::Mahjong {
     inline constexpr eastl::string_view kOnlineConnectingKey = "online.status.connecting";
     inline constexpr eastl::string_view kOnlineReconnectingKey = "online.status.reconnecting";
 
+    /// The line the host reads in the lobby about the setting he made: hints and the coach allowed in the room, or not.
+    inline constexpr eastl::string_view kOnlineLobbyHintsAllowedKey = "online.lobby.hintsAllowed";
+    inline constexpr eastl::string_view kOnlineLobbyHintsOffKey = "online.lobby.hintsOff";
+
     /// The text of @p key in the current language. Only `online.error.unknown` has a placeholder (`{code}`, filled with @p arg).
     [[nodiscard]] eastl::string OnlineNoticeText(const UIStrings& strings, eastl::string_view key, eastl::string_view arg = {});
 

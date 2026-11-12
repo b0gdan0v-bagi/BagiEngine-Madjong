@@ -157,7 +157,8 @@ namespace BECore::Mahjong::Tests {
 
         inline void CheckState(const Json& state, int seat, Offences& offences) {
             const std::string where = "view";
-            if (!CheckKeys(state, where, {"phase", "seat", "seatWind", "roundWind", "east", "hand", "turn", "seats", "discards", "wall", "handsPlayed", "handsTotal", "version", "ready", "format"},
+            if (!CheckKeys(state, where,
+                           {"phase", "seat", "seatWind", "roundWind", "east", "hand", "turn", "seats", "discards", "wall", "handsPlayed", "handsTotal", "version", "ready", "format", "hintsAllowed"},
                            {"result"}, offences)) {
                 return;
             }
@@ -184,6 +185,9 @@ namespace BECore::Mahjong::Tests {
             const Json& ready = state["ready"];
             if (!IsListOf(ready, IsBool) || ready.size() != kJudgedSeatCount) {
                 Offend(offences, "view.ready", "is not four booleans");
+            }
+            if (!state["hintsAllowed"].is_boolean()) {
+                Offend(offences, "view.hintsAllowed", "is not a boolean");
             }
             const Json& discards = state["discards"];
             if (!discards.is_array()) {

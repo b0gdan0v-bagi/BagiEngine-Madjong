@@ -217,6 +217,35 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_client->SessionRevision(), 1u);
     }
 
+    TEST_F(MahjongOnlineClientTest, HostSendsTheHintsChoiceAsABoolean) {
+        ASSERT_TRUE(_client->Host(kUrl, "Ann", {8, 1, true}));
+        Link().PushOpened();
+        Pump();
+        const CreateRoomMessage create = Sent<CreateRoomMessage>(0);
+        const Json* flag = FindJsonMember(create.options, "hintsAllowed");
+        ASSERT_NE(flag, nullptr);
+        EXPECT_TRUE(flag->is_boolean());
+        EXPECT_EQ(GetJsonBool(create.options, "hintsAllowed"), std::optional<bool>(true));
+        EXPECT_EQ(GetJsonInt(create.options, "hands"), 8);
+    }
+
+    TEST_F(MahjongOnlineClientTest, TheTableReadsTheRoomsHintsSettingFromTheView) {
+        MahjongSeatedGame allowed;
+        ASSERT_TRUE(allowed.Start(kSeed, Parse("{\"hands\": 8, \"level\": 1, \"hintsAllowed\": true}")).has_value());
+        EnterAGame(allowed);
+        EXPECT_TRUE(_client->Table().hintsAllowed);
+
+        // the next view of the same room, from a server that does not send the key: not allowed, and the table is still read
+        Json view = allowed.GetSeatView(0).value();
+        view.erase("hintsAllowed");
+        Link().PushText(MakeViewMessage(kRoom, 0, allowed.GetStateVersion() + 1, false, view, allowed.GetSeatActions(0).value()));
+        Pump();
+        EXPECT_EQ(_client->Stage(), OnlineStage::Game);
+        EXPECT_EQ(_client->Table().version, allowed.GetStateVersion());
+        EXPECT_FALSE(_client->Table().hintsAllowed);
+        EXPECT_EQ(_client->Notice().serial, 0u) << "a missing key is not a bad view";
+    }
+
     TEST_F(MahjongOnlineClientTest, JoinTakesALowerCaseCodeAndAGuestCannotStart) {
         ASSERT_TRUE(_client->Join(kUrl, "abcde", "Bob"));
         Link().PushOpened();
@@ -569,6 +598,32 @@ namespace BECore::Mahjong::Tests {
     }
 
     // ---- Leave, Disconnect, Resume ------------------------------------------------------------------------------------------------
+
+    TEST_F(MahjongOnlineClientTest, TheHostKnowsTheOptionsOfItsRoomUntilTheRoomIsLeftOrGone) {
+        EnterAsHost();
+        ASSERT_NE(_client->HostedOptions(), nullptr);
+        EXPECT_EQ(_client->HostedOptions()->hands, 8);
+        EXPECT_FALSE(_client->HostedOptions()->hintsAllowed);
+        ASSERT_TRUE(_client->Leave());
+        EXPECT_EQ(_client->HostedOptions(), nullptr);
+    }
+
+    TEST_F(MahjongOnlineClientTest, TheOptionsAreForgottenWithTheRoomThatClosesUnderTheHostAndAreNotThoseOfARoomJoined) {
+        ASSERT_TRUE(_client->Host(kUrl, "Ann", {16, 3, true}));
+        ASSERT_NE(_client->HostedOptions(), nullptr);
+        EXPECT_TRUE(_client->HostedOptions()->hintsAllowed);
+        Link().PushOpened();
+        Pump();
+        Link().PushText(MakeJoinedMessage(kRoom, 1, kToken, 0, true));
+        Link().PushText(LobbyText(0, HostAlone()));
+        Pump();
+        ASSERT_NE(_client->HostedOptions(), nullptr) << "the joined and the lobby of the room do not forget them";
+        Receive(MakeLeftMessage("room_closed"));
+        EXPECT_EQ(_client->HostedOptions(), nullptr);
+
+        ASSERT_TRUE(_client->Join(kUrl, kRoom, "Bob"));
+        EXPECT_EQ(_client->HostedOptions(), nullptr) << "a guest does not know what the host chose";
+    }
 
     TEST_F(MahjongOnlineClientTest, LeaveForgetsTheSessionAtOnceAndTheConnectionIsClosedWhenTheServerAnswered) {
         EnterAsHost();

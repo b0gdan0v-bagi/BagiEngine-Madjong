@@ -4,22 +4,22 @@
   window), hidden here, layer 32 (Setup is 30, Options 31, the pad of OnlineEntry 33). One plate holds all four pages, and a page is the set of elements shown by
   name (UICanvasComponent::SetElementVisible); a hidden element takes no room, so the rows of a page share the plate. As shipped the Menu page is on:
     Menu   OnlineTitleMenu, OnlineMenuHost, OnlineMenuJoin, OnlineMenuReturn (only while a session is kept)
-    Host   OnlineTitleHost, OnlineNameRow, OnlineHandsRow, OnlineLevelRow, OnlineGap, OnlineButtons with OnlineCreate
+    Host   OnlineTitleHost, OnlineNameRow, OnlineHandsRow, OnlineLevelRow, OnlineHintsRow, OnlineGap, OnlineButtons with OnlineCreate
     Join   OnlineTitleJoin, OnlineNameRow, OnlineCodeRow, OnlineGap, OnlineButtons with OnlineEnter
     Lobby  OnlineTitleLobby, OnlineSeatRow0..3 (OnlineSit0..3 beside the seats that can be taken), OnlineGap, OnlineButtons with OnlineStart (the host) and OnlineLeave
   and, on any page, at most one line under the title: OnlineNotice ({onlineNotice}, an error), OnlineStatus ({onlineStatus}, connecting and reconnecting) or, in the
-  lobby, OnlineWaiting. The fields are buttons (OnlineName, OnlineCode: action MahjongOnlineField, value name or code) that open the page
+  lobby, OnlineWaiting (a guest) or OnlineHostLine (the host: whether he allowed hints, {onlineHostLine}). The fields are buttons (OnlineName, OnlineCode: action MahjongOnlineField, value name or code) that open the page
   OnlineEntry; their text is {onlineName} and {onlineCode}. The seat texts are {onlineSeat0..3}, the title of the lobby and the Return button say {onlineRoom}.
   OnlineClose (the cross at the right of the title band, as on Setup) only hides the panel. The hands are a UISegmented (action MahjongOnlineHands, value 16 or 8,
-  variable onlineHands), the level a UIDropdown (MahjongOnlineLevel, onlineLevel, the options OnlineLevel1 .. 10 with the heights of Setup's lists by the height
-  variants, so the open list always fits the canvas); both sit in rows of Setup's shape (caption 112 wide, group 87.5 % of a row of 64).
+  variable onlineHands), the hints a UISegmented of its own (MahjongOnlineHints, value allowed or off, onlineHints: whether the room allows hints and the coach), the level a UIDropdown (MahjongOnlineLevel, onlineLevel, the options OnlineLevel1 .. 10 with the heights of Setup's lists by the height
+  variants, so the open list always fits the canvas); all three sit in rows of Setup's shape (caption 112 wide, group 87.5 % of a row of 64).
   The roomy shape (1280 x 720 units) is the plate of at most 560 high (32 padding + 56 title band + 96 line + 4 x 64 seats + 64 OnlineButtons + 7 x 8 spacing,
   OnlineGap empty so the 8 + 8 round it set the buttons 16 apart from the rows); the rows share it by flex weights that come out at their maximum heights (title 56,
   line 96, rows and buttons 64; the three Menu buttons 80) and stop growing there. A page with fewer rows leaves the lower part of the plate empty: a stack has no
   height of its content. The line is as high as 96 because the longest error is two lines of text in the smallest window. The variant for a canvas of at most 480
   units wide takes the whole safe width, narrows the captions (52) and the Sit here buttons (96) and drops the title's spacer; the variant of at most 360 hides the
   captions (a 480 px window at the user scale 1.5 is 320 x 320 units with 262 of safe width) and the heights of the dropdown options follow the canvas as on Setup.
-  With seven rows in 297 units of safe height a row is about 29 units, from 21.3 units a control is 32 px. Every text may shrink (AutoFit, down to 12 units). A
+  With seven rows in 297 units of safe height (the lobby; the Host page has six with the hints row) a row is about 29 units, from 21.3 units a control is 32 px. Every text may shrink (AutoFit, down to 12 units). A
   player's name is the one text that can still be cut there: on a seat row about ten wide letters fit beside the seat's number and Sit here; the longest name the
   server takes (24 bytes) fits whole in the field. MahjongHudOnlineTest holds the shapes, the touch size and the words of every page on the whole size matrix.
 -->
@@ -76,6 +76,11 @@
             <element type="UIElement" name="OnlineWaiting" flex="1.5" maxHeight="96" fontSize="18" visible="false">
               <components>
                 <component type="UITextComponent" text="{#online.waitHost}" textColor="190,196,190,255" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+              </components>
+            </element>
+            <element type="UIElement" name="OnlineHostLine" flex="1.5" maxHeight="96" fontSize="18" visible="false">
+              <components>
+                <component type="UITextComponent" text="{onlineHostLine}" textColor="190,196,190,255" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
               </components>
             </element>
             <element type="UIElement" name="OnlineMenuHost" flex="1" maxHeight="80" fontSize="28" color="45,75,120,255">
@@ -227,6 +232,31 @@
                 </element>
               </children>
             </element>
+            <element type="UIStack" name="OnlineHintsRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255" visible="false">
+              <children>
+                <element type="UIElement" name="OnlineHintsCaption" width="112" height="87.5%" fontSize="22">
+                  <components>
+                    <component type="UITextComponent" text="{#online.field.hints}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UISegmented" name="OnlineHintsChoice" bind="onlineHints" flex="1" height="87.5%" direction="Horizontal" spacing="4" color="48,54,72,255">
+                  <children>
+                    <element type="UIElement" name="OnlineHintsOff" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
+                      <components>
+                        <component type="UITextComponent" text="{#online.hints.off}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" action="MahjongOnlineHints" value="off"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="OnlineHintsAllowed" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
+                      <components>
+                        <component type="UITextComponent" text="{#online.hints.allowed}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" action="MahjongOnlineHints" value="allowed"/>
+                      </components>
+                    </element>
+                  </children>
+                </element>
+              </children>
+            </element>
             <element type="UIStack" name="OnlineSeatRow0" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255" visible="false">
               <children>
                 <element type="UIElement" name="OnlineSeatCaption0" width="112" height="87.5%" fontSize="22">
@@ -348,6 +378,7 @@
             <set element="OnlineCodeCaption" width="52" />
             <set element="OnlineHandsCaption" width="52" />
             <set element="OnlineLevelCaption" width="52" />
+            <set element="OnlineHintsCaption" width="52" />
             <set element="OnlineSeatCaption0" width="52" />
             <set element="OnlineSeatCaption1" width="52" />
             <set element="OnlineSeatCaption2" width="52" />
@@ -364,6 +395,7 @@
             <set element="OnlineCodeCaption" visible="false" />
             <set element="OnlineHandsCaption" visible="false" />
             <set element="OnlineLevelCaption" visible="false" />
+            <set element="OnlineHintsCaption" visible="false" />
             <set element="OnlineSeatCaption0" visible="false" />
             <set element="OnlineSeatCaption1" visible="false" />
             <set element="OnlineSeatCaption2" visible="false" />

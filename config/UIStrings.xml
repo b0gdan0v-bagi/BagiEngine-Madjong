@@ -315,6 +315,11 @@
         <string key="online.field.name" text="Name"/>
         <string key="online.field.code" text="Code"/>
         <string key="online.field.level" text="Level"/>
+        <string key="online.field.hints" text="Hints"/>
+        <string key="online.hints.allowed" text="Allowed"/>
+        <string key="online.hints.off" text="Not allowed"/>
+        <string key="online.lobby.hintsAllowed" text="Hints and the coach are allowed in this room"/>
+        <string key="online.lobby.hintsOff" text="Hints and the coach are not allowed in this room"/>
         <string key="online.create" text="Create"/>
         <string key="online.enter" text="Enter"/>
         <string key="online.lobby.title" text="Room {onlineRoom}"/>
@@ -322,6 +327,9 @@
         <string key="online.leave" text="Leave"/>
         <string key="online.waitHost" text="Waiting for the host"/>
         <string key="online.table.ready" text="Ready for the next hand: {n} of {total}"/>
+        <string key="online.table.hintsAllowed" text="Hints are allowed in this room"/>
+        <string key="online.table.hintsAllowedOff" text="Hints are allowed here: turn them on in Options"/>
+        <string key="online.table.hintsOff" text="Hints are not allowed in this room"/>
         <string key="online.delete" text="Delete"/>
         <string key="online.done" text="Done"/>
     </language>
@@ -638,6 +646,11 @@
         <string key="online.field.name" text="Имя"/>
         <string key="online.field.code" text="Код"/>
         <string key="online.field.level" text="Уровень"/>
+        <string key="online.field.hints" text="Помощь"/>
+        <string key="online.hints.allowed" text="Можно"/>
+        <string key="online.hints.off" text="Нельзя"/>
+        <string key="online.lobby.hintsAllowed" text="В комнате разрешены советы и тренер"/>
+        <string key="online.lobby.hintsOff" text="В комнате советы и тренер запрещены"/>
         <string key="online.create" text="Создать"/>
         <string key="online.enter" text="Войти"/>
         <string key="online.lobby.title" text="Комната {onlineRoom}"/>
@@ -645,6 +658,9 @@
         <string key="online.leave" text="Выйти"/>
         <string key="online.waitHost" text="Ждём хозяина комнаты"/>
         <string key="online.table.ready" text="Готовы к следующей раздаче: {n} из {total}"/>
+        <string key="online.table.hintsAllowed" text="В комнате разрешены подсказки"/>
+        <string key="online.table.hintsAllowedOff" text="Подсказки разрешены: включите их в настройках"/>
+        <string key="online.table.hintsOff" text="В комнате подсказки запрещены"/>
         <string key="online.delete" text="Стереть"/>
         <string key="online.done" text="Готово"/>
     </language>

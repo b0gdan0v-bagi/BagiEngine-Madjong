@@ -47,7 +47,7 @@ namespace BECore::Mahjong {
     [[nodiscard]] std::optional<Explanation> ExplainAdviceFor(const TableView& view);
 
     /**
-     * @brief Whether the hints are on screen now: `hintsOn` (`MahjongGame::HintsOn()`), the table is not paused behind a modal screen
+     * @brief Whether the hints are on screen now: `hintsOn` (`MahjongGame::HintsActive()`: the player's mode, unless a room forbids hints), the table is not paused behind a modal screen
      * (`tablePaused` false, `MahjongGame::IsTablePaused()`: neither the seat choice nor the rules are open), the session is `Playing`, it has a viewer who is a person (never a spectator), and no
      * hot-seat cover is up. In `HandOver` and `MatchOver` there are no hints. The one place of the rule; the components ask it every frame.
      */

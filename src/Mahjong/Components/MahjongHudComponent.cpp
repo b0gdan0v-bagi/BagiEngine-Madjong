@@ -346,7 +346,8 @@ namespace BECore::Mahjong {
             SetNextHandDisabled(!CanSendNextHand(*room));
         } else {
             const CoachLedger& coach = game.GetCoach();
-            tally = game.CoachOn() ? FormatCoachTally(strings, coach.HandTallyOf(HandKeyOf(session)), coach.MatchTallyOf(session.StartCount())) : eastl::string();
+            const MoveContext context = game.CoachContext();
+            tally = game.CoachActive() ? FormatCoachTally(strings, coach.HandTallyOf(HandKeyOf(context)), coach.MatchTallyOf(context.startCount)) : eastl::string();
             SetNextHandDisabled(false);
         }
         vars.Set("handOverCoach"_intern, eastl::string_view(tally));
@@ -471,7 +472,7 @@ namespace BECore::Mahjong {
             vars.Set(SeatVar("standing", row), eastl::string_view(table.rows[row]));
         }
         const UIStrings& strings = CoreManager::GetUIStrings();
-        const eastl::string tally = game.CoachOn() && !game.IsOnlineTable() ? FormatCoachTally(strings, CoachTally{}, game.GetCoach().MatchTallyOf(game.GetSession().StartCount())) : eastl::string();
+        const eastl::string tally = game.CoachActive() ? FormatCoachTally(strings, CoachTally{}, game.GetCoach().MatchTallyOf(game.CoachContext().startCount)) : eastl::string();
         vars.Set("matchOverCoach"_intern, eastl::string_view(tally));
         UICanvasComponent::SetElementVisibleByName(GetScene(), "MatchCoachRow"_intern, !tally.empty());
     }
@@ -483,7 +484,7 @@ namespace BECore::Mahjong {
         const bool matchOver = started && game->GetMatch().GetPhase() == MatchPhase::Finished;
         if (handOver || matchOver) {
             const uint64_t stringsVersion = CoreManager::GetUIStrings().GetVersion();
-            const bool coachOn = game->CoachOn();
+            const bool coachOn = game->CoachActive();
             if (!_endScreenPublished || _endScreenOf != &game->GetSession() || _endScreenVersion != game->GetSession().Version() || _endScreenStrings != stringsVersion || _endScreenCoach != coachOn) {
                 _endScreenOf = &game->GetSession();
                 _endScreenCoach = coachOn;

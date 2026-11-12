@@ -145,9 +145,10 @@ namespace BECore::Mahjong {
         /// The `Entry` page back to its form.
         bool Done();
 
-        /// The host options, `Host` form only: 8 or 16 hands, level 1..10.
+        /// The host options, `Host` form only: 8 or 16 hands, level 1..10, whether the players of the room may use hints and the coach.
         bool SetHands(int hands);
         bool SetLevel(int level);
+        bool SetHintsAllowed(bool allowed);
 
         /// Sends the form. Fields that are not complete send nothing and say why in the notice (`bad_name`, `unknown_room`).
         bool Create(OnlineClient& client, eastl::string_view url);

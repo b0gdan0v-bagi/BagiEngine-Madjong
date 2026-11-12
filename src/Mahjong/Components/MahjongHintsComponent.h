@@ -28,7 +28,9 @@ namespace BECore::Mahjong {
      * Coach includes the hints) whose buttons emit `MahjongSetHints` with that value. The mode lives on the game (`MahjongGame::GetHintsMode()`),
      * is not part of the settings and takes effect at once (unlike the seats, nothing waits for `Start`). The component ignores the action
      * while the page is not open (a click that arrives late), accepts only those three ids and sets `hintsChoice` from the game while the page is open and after each
-     * click, so the variable keeps the truth.
+     * click, so the variable keeps the truth. **In a room** that choice counts only where the host allowed hints (`MahjongGame::HintsActive()` /
+     * `CoachActive()`, the effective mode; a client cannot turn them on against the room), and every hint is worked out from the viewer's view of the
+     * display copy with the server's list of actions as `legal` and nothing else.
      *
      * **The waiting row.** While `HintsApply` holds (hints on, neither `Setup` nor the rules open, a person at the table, no cover, the hand being played) and
      * the viewer's hand waits, the canvas shows the caption and a cell per tile (`WaitCell0..12`: the picture `WaitTile<i>`, whose sprite
@@ -47,10 +49,14 @@ namespace BECore::Mahjong {
      * discard that is advised framed on the hand. The advice belongs to the table it was worked out on: any change of the session `Version()`, a cover,
      * hints off or a pause drop it, the next table the viewer acts on gets its own, and a new language words it again.
      *
+     * **The line of a room.** At the table of a room the label `RoomHintsText` (the region of `AdviceText`) says whether the host allowed hints, and
+     * where to switch them on when the player's own mode is Off; it gives way to the sentence and to the card and is made again only when the word
+     * or the language moved.
+     *
      * **The card of the coach.** In the mode Coach the sentence is not a label of its own: the advice of the table is the card `CoachCard` of the
      * node `HintsWhy` (`config/nodes/MahjongHintsWhy.xml`, on the wall ring, text and tile pictures, no input), made by `MakeAdviceCard` (the
      * sentence as its title, the advised move and the next best with their numbers, why in words, the tally). The ledger of the game
-     * (`MahjongGame::GetCoach()`, fed by the session) holds the note of the person's last differing move; while it is up the card is the note
+     * (`MahjongGame::GetCoach()`, fed by the session, in a room by the table component's `Perform`) holds the note of the person's last differing move; while it is up the card is the note
      * (`MakeNoteCard`: the computer's choice and the person's move) instead, exactly while the hints apply, the note is of this hand and of the
      * viewer. The note stays through the computers' turns (they move within a second of the person's action) and goes with the next accepted
      * action of the person (the ledger), a left or touch mouse-down that it was up for, a press of `Hint`, the end of the hand, a new match, a
@@ -78,6 +84,11 @@ namespace BECore::Mahjong {
             return _key.applies && tile.IsValid() ? _dangers[tile.Id()] : DangerMark::None;
         }
 
+        /// The view of @p viewer on the table on screen, the one thing every hint is worked out from: `MakeTableView` of the displayed hand (in a
+        /// room a display copy: the viewer's own tiles and what lies open, the other hands counts only). A display hand lists no action, so in a
+        /// room `legal` is the server's list (`ListHandActions`) and nothing else is added; none while the link is down (`Reconnecting`).
+        [[nodiscard]] static TableView ViewOf(const MahjongGame& game, Seat viewer);
+
     private:
         void OnAction(const InputEvents::ActionEvent& event);
         void OnMouseDown(const SDLEvents::MouseButtonDownEvent& event);
@@ -86,7 +97,7 @@ namespace BECore::Mahjong {
 
         /// What the hints depend on: when it is equal to the last frame's, nothing needs to be worked out again.
         struct Key {
-            bool applies = false;  ///< `HintsApply`
+            bool applies = false;  ///< `HintsApply` of the effective mode, so a room's setting or the player's mode that moves it moves the key
             Seat viewer = kNoSeat;
             uint64_t version = 0;  ///< `TableSession::Version()`
             bool operator==(const Key&) const = default;
@@ -103,6 +114,8 @@ namespace BECore::Mahjong {
         void Advise(const MahjongGame& game, const Key& key);
         /// The button (offered, switched on) and the sentence of the advice, which is a label of its own unless `coach`.
         void PushAdvice(bool coach);
+        /// The line `RoomHintsText` at the table of a room (allowed, allowed but the player's mode is Off, not allowed), while neither the sentence nor the card is up.
+        void PushRoomHints(const MahjongGame* game);
         /// The note of the coach: drops what no longer holds (and clears the ledger) and says whether it is up (`_coachShown`).
         void PushCoach(MahjongGame* game, const Key& key);
         /// The card of the coach: the note when it is up, else the advice in the mode Coach, else nothing; made again only when its key moved.
@@ -151,6 +164,11 @@ namespace BECore::Mahjong {
             bool operator==(const CardKey&) const = default;
         };
         CardKey _cardKey;
+
+        /// What the line of the room says; `None` hides it.
+        enum class RoomHintsWord : uint8_t { None, Allowed, AllowedOff, NotAllowed };
+        RoomHintsWord _roomWord = RoomHintsWord::None;  ///< the word on the canvas
+        uint64_t _roomStringsVersion = 0;               ///< `UIStrings::GetVersion()` it was worded with
 
         static MahjongHintsComponent* s_active;
     };

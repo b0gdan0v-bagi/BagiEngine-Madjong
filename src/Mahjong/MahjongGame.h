@@ -281,13 +281,32 @@ namespace BECore::Mahjong {
         bool CoachOn() const {
             return _hintsMode == HintsMode::Coach;
         }
-        /// The note and the tally of the coach: fed by the session while the mode is Coach and one person sits at the table.
+        /// The mode that applies at the table on screen: the player's own choice outside a room; in a room `Off` unless the room allows hints
+        /// (`OnlineTable::hintsAllowed`, the host's decision), else the player's choice. The three above stay the player's own choice (the Options
+        /// page, the saved choices); everything that decides whether a hint is on screen asks `HintsActive()` / `CoachActive()`.
+        HintsMode EffectiveHintsMode() const {
+            return _onlineTable && !_online->Table().hintsAllowed ? HintsMode::Off : _hintsMode;
+        }
+        bool HintsActive() const {
+            return EffectiveHintsMode() != HintsMode::Off;
+        }
+        bool CoachActive() const {
+            return EffectiveHintsMode() == HintsMode::Coach;
+        }
+        /// The note and the tally of the coach for the table on screen: the local game's (fed by the session while the mode is Coach and one person
+        /// sits at the table), or, while `IsOnlineTable()`, the room's own ledger, fed by `MahjongTableComponent` with the player's accepted actions
+        /// and enabled exactly while `CoachActive()`; the two never mix. It starts afresh when a room's table starts or ends or the room's
+        /// setting changes.
         const CoachLedger& GetCoach() const {
-            return _coach;
+            return _onlineTable ? _roomCoach : _coach;
         }
         CoachLedger& GetCoach() {
-            return _coach;
+            return _onlineTable ? _roomCoach : _coach;
         }
+        /// The keys of the ledger of `GetCoach()` for the hand on screen (`HandKeyOf(context)`; `startCount` is the match). Locally the session's
+        /// own `Context()`. In a room the display session's `StartCount()` moves with every hand, so the match is a count of the game (one per
+        /// table of a room) and the hand adds that start count.
+        MoveContext CoachContext() const;
 
         /// The speed of the table (`Table/AnimationSpeed.h`): the pause of the computers, the flights and the marks of a claim, at once.
         /// Normal by default, kept across `Reset()`, `StartMatch` and `New game`, saved with the other choices. It is no rule, so it is not
@@ -317,6 +336,8 @@ namespace BECore::Mahjong {
         void FollowOnlineSession();
         /// The table of a room goes live: the panels over the table close (the offer of `Continue` stays).
         void EnterOnlineTable();
+        /// The room's ledger follows `CoachActive()`: enabled exactly then, dropped with @p restart (a table starts or ends).
+        void SyncRoomCoach(bool restart);
         /// The table of a room is gone: the display pair is forgotten, and, with @p openSetup, `Setup` opens over the local game.
         void LeaveOnlineTable(bool openSetup);
         /// The saved match onto the table; false (one warning unless nothing is saved or it is finished) when it cannot be.
@@ -346,6 +367,8 @@ namespace BECore::Mahjong {
         bool _onlineDirty = false;          // the name or the session moved since the slot was written
         TableSession _session{_match};      // after _match: it keeps a reference
         CoachLedger _coach;                 // after _session, which holds a pointer to it (the destructor lets it go)
+        CoachLedger _roomCoach;             // the ledger of a room's table: nobody observes the display session, the table component feeds it
+        uint64_t _roomTables = 0;           // the tables of a room shown so far: the match of the room's ledger
         MahjongGameControl _control{*this};
         eastl::unique_ptr<OnlineClient> _online;
         // The table of a room as a display copy (`Online/OnlineMirror.h`); the local pair above never sees it

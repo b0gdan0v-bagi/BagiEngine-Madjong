@@ -185,12 +185,13 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MahjongSeatedGameStartTest, AMalformedOptionIsInvalidParamsNamingTheKey) {
         for (const char* text : {"{\"hands\": 12}", "{\"hands\": \"8\"}", "{\"hands\": 8.5}", "{\"hands\": null}", "{\"hands\": 9223372036854775808}", "{\"level\": 0}", "{\"level\": 11}",
-                                 "{\"level\": \"3\"}", "{\"level\": true}", "{\"hands\": 8, \"level\": 99}"}) {
+                                 "{\"level\": \"3\"}", "{\"level\": true}", "{\"hands\": 8, \"level\": 99}", "{\"hintsAllowed\": 1}", "{\"hintsAllowed\": \"true\"}", "{\"hintsAllowed\": null}"}) {
             MahjongSeatedGame game;
             const auto started = game.Start(kSeed, Options(text));
             ASSERT_FALSE(started.has_value()) << text;
             EXPECT_EQ(started.error().code, "invalid_params") << text;
-            const bool namesAKey = started.error().message.find("'hands'") != eastl::string::npos || started.error().message.find("'level'") != eastl::string::npos;
+            const bool namesAKey = started.error().message.find("'hands'") != eastl::string::npos || started.error().message.find("'level'") != eastl::string::npos ||
+                                   started.error().message.find("'hintsAllowed'") != eastl::string::npos;
             EXPECT_TRUE(namesAKey) << text << ": " << started.error().message.c_str();
             EXPECT_EQ(game.GetStateVersion(), 0u) << text;
         }
@@ -572,8 +573,8 @@ namespace BECore::Mahjong::Tests {
     }  // namespace
 
     TEST(MahjongSeatedGameViewTest, AViewHoldsOnlyTheOwnTilesWhileTheHandIsPlayedAndNoKindOrLevel) {
-        const std::set<std::string> topKeys = {"phase",    "seat", "seatWind",    "roundWind",  "east",    "hand",  "turn",  "seats",
-                                               "discards", "wall", "handsPlayed", "handsTotal", "version", "ready", "format"};
+        const std::set<std::string> topKeys = {"phase",    "seat", "seatWind",    "roundWind",  "east",    "hand",  "turn",   "seats",
+                                               "discards", "wall", "handsPlayed", "handsTotal", "version", "ready", "format", "hintsAllowed"};
         const std::set<std::string> seatKeys = {"wind", "score", "concealedCount", "melds", "concealedKongs", "bonus", "discardCount", "calling"};
         MahjongSeatedGame game = Started();
         for (int step = 0; step < kStepLimit && PhaseIs(game, SessionPhase::Playing); ++step) {

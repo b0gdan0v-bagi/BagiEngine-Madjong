@@ -31,6 +31,8 @@ namespace BECore::Mahjong {
         constexpr eastl::string_view kHintButton = "HintButton";
         constexpr eastl::string_view kAdviceLabel = "AdviceText";
         constexpr eastl::string_view kAdviceVar = "hintAdvice";
+        constexpr eastl::string_view kRoomHintsLabel = "RoomHintsText";
+        constexpr eastl::string_view kRoomHintsVar = "roomHintsText";
         // The card of the coach (node `HintsWhy`, `Table/HintCard.h`): the plate, the head row, row `i` (`CardRow<i>` with the label
         // `CardSteps<i>` and the pictures `Card<i>Tile<k>`) and the variables of the words
         constexpr eastl::string_view kCoachCard = "CoachCard";
@@ -103,7 +105,8 @@ namespace BECore::Mahjong {
             return kUiPalette[9];  // text
         }
 
-        /// The button `Hint` is offered: a person acts and it is the viewer, with something to choose from (a non-empty `legal`).
+        /// The button `Hint` is offered: a person acts and it is the viewer, with something to choose from (a non-empty `legal`). In a room the
+        /// display session names the viewer as the actor exactly while the server lists an action, and `legal` is that list.
         bool IsOffered(const TableSession& session, Seat viewer, const TableView& view) {
             return session.ActorIsPerson() && session.Actor() == viewer && !view.legal.empty();
         }
@@ -124,6 +127,17 @@ namespace BECore::Mahjong {
 
     MahjongHintsComponent* MahjongHintsComponent::s_active = nullptr;
 
+    TableView MahjongHintsComponent::ViewOf(const MahjongGame& game, Seat viewer) {
+        TableView view = MakeTableView(game.GetMatch().Hand(), viewer);
+        if (game.IsOnlineTable()) {
+            const OnlineClient* client = game.FindOnline();
+            if (client != nullptr && client->Stage() == OnlineStage::Game) {
+                ListHandActions(client->Table(), view.legal);
+            }
+        }
+        return view;
+    }
+
     MahjongHintsComponent::~MahjongHintsComponent() {
         if (s_active == this) {
             s_active = nullptr;
@@ -138,7 +152,8 @@ namespace BECore::Mahjong {
 
     MahjongHintsComponent::Key MahjongHintsComponent::KeyOf(const MahjongGame* game) {
         Key key;
-        key.applies = game != nullptr && HintsApply(game->HintsOn() && !game->IsOnlineTable(), game->IsTablePaused(), game->GetSession());  // no hints in a room
+        // The mode that applies at this table (`EffectiveHintsMode`): in a room the host's decision comes first, so a view that changes it moves `applies`
+        key.applies = game != nullptr && HintsApply(game->HintsActive(), game->IsTablePaused(), game->GetSession());
         if (key.applies) {
             key.viewer = game->GetSession().Viewer();
             key.version = game->GetSession().Version();
@@ -151,7 +166,7 @@ namespace BECore::Mahjong {
             return std::nullopt;
         }
         const TableSession& session = game->GetSession();
-        TableView view = MakeTableView(game->GetMatch().Hand(), session.Viewer());
+        TableView view = ViewOf(*game, session.Viewer());
         if (!IsOffered(session, session.Viewer(), view)) {
             return std::nullopt;
         }
@@ -175,10 +190,11 @@ namespace BECore::Mahjong {
         if (_adviceOn && _offered && !_advised) {
             Advise(*game, key);  // `_offered` holds only with a game whose hints apply
         }
-        const bool coach = game != nullptr && game->CoachOn();
+        const bool coach = game != nullptr && game->CoachActive();
         PushCoach(game, key);  // first: the advice gives way on the card to a note that is up
         PushAdvice(coach);
         PushCard(game, coach);
+        PushRoomHints(game);  // last: it gives way to the sentence and to the card
         if (key.applies) {
             DrawMarks(*game);
         }
@@ -195,7 +211,7 @@ namespace BECore::Mahjong {
         if (!key.applies) {
             return;
         }
-        const TableView view = MakeTableView(game->GetMatch().Hand(), key.viewer);
+        const TableView view = ViewOf(*game, key.viewer);
         _row = WaitingTiles(view);
         const TableSession& session = game->GetSession();
         _offered = IsOffered(session, key.viewer, view);
@@ -236,7 +252,7 @@ namespace BECore::Mahjong {
 
     void MahjongHintsComponent::Advise(const MahjongGame& game, const Key& key) {
         BE_PROFILE_SCOPE("MahjongHints::Advise");
-        TableView view = MakeTableView(game.GetMatch().Hand(), key.viewer);
+        TableView view = ViewOf(game, key.viewer);
         _explained = ExplainAdviceFor(view);
         _advice = _explained ? std::optional<HandAction>(_explained->Action()) : AdviceFor(view);
         _advised = true;
@@ -282,17 +298,52 @@ namespace BECore::Mahjong {
         }
     }
 
+    void MahjongHintsComponent::PushRoomHints(const MahjongGame* game) {
+        RoomHintsWord word = RoomHintsWord::None;
+        if (game != nullptr && game->IsOnlineTable() && !game->IsTablePaused() && game->GetSession().GetPhase() == SessionPhase::Playing && !_adviceShown && _cardKey.source == CardSource::None) {
+            if (!game->FindOnline()->Table().hintsAllowed) {
+                word = RoomHintsWord::NotAllowed;
+            } else {
+                word = game->GetHintsMode() == HintsMode::Off ? RoomHintsWord::AllowedOff : RoomHintsWord::Allowed;
+            }
+        }
+        const UIStrings& strings = CoreManager::GetUIStrings();
+        if (word == _roomWord && (word == RoomHintsWord::None || strings.GetVersion() == _roomStringsVersion)) {
+            return;
+        }
+        UIVars& vars = CoreManager::GetUIVars();
+        switch (word) {
+            case RoomHintsWord::Allowed:
+                vars.Set(NameOf(kRoomHintsVar), eastl::string_view(Tr(strings, "online.table.hintsAllowed")));
+                break;
+            case RoomHintsWord::AllowedOff:
+                vars.Set(NameOf(kRoomHintsVar), eastl::string_view(Tr(strings, "online.table.hintsAllowedOff")));
+                break;
+            case RoomHintsWord::NotAllowed:
+                vars.Set(NameOf(kRoomHintsVar), eastl::string_view(Tr(strings, "online.table.hintsOff")));
+                break;
+            case RoomHintsWord::None:
+                vars.Set(NameOf(kRoomHintsVar), eastl::string_view());  // nothing of the last word stays in a variable
+                break;
+        }
+        _roomStringsVersion = strings.GetVersion();
+        if ((word == RoomHintsWord::None) != (_roomWord == RoomHintsWord::None)) {
+            UICanvasComponent::SetElementVisibleByName(GetScene(), NameOf(kRoomHintsLabel), word != RoomHintsWord::None);
+        }
+        _roomWord = word;
+    }
+
     void MahjongHintsComponent::PushCoach(MahjongGame* game, const Key& key) {
         CoachLedger* ledger = game != nullptr ? &game->GetCoach() : nullptr;
         bool show = false;
         if (ledger != nullptr && ledger->Note().has_value()) {
-            const CoachHandKey hand = HandKeyOf(game->GetSession());
+            const CoachHandKey hand = HandKeyOf(game->CoachContext());
             if (_coachOf != game || ledger->Version() != _coachSeen) {
                 _coachOf = game;
                 _coachSeen = ledger->Version();  // a note not seen yet belongs to the hand it is first seen in
                 _coachHand = hand;
             }
-            show = game->CoachOn() && key.applies && hand == _coachHand && ledger->Note()->seat == key.viewer;
+            show = game->CoachActive() && key.applies && hand == _coachHand && ledger->Note()->seat == key.viewer;
             if (!show) {
                 ledger->ClearNote();  // the hand is over, the match is another, the table is covered or paused, the mode changed
             }
@@ -313,10 +364,10 @@ namespace BECore::Mahjong {
             next.version = _adviceGeneration;
         }
         if (next.source != CardSource::None) {
-            const TableSession& session = game->GetSession();
+            const MoveContext context = game->CoachContext();
             next.strings = CoreManager::GetUIStrings().GetVersion();
-            next.hand = game->GetCoach().HandTallyOf(HandKeyOf(session));
-            next.match = game->GetCoach().MatchTallyOf(session.StartCount());
+            next.hand = game->GetCoach().HandTallyOf(HandKeyOf(context));
+            next.match = game->GetCoach().MatchTallyOf(context.startCount);
         }
         if (next == _cardKey) {
             return;

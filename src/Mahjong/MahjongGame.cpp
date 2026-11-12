@@ -41,6 +41,21 @@ namespace BECore::Mahjong {
     void MahjongGame::SetHintsMode(HintsMode mode) {
         _hintsMode = mode;
         _coach.SetEnabled(mode == HintsMode::Coach);
+        SyncRoomCoach(false);
+    }
+
+    void MahjongGame::SyncRoomCoach(bool restart) {
+        if (restart) {
+            _roomCoach.SetEnabled(false);  // a changed value drops the note and the tallies
+        }
+        _roomCoach.SetEnabled(_onlineTable && CoachActive());
+    }
+
+    MoveContext MahjongGame::CoachContext() const {
+        if (!_onlineTable) {
+            return _session.Context();
+        }
+        return MoveContext{_roomTables, _displayMatch.HandsPlayed(), static_cast<size_t>(_displaySession.StartCount()), 1};
     }
 
     MahjongGame* MahjongGame::GetActive() {
@@ -187,10 +202,13 @@ namespace BECore::Mahjong {
             _onlineTable = true;
             EnterOnlineTable();
         }
+        SyncRoomCoach(false);  // the room's setting may have moved with this view
     }
 
     void MahjongGame::EnterOnlineTable() {
         _noticeAtTable = _online->Notice().serial;
+        ++_roomTables;
+        SyncRoomCoach(true);
         const bool offer = _canContinue;
         CloseSetup();
         _canContinue = offer;  // the saved match is still there for when the room is left
@@ -205,6 +223,7 @@ namespace BECore::Mahjong {
             return;
         }
         _onlineTable = false;
+        SyncRoomCoach(true);
         if (openSetup) {
             OpenSetup();
             // A room that ended with a word of the client (not one the player asked for: `Leave` makes none) says it on the online panel

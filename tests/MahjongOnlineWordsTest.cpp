@@ -49,6 +49,8 @@ namespace BECore::Mahjong::Tests {
             keys.insert(Std(kOnlineBadViewKey));
             keys.insert(Std(kOnlineConnectingKey));
             keys.insert(Std(kOnlineReconnectingKey));
+            keys.insert(Std(kOnlineLobbyHintsAllowedKey));
+            keys.insert(Std(kOnlineLobbyHintsOffKey));
             return keys;
         }
 

@@ -115,6 +115,14 @@ namespace BECore::Mahjong {
             }
             level = *read;
         }
+        bool hintsAllowed = false;
+        if (FindJsonMember(options, kHintsAllowedKey) != nullptr) {
+            const std::optional<bool> flag = GetJsonBool(options, kHintsAllowedKey);
+            if (!flag) {
+                return Fail(ControlErrors::kInvalidParams, Format("'{}' has to be true or false", kHintsAllowedKey.data()));
+            }
+            hintsAllowed = *flag;
+        }
 
         // Every option is read and checked: from here on a failure of the match leaves the previous one in place.
         MahjongSettings settings;
@@ -126,6 +134,7 @@ namespace BECore::Mahjong {
         }
         _match = std::move(match);
         _level = level;
+        _hintsAllowed = hintsAllowed;
         _matchSeed = matchSeed;
         _ready = {};
         ++_version;
@@ -150,6 +159,7 @@ namespace BECore::Mahjong {
         }
         view["ready"] = std::move(ready);
         view["format"] = kOnlineViewFormat;
+        view[std::string(kHintsAllowedKey.data(), kHintsAllowedKey.size())] = _hintsAllowed;
         return view;
     }
 

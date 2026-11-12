@@ -63,10 +63,12 @@ namespace BECore::Mahjong {
             SetNoticeForCode(RoomErrors::kBadName);
             return false;
         }
-        const Json json = Json::object({{"hands", options.hands}, {"level", options.level}});
+        const Json json = Json::object({{"hands", options.hands}, {"level", options.level}, {std::string(kHintsAllowedKey.data(), kHintsAllowedKey.size()), options.hintsAllowed}});
         const bool sent = Report(_client.Host(url, kSeatedGameName, *sanitized, json));
         if (sent) {
             _requesting = true;
+            _hosted = options;
+            Bump();
         }
         Settle();
         return sent;
@@ -81,6 +83,7 @@ namespace BECore::Mahjong {
         const bool sent = Report(_client.Join(url, code, *sanitized));
         if (sent) {
             _requesting = true;
+            ForgetHosted();
         }
         Settle();
         return sent;
@@ -89,6 +92,7 @@ namespace BECore::Mahjong {
     bool OnlineClient::Resume(const RoomSession& session) {
         const bool sent = Report(_client.Resume(session));
         if (sent) {
+            ForgetHosted();
             // The caller has this session stored already, so the revision stays
             _kept = session;
         }
@@ -129,6 +133,7 @@ namespace BECore::Mahjong {
         const bool sent = Report(_client.Leave());
         if (sent) {
             ForgetSession();
+            ForgetHosted();
             if (wasReconnecting) {
                 // There was no connection to ask on: the client closed itself
                 CloseConnection();
@@ -141,6 +146,7 @@ namespace BECore::Mahjong {
 
     void OnlineClient::Disconnect() {
         CloseConnection();
+        ForgetHosted();
         _requesting = false;
         _awaitingClose = false;
         ForgetView();
@@ -258,6 +264,7 @@ namespace BECore::Mahjong {
 
     void OnlineClient::OnLeft(const RoomClientEvent& event) {
         _requesting = false;
+        ForgetHosted();
         ForgetView();
         ForgetSession();
         if (event.code == RoomClientCloseReasons::kReplaced) {
@@ -270,6 +277,7 @@ namespace BECore::Mahjong {
 
     void OnlineClient::OnClosed(const RoomClientEvent& event) {
         _requesting = false;
+        ForgetHosted();
         _awaitingClose = false;
         ForgetView();
         if (EndsTheSession(event.code)) {
@@ -377,6 +385,13 @@ namespace BECore::Mahjong {
         _lobbySeat = -1;
         _lobbyHost = false;
         Bump();
+    }
+
+    void OnlineClient::ForgetHosted() {
+        if (_hosted) {
+            _hosted.reset();
+            Bump();
+        }
     }
 
     void OnlineClient::KeepSession(const RoomSession& session) {

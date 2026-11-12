@@ -178,7 +178,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(GoToTheHostForm());
         EXPECT_TRUE(ItemShown(kOnline, "OnlineTitleHost"));
         EXPECT_FALSE(ItemShown(kOnline, "OnlineTitleMenu"));
-        for (const char* name : {"OnlineNameRow", "OnlineHandsRow", "OnlineLevelRow", "OnlineButtons", "OnlineCreate"}) {
+        for (const char* name : {"OnlineNameRow", "OnlineHandsRow", "OnlineLevelRow", "OnlineHintsRow", "OnlineButtons", "OnlineCreate"}) {
             EXPECT_TRUE(ItemShown(kOnline, name)) << name;
         }
         for (const char* name : {"OnlineCodeRow", "OnlineEnter", "OnlineStart", "OnlineLeave", "OnlineSeatRow0"}) {
@@ -197,6 +197,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(ItemShown(kOnline, "OnlineCodeRow"));
         EXPECT_TRUE(ItemShown(kOnline, "OnlineEnter"));
         EXPECT_FALSE(ItemShown(kOnline, "OnlineHandsRow"));
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineHintsRow"));
         EXPECT_EQ(Var("onlineCode"), "");
         EXPECT_EQ(Var("onlineName"), "Player");
 
@@ -217,6 +218,18 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Var("onlineHands"), "8");
         EXPECT_EQ(Var("onlineLevel"), "7");
         EXPECT_TRUE(Element(kOnline, "OnlineHands8")->selected);
+
+        EXPECT_EQ(Var("onlineHints"), "off") << "hints are not allowed unless the host says so";
+        EXPECT_TRUE(Element(kOnline, "OnlineHintsOff")->selected);
+        Act("MahjongOnlineHints", "allowed");
+        EXPECT_EQ(Var("onlineHints"), "allowed");
+        EXPECT_TRUE(Element(kOnline, "OnlineHintsAllowed")->selected);
+        EXPECT_FALSE(Element(kOnline, "OnlineHintsOff")->selected);
+        Act("MahjongOnlineHints", "coach");  // not offered
+        Act("MahjongOnlineHints", "");
+        EXPECT_EQ(Var("onlineHints"), "allowed");
+        Act("MahjongOnlineHints", "off");
+        EXPECT_EQ(Var("onlineHints"), "off");
     }
 
     TEST_F(MahjongOnlineSceneTest, TheNameIsTypedOnThePadAndOnTheKeyboardAndKeptByTheGame) {
@@ -618,6 +631,64 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_world.Judge().NonText(), 0u);
     }
 
+    TEST_F(MahjongOnlineRoomTest, ARoomMadeWithHintsAllowedSaysSoToTheHostInTheLobbyAndToTheSecondPlayerAtTheTable) {
+        ASSERT_NO_FATAL_FAILURE(OpenPanel());
+        ASSERT_NO_FATAL_FAILURE(GoToTheHostForm());
+        Act("MahjongOnlineHands", "8");
+        Act("MahjongOnlineHints", "allowed");
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineCreate"));
+        ASSERT_TRUE(PumpUntil([&] { return Screens().Page() == OnlinePage::Lobby && _game->GetOnline().Stage() == OnlineStage::Lobby; }));
+
+        // The slot of "Waiting for the host" says what the host decided, in the language of the game
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineHostLine"));
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineWaiting"));
+        EXPECT_EQ(Text(kOnline, "OnlineHostLine"), "Hints and the coach are allowed in this room");
+        ASSERT_TRUE(_game->SetLanguage("ru"_intern));
+        Frame();
+        EXPECT_EQ(Text(kOnline, "OnlineHostLine"), "В комнате разрешены советы и тренер");
+        ASSERT_TRUE(_game->SetLanguage("en"_intern));
+        Frame();
+        EXPECT_EQ(Text(kOnline, "OnlineHostLine"), "Hints and the coach are allowed in this room");
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            ASSERT_TRUE(_game->SetLanguage(language));
+            Frame();
+            ExpectTheCanvasFits(kOnline);
+        });
+        ASSERT_TRUE(_game->SetLanguage("en"_intern));
+        Frame();
+
+        // The second player joins, the host starts: both tables carry the choice
+        const std::string code = Var("onlineRoom");
+        HubPlayer bo(_world);
+        ASSERT_NO_FATAL_FAILURE(Join(bo, code, "Bo", {&bo}));
+        ASSERT_TRUE(PumpUntil([&] { return SeatText(1) == "Bo"; }, {&bo}));
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineStart"));
+        ASSERT_TRUE(PumpUntil([&] { return _game->IsOnlineTable() && bo.Client().HasTable(); }, {&bo}));
+        EXPECT_TRUE(bo.Table().hintsAllowed);
+        EXPECT_TRUE(_game->GetOnline().Table().hintsAllowed);
+    }
+
+    TEST_F(MahjongOnlineRoomTest, ARoomMadeWithoutAChoiceSaysNotAllowedToTheHostAndTheGuestKeepsHisWaitingLine) {
+        ASSERT_NO_FATAL_FAILURE(OpenPanel());
+        ASSERT_NO_FATAL_FAILURE(GoToTheHostForm());
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineCreate"));
+        ASSERT_TRUE(PumpUntil([&] { return Screens().Page() == OnlinePage::Lobby && _game->GetOnline().Stage() == OnlineStage::Lobby; }));
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineHostLine"));
+        EXPECT_EQ(Text(kOnline, "OnlineHostLine"), "Hints and the coach are not allowed in this room");
+        ASSERT_TRUE(_game->SetLanguage("ru"_intern));
+        Frame();
+        EXPECT_EQ(Text(kOnline, "OnlineHostLine"), "В комнате советы и тренер запрещены");
+        ASSERT_TRUE(_game->SetLanguage("en"_intern));
+        Frame();
+
+        // Leaving forgets the choice: the next lobby of this client as a guest has no such line
+        Act("MahjongOnlineLeave");
+        ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Idle; }));
+        EXPECT_EQ(_game->GetOnline().HostedOptions(), nullptr);
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineHostLine"));
+    }
+
     TEST_F(MahjongOnlineRoomTest, AGuestEntersByTheCodeSeesTheWaitingLineAndTheLobbyPassesTheSizeMatrixInBothLanguages) {
         HubPlayer host(_world);
         ASSERT_TRUE(host.Client().Host(kUrl, "Hanna", OnlineRoomOptions{kShortMatchHands, kMinLevel}));
@@ -629,6 +700,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(PumpUntil([&] { return SeatText(1) == "Player (you)"; }, {&host}));
         EXPECT_EQ(SeatText(0), "Hanna");
         EXPECT_TRUE(ItemShown(kOnline, "OnlineWaiting"));
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineHostLine")) << "the lobby does not carry the setting: a guest learns it at the table";
         EXPECT_FALSE(ItemShown(kOnline, "OnlineStart")) << "only the host starts";
         EXPECT_EQ(Text(kOnline, "OnlineWaiting"), "Waiting for the host");
 

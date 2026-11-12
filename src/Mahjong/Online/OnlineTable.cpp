@@ -503,8 +503,15 @@ namespace BECore::Mahjong {
                 return GetSeatScores(json, "scores", result.scores) && GetSeatScores(json, "deltas", result.deltas);
             }
 
+            /// The room's setting; missing or not a boolean is false, never a read error (additive key: `Online/CLAUDE.md`).
+            void ReadHintsAllowed() {
+                const std::optional<bool> flag = GetJsonBool(_view, kHintsAllowedKey);
+                _t.hintsAllowed = flag.value_or(false);
+            }
+
             void ReadTable() {
                 int64_t number = 0;
+                ReadHintsAllowed();
                 const bool good = GetNamed(_view, "phase", kSessionPhases, _t.phase) && GetSeat(_view, "seat", _t.seat, false) && GetWind(_view, "seatWind", _t.seatWind) &&
                                   GetWind(_view, "roundWind", _t.roundWind) && GetSeat(_view, "east", _t.east, false) && GetTiles(_view, "hand", _t.hand) &&
                                   InObject(_view, "turn", [&](const Json& turn) { return ReadTurn(turn); }) && ReadSeats() && ReadDiscards() && GetCount(_view, "wall", _t.wall) &&
@@ -541,6 +548,15 @@ namespace BECore::Mahjong {
             std::swap(out, scratch);
         }
         return read;
+    }
+
+    void ListHandActions(const OnlineTable& table, eastl::vector<HandAction>& out) {
+        out.clear();
+        for (const ControlAction& action : table.actions) {
+            if (!action.nextHand) {
+                out.push_back(action.hand);
+            }
+        }
     }
 
     std::expected<void, OnlineViewError> ReadOnlineView(const Json& view, const Json& actions, OnlineTable& out) {

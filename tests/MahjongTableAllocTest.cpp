@@ -4,6 +4,7 @@
 #include "MahjongTouchTestSupport.h"
 
 #include <BECore/Profiler/Alloc/AllocTracker.h>
+#include <Mahjong/Components/MahjongHintsComponent.h>
 #include <Mahjong/Table/Coach.h>
 #include <Mahjong/Table/ScoreText.h>
 
@@ -190,6 +191,53 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(StartRoom());
         ASSERT_TRUE(PlayUntil([&] { return Lists(ActionKind::Discard) && Hand().GetPhase() == Phase::Discard && _game->GetSession().Actor() == Viewer(); }, false));
         ASSERT_TRUE(_game->IsOnlineTable());
+        ExpectSteadyFrameInBothLanguages();
+    }
+
+    // The room that allows hints (the host's choice): the player's mode decides what is up at his turn.
+    TEST_F(MahjongOnlineTableAllocTest, APersonsTurnInARoomWithHintsAndTheLineOfTheRoomAllocatesNothingInTheWholeFrame) {
+        _game->SetHintsMode(HintsMode::Hints);
+        ASSERT_NO_FATAL_FAILURE(StartRoom(kShortMatchHands, 3, true));
+        ASSERT_TRUE(PlayUntil([&] { return Lists(ActionKind::Discard) && Hand().GetPhase() == Phase::Discard && _game->GetSession().Actor() == Viewer(); }));
+        Draw();
+        ASSERT_TRUE(_game->HintsActive());
+        ASSERT_TRUE(OnScreen("Hints", "RoomHintsText"));  // the waiting row, the marks and the line
+        ExpectSteadyFrameInBothLanguages();
+
+        EmitAction("MahjongHintAdvice");  // the sentence takes the place of the line
+        Draw();
+        ASSERT_TRUE(OnScreen("Hints", "AdviceText"));
+        ExpectSteadyFrameInBothLanguages();
+    }
+
+    TEST_F(MahjongOnlineTableAllocTest, TheCoachsAdviceCardInARoomAllocatesNothingInTheWholeFrame) {
+        _game->SetHintsMode(HintsMode::Coach);
+        ASSERT_NO_FATAL_FAILURE(StartRoom(kShortMatchHands, 3, true));
+        ASSERT_TRUE(PlayUntil([&] { return Lists(ActionKind::Discard) && Hand().GetPhase() == Phase::Discard && _game->GetSession().Actor() == Viewer(); }));
+        ASSERT_TRUE(_game->CoachActive());
+        EmitAction("MahjongHintAdvice");
+        Draw();
+        ASSERT_TRUE(OnScreen("HintsWhy", "CoachCard"));
+        ExpectSteadyFrameInBothLanguages();
+    }
+
+    TEST_F(MahjongOnlineTableAllocTest, TheCoachsNoteCardInARoomAllocatesNothingInTheWholeFrame) {
+        _game->SetHintsMode(HintsMode::Coach);
+        ASSERT_NO_FATAL_FAILURE(StartRoom(kShortMatchHands, 3, true));
+        ASSERT_TRUE(PlayUntil([&] { return Lists(ActionKind::Discard) && Hand().GetPhase() == Phase::Discard && _game->GetSession().Actor() == Viewer(); }));
+        ASSERT_TRUE(_game->CoachActive());
+        // A move that differs from the computer's choice, judged as the table component judges the player's own
+        CoachLedger& coach = _game->GetCoach();
+        const TableView view = MahjongHintsComponent::ViewOf(*_game, Viewer());
+        for (const HandAction& action : view.legal) {
+            coach.OnPersonMove(view, action, _game->CoachContext());
+            if (coach.Note().has_value()) {
+                break;
+            }
+        }
+        ASSERT_TRUE(coach.Note().has_value());
+        Draw();
+        ASSERT_TRUE(OnScreen("HintsWhy", "CoachCard"));
         ExpectSteadyFrameInBothLanguages();
     }
 

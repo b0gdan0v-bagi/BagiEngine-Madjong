@@ -563,8 +563,17 @@ namespace BECore::Mahjong {
         }
         OnlineClient& client = game.GetOnline();
         const eastl::vector<ControlAction>& listed = client.Table().actions;
+        // The coach of the room judges the move the player sends, on the view he chose it on (before the table moves on)
+        CoachLedger& coach = game.GetCoach();
+        std::optional<TableView> before;
+        if (coach.Enabled()) {
+            before = MahjongHintsComponent::ViewOf(game, game.GetSession().Viewer());
+        }
         for (size_t i = 0; i < listed.size(); ++i) {
             if (!listed[i].nextHand && listed[i].hand == action && client.Act(i)) {
+                if (before.has_value()) {
+                    coach.OnPersonMove(*before, action, game.CoachContext());
+                }
                 return {};
             }
         }
