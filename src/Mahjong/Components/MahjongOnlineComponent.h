@@ -40,8 +40,8 @@ namespace BECore::Mahjong {
      * goes one page back, and in the `Lobby` does nothing. The name the player typed is handed to `MahjongGame::SetOnlineName` once they leave the field or send a form.
      *
      * **Variables** (set only when `OnlineScreens::Version()`, `OnlineClient::Version()`, the version of `UIStrings` or the open state moved; the elements likewise): `onlineNotice`,
-     * `onlineStatus`, `onlineName`, `onlineCode`, `onlineRoom`, `onlineSeat0..3`, `onlineHands`, `onlineLevel`, `onlineHints` (`allowed` | `off`), `onlineHostLine`, `onlineEntryValue` and
-     * `padKey0..47` (while the `Entry` page is up and the pad, its field or the language moved). The token of a session is never published.
+     * `onlineStatus`, `onlineName`, `onlineCode`, `onlineRoom`, `onlineSeat0..3`, `onlineHands`, `onlineLevel`, `onlineHints` (`allowed` | `off`), `onlineHostLine`, `onlineWaiting`,
+     * `onlineEntryValue` and `padKey0..47` (while the `Entry` page is up and the pad, its field or the language moved). The token of a session is never published.
      */
     class MahjongOnlineComponent : public IComponent {
         BE_CLASS(MahjongOnlineComponent)

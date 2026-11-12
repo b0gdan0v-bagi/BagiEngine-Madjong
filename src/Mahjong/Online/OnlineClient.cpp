@@ -343,6 +343,7 @@ namespace BECore::Mahjong {
             seat.away = human && !from.connected;
         }
         _lobby.canStart = _lobbyHost && source.phase == RoomPhase::Lobby;
+        _lobby.hintsAllowed = GetJsonBool(source.options, kHintsAllowedKey);
         Bump();
     }
 

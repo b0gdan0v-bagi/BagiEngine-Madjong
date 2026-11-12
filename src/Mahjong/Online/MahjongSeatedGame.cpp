@@ -63,7 +63,8 @@ namespace BECore::Mahjong {
     }
 
     SeatedGameInfo MahjongSeatedGame::Info() {
-        return SeatedGameInfo{eastl::string(kSeatedGameName), kSeatCount};
+        // Every member sees these options of the host in the lobby, before the start
+        return SeatedGameInfo{eastl::string(kSeatedGameName), kSeatCount, {"hands", "level", eastl::string(kHintsAllowedKey)}};
     }
 
     int MahjongSeatedGame::GetSeatCount() const {

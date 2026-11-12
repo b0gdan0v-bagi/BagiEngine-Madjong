@@ -386,6 +386,9 @@ namespace BECore::Mahjong {
         vars.Set("onlineHints"_intern, _screens.Options().hintsAllowed ? kHintsAllowedValue : kHintsOffValue);
         const OnlineRoomOptions* hosted = client.HostedOptions();
         vars.Set("onlineHostLine"_intern, eastl::string_view(hosted == nullptr ? eastl::string() : Tr(strings, hosted->hintsAllowed ? kOnlineLobbyHintsAllowedKey : kOnlineLobbyHintsOffKey)));
+        // A guest reads the host's choice about hints from the lobby, on the one line under the title
+        const std::optional<bool> guestHints = lobby.hintsAllowed;
+        vars.Set("onlineWaiting"_intern, eastl::string_view(Tr(strings, !guestHints ? kOnlineWaitHostKey : (*guestHints ? kOnlineWaitHostHintsAllowedKey : kOnlineWaitHostHintsOffKey))));
         // The room: the title of the lobby while there is one, else the room `Return` would enter
         const eastl::string& room = _screens.Page() == OnlinePage::Lobby ? (lobby.room.empty() ? client.Room() : lobby.room) : _screens.ReturnRoom();
         vars.Set("onlineRoom"_intern, eastl::string_view(room));

@@ -239,8 +239,18 @@ namespace BECore::Mahjong::Tests {
         }
 
         inline void CheckLobby(const Json& root, Offences& offences) {
-            if (!CheckKeys(root, "lobby", {"v", "type", "room", "game", "phase", "host", "seats"}, {}, offences)) {
+            if (!CheckKeys(root, "lobby", {"v", "type", "room", "game", "phase", "host", "seats"}, {"options"}, offences)) {
                 return;
+            }
+            // The public options of the room: only the keys the game names public, each a boolean or an integer
+            if (const Json* options = FindJsonMember(root, "options")) {
+                if (CheckKeys(*options, "lobby.options", {}, {"hands", "level", "hintsAllowed"}, offences)) {
+                    for (auto it = options->begin(); it != options->end(); ++it) {
+                        if (!it.value().is_boolean() && !it.value().is_number_integer()) {
+                            Offend(offences, "lobby.options." + it.key(), "is not a boolean or an integer");
+                        }
+                    }
+                }
             }
             if (!root["seats"].is_array()) {
                 Offend(offences, "lobby.seats", "is not a list");

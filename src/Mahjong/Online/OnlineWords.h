@@ -87,6 +87,10 @@ namespace BECore::Mahjong {
 
     /// The line the host reads in the lobby about the setting he made: hints and the coach allowed in the room, or not.
     inline constexpr eastl::string_view kOnlineLobbyHintsAllowedKey = "online.lobby.hintsAllowed";
+    /// The guest's line of the lobby: waiting for the host, with the host's choice about hints when the lobby says it.
+    inline constexpr eastl::string_view kOnlineWaitHostKey = "online.waitHost";
+    inline constexpr eastl::string_view kOnlineWaitHostHintsAllowedKey = "online.waitHost.hintsAllowed";
+    inline constexpr eastl::string_view kOnlineWaitHostHintsOffKey = "online.waitHost.hintsOff";
     inline constexpr eastl::string_view kOnlineLobbyHintsOffKey = "online.lobby.hintsOff";
 
     /// The text of @p key in the current language. Only `online.error.unknown` has a placeholder (`{code}`, filled with @p arg).

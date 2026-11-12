@@ -49,6 +49,9 @@ namespace BECore::Mahjong {
         bool canStart = false;
         /// How many seats a person holds.
         int humans = 0;
+        /// Whether the host allowed hints and the coach, from the public options of the lobby; none when the lobby does not say
+        /// (a server from before the lobby carried options).
+        std::optional<bool> hintsAllowed;
     };
 
     /// One thing for a screen to say: a key of `config/UIStrings.xml` (`OnlineWords.h`), the code for the one key that names it, and a

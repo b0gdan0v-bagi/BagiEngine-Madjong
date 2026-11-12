@@ -689,6 +689,20 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(ItemShown(kOnline, "OnlineHostLine"));
     }
 
+    TEST_F(MahjongOnlineRoomTest, AGuestReadsInTheLobbyThatTheHostAllowedHints) {
+        HubPlayer host(_world);
+        ASSERT_TRUE(host.Client().Host(kUrl, "Hanna", OnlineRoomOptions{kShortMatchHands, kMinLevel, true}));
+        ASSERT_TRUE(PumpUntil([&] { return host.Client().Stage() == OnlineStage::Lobby; }, {&host}));
+        const std::string code(host.Client().Room().c_str());
+
+        ASSERT_NO_FATAL_FAILURE(EnterByTheCode(code));
+        ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Lobby; }, {&host}));
+        ASSERT_TRUE(_game->GetOnline().Lobby().hintsAllowed.has_value());
+        EXPECT_TRUE(*_game->GetOnline().Lobby().hintsAllowed);
+        Frame();
+        EXPECT_EQ(Text(kOnline, "OnlineWaiting"), "Waiting for the host. Hints and the coach are allowed");
+    }
+
     TEST_F(MahjongOnlineRoomTest, AGuestEntersByTheCodeSeesTheWaitingLineAndTheLobbyPassesTheSizeMatrixInBothLanguages) {
         HubPlayer host(_world);
         ASSERT_TRUE(host.Client().Host(kUrl, "Hanna", OnlineRoomOptions{kShortMatchHands, kMinLevel}));
@@ -700,9 +714,9 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(PumpUntil([&] { return SeatText(1) == "Player (you)"; }, {&host}));
         EXPECT_EQ(SeatText(0), "Hanna");
         EXPECT_TRUE(ItemShown(kOnline, "OnlineWaiting"));
-        EXPECT_FALSE(ItemShown(kOnline, "OnlineHostLine")) << "the lobby does not carry the setting: a guest learns it at the table";
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineHostLine")) << "the host's line is the host's: a guest reads the setting on the waiting line";
         EXPECT_FALSE(ItemShown(kOnline, "OnlineStart")) << "only the host starts";
-        EXPECT_EQ(Text(kOnline, "OnlineWaiting"), "Waiting for the host");
+        EXPECT_EQ(Text(kOnline, "OnlineWaiting"), "Waiting for the host. Hints and the coach are off") << "the lobby carries the host's setting";
 
         // A seat that was taken meanwhile: the screen has not heard of it yet, the server refuses, and the notice says so once
         HubPlayer cy(_world);

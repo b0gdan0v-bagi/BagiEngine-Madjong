@@ -112,6 +112,7 @@ namespace BECore::Mahjong::Tests {
             const eastl::string name = RepeatedLetter(strings, kNameBytes);
             const eastl::string seatName = RepeatedLetter(strings, kSeatNameBytes);
             vars.Set("onlineHostLine"_intern, eastl::string_view(LongestText({Tr(strings, kOnlineLobbyHintsAllowedKey), Tr(strings, kOnlineLobbyHintsOffKey)})));
+            vars.Set("onlineWaiting"_intern, eastl::string_view(LongestText({Tr(strings, kOnlineWaitHostKey), Tr(strings, kOnlineWaitHostHintsAllowedKey), Tr(strings, kOnlineWaitHostHintsOffKey)})));
             std::vector<eastl::string> seats;
             for (const bool mine : {false, true}) {
                 for (const bool connected : {false, true}) {
@@ -283,7 +284,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Text(kOnline, "OnlineMenuReturn"), "Return to room K7M2Q");
         EXPECT_EQ(Text(kOnline, "OnlineTitleLobby"), "Room K7M2Q");
         EXPECT_EQ(Text(kOnline, "OnlineSit2"), "Sit here");
-        EXPECT_EQ(Text(kOnline, "OnlineWaiting"), "Waiting for the host");
         EXPECT_EQ(Text(kOnline, "OnlineHandsCaption"), "Hands");
         EXPECT_EQ(Text(kOnline, "OnlineHintsCaption"), "Hints");
         EXPECT_EQ(Text(kOnline, "OnlineHintsAllowed"), "Allowed");

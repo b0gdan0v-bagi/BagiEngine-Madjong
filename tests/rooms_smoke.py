@@ -232,8 +232,13 @@ def check_view(root: dict[str, Any], seat: int, offences: Offences) -> None:
 
 
 def check_lobby(root: dict[str, Any], offences: Offences) -> None:
-    if not check_keys(root, "lobby", {"v", "type", "room", "game", "phase", "host", "seats"}, set(), offences):
+    if not check_keys(root, "lobby", {"v", "type", "room", "game", "phase", "host", "seats"}, {"options"}, offences):
         return
+    # The public options of the room: only the keys the game names public, each a boolean or an integer
+    if "options" in root and check_keys(root["options"], "lobby.options", set(), {"hands", "level", "hintsAllowed"}, offences):
+        for key, value in root["options"].items():
+            if not isinstance(value, (bool, int)):
+                offend(offences, f"lobby.options.{key}", "is not a boolean or an integer")
     if not isinstance(root["seats"], list):
         offend(offences, "lobby.seats", "is not a list")
         return
@@ -343,6 +348,8 @@ def self_check_judge(smoke: Any) -> None:
     cannot_miss("an extra key in the result", mutated(over, lambda m: m["view"]["result"].update(extra=1)), 0, "'extra'")
     cannot_miss("a hand list that is not tiles in the result", mutated(over, lambda m: m["view"]["result"]["seats"][1].update(concealed=5)), 0, "concealed")
     cannot_miss("a tile list in a joined", '{"v":1,"type":"joined","room":"A","player":1,"token":"x","seat":0,"host":true,"hand":["1p"]}', 0, "'hand'")
+    cannot_miss("an option the game does not make public", '{"v":1,"type":"lobby","room":"A","game":"mahjong","phase":"lobby","host":0,"seats":[],"options":{"seed":1}}', 0, "'seed'")
+    cannot_miss("a public option that is text", '{"v":1,"type":"lobby","room":"A","game":"mahjong","phase":"lobby","host":0,"seats":[],"options":{"hands":"8"}}', 0, "lobby.options.hands")
     cannot_miss("a tile list in a lobby", '{"v":1,"type":"lobby","room":"A","game":"mahjong","phase":"playing","host":0,"seats":[],"hands":[]}', 0, "'hands'")
     cannot_miss("a tile list in an error", '{"v":1,"type":"error","code":"x","message":"y","hand":["1p"]}', 0, "'hand'")
     cannot_miss("a tile list in a pong", '{"v":1,"type":"pong","hand":["1p"]}', 0, "'hand'")
