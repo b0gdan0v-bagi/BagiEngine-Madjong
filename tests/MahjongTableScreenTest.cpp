@@ -241,8 +241,13 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_TRUE(names.insert(name).second) << "duplicate name " << name;
             }
             if (const auto* label = element->GetComponent<UITextComponent>()) {
-                // Only the hint follows a variable; the words of the buttons are keys of the string table
-                EXPECT_EQ(std::string(label->text.c_str()).find('{') == std::string::npos, name != "Hint") << name << " and its variable";
+                // Only the hint follows a variable (`{name}`); the words of the buttons are keys of the string table (`{#key}`)
+                const std::string text = label->text.c_str();
+                bool hasVariable = false;
+                for (size_t at = text.find('{'); at != std::string::npos && !hasVariable; at = text.find('{', at + 1)) {
+                    hasVariable = at + 1 >= text.size() || text[at + 1] != '#';
+                }
+                EXPECT_EQ(hasVariable, name == "Hint") << name << " and its variable";
             }
             for (const auto& child : element->children) {
                 pending.push_back(child.Get());

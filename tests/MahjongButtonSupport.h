@@ -1,5 +1,6 @@
 #pragma once
 
+#include <BECore/UI/UIDropdown.h>
 #include <BECore/UI/UIElement.h>
 #include <BECore/UI/UIInputClicker.h>
 #include <BECore/UI/UITextComponent.h>
@@ -47,9 +48,10 @@ namespace BECore::Mahjong::Tests {
         return text != nullptr ? text->text : eastl::string{};
     }
 
-    /// Whether the element shows a text (carries a `UITextComponent`).
+    /// Whether the element shows a text (carries a `UITextComponent`). The header of a `UIDropdown` is not asked: it keeps the whole width
+    /// less its arrow and has its own check in the tests that hold it.
     inline bool ShowsText(const UIElement& element) {
-        return element.GetComponent<UITextComponent>() != nullptr;
+        return element.GetComponent<UITextComponent>() != nullptr && element.Cast<UIDropdown>() == nullptr;
     }
 
     /// Every element with a text of the tree, shown or not, in tree order. A toggle row (`UIToggleComponent`) is one control: its caption
