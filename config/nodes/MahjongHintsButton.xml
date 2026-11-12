@@ -1,14 +1,11 @@
 <?xml version="1.0"?>
 <!--
-  The button HintButton (action MahjongHintAdvice, neutral, hidden until the component shows it) of the hints. It is the one interactive
-  element of the hints and has a node of its own because the canvas Hints is a SceneView canvas, which the table's fit scales (56 units are
-  32 px only from a window of 732 x 412), so a button there is under the touch minimum in every narrow window. HintsButton is the same canvas
-  as Hints with the same regions: the button fills the region table.hintButton, the left end of the strip under the waiting row (in the portrait
-  table the region is 68 high, like the buttons of Actions there: the view is 720 wide, so it is a touch target wherever Actions is), and
-  the label AdviceText of Hints lies right of it. It is shown by MahjongTableComponent exactly where Actions is shown and hidden where
-  ActionsCompact is, which holds a HintButton of its own in its row, 100 wide (a Screen canvas, touch minimum met). MahjongHintsComponent
-  shows and hides the element by name, so both follow. It comes after Hints (layer 6) so that it lies over the label's plate. A region wins
-  over the safe area: the table does not move with it, so neither does the button.
+  The button HintButton (action MahjongHintAdvice, neutral, hidden until the component shows it) of the hints. It has a node of its own
+  because the canvas Hints is a SceneView canvas, which the table's fit scales, so a button there is under the touch minimum in a small
+  window. HintsButton is the same canvas as Hints with the same regions: the button fills the region table.hintButton, the left end of
+  the strip under the waiting row, and the label AdviceText of Hints lies right of it. MahjongTableComponent shows it exactly where
+  Actions is shown and hides it where ActionsCompact is, which holds a HintButton of its own in its row. MahjongHintsComponent shows
+  and hides the element by name, so both follow. It comes after Hints (layer 6) so that it lies over the label's plate.
 -->
 <node name="HintsButton" layer="6" contentVersion="4">
   <components>

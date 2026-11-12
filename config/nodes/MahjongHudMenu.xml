@@ -1,21 +1,18 @@
 <?xml version="1.0"?>
 <!--
   The New game button (MahjongNewGame, opens Setup) in the top right corner of the window and the Options button (MahjongOptions, opens
-  the page Options, which has the button to the pages of the rules; 92 units wide: the top seat's row of bonus tiles of the worst-case table ends at x 980 and a wider button covers it in a 16:10 window) 8 left of it (under it in a canvas of at most 440 units wide, where both do not fit in a row). A Screen canvas with a floor on its scale
-  (minScale 0.6: the 56 unit buttons are 33.6 px), so they are touch targets in any window; MahjongHudTest and MahjongTouchSizeTest check them on the
-  size matrix and that they cover no tile in a window without insets. With insets they lie nearer the table, as the HUD does. Hidden by the component while
-  HandOver or Rules is shown (HandOver has its own Next hand button in the middle of the window; Rules has a dim that covers only the view). MatchOver, Setup and Options are Screen canvases whose dim
-  covers the whole window, so the buttons stay under them.
-  In a portrait window the top right corner is the top seat's row of bonus tiles, so there both buttons are 176 wide (one under the other,
-  16 apart) at the left edge of the middle of the window, where the portrait table has free ground left of the viewer's discards (x 8..252,
-  under the side columns, which end at y 556, to y 1020 in view units; the canvas scale is at most about 1.2 times the table's fit there). It comes after the narrow variant, which it replaces.
-  In a narrow window (aspect up to 1.55, the table 1080 x 768) the top right corner is the top seat's row of bonus tiles (x 838..974) and the
-  line of moves, so from aspect 1.1 both buttons are 176 wide, one over the other, in the bottom left corner of the window: left of the viewer's
-  hand (x 204), under the left seat's columns and the bottom seat plate (y 612), 8 from the edges (the canvas scale is within 12 percent of the
-  table's fit there). In a nearly square window (up to 1.1) the bar under the table holds ActionsCompact along the bottom, so there Options goes
-  under New game in the top right corner, as in a canvas of at most 440 units, over the end of the line of moves and the last bonus tile by a
-  few units at most (a known deviation of the nearly square window, which no window of the matrix is). The portrait variant comes after them and
-  replaces them.
+  the page Options, which has the button to the pages of the rules; 92 units wide so that it covers no bonus tile of the top seat in a
+  16:10 window) 8 left of it (under it in a canvas of at most 440 units wide). A Screen canvas with a floor on its scale (minScale 0.6:
+  the 56 unit buttons are 33.6 px), so they are touch targets in any window. Why not regions of the table like the other canvases of the
+  table: the canvas scale differs from the table's fit, and the landscape and wide places are corners of the window, not of the table,
+  so a region cannot hold them; the two variants that use the table's free ground (portrait, narrow) are placed by units of this
+  canvas and MahjongHudTest and MahjongTouchSizeTest hold them clear of every tile on the size matrix (with insets they lie nearer the
+  table, as the HUD does). Hidden by the component while HandOver or Rules is shown; MatchOver, Setup and Options are Screen canvases
+  whose dim covers the whole window, so the buttons stay under them.
+  Variants, later ones replace earlier: a canvas of at most 440 units wide and a nearly square window (aspect up to 1.1, where
+  ActionsCompact may hold the bottom) put Options under New game; a narrow window (up to 1.55) puts both in the bottom left corner;
+  a portrait window puts both, 176 wide, at the left edge in the middle. A nearly square window may leave Options over the end of the
+  line of moves by a few units; no window of the matrix is that.
 -->
 <node name="HudMenu" layer="10" contentVersion="4">
   <components>

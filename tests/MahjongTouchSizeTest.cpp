@@ -654,27 +654,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_LE(tallestInThePortraitGap, kNextHandPortraitGapHeight + 2.0f * kModalGap);
     }
 
-    namespace {
-
-        /// Whether the compact row, which keeps to the safe area and so lies above the bottom inset, can clear the table in this window: the bar
-        /// under the table less the inset holds the row at its height there (`rowHeightUnits` of the laid-out `ActionRow`: a wrapped stack
-        /// starts its lines at its top, so the row is as high as it is given, not as the lines it uses) at the user scale of the layout.
-        bool RowCanClearTheTable(const MatrixWindow& window, float rowHeightUnits, float userScale = 1.0f) {
-            const float bottomInset = window.HasInsets() ? window.outputHeight - (window.safeArea.y + window.safeArea.h) : 0.0f;
-            return BarUnderTableOf(window) - bottomInset >= rowHeightUnits * CompactScale(window.outputWidth, window.outputHeight, userScale);
-        }
-
-        /// The windows where the rule shows the compact row and the safe area still lifts it onto the table: those with side insets (the only
-        /// simulation with a bottom inset, 4 % of the short side), where the bar holds the row but not the row above the inset. The rule takes the
-        /// bar without the inset (the same for a window with insets and without), and an engine change would fix it (the file's comment has it).
-        /// The matrix has the 3:2 window of 720 x 480 (a bar of 37.5 px, an inset of 19.2 px, a line of 34.3 px) and the 1:1 windows of 480 and 720
-        /// at the user scale 1.5; the row then lies on the viewer's hand by a few pixels, never by more than the inset.
-        bool SafeAreaLiftsTheRowOntoTheTable(const MatrixWindow& window) {
-            return window.simulation == SafeAreaSimulation::SideInsets;
-        }
-
-    }  // namespace
-
     // ----- the action buttons in the narrow windows -----
 
     class MahjongCompactRowTest : public MahjongTouchSizeTest {
@@ -743,7 +722,6 @@ namespace BECore::Mahjong::Tests {
 
         size_t checked = 0;
         size_t sideInsets = 0;
-        size_t liftedOntoTheTable = 0;
         for (const std::vector<ButtonKind>& kinds : FullestButtonSets()) {
             ASSERT_NO_FATAL_FAILURE(ShowCompactButtons(*compact, kinds));
             for (const MatrixWindow& window : CompactWindows()) {
@@ -756,18 +734,7 @@ namespace BECore::Mahjong::Tests {
                     if (window.simulation == SafeAreaSimulation::SideInsets) {
                         ++sideInsets;
                     }
-                    // The row keeps to the safe area: it is checked wherever the bar less the bottom inset holds the row at its height there, and
-                    // the one window where it does not is the known deviation of the file (see `SafeAreaLiftsTheRowOntoTheTable`)
-                    LayOutInWindow(*compact, window, CanvasScaleMode::ScaleWithScreen, userScale);
-                    const UIElement* row = Element("ActionsCompact", "ActionRow");
-                    ASSERT_NE(row, nullptr);
-                    if (!RowCanClearTheTable(window, row->rect.h, userScale)) {
-                        ++liftedOntoTheTable;
-                        EXPECT_TRUE(SafeAreaLiftsTheRowOntoTheTable(window)) << window.label.c_str() << " x" << userScale << ": a new window where the row lies on the table";
-                        EXPECT_LE(row->rect.h * CompactScale(window.outputWidth, window.outputHeight, userScale), BarUnderTableOf(window))
-                            << window.label.c_str() << " x" << userScale << ": the bar holds the row, so it lies on the table by the inset at the most";
-                        continue;
-                    }
+                    // In no window does the compact row lie on a tile: the rule takes the inset the safe area lifts the row by
                     ExpectCompactRowClearOfTheTable(*compact, window, kinds, layout, userScale);
                     ++checked;
                 }
@@ -775,7 +742,6 @@ namespace BECore::Mahjong::Tests {
         }
         EXPECT_GT(checked, 0u);
         EXPECT_GT(sideInsets, 0u);
-        EXPECT_GT(liftedOntoTheTable, 0u);
     }
 
     TEST_F(MahjongCompactRowTest, TheRuleIsTheHeightOfTheRowTheFileLaysOutInEveryWindowOfTheMatrixAndTheCompactWindowsAtBothUserScales) {
@@ -794,8 +760,8 @@ namespace BECore::Mahjong::Tests {
                 // The scale and the row height of the rule are those of the engine's layout of the file
                 EXPECT_NEAR(resolved.scale, CompactScale(window.outputWidth, window.outputHeight, userScale), 0.0001f) << label;
                 EXPECT_FLOAT_EQ(row->rect.h, CompactRowHeight(window.outputWidth / resolved.scale)) << label;
-                // The verdict is the comparison of the bar with that row (the bar of the table, not of the safe area)
-                const bool fitsTheBar = BarUnderTableOf(window) >= row->rect.h * resolved.scale;
+                // The verdict is the comparison of the bar, less the bottom inset that lifts the row, with that row
+                const bool fitsTheBar = BarUnderTableOf(window) - BottomInsetOf(window) >= row->rect.h * resolved.scale;
                 EXPECT_EQ(IsCompactWindow(window, userScale), ActionButtonsAreUnderTheMinimum(window) && fitsTheBar) << label;
                 if (IsCompactWindow(window, userScale)) {
                     ++compactWindows;
@@ -841,8 +807,7 @@ namespace BECore::Mahjong::Tests {
             const float rowPixels = Element("ActionsCompact", "ActionRow")->rect.h * resolved.scale;
             if (IsCompactWindow(window, userScale)) {
                 ++compactWindows;
-                EXPECT_GE(BarUnderTableOf(window), rowPixels) << label << ": the bar holds the whole row";
-                ASSERT_TRUE(RowCanClearTheTable(window, Element("ActionsCompact", "ActionRow")->rect.h, userScale)) << label;
+                EXPECT_GE(BarUnderTableOf(window) - BottomInsetOf(window), rowPixels) << label << ": the bar, less the bottom inset, holds the whole row";
                 for (const std::vector<ButtonKind>& kinds : FullestButtonSets()) {
                     ASSERT_NO_FATAL_FAILURE(ShowCompactButtons(*compact, kinds));
                     ExpectCompactRowClearOfTheTable(*compact, window, kinds, layout, userScale);
@@ -854,7 +819,7 @@ namespace BECore::Mahjong::Tests {
             ++actionsWindows;
             // Either the buttons are big enough or the bar does not hold the row (a bar of a line is not enough: the row is as high as its width makes it)
             if (ActionButtonsAreUnderTheMinimum(window)) {
-                EXPECT_LT(BarUnderTableOf(window), rowPixels) << label;
+                EXPECT_LT(BarUnderTableOf(window) - BottomInsetOf(window), rowPixels) << label;
             }
             LayOutInWindow(*actions, window);
             for (int i = 0; i < kButtonCount; ++i) {
@@ -937,6 +902,12 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(IsCompactWindow(compactWindow));
         EXPECT_FALSE(ActionsStaysSmall(compactWindow, 1.0f));
         EXPECT_TRUE(ActionsMayBeSmall(compactWindow));
+        // With side insets the row would be lifted by 24 px above a bar of 83 px that holds 73: `Actions` stays at the table's 31.6 px, clear of the hand
+        const MatrixWindow insetWindow = MakePhoneWindow(kCompactWindowWidth, kCompactWindowHeight, 1.0f, SafeAreaSimulation::SideInsets);
+        EXPECT_GT(BottomInsetOf(insetWindow), 0.0f);
+        EXPECT_FALSE(IsCompactWindow(insetWindow));
+        EXPECT_TRUE(ActionsStaysSmall(insetWindow, 1.0f));
+        EXPECT_TRUE(ActionsMayBeSmall(insetWindow));
     }
 
     // ----- the whole scene -----

@@ -146,9 +146,9 @@ namespace BECore::Mahjong::Tests {
         return windows;
     }
 
-    /// The windows where the rule shows `ActionsCompact` (the matrix has none: the narrow table's buttons are 33 px or more in every one of its
-    /// windows, and the portrait table's under 339 px wide ones are outside it): the near-square narrow windows, each with and without side
-    /// insets (the inset lifts the row onto the table), and two portrait ones. Density 1.
+    /// The windows of the compact row (the matrix has none: the narrow table's buttons are 33 px or more in every one of its windows, and the
+    /// portrait table's under 339 px wide ones are outside it): the near-square narrow windows, 610 x 600 with side insets too (the inset
+    /// lifts the row, so the rule keeps `Actions` there: the window is here for the tests that name it), and two portrait ones. Density 1.
     inline const std::vector<MatrixWindow>& CompactWindows() {
         static const std::vector<MatrixWindow> windows{MakePhoneWindow(kCompactWindowWidth, kCompactWindowHeight, 1.0f),
                                                        MakePhoneWindow(kCompactWindowWidth, kCompactWindowHeight, 1.0f, SafeAreaSimulation::SideInsets),
@@ -261,11 +261,17 @@ namespace BECore::Mahjong::Tests {
         return {fit.ToViewX(output.x), fit.ToViewY(output.y), output.w / fit.scale, output.h / fit.scale};
     }
 
+    /// The inset at the bottom of the window in output pixels (`window.safeArea` is what the matrix gives it; 0 for none).
+    inline float BottomInsetOf(const MatrixWindow& window) {
+        return window.HasInsets() ? window.outputHeight - (window.safeArea.y + window.safeArea.h) : 0.0f;
+    }
+
     /// Whether the buttons of `Actions` are under the engine's touch minimum in this window and the rule shows `ActionsCompact` (at this
-    /// user scale: the row is as high as the canvas it lies in makes it, and the user scale makes the canvas smaller).
+    /// user scale: the row is as high as the canvas it lies in makes it, and the user scale makes the canvas smaller; the window's bottom
+    /// inset lifts the row, so the bar has to hold it above the inset).
     inline bool IsCompactWindow(const MatrixWindow& window, float userScale = 1.0f) {
         const ActiveSceneView view = ViewOf(window);
-        return NeedsCompactActions(window.outputWidth, window.outputHeight, window.pixelDensity, EngineTouchMinimum(), userScale, view.width, view.height);
+        return NeedsCompactActions(window.outputWidth, window.outputHeight, window.pixelDensity, EngineTouchMinimum(), userScale, view.width, view.height, BottomInsetOf(window));
     }
 
     /// Whether the buttons of `Actions` are under the engine's touch minimum in this window, whatever canvas the rule shows.
@@ -274,8 +280,9 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// Whether `Actions` is the canvas shown in this window at this user scale with buttons under the engine's touch minimum: the rule keeps
-    /// it because the bar under the table cannot hold the compact row. In the matrix that is the portrait window of 1:1 at 480 px (25.5 px,
-    /// no bar at all); no landscape window of it has small buttons now that 4:3 and 3:2 are the narrow view.
+    /// it because the bar under the table, less the bottom inset, cannot hold the compact row. In the matrix that is the portrait window of
+    /// 1:1 at 480 px (25.5 px, no bar at all); no landscape window of it has small buttons now that 4:3 and 3:2 are the narrow view.
+    /// Outside it, the near-square narrow window with side insets (610 x 600: the table's 31.6 px, the row above the inset does not fit).
     inline bool ActionsStaysSmall(const MatrixWindow& window, float userScale) {
         return ActionButtonsAreUnderTheMinimum(window) && !IsCompactWindow(window, userScale);
     }
