@@ -171,7 +171,7 @@ def check_result(result: Any, offences: Offences) -> None:
 
 def check_state(state: Any, seat: int, offences: Offences) -> None:
     where = "view"
-    required = {"phase", "seat", "seatWind", "roundWind", "east", "hand", "turn", "seats", "discards", "wall", "handsPlayed", "handsTotal", "version", "ready"}
+    required = {"phase", "seat", "seatWind", "roundWind", "east", "hand", "turn", "seats", "discards", "wall", "handsPlayed", "handsTotal", "version", "ready", "format"}
     if not check_keys(state, where, required, {"result"}, offences):
         return
     phase = state["phase"]
@@ -182,7 +182,7 @@ def check_state(state: Any, seat: int, offences: Offences) -> None:
         offend(offences, "view.result", "is sent while the hand is played (it shows all four hands)")
     if not is_int(state["seat"]) or state["seat"] != seat:
         offend(offences, "view.seat", "is not the seat of the client")
-    for key in ("wall", "east", "handsPlayed", "handsTotal", "version"):
+    for key in ("wall", "east", "handsPlayed", "handsTotal", "version", "format"):
         check_number(state, key, where, offences)
     check_list(state, "hand", is_string, "tiles", where, offences)
     check_keys(state["turn"], "view.turn", {"phase", "current", "pendingTile", "yourTurn"}, set(), offences)
@@ -289,7 +289,7 @@ def sample_view(seat: int, phase: str = PHASE_PLAYING) -> dict[str, Any]:
     state: dict[str, Any] = {
         "phase": phase, "seat": seat, "seatWind": winds[seat], "roundWind": "East", "east": 0, "hand": hand,
         "turn": {"phase": "discard", "current": 0, "pendingTile": None, "yourTurn": seat == 0}, "seats": seats, "discards": [{"tile": "9s", "seat": 3}],
-        "wall": 67, "handsPlayed": 0, "handsTotal": 8, "version": 1, "ready": [False] * SEAT_COUNT,
+        "wall": 67, "handsPlayed": 0, "handsTotal": 8, "version": 1, "ready": [False] * SEAT_COUNT, "format": 1,
     }
     if phase != PHASE_PLAYING:
         state["result"] = sample_result()
@@ -330,6 +330,8 @@ def self_check_judge(smoke: Any) -> None:
     cannot_miss("a hand shorter than its count", mutated(honest, lambda m: m["view"]["hand"].pop(0)), 0, "view.hand")
     cannot_miss("a concealed meld of another seat", mutated(honest, lambda m: m["view"]["seats"][2].update(
         melds=[{"kind": "kong", "tiles": ["1p"] * 4, "concealed": True, "from": None, "fromDiscard": False, "claimed": None}])), 0, "concealed meld of another seat")
+    cannot_miss("a view without the format number", mutated(honest, lambda m: m["view"].pop("format")), 0, "'format'")
+    cannot_miss("a format number that is a string", mutated(honest, lambda m: m["view"].update(format="1")), 0, "view.format")
     cannot_miss("a view of another seat", honest, 1, "seat of the client")
     cannot_miss("a result while the hand is played", mutated(honest, lambda m: m["view"].update(result=sample_result())), 0, "view.result")
     cannot_miss("a result that is not four hands", mutated(over, lambda m: m["view"]["result"].update(seats=[])), 0, "view.result.seats")

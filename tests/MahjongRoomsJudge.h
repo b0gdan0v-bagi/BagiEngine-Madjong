@@ -157,8 +157,8 @@ namespace BECore::Mahjong::Tests {
 
         inline void CheckState(const Json& state, int seat, Offences& offences) {
             const std::string where = "view";
-            if (!CheckKeys(state, where, {"phase", "seat", "seatWind", "roundWind", "east", "hand", "turn", "seats", "discards", "wall", "handsPlayed", "handsTotal", "version", "ready"}, {"result"},
-                           offences)) {
+            if (!CheckKeys(state, where, {"phase", "seat", "seatWind", "roundWind", "east", "hand", "turn", "seats", "discards", "wall", "handsPlayed", "handsTotal", "version", "ready", "format"},
+                           {"result"}, offences)) {
                 return;
             }
             const Json& phase = state["phase"];
@@ -173,7 +173,7 @@ namespace BECore::Mahjong::Tests {
             if (!state["seat"].is_number_integer() || state["seat"].get<int>() != seat) {
                 Offend(offences, "view.seat", "is not the seat of the client");
             }
-            for (const char* key : {"wall", "east", "handsPlayed", "handsTotal", "version"}) {
+            for (const char* key : {"wall", "east", "handsPlayed", "handsTotal", "version", "format"}) {
                 CheckNumber(state, key, where, offences);
             }
             if (!state["wall"].is_number_integer()) {

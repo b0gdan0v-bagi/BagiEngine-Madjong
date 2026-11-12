@@ -10,6 +10,11 @@ namespace BECore::Mahjong {
     /// The name a room server registers the game under (`create_room {game}`).
     inline constexpr eastl::string_view kSeatedGameName = "mahjong";
 
+    /// The `format` number in every view of a started game. A client reads exactly its own number and says so in words when a server
+    /// sends another. Bump it with every change of the keys or the meaning of a view that an old client cannot read (a change in
+    /// `MahjongStateJson` that reaches the view, a new required key, a changed type).
+    inline constexpr int kOnlineViewFormat = 1;
+
     /// The seed of the computer that answers at state version `version` of a match seeded `seed`: one function of both, so the same state
     /// gives the same answer and the next state another one.
     [[nodiscard]] uint32_t MixSeed(uint32_t seed, uint64_t version) noexcept;
@@ -22,9 +27,9 @@ namespace BECore::Mahjong {
      * and asks `ChooseComputerAction` for those seats. Options of `Start` (untrusted, other members ignored): `hands` 8 or 16 (default
      * 16), `level` 1..10 (the level of every computer seat, default `kDefaultLevel`).
      *
-     * The view of a seat is the table state of `MahjongStateJson` for that seat without `kind`, `level` and `levels`, plus `ready`
-     * (four booleans: the seats that sent `next_hand` in the finished hand). The tiles of the other hands are never in it; in a finished
-     * hand `result` shows all four (the payments depend on them).
+     * The view of a seat is the table state of `MahjongStateJson` for that seat without `kind`, `level` and `levels`, plus `format`
+     * (`kOnlineViewFormat`) and `ready` (four booleans: the seats that sent `next_hand` in the finished hand). The tiles of the other
+     * hands are never in it; in a finished hand `result` shows all four (the payments depend on them).
      *
      * Actions: those of `ActionToJson` for the seats that have to decide (the player to act, every undecided seat of a claim window);
      * `{"type":"next_hand"}` once per seat in a finished hand, and the hand is settled when all four seats have sent it.
