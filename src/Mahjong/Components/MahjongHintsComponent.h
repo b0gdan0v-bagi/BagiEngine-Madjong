@@ -52,7 +52,7 @@ namespace BECore::Mahjong {
      * **The card of the coach.** In the mode Coach the sentence is not a label of its own: the advice of the table is the card `CoachCard` of the
      * node `HintsWhy` (`config/nodes/MahjongHintsWhy.xml`, on the wall ring, text and tile pictures, no input), made by `MakeAdviceCard` (the
      * sentence as its title, the advised move and the next best with their numbers, why in words, the tally). The ledger of the game
-     * (`MahjongGame::GetCoach()`, fed by the session) holds the note of the person's last differing move; while it is up the card is the note
+     * (`MahjongGame::GetCoach()`, fed by the session, in a room by the table component's `Perform`) holds the note of the person's last differing move; while it is up the card is the note
      * (`MakeNoteCard`: the computer's choice and the person's move) instead, exactly while the hints apply, the note is of this hand and of the
      * viewer. The note stays through the computers' turns (they move within a second of the person's action) and goes with the next accepted
      * action of the person (the ledger), a left or touch mouse-down that it was up for, a press of `Hint`, the end of the hand, a new match, a

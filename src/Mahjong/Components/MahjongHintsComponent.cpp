@@ -299,7 +299,7 @@ namespace BECore::Mahjong {
         CoachLedger* ledger = game != nullptr ? &game->GetCoach() : nullptr;
         bool show = false;
         if (ledger != nullptr && ledger->Note().has_value()) {
-            const CoachHandKey hand = HandKeyOf(game->GetSession());
+            const CoachHandKey hand = HandKeyOf(game->CoachContext());
             if (_coachOf != game || ledger->Version() != _coachSeen) {
                 _coachOf = game;
                 _coachSeen = ledger->Version();  // a note not seen yet belongs to the hand it is first seen in
@@ -326,10 +326,10 @@ namespace BECore::Mahjong {
             next.version = _adviceGeneration;
         }
         if (next.source != CardSource::None) {
-            const TableSession& session = game->GetSession();
+            const MoveContext context = game->CoachContext();
             next.strings = CoreManager::GetUIStrings().GetVersion();
-            next.hand = game->GetCoach().HandTallyOf(HandKeyOf(session));
-            next.match = game->GetCoach().MatchTallyOf(session.StartCount());
+            next.hand = game->GetCoach().HandTallyOf(HandKeyOf(context));
+            next.match = game->GetCoach().MatchTallyOf(context.startCount);
         }
         if (next == _cardKey) {
             return;

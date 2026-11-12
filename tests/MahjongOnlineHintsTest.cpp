@@ -1,3 +1,4 @@
+#include "CoachCardTestSupport.h"
 #include "FixedWall.h"
 #include "HandTestSupport.h"
 #include "MahjongOnlineTableTestSupport.h"
@@ -5,7 +6,10 @@
 
 #include <Mahjong/Components/MahjongHintsComponent.h>
 #include <Mahjong/Game/ComputerView.h>
+#include <Mahjong/Table/ActionButtons.h>
+#include <Mahjong/Table/Coach.h>
 #include <Mahjong/Table/Hints.h>
+#include <Mahjong/Table/ScoreText.h>
 #include <Mahjong/Table/UiPalette.h>
 
 /**
@@ -155,6 +159,21 @@ namespace BECore::Mahjong::Tests {
         void PressHint() {
             EmitAction("MahjongHintAdvice");
             Frame();
+        }
+
+        /// The player discards @p tile through the table (a click on the tile of his hand), after the Declare button when @p declare; true when the server's next view came.
+        bool DiscardThroughTheTable(const char* tile, bool declare = false) {
+            const uint64_t version = Table().version;
+            if (declare) {
+                EmitAction(SpecOf(ButtonKind::Declare).action, SpecOf(ButtonKind::Declare).value);
+            }
+            const int index = IndexOf(Viewer(), T(tile));
+            if (index < 0) {
+                ADD_FAILURE() << tile << " is not in the hand";
+                return false;
+            }
+            ClickHandTile(index);
+            return PumpUntil([&] { return Table().version > version; });
         }
 
         /// The number of tiles of the waiting row on screen.
@@ -360,6 +379,147 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(shown[0].advice, shown[1].advice);
         EXPECT_EQ(shown[0].visible, shown[1].visible) << "the other hands are not in what the viewer sees";
         EXPECT_FALSE(shown[0].advice.empty());
+    }
+
+    // ----- the coach of the room -----
+
+    TEST_F(MahjongOnlineHintsTest, ADifferingDiscardInARoomLeavesTheNoteOfTheViewersViewAndTheCardAndTheTally) {
+        ASSERT_NO_FATAL_FAILURE(StartHintsRoom(true, HintsMode::Coach));
+        ASSERT_NO_FATAL_FAILURE(LayStates(PlayedStates(kSeat2Hand, kSeat3Hand, false)));
+        ASSERT_TRUE(_game->CoachActive());
+        const CoachLedger& coach = _game->GetCoach();
+        ASSERT_TRUE(coach.Enabled());
+        const TableView before = ServerView();
+        const std::optional<HandAction> advice = AdviceFor(before);
+        ASSERT_TRUE(advice.has_value());
+        const HandAction taken = HandAction::MakeDiscard(T("1s"));
+        ASSERT_NE(*advice, taken) << "the move differs from the computer's choice";
+        const std::optional<CoachNote> expected = JudgeMove(before, taken);
+        ASSERT_TRUE(expected.has_value());
+
+        ASSERT_TRUE(DiscardThroughTheTable("1s"));
+        Frame();
+
+        ASSERT_TRUE(coach.Note().has_value());
+        EXPECT_EQ(*coach.Note(), *expected) << "judged on the viewer's view, as the server's own seat view judges it";
+        EXPECT_EQ(coach.Note()->advised, *advice);
+        EXPECT_EQ(coach.Note()->taken, taken);
+        EXPECT_EQ(coach.HandTally(), (CoachTally{0, 1}));
+        EXPECT_EQ(coach.MatchTally(), (CoachTally{0, 1}));
+        ASSERT_TRUE(CardShown());
+        const UIStrings& strings = CoreManager::GetUIStrings();
+        const eastl::string tally = CardTallyText(strings, coach.HandTally(), coach.MatchTally());
+        EXPECT_EQ(CardVars(), CardTexts(MakeNoteCard(strings, *expected, tally)));
+    }
+
+    TEST_F(MahjongOnlineHintsTest, AnAgreeingDiscardInARoomOnlyCounts) {
+        ASSERT_NO_FATAL_FAILURE(StartHintsRoom(true, HintsMode::Coach));
+        ASSERT_NO_FATAL_FAILURE(LayStates(PlayedStates(kSeat2Hand, kSeat3Hand, false)));
+        const CoachLedger& coach = _game->GetCoach();
+        const std::optional<HandAction> advice = AdviceFor(ServerView());
+        ASSERT_EQ(advice, std::optional<HandAction>(HandAction::MakeDiscard(T("Ew"), true)));
+
+        ASSERT_TRUE(DiscardThroughTheTable("Ew", true));
+        Frame();
+
+        EXPECT_FALSE(coach.Note().has_value());
+        EXPECT_EQ(coach.HandTally(), (CoachTally{1, 1}));
+        EXPECT_EQ(coach.MatchTally(), (CoachTally{1, 1}));
+        EXPECT_FALSE(CardShown());
+    }
+
+    TEST_F(MahjongOnlineHintsTest, NothingIsJudgedWithTheHintsNotAllowedOrTheModeHints) {
+        struct Case {
+            bool allowed;
+            HintsMode mode;
+        };
+        for (const Case& test : {Case{false, HintsMode::Coach}, Case{true, HintsMode::Hints}, Case{true, HintsMode::Off}}) {
+            ASSERT_NO_FATAL_FAILURE(StartHintsRoom(test.allowed, test.mode));
+            ASSERT_NO_FATAL_FAILURE(LayStates(PlayedStates(kSeat2Hand, kSeat3Hand, false)));
+            const CoachLedger& coach = _game->GetCoach();
+            EXPECT_FALSE(coach.Enabled());
+            ASSERT_TRUE(DiscardThroughTheTable("1s")) << test.allowed << " " << static_cast<int>(test.mode);
+            Frame();
+            EXPECT_FALSE(coach.Note().has_value());
+            EXPECT_EQ(coach.HandTally(), CoachTally{});
+            EXPECT_EQ(coach.MatchTally(), CoachTally{});
+            EXPECT_FALSE(CardShown());
+            ASSERT_TRUE(_game->GetOnline().Leave());
+            ASSERT_TRUE(PumpUntil([&] { return !_game->IsOnlineTable(); }));
+            _others.clear();
+        }
+    }
+
+    TEST_F(MahjongOnlineHintsTest, AClickWhileTheServerListsNothingForTheViewerRecordsNothing) {
+        ASSERT_NO_FATAL_FAILURE(StartHintsRoom(true, HintsMode::Coach));
+        ASSERT_NO_FATAL_FAILURE(LayStates(PlayedStates(kSeat2Hand, kSeat3Hand, true)));
+        ASSERT_FALSE(Lists(ActionKind::Discard));
+        const uint64_t version = Table().version;
+        ClickHandTile(IndexOf(Viewer(), T("1s")));
+        Frame();
+        EXPECT_EQ(Table().version, version);
+        EXPECT_EQ(_game->GetCoach().MatchTally(), CoachTally{});
+        EXPECT_FALSE(_game->GetCoach().Note().has_value());
+    }
+
+    TEST_F(MahjongOnlineHintsTest, TheLedgerOfTheRoomAndTheLedgerOfTheLocalGameNeverMix) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        _game->SetHintsMode(HintsMode::Coach);
+        _game->CloseSetup();
+        _game->GetSession().RunComputers();
+        ASSERT_TRUE(_game->GetSession().ActorIsPerson());
+        ASSERT_TRUE(_game->GetSession().PerformPerson(Hand().LegalActions(_game->GetSession().Actor()).front()).has_value());
+        const CoachTally local = _game->GetCoach().MatchTally();
+        ASSERT_EQ(local.moves, 1);
+
+        ASSERT_NO_FATAL_FAILURE(StartHintsRoom(true, HintsMode::Coach));
+        ASSERT_TRUE(_game->IsOnlineTable());
+        EXPECT_EQ(_game->GetCoach().MatchTally(), CoachTally{}) << "the room starts with a ledger of its own";
+        ASSERT_NO_FATAL_FAILURE(LayStates(PlayedStates(kSeat2Hand, kSeat3Hand, false)));
+        ASSERT_TRUE(DiscardThroughTheTable("1s"));
+        Frame();
+        EXPECT_EQ(_game->GetCoach().MatchTally(), (CoachTally{0, 1}));
+
+        ASSERT_TRUE(_game->GetOnline().Leave());
+        ASSERT_TRUE(PumpUntil([&] { return !_game->IsOnlineTable(); }));
+        EXPECT_EQ(_game->GetCoach().MatchTally(), local) << "the local game's tally is as it was";
+        EXPECT_TRUE(_game->GetCoach().Enabled());
+    }
+
+    TEST_F(MahjongOnlineHintsTest, TheMatchOverPlateOfARoomShowsTheTallyOfTheRoomsLedger) {
+        _game->SetHintsMode(HintsMode::Coach);
+        ASSERT_NO_FATAL_FAILURE(StartRoom(kShortMatchHands, 0, true));  // computers play the other seats
+        CoachLedger& coach = _game->GetCoach();
+        ASSERT_TRUE(coach.Enabled());
+        ASSERT_TRUE(PlayUntil([&] { return Lists(ActionKind::Discard); }, false));
+        // A move judged as the table component does it (the matches of this size are played by the first listed action, which feeds nothing)
+        const TableView view = MahjongHintsComponent::ViewOf(*_game, Viewer());
+        ASSERT_FALSE(view.legal.empty());
+        coach.OnPersonMove(view, view.legal.front(), _game->CoachContext());
+        const CoachTally tally = coach.MatchTally();
+        ASSERT_EQ(tally.moves, 1);
+
+        constexpr int kMostHands = 40;
+        constexpr int kMatchFrames = 40000;
+        int hands = 0;
+        while (_game->GetSession().GetPhase() != SessionPhase::MatchOver && hands < kMostHands) {
+            ASSERT_TRUE(PlayUntil([&] { return _game->GetSession().GetPhase() != SessionPhase::Playing; }, true, kMatchFrames)) << "hand " << hands;
+            if (_game->GetSession().GetPhase() == SessionPhase::HandOver) {
+                ++hands;
+                _game->GetOnline().Act(0);
+                for (const std::unique_ptr<HubPlayer>& other : _others) {
+                    other->ActFirst();
+                }
+                ASSERT_TRUE(PlayUntil([&] { return _game->GetSession().GetPhase() != SessionPhase::HandOver; }, false, kMatchFrames));
+            }
+        }
+        ASSERT_EQ(_game->GetSession().GetPhase(), SessionPhase::MatchOver) << "after " << hands << " hands";
+        Frame();
+        Frame();
+        EXPECT_EQ(coach.MatchTally(), tally) << "the tally survives the hands of the match";
+        ASSERT_TRUE(OnScreen("MatchOver", "MatchCoachRow"));
+        const eastl::string expected = FormatCoachTally(CoreManager::GetUIStrings(), CoachTally{}, tally);
+        EXPECT_STREQ(Var("matchOverCoach").c_str(), expected.c_str());
     }
 
 }  // namespace BECore::Mahjong::Tests

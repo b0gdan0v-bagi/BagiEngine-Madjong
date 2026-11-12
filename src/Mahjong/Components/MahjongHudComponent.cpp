@@ -346,7 +346,7 @@ namespace BECore::Mahjong {
             SetNextHandDisabled(!CanSendNextHand(*room));
         } else {
             const CoachLedger& coach = game.GetCoach();
-            tally = game.CoachActive() ? FormatCoachTally(strings, coach.HandTallyOf(HandKeyOf(session)), coach.MatchTallyOf(session.StartCount())) : eastl::string();
+            tally = game.CoachActive() ? FormatCoachTally(strings, coach.HandTallyOf(HandKeyOf(game.CoachContext())), coach.MatchTallyOf(game.CoachContext().startCount)) : eastl::string();
             SetNextHandDisabled(false);
         }
         vars.Set("handOverCoach"_intern, eastl::string_view(tally));
@@ -471,8 +471,7 @@ namespace BECore::Mahjong {
             vars.Set(SeatVar("standing", row), eastl::string_view(table.rows[row]));
         }
         const UIStrings& strings = CoreManager::GetUIStrings();
-        const eastl::string tally =
-            game.CoachActive() && !game.IsOnlineTable() ? FormatCoachTally(strings, CoachTally{}, game.GetCoach().MatchTallyOf(game.GetSession().StartCount())) : eastl::string();
+        const eastl::string tally = game.CoachActive() ? FormatCoachTally(strings, CoachTally{}, game.GetCoach().MatchTallyOf(game.CoachContext().startCount)) : eastl::string();
         vars.Set("matchOverCoach"_intern, eastl::string_view(tally));
         UICanvasComponent::SetElementVisibleByName(GetScene(), "MatchCoachRow"_intern, !tally.empty());
     }
