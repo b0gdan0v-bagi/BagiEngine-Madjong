@@ -179,7 +179,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(host.screens.Start(host.Client()));
         ASSERT_TRUE(RunUntil(world, {&host}, [&] { return host.Client().HasTable(); }));
         EXPECT_EQ(host.Client().Table().handsTotal, kShortMatchHands);
-        EXPECT_EQ(host.screens.Page(), OnlinePage::Lobby) << "slice 4 puts the table here; the page stays the lobby";
+        EXPECT_EQ(host.screens.Page(), OnlinePage::Closed) << "the table of a started game is the scene's: the panel closes";
         EXPECT_EQ(host.Client().Stage(), OnlineStage::Game);
     }
 
@@ -382,7 +382,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(guest.screens.CanReturn());
     }
 
-    TEST(MahjongOnlineScreens, ALostConnectionInAStartedGameComesBackToTheSameLobbyPage) {
+    TEST(MahjongOnlineScreens, ALostConnectionInAStartedGameLeavesTheTableToTheScene) {
         MahjongHubWorld world;
         Person host(world);
         Person guest(world);
@@ -395,9 +395,9 @@ namespace BECore::Mahjong::Tests {
 
         guest.player.Sever();
         Settle(world, both);
-        EXPECT_EQ(guest.screens.Page(), OnlinePage::Lobby);
+        EXPECT_EQ(guest.screens.Page(), OnlinePage::Closed) << "the frozen table is the scene's too";
         ASSERT_TRUE(RunUntil(world, both, [&] { return InStage(guest, OnlineStage::Game); }));
-        EXPECT_EQ(guest.screens.Page(), OnlinePage::Lobby);
+        EXPECT_EQ(guest.screens.Page(), OnlinePage::Closed);
         EXPECT_TRUE(guest.screens.StatusKey().empty());
         EXPECT_TRUE(guest.screens.NoticeKey().empty());
     }
@@ -441,7 +441,7 @@ namespace BECore::Mahjong::Tests {
 
         // The same client: a closed connection keeps the session
         first.Client().Disconnect();
-        first.screens.Sync(first.Client());
+        first.screens.Open(first.Client());
         EXPECT_EQ(first.screens.Page(), OnlinePage::Menu);
         ASSERT_TRUE(first.screens.CanReturn());
         EXPECT_EQ(first.screens.ReturnRoom(), room);
@@ -461,7 +461,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(second.screens.Page(), OnlinePage::Lobby);
         EXPECT_EQ(Std(second.screens.StatusKey()), Std(kOnlineReconnectingKey));
         ASSERT_TRUE(RunUntil(world, {&second}, [&] { return second.Client().HasTable(); }));
-        EXPECT_EQ(second.screens.Page(), OnlinePage::Lobby);
+        EXPECT_EQ(second.screens.Page(), OnlinePage::Closed) << "the table of the room is the scene's";
         EXPECT_TRUE(second.screens.StatusKey().empty());
         EXPECT_TRUE(second.screens.NoticeKey().empty());
         EXPECT_EQ(second.Client().Room(), room);
@@ -469,8 +469,8 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(second.screens.CanReturn());
 
         // The stored room does not outlive the session of the client: a leave forgets it
-        ASSERT_TRUE(second.screens.Leave(second.Client()));
-        ASSERT_TRUE(RunUntil(world, {&second}, [&] { return second.screens.Page() == OnlinePage::Menu; }));
+        ASSERT_TRUE(second.Client().Leave());
+        ASSERT_TRUE(RunUntil(world, {&second}, [&] { return second.Client().Stage() == OnlineStage::Idle; }));
         EXPECT_FALSE(second.screens.CanReturn());
     }
 

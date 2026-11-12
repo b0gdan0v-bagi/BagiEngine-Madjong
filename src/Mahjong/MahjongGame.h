@@ -8,6 +8,7 @@
 #include <Mahjong/MatchLogWriter.h>
 #include <Mahjong/MatchUpload.h>
 #include <Mahjong/Online/OnlineClient.h>
+#include <Mahjong/Online/OnlineMirror.h>
 #include <Mahjong/Save/MatchSave.h>
 #include <Mahjong/Save/MatchSaveStore.h>
 #include <Mahjong/Table/AnimationSpeed.h>
@@ -35,7 +36,7 @@ namespace BECore::Mahjong {
      * rules are `IsRulesOpen`. The language of the words (`GetLanguage`, `kDefaultLanguage`) is kept for the session and applied to
      * `CoreManager::GetUIStrings()` at every start. `GetHintsMode()` is the switch of the hints (`Off | Hints | Coach`, default Hints, kept for the
      * session, changed on the page `Options`). Every match begun through the session is written down by the `MatchLogWriter` the game owns
-     * (`GetMatchLog()`); a match started through the non-const `GetMatch()` is not.
+     * (`GetMatchLog()`); a match started through the non-const `GetMatch()` / `GetLocalMatch()` is not.
      *
      * **Saving** (`Save/MatchSave.h`, `Save/MatchSaveStore.h`): the session's sink is a `MatchRecorder` that keeps the events of the
      * match begun by `StartMatch` (and passes every one on to the match log writer), and `FlushSave()` writes the `match` slot (and the
@@ -74,21 +75,48 @@ namespace BECore::Mahjong {
         /// Closes `Setup` (and the rules) and plays the saved match on. Ignored, false, when `CanContinue()` is not true.
         bool ContinueMatch();
 
-        /// The match: started by `Start()` / `Reset()` / `StartMatch`, `NotStarted` before the game is first started.
+        /// The match the table shows: the display copy of the room's table while `IsOnlineTable()`, else the local one (`GetLocalMatch()`).
+        /// Started by `Start()` / `Reset()` / `StartMatch`, `NotStarted` before the game is first started.
         Match& GetMatch() {
-            return _match;
+            return _onlineTable ? _displayMatch : _match;
         }
         const Match& GetMatch() const {
-            return _match;
+            return _onlineTable ? _displayMatch : _match;
         }
 
-        /// The session over the match: seat setup, computer players, viewer, state version. Drive the match through it.
+        /// The session over the match the table shows: seat setup, computer players, viewer, state version. Drive the match through it.
+        /// While `IsOnlineTable()` it is the display session (remote mode: nothing is played through it, `Game/TableSession.h`).
         TableSession& GetSession() {
-            return _session;
+            return _onlineTable ? _displaySession : _session;
         }
         const TableSession& GetSession() const {
+            return _onlineTable ? _displaySession : _session;
+        }
+
+        /// The match and the session of this machine's own game, whatever the table shows: what the save, the match log, the upload and the
+        /// control API see. Unchanged while a room's table is shown.
+        Match& GetLocalMatch() {
+            return _match;
+        }
+        const Match& GetLocalMatch() const {
+            return _match;
+        }
+        TableSession& GetLocalSession() {
             return _session;
         }
+        const TableSession& GetLocalSession() const {
+            return _session;
+        }
+
+        /// Whether the table shows a room's game: the client has a table in the `Game` stage, or frozen in `Reconnecting`. The state of the last
+        /// `SyncOnlineTable()`, so it moves at one place of the frame. While it holds `Setup` and the online panel are closed and the control
+        /// API answers `no_active_model`; when it ends (`Leave`, the room gone, a view of another format) `Setup` opens over the local game as it was.
+        bool IsOnlineTable() const {
+            return _onlineTable;
+        }
+        /// Brings the display pair up to date with the client (`Online/OnlineMirror.h`). `MahjongOnlineComponent` calls it right after
+        /// `GetOnline().Update()`; it does work only when `OnlineClient::Version()` moved.
+        void SyncOnlineTable();
 
         /// The writer of the match log (`MatchLogWriter.h`): every match begun through the session is written to a file of its own;
         /// `Path()` is the file of the current (or last) match.
@@ -280,6 +308,10 @@ namespace BECore::Mahjong {
         void ApplySavedOnline();
         /// The client's session into `_storedOnline` once its revision moved; marks the slot to be written.
         void FollowOnlineSession();
+        /// The table of a room goes live: the panels over the table close (the offer of `Continue` stays).
+        void EnterOnlineTable();
+        /// The table of a room is gone: the display pair is forgotten, and, with @p openSetup, `Setup` opens over the local game.
+        void LeaveOnlineTable(bool openSetup);
         /// The saved match onto the table; false (one warning unless nothing is saved or it is finished) when it cannot be.
         bool ResumeSavedMatch();
 
@@ -309,6 +341,15 @@ namespace BECore::Mahjong {
         CoachLedger _coach;                 // after _session, which holds a pointer to it (the destructor lets it go)
         MahjongGameControl _control{*this};
         eastl::unique_ptr<OnlineClient> _online;
+        // The table of a room as a display copy (`Online/OnlineMirror.h`); the local pair above never sees it
+        Match _displayMatch;
+        TableSession _displaySession{_displayMatch};  // after _displayMatch: it keeps a reference
+        MoveTracker _tracker;
+        DisplayState _displayState;  // members, so a view keeps the capacity of the last
+        TableKey _tableKey;
+        static constexpr uint64_t kNotSynced = std::numeric_limits<uint64_t>::max();
+        uint64_t _syncedClient = kNotSynced;  // `OnlineClient::Version()` of the last `SyncOnlineTable()`
+        bool _onlineTable = false;
     };
 
 }  // namespace BECore::Mahjong

@@ -77,6 +77,8 @@ namespace BECore::Mahjong {
     }
 
     void MahjongGame::Start() {
+        LeaveOnlineTable(false);
+        _syncedClient = kNotSynced;  // a client that is still in a room shows its table again at the next sync
         _store.Open(MatchSaveDirectory());
         ApplySavedPrefs();
         ApplySavedOnline();
@@ -159,6 +161,52 @@ namespace BECore::Mahjong {
         _settings.handsPerMatch = values->handsPerMatch;
         _levels = values->levels;
         _animationSpeed = values->speed;
+    }
+
+    void MahjongGame::SyncOnlineTable() {
+        if (!_online || _online->Version() == _syncedClient) {
+            return;
+        }
+        _syncedClient = _online->Version();
+        const OnlineStage stage = _online->Stage();
+        const bool live = _online->HasTable() && (stage == OnlineStage::Game || stage == OnlineStage::Reconnecting);
+        if (!live) {
+            if (_onlineTable) {
+                LeaveOnlineTable(true);
+            }
+            return;
+        }
+        const OnlineTable& table = _online->Table();
+        MakeDisplayState(table, _online->Lobby(), _displayState);
+        _displayState.hand.moves = _tracker.Follow(table);
+        const TableKey key = KeyOf(table);
+        const bool newTable = !_onlineTable || IsAnotherTable(_tableKey, key);
+        _tableKey = key;
+        ShowOnlineTable(_displayMatch, _displaySession, _displayState, newTable);
+        if (!_onlineTable) {
+            _onlineTable = true;
+            EnterOnlineTable();
+        }
+    }
+
+    void MahjongGame::EnterOnlineTable() {
+        const bool offer = _canContinue;
+        CloseSetup();
+        _canContinue = offer;  // the saved match is still there for when the room is left
+        CloseRules();
+        CloseOnline();
+    }
+
+    void MahjongGame::LeaveOnlineTable(bool openSetup) {
+        _tableKey = TableKey{};
+        _tracker.Reset();
+        if (!_onlineTable) {
+            return;
+        }
+        _onlineTable = false;
+        if (openSetup) {
+            OpenSetup();
+        }
     }
 
     OnlineClient& MahjongGame::GetOnline() {
@@ -244,7 +292,8 @@ namespace BECore::Mahjong {
         if (!_store.Open(MatchSaveDirectory())) {
             return;
         }
-        if (const uint64_t counter = _recorder.Counter(); counter != _savedCounter) {
+        // The match of a room is no match of this machine: the slot keeps the local one for `Continue`
+        if (const uint64_t counter = _recorder.Counter(); !_onlineTable && counter != _savedCounter) {
             _savedCounter = counter;
             if (_recorder.IsRecording()) {  // a match dealt behind the panel is not kept, and must not touch the slot
                 if (_recorder.Finished()) {

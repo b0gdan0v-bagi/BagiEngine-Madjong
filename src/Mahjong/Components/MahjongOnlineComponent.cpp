@@ -12,7 +12,6 @@
 #include <Mahjong/Online/OnlineWords.h>
 #include <Mahjong/Platform.h>
 #include <Mahjong/Table/Words.h>
-#include <charconv>
 
 namespace BECore::Mahjong {
 
@@ -148,6 +147,7 @@ namespace BECore::Mahjong {
         }
         OnlineClient& client = game->GetOnline();
         client.Update();
+        game->SyncOnlineTable();  // before Follow: a table that goes live closes the panel
         Follow(*game);
         _screens.Sync(client);
         _screens.Refresh(CoreManager::GetUIStrings());
@@ -411,7 +411,6 @@ namespace BECore::Mahjong {
         SetItem(Notice, notice);
         SetItem(Status, status);
         SetItem(Waiting, lobbyLine && stage == OnlineStage::Lobby && !client.IsHost());
-        SetItem(Started, lobbyLine && stage == OnlineStage::Game);
 
         const bool seats = inLobby && !lobby.room.empty();
         for (size_t seat = 0; seat < kSeatCount; ++seat) {
