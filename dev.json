@@ -1,0 +1,34 @@
+{
+    "about": "The products of BagiMahjong for engine/tools/dev/dev.py and the VS Code panel Bagi Dev (engine/tools/dev/CLAUDE.md). {bin} is build/<preset>/bin.",
+    "products": [
+        { "name": "game", "label": "BagiMahjong (desktop)", "target": "BagiMahjong", "run": ["{bin}/BagiMahjong{exe}"] },
+        { "name": "tests", "label": "MahjongTests + ctest", "targets": ["BagiMahjong", "MahjongTests"], "run": ["ctest", "--preset", "{preset}"] },
+        { "name": "server", "label": "Room server on :8081", "target": "BagiMahjongServer", "run": ["{bin}/BagiMahjongServer{exe}", "--port", "8081"] },
+        {
+            "name": "web",
+            "label": "Browser build on localhost:8080",
+            "kind": "web",
+            "prefer": "release",
+            "target": "BagiMahjong",
+            "after": [["{python}", "engine/tools/web/package.py", "{bin}", "dist", "--game", "BagiMahjong", "--app", "web/app.json"]],
+            "run": ["{python}", "engine/tools/web/serve.py", "--root", "dist"],
+            "url": "http://localhost:8080"
+        },
+        { "name": "arena", "label": "Bot arena (Release)", "prefer": "release", "target": "BagiMahjongArena", "run": ["{bin}/BagiMahjongArena{exe}", "--focus", "normal", "--others", "random", "--seeds", "200"] },
+        { "name": "analyzer", "label": "EV analyzer (Release)", "prefer": "release", "target": "BagiMahjongAnalyzer", "run": ["{bin}/BagiMahjongAnalyzer{exe}", "--help"] }
+    ],
+    "chains": [
+        {
+            "name": "online-local",
+            "label": "Room server + two desktop games",
+            "env": { "BAGI_MAHJONG_SERVER": "ws://localhost:8081" },
+            "steps": ["server", "game", "game"]
+        }
+    ],
+    "tools": [
+        { "name": "ui-shots", "label": "UI screenshots of the desktop game", "build": "game", "command": ["{python}", "tools/ui_shots.py", "--exe", "{bin}/BagiMahjong{exe}", "--label", "now"] },
+        { "name": "tiles-check", "label": "Is the tile atlas up to date", "command": ["{python}", "tools/make_tiles.py", "--check"] },
+        { "name": "format", "label": "clang-format the changed files", "command": ["{python}", "engine/CI/scripts/format_sources.py", "--changed", "--root", "."] },
+        { "name": "doc-budget", "label": "Docs budget", "command": ["{python}", "engine/CI/scripts/check_doc_budget.py", "--root", "."] }
+    ]
+}
