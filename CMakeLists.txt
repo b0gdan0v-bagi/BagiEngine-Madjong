@@ -70,6 +70,7 @@ if(ENGINE_BUILD_TESTS)
     # WHOLE_ARCHIVE: MahjongGameTest starts the game through GameManager, which finds MahjongGame by its BE_CLASS registration only
     be_add_game_tests(MahjongTests
         SOURCES ${MAHJONG_TEST_SOURCES}
+        LINK RoomsModule
         WHOLE_ARCHIVE MahjongModule
     )
 
