@@ -419,6 +419,29 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(NeedsCompactActions(720.0f, 1280.0f, 0.0f, kMinTouch, 1.0f, kPortraitViewWidth, kPortraitViewHeight));
     }
 
+    TEST(TouchRegimeTest, TheBottomInsetLiftsTheCompactRowSoTheBarHasToHoldTheRowAboveIt) {
+        const auto narrow = [](float width, float height, float inset) { return NeedsCompactActions(width, height, 1.0f, kMinTouch, 1.0f, kNarrowViewWidth, kNarrowViewHeight, inset); };
+        // 610 x 600 (the table is 433.8 high, the bar 83.1 px, the row 120 units at the scale 0.63: 75.6 px): no inset as before
+        EXPECT_TRUE(narrow(610.0f, 600.0f, 0.0f));
+        EXPECT_EQ(narrow(610.0f, 600.0f, 0.0f), NeedsCompactActions(610.0f, 600.0f, 1.0f, kMinTouch, 1.0f, kNarrowViewWidth, kNarrowViewHeight)) << "the inset defaults to none";
+        // an inset the bar holds: 83.1 - 7 = 76.1 px for 75.6
+        EXPECT_TRUE(narrow(610.0f, 600.0f, 7.0f));
+        // one it does not: the 4 percent of the short side that the side insets leave below (24 px) lift the row to 59.1 px of bar for 75.6
+        EXPECT_FALSE(narrow(610.0f, 600.0f, 0.04f * 600.0f));
+        // the edge: the inset that leaves exactly the row is still compact, a pixel more is not
+        EXPECT_TRUE(narrow(610.0f, 600.0f, 7.4f));
+        EXPECT_FALSE(narrow(610.0f, 600.0f, 8.0f));
+        // an inset that is not positive counts as none
+        EXPECT_TRUE(narrow(610.0f, 600.0f, -50.0f));
+        // the inset changes nothing where the buttons are big enough, and nothing where no bar holds the row
+        EXPECT_FALSE(narrow(1200.0f, 800.0f, 0.0f));
+        EXPECT_FALSE(narrow(1200.0f, 800.0f, 30.0f));
+        EXPECT_FALSE(narrow(480.0f, 360.0f, 0.0f));
+        // a portrait window with a bar to spare keeps the compact row under an inset: 300 x 800 has a bar of 133 px for a row of 110
+        EXPECT_TRUE(NeedsCompactActions(300.0f, 800.0f, 1.0f, kMinTouch, 1.0f, kPortraitViewWidth, kPortraitViewHeight, 12.0f));
+        EXPECT_FALSE(NeedsCompactActions(300.0f, 800.0f, 1.0f, kMinTouch, 1.0f, kPortraitViewWidth, kPortraitViewHeight, 40.0f));
+    }
+
     TEST(TouchRegimeTest, APortraitViewGetsTheDesktopProfileInAnyWindow) {
         const struct {
             float width;

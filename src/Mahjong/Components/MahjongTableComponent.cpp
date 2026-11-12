@@ -556,7 +556,9 @@ namespace BECore::Mahjong {
         const WindowNumbers numbers = ReadWindow();
         const UILayoutContext& window = numbers.context;
         const ViewSize view = ActiveViewSize(scene);
-        const bool compact = NeedsCompactActions(window.outputWidth, window.outputHeight, window.pixelDensity, numbers.minTouchSize, window.userScale, view.width, view.height);
+        // `ActionsCompact` keeps to the safe area, so the rule takes the inset it is lifted by (an empty safe area is the whole output)
+        const float bottomInset = window.safeArea.IsEmpty() ? 0.0f : window.outputHeight - (window.safeArea.y + window.safeArea.h);
+        const bool compact = NeedsCompactActions(window.outputWidth, window.outputHeight, window.pixelDensity, numbers.minTouchSize, window.userScale, view.width, view.height, bottomInset);
         if (compact != _compactActions) {
             _compactActions = compact;
             UICanvasComponent::SetVisibleByName(scene, ActionsNode(), !compact);

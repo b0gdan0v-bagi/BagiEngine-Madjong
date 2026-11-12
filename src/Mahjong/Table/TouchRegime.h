@@ -104,16 +104,18 @@ namespace BECore::Mahjong {
      * Whether `ActionsCompact` is the canvas of the action buttons in an output of this size: a button of `Actions`
      * (`ActionButtonHeightFor` the shape of the view, scaled by the fit of the table, over the pixel density) would be smaller than the touch minimum
      * (`UISettings::minTouchSize`, in window units) **and** the bar under the table holds the compact row at its height there
-     * (`CompactRowHeight` of the canvas width, times `CompactScale`). The row lies at the bottom of the window and a stack has the height
-     * it is given, so it reaches that far up whatever number of lines its buttons use; without such a bar (a window as high as the table:
-     * every 16:9 window below 731.4 x 411.4, a short wide one, a landscape phone; or one where the width makes the row several lines, like
-     * 626 x 480, or 640 x 480 and 720 x 480 at the user scale 1.5) it would lie on the viewer's hand and take the click from its
-     * tiles, so `Actions` stays, in the free corner of the table, slightly under the minimum but clear of the hand. The bar is taken
-     * without the safe area's inset, so a window with insets is judged like one without. False for an output of no size or a density that
-     * is not positive, so the first frame, before anything was drawn, shows `Actions`. The component and the tests use this one rule.
+     * (`CompactRowHeight` of the canvas width, times `CompactScale`) above the bottom inset: `ActionsCompact` keeps to the safe area, so
+     * its row is lifted by `bottomInset` (output pixels, 0 for none) and the bar less the inset has to hold it. The row lies at the bottom
+     * of the window and a stack has the height it is given, so it reaches that far up whatever number of lines its buttons use; without
+     * such a bar (a window as high as the table: every 16:9 window below 731.4 x 411.4, a short wide one, a landscape phone; one where the
+     * width makes the row several lines, like 626 x 480, or 640 x 480 and 720 x 480 at the user scale 1.5; or a near-square one whose side
+     * insets lift the row, like 610 x 600 with them) it would lie on the viewer's hand and take the click from its tiles, so `Actions`
+     * stays, in the free corner of the table, slightly under the minimum but clear of the hand. False for an output of no size or a
+     * density that is not positive, so the first frame, before anything was drawn, shows `Actions`. The component and the tests use this
+     * one rule; the view size comes before the inset so that a caller that names a view keeps its arguments.
      */
     [[nodiscard]] inline bool NeedsCompactActions(float outputWidth, float outputHeight, float pixelDensity, float minTouchSize, float userScale = 1.0f, float viewWidth = kViewWidth,
-                                                  float viewHeight = kViewHeight) noexcept {
+                                                  float viewHeight = kViewHeight, float bottomInset = 0.0f) noexcept {
         const float fit = FitScale(outputWidth, outputHeight, viewWidth, viewHeight);
         if (!(fit > 0.0f) || !(pixelDensity > 0.0f)) {
             return false;
@@ -122,7 +124,8 @@ namespace BECore::Mahjong {
             return false;
         }
         const float scale = CompactScale(outputWidth, outputHeight, userScale);
-        return BarUnderTable(outputWidth, outputHeight, viewWidth, viewHeight) >= CompactRowHeight(outputWidth / scale) * scale;
+        const float inset = bottomInset > 0.0f ? bottomInset : 0.0f;
+        return BarUnderTable(outputWidth, outputHeight, viewWidth, viewHeight) - inset >= CompactRowHeight(outputWidth / scale) * scale;
     }
 
     /**
