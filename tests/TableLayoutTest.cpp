@@ -2,6 +2,7 @@
 
 #include <Mahjong/Table/TableLayout.h>
 #include <Mahjong/Table/TableLayoutSpec.h>
+#include <Mahjong/Table/TableRegions.h>
 #include <Mahjong/Table/TapSelect.h>
 #include <Mahjong/Table/UiPalette.h>
 #include <cmath>
@@ -2228,29 +2229,30 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
-    TEST(TableLayoutTest, TheSceneClearancesHold) {
-        // What the node files of the scene rely on, in the landscape view and, a wing further right, in the wide one (a widget of the scene's wide
-        // variant either moves by the wing or lies nearer the edge of the view, so the shifted clearance is the strict one). The numbers are those of the node files; a zone of config/TableLayout.xml
-        // that crosses one fails here.
-        constexpr float kHintLabelRight = 960.0f;     // MahjongActions.xml: the Hint label ends here, left of the right seat's discard block
-        constexpr float kSelectedTileRight = 536.0f;  // MahjongHud.xml: the SelectedTile label ends here, left of the viewer's discard block
-        constexpr float kWaitPanelRight = 432.0f;     // MahjongHints.xml: the WaitPanel ends here, left of the top seat's hand
-        constexpr float kMoveLineBottom = 172.0f;     // MahjongHud.xml: the move line reaches over the side columns down to here
-        constexpr float kRulesButtonLeft = 996.0f;    // MahjongHudMenu.xml: the Rules button starts here, right of the top seat's bonus row
+    TEST(TableLayoutTest, TheFreeRegionsOfTheShippedFileLieClearOfTheWorstCaseTableInEveryShapeViewerAndProfile) {
+        // What the canvases of the table rely on is the free regions of config/TableLayout.xml, not numbers of the node files: the check of the
+        // spec holds each one inside the view and clear of every tile, block, ring and plate (the phone profile included).
+        const TableLayoutSpec& spec = ShippedTableLayoutSpec();
+        for (const eastl::string& problem : CheckTableLayoutSpec(spec)) {
+            ADD_FAILURE() << problem.c_str();
+        }
+        for (const TableShape shape : EnumUtils<TableShape>::Values()) {
+            const ShapeSpec* zones = ZonesOf(spec, shape);
+            ASSERT_NE(zones, nullptr);
+            EXPECT_EQ(zones->freeRegions.size(), std::size(kFreeRegionNames)) << EnumUtils<TableShape>::ToString(shape).data();
+        }
+    }
+
+    TEST(TableLayoutTest, TheTopBonusRowLeavesTheRulesButtonOfTheMenu) {
+        // The one clearance left to a node file: the Rules button of MahjongHudMenu.xml (a Screen canvas, not a region of the table) lies
+        // right of the top seat's bonus row, in the landscape view and a wing further right in the wide one.
+        constexpr float kRulesButtonLeft = 996.0f;
         for (const float wing : {0.0f, kWideWingWidth}) {
             const float width = kViewWidth + 2.0f * wing;
             for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
                 const TableLayout layout = MakeTableLayout(WorstInput(viewer, kWorstPile, kNoSeat), width, kViewHeight);
                 ASSERT_EQ(layout.shape, wing == 0.0f ? TableShape::Landscape : TableShape::Wide);
-                const Seat right = SeatAtPosition(viewer, 1);
-                const Seat top = SeatAtPosition(viewer, 2);
-                const Seat left = SeatAtPosition(viewer, 3);
-                EXPECT_GE(layout.zones.discards[right].x, wing + kHintLabelRight) << "MahjongActions.xml Hint label, viewer " << viewer;
-                EXPECT_GE(layout.zones.discards[viewer].x, wing + kSelectedTileRight) << "MahjongHud.xml SelectedTile label, viewer " << viewer;
-                EXPECT_GE(BoundsOf(layout, SlotRole::HandTile, top).x, wing + kWaitPanelRight) << "MahjongHints.xml WaitPanel, viewer " << viewer;
-                EXPECT_GE(BoundsOf(layout, SlotRole::BonusTile, right).y, kMoveLineBottom) << "MahjongHud.xml move line, right seat, viewer " << viewer;
-                EXPECT_GE(BoundsOf(layout, SlotRole::BonusTile, left).y, kMoveLineBottom) << "MahjongHud.xml move line, left seat, viewer " << viewer;
-                const Rect topBonus = BoundsOf(layout, SlotRole::BonusTile, top);
+                const Rect topBonus = BoundsOf(layout, SlotRole::BonusTile, SeatAtPosition(viewer, 2));
                 EXPECT_LE(topBonus.x + topBonus.w, wing + kRulesButtonLeft) << "MahjongHudMenu.xml Rules button, viewer " << viewer;
             }
         }

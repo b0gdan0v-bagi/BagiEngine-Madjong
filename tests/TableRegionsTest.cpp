@@ -4,7 +4,6 @@
 #include <Mahjong/Table/TableSolver.h>
 #include <cmath>
 #include <gtest/gtest.h>
-#include <string>
 
 /**
  * `Table/TableRegions.h`: the regions the table publishes. The zone regions are the layout's own plates (by screen position), centre panel
@@ -180,6 +179,38 @@ namespace BECore::Mahjong::Tests {
         }
         for (const char* name : {"table.plate", "table.plate.4", "table.hint", ""}) {
             EXPECT_FALSE(IsZoneRegionName(name)) << name;
+        }
+    }
+
+    TEST(TableRegionsTest, EveryShapeOfTheShippedFileHasEveryNamedFreeRegionOnceAndNoZoneName) {
+        const TableLayoutSpec& spec = ShippedTableLayoutSpec();
+        for (const TableShape shape : EnumUtils<TableShape>::Values()) {
+            const ShapeSpec* zones = ZonesOf(spec, shape);
+            ASSERT_NE(zones, nullptr);
+            for (const char* name : kFreeRegionNames) {
+                int found = 0;
+                for (const FreeRegion& region : zones->freeRegions) {
+                    found += region.name == name ? 1 : 0;
+                }
+                EXPECT_EQ(found, 1) << name << " in " << EnumUtils<TableShape>::ToString(shape).data();
+            }
+            for (const FreeRegion& region : zones->freeRegions) {
+                EXPECT_FALSE(IsZoneRegionName(region.name.c_str())) << region.name.c_str();
+            }
+        }
+    }
+
+    TEST(TableRegionsTest, TheShippedFreeRegionsAreFittedIntoEveryViewOfEveryShape) {
+        for (const ViewSize& view : kViews) {
+            const eastl::vector<TableRegion> regions = MakeTableRegions(MakeTableLayout(InputOf(0), view.width, view.height));
+            for (const char* name : kFreeRegionNames) {
+                const TableRegion* found = Find(regions, name);
+                ASSERT_NE(found, nullptr) << name << " in " << Where(view, 0);
+                EXPECT_GT(found->rect.w, 0.0f) << name;
+                EXPECT_GT(found->rect.h, 0.0f) << name;
+                EXPECT_GE(found->rect.x, -kTolerance) << name;
+                EXPECT_LE(found->rect.x + found->rect.w, view.width + kTolerance) << name << " in " << Where(view, 0);
+            }
         }
     }
 

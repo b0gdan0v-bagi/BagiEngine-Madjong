@@ -22,6 +22,18 @@ namespace BECore::Mahjong {
     inline constexpr const char* kCenterPanelRegionName = "table.centerPanel";
     inline constexpr const char* kWallRegionName = "table.wall";
 
+    /// The free regions every shape of `config/TableLayout.xml` carries (`TableRegionsTest` holds it): the node
+    /// files of the table name them with `region="..."`. The place of each is the file's, per shape; the comment there says what it stays
+    /// clear of.
+    inline constexpr const char* kMoveLineRegionName = "table.moveLine";          // the last move in words (Hud)
+    inline constexpr const char* kSelectedTileRegionName = "table.selectedTile";  // the name of the tile selected by a tap (Hud)
+    inline constexpr const char* kHintRegionName = "table.hint";                  // the sentence of the button under the pointer (Actions)
+    inline constexpr const char* kActionsRegionName = "table.actions";            // the rows of action buttons (Actions)
+    inline constexpr const char* kWaitingRegionName = "table.waiting";            // the waiting tiles of the hints (Hints)
+    inline constexpr const char* kHintButtonRegionName = "table.hintButton";      // the button that asks for advice (HintsButton)
+    inline constexpr const char* kAdviceRegionName = "table.advice";              // the sentence of the advice (Hints)
+    inline constexpr const char* kFreeRegionNames[] = {kMoveLineRegionName, kSelectedTileRegionName, kHintRegionName, kActionsRegionName, kWaitingRegionName, kHintButtonRegionName, kAdviceRegionName};
+
     /// Whether `name` is the name of a zone region (a free region may not take it).
     [[nodiscard]] bool IsZoneRegionName(eastl::string_view name) noexcept;
 
