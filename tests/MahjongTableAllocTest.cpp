@@ -1,6 +1,9 @@
+#include "ComputerTestSupport.h"
 #include "MahjongTableTestSupport.h"
 
 #include <BECore/Profiler/Alloc/AllocTracker.h>
+#include <Mahjong/Table/Coach.h>
+#include <Mahjong/Table/ScoreText.h>
 
 // The table drawn again with nothing changed allocates nothing (the entry steady-frame-allocs): the layout, its input and the snapshots
 // keep the capacity of their lists between draws. Only a build that counts allocations can see it (`macos-profile`).
@@ -81,6 +84,62 @@ namespace BECore::Mahjong::Tests {
         const uint64_t allocations = AllocTracker::GetThreadCounters().count - before;
 
         EXPECT_EQ(allocations, 0u);
+    }
+
+    /// The coach's note up on the person's next turn (the computers moved after the person's differing discard): the words are published
+    /// once, and the whole frame of every node after that allocates nothing and moves no variable.
+    TEST_F(MahjongTableAllocTest, APersonsTurnWithTheCoachsNoteUpAllocatesNothingInTheWholeFrame) {
+        _game->SetHintsMode(HintsMode::Coach);
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        // 123s 456s 789m 5p 5p Rd Ew with a drawn north wind: a discard of 5p leaves a worse hand than the computer's choice
+        Lay(MakeModel(SpecOf("1s 2s 3s 4s 5s 6s 7m 8m 9m 5p 5p Rd Ew", "Nw")));
+        Draw();
+        ASSERT_TRUE(_game->GetSession().PerformPerson(HandAction::MakeDiscard(T("5p"), false)).has_value());
+        ASSERT_TRUE(StepUntil([&] { return _game->GetSession().ActorIsPerson(); }));
+        Draw();
+        Draw();
+        ASSERT_TRUE(_game->GetCoach().Note().has_value());
+        ASSERT_TRUE(OnScreen("HintsWhy", "CoachPanel"));
+
+        const uint64_t version = CoreManager::GetUIVars().GetVersion();
+        const uint64_t before = AllocTracker::GetThreadCounters().count;
+        Draw();
+        const uint64_t allocations = AllocTracker::GetThreadCounters().count - before;
+
+        EXPECT_EQ(allocations, 0u);
+        EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), version);
+        EXPECT_TRUE(OnScreen("HintsWhy", "CoachPanel"));
+    }
+
+    /// The score table with the tally row up: after the words are published, a frame allocates nothing.
+    TEST_F(MahjongTableAllocTest, TheScoreTableWithTheTallyRowUpAllocatesNothingInTheWholeFrame) {
+        _game->SetHintsMode(HintsMode::Coach);
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        TableSession& session = _game->GetSession();
+        for (int guard = 0; guard < kActionLimit && session.GetPhase() == SessionPhase::Playing; ++guard) {
+            session.RunComputers();
+            if (session.GetPhase() != SessionPhase::Playing) {
+                break;
+            }
+            const TableView view = MakeTableView(Hand(), session.Actor());
+            ASSERT_FALSE(view.legal.empty());
+            ASSERT_TRUE(session.PerformPerson(view.legal.front()).has_value());
+        }
+        ASSERT_EQ(session.GetPhase(), SessionPhase::HandOver);
+        ASSERT_GT(_game->GetCoach().MatchTally().moves, 0);
+        Draw();
+        Draw();
+        ASSERT_TRUE(OnScreen("HandOver", "HandCoachRow"));
+        ASSERT_FALSE(Var("handOverCoach").empty());
+
+        const uint64_t version = CoreManager::GetUIVars().GetVersion();
+        const uint64_t before = AllocTracker::GetThreadCounters().count;
+        Draw();
+        const uint64_t allocations = AllocTracker::GetThreadCounters().count - before;
+
+        EXPECT_EQ(allocations, 0u);
+        EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), version);
+        EXPECT_TRUE(OnScreen("HandOver", "HandCoachRow"));
     }
 
 }  // namespace BECore::Mahjong::Tests

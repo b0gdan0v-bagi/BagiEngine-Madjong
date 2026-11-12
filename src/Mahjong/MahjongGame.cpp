@@ -31,6 +31,16 @@ namespace BECore::Mahjong {
         _upload.SetMatchIdSource(RandomMatchId);  // used only for a match that is recorded: with no sink or consent it is never called
         _session.SetLogSink(&_recorder);
         _session.SetLogOrigin(MakeMatchOrigin(kBrowserBuild));  // every front end is stamped: the session writes it into each Start
+        _session.SetMoveObserver(&_coach);
+    }
+
+    MahjongGame::~MahjongGame() {
+        _session.SetMoveObserver(nullptr);
+    }
+
+    void MahjongGame::SetHintsMode(HintsMode mode) {
+        _hintsMode = mode;
+        _coach.SetEnabled(mode == HintsMode::Coach);
     }
 
     MahjongGame* MahjongGame::GetActive() {
@@ -141,7 +151,7 @@ namespace BECore::Mahjong {
             return;
         }
         SetLanguage(PoolString::Intern(eastl::string_view(values->language.c_str(), values->language.size())));  // a language the table lacks stays out
-        _hintsOn = values->hintsOn;
+        SetHintsMode(values->hintsMode);
         _seats = values->seats;
         _settings.handsPerMatch = values->handsPerMatch;
         _levels = values->levels;
@@ -199,7 +209,7 @@ namespace BECore::Mahjong {
         }
         const int hands = _settings.handsPerMatch;
         const bool handsAreAChoice = hands == kFullMatchHands || hands == kShortMatchHands;
-        const MahjongPrefsSave prefs = MakePrefs(_language.ToStringView(), _hintsOn, _seats, handsAreAChoice ? hands : _savedPrefs.hands, _levels, _animationSpeed);
+        const MahjongPrefsSave prefs = MakePrefs(_language.ToStringView(), HintsOn(), _seats, handsAreAChoice ? hands : _savedPrefs.hands, _levels, _animationSpeed, CoachOn());
         if (!(prefs == _savedPrefs)) {
             _savedPrefs = prefs;
             _store.SavePrefs(prefs);

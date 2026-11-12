@@ -4,6 +4,7 @@
 #include <BECore/Save/SaveGame.h>
 #include <Mahjong/Game/MatchLog.h>
 #include <Mahjong/Table/AnimationSpeed.h>
+#include <Mahjong/Table/Coach.h>
 
 namespace BECore::Mahjong {
 
@@ -56,6 +57,8 @@ namespace BECore::Mahjong {
         BE_REFLECT_FIELD eastl::string language = "en";
         /// The hints switch
         BE_REFLECT_FIELD bool hintsOn = true;
+        /// The coach's notes (`HintsMode::Coach`); implies `hintsOn`, a copy written before the mode reads false
+        BE_REFLECT_FIELD bool coach = false;
         /// Who plays each seat, four letters as in the control `reset`: P a person, C a computer
         BE_REFLECT_FIELD eastl::string seats = "PCCC";
         /// 16 or 8
@@ -71,14 +74,15 @@ namespace BECore::Mahjong {
         BE_REFLECT_FIELD eastl::string speed = "normal";
 
         bool operator==(const MahjongPrefsSave& other) const {
-            return language == other.language && hintsOn == other.hintsOn && seats == other.seats && hands == other.hands && level == other.level && levels == other.levels && speed == other.speed;
+            return language == other.language && hintsOn == other.hintsOn && coach == other.coach && seats == other.seats && hands == other.hands && level == other.level && levels == other.levels &&
+                   speed == other.speed;
         }
     };
 
     /// The choices of `MahjongPrefsSave`, checked and in the types the game uses.
     struct PrefsValues {
         eastl::string language;
-        bool hintsOn = true;
+        HintsMode hintsMode = kDefaultHintsMode;
         SeatSetup seats = kDefaultSeatSetup;
         int handsPerMatch = kFullMatchHands;
         SeatLevels levels = UniformLevels(kDefaultLevel);
@@ -99,14 +103,16 @@ namespace BECore::Mahjong {
      */
     [[nodiscard]] std::expected<eastl::vector<MatchLogEvent>, eastl::string> ParseMatchSaveText(std::string_view text);
 
-    /// The state of the prefs slot from the choices of the game.
+    /// The state of the prefs slot from the choices of the game (`coach` implies `hintsOn`).
     [[nodiscard]] MahjongPrefsSave MakePrefs(eastl::string_view language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, const SeatLevels& levels,
-                                             AnimationSpeed speed = kDefaultAnimationSpeed);
+                                             AnimationSpeed speed = kDefaultAnimationSpeed, bool coach = false);
     /// The same for a table of one level.
-    [[nodiscard]] MahjongPrefsSave MakePrefs(eastl::string_view language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, ComputerLevel level, AnimationSpeed speed = kDefaultAnimationSpeed);
+    [[nodiscard]] MahjongPrefsSave MakePrefs(eastl::string_view language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, ComputerLevel level, AnimationSpeed speed = kDefaultAnimationSpeed,
+                                             bool coach = false);
 
-    /// The choices of a prefs state, or the first thing wrong: seats not four letters P / C, a `levels` text that is not four numbers `1` .. `10`, a level that is not `1` .. `10` (or the old names
-    /// `easy` / `normal`; not read when `levels` is there), a speed that is not `slow` / `normal` / `fast`, hands other than 16 and 8, an empty language.
+    /// The choices of a prefs state (`coach` wins over `hintsOn`: Coach, else Hints or Off), or the first thing wrong: seats not four letters P / C, a `levels` text that is not four numbers `1` ..
+    /// `10`, a level that is not `1` .. `10` (or the old names `easy` / `normal`; not read when `levels` is there), a speed that is not `slow` / `normal` / `fast`, hands other than 16 and 8, an empty
+    /// language.
     [[nodiscard]] std::expected<PrefsValues, eastl::string> ReadPrefs(const MahjongPrefsSave& prefs);
 
     /**

@@ -11,6 +11,11 @@
   (10), under the covers and the modal screens (20 and up). A SceneView canvas whose panel ignores the safe area like CenterPanel, so
   it stays on the ring. MahjongHintsTest holds it inside the ring, clear of every slot but the wall stacks, free of input, and every
   line of the longest text in both languages fitting on the size matrix.
+  CoachPanel is the note of the coach (Table/Coach.h, MahjongHintsComponent): up to three sentences {coachNote0}..{coachNote2}, each in
+  a label of 312 x 40 that wraps to two lines (font 18, AutoFit down to 12). It lies inside the centre panel (x 472..808, y 282..422), 4 units
+  clear of it so that the gold light of the turn on the panel's edge stays visible while the computers move (the note stays up through
+  their turns), on the grid of 4: 320 x 128 at x 480, y 288, with 4 padding. It takes the ring's shifts (portrait 280 left, 132 down;
+  narrow 100 left; wide 140 right) and is never up with WhyPanel. Opaque plate, text only, no input. MahjongCoachTest holds it.
 -->
 <node name="HintsWhy" layer="11" contentVersion="2">
   <components>
@@ -26,21 +31,31 @@
             <element type="UILabel" name="WhyLine5" width="360" height="28" text="{hintWhy5}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" />
           </children>
         </element>
+        <element type="UIStack" name="CoachPanel" anchor="TopLeft" ignoreSafeArea="true" visible="false" x="480" y="288" width="320" height="128" direction="Vertical" spacing="0" padding="4" crossAlign="Start" color="36,40,52,255">
+          <children>
+            <element type="UILabel" name="CoachLine0" width="312" height="40" text="{coachNote0}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" />
+            <element type="UILabel" name="CoachLine1" width="312" height="40" text="{coachNote1}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" />
+            <element type="UILabel" name="CoachLine2" width="312" height="40" text="{coachNote2}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" />
+          </children>
+        </element>
       </elements>
       <variants>
         <variant when="orientation:portrait">
           <overrides>
             <set element="WhyPanel" x="180" y="400" />
+            <set element="CoachPanel" x="200" y="420" />
           </overrides>
         </variant>
         <variant when="orientation:landscape;maxAspect:1.55">
           <overrides>
             <set element="WhyPanel" x="360" />
+            <set element="CoachPanel" x="380" />
           </overrides>
         </variant>
         <variant when="minAspect:2">
           <overrides>
             <set element="WhyPanel" x="600" />
+            <set element="CoachPanel" x="620" />
           </overrides>
         </variant>
       </variants>

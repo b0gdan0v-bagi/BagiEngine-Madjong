@@ -15,9 +15,11 @@
   The hands, melds and bonus tiles of the four seats take the edges of the view (left columns x 8..119, right columns x 1161..1272,
   the top rows y 8..90, the bottom rows y 620..712 at the design size), so the ground left is about x 120..1160 and y 92..616. It holds
   the discard blocks, the wall ring and the seat plates, which the plate covers on purpose while it is up.
-  The plate is 1032 wide (x 124..1156, clear of the side columns) and 32 padding + 48 headline band (one line of 28) + 4 x 32 seat
-  rows + 64 gap + 124 lines (four columns, 4 rows of 28 with 4 between) + 48 summary band + 7 x 8 spacing (8 children) = 500 units, at
-  y -8 from the middle: y 102..602, clear of the top sets and 18 above the bottom row of bonus tiles. The plate has ignoreSafeArea, like the
+  The plate is 1032 wide (x 124..1156, clear of the side columns) and 32 padding + 52 headline band (one line of 28) + 4 x 32 seat
+  rows + 64 gap + 108 lines (four columns, 4 rows of 24 with 4 between) + 24 HandCoachRow + 36 summary band + 8 x 8 spacing (9 children)
+  = 508 units, at y -8 from the middle: y 98..606, clear of the top sets and above the large hand of the phone profile (y 609.6). The height is a fixed
+  budget: HandCoachRow (the coach's tally, handOverCoach) is hidden unless the HUD has text for it and then takes no room, so the plate
+  keeps its size and only its bottom edge is empty; the gap stays at y 334..398 either way (the headline band takes the 4 the plate gained, so the gap and the button keep the place the 80 units of room were made for). The plate has ignoreSafeArea, like the
   table it lies on (a fixed design that ignores the safe area): with side insets in a portrait or square window 1032 units do not fit the
   safe area, and the hands do not move either.
   In a portrait view (720 x 1280, the variant below) the plate is 472 wide (x 124..596, 6 clear of the side seats' bonus columns at x 94..118 and 602..626,
@@ -25,12 +27,12 @@
   is a size smaller (22), the seat rows too (18), and the headline and the summary two lines high (72), for the words of the narrow plate. The
   gap is 112 high: the window is as wide as the table or wider than it in a portrait window, so the button, which follows the window's scale,
   outgrows the table's fit by 1.6 at most (the 1:1 window of 480 px, where the floor of the canvas scale holds), and 56 x 1.6 = 90. The plate
-  is 724 high and 56 under the middle of the view (y 334..1058), which puts the middle of the gap, 312 under its top, 6 units under the middle of
+  is 748 high (the lines are rows of 24, 8 rows 220, and HandCoachRow is two lines of 18, 48) and 68 under the middle of the view (y 334..1082), which puts the middle of the gap, 312 under its top, 6 units under the middle of
   the view as in the landscape plate; it ends clear of the viewer's rows (the bonus tiles start at y 1112).
   In a narrow view (1080 x 768, the variant with orientation:landscape;maxAspect:1.55; config/TableLayout.xml, the narrow table) the side seats'
   columns are at x 8..112 and 968..1072 (the bonus tiles are the inner ones), the top rows end at y 90 and the viewer's row of melds and bonus
-  tiles starts at y 636, so the plate is 840 wide (x 120..960, 8 clear of the columns) and keeps its height and its place (y -8 from the
-  middle: y 126..626, 10 above the viewer's row); the lines are 24 % of it (197 units, AutoFit down to 12); the Headline (28) shrinks to 22 where the Russian text does not fit. The button of HandOverAction follows the
+  tiles starts at y 636, so the plate is 840 wide (x 120..960, 8 clear of the columns) and as high as the wide one, 508, at the same y (the middle is 384 here: y 122..630,
+  6 above the viewer's row, the gap y 358..422); the lines are 24 % of it (197 units, AutoFit down to 12); the Headline (28) shrinks to 22 where the Russian text does not fit. The button of HandOverAction follows the
   window and stays in the gap: in a narrow window the ratio of its scale to the table's is 1.0 to 1.02, far under the 1.41 the gap holds.
   MahjongEndScreenTest holds the sizes and that no hand, meld or bonus tile of the worst-case table is covered by the plate or the
   button; MahjongTouchSizeTest holds the button against the gap, the plate and the table in every window of the matrix.
@@ -39,42 +41,43 @@
   <components>
     <component type="UICanvasComponent" space="SceneView" useSafeArea="true" modal="true" visible="false">
       <elements>
-        <element type="UIStack" name="Plate" anchor="Center" ignoreSafeArea="true" y="-8" width="1032" height="500" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
+        <element type="UIStack" name="Plate" anchor="Center" ignoreSafeArea="true" y="-8" width="1032" height="508" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
           <children>
-            <element type="UILabel" name="Headline" height="48" text="{handOverHeadline}" fontSize="28" overflow="AutoFit" minFontSize="22" align="Center" verticalAlign="Center" color="58,66,92,255" />
+            <element type="UILabel" name="Headline" height="52" text="{handOverHeadline}" fontSize="28" overflow="AutoFit" minFontSize="22" align="Center" verticalAlign="Center" color="58,66,92,255" />
             <element type="UILabel" name="SeatRow0" height="32" text="{handOverSeat0}" fontSize="22" align="Center" verticalAlign="Center" color="48,54,72,255" />
             <element type="UILabel" name="SeatRow1" height="32" text="{handOverSeat1}" fontSize="22" align="Center" verticalAlign="Center" color="48,54,72,255" />
             <element type="UILabel" name="SeatRow2" height="32" text="{handOverSeat2}" fontSize="22" align="Center" verticalAlign="Center" color="48,54,72,255" />
             <element type="UILabel" name="SeatRow3" height="32" text="{handOverSeat3}" fontSize="22" align="Center" verticalAlign="Center" color="48,54,72,255" />
             <element type="UIElement" name="ButtonGap" height="64" />
-            <element type="UIStack" name="Lines" height="124" direction="Horizontal" spacing="4" wrapChildren="true">
+            <element type="UIStack" name="Lines" height="108" direction="Horizontal" spacing="4" wrapChildren="true">
               <children>
-                <element type="UILabel" name="ScoreLine0" visible="false" width="24%" height="28" overflow="AutoFit" minFontSize="12" text="{scoreLine0}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine1" visible="false" width="24%" height="28" overflow="AutoFit" minFontSize="12" text="{scoreLine1}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine2" visible="false" width="24%" height="28" overflow="AutoFit" minFontSize="12" text="{scoreLine2}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine3" visible="false" width="24%" height="28" overflow="AutoFit" minFontSize="12" text="{scoreLine3}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine4" visible="false" width="24%" height="28" overflow="AutoFit" minFontSize="12" text="{scoreLine4}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine5" visible="false" width="24%" height="28" overflow="AutoFit" minFontSize="12" text="{scoreLine5}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine6" visible="false" width="24%" height="28" overflow="AutoFit" minFontSize="12" text="{scoreLine6}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine7" visible="false" width="24%" height="28" overflow="AutoFit" minFontSize="12" text="{scoreLine7}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine8" visible="false" width="24%" height="28" overflow="AutoFit" minFontSize="12" text="{scoreLine8}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine9" visible="false" width="24%" height="28" overflow="AutoFit" minFontSize="12" text="{scoreLine9}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine10" visible="false" width="24%" height="28" overflow="AutoFit" minFontSize="12" text="{scoreLine10}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine11" visible="false" width="24%" height="28" overflow="AutoFit" minFontSize="12" text="{scoreLine11}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine12" visible="false" width="24%" height="28" overflow="AutoFit" minFontSize="12" text="{scoreLine12}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine13" visible="false" width="24%" height="28" overflow="AutoFit" minFontSize="12" text="{scoreLine13}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine14" visible="false" width="24%" height="28" overflow="AutoFit" minFontSize="12" text="{scoreLine14}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine15" visible="false" width="24%" height="28" overflow="AutoFit" minFontSize="12" text="{scoreLine15}" fontSize="18" />
+                <element type="UILabel" name="ScoreLine0" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine0}" fontSize="18" />
+                <element type="UILabel" name="ScoreLine1" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine1}" fontSize="18" />
+                <element type="UILabel" name="ScoreLine2" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine2}" fontSize="18" />
+                <element type="UILabel" name="ScoreLine3" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine3}" fontSize="18" />
+                <element type="UILabel" name="ScoreLine4" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine4}" fontSize="18" />
+                <element type="UILabel" name="ScoreLine5" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine5}" fontSize="18" />
+                <element type="UILabel" name="ScoreLine6" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine6}" fontSize="18" />
+                <element type="UILabel" name="ScoreLine7" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine7}" fontSize="18" />
+                <element type="UILabel" name="ScoreLine8" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine8}" fontSize="18" />
+                <element type="UILabel" name="ScoreLine9" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine9}" fontSize="18" />
+                <element type="UILabel" name="ScoreLine10" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine10}" fontSize="18" />
+                <element type="UILabel" name="ScoreLine11" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine11}" fontSize="18" />
+                <element type="UILabel" name="ScoreLine12" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine12}" fontSize="18" />
+                <element type="UILabel" name="ScoreLine13" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine13}" fontSize="18" />
+                <element type="UILabel" name="ScoreLine14" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine14}" fontSize="18" />
+                <element type="UILabel" name="ScoreLine15" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine15}" fontSize="18" />
               </children>
             </element>
-            <element type="UILabel" name="Summary" height="48" text="{handOverSummary}" fontSize="18" align="Center" verticalAlign="Center" color="48,54,72,255" textColor="190,196,190,255" />
+            <element type="UILabel" name="HandCoachRow" visible="false" height="24" text="{handOverCoach}" fontSize="18" overflow="AutoFit" minFontSize="12" align="Center" verticalAlign="Center" color="48,54,72,255" textColor="190,196,190,255" />
+            <element type="UILabel" name="Summary" height="36" text="{handOverSummary}" fontSize="18" align="Center" verticalAlign="Center" color="48,54,72,255" textColor="190,196,190,255" />
           </children>
         </element>
       </elements>
       <variants>
         <variant when="orientation:portrait">
           <overrides>
-            <set element="Plate" y="56" width="472" height="724" />
+            <set element="Plate" y="68" width="472" height="748" />
             <set element="Headline" height="72" fontSize="22" />
             <set element="SeatRow0" fontSize="18" />
             <set element="SeatRow1" fontSize="18" />
@@ -82,7 +85,8 @@
             <set element="SeatRow3" fontSize="18" />
             <set element="ButtonGap" height="112" />
             <set element="Summary" height="72" />
-            <set element="Lines" height="252" />
+            <set element="Lines" height="220" />
+            <set element="HandCoachRow" height="48" />
             <set element="ScoreLine0" width="48%" />
             <set element="ScoreLine1" width="48%" />
             <set element="ScoreLine2" width="48%" />

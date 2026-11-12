@@ -200,6 +200,10 @@ namespace BECore::Mahjong {
         if (KindOf(actor) != SeatKind::Person) {
             return std::unexpected(HandError::NotYourTurn);
         }
+        std::optional<TableView> before;
+        if (_observer != nullptr) {
+            before = MakeTableView(_match.Hand(), actor);
+        }
         if (const HandStatus applied = _match.Hand().Apply(actor, action); !applied) {
             return applied;
         }
@@ -209,6 +213,9 @@ namespace BECore::Mahjong {
         LogAction(actor, action);
         CoverForNextPerson();
         ++_version;
+        if (_observer != nullptr) {
+            _observer->OnPersonMove(*before, action, Context());
+        }
         return {};
     }
 

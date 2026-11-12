@@ -2,7 +2,9 @@
 <!--
   The end of the match: the seats by points and the New game button (MahjongNewGame, which opens Setup), shown while the match is Finished.
   A 480 px window at the user scale 1.5 is 320 units high (296 with a notch), so the plate is 296: 32 padding + 40 headline band +
-  4 x 32 rows + 64 button + 8 NewGameGap + 6 x 4 spacing (7 children: the rows lie 4 apart and the button 4 + 8 + 4 = 16 below them).
+  4 x 24 rows + 28 MatchCoachRow (the coach's tally, matchOverCoach; hidden and out of the stack unless it has text) + 64 button + 8 NewGameGap +
+  7 x 4 spacing (8 children: the rows lie 4 apart and the button 4 + 8 + 4 = 16 below the last of them). The row has to be paid for inside the
+  plate: a label of 22 needs 32 high (30 is the least that fits and is off the 4 grid), so the four rows are of 18 (the first place is still gold).
 -->
 <node name="MatchOver" layer="25" contentVersion="2">
   <components>
@@ -12,10 +14,11 @@
         <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="560" height="296" direction="Vertical" spacing="4" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
           <children>
             <element type="UILabel" name="Headline" height="40" text="{matchOverHeadline}" fontSize="22" align="Center" verticalAlign="Center" color="58,66,92,255" />
-            <element type="UILabel" name="Standing0" height="32" text="{standing0}" fontSize="22" align="Center" verticalAlign="Center" color="48,54,72,255" textColor="255,214,80,255" />
-            <element type="UILabel" name="Standing1" height="32" text="{standing1}" fontSize="22" align="Center" verticalAlign="Center" color="48,54,72,255" />
-            <element type="UILabel" name="Standing2" height="32" text="{standing2}" fontSize="22" align="Center" verticalAlign="Center" color="48,54,72,255" />
-            <element type="UILabel" name="Standing3" height="32" text="{standing3}" fontSize="22" align="Center" verticalAlign="Center" color="48,54,72,255" />
+            <element type="UILabel" name="Standing0" height="24" text="{standing0}" fontSize="18" overflow="AutoFit" minFontSize="12" align="Center" verticalAlign="Center" color="48,54,72,255" textColor="255,214,80,255" />
+            <element type="UILabel" name="Standing1" height="24" text="{standing1}" fontSize="18" overflow="AutoFit" minFontSize="12" align="Center" verticalAlign="Center" color="48,54,72,255" />
+            <element type="UILabel" name="Standing2" height="24" text="{standing2}" fontSize="18" overflow="AutoFit" minFontSize="12" align="Center" verticalAlign="Center" color="48,54,72,255" />
+            <element type="UILabel" name="Standing3" height="24" text="{standing3}" fontSize="18" overflow="AutoFit" minFontSize="12" align="Center" verticalAlign="Center" color="48,54,72,255" />
+            <element type="UILabel" name="MatchCoachRow" visible="false" height="28" text="{matchOverCoach}" fontSize="18" overflow="AutoFit" minFontSize="12" align="Center" verticalAlign="Center" color="48,54,72,255" textColor="190,196,190,255" />
             <element type="UIElement" name="NewGameGap" height="8" />
             <element type="UIElement" name="NewGame" height="64" fontSize="28" color="40,110,60,255">
               <components>

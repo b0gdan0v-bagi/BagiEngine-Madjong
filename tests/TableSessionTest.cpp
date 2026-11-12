@@ -4,6 +4,7 @@
 #include <Mahjong/Game/TableSession.h>
 #include <gtest/gtest.h>
 #include <thread>
+#include <vector>
 
 /**
  * `TableSession` (`Game/TableSession.h`): the start, `Actor` in a turn and in a claim window, `StepComputer` and `RunComputers` (a
@@ -827,6 +828,137 @@ namespace BECore::Mahjong::Tests {
         const uint64_t version = table.table.session.Version();
         EXPECT_FALSE(table.table.session.StartMatch(bad, kSeed, kAllComputers, SearchProfile()).has_value());
         EXPECT_EQ(table.table.session.Version(), version);
+    }
+
+    // ----- the move observer -----
+
+    namespace {
+
+        /// Keeps what the session reports of the people's actions, with the version and the number of log events when it was told.
+        class RecordingObserver final : public IPersonMoveObserver {
+        public:
+            struct Record {
+                TableView before;
+                HandAction action;
+                MoveContext context;
+                uint64_t version = 0;
+                size_t logged = 0;
+            };
+
+            RecordingObserver(const TableSession& session, const MatchLog& log) : _session(session), _log(log) {}
+
+            void OnPersonMove(const TableView& before, const HandAction& action, const MoveContext& context) override {
+                records.push_back({before, action, context, _session.Version(), _log.Events().size()});
+            }
+
+            std::vector<Record> records;
+
+        private:
+            const TableSession& _session;
+            const MatchLog& _log;
+        };
+
+        /// A table with a log, an observer and one person at `seat`.
+        struct ObservedTable {
+            Table table;
+            MatchLog log;
+            RecordingObserver observer{table.session, log};
+
+            void Start(const SeatSetup& seats, uint32_t seed = kSeed) {
+                table.session.SetLogSink(&log);
+                table.session.SetMoveObserver(&observer);
+                ASSERT_NO_FATAL_FAILURE(table.Start(seats, seed));
+            }
+        };
+
+    }  // namespace
+
+    TEST(TableSessionTest, TheObserverGetsTheViewOfTheActorAsItWasBeforeAnAcceptedPersonAction) {
+        ObservedTable observed;
+        const Seat east = 0;
+        ASSERT_NO_FATAL_FAILURE(observed.Start(PersonAt(east)));
+        Table& table = observed.table;
+        const TableView expected = MakeTableView(table.match.Hand(), east);
+        const HandAction action = expected.legal.front();
+        ASSERT_EQ(action.kind, ActionKind::Discard);
+        const size_t concealed = expected.own.concealed.size();
+
+        ASSERT_TRUE(table.session.PerformPerson(action).has_value());
+
+        ASSERT_EQ(observed.observer.records.size(), 1u);
+        const RecordingObserver::Record& record = observed.observer.records.front();
+        EXPECT_EQ(record.action, action);
+        EXPECT_EQ(record.before.seat, east);
+        EXPECT_TRUE(Has(record.before.legal, action));
+        EXPECT_EQ(record.before.own.concealed.size(), concealed);
+        EXPECT_EQ(record.before.own.concealed, expected.own.concealed);
+        EXPECT_LT(table.match.Hand().GetHand(east).concealed.size(), concealed);
+        EXPECT_EQ(record.context.startCount, table.session.StartCount());
+        EXPECT_EQ(record.context.handsPlayed, table.match.HandsPlayed());
+        EXPECT_EQ(record.context.historySize, table.match.History().size());
+        EXPECT_EQ(record.context.personCount, 1);
+        // Told after the version moved and the log line went out.
+        EXPECT_EQ(record.version, table.session.Version());
+        ASSERT_EQ(record.logged, observed.log.Events().size());
+        EXPECT_EQ(observed.log.Events().back().kind, MatchLogKind::Action);
+        EXPECT_EQ(observed.log.Events().back().action, action);
+    }
+
+    TEST(TableSessionTest, TheObserverIsToldOfNothingBesidesAnAcceptedPersonAction) {
+        ObservedTable observed;
+        const Seat east = 0;
+        ASSERT_NO_FATAL_FAILURE(observed.Start(PersonAt(NextSeat(east))));
+        Table& table = observed.table;
+        RecordingObserver& observer = observed.observer;
+
+        // A computer's step and the run of the computers up to the person.
+        ASSERT_TRUE(table.session.StepComputer().has_value());
+        table.session.RunComputers();
+        ASSERT_TRUE(table.session.ActorIsPerson());
+        // A refused action: another seat's, an unlisted one, one in the wrong phase.
+        EXPECT_FALSE(table.session.PerformPerson(HandAction::MakePass()).has_value());
+        const Tile missing = TileNotHeldBy(table.match.Hand().GetHand(table.session.Actor()));
+        EXPECT_FALSE(table.session.PerformPerson(HandAction::MakeDiscard(missing)).has_value());
+        table.session.Reveal();
+        EXPECT_TRUE(observer.records.empty());
+
+        // NextHand and a resume.
+        ObservedTable computers;
+        ASSERT_NO_FATAL_FAILURE(computers.Start(kAllComputers));
+        computers.table.session.RunComputers();
+        ASSERT_TRUE(computers.table.session.NextHand().has_value());
+        EXPECT_TRUE(computers.observer.records.empty());
+        ObservedTable resumed;
+        resumed.table.session.SetMoveObserver(&resumed.observer);
+        ASSERT_TRUE(resumed.table.session.ResumeMatch(computers.log.Events(), kAllComputers, kDefaultLevel).has_value());
+        EXPECT_TRUE(resumed.observer.records.empty());
+
+        // The person's accepted action is the only report.
+        const HandAction action = MakeTableView(table.match.Hand(), table.session.Actor()).legal.front();
+        ASSERT_TRUE(table.session.PerformPerson(action).has_value());
+        EXPECT_EQ(observer.records.size(), 1u);
+    }
+
+    TEST(TableSessionTest, ASessionWithNoObserverHasTheVersionAndTheLogItHadBefore) {
+        ObservedTable with;
+        ObservedTable without;
+        without.table.session.SetLogSink(&without.log);
+        ASSERT_NO_FATAL_FAILURE(with.Start(PersonAt(0)));
+        ASSERT_NO_FATAL_FAILURE(without.table.Start(PersonAt(0)));
+        const HandAction action = MakeTableView(with.table.match.Hand(), 0).legal.front();
+
+        ASSERT_TRUE(with.table.session.PerformPerson(action).has_value());
+        ASSERT_TRUE(without.table.session.PerformPerson(action).has_value());
+
+        EXPECT_EQ(with.table.session.Version(), without.table.session.Version());
+        EXPECT_EQ(State(with.table), State(without.table));
+        EXPECT_EQ(with.log.Events().size(), without.log.Events().size());
+        // The observer can be taken away again.
+        with.table.session.SetMoveObserver(nullptr);
+        with.table.session.RunComputers();
+        const HandAction next = MakeTableView(with.table.match.Hand(), with.table.session.Actor()).legal.front();
+        ASSERT_TRUE(with.table.session.PerformPerson(next).has_value());
+        EXPECT_EQ(with.observer.records.size(), 1u);
     }
 
 }  // namespace BECore::Mahjong::Tests

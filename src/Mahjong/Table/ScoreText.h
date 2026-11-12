@@ -3,6 +3,7 @@
 #include <Mahjong/Game/Match.h>
 #include <Mahjong/Game/ScoreHand.h>
 #include <Mahjong/Game/TableSession.h>
+#include <Mahjong/Table/Coach.h>
 #include <Mahjong/Table/Words.h>
 
 namespace BECore::Mahjong {
@@ -50,5 +51,13 @@ namespace BECore::Mahjong {
 
     /// The standings of a match: equal points share a place and keep the seat order. The seats carry no wind (the match is over).
     [[nodiscard]] StandingsTable FormatStandings(const UIStrings& strings, const Match& match, const SeatSetup& seats);
+
+    /**
+     * @brief The line of the coach's tally under a score table: "Moves like the computer's: 3 of 5 this hand, 9 of 12 in the match".
+     *
+     * Empty when the match tally has no move (a person made none, or the mode was not Coach). A hand with no move of its own says the
+     * match only (`coach.tally.match`); the standings pass an empty `hand`.
+     */
+    [[nodiscard]] eastl::string FormatCoachTally(const UIStrings& strings, const CoachTally& hand, const CoachTally& match);
 
 }  // namespace BECore::Mahjong

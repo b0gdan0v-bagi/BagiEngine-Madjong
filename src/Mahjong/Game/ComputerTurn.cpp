@@ -100,15 +100,6 @@ namespace BECore::Mahjong {
             return HandAction::MakeDiscard(waits.front().tile, true);
         }
 
-        /// Whether the hand without the kong of `action` is no worse than the hand as it is (`current`, its best discard).
-        bool KongIsNoWorse(const TableView& view, const TileCounts& counts, const HandAction& action, const DiscardRating& current) {
-            const DiscardRating after = RateKong(view, counts, action);
-            if (after.shanten != current.shanten) {
-                return after.shanten < current.shanten;
-            }
-            return after.shanten != 0 || after.acceptance >= current.acceptance;
-        }
-
         /// Step 3: the first listed kong that does not hurt the hand.
         std::optional<HandAction> ChooseKong(const TableView& view) {
             const TileCounts counts = CountTiles(view.own.concealed);
@@ -346,6 +337,14 @@ namespace BECore::Mahjong {
             --rest[action.tile.Id()];
         }
         return {Tile{}, Shanten(rest, melds), AcceptanceOf(view, rest, melds)};
+    }
+
+    bool KongIsNoWorse(const TableView& view, const TileCounts& counts, const HandAction& action, const DiscardRating& current) {
+        const DiscardRating after = RateKong(view, counts, action);
+        if (after.shanten != current.shanten) {
+            return after.shanten < current.shanten;
+        }
+        return after.shanten != 0 || after.acceptance >= current.acceptance;
     }
 
     DiscardRating BestDiscard(const TileCounts& counts, int meldCount, const TableView& view, MahjongRng& rng, bool readDanger) {

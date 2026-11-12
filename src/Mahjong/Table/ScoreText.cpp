@@ -184,4 +184,15 @@ namespace BECore::Mahjong {
         return table;
     }
 
+    eastl::string FormatCoachTally(const UIStrings& strings, const CoachTally& hand, const CoachTally& match) {
+        if (match.moves <= 0) {
+            return {};
+        }
+        if (hand.moves <= 0) {
+            return Tr(strings, "coach.tally.match", {{"agreed", Format("{}", match.agreed)}, {"moves", Format("{}", match.moves)}});
+        }
+        return Tr(strings, "coach.tally.hand",
+                  {{"agreed", Format("{}", hand.agreed)}, {"moves", Format("{}", hand.moves)}, {"matchAgreed", Format("{}", match.agreed)}, {"matchMoves", Format("{}", match.moves)}});
+    }
+
 }  // namespace BECore::Mahjong

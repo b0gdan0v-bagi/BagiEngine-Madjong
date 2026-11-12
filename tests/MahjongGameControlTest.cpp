@@ -477,6 +477,32 @@ namespace BECore::Mahjong::Tests {
         strings.Clear();
     }
 
+    TEST_F(MahjongGameControlTest, TheStateAndTheActionsAreTheSameInEveryHintsMode) {
+        const auto play = [&](HintsMode mode) {
+            game->SetHintsMode(mode);
+            ResetWithEastAtSeat0();
+            const auto unversioned = [](Json json) {
+                json.erase("version");
+                return json;
+            };
+            std::vector<Json> seen;
+            for (int move = 0; move < kMovesChecked && Str(Member(State(), "phase")) == "playing"; ++move) {
+                seen.push_back(unversioned(State()));
+                const Json actions = Actions();
+                seen.push_back(actions);
+                if (actions.empty()) {
+                    break;
+                }
+                seen.push_back(unversioned(Perform(actions[0])));
+            }
+            return seen;
+        };
+        const std::vector<Json> off = play(HintsMode::Off);
+        ASSERT_GT(off.size(), 6u) << "a few moves were played";
+        EXPECT_EQ(play(HintsMode::Hints), off);
+        EXPECT_EQ(play(HintsMode::Coach), off) << "the coach judges the moves and tells the API nothing";
+    }
+
     TEST_F(MahjongGameControlTest, NoTileOfAnotherHandIsInTheStateOrTheActions) {
         for (uint32_t seed = 1; seed <= 12; ++seed) {
             ASSERT_NO_FATAL_FAILURE(Reset((std::string("{\"seed\": ") + std::to_string(seed) + ", \"seats\": \"PCCC\"}").c_str()));
