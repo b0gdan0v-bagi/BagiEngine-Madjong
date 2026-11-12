@@ -137,7 +137,7 @@ namespace BECore::Mahjong {
         size_t pos = 0;
         while (pos < text.size()) {
             const size_t start = pos;
-            Utf8::DecodeNext(text, pos);
+            static_cast<void>(Utf8::DecodeNext(text, pos));  // only how far the character reaches
             if (!candidate.Append(text.substr(start, pos - start))) {
                 return false;
             }

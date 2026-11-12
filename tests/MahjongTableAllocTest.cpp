@@ -5,6 +5,7 @@
 
 #include <BECore/Profiler/Alloc/AllocTracker.h>
 #include <Mahjong/Components/MahjongHintsComponent.h>
+#include <Mahjong/Components/MahjongOnlineComponent.h>
 #include <Mahjong/Table/Coach.h>
 #include <Mahjong/Table/ScoreText.h>
 
@@ -274,6 +275,110 @@ namespace BECore::Mahjong::Tests {
         Frame();
         ASSERT_TRUE(_game->IsOnlineTable());
         ASSERT_TRUE(OnScreen("Hud", "MoveLine"));
+        ExpectSteadyFrameInBothLanguages();
+    }
+
+    /// The online screens (`Components/MahjongOnlineComponent`: the pages `Menu`, `Host`, `Join`, `Entry` and `Lobby` of the panel over `Setup`): a page drawn again with nothing
+    /// changed makes no string and no list, in either language. The pages are reached as a player reaches them; the lobbies are those of a room on the in-memory hub.
+    class MahjongOnlineScreensAllocTest : public MahjongOnlineTableAllocTest {
+    protected:
+        /// `Setup` over a match, then the panel opened by its button.
+        void OpenPanel() {
+            ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
+            _game->OpenSetup();
+            Draw();
+            ASSERT_TRUE(ClickElement("Setup", "SetupOnline"));
+            Draw();
+            ASSERT_TRUE(_game->IsOnlineOpen());
+        }
+
+        /// The panel shows the lobby of the room the game's client is in.
+        void ExpectTheLobby(const char* element) {
+            Frame();
+            Frame();
+            ASSERT_EQ(MahjongOnlineComponent::GetActive()->Screens().Page(), OnlinePage::Lobby);
+            ASSERT_TRUE(OnScreen("Online", element)) << element;
+        }
+
+        /// Another person hosts a room on the hub; the code of it.
+        eastl::string HostElsewhere() {
+            _others.push_back(std::make_unique<HubPlayer>(_world));
+            HubPlayer& host = *_others.back();
+            EXPECT_TRUE(host.Client().Host(kUrl, "Hanna", OnlineRoomOptions{kShortMatchHands, kMinLevel}));
+            EXPECT_TRUE(PumpUntil([&] { return host.Client().Stage() == OnlineStage::Lobby; }));
+            return host.Client().Room();
+        }
+    };
+
+    TEST_F(MahjongOnlineScreensAllocTest, TheMenuTheHostFormAndTheJoinFormAllocateNothingInTheWholeFrame) {
+        ASSERT_NO_FATAL_FAILURE(OpenPanel());
+        ASSERT_TRUE(OnScreen("Online", "OnlineMenuHost"));
+        ExpectSteadyFrameInBothLanguages();
+
+        EmitAction("MahjongOnlineHost");
+        Draw();
+        ASSERT_TRUE(OnScreen("Online", "OnlineCreate"));
+        ExpectSteadyFrameInBothLanguages();
+
+        EmitAction("MahjongOnlineClose");
+        Draw();
+        ASSERT_TRUE(ClickElement("Setup", "SetupOnline"));
+        Draw();
+        EmitAction("MahjongOnlineJoin");
+        Draw();
+        ASSERT_TRUE(OnScreen("Online", "OnlineEnter"));
+        ExpectSteadyFrameInBothLanguages();
+    }
+
+    TEST_F(MahjongOnlineScreensAllocTest, TheNamePadAndTheCodePadAllocateNothingInTheWholeFrame) {
+        ASSERT_NO_FATAL_FAILURE(OpenPanel());
+        EmitAction("MahjongOnlineJoin");
+        Draw();
+        ASSERT_TRUE(ClickElement("Online", "OnlineName"));
+        Draw();
+        ASSERT_EQ(MahjongOnlineComponent::GetActive()->Screens().Page(), OnlinePage::Entry);
+        ASSERT_TRUE(OnScreen("OnlineEntry", "PadKey0"));
+        ExpectSteadyFrameInBothLanguages();
+
+        EmitAction("MahjongOnlineDone");
+        Draw();
+        ASSERT_TRUE(ClickElement("Online", "OnlineCode"));
+        Draw();
+        ASSERT_EQ(MahjongOnlineComponent::GetActive()->Screens().Page(), OnlinePage::Entry);
+        ExpectSteadyFrameInBothLanguages();
+    }
+
+    TEST_F(MahjongOnlineScreensAllocTest, TheWaitingRoomOfTheHostAndOfAGuestAllocateNothingInTheWholeFrame) {
+        ASSERT_NO_FATAL_FAILURE(OpenPanel());
+        EmitAction("MahjongOnlineHost");
+        Draw();
+        ASSERT_TRUE(ClickElement("Online", "OnlineCreate"));
+        ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Lobby; }));
+        ASSERT_NO_FATAL_FAILURE(ExpectTheLobby("OnlineStart"));
+        ExpectSteadyFrameInBothLanguages();
+
+        // A guest: the client leaves and joins the room of another person
+        ASSERT_TRUE(_game->GetOnline().Leave());
+        ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Idle; }));
+        const eastl::string code = HostElsewhere();
+        ASSERT_TRUE(_game->GetOnline().Join(kUrl, code, "Cy"));
+        ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Lobby; }));
+        ASSERT_NO_FATAL_FAILURE(ExpectTheLobby("OnlineWaiting"));
+        ExpectSteadyFrameInBothLanguages();
+    }
+
+    TEST_F(MahjongOnlineScreensAllocTest, TheLobbyWhileTheConnectionIsDownAllocatesNothingInTheWholeFrame) {
+        ASSERT_NO_FATAL_FAILURE(OpenPanel());
+        EmitAction("MahjongOnlineHost");
+        Draw();
+        ASSERT_TRUE(ClickElement("Online", "OnlineCreate"));
+        ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Lobby; }));
+        ASSERT_NO_FATAL_FAILURE(ExpectTheLobby("OnlineStart"));
+        _world.SetRefusing(true);
+        _world.Sever(_links.Last());
+        ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Reconnecting; }));
+        Frame();
+        ASSERT_NO_FATAL_FAILURE(ExpectTheLobby("OnlineLeave"));
         ExpectSteadyFrameInBothLanguages();
     }
 

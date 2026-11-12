@@ -72,4 +72,4 @@ python3 engine/tools/rooms/build_and_deploy.py --source-dir . --server-target Ba
 - redeploy the server while connected: the clients get `room_gone`;
 - an `Origin` that is not in `BAGI_ROOMS_ORIGINS` is refused.
 
-**The desktop** joins a hosted server once `room-client-desktop-tls` is merged (the desktop client does not speak `wss://` yet); until then `BAGI_MAHJONG_SERVER` names a `ws://` address, and the desktop ignores `MahjongOnlineConfig`.
+**The desktop** reads `BAGI_MAHJONG_SERVER` (else `ws://localhost:8080`) and ignores `MahjongOnlineConfig`. It speaks `wss://` through the system TLS on macOS and Windows, so `BAGI_MAHJONG_SERVER=wss://<domain>` joins the hosted server; Linux has no TLS backend yet and refuses `wss://`.
