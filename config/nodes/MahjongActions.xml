@@ -1,40 +1,23 @@
 <?xml version="1.0"?>
 <!--
   The action buttons lie in the free ground of the table that config/TableLayout.xml gives each shape (Table/TableRegions.h): the
-  stack ActionRow fills the region table.actions (right of the bottom discards and above the viewer's melds in the landscape, wide and
-  narrow tables; in the portrait one the band between the viewer's discards and the plate), the label Hint the region table.hint. The
-  regions are clear of every tile and plate, which TableLayoutSpecTest and MahjongTableScreenTest check; a region wins over the safe
-  area: the table is a fixed design that the safe area does not move, so the buttons stay where they are on a screen with a notch. The
-  buttons start hidden: the component shows the ones the person to act can press. They wrap inside the stack, so the region's width
-  decides the lines: four 104 wide fit the landscape region (the fullest claim window shows seven, the fullest turn six, the toggle Declare
-  as wide as the rest). A button says what it does in a plain word (Table/ActionButtons.h, ButtonSpec::wordKey: the keys button.<Kind> of
-  config/UIStrings.xml) and, where it concerns tiles, shows them as pictures: a UIImage child NameTile0..2 on the bottom line (the three
-  tiles of a chow, the claimed discard of a pung, kong or mahjong, the tile of a concealed kong or of the upgrade), hidden until the
-  component sets its sprite (Tile_<notation> of TextureLibrary.xml) and shows it; a picture takes no input, so a click on it is a click on
-  the button.
-  A button is 56 view units high (kActionButtonHeight, Table/TouchRegime.h), which is a 32 px touch target from a window of 732 x 412 px;
-  the table is a fixed design that the engine scales to the window, so a smaller window has smaller buttons and tiles (a tile is 21 x 28
-  units, the 3:4 of an atlas cell). Below that window the component hides this canvas and shows ActionsCompact instead
-  (NeedsCompactActions), which holds the same buttons by name on the bar under the table, but only where that bar holds the row at its
-  height at that canvas width. In a window that the table fills to the bottom (16:9 below 731 x 411, a short wide one like 1000 x 400, a
-  landscape phone) or whose bar is lower than the row (a narrow window like 480 x 360 or 600 x 570) this canvas stays, slightly under 32 px but
-  clear of the viewer's hand.
-  The label Hint above the row shows the sentence of the button under the pointer ({actionHint}, set by the component in the
-  current language from UIElement::hovered and again when the language changes; hidden while there is none). It takes no input, so
-  it never eats a click; its region is a gutter or a corner clear of the plates and of the row it explains, and the longer words of a
-  translation wrap to its height. A touch screen has no hover.
-  The variants are the sizes of the buttons, which are a difference of the size class and not of a place. In a portrait view (720 x 1280)
-  the buttons are 68 high (kPortraitActionButtonHeight, Table/TouchRegime.h: the view is 720 wide, so a 68 unit button is 34 pt on a phone of
-  360 pt and a touch target without ActionsCompact) and 92 wide (the toggle Declare 124: its word and box need it), so that the fullest claim
-  window, seven buttons, is one row of 692 units in the 696 of the region. Where the buttons are under 32 px (a portrait window narrower than
-  339 px) ActionsCompact takes over on the bar under the table; the one window of the matrix that keeps this canvas small is 1:1 at 480 px
-  (25.5 px: the table fills it to the sides and the bottom, so there is no bar). In a narrow view (1080 x 768, the variant with
-  orientation:landscape;maxAspect:1.55) the buttons are 84 wide, so four make a line of the region's 360 and the fullest claim window,
-  seven, two lines (the Declare toggle too). The fullest turn, six, is two lines as well, with UpgradeKong 104 wide because "Add to pung"
-  does not fit 84; the word of Win is the small size, "Маджонг!" at 22 does not fit 84 in a window of 720 x 480. The wide view (1560 x 720) has
-  no variant: its regions are the landscape ones shifted by the wing, and the buttons are as they were. The narrow table is 768 high, so a
-  button is 33 px or more in every window from 640 x 480 up and ActionsCompact takes over only in a nearly square window (610 x 600: a bar of
-  83 px under the table holds its row).
+  stack ActionRow fills the region table.actions, the label Hint the region table.hint. The regions are clear of every tile and plate
+  (TableLayoutSpecTest, MahjongTableScreenTest) and win over the safe area: the table is a fixed design. The buttons start hidden; the
+  component shows the ones the person to act can press. They wrap inside the stack, so the region's width decides the lines. A button
+  says what it does in a word (Table/ActionButtons.h: the keys button.<Kind>) and, where it concerns tiles, shows them as UIImage
+  children NameTile0..2 that take no input, so a click on a picture is a click on the button. The label Hint shows the sentence of the
+  button under the pointer ({actionHint}); it takes no input.
+  The variants are sizes of the buttons (a size class, not a place): portrait and narrow tables. Which sizes: kActionButtonHeight and
+  kPortraitActionButtonHeight (Table/TouchRegime.h), TouchRegimeTest and MahjongTableScreenTest.
+
+  Two canvases of the same buttons, Actions (this) and ActionsCompact, and the component shows one (NeedsCompactActions, which counts the
+  bottom inset). Why two: a SceneView canvas is scaled by the table's fit, has no minimum scale, and a variant sees view units, never
+  output pixels, so no variant of this canvas can make a button bigger in a small window. ActionsCompact is a Screen canvas with
+  minScale and serves the windows where these buttons are under 32 px and the bar under the table holds its row above the safe area.
+  Both hold the same 13 elements, equal by name, action, value, word and picture (MahjongTableScreenTest compares them).
+  Named deviations, where this canvas stays under 32 px: the 1:1 portrait window of 480 px (25.5 px; the table fills the window, so
+  there is no bar for a bigger row) and the near-square narrow window with side insets (610 x 600: 31.6 px, clear of the hand, because
+  the row of ActionsCompact would lie on the tiles). MahjongTouchSizeTest names them in ActionsMayBeSmall.
 -->
 <node name="Actions" layer="10" contentVersion="3">
   <components>

@@ -1,40 +1,16 @@
 <?xml version="1.0"?>
 <!--
-  The action buttons for the windows where the buttons of Actions would be smaller than the touch minimum and the table leaves a bar under
-  itself that holds this row at its height there (Table/TouchRegime.h, NeedsCompactActions: a button of Actions is 56 view units, the
-  table's fit scales it, and below a window of about 732 x 412 px it is under 32 px; the landscape and the wide table are 720 high, the narrow
-  one 768, so there it is 32 px from a window of about 617 px wide, and the windows that need this row are the portrait ones under 339 px and
-  the nearly square narrow ones, 610 x 600, where the table fills the width and leaves a bar of 83 px). Where the table fills the height of
-  the window and so leaves no bar (every 16:9 window below 731 x 411, a short wide window, a landscape phone) this row would lie on the
-  viewer's hand and take the click from its tiles, so Actions stays there, slightly under 32 px but in the free corner of the table; so it
-  does where the bar is lower than the row's height at that width (480 x 360, 600 x 570: a bar of 9 and 72 px for a row of 73). The same 13 buttons and a
-  HintButton (the button of the hints, which MahjongHintsComponent shows by name; on the table it is in the node HintsButton,
-  which is hidden where this canvas is shown; here it is 100 wide at font 18, because the word of the Russian button does not fit 100
-  at 22) with the same element names, actions, values, words and pictures; the component shows exactly one of the two canvases (Actions where it is
-  big enough or this one has no bar to lie on, this one elsewhere) and gives both the same visibility and sprites by name. This one is a
-  Screen canvas (a SceneView canvas is scaled by the fit of the table, whatever the window, and so cannot be made bigger than the table),
-  minScale 0.6 makes a 56 unit button 33.6 px, and the row lies at the bottom of the window, on the bar under the table. The numbers the
-  rule needs are constants of Table/TouchRegime.h (CompactScale repeats referenceWidth, referenceHeight, match and minScale; the button
-  width, the spacing, the count, the 82 % and the variants below are kCompact*, CompactRowHeight) and MahjongTableScreenTest compares them
-  with this node; MahjongTouchSizeTest lays the row out in the windows where the rule shows it (the matrix has none: its portrait ones are 339 px
-  wide or more) at the user scales 1.0 and 1.5 and holds the rule to the row it gets, and the row clear of the table. The row keeps to the safe area (the validator checks the buttons of a row against
-  it, also where the stack has ignoreSafeArea), so a home bar lifts it, and in a window with side insets (a bottom inset of 4 % of the short
-  side) it can lie on the nearest tiles by a few pixels, never by more than the inset: that is the near-square narrow
-  window of 610 x 600 with side insets (a bar of 83 px, the inset 24 px, a row of 73). The touch size is met
-  there but not "no button over a tile"; an engine change would fix it (the validator letting ignoreSafeArea cover the descendants of the
-  element, so the row could lie on the whole bar). The buttons are 100 units wide (the grid of 4, the words of button.* are keys; the
-  Declare switch is 180) and the row is as wide as the safe area, which a canvas variant cannot see: it sees the whole canvas, of
-  which the safe area is at least 82 % (side insets). Eight buttons (a claim window: mahjong, kong, pung, three chows, pass, and the
-  hint button HintButton after them, which MahjongHintsComponent shows in a claim window too) are 856 units, so the row is one line
-  from a canvas 1043.91 units wide. A stack has the height it is given and starts its lines at its top, so the row reaches as far
-  up as that height, whatever number of lines the buttons use. The variants below give the height of the lines the width needs (the
-  buttons wrap), counted for the narrowest safe area: k buttons to a line need k x 100 + (k - 1) x 8 units, so the thresholds are
-  856, 424, 316 and 208 divided by 0.82 and rounded up to 0.01 (1043.91, 517.08, 385.37, 253.66) and the heights are 2, 3, 4 and 8
-  lines of 56 with 8 between (120, 184, 248, 504). The fullest turn (win, three concealed kongs, the upgrade, the hint button and
-  the Declare switch of 180, which is the last element so that it ends a line: seven buttons, 828 units) never needs more lines
-  than the claim window, so the claim window decides. MahjongTableScreenTest recomputes the variants from the button width, the
-  spacing, the eight buttons and the 82 %, and TouchRegimeTest wraps the claim window and the turn, and every part of them, against
-  them. No Hint label: a touch screen has no hover, and the label would lie over the table.
+  The action buttons for the windows where the buttons of Actions would be under the touch minimum and the bar under the table holds
+  this row above the bottom inset (Table/TouchRegime.h, NeedsCompactActions). Elsewhere Actions stays, so this row never lies on the
+  viewer's hand. The same 13 buttons (equal to Actions by name, action, value, word and picture; MahjongTableScreenTest compares them)
+  and the HintButton, which MahjongHintsComponent shows by name where this canvas is shown (the node HintsButton is hidden then). It
+  is a Screen canvas because a SceneView canvas is scaled by the table's fit and cannot be made bigger than the table: minScale
+  makes a 56 unit button 33.6 px. The row lies at the bottom, on the bar, and keeps to the safe area, so a home bar lifts it.
+  The numbers come from constants of Table/TouchRegime.h (CompactScale, kCompact*, CompactRowHeight) and MahjongTableScreenTest
+  compares them with this node; MahjongTouchSizeTest holds the row clear of the table and the touch size. The row is as wide as the
+  safe area, which a canvas variant cannot see, so the variants take the narrowest safe area (82 % of the canvas) and give the height
+  of the lines the claim window needs when its buttons wrap (TouchRegimeTest wraps the claim window and the turn against them). No
+  Hint label: a touch screen has no hover.
 -->
 <node name="ActionsCompact" layer="10" contentVersion="3">
   <components>

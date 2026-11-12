@@ -2,7 +2,7 @@
 <!--
   The reasons of the advice (Table/Hints.h, ReasonLines): up to six lines in a panel that a second press of HintButton opens and a third
   closes (MahjongHintsComponent). Text only, no control: nothing here takes input, so a click on it is the table's.
-  WhyPanel fills the region table.wall (the wall ring of the layout, 364 x 168 in every shape) less 4 on each side (the grid of 4): the
+  WhyPanel fills the region table.wall (the wall ring of the layout, 364 x 168 in every shape) less 4 on each side (margin 4,0,4,0): the
   one place of the table with no hand, meld or discard tile, so it covers only the centre panel (round, wall count, points) and the wall
   stacks while it is open. Its plate is opaque (the palette's surface), so the centre panel does not show through. It is six
   lines of 28 (font 18, AutoFit down to 12) that hold {hintWhy0}..{hintWhy5}, empty ones included. Layer 11: over the HUD (10), under the
@@ -10,7 +10,7 @@
   the ring, clear of every slot but the wall stacks, free of input, and every line of the longest text in both languages fitting on the size
   matrix.
   CoachPanel is the note of the coach (Table/Coach.h, MahjongHintsComponent): up to three sentences {coachNote0}..{coachNote2}, each in a
-  label of 40 that wraps to two lines (font 18, AutoFit down to 12). It lies inside the region table.centerPanel, 4 units clear of it so
+  label of 40 that wraps to two lines (font 18, AutoFit down to 12). It lies inside the region table.centerPanel with the margin 8,4,8,4, so
   that the gold light of the turn on the panel's edge stays visible while the computers move (the note stays up through their turns), and
   is never up with WhyPanel. Opaque plate, text only, no input. MahjongCoachTest holds it.
 -->
