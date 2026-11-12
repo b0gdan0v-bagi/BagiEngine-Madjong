@@ -327,6 +327,9 @@
         <string key="online.leave" text="Leave"/>
         <string key="online.waitHost" text="Waiting for the host"/>
         <string key="online.table.ready" text="Ready for the next hand: {n} of {total}"/>
+        <string key="online.table.hintsAllowed" text="Hints are allowed in this room"/>
+        <string key="online.table.hintsAllowedOff" text="Hints are allowed here: turn them on in Options"/>
+        <string key="online.table.hintsOff" text="Hints are not allowed in this room"/>
         <string key="online.delete" text="Delete"/>
         <string key="online.done" text="Done"/>
     </language>
@@ -655,6 +658,9 @@
         <string key="online.leave" text="Выйти"/>
         <string key="online.waitHost" text="Ждём хозяина комнаты"/>
         <string key="online.table.ready" text="Готовы к следующей раздаче: {n} из {total}"/>
+        <string key="online.table.hintsAllowed" text="В комнате разрешены подсказки"/>
+        <string key="online.table.hintsAllowedOff" text="Подсказки разрешены: включите их в настройках"/>
+        <string key="online.table.hintsOff" text="В комнате подсказки запрещены"/>
         <string key="online.delete" text="Стереть"/>
         <string key="online.done" text="Готово"/>
     </language>

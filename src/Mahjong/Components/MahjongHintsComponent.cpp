@@ -31,6 +31,8 @@ namespace BECore::Mahjong {
         constexpr eastl::string_view kHintButton = "HintButton";
         constexpr eastl::string_view kAdviceLabel = "AdviceText";
         constexpr eastl::string_view kAdviceVar = "hintAdvice";
+        constexpr eastl::string_view kRoomHintsLabel = "RoomHintsText";
+        constexpr eastl::string_view kRoomHintsVar = "roomHintsText";
         // The card of the coach (node `HintsWhy`, `Table/HintCard.h`): the plate, the head row, row `i` (`CardRow<i>` with the label
         // `CardSteps<i>` and the pictures `Card<i>Tile<k>`) and the variables of the words
         constexpr eastl::string_view kCoachCard = "CoachCard";
@@ -192,6 +194,7 @@ namespace BECore::Mahjong {
         PushCoach(game, key);  // first: the advice gives way on the card to a note that is up
         PushAdvice(coach);
         PushCard(game, coach);
+        PushRoomHints(game);  // last: it gives way to the sentence and to the card
         if (key.applies) {
             DrawMarks(*game);
         }
@@ -293,6 +296,41 @@ namespace BECore::Mahjong {
             }
             UICanvasComponent::SetElementVisibleByName(scene, NameOf(kAdviceLabel), show);
         }
+    }
+
+    void MahjongHintsComponent::PushRoomHints(const MahjongGame* game) {
+        RoomHintsWord word = RoomHintsWord::None;
+        if (game != nullptr && game->IsOnlineTable() && !game->IsTablePaused() && game->GetSession().GetPhase() == SessionPhase::Playing && !_adviceShown && _cardKey.source == CardSource::None) {
+            if (!game->FindOnline()->Table().hintsAllowed) {
+                word = RoomHintsWord::NotAllowed;
+            } else {
+                word = game->GetHintsMode() == HintsMode::Off ? RoomHintsWord::AllowedOff : RoomHintsWord::Allowed;
+            }
+        }
+        const UIStrings& strings = CoreManager::GetUIStrings();
+        if (word == _roomWord && (word == RoomHintsWord::None || strings.GetVersion() == _roomStringsVersion)) {
+            return;
+        }
+        UIVars& vars = CoreManager::GetUIVars();
+        switch (word) {
+            case RoomHintsWord::Allowed:
+                vars.Set(NameOf(kRoomHintsVar), eastl::string_view(Tr(strings, "online.table.hintsAllowed")));
+                break;
+            case RoomHintsWord::AllowedOff:
+                vars.Set(NameOf(kRoomHintsVar), eastl::string_view(Tr(strings, "online.table.hintsAllowedOff")));
+                break;
+            case RoomHintsWord::NotAllowed:
+                vars.Set(NameOf(kRoomHintsVar), eastl::string_view(Tr(strings, "online.table.hintsOff")));
+                break;
+            case RoomHintsWord::None:
+                vars.Set(NameOf(kRoomHintsVar), eastl::string_view());  // nothing of the last word stays in a variable
+                break;
+        }
+        _roomStringsVersion = strings.GetVersion();
+        if ((word == RoomHintsWord::None) != (_roomWord == RoomHintsWord::None)) {
+            UICanvasComponent::SetElementVisibleByName(GetScene(), NameOf(kRoomHintsLabel), word != RoomHintsWord::None);
+        }
+        _roomWord = word;
     }
 
     void MahjongHintsComponent::PushCoach(MahjongGame* game, const Key& key) {

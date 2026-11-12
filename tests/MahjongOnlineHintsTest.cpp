@@ -2,6 +2,7 @@
 #include "FixedWall.h"
 #include "HandTestSupport.h"
 #include "MahjongOnlineTableTestSupport.h"
+#include "MahjongTouchTestSupport.h"
 #include "UiStyleTestSupport.h"
 
 #include <Mahjong/Components/MahjongHintsComponent.h>
@@ -379,6 +380,105 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(shown[0].advice, shown[1].advice);
         EXPECT_EQ(shown[0].visible, shown[1].visible) << "the other hands are not in what the viewer sees";
         EXPECT_FALSE(shown[0].advice.empty());
+    }
+
+    // ----- the line of the room -----
+
+    TEST_F(MahjongOnlineHintsTest, TheTableOfARoomSaysInBothLanguagesWhetherHintsAreAllowed) {
+        struct Case {
+            bool allowed;
+            HintsMode mode;
+            const char* key;
+        };
+        const Case cases[] = {{true, HintsMode::Hints, "online.table.hintsAllowed"}, {true, HintsMode::Off, "online.table.hintsAllowedOff"}, {false, HintsMode::Coach, "online.table.hintsOff"}};
+        for (const Case& test : cases) {
+            ASSERT_NO_FATAL_FAILURE(StartHintsRoom(test.allowed, test.mode));
+            ASSERT_NO_FATAL_FAILURE(LayStates(PlayedStates(kSeat2Hand, kSeat3Hand, false)));
+            for (const char* language : {"en", "ru"}) {
+                ASSERT_TRUE(_game->SetLanguage(PoolString::Intern(language)));
+                Frame();
+                const eastl::string expected = Tr(CoreManager::GetUIStrings(), test.key);
+                EXPECT_TRUE(OnScreen("Hints", "RoomHintsText")) << test.key << " " << language;
+                EXPECT_EQ(Var("roomHintsText"), std::string(expected.c_str(), expected.size())) << test.key << " " << language;
+                EXPECT_FALSE(expected.empty());
+            }
+            ASSERT_TRUE(_game->SetLanguage("en"_intern));
+            ASSERT_TRUE(_game->GetOnline().Leave());
+            ASSERT_TRUE(PumpUntil([&] { return !_game->IsOnlineTable(); }));
+            _others.clear();
+        }
+    }
+
+    TEST_F(MahjongOnlineHintsTest, TheLineOfARoomFollowsThePlayersModeAndGivesWayToTheAdviceAndTheCard) {
+        ASSERT_NO_FATAL_FAILURE(StartHintsRoom(true, HintsMode::Off));
+        ASSERT_NO_FATAL_FAILURE(LayStates(PlayedStates(kSeat2Hand, kSeat3Hand, false)));
+        const auto say = [&](const char* key) {
+            const eastl::string expected = Tr(CoreManager::GetUIStrings(), key);
+            return OnScreen("Hints", "RoomHintsText") && Var("roomHintsText") == std::string(expected.c_str(), expected.size());
+        };
+        EXPECT_TRUE(say("online.table.hintsAllowedOff")) << "it says where to switch them on";
+
+        _game->SetHintsMode(HintsMode::Hints);
+        Frame();
+        EXPECT_TRUE(say("online.table.hintsAllowed"));
+        PressHint();
+        ASSERT_TRUE(AdviceShown());
+        EXPECT_FALSE(OnScreen("Hints", "RoomHintsText")) << "the sentence takes the place";
+        EXPECT_EQ(Var("roomHintsText"), "") << "nothing of the word stays in the variable";
+        PressHint();
+        EXPECT_FALSE(AdviceShown());
+        EXPECT_TRUE(say("online.table.hintsAllowed"));
+
+        _game->SetHintsMode(HintsMode::Coach);
+        PressHint();
+        ASSERT_TRUE(CardShown());
+        EXPECT_FALSE(OnScreen("Hints", "RoomHintsText")) << "the card takes the place";
+        PressHint();
+        EXPECT_FALSE(CardShown());
+        EXPECT_TRUE(say("online.table.hintsAllowed"));
+
+        _game->OpenOptions();
+        Frame();
+        EXPECT_FALSE(OnScreen("Hints", "RoomHintsText")) << "no line under a page";
+        _game->CloseOptions();
+        Frame();
+        EXPECT_TRUE(say("online.table.hintsAllowed"));
+
+        ASSERT_TRUE(_game->GetOnline().Leave());
+        ASSERT_TRUE(PumpUntil([&] { return !_game->IsOnlineTable(); }));
+        Frame();
+        EXPECT_FALSE(OnScreen("Hints", "RoomHintsText")) << "the line is the room's";
+        EXPECT_EQ(Var("roomHintsText"), "");
+    }
+
+    TEST_F(MahjongOnlineHintsTest, TheLineOfARoomFitsItsPlaceInEveryLanguageOnTheWholeMatrix) {
+        ASSERT_NO_FATAL_FAILURE(StartHintsRoom(true, HintsMode::Hints));
+        ASSERT_NO_FATAL_FAILURE(LayStates(PlayedStates(kSeat2Hand, kSeat3Hand, false)));
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            const UIStrings& strings = CoreManager::GetUIStrings();
+            std::vector<eastl::string> lines;
+            for (const char* key : {"online.table.hintsAllowed", "online.table.hintsAllowedOff", "online.table.hintsOff"}) {
+                lines.push_back(Tr(strings, key));
+            }
+            CoreManager::GetUIVars().Set("roomHintsText"_intern, eastl::string_view(LongestText(lines)));
+            Draw();
+            ASSERT_TRUE(OnScreen("Hints", "RoomHintsText"));
+            ExpectPassesTheMatrix("Hints", EngineTouchMinimum());
+            const std::vector<std::string> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Hints"), 0.0f);
+            EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
+        });
+    }
+
+    TEST_F(MahjongOnlineHintsTest, TheLocalGameHasNoLineOfARoom) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        _game->SetHintsMode(HintsMode::Hints);
+        _game->CloseSetup();
+        _game->GetSession().RunComputers();
+        Draw();
+        Draw();
+        EXPECT_FALSE(OnScreen("Hints", "RoomHintsText"));
+        EXPECT_EQ(Var("roomHintsText"), "");
     }
 
     // ----- the coach of the room -----

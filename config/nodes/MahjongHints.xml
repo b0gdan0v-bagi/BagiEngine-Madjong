@@ -19,6 +19,8 @@
   shows the panel and the first N cells exactly while hints apply (MahjongGame::HintsOn(), a person at the table, no cover, no Setup, the
   hand being played) and the hand waits, the button while hints apply and the viewer has actions to choose from, and the label while an
   advice is up in the mode Hints (in Coach the sentence is the title of the card CoachCard, node HintsWhy).
+  RoomHintsText lies in the same region and takes its place while neither the sentence nor the card is up: at the table of a room it says whether the
+  host allowed hints ({roomHintsText}, MahjongHintsComponent::PushRoomHints); it is shown only in a room, while the hand is being played.
 -->
 <node name="Hints" layer="5" contentVersion="5">
   <components>
@@ -223,6 +225,11 @@
         <element type="UIElement" name="AdviceText" region="table.advice" anchor="Stretch" visible="false" fontSize="18" color="0,0,0,200">
           <components>
             <component type="UITextComponent" text="{hintAdvice}" align="Center" verticalAlign="Center" overflow="AutoFit"/>
+          </components>
+        </element>
+        <element type="UIElement" name="RoomHintsText" region="table.advice" anchor="Stretch" visible="false" fontSize="18" color="0,0,0,200">
+          <components>
+            <component type="UITextComponent" text="{roomHintsText}" align="Center" verticalAlign="Center" overflow="AutoFit"/>
           </components>
         </element>
       </elements>

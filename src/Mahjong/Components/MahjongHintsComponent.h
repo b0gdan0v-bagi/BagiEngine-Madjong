@@ -49,6 +49,10 @@ namespace BECore::Mahjong {
      * discard that is advised framed on the hand. The advice belongs to the table it was worked out on: any change of the session `Version()`, a cover,
      * hints off or a pause drop it, the next table the viewer acts on gets its own, and a new language words it again.
      *
+     * **The line of a room.** At the table of a room the label `RoomHintsText` (the region of `AdviceText`) says whether the host allowed hints, and
+     * where to switch them on when the player's own mode is Off; it gives way to the sentence and to the card and is made again only when the word
+     * or the language moved.
+     *
      * **The card of the coach.** In the mode Coach the sentence is not a label of its own: the advice of the table is the card `CoachCard` of the
      * node `HintsWhy` (`config/nodes/MahjongHintsWhy.xml`, on the wall ring, text and tile pictures, no input), made by `MakeAdviceCard` (the
      * sentence as its title, the advised move and the next best with their numbers, why in words, the tally). The ledger of the game
@@ -110,6 +114,8 @@ namespace BECore::Mahjong {
         void Advise(const MahjongGame& game, const Key& key);
         /// The button (offered, switched on) and the sentence of the advice, which is a label of its own unless `coach`.
         void PushAdvice(bool coach);
+        /// The line `RoomHintsText` at the table of a room (allowed, allowed but the player's mode is Off, not allowed), while neither the sentence nor the card is up.
+        void PushRoomHints(const MahjongGame* game);
         /// The note of the coach: drops what no longer holds (and clears the ledger) and says whether it is up (`_coachShown`).
         void PushCoach(MahjongGame* game, const Key& key);
         /// The card of the coach: the note when it is up, else the advice in the mode Coach, else nothing; made again only when its key moved.
@@ -158,6 +164,11 @@ namespace BECore::Mahjong {
             bool operator==(const CardKey&) const = default;
         };
         CardKey _cardKey;
+
+        /// What the line of the room says; `None` hides it.
+        enum class RoomHintsWord : uint8_t { None, Allowed, AllowedOff, NotAllowed };
+        RoomHintsWord _roomWord = RoomHintsWord::None;  ///< the word on the canvas
+        uint64_t _roomStringsVersion = 0;               ///< `UIStrings::GetVersion()` it was worded with
 
         static MahjongHintsComponent* s_active;
     };
