@@ -492,11 +492,20 @@ namespace BECore::Mahjong::Tests {
         EngineEnvironment::UseSceneManager({});
         _manager.Reset();
         ASSERT_EQ(MahjongOnlineComponent::GetActive(), nullptr) << "the component is gone, the read is not";
+        ASSERT_TRUE(CoreManager::GetClipboard().HasPending());
+
+        // A new scene with its own component and the same code pad open: only the token tells it from the one that asked
+        SetUp();
+        ASSERT_NO_FATAL_FAILURE(OpenTheCodePad());
+        ASSERT_NE(MahjongOnlineComponent::GetActive(), nullptr);
+        ASSERT_TRUE(CoreManager::GetClipboard().HasPending());
         for (int count = 0; count < 6; ++count) {
             CoreManager::GetClipboard().Update();
         }
+        Frame();
         EXPECT_FALSE(CoreManager::GetClipboard().HasPending());
         EXPECT_EQ(_clipboard->ReadCount(), 1);
+        EXPECT_EQ(Var("onlineEntryValue"), "") << "the answer to a question of a scene that is gone is not for this one";
     }
 
     TEST_F(MahjongOnlineSceneTest, ControlOrCommandWithAKeyTypesNothingIntoTheCodeOrTheName) {

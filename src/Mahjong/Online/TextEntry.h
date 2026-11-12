@@ -64,7 +64,7 @@ namespace BECore::Mahjong {
 
         /// The room code in a pasted @p text, or nothing. A code with spaces or dashes ("  ab3k9 ", "AB3-K9") or longer than needed (cut to its length) is the code itself; an
         /// invite line is searched for the one word that can be a code (5 letters or digits of the code alphabet): none, or two (an English word like "hands" can be one too), is
-        /// refused and never guessed. Empty text, text over `kMaxPasteBytes`, a letter outside ASCII is refused.
+        /// refused and never guessed. Empty text, text over `kMaxPasteBytes` and a code with a letter outside ASCII are refused.
         [[nodiscard]] static std::optional<eastl::string> CleanRoomCode(eastl::string_view text);
 
         /// The name a player starts with (`online.name.default`).
