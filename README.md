@@ -28,6 +28,7 @@ ctest --preset macos-debug                    # MahjongTests and the headless co
 build/macos-debug/bin/BagiMahjong
 ```
 
+- **One command per product:** `python3 engine/tools/dev/dev.py run game` (also `tests`, `server`, `web`, `arena`, `analyzer`; `chain online-local` starts the room server and two games; `info` lists all), described in `dev.json`; the VS Code panel **Bagi Dev** (`engine/tools/vscode/bagi-dev`) has the same buttons and switches build flags as `<preset>-dev` presets in `CMakeUserPresets.json` (`engine/tools/dev/CLAUDE.md`).
 - **Bot arena** (Release, `docs/bot-arena.md`): measures the computer players over thousands of seeds.
 - **EV analyzer** (Release, `docs/ev-analyzer.md`): the expected points of every legal action of one position.
 - **Browser** (Emscripten, `docs/web.md`): build, smoke, deploy. No saves, match log or control API there.
