@@ -9,7 +9,7 @@
 #include <Mahjong/Game/HandModel.h>
 #include <Mahjong/Game/Match.h>
 #include <Mahjong/Game/TableSession.h>
-#include <Mahjong/Table/Hints.h>
+#include <Mahjong/Table/HintCard.h>
 #include <Mahjong/Table/ScoreText.h>
 #include <gtest/gtest.h>
 #include <set>
@@ -17,8 +17,8 @@
 
 /**
  * The pure helper of the hints (`Table/Hints.h`): the waiting row, the discards that declare the calling hand, the advice and its words,
- * and the rule that says when hints are on screen. Fixed walls with the answers worked out by hand; the waiting hands are seat 1 (13
- * tiles) seen while East acts, so no draw is needed. Pure logic: no engine services (the words are the shipped file).
+ * the card of the advice in the mode Coach (`Table/HintCard.h`, `MakeAdviceCard`) and the rule that says when hints are on screen. Fixed walls with the answers worked out by hand; the waiting hands
+ * are seat 1 (13 tiles) seen while East acts, so no draw is needed. Pure logic: no engine services (the words are the shipped file).
  */
 namespace BECore::Mahjong::Tests {
 
@@ -211,16 +211,50 @@ namespace BECore::Mahjong::Tests {
             return static_cast<size_t>(std::count_if(text.begin(), text.end(), [](char c) { return (static_cast<unsigned char>(c) & 0xC0) != 0x80; }));
         }
 
-        std::vector<std::string> Lines(const UIStrings& strings, const TableView& view) {
-            std::vector<std::string> lines;
+        /// The card of the advice of `view` (`ExplainAdviceFor`) with `tally` under it.
+        HintCard CardOf(const UIStrings& strings, const TableView& view, eastl::string_view tally = {}) {
             const std::optional<Explanation> explained = ExplainAdviceFor(view);
             EXPECT_TRUE(explained.has_value());
-            if (explained.has_value()) {
-                for (const eastl::string& line : ReasonLines(strings, view, *explained)) {
-                    lines.push_back(Std(line));
-                }
+            return explained.has_value() ? MakeAdviceCard(strings, view, *explained, tally) : HintCard{};
+        }
+
+        /// A row as one string: the cells joined by `|`, the tiles in notation.
+        std::string RowText(const CardRow& row) {
+            std::string tiles;
+            for (const Tile tile : row.tiles) {
+                tiles += tile.IsValid() ? std::string(ToString(tile)) + " " : "";
+            }
+            return Std(row.who) + "|" + tiles + "|" + Std(row.move) + "|" + Std(row.steps) + "|" + Std(row.useful);
+        }
+
+        std::vector<std::string> FooterOf(const HintCard& card) {
+            std::vector<std::string> lines;
+            for (const eastl::string& line : card.footer) {
+                lines.push_back(Std(line));
             }
             return lines;
+        }
+
+        /// Everything the card says: the title, the head, a string per row, the lines under them.
+        std::vector<std::string> TextOf(const HintCard& card) {
+            std::vector<std::string> text{Std(card.title), Std(card.now)};
+            for (const CardRow& row : card.rows) {
+                text.push_back(RowText(row));
+            }
+            for (const std::string& line : FooterOf(card)) {
+                text.push_back(line);
+            }
+            return text;
+        }
+
+        /// The lines under the rows of the card of `view` (no tally).
+        std::vector<std::string> Lines(const UIStrings& strings, const TableView& view) {
+            return FooterOf(CardOf(strings, view));
+        }
+
+        /// The steps as the card says them.
+        std::string StepsWord(int steps) {
+            return steps <= 0 ? std::string("ready") : std::to_string(steps);
         }
 
         /// The person who has to act follows the advice.
@@ -560,18 +594,19 @@ namespace BECore::Mahjong::Tests {
     TEST(HintsTest, TheKeysOfThePanelAreInBothLanguages) {
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
-        const std::vector<const char*> keys{"hints.waitCaption",       "hints.adviseButton",      "setup.hints",
-                                            "options.hintsHints",      "options.hintsCoach",      "setup.off",
-                                            "hints.why.steps",         "hints.why.help",          "hints.why.help.change",
-                                            "hints.why.waits",         "hints.why.declare",       "hints.why.keepWaiting",
-                                            "hints.why.tie.none",      "hints.why.tie.keep",      "hints.why.tie.chance",
-                                            "hints.why.tie.danger",    "hints.why.danger.safe",   "hints.why.danger.low",
-                                            "hints.why.danger.medium", "hints.why.danger.high",   "hints.why.keep.worthless",
-                                            "hints.why.keep.terminal", "hints.why.keep.simple",   "hints.why.keep.value",
-                                            "hints.why.alt.discard",   "hints.why.alt.wait",      "hints.why.alt.pung",
-                                            "hints.why.alt.kong",      "hints.why.alt.chow",      "hints.why.kong.noWorse",
-                                            "hints.why.win",           "hints.why.claim.mahjong", "hints.why.claim.value",
-                                            "hints.why.pass.waiting",  "hints.why.pass.noGain"};
+        const std::vector<const char*> keys{"hints.waitCaption",      "hints.adviseButton",       "setup.hints",
+                                            "options.hintsHints",     "options.hintsCoach",       "setup.off",
+                                            "hints.card.now",         "hints.card.steps",         "hints.card.useful",
+                                            "hints.card.ready",       "hints.card.title.chow",    "hints.why.tie.none",
+                                            "hints.why.tie.keep",     "hints.why.tie.chance",     "hints.why.tie.danger",
+                                            "hints.why.danger.safe",  "hints.why.danger.low",     "hints.why.danger.medium",
+                                            "hints.why.danger.high",  "hints.why.keep.worthless", "hints.why.keep.terminal",
+                                            "hints.why.keep.simple",  "hints.why.keep.value",     "hints.card.best",
+                                            "hints.card.yours",       "hints.card.declare",       "hints.card.kong",
+                                            "hints.card.pung",        "hints.card.chow",          "hints.card.pass",
+                                            "hints.card.mahjong",     "hints.card.noKong",        "hints.why.kong.noWorse",
+                                            "hints.why.win",          "hints.why.claim.mahjong",  "hints.why.claim.value",
+                                            "hints.why.pass.waiting", "hints.why.pass.noGain"};
 
         ForEachLanguage(strings, [&](PoolString language) {
             for (const char* key : keys) {
@@ -599,34 +634,46 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(ExplainAdviceFor(ViewOfSeat1(kTwoSidedWait)).has_value());  // East acts
     }
 
-    TEST(HintsTest, EveryKindOfAdviceHasReasonsInEveryLanguage) {
+    TEST(HintsTest, EveryKindOfAdviceHasACardInEveryLanguage) {
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
         const std::vector<ReasonCase> cases = ReasonCases();
 
         ForEachLanguage(strings, [&](PoolString language) {
             for (const ReasonCase& one : cases) {
-                const std::vector<std::string> lines = Lines(strings, one.view);
+                const HintCard card = CardOf(strings, one.view);
                 const std::string where = std::string(one.name) + " " + language.ToStringView().data();
-                EXPECT_FALSE(lines.empty()) << where;
-                EXPECT_LE(lines.size(), kMaxReasonLines) << where;
-                for (const std::string& line : lines) {
-                    EXPECT_FALSE(line.empty()) << where;
+                const HandAction advice = *AdviceFor(one.view);
+                const bool chow = advice.kind == ActionKind::Claim && advice.claim == ClaimKind::Chow;
+                EXPECT_EQ(card.title, chow ? Tr(strings, "hints.card.title.chow") : AdviceText(strings, one.view, advice)) << where << ": a chow by its kind, its tiles are pictures";
+                EXPECT_LE(card.rows.size(), kMaxCardRows) << where;
+                const bool claims = one.claimStep.has_value() && *one.claimStep == ClaimStep::Claim;
+                EXPECT_TRUE(claims || !card.footer.empty()) << where << ": every kind but a claim that gains a step says why in words";
+                EXPECT_LE(card.footer.size(), kMaxCardFooter) << where;
+                EXPECT_EQ(card.now.empty(), card.rows.empty()) << where;
+                const bool wins = std::string(one.name) == "win" || std::string(one.name) == "claimMahjong" || std::string(one.name) == "robbedKong";
+                EXPECT_EQ(card.rows.empty(), wins) << where << ": nothing is compared with a win";
+                if (!card.rows.empty()) {
+                    EXPECT_EQ(card.rows[0].kind, CardRowKind::Best) << where;
+                    EXPECT_FALSE(card.rows[0].who.empty()) << where;
+                }
+                const std::vector<std::string> text = TextOf(card);
+                for (const std::string& line : text) {
                     EXPECT_EQ(line.find('{'), std::string::npos) << where << ": " << line;
                     EXPECT_EQ(line.find('}'), std::string::npos) << where << ": " << line;
                     EXPECT_EQ(line.find("hints."), std::string::npos) << where << ": a key is missing: " << line;
                 }
-                EXPECT_EQ(std::set<std::string>(lines.begin(), lines.end()).size(), lines.size()) << where << ": a line is said twice";
+                const std::vector<std::string> footer = FooterOf(card);
+                EXPECT_EQ(std::set<std::string>(footer.begin(), footer.end()).size(), footer.size()) << where << ": a line is said twice";
             }
         });
     }
 
-    TEST(HintsTest, TheNumbersOfTheReasonsAreTheNumbersOfTheExplanation) {
+    TEST(HintsTest, TheNumbersOfTheCardAreTheNumbersOfTheExplanation) {
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
         ASSERT_TRUE(strings.SetLanguage("en"_intern));
         const auto number = [](int value) { return std::to_string(value); };
-        const auto has = [](const std::vector<std::string>& lines, const std::string& text) { return std::find(lines.begin(), lines.end(), text) != lines.end(); };
         const std::vector<ReasonCase> cases = ReasonCases();
         const auto of = [&](const char* name) -> const TableView& {
             for (const ReasonCase& one : cases) {
@@ -638,56 +685,70 @@ namespace BECore::Mahjong::Tests {
             return cases.front().view;
         };
 
-        // A discard: steps before and after, the unseen tiles that help, then the two best others, each with its own numbers.
+        // A discard: the steps now over the rows, the advised tile with its steps and the unseen tiles that help, then the two best others.
         const TableView& discard = of("discard");
         const TurnExplanation turn = *ExplainAdviceFor(discard)->turn;
-        const std::vector<std::string> lines = Lines(strings, discard);
-        ASSERT_GE(lines.size(), 4u);
-        EXPECT_EQ(lines[0], "Steps to ready: " + number(turn.shantenBefore) + " -> " + number(turn.chosen.shanten));
-        EXPECT_EQ(lines[1], "Unseen tiles that help: " + number(turn.chosen.acceptance));
+        const HintCard card = CardOf(strings, discard);
+        EXPECT_EQ(Std(card.now), "Steps to ready now: " + StepsWord(turn.shantenBefore));
+        ASSERT_EQ(card.rows.size(), 3u);
+        EXPECT_EQ(RowText(card.rows[0]), "Best|" + std::string(ToString(turn.chosen.tile)) + " ||" + StepsWord(turn.chosen.shanten) + "|" + number(turn.chosen.acceptance));
         ASSERT_EQ(turn.alternatives.size(), 2u);
         for (size_t at = 0; at < turn.alternatives.size(); ++at) {
             const TurnOption& option = turn.alternatives[at];
-            EXPECT_EQ(lines[lines.size() - 2 + at], "Instead " + Std(TileName(strings, option.tile)) + ": steps " + number(option.shanten) + ", helps " + number(option.acceptance));
+            EXPECT_EQ(card.rows[1 + at].kind, CardRowKind::Other);
+            EXPECT_EQ(RowText(card.rows[1 + at]), "|" + std::string(ToString(option.tile)) + " ||" + StepsWord(option.shanten) + "|" + number(option.acceptance));
+        }
+        for (const CardRow& row : card.rows) {
+            const int steps = row.steps == "ready" ? 0 : std::stoi(Std(row.steps));
+            const CardTrend expected = steps < turn.shantenBefore ? CardTrend::Closer : (steps == turn.shantenBefore ? CardTrend::Same : CardTrend::Farther);
+            EXPECT_EQ(row.trend, expected) << RowText(row);
         }
 
-        // A declaration says what the hand waits on: 4p and 7p, 4 + 4 unseen copies.
-        const std::vector<std::string> declare = Lines(strings, of("declare"));
-        EXPECT_EQ(declare.front(), "This discard makes the hand ready.");
-        EXPECT_TRUE(has(declare, "Waiting tiles: 2, unseen copies: 8"));
-        EXPECT_TRUE(has(declare, "No other tile rates as well."));
-        EXPECT_TRUE(has(declare, "Instead 5 Dots: unseen copies 4"));
+        // A declaration: the hand is ready after it, with the unseen copies of 4p and 7p, 4 + 4; the other declaring discard is worse.
+        const HintCard declare = CardOf(strings, of("declare"));
+        ASSERT_GE(declare.rows.size(), 2u);
+        const TurnExplanation declaring = *ExplainAdviceFor(of("declare"))->turn;
+        EXPECT_EQ(RowText(declare.rows[0]), "Best|" + std::string(ToString(declaring.chosen.tile)) + " |declare|ready|8");
+        EXPECT_EQ(RowText(declare.rows[1]), "|5p ||ready|4");
+        EXPECT_EQ(FooterOf(declare), (std::vector<std::string>{"No other tile rates as well."}));
 
-        // A kong: the numbers of the best discard and of the hand without the kong.
+        // A kong: the hand with it against the hand without it.
         const TurnExplanation kong = *ExplainAdviceFor(of("concealedKong"))->turn;
-        const std::vector<std::string> kongLines = Lines(strings, of("concealedKong"));
-        EXPECT_TRUE(has(kongLines, "Steps to ready: " + number(kong.shantenBefore) + " -> " + number(kong.kongShantenAfter)));
-        EXPECT_TRUE(has(kongLines, "Unseen tiles that help: " + number(kong.kongAcceptanceBefore) + " -> " + number(kong.kongAcceptanceAfter)));
+        const HintCard kongCard = CardOf(strings, of("concealedKong"));
+        ASSERT_EQ(kongCard.rows.size(), 2u);
+        EXPECT_EQ(RowText(kongCard.rows[0]), "Best|Ew |Kong|" + StepsWord(kong.kongShantenAfter) + "|" + number(kong.kongAcceptanceAfter));
+        EXPECT_EQ(RowText(kongCard.rows[1]), "||No kong|" + StepsWord(kong.shantenBefore) + "|" + number(kong.kongAcceptanceBefore));
+        EXPECT_EQ(FooterOf(kongCard), (std::vector<std::string>{"The kong does not make the hand worse."}));
 
-        // A claim: the shanten before and after it and the unseen tiles that help.
+        // A claim: the pung of the pending tile with the numbers after it.
         const ClaimExplanation pung = *ExplainAdviceFor(of("claimPung"))->claim;
-        const std::vector<std::string> pungLines = Lines(strings, of("claimPung"));
-        EXPECT_EQ(pungLines[0], "Steps to ready: " + number(pung.shantenBefore) + " -> " + number(pung.chosen->after.shanten));
-        EXPECT_EQ(pungLines[1], "Unseen tiles that help: " + number(pung.chosen->after.acceptance));
+        const HintCard pungCard = CardOf(strings, of("claimPung"));
+        EXPECT_EQ(Std(pungCard.now), "Steps to ready now: " + StepsWord(pung.shantenBefore));
+        EXPECT_EQ(RowText(pungCard.rows[0]), "Best|5p |Pung|" + StepsWord(pung.chosen->after.shanten) + "|" + number(pung.chosen->after.acceptance));
+        const HintCard chow = CardOf(strings, of("claimChow"));
+        EXPECT_EQ(RowText(chow.rows[0]).substr(0, 19), "Best|4p 5p 6p |Chow");
 
-        // A pass: why, and the waits of a hand that waits (the 4p with 2 copies and the Rd with 1) or the best claim that gains nothing.
-        const std::vector<std::string> waiting = Lines(strings, of("passWaiting"));
-        EXPECT_EQ(waiting, (std::vector<std::string>{"Your hand waits: a claim would break it.", "Waiting tiles: 2, unseen copies: 3"}));
+        // A pass: a hand that waits stays ready with its 3 unseen winning copies; a pass that gains nothing keeps its steps.
+        const HintCard waiting = CardOf(strings, of("passWaiting"));
+        EXPECT_EQ(RowText(waiting.rows[0]), "Best||Pass|ready|3");
+        EXPECT_EQ(FooterOf(waiting), (std::vector<std::string>{"Your hand waits: a claim would break it."}));
         const ClaimExplanation noGain = *ExplainAdviceFor(of("passNoGain"))->claim;
+        const HintCard noGainCard = CardOf(strings, of("passNoGain"));
         ASSERT_EQ(noGain.alternatives.size(), 1u);
-        EXPECT_EQ(Lines(strings, of("passNoGain")),
-                  (std::vector<std::string>{"No claim brings the hand closer to ready.", "Instead pung " + Std(TileName(strings, of("passNoGain").pendingTile)) + ": steps " +
-                                                                                             number(noGain.shantenBefore) + " -> " + number(noGain.alternatives[0].after.shanten)}));
+        ASSERT_EQ(noGainCard.rows.size(), 2u);
+        EXPECT_EQ(RowText(noGainCard.rows[0]), "Best||Pass|" + StepsWord(noGain.shantenBefore) + "|");
+        EXPECT_EQ(noGainCard.rows[0].trend, CardTrend::Same);
+        EXPECT_EQ(RowText(noGainCard.rows[1]), "|5m |Pung|" + StepsWord(noGain.alternatives[0].after.shanten) + "|" + number(noGain.alternatives[0].after.acceptance));
+        EXPECT_EQ(FooterOf(noGainCard), (std::vector<std::string>{"No claim brings the hand closer to ready."}));
 
-        // The listed claims after the advised one come as lines of their own, the sentence of the advice still first.
+        // The listed claims after the advised one are rows of their own.
         const ClaimExplanation withAlternatives = *ExplainAdviceFor(of("claimWithAlternatives"))->claim;
-        const std::vector<std::string> alternativeLines = Lines(strings, of("claimWithAlternatives"));
+        const HintCard alternativeCard = CardOf(strings, of("claimWithAlternatives"));
         ASSERT_FALSE(withAlternatives.alternatives.empty());
-        ASSERT_GE(alternativeLines.size(), withAlternatives.alternatives.size());
+        ASSERT_EQ(alternativeCard.rows.size(), 1 + withAlternatives.alternatives.size());
         for (size_t at = 0; at < withAlternatives.alternatives.size(); ++at) {
-            const std::string& line = alternativeLines[alternativeLines.size() - withAlternatives.alternatives.size() + at];
-            EXPECT_EQ(line.find("Instead "), 0u) << line;
-            EXPECT_NE(line.find("steps " + number(withAlternatives.shantenBefore) + " -> " + number(withAlternatives.alternatives[at].after.shanten)), std::string::npos) << line;
+            EXPECT_EQ(alternativeCard.rows[1 + at].steps, StepsWord(withAlternatives.alternatives[at].after.shanten).c_str());
+            EXPECT_EQ(alternativeCard.rows[1 + at].useful, number(withAlternatives.alternatives[at].after.acceptance).c_str());
         }
 
         EXPECT_EQ(Lines(strings, of("win")), (std::vector<std::string>{"A complete hand: nothing beats a win."}));
@@ -706,7 +767,7 @@ namespace BECore::Mahjong::Tests {
         const TurnExplanation alikeTurn = *ExplainAdviceFor(alikeView)->turn;
         ASSERT_GT(alikeTurn.equalChoices, 0);
         const std::vector<std::string> alikeLines = Lines(strings, alikeView);
-        EXPECT_NE(std::find(alikeLines.begin(), alikeLines.end(), "Equal tiles: " + std::to_string(alikeTurn.equalChoices) + "; any of them will do."), alikeLines.end());
+        EXPECT_NE(std::find(alikeLines.begin(), alikeLines.end(), "Rated the same: " + std::to_string(alikeTurn.equalChoices) + " more; any of them will do."), alikeLines.end());
 
         // The worthless north wind goes before the value tiles that rate the same: the keep class settles the tie.
         const TableView discard = ReasonCases().front().view;
@@ -714,26 +775,41 @@ namespace BECore::Mahjong::Tests {
         ASSERT_GT(turn.equalChoices, 0);
         ASSERT_EQ(turn.alternatives.front().keep > turn.chosen.keep, true);
         const std::vector<std::string> lines = Lines(strings, discard);
-        EXPECT_NE(std::find(lines.begin(), lines.end(), "Equal tiles: " + std::to_string(turn.equalChoices) + "; least wanted: a useless honour."), lines.end());
+        EXPECT_NE(std::find(lines.begin(), lines.end(), "Rated the same: " + std::to_string(turn.equalChoices) + " more; drop a useless honour first."), lines.end());
     }
 
-    TEST(HintsTest, TheReasonsFollowTheLanguage) {
+    TEST(HintsTest, TheTallyIsTheLastLineAndLeavesRoomForOneReason) {
+        UIStrings strings;
+        ASSERT_TRUE(LoadShippedStrings(strings).empty());
+        ASSERT_TRUE(strings.SetLanguage("en"_intern));
+        const TableView view = WithDeclaredOpponent(ReasonCases().front().view);
+        ASSERT_EQ(Lines(strings, view).size(), kMaxCardFooter) << "the danger and the tie";
+
+        const HintCard card = CardOf(strings, view, "tally");
+
+        ASSERT_EQ(card.footer.size(), kMaxCardFooter);
+        EXPECT_EQ(Std(card.footer[0]), Lines(strings, view)[0]) << "the first reason stays";
+        EXPECT_EQ(Std(card.footer[1]), "tally");
+    }
+
+    TEST(HintsTest, TheCardFollowsTheLanguage) {
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
         const TableView view = ReasonCases().front().view;
 
         ASSERT_TRUE(strings.SetLanguage("en"_intern));
-        const std::vector<std::string> english = Lines(strings, view);
+        const HintCard english = CardOf(strings, view);
         ASSERT_TRUE(strings.SetLanguage("ru"_intern));
-        const std::vector<std::string> russian = Lines(strings, view);
+        const HintCard russian = CardOf(strings, view);
 
-        ASSERT_FALSE(english.empty());
-        EXPECT_EQ(english.size(), russian.size());
-        EXPECT_EQ(english.front().find("Steps to ready"), 0u);
-        EXPECT_EQ(russian.front().find("Шагов до готовности"), 0u);
+        ASSERT_FALSE(english.rows.empty());
+        EXPECT_EQ(english.rows.size(), russian.rows.size());
+        EXPECT_EQ(Std(english.now).find("Steps to ready"), 0u);
+        EXPECT_EQ(Std(russian.now).find("Шагов до готовности"), 0u);
+        EXPECT_EQ(Std(russian.rows[0].who), "Лучше");
     }
 
-    TEST(HintsTest, TheReasonsDoNotSeeTheOtherHands) {
+    TEST(HintsTest, TheCardDoesNotSeeTheOtherHands) {
         const auto make = [](bool other) {
             FixedWallSpec spec;
             spec.hands[kSeat0] = "1s 2s 3s 4s 5s 6s 7m 8m 9m 5p 6p 6p Ew";
@@ -751,12 +827,12 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
 
         ForEachLanguage(strings, [&](PoolString) {
-            EXPECT_EQ(Lines(strings, viewA), Lines(strings, viewB));
-            EXPECT_FALSE(Lines(strings, viewA).empty());
+            EXPECT_EQ(TextOf(CardOf(strings, viewA)), TextOf(CardOf(strings, viewB)));
+            EXPECT_FALSE(CardOf(strings, viewA).rows.empty());
         });
     }
 
-    // ----- the danger in the reasons -----
+    // ----- the danger on the card -----
 
     TEST(HintsTest, ADiscardAdviceAgainstADeclaredOpponentSaysTheDangerOfTheAdvisedTileBeforeTheTie) {
         UIStrings strings;
@@ -769,12 +845,9 @@ namespace BECore::Mahjong::Tests {
 
         const std::vector<std::string> lines = Lines(strings, view);
 
-        ASSERT_EQ(lines.size(), kMaxReasonLines) << "a discard turn is exactly the six lines of the panel";
-        EXPECT_EQ(lines[2], kDangerSentences[static_cast<size_t>(turn.chosen.danger)]);
-        EXPECT_EQ(lines[3].find("Equal tiles: "), 0u) << "the tie line follows the danger";
-        EXPECT_EQ(lines[0].find("Steps to ready"), 0u);
-        EXPECT_EQ(lines[1].find("Unseen tiles that help"), 0u);
-        EXPECT_EQ(lines[4].find("Instead "), 0u);
+        ASSERT_EQ(lines.size(), kMaxCardFooter);
+        EXPECT_EQ(lines[0], kDangerSentences[static_cast<size_t>(turn.chosen.danger)]);
+        EXPECT_EQ(lines[1].find("Rated the same: "), 0u) << "the tie line follows the danger";
     }
 
     TEST(HintsTest, TheDangerLineIsThereExactlyForADiscardStepWithADeclaredOpponent) {
@@ -788,7 +861,7 @@ namespace BECore::Mahjong::Tests {
             const std::vector<std::string> lines = Lines(strings, WithDeclaredOpponent(one.view));
             const bool discards = one.turnStep.has_value() && (*one.turnStep == TurnStep::Discard || *one.turnStep == TurnStep::Declare || *one.turnStep == TurnStep::KeepWaiting);
             EXPECT_EQ(HasDangerLine(lines), discards) << one.name;
-            EXPECT_LE(lines.size(), kMaxReasonLines) << one.name;
+            EXPECT_LE(lines.size(), kMaxCardFooter) << one.name;
             withLine += HasDangerLine(lines) ? 1 : 0;
         }
         EXPECT_EQ(withLine, 3u) << "a discard, a declaration and the keeping of a wait";
@@ -807,9 +880,9 @@ namespace BECore::Mahjong::Tests {
             const TurnExplanation turn = *ExplainAdviceFor(view)->turn;
             ASSERT_EQ(turn.chosen.tile, advised);
             const std::vector<std::string> lines = Lines(strings, view);
-            ASSERT_GE(lines.size(), 3u);
-            EXPECT_EQ(lines[2], kDangerSentences[static_cast<size_t>(turn.chosen.danger)]);
-            said.insert(lines[2]);
+            ASSERT_FALSE(lines.empty());
+            EXPECT_EQ(lines[0], kDangerSentences[static_cast<size_t>(turn.chosen.danger)]);
+            said.insert(lines[0]);
         }
         EXPECT_EQ(said.size(), 2u) << "an honour with every copy seen is safe, one with copies unseen is not";
         EXPECT_TRUE(said.contains(kDangerSentences[static_cast<size_t>(Danger::Safe)]));
@@ -822,9 +895,9 @@ namespace BECore::Mahjong::Tests {
         const TableView view = TwoDeclaringDiscardsView();
         const auto tieLine = [&](const LevelProfile& profile) {
             const Explanation explained = *ExplainAdvice(view, profile);
-            for (const eastl::string& line : ReasonLines(strings, view, explained)) {
-                if (Std(line).find("Equal tiles: ") == 0) {
-                    return Std(line);
+            for (const std::string& line : FooterOf(MakeAdviceCard(strings, view, explained, {}))) {
+                if (line.find("Rated the same: ") == 0) {
+                    return line;
                 }
             }
             return std::string();
@@ -837,7 +910,7 @@ namespace BECore::Mahjong::Tests {
         const TurnExplanation reading = *ExplainAdvice(view, careful)->turn;
         ASSERT_EQ(plain.equalChoices, 1);
         ASSERT_NE(plain.alternatives.front().danger, plain.chosen.danger) << "the two discards differ in danger";
-        EXPECT_EQ(tieLine(careful), "Equal tiles: 1; " + std::string(kSafestTie));
+        EXPECT_EQ(tieLine(careful), "Rated the same: 1 more; " + std::string(kSafestTie));
         EXPECT_EQ(reading.chosen.tile, T("Gd"));
         EXPECT_EQ(tieLine(kNormalProfile).find(kSafestTie), std::string::npos) << "the advice player does not read the danger: it did not decide";
         EXPECT_NE(tieLine(kNormalProfile), "");
@@ -846,19 +919,18 @@ namespace BECore::Mahjong::Tests {
         TableView quiet = view;
         quiet.seats[kSeat1].callingDeclared = false;
         const Explanation explained = *ExplainAdvice(quiet, careful);
-        for (const eastl::string& line : ReasonLines(strings, quiet, explained)) {
-            EXPECT_EQ(Std(line).find(kSafestTie), std::string::npos) << Std(line);
-            EXPECT_FALSE(HasDangerLine({Std(line)}));
+        for (const std::string& line : FooterOf(MakeAdviceCard(strings, quiet, explained, {}))) {
+            EXPECT_EQ(line.find(kSafestTie), std::string::npos) << line;
+            EXPECT_FALSE(HasDangerLine({line}));
         }
     }
 
-    TEST(HintsTest, TheDangerSentencesAreInBothLanguagesAndNoLongerThanTheLongestReasonLine) {
+    TEST(HintsTest, TheDangerSentencesAreInBothLanguagesAndNoLongerThanTheLongestLineUnderTheRows) {
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
         const std::vector<std::string> mine{"hints.why.danger.safe", "hints.why.danger.low", "hints.why.danger.medium", "hints.why.danger.high", "hints.why.tie.danger"};
-        const std::vector<std::string> others{"hints.why.steps",       "hints.why.help",          "hints.why.help.change", "hints.why.waits",        "hints.why.declare",
-                                              "hints.why.keepWaiting", "hints.why.tie.none",      "hints.why.tie.keep",    "hints.why.tie.chance",   "hints.why.alt.discard",
-                                              "hints.why.alt.wait",    "hints.why.alt.pung",      "hints.why.alt.kong",    "hints.why.alt.chow",     "hints.why.kong.noWorse",
+        // The lines under the rows of the card share one label: a danger sentence is no longer than the longest of them (the tally of the hand)
+        const std::vector<std::string> others{"coach.card.tally.hand", "hints.why.tie.none",      "hints.why.tie.keep",    "hints.why.tie.chance",   "hints.why.kong.noWorse",
                                               "hints.why.win",         "hints.why.claim.mahjong", "hints.why.claim.value", "hints.why.pass.waiting", "hints.why.pass.noGain"};
         ForEachLanguage(strings, [&](PoolString language) {
             size_t longest = 0;
@@ -873,7 +945,7 @@ namespace BECore::Mahjong::Tests {
         });
     }
 
-    TEST(HintsTest, TheDangerLinesFollowTheLanguageAndStayWithinTheSixLinesOfThePanel) {
+    TEST(HintsTest, TheDangerLinesFollowTheLanguage) {
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
         const TableView view = WithDeclaredOpponent(ReasonCases().front().view);
@@ -883,10 +955,10 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(strings.SetLanguage("ru"_intern));
         const std::vector<std::string> russian = Lines(strings, view);
 
-        ASSERT_EQ(english.size(), kMaxReasonLines);
-        EXPECT_EQ(russian.size(), kMaxReasonLines);
-        EXPECT_NE(english[2], russian[2]);
-        EXPECT_NE(russian[2].find("готов"), std::string::npos);
+        ASSERT_EQ(english.size(), kMaxCardFooter);
+        EXPECT_EQ(russian.size(), kMaxCardFooter);
+        EXPECT_NE(english[0], russian[0]);
+        EXPECT_NE(russian[0].find("готов"), std::string::npos);
     }
 
     // ----- when hints apply -----

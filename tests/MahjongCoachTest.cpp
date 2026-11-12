@@ -1,3 +1,4 @@
+#include "CoachCardTestSupport.h"
 #include "ComputerTestSupport.h"
 #include "MahjongTableTestSupport.h"
 #include "MahjongTouchTestSupport.h"
@@ -5,14 +6,14 @@
 
 #include <BECore/Control/Json.h>
 #include <Mahjong/Components/MahjongHintsComponent.h>
-#include <Mahjong/Table/Coach.h>
+#include <Mahjong/Table/HintCard.h>
 #include <Mahjong/Table/ScoreText.h>
 #include <Mahjong/Table/TableLayout.h>
 #include <Mahjong/Table/UiPalette.h>
 
 /**
- * The coach's note on the table (`Components/MahjongHintsComponent.h`, `Table/Coach.h`): the panel `CoachPanel` of the node `HintsWhy` and
- * the variables `coachNote0..2` in the shipped scene, over the ledger of the game. The judge and the ledger have their own test
+ * The coach's note on the table (`Components/MahjongHintsComponent.h`, `Table/Coach.h`, `Table/HintCard.h`): the card `CoachCard` of the
+ * node `HintsWhy` and its variables (`CardVarNames`) in the shipped scene, over the ledger of the game. The judge and the ledger have their own test
  * (`CoachTest`); here a person's move is made on a fixed hand and the screen is read.
  */
 namespace BECore::Mahjong::Tests {
@@ -62,41 +63,42 @@ namespace BECore::Mahjong::Tests {
             return _game->GetSession().PerformPerson(HandAction::MakeDiscard(T(tile), false)).has_value();
         }
 
+        /// The card is up and says the note of the ledger.
         bool NoteShown() const {
-            return OnScreen("HintsWhy", "CoachPanel");
+            return OnScreen("HintsWhy", "CoachCard") && _game->GetCoach().Note().has_value() && CardVars() == ExpectedLines();
         }
 
         std::string NoteVar(size_t index) const {
-            return Var((std::string("coachNote") + std::to_string(index)).c_str());
+            return CardVars()[index];
         }
 
         std::vector<std::string> NoteVars() const {
-            std::vector<std::string> lines;
-            for (size_t i = 0; i < kMaxCoachLines; ++i) {
-                lines.push_back(NoteVar(i));
-            }
-            return lines;
+            return CardVars();
         }
 
         bool NoNoteText() const {
-            for (const std::string& line : NoteVars()) {
-                if (!line.empty()) {
-                    return false;
-                }
-            }
-            return true;
+            return NoCardText();
         }
 
-        /// What the pure helper says about the note the ledger holds now, in the current language.
+        /// The tally of the game as the card says it.
+        eastl::string Tally() const {
+            const TableSession& session = _game->GetSession();
+            return CardTallyText(CoreManager::GetUIStrings(), _game->GetCoach().HandTallyOf(HandKeyOf(session)), _game->GetCoach().MatchTallyOf(session.StartCount()));
+        }
+
+        /// What the pure helper says about the note the ledger holds now, in the current language, with the tally of the game.
         std::vector<std::string> ExpectedLines() const {
-            std::vector<std::string> lines(kMaxCoachLines);
             if (const std::optional<CoachNote>& note = _game->GetCoach().Note()) {
-                const eastl::vector<eastl::string> said = CoachNoteLines(CoreManager::GetUIStrings(), *note);
-                for (size_t i = 0; i < said.size() && i < lines.size(); ++i) {
-                    lines[i] = Std(said[i]);
-                }
+                return CardTexts(MakeNoteCard(CoreManager::GetUIStrings(), *note, Tally()));
             }
-            return lines;
+            return CardTexts(HintCard{});
+        }
+
+        /// The title of the card of the advice of seat 0's table now.
+        std::string AdviceTitle() const {
+            const TableView view = MakeTableView(Hand(), kSeat0);
+            const eastl::string text = AdviceText(CoreManager::GetUIStrings(), view, *AdviceFor(view));
+            return Std(text);
         }
 
         /// A discard of the person at seat 0 that `JudgeMove` says differs, or nothing.
@@ -273,35 +275,37 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(NoteVars(), ExpectedLines()) << "the words of the new note";
     }
 
-    TEST_F(MahjongCoachTest, OnePressOfHintTakesTheNoteDownAndPutsUpTheAdviceAndItsReasons) {
+    TEST_F(MahjongCoachTest, OnePressOfHintTakesTheNoteDownAndPutsTheAdviceOnTheCard) {
         ASSERT_NO_FATAL_FAILURE(PutNoteUp());
         ASSERT_NO_FATAL_FAILURE(ToThePersonsNextTurn());
         ASSERT_TRUE(NoteShown());
         ASSERT_TRUE(ClickElement("HintsButton", "HintButton"));
         Draw();
         EXPECT_FALSE(NoteShown());
-        EXPECT_TRUE(NoNoteText());
-        EXPECT_TRUE(OnScreen("Hints", "AdviceText"));
-        EXPECT_TRUE(OnScreen("HintsWhy", "WhyPanel")) << "the mode Coach gives the reasons with the same press";
+        EXPECT_FALSE(_game->GetCoach().Note().has_value());
+        EXPECT_FALSE(OnScreen("Hints", "AdviceText")) << "in Coach the sentence is the title of the card";
+        EXPECT_TRUE(OnScreen("HintsWhy", "CoachCard")) << "the same press puts the advice on the card";
+        EXPECT_EQ(NoteVar(0), AdviceTitle());
     }
 
-    TEST_F(MahjongCoachTest, WithTheSwitchOnTheNoteOfTheLastMoveGoesFirstAndTheReasonsComeOnceItIsTakenDown) {
+    TEST_F(MahjongCoachTest, WithTheSwitchOnTheNoteOfTheLastMoveGoesFirstAndTheAdviceComesOnceItIsTakenDown) {
         ASSERT_NO_FATAL_FAILURE(StartEast(HintsMode::Coach));
         EmitAction("MahjongHintAdvice");
         Draw();
-        ASSERT_TRUE(OnScreen("HintsWhy", "WhyPanel"));
+        ASSERT_TRUE(OnScreen("HintsWhy", "CoachCard"));
+        ASSERT_EQ(NoteVar(0), AdviceTitle());
         ASSERT_TRUE(Discard("5p"));
         Draw();
         ASSERT_TRUE(NoteShown());
         ASSERT_NO_FATAL_FAILURE(ToThePersonsNextTurn());
-        EXPECT_TRUE(NoteShown());
-        EXPECT_TRUE(OnScreen("Hints", "AdviceText")) << "the sentence of the new turn comes by itself";
-        EXPECT_FALSE(OnScreen("HintsWhy", "WhyPanel")) << "the two panels are never up together";
+        EXPECT_TRUE(NoteShown()) << "the card says the note of the last move, not the advice of the new turn";
+        EXPECT_FALSE(OnScreen("Hints", "AdviceText"));
 
         ClickTheFelt();
         EXPECT_FALSE(NoteShown());
-        EXPECT_TRUE(OnScreen("HintsWhy", "WhyPanel"));
-        EXPECT_TRUE(OnScreen("Hints", "AdviceText"));
+        EXPECT_TRUE(OnScreen("HintsWhy", "CoachCard"));
+        EXPECT_EQ(NoteVar(0), AdviceTitle()) << "the advice of the new turn comes once the note is down";
+        EXPECT_FALSE(OnScreen("Hints", "AdviceText"));
     }
 
     TEST_F(MahjongCoachTest, TheEndOfTheHandAndANewMatchTakeTheNoteDown) {
@@ -458,28 +462,30 @@ namespace BECore::Mahjong::Tests {
 
     // ----- the place and the words -----
 
-    TEST_F(MahjongCoachTest, ThePanelLiesInsideTheCentrePanelLeavesTheTurnLightFreeAndTakesNoInput) {
+    TEST_F(MahjongCoachTest, TheCardOfTheNoteLiesOnTheWallRingMarksTheTwoMovesAndTakesNoInput) {
         ASSERT_NO_FATAL_FAILURE(PutNoteUp());
         for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait, TableShape::Narrow, TableShape::Wide}) {
             const MatrixWindow window = DesignWindowOf(shape);
             SCOPED_TRACE(window.label.c_str());
             LayOutOnTheTable({"HintsWhy"}, window);
 
-            const UIElement* panel = Element("HintsWhy", "CoachPanel");
+            const UIElement* panel = Element("HintsWhy", "CoachCard");
             ASSERT_NE(panel, nullptr);
             const TableLayout layout = MakeTableLayout(TableInput{}, DesignWidthOf(shape), DesignHeightOf(shape));
             EXPECT_TRUE(Inside(panel->rect, layout.zones.wall)) << "on the ring";
-            const Rect free = Grown(layout.zones.centerPanel, -kPanelTurnLightWidth);
-            EXPECT_TRUE(Inside(panel->rect, free)) << "clear of the light on the edge of the centre panel: " << panel->rect.x << "," << panel->rect.y << " " << panel->rect.w << "x" << panel->rect.h;
-            for (size_t i = 0; i < kMaxCoachLines; ++i) {
-                const UIElement* line = Element("HintsWhy", (std::string("CoachLine") + std::to_string(i)).c_str());
-                ASSERT_NE(line, nullptr) << i;
-                EXPECT_TRUE(Inside(line->rect, panel->rect)) << i;
-                EXPECT_FALSE(line->IsHitTestable()) << i << " takes no input";
+            for (const char* name : {"CardTitle", "CardHead", "CardRow0", "CardRow1", "CardFoot0"}) {
+                const UIElement* part = Element("HintsWhy", name);
+                ASSERT_NE(part, nullptr) << name;
+                ASSERT_GT(part->rect.w, 0.0f) << name;
+                EXPECT_TRUE(Inside(part->rect, panel->rect)) << name;
+                EXPECT_FALSE(part->IsHitTestable()) << name << " takes no input";
             }
+            EXPECT_EQ(Element("HintsWhy", "CardRow2")->rect.w, 0.0f) << "a note has two rows";
             EXPECT_FALSE(panel->IsHitTestable());
-            EXPECT_FALSE(Click(panel->rect.x + panel->rect.w * 0.5f, panel->rect.y + panel->rect.h * 0.5f)) << "a click on the panel is no canvas's";
+            EXPECT_FALSE(Click(panel->rect.x + panel->rect.w * 0.5f, panel->rect.y + panel->rect.h * 0.5f)) << "a click on the card is no canvas's";
             EXPECT_TRUE(SameColor(panel->color, PaletteColor("surface")));
+            EXPECT_TRUE(SameColor(Element("HintsWhy", "CardRow0")->color, PaletteColor("surfaceRaised"))) << "the computer's choice";
+            EXPECT_TRUE(SameColor(Element("HintsWhy", "CardRow1")->color, PaletteColor("danger"))) << "the person's move";
 
             for (const TileSlot& slot : layout.slots) {
                 if (slot.role != SlotRole::WallStack) {
@@ -489,7 +495,7 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
-    TEST_F(MahjongCoachTest, ThePanelPassesTheSizeMatrixAndTheLongestLinesFitInEveryLanguage) {
+    TEST_F(MahjongCoachTest, TheCardOfANotePassesTheSizeMatrixAndTheLongestTextOfEveryCellFitsInEveryLanguage) {
         ASSERT_NO_FATAL_FAILURE(PutNoteUp());
         std::vector<CoachNote> notes;
         notes.push_back(LongNote("Nw", "9p"));
@@ -509,19 +515,15 @@ namespace BECore::Mahjong::Tests {
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             Draw();  // the words of the language
-            std::vector<eastl::string> every;
+            const UIStrings& strings = CoreManager::GetUIStrings();
+            const eastl::string tally = CardTallyText(strings, CoachTally{99, 99}, CoachTally{999, 999});
+            std::vector<HintCard> cards;
             for (const CoachNote& note : notes) {
-                for (const eastl::string& line : CoachNoteLines(CoreManager::GetUIStrings(), note)) {
-                    every.push_back(line);
-                }
+                cards.push_back(MakeNoteCard(strings, note, tally));
             }
-            const eastl::string longest = LongestText(every);
-            ASSERT_FALSE(longest.empty());
-            for (size_t i = 0; i < kMaxCoachLines; ++i) {
-                CoreManager::GetUIVars().Set(PoolString::Intern(Format("coachNote{}", i)), eastl::string_view(longest));
-            }
+            ASSERT_TRUE(OnScreen("HintsWhy", "CoachCard"));
+            SetLongestCardTexts(cards);
             Draw();
-            ASSERT_TRUE(NoteShown());
             ExpectPassesTheMatrix("HintsWhy", EngineTouchMinimum());
             for (const auto& output : kOutputs) {
                 ExpectWordsFit("HintsWhy", output[0], output[1], 0.0f);

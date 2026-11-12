@@ -1,38 +1,86 @@
 <?xml version="1.0"?>
 <!--
-  The reasons of the advice (Table/Hints.h, ReasonLines): up to six lines in a panel that a second press of HintButton opens and a third
-  closes (MahjongHintsComponent). Text only, no control: nothing here takes input, so a click on it is the table's.
-  WhyPanel fills the region table.wall (the wall ring of the layout, 364 x 168 in every shape) less 4 on each side (the grid of 4): the
-  one place of the table with no hand, meld or discard tile, so it covers only the centre panel (round, wall count, points) and the wall
-  stacks while it is open. Its plate is opaque (the palette's surface), so the centre panel does not show through. It is six
-  lines of 28 (font 18, AutoFit down to 12) that hold {hintWhy0}..{hintWhy5}, empty ones included. Layer 11: over the HUD (10), under the
-  covers and the modal screens (20 and up). A region wins over the safe area, so the panel stays on the ring. MahjongHintsTest holds it inside
-  the ring, clear of every slot but the wall stacks, free of input, and every line of the longest text in both languages fitting on the size
-  matrix.
-  CoachPanel is the note of the coach (Table/Coach.h, MahjongHintsComponent): up to three sentences {coachNote0}..{coachNote2}, each in a
-  label of 40 that wraps to two lines (font 18, AutoFit down to 12). It lies inside the region table.centerPanel, 4 units clear of it so
-  that the gold light of the turn on the panel's edge stays visible while the computers move (the note stays up through their turns), and
-  is never up with WhyPanel. Opaque plate, text only, no input. MahjongCoachTest holds it.
+  The card of the coach (Table/HintCard.h, MahjongHintsComponent): in the mode Coach one table in the middle of the table that says either
+  the advice of the person's turn with its numbers (MakeAdviceCard, while the switch Hint is on) or the note of the person's last move
+  that differs from the computer's choice (MakeNoteCard; the note goes first). Text and tile pictures only, no control: nothing here takes
+  input, so a click on it is the table's.
+  CoachCard fills the region table.wall (the wall ring of the layout, 364 x 168 in every shape) edge to edge: the one place of the table
+  with no hand, meld or discard tile, so it covers only the centre panel (round, wall count, points, the light of the turn) and the wall
+  stacks while it is up; the seat plates still show whose turn it is. Its plate is opaque (the palette's surface). Inside the padding
+  (8 at the sides, 4 above and below) it is 348 x 160:
+  - CardTitle (32, font 22, two lines when it must): {cardTitle}, the sentence of the advice, or "Computer: <advice>" for a note;
+  - CardHead (16, muted, font 18): {cardNow}, the steps to a ready hand now, over the three cells who / tiles / word (204), then the
+    heads of the two number columns (72 each);
+  - CardRow0..2 (24 each, font 18): who (64), up to three tile pictures Card<i>Tile<k> (18 x 24, the sprite Tile_<notation> the component
+    sets) in 60, the word of the kind (80), the steps after the move ({cardSteps<i>}, its colour set by the component: green closer to
+    ready, amber farther) and the unseen tiles that help (72 each); the component gives the row of the computer's choice the surfaceRaised
+    fill and the person's move the danger fill;
+  - CardFoot0..1 (20, muted, font 18): why in words, then the tally of the coach.
+  Hidden rows take no room. Layer 11: over the HUD (10), under the covers and the modal screens (20 and up). A region wins over the safe
+  area, so the card stays on the ring. MahjongHintsTest and MahjongCoachTest hold it on the ring, clear of every slot but the wall
+  stacks, free of input, and the longest text of every line fitting on the size matrix in both languages.
 -->
 <node name="HintsWhy" layer="11" contentVersion="3">
   <components>
     <component type="UICanvasComponent" space="SceneView">
       <elements>
-        <element type="UIStack" name="WhyPanel" region="table.wall" anchor="Stretch" margin="4,0,4,0" visible="false" direction="Vertical" spacing="0" padding="0" crossAlign="Stretch" color="36,40,52,255">
+        <element type="UIStack" name="CoachCard" region="table.wall" anchor="Stretch" visible="false" direction="Vertical" spacing="0" padding="8,4,8,4" crossAlign="Stretch" color="36,40,52,255">
           <children>
-            <element type="UILabel" name="WhyLine0" height="28" text="{hintWhy0}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" />
-            <element type="UILabel" name="WhyLine1" height="28" text="{hintWhy1}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" />
-            <element type="UILabel" name="WhyLine2" height="28" text="{hintWhy2}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" />
-            <element type="UILabel" name="WhyLine3" height="28" text="{hintWhy3}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" />
-            <element type="UILabel" name="WhyLine4" height="28" text="{hintWhy4}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" />
-            <element type="UILabel" name="WhyLine5" height="28" text="{hintWhy5}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" />
-          </children>
-        </element>
-        <element type="UIStack" name="CoachPanel" region="table.centerPanel" anchor="Stretch" margin="8,4,8,4" visible="false" direction="Vertical" spacing="0" padding="4" crossAlign="Stretch" color="36,40,52,255">
-          <children>
-            <element type="UILabel" name="CoachLine0" height="40" text="{coachNote0}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" />
-            <element type="UILabel" name="CoachLine1" height="40" text="{coachNote1}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" />
-            <element type="UILabel" name="CoachLine2" height="40" text="{coachNote2}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" />
+            <element type="UILabel" name="CardTitle" height="32" text="{cardTitle}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" />
+            <element type="UIStack" name="CardHead" visible="false" height="16" direction="Horizontal" spacing="0" crossAlign="Center">
+              <children>
+                <element type="UILabel" name="CardNow" width="204" height="16" text="{cardNow}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" textColor="190,196,190,255" />
+                <element type="UILabel" name="CardStepsHead" width="72" height="16" text="{#hints.card.steps}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" align="Center" textColor="190,196,190,255" />
+                <element type="UILabel" name="CardUsefulHead" width="72" height="16" text="{#hints.card.useful}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" align="Center" textColor="190,196,190,255" />
+              </children>
+            </element>
+            <element type="UIStack" name="CardRow0" visible="false" height="24" direction="Horizontal" spacing="0" crossAlign="Center">
+              <children>
+                <element type="UILabel" name="CardWho0" width="64" height="24" text="{cardWho0}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" textColor="190,196,190,255" />
+                <element type="UIStack" name="CardTiles0" width="60" height="24" direction="Horizontal" spacing="0" crossAlign="Center">
+                  <children>
+                    <element type="UIImage" name="Card0Tile0" visible="false" width="18" height="24" />
+                    <element type="UIImage" name="Card0Tile1" visible="false" width="18" height="24" />
+                    <element type="UIImage" name="Card0Tile2" visible="false" width="18" height="24" />
+                  </children>
+                </element>
+                <element type="UILabel" name="CardMove0" width="80" height="24" text="{cardMove0}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" />
+                <element type="UILabel" name="CardSteps0" width="72" height="24" text="{cardSteps0}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" align="Center" />
+                <element type="UILabel" name="CardUseful0" width="72" height="24" text="{cardUseful0}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" align="Center" />
+              </children>
+            </element>
+            <element type="UIStack" name="CardRow1" visible="false" height="24" direction="Horizontal" spacing="0" crossAlign="Center">
+              <children>
+                <element type="UILabel" name="CardWho1" width="64" height="24" text="{cardWho1}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" textColor="190,196,190,255" />
+                <element type="UIStack" name="CardTiles1" width="60" height="24" direction="Horizontal" spacing="0" crossAlign="Center">
+                  <children>
+                    <element type="UIImage" name="Card1Tile0" visible="false" width="18" height="24" />
+                    <element type="UIImage" name="Card1Tile1" visible="false" width="18" height="24" />
+                    <element type="UIImage" name="Card1Tile2" visible="false" width="18" height="24" />
+                  </children>
+                </element>
+                <element type="UILabel" name="CardMove1" width="80" height="24" text="{cardMove1}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" />
+                <element type="UILabel" name="CardSteps1" width="72" height="24" text="{cardSteps1}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" align="Center" />
+                <element type="UILabel" name="CardUseful1" width="72" height="24" text="{cardUseful1}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" align="Center" />
+              </children>
+            </element>
+            <element type="UIStack" name="CardRow2" visible="false" height="24" direction="Horizontal" spacing="0" crossAlign="Center">
+              <children>
+                <element type="UILabel" name="CardWho2" width="64" height="24" text="{cardWho2}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" textColor="190,196,190,255" />
+                <element type="UIStack" name="CardTiles2" width="60" height="24" direction="Horizontal" spacing="0" crossAlign="Center">
+                  <children>
+                    <element type="UIImage" name="Card2Tile0" visible="false" width="18" height="24" />
+                    <element type="UIImage" name="Card2Tile1" visible="false" width="18" height="24" />
+                    <element type="UIImage" name="Card2Tile2" visible="false" width="18" height="24" />
+                  </children>
+                </element>
+                <element type="UILabel" name="CardMove2" width="80" height="24" text="{cardMove2}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" />
+                <element type="UILabel" name="CardSteps2" width="72" height="24" text="{cardSteps2}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" align="Center" />
+                <element type="UILabel" name="CardUseful2" width="72" height="24" text="{cardUseful2}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" align="Center" />
+              </children>
+            </element>
+            <element type="UILabel" name="CardFoot0" height="20" text="{cardFoot0}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" textColor="190,196,190,255" />
+            <element type="UILabel" name="CardFoot1" height="20" text="{cardFoot1}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" textColor="190,196,190,255" />
           </children>
         </element>
       </elements>
