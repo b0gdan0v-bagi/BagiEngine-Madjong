@@ -421,7 +421,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(TouchRegimeTest, TheBottomInsetLiftsTheCompactRowSoTheBarHasToHoldTheRowAboveIt) {
         const auto narrow = [](float width, float height, float inset) { return NeedsCompactActions(width, height, 1.0f, kMinTouch, 1.0f, kNarrowViewWidth, kNarrowViewHeight, inset); };
-        // 610 x 600 (the table is 433.8 high, the bar 83.1 px, the row 120 units at the scale 0.63: 75.6 px): no inset as before
+        // 610 x 600 (the table is 433.8 high, the bar 83.1 px, the row 120 units at the scale 0.63: 75.6 px): with no inset the bar holds the row
         EXPECT_TRUE(narrow(610.0f, 600.0f, 0.0f));
         EXPECT_EQ(narrow(610.0f, 600.0f, 0.0f), NeedsCompactActions(610.0f, 600.0f, 1.0f, kMinTouch, 1.0f, kNarrowViewWidth, kNarrowViewHeight)) << "the inset defaults to none";
         // an inset the bar holds: 83.1 - 7 = 76.1 px for 75.6
