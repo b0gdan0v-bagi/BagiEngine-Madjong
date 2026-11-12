@@ -87,6 +87,21 @@ namespace BECore::Mahjong {
             return {};
         }
 
+        /// Whether the two lists name the same regions at the same rectangles, in the same order.
+        bool SameRegions(const eastl::vector<TableRegion>& a, const eastl::vector<TableRegion>& b) {
+            if (a.size() != b.size()) {
+                return false;
+            }
+            for (size_t i = 0; i < a.size(); ++i) {
+                const Rect& left = a[i].rect;
+                const Rect& right = b[i].rect;
+                if (a[i].name != b[i].name || left.x != right.x || left.y != right.y || left.w != right.w || left.h != right.h) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         /// The element `name` of `canvas`; null when there is no canvas or no such element.
         UIElement* FindElementIn(const IntrusivePtr<UICanvasComponent>& canvas, PoolString name) {
             return canvas ? canvas->GetRoot().FindByName(name) : nullptr;
@@ -299,6 +314,8 @@ namespace BECore::Mahjong {
             TableSnapshot cleared;
             cleared.layout.slots = eastl::move(snapshot.layout.slots);
             cleared.layout.slots.clear();
+            cleared.layout.zones.freeRegions = eastl::move(snapshot.layout.zones.freeRegions);
+            cleared.layout.zones.freeRegions.clear();
             cleared.pile = eastl::move(snapshot.pile);
             cleared.pile.clear();
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
@@ -1034,6 +1051,48 @@ namespace BECore::Mahjong {
         }
     }
 
+    void MahjongTableComponent::PublishRegions(const TableLayout& layout) {
+        BE_PROFILE_SCOPE("MahjongTable::PublishRegions");
+        RebuildTableRegions(layout, _regions);
+        bool publish = !SameRegions(_regions, _publishedRegions);
+        // A node the scene lacks is looked for again (the scene of a test may get it later); in the game all are found at the first draw
+        Scene& scene = GetScene();
+        for (size_t i = 0; i < kRegionNodeCount; ++i) {
+            if (!_regionCanvases[i]) {
+                _regionCanvases[i] = FindCanvasOf(scene, PoolString::Intern(kRegionNodes[i]));
+                publish = publish || _regionCanvases[i];
+            }
+        }
+        if (!publish) {
+            return;
+        }
+        // The names are interned for the new set only; a name that left the spec is withdrawn from every canvas
+        eastl::vector<PoolString> names;
+        names.reserve(_regions.size());
+        for (const TableRegion& region : _regions) {
+            names.push_back(PoolString::Intern(eastl::string_view(region.name.data(), region.name.size())));
+        }
+        for (const PoolString& old : _regionNames) {
+            if (eastl::find(names.begin(), names.end(), old) == names.end()) {
+                for (const IntrusivePtr<UICanvasComponent>& canvas : _regionCanvases) {
+                    if (canvas) {
+                        canvas->RemoveRegion(old);
+                    }
+                }
+            }
+        }
+        for (const IntrusivePtr<UICanvasComponent>& canvas : _regionCanvases) {
+            if (!canvas) {
+                continue;
+            }
+            for (size_t i = 0; i < _regions.size(); ++i) {
+                canvas->SetRegion(names[i], _regions[i].rect);
+            }
+        }
+        _regionNames = eastl::move(names);
+        _publishedRegions = _regions;
+    }
+
     void MahjongTableComponent::SetAtlasTexture(IntrusivePtr<ITexture> texture) {
         _atlas = ResourceHandle<ITexture>(std::move(texture));
     }
@@ -1101,6 +1160,7 @@ namespace BECore::Mahjong {
         TableInput& input = _input;
         input.profile = CurrentTableProfile(view);
         RebuildTableLayout(_shown.layout, input, viewWidth, viewHeight);
+        PublishRegions(_shown.layout);
         FillSnapshot(_shown, hand, faces, bottom);
         PlanBatch(before, news, hand);
         const TableLayout& layout = _shown.layout;
