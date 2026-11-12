@@ -263,6 +263,7 @@
         <string key="setup.computer" text="Computer"/>
         <string key="setup.start" text="Start"/>
         <string key="setup.continue" text="Continue"/>
+        <string key="setup.online" text="Online"/>
         <string key="hud.options" text="Options"/>
         <string key="options.title" text="Options"/>
         <string key="options.back" text="Back"/>
@@ -582,6 +583,7 @@
         <string key="setup.computer" text="Компьютер"/>
         <string key="setup.start" text="Начать"/>
         <string key="setup.continue" text="Продолжить"/>
+        <string key="setup.online" text="По сети"/>
         <string key="hud.options" text="Настройки"/>
         <string key="options.title" text="Настройки"/>
         <string key="options.back" text="Назад"/>

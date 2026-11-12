@@ -69,6 +69,11 @@ namespace BECore::Mahjong {
             return _pad;
         }
 
+        /// The player has typed the name (or an earlier run stored it), so it is theirs to keep and no longer the default of the language.
+        [[nodiscard]] bool NameIsOwn() const {
+            return _nameOwn;
+        }
+
         [[nodiscard]] const OnlineRoomOptions& Options() const {
             return _options;
         }

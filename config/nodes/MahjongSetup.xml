@@ -35,7 +35,11 @@
   Continue (MahjongContinue; the saved match is the table behind the panel, MahjongGame::CanContinue()) is not a new row, because
   the plate has no room for another: Start lives in the horizontal stack ButtonRow (64 high like the rows, 8 between) beside it.
   Continue is hidden here and shown by MahjongHudComponent exactly while the panel is open and there is a match to continue; a hidden
-  element takes no room, so Start keeps the whole width otherwise, and the two share it half and half when both are there.
+  element takes no room, so Start keeps the rest of the width otherwise.
+  SetupOnline (MahjongOnline; opens the online panel, nodes Online and OnlineEntry, over this one; MahjongOnlineComponent hides it in the browser build) is the third
+  control of ButtonRow, between Continue and Start: the plate has no room for another row, and the title band has no room for a word (its spacer is 0 in the narrow
+  variants). Three buttons share a row of 214 units in the smallest window, so the weights follow the words (Continue 1.5, SetupOnline 1.1, Start 1: Продолжить is the
+  longest word and По сети the next); MahjongHudTest holds every word whole and every button a touch target with all three there.
 -->
 <node name="Setup" layer="30" contentVersion="5">
   <components>
@@ -457,10 +461,16 @@
             <element type="UIElement" name="StartGap" height="0" />
             <element type="UIStack" name="ButtonRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" crossAlign="Stretch">
               <children>
-                <element type="UIElement" name="Continue" flex="1" fontSize="28" color="45,75,120,255" visible="false">
+                <element type="UIElement" name="Continue" flex="1.5" fontSize="28" color="45,75,120,255" visible="false">
                   <components>
                     <component type="UITextComponent" text="{#setup.continue}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongContinue"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="SetupOnline" flex="1.1" fontSize="28" color="45,75,120,255">
+                  <components>
+                    <component type="UITextComponent" text="{#setup.online}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UIInputClicker" action="MahjongOnline"/>
                   </components>
                 </element>
                 <element type="UIElement" name="Start" flex="1" fontSize="28" color="40,110,60,255">

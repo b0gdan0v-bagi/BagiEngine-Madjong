@@ -31,6 +31,8 @@ namespace BECore::Mahjong::Tests {
         };
         constexpr Output kOutputs[] = {{1280.0f, 720.0f}, {731.0f, 411.0f}, {853.0f, 480.0f}, {480.0f, 480.0f}, {480.0f, 853.0f}, {1707.0f, 480.0f}};
         constexpr float kButtonAir = 8.0f;
+        /// A row shared by flex weights adds up to the width of the plate only to the last bit of a float.
+        constexpr float kRowTolerance = 0.01f;
         constexpr float kMinControlHeight = 48.0f;
         constexpr int kHandsToTry = 20;
         constexpr const char* kPlainHand = "1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Gd Rd";
@@ -735,7 +737,11 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(SameColor(start->color, PaletteColor("primary")));
         EXPECT_EQ(start->rect.h, kMainButtonHeight);
         EXPECT_EQ(GapBelow(*above, start->rect), kModalSectionGap) << "Start is set apart from the rows by 16";
-        EXPECT_EQ(start->rect.x, plate.x + kModalPadding);
+        const UIElement* online = Element("Setup", "SetupOnline");
+        ASSERT_NE(online, nullptr);
+        EXPECT_TRUE(SameColor(online->color, PaletteColor("secondary")));
+        EXPECT_EQ(online->rect.x, plate.x + kModalPadding) << "the row of Start opens with the Online button";
+        EXPECT_NEAR(start->rect.x + start->rect.w, plate.x + plate.w - kModalPadding, kRowTolerance);
         EXPECT_EQ(start->rect.y + start->rect.h, plate.y + plate.h - kModalPadding) << "the plate holds Start and nothing more";
         EXPECT_LE(plate.y + plate.h, kViewHeight);
     }
@@ -1712,11 +1718,13 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(_game->CanContinue());
         ASSERT_NE(Element("Setup", "Continue"), nullptr);
         EXPECT_FALSE(OnScreen("Setup", "Continue"));
-        // Start has the whole width of the plate then
+        // The Online button and Start share the whole width of the plate then
         const UIElement* start = Element("Setup", "Start");
-        ASSERT_NE(start, nullptr);
-        EXPECT_EQ(start->rect.x, Element("Setup", "Plate")->rect.x + kModalPadding);
-        EXPECT_EQ(start->rect.w, Element("Setup", "Plate")->rect.w - 2.0f * kModalPadding);
+        const UIElement* online = Element("Setup", "SetupOnline");
+        ASSERT_TRUE(start != nullptr && online != nullptr);
+        EXPECT_EQ(online->rect.x, Element("Setup", "Plate")->rect.x + kModalPadding);
+        EXPECT_NEAR(online->rect.x + online->rect.w + kModalGap, start->rect.x, kRowTolerance);
+        EXPECT_NEAR(start->rect.x + start->rect.w, Element("Setup", "Plate")->rect.x + Element("Setup", "Plate")->rect.w - kModalPadding, kRowTolerance);
 
         // The action does nothing, with the panel open or closed
         const uint64_t version = _game->GetSession().Version();
@@ -1800,14 +1808,17 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(Text("Setup", "Continue"), Tr(CoreManager::GetUIStrings(), "setup.continue").c_str());
             EXPECT_TRUE(SameColor(proceed->color, PaletteColor("secondary")));
             EXPECT_TRUE(SameColor(start->color, PaletteColor("primary")));
-            // Side by side in one row of the main button's height, sharing the width, inside the plate, the gap of 8 between
+            // Side by side with the Online button between them, in one row of the main button's height, sharing the width, inside the plate, the gap of 8 between
+            const UIElement* online = Element("Setup", "SetupOnline");
+            ASSERT_NE(online, nullptr);
             EXPECT_EQ(proceed->rect.y, start->rect.y);
+            EXPECT_EQ(online->rect.y, start->rect.y);
             EXPECT_EQ(proceed->rect.h, kMainButtonHeight);
             EXPECT_EQ(start->rect.h, kMainButtonHeight);
-            EXPECT_EQ(proceed->rect.w, start->rect.w);
             EXPECT_EQ(proceed->rect.x, plate->rect.x + kModalPadding);
-            EXPECT_EQ(proceed->rect.x + proceed->rect.w + kModalGap, start->rect.x);
-            EXPECT_EQ(start->rect.x + start->rect.w, plate->rect.x + plate->rect.w - kModalPadding);
+            EXPECT_NEAR(proceed->rect.x + proceed->rect.w + kModalGap, online->rect.x, kRowTolerance);
+            EXPECT_NEAR(online->rect.x + online->rect.w + kModalGap, start->rect.x, kRowTolerance);
+            EXPECT_NEAR(start->rect.x + start->rect.w, plate->rect.x + plate->rect.w - kModalPadding, kRowTolerance);
             EXPECT_GE(proceed->rect.h, kMinControlHeight);
 
             // The size matrix with both buttons there: the engine's touch minimum and every word whole
