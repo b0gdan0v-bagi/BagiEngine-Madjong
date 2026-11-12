@@ -13,6 +13,7 @@ be_add_module(Mahjong LINK
     BECoreModule
     EventsModule
     GamesModule
+    RoomClientModule
     SDLModule
 )
 be_add_game_reflection(MahjongModule)
