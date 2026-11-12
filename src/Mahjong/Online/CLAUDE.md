@@ -24,6 +24,7 @@
 | `OnlineWords.h/.cpp` | every code the client can meet (`kKnownOnlineCodes`) with its key in `config/UIStrings.xml` (`online.*`); several codes share a key where the player can do nothing different; `stale_action` alone is silent |
 | `OnlineClient.h/.cpp` | the model, and `SessionToJson` / `SessionFromJson` |
 | `TextEntry.h/.cpp` | one bounded text (a room code or a name), its pad of keys, `CharFromKeycode` |
+| `OnlineMirror.h/.cpp` | the table of a view as a display copy (below) |
 | `OnlineScreens.h/.cpp` | the pages and fields over the client, pure |
 | `OnlineServerUrl.h/.cpp` | the address of the server |
 
@@ -33,6 +34,15 @@
 - **Version rule:** `Version()` grows when the stage, lobby, table, notice or session to keep changes; a frame with nothing to do changes nothing and allocates nothing (lists are members). The lobby is rebuilt on a lobby event and when the client's seat or host flag moved (`ChooseSeat` takes the seat at once, an error gives it back).
 - **Notice:** one `OnlineNotice` (a key, an `arg` for the one key that names a code, a serial so a screen shows each once). A command that cannot be sent, a server `error`, a `left` the player did not ask for and a `Closed` make one. The `arg` is a code from the server, reduced to letters, digits and `_`. A `Closed` the model asked for (`Disconnect`, a bad format) is dropped.
 - **The session to keep:** `SessionToKeep()` with `SessionRevision()` (grows when it should be saved or erased). Forgotten on `room_gone`, `replaced`, `gave_up`, `Leave()`, a `left` and a format mismatch; kept through a lost connection, `Disconnect()` and every other close. **The token is the player's secret:** never in a log, a notice or a test message. Where it is stored (`Save/`, the browser) is the screens' decision; the model gives the data and a JSON pair that refuses anything that is not a room and a token.
+
+## The display copy
+
+The online table is drawn by the scene components of the local game, which read `Match` / `HandModel` / `TableSession`. So `MakeDisplayState(OnlineTable, OnlineLobby)` turns a view into the arguments of `HandModel::ForDisplay`, `Match::ShowRemote` and `TableSession::ShowRemote` (`Game/CLAUDE.md`, "Display copies") and `ShowOnlineTable` puts them in. **Not `Restore`:** a client does not know the other hands or the wall (so the counts never add up) nor the claims of the other seats, and `Restore` refuses such a state; a display model is read, never played.
+
+- **Real:** the own concealed tiles and melds, open melds, bonus tiles, the pile, scores, turn, winds (from `east`), and, once the hand is over, all four hands and the result. **Invalid tiles:** the other hands, their concealed kongs (a `Kong` meld after the open ones), the live wall, the reserve and the dead wall. The reserve is derived from the tile count, so `Remaining()` (the wall ring) equals the model's.
+- **Claim window:** the own seat is `Waiting` when `actions` lists a claim or a pass, else `Passed`; the others `Passed` (a view does not say), no `LastClaimWindow`.
+- **The view does not say, so the copy does not know:** which tile was drawn (`DrawnTile` is invalid for every seat: no tint of the drawn tile, no draw flight online), `callingAtDiscardCount` (set so it is never "the first hand"), the level of a computer (all default) and the breakdown of a win. Do not score a display model; read `result.scores` and `deltas`. After the last hand `Match::East()` is the next dealer, as in a local match.
+- **`IsAnotherTable(TableKey, TableKey)`** tells a new hand or match (other `handsPlayed`, east, seat, a version that went back, a played hand after an ended one: a replayed drawn hand has the same keys) from another view of the same table: the session's `StartCount()` moves on the first only.
 
 ## The screens
 
