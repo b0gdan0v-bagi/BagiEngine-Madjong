@@ -36,7 +36,7 @@
   spacing, the eight buttons and the 82 %, and TouchRegimeTest wraps the claim window and the turn, and every part of them, against
   them. No Hint label: a touch screen has no hover, and the label would lie over the table.
 -->
-<node name="ActionsCompact" layer="10" contentVersion="2">
+<node name="ActionsCompact" layer="10" contentVersion="3">
   <components>
     <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" visible="false">
       <elements>

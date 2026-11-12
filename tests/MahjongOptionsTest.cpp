@@ -116,15 +116,15 @@ namespace BECore::Mahjong::Tests {
 
         bool Selected(const char* segment) const {
             const UIElement* element = Element("Options", segment);
-            const auto* button = element != nullptr ? element->Cast<UIButton>() : nullptr;
+            const auto* button = element != nullptr ? element : nullptr;
             return button != nullptr && button->selected;
         }
 
         std::string Text(const char* element) const {
             const UIElement* found = Element("Options", element);
             if (found != nullptr && found->Cast<UIDropdown>() != nullptr) {
-                const UIButton* chosen = found->Cast<UIDropdown>()->FindChosenOption();  // the header shows the chosen option
-                return chosen != nullptr ? std::string(chosen->GetDisplayText().data(), chosen->GetDisplayText().size()) : std::string("<none chosen>");
+                const UIElement* chosen = found->Cast<UIDropdown>()->FindChosenOption();  // the header shows the chosen option
+                return chosen != nullptr ? DisplayText(chosen) : std::string("<none chosen>");
             }
             return DisplayText(found);
         }
@@ -167,11 +167,11 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(group->bind, PoolString::Intern(row.variable)) << row.group;
             ASSERT_EQ(group->children.size(), row.count) << row.group;
             for (size_t index = 0; index < row.count; ++index) {
-                const auto* button = group->children[index]->Cast<UIButton>();
+                const UIElement* button = group->children[index].Get();
                 ASSERT_NE(button, nullptr) << row.segments[index];
                 EXPECT_EQ(button->name.ToStringView(), row.segments[index]);
-                EXPECT_EQ(button->action, PoolString::Intern(row.action)) << row.segments[index];
-                EXPECT_EQ(button->value.ToStringView(), row.values[index]) << row.segments[index];
+                EXPECT_EQ(ButtonAction(button), PoolString::Intern(row.action)) << row.segments[index];
+                EXPECT_EQ(ButtonValue(button).ToStringView(), row.values[index]) << row.segments[index];
             }
         }
         for (const char* name : {kSpeedRow, kSpeedCaption}) {
@@ -182,11 +182,11 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(speedGroup->bind, "speedChoice"_intern);
         ASSERT_EQ(speedGroup->children.size(), EnumUtils<AnimationSpeed>::Count()) << "one segment per speed, slowest first";
         for (size_t index = 0; index < EnumUtils<AnimationSpeed>::Count(); ++index) {
-            const auto* segment = speedGroup->children[index]->Cast<UIButton>();
+            const UIElement* segment = speedGroup->children[index].Get();
             ASSERT_NE(segment, nullptr) << index;
             EXPECT_EQ(segment->name.ToStringView(), kSpeedSegments[index]);
-            EXPECT_EQ(segment->action, "MahjongSetSpeed"_intern);
-            EXPECT_EQ(segment->value.ToStringView(), SpeedText(EnumUtils<AnimationSpeed>::Values()[index]).data());
+            EXPECT_EQ(ButtonAction(segment), "MahjongSetSpeed"_intern);
+            EXPECT_EQ(ButtonValue(segment).ToStringView(), SpeedText(EnumUtils<AnimationSpeed>::Values()[index]).data());
         }
         ASSERT_TRUE(IsButton(Element("Options", "Back")));
         EXPECT_EQ(ButtonAction(Element("Options", "Back")), "MahjongOptionsBack"_intern);
@@ -330,7 +330,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(group->rect.y, row->rect.y + kRowPadding);
             EXPECT_EQ(group->rect.y + group->rect.h, row->rect.y + row->rect.h - kRowPadding);
             for (const char* name : std::span<const char* const>(entry.segments, entry.count)) {
-                const auto* segment = Element("Options", name)->Cast<UIButton>();
+                const auto* segment = Element("Options", name);
                 ASSERT_NE(segment, nullptr) << name;
                 EXPECT_TRUE(SameColor(segment->selectedColor, PaletteColor("primary"))) << name;
                 EXPECT_TRUE(SameColor(segment->color, PaletteColor("neutral"))) << name;
@@ -355,7 +355,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(group->rect.y, row->rect.y + kRowPadding);
             EXPECT_EQ(group->rect.y + group->rect.h, row->rect.y + row->rect.h - kRowPadding);
             for (const char* name : kSpeedSegments) {
-                const auto* segment = Element("Options", name)->Cast<UIButton>();
+                const auto* segment = Element("Options", name);
                 ASSERT_NE(segment, nullptr) << name;
                 EXPECT_TRUE(SameColor(segment->selectedColor, PaletteColor("primary"))) << name;
                 EXPECT_TRUE(SameColor(segment->color, PaletteColor("neutral"))) << name;

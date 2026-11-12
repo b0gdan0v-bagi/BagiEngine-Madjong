@@ -22,7 +22,7 @@
   bottom seat plate (right edge 240) and the bottom discard block (x 444), under the wall ring and over the viewer's row of bonus tiles
   and melds (y 636): x 248, y 572, 188 wide, which leaves the tile a tap raises and the row clear.
 -->
-<node name="Hud" layer="10" contentVersion="2">
+<node name="Hud" layer="10" contentVersion="3">
   <components>
     <component type="MahjongHudComponent" />
     <component type="UICanvasComponent" space="SceneView" useSafeArea="true">

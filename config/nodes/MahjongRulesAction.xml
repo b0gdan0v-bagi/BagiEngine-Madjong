@@ -8,7 +8,7 @@
   and hidden by MahjongHudComponent together with Rules, which also hides Back on the first page and Next on the last (the others
   widen: a hidden element takes no room in a stack). Back and Close are neutral, Next confirms (primary).
 -->
-<node name="RulesAction" layer="36" contentVersion="2">
+<node name="RulesAction" layer="36" contentVersion="3">
   <components>
     <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="1" minScale="0.6" useSafeArea="true" visible="false">
       <elements>

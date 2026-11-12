@@ -71,7 +71,7 @@ namespace BECore::Mahjong::Tests {
 
         bool Selected(const char* segment) const {
             const UIElement* element = Element("Options", segment);
-            const auto* button = element != nullptr ? element->Cast<UIButton>() : nullptr;
+            const auto* button = element != nullptr ? element : nullptr;
             return button != nullptr && button->selected;
         }
 

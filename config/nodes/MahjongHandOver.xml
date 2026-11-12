@@ -37,7 +37,7 @@
   MahjongEndScreenTest holds the sizes and that no hand, meld or bonus tile of the worst-case table is covered by the plate or the
   button; MahjongTouchSizeTest holds the button against the gap, the plate and the table in every window of the matrix.
 -->
-<node name="HandOver" layer="25" contentVersion="2">
+<node name="HandOver" layer="25" contentVersion="3">
   <components>
     <component type="UICanvasComponent" space="SceneView" useSafeArea="true" modal="true" visible="false">
       <elements>

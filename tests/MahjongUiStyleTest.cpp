@@ -120,9 +120,11 @@ namespace BECore::Mahjong::Tests {
             if ((type == "UIButton" || type == "UIToggle") && AttributeOf(element, "action").empty() && parentType != "UISegmented" && parentType != "UIDropdown") {
                 flag(Rule::Action, "action");
             }
-            // A composed button (an element with a `UIInputClicker`, the form of a plain button since content version 2) keeps its action on the clicker
+            // A composed button (an element with a `UIInputClicker`, the form of a plain button since content version 2, of a group's
+            // segment or option since version 3) keeps its action on the clicker; a group's child may leave it to the group, as above
+            const bool groupChild = parentType == "UISegmented" || parentType == "UIDropdown";
             for (const pugi::xml_node component : element.child("components").children("component")) {
-                if (AttributeOf(component, "type") == "UIInputClicker" && AttributeOf(component, "action").empty()) {
+                if (AttributeOf(component, "type") == "UIInputClicker" && AttributeOf(component, "action").empty() && !groupChild) {
                     flag(Rule::Action, "action");
                 }
             }

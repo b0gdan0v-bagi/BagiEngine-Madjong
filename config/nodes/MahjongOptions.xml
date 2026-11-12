@@ -18,7 +18,7 @@
   Every text may shrink (AutoFit, down to 12 units) instead of being cut. MahjongOptionsTest holds the
   shapes, the touch size and the words on the whole size matrix.
 -->
-<node name="Options" layer="31" contentVersion="2">
+<node name="Options" layer="31" contentVersion="3">
   <components>
     <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" modal="true" visible="false">
       <elements>
@@ -31,8 +31,18 @@
                 <element type="UILabel" name="LanguageCaption" width="112" height="87.5%" text="{#setup.language}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" textColor="190,196,190,255" />
                 <element type="UISegmented" name="Language" bind="language" flex="1" height="87.5%" direction="Horizontal" spacing="4" color="48,54,72,255">
                   <children>
-                    <element type="UIButton" name="LanguageEn" flex="1" height="100%" text="{#lang.en}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetLanguage" value="en" color="70,70,100,255" selectedColor="40,110,60,255" />
-                    <element type="UIButton" name="LanguageRu" flex="1" height="100%" text="{#lang.ru}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetLanguage" value="ru" color="70,70,100,255" selectedColor="40,110,60,255" />
+                    <element type="UIElement" name="LanguageEn" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
+                      <components>
+                        <component type="UITextComponent" text="{#lang.en}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" action="MahjongSetLanguage" value="en"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="LanguageRu" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
+                      <components>
+                        <component type="UITextComponent" text="{#lang.ru}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" action="MahjongSetLanguage" value="ru"/>
+                      </components>
+                    </element>
                   </children>
                 </element>
               </children>
@@ -42,9 +52,24 @@
                 <element type="UILabel" name="HintsCaption" width="112" height="87.5%" text="{#setup.hints}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" textColor="190,196,190,255" />
                 <element type="UISegmented" name="HintsChoice" bind="hintsChoice" flex="1" height="87.5%" direction="Horizontal" spacing="4" color="48,54,72,255">
                   <children>
-                    <element type="UIButton" name="HintsOff" flex="1" height="100%" text="{#setup.off}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetHints" value="off" color="70,70,100,255" selectedColor="40,110,60,255" />
-                    <element type="UIButton" name="HintsHints" flex="1" height="100%" text="{#options.hintsHints}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetHints" value="hints" color="70,70,100,255" selectedColor="40,110,60,255" />
-                    <element type="UIButton" name="HintsCoach" flex="1" height="100%" text="{#options.hintsCoach}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetHints" value="coach" color="70,70,100,255" selectedColor="40,110,60,255" />
+                    <element type="UIElement" name="HintsOff" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
+                      <components>
+                        <component type="UITextComponent" text="{#setup.off}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" action="MahjongSetHints" value="off"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="HintsHints" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
+                      <components>
+                        <component type="UITextComponent" text="{#options.hintsHints}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" action="MahjongSetHints" value="hints"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="HintsCoach" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
+                      <components>
+                        <component type="UITextComponent" text="{#options.hintsCoach}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" action="MahjongSetHints" value="coach"/>
+                      </components>
+                    </element>
                   </children>
                 </element>
               </children>
@@ -54,9 +79,24 @@
                 <element type="UILabel" name="SpeedCaption" width="96" height="87.5%" text="{#options.speed}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" textColor="190,196,190,255" />
                 <element type="UISegmented" name="SpeedChoice" bind="speedChoice" flex="1" height="87.5%" direction="Horizontal" spacing="4" color="48,54,72,255">
                   <children>
-                    <element type="UIButton" name="SpeedSlow" flex="1" height="100%" text="{#options.speedSlow}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetSpeed" value="slow" color="70,70,100,255" selectedColor="40,110,60,255" />
-                    <element type="UIButton" name="SpeedNormal" flex="1" height="100%" text="{#options.speedNormal}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetSpeed" value="normal" color="70,70,100,255" selectedColor="40,110,60,255" />
-                    <element type="UIButton" name="SpeedFast" flex="1" height="100%" text="{#options.speedFast}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetSpeed" value="fast" color="70,70,100,255" selectedColor="40,110,60,255" />
+                    <element type="UIElement" name="SpeedSlow" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
+                      <components>
+                        <component type="UITextComponent" text="{#options.speedSlow}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" action="MahjongSetSpeed" value="slow"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="SpeedNormal" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
+                      <components>
+                        <component type="UITextComponent" text="{#options.speedNormal}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" action="MahjongSetSpeed" value="normal"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="SpeedFast" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
+                      <components>
+                        <component type="UITextComponent" text="{#options.speedFast}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" action="MahjongSetSpeed" value="fast"/>
+                      </components>
+                    </element>
                   </children>
                 </element>
               </children>

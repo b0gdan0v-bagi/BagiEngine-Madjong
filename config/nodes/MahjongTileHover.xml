@@ -9,7 +9,7 @@
   the reasons of the advice (11), under the cover and the modal screens (20 and up). The look is that of SelectedTile in MahjongHud.xml; 200 x 48
   holds the longest name of either language (MahjongTableHoverTest).
 -->
-<node name="TileHover" layer="12" contentVersion="2">
+<node name="TileHover" layer="12" contentVersion="3">
   <components>
     <component type="UICanvasComponent" space="SceneView">
       <elements>

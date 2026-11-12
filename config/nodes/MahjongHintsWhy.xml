@@ -17,7 +17,7 @@
   their turns), on the grid of 4: 320 x 128 at x 480, y 288, with 4 padding. It takes the ring's shifts (portrait 280 left, 132 down;
   narrow 100 left; wide 140 right) and is never up with WhyPanel. Opaque plate, text only, no input. MahjongCoachTest holds it.
 -->
-<node name="HintsWhy" layer="11" contentVersion="2">
+<node name="HintsWhy" layer="11" contentVersion="3">
   <components>
     <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
       <elements>

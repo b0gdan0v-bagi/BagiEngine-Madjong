@@ -41,7 +41,7 @@
   The narrow table is 768 high, so a button is 33 px or more in every window from 640 x 480 up and ActionsCompact takes over only in a nearly
   square window (610 x 600: a bar of 83 px under the table holds its row).
 -->
-<node name="Actions" layer="10" contentVersion="2">
+<node name="Actions" layer="10" contentVersion="3">
   <components>
     <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
       <elements>

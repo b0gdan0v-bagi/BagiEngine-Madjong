@@ -37,7 +37,7 @@
   Continue is hidden here and shown by MahjongHudComponent exactly while the panel is open and there is a match to continue; a hidden
   element takes no room, so Start keeps the whole width otherwise, and the two share it half and half when both are there.
 -->
-<node name="Setup" layer="30" contentVersion="2">
+<node name="Setup" layer="30" contentVersion="3">
   <components>
     <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" modal="true" visible="false">
       <elements>
@@ -62,22 +62,82 @@
                 <element type="UILabel" name="SeatCaption0" width="112" height="87.5%" text="{#setup.seat1}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" textColor="190,196,190,255" />
                 <element type="UISegmented" name="SeatKind0" bind="seatKind0" flex="1" height="87.5%" direction="Horizontal" spacing="4" color="48,54,72,255">
                   <children>
-                    <element type="UIButton" name="Seat0Person" flex="1" height="100%" text="{#setup.person}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetSeat0" value="person" color="70,70,100,255" selectedColor="40,110,60,255" />
-                    <element type="UIButton" name="Seat0Computer" flex="1" height="100%" text="{#setup.computer}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetSeat0" value="computer" color="70,70,100,255" selectedColor="40,110,60,255" />
+                    <element type="UIElement" name="Seat0Person" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
+                      <components>
+                        <component type="UITextComponent" text="{#setup.person}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" action="MahjongSetSeat0" value="person"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat0Computer" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
+                      <components>
+                        <component type="UITextComponent" text="{#setup.computer}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" action="MahjongSetSeat0" value="computer"/>
+                      </components>
+                    </element>
                   </children>
                 </element>
                 <element type="UIDropdown" name="SeatLevel0" bind="seatLevel0" action="MahjongSetSeatLevel0" width="72" height="87.5%" optionHeight="56" text="" fontSize="22" overflow="AutoFit" minFontSize="8" verticalAlign="Center" color="70,70,100,255">
                   <children>
-                    <element type="UIButton" name="Seat0Level1" text="1" fontSize="22" overflow="AutoFit" minFontSize="12" value="1" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat0Level2" text="2" fontSize="22" overflow="AutoFit" minFontSize="12" value="2" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat0Level3" text="3" fontSize="22" overflow="AutoFit" minFontSize="12" value="3" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat0Level4" text="4" fontSize="22" overflow="AutoFit" minFontSize="12" value="4" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat0Level5" text="5" fontSize="22" overflow="AutoFit" minFontSize="12" value="5" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat0Level6" text="6" fontSize="22" overflow="AutoFit" minFontSize="12" value="6" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat0Level7" text="7" fontSize="22" overflow="AutoFit" minFontSize="12" value="7" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat0Level8" text="8" fontSize="22" overflow="AutoFit" minFontSize="12" value="8" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat0Level9" text="9" fontSize="22" overflow="AutoFit" minFontSize="12" value="9" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat0Level10" text="10" fontSize="22" overflow="AutoFit" minFontSize="12" value="10" color="70,70,100,255" />
+                    <element type="UIElement" name="Seat0Level1" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="1" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="1"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat0Level2" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="2" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="2"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat0Level3" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="3" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="3"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat0Level4" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="4" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="4"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat0Level5" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="5" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="5"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat0Level6" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="6" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="6"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat0Level7" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="7" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="7"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat0Level8" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="8" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="8"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat0Level9" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="9" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="9"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat0Level10" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="10" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="10"/>
+                      </components>
+                    </element>
                   </children>
                 </element>
               </children>
@@ -87,22 +147,82 @@
                 <element type="UILabel" name="SeatCaption1" width="112" height="87.5%" text="{#setup.seat2}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" textColor="190,196,190,255" />
                 <element type="UISegmented" name="SeatKind1" bind="seatKind1" flex="1" height="87.5%" direction="Horizontal" spacing="4" color="48,54,72,255">
                   <children>
-                    <element type="UIButton" name="Seat1Person" flex="1" height="100%" text="{#setup.person}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetSeat1" value="person" color="70,70,100,255" selectedColor="40,110,60,255" />
-                    <element type="UIButton" name="Seat1Computer" flex="1" height="100%" text="{#setup.computer}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetSeat1" value="computer" color="70,70,100,255" selectedColor="40,110,60,255" />
+                    <element type="UIElement" name="Seat1Person" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
+                      <components>
+                        <component type="UITextComponent" text="{#setup.person}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" action="MahjongSetSeat1" value="person"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat1Computer" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
+                      <components>
+                        <component type="UITextComponent" text="{#setup.computer}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" action="MahjongSetSeat1" value="computer"/>
+                      </components>
+                    </element>
                   </children>
                 </element>
                 <element type="UIDropdown" name="SeatLevel1" bind="seatLevel1" action="MahjongSetSeatLevel1" width="72" height="87.5%" optionHeight="56" text="" fontSize="22" overflow="AutoFit" minFontSize="8" verticalAlign="Center" color="70,70,100,255">
                   <children>
-                    <element type="UIButton" name="Seat1Level1" text="1" fontSize="22" overflow="AutoFit" minFontSize="12" value="1" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat1Level2" text="2" fontSize="22" overflow="AutoFit" minFontSize="12" value="2" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat1Level3" text="3" fontSize="22" overflow="AutoFit" minFontSize="12" value="3" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat1Level4" text="4" fontSize="22" overflow="AutoFit" minFontSize="12" value="4" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat1Level5" text="5" fontSize="22" overflow="AutoFit" minFontSize="12" value="5" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat1Level6" text="6" fontSize="22" overflow="AutoFit" minFontSize="12" value="6" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat1Level7" text="7" fontSize="22" overflow="AutoFit" minFontSize="12" value="7" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat1Level8" text="8" fontSize="22" overflow="AutoFit" minFontSize="12" value="8" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat1Level9" text="9" fontSize="22" overflow="AutoFit" minFontSize="12" value="9" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat1Level10" text="10" fontSize="22" overflow="AutoFit" minFontSize="12" value="10" color="70,70,100,255" />
+                    <element type="UIElement" name="Seat1Level1" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="1" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="1"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat1Level2" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="2" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="2"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat1Level3" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="3" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="3"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat1Level4" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="4" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="4"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat1Level5" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="5" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="5"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat1Level6" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="6" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="6"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat1Level7" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="7" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="7"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat1Level8" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="8" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="8"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat1Level9" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="9" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="9"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat1Level10" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="10" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="10"/>
+                      </components>
+                    </element>
                   </children>
                 </element>
               </children>
@@ -112,22 +232,82 @@
                 <element type="UILabel" name="SeatCaption2" width="112" height="87.5%" text="{#setup.seat3}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" textColor="190,196,190,255" />
                 <element type="UISegmented" name="SeatKind2" bind="seatKind2" flex="1" height="87.5%" direction="Horizontal" spacing="4" color="48,54,72,255">
                   <children>
-                    <element type="UIButton" name="Seat2Person" flex="1" height="100%" text="{#setup.person}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetSeat2" value="person" color="70,70,100,255" selectedColor="40,110,60,255" />
-                    <element type="UIButton" name="Seat2Computer" flex="1" height="100%" text="{#setup.computer}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetSeat2" value="computer" color="70,70,100,255" selectedColor="40,110,60,255" />
+                    <element type="UIElement" name="Seat2Person" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
+                      <components>
+                        <component type="UITextComponent" text="{#setup.person}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" action="MahjongSetSeat2" value="person"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat2Computer" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
+                      <components>
+                        <component type="UITextComponent" text="{#setup.computer}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" action="MahjongSetSeat2" value="computer"/>
+                      </components>
+                    </element>
                   </children>
                 </element>
                 <element type="UIDropdown" name="SeatLevel2" bind="seatLevel2" action="MahjongSetSeatLevel2" width="72" height="87.5%" optionHeight="56" text="" fontSize="22" overflow="AutoFit" minFontSize="8" verticalAlign="Center" color="70,70,100,255">
                   <children>
-                    <element type="UIButton" name="Seat2Level1" text="1" fontSize="22" overflow="AutoFit" minFontSize="12" value="1" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat2Level2" text="2" fontSize="22" overflow="AutoFit" minFontSize="12" value="2" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat2Level3" text="3" fontSize="22" overflow="AutoFit" minFontSize="12" value="3" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat2Level4" text="4" fontSize="22" overflow="AutoFit" minFontSize="12" value="4" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat2Level5" text="5" fontSize="22" overflow="AutoFit" minFontSize="12" value="5" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat2Level6" text="6" fontSize="22" overflow="AutoFit" minFontSize="12" value="6" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat2Level7" text="7" fontSize="22" overflow="AutoFit" minFontSize="12" value="7" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat2Level8" text="8" fontSize="22" overflow="AutoFit" minFontSize="12" value="8" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat2Level9" text="9" fontSize="22" overflow="AutoFit" minFontSize="12" value="9" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat2Level10" text="10" fontSize="22" overflow="AutoFit" minFontSize="12" value="10" color="70,70,100,255" />
+                    <element type="UIElement" name="Seat2Level1" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="1" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="1"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat2Level2" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="2" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="2"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat2Level3" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="3" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="3"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat2Level4" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="4" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="4"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat2Level5" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="5" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="5"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat2Level6" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="6" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="6"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat2Level7" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="7" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="7"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat2Level8" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="8" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="8"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat2Level9" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="9" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="9"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat2Level10" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="10" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="10"/>
+                      </components>
+                    </element>
                   </children>
                 </element>
               </children>
@@ -137,22 +317,82 @@
                 <element type="UILabel" name="SeatCaption3" width="112" height="87.5%" text="{#setup.seat4}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" textColor="190,196,190,255" />
                 <element type="UISegmented" name="SeatKind3" bind="seatKind3" flex="1" height="87.5%" direction="Horizontal" spacing="4" color="48,54,72,255">
                   <children>
-                    <element type="UIButton" name="Seat3Person" flex="1" height="100%" text="{#setup.person}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetSeat3" value="person" color="70,70,100,255" selectedColor="40,110,60,255" />
-                    <element type="UIButton" name="Seat3Computer" flex="1" height="100%" text="{#setup.computer}" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetSeat3" value="computer" color="70,70,100,255" selectedColor="40,110,60,255" />
+                    <element type="UIElement" name="Seat3Person" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
+                      <components>
+                        <component type="UITextComponent" text="{#setup.person}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" action="MahjongSetSeat3" value="person"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat3Computer" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
+                      <components>
+                        <component type="UITextComponent" text="{#setup.computer}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" action="MahjongSetSeat3" value="computer"/>
+                      </components>
+                    </element>
                   </children>
                 </element>
                 <element type="UIDropdown" name="SeatLevel3" bind="seatLevel3" action="MahjongSetSeatLevel3" width="72" height="87.5%" optionHeight="56" text="" fontSize="22" overflow="AutoFit" minFontSize="8" verticalAlign="Center" color="70,70,100,255">
                   <children>
-                    <element type="UIButton" name="Seat3Level1" text="1" fontSize="22" overflow="AutoFit" minFontSize="12" value="1" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat3Level2" text="2" fontSize="22" overflow="AutoFit" minFontSize="12" value="2" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat3Level3" text="3" fontSize="22" overflow="AutoFit" minFontSize="12" value="3" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat3Level4" text="4" fontSize="22" overflow="AutoFit" minFontSize="12" value="4" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat3Level5" text="5" fontSize="22" overflow="AutoFit" minFontSize="12" value="5" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat3Level6" text="6" fontSize="22" overflow="AutoFit" minFontSize="12" value="6" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat3Level7" text="7" fontSize="22" overflow="AutoFit" minFontSize="12" value="7" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat3Level8" text="8" fontSize="22" overflow="AutoFit" minFontSize="12" value="8" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat3Level9" text="9" fontSize="22" overflow="AutoFit" minFontSize="12" value="9" color="70,70,100,255" />
-                    <element type="UIButton" name="Seat3Level10" text="10" fontSize="22" overflow="AutoFit" minFontSize="12" value="10" color="70,70,100,255" />
+                    <element type="UIElement" name="Seat3Level1" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="1" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="1"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat3Level2" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="2" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="2"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat3Level3" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="3" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="3"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat3Level4" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="4" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="4"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat3Level5" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="5" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="5"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat3Level6" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="6" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="6"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat3Level7" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="7" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="7"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat3Level8" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="8" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="8"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat3Level9" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="9" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="9"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Seat3Level10" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="10" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="10"/>
+                      </components>
+                    </element>
                   </children>
                 </element>
               </children>
@@ -162,8 +402,18 @@
                 <element type="UILabel" name="HandsCaption" width="112" height="87.5%" text="{#setup.hands}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" textColor="190,196,190,255" />
                 <element type="UISegmented" name="HandsChoice" bind="handsChoice" flex="1" height="87.5%" direction="Horizontal" spacing="4" color="48,54,72,255">
                   <children>
-                    <element type="UIButton" name="Hands16" flex="1" height="100%" text="16" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetHands" value="16" color="70,70,100,255" selectedColor="40,110,60,255" />
-                    <element type="UIButton" name="Hands8" flex="1" height="100%" text="8" fontSize="22" overflow="AutoFit" minFontSize="12" action="MahjongSetHands" value="8" color="70,70,100,255" selectedColor="40,110,60,255" />
+                    <element type="UIElement" name="Hands16" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
+                      <components>
+                        <component type="UITextComponent" text="16" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" action="MahjongSetHands" value="16"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Hands8" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
+                      <components>
+                        <component type="UITextComponent" text="8" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" action="MahjongSetHands" value="8"/>
+                      </components>
+                    </element>
                   </children>
                 </element>
               </children>

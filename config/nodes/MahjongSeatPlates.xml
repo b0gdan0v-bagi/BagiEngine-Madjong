@@ -15,7 +15,7 @@
   of the narrow layout (bottom (88, 532), right (800, 180), top (300, 96), left (120, 180)). The bottom plate of the phone profile is
   lifted by a few units and keeps its label: the label then ends at the plate's bottom edge.
 -->
-<node name="SeatPlates" layer="10" contentVersion="2">
+<node name="SeatPlates" layer="10" contentVersion="3">
   <components>
     <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
       <elements>

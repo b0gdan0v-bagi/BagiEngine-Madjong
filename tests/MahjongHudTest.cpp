@@ -77,8 +77,8 @@ namespace BECore::Mahjong::Tests {
         std::string Text(const char* node, const char* element) const {
             const UIElement* found = Element(node, element);
             if (found != nullptr && found->Cast<UIDropdown>() != nullptr) {
-                const UIButton* chosen = found->Cast<UIDropdown>()->FindChosenOption();  // the header shows the chosen option
-                return chosen != nullptr ? std::string(chosen->GetDisplayText().data(), chosen->GetDisplayText().size()) : std::string("<none chosen>");
+                const UIElement* chosen = found->Cast<UIDropdown>()->FindChosenOption();  // the header shows the chosen option
+                return chosen != nullptr ? DisplayText(chosen) : std::string("<none chosen>");
             }
             return DisplayText(found);
         }
@@ -114,7 +114,7 @@ namespace BECore::Mahjong::Tests {
 
         bool HandsSelected(const char* segment) const {
             const UIElement* element = Element("Setup", segment);
-            const auto* button = element != nullptr ? element->Cast<UIButton>() : nullptr;
+            const auto* button = element != nullptr ? element : nullptr;
             return button != nullptr && button->selected;
         }
 
@@ -721,7 +721,7 @@ namespace BECore::Mahjong::Tests {
 
             for (const std::string& name : entry.segments) {
                 const UIElement* element = Element("Setup", name.c_str());
-                const auto* segment = element != nullptr ? element->Cast<UIButton>() : nullptr;
+                const auto* segment = element != nullptr ? element : nullptr;
                 ASSERT_NE(segment, nullptr) << name;
                 EXPECT_TRUE(SameColor(segment->selectedColor, PaletteColor("primary"))) << name << ": the chosen segment is the confirming colour";
                 EXPECT_TRUE(SameColor(segment->color, PaletteColor("neutral"))) << name << ": the others are neutral";
@@ -749,14 +749,14 @@ namespace BECore::Mahjong::Tests {
         Draw();
         ASSERT_TRUE(SetupShown());
 
-        const auto* chosen = Element("Setup", "Seat0Person")->Cast<UIButton>();
-        const auto* other = Element("Setup", "Seat0Computer")->Cast<UIButton>();
+        const auto* chosen = Element("Setup", "Seat0Person");
+        const auto* other = Element("Setup", "Seat0Computer");
         ASSERT_TRUE(chosen != nullptr && other != nullptr);
         ASSERT_TRUE(chosen->selected);
         ASSERT_FALSE(other->selected);
-        EXPECT_TRUE(SameColor(chosen->GetCurrentFill(), PaletteColor("primary"))) << "the choice is read from the colour, not only from the bar";
-        EXPECT_FALSE(SameColor(other->GetCurrentFill(), PaletteColor("primary")));
-        EXPECT_TRUE(SameColor(other->GetCurrentFill(), PaletteColor("neutral")));
+        EXPECT_TRUE(SameColor(chosen->GetStateLook().fill, PaletteColor("primary"))) << "the choice is read from the colour, not only from the bar";
+        EXPECT_FALSE(SameColor(other->GetStateLook().fill, PaletteColor("primary")));
+        EXPECT_TRUE(SameColor(other->GetStateLook().fill, PaletteColor("neutral")));
     }
 
     TEST_F(MahjongHudTest, TheHudCoversNoTileOfTheWorstTable) {
@@ -1009,8 +1009,8 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Text("Options", "LanguageCaption"), "Language");
         EXPECT_EQ(Text("Options", "LanguageEn"), "English");
         EXPECT_EQ(Text("Options", "LanguageRu"), "Русский");
-        EXPECT_TRUE(Element("Options", "LanguageEn")->Cast<UIButton>()->selected);
-        EXPECT_FALSE(Element("Options", "LanguageRu")->Cast<UIButton>()->selected);
+        EXPECT_TRUE(Element("Options", "LanguageEn")->selected);
+        EXPECT_FALSE(Element("Options", "LanguageRu")->selected);
         EXPECT_GE(Element("Options", "LanguageEn")->rect.h, kMinControlHeight);
         EXPECT_GE(Element("Options", "LanguageRu")->rect.h, kMinControlHeight);
 
@@ -1034,8 +1034,8 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_game->GetLanguage(), "ru"_intern);
         EXPECT_EQ(CoreManager::GetUIStrings().GetLanguage(), "ru"_intern);
         EXPECT_EQ(Var("language"), "ru");
-        EXPECT_TRUE(Element("Options", "LanguageRu")->Cast<UIButton>()->selected);
-        EXPECT_FALSE(Element("Options", "LanguageEn")->Cast<UIButton>()->selected);
+        EXPECT_TRUE(Element("Options", "LanguageRu")->selected);
+        EXPECT_FALSE(Element("Options", "LanguageEn")->selected);
         EXPECT_EQ(Text("Setup", "Title"), "Новая игра: кто играет?");
         EXPECT_EQ(Text("Setup", "Seat3Computer"), "Компьютер");
         EXPECT_EQ(Text("CenterPanel", "PanelRound"), "Восток 1");
@@ -1071,7 +1071,7 @@ namespace BECore::Mahjong::Tests {
         _game->OpenOptions();
         Draw();
         EXPECT_EQ(Var("language"), "ru") << "the row shows the language the game has";
-        EXPECT_TRUE(Element("Options", "LanguageRu")->Cast<UIButton>()->selected);
+        EXPECT_TRUE(Element("Options", "LanguageRu")->selected);
         EXPECT_EQ(Text("Setup", "Start"), "Начать");
 
         Json options = Json::object();
@@ -1093,7 +1093,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_game->GetLanguage(), "en"_intern);
         EXPECT_EQ(CoreManager::GetUIStrings().GetLanguage(), "en"_intern);
         EXPECT_EQ(Var("language"), "en") << "the variable keeps the truth";
-        EXPECT_TRUE(Element("Options", "LanguageEn")->Cast<UIButton>()->selected);
+        EXPECT_TRUE(Element("Options", "LanguageEn")->selected);
 
         const uint64_t strings = CoreManager::GetUIStrings().GetVersion();
         _game->CloseOptions();
@@ -1152,9 +1152,9 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(SeatKindVar(1), "person");
         EXPECT_EQ(SeatKindVar(2), "computer");
         EXPECT_EQ(SeatKindVar(3), "computer");
-        EXPECT_TRUE(Element("Setup", "Seat1Person")->Cast<UIButton>()->selected) << "the group shows the person";
-        EXPECT_FALSE(Element("Setup", "Seat1Computer")->Cast<UIButton>()->selected);
-        EXPECT_TRUE(Element("Setup", "Seat3Computer")->Cast<UIButton>()->selected);
+        EXPECT_TRUE(Element("Setup", "Seat1Person")->selected) << "the group shows the person";
+        EXPECT_FALSE(Element("Setup", "Seat1Computer")->selected);
+        EXPECT_TRUE(Element("Setup", "Seat3Computer")->selected);
     }
 
     TEST_F(MahjongHudTest, TheSegmentsChangeThePendingSeatsAndTheVariablesAndStartBeginsAMatchWithThem) {
