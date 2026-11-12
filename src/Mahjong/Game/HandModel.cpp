@@ -564,6 +564,10 @@ namespace BECore::Mahjong {
         return seats;
     }
 
+    bool HandModel::AwaitsClaim(Seat seat) const noexcept {
+        return (_phase == Phase::Claim || _phase == Phase::RobKong) && IsSeat(seat) && _claimStatus[seat] == ClaimStatus::Waiting;
+    }
+
     eastl::vector<ClaimOption> HandModel::LegalClaims(Seat seat) const {
         if (_displayOnly || (_phase != Phase::Claim && _phase != Phase::RobKong) || !IsSeat(seat) || _claimStatus[seat] != ClaimStatus::Waiting) {
             return {};

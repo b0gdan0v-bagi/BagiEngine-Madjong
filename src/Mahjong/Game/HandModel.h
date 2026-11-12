@@ -413,6 +413,8 @@ namespace BECore::Mahjong {
 
         /// The seats in the window that have not decided yet, in seat order. Empty outside `Phase::Claim` and `Phase::RobKong`.
         [[nodiscard]] eastl::vector<Seat> PendingClaimSeats() const;
+        /// Whether `seat` is one of `PendingClaimSeats()`, without making the list (a frame of the table asks it).
+        [[nodiscard]] bool AwaitsClaim(Seat seat) const noexcept;
         /// The claims `seat` can make on the pending tile (a pass is always possible besides). Empty for a seat that is not in the
         /// window or has decided, and outside `Phase::Claim` and `Phase::RobKong`; in `Phase::RobKong` at most a mahjong claim.
         [[nodiscard]] eastl::vector<ClaimOption> LegalClaims(Seat seat) const;

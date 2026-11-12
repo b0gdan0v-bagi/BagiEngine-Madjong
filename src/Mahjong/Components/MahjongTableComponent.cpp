@@ -1277,11 +1277,19 @@ namespace BECore::Mahjong {
         eastl::array<bool, kTileIdCount> keepsWaiting{};
         if (IsSeat(bottom) && session.GetPhase() == SessionPhase::Playing && faces.seat == bottom && hand.GetPhase() == Phase::Discard && hand.CurrentSeat() == bottom &&
             hand.GetHand(bottom).callingDeclared) {
-            TableView view = MakeTableView(hand, bottom);
-            if (game->IsOnlineTable()) {
-                view.legal = LegalFor(*game, bottom);  // a display hand lists nothing: the server's list says what may be discarded
+            // The view allocates: the bars are worked out again only when the session moved (the same key as the buttons)
+            const ButtonsKey key{game, game->IsOnlineTable(), session.Version(), session.StartCount(), bottom};
+            if (_keepsKey != key) {
+                TableView view = MakeTableView(hand, bottom);
+                if (game->IsOnlineTable()) {
+                    view.legal = LegalFor(*game, bottom);  // a display hand lists nothing: the server's list says what may be discarded
+                }
+                _keeps = KeepsWaitingDiscards(view);
+                _keepsKey = key;
             }
-            keepsWaiting = KeepsWaitingDiscards(view);
+            keepsWaiting = _keeps;
+        } else {
+            _keepsKey.reset();
         }
 
         // The winds that score for the viewer, marked on its own face-up tiles while the hand is played: under the cover and for a spectator
@@ -1431,8 +1439,7 @@ namespace BECore::Mahjong {
         // that only computers may claim in shows nothing, and nothing shows while the screen is covered)
         bool claimPending = false;
         if (session.GetPhase() == SessionPhase::Playing && hand.GetPhase() == Phase::Claim && !hand.Discards().empty() && IsSeat(faces.seat)) {
-            const eastl::vector<Seat> asked = hand.PendingClaimSeats();
-            claimPending = eastl::find(asked.begin(), asked.end(), faces.seat) != asked.end();
+            claimPending = hand.AwaitsClaim(faces.seat);
         }
         const int pendingEntry = static_cast<int>(hand.Discards().size()) - 1;
         const int lastDiscard = LastDiscardEntry(hand);

@@ -364,13 +364,15 @@ namespace BECore::Mahjong {
 
             bool operator==(const ButtonsKey&) const = default;
         };
-        std::optional<ButtonsKey> _offeredKey;     // the key of `_offered`; none while no person acts
-        ActionButtons _offered;                    // `MakeActionButtons` of the person to act, made again only when the key moves
-        eastl::vector<HandAction> _legal;          // `LegalFor`, a member so that it keeps its capacity
-        std::optional<ButtonKind> _hoveredButton;  // the shown button of `Actions` under the pointer at the last publication
-        ChowTakes _chowTakes;                      // what the last `OnDraw` framed in the hand for the offered chow
-        eastl::string_view _hintKey;               // the key of the sentence in `actionHint` (a literal of `SpecOf`, which lives as long as the program)
-        uint64_t _hintStringsVersion = 0;          // the version of the string table that sentence was looked up at
+        std::optional<ButtonsKey> _offeredKey;      // the key of `_offered`; none while no person acts
+        ActionButtons _offered;                     // `MakeActionButtons` of the person to act, made again only when the key moves
+        eastl::vector<HandAction> _legal;           // `LegalFor`, a member so that it keeps its capacity
+        std::optional<ButtonsKey> _keepsKey;        // the key `_keeps` was made for; none while the keeps-waiting bars are not asked for
+        eastl::array<bool, kTileIdCount> _keeps{};  // `KeepsWaitingDiscards` of the viewer's own turn
+        std::optional<ButtonKind> _hoveredButton;   // the shown button of `Actions` under the pointer at the last publication
+        ChowTakes _chowTakes;                       // what the last `OnDraw` framed in the hand for the offered chow
+        eastl::string_view _hintKey;                // the key of the sentence in `actionHint` (a literal of `SpecOf`, which lives as long as the program)
+        uint64_t _hintStringsVersion = 0;           // the version of the string table that sentence was looked up at
         bool _handoffShown = false;
         bool _compactActions = false;  // `ActionsCompact` is the shown canvas of the buttons; the scene file starts with `Actions`
         bool _declareNext = false;
