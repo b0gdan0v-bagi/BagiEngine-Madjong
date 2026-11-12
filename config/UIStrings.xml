@@ -302,6 +302,8 @@
         <string key="online.seat.computer" text="Computer"/>
         <string key="online.seat.you" text="{name} (you)"/>
         <string key="online.seat.away" text="{name} (away)"/>
+        <string key="online.pad.letters" text="ABCDEFGHIJKLMNOPQRSTUVWXYZ"/>
+        <string key="online.name.default" text="Player"/>
     </language>
     <language id="ru">
         <string key="lang.en" text="English"/>
@@ -603,5 +605,7 @@
         <string key="online.seat.computer" text="Компьютер"/>
         <string key="online.seat.you" text="{name} (вы)"/>
         <string key="online.seat.away" text="{name} (не в сети)"/>
+        <string key="online.pad.letters" text="АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ"/>
+        <string key="online.name.default" text="Игрок"/>
     </language>
 </UIStrings>
