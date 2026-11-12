@@ -346,7 +346,8 @@ namespace BECore::Mahjong {
             SetNextHandDisabled(!CanSendNextHand(*room));
         } else {
             const CoachLedger& coach = game.GetCoach();
-            tally = game.CoachActive() ? FormatCoachTally(strings, coach.HandTallyOf(HandKeyOf(game.CoachContext())), coach.MatchTallyOf(game.CoachContext().startCount)) : eastl::string();
+            const MoveContext context = game.CoachContext();
+            tally = game.CoachActive() ? FormatCoachTally(strings, coach.HandTallyOf(HandKeyOf(context)), coach.MatchTallyOf(context.startCount)) : eastl::string();
             SetNextHandDisabled(false);
         }
         vars.Set("handOverCoach"_intern, eastl::string_view(tally));

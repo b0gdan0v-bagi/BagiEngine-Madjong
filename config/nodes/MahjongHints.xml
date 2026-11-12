@@ -16,7 +16,7 @@
   and shrink in the smallest windows, where a line of 18 units is taller than the 24 the row has. AdviceText (region table.advice, a scrim
   plate) holds the sentence {hintAdvice} of the advice, right of the place of the button HintButton (region table.hintButton), which is
   in the node HintsButton and not here: nothing on this canvas takes input, so it needs no touch size. All start hidden; the component
-  shows the panel and the first N cells exactly while hints apply (MahjongGame::HintsOn(), a person at the table, no cover, no Setup, the
+  shows the panel and the first N cells exactly while hints apply (MahjongGame::HintsActive(), a person at the table, no cover, no Setup, the
   hand being played) and the hand waits, the button while hints apply and the viewer has actions to choose from, and the label while an
   advice is up in the mode Hints (in Coach the sentence is the title of the card CoachCard, node HintsWhy).
   RoomHintsText lies in the same region and takes its place while neither the sentence nor the card is up: at the table of a room it says whether the

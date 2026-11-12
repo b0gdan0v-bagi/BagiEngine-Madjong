@@ -109,11 +109,11 @@ namespace BECore::Mahjong {
      */
     [[nodiscard]] std::expected<void, OnlineViewError> ReadOnlineView(const Json& view, const Json& actions, OnlineTable& out, OnlineTable& scratch);
 
+    /// The same with a scratch of its own (allocates; for a caller that reads once).
+    [[nodiscard]] std::expected<void, OnlineViewError> ReadOnlineView(const Json& view, const Json& actions, OnlineTable& out);
+
     /// Fills @p out with the hand actions among `table.actions` (the `next_hand` ready check is not one), in the server's order. Keeps the
     /// capacity of @p out. The `legal` list of a `TableView` of the viewer's display hand.
     void ListHandActions(const OnlineTable& table, eastl::vector<HandAction>& out);
-
-    /// The same with a scratch of its own (allocates; for a caller that reads once).
-    [[nodiscard]] std::expected<void, OnlineViewError> ReadOnlineView(const Json& view, const Json& actions, OnlineTable& out);
 
 }  // namespace BECore::Mahjong
