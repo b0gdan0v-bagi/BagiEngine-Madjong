@@ -2,6 +2,7 @@
 
 #include <BECore/Control/Json.h>
 #include <Mahjong/MahjongGame.h>
+#include <Mahjong/MahjongStateJson.h>
 
 namespace BECore::Mahjong {
 
@@ -10,9 +11,6 @@ namespace BECore::Mahjong {
         constexpr size_t kSeatLetterCount = kSeatCount;
         constexpr char kPersonLetter = 'P';
         constexpr char kComputerLetter = 'C';
-        constexpr int kChowTiles = 3;
-        constexpr int kPungTiles = 3;
-        constexpr int kKongTiles = 4;
 
         constexpr eastl::string_view kTypeDiscard = "discard";
         constexpr eastl::string_view kTypeWin = "win";
@@ -71,44 +69,6 @@ namespace BECore::Mahjong {
 
         // ----- the names of the enums in JSON -----
 
-        eastl::string_view PhaseName(SessionPhase phase) {
-            switch (phase) {
-                case SessionPhase::Playing:
-                    return "playing";
-                case SessionPhase::HandOver:
-                    return "hand_over";
-                case SessionPhase::MatchOver:
-                    return "match_over";
-            }
-            return "playing";
-        }
-
-        eastl::string_view TurnPhaseName(Phase phase) {
-            switch (phase) {
-                case Phase::Discard:
-                    return "discard";
-                case Phase::Claim:
-                    return "claim";
-                case Phase::RobKong:
-                    return "rob_kong";
-                case Phase::Finished:
-                    return "finished";
-            }
-            return "finished";
-        }
-
-        eastl::string_view MeldKindName(MeldKind kind) {
-            switch (kind) {
-                case MeldKind::Chow:
-                    return "chow";
-                case MeldKind::Pung:
-                    return "pung";
-                case MeldKind::Kong:
-                    return "kong";
-            }
-            return "pung";
-        }
-
         eastl::string_view ClaimName(ClaimKind kind) {
             switch (kind) {
                 case ClaimKind::Chow:
@@ -123,22 +83,6 @@ namespace BECore::Mahjong {
             return "chow";
         }
 
-        eastl::string_view ResultKindName(ResultKind kind) {
-            return kind == ResultKind::Win ? "win" : "drawn";
-        }
-
-        eastl::string_view SourceName(WinSource source) {
-            switch (source) {
-                case WinSource::Discard:
-                    return "discard";
-                case WinSource::SelfDraw:
-                    return "self_draw";
-                case WinSource::RobbedKong:
-                    return "robbed_kong";
-            }
-            return "self_draw";
-        }
-
         /// The kind of a claim named in JSON, nullopt for another text.
         std::optional<ClaimKind> ClaimFromName(eastl::string_view name) {
             for (const ClaimKind kind : {ClaimKind::Chow, ClaimKind::Pung, ClaimKind::Kong, ClaimKind::Mahjong}) {
@@ -151,87 +95,12 @@ namespace BECore::Mahjong {
 
         // ----- the pieces of the state -----
 
-        /// The tiles of a meld as they lie: three in sequence for a chow, three or four equal ones.
-        Json MeldTilesToJson(const Meld& meld) {
-            Json tiles = Json::array();
-            if (meld.kind == MeldKind::Chow) {
-                for (int offset = 0; offset < kChowTiles; ++offset) {
-                    tiles.push_back(TileToJson(Tile::Suited(meld.first.Suit(), meld.first.Rank() + offset)));
-                }
-                return tiles;
-            }
-            const int count = meld.kind == MeldKind::Kong ? kKongTiles : kPungTiles;
-            for (int index = 0; index < count; ++index) {
-                tiles.push_back(TileToJson(meld.first));
-            }
-            return tiles;
-        }
-
-        Json MeldToJson(const Meld& meld) {
-            Json json = Json::object();
-            json["kind"] = MakeJsonString(MeldKindName(meld.kind));
-            json["tiles"] = MeldTilesToJson(meld);
-            json["concealed"] = meld.concealed;
-            json["from"] = meld.concealed ? Json(nullptr) : SeatOrNull(meld.from);
-            json["fromDiscard"] = meld.fromDiscard;
-            json["claimed"] = meld.concealed ? Json(nullptr) : TileToJson(meld.claimed);
-            return json;
-        }
-
-        Json MeldsToJson(const eastl::vector<Meld>& melds) {
-            Json list = Json::array();
-            for (const Meld& meld : melds) {
-                list.push_back(MeldToJson(meld));
-            }
-            return list;
-        }
-
         Json LineToJson(const ScoreLine& line) {
             Json json = Json::object();
             json["kind"] = MakeJsonString(EnumUtils<ScoreKind>::ToString(line.kind));
             json["tile"] = TileToJson(line.tile);
             json["points"] = line.points;
             json["doubles"] = line.doubles;
-            return json;
-        }
-
-        /// What a finished hand came to, all four hands open: see `MahjongGameControl`.
-        Json ResultToJson(const HandModel& hand) {
-            const HandSettlement settlement = SettleHand(hand);
-            Json json = Json::object();
-            const HandResult result = hand.Result().value_or(HandResult{});
-            json["kind"] = MakeJsonString(ResultKindName(result.kind));
-            json["winner"] = SeatOrNull(settlement.winner);
-            const bool won = result.kind == ResultKind::Win;
-            json["winningTile"] = won ? TileToJson(result.winningTile) : Json(nullptr);
-            json["source"] = won ? MakeJsonString(SourceName(result.source)) : Json(nullptr);
-            json["from"] = SeatOrNull(result.from);
-            json["loose"] = result.loose;
-            json["lastLiveTile"] = result.lastLiveTile;
-
-            Json seats = Json::array();
-            for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                const PlayerHand& tiles = hand.GetHand(seat);
-                Json entry = Json::object();
-                entry["concealed"] = TilesToJson(tiles.concealed);
-                entry["melds"] = MeldsToJson(tiles.melds);
-                entry["bonus"] = TilesToJson(tiles.bonus);
-                entry["breakdown"] = BreakdownToJson(settlement.breakdowns[static_cast<size_t>(seat)]);
-                seats.push_back(std::move(entry));
-            }
-            json["seats"] = std::move(seats);
-            json["scores"] = SeatScoresToJson(settlement.scores);
-            json["deltas"] = SeatScoresToJson(settlement.deltas);
-            return json;
-        }
-
-        /// The settlement `next_hand` answers: the outcome and the money, not the breakdowns (they were in `result`).
-        Json SettlementToJson(const HandSettlement& settlement) {
-            Json json = Json::object();
-            json["kind"] = MakeJsonString(ResultKindName(settlement.kind));
-            json["winner"] = SeatOrNull(settlement.winner);
-            json["scores"] = SeatScoresToJson(settlement.scores);
-            json["deltas"] = SeatScoresToJson(settlement.deltas);
             return json;
         }
 
@@ -246,22 +115,6 @@ namespace BECore::Mahjong {
                 }
             }
             return kNoSeat;
-        }
-
-        Json SeatToJson(const TableView& view, Seat viewSeat, const MahjongGame& game, Seat seat) {
-            const HandModel& hand = game.GetMatch().Hand();
-            const PublicSeat& open = view.seats[static_cast<size_t>(seat)];
-            Json json = Json::object();
-            json["kind"] = MakeJsonString(game.GetSession().KindOf(seat) == SeatKind::Person ? "person" : "computer");
-            json["wind"] = MakeJsonString(EnumUtils<Wind>::ToString(hand.SeatWind(seat)));
-            json["score"] = game.GetMatch().Scores()[static_cast<size_t>(seat)];
-            json["concealedCount"] = hand.GetHand(seat).concealed.size();
-            json["melds"] = MeldsToJson(seat == viewSeat ? view.own.melds : open.openMelds);
-            json["concealedKongs"] = open.concealedKongs;
-            json["bonus"] = TilesToJson(open.bonus);
-            json["discardCount"] = open.discardCount;
-            json["calling"] = open.callingDeclared;
-            return json;
         }
 
         // ----- reading what a client sent -----
@@ -443,57 +296,18 @@ namespace BECore::Mahjong {
             return NoMatchStarted();
         }
         const TableSession& session = _game.GetSession();
-        const HandModel& hand = match.Hand();
-        const SessionPhase phase = session.GetPhase();
         // A spectator (no person seat) sees the public table and no own tiles: the view of seat 0 is made only for the numbers every
         // seat sees (and the hands are in `result` once the hand is over).
         const Seat seat = ViewSeat(session);
-        const bool spectator = seat == kNoSeat;
-        const TableView view = MakeTableView(hand, spectator ? 0 : seat);
+        const TableView view = MakeTableView(match.Hand(), seat == kNoSeat ? 0 : seat);
 
-        Json turn = Json::object();
-        turn["phase"] = MakeJsonString(TurnPhaseName(view.phase));
-        turn["current"] = view.phase == Phase::Finished ? Json(nullptr) : SeatOrNull(view.currentSeat);
-        turn["pendingTile"] = TileToJson(view.pendingTile);
-        turn["yourTurn"] = !spectator && !view.legal.empty();
-
-        Json seats = Json::array();
-        for (Seat other = 0; other < kSeatCount; ++other) {
-            seats.push_back(SeatToJson(view, seat, _game, other));
-        }
-
-        Json discards = Json::array();
-        for (const DiscardEntry& entry : hand.Discards()) {
-            Json item = Json::object();
-            item["tile"] = TileToJson(entry.tile);
-            item["seat"] = entry.seat;
-            discards.push_back(std::move(item));
-        }
-
-        Json state = Json::object();
-        state["phase"] = MakeJsonString(PhaseName(phase));
-        state["seat"] = SeatOrNull(seat);
-        state["seatWind"] = spectator ? Json(nullptr) : MakeJsonString(EnumUtils<Wind>::ToString(view.seatWind));
-        state["roundWind"] = MakeJsonString(EnumUtils<Wind>::ToString(view.roundWind));
-        state["east"] = hand.East();
-        state["level"] = LevelNumber(FirstComputerLevel(session.Seats(), session.Levels()));
-        Json levels = Json::array();
-        for (const ComputerLevel level : session.Levels()) {
-            levels.push_back(LevelNumber(level));
-        }
-        state["levels"] = std::move(levels);
-        state["hand"] = spectator ? Json::array() : TilesToJson(view.own.concealed);
-        state["turn"] = std::move(turn);
-        state["seats"] = std::move(seats);
-        state["discards"] = std::move(discards);
-        state["wall"] = view.liveCount;
-        state["handsPlayed"] = match.HandsPlayed();
-        state["handsTotal"] = match.HandsTotal();
-        state["version"] = session.Version();
-        if (phase != SessionPhase::Playing) {
-            state["result"] = ResultToJson(hand);
-        }
-        return state;
+        StateJsonContext context{match};
+        context.phase = session.GetPhase();
+        context.version = session.Version();
+        context.viewSeat = seat;
+        context.kinds = &session.Seats();
+        context.levels = &session.Levels();
+        return TableStateToJson(context, view);
     }
 
     std::expected<Json, ControlError> MahjongGameControl::GetActions() const {
