@@ -4,6 +4,8 @@
 #include <BECore/Control/Json.h>
 #include <Common/TempPath.h>
 #include <Mahjong/Save/MatchSave.h>
+#include <Mahjong/Table/ActionButtons.h>
+#include <Mahjong/Table/TileHover.h>
 #include <memory>
 
 /**
@@ -81,6 +83,44 @@ namespace BECore::Mahjong::Tests {
             ASSERT_TRUE(PumpUntil([&] { return client.Lobby().canStart; }));
             ASSERT_TRUE(client.Start());
             ASSERT_TRUE(PumpUntil([&] { return _game->IsOnlineTable(); }));
+        }
+
+        const OnlineTable& Table() const {
+            return _game->GetOnline().Table();
+        }
+
+        Seat Viewer() const {
+            return _game->GetSession().Viewer();
+        }
+
+        /// Whether the server lists an action of @p kind for the game's client now.
+        bool Lists(ActionKind kind) const {
+            const auto& actions = Table().actions;
+            return _game->GetOnline().Stage() == OnlineStage::Game &&
+                   eastl::any_of(actions.begin(), actions.end(), [&](const ControlAction& listed) { return !listed.nextHand && listed.hand.kind == kind; });
+        }
+
+        /// Frames until @p done is true after one, the other people acting for themselves (the first action of their list, once per view); the game's client acts the same way
+        /// unless @p viewerActs is false (then it waits for the test). False when the limit came first.
+        template <typename Done>
+        bool PlayUntil(Done done, bool viewerActs = true) {
+            constexpr uint64_t kNever = std::numeric_limits<uint64_t>::max();
+            uint64_t acted = kNever;
+            for (int count = 0; count < kPumpLimit; ++count) {
+                Frame();
+                if (done()) {
+                    return true;
+                }
+                for (const std::unique_ptr<HubPlayer>& other : _others) {
+                    other->ActFirst();
+                }
+                OnlineClient& client = _game->GetOnline();
+                if (viewerActs && client.Stage() == OnlineStage::Game && !Table().actions.empty() && Table().version != acted) {
+                    acted = Table().version;
+                    client.Act(0);
+                }
+            }
+            return false;
         }
 
         /// The files of the save folder that hold the match, by name.
@@ -166,6 +206,115 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_game->GetLocalMatch().Scores(), localScores);
         EXPECT_EQ(MatchSlot(), savedBefore);
         EXPECT_TRUE(control->GetState().has_value()) << "the control API plays the local game again";
+    }
+
+    TEST_F(MahjongOnlineTableSceneTest, TheTableDrawsTheOwnTilesFaceUpAndEveryoneElsesAsBacks) {
+        ASSERT_NO_FATAL_FAILURE(StartRoom());
+        ASSERT_TRUE(PlayUntil([&] { return Hand().Discards().size() >= 6 && _game->GetSession().GetPhase() == SessionPhase::Playing; }));
+        const Seat viewer = Viewer();
+        ASSERT_TRUE(IsSeat(viewer));
+        ExpectTableDrawn(false, viewer);
+        EXPECT_EQ(FaceUpHandTiles(viewer), static_cast<int>(Hand().GetHand(viewer).concealed.size()));
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            if (seat == viewer) {
+                continue;
+            }
+            EXPECT_EQ(FaceUpHandTiles(seat), 0) << "seat " << seat;
+            for (const TileSlot& slot : _table->GetLayout().slots) {
+                if (slot.seat == seat && slot.role == SlotRole::HandTile) {
+                    EXPECT_FALSE(TileOfSlot(Hand(), slot, false).has_value());
+                }
+            }
+        }
+        EXPECT_EQ(_world.Judge().Offences().size(), 0u);
+    }
+
+    TEST_F(MahjongOnlineTableSceneTest, AClickOnAHandTileSendsTheListedDiscardAndTheNextViewMovesThePile) {
+        ASSERT_NO_FATAL_FAILURE(StartRoom());
+        ASSERT_TRUE(PlayUntil([&] { return Lists(ActionKind::Discard) && Hand().GetPhase() == Phase::Discard && _game->GetSession().Actor() == Viewer(); }));
+        const Seat viewer = Viewer();
+        const size_t piled = Hand().Discards().size();
+        constexpr int kIndex = 3;
+        const Tile clicked = Hand().GetHand(viewer).concealed[kIndex];
+        const uint64_t version = Table().version;
+
+        ASSERT_FALSE(ClickHandTile(kIndex)) << "no canvas took the click";
+        ASSERT_TRUE(PlayUntil([&] { return Table().version != version; }, false));
+        ASSERT_EQ(Hand().Discards().size(), piled + 1);
+        EXPECT_EQ(Hand().Discards().back().tile, clicked);
+        EXPECT_EQ(Hand().Discards().back().seat, viewer);
+        EXPECT_EQ(_game->GetOnline().Notice().serial, 0u) << "nothing to say";
+    }
+
+    TEST_F(MahjongOnlineTableSceneTest, AClaimWindowShowsTheClaimButtonsAndPassSendsPass) {
+        ASSERT_NO_FATAL_FAILURE(StartRoom());
+        ASSERT_TRUE(PlayUntil([&] { return Lists(ActionKind::Pass) && Hand().GetPhase() == Phase::Claim; }));
+        Draw();
+        EXPECT_TRUE(_table->GetButtons()[ButtonKind::Pass].shown);
+        int claims = 0;
+        for (const ButtonKind kind : {ButtonKind::ClaimMahjong, ButtonKind::ClaimPung, ButtonKind::ClaimKong, ButtonKind::ClaimChow0, ButtonKind::ClaimChow1, ButtonKind::ClaimChow2}) {
+            claims += _table->GetButtons()[kind].shown ? 1 : 0;
+        }
+        EXPECT_GT(claims, 0) << "a window that lists a pass lists a claim";
+        EXPECT_FALSE(_table->GetButtons()[ButtonKind::Declare].shown);
+        EXPECT_EQ(Hand().PendingClaimSeats(), eastl::vector<Seat>{Viewer()});
+
+        const uint64_t version = _world.Game()->GetStateVersion();
+        EmitAction(SpecOf(ButtonKind::Pass).action, SpecOf(ButtonKind::Pass).value);
+        EXPECT_GT(_world.Game()->GetStateVersion(), version) << "the server took the pass";
+        ASSERT_TRUE(PlayUntil([&] { return !Lists(ActionKind::Pass) || Hand().GetPhase() != Phase::Claim; }, false));
+        EXPECT_FALSE(_table->GetButtons()[ButtonKind::Pass].shown);
+    }
+
+    TEST_F(MahjongOnlineTableSceneTest, AClickWhileTheServerListsNoDiscardDoesNothing) {
+        ASSERT_NO_FATAL_FAILURE(StartRoom());
+        ASSERT_TRUE(PlayUntil([&] { return Table().actions.empty() && _game->GetSession().GetPhase() == SessionPhase::Playing; }));
+        const uint64_t version = _world.Game()->GetStateVersion();
+        const size_t piled = Hand().Discards().size();
+        EXPECT_FALSE(_table->GetButtons()[ButtonKind::Pass].shown);
+        ClickHandTile(0);
+        EmitAction(SpecOf(ButtonKind::Pass).action, SpecOf(ButtonKind::Pass).value);
+        for (int i = 0; i < 5; ++i) {
+            Frame();
+        }
+        EXPECT_EQ(_world.Game()->GetStateVersion(), version) << "nothing was sent";
+        EXPECT_EQ(Hand().Discards().size(), piled);
+    }
+
+    TEST_F(MahjongOnlineTableSceneTest, AnActionThatTheServerRefusedAsStaleSaysNothingAndTheNextViewFixesTheTable) {
+        ASSERT_NO_FATAL_FAILURE(StartRoom());
+        // A window in which the game's client and another person may both decide
+        const auto otherDecides = [&] {
+            return eastl::any_of(_others.begin(), _others.end(),
+                                 [](const std::unique_ptr<HubPlayer>& other) { return !other->Table().actions.empty() && other->Client().Stage() == OnlineStage::Game; });
+        };
+        ASSERT_TRUE(PlayUntil([&] { return Lists(ActionKind::Pass) && Hand().GetPhase() == Phase::Claim && otherDecides(); }));
+        Draw();
+        for (const std::unique_ptr<HubPlayer>& other : _others) {
+            other->ActFirst();  // the other decides: the view of the game's client is old before it clicks
+        }
+        const uint64_t shown = Table().version;
+        ASSERT_GT(_world.Game()->GetStateVersion(), shown);
+        EmitAction(SpecOf(ButtonKind::Pass).action, SpecOf(ButtonKind::Pass).value);
+        EXPECT_EQ(_world.Game()->GetStateVersion(), shown + 1) << "the stale pass changed nothing";
+        ASSERT_TRUE(PlayUntil([&] { return Table().version == _world.Game()->GetStateVersion(); }, false));
+        EXPECT_EQ(_game->GetOnline().Notice().serial, 0u) << "a stale action is silent";
+        EXPECT_TRUE(CoreManager::GetUIVars().Get("onlineNotice"_intern).empty());
+        EXPECT_EQ(_game->GetSession().GetPhase(), SessionPhase::Playing);
+        EXPECT_EQ(Hand().Discards().size(), Table().discards.size()) << "the table is the view's";
+    }
+
+    TEST_F(MahjongOnlineTableSceneTest, NoHintIsShownInARoomWhateverTheSwitchSays) {
+        ASSERT_NO_FATAL_FAILURE(StartRoom());
+        ASSERT_TRUE(_game->HintsOn()) << "the default switch";
+        ASSERT_TRUE(PlayUntil([&] { return Lists(ActionKind::Discard) && Hand().GetPhase() == Phase::Discard && _game->GetSession().Actor() == Viewer(); }));
+        Frame();
+        const auto hintsCanvas = Canvas("HintsButton");
+        EXPECT_FALSE(hintsCanvas && hintsCanvas->TakesInput() && OnScreen("HintsButton", "HintButton"));
+        const auto compactCanvas = Canvas("ActionsCompact");
+        EXPECT_FALSE(compactCanvas && compactCanvas->TakesInput() && OnScreen("ActionsCompact", "HintButton"));
+        EXPECT_FALSE(OnScreen("Hints", "WaitPanel"));
+        EXPECT_FALSE(OnScreen("Hints", "AdviceText"));
     }
 
 }  // namespace BECore::Mahjong::Tests
