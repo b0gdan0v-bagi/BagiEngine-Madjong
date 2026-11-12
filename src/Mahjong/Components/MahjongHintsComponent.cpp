@@ -54,6 +54,18 @@ namespace BECore::Mahjong {
             return session.ActorIsPerson() && session.Actor() == viewer && !view.legal.empty();
         }
 
+        /// Draws every element `name` of the canvases under `node` as chosen (`selected`) or not.
+        void SetSelectedIn(SceneNode& node, PoolString name, bool selected) {
+            if (auto canvas = node.GetComponent<UICanvasComponent>()) {
+                if (UIElement* element = canvas->GetRoot().FindByName(name)) {
+                    element->selected = selected;
+                }
+            }
+            for (const auto& child : node.GetChildren()) {
+                SetSelectedIn(*child, name, selected);
+            }
+        }
+
         Color DangerColor(DangerMark mark) {
             switch (mark) {
                 case DangerMark::Safe:
@@ -116,11 +128,14 @@ namespace BECore::Mahjong {
             Refresh(game, key);
         }
         PushWaitingRow();
-        if (_advice && (key != _adviceKey || !_offered)) {
+        if (_advised && (key != _adviceKey || !_offered || !_adviceOn)) {
             DropAdvice();
         }
-        PushAdvice();
-        PushCoach(game, key);
+        if (_adviceOn && _offered && !_advised) {
+            Advise(*game, key);  // `_offered` holds only with a game whose hints apply
+        }
+        PushCoach(game, key);  // first: the reasons give way to a note that is up
+        PushAdvice(game != nullptr && game->CoachOn());
         if (key.applies) {
             DrawMarks(*game);
         }
@@ -176,20 +191,36 @@ namespace BECore::Mahjong {
         _published = _row;
     }
 
+    void MahjongHintsComponent::Advise(const MahjongGame& game, const Key& key) {
+        BE_PROFILE_SCOPE("MahjongHints::Advise");
+        TableView view = MakeTableView(game.GetMatch().Hand(), key.viewer);
+        _explained = ExplainAdviceFor(view);
+        _advice = _explained ? std::optional<HandAction>(_explained->Action()) : AdviceFor(view);
+        _advised = true;
+        _adviceKey = key;
+        _adviceView = std::move(view);
+        _adviceDirty = true;
+        _whyDirty = true;
+    }
+
     void MahjongHintsComponent::DropAdvice() {
+        _advised = false;
         _advice.reset();
         _explained.reset();
-        _whyOpen = false;
         _whyDirty = false;
         _adviceView = TableView{};
         _adviceDirty = false;
     }
 
-    void MahjongHintsComponent::PushAdvice() {
+    void MahjongHintsComponent::PushAdvice(bool coach) {
         Scene& scene = GetScene();
         if (_offered != _offeredShown) {
             _offeredShown = _offered;
             UICanvasComponent::SetElementVisibleByName(scene, NameOf(kHintButton), _offered);
+        }
+        if (_adviceOn != _adviceOnShown) {
+            _adviceOnShown = _adviceOn;
+            SetSelectedIn(scene.GetRootNode(), NameOf(kHintButton), _adviceOn);
         }
         const bool show = _advice.has_value();
         UIVars& vars = CoreManager::GetUIVars();
@@ -206,7 +237,7 @@ namespace BECore::Mahjong {
             }
             UICanvasComponent::SetElementVisibleByName(scene, NameOf(kAdviceLabel), show);
         }
-        PushWhy(show && _whyOpen && _explained.has_value());
+        PushWhy(show && coach && _explained.has_value() && !_coachShown);
     }
 
     void MahjongHintsComponent::PushWhy(bool open) {
@@ -331,24 +362,12 @@ namespace BECore::Mahjong {
         const eastl::string_view action = event.action.ToStringView();
         if (action == kAdviceAction) {
             // What is offered now, not what the last frame showed: a late press changes nothing
-            std::optional<TableView> view = ViewToAdvise(game);
-            if (!view) {
+            if (!ViewToAdvise(game)) {
                 return;
             }
-            const Key key = KeyOf(game);
-            if (_advice && key == _adviceKey && _explained) {
-                // The advice of this table is up: a press opens the reasons, the next one closes them
-                _whyOpen = !_whyOpen;
-                _whyDirty = true;
-                return;
-            }
-            game->GetCoach().ClearNote();  // the advice takes the place of the note
-            _explained = ExplainAdviceFor(*view);
-            _advice = _explained ? std::optional<HandAction>(_explained->Action()) : AdviceFor(*view);
-            _adviceKey = key;
-            _adviceView = std::move(*view);
-            _adviceDirty = true;
-            _whyOpen = false;
+            // A switch: the next draw works the advice out (or drops it)
+            _adviceOn = !_adviceOn;
+            game->GetCoach().ClearNote();  // the press is a click: it takes the note down, as a click on the table does
             return;
         }
         if (action != kSetHintsAction || !game->IsOptionsOpen()) {

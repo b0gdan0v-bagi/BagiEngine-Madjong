@@ -257,10 +257,13 @@ namespace BECore::Mahjong::Tests {
             return true;
         }
 
-        /// The panel open: two presses on the table as it is.
+        /// The panel open: the mode Coach and the switch on, on the table as it is.
         void OpenWhy() {
-            Press();
-            Press();
+            _game->SetHintsMode(HintsMode::Coach);
+            Draw();
+            if (!AdviceShown()) {
+                Press();  // the switch may be on from an earlier table of the test
+            }
             ASSERT_TRUE(AdviceShown());
             ASSERT_TRUE(WhyShown());
         }
@@ -1224,17 +1227,43 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(RectsOf(kDeclareMark).size(), 2u);
     }
 
-    TEST_F(MahjongHintsTest, PressingAgainKeepsTheSentenceAndOpensTheReasons) {
+    TEST_F(MahjongHintsTest, TheButtonIsASwitchDrawnSelectedWhileOn) {
         ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
+        const auto selected = [&](const char* node) {
+            const UIElement* button = Element(node, "HintButton");
+            return button != nullptr && button->selected;
+        };
+        EXPECT_FALSE(selected("HintsButton"));
         Press();
-        const std::string first = AdviceVar();
+        EXPECT_TRUE(AdviceShown());
+        EXPECT_FALSE(WhyShown()) << "the mode Hints gives the sentence only";
+        EXPECT_TRUE(selected("HintsButton"));
+        EXPECT_TRUE(selected("ActionsCompact")) << "both buttons show the switch";
         const uint64_t varsVersion = CoreManager::GetUIVars().GetVersion();
         Draw();
         EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), varsVersion) << "an unchanged frame sets nothing";
+
         Press();
-        EXPECT_EQ(AdviceVar(), first);
-        EXPECT_TRUE(AdviceShown());
-        EXPECT_TRUE(WhyShown());
+        EXPECT_FALSE(AdviceShown()) << "the second press switches it off";
+        EXPECT_TRUE(AdviceVar().empty());
+        EXPECT_TRUE(RectsOf(kAdvisedFrame).empty());
+        EXPECT_FALSE(selected("HintsButton"));
+        EXPECT_FALSE(selected("ActionsCompact"));
+        EXPECT_TRUE(ButtonShown());
+    }
+
+    TEST_F(MahjongHintsTest, WhileTheSwitchIsOnEveryTurnOfThePersonGetsItsAdviceByItself) {
+        ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
+        Press();
+        ASSERT_TRUE(AdviceShown());
+        ASSERT_TRUE(Discard("Nw"));
+        Draw();
+        EXPECT_FALSE(AdviceShown()) << "no advice while the computers move";
+        ASSERT_TRUE(StepUntil([&] { return _game->GetSession().ActorIsPerson() || _game->GetSession().GetPhase() != SessionPhase::Playing; }));
+        ASSERT_TRUE(_game->GetSession().ActorIsPerson());
+        Draw();
+        EXPECT_TRUE(AdviceShown()) << "no press needed";
+        EXPECT_EQ(AdviceVar(), SentenceFor(_game->GetSession().Actor()));
     }
 
     TEST_F(MahjongHintsTest, InAClaimWindowTheSentenceNamesTheClaimTheComputerWouldMake) {
@@ -1324,17 +1353,17 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(AdviceShown());
         _game->SetHintsOn(true);
         Draw();
-        EXPECT_FALSE(AdviceShown()) << "it does not come back by itself";
+        EXPECT_TRUE(AdviceShown()) << "the switch is still on: it comes back";
         EXPECT_TRUE(ButtonShown());
 
-        Press();
-        ASSERT_TRUE(AdviceShown());
         _game->OpenSetup();
         Draw();
         EXPECT_FALSE(AdviceShown());
         _game->CloseSetup();
         Draw();
-        EXPECT_FALSE(AdviceShown());
+        EXPECT_TRUE(AdviceShown());
+        Press();
+        ASSERT_FALSE(AdviceShown());
 
         // Hot seat: person 0 asks, discards; the cover goes up for person 2 and the advice is gone
         const SeatSetup twoPeople{SeatKind::Person, SeatKind::Computer, SeatKind::Person, SeatKind::Computer};
@@ -1351,7 +1380,8 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(ButtonShown());
         _game->GetSession().Reveal();
         Draw();
-        EXPECT_FALSE(AdviceShown()) << "the next person does not inherit the advice";
+        EXPECT_TRUE(AdviceShown()) << "the switch is the table's: the next person gets an advice of their own";
+        EXPECT_EQ(AdviceVar(), SentenceFor(_game->GetSession().Viewer()));
         EXPECT_TRUE(ButtonShown());
     }
 
@@ -1535,7 +1565,8 @@ namespace BECore::Mahjong::Tests {
 
     }  // namespace
 
-    TEST_F(MahjongHintsTest, TheSecondPressOpensTheReasonsAndTheThirdClosesThem) {
+    TEST_F(MahjongHintsTest, InCoachThePressGivesTheSentenceAndTheReasonsAndTheNextTakesBothDown) {
+        _game->SetHintsMode(HintsMode::Coach);
         ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
         EXPECT_FALSE(WhyShown());
         EXPECT_TRUE(NoWhyText());
@@ -1543,20 +1574,15 @@ namespace BECore::Mahjong::Tests {
 
         Press();
         EXPECT_TRUE(AdviceShown());
-        EXPECT_FALSE(WhyShown()) << "the first press gives the sentence only";
-        EXPECT_TRUE(NoWhyText());
-
-        Press();
-        EXPECT_TRUE(AdviceShown()) << "the sentence stays";
         EXPECT_EQ(AdviceVar(), SentenceFor(kSeat0));
         ASSERT_TRUE(WhyShown());
         EXPECT_EQ(WhyVars(), ExpectedWhy(kSeat0));
         EXPECT_FALSE(WhyVar(0).empty());
         EXPECT_FALSE(WhyVar(1).empty());
-        EXPECT_EQ(RectsOf(kAdvisedFrame).size(), 4u) << "the frame of the advised tile stays";
+        EXPECT_EQ(RectsOf(kAdvisedFrame).size(), 4u);
 
         Press();
-        EXPECT_TRUE(AdviceShown());
+        EXPECT_FALSE(AdviceShown());
         EXPECT_FALSE(WhyShown());
         EXPECT_TRUE(NoWhyText()) << "nothing of the reasons stays in a variable";
 
@@ -1590,13 +1616,15 @@ namespace BECore::Mahjong::Tests {
         Draw();
         EXPECT_FALSE(WhyShown());
         EXPECT_TRUE(NoWhyText());
+        _game->SetHintsMode(HintsMode::Coach);
+        Draw();
+        EXPECT_TRUE(WhyShown()) << "the switch is still on: both come back";
+        EXPECT_TRUE(AdviceShown());
         _game->SetHintsOn(true);
         Draw();
-        EXPECT_FALSE(WhyShown());
-        EXPECT_FALSE(AdviceShown());
-        Press();
-        EXPECT_FALSE(WhyShown()) << "a first press again";
+        EXPECT_FALSE(WhyShown()) << "the mode Hints has no reasons";
         EXPECT_TRUE(AdviceShown());
+        Press();
 
         // Setup, the page Options and the rules
         ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
@@ -1607,7 +1635,8 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(NoWhyText());
         _game->CloseSetup();
         Draw();
-        EXPECT_FALSE(WhyShown());
+        EXPECT_TRUE(WhyShown());
+        Press();
 
         ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
         ASSERT_NO_FATAL_FAILURE(OpenWhy());
@@ -1617,7 +1646,8 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(NoWhyText());
         _game->CloseRules();
         Draw();
-        EXPECT_FALSE(WhyShown());
+        EXPECT_TRUE(WhyShown());
+        Press();
 
         // Hot seat: person 0 opens it, discards; the cover goes up for person 2, who does not inherit it
         const SeatSetup twoPeople{SeatKind::Person, SeatKind::Computer, SeatKind::Person, SeatKind::Computer};
@@ -1633,11 +1663,9 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(NoWhyText());
         _game->GetSession().Reveal();
         Draw();
-        EXPECT_FALSE(WhyShown());
-        EXPECT_TRUE(NoWhyText());
         EXPECT_NE(_game->GetSession().Viewer(), kSeat0);
-        Press();
-        EXPECT_FALSE(WhyShown()) << "the next person's first press gives the sentence only";
+        EXPECT_TRUE(WhyShown()) << "the next person gets reasons of their own";
+        EXPECT_EQ(WhyVars(), ExpectedWhy(_game->GetSession().Viewer()));
     }
 
     TEST_F(MahjongHintsTest, APressThatIsNotOfferedOpensNoReasons) {
@@ -1689,10 +1717,9 @@ namespace BECore::Mahjong::Tests {
         const auto play = [&](bool hintsOn) {
             std::string state;
             [&] {
-                _game->SetHintsOn(hintsOn);
+                _game->SetHintsMode(hintsOn ? HintsMode::Coach : HintsMode::Off);
                 ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
                 const uint64_t version = _game->GetSession().Version();
-                Press();
                 Press();
                 EXPECT_EQ(hintsOn, WhyShown());
                 EXPECT_EQ(_game->GetSession().Version(), version);

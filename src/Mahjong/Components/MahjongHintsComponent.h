@@ -41,18 +41,21 @@ namespace BECore::Mahjong {
      * draw of `MahjongTableComponent`, which draws first): a bar under every tile whose discard declares the calling hand
      * (`DeclaringDiscards`, exactly what the `Declare` switch allows) and, while an opponent has declared, a bar inside the left edge of each hand tile that is safe to
      * discard (green), risky (amber) or dangerous (red) (`DangerMarks`; an ordinary tile has none). The button `HintButton` (in the nodes `HintsButton` on the table and `ActionsCompact` in the narrow
-     * windows, shown by name in both, `MahjongTableComponent` swaps the canvases) is shown exactly while hints apply and the viewer has actions to choose from; `MahjongHintAdvice` (ignored when the
-     * button is not offered) stores `AdviceFor(view)` and the component publishes the sentence `AdviceText` as the variable `hintAdvice` for the label `AdviceText`; a discard that is advised is
-     * framed on the hand. A second press while that advice is up opens the reasons (`ExplainAdviceFor`, `ReasonLines`) in the panel
-     * `WhyPanel` of the node `HintsWhy` (`config/nodes/MahjongHintsWhy.xml`, on the wall ring, text only, no input), as the variables `hintWhy0..5`; a third
-     * press closes it. The advice belongs to the table it was asked on: any change of the session `Version()`, a cover, hints off or
-     * `Setup` open drop it and the reasons with it, and a new language words both again.
+     * windows, shown by name in both, `MahjongTableComponent` swaps the canvases) is shown exactly while hints apply and the viewer has actions to choose from.
+     * It is a **switch** (`MahjongHintAdvice`, ignored when the button is not offered; the state is the component's, kept across turns, hands and
+     * matches, not saved): while it is on, both buttons are drawn `selected` and every table the viewer is to act on gets `AdviceFor(view)` worked out
+     * once (`ExplainAdviceFor` names the same action), published as the sentence `AdviceText` in the variable `hintAdvice` for the label `AdviceText`, a
+     * discard that is advised framed on the hand. In the mode Coach the reasons (`ReasonLines`) also show in the panel `WhyPanel` of the node `HintsWhy`
+     * (`config/nodes/MahjongHintsWhy.xml`, on the wall ring, text only, no input) as the variables `hintWhy0..5`, but only while the coach's note
+     * is not up: the two share the place, and the note of the last move goes first. The advice belongs to the table it was worked out on: any
+     * change of the session `Version()`, a cover, hints off or a pause drop it, the next table the viewer acts on gets its own, and a new language
+     * words both again.
      *
      * **The coach's note.** In the mode Coach the ledger of the game (`MahjongGame::GetCoach()`, fed by the session) holds the note of the
      * person's last differing move; the panel `CoachPanel` of the same node shows its lines (`CoachNoteLines`, the variables `coachNote0..2`)
      * exactly while the hints apply, the note is of this hand and of the viewer. The note stays through the computers' turns (they move within a
      * second of the person's action) and goes with the next accepted action of the person (the ledger), a left or touch mouse-down that the
-     * panel was up for, the press of `Hint`, the end of the hand, a new match, a pause, a cover and a change of the mode. The component only
+     * panel was up for, a press of `Hint`, the end of the hand, a new match, a pause, a cover and a change of the mode. The component only
      * reads the ledger and clears it, and publishes only when the note, the language or the shown state changed. **It never acts:** it performs no action, moves no version and the
      * control API does not know it.
      */
@@ -91,8 +94,10 @@ namespace BECore::Mahjong {
         void Refresh(const MahjongGame* game, const Key& key);
         /// Puts the difference between the row and the canvas on the canvas.
         void PushWaitingRow();
-        /// The button and the sentence of the advice.
-        void PushAdvice();
+        /// Works the advice of the viewer's table out (the switch is on and the button offered).
+        void Advise(const MahjongGame& game, const Key& key);
+        /// The button (offered, switched on) and the sentence of the advice; the reasons too when `coach` and the coach's note is not up.
+        void PushAdvice(bool coach);
         /// The panel of the reasons (`HintsWhy`): the lines and the plate while `open`, empty variables and no plate otherwise.
         void PushWhy(bool open);
         /// The note of the coach: drops what no longer holds (and clears the ledger), publishes the lines and the plate when they changed.
@@ -109,15 +114,17 @@ namespace BECore::Mahjong {
         bool _known = false;  ///< `_key` and what follows from it are worked out
         Key _key;
 
-        std::optional<HandAction> _advice;  ///< the advice that was asked for on the table of `_adviceKey`
+        bool _adviceOn = false;             ///< the switch `Hint`
+        bool _adviceOnShown = false;        ///< the buttons are drawn `selected`
+        bool _advised = false;              ///< the advice of the table of `_adviceKey` was worked out (it may have none)
+        std::optional<HandAction> _advice;  ///< the advice worked out on the table of `_adviceKey`
         TableView _adviceView;              ///< the view it was asked on (the sentence names the pending discard of a window)
         Key _adviceKey;
         std::optional<Explanation> _explained;  ///< the reasons of `_advice`, asked on the same table
-        bool _whyOpen = false;                  ///< a second press opened the reasons, a third closes them
-        bool _whyDirty = false;                 ///< the lines are to be published again (opened)
+        bool _whyDirty = false;                 ///< the lines are to be published again (worked out again)
         bool _whyShown = false;
         uint64_t _whyStringsVersion = 0;
-        bool _adviceDirty = false;  ///< the sentence is to be published again (asked again)
+        bool _adviceDirty = false;  ///< the sentence is to be published again (worked out again)
         bool _adviceShown = false;
         uint64_t _adviceStringsVersion = 0;
 

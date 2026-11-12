@@ -273,19 +273,35 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(NoteVars(), ExpectedLines()) << "the words of the new note";
     }
 
-    TEST_F(MahjongCoachTest, ThePressOfHintTakesTheNoteDownAndTheAdviceTakesItsPlace) {
+    TEST_F(MahjongCoachTest, OnePressOfHintTakesTheNoteDownAndPutsUpTheAdviceAndItsReasons) {
         ASSERT_NO_FATAL_FAILURE(PutNoteUp());
         ASSERT_NO_FATAL_FAILURE(ToThePersonsNextTurn());
         ASSERT_TRUE(NoteShown());
-        EmitAction("MahjongHintAdvice");
+        ASSERT_TRUE(ClickElement("HintsButton", "HintButton"));
         Draw();
         EXPECT_FALSE(NoteShown());
         EXPECT_TRUE(NoNoteText());
         EXPECT_TRUE(OnScreen("Hints", "AdviceText"));
+        EXPECT_TRUE(OnScreen("HintsWhy", "WhyPanel")) << "the mode Coach gives the reasons with the same press";
+    }
+
+    TEST_F(MahjongCoachTest, WithTheSwitchOnTheNoteOfTheLastMoveGoesFirstAndTheReasonsComeOnceItIsTakenDown) {
+        ASSERT_NO_FATAL_FAILURE(StartEast(HintsMode::Coach));
         EmitAction("MahjongHintAdvice");
         Draw();
+        ASSERT_TRUE(OnScreen("HintsWhy", "WhyPanel"));
+        ASSERT_TRUE(Discard("5p"));
+        Draw();
+        ASSERT_TRUE(NoteShown());
+        ASSERT_NO_FATAL_FAILURE(ToThePersonsNextTurn());
+        EXPECT_TRUE(NoteShown());
+        EXPECT_TRUE(OnScreen("Hints", "AdviceText")) << "the sentence of the new turn comes by itself";
+        EXPECT_FALSE(OnScreen("HintsWhy", "WhyPanel")) << "the two panels are never up together";
+
+        ClickTheFelt();
+        EXPECT_FALSE(NoteShown());
         EXPECT_TRUE(OnScreen("HintsWhy", "WhyPanel"));
-        EXPECT_FALSE(NoteShown()) << "the two panels are never up together";
+        EXPECT_TRUE(OnScreen("Hints", "AdviceText"));
     }
 
     TEST_F(MahjongCoachTest, TheEndOfTheHandAndANewMatchTakeTheNoteDown) {

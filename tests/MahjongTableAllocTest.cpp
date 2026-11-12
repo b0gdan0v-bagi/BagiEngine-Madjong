@@ -71,10 +71,9 @@ namespace BECore::Mahjong::Tests {
             }
         }
         ASSERT_EQ(_game->GetSeats()[static_cast<size_t>(_game->GetSession().Actor())], SeatKind::Person);
+        _game->SetHintsMode(HintsMode::Coach);  // the switch on in Coach gives the sentence and the reasons
         Draw();
         EmitAction("MahjongHintAdvice");
-        Draw();
-        EmitAction("MahjongHintAdvice");  // the second press opens the reasons
         Draw();
         Draw();
         ASSERT_TRUE(OnScreen("HintsWhy", "WhyPanel"));
