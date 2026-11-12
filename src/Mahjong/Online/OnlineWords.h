@@ -93,6 +93,16 @@ namespace BECore::Mahjong {
     inline constexpr eastl::string_view kOnlineWaitHostHintsOffKey = "online.waitHost.hintsOff";
     inline constexpr eastl::string_view kOnlineLobbyHintsOffKey = "online.lobby.hintsOff";
 
+    /// The lobby's copy button by what it did, and the Paste key of the code pad.
+    inline constexpr eastl::string_view kOnlineCopyKey = "online.copy";
+    inline constexpr eastl::string_view kOnlineCopiedKey = "online.copied";
+    inline constexpr eastl::string_view kOnlineCopyFailedKey = "online.copyFailed";
+    inline constexpr eastl::string_view kOnlinePasteKey = "online.paste";
+    /// The note of the pad when a paste did not give a code: the text holds none, the clipboard is empty, the browser refused to be read.
+    inline constexpr eastl::string_view kOnlinePasteNotCodeKey = "online.paste.notCode";
+    inline constexpr eastl::string_view kOnlinePasteEmptyKey = "online.paste.empty";
+    inline constexpr eastl::string_view kOnlinePasteRefusedKey = "online.paste.refused";
+
     /// The text of @p key in the current language. Only `online.error.unknown` has a placeholder (`{code}`, filled with @p arg).
     [[nodiscard]] eastl::string OnlineNoticeText(const UIStrings& strings, eastl::string_view key, eastl::string_view arg = {});
 

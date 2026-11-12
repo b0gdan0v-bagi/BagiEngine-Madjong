@@ -198,6 +198,69 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(TextEntry::CharFromKeycode(0x40000058u, false).has_value());
     }
 
+    namespace {
+
+        /// "refused" for nothing
+        std::string Cleaned(eastl::string_view text) {
+            const std::optional<eastl::string> code = TextEntry::CleanRoomCode(text);
+            return code ? Std(*code) : std::string("<refused>");
+        }
+
+    }  // namespace
+
+    TEST(MahjongOnlineEntry, APastedTextThatIsACodeGivesItInUpperCaseCutToTheLength) {
+        struct Case {
+            const char* text;
+            const char* code;
+        };
+        const Case cases[] = {
+            {"AB3K9", "AB3K9"},       {"  ab3k9 ", "AB3K9"}, {"ab3k9\n", "AB3K9"}, {"\tab3k9\r\n", "AB3K9"}, {"ab3-k9", "AB3K9"}, {"AB3 K9", "AB3K9"}, {"ab3k9xyz", "AB3K9"},  // a long token is cut
+            {"ab3k9 hands", "AB3K9"},  // all of it is made of the code's letters
+            {"2345678", "23456"},
+        };
+        for (const Case& test : cases) {
+            EXPECT_EQ(Cleaned(test.text), test.code) << test.text;
+        }
+    }
+
+    TEST(MahjongOnlineEntry, APastedInviteLineGivesTheOneWordThatCanBeACode) {
+        EXPECT_EQ(Cleaned("Join my mahjong room ab3k9, please"), "AB3K9");
+        EXPECT_EQ(Cleaned("room: AB3K9"), "AB3K9");
+        EXPECT_EQ(Cleaned("example.test/play?room=ab3k9&x=1"), "AB3K9");
+        EXPECT_EQ(Cleaned("https://example.test/play?room=ab3k9"), "<refused>") << "\"https\" is a candidate too";
+        // "hands" is made of the code's letters too: two candidates are never guessed
+        EXPECT_EQ(Cleaned("Join my mahjong room ab3k9, I deal hands"), "<refused>");
+        EXPECT_EQ(Cleaned("Join the room, please"), "<refused>") << "no candidate";
+        // words of another length, and a word with a letter the alphabet lacks (I, O, 0, 1)
+        EXPECT_EQ(Cleaned("room ab3k90, ok"), "<refused>");
+        EXPECT_EQ(Cleaned("room ab3o9, ok"), "<refused>");
+    }
+
+    TEST(MahjongOnlineEntry, APastedTextThatIsNoCodeIsRefused) {
+        for (const char* text : {"", " ", "ab3", "ab3 k", "---", "!!!", "ab3k", "\xD0\x90\xD0\x91\xD0\x92\xD0\x93\xD0\x94", "room \xD0\x90\xD0\x91\xD0\x92\xD0\x93\xD0\x94"}) {
+            EXPECT_EQ(Cleaned(text), "<refused>") << text;
+        }
+        // the code letters I, O, 0 and 1 do not exist, with or without company
+        EXPECT_EQ(Cleaned("io01x"), "<refused>");
+    }
+
+    TEST(MahjongOnlineEntry, APastedTextOverTheLimitIsNotScanned) {
+        const std::string limit(TextEntry::kMaxPasteBytes, 'a');
+        EXPECT_EQ(Cleaned(eastl::string_view(limit.data(), limit.size())), "AAAAA") << "the limit itself is read";
+        const std::string over(TextEntry::kMaxPasteBytes + 1, 'a');
+        EXPECT_EQ(Cleaned(eastl::string_view(over.data(), over.size())), "<refused>");
+        const std::string spaces(TextEntry::kMaxPasteBytes + 1, ' ');
+        EXPECT_EQ(Cleaned((spaces + "ab3k9").c_str()), "<refused>");
+    }
+
+    TEST(MahjongOnlineEntry, ACleanedCodeIsOneTheFieldTakes) {
+        TextEntry field(TextEntry::Kind::Code);
+        const std::optional<eastl::string> code = TextEntry::CleanRoomCode("ab3-k9");
+        ASSERT_TRUE(code.has_value());
+        EXPECT_TRUE(field.Set(*code));
+        EXPECT_TRUE(field.IsComplete());
+    }
+
     TEST(MahjongOnlineEntry, TheDefaultNameIsAWordOfTheLanguageThatAServerAccepts) {
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());

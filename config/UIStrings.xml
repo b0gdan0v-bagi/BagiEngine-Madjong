@@ -334,6 +334,13 @@
         <string key="online.table.hintsOff" text="Hints are not allowed in this room"/>
         <string key="online.delete" text="Delete"/>
         <string key="online.done" text="Done"/>
+        <string key="online.copy" text="Copy code"/>
+        <string key="online.copied" text="Copied"/>
+        <string key="online.copyFailed" text="Cannot copy"/>
+        <string key="online.paste" text="Paste"/>
+        <string key="online.paste.notCode" text="No room code in the text"/>
+        <string key="online.paste.empty" text="Nothing to paste"/>
+        <string key="online.paste.refused" text="Cannot paste here. Type the code"/>
     </language>
     <language id="ru">
         <string key="lang.en" text="English"/>
@@ -667,5 +674,12 @@
         <string key="online.table.hintsOff" text="В комнате подсказки запрещены"/>
         <string key="online.delete" text="Стереть"/>
         <string key="online.done" text="Готово"/>
+        <string key="online.copy" text="Копировать код"/>
+        <string key="online.copied" text="Скопировано"/>
+        <string key="online.copyFailed" text="Не скопировано"/>
+        <string key="online.paste" text="Вставить"/>
+        <string key="online.paste.notCode" text="В тексте нет кода комнаты"/>
+        <string key="online.paste.empty" text="Нечего вставлять"/>
+        <string key="online.paste.refused" text="Здесь нельзя вставить. Введите код"/>
     </language>
 </UIStrings>

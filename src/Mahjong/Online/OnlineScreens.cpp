@@ -137,6 +137,7 @@ namespace BECore::Mahjong {
         if (_page != OnlinePage::Entry) {
             return false;
         }
+        ClearPasteNote();
         if (!FocusedEntry().Append(character)) {
             return false;
         }
@@ -146,6 +147,9 @@ namespace BECore::Mahjong {
     }
 
     bool OnlineScreens::Backspace() {
+        if (_page == OnlinePage::Entry) {
+            ClearPasteNote();
+        }
         if (_page != OnlinePage::Entry || !FocusedEntry().Backspace()) {
             return false;
         }
@@ -271,6 +275,62 @@ namespace BECore::Mahjong {
         return done;
     }
 
+    bool OnlineScreens::NoteCopy(bool ok) {
+        if (_page != OnlinePage::Lobby) {
+            return false;
+        }
+        Assign(_copyState, ok ? OnlineCopyState::Copied : OnlineCopyState::Failed);
+        return true;
+    }
+
+    bool OnlineScreens::PasteCode(eastl::string_view text) {
+        if (!TakesPaste()) {
+            return false;
+        }
+        const std::optional<eastl::string> code = TextEntry::CleanRoomCode(text);
+        if (!code) {
+            Assign(_pasteNote, OnlinePasteNote::NotACode);
+            return false;
+        }
+        TextEntry candidate(TextEntry::Kind::Code);
+        if (!candidate.Set(*code)) {
+            return false;
+        }
+        ClearNotice();
+        Assign(_code, candidate);
+        return true;
+    }
+
+    bool OnlineScreens::NoteNothingToPaste(ClipboardStatus status) {
+        if (!TakesPaste() || status == ClipboardStatus::Ok) {
+            return false;
+        }
+        Assign(_pasteNote, status == ClipboardStatus::Empty ? OnlinePasteNote::Empty : OnlinePasteNote::Refused);
+        return true;
+    }
+
+    eastl::string_view OnlineScreens::RoomCodeToCopy(const OnlineClient& client) const {
+        if (_page != OnlinePage::Lobby) {
+            return {};
+        }
+        const eastl::string& room = client.Lobby().room.empty() ? client.Room() : client.Lobby().room;
+        return eastl::string_view(room.data(), room.size());
+    }
+
+    eastl::string_view OnlineScreens::PasteNoteKey() const {
+        switch (_pasteNote) {
+            case OnlinePasteNote::NotACode:
+                return kOnlinePasteNotCodeKey;
+            case OnlinePasteNote::Empty:
+                return kOnlinePasteEmptyKey;
+            case OnlinePasteNote::Refused:
+                return kOnlinePasteRefusedKey;
+            case OnlinePasteNote::None:
+                break;
+        }
+        return {};
+    }
+
     // ---- The client --------------------------------------------------------------------------------------------------------------
 
     void OnlineScreens::Sync(const OnlineClient& client) {
@@ -324,6 +384,13 @@ namespace BECore::Mahjong {
             _inRoom = false;
             SetPage(next);
         }
+
+        // The copy button speaks of one room
+        const eastl::string_view copyRoom = RoomCodeToCopy(client);
+        if (_copyRoom != copyRoom) {
+            _copyRoom.assign(copyRoom.data(), copyRoom.size());
+            ResetCopy();
+        }
     }
 
     // ---- Private -----------------------------------------------------------------------------------------------------------------
@@ -336,10 +403,24 @@ namespace BECore::Mahjong {
         if (page != OnlinePage::Entry) {
             ClearPad();
         }
+        if (page != OnlinePage::Lobby) {
+            ResetCopy();
+        }
+        ClearPasteNote();
         Bump();
     }
 
+    void OnlineScreens::ClearPasteNote() {
+        Assign(_pasteNote, OnlinePasteNote::None);
+    }
+
+    void OnlineScreens::ResetCopy() {
+        Assign(_copyState, OnlineCopyState::None);
+    }
+
     void OnlineScreens::ClearNotice() {
+        ResetCopy();
+        ClearPasteNote();
         if (!_noticeKey.empty()) {
             _noticeKey = {};
             _noticeArg.clear();

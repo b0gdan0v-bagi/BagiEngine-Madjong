@@ -60,6 +60,23 @@ namespace BECore::Mahjong {
             return codePoint < 0x80 && RoomLimits::kRoomCodeAlphabet.find(static_cast<char>(codePoint)) != eastl::string_view::npos;
         }
 
+        bool IsAsciiAlphanumeric(char c) {
+            return IsAsciiLetter(static_cast<char32_t>(static_cast<unsigned char>(c))) || IsAsciiDigit(static_cast<char32_t>(static_cast<unsigned char>(c)));
+        }
+
+        bool IsPasteSeparator(char c) {
+            return c == ' ' || c == '-' || (c >= '\t' && c <= '\r');
+        }
+
+        /// @p c folded to upper case when it belongs to the room code alphabet; nothing otherwise.
+        std::optional<char> CodeLetter(char c) {
+            const char folded = static_cast<char>(FoldCodeCharacter(static_cast<char32_t>(static_cast<unsigned char>(c))));
+            if (!IsCodeCharacter(static_cast<char32_t>(static_cast<unsigned char>(folded)))) {
+                return std::nullopt;
+            }
+            return folded;
+        }
+
     }  // namespace
 
     TextEntry::TextEntry(Kind kind) : _kind(kind) {}
@@ -164,6 +181,66 @@ namespace BECore::Mahjong {
             return kSpace;
         }
         return std::nullopt;
+    }
+
+    std::optional<eastl::string> TextEntry::CleanRoomCode(eastl::string_view text) {
+        if (text.empty() || text.size() > kMaxPasteBytes) {
+            return std::nullopt;
+        }
+
+        // The whole text is one code, written with spaces or dashes, maybe longer than a code
+        eastl::string squashed;
+        bool onlyCode = true;
+        for (const char c : text) {
+            if (IsPasteSeparator(c)) {
+                continue;
+            }
+            const std::optional<char> letter = IsAsciiAlphanumeric(c) ? CodeLetter(c) : std::nullopt;
+            if (!letter) {
+                onlyCode = false;
+                break;
+            }
+            squashed.push_back(*letter);
+        }
+        if (onlyCode && !squashed.empty()) {
+            if (squashed.size() < RoomLimits::kRoomCodeLength) {
+                return std::nullopt;
+            }
+            return eastl::string(squashed.data(), RoomLimits::kRoomCodeLength);
+        }
+
+        // A sentence: the one word of the code's length that is made of the code's characters
+        std::optional<eastl::string> found;
+        size_t pos = 0;
+        while (pos < text.size()) {
+            if (!IsAsciiAlphanumeric(text[pos])) {
+                ++pos;
+                continue;
+            }
+            const size_t start = pos;
+            while (pos < text.size() && IsAsciiAlphanumeric(text[pos])) {
+                ++pos;
+            }
+            if (pos - start != RoomLimits::kRoomCodeLength) {
+                continue;
+            }
+            eastl::string word;
+            for (size_t i = start; i < pos; ++i) {
+                const std::optional<char> letter = CodeLetter(text[i]);
+                if (!letter) {
+                    break;
+                }
+                word.push_back(*letter);
+            }
+            if (word.size() != RoomLimits::kRoomCodeLength) {
+                continue;
+            }
+            if (found) {
+                return std::nullopt;
+            }
+            found = eastl::move(word);
+        }
+        return found;
     }
 
     eastl::string TextEntry::DefaultName(const UIStrings& strings) {

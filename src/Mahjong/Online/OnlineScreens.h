@@ -1,5 +1,6 @@
 #pragma once
 
+#include <BECore/Clipboard/ClipboardTypes.h>
 #include <Mahjong/Online/OnlineClient.h>
 #include <Mahjong/Online/TextEntry.h>
 
@@ -16,6 +17,17 @@ namespace BECore::Mahjong {
 
     /// The field the `Entry` page edits.
     enum class OnlineField : uint8_t { Name, Code };
+
+    /// What the lobby's copy button says: its own words, `Copied` or `Failed` until the player's next move or another room.
+    enum class OnlineCopyState : uint8_t { None, Copied, Failed };
+
+    /// The one-line note under the value of the code pad: what a paste did not give.
+    enum class OnlinePasteNote : uint8_t {
+        None,
+        NotACode,  // the pasted text holds no room code
+        Empty,     // the clipboard holds no text
+        Refused    // the platform or the user did not let the game read it
+    };
 
     /**
      * @brief What the pages of the online panel show and do: the page, the two fields, the host's options and the pad. Pure, no scene: the component only shows it.
@@ -109,6 +121,20 @@ namespace BECore::Mahjong {
             return _statusKey;
         }
 
+        /// The code of the room on the `Lobby` page (the lobby's, else the client's); empty on any other page. The copy button puts exactly this on the clipboard.
+        [[nodiscard]] eastl::string_view RoomCodeToCopy(const OnlineClient& client) const;
+
+        [[nodiscard]] OnlineCopyState CopyState() const {
+            return _copyState;
+        }
+
+        [[nodiscard]] OnlinePasteNote PasteNote() const {
+            return _pasteNote;
+        }
+
+        /// The key of the paste note's words (`OnlineWords.h`); empty with no note.
+        [[nodiscard]] eastl::string_view PasteNoteKey() const;
+
         // ---- What the game gives ----
 
         /// The name stored by an earlier run; a name the field cannot hold changes nothing. Until the player edits the name it is the default one of the current language.
@@ -160,6 +186,15 @@ namespace BECore::Mahjong {
         bool Start(OnlineClient& client);
         bool Leave(OnlineClient& client);
 
+        /// `Lobby` only: the copy button has put the code on the clipboard (@p ok) or could not. Back to `None` at the player's next move, in another room and off the `Lobby`.
+        bool NoteCopy(bool ok);
+
+        /// Sets the code from a pasted @p text (`TextEntry::CleanRoomCode`): on the `Join` form, or the `Entry` page of the `Code`. A text with no code changes nothing and sets
+        /// the note `NotACode`; so does every other page (false, no note).
+        bool PasteCode(eastl::string_view text);
+        /// The read of the clipboard gave no text (@p status not `Ok`): the note `Empty`, or `Refused` when it was not allowed or there is no clipboard. Same pages as `PasteCode`.
+        bool NoteNothingToPaste(ClipboardStatus status);
+
         /// Follows the client after its `Update()` (and after each command above, which calls it itself).
         void Sync(const OnlineClient& client);
 
@@ -178,6 +213,11 @@ namespace BECore::Mahjong {
 
         void SetPage(OnlinePage page);
         void ClearNotice();
+        void ClearPasteNote();
+        void ResetCopy();
+        [[nodiscard]] bool TakesPaste() const {
+            return _page == OnlinePage::Join || (_page == OnlinePage::Entry && _focus == OnlineField::Code);
+        }
         void SetLocalNotice(eastl::string_view key);
         void RebuildPad(const UIStrings& strings);
         void ClearPad();
@@ -215,6 +255,10 @@ namespace BECore::Mahjong {
         eastl::string _noticeArg;
         uint32_t _seenNotice = 0;
         eastl::string_view _statusKey;
+        OnlineCopyState _copyState = OnlineCopyState::None;
+        /// The room the page showed at the last `Sync`: another one ends the state of the copy button.
+        eastl::string _copyRoom;
+        OnlinePasteNote _pasteNote = OnlinePasteNote::None;
         /// The client has been in a room (lobby or game) since the last request: the end of it goes to the `Menu`.
         bool _inRoom = false;
         uint64_t _version = 0;
