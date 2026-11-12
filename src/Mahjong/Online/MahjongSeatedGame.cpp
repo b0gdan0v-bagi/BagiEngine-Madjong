@@ -30,6 +30,26 @@ namespace BECore::Mahjong {
             return static_cast<uint32_t>((seed ^ (seed >> kHalfSeedBits)) & std::numeric_limits<uint32_t>::max());
         }
 
+        /// What an answer may say of an applied action to every seat: the action as the table shows it. A concealed kong names no
+        /// tile (the others only count it) and a pass says nothing (it would tell that the seat could claim): `nullopt`.
+        std::optional<Json> PublicActionToJson(const HandAction& action) {
+            switch (action.kind) {
+                case ActionKind::Pass:
+                    return std::nullopt;
+                case ActionKind::ConcealedKong: {
+                    Json json = ActionToJson(action);
+                    json.erase("tile");
+                    return json;
+                }
+                case ActionKind::Discard:
+                case ActionKind::DeclareWin:
+                case ActionKind::UpgradeKong:
+                case ActionKind::Claim:
+                    return ActionToJson(action);
+            }
+            return std::nullopt;
+        }
+
     }  // namespace
 
     uint32_t MixSeed(uint32_t seed, uint64_t version) noexcept {
@@ -184,7 +204,11 @@ namespace BECore::Mahjong {
             }
         }
         ++_version;
-        outcome["applied"] = parsed->nextHand ? NextHandActionToJson() : ActionToJson(parsed->hand);
+        if (parsed->nextHand) {
+            outcome["applied"] = NextHandActionToJson();
+        } else if (std::optional<Json> shown = PublicActionToJson(parsed->hand)) {
+            outcome["applied"] = std::move(*shown);
+        }
         outcome["phase"] = MakeJsonString(PhaseName(PhaseOfMatch(_match)));
         outcome["version"] = _version;
         return outcome;

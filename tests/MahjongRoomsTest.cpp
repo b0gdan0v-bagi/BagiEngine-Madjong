@@ -55,14 +55,21 @@ namespace BECore::Mahjong::Tests {
             return found != object.end() && found->is_number_integer() ? found->get<int64_t>() : fallback;
         }
 
+        constexpr uint64_t kMixIncrement = 0x9E3779B97F4A7C15ULL;
+        constexpr uint64_t kMixFirstMultiplier = 0xBF58476D1CE4E5B9ULL;
+        constexpr uint64_t kMixSecondMultiplier = 0x94D049BB133111EBULL;
+        constexpr int kMixFirstShift = 30;
+        constexpr int kMixSecondShift = 27;
+        constexpr int kMixLastShift = 31;
+
         /// A deterministic stream of well-mixed words (splitmix64)
         RandomFn MakeRandom(uint64_t seed) {
             auto state = eastl::make_shared<uint64_t>(seed);
             return [state]() -> uint64_t {
-                uint64_t z = (*state += 0x9E3779B97F4A7C15ULL);
-                z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
-                z = (z ^ (z >> 27)) * 0x94D049BB133111EBULL;
-                return z ^ (z >> 31);
+                uint64_t z = (*state += kMixIncrement);
+                z = (z ^ (z >> kMixFirstShift)) * kMixFirstMultiplier;
+                z = (z ^ (z >> kMixSecondShift)) * kMixSecondMultiplier;
+                return z ^ (z >> kMixLastShift);
             };
         }
 
@@ -727,16 +734,9 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        uint64_t NextWord(uint64_t& state) {
-            uint64_t z = (state += 0x9E3779B97F4A7C15ULL);
-            z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
-            z = (z ^ (z >> 27)) * 0x94D049BB133111EBULL;
-            return z ^ (z >> 31);
-        }
-
         /// The state of a hand with everything @p viewer cannot see shuffled: the concealed tiles of the other three seats and the
         /// three parts of the wall, the sizes as they were.
-        HandState WithHiddenTilesShuffled(HandState state, Seat viewer, uint64_t& rng) {
+        HandState WithHiddenTilesShuffled(HandState state, Seat viewer, const RandomFn& rng) {
             std::vector<Tile> pool;
             const auto take = [&](const eastl::vector<Tile>& tiles) { pool.insert(pool.end(), tiles.begin(), tiles.end()); };
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
@@ -748,7 +748,7 @@ namespace BECore::Mahjong::Tests {
             take(state.loose);
             take(state.dead);
             for (size_t index = pool.size(); index > 1; --index) {
-                std::swap(pool[index - 1], pool[NextWord(rng) % index]);
+                std::swap(pool[index - 1], pool[rng() % index]);
             }
             size_t next = 0;
             const auto fill = [&](eastl::vector<Tile>& tiles) {
@@ -785,7 +785,7 @@ namespace BECore::Mahjong::Tests {
         /// hidden tiles are shuffled must give the viewer the same view and the same actions.
         TwinReport CompareTwins(MahjongSeatedGame game, size_t handsToPlay) {
             TwinReport report;
-            uint64_t rng = 1234;
+            const RandomFn rng = MakeRandom(1234);
             for (int step = 0; step < kTickLimit && game.GetMatch().History().size() < handsToPlay; ++step) {
                 if (PhaseOfMatch(game.GetMatch()) == SessionPhase::Playing) {
                     for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
@@ -836,7 +836,7 @@ namespace BECore::Mahjong::Tests {
             LeakyMahjongSeatedGame game(leak);
             ASSERT_TRUE(game.Start(7, Parse(kShortMatch)).has_value());
             // the twin is a copy of the leaky game, so the leak is in the comparison
-            uint64_t rng = 99;
+            const RandomFn rng = MakeRandom(99);
             size_t differing = 0;
             for (int step = 0; step < 30; ++step) {
                 const HandState state = WithHiddenTilesShuffled(game.GetMatch().Hand().Capture(), 0, rng);
@@ -947,7 +947,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(harness.At(idler).LastErrorCode(), "not_your_turn");
         EXPECT_EQ(SeatText(harness, idleSeat), idleBefore);
 
-        // a listed action of an old and of a future version: stale, and the view comes again
+        // a listed action of a version the game has not reached: stale, and the view comes again
         const size_t views = harness.At(actor).Count("view");
         harness.SendText(actor, ActionText(version + 1, Dump(harness.At(actor).Actions()[0])));
         EXPECT_EQ(harness.At(actor).LastErrorCode(), "stale_action");

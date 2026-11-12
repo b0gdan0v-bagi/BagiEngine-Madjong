@@ -1,3 +1,4 @@
+#include "ComputerTestSupport.h"
 #include "FixedWall.h"
 #include "HandTestSupport.h"
 
@@ -131,6 +132,15 @@ namespace BECore::Mahjong::Tests {
                 }
             }
             return false;
+        }
+
+        /// East holds three east winds, draws the fourth and may declare a concealed kong of them; the others hold quiet hands.
+        HandModel ConcealedKongModel() {
+            return MakeModel(SpecOf("Ew Ew Ew 1p 4p 7p 1s 4s 7s 1m 4m 7m Gd", "Ew"));
+        }
+
+        Json ConcealedKongAction() {
+            return Parse("{\"type\":\"concealed_kong\",\"tile\":\"Ew\"}");
         }
 
     }  // namespace
@@ -282,7 +292,7 @@ namespace BECore::Mahjong::Tests {
         const uint64_t before = game.GetStateVersion();
         const auto passed = game.PerformSeatAction(1, ActionObject("{\"type\":\"pass\"}"));
         ASSERT_TRUE(passed.has_value());
-        EXPECT_EQ((*passed)["applied"], ActionObject("{\"type\":\"pass\"}"));
+        EXPECT_FALSE(passed->contains("applied")) << "a pass would tell every seat that this one could claim";
         EXPECT_EQ((*passed)["phase"], "playing");
         EXPECT_GT(game.GetStateVersion(), before);
         EXPECT_TRUE(ActionsOf(game, 1).empty());
@@ -322,7 +332,7 @@ namespace BECore::Mahjong::Tests {
             }
             Json discard = Json::object();
             discard["type"] = "discard";
-            discard["tile"] = Dump(TileToJson(tile)).substr(1, 2);
+            discard["tile"] = TileToJson(tile);
             EXPECT_EQ(CodeOf(game.PerformSeatAction(actor, discard)), "illegal_action") << discard["tile"];
             break;
         }
@@ -339,6 +349,15 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ((*answer)["phase"], "playing");
         EXPECT_EQ((*answer)["version"], game.GetStateVersion());
         EXPECT_EQ(answer->size(), 3u) << Dump(*answer);
+    }
+
+    TEST(MahjongSeatedGameActionsTest, TheAnswerToAConcealedKongNamesNoTile) {
+        MahjongSeatedGame game = Started();
+        game.GetMatch().Hand() = ConcealedKongModel();
+        const auto answer = game.PerformSeatAction(kSeat0, ConcealedKongAction());
+        ASSERT_TRUE(answer.has_value());
+        EXPECT_EQ((*answer)["applied"], ActionObject("{\"type\":\"concealed_kong\"}"));
+        EXPECT_EQ(Dump(*answer).find("Ew"), std::string::npos) << Dump(*answer);
     }
 
     namespace {
@@ -576,20 +595,21 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MahjongSeatedGameViewTest, TheOtherSeatsConcealedKongsAreOnlyCountedInAView) {
         MahjongSeatedGame game = Started();
+        game.GetMatch().Hand() = ConcealedKongModel();
+        ASSERT_TRUE(Lists(ActionsOf(game, kSeat0), ConcealedKongAction()));
+        ASSERT_TRUE(game.PerformSeatAction(kSeat0, ConcealedKongAction()).has_value());
+        ASSERT_EQ(game.GetMatch().Hand().GetHand(kSeat0).melds.size(), 1u);
+
         // a concealed kong lies face down for the others: only `concealedKongs` of a seat says one exists
-        for (int step = 0; step < kStepLimit && PhaseIs(game, SessionPhase::Playing); ++step) {
-            for (int seat = 0; seat < kSeatCount; ++seat) {
-                const Json view = ViewOf(game, seat);
-                for (int other = 0; other < kSeatCount; ++other) {
-                    if (other == seat) {
-                        continue;
-                    }
-                    for (const Json& meld : view["seats"][static_cast<size_t>(other)]["melds"]) {
-                        EXPECT_FALSE(meld["concealed"].get<bool>()) << "seat " << seat << " sees a concealed meld of seat " << other;
-                    }
-                }
+        for (int seat = 0; seat < kSeatCount; ++seat) {
+            const Json view = ViewOf(game, seat);
+            EXPECT_EQ(view["seats"][0]["concealedKongs"], 1) << "seat " << seat;
+            if (seat == kSeat0) {
+                EXPECT_EQ(view["seats"][0]["melds"].size(), 1u) << "the owner sees its own kong";
+                continue;
             }
-            ASSERT_TRUE(StepOnce(game));
+            EXPECT_TRUE(view["seats"][0]["melds"].empty()) << "seat " << seat << " sees the kong of seat 0";
+            EXPECT_EQ(Dump(view).find("\"Ew\""), std::string::npos) << "no tile of the kong in the view of seat " << seat;
         }
     }
 
