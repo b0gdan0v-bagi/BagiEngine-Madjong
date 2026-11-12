@@ -10,7 +10,6 @@
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/Online/OnlineServerUrl.h>
 #include <Mahjong/Online/OnlineWords.h>
-#include <Mahjong/Platform.h>
 #include <Mahjong/Table/Words.h>
 
 namespace BECore::Mahjong {
@@ -235,8 +234,8 @@ namespace BECore::Mahjong {
         }
         const eastl::string_view action = event.action.ToStringView();
         if (action == kOpenAction) {
-            // The button of `Setup`: under the panel or without `Setup` it cannot be pressed, an event that says otherwise is out of date
-            if (game->IsSetupOpen() && !game->IsOnlineOpen()) {
+            // The button of `Setup`: under the panel, without `Setup` or with no server address it cannot be pressed, an event that says otherwise is out of date
+            if (game->IsSetupOpen() && !game->IsOnlineOpen() && !OnlineServerUrl().empty()) {
                 game->OpenOnline();
                 Follow(*game);
             }
