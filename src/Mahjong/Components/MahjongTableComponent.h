@@ -7,6 +7,7 @@
 #include <Mahjong/ComputerThinking.h>
 #include <Mahjong/Table/ActionButtons.h>
 #include <Mahjong/Table/AnimationSpeed.h>
+#include <Mahjong/Table/DangerMarks.h>
 #include <Mahjong/Table/TableLayout.h>
 #include <Mahjong/Table/TableRegions.h>
 #include <Mahjong/Table/TileFlights.h>
@@ -380,8 +381,9 @@ namespace BECore::Mahjong {
         bool _hoverShown = false;  // the plate `TileHoverPlate` is shown
         Tile _hoverTile;           // the tile `tileHoverText` names now (invalid for none) and the string table version it was worded at
         uint64_t _hoverStringsVersion = 0;
-        DeclareTurn _declareTurn;     // the turn `_declareNext` was set on
-        float _computerClock = 0.0f;  // seconds a computer has been waiting to play
+        DangerMark _hoverDanger = DangerMark::None;  // the danger mark `tileHoverDanger` words now (the hovered tile of the viewer's hand)
+        DeclareTurn _declareTurn;                    // the turn `_declareNext` was set on
+        float _computerClock = 0.0f;                 // seconds a computer has been waiting to play
         /// The step of a computer that was begun and is not applied yet: the session `Version()` and `StartCount()` it was begun at (the job
         /// itself is in `_thinking`).
         struct StepInProgress {

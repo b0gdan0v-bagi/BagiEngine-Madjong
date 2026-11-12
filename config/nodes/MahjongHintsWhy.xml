@@ -3,12 +3,14 @@
   The card of the coach (Table/HintCard.h, MahjongHintsComponent): in the mode Coach one table in the middle of the table that says either
   the advice of the person's turn with its numbers (MakeAdviceCard, while the switch Hint is on) or the note of the person's last move
   that differs from the computer's choice (MakeNoteCard; the note goes first). Text and tile pictures only, no control: nothing here takes
-  input, so a click on it is the table's.
+  input (a SceneView canvas is under the touch size), so a click on it is the table's. The component reads the left press itself: any press
+  takes a note down (as before), a press inside CoachCard takes the advice down (the switch Hint goes off), and CardClose says so.
   CoachCard fills the region table.wall (the wall ring of the layout, 364 x 168 in every shape) edge to edge: the one place of the table
   with no hand, meld or discard tile, so it covers only the centre panel (round, wall count, points, the light of the turn) and the wall
   stacks while it is up; the seat plates still show whose turn it is. Its plate is opaque (the palette's surface). Inside the padding
   (8 at the sides, 4 above and below) it is 348 x 160:
-  - CardTitle (32, font 22, two lines when it must): {cardTitle}, the sentence of the advice, or "Computer: <advice>" for a note;
+  - CardTop (32): CardTitle (268, font 22, two lines when it must), {cardTitle}, the sentence of the advice, or "Computer: <advice>" for a
+    note; CardClose (80, muted, font 18), "x Close": the card goes down on a press on it (the component reads the press, see below);
   - CardHead (16, muted, font 18): {cardNow}, the steps to a ready hand now, over the three cells who / tiles / word (204), then the
     heads of the two number columns (72 each);
   - CardRow0..2 (24 each, font 18): who (64), up to three tile pictures Card<i>Tile<k> (18 x 24, the sprite Tile_<notation> the component
@@ -26,7 +28,12 @@
       <elements>
         <element type="UIStack" name="CoachCard" region="table.wall" anchor="Stretch" visible="false" direction="Vertical" spacing="0" padding="8,4,8,4" crossAlign="Stretch" color="36,40,52,255">
           <children>
-            <element type="UILabel" name="CardTitle" height="32" text="{cardTitle}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" />
+            <element type="UIStack" name="CardTop" height="32" direction="Horizontal" spacing="0" crossAlign="Center">
+              <children>
+                <element type="UILabel" name="CardTitle" width="268" height="32" text="{cardTitle}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" />
+                <element type="UILabel" name="CardClose" width="80" height="32" text="{#hints.card.close}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" align="Right" textColor="190,196,190,255" />
+              </children>
+            </element>
             <element type="UIStack" name="CardHead" visible="false" height="16" direction="Horizontal" spacing="0" crossAlign="Center">
               <children>
                 <element type="UILabel" name="CardNow" width="204" height="16" text="{cardNow}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" textColor="190,196,190,255" />

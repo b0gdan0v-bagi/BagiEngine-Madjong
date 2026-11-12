@@ -143,6 +143,10 @@
         <string key="hints.card.title.chow" text="Take the discard to make a chow."/>
         <string key="hints.card.now" text="Steps to ready now: {now}"/>
         <string key="hints.card.steps" text="Steps"/>
+        <string key="hints.hover.safe" text="Green bar: a safe discard"/>
+        <string key="hints.hover.risky" text="Amber bar: a risky discard"/>
+        <string key="hints.hover.dangerous" text="Red bar: a dangerous discard, an opponent is ready"/>
+        <string key="hints.card.close" text="× Close"/>
         <string key="hints.card.useful" text="Useful"/>
         <string key="hints.card.ready" text="ready"/>
         <string key="hints.card.best" text="Best"/>
@@ -417,6 +421,10 @@
         <string key="hints.card.title.chow" text="Возьмите сброс и составьте чи."/>
         <string key="hints.card.now" text="Шагов до готовности сейчас: {now}"/>
         <string key="hints.card.steps" text="Шагов"/>
+        <string key="hints.hover.safe" text="Зелёная полоса: безопасный сброс"/>
+        <string key="hints.hover.risky" text="Оранжевая полоса: рискованный сброс"/>
+        <string key="hints.hover.dangerous" text="Красная полоса: опасный сброс, соперник готов"/>
+        <string key="hints.card.close" text="× Закрыть"/>
         <string key="hints.card.useful" text="Полезных"/>
         <string key="hints.card.ready" text="готова"/>
         <string key="hints.card.best" text="Лучше"/>

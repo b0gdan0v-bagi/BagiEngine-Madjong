@@ -72,6 +72,12 @@ namespace BECore::Mahjong {
             return s_active;
         }
 
+        /// The danger mark the hints draw on `tile` of the viewer's hand now (`DangerMarks`): `None` while no mark is drawn (hints off, no
+        /// declared opponent, not the viewer's discard). The name plate of a hovered hand tile words it, so a bar is never unexplained.
+        [[nodiscard]] DangerMark DangerOf(Tile tile) const noexcept {
+            return _key.applies && tile.IsValid() ? _dangers[tile.Id()] : DangerMark::None;
+        }
+
     private:
         void OnAction(const InputEvents::ActionEvent& event);
         void OnMouseDown(const SDLEvents::MouseButtonDownEvent& event);

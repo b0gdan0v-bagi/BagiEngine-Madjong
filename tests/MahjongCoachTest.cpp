@@ -308,6 +308,26 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(OnScreen("Hints", "AdviceText"));
     }
 
+    TEST_F(MahjongCoachTest, APressOnTheCardOfTheAdviceTakesItDownAndAPressOffItDoesNot) {
+        ASSERT_NO_FATAL_FAILURE(StartEast(HintsMode::Coach));
+        EmitAction("MahjongHintAdvice");
+        Draw();
+        ASSERT_TRUE(OnScreen("HintsWhy", "CoachCard"));
+        ASSERT_EQ(NoteVar(0), AdviceTitle());
+        EXPECT_TRUE(OnScreen("HintsWhy", "CardClose")) << "the card says it closes on a press";
+        const Rect card = Element("HintsWhy", "CoachCard")->rect;
+
+        EXPECT_FALSE(Click(4.0f, 4.0f));
+        Draw();
+        EXPECT_TRUE(OnScreen("HintsWhy", "CoachCard")) << "a press off the card leaves the advice up";
+
+        EXPECT_FALSE(Click(card.x + card.w * 0.5f, card.y + card.h * 0.5f)) << "the card is no control: the component reads the press";
+        Draw();
+        EXPECT_FALSE(OnScreen("HintsWhy", "CoachCard")) << "a press on the card takes the advice down";
+        EXPECT_FALSE(Element("HintsButton", "HintButton")->selected) << "as a press of Hint does: the switch is off";
+        EXPECT_EQ(_game->GetSession().GetPhase(), SessionPhase::Playing) << "the press played nothing";
+    }
+
     TEST_F(MahjongCoachTest, TheEndOfTheHandAndANewMatchTakeTheNoteDown) {
         // A short live wall: the discard ends the hand as drawn
         ASSERT_NO_FATAL_FAILURE(StartEast(HintsMode::Coach, kDefaultSeatSetup, kDrawn, 1));

@@ -120,19 +120,6 @@ namespace BECore::Mahjong {
             }
         }
 
-        Color DangerColor(DangerMark mark) {
-            switch (mark) {
-                case DangerMark::Safe:
-                    return kSafeMark;
-                case DangerMark::Risky:
-                    return kRiskyMark;
-                case DangerMark::Dangerous:
-                case DangerMark::None:
-                    break;
-            }
-            return kDangerMark;
-        }
-
     }  // namespace
 
     MahjongHintsComponent* MahjongHintsComponent::s_active = nullptr;
@@ -390,8 +377,28 @@ namespace BECore::Mahjong {
         MahjongGame* game = MahjongGame::GetActive();
         // A left or touch press (a touch makes a left press too) takes the note that is on screen; a note this very press made (the discard it
         // is) was never shown and stays
-        if (event.button.button == SDL_BUTTON_LEFT && game != nullptr && _coachShown && game->GetCoach().Version() == _coachPublished) {
+        if (event.button.button != SDL_BUTTON_LEFT || game == nullptr) {
+            return;
+        }
+        if (_coachShown && game->GetCoach().Version() == _coachPublished) {
             game->GetCoach().ClearNote();
+            return;
+        }
+        // A press on the card of the advice takes it down, as the button Hint does (the card says so: CardClose); the card is no control
+        // (a SceneView canvas is under the touch size), so the press is read here
+        if (_cardKey.source == CardSource::Advice && _adviceOn) {
+            Scene& scene = GetScene();
+            UICanvasComponent* canvas = CanvasWith(scene.GetRootNode(), NameOf(kCoachCard));
+            const UIElement* card = canvas != nullptr ? canvas->GetRoot().FindByName(NameOf(kCoachCard)) : nullptr;
+            // A hidden card has an empty rect, which no point is inside
+            if (card != nullptr) {
+                const float x = scene.ScreenToSceneX(event.button.x);
+                const float y = scene.ScreenToSceneY(event.button.y);
+                const Rect& r = card->rect;
+                if (x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h) {
+                    _adviceOn = false;
+                }
+            }
         }
     }
 
@@ -423,7 +430,7 @@ namespace BECore::Mahjong {
             }
             if (const DangerMark danger = _dangers[tile.Id()]; danger != DangerMark::None) {
                 // Inside the left edge, clear of the advised frame that runs along the edge
-                renderer->DrawFilledRect(rect.x + kFrameThickness, rect.y + dangerTop, kDangerMarkWidth, rect.h - dangerTop - dangerBottom, DangerColor(danger));
+                renderer->DrawFilledRect(rect.x + kFrameThickness, rect.y + dangerTop, kDangerMarkWidth, rect.h - dangerTop - dangerBottom, DangerMarkColor(danger));
             }
             if (advised.IsValid() && tile == advised) {
                 renderer->DrawFilledRect(rect.x, rect.y, rect.w, kFrameThickness, kAdvisedFrame);
