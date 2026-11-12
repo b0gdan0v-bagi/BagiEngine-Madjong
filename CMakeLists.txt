@@ -65,6 +65,17 @@ if(NOT ENGINE_TARGET_WEB)
     mahjong_add_tool(BagiMahjongAnalyzer tools/analyzer/main.cpp)
 endif()
 
+# The room server of online play (README.md, "Online play, the server"): the headless program of the engine's server main with MahjongSeatedGame
+# registered as `mahjong`; no window, no renderer, no Application. RoomServerModule exists only with ENGINE_WITH_REMOTE_CONTROL (sockets), so
+# not for the web.
+if(NOT ENGINE_TARGET_WEB AND TARGET RoomServerModule)
+    be_add_headless_executable(BagiMahjongServer
+        SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/tools/server/main.cpp
+        LINK RoomServerModule RoomsModule RemoteControlModule MahjongModule
+    )
+    set_target_properties(BagiMahjongServer PROPERTIES FOLDER "Tools")
+endif()
+
 if(ENGINE_BUILD_TESTS)
     file(GLOB MAHJONG_TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp")
     # WHOLE_ARCHIVE: MahjongGameTest starts the game through GameManager, which finds MahjongGame by its BE_CLASS registration only
@@ -78,6 +89,18 @@ if(ENGINE_BUILD_TESTS)
     # without the control server (ENGINE_WITH_REMOTE_CONTROL=OFF) the smoke could never connect
     if(ENGINE_WITH_REMOTE_CONTROL)
         be_add_game_control_tests(BagiMahjong SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/tests/control_smoke.py)
+    endif()
+
+    # Starts BagiMahjongServer on a free port and plays hands from Python over real sockets (ctest entry BagiMahjongRoomSmoke), the model is
+    # BagiRoomServerSmoke of the engine. Does not build the executable (a missing one is a skip, exit code 77)
+    if(TARGET BagiMahjongServer AND Python3_FOUND)
+        add_test(NAME BagiMahjongRoomSmoke COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/rooms_smoke.py --exe $<TARGET_FILE:BagiMahjongServer>)
+        set_tests_properties(BagiMahjongRoomSmoke PROPERTIES
+            SKIP_RETURN_CODE 77
+            TIMEOUT 120
+            RESOURCE_LOCK bagi_room_server_smoke
+            ENVIRONMENT "BAGI_ENGINE_DIR=${BAGI_ENGINE_DIR}"
+        )
     endif()
 
     # tools/collect_logs.py with a fake verifier and temp folders (no build needed); Python 3 standard library only
