@@ -400,6 +400,48 @@ namespace BECore::Mahjong::Tests {
         ExpectError(Replaced(FileXml(), ShapeXml("Landscape"), ShapeXml("Landscape", phone + phone)), {"shape 'Landscape'", "'Phone' is given twice"});
     }
 
+    namespace {
+
+        constexpr const char* kFreeXml = "<Free name=\"table.hint\" x=\"0.0625\" y=\"0.5\" w=\"0.125\" h=\"0.25\"/>";
+
+        std::string FreeXml(const std::string& name, const std::string& rect = "x=\"0.0625\" y=\"0.5\" w=\"0.125\" h=\"0.25\"") {
+            return "<Free name=\"" + name + "\" " + rect + "/>";
+        }
+
+        /// A region on ground that no tile of the shipped Landscape table reaches: the corner above the left seat's hand and left of the top seat's.
+        FreeRegion CornerRegion() {
+            return FreeRegion{"table.corner", ZoneRect{0.01f, 0.01f, 0.2f, 0.1f}};
+        }
+
+    }  // namespace
+
+    TEST(TableLayoutSpecTest, AFreeRegionIsReadWithItsNameAndFractions) {
+        const std::string text = Replaced(FileXml(), ShapeXml("Portrait"), ShapeXml("Portrait", kFreeXml + FreeXml("table.moveLine", "x=\"0\" y=\"0\" w=\"1\" h=\"0.5\"")));
+        const TableLayoutSpecParse parse = ParseText(text);
+        EXPECT_TRUE(parse.Ok());
+        const eastl::vector<FreeRegion>& regions = parse.spec.Shape(TableShape::Portrait).freeRegions;
+        ASSERT_EQ(regions.size(), 2U);
+        EXPECT_STREQ(regions[0].name.c_str(), "table.hint");
+        EXPECT_TRUE((regions[0].rect == ZoneRect{0.0625f, 0.5f, 0.125f, 0.25f}));
+        EXPECT_STREQ(regions[1].name.c_str(), "table.moveLine");
+        EXPECT_TRUE((regions[1].rect == ZoneRect{0.0f, 0.0f, 1.0f, 0.5f}));
+        EXPECT_TRUE(parse.spec.Shape(TableShape::Landscape).freeRegions.empty());
+        EXPECT_FALSE(parse.spec == ParseText(FileXml()).spec);
+    }
+
+    TEST(TableLayoutSpecTest, ABadFreeRegionIsRefusedAndNamedByShapeAndRegion) {
+        const auto withFree = [&](const std::string& regions) { return Replaced(FileXml(), ShapeXml("Narrow"), ShapeXml("Narrow", regions)); };
+        ExpectError(withFree(kFreeXml + FreeXml("table.hint")), {"shape 'Narrow'", "Free 'table.hint'", "given twice"});
+        ExpectError(withFree(FreeXml("")), {"shape 'Narrow'", "Free", "attribute 'name' is empty"});
+        ExpectError(withFree("<Free x=\"0.1\" y=\"0.1\" w=\"0.1\" h=\"0.1\"/>"), {"shape 'Narrow'", "Free", "missing attribute 'name'"});
+        ExpectError(withFree(FreeXml("table.aVeryLongNameThatNoLayoutCouldKeepWithoutTheHeap")), {"shape 'Narrow'", "Free", "longer than 31"});
+        ExpectError(withFree(FreeXml("table.hint", "x=\"1.5\" y=\"0.5\" w=\"0.1\" h=\"0.1\"")), {"shape 'Narrow'", "Free 'table.hint'", "attribute 'x'", "outside 0..1"});
+        ExpectError(withFree(FreeXml("table.hint", "x=\"0.5\" y=\"0.5\" w=\"0.1\"")), {"Free 'table.hint'", "missing attribute 'h'"});
+        ExpectError(withFree(FreeXml("table.hint", "x=\"0.5\" y=\"0.5\" w=\"0\" h=\"0.1\"")), {"Free 'table.hint'", "no area"});
+        ExpectError(withFree(FreeXml("table.hint", "x=\"0.5\" y=\"0.5\" w=\"0.1\" h=\"0.1\" size=\"3\"")), {"Free 'table.hint'", "unknown attribute 'size'"});
+        ExpectError(Replaced(FileXml(), "inset=\"0.125\"/>", "inset=\"0.125\">" + std::string(kFreeXml) + "</Shape>"), {"shape 'Wide'", "no zones of its own"});
+    }
+
     TEST(TableLayoutSpecTest, TheLayoutWithoutASpecReadsTheActiveOne) {
         ASSERT_EQ(ActiveTableLayoutSpec(), &ShippedTableLayoutSpec());
         const TableInput input = MixedTable(1, TableProfile{});
@@ -490,6 +532,53 @@ namespace BECore::Mahjong::Tests {
         ExpectProblem(CheckTableLayoutSpec(spec), {"shape 'Landscape', phone profile", "the widest hand tile is 68", "kPhoneHandTileMaxW"});
     }
 
+    TEST(TableLayoutSpecTest, AFreeRegionOnGroundNoTileReachesPassesTheCheck) {
+        TableLayoutSpec spec = ShippedTableLayoutSpec();
+        spec.Shape(TableShape::Landscape).freeRegions.push_back(CornerRegion());
+        const eastl::vector<eastl::string> problems = CheckTableLayoutSpec(spec);
+        for (const eastl::string& problem : problems) {
+            ADD_FAILURE() << problem.c_str();
+        }
+    }
+
+    TEST(TableLayoutSpecTest, AFreeRegionOnATileIsRefusedAndNamed) {
+        TableLayoutSpec spec = ShippedTableLayoutSpec();
+        ShapeSpec& landscape = spec.Shape(TableShape::Landscape);
+        landscape.freeRegions.push_back(FreeRegion{"table.onHand", landscape.seats[0].hand.rect});
+        ExpectProblem(CheckTableLayoutSpec(spec), {"shape 'Landscape'", "free region 'table.onHand'", "hand tile of position 0"});
+        ExpectProblem(CheckTableLayoutSpec(spec), {"shape 'Landscape', phone profile", "free region 'table.onHand'"});
+    }
+
+    TEST(TableLayoutSpecTest, AFreeRegionOnABlockAPlateOrTheRingIsRefusedAndNamed) {
+        TableLayoutSpec spec = ShippedTableLayoutSpec();
+        ShapeSpec& portrait = spec.Shape(TableShape::Portrait);
+        portrait.freeRegions.push_back(FreeRegion{"table.onBlock", portrait.seats[2].discards.rect});
+        portrait.freeRegions.push_back(FreeRegion{"table.onPlate", portrait.seats[1].plate});
+        portrait.freeRegions.push_back(FreeRegion{"table.inRing", ZoneRect{portrait.wall.x + portrait.wall.w / 2.0f - 0.01f, portrait.wall.y + portrait.wall.h / 2.0f - 0.01f, 0.02f, 0.02f}});
+        const eastl::vector<eastl::string> problems = CheckTableLayoutSpec(spec);
+        ExpectProblem(problems, {"shape 'Portrait'", "free region 'table.onBlock'", "the discard block of position 2"});
+        ExpectProblem(problems, {"shape 'Portrait'", "free region 'table.onPlate'", "the plate of position 1"});
+        ExpectProblem(problems, {"shape 'Portrait'", "free region 'table.inRing'", "the wall ring"});
+    }
+
+    TEST(TableLayoutSpecTest, AFreeRegionOutsideTheViewIsRefusedAndNamed) {
+        TableLayoutSpec spec = ShippedTableLayoutSpec();
+        spec.Shape(TableShape::Narrow).freeRegions.push_back(FreeRegion{"table.off", ZoneRect{0.9f, 0.0f, 0.3f, 0.05f}});
+        ExpectProblem(CheckTableLayoutSpec(spec), {"shape 'Narrow'", "free region 'table.off'", "outside the view"});
+    }
+
+    TEST(TableLayoutSpecTest, ALikeShapeHoldsItsBorrowedFreeRegionsToItsOwnView) {
+        // Wide borrows Landscape's regions and lies a wing in: a region at the right edge of Landscape leaves the wide view at the wing's inset
+        TableLayoutSpec spec = ShippedTableLayoutSpec();
+        spec.Shape(TableShape::Landscape).freeRegions.push_back(FreeRegion{"table.edge", ZoneRect{0.99f, 0.0f, 0.01f, 0.01f}});
+        const eastl::vector<eastl::string> problems = CheckTableLayoutSpec(spec);
+        for (const eastl::string& problem : problems) {
+            EXPECT_EQ(problem.find("outside the view"), eastl::string::npos) << problem.c_str();
+        }
+        spec.Shape(TableShape::Wide).inset = 0.2f;
+        ExpectProblem(CheckTableLayoutSpec(spec), {"shape 'Wide'", "free region 'table.edge'", "outside the view"});
+    }
+
     TEST(TableLayoutSpecTest, AProblemIsReportedOnceWhateverTheViewer) {
         TableLayoutSpec spec = ShippedTableLayoutSpec();
         spec.Shape(TableShape::Portrait).seats[0].discards.rect = spec.Shape(TableShape::Portrait).seats[2].discards.rect;
@@ -561,6 +650,31 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(offer.outcome, TableLayoutOffer::Rejected);
         ExpectProblem(offer.errors, {"shape 'Landscape'", "the discard block of position 0", "overlaps", "the discard block of position 2"});
         EXPECT_EQ(ActiveTableLayoutSpec(), &ShippedTableLayoutSpec());
+    }
+
+    TEST_F(TableLayoutOfferTest, AFreeRegionOnATileIsRefusedAndTheLastGoodSpecStaysAFreeOneIsApplied) {
+        pugi::xml_node landscape = _document.document_element().find_child_by_attribute("Shape", "name", "Landscape");
+        pugi::xml_node region = landscape.append_child("Free");
+        region.append_attribute("name") = "table.test";
+        region.append_attribute("x") = "0.05625";
+        region.append_attribute("y") = "0.9";
+        region.append_attribute("w") = "0.1";
+        region.append_attribute("h") = "0.08";
+        const TableLayoutOfferResult refused = OfferTableLayoutSpec(_document.document_element());
+        EXPECT_EQ(refused.outcome, TableLayoutOffer::Rejected);
+        ExpectProblem(refused.errors, {"shape 'Landscape'", "free region 'table.test'", "hand tile of position 0"});
+        EXPECT_EQ(ActiveTableLayoutSpec(), &ShippedTableLayoutSpec());
+
+        region.attribute("x").set_value("0.01");
+        region.attribute("y").set_value("0.01");
+        region.attribute("w").set_value("0.2");
+        region.attribute("h").set_value("0.1");
+        const TableLayoutOfferResult applied = OfferTableLayoutSpec(_document.document_element());
+        ASSERT_EQ(applied.outcome, TableLayoutOffer::Applied) << (applied.errors.empty() ? "" : applied.errors.front().c_str());
+        ASSERT_NE(ActiveTableLayoutSpec(), nullptr);
+        ASSERT_EQ(ActiveTableLayoutSpec()->Shape(TableShape::Landscape).freeRegions.size(), ShippedTableLayoutSpec().Shape(TableShape::Landscape).freeRegions.size() + 1);
+        EXPECT_STREQ(ActiveTableLayoutSpec()->Shape(TableShape::Landscape).freeRegions.back().name.c_str(), "table.test");
+        EXPECT_EQ(OfferTableLayoutSpec(_document.document_element()).outcome, TableLayoutOffer::Unchanged);
     }
 
     TEST_F(TableLayoutOfferTest, AnOfferWithNoActiveSpecAppliesAndARefusalAfterAnApplyKeepsTheApplied) {

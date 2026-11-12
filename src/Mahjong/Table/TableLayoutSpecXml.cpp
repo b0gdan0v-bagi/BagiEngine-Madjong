@@ -20,6 +20,7 @@ namespace BECore::Mahjong {
         constexpr const char* kBonusElement = "Bonus";
         constexpr const char* kDiscardsElement = "Discards";
         constexpr const char* kPlateElement = "Plate";
+        constexpr const char* kFreeElement = "Free";
         constexpr const char* kTileSolve = "solve";
         constexpr const char* kTileProfile = "profile";
         /// A pile of 100 tiles is 17 rows; more rows than this in a zone only mean a typo.
@@ -160,6 +161,36 @@ namespace BECore::Mahjong {
                 return ReadRect(node, where);
             }
 
+            /// `<Free name="..." x y w h/>`: a free-ground region of the shape. The name is kept once per shape and is not empty; the region has
+            /// an area (whether it lies on the table is `CheckTableLayoutSpec`'s to say).
+            void ReadFree(const pugi::xml_node& node, const eastl::string& shapeWhere, ShapeSpec& shape) {
+                const pugi::xml_attribute nameAttribute = node.attribute("name");
+                const eastl::string_view name = nameAttribute.value();
+                const eastl::string where = name.empty() ? Format("{}, {}", shapeWhere, kFreeElement) : Format("{}, {} '{}'", shapeWhere, kFreeElement, name);
+                CheckAttributes(node, where, {"name", "x", "y", "w", "h"});
+                const size_t errorsBefore = errors.size();
+                FreeRegion region;
+                if (!nameAttribute) {
+                    Fail(where, "missing attribute 'name'");
+                } else if (name.empty()) {
+                    Fail(where, "attribute 'name' is empty");
+                } else if (name.size() > kMaxRegionNameLength) {
+                    Fail(where, Format("attribute 'name': longer than {} characters", kMaxRegionNameLength));
+                } else {
+                    region.name = RegionName(name.data(), name.size());
+                    for (const FreeRegion& known : shape.freeRegions) {
+                        if (known.name == region.name) {
+                            Fail(where, "the region is given twice");
+                        }
+                    }
+                }
+                region.rect = ReadRect(node, where);
+                if (errors.size() == errorsBefore && !(region.rect.w > 0.0f && region.rect.h > 0.0f)) {
+                    Fail(where, "the region has no area");
+                }
+                shape.freeRegions.push_back(region);
+            }
+
             /// The children of a `Seat` (or of the `Phone` override): Hand, Melds, Bonus, Discards and Plate, each once.
             void ReadSeatZones(const pugi::xml_node& node, const eastl::string& where, SeatSpec& seat) {
                 unsigned seen = 0;
@@ -231,6 +262,8 @@ namespace BECore::Mahjong {
                         }
                         wallSeen = true;
                         out.wall = ReadPlain(child, wallWhere);
+                    } else if (name == kFreeElement) {
+                        ReadFree(child, where, out);
                     } else if (name == kPhoneElement) {
                         const eastl::string phoneWhere = Format("{}, {}", where, kPhoneElement);
                         if (phoneSeen) {
