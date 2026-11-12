@@ -379,15 +379,19 @@ def element_text(tree: dict[str, Any], node: str, name: str) -> str:
 
 
 def check_rules_screen(client: BagiControlClient) -> None:
-    """The Rules button of the HUD opens the pages, Next turns them, Close closes them; the match does not move meanwhile."""
+    """The Options button of the HUD opens the page, its Rules button the pages of the rules, Next turns them, Close closes them; the
+    match does not move meanwhile."""
     client.call("reset", {"seed": SEED, "seats": "PCCC", "hands": SHORT_MATCH_HANDS})
     shown, tree = screens_shown(client)
     check(shown == set(), f"a table in play shows {sorted(shown)}")
     version = get_state(client)["version"]
-    button = find_ui_element(tree, "Rules")
-    check(button is not None and button["action"] == "MahjongRules", f"the HUD has no Rules button: {button}")
+    button = find_ui_element(tree, "Options")
+    check(button is not None and button["action"] == "MahjongOptions", f"the HUD has no Options button: {button}")
 
-    clicked = client.call("ui_click", {"name": "Rules", "canvas": "HudMenu"})
+    clicked = client.call("ui_click", {"name": "Options", "canvas": "HudMenu"})
+    check(clicked["consumed"] and clicked["action"] == "MahjongOptions", f"the click on Options was not taken: {clicked}")
+    client.call("step", {"frames": SETTLE_FRAMES})  # the page is shown by the next frames
+    clicked = client.call("ui_click", {"name": "OptionsRules", "canvas": "Options"})
     check(clicked["consumed"] and clicked["action"] == "MahjongRules", f"the click on Rules was not taken: {clicked}")
     shown, tree = screens_shown(client)
     check(shown == RULES_SCREENS, f"the Rules button shows {sorted(shown)}")
@@ -415,7 +419,9 @@ def check_rules_screen(client: BagiControlClient) -> None:
     check(get_state(client)["version"] == version, "the match moved while the pages of the rules were open and closed")
 
     # An action of the control API is a controller that plays: it closes the pages
-    client.call("ui_click", {"name": "Rules", "canvas": "HudMenu"})
+    client.call("ui_click", {"name": "Options", "canvas": "HudMenu"})
+    client.call("step", {"frames": SETTLE_FRAMES})
+    client.call("ui_click", {"name": "OptionsRules", "canvas": "Options"})
     shown, _ = screens_shown(client)
     check(shown == RULES_SCREENS, f"the Rules button shows {sorted(shown)} the second time")
     client.call("perform_action", client.call("list_actions")["actions"][0])

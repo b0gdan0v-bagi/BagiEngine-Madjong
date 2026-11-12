@@ -292,7 +292,7 @@ namespace BECore::Mahjong {
         Scene& scene = GetScene();
         UICanvasComponent::SetVisibleByName(scene, "HandOver"_intern, shown);
         UICanvasComponent::SetVisibleByName(scene, "HandOverAction"_intern, shown);
-        // The score table is a screen of its own (no dim, so the hands stay visible): HudMenu (New game, Rules) goes while it is up.
+        // The score table is a screen of its own (no dim, so the hands stay visible): HudMenu (New game, Options) goes while it is up.
         // The standings (MatchOver) are a Screen canvas whose dim covers the whole window, so they need nothing.
         ShowHudMenu();
     }
@@ -422,14 +422,14 @@ namespace BECore::Mahjong {
         if (event.key != SDLK_ESCAPE || event.repeat) {
             return;
         }
-        // Escape steps back one screen: the page `Options` first, then `Setup`; with neither open it is not ours
+        // Escape closes the page `Options` or `Setup`, whichever is open; with neither open it is not ours
         MahjongGame* game = MahjongGame::GetActive();
-        if (game == nullptr || !game->IsSetupOpen()) {
+        if (game == nullptr) {
             return;
         }
         if (game->IsOptionsOpen()) {
             game->CloseOptions();
-        } else {
+        } else if (game->IsSetupOpen()) {
             game->CloseSetup();
         }
     }
@@ -445,13 +445,45 @@ namespace BECore::Mahjong {
             game->OpenSetup();
             return;
         }
+        if (action == kOptionsAction) {
+            // The HUD button: under the dim of the seat choice or behind the rules it cannot be pressed, an event that says otherwise is
+            // out of date
+            if (!game->IsSetupOpen() && !game->IsRulesOpen()) {
+                game->OpenOptions();
+            }
+            return;
+        }
+        if (action == kOptionsBackAction) {
+            game->CloseOptions();  // a click while the page is closed finds it closed
+            return;
+        }
         if (action == kRulesAction) {
-            // Under the dim of the seat choice the button cannot be pressed; an event that says otherwise is out of date
-            if (!game->IsSetupOpen()) {
+            // The button of the page `Options`: the page gives way to the rules. A click while the page is closed is out of date
+            if (game->IsOptionsOpen()) {
+                game->CloseOptions();
                 if (!game->IsRulesOpen()) {
                     _rulesPage = 0;  // the screen opens on its first page, whatever the order of the events
                 }
                 game->OpenRules();
+            }
+            return;
+        }
+        if (action == kSetSpeedAction) {
+            // The page is where the speed is set; client text is parsed by `TryParseSpeed`, anything else is ignored
+            const eastl::string_view text = event.value.ToStringView();
+            const std::optional<AnimationSpeed> speed = TryParseSpeed(std::string_view(text.data(), text.size()));
+            if (game->IsOptionsOpen() && speed) {
+                game->SetAnimationSpeed(*speed);
+                PublishSpeedChoice(*game);
+            }
+            return;
+        }
+        if (action == kSetLanguageAction) {
+            // The language row is on the page: a click that arrives while the page is closed is out of date. The game keeps the language
+            // and applies it to the table; an id the table does not have changes nothing, the variable keeps the truth
+            if (game->IsOptionsOpen()) {
+                game->SetLanguage(event.value);
+                PublishLanguage(*game);
             }
             return;
         }
@@ -479,29 +511,8 @@ namespace BECore::Mahjong {
             return;
         }
         if (action == kSetupCloseAction) {
-            // The cross only goes back to where the player was: nothing of the pending choice is applied, nothing starts. A click that
-            // arrives while the page `Options` is over the panel is out of date
-            if (!game->IsOptionsOpen()) {
-                game->CloseSetup();
-            }
-            return;
-        }
-        if (action == kOptionsAction) {
-            game->OpenOptions();
-            return;
-        }
-        if (action == kOptionsBackAction) {
-            game->CloseOptions();  // a click while the page is closed finds it closed
-            return;
-        }
-        if (action == kSetSpeedAction) {
-            // The page is where the speed is set; client text is parsed by `TryParseSpeed`, anything else is ignored
-            const eastl::string_view text = event.value.ToStringView();
-            const std::optional<AnimationSpeed> speed = TryParseSpeed(std::string_view(text.data(), text.size()));
-            if (game->IsOptionsOpen() && speed) {
-                game->SetAnimationSpeed(*speed);
-                PublishSpeedChoice(*game);
-            }
+            // The cross only goes back to where the player was: nothing of the pending choice is applied, nothing starts
+            game->CloseSetup();
             return;
         }
         if (action == kContinueAction) {
@@ -524,15 +535,6 @@ namespace BECore::Mahjong {
                 game->SetLevels(levelsBefore);
                 game->SetSettings(settingsBefore);
                 LOG_WARNING("MahjongHudComponent: the match did not start, the seat choice stays open");
-            }
-            return;
-        }
-        if (action == kSetLanguageAction) {
-            // The language row is on the page: a click that arrives while the page is closed is out of date. The game keeps the language
-            // and applies it to the table; an id the table does not have changes nothing, the variable keeps the truth
-            if (game->IsOptionsOpen()) {
-                game->SetLanguage(event.value);
-                PublishLanguage(*game);
             }
             return;
         }

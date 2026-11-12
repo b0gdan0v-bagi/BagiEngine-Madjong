@@ -130,43 +130,34 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(FactsOfTheGame(), before);
     }
 
-    TEST_F(MahjongSetupCloseTest, EscapeClosesThePageOptionsFirstAndThenThePanelWhichKeepsItsPendingChoiceUnderIt) {
+    TEST_F(MahjongSetupCloseTest, EscapeClosesThePageOptionsThatTheHudButtonOpenedOverTheTable) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
-        _game->OpenSetup();
+        _game->CloseSetup();
         Draw();
-        ASSERT_TRUE(ClickElement("Setup", "Seat2Person"));
-        ASSERT_TRUE(ClickElement("Setup", "OptionsRow"));
+        ASSERT_TRUE(ClickElement("HudMenu", "Options"));
         Draw();
         ASSERT_TRUE(OptionsShown());
-        const SeatSetup pending = MahjongHudComponent::GetActive()->PendingSeats();
+        EXPECT_FALSE(_game->IsSetupOpen()) << "the page is not a part of the seat choice";
 
         PressKey(SDLK_ESCAPE);
         Draw();
         EXPECT_FALSE(_game->IsOptionsOpen());
         EXPECT_FALSE(OptionsShown());
-        EXPECT_TRUE(_game->IsSetupOpen());
-        EXPECT_TRUE(SetupShown());
-        EXPECT_EQ(MahjongHudComponent::GetActive()->PendingSeats(), pending);
-
-        PressKey(SDLK_ESCAPE);
-        Draw();
         EXPECT_FALSE(_game->IsSetupOpen());
-        EXPECT_FALSE(SetupShown());
     }
 
-    TEST_F(MahjongSetupCloseTest, ACloseActionThatArrivesWhileThePageOptionsIsOverThePanelIsOutOfDate) {
+    TEST_F(MahjongSetupCloseTest, TheHudButtonOptionsIsOutOfDateUnderThePanelAndTheRules) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         _game->OpenSetup();
-        _game->OpenOptions();
         Draw();
-
-        EmitAction("MahjongSetupClose");
+        EmitAction("MahjongOptions");
         Draw();
-        EXPECT_TRUE(_game->IsSetupOpen());
-        EXPECT_TRUE(_game->IsOptionsOpen());
+        EXPECT_FALSE(_game->IsOptionsOpen()) << "the dim of the seat choice covers the HUD button";
 
         _game->CloseSetup();
         _game->OpenRules();
+        EmitAction("MahjongOptions");
+        EXPECT_FALSE(_game->IsOptionsOpen()) << "the rules screen hides the HUD button";
         EmitAction("MahjongSetupClose");
         EXPECT_TRUE(_game->IsRulesOpen()) << "nothing of the panel works while it is closed";
     }

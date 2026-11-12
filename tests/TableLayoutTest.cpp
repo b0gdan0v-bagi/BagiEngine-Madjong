@@ -2229,7 +2229,7 @@ namespace BECore::Mahjong::Tests {
         constexpr float kSelectedTileRight = 536.0f;  // MahjongHud.xml: the SelectedTile label ends here, left of the viewer's discard block
         constexpr float kWaitPanelRight = 432.0f;     // MahjongHints.xml: the WaitPanel ends here, left of the top seat's hand
         constexpr float kMoveLineBottom = 172.0f;     // MahjongHud.xml: the move line reaches over the side columns down to here
-        constexpr float kRulesButtonLeft = 996.0f;    // MahjongHudMenu.xml: the Rules button starts here, right of the top seat's bonus row
+        constexpr float kRulesButtonLeft = 996.0f;    // MahjongHudMenu.xml: the Options button starts here, right of the top seat's bonus row
         for (const float wing : {0.0f, kWideWingWidth}) {
             const float width = kViewWidth + 2.0f * wing;
             for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
@@ -2244,7 +2244,7 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_GE(BoundsOf(layout, SlotRole::BonusTile, right).y, kMoveLineBottom) << "MahjongHud.xml move line, right seat, viewer " << viewer;
                 EXPECT_GE(BoundsOf(layout, SlotRole::BonusTile, left).y, kMoveLineBottom) << "MahjongHud.xml move line, left seat, viewer " << viewer;
                 const Rect topBonus = BoundsOf(layout, SlotRole::BonusTile, top);
-                EXPECT_LE(topBonus.x + topBonus.w, wing + kRulesButtonLeft) << "MahjongHudMenu.xml Rules button, viewer " << viewer;
+                EXPECT_LE(topBonus.x + topBonus.w, wing + kRulesButtonLeft) << "MahjongHudMenu.xml Options button, viewer " << viewer;
             }
         }
     }

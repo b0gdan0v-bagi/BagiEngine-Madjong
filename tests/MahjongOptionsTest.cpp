@@ -59,6 +59,7 @@ namespace BECore::Mahjong::Tests {
             for (const char* segment : kSpeedSegments) {
                 names.push_back(segment);
             }
+            names.push_back("OptionsRules");
             names.push_back("Back");
             return names;
         }
@@ -93,12 +94,12 @@ namespace BECore::Mahjong::Tests {
 
     class MahjongOptionsTest : public MahjongTableTestBase {
     protected:
-        /// A started game with `Setup` and the page over it, drawn.
+        /// A started game with the page opened by the HUD button over the table, drawn.
         void OpenPage() {
             ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
-            _game->OpenSetup();
+            _game->CloseSetup();
             Draw();
-            _game->OpenOptions();
+            ASSERT_TRUE(ClickElement("HudMenu", "Options"));
             Draw();
             ASSERT_TRUE(PageShown());
         }
@@ -137,22 +138,22 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(PageShown());
         _game->OpenSetup();
         Draw();
-        EXPECT_FALSE(PageShown()) << "Setup alone does not show the page";
+        EXPECT_FALSE(PageShown()) << "Setup does not show the page";
+        EXPECT_EQ(Element("Setup", "OptionsRow"), nullptr) << "nor leads to it";
+        _game->CloseSetup();
         _game->OpenOptions();
         Draw();
         EXPECT_TRUE(PageShown());
-        EXPECT_TRUE(SetupShown()) << "Setup stays up under the page";
+        EXPECT_FALSE(SetupShown());
         _game->CloseOptions();
         Draw();
         EXPECT_FALSE(PageShown());
-        EXPECT_TRUE(SetupShown());
     }
 
-    TEST_F(MahjongOptionsTest, ThePageIsAModalScreenCanvasOverSetupAndHasEveryRowOfTheList) {
+    TEST_F(MahjongOptionsTest, ThePageIsAModalScreenCanvasOverTheTableAndHasEveryRowOfTheList) {
         ASSERT_NO_FATAL_FAILURE(OpenPage());
         const auto page = Canvas("Options");
-        const auto setup = Canvas("Setup");
-        ASSERT_TRUE(page && setup);
+        ASSERT_TRUE(page);
         EXPECT_EQ(page->GetLayout().params.space, CanvasSpace::Screen);
         EXPECT_EQ(page->GetLayout().params.scaleMode, CanvasScaleMode::ScaleWithScreen);
         EXPECT_GE(page->GetLayout().params.minScale, 0.6f) << "a floor keeps a 56 unit control above 32 px";
@@ -189,6 +190,9 @@ namespace BECore::Mahjong::Tests {
         }
         ASSERT_TRUE(IsButton(Element("Options", "Back")));
         EXPECT_EQ(ButtonAction(Element("Options", "Back")), "MahjongOptionsBack"_intern);
+        ASSERT_TRUE(IsButton(Element("Options", "OptionsRules")));
+        EXPECT_EQ(ButtonAction(Element("Options", "OptionsRules")), "MahjongRules"_intern);
+        EXPECT_EQ(ButtonAction(Element("HudMenu", "Options")), "MahjongOptions"_intern);
     }
 
     TEST_F(MahjongOptionsTest, ThePagePassesTheSizeMatrixInEveryLanguageAndEveryWordFitsAndEveryControlIsATouchTarget) {
@@ -240,7 +244,7 @@ namespace BECore::Mahjong::Tests {
             bands.push_back(row.row);
         }
         bands.insert(bands.begin() + 1 + kRowCount, kSpeedRow);
-        bands.push_back("Back");
+        bands.push_back("ButtonRow");
 
         const CanvasScaleMode modes[] = {CanvasScaleMode::ConstantPixelSize, CanvasScaleMode::ScaleWithScreen, CanvasScaleMode::ConstantPhysicalSize};
         size_t cases = 0;
@@ -292,7 +296,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(OpenPage());
         auto page = Canvas("Options");
 
-        // The design size: the plate of 376, the title band of 48, the rows of 64, Back of 64 set 16 below the rows
+        // The design size: the plate of 376, the title band of 48, the rows of 64, Rules and Back of 64 set 16 below the rows
         LayOutInWindow(*page, DesignWindow());
         const Rect plate = Element("Options", "Plate")->rect;
         EXPECT_NEAR(plate.h, kRoomyPlateHeight, 0.01f);
@@ -363,8 +367,14 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(SameColor(back->color, PaletteColor("primary")));
         EXPECT_EQ(back->rect.h, kMainButtonHeight);
         EXPECT_EQ(GapBelow(*above, back->rect), kModalSectionGap);
-        EXPECT_EQ(back->rect.x, plate.x + kModalPadding);
-        EXPECT_EQ(back->rect.y + back->rect.h, plate.y + plate.h - kModalPadding) << "the plate holds Back and nothing more";
+        const UIElement* rules = Element("Options", "OptionsRules");
+        ASSERT_NE(rules, nullptr);
+        EXPECT_EQ(rules->rect.h, kMainButtonHeight);
+        EXPECT_EQ(rules->rect.y, back->rect.y) << "Rules and Back are one row";
+        EXPECT_EQ(rules->rect.x, plate.x + kModalPadding);
+        EXPECT_EQ(back->rect.x, rules->rect.x + rules->rect.w + kModalGap);
+        EXPECT_EQ(back->rect.x + back->rect.w, plate.x + plate.w - kModalPadding);
+        EXPECT_EQ(back->rect.y + back->rect.h, plate.y + plate.h - kModalPadding) << "the plate holds the row of Rules and Back and nothing more";
 
         // A canvas of 320 units (a 480 px window at the user scale 1.5): no title, narrower captions, the plate the whole safe width
         LayOutInWindow(*page, WindowOf(480.0f, 480.0f), CanvasScaleMode::ConstantPixelSize, 1.5f);
@@ -386,12 +396,11 @@ namespace BECore::Mahjong::Tests {
 
     // ----- nothing behind the page takes input -----
 
-    TEST_F(MahjongOptionsTest, TheDimCoversTheWindowSoTheRowsOfSetupAndTheNewGameButtonUnderItTakeNoClick) {
+    TEST_F(MahjongOptionsTest, TheDimCoversTheWindowSoTheButtonsOfTheHudUnderItTakeNoClick) {
         ASSERT_NO_FATAL_FAILURE(OpenPage());
         auto page = Canvas("Options");
-        auto setup = Canvas("Setup");
         auto menu = Canvas("HudMenu");
-        ASSERT_TRUE(page && setup && menu);
+        ASSERT_TRUE(page && menu);
 
         ForEachMatrixWindow([&](const MatrixWindow& window) {
             LayOutInWindow(*page, window);
@@ -404,26 +413,15 @@ namespace BECore::Mahjong::Tests {
             EXPECT_GE(dimOutput.y + dimOutput.h, window.outputHeight - 0.01f) << window.label.c_str();
         });
 
-        // In the design window a click on the place of a control of Setup is the dim's: the choice, the seats and the match stay
-        for (const auto& canvas : {setup, page, menu}) {
+        // In the design window a click on the place of a HUD button is the dim's
+        for (const auto& canvas : {page, menu}) {
             LayOutInWindow(*canvas, DesignWindow());
         }
-        const SeatSetup seats = MahjongHudComponent::GetActive()->PendingSeats();
-        const int hands = MahjongHudComponent::GetActive()->PendingHands();
-        for (const char* name : {"Seat2Person", "Seat2Computer", "Hands8", "Start", "Options"}) {
-            const UIElement* under = Element("Setup", name);
-            if (under == nullptr) {
-                continue;  // the button of Setup that leads here comes with the next work package
-            }
-            ASSERT_TRUE(Click(under->rect.x + under->rect.w * 0.5f, under->rect.y + under->rect.h * 0.5f)) << name;
-        }
-        EXPECT_TRUE(PageShown());
-        EXPECT_TRUE(_game->IsSetupOpen());
-        EXPECT_EQ(MahjongHudComponent::GetActive()->PendingSeats(), seats);
-        EXPECT_EQ(MahjongHudComponent::GetActive()->PendingHands(), hands);
         ASSERT_TRUE(menu->TakesInput());
         ClickElement("HudMenu", "NewGame");
+        ClickElement("HudMenu", "Options");
         EXPECT_TRUE(PageShown());
+        EXPECT_FALSE(_game->IsSetupOpen());
     }
 
     // ----- what the rows do -----
@@ -514,7 +512,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongOptionsTest, ThePageOpensOnWhatTheGameHasNow) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
-        _game->OpenSetup();
+        _game->CloseSetup();
         Draw();
         _game->SetAnimationSpeed(AnimationSpeed::Slow);
         CoreManager::GetUIVars().Set("speedChoice"_intern, "fast");
@@ -525,36 +523,22 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Var("speedChoice"), "slow");
         EXPECT_TRUE(Selected("SpeedSlow"));
         EXPECT_TRUE(Selected("LanguageEn"));
-        EXPECT_TRUE(Selected("HintsHints")) << "the hints component publishes while Setup is open";
+        EXPECT_TRUE(Selected("HintsHints")) << "the hints component publishes while the page is open";
     }
 
     // ----- Back and the end of Setup -----
 
-    TEST_F(MahjongOptionsTest, BackLeavesSetupOpenWithThePendingSeatsAndHandsAsTheyWere) {
-        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
-        _game->OpenSetup();
-        Draw();
-        EmitAction("MahjongSetSeat2", "person");
-        EmitAction("MahjongSetSeat3", "person");
-        EmitAction("MahjongSetHands", "8");
-        Draw();
-        const SeatSetup seats = MahjongHudComponent::GetActive()->PendingSeats();
-        ASSERT_EQ(seats[2], SeatKind::Person);
-
-        _game->OpenOptions();
-        Draw();
-        ASSERT_TRUE(PageShown());
+    TEST_F(MahjongOptionsTest, BackGoesBackToTheTableAndOpensNoSetup) {
+        ASSERT_NO_FATAL_FAILURE(OpenPage());
+        EXPECT_FALSE(_game->IsSetupOpen()) << "the page lies over the table, not over the seat choice";
         ASSERT_TRUE(ClickElement("Options", "Back"));
         Draw();
 
         EXPECT_FALSE(_game->IsOptionsOpen());
         EXPECT_FALSE(PageShown());
-        EXPECT_TRUE(_game->IsSetupOpen());
-        EXPECT_TRUE(SetupShown());
-        EXPECT_EQ(MahjongHudComponent::GetActive()->PendingSeats(), seats);
-        EXPECT_EQ(MahjongHudComponent::GetActive()->PendingHands(), kShortMatchHands);
-        EXPECT_EQ(Var("seatKind2"), "person");
-        EXPECT_EQ(Var("handsChoice"), "8");
+        EXPECT_FALSE(_game->IsSetupOpen());
+        EXPECT_FALSE(SetupShown());
+        EXPECT_FALSE(_game->IsTablePaused());
     }
 
     TEST_F(MahjongOptionsTest, TheTablePausesWhileThePageIsOpenAndThePageClosesWithSetup) {
@@ -570,7 +554,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongOptionsTest, AStartWhileThePageIsOpenClosesBothAndAClickOfTheClosedPageChangesNothing) {
         ASSERT_NO_FATAL_FAILURE(OpenPage());
-        EmitAction("MahjongStart");  // a control client or a late event: the match begins and both are closed
+        ASSERT_TRUE(_game->StartMatch(7).has_value());  // a control client: the match begins and every page is closed
         Draw();
         EXPECT_FALSE(_game->IsOptionsOpen());
         EXPECT_FALSE(_game->IsSetupOpen());

@@ -1,15 +1,16 @@
 <?xml version="1.0"?>
 <!--
-  The page of what a player sets once: a modal Screen canvas like Setup (ScaleWithScreen, minScale 0.6), hidden here, layer 31 so that
-  it lies over Setup, which stays open under it (the pending seats and hands and Continue are not lost). MahjongHudComponent shows it
-  exactly while MahjongGame::IsOptionsOpen(); Back (MahjongOptionsBack) closes it. The rows are the shapes of the rows of Setup: the
+  The page of what a player sets once: a modal Screen canvas like Setup (ScaleWithScreen, minScale 0.6), hidden here, layer 31. The
+  Options button of HudMenu (MahjongOptions) opens it over the table, which is paused meanwhile; Setup never shows it. MahjongHudComponent
+  shows it exactly while MahjongGame::IsOptionsOpen(); Back (MahjongOptionsBack) closes it, and OptionsRules beside it (MahjongRules)
+  closes it and opens the pages of the rules, which have no button of their own on the HUD. The rows are the shapes of the rows of Setup: the
   language MahjongSetLanguage (value = the language id, variable language), the hints MahjongSetHints (value off, hints or coach, variable
   hintsChoice, published by MahjongHintsComponent; Coach includes the hints), the speed MahjongSetSpeed (value slow, normal or fast, variable
   speedChoice; the pace of the computers, the flights and the marks of a claim, at once). A row is a node edit: the plate's maximum height grows by 72 for it.
   The level is not here: each computer seat has its own on Setup.
   The roomy shape (a canvas of 1280 x 720 units) is the anatomy of the modal screens: the plate is the safe area at most 376 high
-  (32 padding + 48 title band + 3 x 64 rows + 64 Back + 5 x 8 spacing; BackGap is empty, so the 8 + 8 round it set Back 16 apart
-  from the rows) and the title, the rows and Back share its height by flex weights that come out at 48 / 64 (0.75 / 1) and stop
+  (32 padding + 48 title band + 3 x 64 rows + 64 ButtonRow + 5 x 8 spacing; BackGap is empty, so the 8 + 8 round it set the buttons 16 apart
+  from the rows) and the title, the rows and ButtonRow (Rules and Back, half the width each) share its height by flex weights that come out at 48 / 64 (0.75 / 1) and stop
   growing there (maxHeight). A row has no vertical padding: its caption and its group are 87.5 % of its height and centred, which
   is the 4 padding round a 56 segment of a row of 64. The variant for a canvas of at most 360 units high hides the Title;
   the variant for a canvas of at most 440 units wide takes the whole safe width for the plate and narrows the caption of
@@ -61,11 +62,21 @@
               </children>
             </element>
             <element type="UIElement" name="BackGap" height="0" />
-            <element type="UIElement" name="Back" flex="1" maxHeight="64" fontSize="28" color="40,110,60,255">
-              <components>
-                <component type="UITextComponent" text="{#options.back}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
-                <component type="UIInputClicker" action="MahjongOptionsBack"/>
-              </components>
+            <element type="UIStack" name="ButtonRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" crossAlign="Stretch">
+              <children>
+                <element type="UIElement" name="OptionsRules" flex="1" fontSize="28" color="45,75,120,255">
+                  <components>
+                    <component type="UITextComponent" text="{#hud.rules}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UIInputClicker" action="MahjongRules"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="Back" flex="1" fontSize="28" color="40,110,60,255">
+                  <components>
+                    <component type="UITextComponent" text="{#options.back}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UIInputClicker" action="MahjongOptionsBack"/>
+                  </components>
+                </element>
+              </children>
             </element>
           </children>
         </element>

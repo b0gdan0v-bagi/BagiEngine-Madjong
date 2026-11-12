@@ -272,9 +272,9 @@ namespace BECore::Mahjong::Tests {
             ASSERT_TRUE(SetupShown());
         }
 
-        /// The page `Options` (where the hints row is) open over `Setup` and drawn on the game as it is.
+        /// The page `Options` (where the hints row is) open over the table, as the HUD button opens it, and drawn on the game as it is.
         void OpenPage() {
-            _game->OpenSetup();
+            _game->CloseSetup();
             _game->OpenOptions();
             Draw();
             ASSERT_TRUE(OptionsShown());
@@ -401,7 +401,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_game->GetSession().Version(), version);
         EXPECT_EQ(_game->GetSeats(), seats);
         EXPECT_EQ(_game->GetSettings().handsPerMatch, hands);
-        EXPECT_TRUE(_game->IsSetupOpen());
+        EXPECT_FALSE(_game->IsSetupOpen());
     }
 
     TEST_F(MahjongHintsTest, AnyOtherValueAndAClosedPageChangeNothing) {
@@ -415,11 +415,12 @@ namespace BECore::Mahjong::Tests {
         }
 
         _game->CloseOptions();
+        _game->OpenSetup();
         Draw();
         ASSERT_TRUE(SetupShown());
         ASSERT_FALSE(OptionsShown());
         EmitAction("MahjongSetHints", "off");
-        EXPECT_TRUE(_game->HintsOn()) << "Setup alone has no hints row";
+        EXPECT_TRUE(_game->HintsOn()) << "Setup has no hints row";
         EXPECT_EQ(HintsChoiceVar(), "hints");
 
         _game->CloseSetup();
@@ -461,6 +462,8 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(ClickElement("Options", "HintsOff"));
         ASSERT_TRUE(ClickElement("Options", "Back"));
         Draw();
+        ASSERT_TRUE(ClickElement("HudMenu", "NewGame"));
+        Draw();
         ASSERT_TRUE(ClickElement("Setup", "Start"));
         Draw();
         ASSERT_FALSE(SetupShown());
@@ -470,6 +473,7 @@ namespace BECore::Mahjong::Tests {
         Draw();
         ASSERT_TRUE(SetupShown());
         EXPECT_FALSE(_game->HintsOn()) << "New game";
+        _game->CloseSetup();
         _game->OpenOptions();
         Draw();
         EXPECT_EQ(HintsChoiceVar(), "off");
@@ -487,8 +491,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(control->Reset(options).has_value());
         EXPECT_FALSE(_game->HintsOn()) << "a control reset leaves it alone";
         Draw();
-        ASSERT_TRUE(ClickElement("HudMenu", "NewGame"));
-        _game->OpenOptions();
+        ASSERT_TRUE(ClickElement("HudMenu", "Options"));
         Draw();
         EXPECT_EQ(HintsChoiceVar(), "off");
     }

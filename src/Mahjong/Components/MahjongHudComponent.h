@@ -45,9 +45,9 @@ namespace BECore::Mahjong {
      * `SeatLevels` or the pending number of hands and the variable, and `MahjongStart` gives the pending seats, levels and number of hands (`handsPerMatch` only: every other setting stays as the game
      * has it) to the game and begins a match with a random seed (`StartRandomMatch`), which closes the panel; a start the game refuses
      * leaves it open and the seats, levels and settings as they were. The cross `SetupClose` (`MahjongSetupClose`) closes the panel with
-     * none of the pending choices applied and no match begun (ignored while `Options` is over it), and Escape does the same on the keyboard, closing `Options` first when it is open;
+     * none of the pending choices applied and no match begun, and Escape does the same on the keyboard;
      * either way the player is where they were (the table behind the panel). `MahjongNewGame` (the HUD button) opens it again, with the pending setup of the
-     * last match. `MahjongOptions` (the full-width button `OptionsRow`) opens the page `Options`. The language row of the page is a
+     * last match. The language row of the page `Options` is a
      * `UISegmented` bound to `language` (the id of the language) and emits `MahjongSetLanguage` with the id, which is accepted only while the page is open;
      * `MahjongGame::SetLanguage` applies it to the string table (an id the table does not have is refused and
      * the variable is set to the language the game really has), and the labels and the variables follow at the next draw. Nothing is
@@ -55,12 +55,13 @@ namespace BECore::Mahjong {
      * the stack `ButtonRow`) is shown exactly while the panel is open and `MahjongGame::CanContinue()` (a saved match is the table behind it);
      * `MahjongContinue` calls `ContinueMatch()` and is ignored while the panel is closed or there is nothing to continue.
      *
-     * **Options.** `MahjongGame::IsOptionsOpen()` is the page over `Setup`. `MahjongOptions` opens it, only while `Setup` is
-     * open; `MahjongOptionsBack` closes it (ignored while it is closed).
+     * **Options.** `MahjongGame::IsOptionsOpen()` is the page over the table (paused meanwhile). `MahjongOptions` (the HUD button) opens
+     * it while neither `Setup` nor the rules are open; `MahjongOptionsBack` and Escape close it; `MahjongRules` (its button
+     * `OptionsRules`) closes it and opens the rules, and is ignored while it is closed.
      * `MahjongSetSpeed` with `slow` | `normal` | `fast` (`TryParseSpeed`; any other text is ignored, and so is the action while the page is closed)
-     * calls `SetAnimationSpeed` and sets `speedChoice`; it takes effect at once (`Table/AnimationSpeed.h`). `Setup` stays open under the page and `CloseSetup()` closes it. The canvas `Options` is
-     * shown exactly while the page is open (rows: language, hints, speed, and the button `Back`); `language` and `speedChoice` are published when it opens. The level is not set here: it is a choice
-     * of each computer seat on `Setup`.
+     * calls `SetAnimationSpeed` and sets `speedChoice`; it takes effect at once (`Table/AnimationSpeed.h`). The canvas `Options` is
+     * shown exactly while the page is open (rows: language, hints, speed, and the buttons `Rules` and `Back`); `language` and `speedChoice` are published when it opens. The level is not set here: it
+     * is a choice of each computer seat on `Setup`.
      *
      * **Saving.** Every `SceneUpdateEvent` (once per frame, only for the active game) calls `MahjongGame::FlushSave()`, which writes the match and the
      * choices of `Setup` when they changed, so a burst of computer steps is one write.
@@ -76,7 +77,7 @@ namespace BECore::Mahjong {
      * (`FormatCoachTally`; the labels `HandCoachRow` / `MatchCoachRow` are visible exactly while it has text). Both are published when the version of the session or of the string table moved and read
      * only public data (the hands are open once the hand is over).
      *
-     * **The rules screen.** `MahjongGame::IsRulesOpen()` (the HUD button `Rules`, action `MahjongRules`) decides whether the modal canvas
+     * **The rules screen.** `MahjongGame::IsRulesOpen()` (the button `Rules` of the page `Options`, action `MahjongRules`) decides whether the modal canvas
      * `Rules` (text and tile pictures only) and its action bar `RulesAction` are shown; `HudMenu` is hidden meanwhile. The page number is
      * this component's (`CurrentRulesPage()`, 0 when the screen opens); `MahjongRulesNext` / `MahjongRulesBack` turn the pages (clamped) and
      * `MahjongRulesClose` closes the screen, the last three ignored while it is not open. The page is `FormatRulesPage`
@@ -154,7 +155,7 @@ namespace BECore::Mahjong {
         /// variables and elements when the page, the open state or the language changed.
         void PublishRules(const MahjongGame* game);
         void PublishRulesPage();
-        /// `HudMenu` (New game, Rules) is shown exactly while neither the score table nor the rules are up.
+        /// `HudMenu` (New game, Options) is shown exactly while neither the score table nor the rules are up.
         void ShowHudMenu();
 
         SeatSetup _pending = kDefaultSeatSetup;

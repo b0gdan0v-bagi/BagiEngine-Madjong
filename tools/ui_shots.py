@@ -153,12 +153,10 @@ def setup_screen(client: BagiControlClient, seed: int) -> str:
 
 
 def options_screen(client: BagiControlClient, seed: int) -> str:
-    """The page Options over Setup: New game, then the button Options of Setup."""
+    """The page Options over the table: the button Options of the HUD."""
     reset(client, seed, "PCCC")
     settle(client)
-    client.call("ui_click", {"name": "NewGame", "canvas": "HudMenu"})
-    settle(client)
-    client.call("ui_click", {"name": "OptionsRow", "canvas": "Setup"})
+    client.call("ui_click", {"name": "Options", "canvas": "HudMenu"})
     tree = settle(client)
     check(canvas_visible(tree, "Options"), "the button Options did not open the page")
     return f"seed {seed}"

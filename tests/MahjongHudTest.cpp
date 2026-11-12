@@ -611,10 +611,10 @@ namespace BECore::Mahjong::Tests {
             }
             EXPECT_GE(Element("HudMenu", "NewGame")->rect.h, kMinControlHeight);
             // Both buttons of the menu are shown together, the word of each in the language of the table
-            ASSERT_TRUE(OnScreen("HudMenu", "Rules"));
+            ASSERT_TRUE(OnScreen("HudMenu", "Options"));
             ASSERT_TRUE(OnScreen("HudMenu", "NewGame"));
-            EXPECT_GE(Element("HudMenu", "Rules")->rect.h, kMinControlHeight);
-            EXPECT_EQ(Text("HudMenu", "Rules"), Tr(CoreManager::GetUIStrings(), "hud.rules").c_str());
+            EXPECT_GE(Element("HudMenu", "Options")->rect.h, kMinControlHeight);
+            EXPECT_EQ(Text("HudMenu", "Options"), Tr(CoreManager::GetUIStrings(), "hud.options").c_str());
             EXPECT_EQ(Text("HudMenu", "NewGame"), Tr(CoreManager::GetUIStrings(), "hud.newGame").c_str());
         });
     }
@@ -638,7 +638,7 @@ namespace BECore::Mahjong::Tests {
                     EXPECT_GE(segment->rect.h, kMinControlHeight) << seat << kind;
                 }
             }
-            for (const char* segmentName : {"Hands16", "Hands8", "OptionsRow"}) {
+            for (const char* segmentName : {"Hands16", "Hands8"}) {
                 const UIElement* segment = Element("Setup", segmentName);
                 ASSERT_NE(segment, nullptr) << segmentName;
                 EXPECT_GE(segment->rect.h, kMinControlHeight) << segmentName;
@@ -731,15 +731,7 @@ namespace BECore::Mahjong::Tests {
             }
         }
 
-        // The button of the page Options: a neutral control of the whole row's width under the rows
-        const UIElement* options = Element("Setup", "OptionsRow");
-        ASSERT_NE(options, nullptr);
-        EXPECT_TRUE(SameColor(options->color, PaletteColor("neutral")));
-        EXPECT_EQ(options->rect.h, kMainButtonHeight);
-        EXPECT_EQ(GapBelow(*above, options->rect), kModalGap);
-        EXPECT_EQ(options->rect.x, plate.x + kModalPadding);
-        EXPECT_EQ(options->rect.w, plate.w - 2 * kModalPadding);
-        above = &options->rect;
+        EXPECT_EQ(Element("Setup", "OptionsRow"), nullptr) << "the page Options is opened from the HUD, not from the seat choice";
 
         const UIElement* start = Element("Setup", "Start");
         ASSERT_NE(start, nullptr);
@@ -1887,40 +1879,45 @@ namespace BECore::Mahjong::Tests {
 
     // ----- the page Options -----
 
-    TEST_F(MahjongHudTest, OptionsOpensOnlyOverSetupAndBackClosesItAndSetupStaysOpen) {
+    TEST_F(MahjongHudTest, OptionsOpensOverTheTableOnlyAndBackClosesIt) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
-        ASSERT_FALSE(_game->IsSetupOpen());
-        EmitAction("MahjongOptions");
-        EXPECT_FALSE(_game->IsOptionsOpen()) << "a click that reached the HUD with Setup closed is out of date";
-
         _game->OpenSetup();
         Draw();
         EmitAction("MahjongOptions");
+        EXPECT_FALSE(_game->IsOptionsOpen()) << "the dim of Setup covers the HUD button: the click is out of date";
+
+        _game->CloseSetup();
+        _game->OpenRules();
+        EmitAction("MahjongOptions");
+        EXPECT_FALSE(_game->IsOptionsOpen()) << "the HUD is hidden behind the rules";
+
+        _game->CloseRules();
+        Draw();
+        EmitAction("MahjongOptions");
         EXPECT_TRUE(_game->IsOptionsOpen());
-        EXPECT_TRUE(_game->IsSetupOpen());
+        EXPECT_FALSE(_game->IsSetupOpen());
         EXPECT_TRUE(_game->IsTablePaused());
 
         EmitAction("MahjongOptionsBack");
         EXPECT_FALSE(_game->IsOptionsOpen());
-        EXPECT_TRUE(_game->IsSetupOpen());
+        EXPECT_FALSE(_game->IsTablePaused());
         EmitAction("MahjongOptionsBack");  // closed already
         EXPECT_FALSE(_game->IsOptionsOpen());
-        EXPECT_TRUE(_game->IsSetupOpen());
+        EXPECT_FALSE(_game->IsSetupOpen());
     }
 
-    TEST_F(MahjongHudTest, AStartAControlResetAndAControlActionCloseThePage) {
+    TEST_F(MahjongHudTest, ANewMatchAControlResetAndAControlActionCloseThePage) {
         IControllableGame* control = _game->AsControllable();
         ASSERT_NE(control, nullptr);
         _game->Start();
+        _game->CloseSetup();
         Draw();
 
         EmitAction("MahjongOptions");
         ASSERT_TRUE(_game->IsOptionsOpen());
-        EmitAction("MahjongStart");
+        ASSERT_TRUE(_game->StartMatch(5).has_value());
         EXPECT_FALSE(_game->IsOptionsOpen());
 
-        _game->OpenSetup();
-        Draw();
         EmitAction("MahjongOptions");
         ASSERT_TRUE(_game->IsOptionsOpen());
         Json options = Json::object();
@@ -1929,7 +1926,6 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(control->Reset(options).has_value());
         EXPECT_FALSE(_game->IsOptionsOpen());
 
-        _game->OpenSetup();
         Draw();
         EmitAction("MahjongOptions");
         ASSERT_TRUE(_game->IsOptionsOpen());
@@ -1942,6 +1938,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongHudTest, TheLevelVariableIsNotSetAgainWhileNothingChanges) {
         _game->Start();
+        _game->CloseSetup();
         Draw();
         EmitAction("MahjongOptions");
         Draw();
@@ -1951,12 +1948,12 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), version);
     }
 
-    TEST_F(MahjongHudContinueTest, ContinueWithThePageOpenClosesBothAndKeepsTheSavedMatch) {
+    TEST_F(MahjongHudContinueTest, TheHudButtonOptionsDoesNotTakeTheOfferAwayAndContinueKeepsTheSavedMatch) {
         Draw();
         ASSERT_TRUE(_game->CanContinue());
         EmitAction("MahjongOptions");
-        ASSERT_TRUE(_game->IsOptionsOpen());
-        EXPECT_TRUE(_game->CanContinue()) << "the page does not take the offer away";
+        EXPECT_FALSE(_game->IsOptionsOpen()) << "the dim of Setup covers the HUD button";
+        EXPECT_TRUE(_game->CanContinue());
 
         EmitAction("MahjongContinue");
         EXPECT_FALSE(_game->IsOptionsOpen());

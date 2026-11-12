@@ -13,7 +13,7 @@
 #include <Mahjong/Table/UiPalette.h>
 
 /**
- * The rules screen of the shipped scene (`Components/MahjongHudComponent.h`, `Table/RulesText.h`): the `Rules` button of `HudMenu` opens
+ * The rules screen of the shipped scene (`Components/MahjongHudComponent.h`, `Table/RulesText.h`): the `Rules` button of the page `Options` opens
  * the modal pages `Rules` with their bar `RulesAction`, `Next` / `Back` turn them, `Close` closes them, the variables and the elements are
  * the page `FormatRulesPage` makes in each language, nothing moves behind the screen, and a new match or a control action closes it.
  */
@@ -92,10 +92,12 @@ namespace BECore::Mahjong::Tests {
             return MahjongHudComponent::GetActive();
         }
 
-        /// Opens the pages with the button of the HUD, as a person would.
+        /// Opens the pages as a person would: the button `Options` of the HUD, then `Rules` of the page.
         void PressRules() {
             Draw();
-            ASSERT_TRUE(ClickElement("HudMenu", "Rules"));
+            ASSERT_TRUE(ClickElement("HudMenu", "Options"));
+            Draw();
+            ASSERT_TRUE(ClickElement("Options", "OptionsRules"));
             Draw();
         }
 
@@ -183,7 +185,7 @@ namespace BECore::Mahjong::Tests {
 
     // ----- opening, turning and closing -----
 
-    TEST_F(MahjongRulesTest, TheScreenIsHiddenAtTheStartAndTheButtonOfTheHudIsThere) {
+    TEST_F(MahjongRulesTest, TheScreenIsHiddenAtTheStartAndItsButtonIsOnThePageOptions) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
 
@@ -191,9 +193,10 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(RulesShown());
         EXPECT_FALSE(BarShown());
         EXPECT_TRUE(MenuShown());
-        EXPECT_TRUE(OnScreen("HudMenu", "Rules"));
+        EXPECT_TRUE(OnScreen("HudMenu", "Options"));
         EXPECT_TRUE(OnScreen("HudMenu", "NewGame"));
-        EXPECT_EQ(Text("HudMenu", "Rules"), "Rules");
+        EXPECT_EQ(Element("HudMenu", "Rules"), nullptr) << "the rules are opened from the page Options";
+        EXPECT_EQ(Text("Options", "OptionsRules"), "Rules");
         EXPECT_EQ(Hud()->CurrentRulesPage(), 0);
     }
 
@@ -289,7 +292,7 @@ namespace BECore::Mahjong::Tests {
         ExpectPageShown(1);
         EXPECT_EQ(Text("RulesAction", "RulesNext"), "Далее");
         EXPECT_NE(Text("RulesAction", "RulesNext"), englishButton);
-        EXPECT_EQ(Text("HudMenu", "Rules"), "Правила");
+        EXPECT_EQ(Text("Options", "OptionsRules"), "Правила");
 
         ASSERT_TRUE(_game->SetLanguage("en"_intern));
         Draw();
@@ -373,7 +376,9 @@ namespace BECore::Mahjong::Tests {
         Draw();
         ASSERT_TRUE(SetupShown());
 
-        EXPECT_TRUE(ClickElement("HudMenu", "Rules")) << "the click goes to the dim of Setup, which covers the whole window";
+        EXPECT_TRUE(ClickElement("HudMenu", "Options")) << "the click goes to the dim of Setup, which covers the whole window";
+        Draw();
+        EXPECT_FALSE(_game->IsOptionsOpen());
         Draw();
         EXPECT_FALSE(_game->IsRulesOpen());
         EXPECT_FALSE(RulesShown());
@@ -738,7 +743,8 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(PressRules());
         ASSERT_NO_FATAL_FAILURE(GoToPage(1));
         const auto action = [&](const char* node, const char* element) { return ButtonAction(Element(node, element)); };
-        EXPECT_EQ(action("HudMenu", "Rules"), "MahjongRules"_intern);
+        EXPECT_EQ(action("HudMenu", "Options"), "MahjongOptions"_intern);
+        EXPECT_EQ(action("Options", "OptionsRules"), "MahjongRules"_intern);
         EXPECT_EQ(action("RulesAction", "RulesBack"), "MahjongRulesBack"_intern);
         EXPECT_EQ(action("RulesAction", "RulesNext"), "MahjongRulesNext"_intern);
         EXPECT_EQ(action("RulesAction", "RulesClose"), "MahjongRulesClose"_intern);
@@ -790,9 +796,10 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(ClickElement("HudMenu", "NewGame")) << "the dim of the pages takes the click";
         Draw();
         EXPECT_FALSE(_game->IsSetupOpen());
-        EXPECT_TRUE(ClickElement("HudMenu", "Rules"));
+        EXPECT_TRUE(ClickElement("HudMenu", "Options"));
         Draw();
-        EXPECT_EQ(Hud()->CurrentRulesPage(), 1) << "the Rules button was not pressed again (it would have opened the first page)";
+        EXPECT_FALSE(_game->IsOptionsOpen()) << "the Options button was not pressed";
+        EXPECT_EQ(Hud()->CurrentRulesPage(), 1);
         EXPECT_TRUE(_game->IsRulesOpen());
     }
 

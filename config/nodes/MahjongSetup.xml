@@ -11,16 +11,15 @@
   ten levels is a popup in the safe area with no scrolling, so its options are as high as the canvas allows: 56 in a canvas of more than
   601 units high, then 44, 32, 24, 20 and 16 by the height variants (the same steps as MahjongOptions.xml). The variables seatKindN,
   seatLevelN and handsChoice are set by the component, which also begins the match on MahjongStart. What a player sets once (language,
-  hints, speed) is not here but on the page Options (MahjongOptions.xml), which the full-width button OptionsRow (MahjongOptions, neutral) opens over this panel; the panel stays open
-  under it, so the pending seats and hands and Continue are not lost.
+  hints, speed) is not here but on the page Options (MahjongOptions.xml), which the Options button of HudMenu opens over the table.
   The roomy shape (a canvas of 1280 x 720 units, the design size) is the anatomy of the modal screens: the plate is the safe area
-  at most 600 high (32 padding + 56 title band + 5 x 64 rows + 64 OptionsRow + 64 ButtonRow + 8 x 8 spacing; StartGap is empty,
-  so the 8 + 8 round it set the row of Start 16 apart from the rows) and the title, the rows, OptionsRow and Start share its height
+  at most 528 high (32 padding + 56 title band + 5 x 64 rows + 64 ButtonRow + 7 x 8 spacing; StartGap is empty,
+  so the 8 + 8 round it set the row of Start 16 apart from the rows) and the title, the rows and Start share its height
   by flex weights that come out at 56 / 64 (0.875 / 1) and stop growing there (maxHeight). A row has no vertical padding: its caption
   and its group are 87.5 % of its height and centred, which is the 4 padding round a 56 segment of a row of 64. The shape gives way
   where the canvas is short: the smallest one is a 480 px window at the user scale 1.5, 320 x 320 units (262 x 297 of safe area
-  with insets), where a control is 32 px from 21.34 units; the seven controls (four seats, hands, OptionsRow, Start) with the gaps
-  leave 25.9 units a row with the title still there, so there is no variant for a short canvas and the Title stays everywhere.
+  with insets), where a control is 32 px from 21.34 units; the six controls (four seats, hands, Start) with the gaps
+  leave about 30 units a row with the title still there, so there is no variant for a short canvas and the Title stays everywhere.
   The variant for a canvas of at most 480 units wide takes the whole safe width for the plate and narrows the captions (52) so
   that Person / Computer and Человек / Компьютер fit (a 480 px window with side insets is the case: 262 units of safe width); the
   dropdowns are 64 there, the least that shows "10" beside its arrow (the arrow and the insets of a header take 50 of the width).
@@ -43,7 +42,7 @@
     <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" modal="true" visible="false">
       <elements>
         <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
-        <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="640" height="100%" maxHeight="600" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
+        <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="640" height="100%" maxHeight="528" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
           <children>
             <element type="UIStack" name="TitleRow" flex="0.875" maxHeight="56" direction="Horizontal" spacing="0" crossAlign="Stretch" color="58,66,92,255">
               <children>
@@ -168,12 +167,6 @@
                   </children>
                 </element>
               </children>
-            </element>
-            <element type="UIElement" name="OptionsRow" flex="1" maxHeight="64" fontSize="22" color="70,70,100,255">
-              <components>
-                <component type="UITextComponent" text="{#setup.options}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
-                <component type="UIInputClicker" action="MahjongOptions"/>
-              </components>
             </element>
             <element type="UIElement" name="StartGap" height="0" />
             <element type="UIStack" name="ButtonRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" crossAlign="Stretch">
