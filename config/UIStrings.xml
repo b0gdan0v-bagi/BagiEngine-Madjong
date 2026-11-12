@@ -279,6 +279,29 @@
         <string key="move.kong" text="{seat} claimed {tile} for a kong"/>
         <string key="move.concealedKong" text="{seat} declared a concealed kong"/>
         <string key="move.upgradeKong" text="{seat} added {tile} to a pung to make a kong"/>
+        <string key="online.error.unknownRoom" text="No room has this code. Check the code and try again."/>
+        <string key="online.error.roomFull" text="This room is full."/>
+        <string key="online.error.gameStarted" text="The game in this room has already started. Only a player who was in it can come back."/>
+        <string key="online.error.seatTaken" text="That seat is taken. Choose another one."/>
+        <string key="online.error.badName" text="That name cannot be used. Choose another one."/>
+        <string key="online.error.notHost" text="Only the host can do that."/>
+        <string key="online.error.roomGone" text="The room is closed, the game cannot be resumed."/>
+        <string key="online.error.replaced" text="Another device took your seat."/>
+        <string key="online.error.rateLimited" text="Too many requests. Wait a little and try again."/>
+        <string key="online.error.busy" text="The server is busy. Try again later."/>
+        <string key="online.error.connectFailed" text="Cannot connect to the server. Check the address."/>
+        <string key="online.error.noAnswer" text="The server does not answer. Try again later."/>
+        <string key="online.error.viewFormat" text="The server speaks another version of the game. Update the game."/>
+        <string key="online.error.badView" text="The table sent by the server could not be read."/>
+        <string key="online.error.server" text="The server did not understand the request. Try again."/>
+        <string key="online.error.notNow" text="That is not possible right now."/>
+        <string key="online.error.unknown" text="Something went wrong ({code})."/>
+        <string key="online.status.connecting" text="Connecting..."/>
+        <string key="online.status.reconnecting" text="The connection was lost. Reconnecting..."/>
+        <string key="online.seat.empty" text="Empty"/>
+        <string key="online.seat.computer" text="Computer"/>
+        <string key="online.seat.you" text="{name} (you)"/>
+        <string key="online.seat.away" text="{name} (away)"/>
     </language>
     <language id="ru">
         <string key="lang.en" text="English"/>
@@ -557,5 +580,28 @@
         <string key="move.kong" text="{seat} взяло {tile} в конг"/>
         <string key="move.concealedKong" text="{seat} выложило скрытый конг"/>
         <string key="move.upgradeKong" text="{seat} добавило {tile} к пуну, получился конг"/>
+        <string key="online.error.unknownRoom" text="Комнаты с таким кодом нет. Проверьте код и попробуйте ещё раз."/>
+        <string key="online.error.roomFull" text="В комнате нет свободных мест."/>
+        <string key="online.error.gameStarted" text="Игра в этой комнате уже началась. Вернуться может только тот, кто в ней играл."/>
+        <string key="online.error.seatTaken" text="Это место занято. Выберите другое."/>
+        <string key="online.error.badName" text="Это имя нельзя использовать. Выберите другое."/>
+        <string key="online.error.notHost" text="Это может сделать только хозяин комнаты."/>
+        <string key="online.error.roomGone" text="Комната закрыта, игру не продолжить."/>
+        <string key="online.error.replaced" text="Ваше место занято с другого устройства."/>
+        <string key="online.error.rateLimited" text="Слишком много запросов. Подождите немного и попробуйте ещё раз."/>
+        <string key="online.error.busy" text="Сервер занят. Попробуйте позже."/>
+        <string key="online.error.connectFailed" text="Не удаётся подключиться к серверу. Проверьте адрес."/>
+        <string key="online.error.noAnswer" text="Сервер не отвечает. Попробуйте позже."/>
+        <string key="online.error.viewFormat" text="Сервер работает по другой версии игры. Обновите игру."/>
+        <string key="online.error.badView" text="Не удалось прочитать стол, присланный сервером."/>
+        <string key="online.error.server" text="Сервер не понял запрос. Попробуйте ещё раз."/>
+        <string key="online.error.notNow" text="Сейчас это невозможно."/>
+        <string key="online.error.unknown" text="Что-то пошло не так ({code})."/>
+        <string key="online.status.connecting" text="Подключение..."/>
+        <string key="online.status.reconnecting" text="Связь потеряна. Подключаемся снова..."/>
+        <string key="online.seat.empty" text="Свободно"/>
+        <string key="online.seat.computer" text="Компьютер"/>
+        <string key="online.seat.you" text="{name} (вы)"/>
+        <string key="online.seat.away" text="{name} (не в сети)"/>
     </language>
 </UIStrings>
