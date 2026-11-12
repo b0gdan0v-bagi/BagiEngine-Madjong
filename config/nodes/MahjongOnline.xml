@@ -6,10 +6,12 @@
     Menu   OnlineTitleMenu, OnlineMenuHost, OnlineMenuJoin, OnlineMenuReturn (only while a session is kept)
     Host   OnlineTitleHost, OnlineNameRow, OnlineHandsRow, OnlineLevelRow, OnlineHintsRow, OnlineGap, OnlineButtons with OnlineCreate
     Join   OnlineTitleJoin, OnlineNameRow, OnlineCodeRow, OnlineGap, OnlineButtons with OnlineEnter
-    Lobby  OnlineTitleLobby, OnlineSeatRow0..3 (OnlineSit0..3 beside the seats that can be taken), OnlineGap, OnlineButtons with OnlineStart (the host) and OnlineLeave
+    Lobby  OnlineTitleLobby, OnlineSeatRow0..3 (OnlineSit0..3 beside the seats that can be taken), OnlineGap, OnlineButtons with OnlineStart (the host), OnlineCopy and OnlineLeave
   and, on any page, at most one line under the title: OnlineNotice ({onlineNotice}, an error), OnlineStatus ({onlineStatus}, connecting and reconnecting) or, in the
   lobby, OnlineWaiting (a guest: {onlineWaiting}, with whether the host allowed hints when the lobby says it) or OnlineHostLine (the host: whether he allowed hints, {onlineHostLine}). The fields are buttons (OnlineName, OnlineCode: action MahjongOnlineField, value name or code) that open the page
   OnlineEntry; their text is {onlineName} and {onlineCode}. The seat texts are {onlineSeat0..3}, the title of the lobby and the Return button say {onlineRoom}.
+  OnlineCopy (action MahjongOnlineCopy, text {onlineCopy}: "Copy code", then "Copied" or "Cannot copy") and a click on OnlineTitleLobby (same action) put the room code on
+  the clipboard; the notice line is not used for it, it carries the host line and the errors. The three buttons of the lobby share OnlineButtons; OnlineCopy has flex 1.5 because its words ("Копия кода") are the longest and the smallest window is 71 px per button.
   OnlineClose (the cross at the right of the title band, as on Setup) only hides the panel. The hands are a UISegmented (action MahjongOnlineHands, value 16 or 8,
   variable onlineHands), the hints a UISegmented of its own (MahjongOnlineHints, value allowed or off, onlineHints: whether the room allows hints and the coach), the level a UIDropdown (MahjongOnlineLevel, onlineLevel, the options OnlineLevel1 .. 10 with the heights of Setup's lists by the height
   variants, so the open list always fits the canvas); all three sit in rows of Setup's shape (caption 112 wide, group 87.5 % of a row of 64).
@@ -52,6 +54,7 @@
                 <element type="UIElement" name="OnlineTitleLobby" flex="1" fontSize="28" visible="false">
                   <components>
                     <component type="UITextComponent" text="{#online.lobby.title}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UIInputClicker" action="MahjongOnlineCopy"/>
                   </components>
                 </element>
                 <element type="UIElement" name="OnlineClose" width="56" fontSize="28" color="70,70,100,255">
@@ -356,6 +359,12 @@
                   <components>
                     <component type="UITextComponent" text="{#setup.start}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineStart"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="OnlineCopy" flex="1.5" fontSize="28" color="45,75,120,255" visible="false">
+                  <components>
+                    <component type="UITextComponent" text="{onlineCopy}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UIInputClicker" action="MahjongOnlineCopy"/>
                   </components>
                 </element>
                 <element type="UIElement" name="OnlineLeave" flex="1" fontSize="28" color="70,70,100,255" visible="false">

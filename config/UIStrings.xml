@@ -674,9 +674,9 @@
         <string key="online.table.hintsOff" text="В комнате подсказки запрещены"/>
         <string key="online.delete" text="Стереть"/>
         <string key="online.done" text="Готово"/>
-        <string key="online.copy" text="Копировать код"/>
-        <string key="online.copied" text="Скопировано"/>
-        <string key="online.copyFailed" text="Не скопировано"/>
+        <string key="online.copy" text="Копия кода"/>
+        <string key="online.copied" text="Скопирован"/>
+        <string key="online.copyFailed" text="Не вышло"/>
         <string key="online.paste" text="Вставить"/>
         <string key="online.paste.notCode" text="В тексте нет кода комнаты"/>
         <string key="online.paste.empty" text="Нечего вставлять"/>

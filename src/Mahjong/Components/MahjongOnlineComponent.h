@@ -5,6 +5,10 @@
 
 namespace BECore {
 
+    namespace ClipboardEvents {
+        struct PasteEvent;
+    }
+
     namespace InputEvents {
         struct ActionEvent;
     }
@@ -37,11 +41,17 @@ namespace BECore::Mahjong {
      *
      * **Input.** The actions of the panel (`MahjongOnlineHost` ... `MahjongOnlineLeave`) are ignored while it is closed, and each asks `OnlineScreens` again what is on offer, so a
      * stale click does nothing. On the `Entry` page the keyboard types too (`SDLEvents::KeyDownEvent`: Latin letters, digits, space, Backspace (may repeat), Enter = Done); Escape
-     * goes one page back, and in the `Lobby` does nothing. The name the player typed is handed to `MahjongGame::SetOnlineName` once they leave the field or send a form.
+     * goes one page back, and in the `Lobby` does nothing. A key held with Ctrl or Cmd types nothing (the paste shortcut reaches here as a `v`). The name the player typed is handed to
+     * `MahjongGame::SetOnlineName` once they leave the field or send a form.
+     *
+     * **Clipboard.** `MahjongOnlineCopy` (the button `OnlineCopy` and a click on the title of the lobby) writes the room code with `Clipboard::SetText` and tells `OnlineScreens` how it went.
+     * A paste reaches the code from two sides: `ClipboardEvents::PasteEvent` (the shortcut, on the `Join` form or the code pad) and the key `MahjongOnlinePaste` of the code pad, which
+     * asks `Clipboard::RequestText`. That request cannot be cancelled and is answered from a later `Update()`, so its callback holds a `weak_ptr` of `_alive` and finds the component again
+     * through `GetActive()`: a scene torn down with a read pending leaves nothing to call.
      *
      * **Variables** (set only when `OnlineScreens::Version()`, `OnlineClient::Version()`, the version of `UIStrings` or the open state moved; the elements likewise): `onlineNotice`,
      * `onlineStatus`, `onlineName`, `onlineCode`, `onlineRoom`, `onlineSeat0..3`, `onlineHands`, `onlineLevel`, `onlineHints` (`allowed` | `off`), `onlineHostLine`, `onlineWaiting`,
-     * `onlineEntryValue` and `padKey0..47` (while the `Entry` page is up and the pad, its field or the language moved). The token of a session is never published.
+     * `onlineEntryValue`, `onlineEntryNote`, `onlineCopy` and `padKey0..47` (while the `Entry` page is up and the pad, its field or the language moved). The token of a session is never published.
      */
     class MahjongOnlineComponent : public IComponent {
         BE_CLASS(MahjongOnlineComponent)
@@ -66,6 +76,11 @@ namespace BECore::Mahjong {
         void OnAction(const InputEvents::ActionEvent& event);
         void OnKeyDown(const SDLEvents::KeyDownEvent& event);
         void OnUpdate(const SceneEvents::SceneUpdateEvent& event);
+        void OnPaste(const ClipboardEvents::PasteEvent& event);
+        /// The answer to the `Paste` key's read of the clipboard.
+        void OnClipboardAnswer(const ClipboardText& answer);
+        /// Asks the clipboard for its text; the answer goes to `OnClipboardAnswer`.
+        void RequestPaste();
 
         /// Opens or closes the pages after the flag of the game.
         void Follow(MahjongGame& game);
@@ -82,9 +97,11 @@ namespace BECore::Mahjong {
         void SetPadRow(size_t row, bool visible);
 
         /// The elements the pages show among themselves (`Item` in the source file).
-        static constexpr size_t kItemCount = 32;
+        static constexpr size_t kItemCount = 35;
 
         OnlineScreens _screens;
+        /// Alive while the component is attached; a read of the clipboard that is still pending holds a `weak_ptr` of it.
+        std::shared_ptr<int> _alive;
         PoolString _seatVars[kSeatCount];
         PoolString _padVars[TextEntry::kPadMaxKeys];
         PoolString _padKeyNames[TextEntry::kPadMaxKeys];

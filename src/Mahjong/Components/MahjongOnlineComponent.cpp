@@ -4,6 +4,7 @@
 #include <BECore/Scene/Scene.h>
 #include <BECore/UI/UICanvasComponent.h>
 #include <CoreSDL/SDLEvents.h>
+#include <Events/ClipboardEvents.h>
 #include <Events/InputEvents.h>
 #include <Events/SceneEvents.h>
 #include <Generated/MahjongOnlineComponent.gen.hpp>
@@ -33,6 +34,10 @@ namespace BECore::Mahjong {
         constexpr eastl::string_view kSitAction = "MahjongOnlineSit";
         constexpr eastl::string_view kStartAction = "MahjongOnlineStart";
         constexpr eastl::string_view kLeaveAction = "MahjongOnlineLeave";
+        constexpr eastl::string_view kCopyAction = "MahjongOnlineCopy";
+        constexpr eastl::string_view kPasteAction = "MahjongOnlinePaste";
+        /// A key held with one of these is a shortcut and types nothing.
+        constexpr SDL_Keymod kShortcutMods = SDL_KMOD_CTRL | SDL_KMOD_GUI;
         constexpr eastl::string_view kNameValue = "name";
         constexpr eastl::string_view kCodeValue = "code";
         constexpr eastl::string_view kHintsAllowedValue = "allowed";
@@ -72,14 +77,17 @@ namespace BECore::Mahjong {
             Leave,
             EntryCaptionName,
             EntryCaptionCode,
+            Copy,
+            EntryPaste,
+            EntryNote,
             ItemCount
         };
 
         constexpr const char* kItemNames[] = {
-            "OnlineTitleMenu", "OnlineTitleHost", "OnlineTitleJoin",  "OnlineTitleLobby", "OnlineNotice",  "OnlineStatus",   "OnlineWaiting",    "OnlineHostLine",
-            "OnlineMenuHost",  "OnlineMenuJoin",  "OnlineMenuReturn", "OnlineNameRow",    "OnlineCodeRow", "OnlineHandsRow", "OnlineLevelRow",   "OnlineHintsRow",
-            "OnlineSeatRow0",  "OnlineSeatRow1",  "OnlineSeatRow2",   "OnlineSeatRow3",   "OnlineSit0",    "OnlineSit1",     "OnlineSit2",       "OnlineSit3",
-            "OnlineGap",       "OnlineButtons",   "OnlineCreate",     "OnlineEnter",      "OnlineStart",   "OnlineLeave",    "EntryCaptionName", "EntryCaptionCode",
+            "OnlineTitleMenu", "OnlineTitleHost",  "OnlineTitleJoin", "OnlineTitleLobby", "OnlineNotice",     "OnlineStatus",   "OnlineWaiting",  "OnlineHostLine", "OnlineMenuHost",
+            "OnlineMenuJoin",  "OnlineMenuReturn", "OnlineNameRow",   "OnlineCodeRow",    "OnlineHandsRow",   "OnlineLevelRow", "OnlineHintsRow", "OnlineSeatRow0", "OnlineSeatRow1",
+            "OnlineSeatRow2",  "OnlineSeatRow3",   "OnlineSit0",      "OnlineSit1",       "OnlineSit2",       "OnlineSit3",     "OnlineGap",      "OnlineButtons",  "OnlineCreate",
+            "OnlineEnter",     "OnlineStart",      "OnlineLeave",     "EntryCaptionName", "EntryCaptionCode", "OnlineCopy",     "EntryPaste",     "EntryNote",
         };
         static_assert(sizeof(kItemNames) / sizeof(kItemNames[0]) == ItemCount, "one name per item");
 
@@ -100,6 +108,18 @@ namespace BECore::Mahjong {
             return number;
         }
 
+        eastl::string_view CopyKeyOf(OnlineCopyState state) {
+            switch (state) {
+                case OnlineCopyState::Copied:
+                    return kOnlineCopiedKey;
+                case OnlineCopyState::Failed:
+                    return kOnlineCopyFailedKey;
+                case OnlineCopyState::None:
+                    break;
+            }
+            return kOnlineCopyKey;
+        }
+
         /// The kept room of this run, else the one an earlier run stored: what `Return` enters.
         const RoomSession& SessionToReturnTo(const MahjongGame& game, const OnlineClient& client) {
             const RoomSession& kept = client.SessionToKeep();
@@ -114,11 +134,13 @@ namespace BECore::Mahjong {
         if (s_active == this) {
             s_active = nullptr;
         }
+        _alive.reset();
     }
 
     void MahjongOnlineComponent::OnAttached() {
         static_assert(kItemCount == ItemCount, "the header sizes its arrays by the items");
         s_active = this;
+        _alive = std::make_shared<int>(0);
         for (size_t i = 0; i < kItemCount; ++i) {
             _itemNames[i] = PoolString::Intern(kItemNames[i]);
             _items[i] = -1;
@@ -138,6 +160,7 @@ namespace BECore::Mahjong {
         SubscribeInScene<InputEvents::ActionEvent, &MahjongOnlineComponent::OnAction>(this);
         SubscribeInScene<SDLEvents::KeyDownEvent, &MahjongOnlineComponent::OnKeyDown>(this);
         SubscribeInScene<SceneEvents::SceneUpdateEvent, &MahjongOnlineComponent::OnUpdate>(this);
+        SubscribeInScene<ClipboardEvents::PasteEvent, &MahjongOnlineComponent::OnPaste>(this);
     }
 
     // ---- Frame -------------------------------------------------------------------------------------------------------------------
@@ -216,7 +239,9 @@ namespace BECore::Mahjong {
                 _closeRequested = true;
             }
         } else if (_screens.Page() == OnlinePage::Entry) {
-            if (event.key == SDLK_BACKSPACE) {
+            if ((event.mod & kShortcutMods) != 0) {
+                // Ctrl+V and its kind: the shortcut is the clipboard's (`PasteEvent`), not a letter of the code
+            } else if (event.key == SDLK_BACKSPACE) {
                 _screens.Backspace();
             } else if (event.repeat) {
                 // A held key types once; Enter does not repeat
@@ -228,6 +253,41 @@ namespace BECore::Mahjong {
                 const char character = *typed;
                 _screens.Type(eastl::string_view(&character, 1));
             }
+        }
+        _screens.Refresh(CoreManager::GetUIStrings());
+    }
+
+    void MahjongOnlineComponent::OnPaste(const ClipboardEvents::PasteEvent& event) {
+        MahjongGame* game = MahjongGame::GetActive();
+        if (game == nullptr || !game->IsOnlineOpen() || !_screens.IsOpen()) {
+            return;
+        }
+        _screens.PasteCode(eastl::string_view(event.text.data(), event.text.size()));
+        _screens.Refresh(CoreManager::GetUIStrings());
+    }
+
+    void MahjongOnlineComponent::RequestPaste() {
+        // The answer comes from a later `Update()` and the request cannot be withdrawn: the callback holds no pointer to this, only a token that dies with the component
+        const std::weak_ptr<int> alive = _alive;
+        CoreManager::GetClipboard().RequestText([alive](const ClipboardText& answer) {
+            if (alive.lock() == nullptr) {
+                return;
+            }
+            if (MahjongOnlineComponent* component = MahjongOnlineComponent::GetActive()) {
+                component->OnClipboardAnswer(answer);
+            }
+        });
+    }
+
+    void MahjongOnlineComponent::OnClipboardAnswer(const ClipboardText& answer) {
+        MahjongGame* game = MahjongGame::GetActive();
+        if (game == nullptr || !game->IsOnlineOpen() || !_screens.IsOpen()) {
+            return;
+        }
+        if (answer.status == ClipboardStatus::Ok) {
+            _screens.PasteCode(eastl::string_view(answer.text.data(), answer.text.size()));
+        } else {
+            _screens.NoteNothingToPaste(answer.status);
         }
         _screens.Refresh(CoreManager::GetUIStrings());
     }
@@ -306,6 +366,15 @@ namespace BECore::Mahjong {
             _screens.Start(client);
         } else if (action == kLeaveAction) {
             _screens.Leave(client);
+        } else if (action == kCopyAction) {
+            const eastl::string_view room = _screens.RoomCodeToCopy(client);
+            if (!room.empty()) {
+                _screens.NoteCopy(CoreManager::GetClipboard().SetText(room));
+            }
+        } else if (action == kPasteAction) {
+            if (_screens.Page() == OnlinePage::Entry && _screens.Focus() == OnlineField::Code) {
+                RequestPaste();
+            }
         }
         _screens.Refresh(CoreManager::GetUIStrings());
     }
@@ -381,6 +450,8 @@ namespace BECore::Mahjong {
         vars.Set("onlineName"_intern, eastl::string_view(_screens.Name().Text()));
         vars.Set("onlineCode"_intern, eastl::string_view(_screens.Code().Text()));
         vars.Set("onlineEntryValue"_intern, eastl::string_view(_screens.Focused().Text()));
+        vars.Set("onlineEntryNote"_intern, eastl::string_view(_screens.PasteNoteKey().empty() ? eastl::string() : Tr(strings, _screens.PasteNoteKey())));
+        vars.Set("onlineCopy"_intern, eastl::string_view(Tr(strings, CopyKeyOf(_screens.CopyState()))));
         vars.Set("onlineHands"_intern, _screens.Options().hands);
         vars.Set("onlineLevel"_intern, _screens.Options().level);
         vars.Set("onlineHints"_intern, _screens.Options().hintsAllowed ? kHintsAllowedValue : kHintsOffValue);
@@ -440,12 +511,15 @@ namespace BECore::Mahjong {
         SetItem(Enter, join);
         SetItem(Start, inLobby && lobby.canStart && stage == OnlineStage::Lobby);
         SetItem(Leave, inLobby);
+        SetItem(Copy, inLobby && !lobby.room.empty());
     }
 
     void MahjongOnlineComponent::PublishPad(const UIStrings& strings) {
         const OnlineField field = _screens.Focus();
         SetItem(EntryCaptionName, field == OnlineField::Name);
         SetItem(EntryCaptionCode, field == OnlineField::Code);
+        SetItem(EntryPaste, field == OnlineField::Code);
+        SetItem(EntryNote, !_screens.PasteNoteKey().empty());
         if (_padPublished && _padField == field && _padStrings == strings.GetVersion()) {
             return;
         }

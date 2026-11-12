@@ -601,6 +601,14 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Std(person.screens.Name().Text()), name);
         EXPECT_EQ(person.screens.PasteNote(), OnlinePasteNote::None);
         EXPECT_FALSE(person.screens.NoteNothingToPaste(ClipboardStatus::Empty));
+
+        // on the form, which has no pad, a text with no code says so in the notice line
+        ASSERT_TRUE(person.screens.Done());
+        EXPECT_FALSE(person.screens.PasteCode("hello world"));
+        EXPECT_EQ(Std(person.screens.NoticeKey()), Std(kOnlinePasteNotCodeKey));
+        EXPECT_EQ(Std(person.screens.Code().Text()), "MM7NN");
+        EXPECT_TRUE(person.screens.PasteCode("zz7zz"));
+        EXPECT_TRUE(person.screens.NoticeKey().empty()) << "a paste that worked is a move";
     }
 
     TEST(MahjongOnlineScreens, ATextWithNoCodeChangesNothingAndTheNoteGoesAtTheNextMove) {

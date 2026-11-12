@@ -189,8 +189,8 @@ namespace BECore::Mahjong {
         /// `Lobby` only: the copy button has put the code on the clipboard (@p ok) or could not. Back to `None` at the player's next move, in another room and off the `Lobby`.
         bool NoteCopy(bool ok);
 
-        /// Sets the code from a pasted @p text (`TextEntry::CleanRoomCode`): on the `Join` form, or the `Entry` page of the `Code`. A text with no code changes nothing and sets
-        /// the note `NotACode`; so does every other page (false, no note).
+        /// Sets the code from a pasted @p text (`TextEntry::CleanRoomCode`): on the `Join` form, or the `Entry` page of the `Code`. A text with no code changes nothing and says so: the pad
+        /// note `NotACode` on the `Entry` page, the notice on the `Join` form (which has no pad). Any other page: false, nothing said.
         bool PasteCode(eastl::string_view text);
         /// The read of the clipboard gave no text (@p status not `Ok`): the note `Empty`, or `Refused` when it was not allowed or there is no clipboard. Same pages as `PasteCode`.
         bool NoteNothingToPaste(ClipboardStatus status);
