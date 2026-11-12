@@ -695,6 +695,9 @@ namespace BECore::Mahjong::Tests {
                 Json::array({Parse("{\"kind\":\"kong\",\"tiles\":[\"1p\",\"1p\",\"1p\",\"1p\"],\"concealed\":true,\"from\":null,\"fromDiscard\":false,\"claimed\":null}")});
         });
         EXPECT_TRUE(Says(JudgeRoomMessage(melds, 0), "concealed meld of another seat"));
+        // the format number: required, an integer
+        EXPECT_TRUE(Says(JudgeRoomMessage(Mutated(honest, [](Json& json) { json["view"].erase("format"); }), 0), "'format'"));
+        EXPECT_TRUE(Says(JudgeRoomMessage(Mutated(honest, [](Json& json) { json["view"]["format"] = "1"; }), 0), "view.format"));
         // a view of another seat than the client's
         EXPECT_TRUE(Says(JudgeRoomMessage(honest, 1), "seat of the client"));
         // `result` while the hand is played, copied from a finished hand

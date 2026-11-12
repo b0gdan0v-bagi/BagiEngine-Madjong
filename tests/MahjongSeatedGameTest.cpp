@@ -572,7 +572,8 @@ namespace BECore::Mahjong::Tests {
     }  // namespace
 
     TEST(MahjongSeatedGameViewTest, AViewHoldsOnlyTheOwnTilesWhileTheHandIsPlayedAndNoKindOrLevel) {
-        const std::set<std::string> topKeys = {"phase", "seat", "seatWind", "roundWind", "east", "hand", "turn", "seats", "discards", "wall", "handsPlayed", "handsTotal", "version", "ready"};
+        const std::set<std::string> topKeys = {"phase",    "seat", "seatWind",    "roundWind",  "east",    "hand",  "turn",  "seats",
+                                               "discards", "wall", "handsPlayed", "handsTotal", "version", "ready", "format"};
         const std::set<std::string> seatKeys = {"wind", "score", "concealedCount", "melds", "concealedKongs", "bonus", "discardCount", "calling"};
         MahjongSeatedGame game = Started();
         for (int step = 0; step < kStepLimit && PhaseIs(game, SessionPhase::Playing); ++step) {
@@ -591,6 +592,21 @@ namespace BECore::Mahjong::Tests {
             }
             ASSERT_TRUE(StepOnce(game));
         }
+    }
+
+    TEST(MahjongSeatedGameViewTest, EveryViewOfAStartedGameCarriesTheFormatNumberAndTheEmptyOneBeforeStartDoesNot) {
+        const MahjongSeatedGame fresh;
+        EXPECT_FALSE(ViewOf(fresh, 0).contains("format"));
+        MahjongSeatedGame game = Started();
+        for (int step = 0; step < kStepLimit && PhaseIs(game, SessionPhase::Playing); ++step) {
+            ASSERT_TRUE(StepOnce(game));
+        }
+        for (int seat = 0; seat < kSeatCount; ++seat) {
+            const Json view = ViewOf(game, seat);
+            ASSERT_TRUE(view.contains("format")) << seat;
+            EXPECT_EQ(view["format"], kOnlineViewFormat) << seat;
+        }
+        EXPECT_EQ(ViewOf(Started(), 2)["format"], kOnlineViewFormat);
     }
 
     TEST(MahjongSeatedGameViewTest, TheOtherSeatsConcealedKongsAreOnlyCountedInAView) {

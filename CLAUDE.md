@@ -4,7 +4,7 @@ Classic Chinese mahjong for four seats on BagiEngine (the submodule `engine/`, b
 
 ## State
 
-Every stage of the plan is built: rules, match, computer players (levels 1..10), table session, control API, match log, the scene, save and Continue, English and Russian. The server side of online play exists (`BagiMahjongServer`, `Online/`; build and run: `README.md`), the client and its screens do not yet. It also builds for the browser (`BagiMahjong.html`; saves, match log and control API are off there: `docs/web.md`). Open work and the owner's pending looks are in the todo store (area `mahjong`), not here.
+Every stage of the plan is built: rules, match, computer players (levels 1..10), table session, control API, match log, the scene, save and Continue, English and Russian. The server side of online play exists (`BagiMahjongServer`, `Online/`; build and run: `README.md`) and so does the client logic (`Online/`: the model over `RoomClient`); its screens and the online table do not yet. It also builds for the browser (`BagiMahjong.html`; saves, match log and control API are off there: `docs/web.md`). Open work and the owner's pending looks are in the todo store (area `mahjong`), not here.
 
 ## Where to read
 
@@ -13,7 +13,7 @@ A nested `CLAUDE.md` loads when you work in its folder.
 | Folder | Covers |
 |--------|--------|
 | `src/Mahjong/` | `MahjongGame`, the control API, the match log JSON and file |
-| `src/Mahjong/Online/` | `MahjongSeatedGame`: the game in a room (server side, the ready check, the views) |
+| `src/Mahjong/Online/` | `MahjongSeatedGame`: the game in a room (server side, the ready check, the views); `OnlineClient`: the client model over `RoomClient` (stage, lobby, table, notice, session to keep) |
 | `src/Mahjong/Save/` | the save of a match and of the `Setup` choices, `Continue` |
 | `src/Mahjong/Game/` | the rules: wall, `HandModel`, scoring (and the owner's readings), `Match`, the computer player, `TableSession`, `MatchLog` |
 | `src/Mahjong/Table/` | pure scene logic: layout, words, seat plates, buttons, hints, flights, touch regime |

@@ -149,6 +149,7 @@ namespace BECore::Mahjong {
             ready.push_back(flag);
         }
         view["ready"] = std::move(ready);
+        view["format"] = kOnlineViewFormat;
         return view;
     }
 
