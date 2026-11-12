@@ -47,10 +47,30 @@ namespace BECore::Mahjong {
     /// shanten of the hand as it is. `ChooseClaimAction` keeps the best of the acceptable ones.
     [[nodiscard]] eastl::vector<RatedClaim> RateClaims(const TableView& view, int shantenBefore, const LevelProfile& profile);
 
+    /// A kong of the discard offered to a waiting hand that keeps the wait, and what the hand is worth with it and without it.
+    struct WaitingKong {
+        HandAction kong;
+        /// In milli-points (`ValueOfHeldHand`, `OwnDraws.h`): the hand as it is, and after the kong with its loose tile.
+        int64_t passValue = 0;
+        int64_t kongValue = 0;
+
+        /// Whether the kong is worth more; an equal value passes (the hand stays concealed).
+        [[nodiscard]] bool KongIsBetter() const noexcept {
+            return kongValue > passValue;
+        }
+    };
+
+    /// The kong of `view.pendingTile` when it is listed and the hand after it still waits (`RateClaim` at `kWaitingShanten`), rated
+    /// by points: the kong gives its points and the loose tile, and the hand loses `FullyConcealed` once it is open. nullopt
+    /// otherwise. A pure function of the view, no rng.
+    [[nodiscard]] std::optional<WaitingKong> RateWaitingKong(const TableView& view);
+
     /// The rule of the window that decided (the numbers of the list in `ChooseClaimAction`).
     enum class ClaimStep {
         Mahjong,      // 1
-        WaitingHand,  // 2
+        WaitingHand,  // 2: the hand waits and the claim would break the wait (or nothing kept the wait)
+        WaitingKong,  // 2: with `waitingKongByPoints`, a kong that keeps the wait is worth more than the pass
+        WaitingPass,  // 2: with `waitingKongByPoints`, a kong that keeps the wait is worth no more than the pass
         Claim,        // 3: an acceptable claim was chosen (also when a roll of `skipClaimPercent` passed it, and a handoff placeholder)
         NoGain,       // 4: nothing acceptable
     };
@@ -69,7 +89,8 @@ namespace BECore::Mahjong {
      *
      * The first that applies wins:
      * 1. `Mahjong` whenever it is listed (the only claim of `Phase::RobKong`).
-     * 2. `Pass` when the hand waits (`Shanten` 0 with the 13 tiles it holds): it stays concealed and takes mahjong only.
+     * 2. `Pass` when the hand waits (`Shanten` 0 with the 13 tiles it holds): it stays concealed and takes mahjong only. With
+     *    `profile.waitingKongByPoints` a kong that keeps the wait is taken when `RateWaitingKong` says it is worth more.
      * 3. Otherwise each listed pung, kong and chow is rated with `RateClaim` (shanten `s1`, acceptance `a1`; the shanten of the hand as
      *    it is is `s0`). A claim is acceptable when `s1 < s0`, or when `s1 == s0` for a pung or kong of a value tile (`IsValueTile`:
      *    a dragon, the own wind, the round wind; it scores a double). Of the acceptable ones: the lowest `s1`, then the highest `a1`,

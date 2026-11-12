@@ -452,4 +452,111 @@ namespace BECore::Mahjong::Tests {
         EXPECT_GT(acceptable, 0);
     }
 
+    // ----- 2. a waiting hand offered a kong (`waitingKongByPoints`) -----
+
+    namespace {
+
+        /// A concealed pung of red dragons and a single 4p wait; East throws the fourth red dragon.
+        constexpr const char* kWaitingOnPung = "Rd Rd Rd 1s 2s 3s 4s 5s 6s 7m 8m 9m 4p";
+        /// Live tiles the seat is told the wall still holds, so both sides have draws to win with (the fixed wall has only the discard).
+        constexpr int kLiveForValues = 60;
+
+        TableView WaitingKongView(const HandModel& model) {
+            TableView view = MakeTableView(model, kSeat1);
+            view.liveCount = kLiveForValues;
+            return view;
+        }
+
+        /// The same seat with its 1s 2s 3s already an open chow: the hand has lost `FullyConcealed` before the window.
+        TableView OpenWaitingKongView(const HandModel& model) {
+            TableView view = WaitingKongView(model);
+            eastl::vector<Tile> concealed;
+            for (const Tile tile : view.own.concealed) {
+                if (tile != T("1s") && tile != T("2s") && tile != T("3s")) {
+                    concealed.push_back(tile);
+                }
+            }
+            view.own.concealed = eastl::move(concealed);
+            Meld chow;
+            chow.kind = MeldKind::Chow;
+            chow.first = T("1s");
+            chow.from = kSeat0;
+            chow.fromDiscard = true;
+            chow.claimed = T("1s");
+            view.own.melds.push_back(chow);
+            return view;
+        }
+
+        LevelProfile ByPoints() {
+            LevelProfile profile = kNormalProfile;
+            profile.waitingKongByPoints = true;
+            return profile;
+        }
+
+    }  // namespace
+
+    TEST(ComputerClaimTest, AWaitingHandWithTheKnobOffPassesAKongThatKeepsItsWait) {
+        const TableView view = WaitingKongView(WindowModel(kWaitingOnPung, "Rd"));
+        ASSERT_TRUE(Has(view.legal, HandAction::MakeClaim(ClaimKind::Kong)));
+        LevelProfile profile = kNormalProfile;
+        profile.waitingKongByPoints = false;
+        MahjongRng rng(kRngSeed);
+
+        const ClaimDecision decision = DecideClaim(view, rng, profile);
+
+        EXPECT_EQ(decision.action, kPass);
+        EXPECT_EQ(decision.step, ClaimStep::WaitingHand);
+    }
+
+    TEST(ComputerClaimTest, RateWaitingKongRatesOnlyAKongThatKeepsTheWait) {
+        const std::optional<WaitingKong> kong = RateWaitingKong(WaitingKongView(WindowModel(kWaitingOnPung, "Rd")));
+        ASSERT_TRUE(kong.has_value());
+        EXPECT_EQ(kong->kong, HandAction::MakeClaim(ClaimKind::Kong));
+
+        // Two red dragons: a pung is listed, no kong, nothing to rate.
+        EXPECT_FALSE(RateWaitingKong(WaitingKongView(WindowModel("Rd Rd 1s 2s 3s 4s 5s 6s 7m 8m 9m 4p 4p", "Rd"))).has_value());
+    }
+
+    TEST(ComputerClaimTest, AConcealedWaitingHandWeighsTheKongAgainstTheConcealedDouble) {
+        const TableView view = WaitingKongView(WindowModel(kWaitingOnPung, "Rd"));
+        const std::optional<WaitingKong> kong = RateWaitingKong(view);
+        ASSERT_TRUE(kong.has_value());
+        MahjongRng rng(kRngSeed);
+
+        const ClaimDecision decision = DecideClaim(view, rng, ByPoints());
+
+        // The concealed hand loses `FullyConcealed` with the kong; the decision follows the comparison either way.
+        if (kong->KongIsBetter()) {
+            EXPECT_EQ(decision.step, ClaimStep::WaitingKong);
+            EXPECT_EQ(decision.action, kong->kong);
+        } else {
+            EXPECT_EQ(decision.step, ClaimStep::WaitingPass);
+            EXPECT_EQ(decision.action, kPass);
+        }
+        EXPECT_LE(kong->kongValue, kong->passValue) << "the concealed double is worth more than the kong's points here";
+    }
+
+    TEST(ComputerClaimTest, AnOpenWaitingHandTakesTheKongThatKeepsItsWait) {
+        const TableView view = OpenWaitingKongView(WindowModel(kWaitingOnPung, "Rd"));
+        const std::optional<WaitingKong> kong = RateWaitingKong(view);
+        ASSERT_TRUE(kong.has_value());
+        EXPECT_GT(kong->kongValue, kong->passValue) << "nothing is lost, the kong adds points and a loose tile";
+        for (uint32_t seed = 1; seed <= kRngSeeds; ++seed) {
+            MahjongRng rng(seed);
+            const ClaimDecision decision = DecideClaim(view, rng, ByPoints());
+            EXPECT_EQ(decision.step, ClaimStep::WaitingKong) << "rng seed " << seed;
+            EXPECT_EQ(decision.action, HandAction::MakeClaim(ClaimKind::Kong)) << "rng seed " << seed;
+        }
+    }
+
+    TEST(ComputerClaimTest, TheKongOfAWaitingHandDrawsNothingFromTheRng) {
+        const TableView view = OpenWaitingKongView(WindowModel(kWaitingOnPung, "Rd"));
+        MahjongRng used(kRngSeed);
+        MahjongRng fresh(kRngSeed);
+
+        (void)DecideClaim(view, used, ByPoints());
+
+        EXPECT_EQ(used.Below(1000), fresh.Below(1000));
+    }
+
 }  // namespace BECore::Mahjong::Tests

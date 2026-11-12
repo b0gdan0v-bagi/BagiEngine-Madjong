@@ -141,6 +141,8 @@
         <string key="hints.why.claim.value" text="A value tile: its set scores a double."/>
         <string key="hints.why.pass.waiting" text="Your hand waits: a claim would break it."/>
         <string key="hints.why.pass.noGain" text="No claim brings the hand closer to ready."/>
+        <string key="hints.why.pass.points" text="The kong keeps your wait, but the concealed hand is worth more."/>
+        <string key="hints.why.kong.points" text="The kong keeps your wait and is worth more than the concealed hand."/>
         <string key="hints.card.title.chow" text="Take the discard to make a chow."/>
         <string key="hints.card.now" text="Steps to ready now: {now}"/>
         <string key="hints.card.steps" text="Steps"/>
@@ -462,6 +464,8 @@
         <string key="hints.why.claim.value" text="Ценная кость: набор даёт удвоение."/>
         <string key="hints.why.pass.waiting" text="Рука уже ждёт: взяв сброс, вы её сломаете."/>
         <string key="hints.why.pass.noGain" text="Взятие сброса не приближает руку к готовности."/>
+        <string key="hints.why.pass.points" text="Конг сохранит ожидание, но закрытая рука стоит больше."/>
+        <string key="hints.why.kong.points" text="Конг сохраняет ожидание и стоит больше закрытой руки."/>
         <string key="hints.card.title.chow" text="Возьмите сброс и составьте чи."/>
         <string key="hints.card.now" text="Шагов до готовности сейчас: {now}"/>
         <string key="hints.card.steps" text="Шагов"/>

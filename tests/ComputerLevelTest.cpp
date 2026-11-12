@@ -23,12 +23,12 @@ namespace BECore::Mahjong::Tests {
         constexpr int kWholeHands = 6;
 
         /// The final scores of the 16-hand match (`SettingsOf(0)`, flowers off) of each seed 700..703 played by four computers, taken
-        /// from the unmodified tree before the level was added.
+        /// from the unmodified tree before the level was added; seeds 701 and 703 again when Normal took `waitingKongByPoints` (2026-11-12).
         constexpr SeatScores kGoldenScores[kGoldenMatchCount] = {
             {2780, 2550, 1910, 760},
-            {2090, 1420, 2600, 1890},
+            {1790, 1370, 2810, 2030},
             {1480, 2560, 2060, 1900},
-            {1780, 2130, 1670, 2420},
+            {2490, 2250, 1750, 1510},
         };
 
         /// Every action of `kWholeHands` hands played by a table, in order.

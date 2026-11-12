@@ -25,7 +25,7 @@ export PATH="$PWD/engine/.venv/bin:$PATH"     # the reflection generator needs j
 cmake --preset macos-debug                    # the engine's presets; list: cmake --list-presets
 cmake --build --preset macos-debug
 ctest --preset macos-debug                    # MahjongTests and the headless control API smoke
-build/ClangmacOS/BagiMahjong
+build/macos-debug/bin/BagiMahjong
 ```
 
 - **Bot arena** (Release, `docs/bot-arena.md`): measures the computer players over thousands of seeds.
@@ -42,7 +42,7 @@ The first screen (`Setup`) has an `Online` button (desktop only): **Host a room*
 ```bash
 cmake --build --preset macos-debug --target BagiMahjongServer
 build/macos-debug/bin/BagiMahjongServer --port 8080                 # --help lists the flags; PORT and BAGI_ROOMS_* are read too
-build/ClangmacOS/BagiMahjong                                        # twice: Host in one window, Join with its code in the other
+build/macos-debug/bin/BagiMahjong                                   # twice: Host in one window, Join with its code in the other
 ctest --preset macos-debug -R BagiMahjongRoomSmoke                  # starts it, plays hands with four clients, a reconnect
 docker build -f engine/tools/rooms/Dockerfile --build-arg SERVER_TARGET=BagiMahjongServer -t bagi-mahjong-server .
 ```

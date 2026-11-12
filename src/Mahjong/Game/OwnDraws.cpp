@@ -46,9 +46,9 @@ namespace BECore::Mahjong {
         /// The search of one call. Holds the view and the memo; nothing outlives the call.
         class Evaluator {
         public:
-            Evaluator(const TableView& view, int depth)
+            Evaluator(const TableView& view, int depth, int extraDraws = 0)
                 : _view(view), _depth(depth), _meldCount(MeldCountOf(view)), _meldTiles(CountMeldTiles(view.own.melds)), _root(CountTiles(view.own.concealed)), _east(view.seatWind == Wind::East),
-                  _draws(view.liveCount / kSeatCount) {
+                  _draws(view.liveCount / kSeatCount + extraDraws) {
                 int declared = 0;
                 for (Seat seat = 0; seat < kSeatCount; ++seat) {
                     declared += (seat != view.seat && view.seats[seat].callingDeclared) ? 1 : 0;
@@ -365,6 +365,14 @@ namespace BECore::Mahjong {
             ++counts[discard.tile.Id()];
         }
         return BestFirst(eastl::move(ranked));
+    }
+
+    int64_t ValueOfHeldHand(const TableView& view, int extraDraws) {
+        if (!IsSeat(view.seat)) {
+            return 0;
+        }
+        Evaluator evaluator(view, 0, eastl::max(0, extraDraws));
+        return evaluator.Start(CountTiles(view.own.concealed)).Expected();
     }
 
 }  // namespace BECore::Mahjong

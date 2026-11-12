@@ -20,7 +20,7 @@ namespace BECore::Mahjong::Arena {
     };
 
     /// The number of fields of `LevelProfile`, and so of rows of `kProfileKnobs`.
-    inline constexpr size_t kProfileFieldCount = 10;
+    inline constexpr size_t kProfileFieldCount = 11;
 
     inline constexpr eastl::array<ProfileKnob, kProfileFieldCount> kProfileKnobs{{
         {"skipAcceptancePercent", &LevelProfile::skipAcceptancePercent, nullptr, kPercentBase},
@@ -33,6 +33,7 @@ namespace BECore::Mahjong::Arena {
         {"ownDrawsDepth", &LevelProfile::ownDrawsDepth, nullptr, kOwnDrawsMaxDepth},
         {"ownDrawsPickWait", nullptr, &LevelProfile::ownDrawsPickWait, 1},
         {"readDanger", nullptr, &LevelProfile::readDanger, 1},
+        {"waitingKongByPoints", nullptr, &LevelProfile::waitingKongByPoints, 1},
     }};
 
     /// Who sits on a seat: the random "seek win" chooser, or a computer player that plays by `profile`. `name` is the text it was made

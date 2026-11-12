@@ -57,4 +57,14 @@ namespace BECore::Mahjong {
      */
     [[nodiscard]] eastl::vector<DiscardValue> ValueWaits(const TableView& view);
 
+    /**
+     * @brief The seat's hand as it is held (3n + 1 tiles: in a claim window, or a view made for a claim), in milli-points, in the
+     *        closed form of a waiting hand (taken as declared) over the draws the wall leaves plus `extraDraws` (a kong's loose tile).
+     *
+     * No search (a hand that does not wait wins nothing and is worth its standing value when another seat wins). For the kong of a
+     * waiting hand (`RateWaitingKong`, `ComputerClaim.h`): the same arithmetic as `ValueWaits`, so the two choices agree. 0 for a view
+     * of no seat.
+     */
+    [[nodiscard]] int64_t ValueOfHeldHand(const TableView& view, int extraDraws = 0);
+
 }  // namespace BECore::Mahjong

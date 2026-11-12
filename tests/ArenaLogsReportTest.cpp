@@ -32,18 +32,18 @@ matches analysed 5, not analysed 0
 +- is 1.96 standard errors over the matches (a 95 percent interval); the match is the sample, not the decision
 Testers are not experts: the share says how people play, not what is best
 bot                     phase            decisions           equal %
-normal                  discard turn           456    75.82 +- 16.93
-                        claim window           116     93.15 +- 8.25
-                        both                   572    79.27 +- 15.40
+normal                  discard turn           450    76.45 +- 16.55
+                        claim window           114     93.40 +- 7.99
+                        both                   564    79.81 +- 15.08
 
 Real games by the level of the computers met (the logged results of the people's seat-hands at tables with a computer)
 A table whose computers are not all at one level is `mixed`; a hand not finished is not counted; the match is the unit of the intervals
 level     matches   seat-hands            wins %           points/hand           drawn %        declared %   avg win score
-1               2           22     7.69 +- 15.08       -32.61 +- 23.20    24.79 +- 26.80     26.50 +- 8.38           40.00
+1               2           22     7.69 +- 15.08       -35.30 +- 17.92    24.79 +- 26.80     26.50 +- 8.38           40.00
 5               2            9     6.25 +- 12.25       -53.12 +- 52.68      0.00 +- 0.00    18.75 +- 36.75           40.00
 mixed           1            8             25.00                 23.75              0.00             37.50           75.00
 
-Differences from normal: 150 in all, 2 listed (log order)
+Differences from normal: 141 in all, 2 listed (log order)
   a.jsonl hand 1 action 16 seat 0: logged discard Gd, bot chose discard Rd
     --log a.jsonl --hand 1 --action 16
   a.jsonl hand 2 action 3 seat 0: logged discard 9m, bot chose discard 1p

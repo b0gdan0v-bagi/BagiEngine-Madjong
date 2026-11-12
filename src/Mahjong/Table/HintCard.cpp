@@ -240,23 +240,43 @@ namespace BECore::Mahjong {
             footer.Add(TieLine(strings, turn));
         }
 
+        /// The unseen copies of the tiles a waiting hand of a window waits on.
+        int WaitCopies(const ClaimExplanation& claim) {
+            int copies = 0;
+            for (const TileCopies& wait : claim.waits) {
+                copies += wait.unseen;
+            }
+            return copies;
+        }
+
         void ClaimCard(const UIStrings& strings, const TableView& view, const ClaimExplanation& claim, HintCard& card, Footer& footer) {
             const int now = claim.shantenBefore;
             switch (claim.step) {
                 case ClaimStep::Mahjong:
                     footer.Add(Tr(strings, "hints.why.claim.mahjong"));
                     return;
-                case ClaimStep::WaitingHand: {
-                    int copies = 0;
-                    for (const TileCopies& wait : claim.waits) {
-                        copies += wait.unseen;
-                    }
+                case ClaimStep::WaitingHand:
+                case ClaimStep::WaitingPass: {
                     CardRow pass = RowOf(strings, CardRowKind::Best, claim.action, view.pendingTile);
-                    Rate(strings, pass, now, 0, copies);
+                    Rate(strings, pass, now, 0, WaitCopies(claim));
                     AddRow(card, eastl::move(pass));
-                    footer.Add(Tr(strings, "hints.why.pass.waiting"));
+                    footer.Add(Tr(strings, claim.step == ClaimStep::WaitingPass ? "hints.why.pass.points" : "hints.why.pass.waiting"));
                     break;
                 }
+                case ClaimStep::WaitingKong:
+                    if (claim.chosen.has_value()) {
+                        CardRow best = RowOf(strings, CardRowKind::Best, claim.chosen->action, view.pendingTile);
+                        Rate(strings, best, now, claim.chosen->after.shanten, claim.chosen->after.acceptance);
+                        AddRow(card, eastl::move(best));
+                    }
+                    {
+                        // The pass keeps the hand as it waits now: the rows compare directly
+                        CardRow pass = RowOf(strings, CardRowKind::Other, HandAction::MakePass(), view.pendingTile);
+                        Rate(strings, pass, now, 0, WaitCopies(claim));
+                        AddRow(card, eastl::move(pass));
+                    }
+                    footer.Add(Tr(strings, "hints.why.kong.points"));
+                    break;
                 case ClaimStep::Claim:
                     if (claim.chosen.has_value()) {
                         CardRow best = RowOf(strings, CardRowKind::Best, claim.chosen->action, view.pendingTile);
@@ -336,7 +356,9 @@ namespace BECore::Mahjong {
         if (EndsTheHand(note.advised)) {
             footer.Add(Tr(strings, "coach.complete"));
         } else if (note.advised.kind == ActionKind::Pass) {
-            footer.Add(Tr(strings, note.handWaits ? "hints.why.pass.waiting" : "hints.why.pass.noGain"));
+            footer.Add(Tr(strings, note.byPoints ? "hints.why.pass.points" : (note.handWaits ? "hints.why.pass.waiting" : "hints.why.pass.noGain")));
+        } else if (note.byPoints) {
+            footer.Add(Tr(strings, "hints.why.kong.points"));
         } else if (note.advised.declareCalling && note.taken.kind == ActionKind::Discard && !note.taken.declareCalling) {
             footer.Add(Tr(strings, "coach.undeclared"));
         }

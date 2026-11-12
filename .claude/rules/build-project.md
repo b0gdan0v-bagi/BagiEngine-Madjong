@@ -48,13 +48,13 @@ The common configure triggers (the skill states them; this repository adds the o
 ### Gotchas
 
 - The engine is another repository: a build never edits `engine/`. A missing engine feature is `needs engine change`, not a patch here.
-- Executables land in `build/{Clang|MSVC}{macOS|Windows}/BagiMahjong[.exe]` and `MahjongTests`, not in the preset folder; Debug and Release overwrite each other.
-- The web presets (`web-release`, `web-release-single-thread`, `-local` ones in worker folders) build `BagiMahjong` only, into `build/ClangWeb` (`ClangWebSingleThread`); there are no tests, no arena and no control server there. `package.py ... --game BagiMahjong` writes `dist/` (git-ignored). The web-like desktop build and the commands: `docs/web.md`.
+- Executables land in `build/<preset>/bin/` (`BagiMahjong[.exe]`, `MahjongTests`, `BagiMahjongArena`, `BagiMahjongServer`): every preset has its own, so Debug and Release do not overwrite each other.
+- The web presets (`web-release`, `web-release-single-thread`, `-local` ones in worker folders) build `BagiMahjong` only, into `build/<preset>/bin/`; there are no tests, no arena and no control server there. `package.py ... --game BagiMahjong` writes `dist/` (git-ignored). The web-like desktop build and the commands: `docs/web.md`.
 - `BagiMahjong` opens a window, so it is never started to check a build (to launch it use the `run` skill). `MahjongTests` opens none.
 
 ### Tests
 
-`ctest --preset <p>` runs `MahjongTests` (the gtests, each in its own process) and `BagiMahjongControlSmoke` (`be_add_game_control_tests(BagiMahjong SCRIPT tests/control_smoke.py)` in `CMakeLists.txt`). The smoke test starts `BagiMahjong --headless --control` (no window) on a free port, once on the real clock and once with `--manual-clock`, and plays a hand and a match over WebSocket; it takes about 7 seconds. It does not build the executable: `cmake --build --preset <p> --target BagiMahjong MahjongTests` first (a missing executable is a skip, exit code 77). It runs by hand as `BAGI_ENGINE_DIR=engine python3 tests/control_smoke.py --exe build/ClangmacOS/BagiMahjong`.
+`ctest --preset <p>` runs `MahjongTests` (the gtests, each in its own process) and `BagiMahjongControlSmoke` (`be_add_game_control_tests(BagiMahjong SCRIPT tests/control_smoke.py)` in `CMakeLists.txt`). The smoke test starts `BagiMahjong --headless --control` (no window) on a free port, once on the real clock and once with `--manual-clock`, and plays a hand and a match over WebSocket; it takes about 7 seconds. It does not build the executable: `cmake --build --preset <p> --target BagiMahjong MahjongTests` first (a missing executable is a skip, exit code 77). It runs by hand as `BAGI_ENGINE_DIR=engine python3 tests/control_smoke.py --exe build/macos-debug/bin/BagiMahjong`.
 
 ### Local overrides
 
