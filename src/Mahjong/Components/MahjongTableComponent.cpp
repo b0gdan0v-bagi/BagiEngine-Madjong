@@ -673,14 +673,26 @@ namespace BECore::Mahjong {
     }
 
     bool MahjongTableComponent::TapToSelect() const {
+        if (_touchSeen) {
+            return true;
+        }
+        // The window of the last draw, not the renderer's output now: in the editor the table is drawn into the viewport's target, and an
+        // input event or the scene update sees the whole editor window, so the regime would be on at a click and off a moment later
+        if (_drawnSmallHandTile.has_value()) {
+            return *_drawnSmallHandTile;
+        }
+        return SmallHandTileNow();
+    }
+
+    bool MahjongTableComponent::SmallHandTileNow() const {
         if (!CoreManager::GetRenderer()) {
-            return _touchSeen;
+            return false;
         }
         const WindowNumbers numbers = ReadWindow();
         const UILayoutContext& window = numbers.context;
         const ViewSize view = ActiveViewSize(GetScene());
         const TableProfile profile = TableProfileFor(window.outputWidth, window.outputHeight, window.pixelDensity, numbers.minTouchSize, view.width, view.height);
-        return UsesTapToSelect(_touchSeen, window.outputWidth, window.outputHeight, window.pixelDensity, numbers.minTouchSize, profile.handTileW, view.width, view.height);
+        return UsesTapToSelect(false, window.outputWidth, window.outputHeight, window.pixelDensity, numbers.minTouchSize, profile.handTileW, view.width, view.height);
     }
 
     bool MahjongTableComponent::SelectionHolds(const MahjongGame& game) const {
@@ -1188,6 +1200,7 @@ namespace BECore::Mahjong {
     void MahjongTableComponent::OnDraw() {
         BE_PROFILE_SCOPE("MahjongTable::OnDraw");
         PollTableLayoutSpec();
+        _drawnSmallHandTile = SmallHandTileNow();
         IRenderer& renderer = *CoreManager::GetRenderer();
         // The active view: the design of one of the four shapes (`Scene::Draw` picked it before this draw)
         const ViewSize view = ActiveViewSize(GetScene());
