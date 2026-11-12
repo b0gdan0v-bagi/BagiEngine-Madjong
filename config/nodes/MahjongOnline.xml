@@ -1,0 +1,450 @@
+<?xml version="1.0"?>
+<!--
+  The online panel: a modal Screen canvas like Setup (ScaleWithScreen, minScale 0.6: a 56 unit control is 33.6 px, so every control is a touch target in any
+  window), hidden here, layer 32 (Setup is 30, Options 31, the pad of OnlineEntry 33). One plate holds all four pages, and a page is the set of elements shown by
+  name (UICanvasComponent::SetElementVisible); a hidden element takes no room, so the rows of a page share the plate. As shipped the Menu page is on:
+    Menu   OnlineTitleMenu, OnlineMenuHost, OnlineMenuJoin, OnlineMenuReturn (only while a session is kept)
+    Host   OnlineTitleHost, OnlineNameRow, OnlineHandsRow, OnlineLevelRow, OnlineGap, OnlineButtons with OnlineCreate
+    Join   OnlineTitleJoin, OnlineNameRow, OnlineCodeRow, OnlineGap, OnlineButtons with OnlineEnter
+    Lobby  OnlineTitleLobby, OnlineSeatRow0..3 (OnlineSit0..3 beside the seats that can be taken), OnlineGap, OnlineButtons with OnlineStart (the host) and OnlineLeave
+  and, on any page, at most one line under the title: OnlineNotice ({onlineNotice}, an error), OnlineStatus ({onlineStatus}, connecting and reconnecting) or, in the
+  lobby, OnlineWaiting / OnlineStarted. The fields are buttons (OnlineName, OnlineCode: action MahjongOnlineField, value name or code) that open the page
+  OnlineEntry; their text is {onlineName} and {onlineCode}. The seat texts are {onlineSeat0..3}, the title of the lobby and the Return button say {onlineRoom}.
+  OnlineClose (the cross at the right of the title band, as on Setup) only hides the panel. The hands are a UISegmented (action MahjongOnlineHands, value 16 or 8,
+  variable onlineHands), the level a UIDropdown (MahjongOnlineLevel, onlineLevel, the options OnlineLevel1 .. 10 with the heights of Setup's lists by the height
+  variants, so the open list always fits the canvas); both sit in rows of Setup's shape (caption 112 wide, group 87.5 % of a row of 64).
+  The roomy shape (1280 x 720 units) is the plate of at most 560 high (32 padding + 56 title band + 96 line + 4 x 64 seats + 64 OnlineButtons + 7 x 8 spacing,
+  OnlineGap empty so the 8 + 8 round it set the buttons 16 apart from the rows); the rows share it by flex weights that come out at their maximum heights (title 56,
+  line 96, rows and buttons 64; the three Menu buttons 80) and stop growing there. A page with fewer rows leaves the lower part of the plate empty: a stack has no
+  height of its content. The line is as high as 96 because the longest error is two lines of text in the smallest window. The variant for a canvas of at most 480
+  units wide takes the whole safe width, narrows the captions (52) and the Sit here buttons (96) and drops the title's spacer; the variant of at most 360 hides the
+  captions (a 480 px window at the user scale 1.5 is 320 x 320 units with 262 of safe width) and the heights of the dropdown options follow the canvas as on Setup.
+  With seven rows in 297 units of safe height a row is about 29 units, from 21.3 units a control is 32 px. Every text may shrink (AutoFit, down to 12 units). A
+  player's name is the one text that can still be cut there: on a seat row about ten wide letters fit beside the seat's number and Sit here; the longest name the
+  server takes (24 bytes) fits whole in the field. MahjongHudOnlineTest holds the shapes, the touch size and the words of every page on the whole size matrix.
+-->
+<node name="Online" layer="32" contentVersion="5">
+  <components>
+    <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" modal="true" visible="false">
+      <elements>
+        <element type="UIElement" name="OnlineDim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
+        <element type="UIStack" name="OnlinePlate" anchor="Center" width="94%" maxWidth="640" height="100%" maxHeight="560" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
+          <children>
+            <element type="UIStack" name="OnlineTitleRow" flex="0.875" maxHeight="56" direction="Horizontal" spacing="0" crossAlign="Stretch" color="58,66,92,255">
+              <children>
+                <element type="UIElement" name="OnlineTitleSpacer" width="56" />
+                <element type="UIElement" name="OnlineTitleMenu" flex="1" fontSize="28">
+                  <components>
+                    <component type="UITextComponent" text="{#online.title}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="OnlineTitleHost" flex="1" fontSize="28" visible="false">
+                  <components>
+                    <component type="UITextComponent" text="{#online.host}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="OnlineTitleJoin" flex="1" fontSize="28" visible="false">
+                  <components>
+                    <component type="UITextComponent" text="{#online.join}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="OnlineTitleLobby" flex="1" fontSize="28" visible="false">
+                  <components>
+                    <component type="UITextComponent" text="{#online.lobby.title}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="OnlineClose" width="56" fontSize="28" color="70,70,100,255">
+                  <components>
+                    <component type="UITextComponent" text="{#setup.closeMark}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UIInputClicker" action="MahjongOnlineClose"/>
+                    <component type="UITooltipComponent" text="{#setup.close}"/>
+                  </components>
+                </element>
+              </children>
+            </element>
+            <element type="UIElement" name="OnlineNotice" flex="1.5" maxHeight="96" fontSize="18" visible="false">
+              <components>
+                <component type="UITextComponent" text="{onlineNotice}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+              </components>
+            </element>
+            <element type="UIElement" name="OnlineStatus" flex="1.5" maxHeight="96" fontSize="18" visible="false">
+              <components>
+                <component type="UITextComponent" text="{onlineStatus}" textColor="190,196,190,255" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+              </components>
+            </element>
+            <element type="UIElement" name="OnlineWaiting" flex="1.5" maxHeight="96" fontSize="18" visible="false">
+              <components>
+                <component type="UITextComponent" text="{#online.waitHost}" textColor="190,196,190,255" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+              </components>
+            </element>
+            <element type="UIElement" name="OnlineStarted" flex="1.5" maxHeight="96" fontSize="18" visible="false">
+              <components>
+                <component type="UITextComponent" text="{#online.started}" textColor="190,196,190,255" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+              </components>
+            </element>
+            <element type="UIElement" name="OnlineMenuHost" flex="1" maxHeight="80" fontSize="28" color="45,75,120,255">
+              <components>
+                <component type="UITextComponent" text="{#online.host}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                <component type="UIInputClicker" action="MahjongOnlineHost"/>
+              </components>
+            </element>
+            <element type="UIElement" name="OnlineMenuJoin" flex="1" maxHeight="80" fontSize="28" color="45,75,120,255">
+              <components>
+                <component type="UITextComponent" text="{#online.join}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                <component type="UIInputClicker" action="MahjongOnlineJoin"/>
+              </components>
+            </element>
+            <element type="UIElement" name="OnlineMenuReturn" flex="1" maxHeight="80" fontSize="28" color="40,110,60,255" visible="false">
+              <components>
+                <component type="UITextComponent" text="{#online.return}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                <component type="UIInputClicker" action="MahjongOnlineResume"/>
+              </components>
+            </element>
+            <element type="UIStack" name="OnlineNameRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255" visible="false">
+              <children>
+                <element type="UIElement" name="OnlineNameCaption" width="112" height="87.5%" fontSize="22">
+                  <components>
+                    <component type="UITextComponent" text="{#online.field.name}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="OnlineName" flex="1" height="87.5%" fontSize="22" color="70,70,100,255">
+                  <components>
+                    <component type="UITextComponent" text="{onlineName}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UIInputClicker" action="MahjongOnlineField" value="name"/>
+                  </components>
+                </element>
+              </children>
+            </element>
+            <element type="UIStack" name="OnlineCodeRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255" visible="false">
+              <children>
+                <element type="UIElement" name="OnlineCodeCaption" width="112" height="87.5%" fontSize="22">
+                  <components>
+                    <component type="UITextComponent" text="{#online.field.code}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="OnlineCode" flex="1" height="87.5%" fontSize="22" color="70,70,100,255">
+                  <components>
+                    <component type="UITextComponent" text="{onlineCode}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UIInputClicker" action="MahjongOnlineField" value="code"/>
+                  </components>
+                </element>
+              </children>
+            </element>
+            <element type="UIStack" name="OnlineHandsRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255" visible="false">
+              <children>
+                <element type="UIElement" name="OnlineHandsCaption" width="112" height="87.5%" fontSize="22">
+                  <components>
+                    <component type="UITextComponent" text="{#setup.hands}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UISegmented" name="OnlineHandsChoice" bind="onlineHands" flex="1" height="87.5%" direction="Horizontal" spacing="4" color="48,54,72,255">
+                  <children>
+                    <element type="UIElement" name="OnlineHands16" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
+                      <components>
+                        <component type="UITextComponent" text="16" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" action="MahjongOnlineHands" value="16"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="OnlineHands8" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
+                      <components>
+                        <component type="UITextComponent" text="8" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" action="MahjongOnlineHands" value="8"/>
+                      </components>
+                    </element>
+                  </children>
+                </element>
+              </children>
+            </element>
+            <element type="UIStack" name="OnlineLevelRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255" visible="false">
+              <children>
+                <element type="UIElement" name="OnlineLevelCaption" width="112" height="87.5%" fontSize="22">
+                  <components>
+                    <component type="UITextComponent" text="{#online.field.level}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIDropdown" name="OnlineLevel" bind="onlineLevel" action="MahjongOnlineLevel" flex="1" height="87.5%" optionHeight="56" fontSize="22" color="70,70,100,255">
+                  <components>
+                    <component type="UITextComponent" text="" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="8" fadeWhenDisabled="true"/>
+                  </components>
+                  <children>
+                    <element type="UIElement" name="OnlineLevel1" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="1" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="1"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="OnlineLevel2" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="2" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="2"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="OnlineLevel3" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="3" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="3"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="OnlineLevel4" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="4" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="4"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="OnlineLevel5" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="5" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="5"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="OnlineLevel6" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="6" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="6"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="OnlineLevel7" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="7" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="7"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="OnlineLevel8" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="8" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="8"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="OnlineLevel9" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="9" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="9"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="OnlineLevel10" fontSize="22" color="70,70,100,255">
+                      <components>
+                        <component type="UITextComponent" text="10" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" value="10"/>
+                      </components>
+                    </element>
+                  </children>
+                </element>
+              </children>
+            </element>
+            <element type="UIStack" name="OnlineSeatRow0" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255" visible="false">
+              <children>
+                <element type="UIElement" name="OnlineSeatCaption0" width="112" height="87.5%" fontSize="22">
+                  <components>
+                    <component type="UITextComponent" text="{#setup.seat1}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="OnlineSeat0" flex="1" height="87.5%" fontSize="22">
+                  <components>
+                    <component type="UITextComponent" text="{onlineSeat0}" align="Left" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="OnlineSit0" width="112" height="87.5%" fontSize="22" color="40,110,60,255" visible="false">
+                  <components>
+                    <component type="UITextComponent" text="{#online.sit}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UIInputClicker" action="MahjongOnlineSit" value="0"/>
+                  </components>
+                </element>
+              </children>
+            </element>
+            <element type="UIStack" name="OnlineSeatRow1" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255" visible="false">
+              <children>
+                <element type="UIElement" name="OnlineSeatCaption1" width="112" height="87.5%" fontSize="22">
+                  <components>
+                    <component type="UITextComponent" text="{#setup.seat2}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="OnlineSeat1" flex="1" height="87.5%" fontSize="22">
+                  <components>
+                    <component type="UITextComponent" text="{onlineSeat1}" align="Left" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="OnlineSit1" width="112" height="87.5%" fontSize="22" color="40,110,60,255" visible="false">
+                  <components>
+                    <component type="UITextComponent" text="{#online.sit}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UIInputClicker" action="MahjongOnlineSit" value="1"/>
+                  </components>
+                </element>
+              </children>
+            </element>
+            <element type="UIStack" name="OnlineSeatRow2" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255" visible="false">
+              <children>
+                <element type="UIElement" name="OnlineSeatCaption2" width="112" height="87.5%" fontSize="22">
+                  <components>
+                    <component type="UITextComponent" text="{#setup.seat3}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="OnlineSeat2" flex="1" height="87.5%" fontSize="22">
+                  <components>
+                    <component type="UITextComponent" text="{onlineSeat2}" align="Left" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="OnlineSit2" width="112" height="87.5%" fontSize="22" color="40,110,60,255" visible="false">
+                  <components>
+                    <component type="UITextComponent" text="{#online.sit}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UIInputClicker" action="MahjongOnlineSit" value="2"/>
+                  </components>
+                </element>
+              </children>
+            </element>
+            <element type="UIStack" name="OnlineSeatRow3" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255" visible="false">
+              <children>
+                <element type="UIElement" name="OnlineSeatCaption3" width="112" height="87.5%" fontSize="22">
+                  <components>
+                    <component type="UITextComponent" text="{#setup.seat4}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="OnlineSeat3" flex="1" height="87.5%" fontSize="22">
+                  <components>
+                    <component type="UITextComponent" text="{onlineSeat3}" align="Left" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="OnlineSit3" width="112" height="87.5%" fontSize="22" color="40,110,60,255" visible="false">
+                  <components>
+                    <component type="UITextComponent" text="{#online.sit}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UIInputClicker" action="MahjongOnlineSit" value="3"/>
+                  </components>
+                </element>
+              </children>
+            </element>
+            <element type="UIElement" name="OnlineGap" height="0" visible="false" />
+            <element type="UIStack" name="OnlineButtons" flex="1" maxHeight="64" direction="Horizontal" spacing="8" crossAlign="Stretch" visible="false">
+              <children>
+                <element type="UIElement" name="OnlineCreate" flex="1" fontSize="28" color="40,110,60,255" visible="false">
+                  <components>
+                    <component type="UITextComponent" text="{#online.create}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UIInputClicker" action="MahjongOnlineCreate"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="OnlineEnter" flex="1" fontSize="28" color="40,110,60,255" visible="false">
+                  <components>
+                    <component type="UITextComponent" text="{#online.enter}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UIInputClicker" action="MahjongOnlineEnter"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="OnlineStart" flex="1" fontSize="28" color="40,110,60,255" visible="false">
+                  <components>
+                    <component type="UITextComponent" text="{#setup.start}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UIInputClicker" action="MahjongOnlineStart"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="OnlineLeave" flex="1" fontSize="28" color="70,70,100,255" visible="false">
+                  <components>
+                    <component type="UITextComponent" text="{#online.leave}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UIInputClicker" action="MahjongOnlineLeave"/>
+                  </components>
+                </element>
+              </children>
+            </element>
+          </children>
+        </element>
+      </elements>
+      <variants>
+        <variant when="maxWidth:480">
+          <overrides>
+            <set element="OnlinePlate" width="100%" />
+            <set element="OnlineTitleSpacer" width="0" />
+            <set element="OnlineNameCaption" width="52" />
+            <set element="OnlineCodeCaption" width="52" />
+            <set element="OnlineHandsCaption" width="52" />
+            <set element="OnlineLevelCaption" width="52" />
+            <set element="OnlineSeatCaption0" width="52" />
+            <set element="OnlineSeatCaption1" width="52" />
+            <set element="OnlineSeatCaption2" width="52" />
+            <set element="OnlineSeatCaption3" width="52" />
+            <set element="OnlineSit0" width="96" />
+            <set element="OnlineSit1" width="96" />
+            <set element="OnlineSit2" width="96" />
+            <set element="OnlineSit3" width="96" />
+          </overrides>
+        </variant>
+        <variant when="maxWidth:360">
+          <overrides>
+            <set element="OnlineNameCaption" visible="false" />
+            <set element="OnlineCodeCaption" visible="false" />
+            <set element="OnlineHandsCaption" visible="false" />
+            <set element="OnlineLevelCaption" visible="false" />
+            <set element="OnlineSeatCaption0" visible="false" />
+            <set element="OnlineSeatCaption1" visible="false" />
+            <set element="OnlineSeatCaption2" visible="false" />
+            <set element="OnlineSeatCaption3" visible="false" />
+          </overrides>
+        </variant>
+        <variant when="maxHeight:601">
+          <overrides>
+            <set element="OnlineLevel1" height="44" />
+            <set element="OnlineLevel2" height="44" />
+            <set element="OnlineLevel3" height="44" />
+            <set element="OnlineLevel4" height="44" />
+            <set element="OnlineLevel5" height="44" />
+            <set element="OnlineLevel6" height="44" />
+            <set element="OnlineLevel7" height="44" />
+            <set element="OnlineLevel8" height="44" />
+            <set element="OnlineLevel9" height="44" />
+            <set element="OnlineLevel10" height="44" />
+          </overrides>
+        </variant>
+        <variant when="maxHeight:472">
+          <overrides>
+            <set element="OnlineLevel1" height="32" />
+            <set element="OnlineLevel2" height="32" />
+            <set element="OnlineLevel3" height="32" />
+            <set element="OnlineLevel4" height="32" />
+            <set element="OnlineLevel5" height="32" />
+            <set element="OnlineLevel6" height="32" />
+            <set element="OnlineLevel7" height="32" />
+            <set element="OnlineLevel8" height="32" />
+            <set element="OnlineLevel9" height="32" />
+            <set element="OnlineLevel10" height="32" />
+          </overrides>
+        </variant>
+        <variant when="maxHeight:343">
+          <overrides>
+            <set element="OnlineLevel1" height="24" />
+            <set element="OnlineLevel2" height="24" />
+            <set element="OnlineLevel3" height="24" />
+            <set element="OnlineLevel4" height="24" />
+            <set element="OnlineLevel5" height="24" />
+            <set element="OnlineLevel6" height="24" />
+            <set element="OnlineLevel7" height="24" />
+            <set element="OnlineLevel8" height="24" />
+            <set element="OnlineLevel9" height="24" />
+            <set element="OnlineLevel10" height="24" />
+          </overrides>
+        </variant>
+        <variant when="maxHeight:257">
+          <overrides>
+            <set element="OnlineLevel1" height="20" />
+            <set element="OnlineLevel2" height="20" />
+            <set element="OnlineLevel3" height="20" />
+            <set element="OnlineLevel4" height="20" />
+            <set element="OnlineLevel5" height="20" />
+            <set element="OnlineLevel6" height="20" />
+            <set element="OnlineLevel7" height="20" />
+            <set element="OnlineLevel8" height="20" />
+            <set element="OnlineLevel9" height="20" />
+            <set element="OnlineLevel10" height="20" />
+          </overrides>
+        </variant>
+        <variant when="maxHeight:214">
+          <overrides>
+            <set element="OnlineLevel1" height="16" />
+            <set element="OnlineLevel2" height="16" />
+            <set element="OnlineLevel3" height="16" />
+            <set element="OnlineLevel4" height="16" />
+            <set element="OnlineLevel5" height="16" />
+            <set element="OnlineLevel6" height="16" />
+            <set element="OnlineLevel7" height="16" />
+            <set element="OnlineLevel8" height="16" />
+            <set element="OnlineLevel9" height="16" />
+            <set element="OnlineLevel10" height="16" />
+          </overrides>
+        </variant>
+      </variants>
+    </component>
+  </components>
+</node>

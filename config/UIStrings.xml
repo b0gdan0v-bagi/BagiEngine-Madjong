@@ -281,7 +281,7 @@
         <string key="move.upgradeKong" text="{seat} added {tile} to a pung to make a kong"/>
         <string key="online.error.unknownRoom" text="No room has this code. Check the code and try again."/>
         <string key="online.error.roomFull" text="This room is full."/>
-        <string key="online.error.gameStarted" text="The game in this room has already started. Only a player who was in it can come back."/>
+        <string key="online.error.gameStarted" text="The game has already started. Only a player who was in it can come back."/>
         <string key="online.error.seatTaken" text="That seat is taken. Choose another one."/>
         <string key="online.error.badName" text="That name cannot be used. Choose another one."/>
         <string key="online.error.notHost" text="Only the host can do that."/>
@@ -304,6 +304,22 @@
         <string key="online.seat.away" text="{name} (away)"/>
         <string key="online.pad.letters" text="ABCDEFGHIJKLMNOPQRSTUVWXYZ"/>
         <string key="online.name.default" text="Player"/>
+        <string key="online.title" text="Play online"/>
+        <string key="online.host" text="Host a room"/>
+        <string key="online.join" text="Join a room"/>
+        <string key="online.return" text="Return to room {onlineRoom}"/>
+        <string key="online.field.name" text="Name"/>
+        <string key="online.field.code" text="Code"/>
+        <string key="online.field.level" text="Level"/>
+        <string key="online.create" text="Create"/>
+        <string key="online.enter" text="Enter"/>
+        <string key="online.lobby.title" text="Room {onlineRoom}"/>
+        <string key="online.sit" text="Sit here"/>
+        <string key="online.leave" text="Leave"/>
+        <string key="online.waitHost" text="Waiting for the host"/>
+        <string key="online.started" text="The game has started"/>
+        <string key="online.delete" text="Delete"/>
+        <string key="online.done" text="Done"/>
     </language>
     <language id="ru">
         <string key="lang.en" text="English"/>
@@ -584,13 +600,13 @@
         <string key="move.upgradeKong" text="{seat} добавило {tile} к пуну, получился конг"/>
         <string key="online.error.unknownRoom" text="Комнаты с таким кодом нет. Проверьте код и попробуйте ещё раз."/>
         <string key="online.error.roomFull" text="В комнате нет свободных мест."/>
-        <string key="online.error.gameStarted" text="Игра в этой комнате уже началась. Вернуться может только тот, кто в ней играл."/>
+        <string key="online.error.gameStarted" text="Игра уже началась. Вернуться может только тот, кто в ней играл."/>
         <string key="online.error.seatTaken" text="Это место занято. Выберите другое."/>
         <string key="online.error.badName" text="Это имя нельзя использовать. Выберите другое."/>
         <string key="online.error.notHost" text="Это может сделать только хозяин комнаты."/>
         <string key="online.error.roomGone" text="Комната закрыта, игру не продолжить."/>
         <string key="online.error.replaced" text="Ваше место занято с другого устройства."/>
-        <string key="online.error.rateLimited" text="Слишком много запросов. Подождите немного и попробуйте ещё раз."/>
+        <string key="online.error.rateLimited" text="Слишком много запросов. Подождите и попробуйте ещё раз."/>
         <string key="online.error.busy" text="Сервер занят. Попробуйте позже."/>
         <string key="online.error.connectFailed" text="Не удаётся подключиться к серверу. Проверьте адрес."/>
         <string key="online.error.noAnswer" text="Сервер не отвечает. Попробуйте позже."/>
@@ -607,5 +623,21 @@
         <string key="online.seat.away" text="{name} (не в сети)"/>
         <string key="online.pad.letters" text="АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ"/>
         <string key="online.name.default" text="Игрок"/>
+        <string key="online.title" text="Игра по сети"/>
+        <string key="online.host" text="Создать комнату"/>
+        <string key="online.join" text="Войти в комнату"/>
+        <string key="online.return" text="Вернуться в комнату {onlineRoom}"/>
+        <string key="online.field.name" text="Имя"/>
+        <string key="online.field.code" text="Код"/>
+        <string key="online.field.level" text="Уровень"/>
+        <string key="online.create" text="Создать"/>
+        <string key="online.enter" text="Войти"/>
+        <string key="online.lobby.title" text="Комната {onlineRoom}"/>
+        <string key="online.sit" text="Сесть здесь"/>
+        <string key="online.leave" text="Выйти"/>
+        <string key="online.waitHost" text="Ждём хозяина комнаты"/>
+        <string key="online.started" text="Игра началась"/>
+        <string key="online.delete" text="Стереть"/>
+        <string key="online.done" text="Готово"/>
     </language>
 </UIStrings>

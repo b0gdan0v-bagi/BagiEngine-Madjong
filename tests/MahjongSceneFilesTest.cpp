@@ -28,7 +28,7 @@ namespace BECore::Mahjong::Tests {
         constexpr SceneNode kSceneNodes[] = {
             {"Table", 0},        {"Hints", 5},    {"HintsButton", 6}, {"Actions", 10},   {"ActionsCompact", 10}, {"Hud", 10},      {"SeatPlates", 10},
             {"CenterPanel", 10}, {"HudMenu", 10}, {"HintsWhy", 11},   {"TileHover", 12}, {"Handoff", 20},        {"HandOver", 25}, {"HandOverAction", 26},
-            {"MatchOver", 25},   {"Setup", 30},   {"Options", 31},    {"Rules", 35},     {"RulesAction", 36},
+            {"MatchOver", 25},   {"Setup", 30},   {"Options", 31},    {"Online", 32},    {"OnlineEntry", 33},    {"Rules", 35},    {"RulesAction", 36},
         };
 
         std::string NodeFileStem(const char* name) {
