@@ -31,7 +31,7 @@ namespace BECore::Mahjong::Tests {
         constexpr const char* kDiscarder = "2p 5p 8p 2s 5s 8s 2m 5m 8m Rd Wd Nw 9s";
 
         constexpr SeatSetup kPersonAtSeat0{SeatKind::Person, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
-        constexpr SeatSetup kPersonAtSeat2{SeatKind::Computer, SeatKind::Computer, SeatKind::Person, SeatKind::Computer};
+        constexpr SeatSetup kPersonAtSeat1{SeatKind::Computer, SeatKind::Person, SeatKind::Computer, SeatKind::Computer};
         /// Times that a blink period (`kClaimBlinkSeconds` 0.5) divides exactly in floats: 0.375 s is in the off half, 0.125 s ends it.
         constexpr float kOffHalf = 0.375f;
         constexpr float kEndOfPeriod = 0.125f;
@@ -505,22 +505,23 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableLostClaimTest, TheMarksFollowTheViewerAndSitOnThePlatesWhereTheSeatsAre) {
-        // A person at seat 2 holds the pung; seat 1 (a computer) has declared and wins on the 4p
-        ASSERT_NO_FATAL_FAILURE(StartWindow(kPersonAtSeat2, WindowModel(WindowSpec(kQuietHand, kSeatWaits, kPungHand), {kSeat1})));
-        ASSERT_EQ(_table->GetLayout().viewer, kSeat2);
-        ASSERT_EQ(SeatPosition(kSeat2, kSeat2), 0);
-        AdvanceTime(kComputerStepSeconds);  // seat 1 claims the mahjong; seat 2 is a person and has yet to decide
-        ASSERT_EQ(Hand().GetPhase(), Phase::Claim);
+        // A person at seat 1 holds the pung; seat 2 (a computer) has declared and wins on the 4p. The person decides first: a mahjong
+        // claimed first would settle the window without asking the pung, which could not beat it.
+        ASSERT_NO_FATAL_FAILURE(StartWindow(kPersonAtSeat1, WindowModel(WindowSpec(kQuietHand, kPungHand, kSeatWaits), {kSeat2})));
+        ASSERT_EQ(_table->GetLayout().viewer, kSeat1);
+        ASSERT_EQ(SeatPosition(kSeat1, kSeat1), 0);
         EmitAction("MahjongClaimPung");
+        ASSERT_EQ(Hand().GetPhase(), Phase::Claim);  // seat 2 has yet to decide
+        AdvanceTime(kComputerStepSeconds);           // seat 2 claims the mahjong
         ASSERT_EQ(Hand().GetPhase(), Phase::Finished);
         Draw();
 
-        EXPECT_TRUE(Framed(kSeat2));
-        EXPECT_TRUE(Blinking(kSeat1));
+        EXPECT_TRUE(Framed(kSeat1));
+        EXPECT_TRUE(Blinking(kSeat2));
         // The plate of the person is the one at the bottom of the table: lower than every other plate
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            if (seat != kSeat2) {
-                EXPECT_GT(PlateOf(kSeat2).y, PlateOf(seat).y) << "seat " << seat;
+            if (seat != kSeat1) {
+                EXPECT_GT(PlateOf(kSeat1).y, PlateOf(seat).y) << "seat " << seat;
             }
         }
         EXPECT_EQ(RectsOf(kClaimLostFrame).size(), 4u);

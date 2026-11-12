@@ -435,6 +435,35 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(model.GetHand(kSeat1).melds.empty());
     }
 
+    TEST(HandModelClaimTest, AMahjongClaimThatNoWaitingSeatCanBeatSettlesTheWindowAtOnce) {
+        HandModel model = PriorityWindow();
+        ASSERT_EQ(model.GetPhase(), Phase::Claim);
+
+        // Seat 2 is the farthest from the discarder: neither the chow of seat 0 nor the pung of seat 1 could beat it, so the table
+        // does not wait for them (online, a person who could chow would otherwise hold the table).
+        ASSERT_TRUE(model.Claim(kSeat2, ClaimKind::Mahjong).has_value());
+
+        EXPECT_EQ(model.GetPhase(), Phase::Finished);
+        ASSERT_TRUE(model.Result().has_value());
+        EXPECT_EQ(model.Result()->winner, kSeat2);
+        EXPECT_TRUE(model.PendingClaimSeats().empty());
+        EXPECT_TRUE(model.LegalActions(kSeat0).empty());
+    }
+
+    TEST(HandModelClaimTest, APungThatNoWaitingSeatCanBeatSettlesTheWindowAtOnce) {
+        HandModel model = PriorityWindow();
+        ASSERT_EQ(model.GetPhase(), Phase::Claim);
+
+        ASSERT_TRUE(model.Pass(kSeat2).has_value());
+        ASSERT_TRUE(model.Claim(kSeat1, ClaimKind::Pung).has_value());  // seat 0 can only chow: it is not asked
+
+        EXPECT_EQ(model.GetPhase(), Phase::Discard);
+        EXPECT_EQ(model.CurrentSeat(), kSeat1);
+        EXPECT_TRUE(HasMeld(model.GetHand(kSeat1), MeldKind::Pung, T(kPriorityTile), kSeat3, T(kPriorityTile)));
+        ASSERT_TRUE(model.LastClaimWindow().has_value());
+        EXPECT_TRUE(model.LastClaimWindow()->beaten.empty());  // a seat that was not asked made no claim
+    }
+
     TEST(HandModelClaimTest, APungBeatsAChowWhateverTheOrderOfTheDecisions) {
         HandModel model = PriorityWindow();
         ASSERT_EQ(model.GetPhase(), Phase::Claim);
@@ -547,9 +576,14 @@ namespace BECore::Mahjong::Tests {
             ASSERT_EQ(model.GetPhase(), Phase::Claim);
             ASSERT_EQ(model.PendingClaimSeats().size(), 2u);
 
-            ASSERT_TRUE(model.Claim(nearFirst ? kSeat0 : kSeat1, ClaimKind::Mahjong).has_value());
-            EXPECT_EQ(model.GetPhase(), Phase::Claim);
-            ASSERT_TRUE(model.Claim(nearFirst ? kSeat1 : kSeat0, ClaimKind::Mahjong).has_value());
+            if (nearFirst) {
+                ASSERT_TRUE(model.Claim(kSeat0, ClaimKind::Mahjong).has_value());
+                EXPECT_EQ(model.GetPhase(), Phase::Claim);  // the farther seat could still beat it
+                ASSERT_TRUE(model.Claim(kSeat1, ClaimKind::Mahjong).has_value());
+            } else {
+                // Nothing the nearer seat could claim beats the farther mahjong: it is not asked.
+                ASSERT_TRUE(model.Claim(kSeat1, ClaimKind::Mahjong).has_value());
+            }
 
             ASSERT_TRUE(model.Result().has_value());
             EXPECT_EQ(model.Result()->kind, ResultKind::Win);

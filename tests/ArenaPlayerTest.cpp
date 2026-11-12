@@ -12,7 +12,7 @@
  * The players and the one hand of the arena (`src/Mahjong/Arena/`): the text specs of the players, the table of the knobs of
  * `LevelProfile`, the random "seek win" chooser and `PlayArenaHand`. The last part is the point of the arena: it plays the hands of
  * `ComputerStrengthTest` (seeds 4000..4059, Normal on each seat in turn against three random seats) to the same numbers (those of
- * Normal since `waitingKongByPoints`, 2026-11-12): 187 wins of 240, 27 won by the random seats together, 26 drawn hands, +34090 points
+ * Normal since `waitingKongByPoints` and the claim window that settles early, 2026-11-12): 190 wins of 240, 27 won by the random seats together, 23 drawn hands, +35270 points
  * for the focus seat. Pure logic: no engine services; about
  * 6 s in Debug (2 s of it the search seat with and without a loop over its worlds).
  */
@@ -342,10 +342,10 @@ namespace BECore::Mahjong::Arena {
             }
         }
         EXPECT_EQ(hands, 240);
-        EXPECT_EQ(focusWins, 187);
+        EXPECT_EQ(focusWins, 190);
         EXPECT_EQ(randomWins, 27);
-        EXPECT_EQ(drawn, 26);
-        EXPECT_EQ(focusPoints, 34090);
+        EXPECT_EQ(drawn, 23);
+        EXPECT_EQ(focusPoints, 35270);
     }
 
     TEST(ArenaPlayerTest, AProfilePlayerPlaysLikeTheComputerPlayerOfItsLevel) {

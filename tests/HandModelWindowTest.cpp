@@ -122,9 +122,10 @@ namespace BECore::Mahjong::Tests {
     TEST(HandModelWindowTest, AMahjongBeatsAPungAndAChowAndTheRecordSurvivesTheEndOfTheHand) {
         HandModel model = PriorityWindow();
 
-        ASSERT_TRUE(model.Claim(kSeat2, ClaimKind::Mahjong).has_value());
-        ASSERT_TRUE(model.Claim(kSeat0, ClaimKind::Chow, T(kPriorityChow)).has_value());
+        // The mahjong comes last: once it is claimed nobody else is asked (it cannot be beaten).
         ASSERT_TRUE(model.Claim(kSeat1, ClaimKind::Pung).has_value());
+        ASSERT_TRUE(model.Claim(kSeat0, ClaimKind::Chow, T(kPriorityChow)).has_value());
+        ASSERT_TRUE(model.Claim(kSeat2, ClaimKind::Mahjong).has_value());
 
         EXPECT_EQ(model.GetPhase(), Phase::Finished);
         ASSERT_TRUE(model.LastClaimWindow().has_value());
@@ -155,8 +156,8 @@ namespace BECore::Mahjong::Tests {
         Lap(model, "9p 9s Gd", {kSeat0, kSeat1});
         ASSERT_TRUE(model.Discard(kSeat3, T("Rd")).has_value());
 
+        ASSERT_TRUE(model.Claim(kSeat0, ClaimKind::Mahjong).has_value());  // the farther seat could beat it: the window waits
         ASSERT_TRUE(model.Claim(kSeat1, ClaimKind::Mahjong).has_value());
-        ASSERT_TRUE(model.Claim(kSeat0, ClaimKind::Mahjong).has_value());
 
         ASSERT_TRUE(model.LastClaimWindow().has_value());
         const ClaimWindowResult& window = *model.LastClaimWindow();

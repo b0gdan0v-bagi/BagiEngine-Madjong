@@ -10,8 +10,8 @@
  * focus player and each of the four seats against `others`, and sums them. Checked here: the totals are the sums of the per-seed rows,
  * one seed equals the four `PlayArenaHand` calls, the mirror identity (Normal against three Normal wins exactly one hand of the four
  * rotations of a seed), determinism, a focus player's result not depending on the other focus players, the numbers of
- * `ComputerStrengthTest` (seeds 4000..4059, Normal against three random seats: 187 wins of 240, the random seats 27 together, 26 drawn
- * hands, +34090 points, since `waitingKongByPoints`), a bad config and the threads: the same config at 1, 2 and 5 jobs gives equal results and the same report text,
+ * `ComputerStrengthTest` (seeds 4000..4059, Normal against three random seats: 190 wins of 240, the random seats 27 together, 23 drawn
+ * hands, +35270 points, since the claim window that settles early), a bad config and the threads: the same config at 1, 2 and 5 jobs gives equal results and the same report text,
  * and a hand that fails gives the error of the lowest seed whatever the number of threads. The second level of threads (`WorldThreads`, the
  * worlds of a search decision): the pool runs every index once and serves many calls, a search focus player with few seeds gives the same
  * result and report at 1, 2 and 5 jobs, and the split of `jobs` between the seeds and the worlds is what `ArenaConfig::jobs` says. Pure logic: no engine services; the file takes about 16 s in Debug
@@ -426,15 +426,15 @@ namespace BECore::Mahjong::Arena {
 
     TEST(ArenaRunTest, NormalAgainstRandomIsTheStrengthTest) {
         // The hands of `ComputerStrengthTest.cpp`, with Normal's `waitingKongByPoints` (its comment has the numbers of the first player:
-        // 186 wins, 27 drawn, +31730): 187 wins of 240 hands, the three random seats 27 together, 26 drawn hands, +34090 points.
+        // 186 wins, 27 drawn, +31730) and the claim window that settles early: 190 wins of 240 hands, the random seats 27, 23 drawn, +35270.
         const FocusResult& normal = StrengthRun().focus.at(0);
         EXPECT_EQ(normal.focus.hands, 240);
-        EXPECT_EQ(normal.focus.wins, 187);
+        EXPECT_EQ(normal.focus.wins, 190);
         EXPECT_EQ(normal.others.wins, 27);
-        EXPECT_EQ(normal.focus.drawn, 26);
-        EXPECT_EQ(normal.focus.points, 34090);
-        EXPECT_EQ(normal.others.points, -34090);
-        EXPECT_EQ(normal.focus.declared, 224) << "the declarations measured by the strength test";
+        EXPECT_EQ(normal.focus.drawn, 23);
+        EXPECT_EQ(normal.focus.points, 35270);
+        EXPECT_EQ(normal.others.points, -35270);
+        EXPECT_EQ(normal.focus.declared, 223) << "the declarations measured by the strength test";
         EXPECT_EQ(normal.rows.size(), static_cast<size_t>(kStrengthSeeds));
     }
 

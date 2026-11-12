@@ -703,11 +703,31 @@ namespace BECore::Mahjong {
         return winner;
     }
 
-    void HandModel::ResolveClaims() {
-        for (const ClaimStatus status : _claimStatus) {
-            if (status == ClaimStatus::Waiting) {
-                return;
+    bool HandModel::WindowIsDecided() const {
+        const Seat best = BestClaimant();
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            if (_claimStatus[seat] != ClaimStatus::Waiting) {
+                continue;
             }
+            if (best == kNoSeat) {
+                return false;
+            }
+            // The waiting seat would win with its strongest option: a higher priority, or the same one from farther away.
+            const int bestPriority = ClaimPriority(_claims[best].kind);
+            const bool farther = Offset(_current, seat) > Offset(_current, best);
+            for (const ClaimOption& option : ClaimOptionsFor(_hands[seat], seat, _current, _pendingTile, _phase == Phase::RobKong)) {
+                const int priority = ClaimPriority(option.kind);
+                if (priority > bestPriority || (priority == bestPriority && farther)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    void HandModel::ResolveClaims() {
+        if (!WindowIsDecided()) {
+            return;
         }
         const Seat from = _current;
         const Seat winner = BestClaimant();

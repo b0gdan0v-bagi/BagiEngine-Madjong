@@ -151,7 +151,9 @@ normal                     4000     82.20 +- 1.20        155.16 +- 4.67       10
 That is 3288 wins of 4000 (82.20 %), 620620 points (155.155 a hand), 427 drawn hands (10.68 %) and an average winning score of 43,
 exactly the numbers of the old harness. The 60-seed run (`--seeds 60`) gives 186 wins of 240 (77.50 %) and +31730 points (132.21 a
 hand), the numbers of `ComputerStrengthTest`. Since Normal takes a kong that keeps its wait by points (`waitingKongByPoints`,
-2026-11-12) the same run gives 82.20 % wins, 156.91 points a hand, 10.65 % drawn; the 60 seeds 187 wins and +34090 points
+2026-11-12) the same run gives 82.20 % wins, 156.91 points a hand, 10.65 % drawn; the 60 seeds 187 wins and +34090 points.
+Since a claim window settles as soon as no seat still to decide can beat the best claim (2026-11-12: fewer decisions, so other
+rng draws, the same strength) it gives 82.33 % wins, 157.50 points a hand, 10.55 % drawn; the 60 seeds 190 wins and +35270 points
 (`ArenaRunTest`). The tables of this file before that date are the older Normal.
 
 **(2) Normal against three Normal seats**, `A --focus normal --others normal --first 4000 --seeds 1000`:
