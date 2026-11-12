@@ -124,9 +124,20 @@ namespace BECore::Mahjong {
             if (claim.step == ClaimStep::Mahjong) {
                 return note;
             }
-            note.handWaits = claim.step == ClaimStep::WaitingHand;
-            if (claim.step == ClaimStep::Claim && claim.chosen.has_value()) {
+            const bool waits = claim.step == ClaimStep::WaitingHand || claim.step == ClaimStep::WaitingPass || claim.step == ClaimStep::WaitingKong;
+            note.handWaits = claim.step == ClaimStep::WaitingHand || claim.step == ClaimStep::WaitingPass;
+            note.byPoints = claim.step == ClaimStep::WaitingPass || claim.step == ClaimStep::WaitingKong;
+            int copies = 0;
+            for (const TileCopies& wait : claim.waits) {
+                copies += wait.unseen;
+            }
+            if ((claim.step == ClaimStep::Claim || claim.step == ClaimStep::WaitingKong) && claim.chosen.has_value()) {
                 note.advisedSide = RatedSide(claim.chosen->after);
+            } else if (note.handWaits) {
+                note.advisedSide = WaitingSide(copies);
+            }
+            if (waits && taken.kind == ActionKind::Pass) {
+                note.takenSide = WaitingSide(copies);
             }
             if (taken.kind == ActionKind::Claim && taken.claim != ClaimKind::Mahjong) {
                 for (const RatedClaim& option : RateClaims(before, claim.shantenBefore, ProfileOf(kDefaultLevel))) {

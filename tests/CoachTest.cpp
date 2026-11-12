@@ -392,7 +392,108 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(card.rows.size(), 2u);
         EXPECT_EQ(Std(card.rows[0].move), "Pass");
         EXPECT_EQ(Std(card.rows[0].steps), "ready") << "the pass keeps the hand that waits";
+        EXPECT_EQ(note.advisedSide.numbers, CoachNumbers::Waiting);
+        EXPECT_EQ(Std(card.rows[0].useful), std::to_string(note.advisedSide.copies)) << "the pass row counts the wait, so the rows compare";
+        EXPECT_FALSE(card.rows[0].useful.empty());
         EXPECT_TRUE(FooterHas(card, "a claim would break it")) << ::testing::PrintToString(TextOf(card));
+    }
+
+    // ----- a waiting hand offered a kong that keeps its wait -----
+
+    namespace {
+
+        /// A concealed pung of red dragons and a single 4p wait; East throws the fourth red dragon.
+        constexpr const char* kWaitingOnPung = "Rd Rd Rd 1s 2s 3s 4s 5s 6s 7m 8m 9m 4p";
+        constexpr int kLiveForValues = 60;
+        const HandAction kKong = HandAction::MakeClaim(ClaimKind::Kong);
+
+        /// The window of `kWaitingOnPung` with a wall long enough for both sides to have draws; `open` makes 1s 2s 3s an open chow.
+        TableView WaitingKongView(bool open) {
+            TableView view = WindowView(kWaitingOnPung, "Rd");
+            view.liveCount = kLiveForValues;
+            if (open) {
+                eastl::vector<Tile> concealed;
+                for (const Tile tile : view.own.concealed) {
+                    if (tile != T("1s") && tile != T("2s") && tile != T("3s")) {
+                        concealed.push_back(tile);
+                    }
+                }
+                view.own.concealed = eastl::move(concealed);
+                Meld chow;
+                chow.kind = MeldKind::Chow;
+                chow.first = T("1s");
+                chow.from = kSeat0;
+                chow.fromDiscard = true;
+                chow.claimed = T("1s");
+                view.own.melds.push_back(chow);
+            }
+            return view;
+        }
+
+        LevelProfile ByPoints() {
+            LevelProfile profile = ProfileOf(kDefaultLevel);
+            profile.waitingKongByPoints = true;
+            return profile;
+        }
+
+        HintCard AdviceCardOf(const TableView& view) {
+            const std::optional<Explanation> explained = ExplainAdvice(view, ByPoints());
+            EXPECT_TRUE(explained.has_value());
+            return explained.has_value() ? MakeAdviceCard(Words(), view, *explained, {}) : HintCard{};
+        }
+
+    }  // namespace
+
+    TEST(CoachTest, AKongThatKeepsTheWaitAgainstTheAdviceToPassShowsBothRowsWithTheirNumbers) {
+        const TableView view = WaitingKongView(false);
+        ASSERT_EQ(*AdviceFor(view), kPass);
+        ASSERT_TRUE(CanJudge(view, kKong));
+
+        const CoachNote note = NoteOf(view, kKong);
+
+        const HintCard card = CardOf(note);
+        ASSERT_EQ(card.rows.size(), 2u) << ::testing::PrintToString(TextOf(card));
+        EXPECT_EQ(Std(card.rows[0].move), "Pass");
+        EXPECT_EQ(Std(card.rows[0].steps), "ready");
+        EXPECT_EQ(Std(card.rows[0].useful), "3") << "three 4p are unseen";
+        EXPECT_EQ(Std(card.rows[1].steps), "ready") << "the kong keeps the wait";
+        EXPECT_EQ(Std(card.rows[1].useful), "3");
+    }
+
+    TEST(CoachTest, TheAdviceCardOfAConcealedWaitingHandPassesTheKongByPoints) {
+        const TableView view = WaitingKongView(false);
+        const std::optional<Explanation> explained = ExplainAdvice(view, ByPoints());
+        ASSERT_TRUE(explained.has_value() && explained->claim.has_value());
+        ASSERT_EQ(explained->claim->step, ClaimStep::WaitingPass);
+        ASSERT_TRUE(explained->claim->waitingKong.has_value());
+        EXPECT_FALSE(explained->claim->waitingKong->KongIsBetter());
+
+        const HintCard card = AdviceCardOf(view);
+
+        ASSERT_EQ(card.rows.size(), 2u) << ::testing::PrintToString(TextOf(card));
+        EXPECT_EQ(Std(card.rows[0].move), "Pass");
+        EXPECT_EQ(Std(card.rows[0].useful), "3");
+        EXPECT_EQ(Std(card.rows[1].move), "Kong");
+        EXPECT_EQ(Std(card.rows[1].steps), "ready");
+        EXPECT_TRUE(FooterHas(card, "concealed hand is worth more")) << ::testing::PrintToString(TextOf(card));
+        EXPECT_FALSE(FooterHas(card, "a claim would break it")) << "the kong does not break the wait";
+    }
+
+    TEST(CoachTest, TheAdviceCardOfAnOpenWaitingHandTakesTheKongByPoints) {
+        const TableView view = WaitingKongView(true);
+        const std::optional<Explanation> explained = ExplainAdvice(view, ByPoints());
+        ASSERT_TRUE(explained.has_value() && explained->claim.has_value());
+        ASSERT_EQ(explained->claim->step, ClaimStep::WaitingKong);
+        EXPECT_EQ(explained->Action(), kKong);
+
+        const HintCard card = AdviceCardOf(view);
+
+        ASSERT_EQ(card.rows.size(), 2u) << ::testing::PrintToString(TextOf(card));
+        EXPECT_EQ(Std(card.rows[0].move), "Kong");
+        EXPECT_EQ(Std(card.rows[0].steps), "ready");
+        EXPECT_EQ(Std(card.rows[1].move), "Pass");
+        EXPECT_EQ(Std(card.rows[1].useful), "3");
+        EXPECT_TRUE(FooterHas(card, "keeps your wait and is worth more")) << ::testing::PrintToString(TextOf(card));
     }
 
     TEST(CoachTest, TheOtherClaimIsJudgedByTheNumbersAfterIt) {

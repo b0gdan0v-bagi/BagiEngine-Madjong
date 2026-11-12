@@ -121,7 +121,8 @@ namespace BECore::Mahjong {
 
     /**
      * @brief The numbers a level plays by: what the choosers of `ComputerTurn.h` and `ComputerClaim.h` do differently from the Normal
-     * player. Every knob of `kNormalProfile` is off, and **a knob that is off draws nothing from the rng**, so Normal's stream is the
+     * player. `kNormalProfile` is the defaults (every knob off but `takeValueClaimsAtEqualShanten` and `waitingKongByPoints`, neither of
+     * which draws), and **a knob that is off draws nothing from the rng**, so Normal's stream is the
      * stream of the player before levels existed. A percentage is 0..100; each roll is one `MahjongRng::Below(kPercentBase)` of the player's own
      * seeded rng, so one seed and one setup is one match.
      */
@@ -160,9 +161,14 @@ namespace BECore::Mahjong {
         /// a hand stay level (seeds 4000..: -1.09 +- 1.30 points, +0.05 +- 0.39 wins %; seeds 12000..: +0.03 +- 1.52, +0.33 +- 0.36), the
         /// pooled points are -0.53, so the rule of the entry (pooled points not below 0) kept it off.
         bool readDanger = false;
+        /// Step 2 of a claim window: a waiting hand offered a kong that keeps its wait (a concealed pung of the discard) takes it or
+        /// passes by the expected points of each (`RateWaitingKong`, `ComputerClaim.h`); false = it passes every claim but mahjong.
+        /// Draws nothing from the rng. On in every level (the owner, 2026-11-12): paired with Normal against three Normal seats (1000
+        /// seeds, Release) points a hand +0.66 +- 0.88 on seeds 4000.. and -0.35 +- 0.43 on seeds 12000.., pooled +0.16, not below 0.
+        bool waitingKongByPoints = true;
     };
 
-    /// The Normal player: every knob off.
+    /// The Normal player: the defaults of `LevelProfile`.
     inline constexpr LevelProfile kNormalProfile{};
 
     /// What Easy (level 1) plays by (measured in `ComputerStrengthTest`, whose comment has the numbers): about half of Normal's wins,

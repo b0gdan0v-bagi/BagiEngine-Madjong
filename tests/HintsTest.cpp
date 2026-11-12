@@ -606,7 +606,8 @@ namespace BECore::Mahjong::Tests {
                                             "hints.card.pung",        "hints.card.chow",          "hints.card.pass",
                                             "hints.card.mahjong",     "hints.card.noKong",        "hints.why.kong.noWorse",
                                             "hints.why.win",          "hints.why.claim.mahjong",  "hints.why.claim.value",
-                                            "hints.why.pass.waiting", "hints.why.pass.noGain"};
+                                            "hints.why.pass.waiting", "hints.why.pass.noGain",    "hints.why.pass.points",
+                                            "hints.why.kong.points"};
 
         ForEachLanguage(strings, [&](PoolString language) {
             for (const char* key : keys) {
@@ -930,8 +931,8 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
         const std::vector<std::string> mine{"hints.why.danger.safe", "hints.why.danger.low", "hints.why.danger.medium", "hints.why.danger.high", "hints.why.tie.danger"};
         // The lines under the rows of the card share one label: a danger sentence is no longer than the longest of them (the tally of the hand)
-        const std::vector<std::string> others{"coach.card.tally.hand", "hints.why.tie.none",      "hints.why.tie.keep",    "hints.why.tie.chance",   "hints.why.kong.noWorse",
-                                              "hints.why.win",         "hints.why.claim.mahjong", "hints.why.claim.value", "hints.why.pass.waiting", "hints.why.pass.noGain"};
+        const std::vector<std::string> others{"coach.card.tally.hand",   "hints.why.tie.none",    "hints.why.tie.keep",     "hints.why.tie.chance",  "hints.why.kong.noWorse", "hints.why.win",
+                                              "hints.why.claim.mahjong", "hints.why.claim.value", "hints.why.pass.waiting", "hints.why.pass.noGain", "hints.why.pass.points",  "hints.why.kong.points"};
         ForEachLanguage(strings, [&](PoolString language) {
             size_t longest = 0;
             for (const std::string& key : others) {
