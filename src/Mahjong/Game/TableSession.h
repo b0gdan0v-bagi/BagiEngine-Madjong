@@ -12,6 +12,9 @@ namespace BECore::Mahjong {
     /// The kind of each seat, indexed by seat.
     using SeatSetup = eastl::array<SeatKind, kSeatCount>;
 
+    /// The name of each seat's player, indexed by seat; empty where a table has none (a local game names no one).
+    using SeatNames = eastl::array<eastl::string, kSeatCount>;
+
     /// Seat 0 is a person, the others are computers.
     inline constexpr SeatSetup kDefaultSeatSetup{SeatKind::Person, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
 
@@ -150,6 +153,11 @@ namespace BECore::Mahjong {
      *   refused call, `Reveal` and a start with bad settings report nothing. A match started behind the session's back (through the
      *   non-const `Match::Start`) is not seen and so not logged.
      * - `ResumeMatch` puts the session where a recorded log left it (a saved match), see there.
+     * - **Remote mode** (`ShowRemote`): the session shows a table that is played elsewhere (an online room) over a match made by
+     *   `Match::ShowRemote`. It plays nothing: `StepComputer`, `BeginComputerStep`, `FinishComputerStep`, `RunComputers`,
+     *   `PerformPerson`, `NextHand` and `Reveal` change nothing and give their usual refusals (`HandoffPending()` is false), nothing is
+     *   logged and no observer is told. `Actor()` is the actor the caller gave, `GetPhase()` still follows the match. `StartMatch` and
+     *   `ResumeMatch` (accepted) leave the mode.
      * - The move observer (`SetMoveObserver`) is told of an accepted `PerformPerson` only, after the version moved and the log line
      *   went out, with `MakeTableView(hand, actor)` made before the action; with none set no view is made. Computer steps, `Reveal`,
      *   `NextHand` and `ResumeMatch` never report, a refused action reports nothing.
@@ -187,6 +195,23 @@ namespace BECore::Mahjong {
         std::expected<void, ReplayError> ResumeMatch(const eastl::vector<MatchLogEvent>& events, const SeatSetup& seats, const SeatLevels& levels);
         /// `ResumeMatch` with `UniformLevels(level)`.
         std::expected<void, ReplayError> ResumeMatch(const eastl::vector<MatchLogEvent>& events, const SeatSetup& seats, ComputerLevel level);
+
+        /**
+         * @brief Shows a table that is played elsewhere (the session goes into remote mode, see the class comment); the match has been
+         *        set by `Match::ShowRemote`. Nothing is checked: the caller gives what a client knows.
+         *
+         * `seats` and `levels` are what the lobby says (a computer seat shows the level given), `names` the players' names for the
+         * plates, `viewer` the seat whose tiles are face up (`kNoSeat` for none), `actor` the seat the table waits for (`kNoSeat`
+         * when none, `Actor()` answers it while `Playing`). `Version()` grows; `StartCount()` only when `newTable` (another hand or
+         * match, not another view of the same one).
+         */
+        void ShowRemote(const SeatSetup& seats, const SeatLevels& levels, const SeatNames& names, Seat viewer, Seat actor, bool newTable);
+        /// Whether the session is in remote mode.
+        [[nodiscard]] bool IsRemote() const noexcept {
+            return _remote;
+        }
+        /// The name of the player of `seat` that `ShowRemote` gave; empty for a local game and for a number that is no seat.
+        [[nodiscard]] const eastl::string& NameOf(Seat seat) const noexcept;
 
         /// The level of each seat of the match started last (the entries of person seats are kept, they play nothing); all `kDefaultLevel`
         /// before the first start.
@@ -296,6 +321,8 @@ namespace BECore::Mahjong {
         void CoverForNextPerson();
         /// Reports the action the actor `seat` has just done.
         void LogAction(Seat seat, const HandAction& action);
+        /// Leaves remote mode (a local match was started or resumed).
+        void LeaveRemote();
         /// Reports the hand that was just dealt, or the end of the match when the last hand was settled.
         void LogAfterSettlement();
 
@@ -309,6 +336,9 @@ namespace BECore::Mahjong {
         IMatchLogSink* _sink = nullptr;
         IPersonMoveObserver* _observer = nullptr;
         MatchLogOrigin _origin;
+        bool _remote = false;
+        SeatNames _names;
+        Seat _remoteActor = kNoSeat;
     };
 
 }  // namespace BECore::Mahjong

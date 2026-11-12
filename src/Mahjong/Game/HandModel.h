@@ -331,6 +331,22 @@ namespace BECore::Mahjong {
          * is then exactly the one that was captured: the same actions are legal and the same play follows.
          */
         [[nodiscard]] static std::expected<HandModel, eastl::string> Restore(HandState state);
+        /**
+         * @brief Builds a model that a client only shows (a table of an online room), from plain data, **without any check**: a tile
+         *        may be invalid (a hand or a wall the client is not told), the counts, the claim window and the hand sizes are taken as
+         *        they are. Only a front end that draws a table it does not play builds one; the rules never do.
+         *
+         * Every read answers from the state (`GetHand`, `Discards`, `Moves`, `PendingTile`, `CurrentSeat`, `GetPhase`, `Result`,
+         * `SeatWind`, `RoundWind`, `DrawnTile`, `PendingClaimSeats`, `LastClaimWindow`, `GetWall().Remaining()`); a reader asks
+         * `Tile::IsValid` before it reads a tile of a hidden place. Concealed tiles are not sorted. The model is **display only**
+         * (`IsDisplayOnly`): `Begin` and every action are refused with `WrongPhase` and change nothing, `LegalActions` and `LegalClaims`
+         * are empty. A copy of it is display only too.
+         */
+        [[nodiscard]] static HandModel ForDisplay(HandState state);
+        /// Whether the model was made by `ForDisplay`: it shows a table and cannot be played.
+        [[nodiscard]] bool IsDisplayOnly() const noexcept {
+            return _displayOnly;
+        }
 
         /**
          * @brief The current seat discards `tile`; the hand goes on to the next seat's draw.
@@ -465,6 +481,8 @@ namespace BECore::Mahjong {
         int _windowSerial = 0;
         /// Starts as a drawn hand: a model that was never begun is finished, and a finished hand has a result.
         std::optional<HandResult> _result = HandResult{};
+        /// Set by `ForDisplay` only: every action and `Begin` are refused.
+        bool _displayOnly = false;
     };
 
 }  // namespace BECore::Mahjong

@@ -478,4 +478,77 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(match.Hand().GetPhase(), Phase::Discard);  // a fresh wall, the same East
     }
 
+    // ----- a match that is shown, not played -----
+
+    TEST(MatchTest, ShowRemoteTakesOverWhatIsGivenAndPlaysNothing) {
+        const Match real = StartedMatch(Settings(kExpectedShortHands));
+        HandState state = real.Hand().Capture();
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            if (seat != kSeat2) {
+                state.hands[seat].concealed.assign(state.hands[seat].concealed.size(), Tile{});
+            }
+        }
+        state.live.assign(state.live.size(), Tile{});
+        const SeatScores scores = {1200, 2300, 3400, 4500};
+        const Seat east = NextSeat(real.East());
+
+        Match shown;
+        shown.ShowRemote(Settings(kExpectedShortHands), MatchPhase::InHand, 3, east, scores, HandModel::ForDisplay(state));
+
+        EXPECT_TRUE(shown.IsRemote());
+        EXPECT_EQ(shown.GetPhase(), MatchPhase::InHand);
+        EXPECT_EQ(shown.HandsPlayed(), 3);
+        EXPECT_EQ(shown.HandsTotal(), kExpectedShortHands);
+        EXPECT_EQ(shown.East(), east);
+        EXPECT_EQ(shown.Winds()[east], Wind::East);
+        EXPECT_EQ(shown.RoundWind(), RoundWindOf(3, Settings(kExpectedShortHands)));
+        EXPECT_EQ(shown.Scores(), scores);
+        EXPECT_TRUE(shown.History().empty());
+        EXPECT_EQ(shown.Hand().GetWall().Remaining(), real.Hand().GetWall().Remaining());
+        EXPECT_EQ(shown.Hand().GetHand(kSeat2).concealed, real.Hand().GetHand(kSeat2).concealed);
+
+        // Nothing deals a real hand from it.
+        EXPECT_EQ(ErrorOf(shown.ApplySettlement(Drawn(shown))), MatchError::NotInHand);
+        EXPECT_EQ(shown.HandsPlayed(), 3);
+        EXPECT_TRUE(shown.History().empty());
+        EXPECT_EQ(shown.Scores(), scores);
+        EXPECT_TRUE(shown.Hand().IsDisplayOnly());
+    }
+
+    TEST(MatchTest, ShowRemoteCanShowAMatchThatIsOverAndAFinishedHandRefusesEndHand) {
+        MahjongRng rng(kSeed);
+        Match played = StartedMatch();
+        ASSERT_NO_FATAL_FAILURE(PlayHand(played, Mode::SeekWin, rng));
+
+        Match shown;
+        shown.ShowRemote(MahjongSettings{}, MatchPhase::InHand, 2, 1, kNoChange, HandModel::ForDisplay(played.Hand().Capture()));
+        EXPECT_EQ(shown.Hand().GetPhase(), Phase::Finished);
+        const auto ended = shown.EndHand();
+        ASSERT_FALSE(ended.has_value());
+        EXPECT_EQ(ended.error(), MatchError::NotInHand);
+
+        shown.ShowRemote(MahjongSettings{}, MatchPhase::Finished, kExpectedFullHands, 1, kNoChange, HandModel::ForDisplay(played.Hand().Capture()));
+        EXPECT_EQ(shown.GetPhase(), MatchPhase::Finished);
+        EXPECT_EQ(shown.HandsPlayed(), kExpectedFullHands);
+    }
+
+    TEST(MatchTest, AStartAfterShowRemoteIsAnOrdinaryMatch) {
+        Match match;
+        match.ShowRemote(MahjongSettings{}, MatchPhase::InHand, 5, 2, SeatScores{1, 2, 3, 4}, HandModel::ForDisplay(HandState{}));
+        ASSERT_TRUE(match.IsRemote());
+
+        ASSERT_TRUE(match.Start(MahjongSettings{}, kSeed).has_value());
+
+        EXPECT_FALSE(match.IsRemote());
+        EXPECT_FALSE(match.Hand().IsDisplayOnly());
+        EXPECT_EQ(match.HandsPlayed(), 0);
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            EXPECT_EQ(match.Scores()[seat], kExpectedStartingScore);
+        }
+        EXPECT_EQ(Snapshot(match.Hand()), Snapshot(StartedMatch().Hand()));
+        const auto ended = match.EndHand();
+        ASSERT_FALSE(ended.has_value());
+        EXPECT_EQ(ended.error(), MatchError::HandNotFinished);
+    }
+
 }  // namespace BECore::Mahjong::Tests

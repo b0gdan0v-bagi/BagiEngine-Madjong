@@ -46,6 +46,7 @@ namespace BECore::Mahjong {
         }
         _seats = seats;
         _levels = levels;
+        LeaveRemote();
         _viewer = PersonCount() == 1 ? OnlyPerson(_seats) : kNoSeat;
         ++_version;
         ++_starts;
@@ -85,9 +86,34 @@ namespace BECore::Mahjong {
         _table.emplace(seed, levels);
         _seats = seats;
         _levels = levels;
+        LeaveRemote();
         _viewer = PersonCount() == 1 ? OnlyPerson(_seats) : kNoSeat;
         ++_version;
         return {};
+    }
+
+    void TableSession::ShowRemote(const SeatSetup& seats, const SeatLevels& levels, const SeatNames& names, Seat viewer, Seat actor, bool newTable) {
+        _remote = true;
+        _seats = seats;
+        _levels = levels;
+        _names = names;
+        _viewer = viewer;
+        _remoteActor = actor;
+        ++_version;
+        if (newTable) {
+            ++_starts;
+        }
+    }
+
+    const eastl::string& TableSession::NameOf(Seat seat) const noexcept {
+        static const eastl::string kNoName;
+        return IsSeat(seat) ? _names[static_cast<size_t>(seat)] : kNoName;
+    }
+
+    void TableSession::LeaveRemote() {
+        _remote = false;
+        _names = {};
+        _remoteActor = kNoSeat;
     }
 
     SessionPhase TableSession::GetPhase() const noexcept {
@@ -110,6 +136,9 @@ namespace BECore::Mahjong {
     }
 
     Seat TableSession::Actor() const {
+        if (_remote) {
+            return GetPhase() == SessionPhase::Playing ? _remoteActor : kNoSeat;
+        }
         return GetPhase() == SessionPhase::Playing ? ComputerTable::NextActor(_match.Hand()) : kNoSeat;
     }
 
@@ -120,7 +149,7 @@ namespace BECore::Mahjong {
 
     std::expected<ComputerStepJob, HandError> TableSession::MakeComputerJob() {
         BE_PROFILE_SCOPE("TableSession::MakeComputerJob");
-        if (GetPhase() != SessionPhase::Playing || !_table) {
+        if (_remote || GetPhase() != SessionPhase::Playing || !_table) {
             return std::unexpected(HandError::WrongPhase);
         }
         if (ActorIsPerson()) {
@@ -156,7 +185,7 @@ namespace BECore::Mahjong {
     }
 
     std::optional<StepResult> TableSession::FinishComputerStep(const ComputerStepJob& job) {
-        if (job.Version() != _version || job.StartCount() != _starts) {
+        if (_remote || job.Version() != _version || job.StartCount() != _starts) {
             return std::nullopt;
         }
         ASSERT(job.Done(), "FinishComputerStep: the job is not done");
@@ -177,7 +206,7 @@ namespace BECore::Mahjong {
 
     int TableSession::RunComputers() {
         int steps = 0;
-        while (GetPhase() == SessionPhase::Playing && !ActorIsPerson()) {
+        while (!_remote && GetPhase() == SessionPhase::Playing && !ActorIsPerson()) {
             if (steps >= kMaxComputerSteps) {
                 ASSERT(false, "RunComputers: the hand does not end");
                 break;
@@ -195,6 +224,9 @@ namespace BECore::Mahjong {
         BE_PROFILE_SCOPE("TableSession::PerformPerson");
         if (GetPhase() != SessionPhase::Playing) {
             return std::unexpected(HandError::WrongPhase);
+        }
+        if (_remote) {
+            return std::unexpected(HandError::NotYourTurn);
         }
         const Seat actor = Actor();
         if (KindOf(actor) != SeatKind::Person) {
@@ -221,6 +253,9 @@ namespace BECore::Mahjong {
 
     std::expected<HandSettlement, MatchError> TableSession::NextHand() {
         BE_PROFILE_SCOPE("TableSession::NextHand");
+        if (_remote) {
+            return std::unexpected(MatchError::NotInHand);
+        }
         std::expected<HandSettlement, MatchError> settled = _match.EndHand();
         if (settled) {
             if (_sink != nullptr) {
@@ -242,11 +277,11 @@ namespace BECore::Mahjong {
     }
 
     bool TableSession::HandoffPending() const {
-        return PersonCount() >= 2 && ActorIsPerson() && Actor() != _viewer;
+        return !_remote && PersonCount() >= 2 && ActorIsPerson() && Actor() != _viewer;
     }
 
     void TableSession::Reveal() {
-        if (!ActorIsPerson()) {
+        if (_remote || !ActorIsPerson()) {
             return;
         }
         const Seat actor = Actor();

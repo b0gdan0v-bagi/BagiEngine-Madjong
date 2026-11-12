@@ -143,6 +143,21 @@ namespace BECore::Mahjong {
         /// The seats by points, best first; equal points in seat order.
         [[nodiscard]] eastl::array<Seat, kSeatCount> Standings() const;
 
+        /**
+         * @brief Shows a match that is played elsewhere (an online room): everything is taken over as it is, nothing is checked or
+         *        played. For a front end that draws the table of a server; the rules never call it.
+         *
+         * `phase` is `InHand` (the hand is in progress or finished, waiting for the next) or `Finished` (the match is over, `hand` is
+         * the last hand). `handsPlayed` and `east` are the progress, `scores` the points of the seats, `hand` a model made by
+         * `HandModel::ForDisplay`. `History()` stays empty. The match is **remote** (`IsRemote()`): `EndHand` and `ApplySettlement` are
+         * refused with `NotInHand`, so it can never deal a real hand. `Start` makes a real match again.
+         */
+        void ShowRemote(const MahjongSettings& settings, MatchPhase phase, int handsPlayed, Seat east, const SeatScores& scores, HandModel hand);
+        /// Whether the match was set by `ShowRemote` (its hand is display only) and not started.
+        [[nodiscard]] bool IsRemote() const noexcept {
+            return _hand.IsDisplayOnly();
+        }
+
     private:
         /// Deals the hand of `progress` into `hand` from the next wall of the match.
         MatchStatus DealHand(const MatchProgress& progress, HandModel& hand);
