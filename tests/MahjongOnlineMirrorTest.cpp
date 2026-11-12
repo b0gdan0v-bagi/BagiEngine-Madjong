@@ -21,7 +21,7 @@ namespace BECore::Mahjong::Tests {
         constexpr int kStepLimit = 40000;
         constexpr int kNoSampling = 1;
         constexpr int kSampleEvery = 4;
-        constexpr int kSeedsToPlay = 3;
+        constexpr int kSeedsToPlay = 4;
 
         Json Parse(const char* text) {
             return ParseJson(text).value();

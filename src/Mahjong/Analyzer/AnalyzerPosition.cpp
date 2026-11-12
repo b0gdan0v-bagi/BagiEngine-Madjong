@@ -612,6 +612,9 @@ namespace BECore::Mahjong::Analyzer {
         for (size_t i = 0; i < actions->size(); ++i) {
             const size_t eventIndex = (*actions)[i];
             const MatchLogEvent& event = events[eventIndex];
+            if (IsDecisionOfASettledWindow(*match, event.action)) {
+                continue;  // a log from before windows settled early
+            }
             if (event.seat == seat) {
                 std::expected<LogPosition, eastl::string> position = MakeLogPosition(match->Hand(), event, eventIndex, hand, static_cast<int>(i));
                 if (!position.has_value()) {

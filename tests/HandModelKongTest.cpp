@@ -564,11 +564,13 @@ namespace BECore::Mahjong::Tests {
             ASSERT_EQ(model.GetPhase(), Phase::RobKong);
             ASSERT_EQ(model.PendingClaimSeats().size(), 2u);
 
-            const Seat first = nearFirst ? kSeat2 : kSeat3;
-            const Seat second = nearFirst ? kSeat3 : kSeat2;
-            ASSERT_TRUE(model.Claim(first, ClaimKind::Mahjong).has_value());
-            EXPECT_EQ(model.GetPhase(), Phase::RobKong) << "the window waits for the other seat";
-            ASSERT_TRUE(model.Claim(second, ClaimKind::Mahjong).has_value());
+            if (nearFirst) {
+                ASSERT_TRUE(model.Claim(kSeat2, ClaimKind::Mahjong).has_value());
+                EXPECT_EQ(model.GetPhase(), Phase::RobKong) << "the window waits for the farther seat";
+                ASSERT_TRUE(model.Claim(kSeat3, ClaimKind::Mahjong).has_value());
+            } else {
+                ASSERT_TRUE(model.Claim(kSeat3, ClaimKind::Mahjong).has_value());  // the nearer seat cannot beat it: not asked
+            }
 
             ASSERT_EQ(model.GetPhase(), Phase::Finished);
             ASSERT_TRUE(model.Result().has_value());

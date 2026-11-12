@@ -131,6 +131,7 @@ namespace BECore::Mahjong::Tests {
             for (int count = 0; count < limit; ++count) {
                 if (_game->GetOnline().Stage() == OnlineStage::Reconnecting) {
                     std::this_thread::sleep_for(std::chrono::milliseconds(2));  // the client reconnects on the real clock
+                    _viewerActed = 0;                                           // an action sent into the cut is lost: the same version is played again, as a person would
                 }
                 Frame();
                 if (_game->IsOnlineTable()) {

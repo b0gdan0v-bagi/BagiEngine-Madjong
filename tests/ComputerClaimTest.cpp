@@ -307,6 +307,9 @@ namespace BECore::Mahjong::Tests {
                 }
                 ++windows;
                 for (const Seat seat : hand.PendingClaimSeats()) {
+                    if (hand.GetClaimStatus(seat) != ClaimStatus::Waiting) {
+                        break;  // settled early: no seat still to decide could beat the claim made
+                    }
                     const TableView view = MakeTableView(hand, seat);
                     MahjongRng first(seed + static_cast<uint32_t>(windows));
                     MahjongRng second(seed + static_cast<uint32_t>(windows));
@@ -418,6 +421,9 @@ namespace BECore::Mahjong::Tests {
                     continue;
                 }
                 for (const Seat seat : hand.PendingClaimSeats()) {
+                    if (hand.GetClaimStatus(seat) != ClaimStatus::Waiting) {
+                        break;  // settled early: no seat still to decide could beat the claim made
+                    }
                     const TableView view = MakeTableView(hand, seat);
                     const int before = Shanten(CountTiles(view.own.concealed), MeldCountOf(view));
                     MahjongRng chooser(seed + static_cast<uint32_t>(compared));

@@ -275,6 +275,65 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(status.error().problem, ReplayProblem::EndMismatch);
     }
 
+    TEST(MatchLogTest, ALogFromBeforeWindowsSettledEarlyReplaysAndAStrayDecisionIsStillRefused) {
+        // A log written before a window settled early holds the decisions of the seats asked after the one that settles it now: a
+        // pass of each such seat is put back after that decision, as the old rule logged it.
+        constexpr uint32_t kSeedsToTry = 20;
+        for (uint32_t seed = kSeed; seed < kSeed + kSeedsToTry; ++seed) {
+            const PlayedMatch played = Play(seed);
+            eastl::vector<MatchLogEvent> old;
+            Match scratch;
+            int added = 0;
+            for (const MatchLogEvent& event : played.events) {
+                old.push_back(event);
+                if (event.kind == MatchLogKind::Start) {
+                    ASSERT_TRUE(scratch.Start(event.settings, event.seed).has_value());
+                } else if (event.kind == MatchLogKind::Settlement) {
+                    ASSERT_TRUE(scratch.EndHand().has_value());
+                } else if (event.kind == MatchLogKind::Action) {
+                    const eastl::vector<Seat> waiting = scratch.Hand().PendingClaimSeats();
+                    ASSERT_TRUE(scratch.Hand().Apply(event.seat, event.action).has_value());
+                    if (waiting.empty() || !IsDecisionOfASettledWindow(scratch, HandAction::MakePass())) {
+                        continue;
+                    }
+                    for (const Seat seat : waiting) {
+                        if (seat != event.seat) {
+                            MatchLogEvent pass = event;
+                            pass.seat = seat;
+                            pass.action = HandAction::MakePass();
+                            old.push_back(pass);
+                            ++added;
+                        }
+                    }
+                }
+            }
+            if (added == 0) {
+                continue;  // every window of this match waited for all its seats
+            }
+            Match replayed;
+            const ReplayStatus status = ReplayMatchLog(old, replayed);
+            ASSERT_TRUE(status.has_value()) << "seed " << seed << ", stopped at event " << status.error().index << ": " << Name(status.error().problem);
+            EXPECT_EQ(replayed.GetPhase(), MatchPhase::Finished);
+            EXPECT_EQ(replayed.Scores(), played.match.Scores());
+
+            // A pass that does not follow the decision that settled a window is refused as before: here before the first action.
+            eastl::vector<MatchLogEvent> stray = played.events;
+            const size_t action = IndexOf(stray, MatchLogKind::Action);
+            ASSERT_LT(action, stray.size());
+            MatchLogEvent pass = stray[action];
+            pass.seat = NextSeat(pass.seat);
+            pass.action = HandAction::MakePass();
+            stray.insert(stray.begin() + static_cast<ptrdiff_t>(action), pass);
+            Match refused;
+            const ReplayStatus strayStatus = ReplayMatchLog(stray, refused);
+            ASSERT_FALSE(strayStatus.has_value());
+            EXPECT_EQ(strayStatus.error().index, action);
+            EXPECT_EQ(strayStatus.error().problem, ReplayProblem::ActionRefused);
+            return;
+        }
+        FAIL() << "no match of " << kSeedsToTry << " seeds had a window settled early";
+    }
+
     TEST(MatchLogTest, ALogWithoutAStartOrWithBadSettingsDoesNotReplay) {
         Match match;
         ReplayStatus status = ReplayMatchLog({}, match);

@@ -227,11 +227,10 @@ namespace BECore::Mahjong {
      * compulsory: a seat that could declare a win may discard instead.
      *
      * The claim window: a discard opens `Phase::Claim` only when at least one other seat has a legal claim (`LegalClaims`), otherwise
-     * the next seat draws at once. Each seat in the window claims once (`Claim`) or passes (`Pass`); when every one has decided the
-     * best claim wins: mahjong, then pung or kong, then chow; two mahjong claims go to the seat farther counter-clockwise from the
-     * discarder. A chow is only for the seat after the discarder. A claimed tile leaves the pile and goes into an open meld (or into
-     * the winning hand); after a chow or pung the claimer discards, after a kong it draws a loose tile first, and the turn that follows
-     * goes to the seat after the claimer. If all pass, the seat after the discarder draws.
+     * the next seat draws at once. Each seat in the window claims once (`Claim`) or passes (`Pass`); the window is settled as soon as
+     * no seat still to decide could beat the best claim made (it is not asked any more), and the best claim wins: mahjong, then pung or kong, then chow; two mahjong claims go to the seat farther
+     * counter-clockwise from the discarder. A chow is only for the seat after the discarder. A claimed tile leaves the pile and goes into an open meld (or into the winning hand); after a chow or pung
+     * the claimer discards, after a kong it draws a loose tile first, and the turn that follows goes to the seat after the claimer. If all pass, the seat after the discarder draws.
      *
      * The kongs: besides the open kong of a claim, a seat on its turn declares a concealed kong from four equal tiles of its hand
      * (`DeclareConcealedKong`) or upgrades an open pung with the fourth tile (`UpgradeKong`), which must be the tile just drawn
@@ -443,8 +442,12 @@ namespace BECore::Mahjong {
         /// Opens the window of `phase` (`Claim` or `RobKong`) when some seat other than `from` has a legal claim on `tile`; false
         /// when none has.
         bool OpenWindow(Phase phase, Seat from, Tile tile);
-        /// Carries out the best claim once every seat in the window has decided (or deals on when all passed).
+        /// Carries out the best claim once the window is decided (or deals on when all passed).
         void ResolveClaims();
+        /// True when no seat still to decide could change the outcome: every one has decided, or none of the seats still waiting
+        /// has a legal claim that would beat the best claim made (a chow cannot beat a mahjong claim, so the table does not wait
+        /// for it).
+        [[nodiscard]] bool WindowIsDecided() const;
         /// The seat whose claim wins: the best priority, a tie going to the seat farther counter-clockwise from `_current`;
         /// `kNoSeat` when nobody claimed.
         [[nodiscard]] Seat BestClaimant() const;

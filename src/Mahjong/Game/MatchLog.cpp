@@ -61,10 +61,24 @@ namespace BECore::Mahjong {
         return false;
     }
 
+    bool IsDecisionOfASettledWindow(const Match& match, const HandAction& action) {
+        if (action.kind != ActionKind::Claim && action.kind != ActionKind::Pass) {
+            return false;
+        }
+        if (match.GetPhase() != MatchPhase::InHand) {
+            return true;
+        }
+        const Phase phase = match.Hand().GetPhase();
+        return phase != Phase::Claim && phase != Phase::RobKong;
+    }
+
     ReplayStatus ReplayMatchLog(const eastl::vector<MatchLogEvent>& events, Match& match, IMatchLogSink* echo) {
         if (events.empty() || events.front().kind != MatchLogKind::Start) {
             return std::unexpected(At(0, ReplayProblem::NoStart));
         }
+        // A log written before a window settled early (as soon as no seat still to decide could beat the best claim) holds the
+        // decisions of the seats that were still asked then: after the decision that settles the window now, they are skipped.
+        bool windowJustSettled = false;
         for (size_t index = 0; index < events.size(); ++index) {
             const MatchLogEvent& event = events[index];
             switch (event.kind) {
@@ -85,14 +99,19 @@ namespace BECore::Mahjong {
                         return std::unexpected(At(index, ReplayProblem::HandMismatch));
                     }
                     break;
-                case MatchLogKind::Action:
+                case MatchLogKind::Action: {
+                    if (windowJustSettled && IsDecisionOfASettledWindow(match, event.action)) {
+                        break;
+                    }
                     if (match.GetPhase() != MatchPhase::InHand || !match.Hand().Apply(event.seat, event.action)) {
                         return std::unexpected(At(index, ReplayProblem::ActionRefused));
                     }
+                    windowJustSettled = IsDecisionOfASettledWindow(match, event.action);
                     if (echo != nullptr) {
                         echo->OnEvent(event);
                     }
                     break;
+                }
                 case MatchLogKind::Settlement: {
                     const std::expected<HandSettlement, MatchError> settled = match.EndHand();
                     if (!settled) {

@@ -107,6 +107,11 @@ namespace BECore::Mahjong {
 
     using ReplayStatus = std::expected<void, ReplayError>;
 
+    /// True for a `Claim` or `Pass` while `match` has no claim window open. A window now settles as soon as no seat still to decide
+    /// could beat the best claim; a log written before that holds the decisions of the seats asked after it, and a reader of a log
+    /// skips them (`ReplayMatchLog` does, right after the decision that settled the window).
+    [[nodiscard]] bool IsDecisionOfASettledWindow(const Match& match, const HandAction& action);
+
     /**
      * @brief Plays `events` on `match`: `Match::Start(settings, seed)`, `Hand().Apply(seat, action)` for every `Action`, `EndHand()`
      *        for every `Settlement`. No computer players are needed: the actions are in the log.
