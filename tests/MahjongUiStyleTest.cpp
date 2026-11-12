@@ -25,9 +25,9 @@ namespace BECore::Mahjong::Tests {
         };
 
         constexpr const char* kColourAttributes[] = {"color", "hoverColor", "pressedColor", "disabledColor", "selectedColor", "textColor", "trackColor", "fillColor", "thumbColor"};
-        /// The positions and sizes that are a plain number or a length (a percent is not on the grid) ...
-        constexpr const char* kLengthAttributes[] = {"width", "height", "minWidth", "maxWidth", "minHeight", "maxHeight"};
-        constexpr const char* kNumberAttributes[] = {"x", "y", "spacing"};
+        /// The positions and sizes that are a plain number or a length (a percent is not on the grid; an offset may be one too) ...
+        constexpr const char* kLengthAttributes[] = {"x", "y", "width", "height", "minWidth", "maxWidth", "minHeight", "maxHeight"};
+        constexpr const char* kNumberAttributes[] = {"spacing"};
         /// ... and the four edges in one attribute.
         constexpr const char* kEdgeAttributes[] = {"padding", "margin"};
 
@@ -250,7 +250,7 @@ namespace BECore::Mahjong::Tests {
         for (const auto& [from, to] : {std::pair<const char*, const char*>{"width=\"104\"", "width=\"102\""},
                                        {"spacing=\"8\"", "spacing=\"6\""},
                                        {"padding=\"16\"", "padding=\"15\""},
-                                       {"y=\"440\"", "y=\"441\""},
+                                       {"y=\"72\"", "y=\"73\""},
                                        {"maxWidth=\"640\"", "maxWidth=\"642\""}}) {
             const Report report = CheckStyle(Broken(_text, from, to));
             EXPECT_FALSE(Of(report, Rule::Grid).empty()) << to;

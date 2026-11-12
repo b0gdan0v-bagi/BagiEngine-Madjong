@@ -1,42 +1,33 @@
 <?xml version="1.0"?>
 <!--
   The hints (Table/Hints.h, MahjongHintsComponent). The component answers the row HintsRow of the page Options (MahjongSetHints) and the
-  button HintButton (MahjongHintAdvice; it is in the node HintsButton below and in ActionsCompact), fills the canvas below and
+  button HintButton (MahjongHintAdvice; it is in the node HintsButton and in ActionsCompact), fills the canvas below and
   draws the marks over the viewer's hand; it comes after the table (layer 5: it reads the layout the table drew) and before the
   canvas so that the variables are set when the canvas draws.
-  The canvas lies on the view of the table (SceneView) in the top left corner, x 96..432 and y 8..148, clear of the node CenterPanel
-  inside the wall ring, which the hints leave free (MahjongHintsTest checks the rectangles against the worst-case layout, the plates and
-  the panel). The elements keep to the safe area: at y 8 they would lie outside it on a screen with a notch, so there they move inwards
-  together and can cover the nearest tiles. The top 80 units are the waiting row WaitPanel (x 96..432, a scrim plate): the caption (24, font 18)
-  and a cell per tile that the viewer's hand waits for (WaitCell0..12, 24 x 56: the tile as a UIImage of 24 x 32 whose sprite
-  Tile_<notation> the component sets, and under it the count of the copies the viewer cannot see, {hintCountN}, 24 high, font 18). The
-  caption, the counts and the sentence are AutoFit: at 18 they fill their lines in a window of 1280 x 720 and shrink in the smallest
-  windows, where a line of 18 units is taller than the 24 the row has. The strip y 92..148 below it (56 units, left of the top seat's
-  plate) holds the label AdviceText (a scrim plate, x 220..392) with the sentence {hintAdvice} of the advice, right of the place of the
-  button HintButton (x 96..216), which is in the node HintsButton and not here: nothing on this canvas takes input, so it needs no
-  touch size. All start hidden; the component shows the panel and the first N cells exactly while hints apply (MahjongGame::HintsOn(),
-  a person at the table, no cover, no Setup, the hand being played) and the hand waits, the button while hints apply and the viewer
-  has actions to choose from, and the label while an advice is up.
-  In a portrait view (720 x 1280, the variant below) they lie in the band of free ground between the viewer's discards and the viewer's
-  seat plate (y 836, a grid unit under the plate of the discards): the waiting row left (x 12..348), the button HintButton of HintsButton
-  at x 360..480, and AdviceText right of it (216 wide, 12 in from the right edge). The elements are anchored to the edge they are
-  nearer to, so a window with side insets (65 units each side of a 9:16 view) moves them inwards, where the three no longer fit in a row
-  (they may then overlap, no tile is checked in a window with insets).
-  In a wide view (1560 x 720, the variant with minAspect:2) the landscape table lies 140 units in from each side, so the waiting row
-  (x 236..572) and AdviceText (x 360..532) move right by that wing and keep the place of the corner of the table they have in landscape.
-  In a narrow view (1080 x 768, the variant with orientation:landscape;maxAspect:1.55; config/TableLayout.xml, the narrow table) the corner
-  is x 8..328, y 8..176: the top seat's hand and melds start at x 336, its seat plate at x 300 (y 96..176) and the left seat's melds at y 180.
-  The waiting row is 320 wide there (caption and cells as before, the 13 cells are 312), x 8, y 8; the strip under it holds HintButton
-  (node HintsButton, x 8..128) and AdviceText (x 136..292, 8 clear of the plate).
+  The canvas lies on the view of the table (SceneView). Its two elements fill free regions that config/TableLayout.xml gives each shape
+  (Table/TableRegions.h), clear of the node CenterPanel inside the wall ring, which the hints leave free, and of the plates (MahjongHintsTest
+  checks the rectangles against the worst-case layout, the plates and the panel). Where they lie in the landscape, portrait, narrow and
+  wide table is the file's, so there is no variant. A region wins over the safe area: the table is a fixed design that the safe area does not
+  move, so the elements stay where they are on a screen with a notch or side insets, like the tiles.
+  WaitPanel (region table.waiting) is the waiting row, a scrim plate: the caption (24, font 18) and a cell per tile that the viewer's hand
+  waits for (WaitCell0..12, 24 x 56: the tile as a UIImage of 24 x 32 whose sprite Tile_<notation> the component sets, and under it the
+  count of the copies the viewer cannot see, {hintCountN}, 24 high, font 18). The cells keep their size (13 of them are 312 wide) and the
+  caption is as wide as the plate. The caption, the counts and the sentence are AutoFit: at 18 they fill their lines in a window of 1280 x 720
+  and shrink in the smallest windows, where a line of 18 units is taller than the 24 the row has. AdviceText (region table.advice, a scrim
+  plate) holds the sentence {hintAdvice} of the advice, right of the place of the button HintButton (region table.hintButton), which is
+  in the node HintsButton and not here: nothing on this canvas takes input, so it needs no touch size. All start hidden; the component
+  shows the panel and the first N cells exactly while hints apply (MahjongGame::HintsOn(), a person at the table, no cover, no Setup, the
+  hand being played) and the hand waits, the button while hints apply and the viewer has actions to choose from, and the label while an
+  advice is up.
 -->
 <node name="Hints" layer="5" contentVersion="3">
   <components>
     <component type="MahjongHintsComponent" />
-    <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
+    <component type="UICanvasComponent" space="SceneView">
       <elements>
-        <element type="UIStack" name="WaitPanel" anchor="TopLeft" visible="false" x="96" y="8" width="336" height="80" direction="Vertical" spacing="0" padding="0" crossAlign="Center" color="0,0,0,200">
+        <element type="UIStack" name="WaitPanel" region="table.waiting" anchor="Stretch" visible="false" direction="Vertical" spacing="0" padding="0" crossAlign="Center" color="0,0,0,200">
           <children>
-            <element type="UILabel" name="WaitCaption" width="336" height="24" text="{#hints.waitCaption}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" />
+            <element type="UILabel" name="WaitCaption" width="100%" height="24" text="{#hints.waitCaption}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" />
             <element type="UIStack" name="WaitRow" width="312" height="56" direction="Horizontal" spacing="0" crossAlign="Start">
               <children>
                 <element type="UIStack" name="WaitCell0" visible="false" width="24" height="56" direction="Vertical" crossAlign="Stretch">
@@ -121,29 +112,8 @@
             </element>
           </children>
         </element>
-        <element type="UILabel" name="AdviceText" anchor="TopLeft" visible="false" x="220" y="92" width="172" height="56" text="{hintAdvice}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" color="0,0,0,200" />
+        <element type="UILabel" name="AdviceText" region="table.advice" anchor="Stretch" visible="false" text="{hintAdvice}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" color="0,0,0,200" />
       </elements>
-      <variants>
-        <variant when="orientation:portrait">
-          <overrides>
-            <set element="WaitPanel" x="12" y="836" />
-            <set element="AdviceText" anchor="TopRight" x="-12" y="836" width="216" />
-          </overrides>
-        </variant>
-        <variant when="orientation:landscape;maxAspect:1.55">
-          <overrides>
-            <set element="WaitPanel" x="8" y="8" width="320" />
-            <set element="WaitCaption" width="320" />
-            <set element="AdviceText" x="136" width="156" />
-          </overrides>
-        </variant>
-        <variant when="minAspect:2">
-          <overrides>
-            <set element="WaitPanel" x="236" />
-            <set element="AdviceText" x="360" />
-          </overrides>
-        </variant>
-      </variants>
     </component>
   </components>
 </node>

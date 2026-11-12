@@ -45,6 +45,7 @@ namespace BECore::Mahjong::Tests {
         /// The gap between the buttons of a row, and the width of a row of four buttons of 104 with three gaps (the row wraps at it).
         constexpr float kButtonGap = 8.0f;
         constexpr float kRowWidth = 4.0f * kButtonWidth + 3.0f * kButtonGap;
+        constexpr float kRegionTolerance = 0.01f;  // a region is fitted in floats
 
         /// The role of the colour of a button (an entry of `kUiPaletteNames`), by what the button does.
         const char* RoleOf(ButtonKind kind) {
@@ -218,9 +219,10 @@ namespace BECore::Mahjong::Tests {
         const UIElement* row = Element("Actions", "ActionRow");
         ASSERT_NE(row, nullptr);
         EXPECT_EQ(row->style.stack.spacing, kButtonGap);
+        Draw();                                                                  // the table publishes its regions to the canvas
         ASSERT_TRUE(Canvas("Actions")->SetElementVisible("Hint"_intern, true));  // a hidden element has no rect
         Canvas("Actions")->UpdateLayout(kViewWidth, kViewHeight);
-        EXPECT_EQ(row->rect.w, kRowWidth) << "four buttons and three gaps fit a row";
+        EXPECT_EQ(row->rect.w, kRowWidth) << "the row fills its region: four buttons and three gaps";
         const UIElement* hint = Element("Actions", "Hint");
         ASSERT_NE(hint, nullptr);
         EXPECT_TRUE(SameColor(hint->color, PaletteColor("scrim")));
@@ -310,8 +312,6 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongTableScreenTest, InThePortraitViewTheButtonsAre68HighInOneRowInTheBandUnderTheWaitingRow) {
         // The portrait view is 720 wide: a button of kPortraitActionButtonHeight is a touch target from a window 339 px wide
         constexpr float kPortraitSmallestWindowWidth = 339.0f;
-        constexpr float kBandTop = 924.0f;      // under the waiting row of `Hints` (y 836..916)
-        constexpr float kBandBottom = 1028.0f;  // the plate of the viewer
         constexpr float kPortraitButtonWidth = 92.0f;
         constexpr float kPortraitDeclareWidth = 124.0f;
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
@@ -323,6 +323,13 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(canvas);
         const MatrixWindow window = DesignWindowOf(TableShape::Portrait);
         const TableLayout layout = MakeWorstCaseTableLayout(0, window);
+        Rect band;  // the free ground of the buttons: under the waiting row and above the plate of the viewer
+        for (const TableRegion& region : MakeTableRegions(layout)) {
+            if (region.name == kActionsRegionName) {
+                band = region.rect;
+            }
+        }
+        ASSERT_FALSE(band.IsEmpty());
         for (const std::vector<ButtonKind>& kinds : FullestButtonSets()) {
             for (int i = 0; i < kButtonCount; ++i) {
                 SetShown(static_cast<ButtonKind>(i), false);
@@ -335,8 +342,9 @@ namespace BECore::Mahjong::Tests {
             ASSERT_NE(row, nullptr);
             EXPECT_GE(row->rect.x, 0.0f);
             EXPECT_LE(row->rect.x + row->rect.w, kPortraitViewWidth);
-            EXPECT_GE(row->rect.y, kBandTop);
-            EXPECT_LE(row->rect.y + row->rect.h, kBandBottom - kGridUnit);
+            EXPECT_GE(row->rect.y, band.y - kRegionTolerance);
+            EXPECT_LE(row->rect.y + row->rect.h, band.y + band.h + kRegionTolerance);
+            EXPECT_LE(row->rect.y + row->rect.h, layout.zones.seatPlates[0].y - kGridUnit) << "above the plate of the viewer";
             float width = 0.0f;
             for (const ButtonKind kind : kinds) {
                 const UIElement* button = Element("Actions", SpecOf(kind).element);
@@ -602,7 +610,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NE(hint, nullptr);
         EXPECT_FALSE(OnScreen("Actions", "Hint")) << "hidden in the file";
         EXPECT_FALSE(hint->IsHitTestable()) << "a tooltip never takes a click";
-        EXPECT_TRUE(hint->ignoreSafeArea);
+        EXPECT_EQ(hint->style.rect.region, PoolString::Intern(kHintRegionName)) << "the label names the free ground of the table that is its place";
         ASSERT_TRUE(canvas->SetElementVisible("Hint"_intern, true));
 
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
@@ -639,6 +647,14 @@ namespace BECore::Mahjong::Tests {
             }
             LayOutOnTheTable({"Actions"}, window);
             const Rect plate = hint->rect;
+            for (const TableRegion& region : MakeTableRegions(MakeWorstCaseTableLayout(0, window))) {
+                if (region.name == kHintRegionName) {
+                    EXPECT_GE(plate.x, region.rect.x - kRegionTolerance) << window.label.c_str() << ": inside its region";
+                    EXPECT_GE(plate.y, region.rect.y - kRegionTolerance) << window.label.c_str();
+                    EXPECT_LE(plate.x + plate.w, region.rect.x + region.rect.w + kRegionTolerance) << window.label.c_str();
+                    EXPECT_LE(plate.y + plate.h, region.rect.y + region.rect.h + kRegionTolerance) << window.label.c_str();
+                }
+            }
             EXPECT_GE(plate.x, 0.0f) << window.label.c_str();
             EXPECT_GE(plate.y, 0.0f) << window.label.c_str();
             EXPECT_LE(plate.x + plate.w, ViewOf(window).width) << window.label.c_str();

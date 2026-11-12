@@ -1,5 +1,6 @@
 #include "ComputerTestSupport.h"
 #include "MahjongTableTestSupport.h"
+#include "MahjongTouchTestSupport.h"
 
 #include <BECore/Profiler/Alloc/AllocTracker.h>
 #include <Mahjong/Table/Coach.h>
@@ -36,6 +37,26 @@ namespace BECore::Mahjong::Tests {
 
         EXPECT_EQ(allocations, 0u);
         EXPECT_FALSE(_renderer->calls.empty());
+    }
+
+    /// The regions reach every canvas of the table; once they are there, a frame in each shape, the phone profile among them, allocates
+    /// nothing (`Set` of an equal rectangle, and the comparison with the published list, keep the heap out).
+    TEST_F(MahjongTableAllocTest, TheTablesRegionsOnTheCanvasesAllocateNothingInASteadyFrameInEveryShape) {
+        ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
+        const MatrixWindow windows[] = {DesignWindowOf(TableShape::Landscape), DesignWindowOf(TableShape::Portrait), DesignWindowOf(TableShape::Narrow), DesignWindowOf(TableShape::Wide),
+                                        MakePhoneWindow(915.0f, 330.0f, 2.6f)};
+        for (const MatrixWindow& window : windows) {
+            SetWindow(*_renderer, window);
+            Draw();
+            Draw();
+            Draw();
+            ASSERT_FALSE(Canvas("Hud")->GetRegions().IsEmpty()) << window.label.c_str();
+
+            const uint64_t before = AllocTracker::GetThreadCounters().count;
+            Draw();
+            const uint64_t allocations = AllocTracker::GetThreadCounters().count - before;
+            EXPECT_EQ(allocations, 0u) << window.label.c_str();
+        }
     }
 
     TEST_F(MahjongTableAllocTest, ThePointerAtRestOnATileAllocatesNothing) {

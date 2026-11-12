@@ -3,10 +3,12 @@
 #include <BECore/Renderer/ITexture.h>
 #include <BECore/Resource/ResourceHandle.h>
 #include <BECore/Scene/IComponent.h>
+#include <BECore/UI/UICanvasComponent.h>
 #include <Mahjong/ComputerThinking.h>
 #include <Mahjong/Table/ActionButtons.h>
 #include <Mahjong/Table/AnimationSpeed.h>
 #include <Mahjong/Table/TableLayout.h>
+#include <Mahjong/Table/TableRegions.h>
 #include <Mahjong/Table/TileFlights.h>
 #include <chrono>
 
@@ -41,6 +43,10 @@ namespace BECore::Mahjong {
     /// How often the table looks at `config/TableLayout.xml` (wall-clock seconds), see the class comment.
     inline constexpr float kTableLayoutPollSeconds = 0.5f;
 
+    /// The nodes of the scene whose `SceneView` canvas get the regions of the table (`PublishRegions`), by the names of the scene file.
+    inline constexpr const char* kRegionNodes[] = {"Hud", "SeatPlates", "CenterPanel", "Hints", "HintsButton", "HintsWhy", "Actions", "HandOver"};
+    inline constexpr size_t kRegionNodeCount = std::size(kRegionNodes);
+
     /**
      * @brief The table of the active `MahjongGame` on screen: draws the felt, the four hands, the open sets, the bonus tiles, the discards
      *        and the wall, and plays the person seats by mouse and buttons and the computer seats by pace.
@@ -56,6 +62,12 @@ namespace BECore::Mahjong {
      * `kTableLayoutPollSeconds` of wall-clock time (not the scene's time, so a paused table or an open modal keep polling) at the file stamp, reloads the config when
      * it changed and offers the document to `OfferTableLayoutSpec` (also when the stamp did not change, so an edit of the Config Editor shows without a save): the spec is
      * replaced only by one that reads and passes `CheckTableLayoutSpec`, and a refused file keeps the last good spec and is logged once per distinct text.
+     *
+     * **The regions.** Once the layout of a draw is built, the component publishes `MakeTableRegions` of it (`Table/TableRegions.h`: the plates, the
+     * centre panel, the wall and the free ground of the spec) to the `SceneView` canvas of every node in `kRegionNodes` with `SetRegion`, so an
+     * element anchors to the table's own places (`region="table.plate.0"`). The `Table` node is first in the scene, so they are set before those
+     * canvases lay out in the same frame. They are published again only when a rectangle or a name moved (another viewer, shape, window, profile or
+     * spec), and a withdrawn name is removed. A node the scene lacks is skipped and looked for again at the next draw.
      *
      * **No peeking.** While the hand is played only the concealed tiles of the viewer (`TableSession::Viewer()`) are drawn face up, and
      * none at all while `HandoffPending()` (a hot-seat cover). The other seats show backs, their concealed kongs too. When the hand is
@@ -291,6 +303,8 @@ namespace BECore::Mahjong {
         /// The name on hover, from the layout just built: sets `tileHoverText`, shows the plate `TileHoverPlate` exactly while the pointer is over a
         /// face-up tile (`Table/TileHover.h`) and moves it only when its place changed. `game` null: nothing is hovered.
         void PublishHover(const MahjongGame* game, float viewWidth, float viewHeight);
+        /// Publishes the regions of `layout` (just built) to the canvases of `kRegionNodes`, only what changed.
+        void PublishRegions(const TableLayout& layout);
         /// Pushes the buttons, the tile pictures on them, the hint of the hovered button, the choice between `Actions` (with `HintsButton`) and
         /// `ActionsCompact` and the cover to the canvases of the scene, only what changed.
         void PublishScreen(const MahjongGame* game);
@@ -394,6 +408,11 @@ namespace BECore::Mahjong {
         float _lostLeft = 0.0f;                       // seconds of the marks of that window left, 0 for none
         float _handOverHoldLeft = 0.0f;               // seconds the score table is still held back, 0 for none
         SeenHand _handOverHoldOf;                     // the hand it is held for: a hold is void in any other
+
+        eastl::vector<TableRegion> _regions;                                              // the regions of the last layout (refilled every draw, for its capacity)
+        eastl::vector<TableRegion> _publishedRegions;                                     // what the canvases of `_regionCanvases` hold,
+        eastl::vector<PoolString> _regionNames;                                           // and the interned names of them, in the same order
+        eastl::array<IntrusivePtr<UICanvasComponent>, kRegionNodeCount> _regionCanvases;  // the canvases of `kRegionNodes`, null for a node the scene lacks
 
         std::optional<std::filesystem::file_time_type> _layoutStamp;  // the stamp of the file of the config `TableLayout` at the last look, none when it has none
         std::chrono::steady_clock::time_point _layoutPolled;          // the last look

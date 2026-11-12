@@ -212,6 +212,12 @@ namespace BECore::Mahjong::Tests {
         return MakeTableLayout(input, view.width, view.height);
     }
 
+    /// Sets on `regions` what the table publishes in this window (`MakeTableRegions` of its worst-case layout, the phone profile's lifted plate
+    /// included): a canvas laid out in the window by a helper below holds them while it does, so an element that names a region lies in it.
+    inline void PublishTableRegionsOf(UIRegionSet& regions, const MatrixWindow& window) {
+        PublishRegionsOf(regions, TableLayoutFor(window, WorstCaseTableInput(0)));
+    }
+
     /// The layout context `ValidateOnMatrix` builds for a window of the matrix, for a scene whose view is the table (the view of the window's
     /// shape).
     inline UILayoutContext ContextOf(const MatrixWindow& window, float userScale = 1.0f) {
@@ -229,14 +235,20 @@ namespace BECore::Mahjong::Tests {
 
     /// Lays the canvas out in the window as the game does (the scene's view size, the density of the window) in the scale mode and at
     /// the user scale given (a `SceneView` canvas ignores both), and returns where it is. The rects of the elements are in canvas
-    /// units afterwards; the canvas keeps the scale mode until its next `UpdateLayout`, which takes it from the file again.
+    /// units afterwards; the canvas keeps the scale mode until its next `UpdateLayout`, which takes it from the file again. The canvas lies
+    /// against the regions of the table in this window (`PublishTableRegionsOf`) while it is laid out; it holds the regions of the last
+    /// draw again afterwards, so the next draw, which publishes only a change, finds them as it left them.
     inline UICanvasResolved LayOutInWindow(UICanvasComponent& canvas, const MatrixWindow& window, CanvasScaleMode mode = CanvasScaleMode::ScaleWithScreen, float userScale = 1.0f) {
         canvas.UpdateLayout(kViewWidth, kViewHeight);  // the reflected fields of the component reach the layout on its first update
         UICanvasLayout& layout = canvas.GetLayout();
         if (layout.params.space == CanvasSpace::Screen) {
             layout.params.scaleMode = mode;
         }
+        const UIRegionSet published = layout.regions;
+        layout.regions.Clear();
+        PublishTableRegionsOf(layout.regions, window);
         layout.Update(ContextOf(window, userScale));
+        layout.regions = published;
         return layout.GetResolved();
     }
 
@@ -301,32 +313,6 @@ namespace BECore::Mahjong::Tests {
     inline std::pair<float, float> OutputCenterOf(const UICanvasComponent& canvas, const UIElement& element) {
         const Rect output = canvas.GetLayout().GetResolved().transform.ToOutput(element.rect.x, element.rect.y, element.rect.w, element.rect.h);
         return {output.x + output.w * 0.5f, output.y + output.h * 0.5f};
-    }
-
-    /// The input of the table with every zone at its capacity (14 concealed tiles, four kongs and 8 bonus tiles a seat, 100 discards, the
-    /// 144-tile wall). `viewer` is the seat at the bottom (the zones are the same, the seats turn).
-    inline TableInput WorstCaseTableInput(Seat viewer = 0) {
-        constexpr int kMostDiscards = 100;  // longer than any hand leaves (136 tiles, 52 in the hands at the least)
-        TableInput worst;
-        worst.viewer = viewer;
-        worst.concealedCount.fill(kMaxConcealedTiles);
-        worst.bonusCount.fill(kMaxBonusTiles);
-        Meld kong;
-        kong.kind = MeldKind::Kong;
-        kong.first = T("1p");
-        for (auto& melds : worst.melds) {
-            melds.assign(kMaxMelds, kong);
-        }
-        for (int i = 0; i < kMostDiscards; ++i) {
-            worst.discardSeats.push_back(i % kSeatCount);
-        }
-        worst.wallRemaining = 2 * kWallRingCells;
-        return worst;
-    }
-
-    /// The table with every zone at its capacity in the desktop profile, so no tile of any desktop game lies where this does not.
-    inline TableLayout MakeWorstCaseTableLayout(Seat viewer = 0) {
-        return MakeTableLayout(WorstCaseTableInput(viewer));
     }
 
     /// The table with every zone at its capacity as the component draws it in this window (the profile the rule gives the window).
@@ -397,6 +383,7 @@ namespace BECore::Mahjong::Tests {
         canvas.UpdateLayout(kViewWidth, kViewHeight);
         UICanvasLayout& layout = canvas.GetLayout();
         const UICanvasScaleParams saved = layout.params;
+        const UIRegionSet savedRegions = layout.regions;
         const bool screen = saved.space == CanvasSpace::Screen;
         const CanvasScaleMode modes[] = {CanvasScaleMode::ConstantPixelSize, CanvasScaleMode::ScaleWithScreen, CanvasScaleMode::ConstantPhysicalSize};
         const float userScales[] = {1.0f, 1.5f};
@@ -407,6 +394,8 @@ namespace BECore::Mahjong::Tests {
                 return;
             }
             const bool dropTouch = skip(window);
+            layout.regions.Clear();
+            PublishTableRegionsOf(layout.regions, window);
             for (const CanvasScaleMode mode : modes) {
                 for (const float userScale : userScales) {
                     if (!screen && (mode != modes[0] || userScale != userScales[0])) {
@@ -433,6 +422,7 @@ namespace BECore::Mahjong::Tests {
             }
         });
         layout.params = saved;
+        layout.regions = savedRegions;
         layout.Invalidate();
         return failures;
     }
@@ -455,6 +445,7 @@ namespace BECore::Mahjong::Tests {
         canvas.UpdateLayout(kViewWidth, kViewHeight);
         UICanvasLayout& layout = canvas.GetLayout();
         const UICanvasScaleParams saved = layout.params;
+        const UIRegionSet savedRegions = layout.regions;
         const bool screen = saved.space == CanvasSpace::Screen;
         const CanvasScaleMode modes[] = {CanvasScaleMode::ConstantPixelSize, CanvasScaleMode::ScaleWithScreen, CanvasScaleMode::ConstantPhysicalSize};
         const float userScales[] = {1.0f, 1.5f};
@@ -464,6 +455,8 @@ namespace BECore::Mahjong::Tests {
             if (only.has_value() && ShapeOf(window) != *only) {
                 return;
             }
+            layout.regions.Clear();
+            PublishTableRegionsOf(layout.regions, window);
             for (const CanvasScaleMode mode : modes) {
                 for (const float userScale : userScales) {
                     if (!screen && (mode != modes[0] || userScale != userScales[0])) {
@@ -493,6 +486,7 @@ namespace BECore::Mahjong::Tests {
             }
         });
         layout.params = saved;
+        layout.regions = savedRegions;
         layout.Invalidate();
         return cut;
     }

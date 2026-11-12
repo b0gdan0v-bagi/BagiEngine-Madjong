@@ -59,8 +59,19 @@ namespace BECore::Mahjong {
         [[nodiscard]] bool operator==(const SeatSpec& other) const noexcept = default;
     };
 
+    /// A named free-ground region: a place for a canvas of the table, as fractions of the design view like a zone. It lies on no tile, no
+    /// discard block, no wall ring and no plate (`CheckTableLayoutSpec`); a region that must lie on the wall or the centre panel is a zone
+    /// region, built from the layout (`TableRegions.h`), not a free one.
+    struct FreeRegion {
+        RegionName name;
+        ZoneRect rect;
+
+        [[nodiscard]] bool operator==(const FreeRegion& other) const noexcept = default;
+    };
+
     /// The zones of one shape. A `like` shape borrows every zone of another shape (Wide is Landscape): its seats, wall and phone override
-    /// are not read, and the borrowed table lies `inset` (a fraction of this shape's design width) from the left edge of the view.
+    /// are not read, and the borrowed table lies `inset` (a fraction of this shape's design width) from the left edge of the view; its free
+    /// regions are the borrowed shape's, shifted with the table.
     struct ShapeSpec {
         /// Set when the shape is described in the spec (the reader sets it; a shape the file does not mention stays false).
         bool present = false;
@@ -70,6 +81,8 @@ namespace BECore::Mahjong {
         /// By screen position: 0 bottom, 1 right, 2 top, 3 left.
         eastl::array<SeatSpec, kSeatCount> seats;
         ZoneRect wall;
+        /// The free-ground regions of the shape, by name (a name once).
+        eastl::vector<FreeRegion> freeRegions;
         /// The viewer's side (position 0) for the phone profile; read when `hasPhone`.
         bool hasPhone = false;
         SeatSpec phone;

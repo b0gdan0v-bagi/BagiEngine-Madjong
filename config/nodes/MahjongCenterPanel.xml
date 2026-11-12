@@ -1,64 +1,28 @@
 <?xml version="1.0"?>
 <!--
   The words of the centre panel (Table/CenterPanel.h): the round wind with the number of the hand in it, the tiles left in the wall and,
-  on each side, the wind letter and the points of the seat that sits there, inside the wall ring (TableLayout::zones.centerPanel,
-  x 472..808, y 282..422 in view units; MahjongTableComponent paints its ground, the light of the turn and the mark of the dealer). By
-  screen position, not by seat: 0 bottom, 1 right, 2 top, 3 left, so the labels stay put and the variables panelWind0..3 and
-  panelScore0..3 that MahjongHudComponent publishes follow the seat that sits there; panelRound and panelWall are whole sentences of the
-  string table. Text only, no control. A SceneView canvas whose labels ignore the safe area like SeatPlates: the panel is on the table,
-  so the words stay on it. Every label is a direct element of the canvas (the validator checks the children of a stack against the safe
-  area whatever the stack says) and lies inside the panel on the grid of 4 (the panel's own top, 282, is off the grid: the labels start at
-  284 and end at 420). The top and bottom cells are 328 wide
-  and 28 high; the side cells are 104 wide and as high as the middle (72); the round and the wall lie between them. Every label is
-  AutoFit, so the worst texts (-9999, the longest round and wall words) shrink in the small windows. MahjongHudTest holds the labels
-  inside the panel and clear of every tile. In the portrait table the ring and its panel are 280 units left and 132 down (x 192..528, y 414..554)
-  and the portrait variant moves every label by that, so the cells keep the sizes above. The wide variant (minAspect:2, the view of
-  1560 x 720 whose table is the landscape one 140 units in from each side) moves every label right by that wing (the panel is x 612..948). The narrow variant (orientation:landscape;maxAspect:1.55, the view of
-  1080 x 768, whose ring and panel are 100 left of the landscape ones, x 372..708 at the same y) moves every label 100 left.
+  on each side, the wind letter and the points of the seat that sits there, inside the wall ring. MahjongTableComponent paints the panel's
+  ground, the light of the turn and the mark of the dealer. By screen position, not by seat: 0 bottom, 1 right, 2 top, 3 left, so the
+  labels stay put and the variables panelWind0..3 and panelScore0..3 that MahjongHudComponent publishes follow the seat that sits there;
+  panelRound and panelWall are whole sentences of the string table. Text only, no control.
+  A SceneView canvas whose labels name the region table.centerPanel (Table/TableRegions.h, the inside of the wall ring, published by the
+  table from the solved layout) and lie in it by fractions of it: the top and the bottom cell run across the panel, the side cells are
+  a third wide and as high as the middle, the round and the wall lie between them. The panel has the same shape in every view, so there is
+  no variant. A region wins over the safe area: the words stay on the panel, which the safe area does not move. Every label is
+  AutoFit, so the worst texts (-9999, the longest round and wall words) shrink in the small windows. MahjongHudTest holds the labels inside
+  the panel, apart from each other and clear of every tile.
 -->
 <node name="CenterPanel" layer="10" contentVersion="3">
   <components>
-    <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
+    <component type="UICanvasComponent" space="SceneView">
       <elements>
-        <element type="UILabel" name="PanelRound" anchor="TopLeft" ignoreSafeArea="true" x="584" y="320" width="112" height="36" text="{panelRound}" fontSize="28" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
-        <element type="UILabel" name="PanelWall" anchor="TopLeft" ignoreSafeArea="true" x="584" y="356" width="112" height="32" text="{panelWall}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
-        <element type="UILabel" name="PanelSeat0" anchor="TopLeft" ignoreSafeArea="true" x="476" y="392" width="328" height="28" text="{panelWind0} {panelScore0}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
-        <element type="UILabel" name="PanelSeat1" anchor="TopLeft" ignoreSafeArea="true" x="700" y="316" width="104" height="72" text="{panelWind1} {panelScore1}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
-        <element type="UILabel" name="PanelSeat2" anchor="TopLeft" ignoreSafeArea="true" x="476" y="284" width="328" height="28" text="{panelWind2} {panelScore2}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
-        <element type="UILabel" name="PanelSeat3" anchor="TopLeft" ignoreSafeArea="true" x="476" y="316" width="104" height="72" text="{panelWind3} {panelScore3}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
+        <element type="UILabel" name="PanelRound" region="table.centerPanel" anchorMin="33.3%,27%" anchorMax="66.7%,53%" text="{panelRound}" fontSize="28" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
+        <element type="UILabel" name="PanelWall" region="table.centerPanel" anchorMin="33.3%,53%" anchorMax="66.7%,76%" text="{panelWall}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
+        <element type="UILabel" name="PanelSeat0" region="table.centerPanel" anchorMin="1%,80%" anchorMax="99%,100%" text="{panelWind0} {panelScore0}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
+        <element type="UILabel" name="PanelSeat1" region="table.centerPanel" anchorMin="68%,24%" anchorMax="99%,76%" text="{panelWind1} {panelScore1}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
+        <element type="UILabel" name="PanelSeat2" region="table.centerPanel" anchorMin="1%,0%" anchorMax="99%,20%" text="{panelWind2} {panelScore2}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
+        <element type="UILabel" name="PanelSeat3" region="table.centerPanel" anchorMin="1%,24%" anchorMax="32%,76%" text="{panelWind3} {panelScore3}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
       </elements>
-      <variants>
-        <variant when="orientation:portrait">
-          <overrides>
-            <set element="PanelRound" x="304" y="452" />
-            <set element="PanelWall" x="304" y="488" />
-            <set element="PanelSeat0" x="196" y="524" />
-            <set element="PanelSeat1" x="420" y="448" />
-            <set element="PanelSeat2" x="196" y="416" />
-            <set element="PanelSeat3" x="196" y="448" />
-          </overrides>
-        </variant>
-        <variant when="orientation:landscape;maxAspect:1.55">
-          <overrides>
-            <set element="PanelRound" x="484" />
-            <set element="PanelWall" x="484" />
-            <set element="PanelSeat0" x="376" />
-            <set element="PanelSeat1" x="600" />
-            <set element="PanelSeat2" x="376" />
-            <set element="PanelSeat3" x="376" />
-          </overrides>
-        </variant>
-        <variant when="minAspect:2">
-          <overrides>
-            <set element="PanelRound" x="724" />
-            <set element="PanelWall" x="724" />
-            <set element="PanelSeat0" x="616" />
-            <set element="PanelSeat1" x="840" />
-            <set element="PanelSeat2" x="616" />
-            <set element="PanelSeat3" x="616" />
-          </overrides>
-        </variant>
-      </variants>
     </component>
   </components>
 </node>

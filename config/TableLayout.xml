@@ -20,8 +20,15 @@
     Plate               the seat plate (152 x 80); nothing else lies on it and it keeps 4 units clear of every discard block and the wall.
     Wall                the ring of 26 x 12 stacks; the centre panel is the ring inset by one stack.
   Tile sizes follow one rule: width w, height floor(w * 4 / 3).
-  A Shape with like="Name" borrows the zones of that shape and lies `inset` (a fraction of its own width) from the left edge (Wide).
-  Clearances other files rely on are named next to the zone that keeps them; tests/TableLayoutTest.cpp holds each of them.
+  A Shape with like="Name" borrows the zones (and the Free regions) of that shape and lies `inset` (a fraction of its own width) from the left
+  edge (Wide).
+  Free      <Free name="table.x" x y w h/>: a region of free ground in the shape, for the canvases of the table (the node files in config/nodes/
+            anchor to it with region="table.x"; the names every shape must have are listed in Table/TableRegions.h). It is a place, not a
+            tile zone: CheckTableLayoutSpec holds it inside the view and clear of every tile, discard block, wall ring and plate of the
+            worst-case table, for every viewer and the phone profile, so a zone that moves onto a region is refused. A name is given once
+            per shape and is not one of the names the table publishes from its zones (table.plate.0..3, table.centerPanel, table.wall).
+  Other files rely on the Free regions, so a clearance is written next to the region (or the zone that keeps it); tests/TableLayoutTest.cpp
+  holds the regions, and what the check cannot see (the Rules button of the menu) by a test of its own.
 -->
 <TableLayout>
 
@@ -30,7 +37,7 @@
     <!-- The viewer: the Hand rests 8 units above the bottom edge and starts at x 72, under the left melds column (it ends at y 600); the Melds lie
          right of it and end at x 1268, the Bonus row above the hand. The plate lies left of the Discards, above the Bonus row and right of the left
          melds column (it ends at x 91). The Discards lie between the wall ring (ends y 436) and the hand tile that a tap raises (y 632), and
-         lie 8 right of SelectedTile of MahjongHud.xml (ends x 536) and 8 left of the action row (x 720). -->
+         lie 8 right of the region table.selectedTile (ends x 536) and 8 left of table.actions (x 720). -->
     <Seat position="0">
       <Hand x="0.05625" y="0.9" w="0.525" h="0.08888889" minTileW="48"/>  <!-- 72 648 672x64 -->
       <Melds x="0.596875" y="0.9333333" w="0.39375" h="0.05555556" minTileW="30"/>  <!-- 764 672 504x40 -->
@@ -38,10 +45,10 @@
       <Discards x="0.425" y="0.61388889" w="0.13125" h="0.25694444"/>  <!-- 544 442 168x185 -->
       <Plate x="0.075" y="0.73888889" w="0.11875" h="0.11111111"/>  <!-- 96 532 152x80 -->
     </Seat>
-    <!-- The right seat, turned: the columns hand, melds, bonus from the edge inwards. The Bonus starts at y 192, below the move line of the HUD
-         (MahjongHud.xml; it ends at y 172 and reaches over this column). The Hand and the Melds end at y 576 and 600: the hand row of the
-         phone profile starts at y 608. The Discards start at x 968: the Hint label of MahjongActions.xml ends at x 960, and the block ends at
-         y 436, above the action row (y 440). The plate lies right of that label, below the move line and left of the Bonus column. -->
+    <!-- The right seat, turned: the columns hand, melds, bonus from the edge inwards. The Bonus starts at y 192, below the region table.moveLine
+         (it ends at y 172 and reaches over this column). The Hand and the Melds end at y 576 and 600: the hand row of the
+         phone profile starts at y 608. The Discards start at x 968: the region table.hint ends at x 960, and the block ends at
+         y 436, above table.actions (y 440). The plate lies right of that region, below table.moveLine and left of the Bonus column. -->
     <Seat position="1">
       <Hand x="0.9609375" y="0.17777778" w="0.0328125" h="0.62222222" minTileW="32"/>  <!-- 1230 128 42x448 -->
       <Melds x="0.92890625" y="0.17777778" w="0.02890625" h="0.65555556" minTileW="28"/>  <!-- 1189 128 37x472 -->
@@ -49,11 +56,11 @@
       <Discards x="0.75625" y="0.37222222" w="0.14453125" h="0.23333333"/>  <!-- 968 268 185x168 -->
       <Plate x="0.78125" y="0.25" w="0.11875" h="0.11111111"/>  <!-- 1000 180 152x80 -->
     </Seat>
-    <!-- The top seat, the squeeze of the table: the Hand starts at x 444, right of the WaitPanel of MahjongHints.xml (x 96..432), and is not
+    <!-- The top seat, the squeeze of the table: the Hand starts at x 444, right of the region table.waiting (x 96..432), and is not
          centred. From y 8 the Hand (46 high), the Melds (32), the Discards (5 rows of 34) and the wall ring (y 268) leave 4 units between them,
          so a taller tile in one of them takes from the others. The Bonus tiles lie in the row of the Melds, right of them, and end at x 988, left
          of the Rules button (x 996), so every unit of meld width takes 8 from them (4 kongs and 8 bonus tiles fill the row). The plate lies below
-         the Melds, left of the Discards and 8 right of AdviceText of MahjongHints.xml (it ends at x 392). -->
+         the Melds, left of the Discards and 8 right of table.advice (it ends at x 392). -->
     <Seat position="2">
       <Hand x="0.346875" y="0.01111111" w="0.39375" h="0.06388889" minTileW="35"/>  <!-- 444 8 504x46 -->
       <Melds x="0.340625" y="0.08055556" w="0.31875" h="0.04444444" minTileW="24"/>  <!-- 436 58 408x32 -->
@@ -71,6 +78,16 @@
       <Plate x="0.096875" y="0.25" w="0.11875" h="0.11111111"/>  <!-- 124 180 152x80 -->
     </Seat>
     <Wall x="0.3578125" y="0.3722222" w="0.284375" h="0.2333333"/>  <!-- 458 268 364x168 -->
+    <!-- Free ground for the canvases of the table (MahjongHud, MahjongActions, MahjongHints, MahjongHintsButton; the names are in Table/TableRegions.h).
+         A region lies on no tile of the worst-case table (every viewer, the phone profile too), no discard block, no plate and not on the wall
+         ring; CheckTableLayoutSpec holds each. Wide borrows them a wing in. What each stays clear of is after it. -->
+    <Free name="table.moveLine" x="0.578125" y="0.12777778" w="0.35" h="0.11111111"/>  <!-- 740 92 448x80; right of the top discards and bonus tiles, above the right seat's plate (y 180) and its rows (they start at y 128 / 192) -->
+    <Free name="table.selectedTile" x="0.215625" y="0.71111111" w="0.203125" h="0.06666667"/>  <!-- 276 512 260x48; between the bottom plate and the bottom discards, above the bonus row of both the desktop and the phone profile, below the left discards -->
+    <Free name="table.hint" x="0.65" y="0.35555556" w="0.1" h="0.24444444"/>  <!-- 832 256 128x176; the gutter between the wall ring (ends x 822) and the right discards (start x 968) -->
+    <Free name="table.actions" x="0.5625" y="0.61111111" w="0.34375" h="0.16666667"/>  <!-- 720 440 440x120; right of the bottom discards of both profiles (they end x 712), below the right discards and plate, above the phone profile's meld row (y 564) -->
+    <Free name="table.waiting" x="0.075" y="0.01111111" w="0.2625" h="0.11111111"/>  <!-- 96 8 336x80; right of the left melds column (ends x 91), left of the top hand (starts x 444) -->
+    <Free name="table.hintButton" x="0.075" y="0.12777778" w="0.09375" h="0.07777778"/>  <!-- 96 92 120x56; under waiting, left of the top plate (starts x 400) -->
+    <Free name="table.advice" x="0.171875" y="0.12777778" w="0.134375" h="0.07777778"/>  <!-- 220 92 172x56; right of hintButton, 8 left of the top plate -->
 
     <!--
       The phone profile: the viewer's side when the window is so small that the desktop hand tile would be under the touch size
@@ -90,7 +107,7 @@
 
   <!-- Portrait: 720 x 1280 (a view at least as high as wide). From the top: the top seat, a band (y 124..296) of the three opponents' Discards with the
        side seats' Hand and Melds columns at the edges (from y 84), a row of three plates (y 308) with the side seats' Bonus columns beside them, the wall ring (y 400), the viewer's Discards, then free ground for the
-       canvases of the table (config/nodes/), the viewer's plate, Bonus row, Melds row and the Hand at the foot. -->
+       canvases of the table (the free regions below), the viewer's plate, Bonus row, Melds row and the Hand at the foot. -->
   <Shape name="Portrait">
     <!-- The viewer: the Hand is one row of 14 tiles spread over the width inside the rim and the rack, resting on the rim; the Melds and Bonus rows
          lie above it, clear of a tile raised by a tap (kSelectedTileRise). The Discards are larger here (the view is 720 wide: a phone shows it small). -->
@@ -102,7 +119,7 @@
       <Plate x="0.01666667" y="0.803125" w="0.2111111" h="0.0625"/>  <!-- 12 1028 152x80 -->
     </Seat>
     <!-- The side seats, as large as in Landscape: the Hand and Melds columns at the edges start at y 84, under the top seat's Hand (it ends at y 80;
-         the Melds of the top seat start at x 156), and end at y 532 and 556, above the MoveLine of MahjongHud.xml (y 588) and the buttons of HudMenu. The
+         the Melds of the top seat start at x 156), and end at y 532 and 556, above the region table.moveLine (y 588) and the buttons of HudMenu. The
          Discards blocks (185 x 168) fill the band between the columns and the top block, 3 or 4 units apart: the columns (91 wide each side), the two
          side blocks and the top block are the 720 units but for 12. The Bonus tiles do not fit the band, so their column lies below the block,
          next to the plate (left of the right plate, right of the left one), and the plates in one row under the blocks. -->
@@ -131,6 +148,14 @@
       <Plate x="0.17222222" y="0.240625" w="0.21111111" h="0.0625"/>  <!-- 124 308 152x80 -->
     </Seat>
     <Wall x="0.2472222" y="0.3125" w="0.5055556" h="0.13125"/>  <!-- 178 400 364x168 -->
+    <!-- Free ground, as in Landscape. -->
+    <Free name="table.moveLine" x="0.66666667" y="0.459375" w="0.32222222" h="0.096875"/>  <!-- 480 588 232x124; right of the viewer's discards (end x 468), clear of the right seat's plate and bonus column (end y 452) -->
+    <Free name="table.selectedTile" x="0.31111111" y="0.809375" w="0.36111111" h="0.0375"/>  <!-- 224 1036 260x48; right of the viewer's plate (ends x 164), above the bonus row (y 1112) and clear of a raised hand tile -->
+    <Free name="table.hint" x="0.66666667" y="0.559375" w="0.32222222" h="0.0875"/>  <!-- 480 716 232x112; under moveLine, right of the viewer's discards -->
+    <Free name="table.actions" x="0.01666667" y="0.721875" w="0.96666667" h="0.053125"/>  <!-- 12 924 696x68; the band between the viewer's discards (end y 824) and the plate (y 1028), under waiting -->
+    <Free name="table.waiting" x="0.01666667" y="0.653125" w="0.46666667" h="0.0625"/>  <!-- 12 836 336x80; left of hintButton, left of the viewer's discards -->
+    <Free name="table.hintButton" x="0.5" y="0.653125" w="0.16666667" h="0.053125"/>  <!-- 360 836 120x68; between waiting and advice -->
+    <Free name="table.advice" x="0.68333333" y="0.653125" w="0.3" h="0.04375"/>  <!-- 492 836 216x56; right of hintButton, 12 in from the edge -->
   </Shape>
 
   <!-- Narrow: 1080 x 768 (4:3, 3:2, 5:4). The landscape table with the viewer's side as the phone profile lays it out: the Hand one row resting
@@ -145,9 +170,9 @@
       <Discards x="0.41111111" y="0.57552083" w="0.15555556" h="0.24088542"/>  <!-- 444 442 168x185 -->
       <Plate x="0.081481481" y="0.69270833" w="0.14074074" h="0.10416667"/>  <!-- 88 532 152x80 -->
     </Seat>
-    <!-- The side columns run from y 180, below the move line of MahjongHud.xml (it ends at y 172), and end at y 604: the buttons of HudMenu lie
+    <!-- The side columns run from y 180, below the region table.moveLine (it ends at y 172), and end at y 604: the buttons of HudMenu lie
          in the bottom left corner from y 612. Their length is what the left column allows (14 and 16 tiles and three gaps in 432), so the right
-         one has the same sizes. The Melds column ends at x 1028 and the action row of MahjongActions.xml (x 620..980) lies 15 left of it. -->
+         one has the same sizes. The Melds column ends at x 1028 and the region table.actions (x 620..980) lies 15 left of it. -->
     <Seat position="1">
       <Hand x="0.95555556" y="0.23697917" w="0.037037037" h="0.546875" minTileW="30"/>  <!-- 1032 182 40x420 -->
       <Melds x="0.9212963" y="0.234375" w="0.030555556" h="0.55208333" minTileW="25"/>  <!-- 995 180 33x424 -->
@@ -155,7 +180,7 @@
       <Discards x="0.71111111" y="0.34895833" w="0.1712963" h="0.21875"/>  <!-- 768 268 185x168 -->
       <Plate x="0.74074074" y="0.234375" w="0.14074074" h="0.10416667"/>  <!-- 800 180 152x80 -->
     </Seat>
-    <!-- The top Hand starts at x 340, right of the WaitPanel (x 8..328 in this view); the Bonus tiles lie beside it, centred on it. The Hand
+    <!-- The top Hand starts at x 340, right of the region table.waiting (x 8..328 in this view); the Bonus tiles lie beside it, centred on it. The Hand
          (46 high), the Melds (32) and the Discards (170) are those of the landscape table. -->
     <Seat position="2">
       <Hand x="0.31481481" y="0.010416667" w="0.4537037" h="0.059895833" minTileW="35"/>  <!-- 340 8 490x46 -->
@@ -172,6 +197,14 @@
       <Plate x="0.11111111" y="0.234375" w="0.14074074" h="0.10416667"/>  <!-- 120 180 152x80 -->
     </Seat>
     <Wall x="0.3314815" y="0.3489583" w="0.337037" h="0.21875"/>  <!-- 358 268 364x168 -->
+    <!-- Free ground, as in Landscape. -->
+    <Free name="table.moveLine" x="0.58518519" y="0.11979167" w="0.40740741" h="0.10416667"/>  <!-- 632 92 440x80; right of the top discards (end x 618), above the right seat's rows (start y 180) -->
+    <Free name="table.selectedTile" x="0.22962963" y="0.74479167" w="0.17407407" h="0.0625"/>  <!-- 248 572 188x48; between the bottom plate (ends x 240) and the bottom discards (start x 444), under the wall ring, over the bonus and meld row (y 636) -->
+    <Free name="table.hint" x="0.24074074" y="0.578125" w="0.16296296" h="0.16145833"/>  <!-- 260 444 176x124; left of the bottom discards, 8 under the wall ring (ends y 436), over selectedTile, right of the left discards (end x 305 at y 436) and the plate (ends x 240) -->
+    <Free name="table.actions" x="0.57407407" y="0.65104167" w="0.33333333" h="0.15625"/>  <!-- 620 500 360x120; right of the bottom discards (end x 612), 15 left of the right seat's melds column (x 995), above the melds row -->
+    <Free name="table.waiting" x="0.00740741" y="0.01041667" w="0.2962963" h="0.10416667"/>  <!-- 8 8 320x80; left of the top hand (starts x 340) -->
+    <Free name="table.hintButton" x="0.00740741" y="0.11979167" w="0.11111111" h="0.07291667"/>  <!-- 8 92 120x56; under waiting, left of the top plate (starts x 300) -->
+    <Free name="table.advice" x="0.12592593" y="0.11979167" w="0.14444444" h="0.07291667"/>  <!-- 136 92 156x56; right of hintButton, 8 left of the top plate -->
   </Shape>
 
   <!-- Wide: the landscape table in a view 1560 wide, a wing of 140 units (140 / 1560) on each side; the table is as high as before. -->

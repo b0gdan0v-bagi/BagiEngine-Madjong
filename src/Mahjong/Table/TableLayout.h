@@ -218,6 +218,17 @@ namespace BECore::Mahjong {
     inline constexpr float kSeatPlateW = 152.0f;
     inline constexpr float kSeatPlateH = 80.0f;
 
+    /// The name of a region of the table (`TableRegions.h`): at most this long, so a layout and a spec keep it without the heap.
+    inline constexpr size_t kMaxRegionNameLength = 31;
+    using RegionName = eastl::fixed_string<char, kMaxRegionNameLength + 1, false>;
+
+    /// A free-ground region of the layout (`ShapeSpec::freeRegions`), fitted to the view like a zone: a place a canvas of the table may use,
+    /// clear of every tile and plate of the worst-case table.
+    struct FreeZone {
+        RegionName name;
+        Rect rect;
+    };
+
     /// The zones of the table, in view units: the block that holds each seat's discards (by seat, whatever the pile holds), the ring
     /// that holds the wall stacks, the plate of each seat (by seat, for the viewer at the bottom: it lies at the screen position
     /// `SeatPosition(viewer, seat)`) and the centre panel. A zone holds its slots and overlaps no other zone and no hand, meld or bonus
@@ -229,6 +240,9 @@ namespace BECore::Mahjong {
         Rect wall;
         eastl::array<Rect, kSeatCount> seatPlates{};
         Rect centerPanel;
+        /// The free-ground regions of the spec for this shape, fitted like the zones (`ShapeSpec::freeRegions`, in the order of the file);
+        /// empty for a spec without any. Clear of every slot and zone above for the worst-case table (`CheckTableLayoutSpec`).
+        eastl::vector<FreeZone> freeRegions;
     };
 
     /// The slots of the four seats and the wall: per seat the hand, the melds, the bonus tiles, then the pile, then the wall stacks.

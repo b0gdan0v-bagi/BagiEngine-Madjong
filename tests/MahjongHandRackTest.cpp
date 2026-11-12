@@ -128,6 +128,7 @@ namespace BECore::Mahjong::Tests {
         const auto hints = Canvas("HintsButton");
         ASSERT_TRUE(actions && hints);
         ASSERT_TRUE(hints->SetElementVisible("HintButton"_intern, true));
+        Draw();  // the table publishes its regions to the canvases
         actions->UpdateLayout(kViewWidth, kViewHeight);
         hints->UpdateLayout(kViewWidth, kViewHeight);
         for (const char* name : {"ActionRow", "Hint"}) {
@@ -137,6 +138,7 @@ namespace BECore::Mahjong::Tests {
         }
         const UIElement* hint = Element("HintsButton", "HintButton");
         ASSERT_NE(hint, nullptr);
+        ASSERT_FALSE(hint->rect.IsEmpty());
         EXPECT_FALSE(Intersects(rack, hint->rect));
     }
 

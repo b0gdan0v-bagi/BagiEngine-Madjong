@@ -42,4 +42,21 @@ namespace BECore::Mahjong::Tests {
         return spec;
     }
 
+    /// The shipped spec with two more free regions in each shape, `test.first` and `test.second`, on ground no tile of the worst-case table
+    /// reaches (a spec that passes `CheckTableLayoutSpec`): the pure tests of how regions are fitted and published do not depend on which
+    /// regions the shipped file has.
+    inline TableLayoutSpec ShippedSpecWithTestRegions() {
+        TableLayoutSpec spec = ShippedTableLayoutSpec();
+        ShapeSpec& landscape = spec.Shape(TableShape::Landscape);
+        landscape.freeRegions.push_back(FreeRegion{"test.first", ZoneRect{0.01f, 0.01f, 0.2f, 0.1f}});
+        landscape.freeRegions.push_back(FreeRegion{"test.second", ZoneRect{0.25f, 0.01f, 0.05f, 0.05f}});
+        ShapeSpec& portrait = spec.Shape(TableShape::Portrait);
+        portrait.freeRegions.push_back(FreeRegion{"test.first", ZoneRect{0.02f, 0.5f, 0.2f, 0.1f}});
+        portrait.freeRegions.push_back(FreeRegion{"test.second", ZoneRect{0.7f, 0.5f, 0.2f, 0.1f}});
+        ShapeSpec& narrow = spec.Shape(TableShape::Narrow);
+        narrow.freeRegions.push_back(FreeRegion{"test.first", ZoneRect{0.01f, 0.01f, 0.1f, 0.08f}});
+        narrow.freeRegions.push_back(FreeRegion{"test.second", ZoneRect{0.15f, 0.01f, 0.05f, 0.05f}});
+        return spec;
+    }
+
 }  // namespace BECore::Mahjong::Tests

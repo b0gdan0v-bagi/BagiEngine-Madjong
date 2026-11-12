@@ -1770,8 +1770,8 @@ namespace BECore::Mahjong::Tests {
             ASSERT_NE(panel, nullptr);
             const Rect ring = MakeTableLayout(TableInput{}, DesignWidthOf(shape), DesignHeightOf(shape)).zones.wall;
             EXPECT_TRUE(Inside(panel->rect, ring)) << panel->rect.x << "," << panel->rect.y << " " << panel->rect.w << "x" << panel->rect.h;
-            EXPECT_EQ(panel->rect.x, ring.x + 2.0f);
-            EXPECT_EQ(panel->rect.y, shape == TableShape::Portrait ? 400.0f : 268.0f);
+            EXPECT_NEAR(panel->rect.x + panel->rect.w * 0.5f, ring.x + ring.w * 0.5f, 0.5f) << "centred on the ring";
+            EXPECT_NEAR(panel->rect.y + panel->rect.h * 0.5f, ring.y + ring.h * 0.5f, 0.5f);
             for (size_t i = 0; i < kMaxReasonLines; ++i) {
                 const UIElement* line = Element("HintsWhy", CellName("WhyLine", static_cast<int>(i)).c_str());
                 ASSERT_NE(line, nullptr) << i;
