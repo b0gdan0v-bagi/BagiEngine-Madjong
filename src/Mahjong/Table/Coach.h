@@ -59,6 +59,8 @@ namespace BECore::Mahjong {
      *
      * `pending` is the discard of a claim window (invalid in a turn). `stepsBefore` is the shanten of the hand as it was (of the 14 tiles
      * of a turn, of the hand of a window). `handWaits`: the advice is to pass a claim because the hand waits (and not for lack of gain).
+     * `byPoints`: the advice of a waiting hand offered a kong that keeps its wait was decided by points (`RateWaitingKong`). The pass of a
+     * waiting hand has the numbers of the wait (`Waiting`: ready, the unseen winning copies), so it compares with a claim's row.
      */
     struct CoachNote {
         Seat seat = kNoSeat;
@@ -67,6 +69,7 @@ namespace BECore::Mahjong {
         Tile pending;
         int stepsBefore = 0;
         bool handWaits = false;
+        bool byPoints = false;
         CoachSide advisedSide;
         CoachSide takenSide;
 

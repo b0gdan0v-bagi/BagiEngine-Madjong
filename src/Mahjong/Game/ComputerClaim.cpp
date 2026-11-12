@@ -1,5 +1,7 @@
 #include "ComputerClaim.h"
 
+#include <Mahjong/Game/OwnDraws.h>
+
 namespace BECore::Mahjong {
 
     namespace {
@@ -14,6 +16,34 @@ namespace BECore::Mahjong {
                 return after.shanten < shantenBefore;
             }
             return profile.takeValueClaimsAtEqualShanten && KeepsValueAtEqualShanten(view, action.claim);
+        }
+
+        /// The loose tile a kong draws: one draw more than the wall leaves the seat.
+        constexpr int kKongLooseDraws = 1;
+
+        /// The view of the seat after it claimed `view.pendingTile` as a kong: three concealed copies out, an open kong in the melds.
+        /// The copies the seat sees do not change (the fourth was in the pile, now it lies in the meld).
+        TableView ViewAfterKong(const TableView& view) {
+            TableView after = view;
+            int left = kKongTilesFromHand;
+            eastl::vector<Tile> concealed;
+            for (const Tile tile : view.own.concealed) {
+                if (left > 0 && tile == view.pendingTile) {
+                    --left;
+                    continue;
+                }
+                concealed.push_back(tile);
+            }
+            after.own.concealed = eastl::move(concealed);
+            Meld kong;
+            kong.kind = MeldKind::Kong;
+            kong.concealed = false;
+            kong.first = view.pendingTile;
+            kong.from = view.currentSeat;
+            kong.fromDiscard = true;
+            kong.claimed = view.pendingTile;
+            after.own.melds.push_back(kong);
+            return after;
         }
 
         /// The acceptable claims no other acceptable claim beats (several when they are equal in every respect).
@@ -100,12 +130,34 @@ namespace BECore::Mahjong {
         return options;
     }
 
+    std::optional<WaitingKong> RateWaitingKong(const TableView& view) {
+        for (const HandAction& action : view.legal) {
+            if (action.kind != ActionKind::Claim || action.claim != ClaimKind::Kong) {
+                continue;
+            }
+            if (RateClaim(view, action).shanten > kWaitingShanten) {
+                return std::nullopt;
+            }
+            WaitingKong rated;
+            rated.kong = action;
+            rated.passValue = ValueOfHeldHand(view);
+            rated.kongValue = ValueOfHeldHand(ViewAfterKong(view), kKongLooseDraws);
+            return rated;
+        }
+        return std::nullopt;
+    }
+
     ClaimDecision DecideClaim(const TableView& view, MahjongRng& rng, const LevelProfile& profile, SearchHandoff* handoff) {
         if (const HandAction* mahjong = FindMahjong(view)) {
             return {*mahjong, ClaimStep::Mahjong};
         }
         const int shantenBefore = Shanten(CountTiles(view.own.concealed), MeldCountOf(view));
         if (shantenBefore <= kWaitingShanten) {
+            if (profile.waitingKongByPoints) {
+                if (const std::optional<WaitingKong> kong = RateWaitingKong(view)) {
+                    return kong->KongIsBetter() ? ClaimDecision{kong->kong, ClaimStep::WaitingKong} : ClaimDecision{HandAction::MakePass(), ClaimStep::WaitingPass};
+                }
+            }
             return {HandAction::MakePass(), ClaimStep::WaitingHand};
         }
         if (profile.searchWorlds > 0) {

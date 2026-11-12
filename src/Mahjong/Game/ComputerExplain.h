@@ -70,6 +70,8 @@ namespace BECore::Mahjong {
      *   `IsBetterClaim`), then the unacceptable ones, at most `kExplainAlternatives`.
      * - `NoGain`: `chosen` is empty (the advice is `Pass`); `alternatives` the best listed claims, all unacceptable.
      * - `WaitingHand`: `waits` are the winning tiles of the held tiles.
+     * - `WaitingKong` / `WaitingPass`: `waits` as for `WaitingHand`, `waitingKong` the two values; the kong is `chosen` (taken) or the
+     *   one alternative (passed).
      * - `Mahjong`: only the step.
      */
     struct ClaimExplanation {
@@ -79,6 +81,7 @@ namespace BECore::Mahjong {
         std::optional<RatedClaim> chosen;
         eastl::vector<RatedClaim> alternatives;
         eastl::vector<TileCopies> waits;
+        std::optional<WaitingKong> waitingKong;
     };
 
     /// The explanation of one advice: the member of the phase of the view is set.

@@ -57,7 +57,7 @@ over-counts when the threads contend (shared cores, efficiency cores), so the De
 (`docs/bot-search.md`) is not read from a `--jobs 14` run.
 
 A player is `random`, a level `1` .. `10` (`easy` and `normal` are the names of 1 and 5), or a level with knobs of `LevelProfile`, `<level>:<knob>=<value>,...` (the knobs are
-`skipAcceptancePercent`, `skipDeclarationPercent`, `skipClaimPercent` (0..100), `takeValueClaimsAtEqualShanten` and `readDanger` (0 or 1: the danger tie-break against declared opponents, `DiscardDanger.h`; the two own-draws knobs, `ownDrawsDepth` and `ownDrawsPickWait`, are rated in `docs/own-draws-ev.md`) and the three knobs of
+`skipAcceptancePercent`, `skipDeclarationPercent`, `skipClaimPercent` (0..100), `takeValueClaimsAtEqualShanten` `waitingKongByPoints` (0 or 1, on in Normal: a waiting hand weighs a kong that keeps its wait by points, `ComputerClaim.h`) and `readDanger` (0 or 1: the danger tie-break against declared opponents, `DiscardDanger.h`; the two own-draws knobs, `ownDrawsDepth` and `ownDrawsPickWait`, are rated in `docs/own-draws-ev.md`) and the three knobs of
 the search player, `searchWorlds` (0..4096, 0 = no search), `searchCandidates` (0..12, default 4) and `searchMargin` (0..100 tenths of a standard
 error), see `CLAUDE.md`, "Computer player"; the level's profile is the start and the knobs are set on it). A search seat is slow: one decision
 plays `searchWorlds` x candidates whole hands, so `normal:searchWorlds=2,searchCandidates=3` takes about 49 s on 20 seeds in Debug (one thread). In `--focus` a part with an `=` and no `:` goes on the knobs of the player before it,
@@ -150,7 +150,9 @@ normal                     4000     82.20 +- 1.20        155.16 +- 4.67       10
 
 That is 3288 wins of 4000 (82.20 %), 620620 points (155.155 a hand), 427 drawn hands (10.68 %) and an average winning score of 43,
 exactly the numbers of the old harness. The 60-seed run (`--seeds 60`) gives 186 wins of 240 (77.50 %) and +31730 points (132.21 a
-hand), the numbers of `ComputerStrengthTest`.
+hand), the numbers of `ComputerStrengthTest`. Since Normal takes a kong that keeps its wait by points (`waitingKongByPoints`,
+2026-11-12) the same run gives 82.20 % wins, 156.91 points a hand, 10.65 % drawn; the 60 seeds 187 wins and +34090 points
+(`ArenaRunTest`). The tables of this file before that date are the older Normal.
 
 **(2) Normal against three Normal seats**, `A --focus normal --others normal --first 4000 --seeds 1000`:
 

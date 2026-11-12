@@ -156,6 +156,21 @@ namespace BECore::Mahjong {
                 case ClaimStep::WaitingHand:
                     explanation.waits = CopiesOf(view, WinningTiles(view.own));
                     break;
+                case ClaimStep::WaitingKong:
+                case ClaimStep::WaitingPass: {
+                    explanation.waits = CopiesOf(view, WinningTiles(view.own));
+                    explanation.waitingKong = RateWaitingKong(view);
+                    if (explanation.waitingKong.has_value()) {
+                        const HandAction& kong = explanation.waitingKong->kong;
+                        const RatedClaim rated{kong, RateClaim(view, kong), ClaimRank(kong.claim), true};
+                        if (decision.step == ClaimStep::WaitingKong) {
+                            explanation.chosen = rated;
+                        } else {
+                            explanation.alternatives.push_back(rated);
+                        }
+                    }
+                    break;
+                }
                 case ClaimStep::Claim:
                 case ClaimStep::NoGain: {
                     const eastl::vector<RatedClaim> options = RateClaims(view, explanation.shantenBefore, profile);

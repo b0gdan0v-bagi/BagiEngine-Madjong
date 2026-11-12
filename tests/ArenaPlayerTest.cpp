@@ -11,8 +11,9 @@
 /**
  * The players and the one hand of the arena (`src/Mahjong/Arena/`): the text specs of the players, the table of the knobs of
  * `LevelProfile`, the random "seek win" chooser and `PlayArenaHand`. The last part is the point of the arena: it plays the hands of
- * `ComputerStrengthTest` (seeds 4000..4059, Normal on each seat in turn against three random seats) to the same numbers, 186 wins of
- * 240, 27 won by the random seats together, 27 drawn hands, +31730 points for the focus seat. Pure logic: no engine services; about
+ * `ComputerStrengthTest` (seeds 4000..4059, Normal on each seat in turn against three random seats) to the same numbers (those of
+ * Normal since `waitingKongByPoints`, 2026-11-12): 187 wins of 240, 27 won by the random seats together, 26 drawn hands, +34090 points
+ * for the focus seat. Pure logic: no engine services; about
  * 6 s in Debug (2 s of it the search seat with and without a loop over its worlds).
  */
 namespace BECore::Mahjong::Arena {
@@ -150,7 +151,8 @@ namespace BECore::Mahjong::Arena {
                                                       set.searchMargin != kNormalProfile.searchMargin,
                                                       set.ownDrawsDepth != kNormalProfile.ownDrawsDepth,
                                                       set.ownDrawsPickWait != kNormalProfile.ownDrawsPickWait,
-                                                      set.readDanger != kNormalProfile.readDanger};
+                                                      set.readDanger != kNormalProfile.readDanger,
+                                                      set.waitingKongByPoints != kNormalProfile.waitingKongByPoints};
             EXPECT_EQ(std::count(changed, changed + kProfileFieldCount, true), 1) << name;
             for (size_t index = 0; index < kProfileFieldCount; ++index) {
                 moved[index] = moved[index] || changed[index];
@@ -340,10 +342,10 @@ namespace BECore::Mahjong::Arena {
             }
         }
         EXPECT_EQ(hands, 240);
-        EXPECT_EQ(focusWins, 186);
+        EXPECT_EQ(focusWins, 187);
         EXPECT_EQ(randomWins, 27);
-        EXPECT_EQ(drawn, 27);
-        EXPECT_EQ(focusPoints, 31730);
+        EXPECT_EQ(drawn, 26);
+        EXPECT_EQ(focusPoints, 34090);
     }
 
     TEST(ArenaPlayerTest, AProfilePlayerPlaysLikeTheComputerPlayerOfItsLevel) {
