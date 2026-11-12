@@ -6,7 +6,7 @@
 
 #include <BECore/Control/Json.h>
 #include <BECore/UI/UILabel.h>
-#include <BECore/UI/UIToggle.h>
+#include <BECore/UI/UIToggleComponent.h>
 #include <Events/InputEvents.h>
 #include <Events/SceneEvents.h>
 #include <Mahjong/Table/TapSelect.h>
@@ -142,7 +142,7 @@ namespace BECore::Mahjong::Tests {
         Draw();
         EXPECT_TRUE(_table->DeclareNext());
         EXPECT_EQ(Var("declareNext"), "on");
-        const auto* declare = Element("Actions", "Declare")->Cast<UIToggle>();
+        const auto* declare = Element("Actions", "Declare")->GetComponent<UIToggleComponent>();
         ASSERT_NE(declare, nullptr);
         EXPECT_TRUE(declare->IsOn()) << "the switch shows that the flag is on";
 

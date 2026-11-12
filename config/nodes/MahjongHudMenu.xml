@@ -14,7 +14,7 @@
   a portrait window puts both, 176 wide, at the left edge in the middle. A nearly square window may leave Options over the end of the
   line of moves by a few units; no window of the matrix is that.
 -->
-<node name="HudMenu" layer="10" contentVersion="3">
+<node name="HudMenu" layer="10" contentVersion="4">
   <components>
     <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true">
       <elements>

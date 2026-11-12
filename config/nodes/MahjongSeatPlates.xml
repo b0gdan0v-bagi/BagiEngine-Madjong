@@ -10,7 +10,7 @@
   every view and the phone profile's lifted bottom plate is a region of its own, so there is no variant. A region wins over the safe area:
   the words stay on the plate, which the safe area does not move. Every label is AutoFit, so the worst names shrink in a small window.
 -->
-<node name="SeatPlates" layer="10" contentVersion="3">
+<node name="SeatPlates" layer="10" contentVersion="4">
   <components>
     <component type="UICanvasComponent" space="SceneView">
       <elements>

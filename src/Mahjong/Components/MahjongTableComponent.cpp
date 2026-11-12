@@ -7,11 +7,13 @@
 #include <BECore/UI/UICanvasComponent.h>
 #include <BECore/UI/UIEnvironment.h>
 #include <BECore/UI/UIImage.h>
+#include <BECore/UI/UILabel.h>
 #include <CoreSDL/SDLEvents.h>
 #include <Events/ApplicationEvents.h>
 #include <Events/InputEvents.h>
 #include <Events/SceneEvents.h>
 #include <Generated/MahjongTableComponent.gen.hpp>
+#include <Mahjong/Components/MahjongHintsComponent.h>
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/Table/CallingMarks.h>
 #include <Mahjong/Table/CenterPanel.h>
@@ -31,6 +33,10 @@
 namespace BECore::Mahjong {
 
     namespace {
+
+        /// The height of the plate `TileHoverPlate` with the name alone and with the line of the danger bar under it (`MahjongTileHover.xml`)
+        constexpr float kHoverPlateHeight = 48.0f;
+        constexpr float kHoverPlateTallHeight = 92.0f;
 
         constexpr eastl::string_view kRevealAction = "MahjongReveal";
         /// The tint of a turned tile: white leaves the atlas as it is (the plain `DrawTexture` has the same default).
@@ -1031,25 +1037,58 @@ namespace BECore::Mahjong {
             _hoverShown = tile.IsValid();
             UICanvasComponent::SetElementVisibleByName(scene, "TileHoverPlate"_intern, _hoverShown);
         }
-        if (tile != _hoverTile || (tile.IsValid() && strings.GetVersion() != _hoverStringsVersion) || !vars.Has(name)) {
+        // A tile of the viewer's own hand says what the bar of the hints on it means (the hints draw it a frame ahead of this word at most)
+        DangerMark danger = DangerMark::None;
+        if (slot != nullptr && slot->role == SlotRole::HandTile && slot->seat == _shown.layout.viewer) {
+            if (const MahjongHintsComponent* hints = MahjongHintsComponent::GetActive()) {
+                danger = hints->DangerOf(tile);
+            }
+        }
+        const bool wordsChanged = tile.IsValid() && strings.GetVersion() != _hoverStringsVersion;
+        if (tile != _hoverTile || wordsChanged || !vars.Has(name)) {
             _hoverTile = tile;
-            _hoverStringsVersion = strings.GetVersion();
             const eastl::string text = tile.IsValid() ? TileName(strings, tile) : eastl::string();
             vars.Set(name, eastl::string_view(text));
+        }
+        const PoolString dangerName = "tileHoverDanger"_intern;
+        const bool dangerMoved = danger != _hoverDanger;
+        if (dangerMoved || wordsChanged || !vars.Has(dangerName)) {
+            const eastl::string text = danger != DangerMark::None ? Tr(strings, DangerHoverKey(danger)) : eastl::string();
+            vars.Set(dangerName, eastl::string_view(text));
+        }
+        if (tile.IsValid()) {
+            _hoverStringsVersion = strings.GetVersion();
+        }
+        if (slot == nullptr && !dangerMoved) {
+            return;
+        }
+        // The plate is laid out again each time it moves or grows; it is in place when the canvas of the node draws, later in this frame
+        const IntrusivePtr<UICanvasComponent> canvas = FindCanvasOf(scene, "TileHover"_intern);
+        UIElement* plate = FindElementIn(canvas, "TileHoverPlate"_intern);
+        if (plate == nullptr) {
+            return;
+        }
+        UIRectSpec& spec = plate->style.rect;
+        if (dangerMoved) {
+            const bool worded = danger != DangerMark::None;
+            if (worded != (_hoverDanger != DangerMark::None)) {
+                spec.height = UILength::Px(worded ? kHoverPlateTallHeight : kHoverPlateHeight);
+                UICanvasComponent::SetElementVisibleByName(scene, "TileHoverDanger"_intern, worded);
+            }
+            if (UIElement* line = FindElementIn(canvas, "TileHoverDanger"_intern); UILabel* label = line != nullptr ? line->Cast<UILabel>() : nullptr) {
+                label->textColor = DangerMarkColor(danger);
+            }
+            _hoverDanger = danger;
+            canvas->Invalidate();
         }
         if (slot == nullptr) {
             return;
         }
-        // The plate is laid out again each time it moves; it is in place when the canvas of the node draws, later in this frame
-        const IntrusivePtr<UICanvasComponent> canvas = FindCanvasOf(scene, "TileHover"_intern);
-        if (UIElement* plate = FindElementIn(canvas, "TileHoverPlate"_intern)) {
-            UIRectSpec& spec = plate->style.rect;
-            const Rect place = HoverPlateRect(slot->rect, spec.width.value, spec.height.value, viewWidth, viewHeight);
-            if (spec.x.value != place.x || spec.y.value != place.y) {
-                spec.x = UILength::Px(place.x);
-                spec.y = UILength::Px(place.y);
-                canvas->Invalidate();
-            }
+        const Rect place = HoverPlateRect(slot->rect, spec.width.value, spec.height.value, viewWidth, viewHeight);
+        if (spec.x.value != place.x || spec.y.value != place.y) {
+            spec.x = UILength::Px(place.x);
+            spec.y = UILength::Px(place.y);
+            canvas->Invalidate();
         }
     }
 

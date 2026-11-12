@@ -16,7 +16,7 @@ The nodes in order with their layers: `kSceneNodes` (`tests/MahjongSceneFilesTes
 
 The label `SelectedTile` (node `Hud`) says `{selectedTileText}` (key `table.selectedTile`), above the viewer's hand; the table component shows it only while a tile is selected.
 
-The label `TileHoverLabel` (node `TileHover`) says `{tileHoverText}`, the `TileName` of the face-up tile under the pointer: it has no key of its own (`tile.*`, `suit.*`, `wind.*`).
+The label `TileHoverLabel` (node `TileHover`) says `{tileHoverText}`, the `TileName` of the face-up tile under the pointer: it has no key of its own (`tile.*`, `suit.*`, `wind.*`). Under it `TileHoverDanger` says `{tileHoverDanger}` (`hints.hover.*`) on a hand tile with a danger bar.
 
 Every visible word is a key in both languages; never a literal in code or in a `text` attribute. The scene says `text="{#key}"`, code says `Tr(strings, key, {{"n", "2"}})`. Keys of an enum family (`wind.*`, `suit.*`, `score.kind.*`, `button.*`, `hint.*`) are built in code. `StringsTest` holds parity, every key used, no plain word in a `text`, the same placeholders in both languages. Symbols (a glyph with no word) stay in code. The control API stays English. Tests that need Russian call `MahjongGame::SetLanguage` (a start re-applies the game's language) and loop with `ForEachLanguage`.
 

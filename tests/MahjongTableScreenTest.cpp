@@ -5,7 +5,7 @@
 #include <BECore/Text/Utf8.h>
 #include <BECore/UI/UIImage.h>
 #include <BECore/UI/UILabel.h>
-#include <BECore/UI/UIToggle.h>
+#include <BECore/UI/UIToggleComponent.h>
 #include <Mahjong/Table/SeatName.h>
 
 /**
@@ -173,14 +173,14 @@ namespace BECore::Mahjong::Tests {
             const UIElement* element = Element("Actions", spec.element);
             ASSERT_NE(element, nullptr) << spec.element;
             if (kind == ButtonKind::Declare) {
-                // The declaration is a toggle: it emits the state it asks for, `on` or `off` (`kDeclareOn`, `kDeclareOff`)
-                const auto* toggle = element->Cast<UIToggle>();
+                // The declaration is a toggle row: it emits the state it asks for, `on` or `off` (`kDeclareOn`, `kDeclareOff`)
+                const auto* toggle = element->GetComponent<UIToggleComponent>();
                 ASSERT_NE(toggle, nullptr);
                 EXPECT_EQ(toggle->action, PoolString::Intern(spec.action));
                 EXPECT_EQ(toggle->onValue, PoolString::Intern(kDeclareOn.data()));
                 EXPECT_EQ(toggle->offValue, PoolString::Intern(kDeclareOff.data()));
                 EXPECT_EQ(toggle->bind, "declareNext"_intern);
-                EXPECT_EQ(toggle->text, eastl::string("{#") + spec.wordKey + "}") << "the toggle says the word of the string table";
+                EXPECT_EQ(ElementText(Element("Actions", "DeclareCaption")), eastl::string("{#") + spec.wordKey + "}") << "the toggle says the word of the string table";
                 continue;
             }
             const UIElement* button = element;
@@ -495,14 +495,14 @@ namespace BECore::Mahjong::Tests {
             ASSERT_TRUE(wide != nullptr && narrow != nullptr) << spec.element;
             EXPECT_TRUE(SameColor(narrow->color, wide->color)) << spec.element;
             if (kind == ButtonKind::Declare) {
-                const auto* a = wide->Cast<UIToggle>();
-                const auto* b = narrow->Cast<UIToggle>();
+                const auto* a = wide->GetComponent<UIToggleComponent>();
+                const auto* b = narrow->GetComponent<UIToggleComponent>();
                 ASSERT_TRUE(a != nullptr && b != nullptr);
                 EXPECT_EQ(b->action, a->action);
                 EXPECT_EQ(b->onValue, a->onValue);
                 EXPECT_EQ(b->offValue, a->offValue);
                 EXPECT_EQ(b->bind, a->bind);
-                EXPECT_EQ(b->text, a->text);
+                EXPECT_EQ(ElementText(Element("ActionsCompact", "DeclareCaption")), ElementText(Element("Actions", "DeclareCaption")));
                 continue;
             }
             const UIElement* a = wide;

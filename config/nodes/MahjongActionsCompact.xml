@@ -12,7 +12,7 @@
   of the lines the claim window needs when its buttons wrap (TouchRegimeTest wraps the claim window and the turn against them). No
   Hint label: a touch screen has no hover.
 -->
-<node name="ActionsCompact" layer="10" contentVersion="3">
+<node name="ActionsCompact" layer="10" contentVersion="4">
   <components>
     <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" visible="false">
       <elements>
@@ -132,7 +132,24 @@
               <component type="UIInputClicker" action="MahjongHintAdvice"/>
             </components>
           </element>
-          <element type="UIToggle" name="Declare" visible="false" bind="declareNext" onValue="on" offValue="off" width="180" height="56" text="{#button.Declare}" fontSize="22" action="MahjongDeclare" color="70,70,100,255" />
+          <element type="UIElement" name="Declare" visible="false" width="180" height="56" color="70,70,100,255" layout="Stack" direction="Horizontal" spacing="8" crossAlign="Center">
+            <components>
+              <component type="UIInputClicker"/>
+              <component type="UIToggleComponent" bind="declareNext" action="MahjongDeclare" onValue="on" offValue="off"/>
+            </components>
+            <children>
+              <element type="UIElement" name="DeclareCaption" flex="1" height="100%" fontSize="22">
+                <components>
+                  <component type="UITextComponent" text="{#button.Declare}" verticalAlign="Center" wrap="false" fadeWhenDisabled="true"/>
+                </components>
+              </element>
+              <element type="UIElement" name="DeclareSwitch" height="100%" aspectRatio="1.25">
+                <components>
+                  <component type="UISwitchComponent"/>
+                </components>
+              </element>
+            </children>
+          </element>
           </children>
         </element>
       </elements>

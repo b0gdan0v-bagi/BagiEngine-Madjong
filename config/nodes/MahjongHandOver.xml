@@ -18,7 +18,7 @@
   the words of the narrow plate and for the button, which follows the window's scale). HandCoachRow is hidden unless the HUD has text
   for it and then takes no room, so the plate keeps its size.
 -->
-<node name="HandOver" layer="25" contentVersion="3">
+<node name="HandOver" layer="25" contentVersion="4">
   <components>
     <component type="UICanvasComponent" space="SceneView" useSafeArea="true" modal="true" visible="false">
       <elements>

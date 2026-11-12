@@ -12,7 +12,7 @@
   AutoFit, so the worst texts (-9999, the longest round and wall words) shrink in the small windows. MahjongHudTest holds the labels inside
   the panel, apart from each other and clear of every tile.
 -->
-<node name="CenterPanel" layer="10" contentVersion="3">
+<node name="CenterPanel" layer="10" contentVersion="4">
   <components>
     <component type="UICanvasComponent" space="SceneView">
       <elements>

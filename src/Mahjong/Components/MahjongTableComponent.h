@@ -7,6 +7,7 @@
 #include <Mahjong/ComputerThinking.h>
 #include <Mahjong/Table/ActionButtons.h>
 #include <Mahjong/Table/AnimationSpeed.h>
+#include <Mahjong/Table/DangerMarks.h>
 #include <Mahjong/Table/TableLayout.h>
 #include <Mahjong/Table/TableRegions.h>
 #include <Mahjong/Table/TileFlights.h>
@@ -154,14 +155,15 @@ namespace BECore::Mahjong {
      * table, is shown with `Actions`, and `ActionsCompact` holds a `HintButton` of its own), shown from `LegalActions` every frame
      * (`SetElementVisibleByName`; each button says a word of the string table in the file (`{#button.<Kind>}`) and the tiles of its action are `UIImage` children whose sprite the component sets), and
      * answered here as `InputEvents::ActionEvent`s. While the pointer is over a shown button (`UIElement::hovered`, set by the canvas) its sentence (a key of the string table, looked up in the
-     * current language and again when it changes) is the variable `actionHint` and the label `Hint` is shown; a touch screen has no hover and so no hint. `Declare` is a `UIToggle` bound to the flag
-     * "the next discard declares the calling hand" (variable `declareNext`, `on` / `off`; it emits the state it asks for; the tiles whose declaring discard is not legal are dimmed while it is on);
-     * the flag is cleared by the discard, when the button is no longer offered and when the turn it was set on is over (the seat or the number of discards changed, e.g. a control client played for
-     * the person). With two or more people the canvas `Handoff` (a modal, hidden at the start) is shown exactly while `HandoffPending()`; its button `MahjongReveal` calls `Reveal()`. **Pace:** while
-     * a computer has to act the component plays one step every `kComputerStepSeconds` of `SceneUpdateEvent` time (a claim window and the discard after it count as one step), and nothing while a
-     * person acts, the cover is up, the seat choice `Setup` is open (`MahjongGame::IsSetupOpen()`: no click is taken either) or the hand is over. A claim window is settled within one period (the
-     * computers decide one after the other without a pause between them) and a computer that is to discard after it does so in the same period, so between computers the time from a discard to the
-     * next one is the same whether or not a window opened (a person who acts next gets the turn at once when no window opened and after the pause when one did).
+     * current language and again when it changes) is the variable `actionHint` and the label `Hint` is shown; a touch screen has no hover and so no hint. `Declare` is a toggle row
+     * (`UIToggleComponent`) bound to the flag "the next discard declares the calling hand" (variable `declareNext`, `on` / `off`; it emits the state it asks for; the tiles whose declaring discard is
+     * not legal are dimmed while it is on); the flag is cleared by the discard, when the button is no longer offered and when the turn it was set on is over (the seat or the number of discards
+     * changed, e.g. a control client played for the person). With two or more people the canvas `Handoff` (a modal, hidden at the start) is shown exactly while `HandoffPending()`; its button
+     * `MahjongReveal` calls `Reveal()`. **Pace:** while a computer has to act the component plays one step every `kComputerStepSeconds` of `SceneUpdateEvent` time (a claim window and the discard
+     * after it count as one step), and nothing while a person acts, the cover is up, the seat choice `Setup` is open (`MahjongGame::IsSetupOpen()`: no click is taken either) or the hand is over. A
+     * claim window is settled within one period (the computers decide one after the other without a pause between them) and a computer that is to discard after it does so in the same period, so
+     * between computers the time from a discard to the next one is the same whether or not a window opened (a person who acts next gets the turn at once when no window opened and after the pause when
+     * one did).
      */
     class MahjongTableComponent : public IComponent {
         BE_CLASS(MahjongTableComponent)
@@ -380,8 +382,9 @@ namespace BECore::Mahjong {
         bool _hoverShown = false;  // the plate `TileHoverPlate` is shown
         Tile _hoverTile;           // the tile `tileHoverText` names now (invalid for none) and the string table version it was worded at
         uint64_t _hoverStringsVersion = 0;
-        DeclareTurn _declareTurn;     // the turn `_declareNext` was set on
-        float _computerClock = 0.0f;  // seconds a computer has been waiting to play
+        DangerMark _hoverDanger = DangerMark::None;  // the danger mark `tileHoverDanger` words now (the hovered tile of the viewer's hand)
+        DeclareTurn _declareTurn;                    // the turn `_declareNext` was set on
+        float _computerClock = 0.0f;                 // seconds a computer has been waiting to play
         /// The step of a computer that was begun and is not applied yet: the session `Version()` and `StartCount()` it was begun at (the job
         /// itself is in `_thinking`).
         struct StepInProgress {

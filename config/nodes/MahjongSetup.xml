@@ -37,7 +37,7 @@
   Continue is hidden here and shown by MahjongHudComponent exactly while the panel is open and there is a match to continue; a hidden
   element takes no room, so Start keeps the whole width otherwise, and the two share it half and half when both are there.
 -->
-<node name="Setup" layer="30" contentVersion="3">
+<node name="Setup" layer="30" contentVersion="4">
   <components>
     <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" modal="true" visible="false">
       <elements>

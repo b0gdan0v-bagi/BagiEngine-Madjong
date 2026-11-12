@@ -7,7 +7,7 @@
   Actions is shown and hides it where ActionsCompact is, which holds a HintButton of its own in its row. MahjongHintsComponent shows
   and hides the element by name, so both follow. It comes after Hints (layer 6) so that it lies over the label's plate.
 -->
-<node name="HintsButton" layer="6" contentVersion="3">
+<node name="HintsButton" layer="6" contentVersion="4">
   <components>
     <component type="UICanvasComponent" space="SceneView">
       <elements>

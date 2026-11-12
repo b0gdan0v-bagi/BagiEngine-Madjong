@@ -7,9 +7,9 @@ namespace BECore::Mahjong {
     /**
      * The coach: after an accepted action of a person that is not what the computer player would have done, a short note says what it
      * would have done and what the two cost. Plain C++ over the `TableView` the person had **before** the action (`MakeTableView`), so
-     * the judge knows nothing the person did not see; no scene, no game. The words are keys `coach.*` of `config/UIStrings.xml`.
-     * The judge (`JudgeMove`) and the words (`CoachNoteLines`) are here; the ledger (`CoachLedger`) holds the note and the tally for
-     * the table (`MahjongGame` owns one, the components read it).
+     * the judge knows nothing the person did not see; no scene, no game. The judge (`JudgeMove`) is here; the ledger (`CoachLedger`)
+     * holds the note and the tally for the table (`MahjongGame` owns one, the components read it); the card of the table words a note
+     * (`MakeNoteCard`, `Table/HintCard.h`).
      */
 
     /// What the hints of the table do: nothing, the hints (`Hint`, the waiting row, the marks), or the hints and the coach's notes. Kept on
@@ -41,12 +41,6 @@ namespace BECore::Mahjong {
         return std::nullopt;
     }
 
-    /// The most sentences of a note: what the computer would have done, your move with its numbers, the computer's with its numbers.
-    inline constexpr size_t kMaxCoachLines = 3;
-
-    /// The most letters a line of a note may have in any language, the budget the panel of the table is made for.
-    inline constexpr size_t kMaxCoachLineLetters = 96;
-
     /// What the numbers of one side of a note are: none (a pass, a complete hand), the steps to a ready hand after the move with the unseen
     /// copies that help (`Rated`), or the unseen copies of the tiles a ready hand waits on (`Waiting`).
     CORE_ENUM(CoachNumbers, uint8_t, None, Rated, Waiting)
@@ -61,7 +55,7 @@ namespace BECore::Mahjong {
     };
 
     /**
-     * @brief A move that differs from the computer's choice: plain data, no text (`CoachNoteLines` words it).
+     * @brief A move that differs from the computer's choice: plain data, no text (`MakeNoteCard` words it).
      *
      * `pending` is the discard of a claim window (invalid in a turn). `stepsBefore` is the shanten of the hand as it was (of the 14 tiles
      * of a turn, of the hand of a window). `handWaits`: the advice is to pass a claim because the hand waits (and not for lack of gain).
@@ -94,11 +88,6 @@ namespace BECore::Mahjong {
      * judge (`CanJudge` false).
      */
     [[nodiscard]] std::optional<CoachNote> JudgeMove(const TableView& before, const HandAction& taken);
-
-    /// The sentences of `note` in the language of `strings`, at most `kMaxCoachLines`, none empty: the computer's choice (`AdviceText`),
-    /// your move with its numbers, the computer's with its numbers (a complete hand says so in one more line instead). One key `coach.*`
-    /// per sentence, tiles by `TileName`, a number never in a plural form.
-    [[nodiscard]] eastl::vector<eastl::string> CoachNoteLines(const UIStrings& strings, const CoachNote& note);
 
     /// The moves that agreed with the computer's choice and all the moves judged.
     struct CoachTally {

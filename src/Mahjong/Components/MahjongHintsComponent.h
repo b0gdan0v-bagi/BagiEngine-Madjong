@@ -1,9 +1,8 @@
 #pragma once
 
 #include <BECore/Scene/IComponent.h>
-#include <Mahjong/Table/Coach.h>
 #include <Mahjong/Table/DangerMarks.h>
-#include <Mahjong/Table/Hints.h>
+#include <Mahjong/Table/HintCard.h>
 
 namespace BECore {
 
@@ -45,19 +44,19 @@ namespace BECore::Mahjong {
      * It is a **switch** (`MahjongHintAdvice`, ignored when the button is not offered; the state is the component's, kept across turns, hands and
      * matches, not saved): while it is on, both buttons are drawn `selected` and every table the viewer is to act on gets `AdviceFor(view)` worked out
      * once (`ExplainAdviceFor` names the same action), published as the sentence `AdviceText` in the variable `hintAdvice` for the label `AdviceText`, a
-     * discard that is advised framed on the hand. In the mode Coach the reasons (`ReasonLines`) also show in the panel `WhyPanel` of the node `HintsWhy`
-     * (`config/nodes/MahjongHintsWhy.xml`, on the wall ring, text only, no input) as the variables `hintWhy0..5`, but only while the coach's note
-     * is not up: the two share the place, and the note of the last move goes first. The advice belongs to the table it was worked out on: any
-     * change of the session `Version()`, a cover, hints off or a pause drop it, the next table the viewer acts on gets its own, and a new language
-     * words both again.
+     * discard that is advised framed on the hand. The advice belongs to the table it was worked out on: any change of the session `Version()`, a cover,
+     * hints off or a pause drop it, the next table the viewer acts on gets its own, and a new language words it again.
      *
-     * **The coach's note.** In the mode Coach the ledger of the game (`MahjongGame::GetCoach()`, fed by the session) holds the note of the
-     * person's last differing move; the panel `CoachPanel` of the same node shows its lines (`CoachNoteLines`, the variables `coachNote0..2`)
-     * exactly while the hints apply, the note is of this hand and of the viewer. The note stays through the computers' turns (they move within a
-     * second of the person's action) and goes with the next accepted action of the person (the ledger), a left or touch mouse-down that the
-     * panel was up for, a press of `Hint`, the end of the hand, a new match, a pause, a cover and a change of the mode. The component only
-     * reads the ledger and clears it, and publishes only when the note, the language or the shown state changed. **It never acts:** it performs no action, moves no version and the
-     * control API does not know it.
+     * **The card of the coach.** In the mode Coach the sentence is not a label of its own: the advice of the table is the card `CoachCard` of the
+     * node `HintsWhy` (`config/nodes/MahjongHintsWhy.xml`, on the wall ring, text and tile pictures, no input), made by `MakeAdviceCard` (the
+     * sentence as its title, the advised move and the next best with their numbers, why in words, the tally). The ledger of the game
+     * (`MahjongGame::GetCoach()`, fed by the session) holds the note of the person's last differing move; while it is up the card is the note
+     * (`MakeNoteCard`: the computer's choice and the person's move) instead, exactly while the hints apply, the note is of this hand and of the
+     * viewer. The note stays through the computers' turns (they move within a second of the person's action) and goes with the next accepted
+     * action of the person (the ledger), a left or touch mouse-down that it was up for, a press of `Hint`, the end of the hand, a new match, a
+     * pause, a cover and a change of the mode. The card is made and published only when what it says moved (`CardKey`: the advice or the note,
+     * the language, the tally); every variable of it is emptied when it goes down. The component only reads the ledger and clears it. **It never
+     * acts:** it performs no action, moves no version and the control API does not know it.
      */
     class MahjongHintsComponent : public IComponent {
         BE_CLASS(MahjongHintsComponent)
@@ -71,6 +70,12 @@ namespace BECore::Mahjong {
         /// The attached component, if any; the game assumes a single one.
         static MahjongHintsComponent* GetActive() noexcept {
             return s_active;
+        }
+
+        /// The danger mark the hints draw on `tile` of the viewer's hand now (`DangerMarks`): `None` while no mark is drawn (hints off, no
+        /// declared opponent, not the viewer's discard). The name plate of a hovered hand tile words it, so a bar is never unexplained.
+        [[nodiscard]] DangerMark DangerOf(Tile tile) const noexcept {
+            return _key.applies && tile.IsValid() ? _dangers[tile.Id()] : DangerMark::None;
         }
 
     private:
@@ -96,12 +101,14 @@ namespace BECore::Mahjong {
         void PushWaitingRow();
         /// Works the advice of the viewer's table out (the switch is on and the button offered).
         void Advise(const MahjongGame& game, const Key& key);
-        /// The button (offered, switched on) and the sentence of the advice; the reasons too when `coach` and the coach's note is not up.
+        /// The button (offered, switched on) and the sentence of the advice, which is a label of its own unless `coach`.
         void PushAdvice(bool coach);
-        /// The panel of the reasons (`HintsWhy`): the lines and the plate while `open`, empty variables and no plate otherwise.
-        void PushWhy(bool open);
-        /// The note of the coach: drops what no longer holds (and clears the ledger), publishes the lines and the plate when they changed.
+        /// The note of the coach: drops what no longer holds (and clears the ledger) and says whether it is up (`_coachShown`).
         void PushCoach(MahjongGame* game, const Key& key);
+        /// The card of the coach: the note when it is up, else the advice in the mode Coach, else nothing; made again only when its key moved.
+        void PushCard(MahjongGame* game, bool coach);
+        /// Puts `card` into the variables and the elements of `CoachCard` and shows the plate while `open`.
+        void PublishCard(const HintCard& card, bool open);
         void DropAdvice();
         void DrawMarks(const MahjongGame& game) const;
 
@@ -121,19 +128,29 @@ namespace BECore::Mahjong {
         TableView _adviceView;              ///< the view it was asked on (the sentence names the pending discard of a window)
         Key _adviceKey;
         std::optional<Explanation> _explained;  ///< the reasons of `_advice`, asked on the same table
-        bool _whyDirty = false;                 ///< the lines are to be published again (worked out again)
-        bool _whyShown = false;
-        uint64_t _whyStringsVersion = 0;
-        bool _adviceDirty = false;  ///< the sentence is to be published again (worked out again)
+        uint64_t _adviceGeneration = 0;         ///< grows with every advice worked out, so the card knows a new one
+        bool _adviceDirty = false;              ///< the sentence is to be published again (worked out again)
         bool _adviceShown = false;
         uint64_t _adviceStringsVersion = 0;
 
-        bool _coachShown = false;
+        bool _coachShown = false;               ///< the note is up (on the card)
         const MahjongGame* _coachOf = nullptr;  ///< the game whose note was last looked at
         uint64_t _coachSeen = 0;                ///< `CoachLedger::Version()` of the note last looked at
         CoachHandKey _coachHand;                ///< the hand that note was first seen in
-        uint64_t _coachPublished = 0;           ///< the version whose words are in the variables
-        uint64_t _coachStringsVersion = 0;
+        uint64_t _coachPublished = 0;           ///< the version of the note that is up
+
+        /// What the card says: nothing, the advice of the table or the note of the ledger.
+        enum class CardSource : uint8_t { None, Advice, Note };
+        /// What the card depends on: when it is equal to the last published one, nothing is made again.
+        struct CardKey {
+            CardSource source = CardSource::None;
+            uint64_t version = 0;  ///< `_adviceGeneration` or `CoachLedger::Version()`
+            uint64_t strings = 0;  ///< `UIStrings::GetVersion()`
+            CoachTally hand;
+            CoachTally match;
+            bool operator==(const CardKey&) const = default;
+        };
+        CardKey _cardKey;
 
         static MahjongHintsComponent* s_active;
     };

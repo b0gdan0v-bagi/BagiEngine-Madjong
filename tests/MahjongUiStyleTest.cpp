@@ -124,7 +124,13 @@ namespace BECore::Mahjong::Tests {
             // segment or option since version 3) keeps its action on the clicker; a group's child may leave it to the group, as above
             const bool groupChild = parentType == "UISegmented" || parentType == "UIDropdown";
             for (const pugi::xml_node component : element.child("components").children("component")) {
-                if (AttributeOf(component, "type") == "UIInputClicker" && AttributeOf(component, "action").empty() && !groupChild) {
+                // A toggle row's clicker has no action: its `UIToggleComponent` decides what a click emits and holds the action
+                const std::string componentType = AttributeOf(component, "type");
+                const bool toggleRow = static_cast<bool>(element.child("components").find_child_by_attribute("component", "type", "UIToggleComponent"));
+                if (componentType == "UIInputClicker" && AttributeOf(component, "action").empty() && !groupChild && !toggleRow) {
+                    flag(Rule::Action, "action");
+                }
+                if (componentType == "UIToggleComponent" && AttributeOf(component, "action").empty()) {
                     flag(Rule::Action, "action");
                 }
             }
@@ -289,6 +295,12 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(CheckStyle(OneElement("type=\"UIButton\" name=\"B\"")).violations.empty());
         const Report clicker = CheckStyle("<root><element type=\"UIElement\" name=\"C\"><components><component type=\"UIInputClicker\" /></components></element></root>");
         EXPECT_EQ(Of(clicker, Rule::Action).size(), 1u) << "a composed button without an action";
+        const Report toggle = CheckStyle(
+            "<root><element type=\"UIElement\" name=\"T\"><components><component type=\"UIInputClicker\" /><component type=\"UIToggleComponent\" action=\"A\" /></components></element></root>");
+        EXPECT_TRUE(Of(toggle, Rule::Action).empty()) << "a toggle row keeps its action on the toggle, not on the clicker";
+        const Report silentToggle =
+            CheckStyle("<root><element type=\"UIElement\" name=\"T\"><components><component type=\"UIInputClicker\" /><component type=\"UIToggleComponent\" /></components></element></root>");
+        EXPECT_EQ(Of(silentToggle, Rule::Action).size(), 1u) << "a toggle row without an action";
         const Report segment = CheckStyle("<root><element type=\"UISegmented\" name=\"G\"><children><element type=\"UIButton\" name=\"S\" /></children></element></root>");
         EXPECT_TRUE(segment.violations.empty());
     }

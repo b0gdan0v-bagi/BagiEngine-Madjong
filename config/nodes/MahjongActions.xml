@@ -19,7 +19,7 @@
   there is no bar for a bigger row) and the near-square narrow window with side insets (610 x 600: 31.6 px, clear of the hand, because
   the row of ActionsCompact would lie on the tiles). MahjongTouchSizeTest names them in ActionsMayBeSmall.
 -->
-<node name="Actions" layer="10" contentVersion="3">
+<node name="Actions" layer="10" contentVersion="4">
   <components>
     <component type="UICanvasComponent" space="SceneView">
       <elements>
@@ -134,7 +134,24 @@
               <component type="UIInputClicker" action="MahjongPass"/>
             </components>
           </element>
-          <element type="UIToggle" name="Declare" visible="false" bind="declareNext" onValue="on" offValue="off" width="104" height="56" text="{#button.Declare}" fontSize="22" action="MahjongDeclare" color="70,70,100,255" />
+          <element type="UIElement" name="Declare" visible="false" width="104" height="56" color="70,70,100,255" layout="Stack" direction="Horizontal" spacing="8" crossAlign="Center">
+            <components>
+              <component type="UIInputClicker"/>
+              <component type="UIToggleComponent" bind="declareNext" action="MahjongDeclare" onValue="on" offValue="off"/>
+            </components>
+            <children>
+              <element type="UIElement" name="DeclareCaption" flex="1" height="100%" fontSize="22">
+                <components>
+                  <component type="UITextComponent" text="{#button.Declare}" verticalAlign="Center" wrap="false" fadeWhenDisabled="true"/>
+                </components>
+              </element>
+              <element type="UIElement" name="DeclareSwitch" height="100%" aspectRatio="1.25">
+                <components>
+                  <component type="UISwitchComponent"/>
+                </components>
+              </element>
+            </children>
+          </element>
           </children>
         </element>
       </elements>

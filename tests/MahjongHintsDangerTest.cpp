@@ -1,12 +1,15 @@
 #include "ComputerTestSupport.h"
 #include "MahjongTableTestSupport.h"
 #include "MahjongTouchTestSupport.h"
+#include "StringsTestSupport.h"
 #include "UiStyleTestSupport.h"
 
+#include <BECore/UI/UILabel.h>
 #include <Mahjong/Components/MahjongHintsComponent.h>
 #include <Mahjong/Table/DangerMarks.h>
 #include <Mahjong/Table/TapSelect.h>
 #include <Mahjong/Table/UiPalette.h>
+#include <Mahjong/Table/Words.h>
 
 /**
  * The danger marks the hints draw on the viewer's hand (`Components/MahjongHintsComponent.h`, `Table/DangerMarks.h`): a bar inside the left
@@ -340,6 +343,68 @@ namespace BECore::Mahjong::Tests {
         // The Rd and the Ew keep the declared hand waiting; the danger bars of the other tiles stay clear of those bars
         EXPECT_EQ(RectsOf(kKeepsWaitingMark).size(), 2u) << "the Rd and the Ew keep the hand waiting";
         EXPECT_EQ(RectsOf(kDangerMark).size(), kDangerousCount);
+    }
+
+    TEST_F(MahjongHintsDangerTest, TheNameOfAHoveredHandTileSaysWhatItsBarMeansInTheBarsColour) {
+        ASSERT_NO_FATAL_FAILURE(StartPlayed(PlayedModel()));
+        const auto marks = DangerMarks(MakeTableView(Hand(), kSeat0));
+        size_t worded = 0;
+        for (const auto& [slot, tile] : HandTiles()) {
+            SCOPED_TRACE(ToString(tile));
+            HoverAt(slot.rect.x + slot.rect.w * 0.5f, slot.rect.y + slot.rect.h * 0.5f);
+            Draw();
+            Draw();  // the hints draw after the table: the word follows the bar within a frame
+            ASSERT_TRUE(OnScreen("TileHover", "TileHoverPlate"));
+            const DangerMark mark = marks[tile.Id()];
+            if (mark == DangerMark::None) {
+                EXPECT_FALSE(OnScreen("TileHover", "TileHoverDanger")) << "no bar, no line";
+                EXPECT_EQ(Var("tileHoverDanger"), "");
+                continue;
+            }
+            ++worded;
+            ASSERT_TRUE(OnScreen("TileHover", "TileHoverDanger"));
+            const eastl::string expected = Tr(CoreManager::GetUIStrings(), DangerHoverKey(mark));
+            EXPECT_EQ(Var("tileHoverDanger"), std::string(expected.data(), expected.size()));
+            const auto* label = Element("TileHover", "TileHoverDanger")->Cast<UILabel>();
+            ASSERT_NE(label, nullptr);
+            EXPECT_TRUE(SameColor(label->textColor, DangerMarkColor(mark)));
+            EXPECT_TRUE(Inside(Element("TileHover", "TileHoverDanger")->rect, Element("TileHover", "TileHoverPlate")->rect));
+        }
+        EXPECT_EQ(worded, kSafeCount + kRiskyCount + kDangerousCount);
+
+        // Off the tiles the plate goes, and with it the line
+        HoverAt(4.0f, 4.0f);
+        Draw();
+        EXPECT_FALSE(OnScreen("TileHover", "TileHoverDanger"));
+        _game->SetHintsOn(false);
+        const auto [slot, tile] = HandTiles().front();
+        HoverAt(slot.rect.x + slot.rect.w * 0.5f, slot.rect.y + slot.rect.h * 0.5f);
+        Draw();
+        Draw();
+        EXPECT_TRUE(OnScreen("TileHover", "TileHoverPlate"));
+        EXPECT_FALSE(OnScreen("TileHover", "TileHoverDanger")) << "hints off: no bar, no line";
+    }
+
+    TEST_F(MahjongHintsDangerTest, TheLongestLineOfTheBarsFitsTheHoverPlateInEveryLanguage) {
+        ASSERT_NO_FATAL_FAILURE(StartPlayed(PlayedModel()));
+        Scene& scene = *_manager->GetSceneByName("MahjongScene"_intern);
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            std::vector<eastl::string> lines;
+            for (const DangerMark mark : {DangerMark::Safe, DangerMark::Risky, DangerMark::Dangerous}) {
+                lines.push_back(Tr(CoreManager::GetUIStrings(), DangerHoverKey(mark)));
+            }
+            const eastl::string longest = LongestText(lines);
+            CoreManager::GetUIVars().Set("tileHoverText"_intern, eastl::string_view("9 Dots"));
+            CoreManager::GetUIVars().Set("tileHoverDanger"_intern, eastl::string_view(longest));
+            UIElement* plate = Element("TileHover", "TileHoverPlate");
+            plate->style.rect.height = UILength::Px(92.0f);
+            UICanvasComponent::SetElementVisibleByName(scene, "TileHoverPlate"_intern, true);
+            UICanvasComponent::SetElementVisibleByName(scene, "TileHoverDanger"_intern, true);
+            ExpectWordsFit("TileHover", kViewWidth, kViewHeight, 0.0f);
+            ExpectWordsFit("TileHover", kViewWidth / 2.0f, kViewHeight / 2.0f, 0.0f);
+            UICanvasComponent::SetElementVisibleByName(scene, "TileHoverPlate"_intern, false);
+        });
     }
 
     TEST_F(MahjongHintsDangerTest, TheThreeColoursAreRolesOfTheirOwnApartFromEveryOtherMark) {

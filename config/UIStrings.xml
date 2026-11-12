@@ -122,16 +122,10 @@
         <string key="hints.advice.claimKong" text="Take the discard to make a kong of {tile}."/>
         <string key="hints.advice.claimChow" text="Take the discard to make the chow {first}, {second}, {third}."/>
         <string key="hints.advice.pass" text="Let the discard go."/>
-        <string key="hints.why.steps" text="Steps to ready: {before} -&gt; {after}"/>
-        <string key="hints.why.help" text="Unseen tiles that help: {copies}"/>
-        <string key="hints.why.help.change" text="Unseen tiles that help: {before} -&gt; {after}"/>
-        <string key="hints.why.waits" text="Waiting tiles: {kinds}, unseen copies: {copies}"/>
-        <string key="hints.why.declare" text="This discard makes the hand ready."/>
-        <string key="hints.why.keepWaiting" text="The hand is ready: keep the best wait."/>
         <string key="hints.why.tie.none" text="No other tile rates as well."/>
-        <string key="hints.why.tie.keep" text="Equal tiles: {n}; least wanted: {keep}."/>
-        <string key="hints.why.tie.chance" text="Equal tiles: {n}; any of them will do."/>
-        <string key="hints.why.tie.danger" text="Equal tiles: {n}; this one is the safest."/>
+        <string key="hints.why.tie.keep" text="Rated the same: {n} more; drop {keep} first."/>
+        <string key="hints.why.tie.chance" text="Rated the same: {n} more; any of them will do."/>
+        <string key="hints.why.tie.danger" text="Rated the same: {n} more; this one is the safest."/>
         <string key="hints.why.danger.safe" text="Safe against the ready hand."/>
         <string key="hints.why.danger.low" text="Low danger from the ready hand."/>
         <string key="hints.why.danger.medium" text="Risky against the ready hand."/>
@@ -140,35 +134,37 @@
         <string key="hints.why.keep.terminal" text="a terminal"/>
         <string key="hints.why.keep.simple" text="a simple tile"/>
         <string key="hints.why.keep.value" text="a value tile"/>
-        <string key="hints.why.alt.discard" text="Instead {tile}: steps {steps}, helps {copies}"/>
-        <string key="hints.why.alt.wait" text="Instead {tile}: unseen copies {copies}"/>
-        <string key="hints.why.alt.pung" text="Instead pung {tile}: steps {before} -&gt; {after}"/>
-        <string key="hints.why.alt.kong" text="Instead kong {tile}: steps {before} -&gt; {after}"/>
-        <string key="hints.why.alt.chow" text="Instead chow {first} - {third}: steps {before} -&gt; {after}"/>
         <string key="hints.why.kong.noWorse" text="The kong does not make the hand worse."/>
         <string key="hints.why.win" text="A complete hand: nothing beats a win."/>
         <string key="hints.why.claim.mahjong" text="Take it: a win ends the hand."/>
         <string key="hints.why.claim.value" text="A value tile: its set scores a double."/>
         <string key="hints.why.pass.waiting" text="Your hand waits: a claim would break it."/>
         <string key="hints.why.pass.noGain" text="No claim brings the hand closer to ready."/>
+        <string key="hints.card.title.chow" text="Take the discard to make a chow."/>
+        <string key="hints.card.now" text="Steps to ready now: {now}"/>
+        <string key="hints.card.steps" text="Steps"/>
+        <string key="hints.hover.safe" text="Green bar: a safe discard"/>
+        <string key="hints.hover.risky" text="Amber bar: a risky discard"/>
+        <string key="hints.hover.dangerous" text="Red bar: a dangerous discard, an opponent is ready"/>
+        <string key="hints.card.close" text="× Close"/>
+        <string key="hints.card.useful" text="Useful"/>
+        <string key="hints.card.ready" text="ready"/>
+        <string key="hints.card.best" text="Best"/>
+        <string key="hints.card.yours" text="Yours"/>
+        <string key="hints.card.declare" text="declare"/>
+        <string key="hints.card.kong" text="Kong"/>
+        <string key="hints.card.pung" text="Pung"/>
+        <string key="hints.card.chow" text="Chow"/>
+        <string key="hints.card.pass" text="Pass"/>
+        <string key="hints.card.mahjong" text="Mahjong"/>
+        <string key="hints.card.noKong" text="No kong"/>
         <string key="coach.would" text="Computer: {advice}"/>
         <string key="coach.complete" text="Your hand was complete: nothing beats a win."/>
-        <string key="coach.mine.discard" text="Your discard {tile}: steps {before} -&gt; {after}, helps {copies}"/>
-        <string key="coach.mine.wait" text="Your discard {tile}: waiting copies {copies}"/>
-        <string key="coach.mine.undeclared" text="Your discard {tile}, not declared: waiting copies {copies}"/>
-        <string key="coach.mine.kong" text="Your kong of {tile}: steps {before} -&gt; {after}, helps {copies}"/>
-        <string key="coach.mine.pung" text="Your pung of {tile}: steps {before} -&gt; {after}, helps {copies}"/>
-        <string key="coach.mine.chow" text="Your chow {first} - {third}: steps {before} -&gt; {after}, helps {copies}"/>
-        <string key="coach.mine.pass" text="You let the discard go."/>
-        <string key="coach.computer.discard" text="Computer's discard {tile}: steps {before} -&gt; {after}, helps {copies}"/>
-        <string key="coach.computer.wait" text="Computer's discard {tile}: waiting copies {copies}"/>
-        <string key="coach.computer.kong" text="Computer's kong of {tile}: steps {before} -&gt; {after}, helps {copies}"/>
-        <string key="coach.computer.pung" text="Computer's pung of {tile}: steps {before} -&gt; {after}, helps {copies}"/>
-        <string key="coach.computer.chow" text="Computer's chow {first} - {third}: steps {before} -&gt; {after}, helps {copies}"/>
-        <string key="coach.computer.pass" text="Computer would pass: steps to ready: {before}."/>
-        <string key="coach.computer.waiting" text="Computer would pass: your hand is already waiting."/>
+        <string key="coach.undeclared" text="Your discard did not declare the ready hand."/>
         <string key="coach.tally.hand" text="Moves like the computer's: {agreed} of {moves} this hand, {matchAgreed} of {matchMoves} in the match"/>
         <string key="coach.tally.match" text="Moves like the computer's: {agreed} of {moves} in the match"/>
+        <string key="coach.card.tally.hand" text="Like the computer: {agreed} of {moves} this hand, {matchAgreed} of {matchMoves} in all"/>
+        <string key="coach.card.tally.match" text="Like the computer: {agreed} of {moves} in the match"/>
         <string key="cover.text" text="Pass the screen to {handoffSeat}"/>
         <string key="cover.show" text="Show"/>
         <string key="panel.round" text="{wind} {n}"/>
@@ -404,16 +400,10 @@
         <string key="hints.advice.claimKong" text="Возьмите сброс и составьте конг: {tile}."/>
         <string key="hints.advice.claimChow" text="Возьмите сброс и составьте чи: {first}, {second}, {third}."/>
         <string key="hints.advice.pass" text="Пропустите сброс."/>
-        <string key="hints.why.steps" text="Шагов до готовности: {before} -&gt; {after}"/>
-        <string key="hints.why.help" text="Полезных невидимых костей: {copies}"/>
-        <string key="hints.why.help.change" text="Полезных невидимых костей: {before} -&gt; {after}"/>
-        <string key="hints.why.waits" text="Ждёт костей: {kinds}, не видно копий: {copies}"/>
-        <string key="hints.why.declare" text="Этот сброс делает руку готовой."/>
-        <string key="hints.why.keepWaiting" text="Рука готова: оставьте лучшее ожидание."/>
         <string key="hints.why.tie.none" text="Другой сброс не лучше."/>
-        <string key="hints.why.tie.keep" text="Равных костей: {n}; менее нужна: {keep}."/>
-        <string key="hints.why.tie.chance" text="Равных костей: {n}; подойдёт любая."/>
-        <string key="hints.why.tie.danger" text="Равных костей: {n}; эта самая безопасная."/>
+        <string key="hints.why.tie.keep" text="Так же хороши ещё: {n}; первой сбросьте: {keep}."/>
+        <string key="hints.why.tie.chance" text="Так же хороши ещё: {n}; подойдёт любая."/>
+        <string key="hints.why.tie.danger" text="Так же хороши ещё: {n}; эта самая безопасная."/>
         <string key="hints.why.danger.safe" text="Безопасно против готовой руки."/>
         <string key="hints.why.danger.low" text="Малая опасность от готовой руки."/>
         <string key="hints.why.danger.medium" text="Рискованно против готовой руки."/>
@@ -422,35 +412,37 @@
         <string key="hints.why.keep.terminal" text="крайняя"/>
         <string key="hints.why.keep.simple" text="простая"/>
         <string key="hints.why.keep.value" text="ценная"/>
-        <string key="hints.why.alt.discard" text="Вместо {tile} — шагов {steps}, помогут {copies}"/>
-        <string key="hints.why.alt.wait" text="Вместо {tile} — не видно копий {copies}"/>
-        <string key="hints.why.alt.pung" text="Вместо пуна {tile} — шагов {before} -&gt; {after}"/>
-        <string key="hints.why.alt.kong" text="Вместо конга {tile} — шагов {before} -&gt; {after}"/>
-        <string key="hints.why.alt.chow" text="Вместо чи {first} - {third} — шагов {before} -&gt; {after}"/>
         <string key="hints.why.kong.noWorse" text="Конг не ухудшает руку."/>
         <string key="hints.why.win" text="Рука собрана: лучше победы нет."/>
         <string key="hints.why.claim.mahjong" text="Берите: победа завершает раздачу."/>
         <string key="hints.why.claim.value" text="Ценная кость: набор даёт удвоение."/>
         <string key="hints.why.pass.waiting" text="Рука уже ждёт: взяв сброс, вы её сломаете."/>
         <string key="hints.why.pass.noGain" text="Взятие сброса не приближает руку к готовности."/>
+        <string key="hints.card.title.chow" text="Возьмите сброс и составьте чи."/>
+        <string key="hints.card.now" text="Шагов до готовности сейчас: {now}"/>
+        <string key="hints.card.steps" text="Шагов"/>
+        <string key="hints.hover.safe" text="Зелёная полоса: безопасный сброс"/>
+        <string key="hints.hover.risky" text="Оранжевая полоса: рискованный сброс"/>
+        <string key="hints.hover.dangerous" text="Красная полоса: опасный сброс, соперник готов"/>
+        <string key="hints.card.close" text="× Закрыть"/>
+        <string key="hints.card.useful" text="Полезных"/>
+        <string key="hints.card.ready" text="готова"/>
+        <string key="hints.card.best" text="Лучше"/>
+        <string key="hints.card.yours" text="Ваш"/>
+        <string key="hints.card.declare" text="заявка"/>
+        <string key="hints.card.kong" text="Конг"/>
+        <string key="hints.card.pung" text="Пун"/>
+        <string key="hints.card.chow" text="Чи"/>
+        <string key="hints.card.pass" text="Пас"/>
+        <string key="hints.card.mahjong" text="Маджонг"/>
+        <string key="hints.card.noKong" text="Без конга"/>
         <string key="coach.would" text="Компьютер: {advice}"/>
         <string key="coach.complete" text="Ваша рука была собрана: лучше победы нет."/>
-        <string key="coach.mine.discard" text="Ваш сброс {tile}: шагов {before} -&gt; {after}, помогут {copies}"/>
-        <string key="coach.mine.wait" text="Ваш сброс {tile}: не видно копий {copies}"/>
-        <string key="coach.mine.undeclared" text="Ваш сброс {tile} без заявки: не видно копий {copies}"/>
-        <string key="coach.mine.kong" text="Ваш конг {tile}: шагов {before} -&gt; {after}, помогут {copies}"/>
-        <string key="coach.mine.pung" text="Ваш пун {tile}: шагов {before} -&gt; {after}, помогут {copies}"/>
-        <string key="coach.mine.chow" text="Ваше чи {first} - {third}: шагов {before} -&gt; {after}, помогут {copies}"/>
-        <string key="coach.mine.pass" text="Вы пропустили сброс."/>
-        <string key="coach.computer.discard" text="Сброс компьютера {tile}: шагов {before} -&gt; {after}, помогут {copies}"/>
-        <string key="coach.computer.wait" text="Сброс компьютера {tile}: не видно копий {copies}"/>
-        <string key="coach.computer.kong" text="Конг компьютера {tile}: шагов {before} -&gt; {after}, помогут {copies}"/>
-        <string key="coach.computer.pung" text="Пун компьютера {tile}: шагов {before} -&gt; {after}, помогут {copies}"/>
-        <string key="coach.computer.chow" text="Чи компьютера {first} - {third}: шагов {before} -&gt; {after}, помогут {copies}"/>
-        <string key="coach.computer.pass" text="Компьютер пропустил бы: шагов до готовности {before}."/>
-        <string key="coach.computer.waiting" text="Компьютер пропустил бы: ваша рука уже ждёт."/>
+        <string key="coach.undeclared" text="Ваш сброс не объявил заявку."/>
         <string key="coach.tally.hand" text="Ходы как у компьютера: {agreed} из {moves} в раздаче, {matchAgreed} из {matchMoves} в матче"/>
         <string key="coach.tally.match" text="Ходы как у компьютера: {agreed} из {moves} в матче"/>
+        <string key="coach.card.tally.hand" text="Как компьютер: {agreed} из {moves} в раздаче, {matchAgreed} из {matchMoves} всего"/>
+        <string key="coach.card.tally.match" text="Как компьютер: {agreed} из {moves} в матче"/>
         <string key="cover.text" text="Передайте экран: {handoffSeat}"/>
         <string key="cover.show" text="Показать"/>
         <string key="panel.round" text="{wind} {n}"/>

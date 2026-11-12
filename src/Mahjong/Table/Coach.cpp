@@ -24,11 +24,6 @@ namespace BECore::Mahjong {
             return action.kind == ActionKind::ConcealedKong || action.kind == ActionKind::UpgradeKong;
         }
 
-        /// The advice that ends the hand: nothing else is as good, and the note says so instead of comparing numbers.
-        bool EndsTheHand(const HandAction& advice) noexcept {
-            return advice.kind == ActionKind::DeclareWin || (advice.kind == ActionKind::Claim && advice.claim == ClaimKind::Mahjong);
-        }
-
         CoachNote MakeNote(const TableView& before, const HandAction& advised, const HandAction& taken) {
             CoachNote note;
             note.seat = before.seat;
@@ -146,69 +141,6 @@ namespace BECore::Mahjong {
             return note;
         }
 
-        eastl::string Num(int value) {
-            return Format("{}", value);
-        }
-
-        /// The sentence of one side of a note (`computer`: the key is "computer" or "mine") for `action`; empty when the side has nothing to say.
-        eastl::string SideLine(const UIStrings& strings, const CoachNote& note, const HandAction& action, const CoachSide& side, bool computer) {
-            const eastl::string before = Num(note.stepsBefore);
-            const eastl::string after = Num(side.steps);
-            const eastl::string copies = Num(side.copies);
-            const WordArg beforeArg{"before", before};
-            const WordArg afterArg{"after", after};
-            const WordArg copiesArg{"copies", copies};
-            const bool rated = side.numbers == CoachNumbers::Rated;
-            switch (action.kind) {
-                case ActionKind::Discard: {
-                    const eastl::string tile = TileName(strings, action.tile);
-                    if (side.numbers == CoachNumbers::Waiting) {
-                        const bool undeclared = !computer && note.advised.declareCalling && !action.declareCalling;
-                        const char* key = computer ? "coach.computer.wait" : (undeclared ? "coach.mine.undeclared" : "coach.mine.wait");
-                        return Tr(strings, key, {{"tile", tile}, copiesArg});
-                    }
-                    return rated ? Tr(strings, computer ? "coach.computer.discard" : "coach.mine.discard", {{"tile", tile}, beforeArg, afterArg, copiesArg}) : eastl::string();
-                }
-                case ActionKind::ConcealedKong:
-                case ActionKind::UpgradeKong:
-                    return rated ? Tr(strings, computer ? "coach.computer.kong" : "coach.mine.kong", {{"tile", TileName(strings, action.tile)}, beforeArg, afterArg, copiesArg}) : eastl::string();
-                case ActionKind::Claim: {
-                    if (!rated) {
-                        return {};
-                    }
-                    switch (action.claim) {
-                        case ClaimKind::Chow: {
-                            const auto tiles = action.chowFirst.IsValid() ? ChowTiles(action.chowFirst) : eastl::array<Tile, kTilesPerSet>{};
-                            const eastl::string first = TileName(strings, tiles[0]);
-                            const eastl::string third = TileName(strings, tiles[2]);
-                            return Tr(strings, computer ? "coach.computer.chow" : "coach.mine.chow", {{"first", first}, {"third", third}, beforeArg, afterArg, copiesArg});
-                        }
-                        case ClaimKind::Pung:
-                            return Tr(strings, computer ? "coach.computer.pung" : "coach.mine.pung", {{"tile", TileName(strings, note.pending)}, beforeArg, afterArg, copiesArg});
-                        case ClaimKind::Kong:
-                            return Tr(strings, computer ? "coach.computer.kong" : "coach.mine.kong", {{"tile", TileName(strings, note.pending)}, beforeArg, afterArg, copiesArg});
-                        case ClaimKind::Mahjong:
-                            break;
-                    }
-                    return {};
-                }
-                case ActionKind::Pass:
-                    if (!computer) {
-                        return Tr(strings, "coach.mine.pass");
-                    }
-                    return note.handWaits ? Tr(strings, "coach.computer.waiting") : Tr(strings, "coach.computer.pass", {beforeArg});
-                case ActionKind::DeclareWin:
-                    break;
-            }
-            return {};
-        }
-
-        void AddLine(eastl::vector<eastl::string>& lines, eastl::string line) {
-            if (!line.empty() && lines.size() < kMaxCoachLines) {
-                lines.push_back(eastl::move(line));
-            }
-        }
-
     }  // namespace
 
     bool CanJudge(const TableView& before, const HandAction& taken) {
@@ -229,22 +161,6 @@ namespace BECore::Mahjong {
             return std::nullopt;
         }
         return explained->turn.has_value() ? JudgeTurn(before, *explained->turn, taken) : JudgeClaim(before, *explained->claim, taken);
-    }
-
-    eastl::vector<eastl::string> CoachNoteLines(const UIStrings& strings, const CoachNote& note) {
-        eastl::vector<eastl::string> lines;
-        // `AdviceText` names the pending tile of a window from a view: only that member is read of this one
-        TableView named;
-        named.pendingTile = note.pending;
-        const eastl::string advice = AdviceText(strings, named, note.advised);
-        AddLine(lines, Tr(strings, "coach.would", {{"advice", advice}}));
-        if (EndsTheHand(note.advised)) {
-            AddLine(lines, Tr(strings, "coach.complete"));
-            return lines;
-        }
-        AddLine(lines, SideLine(strings, note, note.taken, note.takenSide, false));
-        AddLine(lines, SideLine(strings, note, note.advised, note.advisedSide, true));
-        return lines;
     }
 
     void CoachLedger::SetEnabled(bool enabled) {

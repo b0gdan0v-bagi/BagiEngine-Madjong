@@ -6,7 +6,7 @@
   7 x 4 spacing (8 children: the rows lie 4 apart and the button 4 + 8 + 4 = 16 below the last of them). The row has to be paid for inside the
   plate: a label of 22 needs 32 high (30 is the least that fits and is off the 4 grid), so the four rows are of 18 (the first place is still gold).
 -->
-<node name="MatchOver" layer="25" contentVersion="3">
+<node name="MatchOver" layer="25" contentVersion="4">
   <components>
     <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.7" useSafeArea="true" modal="true" visible="false">
       <elements>

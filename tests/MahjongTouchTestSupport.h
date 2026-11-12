@@ -434,16 +434,6 @@ namespace BECore::Mahjong::Tests {
         return failures;
     }
 
-    /// Every label and button of the canvas, shown or not, in tree order.
-    inline void CollectTextControls(const UIElement& element, std::vector<const UIElement*>& found) {
-        if (ShowsText(element)) {
-            found.push_back(&element);
-        }
-        for (const auto& child : element.children) {
-            CollectTextControls(*child, found);
-        }
-    }
-
     /// The words of the canvas on the whole matrix: `ValidateOnMatrix` does not flag a text that can shrink (`AutoFit`, ellipsis), so
     /// this asks every shown label and button on the text it shows, with `air` units kept free each side of an interactive one, in every
     /// window, scale mode and user scale of the matrix (a `SceneView` canvas once per window; with `only` the windows of that shape alone).
