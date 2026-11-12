@@ -1,4 +1,7 @@
 #include "MahjongTableTestSupport.h"
+#include "MahjongTouchTestSupport.h"
+#include "ShippedTableLayout.h"
+#include "UiStyleTestSupport.h"
 
 #include <Common/ContentFilesCheck.h>
 #include <Mahjong/Table/TableLayout.h>
@@ -43,6 +46,41 @@ namespace BECore::Mahjong::Tests {
         size_t AttributeCount(const pugi::xml_node& node) {
             const pugi::xml_object_range<pugi::xml_attribute_iterator> attributes = node.attributes();
             return static_cast<size_t>(std::distance(attributes.begin(), attributes.end()));
+        }
+
+        /// The root elements of the `SceneView` canvas of the node `node` of the expanded scene (the elements that lie against the canvas, not those
+        /// inside a stack).
+        std::vector<pugi::xml_node> RootElementsOf(const pugi::xml_document& document, const char* node) {
+            std::vector<pugi::xml_node> found;
+            const std::string path = std::string("//node[@name='") + node + "']//component[@space='SceneView']/elements/element";
+            for (const pugi::xpath_node& element : document.select_nodes(path.c_str())) {
+                found.push_back(element.node());
+            }
+            return found;
+        }
+
+        /// The root elements of a table canvas that do not name a region, each with the reason: the one place that lists a deliberate exception.
+        struct UnanchoredElement {
+            const char* node;
+            const char* element;
+            const char* reason;
+        };
+        constexpr UnanchoredElement kUnanchoredElements[] = {
+            {"HandOver", "Plate", "the score table is a modal plate over the discards, the wall and the plates on purpose: it lies in percents of the whole view, clear of the hands at the edges"},
+        };
+
+        bool IsListedUnanchored(const char* node, const char* element) {
+            for (const UnanchoredElement& listed : kUnanchoredElements) {
+                if (std::string(listed.node) == node && std::string(listed.element) == element) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        bool IsPercent(const char* value) {
+            const size_t length = std::strlen(value);
+            return length > 1 && value[length - 1] == '%';
         }
 
         std::vector<pugi::xml_node> ElementChildren(const pugi::xml_node& parent) {
@@ -191,6 +229,76 @@ namespace BECore::Mahjong::Tests {
         EXPECT_GT(found, 0u);
     }
 
+    /// The contract of the canvases on the table: an element lies in a region the table publishes, not at a pair of numbers that repeats the layout.
+    TEST(MahjongSceneFilesTest, EveryElementOfATableCanvasNamesARegionOrIsAListedException) {
+        pugi::xml_document document;
+        ASSERT_TRUE(LoadShippedSceneDocument(document));
+        size_t named = 0;
+        for (const char* node : kRegionNodes) {
+            const std::vector<pugi::xml_node> elements = RootElementsOf(document, node);
+            ASSERT_FALSE(elements.empty()) << node << " has a SceneView canvas";
+            for (const pugi::xml_node& element : elements) {
+                const char* name = element.attribute("name").as_string();
+                if (*element.attribute("region").as_string() != '\0') {
+                    EXPECT_FALSE(IsListedUnanchored(node, name)) << node << "/" << name << " names a region and is listed as an exception";
+                    ++named;
+                } else {
+                    EXPECT_TRUE(IsListedUnanchored(node, name)) << node << "/" << name << " names no region and is not a listed exception";
+                }
+            }
+        }
+        for (const UnanchoredElement& listed : kUnanchoredElements) {
+            EXPECT_TRUE(document.select_node((std::string("//node[@name='") + listed.node + "']//element[@name='" + listed.element + "']").c_str())) << "an exception that is gone: " << listed.element;
+            EXPECT_GT(std::strlen(listed.reason), 0u);
+        }
+        EXPECT_GT(named, 0u);
+    }
+
+    TEST(MahjongSceneFilesTest, NothingOnATableCanvasIsPlacedByAPairOfNumbersAndTheVariantsMoveNothingByPixels) {
+        pugi::xml_document document;
+        ASSERT_TRUE(LoadShippedSceneDocument(document));
+        for (const char* node : kRegionNodes) {
+            for (const pugi::xml_node& element : RootElementsOf(document, node)) {
+                for (const char* axis : {"x", "y"}) {
+                    const char* value = element.attribute(axis).as_string();
+                    EXPECT_TRUE(*value == '\0' || IsPercent(value)) << node << "/" << element.attribute("name").as_string() << " " << axis << "=" << value << ": an offset in a region or in percents";
+                }
+            }
+            // A variant of such a canvas is a real difference (a size class, an arrangement), so it sets no offset in units
+            const std::string sets = std::string("//node[@name='") + node + "']//variants//set";
+            for (const pugi::xpath_node& set : document.select_nodes(sets.c_str())) {
+                for (const char* axis : {"x", "y"}) {
+                    const char* value = set.node().attribute(axis).as_string();
+                    EXPECT_TRUE(*value == '\0' || IsPercent(value)) << node << " variant sets " << set.node().attribute("element").as_string() << " " << axis << "=" << value;
+                }
+            }
+        }
+    }
+
+    TEST(MahjongSceneFilesTest, EveryRegionNameOfTheTableNodesExistsInTheSpecOfEveryShape) {
+        pugi::xml_document document;
+        ASSERT_TRUE(LoadShippedSceneDocument(document));
+        std::set<std::string> used;
+        for (const char* node : kRegionNodes) {
+            const std::string attributes = std::string("//node[@name='") + node + "']//@region";
+            for (const pugi::xpath_node& region : document.select_nodes(attributes.c_str())) {
+                used.insert(region.attribute().as_string());
+            }
+        }
+        ASSERT_GT(used.size(), 4u);
+        const TableLayoutSpec& spec = ShippedTableLayoutSpec();
+        for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait, TableShape::Wide, TableShape::Narrow}) {
+            const eastl::vector<TableRegion> regions = MakeTableRegions(MakeTableLayout(WorstCaseTableInput(0), spec, DesignWidthOf(shape), DesignHeightOf(shape)));
+            for (const std::string& name : used) {
+                bool found = false;
+                for (const TableRegion& region : regions) {
+                    found = found || name == region.name.c_str();
+                }
+                EXPECT_TRUE(found) << "the region " << name << " of the node files is not in the layout of " << EnumUtils<TableShape>::ToString(shape).data();
+            }
+        }
+    }
+
     class MahjongSceneLoadTest : public MahjongTableTestBase {};
 
     TEST_F(MahjongSceneLoadTest, TheLoadedSceneHasTheNodesInOrder) {
@@ -205,6 +313,70 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(children[i]->GetName(), PoolString::Intern(kSceneNodes[i].name)) << "position " << i;
             EXPECT_EQ(children[i]->GetLayer(), kSceneNodes[i].layer) << kSceneNodes[i].name;
         }
+    }
+
+    /// The canvases of the table whose elements lie in the free ground the layout gives them (not on tiles, plates or the panel by design), with the
+    /// regions the rule is asked of: every region an element names is looked up by the element, so a new element is covered without a line here.
+    TEST_F(MahjongSceneLoadTest, EveryTableCanvasPassesTheMatrixAgainstItsRegionsAndTheElementsOfTheFreeGroundLieInsideAndClearOfTheWorstCaseTable) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        Draw();
+        for (const char* node : kRegionNodes) {
+            const auto canvas = Canvas(node);
+            ASSERT_TRUE(canvas) << node;
+            std::vector<UIElement*> pending{&canvas->GetRoot()};
+            while (!pending.empty()) {
+                UIElement* element = pending.back();
+                pending.pop_back();
+                canvas->SetElementVisible(element->name, true);
+                for (const auto& child : element->children) {
+                    pending.push_back(child.Get());
+                }
+            }
+        }
+
+        // The size matrix with the regions of the worst-case table of each case's view (`OutsideRegion`, `MissingRegion`, `OutsideCanvas` and the
+        // overlaps of siblings), once per language; the touch size is the business of `MahjongTouchSizeTest`
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            for (const char* node : kRegionNodes) {
+                ExpectPassesTheMatrix(node, 0.0f);
+            }
+        });
+
+        // The elements that lie in free ground are inside their region and clear of every tile of the worst-case table, in every window of the table
+        // (the phone profile included), and a grid unit off every plate
+        const std::vector<const char*> nodes(std::begin(kRegionNodes), std::end(kRegionNodes));
+        const char* const freeGroundNodes[] = {"Hud", "Hints", "HintsButton", "Actions"};
+        ForEachTableWindow([&](const MatrixWindow& window) {
+            SCOPED_TRACE(window.label.c_str());
+            const TableLayout layout = MakeWorstCaseTableLayout(0, window);
+            const eastl::vector<TableRegion> regions = MakeTableRegions(layout);
+            LayOutOnTheTable(nodes, window);
+            for (const char* node : freeGroundNodes) {
+                const auto canvas = Canvas(node);
+                ASSERT_TRUE(canvas) << node;
+                for (const auto& child : canvas->GetRoot().children) {
+                    const UIElement& element = *child;
+                    const char* name = element.name.ToStringView().data();
+                    ASSERT_FALSE(element.rect.IsEmpty()) << node << "/" << name;
+                    const Rect* region = nullptr;
+                    for (const TableRegion& candidate : regions) {
+                        if (PoolString::Intern(candidate.name.c_str()) == element.style.rect.region) {
+                            region = &candidate.rect;
+                        }
+                    }
+                    ASSERT_NE(region, nullptr) << node << "/" << name << " names a region the table publishes";
+                    EXPECT_GE(element.rect.x, region->x - 0.01f) << node << "/" << name;
+                    EXPECT_GE(element.rect.y, region->y - 0.01f) << node << "/" << name;
+                    EXPECT_LE(element.rect.x + element.rect.w, region->x + region->w + 0.01f) << node << "/" << name;
+                    EXPECT_LE(element.rect.y + element.rect.h, region->y + region->h + 0.01f) << node << "/" << name;
+                    ExpectClearOfTable(element.rect, layout, name);
+                    for (const Rect& plate : layout.zones.seatPlates) {
+                        EXPECT_TRUE(Apart(plate, element.rect)) << node << "/" << name << " lies over a plate";
+                    }
+                }
+            }
+        });
     }
 
     TEST_F(MahjongSceneLoadTest, TheLoadedViewVariantsArePortraitNarrowAndWideInThatOrder) {

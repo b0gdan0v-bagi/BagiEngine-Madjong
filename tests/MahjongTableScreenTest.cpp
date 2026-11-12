@@ -312,8 +312,6 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongTableScreenTest, InThePortraitViewTheButtonsAre68HighInOneRowInTheBandUnderTheWaitingRow) {
         // The portrait view is 720 wide: a button of kPortraitActionButtonHeight is a touch target from a window 339 px wide
         constexpr float kPortraitSmallestWindowWidth = 339.0f;
-        constexpr float kBandTop = 924.0f;      // under the waiting row of `Hints` (y 836..916)
-        constexpr float kBandBottom = 1028.0f;  // the plate of the viewer
         constexpr float kPortraitButtonWidth = 92.0f;
         constexpr float kPortraitDeclareWidth = 124.0f;
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
@@ -325,6 +323,13 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(canvas);
         const MatrixWindow window = DesignWindowOf(TableShape::Portrait);
         const TableLayout layout = MakeWorstCaseTableLayout(0, window);
+        Rect band;  // the free ground of the buttons: under the waiting row and above the plate of the viewer
+        for (const TableRegion& region : MakeTableRegions(layout)) {
+            if (region.name == kActionsRegionName) {
+                band = region.rect;
+            }
+        }
+        ASSERT_FALSE(band.IsEmpty());
         for (const std::vector<ButtonKind>& kinds : FullestButtonSets()) {
             for (int i = 0; i < kButtonCount; ++i) {
                 SetShown(static_cast<ButtonKind>(i), false);
@@ -337,8 +342,9 @@ namespace BECore::Mahjong::Tests {
             ASSERT_NE(row, nullptr);
             EXPECT_GE(row->rect.x, 0.0f);
             EXPECT_LE(row->rect.x + row->rect.w, kPortraitViewWidth);
-            EXPECT_GE(row->rect.y, kBandTop);
-            EXPECT_LE(row->rect.y + row->rect.h, kBandBottom - kGridUnit);
+            EXPECT_GE(row->rect.y, band.y - kRegionTolerance);
+            EXPECT_LE(row->rect.y + row->rect.h, band.y + band.h + kRegionTolerance);
+            EXPECT_LE(row->rect.y + row->rect.h, layout.zones.seatPlates[0].y - kGridUnit) << "above the plate of the viewer";
             float width = 0.0f;
             for (const ButtonKind kind : kinds) {
                 const UIElement* button = Element("Actions", SpecOf(kind).element);
