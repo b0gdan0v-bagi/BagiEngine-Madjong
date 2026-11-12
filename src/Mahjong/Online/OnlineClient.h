@@ -23,6 +23,8 @@ namespace BECore::Mahjong {
         int hands = kFullMatchHands;
         /// The level of every computer seat, `kMinLevel` .. `kMaxLevel`.
         int level = LevelNumber(kDefaultLevel);
+        /// Whether the players of the room may use hints and the coach (the host decides; the room keeps it).
+        bool hintsAllowed = false;
     };
 
     /// One seat of the lobby, with the facts a screen needs so that it reads no `RoomClient`.

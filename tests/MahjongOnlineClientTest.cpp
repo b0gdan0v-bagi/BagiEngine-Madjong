@@ -217,6 +217,35 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_client->SessionRevision(), 1u);
     }
 
+    TEST_F(MahjongOnlineClientTest, HostSendsTheHintsChoiceAsABoolean) {
+        ASSERT_TRUE(_client->Host(kUrl, "Ann", {8, 1, true}));
+        Link().PushOpened();
+        Pump();
+        const CreateRoomMessage create = Sent<CreateRoomMessage>(0);
+        const Json* flag = FindJsonMember(create.options, "hintsAllowed");
+        ASSERT_NE(flag, nullptr);
+        EXPECT_TRUE(flag->is_boolean());
+        EXPECT_EQ(GetJsonBool(create.options, "hintsAllowed"), std::optional<bool>(true));
+        EXPECT_EQ(GetJsonInt(create.options, "hands"), 8);
+    }
+
+    TEST_F(MahjongOnlineClientTest, TheTableReadsTheRoomsHintsSettingFromTheView) {
+        MahjongSeatedGame allowed;
+        ASSERT_TRUE(allowed.Start(kSeed, Parse("{\"hands\": 8, \"level\": 1, \"hintsAllowed\": true}")).has_value());
+        EnterAGame(allowed);
+        EXPECT_TRUE(_client->Table().hintsAllowed);
+
+        // the next view of the same room, from a server that does not send the key: not allowed, and the table is still read
+        Json view = allowed.GetSeatView(0).value();
+        view.erase("hintsAllowed");
+        Link().PushText(MakeViewMessage(kRoom, 0, allowed.GetStateVersion() + 1, false, view, allowed.GetSeatActions(0).value()));
+        Pump();
+        EXPECT_EQ(_client->Stage(), OnlineStage::Game);
+        EXPECT_EQ(_client->Table().version, allowed.GetStateVersion());
+        EXPECT_FALSE(_client->Table().hintsAllowed);
+        EXPECT_EQ(_client->Notice().serial, 0u) << "a missing key is not a bad view";
+    }
+
     TEST_F(MahjongOnlineClientTest, JoinTakesALowerCaseCodeAndAGuestCannotStart) {
         ASSERT_TRUE(_client->Join(kUrl, "abcde", "Bob"));
         Link().PushOpened();

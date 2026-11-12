@@ -963,4 +963,114 @@ namespace BECore::Mahjong::Tests {
         ExpectJudgedClean(harness);
     }
 
+    // ----- (g) the room setting "hints allowed" -----
+
+    namespace {
+
+        constexpr const char* kHintsRoom = "{\"hands\": 8, \"level\": 1, \"hintsAllowed\": true}";
+        constexpr int kSettingMoves = 200;
+
+        /// The `hintsAllowed` of every view a client received: each one has the key, a boolean, and says @p expected.
+        void ExpectEveryViewSays(RoomsHarness& harness, const std::vector<ConnectionId>& people, bool expected) {
+            for (const ConnectionId id : people) {
+                size_t views = 0;
+                for (const Received& message : harness.At(id).received) {
+                    if (message.type != "view" || message.json["view"].empty()) {
+                        continue;
+                    }
+                    ++views;
+                    const Json* flag = FindJsonMember(message.json["view"], "hintsAllowed");
+                    ASSERT_NE(flag, nullptr);
+                    ASSERT_TRUE(flag->is_boolean());
+                    EXPECT_EQ(flag->get<bool>(), expected) << "seat " << harness.At(id).seat;
+                }
+                EXPECT_GT(views, 0u);
+            }
+        }
+
+        /// Raw texts of a client that tries to change the room's setting after the room was made
+        std::vector<std::string> SettingAttempts(const std::string& room, int seat) {
+            const std::string extra = ",\"hintsAllowed\":true,\"options\":{\"hintsAllowed\":true}";
+            return {"{\"v\":1,\"type\":\"join_room\",\"code\":\"" + room + "\",\"name\":\"Cheat\"" + extra + "}", "{\"v\":1,\"type\":\"choose_seat\",\"seat\":" + std::to_string(seat) + extra + "}",
+                    "{\"v\":1,\"type\":\"start\"" + extra + "}"};
+        }
+
+    }  // namespace
+
+    TEST(MahjongRoomsHintsTest, EverySeatOfARoomMadeWithHintsAllowedSaysSoAndOneMadeWithoutSaysNot) {
+        for (const bool allowed : {true, false}) {
+            RoomsHarness harness;
+            const std::vector<ConnectionId> people = harness.MakeLobby(kPersonSeats, allowed ? kHintsRoom : kShortMatch);
+            harness.Start(people[0]);
+            ASSERT_NE(harness.Game(), nullptr);
+            for (int seat = 0; seat < kSeatCount; ++seat) {
+                EXPECT_EQ(harness.Game()->GetSeatView(seat).value()["hintsAllowed"], Json(allowed)) << "seat " << seat << ", allowed " << allowed;
+            }
+            ASSERT_TRUE(RunUntil(harness, people, [&] { return harness.Game()->GetStateVersion() > kSettingMoves; }));
+            ExpectEveryViewSays(harness, people, allowed);
+            ExpectJudgedClean(harness);
+        }
+    }
+
+    TEST(MahjongRoomsHintsTest, ASettingThatIsNotABooleanIsInvalidParamsNamingTheKeyAndTheRoomStaysInTheLobby) {
+        for (const char* options : {"{\"hintsAllowed\": \"yes\"}", "{\"hintsAllowed\": 1}", "{\"hintsAllowed\": null}", "{\"hintsAllowed\": []}", "{\"hintsAllowed\": {}}"}) {
+            RoomsHarness harness;
+            const std::vector<ConnectionId> people = harness.MakeLobby(kPersonSeats, options);
+            harness.Start(people[0]);
+            EXPECT_EQ(harness.At(people[0]).LastErrorCode(), "invalid_params") << options;
+            EXPECT_NE(StringAt(harness.At(people[0]).Last("error")->json, "message").find("hintsAllowed"), std::string::npos) << options;
+            EXPECT_EQ(harness.Game(), nullptr) << options << ": nothing was started";
+            EXPECT_EQ(harness.At(people[0]).Count("view"), 0u) << options;
+            ASSERT_NE(harness.At(people[0]).Last("lobby"), nullptr);
+            EXPECT_EQ(StringAt(harness.At(people[0]).Last("lobby")->json, "phase"), "lobby") << options;
+        }
+        // a game asked directly: nothing is changed by the refusal, an absent key is false
+        MahjongSeatedGame game;
+        EXPECT_FALSE(game.Start(7, Parse("{\"hintsAllowed\": \"yes\"}")).has_value());
+        EXPECT_EQ(game.GetSeatView(0).value(), Json::object());
+        ASSERT_TRUE(game.Start(7, Parse("{\"hintsAllowed\": true}")).has_value());
+        EXPECT_FALSE(game.Start(7, Parse("{\"hintsAllowed\": 0}")).has_value());
+        EXPECT_EQ(game.GetSeatView(2).value()["hintsAllowed"], Json(true)) << "a refused start leaves the match and its setting";
+        ASSERT_TRUE(game.Start(7, Json::object()).has_value());
+        EXPECT_EQ(game.GetSeatView(2).value()["hintsAllowed"], Json(false));
+    }
+
+    TEST(MahjongRoomsHintsTest, AClientCannotTurnTheSettingOnAgainstTheRoom) {
+        RoomsHarness harness;
+        std::vector<ConnectionId> everyone = harness.MakeLobby(kPersonSeats);
+        const std::string room = harness.At(everyone[0]).room;
+        // a third person joins with the setting in the message
+        const ConnectionId third = harness.Connect();
+        harness.SendText(third, SettingAttempts(room, 0).front());
+        everyone.push_back(third);
+        harness.Start(everyone[0]);
+        ASSERT_NE(harness.Game(), nullptr);
+
+        // after the start: an action carrying the setting, and the attempts (join, choose_seat, start) between the moves of the game
+        for (int round = 0; round < kSettingMoves && !harness.Game()->IsFinished(); ++round) {
+            harness.Tick();
+            for (const ConnectionId id : everyone) {
+                const Json actions = harness.At(id).Actions();
+                if (!actions.empty() && harness.At(id).ViewVersion() != harness.At(id).actedVersion) {
+                    harness.At(id).actedVersion = harness.At(id).ViewVersion();
+                    Json action = actions[0];
+                    action["hintsAllowed"] = true;
+                    harness.SendText(id, "{\"v\":1,\"type\":\"action\",\"version\":" + std::to_string(harness.At(id).ViewVersion()) +
+                                             ",\"hintsAllowed\":true,\"options\":{\"hintsAllowed\":true},\"action\":" + Dump(action) + "}");
+                }
+            }
+            if (round % 50 == 0) {
+                for (const std::string& text : SettingAttempts(room, 3)) {
+                    harness.SendText(everyone[static_cast<size_t>(round / 50) % everyone.size()], text);
+                }
+            }
+        }
+        EXPECT_GT(harness.Game()->GetStateVersion(), 20u) << "the game went on";
+        for (int seat = 0; seat < kSeatCount; ++seat) {
+            EXPECT_EQ(harness.Game()->GetSeatView(seat).value()["hintsAllowed"], Json(false)) << "seat " << seat;
+        }
+        ExpectEveryViewSays(harness, everyone, false);
+        ExpectJudgedClean(harness);
+    }
+
 }  // namespace BECore::Mahjong::Tests

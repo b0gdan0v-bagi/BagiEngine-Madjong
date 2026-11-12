@@ -146,6 +146,7 @@ namespace BECore::Mahjong::Tests {
             const TableView view = MakeTableView(hand, seat);
 
             EXPECT_EQ(table.format, kOnlineViewFormat);
+            EXPECT_FALSE(table.hintsAllowed);
             EXPECT_EQ(table.phase, PhaseOfMatch(match));
             EXPECT_EQ(table.seat, seat);
             EXPECT_EQ(table.seatWind, view.seatWind);
@@ -429,6 +430,69 @@ namespace BECore::Mahjong::Tests {
         OnlineTable table;
         const auto read = ReadOnlineView(view, ActionsWithEverything(), table);
         EXPECT_TRUE(read.has_value()) << (read ? "" : TextOf(read.error()));
+    }
+
+    TEST(MahjongOnlineTableTest, TheRoomsHintsSettingIsReadAsTheHostChoseIt) {
+        for (const bool allowed : {true, false}) {
+            MahjongSeatedGame game;
+            ASSERT_TRUE(game.Start(kSeed, Parse(allowed ? "{\"hands\": 8, \"level\": 1, \"hintsAllowed\": true}" : "{\"hands\": 8, \"level\": 1, \"hintsAllowed\": false}")).has_value());
+            for (int seat = 0; seat < kSeatCount; ++seat) {
+                OnlineTable table;
+                ASSERT_TRUE(ReadSeat(game, seat, table).has_value());
+                EXPECT_EQ(table.hintsAllowed, allowed) << "seat " << seat;
+            }
+        }
+    }
+
+    TEST(MahjongOnlineTableTest, ASettingThatIsMissingOrMalformedReadsAsNotAllowedAndTheTableIsRead) {
+        MahjongSeatedGame game;
+        ASSERT_TRUE(game.Start(kSeed, Parse("{\"hands\": 8, \"level\": 1, \"hintsAllowed\": true}")).has_value());
+        const Json actions = ActionsJson(game, 0);
+        OnlineTable table;
+        OnlineTable scratch;
+        ASSERT_TRUE(ReadOnlineView(ViewJson(game, 0), actions, table, scratch).has_value());
+        ASSERT_TRUE(table.hintsAllowed);
+
+        // each of these is read into the pair that held `true`: nothing of the earlier read survives
+        Json missing = ViewJson(game, 0);
+        missing.erase("hintsAllowed");
+        std::vector<Json> views{missing};
+        for (const Json& wrong : {Json("true"), Json(1), Json(0), Json(nullptr), Json::array(), Json::object()}) {
+            Json view = ViewJson(game, 0);
+            view["hintsAllowed"] = wrong;
+            views.push_back(view);
+        }
+        for (const Json& view : views) {
+            ASSERT_TRUE(ReadOnlineView(ViewJson(game, 0), actions, table, scratch).has_value());
+            ASSERT_TRUE(table.hintsAllowed);
+            const auto read = ReadOnlineView(view, actions, table, scratch);
+            ASSERT_TRUE(read.has_value()) << (read ? "" : TextOf(read.error())) << " " << Dump(view["hintsAllowed"]);
+            EXPECT_FALSE(table.hintsAllowed) << Dump(view);
+            EXPECT_EQ(table.seat, 0);
+            EXPECT_EQ(table.hand.size(), ViewJson(game, 0)["hand"].size());
+        }
+    }
+
+    TEST(MahjongOnlineTableTest, TheHandActionsOfATableAreTheServersListWithoutTheReadyCheckAndKeepTheCapacity) {
+        OnlineTable table;
+        ASSERT_TRUE(ReadOnlineView(RichHandOverView(), ActionsWithEverything(), table).has_value());
+        eastl::vector<HandAction> list;
+        ListHandActions(table, list);
+        ASSERT_EQ(list.size(), 4u);
+        EXPECT_EQ(list[0], HandAction::MakeDiscard(T("1p"), true));
+        EXPECT_EQ(list[1], HandAction::MakeDeclareWin());
+        EXPECT_EQ(list[2], HandAction::MakeClaim(ClaimKind::Chow, T("3p")));
+        EXPECT_EQ(list[3], HandAction::MakePass());
+
+        const size_t capacity = list.capacity();
+        table.actions.clear();
+        ListHandActions(table, list);
+        EXPECT_TRUE(list.empty()) << "an earlier list is not kept";
+        EXPECT_EQ(list.capacity(), capacity);
+        ASSERT_TRUE(ReadOnlineView(RichHandOverView(), ActionsWithEverything(), table).has_value());
+        ListHandActions(table, list);
+        EXPECT_EQ(list.size(), 4u);
+        EXPECT_EQ(list.capacity(), capacity);
     }
 
     TEST(MahjongOnlineTableTest, ReadingAgainKeepsTheCapacityOfTheLists) {

@@ -63,7 +63,7 @@ namespace BECore::Mahjong {
             SetNoticeForCode(RoomErrors::kBadName);
             return false;
         }
-        const Json json = Json::object({{"hands", options.hands}, {"level", options.level}});
+        const Json json = Json::object({{"hands", options.hands}, {"level", options.level}, {std::string(kHintsAllowedKey.data(), kHintsAllowedKey.size()), options.hintsAllowed}});
         const bool sent = Report(_client.Host(url, kSeatedGameName, *sanitized, json));
         if (sent) {
             _requesting = true;

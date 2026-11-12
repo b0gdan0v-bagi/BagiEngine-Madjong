@@ -26,8 +26,8 @@ namespace BECore::Mahjong::Tests {
         constexpr int kSettleSteps = 20;
         constexpr int kHostSeat = 0;
 
-        OnlineRoomOptions ShortMatch() {
-            return OnlineRoomOptions{kShortMatchHands, kMinLevel};
+        OnlineRoomOptions ShortMatch(bool hintsAllowed = false) {
+            return OnlineRoomOptions{kShortMatchHands, kMinLevel, hintsAllowed};
         }
 
         /// One step of the world: the clock moves and the hub ticks, every client reads what came, then every client plays.
@@ -72,8 +72,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The host makes a room and waits in its lobby.
-        void HostRoom(MahjongHubWorld& world, HubPlayer& host, const char* name = "Ann") {
-            ASSERT_TRUE(host.Client().Host(kUrl, name, ShortMatch()));
+        void HostRoom(MahjongHubWorld& world, HubPlayer& host, const char* name = "Ann", bool hintsAllowed = false) {
+            ASSERT_TRUE(host.Client().Host(kUrl, name, ShortMatch(hintsAllowed)));
             ASSERT_TRUE(RunUntil(world, {&host}, [&] { return InStage(host, OnlineStage::Lobby); }));
         }
 
@@ -108,6 +108,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_TRUE(read.has_value()) << "the adapter's own view must read";
 
             EXPECT_EQ(table.format, kOnlineViewFormat);
+            EXPECT_EQ(table.hintsAllowed, expected.hintsAllowed);
             EXPECT_TRUE(table.phase == expected.phase);
             EXPECT_EQ(table.seat, seat);
             EXPECT_EQ(table.seat, expected.seat);
@@ -243,6 +244,23 @@ namespace BECore::Mahjong::Tests {
     }
 
     // ----- (b) four people -----
+
+    TEST(MahjongOnlineHubTest, TheTablesOfARoomSayWhatTheHostChoseAboutHints) {
+        for (const bool allowed : {true, false}) {
+            MahjongHubWorld world;
+            HubPlayer host(world);
+            HubPlayer guest(world);
+            const Players players = {&host, &guest};
+            ASSERT_NO_FATAL_FAILURE(HostRoom(world, host, "Ann", allowed));
+            ASSERT_NO_FATAL_FAILURE(JoinRoom(world, guest, host, "Bob"));
+            ASSERT_NO_FATAL_FAILURE(StartAndWait(world, host, players));
+            ASSERT_TRUE(RunUntil(world, players, [&] { return world.Game()->GetStateVersion() > kWarmUpVersion; }));
+            for (const HubPlayer* player : players) {
+                EXPECT_EQ(player->Table().hintsAllowed, allowed) << "allowed " << allowed;
+            }
+            ExpectJudgedClean(world);
+        }
+    }
 
     TEST(MahjongOnlineHubTest, FourPeopleReadEveryViewTheAdapterGivesTheirSeatAtEveryVersionToTheFirstHandOver) {
         MahjongHubWorld world;

@@ -4,10 +4,11 @@
     python3 tests/rooms_smoke.py --exe build/macos-debug/bin/BagiMahjongServer
 
 Scenarios, on a server with --computer-delay-ms 0 --reconnect-grace-ms 300 (the room is `mahjong`, 8 hands, computers at level 1):
-  * a host and a guest with two computers play a hand to its end (`hand_over`), send `next_hand` and see the next hand dealt;
+  * a host and a guest with two computers play a hand to its end (`hand_over`), send `next_hand` and see the next hand dealt; the
+    room is made with `hintsAllowed` and every seat's view says so;
   * the guest drops mid-hand, a computer plays its seat once the grace has passed, the guest returns with its token and gets
     `joined`, `lobby`, `view`, and plays on to the end of a hand;
-  * four people, nobody empty, play a hand to its end.
+  * four people, nobody empty, play a hand to its end; the room is made without the option and every view says `hintsAllowed` false.
 Every text every client receives goes through the judge below. The judge is the rule of tests/MahjongRoomsJudge.h, ported: change both
 together (tests/CLAUDE.md). It has a self-check on hand-made texts, because a judge that cannot fail proves nothing.
 
@@ -171,7 +172,7 @@ def check_result(result: Any, offences: Offences) -> None:
 
 def check_state(state: Any, seat: int, offences: Offences) -> None:
     where = "view"
-    required = {"phase", "seat", "seatWind", "roundWind", "east", "hand", "turn", "seats", "discards", "wall", "handsPlayed", "handsTotal", "version", "ready", "format"}
+    required = {"phase", "seat", "seatWind", "roundWind", "east", "hand", "turn", "seats", "discards", "wall", "handsPlayed", "handsTotal", "version", "ready", "format", "hintsAllowed"}
     if not check_keys(state, where, required, {"result"}, offences):
         return
     phase = state["phase"]
@@ -189,6 +190,8 @@ def check_state(state: Any, seat: int, offences: Offences) -> None:
     ready = state["ready"]
     if not is_list_of(ready, is_bool) or len(ready) != SEAT_COUNT:
         offend(offences, "view.ready", "is not four booleans")
+    if not is_bool(state["hintsAllowed"]):
+        offend(offences, "view.hintsAllowed", "is not a boolean")
     discards = state["discards"]
     if not isinstance(discards, list):
         offend(offences, "view.discards", "is not a list")
@@ -289,7 +292,7 @@ def sample_view(seat: int, phase: str = PHASE_PLAYING) -> dict[str, Any]:
     state: dict[str, Any] = {
         "phase": phase, "seat": seat, "seatWind": winds[seat], "roundWind": "East", "east": 0, "hand": hand,
         "turn": {"phase": "discard", "current": 0, "pendingTile": None, "yourTurn": seat == 0}, "seats": seats, "discards": [{"tile": "9s", "seat": 3}],
-        "wall": 67, "handsPlayed": 0, "handsTotal": 8, "version": 1, "ready": [False] * SEAT_COUNT, "format": 1,
+        "wall": 67, "handsPlayed": 0, "handsTotal": 8, "version": 1, "ready": [False] * SEAT_COUNT, "format": 1, "hintsAllowed": False,
     }
     if phase != PHASE_PLAYING:
         state["result"] = sample_result()
@@ -332,6 +335,8 @@ def self_check_judge(smoke: Any) -> None:
         melds=[{"kind": "kong", "tiles": ["1p"] * 4, "concealed": True, "from": None, "fromDiscard": False, "claimed": None}])), 0, "concealed meld of another seat")
     cannot_miss("a view without the format number", mutated(honest, lambda m: m["view"].pop("format")), 0, "'format'")
     cannot_miss("a format number that is a string", mutated(honest, lambda m: m["view"].update(format="1")), 0, "view.format")
+    cannot_miss("a view without the hints setting", mutated(honest, lambda m: m["view"].pop("hintsAllowed")), 0, "'hintsAllowed'")
+    cannot_miss("a hints setting that is a string", mutated(honest, lambda m: m["view"].update(hintsAllowed="true")), 0, "view.hintsAllowed")
     cannot_miss("a view of another seat", honest, 1, "seat of the client")
     cannot_miss("a result while the hand is played", mutated(honest, lambda m: m["view"].update(result=sample_result())), 0, "view.result")
     cannot_miss("a result that is not four hands", mutated(over, lambda m: m["view"]["result"].update(seats=[])), 0, "view.result.seats")
@@ -381,10 +386,10 @@ def make_player_class(smoke: Any) -> type:
     return MahjongHuman
 
 
-def open_table(smoke: Any, player: type, port: int, people: int) -> list[Any]:
-    """The host creates the room and `people - 1` guests join by its code; the host has not started it."""
+def open_table(smoke: Any, player: type, port: int, people: int, options: dict[str, Any] = GAME_OPTIONS) -> list[Any]:
+    """The host creates the room (with @p options) and `people - 1` guests join by its code; the host has not started it."""
     host = player(port)
-    host.send({"type": "create_room", "game": GAME, "name": "Host", "options": GAME_OPTIONS})
+    host.send({"type": "create_room", "game": GAME, "name": "Host", "options": options})
     host.wait_for("joined")
     host.wait_for("lobby")
     table = [host]
@@ -416,13 +421,19 @@ def check_clean(smoke: Any, humans: list[Any]) -> None:
         smoke.check(not human.offences, f"seat {human.seat}: the judge found {human.offences[:5]}")
 
 
+def check_hints_setting(smoke: Any, humans: list[Any], allowed: bool) -> None:
+    """Every seat's last view carries the host's choice, whatever the seat."""
+    for human in humans:
+        smoke.check(human.state().get("hintsAllowed") is allowed, f"seat {human.seat}: hintsAllowed is {human.state().get('hintsAllowed')}, the host chose {allowed}")
+
+
 def close_all(humans: list[Any]) -> None:
     for human in humans:
         human.close()
 
 
 def scenario_hand_and_next(smoke: Any, player: type, port: int) -> None:
-    humans = open_table(smoke, player, port, 2)
+    humans = open_table(smoke, player, port, 2, {**GAME_OPTIONS, "hintsAllowed": True})
     humans[0].send({"type": "start"})
     play(smoke, humans, lambda: all(human.saw_hand_over for human in humans), "the hand did not end")
     result_kinds = {human.result_kind for human in humans}
@@ -438,6 +449,7 @@ def scenario_hand_and_next(smoke: Any, player: type, port: int) -> None:
     for human in humans:
         smoke.check(human.state()["ready"] == [False] * SEAT_COUNT, f"seat {human.seat}: the ready flags were not cleared by the deal")
         smoke.check("result" not in human.state(), f"seat {human.seat}: the new hand still shows a result")
+    check_hints_setting(smoke, humans, True)
     check_clean(smoke, humans)
     close_all(humans)
 
@@ -484,6 +496,7 @@ def scenario_four_people(smoke: Any, player: type, port: int) -> None:
     humans = open_table(smoke, player, port, SEAT_COUNT)
     humans[0].send({"type": "start"})
     play(smoke, humans, lambda: all(human.saw_hand_over for human in humans), "the hand of four people did not end")
+    check_hints_setting(smoke, humans, False)
     for human in humans:
         result = human.state()["result"] if human.phase() == PHASE_HAND_OVER else None
         if result is not None:

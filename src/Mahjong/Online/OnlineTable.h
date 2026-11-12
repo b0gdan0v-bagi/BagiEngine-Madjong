@@ -64,6 +64,9 @@ namespace BECore::Mahjong {
      */
     struct OnlineTable {
         int format = 0;
+        /// The room's setting: hints and the coach may be used at this table. A view without the key, or with a value that is not a
+        /// boolean, says false (an old server, a malformed value) and is read all the same.
+        bool hintsAllowed = false;
         SessionPhase phase = SessionPhase::Playing;
         Seat seat = kNoSeat;
         Wind seatWind = Wind::East;
@@ -105,6 +108,10 @@ namespace BECore::Mahjong {
      * tile that is not in the notation are errors.
      */
     [[nodiscard]] std::expected<void, OnlineViewError> ReadOnlineView(const Json& view, const Json& actions, OnlineTable& out, OnlineTable& scratch);
+
+    /// Fills @p out with the hand actions among `table.actions` (the `next_hand` ready check is not one), in the server's order. Keeps the
+    /// capacity of @p out. The `legal` list of a `TableView` of the viewer's display hand.
+    void ListHandActions(const OnlineTable& table, eastl::vector<HandAction>& out);
 
     /// The same with a scratch of its own (allocates; for a caller that reads once).
     [[nodiscard]] std::expected<void, OnlineViewError> ReadOnlineView(const Json& view, const Json& actions, OnlineTable& out);
