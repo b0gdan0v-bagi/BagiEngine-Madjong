@@ -7,12 +7,15 @@
 
 namespace BECore::Mahjong {
 
-    /// Codes the client of a room can meet beyond the room protocol's own (`RoomErrors`, `RoomClientErrors`, `RoomClientCloseReasons`): the game's `invalid_params` and the
-    /// reasons a server closes a connection with.
+    /// Codes the client of a room can meet beyond the room protocol's own (`RoomErrors`, `RoomClientErrors`, `RoomClientCloseReasons`): the game's `invalid_params`, the
+    /// reasons a server closes a connection with and the reasons of a `left`.
     namespace OnlineCodes {
         inline constexpr eastl::string_view kInvalidParams = "invalid_params";
         inline constexpr eastl::string_view kTooManyFailedJoins = "too_many_failed_joins";
         inline constexpr eastl::string_view kServerFull = "server_full";
+        /// The reasons of a `left` that the room itself sends (the hub closed the room, or a finished game ran out its time).
+        inline constexpr eastl::string_view kRoomClosed = "room_closed";
+        inline constexpr eastl::string_view kRoomFinished = "room_finished";
     }  // namespace OnlineCodes
 
     /// One code and the key of `config/UIStrings.xml` that says it. Where the player can do nothing different, several codes share a key.
@@ -63,6 +66,9 @@ namespace BECore::Mahjong {
         {RoomClientCloseReasons::kConnectTimeout, "online.error.noAnswer"},
         {OnlineCodes::kTooManyFailedJoins, "online.error.rateLimited"},
         {OnlineCodes::kServerFull, "online.error.busy"},
+        // why the room let the player go (`left`)
+        {OnlineCodes::kRoomClosed, "online.error.roomGone"},
+        {OnlineCodes::kRoomFinished, "online.error.roomGone"},
     };
 
     /// The key that says @p code; `online.error.unknown` for a code that is not in `kKnownOnlineCodes`.
@@ -88,6 +94,6 @@ namespace BECore::Mahjong {
      * @p name is kept as it is (UTF-8, whatever the person typed). @p mine wins over @p away: a client never shows its own seat as away.
      * @param connected only for a person: false is "away".
      */
-    [[nodiscard]] eastl::string OnlineSeatText(const UIStrings& strings, SeatKind kind, eastl::string_view name, bool mine, bool connected);
+    [[nodiscard]] eastl::string OnlineSeatText(const UIStrings& strings, BECore::SeatKind kind, eastl::string_view name, bool mine, bool connected);
 
 }  // namespace BECore::Mahjong

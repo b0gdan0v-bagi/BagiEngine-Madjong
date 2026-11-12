@@ -1,6 +1,6 @@
-# Online/ — Mahjong in a room (the server side)
+# Online/ — Mahjong in a room (the server side and the client model)
 
-`MahjongSeatedGame` is the game's `ISeatedGame` (contract: `engine/src/Modules/Games/CLAUDE.md`, "Seats"), registered by a server as `mahjong` (`MahjongSeatedGame::Info()`). It drives `Match` and `HandModel::Apply` directly, with no `TableSession`, `MahjongGame`, scene or `ImGui`: it compiles into `MahjongModule` and the headless server links it. Not here: the match log, saves (a server restart ends the rooms), the client.
+`MahjongSeatedGame` is the game's `ISeatedGame` (contract: `engine/src/Modules/Games/CLAUDE.md`, "Seats"), registered by a server as `mahjong` (`MahjongSeatedGame::Info()`). It drives `Match` and `HandModel::Apply` directly, with no `TableSession`, `MahjongGame`, scene or `ImGui`: it compiles into `MahjongModule` and the headless server links it. Not here: the match log, saves (a server restart ends the rooms). The client side is "The client model" below.
 
 - **Room seat `i` is Mahjong seat `i`.** The adapter knows no person from a computer: the room decides who is one, per seat and at any moment (a seat whose player stayed away past the grace becomes one). So it has no seat setup and no per-seat level; `level` of the options is the level of every computer seat. A claim window has several seats that decide, which `TableSession::PerformPerson` (the first only) cannot serve.
 - **Options** of `Start` (untrusted): `hands` 8 or 16 (default 16), `level` 1..10. Others are ignored (`flowers` is never offered); a wrong member is `invalid_params` naming the key and changes nothing. The 64-bit room seed is the match seed `low ^ high`.
@@ -13,3 +13,21 @@
 - **A client reads `actions`, not `turn.yourTurn`:** in `hand_over` `yourTurn` is false while `actions` lists `next_hand`.
 - **Test seams** `GetMatch()` (both constness) are for tests, never for the server.
 - **The proof** is `tests/MahjongRoomsTest.cpp`: a `RoomHub` plays rooms and a judge (`tests/MahjongRoomsJudge.h`) checks the schema of every text a client gets. Tiles have no ids, so the judge cannot spot a copied hand by name; the equal-views test (hidden tiles shuffled through `HandModel::Capture` / `Restore`, same view for the seat) covers what the schema cannot see. A new key in a view is a change of the judge too, in C++ and in `tests/rooms_smoke.py`. The executable `BagiMahjongServer` (`tools/server/main.cpp`, the engine's `RunRoomServer` with this game in the registry) is proved end to end by that script (ctest `BagiMahjongRoomSmoke`).
+
+## The client model
+
+`OnlineClient` owns one engine `RoomClient` (contract and numbers: `engine/src/Modules/RoomClient/CLAUDE.md`) and turns it into what a screen reads. It knows no ImGui, scene, renderer, `MahjongGame` or `GameManager`; the screens (the create / join / lobby ones) and the table component read it and are not here yet. A component calls `Update()` once per frame and redraws when `Version()` moved.
+
+| File | Purpose |
+|------|---------|
+| `OnlineTable.h/.cpp` | `ReadOnlineView(view, actions, out, scratch)`: the server's `view` and `actions` (untrusted JSON, checked helpers) into plain data with the game's value types; errors name the key; `out` is touched only on success, and both tables keep their lists' capacity |
+| `OnlineWords.h/.cpp` | every code the client can meet (`kKnownOnlineCodes`) with its key in `config/UIStrings.xml` (`online.*`); several codes share a key where the player can do nothing different; `stale_action` alone is silent |
+| `OnlineClient.h/.cpp` | the model, and `SessionToJson` / `SessionFromJson` |
+
+- **Stage** (`OnlineStage`) is derived, never stored on its own: `Idle` (no connection, or a request answered with an error), `Connecting` (a Host / Join waits for `joined`), `Lobby` (in a room, no good view yet), `Game` (a good view arrived; `Table()`), `Reconnecting` (the lobby and the table stay readable, frozen). A connection with no room and no request pending is closed by the model, so the server never closes it later with a notice nobody asked for.
+- **A client reads `actions`.** `Act(i)` sends `Table().actions[i]`'s original JSON (`RoomClient::GetActions()[i]`) with the version of the last view, only in `Game`; it is never resent (`stale_action` is silent and the fresh view follows). `view {}` before the start is not a table.
+- **`format`:** the model reads exactly `kOnlineViewFormat`. Another number (or none) is `online.error.viewFormat`, the connection is closed and the session forgotten (reconnecting would get the same answer). A view that is broken in another way keeps the last good table and says `online.error.badView`.
+- **Version rule:** `Version()` grows when the stage, lobby, table, notice or session to keep changes; a frame with nothing to do changes nothing and allocates nothing (lists are members). The lobby is rebuilt on a lobby event and when the client's seat or host flag moved (`ChooseSeat` takes the seat at once, an error gives it back).
+- **Notice:** one `OnlineNotice` (a key, an `arg` for the one key that names a code, a serial so a screen shows each once). A command that cannot be sent, a server `error`, a `left` the player did not ask for and a `Closed` make one. The `arg` is a code from the server, reduced to letters, digits and `_`. A `Closed` the model asked for (`Disconnect`, a bad format) is dropped.
+- **The session to keep:** `SessionToKeep()` with `SessionRevision()` (grows when it should be saved or erased). Forgotten on `room_gone`, `replaced`, `gave_up`, `Leave()`, a `left` and a format mismatch; kept through a lost connection, `Disconnect()` and every other close. **The token is the player's secret:** never in a log, a notice or a test message. Where it is stored (`Save/`, the browser) is the screens' decision; the model gives the data and a JSON pair that refuses anything that is not a room and a token.
+

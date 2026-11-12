@@ -103,6 +103,8 @@ namespace BECore::Mahjong::Tests {
             RoomClientCloseReasons::kConnectTimeout,
             OnlineCodes::kTooManyFailedJoins,
             OnlineCodes::kServerFull,
+            OnlineCodes::kRoomClosed,
+            OnlineCodes::kRoomFinished,
         };
         for (const eastl::string_view code : codes) {
             EXPECT_NE(OnlineErrorKey(code), kOnlineUnknownKey) << Std(code);
@@ -157,13 +159,13 @@ namespace BECore::Mahjong::Tests {
 
         ForEachLanguage(strings, [&](PoolString language) {
             const bool russian = language == "ru"_intern;
-            EXPECT_EQ(OnlineSeatText(strings, SeatKind::Empty, "", false, false), russian ? "Свободно" : "Empty");
-            EXPECT_EQ(OnlineSeatText(strings, SeatKind::Computer, "", false, false), russian ? "Компьютер" : "Computer");
-            EXPECT_EQ(OnlineSeatText(strings, SeatKind::Human, name, false, true), name);
-            EXPECT_EQ(OnlineSeatText(strings, SeatKind::Human, name, true, true), (russian ? "Анна 🀄 (вы)" : "Анна 🀄 (you)"));
-            EXPECT_EQ(OnlineSeatText(strings, SeatKind::Human, name, false, false), (russian ? "Анна 🀄 (не в сети)" : "Анна 🀄 (away)"));
+            EXPECT_EQ(OnlineSeatText(strings, BECore::SeatKind::Empty, "", false, false), russian ? "Свободно" : "Empty");
+            EXPECT_EQ(OnlineSeatText(strings, BECore::SeatKind::Computer, "", false, false), russian ? "Компьютер" : "Computer");
+            EXPECT_EQ(OnlineSeatText(strings, BECore::SeatKind::Human, name, false, true), name);
+            EXPECT_EQ(OnlineSeatText(strings, BECore::SeatKind::Human, name, true, true), (russian ? "Анна 🀄 (вы)" : "Анна 🀄 (you)"));
+            EXPECT_EQ(OnlineSeatText(strings, BECore::SeatKind::Human, name, false, false), (russian ? "Анна 🀄 (не в сети)" : "Анна 🀄 (away)"));
             // Mine wins over away
-            EXPECT_EQ(OnlineSeatText(strings, SeatKind::Human, name, true, false), OnlineSeatText(strings, SeatKind::Human, name, true, true));
+            EXPECT_EQ(OnlineSeatText(strings, BECore::SeatKind::Human, name, true, false), OnlineSeatText(strings, BECore::SeatKind::Human, name, true, true));
         });
     }
 

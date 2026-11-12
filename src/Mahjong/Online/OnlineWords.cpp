@@ -21,13 +21,13 @@ namespace BECore::Mahjong {
         return Tr(strings, key, {{"code", arg}});
     }
 
-    eastl::string OnlineSeatText(const UIStrings& strings, SeatKind kind, eastl::string_view name, bool mine, bool connected) {
+    eastl::string OnlineSeatText(const UIStrings& strings, BECore::SeatKind kind, eastl::string_view name, bool mine, bool connected) {
         switch (kind) {
-            case SeatKind::Empty:
+            case BECore::SeatKind::Empty:
                 return Tr(strings, "online.seat.empty");
-            case SeatKind::Computer:
+            case BECore::SeatKind::Computer:
                 return Tr(strings, "online.seat.computer");
-            case SeatKind::Human:
+            case BECore::SeatKind::Human:
                 break;
         }
         if (mine) {
