@@ -8,7 +8,7 @@
 
 namespace BECore::Mahjong {
 
-    /// Where the player is in the life of an online game; the screens of slice 3 and the table of slice 4 switch on it.
+    /// Where the player is in the life of an online game; the screens and the table switch on it.
     CORE_ENUM(OnlineStage, uint8_t,
               Idle,         // no connection and no room (or a request that was answered with an error)
               Connecting,   // a Host / Join was sent and `joined` has not come
@@ -89,7 +89,8 @@ namespace BECore::Mahjong {
         /// The host starts the game, in the lobby only.
         bool Start();
         /// Sends `Table().actions[index]` as the server listed it, stamped with the version of the view. Only in `Game` (no notice
-        /// elsewhere, so a click during a reconnect does nothing); the client never resends it.
+        /// elsewhere, so a click during a reconnect does nothing) and not after a view that was not read, until a good one comes (the
+        /// screen shows an older table than the client holds); the client never resends it.
         bool Act(size_t index);
         /// Leaves the room and forgets the session. The connection is closed by the model once the server answered.
         bool Leave();
@@ -196,6 +197,8 @@ namespace BECore::Mahjong {
         OnlineTable _table;
         OnlineTable _scratch;
         bool _hasTable = false;
+        /// `_table` is the latest view of the client: false after a view that was not read, until the next good one.
+        bool _tableIsLatest = false;
         OnlineLobby _lobby;
         bool _lobbyDirty = false;
         int _lobbySeat = -1;

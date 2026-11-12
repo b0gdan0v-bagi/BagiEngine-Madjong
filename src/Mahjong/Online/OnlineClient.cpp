@@ -9,7 +9,6 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        /// A code from the server is shown in a notice only when it is plain: letters, digits and underscores, so a hostile server cannot put a text on the screen.
         constexpr size_t kMaxNoticeArgBytes = 32;
 
         constexpr eastl::string_view kSessionUrlKey = "url";
@@ -19,6 +18,7 @@ namespace BECore::Mahjong {
         /// The reason of `left` after the player's own `leave`: nothing to say.
         constexpr eastl::string_view kLeftReasonLeft = "left";
 
+        /// A code from the server is shown in a notice only when it is plain: letters, digits and underscores, so a hostile server cannot put a text on the screen.
         eastl::string SafeArg(eastl::string_view code) {
             eastl::string arg;
             for (const char c : code) {
@@ -113,7 +113,8 @@ namespace BECore::Mahjong {
     }
 
     bool OnlineClient::Act(size_t index) {
-        if (_stage != OnlineStage::Game || index >= _table.actions.size()) {
+        // The client already holds the actions of a view the model did not read; the screen still shows the table before it
+        if (_stage != OnlineStage::Game || !_tableIsLatest || index >= _table.actions.size()) {
             return false;
         }
         const Json& actions = _client.GetActions();
@@ -229,6 +230,7 @@ namespace BECore::Mahjong {
         const std::expected<void, OnlineViewError> read = ReadOnlineView(view, _client.GetActions(), _table, _scratch);
         if (read) {
             _hasTable = true;
+            _tableIsLatest = true;
             Bump();
             return true;
         }
@@ -241,6 +243,7 @@ namespace BECore::Mahjong {
             return false;
         }
         LOG_WARNING(Format("Online: a view was not read: {}", read.error().text.c_str()));
+        _tableIsLatest = false;
         SetNotice(kOnlineBadViewKey);
         return true;
     }
@@ -251,8 +254,6 @@ namespace BECore::Mahjong {
         if (!IsSilentOnlineCode(event.code)) {
             SetNoticeForCode(event.code);
         }
-        // A refused choose_seat gives the old seat back
-        _lobbyDirty = true;
     }
 
     void OnlineClient::OnLeft(const RoomClientEvent& event) {
@@ -370,6 +371,7 @@ namespace BECore::Mahjong {
 
     void OnlineClient::ForgetView() {
         _hasTable = false;
+        _tableIsLatest = false;
         _lobby = OnlineLobby();
         _lobbyDirty = false;
         _lobbySeat = -1;

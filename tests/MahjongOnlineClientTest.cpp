@@ -81,9 +81,9 @@ namespace BECore::Mahjong::Tests {
             return std::string(text.c_str(), text.size());
         }
 
-        class OnlineClientTest : public ::testing::Test {
+        class MahjongOnlineClientTest : public ::testing::Test {
         protected:
-            OnlineClientTest() {
+            MahjongOnlineClientTest() {
                 MakeClient();
             }
 
@@ -163,7 +163,7 @@ namespace BECore::Mahjong::Tests {
 
     // ---- Host and Join ------------------------------------------------------------------------------------------------------------
 
-    TEST_F(OnlineClientTest, AFreshClientIsIdleWithNothingToShow) {
+    TEST_F(MahjongOnlineClientTest, AFreshClientIsIdleWithNothingToShow) {
         EXPECT_EQ(_client->Stage(), OnlineStage::Idle);
         EXPECT_FALSE(_client->HasTable());
         EXPECT_EQ(_client->Notice().serial, 0u);
@@ -172,7 +172,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(_client->Lobby().room.empty());
     }
 
-    TEST_F(OnlineClientTest, HostCreatesTheRoomAndTheHostAloneSeesThreeEmptySeats) {
+    TEST_F(MahjongOnlineClientTest, HostCreatesTheRoomAndTheHostAloneSeesThreeEmptySeats) {
         ASSERT_TRUE(_client->Host(kUrl, "Ann", {8, 1}));
         EXPECT_EQ(_client->Stage(), OnlineStage::Connecting);
         Link().PushOpened();
@@ -217,7 +217,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_client->SessionRevision(), 1u);
     }
 
-    TEST_F(OnlineClientTest, JoinTakesALowerCaseCodeAndAGuestCannotStart) {
+    TEST_F(MahjongOnlineClientTest, JoinTakesALowerCaseCodeAndAGuestCannotStart) {
         ASSERT_TRUE(_client->Join(kUrl, "abcde", "Bob"));
         Link().PushOpened();
         Pump();
@@ -236,7 +236,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_client->Lobby().humans, 2);
     }
 
-    TEST_F(OnlineClientTest, TheLobbyShowsAPersonWhoseConnectionIsDownAsAway) {
+    TEST_F(MahjongOnlineClientTest, TheLobbyShowsAPersonWhoseConnectionIsDownAsAway) {
         EnterAsHost();
         eastl::vector<LobbySeat> seats = AnnAndBob();
         seats[1].connected = false;
@@ -249,7 +249,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(_client->Lobby().seats[2].name.empty());
     }
 
-    TEST_F(OnlineClientTest, TheHostLeavingInTheLobbyMovesTheHostToTheOtherPlayer) {
+    TEST_F(MahjongOnlineClientTest, TheHostLeavingInTheLobbyMovesTheHostToTheOtherPlayer) {
         ASSERT_TRUE(_client->Join(kUrl, "ABCDE", "Bob"));
         Link().PushOpened();
         Pump();
@@ -268,7 +268,7 @@ namespace BECore::Mahjong::Tests {
 
     // ---- Commands that cannot be sent ---------------------------------------------------------------------------------------------
 
-    TEST_F(OnlineClientTest, ACodeThatCannotBeARoomCodeAndANameTheServerWouldRefuseMakeNoConnection) {
+    TEST_F(MahjongOnlineClientTest, ACodeThatCannotBeARoomCodeAndANameTheServerWouldRefuseMakeNoConnection) {
         EXPECT_FALSE(_client->Join(kUrl, "no!", "Bob"));
         EXPECT_STREQ(KeyOf(*_client), "online.error.unknownRoom");
         EXPECT_EQ(_client->Notice().serial, 1u);
@@ -282,7 +282,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_client->Stage(), OnlineStage::Idle);
     }
 
-    TEST_F(OnlineClientTest, OptionsOutsideWhatTheGameTakesMakeNoConnection) {
+    TEST_F(MahjongOnlineClientTest, OptionsOutsideWhatTheGameTakesMakeNoConnection) {
         EXPECT_FALSE(_client->Host(kUrl, "Ann", {9, 5}));
         EXPECT_FALSE(_client->Host(kUrl, "Ann", {8, 0}));
         EXPECT_FALSE(_client->Host(kUrl, "Ann", {16, 11}));
@@ -292,7 +292,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(_client->Host(kUrl, "Ann", {16, 10}));
     }
 
-    TEST_F(OnlineClientTest, ACommandThatDoesNotFitTheStateIsANoticeAndOneOutsideItsStageIsNot) {
+    TEST_F(MahjongOnlineClientTest, ACommandThatDoesNotFitTheStateIsANoticeAndOneOutsideItsStageIsNot) {
         EXPECT_FALSE(_client->Start());
         EXPECT_FALSE(_client->ChooseSeat(1));
         EXPECT_FALSE(_client->Act(0));
@@ -311,7 +311,7 @@ namespace BECore::Mahjong::Tests {
 
     // ---- Seats and start ----------------------------------------------------------------------------------------------------------
 
-    TEST_F(OnlineClientTest, ChooseSeatTakesTheSeatAtOnceAndARefusalGivesTheOldOneBackWithANotice) {
+    TEST_F(MahjongOnlineClientTest, ChooseSeatTakesTheSeatAtOnceAndARefusalGivesTheOldOneBackWithANotice) {
         EnterAsHost();
         ASSERT_TRUE(_client->ChooseSeat(1));
         const ChooseSeatMessage choose = Sent<ChooseSeatMessage>(Link().sent.size() - 1);
@@ -328,7 +328,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_client->Stage(), OnlineStage::Lobby);
     }
 
-    TEST_F(OnlineClientTest, AViewOfAnEmptyObjectBeforeTheStartIsNotATable) {
+    TEST_F(MahjongOnlineClientTest, AViewOfAnEmptyObjectBeforeTheStartIsNotATable) {
         EnterAsHost();
         const uint32_t serial = _client->Notice().serial;
         Receive(MakeViewMessage(kRoom, 0, 0, false, Json::object(), Json::array()));
@@ -338,7 +338,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_client->Notice().serial, serial);
     }
 
-    TEST_F(OnlineClientTest, StartIsSentAndTheFirstViewMakesTheTableAndTheStageGame) {
+    TEST_F(MahjongOnlineClientTest, StartIsSentAndTheFirstViewMakesTheTableAndTheStageGame) {
         EnterAsHost();
         ASSERT_TRUE(_client->Start());
         EXPECT_EQ(Link().sent.size(), 2u);
@@ -363,7 +363,7 @@ namespace BECore::Mahjong::Tests {
 
     // ---- Acting -------------------------------------------------------------------------------------------------------------------
 
-    TEST_F(OnlineClientTest, ActSendsTheListedActionStampedWithTheVersionOfTheView) {
+    TEST_F(MahjongOnlineClientTest, ActSendsTheListedActionStampedWithTheVersionOfTheView) {
         MahjongSeatedGame game = Started();
         EnterAGame(game);
         const size_t sentBefore = Link().sent.size();
@@ -377,7 +377,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(sent.action, game.GetSeatActions(0).value()[0]);
     }
 
-    TEST_F(OnlineClientTest, AStaleActionIsSilentAndTheNextViewIsShown) {
+    TEST_F(MahjongOnlineClientTest, AStaleActionIsSilentAndTheNextViewIsShown) {
         MahjongSeatedGame game = Started();
         EnterAGame(game);
         const uint32_t serial = _client->Notice().serial;
@@ -393,7 +393,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_client->Table().version, game.GetStateVersion());
     }
 
-    TEST_F(OnlineClientTest, AnErrorOfTheGameIsShownAsItsWord) {
+    TEST_F(MahjongOnlineClientTest, AnErrorOfTheGameIsShownAsItsWord) {
         MahjongSeatedGame game = Started();
         EnterAGame(game);
         ReceiveError(RoomErrors::kIllegalAction, "action");
@@ -405,7 +405,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_client->Notice().arg, "ahostiletextb");
     }
 
-    TEST_F(OnlineClientTest, NextHandIsListedInAFinishedHandAndTheReadyFlagsComeWithTheView) {
+    TEST_F(MahjongOnlineClientTest, NextHandIsListedInAFinishedHandAndTheReadyFlagsComeWithTheView) {
         MahjongSeatedGame game = Started();
         PlayToHandOver(game);
         EnterAGame(game);
@@ -429,7 +429,7 @@ namespace BECore::Mahjong::Tests {
 
     // ---- Errors of a request ------------------------------------------------------------------------------------------------------
 
-    TEST_F(OnlineClientTest, ARefusedJoinIsItsWordAndTheStageGoesBackToIdleWithTheConnectionClosed) {
+    TEST_F(MahjongOnlineClientTest, ARefusedJoinIsItsWordAndTheStageGoesBackToIdleWithTheConnectionClosed) {
         const eastl::string_view codes[] = {RoomErrors::kUnknownRoom, RoomErrors::kRoomFull, RoomErrors::kGameStarted, RoomErrors::kBadName};
         for (const eastl::string_view code : codes) {
             const size_t links = _transports.Count();
@@ -450,7 +450,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_client->Notice().serial, 4u);
     }
 
-    TEST_F(OnlineClientTest, AConnectionThatDoesNotOpenIsAClosedWithTheConnectFailedWord) {
+    TEST_F(MahjongOnlineClientTest, AConnectionThatDoesNotOpenIsAClosedWithTheConnectFailedWord) {
         _transports.FailNextOpen("tls_unsupported");
         EXPECT_FALSE(_client->Host(kUrl, "Ann"));
         EXPECT_STREQ(KeyOf(*_client), "online.error.connectFailed");
@@ -465,7 +465,7 @@ namespace BECore::Mahjong::Tests {
 
     // ---- Losing the connection ----------------------------------------------------------------------------------------------------
 
-    TEST_F(OnlineClientTest, ALostConnectionFreezesTheTableAndTheReturnFindsTheGameAgain) {
+    TEST_F(MahjongOnlineClientTest, ALostConnectionFreezesTheTableAndTheReturnFindsTheGameAgain) {
         MahjongSeatedGame game = Started();
         EnterAGame(game);
         const uint32_t revision = _client->SessionRevision();
@@ -504,7 +504,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_client->Stage(), OnlineStage::Game);
     }
 
-    TEST_F(OnlineClientTest, TheSessionIsForgottenWhenTheRoomIsGoneAndKeptWhenTheServerCannotBeReached) {
+    TEST_F(MahjongOnlineClientTest, TheSessionIsForgottenWhenTheRoomIsGoneAndKeptWhenTheServerCannotBeReached) {
         // room_gone: the server does not know the token
         {
             MahjongSeatedGame game = Started();
@@ -570,7 +570,7 @@ namespace BECore::Mahjong::Tests {
 
     // ---- Leave, Disconnect, Resume ------------------------------------------------------------------------------------------------
 
-    TEST_F(OnlineClientTest, LeaveForgetsTheSessionAtOnceAndTheConnectionIsClosedWhenTheServerAnswered) {
+    TEST_F(MahjongOnlineClientTest, LeaveForgetsTheSessionAtOnceAndTheConnectionIsClosedWhenTheServerAnswered) {
         EnterAsHost();
         const uint32_t revision = _client->SessionRevision();
         const uint32_t serial = _client->Notice().serial;
@@ -586,7 +586,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_client->Notice().serial, serial);
     }
 
-    TEST_F(OnlineClientTest, TheRoomClosingUnderThePlayerIsTheRoomGoneWord) {
+    TEST_F(MahjongOnlineClientTest, TheRoomClosingUnderThePlayerIsTheRoomGoneWord) {
         EnterAsHost();
         Receive(MakeLeftMessage("room_closed"));
         EXPECT_EQ(_client->Stage(), OnlineStage::Idle);
@@ -594,7 +594,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(_client->SessionToKeep().IsValid());
     }
 
-    TEST_F(OnlineClientTest, DisconnectKeepsTheSessionAndSaysNothing) {
+    TEST_F(MahjongOnlineClientTest, DisconnectKeepsTheSessionAndSaysNothing) {
         MahjongSeatedGame game = Started();
         EnterAGame(game);
         const uint32_t revision = _client->SessionRevision();
@@ -609,7 +609,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_client->Notice().serial, serial);
     }
 
-    TEST_F(OnlineClientTest, LeavingWhileReconnectingEndsItWithNoNoticeAndNoSession) {
+    TEST_F(MahjongOnlineClientTest, LeavingWhileReconnectingEndsItWithNoNoticeAndNoSession) {
         EnterAsHost();
         Link().PushClosed();
         Pump();
@@ -623,7 +623,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_client->Notice().serial, serial);
     }
 
-    TEST_F(OnlineClientTest, ASessionGoesThroughJsonAndResumesInANewClient) {
+    TEST_F(MahjongOnlineClientTest, ASessionGoesThroughJsonAndResumesInANewClient) {
         EnterAsHost();
         const eastl::string text = DumpJson(SessionToJson(_client->SessionToKeep()));
         EXPECT_NE(text.find(kRoom.data()), eastl::string::npos);
@@ -650,7 +650,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_client->SessionRevision(), 0u);
     }
 
-    TEST_F(OnlineClientTest, AResumeOfARoomThatNoLongerExistsIsTheRoomGoneWord) {
+    TEST_F(MahjongOnlineClientTest, AResumeOfARoomThatNoLongerExistsIsTheRoomGoneWord) {
         RoomSession session;
         session.url = kUrl;
         session.room = kRoom;
@@ -666,7 +666,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_GT(_client->SessionRevision(), 0u);
     }
 
-    TEST_F(OnlineClientTest, ASessionThatCannotBeOneIsRefusedWithoutAConnection) {
+    TEST_F(MahjongOnlineClientTest, ASessionThatCannotBeOneIsRefusedWithoutAConnection) {
         RoomSession session;
         session.url = kUrl;
         session.room = kRoom;
@@ -678,7 +678,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(_client->SessionToKeep().IsValid());
     }
 
-    TEST(OnlineSessionJsonTest, ARoundTripKeepsTheSessionAndAnythingElseIsRefused) {
+    TEST(MahjongOnlineSessionJsonTest, ARoundTripKeepsTheSessionAndAnythingElseIsRefused) {
         RoomSession session;
         session.url = kUrl;
         session.room = "abcde";
@@ -707,7 +707,7 @@ namespace BECore::Mahjong::Tests {
 
     // ---- Views the model will not read --------------------------------------------------------------------------------------------
 
-    TEST_F(OnlineClientTest, AViewOfAnotherFormatIsRefusedInWordsTheClientClosesAndTheSessionIsForgotten) {
+    TEST_F(MahjongOnlineClientTest, AViewOfAnotherFormatIsRefusedInWordsTheClientClosesAndTheSessionIsForgotten) {
         MahjongSeatedGame game = Started();
         EnterAsHost();
         const uint32_t revision = _client->SessionRevision();
@@ -728,7 +728,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_client->Notice().serial, serial);
     }
 
-    TEST_F(OnlineClientTest, AViewThatDoesNotParseKeepsTheLastGoodTableWithANotice) {
+    TEST_F(MahjongOnlineClientTest, AViewThatDoesNotParseKeepsTheLastGoodTableWithANotice) {
         MahjongSeatedGame game = Started();
         EnterAGame(game);
         const OnlineTable good = _client->Table();
@@ -744,11 +744,21 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_client->Table().version, good.version);
         EXPECT_TRUE(_client->SessionToKeep().IsValid());
         EXPECT_FALSE(Link().closeCalled);
+
+        // The screen shows the old table, the client holds the new list: nothing is sent from it
+        const size_t sentBefore = Link().sent.size();
+        EXPECT_FALSE(_client->Act(0));
+        EXPECT_EQ(Link().sent.size(), sentBefore);
+
+        // A good view brings the action back
+        Receive(ViewText(game, 0));
+        EXPECT_TRUE(_client->Act(0));
+        EXPECT_EQ(Link().sent.size(), sentBefore + 1);
     }
 
     // ---- Redraw by version --------------------------------------------------------------------------------------------------------
 
-    TEST_F(OnlineClientTest, AFrameWithNothingToDoChangesNothingAndKeepsTheCapacities) {
+    TEST_F(MahjongOnlineClientTest, AFrameWithNothingToDoChangesNothingAndKeepsTheCapacities) {
         MahjongSeatedGame game = Started();
         EnterAGame(game);
         Receive(ViewText(game, 0));
@@ -774,7 +784,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_client->Table().actions.capacity(), actionCapacity);
     }
 
-    TEST_F(OnlineClientTest, EveryChangeMovesTheVersion) {
+    TEST_F(MahjongOnlineClientTest, EveryChangeMovesTheVersion) {
         uint64_t version = _client->Version();
         const auto moved = [&] {
             const bool grew = _client->Version() > version;

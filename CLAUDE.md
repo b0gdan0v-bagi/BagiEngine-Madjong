@@ -13,7 +13,7 @@ A nested `CLAUDE.md` loads when you work in its folder.
 | Folder | Covers |
 |--------|--------|
 | `src/Mahjong/` | `MahjongGame`, the control API, the match log JSON and file |
-| `src/Mahjong/Online/` | `MahjongSeatedGame`: the game in a room (server side, the ready check, the views) |
+| `src/Mahjong/Online/` | `MahjongSeatedGame`: the game in a room (server side, the ready check, the views); `OnlineClient`: the client model over `RoomClient` (stage, lobby, table, notice, session to keep) |
 | `src/Mahjong/Save/` | the save of a match and of the `Setup` choices, `Continue` |
 | `src/Mahjong/Game/` | the rules: wall, `HandModel`, scoring (and the owner's readings), `Match`, the computer player, `TableSession`, `MatchLog` |
 | `src/Mahjong/Table/` | pure scene logic: layout, words, seat plates, buttons, hints, flights, touch regime |
