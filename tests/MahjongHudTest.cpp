@@ -432,21 +432,18 @@ namespace BECore::Mahjong::Tests {
             LayOutOnTheTable(nodes, window);
 
             // The file is by screen position and the viewer of the worst-case layout is seat 0, so position p is seat p: the label of a plate
-            // is its `NameBox` (the view of a shape is its design, so a unit is one view unit), the bottom plate of the phone profile lifted
-            // by a few units under it
-            constexpr float kPhonePlateShift = 4.0f;
+            // names the region of its plate, so it lies inside the plate (the phone profile's lifted bottom plate included), centred on it
+            // and under the ring box of the emblem (the view of a shape is its design, so a unit is one view unit)
             eastl::vector<Rect> plates;
             for (int position = 0; position < kSeatCount; ++position) {
                 const UIElement* name = Element("SeatPlates", Format("PlateName{}", position).c_str());
                 ASSERT_NE(name, nullptr) << position;
                 const Rect& expected = layout.zones.seatPlates[SeatAtPosition(layout.viewer, position)];
-                const Rect nameBox = NameBox(expected, 1.0f);
-                EXPECT_FLOAT_EQ(name->rect.x, nameBox.x) << position;
-                // The file's label is the desktop one; the bottom plate of the phone profile is a few units higher and the label stays on it
-                EXPECT_NEAR(name->rect.y, nameBox.y, layout.profile.phone && position == 0 ? kPhonePlateShift : 0.0f) << position;
+                EXPECT_GE(name->rect.x, expected.x) << position;
+                EXPECT_LE(name->rect.x + name->rect.w, expected.x + expected.w) << position;
+                EXPECT_NEAR(name->rect.x + name->rect.w * 0.5f, expected.x + expected.w * 0.5f, 0.5f) << position << ": centred on the plate";
+                EXPECT_GE(name->rect.y, expected.y) << position;
                 EXPECT_LE(name->rect.y + name->rect.h, expected.y + expected.h) << position << ": the label lies inside the plate";
-                EXPECT_FLOAT_EQ(name->rect.w, nameBox.w) << position;
-                EXPECT_FLOAT_EQ(name->rect.h, nameBox.h) << position;
                 EXPECT_TRUE(Apart(name->rect, EmblemBox(expected, 1.0f))) << position << ": the label never overlaps the ring box of the emblem";
                 EXPECT_FALSE(name->IsHitTestable()) << "a plate takes no input";
                 plates.push_back(expected);

@@ -103,9 +103,8 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTablePhoneTest, TheWordsOfEveryPlateLieOnItInEveryWindow) {
-        // The labels of `MahjongSeatPlates.xml` are fixed in view units (the plate is not moved for them, with one exception: the bottom plate
-        // of the phone profile is lifted to end where the tallest hand tile starts), so each must still lie inside its plate, under the ring box
-        // of its emblem
+        // The labels of `MahjongSeatPlates.xml` name the region of their plate (the bottom plate of the phone profile is lifted to end where
+        // the tallest hand tile starts, and its region with it), so each must lie inside its plate, under the ring box of its emblem
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
         ForEachTableWindow([&](const MatrixWindow& window) {

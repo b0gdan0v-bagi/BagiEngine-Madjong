@@ -1,55 +1,24 @@
 <?xml version="1.0"?>
 <!--
-  The words of the four seat plates (Table/SeatPlates.h): the seat's number (and You), at the rectangles of
-  TableLayout::zones.seatPlates (MahjongTableComponent paints the plate, its turn, its dealer bar and the seat's emblem with its rings
-  under them; the wind and the points of the seat are in the node CenterPanel). By screen position, not by seat, so the labels stay at
-  fixed places: 0 bottom, 1 right, 2 top, 3 left (the variables plateName0..3 that MahjongHudComponent publishes follow the seat that
-  sits there). Text only, no control. A SceneView canvas whose labels ignore the safe area like Actions: the plates are on the table, so
-  the words stay on them. One label of 136 x 24 per plate (the plate is 152 x 80): it lies in NameBox of Table/SeatPlates.h, centred,
-  52 under the plate's top, below the ring box of the emblem (44 high, 8 under the top); the labels are direct elements of the canvas,
-  because the validator checks the children of a stack against the safe area whatever the stack says. The portrait variant puts each label
-  on the plate of the portrait layout (the three opponents' plates in one row under the discard blocks, the viewer's at the foot: x 124 /
-  284 / 444 at y 308 and x 12 at y 1028; the label 8 in from the plate's side, 52 down). The wide variant (minAspect:2, the view of 1560 x
-  720 whose table is the landscape one 140 units in from each side) moves every label right by that wing, so each lies on its plate where
-  it lay in landscape. The narrow variant (orientation:landscape;maxAspect:1.55, the view of 1080 x 768) puts each label so on the plate
-  of the narrow layout (bottom (88, 532), right (800, 180), top (300, 96), left (120, 180)). The bottom plate of the phone profile is
-  lifted by a few units and keeps its label: the label then ends at the plate's bottom edge.
+  The words of the four seat plates (Table/SeatPlates.h): the seat's number (and You). MahjongTableComponent paints the plate, its turn, its
+  dealer bar and the seat's emblem with its rings; the wind and the points of the seat are in the node CenterPanel. By screen position, not
+  by seat, so the labels stay at fixed places: 0 bottom, 1 right, 2 top, 3 left (the variables plateName0..3 that MahjongHudComponent
+  publishes follow the seat that sits there). Text only, no control.
+  A SceneView canvas whose labels name the regions table.plate.0..3 (Table/TableRegions.h, published by the table from the solved layout):
+  each label is anchored inside its plate by fractions of the plate, in the lower part of it, centred, under the ring box of the emblem
+  (NameBox of Table/SeatPlates.h: 8 in from the sides, 52 down of 80, 24 high on the plate of 152 x 80). The plate has the same shape in
+  every view and the phone profile's lifted bottom plate is a region of its own, so there is no variant. A region wins over the safe area:
+  the words stay on the plate, which the safe area does not move. Every label is AutoFit, so the worst names shrink in a small window.
 -->
 <node name="SeatPlates" layer="10" contentVersion="2">
   <components>
-    <component type="UICanvasComponent" space="SceneView" useSafeArea="true">
+    <component type="UICanvasComponent" space="SceneView">
       <elements>
-        <element type="UILabel" name="PlateName0" anchor="TopLeft" ignoreSafeArea="true" x="104" y="584" width="136" height="24" text="{plateName0}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
-        <element type="UILabel" name="PlateName1" anchor="TopLeft" ignoreSafeArea="true" x="1008" y="232" width="136" height="24" text="{plateName1}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
-        <element type="UILabel" name="PlateName2" anchor="TopLeft" ignoreSafeArea="true" x="408" y="152" width="136" height="24" text="{plateName2}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
-        <element type="UILabel" name="PlateName3" anchor="TopLeft" ignoreSafeArea="true" x="132" y="232" width="136" height="24" text="{plateName3}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
+        <element type="UILabel" name="PlateName0" region="table.plate.0" anchorMin="5.3%,65%" anchorMax="94.7%,95%" text="{plateName0}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
+        <element type="UILabel" name="PlateName1" region="table.plate.1" anchorMin="5.3%,65%" anchorMax="94.7%,95%" text="{plateName1}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
+        <element type="UILabel" name="PlateName2" region="table.plate.2" anchorMin="5.3%,65%" anchorMax="94.7%,95%" text="{plateName2}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
+        <element type="UILabel" name="PlateName3" region="table.plate.3" anchorMin="5.3%,65%" anchorMax="94.7%,95%" text="{plateName3}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
       </elements>
-      <variants>
-        <variant when="orientation:portrait">
-          <overrides>
-            <set element="PlateName0" x="20" y="1080" />
-            <set element="PlateName1" x="452" y="360" />
-            <set element="PlateName2" x="292" y="360" />
-            <set element="PlateName3" x="132" y="360" />
-          </overrides>
-        </variant>
-        <variant when="orientation:landscape;maxAspect:1.55">
-          <overrides>
-            <set element="PlateName0" x="96" y="584" />
-            <set element="PlateName1" x="808" y="232" />
-            <set element="PlateName2" x="308" y="148" />
-            <set element="PlateName3" x="128" y="232" />
-          </overrides>
-        </variant>
-        <variant when="minAspect:2">
-          <overrides>
-            <set element="PlateName0" x="244" />
-            <set element="PlateName1" x="1148" />
-            <set element="PlateName2" x="548" />
-            <set element="PlateName3" x="272" />
-          </overrides>
-        </variant>
-      </variants>
     </component>
   </components>
 </node>

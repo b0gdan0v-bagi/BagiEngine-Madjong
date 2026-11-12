@@ -20,6 +20,7 @@
 #include <Games/GameManager.h>
 #include <Mahjong/Components/MahjongTableComponent.h>
 #include <Mahjong/MahjongGame.h>
+#include <Mahjong/Table/TableRegions.h>
 #include <Mahjong/Table/TileAtlas.h>
 #include <Mahjong/Table/TileFlights.h>
 #include <gtest/gtest.h>
@@ -74,6 +75,45 @@ namespace BECore::Mahjong::Tests {
     inline ActiveSceneView ViewOfOutput(float outputWidth, float outputHeight) {
         const auto& variants = SceneViewVariants();
         return SceneViewSelector::Pick(kViewWidth, kViewHeight, eastl::span<const SceneViewVariant>(variants.data(), variants.size()), outputWidth, outputHeight);
+    }
+
+    /// The input of the table with every zone at its capacity (14 concealed tiles, four kongs and 8 bonus tiles a seat, 100 discards, the
+    /// 144-tile wall). `viewer` is the seat at the bottom (the zones are the same, the seats turn).
+    inline TableInput WorstCaseTableInput(Seat viewer = 0) {
+        constexpr int kMostDiscards = 100;  // longer than any hand leaves (136 tiles, 52 in the hands at the least)
+        TableInput worst;
+        worst.viewer = viewer;
+        worst.concealedCount.fill(kMaxConcealedTiles);
+        worst.bonusCount.fill(kMaxBonusTiles);
+        Meld kong;
+        kong.kind = MeldKind::Kong;
+        kong.first = T("1p");
+        for (auto& melds : worst.melds) {
+            melds.assign(kMaxMelds, kong);
+        }
+        for (int i = 0; i < kMostDiscards; ++i) {
+            worst.discardSeats.push_back(i % kSeatCount);
+        }
+        worst.wallRemaining = 2 * kWallRingCells;
+        return worst;
+    }
+
+    /// The table with every zone at its capacity in the desktop profile, so no tile of any desktop game lies where this does not.
+    inline TableLayout MakeWorstCaseTableLayout(Seat viewer = 0) {
+        return MakeTableLayout(WorstCaseTableInput(viewer));
+    }
+
+    /// Sets the regions of `layout` (`MakeTableRegions`) on `regions`, as the table publishes them to its canvases.
+    inline void PublishRegionsOf(UIRegionSet& regions, const TableLayout& layout) {
+        for (const TableRegion& region : MakeTableRegions(layout)) {
+            regions.Set(PoolString::Intern(eastl::string_view(region.name.data(), region.name.size())), region.rect);
+        }
+    }
+
+    /// The publisher `ValidateOnMatrix` takes for a canvas of the table: the regions of the worst-case layout of the view the case gets
+    /// (`resolved.viewBounds`), so "inside its region" is checked on every size of the matrix.
+    inline void PublishTableRegions(UIRegionSet& regions, const UICanvasResolved& resolved) {
+        PublishRegionsOf(regions, MakeTableLayout(WorstCaseTableInput(0), resolved.viewBounds.w, resolved.viewBounds.h));
     }
 
     /// The tile at `part` of a meld as laid, worked out here and not taken from the component.
@@ -468,7 +508,9 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The size matrix on a canvas of the scene, as Match3's HUD test does it. `minTouchSize`: the least size of a control as seen.
-        void ExpectPassesTheMatrix(const char* node, float minTouchSize) {
+        /// `publishRegions` computes the named regions of each case from its view: by default the table's own (`PublishTableRegions`), so
+        /// "inside its region" and "region published" are checked on every size for a canvas that names one.
+        void ExpectPassesTheMatrix(const char* node, float minTouchSize, const UIMatrixRegions& publishRegions = PublishTableRegions) {
             auto canvas = Canvas(node);
             ASSERT_TRUE(canvas) << node;
             canvas->UpdateLayout(kViewWidth, kViewHeight);  // the reflected fields of the component reach the layout on its first update
@@ -481,7 +523,7 @@ namespace BECore::Mahjong::Tests {
             // A `SceneView` canvas is laid out against the view each case of the matrix gets from the scene's view variants
             const auto& variants = SceneViewVariants();
             const UIMatrixViews views{kViewWidth, kViewHeight, eastl::span<const SceneViewVariant>(variants.data(), variants.size())};
-            const auto failures = ValidateOnMatrix(canvas->GetLayout(), options, base, views);
+            const auto failures = ValidateOnMatrix(canvas->GetLayout(), options, base, views, publishRegions);
 
             EXPECT_TRUE(failures.empty()) << node << ": " << DescribeMatrixFailures(failures).c_str();
         }
