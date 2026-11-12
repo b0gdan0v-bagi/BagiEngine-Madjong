@@ -635,6 +635,9 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(config.LoadFromFile(ShippedConfigDirectory() / (std::string(kOnlineConfigName.data(), kOnlineConfigName.size()) + ".xml")));
         const OnlineServerConfig shipped = ReadOnlineServerConfig(config.GetRoot());
         EXPECT_EQ(Std(shipped.webServer).rfind("wss://", 0), 0u) << "a typo in config/MahjongOnlineConfig.xml reads as not set: " << Std(shipped.webServer);
+        // The browser build offers `Online` exactly when this is not empty (the component hides the button on an empty address) and connects to it
+        EXPECT_EQ(OnlineServerUrl(true, nullptr, shipped), shipped.webServer);
+        EXPECT_FALSE(OnlineServerUrl(true, nullptr, shipped).empty());
     }
 
 }  // namespace BECore::Mahjong::Tests
