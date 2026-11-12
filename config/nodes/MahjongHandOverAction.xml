@@ -15,7 +15,7 @@
   1:1 window of 480 px) and 56 x 1.6 = 90 fits the gap, so the button stays in the middle of the window as in a landscape one. MahjongTouchSizeTest and
   MahjongEndScreenTest hold the place against the plate and the hands in every window of the matrix.
 -->
-<node name="HandOverAction" layer="26" contentVersion="4">
+<node name="HandOverAction" layer="26" contentVersion="5">
   <components>
     <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" visible="false">
       <elements>

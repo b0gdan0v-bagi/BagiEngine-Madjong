@@ -12,16 +12,40 @@
   AutoFit, so the worst texts (-9999, the longest round and wall words) shrink in the small windows. MahjongHudTest holds the labels inside
   the panel, apart from each other and clear of every tile.
 -->
-<node name="CenterPanel" layer="10" contentVersion="4">
+<node name="CenterPanel" layer="10" contentVersion="5">
   <components>
     <component type="UICanvasComponent" space="SceneView">
       <elements>
-        <element type="UILabel" name="PanelRound" region="table.centerPanel" anchorMin="33.3%,27%" anchorMax="66.7%,53%" text="{panelRound}" fontSize="28" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
-        <element type="UILabel" name="PanelWall" region="table.centerPanel" anchorMin="33.3%,53%" anchorMax="66.7%,76%" text="{panelWall}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
-        <element type="UILabel" name="PanelSeat0" region="table.centerPanel" anchorMin="1%,80%" anchorMax="99%,100%" text="{panelWind0} {panelScore0}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
-        <element type="UILabel" name="PanelSeat1" region="table.centerPanel" anchorMin="68%,24%" anchorMax="99%,76%" text="{panelWind1} {panelScore1}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
-        <element type="UILabel" name="PanelSeat2" region="table.centerPanel" anchorMin="1%,0%" anchorMax="99%,20%" text="{panelWind2} {panelScore2}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
-        <element type="UILabel" name="PanelSeat3" region="table.centerPanel" anchorMin="1%,24%" anchorMax="32%,76%" text="{panelWind3} {panelScore3}" fontSize="22" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12" />
+        <element type="UIElement" name="PanelRound" region="table.centerPanel" anchorMin="33.3%,27%" anchorMax="66.7%,53%" fontSize="28">
+          <components>
+            <component type="UITextComponent" text="{panelRound}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+          </components>
+        </element>
+        <element type="UIElement" name="PanelWall" region="table.centerPanel" anchorMin="33.3%,53%" anchorMax="66.7%,76%" fontSize="22">
+          <components>
+            <component type="UITextComponent" text="{panelWall}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+          </components>
+        </element>
+        <element type="UIElement" name="PanelSeat0" region="table.centerPanel" anchorMin="1%,80%" anchorMax="99%,100%" fontSize="22">
+          <components>
+            <component type="UITextComponent" text="{panelWind0} {panelScore0}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+          </components>
+        </element>
+        <element type="UIElement" name="PanelSeat1" region="table.centerPanel" anchorMin="68%,24%" anchorMax="99%,76%" fontSize="22">
+          <components>
+            <component type="UITextComponent" text="{panelWind1} {panelScore1}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+          </components>
+        </element>
+        <element type="UIElement" name="PanelSeat2" region="table.centerPanel" anchorMin="1%,0%" anchorMax="99%,20%" fontSize="22">
+          <components>
+            <component type="UITextComponent" text="{panelWind2} {panelScore2}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+          </components>
+        </element>
+        <element type="UIElement" name="PanelSeat3" region="table.centerPanel" anchorMin="1%,24%" anchorMax="32%,76%" fontSize="22">
+          <components>
+            <component type="UITextComponent" text="{panelWind3} {panelScore3}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+          </components>
+        </element>
       </elements>
     </component>
   </components>

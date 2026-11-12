@@ -11,14 +11,22 @@
   hints (green, amber, red: MahjongHintsComponent::DangerOf) the table also shows TileHoverDanger, {tileHoverDanger}, the line that says what
   the bar means (hints.hover.*, in the bar's colour), and makes the plate 92 high (8 + 32 + 44 + 8).
 -->
-<node name="TileHover" layer="12" contentVersion="4">
+<node name="TileHover" layer="12" contentVersion="5">
   <components>
     <component type="UICanvasComponent" space="SceneView">
       <elements>
         <element type="UIStack" name="TileHoverPlate" anchor="TopLeft" x="0" y="0" width="240" height="48" visible="false" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170">
           <children>
-            <element type="UILabel" name="TileHoverLabel" height="32" text="{tileHoverText}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" />
-            <element type="UILabel" name="TileHoverDanger" height="44" visible="false" text="{tileHoverDanger}" fontSize="18" overflow="AutoFit" minFontSize="12" align="Center" verticalAlign="Center" />
+            <element type="UIElement" name="TileHoverLabel" height="32" fontSize="18">
+              <components>
+                <component type="UITextComponent" text="{tileHoverText}" align="Center" verticalAlign="Center" overflow="AutoFit"/>
+              </components>
+            </element>
+            <element type="UIElement" name="TileHoverDanger" height="44" visible="false" fontSize="18">
+              <components>
+                <component type="UITextComponent" text="{tileHoverDanger}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+              </components>
+            </element>
           </children>
         </element>
       </elements>

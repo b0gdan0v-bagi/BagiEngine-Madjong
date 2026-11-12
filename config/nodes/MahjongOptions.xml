@@ -18,17 +18,25 @@
   Every text may shrink (AutoFit, down to 12 units) instead of being cut. MahjongOptionsTest holds the
   shapes, the touch size and the words on the whole size matrix.
 -->
-<node name="Options" layer="31" contentVersion="4">
+<node name="Options" layer="31" contentVersion="5">
   <components>
     <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" modal="true" visible="false">
       <elements>
         <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
         <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="640" height="100%" maxHeight="376" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
           <children>
-            <element type="UILabel" name="Title" flex="0.75" maxHeight="48" text="{#options.title}" fontSize="28" overflow="AutoFit" minFontSize="12" align="Center" verticalAlign="Center" color="58,66,92,255" />
+            <element type="UIElement" name="Title" flex="0.75" maxHeight="48" fontSize="28" color="58,66,92,255">
+              <components>
+                <component type="UITextComponent" text="{#options.title}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+              </components>
+            </element>
             <element type="UIStack" name="LanguageRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255">
               <children>
-                <element type="UILabel" name="LanguageCaption" width="112" height="87.5%" text="{#setup.language}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" textColor="190,196,190,255" />
+                <element type="UIElement" name="LanguageCaption" width="112" height="87.5%" fontSize="22">
+                  <components>
+                    <component type="UITextComponent" text="{#setup.language}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
                 <element type="UISegmented" name="Language" bind="language" flex="1" height="87.5%" direction="Horizontal" spacing="4" color="48,54,72,255">
                   <children>
                     <element type="UIElement" name="LanguageEn" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
@@ -49,7 +57,11 @@
             </element>
             <element type="UIStack" name="HintsRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255">
               <children>
-                <element type="UILabel" name="HintsCaption" width="112" height="87.5%" text="{#setup.hints}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" textColor="190,196,190,255" />
+                <element type="UIElement" name="HintsCaption" width="112" height="87.5%" fontSize="22">
+                  <components>
+                    <component type="UITextComponent" text="{#setup.hints}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
                 <element type="UISegmented" name="HintsChoice" bind="hintsChoice" flex="1" height="87.5%" direction="Horizontal" spacing="4" color="48,54,72,255">
                   <children>
                     <element type="UIElement" name="HintsOff" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
@@ -76,7 +88,11 @@
             </element>
             <element type="UIStack" name="SpeedRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255">
               <children>
-                <element type="UILabel" name="SpeedCaption" width="96" height="87.5%" text="{#options.speed}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" textColor="190,196,190,255" />
+                <element type="UIElement" name="SpeedCaption" width="96" height="87.5%" fontSize="22">
+                  <components>
+                    <component type="UITextComponent" text="{#options.speed}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
                 <element type="UISegmented" name="SpeedChoice" bind="speedChoice" flex="1" height="87.5%" direction="Horizontal" spacing="4" color="48,54,72,255">
                   <children>
                     <element type="UIElement" name="SpeedSlow" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">

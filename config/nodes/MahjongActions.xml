@@ -19,11 +19,15 @@
   there is no bar for a bigger row) and the near-square narrow window with side insets (610 x 600: 31.6 px, clear of the hand, because
   the row of ActionsCompact would lie on the tiles). MahjongTouchSizeTest names them in ActionsMayBeSmall.
 -->
-<node name="Actions" layer="10" contentVersion="4">
+<node name="Actions" layer="10" contentVersion="5">
   <components>
     <component type="UICanvasComponent" space="SceneView">
       <elements>
-        <element type="UILabel" name="Hint" region="table.hint" anchor="Stretch" visible="false" text="{actionHint}" fontSize="18" align="Center" verticalAlign="Center" color="0,0,0,200" />
+        <element type="UIElement" name="Hint" region="table.hint" anchor="Stretch" visible="false" fontSize="18" color="0,0,0,200">
+          <components>
+            <component type="UITextComponent" text="{actionHint}" align="Center" verticalAlign="Center"/>
+          </components>
+        </element>
         <element type="UIStack" name="ActionRow" region="table.actions" anchor="Stretch" direction="Horizontal" spacing="8" wrapChildren="true">
           <children>
           <element type="UIElement" name="Win" visible="false" width="104" height="56" fontSize="22" color="40,110,60,255">
@@ -38,7 +42,11 @@
               <component type="UIInputClicker" action="MahjongClaimMahjong"/>
             </components>
             <children>
-              <element type="UIImage" name="MahjongTile0" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
+              <element type="UIElement" name="MahjongTile0" visible="false" anchor="Bottom" y="-3" width="21" height="28">
+                <components>
+                  <component type="UIImageComponent" hoverTint="255,255,255,255" pressedTint="255,255,255,255" disabledTint="255,255,255,255"/>
+                </components>
+              </element>
             </children>
           </element>
           <element type="UIElement" name="Pung" visible="false" width="104" height="56" fontSize="18" color="45,75,120,255">
@@ -47,7 +55,11 @@
               <component type="UIInputClicker" action="MahjongClaimPung"/>
             </components>
             <children>
-              <element type="UIImage" name="PungTile0" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
+              <element type="UIElement" name="PungTile0" visible="false" anchor="Bottom" y="-3" width="21" height="28">
+                <components>
+                  <component type="UIImageComponent" hoverTint="255,255,255,255" pressedTint="255,255,255,255" disabledTint="255,255,255,255"/>
+                </components>
+              </element>
             </children>
           </element>
           <element type="UIElement" name="Kong" visible="false" width="104" height="56" fontSize="18" color="45,75,120,255">
@@ -56,7 +68,11 @@
               <component type="UIInputClicker" action="MahjongClaimKong"/>
             </components>
             <children>
-              <element type="UIImage" name="KongTile0" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
+              <element type="UIElement" name="KongTile0" visible="false" anchor="Bottom" y="-3" width="21" height="28">
+                <components>
+                  <component type="UIImageComponent" hoverTint="255,255,255,255" pressedTint="255,255,255,255" disabledTint="255,255,255,255"/>
+                </components>
+              </element>
             </children>
           </element>
           <element type="UIElement" name="Chow0" visible="false" width="104" height="56" fontSize="18" color="45,75,120,255">
@@ -65,9 +81,21 @@
               <component type="UIInputClicker" action="MahjongClaimChow" value="0"/>
             </components>
             <children>
-              <element type="UIImage" name="Chow0Tile0" visible="false" anchor="Bottom" x="-23" y="-3" width="21" height="28" />
-              <element type="UIImage" name="Chow0Tile1" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
-              <element type="UIImage" name="Chow0Tile2" visible="false" anchor="Bottom" x="23" y="-3" width="21" height="28" />
+              <element type="UIElement" name="Chow0Tile0" visible="false" anchor="Bottom" x="-23" y="-3" width="21" height="28">
+                <components>
+                  <component type="UIImageComponent" hoverTint="255,255,255,255" pressedTint="255,255,255,255" disabledTint="255,255,255,255"/>
+                </components>
+              </element>
+              <element type="UIElement" name="Chow0Tile1" visible="false" anchor="Bottom" y="-3" width="21" height="28">
+                <components>
+                  <component type="UIImageComponent" hoverTint="255,255,255,255" pressedTint="255,255,255,255" disabledTint="255,255,255,255"/>
+                </components>
+              </element>
+              <element type="UIElement" name="Chow0Tile2" visible="false" anchor="Bottom" x="23" y="-3" width="21" height="28">
+                <components>
+                  <component type="UIImageComponent" hoverTint="255,255,255,255" pressedTint="255,255,255,255" disabledTint="255,255,255,255"/>
+                </components>
+              </element>
             </children>
           </element>
           <element type="UIElement" name="Chow1" visible="false" width="104" height="56" fontSize="18" color="45,75,120,255">
@@ -76,9 +104,21 @@
               <component type="UIInputClicker" action="MahjongClaimChow" value="1"/>
             </components>
             <children>
-              <element type="UIImage" name="Chow1Tile0" visible="false" anchor="Bottom" x="-23" y="-3" width="21" height="28" />
-              <element type="UIImage" name="Chow1Tile1" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
-              <element type="UIImage" name="Chow1Tile2" visible="false" anchor="Bottom" x="23" y="-3" width="21" height="28" />
+              <element type="UIElement" name="Chow1Tile0" visible="false" anchor="Bottom" x="-23" y="-3" width="21" height="28">
+                <components>
+                  <component type="UIImageComponent" hoverTint="255,255,255,255" pressedTint="255,255,255,255" disabledTint="255,255,255,255"/>
+                </components>
+              </element>
+              <element type="UIElement" name="Chow1Tile1" visible="false" anchor="Bottom" y="-3" width="21" height="28">
+                <components>
+                  <component type="UIImageComponent" hoverTint="255,255,255,255" pressedTint="255,255,255,255" disabledTint="255,255,255,255"/>
+                </components>
+              </element>
+              <element type="UIElement" name="Chow1Tile2" visible="false" anchor="Bottom" x="23" y="-3" width="21" height="28">
+                <components>
+                  <component type="UIImageComponent" hoverTint="255,255,255,255" pressedTint="255,255,255,255" disabledTint="255,255,255,255"/>
+                </components>
+              </element>
             </children>
           </element>
           <element type="UIElement" name="Chow2" visible="false" width="104" height="56" fontSize="18" color="45,75,120,255">
@@ -87,9 +127,21 @@
               <component type="UIInputClicker" action="MahjongClaimChow" value="2"/>
             </components>
             <children>
-              <element type="UIImage" name="Chow2Tile0" visible="false" anchor="Bottom" x="-23" y="-3" width="21" height="28" />
-              <element type="UIImage" name="Chow2Tile1" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
-              <element type="UIImage" name="Chow2Tile2" visible="false" anchor="Bottom" x="23" y="-3" width="21" height="28" />
+              <element type="UIElement" name="Chow2Tile0" visible="false" anchor="Bottom" x="-23" y="-3" width="21" height="28">
+                <components>
+                  <component type="UIImageComponent" hoverTint="255,255,255,255" pressedTint="255,255,255,255" disabledTint="255,255,255,255"/>
+                </components>
+              </element>
+              <element type="UIElement" name="Chow2Tile1" visible="false" anchor="Bottom" y="-3" width="21" height="28">
+                <components>
+                  <component type="UIImageComponent" hoverTint="255,255,255,255" pressedTint="255,255,255,255" disabledTint="255,255,255,255"/>
+                </components>
+              </element>
+              <element type="UIElement" name="Chow2Tile2" visible="false" anchor="Bottom" x="23" y="-3" width="21" height="28">
+                <components>
+                  <component type="UIImageComponent" hoverTint="255,255,255,255" pressedTint="255,255,255,255" disabledTint="255,255,255,255"/>
+                </components>
+              </element>
             </children>
           </element>
           <element type="UIElement" name="ConcealedKong0" visible="false" width="104" height="56" fontSize="18" color="70,70,100,255">
@@ -98,7 +150,11 @@
               <component type="UIInputClicker" action="MahjongConcealedKong" value="0"/>
             </components>
             <children>
-              <element type="UIImage" name="ConcealedKong0Tile0" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
+              <element type="UIElement" name="ConcealedKong0Tile0" visible="false" anchor="Bottom" y="-3" width="21" height="28">
+                <components>
+                  <component type="UIImageComponent" hoverTint="255,255,255,255" pressedTint="255,255,255,255" disabledTint="255,255,255,255"/>
+                </components>
+              </element>
             </children>
           </element>
           <element type="UIElement" name="ConcealedKong1" visible="false" width="104" height="56" fontSize="18" color="70,70,100,255">
@@ -107,7 +163,11 @@
               <component type="UIInputClicker" action="MahjongConcealedKong" value="1"/>
             </components>
             <children>
-              <element type="UIImage" name="ConcealedKong1Tile0" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
+              <element type="UIElement" name="ConcealedKong1Tile0" visible="false" anchor="Bottom" y="-3" width="21" height="28">
+                <components>
+                  <component type="UIImageComponent" hoverTint="255,255,255,255" pressedTint="255,255,255,255" disabledTint="255,255,255,255"/>
+                </components>
+              </element>
             </children>
           </element>
           <element type="UIElement" name="ConcealedKong2" visible="false" width="104" height="56" fontSize="18" color="70,70,100,255">
@@ -116,7 +176,11 @@
               <component type="UIInputClicker" action="MahjongConcealedKong" value="2"/>
             </components>
             <children>
-              <element type="UIImage" name="ConcealedKong2Tile0" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
+              <element type="UIElement" name="ConcealedKong2Tile0" visible="false" anchor="Bottom" y="-3" width="21" height="28">
+                <components>
+                  <component type="UIImageComponent" hoverTint="255,255,255,255" pressedTint="255,255,255,255" disabledTint="255,255,255,255"/>
+                </components>
+              </element>
             </children>
           </element>
           <element type="UIElement" name="UpgradeKong" visible="false" width="104" height="56" fontSize="18" color="70,70,100,255">
@@ -125,7 +189,11 @@
               <component type="UIInputClicker" action="MahjongUpgradeKong"/>
             </components>
             <children>
-              <element type="UIImage" name="UpgradeKongTile0" visible="false" anchor="Bottom" y="-3" width="21" height="28" />
+              <element type="UIElement" name="UpgradeKongTile0" visible="false" anchor="Bottom" y="-3" width="21" height="28">
+                <components>
+                  <component type="UIImageComponent" hoverTint="255,255,255,255" pressedTint="255,255,255,255" disabledTint="255,255,255,255"/>
+                </components>
+              </element>
             </children>
           </element>
           <element type="UIElement" name="Pass" visible="false" width="104" height="56" fontSize="22" color="90,50,50,255">
