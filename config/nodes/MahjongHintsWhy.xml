@@ -22,7 +22,7 @@
   area, so the card stays on the ring. MahjongHintsTest and MahjongCoachTest hold it on the ring, clear of every slot but the wall
   stacks, free of input, and the longest text of every line fitting on the size matrix in both languages.
 -->
-<node name="HintsWhy" layer="11" contentVersion="4">
+<node name="HintsWhy" layer="11" contentVersion="5">
   <components>
     <component type="UICanvasComponent" space="SceneView">
       <elements>
@@ -30,64 +30,176 @@
           <children>
             <element type="UIStack" name="CardTop" height="32" direction="Horizontal" spacing="0" crossAlign="Center">
               <children>
-                <element type="UILabel" name="CardTitle" width="268" height="32" text="{cardTitle}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" />
-                <element type="UILabel" name="CardClose" width="80" height="32" text="{#hints.card.close}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" align="Right" textColor="190,196,190,255" />
+                <element type="UIElement" name="CardTitle" width="268" height="32" fontSize="22">
+                  <components>
+                    <component type="UITextComponent" text="{cardTitle}" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="CardClose" width="80" height="32" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{#hints.card.close}" textColor="190,196,190,255" align="Right" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                  </components>
+                </element>
               </children>
             </element>
             <element type="UIStack" name="CardHead" visible="false" height="16" direction="Horizontal" spacing="0" crossAlign="Center">
               <children>
-                <element type="UILabel" name="CardNow" width="204" height="16" text="{cardNow}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" textColor="190,196,190,255" />
-                <element type="UILabel" name="CardStepsHead" width="72" height="16" text="{#hints.card.steps}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" align="Center" textColor="190,196,190,255" />
-                <element type="UILabel" name="CardUsefulHead" width="72" height="16" text="{#hints.card.useful}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" align="Center" textColor="190,196,190,255" />
+                <element type="UIElement" name="CardNow" width="204" height="16" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{cardNow}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="CardStepsHead" width="72" height="16" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{#hints.card.steps}" textColor="190,196,190,255" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="CardUsefulHead" width="72" height="16" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{#hints.card.useful}" textColor="190,196,190,255" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                  </components>
+                </element>
               </children>
             </element>
             <element type="UIStack" name="CardRow0" visible="false" height="24" direction="Horizontal" spacing="0" crossAlign="Center">
               <children>
-                <element type="UILabel" name="CardWho0" width="64" height="24" text="{cardWho0}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" textColor="190,196,190,255" />
+                <element type="UIElement" name="CardWho0" width="64" height="24" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{cardWho0}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                  </components>
+                </element>
                 <element type="UIStack" name="CardTiles0" width="60" height="24" direction="Horizontal" spacing="0" crossAlign="Center">
                   <children>
-                    <element type="UIImage" name="Card0Tile0" visible="false" width="18" height="24" />
-                    <element type="UIImage" name="Card0Tile1" visible="false" width="18" height="24" />
-                    <element type="UIImage" name="Card0Tile2" visible="false" width="18" height="24" />
+                    <element type="UIElement" name="Card0Tile0" visible="false" width="18" height="24">
+                      <components>
+                        <component type="UIImageComponent"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Card0Tile1" visible="false" width="18" height="24">
+                      <components>
+                        <component type="UIImageComponent"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Card0Tile2" visible="false" width="18" height="24">
+                      <components>
+                        <component type="UIImageComponent"/>
+                      </components>
+                    </element>
                   </children>
                 </element>
-                <element type="UILabel" name="CardMove0" width="80" height="24" text="{cardMove0}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" />
-                <element type="UILabel" name="CardSteps0" width="72" height="24" text="{cardSteps0}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" align="Center" />
-                <element type="UILabel" name="CardUseful0" width="72" height="24" text="{cardUseful0}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" align="Center" />
+                <element type="UIElement" name="CardMove0" width="80" height="24" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{cardMove0}" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="CardSteps0" width="72" height="24" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{cardSteps0}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="CardUseful0" width="72" height="24" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{cardUseful0}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                  </components>
+                </element>
               </children>
             </element>
             <element type="UIStack" name="CardRow1" visible="false" height="24" direction="Horizontal" spacing="0" crossAlign="Center">
               <children>
-                <element type="UILabel" name="CardWho1" width="64" height="24" text="{cardWho1}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" textColor="190,196,190,255" />
+                <element type="UIElement" name="CardWho1" width="64" height="24" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{cardWho1}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                  </components>
+                </element>
                 <element type="UIStack" name="CardTiles1" width="60" height="24" direction="Horizontal" spacing="0" crossAlign="Center">
                   <children>
-                    <element type="UIImage" name="Card1Tile0" visible="false" width="18" height="24" />
-                    <element type="UIImage" name="Card1Tile1" visible="false" width="18" height="24" />
-                    <element type="UIImage" name="Card1Tile2" visible="false" width="18" height="24" />
+                    <element type="UIElement" name="Card1Tile0" visible="false" width="18" height="24">
+                      <components>
+                        <component type="UIImageComponent"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Card1Tile1" visible="false" width="18" height="24">
+                      <components>
+                        <component type="UIImageComponent"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Card1Tile2" visible="false" width="18" height="24">
+                      <components>
+                        <component type="UIImageComponent"/>
+                      </components>
+                    </element>
                   </children>
                 </element>
-                <element type="UILabel" name="CardMove1" width="80" height="24" text="{cardMove1}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" />
-                <element type="UILabel" name="CardSteps1" width="72" height="24" text="{cardSteps1}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" align="Center" />
-                <element type="UILabel" name="CardUseful1" width="72" height="24" text="{cardUseful1}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" align="Center" />
+                <element type="UIElement" name="CardMove1" width="80" height="24" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{cardMove1}" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="CardSteps1" width="72" height="24" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{cardSteps1}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="CardUseful1" width="72" height="24" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{cardUseful1}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                  </components>
+                </element>
               </children>
             </element>
             <element type="UIStack" name="CardRow2" visible="false" height="24" direction="Horizontal" spacing="0" crossAlign="Center">
               <children>
-                <element type="UILabel" name="CardWho2" width="64" height="24" text="{cardWho2}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" textColor="190,196,190,255" />
+                <element type="UIElement" name="CardWho2" width="64" height="24" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{cardWho2}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                  </components>
+                </element>
                 <element type="UIStack" name="CardTiles2" width="60" height="24" direction="Horizontal" spacing="0" crossAlign="Center">
                   <children>
-                    <element type="UIImage" name="Card2Tile0" visible="false" width="18" height="24" />
-                    <element type="UIImage" name="Card2Tile1" visible="false" width="18" height="24" />
-                    <element type="UIImage" name="Card2Tile2" visible="false" width="18" height="24" />
+                    <element type="UIElement" name="Card2Tile0" visible="false" width="18" height="24">
+                      <components>
+                        <component type="UIImageComponent"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Card2Tile1" visible="false" width="18" height="24">
+                      <components>
+                        <component type="UIImageComponent"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="Card2Tile2" visible="false" width="18" height="24">
+                      <components>
+                        <component type="UIImageComponent"/>
+                      </components>
+                    </element>
                   </children>
                 </element>
-                <element type="UILabel" name="CardMove2" width="80" height="24" text="{cardMove2}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" />
-                <element type="UILabel" name="CardSteps2" width="72" height="24" text="{cardSteps2}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" align="Center" />
-                <element type="UILabel" name="CardUseful2" width="72" height="24" text="{cardUseful2}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" align="Center" />
+                <element type="UIElement" name="CardMove2" width="80" height="24" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{cardMove2}" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="CardSteps2" width="72" height="24" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{cardSteps2}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="CardUseful2" width="72" height="24" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{cardUseful2}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                  </components>
+                </element>
               </children>
             </element>
-            <element type="UILabel" name="CardFoot0" height="20" text="{cardFoot0}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" textColor="190,196,190,255" />
-            <element type="UILabel" name="CardFoot1" height="20" text="{cardFoot1}" fontSize="18" overflow="AutoFit" minFontSize="12" verticalAlign="Center" wrap="false" textColor="190,196,190,255" />
+            <element type="UIElement" name="CardFoot0" height="20" fontSize="18">
+              <components>
+                <component type="UITextComponent" text="{cardFoot0}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+              </components>
+            </element>
+            <element type="UIElement" name="CardFoot1" height="20" fontSize="18">
+              <components>
+                <component type="UITextComponent" text="{cardFoot1}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+              </components>
+            </element>
           </children>
         </element>
       </elements>

@@ -6,8 +6,8 @@
 #include <BECore/Scene/Scene.h>
 #include <BECore/UI/UICanvasComponent.h>
 #include <BECore/UI/UIEnvironment.h>
-#include <BECore/UI/UIImage.h>
-#include <BECore/UI/UILabel.h>
+#include <BECore/UI/UIImageComponent.h>
+#include <BECore/UI/UITextComponent.h>
 #include <CoreSDL/SDLEvents.h>
 #include <Events/ApplicationEvents.h>
 #include <Events/InputEvents.h>
@@ -581,7 +581,7 @@ namespace BECore::Mahjong {
             if (now.shown != before.shown) {
                 UICanvasComponent::SetElementVisibleByName(scene, PoolString::Intern(spec.element), now.shown);
             }
-            // The tiles pictured on the button: one `UIImage` per tile, hidden in the file, shown exactly while the button shows that tile
+            // The tiles pictured on the button: one element with a `UIImageComponent` per tile, hidden in the file, shown exactly while the button shows that tile
             for (int t = 0; t < spec.maxTiles; ++t) {
                 const bool showNow = now.shown && t < now.tileCount;
                 const bool showBefore = before.shown && t < before.tileCount;
@@ -593,7 +593,7 @@ namespace BECore::Mahjong {
                 if (showNow) {
                     for (const IntrusivePtr<UICanvasComponent>& canvas : canvases) {
                         UIElement* element = FindElementIn(canvas, imageName);
-                        if (UIImage* image = element != nullptr ? element->Cast<UIImage>() : nullptr) {
+                        if (UIImageComponent* image = element != nullptr ? element->GetComponent<UIImageComponent>() : nullptr) {
                             image->sprite = PoolString::Intern(SpriteName(now.tiles[static_cast<size_t>(t)]));
                         }
                     }
@@ -1075,7 +1075,7 @@ namespace BECore::Mahjong {
                 spec.height = UILength::Px(worded ? kHoverPlateTallHeight : kHoverPlateHeight);
                 UICanvasComponent::SetElementVisibleByName(scene, "TileHoverDanger"_intern, worded);
             }
-            if (UIElement* line = FindElementIn(canvas, "TileHoverDanger"_intern); UILabel* label = line != nullptr ? line->Cast<UILabel>() : nullptr) {
+            if (UIElement* line = FindElementIn(canvas, "TileHoverDanger"_intern); UITextComponent* label = line != nullptr ? line->GetComponent<UITextComponent>() : nullptr) {
                 label->textColor = DangerMarkColor(danger);
             }
             _hoverDanger = danger;

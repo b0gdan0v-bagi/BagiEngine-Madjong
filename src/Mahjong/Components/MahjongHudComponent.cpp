@@ -3,7 +3,7 @@
 #include <BECore/GameManager/CoreManager.h>
 #include <BECore/Scene/Scene.h>
 #include <BECore/UI/UICanvasComponent.h>
-#include <BECore/UI/UIImage.h>
+#include <BECore/UI/UIImageComponent.h>
 #include <CoreSDL/SDLEvents.h>
 #include <Events/InputEvents.h>
 #include <Events/SceneEvents.h>
@@ -332,8 +332,8 @@ namespace BECore::Mahjong {
                 const bool has = column < count;
                 if (has) {
                     UIElement* element = rulesCanvas ? rulesCanvas->GetRoot().FindByName(name) : nullptr;
-                    UIImage* image = element != nullptr ? element->Cast<UIImage>() : nullptr;
-                    ASSERT(image != nullptr, "PublishRulesPage: the scene file has no UIImage RulesTile<N> for a tile of the page");
+                    UIImageComponent* image = element != nullptr ? element->GetComponent<UIImageComponent>() : nullptr;
+                    ASSERT(image != nullptr, "PublishRulesPage: the scene file has no UIImageComponent on RulesTile<N> for a tile of the page");
                     if (image != nullptr) {
                         image->sprite = PoolString::Intern(SpriteName(page.tileRows[static_cast<size_t>(row)][static_cast<size_t>(column)]));
                     }

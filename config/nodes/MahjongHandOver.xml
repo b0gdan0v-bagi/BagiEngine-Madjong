@@ -18,40 +18,132 @@
   the words of the narrow plate and for the button, which follows the window's scale). HandCoachRow is hidden unless the HUD has text
   for it and then takes no room, so the plate keeps its size.
 -->
-<node name="HandOver" layer="25" contentVersion="4">
+<node name="HandOver" layer="25" contentVersion="5">
   <components>
     <component type="UICanvasComponent" space="SceneView" useSafeArea="true" modal="true" visible="false">
       <elements>
         <element type="UIStack" name="Plate" anchor="Center" ignoreSafeArea="true" y="-1.111111%" width="80.625%" height="70.555556%" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
           <children>
-            <element type="UILabel" name="Headline" height="52" text="{handOverHeadline}" fontSize="28" overflow="AutoFit" minFontSize="22" align="Center" verticalAlign="Center" color="58,66,92,255" />
-            <element type="UILabel" name="SeatRow0" height="32" text="{handOverSeat0}" fontSize="22" align="Center" verticalAlign="Center" color="48,54,72,255" />
-            <element type="UILabel" name="SeatRow1" height="32" text="{handOverSeat1}" fontSize="22" align="Center" verticalAlign="Center" color="48,54,72,255" />
-            <element type="UILabel" name="SeatRow2" height="32" text="{handOverSeat2}" fontSize="22" align="Center" verticalAlign="Center" color="48,54,72,255" />
-            <element type="UILabel" name="SeatRow3" height="32" text="{handOverSeat3}" fontSize="22" align="Center" verticalAlign="Center" color="48,54,72,255" />
+            <element type="UIElement" name="Headline" height="52" fontSize="28" color="58,66,92,255">
+              <components>
+                <component type="UITextComponent" text="{handOverHeadline}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="22"/>
+              </components>
+            </element>
+            <element type="UIElement" name="SeatRow0" height="32" fontSize="22" color="48,54,72,255">
+              <components>
+                <component type="UITextComponent" text="{handOverSeat0}" align="Center" verticalAlign="Center"/>
+              </components>
+            </element>
+            <element type="UIElement" name="SeatRow1" height="32" fontSize="22" color="48,54,72,255">
+              <components>
+                <component type="UITextComponent" text="{handOverSeat1}" align="Center" verticalAlign="Center"/>
+              </components>
+            </element>
+            <element type="UIElement" name="SeatRow2" height="32" fontSize="22" color="48,54,72,255">
+              <components>
+                <component type="UITextComponent" text="{handOverSeat2}" align="Center" verticalAlign="Center"/>
+              </components>
+            </element>
+            <element type="UIElement" name="SeatRow3" height="32" fontSize="22" color="48,54,72,255">
+              <components>
+                <component type="UITextComponent" text="{handOverSeat3}" align="Center" verticalAlign="Center"/>
+              </components>
+            </element>
             <element type="UIElement" name="ButtonGap" height="64" />
             <element type="UIStack" name="Lines" height="108" direction="Horizontal" spacing="4" wrapChildren="true">
               <children>
-                <element type="UILabel" name="ScoreLine0" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine0}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine1" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine1}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine2" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine2}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine3" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine3}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine4" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine4}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine5" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine5}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine6" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine6}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine7" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine7}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine8" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine8}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine9" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine9}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine10" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine10}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine11" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine11}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine12" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine12}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine13" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine13}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine14" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine14}" fontSize="18" />
-                <element type="UILabel" name="ScoreLine15" visible="false" width="24%" height="24" overflow="AutoFit" minFontSize="12" text="{scoreLine15}" fontSize="18" />
+                <element type="UIElement" name="ScoreLine0" visible="false" width="24%" height="24" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{scoreLine0}" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="ScoreLine1" visible="false" width="24%" height="24" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{scoreLine1}" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="ScoreLine2" visible="false" width="24%" height="24" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{scoreLine2}" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="ScoreLine3" visible="false" width="24%" height="24" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{scoreLine3}" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="ScoreLine4" visible="false" width="24%" height="24" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{scoreLine4}" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="ScoreLine5" visible="false" width="24%" height="24" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{scoreLine5}" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="ScoreLine6" visible="false" width="24%" height="24" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{scoreLine6}" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="ScoreLine7" visible="false" width="24%" height="24" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{scoreLine7}" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="ScoreLine8" visible="false" width="24%" height="24" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{scoreLine8}" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="ScoreLine9" visible="false" width="24%" height="24" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{scoreLine9}" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="ScoreLine10" visible="false" width="24%" height="24" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{scoreLine10}" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="ScoreLine11" visible="false" width="24%" height="24" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{scoreLine11}" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="ScoreLine12" visible="false" width="24%" height="24" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{scoreLine12}" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="ScoreLine13" visible="false" width="24%" height="24" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{scoreLine13}" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="ScoreLine14" visible="false" width="24%" height="24" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{scoreLine14}" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="ScoreLine15" visible="false" width="24%" height="24" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{scoreLine15}" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
               </children>
             </element>
-            <element type="UILabel" name="HandCoachRow" visible="false" height="24" text="{handOverCoach}" fontSize="18" overflow="AutoFit" minFontSize="12" align="Center" verticalAlign="Center" color="48,54,72,255" textColor="190,196,190,255" />
-            <element type="UILabel" name="Summary" height="36" text="{handOverSummary}" fontSize="18" align="Center" verticalAlign="Center" color="48,54,72,255" textColor="190,196,190,255" />
+            <element type="UIElement" name="HandCoachRow" visible="false" height="24" fontSize="18" color="48,54,72,255">
+              <components>
+                <component type="UITextComponent" text="{handOverCoach}" textColor="190,196,190,255" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+              </components>
+            </element>
+            <element type="UIElement" name="Summary" height="36" fontSize="18" color="48,54,72,255">
+              <components>
+                <component type="UITextComponent" text="{handOverSummary}" textColor="190,196,190,255" align="Center" verticalAlign="Center"/>
+              </components>
+            </element>
           </children>
         </element>
       </elements>

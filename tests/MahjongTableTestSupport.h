@@ -11,7 +11,6 @@
 #include <BECore/Scene/SceneManager.h>
 #include <BECore/Text/FontAtlasLibrary.h>
 #include <BECore/UI/UICanvasComponent.h>
-#include <BECore/UI/UILabel.h>
 #include <Common/EngineEnvironment.h>
 #include <Common/RecordingRenderer.h>
 #include <Common/UILayoutMatrix.h>

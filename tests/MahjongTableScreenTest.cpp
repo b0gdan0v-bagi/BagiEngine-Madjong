@@ -3,8 +3,7 @@
 #include "UiStyleTestSupport.h"
 
 #include <BECore/Text/Utf8.h>
-#include <BECore/UI/UIImage.h>
-#include <BECore/UI/UILabel.h>
+#include <BECore/UI/UIImageComponent.h>
 #include <BECore/UI/UIToggleComponent.h>
 #include <Mahjong/Table/SeatName.h>
 
@@ -191,7 +190,7 @@ namespace BECore::Mahjong::Tests {
             // The pictures of its tiles: `maxTiles` hidden images named after the button, and no more
             int images = 0;
             for (const auto& child : button->children) {
-                EXPECT_NE(child->Cast<UIImage>(), nullptr) << spec.element << " has only pictures as children";
+                EXPECT_NE(child->GetComponent<UIImageComponent>(), nullptr) << spec.element << " has only pictures as children";
                 ++images;
             }
             EXPECT_EQ(images, spec.maxTiles) << spec.element;
@@ -203,7 +202,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_NE(Element("Handoff", "Reveal"), nullptr);
         EXPECT_EQ(ButtonAction(Element("Handoff", "Reveal")), "MahjongReveal"_intern);
         EXPECT_EQ(ElementText(Element("Handoff", "Reveal")), eastl::string("{#cover.show}"));
-        EXPECT_EQ(Element("Handoff", "HandoffText")->Cast<UILabel>()->text, eastl::string("{#cover.text}"));
+        EXPECT_EQ(Element("Handoff", "HandoffText")->GetComponent<UITextComponent>()->text, eastl::string("{#cover.text}"));
     }
 
     TEST_F(MahjongTableScreenTest, EveryActionButtonHasTheColourOfItsRoleAndTheRowKeepsTheGapOfTheGrid) {
@@ -241,9 +240,14 @@ namespace BECore::Mahjong::Tests {
             if (!name.empty()) {
                 EXPECT_TRUE(names.insert(name).second) << "duplicate name " << name;
             }
-            if (const auto* label = element->Cast<UILabel>()) {
-                // Only the hint follows a variable; the words of the buttons are keys of the string table
-                EXPECT_EQ(std::string(label->text.c_str()).find('{') == std::string::npos, name != "Hint") << name << " and its variable";
+            if (const auto* label = element->GetComponent<UITextComponent>()) {
+                // Only the hint follows a variable (`{name}`); the words of the buttons are keys of the string table (`{#key}`)
+                const std::string text = label->text.c_str();
+                bool hasVariable = false;
+                for (size_t at = text.find('{'); at != std::string::npos && !hasVariable; at = text.find('{', at + 1)) {
+                    hasVariable = at + 1 >= text.size() || text[at + 1] != '#';
+                }
+                EXPECT_EQ(hasVariable, name == "Hint") << name << " and its variable";
             }
             for (const auto& child : element->children) {
                 pending.push_back(child.Get());

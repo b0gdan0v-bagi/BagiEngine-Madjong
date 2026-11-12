@@ -37,7 +37,7 @@
   Continue is hidden here and shown by MahjongHudComponent exactly while the panel is open and there is a match to continue; a hidden
   element takes no room, so Start keeps the whole width otherwise, and the two share it half and half when both are there.
 -->
-<node name="Setup" layer="30" contentVersion="4">
+<node name="Setup" layer="30" contentVersion="5">
   <components>
     <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" modal="true" visible="false">
       <elements>
@@ -47,7 +47,11 @@
             <element type="UIStack" name="TitleRow" flex="0.875" maxHeight="56" direction="Horizontal" spacing="0" crossAlign="Stretch" color="58,66,92,255">
               <children>
                 <element type="UIElement" name="TitleSpacer" width="56" />
-                <element type="UILabel" name="Title" flex="1" text="{#setup.title}" fontSize="28" overflow="AutoFit" minFontSize="12" align="Center" verticalAlign="Center" />
+                <element type="UIElement" name="Title" flex="1" fontSize="28">
+                  <components>
+                    <component type="UITextComponent" text="{#setup.title}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
                 <element type="UIElement" name="SetupClose" width="56" fontSize="28" color="70,70,100,255">
                   <components>
                     <component type="UITextComponent" text="{#setup.closeMark}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
@@ -59,7 +63,11 @@
             </element>
             <element type="UIStack" name="SeatRow0" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255">
               <children>
-                <element type="UILabel" name="SeatCaption0" width="112" height="87.5%" text="{#setup.seat1}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" textColor="190,196,190,255" />
+                <element type="UIElement" name="SeatCaption0" width="112" height="87.5%" fontSize="22">
+                  <components>
+                    <component type="UITextComponent" text="{#setup.seat1}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
                 <element type="UISegmented" name="SeatKind0" bind="seatKind0" flex="1" height="87.5%" direction="Horizontal" spacing="4" color="48,54,72,255">
                   <children>
                     <element type="UIElement" name="Seat0Person" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
@@ -76,7 +84,10 @@
                     </element>
                   </children>
                 </element>
-                <element type="UIDropdown" name="SeatLevel0" bind="seatLevel0" action="MahjongSetSeatLevel0" width="72" height="87.5%" optionHeight="56" text="" fontSize="22" overflow="AutoFit" minFontSize="8" verticalAlign="Center" color="70,70,100,255">
+                <element type="UIDropdown" name="SeatLevel0" bind="seatLevel0" action="MahjongSetSeatLevel0" width="72" height="87.5%" optionHeight="56" fontSize="22" color="70,70,100,255">
+                  <components>
+                    <component type="UITextComponent" text="" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="8" fadeWhenDisabled="true"/>
+                  </components>
                   <children>
                     <element type="UIElement" name="Seat0Level1" fontSize="22" color="70,70,100,255">
                       <components>
@@ -144,7 +155,11 @@
             </element>
             <element type="UIStack" name="SeatRow1" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255">
               <children>
-                <element type="UILabel" name="SeatCaption1" width="112" height="87.5%" text="{#setup.seat2}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" textColor="190,196,190,255" />
+                <element type="UIElement" name="SeatCaption1" width="112" height="87.5%" fontSize="22">
+                  <components>
+                    <component type="UITextComponent" text="{#setup.seat2}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
                 <element type="UISegmented" name="SeatKind1" bind="seatKind1" flex="1" height="87.5%" direction="Horizontal" spacing="4" color="48,54,72,255">
                   <children>
                     <element type="UIElement" name="Seat1Person" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
@@ -161,7 +176,10 @@
                     </element>
                   </children>
                 </element>
-                <element type="UIDropdown" name="SeatLevel1" bind="seatLevel1" action="MahjongSetSeatLevel1" width="72" height="87.5%" optionHeight="56" text="" fontSize="22" overflow="AutoFit" minFontSize="8" verticalAlign="Center" color="70,70,100,255">
+                <element type="UIDropdown" name="SeatLevel1" bind="seatLevel1" action="MahjongSetSeatLevel1" width="72" height="87.5%" optionHeight="56" fontSize="22" color="70,70,100,255">
+                  <components>
+                    <component type="UITextComponent" text="" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="8" fadeWhenDisabled="true"/>
+                  </components>
                   <children>
                     <element type="UIElement" name="Seat1Level1" fontSize="22" color="70,70,100,255">
                       <components>
@@ -229,7 +247,11 @@
             </element>
             <element type="UIStack" name="SeatRow2" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255">
               <children>
-                <element type="UILabel" name="SeatCaption2" width="112" height="87.5%" text="{#setup.seat3}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" textColor="190,196,190,255" />
+                <element type="UIElement" name="SeatCaption2" width="112" height="87.5%" fontSize="22">
+                  <components>
+                    <component type="UITextComponent" text="{#setup.seat3}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
                 <element type="UISegmented" name="SeatKind2" bind="seatKind2" flex="1" height="87.5%" direction="Horizontal" spacing="4" color="48,54,72,255">
                   <children>
                     <element type="UIElement" name="Seat2Person" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
@@ -246,7 +268,10 @@
                     </element>
                   </children>
                 </element>
-                <element type="UIDropdown" name="SeatLevel2" bind="seatLevel2" action="MahjongSetSeatLevel2" width="72" height="87.5%" optionHeight="56" text="" fontSize="22" overflow="AutoFit" minFontSize="8" verticalAlign="Center" color="70,70,100,255">
+                <element type="UIDropdown" name="SeatLevel2" bind="seatLevel2" action="MahjongSetSeatLevel2" width="72" height="87.5%" optionHeight="56" fontSize="22" color="70,70,100,255">
+                  <components>
+                    <component type="UITextComponent" text="" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="8" fadeWhenDisabled="true"/>
+                  </components>
                   <children>
                     <element type="UIElement" name="Seat2Level1" fontSize="22" color="70,70,100,255">
                       <components>
@@ -314,7 +339,11 @@
             </element>
             <element type="UIStack" name="SeatRow3" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255">
               <children>
-                <element type="UILabel" name="SeatCaption3" width="112" height="87.5%" text="{#setup.seat4}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" textColor="190,196,190,255" />
+                <element type="UIElement" name="SeatCaption3" width="112" height="87.5%" fontSize="22">
+                  <components>
+                    <component type="UITextComponent" text="{#setup.seat4}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
                 <element type="UISegmented" name="SeatKind3" bind="seatKind3" flex="1" height="87.5%" direction="Horizontal" spacing="4" color="48,54,72,255">
                   <children>
                     <element type="UIElement" name="Seat3Person" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
@@ -331,7 +360,10 @@
                     </element>
                   </children>
                 </element>
-                <element type="UIDropdown" name="SeatLevel3" bind="seatLevel3" action="MahjongSetSeatLevel3" width="72" height="87.5%" optionHeight="56" text="" fontSize="22" overflow="AutoFit" minFontSize="8" verticalAlign="Center" color="70,70,100,255">
+                <element type="UIDropdown" name="SeatLevel3" bind="seatLevel3" action="MahjongSetSeatLevel3" width="72" height="87.5%" optionHeight="56" fontSize="22" color="70,70,100,255">
+                  <components>
+                    <component type="UITextComponent" text="" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="8" fadeWhenDisabled="true"/>
+                  </components>
                   <children>
                     <element type="UIElement" name="Seat3Level1" fontSize="22" color="70,70,100,255">
                       <components>
@@ -399,7 +431,11 @@
             </element>
             <element type="UIStack" name="HandsRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255">
               <children>
-                <element type="UILabel" name="HandsCaption" width="112" height="87.5%" text="{#setup.hands}" fontSize="22" overflow="AutoFit" minFontSize="12" verticalAlign="Center" textColor="190,196,190,255" />
+                <element type="UIElement" name="HandsCaption" width="112" height="87.5%" fontSize="22">
+                  <components>
+                    <component type="UITextComponent" text="{#setup.hands}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
                 <element type="UISegmented" name="HandsChoice" bind="handsChoice" flex="1" height="87.5%" direction="Horizontal" spacing="4" color="48,54,72,255">
                   <children>
                     <element type="UIElement" name="Hands16" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">

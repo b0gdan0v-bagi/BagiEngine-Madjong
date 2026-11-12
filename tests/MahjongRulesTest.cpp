@@ -5,8 +5,7 @@
 #include "UiStyleTestSupport.h"
 
 #include <BECore/Control/Json.h>
-#include <BECore/UI/UIImage.h>
-#include <BECore/UI/UILabel.h>
+#include <BECore/UI/UIImageComponent.h>
 #include <Events/SceneEvents.h>
 #include <Mahjong/Components/MahjongHudComponent.h>
 #include <Mahjong/Table/RulesText.h>
@@ -73,7 +72,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         std::string SpriteOf(const char* element) const {
-            const auto* image = Element("Rules", element) != nullptr ? Element("Rules", element)->Cast<UIImage>() : nullptr;
+            const auto* image = Element("Rules", element) != nullptr ? Element("Rules", element)->GetComponent<UIImageComponent>() : nullptr;
             return image != nullptr ? std::string(image->sprite.ToStringView().data(), image->sprite.ToStringView().size()) : std::string("<none>");
         }
 
@@ -675,7 +674,7 @@ namespace BECore::Mahjong::Tests {
 
         const UIElement* pager = Element("Rules", "Pager");
         ASSERT_NE(pager, nullptr);
-        EXPECT_TRUE(SameColor(pager->Cast<UILabel>()->textColor, PaletteColor("textMuted")));
+        EXPECT_TRUE(SameColor(pager->GetComponent<UITextComponent>()->textColor, PaletteColor("textMuted")));
         EXPECT_EQ(GapBelow(title->rect, pager->rect), kModalGap);
 
         // The dim is the whole view, and it takes the clicks

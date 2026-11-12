@@ -323,7 +323,7 @@ namespace BECore::Mahjong::Tests {
             const UIElement* group = Element("Options", entry.group);
             ASSERT_TRUE(caption != nullptr && group != nullptr);
             EXPECT_NEAR(caption->rect.w, 112.0f, 0.01f);
-            EXPECT_TRUE(SameColor(caption->Cast<UILabel>()->textColor, PaletteColor("textMuted")));
+            EXPECT_TRUE(SameColor(caption->GetComponent<UITextComponent>()->textColor, PaletteColor("textMuted")));
             EXPECT_EQ(caption->rect.x, row->rect.x + kRowPadding);
             EXPECT_EQ(group->rect.x, caption->rect.x + caption->rect.w + kModalGap);
             EXPECT_EQ(group->rect.x + group->rect.w, row->rect.x + row->rect.w - kRowPadding);
@@ -349,7 +349,7 @@ namespace BECore::Mahjong::Tests {
             const UIElement* group = Element("Options", kSpeedChoice);
             ASSERT_TRUE(caption != nullptr && group != nullptr);
             EXPECT_NEAR(caption->rect.w, 96.0f, 0.01f) << "narrower than the others: the three words need the room";
-            EXPECT_TRUE(SameColor(caption->Cast<UILabel>()->textColor, PaletteColor("textMuted")));
+            EXPECT_TRUE(SameColor(caption->GetComponent<UITextComponent>()->textColor, PaletteColor("textMuted")));
             EXPECT_EQ(group->rect.x, caption->rect.x + caption->rect.w + kModalGap);
             EXPECT_EQ(group->rect.x + group->rect.w, row->rect.x + row->rect.w - kRowPadding);
             EXPECT_EQ(group->rect.y, row->rect.y + kRowPadding);

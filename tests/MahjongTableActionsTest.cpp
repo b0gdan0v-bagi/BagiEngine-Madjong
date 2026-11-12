@@ -3,8 +3,7 @@
 #include "MahjongTableTestSupport.h"
 #include "MahjongTouchTestSupport.h"
 
-#include <BECore/UI/UIImage.h>
-#include <BECore/UI/UILabel.h>
+#include <BECore/UI/UIImageComponent.h>
 #include <Events/InputEvents.h>
 
 /**
@@ -81,7 +80,7 @@ namespace BECore::Mahjong::Tests {
                 if (!OnScreen("Actions", name.c_str())) {
                     continue;
                 }
-                const auto* image = Element("Actions", name.c_str())->Cast<UIImage>();
+                const auto* image = Element("Actions", name.c_str())->GetComponent<UIImageComponent>();
                 EXPECT_NE(image, nullptr) << name;
                 if (image != nullptr) {
                     sprites.emplace_back(image->sprite.ToStringView().data(), image->sprite.ToStringView().size());
@@ -120,7 +119,7 @@ namespace BECore::Mahjong::Tests {
             const bool shown = OnScreen("Actions", "Hint");
             const std::string variable = Var("actionHint");
             EXPECT_EQ(shown, !variable.empty()) << "the label is shown exactly while there is a sentence";
-            const auto* label = Element("Actions", "Hint") != nullptr ? Element("Actions", "Hint")->Cast<UILabel>() : nullptr;
+            const auto* label = Element("Actions", "Hint") != nullptr ? Element("Actions", "Hint")->GetComponent<UITextComponent>() : nullptr;
             EXPECT_NE(label, nullptr);
             if (!shown || label == nullptr) {
                 return {};
@@ -155,7 +154,7 @@ namespace BECore::Mahjong::Tests {
                 if (!CanvasShown("ActionsCompact") || !OnScreen("ActionsCompact", name.c_str())) {
                     continue;
                 }
-                const auto* image = Element("ActionsCompact", name.c_str())->Cast<UIImage>();
+                const auto* image = Element("ActionsCompact", name.c_str())->GetComponent<UIImageComponent>();
                 EXPECT_NE(image, nullptr) << name;
                 if (image != nullptr) {
                     sprites.emplace_back(image->sprite.ToStringView().data(), image->sprite.ToStringView().size());
@@ -620,7 +619,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(CompactPicturesOf(ButtonKind::ClaimPung), (std::vector<std::string>{"Tile_5p"}));
         EXPECT_TRUE(CompactPicturesOf(ButtonKind::Pass).empty());
         // The same state in the other canvas, so a window that grows shows the same buttons at once
-        const auto* image = Element("Actions", "Chow0Tile0") != nullptr ? Element("Actions", "Chow0Tile0")->Cast<UIImage>() : nullptr;
+        const auto* image = Element("Actions", "Chow0Tile0") != nullptr ? Element("Actions", "Chow0Tile0")->GetComponent<UIImageComponent>() : nullptr;
         ASSERT_NE(image, nullptr);
         EXPECT_EQ(image->sprite, "Tile_4p"_intern);
         const std::vector<ButtonKind> onCompact = OnCompactScreen();

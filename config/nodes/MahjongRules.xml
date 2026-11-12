@@ -15,91 +15,283 @@
   In a narrow view (1080 x 768) 94% of the width is 1015, so maxWidth holds the plate to 960 (x 60..1020, y 50..638) and the pages fit as in
   landscape: no variant (MahjongRulesTest holds the matrix and the narrow windows).
 -->
-<node name="Rules" layer="35" contentVersion="4">
+<node name="Rules" layer="35" contentVersion="5">
   <components>
     <component type="UICanvasComponent" space="SceneView" useSafeArea="true" modal="true" visible="false">
       <elements>
         <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
         <element type="UIStack" name="Plate" anchor="Center" y="-40" width="94%" maxWidth="960" height="588" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
           <children>
-            <element type="UILabel" name="Title" height="48" text="{rulesTitle}" fontSize="28" overflow="AutoFit" minFontSize="18" align="Center" verticalAlign="Center" color="58,66,92,255" />
-            <element type="UILabel" name="Pager" height="28" text="{rulesPager}" fontSize="18" align="Center" verticalAlign="Center" textColor="190,196,190,255" />
-            <element type="UILabel" name="RulesLine0" visible="false" height="48" text="{rulesLine0}" fontSize="18" overflow="AutoFit" minFontSize="12" />
-            <element type="UILabel" name="RulesLine1" visible="false" height="48" text="{rulesLine1}" fontSize="18" overflow="AutoFit" minFontSize="12" />
-            <element type="UILabel" name="RulesLine2" visible="false" height="48" text="{rulesLine2}" fontSize="18" overflow="AutoFit" minFontSize="12" />
-            <element type="UILabel" name="RulesLine3" visible="false" height="48" text="{rulesLine3}" fontSize="18" overflow="AutoFit" minFontSize="12" />
-            <element type="UILabel" name="RulesLine4" visible="false" height="48" text="{rulesLine4}" fontSize="18" overflow="AutoFit" minFontSize="12" />
-            <element type="UILabel" name="RulesLine5" visible="false" height="48" text="{rulesLine5}" fontSize="18" overflow="AutoFit" minFontSize="12" />
+            <element type="UIElement" name="Title" height="48" fontSize="28" color="58,66,92,255">
+              <components>
+                <component type="UITextComponent" text="{rulesTitle}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="18"/>
+              </components>
+            </element>
+            <element type="UIElement" name="Pager" height="28" fontSize="18">
+              <components>
+                <component type="UITextComponent" text="{rulesPager}" textColor="190,196,190,255" align="Center" verticalAlign="Center"/>
+              </components>
+            </element>
+            <element type="UIElement" name="RulesLine0" visible="false" height="48" fontSize="18">
+              <components>
+                <component type="UITextComponent" text="{rulesLine0}" overflow="AutoFit" minFontSize="12"/>
+              </components>
+            </element>
+            <element type="UIElement" name="RulesLine1" visible="false" height="48" fontSize="18">
+              <components>
+                <component type="UITextComponent" text="{rulesLine1}" overflow="AutoFit" minFontSize="12"/>
+              </components>
+            </element>
+            <element type="UIElement" name="RulesLine2" visible="false" height="48" fontSize="18">
+              <components>
+                <component type="UITextComponent" text="{rulesLine2}" overflow="AutoFit" minFontSize="12"/>
+              </components>
+            </element>
+            <element type="UIElement" name="RulesLine3" visible="false" height="48" fontSize="18">
+              <components>
+                <component type="UITextComponent" text="{rulesLine3}" overflow="AutoFit" minFontSize="12"/>
+              </components>
+            </element>
+            <element type="UIElement" name="RulesLine4" visible="false" height="48" fontSize="18">
+              <components>
+                <component type="UITextComponent" text="{rulesLine4}" overflow="AutoFit" minFontSize="12"/>
+              </components>
+            </element>
+            <element type="UIElement" name="RulesLine5" visible="false" height="48" fontSize="18">
+              <components>
+                <component type="UITextComponent" text="{rulesLine5}" overflow="AutoFit" minFontSize="12"/>
+              </components>
+            </element>
             <element type="UIStack" name="RulesTileRow0" visible="false" height="48" direction="Horizontal" spacing="4">
               <children>
-                <element type="UIImage" name="RulesTile0" visible="false" width="36" height="48" />
-                <element type="UIImage" name="RulesTile1" visible="false" width="36" height="48" />
-                <element type="UIImage" name="RulesTile2" visible="false" width="36" height="48" />
-                <element type="UIImage" name="RulesTile3" visible="false" width="36" height="48" />
-                <element type="UIImage" name="RulesTile4" visible="false" width="36" height="48" />
-                <element type="UIImage" name="RulesTile5" visible="false" width="36" height="48" />
-                <element type="UIImage" name="RulesTile6" visible="false" width="36" height="48" />
-                <element type="UIImage" name="RulesTile7" visible="false" width="36" height="48" />
-                <element type="UIImage" name="RulesTile8" visible="false" width="36" height="48" />
-                <element type="UIImage" name="RulesTile9" visible="false" width="36" height="48" />
-                <element type="UIImage" name="RulesTile10" visible="false" width="36" height="48" />
-                <element type="UIImage" name="RulesTile11" visible="false" width="36" height="48" />
-                <element type="UIImage" name="RulesTile12" visible="false" width="36" height="48" />
-                <element type="UIImage" name="RulesTile13" visible="false" width="36" height="48" />
+                <element type="UIElement" name="RulesTile0" visible="false" width="36" height="48">
+                  <components>
+                    <component type="UIImageComponent"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesTile1" visible="false" width="36" height="48">
+                  <components>
+                    <component type="UIImageComponent"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesTile2" visible="false" width="36" height="48">
+                  <components>
+                    <component type="UIImageComponent"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesTile3" visible="false" width="36" height="48">
+                  <components>
+                    <component type="UIImageComponent"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesTile4" visible="false" width="36" height="48">
+                  <components>
+                    <component type="UIImageComponent"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesTile5" visible="false" width="36" height="48">
+                  <components>
+                    <component type="UIImageComponent"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesTile6" visible="false" width="36" height="48">
+                  <components>
+                    <component type="UIImageComponent"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesTile7" visible="false" width="36" height="48">
+                  <components>
+                    <component type="UIImageComponent"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesTile8" visible="false" width="36" height="48">
+                  <components>
+                    <component type="UIImageComponent"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesTile9" visible="false" width="36" height="48">
+                  <components>
+                    <component type="UIImageComponent"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesTile10" visible="false" width="36" height="48">
+                  <components>
+                    <component type="UIImageComponent"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesTile11" visible="false" width="36" height="48">
+                  <components>
+                    <component type="UIImageComponent"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesTile12" visible="false" width="36" height="48">
+                  <components>
+                    <component type="UIImageComponent"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesTile13" visible="false" width="36" height="48">
+                  <components>
+                    <component type="UIImageComponent"/>
+                  </components>
+                </element>
               </children>
             </element>
             <element type="UIStack" name="RulesTileRow1" visible="false" height="48" direction="Horizontal" spacing="4">
               <children>
-                <element type="UIImage" name="RulesTile14" visible="false" width="36" height="48" />
-                <element type="UIImage" name="RulesTile15" visible="false" width="36" height="48" />
-                <element type="UIImage" name="RulesTile16" visible="false" width="36" height="48" />
-                <element type="UIImage" name="RulesTile17" visible="false" width="36" height="48" />
-                <element type="UIImage" name="RulesTile18" visible="false" width="36" height="48" />
-                <element type="UIImage" name="RulesTile19" visible="false" width="36" height="48" />
-                <element type="UIImage" name="RulesTile20" visible="false" width="36" height="48" />
-                <element type="UIImage" name="RulesTile21" visible="false" width="36" height="48" />
-                <element type="UIImage" name="RulesTile22" visible="false" width="36" height="48" />
-                <element type="UIImage" name="RulesTile23" visible="false" width="36" height="48" />
-                <element type="UIImage" name="RulesTile24" visible="false" width="36" height="48" />
-                <element type="UIImage" name="RulesTile25" visible="false" width="36" height="48" />
-                <element type="UIImage" name="RulesTile26" visible="false" width="36" height="48" />
-                <element type="UIImage" name="RulesTile27" visible="false" width="36" height="48" />
+                <element type="UIElement" name="RulesTile14" visible="false" width="36" height="48">
+                  <components>
+                    <component type="UIImageComponent"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesTile15" visible="false" width="36" height="48">
+                  <components>
+                    <component type="UIImageComponent"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesTile16" visible="false" width="36" height="48">
+                  <components>
+                    <component type="UIImageComponent"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesTile17" visible="false" width="36" height="48">
+                  <components>
+                    <component type="UIImageComponent"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesTile18" visible="false" width="36" height="48">
+                  <components>
+                    <component type="UIImageComponent"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesTile19" visible="false" width="36" height="48">
+                  <components>
+                    <component type="UIImageComponent"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesTile20" visible="false" width="36" height="48">
+                  <components>
+                    <component type="UIImageComponent"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesTile21" visible="false" width="36" height="48">
+                  <components>
+                    <component type="UIImageComponent"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesTile22" visible="false" width="36" height="48">
+                  <components>
+                    <component type="UIImageComponent"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesTile23" visible="false" width="36" height="48">
+                  <components>
+                    <component type="UIImageComponent"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesTile24" visible="false" width="36" height="48">
+                  <components>
+                    <component type="UIImageComponent"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesTile25" visible="false" width="36" height="48">
+                  <components>
+                    <component type="UIImageComponent"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesTile26" visible="false" width="36" height="48">
+                  <components>
+                    <component type="UIImageComponent"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesTile27" visible="false" width="36" height="48">
+                  <components>
+                    <component type="UIImageComponent"/>
+                  </components>
+                </element>
               </children>
             </element>
             <element type="UIStack" name="RulesItemRow0" visible="false" height="28" direction="Horizontal" spacing="4">
               <children>
-                <element type="UILabel" name="RulesItem0" visible="false" width="49%" height="28" text="{rulesItem0}" fontSize="18" overflow="AutoFit" minFontSize="12" />
-                <element type="UILabel" name="RulesItem1" visible="false" width="49%" height="28" text="{rulesItem1}" fontSize="18" overflow="AutoFit" minFontSize="12" />
+                <element type="UIElement" name="RulesItem0" visible="false" width="49%" height="28" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{rulesItem0}" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesItem1" visible="false" width="49%" height="28" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{rulesItem1}" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
               </children>
             </element>
             <element type="UIStack" name="RulesItemRow1" visible="false" height="28" direction="Horizontal" spacing="4">
               <children>
-                <element type="UILabel" name="RulesItem2" visible="false" width="49%" height="28" text="{rulesItem2}" fontSize="18" overflow="AutoFit" minFontSize="12" />
-                <element type="UILabel" name="RulesItem3" visible="false" width="49%" height="28" text="{rulesItem3}" fontSize="18" overflow="AutoFit" minFontSize="12" />
+                <element type="UIElement" name="RulesItem2" visible="false" width="49%" height="28" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{rulesItem2}" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesItem3" visible="false" width="49%" height="28" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{rulesItem3}" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
               </children>
             </element>
             <element type="UIStack" name="RulesItemRow2" visible="false" height="28" direction="Horizontal" spacing="4">
               <children>
-                <element type="UILabel" name="RulesItem4" visible="false" width="49%" height="28" text="{rulesItem4}" fontSize="18" overflow="AutoFit" minFontSize="12" />
-                <element type="UILabel" name="RulesItem5" visible="false" width="49%" height="28" text="{rulesItem5}" fontSize="18" overflow="AutoFit" minFontSize="12" />
+                <element type="UIElement" name="RulesItem4" visible="false" width="49%" height="28" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{rulesItem4}" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesItem5" visible="false" width="49%" height="28" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{rulesItem5}" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
               </children>
             </element>
             <element type="UIStack" name="RulesItemRow3" visible="false" height="28" direction="Horizontal" spacing="4">
               <children>
-                <element type="UILabel" name="RulesItem6" visible="false" width="49%" height="28" text="{rulesItem6}" fontSize="18" overflow="AutoFit" minFontSize="12" />
-                <element type="UILabel" name="RulesItem7" visible="false" width="49%" height="28" text="{rulesItem7}" fontSize="18" overflow="AutoFit" minFontSize="12" />
+                <element type="UIElement" name="RulesItem6" visible="false" width="49%" height="28" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{rulesItem6}" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesItem7" visible="false" width="49%" height="28" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{rulesItem7}" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
               </children>
             </element>
             <element type="UIStack" name="RulesItemRow4" visible="false" height="28" direction="Horizontal" spacing="4">
               <children>
-                <element type="UILabel" name="RulesItem8" visible="false" width="49%" height="28" text="{rulesItem8}" fontSize="18" overflow="AutoFit" minFontSize="12" />
-                <element type="UILabel" name="RulesItem9" visible="false" width="49%" height="28" text="{rulesItem9}" fontSize="18" overflow="AutoFit" minFontSize="12" />
+                <element type="UIElement" name="RulesItem8" visible="false" width="49%" height="28" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{rulesItem8}" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesItem9" visible="false" width="49%" height="28" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{rulesItem9}" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
               </children>
             </element>
             <element type="UIStack" name="RulesItemRow5" visible="false" height="28" direction="Horizontal" spacing="4">
               <children>
-                <element type="UILabel" name="RulesItem10" visible="false" width="49%" height="28" text="{rulesItem10}" fontSize="18" overflow="AutoFit" minFontSize="12" />
-                <element type="UILabel" name="RulesItem11" visible="false" width="49%" height="28" text="{rulesItem11}" fontSize="18" overflow="AutoFit" minFontSize="12" />
+                <element type="UIElement" name="RulesItem10" visible="false" width="49%" height="28" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{rulesItem10}" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="RulesItem11" visible="false" width="49%" height="28" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{rulesItem11}" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
               </children>
             </element>
           </children>

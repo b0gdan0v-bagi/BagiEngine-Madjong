@@ -13,7 +13,7 @@
   seats' winds and points are in the node CenterPanel, the seats' names in SeatPlates). MahjongHudTest holds the worst texts and checks that
   each label lies in its region and that no tile of any game lies under it.
 -->
-<node name="Hud" layer="10" contentVersion="4">
+<node name="Hud" layer="10" contentVersion="5">
   <components>
     <component type="MahjongHudComponent" />
     <component type="UICanvasComponent" space="SceneView">
@@ -21,13 +21,21 @@
         <!-- The last move in words (lastMove), shown by the component exactly while it has a text -->
         <element type="UIStack" name="MoveLine" region="table.moveLine" anchor="Stretch" visible="false" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170">
           <children>
-            <element type="UILabel" name="MoveText" flex="1" text="{lastMove}" fontSize="18" verticalAlign="Center" />
+            <element type="UIElement" name="MoveText" flex="1" fontSize="18">
+              <components>
+                <component type="UITextComponent" text="{lastMove}" verticalAlign="Center"/>
+              </components>
+            </element>
           </children>
         </element>
         <!-- The name of the tile selected by a tap (selectedTileText, Table/TapSelect.h), shown by MahjongTableComponent exactly while a tile is selected -->
         <element type="UIStack" name="SelectedTile" region="table.selectedTile" anchor="Stretch" visible="false" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170">
           <children>
-            <element type="UILabel" name="SelectedTileLabel" flex="1" text="{selectedTileText}" fontSize="18" overflow="AutoFit" align="Center" verticalAlign="Center" />
+            <element type="UIElement" name="SelectedTileLabel" flex="1" fontSize="18">
+              <components>
+                <component type="UITextComponent" text="{selectedTileText}" align="Center" verticalAlign="Center" overflow="AutoFit"/>
+              </components>
+            </element>
           </children>
         </element>
       </elements>

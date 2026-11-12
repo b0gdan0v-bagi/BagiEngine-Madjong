@@ -5,7 +5,6 @@
 #include "UiStyleTestSupport.h"
 
 #include <BECore/Control/Json.h>
-#include <BECore/UI/UILabel.h>
 #include <BECore/UI/UIToggleComponent.h>
 #include <Events/InputEvents.h>
 #include <Events/SceneEvents.h>
