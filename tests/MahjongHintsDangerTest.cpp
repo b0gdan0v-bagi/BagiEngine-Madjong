@@ -4,7 +4,6 @@
 #include "StringsTestSupport.h"
 #include "UiStyleTestSupport.h"
 
-#include <BECore/UI/UILabel.h>
 #include <Mahjong/Components/MahjongHintsComponent.h>
 #include <Mahjong/Table/DangerMarks.h>
 #include <Mahjong/Table/TapSelect.h>
@@ -365,7 +364,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_TRUE(OnScreen("TileHover", "TileHoverDanger"));
             const eastl::string expected = Tr(CoreManager::GetUIStrings(), DangerHoverKey(mark));
             EXPECT_EQ(Var("tileHoverDanger"), std::string(expected.data(), expected.size()));
-            const auto* label = Element("TileHover", "TileHoverDanger")->Cast<UILabel>();
+            const auto* label = Element("TileHover", "TileHoverDanger")->GetComponent<UITextComponent>();
             ASSERT_NE(label, nullptr);
             EXPECT_TRUE(SameColor(label->textColor, DangerMarkColor(mark)));
             EXPECT_TRUE(Inside(Element("TileHover", "TileHoverDanger")->rect, Element("TileHover", "TileHoverPlate")->rect));

@@ -3,7 +3,6 @@
 #include "UiStyleTestSupport.h"
 
 #include <BECore/Control/Json.h>
-#include <BECore/UI/UILabel.h>
 #include <Mahjong/Table/ScoreText.h>
 #include <Mahjong/Table/TileHover.h>
 
@@ -89,7 +88,7 @@ namespace BECore::Mahjong::Tests {
             const std::string variable = Var("tileHoverText");
             EXPECT_EQ(shown, !variable.empty()) << "the plate is shown exactly while there is a name";
             const UIElement* element = Element("TileHover", "TileHoverLabel");
-            const auto* label = element != nullptr ? element->Cast<UILabel>() : nullptr;
+            const auto* label = element != nullptr ? element->GetComponent<UITextComponent>() : nullptr;
             EXPECT_NE(label, nullptr);
             if (!shown || label == nullptr) {
                 return {};
@@ -375,7 +374,7 @@ namespace BECore::Mahjong::Tests {
             ExpectWordsFit("TileHover", kViewWidth / 2.0f, kViewHeight / 2.0f, 0.0f);
             const UIElement* element = Element("TileHover", "TileHoverLabel");
             ASSERT_NE(element, nullptr);
-            const auto* label = element->Cast<UILabel>();
+            const auto* label = element->GetComponent<UITextComponent>();
             ASSERT_NE(label, nullptr);
             EXPECT_EQ(std::string(label->GetDisplayText().data(), label->GetDisplayText().size()), std::string(longest.data(), longest.size()));
             UICanvasComponent::SetElementVisibleByName(*_manager->GetSceneByName("MahjongScene"_intern), "TileHoverPlate"_intern, false);

@@ -1,20 +1,15 @@
 #pragma once
 
-#include <BECore/UI/UIButton.h>
 #include <BECore/UI/UIElement.h>
 #include <BECore/UI/UIInputClicker.h>
-#include <BECore/UI/UILabel.h>
 #include <BECore/UI/UITextComponent.h>
 #include <BECore/UI/UIToggleComponent.h>
-#include <optional>
-#include <string>
 #include <vector>
 
 /**
- * A button of the shipped scene in either form: a composed element (`UIElement` with a `UITextComponent` and a `UIInputClicker`, what
- * `engine/tools/migrate` makes of a plain button since content version 2) or a `UIButton` (still the form of the options of a
- * `UISegmented` or a `UIDropdown`, and of an icon button). The tests ask a button its action, value, text and words through these, so
- * they do not depend on the form. Header only.
+ * A button of the shipped scene is one composed element: a `UIElement` with a `UIInputClicker` (the action and the value) and, when it
+ * shows words, a `UITextComponent`; the options of a `UISegmented` or a `UIDropdown` are the same form. A text is a `UIElement` with a
+ * `UITextComponent`. The tests ask a control its action, value, text and words through these helpers. Header only.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -23,11 +18,8 @@ namespace BECore::Mahjong::Tests {
         if (element == nullptr) {
             return {};
         }
-        if (const auto* clicker = element->GetComponent<UIInputClicker>()) {
-            return clicker->action;
-        }
-        const auto* button = element->Cast<UIButton>();
-        return button != nullptr ? button->action : PoolString{};
+        const auto* clicker = element->GetComponent<UIInputClicker>();
+        return clicker != nullptr ? clicker->action : PoolString{};
     }
 
     /// The value sent with the action; empty when there is none.
@@ -35,39 +27,32 @@ namespace BECore::Mahjong::Tests {
         if (element == nullptr) {
             return {};
         }
-        if (const auto* clicker = element->GetComponent<UIInputClicker>()) {
-            return clicker->value;
-        }
-        const auto* button = element->Cast<UIButton>();
-        return button != nullptr ? button->value : PoolString{};
+        const auto* clicker = element->GetComponent<UIInputClicker>();
+        return clicker != nullptr ? clicker->value : PoolString{};
     }
 
-    /// Whether the element is a button of either form.
+    /// Whether the element is a button (carries a `UIInputClicker`).
     inline bool IsButton(const UIElement* element) {
-        return element != nullptr && (element->GetComponent<UIInputClicker>() != nullptr || element->Cast<UIButton>() != nullptr);
+        return element != nullptr && element->GetComponent<UIInputClicker>() != nullptr;
     }
 
-    /// The text as written in the file (`{#key}` not expanded), of a label, a button or an element with a text component.
+    /// The text component of the element; null when it shows no text.
+    inline UITextComponent* TextOf(const UIElement* element) {
+        return element != nullptr ? element->GetComponent<UITextComponent>() : nullptr;
+    }
+
+    /// The text as written in the file (`{#key}` not expanded); empty when the element shows none.
     inline eastl::string ElementText(const UIElement* element) {
-        if (element == nullptr) {
-            return {};
-        }
-        if (const auto* text = element->GetComponent<UITextComponent>()) {
-            return text->text;
-        }
-        if (const auto* button = element->Cast<UIButton>()) {
-            return button->text;
-        }
-        const auto* label = element->Cast<UILabel>();
-        return label != nullptr ? label->text : eastl::string{};
+        const auto* text = TextOf(element);
+        return text != nullptr ? text->text : eastl::string{};
     }
 
-    /// Whether the element shows a text: a label, a button or an element with a text component.
+    /// Whether the element shows a text (carries a `UITextComponent`).
     inline bool ShowsText(const UIElement& element) {
-        return element.Cast<UILabel>() != nullptr || element.Cast<UIButton>() != nullptr || element.GetComponent<UITextComponent>() != nullptr;
+        return element.GetComponent<UITextComponent>() != nullptr;
     }
 
-    /// Every label and button of the tree, shown or not, in tree order. A toggle row (`UIToggleComponent`) is one control: its caption
+    /// Every element with a text of the tree, shown or not, in tree order. A toggle row (`UIToggleComponent`) is one control: its caption
     /// is not asked, since the switch beside it may cut it (the look the owner keeps for `Declare`; the class toggle flagged a caption
     /// only when it had no room at all).
     inline void CollectTextControls(const UIElement& element, std::vector<const UIElement*>& found) {
@@ -84,17 +69,11 @@ namespace BECore::Mahjong::Tests {
 
     /// The text as shown (`{#key}` and `{name}` expanded); nothing when the element shows none.
     inline std::optional<std::string> ShownText(const UIElement* element) {
-        if (element == nullptr) {
+        const auto* text = TextOf(element);
+        if (text == nullptr) {
             return std::nullopt;
         }
-        eastl::string_view shown;
-        if (const auto* text = element->GetComponent<UITextComponent>()) {
-            shown = text->GetDisplayText();
-        } else if (const UILabel* label = element->Cast<UILabel>() != nullptr ? element->Cast<UILabel>() : element->Cast<UIButton>()) {
-            shown = label->GetDisplayText();  // a button is a label by inheritance, but `Cast` is exact
-        } else {
-            return std::nullopt;
-        }
+        const eastl::string_view shown = text->GetDisplayText();
         return std::string(shown.data(), shown.size());
     }
 

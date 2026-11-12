@@ -697,7 +697,7 @@ namespace BECore::Mahjong::Tests {
 
             const UIElement* caption = Element("Setup", entry.caption.c_str());
             ASSERT_NE(caption, nullptr);
-            EXPECT_TRUE(SameColor(caption->Cast<UILabel>()->textColor, PaletteColor("textMuted")));
+            EXPECT_TRUE(SameColor(caption->GetComponent<UITextComponent>()->textColor, PaletteColor("textMuted")));
             EXPECT_EQ(caption->rect.x, row->rect.x + kRowPadding);
             const UIElement* group = Element("Setup", entry.group.c_str());
             ASSERT_NE(group, nullptr);

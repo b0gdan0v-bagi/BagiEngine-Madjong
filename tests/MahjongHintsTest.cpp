@@ -6,7 +6,7 @@
 #include "UiStyleTestSupport.h"
 
 #include <BECore/Control/Json.h>
-#include <BECore/UI/UIImage.h>
+#include <BECore/UI/UIImageComponent.h>
 #include <Mahjong/Components/MahjongHintsComponent.h>
 #include <Mahjong/Game/ComputerExplain.h>
 #include <Mahjong/Game/ComputerPlayer.h>
@@ -119,7 +119,7 @@ namespace BECore::Mahjong::Tests {
                 if (!OnScreen("Hints", CellName("WaitCell", i).c_str())) {
                     continue;
                 }
-                const auto* image = Element("Hints", CellName("WaitTile", i).c_str())->Cast<UIImage>();
+                const auto* image = Element("Hints", CellName("WaitTile", i).c_str())->GetComponent<UIImageComponent>();
                 const std::string sprite = image != nullptr ? std::string(image->sprite.ToStringView().data(), image->sprite.ToStringView().size()) : "<none>";
                 row.emplace_back(sprite.substr(sprite.find('_') + 1), Var(CellName("hintCount", i).c_str()));
             }
@@ -345,7 +345,7 @@ namespace BECore::Mahjong::Tests {
             const eastl::string off = Tr(CoreManager::GetUIStrings(), "setup.off");
             const eastl::string caption = Tr(CoreManager::GetUIStrings(), "setup.hints");
             const auto text = [&](const char* element) {
-                const auto* label = Element("Options", element) != nullptr ? Element("Options", element)->Cast<UILabel>() : nullptr;
+                const auto* label = Element("Options", element) != nullptr ? Element("Options", element)->GetComponent<UITextComponent>() : nullptr;
                 return label != nullptr ? std::string(label->GetDisplayText().data(), label->GetDisplayText().size()) : std::string("<none>");
             };
             const auto buttonText = [&](const char* element) { return DisplayText(Element("Options", element), "<none>"); };
@@ -784,7 +784,7 @@ namespace BECore::Mahjong::Tests {
             SCOPED_TRACE(language.ToStringView().data());
             Draw();
             const eastl::string expected = Tr(CoreManager::GetUIStrings(), "hints.waitCaption");
-            const auto* caption = Element("Hints", "WaitCaption") != nullptr ? Element("Hints", "WaitCaption")->Cast<UILabel>() : nullptr;
+            const auto* caption = Element("Hints", "WaitCaption") != nullptr ? Element("Hints", "WaitCaption")->GetComponent<UITextComponent>() : nullptr;
             ASSERT_NE(caption, nullptr);
             EXPECT_EQ(std::string(caption->GetDisplayText().data(), caption->GetDisplayText().size()), std::string(expected.data(), expected.size()));
             seen.emplace_back(expected.data(), expected.size());

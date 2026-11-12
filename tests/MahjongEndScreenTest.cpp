@@ -614,7 +614,7 @@ namespace BECore::Mahjong::Tests {
             const UIElement* summary = Element("HandOver", "Summary");
             ASSERT_NE(summary, nullptr);
             EXPECT_TRUE(SameColor(summary->color, PaletteColor("surfaceRaised")));
-            EXPECT_TRUE(SameColor(summary->Cast<UILabel>()->textColor, PaletteColor("textMuted")));
+            EXPECT_TRUE(SameColor(summary->GetComponent<UITextComponent>()->textColor, PaletteColor("textMuted")));
             EXPECT_EQ(GapBelow(*above, summary->rect), kModalGap);
             above = &summary->rect;
 
@@ -942,7 +942,7 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_EQ(GapBelow(*above, standing->rect), kStandingsGap) << "row " << row;
                 above = &standing->rect;
                 // The first place is the accent (gold), the others the plain text colour
-                const Color& text = standing->Cast<UILabel>()->textColor;
+                const Color& text = standing->GetComponent<UITextComponent>()->textColor;
                 EXPECT_EQ(SameColor(text, PaletteColor("accent")), row == 0) << "row " << row;
                 if (row != 0) {
                     EXPECT_TRUE(SameColor(text, PaletteColor("text"))) << "row " << row;
