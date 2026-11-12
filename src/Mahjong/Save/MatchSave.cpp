@@ -3,6 +3,8 @@
 #include <Generated/MatchSave.gen.hpp>
 #include <Mahjong/MahjongGameControl.h>
 #include <Mahjong/MatchLogJson.h>
+#include <Mahjong/Online/OnlineClient.h>
+#include <Rooms/RoomProtocol.h>
 
 namespace BECore::Mahjong {
 
@@ -181,6 +183,38 @@ namespace BECore::Mahjong {
             return std::unexpected(Format("the speed '{}' is not slow, normal or fast", prefs.speed));
         }
         values.speed = *speed;
+        return values;
+    }
+
+    MahjongOnlineSave MakeOnlineSave(eastl::string_view name, const RoomSession& session) {
+        MahjongOnlineSave save;
+        save.name.assign(name.data(), name.size());
+        if (session.IsValid()) {
+            const std::string text = SessionToJson(session).dump();
+            save.session.assign(text.data(), text.size());
+        }
+        return save;
+    }
+
+    std::expected<OnlineValues, eastl::string> ReadOnline(const MahjongOnlineSave& save) {
+        OnlineValues values;
+        if (!save.name.empty()) {
+            if (!SanitizePlayerName(save.name)) {
+                return std::unexpected(eastl::string("the name is not one a room accepts"));
+            }
+            values.name = save.name;
+        }
+        if (!save.session.empty()) {
+            const std::expected<Json, ControlError> parsed = ParseJson(eastl::string_view(save.session.c_str(), save.session.size()));
+            if (!parsed) {
+                return std::unexpected(eastl::string("the session is not JSON"));
+            }
+            std::optional<RoomSession> session = SessionFromJson(*parsed);
+            if (!session) {
+                return std::unexpected(eastl::string("the session is not a room with a token"));
+            }
+            values.session = eastl::move(*session);
+        }
         return values;
     }
 

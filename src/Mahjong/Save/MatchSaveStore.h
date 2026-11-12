@@ -25,7 +25,7 @@ namespace BECore::Mahjong {
     };
 
     /**
-     * @brief The two slots of Mahjong (`match` and `settings`, `MatchSave.h`) over a `SaveGameService`.
+     * @brief The three slots of Mahjong (`match`, `settings` and `online`, `MatchSave.h`) over a `SaveGameService`.
      *
      * `Open(directory)` makes the folder and mounts it; an empty directory means saving is off, and then every call does nothing and
      * answers "nothing there" (`Missing`, false). The store never throws and never fails the game: a folder that cannot be made, a
@@ -55,6 +55,13 @@ namespace BECore::Mahjong {
 
         bool SavePrefs(const MahjongPrefsSave& prefs);
         [[nodiscard]] std::expected<MahjongPrefsSave, SaveProblem> LoadPrefs() const;
+
+        /// The `online` slot: the name and the session of a room (**a secret**, `MahjongOnlineSave`). `LoadOnline` is checked by
+        /// `ReadOnline`: a session that is not a room and a token is `Broken` (the detail never holds the token).
+        bool SaveOnline(const MahjongOnlineSave& save);
+        [[nodiscard]] std::expected<OnlineValues, SaveProblem> LoadOnline() const;
+        /// Removes the `online` slot (nothing when there is none).
+        void ClearOnline();
 
     private:
         template <typename State>

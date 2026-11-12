@@ -124,4 +124,29 @@ namespace BECore::Mahjong {
         return state;
     }
 
+    bool MatchSaveStore::SaveOnline(const MahjongOnlineSave& save) {
+        return IsOn() && Write(kOnlineSlot, save);
+    }
+
+    std::expected<OnlineValues, SaveProblem> MatchSaveStore::LoadOnline() const {
+        if (!IsOn()) {
+            return std::unexpected(SavingIsOff());
+        }
+        MahjongOnlineSave state;
+        if (const auto loaded = _service.Load(kOnlineSlot, kMahjongSaveSchema, state); !loaded) {
+            return std::unexpected(ProblemOf(loaded.error()));
+        }
+        std::expected<OnlineValues, eastl::string> values = ReadOnline(state);
+        if (!values) {
+            return std::unexpected(SaveProblem{SaveProblemKind::Broken, eastl::move(values.error())});
+        }
+        return eastl::move(*values);
+    }
+
+    void MatchSaveStore::ClearOnline() {
+        if (IsOn()) {
+            _service.Delete(kOnlineSlot);
+        }
+    }
+
 }  // namespace BECore::Mahjong
