@@ -156,8 +156,8 @@ namespace BECore::Mahjong {
         MahjongGame* game = MahjongGame::GetActive();
         if (!_setupButtonChecked) {
             _setupButtonChecked = true;
-            if (kBrowserBuild) {
-                // The browser build has no `wss://` address yet (docs/web.md): the button is not offered
+            if (OnlineServerUrl().empty()) {
+                // No address of a server (the browser build without `webServer` in `MahjongOnlineConfig`): the button is not offered
                 UICanvasComponent::SetElementVisibleByName(GetScene(), PoolString::Intern(kSetupOnlineButton), false);
             }
         }
@@ -236,7 +236,7 @@ namespace BECore::Mahjong {
         const eastl::string_view action = event.action.ToStringView();
         if (action == kOpenAction) {
             // The button of `Setup`: under the panel or without `Setup` it cannot be pressed, an event that says otherwise is out of date
-            if (!kBrowserBuild && game->IsSetupOpen() && !game->IsOnlineOpen()) {
+            if (game->IsSetupOpen() && !game->IsOnlineOpen()) {
                 game->OpenOnline();
                 Follow(*game);
             }
