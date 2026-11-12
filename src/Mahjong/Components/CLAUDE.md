@@ -5,7 +5,7 @@ The glue between the model and the engine's scene and UI. Pure logic lives in `.
 - `MahjongTableComponent` (node `Table`) draws the table and plays the person seats by mouse and buttons, paces the computers, flies tiles, shows the hot-seat cover, swaps `Actions` / `ActionsCompact`. After the layout it publishes `MakeTableRegions` to the canvas of every node in `kRegionNodes` (`SetRegion`, only what changed); those nodes anchor to the regions and do not move with insets.
 - `MahjongHudComponent` (node `Hud`) publishes the HUD, seat-plate and centre-panel words and runs `Setup`, the rules screen and the end screens.
 - `MahjongHintsComponent` (node `Hints`) runs the hints.
-- `MahjongOnlineComponent` (node `Online`) shows the online panel (`OnlineScreens`, the canvases `Online` and `OnlineEntry`) and runs the client of `MahjongGame` once per frame; `Online/CLAUDE.md`, "The screens". Escape is the panel's while `IsOnlineOpen()` (the HUD ignores it then); the `Online` button of `Setup` is hidden in the browser build.
+- `MahjongOnlineComponent` (node `Online`) shows the online panel (`OnlineScreens`, the canvases `Online` and `OnlineEntry`) and runs the client of `MahjongGame` once per frame; `Online/CLAUDE.md`, "The screens". Escape is the panel's while `IsOnlineOpen()` (the HUD ignores it then); the `Online` button of `Setup` hides with no address.
 
 ## Rules for every component
 

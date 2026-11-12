@@ -36,7 +36,7 @@
   the plate has no room for another: Start lives in the horizontal stack ButtonRow (64 high like the rows, 8 between) beside it.
   Continue is hidden here and shown by MahjongHudComponent exactly while the panel is open and there is a match to continue; a hidden
   element takes no room, so Start keeps the rest of the width otherwise.
-  SetupOnline (MahjongOnline; opens the online panel, nodes Online and OnlineEntry, over this one; MahjongOnlineComponent hides it in the browser build) is the third
+  SetupOnline (MahjongOnline; opens the online panel, nodes Online and OnlineEntry, over this one; MahjongOnlineComponent hides it when the build has no server address) is the third
   control of ButtonRow, between Continue and Start: the plate has no room for another row, and the title band has no room for a word (its spacer is 0 in the narrow
   variants). Three buttons share a row of 214 units in the smallest window, so the weights follow the words (Continue 1.5, SetupOnline 1.1, Start 1: Продолжить is the
   longest word and По сети the next); MahjongHudTest holds every word whole and every button a touch target with all three there.

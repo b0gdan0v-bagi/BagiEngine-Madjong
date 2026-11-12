@@ -1,4 +1,5 @@
 #include "MahjongHubTransport.h"
+#include "ShippedScene.h"
 #include "StringsTestSupport.h"
 
 #include <Mahjong/Online/OnlineScreens.h>
@@ -557,14 +558,53 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(person.screens.Version(), version);
     }
 
-    TEST(MahjongOnlineServerUrl, TheVariableWinsOnTheDesktopAndNowhereElse) {
-        const eastl::string standard(kDefaultOnlineServerUrl.data(), kDefaultOnlineServerUrl.size());
-        EXPECT_EQ(OnlineServerUrl(false, nullptr), standard);
-        EXPECT_EQ(OnlineServerUrl(false, ""), standard) << "an empty variable is no variable";
-        EXPECT_EQ(OnlineServerUrl(false, "ws://example.test:9"), eastl::string("ws://example.test:9"));
-        EXPECT_EQ(OnlineServerUrl(true, "ws://example.test:9"), standard) << "the browser has no environment";
-        EXPECT_EQ(OnlineServerUrl(true, nullptr), standard);
-        EXPECT_EQ(Std(standard).rfind("ws", 0), 0u);
+    namespace {
+
+        /// The config as the game reads it: a root with a `webServer` attribute (`value` null: no attribute).
+        OnlineServerConfig ConfigWith(const char* value) {
+            const XmlConfig config = XmlConfig::Create();
+            const eastl::string xml = value != nullptr ? eastl::string("<root webServer=\"") + value + "\"/>" : eastl::string("<root/>");
+            EXPECT_TRUE(config.LoadFromString(eastl::string_view(xml.data(), xml.size())));
+            return ReadOnlineServerConfig(config.GetRoot());
+        }
+
+        const eastl::string kStandardUrl(kDefaultOnlineServerUrl.data(), kDefaultOnlineServerUrl.size());
+
+    }  // namespace
+
+    TEST(MahjongOnlineServerUrl, ADesktopTakesTheVariableElseTheDefaultAndIgnoresTheConfig) {
+        const OnlineServerConfig hosted = ConfigWith("wss://rooms.example.test");
+        EXPECT_EQ(OnlineServerUrl(false, nullptr, hosted), kStandardUrl);
+        EXPECT_EQ(OnlineServerUrl(false, "", hosted), kStandardUrl) << "an empty variable is no variable";
+        EXPECT_EQ(OnlineServerUrl(false, "ws://example.test:9", hosted), eastl::string("ws://example.test:9"));
+        EXPECT_EQ(OnlineServerUrl(false, nullptr, OnlineServerConfig{}), kStandardUrl);
+        EXPECT_EQ(Std(kStandardUrl).rfind("ws", 0), 0u);
+    }
+
+    TEST(MahjongOnlineServerUrl, TheBrowserTakesTheConfigAndNothingElse) {
+        EXPECT_EQ(OnlineServerUrl(true, nullptr, ConfigWith("wss://rooms.example.test")), eastl::string("wss://rooms.example.test"));
+        EXPECT_EQ(OnlineServerUrl(true, "ws://example.test:9", ConfigWith("wss://rooms.example.test")), eastl::string("wss://rooms.example.test")) << "the browser has no environment";
+        EXPECT_EQ(OnlineServerUrl(true, nullptr, ConfigWith("ws://localhost:8080")), kStandardUrl) << "a plain address is accepted";
+        EXPECT_TRUE(OnlineServerUrl(true, nullptr, OnlineServerConfig{}).empty()) << "no localhost default in the browser";
+        EXPECT_TRUE(OnlineServerUrl(true, "ws://example.test:9", OnlineServerConfig{}).empty());
+    }
+
+    TEST(MahjongOnlineServerUrl, OnlyAWebSocketAddressReadsAsSet) {
+        EXPECT_EQ(ConfigWith("wss://rooms.example.test").webServer, eastl::string("wss://rooms.example.test"));
+        EXPECT_EQ(ConfigWith("ws://localhost:8080").webServer, kStandardUrl);
+        EXPECT_TRUE(ConfigWith(nullptr).webServer.empty());
+        EXPECT_TRUE(ConfigWith("").webServer.empty());
+        EXPECT_TRUE(ConfigWith("http://rooms.example.test").webServer.empty());
+        EXPECT_TRUE(ConfigWith("https://rooms.example.test").webServer.empty());
+        EXPECT_TRUE(ConfigWith("rooms.example.test").webServer.empty());
+        EXPECT_TRUE(ReadOnlineServerConfig(XmlNode()).webServer.empty()) << "an invalid node reads as not set";
+    }
+
+    TEST(MahjongOnlineServerUrl, TheShippedConfigNamesASecureServer) {
+        const XmlConfig config = XmlConfig::Create();
+        ASSERT_TRUE(config.LoadFromFile(ShippedConfigDirectory() / (std::string(kOnlineConfigName.data(), kOnlineConfigName.size()) + ".xml")));
+        const OnlineServerConfig shipped = ReadOnlineServerConfig(config.GetRoot());
+        EXPECT_EQ(Std(shipped.webServer).rfind("wss://", 0), 0u) << "a typo in config/MahjongOnlineConfig.xml reads as not set: " << Std(shipped.webServer);
     }
 
 }  // namespace BECore::Mahjong::Tests

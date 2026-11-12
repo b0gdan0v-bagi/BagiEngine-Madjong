@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<!--
+  The address of the room server for the browser build (src/Mahjong/Online/OnlineServerUrl.h). The page cannot read an environment
+  variable, so the address is here; it is read only in the browser: a desktop build still reads BAGI_MAHJONG_SERVER (else
+  ws://localhost:8080) and ignores this file.
+
+  webServer is the wss:// address of the Railway domain of the service bagi-mahjong-rooms (docs/web.md). Empty, missing or not
+  starting with ws:// or wss://: the browser has no server address and the Online button of Setup is hidden. The file is packed
+  into the .data package of the page, so an edit needs the web build again.
+-->
+<root webServer="wss://bagi-mahjong-rooms-production.up.railway.app"/>
