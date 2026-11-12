@@ -189,6 +189,7 @@ namespace BECore::Mahjong {
         const UIStrings& strings = CoreManager::GetUIStrings();
         const OnlineValues& stored = game.StoredOnline();
         _screens.Refresh(strings);
+        _screens.Sync(game.GetOnline());  // the revision of this client is known before a stored room is offered
         if (!stored.name.empty()) {
             _screens.SetStoredName(stored.name);
         }

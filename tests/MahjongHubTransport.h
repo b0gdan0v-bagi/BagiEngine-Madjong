@@ -128,6 +128,20 @@ namespace BECore::Mahjong::Tests {
         /// The factory of one client's transports; their links are appended to @p links.
         [[nodiscard]] RoomTransportFactory Factory(HubClientLinks& links);
 
+        /// The settings of one client on this world, for `OnlineClient` and `MahjongGame::SetOnlineSettings`: its transports are made by `Factory(links)`, no heartbeat to answer
+        /// (the clock of the test jumps by seconds) and a short backoff. @p links must outlive the client.
+        [[nodiscard]] RoomClientSettings MakeClientSettings(HubClientLinks& links) {
+            constexpr std::chrono::milliseconds kBackoff{100};
+            constexpr std::chrono::milliseconds kBackoffMax{1000};
+            RoomClientSettings settings;
+            settings.transportFactory = Factory(links);
+            settings.pingInterval = std::chrono::milliseconds(0);
+            settings.silenceLimit = std::chrono::milliseconds(0);
+            settings.backoffStart = kBackoff;
+            settings.backoffMax = kBackoffMax;
+            return settings;
+        }
+
         /// The transport calls these.
         void Connect(const std::shared_ptr<HubLink>& link);
         void Deliver(HubLink& link, eastl::string_view text);
@@ -300,7 +314,7 @@ namespace BECore::Mahjong::Tests {
     /// per view).
     class HubPlayer {
     public:
-        explicit HubPlayer(MahjongHubWorld& world) : _world(world), _client(MakeSettings(world)) {}
+        explicit HubPlayer(MahjongHubWorld& world) : _world(world), _client(world.MakeClientSettings(_links)) {}
 
         HubPlayer(const HubPlayer&) = delete;
         HubPlayer& operator=(const HubPlayer&) = delete;
@@ -353,19 +367,6 @@ namespace BECore::Mahjong::Tests {
         }
 
     private:
-        RoomClientSettings MakeSettings(MahjongHubWorld& world) {
-            constexpr std::chrono::milliseconds kBackoff{100};
-            constexpr std::chrono::milliseconds kBackoffMax{1000};
-            RoomClientSettings settings;
-            settings.transportFactory = world.Factory(_links);
-            // The manual clock jumps by seconds: no heartbeat to answer
-            settings.pingInterval = std::chrono::milliseconds(0);
-            settings.silenceLimit = std::chrono::milliseconds(0);
-            settings.backoffStart = kBackoff;
-            settings.backoffMax = kBackoffMax;
-            return settings;
-        }
-
         static constexpr uint64_t kNever = std::numeric_limits<uint64_t>::max();
 
         MahjongHubWorld& _world;

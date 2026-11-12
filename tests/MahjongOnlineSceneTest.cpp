@@ -1,12 +1,16 @@
 #include "ComputerTestSupport.h"
 #include "MahjongButtonSupport.h"
+#include "MahjongHubTransport.h"
 #include "MahjongTableTestSupport.h"
 #include "MahjongTouchTestSupport.h"
 #include "StringsTestSupport.h"
 
+#include <Common/TempPath.h>
 #include <CoreSDL/SDLEvents.h>
 #include <Mahjong/Components/MahjongOnlineComponent.h>
+#include <Mahjong/Online/OnlineWords.h>
 #include <Mahjong/Online/TextEntry.h>
+#include <Rooms/RoomErrors.h>
 
 /**
  * The online panel in the shipped scene (`Components/MahjongOnlineComponent.h`, the nodes `Online` and `OnlineEntry`): the `Online` button of `Setup` opens it over `Setup`, the pages
@@ -418,6 +422,354 @@ namespace BECore::Mahjong::Tests {
             Act("MahjongOnlineDone");
             Act("MahjongOnlineClose");
         });
+    }
+
+    // ----- A room played through the screens, over the real hub -----
+
+    namespace {
+
+        using std::chrono::milliseconds;
+        using std::chrono::seconds;
+
+        constexpr int kPumpLimit = 2000;
+        constexpr milliseconds kTick{10};
+        constexpr size_t kRoomCodeLength = 5;
+        constexpr const char* kTempFolder = "BagiMahjongOnlineSceneTest";
+        constexpr eastl::string_view kUrl = "ws://hub.test";
+
+    }  // namespace
+
+    /// The game of the scene on the in-memory hub of `MahjongHubTransport.h`, with its save folder in a temp directory (the slot `online` is written there by the HUD's flush).
+    class MahjongOnlineRoomTest : public MahjongOnlineSceneTest {
+    protected:
+        void SetUp() override {
+            _folder = TestTempDirectory(kTempFolder);
+            std::filesystem::remove_all(_folder);
+            SetMatchSaveDirectory(_folder);
+            MahjongOnlineSceneTest::SetUp();
+            ASSERT_TRUE(_game->SetOnlineSettings(_world.MakeClientSettings(_links)));
+        }
+
+        void TearDown() override {
+            MahjongOnlineSceneTest::TearDown();  // the game stops: its last flush still goes to the folder
+            SetMatchSaveDirectory(std::filesystem::path());
+            std::error_code error;
+            std::filesystem::remove_all(_folder, error);
+        }
+
+        /// Frames of the scene and of the other people of the room until @p done: the clock of the world moves by a tick, the others read what came, the scene updates and draws.
+        template <typename Done>
+        bool PumpUntil(Done done, const std::vector<HubPlayer*>& others = {}) {
+            for (int count = 0; count < kPumpLimit; ++count) {
+                if (done()) {
+                    return true;
+                }
+                _world.Advance(kTick);
+                for (HubPlayer* other : others) {
+                    other->Update();
+                }
+                Frame();
+                TellTheJudge();
+            }
+            return done();
+        }
+
+        /// The seat the game's client holds is the seat the judge compares its views with (a seat it chose is not in its `joined`).
+        void TellTheJudge() {
+            if (!_links.links.empty() && _game->GetOnline().Seat() >= 0) {
+                _links.Last().judgeSeat = _game->GetOnline().Seat();
+            }
+        }
+
+        /// Only the others read what came: the scene shows what it showed.
+        void LetOthersRun(const std::vector<HubPlayer*>& others, const std::function<bool()>& done) {
+            for (int count = 0; count < kPumpLimit && !done(); ++count) {
+                _world.Advance(kTick);
+                for (HubPlayer* other : others) {
+                    other->Update();
+                }
+            }
+        }
+
+        void Join(HubPlayer& player, const std::string& code, const char* name, const std::vector<HubPlayer*>& others) {
+            ASSERT_TRUE(player.Client().Join(kUrl, eastl::string(code.c_str()), name));
+            ASSERT_TRUE(PumpUntil([&] { return player.Client().Stage() == OnlineStage::Lobby; }, others));
+        }
+
+        /// The name is typed on the pad page and the form is back.
+        void TypeName(const char* name) {
+            ASSERT_TRUE(ClickElement(kOnline, "OnlineName"));
+            Draw();
+            ASSERT_EQ(Screens().Page(), OnlinePage::Entry);
+            for (int i = 0; i < 24; ++i) {
+                EmitAction("MahjongOnlineBackspace");
+            }
+            for (const char* at = name; *at != 0; ++at) {
+                const bool upper = *at >= 'A' && *at <= 'Z';
+                PressKeyboard(static_cast<SDL_Keycode>(upper ? *at - 'A' + 'a' : *at), upper);
+            }
+            Act("MahjongOnlineDone");
+            ASSERT_NE(Screens().Page(), OnlinePage::Entry);
+        }
+
+        /// The Join form: the code is typed on the keyboard of the pad page and Enter is clicked; the name stays the default one.
+        void EnterByTheCode(const std::string& code) {
+            ASSERT_NO_FATAL_FAILURE(OpenPanel());
+            ASSERT_NO_FATAL_FAILURE(GoToTheJoinForm());
+            ASSERT_TRUE(ClickElement(kOnline, "OnlineCode"));
+            Draw();
+            for (const char letter : code) {
+                PressKeyboard(static_cast<SDL_Keycode>(letter >= 'A' && letter <= 'Z' ? letter - 'A' + 'a' : letter));
+            }
+            Act("MahjongOnlineDone");
+            ASSERT_EQ(Var("onlineCode"), code);
+            ASSERT_TRUE(ClickElement(kOnline, "OnlineEnter"));
+        }
+
+        std::string SeatText(size_t seat) const {
+            return Var(Format("onlineSeat{}", seat).c_str());
+        }
+
+        std::string Notice() const {
+            return ItemShown(kOnline, "OnlineNotice") ? Var("onlineNotice") : std::string();
+        }
+
+        /// The game object made again, as a restart of the program does: the scene stays, the game starts on the same folder and its client on a new transport.
+        void RestartTheGame() {
+            GameManager::GetInstance().Shutdown();
+            _links.links.clear();
+            GameManager::GetInstance().Initialize();
+            _game = MahjongGame::GetActive();
+            ASSERT_NE(_game, nullptr);
+            ASSERT_TRUE(_game->SetOnlineSettings(_world.MakeClientSettings(_links)));
+        }
+
+        MahjongHubWorld _world;
+        HubClientLinks _links;
+        std::filesystem::path _folder;
+    };
+
+    TEST_F(MahjongOnlineRoomTest, AHostCreatesARoomThroughTheClicksThreePeopleJoinAndTheStartedGameIsShown) {
+        ASSERT_NO_FATAL_FAILURE(OpenPanel());
+        ASSERT_NO_FATAL_FAILURE(GoToTheHostForm());
+        ASSERT_NO_FATAL_FAILURE(TypeName("Anna"));
+        Act("MahjongOnlineHands", "8");
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineCreate"));
+        ASSERT_TRUE(PumpUntil([&] { return Screens().Page() == OnlinePage::Lobby && _game->GetOnline().Stage() == OnlineStage::Lobby; }));
+
+        // The lobby: the code, the host on the first seat, the rest empty and free to take
+        const std::string code = Var("onlineRoom");
+        ASSERT_EQ(code.size(), kRoomCodeLength);
+        EXPECT_EQ(code, std::string(_game->GetOnline().Room().c_str()));
+        EXPECT_EQ(Text(kOnline, "OnlineTitleLobby"), "Room " + code);
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineTitleLobby"));
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineNameRow"));
+        EXPECT_EQ(SeatText(0), "Anna (you)");
+        for (size_t seat = 1; seat < 4; ++seat) {
+            EXPECT_EQ(SeatText(seat), "Empty") << seat;
+            EXPECT_TRUE(ItemShown(kOnline, Format("OnlineSit{}", seat).c_str())) << seat;
+        }
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineSit0")) << "the own seat is not offered";
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineStart"));
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineLeave"));
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineWaiting"));
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineStarted"));
+        EXPECT_TRUE(_game->StoredOnline().session.IsValid()) << "the session is kept as soon as there is one";
+
+        // Two people join by the code: each takes the lowest free seat and the seat rows name them
+        HubPlayer bo(_world);
+        HubPlayer cy(_world);
+        HubPlayer di(_world);
+        ASSERT_NO_FATAL_FAILURE(Join(bo, code, "Bo", {&bo}));
+        ASSERT_NO_FATAL_FAILURE(Join(cy, code, "Cy", {&bo, &cy}));
+        ASSERT_TRUE(PumpUntil([&] { return SeatText(2) == "Cy"; }, {&bo, &cy}));
+        EXPECT_EQ(SeatText(1), "Bo");
+        EXPECT_EQ(SeatText(3), "Empty");
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineSit1"));
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineSit2"));
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineSit3"));
+
+        // The seat click: the host moves to the free seat, and the seat it left is free
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineSit3"));
+        ASSERT_TRUE(PumpUntil([&] { return SeatText(3) == "Anna (you)"; }, {&bo, &cy}));
+        EXPECT_EQ(SeatText(0), "Empty");
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineSit0"));
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineSit3"));
+        EXPECT_EQ(Notice(), "");
+
+        // The last one fills the room: it takes the seat the host left
+        ASSERT_NO_FATAL_FAILURE(Join(di, code, "Di", {&bo, &cy, &di}));
+        ASSERT_TRUE(PumpUntil([&] { return SeatText(0) == "Di"; }, {&bo, &cy, &di}));
+        EXPECT_EQ(SeatText(3), "Anna (you)");
+        for (size_t seat = 0; seat < 4; ++seat) {
+            EXPECT_FALSE(ItemShown(kOnline, Format("OnlineSit{}", seat).c_str())) << "the room is full";
+        }
+
+        // Start: the screen shows the started game, in both languages
+        ASSERT_TRUE(ItemShown(kOnline, "OnlineStart"));
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineStart"));
+        ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Game; }, {&bo, &cy, &di}));
+        EXPECT_EQ(Screens().Page(), OnlinePage::Lobby);
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineStarted"));
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineStart"));
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineWaiting"));
+        EXPECT_EQ(Text(kOnline, "OnlineStarted"), "The game has started");
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineLeave"));
+        ASSERT_TRUE(_game->SetLanguage("ru"_intern));
+        Frame();
+        EXPECT_EQ(Text(kOnline, "OnlineStarted"), "Игра началась");
+        EXPECT_EQ(SeatText(3), "Anna (вы)");
+        ASSERT_TRUE(_game->SetLanguage("en"_intern));
+        Frame();
+        EXPECT_EQ(_world.Judge().Offences().size(), 0u) << (_world.Judge().Offences().empty() ? "" : _world.Judge().Offences().front());
+        EXPECT_EQ(_world.Judge().NonText(), 0u);
+    }
+
+    TEST_F(MahjongOnlineRoomTest, AGuestEntersByTheCodeSeesTheWaitingLineAndTheLobbyPassesTheSizeMatrixInBothLanguages) {
+        HubPlayer host(_world);
+        ASSERT_TRUE(host.Client().Host(kUrl, "Hanna", OnlineRoomOptions{kShortMatchHands, kMinLevel}));
+        ASSERT_TRUE(PumpUntil([&] { return host.Client().Stage() == OnlineStage::Lobby; }, {&host}));
+        const std::string code(host.Client().Room().c_str());
+
+        ASSERT_NO_FATAL_FAILURE(EnterByTheCode(code));
+        ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Lobby; }, {&host}));
+        ASSERT_TRUE(PumpUntil([&] { return SeatText(1) == "Player (you)"; }, {&host}));
+        EXPECT_EQ(SeatText(0), "Hanna");
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineWaiting"));
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineStart")) << "only the host starts";
+        EXPECT_EQ(Text(kOnline, "OnlineWaiting"), "Waiting for the host");
+
+        // A seat that was taken meanwhile: the screen has not heard of it yet, the server refuses, and the notice says so once
+        HubPlayer cy(_world);
+        ASSERT_NO_FATAL_FAILURE(Join(cy, code, "Cy", {&host, &cy}));
+        ASSERT_TRUE(PumpUntil([&] { return SeatText(2) == "Cy"; }, {&host, &cy}));
+        ASSERT_TRUE(ItemShown(kOnline, "OnlineSit3"));
+        ASSERT_TRUE(cy.Client().ChooseSeat(3));
+        cy.Sync();
+        LetOthersRun({&host, &cy}, [&] { return host.Client().Lobby().seats[3].kind == BECore::SeatKind::Human; });
+        ASSERT_TRUE(ItemShown(kOnline, "OnlineSit3")) << "the screen was not drawn since";
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineSit3"));
+        ASSERT_TRUE(PumpUntil([&] { return !Notice().empty(); }, {&host, &cy}));
+        EXPECT_EQ(Notice(), std::string(OnlineNoticeText(CoreManager::GetUIStrings(), OnlineErrorKey(RoomErrors::kSeatTaken)).c_str()));
+        ASSERT_TRUE(PumpUntil([&] { return SeatText(3) == "Cy"; }, {&host, &cy}));
+        EXPECT_EQ(SeatText(1), "Player (you)") << "the seat of the guest did not move";
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineSit2")) << "the seat Cy left is free";
+        const std::string notice = Notice();
+        for (int i = 0; i < 5; ++i) {
+            Frame();
+        }
+        EXPECT_EQ(Notice(), notice) << "the notice stays until the player moves";
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineSit2"));
+        ASSERT_TRUE(PumpUntil([&] { return SeatText(2) == "Player (you)"; }, {&host, &cy}));
+        EXPECT_EQ(Notice(), "") << "the next move of the player clears it";
+
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            ASSERT_TRUE(_game->SetLanguage(language));
+            Frame();
+            ExpectTheCanvasFits(kOnline);
+        });
+    }
+
+    TEST_F(MahjongOnlineRoomTest, AConnectionLostInTheLobbyShowsTheReconnectLineAndTheLobbyStaysAsItWas) {
+        HubPlayer host(_world);
+        ASSERT_TRUE(host.Client().Host(kUrl, "Hanna", OnlineRoomOptions{kShortMatchHands, kMinLevel}));
+        ASSERT_TRUE(PumpUntil([&] { return host.Client().Stage() == OnlineStage::Lobby; }, {&host}));
+        const std::string code(host.Client().Room().c_str());
+        ASSERT_NO_FATAL_FAILURE(EnterByTheCode(code));
+        ASSERT_TRUE(PumpUntil([&] { return Screens().Page() == OnlinePage::Lobby && SeatText(1) == "Player (you)"; }, {&host}));
+
+        _world.SetRefusing(true);
+        _world.Sever(_links.Last());
+        ASSERT_TRUE(PumpUntil([&] { return ItemShown(kOnline, "OnlineStatus"); }, {&host}));
+        EXPECT_EQ(Var("onlineStatus"), "The connection was lost. Reconnecting...");
+        EXPECT_EQ(Screens().Page(), OnlinePage::Lobby);
+        EXPECT_EQ(SeatText(0), "Hanna");
+        EXPECT_EQ(SeatText(1), "Player (you)");
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineNotice")) << "a lost connection is a status, not an error";
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineWaiting"));
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineLeave"));
+        for (const PoolString language : {PoolString("ru"_intern), PoolString("en"_intern)}) {
+            ASSERT_TRUE(_game->SetLanguage(language));
+            Frame();
+            ExpectTheCanvasFits(kOnline);
+        }
+    }
+
+    TEST_F(MahjongOnlineRoomTest, AStartedGameIsReturnedToAfterTheGameObjectIsMadeAgainAndARoomThatIsGoneSaysSoAndForgetsTheSession) {
+        // A game of two people and a computer pair: the room outlives the host's connection
+        ASSERT_NO_FATAL_FAILURE(OpenPanel());
+        ASSERT_NO_FATAL_FAILURE(GoToTheHostForm());
+        ASSERT_NO_FATAL_FAILURE(TypeName("Anna"));
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineCreate"));
+        ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Lobby; }));
+        const std::string code = Var("onlineRoom");
+        HubPlayer bo(_world);
+        ASSERT_NO_FATAL_FAILURE(Join(bo, code, "Bo", {&bo}));
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineStart"));
+        ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Game; }, {&bo}));
+        const RoomSession kept = _game->GetOnline().SessionToKeep();
+        ASSERT_TRUE(kept.IsValid());
+        Frame();
+        EXPECT_TRUE(_game->StoredOnline().session.IsValid());
+        EXPECT_EQ(_game->StoredOnline().name, "Anna");
+        EXPECT_TRUE(std::filesystem::exists(_folder / "online.save")) << "the slot is written by the flush of the frame";
+
+        // The program ends, the host's connection with it; the room goes on with Bo in it
+        ASSERT_NO_FATAL_FAILURE(RestartTheGame());
+        EXPECT_EQ(_game->StoredOnline().name, "Anna");
+        ASSERT_TRUE(_game->StoredOnline().session.IsValid());
+        EXPECT_TRUE(_game->StoredOnline().session.token == kept.token) << "the token came back from the slot";
+
+        // The first screen again: the Online button, the Menu offers Return to the room of the slot
+        Draw();
+        ASSERT_TRUE(_game->IsSetupOpen());
+        ASSERT_TRUE(ClickElement("Setup", "SetupOnline"));
+        Draw();
+        ASSERT_EQ(Screens().Page(), OnlinePage::Menu);
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineMenuReturn"));
+        EXPECT_EQ(Text(kOnline, "OnlineMenuReturn"), "Return to room " + code);
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineMenuReturn"));
+        ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Game; }, {&bo}));
+        EXPECT_EQ(Screens().Page(), OnlinePage::Lobby);
+        EXPECT_EQ(Var("onlineRoom"), code);
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineStarted"));
+        EXPECT_EQ(SeatText(0), "Anna (you)");
+        EXPECT_EQ(SeatText(1), "Bo");
+        EXPECT_EQ(Notice(), "");
+        EXPECT_EQ(_world.Judge().Offences().size(), 0u);
+
+        // Leave: the session is forgotten and the slot goes with it
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineLeave"));
+        ASSERT_TRUE(PumpUntil([&] { return Screens().Page() == OnlinePage::Menu; }, {&bo}));
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineMenuReturn"));
+        EXPECT_FALSE(_game->StoredOnline().session.IsValid());
+    }
+
+    TEST_F(MahjongOnlineRoomTest, ARoomThatIsGoneIsReportedOnReturnAndTheStoredSessionIsForgotten) {
+        ASSERT_NO_FATAL_FAILURE(OpenPanel());
+        ASSERT_NO_FATAL_FAILURE(GoToTheHostForm());
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineCreate"));
+        ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Lobby; }));
+        const std::string code = Var("onlineRoom");
+        Frame();
+        ASSERT_TRUE(_game->StoredOnline().session.IsValid());
+
+        // Alone in a lobby: the room goes with the connection, the session stays in the slot
+        _game->GetOnline().Disconnect();
+        ASSERT_TRUE(PumpUntil([&] { return Screens().Page() == OnlinePage::Menu; }));
+        ASSERT_TRUE(ItemShown(kOnline, "OnlineMenuReturn"));
+        EXPECT_EQ(Text(kOnline, "OnlineMenuReturn"), "Return to room " + code);
+
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineMenuReturn"));
+        ASSERT_TRUE(PumpUntil([&] { return !Notice().empty(); }));
+        EXPECT_EQ(Notice(), std::string(OnlineNoticeText(CoreManager::GetUIStrings(), OnlineErrorKey(RoomClientCloseReasons::kRoomGone)).c_str()));
+        EXPECT_EQ(Screens().Page(), OnlinePage::Menu);
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineMenuReturn")) << "there is no room to return to";
+        EXPECT_FALSE(_game->StoredOnline().session.IsValid());
+        EXPECT_FALSE(_game->GetOnline().SessionToKeep().IsValid());
+        Frame();
+        EXPECT_FALSE(std::filesystem::exists(_folder / "online.save")) << "no name and no session: the slot is gone";
     }
 
 }  // namespace BECore::Mahjong::Tests
