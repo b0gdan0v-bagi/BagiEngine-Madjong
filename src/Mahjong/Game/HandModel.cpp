@@ -145,6 +145,9 @@ namespace BECore::Mahjong {
     }  // namespace
 
     HandStatus HandModel::Begin(const MahjongSettings& settings, Wall wall, const SeatWinds& seatWinds, Wind roundWind) {
+        if (_displayOnly) {
+            return std::unexpected(HandError::WrongPhase);
+        }
         const Seat east = EastOf(seatWinds);
         if (east == kNoSeat) {
             return std::unexpected(HandError::BadSeatWinds);
@@ -380,8 +383,32 @@ namespace BECore::Mahjong {
         return model;
     }
 
+    HandModel HandModel::ForDisplay(HandState state) {
+        HandModel model;
+        model._settings = state.settings;
+        model._seatWinds = state.seatWinds;
+        model._roundWind = state.roundWind;
+        model._east = state.east;
+        model._wall = Wall::FromParts(eastl::move(state.loose), eastl::move(state.live), eastl::move(state.dead));
+        model._hands = eastl::move(state.hands);
+        model._discards = eastl::move(state.discards);
+        model._moves = eastl::move(state.moves);
+        model._phase = state.phase;
+        model._current = state.current;
+        model._drawnTile = state.drawnTile;
+        model._drawnLoose = state.drawnLoose;
+        model._claimStatus = state.claimStatus;
+        model._claims = state.claims;
+        model._pendingTile = state.pendingTile;
+        model._result = state.result;
+        model._lastWindow = eastl::move(state.lastWindow);
+        model._windowSerial = state.windowSerial;
+        model._displayOnly = true;
+        return model;
+    }
+
     HandStatus HandModel::CheckOwnTurn(Seat seat) const {
-        if (_phase != Phase::Discard) {
+        if (_displayOnly || _phase != Phase::Discard) {
             return std::unexpected(HandError::WrongPhase);
         }
         if (seat != _current || !IsSeat(seat)) {
@@ -476,7 +503,7 @@ namespace BECore::Mahjong {
     }
 
     HandStatus HandModel::Claim(Seat seat, ClaimKind kind, Tile chowFirst) {
-        if (_phase != Phase::Claim && _phase != Phase::RobKong) {
+        if (_displayOnly || (_phase != Phase::Claim && _phase != Phase::RobKong)) {
             return std::unexpected(HandError::WrongPhase);
         }
         if (!IsSeat(seat) || seat == _current) {
@@ -511,7 +538,7 @@ namespace BECore::Mahjong {
     }
 
     HandStatus HandModel::Pass(Seat seat) {
-        if (_phase != Phase::Claim && _phase != Phase::RobKong) {
+        if (_displayOnly || (_phase != Phase::Claim && _phase != Phase::RobKong)) {
             return std::unexpected(HandError::WrongPhase);
         }
         if (!IsSeat(seat) || _claimStatus[seat] == ClaimStatus::NotInWindow) {
@@ -537,8 +564,12 @@ namespace BECore::Mahjong {
         return seats;
     }
 
+    bool HandModel::AwaitsClaim(Seat seat) const noexcept {
+        return (_phase == Phase::Claim || _phase == Phase::RobKong) && IsSeat(seat) && _claimStatus[seat] == ClaimStatus::Waiting;
+    }
+
     eastl::vector<ClaimOption> HandModel::LegalClaims(Seat seat) const {
-        if ((_phase != Phase::Claim && _phase != Phase::RobKong) || !IsSeat(seat) || _claimStatus[seat] != ClaimStatus::Waiting) {
+        if (_displayOnly || (_phase != Phase::Claim && _phase != Phase::RobKong) || !IsSeat(seat) || _claimStatus[seat] != ClaimStatus::Waiting) {
             return {};
         }
         return ClaimOptionsFor(_hands[seat], seat, _current, _pendingTile, _phase == Phase::RobKong);
@@ -546,7 +577,7 @@ namespace BECore::Mahjong {
 
     eastl::vector<HandAction> HandModel::LegalActions(Seat seat) const {
         eastl::vector<HandAction> actions;
-        if (!IsSeat(seat)) {
+        if (_displayOnly || !IsSeat(seat)) {
             return actions;
         }
         const PlayerHand& hand = _hands[seat];
@@ -589,6 +620,9 @@ namespace BECore::Mahjong {
     }
 
     HandStatus HandModel::Apply(Seat seat, const HandAction& action) {
+        if (_displayOnly) {
+            return std::unexpected(HandError::WrongPhase);
+        }
         if (!IsSeat(seat)) {
             return std::unexpected(HandError::NotYourTurn);
         }

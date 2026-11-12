@@ -11,7 +11,7 @@ namespace BECore::Mahjong {
               Host,   // the form of a new room: name, hands, level, Create
               Join,   // the form of a room to enter: name, code, Enter
               Entry,  // the pad that edits one field of the form the player came from
-              Lobby   // the room: the code, the seats, Start, Leave (also while connecting and reconnecting, and after the game has started)
+              Lobby   // the room: the code, the seats, Start, Leave (also while connecting and reconnecting before the game has started)
     )
 
     /// The field the `Entry` page edits.
@@ -21,9 +21,9 @@ namespace BECore::Mahjong {
      * @brief What the pages of the online panel show and do: the page, the two fields, the host's options and the pad. Pure, no scene: the component only shows it.
      *
      * The commands take the `OnlineClient` (which lives in `MahjongGame`, not here) and turn the player's choices into its commands; `Sync` follows the client after every
-     * `OnlineClient::Update()` and moves the page by the stage: Connecting, Lobby, Game and Reconnecting show the `Lobby` page; an `Idle` client after a request that failed
-     * returns to the form it was sent from, after a room (gone, replaced, left) to the `Menu`. An error is the notice of the client (or of a field that cannot be sent), shown
-     * once and cleared by the next move of the player.
+     * `OnlineClient::Update()` and moves the page by the stage: Connecting, Lobby and Reconnecting show the `Lobby` page and a started game (`Game`) closes the panel (the table is the scene's); an
+     * `Idle` client after a request that failed returns to the form it was sent from, after a room (gone, replaced, left) to the `Menu`. An error is the notice of the client (or of a field that
+     * cannot be sent), shown once and cleared by the next move of the player.
      *
      * Not here: the token. A session goes through the client only (`Resume` takes it from the caller).
      *
@@ -123,8 +123,9 @@ namespace BECore::Mahjong {
 
         // ---- The player's moves ----
 
-        /// Opens the panel: the `Lobby` page while the client is in a room (or connecting), else the `Menu`.
-        void Open(const OnlineClient& client);
+        /// Opens the panel: the `Lobby` page while the client is in a room (or connecting), else the `Menu`. The notice is cleared unless @p keepNotice (a room
+        /// that has just ended says why on the `Menu`).
+        void Open(const OnlineClient& client, bool keepNotice = false);
         void Close();
 
         /// Escape: an `Entry` page to its form, a form to the `Menu`, the `Menu` closes the panel. The `Lobby` does nothing (leaving is a button: a stray key must not give up a

@@ -27,6 +27,7 @@
         <string key="seat.name" text="Seat {n} ({wind})"/>
         <string key="seat.short" text="Seat {n}"/>
         <string key="seat.you" text=" You"/>
+        <string key="seat.playerWind" text="{name} ({wind})"/>
         <string key="score.of" text="{name} of {tile}"/>
         <string key="score.bracket" text="{name} ({tile})"/>
         <string key="score.points" text="{name}: {points}"/>
@@ -173,8 +174,8 @@
         <string key="panel.wall" text="Wall {wall}"/>
         <string key="table.selectedTile" text="Selected: {tile}"/>
         <string key="hud.newGame" text="New game"/>
+        <string key="hud.leaveRoom" text="Leave room"/>
         <string key="hud.rules" text="Rules"/>
-        <string key="matchover.newGame" text="New game"/>
         <string key="rules.pager" text="Page {n} of {total}"/>
         <string key="rules.back" text="Back"/>
         <string key="rules.next" text="Next"/>
@@ -320,7 +321,7 @@
         <string key="online.sit" text="Sit here"/>
         <string key="online.leave" text="Leave"/>
         <string key="online.waitHost" text="Waiting for the host"/>
-        <string key="online.started" text="The game has started"/>
+        <string key="online.table.ready" text="Ready for the next hand: {n} of {total}"/>
         <string key="online.delete" text="Delete"/>
         <string key="online.done" text="Done"/>
     </language>
@@ -349,6 +350,7 @@
         <string key="seat.name" text="Место {n} ({wind})"/>
         <string key="seat.short" text="Место {n}"/>
         <string key="seat.you" text=" Вы"/>
+        <string key="seat.playerWind" text="{name} ({wind})"/>
         <string key="score.of" text="{name} ({tile})"/>
         <string key="score.bracket" text="{name} ({tile})"/>
         <string key="score.points" text="{name}: {points}"/>
@@ -495,8 +497,8 @@
         <string key="panel.wall" text="Стена {wall}"/>
         <string key="table.selectedTile" text="Выбрано: {tile}"/>
         <string key="hud.newGame" text="Новая игра"/>
+        <string key="hud.leaveRoom" text="Выйти из комнаты"/>
         <string key="hud.rules" text="Правила"/>
-        <string key="matchover.newGame" text="Новая игра"/>
         <string key="rules.pager" text="Страница {n} из {total}"/>
         <string key="rules.back" text="Назад"/>
         <string key="rules.next" text="Далее"/>
@@ -642,7 +644,7 @@
         <string key="online.sit" text="Сесть здесь"/>
         <string key="online.leave" text="Выйти"/>
         <string key="online.waitHost" text="Ждём хозяина комнаты"/>
-        <string key="online.started" text="Игра началась"/>
+        <string key="online.table.ready" text="Готовы к следующей раздаче: {n} из {total}"/>
         <string key="online.delete" text="Стереть"/>
         <string key="online.done" text="Готово"/>
     </language>

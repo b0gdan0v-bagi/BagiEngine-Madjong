@@ -28,8 +28,8 @@ namespace BECore::Mahjong {
      *        actions it answers. The pages, the fields and the pad are `OnlineScreens` (pure); the client is `MahjongGame::GetOnline()`. This component only shows the one and
      *        feeds the other.
      *
-     * **Frame.** Every `SceneUpdateEvent` (the active game only, whether or not the panel is open) calls `OnlineClient::Update()` and `OnlineScreens::Sync`, so a room is kept alive
-     * and a reconnect runs behind the table. The save flush stays the HUD's.
+     * **Frame.** Every `SceneUpdateEvent` (the active game only, whether or not the panel is open) calls `OnlineClient::Update()`, `MahjongGame::SyncOnlineTable()` (the room's table, which closes the
+     * panel when it goes live) and `OnlineScreens::Sync`, so a room is kept alive and a reconnect runs behind the table. The save flush stays the HUD's.
      *
      * **Open.** `MahjongGame::IsOnlineOpen()` is the owner of the state: the `Online` button of `Setup` (`MahjongOnline`, only while `Setup` is open, never in the browser build)
      * sets it and this component opens the pages; `Start()` and `Stop()` of the game clear it and the pages close. `OnlineClose` hides the panel and leaves the room as it is. The
@@ -82,7 +82,7 @@ namespace BECore::Mahjong {
         void SetPadRow(size_t row, bool visible);
 
         /// The elements the pages show among themselves (`Item` in the source file).
-        static constexpr size_t kItemCount = 31;
+        static constexpr size_t kItemCount = 30;
 
         OnlineScreens _screens;
         PoolString _seatVars[kSeatCount];

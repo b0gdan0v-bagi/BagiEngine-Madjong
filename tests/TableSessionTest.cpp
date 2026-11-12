@@ -961,4 +961,131 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(with.observer.records.size(), 1u);
     }
 
+    // ----- remote mode: a table that is shown, not played -----
+
+    namespace {
+
+        /// A session in remote mode over the display copy of a started match, seat `viewer` face up and `actor` waited for.
+        struct RemoteTable {
+            Table source;
+            MatchLog log;
+            Match match;
+            TableSession session{match};
+            SeatNames names;
+
+            void Show(Seat viewer, Seat actor, bool newTable, const SeatSetup& seats = kAllPeople) {
+                match.ShowRemote(source.match.GetSettings(), MatchPhase::InHand, source.match.HandsPlayed(), source.match.East(), source.match.Scores(),
+                                 HandModel::ForDisplay(source.match.Hand().Capture()));
+                names = {eastl::string("Ann"), eastl::string("Bob"), eastl::string("Cy"), eastl::string("Di")};
+                session.ShowRemote(seats, UniformLevels(ComputerLevel::Easy), names, viewer, actor, newTable);
+            }
+        };
+
+    }  // namespace
+
+    TEST(TableSessionTest, ShowRemoteSetsWhatAClientKnowsAndBumpsTheVersion) {
+        RemoteTable remote;
+        ASSERT_NO_FATAL_FAILURE(remote.source.Start(kAllComputers));
+        const Seat waited = remote.source.match.Hand().CurrentSeat();
+        const uint64_t version = remote.session.Version();
+
+        remote.Show(kSeat2, waited, true);
+
+        EXPECT_TRUE(remote.session.IsRemote());
+        EXPECT_GT(remote.session.Version(), version);
+        EXPECT_EQ(remote.session.StartCount(), 1U);
+        EXPECT_EQ(remote.session.Viewer(), kSeat2);
+        EXPECT_EQ(remote.session.Seats(), kAllPeople);
+        EXPECT_EQ(remote.session.LevelOf(kSeat1), ComputerLevel::Easy);
+        EXPECT_EQ(remote.session.NameOf(kSeat1), "Bob");
+        EXPECT_TRUE(remote.session.NameOf(kNoSeat).empty());
+        EXPECT_EQ(remote.session.GetPhase(), SessionPhase::Playing);
+        EXPECT_EQ(remote.session.Actor(), waited);
+        EXPECT_TRUE(remote.session.ActorIsPerson());
+        EXPECT_FALSE(remote.session.HandoffPending());
+
+        // Another view of the same table: the version moves, the start count does not.
+        const uint64_t shown = remote.session.Version();
+        remote.Show(kSeat2, waited, false);
+        EXPECT_GT(remote.session.Version(), shown);
+        EXPECT_EQ(remote.session.StartCount(), 1U);
+        remote.Show(kSeat2, waited, true);
+        EXPECT_EQ(remote.session.StartCount(), 2U);
+    }
+
+    TEST(TableSessionTest, ARemoteSessionPlaysNothingAndReportsNothing) {
+        RemoteTable remote;
+        ASSERT_NO_FATAL_FAILURE(remote.source.Start(kAllComputers));
+        const Seat waited = remote.source.match.Hand().CurrentSeat();
+        MatchLog log;
+        remote.session.SetLogSink(&log);
+        remote.Show(kSeat2, waited, true, kTwoPeople);
+        const uint64_t version = remote.session.Version();
+        const uint64_t starts = remote.session.StartCount();
+        const std::string hand = Snapshot(remote.match.Hand());
+        // A job begun before the mode: stale.
+        Table other;
+        ASSERT_NO_FATAL_FAILURE(other.Start(kAllComputers));
+        const std::optional<ComputerStepJob> job = other.session.BeginComputerStep();
+        ASSERT_TRUE(job.has_value());
+
+        EXPECT_EQ(remote.session.StepComputer().error(), HandError::WrongPhase);
+        EXPECT_FALSE(remote.session.BeginComputerStep().has_value());
+        EXPECT_FALSE(remote.session.FinishComputerStep(*job).has_value());
+        EXPECT_EQ(remote.session.RunComputers(), 0);
+        EXPECT_EQ(remote.session.PerformPerson(HandAction::MakePass()).error(), HandError::NotYourTurn);
+        EXPECT_EQ(remote.session.NextHand().error(), MatchError::NotInHand);
+        remote.session.Reveal();
+
+        EXPECT_EQ(remote.session.Version(), version);
+        EXPECT_EQ(remote.session.StartCount(), starts);
+        EXPECT_EQ(remote.session.Viewer(), kSeat2);
+        EXPECT_EQ(Snapshot(remote.match.Hand()), hand);
+        EXPECT_TRUE(log.Events().empty());
+        EXPECT_FALSE(remote.session.HandoffPending());
+        EXPECT_EQ(remote.session.GetPhase(), SessionPhase::Playing);
+    }
+
+    TEST(TableSessionTest, ARemoteSessionFollowsTheMatchPhaseAndAnActorOnlyWhilePlaying) {
+        RemoteTable remote;
+        ASSERT_NO_FATAL_FAILURE(remote.source.Start(kAllComputers));
+        MahjongRng rng(kSeed);
+        while (remote.source.match.Hand().GetPhase() != Phase::Finished) {
+            const Seat actor = NextActor(remote.source.match.Hand(), rng);
+            ASSERT_TRUE(remote.source.match.Hand().Apply(actor, Choose(remote.source.match.Hand().LegalActions(actor), Mode::SeekWin, rng)).has_value());
+        }
+
+        remote.Show(kSeat0, kSeat1, true);
+
+        EXPECT_EQ(remote.session.GetPhase(), SessionPhase::HandOver);
+        EXPECT_EQ(remote.session.Actor(), kNoSeat);
+        EXPECT_FALSE(remote.session.ActorIsPerson());
+        EXPECT_EQ(remote.session.PerformPerson(HandAction::MakePass()).error(), HandError::WrongPhase);
+    }
+
+    TEST(TableSessionTest, AStartLeavesRemoteMode) {
+        RemoteTable remote;
+        ASSERT_NO_FATAL_FAILURE(remote.source.Start(kAllComputers));
+        remote.Show(kSeat2, kSeat0, true);
+        const uint64_t version = remote.session.Version();
+
+        // A refused start leaves the mode as it was.
+        MahjongSettings bad;
+        bad.handsPerMatch = 3;
+        EXPECT_FALSE(remote.session.StartMatch(bad, kSeed, PersonAt(0)).has_value());
+        EXPECT_TRUE(remote.session.IsRemote());
+        EXPECT_EQ(remote.session.Version(), version);
+
+        ASSERT_TRUE(remote.session.StartMatch(MahjongSettings{}, kSeed, PersonAt(0)).has_value());
+
+        EXPECT_FALSE(remote.session.IsRemote());
+        EXPECT_FALSE(remote.match.IsRemote());
+        EXPECT_GT(remote.session.Version(), version);
+        EXPECT_TRUE(remote.session.NameOf(kSeat1).empty());
+        EXPECT_EQ(remote.session.Viewer(), kSeat0);
+        EXPECT_EQ(remote.session.Actor(), remote.match.Hand().CurrentSeat());
+        EXPECT_EQ(remote.session.RunComputers(), 0);
+        EXPECT_TRUE(remote.session.PerformPerson(MakeTableView(remote.match.Hand(), 0).legal.front()).has_value());
+    }
+
 }  // namespace BECore::Mahjong::Tests

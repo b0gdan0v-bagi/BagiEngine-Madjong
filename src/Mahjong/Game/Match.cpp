@@ -65,7 +65,7 @@ namespace BECore::Mahjong {
 
     std::expected<HandSettlement, MatchError> Match::EndHand() {
         BE_PROFILE_SCOPE("Match::EndHand");
-        if (_phase != MatchPhase::InHand) {
+        if (_phase != MatchPhase::InHand || IsRemote()) {
             return std::unexpected(MatchError::NotInHand);
         }
         if (_hand.GetPhase() != Phase::Finished) {
@@ -79,7 +79,7 @@ namespace BECore::Mahjong {
     }
 
     MatchStatus Match::ApplySettlement(const HandSettlement& settlement) {
-        if (_phase != MatchPhase::InHand) {
+        if (_phase != MatchPhase::InHand || IsRemote()) {
             return std::unexpected(MatchError::NotInHand);
         }
         const MatchProgress next = NextProgress(_progress, settlement.kind, settlement.winner, _settings);
@@ -102,6 +102,16 @@ namespace BECore::Mahjong {
             _hand = eastl::move(nextHand);
         }
         return {};
+    }
+
+    void Match::ShowRemote(const MahjongSettings& settings, MatchPhase phase, int handsPlayed, Seat east, const SeatScores& scores, HandModel hand) {
+        Match next;
+        next._settings = settings;
+        next._phase = phase;
+        next._progress = MatchProgress{handsPlayed, east};
+        next._scores = scores;
+        next._hand = eastl::move(hand);
+        *this = eastl::move(next);
     }
 
     eastl::array<Seat, kSeatCount> Match::Standings() const {

@@ -97,7 +97,8 @@ namespace BECore::Mahjong {
      * game (the seed: the one of the last `reset`, or 1). The seats, the settings and the levels stay for the next match. A level that
      * is not a whole number 1..10 (a string too), `levels` that is not an array of four of them, and `level` together with `levels`
      * are `invalid_params`, which names the key, and nothing changes.
-     * `set_state` is not supported. `no_active_model` before the first match was started.
+     * `set_state` is not supported. `no_active_model` before the first match was started and while the game plays in an online room (`MahjongGame::IsOnlineTable()`: the
+     * adapter drives the local match only).
      */
     class MahjongGameControl : public IControllableGame {
     public:

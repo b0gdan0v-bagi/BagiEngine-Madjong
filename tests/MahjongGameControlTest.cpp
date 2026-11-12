@@ -1,6 +1,7 @@
 #include "ComputerTestSupport.h"
 #include "FixedWall.h"
 #include "HandTestSupport.h"
+#include "MahjongHubTransport.h"
 #include "StringsTestSupport.h"
 
 #include <BECore/Control/Json.h>
@@ -1172,6 +1173,61 @@ namespace BECore::Mahjong::Tests {
         const Json& meld = Member(Member(state, "seats")[1], "melds")[0];
         EXPECT_EQ(Str(Member(meld, "kind")), "kong");
         EXPECT_EQ(Strings(Member(meld, "tiles")), (std::vector<std::string>{"5p", "5p", "5p", "5p"}));
+    }
+
+    /// The game with its client on the in-memory hub of `MahjongHubTransport.h`; the game goes before the world and the links it uses.
+    class MahjongGameControlRoomTest : public MahjongGameControlTest {
+    protected:
+        void TearDown() override {
+            game.Reset();
+        }
+
+        MahjongHubWorld world;
+        HubClientLinks links;
+        std::vector<std::unique_ptr<HubPlayer>> others;
+    };
+
+    TEST_F(MahjongGameControlRoomTest, TheApiRefusesWhileTheGamePlaysInARoomAndPlaysTheLocalGameAgainAfterIt) {
+        ASSERT_NO_FATAL_FAILURE(ResetWithEastAtSeat0("PCCC"));
+        const Json before = State();
+        const uint64_t version = control->GetStateVersion();
+
+        ASSERT_TRUE(game->SetOnlineSettings(world.MakeClientSettings(links)));
+        OnlineClient& client = game->GetOnline();
+        ASSERT_TRUE(client.Host("ws://hub.test", "Ann", OnlineRoomOptions{kShortMatchHands, kMinLevel}));
+        const auto step = [&] {
+            world.Advance(std::chrono::milliseconds(10));
+            for (const std::unique_ptr<HubPlayer>& other : others) {
+                other->Update();
+            }
+            client.Update(world.Now());
+            game->SyncOnlineTable();
+        };
+        const auto pump = [&](const std::function<bool()>& done) {
+            for (int count = 0; count < 2000 && !done(); ++count) {
+                step();
+            }
+            return done();
+        };
+        ASSERT_TRUE(pump([&] { return client.Stage() == OnlineStage::Lobby; }));
+        for (const char* name : {"Bo", "Cy", "Di"}) {
+            others.push_back(std::make_unique<HubPlayer>(world));
+            ASSERT_TRUE(others.back()->Client().Join("ws://hub.test", client.Room(), name));
+            ASSERT_TRUE(pump([&] { return others.back()->Client().Stage() == OnlineStage::Lobby; }));
+        }
+        ASSERT_TRUE(pump([&] { return client.Lobby().canStart; }));
+        ASSERT_TRUE(client.Start());
+        ASSERT_TRUE(pump([&] { return game->IsOnlineTable(); }));
+
+        EXPECT_EQ(CodeOf(control->GetState()), "no_active_model");
+        EXPECT_EQ(CodeOf(control->GetActions()), "no_active_model");
+        EXPECT_EQ(CodeOf(control->PerformAction(Parse("{\"type\": \"pass\"}"))), "no_active_model");
+        EXPECT_EQ(CodeOf(control->Reset(Parse("{\"seed\": 3}"))), "no_active_model");
+        EXPECT_EQ(control->GetStateVersion(), version) << "nothing of the local game moved";
+
+        ASSERT_TRUE(client.Leave());
+        ASSERT_TRUE(pump([&] { return !game->IsOnlineTable(); }));
+        EXPECT_EQ(State(), before) << "the local match is as it was";
     }
 
 }  // namespace BECore::Mahjong::Tests

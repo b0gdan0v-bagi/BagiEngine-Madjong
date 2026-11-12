@@ -12,7 +12,6 @@
 #include <Mahjong/Online/OnlineWords.h>
 #include <Mahjong/Platform.h>
 #include <Mahjong/Table/Words.h>
-#include <charconv>
 
 namespace BECore::Mahjong {
 
@@ -46,7 +45,6 @@ namespace BECore::Mahjong {
             Notice,
             Status,
             Waiting,
-            Started,
             MenuHost,
             MenuJoin,
             MenuReturn,
@@ -74,10 +72,9 @@ namespace BECore::Mahjong {
         };
 
         constexpr const char* kItemNames[] = {
-            "OnlineTitleMenu", "OnlineTitleHost", "OnlineTitleJoin",  "OnlineTitleLobby", "OnlineNotice",  "OnlineStatus",     "OnlineWaiting",    "OnlineStarted",
-            "OnlineMenuHost",  "OnlineMenuJoin",  "OnlineMenuReturn", "OnlineNameRow",    "OnlineCodeRow", "OnlineHandsRow",   "OnlineLevelRow",   "OnlineSeatRow0",
-            "OnlineSeatRow1",  "OnlineSeatRow2",  "OnlineSeatRow3",   "OnlineSit0",       "OnlineSit1",    "OnlineSit2",       "OnlineSit3",       "OnlineGap",
-            "OnlineButtons",   "OnlineCreate",    "OnlineEnter",      "OnlineStart",      "OnlineLeave",   "EntryCaptionName", "EntryCaptionCode",
+            "OnlineTitleMenu", "OnlineTitleHost", "OnlineTitleJoin", "OnlineTitleLobby", "OnlineNotice",   "OnlineStatus",   "OnlineWaiting",  "OnlineMenuHost", "OnlineMenuJoin",   "OnlineMenuReturn",
+            "OnlineNameRow",   "OnlineCodeRow",   "OnlineHandsRow",  "OnlineLevelRow",   "OnlineSeatRow0", "OnlineSeatRow1", "OnlineSeatRow2", "OnlineSeatRow3", "OnlineSit0",       "OnlineSit1",
+            "OnlineSit2",      "OnlineSit3",      "OnlineGap",       "OnlineButtons",    "OnlineCreate",   "OnlineEnter",    "OnlineStart",    "OnlineLeave",    "EntryCaptionName", "EntryCaptionCode",
         };
         static_assert(sizeof(kItemNames) / sizeof(kItemNames[0]) == ItemCount, "one name per item");
 
@@ -148,6 +145,7 @@ namespace BECore::Mahjong {
         }
         OnlineClient& client = game->GetOnline();
         client.Update();
+        game->SyncOnlineTable();  // before Follow: a table that goes live closes the panel
         Follow(*game);
         _screens.Sync(client);
         _screens.Refresh(CoreManager::GetUIStrings());
@@ -190,7 +188,7 @@ namespace BECore::Mahjong {
             _screens.SetStoredName(stored.name);
         }
         _screens.SetStoredRoom(stored.session.IsValid() ? eastl::string_view(stored.session.room.data(), stored.session.room.size()) : eastl::string_view());
-        _screens.Open(game.GetOnline());
+        _screens.Open(game.GetOnline(), game.TakeRoomEndNotice());
         _screens.Refresh(strings);
     }
 
@@ -403,7 +401,7 @@ namespace BECore::Mahjong {
         SetItem(HandsRow, host);
         SetItem(LevelRow, host);
 
-        // One line under the title: the notice, else the status, else (in the lobby) who is waited for or that the game has started
+        // One line under the title: the notice, else the status, else (in the lobby) who is waited for
         const bool notice = !_screens.NoticeKey().empty();
         const bool status = !notice && !_screens.StatusKey().empty();
         const OnlineStage stage = client.Stage();
@@ -411,7 +409,6 @@ namespace BECore::Mahjong {
         SetItem(Notice, notice);
         SetItem(Status, status);
         SetItem(Waiting, lobbyLine && stage == OnlineStage::Lobby && !client.IsHost());
-        SetItem(Started, lobbyLine && stage == OnlineStage::Game);
 
         const bool seats = inLobby && !lobby.room.empty();
         for (size_t seat = 0; seat < kSeatCount; ++seat) {

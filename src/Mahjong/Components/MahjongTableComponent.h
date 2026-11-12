@@ -267,6 +267,12 @@ namespace BECore::Mahjong {
         void RefreshSelection(const MahjongGame* game);
         /// A click on a hand tile: `StepTap` says what it does. Needs `PersonToAct()`.
         void TapHandTile(MahjongGame& game, const std::optional<int>& hit);
+        /// What the person to act at @p actor may do now: `LegalActions` of the hand, and in a room the server's own list (`OnlineTable::actions`,
+        /// without `next_hand`: a display hand lists nothing). Valid until the next call.
+        [[nodiscard]] const eastl::vector<HandAction>& LegalFor(const MahjongGame& game, Seat actor);
+        /// Plays @p action for the person to act: through the session, or in a room as the first entry of the server's list that equals it
+        /// (`OnlineClient::Act`). An action the server does not list is refused (`NotYourTurn`), which is a click that is out of date.
+        HandStatus Perform(MahjongGame& game, const HandAction& action);
         /// The buttons for what the person to act can do now (all hidden when none can); clears `_declareNext` when `Declare` is not
         /// offered.
         [[nodiscard]] ActionButtons CurrentButtons(const MahjongGame& game);
@@ -351,18 +357,22 @@ namespace BECore::Mahjong {
         /// What the buttons were made from: `LegalActions` allocates, and the model moves only through the session, which bumps its version
         struct ButtonsKey {
             const MahjongGame* game = nullptr;
+            bool online = false;  // the display session of a room has versions of its own
             uint64_t version = 0;
             uint64_t starts = 0;
             Seat actor = kNoSeat;
 
             bool operator==(const ButtonsKey&) const = default;
         };
-        std::optional<ButtonsKey> _offeredKey;     // the key of `_offered`; none while no person acts
-        ActionButtons _offered;                    // `MakeActionButtons` of the person to act, made again only when the key moves
-        std::optional<ButtonKind> _hoveredButton;  // the shown button of `Actions` under the pointer at the last publication
-        ChowTakes _chowTakes;                      // what the last `OnDraw` framed in the hand for the offered chow
-        eastl::string_view _hintKey;               // the key of the sentence in `actionHint` (a literal of `SpecOf`, which lives as long as the program)
-        uint64_t _hintStringsVersion = 0;          // the version of the string table that sentence was looked up at
+        std::optional<ButtonsKey> _offeredKey;      // the key of `_offered`; none while no person acts
+        ActionButtons _offered;                     // `MakeActionButtons` of the person to act, made again only when the key moves
+        eastl::vector<HandAction> _legal;           // `LegalFor`, a member so that it keeps its capacity
+        std::optional<ButtonsKey> _keepsKey;        // the key `_keeps` was made for; none while the keeps-waiting bars are not asked for
+        eastl::array<bool, kTileIdCount> _keeps{};  // `KeepsWaitingDiscards` of the viewer's own turn
+        std::optional<ButtonKind> _hoveredButton;   // the shown button of `Actions` under the pointer at the last publication
+        ChowTakes _chowTakes;                       // what the last `OnDraw` framed in the hand for the offered chow
+        eastl::string_view _hintKey;                // the key of the sentence in `actionHint` (a literal of `SpecOf`, which lives as long as the program)
+        uint64_t _hintStringsVersion = 0;           // the version of the string table that sentence was looked up at
         bool _handoffShown = false;
         bool _compactActions = false;  // `ActionsCompact` is the shown canvas of the buttons; the scene file starts with `Actions`
         bool _declareNext = false;

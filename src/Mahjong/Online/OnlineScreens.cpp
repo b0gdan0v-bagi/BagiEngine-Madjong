@@ -10,9 +10,9 @@ namespace BECore::Mahjong {
             return stage == OnlineStage::Lobby || stage == OnlineStage::Game;
         }
 
-        /// The stages in which the panel shows the room.
+        /// The stages in which the panel shows the room. In `Game` the table is the scene's and the panel is closed.
         bool ShowsRoom(OnlineStage stage) {
-            return stage != OnlineStage::Idle;
+            return stage != OnlineStage::Idle && stage != OnlineStage::Game;
         }
 
     }  // namespace
@@ -61,8 +61,10 @@ namespace BECore::Mahjong {
 
     // ---- The player's moves ------------------------------------------------------------------------------------------------------
 
-    void OnlineScreens::Open(const OnlineClient& client) {
-        ClearNotice();
+    void OnlineScreens::Open(const OnlineClient& client, bool keepNotice) {
+        if (!keepNotice) {
+            ClearNotice();
+        }
         SetPage(ShowsRoom(client.Stage()) ? OnlinePage::Lobby : OnlinePage::Menu);
         _origin = OnlinePage::Menu;
         Sync(client);
@@ -304,7 +306,9 @@ namespace BECore::Mahjong {
         if (_page == OnlinePage::Closed) {
             return;
         }
-        if (ShowsRoom(stage)) {
+        if (stage == OnlineStage::Game) {
+            Close();  // a started game is shown by the table, not by the panel
+        } else if (ShowsRoom(stage)) {
             SetPage(OnlinePage::Lobby);
         } else if (_page == OnlinePage::Lobby) {
             // The request failed, or the room is over

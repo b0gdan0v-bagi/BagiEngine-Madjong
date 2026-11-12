@@ -4,12 +4,14 @@
 #include <BECore/Scene/Scene.h>
 #include <BECore/UI/UICanvasComponent.h>
 #include <BECore/UI/UIImageComponent.h>
+#include <BECore/UI/UIInputClicker.h>
 #include <CoreSDL/SDLEvents.h>
 #include <Events/InputEvents.h>
 #include <Events/SceneEvents.h>
 #include <Generated/MahjongHudComponent.gen.hpp>
 #include <Mahjong/Components/MahjongTableComponent.h>
 #include <Mahjong/MahjongGame.h>
+#include <Mahjong/Online/OnlineWords.h>
 #include <Mahjong/Table/AnimationSpeed.h>
 #include <Mahjong/Table/CenterPanel.h>
 #include <Mahjong/Table/MoveText.h>
@@ -118,12 +120,54 @@ namespace BECore::Mahjong {
         BE_PROFILE_SCOPE("MahjongHud::OnUpdate");
         if (MahjongGame* game = MahjongGame::GetActive(); game != nullptr) {
             game->FlushSave();
+            _leaveSent = _leaveSent && game->IsOnlineTable();  // the room's table ended: a leave is over
         }
+    }
+
+    void MahjongHudComponent::PublishNewGameWord(const MahjongGame* game) {
+        const bool room = game != nullptr && game->IsOnlineTable();
+        const uint64_t stringsVersion = CoreManager::GetUIStrings().GetVersion();
+        if (_newGameWordPublished && _newGameWordRoom == room && _newGameWordStrings == stringsVersion) {
+            return;
+        }
+        _newGameWordPublished = true;
+        _newGameWordRoom = room;
+        _newGameWordStrings = stringsVersion;
+        // The button of the HUD menu and of the standings: in a room it leaves the room instead of dealing a new match
+        const eastl::string word = Tr(CoreManager::GetUIStrings(), room ? "hud.leaveRoom" : "hud.newGame");
+        CoreManager::GetUIVars().Set("newGameWord"_intern, eastl::string_view(word));
+    }
+
+    eastl::string MahjongHudComponent::RoomLine(const MahjongGame& game, const UIStrings& strings) {
+        const OnlineClient* client = game.FindOnline();
+        if (client == nullptr) {
+            return {};
+        }
+        // A word of the client that comes while the table is up (a view that could not be read) stays until the next view moves the table
+        const OnlineNotice& notice = client->Notice();
+        if (!_roomLineSeen) {
+            _roomLineSeen = true;
+            _noticeSeen = notice.serial;
+            _noteKey = {};
+        } else if (notice.serial != _noticeSeen) {
+            _noticeSeen = notice.serial;
+            _noteKey = notice.key;
+            _noteArg = notice.arg;
+            _noteTable = client->Table().version;
+        }
+        if (!_noteKey.empty() && client->Table().version != _noteTable) {
+            _noteKey = {};
+        }
+        if (client->Stage() == OnlineStage::Reconnecting) {
+            return OnlineNoticeText(strings, kOnlineReconnectingKey);
+        }
+        return _noteKey.empty() ? eastl::string() : OnlineNoticeText(strings, _noteKey, _noteArg);
     }
 
     void MahjongHudComponent::OnDraw() {
         BE_PROFILE_SCOPE("MahjongHud::OnDraw");
         const MahjongGame* game = MahjongGame::GetActive();
+        PublishNewGameWord(game);
         PublishNumbers(game);
         PublishSetup(game);
         PublishOptions(game);
@@ -137,15 +181,16 @@ namespace BECore::Mahjong {
         if (!started) {
             _numbersOf = nullptr;
             _numbersPublished = false;
+            _roomLineSeen = false;
             ShowMoveLine(false);
             return;
         }
         const TableSession& session = game->GetSession();
         const UIStrings& strings = CoreManager::GetUIStrings();
-        if (_numbersPublished && _numbersOf == game && _numbersVersion == session.Version() && _numbersStrings == strings.GetVersion()) {
+        if (_numbersPublished && _numbersOf == &session && _numbersVersion == session.Version() && _numbersStrings == strings.GetVersion()) {
             return;
         }
-        _numbersOf = game;
+        _numbersOf = &session;
         _numbersVersion = session.Version();
         _numbersStrings = strings.GetVersion();
         _numbersPublished = true;
@@ -153,9 +198,15 @@ namespace BECore::Mahjong {
         const Match& match = game->GetMatch();
         const HandModel& hand = match.Hand();
         UIVars& vars = CoreManager::GetUIVars();
-        // The last move, in words: only while a hand is played and has a move (the end screens speak after it)
+        // The line under the discards: in a room the connection or a word of the client first; else the last move, in words, only while a hand is
+        // played and has a move (the end screens speak after it)
         eastl::string lastMove;
-        if (session.GetPhase() == SessionPhase::Playing && !hand.Moves().empty()) {
+        if (game->IsOnlineTable()) {
+            lastMove = RoomLine(*game, strings);
+        } else {
+            _roomLineSeen = false;
+        }
+        if (lastMove.empty() && session.GetPhase() == SessionPhase::Playing && !hand.Moves().empty()) {
             const HandMove& move = hand.Moves().back();
             lastMove = MoveText(strings, move, hand.SeatWind(move.seat));
         }
@@ -260,13 +311,19 @@ namespace BECore::Mahjong {
     void MahjongHudComponent::PublishHandOver(const MahjongGame& game) {
         const Match& match = game.GetMatch();
         const TableSession& session = game.GetSession();
-        const HandSettlement settlement = SettleHand(match.Hand());
+        const OnlineClient* room = game.IsOnlineTable() ? game.FindOnline() : nullptr;
+        HandSettlement settlement = SettleHand(match.Hand());
+        if (room != nullptr && room->Table().result.has_value()) {
+            // A display hand does not know everything the room scored with (`Online/CLAUDE.md`): the points are the server's
+            settlement.scores = room->Table().result->scores;
+            settlement.deltas = room->Table().result->deltas;
+        }
         SeatScores totals = match.Scores();
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             totals[seat] += settlement.deltas[seat];
         }
         const UIStrings& strings = CoreManager::GetUIStrings();
-        const ScoreTable table = FormatScoreTable(strings, settlement, match.Hand().Result().value_or(HandResult{}), totals, session.Seats());
+        const ScoreTable table = FormatScoreTable(strings, settlement, match.Hand().Result().value_or(HandResult{}), totals, SeatWho(session));
 
         UIVars& vars = CoreManager::GetUIVars();
         vars.Set("handOverHeadline"_intern, eastl::string_view(table.headline));
@@ -282,16 +339,54 @@ namespace BECore::Mahjong {
         // The last hand of the match ends it: the button says so
         const MatchProgress after = NextProgress(MatchProgress{match.HandsPlayed(), match.East()}, settlement.kind, settlement.winner, match.GetSettings());
         vars.Set("handOverButton"_intern, eastl::string_view(Tr(strings, IsMatchOver(after.handsPlayed, match.GetSettings()) ? "handover.finish" : "handover.next")));
-        const CoachLedger& coach = game.GetCoach();
-        const eastl::string tally = game.CoachOn() ? FormatCoachTally(strings, coach.HandTallyOf(HandKeyOf(session)), coach.MatchTallyOf(session.StartCount())) : eastl::string();
+        // The row under the lines: in a room how many have read the plate (the coach is off there), else the coach's tally
+        eastl::string tally;
+        if (room != nullptr) {
+            tally = ReadyText(strings, room->Table());
+            SetNextHandDisabled(!CanSendNextHand(*room));
+        } else {
+            const CoachLedger& coach = game.GetCoach();
+            tally = game.CoachOn() ? FormatCoachTally(strings, coach.HandTallyOf(HandKeyOf(session)), coach.MatchTallyOf(session.StartCount())) : eastl::string();
+            SetNextHandDisabled(false);
+        }
         vars.Set("handOverCoach"_intern, eastl::string_view(tally));
         UICanvasComponent::SetElementVisibleByName(GetScene(), "HandCoachRow"_intern, !tally.empty());
+    }
+
+    eastl::string MahjongHudComponent::ReadyText(const UIStrings& strings, const OnlineTable& table) {
+        int ready = 0;
+        for (const bool seat : table.ready) {
+            ready += seat ? 1 : 0;
+        }
+        if (ready == 0) {
+            return {};
+        }
+        return Tr(strings, "online.table.ready", {{"n", Format("{}", ready)}, {"total", Format("{}", kSeatCount)}});
+    }
+
+    bool MahjongHudComponent::CanSendNextHand(const OnlineClient& client) {
+        if (client.Stage() != OnlineStage::Game) {
+            return false;
+        }
+        const auto& actions = client.Table().actions;
+        return eastl::any_of(actions.begin(), actions.end(), [](const ControlAction& listed) { return listed.nextHand; });
+    }
+
+    void MahjongHudComponent::SetNextHandDisabled(bool disabled) {
+        const IntrusivePtr<UICanvasComponent> canvas = CanvasOf(GetScene(), "HandOverAction"_intern);
+        UIElement* button = canvas ? canvas->GetRoot().FindByName("NextHand"_intern) : nullptr;
+        if (UIInputClicker* clicker = button != nullptr ? button->GetComponent<UIInputClicker>() : nullptr) {
+            clicker->disabled = disabled;
+        }
     }
 
     void MahjongHudComponent::ShowHandOver(bool shown) {
         Scene& scene = GetScene();
         UICanvasComponent::SetVisibleByName(scene, "HandOver"_intern, shown);
         UICanvasComponent::SetVisibleByName(scene, "HandOverAction"_intern, shown);
+        if (!shown) {
+            SetNextHandDisabled(false);  // a room's ready check is over with the plate
+        }
         // The score table is a screen of its own (no dim, so the hands stay visible): HudMenu (New game, Options) goes while it is up.
         // The standings (MatchOver) are a Screen canvas whose dim covers the whole window, so they need nothing.
         ShowHudMenu();
@@ -369,14 +464,14 @@ namespace BECore::Mahjong {
     }
 
     void MahjongHudComponent::PublishMatchOver(const MahjongGame& game) {
-        const StandingsTable table = FormatStandings(CoreManager::GetUIStrings(), game.GetMatch(), game.GetSession().Seats());
+        const StandingsTable table = FormatStandings(CoreManager::GetUIStrings(), game.GetMatch(), SeatWho(game.GetSession()));
         UIVars& vars = CoreManager::GetUIVars();
         vars.Set("matchOverHeadline"_intern, eastl::string_view(table.headline));
         for (Seat row = 0; row < kSeatCount; ++row) {
             vars.Set(SeatVar("standing", row), eastl::string_view(table.rows[row]));
         }
         const UIStrings& strings = CoreManager::GetUIStrings();
-        const eastl::string tally = game.CoachOn() ? FormatCoachTally(strings, CoachTally{}, game.GetCoach().MatchTallyOf(game.GetSession().StartCount())) : eastl::string();
+        const eastl::string tally = game.CoachOn() && !game.IsOnlineTable() ? FormatCoachTally(strings, CoachTally{}, game.GetCoach().MatchTallyOf(game.GetSession().StartCount())) : eastl::string();
         vars.Set("matchOverCoach"_intern, eastl::string_view(tally));
         UICanvasComponent::SetElementVisibleByName(GetScene(), "MatchCoachRow"_intern, !tally.empty());
     }
@@ -389,8 +484,8 @@ namespace BECore::Mahjong {
         if (handOver || matchOver) {
             const uint64_t stringsVersion = CoreManager::GetUIStrings().GetVersion();
             const bool coachOn = game->CoachOn();
-            if (!_endScreenPublished || _endScreenOf != game || _endScreenVersion != game->GetSession().Version() || _endScreenStrings != stringsVersion || _endScreenCoach != coachOn) {
-                _endScreenOf = game;
+            if (!_endScreenPublished || _endScreenOf != &game->GetSession() || _endScreenVersion != game->GetSession().Version() || _endScreenStrings != stringsVersion || _endScreenCoach != coachOn) {
+                _endScreenOf = &game->GetSession();
                 _endScreenCoach = coachOn;
                 _endScreenVersion = game->GetSession().Version();
                 _endScreenStrings = stringsVersion;
@@ -434,6 +529,25 @@ namespace BECore::Mahjong {
         }
     }
 
+    void MahjongHudComponent::LeaveRoom(MahjongGame& game) {
+        if (_leaveSent) {
+            return;  // the server has not answered yet: a second leave would only be refused
+        }
+        _leaveSent = game.GetOnline().Leave();
+    }
+
+    void MahjongHudComponent::SendNextHand(MahjongGame& game) {
+        // The server's own `next_hand` of the list now; none listed (already sent, the hand moved on, the link is down) and the click is ignored
+        OnlineClient& client = game.GetOnline();
+        const auto& actions = client.Table().actions;
+        for (size_t i = 0; i < actions.size(); ++i) {
+            if (actions[i].nextHand) {
+                client.Act(i);
+                return;
+            }
+        }
+    }
+
     void MahjongHudComponent::OnAction(const InputEvents::ActionEvent& event) {
         BE_PROFILE_SCOPE("MahjongHud::OnAction");
         MahjongGame* game = MahjongGame::GetActive();
@@ -442,7 +556,11 @@ namespace BECore::Mahjong {
         }
         const eastl::string_view action = event.action.ToStringView();
         if (action == kNewGameAction) {
-            game->OpenSetup();
+            if (game->IsOnlineTable()) {
+                LeaveRoom(*game);  // the room's table has no new game: the button leaves, and the end of the table opens `Setup`
+            } else {
+                game->OpenSetup();
+            }
             return;
         }
         if (action == kOptionsAction) {
@@ -500,6 +618,10 @@ namespace BECore::Mahjong {
             return;
         }
         if (action == kNextHandAction) {
+            if (game->IsOnlineTable()) {
+                SendNextHand(*game);
+                return;
+            }
             // Out of date when the hand is no longer over (a control client played on, or a second click)
             if (game->GetSession().GetPhase() == SessionPhase::HandOver && !game->GetSession().NextHand().has_value()) {
                 LOG_WARNING("MahjongHudComponent: the finished hand could not be settled");

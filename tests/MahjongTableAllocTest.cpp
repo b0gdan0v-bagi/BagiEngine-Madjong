@@ -1,4 +1,5 @@
 #include "ComputerTestSupport.h"
+#include "MahjongOnlineTableTestSupport.h"
 #include "MahjongTableTestSupport.h"
 #include "MahjongTouchTestSupport.h"
 
@@ -160,6 +161,72 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(allocations, 0u);
         EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), version);
         EXPECT_TRUE(OnScreen("HandOver", "HandCoachRow"));
+    }
+
+    /// The table of a room: the display pair is made again only when the client's version moved (`SyncOnlineTable`), the buttons and the
+    /// keeps-waiting bars only when the display session moved, the words only when the session, the language or the client moved. A
+    /// frame is the draw of every node; the update of the scene (the client's own work) is not part of it.
+    class MahjongOnlineTableAllocTest : public MahjongOnlineTableTestBase {
+    protected:
+        /// Settles with three draws, then counts the fourth, in each language: no allocation and no `UIVars` change.
+        void ExpectSteadyFrameInBothLanguages() {
+            for (const char* language : {"en", "ru"}) {
+                ASSERT_TRUE(_game->SetLanguage(PoolString::Intern(language)));
+                Draw();
+                Draw();
+                Draw();  // the words of the language are published; from here on nothing changes
+                const uint64_t version = CoreManager::GetUIVars().GetVersion();
+                const uint64_t before = AllocTracker::GetThreadCounters().count;
+                Draw();
+                const uint64_t allocations = AllocTracker::GetThreadCounters().count - before;
+                EXPECT_EQ(allocations, 0u) << language;
+                EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), version) << language;
+            }
+            ASSERT_TRUE(_game->SetLanguage("en"_intern));
+        }
+    };
+
+    TEST_F(MahjongOnlineTableAllocTest, APersonsTurnInARoomAllocatesNothingInTheWholeFrame) {
+        ASSERT_NO_FATAL_FAILURE(StartRoom());
+        ASSERT_TRUE(PlayUntil([&] { return Lists(ActionKind::Discard) && Hand().GetPhase() == Phase::Discard && _game->GetSession().Actor() == Viewer(); }, false));
+        ASSERT_TRUE(_game->IsOnlineTable());
+        ExpectSteadyFrameInBothLanguages();
+    }
+
+    TEST_F(MahjongOnlineTableAllocTest, AClaimWindowInARoomAllocatesNothingInTheWholeFrame) {
+        ASSERT_NO_FATAL_FAILURE(StartRoom());
+        ASSERT_TRUE(PlayUntil([&] { return Lists(ActionKind::Pass) && Hand().GetPhase() == Phase::Claim; }, false));
+        Draw();
+        ASSERT_TRUE(_table->GetButtons()[ButtonKind::Pass].shown);
+        ExpectSteadyFrameInBothLanguages();
+    }
+
+    TEST_F(MahjongOnlineTableAllocTest, TheHandOverPlateAndTheReadyCheckOfARoomAllocateNothingInTheWholeFrame) {
+        ASSERT_NO_FATAL_FAILURE(StartRoom());
+        ASSERT_TRUE(PlayUntil([&] { return _game->GetSession().GetPhase() == SessionPhase::HandOver; }));
+        Frame();
+        ASSERT_TRUE(OnScreen("HandOverAction", "NextHand"));
+        ExpectSteadyFrameInBothLanguages();
+
+        // The own flag set: the plate says how many have read it
+        ASSERT_TRUE(ClickElement("HandOverAction", "NextHand"));
+        const Seat viewer = Viewer();
+        ASSERT_TRUE(PumpUntil([&] { return Table().ready[static_cast<size_t>(viewer)]; }));
+        Frame();
+        ASSERT_TRUE(OnScreen("HandOver", "HandCoachRow"));
+        ExpectSteadyFrameInBothLanguages();
+    }
+
+    TEST_F(MahjongOnlineTableAllocTest, TheFrozenTableWhileTheConnectionIsDownAllocatesNothingInTheWholeFrame) {
+        ASSERT_NO_FATAL_FAILURE(StartRoom());
+        ASSERT_TRUE(PlayUntil([&] { return Hand().Discards().size() >= 4 && _game->GetSession().GetPhase() == SessionPhase::Playing; }));
+        _world.SetRefusing(true);
+        _world.Sever(_links.Last());
+        ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Reconnecting; }));
+        Frame();
+        ASSERT_TRUE(_game->IsOnlineTable());
+        ASSERT_TRUE(OnScreen("Hud", "MoveLine"));
+        ExpectSteadyFrameInBothLanguages();
     }
 
 }  // namespace BECore::Mahjong::Tests

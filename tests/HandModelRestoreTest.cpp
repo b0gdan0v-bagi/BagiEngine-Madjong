@@ -239,6 +239,46 @@ namespace BECore::Mahjong::Tests {
             return model;
         }
 
+        /// The state as a client of `viewer` knows it: the tiles of the wall and of the other hands are invalid tiles (counts kept).
+        HandState HiddenFrom(const HandModel& model, Seat viewer) {
+            HandState state = model.Capture();
+            const auto hide = [](eastl::vector<Tile>& tiles) {
+                for (Tile& tile : tiles) {
+                    tile = Tile{};
+                }
+            };
+            hide(state.loose);
+            hide(state.live);
+            hide(state.dead);
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                if (seat != viewer) {
+                    hide(state.hands[seat].concealed);
+                }
+            }
+            return state;
+        }
+
+        /// Every call that plays the model, tried for every seat and action: all refused, nothing changes.
+        void ExpectNotPlayable(HandModel& display, const HandModel& real, const char* where) {
+            const std::string before = Describe(display.Capture());
+            MahjongRng rng(1);
+            EXPECT_EQ(Error(display.Begin(MahjongSettings{}, MakeWall(rng, MahjongSettings{}, 0), MakeSeatWinds(0), Wind::East)), HandError::WrongPhase) << where;
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                EXPECT_TRUE(display.LegalActions(seat).empty()) << where;
+                EXPECT_TRUE(display.LegalClaims(seat).empty()) << where;
+                EXPECT_EQ(Error(display.Discard(seat, T("1p"))), HandError::WrongPhase) << where;
+                EXPECT_EQ(Error(display.DeclareWin(seat)), HandError::WrongPhase) << where;
+                EXPECT_EQ(Error(display.DeclareConcealedKong(seat, T("1p"))), HandError::WrongPhase) << where;
+                EXPECT_EQ(Error(display.UpgradeKong(seat, T("5p"))), HandError::WrongPhase) << where;
+                EXPECT_EQ(Error(display.Claim(seat, ClaimKind::Pung)), HandError::WrongPhase) << where;
+                EXPECT_EQ(Error(display.Pass(seat)), HandError::WrongPhase) << where;
+                for (const HandAction& action : real.LegalActions(seat)) {
+                    EXPECT_EQ(Error(display.Apply(seat, action)), HandError::WrongPhase) << where;
+                }
+            }
+            EXPECT_EQ(Describe(display.Capture()), before) << where;
+        }
+
     }  // namespace
 
     TEST(HandModelRestoreTest, EveryStateOfRandomPlayoutsRestoresToTheSameHand) {
@@ -377,6 +417,67 @@ namespace BECore::Mahjong::Tests {
         const std::expected<HandModel, eastl::string> restored = HandModel::Restore(state);
         ASSERT_TRUE(restored.has_value()) << restored.error().c_str();
         EXPECT_EQ(restored->GetHand(kSeat0).concealed, model.GetHand(kSeat0).concealed);
+    }
+
+    TEST(HandModelRestoreTest, ADisplayModelReadsBackWhatWasPutInAndCannotBePlayed) {
+        const HandModel turn = MakeModel(SpecOf("1p 2p 3p 5s 6s 7s 2m 3m 4m Ew Ew Rd Rd", "Wd"));
+        const HandModel claim = ClaimWindow();
+        const HandModel robbing = RobbingWindow();
+        for (const HandModel* real : {&turn, &claim, &robbing}) {
+            for (const Seat viewer : {kSeat0, kSeat1, kSeat3}) {
+                const std::string where = "phase " + std::to_string(static_cast<int>(real->GetPhase())) + " viewer " + std::to_string(viewer);
+                const HandState state = HiddenFrom(*real, viewer);
+                // The hidden state is one no play could reach: Restore refuses it, ForDisplay takes it.
+                EXPECT_FALSE(HandModel::Restore(state).has_value()) << where;
+                HandModel display = HandModel::ForDisplay(state);
+                EXPECT_TRUE(display.IsDisplayOnly()) << where;
+                EXPECT_FALSE(real->IsDisplayOnly()) << where;
+                EXPECT_EQ(Describe(display.Capture()), Describe(state)) << where;
+
+                EXPECT_EQ(display.GetPhase(), real->GetPhase()) << where;
+                EXPECT_EQ(display.CurrentSeat(), real->CurrentSeat()) << where;
+                EXPECT_EQ(display.PendingTile(), real->PendingTile()) << where;
+                EXPECT_EQ(display.PendingClaimSeats(), real->PendingClaimSeats()) << where;
+                EXPECT_EQ(display.GetWall().Remaining(), real->GetWall().Remaining()) << where;
+                EXPECT_EQ(display.East(), real->East()) << where;
+                EXPECT_EQ(display.RoundWind(), real->RoundWind()) << where;
+                EXPECT_EQ(display.Discards().size(), real->Discards().size()) << where;
+                EXPECT_EQ(display.Moves().size(), real->Moves().size()) << where;
+                for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                    EXPECT_EQ(display.SeatWind(seat), real->SeatWind(seat)) << where;
+                    EXPECT_EQ(display.GetClaimStatus(seat), real->GetClaimStatus(seat)) << where;
+                    EXPECT_EQ(display.DrawnTile(seat), real->DrawnTile(seat)) << where;
+                    EXPECT_EQ(display.GetHand(seat).concealed.size(), real->GetHand(seat).concealed.size()) << where;
+                    EXPECT_EQ(display.GetHand(seat).melds.size(), real->GetHand(seat).melds.size()) << where;
+                    for (const Tile tile : display.GetHand(seat).concealed) {
+                        EXPECT_EQ(tile.IsValid(), seat == viewer) << where;
+                    }
+                }
+                EXPECT_EQ(display.GetHand(viewer).concealed, real->GetHand(viewer).concealed) << where;
+
+                ExpectNotPlayable(display, *real, where.c_str());
+                HandModel copy = display;
+                EXPECT_TRUE(copy.IsDisplayOnly()) << where;
+                ExpectNotPlayable(copy, *real, where.c_str());
+            }
+        }
+    }
+
+    TEST(HandModelRestoreTest, ADisplayModelOfAFinishedHandShowsTheResult) {
+        MahjongRng rng(3);
+        HandModel model = BeginSeed(3, rng);
+        while (model.GetPhase() != Phase::Finished) {
+            const Seat actor = NextActor(model, rng);
+            ASSERT_TRUE(model.Apply(actor, Choose(model.LegalActions(actor), Mode::SeekWin, rng)).has_value());
+        }
+        const HandModel display = HandModel::ForDisplay(model.Capture());
+        EXPECT_EQ(display.GetPhase(), Phase::Finished);
+        ASSERT_TRUE(display.Result().has_value());
+        EXPECT_EQ(display.Result()->kind, model.Result()->kind);
+        EXPECT_EQ(display.Result()->winningTile, model.Result()->winningTile);
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            EXPECT_EQ(display.GetHand(seat).concealed, model.GetHand(seat).concealed);
+        }
     }
 
     TEST(HandModelRestoreTest, StatesNoPlayCouldReachAreRefusedWithAText) {

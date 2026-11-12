@@ -610,11 +610,28 @@ namespace BECore::Mahjong::Tests {
             }
             EXPECT_GE(Element("HudMenu", "NewGame")->rect.h, kMinControlHeight);
             // Both buttons of the menu are shown together, the word of each in the language of the table
+            Draw();  // the word of `NewGame` is a variable the HUD publishes at a draw
             ASSERT_TRUE(OnScreen("HudMenu", "Options"));
             ASSERT_TRUE(OnScreen("HudMenu", "NewGame"));
             EXPECT_GE(Element("HudMenu", "Options")->rect.h, kMinControlHeight);
             EXPECT_EQ(Text("HudMenu", "Options"), Tr(CoreManager::GetUIStrings(), "hud.options").c_str());
             EXPECT_EQ(Text("HudMenu", "NewGame"), Tr(CoreManager::GetUIStrings(), "hud.newGame").c_str());
+        });
+    }
+
+    TEST_F(MahjongHudTest, TheLeaveRoomWordFitsTheButtonOfTheMenuOnTheMatrixInEveryLanguage) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        Draw();
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            const UIStrings& strings = CoreManager::GetUIStrings();
+            CoreManager::GetUIVars().Set("newGameWord"_intern, eastl::string_view(LongestText({Tr(strings, "hud.newGame"), Tr(strings, "hud.leaveRoom")})));
+            ExpectPassesTheMatrix("HudMenu", EngineTouchMinimum());
+            for (const Output& output : kOutputs) {
+                ExpectWordsFit("HudMenu", output.width, output.height, kButtonAir);
+            }
+            const std::vector<std::string> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("HudMenu"), kButtonAir);
+            EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
         });
     }
 

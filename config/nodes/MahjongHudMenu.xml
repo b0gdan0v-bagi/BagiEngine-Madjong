@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!--
-  The New game button (MahjongNewGame, opens Setup) in the top right corner of the window and the Options button (MahjongOptions, opens
+  The New game button (MahjongNewGame, opens Setup; its word is the variable newGameWord, "Leave room" in an online room) in the top right corner of the window and the Options button (MahjongOptions, opens
   the page Options, which has the button to the pages of the rules; 92 units wide so that it covers no bonus tile of the top seat in a
   16:10 window) 8 left of it (under it in a canvas of at most 440 units wide). A Screen canvas with a floor on its scale (minScale 0.6:
   the 56 unit buttons are 33.6 px), so they are touch targets in any window. Why not regions of the table like the other canvases of the
@@ -20,7 +20,7 @@
       <elements>
         <element type="UIElement" name="NewGame" anchor="TopRight" x="-8" y="8" width="176" height="56" fontSize="22" color="45,75,120,255">
           <components>
-            <component type="UITextComponent" text="{#hud.newGame}" align="Center" verticalAlign="Center" wrap="false"/>
+            <component type="UITextComponent" text="{newGameWord}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
             <component type="UIInputClicker" action="MahjongNewGame"/>
           </components>
         </element>

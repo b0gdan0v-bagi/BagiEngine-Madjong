@@ -201,6 +201,24 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(window.beaten.empty());
     }
 
+    TEST(HandModelWindowTest, AwaitsClaimIsEveryPendingSeatAndNoOtherAndNobodyOutsideAWindow) {
+        HandModel model = PriorityWindow();
+
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            const eastl::vector<Seat> pending = model.PendingClaimSeats();
+            EXPECT_EQ(model.AwaitsClaim(seat), eastl::find(pending.begin(), pending.end(), seat) != pending.end()) << seat;
+        }
+        EXPECT_FALSE(model.AwaitsClaim(kNoSeat));
+
+        for (const Seat seat : model.PendingClaimSeats()) {
+            ASSERT_TRUE(model.Pass(seat).has_value());
+            EXPECT_FALSE(model.AwaitsClaim(seat)) << "a seat that decided waits no more";
+        }
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            EXPECT_FALSE(model.AwaitsClaim(seat)) << "the window is closed";
+        }
+    }
+
     TEST(HandModelWindowTest, ALoneClaimerBeatsNobody) {
         HandModel model = PriorityWindow();
 

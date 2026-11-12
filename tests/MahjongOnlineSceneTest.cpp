@@ -573,7 +573,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(ItemShown(kOnline, "OnlineStart"));
         EXPECT_TRUE(ItemShown(kOnline, "OnlineLeave"));
         EXPECT_FALSE(ItemShown(kOnline, "OnlineWaiting"));
-        EXPECT_FALSE(ItemShown(kOnline, "OnlineStarted"));
         EXPECT_TRUE(_game->StoredOnline().session.IsValid()) << "the session is kept as soon as there is one";
 
         // Two people join by the code: each takes the lowest free seat and the seat rows name them
@@ -605,22 +604,16 @@ namespace BECore::Mahjong::Tests {
             EXPECT_FALSE(ItemShown(kOnline, Format("OnlineSit{}", seat).c_str())) << "the room is full";
         }
 
-        // Start: the screen shows the started game, in both languages
+        // Start: the table of the room takes the screen, the panel and Setup close
         ASSERT_TRUE(ItemShown(kOnline, "OnlineStart"));
         ASSERT_TRUE(ClickElement(kOnline, "OnlineStart"));
-        ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Game; }, {&bo, &cy, &di}));
-        EXPECT_EQ(Screens().Page(), OnlinePage::Lobby);
-        EXPECT_TRUE(ItemShown(kOnline, "OnlineStarted"));
-        EXPECT_FALSE(ItemShown(kOnline, "OnlineStart"));
-        EXPECT_FALSE(ItemShown(kOnline, "OnlineWaiting"));
-        EXPECT_EQ(Text(kOnline, "OnlineStarted"), "The game has started");
-        EXPECT_TRUE(ItemShown(kOnline, "OnlineLeave"));
-        ASSERT_TRUE(_game->SetLanguage("ru"_intern));
-        Frame();
-        EXPECT_EQ(Text(kOnline, "OnlineStarted"), "Игра началась");
-        EXPECT_EQ(SeatText(3), "Anna (вы)");
-        ASSERT_TRUE(_game->SetLanguage("en"_intern));
-        Frame();
+        ASSERT_TRUE(PumpUntil([&] { return _game->IsOnlineTable(); }, {&bo, &cy, &di}));
+        EXPECT_EQ(_game->GetOnline().Stage(), OnlineStage::Game);
+        EXPECT_FALSE(_game->IsOnlineOpen());
+        EXPECT_FALSE(_game->IsSetupOpen());
+        EXPECT_FALSE(_game->IsTablePaused());
+        EXPECT_FALSE(CanvasShown(kOnline));
+        EXPECT_FALSE(Screens().IsOpen());
         EXPECT_EQ(_world.Judge().Offences().size(), 0u) << (_world.Judge().Offences().empty() ? "" : _world.Judge().Offences().front());
         EXPECT_EQ(_world.Judge().NonText(), 0u);
     }
@@ -730,19 +723,17 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(ItemShown(kOnline, "OnlineMenuReturn"));
         EXPECT_EQ(Text(kOnline, "OnlineMenuReturn"), "Return to room " + code);
         ASSERT_TRUE(ClickElement(kOnline, "OnlineMenuReturn"));
-        ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Game; }, {&bo}));
-        EXPECT_EQ(Screens().Page(), OnlinePage::Lobby);
-        EXPECT_EQ(Var("onlineRoom"), code);
-        EXPECT_TRUE(ItemShown(kOnline, "OnlineStarted"));
-        EXPECT_EQ(SeatText(0), "Anna (you)");
-        EXPECT_EQ(SeatText(1), "Bo");
+        ASSERT_TRUE(PumpUntil([&] { return _game->IsOnlineTable(); }, {&bo}));
+        EXPECT_FALSE(Screens().IsOpen()) << "the table of the room, not the lobby";
+        EXPECT_FALSE(_game->IsOnlineOpen());
+        EXPECT_TRUE(_game->GetSession().IsRemote());
         EXPECT_EQ(Notice(), "");
         EXPECT_EQ(_world.Judge().Offences().size(), 0u);
 
-        // Leave: the session is forgotten and the slot goes with it
-        ASSERT_TRUE(ClickElement(kOnline, "OnlineLeave"));
-        ASSERT_TRUE(PumpUntil([&] { return Screens().Page() == OnlinePage::Menu; }, {&bo}));
-        EXPECT_FALSE(ItemShown(kOnline, "OnlineMenuReturn"));
+        // Leave: the session is forgotten and the slot goes with it; the local game is back behind Setup
+        ASSERT_TRUE(_game->GetOnline().Leave());
+        ASSERT_TRUE(PumpUntil([&] { return !_game->IsOnlineTable(); }, {&bo}));
+        EXPECT_TRUE(_game->IsSetupOpen());
         EXPECT_FALSE(_game->StoredOnline().session.IsValid());
     }
 

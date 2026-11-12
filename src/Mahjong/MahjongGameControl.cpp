@@ -28,6 +28,10 @@ namespace BECore::Mahjong {
             return std::unexpected(MakeControlError(GameControlErrors::kNoActiveModel, "no match has been started"));
         }
 
+        std::unexpected<ControlError> InARoom() {
+            return std::unexpected(MakeControlError(GameControlErrors::kNoActiveModel, "the game is playing in an online room"));
+        }
+
         std::unexpected<ControlError> IllegalAction(eastl::string message) {
             return std::unexpected(MakeControlError(GameControlErrors::kIllegalAction, std::move(message)));
         }
@@ -291,11 +295,14 @@ namespace BECore::Mahjong {
     }
 
     std::expected<Json, ControlError> MahjongGameControl::GetState() const {
-        const Match& match = _game.GetMatch();
+        if (_game.IsOnlineTable()) {
+            return InARoom();
+        }
+        const Match& match = _game.GetLocalMatch();
         if (match.GetPhase() == MatchPhase::NotStarted) {
             return NoMatchStarted();
         }
-        const TableSession& session = _game.GetSession();
+        const TableSession& session = _game.GetLocalSession();
         // A spectator (no person seat) sees the public table and no own tiles: the view of seat 0 is made only for the numbers every
         // seat sees (and the hands are in `result` once the hand is over).
         const Seat seat = ViewSeat(session);
@@ -311,11 +318,14 @@ namespace BECore::Mahjong {
     }
 
     std::expected<Json, ControlError> MahjongGameControl::GetActions() const {
-        const Match& match = _game.GetMatch();
+        if (_game.IsOnlineTable()) {
+            return InARoom();
+        }
+        const Match& match = _game.GetLocalMatch();
         if (match.GetPhase() == MatchPhase::NotStarted) {
             return NoMatchStarted();
         }
-        const TableSession& session = _game.GetSession();
+        const TableSession& session = _game.GetLocalSession();
         Json actions = Json::array();
         switch (session.GetPhase()) {
             case SessionPhase::Playing:
@@ -335,7 +345,10 @@ namespace BECore::Mahjong {
     }
 
     std::expected<Json, ControlError> MahjongGameControl::PerformAction(const Json& action) {
-        if (_game.GetMatch().GetPhase() == MatchPhase::NotStarted) {
+        if (_game.IsOnlineTable()) {
+            return InARoom();
+        }
+        if (_game.GetLocalMatch().GetPhase() == MatchPhase::NotStarted) {
             return NoMatchStarted();
         }
         const std::expected<ControlAction, ControlError> parsed = ActionFromJson(action);
@@ -343,7 +356,7 @@ namespace BECore::Mahjong {
             return std::unexpected(parsed.error());
         }
 
-        TableSession& session = _game.GetSession();
+        TableSession& session = _game.GetLocalSession();
         Json outcome = Json::object();
         if (parsed->nextHand) {
             if (session.GetPhase() != SessionPhase::HandOver) {
@@ -362,7 +375,7 @@ namespace BECore::Mahjong {
             if (!session.ActorIsPerson()) {
                 return IllegalAction("it is not a person's turn");
             }
-            const eastl::vector<HandAction> legal = _game.GetMatch().Hand().LegalActions(session.Actor());
+            const eastl::vector<HandAction> legal = _game.GetLocalMatch().Hand().LegalActions(session.Actor());
             if (eastl::find(legal.begin(), legal.end(), parsed->hand) == legal.end()) {
                 return IllegalAction("the action is not among the legal actions now (see list_actions)");
             }
@@ -381,6 +394,9 @@ namespace BECore::Mahjong {
     }
 
     std::expected<void, ControlError> MahjongGameControl::Reset(const Json& options) {
+        if (_game.IsOnlineTable()) {
+            return InARoom();
+        }
         uint32_t seed = _lastSeed;
         if (FindJsonMember(options, "seed") != nullptr) {
             const auto requested = GetJsonInt(options, "seed");
@@ -447,12 +463,12 @@ namespace BECore::Mahjong {
             return InvalidParams(Format("the match did not start: {}", EnumUtils<MatchError>::ToString(started.error())));
         }
         _lastSeed = seed;
-        _game.GetSession().RunComputers();  // StartMatch closed the seat choice: a reset is a controller entering the game
+        _game.GetLocalSession().RunComputers();  // StartMatch closed the seat choice: a reset is a controller entering the game
         return {};
     }
 
     uint64_t MahjongGameControl::GetStateVersion() const {
-        return _game.GetSession().Version();
+        return _game.GetLocalSession().Version();
     }
 
 }  // namespace BECore::Mahjong

@@ -192,16 +192,26 @@ namespace BECore::Mahjong {
             return !game.IsTablePaused();
         }
 
-        /// Whether a person is to act and may: the table is being played, the actor is a person and no cover is up.
-        bool PersonActs(const MahjongGame& game) {
+        /// In a room the person to act is the viewer, and only while the server lists an action for it (a frozen table, in `Reconnecting`, lists none that can be sent).
+        bool ServerListsActions(const MahjongGame& game) {
+            const OnlineClient* client = game.FindOnline();
             const TableSession& session = game.GetSession();
-            return TableIsLive(game) && session.GetPhase() == SessionPhase::Playing && session.ActorIsPerson() && !session.HandoffPending();
+            return client != nullptr && client->Stage() == OnlineStage::Game && !client->Table().actions.empty() && session.Actor() == session.Viewer();
         }
 
-        /// Whether a computer is to act and may: the table is being played and the actor is a computer.
+        /// Whether a person is to act and may: the table is being played, the actor is a person and no cover is up. In a room: the server lists an action for the viewer.
+        bool PersonActs(const MahjongGame& game) {
+            const TableSession& session = game.GetSession();
+            if (!TableIsLive(game) || session.GetPhase() != SessionPhase::Playing || session.HandoffPending()) {
+                return false;
+            }
+            return game.IsOnlineTable() ? ServerListsActions(game) : session.ActorIsPerson();
+        }
+
+        /// Whether a computer is to act and may: the table is being played and the actor is a computer. Never in a room: the server plays its computers.
         bool ComputerActs(const MahjongGame& game) {
             const TableSession& session = game.GetSession();
-            return TableIsLive(game) && session.GetPhase() == SessionPhase::Playing && !session.ActorIsPerson();
+            return !game.IsOnlineTable() && TableIsLive(game) && session.GetPhase() == SessionPhase::Playing && !session.ActorIsPerson();
         }
 
         /// A claim window: a discard or an upgraded kong waits for the other seats to decide.
@@ -531,15 +541,45 @@ namespace BECore::Mahjong {
         return DeclareTurn{game.GetSession().Actor(), game.GetMatch().Hand().Discards().size()};
     }
 
+    const eastl::vector<HandAction>& MahjongTableComponent::LegalFor(const MahjongGame& game, Seat actor) {
+        if (!game.IsOnlineTable()) {
+            _legal = game.GetMatch().Hand().LegalActions(actor);
+            return _legal;
+        }
+        _legal.clear();
+        if (const OnlineClient* client = game.FindOnline(); client != nullptr && ServerListsActions(game)) {
+            for (const ControlAction& listed : client->Table().actions) {
+                if (!listed.nextHand) {
+                    _legal.push_back(listed.hand);
+                }
+            }
+        }
+        return _legal;
+    }
+
+    HandStatus MahjongTableComponent::Perform(MahjongGame& game, const HandAction& action) {
+        if (!game.IsOnlineTable()) {
+            return game.GetSession().PerformPerson(action);
+        }
+        OnlineClient& client = game.GetOnline();
+        const eastl::vector<ControlAction>& listed = client.Table().actions;
+        for (size_t i = 0; i < listed.size(); ++i) {
+            if (!listed[i].nextHand && listed[i].hand == action && client.Act(i)) {
+                return {};
+            }
+        }
+        return std::unexpected(HandError::NotYourTurn);
+    }
+
     ActionButtons MahjongTableComponent::CurrentButtons(const MahjongGame& game) {
         ActionButtons buttons;
         const TableSession& session = game.GetSession();
         if (PersonActs(game)) {
-            const ButtonsKey key{&game, session.Version(), session.StartCount(), session.Actor()};
+            const ButtonsKey key{&game, game.IsOnlineTable(), session.Version(), session.StartCount(), session.Actor()};
             if (_offeredKey != key) {
                 const HandModel& hand = game.GetMatch().Hand();
                 // The tile of the window: the discard that waits for a claim, the tile of a kong that waits to be robbed (invalid in a turn)
-                _offered = MakeActionButtons(hand.LegalActions(key.actor), hand.PendingTile());
+                _offered = MakeActionButtons(LegalFor(game, key.actor), hand.PendingTile());
                 _offeredKey = key;
             }
             buttons = _offered;
@@ -682,7 +722,7 @@ namespace BECore::Mahjong {
                 }
                 break;
             case TapAction::Discard:
-                if (session.PerformPerson(HandAction::MakeDiscard(hand.GetHand(session.Actor()).concealed[static_cast<size_t>(outcome.index)], _declareNext)).has_value()) {
+                if (Perform(game, HandAction::MakeDiscard(hand.GetHand(session.Actor()).concealed[static_cast<size_t>(outcome.index)], _declareNext)).has_value()) {
                     _declareNext = false;
                     _selected.reset();
                 }  // else the click changes nothing: a tile that cannot declare while the flag is on, or the model moved on since the draw
@@ -751,7 +791,10 @@ namespace BECore::Mahjong {
         }
         // A refused action is a button that was out of date; it changes nothing
         const int serialBefore = WindowSerial(game->GetMatch().Hand());
-        if (const HandStatus performed = session.PerformPerson(buttons[*kind].action); !performed.has_value()) {
+        if (const HandStatus performed = Perform(*game, buttons[*kind].action); !performed.has_value()) {
+            if (game->IsOnlineTable()) {
+                return;  // the server lists no such action any more: the next view corrects the table, there is nothing to say
+            }
             LOG_WARNING(Format("MahjongTableComponent: the button '{}' was refused: {}", SpecOf(*kind).element, EnumUtils<HandError>::ToString(performed.error())));
             return;
         }
@@ -1234,7 +1277,19 @@ namespace BECore::Mahjong {
         eastl::array<bool, kTileIdCount> keepsWaiting{};
         if (IsSeat(bottom) && session.GetPhase() == SessionPhase::Playing && faces.seat == bottom && hand.GetPhase() == Phase::Discard && hand.CurrentSeat() == bottom &&
             hand.GetHand(bottom).callingDeclared) {
-            keepsWaiting = KeepsWaitingDiscards(MakeTableView(hand, bottom));
+            // The view allocates: the bars are worked out again only when the session moved (the same key as the buttons)
+            const ButtonsKey key{game, game->IsOnlineTable(), session.Version(), session.StartCount(), bottom};
+            if (_keepsKey != key) {
+                TableView view = MakeTableView(hand, bottom);
+                if (game->IsOnlineTable()) {
+                    view.legal = LegalFor(*game, bottom);  // a display hand lists nothing: the server's list says what may be discarded
+                }
+                _keeps = KeepsWaitingDiscards(view);
+                _keepsKey = key;
+            }
+            keepsWaiting = _keeps;
+        } else {
+            _keepsKey.reset();
         }
 
         // The winds that score for the viewer, marked on its own face-up tiles while the hand is played: under the cover and for a spectator
@@ -1374,7 +1429,7 @@ namespace BECore::Mahjong {
         eastl::array<bool, kTileIdCount> cannotDeclare{};
         if (_declareNext) {
             cannotDeclare.fill(true);
-            for (const HandAction& action : hand.LegalActions(session.Actor())) {
+            for (const HandAction& action : LegalFor(*game, session.Actor())) {
                 if (action.kind == ActionKind::Discard && action.declareCalling) {
                     cannotDeclare[action.tile.Id()] = false;
                 }
@@ -1384,8 +1439,7 @@ namespace BECore::Mahjong {
         // that only computers may claim in shows nothing, and nothing shows while the screen is covered)
         bool claimPending = false;
         if (session.GetPhase() == SessionPhase::Playing && hand.GetPhase() == Phase::Claim && !hand.Discards().empty() && IsSeat(faces.seat)) {
-            const eastl::vector<Seat> asked = hand.PendingClaimSeats();
-            claimPending = eastl::find(asked.begin(), asked.end(), faces.seat) != asked.end();
+            claimPending = hand.AwaitsClaim(faces.seat);
         }
         const int pendingEntry = static_cast<int>(hand.Discards().size()) - 1;
         const int lastDiscard = LastDiscardEntry(hand);

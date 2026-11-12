@@ -43,7 +43,7 @@ namespace BECore::Mahjong {
             const Seat seat = SeatAtPosition(bottom, position);
             SeatPlateText& plate = plates[position];
             plate.seat = seat;
-            plate.name = SeatLabel(strings, seat, session.Seats());
+            plate.name = SeatLabel(strings, seat, SeatWho(session));
             plate.kind = session.KindOf(seat);
             plate.level = session.LevelOf(seat);
             plate.turn = turn == seat;
