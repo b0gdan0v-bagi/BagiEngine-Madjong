@@ -45,6 +45,7 @@ namespace BECore::Mahjong::Tests {
         /// The gap between the buttons of a row, and the width of a row of four buttons of 104 with three gaps (the row wraps at it).
         constexpr float kButtonGap = 8.0f;
         constexpr float kRowWidth = 4.0f * kButtonWidth + 3.0f * kButtonGap;
+        constexpr float kRegionTolerance = 0.01f;  // a region is fitted in floats
 
         /// The role of the colour of a button (an entry of `kUiPaletteNames`), by what the button does.
         const char* RoleOf(ButtonKind kind) {
@@ -218,9 +219,10 @@ namespace BECore::Mahjong::Tests {
         const UIElement* row = Element("Actions", "ActionRow");
         ASSERT_NE(row, nullptr);
         EXPECT_EQ(row->style.stack.spacing, kButtonGap);
+        Draw();                                                                  // the table publishes its regions to the canvas
         ASSERT_TRUE(Canvas("Actions")->SetElementVisible("Hint"_intern, true));  // a hidden element has no rect
         Canvas("Actions")->UpdateLayout(kViewWidth, kViewHeight);
-        EXPECT_EQ(row->rect.w, kRowWidth) << "four buttons and three gaps fit a row";
+        EXPECT_EQ(row->rect.w, kRowWidth) << "the row fills its region: four buttons and three gaps";
         const UIElement* hint = Element("Actions", "Hint");
         ASSERT_NE(hint, nullptr);
         EXPECT_TRUE(SameColor(hint->color, PaletteColor("scrim")));
@@ -602,7 +604,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NE(hint, nullptr);
         EXPECT_FALSE(OnScreen("Actions", "Hint")) << "hidden in the file";
         EXPECT_FALSE(hint->IsHitTestable()) << "a tooltip never takes a click";
-        EXPECT_TRUE(hint->ignoreSafeArea);
+        EXPECT_EQ(hint->style.rect.region, PoolString::Intern(kHintRegionName)) << "the label names the free ground of the table that is its place";
         ASSERT_TRUE(canvas->SetElementVisible("Hint"_intern, true));
 
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
@@ -639,6 +641,14 @@ namespace BECore::Mahjong::Tests {
             }
             LayOutOnTheTable({"Actions"}, window);
             const Rect plate = hint->rect;
+            for (const TableRegion& region : MakeTableRegions(MakeWorstCaseTableLayout(0, window))) {
+                if (region.name == kHintRegionName) {
+                    EXPECT_GE(plate.x, region.rect.x - kRegionTolerance) << window.label.c_str() << ": inside its region";
+                    EXPECT_GE(plate.y, region.rect.y - kRegionTolerance) << window.label.c_str();
+                    EXPECT_LE(plate.x + plate.w, region.rect.x + region.rect.w + kRegionTolerance) << window.label.c_str();
+                    EXPECT_LE(plate.y + plate.h, region.rect.y + region.rect.h + kRegionTolerance) << window.label.c_str();
+                }
+            }
             EXPECT_GE(plate.x, 0.0f) << window.label.c_str();
             EXPECT_GE(plate.y, 0.0f) << window.label.c_str();
             EXPECT_LE(plate.x + plate.w, ViewOf(window).width) << window.label.c_str();
