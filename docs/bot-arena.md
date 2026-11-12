@@ -21,15 +21,14 @@ The program only measures. It reads `src/Mahjong/Game/` and changes nothing ther
 export PATH="$PWD/engine/.venv/bin:$PATH"          # the reflection generator needs jinja2
 cmake --preset macos-release
 cmake --build --preset macos-release --target BagiMahjongArena
-build/ClangmacOS/BagiMahjongArena --help
+build/macos-release/bin/BagiMahjongArena --help
 ```
 
-**A Release build overwrites the Debug executables and libraries in `build/ClangmacOS/`** (the same folder for every preset). Before the
-next `MahjongTests` run: delete `build/ClangmacOS/lib/*.a` and build again with `macos-debug`. Run the arena in Release: a Debug
+Each preset builds into its own `build/<preset>/bin/`, so the Release arena and the Debug `MahjongTests` live side by side. Run the arena in Release: a Debug
 build is much slower. The program is not part of `ctest`; the library it is made of (`src/Mahjong/Arena/`) is tested by
 `ArenaPlayerTest`, `ArenaRunTest`, `ArenaStatsTest`, `ArenaTableTest`, `ArenaCliTest` and, for the log mode, `ArenaLogsTest`, `ArenaLogsReportTest` and `ArenaTesterTest` in `MahjongTests`.
 
-Commands (`A` is `build/ClangmacOS/BagiMahjongArena`; every run prints the same bytes twice, `--time` apart):
+Commands (`A` is `build/macos-release/bin/BagiMahjongArena`; every run prints the same bytes twice, `--time` apart):
 
 ```bash
 A --focus normal --others random --first 4000 --seeds 1000         # one player against three random seats

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Smoke test of the control API of Mahjong: starts BagiMahjong with --control and plays over WebSocket.
 
-    python3 tests/control_smoke.py --exe build/ClangmacOS/BagiMahjong
+    python3 tests/control_smoke.py --exe build/macos-debug/bin/BagiMahjong
 
 The game is started twice, once on the real clock and once with --manual-clock (game time moves only on `step`), headless (no window).
 Both runs play the same scenario: the methods of the control API, one whole hand chosen at random among `list_actions`, and a match of

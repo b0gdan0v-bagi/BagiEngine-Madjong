@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Collects match logs of testers into one folder: only the logs that replay, each once, with an index.
 
-    python3 tools/collect_logs.py --from some/folder [--from other/folder ...] [--to logs/collected] [--verifier build/ClangmacOS/BagiMahjongArena] [--recheck]
+    python3 tools/collect_logs.py --from some/folder [--from other/folder ...] [--to logs/collected] [--verifier build/macos-release/bin/BagiMahjongArena] [--recheck]
 
 For every `--from` folder it runs `<verifier> --logs FOLDER --check` (the output of `BagiMahjongArena`: one line per `*.jsonl` file,
 `ok<TAB>name` or `bad<TAB>name<TAB>reason`; any program that prints that format will do), hashes every file (the SHA-256 of its bytes is its
@@ -61,8 +61,8 @@ class Verdict:
 
 def default_verifier() -> Path:
     if platform.system() == "Windows":
-        return ROOT / "build" / "MSVCWindows" / "BagiMahjongArena.exe"
-    return ROOT / "build" / "ClangmacOS" / "BagiMahjongArena"
+        return ROOT / "build" / "windows-msvc-release" / "bin" / "BagiMahjongArena.exe"
+    return ROOT / "build" / "macos-release" / "bin" / "BagiMahjongArena"
 
 
 # ----- command line -----

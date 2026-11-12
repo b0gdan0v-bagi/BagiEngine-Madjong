@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Screenshots of the Mahjong UI for a review: seven scenes, each in two sizes, into a folder outside the repository.
 
-    python3 tools/ui_shots.py --exe build/ClangmacOS/BagiMahjong --label before
+    python3 tools/ui_shots.py --exe build/macos-debug/bin/BagiMahjong --label before
 
 Starts one BagiMahjong (--headless --control --manual-clock) and, for each scene, sets up the state through the control API, steps a few
 frames and writes `<NN>-<scene>-1920x1080.png` (the native output of the headless window) and `<NN>-<scene>-640x360.png` (the same render
