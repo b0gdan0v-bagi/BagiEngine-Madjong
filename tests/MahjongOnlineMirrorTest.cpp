@@ -581,6 +581,38 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
+    TEST(MahjongOnlineMirrorTest, AClaimAfterAnOwnConcealedKongPointsAtItsPlaceInTheDisplayList) {
+        // The own view lists the melds as the model keeps them, so a concealed kong may lie before the claimed meld.
+        MahjongSeatedGame game = Started(kSeed);
+        OnlineTable table = ReadTable(game, 1);
+        Meld hidden;
+        hidden.kind = MeldKind::Kong;
+        hidden.concealed = true;
+        hidden.first = T("5p");
+        table.seats[1].melds = {hidden};
+        table.discards = {DiscardEntry{T("9s"), 0}};
+        MoveTracker tracker;
+        ASSERT_TRUE(tracker.Follow(table).empty());
+
+        Meld claimed;
+        claimed.kind = MeldKind::Kong;
+        claimed.first = T("9s");
+        claimed.claimed = T("9s");
+        claimed.from = 0;
+        claimed.fromDiscard = true;
+        table.seats[1].melds.push_back(claimed);
+        table.discards.clear();
+        table.version += 1;
+        const eastl::vector<HandMove>& moves = tracker.Follow(table);
+        ASSERT_EQ(moves.size(), 1U);
+        EXPECT_EQ(moves[0].kind, MoveKind::ClaimKong);
+        EXPECT_EQ(moves[0].meld, 1);
+        eastl::vector<Meld> melds;
+        DisplayMelds(table, 1, melds);
+        ASSERT_EQ(melds.size(), 2U);
+        EXPECT_FALSE(melds[static_cast<size_t>(moves[0].meld)].concealed);
+    }
+
     TEST(MahjongOnlineMirrorTest, AFirstTableAndANewHandStartTheLogEmpty) {
         MahjongSeatedGame game = Started(kSeed);
         for (int step = 0; step < 10; ++step) {

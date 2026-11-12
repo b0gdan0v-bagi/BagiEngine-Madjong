@@ -365,7 +365,9 @@ namespace BECore::Mahjong {
             change.newConcealed = 0;
         };
         // New open melds that are not the claim of the last discard cannot come from a claim: the checks above refused them.
+        // The claim found its meld among the open ones; its position in the list is another number when an own concealed kong lies before it.
         if (claim) {
+            claim->meld = indexOf(openAt[static_cast<size_t>(claim->seat)], static_cast<size_t>(claim->meld));
             _step.push_back(*claim);
         }
         // A declaration turned on in this step belongs to the discard of its seat; with two discards of one seat in the step it cannot
