@@ -33,7 +33,7 @@ Without a browser it tests the same code paths: `cmake -S . -B build/webcheck -G
 
 ## What differs in the browser
 
-No saves and no `Continue` (the page's file system is memory, lost on reload; the seat choice is not remembered either), no match log, no control API, no bot arena. Persistence needs IDBFS, which is engine work and not done.
+No saves and no `Continue` (the page's file system is memory, lost on reload; the seat choice is not remembered either), no match log, no control API, no bot arena. Persistence needs IDBFS, which is engine work and not done. Online play is on when `config/MahjongOnlineConfig.xml` names a `wss://` server in `webServer`: the `Online` button of `Setup` is there only then (below).
 
 ## Deploy to Railway
 
@@ -44,3 +44,32 @@ python3 engine/tools/web/build_and_deploy.py --source-dir . --game BagiMahjong -
 ```
 
 `--dry-run` prints the commands without running them. It builds with the SDK in `engine/external/emsdk`, so it is not possible in a worker folder. The service `bagi-mahjong` takes its Railway settings (builder Dockerfile, health check `/healthz`, restart on failure, limits) from `web/.railway/railway.ts`, an IaC partial that owns only it: after a change, `cd web && npm install && railway config plan`, then `railway config apply`.
+
+Two IaC partials share the project and neither touches the other: `web/.railway` is `mahjong-web` (the service `bagi-mahjong`), `tools/server/.railway` is `mahjong-rooms` (the service `bagi-mahjong-rooms`, below). Each owns only its service; variables are never in them.
+
+## The room server on Railway
+
+Written down, not run; the owner runs it. `BagiMahjongServer` (`tools/server/main.cpp`) keeps the online rooms; the hosted page reaches it over `wss://` at the address `webServer` in `config/MahjongOnlineConfig.xml`. The order matters, because the page carries the address:
+
+1. `railway add --service bagi-mahjong-rooms`, then generate its domain (the dashboard, or `railway domain --service bagi-mahjong-rooms`). Compare it with `webServer` of `config/MahjongOnlineConfig.xml` (shipped as `wss://bagi-mahjong-rooms-production.up.railway.app`, a guess from the pattern of the web service); if it differs, edit the file (the page needs the web build again, step 6).
+2. The settings: `cd tools/server && npm install && railway config plan`, then `railway config apply` (commit `package-lock.json` if npm changed it). `plan` is the first check of `tools/server/.railway/railway.ts`, the Amsterdam region id above all.
+3. The variables, from the root: `railway variables --service bagi-mahjong-rooms --set BAGI_ROOMS_ORIGINS=https://bagi-mahjong-production.up.railway.app`. Without it browsers are refused (programs without an `Origin` are let in). Optional: `--set BAGI_ROOMS_SHUTDOWN_GRACE_MS=<ms>` together with `RAILWAY_DEPLOYMENT_DRAINING_SECONDS` for a longer drain on a redeploy; the other `BAGI_ROOMS_*` variables are in `engine/README.md`, "Hosting the room server".
+4. The deploy of the server (needs Docker and the Railway CLI, logged in, the project linked):
+
+```bash
+python3 engine/tools/rooms/build_and_deploy.py --source-dir . --server-target BagiMahjongServer --deploy --service bagi-mahjong-rooms
+```
+
+   The preset is the engine's `linux-server-release`, which the game's presets include. It builds for `linux/amd64` in Docker (slow in emulation on an arm Mac), stages the executable with a runtime-only `Dockerfile` and uploads a few MB; Railway compiles nothing. `--dry-run` prints the commands. This Linux build of `BagiMahjongServer` has not been run yet: the first deploy is its first compile.
+5. Check `https://<domain>/healthz` answers `ok`.
+6. The web page again, with the command of "Deploy to Railway", so it carries the config.
+
+**One replica.** The rooms live in the memory of the process: a second replica would split them in two servers that do not know each other's codes, so the partial pins one. A redeploy or a restart loses every room; a client that reconnects is told `room_gone`.
+
+**The live check** (the owner, in two browsers or a browser and a phone):
+- the `Online` button is on `Setup`; create a room, a second device joins by the code;
+- take seats, the host starts, a hand is played to its end and the ready check passes;
+- redeploy the server while connected: the clients get `room_gone`;
+- an `Origin` that is not in `BAGI_ROOMS_ORIGINS` is refused.
+
+**The desktop** joins a hosted server once `room-client-desktop-tls` is merged (the desktop client does not speak `wss://` yet); until then `BAGI_MAHJONG_SERVER` names a `ws://` address, and the desktop ignores `MahjongOnlineConfig`.
