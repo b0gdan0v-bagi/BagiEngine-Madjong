@@ -79,6 +79,8 @@ namespace BECore::Mahjong {
     void MahjongGame::Start() {
         _store.Open(MatchSaveDirectory());
         ApplySavedPrefs();
+        ApplySavedOnline();
+        CloseOnline();
         // The saved match is the table behind the panel; else a match is dealt at once so that the table is never empty, and it is not
         // recorded: only the match that the person begins may take the place of the saved one
         const bool resumed = ResumeSavedMatch();
@@ -90,6 +92,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongGame::Stop() {
+        CloseOnline();
         FlushSave();
         _upload.Abandon();  // a match given up by the game closing tells the store so
     }
@@ -158,6 +161,49 @@ namespace BECore::Mahjong {
         _animationSpeed = values->speed;
     }
 
+    OnlineClient& MahjongGame::GetOnline() {
+        if (!_online) {
+            _online = eastl::make_unique<OnlineClient>(_onlineSettings);
+        }
+        return *_online;
+    }
+
+    bool MahjongGame::SetOnlineSettings(RoomClientSettings settings) {
+        if (_online) {
+            return false;
+        }
+        _onlineSettings = eastl::move(settings);
+        return true;
+    }
+
+    void MahjongGame::SetOnlineName(eastl::string_view name) {
+        if (_storedOnline.name != name) {
+            _storedOnline.name.assign(name.data(), name.size());
+            _onlineDirty = true;
+        }
+    }
+
+    void MahjongGame::ApplySavedOnline() {
+        const std::expected<OnlineValues, SaveProblem> loaded = _store.LoadOnline();
+        if (!loaded) {
+            if (loaded.error().kind == SaveProblemKind::Broken) {
+                LOG_WARNING(Format("MahjongGame: the saved online play is not used: {}", loaded.error().detail));
+            }
+            return;
+        }
+        _storedOnline = *loaded;
+        _onlineDirty = false;  // the slot holds exactly this
+    }
+
+    void MahjongGame::FollowOnlineSession() {
+        if (!_online || _online->SessionRevision() == _seenSessionRevision) {
+            return;
+        }
+        _seenSessionRevision = _online->SessionRevision();
+        _storedOnline.session = _online->SessionToKeep();  // invalid when the client forgot it
+        _onlineDirty = true;
+    }
+
     bool MahjongGame::ResumeSavedMatch() {
         std::expected<eastl::vector<MatchLogEvent>, SaveProblem> loaded = _store.LoadMatch();
         if (!loaded) {
@@ -194,6 +240,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongGame::FlushSave() {
+        FollowOnlineSession();  // also with saving off: `StoredOnline()` follows the client
         if (!_store.Open(MatchSaveDirectory())) {
             return;
         }
@@ -213,6 +260,14 @@ namespace BECore::Mahjong {
         if (!(prefs == _savedPrefs)) {
             _savedPrefs = prefs;
             _store.SavePrefs(prefs);
+        }
+        if (_onlineDirty) {
+            _onlineDirty = false;  // a failed write is one warning and is not retried until something changes
+            if (_storedOnline.name.empty() && !_storedOnline.session.IsValid()) {
+                _store.ClearOnline();
+            } else {
+                _store.SaveOnline(MakeOnlineSave(_storedOnline.name, _storedOnline.session));
+            }
         }
     }
 

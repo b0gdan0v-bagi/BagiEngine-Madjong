@@ -16,6 +16,9 @@ namespace BECore::Mahjong::Tests {
 
         constexpr uint32_t kSeed = 9;
         constexpr const char* kFolderPrefix = "BagiMahjongSaveStoreTest";
+        constexpr eastl::string_view kRoom = "K7M4Q";
+        constexpr eastl::string_view kToken = "00112233445566778899aabbccddeeff";
+        constexpr eastl::string_view kUrl = "ws://rooms.test:8080";
         constexpr SeatSetup kAllComputers{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
 
         /// The saved events of a short stretch of a match: the start, a whole hand of computers, its settlement and the first moves of the next.
@@ -39,6 +42,14 @@ namespace BECore::Mahjong::Tests {
             return MakePrefs("ru", false, SeatSetup{SeatKind::Person, SeatKind::Person, SeatKind::Computer, SeatKind::Computer}, kShortMatchHands, ComputerLevel::Easy);
         }
 
+        RoomSession SomeSession() {
+            RoomSession session;
+            session.url = kUrl;
+            session.room = kRoom;
+            session.token = kToken;
+            return session;
+        }
+
         class MatchSaveStoreTest : public ::testing::Test {
         protected:
             void SetUp() override {
@@ -60,6 +71,13 @@ namespace BECore::Mahjong::Tests {
                 SaveGameService service(_fileSystem);
                 ASSERT_TRUE(service.Initialize(folder));
                 ASSERT_TRUE(service.Save(kMatchSlot, schema, state).has_value());
+            }
+
+            /// The online slot written as is by a service of its own (the store writes only what `MakeOnlineSave` made).
+            void PutOnline(const MahjongOnlineSave& save) {
+                SaveGameService service(_fileSystem);
+                ASSERT_TRUE(service.Initialize(folder));
+                ASSERT_TRUE(service.Save(kOnlineSlot, kMahjongSaveSchema, save).has_value());
             }
 
             void PutBytes(const char* name, const std::string& bytes) const {
@@ -190,6 +208,84 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(store->LoadMatch().has_value());
         EXPECT_TRUE(store->Open(folder.parent_path() / "other"));  // another folder works
         EXPECT_TRUE(store->SaveMatch(PlayedEvents()));
+    }
+
+    TEST_F(MatchSaveStoreTest, TheOnlineSlotKeepsTheNameAndTheSessionAndIsASlotOfItsOwn) {
+        ASSERT_TRUE(store->Open(folder));
+        const auto missing = store->LoadOnline();
+        ASSERT_FALSE(missing.has_value());
+        EXPECT_EQ(missing.error().kind, SaveProblemKind::Missing);
+
+        ASSERT_TRUE(store->SaveOnline(MakeOnlineSave("Ann", SomeSession())));
+        EXPECT_TRUE(fs::exists(folder / "online.save"));
+        const auto loaded = store->LoadOnline();
+        ASSERT_TRUE(loaded.has_value());
+        EXPECT_EQ(loaded->name, "Ann");
+        EXPECT_TRUE(loaded->session.url == kUrl);
+        EXPECT_TRUE(loaded->session.room == kRoom);
+        EXPECT_TRUE(loaded->session.token == kToken);  // compared, never printed: it is a secret
+        EXPECT_FALSE(store->LoadMatch().has_value());
+        EXPECT_FALSE(store->LoadPrefs().has_value());
+
+        ASSERT_TRUE(store->SaveOnline(MakeOnlineSave("Анна", RoomSession{})));  // a name alone: no room is kept
+        const auto nameOnly = store->LoadOnline();
+        ASSERT_TRUE(nameOnly.has_value());
+        EXPECT_EQ(nameOnly->name, "Анна");
+        EXPECT_FALSE(nameOnly->session.IsValid());
+
+        store->ClearOnline();
+        EXPECT_FALSE(fs::exists(folder / "online.save"));
+        EXPECT_EQ(store->LoadOnline().error().kind, SaveProblemKind::Missing);
+    }
+
+    TEST_F(MatchSaveStoreTest, AnOnlineSlotThatIsNotARoomAndATokenIsBrokenAndNeverNamesTheToken) {
+        ASSERT_TRUE(store->Open(folder));
+        const auto expectBroken = [&](const MahjongOnlineSave& save) {
+            PutOnline(save);
+            const auto loaded = store->LoadOnline();
+            ASSERT_FALSE(loaded.has_value());
+            EXPECT_EQ(loaded.error().kind, SaveProblemKind::Broken);
+            EXPECT_FALSE(loaded.error().detail.empty());
+            EXPECT_EQ(loaded.error().detail.find(kToken.data()), eastl::string::npos);
+        };
+
+        MahjongOnlineSave save = MakeOnlineSave("Ann", SomeSession());
+        const eastl::string good = save.session;
+
+        save.session = "{\"url\":\"ws://x\"";  // not JSON
+        expectBroken(save);
+        save.session = "[1, 2]";  // JSON, not a session
+        expectBroken(save);
+
+        RoomSession badToken = SomeSession();
+        badToken.token = "TOKEN";  // not of the form a room hands out
+        save = MakeOnlineSave("Ann", badToken);
+        expectBroken(save);
+
+        RoomSession badRoom = SomeSession();
+        badRoom.room = "NOT A CODE";
+        save = MakeOnlineSave("Ann", badRoom);
+        expectBroken(save);
+
+        save.session = good;
+        save.name = "\n";  // a name no room accepts
+        expectBroken(save);
+
+        save.name = "Ann";
+        PutOnline(save);
+        EXPECT_TRUE(store->LoadOnline().has_value());  // and a good one after all of that is read again
+
+        PutBytes("online.save", "garbage");
+        ASSERT_FALSE(store->LoadOnline().has_value());
+        EXPECT_EQ(store->LoadOnline().error().kind, SaveProblemKind::Broken);
+    }
+
+    TEST_F(MatchSaveStoreTest, WithSavingOffTheOnlineSlotDoesNothing) {
+        EXPECT_FALSE(store->Open(fs::path()));
+        EXPECT_FALSE(store->SaveOnline(MakeOnlineSave("Ann", SomeSession())));
+        store->ClearOnline();
+        ASSERT_FALSE(store->LoadOnline().has_value());
+        EXPECT_EQ(store->LoadOnline().error().kind, SaveProblemKind::Missing);
     }
 
     TEST(MatchSaveDirectoryTest, TheDefaultFolderIsSavesOrTheEnvironmentAndNoneInTheBrowser) {

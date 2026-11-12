@@ -5,6 +5,7 @@
 #include <Mahjong/Game/MatchLog.h>
 #include <Mahjong/Table/AnimationSpeed.h>
 #include <Mahjong/Table/Coach.h>
+#include <RoomClient/RoomClient.h>
 
 namespace BECore::Mahjong {
 
@@ -23,6 +24,8 @@ namespace BECore::Mahjong {
     /// The slot of the match in progress and the slot of the choices of `Setup`
     inline constexpr eastl::string_view kMatchSlot = "match";
     inline constexpr eastl::string_view kPrefsSlot = "settings";
+    /// The slot of the online play: the player's name and the session of the room to return to
+    inline constexpr eastl::string_view kOnlineSlot = "online";
 
     /// The most lines a saved match may have: a sanity cap on what is parsed (a 16-hand match of four players is a few thousand events)
     inline constexpr size_t kMaxSavedEvents = 50000;
@@ -79,6 +82,31 @@ namespace BECore::Mahjong {
         }
     };
 
+    /**
+     * @brief The online play as it is saved: the name the player typed and the session of the room they may come back to (`Online/OnlineClient.h`).
+     *
+     * **The session holds the token, a secret**: the slot is a plain file like the others (`Save/CLAUDE.md`) and the token goes nowhere
+     * else, never into a log line or a message. Adding a field needs no version.
+     */
+    struct MahjongOnlineSave {
+        BE_CLASS(MahjongOnlineSave)
+
+        /// The player's name as the fields hold it (UTF-8); empty when none was typed
+        BE_REFLECT_FIELD eastl::string name;
+        /// The session as the JSON text of `SessionToJson` (`url`, `room`, `token`); empty when no room is kept
+        BE_REFLECT_FIELD eastl::string session;
+
+        bool operator==(const MahjongOnlineSave& other) const {
+            return name == other.name && session == other.session;
+        }
+    };
+
+    /// What `MahjongOnlineSave` holds, checked and in the types the game uses: a name (empty: none) and a session (`IsValid()` false: none).
+    struct OnlineValues {
+        eastl::string name;
+        RoomSession session;
+    };
+
     /// The choices of `MahjongPrefsSave`, checked and in the types the game uses.
     struct PrefsValues {
         eastl::string language;
@@ -114,6 +142,13 @@ namespace BECore::Mahjong {
     /// `10`, a level that is not `1` .. `10` (or the old names `easy` / `normal`; not read when `levels` is there), a speed that is not `slow` / `normal` / `fast`, hands other than 16 and 8, an empty
     /// language.
     [[nodiscard]] std::expected<PrefsValues, eastl::string> ReadPrefs(const MahjongPrefsSave& prefs);
+
+    /// The state of the online slot: @p session invalid keeps no room.
+    [[nodiscard]] MahjongOnlineSave MakeOnlineSave(eastl::string_view name, const RoomSession& session);
+
+    /// The values of an online state, or the first thing wrong: a name that `SanitizePlayerName` refuses, or a session text that is not a
+    /// room and a token (`SessionFromJson`). The error never repeats the token.
+    [[nodiscard]] std::expected<OnlineValues, eastl::string> ReadOnline(const MahjongOnlineSave& save);
 
     /**
      * @brief The sink of a session that keeps the match for the save: the `Start`, `Action` and `Settlement` events of the current match.

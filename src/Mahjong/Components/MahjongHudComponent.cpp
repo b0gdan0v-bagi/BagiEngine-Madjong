@@ -424,8 +424,8 @@ namespace BECore::Mahjong {
         }
         // Escape closes the page `Options` or `Setup`, whichever is open; with neither open it is not ours
         MahjongGame* game = MahjongGame::GetActive();
-        if (game == nullptr) {
-            return;
+        if (game == nullptr || game->IsOnlineOpen()) {
+            return;  // the online panel owns Escape while it is up (`MahjongOnlineComponent`)
         }
         if (game->IsOptionsOpen()) {
             game->CloseOptions();

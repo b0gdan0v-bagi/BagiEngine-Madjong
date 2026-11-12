@@ -7,6 +7,7 @@
 #include <Mahjong/MahjongGameControl.h>
 #include <Mahjong/MatchLogWriter.h>
 #include <Mahjong/MatchUpload.h>
+#include <Mahjong/Online/OnlineClient.h>
 #include <Mahjong/Save/MatchSave.h>
 #include <Mahjong/Save/MatchSaveStore.h>
 #include <Mahjong/Table/AnimationSpeed.h>
@@ -181,10 +182,43 @@ namespace BECore::Mahjong {
             _rulesOpen = false;
         }
 
-        /// Whether a modal panel (`Setup`, the page `Options` or the rules) covers the table: no click is taken, no computer steps, no hint is shown.
-        bool IsTablePaused() const {
-            return _setupOpen || _optionsOpen || _rulesOpen;
+        /// Whether the online panel (the pages of `Online/OnlineScreens.h`) is open over `Setup`. It is a flag of its own: `CloseSetup()` (every
+        /// start and control action) does not close it, so closing the panel gives the player `Setup` and its `Continue` offer back; `Start()` and
+        /// `Stop()` close it.
+        bool IsOnlineOpen() const {
+            return _onlineOpen;
         }
+        void OpenOnline() {
+            _onlineOpen = true;
+        }
+        void CloseOnline() {
+            _onlineOpen = false;
+        }
+
+        /// Whether a modal panel (`Setup`, the page `Options`, the rules or the online panel) covers the table: no click is taken, no computer
+        /// steps, no hint is shown.
+        bool IsTablePaused() const {
+            return _setupOpen || _optionsOpen || _rulesOpen || _onlineOpen;
+        }
+
+        /// The client of the online play, made on first use with `SetOnlineSettings` (the defaults: the real transport). It lives as long as
+        /// the game: the screens and the table of a room read it, and `Update()` is called by the component once per frame.
+        OnlineClient& GetOnline();
+        const OnlineClient* FindOnline() const {
+            return _online.get();
+        }
+        /// The settings of the client (a test gives it a transport of its own). False, and nothing changes, once the client exists.
+        bool SetOnlineSettings(RoomClientSettings settings);
+
+        /// What `Start()` read of the `online` slot, and what the game keeps since: the name the player chose (empty: none) and the session to
+        /// offer `Return` for (`IsValid()` false: none). The session is the one of the slot until the client's own moves (`SessionRevision()`),
+        /// then the client's, so it follows `Leave` and a room that is gone. **The token is a secret**: it is read here to be handed to
+        /// `OnlineClient::Resume` and nowhere else.
+        const OnlineValues& StoredOnline() const {
+            return _storedOnline;
+        }
+        /// Remembers the player's name; saved by `FlushSave()` when it differs.
+        void SetOnlineName(eastl::string_view name);
 
         /// The language of the words, an id of `config/UIStrings.xml`. Kept across `Reset()` and `StartMatch`.
         PoolString GetLanguage() const {
@@ -242,6 +276,10 @@ namespace BECore::Mahjong {
         MatchStatus BeginRandomMatch(bool record);
         /// The saved choices of `Setup` into the game; one warning for a slot that cannot be used.
         void ApplySavedPrefs();
+        /// The `online` slot into `_storedOnline`; one warning for a slot that cannot be used.
+        void ApplySavedOnline();
+        /// The client's session into `_storedOnline` once its revision moved; marks the slot to be written.
+        void FollowOnlineSession();
         /// The saved match onto the table; false (one warning unless nothing is saved or it is finished) when it cannot be.
         bool ResumeSavedMatch();
 
@@ -252,6 +290,7 @@ namespace BECore::Mahjong {
         bool _setupOpen = false;
         bool _rulesOpen = false;
         bool _optionsOpen = false;
+        bool _onlineOpen = false;
         HintsMode _hintsMode = kDefaultHintsMode;
         AnimationSpeed _animationSpeed = kDefaultAnimationSpeed;
         PoolString _language = PoolString::Intern(kDefaultLanguage);
@@ -262,9 +301,14 @@ namespace BECore::Mahjong {
         uint64_t _savedCounter = 0;    // the recorder's counter at the last write of the match slot
         MahjongPrefsSave _savedPrefs;  // what the prefs slot holds (the defaults while there is none)
         bool _canContinue = false;
-        TableSession _session{_match};  // after _match: it keeps a reference
-        CoachLedger _coach;             // after _session, which holds a pointer to it (the destructor lets it go)
+        RoomClientSettings _onlineSettings;
+        OnlineValues _storedOnline;
+        uint32_t _seenSessionRevision = 0;  // of the client, when `_storedOnline.session` last took its session
+        bool _onlineDirty = false;          // the name or the session moved since the slot was written
+        TableSession _session{_match};      // after _match: it keeps a reference
+        CoachLedger _coach;                 // after _session, which holds a pointer to it (the destructor lets it go)
         MahjongGameControl _control{*this};
+        eastl::unique_ptr<OnlineClient> _online;
     };
 
 }  // namespace BECore::Mahjong

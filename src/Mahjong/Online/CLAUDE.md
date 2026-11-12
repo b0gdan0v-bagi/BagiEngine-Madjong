@@ -1,4 +1,4 @@
-# Online/ — Mahjong in a room (the server side and the client model)
+# Online/ — Mahjong in a room (the server side, the client model, the screens)
 
 `MahjongSeatedGame` is the game's `ISeatedGame` (contract: `engine/src/Modules/Games/CLAUDE.md`, "Seats"), registered by a server as `mahjong` (`MahjongSeatedGame::Info()`). It drives `Match` and `HandModel::Apply` directly, with no `TableSession`, `MahjongGame`, scene or `ImGui`: it compiles into `MahjongModule` and the headless server links it. Not here: the match log, saves (a server restart ends the rooms). The client side is "The client model" below.
 
@@ -16,13 +16,16 @@
 
 ## The client model
 
-`OnlineClient` owns one engine `RoomClient` (contract and numbers: `engine/src/Modules/RoomClient/CLAUDE.md`) and turns it into what a screen reads. It knows no ImGui, scene, renderer, `MahjongGame` or `GameManager`; the screens (the create / join / lobby ones) and the table component read it and are not here yet. A component calls `Update()` once per frame and redraws when `Version()` moved.
+`OnlineClient` owns one engine `RoomClient` (contract and numbers: `engine/src/Modules/RoomClient/CLAUDE.md`) and turns it into what a screen reads. It knows no ImGui, scene, renderer, `MahjongGame` or `GameManager`; the screens below read it, the table of a started game does not yet. A component calls `Update()` once per frame and redraws when `Version()` moved.
 
 | File | Purpose |
 |------|---------|
 | `OnlineTable.h/.cpp` | `ReadOnlineView(view, actions, out, scratch)`: the server's `view` and `actions` (untrusted JSON, checked helpers) into plain data with the game's value types; errors name the key; `out` is touched only on success, and both tables keep their lists' capacity |
 | `OnlineWords.h/.cpp` | every code the client can meet (`kKnownOnlineCodes`) with its key in `config/UIStrings.xml` (`online.*`); several codes share a key where the player can do nothing different; `stale_action` alone is silent |
 | `OnlineClient.h/.cpp` | the model, and `SessionToJson` / `SessionFromJson` |
+| `TextEntry.h/.cpp` | one bounded text (a room code or a name), its pad of keys, `CharFromKeycode` |
+| `OnlineScreens.h/.cpp` | the pages and fields over the client, pure |
+| `OnlineServerUrl.h/.cpp` | the address of the server |
 
 - **Stage** (`OnlineStage`) is derived, never stored on its own: `Idle` (no connection, or a request answered with an error), `Connecting` (a Host / Join waits for `joined`), `Lobby` (in a room, no good view yet), `Game` (a good view arrived; `Table()`), `Reconnecting` (the lobby and the table stay readable, frozen). A connection with no room and no request pending is closed by the model, so the server never closes it later with a notice nobody asked for.
 - **A client reads `actions`.** `Act(i)` sends `Table().actions[i]`'s original JSON (`RoomClient::GetActions()[i]`) with the version of the last view, only in `Game` and only while `Table()` is that last view (after a view that did not read, the client already holds the new list and the screen the old table: `Act` is refused, no notice, until a good view); it is never resent (`stale_action` is silent and the fresh view follows). `view {}` before the start is not a table.
@@ -31,3 +34,13 @@
 - **Notice:** one `OnlineNotice` (a key, an `arg` for the one key that names a code, a serial so a screen shows each once). A command that cannot be sent, a server `error`, a `left` the player did not ask for and a `Closed` make one. The `arg` is a code from the server, reduced to letters, digits and `_`. A `Closed` the model asked for (`Disconnect`, a bad format) is dropped.
 - **The session to keep:** `SessionToKeep()` with `SessionRevision()` (grows when it should be saved or erased). Forgotten on `room_gone`, `replaced`, `gave_up`, `Leave()`, a `left` and a format mismatch; kept through a lost connection, `Disconnect()` and every other close. **The token is the player's secret:** never in a log, a notice or a test message. Where it is stored (`Save/`, the browser) is the screens' decision; the model gives the data and a JSON pair that refuses anything that is not a room and a token.
 
+## The screens
+
+`OnlineScreens` is the pure model of the online panel (`Components/MahjongOnlineComponent`, the nodes `Online` and `OnlineEntry`): the page (`Menu`, `Host`, `Join`, `Entry`, `Lobby`), the two fields, the host's options and the pad. It takes the client as an argument of each command and of `Sync` and keeps no copy of it, so it holds no token; `Resume` takes the session from the caller.
+
+- **No text field exists in the engine**, so a field is typed on a **pad of buttons** (it works on a phone and in the browser) and, on a desktop, from the keyboard (`CharFromKeycode`, ASCII). The code pad is the server's `kRoomCodeAlphabet`; the name pad is the key `online.pad.letters` of the language (letters are words, not code) plus digits and a space. The field takes the letters of both alphabets, so a name typed in one language survives a switch. A Cyrillic name from a hardware keyboard needs the engine to call `SDL_StartTextInput`; it does not yet.
+- **Entry is a page, not a field:** on a window 320 units high a form and a pad of touch-size keys do not fit together. A tap on the Name or Code row opens the pad; Done returns. Escape goes one page back; **in the `Lobby` it does nothing** (a stray key must not give up a seat; `Leave` is a button).
+- **The panel follows the stage of the client** (`Sync` after every `Update()`): Connecting, Lobby, Game and Reconnecting show the `Lobby` page (a lost connection is a status line, never an error); an `Idle` client after a request returns to the form it was sent from, after a room (gone, replaced, left) to the `Menu`. The `Game` stage shows the lobby with "The game has started" and `Leave`: the placeholder that the online table replaces. An error is the notice of the client in the current language, shown once per serial and cleared by the player's next move.
+- **The name and the session** are the game's to keep (`MahjongGame::StoredOnline()`, `Save/CLAUDE.md`): the component hands them over, `Return` offers the client's own session, else the stored one. The address is not typed: `OnlineServerUrl` is `BAGI_MAHJONG_SERVER` on a desktop, else the default port of `BagiMahjongServer` on this machine; the browser's `wss://` one is not set yet.
+- **A room in a lobby vanishes with its last member**, so `Return` works for a started game only (or while another person is in the room).
+- **Known engine fault** (not worked around): `RoomClient::_host` is recomputed on `lobby` and `view` only, so a host whose `choose_seat` is refused after a `lobby` that took the seat looks like a guest until the next lobby message. A guest is unaffected.

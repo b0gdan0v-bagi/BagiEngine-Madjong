@@ -33,18 +33,21 @@ build/ClangmacOS/BagiMahjong
 - **Browser** (Emscripten, `docs/web.md`): build, smoke, deploy. No saves, match log or control API there.
 - **Tile art:** `python3 tools/make_tiles.py` (`--check` tells whether the committed atlas is up to date).
 
-## Online play, the server
+## Online play
 
-The server side of online rooms (`src/Mahjong/Online/CLAUDE.md`) is built; the game has no screens for it yet. `BagiMahjongServer` is a headless program (no window, no renderer) that keeps rooms of the game `mahjong` in memory; it is not built for the browser.
+The first screen (`Setup`) has an `Online` button (desktop only): **Host a room** (name, 8 or 16 hands, the level of the computer seats, then the code to give to friends), **Join a room** (name and the five-character code), then the lobby (take a seat, the host starts) and, after a drop or a restart, **Return to room** while the game goes on. The name is typed on a pad of keys or on the keyboard. The table of a started game is not online yet: the panel shows the lobby with "The game has started" (`src/Mahjong/Online/CLAUDE.md`).
+
+`BagiMahjongServer` is a headless program (no window, no renderer) that keeps rooms of the game `mahjong` in memory; it is not built for the browser. The game connects to `ws://localhost:8080` unless `BAGI_MAHJONG_SERVER` names another address.
 
 ```bash
 cmake --build --preset macos-debug --target BagiMahjongServer
 build/macos-debug/bin/BagiMahjongServer --port 8080                 # --help lists the flags; PORT and BAGI_ROOMS_* are read too
+build/ClangmacOS/BagiMahjong                                        # twice: Host in one window, Join with its code in the other
 ctest --preset macos-debug -R BagiMahjongRoomSmoke                  # starts it, plays hands with four clients, a reconnect
 docker build -f engine/tools/rooms/Dockerfile --build-arg SERVER_TARGET=BagiMahjongServer -t bagi-mahjong-server .
 ```
 
-Hosting (Railway, the settings, the proxy): the engine README, "Hosting the room server". The server runs the rules, so a change in `src/Mahjong/Game/` needs a new image together with the client.
+Hosting (Railway, the settings, the proxy): the engine README, "Hosting the room server". The server runs the rules, so a change in `src/Mahjong/Game/` needs a new image together with the client. The kept room and the name are saved in `saves/` (the token is a secret in a plain file).
 
 ## How to play
 
