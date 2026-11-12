@@ -179,6 +179,14 @@ namespace BECore::Mahjong {
         return true;
     }
 
+    bool OnlineScreens::SetHintsAllowed(bool allowed) {
+        if (_page != OnlinePage::Host) {
+            return false;
+        }
+        Assign(_options.hintsAllowed, allowed);
+        return true;
+    }
+
     bool OnlineScreens::Create(OnlineClient& client, eastl::string_view url) {
         if (_page != OnlinePage::Host || client.Stage() != OnlineStage::Idle) {
             return false;

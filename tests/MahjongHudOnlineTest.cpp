@@ -40,19 +40,19 @@ namespace BECore::Mahjong::Tests {
 
         /// The elements the pages of the panel show and hide among themselves (the rest of the canvas is always there).
         const char* const kPageElements[] = {
-            "OnlineTitleMenu", "OnlineTitleHost", "OnlineTitleJoin", "OnlineTitleLobby", "OnlineNotice",   "OnlineStatus",   "OnlineWaiting",  "OnlineMenuHost", "OnlineMenuJoin", "OnlineMenuReturn",
-            "OnlineNameRow",   "OnlineCodeRow",   "OnlineHandsRow",  "OnlineLevelRow",   "OnlineSeatRow0", "OnlineSeatRow1", "OnlineSeatRow2", "OnlineSeatRow3", "OnlineSit0",     "OnlineSit1",
-            "OnlineSit2",      "OnlineSit3",      "OnlineGap",       "OnlineButtons",    "OnlineCreate",   "OnlineEnter",    "OnlineStart",    "OnlineLeave",
+            "OnlineTitleMenu",  "OnlineTitleHost", "OnlineTitleJoin", "OnlineTitleLobby", "OnlineNotice",   "OnlineStatus",   "OnlineWaiting",  "OnlineHostLine", "OnlineMenuHost", "OnlineMenuJoin",
+            "OnlineMenuReturn", "OnlineNameRow",   "OnlineCodeRow",   "OnlineHandsRow",   "OnlineLevelRow", "OnlineHintsRow", "OnlineSeatRow0", "OnlineSeatRow1", "OnlineSeatRow2", "OnlineSeatRow3",
+            "OnlineSit0",       "OnlineSit1",      "OnlineSit2",      "OnlineSit3",       "OnlineGap",      "OnlineButtons",  "OnlineCreate",   "OnlineEnter",    "OnlineStart",    "OnlineLeave",
         };
 
         /// The page `Menu` (with `Return` offered), `Host`, `Join` and the `Lobby` (a seat that can be taken on every row, the host's `Start`): the elements each shows.
         const std::vector<const char*> kMenuPage = {"OnlineTitleMenu", "OnlineMenuHost", "OnlineMenuJoin", "OnlineMenuReturn"};
-        const std::vector<const char*> kHostPage = {"OnlineTitleHost", "OnlineNameRow", "OnlineHandsRow", "OnlineLevelRow", "OnlineGap", "OnlineButtons", "OnlineCreate"};
+        const std::vector<const char*> kHostPage = {"OnlineTitleHost", "OnlineNameRow", "OnlineHandsRow", "OnlineLevelRow", "OnlineHintsRow", "OnlineGap", "OnlineButtons", "OnlineCreate"};
         const std::vector<const char*> kJoinPage = {"OnlineTitleJoin", "OnlineNameRow", "OnlineCodeRow", "OnlineGap", "OnlineButtons", "OnlineEnter"};
         const std::vector<const char*> kLobbyPage = {"OnlineTitleLobby", "OnlineSeatRow0", "OnlineSeatRow1", "OnlineSeatRow2", "OnlineSeatRow3", "OnlineSit0", "OnlineSit1",
                                                      "OnlineSit2",       "OnlineSit3",     "OnlineGap",      "OnlineButtons",  "OnlineStart",    "OnlineLeave"};
         /// The lines that take the place under the title, one at a time.
-        const char* const kInfoLines[] = {"OnlineNotice", "OnlineStatus", "OnlineWaiting"};
+        const char* const kInfoLines[] = {"OnlineNotice", "OnlineStatus", "OnlineWaiting", "OnlineHostLine"};
 
         /// The widest character of @p candidates by the number of code points of a text of it, which is how a line is measured; here the longest text in a language is wanted,
         /// so the first of the pad.
@@ -111,6 +111,7 @@ namespace BECore::Mahjong::Tests {
 
             const eastl::string name = RepeatedLetter(strings, kNameBytes);
             const eastl::string seatName = RepeatedLetter(strings, kSeatNameBytes);
+            vars.Set("onlineHostLine"_intern, eastl::string_view(LongestText({Tr(strings, kOnlineLobbyHintsAllowedKey), Tr(strings, kOnlineLobbyHintsOffKey)})));
             std::vector<eastl::string> seats;
             for (const bool mine : {false, true}) {
                 for (const bool connected : {false, true}) {
@@ -176,10 +177,13 @@ namespace BECore::Mahjong::Tests {
             std::string value;
         };
         std::vector<Control> controls = {
-            {kOnline, "OnlineClose", "MahjongOnlineClose", ""},       {kOnline, "OnlineMenuHost", "MahjongOnlineHost", ""},  {kOnline, "OnlineMenuJoin", "MahjongOnlineJoin", ""},
-            {kOnline, "OnlineMenuReturn", "MahjongOnlineResume", ""}, {kOnline, "OnlineName", "MahjongOnlineField", "name"}, {kOnline, "OnlineCode", "MahjongOnlineField", "code"},
-            {kOnline, "OnlineHands16", "MahjongOnlineHands", "16"},   {kOnline, "OnlineHands8", "MahjongOnlineHands", "8"},  {kOnline, "OnlineCreate", "MahjongOnlineCreate", ""},
-            {kOnline, "OnlineEnter", "MahjongOnlineEnter", ""},       {kOnline, "OnlineStart", "MahjongOnlineStart", ""},    {kOnline, "OnlineLeave", "MahjongOnlineLeave", ""},
+            {kOnline, "OnlineClose", "MahjongOnlineClose", ""},       {kOnline, "OnlineMenuHost", "MahjongOnlineHost", ""},
+            {kOnline, "OnlineMenuJoin", "MahjongOnlineJoin", ""},     {kOnline, "OnlineMenuReturn", "MahjongOnlineResume", ""},
+            {kOnline, "OnlineName", "MahjongOnlineField", "name"},    {kOnline, "OnlineCode", "MahjongOnlineField", "code"},
+            {kOnline, "OnlineHands16", "MahjongOnlineHands", "16"},   {kOnline, "OnlineHands8", "MahjongOnlineHands", "8"},
+            {kOnline, "OnlineCreate", "MahjongOnlineCreate", ""},     {kOnline, "OnlineHintsAllowed", "MahjongOnlineHints", "allowed"},
+            {kOnline, "OnlineHintsOff", "MahjongOnlineHints", "off"}, {kOnline, "OnlineEnter", "MahjongOnlineEnter", ""},
+            {kOnline, "OnlineStart", "MahjongOnlineStart", ""},       {kOnline, "OnlineLeave", "MahjongOnlineLeave", ""},
             {kEntry, "EntryDelete", "MahjongOnlineBackspace", ""},    {kEntry, "EntryDone", "MahjongOnlineDone", ""},
         };
         for (size_t seat = 0; seat < kSeats; ++seat) {
@@ -281,6 +285,9 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Text(kOnline, "OnlineSit2"), "Sit here");
         EXPECT_EQ(Text(kOnline, "OnlineWaiting"), "Waiting for the host");
         EXPECT_EQ(Text(kOnline, "OnlineHandsCaption"), "Hands");
+        EXPECT_EQ(Text(kOnline, "OnlineHintsCaption"), "Hints");
+        EXPECT_EQ(Text(kOnline, "OnlineHintsAllowed"), "Allowed");
+        EXPECT_EQ(Text(kOnline, "OnlineHintsOff"), "Not allowed");
         EXPECT_EQ(Text(kOnline, "OnlineSeatCaption3"), "Seat 4");
         EXPECT_EQ(Text(kOnline, "OnlineStart"), "Start");
         EXPECT_EQ(Text(kOnline, "OnlineLeave"), "Leave");
@@ -292,6 +299,9 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Text(kOnline, "OnlineTitleLobby"), "Комната K7M2Q");
         EXPECT_EQ(Text(kOnline, "OnlineSit0"), "Сесть здесь");
         EXPECT_EQ(Text(kOnline, "OnlineLevelCaption"), "Уровень");
+        EXPECT_EQ(Text(kOnline, "OnlineHintsCaption"), "Помощь");
+        EXPECT_EQ(Text(kOnline, "OnlineHintsAllowed"), "Можно");
+        EXPECT_EQ(Text(kOnline, "OnlineHintsOff"), "Нельзя");
         EXPECT_EQ(Text(kOnline, "OnlineCreate"), "Создать");
         EXPECT_EQ(Text(kOnline, "OnlineEnter"), "Войти");
         EXPECT_EQ(Text(kEntry, "EntryDone"), "Готово");

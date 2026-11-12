@@ -159,6 +159,12 @@ namespace BECore::Mahjong {
         /// Whether the lobby shows @p seat free to take, in a lobby that has not started.
         [[nodiscard]] bool CanChoose(int seat) const;
 
+        /// What this client asked for when it made the room it is in; null for a room it joined or resumed, and once the room is left, gone
+        /// or the connection given up. The lobby does not carry the options, so only the host can say them there.
+        [[nodiscard]] const OnlineRoomOptions* HostedOptions() const {
+            return _hosted ? &*_hosted : nullptr;
+        }
+
         /// The raw client, for what the model does not copy (the breakdown lines of a result in `GetView()`).
         [[nodiscard]] const RoomClient& Client() const {
             return _client;
@@ -184,6 +190,7 @@ namespace BECore::Mahjong {
         /// Closes the connection of the client and drops the `Closed` it queues (the model asked for it, so it has nothing to say).
         void CloseConnection();
         void ForgetView();
+        void ForgetHosted();
         void KeepSession(const RoomSession& session);
         void ForgetSession();
         void SetNotice(eastl::string_view key, eastl::string_view arg = {});
@@ -202,6 +209,7 @@ namespace BECore::Mahjong {
         /// `_table` is the latest view of the client: false after a view that was not read, until the next good one.
         bool _tableIsLatest = false;
         OnlineLobby _lobby;
+        std::optional<OnlineRoomOptions> _hosted;
         bool _lobbyDirty = false;
         int _lobbySeat = -1;
         bool _lobbyHost = false;

@@ -27,6 +27,7 @@ namespace BECore::Mahjong {
         constexpr eastl::string_view kDoneAction = "MahjongOnlineDone";
         constexpr eastl::string_view kHandsAction = "MahjongOnlineHands";
         constexpr eastl::string_view kLevelAction = "MahjongOnlineLevel";
+        constexpr eastl::string_view kHintsAction = "MahjongOnlineHints";
         constexpr eastl::string_view kCreateAction = "MahjongOnlineCreate";
         constexpr eastl::string_view kEnterAction = "MahjongOnlineEnter";
         constexpr eastl::string_view kSitAction = "MahjongOnlineSit";
@@ -34,6 +35,8 @@ namespace BECore::Mahjong {
         constexpr eastl::string_view kLeaveAction = "MahjongOnlineLeave";
         constexpr eastl::string_view kNameValue = "name";
         constexpr eastl::string_view kCodeValue = "code";
+        constexpr eastl::string_view kHintsAllowedValue = "allowed";
+        constexpr eastl::string_view kHintsOffValue = "off";
 
         /// The elements of the canvas `Online` the pages show and hide among themselves, in the order of `kItemNames`.
         enum Item : size_t {
@@ -44,6 +47,7 @@ namespace BECore::Mahjong {
             Notice,
             Status,
             Waiting,
+            HostLine,
             MenuHost,
             MenuJoin,
             MenuReturn,
@@ -51,6 +55,7 @@ namespace BECore::Mahjong {
             CodeRow,
             HandsRow,
             LevelRow,
+            HintsRow,
             SeatRow0,
             SeatRow1,
             SeatRow2,
@@ -71,9 +76,10 @@ namespace BECore::Mahjong {
         };
 
         constexpr const char* kItemNames[] = {
-            "OnlineTitleMenu", "OnlineTitleHost", "OnlineTitleJoin", "OnlineTitleLobby", "OnlineNotice",   "OnlineStatus",   "OnlineWaiting",  "OnlineMenuHost", "OnlineMenuJoin",   "OnlineMenuReturn",
-            "OnlineNameRow",   "OnlineCodeRow",   "OnlineHandsRow",  "OnlineLevelRow",   "OnlineSeatRow0", "OnlineSeatRow1", "OnlineSeatRow2", "OnlineSeatRow3", "OnlineSit0",       "OnlineSit1",
-            "OnlineSit2",      "OnlineSit3",      "OnlineGap",       "OnlineButtons",    "OnlineCreate",   "OnlineEnter",    "OnlineStart",    "OnlineLeave",    "EntryCaptionName", "EntryCaptionCode",
+            "OnlineTitleMenu", "OnlineTitleHost", "OnlineTitleJoin",  "OnlineTitleLobby", "OnlineNotice",  "OnlineStatus",   "OnlineWaiting",    "OnlineHostLine",
+            "OnlineMenuHost",  "OnlineMenuJoin",  "OnlineMenuReturn", "OnlineNameRow",    "OnlineCodeRow", "OnlineHandsRow", "OnlineLevelRow",   "OnlineHintsRow",
+            "OnlineSeatRow0",  "OnlineSeatRow1",  "OnlineSeatRow2",   "OnlineSeatRow3",   "OnlineSit0",    "OnlineSit1",     "OnlineSit2",       "OnlineSit3",
+            "OnlineGap",       "OnlineButtons",   "OnlineCreate",     "OnlineEnter",      "OnlineStart",   "OnlineLeave",    "EntryCaptionName", "EntryCaptionCode",
         };
         static_assert(sizeof(kItemNames) / sizeof(kItemNames[0]) == ItemCount, "one name per item");
 
@@ -281,6 +287,11 @@ namespace BECore::Mahjong {
             if (const std::optional<ComputerLevel> level = TryParseLevel(std::string_view(value.data(), value.size()))) {
                 _screens.SetLevel(LevelNumber(*level));
             }
+        } else if (action == kHintsAction) {
+            // Only the two ids the panel offers
+            if (value == kHintsAllowedValue || value == kHintsOffValue) {
+                _screens.SetHintsAllowed(value == kHintsAllowedValue);
+            }
         } else if (action == kCreateAction) {
             _screens.Create(client, OnlineServerUrl());
             StoreName(*game);
@@ -372,6 +383,9 @@ namespace BECore::Mahjong {
         vars.Set("onlineEntryValue"_intern, eastl::string_view(_screens.Focused().Text()));
         vars.Set("onlineHands"_intern, _screens.Options().hands);
         vars.Set("onlineLevel"_intern, _screens.Options().level);
+        vars.Set("onlineHints"_intern, _screens.Options().hintsAllowed ? kHintsAllowedValue : kHintsOffValue);
+        const OnlineRoomOptions* hosted = client.HostedOptions();
+        vars.Set("onlineHostLine"_intern, eastl::string_view(hosted == nullptr ? eastl::string() : Tr(strings, hosted->hintsAllowed ? kOnlineLobbyHintsAllowedKey : kOnlineLobbyHintsOffKey)));
         // The room: the title of the lobby while there is one, else the room `Return` would enter
         const eastl::string& room = _screens.Page() == OnlinePage::Lobby ? (lobby.room.empty() ? client.Room() : lobby.room) : _screens.ReturnRoom();
         vars.Set("onlineRoom"_intern, eastl::string_view(room));
@@ -399,6 +413,7 @@ namespace BECore::Mahjong {
         SetItem(CodeRow, join);
         SetItem(HandsRow, host);
         SetItem(LevelRow, host);
+        SetItem(HintsRow, host);
 
         // One line under the title: the notice, else the status, else (in the lobby) who is waited for
         const bool notice = !_screens.NoticeKey().empty();
@@ -408,6 +423,8 @@ namespace BECore::Mahjong {
         SetItem(Notice, notice);
         SetItem(Status, status);
         SetItem(Waiting, lobbyLine && stage == OnlineStage::Lobby && !client.IsHost());
+        // The slot of "Waiting for the host" is free for the host: it says what he decided about hints
+        SetItem(HostLine, lobbyLine && stage == OnlineStage::Lobby && client.IsHost() && client.HostedOptions() != nullptr);
 
         const bool seats = inLobby && !lobby.room.empty();
         for (size_t seat = 0; seat < kSeatCount; ++seat) {

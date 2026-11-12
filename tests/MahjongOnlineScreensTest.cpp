@@ -165,6 +165,7 @@ namespace BECore::Mahjong::Tests {
         const OnlineRoomOptions defaults;
         EXPECT_EQ(host.screens.Options().hands, defaults.hands);
         EXPECT_EQ(host.screens.Options().level, defaults.level);
+        EXPECT_FALSE(host.screens.Options().hintsAllowed) << "hints are not allowed unless the host says so";
 
         EXPECT_FALSE(host.screens.SetHands(12));
         EXPECT_FALSE(host.screens.SetLevel(0));
@@ -172,6 +173,8 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(host.screens.Options().hands, defaults.hands);
         EXPECT_TRUE(host.screens.SetHands(kShortMatchHands));
         EXPECT_TRUE(host.screens.SetLevel(kMinLevel));
+        EXPECT_TRUE(host.screens.SetHintsAllowed(true));
+        EXPECT_TRUE(host.screens.Options().hintsAllowed);
         EXPECT_EQ(host.screens.Options().hands, kShortMatchHands);
         EXPECT_EQ(host.screens.Options().level, kMinLevel);
 
@@ -180,8 +183,35 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(host.screens.Start(host.Client()));
         ASSERT_TRUE(RunUntil(world, {&host}, [&] { return host.Client().HasTable(); }));
         EXPECT_EQ(host.Client().Table().handsTotal, kShortMatchHands);
+        EXPECT_TRUE(host.Client().Table().hintsAllowed) << "the choice of the form reached the room";
         EXPECT_EQ(host.screens.Page(), OnlinePage::Closed) << "the table of a started game is the scene's: the panel closes";
         EXPECT_EQ(host.Client().Stage(), OnlineStage::Game);
+    }
+
+    TEST(MahjongOnlineScreens, TheHintsChoiceIsKeptOnlyOnTheHostFormAndAHostWhoDidNotChooseGetsARoomWithoutHints) {
+        MahjongHubWorld world;
+        Person host(world);
+        host.screens.Open(host.Client());
+        EXPECT_FALSE(host.screens.SetHintsAllowed(true)) << "the Menu has no such choice";
+        ASSERT_TRUE(host.screens.ShowJoin());
+        EXPECT_FALSE(host.screens.SetHintsAllowed(true)) << "nor has the Join form";
+        EXPECT_FALSE(host.screens.Options().hintsAllowed);
+        ASSERT_TRUE(host.screens.Back());
+        ASSERT_TRUE(host.screens.ShowHost());
+        const uint64_t before = host.screens.Version();
+        EXPECT_TRUE(host.screens.SetHintsAllowed(false));
+        EXPECT_EQ(host.screens.Version(), before) << "the same choice changes nothing";
+        EXPECT_TRUE(host.screens.SetHintsAllowed(true));
+        EXPECT_GT(host.screens.Version(), before);
+        EXPECT_TRUE(host.screens.SetHintsAllowed(false));
+
+        ASSERT_TRUE(host.screens.Create(host.Client(), kUrl));
+        ASSERT_TRUE(RunUntil(world, {&host}, [&] { return InStage(host, OnlineStage::Lobby); }));
+        ASSERT_NE(host.Client().HostedOptions(), nullptr);
+        EXPECT_FALSE(host.Client().HostedOptions()->hintsAllowed);
+        ASSERT_TRUE(host.screens.Start(host.Client()));
+        ASSERT_TRUE(RunUntil(world, {&host}, [&] { return host.Client().HasTable(); }));
+        EXPECT_FALSE(host.Client().Table().hintsAllowed);
     }
 
     TEST(MahjongOnlineScreens, JoinByCodeWithANameAndALowerCaseCodeSeatsThePlayer) {

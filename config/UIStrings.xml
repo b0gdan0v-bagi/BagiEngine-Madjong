@@ -315,6 +315,11 @@
         <string key="online.field.name" text="Name"/>
         <string key="online.field.code" text="Code"/>
         <string key="online.field.level" text="Level"/>
+        <string key="online.field.hints" text="Hints"/>
+        <string key="online.hints.allowed" text="Allowed"/>
+        <string key="online.hints.off" text="Not allowed"/>
+        <string key="online.lobby.hintsAllowed" text="Hints and the coach are allowed in this room"/>
+        <string key="online.lobby.hintsOff" text="Hints and the coach are not allowed in this room"/>
         <string key="online.create" text="Create"/>
         <string key="online.enter" text="Enter"/>
         <string key="online.lobby.title" text="Room {onlineRoom}"/>
@@ -638,6 +643,11 @@
         <string key="online.field.name" text="Имя"/>
         <string key="online.field.code" text="Код"/>
         <string key="online.field.level" text="Уровень"/>
+        <string key="online.field.hints" text="Помощь"/>
+        <string key="online.hints.allowed" text="Можно"/>
+        <string key="online.hints.off" text="Нельзя"/>
+        <string key="online.lobby.hintsAllowed" text="В комнате разрешены советы и тренер"/>
+        <string key="online.lobby.hintsOff" text="В комнате советы и тренер запрещены"/>
         <string key="online.create" text="Создать"/>
         <string key="online.enter" text="Войти"/>
         <string key="online.lobby.title" text="Комната {onlineRoom}"/>

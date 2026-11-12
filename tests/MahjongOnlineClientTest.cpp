@@ -599,6 +599,32 @@ namespace BECore::Mahjong::Tests {
 
     // ---- Leave, Disconnect, Resume ------------------------------------------------------------------------------------------------
 
+    TEST_F(MahjongOnlineClientTest, TheHostKnowsTheOptionsOfItsRoomUntilTheRoomIsLeftOrGone) {
+        EnterAsHost();
+        ASSERT_NE(_client->HostedOptions(), nullptr);
+        EXPECT_EQ(_client->HostedOptions()->hands, 8);
+        EXPECT_FALSE(_client->HostedOptions()->hintsAllowed);
+        ASSERT_TRUE(_client->Leave());
+        EXPECT_EQ(_client->HostedOptions(), nullptr);
+    }
+
+    TEST_F(MahjongOnlineClientTest, TheOptionsAreForgottenWithTheRoomThatClosesUnderTheHostAndAreNotThoseOfARoomJoined) {
+        ASSERT_TRUE(_client->Host(kUrl, "Ann", {16, 3, true}));
+        ASSERT_NE(_client->HostedOptions(), nullptr);
+        EXPECT_TRUE(_client->HostedOptions()->hintsAllowed);
+        Link().PushOpened();
+        Pump();
+        Link().PushText(MakeJoinedMessage(kRoom, 1, kToken, 0, true));
+        Link().PushText(LobbyText(0, HostAlone()));
+        Pump();
+        ASSERT_NE(_client->HostedOptions(), nullptr) << "the joined and the lobby of the room do not forget them";
+        Receive(MakeLeftMessage("room_closed"));
+        EXPECT_EQ(_client->HostedOptions(), nullptr);
+
+        ASSERT_TRUE(_client->Join(kUrl, kRoom, "Bob"));
+        EXPECT_EQ(_client->HostedOptions(), nullptr) << "a guest does not know what the host chose";
+    }
+
     TEST_F(MahjongOnlineClientTest, LeaveForgetsTheSessionAtOnceAndTheConnectionIsClosedWhenTheServerAnswered) {
         EnterAsHost();
         const uint32_t revision = _client->SessionRevision();
