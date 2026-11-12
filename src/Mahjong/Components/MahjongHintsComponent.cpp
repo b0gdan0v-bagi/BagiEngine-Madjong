@@ -4,8 +4,8 @@
 #include <BECore/Renderer/IRenderer.h>
 #include <BECore/Scene/Scene.h>
 #include <BECore/UI/UICanvasComponent.h>
-#include <BECore/UI/UIImage.h>
-#include <BECore/UI/UILabel.h>
+#include <BECore/UI/UIImageComponent.h>
+#include <BECore/UI/UITextComponent.h>
 #include <CoreSDL/SDLEvents.h>
 #include <Events/InputEvents.h>
 #include <Generated/MahjongHintsComponent.gen.hpp>
@@ -217,7 +217,7 @@ namespace BECore::Mahjong {
                 // The canvas is looked up only when a sprite must change
                 const auto canvas = GetNode().GetComponent<UICanvasComponent>();
                 UIElement* element = canvas ? canvas->GetRoot().FindByName(IndexedName(kWaitTilePrefix, i)) : nullptr;
-                if (UIImage* image = element != nullptr ? element->Cast<UIImage>() : nullptr) {
+                if (UIImageComponent* image = element != nullptr ? element->GetComponent<UIImageComponent>() : nullptr) {
                     image->sprite = PoolString::Intern(SpriteName(_row[i].tile));
                 }
             }
@@ -353,13 +353,13 @@ namespace BECore::Mahjong {
             if (UIElement* element = root.FindByName(rowName)) {
                 element->color = RowFill(row != nullptr ? row->kind : CardRowKind::Other);
             }
-            if (UIElement* steps = root.FindByName(IndexedName(kCardStepsPrefix, at)); UILabel* label = steps != nullptr ? steps->Cast<UILabel>() : nullptr) {
+            if (UIElement* steps = root.FindByName(IndexedName(kCardStepsPrefix, at)); UITextComponent* label = steps != nullptr ? steps->GetComponent<UITextComponent>() : nullptr) {
                 label->textColor = TrendColor(row != nullptr ? row->trend : CardTrend::None);
             }
             for (size_t k = 0; k < kMaxCardTiles; ++k) {
                 const PoolString name = CardTileName(at, static_cast<int>(k));
                 const bool shown = row != nullptr && row->tiles[k].IsValid();
-                if (UIElement* element = root.FindByName(name); UIImage* image = element != nullptr ? element->Cast<UIImage>() : nullptr) {
+                if (UIElement* element = root.FindByName(name); UIImageComponent* image = element != nullptr ? element->GetComponent<UIImageComponent>() : nullptr) {
                     image->sprite = shown ? PoolString::Intern(SpriteName(row->tiles[k])) : PoolString();
                 }
                 canvas->SetElementVisible(name, shown);
