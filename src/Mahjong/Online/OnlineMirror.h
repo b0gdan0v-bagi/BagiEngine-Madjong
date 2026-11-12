@@ -73,6 +73,8 @@ namespace BECore::Mahjong {
         Seat seat = kNoSeat;
         uint64_t version = 0;
         SessionPhase phase = SessionPhase::Playing;
+        /// The live wall only shrinks inside a hand: a bigger one is another hand (a replayed drawn hand has the same `handsPlayed`).
+        int wall = 0;
     };
 
     [[nodiscard]] TableKey KeyOf(const OnlineTable& table);
@@ -80,5 +82,56 @@ namespace BECore::Mahjong {
     /// Whether @p now is not another view of the table of @p before: the first table, another hand or match, a version that went back,
     /// a played hand after an ended one. Never true inside one hand, so the session's `StartCount()` moves only on a new one.
     [[nodiscard]] bool IsAnotherTable(const TableKey& before, const TableKey& now);
+
+    /**
+     * @brief The `Moves()` of a display hand: the public log of a hand that a client never saw move by move, inferred from the tables
+     *        of two consecutive views. Kept by the owner of the display pair; `Follow` once per view.
+     *
+     * A view is a state, not a move, so each table is compared with the previous one of the same hand (`IsAnotherTable`):
+     * - new entries of the pile are `Discard` moves (`declaredCalling` when the seat's `calling` flag turned on in this step and it made one new
+     *   discard: with two the declaring one cannot be told), in the order of the pile;
+     * - the last pile entry gone with a new open meld that claims it is a claim (`ClaimChow` / `ClaimPung` / `ClaimKong` by the meld's
+     *   kind, `from` its discarder, `tile` the claimed tile) and comes before the discards that follow; with the hand won on a
+     *   discard it is no move;
+     * - an open pung that became a kong is an `UpgradeKong`, a new concealed kong a `ConcealedKong` (no tile); a kong comes before the
+     *   next discard of its seat, or at the end of the step;
+     * - `meld` is the index in `DisplayMelds` of the new table.
+     *
+     * The log starts empty on the first table (no flights for the view a client joined in) and on every new hand; it only grows. A step
+     * that cannot be explained (a pile that shrank with no claim, a meld that vanished, two tiles gone, a kong whose place among the discards of the
+     * step cannot be told) leaves the log as it was:
+     * nothing is invented. Views are not one per move, so moves the client missed are coalesced: several moves of one step come out
+     * in the order above, which is the real order for one move and a plausible one for more.
+     */
+    class MoveTracker {
+    public:
+        /// Takes in the next table of the hand and returns the log (valid until the next call).
+        const eastl::vector<HandMove>& Follow(const OnlineTable& table);
+        [[nodiscard]] const eastl::vector<HandMove>& Moves() const noexcept {
+            return _moves;
+        }
+        /// Forgets the table and the log: the next `Follow` starts afresh.
+        void Reset();
+
+    private:
+        /// What the next step needs of the previous table.
+        struct Snapshot {
+            eastl::vector<DiscardEntry> pile;
+            eastl::array<eastl::vector<Meld>, kSeatCount> open;
+            eastl::array<int, kSeatCount> concealedKongs{};
+            eastl::array<bool, kSeatCount> calling{};
+        };
+
+        void Take(const OnlineTable& table, Snapshot& into);
+        /// Appends the moves of the step from `_before` to `table`; false (nothing appended) when the step cannot be explained.
+        bool Explain(const OnlineTable& table);
+
+        eastl::vector<HandMove> _moves;
+        Snapshot _before;
+        Snapshot _now;
+        eastl::vector<HandMove> _step;
+        eastl::vector<Meld> _melds;
+        TableKey _key;
+    };
 
 }  // namespace BECore::Mahjong
