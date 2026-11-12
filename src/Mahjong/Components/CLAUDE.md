@@ -5,6 +5,7 @@ The glue between the model and the engine's scene and UI. Pure logic lives in `.
 - `MahjongTableComponent` (node `Table`) draws the table and plays the person seats by mouse and buttons, paces the computers, flies tiles, shows the hot-seat cover, swaps `Actions` / `ActionsCompact`. After the layout it publishes `MakeTableRegions` to the canvas of every node in `kRegionNodes` (`SetRegion`, only what changed); those nodes anchor to the regions and do not move with insets.
 - `MahjongHudComponent` (node `Hud`) publishes the HUD, seat-plate and centre-panel words and runs `Setup`, the rules screen and the end screens.
 - `MahjongHintsComponent` (node `Hints`) runs the hints.
+- `MahjongOnlineComponent` (node `Online`) shows the online panel (`OnlineScreens`, the canvases `Online` and `OnlineEntry`) and runs the client of `MahjongGame` once per frame; `Online/CLAUDE.md`, "The screens". Escape is the panel's while `IsOnlineOpen()` (the HUD ignores it then); the `Online` button of `Setup` is hidden in the browser build.
 
 ## Rules for every component
 
@@ -12,7 +13,7 @@ The glue between the model and the engine's scene and UI. Pure logic lives in `.
 - Change the game only through `TableSession` (`PerformPerson`, `StepComputer`, `NextHand`, `Reveal`). **The table component draws only from the model; hints never act** (no `PerformPerson`, no `Reveal`, no version change).
 - A button handler asks again what is on offer *now* and ignores an event that is not offered (stale clicks, events after a control action).
 - Publish `UIVars` only when something changed: the key is `TableSession::Version()` plus the version of `UIStrings` (a language switch rewords everything at the next draw). An unchanged frame must not move the `UIVars` version (tests check it).
-- `IsTablePaused()` (`Setup`, `Options` or rules open) stops everything on the table: clicks, action events, computer steps, the blink and flight clocks, the hints.
+- `IsTablePaused()` (`Setup`, `Options`, rules or the online panel open) stops everything on the table: clicks, action events, computer steps, the blink and flight clocks, the hints.
 - Every word is a key (`text="{#key}"` in the scene, `Tr` in code).
 
 ## The table (`MahjongTableComponent`)

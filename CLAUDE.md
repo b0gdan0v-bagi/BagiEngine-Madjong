@@ -4,7 +4,7 @@ Classic Chinese mahjong for four seats on BagiEngine (the submodule `engine/`, b
 
 ## State
 
-Every stage of the plan is built: rules, match, computer players (levels 1..10), table session, control API, match log, the scene, save and Continue, English and Russian. The server side of online play exists (`BagiMahjongServer`, `Online/`; build and run: `README.md`) and so does the client logic (`Online/`: the model over `RoomClient`); its screens and the online table do not yet. It also builds for the browser (`BagiMahjong.html`; saves, match log and control API are off there: `docs/web.md`). Open work and the owner's pending looks are in the todo store (area `mahjong`), not here.
+Every stage of the plan is built: rules, match, computer players (levels 1..10), table session, control API, match log, the scene, save and Continue, English and Russian. The server side of online play exists (`BagiMahjongServer`, `Online/`; build and run: `README.md`) and so do the client logic (`Online/`: the model over `RoomClient`) and the screens to host, join and wait in a room (the `Online` button of `Setup`); the online table does not yet. It also builds for the browser (`BagiMahjong.html`; saves, match log and control API are off there: `docs/web.md`). Open work and the owner's pending looks are in the todo store (area `mahjong`), not here.
 
 ## Where to read
 
