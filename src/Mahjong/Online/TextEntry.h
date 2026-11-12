@@ -23,6 +23,8 @@ namespace BECore::Mahjong {
 
         explicit TextEntry(Kind kind);
 
+        [[nodiscard]] bool operator==(const TextEntry& other) const = default;
+
         [[nodiscard]] Kind GetKind() const {
             return _kind;
         }
