@@ -82,7 +82,7 @@ namespace BECore::Mahjong {
         void SetPadRow(size_t row, bool visible);
 
         /// The elements the pages show among themselves (`Item` in the source file).
-        static constexpr size_t kItemCount = 31;
+        static constexpr size_t kItemCount = 30;
 
         OnlineScreens _screens;
         PoolString _seatVars[kSeatCount];

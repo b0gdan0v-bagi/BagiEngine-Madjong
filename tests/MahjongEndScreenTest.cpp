@@ -203,7 +203,9 @@ namespace BECore::Mahjong::Tests {
             worst.standing = LongestText(standings);
             worst.standingsHeadline = LongestText(standingsHeadlines);
             constexpr CoachTally kBig{999, 999};
-            worst.handTally = FormatCoachTally(strings, kBig, kBig);
+            // The row also says how many of the room have read the plate
+            const eastl::string ready = Tr(strings, "online.table.ready", {{"n", Format("{}", kSeatCount)}, {"total", Format("{}", kSeatCount)}});
+            worst.handTally = LongestText({FormatCoachTally(strings, kBig, kBig), ready});
             worst.matchTally = FormatCoachTally(strings, CoachTally{}, kBig);
             return worst;
         }
@@ -487,7 +489,7 @@ namespace BECore::Mahjong::Tests {
             // The standings are in this language, and in the other after a switch while they are up
             const StandingsTable table = FormatStandings(strings, _game->GetMatch(), _game->GetSession().Seats());
             EXPECT_EQ(Text("MatchOver", "Headline"), table.headline.c_str());
-            EXPECT_EQ(Text("MatchOver", "NewGame"), Tr(strings, "matchover.newGame").c_str());
+            EXPECT_EQ(Text("MatchOver", "NewGame"), Tr(strings, "hud.newGame").c_str());
             const PoolString other = language == "en"_intern ? PoolString("ru"_intern) : PoolString("en"_intern);
             ASSERT_TRUE(_game->SetLanguage(other));
             Draw();

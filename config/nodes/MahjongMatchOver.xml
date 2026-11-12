@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <!--
-  The end of the match: the seats by points and the New game button (MahjongNewGame, which opens Setup), shown while the match is Finished.
+  The end of the match: the seats by points and the New game button (MahjongNewGame, which opens Setup; its word is the variable newGameWord, "Leave room" in an online room), shown while the match is Finished.
   A 480 px window at the user scale 1.5 is 320 units high (296 with a notch), so the plate is 296: 32 padding + 40 headline band +
   4 x 24 rows + 28 MatchCoachRow (the coach's tally, matchOverCoach; hidden and out of the stack unless it has text) + 64 button + 8 NewGameGap +
   7 x 4 spacing (8 children: the rows lie 4 apart and the button 4 + 8 + 4 = 16 below the last of them). The row has to be paid for inside the
@@ -46,7 +46,7 @@
             <element type="UIElement" name="NewGameGap" height="8" />
             <element type="UIElement" name="NewGame" height="64" fontSize="28" color="40,110,60,255">
               <components>
-                <component type="UITextComponent" text="{#matchover.newGame}" align="Center" verticalAlign="Center" wrap="false"/>
+                <component type="UITextComponent" text="{newGameWord}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                 <component type="UIInputClicker" action="MahjongNewGame"/>
               </components>
             </element>

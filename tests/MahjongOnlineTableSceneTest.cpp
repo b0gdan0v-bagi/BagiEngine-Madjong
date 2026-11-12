@@ -1,12 +1,17 @@
+#include "MahjongButtonSupport.h"
 #include "MahjongHubTransport.h"
 #include "MahjongTableTestSupport.h"
 
 #include <BECore/Control/Json.h>
+#include <BECore/UI/UIInputClicker.h>
 #include <Common/TempPath.h>
+#include <Mahjong/Online/OnlineWords.h>
 #include <Mahjong/Save/MatchSave.h>
 #include <Mahjong/Table/ActionButtons.h>
+#include <Mahjong/Table/ScoreText.h>
 #include <Mahjong/Table/TileHover.h>
 #include <memory>
+#include <thread>
 
 /**
  * The table of a started online game in the shipped scene: the game's client over the in-memory hub with three other people
@@ -34,7 +39,12 @@ namespace BECore::Mahjong::Tests {
             std::filesystem::remove_all(_folder);
             SetMatchSaveDirectory(_folder);
             MahjongTableTestBase::SetUp();
-            ASSERT_TRUE(_game->SetOnlineSettings(_world.MakeClientSettings(_links)));
+            ASSERT_TRUE(_game->SetOnlineSettings(ClientSettings()));
+        }
+
+        /// The game's client runs on the real clock (`OnlineClient::Update()`), so what it waits for is real time.
+        virtual RoomClientSettings ClientSettings() {
+            return _world.MakeClientSettings(_links);
         }
 
         void TearDown() override {
@@ -69,12 +79,15 @@ namespace BECore::Mahjong::Tests {
             return done();
         }
 
-        /// The game's client hosts a room of @p hands hands with three people, starts it, and waits for the table.
-        void StartRoom(int hands = kShortMatchHands) {
+        /// The game's client hosts a room of @p hands hands with @p others more people (the seats left over are computers), starts it, and waits for the table.
+        void StartRoom(int hands = kShortMatchHands, int others = 3) {
             OnlineClient& client = _game->GetOnline();
             ASSERT_TRUE(client.Host(kUrl, kHostName, OnlineRoomOptions{hands, kMinLevel}));
             ASSERT_TRUE(PumpUntil([&] { return client.Stage() == OnlineStage::Lobby; }));
             for (const char* name : {"Bo", "Cy", "Di"}) {
+                if (static_cast<int>(_others.size()) == others) {
+                    break;
+                }
                 _others.push_back(std::make_unique<HubPlayer>(_world));
                 HubPlayer& player = *_others.back();
                 ASSERT_TRUE(player.Client().Join(kUrl, client.Room(), name));
@@ -103,10 +116,10 @@ namespace BECore::Mahjong::Tests {
         /// Frames until @p done is true after one, the other people acting for themselves (the first action of their list, once per view); the game's client acts the same way
         /// unless @p viewerActs is false (then it waits for the test). False when the limit came first.
         template <typename Done>
-        bool PlayUntil(Done done, bool viewerActs = true) {
+        bool PlayUntil(Done done, bool viewerActs = true, int limit = kPumpLimit) {
             constexpr uint64_t kNever = std::numeric_limits<uint64_t>::max();
             uint64_t acted = kNever;
-            for (int count = 0; count < kPumpLimit; ++count) {
+            for (int count = 0; count < limit; ++count) {
                 Frame();
                 if (done()) {
                     return true;
@@ -121,6 +134,28 @@ namespace BECore::Mahjong::Tests {
                 }
             }
             return false;
+        }
+
+        std::string Text(const char* node, const char* element) const {
+            return DisplayText(Element(node, element));
+        }
+
+        /// Whether the button of the score table is disabled (the room's ready check).
+        bool NextHandDisabled() const {
+            const UIElement* button = Element("HandOverAction", "NextHand");
+            const UIInputClicker* clicker = button != nullptr ? button->GetComponent<UIInputClicker>() : nullptr;
+            return clicker != nullptr && clicker->disabled;
+        }
+
+        /// The room's name of the player at @p seat, as the lobby has it.
+        std::string LobbyName(Seat seat) const {
+            const eastl::string& name = _game->GetOnline().Lobby().seats[static_cast<size_t>(seat)].name;
+            return std::string(name.c_str(), name.size());
+        }
+
+        /// Frames until the hand is over for the game's client: the others and the client itself play on (the first action of each list) and stop short of the first `next_hand`.
+        bool PlayToHandOver() {
+            return PlayUntil([&] { return _game->GetSession().GetPhase() == SessionPhase::HandOver; });
         }
 
         /// The files of the save folder that hold the match, by name.
@@ -315,6 +350,223 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(compactCanvas && compactCanvas->TakesInput() && OnScreen("ActionsCompact", "HintButton"));
         EXPECT_FALSE(OnScreen("Hints", "WaitPanel"));
         EXPECT_FALSE(OnScreen("Hints", "AdviceText"));
+    }
+
+    // ----- the HUD speaks the room -----
+
+    TEST_F(MahjongOnlineTableSceneTest, ThePlatesNameThePlayersAndOnlyTheOwnSeatIsYou) {
+        ASSERT_NO_FATAL_FAILURE(StartRoom());
+        Frame();
+        const Seat viewer = Viewer();
+        ASSERT_TRUE(IsSeat(viewer));
+        for (int position = 0; position < kSeatCount; ++position) {
+            const Seat seat = SeatAtPosition(viewer, position);
+            const std::string expected = LobbyName(seat) + (seat == viewer ? " You" : "");
+            EXPECT_EQ(Var(Format("plateName{}", position).c_str()), expected) << "position " << position;
+            EXPECT_EQ(Text("SeatPlates", Format("PlateName{}", position).c_str()), expected);
+        }
+        EXPECT_EQ(Var("plateName0"), std::string(kHostName) + " You") << "the host sits at seat 0 and at the bottom";
+        EXPECT_EQ(Var("panelRound"), "East 1") << "the centre panel follows the display match";
+        EXPECT_EQ(Var("panelWall"), "Wall " + std::to_string(Hand().GetWall().LiveCount()));
+
+        ASSERT_TRUE(_game->SetLanguage("ru"_intern));
+        Frame();
+        EXPECT_EQ(Var("plateName0"), std::string(kHostName) + " Вы");
+        EXPECT_EQ(Var("panelRound"), "Восток 1");
+    }
+
+    TEST_F(MahjongOnlineTableSceneTest, TheMenuButtonLeavesTheRoomAndTheEndOfTheTableOpensSetupWithoutAWord) {
+        ASSERT_NO_FATAL_FAILURE(StartRoom());
+        Frame();
+        EXPECT_EQ(Text("HudMenu", "NewGame"), "Leave room");
+        EXPECT_TRUE(OnScreen("HudMenu", "Options")) << "the options stay";
+        ASSERT_TRUE(_game->SetLanguage("ru"_intern));
+        Frame();
+        Frame();
+        EXPECT_EQ(Text("HudMenu", "NewGame"), "Выйти из комнаты");
+        ASSERT_TRUE(_game->SetLanguage("en"_intern));
+        Frame();
+        Frame();
+
+        ASSERT_TRUE(ClickElement("HudMenu", "NewGame"));
+        ASSERT_TRUE(ClickElement("HudMenu", "NewGame")) << "a second press before the server answered";
+        ASSERT_TRUE(PumpUntil([&] { return !_game->IsOnlineTable(); }));
+        EXPECT_EQ(_game->GetOnline().Stage(), OnlineStage::Idle);
+        EXPECT_TRUE(_game->IsSetupOpen());
+        EXPECT_FALSE(_game->IsOnlineOpen()) << "the player asked to leave: no word";
+        EXPECT_EQ(_game->GetOnline().Notice().serial, 0u);
+        Frame();
+        Frame();
+        EXPECT_EQ(Text("HudMenu", "NewGame"), "New game") << "the local game's button again";
+        EXPECT_FALSE(_game->GetSession().IsRemote());
+        EXPECT_EQ(Var("plateName0"), "Seat 1 You") << "the plates are the local game's again";
+    }
+
+    TEST_F(MahjongOnlineTableSceneTest, TheConnectionLostShowsAStatusLineOverTheFrozenTableAndTheTableGoesOnWhenItIsBack) {
+        ASSERT_NO_FATAL_FAILURE(StartRoom());
+        ASSERT_TRUE(PlayUntil([&] { return Hand().Discards().size() >= 4 && _game->GetSession().GetPhase() == SessionPhase::Playing; }));
+        Frame();
+        const uint64_t starts = _game->GetSession().StartCount();
+        const size_t piled = Hand().Discards().size();
+
+        _world.SetRefusing(true);
+        _world.Sever(_links.Last());
+        ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Reconnecting; }));
+        Frame();
+        EXPECT_TRUE(_game->IsOnlineTable()) << "the last view stays";
+        const std::string status = std::string(OnlineNoticeText(CoreManager::GetUIStrings(), kOnlineReconnectingKey).c_str());
+        EXPECT_EQ(Var("lastMove"), status);
+        EXPECT_TRUE(OnScreen("Hud", "MoveLine"));
+        EXPECT_EQ(Text("Hud", "MoveText"), status);
+        EXPECT_EQ(Hand().Discards().size(), piled);
+        ExpectTableDrawn(false, Viewer());
+        EXPECT_EQ(Text("HudMenu", "NewGame"), "Leave room") << "a room can be left while the link is down";
+
+        ASSERT_TRUE(_game->SetLanguage("ru"_intern));
+        Frame();
+        EXPECT_EQ(Var("lastMove"), std::string(OnlineNoticeText(CoreManager::GetUIStrings(), kOnlineReconnectingKey).c_str()));
+        ASSERT_TRUE(_game->SetLanguage("en"_intern));
+
+        _world.SetRefusing(false);
+        ASSERT_TRUE(PlayUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Game && Var("lastMove") != status; }));
+        EXPECT_EQ(_game->GetSession().StartCount(), starts) << "the same table";
+    }
+
+    TEST_F(MahjongOnlineTableSceneTest, AWordOfTheClientWhileTheTableIsUpIsTheLineUnderTheDiscardsUntilTheTableMoves) {
+        ASSERT_NO_FATAL_FAILURE(StartRoom());
+        ASSERT_TRUE(PlayUntil([&] { return Hand().Discards().size() >= 3 && _game->GetSession().GetPhase() == SessionPhase::Playing; }));
+        Frame();
+        const uint32_t before = _game->GetOnline().Notice().serial;
+        EXPECT_FALSE(_game->GetOnline().Host(kUrl, kHostName));  // not possible in a room: a word, and the table stays
+        ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Notice().serial != before; }));
+        Frame();
+        const std::string word = std::string(OnlineNoticeText(CoreManager::GetUIStrings(), _game->GetOnline().Notice().key, _game->GetOnline().Notice().arg).c_str());
+        ASSERT_FALSE(word.empty());
+        EXPECT_TRUE(_game->IsOnlineTable());
+        EXPECT_EQ(Var("lastMove"), word);
+        EXPECT_TRUE(OnScreen("Hud", "MoveLine"));
+
+        // The next view moves the table: the line is the move again
+        const uint64_t version = Table().version;
+        ASSERT_TRUE(PlayUntil([&] { return Table().version != version; }));
+        Frame();
+        EXPECT_NE(Var("lastMove"), word);
+    }
+
+    /// A client that gives up on a lost connection after a third of a second.
+    class MahjongOnlineTableGaveUpTest : public MahjongOnlineTableSceneTest {
+    protected:
+        RoomClientSettings ClientSettings() override {
+            RoomClientSettings settings = MahjongOnlineTableSceneTest::ClientSettings();
+            settings.reconnectGiveUp = std::chrono::milliseconds(300);
+            return settings;
+        }
+    };
+
+    TEST_F(MahjongOnlineTableGaveUpTest, ARoomTheClientGaveUpOnBringsThePlayerBackToTheOnlinePanelWithTheWord) {
+        ASSERT_NO_FATAL_FAILURE(StartRoom());
+        Frame();
+        _world.SetRefusing(true);
+        _world.Sever(_links.Last());
+        constexpr auto kWait = std::chrono::seconds(5);
+        const auto until = std::chrono::steady_clock::now() + kWait;
+        while (_game->IsOnlineTable() && std::chrono::steady_clock::now() < until) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(2));
+            Frame();
+        }
+        ASSERT_FALSE(_game->IsOnlineTable());
+        Frame();
+        const std::string word = std::string(OnlineNoticeText(CoreManager::GetUIStrings(), OnlineErrorKey(RoomClientCloseReasons::kGaveUp)).c_str());
+        EXPECT_TRUE(_game->IsSetupOpen());
+        EXPECT_TRUE(_game->IsOnlineOpen()) << "the panel is the place to say why";
+        EXPECT_EQ(Var("onlineNotice"), word);
+        EXPECT_TRUE(OnScreen("Online", "OnlineNotice"));
+        EXPECT_FALSE(_game->TakeRoomEndNotice()) << "the panel took it";
+        EXPECT_FALSE(_game->GetSession().IsRemote());
+    }
+
+    TEST_F(MahjongOnlineTableSceneTest, TheReadyCheckDisablesTheButtonCountsTheReadersAndTheNextHandOpensItAgain) {
+        ASSERT_NO_FATAL_FAILURE(StartRoom());
+        ASSERT_TRUE(PlayToHandOver());
+        Frame();
+        const Seat viewer = Viewer();
+        ASSERT_TRUE(Canvas("HandOver")->TakesInput());
+        ASSERT_TRUE(OnScreen("HandOverAction", "NextHand"));
+        EXPECT_FALSE(NextHandDisabled());
+        EXPECT_FALSE(OnScreen("HandOver", "HandCoachRow")) << "nobody has read the plate yet";
+        EXPECT_EQ(Text("HandOverAction", "NextHand"), _game->GetMatch().HandsPlayed() + 1 >= _game->GetMatch().HandsTotal() ? "Finish match" : "Next hand");
+        const std::string headline = Text("HandOver", "Headline");
+        bool namesAPlayer = headline.find("Drawn") != std::string::npos;
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            namesAPlayer = namesAPlayer || headline.find(LobbyName(seat)) != std::string::npos;
+        }
+        EXPECT_TRUE(namesAPlayer) << "the headline names a player of the room: " << headline;
+
+        ASSERT_TRUE(ClickElement("HandOverAction", "NextHand"));
+        ASSERT_TRUE(PumpUntil([&] { return Table().ready[static_cast<size_t>(viewer)]; }));
+        Frame();
+        EXPECT_TRUE(NextHandDisabled());
+        EXPECT_EQ(Text("HandOver", "HandCoachRow"), "Ready for the next hand: 1 of 4");
+        const uint64_t version = _world.Game()->GetStateVersion();
+        ClickElement("HandOverAction", "NextHand");
+        Frame();
+        EXPECT_EQ(_world.Game()->GetStateVersion(), version) << "a disabled button sends nothing";
+
+        // The others read the plate (each acts again when a view with a ready flag more comes): the next hand is dealt and the plate and the count go
+        ASSERT_TRUE(PlayUntil([&] { return _game->GetSession().GetPhase() != SessionPhase::HandOver; }, false));
+        Frame();
+        EXPECT_FALSE(Canvas("HandOver")->TakesInput());
+        EXPECT_FALSE(NextHandDisabled()) << "the next hand's plate starts with an enabled button";
+        EXPECT_EQ(eastl::count(Table().ready.begin(), Table().ready.end(), true), 0) << "the count went with the hand";
+    }
+
+    TEST_F(MahjongOnlineTableSceneTest, TheScoreTableOfARoomPaysWhatTheServerPaysAndTheStandingsOfAMatchOfTheRoomOfferLeaveRoom) {
+        ASSERT_NO_FATAL_FAILURE(StartRoom(kShortMatchHands, 0));  // computers play the other seats: they win hands, and a hand won counts
+        constexpr int kMatchFrames = 40000;
+        constexpr int kMostHands = 40;  // a drawn hand is dealt again and counts for nothing
+        int hands = 0;
+        while (_game->GetSession().GetPhase() != SessionPhase::MatchOver && hands < kMostHands) {
+            ASSERT_TRUE(PlayUntil([&] { return _game->GetSession().GetPhase() != SessionPhase::Playing; }, true, kMatchFrames)) << "hand " << hands;
+            if (_game->GetSession().GetPhase() == SessionPhase::HandOver) {
+                Frame();
+                const OnlineResult& result = *Table().result;
+                const Match& match = _game->GetMatch();
+                for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                    const std::string shown = Var(Format("handOverSeat{}", seat).c_str());
+                    const std::string total = std::to_string(match.Scores()[seat] + result.deltas[seat]);
+                    EXPECT_NE(shown.find("total " + total), std::string::npos) << shown << " / " << total;
+                }
+                ++hands;
+                // all four read the plate
+                _game->GetOnline().Act(0);
+                for (const std::unique_ptr<HubPlayer>& other : _others) {
+                    other->ActFirst();
+                }
+                ASSERT_TRUE(PlayUntil([&] { return _game->GetSession().GetPhase() != SessionPhase::HandOver; }, false, kMatchFrames));
+            }
+        }
+        ASSERT_EQ(_game->GetSession().GetPhase(), SessionPhase::MatchOver) << "after " << hands << " hands";
+        Frame();
+        Frame();
+        ASSERT_TRUE(OnScreen("MatchOver", "Headline"));
+        const Match& match = _game->GetMatch();
+        const StandingsTable table = FormatStandings(CoreManager::GetUIStrings(), match, SeatWho(_game->GetSession()));
+        EXPECT_EQ(Text("MatchOver", "Headline"), std::string(table.headline.c_str()));
+        for (int row = 0; row < kSeatCount; ++row) {
+            EXPECT_EQ(Text("MatchOver", Format("Standing{}", row).c_str()), std::string(table.rows[static_cast<size_t>(row)].c_str()));
+        }
+        std::string rows;
+        for (int row = 0; row < kSeatCount; ++row) {
+            rows += Text("MatchOver", Format("Standing{}", row).c_str()) + "\n";
+        }
+        EXPECT_NE(rows.find(std::string(kHostName) + " You"), std::string::npos) << rows;
+        EXPECT_NE(rows.find("Seat 2"), std::string::npos) << "a computer keeps its number: " << rows;
+        EXPECT_EQ(Text("MatchOver", "NewGame"), "Leave room");
+
+        ASSERT_TRUE(ClickElement("MatchOver", "NewGame"));
+        ASSERT_TRUE(PumpUntil([&] { return !_game->IsOnlineTable(); }));
+        EXPECT_TRUE(_game->IsSetupOpen());
+        EXPECT_FALSE(_game->IsOnlineOpen());
     }
 
 }  // namespace BECore::Mahjong::Tests

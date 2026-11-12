@@ -2,8 +2,11 @@
 
 #include <BECore/Scene/IComponent.h>
 #include <Mahjong/Game/TableSession.h>
+#include <Mahjong/Online/OnlineClient.h>
 
 namespace BECore {
+
+    class UIStrings;
 
     namespace InputEvents {
         struct ActionEvent;
@@ -29,11 +32,11 @@ namespace BECore::Mahjong {
      *
      * **Variables** (set when `TableSession::Version()` moved, or the game changed, or the version of `UIStrings` moved, i.e. the language;
      * nothing is set again otherwise; every word is in the current language of the string table, `config/UIStrings.xml`): per screen position of the four seats (0 bottom, 1 right, 2 top,
-     * 3 left; the seat there is the viewer's, `BottomSeat`) `plateName` (`Seat 2`, with ` You` for the person when exactly one person plays; the node `SeatPlates`), `panelWind` (the wind
-     * letter) and `panelScore`; and `panelRound` ("East 1": the round wind and the hand in it) and `panelWall` ("Wall 83"), all of `MakeCenterPanel` (the labels of the node `CenterPanel`; the
-     * table paints the plates, the panel's ground, the turn and the dealer, `MahjongTableComponent`; the plates also change with the viewer, which moves `Version()`), and `lastMove`
-     * (the last accepted move of the hand in words, `MoveText` of `HandModel::Moves().back()`; empty before the first move and once
-     * the hand is over; the element `MoveLine` is visible exactly while it is not empty). They carry no tile a seat could not see (the last move is public: a concealed kong names no tile).
+     * 3 left; the seat there is the viewer's, `BottomSeat`) `plateName` (`Seat 2`, with ` You` for the person when exactly one person plays, the player's name in a room; the node `SeatPlates`),
+     * `panelWind` (the wind letter) and `panelScore`; and `panelRound` ("East 1": the round wind and the hand in it) and `panelWall` ("Wall 83"), all of `MakeCenterPanel` (the labels of the node
+     * `CenterPanel`; the table paints the plates, the panel's ground, the turn and the dealer, `MahjongTableComponent`; the plates also change with the viewer, which moves `Version()`), and
+     * `lastMove` (the last accepted move of the hand in words, `MoveText` of `HandModel::Moves().back()`; empty before the first move and once the hand is over; the element `MoveLine` is visible
+     * exactly while it is not empty). They carry no tile a seat could not see (the last move is public: a concealed kong names no tile).
      *
      * **Setup.** `MahjongGame::IsSetupOpen()` decides whether the modal canvas `Setup` is shown (this component shows and hides it every
      * frame). Its four seat `UISegmented` groups are bound to `seatKind0` .. `seatKind3` (`person` | `computer`) and emit
@@ -76,6 +79,10 @@ namespace BECore::Mahjong {
      * `MahjongNewGame` opens `Setup`. In Coach mode, once the match tally has a move, each also has `handOverCoach` / `matchOverCoach`
      * (`FormatCoachTally`; the labels `HandCoachRow` / `MatchCoachRow` are visible exactly while it has text). Both are published when the version of the session or of the string table moved and read
      * only public data (the hands are open once the hand is over).
+     *
+     * **A room** (`MahjongGame::IsOnlineTable()`, `Components/CLAUDE.md`): the plates and sentences name the players (`SeatWho`); `newGameWord` (the caption of `NewGame` of `HudMenu` and `MatchOver`)
+     * is `hud.leaveRoom` and `MahjongNewGame` leaves the room (`OnlineClient::Leave`, once); `MahjongNextHand` sends the server's `next_hand` (`OnlineClient::Act`) and the button is disabled while
+     * none is listed, `handOverCoach` says how many have read the plate; `lastMove` is the lost connection or the client's own word while there is one.
      *
      * **The rules screen.** `MahjongGame::IsRulesOpen()` (the button `Rules` of the page `Options`, action `MahjongRules`) decides whether the modal canvas
      * `Rules` (text and tile pictures only) and its action bar `RulesAction` are shown; `HudMenu` is hidden meanwhile. The page number is
@@ -128,6 +135,20 @@ namespace BECore::Mahjong {
         void OnUpdate(const SceneEvents::SceneUpdateEvent& event);
         /// Sets the variables of the HUD when the version of the session (or the game) moved since the last time.
         void PublishNumbers(const MahjongGame* game);
+        /// Sets `newGameWord`, the caption of the HUD button and of the standings' button: "New game", in a room "Leave room".
+        void PublishNewGameWord(const MahjongGame* game);
+        /// What the line under the discards says in a room instead of the last move: the lost connection, else the client's latest word while the table has not moved; empty if neither.
+        eastl::string RoomLine(const MahjongGame& game, const UIStrings& strings);
+        /// "Ready for the next hand: 2 of 4"; empty while nobody has sent `next_hand`.
+        static eastl::string ReadyText(const UIStrings& strings, const OnlineTable& table);
+        /// The client is in the game and the server lists `next_hand` for it now.
+        static bool CanSendNextHand(const OnlineClient& client);
+        /// Disables (or enables) the button `NextHand`: in a room after the own `next_hand`, while the link is down.
+        void SetNextHandDisabled(bool disabled);
+        /// The button of the HUD in a room: leaves it (the end of the table opens `Setup`).
+        void LeaveRoom(MahjongGame& game);
+        /// `MahjongNextHand` in a room: the server's `next_hand` through the client.
+        void SendNextHand(MahjongGame& game);
         /// Shows or hides `Setup` after the game, and takes the setup of the game when the panel opens.
         void PublishSetup(const MahjongGame* game);
         /// Shows or hides `Options` after `MahjongGame::IsOptionsOpen()`, and publishes `language` and `speedChoice` when it opens.
@@ -162,17 +183,17 @@ namespace BECore::Mahjong {
         SeatLevels _pendingLevels = UniformLevels(kDefaultLevel);
         int _pendingHands = kFullMatchHands;
         bool _setupShown = false;
-        bool _optionsShown = false;               // the canvas `Options`
-        bool _continueShown = false;              // the button `Continue` of the panel
-        const MahjongGame* _numbersOf = nullptr;  // the game and the version the variables show
+        bool _optionsShown = false;                // the canvas `Options`
+        bool _continueShown = false;               // the button `Continue` of the panel
+        const TableSession* _numbersOf = nullptr;  // the session (the local one or a room's display copy) and the version the variables show
         uint64_t _numbersVersion = 0;
         uint64_t _numbersStrings = 0;  // the version of the string table the variables are worded in
         bool _numbersPublished = false;
         bool _moveLineShown = false;
         bool _handOverShown = false;
         bool _matchOverShown = false;
-        int _shownLines = 0;                        // the labels `ScoreLine0` .. that are visible
-        const MahjongGame* _endScreenOf = nullptr;  // the game and the version the variables of the end screens show
+        int _shownLines = 0;                         // the labels `ScoreLine0` .. that are visible
+        const TableSession* _endScreenOf = nullptr;  // the session and the version the variables of the end screens show
         uint64_t _endScreenVersion = 0;
         uint64_t _endScreenStrings = 0;
         bool _endScreenCoach = false;  // the mode the tally line was published for
@@ -181,6 +202,15 @@ namespace BECore::Mahjong {
         bool _rulesShown = false;
         int _rulesPublishedPage = -1;  // the page and the language the elements show
         uint64_t _rulesStrings = 0;
+        bool _newGameWordPublished = false;  // `newGameWord` is for this state: a room or not, this language
+        bool _newGameWordRoom = false;
+        uint64_t _newGameWordStrings = 0;
+        bool _roomLineSeen = false;  // the word of the client at the table's start is not new
+        uint32_t _noticeSeen = 0;
+        eastl::string_view _noteKey;  // the word of the client that came while the table is up, and the version of the table it came at
+        eastl::string _noteArg;
+        uint64_t _noteTable = 0;
+        bool _leaveSent = false;
         static MahjongHudComponent* s_active;
     };
 

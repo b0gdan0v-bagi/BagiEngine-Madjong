@@ -8,7 +8,7 @@
     Join   OnlineTitleJoin, OnlineNameRow, OnlineCodeRow, OnlineGap, OnlineButtons with OnlineEnter
     Lobby  OnlineTitleLobby, OnlineSeatRow0..3 (OnlineSit0..3 beside the seats that can be taken), OnlineGap, OnlineButtons with OnlineStart (the host) and OnlineLeave
   and, on any page, at most one line under the title: OnlineNotice ({onlineNotice}, an error), OnlineStatus ({onlineStatus}, connecting and reconnecting) or, in the
-  lobby, OnlineWaiting / OnlineStarted. The fields are buttons (OnlineName, OnlineCode: action MahjongOnlineField, value name or code) that open the page
+  lobby, OnlineWaiting. The fields are buttons (OnlineName, OnlineCode: action MahjongOnlineField, value name or code) that open the page
   OnlineEntry; their text is {onlineName} and {onlineCode}. The seat texts are {onlineSeat0..3}, the title of the lobby and the Return button say {onlineRoom}.
   OnlineClose (the cross at the right of the title band, as on Setup) only hides the panel. The hands are a UISegmented (action MahjongOnlineHands, value 16 or 8,
   variable onlineHands), the level a UIDropdown (MahjongOnlineLevel, onlineLevel, the options OnlineLevel1 .. 10 with the heights of Setup's lists by the height
@@ -76,11 +76,6 @@
             <element type="UIElement" name="OnlineWaiting" flex="1.5" maxHeight="96" fontSize="18" visible="false">
               <components>
                 <component type="UITextComponent" text="{#online.waitHost}" textColor="190,196,190,255" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
-              </components>
-            </element>
-            <element type="UIElement" name="OnlineStarted" flex="1.5" maxHeight="96" fontSize="18" visible="false">
-              <components>
-                <component type="UITextComponent" text="{#online.started}" textColor="190,196,190,255" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
               </components>
             </element>
             <element type="UIElement" name="OnlineMenuHost" flex="1" maxHeight="80" fontSize="28" color="45,75,120,255">

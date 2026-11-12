@@ -573,7 +573,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(ItemShown(kOnline, "OnlineStart"));
         EXPECT_TRUE(ItemShown(kOnline, "OnlineLeave"));
         EXPECT_FALSE(ItemShown(kOnline, "OnlineWaiting"));
-        EXPECT_FALSE(ItemShown(kOnline, "OnlineStarted"));
         EXPECT_TRUE(_game->StoredOnline().session.IsValid()) << "the session is kept as soon as there is one";
 
         // Two people join by the code: each takes the lowest free seat and the seat rows name them
@@ -615,7 +614,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(_game->IsTablePaused());
         EXPECT_FALSE(CanvasShown(kOnline));
         EXPECT_FALSE(Screens().IsOpen());
-        EXPECT_FALSE(ItemShown(kOnline, "OnlineStarted")) << "no placeholder: the table is the game";
         EXPECT_EQ(_world.Judge().Offences().size(), 0u) << (_world.Judge().Offences().empty() ? "" : _world.Judge().Offences().front());
         EXPECT_EQ(_world.Judge().NonText(), 0u);
     }

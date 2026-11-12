@@ -123,8 +123,9 @@ namespace BECore::Mahjong {
 
         // ---- The player's moves ----
 
-        /// Opens the panel: the `Lobby` page while the client is in a room (or connecting), else the `Menu`.
-        void Open(const OnlineClient& client);
+        /// Opens the panel: the `Lobby` page while the client is in a room (or connecting), else the `Menu`. The notice is cleared unless @p keepNotice (a room
+        /// that has just ended says why on the `Menu`).
+        void Open(const OnlineClient& client, bool keepNotice = false);
         void Close();
 
         /// Escape: an `Entry` page to its form, a form to the `Menu`, the `Menu` closes the panel. The `Lobby` does nothing (leaving is a button: a stray key must not give up a

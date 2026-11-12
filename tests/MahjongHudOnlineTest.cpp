@@ -40,9 +40,9 @@ namespace BECore::Mahjong::Tests {
 
         /// The elements the pages of the panel show and hide among themselves (the rest of the canvas is always there).
         const char* const kPageElements[] = {
-            "OnlineTitleMenu",  "OnlineTitleHost", "OnlineTitleJoin", "OnlineTitleLobby", "OnlineNotice",   "OnlineStatus",   "OnlineWaiting",  "OnlineStarted",  "OnlineMenuHost", "OnlineMenuJoin",
-            "OnlineMenuReturn", "OnlineNameRow",   "OnlineCodeRow",   "OnlineHandsRow",   "OnlineLevelRow", "OnlineSeatRow0", "OnlineSeatRow1", "OnlineSeatRow2", "OnlineSeatRow3", "OnlineSit0",
-            "OnlineSit1",       "OnlineSit2",      "OnlineSit3",      "OnlineGap",        "OnlineButtons",  "OnlineCreate",   "OnlineEnter",    "OnlineStart",    "OnlineLeave",
+            "OnlineTitleMenu", "OnlineTitleHost", "OnlineTitleJoin", "OnlineTitleLobby", "OnlineNotice",   "OnlineStatus",   "OnlineWaiting",  "OnlineMenuHost", "OnlineMenuJoin", "OnlineMenuReturn",
+            "OnlineNameRow",   "OnlineCodeRow",   "OnlineHandsRow",  "OnlineLevelRow",   "OnlineSeatRow0", "OnlineSeatRow1", "OnlineSeatRow2", "OnlineSeatRow3", "OnlineSit0",     "OnlineSit1",
+            "OnlineSit2",      "OnlineSit3",      "OnlineGap",       "OnlineButtons",    "OnlineCreate",   "OnlineEnter",    "OnlineStart",    "OnlineLeave",
         };
 
         /// The page `Menu` (with `Return` offered), `Host`, `Join` and the `Lobby` (a seat that can be taken on every row, the host's `Start`): the elements each shows.
@@ -52,7 +52,7 @@ namespace BECore::Mahjong::Tests {
         const std::vector<const char*> kLobbyPage = {"OnlineTitleLobby", "OnlineSeatRow0", "OnlineSeatRow1", "OnlineSeatRow2", "OnlineSeatRow3", "OnlineSit0", "OnlineSit1",
                                                      "OnlineSit2",       "OnlineSit3",     "OnlineGap",      "OnlineButtons",  "OnlineStart",    "OnlineLeave"};
         /// The lines that take the place under the title, one at a time.
-        const char* const kInfoLines[] = {"OnlineNotice", "OnlineStatus", "OnlineWaiting", "OnlineStarted"};
+        const char* const kInfoLines[] = {"OnlineNotice", "OnlineStatus", "OnlineWaiting"};
 
         /// The widest character of @p candidates by the number of code points of a text of it, which is how a line is measured; here the longest text in a language is wanted,
         /// so the first of the pad.
@@ -280,7 +280,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Text(kOnline, "OnlineTitleLobby"), "Room K7M2Q");
         EXPECT_EQ(Text(kOnline, "OnlineSit2"), "Sit here");
         EXPECT_EQ(Text(kOnline, "OnlineWaiting"), "Waiting for the host");
-        EXPECT_EQ(Text(kOnline, "OnlineStarted"), "The game has started");
         EXPECT_EQ(Text(kOnline, "OnlineHandsCaption"), "Hands");
         EXPECT_EQ(Text(kOnline, "OnlineSeatCaption3"), "Seat 4");
         EXPECT_EQ(Text(kOnline, "OnlineStart"), "Start");

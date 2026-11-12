@@ -190,6 +190,7 @@ namespace BECore::Mahjong {
     }
 
     void MahjongGame::EnterOnlineTable() {
+        _noticeAtTable = _online->Notice().serial;
         const bool offer = _canContinue;
         CloseSetup();
         _canContinue = offer;  // the saved match is still there for when the room is left
@@ -206,6 +207,12 @@ namespace BECore::Mahjong {
         _onlineTable = false;
         if (openSetup) {
             OpenSetup();
+            // A room that ended with a word of the client (not one the player asked for: `Leave` makes none) says it on the online panel
+            const OnlineNotice& notice = _online->Notice();
+            if (notice.serial != _noticeAtTable && !notice.key.empty()) {
+                OpenOnline();
+                _roomEndNotice = true;
+            }
         }
     }
 

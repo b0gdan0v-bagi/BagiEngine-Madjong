@@ -117,6 +117,13 @@ namespace BECore::Mahjong {
         /// Brings the display pair up to date with the client (`Online/OnlineMirror.h`). `MahjongOnlineComponent` calls it right after
         /// `GetOnline().Update()`; it does work only when `OnlineClient::Version()` moved.
         void SyncOnlineTable();
+        /// Whether the table of a room has just ended with a word of the client to say (the room is gone, another device took the seat, a view of
+        /// another format): `Setup` and the online panel are open, and the panel shows that notice instead of clearing it. True once.
+        bool TakeRoomEndNotice() {
+            const bool due = _roomEndNotice;
+            _roomEndNotice = false;
+            return due;
+        }
 
         /// The writer of the match log (`MatchLogWriter.h`): every match begun through the session is written to a file of its own;
         /// `Path()` is the file of the current (or last) match.
@@ -350,6 +357,8 @@ namespace BECore::Mahjong {
         static constexpr uint64_t kNotSynced = std::numeric_limits<uint64_t>::max();
         uint64_t _syncedClient = kNotSynced;  // `OnlineClient::Version()` of the last `SyncOnlineTable()`
         bool _onlineTable = false;
+        uint32_t _noticeAtTable = 0;  // `OnlineClient::Notice().serial` when the table went live: a later one is a word for the player
+        bool _roomEndNotice = false;
     };
 
 }  // namespace BECore::Mahjong

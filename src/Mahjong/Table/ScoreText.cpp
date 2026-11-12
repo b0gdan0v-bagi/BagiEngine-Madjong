@@ -45,9 +45,9 @@ namespace BECore::Mahjong {
             return int64_t{1} << std::clamp(doubles, 0, kMostDoubles);
         }
 
-        eastl::string WinHeadline(const UIStrings& strings, const HandSettlement& settlement, const HandResult& result, const SeatSetup& seats) {
+        eastl::string WinHeadline(const UIStrings& strings, const HandSettlement& settlement, const HandResult& result, const SeatWho& who) {
             const SeatWinds winds = MakeSeatWinds(settlement.east);
-            const auto label = [&](Seat seat) { return SeatLabel(strings, seat, winds[seat], seats); };
+            const auto label = [&](Seat seat) { return SeatLabel(strings, seat, winds[seat], who); };
             const eastl::string winner = label(settlement.winner);
             const bool knowsFrom = IsSeat(result.from);
             switch (result.source) {
@@ -124,12 +124,12 @@ namespace BECore::Mahjong {
         return Tr(strings, "score.points", {{"name", text}, {"points", points}});
     }
 
-    ScoreTable FormatScoreTable(const UIStrings& strings, const HandSettlement& settlement, const HandResult& result, const SeatScores& totalsAfter, const SeatSetup& seats) {
+    ScoreTable FormatScoreTable(const UIStrings& strings, const HandSettlement& settlement, const HandResult& result, const SeatScores& totalsAfter, const SeatWho& who) {
         ScoreTable table;
         const SeatWinds winds = MakeSeatWinds(settlement.east);
         const bool won = settlement.kind == ResultKind::Win && IsSeat(settlement.winner);
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            const eastl::string name = SeatLabel(strings, seat, winds[seat], seats);
+            const eastl::string name = SeatLabel(strings, seat, winds[seat], who);
             const eastl::string total = Format("{}", totalsAfter[seat]);
             if (won) {
                 const eastl::string hand = Format("{}", settlement.scores[seat]);
@@ -144,7 +144,7 @@ namespace BECore::Mahjong {
             table.summary = Tr(strings, "handover.noPayments");
             return table;
         }
-        table.headline = WinHeadline(strings, settlement, result, seats);
+        table.headline = WinHeadline(strings, settlement, result, who);
         const ScoreBreakdown& breakdown = settlement.breakdowns[settlement.winner];
         table.summary = WinSummary(strings, breakdown, result);
         const int count = static_cast<int>(breakdown.lines.size());
@@ -158,7 +158,7 @@ namespace BECore::Mahjong {
         return table;
     }
 
-    StandingsTable FormatStandings(const UIStrings& strings, const Match& match, const SeatSetup& seats) {
+    StandingsTable FormatStandings(const UIStrings& strings, const Match& match, const SeatWho& who) {
         StandingsTable table;
         const eastl::array<Seat, kSeatCount> order = match.Standings();
         const SeatScores& scores = match.Scores();
@@ -169,15 +169,15 @@ namespace BECore::Mahjong {
             if (i > 0 && scores[order[i]] != scores[order[i - 1]]) {
                 place = i + 1;
             }
-            table.rows[i] = Tr(strings, "matchover.row", {{"place", Format("{}", place)}, {"name", SeatLabel(strings, order[i], seats)}, {"score", Format("{}", scores[order[i]])}});
+            table.rows[i] = Tr(strings, "matchover.row", {{"place", Format("{}", place)}, {"name", SeatLabel(strings, order[i], who)}, {"score", Format("{}", scores[order[i]])}});
             tied += scores[order[i]] == scores[order[0]] ? 1 : 0;
         }
         if (tied == 1) {
-            table.headline = Tr(strings, "matchover.wins", {{"winner", SeatLabel(strings, order[0], seats)}});
+            table.headline = Tr(strings, "matchover.wins", {{"winner", SeatLabel(strings, order[0], who)}});
         } else {
             eastl::string names;
             for (int i = 0; i < tied; ++i) {
-                names += Format("{}{}", i > 0 ? ", " : "", SeatLabel(strings, order[i], seats));
+                names += Format("{}{}", i > 0 ? ", " : "", SeatLabel(strings, order[i], who));
             }
             table.headline = Tr(strings, "matchover.tied", {{"seats", names}});
         }

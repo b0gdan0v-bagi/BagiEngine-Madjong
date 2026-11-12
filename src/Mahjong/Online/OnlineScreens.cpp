@@ -61,8 +61,10 @@ namespace BECore::Mahjong {
 
     // ---- The player's moves ------------------------------------------------------------------------------------------------------
 
-    void OnlineScreens::Open(const OnlineClient& client) {
-        ClearNotice();
+    void OnlineScreens::Open(const OnlineClient& client, bool keepNotice) {
+        if (!keepNotice) {
+            ClearNotice();
+        }
         SetPage(ShowsRoom(client.Stage()) ? OnlinePage::Lobby : OnlinePage::Menu);
         _origin = OnlinePage::Menu;
         Sync(client);

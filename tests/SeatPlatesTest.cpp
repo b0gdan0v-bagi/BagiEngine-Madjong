@@ -4,6 +4,8 @@
 #include "UiStyleTestSupport.h"
 
 #include <Mahjong/Game/TableSession.h>
+#include <Mahjong/Table/ScoreText.h>
+#include <Mahjong/Table/SeatName.h>
 #include <Mahjong/Table/SeatPlates.h>
 #include <Mahjong/Table/TableLayout.h>
 #include <Mahjong/Table/UiPalette.h>
@@ -366,6 +368,36 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(kDealerMark.a, 255);
         EXPECT_GT(kDealerMarkHeight, 0.0f);
         EXPECT_LT(kDealerMarkHeight, kSeatPlateH);
+    }
+
+    TEST(SeatPlatesTest, InARoomAPersonIsCalledByTheNameAComputerByItsNumberAndTheViewerAloneIsYou) {
+        Table source;
+        ASSERT_NO_FATAL_FAILURE(source.Start(kAllComputers));
+        Match match;
+        TableSession session{match};
+        match.ShowRemote(source.match.GetSettings(), MatchPhase::InHand, 0, source.match.East(), source.match.Scores(), HandModel::ForDisplay(source.match.Hand().Capture()));
+        // Seats 0 and 2 are people, seat 3 is a person who has no name; the viewer is seat 2
+        const SeatSetup seats{SeatKind::Person, SeatKind::Computer, SeatKind::Person, SeatKind::Person};
+        const SeatNames names{eastl::string("Ann"), eastl::string(), eastl::string("Cy"), eastl::string()};
+        session.ShowRemote(seats, UniformLevels(kDefaultLevel), names, 2, kNoSeat, true);
+
+        const auto plates = MakeSeatPlates(Words(), session, match);
+        EXPECT_EQ(plates[0].seat, 2);
+        EXPECT_EQ(Std(plates[0].name), "Cy You") << "the viewer, though several people sit";
+        EXPECT_EQ(Std(plates[1].name), "Seat 4") << "a person with no name has a number";
+        EXPECT_EQ(Std(plates[2].name), "Ann");
+        EXPECT_EQ(Std(plates[3].name), "Seat 2") << "a computer keeps its number";
+
+        // The sentences that name a seat say the same
+        EXPECT_EQ(Std(SeatLabel(Words(), 0, Wind::South, SeatWho(session))), "Ann (South)");
+        EXPECT_EQ(Std(SeatLabel(Words(), 2, Wind::East, SeatWho(session))), "Cy (East) You");
+        EXPECT_EQ(Std(SeatLabel(Words(), 1, Wind::West, SeatWho(session))), "Seat 2 (West)");
+        const StandingsTable standings = FormatStandings(Words(), match, SeatWho(session));
+        EXPECT_EQ(Std(standings.headline), "Tied for first: Ann, Seat 2, Cy You, Seat 4");
+
+        // A table with no room knows no names: the one person is "you", as before
+        const SeatSetup local{SeatKind::Person, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
+        EXPECT_EQ(Std(SeatLabel(Words(), 0, SeatWho(local))), "Seat 1 You");
     }
 
 }  // namespace BECore::Mahjong::Tests

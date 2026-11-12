@@ -45,7 +45,6 @@ namespace BECore::Mahjong {
             Notice,
             Status,
             Waiting,
-            Started,
             MenuHost,
             MenuJoin,
             MenuReturn,
@@ -73,10 +72,9 @@ namespace BECore::Mahjong {
         };
 
         constexpr const char* kItemNames[] = {
-            "OnlineTitleMenu", "OnlineTitleHost", "OnlineTitleJoin",  "OnlineTitleLobby", "OnlineNotice",  "OnlineStatus",     "OnlineWaiting",    "OnlineStarted",
-            "OnlineMenuHost",  "OnlineMenuJoin",  "OnlineMenuReturn", "OnlineNameRow",    "OnlineCodeRow", "OnlineHandsRow",   "OnlineLevelRow",   "OnlineSeatRow0",
-            "OnlineSeatRow1",  "OnlineSeatRow2",  "OnlineSeatRow3",   "OnlineSit0",       "OnlineSit1",    "OnlineSit2",       "OnlineSit3",       "OnlineGap",
-            "OnlineButtons",   "OnlineCreate",    "OnlineEnter",      "OnlineStart",      "OnlineLeave",   "EntryCaptionName", "EntryCaptionCode",
+            "OnlineTitleMenu", "OnlineTitleHost", "OnlineTitleJoin", "OnlineTitleLobby", "OnlineNotice",   "OnlineStatus",   "OnlineWaiting",  "OnlineMenuHost", "OnlineMenuJoin",   "OnlineMenuReturn",
+            "OnlineNameRow",   "OnlineCodeRow",   "OnlineHandsRow",  "OnlineLevelRow",   "OnlineSeatRow0", "OnlineSeatRow1", "OnlineSeatRow2", "OnlineSeatRow3", "OnlineSit0",       "OnlineSit1",
+            "OnlineSit2",      "OnlineSit3",      "OnlineGap",       "OnlineButtons",    "OnlineCreate",   "OnlineEnter",    "OnlineStart",    "OnlineLeave",    "EntryCaptionName", "EntryCaptionCode",
         };
         static_assert(sizeof(kItemNames) / sizeof(kItemNames[0]) == ItemCount, "one name per item");
 
@@ -190,7 +188,7 @@ namespace BECore::Mahjong {
             _screens.SetStoredName(stored.name);
         }
         _screens.SetStoredRoom(stored.session.IsValid() ? eastl::string_view(stored.session.room.data(), stored.session.room.size()) : eastl::string_view());
-        _screens.Open(game.GetOnline());
+        _screens.Open(game.GetOnline(), game.TakeRoomEndNotice());
         _screens.Refresh(strings);
     }
 
@@ -403,7 +401,7 @@ namespace BECore::Mahjong {
         SetItem(HandsRow, host);
         SetItem(LevelRow, host);
 
-        // One line under the title: the notice, else the status, else (in the lobby) who is waited for or that the game has started
+        // One line under the title: the notice, else the status, else (in the lobby) who is waited for
         const bool notice = !_screens.NoticeKey().empty();
         const bool status = !notice && !_screens.StatusKey().empty();
         const OnlineStage stage = client.Stage();

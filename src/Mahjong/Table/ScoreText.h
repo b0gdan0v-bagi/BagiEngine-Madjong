@@ -4,6 +4,7 @@
 #include <Mahjong/Game/ScoreHand.h>
 #include <Mahjong/Game/TableSession.h>
 #include <Mahjong/Table/Coach.h>
+#include <Mahjong/Table/SeatName.h>
 #include <Mahjong/Table/Words.h>
 
 namespace BECore::Mahjong {
@@ -44,13 +45,13 @@ namespace BECore::Mahjong {
      * @brief The rows of the screen that follows a finished hand.
      *
      * `result` is `Hand().Result()` (the settlement does not carry the winning tile and the source), `totalsAfter` the points of the
-     * seats once the settlement is applied (`Match::Scores()` plus `deltas`), `seats` says who is "You". The seats are named with the
+     * seats once the settlement is applied (`Match::Scores()` plus `deltas`), `who` says who is "You" and what a seat is called. The seats are named with the
      * winds of the hand (`settlement.east`).
      */
-    [[nodiscard]] ScoreTable FormatScoreTable(const UIStrings& strings, const HandSettlement& settlement, const HandResult& result, const SeatScores& totalsAfter, const SeatSetup& seats);
+    [[nodiscard]] ScoreTable FormatScoreTable(const UIStrings& strings, const HandSettlement& settlement, const HandResult& result, const SeatScores& totalsAfter, const SeatWho& who);
 
     /// The standings of a match: equal points share a place and keep the seat order. The seats carry no wind (the match is over).
-    [[nodiscard]] StandingsTable FormatStandings(const UIStrings& strings, const Match& match, const SeatSetup& seats);
+    [[nodiscard]] StandingsTable FormatStandings(const UIStrings& strings, const Match& match, const SeatWho& who);
 
     /**
      * @brief The line of the coach's tally under a score table: "Moves like the computer's: 3 of 5 this hand, 9 of 12 in the match".
