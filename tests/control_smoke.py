@@ -52,8 +52,7 @@ HAND_OVER_SCREENS = {"HandOver", "HandOverAction"}  # the score table and its Ne
 RULES_SCREENS = {"Rules", "RulesAction"}  # the pages of the rules and their bar are shown together
 SETTLE_FRAMES = 2  # frames after a change of the game before the canvases show it
 # A screen that opens takes no click while it shows (kMotionShowSeconds, 0.18 s, `src/Mahjong/Table/UiPalette.h`): `let_motion_finish` moves the game clock past it
-MOTION_FRAMES = 2
-MOTION_FRAME_SECONDS = 0.125  # exact in binary; two of them are 0.25 s
+MOTION_FRAME_SECONDS = 0.25  # one frame of the longest time the engine allows (Time::kMaxFrameTime), exact in binary, past the show
 MOTION_WAIT_SECONDS = 0.3  # the real clock: game time is wall time, `step` waits for frames only and ignores `dt`
 IDLE_CHECK_SECONDS = 0.3  # how long the manual clock is watched not moving
 DEFAULT_STEP_SECONDS = 1.0 / 60.0
@@ -67,6 +66,12 @@ RESULT_SEAT_KEYS = {"concealed", "melds", "bonus", "breakdown"}
 BREAKDOWN_KEYS = {"won", "lines", "points", "doubles", "raw", "score", "limitHand"}
 # The playable tiles in the order of their ids: dots, bamboo, characters, winds, dragons
 ALL_TILES = [f"{rank}{suit}" for suit in "psm" for rank in range(1, 10)] + ["Ew", "Sw", "Ww", "Nw", "Rd", "Wd", "Gd"]
+
+
+class RealClock:
+    """Set by the real-clock scenario while it plays: a call to ask the game would cost a frame, so the helpers are told."""
+
+    running = False
 
 
 def get_state(client: BagiControlClient) -> dict[str, Any]:
@@ -290,11 +295,13 @@ def check_state_is_pushed(client: BagiControlClient) -> None:
 
 
 def let_motion_finish(client: BagiControlClient) -> None:
-    """Gives a screen that has just opened the time to finish its show: frames of 0.125 s on the manual clock, a wait on the real one."""
-    client.call("step", {"frames": MOTION_FRAMES, "dt": MOTION_FRAME_SECONDS})
-    if not client.call("status")["manualClock"]:
+    """Gives a screen that has just opened the time to finish its show: one long frame on the manual clock, a wait and a frame on the real one.
+    Every request of the control API takes a frame and a frame of a screen about a second in Debug (the SDL software renderer): none is spent on what the show does not need."""
+    if RealClock.running:
         time.sleep(MOTION_WAIT_SECONDS)
         client.call("step", {"frames": 1})
+    else:
+        client.call("step", {"frames": 1, "dt": MOTION_FRAME_SECONDS})
 
 
 def screens_shown(client: BagiControlClient) -> tuple[set[str], dict[str, Any]]:
@@ -365,10 +372,11 @@ def check_screens_follow_the_game(client: BagiControlClient, rng: random.Random)
 
     # The end of the match: the standings, then New game opens the seat choice, and Start begins another match
     client.call("reset", {"seed": SEED, "seats": "CCCC", "hands": SHORT_MATCH_HANDS})
+    phase = get_state(client)["phase"]
     for _ in range(HAND_LIMIT_PER_MATCH):
-        if get_state(client)["phase"] == "match_over":
+        if phase == "match_over":
             break
-        client.call("perform_action", {"type": "next_hand"})
+        phase = client.call("perform_action", {"type": "next_hand"})["outcome"]["phase"]  # one call a hand: each takes a frame
     shown, tree = screens_shown(client)
     check(shown == {"MatchOver"}, f"a finished match shows {sorted(shown)}")
     place = find_ui_element(tree, "StandingPlace0")
@@ -471,7 +479,14 @@ def run_real_clock_scenario(client: BagiControlClient, headless: bool) -> None:
     status = client.call("status")
     check(status["frame"] >= 1, f"status reports frame {status['frame']}")
     check(status["manualClock"] is False, "the manual clock is on without --manual-clock")
+    RealClock.running = True
+    try:
+        play_real_clock_scenario(client, headless)
+    finally:
+        RealClock.running = False
 
+
+def play_real_clock_scenario(client: BagiControlClient, headless: bool) -> None:
     play_mahjong(client)
     check_state_is_pushed(client)
 
