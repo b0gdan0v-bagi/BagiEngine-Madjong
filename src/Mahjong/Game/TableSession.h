@@ -32,6 +32,9 @@ namespace BECore::Mahjong {
     /// Where a match was played; `Unknown` is what a log of an older format says (the origin was not recorded).
     CORE_ENUM(MatchPlatform, uint8_t, Unknown, Desktop, Web)
 
+    /// The longest `nickname` of a log, in bytes: the length of a player's name in a room (`TextEntry` of kind `Name`).
+    inline constexpr size_t kMaxMatchLogNicknameBytes = 24;
+
     /// Where and by which build a match was played, plain data of the `Start` event (kept here, like `SeatSetup`, because the session
     /// stores it and `MatchLog.h` includes this header). The game fills it; the rules know no platform: a session only copies what it
     /// was given (`TableSession::SetLogOrigin`).
@@ -39,6 +42,7 @@ namespace BECore::Mahjong {
         MatchPlatform platform = MatchPlatform::Unknown;
         eastl::string build;        // the build id (a short git hash), empty when not known
         eastl::string gameVersion;  // the version for testers, empty when not known
+        eastl::string nickname;     // what a tester typed to be found by (only after a consent), empty: none
 
         bool operator==(const MatchLogOrigin&) const = default;
     };

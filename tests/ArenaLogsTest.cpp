@@ -83,6 +83,21 @@ namespace BECore::Mahjong::Arena {
         EXPECT_TRUE(verdict.events.front().origin.build.empty());
     }
 
+    TEST(ArenaLogsTest, ALogWithANicknameIsOkAndTheNicknameIsInNoReportText) {
+        LogSpec spec = PersonMatch(kSeedA, MatchPlatform::Web, "a1b2c3d");
+        spec.origin.nickname = "Zorro";
+        const eastl::string text = LogText(PlayLog(spec));
+        ASSERT_NE(text.find("\"nickname\":\"Zorro\""), eastl::string::npos);
+        const LogVerdict verdict = CheckMatchLog(View(text));
+        ASSERT_TRUE(verdict.ok) << verdict.reason.c_str();
+        EXPECT_TRUE(verdict.complete);
+
+        const auto logs = ReadLogs(SourceOf({FileOf("a.jsonl", text)}), ".");
+        ASSERT_TRUE(logs.has_value());
+        EXPECT_EQ(FormatCheckLines(*logs).find("Zorro"), eastl::string::npos);
+        EXPECT_EQ(FormatCorpusSummary(SummariseLogs(*logs)).find("Zorro"), eastl::string::npos);
+    }
+
     TEST(ArenaLogsTest, AnUnreadableLogNamesTheLine) {
         eastl::string text = LogText(PlayLog(PersonMatch(kSeedA, MatchPlatform::Desktop, "x")));
         text.append("{\"event\":\"action\",\"seat\":1}\n");

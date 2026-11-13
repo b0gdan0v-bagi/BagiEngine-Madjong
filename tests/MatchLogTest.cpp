@@ -190,6 +190,17 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(table.log.Events().front().origin, changed);
     }
 
+    TEST(MatchLogTest, TheNicknameOfTheOriginIsStampedAndCompared) {
+        const MatchLogOrigin origin{MatchPlatform::Web, "a1b2c3d", "0.1.0", "Anna"};
+        LoggedTable table;
+        table.session.SetLogOrigin(origin);
+        ASSERT_NO_FATAL_FAILURE(table.Start(kAllComputers));
+        EXPECT_EQ(table.log.Events().front().origin, origin);
+        EXPECT_EQ(table.log.Events().front().origin.nickname, "Anna");
+        EXPECT_FALSE(origin == (MatchLogOrigin{MatchPlatform::Web, "a1b2c3d", "0.1.0", ""}));
+        EXPECT_FALSE(origin == (MatchLogOrigin{MatchPlatform::Web, "a1b2c3d", "0.1.0", "Boris"}));
+    }
+
     TEST(MatchLogTest, AResumedMatchEchoesTheOriginOfItsLogNotTheSessions) {
         const MatchLogOrigin began{MatchPlatform::Web, "a1b2c3d", "0.1.0"};
         LoggedTable recorded;
