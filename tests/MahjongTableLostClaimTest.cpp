@@ -58,13 +58,6 @@ namespace BECore::Mahjong::Tests {
             return model;
         }
 
-        /// The four bars the component draws round `rect`: `kSeatTurnFrameWidth` units wide, the side bars between the top and the bottom one.
-        std::vector<Rect> BarsOf(const Rect& rect) {
-            const float width = kSeatTurnFrameWidth;
-            return {Rect(rect.x, rect.y, rect.w, width), Rect(rect.x, rect.y + rect.h - width, rect.w, width), Rect(rect.x, rect.y + width, width, rect.h - 2.0f * width),
-                    Rect(rect.x + rect.w - width, rect.y + width, width, rect.h - 2.0f * width)};
-        }
-
         /// Where a tile that arrives somewhere flies from, and what it shows there.
         struct Arrival {
             FlightOrigin from;
@@ -124,13 +117,11 @@ namespace BECore::Mahjong::Tests {
             ASSERT_FALSE(Hand().GetHand(kSeat1).melds.empty()) << "the computer at seat 1 claimed the pung";
         }
 
-        /// The rectangles drawn in `color`.
+        /// The rectangles drawn in `color`: a rect's own, and the box of the vertices of that colour in a geometry call (the frame and the blink of a plate are rounded layers of their own).
         std::vector<Rect> RectsOf(const Color& color) const {
             std::vector<Rect> found;
-            for (const DrawCall& call : _renderer->calls) {
-                if (call.kind == DrawKind::Rect && SameColor(call.color, color)) {
-                    found.push_back(call.rect);
-                }
+            for (const MarkDraw& draw : MarksOf(_renderer->calls, color)) {
+                found.push_back(draw.rect);
             }
             return found;
         }
@@ -145,25 +136,19 @@ namespace BECore::Mahjong::Tests {
             return _table->GetLayout().zones.seatPlates[seat];
         }
 
-        /// The four bars of `kClaimLostFrame` round the plate of `seat` are drawn, once each.
+        /// The frame `kClaimLostFrame` round the plate of `seat` is drawn, once (one rounded border: its box is the plate).
         bool Framed(Seat seat) const {
-            const std::vector<Rect> drawn = RectsOf(kClaimLostFrame);
-            for (const Rect& bar : BarsOf(PlateOf(seat))) {
-                int found = 0;
-                for (const Rect& rect : drawn) {
-                    found += SameRect(rect, bar) ? 1 : 0;
-                }
-                if (found != 1) {
-                    return false;
-                }
+            int found = 0;
+            for (const Rect& rect : RectsOf(kClaimLostFrame)) {
+                found += SameBox(rect, PlateOf(seat)) ? 1 : 0;
             }
-            return true;
+            return found == 1;
         }
 
         /// The plate of `seat` is filled with `kClaimHighlight` (the blink of the winner).
         bool Blinking(Seat seat) const {
             for (const Rect& rect : RectsOf(kClaimHighlight)) {
-                if (SameRect(rect, PlateOf(seat))) {
+                if (SameBox(rect, PlateOf(seat))) {
                     return true;
                 }
             }
@@ -250,8 +235,8 @@ namespace BECore::Mahjong::Tests {
         Draw();
 
         EXPECT_EQ(Session().GetPhase(), SessionPhase::HandOver);
-        EXPECT_TRUE(Framed(kSeat0)) << "four bars on the plate of the seat whose claim lost";
-        EXPECT_EQ(RectsOf(kClaimLostFrame).size(), 4u);
+        EXPECT_TRUE(Framed(kSeat0)) << "the frame on the plate of the seat whose claim lost";
+        EXPECT_EQ(RectsOf(kClaimLostFrame).size(), 1u) << "one frame, on the plate of the seat whose claim lost";
         EXPECT_TRUE(Blinking(kSeat2)) << "on at the moment";
         EXPECT_FALSE(Blinking(kSeat0));
         EXPECT_FALSE(Framed(kSeat2));
@@ -277,8 +262,8 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(PersonPungsAndAComputerWins());
         Draw();
 
-        int baseOf0 = -1;
-        int baseOf2 = -1;
+        const int baseOf0 = PanelCallAt(_renderer->calls, PlateOf(kSeat0));
+        const int baseOf2 = PanelCallAt(_renderer->calls, PlateOf(kSeat2));
         int frameAt = -1;
         int blinkAt = -1;
         int firstTile = -1;
@@ -287,12 +272,9 @@ namespace BECore::Mahjong::Tests {
             const int at = static_cast<int>(i);
             if (call.kind == DrawKind::Texture && call.texture == _atlasTexture) {
                 firstTile = firstTile < 0 ? at : firstTile;
-            } else if (call.kind == DrawKind::Rect && SameColor(call.color, kSeatPlate)) {
-                baseOf0 = SameRect(call.rect, PlateOf(kSeat0)) ? at : baseOf0;
-                baseOf2 = SameRect(call.rect, PlateOf(kSeat2)) ? at : baseOf2;
-            } else if (call.kind == DrawKind::Rect && SameColor(call.color, kClaimLostFrame)) {
+            } else if (BoxOfColor(call, kClaimLostFrame)) {
                 frameAt = frameAt < 0 ? at : frameAt;
-            } else if (call.kind == DrawKind::Rect && SameColor(call.color, kClaimHighlight) && SameRect(call.rect, PlateOf(kSeat2))) {
+            } else if (const std::optional<Rect> box = BoxOfColor(call, kClaimHighlight); box && SameBox(*box, PlateOf(kSeat2))) {
                 blinkAt = at;
             }
         }
@@ -341,7 +323,7 @@ namespace BECore::Mahjong::Tests {
         Draw();
 
         EXPECT_TRUE(Framed(kSeat0));
-        EXPECT_EQ(RectsOf(kClaimLostFrame).size(), 4u);
+        EXPECT_EQ(RectsOf(kClaimLostFrame).size(), 1u) << "one frame, on the plate of the seat whose claim lost";
         EXPECT_TRUE(Blinking(kSeat1)) << "the plate of the pung's owner";
         EXPECT_FALSE(Framed(kSeat1));
         EXPECT_FALSE(Blinking(kSeat0));
@@ -524,7 +506,7 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_GT(PlateOf(kSeat1).y, PlateOf(seat).y) << "seat " << seat;
             }
         }
-        EXPECT_EQ(RectsOf(kClaimLostFrame).size(), 4u);
+        EXPECT_EQ(RectsOf(kClaimLostFrame).size(), 1u) << "one frame, on the plate of the seat whose claim lost";
     }
 
     TEST_F(MahjongTableLostClaimTest, TheColourOfTheFrameIsGoldWithAnAlphaOfItsOwn) {

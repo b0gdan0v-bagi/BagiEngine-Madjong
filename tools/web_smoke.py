@@ -97,6 +97,9 @@ TILE_ROUNDS = 3
 ANSWER_WINDOW_SECONDS = 1.5  # how long a claim-answer click is watched for a change (a button gone is a change at once)
 CLICK_WINDOW_SECONDS = 5.0  # how long a tile click is watched (the engine's CLICK_TIMEOUT_SECONDS)
 POLL_INTERVAL_SECONDS = 0.5
+# A screen that opens or leaves (the upload question, the seat choice) fades for at most 0.18 s (`kMotionShowSeconds` of `Table/UiPalette.h`) and takes no click while it shows: every wait after
+# a click or after the first frame lasts at least this, whatever `--settle` says.
+MOTION_SECONDS = 0.3
 
 
 # ----- command line -----
@@ -222,7 +225,7 @@ def click_changes_picture(page, canvas, box, point: tuple[float, float], settle:
     page.wait_for_timeout(settle * 1000)
     before = canvas.screenshot()
     engine.press(page, x, y, False)
-    page.wait_for_timeout(settle * 1000)
+    page.wait_for_timeout(max(settle, MOTION_SECONDS) * 1000)
     _, changed = engine.poll(canvas.screenshot, lambda png: pictures_differ(before, png), window, sleep=sleep)
     return changed
 
@@ -288,7 +291,7 @@ def wait_for_first_frame(page, canvas, args: argparse.Namespace, run: TableRun):
     if not drawn:
         run.problems.append(f"(2) nothing was drawn within {args.timeout:g} s")
         return None
-    page.wait_for_timeout(args.settle * 1000)
+    page.wait_for_timeout(max(args.settle, MOTION_SECONDS) * 1000)
     box = canvas.bounding_box()
     if box is None:
         run.problems.append("the canvas has no box to click in")

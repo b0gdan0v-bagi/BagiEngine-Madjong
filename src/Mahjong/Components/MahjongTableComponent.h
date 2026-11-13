@@ -1,5 +1,6 @@
 #pragma once
 
+#include <BECore/Renderer/IRenderer.h>
 #include <BECore/Renderer/ITexture.h>
 #include <BECore/Resource/ResourceHandle.h>
 #include <BECore/Scene/IComponent.h>
@@ -85,11 +86,13 @@ namespace BECore::Mahjong {
      * the application's clean-up, on a renderer change and with the component; the flat `kFelt` when the renderer gives none), the rim of
      * `kFeltRim` and its lip `kFeltLip` follow it; no box is painted under the discards or the wall.
      *
-     * **The seat plates.** Each seat has a plate (`TableLayout::zones.seatPlates`, indexed by seat: each lies at `SeatPosition(viewer, seat)`) painted after the felt: the base `kSeatPlate`, on the
-     * plate of the seat whose turn it is (`TurnSeat`, never the seat asked to claim) the tint `kTurnMark` and a frame `kSeatTurnFrame`, and along the top edge of the dealer's plate (East of the hand
-     * shown) a bar `kDealerMark`, which is red, not gold. Then the seat's emblem in `EmblemBox` (a person, or the computer of the seat's level; `Table/EmblemAtlas.h`) with the turn ring tinted
-     * `kSeatTurnFrame` while it is the seat's turn and the calling ring tinted `kCallingFrame` while its hand is declared; the blink and the frame of a lost claim go over that. All public data, so
-     * they show under the cover, for a spectator and at the end of a hand; the words on the plates are the labels of the node `SeatPlates` (`MahjongHudComponent`).
+     * **The seat plates.** Each seat has a plate (`TableLayout::zones.seatPlates`, indexed by seat: each lies at `SeatPosition(viewer, seat)`) painted after the felt: the base (a rounded framed
+     * panel, `kSeatPlate` over `kSeatPlateDeep` with its border and soft shadow: one `DrawGeometry` through `UIBoxMesh`, as the centre panel's), on the plate of the seat whose turn it is (`TurnSeat`,
+     * never the seat asked to claim) the tint `kTurnMark` and a frame `kSeatTurnFrame` in the same call, and along the top edge of the dealer's plate (East of the hand shown) a bar `kDealerMark`,
+     * which is red, not gold. Then the seat's emblem in `EmblemBox` (a person, or the computer of the seat's level; `Table/EmblemAtlas.h`) with the turn ring tinted `kSeatTurnFrame` while it is the
+     * seat's turn and the calling ring tinted `kCallingFrame` while its hand is declared; the blink and the frame of a lost claim go over that (a call of their own each, rounded like the plate). A
+     * bar of a mark along the edge of a panel is inset by the corner radius at both ends. The meshes are made into member lists (`PanelScratchCapacity()`), so a steady frame allocates nothing. All
+     * public data, so they show under the cover, for a spectator and at the end of a hand; the words on the plates are the labels of the node `SeatPlates` (`MahjongHudComponent`).
      *
      * **The last move.** Three marks of the gold family (`Table/UiPalette.h`) show what has just happened, from the public data of `HandModel`
      * (`Moves()`, `Discards()`, the open sets): a tint over the last discard (`kLastDiscardMark`; the frame of a pending discard shows
@@ -204,6 +207,17 @@ namespace BECore::Mahjong {
         /// hints draw their marks on `RaisedRect` of that slot.
         [[nodiscard]] std::optional<int> SelectedHandIndex() const noexcept {
             return _drawnSelected;
+        }
+
+        /// The capacities of the scratch lists the panels are meshed into (see `DrawPanel`): a table drawn again unchanged leaves both as they were, since a steady frame allocates nothing.
+        struct PanelScratch {
+            size_t vertices = 0;
+            size_t indices = 0;
+
+            [[nodiscard]] bool operator==(const PanelScratch&) const = default;
+        };
+        [[nodiscard]] PanelScratch PanelScratchCapacity() const noexcept {
+            return PanelScratch{_panelVertices.capacity(), _panelIndices.capacity()};
         }
 
         /// The layout of the last `OnDraw` in the view units of the scene (empty before the first draw and while nothing is drawn).
@@ -337,6 +351,15 @@ namespace BECore::Mahjong {
         /// flights when it has any, a restart, another viewer or another view size drops them.
         void PlanBatch(const TableSnapshot& before, const NewMoves& news, const HandModel& hand);
 
+        /// The panels of the table (the seat plates and the centre panel) are one `DrawGeometry` each: `DrawPanel` meshes the soft shadow, the fill, the border and the highlight of `rect`
+        /// (and, with `turn`, the tint and the frame of the seat whose turn it is) into the member lists, `DrawPanelTint` and `DrawPanelFrame` mesh one more layer over a plate (the blink and
+        /// the frame of a claim). `unit` is the table's `LayoutScale`: the radius and the widths are in design units.
+        void DrawPanel(IRenderer& renderer, const Rect& rect, float unit, bool turn);
+        void DrawPanelTint(IRenderer& renderer, const Rect& rect, float unit, const Color& color);
+        void DrawPanelFrame(IRenderer& renderer, const Rect& rect, float unit, float width, const Color& color);
+        /// Empties the scratch lists and gives them their first capacity, so the first frame is the only one that makes them.
+        void BeginPanelMesh();
+
         /// `baseSeconds` at the speed of the game.
         [[nodiscard]] float Seconds(float baseSeconds) const noexcept {
             return ScaledSeconds(baseSeconds, _speed);
@@ -425,6 +448,9 @@ namespace BECore::Mahjong {
         float _lostLeft = 0.0f;                       // seconds of the marks of that window left, 0 for none
         float _handOverHoldLeft = 0.0f;               // seconds the score table is still held back, 0 for none
         SeenHand _handOverHoldOf;                     // the hand it is held for: a hold is void in any other
+
+        eastl::vector<GeometryVertex> _panelVertices;  // the scratch of `DrawPanel`: cleared before each panel, never made again
+        eastl::vector<int> _panelIndices;
 
         eastl::vector<TableRegion> _regions;                                              // the regions of the last layout (refilled every draw, for its capacity)
         eastl::vector<TableRegion> _publishedRegions;                                     // what the canvases of `_regionCanvases` hold,

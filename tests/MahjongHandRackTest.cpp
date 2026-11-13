@@ -19,12 +19,11 @@ namespace BECore::Mahjong::Tests {
 
     class MahjongHandRackTest : public MahjongTableTestBase {
     protected:
+        /// The index of each draw of `color`: a rect of it, or a geometry call with a vertex of it (the tint of a seat plate is part of the plate's mesh).
         std::vector<size_t> CallsOf(const Color& color) const {
             std::vector<size_t> found;
-            for (size_t i = 0; i < _renderer->calls.size(); ++i) {
-                if (_renderer->calls[i].kind == DrawKind::Rect && SameColor(_renderer->calls[i].color, color)) {
-                    found.push_back(i);
-                }
+            for (const MarkDraw& draw : MarksOf(_renderer->calls, color)) {
+                found.push_back(draw.call);
             }
             return found;
         }

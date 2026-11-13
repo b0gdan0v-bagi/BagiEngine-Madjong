@@ -5,6 +5,7 @@
 
 #include <BECore/Control/Json.h>
 #include <BECore/Text/Utf8.h>
+#include <BECore/UI/UIImageComponent.h>
 #include <Events/SceneEvents.h>
 #include <Mahjong/Components/MahjongHudComponent.h>
 #include <Mahjong/Table/Coach.h>
@@ -37,13 +38,24 @@ namespace BECore::Mahjong::Tests {
         constexpr float kScoreTableHeight = 508.0f;     // the phone profile's large hand starts at y 609.6, so the plate ends at 606
         constexpr float kScoreCoachRowHeight = 24.0f;   // HandCoachRow, the coach's tally: hidden unless the HUD has a line for it
         constexpr float kScoreButtonGapHeight = 64.0f;  // the gap of the plate that the Next hand button sits in
+        /// The table of the plate: a caption row and four seat rows 4 apart (`ScoreTable`), and under the gap `Details` (the winning tiles, the lines,
+        /// the coach's row and the summary, 4 apart: the plate is exactly full with the tally row shown).
+        constexpr float kScoreCaptionHeight = 24.0f;
+        constexpr float kScoreRowHeight = 28.0f;
+        constexpr float kScoreTableGap = 4.0f;
+        constexpr float kScoreTilesHeight = 32.0f;
+        constexpr float kScoreTileWidth = 24.0f;
+        constexpr float kScoreLineRowHeight = 20.0f;
+        constexpr float kScoreSummaryHeight = 24.0f;
+        constexpr int kScoreColumns = 5;  // seat, wind, hand, change, total
         /// The same in the portrait view: the plate lies between the bonus columns of the side seats (x 94..118 and 602..626, y 308..452) and above the
         /// viewer's bonus tiles (from y 1112); two columns of lines and a taller gap, for the ratio of the window scale to the table's fit of 1.6
         constexpr float kPortraitScoreTableLeft = 124.0f;
         constexpr float kPortraitScoreTableRight = 596.0f;
         constexpr float kPortraitScoreTableTop = 92.0f;
         constexpr float kPortraitScoreTableBottom = 1108.0f;
-        constexpr float kPortraitScoreTableHeight = 748.0f;
+        constexpr float kPortraitScoreTableHeight = 760.0f;
+        constexpr float kPortraitScoreRowHeight = 32.0f;
         constexpr float kPortraitScoreCoachRowHeight = 48.0f;  // two lines of 18
         constexpr float kPortraitScoreBandHeight = 72.0f;      // the headline and the summary: two lines of the narrow plate
         constexpr float kPortraitScoreButtonGapHeight = 112.0f;
@@ -76,6 +88,9 @@ namespace BECore::Mahjong::Tests {
         /// the plate keeps its rows 4 apart; the button is still 16 below them (a spacer of 8 between two gaps of 4).
         constexpr float kStandingsGap = 4.0f;
         constexpr float kStandingsPlateHeight = 296.0f;
+        constexpr float kStandingsRowHeight = 24.0f;
+        constexpr float kStandingsBadgeSize = 20.0f;  // the row less its border, on the grid
+        constexpr float kStandingsRowPadding = 8.0f;
         constexpr float kMatchCoachRowHeight = 28.0f;  // MatchCoachRow: the plate (296) pays for it inside, so its rows are 24 high at 18
         constexpr int kHandLimit = 60;                 // hands of a 4-hand match with replayed draws
         /// Output sizes the words are asked in: the design size, a small window, the narrowest windows and a wide short one.
@@ -84,6 +99,18 @@ namespace BECore::Mahjong::Tests {
             float height;
         };
         constexpr Output kOutputs[] = {{1280.0f, 720.0f}, {731.0f, 411.0f}, {480.0f, 480.0f}, {480.0f, 853.0f}, {1707.0f, 480.0f}};
+
+        /// The worst case of the score table's shape: sixteen lines, the tally row and the eighteen tiles of a hand of four kongs, all shown.
+        void ShowTheWorstScoreTable(UICanvasComponent& canvas) {
+            for (int i = 0; i < kMaxScoreLines; ++i) {
+                ASSERT_TRUE(canvas.SetElementVisible(PoolString::Intern(Format("ScoreLine{}", i)), true));
+            }
+            ASSERT_TRUE(canvas.SetElementVisible("HandCoachRow"_intern, true));
+            ASSERT_TRUE(canvas.SetElementVisible("WinTiles"_intern, true));
+            for (int i = 0; i < kMaxWinningTiles; ++i) {
+                ASSERT_TRUE(canvas.SetElementVisible(PoolString::Intern(Format("WinTile{}", i)), true));
+            }
+        }
 
         /// The longest texts of the screens in the current language of `strings`: the real formatters over every winner, East, kind of win, seat of the
         /// discarder, seat of the one person (the mark of "you") and winning tile, the longest found by code points.
@@ -122,11 +149,18 @@ namespace BECore::Mahjong::Tests {
             return longest;
         }
 
+        /// The cell of a row of the score table by column: name, wind, hand, change, total.
+        const eastl::string& CellOf(const ScoreRow& row, int column) {
+            const eastl::string* const cells[kScoreColumns] = {&row.name, &row.wind, &row.hand, &row.change, &row.total};
+            return *cells[column];
+        }
+
         struct WorstTexts {
             eastl::string headline;
-            eastl::string seatRow;
+            eastl::array<eastl::string, kScoreColumns> cells;  // the longest text of each column of the score table
             eastl::string summary;
-            eastl::string standing;
+            eastl::string standingName;   // the longest name of a standings row
+            eastl::string standingScore;  // and the biggest score
             eastl::string standingsHeadline;
             eastl::string handTally;   // the longest line of the coach's tally under the score table
             eastl::string matchTally;  // and under the standings
@@ -138,7 +172,7 @@ namespace BECore::Mahjong::Tests {
             worst.tile = LongestTile(strings, [](Tile tile) { return !tile.IsBonus(); });  // a winning tile is never a flower
 
             std::vector<eastl::string> headlines;
-            std::vector<eastl::string> rows;
+            std::array<std::vector<eastl::string>, kScoreColumns> columns;
             std::vector<eastl::string> summaries;
             for (Seat winner = 0; winner < kSeatCount; ++winner) {
                 for (Seat east = 0; east < kSeatCount; ++east) {
@@ -170,14 +204,20 @@ namespace BECore::Mahjong::Tests {
                                 const ScoreTable table = FormatScoreTable(strings, settlement, result, totals, seats);
                                 headlines.push_back(table.headline);
                                 summaries.push_back(table.summary);
-                                rows.insert(rows.end(), table.seats.begin(), table.seats.end());
+                                for (const ScoreRow& row : table.rows) {
+                                    for (int column = 0; column < kScoreColumns; ++column) {
+                                        columns[static_cast<size_t>(column)].push_back(CellOf(row, column));
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
             worst.headline = LongestText(headlines);
-            worst.seatRow = LongestText(rows);
+            for (int column = 0; column < kScoreColumns; ++column) {
+                worst.cells[static_cast<size_t>(column)] = LongestText(columns[static_cast<size_t>(column)]);
+            }
             worst.summary = LongestText(summaries);
 
             // The standings: a row with the last place and the biggest score, the headline of three tied seats and of a single winner
@@ -187,7 +227,7 @@ namespace BECore::Mahjong::Tests {
                 SeatSetup seats{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
                 seats[person] = SeatKind::Person;
                 for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                    standings.push_back(Tr(strings, "matchover.row", {{"place", "4"}, {"name", SeatLabel(strings, seat, seats)}, {"score", Format("{}", kWorstTotal)}}));
+                    standings.push_back(SeatLabel(strings, seat, seats));
                 }
                 for (const SeatScores& deltas : {SeatScores{-300, 100, 100, 100}, SeatScores{100, -300, 100, 100}, SeatScores{100, 100, -300, 100}, SeatScores{100, 100, 100, -300},
                                                  SeatScores{200, 100, 0, -300}, SeatScores{-300, 0, 100, 200}}) {
@@ -200,7 +240,8 @@ namespace BECore::Mahjong::Tests {
                     standingsHeadlines.push_back(FormatStandings(strings, match, seats).headline);
                 }
             }
-            worst.standing = LongestText(standings);
+            worst.standingName = LongestText(standings);
+            worst.standingScore = Format("{}", -kWorstTotal);  // the biggest in the longest form: a negative total
             worst.standingsHeadline = LongestText(standingsHeadlines);
             constexpr CoachTally kBig{999, 999};
             // The row also says how many of the room have read the plate
@@ -214,6 +255,37 @@ namespace BECore::Mahjong::Tests {
 
     class MahjongEndScreenTest : public MahjongTableTestBase {
     protected:
+        /// Expects the rows of the table and the tiles to lie inside the plate's inner area and the cells inside their row.
+        void ExpectTheTableInsideThePlate(const Rect& plate, const char* label) const {
+            const Rect inner(plate.x + kModalPadding, plate.y + kModalPadding, plate.w - 2.0f * kModalPadding, plate.h - 2.0f * kModalPadding);
+            auto inside = [&](const Rect& rect, const Rect& frame, const eastl::string& what) {
+                EXPECT_GE(rect.x, frame.x - 0.01f) << label << ": " << what.c_str();
+                EXPECT_LE(rect.x + rect.w, frame.x + frame.w + 0.01f) << label << ": " << what.c_str();
+                EXPECT_GE(rect.y, frame.y - 0.01f) << label << ": " << what.c_str();
+                EXPECT_LE(rect.y + rect.h, frame.y + frame.h + 0.01f) << label << ": " << what.c_str();
+            };
+            for (const char* name : {"ScoreTable", "ScoreHeader", "ButtonGap", "Details", "WinTiles", "Lines", "HandCoachRow", "Summary"}) {
+                const UIElement* element = Element("HandOver", name);
+                ASSERT_NE(element, nullptr) << name;
+                inside(element->rect, inner, name);
+            }
+            for (int row = 0; row < kSeatCount; ++row) {
+                const UIElement* seatRow = Element("HandOver", Format("SeatRow{}", row).c_str());
+                ASSERT_NE(seatRow, nullptr) << row;
+                inside(seatRow->rect, inner, Format("SeatRow{}", row));
+                for (int column = 0; column < kScoreColumns; ++column) {
+                    const UIElement* cell = Element("HandOver", Format("ScoreCell{}_{}", row, column).c_str());
+                    ASSERT_NE(cell, nullptr);
+                    inside(cell->rect, seatRow->rect, Format("ScoreCell{}_{}", row, column));
+                }
+            }
+            for (int i = 0; i < kMaxWinningTiles; ++i) {
+                const UIElement* tile = Element("HandOver", Format("WinTile{}", i).c_str());
+                ASSERT_NE(tile, nullptr) << i;
+                inside(tile->rect, Element("HandOver", "WinTiles")->rect, Format("WinTile{}", i));
+            }
+        }
+
         void StartShortMatch(const SeatSetup& seats, uint32_t seed = kSeed) {
             MahjongSettings settings = _game->GetSettings();
             settings.handsPerMatch = kRoundsPerMatch;
@@ -245,7 +317,8 @@ namespace BECore::Mahjong::Tests {
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 totals[seat] += settlement.deltas[seat];
             }
-            return FormatScoreTable(CoreManager::GetUIStrings(), settlement, *Hand().Result(), totals, _game->GetSession().Seats());
+            const PlayerHand* winnerHand = IsSeat(settlement.winner) ? &Hand().GetHand(settlement.winner) : nullptr;
+            return FormatScoreTable(CoreManager::GetUIStrings(), settlement, *Hand().Result(), totals, _game->GetSession().Seats(), winnerHand);
         }
 
         /// The person at seat 0 plays the hand on: the computers run, and each turn of the person takes the first action on offer. Returns how
@@ -273,6 +346,21 @@ namespace BECore::Mahjong::Tests {
             const CoachLedger& coach = _game->GetCoach();
             const TableSession& session = _game->GetSession();
             return FormatCoachTally(CoreManager::GetUIStrings(), coach.HandTallyOf(HandKeyOf(session)), coach.MatchTallyOf(session.StartCount()));
+        }
+
+        /// The rows of the standings on screen say `table`: the variables and the texts of the badge, the name and the score, and the highlight of a first place.
+        void ExpectStandingRows(const StandingsTable& table) const {
+            for (int row = 0; row < kSeatCount; ++row) {
+                const StandingRow& expected = table.rows[static_cast<size_t>(row)];
+                SCOPED_TRACE(row);
+                EXPECT_EQ(Var(Format("standingPlace{}", row).c_str()), Format("{}", expected.place).c_str());
+                EXPECT_EQ(Var(Format("standingName{}", row).c_str()), expected.name.c_str());
+                EXPECT_EQ(Var(Format("standingScore{}", row).c_str()), expected.score.c_str());
+                EXPECT_EQ(Text("MatchOver", Format("StandingPlace{}", row).c_str()), Format("{}", expected.place).c_str());
+                EXPECT_EQ(Text("MatchOver", Format("StandingName{}", row).c_str()), expected.name.c_str());
+                EXPECT_EQ(Text("MatchOver", Format("StandingScore{}", row).c_str()), expected.score.c_str());
+                EXPECT_EQ(OnScreen("MatchOver", Format("StandingFirst{}", row).c_str()), expected.first) << "the highlight is shown exactly for a first place";
+            }
         }
 
         /// Plays whole hands (the person clicking `Next hand` each time) until the match is over.
@@ -316,8 +404,11 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Text("HandOver", "Headline"), expected.headline.c_str());
         EXPECT_EQ(Text("HandOver", "Summary"), expected.summary.c_str());
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            EXPECT_EQ(Var(Format("handOverSeat{}", seat).c_str()), expected.seats[seat].c_str());
-            EXPECT_EQ(Text("HandOver", Format("SeatRow{}", seat).c_str()), expected.seats[seat].c_str());
+            for (int column = 0; column < kScoreColumns; ++column) {
+                const std::string name = Format("handOverCell{}_{}", seat, column).c_str();
+                EXPECT_EQ(Var(name.c_str()), CellOf(expected.rows[seat], column).c_str());
+                EXPECT_EQ(Text("HandOver", Format("ScoreCell{}_{}", seat, column).c_str()), CellOf(expected.rows[seat], column).c_str());
+            }
         }
         for (int i = 0; i < kMaxScoreLines; ++i) {
             const bool has = i < static_cast<int>(expected.lines.size());
@@ -325,6 +416,75 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(OnScreen("HandOver", Format("ScoreLine{}", i).c_str()), has) << "line " << i << " is visible exactly when it has text";
         }
         EXPECT_EQ(Text("HandOverAction", "NextHand"), "Next hand");
+    }
+
+    TEST_F(MahjongEndScreenTest, TheWinnersRowIsLitAndTheWinningTilesAreShownAsPicturesWithTheWinningTileMarked) {
+        ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers, 3));
+        ASSERT_NO_FATAL_FAILURE(PlayHandOver());
+        ASSERT_EQ(Hand().Result()->kind, ResultKind::Win) << "this seed ends in a mahjong";
+        const ScoreTable expected = ExpectedTable();
+        ASSERT_EQ(expected.winner, Hand().Result()->winner);
+
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            EXPECT_EQ(OnScreen("HandOver", Format("WinnerRow{}", seat).c_str()), seat == expected.winner) << "exactly the winner's row is lit: seat " << seat;
+        }
+        ASSERT_FALSE(expected.winningTiles.empty());
+        EXPECT_EQ(expected.winningTiles.back(), Hand().Result()->winningTile) << "the winning tile is the last";
+        EXPECT_TRUE(OnScreen("HandOver", "WinTiles"));
+        for (int i = 0; i < kMaxWinningTiles; ++i) {
+            const bool has = i < static_cast<int>(expected.winningTiles.size());
+            EXPECT_EQ(OnScreen("HandOver", Format("WinTile{}", i).c_str()), has) << "tile " << i << " is shown exactly when the hand has it";
+            EXPECT_EQ(OnScreen("HandOver", Format("WinTileMark{}", i).c_str()), has && i + 1 == static_cast<int>(expected.winningTiles.size())) << "only the winning tile is marked: " << i;
+            if (has) {
+                const UIElement* tile = Element("HandOver", Format("WinTile{}", i).c_str());
+                ASSERT_NE(tile, nullptr);
+                const UIImageComponent* image = tile->GetComponent<UIImageComponent>();
+                ASSERT_NE(image, nullptr);
+                EXPECT_EQ(image->sprite, PoolString::Intern(SpriteName(expected.winningTiles[static_cast<size_t>(i)]))) << "tile " << i;
+            }
+        }
+        EXPECT_EQ(
+            expected.winningTiles.size(), Hand().GetHand(expected.winner).concealed.size() + 3 * Hand().GetHand(expected.winner).melds.size() +
+                                              [&] {
+                                                  size_t kongs = 0;
+                                                  for (const Meld& meld : Hand().GetHand(expected.winner).melds) {
+                                                      kongs += meld.kind == MeldKind::Kong ? 1 : 0;
+                                                  }
+                                                  return kongs;
+                                              }())
+            << "all the tiles of the hand: its melds as laid, the concealed tiles with the winning tile in them";
+    }
+
+    TEST_F(MahjongEndScreenTest, ADrawnHandLightsNoRowShowsNoTilesAndHasDashesInItsCells) {
+        ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers, 3));
+        ASSERT_NO_FATAL_FAILURE(PlayHandOver());
+        HandState state = Hand().Capture();
+        state.result = HandResult{};
+        Lay(HandModel::ForDisplay(state));
+        Draw();
+        ASSERT_TRUE(Shown("HandOver"));
+        ASSERT_EQ(Hand().Result()->kind, ResultKind::Drawn);
+
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            EXPECT_FALSE(OnScreen("HandOver", Format("WinnerRow{}", seat).c_str())) << seat;
+            EXPECT_EQ(Var(Format("handOverCell{}_2", seat).c_str()), "-");
+            EXPECT_EQ(Var(Format("handOverCell{}_3", seat).c_str()), "-");
+            EXPECT_EQ(Text("HandOver", Format("ScoreCell{}_2", seat).c_str()), "-");
+        }
+        EXPECT_FALSE(OnScreen("HandOver", "WinTiles")) << "no winning hand, no row of tiles";
+        for (int i = 0; i < kMaxWinningTiles; ++i) {
+            EXPECT_FALSE(OnScreen("HandOver", Format("WinTile{}", i).c_str())) << i;
+            EXPECT_FALSE(OnScreen("HandOver", Format("WinTileMark{}", i).c_str())) << i;
+        }
+    }
+
+    TEST_F(MahjongEndScreenTest, AnUnchangedFrameOfTheScoreTableMovesNoVariable) {
+        ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers, 3));
+        ASSERT_NO_FATAL_FAILURE(PlayHandOver());
+        const uint64_t version = CoreManager::GetUIVars().GetVersion();
+        Draw();
+        Draw();
+        EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), version) << "the cells are published when the session or the language moved, not per frame";
     }
 
     TEST_F(MahjongEndScreenTest, ALanguageSwitchWhileTheScoreTableIsUpChangesItsTextAtTheNextDraw) {
@@ -342,7 +502,12 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Text("HandOver", "Headline"), russian.headline.c_str());
         EXPECT_EQ(Text("HandOver", "Summary"), russian.summary.c_str());
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            EXPECT_EQ(Text("HandOver", Format("SeatRow{}", seat).c_str()), russian.seats[seat].c_str());
+            for (int column = 0; column < kScoreColumns; ++column) {
+                EXPECT_EQ(Text("HandOver", Format("ScoreCell{}_{}", seat, column).c_str()), CellOf(russian.rows[seat], column).c_str());
+            }
+        }
+        for (int column = 0; column < kScoreColumns; ++column) {
+            EXPECT_EQ(Text("HandOver", Format("ScoreCol{}", column).c_str()), russian.columns[static_cast<size_t>(column)].c_str()) << "the captions follow the language";
         }
         for (int i = 0; i < kMaxScoreLines; ++i) {
             const bool has = i < static_cast<int>(russian.lines.size());
@@ -461,9 +626,8 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Var("matchOverHeadline"), table.headline.c_str());
         EXPECT_EQ(Text("MatchOver", "Headline"), table.headline.c_str());
         for (int row = 0; row < kSeatCount; ++row) {
-            EXPECT_EQ(Var(Format("standing{}", row).c_str()), table.rows[row].c_str());
-            EXPECT_EQ(Text("MatchOver", Format("Standing{}", row).c_str()), table.rows[row].c_str());
         }
+        ExpectStandingRows(table);
     }
 
     TEST_F(MahjongEndScreenTest, TheButtonOfTheLastHandSaysFinishInEveryLanguageAndTheStandingsFollowALanguageSwitch) {
@@ -496,9 +660,7 @@ namespace BECore::Mahjong::Tests {
             const StandingsTable switched = FormatStandings(CoreManager::GetUIStrings(), _game->GetMatch(), _game->GetSession().Seats());
             EXPECT_NE(switched.headline, table.headline);
             EXPECT_EQ(Text("MatchOver", "Headline"), switched.headline.c_str());
-            for (int row = 0; row < kSeatCount; ++row) {
-                EXPECT_EQ(Text("MatchOver", Format("Standing{}", row).c_str()), switched.rows[row].c_str());
-            }
+            ExpectStandingRows(switched);
             ASSERT_TRUE(_game->SetLanguage(language));  // the walk goes on from this language
         });
     }
@@ -541,10 +703,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(PlayHandOver());
         auto canvas = Canvas("HandOver");
         ASSERT_TRUE(canvas);
-        for (int i = 0; i < kMaxScoreLines; ++i) {
-            ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(Format("ScoreLine{}", i)), true));
-        }
-        ASSERT_TRUE(canvas->SetElementVisible("HandCoachRow"_intern, true));  // the worst case: the tally row shown
+        ASSERT_NO_FATAL_FAILURE(ShowTheWorstScoreTable(*canvas));  // the worst case: the sixteen lines, the tally row and eighteen tiles shown
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             CoreManager::GetUIVars().Set("handOverHeadline"_intern, eastl::string_view(FindWorstTexts(CoreManager::GetUIStrings()).headline));
@@ -568,29 +727,52 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(headline->rect.w, plate.w - 2.0f * kModalPadding);
             EXPECT_EQ(headline->rect.h, kScoreHeadlineHeight) << "one line of 28";
 
-            const Rect* above = &headline->rect;
+            // The table: the caption row and the four seat rows, 4 apart, in one stack 8 under the headline
+            const UIElement* table = Element("HandOver", "ScoreTable");
+            const UIElement* caption = Element("HandOver", "ScoreHeader");
+            ASSERT_TRUE(table != nullptr && caption != nullptr);
+            EXPECT_EQ(GapBelow(headline->rect, table->rect), kModalGap);
+            EXPECT_EQ(caption->rect.y, table->rect.y);
+            EXPECT_EQ(caption->rect.h, kScoreCaptionHeight);
+            EXPECT_EQ(caption->rect.w, headline->rect.w);
+            const Rect* above = &caption->rect;
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 const UIElement* row = Element("HandOver", Format("SeatRow{}", seat).c_str());
                 ASSERT_NE(row, nullptr);
                 EXPECT_TRUE(SameColor(row->color, PaletteColor("surfaceRaised"))) << seat;
-                EXPECT_EQ(GapBelow(*above, row->rect), kModalGap) << "row " << seat;
+                EXPECT_EQ(GapBelow(*above, row->rect), kScoreTableGap) << "row " << seat;
+                EXPECT_EQ(row->rect.h, kScoreRowHeight) << seat;
                 EXPECT_EQ(row->rect.x, headline->rect.x) << seat;
                 EXPECT_EQ(row->rect.w, headline->rect.w) << seat;
                 above = &row->rect;
             }
+            EXPECT_EQ(table->rect.y + table->rect.h, above->y + above->h) << "the table ends with its last row";
 
-            // The gap for the Next hand button: an empty element of the stack between the seat rows and the lines
+            // The gap for the Next hand button: an empty element of the stack between the table and the details
             const UIElement* buttonGap = Element("HandOver", "ButtonGap");
             ASSERT_NE(buttonGap, nullptr);
-            EXPECT_EQ(GapBelow(*above, buttonGap->rect), kModalGap);
+            EXPECT_EQ(GapBelow(table->rect, buttonGap->rect), kModalGap);
             EXPECT_EQ(buttonGap->rect.h, kScoreButtonGapHeight);
             EXPECT_EQ(buttonGap->rect.x, headline->rect.x);
             EXPECT_EQ(buttonGap->rect.w, headline->rect.w);
-            above = &buttonGap->rect;
 
+            // Under the gap the details, 4 apart: the winning tiles, the lines, the tally row, the summary
+            const UIElement* details = Element("HandOver", "Details");
+            const UIElement* tiles = Element("HandOver", "WinTiles");
             const UIElement* lines = Element("HandOver", "Lines");
-            ASSERT_NE(lines, nullptr);
-            EXPECT_EQ(GapBelow(*above, lines->rect), kModalGap);
+            ASSERT_TRUE(details != nullptr && tiles != nullptr && lines != nullptr);
+            EXPECT_EQ(GapBelow(buttonGap->rect, details->rect), kModalGap);
+            EXPECT_EQ(tiles->rect.y, details->rect.y);
+            EXPECT_EQ(tiles->rect.h, kScoreTilesHeight);
+            EXPECT_EQ(tiles->rect.w, headline->rect.w);
+            for (int i = 0; i < kMaxWinningTiles; ++i) {
+                const UIElement* tile = Element("HandOver", Format("WinTile{}", i).c_str());
+                ASSERT_NE(tile, nullptr) << i;
+                EXPECT_EQ(tile->rect.w, kScoreTileWidth) << i;
+                EXPECT_EQ(tile->rect.h, kScoreTilesHeight) << i;
+            }
+            EXPECT_EQ(GapBelow(tiles->rect, lines->rect), kScoreTableGap);
+            EXPECT_EQ(lines->rect.w, headline->rect.w);
             std::vector<float> columns;  // the distinct left edges of the lines: four columns
             for (int i = 0; i < kMaxScoreLines; ++i) {
                 const UIElement* line = Element("HandOver", Format("ScoreLine{}", i).c_str());
@@ -598,6 +780,7 @@ namespace BECore::Mahjong::Tests {
                 if (std::find(columns.begin(), columns.end(), line->rect.x) == columns.end()) {
                     columns.push_back(line->rect.x);
                 }
+                EXPECT_EQ(line->rect.h, kScoreLineRowHeight) << i;
                 EXPECT_GE(line->rect.x, lines->rect.x) << i;
                 EXPECT_LE(line->rect.x + line->rect.w, lines->rect.x + lines->rect.w) << i;
                 EXPECT_GE(line->rect.y, lines->rect.y) << i;
@@ -609,7 +792,7 @@ namespace BECore::Mahjong::Tests {
             const UIElement* coachRow = Element("HandOver", "HandCoachRow");
             ASSERT_NE(coachRow, nullptr);
             EXPECT_EQ(coachRow->rect.h, kScoreCoachRowHeight);
-            EXPECT_EQ(GapBelow(*above, coachRow->rect), kModalGap) << "the tally row lies under the lines";
+            EXPECT_EQ(GapBelow(*above, coachRow->rect), kScoreTableGap) << "the tally row lies under the lines";
             EXPECT_EQ(coachRow->rect.w, headline->rect.w);
             above = &coachRow->rect;
 
@@ -617,10 +800,12 @@ namespace BECore::Mahjong::Tests {
             ASSERT_NE(summary, nullptr);
             EXPECT_TRUE(SameColor(summary->color, PaletteColor("surfaceRaised")));
             EXPECT_TRUE(SameColor(summary->GetComponent<UITextComponent>()->textColor, PaletteColor("textMuted")));
-            EXPECT_EQ(GapBelow(*above, summary->rect), kModalGap);
-            above = &summary->rect;
+            EXPECT_EQ(summary->rect.h, kScoreSummaryHeight);
+            EXPECT_EQ(GapBelow(*above, summary->rect), kScoreTableGap);
 
-            EXPECT_EQ(summary->rect.y + summary->rect.h, plate.y + plate.h - kModalPadding) << "the plate ends with the summary band: the button is in the gap above the lines";
+            EXPECT_EQ(summary->rect.y + summary->rect.h, plate.y + plate.h - kModalPadding) << "the plate ends with the summary band: the button is in the gap above the details";
+            EXPECT_EQ(details->rect.y + details->rect.h, summary->rect.y + summary->rect.h) << "the details stack is exactly full with the tally row shown";
+            ExpectTheTableInsideThePlate(plate, "landscape");
 
             // The score table leaves the hands face up under it: no dim, and the plate is the only thing that blocks the clicks
             EXPECT_EQ(Element("HandOver", "Dim"), nullptr) << "a dim would cover the hands";
@@ -645,7 +830,7 @@ namespace BECore::Mahjong::Tests {
             // In the gap at the design size, with room to spare on both sides (a grid unit at least); the gap is 64 and the button 56
             EXPECT_GE(next->rect.y, buttonGap->rect.y) << "inside the gap, not on the seat rows";
             EXPECT_LE(next->rect.y + next->rect.h, buttonGap->rect.y + buttonGap->rect.h) << "inside the gap, not on the lines";
-            for (const char* name : {"Headline", "SeatRow0", "SeatRow1", "SeatRow2", "SeatRow3", "Lines", "HandCoachRow", "Summary"}) {
+            for (const char* name : {"Headline", "ScoreHeader", "SeatRow0", "SeatRow1", "SeatRow2", "SeatRow3", "WinTiles", "Lines", "HandCoachRow", "Summary"}) {
                 EXPECT_FALSE(Intersects(next->rect, Element("HandOver", name)->rect)) << name;
             }
             EXPECT_TRUE(Intersects(next->rect, plate)) << "the button lies on the plate";
@@ -658,10 +843,7 @@ namespace BECore::Mahjong::Tests {
         auto canvas = Canvas("HandOver");
         auto action = Canvas("HandOverAction");
         ASSERT_TRUE(canvas && action);
-        for (int i = 0; i < kMaxScoreLines; ++i) {
-            ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(Format("ScoreLine{}", i)), true));
-        }
-        ASSERT_TRUE(canvas->SetElementVisible("HandCoachRow"_intern, true));  // the worst case: the tally row shown
+        ASSERT_NO_FATAL_FAILURE(ShowTheWorstScoreTable(*canvas));  // the worst case: the sixteen lines, the tally row and eighteen tiles shown
         const MatrixWindow window = DesignWindowOf(TableShape::Portrait);
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
@@ -681,24 +863,45 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(plate.h, kPortraitScoreTableHeight);
             EXPECT_EQ(plate.x + plate.w * 0.5f, kPortraitViewWidth * 0.5f) << "in the middle of the table";
 
-            // The anatomy of the landscape plate: padding, the headline, the four seat rows, the gap, the lines, the summary; the gap and the
-            // two bands are taller, the type of the headline and of the seat rows one step smaller
+            // The anatomy of the landscape plate: padding, the headline, the table, the gap, the details; the gap and the two bands are taller,
+            // the rows of the table one step taller and the type of the headline one step smaller
             const UIElement* headline = Element("HandOver", "Headline");
+            const UIElement* table = Element("HandOver", "ScoreTable");
             const UIElement* gap = Element("HandOver", "ButtonGap");
+            const UIElement* details = Element("HandOver", "Details");
+            const UIElement* tiles = Element("HandOver", "WinTiles");
             const UIElement* lines = Element("HandOver", "Lines");
             const UIElement* summary = Element("HandOver", "Summary");
             const UIElement* coachRow = Element("HandOver", "HandCoachRow");
-            ASSERT_TRUE(headline != nullptr && gap != nullptr && lines != nullptr && summary != nullptr && coachRow != nullptr);
+            ASSERT_TRUE(headline != nullptr && table != nullptr && gap != nullptr && details != nullptr && tiles != nullptr && lines != nullptr && summary != nullptr && coachRow != nullptr);
             EXPECT_EQ(headline->rect.y, plate.y + kModalPadding);
             EXPECT_EQ(headline->rect.w, plate.w - 2.0f * kModalPadding);
             EXPECT_EQ(headline->rect.h, kPortraitScoreBandHeight);
-            EXPECT_EQ(summary->rect.h, kPortraitScoreBandHeight);
+            EXPECT_EQ(GapBelow(headline->rect, table->rect), kModalGap);
+            EXPECT_EQ(Element("HandOver", "ScoreHeader")->rect.h, kScoreCaptionHeight);
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                const UIElement* row = Element("HandOver", Format("SeatRow{}", seat).c_str());
+                ASSERT_NE(row, nullptr);
+                EXPECT_EQ(row->rect.h, kPortraitScoreRowHeight) << seat;
+            }
+            EXPECT_EQ(GapBelow(table->rect, gap->rect), kModalGap);
             EXPECT_EQ(gap->rect.h, kPortraitScoreButtonGapHeight);
-            EXPECT_EQ(GapBelow(gap->rect, lines->rect), kModalGap);
-            EXPECT_EQ(GapBelow(lines->rect, coachRow->rect), kModalGap);
+            EXPECT_EQ(GapBelow(gap->rect, details->rect), kModalGap);
+            EXPECT_EQ(tiles->rect.y, details->rect.y);
+            EXPECT_EQ(tiles->rect.h, kScoreTilesHeight);
+            for (int i = 0; i < kMaxWinningTiles; ++i) {
+                const UIElement* tile = Element("HandOver", Format("WinTile{}", i).c_str());
+                ASSERT_NE(tile, nullptr) << i;
+                EXPECT_EQ(tile->rect.w, kScoreTileWidth) << "the narrow plate holds all eighteen tiles at the size of the landscape one: " << i;
+            }
+            EXPECT_EQ(GapBelow(tiles->rect, lines->rect), kScoreTableGap);
+            EXPECT_EQ(GapBelow(lines->rect, coachRow->rect), kScoreTableGap);
             EXPECT_EQ(coachRow->rect.h, kPortraitScoreCoachRowHeight);
-            EXPECT_EQ(GapBelow(coachRow->rect, summary->rect), kModalGap);
+            EXPECT_EQ(GapBelow(coachRow->rect, summary->rect), kScoreTableGap);
+            EXPECT_EQ(summary->rect.h, kPortraitScoreBandHeight);
             EXPECT_EQ(summary->rect.y + summary->rect.h, plate.y + plate.h - kModalPadding) << "the plate ends with the summary band";
+            EXPECT_EQ(details->rect.y + details->rect.h, summary->rect.y + summary->rect.h) << "the details stack is exactly full";
+            ExpectTheTableInsideThePlate(plate, "portrait");
             std::vector<float> columns;
             for (int i = 0; i < kMaxScoreLines; ++i) {
                 const UIElement* line = Element("HandOver", Format("ScoreLine{}", i).c_str());
@@ -761,10 +964,7 @@ namespace BECore::Mahjong::Tests {
         auto canvas = Canvas("HandOver");
         auto action = Canvas("HandOverAction");
         ASSERT_TRUE(canvas && action);
-        for (int i = 0; i < kMaxScoreLines; ++i) {
-            ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(Format("ScoreLine{}", i)), true));
-        }
-        ASSERT_TRUE(canvas->SetElementVisible("HandCoachRow"_intern, true));  // the worst case: the tally row shown
+        ASSERT_NO_FATAL_FAILURE(ShowTheWorstScoreTable(*canvas));  // the worst case: the sixteen lines, the tally row and eighteen tiles shown
         const MatrixWindow window = DesignWindowOf(TableShape::Narrow);
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
@@ -791,12 +991,15 @@ namespace BECore::Mahjong::Tests {
             const UIElement* lines = Element("HandOver", "Lines");
             const UIElement* coachRow = Element("HandOver", "HandCoachRow");
             const UIElement* summary = Element("HandOver", "Summary");
-            ASSERT_TRUE(headline != nullptr && gap != nullptr && lines != nullptr && coachRow != nullptr && summary != nullptr);
+            const UIElement* details = Element("HandOver", "Details");
+            ASSERT_TRUE(headline != nullptr && gap != nullptr && lines != nullptr && coachRow != nullptr && summary != nullptr && details != nullptr);
             EXPECT_EQ(headline->rect.w, plate.w - 2.0f * kModalPadding);
             EXPECT_EQ(headline->rect.h, kScoreHeadlineHeight);
             EXPECT_EQ(coachRow->rect.h, kScoreCoachRowHeight);
             EXPECT_EQ(summary->rect.y + summary->rect.h, plate.y + plate.h - kModalPadding) << "the plate ends with the summary band";
+            EXPECT_EQ(details->rect.y + details->rect.h, summary->rect.y + summary->rect.h) << "the details stack is exactly full";
             EXPECT_EQ(gap->rect.h, kScoreButtonGapHeight);
+            ExpectTheTableInsideThePlate(plate, "narrow");
             std::vector<float> columns;
             for (int i = 0; i < kMaxScoreLines; ++i) {
                 const UIElement* line = Element("HandOver", Format("ScoreLine{}", i).c_str());
@@ -836,10 +1039,7 @@ namespace BECore::Mahjong::Tests {
         auto action = Canvas("HandOverAction");
         ASSERT_TRUE(canvas && action);
         ASSERT_TRUE(Shown("HandOver") && Shown("HandOverAction"));
-        for (int i = 0; i < kMaxScoreLines; ++i) {
-            ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(Format("ScoreLine{}", i)), true));
-        }
-        ASSERT_TRUE(canvas->SetElementVisible("HandCoachRow"_intern, true));  // the worst case: the tally row shown
+        ASSERT_NO_FATAL_FAILURE(ShowTheWorstScoreTable(*canvas));  // the worst case: the sixteen lines, the tally row and eighteen tiles shown
 
         // The score table promises that the four hands stay readable under it: there is no dim, it is the plate that is modal
         EXPECT_EQ(Element("HandOver", "Dim"), nullptr);
@@ -853,7 +1053,9 @@ namespace BECore::Mahjong::Tests {
             vars.Set("handOverHeadline"_intern, eastl::string_view(worst.headline));
             vars.Set("handOverSummary"_intern, eastl::string_view(worst.summary));
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                vars.Set(PoolString::Intern(Format("handOverSeat{}", seat)), eastl::string_view(worst.seatRow));
+                for (int column = 0; column < kScoreColumns; ++column) {
+                    vars.Set(PoolString::Intern(Format("handOverCell{}_{}", seat, column)), eastl::string_view(worst.cells[static_cast<size_t>(column)]));
+                }
             }
             canvas->UpdateLayout(kViewWidth, kViewHeight);
             action->UpdateLayout(kViewWidth, kViewHeight);
@@ -883,10 +1085,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(PlayHandOver());
         auto canvas = Canvas("HandOver");
         ASSERT_TRUE(canvas);
-        for (int i = 0; i < kMaxScoreLines; ++i) {
-            ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(Format("ScoreLine{}", i)), true));
-        }
-        ASSERT_TRUE(canvas->SetElementVisible("HandCoachRow"_intern, true));  // the worst case: the tally row shown
+        ASSERT_NO_FATAL_FAILURE(ShowTheWorstScoreTable(*canvas));  // the worst case: the sixteen lines, the tally row and eighteen tiles shown
         // The plate is a SceneView canvas and follows the table (it has ignoreSafeArea like the table), so no window brings it onto a hand,
         // not even one with insets. The layout is the one the table draws in the window (the phone windows included)
         size_t windows = 0;
@@ -897,6 +1096,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_NE(plate, nullptr);
             ASSERT_FALSE(plate->rect.IsEmpty()) << window.label.c_str();
             const Rect plateRect = ToView(plate->rect, *canvas, window);
+            ExpectTheTableInsideThePlate(plate->rect, window.label.c_str());
             const Rect bounds = ScoreTableBounds(ShapeOf(window));
             EXPECT_GE(plateRect.x, bounds.x - 0.01f) << window.label.c_str();
             EXPECT_LE(plateRect.x + plateRect.w, bounds.x + bounds.w + 0.01f) << window.label.c_str();
@@ -913,13 +1113,16 @@ namespace BECore::Mahjong::Tests {
         EXPECT_GT(phoneWindows, 0u) << "the phone windows are visited";
     }
 
-    TEST_F(MahjongEndScreenTest, TheStandingsFollowTheModalAnatomyAndTheFirstPlaceIsGold) {
+    TEST_F(MahjongEndScreenTest, TheStandingsFollowTheModalAnatomyAndEveryRowIsABadgeANameAndAScore) {
         ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers));
         ASSERT_NO_FATAL_FAILURE(PlayMatchToTheEnd());
         Draw();
         auto canvas = Canvas("MatchOver");
         ASSERT_TRUE(canvas);
         ASSERT_TRUE(canvas->SetElementVisible("MatchCoachRow"_intern, true));  // shown: the plate is laid out with the row in it
+        for (int row = 0; row < kSeatCount; ++row) {
+            ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(Format("StandingFirst{}", row)), true));  // a hidden element has no rect
+        }
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             CoreManager::GetUIVars().Set("matchOverHeadline"_intern, eastl::string_view(FindWorstTexts(CoreManager::GetUIStrings()).standingsHeadline));
@@ -943,12 +1146,26 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_TRUE(SameColor(standing->color, PaletteColor("surfaceRaised"))) << row;
                 EXPECT_EQ(GapBelow(*above, standing->rect), kStandingsGap) << "row " << row;
                 above = &standing->rect;
-                // The first place is the accent (gold), the others the plain text colour
-                const Color& text = standing->GetComponent<UITextComponent>()->textColor;
-                EXPECT_EQ(SameColor(text, PaletteColor("accent")), row == 0) << "row " << row;
-                if (row != 0) {
-                    EXPECT_TRUE(SameColor(text, PaletteColor("text"))) << "row " << row;
-                }
+                EXPECT_EQ(standing->rect.h, kStandingsRowHeight) << row;
+                // [badge][name][score] in the row: the badge a 20 box of its role, centred in the row, the name between it and the score
+                const UIElement* badge = Element("MatchOver", Format("StandingPlace{}", row).c_str());
+                const UIElement* name = Element("MatchOver", Format("StandingName{}", row).c_str());
+                const UIElement* score = Element("MatchOver", Format("StandingScore{}", row).c_str());
+                const UIElement* first = Element("MatchOver", Format("StandingFirst{}", row).c_str());
+                ASSERT_TRUE(badge != nullptr && name != nullptr && score != nullptr && first != nullptr) << row;
+                EXPECT_TRUE(SameColor(badge->color, PaletteColor("placeBadge"))) << row;
+                EXPECT_EQ(badge->rect.w, kStandingsBadgeSize) << row;
+                EXPECT_EQ(badge->rect.h, kStandingsBadgeSize) << row;
+                EXPECT_EQ(badge->rect.x, standing->rect.x + kStandingsRowPadding) << row;
+                EXPECT_EQ(badge->rect.y - standing->rect.y, (standing->rect.h - badge->rect.h) * 0.5f) << "centred in its row: " << row;
+                EXPECT_GE(name->rect.x, badge->rect.x + badge->rect.w) << row;
+                EXPECT_GE(score->rect.x, name->rect.x + name->rect.w) << row;
+                EXPECT_EQ(score->rect.x + score->rect.w, standing->rect.x + standing->rect.w - kStandingsRowPadding) << "the score ends at the padding of the row: " << row;
+                EXPECT_EQ(first->rect.x, standing->rect.x) << row;
+                EXPECT_EQ(first->rect.y, standing->rect.y) << row;
+                EXPECT_EQ(first->rect.w, standing->rect.w) << row;
+                EXPECT_EQ(first->rect.h, standing->rect.h) << row;
+                EXPECT_TRUE(SameColor(first->color, PaletteColor("winnerRow"))) << row;
             }
 
             const UIElement* coachRow = Element("MatchOver", "MatchCoachRow");
@@ -964,6 +1181,52 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(GapBelow(*above, button->rect), kModalSectionGap) << "the button is set apart from the rows by 16";
             EXPECT_EQ(button->rect.y + button->rect.h, plate.y + plate.h - kModalPadding) << "the plate holds the button and nothing more";
         });
+    }
+
+    TEST_F(MahjongEndScreenTest, ATieForFirstLightsEveryTiedRowAndASingleWinnerLightsOne) {
+        ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers));
+        // The match is settled by hand (the rules of a match are tested that way): four hands that pay the same to two seats, which tie for first and for last
+        for (int hand = 0; hand < kRoundsPerMatch; ++hand) {
+            HandSettlement settlement;
+            settlement.kind = ResultKind::Win;
+            settlement.winner = static_cast<Seat>((_game->GetMatch().East() + 1) % kSeatCount);  // not East: every hand counts
+            settlement.deltas = SeatScores{100, 100, -100, -100};
+            ASSERT_TRUE(_game->GetMatch().ApplySettlement(settlement).has_value());
+        }
+        ASSERT_EQ(_game->GetMatch().GetPhase(), MatchPhase::Finished);
+        ASSERT_TRUE(_game->SetLanguage("ru"_intern) && _game->SetLanguage("en"_intern));  // a new key for the publisher: the session did not move
+        Draw();
+        ASSERT_TRUE(Shown("MatchOver"));
+        const StandingsTable tied = FormatStandings(CoreManager::GetUIStrings(), _game->GetMatch(), _game->GetSession().Seats());
+        EXPECT_EQ(tied.rows[0].place, 1);
+        EXPECT_EQ(tied.rows[1].place, 1);
+        EXPECT_EQ(tied.rows[2].place, 3);
+        EXPECT_EQ(tied.rows[3].place, 3);
+        ExpectStandingRows(tied);
+        int lit = 0;
+        for (int row = 0; row < kSeatCount; ++row) {
+            lit += OnScreen("MatchOver", Format("StandingFirst{}", row).c_str()) ? 1 : 0;
+        }
+        EXPECT_EQ(lit, 2) << "a tie for first lights both seats, and only them";
+
+        // A single winner: one highlight
+        ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers));
+        for (int hand = 0; hand < kRoundsPerMatch; ++hand) {
+            HandSettlement settlement;
+            settlement.kind = ResultKind::Win;
+            settlement.winner = static_cast<Seat>((_game->GetMatch().East() + 1) % kSeatCount);
+            settlement.deltas = SeatScores{300, -100, -100, -100};
+            ASSERT_TRUE(_game->GetMatch().ApplySettlement(settlement).has_value());
+        }
+        ASSERT_TRUE(_game->SetLanguage("ru"_intern) && _game->SetLanguage("en"_intern));
+        Draw();
+        const StandingsTable single = FormatStandings(CoreManager::GetUIStrings(), _game->GetMatch(), _game->GetSession().Seats());
+        ExpectStandingRows(single);
+        lit = 0;
+        for (int row = 0; row < kSeatCount; ++row) {
+            lit += OnScreen("MatchOver", Format("StandingFirst{}", row).c_str()) ? 1 : 0;
+        }
+        EXPECT_EQ(lit, 1);
     }
 
     // ----- the coach's tally -----
@@ -1077,10 +1340,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(PlayHandOver());
         auto canvas = Canvas("HandOver");
         ASSERT_TRUE(canvas);
-        for (int i = 0; i < kMaxScoreLines; ++i) {
-            ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(Format("ScoreLine{}", i)), true));
-        }
-        ASSERT_TRUE(canvas->SetElementVisible("HandCoachRow"_intern, true));  // the worst case: the tally row shown
+        ASSERT_NO_FATAL_FAILURE(ShowTheWorstScoreTable(*canvas));  // the worst case: the sixteen lines, the tally row and eighteen tiles shown
 
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
@@ -1092,7 +1352,9 @@ namespace BECore::Mahjong::Tests {
             vars.Set("handOverCoach"_intern, eastl::string_view(worst.handTally));
             vars.Set("handOverButton"_intern, eastl::string_view(LongestText({Tr(strings, "handover.next"), Tr(strings, "handover.finish")})));
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                vars.Set(PoolString::Intern(Format("handOverSeat{}", seat)), eastl::string_view(worst.seatRow));
+                for (int column = 0; column < kScoreColumns; ++column) {
+                    vars.Set(PoolString::Intern(Format("handOverCell{}_{}", seat, column)), eastl::string_view(worst.cells[static_cast<size_t>(column)]));
+                }
             }
 
             // The longest line the rules can print, of every kind and in both forms (points and doubles), in all sixteen places at once
@@ -1138,7 +1400,10 @@ namespace BECore::Mahjong::Tests {
             vars.Set("matchOverHeadline"_intern, eastl::string_view(worst.standingsHeadline));
             vars.Set("matchOverCoach"_intern, eastl::string_view(worst.matchTally));
             for (int row = 0; row < kSeatCount; ++row) {
-                vars.Set(PoolString::Intern(Format("standing{}", row)), eastl::string_view(worst.standing));
+                vars.Set(PoolString::Intern(Format("standingPlace{}", row)), eastl::string_view("4"));
+                vars.Set(PoolString::Intern(Format("standingName{}", row)), eastl::string_view(worst.standingName));
+                vars.Set(PoolString::Intern(Format("standingScore{}", row)), eastl::string_view(worst.standingScore));
+                ASSERT_TRUE(Canvas("MatchOver")->SetElementVisible(PoolString::Intern(Format("StandingFirst{}", row)), true));  // the highlights, all lit: the worst case
             }
 
             ExpectPassesTheMatrix("MatchOver", EngineTouchMinimum());

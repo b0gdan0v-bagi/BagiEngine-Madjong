@@ -1,28 +1,40 @@
 <?xml version="1.0"?>
 <!--
   The score table of a finished hand: a modal canvas on the view of the table (a SceneView: 16 lines of the winner, four seats,
-  a headline and a summary, text only, no touch target), shown by MahjongHudComponent exactly while the session is in
-  HandOver. The component publishes handOverHeadline, handOverSeat0..3, scoreLine0..15 (ScoreLineN is visible when there is a line N),
-  handOverSummary, handOverCoach and handOverButton; MahjongNextHand settles the hand and deals on. The button is not in this canvas: a
-  control of a SceneView canvas is only 24 px high in the smallest window. It is in HandOverAction, a Screen canvas, in the middle of
-  the window, over the empty element ButtonGap of this plate (the middle of the plate and of the window), which is high enough for the
-  button at the most that its scale outgrows the table's fit (MahjongTouchSizeTest holds the button against the gap in every window of
-  the matrix).
+  a headline and a summary, no touch target), shown by MahjongHudComponent exactly while the session is in
+  HandOver. The component publishes handOverHeadline, handOverCell<r>_<c> (the table: row r is seat r, column c is name, wind, hand,
+  change, total; the five captions in ScoreHeader are static words), scoreLine0..15 (ScoreLineN is visible when there is a line N),
+  handOverSummary, handOverCoach and handOverButton; MahjongNextHand settles the hand and deals on.
+  The plate is a stack of four things 8 apart: Headline, ScoreTable (the caption row ScoreHeader and the four rows SeatRow<n>, 4 apart),
+  ButtonGap and Details (the winning tiles, Lines, HandCoachRow and Summary, 4 apart). SeatRow<n> is the raised row of seat n; WinnerRow<n>
+  inside it is the highlight (the winnerRow role inside an accent border), shown exactly for the winner's row; the cells are in
+  SeatCells<n>. WinTiles is the winning hand as tile pictures (WinTile0..17 of 24 x 32, side by side: eighteen of them are 432 wide,
+  the inside of the narrowest plate is 440; the sprite is set by name when the page is published; WinTileMark<N> is the frame of the last
+  one, the winning tile); the two flex elements at its ends centre the tiles, and it is hidden, and takes no room, for a drawn hand.
+  The button is not in this canvas: a control of a SceneView canvas is only 24 px high in the smallest window. It is in HandOverAction, a
+  Screen canvas, in the middle of the window, over the empty element ButtonGap of this plate (the middle of the plate and of the window),
+  which is high enough for the button at the most that its scale outgrows the table's fit (MahjongTouchSizeTest holds the button against
+  the gap in every window of the matrix).
+  The heights are the budget of the plate, which is exactly full (508 high, with the tally row shown): the ground the hands leave free is
+  98 to 606, and the gap must stay at the middle of the view, so what lies above it (52 + 8 + 152 = 212) and below it (the details,
+  184) cannot grow; a row is 28 (32 in the portrait view), a line of the winner 20, the summary 24. Nothing is cut: the words shrink
+  (AutoFit).
   All four hands are face up under the table and must stay readable, so nothing lies over them: there is no Dim and the plate keeps to
   the ground the hands, melds and bonus tiles leave free. It covers the discard blocks, the wall ring and the seat plates on purpose
   while it is up. MahjongEndScreenTest holds that no hand, meld or bonus tile of the worst-case table is covered by the plate or the
   button.
   The plate is sized in percents of the view, with ignoreSafeArea on it like the table, a fixed design: the landscape view is the base,
   the wide view (wider than the table) keeps the table's width and is centred, the narrow and the portrait views have a variant
-  with their own width, height and offset (the portrait one also has two columns of lines, smaller type and a higher ButtonGap, for
-  the words of the narrow plate and for the button, which follows the window's scale). HandCoachRow is hidden unless the HUD has text
+  with their own width, height and offset (the portrait one also has two columns of lines, taller rows, bands and ButtonGap, and a
+  Details of 352, for the words of the narrow plate and for the button, which follows the window's scale). HandCoachRow is hidden unless the HUD has text
   for it and then takes no room, so the plate keeps its size.
-  The skin is that of config/CLAUDE.md: the plate a card, the headline band in the display font, the seat rows and the summary raised rows of radius 8 (the seat rows in PT Sans bold: the
-  display font is too wide for a seat's line in the smallest window).
+  The skin is that of config/CLAUDE.md: the plate a card, the headline band in the display font, the seat rows and the summary raised rows of radius 8 (the cells in PT Sans bold,
+  the totals in the display font: it is too wide for a seat's name in the smallest window; a cell shrinks with AutoFit).
+  Motion (UiPalette.h kMotion*): fade only, 0.18 s in and 0.12 s out, no scale: the cover test judges the plate's rect against the hands and the rect is not scaled for layout or input anyway. _transitionInput stays off with HandOverAction's (the plate has no input).
 -->
 <node name="HandOver" layer="25" contentVersion="5">
   <components>
-    <component type="UICanvasComponent" space="SceneView" useSafeArea="true" modal="true" visible="false">
+    <component type="UICanvasComponent" space="SceneView" useSafeArea="true" modal="true" transitionDuration="0.18" transitionHideDuration="0.12" transitionEase="QuadOut" visible="false">
       <elements>
         <element type="UIStack" name="Plate" anchor="Center" ignoreSafeArea="true" y="-1.111111%" width="80.625%" height="70.555556%" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true" cornerRadius="16" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="26,29,38,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
           <children>
@@ -31,120 +43,423 @@
                 <component type="UITextComponent" fontFamily="Russo One" textOutline="2,16,18,26,255" text="{handOverHeadline}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="22"/>
               </components>
             </element>
-            <element type="UIElement" name="SeatRow0" height="32" fontSize="22" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
-              <components>
-                <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{handOverSeat0}" align="Center" verticalAlign="Center"/>
-              </components>
-            </element>
-            <element type="UIElement" name="SeatRow1" height="32" fontSize="22" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
-              <components>
-                <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{handOverSeat1}" align="Center" verticalAlign="Center"/>
-              </components>
-            </element>
-            <element type="UIElement" name="SeatRow2" height="32" fontSize="22" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
-              <components>
-                <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{handOverSeat2}" align="Center" verticalAlign="Center"/>
-              </components>
-            </element>
-            <element type="UIElement" name="SeatRow3" height="32" fontSize="22" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
-              <components>
-                <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{handOverSeat3}" align="Center" verticalAlign="Center"/>
-              </components>
-            </element>
-            <element type="UIElement" name="ButtonGap" height="64" />
-            <element type="UIStack" name="Lines" height="108" direction="Horizontal" spacing="4" wrapChildren="true">
+            <element type="UIStack" name="ScoreTable" height="152" direction="Vertical" spacing="4" crossAlign="Stretch">
               <children>
-                <element type="UIElement" name="ScoreLine0" visible="false" width="24%" height="24" fontSize="18">
-                  <components>
-                    <component type="UITextComponent" text="{scoreLine0}" overflow="AutoFit" minFontSize="12"/>
-                  </components>
+                <element type="UIStack" name="ScoreHeader" height="24" direction="Horizontal" spacing="0" padding="8,0,8,0" crossAlign="Center">
+                  <children>
+                    <element type="UIElement" name="ScoreCol0" width="34%" height="100%" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#handover.col.seat}" textColor="190,196,190,255" align="Left" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="ScoreCol1" width="12%" height="100%" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#handover.col.wind}" textColor="190,196,190,255" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="ScoreCol2" width="18%" height="100%" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#handover.col.hand}" textColor="190,196,190,255" align="Right" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="ScoreCol3" width="18%" height="100%" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#handover.col.change}" textColor="190,196,190,255" align="Right" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="ScoreCol4" width="18%" height="100%" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#handover.col.total}" textColor="190,196,190,255" align="Right" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                  </children>
                 </element>
-                <element type="UIElement" name="ScoreLine1" visible="false" width="24%" height="24" fontSize="18">
-                  <components>
-                    <component type="UITextComponent" text="{scoreLine1}" overflow="AutoFit" minFontSize="12"/>
-                  </components>
+                <element type="UIElement" name="SeatRow0" height="28" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+                  <children>
+                    <element type="UIElement" name="WinnerRow0" anchor="Stretch" visible="false" color="84,74,36,255" cornerRadius="8" borderWidth="2" borderColor="255,214,80,255" />
+                    <element type="UIStack" name="SeatCells0" anchor="Stretch" direction="Horizontal" spacing="0" padding="8,0,8,0" crossAlign="Stretch">
+                      <children>
+                        <element type="UIElement" name="ScoreCell0_0" width="34%" height="100%" fontSize="18">
+                          <components>
+                            <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{handOverCell0_0}" align="Left" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                          </components>
+                        </element>
+                        <element type="UIElement" name="ScoreCell0_1" width="12%" height="100%" fontSize="18">
+                          <components>
+                            <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{handOverCell0_1}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                          </components>
+                        </element>
+                        <element type="UIElement" name="ScoreCell0_2" width="18%" height="100%" fontSize="18">
+                          <components>
+                            <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{handOverCell0_2}" align="Right" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                          </components>
+                        </element>
+                        <element type="UIElement" name="ScoreCell0_3" width="18%" height="100%" fontSize="18">
+                          <components>
+                            <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{handOverCell0_3}" align="Right" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                          </components>
+                        </element>
+                        <element type="UIElement" name="ScoreCell0_4" width="18%" height="100%" fontSize="18">
+                          <components>
+                            <component type="UITextComponent" fontFamily="Russo One" text="{handOverCell0_4}" align="Right" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                          </components>
+                        </element>
+                      </children>
+                    </element>
+                  </children>
                 </element>
-                <element type="UIElement" name="ScoreLine2" visible="false" width="24%" height="24" fontSize="18">
-                  <components>
-                    <component type="UITextComponent" text="{scoreLine2}" overflow="AutoFit" minFontSize="12"/>
-                  </components>
+                <element type="UIElement" name="SeatRow1" height="28" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+                  <children>
+                    <element type="UIElement" name="WinnerRow1" anchor="Stretch" visible="false" color="84,74,36,255" cornerRadius="8" borderWidth="2" borderColor="255,214,80,255" />
+                    <element type="UIStack" name="SeatCells1" anchor="Stretch" direction="Horizontal" spacing="0" padding="8,0,8,0" crossAlign="Stretch">
+                      <children>
+                        <element type="UIElement" name="ScoreCell1_0" width="34%" height="100%" fontSize="18">
+                          <components>
+                            <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{handOverCell1_0}" align="Left" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                          </components>
+                        </element>
+                        <element type="UIElement" name="ScoreCell1_1" width="12%" height="100%" fontSize="18">
+                          <components>
+                            <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{handOverCell1_1}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                          </components>
+                        </element>
+                        <element type="UIElement" name="ScoreCell1_2" width="18%" height="100%" fontSize="18">
+                          <components>
+                            <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{handOverCell1_2}" align="Right" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                          </components>
+                        </element>
+                        <element type="UIElement" name="ScoreCell1_3" width="18%" height="100%" fontSize="18">
+                          <components>
+                            <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{handOverCell1_3}" align="Right" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                          </components>
+                        </element>
+                        <element type="UIElement" name="ScoreCell1_4" width="18%" height="100%" fontSize="18">
+                          <components>
+                            <component type="UITextComponent" fontFamily="Russo One" text="{handOverCell1_4}" align="Right" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                          </components>
+                        </element>
+                      </children>
+                    </element>
+                  </children>
                 </element>
-                <element type="UIElement" name="ScoreLine3" visible="false" width="24%" height="24" fontSize="18">
-                  <components>
-                    <component type="UITextComponent" text="{scoreLine3}" overflow="AutoFit" minFontSize="12"/>
-                  </components>
+                <element type="UIElement" name="SeatRow2" height="28" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+                  <children>
+                    <element type="UIElement" name="WinnerRow2" anchor="Stretch" visible="false" color="84,74,36,255" cornerRadius="8" borderWidth="2" borderColor="255,214,80,255" />
+                    <element type="UIStack" name="SeatCells2" anchor="Stretch" direction="Horizontal" spacing="0" padding="8,0,8,0" crossAlign="Stretch">
+                      <children>
+                        <element type="UIElement" name="ScoreCell2_0" width="34%" height="100%" fontSize="18">
+                          <components>
+                            <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{handOverCell2_0}" align="Left" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                          </components>
+                        </element>
+                        <element type="UIElement" name="ScoreCell2_1" width="12%" height="100%" fontSize="18">
+                          <components>
+                            <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{handOverCell2_1}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                          </components>
+                        </element>
+                        <element type="UIElement" name="ScoreCell2_2" width="18%" height="100%" fontSize="18">
+                          <components>
+                            <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{handOverCell2_2}" align="Right" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                          </components>
+                        </element>
+                        <element type="UIElement" name="ScoreCell2_3" width="18%" height="100%" fontSize="18">
+                          <components>
+                            <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{handOverCell2_3}" align="Right" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                          </components>
+                        </element>
+                        <element type="UIElement" name="ScoreCell2_4" width="18%" height="100%" fontSize="18">
+                          <components>
+                            <component type="UITextComponent" fontFamily="Russo One" text="{handOverCell2_4}" align="Right" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                          </components>
+                        </element>
+                      </children>
+                    </element>
+                  </children>
                 </element>
-                <element type="UIElement" name="ScoreLine4" visible="false" width="24%" height="24" fontSize="18">
-                  <components>
-                    <component type="UITextComponent" text="{scoreLine4}" overflow="AutoFit" minFontSize="12"/>
-                  </components>
-                </element>
-                <element type="UIElement" name="ScoreLine5" visible="false" width="24%" height="24" fontSize="18">
-                  <components>
-                    <component type="UITextComponent" text="{scoreLine5}" overflow="AutoFit" minFontSize="12"/>
-                  </components>
-                </element>
-                <element type="UIElement" name="ScoreLine6" visible="false" width="24%" height="24" fontSize="18">
-                  <components>
-                    <component type="UITextComponent" text="{scoreLine6}" overflow="AutoFit" minFontSize="12"/>
-                  </components>
-                </element>
-                <element type="UIElement" name="ScoreLine7" visible="false" width="24%" height="24" fontSize="18">
-                  <components>
-                    <component type="UITextComponent" text="{scoreLine7}" overflow="AutoFit" minFontSize="12"/>
-                  </components>
-                </element>
-                <element type="UIElement" name="ScoreLine8" visible="false" width="24%" height="24" fontSize="18">
-                  <components>
-                    <component type="UITextComponent" text="{scoreLine8}" overflow="AutoFit" minFontSize="12"/>
-                  </components>
-                </element>
-                <element type="UIElement" name="ScoreLine9" visible="false" width="24%" height="24" fontSize="18">
-                  <components>
-                    <component type="UITextComponent" text="{scoreLine9}" overflow="AutoFit" minFontSize="12"/>
-                  </components>
-                </element>
-                <element type="UIElement" name="ScoreLine10" visible="false" width="24%" height="24" fontSize="18">
-                  <components>
-                    <component type="UITextComponent" text="{scoreLine10}" overflow="AutoFit" minFontSize="12"/>
-                  </components>
-                </element>
-                <element type="UIElement" name="ScoreLine11" visible="false" width="24%" height="24" fontSize="18">
-                  <components>
-                    <component type="UITextComponent" text="{scoreLine11}" overflow="AutoFit" minFontSize="12"/>
-                  </components>
-                </element>
-                <element type="UIElement" name="ScoreLine12" visible="false" width="24%" height="24" fontSize="18">
-                  <components>
-                    <component type="UITextComponent" text="{scoreLine12}" overflow="AutoFit" minFontSize="12"/>
-                  </components>
-                </element>
-                <element type="UIElement" name="ScoreLine13" visible="false" width="24%" height="24" fontSize="18">
-                  <components>
-                    <component type="UITextComponent" text="{scoreLine13}" overflow="AutoFit" minFontSize="12"/>
-                  </components>
-                </element>
-                <element type="UIElement" name="ScoreLine14" visible="false" width="24%" height="24" fontSize="18">
-                  <components>
-                    <component type="UITextComponent" text="{scoreLine14}" overflow="AutoFit" minFontSize="12"/>
-                  </components>
-                </element>
-                <element type="UIElement" name="ScoreLine15" visible="false" width="24%" height="24" fontSize="18">
-                  <components>
-                    <component type="UITextComponent" text="{scoreLine15}" overflow="AutoFit" minFontSize="12"/>
-                  </components>
+                <element type="UIElement" name="SeatRow3" height="28" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+                  <children>
+                    <element type="UIElement" name="WinnerRow3" anchor="Stretch" visible="false" color="84,74,36,255" cornerRadius="8" borderWidth="2" borderColor="255,214,80,255" />
+                    <element type="UIStack" name="SeatCells3" anchor="Stretch" direction="Horizontal" spacing="0" padding="8,0,8,0" crossAlign="Stretch">
+                      <children>
+                        <element type="UIElement" name="ScoreCell3_0" width="34%" height="100%" fontSize="18">
+                          <components>
+                            <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{handOverCell3_0}" align="Left" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                          </components>
+                        </element>
+                        <element type="UIElement" name="ScoreCell3_1" width="12%" height="100%" fontSize="18">
+                          <components>
+                            <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{handOverCell3_1}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                          </components>
+                        </element>
+                        <element type="UIElement" name="ScoreCell3_2" width="18%" height="100%" fontSize="18">
+                          <components>
+                            <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{handOverCell3_2}" align="Right" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                          </components>
+                        </element>
+                        <element type="UIElement" name="ScoreCell3_3" width="18%" height="100%" fontSize="18">
+                          <components>
+                            <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{handOverCell3_3}" align="Right" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                          </components>
+                        </element>
+                        <element type="UIElement" name="ScoreCell3_4" width="18%" height="100%" fontSize="18">
+                          <components>
+                            <component type="UITextComponent" fontFamily="Russo One" text="{handOverCell3_4}" align="Right" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                          </components>
+                        </element>
+                      </children>
+                    </element>
+                  </children>
                 </element>
               </children>
             </element>
-            <element type="UIElement" name="HandCoachRow" visible="false" height="24" fontSize="18" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
-              <components>
-                <component type="UITextComponent" text="{handOverCoach}" textColor="190,196,190,255" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
-              </components>
-            </element>
-            <element type="UIElement" name="Summary" height="36" fontSize="18" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
-              <components>
-                <component type="UITextComponent" text="{handOverSummary}" textColor="190,196,190,255" align="Center" verticalAlign="Center"/>
-              </components>
+            <element type="UIElement" name="ButtonGap" height="64" />
+            <element type="UIStack" name="Details" height="184" direction="Vertical" spacing="4" crossAlign="Stretch">
+              <children>
+                <element type="UIStack" name="WinTiles" visible="false" height="32" direction="Horizontal" spacing="0" crossAlign="Center">
+                  <children>
+                    <element type="UIElement" name="WinTilesLeft" flex="1" height="100%" />
+                    <element type="UIElement" name="WinTile0" visible="false" width="24" height="32">
+                      <components>
+                        <component type="UIImageComponent"/>
+                      </components>
+                      <children>
+                        <element type="UIElement" name="WinTileMark0" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                      </children>
+                    </element>
+                    <element type="UIElement" name="WinTile1" visible="false" width="24" height="32">
+                      <components>
+                        <component type="UIImageComponent"/>
+                      </components>
+                      <children>
+                        <element type="UIElement" name="WinTileMark1" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                      </children>
+                    </element>
+                    <element type="UIElement" name="WinTile2" visible="false" width="24" height="32">
+                      <components>
+                        <component type="UIImageComponent"/>
+                      </components>
+                      <children>
+                        <element type="UIElement" name="WinTileMark2" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                      </children>
+                    </element>
+                    <element type="UIElement" name="WinTile3" visible="false" width="24" height="32">
+                      <components>
+                        <component type="UIImageComponent"/>
+                      </components>
+                      <children>
+                        <element type="UIElement" name="WinTileMark3" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                      </children>
+                    </element>
+                    <element type="UIElement" name="WinTile4" visible="false" width="24" height="32">
+                      <components>
+                        <component type="UIImageComponent"/>
+                      </components>
+                      <children>
+                        <element type="UIElement" name="WinTileMark4" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                      </children>
+                    </element>
+                    <element type="UIElement" name="WinTile5" visible="false" width="24" height="32">
+                      <components>
+                        <component type="UIImageComponent"/>
+                      </components>
+                      <children>
+                        <element type="UIElement" name="WinTileMark5" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                      </children>
+                    </element>
+                    <element type="UIElement" name="WinTile6" visible="false" width="24" height="32">
+                      <components>
+                        <component type="UIImageComponent"/>
+                      </components>
+                      <children>
+                        <element type="UIElement" name="WinTileMark6" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                      </children>
+                    </element>
+                    <element type="UIElement" name="WinTile7" visible="false" width="24" height="32">
+                      <components>
+                        <component type="UIImageComponent"/>
+                      </components>
+                      <children>
+                        <element type="UIElement" name="WinTileMark7" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                      </children>
+                    </element>
+                    <element type="UIElement" name="WinTile8" visible="false" width="24" height="32">
+                      <components>
+                        <component type="UIImageComponent"/>
+                      </components>
+                      <children>
+                        <element type="UIElement" name="WinTileMark8" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                      </children>
+                    </element>
+                    <element type="UIElement" name="WinTile9" visible="false" width="24" height="32">
+                      <components>
+                        <component type="UIImageComponent"/>
+                      </components>
+                      <children>
+                        <element type="UIElement" name="WinTileMark9" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                      </children>
+                    </element>
+                    <element type="UIElement" name="WinTile10" visible="false" width="24" height="32">
+                      <components>
+                        <component type="UIImageComponent"/>
+                      </components>
+                      <children>
+                        <element type="UIElement" name="WinTileMark10" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                      </children>
+                    </element>
+                    <element type="UIElement" name="WinTile11" visible="false" width="24" height="32">
+                      <components>
+                        <component type="UIImageComponent"/>
+                      </components>
+                      <children>
+                        <element type="UIElement" name="WinTileMark11" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                      </children>
+                    </element>
+                    <element type="UIElement" name="WinTile12" visible="false" width="24" height="32">
+                      <components>
+                        <component type="UIImageComponent"/>
+                      </components>
+                      <children>
+                        <element type="UIElement" name="WinTileMark12" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                      </children>
+                    </element>
+                    <element type="UIElement" name="WinTile13" visible="false" width="24" height="32">
+                      <components>
+                        <component type="UIImageComponent"/>
+                      </components>
+                      <children>
+                        <element type="UIElement" name="WinTileMark13" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                      </children>
+                    </element>
+                    <element type="UIElement" name="WinTile14" visible="false" width="24" height="32">
+                      <components>
+                        <component type="UIImageComponent"/>
+                      </components>
+                      <children>
+                        <element type="UIElement" name="WinTileMark14" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                      </children>
+                    </element>
+                    <element type="UIElement" name="WinTile15" visible="false" width="24" height="32">
+                      <components>
+                        <component type="UIImageComponent"/>
+                      </components>
+                      <children>
+                        <element type="UIElement" name="WinTileMark15" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                      </children>
+                    </element>
+                    <element type="UIElement" name="WinTile16" visible="false" width="24" height="32">
+                      <components>
+                        <component type="UIImageComponent"/>
+                      </components>
+                      <children>
+                        <element type="UIElement" name="WinTileMark16" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                      </children>
+                    </element>
+                    <element type="UIElement" name="WinTile17" visible="false" width="24" height="32">
+                      <components>
+                        <component type="UIImageComponent"/>
+                      </components>
+                      <children>
+                        <element type="UIElement" name="WinTileMark17" anchor="Stretch" visible="false" borderWidth="2" borderColor="255,214,80,255" />
+                      </children>
+                    </element>
+                    <element type="UIElement" name="WinTilesRight" flex="1" height="100%" />
+                  </children>
+                </element>
+                <element type="UIStack" name="Lines" height="92" direction="Horizontal" spacing="4" wrapChildren="true">
+                  <children>
+                    <element type="UIElement" name="ScoreLine0" visible="false" width="24%" height="20" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" text="{scoreLine0}" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="ScoreLine1" visible="false" width="24%" height="20" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" text="{scoreLine1}" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="ScoreLine2" visible="false" width="24%" height="20" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" text="{scoreLine2}" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="ScoreLine3" visible="false" width="24%" height="20" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" text="{scoreLine3}" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="ScoreLine4" visible="false" width="24%" height="20" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" text="{scoreLine4}" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="ScoreLine5" visible="false" width="24%" height="20" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" text="{scoreLine5}" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="ScoreLine6" visible="false" width="24%" height="20" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" text="{scoreLine6}" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="ScoreLine7" visible="false" width="24%" height="20" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" text="{scoreLine7}" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="ScoreLine8" visible="false" width="24%" height="20" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" text="{scoreLine8}" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="ScoreLine9" visible="false" width="24%" height="20" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" text="{scoreLine9}" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="ScoreLine10" visible="false" width="24%" height="20" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" text="{scoreLine10}" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="ScoreLine11" visible="false" width="24%" height="20" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" text="{scoreLine11}" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="ScoreLine12" visible="false" width="24%" height="20" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" text="{scoreLine12}" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="ScoreLine13" visible="false" width="24%" height="20" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" text="{scoreLine13}" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="ScoreLine14" visible="false" width="24%" height="20" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" text="{scoreLine14}" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="ScoreLine15" visible="false" width="24%" height="20" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" text="{scoreLine15}" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                  </children>
+                </element>
+                <element type="UIElement" name="HandCoachRow" visible="false" height="24" fontSize="18" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+                  <components>
+                    <component type="UITextComponent" text="{handOverCoach}" textColor="190,196,190,255" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="Summary" height="24" fontSize="18" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+                  <components>
+                    <component type="UITextComponent" text="{handOverSummary}" textColor="190,196,190,255" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+              </children>
             </element>
           </children>
         </element>
@@ -152,15 +467,17 @@
       <variants>
         <variant when="orientation:portrait">
           <overrides>
-            <set element="Plate" y="5.3125%" width="65.555556%" height="58.4375%" />
+            <set element="Plate" y="4.53125%" width="65.555556%" height="59.375%" />
             <set element="Headline" height="72" fontSize="22" />
-            <set element="SeatRow0" fontSize="18" />
-            <set element="SeatRow1" fontSize="18" />
-            <set element="SeatRow2" fontSize="18" />
-            <set element="SeatRow3" fontSize="18" />
+            <set element="ScoreTable" height="168" />
+            <set element="SeatRow0" height="32" />
+            <set element="SeatRow1" height="32" />
+            <set element="SeatRow2" height="32" />
+            <set element="SeatRow3" height="32" />
             <set element="ButtonGap" height="112" />
+            <set element="Details" height="352" />
             <set element="Summary" height="72" />
-            <set element="Lines" height="220" />
+            <set element="Lines" height="188" />
             <set element="HandCoachRow" height="48" />
             <set element="ScoreLine0" width="48%" />
             <set element="ScoreLine1" width="48%" />

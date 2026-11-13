@@ -58,13 +58,11 @@ namespace BECore::Mahjong::Tests {
             Draw();
         }
 
-        /// The rectangles drawn in `color`.
+        /// The rectangles drawn in `color`: a rect's own, or the box of the vertices of that colour in a geometry call (the tint of a seat plate is a layer of its mesh).
         std::vector<Rect> RectsOf(const Color& color) const {
             std::vector<Rect> found;
-            for (const DrawCall& call : _renderer->calls) {
-                if (call.kind == DrawKind::Rect && SameColor(call.color, color)) {
-                    found.push_back(call.rect);
-                }
+            for (const MarkDraw& draw : MarksOf(_renderer->calls, color)) {
+                found.push_back(draw.rect);
             }
             return found;
         }
@@ -87,10 +85,10 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(marks.size(), 2u);
         const Rect expected = MarkOf(kSeat0);
         const Rect plate = _table->GetLayout().zones.seatPlates[kSeat0];
-        EXPECT_TRUE(SameRect(marks[0], plate) || SameRect(marks[1], plate));
+        EXPECT_TRUE(SameBox(marks[0], plate) || SameBox(marks[1], plate));
         EXPECT_TRUE(SameRect(marks[0], expected) || SameRect(marks[1], expected));
         const Rect other = _table->GetLayout().zones.seatPlates[kSeat1];
-        EXPECT_FALSE(SameRect(marks[0], other) || SameRect(marks[1], other));
+        EXPECT_FALSE(SameBox(marks[0], other) || SameBox(marks[1], other));
     }
 
     TEST_F(MahjongTableWindowTest, TheFrameOnTheDiscardIsNotDrawnWhenOnlyAComputerMayClaim) {

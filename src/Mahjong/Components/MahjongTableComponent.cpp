@@ -4,6 +4,7 @@
 #include <BECore/GameManager/CoreManager.h>
 #include <BECore/Renderer/IRenderer.h>
 #include <BECore/Scene/Scene.h>
+#include <BECore/UI/UIBoxMesh.h>
 #include <BECore/UI/UICanvasComponent.h>
 #include <BECore/UI/UIEnvironment.h>
 #include <BECore/UI/UIImageComponent.h>
@@ -382,6 +383,22 @@ namespace BECore::Mahjong {
             renderer.DrawFilledRect(rect.x, rect.y + rect.h - width, rect.w, width, color);
             renderer.DrawFilledRect(rect.x, rect.y + width, width, rect.h - 2.0f * width, color);
             renderer.DrawFilledRect(rect.x + rect.w - width, rect.y + width, width, rect.h - 2.0f * width, color);
+        }
+
+        /// The first capacity of the scratch lists of a panel: a base with its shadow, tint and frame is a few hundred vertices, a few thousand indices (`UIBoxMesh` has the most one call can add)
+        constexpr size_t kPanelVertexReserve = 1536;
+        constexpr size_t kPanelIndexReserve = 6144;
+
+        UICorners PanelCorners(float unit) {
+            return UICorners::Uniform(kSeatPlateCorner * unit);
+        }
+
+        /// `bar`, a bar along an edge of a rounded panel, shortened by `inset` at both ends along its length, so it stays on the straight part of the edge.
+        Rect InsetAlong(const Rect& bar, float inset) {
+            if (bar.w >= bar.h) {
+                return bar.w > 2.0f * inset ? Rect(bar.x + inset, bar.y, bar.w - 2.0f * inset, bar.h) : bar;
+            }
+            return bar.h > 2.0f * inset ? Rect(bar.x, bar.y + inset, bar.w, bar.h - 2.0f * inset) : bar;
         }
 
         /// The emblem of a seat in its ring box, then the turn ring and the calling ring over it (white cells of the atlas, tinted by the palette
@@ -1206,6 +1223,50 @@ namespace BECore::Mahjong {
         _emblems = ResourceHandle<ITexture>(std::move(texture));
     }
 
+    void MahjongTableComponent::BeginPanelMesh() {
+        if (_panelVertices.capacity() == 0) {
+            _panelVertices.reserve(kPanelVertexReserve);
+            _panelIndices.reserve(kPanelIndexReserve);
+        }
+        _panelVertices.clear();
+        _panelIndices.clear();
+    }
+
+    void MahjongTableComponent::DrawPanel(IRenderer& renderer, const Rect& rect, float unit, bool turn) {
+        BeginPanelMesh();
+        const float pixelsPerUnit = renderer.GetViewTransform().scale;
+        const UICorners corners = PanelCorners(unit);
+        // The order of `UIElement::DrawBoxIn`: the shadow, the fill, the border, the highlight; then the marks of the turn over them
+        const UIShadowSpec shadow{0.0f, kShadowOffsetY * unit, kShadowBlur * unit, 0.0f, kSeatPlateShadow};
+        UIBoxMesh::AppendShadow(_panelVertices, _panelIndices, rect, corners, shadow, pixelsPerUnit);
+        UIBoxMesh::AppendFill(_panelVertices, _panelIndices, rect, corners, kSeatPlate, UIGradientSpec{UIGradientDirection::Vertical, kSeatPlateDeep}, pixelsPerUnit);
+        UIBoxMesh::AppendBorder(_panelVertices, _panelIndices, rect, corners, kSeatPlateBorder * unit, kSeatPlateFrame, pixelsPerUnit);
+        UIBoxMesh::AppendHighlight(_panelVertices, _panelIndices, rect, corners, kSeatPlateHighlight, pixelsPerUnit);
+        if (turn) {
+            UIBoxMesh::AppendFill(_panelVertices, _panelIndices, rect, corners, kTurnMark, UIGradientSpec{}, pixelsPerUnit);
+            UIBoxMesh::AppendBorder(_panelVertices, _panelIndices, rect, corners, kSeatTurnFrameWidth * unit, kSeatTurnFrame, pixelsPerUnit);
+        }
+        if (!_panelVertices.empty()) {
+            renderer.DrawGeometry(nullptr, _panelVertices, _panelIndices, 0.0f, 0.0f);
+        }
+    }
+
+    void MahjongTableComponent::DrawPanelTint(IRenderer& renderer, const Rect& rect, float unit, const Color& color) {
+        BeginPanelMesh();
+        UIBoxMesh::AppendFill(_panelVertices, _panelIndices, rect, PanelCorners(unit), color, UIGradientSpec{}, renderer.GetViewTransform().scale);
+        if (!_panelVertices.empty()) {
+            renderer.DrawGeometry(nullptr, _panelVertices, _panelIndices, 0.0f, 0.0f);
+        }
+    }
+
+    void MahjongTableComponent::DrawPanelFrame(IRenderer& renderer, const Rect& rect, float unit, float width, const Color& color) {
+        BeginPanelMesh();
+        UIBoxMesh::AppendBorder(_panelVertices, _panelIndices, rect, PanelCorners(unit), width, color, renderer.GetViewTransform().scale);
+        if (!_panelVertices.empty()) {
+            renderer.DrawGeometry(nullptr, _panelVertices, _panelIndices, 0.0f, 0.0f);
+        }
+    }
+
     void MahjongTableComponent::OnDraw() {
         BE_PROFILE_SCOPE("MahjongTable::OnDraw");
         PollTableLayoutSpec();
@@ -1367,9 +1428,10 @@ namespace BECore::Mahjong {
         // unless the session plays) and the mark of the dealer in the dealer's cell (East of the hand shown, as for the plates)
         const Seat turnSeat = TurnSeat(session, hand);
         const Rect& panel = layout.zones.centerPanel;
-        renderer.DrawFilledRect(panel.x, panel.y, panel.w, panel.h, kSeatPlate);
+        DrawPanel(renderer, panel, unit, false);
+        const float corner = kSeatPlateCorner * unit;
         if (IsSeat(turnSeat)) {
-            const Rect light = PanelTurnLight(panel, SeatPosition(bottom, turnSeat), kPanelTurnLightWidth * unit);
+            const Rect light = InsetAlong(PanelTurnLight(panel, SeatPosition(bottom, turnSeat), kPanelTurnLightWidth * unit), corner);
             renderer.DrawFilledRect(light.x, light.y, light.w, light.h, kPanelTurnLight);
         }
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
@@ -1385,13 +1447,10 @@ namespace BECore::Mahjong {
         // the calling ring while its hand is declared); the last claim window's blink and frame go over all of it
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             const Rect& box = layout.zones.seatPlates[seat];
-            renderer.DrawFilledRect(box.x, box.y, box.w, box.h, kSeatPlate);
-            if (seat == turnSeat) {
-                renderer.DrawFilledRect(box.x, box.y, box.w, box.h, kTurnMark);
-                DrawFrame(renderer, box, kSeatTurnFrameWidth * unit, kSeatTurnFrame);
-            }
+            DrawPanel(renderer, box, unit, seat == turnSeat);
             if (hand.SeatWind(seat) == Wind::East) {
-                renderer.DrawFilledRect(box.x, box.y, box.w, kDealerMarkHeight * unit, kDealerMark);
+                const Rect bar = InsetAlong(Rect(box.x, box.y, box.w, kDealerMarkHeight * unit), corner);
+                renderer.DrawFilledRect(bar.x, bar.y, bar.w, bar.h, kDealerMark);
             }
             // The same public reads as `MakeSeatPlates` (kind, level, turn, declared hand), without its words: no string is made per frame
             DrawEmblem(renderer, _emblems.Get(), EmblemBox(box, unit), session.KindOf(seat), session.LevelOf(seat), seat == turnSeat, hand.GetHand(seat).callingDeclared, unit);
@@ -1399,10 +1458,10 @@ namespace BECore::Mahjong {
             // claim lost has a frame
             if (_lostLeft > 0.0f) {
                 if (seat == _lostWinner && BlinkIsOn(Seconds(kClaimLostSeconds) - _lostLeft, Seconds(kClaimBlinkSeconds))) {
-                    renderer.DrawFilledRect(box.x, box.y, box.w, box.h, kClaimHighlight);
+                    DrawPanelTint(renderer, box, unit, kClaimHighlight);
                 }
                 if (_lostSeats[seat]) {
-                    DrawFrame(renderer, box, kSeatTurnFrameWidth * unit, kClaimLostFrame);
+                    DrawPanelFrame(renderer, box, unit, kSeatTurnFrameWidth * unit, kClaimLostFrame);
                 }
             }
         }

@@ -309,6 +309,27 @@ namespace BECore::Mahjong {
         _shownLines = count;
     }
 
+    void MahjongHudComponent::PublishWinningTiles(const eastl::vector<Tile>& tiles) {
+        Scene& scene = GetScene();
+        const IntrusivePtr<UICanvasComponent> canvas = CanvasOf(scene, "HandOver"_intern);
+        ASSERT(canvas != nullptr, "PublishWinningTiles: the node HandOver has no canvas");
+        const int count = static_cast<int>(tiles.size());
+        for (int i = 0; i < kMaxWinningTiles; ++i) {
+            const bool has = i < count;
+            if (has) {
+                UIElement* element = canvas ? canvas->GetRoot().FindByName(NumberedName("WinTile", i)) : nullptr;
+                UIImageComponent* image = element != nullptr ? element->GetComponent<UIImageComponent>() : nullptr;
+                ASSERT(image != nullptr, "PublishWinningTiles: the scene file has no UIImageComponent on WinTile<N> for a tile of the winning hand");
+                if (image != nullptr) {
+                    image->sprite = PoolString::Intern(SpriteName(tiles[static_cast<size_t>(i)]));
+                }
+            }
+            UICanvasComponent::SetElementVisibleByName(scene, NumberedName("WinTile", i), has);
+            UICanvasComponent::SetElementVisibleByName(scene, NumberedName("WinTileMark", i), has && i + 1 == count);
+        }
+        UICanvasComponent::SetElementVisibleByName(scene, "WinTiles"_intern, count > 0);
+    }
+
     void MahjongHudComponent::PublishHandOver(const MahjongGame& game) {
         const Match& match = game.GetMatch();
         const TableSession& session = game.GetSession();
@@ -324,14 +345,21 @@ namespace BECore::Mahjong {
             totals[seat] += settlement.deltas[seat];
         }
         const UIStrings& strings = CoreManager::GetUIStrings();
-        const ScoreTable table = FormatScoreTable(strings, settlement, match.Hand().Result().value_or(HandResult{}), totals, SeatWho(session));
+        const ScoreTable table = FormatScoreTable(strings, settlement, match.Hand().Result().value_or(HandResult{}), totals, SeatWho(session),
+                                                  IsSeat(settlement.winner) ? &match.Hand().GetHand(settlement.winner) : nullptr);
 
         UIVars& vars = CoreManager::GetUIVars();
         vars.Set("handOverHeadline"_intern, eastl::string_view(table.headline));
         vars.Set("handOverSummary"_intern, eastl::string_view(table.summary));
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            vars.Set(SeatVar("handOverSeat", seat), eastl::string_view(table.seats[seat]));
+            const ScoreRow& row = table.rows[seat];
+            const eastl::string_view cells[] = {row.name, row.wind, row.hand, row.change, row.total};
+            for (int column = 0; column < static_cast<int>(std::size(cells)); ++column) {
+                vars.Set(PoolString::Intern(Format("handOverCell{}_{}", seat, column)), cells[column]);
+            }
+            UICanvasComponent::SetElementVisibleByName(GetScene(), SeatVar("WinnerRow", seat), seat == table.winner);
         }
+        PublishWinningTiles(table.winningTiles);
         for (int i = 0; i < kMaxScoreLines; ++i) {
             const bool has = i < static_cast<int>(table.lines.size());
             vars.Set(PoolString::Intern(Format("scoreLine{}", i)), has ? eastl::string_view(table.lines[i]) : eastl::string_view());
@@ -466,13 +494,17 @@ namespace BECore::Mahjong {
     }
 
     void MahjongHudComponent::PublishMatchOver(const MahjongGame& game) {
-        const StandingsTable table = FormatStandings(CoreManager::GetUIStrings(), game.GetMatch(), SeatWho(game.GetSession()));
+        const UIStrings& strings = CoreManager::GetUIStrings();
+        const StandingsTable table = FormatStandings(strings, game.GetMatch(), SeatWho(game.GetSession()));
         UIVars& vars = CoreManager::GetUIVars();
         vars.Set("matchOverHeadline"_intern, eastl::string_view(table.headline));
         for (Seat row = 0; row < kSeatCount; ++row) {
-            vars.Set(SeatVar("standing", row), eastl::string_view(table.rows[row]));
+            const StandingRow& standing = table.rows[row];
+            vars.Set(SeatVar("standingPlace", row), eastl::string_view(Format("{}", standing.place)));
+            vars.Set(SeatVar("standingName", row), eastl::string_view(standing.name));
+            vars.Set(SeatVar("standingScore", row), eastl::string_view(standing.score));
+            UICanvasComponent::SetElementVisibleByName(GetScene(), SeatVar("StandingFirst", row), standing.first);
         }
-        const UIStrings& strings = CoreManager::GetUIStrings();
         const eastl::string tally = game.CoachActive() ? FormatCoachTally(strings, CoachTally{}, game.GetCoach().MatchTallyOf(game.CoachContext().startCount)) : eastl::string();
         vars.Set("matchOverCoach"_intern, eastl::string_view(tally));
         UICanvasComponent::SetElementVisibleByName(GetScene(), "MatchCoachRow"_intern, !tally.empty());

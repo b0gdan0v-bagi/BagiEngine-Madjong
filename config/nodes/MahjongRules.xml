@@ -14,10 +14,18 @@
   row, 28 high) shrink the same way: the portrait view is 720 wide and a window with side insets keeps 590 of it.
   In a narrow view (1080 x 768) 94% of the width is 1015, so maxWidth holds the plate to 960 (x 60..1020, y 50..638) and the pages fit as in
   landscape: no variant (MahjongRulesTest holds the matrix and the narrow windows).
+  The page is laid out as a page, and no block grew for it: the Title is the heading band, the Pager a holder (28 high) of a small chip
+  PagerChip (200 wide, raised, the text of rulesPager), a line a raised row of radius 8 (RulesLine<n>, 48 high) with a 4 wide accent bar
+  (RulesLineBar<n>; the canvas has its own dim, so accent is allowed as on any modal) and the text in a child RulesLineText<n>, an item a
+  raised chip of radius 8 (RulesItem<n>, half a row) with the text in RulesItemText<n>. A text component has no inset, so the air of a
+  chip or a row is the margin of the child that holds the text, and the sizes of the blocks stay the constants of RulesText.h. A tile row
+  is a recessed tray (surfaceDeep, radius 8) with a flex spacer at each end (RulesTrayLeft<r>, RulesTrayRight<r>: a stack has no main-axis
+  centring) so the tiles, however many a page shows, stand in the middle side by side (no gap: 14 tiles and two gaps of 4 would not fit the narrowest window).
+  Motion (UiPalette.h kMotion*): the canvas fades and rises from 0.96 over 0.18 s and leaves in 0.12 s; _transitionInput stays off: a click in the 0.18 s of the show is eaten, none of the choices here is worth a blind click, and a leaving modal frees the screen at once.
 -->
 <node name="Rules" layer="35" contentVersion="5">
   <components>
-    <component type="UICanvasComponent" space="SceneView" useSafeArea="true" modal="true" visible="false">
+    <component type="UICanvasComponent" space="SceneView" useSafeArea="true" modal="true" transitionDuration="0.18" transitionHideDuration="0.12" transitionEase="QuadOut" transitionScaleFrom="0.96" visible="false">
       <elements>
         <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
         <element type="UIStack" name="Plate" anchor="Center" y="-40" width="94%" maxWidth="960" height="588" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true" cornerRadius="16" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="26,29,38,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
@@ -27,43 +35,78 @@
                 <component type="UITextComponent" fontFamily="Russo One" textOutline="2,16,18,26,255" text="{rulesTitle}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="18"/>
               </components>
             </element>
-            <element type="UIElement" name="Pager" height="28" fontSize="18">
-              <components>
-                <component type="UITextComponent" text="{rulesPager}" textColor="190,196,190,255" align="Center" verticalAlign="Center"/>
-              </components>
-            </element>
-            <element type="UIElement" name="RulesLine0" visible="false" height="48" fontSize="18">
-              <components>
-                <component type="UITextComponent" text="{rulesLine0}" overflow="AutoFit" minFontSize="12"/>
-              </components>
-            </element>
-            <element type="UIElement" name="RulesLine1" visible="false" height="48" fontSize="18">
-              <components>
-                <component type="UITextComponent" text="{rulesLine1}" overflow="AutoFit" minFontSize="12"/>
-              </components>
-            </element>
-            <element type="UIElement" name="RulesLine2" visible="false" height="48" fontSize="18">
-              <components>
-                <component type="UITextComponent" text="{rulesLine2}" overflow="AutoFit" minFontSize="12"/>
-              </components>
-            </element>
-            <element type="UIElement" name="RulesLine3" visible="false" height="48" fontSize="18">
-              <components>
-                <component type="UITextComponent" text="{rulesLine3}" overflow="AutoFit" minFontSize="12"/>
-              </components>
-            </element>
-            <element type="UIElement" name="RulesLine4" visible="false" height="48" fontSize="18">
-              <components>
-                <component type="UITextComponent" text="{rulesLine4}" overflow="AutoFit" minFontSize="12"/>
-              </components>
-            </element>
-            <element type="UIElement" name="RulesLine5" visible="false" height="48" fontSize="18">
-              <components>
-                <component type="UITextComponent" text="{rulesLine5}" overflow="AutoFit" minFontSize="12"/>
-              </components>
-            </element>
-            <element type="UIStack" name="RulesTileRow0" visible="false" height="48" direction="Horizontal" spacing="4">
+            <element type="UIElement" name="Pager" height="28">
               <children>
+                <element type="UIElement" name="PagerChip" anchor="Center" width="200" height="28" fontSize="18" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+                  <components>
+                    <component type="UITextComponent" text="{rulesPager}" textColor="190,196,190,255" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+              </children>
+            </element>
+            <element type="UIElement" name="RulesLine0" visible="false" height="48" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+              <children>
+                <element type="UIElement" name="RulesLineBar0" anchorMin="0,0" anchorMax="0,1" pivot="0,0.5" x="4" width="4" margin="0,8,0,8" color="255,214,80,255" cornerRadius="8" />
+                <element type="UIElement" name="RulesLineText0" anchor="Stretch" margin="16,0,8,0" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{rulesLine0}" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+              </children>
+            </element>
+            <element type="UIElement" name="RulesLine1" visible="false" height="48" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+              <children>
+                <element type="UIElement" name="RulesLineBar1" anchorMin="0,0" anchorMax="0,1" pivot="0,0.5" x="4" width="4" margin="0,8,0,8" color="255,214,80,255" cornerRadius="8" />
+                <element type="UIElement" name="RulesLineText1" anchor="Stretch" margin="16,0,8,0" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{rulesLine1}" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+              </children>
+            </element>
+            <element type="UIElement" name="RulesLine2" visible="false" height="48" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+              <children>
+                <element type="UIElement" name="RulesLineBar2" anchorMin="0,0" anchorMax="0,1" pivot="0,0.5" x="4" width="4" margin="0,8,0,8" color="255,214,80,255" cornerRadius="8" />
+                <element type="UIElement" name="RulesLineText2" anchor="Stretch" margin="16,0,8,0" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{rulesLine2}" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+              </children>
+            </element>
+            <element type="UIElement" name="RulesLine3" visible="false" height="48" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+              <children>
+                <element type="UIElement" name="RulesLineBar3" anchorMin="0,0" anchorMax="0,1" pivot="0,0.5" x="4" width="4" margin="0,8,0,8" color="255,214,80,255" cornerRadius="8" />
+                <element type="UIElement" name="RulesLineText3" anchor="Stretch" margin="16,0,8,0" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{rulesLine3}" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+              </children>
+            </element>
+            <element type="UIElement" name="RulesLine4" visible="false" height="48" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+              <children>
+                <element type="UIElement" name="RulesLineBar4" anchorMin="0,0" anchorMax="0,1" pivot="0,0.5" x="4" width="4" margin="0,8,0,8" color="255,214,80,255" cornerRadius="8" />
+                <element type="UIElement" name="RulesLineText4" anchor="Stretch" margin="16,0,8,0" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{rulesLine4}" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+              </children>
+            </element>
+            <element type="UIElement" name="RulesLine5" visible="false" height="48" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+              <children>
+                <element type="UIElement" name="RulesLineBar5" anchorMin="0,0" anchorMax="0,1" pivot="0,0.5" x="4" width="4" margin="0,8,0,8" color="255,214,80,255" cornerRadius="8" />
+                <element type="UIElement" name="RulesLineText5" anchor="Stretch" margin="16,0,8,0" fontSize="18">
+                  <components>
+                    <component type="UITextComponent" text="{rulesLine5}" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+              </children>
+            </element>
+            <element type="UIStack" name="RulesTileRow0" visible="false" height="48" direction="Horizontal" spacing="0" color="26,29,38,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255">
+              <children>
+                <element type="UIElement" name="RulesTrayLeft0" flex="1" height="48" />
                 <element type="UIElement" name="RulesTile0" visible="false" width="36" height="48">
                   <components>
                     <component type="UIImageComponent"/>
@@ -134,10 +177,12 @@
                     <component type="UIImageComponent"/>
                   </components>
                 </element>
+                <element type="UIElement" name="RulesTrayRight0" flex="1" height="48" />
               </children>
             </element>
-            <element type="UIStack" name="RulesTileRow1" visible="false" height="48" direction="Horizontal" spacing="4">
+            <element type="UIStack" name="RulesTileRow1" visible="false" height="48" direction="Horizontal" spacing="0" color="26,29,38,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255">
               <children>
+                <element type="UIElement" name="RulesTrayLeft1" flex="1" height="48" />
                 <element type="UIElement" name="RulesTile14" visible="false" width="36" height="48">
                   <components>
                     <component type="UIImageComponent"/>
@@ -208,89 +253,138 @@
                     <component type="UIImageComponent"/>
                   </components>
                 </element>
+                <element type="UIElement" name="RulesTrayRight1" flex="1" height="48" />
               </children>
             </element>
             <element type="UIStack" name="RulesItemRow0" visible="false" height="28" direction="Horizontal" spacing="4">
               <children>
-                <element type="UIElement" name="RulesItem0" visible="false" width="49%" height="28" fontSize="18">
-                  <components>
-                    <component type="UITextComponent" text="{rulesItem0}" overflow="AutoFit" minFontSize="12"/>
-                  </components>
+                <element type="UIElement" name="RulesItem0" visible="false" width="49%" height="28" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+                  <children>
+                    <element type="UIElement" name="RulesItemText0" anchor="Stretch" margin="8,0,8,0" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" text="{rulesItem0}" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                  </children>
                 </element>
-                <element type="UIElement" name="RulesItem1" visible="false" width="49%" height="28" fontSize="18">
-                  <components>
-                    <component type="UITextComponent" text="{rulesItem1}" overflow="AutoFit" minFontSize="12"/>
-                  </components>
+                <element type="UIElement" name="RulesItem1" visible="false" width="49%" height="28" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+                  <children>
+                    <element type="UIElement" name="RulesItemText1" anchor="Stretch" margin="8,0,8,0" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" text="{rulesItem1}" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                  </children>
                 </element>
               </children>
             </element>
             <element type="UIStack" name="RulesItemRow1" visible="false" height="28" direction="Horizontal" spacing="4">
               <children>
-                <element type="UIElement" name="RulesItem2" visible="false" width="49%" height="28" fontSize="18">
-                  <components>
-                    <component type="UITextComponent" text="{rulesItem2}" overflow="AutoFit" minFontSize="12"/>
-                  </components>
+                <element type="UIElement" name="RulesItem2" visible="false" width="49%" height="28" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+                  <children>
+                    <element type="UIElement" name="RulesItemText2" anchor="Stretch" margin="8,0,8,0" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" text="{rulesItem2}" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                  </children>
                 </element>
-                <element type="UIElement" name="RulesItem3" visible="false" width="49%" height="28" fontSize="18">
-                  <components>
-                    <component type="UITextComponent" text="{rulesItem3}" overflow="AutoFit" minFontSize="12"/>
-                  </components>
+                <element type="UIElement" name="RulesItem3" visible="false" width="49%" height="28" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+                  <children>
+                    <element type="UIElement" name="RulesItemText3" anchor="Stretch" margin="8,0,8,0" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" text="{rulesItem3}" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                  </children>
                 </element>
               </children>
             </element>
             <element type="UIStack" name="RulesItemRow2" visible="false" height="28" direction="Horizontal" spacing="4">
               <children>
-                <element type="UIElement" name="RulesItem4" visible="false" width="49%" height="28" fontSize="18">
-                  <components>
-                    <component type="UITextComponent" text="{rulesItem4}" overflow="AutoFit" minFontSize="12"/>
-                  </components>
+                <element type="UIElement" name="RulesItem4" visible="false" width="49%" height="28" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+                  <children>
+                    <element type="UIElement" name="RulesItemText4" anchor="Stretch" margin="8,0,8,0" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" text="{rulesItem4}" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                  </children>
                 </element>
-                <element type="UIElement" name="RulesItem5" visible="false" width="49%" height="28" fontSize="18">
-                  <components>
-                    <component type="UITextComponent" text="{rulesItem5}" overflow="AutoFit" minFontSize="12"/>
-                  </components>
+                <element type="UIElement" name="RulesItem5" visible="false" width="49%" height="28" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+                  <children>
+                    <element type="UIElement" name="RulesItemText5" anchor="Stretch" margin="8,0,8,0" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" text="{rulesItem5}" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                  </children>
                 </element>
               </children>
             </element>
             <element type="UIStack" name="RulesItemRow3" visible="false" height="28" direction="Horizontal" spacing="4">
               <children>
-                <element type="UIElement" name="RulesItem6" visible="false" width="49%" height="28" fontSize="18">
-                  <components>
-                    <component type="UITextComponent" text="{rulesItem6}" overflow="AutoFit" minFontSize="12"/>
-                  </components>
+                <element type="UIElement" name="RulesItem6" visible="false" width="49%" height="28" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+                  <children>
+                    <element type="UIElement" name="RulesItemText6" anchor="Stretch" margin="8,0,8,0" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" text="{rulesItem6}" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                  </children>
                 </element>
-                <element type="UIElement" name="RulesItem7" visible="false" width="49%" height="28" fontSize="18">
-                  <components>
-                    <component type="UITextComponent" text="{rulesItem7}" overflow="AutoFit" minFontSize="12"/>
-                  </components>
+                <element type="UIElement" name="RulesItem7" visible="false" width="49%" height="28" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+                  <children>
+                    <element type="UIElement" name="RulesItemText7" anchor="Stretch" margin="8,0,8,0" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" text="{rulesItem7}" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                  </children>
                 </element>
               </children>
             </element>
             <element type="UIStack" name="RulesItemRow4" visible="false" height="28" direction="Horizontal" spacing="4">
               <children>
-                <element type="UIElement" name="RulesItem8" visible="false" width="49%" height="28" fontSize="18">
-                  <components>
-                    <component type="UITextComponent" text="{rulesItem8}" overflow="AutoFit" minFontSize="12"/>
-                  </components>
+                <element type="UIElement" name="RulesItem8" visible="false" width="49%" height="28" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+                  <children>
+                    <element type="UIElement" name="RulesItemText8" anchor="Stretch" margin="8,0,8,0" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" text="{rulesItem8}" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                  </children>
                 </element>
-                <element type="UIElement" name="RulesItem9" visible="false" width="49%" height="28" fontSize="18">
-                  <components>
-                    <component type="UITextComponent" text="{rulesItem9}" overflow="AutoFit" minFontSize="12"/>
-                  </components>
+                <element type="UIElement" name="RulesItem9" visible="false" width="49%" height="28" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+                  <children>
+                    <element type="UIElement" name="RulesItemText9" anchor="Stretch" margin="8,0,8,0" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" text="{rulesItem9}" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                  </children>
                 </element>
               </children>
             </element>
             <element type="UIStack" name="RulesItemRow5" visible="false" height="28" direction="Horizontal" spacing="4">
               <children>
-                <element type="UIElement" name="RulesItem10" visible="false" width="49%" height="28" fontSize="18">
-                  <components>
-                    <component type="UITextComponent" text="{rulesItem10}" overflow="AutoFit" minFontSize="12"/>
-                  </components>
+                <element type="UIElement" name="RulesItem10" visible="false" width="49%" height="28" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+                  <children>
+                    <element type="UIElement" name="RulesItemText10" anchor="Stretch" margin="8,0,8,0" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" text="{rulesItem10}" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                  </children>
                 </element>
-                <element type="UIElement" name="RulesItem11" visible="false" width="49%" height="28" fontSize="18">
-                  <components>
-                    <component type="UITextComponent" text="{rulesItem11}" overflow="AutoFit" minFontSize="12"/>
-                  </components>
+                <element type="UIElement" name="RulesItem11" visible="false" width="49%" height="28" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+                  <children>
+                    <element type="UIElement" name="RulesItemText11" anchor="Stretch" margin="8,0,8,0" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" text="{rulesItem11}" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                  </children>
                 </element>
               </children>
             </element>

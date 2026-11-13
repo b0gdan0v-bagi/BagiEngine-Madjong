@@ -252,19 +252,66 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
 
-        // After the felt (1), the rim (4) and the lip (4) comes the ground of the centre panel, then only its marks up to the first seat plate
+        // After the felt (1), the rim (4) and the lip (4) comes the ground of the centre panel (one geometry call), then only its marks up to the first seat plate
         const TableLayout& layout = _table->GetLayout();
         ASSERT_GE(_renderer->calls.size(), 10u);
-        EXPECT_EQ(_renderer->calls[9].kind, DrawKind::Rect);
-        EXPECT_TRUE(SameColor(_renderer->calls[9].color, kSeatPlate));
-        EXPECT_TRUE(SameRect(_renderer->calls[9].rect, layout.zones.centerPanel));
+        const int ground = PanelCallAt(_renderer->calls, layout.zones.centerPanel);
+        EXPECT_EQ(ground, 9);
         size_t next = 10;
         while (next < _renderer->calls.size() && (SameColor(_renderer->calls[next].color, kPanelTurnLight) || SameColor(_renderer->calls[next].color, kPanelDealerMark))) {
             ++next;
         }
         ASSERT_LT(next, _renderer->calls.size());
-        EXPECT_TRUE(SameColor(_renderer->calls[next].color, kSeatPlate));
-        EXPECT_TRUE(SameRect(_renderer->calls[next].rect, layout.zones.seatPlates[0]));
+        EXPECT_EQ(static_cast<int>(next), PanelCallAt(_renderer->calls, layout.zones.seatPlates[0]));
+    }
+
+    TEST_F(MahjongTableUiTest, EachPanelIsOneGeometryCallThatStaysInsideItsZoneAndItsShadowMargin) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        Draw();
+
+        const TableLayout& layout = _table->GetLayout();
+        std::vector<Rect> zones(layout.zones.seatPlates.begin(), layout.zones.seatPlates.end());
+        zones.push_back(layout.zones.centerPanel);
+        // The view is the output, so a unit is a pixel: the shadow reaches its offset and blur past the zone, the fill and the borders stay in it (a pixel of feather)
+        const float shadowMargin = kShadowOffsetY + kShadowBlur;
+        for (const Rect& zone : zones) {
+            const int call = PanelCallAt(_renderer->calls, zone);
+            ASSERT_GE(call, 0) << "the panel at " << zone.x << "," << zone.y;
+            int sameBase = 0;
+            for (const DrawCall& other : _renderer->calls) {
+                const std::optional<Rect> frame = BoxOfColor(other, kSeatPlateFrame);
+                sameBase += (frame && SameBox(*frame, zone)) ? 1 : 0;
+            }
+            EXPECT_EQ(sameBase, 1) << "one base call per panel";
+            for (const GeometryVertex& vertex : _renderer->calls[static_cast<size_t>(call)].vertices) {
+                EXPECT_GE(vertex.x, zone.x - shadowMargin - kPanelBoxEpsilon);
+                EXPECT_GE(vertex.y, zone.y - shadowMargin - kPanelBoxEpsilon);
+                EXPECT_LE(vertex.x, zone.x + zone.w + shadowMargin + kPanelBoxEpsilon);
+                EXPECT_LE(vertex.y, zone.y + zone.h + shadowMargin + kPanelBoxEpsilon);
+                if (SameColor(vertex.color, kSeatPlate) || SameColor(vertex.color, kSeatPlateDeep)) {
+                    EXPECT_GE(vertex.x, zone.x - kPanelBoxEpsilon) << "the fill is inside the zone";
+                    EXPECT_LE(vertex.x, zone.x + zone.w + kPanelBoxEpsilon);
+                    EXPECT_GE(vertex.y, zone.y - kPanelBoxEpsilon);
+                    EXPECT_LE(vertex.y, zone.y + zone.h + kPanelBoxEpsilon);
+                }
+            }
+        }
+    }
+
+    TEST_F(MahjongTableUiTest, TwoDrawsOfAnUnchangedTableLeaveTheScratchListsOfThePanelsAsTheyWere) {
+        ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
+        Draw();
+        const MahjongTableComponent::PanelScratch first = _table->PanelScratchCapacity();
+        EXPECT_GT(first.vertices, 0u);
+        EXPECT_GT(first.indices, 0u);
+        Draw();
+        EXPECT_EQ(_table->PanelScratchCapacity(), first);
+        Draw();
+        EXPECT_EQ(_table->PanelScratchCapacity(), first);
+        // A table that moves on (the turn goes to another plate) does not outgrow the first capacity either
+        ASSERT_TRUE(_game->GetSession().StepComputer().has_value());
+        Draw();
+        EXPECT_EQ(_table->PanelScratchCapacity(), first);
     }
 
     TEST_F(MahjongTableUiTest, EveryTileThatIsNotAWallStackHasAShadowOfTwoLayersOffsetBy2) {

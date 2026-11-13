@@ -5,10 +5,11 @@
   4 x 24 rows + 28 MatchCoachRow (the coach's tally, matchOverCoach; hidden and out of the stack unless it has text) + 64 button + 8 NewGameGap +
   7 x 4 spacing (8 children: the rows lie 4 apart and the button 4 + 8 + 4 = 16 below the last of them). The row has to be paid for inside the
   plate: a label of 22 needs 32 high (30 is the least that fits and is off the 4 grid), so the four rows are of 18 (the first place is still gold).
+  Motion (UiPalette.h kMotion*): the canvas fades and rises from 0.96 over 0.18 s and leaves in 0.12 s; _transitionInput stays off: a click in the 0.18 s of the show is eaten, none of the choices here is worth a blind click, and a leaving modal frees the screen at once.
 -->
 <node name="MatchOver" layer="25" contentVersion="5">
   <components>
-    <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.7" useSafeArea="true" modal="true" visible="false">
+    <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.7" useSafeArea="true" modal="true" transitionDuration="0.18" transitionHideDuration="0.12" transitionEase="QuadOut" transitionScaleFrom="0.96" visible="false">
       <elements>
         <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
         <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="560" height="296" direction="Vertical" spacing="4" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true" cornerRadius="16" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="26,29,38,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
@@ -18,25 +19,101 @@
                 <component type="UITextComponent" fontFamily="Russo One" textOutline="2,16,18,26,255" text="{matchOverHeadline}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
               </components>
             </element>
-            <element type="UIElement" name="Standing0" height="24" fontSize="18" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
-              <components>
-                <component type="UITextComponent" fontFamily="Russo One" textOutline="2,16,18,26,255" text="{standing0}" textColor="255,214,80,255" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
-              </components>
+            <element type="UIElement" name="Standing0" height="24" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+              <children>
+                <element type="UIElement" name="StandingFirst0" anchor="Stretch" visible="false" color="84,74,36,255" cornerRadius="8" borderWidth="2" borderColor="255,214,80,255" />
+                <element type="UIStack" name="StandingCells0" anchor="Stretch" direction="Horizontal" spacing="8" padding="8,0,8,0" crossAlign="Center">
+                  <children>
+                    <element type="UIElement" name="StandingPlace0" width="20" height="20" fontSize="18" color="70,84,128,255" cornerRadius="8">
+                      <components>
+                        <component type="UITextComponent" fontFamily="Russo One" text="{standingPlace0}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="StandingName0" flex="1" height="100%" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{standingName0}" align="Left" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="StandingScore0" width="24%" height="100%" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" fontFamily="Russo One" text="{standingScore0}" align="Right" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                  </children>
+                </element>
+              </children>
             </element>
-            <element type="UIElement" name="Standing1" height="24" fontSize="18" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
-              <components>
-                <component type="UITextComponent" fontFamily="Russo One" textOutline="2,16,18,26,255" text="{standing1}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
-              </components>
+            <element type="UIElement" name="Standing1" height="24" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+              <children>
+                <element type="UIElement" name="StandingFirst1" anchor="Stretch" visible="false" color="84,74,36,255" cornerRadius="8" borderWidth="2" borderColor="255,214,80,255" />
+                <element type="UIStack" name="StandingCells1" anchor="Stretch" direction="Horizontal" spacing="8" padding="8,0,8,0" crossAlign="Center">
+                  <children>
+                    <element type="UIElement" name="StandingPlace1" width="20" height="20" fontSize="18" color="70,84,128,255" cornerRadius="8">
+                      <components>
+                        <component type="UITextComponent" fontFamily="Russo One" text="{standingPlace1}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="StandingName1" flex="1" height="100%" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{standingName1}" align="Left" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="StandingScore1" width="24%" height="100%" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" fontFamily="Russo One" text="{standingScore1}" align="Right" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                  </children>
+                </element>
+              </children>
             </element>
-            <element type="UIElement" name="Standing2" height="24" fontSize="18" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
-              <components>
-                <component type="UITextComponent" fontFamily="Russo One" textOutline="2,16,18,26,255" text="{standing2}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
-              </components>
+            <element type="UIElement" name="Standing2" height="24" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+              <children>
+                <element type="UIElement" name="StandingFirst2" anchor="Stretch" visible="false" color="84,74,36,255" cornerRadius="8" borderWidth="2" borderColor="255,214,80,255" />
+                <element type="UIStack" name="StandingCells2" anchor="Stretch" direction="Horizontal" spacing="8" padding="8,0,8,0" crossAlign="Center">
+                  <children>
+                    <element type="UIElement" name="StandingPlace2" width="20" height="20" fontSize="18" color="70,84,128,255" cornerRadius="8">
+                      <components>
+                        <component type="UITextComponent" fontFamily="Russo One" text="{standingPlace2}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="StandingName2" flex="1" height="100%" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{standingName2}" align="Left" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="StandingScore2" width="24%" height="100%" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" fontFamily="Russo One" text="{standingScore2}" align="Right" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                  </children>
+                </element>
+              </children>
             </element>
-            <element type="UIElement" name="Standing3" height="24" fontSize="18" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
-              <components>
-                <component type="UITextComponent" fontFamily="Russo One" textOutline="2,16,18,26,255" text="{standing3}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
-              </components>
+            <element type="UIElement" name="Standing3" height="24" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+              <children>
+                <element type="UIElement" name="StandingFirst3" anchor="Stretch" visible="false" color="84,74,36,255" cornerRadius="8" borderWidth="2" borderColor="255,214,80,255" />
+                <element type="UIStack" name="StandingCells3" anchor="Stretch" direction="Horizontal" spacing="8" padding="8,0,8,0" crossAlign="Center">
+                  <children>
+                    <element type="UIElement" name="StandingPlace3" width="20" height="20" fontSize="18" color="70,84,128,255" cornerRadius="8">
+                      <components>
+                        <component type="UITextComponent" fontFamily="Russo One" text="{standingPlace3}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="StandingName3" flex="1" height="100%" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{standingName3}" align="Left" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="StandingScore3" width="24%" height="100%" fontSize="18">
+                      <components>
+                        <component type="UITextComponent" fontFamily="Russo One" text="{standingScore3}" align="Right" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                      </components>
+                    </element>
+                  </children>
+                </element>
+              </children>
             </element>
             <element type="UIElement" name="MatchCoachRow" visible="false" height="28" fontSize="18" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
               <components>

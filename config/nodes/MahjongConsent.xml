@@ -9,11 +9,12 @@
   The plate is the safe area at most 320 high (32 padding + the text + 16 spacing + a 64 button row) and 560 wide. The text takes what the
   buttons leave and may shrink (AutoFit, down to 12 units, wrap on) instead of being cut, in both languages, in the smallest windows too;
   the buttons stay at 64 (a touch target). The plate is a card and the buttons have the skin of their role, like Options. MahjongUploadSceneTest holds the shape, the touch size and the words on the whole size matrix.
+  Motion (UiPalette.h kMotion*): the canvas fades and rises from 0.96 over 0.18 s and leaves in 0.12 s; _transitionInput stays off: a click in the 0.18 s of the show is eaten, none of the choices here is worth a blind click, and a leaving modal frees the screen at once.
 -->
 <node name="Consent" layer="34" contentVersion="5">
   <components>
     <component type="MahjongUploadComponent" />
-    <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" modal="true" visible="false">
+    <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" modal="true" transitionDuration="0.18" transitionHideDuration="0.12" transitionEase="QuadOut" transitionScaleFrom="0.96" visible="false">
       <elements>
         <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
         <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="560" height="100%" maxHeight="320" direction="Vertical" spacing="16" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true" cornerRadius="16" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="26,29,38,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">

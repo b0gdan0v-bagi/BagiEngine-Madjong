@@ -4,6 +4,7 @@
 #include "MahjongButtonSupport.h"
 #include "ShippedScene.h"
 #include "StringsTestSupport.h"
+#include "UiStyleTestSupport.h"
 
 #include <BECore/GameManager/CoreManager.h>
 #include <BECore/Reflection/XmlDeserializer.h>
@@ -285,6 +286,81 @@ namespace BECore::Mahjong::Tests {
         }
     };
 
+    // ----- the panels of the table: geometry, found by the colours of its vertices -----
+
+    /// What a rect of a panel may differ from the zone it is drawn in: the opaque core of a `UIBoxMesh` shape is the rect inset by half a pixel of feather, a pixel of it at scale 1.
+    inline constexpr float kPanelBoxEpsilon = 1.0f;
+
+    inline bool SameBox(const Rect& a, const Rect& b, float epsilon = kPanelBoxEpsilon) {
+        return std::abs(a.x - b.x) <= epsilon && std::abs(a.y - b.y) <= epsilon && std::abs(a.w - b.w) <= 2.0f * epsilon && std::abs(a.h - b.h) <= 2.0f * epsilon;
+    }
+
+    /// The box around the vertices of the geometry call `call` that carry exactly `color` (a fill is `color` all over its opaque core, a gradient only along its top row, a border or a highlight is
+    /// flat; the feather ring has alpha 0): none when the call is no geometry or none of its vertices does.
+    inline std::optional<Rect> BoxOfColor(const DrawCall& call, const Color& color) {
+        if (call.kind != DrawKind::Geometry) {
+            return std::nullopt;
+        }
+        bool found = false;
+        float left = 0.0f;
+        float top = 0.0f;
+        float right = 0.0f;
+        float bottom = 0.0f;
+        for (const GeometryVertex& vertex : call.vertices) {
+            if (!SameColor(vertex.color, color)) {
+                continue;
+            }
+            left = found ? std::min(left, vertex.x) : vertex.x;
+            top = found ? std::min(top, vertex.y) : vertex.y;
+            right = found ? std::max(right, vertex.x) : vertex.x;
+            bottom = found ? std::max(bottom, vertex.y) : vertex.y;
+            found = true;
+        }
+        return found ? std::optional<Rect>(Rect(left, top, right - left, bottom - top)) : std::nullopt;
+    }
+
+    /// One draw of a mark in a colour: the index of its call and its rectangle (a plain rect's own, or the box of the vertices of that colour in a geometry call).
+    struct MarkDraw {
+        size_t call = 0;
+        Rect rect;
+    };
+
+    /// Every draw of `color` in `calls`, in the order drawn: the rects of that colour and the geometry calls with a vertex of that colour. A panel of the table is one geometry call (its base,
+    /// its tint and its frame), so the plate's marks are found among them by their colours.
+    inline std::vector<MarkDraw> MarksOf(const eastl::vector<DrawCall>& calls, const Color& color) {
+        std::vector<MarkDraw> found;
+        for (size_t i = 0; i < calls.size(); ++i) {
+            if (calls[i].kind == DrawKind::Rect && SameColor(calls[i].color, color)) {
+                found.push_back(MarkDraw{i, calls[i].rect});
+            } else if (const std::optional<Rect> box = BoxOfColor(calls[i], color)) {
+                found.push_back(MarkDraw{i, *box});
+            }
+        }
+        return found;
+    }
+
+    /// The index of the geometry call that is the base of a panel over `zone`: it carries the fill `kSeatPlate` and its border `kSeatPlateFrame` runs round the zone (the border is the one thing whose
+    /// vertices reach every corner). The HUD's canvases mesh the same fill colour, so a panel is found by its place; -1 when none.
+    inline int PanelCallAt(const eastl::vector<DrawCall>& calls, const Rect& zone) {
+        for (size_t i = 0; i < calls.size(); ++i) {
+            const std::optional<Rect> frame = BoxOfColor(calls[i], kSeatPlateFrame);
+            if (frame && SameBox(*frame, zone) && BoxOfColor(calls[i], kSeatPlate)) {
+                return static_cast<int>(i);
+            }
+        }
+        return -1;
+    }
+
+    /// How many geometry calls are a panel base over `zone` (`PanelCallAt` finds the first): a panel is drawn once.
+    inline int PanelCountAt(const eastl::vector<DrawCall>& calls, const Rect& zone) {
+        int found = 0;
+        for (const DrawCall& call : calls) {
+            const std::optional<Rect> frame = BoxOfColor(call, kSeatPlateFrame);
+            found += (frame && SameBox(*frame, zone) && BoxOfColor(call, kSeatPlate)) ? 1 : 0;
+        }
+        return found;
+    }
+
     class MahjongTableTestBase : public ::testing::Test {
     protected:
         static void SetUpTestSuite() {
@@ -347,6 +423,18 @@ namespace BECore::Mahjong::Tests {
         void Draw() {
             _renderer->ClearCalls();
             _manager->DrawAll();
+        }
+
+        /// Lets the show and hide of the canvases run out (`kMotion*` of `UiPalette.h`: at most 0.18 s): the game clock moves in exact steps of 0.125, a frame is drawn after each, as
+        /// `engine/.claude/rules/ui-transitions.md` says. The clock stands still while the tests only draw, so a canvas that was just shown or hidden is at the start of its motion (nothing
+        /// of it takes a click) until this is called; a canvas of no motion is not affected. The calls of the last frame stay in the recorder.
+        void SettleTransitions() {
+            constexpr double kSettleStep = 0.125;  // exact in binary, so the progress adds up without a remainder
+            constexpr int kSettleSteps = 8;        // one second, longer than any motion of the scene
+            for (int step = 0; step < kSettleSteps; ++step) {
+                CoreManager::GetTime().Advance(kSettleStep);
+                Draw();
+            }
         }
 
         /// Switches the flights of arriving tiles on, with their real duration (`kTileFlightSeconds`): `SetUp` switches them off.
@@ -501,8 +589,10 @@ namespace BECore::Mahjong::Tests {
             return found != nullptr && found->rect.w > 0.0f && found->rect.h > 0.0f;
         }
 
-        /// Clicks the middle of a button of the canvas as the last draw put it.
+        /// Clicks the middle of a button of the canvas as the last draw put it, as a person does: once the screens that were just shown have finished
+        /// their motion (`SettleTransitions`; a click in the middle of a show is eaten, and a test of that clicks with `Click`).
         bool ClickElement(const char* node, const char* element) {
+            SettleTransitions();
             const UIElement* found = Element(node, element);
             EXPECT_NE(found, nullptr) << element;
             return found != nullptr && Click(found->rect.x + found->rect.w * 0.5f, found->rect.y + found->rect.h * 0.5f);

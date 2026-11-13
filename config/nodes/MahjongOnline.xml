@@ -28,11 +28,12 @@
   server takes (24 bytes) fits whole in the field; so is the host's name on a room row, which wraps to two lines with the facts of the listing. MahjongHudOnlineTest holds the shapes, the touch size and the words of every page on the whole size matrix.
   The skin is that of config/CLAUDE.md as on Setup: the plate a card, the title band and the titles in the display font, the rows raised rows of radius 8 (the segmented controls carry no colour of
   their own, so the row shows through), the segments radius 8, the buttons their role's gradient in PT Sans bold; the room rows keep the regular weight (two lines of mixed text do not fit bold in the smallest window).
+  Motion (UiPalette.h kMotion*): the canvas fades and rises from 0.96 over 0.18 s and leaves in 0.12 s; _transitionInput stays off: a click in the 0.18 s of the show is eaten, none of the choices here is worth a blind click, and a leaving modal frees the screen at once.
 -->
 <node name="Online" layer="32" contentVersion="5">
   <components>
     <component type="MahjongOnlineComponent" />
-    <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" modal="true" visible="false">
+    <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" modal="true" transitionDuration="0.18" transitionHideDuration="0.12" transitionEase="QuadOut" transitionScaleFrom="0.96" visible="false">
       <elements>
         <element type="UIElement" name="OnlineDim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
         <element type="UIStack" name="OnlinePlate" anchor="Center" width="94%" maxWidth="640" height="100%" maxHeight="640" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true" cornerRadius="16" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="26,29,38,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
