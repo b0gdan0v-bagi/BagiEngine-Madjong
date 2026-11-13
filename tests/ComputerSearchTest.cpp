@@ -1,6 +1,7 @@
 #include "ComputerTestSupport.h"
 #include "MatchTestSupport.h"
 
+#include <EASTL/sort.h>
 #include <Mahjong/Game/ComputerClaim.h>
 #include <Mahjong/Game/ComputerLevel.h>
 #include <Mahjong/Game/ComputerPlayer.h>
@@ -17,7 +18,8 @@
  * claim, the pass of a waiting hand, a window with only `Pass`, a single candidate); the answer is listed and repeatable, Normal's
  * choice is the first candidate, a huge margin always gives Normal's choice, nothing is seen that the view does not show, and a
  * search seat plays whole hands. The budgets are a few worlds and a few candidates, so a Debug run stays short. Pure logic: no engine
- * services.
+ * services. The seam for a source of worlds (`UseWorldSource`) is held here too: it changes nothing without a source, and no level's
+ * player ever has one.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -860,6 +862,189 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(Shown(run), shown);
             EXPECT_EQ(run.Result(), answer);
         }
+    }
+
+    // ----- a source of worlds in place of SampleWorld (the arena's oracle players use it) -----
+
+    namespace {
+
+        /// What `SampleWorld` would make, as a source: a run that uses it must play exactly what a run with no source plays.
+        WorldSource SamplingSource() {
+            return [](const TableView& view, MahjongRng& rng) { return SampleWorld(view, rng); };
+        }
+
+        WorldSource NoWorldSource() {
+            return [](const TableView&, MahjongRng&) -> std::optional<HandModel> { return std::nullopt; };
+        }
+
+        /// The first number world `index` of a run with `base` draws from its own rng (`DerivedSeed(base, 2 * index)` is the seed).
+        uint32_t FirstDrawOfWorld(uint32_t base, uint32_t index) {
+            MahjongRng mixer(base * kSearchSeedMixer + index * 2);
+            MahjongRng worldRng(mixer.Below(std::numeric_limits<uint32_t>::max()));
+            return worldRng.Below(kRngRange);
+        }
+
+    }  // namespace
+
+    TEST(ComputerSearchTest, ASourceThatSamplesAsTheSearchDoesGivesTheValuesOfNoSource) {
+        for (const bool turn : {true, false}) {
+            const eastl::vector<TableView> views = FindDecisions(turn);
+            ASSERT_FALSE(views.empty());
+            const TableView& view = views.front();
+            const LevelProfile profile = SearchProfile(3, kCandidates);
+            MahjongRng plainRng(kRngSeed);
+            std::optional<SearchRun> plain = Begin(view, plainRng, profile);
+            MahjongRng sourcedRng(kRngSeed);
+            std::optional<SearchRun> sourced = Begin(view, sourcedRng, profile);
+            ASSERT_TRUE(plain.has_value() && sourced.has_value());
+            EXPECT_FALSE(sourced->HasWorldSource());
+            ASSERT_TRUE(sourced->UseWorldSource(SamplingSource()));
+            EXPECT_TRUE(sourced->HasWorldSource());
+            EXPECT_FALSE(plain->HasWorldSource());
+            plain->RunWorlds(SerialLoop);
+            sourced->RunWorlds(ThreadLoop(3));
+            EXPECT_EQ(sourced->Values(), plain->Values());
+            EXPECT_EQ(sourced->DroppedWorlds(), plain->DroppedWorlds());
+            EXPECT_EQ(sourced->Result(), plain->Result());
+
+            // A stepped run takes the source the same way.
+            MahjongRng steppedRng(kRngSeed);
+            std::optional<SearchRun> stepped = Begin(view, steppedRng, profile);
+            ASSERT_TRUE(stepped.has_value());
+            ASSERT_TRUE(stepped->UseWorldSource(SamplingSource()));
+            StepToEnd(*stepped, "stepped with a source");
+            EXPECT_EQ(stepped->Values(), plain->Values());
+        }
+    }
+
+    TEST(ComputerSearchTest, ASourceIsCalledOncePerWorldWithTheWorldsOwnRngAtAnyThreadCount) {
+        constexpr int kSourceWorlds = 4;
+        for (const bool turn : {true, false}) {
+            const eastl::vector<TableView> views = FindDecisions(turn);
+            ASSERT_FALSE(views.empty());
+            const TableView& view = views.front();
+            const LevelProfile profile = SearchProfile(kSourceWorlds, kCandidates);
+            const uint32_t base = BaseSeedOf(MahjongRng(kRngSeed));
+            eastl::vector<uint32_t> expected;
+            for (uint32_t i = 0; i < static_cast<uint32_t>(kSourceWorlds); ++i) {
+                expected.push_back(FirstDrawOfWorld(base, i));
+            }
+            eastl::sort(expected.begin(), expected.end());
+
+            for (const int threads : {1, 4}) {
+                std::mutex lock;
+                eastl::vector<uint32_t> draws;
+                MahjongRng rng(kRngSeed);
+                std::optional<SearchRun> run = Begin(view, rng, profile);
+                ASSERT_TRUE(run.has_value());
+                ASSERT_TRUE(run->UseWorldSource([&](const TableView& v, MahjongRng& worldRng) {
+                    MahjongRng probe = worldRng;
+                    const std::lock_guard<std::mutex> guard(lock);
+                    draws.push_back(probe.Below(kRngRange));
+                    return SampleWorld(v, worldRng);
+                }));
+                run->RunWorlds(ThreadLoop(threads));
+                eastl::sort(draws.begin(), draws.end());
+                EXPECT_EQ(draws, expected) << (turn ? "turn" : "window") << " threads " << threads;
+            }
+
+            // Two plays of the same world give the same row: the source gets the same rng each time.
+            MahjongRng rng(kRngSeed);
+            std::optional<SearchRun> run = Begin(view, rng, profile);
+            ASSERT_TRUE(run.has_value());
+            ASSERT_TRUE(run->UseWorldSource(SamplingSource()));
+            for (int index = 0; index < kSourceWorlds; ++index) {
+                EXPECT_TRUE(SameWorld(run->PlayWorld(index), run->PlayWorld(index))) << "world " << index;
+            }
+        }
+    }
+
+    TEST(ComputerSearchTest, ASourceThatMakesNoWorldOrOneTheCandidateDoesNotApplyInDropsTheWorlds) {
+        for (const bool turn : {true, false}) {
+            const eastl::vector<TableView> views = FindDecisions(turn);
+            ASSERT_FALSE(views.empty());
+            const TableView& view = views.front();
+            const LevelProfile profile = SearchProfile(3, kCandidates);
+            // A model that was never begun is a finished hand: no candidate applies in it.
+            const WorldSource finished = [](const TableView&, MahjongRng&) { return std::optional<HandModel>(HandModel()); };
+            for (const WorldSource& source : {NoWorldSource(), finished}) {
+                MahjongRng rng(kRngSeed);
+                std::optional<SearchRun> run = Begin(view, rng, profile);
+                ASSERT_TRUE(run.has_value());
+                ASSERT_TRUE(run->UseWorldSource(source));
+                for (int index = 0; index < run->WorldCount(); ++index) {
+                    EXPECT_FALSE(run->PlayWorld(index).played) << "world " << index;
+                }
+                run->RunWorlds(SerialLoop);
+                EXPECT_TRUE(run->Done());
+                EXPECT_EQ(run->DroppedWorlds(), run->WorldCount());
+                EXPECT_EQ(run->Result(), Normal(view, MahjongRng(kRngSeed)));
+            }
+        }
+    }
+
+    TEST(ComputerSearchTest, ASourceIsRefusedOnAStartedRunAFinishedRunAndAnEmptyFunctionAndACopyKeepsIt) {
+        const TableView view = MakeTableView(TurnModel(), kSeat0);
+        const LevelProfile profile = SearchProfile(3, kCandidates);
+        const auto begin = [&] {
+            MahjongRng rng(kRngSeed);
+            return *BeginTurnSearch(view, rng, profile);
+        };
+
+        SearchRun fresh = begin();
+        EXPECT_FALSE(fresh.UseWorldSource(WorldSource()));
+        EXPECT_FALSE(fresh.HasWorldSource());
+
+        SearchRun stepped = begin();
+        stepped.Step();
+        EXPECT_FALSE(stepped.UseWorldSource(NoWorldSource()));
+        EXPECT_FALSE(stepped.HasWorldSource());
+        StepToEnd(stepped, "refused source");
+
+        SearchRun finished = begin();
+        finished.RunWorlds(SerialLoop);
+        ASSERT_TRUE(finished.Done());
+        EXPECT_FALSE(finished.UseWorldSource(NoWorldSource()));
+        EXPECT_FALSE(finished.HasWorldSource());
+        EXPECT_EQ(finished.DroppedWorlds(), 0);
+
+        // A run that took a source gives it to a copy, which then plays the source's worlds (none here), the original untouched.
+        SearchRun sourced = begin();
+        ASSERT_TRUE(sourced.UseWorldSource(NoWorldSource()));
+        SearchRun copy = sourced;
+        EXPECT_TRUE(copy.HasWorldSource());
+        copy.RunWorlds(SerialLoop);
+        EXPECT_EQ(copy.DroppedWorlds(), copy.WorldCount());
+        EXPECT_TRUE(sourced.HasWorldSource());
+        EXPECT_FALSE(sourced.Done());
+    }
+
+    // No level may peek (`CLAUDE.md`, "No peeking"): a source of worlds is for the arena's oracle players only, which `BeginTurnSearch`
+    // and `BeginClaimSearch` never give. This holds every level 1..10 (and a search profile, so the check is not vacuous: the levels
+    // do not search) to a run with no source.
+    TEST(ComputerSearchTest, NoLevelMakesARunThatHasASourceOfWorlds) {
+        eastl::vector<TableView> views = FindDecisions(true);
+        for (const TableView& view : FindDecisions(false)) {
+            views.push_back(view);
+        }
+        ASSERT_FALSE(views.empty());
+        for (const ComputerLevel level : kAllLevels) {
+            for (size_t i = 0; i < views.size(); ++i) {
+                ComputerPlayer player(kRngSeed + static_cast<uint32_t>(i), level);
+                PlayerDecision decision = player.Begin(views[i]);
+                EXPECT_FALSE(decision.run.has_value() && decision.run->HasWorldSource()) << LevelText(level) << " view " << i;
+            }
+        }
+        int searched = 0;
+        for (size_t i = 0; i < views.size(); ++i) {
+            ComputerPlayer player(kRngSeed + static_cast<uint32_t>(i), SearchProfile());
+            PlayerDecision decision = player.Begin(views[i]);
+            if (decision.run.has_value()) {
+                ++searched;
+                EXPECT_FALSE(decision.run->HasWorldSource()) << "search profile, view " << i;
+            }
+        }
+        EXPECT_GT(searched, 0);
     }
 
     // ----- no peeking -----

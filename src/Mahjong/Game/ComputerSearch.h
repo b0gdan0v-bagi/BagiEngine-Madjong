@@ -47,6 +47,13 @@ namespace BECore::Mahjong {
     /// threads, and returns when all are done.
     using WorldLoop = std::function<void(int count, const std::function<void(int index)>& body)>;
 
+    /// Where a tool takes the worlds of a run from instead of `SampleWorld`: the world for `view` drawn with the world's own rng, or
+    /// nullopt for a world that cannot be made (the run drops it). It is called once per world, possibly on several threads at once
+    /// (`PlayWorld` is const), so it must be pure: no shared state it writes, nothing but `view` and the rng it is given.
+    /// **Only the arena's oracle players give one** (they know what a player may not, `../Arena/CLAUDE.md`); no level of `ComputerLevel`
+    /// makes a run that has one, and `ComputerSearchTest` pins that.
+    using WorldSource = std::function<std::optional<HandModel>(const TableView& view, MahjongRng& rng)>;
+
     /**
      * @brief A search decision as a resumable object: `Step()` plays one rollout, `Result()` is the answer when `Done()`.
      *
@@ -68,6 +75,15 @@ namespace BECore::Mahjong {
 
         /// Plays one rollout; a no-op when `Done()`.
         void Step();
+
+        /// Makes the run take its worlds from `source` (world `i` is `source(view, MahjongRng(DerivedSeed(base, 2 i)))`, the seed of its
+        /// rollout table unchanged) instead of `SampleWorld`. A no-op returning false (the contract of `Finish`) on a run that was
+        /// stepped, finished or handed an empty function; true when taken. Must be called before the first step, `PlayWorld` or
+        /// `RunWorlds`; a copy of the run keeps the source. The source must be pure and thread-safe (`WorldSource`).
+        bool UseWorldSource(WorldSource source);
+
+        /// Whether the run takes its worlds from a `WorldSource`. False for every run a level's player makes.
+        [[nodiscard]] bool HasWorldSource() const noexcept;
 
         /// The number of worlds the run plays (`searchWorlds`).
         [[nodiscard]] int WorldCount() const noexcept;
@@ -123,6 +139,7 @@ namespace BECore::Mahjong {
         eastl::vector<eastl::vector<int>> _values;
         int _worldIndex = 0;
         int _candidateIndex = 0;
+        WorldSource _source;
         std::optional<HandModel> _sampled;
         uint32_t _tableSeed = 0;
         eastl::vector<int> _row;
