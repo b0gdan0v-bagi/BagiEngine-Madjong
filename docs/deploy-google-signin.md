@@ -21,8 +21,14 @@ railway domain --service bagi-mahjong
    - User type: **External**.
    - App name: его тестер увидит в окне Google, например `BagiMahjong`.
    - Support email и Developer contact: ваша почта.
+   - **Branding → App domain** (без этих полей Google не даёт опубликовать приложение: «Valid app name, support email, homepage URL and privacy policy URL are required»):
+     - Application home page: `https://<домен>/`
+     - Application privacy policy link: `https://<домен>/privacy` — эту страницу отдаёт сам сервер, без входа (сервер должен быть уже выложен с новым `serve.py`, шаг 7);
+     - Application terms of service link: можно оставить пустым;
+     - **Authorized domains**: `<домен>` целиком (например `bagi-mahjong-production.up.railway.app`). Если Google его не примет, остаётся подключить к сервису свой домен и указать его.
+   - Логотип не загружайте: с ним Google требует проверку бренда.
 3. **Scopes** (в новом интерфейсе **Data Access**): добавьте только `openid` и `.../auth/userinfo.email`. Ничего больше не добавляйте: эти два не считаются чувствительными, поэтому проверка приложения в Google не нужна.
-4. **Audience → Publish app**, подтвердите. Без этого шага войти смогут только тестовые пользователи (до 100), которых вы впишете руками.
+4. **Audience → Publish app**, подтвердите. Если Google снова пишет, что не хватает полей, проверьте Branding из пункта 2 и что `https://<домен>/privacy` открывается в браузере. Без этого шага войти смогут только тестовые пользователи (до 100), которых вы впишете руками.
 
 ## 3. Google Cloud: OAuth-клиент
 
@@ -41,6 +47,8 @@ python3 -c "import secrets; print(secrets.token_urlsafe(48))"   # MATCH_COLLECT_
 
 - `SESSION_SECRET` подписывает cookie входа. Если его сменить, все тестеры разлогинятся.
 - `MATCH_COLLECT_TOKEN` — ваш ключ, чтобы забирать и удалять логи матчей. Сохраните его в менеджере паролей.
+
+> **Порядок с Google и страницей политики.** Страница `/privacy` появится, когда на `bagi-mahjong` будет выложена новая версия (шаг 7). Удобный порядок: шаги 1, 3–7 (Google пока в режиме Testing — добавьте себя в Test users, чтобы проверить вход), затем Branding и Publish app из шага 2.
 
 ## 5. Хранилище матчей (volume)
 
@@ -61,6 +69,7 @@ railway variables --service bagi-mahjong \
   --set PUBLIC_URL=https://<домен> \
   --set SESSION_SECRET=<первый секрет> \
   --set MATCH_COLLECT_TOKEN=<второй секрет> \
+  --set PRIVACY_CONTACT=<ваша почта для запросов об удалении> \
   --set MATCH_STORE=/data/matches \
   --set MATCH_LOG_VERSIONS=1-6 \
   --set MATCH_FORWARDED_FOR=1 \
