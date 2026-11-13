@@ -71,7 +71,7 @@ python3 engine/tools/rooms/build_and_deploy.py --source-dir . --server-target Ba
 **One replica.** The rooms live in the memory of the process: a second replica would split them in two servers that do not know each other's codes, so the partial pins one. A redeploy or a restart loses every room; a client that reconnects is told `room_gone`.
 
 **The live check** (the owner, in two browsers or a browser and a phone):
-- the `Online` button is on `Setup`; create a room, a second device joins by the code;
+- the `Online` button is on `Setup`; create a room, a second device joins by the code, or (the room made `Open`) taps it in **Open rooms**; the server must be the build that knows `list_rooms` and the `public` flag (an older one keeps every room private and answers the list with an error);
 - take seats, the host starts, a hand is played to its end and the ready check passes;
 - redeploy the server while connected: the clients get `room_gone`;
 - an `Origin` that is not in `BAGI_ROOMS_ORIGINS` is refused.
