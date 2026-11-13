@@ -27,9 +27,9 @@ Pass is as good: a person who claimed must discard.) Nothing is assumed about th
 
 The coordinates are in pixels from the top left of the canvas at the viewport VIEWPORT (1280x720 is the design size of the table,
 kViewWidth x kViewHeight of Table/TableLayout.h, so one design unit is one pixel; at 640x480 the viewer's hand is cut off at the bottom):
-  PLATE_REGION     the Plate of config/nodes/MahjongSetup.xml: 640 wide (x 320..960), at most 528 high (centred: y 96..624).
-  START_CLICK      the middle of Start: the last item of ButtonRow, the last row of the plate (padding 16, 64 high: y 544..608, middle
-                   576). The row inside the plate is x 336..944 and holds Continue (flex 1.5, hidden at a first start), Online (1.1,
+  PLATE_REGION     the Plate of config/nodes/MahjongSetup.xml: 640 wide (x 320..960), at most 552 high (centred: y 84..636).
+  START_CLICK      the middle of Start: the last item of ButtonRow, the last row of the plate (padding 16, 64 high: y 556..620, middle
+                   588). The row inside the plate is x 336..944 and holds Continue (flex 1.5, hidden at a first start), Online (1.1,
                    there only when MahjongOnlineConfig.xml names a server) and Start (1), 8 apart, so Start is at best x 704..944 (no
                    Online, Continue shown) and at most 658..944 (Online, no Continue) whichever of them are there: x 860 is in it always.
   CONTINUE_CLICK   the middle of Continue, the first of the row: x 336..582 with Online and 336..696 without, so x 459 is in it always.
@@ -79,9 +79,9 @@ def load_engine_smoke():
 engine = load_engine_smoke()
 
 VIEWPORT = (1280, 720)
-PLATE_REGION = (320, 96, 640, 528)  # x, y, width, height of the Plate of Setup
-START_CLICK = (860.0, 576.0)
-CONTINUE_CLICK = (459.0, 576.0)
+PLATE_REGION = (320, 84, 640, 552)  # x, y, width, height of the Plate of Setup
+START_CLICK = (860.0, 588.0)
+CONTINUE_CLICK = (459.0, 588.0)
 HAND_TILE_CLICK = (95.0, 683.0)
 # The first two rows of the action buttons, three of 132 x 56 per row, left to right; the order puts the second place first (the
 # Pass of a window with one claim: Chow or Pung), then the third, then the first and the second row.

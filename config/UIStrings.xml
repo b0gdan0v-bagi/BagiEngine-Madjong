@@ -256,6 +256,8 @@
         <string key="setup.closeMark" text="×"/>
         <string key="setup.language" text="Language"/>
         <string key="setup.hands" text="Hands"/>
+        <string key="setup.seats" text="Seats"/>
+        <string key="setup.match" text="Match"/>
         <string key="setup.hints" text="Hints"/>
         <string key="setup.off" text="Off"/>
         <string key="setup.seat1" text="Seat 1"/>
@@ -621,6 +623,8 @@
         <string key="setup.closeMark" text="×"/>
         <string key="setup.language" text="Язык"/>
         <string key="setup.hands" text="Раздачи"/>
+        <string key="setup.seats" text="Игроки"/>
+        <string key="setup.match" text="Партия"/>
         <string key="setup.hints" text="Помощь"/>
         <string key="setup.off" text="Выкл"/>
         <string key="setup.seat1" text="Место 1"/>

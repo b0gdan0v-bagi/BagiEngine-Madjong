@@ -476,9 +476,12 @@ namespace BECore::Mahjong::Tests {
         auto setup = Canvas("Setup");
         ASSERT_TRUE(setup);
 
-        // The design size: the plate of 528, the title band of 56 (the close cross is a touch target in it), the rows of 64 and a Start of 64
+        // The design size: the plate of 552, the title band of 56 (the close cross is a touch target in it), the two groups with a caption of 24 over
+        // their rows of 64 and a Start of 64
         LayOutInWindow(*setup, DesignWindow());
-        EXPECT_NEAR(Element("Setup", "Plate")->rect.h, 528.0f, 0.01f);
+        EXPECT_NEAR(Element("Setup", "Plate")->rect.h, 552.0f, 0.01f);
+        EXPECT_NEAR(Element("Setup", "SeatsGroup")->rect.h, 280.0f, 0.01f);
+        EXPECT_NEAR(Element("Setup", "MatchGroup")->rect.h, 88.0f, 0.01f);
         EXPECT_NEAR(Element("Setup", "TitleRow")->rect.h, 56.0f, 0.01f);
         for (const char* row : {"SeatRow0", "SeatRow1", "SeatRow2", "SeatRow3", "HandsRow", "Start"}) {
             EXPECT_NEAR(Element("Setup", row)->rect.h, 64.0f, 0.01f) << row;
@@ -495,6 +498,7 @@ namespace BECore::Mahjong::Tests {
         for (const char* row : {"SeatRow0", "HandsRow", "Start"}) {
             EXPECT_GT(Element("Setup", row)->rect.h, 0.0f) << row << ": nothing is dropped";
         }
+        EXPECT_TRUE(Element("Setup", "SeatsCaptionRow")->rect.IsEmpty()) << "the captions of the groups give their 48 units to the rows here";
     }
 
     TEST_F(MahjongTouchSizeTest, ThePageOptionsHasRulesBesideBackAndRulesGivesWayToThePagesOfTheRules) {

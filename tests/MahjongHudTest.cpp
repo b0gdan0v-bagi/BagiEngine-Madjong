@@ -674,6 +674,8 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongHudTest, TheSeatChoiceFollowsTheModalAnatomyAndTheGridGaps) {
         constexpr float kRowPadding = 4.0f;  // the rows of 64 round a 56 segment: rows of 72 would not leave room for the plate
+        constexpr float kRowHeight = 64.0f;
+        constexpr float kGroupCaptionHeight = 24.0f;
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         _game->OpenSetup();
         Draw();
@@ -692,60 +694,74 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(title->rect.h, kSetupTitleHeight);
         EXPECT_EQ(title->rect.w, plate.w - 2 * kModalPadding);
 
-        // The rows from the top: the four seats and the number of hands; each a raised band with a muted caption and a group
-        struct Row {
-            std::string row, caption, group;
-            std::vector<std::string> segments;
+        // Two raised groups under the title band, each with a caption of its own: the four seats, then the number of hands. The rows of a group
+        // lie against each other (the group is the card, a row has no colour); each row has a muted caption and a choice group.
+        struct Group {
+            std::string name, caption;
+            std::vector<std::string> rows;
         };
-        std::vector<Row> rows;
-        for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            rows.push_back({Format("SeatRow{}", seat).c_str(),
-                            Format("SeatCaption{}", seat).c_str(),
-                            Format("SeatKind{}", seat).c_str(),
-                            {Format("Seat{}Person", seat).c_str(), Format("Seat{}Computer", seat).c_str()}});
-        }
-        rows.push_back({"HandsRow", "HandsCaption", "HandsChoice", {"Hands16", "Hands8"}});
-
+        const std::vector<Group> groups{{"SeatsGroup", "SeatsCaption", {"SeatRow0", "SeatRow1", "SeatRow2", "SeatRow3"}}, {"MatchGroup", "MatchCaption", {"HandsRow"}}};
         const Rect* above = &title->rect;
-        for (const Row& entry : rows) {
-            SCOPED_TRACE(entry.row);
-            const UIElement* row = Element("Setup", entry.row.c_str());
-            ASSERT_NE(row, nullptr);
-            EXPECT_TRUE(SameColor(row->color, PaletteColor("surfaceRaised")));
-            EXPECT_EQ(GapBelow(*above, row->rect), kModalGap);
-            above = &row->rect;
-
-            const UIElement* caption = Element("Setup", entry.caption.c_str());
-            ASSERT_NE(caption, nullptr);
-            EXPECT_TRUE(SameColor(caption->GetComponent<UITextComponent>()->textColor, PaletteColor("textMuted")));
-            EXPECT_EQ(caption->rect.x, row->rect.x + kRowPadding);
-            const UIElement* group = Element("Setup", entry.group.c_str());
+        for (const Group& entry : groups) {
+            SCOPED_TRACE(entry.name);
+            const UIElement* group = Element("Setup", entry.name.c_str());
             ASSERT_NE(group, nullptr);
-            EXPECT_EQ(group->rect.x, caption->rect.x + caption->rect.w + kModalGap);
-            const UIElement* level = Element("Setup", Format("SeatLevel{}", entry.row.back() - '0').c_str());
-            const bool hasLevel = entry.row != "HandsRow" && level != nullptr && !level->rect.IsEmpty();
-            if (hasLevel) {
-                EXPECT_EQ(group->rect.x + group->rect.w + kModalGap, level->rect.x) << "the dropdown of a computer seat follows its group";
-                EXPECT_EQ(level->rect.x + level->rect.w, row->rect.x + row->rect.w - kRowPadding) << "and ends inside the row's padding";
-                EXPECT_EQ(level->rect.y, row->rect.y + kRowPadding);
-                EXPECT_EQ(level->rect.y + level->rect.h, row->rect.y + row->rect.h - kRowPadding);
-                EXPECT_TRUE(SameColor(level->color, PaletteColor("neutral")));
-            } else {
-                EXPECT_EQ(group->rect.x + group->rect.w, row->rect.x + row->rect.w - kRowPadding) << "the group ends inside the row's padding";
-            }
-            EXPECT_EQ(group->rect.y, row->rect.y + kRowPadding);
-            EXPECT_EQ(group->rect.y + group->rect.h, row->rect.y + row->rect.h - kRowPadding);
+            EXPECT_TRUE(SameColor(group->color, PaletteColor("surfaceRaised")));
+            EXPECT_EQ(GapBelow(*above, group->rect), kModalGap);
+            above = &group->rect;
+            const UIElement* heading = Element("Setup", (entry.caption + "Row").c_str());
+            ASSERT_NE(heading, nullptr);
+            EXPECT_EQ(heading->rect.y, group->rect.y);
+            EXPECT_EQ(heading->rect.h, kGroupCaptionHeight);
+            const UIElement* word = Element("Setup", entry.caption.c_str());
+            ASSERT_NE(word, nullptr);
+            EXPECT_TRUE(SameColor(word->GetComponent<UITextComponent>()->textColor, PaletteColor("textMuted")));
+            EXPECT_GT(word->rect.x, heading->rect.x) << "the word is set in from the edge of the group";
 
-            for (const std::string& name : entry.segments) {
-                const UIElement* element = Element("Setup", name.c_str());
-                const auto* segment = element != nullptr ? element : nullptr;
-                ASSERT_NE(segment, nullptr) << name;
-                EXPECT_TRUE(SameColor(segment->selectedColor, PaletteColor("primary"))) << name << ": the chosen segment is the confirming colour";
-                EXPECT_TRUE(SameColor(segment->color, PaletteColor("neutral"))) << name << ": the others are neutral";
-                EXPECT_GE(segment->rect.x, group->rect.x);
-                EXPECT_LE(segment->rect.x + segment->rect.w, group->rect.x + group->rect.w);
-                EXPECT_EQ(segment->rect.h, group->rect.h);
+            const Rect* rowAbove = &heading->rect;
+            for (const std::string& rowName : entry.rows) {
+                SCOPED_TRACE(rowName);
+                const UIElement* row = Element("Setup", rowName.c_str());
+                ASSERT_NE(row, nullptr);
+                EXPECT_EQ(GapBelow(*rowAbove, row->rect), 0.0f) << "the rows of a group lie against each other";
+                rowAbove = &row->rect;
+                EXPECT_EQ(row->rect.h, kRowHeight);
+                EXPECT_EQ(row->rect.x, group->rect.x);
+                EXPECT_EQ(row->rect.w, group->rect.w);
+
+                const bool hands = rowName == "HandsRow";
+                const char index = rowName.back();
+                const UIElement* caption = Element("Setup", hands ? "HandsCaption" : Format("SeatCaption{}", index).c_str());
+                ASSERT_NE(caption, nullptr);
+                EXPECT_TRUE(SameColor(caption->GetComponent<UITextComponent>()->textColor, PaletteColor("textMuted")));
+                EXPECT_EQ(caption->rect.x, row->rect.x + kRowPadding);
+                const UIElement* choice = Element("Setup", hands ? "HandsChoice" : Format("SeatKind{}", index).c_str());
+                ASSERT_NE(choice, nullptr);
+                EXPECT_EQ(choice->rect.x, caption->rect.x + caption->rect.w + kModalGap);
+                const UIElement* level = hands ? nullptr : Element("Setup", Format("SeatLevel{}", index).c_str());
+                if (level != nullptr && !level->rect.IsEmpty()) {
+                    EXPECT_EQ(choice->rect.x + choice->rect.w + kModalGap, level->rect.x) << "the dropdown of a computer seat follows its group";
+                    EXPECT_EQ(level->rect.x + level->rect.w, row->rect.x + row->rect.w - kRowPadding) << "and ends inside the row's padding";
+                    EXPECT_EQ(level->rect.y, row->rect.y + kRowPadding);
+                    EXPECT_EQ(level->rect.y + level->rect.h, row->rect.y + row->rect.h - kRowPadding);
+                    EXPECT_TRUE(SameColor(level->color, PaletteColor("neutral")));
+                } else {
+                    EXPECT_EQ(choice->rect.x + choice->rect.w, row->rect.x + row->rect.w - kRowPadding) << "the group ends inside the row's padding";
+                }
+                EXPECT_EQ(choice->rect.y, row->rect.y + kRowPadding);
+                EXPECT_EQ(choice->rect.y + choice->rect.h, row->rect.y + row->rect.h - kRowPadding);
+
+                EXPECT_FALSE(choice->children.empty());
+                for (const auto& segment : choice->children) {
+                    ASSERT_NE(segment, nullptr);
+                    EXPECT_TRUE(SameColor(segment->selectedColor, PaletteColor("primary"))) << "the chosen segment is the confirming colour";
+                    EXPECT_TRUE(SameColor(segment->color, PaletteColor("neutral"))) << "the others are neutral";
+                    EXPECT_GE(segment->rect.x, choice->rect.x);
+                    EXPECT_LE(segment->rect.x + segment->rect.w, choice->rect.x + choice->rect.w);
+                    EXPECT_EQ(segment->rect.h, choice->rect.h);
+                }
             }
+            EXPECT_EQ(group->rect.y + group->rect.h, rowAbove->y + rowAbove->h) << "the group ends with its last row";
         }
 
         EXPECT_EQ(Element("Setup", "OptionsRow"), nullptr) << "the page Options is opened from the HUD, not from the seat choice";
@@ -762,6 +778,41 @@ namespace BECore::Mahjong::Tests {
         EXPECT_NEAR(start->rect.x + start->rect.w, plate.x + plate.w - kModalPadding, kRowTolerance);
         EXPECT_EQ(start->rect.y + start->rect.h, plate.y + plate.h - kModalPadding) << "the plate holds Start and nothing more";
         EXPECT_LE(plate.y + plate.h, kViewHeight);
+    }
+
+    TEST_F(MahjongHudTest, TheSeatChoiceIsACardOfTwoGroupsWithACaptionEachInBothLanguages) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        _game->OpenSetup();
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            Draw();
+            Canvas("Setup")->UpdateLayout(kViewWidth, kViewHeight);
+            const UIStrings& strings = CoreManager::GetUIStrings();
+            EXPECT_EQ(Text("Setup", "SeatsCaption"), Tr(strings, "setup.seats").c_str());
+            EXPECT_EQ(Text("Setup", "MatchCaption"), Tr(strings, "setup.match").c_str());
+            EXPECT_NE(Text("Setup", "SeatsCaption"), "setup.seats") << "the key exists in this language";
+            EXPECT_NE(Text("Setup", "MatchCaption"), "setup.match");
+
+            const UIElement* seats = Element("Setup", "SeatsGroup");
+            const UIElement* match = Element("Setup", "MatchGroup");
+            const UIElement* plate = Element("Setup", "Plate");
+            ASSERT_TRUE(seats != nullptr && match != nullptr && plate != nullptr);
+            EXPECT_GT(plate->box.cornerRadius.topLeft, seats->box.cornerRadius.topLeft) << "the card is rounder than the groups on it";
+            for (const UIElement* group : {seats, match}) {
+                EXPECT_EQ(group->rect.x, plate->rect.x + kModalPadding);
+                EXPECT_EQ(group->rect.w, plate->rect.w - 2 * kModalPadding);
+                EXPECT_GT(group->box.borderWidth, 0.0f);
+            }
+            // Four seats in the first group, the hands in the second, and the seat rows are not in the second
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                const UIElement* row = Element("Setup", Format("SeatRow{}", seat).c_str());
+                ASSERT_NE(row, nullptr);
+                EXPECT_GE(row->rect.y, seats->rect.y);
+                EXPECT_LE(row->rect.y + row->rect.h, seats->rect.y + seats->rect.h);
+            }
+            EXPECT_GE(Element("Setup", "HandsRow")->rect.y, match->rect.y);
+            EXPECT_LE(Element("Setup", "HandsRow")->rect.y + Element("Setup", "HandsRow")->rect.h, match->rect.y + match->rect.h);
+        });
     }
 
     TEST_F(MahjongHudTest, TheSelectedSegmentIsDrawnInTheFillOfThePrimaryRole) {
