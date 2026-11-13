@@ -4,6 +4,7 @@
 #include "StringsTestSupport.h"
 
 #include <Mahjong/Table/HintCard.h>
+#include <string>
 #include <vector>
 
 /**
