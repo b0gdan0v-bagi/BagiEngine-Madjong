@@ -10,8 +10,9 @@ coach): "is it better, and by how much" is answered by a number with an interval
 large: the arena reads about 16 points a hand of half-width (the 95 percent interval) for Normal against three random seats on those
 60 seeds, and about 4.7 on 1000 seeds, while the effects a lever of a computer player has are +1 to +4 points a hand (the Hard-lever
 measurements of the entry `mahjong-computer-difficulty`: even an oracle that cheats gains only about that much against three Normal
-seats). A Release build plays 1000 seeds (4000 hands for a focus player) in about 4 seconds, and the paired rows (below) make a
-difference of a few points visible.
+seats; the oracle ladder of `bot-search.md` measured it again with the arena's own oracle players: +2.9 points a hand for the
+defence oracle, +4.5 for the acceptance oracle, +3.7 for exact hands in an 8-world search, over the same walls). A Release build plays 1000 seeds (4000 hands for a focus player) in about 4 seconds, and the paired rows
+(below) make a difference of a few points visible.
 
 The program only measures. It reads `src/Mahjong/Game/` and changes nothing there; the numbers of a level are the owner's decision.
 
