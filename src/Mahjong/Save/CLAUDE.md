@@ -17,10 +17,12 @@ Plain C++ with reflected states: `MatchSave.*` has no scene and no disk, `MatchS
 
 - The session's sink is a `MatchRecorder`: it forwards every event to the `MatchLogWriter` and keeps the events of the current match. **No file is written from that hook.**
 - `MahjongGame::FlushSave()` writes, called by `Stop()` and once per frame by `MahjongHudComponent` (`SceneUpdateEvent`). A burst of computer steps is one write; "after every action" means "at the end of the frame that made it". A flush is cheap even for a 16-hand match, so there is no throttle.
+- Each write and delete calls the engine's `NotifySaveChanged()` (inside `SaveGameService`), which flushes the folder to IndexedDB soon, at once when the tab is hidden: the last complete save is the one on disk at `pagehide`. The game adds nothing.
 - It writes only a match that **is being recorded** (`IsRecording()`, not the counter alone: an unrecorded background match moves the counter too); a finished match deletes the slot, so it is never offered. The prefs are written only when they differ from the last copy written or loaded. A failed write is one warning, not retried until something changes.
 
 ## Start and Continue
 
+- `Start()` reads the storage state once (`MatchSaveStorage()`). **`NotRemembered` (a private window, IndexedDB refused) is saving off**: the store gets no folder, so nothing is written, read or offered, and the player is not promised a `Continue` the next visit cannot keep. `SavesAreRemembered()` ("is my choice kept?": saving on and the storage remembers) is what the consent of the match upload will pass as `remembered`.
 - `Start()` opens the store, applies the prefs (a prefs slot that does not check is one warning and none of it applies), then tries `match`: parse, replay on a scratch `Match`, `ResumeMatch` with the recorder on. **On success the saved match is the table behind the open `Setup` and `CanContinue()` is true**; nothing is dealt and the slot is not rewritten.
 - Otherwise (no slot: silent; a broken, foreign, newer or non-replaying slot: one warning, the file stays) a random match is dealt **unrecorded** (`BeginMatch(seed, false)`), so a match behind the panel can never overwrite the saved one.
 - Any match begun by `StartMatch` (`Start` of the panel, `Reset()`, a control `reset`) is recorded, clears `CanContinue()` and replaces the slot at its first flush. `ContinueMatch()` closes `Setup` and the rules; closing the panel any other way also drops the offer.

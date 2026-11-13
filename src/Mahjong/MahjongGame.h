@@ -42,7 +42,8 @@ namespace BECore::Mahjong {
      * match begun by `StartMatch` (and passes every one on to the match log writer), and `FlushSave()` writes the `match` slot (and the
      * `settings` slot, the choices of `Setup`) when something changed; `MahjongHudComponent` calls it once per frame (a `SceneUpdateEvent`) and `Stop()` calls it, so a burst
      * of computer steps is one write. `Start()` reads the prefs and offers a saved match that replays (`CanContinue()`, taken by
-     * `ContinueMatch()`); the background match it deals otherwise is not recorded, so it cannot overwrite the saved one.
+     * `ContinueMatch()`); the background match it deals otherwise is not recorded, so it cannot overwrite the saved one. A browser whose
+     * storage is not remembered (`NotRemembered`: a private window) is saving off: nothing is written or read, and `Continue` is not offered.
      */
     class MahjongGame : public IGame {
         BE_CLASS(MahjongGame)
@@ -74,6 +75,10 @@ namespace BECore::Mahjong {
         }
         /// Closes `Setup` (and the rules) and plays the saved match on. Ignored, false, when `CanContinue()` is not true.
         bool ContinueMatch();
+
+        /// Whether what the game saves is there at the next visit: saving is on and the storage keeps it (false with saving off for any
+        /// reason: no folder, a folder that cannot be made, a browser that does not remember). The storage state is read at `Start()`.
+        [[nodiscard]] bool SavesAreRemembered() const;
 
         /// The match the table shows: the display copy of the room's table while `IsOnlineTable()`, else the local one (`GetLocalMatch()`).
         /// Started by `Start()` / `Reset()` / `StartMatch`, `NotStarted` before the game is first started.
@@ -328,6 +333,8 @@ namespace BECore::Mahjong {
         /// `StartMatch` with `record` saying whether the match is kept for the save.
         MatchStatus BeginMatch(uint32_t seed, bool record);
         MatchStatus BeginRandomMatch(bool record);
+        /// The folder the store opens: `MatchSaveDirectory()`, or none while the storage is not remembered (nothing is saved or offered).
+        const std::filesystem::path& SaveDirectory() const;
         /// The saved choices of `Setup` into the game; one warning for a slot that cannot be used.
         void ApplySavedPrefs();
         /// The `online` slot into `_storedOnline`; one warning for a slot that cannot be used.
@@ -358,8 +365,9 @@ namespace BECore::Mahjong {
         MatchUploader _upload;    // forwards to _log
         MatchRecorder _recorder;  // the session's sink; forwards to _upload
         MatchSaveStore _store;
-        uint64_t _savedCounter = 0;    // the recorder's counter at the last write of the match slot
-        MahjongPrefsSave _savedPrefs;  // what the prefs slot holds (the defaults while there is none)
+        SaveStorageState _storage = SaveStorageState::NotApplicable;  // `MatchSaveStorage()` at the last `Start()`
+        uint64_t _savedCounter = 0;                                   // the recorder's counter at the last write of the match slot
+        MahjongPrefsSave _savedPrefs;                                 // what the prefs slot holds (the defaults while there is none)
         bool _canContinue = false;
         RoomClientSettings _onlineSettings;
         OnlineValues _storedOnline;
