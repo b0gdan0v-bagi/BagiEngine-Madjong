@@ -124,6 +124,26 @@ namespace BECore::Mahjong::Arena {
         EXPECT_EQ(knobs.name, "oracle-defence:searchWorlds=2,skipClaimPercent=10");
         EXPECT_EQ(knobs.profile.searchWorlds, 2);
         EXPECT_EQ(knobs.profile.skipClaimPercent, 10);
+        // The search oracles start from the shipped budget and the knobs override it.
+        for (const auto& [spec, kind] : {std::pair<const char*, OracleKind>{"oracle-hands", OracleKind::Hands}, {"oracle-whole", OracleKind::WholeHand}}) {
+            const ArenaPlayer player = Player(spec);
+            EXPECT_EQ(player.oracle, kind) << spec;
+            EXPECT_EQ(player.name, spec);
+            EXPECT_EQ(player.profile.searchWorlds, kSearchWorlds);
+            EXPECT_EQ(player.profile.searchCandidates, kSearchCandidates);
+            EXPECT_EQ(player.profile.searchMargin, kSearchMargin);
+            EXPECT_EQ(player.profile.skipClaimPercent, kNormalProfile.skipClaimPercent);
+        }
+        const ArenaPlayer wide = Player("oracle-hands:searchWorlds=8,searchMargin=10");
+        EXPECT_EQ(wide.profile.searchWorlds, 8);
+        EXPECT_EQ(wide.profile.searchCandidates, kSearchCandidates);
+        EXPECT_EQ(wide.profile.searchMargin, 10);
+        EXPECT_EQ(wide.name, "oracle-hands:searchWorlds=8,searchMargin=10");
+        EXPECT_EQ(Player("oracle-whole:searchCandidates=2").profile.searchCandidates, kSearchMinCandidates);
+        // A search oracle with no worlds or with one candidate would be plain Normal.
+        EXPECT_TRUE(Contains(ErrorOf("oracle-hands:searchWorlds=0"), "oracle-hands:searchWorlds=0"));
+        EXPECT_TRUE(Contains(ErrorOf("oracle-whole:searchCandidates=1"), "plain Normal"));
+        EXPECT_TRUE(Contains(ErrorOf("oracle-whole:searchCandidates=0"), "plain Normal"));
         // An ordinary player is no oracle.
         for (const char* spec : {"normal", "easy:skipClaimPercent=20", "random", "7"}) {
             EXPECT_EQ(Player(spec).oracle, OracleKind::None) << spec;

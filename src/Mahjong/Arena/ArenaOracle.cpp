@@ -8,9 +8,10 @@ namespace BECore::Mahjong::Arena {
 
     namespace {
 
-        /// Normal's answer on `view` by `profile`; a search decision is handed back and its worlds are played through `worlds`, or one by
-        /// one when there is no loop (the same draws and the same answer as the plain chooser).
-        HandAction AskNormal(const TableView& view, MahjongRng& rng, const LevelProfile& profile, const WorldLoop* worlds) {
+        /// Normal's answer on `view` by `profile`; a search decision is handed back, given `source` for its worlds when there is one, and
+        /// its worlds are played through `worlds`, or one by one when there is no loop (the same draws and the same answer as the plain
+        /// chooser).
+        HandAction AskNormal(const TableView& view, MahjongRng& rng, const LevelProfile& profile, const WorldLoop* worlds, WorldSource source = {}) {
             SearchHandoff handoff;
             HandAction action = HandAction::MakePass();
             switch (view.phase) {
@@ -26,6 +27,10 @@ namespace BECore::Mahjong::Arena {
             }
             if (!handoff.run.has_value()) {
                 return action;
+            }
+            if (source) {
+                [[maybe_unused]] const bool taken = handoff.run->UseWorldSource(eastl::move(source));
+                ASSERT(taken, "an oracle's run did not take its source of worlds");
             }
             if (worlds != nullptr) {
                 handoff.run->RunWorlds(*worlds);
@@ -89,6 +94,29 @@ namespace BECore::Mahjong::Arena {
 
     }  // namespace
 
+    WorldSource MakeTrueWorlds(const HandModel& hand, bool wallOrderKnown) {
+        const std::shared_ptr<const HandState> real = std::make_shared<const HandState>(hand.Capture());
+        return [real, wallOrderKnown](const TableView&, MahjongRng& rng) -> std::optional<HandModel> {
+            HandState world = *real;
+            if (!wallOrderKnown) {
+                const size_t looseCount = world.loose.size();
+                const size_t liveCount = world.live.size();
+                eastl::vector<Tile> wall = world.loose;
+                wall.insert(wall.end(), world.live.begin(), world.live.end());
+                wall.insert(wall.end(), world.dead.begin(), world.dead.end());
+                rng.Shuffle(wall);
+                world.loose.assign(wall.begin(), wall.begin() + looseCount);
+                world.live.assign(wall.begin() + looseCount, wall.begin() + looseCount + liveCount);
+                world.dead.assign(wall.begin() + looseCount + liveCount, wall.end());
+            }
+            std::expected<HandModel, eastl::string> restored = HandModel::Restore(eastl::move(world));
+            if (!restored.has_value()) {
+                return std::nullopt;
+            }
+            return eastl::move(*restored);
+        };
+    }
+
     TableView TrueAcceptanceView(const HandModel& hand, Seat seat) {
         TableView view = MakeTableView(hand, seat);
         TileCounts drawable{};
@@ -114,6 +142,7 @@ namespace BECore::Mahjong::Arena {
             }
             case OracleKind::Hands:
             case OracleKind::WholeHand:
+                return AskNormal(MakeTableView(hand, seat), rng, player.profile, worlds, MakeTrueWorlds(hand, player.oracle == OracleKind::WholeHand));
             case OracleKind::None:
                 break;
         }

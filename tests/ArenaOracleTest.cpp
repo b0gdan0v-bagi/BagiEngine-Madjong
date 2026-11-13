@@ -1,8 +1,10 @@
 #include "ComputerTestSupport.h"
 
+#include <EASTL/sort.h>
 #include <Mahjong/Arena/ArenaHand.h>
 #include <Mahjong/Arena/ArenaOracle.h>
 #include <Mahjong/Arena/ArenaPlayer.h>
+#include <Mahjong/Arena/ArenaWorlds.h>
 #include <Mahjong/Game/ComputerClaim.h>
 #include <Mahjong/Game/ComputerTurn.h>
 #include <Mahjong/Game/HandShape.h>
@@ -12,7 +14,9 @@
  * The oracle players of the arena (`src/Mahjong/Arena/ArenaOracle.h`): the view of `oracle-acceptance` differs from the real one only in
  * `visible` and counts exactly the copies that can still be drawn; the oracles choose listed actions only and play whole hands;
  * `oracle-defence` is Normal's action except where Normal's discard wins for a declared opponent and a safe discard of equal shanten
- * exists. Pure logic: no engine services; a few seconds in Debug.
+ * exists. The search oracles: the worlds of `oracle-hands` keep the opponents' hands and the wall's tiles and reorder the wall, those of
+ * `oracle-whole` are the real table, a decision is listed and the same at any loop over its worlds. Pure logic: no engine services; about
+ * 20 s in Debug (the search oracles playing hands are the dear part).
  */
 namespace BECore::Mahjong::Arena {
 
@@ -137,6 +141,49 @@ namespace BECore::Mahjong::Arena {
         HandAction OracleDefence(const HandModel& hand, Seat seat, uint32_t rngSeed) {
             MahjongRng rng(rngSeed);
             return ChooseOracle(hand, seat, Player("oracle-defence"), rng, nullptr);
+        }
+
+        ::testing::AssertionResult SameView(const TableView& real, const TableView& other) {
+            if (real.visible != other.visible) {
+                return ::testing::AssertionFailure() << "visible differs";
+            }
+            return SameButVisible(real, other);
+        }
+
+        /// The kinds of the three lists of the wall together, sorted.
+        eastl::vector<Tile> WallTiles(const HandModel& hand) {
+            eastl::vector<Tile> tiles = hand.GetWall().LiveTiles();
+            tiles.insert(tiles.end(), hand.GetWall().LooseTiles().begin(), hand.GetWall().LooseTiles().end());
+            tiles.insert(tiles.end(), hand.GetWall().DeadWall().begin(), hand.GetWall().DeadWall().end());
+            eastl::sort(tiles.begin(), tiles.end());
+            return tiles;
+        }
+
+        /// The positions of the hands played (every action of a hand with Normal on the seats), the actor's own view a decision of a
+        /// search: `phase` Discard or Claim, and a search run that would begin on it with the shipped budget.
+        eastl::vector<Position> SearchedPositions(Phase phase, size_t count) {
+            LevelProfile search = kNormalProfile;
+            search.searchWorlds = kSearchWorlds;
+            search.searchCandidates = kSearchCandidates;
+            search.searchMargin = kSearchMargin;
+            eastl::vector<Position> found;
+            for (const Position& position : Positions(kStateSeedCount, 1)) {
+                const TableView view = MakeTableView(position.hand, position.actor);
+                MahjongRng rng(position.rngSeed);
+                const bool searched = view.phase == phase && (phase == Phase::Discard ? BeginTurnSearch(view, rng, search) : BeginClaimSearch(view, rng, search)).has_value();
+                if (searched && found.size() < count) {
+                    found.push_back(position);
+                }
+            }
+            return found;
+        }
+
+        /// A robbed-kong window: seat 1 upgrades its pung of 5p and seat 2, declared and waiting on it, may rob it.
+        HandModel RobKongModel() {
+            HandModel hand = UpgradeModel({kSeat2});
+            EXPECT_TRUE(hand.Apply(kSeat1, HandAction::MakeUpgradeKong(T("5p"))).has_value());
+            EXPECT_EQ(hand.GetPhase(), Phase::RobKong);
+            return hand;
         }
 
     }  // namespace
@@ -280,6 +327,124 @@ namespace BECore::Mahjong::Arena {
             EXPECT_EQ(action.declareCalling, normal.declareCalling);
         }
         EXPECT_GT(replaced, 0) << "the defence never moved a discard in the hands played";
+    }
+
+    TEST(ArenaOracleTest, TheWorldsOfTheHandsOracleKeepTheOpponentsHandsAndOnlyReorderTheWall) {
+        eastl::vector<Position> positions = Positions(kStateSeedCount, kStateStride);
+        positions.push_back({RobKongModel(), kSeat2, 1});
+        bool sawRobKong = false;
+        int reordered = 0;
+        for (const Position& position : positions) {
+            const HandModel& real = position.hand;
+            const TableView view = MakeTableView(real, position.actor);
+            sawRobKong = sawRobKong || view.phase == Phase::RobKong;
+            const WorldSource source = MakeTrueWorlds(real, false);
+            MahjongRng first(position.rngSeed);
+            MahjongRng second(position.rngSeed + 1);
+            const std::optional<HandModel> world = source(view, first);
+            const std::optional<HandModel> other = source(view, second);
+            ASSERT_TRUE(world.has_value());
+            ASSERT_TRUE(other.has_value());
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                const PlayerHand& a = real.GetHand(seat);
+                const PlayerHand& b = world->GetHand(seat);
+                EXPECT_EQ(a.concealed, b.concealed) << "seat " << seat;
+                EXPECT_EQ(a.bonus, b.bonus);
+                EXPECT_EQ(a.callingDeclared, b.callingDeclared);
+                EXPECT_EQ(a.callingAtDiscardCount, b.callingAtDiscardCount);
+                EXPECT_EQ(a.discardCount, b.discardCount);
+                ASSERT_EQ(a.melds.size(), b.melds.size());
+                for (size_t index = 0; index < a.melds.size(); ++index) {
+                    EXPECT_EQ(a.melds[index].kind, b.melds[index].kind);
+                    EXPECT_EQ(a.melds[index].first, b.melds[index].first);
+                    EXPECT_EQ(a.melds[index].concealed, b.melds[index].concealed);
+                }
+            }
+            EXPECT_EQ(WallTiles(real), WallTiles(*world));
+            EXPECT_EQ(real.GetWall().LiveCount(), world->GetWall().LiveCount());
+            EXPECT_EQ(real.GetWall().LooseCount(), world->GetWall().LooseCount());
+            EXPECT_EQ(real.GetWall().DeadWallSize(), world->GetWall().DeadWallSize());
+            EXPECT_EQ(real.Discards().size(), world->Discards().size());
+            EXPECT_EQ(real.GetPhase(), world->GetPhase());
+            EXPECT_EQ(real.CurrentSeat(), world->CurrentSeat());
+            EXPECT_TRUE(SameView(view, MakeTableView(*world, position.actor)));
+            reordered += world->GetWall().LiveTiles() != other->GetWall().LiveTiles() ? 1 : 0;
+        }
+        EXPECT_TRUE(sawRobKong);
+        EXPECT_EQ(reordered, static_cast<int>(positions.size())) << "two rngs gave one order of the wall";
+    }
+
+    TEST(ArenaOracleTest, TheWorldsOfTheWholeHandOracleAreTheRealTable) {
+        eastl::vector<Position> positions = Positions(kStateSeedCount, kStateStride);
+        positions.push_back({RobKongModel(), kSeat2, 1});
+        for (const Position& position : positions) {
+            const TableView view = MakeTableView(position.hand, position.actor);
+            const WorldSource source = MakeTrueWorlds(position.hand, true);
+            MahjongRng first(position.rngSeed);
+            MahjongRng second(position.rngSeed + 1);
+            const std::optional<HandModel> world = source(view, first);
+            ASSERT_TRUE(world.has_value());
+            EXPECT_EQ(Snapshot(*world), Snapshot(position.hand));
+            EXPECT_EQ(world->GetWall().LiveTiles(), position.hand.GetWall().LiveTiles());
+            EXPECT_EQ(world->GetWall().LooseTiles(), position.hand.GetWall().LooseTiles());
+            EXPECT_EQ(world->GetWall().DeadWall(), position.hand.GetWall().DeadWall());
+            EXPECT_TRUE(SameView(view, MakeTableView(*world, position.actor)));
+            // The world's own rng is not read.
+            EXPECT_EQ(first.GetSeed(), position.rngSeed);
+            EXPECT_EQ(source(view, second)->GetWall().LiveTiles(), world->GetWall().LiveTiles());
+        }
+    }
+
+    TEST(ArenaOracleTest, ASearchDecisionOfAnOracleIsListedAndTheSameAtAnyWorldLoop) {
+        constexpr int kPositionsOfAKind = 3;
+        constexpr int kThreadCounts[] = {2, 5};
+        for (const char* spec : {"oracle-hands", "oracle-whole"}) {
+            const ArenaPlayer oracle = Player(spec);
+            EXPECT_EQ(oracle.profile.searchWorlds, kSearchWorlds);
+            EXPECT_EQ(oracle.profile.searchCandidates, kSearchCandidates);
+            EXPECT_EQ(oracle.profile.searchMargin, kSearchMargin);
+            for (const Phase phase : {Phase::Discard, Phase::Claim}) {
+                const eastl::vector<Position> found = SearchedPositions(phase, kPositionsOfAKind);
+                EXPECT_EQ(found.size(), static_cast<size_t>(kPositionsOfAKind)) << spec << " " << Name(phase);
+                for (const Position& position : found) {
+                    const TableView view = MakeTableView(position.hand, position.actor);
+                    MahjongRng serialRng(position.rngSeed);
+                    const HandAction serial = ChooseOracle(position.hand, position.actor, oracle, serialRng, nullptr);
+                    EXPECT_TRUE(Has(view.legal, serial)) << spec;
+                    const uint32_t nextDraw = serialRng.Below(kRngStride);
+                    for (const int threads : kThreadCounts) {
+                        WorldThreads pool(threads);
+                        const WorldLoop loop = pool.AsLoop();
+                        MahjongRng rng(position.rngSeed);
+                        EXPECT_EQ(ChooseOracle(position.hand, position.actor, oracle, rng, &loop), serial) << spec << " threads " << threads;
+                        // The same draws from the player's rng: the next number is the same.
+                        EXPECT_EQ(rng.Below(kRngStride), nextDraw) << spec << " threads " << threads;
+                    }
+                }
+            }
+        }
+    }
+
+    TEST(ArenaOracleTest, TheSearchOraclesAreNotTheHonestSearch) {
+        // Over the hands of a few seeds the oracle with the real hands decides otherwise than the honest search at least once.
+        const ArenaPlayer oracle = Player("oracle-hands");
+        const ArenaPlayer honest = Player("normal:searchWorlds=2,searchCandidates=4,searchMargin=30");
+        int differs = 0;
+        for (const Position& position : SearchedPositions(Phase::Discard, 12)) {
+            MahjongRng oracleRng(position.rngSeed);
+            MahjongRng honestRng(position.rngSeed);
+            const HandAction told = ChooseOracle(position.hand, position.actor, oracle, oracleRng, nullptr);
+            const TableView view = MakeTableView(position.hand, position.actor);
+            differs += told != ChooseTurnAction(view, honestRng, honest.profile) ? 1 : 0;
+        }
+        EXPECT_GT(differs, 0);
+    }
+
+    TEST(ArenaOracleTest, FourSearchOraclesPlayAHandToItsEnd) {
+        for (const char* spec : {"oracle-hands", "oracle-whole"}) {
+            const auto record = PlayArenaHand(kFirstSeed, Table(Player(spec)));
+            EXPECT_TRUE(record.has_value()) << spec << ": " << (record.has_value() ? "" : record.error().c_str());
+        }
     }
 
     TEST(ArenaOracleTest, FourOracleSeatsPlayWholeHands) {

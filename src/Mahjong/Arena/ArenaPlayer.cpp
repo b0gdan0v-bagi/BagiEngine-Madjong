@@ -1,5 +1,7 @@
 #include "ArenaPlayer.h"
 
+#include <Mahjong/Game/ComputerSearch.h>
+
 namespace BECore::Mahjong::Arena {
 
     namespace {
@@ -51,12 +53,19 @@ namespace BECore::Mahjong::Arena {
             std::string_view name;
             OracleKind kind;
         };
-        constexpr eastl::array<OracleSpec, 2> kOracleSpecs{{
+        constexpr eastl::array<OracleSpec, 4> kOracleSpecs{{
             {"oracle-acceptance", OracleKind::Acceptance},
+            {"oracle-hands", OracleKind::Hands},
+            {"oracle-whole", OracleKind::WholeHand},
             {"oracle-defence", OracleKind::Defence},
         }};
         constexpr std::string_view kOracleHeadPrefix = "oracle-";
         constexpr std::string_view kOracleNamesText = "oracle-acceptance, oracle-hands, oracle-whole, oracle-defence";
+
+        /// The oracles that are a search player: their profile starts from the shipped search budget.
+        bool IsSearchOracle(OracleKind kind) {
+            return kind == OracleKind::Hands || kind == OracleKind::WholeHand;
+        }
 
         const OracleSpec* FindOracle(std::string_view head) {
             for (const OracleSpec& oracle : kOracleSpecs) {
@@ -124,6 +133,11 @@ namespace BECore::Mahjong::Arena {
             }
             player.oracle = oracle->kind;
             player.profile = kNormalProfile;
+            if (IsSearchOracle(player.oracle)) {
+                player.profile.searchWorlds = kSearchWorlds;
+                player.profile.searchCandidates = kSearchCandidates;
+                player.profile.searchMargin = kSearchMargin;
+            }
         } else {
             std::optional<ComputerLevel> level = TryParseLevel(head);
             if (!level.has_value()) {
@@ -150,6 +164,9 @@ namespace BECore::Mahjong::Arena {
                 return std::unexpected(*error);
             }
             begin = end + 1;
+        }
+        if (IsSearchOracle(player.oracle) && (player.profile.searchWorlds < 1 || player.profile.searchCandidates < kSearchMinCandidates)) {
+            return std::unexpected(Format("\"{}\" would be plain Normal: a search oracle needs searchWorlds of at least 1 and searchCandidates of at least {}", spec, kSearchMinCandidates));
         }
         return player;
     }
