@@ -24,7 +24,7 @@ railway domain --service bagi-mahjong
    - **Branding → App domain** (без этих полей Google не даёт опубликовать приложение: «Valid app name, support email, homepage URL and privacy policy URL are required»):
      - Application home page: `https://bagi-mahjong-production.up.railway.app/`
      - Application privacy policy link: `https://bagi-mahjong-production.up.railway.app/privacy` — эту страницу отдаёт сам сервер, без входа (сервер должен быть уже выложен с новым `serve.py`, шаг 7);
-     - Application terms of service link: можно оставить пустым;
+     - Application terms of service link: `https://bagi-mahjong-production.up.railway.app/terms` — тоже страница самого сервера (условия: бесплатная игра в тестировании, без гарантий, играть честно);
      - **Authorized domains**: `bagi-mahjong-production.up.railway.app`. Если Google его не примет, остаётся подключить к сервису свой домен и указать его.
    - Логотип не загружайте: с ним Google требует проверку бренда.
 3. **Scopes** (в новом интерфейсе **Data Access**): добавьте только `openid` и `.../auth/userinfo.email`. Ничего больше не добавляйте: эти два не считаются чувствительными, поэтому проверка приложения в Google не нужна.
