@@ -258,6 +258,25 @@ value) and raise `kProfileFieldCount`; the structured binding in `ArenaPlayer.cp
 lists the new one, and `ArenaPlayerTest` fails when a row does not move its own field. Then `--focus normal,normal:<knob>=<value>`
 measures it against Normal, paired.
 
+## Oracle players (arena only)
+
+Four players that cheat exist only in the arena, to measure ceilings: how much a kind of player could win if it knew something it cannot
+know. A spec is `oracle-<name>` with the optional knobs of a level on the Normal profile (`oracle-hands:searchWorlds=8,searchMargin=10`), in
+`--focus` or `--others`:
+
+- `oracle-acceptance`: Normal that counts the copies that can still come exactly (the live wall and the loose tiles; the dead wall and the
+  opponents' concealed hands count as seen).
+- `oracle-hands`: the search player (2 worlds, 4 candidates, margin 30 unless a knob says otherwise) whose worlds are the real table with
+  the wall's tiles shuffled: the opponents' concealed hands are exact.
+- `oracle-whole`: the same search with every world equal to the real table, wall order included (a loose bound).
+- `oracle-defence`: Normal, except that a discard that wins for a declared opponent is replaced by the best safe discard of equal
+  shanten when one exists.
+
+They are not levels: an oracle is an `ArenaPlayer` kind, not a `LevelProfile` field, so no level, no `TableSession`, no control API and no
+hint can name one, and `Game/` knows none of them (the one seam, a source of worlds in `SearchRun`, is pinned by a test that no level uses
+it). The arena pairs every focus player against the first one, so an oracle is read against Normal when Normal is the first; the record
+and the reading rules are in `docs/bot-search.md`.
+
 ## The danger tie-break (`readDanger`)
 
 `A --focus normal,normal:readDanger=1 --others normal --jobs 0 --seeds 1000 --first F`, Release, paired against plain Normal (decided

@@ -137,6 +137,33 @@ namespace BECore::Mahjong::Arena {
         EXPECT_TRUE(ArgsOf({"--help", "--nonsense"}).help);
     }
 
+    TEST(ArenaCliTest, TheOraclePlayersAreReadInTheFocusListAndAsOthers) {
+        const ArenaArgs single = ArgsOf({"--focus", "5,oracle-defence"});
+        ASSERT_EQ(single.config.focus.size(), size_t{2});
+        EXPECT_EQ(single.config.focus[1].name, "oracle-defence");
+        EXPECT_EQ(single.config.focus[1].oracle, OracleKind::Defence);
+        // A knob continuation goes on the oracle before it: one player, not two.
+        const ArenaArgs knobs = ArgsOf({"--focus", "5,oracle-hands:searchWorlds=8,searchMargin=10,oracle-whole"});
+        ASSERT_EQ(knobs.config.focus.size(), size_t{3});
+        EXPECT_EQ(knobs.config.focus[1].name, "oracle-hands:searchWorlds=8,searchMargin=10");
+        EXPECT_EQ(knobs.config.focus[1].oracle, OracleKind::Hands);
+        EXPECT_EQ(knobs.config.focus[1].profile.searchWorlds, 8);
+        EXPECT_EQ(knobs.config.focus[1].profile.searchMargin, 10);
+        EXPECT_EQ(knobs.config.focus[2].oracle, OracleKind::WholeHand);
+        EXPECT_EQ(ArgsOf({"--others", "oracle-acceptance"}).config.others.oracle, OracleKind::Acceptance);
+    }
+
+    TEST(ArenaCliTest, ABadOracleNameIsRefusedAndNamesTheOracles) {
+        const std::string error = ErrorOf({"--focus", "5,oracle-nothing"});
+        EXPECT_NE(error.find("--focus:"), std::string::npos) << error;
+        EXPECT_NE(error.find("oracle-nothing"), std::string::npos) << error;
+        EXPECT_NE(error.find("oracle-defence"), std::string::npos) << error;
+        ArenaCliOutput output;
+        EXPECT_EQ(RunProgram({"--others", "oracle-nothing"}, output), kExitBadArguments);
+        EXPECT_TRUE(output.out.empty());
+        EXPECT_TRUE(Contains(output.err, "oracle-nothing")) << output.err.c_str();
+    }
+
     TEST(ArenaCliTest, BadArgumentsAreRefusedWithAMessageThatNamesThem) {
         EXPECT_NE(ErrorOf({"--verbose"}).find("unknown argument \"--verbose\""), std::string::npos);
         EXPECT_NE(ErrorOf({"normal"}).find("unknown argument \"normal\""), std::string::npos);
@@ -176,6 +203,9 @@ namespace BECore::Mahjong::Arena {
         EXPECT_TRUE(Contains(usage, "default 250"));
         EXPECT_TRUE(Contains(usage, "default normal"));
         EXPECT_TRUE(Contains(usage, "default random"));
+        for (const std::string_view oracle : {"oracle-acceptance", "oracle-hands", "oracle-whole", "oracle-defence"}) {
+            EXPECT_TRUE(Contains(usage, oracle)) << std::string(oracle);
+        }
         EXPECT_TRUE(Contains(usage, "1.96 standard errors"));
         EXPECT_TRUE(Contains(usage, "the seed is the sample"));
     }
