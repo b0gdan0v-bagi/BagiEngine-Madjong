@@ -489,3 +489,78 @@ level.
 **Time.** There is no search level, so there is no Release decision time of a search level to record (the arena's `--time` is read at
 `--jobs 1` for a search profile; the time rule and the Debug figures of the shapes that would fit it are in "Above Normal"). A run
 of the whole table plays 5 distinct players; the wall time of one range at `--jobs 14` is above.
+
+## The oracle ladder: ceilings above Normal
+
+Players that exist only in `BagiMahjongArena` (`oracle-acceptance`, `oracle-hands`, `oracle-whole`, `oracle-defence`: "Oracle players
+(arena only)" of `bot-arena.md`) are played against Normal to measure how much a kind of knowledge could be worth. This section is the
+reading, **fixed before any number was seen**; the numbers and their class are written below it after the three ranges are played. A
+change after a number has been seen is a named deviation in the record.
+
+**Setup.** Release, `--others 5` (three Normal seats), `--jobs 14`, 1000 seeds a range, each range played once as it stands. Ranges:
+**exploration** `--first 4000`, **decision** `--first 100000`, **confirmation** `--first 130000` (the ranges of "Levels"; nothing is
+tuned on any of them: the variants are the list below). The first focus player is always `5` (Normal); every variant is read by its
+paired difference to it (same walls, the seed is the unit, the arena's `significant`). The three groups of one range, with `A` the
+Release arena:
+
+- `cheap`: `A --first <F> --seeds 1000 --others 5 --jobs 14 --focus 5,oracle-acceptance,oracle-defence`
+- `w2`: `--focus 5,normal:searchWorlds=2,searchCandidates=4,searchMargin=30,oracle-hands,oracle-whole`
+- `w8`: `--focus 5,normal:searchWorlds=8,searchCandidates=4,searchMargin=30,oracle-hands:searchWorlds=8,oracle-hands:searchWorlds=8,searchMargin=10,oracle-whole:searchWorlds=8`
+
+**Every variant** (none is added or dropped after a result; each is played on all three ranges):
+
+| id | spec | what it knows | role |
+|---|---|---|---|
+| ref-S2 | `normal:searchWorlds=2,searchCandidates=4,searchMargin=30` | nothing hidden | reference: the shipped search |
+| ref-S8 | `normal:searchWorlds=8,searchCandidates=4,searchMargin=30` | nothing hidden | reference: 4 times the worlds |
+| A | `oracle-acceptance` | which copies can still come | ceiling of reading the hands for hand building |
+| B2 | `oracle-hands` | the opponents' concealed hands | ceiling of an exact sample, shipped budget |
+| B8 | `oracle-hands:searchWorlds=8` | likewise | 4 times the worlds |
+| B8m10 | `oracle-hands:searchWorlds=8,searchMargin=10` | likewise | the margin is the dial of a search ("Levels", step 2): a lower margin lets true worlds override Normal more |
+| C2 | `oracle-whole` | the whole true hand, wall order too | loose bound, record only |
+| C8 | `oracle-whole:searchWorlds=8` | likewise | loose bound, record only |
+| D | `oracle-defence` | the winning tiles of declared seats | the defence ceiling of `mahjong-computer-difficulty` (old harness: +1 to +4 points a hand) |
+
+**Per variant and range** the table shows: wins % and points a hand of the variant's own row (intervals) and the paired points a hand
+and paired wins % to Normal with `significant`. The honest references sit in the same table; an oracle is read against Normal as the
+entry says (the arena pairs only against the first focus player, so oracle against honest search is not an arena output and is not
+read).
+
+**Pooling.** The pooled value of a variant is the mean of its decision and confirmation paired differences; its half-width is
+`sqrt(h1^2 + h2^2) / 2` of the two rows' half-widths (from the rows, not an arena output). Exploration is shown, never pooled, never
+part of a verdict.
+
+**The verdict of a ceiling** (A, B2, B8, B8m10, D; for C2 and C8 only the numbers are written, no class):
+
+- **closed**: the pooled upper end (mean plus half-width) is below +5.0 points a hand and below +1.5 points of wins. Even with that
+  information a player of that kind cannot reach a step of the level ladder (+5 points a hand and +1.5 of wins are the bar of the
+  search entry's switch rule), so the idea is closed.
+- **room**: the paired points are significantly positive on **both** the decision and the confirmation range, the pooled points are at
+  least +10.0 a hand (twice the bar: an honest player gets a part of its ceiling) and the pooled wins are above 0.
+- **narrow**: anything else. The numbers are written; the entries it touches stay open with the number as the limit of what they can
+  win.
+
+A negative oracle (worse than Normal) is a result, not an error: that information does not help that kind of player.
+
+**Sanity, not a verdict.** D is expected within 0 to +8 points a hand (the old harness: +1 to +4); outside it, the record says how the
+definition differs. The 20-seed runs at `--jobs 1` and `--jobs 14` of every variant must be the same bytes, and the first-check numbers
+of `bot-arena.md` must not move.
+
+**Consequences, written by class before the numbers:**
+
+- **A closed**: reading what the opponents hold, as an input to the acceptance and the waits of a hand-building player, is closed
+  (Normal's choosers, the unseen-copy probabilities of `mahjong-own-draws-ev`, the draw model of `mahjong-hand-plan-search`). **A
+  room**: a hand-reading estimate of the opponents' tiles for hand building becomes the next entry, and the number is the most it can
+  give.
+- **B closed**: a better sample of the opponents' hands (the waits of declared hands exact) cannot make the one-step search with Normal
+  rollouts win, at the shipped budget and at 4 times; what stays open of `mahjong-search-release-curve` is only the compute (more
+  worlds, claims against discards), bounded by the 4x number. **B room**: an honest sample of the declared hands is worth an entry, up
+  to the number.
+- **C**: how far one deviation from Normal with Normal rollouts can go with perfect knowledge of its own draws. If even the loose bound
+  is under +5 points a hand, the one-step form with a Normal rollout is the limit, which closes `mahjong-search-release-curve` for any
+  budget and leaves open only a different form (a plan of the hand, `mahjong-hand-plan-search`; a rollout policy that is not Normal).
+  If it is not under, the loose bound alone decides nothing and B decides.
+- **D closed**: `mahjong-discard-danger` stays as it is (a tie-break; measured -0.53 points a hand) and no stronger defence for the
+  computers is worth building; the danger stays for the hints and for teaching. **D room**: a danger reading that moves more than a
+  tie-break becomes an entry, up to the number.
+- A "narrow" is written in its own words in the record.
