@@ -497,7 +497,7 @@ namespace BECore::Mahjong::Tests {
         const size_t slots = _table->GetLayout().slots.size();
         ASSERT_GT(slots, 0u);
 
-        _table->SetAtlasTexture({});
+        RemoveAtlasTexture();
         Draw();
 
         EXPECT_TRUE(TileCalls().empty());
@@ -541,7 +541,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
         Lay(table);
-        _table->SetAtlasTexture({});
+        RemoveAtlasTexture();
         Draw();
 
         const TableLayout& layout = _table->GetLayout();

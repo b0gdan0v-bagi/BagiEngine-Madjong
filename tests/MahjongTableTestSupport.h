@@ -370,6 +370,13 @@ namespace BECore::Mahjong::Tests {
             return calls;
         }
 
+        /// Takes the atlas from the table and forgets its address: the texture is freed, and another one made later may be given the same address, which
+        /// `TileCalls` would then count as a tile.
+        void RemoveAtlasTexture() {
+            _table->SetAtlasTexture({});
+            _atlasTexture = nullptr;
+        }
+
         /// The draw calls of tiles, in the order of the layout's slots.
         std::vector<DrawCall> TileCalls() const {
             std::vector<DrawCall> calls;

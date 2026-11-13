@@ -19,7 +19,7 @@
     <component type="UICanvasComponent" space="SceneView">
       <elements>
         <!-- The last move in words (lastMove), shown by the component exactly while it has a text -->
-        <element type="UIStack" name="MoveLine" region="table.moveLine" anchor="Stretch" visible="false" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170">
+        <element type="UIStack" name="MoveLine" region="table.moveLine" anchor="Stretch" visible="false" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="6,20,14,170" highlight="255,255,255,60">
           <children>
             <element type="UIElement" name="MoveText" flex="1" fontSize="18">
               <components>
@@ -29,7 +29,7 @@
           </children>
         </element>
         <!-- The name of the tile selected by a tap (selectedTileText, Table/TapSelect.h), shown by MahjongTableComponent exactly while a tile is selected -->
-        <element type="UIStack" name="SelectedTile" region="table.selectedTile" anchor="Stretch" visible="false" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170">
+        <element type="UIStack" name="SelectedTile" region="table.selectedTile" anchor="Stretch" visible="false" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="6,20,14,170" highlight="255,255,255,60">
           <children>
             <element type="UIElement" name="SelectedTileLabel" flex="1" fontSize="18">
               <components>

@@ -7,6 +7,7 @@
   says what it does in a word (Table/ActionButtons.h: the keys button.<Kind>) and, where it concerns tiles, shows them as UIImage
   children NameTile0..2 that take no input, so a click on a picture is a click on the button. The label Hint shows the sentence of the
   button under the pointer ({actionHint}); it takes no input.
+  Each button has the skin of its role (config/CLAUDE.md, "UI style": gradient to the <role>Deep, border, shadow, bold text); ActionsCompact the same.
   The variants are sizes of the buttons (a size class, not a place): portrait and narrow tables. Which sizes: kActionButtonHeight and
   kPortraitActionButtonHeight (Table/TouchRegime.h), TouchRegimeTest and MahjongTableScreenTest.
 
@@ -23,22 +24,22 @@
   <components>
     <component type="UICanvasComponent" space="SceneView">
       <elements>
-        <element type="UIElement" name="Hint" region="table.hint" anchor="Stretch" visible="false" fontSize="18" color="0,0,0,200">
+        <element type="UIElement" name="Hint" region="table.hint" anchor="Stretch" visible="false" fontSize="18" color="0,0,0,200" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" highlight="255,255,255,60">
           <components>
             <component type="UITextComponent" text="{actionHint}" align="Center" verticalAlign="Center"/>
           </components>
         </element>
         <element type="UIStack" name="ActionRow" region="table.actions" anchor="Stretch" direction="Horizontal" spacing="8" wrapChildren="true">
           <children>
-          <element type="UIElement" name="Win" visible="false" width="104" height="56" fontSize="22" color="40,110,60,255">
+          <element type="UIElement" name="Win" visible="false" width="104" height="56" fontSize="22" color="40,110,60,255" cornerRadius="12" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="26,78,40,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
             <components>
-              <component type="UITextComponent" text="{#button.Win}" align="Center" verticalAlign="Center" wrap="false"/>
+              <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#button.Win}" align="Center" verticalAlign="Center" wrap="false"/>
               <component type="UIInputClicker" action="MahjongWin"/>
             </components>
           </element>
-          <element type="UIElement" name="Mahjong" visible="false" width="104" height="56" fontSize="18" color="40,110,60,255">
+          <element type="UIElement" name="Mahjong" visible="false" width="104" height="56" fontSize="18" color="40,110,60,255" cornerRadius="12" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="26,78,40,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
             <components>
-              <component type="UITextComponent" text="{#button.ClaimMahjong}" align="Center" verticalAlign="Top" wrap="false"/>
+              <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#button.ClaimMahjong}" align="Center" verticalAlign="Top" wrap="false"/>
               <component type="UIInputClicker" action="MahjongClaimMahjong"/>
             </components>
             <children>
@@ -49,9 +50,9 @@
               </element>
             </children>
           </element>
-          <element type="UIElement" name="Pung" visible="false" width="104" height="56" fontSize="18" color="45,75,120,255">
+          <element type="UIElement" name="Pung" visible="false" width="104" height="56" fontSize="18" color="45,75,120,255" cornerRadius="12" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="30,52,86,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
             <components>
-              <component type="UITextComponent" text="{#button.ClaimPung}" align="Center" verticalAlign="Top" wrap="false"/>
+              <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#button.ClaimPung}" align="Center" verticalAlign="Top" wrap="false"/>
               <component type="UIInputClicker" action="MahjongClaimPung"/>
             </components>
             <children>
@@ -62,9 +63,9 @@
               </element>
             </children>
           </element>
-          <element type="UIElement" name="Kong" visible="false" width="104" height="56" fontSize="18" color="45,75,120,255">
+          <element type="UIElement" name="Kong" visible="false" width="104" height="56" fontSize="18" color="45,75,120,255" cornerRadius="12" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="30,52,86,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
             <components>
-              <component type="UITextComponent" text="{#button.ClaimKong}" align="Center" verticalAlign="Top" wrap="false"/>
+              <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#button.ClaimKong}" align="Center" verticalAlign="Top" wrap="false"/>
               <component type="UIInputClicker" action="MahjongClaimKong"/>
             </components>
             <children>
@@ -75,9 +76,9 @@
               </element>
             </children>
           </element>
-          <element type="UIElement" name="Chow0" visible="false" width="104" height="56" fontSize="18" color="45,75,120,255">
+          <element type="UIElement" name="Chow0" visible="false" width="104" height="56" fontSize="18" color="45,75,120,255" cornerRadius="12" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="30,52,86,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
             <components>
-              <component type="UITextComponent" text="{#button.ClaimChow0}" align="Center" verticalAlign="Top" wrap="false"/>
+              <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#button.ClaimChow0}" align="Center" verticalAlign="Top" wrap="false"/>
               <component type="UIInputClicker" action="MahjongClaimChow" value="0"/>
             </components>
             <children>
@@ -98,9 +99,9 @@
               </element>
             </children>
           </element>
-          <element type="UIElement" name="Chow1" visible="false" width="104" height="56" fontSize="18" color="45,75,120,255">
+          <element type="UIElement" name="Chow1" visible="false" width="104" height="56" fontSize="18" color="45,75,120,255" cornerRadius="12" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="30,52,86,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
             <components>
-              <component type="UITextComponent" text="{#button.ClaimChow1}" align="Center" verticalAlign="Top" wrap="false"/>
+              <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#button.ClaimChow1}" align="Center" verticalAlign="Top" wrap="false"/>
               <component type="UIInputClicker" action="MahjongClaimChow" value="1"/>
             </components>
             <children>
@@ -121,9 +122,9 @@
               </element>
             </children>
           </element>
-          <element type="UIElement" name="Chow2" visible="false" width="104" height="56" fontSize="18" color="45,75,120,255">
+          <element type="UIElement" name="Chow2" visible="false" width="104" height="56" fontSize="18" color="45,75,120,255" cornerRadius="12" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="30,52,86,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
             <components>
-              <component type="UITextComponent" text="{#button.ClaimChow2}" align="Center" verticalAlign="Top" wrap="false"/>
+              <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#button.ClaimChow2}" align="Center" verticalAlign="Top" wrap="false"/>
               <component type="UIInputClicker" action="MahjongClaimChow" value="2"/>
             </components>
             <children>
@@ -144,9 +145,9 @@
               </element>
             </children>
           </element>
-          <element type="UIElement" name="ConcealedKong0" visible="false" width="104" height="56" fontSize="18" color="70,70,100,255">
+          <element type="UIElement" name="ConcealedKong0" visible="false" width="104" height="56" fontSize="18" color="70,70,100,255" cornerRadius="12" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
             <components>
-              <component type="UITextComponent" text="{#button.ConcealedKong0}" align="Center" verticalAlign="Top" wrap="false"/>
+              <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#button.ConcealedKong0}" align="Center" verticalAlign="Top" wrap="false"/>
               <component type="UIInputClicker" action="MahjongConcealedKong" value="0"/>
             </components>
             <children>
@@ -157,9 +158,9 @@
               </element>
             </children>
           </element>
-          <element type="UIElement" name="ConcealedKong1" visible="false" width="104" height="56" fontSize="18" color="70,70,100,255">
+          <element type="UIElement" name="ConcealedKong1" visible="false" width="104" height="56" fontSize="18" color="70,70,100,255" cornerRadius="12" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
             <components>
-              <component type="UITextComponent" text="{#button.ConcealedKong1}" align="Center" verticalAlign="Top" wrap="false"/>
+              <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#button.ConcealedKong1}" align="Center" verticalAlign="Top" wrap="false"/>
               <component type="UIInputClicker" action="MahjongConcealedKong" value="1"/>
             </components>
             <children>
@@ -170,9 +171,9 @@
               </element>
             </children>
           </element>
-          <element type="UIElement" name="ConcealedKong2" visible="false" width="104" height="56" fontSize="18" color="70,70,100,255">
+          <element type="UIElement" name="ConcealedKong2" visible="false" width="104" height="56" fontSize="18" color="70,70,100,255" cornerRadius="12" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
             <components>
-              <component type="UITextComponent" text="{#button.ConcealedKong2}" align="Center" verticalAlign="Top" wrap="false"/>
+              <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#button.ConcealedKong2}" align="Center" verticalAlign="Top" wrap="false"/>
               <component type="UIInputClicker" action="MahjongConcealedKong" value="2"/>
             </components>
             <children>
@@ -183,9 +184,9 @@
               </element>
             </children>
           </element>
-          <element type="UIElement" name="UpgradeKong" visible="false" width="104" height="56" fontSize="18" color="70,70,100,255">
+          <element type="UIElement" name="UpgradeKong" visible="false" width="104" height="56" fontSize="18" color="70,70,100,255" cornerRadius="12" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
             <components>
-              <component type="UITextComponent" text="{#button.UpgradeKong}" align="Center" verticalAlign="Top" wrap="false"/>
+              <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#button.UpgradeKong}" align="Center" verticalAlign="Top" wrap="false"/>
               <component type="UIInputClicker" action="MahjongUpgradeKong"/>
             </components>
             <children>
@@ -196,13 +197,13 @@
               </element>
             </children>
           </element>
-          <element type="UIElement" name="Pass" visible="false" width="104" height="56" fontSize="22" color="90,50,50,255">
+          <element type="UIElement" name="Pass" visible="false" width="104" height="56" fontSize="22" color="90,50,50,255" cornerRadius="12" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="62,34,34,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
             <components>
-              <component type="UITextComponent" text="{#button.Pass}" align="Center" verticalAlign="Center" wrap="false"/>
+              <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#button.Pass}" align="Center" verticalAlign="Center" wrap="false"/>
               <component type="UIInputClicker" action="MahjongPass"/>
             </components>
           </element>
-          <element type="UIElement" name="Declare" visible="false" width="104" height="56" color="70,70,100,255" layout="Stack" direction="Horizontal" spacing="8" crossAlign="Center">
+          <element type="UIElement" name="Declare" visible="false" width="104" height="56" color="70,70,100,255" cornerRadius="12" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60" layout="Stack" direction="Horizontal" spacing="8" crossAlign="Center">
             <components>
               <component type="UIInputClicker"/>
               <component type="UIToggleComponent" bind="declareNext" action="MahjongDeclare" onValue="on" offValue="off"/>
@@ -210,7 +211,7 @@
             <children>
               <element type="UIElement" name="DeclareCaption" flex="1" height="100%" fontSize="22">
                 <components>
-                  <component type="UITextComponent" text="{#button.Declare}" verticalAlign="Center" wrap="false" fadeWhenDisabled="true"/>
+                  <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#button.Declare}" verticalAlign="Center" wrap="false" fadeWhenDisabled="true"/>
                 </components>
               </element>
               <element type="UIElement" name="DeclareSwitch" height="100%" aspectRatio="1.25">
