@@ -32,6 +32,7 @@ namespace BECore::Mahjong::Tests {
         constexpr const char* kFolderPrefix = "BagiMahjongSaveGameTest";
         constexpr const char* kMatchFile = "match.save";
         constexpr const char* kPrefsFile = "settings.save";
+        constexpr const char* kOnlineFile = "online.save";
 
         /// Switches saving off for the whole run of the test binary: the games that other tests build must not write `saves/`.
         class SavingOffEnvironment final : public ::testing::Environment {
@@ -81,6 +82,8 @@ namespace BECore::Mahjong::Tests {
 
             void TearDown() override {
                 SetMatchSaveDirectory(fs::path());
+                SetMatchSaveStorage(std::nullopt);
+                SetSaveChangedHandler({});
                 std::error_code error;
                 fs::remove_all(folder, error);
                 CoreManager::GetUIStrings().Clear();
@@ -199,6 +202,16 @@ namespace BECore::Mahjong::Tests {
                 game->FlushSave();
                 EXPECT_NE(ReadFile(Slot(kMatchFile)), before) << what;  // a match begun by a person replaces it
                 EXPECT_TRUE(StartedGame()->CanContinue()) << what;
+            }
+
+            /// The files in the save folder (none while the folder is not made).
+            int FilesInFolder() const {
+                std::error_code error;
+                int count = 0;
+                for (fs::directory_iterator it(folder, error), end; !error && it != end; it.increment(error)) {
+                    ++count;
+                }
+                return count;
             }
 
             fs::path folder;
@@ -578,6 +591,111 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(recorder.Finished());
         WriteMatch(recorder.Events());
         ExpectNotOffered("a finished match");
+    }
+
+    TEST_F(MahjongSaveGameTest, WhenTheStorageIsPersistentTheMatchTheChoicesAndTheNameComeBackAfterARestart) {
+        SetMatchSaveStorage(SaveStorageState::Persistent);
+        IntrusivePtr<MahjongGame> game = StartedGame();
+        EXPECT_TRUE(game->SavesAreRemembered());
+        Reset(*game, "{\"seed\": 5, \"seats\": \"PCCC\", \"hands\": 8}");
+        PlayFirstActions(*game, kPersonActions);
+        game->SetHintsOn(false);
+        game->SetAnimationSpeed(AnimationSpeed::Slow);
+        game->SetOnlineName("Ann");
+        game->FlushSave();
+        EXPECT_TRUE(fs::exists(Slot(kMatchFile)));
+        EXPECT_TRUE(fs::exists(Slot(kPrefsFile)));
+        EXPECT_TRUE(fs::exists(Slot(kOnlineFile)));
+
+        IntrusivePtr<MahjongGame> second = StartedGame();
+        EXPECT_TRUE(second->CanContinue());
+        EXPECT_TRUE(second->SavesAreRemembered());
+        EXPECT_EQ(State(*second), State(*game));
+        EXPECT_FALSE(second->HintsOn());
+        EXPECT_EQ(second->GetAnimationSpeed(), AnimationSpeed::Slow);
+        EXPECT_EQ(second->StoredOnline().name, "Ann");
+    }
+
+    TEST_F(MahjongSaveGameTest, WhenTheStorageIsNotRememberedNothingIsWrittenReadOrOfferedAndTheGamePlaysOn) {
+        // A save of an earlier visit is in the folder: this visit must neither read nor touch it
+        SetMatchSaveStorage(SaveStorageState::Persistent);
+        {
+            IntrusivePtr<MahjongGame> earlier = StartedGame();
+            Reset(*earlier, "{\"seed\": 5, \"seats\": \"PCCC\", \"hands\": 8}");
+            earlier->SetHintsOn(false);
+            earlier->SetOnlineName("Ann");
+            earlier->FlushSave();
+        }
+        const std::string match = ReadFile(Slot(kMatchFile));
+        const std::string prefs = ReadFile(Slot(kPrefsFile));
+        const std::string online = ReadFile(Slot(kOnlineFile));
+        ASSERT_FALSE(match.empty());
+
+        SetMatchSaveStorage(SaveStorageState::NotRemembered);
+        IntrusivePtr<MahjongGame> game = StartedGame();
+        EXPECT_FALSE(game->CanContinue());
+        EXPECT_FALSE(game->SavesAreRemembered());
+        EXPECT_TRUE(game->HintsOn()) << "the defaults, not the saved choices";
+        EXPECT_TRUE(game->StoredOnline().name.empty());
+        EXPECT_TRUE(game->IsSetupOpen());
+
+        Reset(*game, "{\"seed\": 3, \"seats\": \"CCCC\", \"hands\": 8}");
+        game->SetHintsOn(false);
+        game->SetOnlineName("Bob");
+        game->FlushSave();
+        NextHand(*game);  // a hand is played and the game goes on
+        EXPECT_NE(game->GetSession().GetPhase(), SessionPhase::MatchOver);
+        game->Stop();
+        EXPECT_EQ(ReadFile(Slot(kMatchFile)), match);
+        EXPECT_EQ(ReadFile(Slot(kPrefsFile)), prefs);
+        EXPECT_EQ(ReadFile(Slot(kOnlineFile)), online);
+        EXPECT_FALSE(game->SavesAreRemembered());
+    }
+
+    TEST_F(MahjongSaveGameTest, WhenTheStorageIsNotRememberedNoFolderIsMadeAndNoFileWritten) {
+        SetMatchSaveStorage(SaveStorageState::NotRemembered);
+        IntrusivePtr<MahjongGame> game = StartedGame();
+        Reset(*game, "{\"seed\": 5, \"seats\": \"PCCC\", \"hands\": 8}");
+        PlayFirstActions(*game, kPersonActions);
+        game->SetHintsOn(false);
+        game->SetOnlineName("Ann");
+        game->FlushSave();
+        game->Stop();
+        EXPECT_EQ(FilesInFolder(), 0);
+        EXPECT_FALSE(StartedGame()->CanContinue());
+    }
+
+    TEST_F(MahjongSaveGameTest, SavesAreRememberedWhenSavingIsOnAndTheStorageKeepsThem) {
+        EXPECT_TRUE(StartedGame()->SavesAreRemembered()) << "a desktop folder";
+        SetMatchSaveDirectory(fs::path());
+        EXPECT_FALSE(StartedGame()->SavesAreRemembered()) << "saving is off";
+        SetMatchSaveStorage(SaveStorageState::Persistent);
+        EXPECT_FALSE(StartedGame()->SavesAreRemembered()) << "saving is off, whatever the storage is";
+        SetMatchSaveDirectory(folder);
+        EXPECT_TRUE(StartedGame()->SavesAreRemembered());
+        SetMatchSaveStorage(SaveStorageState::NotRemembered);
+        EXPECT_FALSE(StartedGame()->SavesAreRemembered());
+    }
+
+    TEST_F(MahjongSaveGameTest, EveryWriteAndDeleteOfTheGameReachesTheStorageNotifier) {
+        int notified = 0;
+        SetSaveChangedHandler([&notified] { ++notified; });
+        IntrusivePtr<MahjongGame> game = StartedGame();
+        Reset(*game, "{\"seed\": 3, \"seats\": \"CCCC\", \"hands\": 8}");
+        game->FlushSave();
+        ASSERT_TRUE(fs::exists(Slot(kMatchFile)));
+        EXPECT_GT(notified, 0) << "a slot was written";
+
+        const int afterWrite = notified;
+        game->FlushSave();
+        EXPECT_EQ(notified, afterWrite) << "nothing new, nothing written";
+
+        while (game->GetSession().GetPhase() != SessionPhase::MatchOver) {
+            NextHand(*game);
+        }
+        game->FlushSave();
+        EXPECT_FALSE(fs::exists(Slot(kMatchFile))) << "the finished match's slot is deleted";
+        EXPECT_GT(notified, afterWrite) << "and the delete is told too";
     }
 
 }  // namespace BECore::Mahjong::Tests
