@@ -13,6 +13,8 @@ namespace BECore::Mahjong {
         inline constexpr eastl::string_view kInvalidParams = "invalid_params";
         inline constexpr eastl::string_view kTooManyFailedJoins = "too_many_failed_joins";
         inline constexpr eastl::string_view kServerFull = "server_full";
+        /// The server closes a connection in no room that sent nothing it counts (a `ping` is none) for its idle time: a list the player left on screen.
+        inline constexpr eastl::string_view kIdle = "idle";
         /// The reasons of a `left` that the room itself sends (the hub closed the room, or a finished game ran out its time).
         inline constexpr eastl::string_view kRoomClosed = "room_closed";
         inline constexpr eastl::string_view kRoomFinished = "room_finished";
@@ -66,6 +68,7 @@ namespace BECore::Mahjong {
         {RoomClientCloseReasons::kConnectTimeout, "online.error.noAnswer"},
         {OnlineCodes::kTooManyFailedJoins, "online.error.rateLimited"},
         {OnlineCodes::kServerFull, "online.error.busy"},
+        {OnlineCodes::kIdle, "online.error.idle"},
         // why the room let the player go (`left`)
         {OnlineCodes::kRoomClosed, "online.error.roomGone"},
         {OnlineCodes::kRoomFinished, "online.error.roomGone"},

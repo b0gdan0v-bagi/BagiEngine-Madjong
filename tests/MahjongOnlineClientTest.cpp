@@ -229,6 +229,26 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(GetJsonInt(create.options, "hands"), 8);
     }
 
+    TEST_F(MahjongOnlineClientTest, HostWithTheDefaultOptionsMakesAPrivateRoomAndTheChoiceOfAnOpenOneIsSent) {
+        ASSERT_TRUE(_client->Host(kUrl, "Ann", {8, 1}));
+        Link().PushOpened();
+        Pump();
+        EXPECT_FALSE(Sent<CreateRoomMessage>(0).isPublic);
+        ASSERT_TRUE(_client->HostedOptions() != nullptr);
+        EXPECT_FALSE(_client->HostedOptions()->isPublic);
+
+        _client->Disconnect();
+        MakeClient();
+        OnlineRoomOptions open{8, 1};
+        open.isPublic = true;
+        ASSERT_TRUE(_client->Host(kUrl, "Ann", open));
+        Link().PushOpened();
+        Pump();
+        EXPECT_TRUE(Sent<CreateRoomMessage>(0).isPublic);
+        ASSERT_TRUE(_client->HostedOptions() != nullptr);
+        EXPECT_TRUE(_client->HostedOptions()->isPublic);
+    }
+
     TEST_F(MahjongOnlineClientTest, TheTableReadsTheRoomsHintsSettingFromTheView) {
         MahjongSeatedGame allowed;
         ASSERT_TRUE(allowed.Start(kSeed, Parse("{\"hands\": 8, \"level\": 1, \"hintsAllowed\": true}")).has_value());

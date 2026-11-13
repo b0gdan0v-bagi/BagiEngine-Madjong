@@ -341,6 +341,7 @@
         <string key="online.paste.notCode" text="No room code in the text"/>
         <string key="online.paste.empty" text="Nothing to paste"/>
         <string key="online.paste.refused" text="Cannot paste here. Type the code"/>
+        <string key="online.error.idle" text="The connection was closed because nothing happened for a while. Try again."/>
     </language>
     <language id="ru">
         <string key="lang.en" text="English"/>
@@ -681,5 +682,6 @@
         <string key="online.paste.notCode" text="В тексте нет кода комнаты"/>
         <string key="online.paste.empty" text="Нечего вставлять"/>
         <string key="online.paste.refused" text="Здесь нельзя вставить. Введите код"/>
+        <string key="online.error.idle" text="Соединение закрыто: долго ничего не происходило. Попробуйте ещё раз."/>
     </language>
 </UIStrings>

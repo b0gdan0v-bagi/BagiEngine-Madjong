@@ -10,9 +10,9 @@ namespace BECore::Mahjong {
             return stage == OnlineStage::Lobby || stage == OnlineStage::Game;
         }
 
-        /// The stages in which the panel shows the room. In `Game` the table is the scene's and the panel is closed.
+        /// The stages in which the panel shows the room. In `Game` the table is the scene's and the panel is closed; `Browsing` has no room.
         bool ShowsRoom(OnlineStage stage) {
-            return stage != OnlineStage::Idle && stage != OnlineStage::Game;
+            return stage != OnlineStage::Idle && stage != OnlineStage::Game && stage != OnlineStage::Browsing;
         }
 
     }  // namespace

@@ -11,6 +11,9 @@ namespace BECore::Mahjong {
 
         constexpr size_t kMaxNoticeArgBytes = 32;
 
+        constexpr eastl::string_view kHandsKey = "hands";
+        constexpr eastl::string_view kLevelKey = "level";
+
         constexpr eastl::string_view kSessionUrlKey = "url";
         constexpr eastl::string_view kSessionRoomKey = "room";
         constexpr eastl::string_view kSessionTokenKey = "token";
@@ -64,10 +67,11 @@ namespace BECore::Mahjong {
             return false;
         }
         const Json json = Json::object({{"hands", options.hands}, {"level", options.level}, {std::string(kHintsAllowedKey.data(), kHintsAllowedKey.size()), options.hintsAllowed}});
-        const bool sent = Report(_client.Host(url, kSeatedGameName, *sanitized, json));
+        const bool sent = Report(_client.Host(url, kSeatedGameName, *sanitized, json, options.isPublic));
         if (sent) {
             _requesting = true;
             _hosted = options;
+            EndBrowsing();
             Bump();
         }
         Settle();
@@ -75,6 +79,14 @@ namespace BECore::Mahjong {
     }
 
     bool OnlineClient::Join(eastl::string_view url, eastl::string_view code, eastl::string_view name) {
+        return SendJoin(url, code, name, false);
+    }
+
+    bool OnlineClient::JoinListed(eastl::string_view url, eastl::string_view code, eastl::string_view name) {
+        return SendJoin(url, code, name, true);
+    }
+
+    bool OnlineClient::SendJoin(eastl::string_view url, eastl::string_view code, eastl::string_view name, bool fromList) {
         const std::optional<eastl::string> sanitized = SanitizePlayerName(name);
         if (!sanitized) {
             SetNoticeForCode(RoomErrors::kBadName);
@@ -84,9 +96,47 @@ namespace BECore::Mahjong {
         if (sent) {
             _requesting = true;
             ForgetHosted();
+            if (fromList && _browsing) {
+                // The connection stays a browsing one: an error of this join asks the list again
+                _joiningListed = true;
+            } else {
+                EndBrowsing();
+            }
         }
         Settle();
         return sent;
+    }
+
+    bool OnlineClient::Browse(eastl::string_view url) {
+        if (_stage == OnlineStage::Browsing) {
+            if (_rooms.pending) {
+                return false;
+            }
+            return Report(AskForRooms(url));
+        }
+        if (_stage != OnlineStage::Idle) {
+            SetNoticeForCode(RoomClientErrors::kWrongState);
+            return false;
+        }
+        const bool sent = Report(_client.ListRooms(url, kSeatedGameName));
+        if (sent) {
+            EndBrowsing();
+            _browsing = true;
+            _browseUrl.assign(url.data(), url.size());
+            _rooms.pending = true;
+            Bump();
+        }
+        Settle();
+        return sent;
+    }
+
+    std::expected<void, ControlError> OnlineClient::AskForRooms(eastl::string_view url) {
+        std::expected<void, ControlError> result = _client.ListRooms(url, kSeatedGameName);
+        if (result) {
+            _rooms.pending = true;
+            Bump();
+        }
+        return result;
     }
 
     bool OnlineClient::Resume(const RoomSession& session) {
@@ -129,6 +179,12 @@ namespace BECore::Mahjong {
     }
 
     bool OnlineClient::Leave() {
+        if (_stage == OnlineStage::Browsing) {
+            EndBrowsing();
+            CloseConnection();
+            Settle();
+            return true;
+        }
         const bool wasReconnecting = _client.GetState() == RoomClientState::Reconnecting;
         const bool sent = Report(_client.Leave());
         if (sent) {
@@ -146,6 +202,7 @@ namespace BECore::Mahjong {
 
     void OnlineClient::Disconnect() {
         CloseConnection();
+        EndBrowsing();
         ForgetHosted();
         _requesting = false;
         _awaitingClose = false;
@@ -209,12 +266,16 @@ namespace BECore::Mahjong {
             case RoomClientEventKind::Closed:
                 OnClosed(event);
                 break;
+            case RoomClientEventKind::RoomList:
+                OnRoomList();
+                break;
         }
         return true;
     }
 
     void OnlineClient::OnJoined() {
         _requesting = false;
+        EndBrowsing();
         ForgetView();
         KeepSession(_client.GetSession());
         Bump();
@@ -255,11 +316,56 @@ namespace BECore::Mahjong {
     }
 
     void OnlineClient::OnError(const RoomClientEvent& event) {
+        if (event.ref == RoomMessageTypes::kListRooms) {
+            // A refused list is no answer to a join: the connection and the last list stay
+            _rooms.pending = false;
+            SetNoticeForCode(event.code);
+            return;
+        }
         // The client counts any error as the answer to a request that waits for `joined`
         _requesting = false;
         if (!IsSilentOnlineCode(event.code)) {
             SetNoticeForCode(event.code);
         }
+        if (_joiningListed) {
+            // The room may be gone or full: the player gets the notice and a fresh list on the same connection
+            _joiningListed = false;
+            if (_browsing && !AskForRooms(_browseUrl)) {
+                EndBrowsing();
+            }
+        }
+    }
+
+    void OnlineClient::OnRoomList() {
+        if (!_browsing) {
+            return;
+        }
+        const RoomListMessage& list = _client.GetRoomList();
+        size_t count = 0;
+        _rooms.rooms.resize(list.rooms.size());
+        for (const RoomListing& listing : list.rooms) {
+            if (listing.started) {
+                continue;
+            }
+            OnlineListedRoom& room = _rooms.rooms[count++];
+            room.code = listing.room;
+            room.host = listing.host;
+            room.free = std::max(0, listing.seats - listing.taken);
+            room.hands.reset();
+            room.level.reset();
+            room.hintsAllowed = GetJsonBool(listing.options, kHintsAllowedKey);
+            if (const std::optional<int64_t> hands = GetJsonInt(listing.options, kHandsKey); hands && (*hands == kShortMatchHands || *hands == kFullMatchHands)) {
+                room.hands = static_cast<int>(*hands);
+            }
+            if (const std::optional<int64_t> level = GetJsonInt(listing.options, kLevelKey); level && *level >= kMinLevel && *level <= kMaxLevel) {
+                room.level = static_cast<int>(*level);
+            }
+        }
+        _rooms.rooms.resize(count);
+        _rooms.loaded = true;
+        _rooms.pending = false;
+        _rooms.more = list.more;
+        Bump();
     }
 
     void OnlineClient::OnLeft(const RoomClientEvent& event) {
@@ -277,13 +383,17 @@ namespace BECore::Mahjong {
 
     void OnlineClient::OnClosed(const RoomClientEvent& event) {
         _requesting = false;
+        EndBrowsing();
         ForgetHosted();
         _awaitingClose = false;
         ForgetView();
         if (EndsTheSession(event.code)) {
             ForgetSession();
         }
-        if (event.code.empty()) {
+        if (event.code.empty() && event.message == OnlineCodes::kIdle) {
+            // An ordinary close (1000) whose reason is the server's: a connection in no room that was left alone
+            SetNoticeForCode(OnlineCodes::kIdle);
+        } else if (event.code.empty()) {
             // A connection that did not open, or that the server ended without a reason
             SetNoticeForCode(RoomClientErrors::kConnectFailed);
         } else {
@@ -294,7 +404,7 @@ namespace BECore::Mahjong {
     // ---- Keeping the model up to date ---------------------------------------------------------------------------------------------
 
     void OnlineClient::Settle() {
-        if (_client.GetState() == RoomClientState::Connected && !_requesting && !_awaitingClose) {
+        if (_client.GetState() == RoomClientState::Connected && !_requesting && !_awaitingClose && !_browsing) {
             // After an error of a request or a `left`: an open connection with nothing to do would be closed by the server some time later, with a notice nobody asked for
             CloseConnection();
         }
@@ -352,9 +462,12 @@ namespace BECore::Mahjong {
             case RoomClientState::Disconnected:
                 return OnlineStage::Idle;
             case RoomClientState::Connecting:
-                return OnlineStage::Connecting;
+                return _browsing && !_requesting ? OnlineStage::Browsing : OnlineStage::Connecting;
             case RoomClientState::Connected:
-                return _requesting ? OnlineStage::Connecting : OnlineStage::Idle;
+                if (_requesting) {
+                    return OnlineStage::Connecting;
+                }
+                return _browsing ? OnlineStage::Browsing : OnlineStage::Idle;
             case RoomClientState::InRoom:
                 return _hasTable ? OnlineStage::Game : OnlineStage::Lobby;
             case RoomClientState::Reconnecting:
@@ -391,6 +504,20 @@ namespace BECore::Mahjong {
     void OnlineClient::ForgetHosted() {
         if (_hosted) {
             _hosted.reset();
+            Bump();
+        }
+    }
+
+    void OnlineClient::EndBrowsing() {
+        const bool somethingToForget = _browsing || _joiningListed || _rooms.loaded || _rooms.pending || _rooms.more || !_rooms.rooms.empty();
+        _browsing = false;
+        _joiningListed = false;
+        _browseUrl.clear();
+        _rooms.loaded = false;
+        _rooms.pending = false;
+        _rooms.more = false;
+        _rooms.rooms.clear();
+        if (somethingToForget) {
             Bump();
         }
     }

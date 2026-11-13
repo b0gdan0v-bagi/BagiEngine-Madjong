@@ -15,7 +15,7 @@ namespace BECore::Mahjong::Tests {
      * client) and has the size that `seats[seat].concealedCount` says; the melds of the other seats are all open; there is no `hands`,
      * no wall and no concealed list of another seat; `result` (all four hands) only when the phase is not `playing`; the messages of
      * the other types carry no tile list at all. What the schema cannot see (a neighbour's tiles in the place of the own ones) is held
-     * by the equal-views test of `MahjongRoomsTest.cpp`.
+     * by the equal-views test of `MahjongRoomsTest.cpp`. A `rooms` list (the answer to `list_rooms`) has no tile list and no token either.
      *
      * `tests/rooms_smoke.py` holds the same rule in Python: change both together.
      */
@@ -261,6 +261,36 @@ namespace BECore::Mahjong::Tests {
             }
         }
 
+        /// `rooms`: the answer to `list_rooms`. No token and no tile list; the options are the public ones of the lobby.
+        inline void CheckRooms(const Json& root, Offences& offences) {
+            if (!CheckKeys(root, "rooms", {"v", "type", "game", "rooms", "more"}, {}, offences)) {
+                return;
+            }
+            if (!IsBool(root["more"])) {
+                Offend(offences, "rooms.more", "is not a boolean");
+            }
+            if (!root["rooms"].is_array()) {
+                Offend(offences, "rooms.rooms", "is not a list");
+                return;
+            }
+            for (const Json& entry : root["rooms"]) {
+                if (!CheckKeys(entry, "rooms.rooms[]", {"room", "host", "taken", "seats", "started"}, {"options"}, offences)) {
+                    continue;
+                }
+                CheckNumber(entry, "taken", "rooms.rooms[]", offences);
+                CheckNumber(entry, "seats", "rooms.rooms[]", offences);
+                if (const Json* options = Member(entry, "options")) {
+                    if (CheckKeys(*options, "rooms.rooms[].options", {}, {"hands", "level", "hintsAllowed"}, offences)) {
+                        for (auto it = options->begin(); it != options->end(); ++it) {
+                            if (!it.value().is_boolean() && !it.value().is_number_integer()) {
+                                Offend(offences, "rooms.rooms[].options." + it.key(), "is not a boolean or an integer");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
     }  // namespace RoomsJudgeDetail
 
     /// What is wrong with one text that a client received; empty when nothing. @p seat is the seat the client holds (from its `joined`),
@@ -290,6 +320,8 @@ namespace BECore::Mahjong::Tests {
             CheckKeys(root, "error", {"v", "type", "code", "message"}, {"ref"}, offences);
         } else if (name == "left") {
             CheckKeys(root, "left", {"v", "type", "reason"}, {}, offences);
+        } else if (name == "rooms") {
+            CheckRooms(root, offences);
         } else if (name == "pong") {
             CheckKeys(root, "pong", {"v", "type"}, {}, offences);
         } else {
