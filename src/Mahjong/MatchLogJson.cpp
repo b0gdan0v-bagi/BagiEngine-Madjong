@@ -16,6 +16,9 @@ namespace BECore::Mahjong {
         constexpr eastl::string_view kPlatformDesktop = "desktop";
         constexpr eastl::string_view kPlatformWeb = "web";
         constexpr eastl::string_view kPlatformUnknown = "unknown";
+        constexpr eastl::string_view kNicknameKey = "nickname";
+        constexpr unsigned char kFirstPrintableByte = 0x20;
+        constexpr unsigned char kDeleteByte = 0x7F;
         constexpr eastl::string_view kKindWin = "win";
         constexpr eastl::string_view kKindDrawn = "drawn";
 
@@ -242,6 +245,28 @@ namespace BECore::Mahjong {
             return levels;
         }
 
+        /// The `nickname` of a version 6 `start`: absent is none; a string of at most `kMaxMatchLogNicknameBytes` bytes without a control
+        /// character is kept, anything else is refused.
+        std::expected<eastl::string, eastl::string> ReadNickname(const Json& object) {
+            if (FindJsonMember(object, kNicknameKey) == nullptr) {
+                return eastl::string();
+            }
+            auto nickname = ReadString(object, kNicknameKey);
+            if (!nickname) {
+                return nickname;
+            }
+            if (nickname->size() > kMaxMatchLogNicknameBytes) {
+                return Fail(kNicknameKey, Format("has to be at most {} bytes", kMaxMatchLogNicknameBytes).c_str());
+            }
+            for (const char character : *nickname) {
+                const auto byte = static_cast<unsigned char>(character);
+                if (byte < kFirstPrintableByte || byte == kDeleteByte) {
+                    return Fail(kNicknameKey, "has to hold no control character");
+                }
+            }
+            return nickname;
+        }
+
         /// The `platform`, `build` and `gameVersion` of a version 5 `start`.
         std::expected<MatchLogOrigin, eastl::string> ReadOrigin(const Json& object) {
             const auto platform = ReadString(object, "platform");
@@ -338,6 +363,13 @@ namespace BECore::Mahjong {
                     return std::unexpected(origin.error());
                 }
                 event.origin = *origin;
+            }
+            if (*version >= kMatchLogNicknameVersion) {
+                auto nickname = ReadNickname(json);
+                if (!nickname) {
+                    return std::unexpected(nickname.error());
+                }
+                event.origin.nickname = std::move(*nickname);
             }
             if (*version >= kMatchLogSeatLevelsVersion) {
                 const auto levels = ReadSeatLevels(json, "levels");
@@ -553,6 +585,9 @@ namespace BECore::Mahjong {
                 json["platform"] = MakeJsonString(PlatformName(event.origin.platform));
                 json["build"] = MakeJsonString(event.origin.build);
                 json["gameVersion"] = MakeJsonString(event.origin.gameVersion);
+                if (!event.origin.nickname.empty()) {
+                    json["nickname"] = MakeJsonString(event.origin.nickname);
+                }
                 break;
             }
             case MatchLogKind::Hand: {

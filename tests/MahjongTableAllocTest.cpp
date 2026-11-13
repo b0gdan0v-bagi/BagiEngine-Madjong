@@ -7,8 +7,10 @@
 #include <BECore/Profiler/Alloc/AllocTracker.h>
 #include <Mahjong/Components/MahjongHintsComponent.h>
 #include <Mahjong/Components/MahjongOnlineComponent.h>
+#include <Mahjong/Components/MahjongUploadComponent.h>
 #include <Mahjong/Table/Coach.h>
 #include <Mahjong/Table/ScoreText.h>
+#include <Mahjong/UploadPrefs.h>
 
 // The table drawn again with nothing changed allocates nothing (the entry steady-frame-allocs): the layout, its input and the snapshots
 // keep the capacity of their lists between draws. Only a build that counts allocations can see it (`macos-profile`).
@@ -438,6 +440,94 @@ namespace BECore::Mahjong::Tests {
         CoreManager::GetClipboard().Update();
         Frame();
         ASSERT_EQ(MahjongOnlineComponent::GetActive()->Screens().PasteNote(), OnlinePasteNote::Refused);
+        ExpectSteadyFrameInBothLanguages();
+    }
+
+    // ----- the tester upload: the question, the rows of Options and the pad of the nickname -----
+
+    namespace {
+
+        /// A page that can post and has nothing to say: the component runs, no match is posted
+        class QuietPoster final : public IWebPoster {
+        public:
+            [[nodiscard]] bool Available() const override {
+                return true;
+            }
+            std::expected<WebPostId, eastl::string> Start(eastl::string_view /*path*/, eastl::string_view /*body*/) override {
+                return WebPostId{1};
+            }
+            WebPostResult Poll(WebPostId /*id*/) override {
+                return {WebPostStatus::Done, 200};
+            }
+        };
+
+    }  // namespace
+
+    class MahjongUploadAllocTest : public MahjongOnlineTableAllocTest {
+    protected:
+        void SetUp() override {
+            _prefsFolder = BECore::Tests::TestTempDirectory("bagi-mahjong-upload-alloc-prefs");
+            std::filesystem::remove_all(_prefsFolder);
+            std::filesystem::create_directories(_prefsFolder);
+            MahjongOnlineTableAllocTest::SetUp();
+            MahjongUploadComponent::Overrides& overrides = MahjongUploadComponent::TestOverrides();
+            overrides.poster = &_poster;
+            overrides.folder = _prefsFolder;
+            overrides.remembered = true;
+        }
+
+        void TearDown() override {
+            MahjongUploadComponent::TestOverrides() = {};
+            MahjongOnlineTableAllocTest::TearDown();
+            std::error_code error;
+            std::filesystem::remove_all(_prefsFolder, error);
+        }
+
+        /// The page `Options` up over the table after the question was answered with Send
+        void OpenOptionsAnswered() {
+            ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
+            _game->CloseSetup();
+            Draw();
+            Draw();
+            ASSERT_TRUE(MahjongUploadComponent::GetActive()->IsConsentShown());
+            MahjongUploadComponent::GetActive()->Choose(UploadConsent::Granted);
+            _game->OpenOptions();
+            Draw();
+            ASSERT_TRUE(OnScreen("Options", "UploadSend"));
+        }
+
+        QuietPoster _poster;
+        std::filesystem::path _prefsFolder;
+    };
+
+    TEST_F(MahjongUploadAllocTest, TheQuestionOfTheConsentAllocatesNothingInTheWholeFrame) {
+        ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
+        Draw();
+        Draw();
+        ASSERT_TRUE(MahjongUploadComponent::GetActive()->IsConsentShown());
+        ExpectSteadyFrameInBothLanguages();
+    }
+
+    TEST_F(MahjongUploadAllocTest, TheRowsOfOptionsWithNoNicknameAndWithOneAllocateNothingInTheWholeFrame) {
+        ASSERT_NO_FATAL_FAILURE(OpenOptionsAnswered());
+        ExpectSteadyFrameInBothLanguages();
+        MahjongUploadComponent::GetActive()->SetNickname("Anna");
+        Draw();
+        ExpectSteadyFrameInBothLanguages();
+        MahjongUploadComponent::GetActive()->Choose(UploadConsent::Declined);
+        Draw();
+        ExpectSteadyFrameInBothLanguages();
+    }
+
+    TEST_F(MahjongUploadAllocTest, ThePadOfTheNicknameAllocatesNothingInTheWholeFrame) {
+        ASSERT_NO_FATAL_FAILURE(OpenOptionsAnswered());
+        ASSERT_TRUE(ClickElement("Options", "NicknameField"));
+        Draw();
+        ASSERT_TRUE(OnScreen("OnlineEntry", "PadKey0"));
+        ASSERT_TRUE(MahjongOnlineComponent::GetActive()->IsNicknameEntryOpen());
+        ExpectSteadyFrameInBothLanguages();
+        EmitAction("MahjongOnlineKey", "0");
+        Draw();
         ExpectSteadyFrameInBothLanguages();
     }
 

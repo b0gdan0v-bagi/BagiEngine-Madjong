@@ -11,11 +11,12 @@ namespace BECore::Mahjong {
         return MAHJONG_BUILD_ID;
     }
 
-    MatchLogOrigin MakeMatchOrigin(bool browser) {
+    MatchLogOrigin MakeMatchOrigin(bool browser, eastl::string_view nickname) {
         MatchLogOrigin origin;
         origin.platform = browser ? MatchPlatform::Web : MatchPlatform::Desktop;
         origin.build.assign(BuildId().data(), BuildId().size());
         origin.gameVersion.assign(kGameVersion.data(), kGameVersion.size());
+        origin.nickname.assign(nickname.data(), nickname.size());
         return origin;
     }
 

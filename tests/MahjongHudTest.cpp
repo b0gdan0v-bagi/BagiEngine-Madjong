@@ -564,7 +564,8 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongHudTest, NoKeyIsMissingWhenEveryCanvasOfTheSceneIsShownInEveryLanguage) {
         ASSERT_NO_FATAL_FAILURE(Start(kTwoPeople));
         Scene& scene = *_manager->GetSceneByName("MahjongScene"_intern);
-        for (const char* node : {"Actions", "ActionsCompact", "Hud", "SeatPlates", "CenterPanel", "HudMenu", "Handoff", "HandOver", "HandOverAction", "MatchOver", "Setup", "Rules", "RulesAction"}) {
+        for (const char* node :
+             {"Actions", "ActionsCompact", "Hud", "SeatPlates", "CenterPanel", "HudMenu", "Handoff", "HandOver", "HandOverAction", "MatchOver", "Setup", "Consent", "Rules", "RulesAction"}) {
             UICanvasComponent::SetVisibleByName(scene, PoolString::Intern(node), true);
             const auto canvas = Canvas(node);
             ASSERT_TRUE(canvas) << node;

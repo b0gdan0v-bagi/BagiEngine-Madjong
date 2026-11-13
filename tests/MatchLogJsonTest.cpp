@@ -278,7 +278,8 @@ namespace BECore::Mahjong::Tests {
         for (const char* key : {"event", "version", "seed", "settings", "seats", "levels", "platform", "build", "gameVersion"}) {
             EXPECT_NE(FindJsonMember(json, key), nullptr) << key;
         }
-        EXPECT_EQ(Member(json, "version"), kMatchLogOriginVersion);
+        EXPECT_EQ(Member(json, "version"), kMatchLogFormatVersion);
+        EXPECT_EQ(FindJsonMember(json, "nickname"), nullptr) << "no nickname typed, no member";
         EXPECT_EQ(Member(json, "seats"), "PCCC");
         EXPECT_EQ(Member(json, "levels"), Json::array({5, 2, 7, 1}));
         EXPECT_EQ(Member(json, "platform"), "web");
@@ -371,10 +372,89 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(ChangedMemberIsRefused(start, "platform", "mainframe"));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "platform", "Desktop")) << "the names are lower case";
         EXPECT_TRUE(ChangedMemberIsRefused(start, "platform", ""));
-        // Versions 0 and 6 are refused.
+        // Versions 0 and 7 are refused.
         EXPECT_TRUE(ChangedMemberIsRefused(start, "version", 0));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "version", kMatchLogFormatVersion + 1));
-        EXPECT_EQ(kMatchLogFormatVersion, 5);
+        EXPECT_EQ(kMatchLogFormatVersion, 6);
+        EXPECT_EQ(kMatchLogNicknameVersion, 6);
+    }
+
+    TEST_F(MatchLogJsonTest, TheNicknameRoundTripsAndIsWrittenOnlyWhenThereIsOne) {
+        MatchLogEvent start = PlayedLog(kSeed).front();
+        EXPECT_EQ(FindJsonMember(EventToJson(start), "nickname"), nullptr);
+        for (const char* nickname : {"Anna", "Anna Lee 7", "\xD0\x90\xD0\xBD\xD0\xBD\xD0\xB0 \xD0\x9F"}) {
+            start.origin.nickname = nickname;
+            const Json json = EventToJson(start);
+            EXPECT_EQ(Member(json, "nickname"), nickname);
+            const auto back = EventFromJson(json);
+            ASSERT_TRUE(back.has_value()) << back.error().c_str();
+            EXPECT_EQ(back->origin.nickname, nickname);
+            EXPECT_EQ(*back, start);
+            const auto parsed = ParseMatchLog(TextOf({start}).c_str());
+            ASSERT_TRUE(parsed.has_value()) << parsed.error().c_str();
+            EXPECT_EQ(parsed->front().origin.nickname, nickname);
+        }
+        // `==` of a start looks at the nickname.
+        MatchLogEvent other = start;
+        other.origin.nickname = "Boris";
+        EXPECT_FALSE(other == start);
+        other.origin.nickname.clear();
+        EXPECT_FALSE(other == start);
+        EXPECT_TRUE(EventFromJson(EventToJson(other)).has_value());
+        EXPECT_TRUE(*EventFromJson(EventToJson(other)) == other);
+    }
+
+    TEST_F(MatchLogJsonTest, TheNicknameIsCheckedAndAnErrorNamesIt) {
+        MatchLogEvent start = PlayedLog(kSeed).front();
+        start.origin.nickname = "Anna";
+        const std::string longest(kMaxMatchLogNicknameBytes, 'a');
+        EXPECT_EQ(kMaxMatchLogNicknameBytes, 24u);
+        EXPECT_TRUE(EventFromJson(With(EventToJson(start), "nickname", longest)).has_value());
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "nickname", longest + "a")) << "25 bytes";
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "nickname", 5));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "nickname", nullptr));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "nickname", Json::array()));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "nickname", "An\nna"));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "nickname", std::string("An\0na", 5)));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "nickname", "An\x7F"));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "nickname", "\t"));
+    }
+
+    TEST_F(MatchLogJsonTest, ABeforeVersionSixStartReadsWithNoNicknameAndIgnoresOne) {
+        MatchLogEvent start = PlayedLog(kSeed).front();
+        start.origin = {MatchPlatform::Web, "abc", "1.0", ""};
+        for (const int version : {5, 4}) {
+            Json json = EventToJson(start);
+            json["version"] = version;
+            if (version == 4) {
+                json.erase("platform");
+                json.erase("build");
+                json.erase("gameVersion");
+            }
+            const auto plain = EventFromJson(json);
+            ASSERT_TRUE(plain.has_value()) << plain.error().c_str();
+            EXPECT_TRUE(plain->origin.nickname.empty());
+            // A nickname the version has no place for is not looked at, even one a version 6 reader would refuse.
+            for (const Json& stray : {Json("Anna"), Json(5), Json(std::string(kMaxMatchLogNicknameBytes + 1, 'x'))}) {
+                const auto ignored = EventFromJson(With(json, "nickname", stray));
+                ASSERT_TRUE(ignored.has_value()) << "version " << version << ": " << ignored.error().c_str();
+                EXPECT_TRUE(ignored->origin.nickname.empty());
+                EXPECT_EQ(ignored->origin, plain->origin);
+            }
+        }
+    }
+
+    TEST_F(MatchLogJsonTest, AWholeLogWithANicknameInItsStartParsesAndReplays) {
+        eastl::vector<MatchLogEvent> events = PlayedLog(kSeed);
+        events.front().origin = {MatchPlatform::Web, "a1b2c3d", "0.1.0", "Anna"};
+        const auto parsed = ParseMatchLog(TextOf(events).c_str());
+        ASSERT_TRUE(parsed.has_value()) << parsed.error().c_str();
+        EXPECT_EQ(*parsed, events);
+        EXPECT_EQ(parsed->front().origin.nickname, "Anna");
+        Match replayed;
+        const ReplayStatus status = ReplayMatchLog(*parsed, replayed);
+        ASSERT_TRUE(status.has_value()) << "stopped at event " << status.error().index;
+        EXPECT_EQ(replayed.GetPhase(), MatchPhase::Finished);
     }
 
     TEST_F(MatchLogJsonTest, AVersionThreeStartKeepsItsOneLevelAsFourEqualOnes) {

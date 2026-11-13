@@ -596,10 +596,10 @@ namespace BECore::Mahjong::Tests {
         const size_t firstBreak = current.find('\n');
         ASSERT_NE(firstBreak, std::string::npos);
         const std::string startLine = current.substr(0, firstBreak);
-        ASSERT_NE(startLine.find("\"version\":5"), std::string::npos) << startLine;
+        ASSERT_NE(startLine.find("\"version\":6"), std::string::npos) << startLine;
         ASSERT_NE(startLine.find("\"levels\":[3,3,3,3]"), std::string::npos) << startLine;
         std::string old = startLine;
-        old.replace(old.find("\"version\":5"), 11, "\"version\":3");
+        old.replace(old.find("\"version\":6"), 11, "\"version\":3");
         old.replace(old.find("\"levels\":[3,3,3,3]"), 18, "\"level\":3");
         const std::string oldText = old + current.substr(firstBreak);
 

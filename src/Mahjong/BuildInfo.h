@@ -14,7 +14,8 @@ namespace BECore::Mahjong {
     [[nodiscard]] std::string_view BuildId();
 
     /// The origin a match of this build says it was played from: `Web` for the browser build (`kBrowserBuild`, passed by the caller so
-    /// that a test drives both), else `Desktop`, with `BuildId()` and `kGameVersion`.
-    [[nodiscard]] MatchLogOrigin MakeMatchOrigin(bool browser);
+    /// that a test drives both), else `Desktop`, with `BuildId()` and `kGameVersion`, and the `nickname` the caller passes (empty: none;
+    /// the caller passes one only while the tester's consent is `Granted`).
+    [[nodiscard]] MatchLogOrigin MakeMatchOrigin(bool browser, eastl::string_view nickname = {});
 
 }  // namespace BECore::Mahjong

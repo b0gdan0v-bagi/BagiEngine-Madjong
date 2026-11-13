@@ -9,6 +9,7 @@
 #include <Events/InputEvents.h>
 #include <Events/SceneEvents.h>
 #include <Generated/MahjongHudComponent.gen.hpp>
+#include <Mahjong/Components/MahjongOnlineComponent.h>
 #include <Mahjong/Components/MahjongTableComponent.h>
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/Online/OnlineWords.h>
@@ -522,6 +523,9 @@ namespace BECore::Mahjong {
         MahjongGame* game = MahjongGame::GetActive();
         if (game == nullptr || game->IsOnlineOpen()) {
             return;  // the online panel owns Escape while it is up (`MahjongOnlineComponent`)
+        }
+        if (const MahjongOnlineComponent* online = MahjongOnlineComponent::GetActive(); online != nullptr && online->IsNicknameEntryOpen()) {
+            return;  // so does the nickname pad over `Options`: its Escape goes back to the page
         }
         if (game->IsOptionsOpen()) {
             game->CloseOptions();

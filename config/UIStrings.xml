@@ -276,6 +276,14 @@
         <string key="options.speedSlow" text="Slow"/>
         <string key="options.speedNormal" text="Normal"/>
         <string key="options.speedFast" text="Fast"/>
+        <string key="upload.consent.text" text="Send your finished matches to the author together with your Google email? They help improve the computer players. You can change this in Options."/>
+        <string key="upload.consent.accept" text="Accept"/>
+        <string key="upload.consent.decline" text="Don't send"/>
+        <string key="options.upload" text="Send matches"/>
+        <string key="options.nickname" text="Nickname"/>
+        <string key="options.nicknameNote" text="Sent with your matches"/>
+        <string key="options.nicknameNone" text="none"/>
+        <string key="upload.field.nickname" text="Nickname"/>
         <string key="move.discard" text="{seat} discarded {tile}"/>
         <string key="move.discardCalling" text="{seat} discarded {tile} and declared a ready hand"/>
         <string key="move.chow" text="{seat} claimed {tile} for a chow"/>
@@ -616,6 +624,14 @@
         <string key="options.speedSlow" text="Медленно"/>
         <string key="options.speedNormal" text="Обычно"/>
         <string key="options.speedFast" text="Быстро"/>
+        <string key="upload.consent.text" text="Отправлять сыгранные матчи автору вместе с вашим Google email? Они нужны, чтобы улучшать компьютерных игроков. Поменять можно в настройках."/>
+        <string key="upload.consent.accept" text="Принять"/>
+        <string key="upload.consent.decline" text="Не отправлять"/>
+        <string key="options.upload" text="Отправка матчей"/>
+        <string key="options.nickname" text="Ник"/>
+        <string key="options.nicknameNote" text="Уходит вместе с матчами"/>
+        <string key="options.nicknameNone" text="нет"/>
+        <string key="upload.field.nickname" text="Ник"/>
         <string key="move.discard" text="{seat} сбросило {tile}"/>
         <string key="move.discardCalling" text="{seat} сбросило {tile} и объявило заявку"/>
         <string key="move.chow" text="{seat} взяло {tile} в чи"/>

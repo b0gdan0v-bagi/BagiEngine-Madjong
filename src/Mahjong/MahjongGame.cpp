@@ -307,7 +307,9 @@ namespace BECore::Mahjong {
         }
         ApplyLanguage();
         _recorder.SetRecording(true);  // the match goes on being saved
-        _upload.SetRecording(true);
+        // Not uploaded: the replay below goes through the whole chain and would record the match again under a new id, and the part
+        // played before cannot be rejoined (the match id is not in the save). The next `BeginMatch` records again.
+        _upload.SetRecording(false);
         const MatchLogEvent& start = events.front();
         if (const ReplayStatus resumed = _session.ResumeMatch(events, start.seats, start.levels); !resumed) {
             LOG_WARNING(Format("MahjongGame: the saved match is not used: event {} was refused ({})", resumed.error().index, EnumUtils<ReplayProblem>::ToString(resumed.error().problem)));

@@ -9,6 +9,7 @@
   fills the code; the shortcut Ctrl+V / Cmd+V does the same without it. EntryNote, one line under EntryValueRow ({onlineEntryNote}), is shown only while a paste has
   said something ("No room code in the text", "Nothing to paste", "Cannot paste here. Type the code"); the room code pad has 32 keys, four rows, so the two empty rows
   leave room for it, and the name pad (48 keys) never shows it. A key is flex 1 of its row with the row's height, so a row of fewer keys shows wider ones.
+  The same pad also edits the tester's nickname (MahjongOnlineComponent, the page Options; EntryCaptionNickname is its caption), with the keys of a name.
   The plate is at most 544 high (32 padding + 56 value band + 6 x 56 pad rows + 64 actions + 7 x 8 spacing) and the rows share the height by flex weights at their
   maximum; the smallest canvas (320 x 320 units, 297 of safe height) leaves a row about 26 units and a key 25 units wide, both above the 21.3 units of 32 px, which is
   why the keys stay eight to a row in every window and nothing scrolls. The variants are those of Online: at most 480 units wide the plate takes the whole safe
@@ -31,6 +32,11 @@
                 <element type="UIElement" name="EntryCaptionCode" width="112" fontSize="22" visible="false">
                   <components>
                     <component type="UITextComponent" text="{#online.field.code}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="EntryCaptionNickname" width="112" fontSize="22" visible="false">
+                  <components>
+                    <component type="UITextComponent" text="{#upload.field.nickname}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
                   </components>
                 </element>
                 <element type="UIElement" name="EntryValue" flex="1" fontSize="28">
