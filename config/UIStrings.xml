@@ -86,8 +86,6 @@
         <string key="handover.col.hand" text="Hand"/>
         <string key="handover.col.change" text="Change"/>
         <string key="handover.col.total" text="Total"/>
-        <string key="handover.seat.won" text="{name}: hand {hand}, {delta}, total {total}"/>
-        <string key="handover.seat.drawn" text="{name}: no payment, total {total}"/>
         <string key="handover.more" text="+{n} more"/>
         <string key="handover.next" text="Next hand"/>
         <string key="handover.finish" text="Finish match"/>
@@ -458,8 +456,6 @@
         <string key="handover.col.hand" text="Рука"/>
         <string key="handover.col.change" text="Разница"/>
         <string key="handover.col.total" text="Итого"/>
-        <string key="handover.seat.won" text="{name}: рука {hand}, {delta}, итого {total}"/>
-        <string key="handover.seat.drawn" text="{name}: без выплат, итого {total}"/>
         <string key="handover.more" text="ещё +{n}"/>
         <string key="handover.next" text="Следующая раздача"/>
         <string key="handover.finish" text="Закончить матч"/>

@@ -5,6 +5,7 @@
 
 #include <BECore/Control/Json.h>
 #include <BECore/Text/Utf8.h>
+#include <BECore/UI/UIImageComponent.h>
 #include <Events/SceneEvents.h>
 #include <Mahjong/Components/MahjongHudComponent.h>
 #include <Mahjong/Table/Coach.h>
@@ -122,9 +123,17 @@ namespace BECore::Mahjong::Tests {
             return longest;
         }
 
+        constexpr int kScoreColumns = 5;
+
+        /// The cell of a row of the score table by column: name, wind, hand, change, total.
+        const eastl::string& CellOf(const ScoreRow& row, int column) {
+            const eastl::string* const cells[kScoreColumns] = {&row.name, &row.wind, &row.hand, &row.change, &row.total};
+            return *cells[column];
+        }
+
         struct WorstTexts {
             eastl::string headline;
-            eastl::string seatRow;
+            eastl::array<eastl::string, kScoreColumns> cells;  // the longest text of each column of the score table
             eastl::string summary;
             eastl::string standing;
             eastl::string standingsHeadline;
@@ -138,7 +147,7 @@ namespace BECore::Mahjong::Tests {
             worst.tile = LongestTile(strings, [](Tile tile) { return !tile.IsBonus(); });  // a winning tile is never a flower
 
             std::vector<eastl::string> headlines;
-            std::vector<eastl::string> rows;
+            std::array<std::vector<eastl::string>, kScoreColumns> columns;
             std::vector<eastl::string> summaries;
             for (Seat winner = 0; winner < kSeatCount; ++winner) {
                 for (Seat east = 0; east < kSeatCount; ++east) {
@@ -170,8 +179,10 @@ namespace BECore::Mahjong::Tests {
                                 const ScoreTable table = FormatScoreTable(strings, settlement, result, totals, seats);
                                 headlines.push_back(table.headline);
                                 summaries.push_back(table.summary);
-                                for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                                    rows.push_back(FormatSeatSentence(strings, table, seat));
+                                for (const ScoreRow& row : table.rows) {
+                                    for (int column = 0; column < kScoreColumns; ++column) {
+                                        columns[static_cast<size_t>(column)].push_back(CellOf(row, column));
+                                    }
                                 }
                             }
                         }
@@ -179,7 +190,9 @@ namespace BECore::Mahjong::Tests {
                 }
             }
             worst.headline = LongestText(headlines);
-            worst.seatRow = LongestText(rows);
+            for (int column = 0; column < kScoreColumns; ++column) {
+                worst.cells[static_cast<size_t>(column)] = LongestText(columns[static_cast<size_t>(column)]);
+            }
             worst.summary = LongestText(summaries);
 
             // The standings: a row with the last place and the biggest score, the headline of three tied seats and of a single winner
@@ -247,7 +260,8 @@ namespace BECore::Mahjong::Tests {
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 totals[seat] += settlement.deltas[seat];
             }
-            return FormatScoreTable(CoreManager::GetUIStrings(), settlement, *Hand().Result(), totals, _game->GetSession().Seats());
+            const PlayerHand* winnerHand = IsSeat(settlement.winner) ? &Hand().GetHand(settlement.winner) : nullptr;
+            return FormatScoreTable(CoreManager::GetUIStrings(), settlement, *Hand().Result(), totals, _game->GetSession().Seats(), winnerHand);
         }
 
         /// The person at seat 0 plays the hand on: the computers run, and each turn of the person takes the first action on offer. Returns how
@@ -318,8 +332,11 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Text("HandOver", "Headline"), expected.headline.c_str());
         EXPECT_EQ(Text("HandOver", "Summary"), expected.summary.c_str());
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            EXPECT_EQ(Var(Format("handOverSeat{}", seat).c_str()), FormatSeatSentence(CoreManager::GetUIStrings(), expected, seat).c_str());
-            EXPECT_EQ(Text("HandOver", Format("SeatRow{}", seat).c_str()), FormatSeatSentence(CoreManager::GetUIStrings(), expected, seat).c_str());
+            for (int column = 0; column < kScoreColumns; ++column) {
+                const std::string name = Format("handOverCell{}_{}", seat, column).c_str();
+                EXPECT_EQ(Var(name.c_str()), CellOf(expected.rows[seat], column).c_str());
+                EXPECT_EQ(Text("HandOver", Format("ScoreCell{}_{}", seat, column).c_str()), CellOf(expected.rows[seat], column).c_str());
+            }
         }
         for (int i = 0; i < kMaxScoreLines; ++i) {
             const bool has = i < static_cast<int>(expected.lines.size());
@@ -327,6 +344,75 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(OnScreen("HandOver", Format("ScoreLine{}", i).c_str()), has) << "line " << i << " is visible exactly when it has text";
         }
         EXPECT_EQ(Text("HandOverAction", "NextHand"), "Next hand");
+    }
+
+    TEST_F(MahjongEndScreenTest, TheWinnersRowIsLitAndTheWinningTilesAreShownAsPicturesWithTheWinningTileMarked) {
+        ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers, 3));
+        ASSERT_NO_FATAL_FAILURE(PlayHandOver());
+        ASSERT_EQ(Hand().Result()->kind, ResultKind::Win) << "this seed ends in a mahjong";
+        const ScoreTable expected = ExpectedTable();
+        ASSERT_EQ(expected.winner, Hand().Result()->winner);
+
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            EXPECT_EQ(OnScreen("HandOver", Format("WinnerRow{}", seat).c_str()), seat == expected.winner) << "exactly the winner's row is lit: seat " << seat;
+        }
+        ASSERT_FALSE(expected.winningTiles.empty());
+        EXPECT_EQ(expected.winningTiles.back(), Hand().Result()->winningTile) << "the winning tile is the last";
+        EXPECT_TRUE(OnScreen("HandOver", "WinTiles"));
+        for (int i = 0; i < kMaxWinningTiles; ++i) {
+            const bool has = i < static_cast<int>(expected.winningTiles.size());
+            EXPECT_EQ(OnScreen("HandOver", Format("WinTile{}", i).c_str()), has) << "tile " << i << " is shown exactly when the hand has it";
+            EXPECT_EQ(OnScreen("HandOver", Format("WinTileMark{}", i).c_str()), has && i + 1 == static_cast<int>(expected.winningTiles.size())) << "only the winning tile is marked: " << i;
+            if (has) {
+                const UIElement* tile = Element("HandOver", Format("WinTile{}", i).c_str());
+                ASSERT_NE(tile, nullptr);
+                const UIImageComponent* image = tile->GetComponent<UIImageComponent>();
+                ASSERT_NE(image, nullptr);
+                EXPECT_EQ(image->sprite, PoolString::Intern(SpriteName(expected.winningTiles[static_cast<size_t>(i)]))) << "tile " << i;
+            }
+        }
+        EXPECT_EQ(
+            expected.winningTiles.size(), Hand().GetHand(expected.winner).concealed.size() + 3 * Hand().GetHand(expected.winner).melds.size() +
+                                              [&] {
+                                                  size_t kongs = 0;
+                                                  for (const Meld& meld : Hand().GetHand(expected.winner).melds) {
+                                                      kongs += meld.kind == MeldKind::Kong ? 1 : 0;
+                                                  }
+                                                  return kongs;
+                                              }())
+            << "all the tiles of the hand: its melds as laid, the concealed tiles with the winning tile in them";
+    }
+
+    TEST_F(MahjongEndScreenTest, ADrawnHandLightsNoRowShowsNoTilesAndHasDashesInItsCells) {
+        ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers, 3));
+        ASSERT_NO_FATAL_FAILURE(PlayHandOver());
+        HandState state = Hand().Capture();
+        state.result = HandResult{};
+        Lay(HandModel::ForDisplay(state));
+        Draw();
+        ASSERT_TRUE(Shown("HandOver"));
+        ASSERT_EQ(Hand().Result()->kind, ResultKind::Drawn);
+
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            EXPECT_FALSE(OnScreen("HandOver", Format("WinnerRow{}", seat).c_str())) << seat;
+            EXPECT_EQ(Var(Format("handOverCell{}_2", seat).c_str()), "-");
+            EXPECT_EQ(Var(Format("handOverCell{}_3", seat).c_str()), "-");
+            EXPECT_EQ(Text("HandOver", Format("ScoreCell{}_2", seat).c_str()), "-");
+        }
+        EXPECT_FALSE(OnScreen("HandOver", "WinTiles")) << "no winning hand, no row of tiles";
+        for (int i = 0; i < kMaxWinningTiles; ++i) {
+            EXPECT_FALSE(OnScreen("HandOver", Format("WinTile{}", i).c_str())) << i;
+            EXPECT_FALSE(OnScreen("HandOver", Format("WinTileMark{}", i).c_str())) << i;
+        }
+    }
+
+    TEST_F(MahjongEndScreenTest, AnUnchangedFrameOfTheScoreTableMovesNoVariable) {
+        ASSERT_NO_FATAL_FAILURE(StartShortMatch(kAllComputers, 3));
+        ASSERT_NO_FATAL_FAILURE(PlayHandOver());
+        const uint64_t version = CoreManager::GetUIVars().GetVersion();
+        Draw();
+        Draw();
+        EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), version) << "the cells are published when the session or the language moved, not per frame";
     }
 
     TEST_F(MahjongEndScreenTest, ALanguageSwitchWhileTheScoreTableIsUpChangesItsTextAtTheNextDraw) {
@@ -344,7 +430,12 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Text("HandOver", "Headline"), russian.headline.c_str());
         EXPECT_EQ(Text("HandOver", "Summary"), russian.summary.c_str());
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            EXPECT_EQ(Text("HandOver", Format("SeatRow{}", seat).c_str()), FormatSeatSentence(CoreManager::GetUIStrings(), russian, seat).c_str());
+            for (int column = 0; column < kScoreColumns; ++column) {
+                EXPECT_EQ(Text("HandOver", Format("ScoreCell{}_{}", seat, column).c_str()), CellOf(russian.rows[seat], column).c_str());
+            }
+        }
+        for (int column = 0; column < kScoreColumns; ++column) {
+            EXPECT_EQ(Text("HandOver", Format("ScoreCol{}", column).c_str()), russian.columns[static_cast<size_t>(column)].c_str()) << "the captions follow the language";
         }
         for (int i = 0; i < kMaxScoreLines; ++i) {
             const bool has = i < static_cast<int>(russian.lines.size());
@@ -855,7 +946,9 @@ namespace BECore::Mahjong::Tests {
             vars.Set("handOverHeadline"_intern, eastl::string_view(worst.headline));
             vars.Set("handOverSummary"_intern, eastl::string_view(worst.summary));
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                vars.Set(PoolString::Intern(Format("handOverSeat{}", seat)), eastl::string_view(worst.seatRow));
+                for (int column = 0; column < kScoreColumns; ++column) {
+                    vars.Set(PoolString::Intern(Format("handOverCell{}_{}", seat, column)), eastl::string_view(worst.cells[static_cast<size_t>(column)]));
+                }
             }
             canvas->UpdateLayout(kViewWidth, kViewHeight);
             action->UpdateLayout(kViewWidth, kViewHeight);
@@ -1094,7 +1187,9 @@ namespace BECore::Mahjong::Tests {
             vars.Set("handOverCoach"_intern, eastl::string_view(worst.handTally));
             vars.Set("handOverButton"_intern, eastl::string_view(LongestText({Tr(strings, "handover.next"), Tr(strings, "handover.finish")})));
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                vars.Set(PoolString::Intern(Format("handOverSeat{}", seat)), eastl::string_view(worst.seatRow));
+                for (int column = 0; column < kScoreColumns; ++column) {
+                    vars.Set(PoolString::Intern(Format("handOverCell{}_{}", seat, column)), eastl::string_view(worst.cells[static_cast<size_t>(column)]));
+                }
             }
 
             // The longest line the rules can print, of every kind and in both forms (points and doubles), in all sixteen places at once

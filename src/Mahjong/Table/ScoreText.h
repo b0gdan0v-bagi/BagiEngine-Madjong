@@ -89,9 +89,6 @@ namespace BECore::Mahjong {
     [[nodiscard]] ScoreTable FormatScoreTable(const UIStrings& strings, const HandSettlement& settlement, const HandResult& result, const SeatScores& totalsAfter, const SeatWho& who,
                                               const PlayerHand* winnerHand = nullptr);
 
-    /// The one-line sentence the node of the score table still shows for `seat` (`handover.seat.*`): replaced by the columns at WP 2.
-    [[nodiscard]] eastl::string FormatSeatSentence(const UIStrings& strings, const ScoreTable& table, Seat seat);
-
     /// The one-line standing the node of the standings still shows (`matchover.row`): replaced by the badge row at WP 4.
     [[nodiscard]] eastl::string FormatStandingSentence(const UIStrings& strings, const StandingRow& row);
 

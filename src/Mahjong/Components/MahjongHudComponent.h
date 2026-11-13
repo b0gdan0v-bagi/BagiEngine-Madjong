@@ -70,13 +70,13 @@ namespace BECore::Mahjong {
      * choices of `Setup` when they changed, so a burst of computer steps is one write.
      *
      * **The end of a hand and of a match.** While the session is in `HandOver` the modal canvas `HandOver` is shown with the rows of
-     * `FormatScoreTable` (`Table/ScoreText.h`): `handOverHeadline`, `handOverSeat0` .. `3`, `scoreLine0` .. `15` (the element
-     * `ScoreLineN` is visible exactly when there is a line N), `handOverSummary` and `handOverButton` (`handover.next`, `handover.finish` on
-     * the last hand of the match, resolved, on the button `NextHand` of `HandOverAction`, in the middle of the table, in the gap of the plate, shown and hidden with the score table, while
-     * `HudMenu` is hidden; the two wait while `MahjongTableComponent::HandOverHeld()`, i.e. while the table shows a person's claim that lost to a
-     * mahjong, for `kClaimLostSeconds`; the variables are published at once); `MahjongNextHand` settles the hand (`TableSession::NextHand`) and deals on. While the match is
-     * finished the canvas `MatchOver` is shown with `matchOverHeadline` and `standing0` .. `3` (`FormatStandings`); its button
-     * `MahjongNewGame` opens `Setup`. In Coach mode, once the match tally has a move, each also has `handOverCoach` / `matchOverCoach`
+     * `FormatScoreTable` (`Table/ScoreText.h`): `handOverHeadline`, `handOverCell<r>_<c>` (seat row 0..3, column 0..4: name, wind, hand, change, total), `scoreLine0` .. `15` (the element
+     * `ScoreLineN` is visible exactly when there is a line N; `WinnerRow<seat>` exactly for the winner's row; the pictures `WinTile<N>` of the winning hand with `WinTileMark<N>` on the last, in the
+     * row `WinTiles`, none for a drawn hand), `handOverSummary` and `handOverButton` (`handover.next`, `handover.finish` on the last hand of the match, resolved, on the button `NextHand` of
+     * `HandOverAction`, in the middle of the table, in the gap of the plate, shown and hidden with the score table, while `HudMenu` is hidden; the two wait while
+     * `MahjongTableComponent::HandOverHeld()`, i.e. while the table shows a person's claim that lost to a mahjong, for `kClaimLostSeconds`; the variables are published at once); `MahjongNextHand`
+     * settles the hand (`TableSession::NextHand`) and deals on. While the match is finished the canvas `MatchOver` is shown with `matchOverHeadline` and `standing0` .. `3` (`FormatStandings`); its
+     * button `MahjongNewGame` opens `Setup`. In Coach mode, once the match tally has a move, each also has `handOverCoach` / `matchOverCoach`
      * (`FormatCoachTally`; the labels `HandCoachRow` / `MatchCoachRow` are visible exactly while it has text). Both are published when the version of the session or of the string table moved and read
      * only public data (the hands are open once the hand is over).
      *
@@ -167,6 +167,8 @@ namespace BECore::Mahjong {
         /// Shows or hides `HandOver` and `MatchOver` after the session, and sets their variables when the session moved.
         void PublishEndScreens(const MahjongGame* game);
         void PublishHandOver(const MahjongGame& game);
+        /// Sets the pictures `WinTile0` .. of the winning hand and shows exactly those (the row `WinTiles` with them), the mark of the winning tile on the last.
+        void PublishWinningTiles(const eastl::vector<Tile>& tiles);
         void PublishMatchOver(const MahjongGame& game);
         /// Shows or hides the score table `HandOver` with its button `HandOverAction`; `HudMenu` (New game) is hidden while it is shown.
         void ShowHandOver(bool shown);

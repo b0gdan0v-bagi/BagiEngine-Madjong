@@ -2,6 +2,7 @@
 #include "MahjongOnlineTableTestSupport.h"
 
 #include <BECore/Control/Json.h>
+#include <BECore/UI/UIImageComponent.h>
 #include <BECore/UI/UIInputClicker.h>
 #include <Common/TempPath.h>
 #include <Mahjong/Online/OnlineWords.h>
@@ -525,9 +526,26 @@ namespace BECore::Mahjong::Tests {
                 const OnlineResult& result = *Table().result;
                 const Match& match = _game->GetMatch();
                 for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                    const std::string shown = Var(Format("handOverSeat{}", seat).c_str());
                     const std::string total = std::to_string(match.Scores()[seat] + result.deltas[seat]);
-                    EXPECT_NE(shown.find("total " + total), std::string::npos) << shown << " / " << total;
+                    EXPECT_EQ(Var(Format("handOverCell{}_4", seat).c_str()), total) << "the total cell of seat " << seat << " is the match's points plus the server's change";
+                    if (result.winner != kNoSeat) {
+                        EXPECT_EQ(Var(Format("handOverCell{}_2", seat).c_str()), std::to_string(result.scores[seat])) << "the hand cell is the server's score: seat " << seat;
+                        EXPECT_EQ(Var(Format("handOverCell{}_3", seat).c_str()), Format("{:+}", result.deltas[seat]).c_str()) << "the change cell is the server's change: seat " << seat;
+                    }
+                }
+                if (result.winner != kNoSeat) {
+                    // the tiles of the plate are the display hand's; the last one is the winning tile of the server's result
+                    int shown = 0;
+                    for (int i = 0; i < kMaxWinningTiles; ++i) {
+                        shown += OnScreen("HandOver", Format("WinTile{}", i).c_str()) ? 1 : 0;
+                    }
+                    ASSERT_GT(shown, 0) << "the winning hand is on the plate";
+                    ASSERT_TRUE(OnScreen("HandOver", Format("WinTileMark{}", shown - 1).c_str()));
+                    const UIImageComponent* last = Element("HandOver", Format("WinTile{}", shown - 1).c_str())->GetComponent<UIImageComponent>();
+                    ASSERT_NE(last, nullptr);
+                    EXPECT_EQ(last->sprite, PoolString::Intern(SpriteName(result.winningTile)));
+                } else {
+                    EXPECT_FALSE(OnScreen("HandOver", "WinTiles"));
                 }
                 ++hands;
                 // all four read the plate

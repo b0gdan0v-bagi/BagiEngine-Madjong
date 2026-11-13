@@ -28,6 +28,7 @@ namespace BECore::Mahjong {
      * - The skin of a box (`config/CLAUDE.md`, "UI style"): the role colour is the **top** of a vertical gradient and its `<role>Deep` the bottom (the four button roles, and `surface`,
      *   `surfaceRaised`, `header`, `hudPanel` for panels). `frame` is the border of a panel, `frameLight` the border of a button, `shadow` the colour of the one soft shadow of a raised thing,
      *   `highlight` the line along the top edge, `outline` the dark outline of a headline in the display font, `glowPrimary` the glow of a selected segment or a primary button.
+     *   `winnerRow` is the fill of the winner's row in the score table, a dim gold-brown inside a gold `accent` border (the plate is a modal, so `accent` is allowed as on any modal).
      *   Nothing of the skin is gold: a screen over the table (`Actions`, `Hud`, `Hints*`, `HudMenu`) uses none, gold stays the marks of the table and the `accent` text of a modal.
      */
 
@@ -126,7 +127,7 @@ namespace BECore::Mahjong {
     inline constexpr float kPlatePadding = 4.0f;
 
     /// The colours of the scene file, by role (`kUiPaletteNames` holds the role of each, in the same order).
-    inline constexpr int kUiPaletteSize = 26;
+    inline constexpr int kUiPaletteSize = 27;
     inline constexpr eastl::array<Color, kUiPaletteSize> kUiPalette{{
         {0, 0, 0, 200},        // scrim
         {36, 40, 52, 255},     // surface
@@ -154,6 +155,7 @@ namespace BECore::Mahjong {
         {255, 255, 255, 60},   // highlight
         {16, 18, 26, 255},     // outline
         {90, 200, 120, 160},   // glowPrimary
+        {84, 74, 36, 255},     // winnerRow
     }};
     // clang-format off
     inline constexpr eastl::array<const char*, kUiPaletteSize> kUiPaletteNames{{
@@ -183,6 +185,7 @@ namespace BECore::Mahjong {
         "highlight",
         "outline",
         "glowPrimary",
+        "winnerRow",
     }};
     // clang-format on
 

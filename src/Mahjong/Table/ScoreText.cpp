@@ -241,15 +241,6 @@ namespace BECore::Mahjong {
         return table;
     }
 
-    eastl::string FormatSeatSentence(const UIStrings& strings, const ScoreTable& table, Seat seat) {
-        const ScoreRow& row = table.rows[seat];
-        const eastl::string name = Format("{} ({})", row.name, row.wind);
-        if (table.winner == kNoSeat) {
-            return Tr(strings, "handover.seat.drawn", {{"name", name}, {"total", row.total}});
-        }
-        return Tr(strings, "handover.seat.won", {{"name", name}, {"hand", row.hand}, {"delta", row.change}, {"total", row.total}});
-    }
-
     eastl::string FormatStandingSentence(const UIStrings& strings, const StandingRow& row) {
         return Tr(strings, "matchover.row", {{"place", Format("{}", row.place)}, {"name", row.name}, {"score", row.score}});
     }

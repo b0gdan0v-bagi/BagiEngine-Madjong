@@ -517,15 +517,7 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
-    TEST(ScoreTextTest, TheTransitionalSentencesKeepTheOldRows) {
-        const HandModel model = PlayToSelfDrawWin();
-        const HandSettlement settlement = SettleHand(model);
-        const ScoreTable table = FormatScoreTable(En(), settlement, *model.Result(), TotalsAfter(settlement), kDefaultSeatSetup);
-        EXPECT_STREQ(FormatSeatSentence(En(), table, kSeat1).c_str(), "Seat 2 (S): hand 290, +1160, total 3160");
-        HandSettlement drawn;
-        drawn.kind = ResultKind::Drawn;
-        const ScoreTable none = FormatScoreTable(Ru(), drawn, HandResult{}, SeatScores{2000, 2000, 2000, 2000}, kNoPeople);
-        EXPECT_STREQ(FormatSeatSentence(Ru(), none, kSeat0).c_str(), "Место 1 (В): без выплат, итого 2000");
+    TEST(ScoreTextTest, TheTransitionalStandingSentenceKeepsTheOldRow) {
         EXPECT_STREQ(FormatStandingSentence(En(), StandingRow{3, "Seat 2", "1900", false}).c_str(), "3. Seat 2: 1900");
     }
 
