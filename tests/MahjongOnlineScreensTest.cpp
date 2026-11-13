@@ -568,6 +568,142 @@ namespace BECore::Mahjong::Tests {
         EXPECT_NE(Std(person.screens.Name().Text()), Std(TextEntry::DefaultName(person.strings))) << "an edited name stays";
     }
 
+    TEST(MahjongOnlineScreens, APasteFillsTheCodeOnTheJoinFormAndOnTheCodePadAndNowhereElse) {
+        MahjongHubWorld world;
+        Person person(world);
+        person.screens.Open(person.Client());
+        EXPECT_FALSE(person.screens.PasteCode("ab3k9")) << "the Menu takes no paste";
+        ASSERT_TRUE(person.screens.ShowHost());
+        EXPECT_FALSE(person.screens.PasteCode("ab3k9")) << "the Host form has no code";
+        ASSERT_TRUE(person.screens.Back());
+        ASSERT_TRUE(person.screens.ShowJoin());
+
+        uint64_t version = person.screens.Version();
+        EXPECT_TRUE(person.screens.PasteCode("  ab3k9 "));
+        EXPECT_EQ(Std(person.screens.Code().Text()), "AB3K9");
+        EXPECT_GT(person.screens.Version(), version);
+        version = person.screens.Version();
+        EXPECT_TRUE(person.screens.PasteCode("ab3k9"));
+        EXPECT_EQ(person.screens.Version(), version) << "the same code is no change";
+
+        // on the pad of the code the paste replaces what was typed; the pad of the name takes none
+        ASSERT_TRUE(person.screens.FocusField(OnlineField::Code));
+        person.screens.Refresh(person.strings);
+        ASSERT_TRUE(person.screens.Backspace());
+        ASSERT_TRUE(person.screens.PressKey(0));
+        EXPECT_TRUE(person.screens.PasteCode("Join my room, the code is mm7nn"));
+        EXPECT_EQ(Std(person.screens.Code().Text()), "MM7NN");
+        ASSERT_TRUE(person.screens.Done());
+        ASSERT_TRUE(person.screens.FocusField(OnlineField::Name));
+        const std::string name = Std(person.screens.Name().Text());
+        EXPECT_FALSE(person.screens.PasteCode("zz7zz"));
+        EXPECT_EQ(Std(person.screens.Code().Text()), "MM7NN");
+        EXPECT_EQ(Std(person.screens.Name().Text()), name);
+        EXPECT_EQ(person.screens.PasteNote(), OnlinePasteNote::None);
+        EXPECT_FALSE(person.screens.NoteNothingToPaste(ClipboardStatus::Empty));
+
+        // on the form, which has no pad, a text with no code says so in the notice line
+        ASSERT_TRUE(person.screens.Done());
+        EXPECT_FALSE(person.screens.PasteCode("hello world"));
+        EXPECT_EQ(Std(person.screens.NoticeKey()), Std(kOnlinePasteNotCodeKey));
+        EXPECT_EQ(Std(person.screens.Code().Text()), "MM7NN");
+        EXPECT_TRUE(person.screens.PasteCode("zz7zz"));
+        EXPECT_TRUE(person.screens.NoticeKey().empty()) << "a paste that worked is a move";
+    }
+
+    TEST(MahjongOnlineScreens, ATextWithNoCodeChangesNothingAndTheNoteGoesAtTheNextMove) {
+        MahjongHubWorld world;
+        Person person(world);
+        person.screens.Open(person.Client());
+        ASSERT_TRUE(person.screens.ShowJoin());
+        ASSERT_TRUE(person.screens.PasteCode("ab3k9"));
+        ASSERT_TRUE(person.screens.FocusField(OnlineField::Code));
+        person.screens.Refresh(person.strings);
+
+        EXPECT_FALSE(person.screens.PasteCode("hello world"));
+        EXPECT_EQ(Std(person.screens.Code().Text()), "AB3K9") << "a refused paste leaves the field as it was";
+        EXPECT_EQ(person.screens.PasteNote(), OnlinePasteNote::NotACode);
+        EXPECT_EQ(Std(person.screens.PasteNoteKey()), Std(kOnlinePasteNotCodeKey));
+        const uint64_t version = person.screens.Version();
+        EXPECT_FALSE(person.screens.PasteCode("hello again"));
+        EXPECT_EQ(person.screens.Version(), version) << "the same note is no change";
+
+        // the next key, Backspace, Done and a page move each clear it
+        EXPECT_FALSE(person.screens.PressKey(0)) << "the code is full, but the key is a move all the same";
+        EXPECT_EQ(person.screens.PasteNote(), OnlinePasteNote::None);
+        EXPECT_TRUE(person.screens.NoteNothingToPaste(ClipboardStatus::Empty));
+        EXPECT_EQ(Std(person.screens.PasteNoteKey()), Std(kOnlinePasteEmptyKey));
+        EXPECT_TRUE(person.screens.Backspace());
+        EXPECT_EQ(person.screens.PasteNote(), OnlinePasteNote::None);
+        EXPECT_TRUE(person.screens.NoteNothingToPaste(ClipboardStatus::Refused));
+        EXPECT_EQ(Std(person.screens.PasteNoteKey()), Std(kOnlinePasteRefusedKey));
+        EXPECT_TRUE(person.screens.NoteNothingToPaste(ClipboardStatus::Unavailable));
+        EXPECT_EQ(person.screens.PasteNote(), OnlinePasteNote::Refused);
+        EXPECT_FALSE(person.screens.NoteNothingToPaste(ClipboardStatus::Ok));
+        ASSERT_TRUE(person.screens.Done());
+        EXPECT_EQ(person.screens.PasteNote(), OnlinePasteNote::None);
+        EXPECT_TRUE(person.screens.PasteNoteKey().empty());
+
+        ASSERT_TRUE(person.screens.FocusField(OnlineField::Code));
+        EXPECT_FALSE(person.screens.PasteCode(""));
+        ASSERT_TRUE(person.screens.Back());
+        EXPECT_EQ(person.screens.PasteNote(), OnlinePasteNote::None);
+    }
+
+    TEST(MahjongOnlineScreens, TheCopyButtonCopiesTheCodeOfTheRoomOfTheLobbyAndForgetsItAtTheNextMove) {
+        MahjongHubWorld world;
+        Person host(world);
+        host.screens.Open(host.Client());
+        EXPECT_TRUE(host.screens.RoomCodeToCopy(host.Client()).empty());
+        EXPECT_FALSE(host.screens.NoteCopy(true)) << "only the lobby copies";
+        EXPECT_EQ(host.screens.CopyState(), OnlineCopyState::None);
+
+        ASSERT_TRUE(HostRoom(world, host));
+        EXPECT_EQ(Std(host.screens.RoomCodeToCopy(host.Client())), Std(host.Client().Room()));
+        EXPECT_EQ(host.screens.RoomCodeToCopy(host.Client()).size(), RoomLimits::kRoomCodeLength);
+        EXPECT_EQ(host.screens.CopyState(), OnlineCopyState::None);
+
+        EXPECT_TRUE(host.screens.NoteCopy(true));
+        EXPECT_EQ(host.screens.CopyState(), OnlineCopyState::Copied);
+        const uint64_t version = host.screens.Version();
+        host.screens.NoteCopy(true);
+        EXPECT_EQ(host.screens.Version(), version);
+        Settle(world, {&host});
+        EXPECT_EQ(host.screens.CopyState(), OnlineCopyState::Copied) << "frames alone do not end it";
+        EXPECT_EQ(host.screens.Version(), version);
+
+        EXPECT_TRUE(host.screens.NoteCopy(false));
+        EXPECT_EQ(host.screens.CopyState(), OnlineCopyState::Failed);
+
+        // a move of the player: a seat
+        host.screens.NoteCopy(true);
+        const int seat = host.Client().Seat() == 1 ? 2 : 1;
+        ASSERT_TRUE(host.screens.Sit(host.Client(), seat));
+        EXPECT_EQ(host.screens.CopyState(), OnlineCopyState::None);
+
+        // the panel left and opened again, and a closed one
+        host.screens.NoteCopy(true);
+        host.screens.Close();
+        EXPECT_EQ(host.screens.CopyState(), OnlineCopyState::None);
+        EXPECT_TRUE(host.screens.RoomCodeToCopy(host.Client()).empty());
+        host.screens.Open(host.Client());
+        EXPECT_EQ(host.screens.CopyState(), OnlineCopyState::None);
+    }
+
+    TEST(MahjongOnlineScreens, TheCopyStateEndsWithTheLobbyAndANewRoomStartsClean) {
+        MahjongHubWorld world;
+        Person host(world);
+        ASSERT_TRUE(HostRoom(world, host));
+        ASSERT_TRUE(host.screens.NoteCopy(true));
+
+        ASSERT_TRUE(host.screens.Leave(host.Client()));
+        ASSERT_TRUE(RunUntil(world, {&host}, [&] { return host.screens.Page() == OnlinePage::Menu; }));
+        EXPECT_EQ(host.screens.CopyState(), OnlineCopyState::None);
+        ASSERT_TRUE(HostRoom(world, host));
+        EXPECT_EQ(host.screens.CopyState(), OnlineCopyState::None) << "a new room starts with its own button";
+        EXPECT_EQ(Std(host.screens.RoomCodeToCopy(host.Client())), Std(host.Client().Room()));
+    }
+
     TEST(MahjongOnlineScreens, AStoredNameStaysAndAFrameWithNothingNewChangesNothing) {
         MahjongHubWorld world;
         Person person(world);

@@ -3,6 +3,7 @@
 #include "MahjongTableTestSupport.h"
 #include "MahjongTouchTestSupport.h"
 
+#include <BECore/Clipboard/FakeClipboard.h>
 #include <BECore/Profiler/Alloc/AllocTracker.h>
 #include <Mahjong/Components/MahjongHintsComponent.h>
 #include <Mahjong/Components/MahjongOnlineComponent.h>
@@ -379,6 +380,64 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Reconnecting; }));
         Frame();
         ASSERT_NO_FATAL_FAILURE(ExpectTheLobby("OnlineLeave"));
+        ExpectSteadyFrameInBothLanguages();
+    }
+
+    TEST_F(MahjongOnlineScreensAllocTest, TheLobbyWithTheCopyButtonSayingCopiedAllocatesNothingInTheWholeFrame) {
+        const IntrusivePtr<FakeClipboard> clipboard = New<FakeClipboard>();
+        const ScopedClipboardBackend scope(clipboard);
+        ASSERT_NO_FATAL_FAILURE(OpenPanel());
+        EmitAction("MahjongOnlineHost");
+        Draw();
+        ASSERT_TRUE(ClickElement("Online", "OnlineCreate"));
+        ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Lobby; }));
+        ASSERT_NO_FATAL_FAILURE(ExpectTheLobby("OnlineCopy"));
+        ExpectSteadyFrameInBothLanguages();
+
+        ASSERT_TRUE(ClickElement("Online", "OnlineCopy"));
+        Frame();
+        ASSERT_EQ(MahjongOnlineComponent::GetActive()->Screens().CopyState(), OnlineCopyState::Copied);
+        ExpectSteadyFrameInBothLanguages();
+
+        clipboard->SetRefuse(true);
+        ASSERT_TRUE(ClickElement("Online", "OnlineCopy"));
+        Frame();
+        ASSERT_EQ(MahjongOnlineComponent::GetActive()->Screens().CopyState(), OnlineCopyState::Failed);
+        ExpectSteadyFrameInBothLanguages();
+    }
+
+    TEST_F(MahjongOnlineScreensAllocTest, TheCodePadWithAPasteNoteUpAllocatesNothingInTheWholeFrame) {
+        const IntrusivePtr<FakeClipboard> clipboard = New<FakeClipboard>("no code in here");
+        const ScopedClipboardBackend scope(clipboard);
+        ASSERT_NO_FATAL_FAILURE(OpenPanel());
+        EmitAction("MahjongOnlineJoin");
+        Draw();
+        ASSERT_TRUE(ClickElement("Online", "OnlineCode"));
+        Draw();
+        ASSERT_EQ(MahjongOnlineComponent::GetActive()->Screens().Page(), OnlinePage::Entry);
+        ASSERT_TRUE(OnScreen("OnlineEntry", "EntryPaste"));
+        ExpectSteadyFrameInBothLanguages();
+
+        // A text with no code from the paste key: the note stands under the value
+        ASSERT_TRUE(ClickElement("OnlineEntry", "EntryPaste"));
+        CoreManager::GetClipboard().Update();
+        Frame();
+        ASSERT_EQ(MahjongOnlineComponent::GetActive()->Screens().PasteNote(), OnlinePasteNote::NotACode);
+        ASSERT_TRUE(OnScreen("OnlineEntry", "EntryNote"));
+        ExpectSteadyFrameInBothLanguages();
+
+        // The other two notes
+        clipboard->SetContent("");
+        ASSERT_TRUE(ClickElement("OnlineEntry", "EntryPaste"));
+        CoreManager::GetClipboard().Update();
+        Frame();
+        ASSERT_EQ(MahjongOnlineComponent::GetActive()->Screens().PasteNote(), OnlinePasteNote::Empty);
+        ExpectSteadyFrameInBothLanguages();
+        clipboard->SetRefuse(true);
+        ASSERT_TRUE(ClickElement("OnlineEntry", "EntryPaste"));
+        CoreManager::GetClipboard().Update();
+        Frame();
+        ASSERT_EQ(MahjongOnlineComponent::GetActive()->Screens().PasteNote(), OnlinePasteNote::Refused);
         ExpectSteadyFrameInBothLanguages();
     }
 
