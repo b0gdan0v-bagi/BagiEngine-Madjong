@@ -110,6 +110,37 @@ namespace BECore::Mahjong::Arena {
         EXPECT_TRUE(Contains(ErrorOf("normal:searchCandidates=13"), "13"));
     }
 
+    TEST(ArenaPlayerTest, TheOraclesAreReadOnTheNormalProfile) {
+        static_assert(kProfileFieldCount == 11, "an oracle is no LevelProfile field");
+        for (const auto& [spec, kind] : {std::pair<const char*, OracleKind>{"oracle-acceptance", OracleKind::Acceptance}, {"oracle-defence", OracleKind::Defence}}) {
+            const ArenaPlayer player = Player(spec);
+            EXPECT_EQ(player.oracle, kind) << spec;
+            EXPECT_FALSE(player.random);
+            EXPECT_EQ(player.name, spec);
+            EXPECT_TRUE(SameProfile(player.profile, kNormalProfile));
+        }
+        const ArenaPlayer knobs = Player("oracle-defence:searchWorlds=2,skipClaimPercent=10");
+        EXPECT_EQ(knobs.oracle, OracleKind::Defence);
+        EXPECT_EQ(knobs.name, "oracle-defence:searchWorlds=2,skipClaimPercent=10");
+        EXPECT_EQ(knobs.profile.searchWorlds, 2);
+        EXPECT_EQ(knobs.profile.skipClaimPercent, 10);
+        // An ordinary player is no oracle.
+        for (const char* spec : {"normal", "easy:skipClaimPercent=20", "random", "7"}) {
+            EXPECT_EQ(Player(spec).oracle, OracleKind::None) << spec;
+        }
+        // A bad oracle name names the part and lists the four oracles.
+        for (const char* spec : {"oracle-wise", "oracle-", "oracle-acceptance2:searchWorlds=2"}) {
+            const std::string error = ErrorOf(spec);
+            EXPECT_TRUE(Contains(error, "oracle")) << error;
+            for (const char* name : {"oracle-acceptance", "oracle-hands", "oracle-whole", "oracle-defence"}) {
+                EXPECT_TRUE(Contains(error, name)) << error;
+            }
+        }
+        EXPECT_TRUE(Contains(ErrorOf("oracle-wise"), "\"oracle-wise\""));
+        EXPECT_TRUE(Contains(ErrorOf("oracle-defence:"), "no knobs"));
+        EXPECT_TRUE(Contains(ErrorOf("oracle-defence:searchWorlds=4097"), "4097"));
+    }
+
     TEST(ArenaPlayerTest, ABadSpecIsAnErrorThatNamesThePart) {
         EXPECT_TRUE(Contains(ErrorOf(""), "empty"));
         EXPECT_TRUE(Contains(ErrorOf("Normal"), "\"Normal\""));

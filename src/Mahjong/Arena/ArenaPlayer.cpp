@@ -46,6 +46,27 @@ namespace BECore::Mahjong::Arena {
             return Format("a level {}..{}, easy (1), normal ({}) or random", kMinLevel, kMaxLevel, LevelNumber(ComputerLevel::Normal));
         }
 
+        /// The oracle specs the parser knows: the head of a spec, up to the colon.
+        struct OracleSpec {
+            std::string_view name;
+            OracleKind kind;
+        };
+        constexpr eastl::array<OracleSpec, 2> kOracleSpecs{{
+            {"oracle-acceptance", OracleKind::Acceptance},
+            {"oracle-defence", OracleKind::Defence},
+        }};
+        constexpr std::string_view kOracleHeadPrefix = "oracle-";
+        constexpr std::string_view kOracleNamesText = "oracle-acceptance, oracle-hands, oracle-whole, oracle-defence";
+
+        const OracleSpec* FindOracle(std::string_view head) {
+            for (const OracleSpec& oracle : kOracleSpecs) {
+                if (head == oracle.name) {
+                    return &oracle;
+                }
+            }
+            return nullptr;
+        }
+
         /// Applies `knob=value` (`part`) to `profile`; the error names the part.
         std::optional<eastl::string> ApplyKnob(std::string_view part, LevelProfile& profile, eastl::array<bool, kProfileFieldCount>& seen) {
             const size_t equals = part.find('=');
@@ -96,14 +117,23 @@ namespace BECore::Mahjong::Arena {
             player.profile = kNormalProfile;
             return player;
         }
-        std::optional<ComputerLevel> level = TryParseLevel(head);
-        if (!level.has_value()) {
-            level = TryParseLevelName(head);
+        if (head.starts_with(kOracleHeadPrefix)) {
+            const OracleSpec* const oracle = FindOracle(head);
+            if (oracle == nullptr) {
+                return std::unexpected(Format("unknown oracle \"{}\" in \"{}\" (the oracles are {})", head, spec, kOracleNamesText));
+            }
+            player.oracle = oracle->kind;
+            player.profile = kNormalProfile;
+        } else {
+            std::optional<ComputerLevel> level = TryParseLevel(head);
+            if (!level.has_value()) {
+                level = TryParseLevelName(head);
+            }
+            if (!level.has_value()) {
+                return std::unexpected(Format("unknown player \"{}\" in \"{}\" (use {}, all lowercase, or an oracle: {})", head, spec, LevelAndRandomNamesText(), kOracleNamesText));
+            }
+            player.profile = ProfileOf(*level);
         }
-        if (!level.has_value()) {
-            return std::unexpected(Format("unknown player \"{}\" in \"{}\" (use {}, all lowercase)", head, spec, LevelAndRandomNamesText()));
-        }
-        player.profile = ProfileOf(*level);
         if (colon == std::string_view::npos) {
             return player;
         }
