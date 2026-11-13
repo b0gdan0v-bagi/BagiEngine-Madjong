@@ -13,6 +13,7 @@
 #include <Mahjong/Save/MatchSaveStore.h>
 #include <Mahjong/Table/AnimationSpeed.h>
 #include <Mahjong/Table/Coach.h>
+#include <Mahjong/UploadPrefs.h>
 
 namespace BECore::Mahjong {
 
@@ -139,6 +140,15 @@ namespace BECore::Mahjong {
         }
         const MatchUploader& GetUpload() const {
             return _upload;
+        }
+
+        /// The tester's choice about sending the matches (`UploadPrefs.h`): a plain member. The upload component of the scene fills it from
+        /// the file and keeps the file in step; the Options components read it. The game itself does nothing with it.
+        UploadPrefs& GetUploadPrefs() {
+            return _uploadPrefs;
+        }
+        const UploadPrefs& GetUploadPrefs() const {
+            return _uploadPrefs;
         }
 
         /// The settings of the next match; a match in progress keeps the ones it was started with.
@@ -354,6 +364,7 @@ namespace BECore::Mahjong {
         HintsMode _hintsMode = kDefaultHintsMode;
         AnimationSpeed _animationSpeed = kDefaultAnimationSpeed;
         PoolString _language = PoolString::Intern(kDefaultLanguage);
+        UploadPrefs _uploadPrefs;
         MatchLogWriter _log;      // before _session: the session reports to it, so it goes last
         MatchUploader _upload;    // forwards to _log
         MatchRecorder _recorder;  // the session's sink; forwards to _upload
