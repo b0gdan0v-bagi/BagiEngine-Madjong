@@ -441,6 +441,34 @@ namespace BECore::Mahjong::Tests {
         ExpectSteadyFrameInBothLanguages();
     }
 
+    TEST_F(MahjongOnlineScreensAllocTest, TheRoomsPageWithAListAndWithNoneAllocatesNothingInTheWholeFrame) {
+        ASSERT_NO_FATAL_FAILURE(OpenPanel());
+        EmitAction("MahjongOnlineRooms");
+        Draw();
+        ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Rooms().loaded; }));
+        Frame();
+        ASSERT_EQ(MahjongOnlineComponent::GetActive()->Screens().Page(), OnlinePage::Rooms);
+        ASSERT_TRUE(OnScreen("Online", "OnlineRoomsHost")) << "no room is open";
+        ExpectSteadyFrameInBothLanguages();
+
+        // Four open rooms: three rows and the page button
+        for (const char* name : {"Hanna", "Ivo", "Jan", "Kai"}) {
+            _others.push_back(std::make_unique<HubPlayer>(_world));
+            HubPlayer& host = *_others.back();
+            OnlineRoomOptions options{kShortMatchHands, kMinLevel};
+            options.isPublic = true;
+            ASSERT_TRUE(host.Client().Host(kUrl, name, options));
+            ASSERT_TRUE(PumpUntil([&] { return host.Client().Stage() == OnlineStage::Lobby; }));
+        }
+        ASSERT_TRUE(ClickElement("Online", "OnlineRefresh"));
+        ASSERT_TRUE(PumpUntil([&] { return !_game->GetOnline().Rooms().pending; }));
+        Frame();
+        Frame();
+        ASSERT_TRUE(OnScreen("Online", "OnlineRoomRow2"));
+        ASSERT_TRUE(OnScreen("Online", "OnlineMore"));
+        ExpectSteadyFrameInBothLanguages();
+    }
+
 }  // namespace BECore::Mahjong::Tests
 
 #endif

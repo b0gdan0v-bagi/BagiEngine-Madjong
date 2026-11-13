@@ -342,6 +342,22 @@
         <string key="online.paste.empty" text="Nothing to paste"/>
         <string key="online.paste.refused" text="Cannot paste here. Type the code"/>
         <string key="online.error.idle" text="The connection was closed because nothing happened for a while. Try again."/>
+        <string key="online.rooms" text="Open rooms"/>
+        <string key="online.rooms.title" text="Open rooms"/>
+        <string key="online.rooms.row" text="{host}: {facts}"/>
+        <string key="online.rooms.free" text="{n} free"/>
+        <string key="online.rooms.hands" text="{n} hands"/>
+        <string key="online.rooms.level" text="level {n}"/>
+        <string key="online.rooms.hints" text="hints"/>
+        <string key="online.rooms.empty" text="No open rooms. Host one."/>
+        <string key="online.rooms.refresh" text="Refresh"/>
+        <string key="online.rooms.page" text="Page {n}/{m}"/>
+        <string key="online.rooms.host" text="Host"/>
+        <string key="online.rooms.back" text="Back"/>
+        <string key="online.status.browsing" text="Looking for rooms..."/>
+        <string key="online.field.open" text="Room"/>
+        <string key="online.open.code" text="By code"/>
+        <string key="online.open.open" text="Open"/>
     </language>
     <language id="ru">
         <string key="lang.en" text="English"/>
@@ -683,5 +699,21 @@
         <string key="online.paste.empty" text="Нечего вставлять"/>
         <string key="online.paste.refused" text="Здесь нельзя вставить. Введите код"/>
         <string key="online.error.idle" text="Соединение закрыто: долго ничего не происходило. Попробуйте ещё раз."/>
+        <string key="online.rooms" text="Открытые комнаты"/>
+        <string key="online.rooms.title" text="Открытые комнаты"/>
+        <string key="online.rooms.row" text="{host}: {facts}"/>
+        <string key="online.rooms.free" text="своб. {n}"/>
+        <string key="online.rooms.hands" text="{n} раздач"/>
+        <string key="online.rooms.level" text="ур. {n}"/>
+        <string key="online.rooms.hints" text="подсказки"/>
+        <string key="online.rooms.empty" text="Открытых комнат нет. Создайте свою."/>
+        <string key="online.rooms.refresh" text="Обновить"/>
+        <string key="online.rooms.page" text="Стр. {n}/{m}"/>
+        <string key="online.rooms.host" text="Создать"/>
+        <string key="online.rooms.back" text="Назад"/>
+        <string key="online.status.browsing" text="Ищем комнаты..."/>
+        <string key="online.field.open" text="Доступ"/>
+        <string key="online.open.code" text="По коду"/>
+        <string key="online.open.open" text="Открытая"/>
     </language>
 </UIStrings>

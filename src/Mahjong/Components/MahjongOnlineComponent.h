@@ -37,7 +37,7 @@ namespace BECore::Mahjong {
      *
      * **Open.** `MahjongGame::IsOnlineOpen()` is the owner of the state: the `Online` button of `Setup` (`MahjongOnline`, only while `Setup` is open, never in the browser build)
      * sets it and this component opens the pages; `Start()` and `Stop()` of the game clear it and the pages close. `OnlineClose` hides the panel and leaves the room as it is. The
-     * canvas `Online` shows the page `Menu`, `Host`, `Join` or `Lobby`, the canvas `OnlineEntry` the page `Entry` (the first one is hidden meanwhile: the second has a dim of its own).
+     * canvas `Online` shows the page `Menu`, `Host`, `Join`, `Rooms` or `Lobby`, the canvas `OnlineEntry` the page `Entry` (the first one is hidden meanwhile: the second has a dim of its own).
      *
      * **Input.** The actions of the panel (`MahjongOnlineHost` ... `MahjongOnlineLeave`) are ignored while it is closed, and each asks `OnlineScreens` again what is on offer, so a
      * stale click does nothing. On the `Entry` page the keyboard types too (`SDLEvents::KeyDownEvent`: Latin letters, digits, space, Backspace (may repeat), Enter = Done); Escape
@@ -51,6 +51,7 @@ namespace BECore::Mahjong {
      *
      * **Variables** (set only when `OnlineScreens::Version()`, `OnlineClient::Version()`, the version of `UIStrings` or the open state moved; the elements likewise): `onlineNotice`,
      * `onlineStatus`, `onlineName`, `onlineCode`, `onlineRoom`, `onlineSeat0..3`, `onlineHands`, `onlineLevel`, `onlineHints` (`allowed` | `off`), `onlineHostLine`, `onlineWaiting`,
+     * `onlineOpen` (`code` | `open`: the visibility of the room to host), `onlineListRow0..2` and `onlineMore` (the `Rooms` page; a host's name is a value of a text, never the text),
      * `onlineEntryValue`, `onlineEntryNote`, `onlineCopy` and `padKey0..47` (while the `Entry` page is up and the pad, its field or the language moved). The token of a session is never published.
      */
     class MahjongOnlineComponent : public IComponent {
@@ -92,17 +93,21 @@ namespace BECore::Mahjong {
         void PublishVariables(const OnlineClient& client, const UIStrings& strings);
         void PublishPages(const OnlineClient& client);
         void PublishPad(const UIStrings& strings);
+        /// The rows of the `Rooms` page and the page button: set when the list, the page or the language moved.
+        void PublishRooms(const OnlineClient& client, const UIStrings& strings);
         void SetItem(size_t item, bool visible);
         void SetPadKey(size_t key, bool visible);
         void SetPadRow(size_t row, bool visible);
 
         /// The elements the pages show among themselves (`Item` in the source file).
-        static constexpr size_t kItemCount = 35;
+        static constexpr size_t kItemCount = 45;
 
         OnlineScreens _screens;
         /// Alive while the component is attached; a read of the clipboard that is still pending holds a `weak_ptr` of it.
         std::shared_ptr<int> _alive;
         PoolString _seatVars[kSeatCount];
+        static constexpr size_t kListRowCount = static_cast<size_t>(OnlineScreens::kRoomsPerPage);
+        PoolString _listVars[kListRowCount];
         PoolString _padVars[TextEntry::kPadMaxKeys];
         PoolString _padKeyNames[TextEntry::kPadMaxKeys];
         PoolString _padRowNames[TextEntry::kPadRowCount];

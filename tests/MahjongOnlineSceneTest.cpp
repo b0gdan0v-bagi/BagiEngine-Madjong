@@ -1195,4 +1195,227 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(std::filesystem::exists(_folder / "online.save")) << "no name and no session: the slot is gone";
     }
 
+    // ----- The open rooms, listed and joined through the clicks -----
+
+    /// The game of the scene beside people who host open rooms on the same hub.
+    class MahjongOnlineRoomsPageTest : public MahjongOnlineRoomTest {
+    protected:
+        /// A person hosts a room that others can list; true when it is in its lobby.
+        bool HostOpen(HubPlayer& host, const char* name, bool hintsAllowed, const std::vector<HubPlayer*>& pumped) {
+            OnlineRoomOptions options;
+            options.hands = kShortMatchHands;
+            options.level = 3;
+            options.hintsAllowed = hintsAllowed;
+            options.isPublic = true;
+            if (!host.Client().Host(kUrl, name, options)) {
+                return false;
+            }
+            return PumpUntil([&] { return host.Client().Stage() == OnlineStage::Lobby; }, pumped);
+        }
+
+        /// The panel on the `Rooms` page with the first list on it.
+        void OpenTheRooms(const std::vector<HubPlayer*>& pumped) {
+            ASSERT_NO_FATAL_FAILURE(OpenPanel());
+            Act("MahjongOnlineRooms");
+            ASSERT_EQ(Screens().Page(), OnlinePage::Rooms);
+            ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Rooms().loaded; }, pumped));
+            Frame();
+        }
+    };
+
+    TEST_F(MahjongOnlineRoomsPageTest, TheMenuOpensTheRoomsPageThatListsTheOpenRoomsAndATapOnARowJoinsTheLobbyACodeGives) {
+        HubPlayer ann(_world);
+        HubPlayer bo(_world);
+        HubPlayer hidden(_world);
+        const std::vector<HubPlayer*> all = {&ann, &bo, &hidden};
+        ASSERT_TRUE(HostOpen(ann, "Ann", false, all));
+        ASSERT_TRUE(HostOpen(bo, "Bo", true, all));
+        ASSERT_TRUE(hidden.Client().Host(kUrl, "Hidden", OnlineRoomOptions{}));
+        ASSERT_TRUE(PumpUntil([&] { return hidden.Client().Stage() == OnlineStage::Lobby; }, all));
+
+        ASSERT_NO_FATAL_FAILURE(OpenPanel());
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineMenuRooms"));
+        EXPECT_EQ(Text(kOnline, "OnlineMenuRooms"), "Open rooms");
+        Act("MahjongOnlineRooms");
+        ASSERT_EQ(Screens().Page(), OnlinePage::Rooms);
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineTitleRooms"));
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineMenuRooms"));
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineNameRow"));
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineStatus")) << "until the first answer";
+        EXPECT_EQ(Var("onlineStatus"), "Looking for rooms...");
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineRoomRow0"));
+        ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Rooms().loaded; }, all));
+        Frame();
+
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineStatus"));
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineRoomRow0"));
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineRoomRow1"));
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineRoomRow2")) << "the private room is not listed";
+        EXPECT_EQ(Var("onlineListRow0"), "Ann: 3 free, 8 hands, level 3");
+        EXPECT_EQ(Var("onlineListRow1"), "Bo: 3 free, 8 hands, level 3, hints");
+        EXPECT_EQ(Text(kOnline, "OnlineRoomRow1"), "Bo: 3 free, 8 hands, level 3, hints");
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineRefresh"));
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineRoomsBack"));
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineMore")) << "one page";
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineRoomsHost")) << "the list is not empty";
+
+        // The name is the page's (the pad returns to the list), then the tap: the guest sits in the lobby of that room
+        ASSERT_NO_FATAL_FAILURE(TypeName("Zed"));
+        ASSERT_EQ(Screens().Page(), OnlinePage::Rooms);
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineRoomRow1")) << "the list stayed";
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineRoomRow1"));
+        EXPECT_EQ(Screens().Page(), OnlinePage::Lobby);
+        ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Lobby; }, all));
+        EXPECT_EQ(Var("onlineRoom"), std::string(bo.Client().Room().c_str()));
+        ASSERT_TRUE(PumpUntil([&] { return SeatText(1) == "Zed (you)"; }, all));
+        EXPECT_EQ(SeatText(0), "Bo");
+        EXPECT_EQ(_game->StoredOnline().name, "Zed") << "a name sent from the list is stored as on Enter";
+        EXPECT_EQ(_world.Judge().Offences().size(), 0u);
+    }
+
+    TEST_F(MahjongOnlineRoomsPageTest, ARoomGoneBetweenTheListAndTheTapShowsTheNoticeAndTheListWithoutItAndEscapeEndsTheBrowsing) {
+        HubPlayer gone(_world);
+        HubPlayer stays(_world);
+        const std::vector<HubPlayer*> all = {&gone, &stays};
+        ASSERT_TRUE(HostOpen(gone, "Gone", false, all));
+        ASSERT_TRUE(HostOpen(stays, "Stays", false, all));
+        ASSERT_NO_FATAL_FAILURE(OpenTheRooms(all));
+        ASSERT_TRUE(ItemShown(kOnline, "OnlineRoomRow1"));
+
+        ASSERT_TRUE(gone.Client().Leave());
+        ASSERT_TRUE(PumpUntil([&] { return gone.Client().Stage() == OnlineStage::Idle; }, all));
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineRoomRow0"));
+        ASSERT_TRUE(PumpUntil([&] { return !Notice().empty() && _game->GetOnline().Rooms().loaded && !_game->GetOnline().Rooms().pending; }, all));
+        EXPECT_EQ(Screens().Page(), OnlinePage::Rooms);
+        EXPECT_EQ(Notice(), std::string(OnlineNoticeText(CoreManager::GetUIStrings(), OnlineErrorKey(RoomErrors::kUnknownRoom)).c_str()));
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineRoomRow1"));
+        ASSERT_TRUE(ItemShown(kOnline, "OnlineRoomRow0"));
+        EXPECT_EQ(Var("onlineListRow0"), "Stays: 3 free, 8 hands, level 3");
+
+        // Escape: the Menu, the connection closed; once more: the panel closes and Setup is left under it
+        PressKeyboard(SDLK_ESCAPE);
+        Draw();
+        EXPECT_EQ(Screens().Page(), OnlinePage::Menu);
+        EXPECT_EQ(_game->GetOnline().Stage(), OnlineStage::Idle);
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineMenuRooms"));
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineRoomRow0"));
+        EXPECT_EQ(Notice(), "");
+        PressKeyboard(SDLK_ESCAPE);
+        Draw();
+        EXPECT_FALSE(_game->IsOnlineOpen());
+        EXPECT_TRUE(_game->IsSetupOpen());
+    }
+
+    TEST_F(MahjongOnlineRoomsPageTest, AnEmptyListOffersToHostAndRefreshAsksAgain) {
+        HubPlayer late(_world);
+        const std::vector<HubPlayer*> all = {&late};
+        ASSERT_NO_FATAL_FAILURE(OpenTheRooms(all));
+        EXPECT_EQ(Var("onlineStatus"), "No open rooms. Host one.");
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineStatus"));
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineRoomsHost"));
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineRoomRow0"));
+
+        ASSERT_TRUE(HostOpen(late, "Late", false, all));
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineRefresh"));
+        ASSERT_TRUE(PumpUntil([&] { return !_game->GetOnline().Rooms().pending; }, all));
+        Frame();
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineRoomRow0"));
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineRoomsHost"));
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineStatus"));
+
+        // Back to an empty world: the offer hosts, on the form
+        ASSERT_TRUE(late.Client().Leave());
+        ASSERT_TRUE(PumpUntil([&] { return late.Client().Stage() == OnlineStage::Idle; }, all));
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineRefresh"));
+        ASSERT_TRUE(PumpUntil([&] { return !_game->GetOnline().Rooms().pending; }, all));
+        Frame();
+        ASSERT_TRUE(ItemShown(kOnline, "OnlineRoomsHost"));
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineRoomsHost"));
+        EXPECT_EQ(Screens().Page(), OnlinePage::Host);
+        EXPECT_EQ(_game->GetOnline().Stage(), OnlineStage::Idle);
+    }
+
+    TEST_F(MahjongOnlineRoomsPageTest, MoreThanThreeRoomsPageByThePageButtonAndTheVisibilityChoiceMakesARoomThatOthersList) {
+        std::vector<std::unique_ptr<HubPlayer>> hosts;
+        std::vector<HubPlayer*> all;
+        for (const char* name : {"Ann", "Bo", "Cy", "Di"}) {
+            hosts.push_back(std::make_unique<HubPlayer>(_world));
+            all.push_back(hosts.back().get());
+            ASSERT_TRUE(HostOpen(*hosts.back(), name, false, all));
+        }
+        ASSERT_NO_FATAL_FAILURE(OpenTheRooms(all));
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineRoomRow2"));
+        ASSERT_TRUE(ItemShown(kOnline, "OnlineMore"));
+        EXPECT_EQ(Text(kOnline, "OnlineMore"), "Page 1/2");
+        EXPECT_EQ(Var("onlineListRow0"), "Ann: 3 free, 8 hands, level 3");
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineMore"));
+        Draw();
+        EXPECT_EQ(Text(kOnline, "OnlineMore"), "Page 2/2");
+        EXPECT_EQ(Var("onlineListRow0"), "Di: 3 free, 8 hands, level 3");
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineRoomRow1"));
+        EXPECT_FALSE(ItemShown(kOnline, "OnlineRoomRow2"));
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineMore"));
+        Draw();
+        EXPECT_EQ(Text(kOnline, "OnlineMore"), "Page 1/2") << "the page after the last is the first";
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineRoomsBack"));
+        Draw();
+        ASSERT_EQ(Screens().Page(), OnlinePage::Menu);
+
+        // The host form: by code, unless Open room is chosen
+        ASSERT_NO_FATAL_FAILURE(GoToTheHostForm());
+        EXPECT_TRUE(ItemShown(kOnline, "OnlineOpenRow"));
+        EXPECT_EQ(Var("onlineOpen"), "code");
+        EXPECT_TRUE(Element(kOnline, "OnlineOpenCode")->selected);
+        Act("MahjongOnlineOpen", "everyone");  // not offered
+        Act("MahjongOnlineOpen", "");
+        EXPECT_EQ(Var("onlineOpen"), "code");
+        Act("MahjongOnlineOpen", "open");
+        EXPECT_EQ(Var("onlineOpen"), "open");
+        EXPECT_TRUE(Element(kOnline, "OnlineOpenOpen")->selected);
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineCreate"));
+        ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Lobby; }, all));
+        const std::string code = Var("onlineRoom");
+
+        HubPlayer seeker(_world);
+        all.push_back(&seeker);
+        ASSERT_TRUE(seeker.Client().Browse(kUrl));
+        ASSERT_TRUE(PumpUntil([&] { return seeker.Client().Rooms().loaded; }, all));
+        bool listed = false;
+        for (const OnlineListedRoom& room : seeker.Client().Rooms().rooms) {
+            listed = listed || std::string(room.code.c_str()) == code;
+        }
+        EXPECT_TRUE(listed) << "an Open room is on the list of others";
+    }
+
+    TEST_F(MahjongOnlineRoomsPageTest, TheRoomsPageAndTheHostFormPassTheSizeMatrixInBothLanguagesAndAQuietFrameSetsNothing) {
+        std::vector<std::unique_ptr<HubPlayer>> hosts;
+        std::vector<HubPlayer*> all;
+        for (const char* name : {"Ann", "Bo", "Cy", "Di"}) {
+            hosts.push_back(std::make_unique<HubPlayer>(_world));
+            all.push_back(hosts.back().get());
+            ASSERT_TRUE(HostOpen(*hosts.back(), name, true, all));
+        }
+        ASSERT_NO_FATAL_FAILURE(OpenTheRooms(all));
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            ASSERT_TRUE(_game->SetLanguage(language));
+            Frame();
+            {
+                SCOPED_TRACE("rooms, three rows and the page button");
+                ExpectTheCanvasFits(kOnline);
+            }
+            const uint64_t version = CoreManager::GetUIVars().GetVersion();
+            for (int i = 0; i < 3; ++i) {
+                Frame();
+            }
+            EXPECT_EQ(CoreManager::GetUIVars().GetVersion(), version) << "a frame in which nothing moved sets no variable";
+        });
+        ASSERT_TRUE(ClickElement(kOnline, "OnlineMore"));
+        Draw();
+        {
+            SCOPED_TRACE("rooms, the last page");
+            ExpectTheCanvasFits(kOnline);
+        }
+    }
+
 }  // namespace BECore::Mahjong::Tests
