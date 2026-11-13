@@ -105,6 +105,7 @@ namespace BECore::Mahjong::Tests {
             RoomClientCloseReasons::kConnectTimeout,
             OnlineCodes::kTooManyFailedJoins,
             OnlineCodes::kServerFull,
+            OnlineCodes::kIdle,
             OnlineCodes::kRoomClosed,
             OnlineCodes::kRoomFinished,
         };

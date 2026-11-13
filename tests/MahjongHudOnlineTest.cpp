@@ -26,11 +26,14 @@ namespace BECore::Mahjong::Tests {
         constexpr float kKeyAir = 4.0f;
         constexpr float kMinControlHeight = 48.0f;
         constexpr size_t kSeats = 4;
+        constexpr size_t kListRows = 3;
         /// The longest a name can be: 24 bytes, which the value of a field shows whole. The widest letter of the pad of the language repeats up to it.
         constexpr size_t kNameBytes = 24;
         /// A name on a seat row shares the row with the seat's number and `Sit here`, and in a canvas of 262 units it has about 120 of them: a name longer than this many bytes
         /// of wide letters is cut at the smallest text size (it is the player's text, not a word of the game).
         constexpr size_t kSeatNameBytes = 10;
+        /// A host's name on a room row shares two lines with the listing's facts ("3 free, 16 hands, level 10, hints") in a canvas of 230 units: wider names lose the end of the facts.
+        constexpr size_t kListNameBytes = 6;
 
         struct Output {
             float width;
@@ -40,18 +43,24 @@ namespace BECore::Mahjong::Tests {
 
         /// The elements the pages of the panel show and hide among themselves (the rest of the canvas is always there).
         const char* const kPageElements[] = {
-            "OnlineTitleMenu", "OnlineTitleHost", "OnlineTitleJoin",  "OnlineTitleLobby", "OnlineNotice",  "OnlineStatus",   "OnlineWaiting",  "OnlineHostLine",
-            "OnlineMenuHost",  "OnlineMenuJoin",  "OnlineMenuReturn", "OnlineNameRow",    "OnlineCodeRow", "OnlineHandsRow", "OnlineLevelRow", "OnlineHintsRow",
-            "OnlineSeatRow0",  "OnlineSeatRow1",  "OnlineSeatRow2",   "OnlineSeatRow3",   "OnlineSit0",    "OnlineSit1",     "OnlineSit2",     "OnlineSit3",
-            "OnlineGap",       "OnlineButtons",   "OnlineCreate",     "OnlineEnter",      "OnlineStart",   "OnlineLeave",    "OnlineCopy",
+            "OnlineTitleMenu", "OnlineTitleHost",  "OnlineTitleJoin", "OnlineTitleLobby", "OnlineNotice",     "OnlineStatus",    "OnlineWaiting",  "OnlineHostLine", "OnlineMenuHost",
+            "OnlineMenuJoin",  "OnlineMenuReturn", "OnlineNameRow",   "OnlineCodeRow",    "OnlineHandsRow",   "OnlineLevelRow",  "OnlineHintsRow", "OnlineSeatRow0", "OnlineSeatRow1",
+            "OnlineSeatRow2",  "OnlineSeatRow3",   "OnlineSit0",      "OnlineSit1",       "OnlineSit2",       "OnlineSit3",      "OnlineGap",      "OnlineButtons",  "OnlineCreate",
+            "OnlineEnter",     "OnlineStart",      "OnlineLeave",     "OnlineCopy",       "OnlineTitleRooms", "OnlineMenuRooms", "OnlineOpenRow",  "OnlineRoomRow0", "OnlineRoomRow1",
+            "OnlineRoomRow2",  "OnlineRefresh",    "OnlineMore",      "OnlineRoomsHost",  "OnlineRoomsBack",
         };
 
         /// The page `Menu` (with `Return` offered), `Host`, `Join` and the `Lobby` (a seat that can be taken on every row, the host's `Start`): the elements each shows.
-        const std::vector<const char*> kMenuPage = {"OnlineTitleMenu", "OnlineMenuHost", "OnlineMenuJoin", "OnlineMenuReturn"};
-        const std::vector<const char*> kHostPage = {"OnlineTitleHost", "OnlineNameRow", "OnlineHandsRow", "OnlineLevelRow", "OnlineHintsRow", "OnlineGap", "OnlineButtons", "OnlineCreate"};
+        const std::vector<const char*> kMenuPage = {"OnlineTitleMenu", "OnlineMenuHost", "OnlineMenuJoin", "OnlineMenuRooms", "OnlineMenuReturn"};
+        const std::vector<const char*> kHostPage = {"OnlineTitleHost", "OnlineNameRow", "OnlineHandsRow", "OnlineLevelRow", "OnlineHintsRow",
+                                                    "OnlineOpenRow",   "OnlineGap",     "OnlineButtons",  "OnlineCreate"};
         const std::vector<const char*> kJoinPage = {"OnlineTitleJoin", "OnlineNameRow", "OnlineCodeRow", "OnlineGap", "OnlineButtons", "OnlineEnter"};
         const std::vector<const char*> kLobbyPage = {"OnlineTitleLobby", "OnlineSeatRow0", "OnlineSeatRow1", "OnlineSeatRow2", "OnlineSeatRow3", "OnlineSit0", "OnlineSit1",
                                                      "OnlineSit2",       "OnlineSit3",     "OnlineGap",      "OnlineButtons",  "OnlineStart",    "OnlineCopy", "OnlineLeave"};
+        /// The `Rooms` page with three rows on the first of several pages, and with an empty list (the offer to host).
+        const std::vector<const char*> kRoomsPage = {"OnlineTitleRooms", "OnlineNameRow", "OnlineRoomRow0", "OnlineRoomRow1", "OnlineRoomRow2",
+                                                     "OnlineGap",        "OnlineButtons", "OnlineRefresh",  "OnlineMore",     "OnlineRoomsBack"};
+        const std::vector<const char*> kRoomsEmptyPage = {"OnlineTitleRooms", "OnlineNameRow", "OnlineGap", "OnlineButtons", "OnlineRefresh", "OnlineRoomsHost", "OnlineRoomsBack"};
         /// The lines that take the place under the title, one at a time.
         const char* const kInfoLines[] = {"OnlineNotice", "OnlineStatus", "OnlineWaiting", "OnlineHostLine"};
 
@@ -108,7 +117,16 @@ namespace BECore::Mahjong::Tests {
             notices.push_back(OnlineNoticeText(strings, kOnlineUnknownKey, "too_many_failed_joins"));
             notices.push_back(OnlineNoticeText(strings, kOnlineBadViewKey));
             vars.Set("onlineNotice"_intern, eastl::string_view(LongestText(notices)));
-            vars.Set("onlineStatus"_intern, eastl::string_view(LongestText({Tr(strings, kOnlineConnectingKey), Tr(strings, kOnlineReconnectingKey)})));
+            vars.Set("onlineStatus"_intern,
+                     eastl::string_view(LongestText({Tr(strings, kOnlineConnectingKey), Tr(strings, kOnlineReconnectingKey), Tr(strings, kOnlineBrowsingKey), Tr(strings, kOnlineNoRoomsKey)})));
+            // A room row: the widest name that is kept whole elsewhere and every fact the listing can carry
+            const eastl::string facts = Tr(strings, "online.rooms.free", {{"n", "3"}}) + ", " + Tr(strings, "online.rooms.hands", {{"n", "16"}}) + ", " +
+                                        Tr(strings, "online.rooms.level", {{"n", "10"}}) + ", " + Tr(strings, "online.rooms.hints");
+            const eastl::string row = Tr(strings, "online.rooms.row", {{"host", eastl::string_view(RepeatedLetter(strings, kListNameBytes))}, {"facts", eastl::string_view(facts)}});
+            for (size_t index = 0; index < kListRows; ++index) {
+                vars.Set(PoolString::Intern(Format("onlineListRow{}", index)), eastl::string_view(row));
+            }
+            vars.Set("onlineMore"_intern, eastl::string_view(Tr(strings, "online.rooms.page", {{"n", "2"}, {"m", "9"}})));
 
             const eastl::string name = RepeatedLetter(strings, kNameBytes);
             const eastl::string seatName = RepeatedLetter(strings, kSeatNameBytes);
@@ -181,19 +199,38 @@ namespace BECore::Mahjong::Tests {
             std::string value;
         };
         std::vector<Control> controls = {
-            {kOnline, "OnlineClose", "MahjongOnlineClose", ""},       {kOnline, "OnlineMenuHost", "MahjongOnlineHost", ""},
-            {kOnline, "OnlineMenuJoin", "MahjongOnlineJoin", ""},     {kOnline, "OnlineMenuReturn", "MahjongOnlineResume", ""},
-            {kOnline, "OnlineName", "MahjongOnlineField", "name"},    {kOnline, "OnlineCode", "MahjongOnlineField", "code"},
-            {kOnline, "OnlineHands16", "MahjongOnlineHands", "16"},   {kOnline, "OnlineHands8", "MahjongOnlineHands", "8"},
-            {kOnline, "OnlineCreate", "MahjongOnlineCreate", ""},     {kOnline, "OnlineHintsAllowed", "MahjongOnlineHints", "allowed"},
-            {kOnline, "OnlineHintsOff", "MahjongOnlineHints", "off"}, {kOnline, "OnlineEnter", "MahjongOnlineEnter", ""},
-            {kOnline, "OnlineStart", "MahjongOnlineStart", ""},       {kOnline, "OnlineLeave", "MahjongOnlineLeave", ""},
-            {kEntry, "EntryDelete", "MahjongOnlineBackspace", ""},    {kEntry, "EntryDone", "MahjongOnlineDone", ""},
-            {kOnline, "OnlineCopy", "MahjongOnlineCopy", ""},         {kOnline, "OnlineTitleLobby", "MahjongOnlineCopy", ""},
+            {kOnline, "OnlineClose", "MahjongOnlineClose", ""},
+            {kOnline, "OnlineMenuHost", "MahjongOnlineHost", ""},
+            {kOnline, "OnlineMenuJoin", "MahjongOnlineJoin", ""},
+            {kOnline, "OnlineMenuReturn", "MahjongOnlineResume", ""},
+            {kOnline, "OnlineMenuRooms", "MahjongOnlineRooms", ""},
+            {kOnline, "OnlineOpenCode", "MahjongOnlineOpen", "code"},
+            {kOnline, "OnlineOpenOpen", "MahjongOnlineOpen", "open"},
+            {kOnline, "OnlineRefresh", "MahjongOnlineRefresh", ""},
+            {kOnline, "OnlineMore", "MahjongOnlineMore", ""},
+            {kOnline, "OnlineRoomsHost", "MahjongOnlineRoomsHost", ""},
+            {kOnline, "OnlineRoomsBack", "MahjongOnlineBack", ""},
+            {kOnline, "OnlineName", "MahjongOnlineField", "name"},
+            {kOnline, "OnlineCode", "MahjongOnlineField", "code"},
+            {kOnline, "OnlineHands16", "MahjongOnlineHands", "16"},
+            {kOnline, "OnlineHands8", "MahjongOnlineHands", "8"},
+            {kOnline, "OnlineCreate", "MahjongOnlineCreate", ""},
+            {kOnline, "OnlineHintsAllowed", "MahjongOnlineHints", "allowed"},
+            {kOnline, "OnlineHintsOff", "MahjongOnlineHints", "off"},
+            {kOnline, "OnlineEnter", "MahjongOnlineEnter", ""},
+            {kOnline, "OnlineStart", "MahjongOnlineStart", ""},
+            {kOnline, "OnlineLeave", "MahjongOnlineLeave", ""},
+            {kEntry, "EntryDelete", "MahjongOnlineBackspace", ""},
+            {kEntry, "EntryDone", "MahjongOnlineDone", ""},
+            {kOnline, "OnlineCopy", "MahjongOnlineCopy", ""},
+            {kOnline, "OnlineTitleLobby", "MahjongOnlineCopy", ""},
             {kEntry, "EntryPaste", "MahjongOnlinePaste", ""},
         };
         for (size_t seat = 0; seat < kSeats; ++seat) {
             controls.push_back({kOnline, Format("OnlineSit{}", seat).c_str(), "MahjongOnlineSit", Format("{}", seat).c_str()});
+        }
+        for (size_t row = 0; row < kListRows; ++row) {
+            controls.push_back({kOnline, Format("OnlineRoomRow{}", row).c_str(), "MahjongOnlineJoinListed", Format("{}", row).c_str()});
         }
         for (const Control& control : controls) {
             const UIElement* element = Element(control.node, control.element.c_str());
@@ -238,7 +275,7 @@ namespace BECore::Mahjong::Tests {
             const char* label;
             const std::vector<const char*>* shown;
         };
-        const Page pages[] = {{"Menu", &kMenuPage}, {"Host", &kHostPage}, {"Join", &kJoinPage}, {"Lobby", &kLobbyPage}};
+        const Page pages[] = {{"Menu", &kMenuPage}, {"Host", &kHostPage}, {"Join", &kJoinPage}, {"Lobby", &kLobbyPage}, {"Rooms", &kRoomsPage}, {"RoomsEmpty", &kRoomsEmptyPage}};
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             SetWorstVars();
@@ -299,6 +336,14 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Text(kOnline, "OnlineStart"), "Start");
         EXPECT_EQ(Text(kOnline, "OnlineLeave"), "Leave");
         EXPECT_EQ(Text(kEntry, "EntryPaste"), "Paste");
+        EXPECT_EQ(Text(kOnline, "OnlineMenuRooms"), "Open rooms");
+        EXPECT_EQ(Text(kOnline, "OnlineTitleRooms"), "Open rooms");
+        EXPECT_EQ(Text(kOnline, "OnlineRefresh"), "Refresh");
+        EXPECT_EQ(Text(kOnline, "OnlineRoomsHost"), "Host");
+        EXPECT_EQ(Text(kOnline, "OnlineRoomsBack"), "Back");
+        EXPECT_EQ(Text(kOnline, "OnlineOpenCaption"), "Room");
+        EXPECT_EQ(Text(kOnline, "OnlineOpenCode"), "By code");
+        EXPECT_EQ(Text(kOnline, "OnlineOpenOpen"), "Open");
 
         ASSERT_TRUE(_game->SetLanguage("ru"_intern));
         Draw();
@@ -315,6 +360,10 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Text(kEntry, "EntryDone"), "Готово");
         EXPECT_EQ(Text(kEntry, "EntryDelete"), "Стереть");
         EXPECT_EQ(Text(kEntry, "EntryPaste"), "Вставить");
+        EXPECT_EQ(Text(kOnline, "OnlineMenuRooms"), "Открытые комнаты");
+        EXPECT_EQ(Text(kOnline, "OnlineRefresh"), "Обновить");
+        EXPECT_EQ(Text(kOnline, "OnlineOpenCode"), "По коду");
+        EXPECT_EQ(Text(kOnline, "OnlineOpenOpen"), "Открытая");
         CoreManager::GetUIVars().Set("onlineRoom"_intern, "");
     }
 

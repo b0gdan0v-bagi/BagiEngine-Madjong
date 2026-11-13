@@ -13,6 +13,8 @@ namespace BECore::Mahjong {
         inline constexpr eastl::string_view kInvalidParams = "invalid_params";
         inline constexpr eastl::string_view kTooManyFailedJoins = "too_many_failed_joins";
         inline constexpr eastl::string_view kServerFull = "server_full";
+        /// The server closes a connection in no room that sent nothing it counts (a `ping` is none) for its idle time: a list the player left on screen.
+        inline constexpr eastl::string_view kIdle = "idle";
         /// The reasons of a `left` that the room itself sends (the hub closed the room, or a finished game ran out its time).
         inline constexpr eastl::string_view kRoomClosed = "room_closed";
         inline constexpr eastl::string_view kRoomFinished = "room_finished";
@@ -66,6 +68,7 @@ namespace BECore::Mahjong {
         {RoomClientCloseReasons::kConnectTimeout, "online.error.noAnswer"},
         {OnlineCodes::kTooManyFailedJoins, "online.error.rateLimited"},
         {OnlineCodes::kServerFull, "online.error.busy"},
+        {OnlineCodes::kIdle, "online.error.idle"},
         // why the room let the player go (`left`)
         {OnlineCodes::kRoomClosed, "online.error.roomGone"},
         {OnlineCodes::kRoomFinished, "online.error.roomGone"},
@@ -84,6 +87,9 @@ namespace BECore::Mahjong {
     /// What the client is doing while it has no room to show.
     inline constexpr eastl::string_view kOnlineConnectingKey = "online.status.connecting";
     inline constexpr eastl::string_view kOnlineReconnectingKey = "online.status.reconnecting";
+    /// The `Rooms` page: the first answer has not come, and an answer that lists no open room.
+    inline constexpr eastl::string_view kOnlineBrowsingKey = "online.status.browsing";
+    inline constexpr eastl::string_view kOnlineNoRoomsKey = "online.rooms.empty";
 
     /// The line the host reads in the lobby about the setting he made: hints and the coach allowed in the room, or not.
     inline constexpr eastl::string_view kOnlineLobbyHintsAllowedKey = "online.lobby.hintsAllowed";

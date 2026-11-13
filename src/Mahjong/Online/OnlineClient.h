@@ -10,11 +10,12 @@ namespace BECore::Mahjong {
 
     /// Where the player is in the life of an online game; the screens and the table switch on it.
     CORE_ENUM(OnlineStage, uint8_t,
-              Idle,         // no connection and no room (or a request that was answered with an error)
-              Connecting,   // a Host / Join was sent and `joined` has not come
-              Lobby,        // in a room, before the first good view
-              Game,         // in a room with a table to read (`Table()`)
-              Reconnecting  // the connection was lost (or `Resume` is under way); the lobby and the table stay readable, frozen
+              Idle,          // no connection and no room (or a request that was answered with an error)
+              Connecting,    // a Host / Join was sent and `joined` has not come
+              Lobby,         // in a room, before the first good view
+              Game,          // in a room with a table to read (`Table()`)
+              Reconnecting,  // the connection was lost (or `Resume` is under way); the lobby and the table stay readable, frozen
+              Browsing       // a connection used to list the open rooms (opening, or open with no room): no room to show
     )
 
     /// What the host asks of the game when the room is made (`create_room options`, read by `MahjongSeatedGame::Start`).
@@ -25,6 +26,32 @@ namespace BECore::Mahjong {
         int level = LevelNumber(kDefaultLevel);
         /// Whether the players of the room may use hints and the coach (the host decides; the room keeps it).
         bool hintsAllowed = false;
+        /// Whether the room is listed for the players who browse (`Browse`); false: it is joined by its code only.
+        bool isPublic = false;
+    };
+
+    /// One open room of a list the server sent, with the facts a screen needs. A fact the listing does not carry is none.
+    struct OnlineListedRoom {
+        /// The code to join with.
+        eastl::string code;
+        /// The host's name (UTF-8, as the server kept it): untrusted text, shown as given and never used as a format.
+        eastl::string host;
+        /// Seats a person can still take.
+        int free = 0;
+        std::optional<int> hands;
+        std::optional<int> level;
+        std::optional<bool> hintsAllowed;
+    };
+
+    /// The last list of open rooms, for the `Rooms` page.
+    struct OnlineRoomList {
+        /// An answer has come since `Browse` started this connection (a list that was re-asked keeps the old rooms until the new answer).
+        bool loaded = false;
+        /// A list was asked for and neither an answer nor a refusal has come.
+        bool pending = false;
+        /// The server cut the list at its cap: more rooms are open.
+        bool more = false;
+        eastl::vector<OnlineListedRoom> rooms;
     };
 
     /// One seat of the lobby, with the facts a screen needs so that it reads no `RoomClient`.
@@ -87,6 +114,13 @@ namespace BECore::Mahjong {
         bool Host(eastl::string_view url, eastl::string_view name, const OnlineRoomOptions& options = {});
         /// Enters the room @p code (any case). A code that cannot be one is `unknown_room` at once; a bad name is `bad_name`.
         bool Join(eastl::string_view url, eastl::string_view code, eastl::string_view name);
+        /// Starts browsing the open rooms of @p url (from `Idle`: opens a connection) or asks again on the open one (from `Browsing`; nothing
+        /// while an ask is still unanswered). Any other stage is refused with the `wrong_state` notice. The list is the answer to `Rooms()`.
+        /// The model never asks by itself: a screen presses Refresh.
+        bool Browse(eastl::string_view url);
+        /// `Join` of a code from the list: on the connection that lists. A refusal (`unknown_room`, `room_full`, `game_started`, any error)
+        /// keeps the connection, makes its notice and asks the list again, so the player is back on a list without the gone room.
+        bool JoinListed(eastl::string_view url, eastl::string_view code, eastl::string_view name);
         /// Comes back into the room of a session that an earlier run kept. `invalid_session` for one that cannot be a room and a token.
         bool Resume(const RoomSession& session);
         /// Asks for a seat, in the lobby only (no notice elsewhere). `CanChoose` says whether the lobby shows the seat free.
@@ -97,7 +131,8 @@ namespace BECore::Mahjong {
         /// elsewhere, so a click during a reconnect does nothing) and not after a view that was not read, until a good one comes (the
         /// screen shows an older table than the client holds); the client never resends it.
         bool Act(size_t index);
-        /// Leaves the room and forgets the session. The connection is closed by the model once the server answered.
+        /// Leaves the room and forgets the session. The connection is closed by the model once the server answered. While `Browsing` it ends
+        /// the browsing and closes the connection.
         bool Leave();
         /// Closes the connection and keeps the session; the room, lobby and table are forgotten. No notice.
         void Disconnect();
@@ -168,6 +203,11 @@ namespace BECore::Mahjong {
             return _hosted ? &*_hosted : nullptr;
         }
 
+        /// The open rooms of the last answer; empty and not loaded outside `Browsing`. Refilled only when an answer comes (then `Version()` moves).
+        [[nodiscard]] const OnlineRoomList& Rooms() const {
+            return _rooms;
+        }
+
         /// The raw client, for what the model does not copy (the breakdown lines of a result in `GetView()`).
         [[nodiscard]] const RoomClient& Client() const {
             return _client;
@@ -182,6 +222,7 @@ namespace BECore::Mahjong {
         bool OnView();
         void OnError(const RoomClientEvent& event);
         void OnLeft(const RoomClientEvent& event);
+        void OnRoomList();
         void OnClosed(const RoomClientEvent& event);
         /// Closes a connection that has no room and no request, and brings the lobby and the stage up to date.
         void Settle();
@@ -194,6 +235,11 @@ namespace BECore::Mahjong {
         void CloseConnection();
         void ForgetView();
         void ForgetHosted();
+        /// Ends browsing and clears the list (the connection is the caller's to close, or the model's `Settle()`).
+        void EndBrowsing();
+        /// Asks the server for the list on the connection that is open (`pending` until the answer or the refusal).
+        std::expected<void, ControlError> AskForRooms(eastl::string_view url);
+        bool SendJoin(eastl::string_view url, eastl::string_view code, eastl::string_view name, bool fromList);
         void KeepSession(const RoomSession& session);
         void ForgetSession();
         void SetNotice(eastl::string_view key, eastl::string_view arg = {});
@@ -223,6 +269,13 @@ namespace BECore::Mahjong {
         uint32_t _sessionRevision = 0;
         /// A Host / Join was sent and `joined` or an error has not come.
         bool _requesting = false;
+        /// The connection is used to list the open rooms: `Settle()` keeps it open, and `ComputeStage()` says `Browsing` while it has no request.
+        bool _browsing = false;
+        /// The address of the browsing connection, for the next ask.
+        eastl::string _browseUrl;
+        /// The request that waits for `joined` is a join of a listed code: an error asks the list again.
+        bool _joiningListed = false;
+        OnlineRoomList _rooms;
         /// `left {replaced}` came: the server's close follows and carries the notice.
         bool _awaitingClose = false;
     };

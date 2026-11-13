@@ -12,7 +12,8 @@ namespace BECore::Mahjong {
               Host,   // the form of a new room: name, hands, level, Create
               Join,   // the form of a room to enter: name, code, Enter
               Entry,  // the pad that edits one field of the form the player came from
-              Lobby   // the room: the code, the seats, Start, Leave (also while connecting and reconnecting before the game has started)
+              Lobby,  // the room: the code, the seats, Start, Leave (also while connecting and reconnecting before the game has started)
+              Rooms   // the open rooms of the server to pick from: the name, up to `kRoomsPerPage` rows, Refresh, a page button, Back
     )
 
     /// The field the `Entry` page edits.
@@ -37,12 +38,18 @@ namespace BECore::Mahjong {
      * `Idle` client after a request that failed returns to the form it was sent from, after a room (gone, replaced, left) to the `Menu`. An error is the notice of the client (or of a field that
      * cannot be sent), shown once and cleared by the next move of the player.
      *
+     * The `Rooms` page follows the client's `Browsing` stage and its list (`OnlineClient::Rooms()`): rows are paged by `kRoomsPerPage` and a row is joined by its index on the page. A join
+     * that failed returns to this page (the client asks the list again), and so does a closed browsing connection (Refresh opens it again).
+     *
      * Not here: the token. A session goes through the client only (`Resume` takes it from the caller).
      *
      * `Version()` grows with every change a screen shows; a frame in which nothing moved changes nothing and allocates nothing. One thread.
      */
     class OnlineScreens {
     public:
+        /// Room rows on a page of the `Rooms` list: a window 320 units high holds the title, a line, the name, three rows and the button bar.
+        static constexpr int kRoomsPerPage = 3;
+
         OnlineScreens();
 
         [[nodiscard]] uint64_t Version() const {
@@ -124,6 +131,21 @@ namespace BECore::Mahjong {
         /// The code of the room on the `Lobby` page (the lobby's, else the client's); empty on any other page. The copy button puts exactly this on the clipboard.
         [[nodiscard]] eastl::string_view RoomCodeToCopy(const OnlineClient& client) const;
 
+        /// The `Rooms` page: the page shown (0-based), how many pages the list has (at least 1), how many rows this page has (0..`kRoomsPerPage`) and the index in
+        /// `OnlineClient::Rooms().rooms` of the row @p row of this page.
+        [[nodiscard]] int RoomsPage() const {
+            return _roomsPage;
+        }
+        [[nodiscard]] int RoomsPageCount() const;
+        [[nodiscard]] int RoomsOnPage() const;
+        [[nodiscard]] size_t RoomIndex(int row) const {
+            return static_cast<size_t>(_roomsPage * kRoomsPerPage + row);
+        }
+        /// An answer has come and no room is open: the page offers to host one.
+        [[nodiscard]] bool RoomsEmpty() const {
+            return _roomsLoaded && _roomCount == 0;
+        }
+
         [[nodiscard]] OnlineCopyState CopyState() const {
             return _copyState;
         }
@@ -154,15 +176,16 @@ namespace BECore::Mahjong {
         void Open(const OnlineClient& client, bool keepNotice = false);
         void Close();
 
-        /// Escape: an `Entry` page to its form, a form to the `Menu`, the `Menu` closes the panel. The `Lobby` does nothing (leaving is a button: a stray key must not give up a
-        /// seat). True when something changed.
-        bool Back();
+        /// Escape: an `Entry` page to its form, a form to the `Menu`, the `Rooms` page to the `Menu` (it ends the browsing: the connection is closed), the `Menu` closes the
+        /// panel. The `Lobby` does nothing (leaving is a button: a stray key must not give up a seat). True when something changed.
+        bool Back(OnlineClient& client);
 
-        /// The `Menu`'s two choices.
+        /// The `Menu`'s choices. `ShowRooms` starts browsing the open rooms of @p url; the page opens when that was sent.
         bool ShowHost();
         bool ShowJoin();
+        bool ShowRooms(OnlineClient& client, eastl::string_view url);
 
-        /// Opens the `Entry` page for @p field of the form on show (the `Code` of the `Join` form only).
+        /// Opens the `Entry` page for @p field of the page on show: the `Name` of the `Host`, `Join` and `Rooms` pages, the `Code` of the `Join` form only.
         bool FocusField(OnlineField field);
         /// Types a character into the focused field of the `Entry` page: the key @p index of `Pad()`, or one UTF-8 character of the keyboard.
         bool PressKey(size_t index);
@@ -175,6 +198,8 @@ namespace BECore::Mahjong {
         bool SetHands(int hands);
         bool SetLevel(int level);
         bool SetHintsAllowed(bool allowed);
+        /// Whether the room is listed on the `Rooms` page of others (`Open room`) or joined by its code only (`By code`, the default).
+        bool SetPublic(bool isPublic);
 
         /// Sends the form. Fields that are not complete send nothing and say why in the notice (`bad_name`, `unknown_room`).
         bool Create(OnlineClient& client, eastl::string_view url);
@@ -185,6 +210,15 @@ namespace BECore::Mahjong {
         bool Sit(OnlineClient& client, int seat);
         bool Start(OnlineClient& client);
         bool Leave(OnlineClient& client);
+
+        /// `Rooms` only. `RefreshRooms` asks the list again (or opens the connection again after it closed); it does nothing while a list request is in flight.
+        bool RefreshRooms(OnlineClient& client, eastl::string_view url);
+        /// The next page of the list, the first one after the last; false when the list has one page.
+        bool NextRoomsPage();
+        /// Joins the room of the row @p row of this page, with the name on the page (an incomplete one is the `bad_name` notice). A row that is not there now sends nothing.
+        bool JoinRoom(OnlineClient& client, eastl::string_view url, int row);
+        /// The offer of an empty list: ends the browsing and shows the `Host` form.
+        bool HostFromRooms(OnlineClient& client);
 
         /// `Lobby` only: the copy button has put the code on the clipboard (@p ok) or could not. Back to `None` at the player's next move, in another room and off the `Lobby`.
         bool NoteCopy(bool ok);
@@ -212,6 +246,8 @@ namespace BECore::Mahjong {
         }
 
         void SetPage(OnlinePage page);
+        /// Closes the browsing connection of @p client, if there is one.
+        static void EndBrowsing(OnlineClient& client);
         void ClearNotice();
         void ClearPasteNote();
         void ResetCopy();
@@ -226,7 +262,7 @@ namespace BECore::Mahjong {
         }
         /// A form is a page the `Entry` page can be opened from.
         [[nodiscard]] bool IsForm(OnlinePage page) const {
-            return page == OnlinePage::Host || page == OnlinePage::Join;
+            return page == OnlinePage::Host || page == OnlinePage::Join || page == OnlinePage::Rooms;
         }
 
         OnlinePage _page = OnlinePage::Closed;
@@ -261,6 +297,10 @@ namespace BECore::Mahjong {
         OnlinePasteNote _pasteNote = OnlinePasteNote::None;
         /// The client has been in a room (lobby or game) since the last request: the end of it goes to the `Menu`.
         bool _inRoom = false;
+        /// The `Rooms` page: the page shown, and what the last `Sync` read of the client's list (the page is clamped when a refreshed list is shorter).
+        int _roomsPage = 0;
+        int _roomCount = 0;
+        bool _roomsLoaded = false;
         uint64_t _version = 0;
     };
 

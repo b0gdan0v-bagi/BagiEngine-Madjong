@@ -10,9 +10,9 @@ namespace BECore::Mahjong {
             return stage == OnlineStage::Lobby || stage == OnlineStage::Game;
         }
 
-        /// The stages in which the panel shows the room. In `Game` the table is the scene's and the panel is closed.
+        /// The stages in which the panel shows the room. In `Game` the table is the scene's and the panel is closed; `Browsing` has no room.
         bool ShowsRoom(OnlineStage stage) {
-            return stage != OnlineStage::Idle && stage != OnlineStage::Game;
+            return stage != OnlineStage::Idle && stage != OnlineStage::Game && stage != OnlineStage::Browsing;
         }
 
     }  // namespace
@@ -65,8 +65,10 @@ namespace BECore::Mahjong {
         if (!keepNotice) {
             ClearNotice();
         }
-        SetPage(ShowsRoom(client.Stage()) ? OnlinePage::Lobby : OnlinePage::Menu);
-        _origin = OnlinePage::Menu;
+        const OnlineStage stage = client.Stage();
+        // A panel that was hidden while the client was browsing comes back on its list
+        SetPage(ShowsRoom(stage) ? OnlinePage::Lobby : stage == OnlineStage::Browsing ? OnlinePage::Rooms : OnlinePage::Menu);
+        _origin = stage == OnlineStage::Browsing ? OnlinePage::Rooms : OnlinePage::Menu;
         Sync(client);
     }
 
@@ -75,11 +77,17 @@ namespace BECore::Mahjong {
         SetPage(OnlinePage::Closed);
     }
 
-    bool OnlineScreens::Back() {
+    bool OnlineScreens::Back(OnlineClient& client) {
         switch (_page) {
             case OnlinePage::Entry:
                 ClearNotice();
                 SetPage(_form);
+                return true;
+            case OnlinePage::Rooms:
+                ClearNotice();
+                EndBrowsing(client);
+                SetPage(OnlinePage::Menu);
+                Sync(client);
                 return true;
             case OnlinePage::Host:
             case OnlinePage::Join:
@@ -112,6 +120,24 @@ namespace BECore::Mahjong {
         ClearNotice();
         SetPage(OnlinePage::Join);
         return true;
+    }
+
+    bool OnlineScreens::ShowRooms(OnlineClient& client, eastl::string_view url) {
+        if (_page != OnlinePage::Menu || client.Stage() != OnlineStage::Idle) {
+            return false;
+        }
+        ClearNotice();
+        _origin = OnlinePage::Rooms;
+        _inRoom = false;
+        Assign(_roomsPage, 0);
+        const bool sent = client.Browse(url);
+        if (sent) {
+            SetPage(OnlinePage::Rooms);
+        } else {
+            _origin = OnlinePage::Menu;
+        }
+        Sync(client);
+        return sent;
     }
 
     bool OnlineScreens::FocusField(OnlineField field) {
@@ -188,6 +214,14 @@ namespace BECore::Mahjong {
             return false;
         }
         Assign(_options.hintsAllowed, allowed);
+        return true;
+    }
+
+    bool OnlineScreens::SetPublic(bool isPublic) {
+        if (_page != OnlinePage::Host) {
+            return false;
+        }
+        Assign(_options.isPublic, isPublic);
         return true;
     }
 
@@ -275,6 +309,60 @@ namespace BECore::Mahjong {
         return done;
     }
 
+    bool OnlineScreens::RefreshRooms(OnlineClient& client, eastl::string_view url) {
+        const OnlineStage stage = client.Stage();
+        if (_page != OnlinePage::Rooms || (stage != OnlineStage::Browsing && stage != OnlineStage::Idle) || client.Rooms().pending) {
+            return false;
+        }
+        ClearNotice();
+        const bool sent = client.Browse(url);
+        Sync(client);
+        return sent;
+    }
+
+    bool OnlineScreens::NextRoomsPage() {
+        const int pages = RoomsPageCount();
+        if (_page != OnlinePage::Rooms || pages < 2) {
+            return false;
+        }
+        ClearNotice();
+        Assign(_roomsPage, (_roomsPage + 1) % pages);
+        return true;
+    }
+
+    bool OnlineScreens::JoinRoom(OnlineClient& client, eastl::string_view url, int row) {
+        if (_page != OnlinePage::Rooms || client.Stage() != OnlineStage::Browsing || row < 0 || row >= RoomsOnPage()) {
+            return false;
+        }
+        const size_t index = RoomIndex(row);
+        if (index >= client.Rooms().rooms.size()) {
+            return false;
+        }
+        ClearNotice();
+        if (!_name.IsComplete()) {
+            SetLocalNotice(OnlineErrorKey(RoomErrors::kBadName));
+            return false;
+        }
+        // A copy: the client's list is refilled by the answer to this join's failure
+        const eastl::string code = client.Rooms().rooms[index].code;
+        _origin = OnlinePage::Rooms;
+        _inRoom = false;
+        const bool sent = client.JoinListed(url, code, _name.Text());
+        Sync(client);
+        return sent;
+    }
+
+    bool OnlineScreens::HostFromRooms(OnlineClient& client) {
+        if (_page != OnlinePage::Rooms) {
+            return false;
+        }
+        ClearNotice();
+        EndBrowsing(client);
+        SetPage(OnlinePage::Host);
+        Sync(client);
+        return true;
+    }
+
     bool OnlineScreens::NoteCopy(bool ok) {
         if (_page != OnlinePage::Lobby) {
             return false;
@@ -314,6 +402,14 @@ namespace BECore::Mahjong {
         return true;
     }
 
+    int OnlineScreens::RoomsPageCount() const {
+        return std::max(1, (_roomCount + kRoomsPerPage - 1) / kRoomsPerPage);
+    }
+
+    int OnlineScreens::RoomsOnPage() const {
+        return std::clamp(_roomCount - _roomsPage * kRoomsPerPage, 0, kRoomsPerPage);
+    }
+
     eastl::string_view OnlineScreens::RoomCodeToCopy(const OnlineClient& client) const {
         if (_page != OnlinePage::Lobby) {
             return {};
@@ -350,7 +446,20 @@ namespace BECore::Mahjong {
             }
         }
 
-        const eastl::string_view status = stage == OnlineStage::Connecting ? kOnlineConnectingKey : stage == OnlineStage::Reconnecting ? kOnlineReconnectingKey : eastl::string_view();
+        const OnlineRoomList& list = client.Rooms();
+        Assign(_roomCount, static_cast<int>(list.rooms.size()));
+        Assign(_roomsLoaded, list.loaded);
+        // A refreshed list can be shorter than the page the player is on
+        Assign(_roomsPage, std::min(_roomsPage, RoomsPageCount() - 1));
+
+        eastl::string_view status;
+        if (stage == OnlineStage::Connecting) {
+            status = kOnlineConnectingKey;
+        } else if (stage == OnlineStage::Reconnecting) {
+            status = kOnlineReconnectingKey;
+        } else if (stage == OnlineStage::Browsing) {
+            status = !list.loaded ? kOnlineBrowsingKey : RoomsEmpty() ? kOnlineNoRoomsKey : eastl::string_view();
+        }
         Assign(_statusKey, status);
 
         if (InRoomStage(stage)) {
@@ -399,6 +508,12 @@ namespace BECore::Mahjong {
     }
 
     // ---- Private -----------------------------------------------------------------------------------------------------------------
+
+    void OnlineScreens::EndBrowsing(OnlineClient& client) {
+        if (client.Stage() == OnlineStage::Browsing) {
+            client.Leave();
+        }
+    }
 
     void OnlineScreens::SetPage(OnlinePage page) {
         if (_page == page) {

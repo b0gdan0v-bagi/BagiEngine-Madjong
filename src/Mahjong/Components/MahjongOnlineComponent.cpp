@@ -37,12 +37,28 @@ namespace BECore::Mahjong {
         constexpr eastl::string_view kLeaveAction = "MahjongOnlineLeave";
         constexpr eastl::string_view kCopyAction = "MahjongOnlineCopy";
         constexpr eastl::string_view kPasteAction = "MahjongOnlinePaste";
+        constexpr eastl::string_view kRoomsAction = "MahjongOnlineRooms";
+        constexpr eastl::string_view kVisibilityAction = "MahjongOnlineOpen";
+        constexpr eastl::string_view kJoinListedAction = "MahjongOnlineJoinListed";
+        constexpr eastl::string_view kRefreshAction = "MahjongOnlineRefresh";
+        constexpr eastl::string_view kMoreAction = "MahjongOnlineMore";
+        constexpr eastl::string_view kRoomsHostAction = "MahjongOnlineRoomsHost";
+        constexpr eastl::string_view kBackAction = "MahjongOnlineBack";
         /// A key held with one of these is a shortcut and types nothing.
         constexpr SDL_Keymod kShortcutMods = SDL_KMOD_CTRL | SDL_KMOD_GUI;
         constexpr eastl::string_view kNameValue = "name";
         constexpr eastl::string_view kCodeValue = "code";
         constexpr eastl::string_view kHintsAllowedValue = "allowed";
         constexpr eastl::string_view kHintsOffValue = "off";
+        constexpr eastl::string_view kOpenValue = "open";
+        /// Between the facts of a listed room; a list of facts, not a sentence.
+        constexpr eastl::string_view kFactSeparator = ", ";
+        constexpr eastl::string_view kRoomRowKey = "online.rooms.row";
+        constexpr eastl::string_view kRoomFreeKey = "online.rooms.free";
+        constexpr eastl::string_view kRoomHandsKey = "online.rooms.hands";
+        constexpr eastl::string_view kRoomLevelKey = "online.rooms.level";
+        constexpr eastl::string_view kRoomHintsKey = "online.rooms.hints";
+        constexpr eastl::string_view kRoomsPageKey = "online.rooms.page";
 
         /// The elements of the canvas `Online` the pages show and hide among themselves, in the order of `kItemNames`.
         enum Item : size_t {
@@ -82,14 +98,26 @@ namespace BECore::Mahjong {
             Copy,
             EntryPaste,
             EntryNote,
+            TitleRooms,
+            MenuRooms,
+            OpenRow,
+            RoomRow0,
+            RoomRow1,
+            RoomRow2,
+            Refresh,
+            More,
+            RoomsHost,
+            RoomsBack,
             ItemCount
         };
 
         constexpr const char* kItemNames[] = {
-            "OnlineTitleMenu", "OnlineTitleHost",  "OnlineTitleJoin", "OnlineTitleLobby", "OnlineNotice",     "OnlineStatus",         "OnlineWaiting",  "OnlineHostLine", "OnlineMenuHost",
-            "OnlineMenuJoin",  "OnlineMenuReturn", "OnlineNameRow",   "OnlineCodeRow",    "OnlineHandsRow",   "OnlineLevelRow",       "OnlineHintsRow", "OnlineSeatRow0", "OnlineSeatRow1",
-            "OnlineSeatRow2",  "OnlineSeatRow3",   "OnlineSit0",      "OnlineSit1",       "OnlineSit2",       "OnlineSit3",           "OnlineGap",      "OnlineButtons",  "OnlineCreate",
-            "OnlineEnter",     "OnlineStart",      "OnlineLeave",     "EntryCaptionName", "EntryCaptionCode", "EntryCaptionNickname", "OnlineCopy",     "EntryPaste",     "EntryNote",
+            "OnlineTitleMenu",  "OnlineTitleHost",  "OnlineTitleJoin", "OnlineTitleLobby", "OnlineNotice",     "OnlineStatus",         "OnlineWaiting",  "OnlineHostLine", "OnlineMenuHost",
+            "OnlineMenuJoin",   "OnlineMenuReturn", "OnlineNameRow",   "OnlineCodeRow",    "OnlineHandsRow",   "OnlineLevelRow",       "OnlineHintsRow", "OnlineSeatRow0", "OnlineSeatRow1",
+            "OnlineSeatRow2",   "OnlineSeatRow3",   "OnlineSit0",      "OnlineSit1",       "OnlineSit2",       "OnlineSit3",           "OnlineGap",      "OnlineButtons",  "OnlineCreate",
+            "OnlineEnter",      "OnlineStart",      "OnlineLeave",     "EntryCaptionName", "EntryCaptionCode", "EntryCaptionNickname", "OnlineCopy",     "EntryPaste",     "EntryNote",
+            "OnlineTitleRooms", "OnlineMenuRooms",  "OnlineOpenRow",   "OnlineRoomRow0",   "OnlineRoomRow1",   "OnlineRoomRow2",       "OnlineRefresh",  "OnlineMore",     "OnlineRoomsHost",
+            "OnlineRoomsBack",
         };
         static_assert(sizeof(kItemNames) / sizeof(kItemNames[0]) == ItemCount, "one name per item");
 
@@ -122,6 +150,25 @@ namespace BECore::Mahjong {
             return kOnlineCopyKey;
         }
 
+        /// The text of a row of the `Rooms` page: the host's name (the player's text, put in as a value) and the facts the listing carried, a missing one left out.
+        eastl::string RoomRowText(const UIStrings& strings, const OnlineListedRoom& room) {
+            eastl::string facts = Tr(strings, kRoomFreeKey, {{"n", Format("{}", room.free)}});
+            const auto add = [&](eastl::string_view text) {
+                facts.append(kFactSeparator.data(), kFactSeparator.size());
+                facts.append(text.data(), text.size());
+            };
+            if (room.hands) {
+                add(Tr(strings, kRoomHandsKey, {{"n", Format("{}", *room.hands)}}));
+            }
+            if (room.level) {
+                add(Tr(strings, kRoomLevelKey, {{"n", Format("{}", *room.level)}}));
+            }
+            if (room.hintsAllowed.value_or(false)) {
+                add(Tr(strings, kRoomHintsKey));
+            }
+            return Tr(strings, kRoomRowKey, {{"host", eastl::string_view(room.host)}, {"facts", eastl::string_view(facts)}});
+        }
+
         /// The kept room of this run, else the one an earlier run stored: what `Return` enters.
         const RoomSession& SessionToReturnTo(const MahjongGame& game, const OnlineClient& client) {
             const RoomSession& kept = client.SessionToKeep();
@@ -149,6 +196,9 @@ namespace BECore::Mahjong {
         }
         for (size_t i = 0; i < kSeatCount; ++i) {
             _seatVars[i] = IndexedName("onlineSeat", i);
+        }
+        for (size_t i = 0; i < kListRowCount; ++i) {
+            _listVars[i] = IndexedName("onlineListRow", i);
         }
         for (size_t i = 0; i < TextEntry::kPadMaxKeys; ++i) {
             _padVars[i] = IndexedName("padKey", i);
@@ -246,7 +296,7 @@ namespace BECore::Mahjong {
         }
         if (event.key == SDLK_ESCAPE) {
             // The Menu was the last page: the game's flag goes at the next `Follow`, so the HUD, which hears this Escape too, does not take it for its own
-            if (!event.repeat && _screens.Back() && !_screens.IsOpen()) {
+            if (!event.repeat && _screens.Back(game->GetOnline()) && !_screens.IsOpen()) {
                 _closeRequested = true;
             }
         } else if (_screens.Page() == OnlinePage::Entry) {
@@ -390,6 +440,30 @@ namespace BECore::Mahjong {
             if (_screens.Page() == OnlinePage::Entry && _screens.Focus() == OnlineField::Code) {
                 RequestPaste();
             }
+        } else if (action == kRoomsAction) {
+            _screens.ShowRooms(client, OnlineServerUrl());
+        } else if (action == kVisibilityAction) {
+            // Only the two ids the panel offers
+            if (value == kCodeValue || value == kOpenValue) {
+                _screens.SetPublic(value == kOpenValue);
+            }
+        } else if (action == kJoinListedAction) {
+            // The row is asked again of the list as it is now
+            if (const std::optional<size_t> row = ParseIndex(value); row && *row < static_cast<size_t>(OnlineScreens::kRoomsPerPage)) {
+                _screens.JoinRoom(client, OnlineServerUrl(), static_cast<int>(*row));
+                StoreName(*game);
+            }
+        } else if (action == kRefreshAction) {
+            _screens.RefreshRooms(client, OnlineServerUrl());
+        } else if (action == kMoreAction) {
+            _screens.NextRoomsPage();
+        } else if (action == kRoomsHostAction) {
+            _screens.HostFromRooms(client);
+        } else if (action == kBackAction) {
+            // The button of the `Rooms` page; a stale click elsewhere must not walk the player back through the pages
+            if (_screens.Page() == OnlinePage::Rooms) {
+                _screens.Back(client);
+            }
         }
         _screens.Refresh(CoreManager::GetUIStrings());
     }
@@ -518,6 +592,7 @@ namespace BECore::Mahjong {
         _publishedStrings = strings.GetVersion();
 
         PublishVariables(client, strings);
+        PublishRooms(client, strings);
         if (page == OnlinePage::Entry) {
             PublishPad(strings);
         } else {
@@ -538,6 +613,7 @@ namespace BECore::Mahjong {
         vars.Set("onlineCopy"_intern, eastl::string_view(Tr(strings, CopyKeyOf(_screens.CopyState()))));
         vars.Set("onlineHands"_intern, _screens.Options().hands);
         vars.Set("onlineLevel"_intern, _screens.Options().level);
+        vars.Set("onlineOpen"_intern, _screens.Options().isPublic ? kOpenValue : kCodeValue);
         vars.Set("onlineHints"_intern, _screens.Options().hintsAllowed ? kHintsAllowedValue : kHintsOffValue);
         const OnlineRoomOptions* hosted = client.HostedOptions();
         vars.Set("onlineHostLine"_intern, eastl::string_view(hosted == nullptr ? eastl::string() : Tr(strings, hosted->hintsAllowed ? kOnlineLobbyHintsAllowedKey : kOnlineLobbyHintsOffKey)));
@@ -560,18 +636,21 @@ namespace BECore::Mahjong {
         const bool host = page == OnlinePage::Host;
         const bool join = page == OnlinePage::Join;
         const bool inLobby = page == OnlinePage::Lobby;
+        const bool rooms = page == OnlinePage::Rooms;
         SetItem(TitleMenu, menu);
         SetItem(TitleHost, host);
         SetItem(TitleJoin, join);
         SetItem(TitleLobby, inLobby);
         SetItem(MenuHost, menu);
         SetItem(MenuJoin, menu);
+        SetItem(MenuRooms, menu);
         SetItem(MenuReturn, menu && _screens.CanReturn());
-        SetItem(NameRow, host || join);
+        SetItem(NameRow, host || join || rooms);
         SetItem(CodeRow, join);
         SetItem(HandsRow, host);
         SetItem(LevelRow, host);
         SetItem(HintsRow, host);
+        SetItem(OpenRow, host);
 
         // One line under the title: the notice, else the status, else (in the lobby) who is waited for
         const bool notice = !_screens.NoticeKey().empty();
@@ -596,6 +675,25 @@ namespace BECore::Mahjong {
         SetItem(Start, inLobby && lobby.canStart && stage == OnlineStage::Lobby);
         SetItem(Leave, inLobby);
         SetItem(Copy, inLobby && !lobby.room.empty());
+
+        SetItem(TitleRooms, rooms);
+        for (size_t row = 0; row < static_cast<size_t>(OnlineScreens::kRoomsPerPage); ++row) {
+            SetItem(RoomRow0 + row, rooms && row < static_cast<size_t>(_screens.RoomsOnPage()));
+        }
+        SetItem(Refresh, rooms);
+        SetItem(More, rooms && _screens.RoomsPageCount() > 1);
+        SetItem(RoomsHost, rooms && _screens.RoomsEmpty());
+        SetItem(RoomsBack, rooms);
+    }
+
+    void MahjongOnlineComponent::PublishRooms(const OnlineClient& client, const UIStrings& strings) {
+        UIVars& vars = CoreManager::GetUIVars();
+        const eastl::vector<OnlineListedRoom>& listed = client.Rooms().rooms;
+        for (size_t row = 0; row < static_cast<size_t>(OnlineScreens::kRoomsPerPage); ++row) {
+            const bool has = row < static_cast<size_t>(_screens.RoomsOnPage()) && _screens.RoomIndex(static_cast<int>(row)) < listed.size();
+            vars.Set(_listVars[row], has ? eastl::string_view(RoomRowText(strings, listed[_screens.RoomIndex(static_cast<int>(row))])) : eastl::string_view());
+        }
+        vars.Set("onlineMore"_intern, eastl::string_view(Tr(strings, kRoomsPageKey, {{"n", Format("{}", _screens.RoomsPage() + 1)}, {"m", Format("{}", _screens.RoomsPageCount())}})));
     }
 
     void MahjongOnlineComponent::PublishNickname(const UIStrings& strings) {
