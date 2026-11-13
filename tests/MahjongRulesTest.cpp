@@ -113,19 +113,21 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(Var("rulesTitle"), StdString(expected.title));
             EXPECT_EQ(Var("rulesPager"), StdString(RulesPagerText(strings, page)));
             EXPECT_EQ(Text("Rules", "Title"), StdString(expected.title));
-            EXPECT_EQ(Text("Rules", "Pager"), StdString(RulesPagerText(strings, page)));
+            EXPECT_EQ(Text("Rules", "PagerChip"), StdString(RulesPagerText(strings, page)));
             for (int i = 0; i < kRulesMaxLines; ++i) {
                 const bool has = i < static_cast<int>(expected.lines.size());
                 const std::string name = "RulesLine" + std::to_string(i);
                 EXPECT_EQ(OnScreen("Rules", name.c_str()), has) << "line " << i << " of page " << page;
                 EXPECT_EQ(Var(("rulesLine" + std::to_string(i)).c_str()), has ? StdString(expected.lines[static_cast<size_t>(i)]) : std::string()) << "line " << i;
+                // The text of a row is in a child of the raised row (a text has no inset): the row and its bar come and go together
+                EXPECT_EQ(Text("Rules", ("RulesLineText" + std::to_string(i)).c_str()), has ? StdString(expected.lines[static_cast<size_t>(i)]) : std::string()) << "line " << i;
             }
             for (int i = 0; i < kRulesMaxItems; ++i) {
                 const bool has = i < static_cast<int>(expected.items.size());
                 const std::string name = "RulesItem" + std::to_string(i);
                 EXPECT_EQ(OnScreen("Rules", name.c_str()), has) << "item " << i << " of page " << page;
                 EXPECT_EQ(Var(("rulesItem" + std::to_string(i)).c_str()), has ? StdString(expected.items[static_cast<size_t>(i)]) : std::string()) << "item " << i;
-                EXPECT_EQ(Text("Rules", name.c_str()), has ? StdString(expected.items[static_cast<size_t>(i)]) : std::string()) << "item " << i;
+                EXPECT_EQ(Text("Rules", ("RulesItemText" + std::to_string(i)).c_str()), has ? StdString(expected.items[static_cast<size_t>(i)]) : std::string()) << "item " << i;
             }
             for (int row = 0; row < kRulesMaxItems / kRulesItemColumns; ++row) {
                 const std::string name = "RulesItemRow" + std::to_string(row);
@@ -674,7 +676,7 @@ namespace BECore::Mahjong::Tests {
 
         const UIElement* pager = Element("Rules", "Pager");
         ASSERT_NE(pager, nullptr);
-        EXPECT_TRUE(SameColor(pager->GetComponent<UITextComponent>()->textColor, PaletteColor("textMuted")));
+        EXPECT_TRUE(SameColor(pager->children.front()->GetComponent<UITextComponent>()->textColor, PaletteColor("textMuted")));
         EXPECT_EQ(GapBelow(title->rect, pager->rect), kModalGap);
 
         // The dim is the whole view, and it takes the clicks
@@ -707,6 +709,50 @@ namespace BECore::Mahjong::Tests {
             }
             left = button;
         }
+    }
+
+    TEST_F(MahjongRulesTest, TheRulesAreAPageARaisedRowWithAnAccentBarARaisedChipAndATileTrayWithTheTilesInTheMiddle) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        ASSERT_NO_FATAL_FAILURE(PressRules());
+        ASSERT_NO_FATAL_FAILURE(GoToPage(7));  // a page with lines and items
+        const float small = static_cast<float>(kCornerSmall);
+
+        const UIElement* chip = Element("Rules", "PagerChip");
+        ASSERT_NE(chip, nullptr);
+        EXPECT_TRUE(SameColor(chip->color, PaletteColor("surfaceRaised")));
+        EXPECT_EQ(chip->box.cornerRadius.topLeft, small);
+        EXPECT_LT(chip->rect.w, Element("Rules", "Pager")->rect.w) << "the pager is a small chip, not a band";
+
+        const UIElement* line = Element("Rules", "RulesLine0");
+        const UIElement* bar = Element("Rules", "RulesLineBar0");
+        ASSERT_TRUE(line != nullptr && bar != nullptr);
+        EXPECT_TRUE(SameColor(line->color, PaletteColor("surfaceRaised")));
+        EXPECT_EQ(line->box.cornerRadius.topLeft, small);
+        EXPECT_TRUE(SameColor(bar->color, PaletteColor("accent")));
+        EXPECT_EQ(bar->rect.w, 4.0f);
+        EXPECT_GE(bar->rect.x, line->rect.x);
+        EXPECT_LE(bar->rect.x + bar->rect.w, Element("Rules", "RulesLineText0")->rect.x) << "the text starts right of the bar";
+
+        const UIElement* item = Element("Rules", "RulesItem0");
+        ASSERT_NE(item, nullptr);
+        ASSERT_TRUE(OnScreen("Rules", "RulesItem0"));
+        EXPECT_TRUE(SameColor(item->color, PaletteColor("surfaceRaised")));
+        EXPECT_EQ(item->box.cornerRadius.topLeft, small);
+        EXPECT_EQ(Element("Rules", "RulesItemText0")->rect.h, item->rect.h);
+
+        ASSERT_NO_FATAL_FAILURE(GoToPage(0));
+        const UIElement* tray = Element("Rules", "RulesTileRow0");
+        ASSERT_NE(tray, nullptr);
+        EXPECT_TRUE(SameColor(tray->color, PaletteColor("surfaceDeep")));
+        EXPECT_EQ(tray->box.cornerRadius.topLeft, small);
+        // The tiles stand in the middle of the tray, as many as the page has (the first row is the nine dots)
+        const UIElement* first = Element("Rules", "RulesTile0");
+        const UIElement* last = Element("Rules", "RulesTile8");
+        ASSERT_TRUE(first != nullptr && last != nullptr);
+        const float left = first->rect.x - tray->rect.x;
+        const float right = tray->rect.x + tray->rect.w - (last->rect.x + last->rect.w);
+        EXPECT_NEAR(left, right, 1.0f);
+        EXPECT_GT(left, 0.0f);
     }
 
     TEST_F(MahjongRulesTest, ThePlateIsClearOfTheBarInEveryWindowOfTheMatrixWithoutInsets) {
