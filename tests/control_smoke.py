@@ -51,6 +51,10 @@ COMING_AND_GOING_SCREENS = ("Setup", "Handoff", "HandOver", "HandOverAction", "M
 HAND_OVER_SCREENS = {"HandOver", "HandOverAction"}  # the score table and its Next hand button are shown together
 RULES_SCREENS = {"Rules", "RulesAction"}  # the pages of the rules and their bar are shown together
 SETTLE_FRAMES = 2  # frames after a change of the game before the canvases show it
+# A screen that opens takes no click while it shows (kMotionShowSeconds, 0.18 s, `src/Mahjong/Table/UiPalette.h`): `let_motion_finish` moves the game clock past it
+MOTION_FRAMES = 2
+MOTION_FRAME_SECONDS = 0.125  # exact in binary; two of them are 0.25 s
+MOTION_WAIT_SECONDS = 0.3  # the real clock: game time is wall time, `step` waits for frames only and ignores `dt`
 IDLE_CHECK_SECONDS = 0.3  # how long the manual clock is watched not moving
 DEFAULT_STEP_SECONDS = 1.0 / 60.0
 EASY_LEVEL = 1    # the levels are 1..10 (ComputerLevel.h); Easy is 1
@@ -285,9 +289,18 @@ def check_state_is_pushed(client: BagiControlClient) -> None:
     check_state_push(client, outcome)
 
 
+def let_motion_finish(client: BagiControlClient) -> None:
+    """Gives a screen that has just opened the time to finish its show: frames of 0.125 s on the manual clock, a wait on the real one."""
+    client.call("step", {"frames": MOTION_FRAMES, "dt": MOTION_FRAME_SECONDS})
+    if not client.call("status")["manualClock"]:
+        time.sleep(MOTION_WAIT_SECONDS)
+        client.call("step", {"frames": 1})
+
+
 def screens_shown(client: BagiControlClient) -> tuple[set[str], dict[str, Any]]:
     """Which of the screens that come and go (the modal ones and the Next hand button of the score table) are shown, after a few frames in which the scene reads the game; and the whole UI tree."""
     client.call("step", {"frames": SETTLE_FRAMES})
+    let_motion_finish(client)
     tree = client.call("ui_tree")
     check(tree["scene"] == "MahjongScene", f"the active scene is {tree['scene']}")
     canvases = {canvas["node"]: canvas for canvas in tree["canvases"]}
@@ -358,8 +371,9 @@ def check_screens_follow_the_game(client: BagiControlClient, rng: random.Random)
         client.call("perform_action", {"type": "next_hand"})
     shown, tree = screens_shown(client)
     check(shown == {"MatchOver"}, f"a finished match shows {sorted(shown)}")
-    standing = find_ui_element(tree, "Standing0")
-    check(standing is not None and standing["text"].startswith("1. Seat"), f"the first row of the standings is {standing}")
+    place = find_ui_element(tree, "StandingPlace0")
+    name = find_ui_element(tree, "StandingName0")
+    check(place is not None and place["text"] == "1" and name is not None and name["text"].startswith("Seat"), f"the first row of the standings is {place} {name}")
     client.call("ui_click", {"name": "NewGame", "canvas": "MatchOver"})
     shown, _ = screens_shown(client)
     check(shown == {"Setup", "MatchOver"}, f"New game on the standings shows {sorted(shown)}")  # the seat choice lies over the standings
@@ -391,6 +405,7 @@ def check_rules_screen(client: BagiControlClient) -> None:
     clicked = client.call("ui_click", {"name": "Options", "canvas": "HudMenu"})
     check(clicked["consumed"] and clicked["action"] == "MahjongOptions", f"the click on Options was not taken: {clicked}")
     client.call("step", {"frames": SETTLE_FRAMES})  # the page is shown by the next frames
+    let_motion_finish(client)  # and takes the click once it has risen
     clicked = client.call("ui_click", {"name": "OptionsRules", "canvas": "Options"})
     check(clicked["consumed"] and clicked["action"] == "MahjongRules", f"the click on Rules was not taken: {clicked}")
     shown, tree = screens_shown(client)
@@ -398,7 +413,7 @@ def check_rules_screen(client: BagiControlClient) -> None:
     menu = next(canvas for canvas in tree["canvases"] if canvas["node"] == "HudMenu")
     check(not menu["visible"], "the buttons of the HUD are still shown over the pages of the rules")
     title = element_text(tree, "Rules", "Title")
-    pager = element_text(tree, "Rules", "Pager")
+    pager = element_text(tree, "Rules", "PagerChip")
     check(title != "" and pager != "", f"the first page has title '{title}' and pager '{pager}'")
     check(pager.startswith("Page 1 of"), f"the pager of the first page is '{pager}'")
 
@@ -407,7 +422,7 @@ def check_rules_screen(client: BagiControlClient) -> None:
     shown, tree = screens_shown(client)
     check(shown == RULES_SCREENS, f"Next left {sorted(shown)} on the screen")
     check(element_text(tree, "Rules", "Title") not in ("", title), "the title did not change with the next page")
-    check(element_text(tree, "Rules", "Pager").startswith("Page 2 of"), "the pager did not move to the second page")
+    check(element_text(tree, "Rules", "PagerChip").startswith("Page 2 of"), "the pager did not move to the second page")
     check(get_state(client)["version"] == version, "the match moved while the pages of the rules were open")
 
     clicked = client.call("ui_click", {"name": "RulesClose"})
@@ -421,6 +436,7 @@ def check_rules_screen(client: BagiControlClient) -> None:
     # An action of the control API is a controller that plays: it closes the pages
     client.call("ui_click", {"name": "Options", "canvas": "HudMenu"})
     client.call("step", {"frames": SETTLE_FRAMES})
+    let_motion_finish(client)
     client.call("ui_click", {"name": "OptionsRules", "canvas": "Options"})
     shown, _ = screens_shown(client)
     check(shown == RULES_SCREENS, f"the Rules button shows {sorted(shown)} the second time")

@@ -56,6 +56,10 @@ WINDOW_CONFIG = (
 )
 SEED_TRIES = 30
 SETTLE_FRAMES = 2  # frames after a change of the game before the canvases show it
+# A screen that opens or leaves moves for kMotionShowSeconds (0.18 s, `Table/UiPalette.h`) on the game clock; the manual clock moves only by `step`, so a picture taken at once would be a
+# half-faded card and a click would be eaten (a card that is showing takes no input). Two frames of 0.125 s finish it.
+MOTION_FRAMES = 2
+MOTION_FRAME_SECONDS = 0.125
 HANDS = 8
 STEP_LIMIT = 2000  # actions of one hand of a person
 HAND_LIMIT = 100  # hands of one match of 8 (a drawn hand is dealt again)
@@ -75,9 +79,11 @@ def get_state(client: BagiControlClient) -> dict[str, Any]:
     return client.call("get_state")["state"]
 
 
-def settle(client: BagiControlClient) -> dict[str, Any]:
-    """Steps the frames in which the scene reads the game, and returns the UI tree."""
+def settle(client: BagiControlClient, motion: bool = False) -> dict[str, Any]:
+    """Steps the frames in which the scene reads the game, and returns the UI tree; with `motion` it also lets the show of a screen finish."""
     client.call("step", {"frames": SETTLE_FRAMES})
+    if motion:
+        client.call("step", {"frames": MOTION_FRAMES, "dt": MOTION_FRAME_SECONDS})
     tree = client.call("ui_tree")
     check(tree["scene"] == TABLE_SCENE, f"the active scene is {tree['scene']}")
     return tree
@@ -134,7 +140,7 @@ def score_table(client: BagiControlClient, first_seed: int) -> str:
         reset(client, seed, "CCCC")
         state = get_state(client)
         if state["phase"] == "hand_over" and state["result"]["kind"] == "win":
-            tree = settle(client)
+            tree = settle(client, motion=True)
             check(canvas_visible(tree, "HandOver"), "the score table is not shown after a won hand")
             lines = state["result"]["seats"][state["result"]["winner"]]["breakdown"]["lines"]
             return f"seed {seed}, {len(lines)} lines"
@@ -148,7 +154,7 @@ def standings(client: BagiControlClient, seed: int) -> str:
             break
         client.call("perform_action", {"type": "next_hand"})
     check(get_state(client)["phase"] == "match_over", f"the match did not end in {HAND_LIMIT} hands")
-    tree = settle(client)
+    tree = settle(client, motion=True)
     check(canvas_visible(tree, "MatchOver"), "the standings are not shown at the end of the match")
     return f"seed {seed}"
 
@@ -157,7 +163,7 @@ def setup_screen(client: BagiControlClient, seed: int) -> str:
     reset(client, seed, "PCCC")
     settle(client)
     client.call("ui_click", {"name": "NewGame", "canvas": "HudMenu"})
-    tree = settle(client)
+    tree = settle(client, motion=True)
     check(canvas_visible(tree, "Setup"), "New game did not open the seat choice")
     return f"seed {seed}"
 
@@ -167,7 +173,7 @@ def options_screen(client: BagiControlClient, seed: int) -> str:
     reset(client, seed, "PCCC")
     settle(client)
     client.call("ui_click", {"name": "Options", "canvas": "HudMenu"})
-    tree = settle(client)
+    tree = settle(client, motion=True)
     check(canvas_visible(tree, "Options"), "the button Options did not open the page")
     return f"seed {seed}"
 
@@ -175,7 +181,7 @@ def options_screen(client: BagiControlClient, seed: int) -> str:
 def handoff(client: BagiControlClient, seed: int) -> str:
     """Two people at seats 0 and 1: the cover is up right after the start, the screen is to be passed to the person who acts first."""
     reset(client, seed, "PPCC")
-    tree = settle(client)
+    tree = settle(client, motion=True)
     check(canvas_visible(tree, "Handoff"), "the hot-seat cover is not shown after the start with two people")
     return f"seed {seed}"
 
@@ -185,9 +191,9 @@ def rules_screen(client: BagiControlClient, seed: int) -> str:
     reset(client, seed, "PCCC")
     settle(client)
     client.call("ui_click", {"name": "Options", "canvas": "HudMenu"})
-    settle(client)
+    settle(client, motion=True)
     client.call("ui_click", {"name": "OptionsRules", "canvas": "Options"})
-    tree = settle(client)
+    tree = settle(client, motion=True)
     check(canvas_visible(tree, "Rules"), "the button Rules of the options did not open the rules page")
     return f"seed {seed}"
 
@@ -197,9 +203,9 @@ def online_screen(client: BagiControlClient, seed: int) -> str:
     reset(client, seed, "PCCC")
     settle(client)
     client.call("ui_click", {"name": "NewGame", "canvas": "HudMenu"})
-    settle(client)
+    settle(client, motion=True)
     client.call("ui_click", {"name": "SetupOnline", "canvas": "Setup"})
-    tree = settle(client)
+    tree = settle(client, motion=True)
     check(canvas_visible(tree, "Online"), "the button Online of Setup did not open the online panel")
     return f"seed {seed}"
 

@@ -64,7 +64,9 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(DimAlpha(*_renderer).has_value());
         EXPECT_EQ(*DimAlpha(*_renderer), 0) << "the first frame of the show is at nothing";
 
-        const bool taken = ClickElement("Setup", "Seat2Person");
+        const UIElement* seat = Element("Setup", "Seat2Person");
+        ASSERT_NE(seat, nullptr);
+        const bool taken = Click(seat->rect.x + seat->rect.w * 0.5f, seat->rect.y + seat->rect.h * 0.5f);  // not ClickElement: it lets the show finish first
         Draw();
         EXPECT_TRUE(taken) << "the click is consumed";
         EXPECT_EQ(MahjongHudComponent::GetActive()->PendingSeats(), before) << "and delivers nothing";

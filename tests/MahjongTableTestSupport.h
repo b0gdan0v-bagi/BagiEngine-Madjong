@@ -589,8 +589,10 @@ namespace BECore::Mahjong::Tests {
             return found != nullptr && found->rect.w > 0.0f && found->rect.h > 0.0f;
         }
 
-        /// Clicks the middle of a button of the canvas as the last draw put it.
+        /// Clicks the middle of a button of the canvas as the last draw put it, as a person does: once the screens that were just shown have finished
+        /// their motion (`SettleTransitions`; a click in the middle of a show is eaten, and a test of that clicks with `Click`).
         bool ClickElement(const char* node, const char* element) {
+            SettleTransitions();
             const UIElement* found = Element(node, element);
             EXPECT_NE(found, nullptr) << element;
             return found != nullptr && Click(found->rect.x + found->rect.w * 0.5f, found->rect.y + found->rect.h * 0.5f);
