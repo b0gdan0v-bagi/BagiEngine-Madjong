@@ -288,12 +288,14 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(store->LoadOnline().error().kind, SaveProblemKind::Missing);
     }
 
-    TEST(MatchSaveDirectoryTest, TheDefaultFolderIsSavesOrTheEnvironmentAndNoneInTheBrowser) {
+    TEST(MatchSaveDirectoryTest, TheDefaultFolderIsSavesOrTheEnvironmentAndThePersistentOneInTheBrowser) {
         EXPECT_EQ(DefaultMatchSaveDirectory(false, nullptr), fs::path("saves"));
         EXPECT_EQ(DefaultMatchSaveDirectory(false, "elsewhere"), fs::path("elsewhere"));
         EXPECT_TRUE(DefaultMatchSaveDirectory(false, "").empty()) << "an empty value switches saving off";
-        EXPECT_TRUE(DefaultMatchSaveDirectory(true, nullptr).empty());
-        EXPECT_TRUE(DefaultMatchSaveDirectory(true, "elsewhere").empty()) << "the browser has no files to keep, whatever the environment says";
+        const fs::path persistent(kWebSaveDirectory.begin(), kWebSaveDirectory.end());
+        EXPECT_EQ(DefaultMatchSaveDirectory(true, nullptr), persistent);
+        EXPECT_EQ(DefaultMatchSaveDirectory(true, "elsewhere"), persistent) << "the browser has no environment, whatever it says";
+        EXPECT_EQ(DefaultMatchSaveDirectory(true, ""), persistent);
     }
 
     TEST(MatchSaveDirectoryTest, TheProcessWideFolderCanBeChangedAndSwitchedOff) {
@@ -303,6 +305,22 @@ namespace BECore::Mahjong::Tests {
         SetMatchSaveDirectory(fs::path());
         EXPECT_TRUE(MatchSaveDirectory().empty());
         SetMatchSaveDirectory(before);
+    }
+
+    TEST(MatchSaveStorageTest, OnlyAStorageThatIsNotRememberedForgetsTheSaves) {
+        EXPECT_TRUE(SaveStorageRemembers(SaveStorageState::NotApplicable));
+        EXPECT_TRUE(SaveStorageRemembers(SaveStorageState::Persistent));
+        EXPECT_FALSE(SaveStorageRemembers(SaveStorageState::NotRemembered));
+    }
+
+    TEST(MatchSaveStorageTest, TheStorageStateIsTheEnginesUnlessATestPlaysOne) {
+        EXPECT_EQ(MatchSaveStorage(), SaveStorageState::NotApplicable) << "a desktop build keeps its own folder";
+        SetMatchSaveStorage(SaveStorageState::NotRemembered);
+        EXPECT_EQ(MatchSaveStorage(), SaveStorageState::NotRemembered);
+        SetMatchSaveStorage(SaveStorageState::Persistent);
+        EXPECT_EQ(MatchSaveStorage(), SaveStorageState::Persistent);
+        SetMatchSaveStorage(std::nullopt);
+        EXPECT_EQ(MatchSaveStorage(), SaveStorageState::NotApplicable);
     }
 
 }  // namespace BECore::Mahjong::Tests
