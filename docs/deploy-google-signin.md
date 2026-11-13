@@ -55,7 +55,7 @@ python3 -c "import secrets; print(secrets.token_urlsafe(48))"   # MATCH_COLLECT_
 Если volume уже подключён, пропустите этот шаг.
 
 ```bash
-railway volume add --service bagi-mahjong --mount-path /data
+railway volume --service bagi-mahjong add --mount-path /data
 ```
 
 Volume монтируется с владельцем root, а образ работает от пользователя `nobody`. Поэтому нужна переменная `RAILWAY_RUN_UID=0` (шаг 6), иначе сервер остановится с ошибкой «match store is not writable». С этой переменной процесс работает от root. На Railway это пока не проверено.
