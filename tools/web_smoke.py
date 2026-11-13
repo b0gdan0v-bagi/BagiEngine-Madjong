@@ -32,6 +32,10 @@ kViewWidth x kViewHeight of Table/TableLayout.h, so one design unit is one pixel
                    576). The row inside the plate is x 336..944 and holds Continue (flex 1.5, hidden at a first start), Online (1.1,
                    there only when MahjongOnlineConfig.xml names a server) and Start (1), 8 apart, so Start is at best x 704..944 (no
                    Online, Continue shown) and at most 658..944 (Online, no Continue) whichever of them are there: x 860 is in it always.
+  CONSENT_CLICK    the middle of "Don't send" of the question of the tester upload (config/nodes/MahjongConsent.xml), which a fresh
+                   page (an empty IndexedDB) shows over Setup at its first start: a box of 560 x 320 centred (x 360..920, y 200..520),
+                   two buttons in its last row (y 440..504), "Don't send" at x 376..636. The answer is saved, so it is asked once per
+                   browser profile: scenario 1 and 2 answer it before Start, scenario 3 before Start and not after the reload.
   CONTINUE_CLICK   the middle of Continue, the first of the row: x 336..582 with Online and 336..696 without, so x 459 is in it always.
   HAND_TILE_CLICK  the middle of the first tile of the viewer's hand (kViewerHandTileW x kViewerHandTileH = 48 x 64, the hand starts
                    at x 72, y 648).
@@ -82,6 +86,7 @@ VIEWPORT = (1280, 720)
 PLATE_REGION = (320, 96, 640, 528)  # x, y, width, height of the Plate of Setup
 START_CLICK = (860.0, 576.0)
 CONTINUE_CLICK = (459.0, 576.0)
+CONSENT_CLICK = (506.0, 472.0)
 HAND_TILE_CLICK = (95.0, 683.0)
 # The first two rows of the action buttons, three of 132 x 56 per row, left to right; the order puts the second place first (the
 # Pass of a window with one claim: Chow or Pung), then the third, then the first and the second row.
@@ -103,6 +108,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--check", action="store_true", help="run the browser-free checks of this script and exit")
     parser.add_argument("--start-click", type=engine.parse_point, default=START_CLICK, metavar="X,Y",
                         help=f"the middle of Start, in pixels from the top left of the canvas (default: {START_CLICK[0]:g},{START_CLICK[1]:g})")
+    parser.add_argument("--consent-click", type=engine.parse_point, default=CONSENT_CLICK, metavar="X,Y",
+                        help=f"the middle of Don't send of the upload question (default: {CONSENT_CLICK[0]:g},{CONSENT_CLICK[1]:g})")
     parser.add_argument("--continue-click", type=engine.parse_point, default=CONTINUE_CLICK, metavar="X,Y",
                         help=f"the middle of Continue (default: {CONTINUE_CLICK[0]:g},{CONTINUE_CLICK[1]:g})")
     parser.add_argument("--tile-click", type=engine.parse_point, default=HAND_TILE_CLICK, metavar="X,Y",
@@ -129,8 +136,9 @@ def format_point(point: tuple[float, float]) -> str:
 
 
 def engine_arguments(args: argparse.Namespace) -> list[str]:
-    """The command line of the engine's smoke for scenario 1: the same page and browser, the click on Start."""
-    argv = ["--dist", str(args.dist), "--click", format_point(args.start_click), "--viewport", f"{args.viewport[0]}x{args.viewport[1]}",
+    """The command line of the engine's smoke for scenario 1: the same page and browser, the click on Don't send of the upload question
+    (the first thing a fresh page asks; Start is under it)."""
+    argv = ["--dist", str(args.dist), "--click", format_point(args.consent_click), "--viewport", f"{args.viewport[0]}x{args.viewport[1]}",
             "--timeout", f"{args.timeout:g}", "--settle", f"{args.settle:g}"]
     for option, values in (("--allow-console", args.allow_console), ("--expect-console", args.expect_console),
                            ("--chromium-arg", args.chromium_arg)):
@@ -219,11 +227,23 @@ def click_changes_picture(page, canvas, box, point: tuple[float, float], settle:
     return changed
 
 
+def answer_consent(page, canvas, box, run: TableRun, args: argparse.Namespace, sleep) -> bool:
+    """Answers the upload question of a fresh page with Don't send; False with the problem noted when the click changed nothing."""
+    if not click_changes_picture(page, canvas, box, args.consent_click, args.settle, CLICK_WINDOW_SECONDS, sleep):
+        run.problems.append("(5b) the picture is the same after the click on Don't send of the upload question "
+                            "(CONSENT_CLICK may be off: the question moved, or a fresh page no longer asks it?)")
+        return False
+    run.notes.append("ok: (5b) the upload question was answered with Don't send")
+    return True
+
+
 def play_table(page, canvas, box, run: TableRun, args: argparse.Namespace) -> None:
     sleep = lambda seconds: page.wait_for_timeout(seconds * 1000)  # noqa: E731
-    if points_outside(box, run, ("start click", args.start_click), ("tile click", args.tile_click)):
+    if points_outside(box, run, ("consent click", args.consent_click), ("start click", args.start_click), ("tile click", args.tile_click)):
         return
 
+    if not answer_consent(page, canvas, box, run, args, sleep):
+        return
     if not click_changes_picture(page, canvas, box, args.start_click, args.settle, CLICK_WINDOW_SECONDS, sleep):
         run.problems.append("(6) the picture is the same after the click on Start: the seat choice did not close "
                             "(START_CLICK may be off: Setup moved?)")
@@ -287,7 +307,10 @@ def points_outside(box, run: TableRun, *points: tuple[str, tuple[float, float]])
 
 def play_reload(page, canvas, box, run: TableRun, args: argparse.Namespace) -> None:
     sleep = lambda seconds: page.wait_for_timeout(seconds * 1000)  # noqa: E731
-    if points_outside(box, run, ("start click", args.start_click), ("continue click", args.continue_click)):
+    if points_outside(box, run, ("consent click", args.consent_click), ("start click", args.start_click),
+                      ("continue click", args.continue_click)):
+        return
+    if not answer_consent(page, canvas, box, run, args, sleep):
         return
 
     canvas_box = box
@@ -387,7 +410,8 @@ def run_checks() -> int:
         return 0 <= point[0] < size[0] and 0 <= point[1] < size[1]
 
     # the constants are inside the view they are for (and the 640x480 shot of the engine's default would cut the tile off)
-    for name, point in (("START_CLICK", START_CLICK), ("CONTINUE_CLICK", CONTINUE_CLICK), ("HAND_TILE_CLICK", HAND_TILE_CLICK),
+    for name, point in (("START_CLICK", START_CLICK), ("CONTINUE_CLICK", CONTINUE_CLICK), ("CONSENT_CLICK", CONSENT_CLICK),
+                        ("HAND_TILE_CLICK", HAND_TILE_CLICK),
                         *(("claim answer", p) for p in CLAIM_ANSWER_CLICKS)):
         assert inside(point, VIEWPORT), f"{name} {point} is outside {VIEWPORT}"
     assert not inside(HAND_TILE_CLICK, (640, 480))
@@ -417,10 +441,12 @@ def run_checks() -> int:
     assert parsed.continue_click == CONTINUE_CLICK
     assert build_parser().parse_args(["--continue-click", "1,2"]).continue_click == (1.0, 2.0)
     argv = engine_arguments(parsed)
-    assert argv[:6] == ["--dist", "dist", "--click", "10,20", "--viewport", "1280x720"], argv
+    assert argv[:6] == ["--dist", "dist", "--click", format_point(CONSENT_CLICK), "--viewport", "1280x720"], argv
+    # Don't send is in the left button of the question's last row, which is over the plate and clear of Start's row
+    assert 376 <= CONSENT_CLICK[0] < 636 and 440 <= CONSENT_CLICK[1] < 504
     assert ["--allow-console", "x"] == argv[argv.index("--allow-console"):][:2] and "--browser-channel" in argv
     options = engine.parse_options(argv)  # what the engine will read from it
-    assert options.click == (10.0, 20.0) and options.viewport == (1280, 720) and options.expect_console == ["y"]
+    assert options.click == CONSENT_CLICK and options.viewport == (1280, 720) and options.expect_console == ["y"]
 
     # wait_until_still on a fake clock: a changing table is not still, a table that stops is still after `quiet` seconds
     class Clock:
@@ -479,7 +505,7 @@ def main(argv: list[str] | None = None) -> int:
     engine_argv = engine_arguments(args)
     engine.parse_options(engine_argv)  # a wrong command line ends here with exit code 2, before any browser starts
 
-    print("== scenario 1: the engine's checks 1 to 5, the click on Start ==", flush=True)
+    print("== scenario 1: the engine's checks 1 to 8, the click on Don't send of the upload question ==", flush=True)
     code = engine.main(engine_argv)
     if code != engine.EXIT_PASSED:
         return code  # failed, or skipped (77): there is no page to play
