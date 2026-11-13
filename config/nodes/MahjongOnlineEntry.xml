@@ -14,15 +14,16 @@
   maximum; the smallest canvas (320 x 320 units, 297 of safe height) leaves a row about 26 units and a key 25 units wide, both above the 21.3 units of 32 px, which is
   why the keys stay eight to a row in every window and nothing scrolls. The variants are those of Online: at most 480 units wide the plate takes the whole safe
   width and the captions are 52, at most 360 they are hidden. A key's character is one letter, so MahjongHudOnlineTest asks it to fit with 4 units of air, not 8.
+  The skin is that of Online: the plate a card, EntryValueRow the header band, the keys radius 8 with no shadow (they lie 4 apart), EntryDelete, EntryPaste and EntryDone the buttons of their role.
 -->
 <node name="OnlineEntry" layer="33" contentVersion="5">
   <components>
     <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" modal="true" visible="false">
       <elements>
         <element type="UIElement" name="EntryDim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
-        <element type="UIStack" name="EntryPlate" anchor="Center" width="94%" maxWidth="640" height="100%" maxHeight="544" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
+        <element type="UIStack" name="EntryPlate" anchor="Center" width="94%" maxWidth="640" height="100%" maxHeight="544" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true" cornerRadius="16" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="26,29,38,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
           <children>
-            <element type="UIStack" name="EntryValueRow" flex="0.875" maxHeight="56" direction="Horizontal" spacing="8" padding="8,0,8,0" crossAlign="Stretch" color="58,66,92,255">
+            <element type="UIStack" name="EntryValueRow" flex="0.875" maxHeight="56" direction="Horizontal" spacing="8" padding="8,0,8,0" crossAlign="Stretch" color="58,66,92,255" cornerRadius="12" gradientDirection="Vertical" gradientColor="42,48,68,255" highlight="255,255,255,60">
               <children>
                 <element type="UIElement" name="EntryCaptionName" width="112" fontSize="22">
                   <components>
@@ -53,51 +54,51 @@
             </element>
             <element type="UIStack" name="PadRow0" flex="0.875" maxHeight="56" direction="Horizontal" spacing="4" crossAlign="Stretch">
               <children>
-                <element type="UIElement" name="PadKey0" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey0" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey0}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey0}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="0"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey1" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey1" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey1}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey1}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="1"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey2" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey2" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey2}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey2}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="2"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey3" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey3" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey3}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey3}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="3"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey4" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey4" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey4}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey4}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="4"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey5" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey5" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey5}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey5}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="5"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey6" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey6" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey6}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey6}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="6"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey7" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey7" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey7}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey7}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="7"/>
                   </components>
                 </element>
@@ -105,51 +106,51 @@
             </element>
             <element type="UIStack" name="PadRow1" flex="0.875" maxHeight="56" direction="Horizontal" spacing="4" crossAlign="Stretch">
               <children>
-                <element type="UIElement" name="PadKey8" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey8" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey8}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey8}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="8"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey9" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey9" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey9}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey9}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="9"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey10" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey10" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey10}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey10}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="10"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey11" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey11" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey11}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey11}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="11"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey12" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey12" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey12}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey12}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="12"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey13" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey13" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey13}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey13}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="13"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey14" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey14" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey14}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey14}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="14"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey15" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey15" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey15}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey15}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="15"/>
                   </components>
                 </element>
@@ -157,51 +158,51 @@
             </element>
             <element type="UIStack" name="PadRow2" flex="0.875" maxHeight="56" direction="Horizontal" spacing="4" crossAlign="Stretch">
               <children>
-                <element type="UIElement" name="PadKey16" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey16" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey16}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey16}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="16"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey17" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey17" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey17}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey17}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="17"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey18" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey18" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey18}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey18}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="18"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey19" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey19" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey19}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey19}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="19"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey20" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey20" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey20}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey20}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="20"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey21" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey21" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey21}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey21}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="21"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey22" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey22" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey22}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey22}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="22"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey23" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey23" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey23}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey23}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="23"/>
                   </components>
                 </element>
@@ -209,51 +210,51 @@
             </element>
             <element type="UIStack" name="PadRow3" flex="0.875" maxHeight="56" direction="Horizontal" spacing="4" crossAlign="Stretch">
               <children>
-                <element type="UIElement" name="PadKey24" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey24" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey24}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey24}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="24"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey25" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey25" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey25}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey25}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="25"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey26" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey26" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey26}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey26}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="26"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey27" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey27" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey27}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey27}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="27"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey28" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey28" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey28}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey28}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="28"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey29" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey29" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey29}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey29}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="29"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey30" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey30" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey30}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey30}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="30"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey31" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey31" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey31}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey31}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="31"/>
                   </components>
                 </element>
@@ -261,51 +262,51 @@
             </element>
             <element type="UIStack" name="PadRow4" flex="0.875" maxHeight="56" direction="Horizontal" spacing="4" crossAlign="Stretch">
               <children>
-                <element type="UIElement" name="PadKey32" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey32" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey32}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey32}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="32"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey33" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey33" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey33}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey33}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="33"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey34" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey34" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey34}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey34}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="34"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey35" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey35" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey35}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey35}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="35"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey36" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey36" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey36}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey36}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="36"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey37" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey37" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey37}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey37}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="37"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey38" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey38" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey38}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey38}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="38"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey39" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey39" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey39}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey39}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="39"/>
                   </components>
                 </element>
@@ -313,51 +314,51 @@
             </element>
             <element type="UIStack" name="PadRow5" flex="0.875" maxHeight="56" direction="Horizontal" spacing="4" crossAlign="Stretch">
               <children>
-                <element type="UIElement" name="PadKey40" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey40" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey40}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey40}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="40"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey41" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey41" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey41}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey41}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="41"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey42" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey42" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey42}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey42}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="42"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey43" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey43" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey43}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey43}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="43"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey44" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey44" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey44}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey44}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="44"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey45" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey45" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey45}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey45}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="45"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey46" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey46" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey46}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey46}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="46"/>
                   </components>
                 </element>
-                <element type="UIElement" name="PadKey47" flex="1" fontSize="22" color="70,70,100,255">
+                <element type="UIElement" name="PadKey47" flex="1" fontSize="22" color="70,70,100,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{padKey47}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{padKey47}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineKey" value="47"/>
                   </components>
                 </element>
@@ -365,21 +366,21 @@
             </element>
             <element type="UIStack" name="EntryActions" flex="1" maxHeight="64" direction="Horizontal" spacing="8" crossAlign="Stretch">
               <children>
-                <element type="UIElement" name="EntryDelete" flex="1" fontSize="28" color="70,70,100,255">
+                <element type="UIElement" name="EntryDelete" flex="1" fontSize="28" color="70,70,100,255" cornerRadius="12" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{#online.delete}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#online.delete}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineBackspace"/>
                   </components>
                 </element>
-                <element type="UIElement" name="EntryPaste" flex="1" fontSize="28" color="45,75,120,255" visible="false">
+                <element type="UIElement" name="EntryPaste" flex="1" fontSize="28" color="45,75,120,255" visible="false" cornerRadius="12" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="30,52,86,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{#online.paste}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#online.paste}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlinePaste"/>
                   </components>
                 </element>
-                <element type="UIElement" name="EntryDone" flex="1" fontSize="28" color="40,110,60,255">
+                <element type="UIElement" name="EntryDone" flex="1" fontSize="28" color="40,110,60,255" cornerRadius="12" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="26,78,40,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{#online.done}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#online.done}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOnlineDone"/>
                   </components>
                 </element>
