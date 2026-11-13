@@ -40,7 +40,4 @@ namespace BECore::Mahjong {
     /// The folder of the file: the engine's persistent folder in a browser, empty (nowhere) elsewhere
     [[nodiscard]] std::filesystem::path UploadPrefsFolder();
 
-    /// Whether the choice survives a reload (`SaveStorageState::Persistent`); false means it is asked again at each visit
-    [[nodiscard]] bool UploadChoiceIsRemembered();
-
 }  // namespace BECore::Mahjong

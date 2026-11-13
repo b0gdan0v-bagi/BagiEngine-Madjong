@@ -131,7 +131,7 @@ namespace BECore::Mahjong {
             return {};
         }
         // One byte more than the limit tells a file that is too big from one that just fits
-        std::string bytes(kMaxUploadPrefsBytes + 1, '\0');
+        eastl::string bytes(kMaxUploadPrefsBytes + 1, '\0');
         file.read(bytes.data(), static_cast<std::streamsize>(bytes.size()));
         bytes.resize(static_cast<size_t>(file.gcount()));
         return ParseUploadPrefs(eastl::string_view(bytes.data(), bytes.size()));
@@ -170,10 +170,6 @@ namespace BECore::Mahjong {
 
     std::filesystem::path UploadPrefsFolder() {
         return PersistentSaveDirectory();
-    }
-
-    bool UploadChoiceIsRemembered() {
-        return GetSaveStorageState() == SaveStorageState::Persistent;
     }
 
 }  // namespace BECore::Mahjong

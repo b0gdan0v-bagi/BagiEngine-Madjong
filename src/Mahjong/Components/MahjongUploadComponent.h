@@ -27,7 +27,7 @@ namespace BECore::Mahjong {
      * all, no screen, no file, and the game's `GetUpload()` is untouched, so the desktop is as it was.
      *
      * **The first frame** (the game is active, the scene draws) reads the tester's choice from `UploadPrefsFolder()` into
-     * `MahjongGame::GetUploadPrefs()` and then, in this order, gives the uploader its sink, its consent (`UploadChoiceIsRemembered()` says whether
+     * `MahjongGame::GetUploadPrefs()` and then, in this order, gives the uploader its sink, its consent (`MahjongGame::SavesAreRemembered()` says whether
      * the choice is kept) and the session its origin with the nickname (only while the consent is `Granted`), so no match can begin recorded before
      * the choice is applied. `Choose` does the same for a later change and stores the file. **Privacy:** nothing leaves unless the consent is
      * `Granted`, and a nickname is in a log only then.
@@ -50,7 +50,7 @@ namespace BECore::Mahjong {
         struct Overrides {
             IWebPoster* poster = nullptr;                 ///< not owned
             std::optional<std::filesystem::path> folder;  ///< the folder of `upload.txt` (empty path: nowhere)
-            std::optional<bool> remembered;               ///< `UploadChoiceIsRemembered()`
+            std::optional<bool> remembered;               ///< `MahjongGame::SavesAreRemembered()`
         };
         [[nodiscard]] static Overrides& TestOverrides() noexcept;
 
@@ -87,7 +87,9 @@ namespace BECore::Mahjong {
     private:
         void OnAction(const InputEvents::ActionEvent& event);
         void OnUpdate(const SceneEvents::SceneUpdateEvent& event);
-        /// Reads the choice and gives it to the game; false when the page cannot post (then nothing more is done, ever)
+        /// Reads the choice and gives it to the game; false when the page cannot post (then nothing more is done, ever). Called once per
+        /// component, at its first frame with an active game: a game made again (a new scene) has a component of its own that does it again,
+        /// and the destructor takes the sink back from the game.
         bool TakeOver(MahjongGame& game);
         /// The consent and the nickname of the prefs into the uploader and the session's origin
         void Apply(MahjongGame& game);

@@ -35,7 +35,7 @@ Without a browser it tests the same code paths: `cmake -S . -B build/webcheck -G
 
 ## What differs in the browser
 
-Saves are the desktop's, kept in the site's IndexedDB (the folder `/bagi/saves`): the `Setup` choices, `Continue` after a reload or a closed tab (the last complete save of the match) and the room session of `Online` (`Return to room`) survive. Clearing the site data clears them. The tabs of one origin share the folder, the last flush wins, and a tab does not see another's writes until it is reloaded. A private window (or a browser that refuses IndexedDB) plays as before, with no saving and no `Continue`. No match log, no control API, no bot arena. Online play is on when `config/MahjongOnlineConfig.xml` names a `wss://` server in `webServer`: the `Online` button of `Setup` is there only then (below).
+Saves are the desktop's, kept in the site's IndexedDB (the folder `/bagi/saves`): the `Setup` choices, `Continue` after a reload or a closed tab (the last complete save of the match) and the room session of `Online` (`Return to room`) survive. Clearing the site data clears them. The tabs of one origin share the folder, the last flush wins, and a tab does not see another's writes until it is reloaded. A private window (or a browser that refuses IndexedDB) plays as before, with no saving and no `Continue`. No match log file and no control API, no bot arena; finished matches are posted to the service when the tester says yes (`docs/tester-match-logs.md`). Online play is on when `config/MahjongOnlineConfig.xml` names a `wss://` server in `webServer`: the `Online` button of `Setup` is there only then (below).
 
 ## Deploy to Railway
 

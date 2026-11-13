@@ -304,7 +304,8 @@ namespace BECore::Mahjong {
         /// the pause end (when a search is still running, when it arrives), then the rest of a claim window and the discard after it, each begun
         /// as soon as the one before was applied. Drops the step in progress when it can no longer be applied.
         void PlayComputers(MahjongGame& game, float deltaTime);
-        /// Forgets the step in progress: the task is cancelled, nothing of it is applied, the burst of a claim window is over.
+        /// Forgets the step in progress: the task is cancelled, nothing of it is applied, the burst of a claim window is over. The pause
+        /// already spent stays when `Version()` or `StartCount()` moved: the next frame begins the step again without waiting a second time.
         void DropComputerStep();
         /// Begins the next step of the actor (`BeginComputerStep`) and hands it to `_thinking`; false when there is none.
         bool BeginComputerStep(TableSession& session, const HandModel& hand);

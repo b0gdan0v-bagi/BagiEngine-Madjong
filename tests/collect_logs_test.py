@@ -345,16 +345,21 @@ class CollectStoreTest(unittest.TestCase):
         self.assertIn("unreadable: line 1: bad BROKEN", out)
 
     def test_an_incomplete_match_waits_grows_and_is_deleted_after_the_idle_time(self) -> None:
+        part, log = self.downloaded / (ID_A + ".part"), self.downloaded / (ID_A + ".jsonl")
         self.store.matches[ID_A] = [(START % "").encode(), (HAND % 1).encode()]
         code, out, _ = self.run_store("--idle-hours", "2")
         self.assertEqual(code, 0)
         self.assertIn("deleted on the server: 0; kept on the server (may still be played): 1", out)
         self.assertIn(ID_A, self.store.matches)
+        self.assertTrue(part.exists())
+        self.assertFalse(log.exists())
+        self.assertEqual(self.index(), {})  # an open match is not handed to the flow
         self.clock += 3600  # one hour: still waiting
         self.store.matches[ID_A].append((HAND % 2).encode())  # it grew: fetched again, the clock restarts
         _, out, _ = self.run_store("--idle-hours", "2")
         self.assertIn("downloaded: 1", out)
-        self.assertEqual((self.downloaded / (ID_A + ".jsonl")).read_bytes(), b"".join(self.store.matches[ID_A]))
+        self.assertEqual(part.read_bytes(), b"".join(self.store.matches[ID_A]))
+        self.assertEqual(self.index(), {})
         self.clock += 3600
         _, out, _ = self.run_store("--idle-hours", "2")
         self.assertIn("downloaded: 0; deleted on the server: 0", out)
@@ -362,6 +367,20 @@ class CollectStoreTest(unittest.TestCase):
         _, out, _ = self.run_store("--idle-hours", "2")
         self.assertIn("deleted on the server: 1", out)
         self.assertEqual(self.store.matches, {})
+        self.assertFalse(part.exists())
+        self.assertEqual(log.read_bytes(), b"".join([(START % "").encode(), (HAND % 1).encode(), (HAND % 2).encode()]))
+        self.assertEqual([entry["status"] for entry in self.index().values()], ["kept"])  # one log for the id, not one per state
+        self.assertEqual(len(list(self.to.glob("*.jsonl"))), 1)
+
+    def test_an_open_match_that_ends_later_becomes_one_log(self) -> None:
+        self.store.matches[ID_A] = [(START % "").encode(), (HAND % 1).encode()]
+        self.run_store()
+        self.store.matches[ID_A].append((HAND % 2 + END).encode())
+        _, out, _ = self.run_store()
+        self.assertIn("deleted on the server: 1", out)
+        self.assertEqual(sorted(path.name for path in self.downloaded.glob("*.*")), sorted(["state.json", ID_A + ".jsonl"]))
+        self.assertEqual(len(list(self.to.glob("*.jsonl"))), 1)
+        self.assertEqual(len(self.index()), 1)
 
     def test_an_empty_last_piece_is_a_match_given_up_and_is_deleted_at_once(self) -> None:
         self.store.matches[ID_A] = [(START % "").encode(), b""]

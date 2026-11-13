@@ -88,7 +88,7 @@ namespace BECore::Mahjong {
             return false;
         }
         _folder = overrides.folder.has_value() ? *overrides.folder : UploadPrefsFolder();
-        _remembered = overrides.remembered.has_value() ? *overrides.remembered : UploadChoiceIsRemembered();
+        _remembered = overrides.remembered.has_value() ? *overrides.remembered : game.SavesAreRemembered();
         game.GetUploadPrefs() = LoadUploadPrefs(_folder);
         // In this order, so that no match can begin recorded before the choice is applied
         _sink.SetPoster(_poster);

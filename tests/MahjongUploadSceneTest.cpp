@@ -473,13 +473,12 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(CoreManager::GetUIStrings().SetLanguage("en"_intern));
         const UIStrings& strings = CoreManager::GetUIStrings();
         EXPECT_EQ(Tr(strings, "upload.consent.text"),
-                  "Send your finished matches to the author? They help improve the computer players. Only the moves and the score are sent, no name or address. You can change this in Options.");
-        EXPECT_EQ(Tr(strings, "upload.consent.accept"), "Send");
+                  "Send your finished matches to the author together with your Google email? They help improve the computer players. You can change this in Options.");
+        EXPECT_EQ(Tr(strings, "upload.consent.accept"), "Accept");
         EXPECT_EQ(Tr(strings, "upload.consent.decline"), "Don't send");
         ASSERT_TRUE(CoreManager::GetUIStrings().SetLanguage("ru"_intern));
-        EXPECT_EQ(Tr(strings, "upload.consent.text"),
-                  "Отправлять сыгранные матчи автору? Они нужны, чтобы улучшать компьютерных игроков. Уходят только ходы и счёт — без имени и адреса. Поменять можно в настройках.");
-        EXPECT_EQ(Tr(strings, "upload.consent.accept"), "Отправлять");
+        EXPECT_EQ(Tr(strings, "upload.consent.text"), "Отправлять сыгранные матчи автору вместе с вашим Google email? Они нужны, чтобы улучшать компьютерных игроков. Поменять можно в настройках.");
+        EXPECT_EQ(Tr(strings, "upload.consent.accept"), "Принять");
         EXPECT_EQ(Tr(strings, "upload.consent.decline"), "Не отправлять");
     }
 
@@ -532,6 +531,17 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Stored().consent, UploadConsent::Granted);
         EXPECT_EQ(_game->GetUpload().Consent(), UploadConsent::Granted);
         EXPECT_FALSE(ConsentShown());
+    }
+
+    TEST_F(MahjongUploadSceneTest, ThePlateIsGrownByTheHeightOfTheRowsAndTheGapsAsTheNodeFileHasThem) {
+        ASSERT_NO_FATAL_FAILURE(OpenOptionsGranted());
+        const UIElement* plate = Element(kOptions, "Plate");
+        float rows = 0.0f;
+        for (const char* row : kUploadRows) {
+            rows += Element(kOptions, row)->style.rect.maxHeight->value;
+        }
+        const float gaps = static_cast<float>(eastl::size(kUploadRows)) * plate->style.stack.spacing;
+        EXPECT_NEAR(plate->style.rect.maxHeight->value, kDesignPlateHeight + rows + gaps, 0.01f) << "the component's constant follows MahjongOptions.xml";
     }
 
     TEST_F(MahjongUploadSceneTest, DontSendAfterAGrantStopsTheNextMatchAndDropsARunningOneWithNoAbandonedPiece) {

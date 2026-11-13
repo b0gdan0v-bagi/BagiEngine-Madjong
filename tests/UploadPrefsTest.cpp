@@ -118,7 +118,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(flushes, 0);
         EXPECT_EQ(LoadUploadPrefs({}), UploadPrefs());
         EXPECT_TRUE(UploadPrefsFolder().empty()) << "a desktop build keeps nothing here";
-        EXPECT_FALSE(UploadChoiceIsRemembered());
     }
 
     TEST_F(UploadPrefsTest, AFailedWriteLeavesTheOldFile) {

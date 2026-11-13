@@ -4,8 +4,8 @@
   where the page can post (a browser build with the server), so the desktop never sees it. A modal Screen canvas like Options (ScaleWithScreen,
   minScale 0.6), hidden here, layer 34: over Setup (30), the Options page (31), the online panel (32) and the entry pad (33), under the rules (35).
   The owner's words are the keys upload.consent.text / .accept / .decline, nothing else is said here; the component answers the two buttons
-  (MahjongUploadAccept, MahjongUploadDecline), stores the choice and closes the screen. A later wording that names the Google sign-in adds
-  upload.consent.googleText beside the first one.
+  (MahjongUploadAccept, MahjongUploadDecline), stores the choice and closes the screen. The text names the Google email the sign-in service
+  stamps on the matches of a signed-in tester; the buttons are Accept / Don't send.
   The plate is the safe area at most 320 high (32 padding + the text + 16 spacing + a 64 button row) and 560 wide. The text takes what the
   buttons leave and may shrink (AutoFit, down to 12 units, wrap on) instead of being cut, in both languages, in the smallest windows too;
   the buttons stay at 64 (a touch target). MahjongUploadSceneTest holds the shape, the touch size and the words on the whole size matrix.

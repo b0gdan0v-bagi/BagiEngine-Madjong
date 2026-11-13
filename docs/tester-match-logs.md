@@ -21,7 +21,7 @@ the browser build, where the match goes to the service instead). The grammar is 
 - `settlement`: how a hand ended (`win` or `drawn`), the scores, the changes and the breakdown of the winner.
 - `end`: the final scores and standings.
 
-**There are no addresses, no user agent and no time in a log, and no name but the nickname above** (only the desktop file name carries the local time), and none in what the recorder sends. The `build` is
+**There are no addresses, no user agent and no time in a log, and no name but the nickname above** (only the desktop file name carries the local time), and none in what the game sends. A signed-in tester's Google email is not in the log either: the service stamps it beside the match (below). The `build` is
 read when the project is configured (`cmake --preset`), so a commit made after that shows only after the next configure.
 
 Logs of format versions 1 to 5 are still read; before version 4 the platform is `unknown` and the build empty, before version 6 there is no nickname.
@@ -52,28 +52,35 @@ in pieces for the sink (`WebUploadSink`, below):
   window asks again at each visit).
 - **When:** after each hand, at the end of the match, when a new match begins or the game stops.
 - **The choice:** a question at the first start (the owner's words, both languages) and two rows in Options (Send / Don't send, and the
-  nickname with the note "Sent with your matches"). Only where the page can post; the desktop build is unchanged. The consent is the
-  first wording; the one with the Google email waits for `mahjong-web-google-login` (not merged).
+  nickname with the note "Sent with your matches"). Only where the page can post; the desktop build is unchanged. The consent is one
+  offer, **Accept** / **Don't send**, and says the matches go **together with the Google email** (the owner's wording; a guest has no
+  email, so for a guest nothing but the match and the nickname is stored).
 - **Where:** the volume of the web service, `MATCH_STORE` (`engine/tools/web/CLAUDE.md`, "Match logs"). Settings the owner makes on the
   service: `MATCH_STORE`, `MATCH_LOG_VERSIONS=1-6` (the format is 6; with `1-5` every new match is refused with 400),
-  `MATCH_FORWARDED_FOR=1`, and a volume.
-- **Who can read it:** whoever holds the shared Basic password of the service (the owner's decision). When the Google sign-in lands the
-  collecting tool uses a bearer token (`MATCH_COLLECT_TOKEN`) and a list entry may carry `"tester": {"provider","email"}`, which the tool keeps beside the log.
+  `MATCH_FORWARDED_FOR=1`, `MATCH_COLLECT_TOKEN` and a volume; the sign-in variables are in `docs/deploy-google-signin.md`.
+- **Who is named:** a signed-in tester's match is stamped by the service with the verified Google email (`tester.json` beside the
+  match, taken from Google's checked token, never from the page); a guest's match has no stamp. The nickname is an optional label.
+- **Who can read it:** whoever holds `MATCH_COLLECT_TOKEN` (the owner): a session, signed in or not, never lists, reads or deletes
+  matches (`engine/tools/web/ACCESS.md`). The collecting tool sends the token as a bearer (`MATCH_COLLECT_TOKEN` in its environment) and a
+  list entry carries `"tester": {"provider","email"}` for a stamped match, which the tool keeps beside the log in the index.
 - **Retention:** until the collecting tool has downloaded it, and at most 90 days on the server; then it lives in the owner's local
   folder `logs/downloaded/` (outside git).
 - **Deletion:** `collect_logs.py --delete-id ID` removes one match on the server; `--forget-nickname NAME` removes every log with that
-  nickname from the local folders and the index (and from the server with `--store`). A tester who wants a match removed names the
-  nickname: the match id is not shown anywhere.
+  nickname from the local folders and the index (and from the server with `--store`). The match id is not shown anywhere, so a
+  tester who wants a match removed names the nickname; removing by email is not built (the email is in the index and in `state.json`,
+  and the owner can look it up there and delete by id).
 - **What the client does on an answer:** 200 done; 429, 5xx and network failures retry the same piece with a back-off (60 s doubling to
   10 min); 400, 409, 413 drop that match; 401 and 404 stop sending for the session. The queue is bounded (64 pieces / 4 MiB). A piece
   over 60000 bytes may not survive a closing tab.
 
 ## How to collect
 
-`python3 tools/collect_logs.py --store https://the-service --user NAME` (the password in `MATCH_STORE_PASSWORD`, never on the command
-line; with `MATCH_COLLECT_TOKEN` set a bearer token is sent instead) downloads the matches of the service into `logs/downloaded/<id>.jsonl`,
-and deletes a match on the server only after its file is on disk and read back equal; a match that may still be played (no `end`, last
-piece not empty) is deleted when its piece count did not change for `--idle-hours` (default 24). The folder then goes through the flow
+`python3 tools/collect_logs.py --store https://the-service` with `MATCH_COLLECT_TOKEN` in the environment (a bearer token; never on the
+command line; for a service behind Basic, `--user NAME` and `MATCH_STORE_PASSWORD`) downloads the matches of the service into
+`logs/downloaded/<id>.jsonl`, and deletes a match on the server only after its file is on disk and read back equal. A match that may
+still be played (no `end`, last piece not empty) is kept as `<id>.part`, which the flow below does not read (so a growing match is not
+kept once per state), and is deleted on the server, and becomes `<id>.jsonl`, when it ends or when its piece count did not change for
+`--idle-hours` (default 24). The folder then goes through the flow
 below, as does any `--from DIR` (`--from DIR [--from DIR ...] [--to logs/collected] [--verifier build/macos-release/bin/BagiMahjongArena] [--recheck]`;
 standard library only). For each folder it runs the arena's `--logs DIR --check` and copies the logs that replay to
 `logs/collected/<16 hex digits of the SHA-256>.jsonl`, each once, and keeps `logs/collected/index.json` (per hash: file, first source,
@@ -114,8 +121,9 @@ Read the numbers with these limits in mind:
 
 ## Not built
 
-- **The Google-email consent** and the identity of a tester: the entry `mahjong-web-google-login`; today the first wording is shown and a tester is known by the nickname.
-- **A match continued after a reload is lost to the store** (keeping the match id in the save is `Save/`, the entry `mahjong-web-saves`).
+- **A match continued after a reload is lost to the store.** `Continue` works in the browser now (`mahjong-web-saves`), but the save does
+  not keep the match id, so the part played before the reload cannot be rejoined and a continued match is not sent. Keeping the id in
+  the save is `Save/`.
 - **The rows for the neural net** (`mahjong-bot-neural-net`): that entry has no format yet, so no flag is invented. When it has, the decision list of
   `ArenaTester` is the reader to extend, and the record must say that **testers are not experts**.
 - Not checked on the owner's machine: a real post from a browser to the real service, whether a closing tab reaches the game's `Stop()`,

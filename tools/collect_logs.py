@@ -23,7 +23,9 @@ refuses any other folder, as it stores nothing but the logs and the index.
 
 The store source (`--store URL`, the web service of the game): `GET /matches/` lists the matches and their piece counts; every match not
 yet downloaded (or grown since) is fetched piece by piece, put together in order into `logs/downloaded/<id>.jsonl` (the raw bytes, kept
-whatever the verifier says; outside git like `--to`) and the folder then goes through the flow above as one more `--from`. The credentials
+whatever the verifier says; outside git like `--to`) and the folder then goes through the flow above as one more `--from`. A match that
+may still be played is kept as `<id>.part` meanwhile, which the flow does not read: a growing match must not be kept once per state; it
+becomes `<id>.jsonl` when it ends, is given up or has been idle for `--idle-hours`. The credentials
 never come from the command line: the environment variable `MATCH_COLLECT_TOKEN` sends `Authorization: Bearer <token>` (the sign-in
 service); else `--user` with `MATCH_STORE_PASSWORD` sends HTTP Basic; with neither nothing is sent (a service without a password).
 **A match is deleted on the server only after its file is on disk and read back equal to what was fetched** (`DELETE /matches/<id>`); a log
@@ -61,6 +63,7 @@ INDEX_NAME = "index.json"
 INDEX_VERSION = 1
 HASH_NAME_DIGITS = 16
 LOG_SUFFIX = ".jsonl"
+OPEN_SUFFIX = ".part"  # a match that may still be played: not a log yet, the flow does not see it
 STATUS_KEPT = "kept"
 STATUS_DROPPED = "dropped"
 CHECK_OK = "ok"
@@ -394,6 +397,11 @@ def is_complete(pieces: list[bytes]) -> bool:
     return False
 
 
+def is_final(known: dict, idle_hours: float) -> bool:
+    """The match will not grow any more as far as the tool can tell: it ended or was given up, or its piece count did not change for `idle_hours`."""
+    return known["complete"] or now() - known["changed"] >= idle_hours * SECONDS_PER_HOUR
+
+
 def load_state(path: Path) -> dict[str, dict]:
     if not path.exists():
         return {}
@@ -430,25 +438,29 @@ def download_store(store: Store, downloaded: Path, idle_hours: float) -> tuple[D
         known = state.get(match_id)
         if count == 0 or (known and known.get("deleted")):
             continue
-        file = downloaded / (match_id + LOG_SUFFIX)
-        if known is None or known["pieces"] != count or not file.exists():
+        log_file, open_file = downloaded / (match_id + LOG_SUFFIX), downloaded / (match_id + OPEN_SUFFIX)
+        if known is None or known["pieces"] != count or not (log_file.exists() or open_file.exists()):
             pieces = [store.piece(match_id, index) for index in range(count)]
             data = b"".join(pieces)
+            changed = now() if known is None or known["pieces"] != count else known["changed"]
+            known = {"pieces": count, "changed": changed, "complete": is_complete(pieces), "deleted": False}
+            file = log_file if is_final(known, idle_hours) else open_file
             downloaded.mkdir(parents=True, exist_ok=True)
             write_atomically(file, data)
             if file.read_bytes() != data:
                 raise CollectError(f"{file} does not hold the bytes fetched; nothing is deleted on the server")
-            known = {"pieces": count, "changed": now() if known is None or known["pieces"] != count else known["changed"],
-                     "complete": is_complete(pieces), "deleted": False}
+            (open_file if file == log_file else log_file).unlink(missing_ok=True)  # one file per match
             state[match_id] = known
             tally.downloaded += 1
             save_state(state_path, state)  # the file is safe before the first request that deletes
+        if is_final(known, idle_hours) and open_file.exists():
+            os.replace(open_file, log_file)  # the match is over or given up: now it is a log, once
         if isinstance(entry.get("tester"), dict):
             known["tester"] = entry["tester"]
             save_state(state_path, state)
-        if "tester" in known:
-            testers[hashlib.sha256(file.read_bytes()).hexdigest()] = known["tester"]
-        if known["complete"] or now() - known["changed"] >= idle_hours * SECONDS_PER_HOUR:
+        if "tester" in known and log_file.exists():
+            testers[hashlib.sha256(log_file.read_bytes()).hexdigest()] = known["tester"]
+        if is_final(known, idle_hours):
             store.delete(match_id)
             known["deleted"] = True
             tally.deleted += 1
@@ -480,7 +492,8 @@ def forget_nickname(args: argparse.Namespace, store: Store | None) -> None:
     removed, server_ids = 0, []
     logs = load_index(args.to / INDEX_NAME) if (args.to / INDEX_NAME).exists() else {}
     for folder in (args.downloaded, args.to):
-        for path in sorted(folder.glob("*" + LOG_SUFFIX)) if folder.is_dir() else []:
+        suffixes = (LOG_SUFFIX, OPEN_SUFFIX) if folder == args.downloaded else (LOG_SUFFIX,)
+        for path in sorted(p for suffix in suffixes for p in folder.glob("*" + suffix)) if folder.is_dir() else []:
             if nickname_of(path) != args.forget_nickname:
                 continue
             digest = hashlib.sha256(path.read_bytes()).hexdigest()

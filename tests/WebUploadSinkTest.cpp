@@ -3,7 +3,6 @@
 #include <Mahjong/WebUploadSink.h>
 #include <gtest/gtest.h>
 #include <map>
-#include <string>
 #include <vector>
 
 /**
@@ -366,6 +365,17 @@ namespace BECore::Mahjong::Tests {
         busy.sink.Flush(kStart);
         ASSERT_EQ(busy.poster.posts.size(), 2U);
         EXPECT_EQ(busy.poster.posts[1].path, "/matches/abc/1");
+    }
+
+    TEST_F(WebUploadSinkTest, APieceTheFlushCannotPostIsCountedAsDropped) {
+        SinkFixture fixture;
+        fixture.sink.Send(Piece("abc", 0));
+        fixture.sink.Send(Piece("abc", 1));
+        fixture.poster.refuseStart = true;
+        fixture.sink.Flush(kStart);
+        EXPECT_EQ(fixture.sink.QueuedPieces(), 0U);
+        EXPECT_EQ(fixture.sink.Counters().flushed, 0U);
+        EXPECT_EQ(fixture.sink.Counters().droppedPieces, 2U);
     }
 
     TEST_F(WebUploadSinkTest, AnUnavailablePosterQueuesAndPostsNothing) {

@@ -59,9 +59,8 @@ namespace BECore::Mahjong {
      *   path are members that keep their capacity.
      *
      * `Flush` is for the game that is stopping: it posts every piece waiting now, in order, without waiting for answers or the back-off,
-     * and empties the queue. The engine's `keepalive` lets a post outlive a closing tab only up to 60000 bytes of body, so a bigger piece
-     * may not arrive then; and the posts of one flush may reach the server in any order, which is a risk only for a match whose first
-     * pieces are still waiting.
+     * and empties the queue; a piece the post call refuses is lost and counted in `droppedPieces`. The engine's `keepalive` lets a post outlive a closing tab only up to 60000 bytes of body, so a
+     * bigger piece may not arrive then; and the posts of one flush may reach the server in any order, which is a risk only for a match whose first pieces are still waiting.
      */
     class WebUploadSink final : public IMatchUploadSink {
     public:

@@ -83,6 +83,7 @@ namespace BECore::Mahjong {
         for (size_t position = _inFlight != 0 ? 1 : 0; position < _queue.size(); ++position) {
             BuildPath(_queue[position]);
             if (!_poster->Start(_path, _queue[position].lines).has_value()) {
+                _counters.droppedPieces += static_cast<uint32_t>(_queue.size() - position);  // refused: these are lost, and counted
                 break;
             }
             ++_counters.flushed;
