@@ -32,6 +32,12 @@ namespace BECore::Mahjong {
      * the choice is applied. `Choose` does the same for a later change and stores the file. **Privacy:** nothing leaves unless the consent is
      * `Granted`, and a nickname is in a log only then.
      *
+     * **The rows of `Options`** (`Send matches`, `Nickname` and its note, in `config/nodes/MahjongOptions.xml`) are hidden in the file and shown here,
+     * with the plate grown by them, once the component runs, so the desktop page is the one it was. Actions `MahjongSetUpload` (`on` | `off`, the
+     * same as `Choose`) and `MahjongNickname` (opens the pad of `MahjongOnlineComponent` on the nickname) are honoured only while `Options` is up and
+     * the question is not. Variables `uploadChoice` (`on` | `off` | empty while the question is up) and `uploadNickname` (the name, or the word
+     * "none" in the muted colour), set when the consent, the nickname or the language moved.
+     *
      * **The question** is up exactly while the consent is `Unasked` (the actions `MahjongUploadAccept` / `MahjongUploadDecline`, honoured only
      * then). Where the choice is not remembered the next visit asks again by itself, as nothing is read. Each frame pumps the sink with the
      * clock of the scene (the sum of the frame times); a frame in which nothing moved allocates nothing. The sink is flushed when the component
@@ -74,6 +80,10 @@ namespace BECore::Mahjong {
         /// Sets the consent, keeps the choice in the file and applies it to the uploader and the origin at once. Nothing when not running.
         void Choose(UploadConsent consent);
 
+        /// Sets the nickname (the `Name` rules were applied by the pad), keeps it in the file and, while the consent is `Granted`, in the origin of the
+        /// next match. Nothing when not running.
+        void SetNickname(eastl::string_view nickname);
+
     private:
         void OnAction(const InputEvents::ActionEvent& event);
         void OnUpdate(const SceneEvents::SceneUpdateEvent& event);
@@ -82,6 +92,10 @@ namespace BECore::Mahjong {
         /// The consent and the nickname of the prefs into the uploader and the session's origin
         void Apply(MahjongGame& game);
         void PublishConsentScreen(bool shown);
+        /// Shows the rows of `Options` and grows its plate by them (once)
+        void ShowOptionsRows();
+        /// The variables of the rows, when the consent, the nickname or the language moved
+        void PublishOptionsRows(const MahjongGame& game);
 
         EngineWebPoster _enginePoster;
         WebUploadSink _sink;
@@ -92,6 +106,11 @@ namespace BECore::Mahjong {
         bool _running = false;  ///< it succeeded
         bool _consentShown = false;
         double _now = 0.0;  ///< the clock of the sink: the sum of the frame times
+        // What the rows of `Options` show now
+        bool _rowsPublished = false;
+        UploadConsent _publishedConsent = UploadConsent::Unasked;
+        eastl::string _publishedNickname;
+        uint64_t _publishedStrings = 0;
 
         static MahjongUploadComponent* s_active;
     };

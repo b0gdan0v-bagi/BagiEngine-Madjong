@@ -44,6 +44,10 @@ namespace BECore::Mahjong {
      * goes one page back, and in the `Lobby` does nothing. A key held with Ctrl or Cmd types nothing (the paste shortcut reaches here as a `v`). The name the player typed is handed to
      * `MahjongGame::SetOnlineName` once they leave the field or send a form.
      *
+     * **The nickname.** The same pad types the tester's nickname (`OpenNicknameEntry`, from `MahjongUploadComponent` on the page `Options`): a `TextEntry` of kind `Name` of its own, no
+     * `OnlineScreens` page, keys, Backspace, Done and the keyboard act on it while it is up. `Done` and Escape hand the text to `MahjongUploadComponent::SetNickname`; the pad goes at the
+     * next frame (the HUD hears the same Escape and must find it still up) and `Options` is under it as it was. It also goes when `Options` closes under it, with nothing stored.
+     *
      * **Clipboard.** `MahjongOnlineCopy` (the button `OnlineCopy` and a click on the title of the lobby) writes the room code with `Clipboard::SetText` and tells `OnlineScreens` how it went.
      * A paste reaches the code from two sides: `ClipboardEvents::PasteEvent` (the shortcut, on the `Join` form or the code pad) and the key `MahjongOnlinePaste` of the code pad, which
      * asks `Clipboard::RequestText`. That request cannot be cancelled and is answered from a later `Update()`, so its callback holds a `weak_ptr` of `_alive` and finds the component again
@@ -67,6 +71,14 @@ namespace BECore::Mahjong {
             return _screens;
         }
 
+        /// Opens the pad on the tester's nickname (`MahjongUploadComponent`, the row of `Options`) with @p current typed; false unless `Options` is open and the pad is not
+        /// already up. `Done` and Escape hand the text to `MahjongUploadComponent::SetNickname` and go back to `Options`. The online screens are not involved.
+        bool OpenNicknameEntry(eastl::string_view current);
+        /// Whether the pad is up for the nickname (until the frame after `Done` or Escape, so the HUD, which hears the same Escape, leaves `Options` open).
+        [[nodiscard]] bool IsNicknameEntryOpen() const noexcept {
+            return _nicknameActive;
+        }
+
         /// The attached component, if any; the game assumes a single one.
         static MahjongOnlineComponent* GetActive() noexcept {
             return s_active;
@@ -81,6 +93,12 @@ namespace BECore::Mahjong {
         void OnClipboardAnswer(const ClipboardText& answer);
         /// Asks the clipboard for its text; the answer goes to `OnClipboardAnswer`.
         void RequestPaste();
+
+        void OnNicknameKey(MahjongGame& game, const SDLEvents::KeyDownEvent& event);
+        void OnNicknameAction(MahjongGame& game, eastl::string_view action, eastl::string_view value);
+        /// Hands the typed nickname to the upload component and lets the pad go at the next `Follow`.
+        void FinishNickname();
+        void PublishNickname(const UIStrings& strings);
 
         /// Opens or closes the pages after the flag of the game.
         void Follow(MahjongGame& game);
@@ -97,7 +115,7 @@ namespace BECore::Mahjong {
         void SetPadRow(size_t row, bool visible);
 
         /// The elements the pages show among themselves (`Item` in the source file).
-        static constexpr size_t kItemCount = 35;
+        static constexpr size_t kItemCount = 36;
 
         OnlineScreens _screens;
         /// Alive while the component is attached; a read of the clipboard that is still pending holds a `weak_ptr` of it.
@@ -123,6 +141,14 @@ namespace BECore::Mahjong {
         bool _padPublished = false;
         OnlineField _padField = OnlineField::Name;
         uint64_t _padStrings = 0;
+        // The second use of the pad: the nickname of the tester (no `OnlineScreens` page)
+        TextEntry _nicknameEntry{TextEntry::Kind::Name};
+        eastl::vector<eastl::string> _nicknamePad;
+        uint64_t _nicknameStrings = 0;
+        bool _nicknameActive = false;
+        bool _nicknameClosing = false;    // `Done` or Escape stored it: the pad goes at the next `Follow`
+        bool _nicknameDirty = false;      // the text moved since it was published
+        bool _nicknamePublished = false;  // the keys and the value are on the scene
         static MahjongOnlineComponent* s_active;
     };
 

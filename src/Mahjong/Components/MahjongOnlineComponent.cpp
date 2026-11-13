@@ -8,6 +8,7 @@
 #include <Events/InputEvents.h>
 #include <Events/SceneEvents.h>
 #include <Generated/MahjongOnlineComponent.gen.hpp>
+#include <Mahjong/Components/MahjongUploadComponent.h>
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/Online/OnlineServerUrl.h>
 #include <Mahjong/Online/OnlineWords.h>
@@ -77,6 +78,7 @@ namespace BECore::Mahjong {
             Leave,
             EntryCaptionName,
             EntryCaptionCode,
+            EntryCaptionNickname,
             Copy,
             EntryPaste,
             EntryNote,
@@ -84,10 +86,10 @@ namespace BECore::Mahjong {
         };
 
         constexpr const char* kItemNames[] = {
-            "OnlineTitleMenu", "OnlineTitleHost",  "OnlineTitleJoin", "OnlineTitleLobby", "OnlineNotice",     "OnlineStatus",   "OnlineWaiting",  "OnlineHostLine", "OnlineMenuHost",
-            "OnlineMenuJoin",  "OnlineMenuReturn", "OnlineNameRow",   "OnlineCodeRow",    "OnlineHandsRow",   "OnlineLevelRow", "OnlineHintsRow", "OnlineSeatRow0", "OnlineSeatRow1",
-            "OnlineSeatRow2",  "OnlineSeatRow3",   "OnlineSit0",      "OnlineSit1",       "OnlineSit2",       "OnlineSit3",     "OnlineGap",      "OnlineButtons",  "OnlineCreate",
-            "OnlineEnter",     "OnlineStart",      "OnlineLeave",     "EntryCaptionName", "EntryCaptionCode", "OnlineCopy",     "EntryPaste",     "EntryNote",
+            "OnlineTitleMenu", "OnlineTitleHost",  "OnlineTitleJoin", "OnlineTitleLobby", "OnlineNotice",     "OnlineStatus",         "OnlineWaiting",  "OnlineHostLine", "OnlineMenuHost",
+            "OnlineMenuJoin",  "OnlineMenuReturn", "OnlineNameRow",   "OnlineCodeRow",    "OnlineHandsRow",   "OnlineLevelRow",       "OnlineHintsRow", "OnlineSeatRow0", "OnlineSeatRow1",
+            "OnlineSeatRow2",  "OnlineSeatRow3",   "OnlineSit0",      "OnlineSit1",       "OnlineSit2",       "OnlineSit3",           "OnlineGap",      "OnlineButtons",  "OnlineCreate",
+            "OnlineEnter",     "OnlineStart",      "OnlineLeave",     "EntryCaptionName", "EntryCaptionCode", "EntryCaptionNickname", "OnlineCopy",     "EntryPaste",     "EntryNote",
         };
         static_assert(sizeof(kItemNames) / sizeof(kItemNames[0]) == ItemCount, "one name per item");
 
@@ -196,6 +198,11 @@ namespace BECore::Mahjong {
     }
 
     void MahjongOnlineComponent::Follow(MahjongGame& game) {
+        if (_nicknameActive && (_nicknameClosing || !game.IsOptionsOpen())) {
+            // Stored by `Done` or Escape (the HUD heard that Escape in the same frame, so the pad is still open for it), or `Options` went away under it
+            _nicknameActive = false;
+            _nicknameClosing = false;
+        }
         if (_closeRequested) {
             _closeRequested = false;
             game.CloseOnline();
@@ -230,6 +237,10 @@ namespace BECore::Mahjong {
 
     void MahjongOnlineComponent::OnKeyDown(const SDLEvents::KeyDownEvent& event) {
         MahjongGame* game = MahjongGame::GetActive();
+        if (game != nullptr && _nicknameActive) {
+            OnNicknameKey(*game, event);
+            return;
+        }
         if (game == nullptr || !game->IsOnlineOpen() || !_screens.IsOpen()) {
             return;
         }
@@ -307,6 +318,10 @@ namespace BECore::Mahjong {
             }
             return;
         }
+        if (_nicknameActive) {
+            OnNicknameAction(*game, action, event.value.ToStringView());
+            return;
+        }
         if (!game->IsOnlineOpen() || !_screens.IsOpen()) {
             return;
         }
@@ -379,6 +394,68 @@ namespace BECore::Mahjong {
         _screens.Refresh(CoreManager::GetUIStrings());
     }
 
+    // ---- The nickname of the tester ---------------------------------------------------------------------------------------------
+
+    bool MahjongOnlineComponent::OpenNicknameEntry(eastl::string_view current) {
+        const MahjongGame* game = MahjongGame::GetActive();
+        if (game == nullptr || !game->IsOptionsOpen() || _nicknameActive) {
+            return false;
+        }
+        if (!_nicknameEntry.Set(current)) {
+            _nicknameEntry.Clear();
+        }
+        _nicknameActive = true;
+        _nicknameClosing = false;
+        _nicknameDirty = true;
+        return true;
+    }
+
+    void MahjongOnlineComponent::FinishNickname() {
+        if (MahjongUploadComponent* upload = MahjongUploadComponent::GetActive()) {
+            upload->SetNickname(_nicknameEntry.Text());
+        }
+        // The pad goes at the next `Follow`, not now: the HUD hears the same Escape and must find the pad still up
+        _nicknameClosing = true;
+        _nicknameDirty = true;
+    }
+
+    void MahjongOnlineComponent::OnNicknameKey(MahjongGame& /*game*/, const SDLEvents::KeyDownEvent& event) {
+        if (_nicknameClosing) {
+            return;
+        }
+        if (event.key == SDLK_ESCAPE) {
+            if (!event.repeat) {
+                FinishNickname();
+            }
+        } else if ((event.mod & kShortcutMods) != 0) {
+            // A shortcut types nothing
+        } else if (event.key == SDLK_BACKSPACE) {
+            _nicknameDirty = _nicknameEntry.Backspace() || _nicknameDirty;
+        } else if (event.repeat) {
+            // A held key types once; Enter does not repeat
+        } else if (event.key == SDLK_RETURN || event.key == SDLK_KP_ENTER) {
+            FinishNickname();
+        } else if (const std::optional<char> typed = TextEntry::CharFromKeycode(static_cast<uint32_t>(event.key), (event.mod & SDL_KMOD_SHIFT) != 0)) {
+            const char character = *typed;
+            _nicknameDirty = _nicknameEntry.Append(eastl::string_view(&character, 1)) || _nicknameDirty;
+        }
+    }
+
+    void MahjongOnlineComponent::OnNicknameAction(MahjongGame& /*game*/, eastl::string_view action, eastl::string_view value) {
+        if (_nicknameClosing) {
+            return;
+        }
+        if (action == kKeyAction) {
+            if (const std::optional<size_t> index = ParseIndex(value); index && *index < _nicknamePad.size()) {
+                _nicknameDirty = _nicknameEntry.Append(eastl::string_view(_nicknamePad[*index].data(), _nicknamePad[*index].size())) || _nicknameDirty;
+            }
+        } else if (action == kBackspaceAction) {
+            _nicknameDirty = _nicknameEntry.Backspace() || _nicknameDirty;
+        } else if (action == kDoneAction) {
+            FinishNickname();
+        }
+    }
+
     // ---- Publishing --------------------------------------------------------------------------------------------------------------
 
     void MahjongOnlineComponent::SetItem(size_t item, bool visible) {
@@ -404,9 +481,10 @@ namespace BECore::Mahjong {
 
     void MahjongOnlineComponent::Publish(MahjongGame* game) {
         const bool open = game != nullptr && game->IsOnlineOpen() && _screens.IsOpen();
+        const bool nickname = game != nullptr && _nicknameActive;
         const OnlinePage page = open ? _screens.Page() : OnlinePage::Closed;
         const bool onlineShown = open && page != OnlinePage::Entry;
-        const bool entryShown = open && page == OnlinePage::Entry;
+        const bool entryShown = nickname || (open && page == OnlinePage::Entry);
         Scene& scene = GetScene();
         if (onlineShown != _onlineShown) {
             _onlineShown = onlineShown;
@@ -416,9 +494,15 @@ namespace BECore::Mahjong {
             _entryShown = entryShown;
             UICanvasComponent::SetVisibleByName(scene, PoolString::Intern(kEntryCanvas), entryShown);
         }
-        if (!open) {
+        if (!nickname) {
+            _nicknamePublished = false;
+        }
+        if (!open || nickname) {
             _published = false;
             _padPublished = false;
+            if (nickname) {
+                PublishNickname(CoreManager::GetUIStrings());
+            }
             return;
         }
 
@@ -514,10 +598,41 @@ namespace BECore::Mahjong {
         SetItem(Copy, inLobby && !lobby.room.empty());
     }
 
+    void MahjongOnlineComponent::PublishNickname(const UIStrings& strings) {
+        SetItem(EntryCaptionName, false);
+        SetItem(EntryCaptionCode, false);
+        SetItem(EntryCaptionNickname, true);
+        SetItem(EntryPaste, false);
+        SetItem(EntryNote, false);
+        const bool padMoved = !_nicknamePublished || _nicknameStrings != strings.GetVersion();
+        if (!padMoved && !_nicknameDirty) {
+            return;
+        }
+        _nicknameDirty = false;
+        UIVars& vars = CoreManager::GetUIVars();
+        vars.Set("onlineEntryValue"_intern, eastl::string_view(_nicknameEntry.Text()));
+        vars.Set("onlineEntryNote"_intern, eastl::string_view());
+        if (!padMoved) {
+            return;
+        }
+        _nicknamePublished = true;
+        _nicknameStrings = strings.GetVersion();
+        _nicknamePad = _nicknameEntry.Pad(strings);
+        for (size_t key = 0; key < TextEntry::kPadMaxKeys; ++key) {
+            const bool has = key < _nicknamePad.size();
+            vars.Set(_padVars[key], has ? eastl::string_view(_nicknamePad[key]) : eastl::string_view());
+            SetPadKey(key, has);
+        }
+        for (size_t row = 0; row < TextEntry::kPadRowCount; ++row) {
+            SetPadRow(row, row * TextEntry::kPadKeysPerRow < _nicknamePad.size());
+        }
+    }
+
     void MahjongOnlineComponent::PublishPad(const UIStrings& strings) {
         const OnlineField field = _screens.Focus();
         SetItem(EntryCaptionName, field == OnlineField::Name);
         SetItem(EntryCaptionCode, field == OnlineField::Code);
+        SetItem(EntryCaptionNickname, false);
         SetItem(EntryPaste, field == OnlineField::Code);
         SetItem(EntryNote, !_screens.PasteNoteKey().empty());
         if (_padPublished && _padField == field && _padStrings == strings.GetVersion()) {

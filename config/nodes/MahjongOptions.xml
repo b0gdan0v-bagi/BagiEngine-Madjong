@@ -8,6 +8,11 @@
   hintsChoice, published by MahjongHintsComponent; Coach includes the hints), the speed MahjongSetSpeed (value slow, normal or fast, variable
   speedChoice; the pace of the computers, the flights and the marks of a claim, at once). A row is a node edit: the plate's maximum height grows by 72 for it.
   The level is not here: each computer seat has its own on Setup.
+  UploadRow, NicknameRow and NicknameNote are hidden here and MahjongUploadComponent shows them (and sets the plate's maxHeight to 552: 376 plus two rows
+  of 64, the note of 24 and three gaps of 8) only where the page can post, so the desktop page is the one above. UploadRow is the shape of a row of segments (action
+  MahjongSetUpload, value on or off, variable uploadChoice, empty while the question of MahjongConsent is up; the words are the question's buttons), NicknameField
+  a button (MahjongNickname) that opens the pad OnlineEntry on the nickname and says {uploadNickname}, NicknameNote is the line under it. On a canvas of at most 440
+  units high the note is hidden (a word of 12 units does not fit its share of the height), on one of at most 440 wide so is the caption of UploadRow.
   The roomy shape (a canvas of 1280 x 720 units) is the anatomy of the modal screens: the plate is the safe area at most 376 high
   (32 padding + 48 title band + 3 x 64 rows + 64 ButtonRow + 5 x 8 spacing; BackGap is empty, so the 8 + 8 round it set the buttons 16 apart
   from the rows) and the title, the rows and ButtonRow (Rules and Back, half the width each) share its height by flex weights that come out at 48 / 64 (0.75 / 1) and stop
@@ -117,6 +122,51 @@
                 </element>
               </children>
             </element>
+            <element type="UIStack" name="UploadRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255" visible="false">
+              <children>
+                <element type="UIElement" name="UploadCaption" width="112" height="87.5%" fontSize="22">
+                  <components>
+                    <component type="UITextComponent" text="{#options.upload}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UISegmented" name="UploadChoice" bind="uploadChoice" flex="1" height="87.5%" direction="Horizontal" spacing="4" color="48,54,72,255">
+                  <children>
+                    <element type="UIElement" name="UploadSend" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
+                      <components>
+                        <component type="UITextComponent" text="{#upload.consent.accept}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" action="MahjongSetUpload" value="on"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="UploadKeep" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255">
+                      <components>
+                        <component type="UITextComponent" text="{#upload.consent.decline}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" action="MahjongSetUpload" value="off"/>
+                      </components>
+                    </element>
+                  </children>
+                </element>
+              </children>
+            </element>
+            <element type="UIStack" name="NicknameRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255" visible="false">
+              <children>
+                <element type="UIElement" name="NicknameCaption" width="112" height="87.5%" fontSize="22">
+                  <components>
+                    <component type="UITextComponent" text="{#options.nickname}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="NicknameField" flex="1" height="87.5%" fontSize="22" color="70,70,100,255">
+                  <components>
+                    <component type="UITextComponent" text="{uploadNickname}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UIInputClicker" action="MahjongNickname"/>
+                  </components>
+                </element>
+              </children>
+            </element>
+            <element type="UIElement" name="NicknameNote" flex="0.375" maxHeight="24" fontSize="18" visible="false">
+              <components>
+                <component type="UITextComponent" text="{#options.nicknameNote}" textColor="190,196,190,255" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+              </components>
+            </element>
             <element type="UIElement" name="BackGap" height="0" />
             <element type="UIStack" name="ButtonRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" crossAlign="Stretch">
               <children>
@@ -143,12 +193,18 @@
             <set element="Title" visible="false" />
           </overrides>
         </variant>
+        <variant when="maxHeight:440">
+          <overrides>
+            <set element="NicknameNote" visible="false" />
+          </overrides>
+        </variant>
         <variant when="maxWidth:440">
           <overrides>
             <set element="Plate" width="100%" />
             <set element="LanguageCaption" width="64" />
             <set element="HintsCaption" visible="false" />
             <set element="SpeedCaption" visible="false" />
+            <set element="UploadCaption" visible="false" />
           </overrides>
         </variant>
       </variants>

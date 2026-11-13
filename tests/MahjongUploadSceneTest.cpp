@@ -1,17 +1,20 @@
+#include "MahjongButtonSupport.h"
 #include "MahjongOnlineTableTestSupport.h"
 #include "MahjongTouchTestSupport.h"
+#include "UiStyleTestSupport.h"
 
+#include <CoreSDL/SDLEvents.h>
 #include <Mahjong/Components/MahjongUploadComponent.h>
 #include <Mahjong/MatchLogJson.h>
+#include <Mahjong/Online/TextEntry.h>
 #include <Mahjong/UploadPrefs.h>
-#include <algorithm>
-#include <fstream>
 
 /**
  * The glue of the tester upload in the shipped scene (`Components/MahjongUploadComponent.h`, the node `Consent`): where the page cannot post
  * nothing is done; where it can, the question is up exactly while the consent is `Unasked`, the answer is kept in a file and applied at once,
  * and the matches played afterwards reach the poster as pieces that assemble and replay. The poster is a fake that answers 200 to everything,
- * the folder of `upload.txt` a temp folder.
+ * the folder of `upload.txt` a temp folder. The second half is the page `Options`: the rows of the upload (shown only where the page can post)
+ * and the pad of the nickname, which is the pad of the online panel.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -31,6 +34,15 @@ namespace BECore::Mahjong::Tests {
         constexpr float kMinControlHeight = 48.0f;
         constexpr int kMostHands = 200;
         constexpr int kRoomVersions = 10;
+        constexpr const char* kOptions = "Options";
+        constexpr const char* kEntry = "OnlineEntry";
+        constexpr const char* kSend = "UploadSend";
+        constexpr const char* kKeep = "UploadKeep";
+        constexpr const char* kNicknameField = "NicknameField";
+        constexpr const char* kEntryDone = "EntryDone";
+        constexpr const char* kUploadRows[] = {"UploadRow", "NicknameRow", "NicknameNote"};
+        constexpr const char* kUploadControls[] = {"UploadSend", "UploadKeep", "NicknameField"};
+        constexpr float kDesignPlateHeight = 376.0f;
 
         struct Output {
             float width;
@@ -182,6 +194,63 @@ namespace BECore::Mahjong::Tests {
             Match replayed;
             const ReplayStatus status = ReplayMatchLog(*events, replayed);
             EXPECT_TRUE(status.has_value());
+        }
+
+        /// The question answered with Send and the page `Options` up over the table, drawn
+        void OpenOptionsGranted() {
+            ASSERT_NO_FATAL_FAILURE(ShowQuestion());
+            ASSERT_NO_FATAL_FAILURE(Answer(kAccept));
+            OpenOptionsPage();
+        }
+
+        void OpenOptionsPage() {
+            _game->CloseSetup();
+            _game->OpenOptions();
+            Frames();
+            ASSERT_TRUE(OptionsShown());
+        }
+
+        bool OptionsShown() const {
+            const auto canvas = Canvas(kOptions);
+            return canvas && canvas->TakesInput();
+        }
+
+        bool EntryShown() const {
+            const auto canvas = Canvas(kEntry);
+            return canvas && canvas->TakesInput();
+        }
+
+        bool Selected(const char* segment) const {
+            const UIElement* element = Element(kOptions, segment);
+            return element != nullptr && element->selected;
+        }
+
+        /// The pad key whose letter is @p letter (the pad is the name pad of the language); the index, else -1
+        int PadIndexOf(const char* letter) const {
+            for (int key = 0; key < static_cast<int>(TextEntry::kPadMaxKeys); ++key) {
+                if (Var(("padKey" + std::to_string(key)).c_str()) == letter) {
+                    return key;
+                }
+            }
+            return -1;
+        }
+
+        void TypeKey(const char* letter) {
+            const int index = PadIndexOf(letter);
+            ASSERT_GE(index, 0) << letter;
+            EmitAction("MahjongOnlineKey", std::to_string(index).c_str());
+            Frames(1);
+        }
+
+        void PressKeyboard(SDL_Keycode key, bool shift = false) {
+            SDLEvents::KeyDownEvent::Emit(key, shift ? SDL_KMOD_LSHIFT : SDL_KMOD_NONE, false);
+            Frames(1);
+        }
+
+        void OpenPad() {
+            ASSERT_TRUE(ClickElement(kOptions, kNicknameField));
+            Frames();
+            ASSERT_TRUE(EntryShown());
         }
 
         AnsweringPoster _poster;
@@ -412,6 +481,282 @@ namespace BECore::Mahjong::Tests {
                   "Отправлять сыгранные матчи автору? Они нужны, чтобы улучшать компьютерных игроков. Уходят только ходы и счёт — без имени и адреса. Поменять можно в настройках.");
         EXPECT_EQ(Tr(strings, "upload.consent.accept"), "Отправлять");
         EXPECT_EQ(Tr(strings, "upload.consent.decline"), "Не отправлять");
+    }
+
+    // ----- the rows of the page Options -----
+
+    TEST_F(MahjongUploadSceneTest, WhereThePageCannotPostTheOptionsPageIsWhatItWas) {
+        _poster.available = false;
+        Frames();
+        ASSERT_NO_FATAL_FAILURE(OpenOptionsPage());
+        EXPECT_NEAR(Element(kOptions, "Plate")->rect.h, kDesignPlateHeight, 0.01f);
+        for (const char* row : kUploadRows) {
+            EXPECT_TRUE(Element(kOptions, row)->rect.IsEmpty()) << row;
+        }
+        EmitAction("MahjongSetUpload", "on");
+        EmitAction("MahjongNickname");
+        Frames();
+        EXPECT_FALSE(EntryShown());
+        EXPECT_EQ(_game->GetUploadPrefs(), UploadPrefs());
+        EXPECT_FALSE(fs::exists(PrefsFile()));
+    }
+
+    TEST_F(MahjongUploadSceneTest, WherePostingIsAvailableTheRowsAreOnThePageAndTheSegmentedFollowsTheConsent) {
+        ASSERT_NO_FATAL_FAILURE(ShowQuestion());
+        _game->CloseSetup();
+        _game->OpenOptions();
+        Frames();
+        EXPECT_FALSE(Selected(kSend));
+        EXPECT_FALSE(Selected(kKeep)) << "neither is selected while the question is up";
+        EXPECT_TRUE(ConsentShown());
+        EmitAction("MahjongSetUpload", "on");  // under the question: stale
+        Frames();
+        EXPECT_EQ(_game->GetUploadPrefs().consent, UploadConsent::Unasked);
+
+        ASSERT_NO_FATAL_FAILURE(Answer(kAccept));
+        ASSERT_TRUE(OptionsShown());
+        for (const char* row : kUploadRows) {
+            EXPECT_FALSE(Element(kOptions, row)->rect.IsEmpty()) << row;
+        }
+        EXPECT_GT(Element(kOptions, "Plate")->rect.h, kDesignPlateHeight) << "the plate grew by the rows";
+        EXPECT_TRUE(Selected(kSend));
+        EXPECT_FALSE(Selected(kKeep));
+        ASSERT_TRUE(ClickElement(kOptions, kKeep));
+        Frames();
+        EXPECT_EQ(Stored().consent, UploadConsent::Declined);
+        EXPECT_EQ(_game->GetUpload().Consent(), UploadConsent::Declined);
+        EXPECT_TRUE(Selected(kKeep));
+        EXPECT_FALSE(Selected(kSend));
+        ASSERT_TRUE(ClickElement(kOptions, kSend));
+        Frames();
+        EXPECT_EQ(Stored().consent, UploadConsent::Granted);
+        EXPECT_EQ(_game->GetUpload().Consent(), UploadConsent::Granted);
+        EXPECT_FALSE(ConsentShown());
+    }
+
+    TEST_F(MahjongUploadSceneTest, DontSendAfterAGrantStopsTheNextMatchAndDropsARunningOneWithNoAbandonedPiece) {
+        ASSERT_NO_FATAL_FAILURE(OpenOptionsGranted());
+        _game->CloseOptions();
+        MahjongSettings settings = _game->GetSettings();
+        settings.handsPerMatch = kShortMatchHands;
+        _game->SetSettings(settings);
+        ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
+        ASSERT_TRUE(_game->GetUpload().IsRecording());
+        _game->OpenOptions();
+        Frames();
+        ASSERT_TRUE(ClickElement(kOptions, kKeep));
+        Frames();
+        EXPECT_FALSE(_game->GetUpload().IsRecording());
+        _game->CloseOptions();
+        ASSERT_NO_FATAL_FAILURE(PlayMatch());
+        Frames(5);
+        EXPECT_TRUE(_poster.posts.empty()) << "the running match was dropped with no piece, and the next one is not recorded";
+        EXPECT_EQ(Component().Sink().QueuedPieces(), 0U);
+    }
+
+    TEST_F(MahjongUploadSceneTest, TheNicknameFieldShowsNoneInGreyThenTheNameAndTheNoteSaysWhatItIsFor) {
+        ASSERT_NO_FATAL_FAILURE(OpenOptionsGranted());
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            const UIStrings& strings = CoreManager::GetUIStrings();
+            Frames();
+            EXPECT_EQ(DisplayText(Element(kOptions, kNicknameField)), Tr(strings, "options.nicknameNone").c_str());
+            EXPECT_TRUE(SameColor(Element(kOptions, kNicknameField)->GetComponent<UITextComponent>()->textColor, PaletteColor("textMuted")));
+            EXPECT_EQ(DisplayText(Element(kOptions, "NicknameNote")), Tr(strings, "options.nicknameNote").c_str());
+            EXPECT_EQ(DisplayText(Element(kOptions, "NicknameCaption")), Tr(strings, "options.nickname").c_str());
+            EXPECT_EQ(DisplayText(Element(kOptions, "UploadCaption")), Tr(strings, "options.upload").c_str());
+            EXPECT_EQ(DisplayText(Element(kOptions, kSend)), Tr(strings, "upload.consent.accept").c_str());
+            EXPECT_EQ(DisplayText(Element(kOptions, kKeep)), Tr(strings, "upload.consent.decline").c_str());
+        });
+        ASSERT_TRUE(CoreManager::GetUIStrings().SetLanguage("en"_intern));
+        EXPECT_EQ(Tr(CoreManager::GetUIStrings(), "options.nicknameNote"), "Sent with your matches");
+        ASSERT_TRUE(CoreManager::GetUIStrings().SetLanguage("ru"_intern));
+        EXPECT_EQ(Tr(CoreManager::GetUIStrings(), "options.nicknameNote"), "Уходит вместе с матчами");
+        ASSERT_TRUE(CoreManager::GetUIStrings().SetLanguage("en"_intern));
+
+        UploadPrefs typed = _game->GetUploadPrefs();
+        typed.nickname = kNickname;
+        _game->GetUploadPrefs() = typed;
+        Frames();
+        EXPECT_EQ(DisplayText(Element(kOptions, kNicknameField)), kNickname);
+        EXPECT_TRUE(SameColor(Element(kOptions, kNicknameField)->GetComponent<UITextComponent>()->textColor, PaletteColor("text")));
+    }
+
+    TEST_F(MahjongUploadSceneTest, TheNicknameTypedOnThePadLandsInTheFileAndInTheStartOfTheNextPostedMatch) {
+        ASSERT_NO_FATAL_FAILURE(OpenOptionsGranted());
+        ASSERT_NO_FATAL_FAILURE(OpenPad());
+        EXPECT_TRUE(OptionsShown()) << "the pad lies over the page";
+        EXPECT_FALSE(Canvas("Online")->TakesInput());
+        EXPECT_FALSE(Element(kEntry, "EntryCaptionNickname")->rect.IsEmpty());
+        EXPECT_TRUE(Element(kEntry, "EntryCaptionName")->rect.IsEmpty());
+        ASSERT_NO_FATAL_FAILURE(TypeKey("B"));
+        ASSERT_NO_FATAL_FAILURE(TypeKey("O"));
+        EXPECT_EQ(Var("onlineEntryValue"), "BO");
+        EmitAction("MahjongOnlineBackspace");
+        Frames(1);
+        EXPECT_EQ(Var("onlineEntryValue"), "B");
+        EXPECT_EQ(Stored().nickname, eastl::string()) << "stored when the pad is done";
+        ASSERT_NO_FATAL_FAILURE(PressKeyboard(SDLK_A, true));
+        ASSERT_NO_FATAL_FAILURE(PressKeyboard(SDLK_N));
+        EXPECT_EQ(Var("onlineEntryValue"), "BAn");
+        ASSERT_TRUE(ClickElement(kEntry, kEntryDone));
+        Frames();
+        EXPECT_FALSE(EntryShown());
+        EXPECT_TRUE(OptionsShown());
+        EXPECT_FALSE(Canvas("Online")->TakesInput());
+        EXPECT_EQ(Stored().nickname, eastl::string("BAn"));
+        EXPECT_EQ(_game->GetUploadPrefs().nickname, eastl::string("BAn"));
+        EXPECT_EQ(DisplayText(Element(kOptions, kNicknameField)), "BAn");
+        EXPECT_EQ(_game->GetLocalSession().LogOrigin().nickname, eastl::string("BAn"));
+
+        _game->CloseOptions();
+        ASSERT_NO_FATAL_FAILURE(PlayMatch());
+        ASSERT_NO_FATAL_FAILURE(Drain());
+        ExpectPostedMatchReplays();
+        EXPECT_NE(_poster.posts.front().body.find("\"nickname\":\"BAn\""), std::string::npos);
+    }
+
+    TEST_F(MahjongUploadSceneTest, EscapeAndEnterOnThePadStoreTheNicknameAndGoBackToTheOptionsPage) {
+        ASSERT_NO_FATAL_FAILURE(OpenOptionsGranted());
+        ASSERT_NO_FATAL_FAILURE(OpenPad());
+        ASSERT_NO_FATAL_FAILURE(PressKeyboard(SDLK_X));
+        ASSERT_NO_FATAL_FAILURE(PressKeyboard(SDLK_ESCAPE));
+        EXPECT_FALSE(EntryShown());
+        EXPECT_TRUE(OptionsShown()) << "the Escape of the pad is not the page's";
+        EXPECT_TRUE(_game->IsOptionsOpen());
+        EXPECT_EQ(Stored().nickname, eastl::string("x"));
+
+        ASSERT_NO_FATAL_FAILURE(OpenPad());
+        EXPECT_EQ(Var("onlineEntryValue"), "x") << "the pad starts on the nickname";
+        ASSERT_NO_FATAL_FAILURE(PressKeyboard(SDLK_Y));
+        ASSERT_NO_FATAL_FAILURE(PressKeyboard(SDLK_RETURN));
+        EXPECT_FALSE(EntryShown());
+        EXPECT_TRUE(OptionsShown());
+        EXPECT_EQ(Stored().nickname, eastl::string("xy"));
+
+        PressKeyboard(SDLK_ESCAPE);  // with the pad down this one is the page's
+        EXPECT_FALSE(OptionsShown());
+    }
+
+    TEST_F(MahjongUploadSceneTest, ANicknameTypedWhileTheConsentIsDeclinedIsKeptAndGoesIntoNoLog) {
+        ASSERT_NO_FATAL_FAILURE(ShowQuestion());
+        ASSERT_NO_FATAL_FAILURE(Answer(kDecline));
+        OpenOptionsPage();
+        ASSERT_NO_FATAL_FAILURE(OpenPad());
+        ASSERT_NO_FATAL_FAILURE(TypeKey("Z"));
+        ASSERT_TRUE(ClickElement(kEntry, kEntryDone));
+        Frames();
+        EXPECT_EQ(Stored().nickname, eastl::string("Z"));
+        EXPECT_EQ(Stored().consent, UploadConsent::Declined);
+        EXPECT_TRUE(_game->GetLocalSession().LogOrigin().nickname.empty());
+        ASSERT_TRUE(ClickElement(kOptions, kSend));
+        Frames();
+        EXPECT_EQ(_game->GetLocalSession().LogOrigin().nickname, eastl::string("Z"));
+    }
+
+    TEST_F(MahjongUploadSceneTest, ThePadForTheNicknameGoesWhenThePageIsClosedUnderIt) {
+        ASSERT_NO_FATAL_FAILURE(OpenOptionsGranted());
+        ASSERT_NO_FATAL_FAILURE(OpenPad());
+        ASSERT_NO_FATAL_FAILURE(TypeKey("Q"));
+        _game->CloseSetup();  // a control action or a new match closes every page
+        Frames();
+        EXPECT_FALSE(EntryShown());
+        EXPECT_FALSE(OptionsShown());
+        EXPECT_TRUE(Stored().nickname.empty()) << "nothing was confirmed";
+    }
+
+    TEST_F(MahjongUploadSceneTest, TheOptionsPageWithTheRowsPassesTheSizeMatrixAtTheTouchSizeInBothLanguages) {
+        ASSERT_NO_FATAL_FAILURE(OpenOptionsGranted());
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            Frames();
+            Canvas(kOptions)->UpdateLayout(kViewWidth, kViewHeight);
+            for (const char* name : kUploadControls) {
+                const UIElement* control = Element(kOptions, name);
+                ASSERT_NE(control, nullptr) << name;
+                EXPECT_GE(control->rect.h, kMinControlHeight) << name;
+            }
+            ExpectPassesTheMatrix(kOptions, EngineTouchMinimum());
+            for (const Output& output : kOutputs) {
+                ExpectWordsFit(kOptions, output.width, output.height, kButtonAir);
+            }
+            const std::vector<std::string> cut = WordsThatDoNotFitOnTheMatrix(*Canvas(kOptions), kButtonAir);
+            EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
+        });
+    }
+
+    TEST_F(MahjongUploadSceneTest, TheRowsAndTheNoteLieInThePlateOneUnderTheOtherAndEveryControlIsATouchTargetInEveryWindow) {
+        ASSERT_NO_FATAL_FAILURE(OpenOptionsGranted());
+        auto page = Canvas(kOptions);
+        const float minTouch = EngineTouchMinimum();
+        const char* bands[] = {"Title", "LanguageRow", "HintsRow", "SpeedRow", "UploadRow", "NicknameRow", "NicknameNote", "ButtonRow"};
+        const CanvasScaleMode modes[] = {CanvasScaleMode::ConstantPixelSize, CanvasScaleMode::ScaleWithScreen, CanvasScaleMode::ConstantPhysicalSize};
+        ForEachMatrixWindow([&](const MatrixWindow& window) {
+            for (const CanvasScaleMode mode : modes) {
+                for (const float userScale : {1.0f, 1.5f}) {
+                    const std::string label = Format("{} {} x{}", window.label.c_str(), EnumUtils<CanvasScaleMode>::ToString(mode).data(), userScale).c_str();
+                    const UICanvasResolved resolved = LayOutInWindow(*page, window, mode, userScale);
+                    const UIElement* plate = Element(kOptions, "Plate");
+                    ASSERT_NE(plate, nullptr);
+                    const Rect& safe = resolved.contentBounds;
+                    EXPECT_GE(plate->rect.y, safe.y - 0.01f) << label;
+                    EXPECT_LE(plate->rect.y + plate->rect.h, safe.y + safe.h + 0.01f) << label;
+                    const UIElement* previous = nullptr;
+                    for (const char* name : bands) {
+                        const UIElement* band = Element(kOptions, name);
+                        ASSERT_NE(band, nullptr) << name;
+                        if (band->rect.IsEmpty()) {
+                            EXPECT_TRUE(std::string(name) == "Title" || std::string(name) == "NicknameNote") << label << ": " << name << " may give way, no row may";
+                            continue;
+                        }
+                        EXPECT_GE(band->rect.y, plate->rect.y - 0.01f) << label << " " << name;
+                        EXPECT_LE(band->rect.y + band->rect.h, plate->rect.y + plate->rect.h + 0.01f) << label << " " << name;
+                        if (previous != nullptr) {
+                            EXPECT_GE(band->rect.y, previous->rect.y + previous->rect.h - 0.01f) << label << " " << name << " overlaps the one above";
+                        }
+                        previous = band;
+                    }
+                    for (const char* name : kUploadControls) {
+                        const UIElement* control = Element(kOptions, name);
+                        ASSERT_NE(control, nullptr) << name;
+                        ASSERT_FALSE(control->rect.IsEmpty()) << label << " " << name << ": a button is never hidden";
+                        EXPECT_GE(std::min(control->rect.w, control->rect.h) * resolved.scale / window.pixelDensity, minTouch - 0.01f) << label << " " << name;
+                    }
+                }
+            }
+        });
+    }
+
+    TEST_F(MahjongUploadSceneTest, ThePadForTheNicknameSaysItsCaptionInBothLanguagesAndFitsTheMatrix) {
+        ASSERT_NO_FATAL_FAILURE(OpenOptionsGranted());
+        ASSERT_NO_FATAL_FAILURE(OpenPad());
+        ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
+            SCOPED_TRACE(language.ToStringView().data());
+            Frames();
+            EXPECT_EQ(DisplayText(Element(kEntry, "EntryCaptionNickname")), Tr(CoreManager::GetUIStrings(), "upload.field.nickname").c_str());
+            ExpectPassesTheMatrix(kEntry, EngineTouchMinimum());
+            for (const Output& output : kOutputs) {
+                ExpectWordsFit(kEntry, output.width, output.height, kButtonAir);
+            }
+        });
+    }
+
+    TEST_F(MahjongUploadSceneTest, TheOnlinePadStillHasItsOwnCaptionsAfterTheNicknamePadWasUsed) {
+        ASSERT_NO_FATAL_FAILURE(OpenOptionsGranted());
+        ASSERT_NO_FATAL_FAILURE(OpenPad());
+        ASSERT_TRUE(ClickElement(kEntry, kEntryDone));
+        Frames();
+        ASSERT_FALSE(EntryShown());
+        _game->CloseOptions();
+        _game->OpenSetup();
+        _game->OpenOnline();
+        Frames();
+        EmitAction("MahjongOnlineHost");
+        EmitAction("MahjongOnlineField", "name");  // the name field of the room's form opens its pad
+        Frames();
+        ASSERT_TRUE(EntryShown());
+        EXPECT_FALSE(Element(kEntry, "EntryCaptionName")->rect.IsEmpty());
+        EXPECT_TRUE(Element(kEntry, "EntryCaptionNickname")->rect.IsEmpty());
     }
 
 }  // namespace BECore::Mahjong::Tests
