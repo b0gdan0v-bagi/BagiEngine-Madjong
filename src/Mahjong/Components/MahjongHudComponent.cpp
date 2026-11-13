@@ -324,13 +324,14 @@ namespace BECore::Mahjong {
             totals[seat] += settlement.deltas[seat];
         }
         const UIStrings& strings = CoreManager::GetUIStrings();
-        const ScoreTable table = FormatScoreTable(strings, settlement, match.Hand().Result().value_or(HandResult{}), totals, SeatWho(session));
+        const ScoreTable table = FormatScoreTable(strings, settlement, match.Hand().Result().value_or(HandResult{}), totals, SeatWho(session),
+                                                  IsSeat(settlement.winner) ? &match.Hand().GetHand(settlement.winner) : nullptr);
 
         UIVars& vars = CoreManager::GetUIVars();
         vars.Set("handOverHeadline"_intern, eastl::string_view(table.headline));
         vars.Set("handOverSummary"_intern, eastl::string_view(table.summary));
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            vars.Set(SeatVar("handOverSeat", seat), eastl::string_view(table.seats[seat]));
+            vars.Set(SeatVar("handOverSeat", seat), eastl::string_view(FormatSeatSentence(strings, table, seat)));
         }
         for (int i = 0; i < kMaxScoreLines; ++i) {
             const bool has = i < static_cast<int>(table.lines.size());
@@ -466,13 +467,13 @@ namespace BECore::Mahjong {
     }
 
     void MahjongHudComponent::PublishMatchOver(const MahjongGame& game) {
-        const StandingsTable table = FormatStandings(CoreManager::GetUIStrings(), game.GetMatch(), SeatWho(game.GetSession()));
+        const UIStrings& strings = CoreManager::GetUIStrings();
+        const StandingsTable table = FormatStandings(strings, game.GetMatch(), SeatWho(game.GetSession()));
         UIVars& vars = CoreManager::GetUIVars();
         vars.Set("matchOverHeadline"_intern, eastl::string_view(table.headline));
         for (Seat row = 0; row < kSeatCount; ++row) {
-            vars.Set(SeatVar("standing", row), eastl::string_view(table.rows[row]));
+            vars.Set(SeatVar("standing", row), eastl::string_view(FormatStandingSentence(strings, table.rows[row])));
         }
-        const UIStrings& strings = CoreManager::GetUIStrings();
         const eastl::string tally = game.CoachActive() ? FormatCoachTally(strings, CoachTally{}, game.GetCoach().MatchTallyOf(game.CoachContext().startCount)) : eastl::string();
         vars.Set("matchOverCoach"_intern, eastl::string_view(tally));
         UICanvasComponent::SetElementVisibleByName(GetScene(), "MatchCoachRow"_intern, !tally.empty());

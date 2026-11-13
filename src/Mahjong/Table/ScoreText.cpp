@@ -1,6 +1,7 @@
 #include "ScoreText.h"
 
 #include <Mahjong/Table/SeatName.h>
+#include <Mahjong/Table/TileFlights.h>
 
 namespace BECore::Mahjong {
 
@@ -36,6 +37,51 @@ namespace BECore::Mahjong {
 
         bool IsLimitKind(ScoreKind kind) noexcept {
             return kind >= ScoreKind::ConcealedPungsOneSuit;
+        }
+
+        constexpr int kTilesPerSet = 3;
+        constexpr int kTilesPerKong = 4;
+        /// The cell of a drawn hand where a hand score and a change would stand.
+        constexpr eastl::string_view kNoCell = "-";
+
+        constexpr eastl::array<eastl::string_view, 5> kColumnKeys{"handover.col.seat", "handover.col.wind", "handover.col.hand", "handover.col.change", "handover.col.total"};
+
+        /// The winner's tiles for the plate: the melds as laid, the concealed tiles in their order, the winning tile moved to the end.
+        eastl::vector<Tile> WinningTilesOf(const HandResult& result, const PlayerHand* hand) {
+            eastl::vector<Tile> tiles;
+            if (hand == nullptr) {
+                if (result.winningTile.IsValid()) {
+                    tiles.push_back(result.winningTile);
+                }
+                return tiles;
+            }
+            tiles.reserve(kMaxWinningTiles);
+            for (const Meld& meld : hand->melds) {
+                const int count = meld.kind == MeldKind::Kong ? kTilesPerKong : kTilesPerSet;
+                for (int part = 0; part < count; ++part) {
+                    if (const Tile tile = MeldTileAt(meld, part); tile.IsValid()) {
+                        tiles.push_back(tile);
+                    }
+                }
+            }
+            bool skipped = !result.winningTile.IsValid();  // the winning tile has its own place at the end: leave one copy out here
+            for (const Tile tile : hand->concealed) {
+                if (!tile.IsValid()) {
+                    continue;
+                }
+                if (!skipped && tile == result.winningTile) {
+                    skipped = true;
+                    continue;
+                }
+                tiles.push_back(tile);
+            }
+            if (result.winningTile.IsValid()) {
+                tiles.push_back(result.winningTile);
+            }
+            if (tiles.size() > static_cast<size_t>(kMaxWinningTiles)) {
+                tiles.resize(kMaxWinningTiles);
+            }
+            return tiles;
         }
 
         /// 2^doubles, never past the range of a 64-bit number. The clamp only matters for made-up input: a real hand's raw score
@@ -124,19 +170,24 @@ namespace BECore::Mahjong {
         return Tr(strings, "score.points", {{"name", text}, {"points", points}});
     }
 
-    ScoreTable FormatScoreTable(const UIStrings& strings, const HandSettlement& settlement, const HandResult& result, const SeatScores& totalsAfter, const SeatWho& who) {
+    ScoreTable FormatScoreTable(const UIStrings& strings, const HandSettlement& settlement, const HandResult& result, const SeatScores& totalsAfter, const SeatWho& who, const PlayerHand* winnerHand) {
         ScoreTable table;
         const SeatWinds winds = MakeSeatWinds(settlement.east);
         const bool won = settlement.kind == ResultKind::Win && IsSeat(settlement.winner);
+        for (size_t column = 0; column < kColumnKeys.size(); ++column) {
+            table.columns[column] = Tr(strings, kColumnKeys[column]);
+        }
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            const eastl::string name = SeatLabel(strings, seat, winds[seat], who);
-            const eastl::string total = Format("{}", totalsAfter[seat]);
+            ScoreRow& row = table.rows[seat];
+            row.name = SeatLabel(strings, seat, who);
+            row.wind = WindLetter(strings, winds[seat]);
+            row.total = Format("{}", totalsAfter[seat]);
             if (won) {
-                const eastl::string hand = Format("{}", settlement.scores[seat]);
-                const eastl::string delta = Format("{:+}", settlement.deltas[seat]);
-                table.seats[seat] = Tr(strings, "handover.seat.won", {{"name", name}, {"hand", hand}, {"delta", delta}, {"total", total}});
+                row.hand = Format("{}", settlement.scores[seat]);
+                row.change = Format("{:+}", settlement.deltas[seat]);
             } else {
-                table.seats[seat] = Tr(strings, "handover.seat.drawn", {{"name", name}, {"total", total}});
+                row.hand = kNoCell;
+                row.change = kNoCell;
             }
         }
         if (!won) {
@@ -144,6 +195,8 @@ namespace BECore::Mahjong {
             table.summary = Tr(strings, "handover.noPayments");
             return table;
         }
+        table.winner = settlement.winner;
+        table.winningTiles = WinningTilesOf(result, winnerHand);
         table.headline = WinHeadline(strings, settlement, result, who);
         const ScoreBreakdown& breakdown = settlement.breakdowns[settlement.winner];
         table.summary = WinSummary(strings, breakdown, result);
@@ -169,8 +222,12 @@ namespace BECore::Mahjong {
             if (i > 0 && scores[order[i]] != scores[order[i - 1]]) {
                 place = i + 1;
             }
-            table.rows[i] = Tr(strings, "matchover.row", {{"place", Format("{}", place)}, {"name", SeatLabel(strings, order[i], who)}, {"score", Format("{}", scores[order[i]])}});
-            tied += scores[order[i]] == scores[order[0]] ? 1 : 0;
+            StandingRow& row = table.rows[i];
+            row.place = place;
+            row.name = SeatLabel(strings, order[i], who);
+            row.score = Format("{}", scores[order[i]]);
+            row.first = scores[order[i]] == scores[order[0]];
+            tied += row.first ? 1 : 0;
         }
         if (tied == 1) {
             table.headline = Tr(strings, "matchover.wins", {{"winner", SeatLabel(strings, order[0], who)}});
@@ -182,6 +239,19 @@ namespace BECore::Mahjong {
             table.headline = Tr(strings, "matchover.tied", {{"seats", names}});
         }
         return table;
+    }
+
+    eastl::string FormatSeatSentence(const UIStrings& strings, const ScoreTable& table, Seat seat) {
+        const ScoreRow& row = table.rows[seat];
+        const eastl::string name = Format("{} ({})", row.name, row.wind);
+        if (table.winner == kNoSeat) {
+            return Tr(strings, "handover.seat.drawn", {{"name", name}, {"total", row.total}});
+        }
+        return Tr(strings, "handover.seat.won", {{"name", name}, {"hand", row.hand}, {"delta", row.change}, {"total", row.total}});
+    }
+
+    eastl::string FormatStandingSentence(const UIStrings& strings, const StandingRow& row) {
+        return Tr(strings, "matchover.row", {{"place", Format("{}", row.place)}, {"name", row.name}, {"score", row.score}});
     }
 
     eastl::string FormatCoachTally(const UIStrings& strings, const CoachTally& hand, const CoachTally& match) {

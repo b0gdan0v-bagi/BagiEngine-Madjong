@@ -170,7 +170,9 @@ namespace BECore::Mahjong::Tests {
                                 const ScoreTable table = FormatScoreTable(strings, settlement, result, totals, seats);
                                 headlines.push_back(table.headline);
                                 summaries.push_back(table.summary);
-                                rows.insert(rows.end(), table.seats.begin(), table.seats.end());
+                                for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                                    rows.push_back(FormatSeatSentence(strings, table, seat));
+                                }
                             }
                         }
                     }
@@ -187,7 +189,7 @@ namespace BECore::Mahjong::Tests {
                 SeatSetup seats{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
                 seats[person] = SeatKind::Person;
                 for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                    standings.push_back(Tr(strings, "matchover.row", {{"place", "4"}, {"name", SeatLabel(strings, seat, seats)}, {"score", Format("{}", kWorstTotal)}}));
+                    standings.push_back(FormatStandingSentence(strings, StandingRow{4, SeatLabel(strings, seat, seats), Format("{}", kWorstTotal), false}));
                 }
                 for (const SeatScores& deltas : {SeatScores{-300, 100, 100, 100}, SeatScores{100, -300, 100, 100}, SeatScores{100, 100, -300, 100}, SeatScores{100, 100, 100, -300},
                                                  SeatScores{200, 100, 0, -300}, SeatScores{-300, 0, 100, 200}}) {
@@ -316,8 +318,8 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Text("HandOver", "Headline"), expected.headline.c_str());
         EXPECT_EQ(Text("HandOver", "Summary"), expected.summary.c_str());
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            EXPECT_EQ(Var(Format("handOverSeat{}", seat).c_str()), expected.seats[seat].c_str());
-            EXPECT_EQ(Text("HandOver", Format("SeatRow{}", seat).c_str()), expected.seats[seat].c_str());
+            EXPECT_EQ(Var(Format("handOverSeat{}", seat).c_str()), FormatSeatSentence(CoreManager::GetUIStrings(), expected, seat).c_str());
+            EXPECT_EQ(Text("HandOver", Format("SeatRow{}", seat).c_str()), FormatSeatSentence(CoreManager::GetUIStrings(), expected, seat).c_str());
         }
         for (int i = 0; i < kMaxScoreLines; ++i) {
             const bool has = i < static_cast<int>(expected.lines.size());
@@ -342,7 +344,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Text("HandOver", "Headline"), russian.headline.c_str());
         EXPECT_EQ(Text("HandOver", "Summary"), russian.summary.c_str());
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            EXPECT_EQ(Text("HandOver", Format("SeatRow{}", seat).c_str()), russian.seats[seat].c_str());
+            EXPECT_EQ(Text("HandOver", Format("SeatRow{}", seat).c_str()), FormatSeatSentence(CoreManager::GetUIStrings(), russian, seat).c_str());
         }
         for (int i = 0; i < kMaxScoreLines; ++i) {
             const bool has = i < static_cast<int>(russian.lines.size());
@@ -461,8 +463,8 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Var("matchOverHeadline"), table.headline.c_str());
         EXPECT_EQ(Text("MatchOver", "Headline"), table.headline.c_str());
         for (int row = 0; row < kSeatCount; ++row) {
-            EXPECT_EQ(Var(Format("standing{}", row).c_str()), table.rows[row].c_str());
-            EXPECT_EQ(Text("MatchOver", Format("Standing{}", row).c_str()), table.rows[row].c_str());
+            EXPECT_EQ(Var(Format("standing{}", row).c_str()), FormatStandingSentence(CoreManager::GetUIStrings(), table.rows[row]).c_str());
+            EXPECT_EQ(Text("MatchOver", Format("Standing{}", row).c_str()), FormatStandingSentence(CoreManager::GetUIStrings(), table.rows[row]).c_str());
         }
     }
 
@@ -497,7 +499,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_NE(switched.headline, table.headline);
             EXPECT_EQ(Text("MatchOver", "Headline"), switched.headline.c_str());
             for (int row = 0; row < kSeatCount; ++row) {
-                EXPECT_EQ(Text("MatchOver", Format("Standing{}", row).c_str()), switched.rows[row].c_str());
+                EXPECT_EQ(Text("MatchOver", Format("Standing{}", row).c_str()), FormatStandingSentence(CoreManager::GetUIStrings(), switched.rows[row]).c_str());
             }
             ASSERT_TRUE(_game->SetLanguage(language));  // the walk goes on from this language
         });

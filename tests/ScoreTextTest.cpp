@@ -70,6 +70,16 @@ namespace BECore::Mahjong::Tests {
             return totals;
         }
 
+        /// A row's five cells as the screen reads them left to right.
+        std::string Cells(const ScoreRow& row) {
+            return Std(row.name) + "|" + Std(row.wind) + "|" + Std(row.hand) + "|" + Std(row.change) + "|" + Std(row.total);
+        }
+
+        /// A standing as "place|name|score", and "|first" for a first place.
+        std::string Standing(const StandingRow& row) {
+            return std::to_string(row.place) + "|" + Std(row.name) + "|" + Std(row.score) + (row.first ? "|first" : "");
+        }
+
         ScoreLine MakeLine(ScoreKind kind, const char* tile, int points, int doubles) {
             ScoreLine line;
             line.kind = kind;
@@ -223,10 +233,15 @@ namespace BECore::Mahjong::Tests {
         EXPECT_STREQ(table.headline.c_str(), "Seat 2 (South) wins by self-draw");
         EXPECT_STREQ(table.summary.c_str(), "Winning tile 4 Dots: 36 points x 8 = 288, score 290");
         // -600 / +1160 / -260 / -300: the worked payments of ScoreHandTest
-        EXPECT_STREQ(table.seats[kSeat0].c_str(), "Seat 1 (East) You: hand 0, -600, total 1400");
-        EXPECT_STREQ(table.seats[kSeat1].c_str(), "Seat 2 (South): hand 290, +1160, total 3160");
-        EXPECT_STREQ(table.seats[kSeat2].c_str(), "Seat 3 (West): hand 10, -260, total 1740");
-        EXPECT_STREQ(table.seats[kSeat3].c_str(), "Seat 4 (North): hand 0, -300, total 1700");
+        EXPECT_EQ(Cells(table.rows[kSeat0]), "Seat 1 You|E|0|-600|1400");
+        EXPECT_EQ(Cells(table.rows[kSeat1]), "Seat 2|S|290|+1160|3160");
+        EXPECT_EQ(Cells(table.rows[kSeat2]), "Seat 3|W|10|-260|1740");
+        EXPECT_EQ(Cells(table.rows[kSeat3]), "Seat 4|N|0|-300|1700");
+        EXPECT_EQ(table.winner, kSeat1);
+        const char* const columns[] = {"Seat", "Wind", "Hand", "Change", "Total"};
+        for (size_t column = 0; column < std::size(columns); ++column) {
+            EXPECT_STREQ(table.columns[column].c_str(), columns[column]);
+        }
         const char* const expected[] = {"Win: 20",
                                         "Tile from the wall: 2",
                                         "Pung of 6 Bamboo: 4",
@@ -249,8 +264,8 @@ namespace BECore::Mahjong::Tests {
         const ScoreTable two = FormatScoreTable(En(), settlement, *model.Result(), TotalsAfter(settlement), kTwoSeatsOfPeople);
 
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            EXPECT_EQ(std::string(none.seats[seat].c_str()).find("You"), std::string::npos) << seat;
-            EXPECT_EQ(std::string(two.seats[seat].c_str()).find("You"), std::string::npos) << seat;
+            EXPECT_EQ(Std(none.rows[seat].name).find("You"), std::string::npos) << seat;
+            EXPECT_EQ(Std(two.rows[seat].name).find("You"), std::string::npos) << seat;
         }
     }
 
@@ -280,8 +295,10 @@ namespace BECore::Mahjong::Tests {
         EXPECT_STREQ(table.headline.c_str(), "Drawn hand");
         EXPECT_STREQ(table.summary.c_str(), "No payments");
         EXPECT_TRUE(table.lines.empty());
-        EXPECT_STREQ(table.seats[kSeat0].c_str(), "Seat 1 (North) You: no payment, total 2000");
-        EXPECT_STREQ(table.seats[kSeat1].c_str(), "Seat 2 (East): no payment, total 2000");
+        EXPECT_EQ(table.winner, kNoSeat);
+        EXPECT_TRUE(table.winningTiles.empty());
+        EXPECT_EQ(Cells(table.rows[kSeat0]), "Seat 1 You|N|-|-|2000");
+        EXPECT_EQ(Cells(table.rows[kSeat1]), "Seat 2|E|-|-|2000");
     }
 
     TEST(ScoreTextTest, ALimitHandIsOneLineAndTheSummaryHasNoMultiplication) {
@@ -335,10 +352,14 @@ namespace BECore::Mahjong::Tests {
 
         EXPECT_STREQ(table.headline.c_str(), "Место 2 (Юг) побеждает, взяв кость из стены");
         EXPECT_STREQ(table.summary.c_str(), "Выигрышная кость Круги 4: 36 очк. x 8 = 288, счёт 290");
-        EXPECT_STREQ(table.seats[kSeat0].c_str(), "Место 1 (Восток) Вы: рука 0, -600, итого 1400");
-        EXPECT_STREQ(table.seats[kSeat1].c_str(), "Место 2 (Юг): рука 290, +1160, итого 3160");
-        EXPECT_STREQ(table.seats[kSeat2].c_str(), "Место 3 (Запад): рука 10, -260, итого 1740");
-        EXPECT_STREQ(table.seats[kSeat3].c_str(), "Место 4 (Север): рука 0, -300, итого 1700");
+        EXPECT_EQ(Cells(table.rows[kSeat0]), "Место 1 Вы|В|0|-600|1400");
+        EXPECT_EQ(Cells(table.rows[kSeat1]), "Место 2|Ю|290|+1160|3160");
+        EXPECT_EQ(Cells(table.rows[kSeat2]), "Место 3|З|10|-260|1740");
+        EXPECT_EQ(Cells(table.rows[kSeat3]), "Место 4|С|0|-300|1700");
+        const char* const columns[] = {"Место", "Ветер", "Рука", "Разница", "Итого"};
+        for (size_t column = 0; column < std::size(columns); ++column) {
+            EXPECT_STREQ(table.columns[column].c_str(), columns[column]);
+        }
         const char* const expected[] = {"Победа: 20",
                                         "Кость из стены: 2",
                                         "Пун (Бамбук 6): 4",
@@ -389,12 +410,17 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(Std(won.summary).find("handover."), std::string::npos);
             EXPECT_EQ(Std(won.summary).find('{'), std::string::npos);
             EXPECT_NE(Std(won.summary).find("2"), std::string::npos);
-            for (const eastl::string& row : won.seats) {
-                EXPECT_EQ(Std(row).find("handover."), std::string::npos) << Std(row);
-                EXPECT_EQ(Std(row).find('{'), std::string::npos) << Std(row);
+            for (const eastl::string& caption : won.columns) {
+                EXPECT_FALSE(caption.empty());
+                EXPECT_EQ(Std(caption).find("handover."), std::string::npos) << "a key stands in for a missing text: " << Std(caption);
             }
-            EXPECT_NE(Std(won.seats[kSeat2]).find("+300"), std::string::npos) << "the sign and the number stay in the row";
-            EXPECT_NE(Std(won.seats[kSeat0]).find("-100"), std::string::npos);
+            for (const ScoreRow& row : won.rows) {
+                EXPECT_EQ(Cells(row).find("handover."), std::string::npos) << Cells(row);
+                EXPECT_EQ(Cells(row).find('{'), std::string::npos) << Cells(row);
+            }
+            EXPECT_STREQ(won.rows[kSeat2].change.c_str(), "+300") << "the sign stays in the cell";
+            EXPECT_STREQ(won.rows[kSeat0].change.c_str(), "-100");
+            EXPECT_EQ(won.winner, kSeat2);
 
             HandSettlement drawn;
             drawn.kind = ResultKind::Drawn;
@@ -402,8 +428,105 @@ namespace BECore::Mahjong::Tests {
             EXPECT_STREQ(none.headline.c_str(), russian ? "Ничья" : "Drawn hand");
             EXPECT_STREQ(none.summary.c_str(), russian ? "Без выплат" : "No payments");
             EXPECT_TRUE(none.lines.empty());
-            EXPECT_STREQ(none.seats[kSeat1].c_str(), russian ? "Место 2 (Юг): без выплат, итого 2000" : "Seat 2 (South): no payment, total 2000");
+            EXPECT_EQ(Cells(none.rows[kSeat1]), russian ? "Место 2|Ю|-|-|2000" : "Seat 2|S|-|-|2000");
         });
+    }
+
+    TEST(ScoreTextTest, TheWinningTilesAreTheMeldsThenTheConcealedTilesWithTheWinningTileLast) {
+        const HandModel model = PlayToSelfDrawWin();
+        const HandSettlement settlement = SettleHand(model);
+        const PlayerHand& hand = model.GetHand(kSeat1);
+        ASSERT_EQ(hand.concealed.size(), 14u);
+
+        const ScoreTable table = FormatScoreTable(En(), settlement, *model.Result(), TotalsAfter(settlement), kDefaultSeatSetup, &hand);
+
+        ASSERT_EQ(table.winningTiles.size(), 14u);
+        EXPECT_EQ(table.winningTiles.back(), T("4p")) << "the winning tile is the last one";
+        eastl::vector<Tile> others;
+        for (size_t i = 0; i + 1 < table.winningTiles.size(); ++i) {
+            others.push_back(table.winningTiles[i]);
+        }
+        eastl::vector<Tile> expected = hand.concealed;
+        expected.erase(eastl::find(expected.begin(), expected.end(), T("4p")));
+        EXPECT_EQ(others, expected) << "the other 13 keep the order of the hand";
+    }
+
+    TEST(ScoreTextTest, AKongHandShowsEveryTileOfEveryMeldAndStaysWithinTheMost) {
+        HandSettlement settlement = MadeUpWin({MakeLine(ScoreKind::Win, "", 20, 0)});
+        HandResult result;
+        result.kind = ResultKind::Win;
+        result.winner = kSeat2;
+        result.winningTile = T("5p");
+        PlayerHand hand;
+        hand.melds = {OpenKong(T("1m")), ConcealedKong(T("Rd")), OpenChow(T("3s")), OpenKong(T("Ew"))};
+        hand.concealed = {T("5p"), T("5p")};
+
+        const ScoreTable table = FormatScoreTable(En(), settlement, result, TotalsAfter(settlement), kNoPeople, &hand);
+
+        ASSERT_EQ(table.winningTiles.size(), static_cast<size_t>(kMaxWinningTiles - 1)) << "three tiles in a chow, four in a kong, two in the pair";
+        const eastl::vector<Tile> expected = {T("1m"), T("1m"), T("1m"), T("1m"), T("Rd"), T("Rd"), T("Rd"), T("Rd"), T("3s"), T("4s"), T("5s"), T("Ew"), T("Ew"), T("Ew"), T("Ew"), T("5p"), T("5p")};
+        EXPECT_EQ(table.winningTiles, expected) << "a chow runs up from its first tile";
+
+        hand.melds.push_back(OpenKong(T("9m")));  // not a hand a game can reach: never more than the most the plate holds
+        EXPECT_EQ(FormatScoreTable(En(), settlement, result, TotalsAfter(settlement), kNoPeople, &hand).winningTiles.size(), static_cast<size_t>(kMaxWinningTiles));
+    }
+
+    TEST(ScoreTextTest, WithoutTheHandTheWinningTileIsAlone) {
+        HandSettlement settlement = MadeUpWin({MakeLine(ScoreKind::Win, "", 20, 0)});
+        HandResult result;
+        result.kind = ResultKind::Win;
+        result.winner = kSeat2;
+        result.winningTile = T("Gd");
+
+        const ScoreTable table = FormatScoreTable(En(), settlement, result, TotalsAfter(settlement), kNoPeople);
+
+        ASSERT_EQ(table.winningTiles.size(), 1u);
+        EXPECT_EQ(table.winningTiles[0], T("Gd"));
+        EXPECT_TRUE(FormatScoreTable(En(), settlement, HandResult{}, TotalsAfter(settlement), kNoPeople).winningTiles.empty()) << "no winning tile, no tiles";
+    }
+
+    TEST(ScoreTextTest, ATileTheDisplayHandDoesNotKnowIsLeftOut) {
+        HandSettlement settlement = MadeUpWin({MakeLine(ScoreKind::Win, "", 20, 0)});
+        HandResult result;
+        result.kind = ResultKind::Win;
+        result.winner = kSeat2;
+        result.winningTile = T("5p");
+        PlayerHand hand;
+        hand.concealed = {T("2p"), Tile{}, T("5p"), T("9s")};
+
+        const ScoreTable table = FormatScoreTable(En(), settlement, result, TotalsAfter(settlement), kNoPeople, &hand);
+
+        const eastl::vector<Tile> expected = {T("2p"), T("9s"), T("5p")};
+        EXPECT_EQ(table.winningTiles, expected);
+    }
+
+    TEST(ScoreTextTest, TheCellsOfTheLongestNumbersCarryTheSignAndNoPlaceholder) {
+        HandSettlement settlement = MadeUpWin({MakeLine(ScoreKind::Win, "", 20, 0)});
+        settlement.scores = {0, 0, kLimit, 0};
+        settlement.deltas = {-3 * kLimit * 2, kLimit * 2, kLimit * 6, -kLimit * 2};
+        const SeatScores totals{-99999, 99999, 123456, 0};
+        for (const UIStrings* strings : {&En(), &Ru()}) {
+            const ScoreTable table = FormatScoreTable(*strings, settlement, HandResult{ResultKind::Win, kSeat2, T("5p")}, totals, kDefaultSeatSetup);
+            EXPECT_STREQ(table.rows[kSeat0].total.c_str(), "-99999");
+            EXPECT_STREQ(table.rows[kSeat2].total.c_str(), "123456");
+            EXPECT_EQ(table.rows[kSeat1].change[0], '+');
+            EXPECT_EQ(table.rows[kSeat0].change[0], '-');
+            for (const ScoreRow& row : table.rows) {
+                EXPECT_EQ(Cells(row).find('{'), std::string::npos) << Cells(row);
+            }
+        }
+    }
+
+    TEST(ScoreTextTest, TheTransitionalSentencesKeepTheOldRows) {
+        const HandModel model = PlayToSelfDrawWin();
+        const HandSettlement settlement = SettleHand(model);
+        const ScoreTable table = FormatScoreTable(En(), settlement, *model.Result(), TotalsAfter(settlement), kDefaultSeatSetup);
+        EXPECT_STREQ(FormatSeatSentence(En(), table, kSeat1).c_str(), "Seat 2 (S): hand 290, +1160, total 3160");
+        HandSettlement drawn;
+        drawn.kind = ResultKind::Drawn;
+        const ScoreTable none = FormatScoreTable(Ru(), drawn, HandResult{}, SeatScores{2000, 2000, 2000, 2000}, kNoPeople);
+        EXPECT_STREQ(FormatSeatSentence(Ru(), none, kSeat0).c_str(), "Место 1 (В): без выплат, итого 2000");
+        EXPECT_STREQ(FormatStandingSentence(En(), StandingRow{3, "Seat 2", "1900", false}).c_str(), "3. Seat 2: 1900");
     }
 
     TEST(ScoreTextTest, TheOtherSummariesAndTheMoreLineInRussian) {
@@ -446,10 +569,10 @@ namespace BECore::Mahjong::Tests {
         const StandingsTable table = FormatStandings(En(), match, kNoPeople);
 
         EXPECT_STREQ(table.headline.c_str(), "Tied for first: Seat 1, Seat 3");
-        EXPECT_STREQ(table.rows[0].c_str(), "1. Seat 1: 2100");
-        EXPECT_STREQ(table.rows[1].c_str(), "1. Seat 3: 2100");
-        EXPECT_STREQ(table.rows[2].c_str(), "3. Seat 2: 1900");
-        EXPECT_STREQ(table.rows[3].c_str(), "3. Seat 4: 1900");
+        EXPECT_EQ(Standing(table.rows[0]), "1|Seat 1|2100|first");
+        EXPECT_EQ(Standing(table.rows[1]), "1|Seat 3|2100|first");
+        EXPECT_EQ(Standing(table.rows[2]), "3|Seat 2|1900");
+        EXPECT_EQ(Standing(table.rows[3]), "3|Seat 4|1900");
     }
 
     TEST(ScoreTextTest, ASingleWinnerOfTheMatchIsNamedAndYouIsMarkedForTheOnePerson) {
@@ -463,10 +586,10 @@ namespace BECore::Mahjong::Tests {
         const StandingsTable table = FormatStandings(En(), match, kDefaultSeatSetup);
 
         EXPECT_STREQ(table.headline.c_str(), "Seat 4 wins the match");
-        EXPECT_STREQ(table.rows[0].c_str(), "1. Seat 4: 2200");
-        EXPECT_STREQ(table.rows[1].c_str(), "2. Seat 3: 2100");
-        EXPECT_STREQ(table.rows[2].c_str(), "3. Seat 2: 2000");
-        EXPECT_STREQ(table.rows[3].c_str(), "4. Seat 1 You: 1700");
+        EXPECT_EQ(Standing(table.rows[0]), "1|Seat 4|2200|first");
+        EXPECT_EQ(Standing(table.rows[1]), "2|Seat 3|2100");
+        EXPECT_EQ(Standing(table.rows[2]), "3|Seat 2|2000");
+        EXPECT_EQ(Standing(table.rows[3]), "4|Seat 1 You|1700");
     }
 
     TEST(ScoreTextTest, TheStandingsAreWordedInEveryLanguage) {
@@ -479,8 +602,8 @@ namespace BECore::Mahjong::Tests {
 
         const StandingsTable tied = FormatStandings(Ru(), match, kNoPeople);
         EXPECT_STREQ(tied.headline.c_str(), "Делят первое место: Место 1, Место 3");
-        EXPECT_STREQ(tied.rows[0].c_str(), "1. Место 1: 2100");
-        EXPECT_STREQ(tied.rows[3].c_str(), "3. Место 4: 1900");
+        EXPECT_EQ(Standing(tied.rows[0]), "1|Место 1|2100|first");
+        EXPECT_EQ(Standing(tied.rows[3]), "3|Место 4|1900");
 
         HandSettlement second;
         second.kind = ResultKind::Drawn;
@@ -490,8 +613,28 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(other.ApplySettlement(second).has_value());
         const StandingsTable one = FormatStandings(Ru(), other, kDefaultSeatSetup);
         EXPECT_STREQ(one.headline.c_str(), "Место 4 выигрывает матч");
-        EXPECT_STREQ(one.rows[0].c_str(), "1. Место 4: 2200");
-        EXPECT_STREQ(one.rows[3].c_str(), "4. Место 1 Вы: 1700");
+        EXPECT_EQ(Standing(one.rows[0]), "1|Место 4|2200|first");
+        EXPECT_EQ(Standing(one.rows[3]), "4|Место 1 Вы|1700");
+    }
+
+    TEST(ScoreTextTest, AllFourSeatsTiedShareTheFirstPlaceAndALoneLastSeatIsFourth) {
+        Match match;
+        ASSERT_TRUE(match.Start(MahjongSettings{}, 1).has_value());
+        const StandingsTable level = FormatStandings(En(), match, kNoPeople);
+        for (const StandingRow& row : level.rows) {
+            EXPECT_EQ(row.place, 1);
+            EXPECT_TRUE(row.first);
+        }
+
+        HandSettlement settlement;
+        settlement.kind = ResultKind::Drawn;
+        settlement.deltas = {300, 0, 0, -300};
+        ASSERT_TRUE(match.ApplySettlement(settlement).has_value());
+        const StandingsTable table = FormatStandings(En(), match, kNoPeople);
+        EXPECT_EQ(Standing(table.rows[0]), "1|Seat 1|2300|first");
+        EXPECT_EQ(Standing(table.rows[1]), "2|Seat 2|2000");
+        EXPECT_EQ(Standing(table.rows[2]), "2|Seat 3|2000");
+        EXPECT_EQ(Standing(table.rows[3]), "4|Seat 4|1700");
     }
 
     TEST(ScoreTextTest, TheCoachTallyNamesTheHandAndTheMatch) {

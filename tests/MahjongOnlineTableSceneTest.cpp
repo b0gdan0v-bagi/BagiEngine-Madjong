@@ -546,7 +546,7 @@ namespace BECore::Mahjong::Tests {
         const StandingsTable table = FormatStandings(CoreManager::GetUIStrings(), match, SeatWho(_game->GetSession()));
         EXPECT_EQ(Text("MatchOver", "Headline"), std::string(table.headline.c_str()));
         for (int row = 0; row < kSeatCount; ++row) {
-            EXPECT_EQ(Text("MatchOver", Format("Standing{}", row).c_str()), std::string(table.rows[static_cast<size_t>(row)].c_str()));
+            EXPECT_EQ(Text("MatchOver", Format("Standing{}", row).c_str()), std::string(FormatStandingSentence(CoreManager::GetUIStrings(), table.rows[static_cast<size_t>(row)]).c_str()));
         }
         std::string rows;
         for (int row = 0; row < kSeatCount; ++row) {

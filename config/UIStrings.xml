@@ -81,6 +81,11 @@
         <string key="handover.summary.limit" text="Winning tile {tile}: score {score}"/>
         <string key="handover.summary.doubles" text="Winning tile {tile}: {points} points x {multiplier} = {raw}, score {score}"/>
         <string key="handover.summary.plain" text="Winning tile {tile}: {points} points, score {score}"/>
+        <string key="handover.col.seat" text="Seat"/>
+        <string key="handover.col.wind" text="Wind"/>
+        <string key="handover.col.hand" text="Hand"/>
+        <string key="handover.col.change" text="Change"/>
+        <string key="handover.col.total" text="Total"/>
         <string key="handover.seat.won" text="{name}: hand {hand}, {delta}, total {total}"/>
         <string key="handover.seat.drawn" text="{name}: no payment, total {total}"/>
         <string key="handover.more" text="+{n} more"/>
@@ -448,6 +453,11 @@
         <string key="handover.summary.limit" text="Выигрышная кость {tile}: счёт {score}"/>
         <string key="handover.summary.doubles" text="Выигрышная кость {tile}: {points} очк. x {multiplier} = {raw}, счёт {score}"/>
         <string key="handover.summary.plain" text="Выигрышная кость {tile}: {points} очк., счёт {score}"/>
+        <string key="handover.col.seat" text="Место"/>
+        <string key="handover.col.wind" text="Ветер"/>
+        <string key="handover.col.hand" text="Рука"/>
+        <string key="handover.col.change" text="Разница"/>
+        <string key="handover.col.total" text="Итого"/>
         <string key="handover.seat.won" text="{name}: рука {hand}, {delta}, итого {total}"/>
         <string key="handover.seat.drawn" text="{name}: без выплат, итого {total}"/>
         <string key="handover.more" text="ещё +{n}"/>
