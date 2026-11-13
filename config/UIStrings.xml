@@ -276,6 +276,9 @@
         <string key="options.speedSlow" text="Slow"/>
         <string key="options.speedNormal" text="Normal"/>
         <string key="options.speedFast" text="Fast"/>
+        <string key="upload.consent.text" text="Send your finished matches to the author? They help improve the computer players. Only the moves and the score are sent, no name or address. You can change this in Options."/>
+        <string key="upload.consent.accept" text="Send"/>
+        <string key="upload.consent.decline" text="Don't send"/>
         <string key="move.discard" text="{seat} discarded {tile}"/>
         <string key="move.discardCalling" text="{seat} discarded {tile} and declared a ready hand"/>
         <string key="move.chow" text="{seat} claimed {tile} for a chow"/>
@@ -616,6 +619,9 @@
         <string key="options.speedSlow" text="Медленно"/>
         <string key="options.speedNormal" text="Обычно"/>
         <string key="options.speedFast" text="Быстро"/>
+        <string key="upload.consent.text" text="Отправлять сыгранные матчи автору? Они нужны, чтобы улучшать компьютерных игроков. Уходят только ходы и счёт — без имени и адреса. Поменять можно в настройках."/>
+        <string key="upload.consent.accept" text="Отправлять"/>
+        <string key="upload.consent.decline" text="Не отправлять"/>
         <string key="move.discard" text="{seat} сбросило {tile}"/>
         <string key="move.discardCalling" text="{seat} сбросило {tile} и объявило заявку"/>
         <string key="move.chow" text="{seat} взяло {tile} в чи"/>

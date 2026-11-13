@@ -50,6 +50,7 @@
         <node ref="nodes/MahjongOptions"/>
         <node ref="nodes/MahjongOnline"/>
         <node ref="nodes/MahjongOnlineEntry"/>
+        <node ref="nodes/MahjongConsent"/>
         <node ref="nodes/MahjongRules"/>
         <node ref="nodes/MahjongRulesAction"/>
       </nodes>

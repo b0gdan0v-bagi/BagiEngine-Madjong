@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<!--
+  The question of the tester upload (MahjongUploadComponent, WebUploadSink.h): shown exactly while the consent is Unasked, which is only
+  where the page can post (a browser build with the server), so the desktop never sees it. A modal Screen canvas like Options (ScaleWithScreen,
+  minScale 0.6), hidden here, layer 34: over Setup (30), the Options page (31), the online panel (32) and the entry pad (33), under the rules (35).
+  The owner's words are the keys upload.consent.text / .accept / .decline, nothing else is said here; the component answers the two buttons
+  (MahjongUploadAccept, MahjongUploadDecline), stores the choice and closes the screen. A later wording that names the Google sign-in adds
+  upload.consent.googleText beside the first one.
+  The plate is the safe area at most 320 high (32 padding + the text + 16 spacing + a 64 button row) and 560 wide. The text takes what the
+  buttons leave and may shrink (AutoFit, down to 12 units, wrap on) instead of being cut, in both languages, in the smallest windows too;
+  the buttons stay at 64 (a touch target). MahjongUploadSceneTest holds the shape, the touch size and the words on the whole size matrix.
+-->
+<node name="Consent" layer="34" contentVersion="5">
+  <components>
+    <component type="MahjongUploadComponent" />
+    <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" modal="true" visible="false">
+      <elements>
+        <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
+        <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="560" height="100%" maxHeight="320" direction="Vertical" spacing="16" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
+          <children>
+            <element type="UIElement" name="ConsentText" flex="1" fontSize="22" color="58,66,92,255">
+              <components>
+                <component type="UITextComponent" text="{#upload.consent.text}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+              </components>
+            </element>
+            <element type="UIStack" name="ConsentButtons" height="64" direction="Horizontal" spacing="8" crossAlign="Stretch">
+              <children>
+                <element type="UIElement" name="ConsentDecline" flex="1" fontSize="28" color="45,75,120,255">
+                  <components>
+                    <component type="UITextComponent" text="{#upload.consent.decline}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UIInputClicker" action="MahjongUploadDecline"/>
+                  </components>
+                </element>
+                <element type="UIElement" name="ConsentAccept" flex="1" fontSize="28" color="40,110,60,255">
+                  <components>
+                    <component type="UITextComponent" text="{#upload.consent.accept}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UIInputClicker" action="MahjongUploadAccept"/>
+                  </components>
+                </element>
+              </children>
+            </element>
+          </children>
+        </element>
+      </elements>
+    </component>
+  </components>
+</node>
