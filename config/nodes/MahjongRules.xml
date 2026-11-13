@@ -20,11 +20,11 @@
     <component type="UICanvasComponent" space="SceneView" useSafeArea="true" modal="true" visible="false">
       <elements>
         <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
-        <element type="UIStack" name="Plate" anchor="Center" y="-40" width="94%" maxWidth="960" height="588" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
+        <element type="UIStack" name="Plate" anchor="Center" y="-40" width="94%" maxWidth="960" height="588" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true" cornerRadius="16" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="26,29,38,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
           <children>
-            <element type="UIElement" name="Title" height="48" fontSize="28" color="58,66,92,255">
+            <element type="UIElement" name="Title" height="48" fontSize="28" color="58,66,92,255" cornerRadius="12" gradientDirection="Vertical" gradientColor="42,48,68,255" highlight="255,255,255,60">
               <components>
-                <component type="UITextComponent" text="{rulesTitle}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="18"/>
+                <component type="UITextComponent" fontFamily="Russo One" textOutline="2,16,18,26,255" text="{rulesTitle}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="18"/>
               </components>
             </element>
             <element type="UIElement" name="Pager" height="28" fontSize="18">

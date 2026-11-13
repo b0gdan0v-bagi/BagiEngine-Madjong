@@ -5,16 +5,16 @@
     <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.7" useSafeArea="true" modal="true" visible="false">
       <elements>
         <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
-        <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="560" height="208" direction="Vertical" spacing="16" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
+        <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="560" height="208" direction="Vertical" spacing="16" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true" cornerRadius="16" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="26,29,38,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
           <children>
-            <element type="UIElement" name="HandoffText" height="96" fontSize="28" color="58,66,92,255">
+            <element type="UIElement" name="HandoffText" height="96" fontSize="28" color="58,66,92,255" cornerRadius="12" gradientDirection="Vertical" gradientColor="42,48,68,255" highlight="255,255,255,60">
               <components>
-                <component type="UITextComponent" text="{#cover.text}" align="Center" verticalAlign="Center"/>
+                <component type="UITextComponent" fontFamily="Russo One" textOutline="2,16,18,26,255" text="{#cover.text}" align="Center" verticalAlign="Center"/>
               </components>
             </element>
-            <element type="UIElement" name="Reveal" height="64" fontSize="28" color="40,110,60,255">
+            <element type="UIElement" name="Reveal" height="64" fontSize="28" color="40,110,60,255" cornerRadius="12" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="26,78,40,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
               <components>
-                <component type="UITextComponent" text="{#cover.show}" align="Center" verticalAlign="Center" wrap="false"/>
+                <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#cover.show}" align="Center" verticalAlign="Center" wrap="false"/>
                 <component type="UIInputClicker" action="MahjongReveal"/>
               </components>
             </element>
