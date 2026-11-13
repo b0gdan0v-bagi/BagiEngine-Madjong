@@ -499,7 +499,11 @@ namespace BECore::Mahjong {
         UIVars& vars = CoreManager::GetUIVars();
         vars.Set("matchOverHeadline"_intern, eastl::string_view(table.headline));
         for (Seat row = 0; row < kSeatCount; ++row) {
-            vars.Set(SeatVar("standing", row), eastl::string_view(FormatStandingSentence(strings, table.rows[row])));
+            const StandingRow& standing = table.rows[row];
+            vars.Set(SeatVar("standingPlace", row), eastl::string_view(Format("{}", standing.place)));
+            vars.Set(SeatVar("standingName", row), eastl::string_view(standing.name));
+            vars.Set(SeatVar("standingScore", row), eastl::string_view(standing.score));
+            UICanvasComponent::SetElementVisibleByName(GetScene(), SeatVar("StandingFirst", row), standing.first);
         }
         const eastl::string tally = game.CoachActive() ? FormatCoachTally(strings, CoachTally{}, game.GetCoach().MatchTallyOf(game.CoachContext().startCount)) : eastl::string();
         vars.Set("matchOverCoach"_intern, eastl::string_view(tally));

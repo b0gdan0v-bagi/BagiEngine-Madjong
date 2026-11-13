@@ -563,12 +563,14 @@ namespace BECore::Mahjong::Tests {
         const Match& match = _game->GetMatch();
         const StandingsTable table = FormatStandings(CoreManager::GetUIStrings(), match, SeatWho(_game->GetSession()));
         EXPECT_EQ(Text("MatchOver", "Headline"), std::string(table.headline.c_str()));
-        for (int row = 0; row < kSeatCount; ++row) {
-            EXPECT_EQ(Text("MatchOver", Format("Standing{}", row).c_str()), std::string(FormatStandingSentence(CoreManager::GetUIStrings(), table.rows[static_cast<size_t>(row)]).c_str()));
-        }
         std::string rows;
         for (int row = 0; row < kSeatCount; ++row) {
-            rows += Text("MatchOver", Format("Standing{}", row).c_str()) + "\n";
+            const StandingRow& expected = table.rows[static_cast<size_t>(row)];
+            EXPECT_EQ(Text("MatchOver", Format("StandingPlace{}", row).c_str()), std::string(Format("{}", expected.place).c_str()));
+            EXPECT_EQ(Text("MatchOver", Format("StandingName{}", row).c_str()), std::string(expected.name.c_str()));
+            EXPECT_EQ(Text("MatchOver", Format("StandingScore{}", row).c_str()), std::string(expected.score.c_str()));
+            EXPECT_EQ(OnScreen("MatchOver", Format("StandingFirst{}", row).c_str()), expected.first);
+            rows += Text("MatchOver", Format("StandingName{}", row).c_str()) + "\n";
         }
         EXPECT_NE(rows.find(std::string(kHostName) + " You"), std::string::npos) << rows;
         EXPECT_NE(rows.find("Seat 2"), std::string::npos) << "a computer keeps its number: " << rows;

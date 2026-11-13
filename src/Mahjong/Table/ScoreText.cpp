@@ -241,10 +241,6 @@ namespace BECore::Mahjong {
         return table;
     }
 
-    eastl::string FormatStandingSentence(const UIStrings& strings, const StandingRow& row) {
-        return Tr(strings, "matchover.row", {{"place", Format("{}", row.place)}, {"name", row.name}, {"score", row.score}});
-    }
-
     eastl::string FormatCoachTally(const UIStrings& strings, const CoachTally& hand, const CoachTally& match) {
         if (match.moves <= 0) {
             return {};

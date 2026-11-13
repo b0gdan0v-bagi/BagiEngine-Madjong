@@ -1209,7 +1209,8 @@ namespace BECore::Mahjong::Tests {
         Draw();
         EXPECT_EQ(Text("MatchOver", "NewGame"), "Новая игра");
         EXPECT_EQ(Text("MatchOver", "Headline"), FormatStandings(CoreManager::GetUIStrings(), _game->GetMatch(), _game->GetSession().Seats()).headline.c_str());
-        EXPECT_EQ(Var("standing0").find("1. "), 0u);
+        EXPECT_EQ(Var("standingPlace0"), "1");
+        EXPECT_EQ(Var("standingName0"), FormatStandings(CoreManager::GetUIStrings(), _game->GetMatch(), _game->GetSession().Seats()).rows[0].name.c_str());
     }
 
     TEST_F(MahjongHudTest, TheGameStartsWithTheSeatChoiceOpenOnTheSeatsOfTheGame) {

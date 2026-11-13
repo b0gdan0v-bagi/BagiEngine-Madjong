@@ -89,9 +89,6 @@ namespace BECore::Mahjong {
     [[nodiscard]] ScoreTable FormatScoreTable(const UIStrings& strings, const HandSettlement& settlement, const HandResult& result, const SeatScores& totalsAfter, const SeatWho& who,
                                               const PlayerHand* winnerHand = nullptr);
 
-    /// The one-line standing the node of the standings still shows (`matchover.row`): replaced by the badge row at WP 4.
-    [[nodiscard]] eastl::string FormatStandingSentence(const UIStrings& strings, const StandingRow& row);
-
     /// The standings of a match: equal points share a place and keep the seat order. The seats carry no wind (the match is over).
     [[nodiscard]] StandingsTable FormatStandings(const UIStrings& strings, const Match& match, const SeatWho& who);
 

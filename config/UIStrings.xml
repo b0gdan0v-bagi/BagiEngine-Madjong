@@ -91,7 +91,6 @@
         <string key="handover.finish" text="Finish match"/>
         <string key="matchover.wins" text="{winner} wins the match"/>
         <string key="matchover.tied" text="Tied for first: {seats}"/>
-        <string key="matchover.row" text="{place}. {name}: {score}"/>
         <string key="button.Win" text="Mahjong!"/>
         <string key="button.ClaimMahjong" text="Mahjong!"/>
         <string key="button.ClaimPung" text="Pung"/>
@@ -461,7 +460,6 @@
         <string key="handover.finish" text="Закончить матч"/>
         <string key="matchover.wins" text="{winner} выигрывает матч"/>
         <string key="matchover.tied" text="Делят первое место: {seats}"/>
-        <string key="matchover.row" text="{place}. {name}: {score}"/>
         <string key="button.Win" text="Маджонг!"/>
         <string key="button.ClaimMahjong" text="Маджонг!"/>
         <string key="button.ClaimPung" text="Пун"/>

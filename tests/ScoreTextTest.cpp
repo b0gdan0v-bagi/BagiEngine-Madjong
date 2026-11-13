@@ -517,10 +517,6 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
-    TEST(ScoreTextTest, TheTransitionalStandingSentenceKeepsTheOldRow) {
-        EXPECT_STREQ(FormatStandingSentence(En(), StandingRow{3, "Seat 2", "1900", false}).c_str(), "3. Seat 2: 1900");
-    }
-
     TEST(ScoreTextTest, TheOtherSummariesAndTheMoreLineInRussian) {
         HandSettlement settlement = MadeUpWin({MakeLine(ScoreKind::ThirteenOrphans, "", 0, 0)});
         settlement.breakdowns[kSeat2].limitHand = ScoreKind::ThirteenOrphans;
