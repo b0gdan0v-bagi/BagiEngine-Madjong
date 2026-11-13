@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!--
   The button of the score table (MahjongNextHand, which settles the hand and deals on) in the centre of the table: in the window's centre,
-  in the gap that the plate of HandOver leaves for it (the element ButtonGap, 64 high, between the seat rows and the lines). A Screen
+  in the gap that the plate of HandOver leaves for it (the element ButtonGap, 64 high, between the table of the seats and the details: the winning tiles, the lines, the summary). A Screen
   canvas with the settings of HudMenu (match 0.5, minScale 0.6: the 56 unit button is 33.6 px), so it is a touch target in any window. Shown
   and hidden by MahjongHudComponent together with HandOver, which is modal and takes every click that the button does not. It is 56 high at
   22, 176 wide, and its word shrinks (AutoFit): "Следующая раздача" does not fit 176 at 22. The button and the plate are on two scales (the

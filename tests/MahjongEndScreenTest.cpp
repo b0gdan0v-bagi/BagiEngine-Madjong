@@ -38,13 +38,24 @@ namespace BECore::Mahjong::Tests {
         constexpr float kScoreTableHeight = 508.0f;     // the phone profile's large hand starts at y 609.6, so the plate ends at 606
         constexpr float kScoreCoachRowHeight = 24.0f;   // HandCoachRow, the coach's tally: hidden unless the HUD has a line for it
         constexpr float kScoreButtonGapHeight = 64.0f;  // the gap of the plate that the Next hand button sits in
+        /// The table of the plate: a caption row and four seat rows 4 apart (`ScoreTable`), and under the gap `Details` (the winning tiles, the lines,
+        /// the coach's row and the summary, 4 apart: the plate is exactly full with the tally row shown).
+        constexpr float kScoreCaptionHeight = 24.0f;
+        constexpr float kScoreRowHeight = 28.0f;
+        constexpr float kScoreTableGap = 4.0f;
+        constexpr float kScoreTilesHeight = 32.0f;
+        constexpr float kScoreTileWidth = 24.0f;
+        constexpr float kScoreLineRowHeight = 20.0f;
+        constexpr float kScoreSummaryHeight = 24.0f;
+        constexpr int kScoreColumns = 5;  // seat, wind, hand, change, total
         /// The same in the portrait view: the plate lies between the bonus columns of the side seats (x 94..118 and 602..626, y 308..452) and above the
         /// viewer's bonus tiles (from y 1112); two columns of lines and a taller gap, for the ratio of the window scale to the table's fit of 1.6
         constexpr float kPortraitScoreTableLeft = 124.0f;
         constexpr float kPortraitScoreTableRight = 596.0f;
         constexpr float kPortraitScoreTableTop = 92.0f;
         constexpr float kPortraitScoreTableBottom = 1108.0f;
-        constexpr float kPortraitScoreTableHeight = 748.0f;
+        constexpr float kPortraitScoreTableHeight = 760.0f;
+        constexpr float kPortraitScoreRowHeight = 32.0f;
         constexpr float kPortraitScoreCoachRowHeight = 48.0f;  // two lines of 18
         constexpr float kPortraitScoreBandHeight = 72.0f;      // the headline and the summary: two lines of the narrow plate
         constexpr float kPortraitScoreButtonGapHeight = 112.0f;
@@ -86,6 +97,18 @@ namespace BECore::Mahjong::Tests {
         };
         constexpr Output kOutputs[] = {{1280.0f, 720.0f}, {731.0f, 411.0f}, {480.0f, 480.0f}, {480.0f, 853.0f}, {1707.0f, 480.0f}};
 
+        /// The worst case of the score table's shape: sixteen lines, the tally row and the eighteen tiles of a hand of four kongs, all shown.
+        void ShowTheWorstScoreTable(UICanvasComponent& canvas) {
+            for (int i = 0; i < kMaxScoreLines; ++i) {
+                ASSERT_TRUE(canvas.SetElementVisible(PoolString::Intern(Format("ScoreLine{}", i)), true));
+            }
+            ASSERT_TRUE(canvas.SetElementVisible("HandCoachRow"_intern, true));
+            ASSERT_TRUE(canvas.SetElementVisible("WinTiles"_intern, true));
+            for (int i = 0; i < kMaxWinningTiles; ++i) {
+                ASSERT_TRUE(canvas.SetElementVisible(PoolString::Intern(Format("WinTile{}", i)), true));
+            }
+        }
+
         /// The longest texts of the screens in the current language of `strings`: the real formatters over every winner, East, kind of win, seat of the
         /// discarder, seat of the one person (the mark of "you") and winning tile, the longest found by code points.
         /// The tiles a line of this kind can name: a set or a pair any tile of the hand, a bonus line a flower or a season, a dragon set a dragon, a wind set a wind.
@@ -122,8 +145,6 @@ namespace BECore::Mahjong::Tests {
             }
             return longest;
         }
-
-        constexpr int kScoreColumns = 5;
 
         /// The cell of a row of the score table by column: name, wind, hand, change, total.
         const eastl::string& CellOf(const ScoreRow& row, int column) {
@@ -229,6 +250,37 @@ namespace BECore::Mahjong::Tests {
 
     class MahjongEndScreenTest : public MahjongTableTestBase {
     protected:
+        /// Expects the rows of the table and the tiles to lie inside the plate's inner area and the cells inside their row.
+        void ExpectTheTableInsideThePlate(const Rect& plate, const char* label) const {
+            const Rect inner(plate.x + kModalPadding, plate.y + kModalPadding, plate.w - 2.0f * kModalPadding, plate.h - 2.0f * kModalPadding);
+            auto inside = [&](const Rect& rect, const Rect& frame, const eastl::string& what) {
+                EXPECT_GE(rect.x, frame.x - 0.01f) << label << ": " << what.c_str();
+                EXPECT_LE(rect.x + rect.w, frame.x + frame.w + 0.01f) << label << ": " << what.c_str();
+                EXPECT_GE(rect.y, frame.y - 0.01f) << label << ": " << what.c_str();
+                EXPECT_LE(rect.y + rect.h, frame.y + frame.h + 0.01f) << label << ": " << what.c_str();
+            };
+            for (const char* name : {"ScoreTable", "ScoreHeader", "ButtonGap", "Details", "WinTiles", "Lines", "HandCoachRow", "Summary"}) {
+                const UIElement* element = Element("HandOver", name);
+                ASSERT_NE(element, nullptr) << name;
+                inside(element->rect, inner, name);
+            }
+            for (int row = 0; row < kSeatCount; ++row) {
+                const UIElement* seatRow = Element("HandOver", Format("SeatRow{}", row).c_str());
+                ASSERT_NE(seatRow, nullptr) << row;
+                inside(seatRow->rect, inner, Format("SeatRow{}", row));
+                for (int column = 0; column < kScoreColumns; ++column) {
+                    const UIElement* cell = Element("HandOver", Format("ScoreCell{}_{}", row, column).c_str());
+                    ASSERT_NE(cell, nullptr);
+                    inside(cell->rect, seatRow->rect, Format("ScoreCell{}_{}", row, column));
+                }
+            }
+            for (int i = 0; i < kMaxWinningTiles; ++i) {
+                const UIElement* tile = Element("HandOver", Format("WinTile{}", i).c_str());
+                ASSERT_NE(tile, nullptr) << i;
+                inside(tile->rect, Element("HandOver", "WinTiles")->rect, Format("WinTile{}", i));
+            }
+        }
+
         void StartShortMatch(const SeatSetup& seats, uint32_t seed = kSeed) {
             MahjongSettings settings = _game->GetSettings();
             settings.handsPerMatch = kRoundsPerMatch;
@@ -634,10 +686,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(PlayHandOver());
         auto canvas = Canvas("HandOver");
         ASSERT_TRUE(canvas);
-        for (int i = 0; i < kMaxScoreLines; ++i) {
-            ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(Format("ScoreLine{}", i)), true));
-        }
-        ASSERT_TRUE(canvas->SetElementVisible("HandCoachRow"_intern, true));  // the worst case: the tally row shown
+        ASSERT_NO_FATAL_FAILURE(ShowTheWorstScoreTable(*canvas));  // the worst case: the sixteen lines, the tally row and eighteen tiles shown
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             CoreManager::GetUIVars().Set("handOverHeadline"_intern, eastl::string_view(FindWorstTexts(CoreManager::GetUIStrings()).headline));
@@ -661,29 +710,52 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(headline->rect.w, plate.w - 2.0f * kModalPadding);
             EXPECT_EQ(headline->rect.h, kScoreHeadlineHeight) << "one line of 28";
 
-            const Rect* above = &headline->rect;
+            // The table: the caption row and the four seat rows, 4 apart, in one stack 8 under the headline
+            const UIElement* table = Element("HandOver", "ScoreTable");
+            const UIElement* caption = Element("HandOver", "ScoreHeader");
+            ASSERT_TRUE(table != nullptr && caption != nullptr);
+            EXPECT_EQ(GapBelow(headline->rect, table->rect), kModalGap);
+            EXPECT_EQ(caption->rect.y, table->rect.y);
+            EXPECT_EQ(caption->rect.h, kScoreCaptionHeight);
+            EXPECT_EQ(caption->rect.w, headline->rect.w);
+            const Rect* above = &caption->rect;
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 const UIElement* row = Element("HandOver", Format("SeatRow{}", seat).c_str());
                 ASSERT_NE(row, nullptr);
                 EXPECT_TRUE(SameColor(row->color, PaletteColor("surfaceRaised"))) << seat;
-                EXPECT_EQ(GapBelow(*above, row->rect), kModalGap) << "row " << seat;
+                EXPECT_EQ(GapBelow(*above, row->rect), kScoreTableGap) << "row " << seat;
+                EXPECT_EQ(row->rect.h, kScoreRowHeight) << seat;
                 EXPECT_EQ(row->rect.x, headline->rect.x) << seat;
                 EXPECT_EQ(row->rect.w, headline->rect.w) << seat;
                 above = &row->rect;
             }
+            EXPECT_EQ(table->rect.y + table->rect.h, above->y + above->h) << "the table ends with its last row";
 
-            // The gap for the Next hand button: an empty element of the stack between the seat rows and the lines
+            // The gap for the Next hand button: an empty element of the stack between the table and the details
             const UIElement* buttonGap = Element("HandOver", "ButtonGap");
             ASSERT_NE(buttonGap, nullptr);
-            EXPECT_EQ(GapBelow(*above, buttonGap->rect), kModalGap);
+            EXPECT_EQ(GapBelow(table->rect, buttonGap->rect), kModalGap);
             EXPECT_EQ(buttonGap->rect.h, kScoreButtonGapHeight);
             EXPECT_EQ(buttonGap->rect.x, headline->rect.x);
             EXPECT_EQ(buttonGap->rect.w, headline->rect.w);
-            above = &buttonGap->rect;
 
+            // Under the gap the details, 4 apart: the winning tiles, the lines, the tally row, the summary
+            const UIElement* details = Element("HandOver", "Details");
+            const UIElement* tiles = Element("HandOver", "WinTiles");
             const UIElement* lines = Element("HandOver", "Lines");
-            ASSERT_NE(lines, nullptr);
-            EXPECT_EQ(GapBelow(*above, lines->rect), kModalGap);
+            ASSERT_TRUE(details != nullptr && tiles != nullptr && lines != nullptr);
+            EXPECT_EQ(GapBelow(buttonGap->rect, details->rect), kModalGap);
+            EXPECT_EQ(tiles->rect.y, details->rect.y);
+            EXPECT_EQ(tiles->rect.h, kScoreTilesHeight);
+            EXPECT_EQ(tiles->rect.w, headline->rect.w);
+            for (int i = 0; i < kMaxWinningTiles; ++i) {
+                const UIElement* tile = Element("HandOver", Format("WinTile{}", i).c_str());
+                ASSERT_NE(tile, nullptr) << i;
+                EXPECT_EQ(tile->rect.w, kScoreTileWidth) << i;
+                EXPECT_EQ(tile->rect.h, kScoreTilesHeight) << i;
+            }
+            EXPECT_EQ(GapBelow(tiles->rect, lines->rect), kScoreTableGap);
+            EXPECT_EQ(lines->rect.w, headline->rect.w);
             std::vector<float> columns;  // the distinct left edges of the lines: four columns
             for (int i = 0; i < kMaxScoreLines; ++i) {
                 const UIElement* line = Element("HandOver", Format("ScoreLine{}", i).c_str());
@@ -691,6 +763,7 @@ namespace BECore::Mahjong::Tests {
                 if (std::find(columns.begin(), columns.end(), line->rect.x) == columns.end()) {
                     columns.push_back(line->rect.x);
                 }
+                EXPECT_EQ(line->rect.h, kScoreLineRowHeight) << i;
                 EXPECT_GE(line->rect.x, lines->rect.x) << i;
                 EXPECT_LE(line->rect.x + line->rect.w, lines->rect.x + lines->rect.w) << i;
                 EXPECT_GE(line->rect.y, lines->rect.y) << i;
@@ -702,7 +775,7 @@ namespace BECore::Mahjong::Tests {
             const UIElement* coachRow = Element("HandOver", "HandCoachRow");
             ASSERT_NE(coachRow, nullptr);
             EXPECT_EQ(coachRow->rect.h, kScoreCoachRowHeight);
-            EXPECT_EQ(GapBelow(*above, coachRow->rect), kModalGap) << "the tally row lies under the lines";
+            EXPECT_EQ(GapBelow(*above, coachRow->rect), kScoreTableGap) << "the tally row lies under the lines";
             EXPECT_EQ(coachRow->rect.w, headline->rect.w);
             above = &coachRow->rect;
 
@@ -710,10 +783,12 @@ namespace BECore::Mahjong::Tests {
             ASSERT_NE(summary, nullptr);
             EXPECT_TRUE(SameColor(summary->color, PaletteColor("surfaceRaised")));
             EXPECT_TRUE(SameColor(summary->GetComponent<UITextComponent>()->textColor, PaletteColor("textMuted")));
-            EXPECT_EQ(GapBelow(*above, summary->rect), kModalGap);
-            above = &summary->rect;
+            EXPECT_EQ(summary->rect.h, kScoreSummaryHeight);
+            EXPECT_EQ(GapBelow(*above, summary->rect), kScoreTableGap);
 
-            EXPECT_EQ(summary->rect.y + summary->rect.h, plate.y + plate.h - kModalPadding) << "the plate ends with the summary band: the button is in the gap above the lines";
+            EXPECT_EQ(summary->rect.y + summary->rect.h, plate.y + plate.h - kModalPadding) << "the plate ends with the summary band: the button is in the gap above the details";
+            EXPECT_EQ(details->rect.y + details->rect.h, summary->rect.y + summary->rect.h) << "the details stack is exactly full with the tally row shown";
+            ExpectTheTableInsideThePlate(plate, "landscape");
 
             // The score table leaves the hands face up under it: no dim, and the plate is the only thing that blocks the clicks
             EXPECT_EQ(Element("HandOver", "Dim"), nullptr) << "a dim would cover the hands";
@@ -738,7 +813,7 @@ namespace BECore::Mahjong::Tests {
             // In the gap at the design size, with room to spare on both sides (a grid unit at least); the gap is 64 and the button 56
             EXPECT_GE(next->rect.y, buttonGap->rect.y) << "inside the gap, not on the seat rows";
             EXPECT_LE(next->rect.y + next->rect.h, buttonGap->rect.y + buttonGap->rect.h) << "inside the gap, not on the lines";
-            for (const char* name : {"Headline", "SeatRow0", "SeatRow1", "SeatRow2", "SeatRow3", "Lines", "HandCoachRow", "Summary"}) {
+            for (const char* name : {"Headline", "ScoreHeader", "SeatRow0", "SeatRow1", "SeatRow2", "SeatRow3", "WinTiles", "Lines", "HandCoachRow", "Summary"}) {
                 EXPECT_FALSE(Intersects(next->rect, Element("HandOver", name)->rect)) << name;
             }
             EXPECT_TRUE(Intersects(next->rect, plate)) << "the button lies on the plate";
@@ -751,10 +826,7 @@ namespace BECore::Mahjong::Tests {
         auto canvas = Canvas("HandOver");
         auto action = Canvas("HandOverAction");
         ASSERT_TRUE(canvas && action);
-        for (int i = 0; i < kMaxScoreLines; ++i) {
-            ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(Format("ScoreLine{}", i)), true));
-        }
-        ASSERT_TRUE(canvas->SetElementVisible("HandCoachRow"_intern, true));  // the worst case: the tally row shown
+        ASSERT_NO_FATAL_FAILURE(ShowTheWorstScoreTable(*canvas));  // the worst case: the sixteen lines, the tally row and eighteen tiles shown
         const MatrixWindow window = DesignWindowOf(TableShape::Portrait);
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
@@ -774,24 +846,45 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(plate.h, kPortraitScoreTableHeight);
             EXPECT_EQ(plate.x + plate.w * 0.5f, kPortraitViewWidth * 0.5f) << "in the middle of the table";
 
-            // The anatomy of the landscape plate: padding, the headline, the four seat rows, the gap, the lines, the summary; the gap and the
-            // two bands are taller, the type of the headline and of the seat rows one step smaller
+            // The anatomy of the landscape plate: padding, the headline, the table, the gap, the details; the gap and the two bands are taller,
+            // the rows of the table one step taller and the type of the headline one step smaller
             const UIElement* headline = Element("HandOver", "Headline");
+            const UIElement* table = Element("HandOver", "ScoreTable");
             const UIElement* gap = Element("HandOver", "ButtonGap");
+            const UIElement* details = Element("HandOver", "Details");
+            const UIElement* tiles = Element("HandOver", "WinTiles");
             const UIElement* lines = Element("HandOver", "Lines");
             const UIElement* summary = Element("HandOver", "Summary");
             const UIElement* coachRow = Element("HandOver", "HandCoachRow");
-            ASSERT_TRUE(headline != nullptr && gap != nullptr && lines != nullptr && summary != nullptr && coachRow != nullptr);
+            ASSERT_TRUE(headline != nullptr && table != nullptr && gap != nullptr && details != nullptr && tiles != nullptr && lines != nullptr && summary != nullptr && coachRow != nullptr);
             EXPECT_EQ(headline->rect.y, plate.y + kModalPadding);
             EXPECT_EQ(headline->rect.w, plate.w - 2.0f * kModalPadding);
             EXPECT_EQ(headline->rect.h, kPortraitScoreBandHeight);
-            EXPECT_EQ(summary->rect.h, kPortraitScoreBandHeight);
+            EXPECT_EQ(GapBelow(headline->rect, table->rect), kModalGap);
+            EXPECT_EQ(Element("HandOver", "ScoreHeader")->rect.h, kScoreCaptionHeight);
+            for (Seat seat = 0; seat < kSeatCount; ++seat) {
+                const UIElement* row = Element("HandOver", Format("SeatRow{}", seat).c_str());
+                ASSERT_NE(row, nullptr);
+                EXPECT_EQ(row->rect.h, kPortraitScoreRowHeight) << seat;
+            }
+            EXPECT_EQ(GapBelow(table->rect, gap->rect), kModalGap);
             EXPECT_EQ(gap->rect.h, kPortraitScoreButtonGapHeight);
-            EXPECT_EQ(GapBelow(gap->rect, lines->rect), kModalGap);
-            EXPECT_EQ(GapBelow(lines->rect, coachRow->rect), kModalGap);
+            EXPECT_EQ(GapBelow(gap->rect, details->rect), kModalGap);
+            EXPECT_EQ(tiles->rect.y, details->rect.y);
+            EXPECT_EQ(tiles->rect.h, kScoreTilesHeight);
+            for (int i = 0; i < kMaxWinningTiles; ++i) {
+                const UIElement* tile = Element("HandOver", Format("WinTile{}", i).c_str());
+                ASSERT_NE(tile, nullptr) << i;
+                EXPECT_EQ(tile->rect.w, kScoreTileWidth) << "the narrow plate holds all eighteen tiles at the size of the landscape one: " << i;
+            }
+            EXPECT_EQ(GapBelow(tiles->rect, lines->rect), kScoreTableGap);
+            EXPECT_EQ(GapBelow(lines->rect, coachRow->rect), kScoreTableGap);
             EXPECT_EQ(coachRow->rect.h, kPortraitScoreCoachRowHeight);
-            EXPECT_EQ(GapBelow(coachRow->rect, summary->rect), kModalGap);
+            EXPECT_EQ(GapBelow(coachRow->rect, summary->rect), kScoreTableGap);
+            EXPECT_EQ(summary->rect.h, kPortraitScoreBandHeight);
             EXPECT_EQ(summary->rect.y + summary->rect.h, plate.y + plate.h - kModalPadding) << "the plate ends with the summary band";
+            EXPECT_EQ(details->rect.y + details->rect.h, summary->rect.y + summary->rect.h) << "the details stack is exactly full";
+            ExpectTheTableInsideThePlate(plate, "portrait");
             std::vector<float> columns;
             for (int i = 0; i < kMaxScoreLines; ++i) {
                 const UIElement* line = Element("HandOver", Format("ScoreLine{}", i).c_str());
@@ -854,10 +947,7 @@ namespace BECore::Mahjong::Tests {
         auto canvas = Canvas("HandOver");
         auto action = Canvas("HandOverAction");
         ASSERT_TRUE(canvas && action);
-        for (int i = 0; i < kMaxScoreLines; ++i) {
-            ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(Format("ScoreLine{}", i)), true));
-        }
-        ASSERT_TRUE(canvas->SetElementVisible("HandCoachRow"_intern, true));  // the worst case: the tally row shown
+        ASSERT_NO_FATAL_FAILURE(ShowTheWorstScoreTable(*canvas));  // the worst case: the sixteen lines, the tally row and eighteen tiles shown
         const MatrixWindow window = DesignWindowOf(TableShape::Narrow);
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
@@ -884,12 +974,15 @@ namespace BECore::Mahjong::Tests {
             const UIElement* lines = Element("HandOver", "Lines");
             const UIElement* coachRow = Element("HandOver", "HandCoachRow");
             const UIElement* summary = Element("HandOver", "Summary");
-            ASSERT_TRUE(headline != nullptr && gap != nullptr && lines != nullptr && coachRow != nullptr && summary != nullptr);
+            const UIElement* details = Element("HandOver", "Details");
+            ASSERT_TRUE(headline != nullptr && gap != nullptr && lines != nullptr && coachRow != nullptr && summary != nullptr && details != nullptr);
             EXPECT_EQ(headline->rect.w, plate.w - 2.0f * kModalPadding);
             EXPECT_EQ(headline->rect.h, kScoreHeadlineHeight);
             EXPECT_EQ(coachRow->rect.h, kScoreCoachRowHeight);
             EXPECT_EQ(summary->rect.y + summary->rect.h, plate.y + plate.h - kModalPadding) << "the plate ends with the summary band";
+            EXPECT_EQ(details->rect.y + details->rect.h, summary->rect.y + summary->rect.h) << "the details stack is exactly full";
             EXPECT_EQ(gap->rect.h, kScoreButtonGapHeight);
+            ExpectTheTableInsideThePlate(plate, "narrow");
             std::vector<float> columns;
             for (int i = 0; i < kMaxScoreLines; ++i) {
                 const UIElement* line = Element("HandOver", Format("ScoreLine{}", i).c_str());
@@ -929,10 +1022,7 @@ namespace BECore::Mahjong::Tests {
         auto action = Canvas("HandOverAction");
         ASSERT_TRUE(canvas && action);
         ASSERT_TRUE(Shown("HandOver") && Shown("HandOverAction"));
-        for (int i = 0; i < kMaxScoreLines; ++i) {
-            ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(Format("ScoreLine{}", i)), true));
-        }
-        ASSERT_TRUE(canvas->SetElementVisible("HandCoachRow"_intern, true));  // the worst case: the tally row shown
+        ASSERT_NO_FATAL_FAILURE(ShowTheWorstScoreTable(*canvas));  // the worst case: the sixteen lines, the tally row and eighteen tiles shown
 
         // The score table promises that the four hands stay readable under it: there is no dim, it is the plate that is modal
         EXPECT_EQ(Element("HandOver", "Dim"), nullptr);
@@ -978,10 +1068,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(PlayHandOver());
         auto canvas = Canvas("HandOver");
         ASSERT_TRUE(canvas);
-        for (int i = 0; i < kMaxScoreLines; ++i) {
-            ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(Format("ScoreLine{}", i)), true));
-        }
-        ASSERT_TRUE(canvas->SetElementVisible("HandCoachRow"_intern, true));  // the worst case: the tally row shown
+        ASSERT_NO_FATAL_FAILURE(ShowTheWorstScoreTable(*canvas));  // the worst case: the sixteen lines, the tally row and eighteen tiles shown
         // The plate is a SceneView canvas and follows the table (it has ignoreSafeArea like the table), so no window brings it onto a hand,
         // not even one with insets. The layout is the one the table draws in the window (the phone windows included)
         size_t windows = 0;
@@ -992,6 +1079,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_NE(plate, nullptr);
             ASSERT_FALSE(plate->rect.IsEmpty()) << window.label.c_str();
             const Rect plateRect = ToView(plate->rect, *canvas, window);
+            ExpectTheTableInsideThePlate(plate->rect, window.label.c_str());
             const Rect bounds = ScoreTableBounds(ShapeOf(window));
             EXPECT_GE(plateRect.x, bounds.x - 0.01f) << window.label.c_str();
             EXPECT_LE(plateRect.x + plateRect.w, bounds.x + bounds.w + 0.01f) << window.label.c_str();
@@ -1172,10 +1260,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(PlayHandOver());
         auto canvas = Canvas("HandOver");
         ASSERT_TRUE(canvas);
-        for (int i = 0; i < kMaxScoreLines; ++i) {
-            ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(Format("ScoreLine{}", i)), true));
-        }
-        ASSERT_TRUE(canvas->SetElementVisible("HandCoachRow"_intern, true));  // the worst case: the tally row shown
+        ASSERT_NO_FATAL_FAILURE(ShowTheWorstScoreTable(*canvas));  // the worst case: the sixteen lines, the tally row and eighteen tiles shown
 
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());

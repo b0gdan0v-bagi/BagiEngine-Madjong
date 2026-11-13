@@ -594,7 +594,9 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(declared->ignoreSafeArea) << "a notch or side insets do not move the button off its gap";
 
         // The parts of the plate that carry text: the button covers none of them (the gap and the two gaps of 8 around it are free)
-        const char* const kTexts[] = {"Headline", "SeatRow0", "SeatRow1", "SeatRow2", "SeatRow3", "Lines", "Summary"};
+        const char* const kTexts[] = {"Headline", "ScoreHeader", "SeatRow0", "SeatRow1", "SeatRow2", "SeatRow3", "WinTiles", "Lines", "HandCoachRow", "Summary"};
+        ASSERT_TRUE(plate->SetElementVisible("WinTiles"_intern, true));  // the row of tiles of a win: the nearest thing under the gap
+        ASSERT_TRUE(plate->SetElementVisible("HandCoachRow"_intern, true));
         size_t checked = 0;
         size_t inTheGap = 0;
         size_t inThePortraitGap = 0;
