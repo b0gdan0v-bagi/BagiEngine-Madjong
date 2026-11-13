@@ -62,7 +62,7 @@ railway variables --service bagi-mahjong \
   --set SESSION_SECRET=<первый секрет> \
   --set MATCH_COLLECT_TOKEN=<второй секрет> \
   --set MATCH_STORE=/data/matches \
-  --set MATCH_LOG_VERSIONS=5 \
+  --set MATCH_LOG_VERSIONS=1-6 \
   --set MATCH_FORWARDED_FOR=1 \
   --set RAILWAY_RUN_UID=0
 ```
@@ -70,7 +70,7 @@ railway variables --service bagi-mahjong \
 Затем **удалите `BASIC_AUTH_USER` и `BASIC_AUTH_PASSWORD`**: в панели Railway откройте сервис `bagi-mahjong` → Variables → «⋮» → Delete. Удобнее делать всё в панели: Railway собирает изменения в один набор и применяет их кнопкой Deploy.
 
 - `PUBLIC_URL` указывается без слэша в конце и совпадает с адресом из шага 3.
-- `MATCH_LOG_VERSIONS=5` соответствует нынешнему формату лога матча (`kMatchLogFormatVersion` в `src/Mahjong/MatchLogJson.h`). Если формат вырастет, задайте диапазон, например `5-6`.
+- `MATCH_LOG_VERSIONS=1-6`: нынешний формат лога матча — 6 (`kMatchLogFormatVersion` в `src/Mahjong/MatchLogJson.h`). С диапазоном `1-5` каждый новый матч отклоняется с ошибкой 400. Когда формат вырастет, расширьте диапазон.
 - Необязательные переменные:
   - `SESSION_DAYS` — сколько дней действует вход, по умолчанию 30;
   - `SIGNIN_GUESTS=0` — убрать кнопку «Играть без входа».
@@ -92,13 +92,13 @@ python3 engine/tools/web/build_and_deploy.py --source-dir . --game BagiMahjong -
 2. Откройте `https://<домен>` в приватном окне. Должна открыться `/signin` с двумя кнопками.
 3. Войдите через Google. После выбора аккаунта откроется игра. Если снова открыть `https://<домен>/signin`, там будет «Вы вошли как …» и кнопка «Выйти».
 4. В другом приватном окне нажмите «Играть без входа». Игра тоже должна открыться.
-5. Проверьте логи матчей. Пока игра в браузере не отправляет матчи (это делает задача `mahjong-tester-match-logs`), список пуст:
+5. Проверьте логи матчей. Сыграйте в браузере раздачу, приняв согласие на отправку матчей (его можно поменять в Options), затем запросите список:
 
    ```bash
    curl -H "Authorization: Bearer <MATCH_COLLECT_TOKEN>" https://<домен>/matches/
    ```
 
-   У матчей вошедших тестеров в списке будет поле `"tester": {"provider": "google", "email": "..."}`.
+   У матчей вошедших тестеров в списке будет поле `"tester": {"provider": "google", "email": "..."}`. Скачать логи для арены: `tools/collect_logs.py` (см. [tester-match-logs.md](tester-match-logs.md)), токен берётся из `MATCH_COLLECT_TOKEN`.
 
 ## Если что-то пошло не так
 
