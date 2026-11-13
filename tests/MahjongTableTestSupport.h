@@ -351,6 +351,16 @@ namespace BECore::Mahjong::Tests {
         return -1;
     }
 
+    /// How many geometry calls are a panel base over `zone` (`PanelCallAt` finds the first): a panel is drawn once.
+    inline int PanelCountAt(const eastl::vector<DrawCall>& calls, const Rect& zone) {
+        int found = 0;
+        for (const DrawCall& call : calls) {
+            const std::optional<Rect> frame = BoxOfColor(call, kSeatPlateFrame);
+            found += (frame && SameBox(*frame, zone) && BoxOfColor(call, kSeatPlate)) ? 1 : 0;
+        }
+        return found;
+    }
+
     class MahjongTableTestBase : public ::testing::Test {
     protected:
         static void SetUpTestSuite() {

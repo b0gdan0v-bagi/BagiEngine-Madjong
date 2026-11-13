@@ -72,22 +72,20 @@ namespace BECore::Mahjong::Tests {
 
     class MahjongTableMarksTest : public MahjongTableTestBase {
     protected:
-        /// The index in `_renderer->calls` of each rectangle drawn in `color`.
+        /// The index in `_renderer->calls` of each draw of `color`: a rect of it, or a geometry call with a vertex of it (the tint and the frame of a plate are layers of its mesh).
         std::vector<size_t> CallsOf(const Color& color) const {
             std::vector<size_t> found;
-            for (size_t i = 0; i < _renderer->calls.size(); ++i) {
-                if (_renderer->calls[i].kind == DrawKind::Rect && SameColor(_renderer->calls[i].color, color)) {
-                    found.push_back(i);
-                }
+            for (const MarkDraw& draw : MarksOf(_renderer->calls, color)) {
+                found.push_back(draw.call);
             }
             return found;
         }
 
-        /// The rectangles drawn in `color`, in the order drawn.
+        /// The rectangles of those draws, in the order drawn: a rect's own, or the box of the vertices of `color` in a geometry call.
         std::vector<Rect> RectsOf(const Color& color) const {
             std::vector<Rect> found;
-            for (const size_t i : CallsOf(color)) {
-                found.push_back(_renderer->calls[i].rect);
+            for (const MarkDraw& draw : MarksOf(_renderer->calls, color)) {
+                found.push_back(draw.rect);
             }
             return found;
         }
@@ -370,38 +368,37 @@ namespace BECore::Mahjong::Tests {
             return _table->GetLayout().zones.seatPlates[static_cast<size_t>(seat)];
         }
 
-        /// The four bars `DrawFrame` should lay on the border of `rect`, worked out here.
+        /// The four bars `DrawFrame` should lay on the border of `rect`, worked out here (the frame of the calling hand and of the emblem box are still bars).
         static std::vector<Rect> BarsOf(const Rect& rect, float width) {
             return {Rect(rect.x, rect.y, rect.w, width), Rect(rect.x, rect.y + rect.h - width, rect.w, width), Rect(rect.x, rect.y + width, width, rect.h - 2.0f * width),
                     Rect(rect.x + rect.w - width, rect.y + width, width, rect.h - 2.0f * width)};
         }
 
-        /// How many of the rects drawn in `color` are `rect`.
+        /// How many of the draws of `color` are `rect`: a rect equal to it, or a rounded layer (a geometry call) whose box is it to within the feather.
         int CountOf(const Color& color, const Rect& rect) const {
             int found = 0;
-            for (const Rect& drawn : RectsOf(color)) {
-                found += SameRect(drawn, rect) ? 1 : 0;
+            for (const MarkDraw& draw : MarksOf(_renderer->calls, color)) {
+                const bool rounded = _renderer->calls[draw.call].kind == DrawKind::Geometry;
+                found += (rounded ? SameBox(draw.rect, rect) : SameRect(draw.rect, rect)) ? 1 : 0;
             }
             return found;
         }
 
-        /// The plate of `seat` carries the tint and the frame of the turn, all four bars once.
+        /// The plate of `seat` carries the tint and the frame of the turn, each once, in the one call that is its base.
         bool TurnShownOn(Seat seat) const {
-            if (CountOf(kTurnMark, PlateOf(seat)) != 1) {
+            const std::vector<size_t> tints = CallsOf(kTurnMark);
+            const std::vector<size_t> frames = CallsOf(kSeatTurnFrame);
+            const int base = PanelCallAt(_renderer->calls, PlateOf(seat));
+            if (base < 0 || CountOf(kTurnMark, PlateOf(seat)) != 1 || CountOf(kSeatTurnFrame, PlateOf(seat)) != 1) {
                 return false;
             }
-            for (const Rect& bar : BarsOf(PlateOf(seat), kSeatTurnFrameWidth)) {
-                if (CountOf(kSeatTurnFrame, bar) != 1) {
-                    return false;
-                }
-            }
-            return true;
+            return std::find(tints.begin(), tints.end(), static_cast<size_t>(base)) != tints.end() && std::find(frames.begin(), frames.end(), static_cast<size_t>(base)) != frames.end();
         }
 
-        /// The bar of the dealer lies along the top edge of the plate of `seat`.
+        /// The bar of the dealer lies along the top edge of the plate of `seat`, inset by the corner radius at both ends.
         bool DealerShownOn(Seat seat) const {
             const Rect plate = PlateOf(seat);
-            return CountOf(kDealerMark, Rect(plate.x, plate.y, plate.w, kDealerMarkHeight)) == 1;
+            return CountOf(kDealerMark, Rect(plate.x + kSeatPlateCorner, plate.y, plate.w - 2.0f * kSeatPlateCorner, kDealerMarkHeight)) == 1;
         }
 
         /// The turn is on exactly the plate of `turn` (no seat: on none), the dealer's bar on exactly the plate of `dealer`.
@@ -410,7 +407,7 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_EQ(TurnShownOn(seat), seat == turn) << "turn, seat " << seat;
                 EXPECT_EQ(DealerShownOn(seat), seat == dealer) << "dealer, seat " << seat;
             }
-            EXPECT_EQ(RectsOf(kSeatTurnFrame).size(), IsSeat(turn) ? 4u : 0u);
+            EXPECT_EQ(RectsOf(kSeatTurnFrame).size(), IsSeat(turn) ? 1u : 0u);
             EXPECT_EQ(RectsOf(kDealerMark).size(), IsSeat(dealer) ? 1u : 0u);
         }
 
@@ -436,16 +433,9 @@ namespace BECore::Mahjong::Tests {
                 }
             }
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                // The HUD draws its panels in the same colour, so a plate is found by its rectangle
-                size_t at = _renderer->calls.size();
-                int found = 0;
-                for (const size_t i : CallsOf(kSeatPlate)) {
-                    if (SameRect(_renderer->calls[i].rect, PlateOf(seat))) {
-                        at = i;
-                        ++found;
-                    }
-                }
-                ASSERT_EQ(found, 1) << "seat " << seat;
+                // The HUD draws its panels in the same colour, so a plate is found by its place
+                ASSERT_EQ(PanelCountAt(_renderer->calls, PlateOf(seat)), 1) << "seat " << seat;
+                const size_t at = static_cast<size_t>(PanelCallAt(_renderer->calls, PlateOf(seat)));
                 EXPECT_GT(at, lip.back()) << "seat " << seat << ": after the felt and its rim";
                 EXPECT_LT(at, firstTile) << "seat " << seat << ": before the tiles";
             }
@@ -453,19 +443,21 @@ namespace BECore::Mahjong::Tests {
 
         // ----- the centre panel -----
 
-        /// The bar of the turn light at screen position `position`, worked out here from the panel of the last layout.
+        /// The bar of the turn light at screen position `position`, worked out here from the panel of the last layout: along the whole edge but the corner radius at each end, which
+        /// keeps it on the straight part of the rounded panel.
         Rect LightAt(int position) const {
             const Rect panel = _table->GetLayout().zones.centerPanel;
             const float width = kPanelTurnLightWidth;
+            const float corner = kSeatPlateCorner;
             switch (position) {
                 case 1:
-                    return Rect(panel.x + panel.w - width, panel.y, width, panel.h);
+                    return Rect(panel.x + panel.w - width, panel.y + corner, width, panel.h - 2.0f * corner);
                 case 2:
-                    return Rect(panel.x, panel.y, panel.w, width);
+                    return Rect(panel.x + corner, panel.y, panel.w - 2.0f * corner, width);
                 case 3:
-                    return Rect(panel.x, panel.y, width, panel.h);
+                    return Rect(panel.x, panel.y + corner, width, panel.h - 2.0f * corner);
                 default:
-                    return Rect(panel.x, panel.y + panel.h - width, panel.w, width);
+                    return Rect(panel.x + corner, panel.y + panel.h - width, panel.w - 2.0f * corner, width);
             }
         }
 
@@ -501,24 +493,16 @@ namespace BECore::Mahjong::Tests {
             for (const size_t call : CallsOf(kPanelDealerMark)) {
                 marks.push_back(call);
             }
-            std::vector<size_t> grounds;
-            for (const size_t i : CallsOf(kSeatPlate)) {
-                if (SameRect(_renderer->calls[i].rect, panel)) {
-                    grounds.push_back(i);
-                }
-            }
-            ASSERT_EQ(grounds.size(), 1u) << "one ground";
+            ASSERT_EQ(PanelCountAt(_renderer->calls, panel), 1) << "one ground";
+            const std::vector<size_t> grounds{static_cast<size_t>(PanelCallAt(_renderer->calls, panel))};
             size_t firstTile = _renderer->calls.size();
-            size_t firstSeatPlate = _renderer->calls.size();
             for (size_t i = 0; i < _renderer->calls.size(); ++i) {
                 const DrawCall& call = _renderer->calls[i];
                 if (call.kind == DrawKind::Texture && call.texture == _atlasTexture) {
                     firstTile = eastl::min(firstTile, i);
                 }
-                if (call.kind == DrawKind::Rect && SameColor(call.color, kSeatPlate) && SameRect(call.rect, PlateOf(kSeat0))) {
-                    firstSeatPlate = eastl::min(firstSeatPlate, i);
-                }
             }
+            const size_t firstSeatPlate = static_cast<size_t>(PanelCallAt(_renderer->calls, PlateOf(kSeat0)));
             EXPECT_LT(grounds[0], firstTile) << "before the tiles";
             EXPECT_LT(grounds[0], firstSeatPlate) << "before the seat plates";
             for (const size_t call : marks) {
@@ -1613,13 +1597,11 @@ namespace BECore::Mahjong::Tests {
         EXPECT_GT(firstEmblem, CallsOf(kSeatPlate).front()) << "after a plate base";
         // The base of each plate is drawn before the emblem of the same plate
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            size_t base = _renderer->calls.size();
+            ASSERT_GE(PanelCallAt(_renderer->calls, PlateOf(seat)), 0) << "seat " << seat;
+            const size_t base = static_cast<size_t>(PanelCallAt(_renderer->calls, PlateOf(seat)));
             size_t emblem = _renderer->calls.size();
             for (size_t i = 0; i < _renderer->calls.size(); ++i) {
                 const DrawCall& call = _renderer->calls[i];
-                if (base == _renderer->calls.size() && call.kind == DrawKind::Rect && SameColor(call.color, kSeatPlate) && SameRect(call.rect, PlateOf(seat))) {
-                    base = i;
-                }
                 if (emblem == _renderer->calls.size() && call.kind == DrawKind::Texture && call.texture == _emblemTexture && SameRect(call.rect, EmblemBox(PlateOf(seat), 1.0f))) {
                     emblem = i;
                 }
@@ -1641,7 +1623,7 @@ namespace BECore::Mahjong::Tests {
             }
         }
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            EXPECT_EQ(CountOf(kSeatPlate, PlateOf(seat)), 1) << "the base of the plate of seat " << seat;
+            EXPECT_EQ(PanelCountAt(_renderer->calls, PlateOf(seat)), 1) << "the base of the plate of seat " << seat;
         }
         // The frame round the hand and the frame on the ring box of the declared seat
         EXPECT_EQ(RectsOf(kCallingFrame).size(), 8u);

@@ -369,13 +369,12 @@ namespace BECore::Mahjong::Tests {
             return model;
         }
 
-        /// The rectangles drawn in `color` in the last frame, in the order drawn.
+        /// The rectangles drawn in `color` in the last frame, in the order drawn: a rect's own, or the box of the vertices of that colour in a geometry call (the base, the tint and the frame of a
+        /// seat plate are one mesh).
         std::vector<Rect> RectsOf(const Color& color) const {
             std::vector<Rect> found;
-            for (const DrawCall& call : _renderer->calls) {
-                if (call.kind == DrawKind::Rect && SameColor(call.color, color)) {
-                    found.push_back(call.rect);
-                }
+            for (const MarkDraw& draw : MarksOf(_renderer->calls, color)) {
+                found.push_back(draw.rect);
             }
             return found;
         }
