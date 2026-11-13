@@ -29,6 +29,19 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(kGameVersion.empty());
     }
 
+    TEST(BuildInfoTest, TheNicknameIsInTheOriginOnlyWhenGiven) {
+        for (const bool browser : {false, true}) {
+            EXPECT_TRUE(MakeMatchOrigin(browser).nickname.empty());
+        }
+        const MatchLogOrigin named = MakeMatchOrigin(true, "Anna");
+        EXPECT_EQ(named.nickname, "Anna");
+        EXPECT_EQ(named.platform, MatchPlatform::Web);
+        EXPECT_EQ(View(named.build), BuildId());
+        EXPECT_EQ(View(named.gameVersion), kGameVersion);
+        EXPECT_TRUE(MakeMatchOrigin(true, "").nickname.empty());
+        EXPECT_FALSE(MakeMatchOrigin(true, "Anna") == MakeMatchOrigin(true));
+    }
+
     TEST(BuildInfoTest, TheBuildIdIsAShortHashOrUnknown) {
         const std::string_view id = BuildId();
         ASSERT_FALSE(id.empty());

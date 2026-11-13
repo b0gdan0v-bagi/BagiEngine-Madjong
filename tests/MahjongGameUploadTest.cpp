@@ -22,6 +22,8 @@ namespace BECore::Mahjong::Tests {
         constexpr uint32_t kOtherSeed = 8;
         constexpr int kHandLimitPerMatch = 200;
         constexpr const char* kFolderStem = "bagi-mahjong-game-upload";
+        constexpr const char* kSaveFolderStem = "bagi-mahjong-game-upload-saves";
+        constexpr const char* kMatchFile = "match.save";
         constexpr SeatSetup kAllComputers{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
 
         class FakeSink final : public IMatchUploadSink {
@@ -196,6 +198,51 @@ namespace BECore::Mahjong::Tests {
         for (const std::string& id : ids) {
             EXPECT_TRUE(std::regex_match(id, hex32)) << id;
         }
+    }
+
+    TEST_F(MahjongGameUploadTest, AContinuedSavedMatchIsNotUploadedButIsStillSavedAndTheNextMatchIs) {
+        const fs::path saves = TestTempPath(kSaveFolderStem);
+        const fs::path savesBefore = MatchSaveDirectory();
+        SetMatchSaveDirectory(saves);
+
+        // A match left behind in the middle of a hand, by a game that uploads nothing
+        ASSERT_TRUE(game->StartMatch(kSeed).has_value());
+        ASSERT_NO_FATAL_FAILURE(PlayHand());
+        game->GetSession().RunComputers();
+        game->FlushSave();
+        const std::string saved = ReadFile(saves / kMatchFile);
+        ASSERT_FALSE(saved.empty());
+        game.Reset();
+
+        game = New<MahjongGame>();
+        Upload();
+        game->Start();
+        ASSERT_TRUE(game->CanContinue());
+        EXPECT_FALSE(game->GetUpload().IsRecording()) << "the replay of the saved events must not record the match again";
+        EXPECT_TRUE(sink.pieces.empty());
+        ASSERT_TRUE(game->ContinueMatch());
+        game->GetSession().RunComputers();
+        ASSERT_EQ(game->GetSession().GetPhase(), SessionPhase::HandOver);
+        ASSERT_TRUE(game->GetSession().NextHand().has_value());
+        game->GetSession().RunComputers();
+        EXPECT_TRUE(sink.pieces.empty()) << "a hand of the continued match is not sent";
+
+        game->FlushSave();
+        EXPECT_NE(ReadFile(saves / kMatchFile), saved) << "the continued match goes on being saved";
+        game->Stop();
+        EXPECT_TRUE(sink.pieces.empty()) << "and giving it up says nothing to the store";
+
+        // The next match the person begins is recorded again
+        ASSERT_TRUE(game->StartMatch(kOtherSeed).has_value());
+        ASSERT_NO_FATAL_FAILURE(PlayMatch());
+        ASSERT_EQ(sink.pieces.size(), static_cast<size_t>(kShortMatchHands) + 1);
+        const auto assembled = AssemblePieces(sink.pieces);
+        ASSERT_TRUE(assembled.has_value()) << assembled.error().c_str();
+        ExpectReplays(*assembled);
+
+        SetMatchSaveDirectory(savesBefore);
+        std::error_code error;
+        fs::remove_all(saves, error);
     }
 
 }  // namespace BECore::Mahjong::Tests
