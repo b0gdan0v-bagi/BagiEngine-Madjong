@@ -25,6 +25,10 @@ namespace BECore::Mahjong {
      * - The buttons: `primary` confirms (Mahjong!, Start, Next hand), `secondary` claims and the HUD's New game, `neutral` the extras of
      *   an own turn and the segments, `danger` passes.
      * - The text: white, `textMuted` for captions, `accent` for marks and the first place.
+     * - The skin of a box (`config/CLAUDE.md`, "UI style"): the role colour is the **top** of a vertical gradient and its `<role>Deep` the bottom (the four button roles, and `surface`,
+     *   `surfaceRaised`, `header`, `hudPanel` for panels). `frame` is the border of a panel, `frameLight` the border of a button, `shadow` the colour of the one soft shadow of a raised thing,
+     *   `highlight` the line along the top edge, `outline` the dark outline of a headline in the display font, `glowPrimary` the glow of a selected segment or a primary button.
+     *   Nothing of the skin is gold: a screen over the table (`Actions`, `Hud`, `Hints*`, `HudMenu`) uses none, gold stays the marks of the table and the `accent` text of a modal.
      */
 
     /// The table.
@@ -122,7 +126,7 @@ namespace BECore::Mahjong {
     inline constexpr float kPlatePadding = 4.0f;
 
     /// The colours of the scene file, by role (`kUiPaletteNames` holds the role of each, in the same order).
-    inline constexpr int kUiPaletteSize = 12;
+    inline constexpr int kUiPaletteSize = 26;
     inline constexpr eastl::array<Color, kUiPaletteSize> kUiPalette{{
         {0, 0, 0, 200},        // scrim
         {36, 40, 52, 255},     // surface
@@ -136,7 +140,22 @@ namespace BECore::Mahjong {
         {255, 255, 255, 255},  // text
         {190, 196, 190, 255},  // textMuted
         {255, 214, 80, 255},   // accent
+        {26, 78, 40, 255},     // primaryDeep
+        {30, 52, 86, 255},     // secondaryDeep
+        {48, 48, 72, 255},     // neutralDeep
+        {62, 34, 34, 255},     // dangerDeep
+        {26, 29, 38, 255},     // surfaceDeep
+        {34, 38, 52, 255},     // surfaceRaisedDeep
+        {42, 48, 68, 255},     // headerDeep
+        {6, 20, 14, 170},      // hudPanelDeep
+        {78, 86, 116, 255},    // frame
+        {140, 150, 180, 255},  // frameLight
+        {0, 0, 0, 90},         // shadow
+        {255, 255, 255, 60},   // highlight
+        {16, 18, 26, 255},     // outline
+        {90, 200, 120, 160},   // glowPrimary
     }};
+    // clang-format off
     inline constexpr eastl::array<const char*, kUiPaletteSize> kUiPaletteNames{{
         "scrim",
         "surface",
@@ -150,11 +169,45 @@ namespace BECore::Mahjong {
         "text",
         "textMuted",
         "accent",
+        "primaryDeep",
+        "secondaryDeep",
+        "neutralDeep",
+        "dangerDeep",
+        "surfaceDeep",
+        "surfaceRaisedDeep",
+        "headerDeep",
+        "hudPanelDeep",
+        "frame",
+        "frameLight",
+        "shadow",
+        "highlight",
+        "outline",
+        "glowPrimary",
     }};
+    // clang-format on
 
     /// The type scale: small (the hint, the winner's lines, captions), body (the HUD, rows, ordinary buttons), title (the headline of a
     /// screen, its main button). No other `fontSize` in the scene file.
     inline constexpr eastl::array<int, 3> kFontScale{{18, 22, 28}};
+
+    /// The families of the text (`TextConfig.xml` of the engine): the display font of headlines and scores (with an outline of `kTextOutlineWidth` units in the `outline` role) and the
+    /// text font, whose bold (`kFontWeightBold`) is the text of a button. A family is not a size: `kFontScale` stays the only sizes.
+    inline constexpr const char* kFontFamilyDisplay = "Russo One";
+    inline constexpr const char* kFontFamilyText = "PT Sans";
+    inline constexpr int kFontWeightRegular = 400;
+    inline constexpr int kFontWeightBold = 700;
+    inline constexpr int kTextOutlineWidth = 2;
+
+    /// The scale of the skin: corner radii of rows, chips and segments (`kCornerSmall`), of buttons and the header band (`kCornerMiddle`) and of plates and cards
+    /// (`kCornerLarge`), all on the grid; a round button has half its side. One border width; one soft shadow for a raised thing (`kShadowOffsetY`, `kShadowBlur`, no spread; rows have none) written
+    /// `0,4,8,0,shadow`. `MahjongUiStyleTest` holds the scene file to them.
+    inline constexpr int kCornerSmall = 8;
+    inline constexpr int kCornerMiddle = 12;
+    inline constexpr int kCornerLarge = 16;
+    inline constexpr eastl::array<int, 3> kCornerScale{{kCornerSmall, kCornerMiddle, kCornerLarge}};
+    inline constexpr int kBorderWidth = 2;
+    inline constexpr int kShadowOffsetY = 4;
+    inline constexpr int kShadowBlur = 8;
 
     /// The spacing grid: every position, size, spacing and padding of the scene file is a multiple of the unit; the step is the usual
     /// gap between controls and the margin to the edge of the view.
