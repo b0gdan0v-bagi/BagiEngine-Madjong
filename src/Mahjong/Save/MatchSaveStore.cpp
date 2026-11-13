@@ -15,6 +15,11 @@ namespace BECore::Mahjong {
             return directory;
         }
 
+        std::optional<SaveStorageState>& StorageOverride() {
+            static std::optional<SaveStorageState> state;
+            return state;
+        }
+
         SaveProblem ProblemOf(const SaveError& error) {
             if (error.kind == SaveErrorKind::NotFound) {
                 return SaveProblem{SaveProblemKind::Missing, error.detail};
@@ -34,7 +39,7 @@ namespace BECore::Mahjong {
 
     std::filesystem::path DefaultMatchSaveDirectory(bool browser, const char* fromEnvironment) {
         if (browser) {
-            return {};
+            return std::filesystem::path(kWebSaveDirectory.begin(), kWebSaveDirectory.end());
         }
         if (fromEnvironment != nullptr) {
             return fromEnvironment;
@@ -48,6 +53,15 @@ namespace BECore::Mahjong {
 
     void SetMatchSaveDirectory(std::filesystem::path directory) {
         Directory() = std::move(directory);
+    }
+
+    SaveStorageState MatchSaveStorage() {
+        const std::optional<SaveStorageState>& forced = StorageOverride();
+        return forced ? *forced : GetSaveStorageState();
+    }
+
+    void SetMatchSaveStorage(std::optional<SaveStorageState> state) {
+        StorageOverride() = state;
     }
 
     bool MatchSaveStore::Open(const std::filesystem::path& directory) {

@@ -14,7 +14,7 @@ Open `localhost` or an https address: the threaded page needs cross-origin isola
 
 ## Browser smoke
 
-`tools/web_smoke.py` (the engine's smoke, then `Start` and a tile click on a 1280x720 page) needs Playwright in a venv:
+`tools/web_smoke.py` (the engine's smoke, then `Start` and a tile click on a 1280x720 page, then a reload that must bring `Continue`) needs Playwright in a venv:
 
 ```bash
 python3.14 -m venv build/web-venv && build/web-venv/bin/python -m pip install playwright
@@ -22,6 +22,8 @@ build/web-venv/bin/python -m playwright install chromium                       #
 build/web-venv/bin/python tools/web_smoke.py --dist dist --expect-console "Initialized with \d+ worker threads"
 build/web-venv/bin/python tools/web_smoke.py --dist dist-single --expect-console "single-thread mode"
 ```
+
+Scenario 3 starts a match in a fresh browser context (an empty site storage), waits until the table stands still, reloads the page and requires the `Setup` plate to show `Continue` (a picture of the plate differs from the first load's), then clicks `Continue` and requires the picture to change. The click points are for 1280x720 and are tied to `Setup` (`--start-click`, `--continue-click`); `python3 tools/web_smoke.py --check` runs the judging without a browser.
 
 ## The web-like desktop build
 
@@ -33,7 +35,7 @@ Without a browser it tests the same code paths: `cmake -S . -B build/webcheck -G
 
 ## What differs in the browser
 
-No saves and no `Continue` (the page's file system is memory, lost on reload; the seat choice is not remembered either), no match log, no control API, no bot arena. Persistence needs IDBFS, which is engine work and not done. Online play is on when `config/MahjongOnlineConfig.xml` names a `wss://` server in `webServer`: the `Online` button of `Setup` is there only then (below).
+Saves are the desktop's, kept in the site's IndexedDB (the folder `/bagi/saves`): the `Setup` choices, `Continue` after a reload or a closed tab (the last complete save of the match) and the room session of `Online` (`Return to room`) survive. Clearing the site data clears them. The tabs of one origin share the folder, the last flush wins, and a tab does not see another's writes until it is reloaded. A private window (or a browser that refuses IndexedDB) plays as before, with no saving and no `Continue`. No match log, no control API, no bot arena. Online play is on when `config/MahjongOnlineConfig.xml` names a `wss://` server in `webServer`: the `Online` button of `Setup` is there only then (below).
 
 ## Deploy to Railway
 

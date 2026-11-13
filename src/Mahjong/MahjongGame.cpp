@@ -91,10 +91,20 @@ namespace BECore::Mahjong {
         }
     }
 
+    const std::filesystem::path& MahjongGame::SaveDirectory() const {
+        static const std::filesystem::path none;  // by reference: a path by value would allocate in every `FlushSave()`
+        return _storage == SaveStorageState::NotRemembered ? none : MatchSaveDirectory();
+    }
+
+    bool MahjongGame::SavesAreRemembered() const {
+        return _store.IsOn() && SaveStorageRemembers(_storage);
+    }
+
     void MahjongGame::Start() {
         LeaveOnlineTable(false);
-        _syncedClient = kNotSynced;  // a client that is still in a room shows its table again at the next sync
-        _store.Open(MatchSaveDirectory());
+        _syncedClient = kNotSynced;     // a client that is still in a room shows its table again at the next sync
+        _storage = MatchSaveStorage();  // the page has settled it before the start; read once
+        _store.Open(SaveDirectory());
         ApplySavedPrefs();
         ApplySavedOnline();
         CloseOnline();
@@ -315,7 +325,7 @@ namespace BECore::Mahjong {
 
     void MahjongGame::FlushSave() {
         FollowOnlineSession();  // also with saving off: `StoredOnline()` follows the client
-        if (!_store.Open(MatchSaveDirectory())) {
+        if (!_store.Open(SaveDirectory())) {
             return;
         }
         // The match of a room is no match of this machine: the slot keeps the local one for `Continue`

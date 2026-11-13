@@ -1,19 +1,31 @@
 #pragma once
 
+#include <BECore/Save/SaveStorage.h>
 #include <Mahjong/Save/MatchSave.h>
 
 namespace BECore::Mahjong {
 
-    /// The default save folder: empty (saving off) in the browser build, else `fromEnvironment` when it is not null (an empty value
-    /// switches saving off), else `saves`. `fromEnvironment` is the value of `BAGI_MAHJONG_SAVE_DIR` or null. Pure, so a test can drive
-    /// both builds.
+    /// The default save folder: `kWebSaveDirectory` (the engine's persistent folder of the page) in the browser build, whatever the
+    /// environment says, else `fromEnvironment` when it is not null (an empty value switches saving off), else `saves`.
+    /// `fromEnvironment` is the value of `BAGI_MAHJONG_SAVE_DIR` or null. Pure, so a test can drive both builds.
     [[nodiscard]] std::filesystem::path DefaultMatchSaveDirectory(bool browser, const char* fromEnvironment);
 
     /// The folder the saves are written to, relative to the working directory unless absolute. The default is
-    /// `DefaultMatchSaveDirectory` (`saves`, or `BAGI_MAHJONG_SAVE_DIR`; none in the browser). An empty path switches saving off.
-    /// Process-wide: `MahjongGame` reads it when it opens its store.
+    /// `DefaultMatchSaveDirectory` (`saves`, or `BAGI_MAHJONG_SAVE_DIR`; `/bagi/saves` in the browser). An empty path switches saving
+    /// off. Process-wide: `MahjongGame` reads it when it opens its store.
     [[nodiscard]] const std::filesystem::path& MatchSaveDirectory();
     void SetMatchSaveDirectory(std::filesystem::path directory);
+
+    /// Whether a save written under this state is there at the next visit: false only for `NotRemembered` (a browser whose storage
+    /// lives in memory, e.g. a private window). Pure.
+    [[nodiscard]] constexpr bool SaveStorageRemembers(SaveStorageState state) noexcept {
+        return state != SaveStorageState::NotRemembered;
+    }
+
+    /// What the storage makes of the save folder, as `MahjongGame` reads it at `Start()`: `GetSaveStorageState()` of the engine
+    /// (`NotApplicable` off the browser) unless a test plays one with `SetMatchSaveStorage`; nullopt restores the engine's answer.
+    [[nodiscard]] SaveStorageState MatchSaveStorage();
+    void SetMatchSaveStorage(std::optional<SaveStorageState> state);
 
     /// Why a slot could not be read: `Missing` is the usual case (nothing saved yet, or saving is off), `Broken` is a file that is there
     /// and cannot be used (damaged, of another game or version, or a state whose text is wrong); `detail` says what.
