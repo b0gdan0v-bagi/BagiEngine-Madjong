@@ -27,11 +27,11 @@
   one more control: Person / Computer needs 74 units there, so a dropdown is 60 and its text may shrink to 8 units (minFontSize),
   which is 12 px at that scale. Every other text may shrink (AutoFit, down to 12 units) instead of being cut.
   MahjongHudTest and MahjongTouchSizeTest hold the shapes, the touch size and the words on the whole size matrix.
-  The close cross SetupClose (MahjongSetupClose; the same close as Escape) is the right end of the title band TitleRow, as high as the band
-  (56 in the roomy shape, so a touch target at the floor scale 0.6, and as high as a segment of a row in every other: the band is 0.875 of a
-  row like the segments) and 56 wide; the empty TitleSpacer of the same width on the left keeps the Title centred (it is 0 in a canvas of at
+  The close cross SetupClose (MahjongSetupClose; the same close as Escape) is a round icon button (Icon_Close, the tooltip setup.close) of 56 x 56 at
+  the right end of the title band TitleRow (56 high in the roomy shape, so a touch target at the floor scale 0.6; the band is 0.875 of a row like the
+  segments); the empty TitleSpacer of the same width on the left keeps the Title centred (it is 0 in a canvas of at
   most 480 units wide: the Russian title needs the room, and the Title leans left of the middle there). It only closes the panel:
-  it starts nothing and sets none of the choices. Its glyph and its tooltip are keys (setup.closeMark, setup.close).
+  it starts nothing and sets none of the choices.
   Continue (MahjongContinue; the saved match is the table behind the panel, MahjongGame::CanContinue()) is not a new row, because
   the plate has no room for another: Start lives in the horizontal stack ButtonRow (64 high like the rows, 8 between) beside it.
   Continue is hidden here and shown by MahjongHudComponent exactly while the panel is open and there is a match to continue; a hidden
@@ -56,12 +56,18 @@
                     <component type="UITextComponent" text="{#setup.title}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
                   </components>
                 </element>
-                <element type="UIElement" name="SetupClose" width="56" fontSize="28" color="70,70,100,255">
+                <element type="UIElement" name="SetupClose" width="56" height="56" color="70,70,100,255" cornerRadius="28" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{#setup.closeMark}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongSetupClose"/>
                     <component type="UITooltipComponent" text="{#setup.close}"/>
                   </components>
+                  <children>
+                    <element type="UIElement" name="SetupCloseIcon" anchor="Center" width="60%" height="60%" aspectRatio="1">
+                      <components>
+                        <component type="UIImageComponent" sprite="Icon_Close"/>
+                      </components>
+                    </element>
+                  </children>
                 </element>
               </children>
             </element>

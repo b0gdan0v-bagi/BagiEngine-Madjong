@@ -355,7 +355,7 @@ namespace BECore::Mahjong::Tests {
         }
         EXPECT_EQ(Text("CenterPanel", "PanelRound"), "Восток 1");
         EXPECT_EQ(Text("CenterPanel", "PanelWall"), "Стена " + std::to_string(Hand().GetWall().LiveCount()));
-        EXPECT_EQ(Text("HudMenu", "NewGame"), "Новая игра");
+        EXPECT_EQ(ShownTooltip(Element("HudMenu", "NewGame")), "Новая игра");
 
         for (const SeatSetup& seats : {kTwoPeople, kAllComputers}) {
             ASSERT_NO_FATAL_FAILURE(Start(seats));
@@ -615,8 +615,8 @@ namespace BECore::Mahjong::Tests {
             ASSERT_TRUE(OnScreen("HudMenu", "Options"));
             ASSERT_TRUE(OnScreen("HudMenu", "NewGame"));
             EXPECT_GE(Element("HudMenu", "Options")->rect.h, kMinControlHeight);
-            EXPECT_EQ(Text("HudMenu", "Options"), Tr(CoreManager::GetUIStrings(), "hud.options").c_str());
-            EXPECT_EQ(Text("HudMenu", "NewGame"), Tr(CoreManager::GetUIStrings(), "hud.newGame").c_str());
+            EXPECT_EQ(ShownTooltip(Element("HudMenu", "Options")), Tr(CoreManager::GetUIStrings(), "hud.options").c_str());
+            EXPECT_EQ(ShownTooltip(Element("HudMenu", "NewGame")), Tr(CoreManager::GetUIStrings(), "hud.newGame").c_str());
         });
     }
 
@@ -1084,7 +1084,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(SetupShown());
         EXPECT_FALSE(OptionsShown());
         EXPECT_EQ(CoreManager::GetUIStrings().GetLanguage(), "ru"_intern) << "a started match speaks the language of the game";
-        EXPECT_EQ(Text("HudMenu", "NewGame"), "Новая игра");
+        EXPECT_EQ(ShownTooltip(Element("HudMenu", "NewGame")), "Новая игра");
 
         ASSERT_TRUE(ClickElement("HudMenu", "NewGame"));
         Draw();
@@ -1133,7 +1133,7 @@ namespace BECore::Mahjong::Tests {
         Draw();
         EXPECT_EQ(_game->GetLanguage(), "en"_intern) << "and with both panels closed";
         EXPECT_EQ(CoreManager::GetUIStrings().GetVersion(), strings);
-        EXPECT_EQ(Text("HudMenu", "NewGame"), "New game");
+        EXPECT_EQ(ShownTooltip(Element("HudMenu", "NewGame")), "New game");
     }
 
     TEST_F(MahjongHudTest, TheLanguageOfTheScoreTableAndTheStandingsFollowsTheLanguageRowOfTheOptions) {

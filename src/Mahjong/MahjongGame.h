@@ -219,7 +219,7 @@ namespace BECore::Mahjong {
             _optionsOpen = false;
         }
 
-        /// Whether the rules screen (the modal pages `Rules` of the scene, `Table/RulesText.h`) is open. The button `Rules` of `Options` opens it; a
+        /// Whether the rules screen (the modal pages `Rules` of the scene, `Table/RulesText.h`) is open. The button `Rules` of the HUD and that of `Options` open it; a
         /// new match (`StartMatch`, a control `reset`) and every control action close it. While it is open the table is not played, like
         /// under `Setup`.
         bool IsRulesOpen() const {

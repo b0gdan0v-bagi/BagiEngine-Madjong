@@ -194,7 +194,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(MenuShown());
         EXPECT_TRUE(OnScreen("HudMenu", "Options"));
         EXPECT_TRUE(OnScreen("HudMenu", "NewGame"));
-        EXPECT_EQ(Element("HudMenu", "Rules"), nullptr) << "the rules are opened from the page Options";
+        EXPECT_EQ(ButtonAction(Element("HudMenu", "Rules")), "MahjongRules"_intern) << "the rules are opened from the HUD and from the page Options";
         EXPECT_EQ(Text("Options", "OptionsRules"), "Rules");
         EXPECT_EQ(Hud()->CurrentRulesPage(), 0);
     }
