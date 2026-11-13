@@ -5,10 +5,11 @@
   4 x 24 rows + 28 MatchCoachRow (the coach's tally, matchOverCoach; hidden and out of the stack unless it has text) + 64 button + 8 NewGameGap +
   7 x 4 spacing (8 children: the rows lie 4 apart and the button 4 + 8 + 4 = 16 below the last of them). The row has to be paid for inside the
   plate: a label of 22 needs 32 high (30 is the least that fits and is off the 4 grid), so the four rows are of 18 (the first place is still gold).
+  Motion (UiPalette.h kMotion*): the canvas fades and rises from 0.96 over 0.18 s and leaves in 0.12 s; _transitionInput stays off: a click in the 0.18 s of the show is eaten, none of the choices here is worth a blind click, and a leaving modal frees the screen at once.
 -->
 <node name="MatchOver" layer="25" contentVersion="5">
   <components>
-    <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.7" useSafeArea="true" modal="true" visible="false">
+    <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.7" useSafeArea="true" modal="true" transitionDuration="0.18" transitionHideDuration="0.12" transitionEase="QuadOut" transitionScaleFrom="0.96" visible="false">
       <elements>
         <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
         <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="560" height="296" direction="Vertical" spacing="4" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true" cornerRadius="16" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="26,29,38,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">

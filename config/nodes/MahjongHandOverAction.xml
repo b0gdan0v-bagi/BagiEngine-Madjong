@@ -14,10 +14,11 @@
   sides, and the plate of HandOver is 724 high with a gap of 112 (the variant of that file): the ratio of the two scales reaches 1.6 there (the
   1:1 window of 480 px) and 56 x 1.6 = 90 fits the gap, so the button stays in the middle of the window as in a landscape one. MahjongTouchSizeTest and
   MahjongEndScreenTest hold the place against the plate and the hands in every window of the matrix.
+  Motion (UiPalette.h kMotion*): fade only like HandOver. _transitionInput stays off: a click on NextHand in the 0.18 s of the show is eaten, which is what a click meant for the table just before the hand ended should be, and a leaving plate frees the screen at once.
 -->
 <node name="HandOverAction" layer="26" contentVersion="5">
   <components>
-    <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" visible="false">
+    <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" transitionDuration="0.18" transitionHideDuration="0.12" transitionEase="QuadOut" visible="false">
       <elements>
         <element type="UIElement" name="NextHand" anchor="Center" ignoreSafeArea="true" x="0" y="4" width="176" height="56" fontSize="22" color="40,110,60,255" cornerRadius="12" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="26,78,40,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
           <components>

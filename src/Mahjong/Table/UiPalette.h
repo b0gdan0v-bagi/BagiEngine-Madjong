@@ -214,6 +214,16 @@ namespace BECore::Mahjong {
     inline constexpr int kShadowOffsetY = 4;
     inline constexpr int kShadowBlur = 8;
 
+    /// The motion of a screen (`UICanvasComponent` `transition*` fields of the modal canvases and of the end screens' plates; `engine/.claude/rules/ui-transitions.md`): a show takes
+    /// `kMotionShowSeconds`, a hide the shorter `kMotionHideSeconds`, both with the ease `kMotionEase` (an `EaseType` name), a fade, and for a card that stands in the middle of the window also a rise
+    /// from `kMotionScaleFrom` of its size about the centre (no slide). A plate that must keep its rect for the cover test (`HandOver`, `HandOverAction`, `RulesAction`) fades only. The state bound
+    /// plates (hints, `HudMenu`, the action buttons, the move line, the hover plate) have none: they come and go every few seconds and a fade there is latency. `MahjongUiStyleTest` holds the scene
+    /// file to these numbers.
+    inline constexpr float kMotionShowSeconds = 0.18f;
+    inline constexpr float kMotionHideSeconds = 0.12f;
+    inline constexpr float kMotionScaleFrom = 0.96f;
+    inline constexpr const char* kMotionEase = "QuadOut";
+
     /// The table's own panels, the four seat plates and the centre panel: `MahjongTableComponent` paints each as one rounded framed box in one `DrawGeometry` (`UIBoxMesh`, the order of
     /// `UIElement::DrawBoxIn`: the soft shadow, the fill from `kSeatPlate` at the top to `kSeatPlateDeep` at the bottom, the border `kSeatPlateFrame`, the highlight line). The radius and the border
     /// are those of the scale above, times the table's unit; a bar of a mark along an edge is inset by the radius at both ends so it stays on the straight part of the edge. The roles are

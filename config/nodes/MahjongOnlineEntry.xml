@@ -15,10 +15,11 @@
   why the keys stay eight to a row in every window and nothing scrolls. The variants are those of Online: at most 480 units wide the plate takes the whole safe
   width and the captions are 52, at most 360 they are hidden. A key's character is one letter, so MahjongHudOnlineTest asks it to fit with 4 units of air, not 8.
   The skin is that of Online: the plate a card, EntryValueRow the header band, the keys radius 8 with no shadow (they lie 4 apart), EntryDelete, EntryPaste and EntryDone the buttons of their role.
+  Motion (UiPalette.h kMotion*): the canvas fades and rises from 0.96 over 0.18 s and leaves in 0.12 s; _transitionInput stays off: a click in the 0.18 s of the show is eaten, none of the choices here is worth a blind click, and a leaving modal frees the screen at once.
 -->
 <node name="OnlineEntry" layer="33" contentVersion="5">
   <components>
-    <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" modal="true" visible="false">
+    <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" modal="true" transitionDuration="0.18" transitionHideDuration="0.12" transitionEase="QuadOut" transitionScaleFrom="0.96" visible="false">
       <elements>
         <element type="UIElement" name="EntryDim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
         <element type="UIStack" name="EntryPlate" anchor="Center" width="94%" maxWidth="640" height="100%" maxHeight="544" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true" cornerRadius="16" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="26,29,38,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">

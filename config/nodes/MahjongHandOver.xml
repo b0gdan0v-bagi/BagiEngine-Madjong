@@ -30,10 +30,11 @@
   for it and then takes no room, so the plate keeps its size.
   The skin is that of config/CLAUDE.md: the plate a card, the headline band in the display font, the seat rows and the summary raised rows of radius 8 (the cells in PT Sans bold,
   the totals in the display font: it is too wide for a seat's name in the smallest window; a cell shrinks with AutoFit).
+  Motion (UiPalette.h kMotion*): fade only, 0.18 s in and 0.12 s out, no scale: the cover test judges the plate's rect against the hands and the rect is not scaled for layout or input anyway. _transitionInput stays off with HandOverAction's (the plate has no input).
 -->
 <node name="HandOver" layer="25" contentVersion="5">
   <components>
-    <component type="UICanvasComponent" space="SceneView" useSafeArea="true" modal="true" visible="false">
+    <component type="UICanvasComponent" space="SceneView" useSafeArea="true" modal="true" transitionDuration="0.18" transitionHideDuration="0.12" transitionEase="QuadOut" visible="false">
       <elements>
         <element type="UIStack" name="Plate" anchor="Center" ignoreSafeArea="true" y="-1.111111%" width="80.625%" height="70.555556%" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true" cornerRadius="16" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="26,29,38,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
           <children>

@@ -425,6 +425,18 @@ namespace BECore::Mahjong::Tests {
             _manager->DrawAll();
         }
 
+        /// Lets the show and hide of the canvases run out (`kMotion*` of `UiPalette.h`: at most 0.18 s): the game clock moves in exact steps of 0.125, a frame is drawn after each, as
+        /// `engine/.claude/rules/ui-transitions.md` says. The clock stands still while the tests only draw, so a canvas that was just shown or hidden is at the start of its motion (nothing
+        /// of it takes a click) until this is called; a canvas of no motion is not affected. The calls of the last frame stay in the recorder.
+        void SettleTransitions() {
+            constexpr double kSettleStep = 0.125;  // exact in binary, so the progress adds up without a remainder
+            constexpr int kSettleSteps = 8;        // one second, longer than any motion of the scene
+            for (int step = 0; step < kSettleSteps; ++step) {
+                CoreManager::GetTime().Advance(kSettleStep);
+                Draw();
+            }
+        }
+
         /// Switches the flights of arriving tiles on, with their real duration (`kTileFlightSeconds`): `SetUp` switches them off.
         void UseFlights() {
             _table->SetTileFlightSeconds(kTileFlightSeconds);

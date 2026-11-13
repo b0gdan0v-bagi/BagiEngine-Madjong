@@ -7,10 +7,11 @@
   view are 24 px in the smallest window and the plate cannot be a Screen canvas. Shown
   and hidden by MahjongHudComponent together with Rules, which also hides Back on the first page and Next on the last (the others
   widen: a hidden element takes no room in a stack). Back and Close are neutral, Next confirms (primary).
+  Motion (UiPalette.h kMotion*): fade only like Rules (a bar of buttons, no card). _transitionInput stays off: Back / Next / Close are not clicked blind in the 0.18 s of the show.
 -->
 <node name="RulesAction" layer="36" contentVersion="5">
   <components>
-    <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="1" minScale="0.6" useSafeArea="true" visible="false">
+    <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="1" minScale="0.6" useSafeArea="true" transitionDuration="0.18" transitionHideDuration="0.12" transitionEase="QuadOut" visible="false">
       <elements>
         <element type="UIElement" name="Bar" anchor="Bottom" width="100%" height="80" color="36,40,52,255" blocksInput="true" gradientDirection="Vertical" gradientColor="26,29,38,255" highlight="255,255,255,60" />
         <element type="UIStack" name="Buttons" anchor="Bottom" y="-8" width="94%" maxWidth="640" height="64" direction="Horizontal" spacing="8" crossAlign="Stretch">

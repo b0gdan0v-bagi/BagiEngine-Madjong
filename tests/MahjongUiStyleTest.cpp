@@ -18,7 +18,7 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        CORE_ENUM(Rule, uint8_t, Colour, FontSize, Grid, Action, Scale, Family)
+        CORE_ENUM(Rule, uint8_t, Colour, FontSize, Grid, Action, Scale, Family, Motion)
 
         struct Violation {
             Rule rule;
@@ -208,6 +208,55 @@ namespace BECore::Mahjong::Tests {
             }
         }
 
+        /// The canvases that show and hide with a motion (`kMotion*` of `Table/UiPalette.h`): the cards fade and rise, the plates of the end screens and the rules bar fade only. Every other canvas
+        /// has none.
+        constexpr const char* kMotionCards[] = {"Setup", "Options", "Consent", "Handoff", "MatchOver", "Rules", "Online", "OnlineEntry"};
+        constexpr const char* kMotionPlates[] = {"HandOver", "HandOverAction", "RulesAction"};
+        constexpr const char* kMotionAttributes[] = {"transitionDuration", "transitionHideDuration", "transitionEase", "transitionScaleFrom", "transitionSlideX", "transitionSlideY", "transitionFade"};
+
+        template <size_t N>
+        bool IsOneOf(const std::string& name, const char* const (&names)[N]) {
+            return std::any_of(std::begin(names), std::end(names), [&](const char* entry) { return name == entry; });
+        }
+
+        bool IsFloat(const pugi::xml_attribute& attribute, float expected) {
+            const std::optional<float> value = UIText::ParseFiniteFloat(attribute.as_string());
+            return value && std::abs(*value - expected) < 1e-6f;
+        }
+
+        /// The `transition*` fields of a canvas against the named numbers: a card of `kMotionCards` has the show, hide, ease and the rise, a plate of `kMotionPlates` the same without the rise (the
+        /// field stays at 1), no canvas has a slide, and a canvas of neither list has none of the fields. `name` is the node the canvas belongs to.
+        void CheckMotion(const pugi::xml_node& canvas, const std::string& name, std::vector<Violation>& found) {
+            const auto flag = [&](const char* attribute) { found.push_back({Rule::Motion, name, attribute, AttributeOf(canvas, attribute)}); };
+            const bool card = IsOneOf(name, kMotionCards);
+            const bool plate = IsOneOf(name, kMotionPlates);
+            if (!card && !plate) {
+                for (const char* attribute : kMotionAttributes) {
+                    if (canvas.attribute(attribute)) {
+                        flag(attribute);
+                    }
+                }
+                return;
+            }
+            if (!IsFloat(canvas.attribute("transitionDuration"), kMotionShowSeconds)) {
+                flag("transitionDuration");
+            }
+            if (!IsFloat(canvas.attribute("transitionHideDuration"), kMotionHideSeconds)) {
+                flag("transitionHideDuration");
+            }
+            if (AttributeOf(canvas, "transitionEase") != kMotionEase) {
+                flag("transitionEase");
+            }
+            if (card ? !IsFloat(canvas.attribute("transitionScaleFrom"), kMotionScaleFrom) : static_cast<bool>(canvas.attribute("transitionScaleFrom"))) {
+                flag("transitionScaleFrom");
+            }
+            for (const char* attribute : {"transitionSlideX", "transitionSlideY", "transitionFade"}) {
+                if (canvas.attribute(attribute)) {
+                    flag(attribute);
+                }
+            }
+        }
+
         void CheckElement(const pugi::xml_node& element, std::vector<Violation>& found) {
             const std::string name = AttributeOf(element, "name");
             const auto flag = [&](Rule rule, const char* attribute) { found.push_back({rule, name, attribute, AttributeOf(element, attribute)}); };
@@ -269,6 +318,8 @@ namespace BECore::Mahjong::Tests {
                     CheckFontAndGrid(child, name, IsTilePictureName(name), found);
                     CheckSkinScale(child, name, found);
                     ++count;
+                } else if (std::string_view(child.name()) == "component" && AttributeOf(child, "type") == "UICanvasComponent") {
+                    CheckMotion(child, AttributeOf(child.parent().parent(), "name"), found);  // component -> components -> node
                 }
                 Walk(child, found, count);
             }
@@ -538,6 +589,42 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(Of(report, Rule::Family).size(), 1u) << to;
             EXPECT_EQ(report.violations.size(), 1u) << to;
         }
+    }
+
+    TEST_F(MahjongUiStyleTest, EveryCanvasMotionOfTheFileIsTheNamedOne) {
+        EXPECT_TRUE(Of(_report, Rule::Motion).empty()) << Describe(Of(_report, Rule::Motion));
+        // the walk did find the canvases: a card and a plate of the lists carry the fields in the file
+        EXPECT_NE(_text.find("transitionScaleFrom=\"0.96\""), std::string::npos);
+        EXPECT_NE(_text.find("transitionDuration=\"0.18\""), std::string::npos);
+    }
+
+    TEST_F(MahjongUiStyleTest, ACanvasMotionOffTheNamedNumbersIsCaught) {
+        for (const auto& [from, to] : {std::pair<const char*, const char*>{"transitionDuration=\"0.18\"", "transitionDuration=\"0.2\""},
+                                       {"transitionHideDuration=\"0.12\"", "transitionHideDuration=\"0.5\""},
+                                       {"transitionEase=\"QuadOut\"", "transitionEase=\"Linear\""},
+                                       {"transitionScaleFrom=\"0.96\"", "transitionScaleFrom=\"0.9\""},
+                                       {"transitionScaleFrom=\"0.96\"", "transitionSlideY=\"8\""}}) {
+            const Report report = CheckStyle(Broken(_text, from, to));
+            EXPECT_FALSE(Of(report, Rule::Motion).empty()) << to;
+            EXPECT_TRUE(Of(report, Rule::Colour).empty()) << to;
+            EXPECT_TRUE(Of(report, Rule::Grid).empty()) << to;
+        }
+    }
+
+    TEST_F(MahjongUiStyleTest, TheMotionRuleKnowsCardsPlatesAndTheCanvasesWithNone) {
+        const auto canvas = [](const char* node, const char* attributes) {
+            return std::string("<SceneManager><scenes><scene><nodes><node name=\"") + node + "\"><components><component type=\"UICanvasComponent\" " + attributes +
+                   " /></components></node></nodes></scene></scenes></SceneManager>";
+        };
+        constexpr const char* kRise = "transitionDuration=\"0.18\" transitionHideDuration=\"0.12\" transitionEase=\"QuadOut\" transitionScaleFrom=\"0.96\"";
+        constexpr const char* kFade = "transitionDuration=\"0.18\" transitionHideDuration=\"0.12\" transitionEase=\"QuadOut\"";
+        EXPECT_TRUE(CheckStyle(canvas("Setup", kRise)).violations.empty());
+        EXPECT_TRUE(CheckStyle(canvas("HandOver", kFade)).violations.empty());
+        EXPECT_TRUE(CheckStyle(canvas("HudMenu", "visible=\"true\"")).violations.empty()) << "a state bound canvas has none";
+        EXPECT_FALSE(CheckStyle(canvas("Setup", kFade)).violations.empty()) << "a card must rise";
+        EXPECT_FALSE(CheckStyle(canvas("HandOver", kRise)).violations.empty()) << "a plate must not scale";
+        EXPECT_FALSE(CheckStyle(canvas("HudMenu", kFade)).violations.empty()) << "a state bound canvas must not fade";
+        EXPECT_FALSE(CheckStyle(canvas("Setup", "")).violations.empty()) << "a card without its motion";
     }
 
     TEST_F(MahjongUiStyleTest, TheNamesOfThePaletteAreUniqueAndItsColoursAreDifferent) {
