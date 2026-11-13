@@ -355,6 +355,10 @@ namespace BECore::Mahjong::Tests {
 
     TEST(SeatPlatesTest, ThePlateColoursAreTheHudPanelTheGoldOfTheTurnAndADealerMarkThatIsNotGold) {
         EXPECT_TRUE(SameColor(kSeatPlate, PaletteColor("hudPanel")));
+        // The panels' skin is the scale of the scene file: its radius and border, and the bottom of the gradient is the HUD panel's
+        EXPECT_EQ(kSeatPlateCorner, static_cast<float>(kCornerMiddle));
+        EXPECT_EQ(kSeatPlateBorder, static_cast<float>(kBorderWidth));
+        EXPECT_TRUE(SameColor(kSeatPlateDeep, PaletteColor("hudPanelDeep")));
         // The turn is gold: the frame is the gold of the other marks (the same red, green and blue as the turn mark) with an alpha of its own
         EXPECT_EQ(kSeatTurnFrame.r, kTurnMark.r);
         EXPECT_EQ(kSeatTurnFrame.g, kTurnMark.g);

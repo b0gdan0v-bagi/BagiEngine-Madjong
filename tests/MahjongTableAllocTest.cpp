@@ -45,6 +45,28 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(_renderer->calls.empty());
     }
 
+    /// The seat plates and the centre panel are meshed (`UIBoxMesh`) into the scratch lists of the component at the scale of the window: once the lists have their capacity, a draw allocates
+    /// nothing whichever plate has the turn tint and frame (`MahjongTableUiTest` holds that the capacity stays equal in a build without the counter).
+    TEST_F(MahjongTableAllocTest, ThePanelsMeshedAtAnotherScaleAllocateNothingOnceTheTurnHasMoved) {
+        ASSERT_NO_FATAL_FAILURE(Start(kAllComputers));
+        SetWindow(*_renderer, MakePhoneWindow(915.0f, 330.0f, 2.6f));
+        Draw();
+        Draw();
+        ASSERT_TRUE(_game->GetSession().StepComputer().has_value());
+        Draw();
+        Draw();
+
+        _renderer->ClearCalls();
+        const MahjongTableComponent::PanelScratch capacity = _table->PanelScratchCapacity();
+        const uint64_t before = AllocTracker::GetThreadCounters().count;
+        _table->OnDraw();
+        const uint64_t allocations = AllocTracker::GetThreadCounters().count - before;
+
+        EXPECT_EQ(allocations, 0u);
+        EXPECT_EQ(_table->PanelScratchCapacity(), capacity);
+        EXPECT_FALSE(_renderer->calls.empty());
+    }
+
     /// The regions reach every canvas of the table; once they are there, a frame in each shape, the phone profile among them, allocates
     /// nothing (`Set` of an equal rectangle, and the comparison with the published list, keep the heap out).
     TEST_F(MahjongTableAllocTest, TheTablesRegionsOnTheCanvasesAllocateNothingInASteadyFrameInEveryShape) {
