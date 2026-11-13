@@ -12,7 +12,7 @@
 railway domain --service bagi-mahjong
 ```
 
-Ниже этот адрес обозначен как `<домен>`, например `bagi-mahjong-production.up.railway.app`. Нужен именно тот адрес, по которому тестеры открывают игру; если подключён свой домен, берите его.
+Адрес сервиса: **`https://bagi-mahjong-production.up.railway.app`**, он подставлен во все шаги ниже. Если подключите свой домен, замените его везде.
 
 ## 2. Google Cloud: экран согласия
 
@@ -22,20 +22,20 @@ railway domain --service bagi-mahjong
    - App name: его тестер увидит в окне Google, например `BagiMahjong`.
    - Support email и Developer contact: ваша почта.
    - **Branding → App domain** (без этих полей Google не даёт опубликовать приложение: «Valid app name, support email, homepage URL and privacy policy URL are required»):
-     - Application home page: `https://<домен>/`
-     - Application privacy policy link: `https://<домен>/privacy` — эту страницу отдаёт сам сервер, без входа (сервер должен быть уже выложен с новым `serve.py`, шаг 7);
+     - Application home page: `https://bagi-mahjong-production.up.railway.app/`
+     - Application privacy policy link: `https://bagi-mahjong-production.up.railway.app/privacy` — эту страницу отдаёт сам сервер, без входа (сервер должен быть уже выложен с новым `serve.py`, шаг 7);
      - Application terms of service link: можно оставить пустым;
-     - **Authorized domains**: `<домен>` целиком (например `bagi-mahjong-production.up.railway.app`). Если Google его не примет, остаётся подключить к сервису свой домен и указать его.
+     - **Authorized domains**: `bagi-mahjong-production.up.railway.app`. Если Google его не примет, остаётся подключить к сервису свой домен и указать его.
    - Логотип не загружайте: с ним Google требует проверку бренда.
 3. **Scopes** (в новом интерфейсе **Data Access**): добавьте только `openid` и `.../auth/userinfo.email`. Ничего больше не добавляйте: эти два не считаются чувствительными, поэтому проверка приложения в Google не нужна.
-4. **Audience → Publish app**, подтвердите. Если Google снова пишет, что не хватает полей, проверьте Branding из пункта 2 и что `https://<домен>/privacy` открывается в браузере. Без этого шага войти смогут только тестовые пользователи (до 100), которых вы впишете руками.
+4. **Audience → Publish app**, подтвердите. Если Google снова пишет, что не хватает полей, проверьте Branding из пункта 2 и что `https://bagi-mahjong-production.up.railway.app/privacy` открывается в браузере. Без этого шага войти смогут только тестовые пользователи (до 100), которых вы впишете руками.
 
 ## 3. Google Cloud: OAuth-клиент
 
 1. **APIs & Services → Credentials → Create credentials → OAuth client ID.**
 2. Application type: **Web application**, имя любое.
 3. **Authorized JavaScript origins** оставьте пустым: сервер обходится без скриптов Google на странице.
-4. **Authorized redirect URIs**: ровно `https://<домен>/auth/google/callback`. Обязательно `https`, без слэша в конце и без лишнего пути. Если адрес не совпадёт буква в букву, Google покажет ошибку `redirect_uri_mismatch`.
+4. **Authorized redirect URIs**: ровно `https://bagi-mahjong-production.up.railway.app/auth/google/callback`. Обязательно `https`, без слэша в конце и без лишнего пути. Если адрес не совпадёт буква в букву, Google покажет ошибку `redirect_uri_mismatch`.
 5. Нажмите **Create** и скопируйте **Client ID** и **Client secret**. Секрет никуда не коммитьте и не пересылайте.
 
 ## 4. Два секрета
@@ -66,7 +66,7 @@ Volume монтируется с владельцем root, а образ раб
 railway variables --service bagi-mahjong \
   --set GOOGLE_CLIENT_ID=<client id> \
   --set GOOGLE_CLIENT_SECRET=<client secret> \
-  --set PUBLIC_URL=https://<домен> \
+  --set PUBLIC_URL=https://bagi-mahjong-production.up.railway.app \
   --set SESSION_SECRET=<первый секрет> \
   --set MATCH_COLLECT_TOKEN=<второй секрет> \
   --set PRIVACY_CONTACT=<ваша почта для запросов об удалении> \
@@ -97,14 +97,14 @@ python3 engine/tools/web/build_and_deploy.py --source-dir . --game BagiMahjong -
 ## 8. Проверка
 
 1. Запустите `railway logs --service bagi-mahjong`. В стартовой строке должно быть:
-   `access: sign-in with google or as a guest (https://<домен>); match store: /data/matches`.
-2. Откройте `https://<домен>` в приватном окне. Должна открыться `/signin` с двумя кнопками.
-3. Войдите через Google. После выбора аккаунта откроется игра. Если снова открыть `https://<домен>/signin`, там будет «Вы вошли как …» и кнопка «Выйти».
+   `access: sign-in with google or as a guest (https://bagi-mahjong-production.up.railway.app); match store: /data/matches`.
+2. Откройте `https://bagi-mahjong-production.up.railway.app` в приватном окне. Должна открыться `/signin` с двумя кнопками.
+3. Войдите через Google. После выбора аккаунта откроется игра. Если снова открыть `https://bagi-mahjong-production.up.railway.app/signin`, там будет «Вы вошли как …» и кнопка «Выйти».
 4. В другом приватном окне нажмите «Играть без входа». Игра тоже должна открыться.
 5. Проверьте логи матчей. Сыграйте в браузере раздачу, приняв согласие на отправку матчей (его можно поменять в Options), затем запросите список:
 
    ```bash
-   curl -H "Authorization: Bearer <MATCH_COLLECT_TOKEN>" https://<домен>/matches/
+   curl -H "Authorization: Bearer <MATCH_COLLECT_TOKEN>" https://bagi-mahjong-production.up.railway.app/matches/
    ```
 
    У матчей вошедших тестеров в списке будет поле `"tester": {"provider": "google", "email": "..."}`. Скачать логи для арены: `tools/collect_logs.py` (см. [tester-match-logs.md](tester-match-logs.md)), токен берётся из `MATCH_COLLECT_TOKEN`.
@@ -126,13 +126,13 @@ python3 engine/tools/web/build_and_deploy.py --source-dir . --game BagiMahjong -
 ## Обслуживание
 
 - **Удалить матчи тестера по его просьбе.** Найдите id в `/matches/` по email, затем выполните:
-  `curl -X DELETE -H "Authorization: Bearer <MATCH_COLLECT_TOKEN>" https://<домен>/matches/<id>`.
+  `curl -X DELETE -H "Authorization: Bearer <MATCH_COLLECT_TOKEN>" https://bagi-mahjong-production.up.railway.app/matches/<id>`.
 - **Выкинуть всех.** Задайте новый `SESSION_SECRET` и перевыложите.
 - **Токен сбора утёк.** Задайте новый `MATCH_COLLECT_TOKEN` и перевыложите.
 - **Сменить секрет клиента Google.** Credentials → клиент → Reset secret, затем обновите `GOOGLE_CLIENT_SECRET`.
 - **Другой провайдер** (Яндекс, Microsoft, Apple…):
   1. Добавьте строку в таблицу `PROVIDERS` в `engine/tools/web/serve.py`. Если провайдер не поддерживает OpenID Connect, нужен небольшой подкласс `Provider`.
-  2. Создайте его клиент с адресом возврата `https://<домен>/auth/<имя>/callback`.
+  2. Создайте его клиент с адресом возврата `https://bagi-mahjong-production.up.railway.app/auth/<имя>/callback`.
   3. Задайте две его переменные и перевыложите.
 - **Проверить локально без Google:**
   `SIGNIN_FAKE_EMAIL=me@example.com python3 engine/tools/web/serve.py --root dist --host 127.0.0.1`.
