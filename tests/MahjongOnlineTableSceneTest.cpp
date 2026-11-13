@@ -372,12 +372,12 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongOnlineTableSceneTest, TheMenuButtonLeavesTheRoomAndTheEndOfTheTableOpensSetupWithoutAWord) {
         ASSERT_NO_FATAL_FAILURE(StartRoom());
         Frame();
-        EXPECT_EQ(Text("HudMenu", "NewGame"), "Leave room");
+        EXPECT_EQ(ShownTooltip(Element("HudMenu", "NewGame")), "Leave room");
         EXPECT_TRUE(OnScreen("HudMenu", "Options")) << "the options stay";
         ASSERT_TRUE(_game->SetLanguage("ru"_intern));
         Frame();
         Frame();
-        EXPECT_EQ(Text("HudMenu", "NewGame"), "Выйти из комнаты");
+        EXPECT_EQ(ShownTooltip(Element("HudMenu", "NewGame")), "Выйти из комнаты");
         ASSERT_TRUE(_game->SetLanguage("en"_intern));
         Frame();
         Frame();
@@ -391,7 +391,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_game->GetOnline().Notice().serial, 0u);
         Frame();
         Frame();
-        EXPECT_EQ(Text("HudMenu", "NewGame"), "New game") << "the local game's button again";
+        EXPECT_EQ(ShownTooltip(Element("HudMenu", "NewGame")), "New game") << "the local game's button again";
         EXPECT_FALSE(_game->GetSession().IsRemote());
         EXPECT_EQ(Var("plateName0"), "Seat 1 You") << "the plates are the local game's again";
     }
@@ -414,7 +414,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Text("Hud", "MoveText"), status);
         EXPECT_EQ(Hand().Discards().size(), piled);
         ExpectTableDrawn(false, Viewer());
-        EXPECT_EQ(Text("HudMenu", "NewGame"), "Leave room") << "a room can be left while the link is down";
+        EXPECT_EQ(ShownTooltip(Element("HudMenu", "NewGame")), "Leave room") << "a room can be left while the link is down";
 
         ASSERT_TRUE(_game->SetLanguage("ru"_intern));
         Frame();

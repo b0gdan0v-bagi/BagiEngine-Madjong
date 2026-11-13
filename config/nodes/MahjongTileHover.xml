@@ -15,7 +15,7 @@
   <components>
     <component type="UICanvasComponent" space="SceneView">
       <elements>
-        <element type="UIStack" name="TileHoverPlate" anchor="TopLeft" x="0" y="0" width="240" height="48" visible="false" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170">
+        <element type="UIStack" name="TileHoverPlate" anchor="TopLeft" x="0" y="0" width="240" height="48" visible="false" direction="Vertical" padding="8" crossAlign="Stretch" color="10,30,22,170" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="6,20,14,170" highlight="255,255,255,60" shadow="0,4,8,0,0,0,0,90">
           <children>
             <element type="UIElement" name="TileHoverLabel" height="32" fontSize="18">
               <components>

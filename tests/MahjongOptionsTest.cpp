@@ -394,6 +394,36 @@ namespace BECore::Mahjong::Tests {
         EXPECT_LT(Element("Options", "LanguageCaption")->rect.w, 112.0f);
     }
 
+    TEST_F(MahjongOptionsTest, ThePageIsACardWithTheThreeGroupsOnRaisedRowsAndTheButtonsOfTheirRoles) {
+        ASSERT_NO_FATAL_FAILURE(OpenPage());
+        LayOutInWindow(*Canvas("Options"), DesignWindow());
+
+        const UIElement* plate = Element("Options", "Plate");
+        ASSERT_NE(plate, nullptr);
+        EXPECT_EQ(plate->box.cornerRadius.topLeft, static_cast<float>(kCornerLarge));
+        EXPECT_GT(plate->box.borderWidth, 0.0f);
+
+        const UIElement* title = Element("Options", "Title");
+        ASSERT_NE(title, nullptr);
+        EXPECT_EQ(title->box.cornerRadius.topLeft, static_cast<float>(kCornerMiddle));
+        EXPECT_EQ(title->GetComponent<UITextComponent>()->fontFamily, PoolString::Intern(kFontFamilyDisplay)) << "the headline is in the display font";
+
+        for (const char* name : {"LanguageRow", "HintsRow", kSpeedRow}) {
+            const UIElement* row = Element("Options", name);
+            ASSERT_NE(row, nullptr) << name;
+            EXPECT_EQ(row->box.cornerRadius.topLeft, static_cast<float>(kCornerSmall)) << name;
+            EXPECT_GT(row->box.borderWidth, 0.0f) << name << ": a raised row";
+        }
+        for (const char* name : {"OptionsRules", "Back"}) {
+            const UIElement* button = Element("Options", name);
+            ASSERT_NE(button, nullptr) << name;
+            EXPECT_EQ(button->box.cornerRadius.topLeft, static_cast<float>(kCornerMiddle)) << name;
+            EXPECT_EQ(button->GetComponent<UITextComponent>()->fontWeight, kFontWeightBold) << name;
+        }
+        EXPECT_TRUE(SameColor(Element("Options", "OptionsRules")->color, PaletteColor("neutral")));
+        EXPECT_TRUE(SameColor(Element("Options", "Back")->color, PaletteColor("primary")));
+    }
+
     // ----- nothing behind the page takes input -----
 
     TEST_F(MahjongOptionsTest, TheDimCoversTheWindowSoTheButtonsOfTheHudUnderItTakeNoClick) {

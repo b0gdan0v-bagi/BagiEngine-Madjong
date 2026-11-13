@@ -54,7 +54,7 @@ The common configure triggers (the skill states them; this repository adds the o
 
 ### Tests
 
-`ctest --preset <p>` runs `MahjongTests` (the gtests, each in its own process) and `BagiMahjongControlSmoke` (`be_add_game_control_tests(BagiMahjong SCRIPT tests/control_smoke.py)` in `CMakeLists.txt`). The smoke test starts `BagiMahjong --headless --control` (no window) on a free port, once on the real clock and once with `--manual-clock`, and plays a hand and a match over WebSocket; it takes about 7 seconds. It does not build the executable: `cmake --build --preset <p> --target BagiMahjong MahjongTests` first (a missing executable is a skip, exit code 77). It runs by hand as `BAGI_ENGINE_DIR=engine python3 tests/control_smoke.py --exe build/macos-debug/bin/BagiMahjong`.
+`ctest --preset <p>` runs `MahjongTests` (the gtests, each in its own process) and `BagiMahjongControlSmoke` (`be_add_game_control_tests(BagiMahjong SCRIPT tests/control_smoke.py)` in `CMakeLists.txt`). The smoke test starts `BagiMahjong --headless --control` (no window) on a free port, once on the real clock and once with `--manual-clock`, and plays a hand and a match over WebSocket; it takes about 3 to 4 minutes in Debug (a frame of a modal screen of the skin takes about 1 s in the headless software renderer), so `CMakeLists.txt` gives it a `TIMEOUT` of 420 s, not the engine's 120. It does not build the executable: `cmake --build --preset <p> --target BagiMahjong MahjongTests` first (a missing executable is a skip, exit code 77). It runs by hand as `BAGI_ENGINE_DIR=engine python3 tests/control_smoke.py --exe build/macos-debug/bin/BagiMahjong`.
 
 ### Local overrides
 

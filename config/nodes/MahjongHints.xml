@@ -27,7 +27,7 @@
     <component type="MahjongHintsComponent" />
     <component type="UICanvasComponent" space="SceneView">
       <elements>
-        <element type="UIStack" name="WaitPanel" region="table.waiting" anchor="Stretch" visible="false" direction="Vertical" spacing="0" padding="0" crossAlign="Center" color="0,0,0,200">
+        <element type="UIStack" name="WaitPanel" region="table.waiting" anchor="Stretch" visible="false" direction="Vertical" spacing="0" padding="0" crossAlign="Center" color="0,0,0,200" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" highlight="255,255,255,60">
           <children>
             <element type="UIElement" name="WaitCaption" width="100%" height="24" fontSize="18">
               <components>
@@ -222,12 +222,12 @@
             </element>
           </children>
         </element>
-        <element type="UIElement" name="AdviceText" region="table.advice" anchor="Stretch" visible="false" fontSize="18" color="0,0,0,200">
+        <element type="UIElement" name="AdviceText" region="table.advice" anchor="Stretch" visible="false" fontSize="18" color="0,0,0,200" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" highlight="255,255,255,60">
           <components>
             <component type="UITextComponent" text="{hintAdvice}" align="Center" verticalAlign="Center" overflow="AutoFit"/>
           </components>
         </element>
-        <element type="UIElement" name="RoomHintsText" region="table.advice" anchor="Stretch" visible="false" fontSize="18" color="0,0,0,200">
+        <element type="UIElement" name="RoomHintsText" region="table.advice" anchor="Stretch" visible="false" fontSize="18" color="0,0,0,200" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" highlight="255,255,255,60">
           <components>
             <component type="UITextComponent" text="{roomHintsText}" align="Center" verticalAlign="Center" overflow="AutoFit"/>
           </components>

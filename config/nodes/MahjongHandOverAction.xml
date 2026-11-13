@@ -19,9 +19,9 @@
   <components>
     <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" visible="false">
       <elements>
-        <element type="UIElement" name="NextHand" anchor="Center" ignoreSafeArea="true" x="0" y="4" width="176" height="56" fontSize="22" color="40,110,60,255">
+        <element type="UIElement" name="NextHand" anchor="Center" ignoreSafeArea="true" x="0" y="4" width="176" height="56" fontSize="22" color="40,110,60,255" cornerRadius="12" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="26,78,40,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
           <components>
-            <component type="UITextComponent" text="{handOverButton}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+            <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{handOverButton}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
             <component type="UIInputClicker" action="MahjongNextHand"/>
           </components>
         </element>

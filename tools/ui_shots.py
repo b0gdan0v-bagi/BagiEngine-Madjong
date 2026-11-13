@@ -1,28 +1,35 @@
 #!/usr/bin/env python3
-"""Screenshots of the Mahjong UI for a review: seven scenes, each in two sizes, into a folder outside the repository.
+"""Screenshots of the Mahjong UI for a review: nine scenes in the window size of the run, into a folder outside the repository.
 
     python3 tools/ui_shots.py --exe build/macos-debug/bin/BagiMahjong --label before
+    python3 tools/ui_shots.py --exe build/macos-debug/bin/BagiMahjong --label before --window 720x1280
 
 Starts one BagiMahjong (--headless --control --manual-clock) and, for each scene, sets up the state through the control API, steps a few
-frames and writes `<NN>-<scene>-1920x1080.png` (the native output of the headless window) and `<NN>-<scene>-640x360.png` (the same render
-scaled down by `maxSize 640`) into `<out>/<label>/`. The scenes: 01-fresh-table, 02-claim-window, 03-score-table, 04-standings, 05-setup,
-06-handoff, 07-options. A scene that needs a particular state (a claim window, a won hand, the cover) tries the seeds `--seed .. --seed + 29` and
-prints the seed it used. The size is the window of the headless game, 1920 x 1080 from the engine's `SDLWindowConfig.xml`, and no control call changes
-it, so this tool shoots the landscape table only. The portrait table (the scene picks its portrait view for an output at least as high as wide) is
-shot by hand: put a temporary `config/SDLWindowConfig.xml` of the game with a tall window (say 720 x 1280; the game's config overrides the engine's)
-beside `SceneConfig.xml`, run a game and a `screenshot`, and delete the file (never commit it); the scenes of this tool would also need their size
-constants changed, which is why it does not do it. The pictures are never committed: `--out` may not lie inside a git work tree, and the default is
-`~/.claude/plans/mahjong-ui-polish-shots`. The engine's helpers are found through BAGI_ENGINE_DIR (default: `engine` of this repository).
+frames and writes `<NN>-<scene>-<W>x<H>.png` (the native output of the headless window) and a copy scaled down by `maxSize 640` (its longer
+side is 640: 640x360 for the landscape window, 360x640 for the portrait one) into `<out>/<label>/`. The scenes: 01-fresh-table,
+02-claim-window, 03-score-table, 04-standings, 05-setup, 06-handoff, 07-options, 08-rules (the rules page: Options, then its Rules button)
+and 09-online (the online panel: New game, then the Online button of Setup; the panel opens without a server, it only shows its menu page).
+A scene that needs a particular state (a claim window, a won hand, the cover) tries the seeds `--seed .. --seed + 29` and prints the seed it
+used.
+
+The size is the window of the headless game (1920 x 1080 from the engine's `SDLWindowConfig.xml`), and no control call changes it. With
+`--window WxH` that is not the default the tool writes a **temporary** `config/SDLWindowConfig.xml` of the game (next to `SceneConfig.xml`;
+the game's file overrides the engine's) and removes it when it ends, also on Ctrl-C or a signal; it refuses to start when such a file is
+already there (a developer's own file is never overwritten) and the file is never committed. The scene picks its portrait view for an output
+at least as high as wide. The pictures are never committed: `--out` may not lie inside a git work tree, and the default is
+`~/.claude/plans/mahjong-ui-skin-shots`. The engine's helpers are found through BAGI_ENGINE_DIR (default: `engine` of this repository).
 Exit code: 0 done, 1 failed, 77 skipped (the executable does not exist).
 """
 
 import argparse
 import base64
 import os
+import signal
 import subprocess
 import sys
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 ENGINE_DIR = Path(os.environ.get("BAGI_ENGINE_DIR") or Path(__file__).resolve().parents[1] / "engine")
 sys.path.insert(0, str(ENGINE_DIR / "tools" / "control"))
@@ -35,15 +42,18 @@ from png_reader import PngError, read_png  # noqa: E402
 EXIT_DONE = 0
 EXIT_FAILED = 1
 EXIT_SKIPPED = 77
+EXIT_TERMINATED = 143  # 128 + SIGTERM
 
-# The default folder is the one of the entry that made the tool (mahjong-ui-polish); a later entry passes --out with its own
-DEFAULT_OUT = Path("~/.claude/plans/mahjong-ui-polish-shots")
-NATIVE_WIDTH = 1920  # the headless window (engine/src/Modules/SDL/CLAUDE.md, "Headless and screenshots")
-NATIVE_HEIGHT = 1080
+DEFAULT_OUT = Path("~/.claude/plans/mahjong-ui-skin-shots")
+DEFAULT_WINDOW = (1920, 1080)  # the headless window of the engine's SDLWindowConfig.xml (engine/src/Modules/SDL/CLAUDE.md, "Headless and screenshots")
 NATIVE_MAX_SIZE = 4096  # the largest maxSize: a picture is never enlarged, so this gives the native size
 SMALL_MAX_SIZE = 640
-SMALL_WIDTH = 640
-SMALL_HEIGHT = 360
+GAME_CONFIG_DIR = Path(__file__).resolve().parents[1] / "config"  # next to the game's SceneConfig.xml
+WINDOW_CONFIG_NAME = "SDLWindowConfig.xml"
+WINDOW_CONFIG = (
+    '<?xml version="1.0"?>\n<root><window width="{width}" height="{height}" '
+    'windowFlags="SDL_WINDOW_RESIZABLE|SDL_WINDOW_VULKAN|SDL_WINDOW_MAXIMIZED|SDL_WINDOW_HIGH_PIXEL_DENSITY"/></root>\n'
+)
 SEED_TRIES = 30
 SETTLE_FRAMES = 2  # frames after a change of the game before the canvases show it
 HANDS = 8
@@ -170,6 +180,30 @@ def handoff(client: BagiControlClient, seed: int) -> str:
     return f"seed {seed}"
 
 
+def rules_screen(client: BagiControlClient, seed: int) -> str:
+    """The rules page over the table: Options of the HUD, then the Rules button of the page Options."""
+    reset(client, seed, "PCCC")
+    settle(client)
+    client.call("ui_click", {"name": "Options", "canvas": "HudMenu"})
+    settle(client)
+    client.call("ui_click", {"name": "OptionsRules", "canvas": "Options"})
+    tree = settle(client)
+    check(canvas_visible(tree, "Rules"), "the button Rules of the options did not open the rules page")
+    return f"seed {seed}"
+
+
+def online_screen(client: BagiControlClient, seed: int) -> str:
+    """The online panel over Setup: New game, then the Online button of Setup (hidden only in a browser build without a server address)."""
+    reset(client, seed, "PCCC")
+    settle(client)
+    client.call("ui_click", {"name": "NewGame", "canvas": "HudMenu"})
+    settle(client)
+    client.call("ui_click", {"name": "SetupOnline", "canvas": "Setup"})
+    tree = settle(client)
+    check(canvas_visible(tree, "Online"), "the button Online of Setup did not open the online panel")
+    return f"seed {seed}"
+
+
 SCENES = [
     ("01-fresh-table", fresh_table),
     ("02-claim-window", claim_window),
@@ -178,6 +212,8 @@ SCENES = [
     ("05-setup", setup_screen),
     ("06-handoff", handoff),
     ("07-options", options_screen),
+    ("08-rules", rules_screen),
+    ("09-online", online_screen),
 ]
 
 
@@ -194,9 +230,15 @@ def screenshot(client: BagiControlClient, max_size: int) -> tuple[bytes, int, in
     return data, image.width, image.height
 
 
-def write_shots(client: BagiControlClient, folder: Path, name: str) -> list[Path]:
+def small_size(window: tuple[int, int]) -> tuple[int, int]:
+    """The size of the copy `maxSize` makes: the longer side becomes SMALL_MAX_SIZE, never enlarged, the other side rounded."""
+    scale = min(1.0, SMALL_MAX_SIZE / max(window))
+    return round(window[0] * scale), round(window[1] * scale)
+
+
+def write_shots(client: BagiControlClient, folder: Path, name: str, window: tuple[int, int]) -> list[Path]:
     written = []
-    for max_size, width, height in ((NATIVE_MAX_SIZE, NATIVE_WIDTH, NATIVE_HEIGHT), (SMALL_MAX_SIZE, SMALL_WIDTH, SMALL_HEIGHT)):
+    for max_size, (width, height) in ((NATIVE_MAX_SIZE, window), (SMALL_MAX_SIZE, small_size(window))):
         data, got_width, got_height = screenshot(client, max_size)
         check((got_width, got_height) == (width, height), f"{name}: the picture is {got_width}x{got_height}, expected {width}x{height}")
         path = folder / f"{name}-{width}x{height}.png"
@@ -214,7 +256,37 @@ def inside_a_git_work_tree(path: Path) -> bool:
     return result.returncode == 0
 
 
-def run(exe: Path, folder: Path, seed: int) -> None:
+@contextmanager
+def temporary_window_config(window: tuple[int, int]) -> Iterator[None]:
+    """The game's `config/SDLWindowConfig.xml` with the window `window` while the block runs; nothing for the default window.
+    Refuses when such a file exists (it is the developer's), and removes its own in every way out (an error, Ctrl-C, SIGTERM)."""
+    if window == DEFAULT_WINDOW:
+        yield
+        return
+    path = GAME_CONFIG_DIR / WINDOW_CONFIG_NAME
+    if path.exists():
+        raise ShotFailure(f"{path} exists: it is not overwritten; move it away for the run or shoot the default window")
+
+    def on_sigterm(_signal: int, _frame: Any) -> None:
+        raise SystemExit(EXIT_TERMINATED)
+
+    previous = signal.signal(signal.SIGTERM, on_sigterm)
+    try:
+        path.write_text(WINDOW_CONFIG.format(width=window[0], height=window[1]), encoding="utf-8", newline="\n")
+        yield
+    finally:
+        path.unlink(missing_ok=True)
+        signal.signal(signal.SIGTERM, previous)
+
+
+def parse_window(text: str) -> tuple[int, int]:
+    parts = text.lower().split("x")
+    if len(parts) != 2 or not all(part.isdigit() and int(part) > 0 for part in parts):
+        raise argparse.ArgumentTypeError(f"'{text}' is not WxH (for example 720x1280)")
+    return int(parts[0]), int(parts[1])
+
+
+def run(exe: Path, folder: Path, seed: int, window: tuple[int, int]) -> None:
     folder.mkdir(parents=True, exist_ok=True)
     port = free_port()
     with GameProcess(build_game_command(exe, port, headless=True, manual_clock=True), cwd=exe.parent) as game:
@@ -222,7 +294,7 @@ def run(exe: Path, folder: Path, seed: int) -> None:
         try:
             for name, scene in SCENES:
                 note = scene(client, seed)
-                for path in write_shots(client, folder, name):
+                for path in write_shots(client, folder, name, window):
                     print(f"{path.name}: {note}", flush=True)
             client.call("quit")
         except (ShotFailure, ControlError, ConnectionClosed, OSError) as error:
@@ -239,6 +311,8 @@ def main() -> int:
     parser.add_argument("--exe", required=True, type=Path, help="the game executable")
     parser.add_argument("--label", required=True, help="the name of the folder in --out (before, after, ...)")
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT, help=f"the folder of the folders (default {DEFAULT_OUT}); outside every git work tree")
+    parser.add_argument("--window", type=parse_window, default=DEFAULT_WINDOW, metavar="WxH",
+                        help="the size of the headless window (default %dx%d); another size is made by a temporary config/SDLWindowConfig.xml" % DEFAULT_WINDOW)
     parser.add_argument("--seed", type=int, default=1, help="the first seed (scenes that need a state search from here)")
     args = parser.parse_args()
 
@@ -255,7 +329,8 @@ def main() -> int:
 
     folder = out / args.label
     try:
-        run(args.exe.resolve(), folder, args.seed)  # the game runs with its own directory as the working directory
+        with temporary_window_config(args.window):
+            run(args.exe.resolve(), folder, args.seed, args.window)  # the game runs with its own directory as the working directory
     except (ShotFailure, GameLaunchError) as error:
         print(f"FAILED: {error}")
         return EXIT_FAILED

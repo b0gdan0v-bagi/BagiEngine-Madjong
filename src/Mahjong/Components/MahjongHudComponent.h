@@ -59,8 +59,8 @@ namespace BECore::Mahjong {
      * `MahjongContinue` calls `ContinueMatch()` and is ignored while the panel is closed or there is nothing to continue.
      *
      * **Options.** `MahjongGame::IsOptionsOpen()` is the page over the table (paused meanwhile). `MahjongOptions` (the HUD button) opens
-     * it while neither `Setup` nor the rules are open; `MahjongOptionsBack` and Escape close it; `MahjongRules` (its button
-     * `OptionsRules`) closes it and opens the rules, and is ignored while it is closed.
+     * it while neither `Setup` nor the rules are open; `MahjongOptionsBack` and Escape close it; `MahjongRules` (the HUD button `Rules`, and `OptionsRules`
+     * on the page) closes it and opens the rules, and is ignored under `Setup`, the online panel and the rules.
      * `MahjongSetSpeed` with `slow` | `normal` | `fast` (`TryParseSpeed`; any other text is ignored, and so is the action while the page is closed)
      * calls `SetAnimationSpeed` and sets `speedChoice`; it takes effect at once (`Table/AnimationSpeed.h`). The canvas `Options` is
      * shown exactly while the page is open (rows: language, hints, speed, and the buttons `Rules` and `Back`); `language` and `speedChoice` are published when it opens. The level is not set here: it
@@ -84,7 +84,7 @@ namespace BECore::Mahjong {
      * is `hud.leaveRoom` and `MahjongNewGame` leaves the room (`OnlineClient::Leave`, once); `MahjongNextHand` sends the server's `next_hand` (`OnlineClient::Act`) and the button is disabled while
      * none is listed, `handOverCoach` says how many have read the plate; `lastMove` is the lost connection or the client's own word while there is one.
      *
-     * **The rules screen.** `MahjongGame::IsRulesOpen()` (the button `Rules` of the page `Options`, action `MahjongRules`) decides whether the modal canvas
+     * **The rules screen.** `MahjongGame::IsRulesOpen()` (the buttons `Rules` of the HUD and of the page `Options`, action `MahjongRules`) decides whether the modal canvas
      * `Rules` (text and tile pictures only) and its action bar `RulesAction` are shown; `HudMenu` is hidden meanwhile. The page number is
      * this component's (`CurrentRulesPage()`, 0 when the screen opens); `MahjongRulesNext` / `MahjongRulesBack` turn the pages (clamped) and
      * `MahjongRulesClose` closes the screen, the last three ignored while it is not open. The page is `FormatRulesPage`

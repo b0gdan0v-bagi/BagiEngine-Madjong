@@ -322,12 +322,13 @@ namespace BECore::Mahjong::Tests {
         EXPECT_GT(checked, 0u);
     }
 
-    TEST_F(MahjongTouchSizeTest, TheOptionsButtonIsATouchTargetInEveryWindowCoversNoTileWhereThereAreNoInsetsAndNeverTouchesNewGame) {
+    TEST_F(MahjongTouchSizeTest, TheRulesAndOptionsButtonsAreTouchTargetsInEveryWindowCoverNoTileWhereThereAreNoInsetsAndNeverTouchTheOthers) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         auto menu = Canvas("HudMenu");
         ASSERT_TRUE(menu);
         const float minTouch = EngineTouchMinimum();
         const CanvasScaleMode modes[] = {CanvasScaleMode::ConstantPixelSize, CanvasScaleMode::ScaleWithScreen, CanvasScaleMode::ConstantPhysicalSize};
+        const char* const buttons[] = {"Rules", "Options", "NewGame"};
 
         size_t checked = 0;
         ForEachTableWindow([&](const MatrixWindow& window) {
@@ -336,17 +337,23 @@ namespace BECore::Mahjong::Tests {
                 for (const float userScale : {1.0f, 1.5f}) {
                     const std::string label = Format("{} {} x{}", window.label.c_str(), EnumUtils<CanvasScaleMode>::ToString(mode).data(), userScale).c_str();
                     const UICanvasResolved resolved = LayOutInWindow(*menu, window, mode, userScale);
-                    const UIElement* options = Element("HudMenu", "Options");
-                    const UIElement* newGame = Element("HudMenu", "NewGame");
-                    ASSERT_TRUE(options != nullptr && newGame != nullptr);
-                    ASSERT_FALSE(options->rect.IsEmpty()) << label;
-                    if (IsMatrixWindow(window)) {  // the phone windows are held to the layout of the table here, not to the touch size of the HUD (the entry `mahjong-phone-hand-size` leaves it)
-                        EXPECT_GE(std::min(options->rect.w, options->rect.h) * resolved.scale / window.pixelDensity, minTouch - 0.01f) << label << ": a touch target as the user sees it";
+                    for (const char* name : buttons) {
+                        const UIElement* button = Element("HudMenu", name);
+                        ASSERT_NE(button, nullptr) << name;
+                        ASSERT_FALSE(button->rect.IsEmpty()) << label << " " << name;
+                        if (IsMatrixWindow(window)) {  // the phone windows are held to the layout of the table here, not to the touch size of the HUD (the entry `mahjong-phone-hand-size` leaves it)
+                            EXPECT_GE(std::min(button->rect.w, button->rect.h) * resolved.scale / window.pixelDensity, minTouch - 0.01f)
+                                << label << " " << name << ": a touch target as the user sees it";
+                        }
+                        for (const char* other : buttons) {
+                            if (other != name) {
+                                EXPECT_FALSE(Intersects(button->rect, Element("HudMenu", other)->rect)) << label << ": " << name << " touches " << other;
+                            }
+                        }
+                        EXPECT_GE(button->rect.x, resolved.contentBounds.x - 0.01f) << label << " " << name;
+                        EXPECT_LE(button->rect.x + button->rect.w, resolved.contentBounds.x + resolved.contentBounds.w + 0.01f) << label << " " << name;
+                        EXPECT_LE(button->rect.y + button->rect.h, resolved.contentBounds.y + resolved.contentBounds.h + 0.01f) << label << " " << name;
                     }
-                    EXPECT_FALSE(Intersects(options->rect, newGame->rect)) << label << ": the Options button touches New game";
-                    EXPECT_GE(options->rect.x, resolved.contentBounds.x - 0.01f) << label;
-                    EXPECT_LE(options->rect.x + options->rect.w, resolved.contentBounds.x + resolved.contentBounds.w + 0.01f) << label;
-                    EXPECT_LE(options->rect.y + options->rect.h, resolved.contentBounds.y + resolved.contentBounds.h + 0.01f) << label;
                     checked += IsMatrixWindow(window) ? 1 : 0;
                 }
             }
@@ -354,7 +361,9 @@ namespace BECore::Mahjong::Tests {
                 return;  // with insets the buttons lie nearer the table, as the HUD does
             }
             LayOutInWindow(*menu, window, CanvasScaleMode::ScaleWithScreen, 1.0f);
-            ExpectClearOfTable(ToView(Element("HudMenu", "Options")->rect, *menu, window), layout, window.label.c_str());
+            for (const char* name : {"Rules", "Options"}) {
+                ExpectClearOfTable(ToView(Element("HudMenu", name)->rect, *menu, window), layout, window.label.c_str());
+            }
         });
         size_t narrowAtDensityOne = 0;  // the narrow windows join the matrix's in the touch size of the HUD (`IsMatrixWindow`)
         for (const MatrixWindow& window : NarrowWindows()) {
@@ -378,7 +387,7 @@ namespace BECore::Mahjong::Tests {
         // In the design window the click at the place of either button is the dim's
         const UIElement* dim = Element("Rules", "Dim");
         ASSERT_NE(dim, nullptr);
-        for (const char* name : {"Options", "NewGame"}) {
+        for (const char* name : {"Rules", "Options", "NewGame"}) {
             const UIElement* button = Element("HudMenu", name);
             ASSERT_NE(button, nullptr);
             EXPECT_GE(button->rect.x, dim->rect.x) << name;
@@ -467,9 +476,12 @@ namespace BECore::Mahjong::Tests {
         auto setup = Canvas("Setup");
         ASSERT_TRUE(setup);
 
-        // The design size: the plate of 528, the title band of 56 (the close cross is a touch target in it), the rows of 64 and a Start of 64
+        // The design size: the plate of 552, the title band of 56 (the close cross is a touch target in it), the two groups with a caption of 24 over
+        // their rows of 64 and a Start of 64
         LayOutInWindow(*setup, DesignWindow());
-        EXPECT_NEAR(Element("Setup", "Plate")->rect.h, 528.0f, 0.01f);
+        EXPECT_NEAR(Element("Setup", "Plate")->rect.h, 552.0f, 0.01f);
+        EXPECT_NEAR(Element("Setup", "SeatsGroup")->rect.h, 280.0f, 0.01f);
+        EXPECT_NEAR(Element("Setup", "MatchGroup")->rect.h, 88.0f, 0.01f);
         EXPECT_NEAR(Element("Setup", "TitleRow")->rect.h, 56.0f, 0.01f);
         for (const char* row : {"SeatRow0", "SeatRow1", "SeatRow2", "SeatRow3", "HandsRow", "Start"}) {
             EXPECT_NEAR(Element("Setup", row)->rect.h, 64.0f, 0.01f) << row;
@@ -486,6 +498,7 @@ namespace BECore::Mahjong::Tests {
         for (const char* row : {"SeatRow0", "HandsRow", "Start"}) {
             EXPECT_GT(Element("Setup", row)->rect.h, 0.0f) << row << ": nothing is dropped";
         }
+        EXPECT_TRUE(Element("Setup", "SeatsCaptionRow")->rect.IsEmpty()) << "the captions of the groups give their 48 units to the rows here";
     }
 
     TEST_F(MahjongTouchSizeTest, ThePageOptionsHasRulesBesideBackAndRulesGivesWayToThePagesOfTheRules) {
@@ -517,8 +530,9 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(_game->IsOptionsOpen());
         EXPECT_TRUE(_game->IsRulesOpen());
         _game->CloseRules();
+        _game->OpenSetup();
         EmitAction("MahjongRules");
-        EXPECT_FALSE(_game->IsRulesOpen()) << "the HUD has no Rules button: the action comes only from the page";
+        EXPECT_FALSE(_game->IsRulesOpen()) << "under the dim of Setup the button of the HUD cannot be pressed: the action is out of date";
     }
 
     TEST_F(MahjongTouchSizeTest, TheSeatChoiceDimsTheWholeWindowAndTheNewGameButtonUnderItTakesNoClick) {

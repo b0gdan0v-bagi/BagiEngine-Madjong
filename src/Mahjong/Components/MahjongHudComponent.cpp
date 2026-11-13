@@ -581,8 +581,10 @@ namespace BECore::Mahjong {
             return;
         }
         if (action == kRulesAction) {
-            // The button of the page `Options`: the page gives way to the rules. A click while the page is closed is out of date
-            if (game->IsOptionsOpen()) {
+            // The HUD button, or the button of the page `Options` (the page gives way to the rules). Under the dim of `Setup`, the online panel or
+            // the rules themselves it cannot be pressed, an event that says otherwise is out of date. Over the score table and the standings
+            // the button is hidden, but an event of a control client is taken there: the rules open over them
+            if (game->IsOptionsOpen() || !game->IsTablePaused()) {
                 game->CloseOptions();
                 if (!game->IsRulesOpen()) {
                     _rulesPage = 0;  // the screen opens on its first page, whatever the order of the events

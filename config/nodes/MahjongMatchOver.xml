@@ -11,42 +11,42 @@
     <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.7" useSafeArea="true" modal="true" visible="false">
       <elements>
         <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
-        <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="560" height="296" direction="Vertical" spacing="4" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
+        <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="560" height="296" direction="Vertical" spacing="4" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true" cornerRadius="16" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="26,29,38,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
           <children>
-            <element type="UIElement" name="Headline" height="40" fontSize="22" color="58,66,92,255">
+            <element type="UIElement" name="Headline" height="40" fontSize="22" color="58,66,92,255" cornerRadius="12" gradientDirection="Vertical" gradientColor="42,48,68,255" highlight="255,255,255,60">
               <components>
-                <component type="UITextComponent" text="{matchOverHeadline}" align="Center" verticalAlign="Center"/>
+                <component type="UITextComponent" fontFamily="Russo One" textOutline="2,16,18,26,255" text="{matchOverHeadline}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
               </components>
             </element>
-            <element type="UIElement" name="Standing0" height="24" fontSize="18" color="48,54,72,255">
+            <element type="UIElement" name="Standing0" height="24" fontSize="18" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
               <components>
-                <component type="UITextComponent" text="{standing0}" textColor="255,214,80,255" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                <component type="UITextComponent" fontFamily="Russo One" textOutline="2,16,18,26,255" text="{standing0}" textColor="255,214,80,255" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
               </components>
             </element>
-            <element type="UIElement" name="Standing1" height="24" fontSize="18" color="48,54,72,255">
+            <element type="UIElement" name="Standing1" height="24" fontSize="18" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
               <components>
-                <component type="UITextComponent" text="{standing1}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                <component type="UITextComponent" fontFamily="Russo One" textOutline="2,16,18,26,255" text="{standing1}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
               </components>
             </element>
-            <element type="UIElement" name="Standing2" height="24" fontSize="18" color="48,54,72,255">
+            <element type="UIElement" name="Standing2" height="24" fontSize="18" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
               <components>
-                <component type="UITextComponent" text="{standing2}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                <component type="UITextComponent" fontFamily="Russo One" textOutline="2,16,18,26,255" text="{standing2}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
               </components>
             </element>
-            <element type="UIElement" name="Standing3" height="24" fontSize="18" color="48,54,72,255">
+            <element type="UIElement" name="Standing3" height="24" fontSize="18" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
               <components>
-                <component type="UITextComponent" text="{standing3}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                <component type="UITextComponent" fontFamily="Russo One" textOutline="2,16,18,26,255" text="{standing3}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
               </components>
             </element>
-            <element type="UIElement" name="MatchCoachRow" visible="false" height="28" fontSize="18" color="48,54,72,255">
+            <element type="UIElement" name="MatchCoachRow" visible="false" height="28" fontSize="18" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
               <components>
                 <component type="UITextComponent" text="{matchOverCoach}" textColor="190,196,190,255" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
               </components>
             </element>
             <element type="UIElement" name="NewGameGap" height="8" />
-            <element type="UIElement" name="NewGame" height="64" fontSize="28" color="40,110,60,255">
+            <element type="UIElement" name="NewGame" height="64" fontSize="28" color="40,110,60,255" cornerRadius="12" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="26,78,40,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
               <components>
-                <component type="UITextComponent" text="{newGameWord}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{newGameWord}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                 <component type="UIInputClicker" action="MahjongNewGame"/>
               </components>
             </element>

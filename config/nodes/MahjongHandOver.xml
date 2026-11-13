@@ -17,36 +17,38 @@
   with their own width, height and offset (the portrait one also has two columns of lines, smaller type and a higher ButtonGap, for
   the words of the narrow plate and for the button, which follows the window's scale). HandCoachRow is hidden unless the HUD has text
   for it and then takes no room, so the plate keeps its size.
+  The skin is that of config/CLAUDE.md: the plate a card, the headline band in the display font, the seat rows and the summary raised rows of radius 8 (the seat rows in PT Sans bold: the
+  display font is too wide for a seat's line in the smallest window).
 -->
 <node name="HandOver" layer="25" contentVersion="5">
   <components>
     <component type="UICanvasComponent" space="SceneView" useSafeArea="true" modal="true" visible="false">
       <elements>
-        <element type="UIStack" name="Plate" anchor="Center" ignoreSafeArea="true" y="-1.111111%" width="80.625%" height="70.555556%" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
+        <element type="UIStack" name="Plate" anchor="Center" ignoreSafeArea="true" y="-1.111111%" width="80.625%" height="70.555556%" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true" cornerRadius="16" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="26,29,38,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
           <children>
-            <element type="UIElement" name="Headline" height="52" fontSize="28" color="58,66,92,255">
+            <element type="UIElement" name="Headline" height="52" fontSize="28" color="58,66,92,255" cornerRadius="12" gradientDirection="Vertical" gradientColor="42,48,68,255" highlight="255,255,255,60">
               <components>
-                <component type="UITextComponent" text="{handOverHeadline}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="22"/>
+                <component type="UITextComponent" fontFamily="Russo One" textOutline="2,16,18,26,255" text="{handOverHeadline}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="22"/>
               </components>
             </element>
-            <element type="UIElement" name="SeatRow0" height="32" fontSize="22" color="48,54,72,255">
+            <element type="UIElement" name="SeatRow0" height="32" fontSize="22" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
               <components>
-                <component type="UITextComponent" text="{handOverSeat0}" align="Center" verticalAlign="Center"/>
+                <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{handOverSeat0}" align="Center" verticalAlign="Center"/>
               </components>
             </element>
-            <element type="UIElement" name="SeatRow1" height="32" fontSize="22" color="48,54,72,255">
+            <element type="UIElement" name="SeatRow1" height="32" fontSize="22" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
               <components>
-                <component type="UITextComponent" text="{handOverSeat1}" align="Center" verticalAlign="Center"/>
+                <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{handOverSeat1}" align="Center" verticalAlign="Center"/>
               </components>
             </element>
-            <element type="UIElement" name="SeatRow2" height="32" fontSize="22" color="48,54,72,255">
+            <element type="UIElement" name="SeatRow2" height="32" fontSize="22" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
               <components>
-                <component type="UITextComponent" text="{handOverSeat2}" align="Center" verticalAlign="Center"/>
+                <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{handOverSeat2}" align="Center" verticalAlign="Center"/>
               </components>
             </element>
-            <element type="UIElement" name="SeatRow3" height="32" fontSize="22" color="48,54,72,255">
+            <element type="UIElement" name="SeatRow3" height="32" fontSize="22" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
               <components>
-                <component type="UITextComponent" text="{handOverSeat3}" align="Center" verticalAlign="Center"/>
+                <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{handOverSeat3}" align="Center" verticalAlign="Center"/>
               </components>
             </element>
             <element type="UIElement" name="ButtonGap" height="64" />
@@ -134,12 +136,12 @@
                 </element>
               </children>
             </element>
-            <element type="UIElement" name="HandCoachRow" visible="false" height="24" fontSize="18" color="48,54,72,255">
+            <element type="UIElement" name="HandCoachRow" visible="false" height="24" fontSize="18" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
               <components>
                 <component type="UITextComponent" text="{handOverCoach}" textColor="190,196,190,255" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
               </components>
             </element>
-            <element type="UIElement" name="Summary" height="36" fontSize="18" color="48,54,72,255">
+            <element type="UIElement" name="Summary" height="36" fontSize="18" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
               <components>
                 <component type="UITextComponent" text="{handOverSummary}" textColor="190,196,190,255" align="Center" verticalAlign="Center"/>
               </components>

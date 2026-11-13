@@ -8,7 +8,7 @@
   stamps on the matches of a signed-in tester; the buttons are Accept / Don't send.
   The plate is the safe area at most 320 high (32 padding + the text + 16 spacing + a 64 button row) and 560 wide. The text takes what the
   buttons leave and may shrink (AutoFit, down to 12 units, wrap on) instead of being cut, in both languages, in the smallest windows too;
-  the buttons stay at 64 (a touch target). MahjongUploadSceneTest holds the shape, the touch size and the words on the whole size matrix.
+  the buttons stay at 64 (a touch target). The plate is a card and the buttons have the skin of their role, like Options. MahjongUploadSceneTest holds the shape, the touch size and the words on the whole size matrix.
 -->
 <node name="Consent" layer="34" contentVersion="5">
   <components>
@@ -16,24 +16,24 @@
     <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" modal="true" visible="false">
       <elements>
         <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
-        <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="560" height="100%" maxHeight="320" direction="Vertical" spacing="16" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true">
+        <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="560" height="100%" maxHeight="320" direction="Vertical" spacing="16" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true" cornerRadius="16" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="26,29,38,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
           <children>
-            <element type="UIElement" name="ConsentText" flex="1" fontSize="22" color="58,66,92,255">
+            <element type="UIElement" name="ConsentText" flex="1" fontSize="22" color="58,66,92,255" cornerRadius="12" gradientDirection="Vertical" gradientColor="42,48,68,255" highlight="255,255,255,60">
               <components>
                 <component type="UITextComponent" text="{#upload.consent.text}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
               </components>
             </element>
             <element type="UIStack" name="ConsentButtons" height="64" direction="Horizontal" spacing="8" crossAlign="Stretch">
               <children>
-                <element type="UIElement" name="ConsentDecline" flex="1" fontSize="28" color="45,75,120,255">
+                <element type="UIElement" name="ConsentDecline" flex="1" fontSize="28" color="45,75,120,255" cornerRadius="12" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="30,52,86,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{#upload.consent.decline}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#upload.consent.decline}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongUploadDecline"/>
                   </components>
                 </element>
-                <element type="UIElement" name="ConsentAccept" flex="1" fontSize="28" color="40,110,60,255">
+                <element type="UIElement" name="ConsentAccept" flex="1" fontSize="28" color="40,110,60,255" cornerRadius="12" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="26,78,40,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
                   <components>
-                    <component type="UITextComponent" text="{#upload.consent.accept}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                    <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#upload.consent.accept}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongUploadAccept"/>
                   </components>
                 </element>

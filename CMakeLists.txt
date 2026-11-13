@@ -90,6 +90,10 @@ if(ENGINE_BUILD_TESTS)
     # without the control server (ENGINE_WITH_REMOTE_CONTROL=OFF) the smoke could never connect
     if(ENGINE_WITH_REMOTE_CONTROL)
         be_add_game_control_tests(BagiMahjong SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/tests/control_smoke.py)
+        # The engine's 120 s is too short since the skin: the SDL software renderer of the headless game fills every feathered edge
+        # and shadow ring of a rounded box on a slow path, a frame of a modal screen takes about 1 s in Debug (about 0.1 s before) and
+        # the real-clock scenario plays many of them; the whole smoke took about 195 to 240 s on a Mac (Debug). Raise it again if a slower machine needs more
+        set_tests_properties(BagiMahjongControlSmoke PROPERTIES TIMEOUT 420)
     endif()
 
     # Starts BagiMahjongServer on a free port and plays hands from Python over real sockets (ctest entry BagiMahjongRoomSmoke), the model is

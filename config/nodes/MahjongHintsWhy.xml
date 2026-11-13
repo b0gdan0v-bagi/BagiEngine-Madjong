@@ -26,7 +26,7 @@
   <components>
     <component type="UICanvasComponent" space="SceneView">
       <elements>
-        <element type="UIStack" name="CoachCard" region="table.wall" anchor="Stretch" visible="false" direction="Vertical" spacing="0" padding="8,4,8,4" crossAlign="Stretch" color="36,40,52,255">
+        <element type="UIStack" name="CoachCard" region="table.wall" anchor="Stretch" visible="false" direction="Vertical" spacing="0" padding="8,4,8,4" crossAlign="Stretch" color="36,40,52,255" cornerRadius="16" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="26,29,38,255" highlight="255,255,255,60" shadow="0,4,8,0,0,0,0,90">
           <children>
             <element type="UIStack" name="CardTop" height="32" direction="Horizontal" spacing="0" crossAlign="Center">
               <children>
@@ -61,7 +61,7 @@
                 </element>
               </children>
             </element>
-            <element type="UIStack" name="CardRow0" visible="false" height="24" direction="Horizontal" spacing="0" crossAlign="Center">
+            <element type="UIStack" cornerRadius="8" name="CardRow0" visible="false" height="24" direction="Horizontal" spacing="0" crossAlign="Center">
               <children>
                 <element type="UIElement" name="CardWho0" width="64" height="24" fontSize="18">
                   <components>
@@ -104,7 +104,7 @@
                 </element>
               </children>
             </element>
-            <element type="UIStack" name="CardRow1" visible="false" height="24" direction="Horizontal" spacing="0" crossAlign="Center">
+            <element type="UIStack" cornerRadius="8" name="CardRow1" visible="false" height="24" direction="Horizontal" spacing="0" crossAlign="Center">
               <children>
                 <element type="UIElement" name="CardWho1" width="64" height="24" fontSize="18">
                   <components>
@@ -147,7 +147,7 @@
                 </element>
               </children>
             </element>
-            <element type="UIStack" name="CardRow2" visible="false" height="24" direction="Horizontal" spacing="0" crossAlign="Center">
+            <element type="UIStack" cornerRadius="8" name="CardRow2" visible="false" height="24" direction="Horizontal" spacing="0" crossAlign="Center">
               <children>
                 <element type="UIElement" name="CardWho2" width="64" height="24" fontSize="18">
                   <components>

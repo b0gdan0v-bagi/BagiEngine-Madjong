@@ -11,9 +11,9 @@
   <components>
     <component type="UICanvasComponent" space="SceneView">
       <elements>
-        <element type="UIElement" name="HintButton" region="table.hintButton" anchor="Stretch" visible="false" fontSize="22" color="70,70,100,255">
+        <element type="UIElement" name="HintButton" region="table.hintButton" anchor="Stretch" visible="false" fontSize="22" color="70,70,100,255" cornerRadius="12" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
           <components>
-            <component type="UITextComponent" text="{#hints.adviseButton}" align="Center" verticalAlign="Center" wrap="false"/>
+            <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#hints.adviseButton}" align="Center" verticalAlign="Center" wrap="false"/>
             <component type="UIInputClicker" action="MahjongHintAdvice"/>
           </components>
         </element>

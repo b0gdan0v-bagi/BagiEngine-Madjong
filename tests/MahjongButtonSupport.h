@@ -1,10 +1,12 @@
 #pragma once
 
+#include <BECore/GameManager/CoreManager.h>
 #include <BECore/UI/UIDropdown.h>
 #include <BECore/UI/UIElement.h>
 #include <BECore/UI/UIInputClicker.h>
 #include <BECore/UI/UITextComponent.h>
 #include <BECore/UI/UIToggleComponent.h>
+#include <BECore/UI/UITooltipComponent.h>
 #include <vector>
 
 /**
@@ -76,6 +78,15 @@ namespace BECore::Mahjong::Tests {
             return std::nullopt;
         }
         const eastl::string_view shown = text->GetDisplayText();
+        return std::string(shown.data(), shown.size());
+    }
+
+    /// The tooltip as the canvas shows it (`{#key}` and `{name}` expanded); nothing when the element has none. An icon-only button says its word here.
+    inline std::string ShownTooltip(const UIElement* element) {
+        if (element == nullptr || element->GetTooltipText().empty()) {
+            return {};
+        }
+        const eastl::string shown = CoreManager::GetUIVars().Expand(CoreManager::GetUIStrings().Resolve(element->GetTooltipText()));
         return std::string(shown.data(), shown.size());
     }
 
