@@ -1,4 +1,3 @@
-#include "MahjongButtonSupport.h"
 #include "MahjongTableTestSupport.h"
 
 #include <Mahjong/Components/MahjongHudComponent.h>

@@ -1,12 +1,9 @@
 #pragma once
 
-#include <BECore/Config/XmlConfig.h>
 #include <BECore/Text/Utf8.h>
 #include <BECore/UI/UIStrings.h>
-#include <filesystem>
 #include <gtest/gtest.h>
 #include <set>
-#include <string>
 #include <vector>
 
 /**
