@@ -87,6 +87,9 @@ namespace BECore::Mahjong {
     /// What the client is doing while it has no room to show.
     inline constexpr eastl::string_view kOnlineConnectingKey = "online.status.connecting";
     inline constexpr eastl::string_view kOnlineReconnectingKey = "online.status.reconnecting";
+    /// The `Rooms` page: the first answer has not come, and an answer that lists no open room.
+    inline constexpr eastl::string_view kOnlineBrowsingKey = "online.status.browsing";
+    inline constexpr eastl::string_view kOnlineNoRoomsKey = "online.rooms.empty";
 
     /// The line the host reads in the lobby about the setting he made: hints and the coach allowed in the room, or not.
     inline constexpr eastl::string_view kOnlineLobbyHintsAllowedKey = "online.lobby.hintsAllowed";

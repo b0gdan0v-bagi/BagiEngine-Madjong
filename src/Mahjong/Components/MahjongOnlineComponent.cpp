@@ -235,7 +235,7 @@ namespace BECore::Mahjong {
         }
         if (event.key == SDLK_ESCAPE) {
             // The Menu was the last page: the game's flag goes at the next `Follow`, so the HUD, which hears this Escape too, does not take it for its own
-            if (!event.repeat && _screens.Back() && !_screens.IsOpen()) {
+            if (!event.repeat && _screens.Back(game->GetOnline()) && !_screens.IsOpen()) {
                 _closeRequested = true;
             }
         } else if (_screens.Page() == OnlinePage::Entry) {
