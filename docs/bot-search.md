@@ -187,7 +187,10 @@ No range was replayed with other knobs, and no range or budget was chosen after 
 improved (the search over Normal plays Normal against itself); a sample of the opponents' hands that knows the waits of declared
 hands exactly; a win-rate objective compared with the points one; and many more rollouts, which is only possible off the frame
 (a worker thread) or with a faster rollout; the arena already plays the worlds of one decision on many cores ("One decision on
-many cores"); in the game, only one thread plays them. Each of these is a separate entry; none was tried here.
+many cores"); in the game, only one thread plays them. Each of these is a separate entry; none was tried here. The ceiling of a
+sample of the opponents' hands that is exact (and of the other kinds of knowledge) is measured in "The oracle ladder: ceilings
+above Normal" ("The record"): exact hands give +0.99 points a hand at the shipped budget and +3.73 (+4.91 at margin 10, with fewer
+wins) at 8 worlds, a narrow ceiling, not a gain an honest sample would get.
 
 ## One decision on many cores
 
@@ -489,3 +492,218 @@ level.
 **Time.** There is no search level, so there is no Release decision time of a search level to record (the arena's `--time` is read at
 `--jobs 1` for a search profile; the time rule and the Debug figures of the shapes that would fit it are in "Above Normal"). A run
 of the whole table plays 5 distinct players; the wall time of one range at `--jobs 14` is above.
+
+## The oracle ladder: ceilings above Normal
+
+Players that exist only in `BagiMahjongArena` (`oracle-acceptance`, `oracle-hands`, `oracle-whole`, `oracle-defence`: "Oracle players
+(arena only)" of `bot-arena.md`) are played against Normal to measure how much a kind of knowledge could be worth. This section is the
+reading, **fixed before any number was seen**; the numbers and their class are written below it after the three ranges are played. A
+change after a number has been seen is a named deviation in the record.
+
+**Setup.** Release, `--others 5` (three Normal seats), `--jobs 14`, 1000 seeds a range, each range played once as it stands. Ranges:
+**exploration** `--first 4000`, **decision** `--first 100000`, **confirmation** `--first 130000` (the ranges of "Levels"; nothing is
+tuned on any of them: the variants are the list below). The first focus player is always `5` (Normal); every variant is read by its
+paired difference to it (same walls, the seed is the unit, the arena's `significant`). The three groups of one range, with `A` the
+Release arena:
+
+- `cheap`: `A --first <F> --seeds 1000 --others 5 --jobs 14 --focus 5,oracle-acceptance,oracle-defence`
+- `w2`: `--focus 5,normal:searchWorlds=2,searchCandidates=4,searchMargin=30,oracle-hands,oracle-whole`
+- `w8`: `--focus 5,normal:searchWorlds=8,searchCandidates=4,searchMargin=30,oracle-hands:searchWorlds=8,oracle-hands:searchWorlds=8,searchMargin=10,oracle-whole:searchWorlds=8`
+
+**Every variant** (none is added or dropped after a result; each is played on all three ranges):
+
+| id | spec | what it knows | role |
+|---|---|---|---|
+| ref-S2 | `normal:searchWorlds=2,searchCandidates=4,searchMargin=30` | nothing hidden | reference: the shipped search |
+| ref-S8 | `normal:searchWorlds=8,searchCandidates=4,searchMargin=30` | nothing hidden | reference: 4 times the worlds |
+| A | `oracle-acceptance` | which copies can still come | ceiling of reading the hands for hand building |
+| B2 | `oracle-hands` | the opponents' concealed hands | ceiling of an exact sample, shipped budget |
+| B8 | `oracle-hands:searchWorlds=8` | likewise | 4 times the worlds |
+| B8m10 | `oracle-hands:searchWorlds=8,searchMargin=10` | likewise | the margin is the dial of a search ("Levels", step 2): a lower margin lets true worlds override Normal more |
+| C2 | `oracle-whole` | the whole true hand, wall order too | loose bound, record only |
+| C8 | `oracle-whole:searchWorlds=8` | likewise | loose bound, record only |
+| D | `oracle-defence` | the winning tiles of declared seats | the defence ceiling of `mahjong-computer-difficulty` (old harness: +1 to +4 points a hand) |
+
+**Per variant and range** the table shows: wins % and points a hand of the variant's own row (intervals) and the paired points a hand
+and paired wins % to Normal with `significant`. The honest references sit in the same table; an oracle is read against Normal as the
+entry says (the arena pairs only against the first focus player, so oracle against honest search is not an arena output and is not
+read).
+
+**Pooling.** The pooled value of a variant is the mean of its decision and confirmation paired differences; its half-width is
+`sqrt(h1^2 + h2^2) / 2` of the two rows' half-widths (from the rows, not an arena output). Exploration is shown, never pooled, never
+part of a verdict.
+
+**The verdict of a ceiling** (A, B2, B8, B8m10, D; for C2 and C8 only the numbers are written, no class):
+
+- **closed**: the pooled upper end (mean plus half-width) is below +5.0 points a hand and below +1.5 points of wins. Even with that
+  information a player of that kind cannot reach a step of the level ladder (+5 points a hand and +1.5 of wins are the bar of the
+  search entry's switch rule), so the idea is closed.
+- **room**: the paired points are significantly positive on **both** the decision and the confirmation range, the pooled points are at
+  least +10.0 a hand (twice the bar: an honest player gets a part of its ceiling) and the pooled wins are above 0.
+- **narrow**: anything else. The numbers are written; the entries it touches stay open with the number as the limit of what they can
+  win.
+
+A negative oracle (worse than Normal) is a result, not an error: that information does not help that kind of player.
+
+**Sanity, not a verdict.** D is expected within 0 to +8 points a hand (the old harness: +1 to +4); outside it, the record says how the
+definition differs. The 20-seed runs at `--jobs 1` and `--jobs 14` of every variant must be the same bytes, and the first-check numbers
+of `bot-arena.md` must not move.
+
+**Consequences, written by class before the numbers:**
+
+- **A closed**: reading what the opponents hold, as an input to the acceptance and the waits of a hand-building player, is closed
+  (Normal's choosers, the unseen-copy probabilities of `mahjong-own-draws-ev`, the draw model of `mahjong-hand-plan-search`). **A
+  room**: a hand-reading estimate of the opponents' tiles for hand building becomes the next entry, and the number is the most it can
+  give.
+- **B closed**: a better sample of the opponents' hands (the waits of declared hands exact) cannot make the one-step search with Normal
+  rollouts win, at the shipped budget and at 4 times; what stays open of `mahjong-search-release-curve` is only the compute (more
+  worlds, claims against discards), bounded by the 4x number. **B room**: an honest sample of the declared hands is worth an entry, up
+  to the number.
+- **C**: how far one deviation from Normal with Normal rollouts can go with perfect knowledge of its own draws. If even the loose bound
+  is under +5 points a hand, the one-step form with a Normal rollout is the limit, which closes `mahjong-search-release-curve` for any
+  budget and leaves open only a different form (a plan of the hand, `mahjong-hand-plan-search`; a rollout policy that is not Normal).
+  If it is not under, the loose bound alone decides nothing and B decides.
+- **D closed**: `mahjong-discard-danger` stays as it is (a tie-break; measured -0.53 points a hand) and no stronger defence for the
+  computers is worth building; the danger stays for the hints and for teaching. **D room**: a danger reading that moves more than a
+  tie-break becomes an entry, up to the number.
+- A "narrow" is written in its own words in the record.
+
+### The record: the ceilings measured
+
+The reading above was played as written: three groups on three ranges, each once, nothing added, dropped or retuned after a number
+(no deviation). All nine runs exited 0, the 20-seed runs of the three groups are the same bytes at `--jobs 1` and `--jobs 14`, and
+the plain players did not move (`bot-arena.md`, "The first check"; the baselines of the arena before and after the branch are
+equal). Release, `--others 5`, 1000 seeds a range (4000 hands a focus player); "sig." is the arena's `significant`; `+-` is the 95 %
+interval. The own row of a variant and its paired row to Normal show the same points a hand, because Normal's own row is 0.00 by
+the mirror identity; the paired wins is the own wins minus Normal's (24.95 to 25.00 %). The pooled row is the mean of decision and
+confirmation with the half-width `sqrt(h1^2 + h2^2) / 2` of the two rows (exploration is never pooled), and "upper" is the mean
+plus that half-width, the number the verdict reads.
+
+| variant | range | wins % | points/hand | paired points/hand | paired wins % | class |
+|---|---|---|---|---|---|---|
+| **ref-S2** `normal:searchWorlds=2,searchCandidates=4,searchMargin=30` | exploration (shown only) | 23.48 +- 0.93 | -2.50 +- 3.11 | -2.50 +- 3.11 | -1.52 +- 0.93 sig. | |
+|  | decision | 23.73 +- 0.98 | -2.58 +- 3.16 | -2.58 +- 3.16 | -1.25 +- 0.98 sig. | |
+|  | confirmation | 23.62 +- 1.02 | -3.63 +- 3.62 | -3.63 +- 3.62 sig. | -1.32 +- 1.02 sig. | |
+| | **pooled** (decision + confirmation) | | | **-3.10 +- 2.40** (upper -0.70) | **-1.29 +- 0.71** (upper -0.58) | reference |
+| **ref-S8** `normal:searchWorlds=8,searchCandidates=4,searchMargin=30` | exploration (shown only) | 24.23 +- 0.83 | -1.78 +- 2.71 | -1.78 +- 2.71 | -0.78 +- 0.83 | |
+|  | decision | 25.05 +- 0.86 | +1.26 +- 2.87 | +1.26 +- 2.87 | +0.07 +- 0.87 | |
+|  | confirmation | 24.70 +- 0.87 | +1.42 +- 3.27 | +1.42 +- 3.27 | -0.25 +- 0.87 | |
+| | **pooled** (decision + confirmation) | | | **+1.34 +- 2.18** (upper +3.52) | **-0.09 +- 0.62** (upper +0.53) | reference |
+| **A** `oracle-acceptance` | exploration (shown only) | 26.02 +- 1.08 | +3.88 +- 3.99 | +3.88 +- 3.99 | +1.02 +- 1.08 | |
+|  | decision | 26.52 +- 1.06 | +4.53 +- 3.50 | +4.53 +- 3.50 sig. | +1.55 +- 1.06 sig. | |
+|  | confirmation | 25.48 +- 1.13 | +4.55 +- 4.37 | +4.55 +- 4.37 sig. | +0.53 +- 1.13 | |
+| | **pooled** (decision + confirmation) | | | **+4.54 +- 2.80** (upper +7.34) | **+1.04 +- 0.77** (upper +1.81) | **narrow** |
+| **B2** `oracle-hands` | exploration (shown only) | 23.62 +- 0.98 | -1.91 +- 3.42 | -1.91 +- 3.42 | -1.38 +- 0.98 sig. | |
+|  | decision | 24.10 +- 1.03 | -0.86 +- 3.22 | -0.86 +- 3.22 | -0.88 +- 1.03 | |
+|  | confirmation | 25.10 +- 1.06 | +2.83 +- 3.58 | +2.83 +- 3.58 | +0.15 +- 1.06 | |
+| | **pooled** (decision + confirmation) | | | **+0.99 +- 2.41** (upper +3.39) | **-0.36 +- 0.74** (upper +0.37) | **closed** |
+| **B8** `oracle-hands:searchWorlds=8` | exploration (shown only) | 24.93 +- 0.84 | +2.02 +- 2.78 | +2.02 +- 2.78 | -0.07 +- 0.84 | |
+|  | decision | 25.15 +- 0.87 | +3.45 +- 2.93 | +3.45 +- 2.93 sig. | +0.17 +- 0.88 | |
+|  | confirmation | 25.43 +- 0.90 | +4.00 +- 3.37 | +4.00 +- 3.37 sig. | +0.47 +- 0.91 | |
+| | **pooled** (decision + confirmation) | | | **+3.73 +- 2.23** (upper +5.96) | **+0.32 +- 0.63** (upper +0.95) | **narrow** |
+| **B8m10** `oracle-hands:searchWorlds=8,searchMargin=10` | exploration (shown only) | 23.85 +- 1.15 | +6.80 +- 4.07 | +6.80 +- 4.07 sig. | -1.15 +- 1.15 sig. | |
+|  | decision | 23.93 +- 1.17 | +4.16 +- 4.03 | +4.16 +- 4.03 sig. | -1.05 +- 1.17 | |
+|  | confirmation | 23.90 +- 1.21 | +5.66 +- 4.50 | +5.66 +- 4.50 sig. | -1.05 +- 1.21 | |
+| | **pooled** (decision + confirmation) | | | **+4.91 +- 3.02** (upper +7.93) | **-1.05 +- 0.84** (upper -0.21) | **narrow** |
+| **C2** `oracle-whole` | exploration (shown only) | 35.48 +- 1.18 | +36.63 +- 4.27 | +36.63 +- 4.27 sig. | +10.47 +- 1.18 sig. | |
+|  | decision | 36.52 +- 1.18 | +40.90 +- 4.23 | +40.90 +- 4.23 sig. | +11.55 +- 1.18 sig. | |
+|  | confirmation | 38.12 +- 1.22 | +45.17 +- 4.71 | +45.17 +- 4.71 sig. | +13.18 +- 1.22 sig. | |
+| | **pooled** (decision + confirmation) | | | **+43.03 +- 3.17** (upper +46.20) | **+12.37 +- 0.85** (upper +13.21) | loose bound |
+| **C8** `oracle-whole:searchWorlds=8` | exploration (shown only) | 49.17 +- 1.33 | +86.35 +- 5.18 | +86.35 +- 5.18 sig. | +24.18 +- 1.33 sig. | |
+|  | decision | 51.02 +- 1.37 | +92.90 +- 5.34 | +92.90 +- 5.34 sig. | +26.05 +- 1.37 sig. | |
+|  | confirmation | 50.67 +- 1.36 | +93.72 +- 5.73 | +93.72 +- 5.73 sig. | +25.73 +- 1.36 sig. | |
+| | **pooled** (decision + confirmation) | | | **+93.31 +- 3.92** (upper +97.23) | **+25.89 +- 0.97** (upper +26.86) | loose bound |
+| **D** `oracle-defence` | exploration (shown only) | 26.12 +- 0.32 | +2.64 +- 1.12 | +2.64 +- 1.12 sig. | +1.12 +- 0.32 sig. | |
+|  | decision | 26.18 +- 0.34 | +3.33 +- 1.32 | +3.33 +- 1.32 sig. | +1.20 +- 0.33 sig. | |
+|  | confirmation | 25.95 +- 0.31 | +2.46 +- 1.16 | +2.46 +- 1.16 sig. | +1.00 +- 0.30 sig. | |
+| | **pooled** (decision + confirmation) | | | **+2.90 +- 0.88** (upper +3.77) | **+1.10 +- 0.22** (upper +1.32) | **closed** |
+
+**The class of each ceiling by the written rule** (closed: upper end below +5.0 points and below +1.5 wins; room: significant on both
+ranges, pooled at least +10.0 points and wins above 0; narrow: anything else):
+
+| ceiling | pooled points/hand (upper) | pooled wins % (upper) | significant on points, decision / confirmation | rule | class |
+|---|---|---|---|---|---|
+| A `oracle-acceptance` | +4.54 (+7.34) | +1.04 (+1.81) | yes / yes | upper 7.34 is not below 5.0, so not closed; pooled 4.54 is below 10.0, so not room | narrow |
+| B2 `oracle-hands` | +0.99 (+3.39) | -0.36 (+0.37) | no / no | upper 3.39 < 5.0 and 0.37 < 1.5 | **closed** |
+| B8 `oracle-hands:searchWorlds=8` | +3.73 (+5.96) | +0.32 (+0.95) | yes / yes | upper 5.96 is not below 5.0; pooled 3.73 is below 10.0 | narrow |
+| B8m10 `oracle-hands:searchWorlds=8,searchMargin=10` | +4.91 (+7.93) | -1.05 (-0.21) | yes / yes | upper 7.93 is not below 5.0; pooled 4.91 is below 10.0 | narrow |
+| D `oracle-defence` | +2.90 (+3.77) | +1.10 (+1.32) | yes / yes | upper 3.77 < 5.0 and 1.32 < 1.5 | **closed** |
+| C2, C8 | +43.03, +93.31 | +12.37, +25.89 | yes / yes | numbers only, no class (a loose bound) | none |
+
+The pooled arithmetic of each row (points: decision and confirmation paired difference with their half-widths, mean, half-width):
+A (4.53 + 4.55) / 2 = 4.54, sqrt(3.50^2 + 4.37^2) / 2 = 2.80; B2 (-0.86 + 2.83) / 2 = 0.99, sqrt(3.22^2 + 3.58^2) / 2 = 2.41;
+B8 (3.45 + 4.00) / 2 = 3.73, sqrt(2.93^2 + 3.37^2) / 2 = 2.23; B8m10 (4.16 + 5.66) / 2 = 4.91, sqrt(4.03^2 + 4.50^2) / 2 = 3.02;
+D (3.33 + 2.46) / 2 = 2.90, sqrt(1.32^2 + 1.16^2) / 2 = 0.88; ref-S2 (-2.58 - 3.63) / 2 = -3.10, 2.40; ref-S8 (1.26 + 1.42) / 2 =
+1.34, 2.18; C2 (40.90 + 45.17) / 2 = 43.03, 3.17; C8 (92.90 + 93.72) / 2 = 93.31, 3.92. Wins: A (1.55 + 0.53) / 2 = 1.04, 0.77; B2
+(-0.88 + 0.15) / 2 = -0.36, 0.74; B8 (0.17 + 0.47) / 2 = 0.32, 0.63; B8m10 (-1.05 - 1.05) / 2 = -1.05, 0.84; D (1.20 + 1.00) / 2 =
+1.10, 0.22.
+
+**Readings** (what the numbers say; the consequences by class are below):
+
+- **No hidden-information ceiling reaches the bar of a step.** The four classed ceilings other than D have a pooled mean of +0.99 to
+  +4.91 points a hand, all below the +5 bar; only the upper ends of B8, B8m10 and A pass it, which is why they are narrow and not
+  closed. None is at the +10 of "room". The wins side agrees: no pooled wins above +1.10.
+- **A negative-wins oracle: B8m10.** It gains points with fewer wins (-1.05 pooled, declared 48 to 49 % against Normal's 56 %):
+  the low margin lets the true worlds talk Normal out of declarations. Its points are not a win-rate gain. The list has no honest
+  margin-10 reference; the only one is the 8-world margin-10 search of "Levels", step 2, on the exploration range, which is the same
+  walls: -11.57 points (honest) against +6.80 (this oracle). Read as a context, not as a verdict (that row was not played on the
+  decision and confirmation ranges).
+- **D, the defence ceiling, agrees with the old harness.** Pooled +2.90 +- 0.88 points a hand (exploration +2.64), inside the
+  expected 0 to +8 of the sanity line and inside the old harness's +1 to +4 of `mahjong-computer-difficulty`; the definition is the
+  one of the plan (a declared seat's winning tiles on the real hands, a discard of equal shanten that is not one of them). The
+  mechanism is visible in the paired rows: it gives a win to another seat 10.0 points of its hands less often ("gave win %" -10.00
+  +- 0.76 on the decision range), and its pooled wins are +1.10.
+- **The honest searches, for scale.** ref-S2 is -3.10 +- 2.40 points pooled and significantly below Normal on wins on all three
+  ranges; ref-S8 is +1.34 +- 2.18 and -0.09 on wins: more worlds close the loss and do not open a gain (as in "Above Normal"). The
+  arena pairs only against the first focus player, so oracle against honest search is not an arena output and is not read.
+- **C, a loose bound (record only).** `oracle-whole` knows its own draws, so it is not a limit of any honest player: +43.03 +-
+  3.17 points with 2 worlds and +93.31 +- 3.92 with 8, wins +12.37 and +25.89 (own wins 35 to 38 % with 2 worlds and 49 to 51 %
+  with 8, on every range). With its own draws known, a rollout is an exact look at the future, and more worlds only find the best
+  discard of one fixed future more reliably. No class is given and no limit is read from it, other than the rule's: it is not
+  under +5.
+
+**Consequences** (the written text by class; "narrow" in its own words):
+
+- **A, narrow: the hand-reading idea is not closed, but it is small.** Knowing exactly which copies can still come (the opponents'
+  concealed hands and the dead wall as seen) lifts Normal's choosers by +4.54 +- 2.80 points a hand pooled (wins +1.04 +- 0.77),
+  below the bar of a level step in the mean (its upper end, +7.34, is above it): an honest estimate of the hidden hands gets a
+  part of that. So no entry for a hand-reading estimate is opened. `mahjong-own-draws-ev` (open) and `mahjong-hand-plan-search`
+  (open) stay as they are, with the number as the limit of what an improved unseen-copy probability or draw model can win from
+  reading the opponents (the first reads the unseen copies of the public view). `mahjong-selfplay-weight-tuning` is not touched:
+  its features are the seat's own hand, and this ladder bounds no re-weighting of those.
+- **B, closed at the shipped budget, narrow at 4 times the worlds.** With the opponents' concealed hands exact in every world, the
+  2-world, 4-candidate, margin-30 search is +0.99 +- 2.41 points pooled (upper +3.39, wins -0.36): a better sample of the
+  opponents' hands (the waits of declared hands exact) cannot make the shipped one-step search win. At 8 worlds the exact sample
+  is +3.73 +- 2.23 (upper +5.96, B8) and, at margin 10, +4.91 +- 3.02 (upper +7.93, B8m10, with fewer wins, -1.05): the larger of
+  the two, +4.91 points a hand at 4 times the worlds, is the number of the limit, below the +5 bar in the mean and above it at the
+  upper end. By the written text a "narrow" opens no entry: the entries it touches stay open with that number as the limit of what
+  they can win. `mahjong-search-release-curve` stays open, and what it can still find is the compute and the claims (more worlds,
+  claim decisions against discards of equal shanten); the number to measure that against is the +3.73 to +4.91 points at 8 worlds
+  (the exact sample), not a ceiling above the bar. It does not become a level on this evidence. The honest search at 8 worlds
+  (+1.34 +- 2.18) is shown for scale; the gap between it and an oracle is not read, because the reading above excludes the
+  comparison (the arena pairs only against Normal), and a conclusion about the value of an honest sample drawn from that gap
+  would be a post-hoc reading, a deviation.
+- **C: it decides nothing.** The loose bound is +43 and +93 points, far over +5, so by the written text B decides, not C. The
+  one-step form with a Normal rollout is not shown to be at its limit by C, and `mahjong-search-release-curve` is not closed by it.
+  `mahjong-hand-plan-search` stays open, untouched by C: whether a plan of the hand beats the one-step question is not answered by an
+  oracle that knows the draws; for its rollouts in sampled worlds the number is B's.
+- **D, closed: no stronger defence is worth building for the computers.** A perfect reading of what the declared seats wait for is
+  +2.90 +- 0.88 points pooled and +1.10 +- 0.22 wins: it is a reading that gives the real +1 to +4 of the old harness and no more. So
+  `mahjong-discard-danger` (already closed, a tie-break measured at -0.53 points a hand) stays as it is, the defence for the
+  computers stays as it is, and the danger stays for the hints and for teaching; the +2.9 is the largest gain any danger reading of
+  the declared seats' waits could give, with the tiles of those waits known exactly.
+
+**Reproduce.** `A=build/macos-release/bin/BagiMahjongArena`, `cmake --build --preset macos-release --target BagiMahjongArena` first;
+the reports are working files under `build/oracle-ladder/` (git-ignored), `O` that folder:
+
+```bash
+for R in "explore 4000" "decision 100000" "confirm 130000"; do set -- $R
+  $A --first $2 --seeds 1000 --others 5 --jobs 14 --focus 5,oracle-acceptance,oracle-defence > $O/$1-cheap.txt                # 7, 4, 4 s
+  $A --first $2 --seeds 1000 --others 5 --jobs 14 --focus 5,normal:searchWorlds=2,searchCandidates=4,searchMargin=30,oracle-hands,oracle-whole > $O/$1-w2.txt   # 193, 132, 125 s
+  $A --first $2 --seeds 1000 --others 5 --jobs 14 --focus 5,normal:searchWorlds=8,searchCandidates=4,searchMargin=30,oracle-hands:searchWorlds=8,oracle-hands:searchWorlds=8,searchMargin=10,oracle-whole:searchWorlds=8 > $O/$1-w8.txt   # 650, 643, 799 s
+done
+# determinism: the same three focus lists with --first 4000 --seeds 20 at --jobs 1 and --jobs 14: cmp is empty
+```
+
+(The wall times are of this machine, indicative.) Only the pooled rows and the classes are computed here, from the rows; every other
+number is a line of the reports.

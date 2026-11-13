@@ -1,5 +1,7 @@
 #include "ArenaPlayer.h"
 
+#include <Mahjong/Game/ComputerSearch.h>
+
 namespace BECore::Mahjong::Arena {
 
     namespace {
@@ -44,6 +46,37 @@ namespace BECore::Mahjong::Arena {
 
         eastl::string LevelAndRandomNamesText() {
             return Format("a level {}..{}, easy (1), normal ({}) or random", kMinLevel, kMaxLevel, LevelNumber(ComputerLevel::Normal));
+        }
+
+        /// The oracle specs the parser knows: the head of a spec, up to the colon.
+        struct OracleSpec {
+            std::string_view name;
+            OracleKind kind;
+        };
+        constexpr eastl::array<OracleSpec, 4> kOracleSpecs{{
+            {"oracle-acceptance", OracleKind::Acceptance},
+            {"oracle-hands", OracleKind::Hands},
+            {"oracle-whole", OracleKind::WholeHand},
+            {"oracle-defence", OracleKind::Defence},
+        }};
+        constexpr std::string_view kOracleHeadPrefix = "oracle-";
+        constexpr std::string_view kOracleNamesText = "oracle-acceptance, oracle-hands, oracle-whole, oracle-defence";
+
+        /// The knobs of the search: `oracle-acceptance` plays no search, so a spec that sets one is refused.
+        constexpr eastl::array<std::string_view, 3> kSearchKnobNames = {{"searchWorlds", "searchCandidates", "searchMargin"}};
+
+        /// The oracles that are a search player: their profile starts from the shipped search budget.
+        bool IsSearchOracle(OracleKind kind) {
+            return kind == OracleKind::Hands || kind == OracleKind::WholeHand;
+        }
+
+        const OracleSpec* FindOracle(std::string_view head) {
+            for (const OracleSpec& oracle : kOracleSpecs) {
+                if (head == oracle.name) {
+                    return &oracle;
+                }
+            }
+            return nullptr;
         }
 
         /// Applies `knob=value` (`part`) to `profile`; the error names the part.
@@ -96,14 +129,28 @@ namespace BECore::Mahjong::Arena {
             player.profile = kNormalProfile;
             return player;
         }
-        std::optional<ComputerLevel> level = TryParseLevel(head);
-        if (!level.has_value()) {
-            level = TryParseLevelName(head);
+        if (head.starts_with(kOracleHeadPrefix)) {
+            const OracleSpec* const oracle = FindOracle(head);
+            if (oracle == nullptr) {
+                return std::unexpected(Format("unknown oracle \"{}\" in \"{}\" (the oracles are {})", head, spec, kOracleNamesText));
+            }
+            player.oracle = oracle->kind;
+            player.profile = kNormalProfile;
+            if (IsSearchOracle(player.oracle)) {
+                player.profile.searchWorlds = kSearchWorlds;
+                player.profile.searchCandidates = kSearchCandidates;
+                player.profile.searchMargin = kSearchMargin;
+            }
+        } else {
+            std::optional<ComputerLevel> level = TryParseLevel(head);
+            if (!level.has_value()) {
+                level = TryParseLevelName(head);
+            }
+            if (!level.has_value()) {
+                return std::unexpected(Format("unknown player \"{}\" in \"{}\" (use {}, all lowercase, or an oracle: {})", head, spec, LevelAndRandomNamesText(), kOracleNamesText));
+            }
+            player.profile = ProfileOf(*level);
         }
-        if (!level.has_value()) {
-            return std::unexpected(Format("unknown player \"{}\" in \"{}\" (use {}, all lowercase)", head, spec, LevelAndRandomNamesText()));
-        }
-        player.profile = ProfileOf(*level);
         if (colon == std::string_view::npos) {
             return player;
         }
@@ -120,6 +167,19 @@ namespace BECore::Mahjong::Arena {
                 return std::unexpected(*error);
             }
             begin = end + 1;
+        }
+        if (player.oracle == OracleKind::Acceptance) {
+            for (const std::string_view searchKnob : kSearchKnobNames) {
+                const ProfileKnob* const knob = FindKnob(searchKnob);
+                if (knob != nullptr && seen[static_cast<size_t>(knob - kProfileKnobs.data())]) {
+                    return std::unexpected(Format("\"{}\": oracle-acceptance plays no search, so \"{}\" would do nothing there (the search oracles are oracle-hands and "
+                                                  "oracle-whole)",
+                                                  spec, searchKnob));
+                }
+            }
+        }
+        if (IsSearchOracle(player.oracle) && (player.profile.searchWorlds < 1 || player.profile.searchCandidates < kSearchMinCandidates)) {
+            return std::unexpected(Format("\"{}\" would be plain Normal: a search oracle needs searchWorlds of at least 1 and searchCandidates of at least {}", spec, kSearchMinCandidates));
         }
         return player;
     }

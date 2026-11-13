@@ -110,6 +110,65 @@ namespace BECore::Mahjong::Arena {
         EXPECT_TRUE(Contains(ErrorOf("normal:searchCandidates=13"), "13"));
     }
 
+    TEST(ArenaPlayerTest, TheOraclesAreReadOnTheNormalProfile) {
+        static_assert(kProfileFieldCount == 11, "an oracle is no LevelProfile field");
+        for (const auto& [spec, kind] : {std::pair<const char*, OracleKind>{"oracle-acceptance", OracleKind::Acceptance}, {"oracle-defence", OracleKind::Defence}}) {
+            const ArenaPlayer player = Player(spec);
+            EXPECT_EQ(player.oracle, kind) << spec;
+            EXPECT_FALSE(player.random);
+            EXPECT_EQ(player.name, spec);
+            EXPECT_TRUE(SameProfile(player.profile, kNormalProfile));
+        }
+        const ArenaPlayer knobs = Player("oracle-defence:searchWorlds=2,skipClaimPercent=10");
+        EXPECT_EQ(knobs.oracle, OracleKind::Defence);
+        EXPECT_EQ(knobs.name, "oracle-defence:searchWorlds=2,skipClaimPercent=10");
+        EXPECT_EQ(knobs.profile.searchWorlds, 2);
+        EXPECT_EQ(knobs.profile.skipClaimPercent, 10);
+        // The search oracles start from the shipped budget and the knobs override it.
+        for (const auto& [spec, kind] : {std::pair<const char*, OracleKind>{"oracle-hands", OracleKind::Hands}, {"oracle-whole", OracleKind::WholeHand}}) {
+            const ArenaPlayer player = Player(spec);
+            EXPECT_EQ(player.oracle, kind) << spec;
+            EXPECT_EQ(player.name, spec);
+            EXPECT_EQ(player.profile.searchWorlds, kSearchWorlds);
+            EXPECT_EQ(player.profile.searchCandidates, kSearchCandidates);
+            EXPECT_EQ(player.profile.searchMargin, kSearchMargin);
+            EXPECT_EQ(player.profile.skipClaimPercent, kNormalProfile.skipClaimPercent);
+        }
+        const ArenaPlayer wide = Player("oracle-hands:searchWorlds=8,searchMargin=10");
+        EXPECT_EQ(wide.profile.searchWorlds, 8);
+        EXPECT_EQ(wide.profile.searchCandidates, kSearchCandidates);
+        EXPECT_EQ(wide.profile.searchMargin, 10);
+        EXPECT_EQ(wide.name, "oracle-hands:searchWorlds=8,searchMargin=10");
+        EXPECT_EQ(Player("oracle-whole:searchCandidates=2").profile.searchCandidates, kSearchMinCandidates);
+        // A search oracle with no worlds or with one candidate would be plain Normal.
+        EXPECT_TRUE(Contains(ErrorOf("oracle-hands:searchWorlds=0"), "oracle-hands:searchWorlds=0"));
+        EXPECT_TRUE(Contains(ErrorOf("oracle-whole:searchCandidates=1"), "plain Normal"));
+        EXPECT_TRUE(Contains(ErrorOf("oracle-whole:searchCandidates=0"), "plain Normal"));
+        // An ordinary player is no oracle.
+        for (const char* spec : {"normal", "easy:skipClaimPercent=20", "random", "7"}) {
+            EXPECT_EQ(Player(spec).oracle, OracleKind::None) << spec;
+        }
+        // A bad oracle name names the part and lists the four oracles.
+        for (const char* spec : {"oracle-wise", "oracle-", "oracle-acceptance2:searchWorlds=2"}) {
+            const std::string error = ErrorOf(spec);
+            EXPECT_TRUE(Contains(error, "oracle")) << error;
+            for (const char* name : {"oracle-acceptance", "oracle-hands", "oracle-whole", "oracle-defence"}) {
+                EXPECT_TRUE(Contains(error, name)) << error;
+            }
+        }
+        EXPECT_TRUE(Contains(ErrorOf("oracle-wise"), "\"oracle-wise\""));
+        EXPECT_TRUE(Contains(ErrorOf("oracle-defence:"), "no knobs"));
+        EXPECT_TRUE(Contains(ErrorOf("oracle-defence:searchWorlds=4097"), "4097"));
+        // oracle-acceptance plays no search: a search knob is refused by name, the other knobs stay.
+        for (const char* spec : {"oracle-acceptance:searchWorlds=2", "oracle-acceptance:skipClaimPercent=5,searchMargin=10", "oracle-acceptance:searchCandidates=4"}) {
+            const std::string error = ErrorOf(spec);
+            EXPECT_TRUE(Contains(error, "oracle-acceptance")) << error;
+            EXPECT_TRUE(Contains(error, "plays no search")) << error;
+        }
+        EXPECT_TRUE(Contains(ErrorOf("oracle-acceptance:skipClaimPercent=5,searchMargin=10"), "searchMargin"));
+        EXPECT_EQ(Player("oracle-acceptance:skipClaimPercent=5").profile.skipClaimPercent, 5);
+    }
+
     TEST(ArenaPlayerTest, ABadSpecIsAnErrorThatNamesThePart) {
         EXPECT_TRUE(Contains(ErrorOf(""), "empty"));
         EXPECT_TRUE(Contains(ErrorOf("Normal"), "\"Normal\""));

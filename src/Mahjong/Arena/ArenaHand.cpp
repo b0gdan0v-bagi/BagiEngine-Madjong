@@ -1,5 +1,6 @@
 #include "ArenaHand.h"
 
+#include <Mahjong/Arena/ArenaOracle.h>
 #include <Mahjong/Game/ComputerClaim.h>
 #include <Mahjong/Game/ComputerPlayer.h>
 #include <Mahjong/Game/ComputerTurn.h>
@@ -106,7 +107,7 @@ namespace BECore::Mahjong::Arena {
                 if (view.legal.empty()) {
                     return std::unexpected(Format("{}: the computer seat has no legal action", Where(seed, actor)));
                 }
-                action = ChooseComputer(view, seatRngs[actor], player.profile, worlds);
+                action = player.oracle != OracleKind::None ? ChooseOracle(hand, actor, player, seatRngs[actor], worlds) : ChooseComputer(view, seatRngs[actor], player.profile, worlds);
             }
             if (timing) {
                 record.nanoseconds[actor] += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - started).count();

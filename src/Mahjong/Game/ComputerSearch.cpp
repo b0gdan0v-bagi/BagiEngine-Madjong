@@ -91,16 +91,17 @@ namespace BECore::Mahjong {
         }
 
         /// World `worldIndex` of a decision: the sampled hand and the seed of its rollout table. Both `Step()` and `PlayWorld()` take
-        /// it from here, so the two ways cannot draw differently. nullopt when the view does not fit a sample.
+        /// it from here, so the two ways cannot draw differently. nullopt when the view does not fit a sample (or the source answers
+        /// nothing). A non-empty `source` makes the world instead of `SampleWorld`, from the same rng.
         struct SampledWorld {
             HandModel model;
             uint32_t tableSeed = 0;
         };
 
-        std::optional<SampledWorld> SampleWorldOf(const TableView& view, uint32_t base, int worldIndex) {
+        std::optional<SampledWorld> SampleWorldOf(const TableView& view, uint32_t base, int worldIndex, const WorldSource& source) {
             const uint32_t index = static_cast<uint32_t>(worldIndex) * kSeedsPerWorld;
             MahjongRng worldRng(DerivedSeed(base, index));
-            std::optional<HandModel> sampled = SampleWorld(view, worldRng);
+            std::optional<HandModel> sampled = source ? source(view, worldRng) : SampleWorld(view, worldRng);
             if (!sampled.has_value()) {
                 return std::nullopt;
             }
@@ -247,7 +248,7 @@ namespace BECore::Mahjong {
             return;
         }
         if (_candidateIndex == 0) {
-            std::optional<SampledWorld> sampled = SampleWorldOf(_view, _base, _worldIndex);
+            std::optional<SampledWorld> sampled = SampleWorldOf(_view, _base, _worldIndex, _source);
             if (!sampled.has_value()) {
                 NextWorld();
                 return;
@@ -279,13 +280,25 @@ namespace BECore::Mahjong {
         return _worldIndex == 0 && _candidateIndex == 0;
     }
 
+    bool SearchRun::UseWorldSource(WorldSource source) {
+        if (!source || !Untouched() || Done()) {
+            return false;
+        }
+        _source = eastl::move(source);
+        return true;
+    }
+
+    bool SearchRun::HasWorldSource() const noexcept {
+        return static_cast<bool>(_source);
+    }
+
     SearchWorld SearchRun::PlayWorld(int index) const {
         BE_PROFILE_SCOPE("SearchRun::PlayWorld");
         SearchWorld world;
         if (index < 0 || index >= _worlds) {
             return world;
         }
-        const std::optional<SampledWorld> sampled = SampleWorldOf(_view, _base, index);
+        const std::optional<SampledWorld> sampled = SampleWorldOf(_view, _base, index, _source);
         if (!sampled.has_value()) {
             return world;
         }

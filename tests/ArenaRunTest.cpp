@@ -13,10 +13,10 @@
  * `ComputerStrengthTest` (seeds 4000..4059, Normal against three random seats: 190 wins of 240, the random seats 27 together, 23 drawn
  * hands, +35270 points, since the claim window that settles early), a bad config and the threads: the same config at 1, 2 and 5 jobs gives equal results and the same report text,
  * and a hand that fails gives the error of the lowest seed whatever the number of threads. The second level of threads (`WorldThreads`, the
- * worlds of a search decision): the pool runs every index once and serves many calls, a search focus player with few seeds gives the same
- * result and report at 1, 2 and 5 jobs, and the split of `jobs` between the seeds and the worlds is what `ArenaConfig::jobs` says. Pure logic: no engine services; the file takes about 16 s in Debug
- * (few seeds, the 60 seeds of `ComputerStrengthTest` played once for Normal and Easy together; 7 s of it is the search case, the search
- * seeds being the dear ones: a seed is four hands of a search seat, about 1.2 s).
+ * worlds of a search decision): the pool runs every index once and serves many calls, a search focus player with few seeds (an oracle search player too)
+ * gives the same result and report at 1, 2 and 5 jobs, and the split of `jobs` between the seeds and the worlds is what `ArenaConfig::jobs` says. Pure logic: no engine services; the file takes about
+ * 16 s in Debug (few seeds, the 60 seeds of `ComputerStrengthTest` played once for Normal and Easy together; 7 s of it is the search case, the search seeds being the dear ones: a seed is four hands
+ * of a search seat, about 1.2 s).
  */
 namespace BECore::Mahjong::Arena {
 
@@ -536,6 +536,24 @@ namespace BECore::Mahjong::Arena {
             ASSERT_EQ(one.focus[0].rows.size(), 1u);
             ASSERT_FALSE(single.focus[0].rows.empty());
             EXPECT_TRUE(SameRows(one.focus[0].rows, {single.focus[0].rows.front()})) << "one seed, jobs " << jobs;
+        }
+    }
+
+    TEST(ArenaRunTest, AnOracleFocusPlayerGivesTheSameResultAtAnyJobs) {
+        // The search oracles take their worlds from a source that reads the real hand: at 1, 2 and 5 jobs (the last has world threads
+        // too) the report is the same bytes. A cheap budget, as above.
+        for (const char* spec : {"oracle-hands:searchWorlds=1,searchCandidates=2,searchMargin=0", "oracle-whole:searchWorlds=1,searchCandidates=2,searchMargin=0"}) {
+            ArenaConfig config = ConfigOf({spec}, "random", kTwoSeeds);
+            const ArenaResult single = PlayConfig(config);
+            const eastl::string singleReport = FormatArenaReport(single);
+            EXPECT_GT(single.focus.at(0).focus.decisions, 0) << spec;
+            for (const int jobs : {kFewJobs, kManyJobs}) {
+                config.jobs = jobs;
+                const ArenaResult threaded = PlayConfig(config);
+                ASSERT_EQ(threaded.focus.size(), single.focus.size());
+                EXPECT_TRUE(SameFocus(single.focus[0], threaded.focus[0])) << spec << " jobs " << jobs;
+                EXPECT_EQ(FormatArenaReport(threaded), singleReport) << spec << " jobs " << jobs;
+            }
         }
     }
 

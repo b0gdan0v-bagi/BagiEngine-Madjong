@@ -36,17 +36,24 @@ namespace BECore::Mahjong::Arena {
         {"waitingKongByPoints", nullptr, &LevelProfile::waitingKongByPoints, 1},
     }};
 
-    /// Who sits on a seat: the random "seek win" chooser, or a computer player that plays by `profile`. `name` is the text it was made
-    /// from (`normal`, `easy:skipClaimPercent=20`), what a report prints.
+    /// What an arena-only player knows beyond a computer player's view (`ArenaOracle.h`; none of them is a level or reachable from
+    /// `Game/`). `None` is every ordinary player.
+    CORE_ENUM(OracleKind, uint8_t, None, Acceptance, Hands, WholeHand, Defence)
+
+    /// Who sits on a seat: the random "seek win" chooser, or a computer player that plays by `profile`, or an oracle (an `OracleKind`
+    /// other than `None`, on the Normal profile with the spec's knobs, plays through `ChooseOracle`). `name` is the text it was made from
+    /// (`normal`, `easy:skipClaimPercent=20`, `oracle-acceptance`), what a report prints.
     struct ArenaPlayer {
         bool random = false;
+        OracleKind oracle = OracleKind::None;
         LevelProfile profile = kNormalProfile;
         eastl::string name = "normal";
     };
 
     /// The player of `spec`: `random`, a level (`1` .. `10`, or the names `easy` = 1 and `normal` = 5), or a level with knobs, `<level>:<knob>=<value>,...` (the
-    /// knobs of `kProfileKnobs`, each at most once; the level's profile is the start and the listed knobs are set on it). The names are
-    /// exactly the lowercase ones. A bad spec is an error text that names the part that is wrong; nothing is thrown.
+    /// knobs of `kProfileKnobs`, each at most once; the level's profile is the start and the listed knobs are set on it). An oracle is
+    /// `oracle-<name>` (`oracle-acceptance`, `oracle-hands`, `oracle-whole`, `oracle-defence`), with the same optional knobs on the Normal profile.
+    /// The names are exactly the lowercase ones. A bad spec is an error text that names the part that is wrong; nothing is thrown.
     [[nodiscard]] std::expected<ArenaPlayer, eastl::string> ParseArenaPlayer(std::string_view spec);
 
     /// The name of a player for a table (`ArenaPlayer::name`).
