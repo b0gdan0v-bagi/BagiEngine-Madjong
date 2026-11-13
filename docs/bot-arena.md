@@ -9,9 +9,11 @@ coach): "is it better, and by how much" is answered by a number with an interval
 `ComputerStrengthTest` plays 240 hands, and a few hundred hands are what a gtest can afford in Debug. The noise of such a count is
 large: the arena reads about 16 points a hand of half-width (the 95 percent interval) for Normal against three random seats on those
 60 seeds, and about 4.7 on 1000 seeds, while the effects a lever of a computer player has are +1 to +4 points a hand (the Hard-lever
-measurements of the entry `mahjong-computer-difficulty`: even an oracle that cheats gains only about that much against three Normal
-seats; the oracle ladder of `bot-search.md` measured it again with the arena's own oracle players: +2.9 points a hand for the
-defence oracle, +4.5 for the acceptance oracle, +3.7 for exact hands in an 8-world search, over the same walls). A Release build plays 1000 seeds (4000 hands for a focus player) in about 4 seconds, and the paired rows
+measurements of the entry `mahjong-computer-difficulty`: an oracle that sees the hidden hands or the declared waits gains only
+about that much against three Normal seats; the oracle ladder of `bot-search.md` measured it again with the arena's own oracle
+players: +2.9 points a hand for the defence oracle, +4.5 for the acceptance oracle, +3.7 to +4.9 for exact hands in an 8-world
+search, over the same walls; `oracle-whole`, which knows its own draws, is a loose bound at +43 and +93, no limit of an honest
+player). A Release build plays 1000 seeds (4000 hands for a focus player) in about 4 seconds, and the paired rows
 (below) make a difference of a few points visible.
 
 The program only measures. It reads `src/Mahjong/Game/` and changes nothing there; the numbers of a level are the owner's decision.
@@ -263,7 +265,7 @@ measures it against Normal, paired.
 
 Four players that cheat exist only in the arena, to measure ceilings: how much a kind of player could win if it knew something it cannot
 know. A spec is `oracle-<name>` with the optional knobs of a level on the Normal profile (`oracle-hands:searchWorlds=8,searchMargin=10`), in
-`--focus` or `--others`:
+`--focus` or `--others` (`oracle-acceptance` plays no search and refuses the three search knobs by name):
 
 - `oracle-acceptance`: Normal that counts the copies that can still come exactly (the live wall and the loose tiles; the dead wall and the
   opponents' concealed hands count as seen).

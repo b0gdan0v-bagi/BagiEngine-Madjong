@@ -159,6 +159,14 @@ namespace BECore::Mahjong::Arena {
         EXPECT_TRUE(Contains(ErrorOf("oracle-wise"), "\"oracle-wise\""));
         EXPECT_TRUE(Contains(ErrorOf("oracle-defence:"), "no knobs"));
         EXPECT_TRUE(Contains(ErrorOf("oracle-defence:searchWorlds=4097"), "4097"));
+        // oracle-acceptance plays no search: a search knob is refused by name, the other knobs stay.
+        for (const char* spec : {"oracle-acceptance:searchWorlds=2", "oracle-acceptance:skipClaimPercent=5,searchMargin=10", "oracle-acceptance:searchCandidates=4"}) {
+            const std::string error = ErrorOf(spec);
+            EXPECT_TRUE(Contains(error, "oracle-acceptance")) << error;
+            EXPECT_TRUE(Contains(error, "plays no search")) << error;
+        }
+        EXPECT_TRUE(Contains(ErrorOf("oracle-acceptance:skipClaimPercent=5,searchMargin=10"), "searchMargin"));
+        EXPECT_EQ(Player("oracle-acceptance:skipClaimPercent=5").profile.skipClaimPercent, 5);
     }
 
     TEST(ArenaPlayerTest, ABadSpecIsAnErrorThatNamesThePart) {

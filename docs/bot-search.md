@@ -187,9 +187,10 @@ No range was replayed with other knobs, and no range or budget was chosen after 
 improved (the search over Normal plays Normal against itself); a sample of the opponents' hands that knows the waits of declared
 hands exactly; a win-rate objective compared with the points one; and many more rollouts, which is only possible off the frame
 (a worker thread) or with a faster rollout; the arena already plays the worlds of one decision on many cores ("One decision on
-many cores"); in the game, only one thread plays them. Each of these is a separate entry; none was tried here. The ceiling of a sample of the opponents' hands that is exact (and of the
-other kinds of knowledge) is measured in "The oracle ladder: ceilings above Normal" ("The record"): exact hands give +0.99 points a
-hand at the shipped budget and +3.73 at 8 worlds, so the second item is worth at most a few points.
+many cores"); in the game, only one thread plays them. Each of these is a separate entry; none was tried here. The ceiling of a
+sample of the opponents' hands that is exact (and of the other kinds of knowledge) is measured in "The oracle ladder: ceilings
+above Normal" ("The record"): exact hands give +0.99 points a hand at the shipped budget and +3.73 (+4.91 at margin 10, with fewer
+wins) at 8 worlds, a narrow ceiling, not a gain an honest sample would get.
 
 ## One decision on many cores
 
@@ -569,14 +570,14 @@ of `bot-arena.md` must not move.
 
 ### The record: the ceilings measured
 
-The reading above was played as written: three groups on three ranges, each once, nothing added, dropped or retuned after a number (no
-deviation). All nine runs exited 0, the 20-seed runs of the three groups are the same bytes at `--jobs 1` and `--jobs 14`, and the
-plain players did not move (`bot-arena.md`, "The first check"; the baselines of the arena before and after the branch are equal).
-Release, `--others 5`, 1000 seeds a range (4000 hands a focus player); "sig." is the arena's `significant`; `+-` is the 95 % interval.
-The own row of a variant and its paired row to Normal show the same points a hand, because Normal's own row is 0.00 by the mirror
-identity; the paired wins is the own wins minus Normal's (24.95 to 25.00 %). The pooled row is the mean of decision and confirmation with the half-width
-`sqrt(h1^2 + h2^2) / 2` of the two rows (exploration is never pooled), and "upper" is the mean plus that half-width, the number the
-verdict reads.
+The reading above was played as written: three groups on three ranges, each once, nothing added, dropped or retuned after a number
+(no deviation). All nine runs exited 0, the 20-seed runs of the three groups are the same bytes at `--jobs 1` and `--jobs 14`, and
+the plain players did not move (`bot-arena.md`, "The first check"; the baselines of the arena before and after the branch are
+equal). Release, `--others 5`, 1000 seeds a range (4000 hands a focus player); "sig." is the arena's `significant`; `+-` is the 95 %
+interval. The own row of a variant and its paired row to Normal show the same points a hand, because Normal's own row is 0.00 by
+the mirror identity; the paired wins is the own wins minus Normal's (24.95 to 25.00 %). The pooled row is the mean of decision and
+confirmation with the half-width `sqrt(h1^2 + h2^2) / 2` of the two rows (exploration is never pooled), and "upper" is the mean
+plus that half-width, the number the verdict reads.
 
 | variant | range | wins % | points/hand | paired points/hand | paired wins % | class |
 |---|---|---|---|---|---|---|
@@ -655,30 +656,33 @@ D (3.33 + 2.46) / 2 = 2.90, sqrt(1.32^2 + 1.16^2) / 2 = 0.88; ref-S2 (-2.58 - 3.
 - **The honest searches, for scale.** ref-S2 is -3.10 +- 2.40 points pooled and significantly below Normal on wins on all three
   ranges; ref-S8 is +1.34 +- 2.18 and -0.09 on wins: more worlds close the loss and do not open a gain (as in "Above Normal"). The
   arena pairs only against the first focus player, so oracle against honest search is not an arena output and is not read.
-- **C, a loose bound (record only).** `oracle-whole` knows its own draws, so it is not a limit of any honest player: +43.03 +- 3.17
-  points with 2 worlds and +93.31 +- 3.92 with 8, wins +12.37 and +25.89 (own wins 35 to 38 % with 2 worlds and 49 to 51 % with 8, on every range). With
-  its own draws known, a rollout is an exact look at the future, and more worlds only find the best discard of one fixed future more
-  reliably. No class is given and no limit is read from it, other than the rule's: it is not under +5.
+- **C, a loose bound (record only).** `oracle-whole` knows its own draws, so it is not a limit of any honest player: +43.03 +-
+  3.17 points with 2 worlds and +93.31 +- 3.92 with 8, wins +12.37 and +25.89 (own wins 35 to 38 % with 2 worlds and 49 to 51 %
+  with 8, on every range). With its own draws known, a rollout is an exact look at the future, and more worlds only find the best
+  discard of one fixed future more reliably. No class is given and no limit is read from it, other than the rule's: it is not
+  under +5.
 
 **Consequences** (the written text by class; "narrow" in its own words):
 
 - **A, narrow: the hand-reading idea is not closed, but it is small.** Knowing exactly which copies can still come (the opponents'
-  concealed hands and the dead wall as seen) lifts Normal's choosers by +4.54 +- 2.80 points a hand pooled (wins +1.04 +- 0.77), below
-  the bar of a level step in the mean (its upper end, +7.34, is above it): an honest estimate of the hidden hands gets a part of
-  that. So no entry for a hand-reading estimate is opened. `mahjong-own-draws-ev` (open) and `mahjong-hand-plan-search` (open)
-  stay as they are, with the number as the limit of what an improved unseen-copy probability or draw model can win from reading the
-  opponents (the first reads the unseen copies of the public view). `mahjong-selfplay-weight-tuning` is not touched: its features are the
-  seat's own hand, and this ladder bounds no re-weighting of those.
+  concealed hands and the dead wall as seen) lifts Normal's choosers by +4.54 +- 2.80 points a hand pooled (wins +1.04 +- 0.77),
+  below the bar of a level step in the mean (its upper end, +7.34, is above it): an honest estimate of the hidden hands gets a
+  part of that. So no entry for a hand-reading estimate is opened. `mahjong-own-draws-ev` (open) and `mahjong-hand-plan-search`
+  (open) stay as they are, with the number as the limit of what an improved unseen-copy probability or draw model can win from
+  reading the opponents (the first reads the unseen copies of the public view). `mahjong-selfplay-weight-tuning` is not touched:
+  its features are the seat's own hand, and this ladder bounds no re-weighting of those.
 - **B, closed at the shipped budget, narrow at 4 times the worlds.** With the opponents' concealed hands exact in every world, the
   2-world, 4-candidate, margin-30 search is +0.99 +- 2.41 points pooled (upper +3.39, wins -0.36): a better sample of the
   opponents' hands (the waits of declared hands exact) cannot make the shipped one-step search win. At 8 worlds the exact sample
-  is +3.73 +- 2.23 (upper +5.96) and, at margin 10, +4.91 +- 3.02 (upper +7.93, with fewer wins): the most an honest sample of the
-  hands can give a search of this form is about +3.7 points at 4 times the worlds, below the bar, against +1.34 for the honest
-  one (the gap between the exact and the honest sample at 8 worlds is about 2.4 points, within the intervals). So the sample of the
-  opponents' hands is not an entry: it is worth at most the gap above, a few points. `mahjong-search-release-curve` stays open, and
-  what it can still find is the compute and the claims (more worlds, claim decisions against discards of equal shanten); the number
-  to measure that against is these +3.7 points at 8 worlds (the exact sample), not a ceiling above the bar. It does not become a
-  level on this evidence.
+  is +3.73 +- 2.23 (upper +5.96, B8) and, at margin 10, +4.91 +- 3.02 (upper +7.93, B8m10, with fewer wins, -1.05): the larger of
+  the two, +4.91 points a hand at 4 times the worlds, is the number of the limit, below the +5 bar in the mean and above it at the
+  upper end. By the written text a "narrow" opens no entry: the entries it touches stay open with that number as the limit of what
+  they can win. `mahjong-search-release-curve` stays open, and what it can still find is the compute and the claims (more worlds,
+  claim decisions against discards of equal shanten); the number to measure that against is the +3.73 to +4.91 points at 8 worlds
+  (the exact sample), not a ceiling above the bar. It does not become a level on this evidence. The honest search at 8 worlds
+  (+1.34 +- 2.18) is shown for scale; the gap between it and an oracle is not read, because the reading above excludes the
+  comparison (the arena pairs only against Normal), and a conclusion about the value of an honest sample drawn from that gap
+  would be a post-hoc reading, a deviation.
 - **C: it decides nothing.** The loose bound is +43 and +93 points, far over +5, so by the written text B decides, not C. The
   one-step form with a Normal rollout is not shown to be at its limit by C, and `mahjong-search-release-curve` is not closed by it.
   `mahjong-hand-plan-search` stays open, untouched by C: whether a plan of the hand beats the one-step question is not answered by an

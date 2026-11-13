@@ -62,6 +62,9 @@ namespace BECore::Mahjong::Arena {
         constexpr std::string_view kOracleHeadPrefix = "oracle-";
         constexpr std::string_view kOracleNamesText = "oracle-acceptance, oracle-hands, oracle-whole, oracle-defence";
 
+        /// The knobs of the search: `oracle-acceptance` plays no search, so a spec that sets one is refused.
+        constexpr eastl::array<std::string_view, 3> kSearchKnobNames = {{"searchWorlds", "searchCandidates", "searchMargin"}};
+
         /// The oracles that are a search player: their profile starts from the shipped search budget.
         bool IsSearchOracle(OracleKind kind) {
             return kind == OracleKind::Hands || kind == OracleKind::WholeHand;
@@ -164,6 +167,16 @@ namespace BECore::Mahjong::Arena {
                 return std::unexpected(*error);
             }
             begin = end + 1;
+        }
+        if (player.oracle == OracleKind::Acceptance) {
+            for (const std::string_view searchKnob : kSearchKnobNames) {
+                const ProfileKnob* const knob = FindKnob(searchKnob);
+                if (knob != nullptr && seen[static_cast<size_t>(knob - kProfileKnobs.data())]) {
+                    return std::unexpected(Format("\"{}\": oracle-acceptance plays no search, so \"{}\" would do nothing there (the search oracles are oracle-hands and "
+                                                  "oracle-whole)",
+                                                  spec, searchKnob));
+                }
+            }
         }
         if (IsSearchOracle(player.oracle) && (player.profile.searchWorlds < 1 || player.profile.searchCandidates < kSearchMinCandidates)) {
             return std::unexpected(Format("\"{}\" would be plain Normal: a search oracle needs searchWorlds of at least 1 and searchCandidates of at least {}", spec, kSearchMinCandidates));
