@@ -14,9 +14,9 @@ namespace BECore::Mahjong {
         constexpr int kMatchIdWords = 4;  // 4 x 32 bits
 
         /// A random id of 128 bits as 32 hex digits, from `std::random_device` alone: nothing of the seed, the time or the machine.
-        eastl::string RandomMatchId() {
+        String RandomMatchId() {
             std::random_device device;
-            eastl::string id;
+            String id;
             for (int word = 0; word < kMatchIdWords; ++word) {
                 id.append(Format("{:08x}", static_cast<uint32_t>(device())));
             }
@@ -175,7 +175,7 @@ namespace BECore::Mahjong {
             return;
         }
         _savedPrefs = *loaded;  // what the slot holds, so nothing is written until a choice changes
-        const std::expected<PrefsValues, eastl::string> values = ReadPrefs(*loaded);
+        const std::expected<PrefsValues, String> values = ReadPrefs(*loaded);
         if (!values) {
             LOG_WARNING(Format("MahjongGame: the saved settings are not used: {}", values.error()));
             return;

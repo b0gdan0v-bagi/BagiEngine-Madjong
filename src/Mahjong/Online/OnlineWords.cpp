@@ -17,11 +17,11 @@ namespace BECore::Mahjong {
         return code == RoomErrors::kStaleAction;
     }
 
-    eastl::string OnlineNoticeText(const UIStrings& strings, StringView key, StringView arg) {
+    String OnlineNoticeText(const UIStrings& strings, StringView key, StringView arg) {
         return Tr(strings, key, {{"code", arg}});
     }
 
-    eastl::string OnlineSeatText(const UIStrings& strings, BECore::SeatKind kind, StringView name, bool mine, bool connected) {
+    String OnlineSeatText(const UIStrings& strings, BECore::SeatKind kind, StringView name, bool mine, bool connected) {
         switch (kind) {
             case BECore::SeatKind::Empty:
                 return Tr(strings, "online.seat.empty");
@@ -36,7 +36,7 @@ namespace BECore::Mahjong {
         if (!connected) {
             return Tr(strings, "online.seat.away", {{"name", name}});
         }
-        return eastl::string(name.data(), name.size());
+        return String(name.data(), name.size());
     }
 
 }  // namespace BECore::Mahjong

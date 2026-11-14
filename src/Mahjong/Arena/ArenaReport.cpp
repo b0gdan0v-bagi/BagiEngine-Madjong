@@ -38,7 +38,7 @@ namespace BECore::Mahjong::Arena {
         }
 
         /// Ends the line: the spaces at its right end go, a newline comes.
-        void EndLine(eastl::string& text, size_t lineStart) {
+        void EndLine(String& text, size_t lineStart) {
             size_t end = text.size();
             while (end > lineStart && text[end - 1] == ' ') {
                 --end;
@@ -47,26 +47,26 @@ namespace BECore::Mahjong::Arena {
             text.push_back('\n');
         }
 
-        void AddLeft(eastl::string& text, const eastl::string& cell, int width) {
+        void AddLeft(String& text, const String& cell, int width) {
             text.append(Format("{:<{}}", cell, width));
         }
 
-        void AddRight(eastl::string& text, const eastl::string& cell, int width) {
+        void AddRight(String& text, const String& cell, int width) {
             text.append(Format("{}{:>{}}", kColumnGap, cell, width));
         }
 
-        eastl::string Plain(double value) {
+        String Plain(double value) {
             return Format("{:.{}f}", value, kPrecision);
         }
 
-        eastl::string WithInterval(const MeanInterval& interval) {
+        String WithInterval(const MeanInterval& interval) {
             if (!interval.hasInterval) {
                 return Plain(interval.mean);
             }
             return Format("{:.{}f} +- {:.{}f}", interval.mean, kPrecision, interval.half, kPrecision);
         }
 
-        eastl::string SignedWithInterval(const MeanInterval& interval) {
+        String SignedWithInterval(const MeanInterval& interval) {
             if (!interval.hasInterval) {
                 return Format("{:+.{}f}", interval.mean, kPrecision);
             }
@@ -82,14 +82,14 @@ namespace BECore::Mahjong::Arena {
         }
 
         /// The rule of the interval, and what it needs.
-        eastl::string IntervalRule(const ArenaResult& result) {
+        String IntervalRule(const ArenaResult& result) {
             if (result.count < static_cast<int>(kMinSeedsForInterval)) {
                 return Format("{} seed: no interval (it needs at least {} seeds)", result.count, kMinSeedsForInterval);
             }
             return Format("+- is {} standard errors over the seeds (a 95 percent interval); the {} rotations of a seed play one wall, so a seed is one sample", kIntervalZ, kSeatCount);
         }
 
-        void AddHeader(eastl::string& text, const ArenaResult& result) {
+        void AddHeader(String& text, const ArenaResult& result) {
             const int64_t last = static_cast<int64_t>(result.first) + result.count - 1;
             text.append(Format("Bot arena: seeds {} .. {} ({} seeds, {} hands per focus player)\n", result.first, last, result.count, result.count * static_cast<int>(kSeatCount)));
             text.append("focus: ");
@@ -100,7 +100,7 @@ namespace BECore::Mahjong::Arena {
             text.append(Format("{}\n", IntervalRule(result)));
         }
 
-        void AddMainTable(eastl::string& text, const ArenaResult& result, int nameWidth) {
+        void AddMainTable(String& text, const ArenaResult& result, int nameWidth) {
             size_t start = text.size();
             AddLeft(text, "player", nameWidth);
             AddRight(text, "hands", kHandsWidth);
@@ -137,7 +137,7 @@ namespace BECore::Mahjong::Arena {
         /// The table "how the hands end": per focus player and for its others, how often the seat gave the win, how often a win of the
         /// seat was a self-draw, and what the seat's hands cost it when another seat won. The columns with intervals are the two that
         /// have a per-seed value (`GaveWinPercent`, `StandingScore`); the others are ratios of the totals.
-        void AddStyleTable(eastl::string& text, const ArenaResult& result, int nameWidth) {
+        void AddStyleTable(String& text, const ArenaResult& result, int nameWidth) {
             text.append("\nhow the hands end\n");
             size_t start = text.size();
             AddLeft(text, "player", nameWidth);
@@ -168,12 +168,12 @@ namespace BECore::Mahjong::Arena {
             text.append("lost hand: a hand another seat won; standing score: the seat's mean score over its lost hands; points/lost hand: its mean change of points over them\n");
         }
 
-        void AddPairedCell(eastl::string& text, const MeanInterval& interval, int cellWidth) {
+        void AddPairedCell(String& text, const MeanInterval& interval, int cellWidth) {
             AddRight(text, SignedWithInterval(interval), cellWidth);
-            AddRight(text, IsSignificant(interval) ? Format("{}", kSignificantWord) : eastl::string(), kSignificantWidth);
+            AddRight(text, IsSignificant(interval) ? Format("{}", kSignificantWord) : String(), kSignificantWidth);
         }
 
-        void AddPairedTable(eastl::string& text, const ArenaResult& result, int nameWidth) {
+        void AddPairedTable(String& text, const ArenaResult& result, int nameWidth) {
             const FocusResult& baseline = result.focus.front();
             text.append(Format("\npaired difference against {} (the same seeds)\n", baseline.player.name));
             size_t start = text.size();
@@ -192,7 +192,7 @@ namespace BECore::Mahjong::Arena {
             }
         }
 
-        void AddStylePairedTable(eastl::string& text, const ArenaResult& result, int nameWidth) {
+        void AddStylePairedTable(String& text, const ArenaResult& result, int nameWidth) {
             const FocusResult& baseline = result.focus.front();
             text.append(Format("\npaired difference against {} (the same seeds), how the hands end\n", baseline.player.name));
             size_t start = text.size();
@@ -211,7 +211,7 @@ namespace BECore::Mahjong::Arena {
             }
         }
 
-        void AddKindTable(eastl::string& text, const FocusResult& focus) {
+        void AddKindTable(String& text, const FocusResult& focus) {
             eastl::vector<size_t> kinds;
             for (size_t kind = 0; kind < kScoreKindCount; ++kind) {
                 if (focus.focus.winsByKind[kind] > 0 || focus.others.winsByKind[kind] > 0) {
@@ -242,7 +242,7 @@ namespace BECore::Mahjong::Arena {
             }
         }
 
-        void AddTimingRow(eastl::string& text, const eastl::string& name, const ArenaTally& tally, int nameWidth) {
+        void AddTimingRow(String& text, const String& name, const ArenaTally& tally, int nameWidth) {
             const size_t start = text.size();
             AddLeft(text, name, nameWidth);
             AddRight(text, Format("{}", tally.decisions), kDecisionsWidth);
@@ -250,7 +250,7 @@ namespace BECore::Mahjong::Arena {
             EndLine(text, start);
         }
 
-        void AddTimingTable(eastl::string& text, const ArenaResult& result, int nameWidth) {
+        void AddTimingTable(String& text, const ArenaResult& result, int nameWidth) {
             text.append("\ntime per decision (wall clock, not deterministic)\n");
             size_t start = text.size();
             AddLeft(text, "player", nameWidth);
@@ -265,8 +265,8 @@ namespace BECore::Mahjong::Arena {
 
     }  // namespace
 
-    eastl::string FormatArenaReport(const ArenaResult& result, const ArenaReportOptions& options) {
-        eastl::string text;
+    String FormatArenaReport(const ArenaResult& result, const ArenaReportOptions& options) {
+        String text;
         const int nameWidth = NameWidth(result);
         AddHeader(text, result);
         text.append("\n");

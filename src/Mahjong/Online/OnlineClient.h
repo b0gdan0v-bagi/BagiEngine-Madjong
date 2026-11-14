@@ -33,9 +33,9 @@ namespace BECore::Mahjong {
     /// One open room of a list the server sent, with the facts a screen needs. A fact the listing does not carry is none.
     struct OnlineListedRoom {
         /// The code to join with.
-        eastl::string code;
+        String code;
         /// The host's name (UTF-8, as the server kept it): untrusted text, shown as given and never used as a format.
-        eastl::string host;
+        String host;
         /// Seats a person can still take.
         int free = 0;
         Optional<int> hands;
@@ -58,7 +58,7 @@ namespace BECore::Mahjong {
     struct OnlineLobbySeat {
         BECore::SeatKind kind = BECore::SeatKind::Empty;
         /// A person's name (UTF-8, as the server kept it); empty for the other kinds.
-        eastl::string name;
+        String name;
         bool connected = false;
         /// This client's seat.
         bool mine = false;
@@ -69,7 +69,7 @@ namespace BECore::Mahjong {
 
     struct OnlineLobby {
         /// The code of the room; empty when there is no lobby to show.
-        eastl::string room;
+        String room;
         RoomPhase phase = RoomPhase::Lobby;
         eastl::array<OnlineLobbySeat, kSeatCount> seats;
         /// This client is the host of a room that has not started.
@@ -85,7 +85,7 @@ namespace BECore::Mahjong {
     /// serial so a screen shows each notice once (0 is none yet).
     struct OnlineNotice {
         StringView key;
-        eastl::string arg;
+        String arg;
         uint32_t serial = 0;
     };
 
@@ -182,7 +182,7 @@ namespace BECore::Mahjong {
             return _sessionRevision;
         }
 
-        [[nodiscard]] const eastl::string& Room() const {
+        [[nodiscard]] const String& Room() const {
             return _client.GetRoom();
         }
 
@@ -272,7 +272,7 @@ namespace BECore::Mahjong {
         /// The connection is used to list the open rooms: `Settle()` keeps it open, and `ComputeStage()` says `Browsing` while it has no request.
         bool _browsing = false;
         /// The address of the browsing connection, for the next ask.
-        eastl::string _browseUrl;
+        String _browseUrl;
         /// The request that waits for `joined` is a join of a listed code: an error asks the list again.
         bool _joiningListed = false;
         OnlineRoomList _rooms;

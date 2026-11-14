@@ -18,7 +18,7 @@ namespace BECore::Mahjong {
         return WebPostIsAvailable();
     }
 
-    std::expected<WebPostId, eastl::string> EngineWebPoster::Start(StringView path, StringView body) {
+    std::expected<WebPostId, String> EngineWebPoster::Start(StringView path, StringView body) {
         return WebPostStart(path, body, {});
     }
 
@@ -95,7 +95,7 @@ namespace BECore::Mahjong {
     void WebUploadSink::StartFront(double nowSeconds) {
         const UploadPiece& piece = _queue.front();
         BuildPath(piece);
-        const std::expected<WebPostId, eastl::string> started = _poster->Start(_path, piece.lines);
+        const std::expected<WebPostId, String> started = _poster->Start(_path, piece.lines);
         if (!started.has_value()) {
             LOG_WARNING(Format("WebUploadSink: the post of piece {} was refused ({}): again later", piece.index, started.error()));
             RetryLater(nowSeconds);
@@ -132,7 +132,7 @@ namespace BECore::Mahjong {
         _backoff = std::min(_backoff * 2.0, kMaxBackoffSeconds);
     }
 
-    void WebUploadSink::DropMatch(eastl::string matchId) {
+    void WebUploadSink::DropMatch(String matchId) {
         const size_t before = _queue.size();
         if (!_queue.empty() && _inFlight != 0 && _queue.front().matchId == matchId) {
             _inFlight = 0;  // the answer, when it comes, is nobody's

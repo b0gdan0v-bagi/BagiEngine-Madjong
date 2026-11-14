@@ -24,8 +24,8 @@ namespace BECore::Mahjong::Analyzer {
         constexpr StringView kHiddenKind = "uniform";
         constexpr StringView kPointsKind = "this hand";
 
-        eastl::string Text(StringView view) {
-            return eastl::string(view.data(), view.size());
+        String Text(StringView view) {
+            return String(view.data(), view.size());
         }
 
         /// A number as it is printed and stored: `kReportPrecision` digits, and never a negative zero.
@@ -36,8 +36,8 @@ namespace BECore::Mahjong::Analyzer {
             return rounded == 0.0 ? 0.0 : rounded;
         }
 
-        eastl::string TilesText(const eastl::vector<Tile>& tiles) {
-            eastl::string text;
+        String TilesText(const eastl::vector<Tile>& tiles) {
+            String text;
             for (const Tile tile : tiles) {
                 text.append(Format("{}{}", text.empty() ? "" : " ", ToString(tile)));
             }
@@ -45,20 +45,20 @@ namespace BECore::Mahjong::Analyzer {
         }
 
         /// The lowest tile of a chow and the next two of its suit.
-        eastl::string ChowText(Tile first) {
+        String ChowText(Tile first) {
             if (!first.IsSuit()) {
                 return Text(ToString(first));
             }
             constexpr int kChowLength = 3;
-            eastl::string text;
+            String text;
             for (int step = 0; step < kChowLength; ++step) {
                 text.append(Format("{}{}", step == 0 ? "" : "-", ToString(Tile::Suited(first.Suit(), first.Rank() + step))));
             }
             return text;
         }
 
-        eastl::string MeldText(const Meld& meld) {
-            eastl::string text;
+        String MeldText(const Meld& meld) {
+            String text;
             switch (meld.kind) {
                 case MeldKind::Chow:
                     text = Format("chow {}", ChowText(meld.first));
@@ -78,8 +78,8 @@ namespace BECore::Mahjong::Analyzer {
             return text;
         }
 
-        eastl::string MeldsText(const eastl::vector<Meld>& melds) {
-            eastl::string text;
+        String MeldsText(const eastl::vector<Meld>& melds) {
+            String text;
             for (const Meld& meld : melds) {
                 text.append(Format("{}{}", text.empty() ? "" : "; ", MeldText(meld)));
             }
@@ -101,7 +101,7 @@ namespace BECore::Mahjong::Analyzer {
             return order;
         }
 
-        eastl::string ClaimText(const HandAction& action) {
+        String ClaimText(const HandAction& action) {
             switch (action.claim) {
                 case ClaimKind::Chow:
                     return Format("claim chow {}", ChowText(action.chowFirst));
@@ -120,7 +120,7 @@ namespace BECore::Mahjong::Analyzer {
         }
 
         /// The notes of a row, in a fixed order.
-        eastl::string NoteText(const ActionRow& row, const PositionLabel& label) {
+        String NoteText(const ActionRow& row, const PositionLabel& label) {
             eastl::vector<StringView> notes;
             if (row.isBest) {
                 notes.push_back(kNoteBest);
@@ -137,7 +137,7 @@ namespace BECore::Mahjong::Analyzer {
             if (row.vsNormal.significant) {
                 notes.push_back(row.vsNormal.interval.mean > 0.0 ? kNoteBetterThanNormal : kNoteWorseThanNormal);
             }
-            eastl::string text;
+            String text;
             for (const StringView note : notes) {
                 text.append(Format("{}{}", text.empty() ? "" : Text(kNoteSeparator), Text(note)));
             }
@@ -146,16 +146,16 @@ namespace BECore::Mahjong::Analyzer {
 
         // ----- text -----
 
-        void AddLeft(eastl::string& text, const eastl::string& cell, int width) {
+        void AddLeft(String& text, const String& cell, int width) {
             text.append(Format("{:<{}}", cell, width));
         }
 
-        void AddRight(eastl::string& text, const eastl::string& cell, int width) {
+        void AddRight(String& text, const String& cell, int width) {
             text.append(Format("{}{:>{}}", kColumnGap, cell, width));
         }
 
         /// Ends the line: the spaces at its right end go, a newline comes.
-        void EndLine(eastl::string& text, size_t lineStart) {
+        void EndLine(String& text, size_t lineStart) {
             size_t end = text.size();
             while (end > lineStart && text[end - 1] == ' ') {
                 --end;
@@ -164,26 +164,26 @@ namespace BECore::Mahjong::Analyzer {
             text.push_back('\n');
         }
 
-        eastl::string PlainCell(const Arena::MeanInterval& interval) {
-            return interval.n > 0 ? Format("{:.{}f}", Rounded(interval.mean), kReportPrecision) : eastl::string();
+        String PlainCell(const Arena::MeanInterval& interval) {
+            return interval.n > 0 ? Format("{:.{}f}", Rounded(interval.mean), kReportPrecision) : String();
         }
 
-        eastl::string SignedCell(const Arena::MeanInterval& interval) {
-            return interval.n > 0 ? Format("{:+.{}f}", Rounded(interval.mean), kReportPrecision) : eastl::string();
+        String SignedCell(const Arena::MeanInterval& interval) {
+            return interval.n > 0 ? Format("{:+.{}f}", Rounded(interval.mean), kReportPrecision) : String();
         }
 
-        eastl::string HalfCell(const Arena::MeanInterval& interval) {
-            return interval.n > 0 && interval.hasInterval ? Format("{:.{}f}", Rounded(interval.half), kReportPrecision) : eastl::string();
+        String HalfCell(const Arena::MeanInterval& interval) {
+            return interval.n > 0 && interval.hasInterval ? Format("{:.{}f}", Rounded(interval.half), kReportPrecision) : String();
         }
 
-        eastl::string LabelLine(const PositionLabel& label) {
+        String LabelLine(const PositionLabel& label) {
             if (label.hand > 0) {
-                return Format("position: {}, hand {}, action {}\n", label.source.empty() ? eastl::string("(log)") : label.source, label.hand, label.actionIndex);
+                return Format("position: {}, hand {}, action {}\n", label.source.empty() ? String("(log)") : label.source, label.hand, label.actionIndex);
             }
-            return label.source.empty() ? eastl::string() : Format("position: {}\n", label.source);
+            return label.source.empty() ? String() : Format("position: {}\n", label.source);
         }
 
-        void AddHeader(eastl::string& text, const PositionAnalysis& analysis) {
+        void AddHeader(String& text, const PositionAnalysis& analysis) {
             text.append("EV of every legal action, in points at the end of the hand\n");
             text.append(Format("The opponents are Normal players (level {}) and the seat itself plays Normal after the chosen action.\n", LevelNumber(ComputerLevel::Normal)));
             text.append("Hidden tiles are sampled uniformly from the tiles the seat cannot see (the approximations of ComputerWorld.h).\n");
@@ -195,7 +195,7 @@ namespace BECore::Mahjong::Analyzer {
             text.append("vs best has a small bias: the best row was picked by the same worlds.\n");
         }
 
-        void AddPosition(eastl::string& text, const TableView& view, const PositionLabel& label) {
+        void AddPosition(String& text, const TableView& view, const PositionLabel& label) {
             text.push_back('\n');
             text.append(LabelLine(label));
             text.append(Format("seat {} ({} wind), round {}, phase {}, live tiles {}\n", static_cast<int>(view.seat), Text(EnumUtils<Wind>::ToString(view.seatWind)),
@@ -232,7 +232,7 @@ namespace BECore::Mahjong::Analyzer {
             }
         }
 
-        void AddTable(eastl::string& text, const PositionAnalysis& analysis, const PositionLabel& label) {
+        void AddTable(String& text, const PositionAnalysis& analysis, const PositionLabel& label) {
             int actionWidth = kActionMinWidth;
             for (const ActionRow& row : analysis.rows) {
                 actionWidth = eastl::max(actionWidth, static_cast<int>(ActionNotation(row.action).size()));
@@ -306,7 +306,7 @@ namespace BECore::Mahjong::Analyzer {
         return label;
     }
 
-    eastl::string ActionNotation(const HandAction& action) {
+    String ActionNotation(const HandAction& action) {
         switch (action.kind) {
             case ActionKind::Discard:
                 return Format("discard {}{}", ToString(action.tile), action.declareCalling ? " declare" : "");
@@ -324,8 +324,8 @@ namespace BECore::Mahjong::Analyzer {
         return "pass";
     }
 
-    eastl::string FormatAnalysisReport(const TableView& view, const PositionAnalysis& analysis, const PositionLabel& label) {
-        eastl::string text;
+    String FormatAnalysisReport(const TableView& view, const PositionAnalysis& analysis, const PositionLabel& label) {
+        String text;
         AddHeader(text, analysis);
         AddPosition(text, view, label);
         AddTable(text, analysis, label);
@@ -365,7 +365,7 @@ namespace BECore::Mahjong::Analyzer {
         return json;
     }
 
-    eastl::string FormatAnalysisJson(const TableView& view, const PositionAnalysis& analysis, const PositionLabel& label) {
+    String FormatAnalysisJson(const TableView& view, const PositionAnalysis& analysis, const PositionLabel& label) {
         return DumpJson(AnalysisToJson(view, analysis, label));
     }
 

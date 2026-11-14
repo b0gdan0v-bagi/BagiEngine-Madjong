@@ -43,7 +43,7 @@ namespace BECore::Mahjong {
         }
 
         /// The nickname as the name field would keep it: empty when the field would refuse it
-        eastl::string CleanNickname(StringView text) {
+        String CleanNickname(StringView text) {
             TextEntry entry(TextEntry::Kind::Name);
             if (text.size() > kMaxMatchLogNicknameBytes || !entry.Replace(text)) {
                 return {};
@@ -52,7 +52,7 @@ namespace BECore::Mahjong {
         }
 
         std::filesystem::path FileOf(const std::filesystem::path& directory) {
-            return directory / std::string(kUploadPrefsFile.data(), kUploadPrefsFile.size());
+            return directory / ToStd(kUploadPrefsFile);
         }
 
     }  // namespace
@@ -62,7 +62,7 @@ namespace BECore::Mahjong {
             return {};
         }
         Optional<UploadConsent> consent;
-        Optional<eastl::string> nickname;
+        Optional<String> nickname;
         size_t position = 0;
         while (position < text.size()) {
             size_t end = text.find(kLineEnd, position);
@@ -105,14 +105,14 @@ namespace BECore::Mahjong {
         return prefs;
     }
 
-    eastl::string FormatUploadPrefs(const UploadPrefs& prefs) {
-        eastl::string text;
+    String FormatUploadPrefs(const UploadPrefs& prefs) {
+        String text;
         text.append(kConsentKey.data(), kConsentKey.size());
         text.push_back(kAssign);
         const StringView consentText = ConsentText(prefs.consent);
         text.append(consentText.data(), consentText.size());
         text.push_back(kLineEnd);
-        const eastl::string nickname = CleanNickname(prefs.nickname);
+        const String nickname = CleanNickname(prefs.nickname);
         if (!nickname.empty()) {
             text.append(kNicknameKey.data(), kNicknameKey.size());
             text.push_back(kAssign);
@@ -131,7 +131,7 @@ namespace BECore::Mahjong {
             return {};
         }
         // One byte more than the limit tells a file that is too big from one that just fits
-        eastl::string bytes(kMaxUploadPrefsBytes + 1, '\0');
+        String bytes(kMaxUploadPrefsBytes + 1, '\0');
         file.read(bytes.data(), static_cast<std::streamsize>(bytes.size()));
         bytes.resize(static_cast<size_t>(file.gcount()));
         return ParseUploadPrefs(bytes);
@@ -145,8 +145,8 @@ namespace BECore::Mahjong {
         std::filesystem::create_directories(directory, error);
         const std::filesystem::path target = FileOf(directory);
         std::filesystem::path temp = target;
-        temp += std::string(kTempSuffix.data(), kTempSuffix.size());
-        const eastl::string text = FormatUploadPrefs(prefs);
+        temp += ToStd(kTempSuffix);
+        const String text = FormatUploadPrefs(prefs);
         {
             std::ofstream file(temp, std::ios::binary | std::ios::trunc);
             if (!file) {

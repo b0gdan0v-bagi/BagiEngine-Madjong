@@ -30,17 +30,17 @@ namespace BECore::Mahjong {
         return config;
     }
 
-    eastl::string OnlineServerUrl(bool browser, const char* fromEnvironment, const OnlineServerConfig& config) {
+    String OnlineServerUrl(bool browser, const char* fromEnvironment, const OnlineServerConfig& config) {
         if (browser) {
             return config.webServer;
         }
         if (fromEnvironment != nullptr && fromEnvironment[0] != '\0') {
-            return eastl::string(fromEnvironment);
+            return String(fromEnvironment);
         }
-        return eastl::string(kDefaultOnlineServerUrl.data(), kDefaultOnlineServerUrl.size());
+        return String(kDefaultOnlineServerUrl.data(), kDefaultOnlineServerUrl.size());
     }
 
-    eastl::string OnlineServerUrl() {
+    String OnlineServerUrl() {
         OnlineServerConfig config;
         if (kBrowserBuild) {
             config = ReadOnlineServerConfig(CoreManager::GetConfigManager().GetConfig(kOnlineConfigName));

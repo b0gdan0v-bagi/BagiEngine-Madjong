@@ -12,7 +12,7 @@ namespace BECore::Mahjong {
      */
     struct TableLayoutSpecParse {
         TableLayoutSpec spec;
-        eastl::vector<eastl::string> errors;
+        eastl::vector<String> errors;
 
         [[nodiscard]] bool Ok() const noexcept {
             return errors.empty();
@@ -30,7 +30,7 @@ namespace BECore::Mahjong {
 
     struct TableLayoutOfferResult {
         TableLayoutOffer outcome = TableLayoutOffer::Unchanged;
-        eastl::vector<eastl::string> errors;  // only when `Rejected`: what `ParseTableLayoutSpec` or `CheckTableLayoutSpec` found
+        eastl::vector<String> errors;  // only when `Rejected`: what `ParseTableLayoutSpec` or `CheckTableLayoutSpec` found
     };
 
     /// Reads the file as `ParseTableLayoutSpec` does and makes it the active spec (`SetActiveTableLayoutSpec`) only when it reads with no

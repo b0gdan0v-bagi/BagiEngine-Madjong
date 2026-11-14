@@ -7,18 +7,19 @@
 
 namespace {
 
-    std::expected<eastl::string, eastl::string> ReadFile(BECore::StringView path) {
+    std::expected<BECore::String, BECore::String> ReadFile(BECore::StringView path) {
         std::istream* stream = &std::cin;
         std::ifstream file;
         if (path != BECore::Mahjong::Analyzer::kStandardInputName) {
             file.open(BECore::ToStdString(path), std::ios::binary);
             if (!file) {
-                return std::unexpected(eastl::string("cannot read the file \"") + eastl::string(path.data(), path.size()) + "\"");
+                return std::unexpected(BECore::String("cannot read the file \"") + BECore::String(path.data(), path.size()) + "\"");
             }
             stream = &file;
         }
+        //-NoStd: the bytes of the stream are read through its iterator into a std::string (EASTL would measure an input range by consuming it)
         const std::string text((std::istreambuf_iterator<char>(*stream)), std::istreambuf_iterator<char>());
-        return eastl::string(text.data(), text.size());
+        return BECore::FromStdString(text);
     }
 
 }  // namespace

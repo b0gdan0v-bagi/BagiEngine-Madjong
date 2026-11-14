@@ -29,7 +29,7 @@ namespace BECore::Mahjong::Arena {
         /// `--logs PATH`: read the match logs of a folder or a file instead of playing (`config` is then only `focus`, the bots of the
         /// analysis); `--check` prints the verdicts only.
         bool logMode = false;
-        eastl::string logsPath;
+        String logsPath;
         bool check = false;
         /// `--differences N`: how many of the differences between the people and the first bot the log report lists.
         int differences = kDefaultDifferences;
@@ -39,7 +39,7 @@ namespace BECore::Mahjong::Arena {
     };
 
     /// The text of `--help`: the options with their defaults, the exit codes and the interval rule in two lines.
-    [[nodiscard]] eastl::string ArenaUsage();
+    [[nodiscard]] String ArenaUsage();
 
     /**
      * @brief Reads the arguments (without the name of the program).
@@ -52,12 +52,12 @@ namespace BECore::Mahjong::Arena {
      * `--differences N` (the log mode only; `--jobs` then plays whole matches in threads). A bad argument is an error text that names it: an unknown option, a missing or malformed
      * value, a bad player spec, a range of seeds that `ValidateArenaConfig` refuses, a word that is no option.
      */
-    [[nodiscard]] std::expected<ArenaArgs, eastl::string> ParseArenaArgs(eastl::span<const StringView> args);
+    [[nodiscard]] std::expected<ArenaArgs, String> ParseArenaArgs(eastl::span<const StringView> args);
 
     /// What the program prints: the report or the usage to `out`, an error and the usage to `err`.
     struct ArenaCliOutput {
-        eastl::string out;
-        eastl::string err;
+        String out;
+        String err;
     };
 
     /**

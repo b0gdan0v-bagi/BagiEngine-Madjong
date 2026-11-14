@@ -34,7 +34,7 @@ namespace BECore::Mahjong {
 
         /// The keys of this kind's pad in the current language, each one UTF-8 character: the room code alphabet; or the letters of `online.pad.letters`, the ten digits and a space.
         /// At most `kPadMaxKeys`, none twice.
-        [[nodiscard]] eastl::vector<eastl::string> Pad(const UIStrings& strings) const;
+        [[nodiscard]] eastl::vector<String> Pad(const UIStrings& strings) const;
 
         /// Appends @p character (exactly one UTF-8 character, a code folded to upper case). False and nothing changed when the field cannot hold it: a character outside
         /// the kind's set, or the text would pass the limit (5 characters, 24 bytes).
@@ -48,7 +48,7 @@ namespace BECore::Mahjong {
         /// Replaces the text by @p text when every character of it is accepted and it fits; otherwise nothing changes and the result is false.
         bool Replace(StringView text);
 
-        [[nodiscard]] const eastl::string& Text() const {
+        [[nodiscard]] const String& Text() const {
             return _text;
         }
 
@@ -65,14 +65,14 @@ namespace BECore::Mahjong {
         /// The room code in a pasted @p text, or nothing. A code with spaces or dashes ("  ab3k9 ", "AB3-K9") or longer than needed (cut to its length) is the code itself; an
         /// invite line is searched for the one word that can be a code (5 letters or digits of the code alphabet): none, or two (an English word like "hands" can be one too), is
         /// refused and never guessed. Empty text, text over `kMaxPasteBytes` and a code with a letter outside ASCII are refused.
-        [[nodiscard]] static Optional<eastl::string> CleanRoomCode(StringView text);
+        [[nodiscard]] static Optional<String> CleanRoomCode(StringView text);
 
         /// The name a player starts with (`online.name.default`).
-        [[nodiscard]] static eastl::string DefaultName(const UIStrings& strings);
+        [[nodiscard]] static String DefaultName(const UIStrings& strings);
 
     private:
         Kind _kind;
-        eastl::string _text;
+        String _text;
     };
 
 }  // namespace BECore::Mahjong

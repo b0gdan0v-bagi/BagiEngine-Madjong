@@ -208,7 +208,7 @@ namespace BECore::Mahjong {
     }
 
     /// The levels for an error text: "a whole number 1..10".
-    [[nodiscard]] inline eastl::string LevelRangeText() {
+    [[nodiscard]] inline String LevelRangeText() {
         return Format("a whole number {}..{}", kMinLevel, kMaxLevel);
     }
 

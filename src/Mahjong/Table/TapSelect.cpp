@@ -33,7 +33,7 @@ namespace BECore::Mahjong {
         return raised;
     }
 
-    eastl::string SelectedTileText(const UIStrings& strings, Tile tile) {
+    String SelectedTileText(const UIStrings& strings, Tile tile) {
         return Tr(strings, "table.selectedTile", {{"tile", TileName(strings, tile)}});
     }
 

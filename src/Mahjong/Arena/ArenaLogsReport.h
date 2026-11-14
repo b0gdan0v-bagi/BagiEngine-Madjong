@@ -13,7 +13,7 @@ namespace BECore::Mahjong::Arena {
      * @brief The text of `--check`: one line per file in the order of `logs`, `ok<TAB><name>` or `bad<TAB><name><TAB><reason>`, and
      *        nothing else (a tab or a line break in a name is written as a space). `tools/collect_logs.py` reads exactly this.
      */
-    [[nodiscard]] eastl::string FormatCheckLines(const eastl::vector<CheckedLog>& logs);
+    [[nodiscard]] String FormatCheckLines(const eastl::vector<CheckedLog>& logs);
 
     /**
      * @brief The text of the corpus summary: files read, replayed and dropped (per reason, and the dropped files with their reasons),
@@ -22,7 +22,7 @@ namespace BECore::Mahjong::Arena {
      *
      * Fixed-width text, numbers by `Format` with a fixed precision and no locale: the same corpus gives the same bytes everywhere.
      */
-    [[nodiscard]] eastl::string FormatCorpusSummary(const LogCorpus& corpus);
+    [[nodiscard]] String FormatCorpusSummary(const LogCorpus& corpus);
 
     /// The groups of the real-game numbers: the computers met at level `1..kMaxLevel` (the place is the level minus 1), and the table
     /// whose computer seats are not all at one level (`kMixedGroup`).
@@ -63,7 +63,7 @@ namespace BECore::Mahjong::Arena {
         TesterResult tester;
         /// The matches that replayed but whose positions could not be built: one text each (it names the log), in name order. They are
         /// counted here and not in `tester`; their real-game numbers come from the events alone and are counted.
-        eastl::vector<eastl::string> notAnalysed;
+        eastl::vector<String> notAnalysed;
         RealGame realGame;
     };
 
@@ -85,6 +85,6 @@ namespace BECore::Mahjong::Arena {
      * Fixed-width text, fixed precision, no locale: the same analysis gives the same bytes everywhere. Only logged numbers are printed;
      * the agreement of testers measures how people play, not what is best.
      */
-    [[nodiscard]] eastl::string FormatLogAnalysis(const LogAnalysis& analysis, int maxDifferences);
+    [[nodiscard]] String FormatLogAnalysis(const LogAnalysis& analysis, int maxDifferences);
 
 }  // namespace BECore::Mahjong::Arena

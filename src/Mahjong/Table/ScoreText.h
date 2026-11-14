@@ -19,25 +19,25 @@ namespace BECore::Mahjong {
     /// The cells of one seat's row in the score table.
     struct ScoreRow {
         /// The seat's name without its wind ("Seat 2", "Seat 1 You", the player's name in a room): the wind has a column of its own.
-        eastl::string name;
+        String name;
         /// The seat's wind in this hand, the one letter the plates of the table show.
-        eastl::string wind;
+        String wind;
         /// Its score in the hand ("290"); `-` for a drawn hand.
-        eastl::string hand;
+        String hand;
         /// The change of its points with the sign ("+1160", "-600"); `-` for a drawn hand.
-        eastl::string change;
+        String change;
         /// Its points after the hand.
-        eastl::string total;
+        String total;
     };
 
     /// What the screen at the end of a hand says, as plain text (the component only puts it into variables).
     struct ScoreTable {
         /// Who won and how ("Seat 2 (South) wins by self-draw"), or "Drawn hand".
-        eastl::string headline;
+        String headline;
         /// The winner's sum and the winning tile ("Winning tile 4 Dots: 36 points x 8 = 288, score 290"); for a drawn hand "No payments".
-        eastl::string summary;
+        String summary;
         /// The captions of the five columns of `rows`: seat, wind, hand, change, total.
-        eastl::array<eastl::string, 5> columns;
+        eastl::array<String, 5> columns;
         /// One row per seat, by seat.
         eastl::array<ScoreRow, kSeatCount> rows;
         /// The winning seat, `kNoSeat` for a drawn hand: its row is the one that is lit.
@@ -46,7 +46,7 @@ namespace BECore::Mahjong {
         /// at most `kMaxWinningTiles`. Empty for a drawn hand. When the caller passes no hand, only `result.winningTile`.
         eastl::vector<Tile> winningTiles;
         /// The winner's lines in the order of the breakdown, at most `kMaxScoreLines`; empty for a drawn hand.
-        eastl::vector<eastl::string> lines;
+        eastl::vector<String> lines;
     };
 
     /// One seat of the standings.
@@ -54,28 +54,28 @@ namespace BECore::Mahjong {
         /// 1..4; seats with equal points share a place.
         int place = 0;
         /// The seat's name without a wind (the match is over).
-        eastl::string name;
-        eastl::string score;
+        String name;
+        String score;
         /// A first place: a tie lights more than one row.
         bool first = false;
     };
 
     /// The screen at the end of a match: the winner (or the tied seats) and the seats by points, best first.
     struct StandingsTable {
-        eastl::string headline;
+        String headline;
         eastl::array<StandingRow, kSeatCount> rows;
     };
 
     /// "5 Dots", "East Wind", "Red Dragon", "Flower 1", "Season 3"; "No tile" for an invalid one.
     /// (words from the keys `tile.*`, `suit.*`, `wind.*` of the current language of `strings`)
-    [[nodiscard]] eastl::string TileName(const UIStrings& strings, Tile tile);
+    [[nodiscard]] String TileName(const UIStrings& strings, Tile tile);
 
     /// A readable name for every kind of line ("Pung", "One suit, no honours", "Thirteen orphans"); never empty.
     /// The key is `score.kind.<ScoreKind>`.
-    [[nodiscard]] eastl::string ScoreKindName(const UIStrings& strings, ScoreKind kind);
+    [[nodiscard]] String ScoreKindName(const UIStrings& strings, ScoreKind kind);
 
     /// One line of a score: "Pung of 5 Dots: 8", "Win: 20", "One suit, no honours: x8", "Limit: Thirteen orphans".
-    [[nodiscard]] eastl::string ScoreLineText(const UIStrings& strings, const ScoreLine& line);
+    [[nodiscard]] String ScoreLineText(const UIStrings& strings, const ScoreLine& line);
 
     /**
      * @brief The rows of the screen that follows a finished hand.
@@ -98,6 +98,6 @@ namespace BECore::Mahjong {
      * Empty when the match tally has no move (a person made none, or the mode was not Coach). A hand with no move of its own says the
      * match only (`coach.tally.match`); the standings pass an empty `hand`.
      */
-    [[nodiscard]] eastl::string FormatCoachTally(const UIStrings& strings, const CoachTally& hand, const CoachTally& match);
+    [[nodiscard]] String FormatCoachTally(const UIStrings& strings, const CoachTally& hand, const CoachTally& match);
 
 }  // namespace BECore::Mahjong

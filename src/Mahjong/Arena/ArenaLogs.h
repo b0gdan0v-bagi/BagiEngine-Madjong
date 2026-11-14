@@ -6,17 +6,17 @@ namespace BECore::Mahjong::Arena {
 
     /// One match log file as the program read it: `name` is relative to the folder that was named, `/` separated.
     struct LogFile {
-        eastl::string name;
-        eastl::string text;
+        String name;
+        String text;
     };
 
     /// The seam for the files, as the analyzer has `FileReader`: the `*.jsonl` files of `path` (a folder, searched recursively, or one
     /// file) with their text, or the error text when the path cannot be read. The program supplies the real one; a test supplies strings.
     /// The order is the reader's own: `ReadLogs` sorts by name, so the report does not depend on it.
-    using LogSource = std::function<std::expected<eastl::vector<LogFile>, eastl::string>(StringView path)>;
+    using LogSource = std::function<std::expected<eastl::vector<LogFile>, String>(StringView path)>;
 
     /// `text` with every tab and line break turned into a space: a cell of a tab separated line, a reason on one line.
-    [[nodiscard]] eastl::string OneLine(eastl::string text);
+    [[nodiscard]] String OneLine(String text);
 
     /// Why a log is dropped from the corpus.
     CORE_ENUM(LogProblem, uint8_t, Unreadable, DoesNotReplay)
@@ -27,7 +27,7 @@ namespace BECore::Mahjong::Arena {
         /// A log that is not `ok`: which kind of problem, and the reason as text without a tab or a newline (it is a column of the
         /// `--check` output): `unreadable: line 3: ...` or `does not replay: event 17 (ActionRefused)`.
         LogProblem problem = LogProblem::Unreadable;
-        eastl::string reason;
+        String reason;
         /// An `ok` log: its events, and whether it reached its `End` (a match that was given up stops early and is still `ok`).
         eastl::vector<MatchLogEvent> events;
         bool complete = false;
@@ -43,15 +43,15 @@ namespace BECore::Mahjong::Arena {
 
     /// A file and its verdict.
     struct CheckedLog {
-        eastl::string name;
+        String name;
         LogVerdict verdict;
     };
 
     /// The files of `path` through `source`, sorted by name (byte order), each checked. The error text is the source's.
-    [[nodiscard]] std::expected<eastl::vector<CheckedLog>, eastl::string> ReadLogs(const LogSource& source, StringView path);
+    [[nodiscard]] std::expected<eastl::vector<CheckedLog>, String> ReadLogs(const LogSource& source, StringView path);
 
     /// A key and how many times it was met, in the report's order.
-    using CountList = eastl::vector<eastl::pair<eastl::string, int>>;
+    using CountList = eastl::vector<eastl::pair<String, int>>;
 
     /// The smallest, mean and largest of a count over the matches of the corpus (all 0 for none).
     struct Spread {
@@ -66,7 +66,7 @@ namespace BECore::Mahjong::Arena {
         int replayed = 0;
         /// Dropped files per `LogProblem`, and the dropped files in name order with their reasons.
         eastl::array<int, EnumUtils<LogProblem>::Count()> dropped{};
-        eastl::vector<eastl::pair<eastl::string, eastl::string>> droppedFiles;
+        eastl::vector<eastl::pair<String, String>> droppedFiles;
         int complete = 0;
         int abandoned = 0;
         /// The hands settled, over all matches.

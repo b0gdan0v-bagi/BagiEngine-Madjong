@@ -80,6 +80,6 @@ namespace BECore::Mahjong::Analyzer {
      *
      * An error text for a view of no seat, a view with no legal action, fewer than one world, or no world that could be played.
      */
-    [[nodiscard]] std::expected<PositionAnalysis, eastl::string> AnalyzePosition(const TableView& view, const AnalyzerConfig& config, const WorldLoop& loop);
+    [[nodiscard]] std::expected<PositionAnalysis, String> AnalyzePosition(const TableView& view, const AnalyzerConfig& config, const WorldLoop& loop);
 
 }  // namespace BECore::Mahjong::Analyzer

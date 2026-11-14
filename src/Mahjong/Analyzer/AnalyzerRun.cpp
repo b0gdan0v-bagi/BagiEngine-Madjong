@@ -44,24 +44,24 @@ namespace BECore::Mahjong::Analyzer {
 
     }  // namespace
 
-    std::expected<PositionAnalysis, eastl::string> AnalyzePosition(const TableView& view, const AnalyzerConfig& config, const WorldLoop& loop) {
+    std::expected<PositionAnalysis, String> AnalyzePosition(const TableView& view, const AnalyzerConfig& config, const WorldLoop& loop) {
         if (!IsSeat(view.seat)) {
-            return std::unexpected(eastl::string("the position is the view of no seat"));
+            return std::unexpected(String("the position is the view of no seat"));
         }
         if (view.legal.empty()) {
-            return std::unexpected(eastl::string("the seat has no legal action in this position"));
+            return std::unexpected(String("the seat has no legal action in this position"));
         }
         if (config.worlds < 1) {
-            return std::unexpected(eastl::string("the number of worlds must be at least 1"));
+            return std::unexpected(String("the number of worlds must be at least 1"));
         }
         Optional<SearchRun> run = BeginSearchOver(view, view.legal, BaseSeedOf(config.seed), config.worlds);
         if (!run.has_value()) {
-            return std::unexpected(eastl::string("the search over the legal actions could not begin"));
+            return std::unexpected(String("the search over the legal actions could not begin"));
         }
         run->RunWorlds(loop);
         const eastl::vector<eastl::vector<int>>& values = run->Values();
         if (values.empty() || values.front().empty()) {
-            return std::unexpected(eastl::string("no world could be sampled for this position"));
+            return std::unexpected(String("no world could be sampled for this position"));
         }
 
         PositionAnalysis analysis;
@@ -90,7 +90,7 @@ namespace BECore::Mahjong::Analyzer {
             }
         }
         if (normal == count) {
-            return std::unexpected(eastl::string("Normal's choice is not among the legal actions"));
+            return std::unexpected(String("Normal's choice is not among the legal actions"));
         }
         analysis.rows[best].isBest = true;
         analysis.rows[normal].isNormal = true;

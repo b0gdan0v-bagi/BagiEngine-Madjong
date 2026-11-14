@@ -35,8 +35,8 @@ namespace BECore::Mahjong::Arena {
             return nullptr;
         }
 
-        eastl::string KnobNamesText() {
-            eastl::string names;
+        String KnobNamesText() {
+            String names;
             for (const ProfileKnob& knob : kProfileKnobs) {
                 names += names.empty() ? "" : ", ";
                 names.append(knob.name.data(), knob.name.size());
@@ -44,7 +44,7 @@ namespace BECore::Mahjong::Arena {
             return names;
         }
 
-        eastl::string LevelAndRandomNamesText() {
+        String LevelAndRandomNamesText() {
             return Format("a level {}..{}, easy (1), normal ({}) or random", kMinLevel, kMaxLevel, LevelNumber(ComputerLevel::Normal));
         }
 
@@ -80,7 +80,7 @@ namespace BECore::Mahjong::Arena {
         }
 
         /// Applies `knob=value` (`part`) to `profile`; the error names the part.
-        Optional<eastl::string> ApplyKnob(StringView part, LevelProfile& profile, eastl::array<bool, kProfileFieldCount>& seen) {
+        Optional<String> ApplyKnob(StringView part, LevelProfile& profile, eastl::array<bool, kProfileFieldCount>& seen) {
             const size_t equals = part.find('=');
             if (equals == StringView::npos) {
                 return Format("\"{}\" is no knob=value (a knob is set as name=number)", part);
@@ -113,7 +113,7 @@ namespace BECore::Mahjong::Arena {
 
     }  // namespace
 
-    std::expected<ArenaPlayer, eastl::string> ParseArenaPlayer(StringView spec) {
+    std::expected<ArenaPlayer, String> ParseArenaPlayer(StringView spec) {
         if (spec.empty()) {
             return std::unexpected(Format("empty player spec (use {}, or a level with knobs: easy:skipClaimPercent=20)", LevelAndRandomNamesText()));
         }
@@ -163,7 +163,7 @@ namespace BECore::Mahjong::Arena {
         while (begin <= knobs.size()) {
             const size_t comma = knobs.find(',', begin);
             const size_t end = comma == StringView::npos ? knobs.size() : comma;
-            if (const Optional<eastl::string> error = ApplyKnob(knobs.substr(begin, end - begin), player.profile, seen)) {
+            if (const Optional<String> error = ApplyKnob(knobs.substr(begin, end - begin), player.profile, seen)) {
                 return std::unexpected(*error);
             }
             begin = end + 1;

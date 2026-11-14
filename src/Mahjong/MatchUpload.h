@@ -16,11 +16,11 @@ namespace BECore::Mahjong {
      */
     struct UploadPiece {
         /// The random id of the match (chosen by the caller of `MatchUploader::SetMatchIdSource`), the same in every piece of it
-        eastl::string matchId;
+        String matchId;
         /// 0 for the first piece of the match, then 1, 2 ...
         uint32_t index = 0;
         /// The JSON lines of the events of this piece, each ending in its `\n`: exactly what `MatchLogWriter` writes for them
-        eastl::string lines;
+        String lines;
         UploadPieceEnd end = UploadPieceEnd::Open;
         /// False when the choice of the player is not kept anywhere, so it will be asked again at the next visit: the record says so
         bool consentRemembered = false;
@@ -63,7 +63,7 @@ namespace BECore::Mahjong {
         void SetConsent(UploadConsent consent, bool remembered);
         /// Gives the id of the next recorded match: called once at a `Start` that is recorded. The caller chooses it (random, with nothing
         /// of the seed, the time or the machine in it), as the seed is chosen by the game and never here.
-        void SetMatchIdSource(std::function<eastl::string()> source);
+        void SetMatchIdSource(std::function<String()> source);
 
         /// Whether the matches that begin from now on may be recorded (the flag as it was at their `Start`, like `MatchRecorder`); default
         /// true. The game turns it off for the match it deals behind the panel, which nobody plays.
@@ -92,11 +92,11 @@ namespace BECore::Mahjong {
         UploadConsent _consent = UploadConsent::Unasked;
         bool _remembered = false;
         bool _wanted = true;
-        std::function<eastl::string()> _idSource;
+        std::function<String()> _idSource;
         bool _recording = false;
-        eastl::string _matchId;
+        String _matchId;
         uint32_t _index = 0;
-        eastl::string _buffer;
+        String _buffer;
     };
 
     /**
@@ -104,6 +104,6 @@ namespace BECore::Mahjong {
      * concatenated. The error says why not: no pieces, pieces of different matches, an index repeated or missing (the first is 0), or a
      * piece after one that ended the match. A match that stops on an `Open` piece (the tab was closed) is assembled as it is.
      */
-    [[nodiscard]] std::expected<eastl::string, eastl::string> AssemblePieces(const eastl::vector<UploadPiece>& pieces);
+    [[nodiscard]] std::expected<String, String> AssemblePieces(const eastl::vector<UploadPiece>& pieces);
 
 }  // namespace BECore::Mahjong

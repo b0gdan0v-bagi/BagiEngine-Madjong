@@ -47,17 +47,17 @@ namespace BECore::Mahjong::Arena {
         bool random = false;
         OracleKind oracle = OracleKind::None;
         LevelProfile profile = kNormalProfile;
-        eastl::string name = "normal";
+        String name = "normal";
     };
 
     /// The player of `spec`: `random`, a level (`1` .. `10`, or the names `easy` = 1 and `normal` = 5), or a level with knobs, `<level>:<knob>=<value>,...` (the
     /// knobs of `kProfileKnobs`, each at most once; the level's profile is the start and the listed knobs are set on it). An oracle is
     /// `oracle-<name>` (`oracle-acceptance`, `oracle-hands`, `oracle-whole`, `oracle-defence`), with the same optional knobs on the Normal profile.
     /// The names are exactly the lowercase ones. A bad spec is an error text that names the part that is wrong; nothing is thrown.
-    [[nodiscard]] std::expected<ArenaPlayer, eastl::string> ParseArenaPlayer(StringView spec);
+    [[nodiscard]] std::expected<ArenaPlayer, String> ParseArenaPlayer(StringView spec);
 
     /// The name of a player for a table (`ArenaPlayer::name`).
-    [[nodiscard]] inline const eastl::string& PlayerName(const ArenaPlayer& player) noexcept {
+    [[nodiscard]] inline const String& PlayerName(const ArenaPlayer& player) noexcept {
         return player.name;
     }
 

@@ -105,8 +105,8 @@ namespace BECore::Mahjong {
         }
     }
 
-    const eastl::string& TableSession::NameOf(Seat seat) const noexcept {
-        static const eastl::string kNoName;
+    const String& TableSession::NameOf(Seat seat) const noexcept {
+        static const String kNoName;
         return IsSeat(seat) ? _names[static_cast<size_t>(seat)] : kNoName;
     }
 

@@ -51,6 +51,6 @@ namespace BECore::Mahjong {
 
     /// The sentence that names the selected hand tile ("Selected: 5 Dots"): the key `table.selectedTile` of the current language, with the
     /// name of `tile` (`TileName`).
-    [[nodiscard]] eastl::string SelectedTileText(const UIStrings& strings, Tile tile);
+    [[nodiscard]] String SelectedTileText(const UIStrings& strings, Tile tile);
 
 }  // namespace BECore::Mahjong

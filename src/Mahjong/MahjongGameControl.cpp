@@ -20,7 +20,7 @@ namespace BECore::Mahjong {
         constexpr StringView kTypePass = "pass";
         constexpr StringView kTypeNextHand = "next_hand";
 
-        std::unexpected<ControlError> InvalidParams(eastl::string message) {
+        std::unexpected<ControlError> InvalidParams(String message) {
             return std::unexpected(MakeControlError(ControlErrors::kInvalidParams, std::move(message)));
         }
 
@@ -32,7 +32,7 @@ namespace BECore::Mahjong {
             return std::unexpected(MakeControlError(GameControlErrors::kNoActiveModel, "the game is playing in an online room"));
         }
 
-        std::unexpected<ControlError> IllegalAction(eastl::string message) {
+        std::unexpected<ControlError> IllegalAction(String message) {
             return std::unexpected(MakeControlError(GameControlErrors::kIllegalAction, std::move(message)));
         }
 
@@ -178,7 +178,7 @@ namespace BECore::Mahjong {
     }
 
     /// The seat setup of a `seats` string such as "PCCC", nullopt unless it is four letters P or C.
-    Optional<SeatSetup> ReadSeats(const eastl::string& letters) {
+    Optional<SeatSetup> ReadSeats(const String& letters) {
         if (letters.size() != kSeatLetterCount) {
             return std::nullopt;
         }
@@ -192,8 +192,8 @@ namespace BECore::Mahjong {
         return seats;
     }
 
-    eastl::string SeatsToLetters(const SeatSetup& seats) {
-        eastl::string letters;
+    String SeatsToLetters(const SeatSetup& seats) {
+        String letters;
         for (const SeatKind kind : seats) {
             letters.push_back(kind == SeatKind::Person ? kPersonLetter : kComputerLetter);
         }

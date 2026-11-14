@@ -26,12 +26,12 @@ namespace BECore::Mahjong::Analyzer {
     /// What the command line asks for.
     struct AnalyzerArgs {
         /// `--log FILE` with `--hand K` and `--action I` (one decision) or `--seat S` (every decision of that seat in the hand).
-        eastl::string logFile;
+        String logFile;
         int hand = 0;
         Optional<int> action;
         Optional<Seat> seat;
         /// `--position FILE`: a hand-written position (`ParsePosition`).
-        eastl::string positionFile;
+        String positionFile;
         /// `--worlds`, `--seed`; `normalSeed` stays the default.
         AnalyzerConfig config;
         /// The threads that play the worlds, 1 to `kMaxJobs`.
@@ -42,7 +42,7 @@ namespace BECore::Mahjong::Analyzer {
     };
 
     /// The text of `--help`: the options with their defaults, the numbering of `--hand` / `--action`, the exit codes.
-    [[nodiscard]] eastl::string AnalyzerUsage();
+    [[nodiscard]] String AnalyzerUsage();
 
     /**
      * @brief Reads the arguments (without the name of the program).
@@ -53,15 +53,15 @@ namespace BECore::Mahjong::Analyzer {
      * `--log` without `--hand` or without one of `--action` / `--seat`, `--action` together with `--seat`, or `--hand`, `--action`
      * or `--seat` without a `--log`.
      */
-    [[nodiscard]] std::expected<AnalyzerArgs, eastl::string> ParseAnalyzerArgs(eastl::span<const StringView> args);
+    [[nodiscard]] std::expected<AnalyzerArgs, String> ParseAnalyzerArgs(eastl::span<const StringView> args);
 
     /// The text of a file, or the error text. The program supplies the real one; `kStandardInputName` is its to interpret.
-    using FileReader = std::function<std::expected<eastl::string, eastl::string>(StringView path)>;
+    using FileReader = std::function<std::expected<String, String>(StringView path)>;
 
     /// What the program prints: the reports or the usage to `out`, an error (and the usage for bad arguments) to `err`.
     struct AnalyzerCliOutput {
-        eastl::string out;
-        eastl::string err;
+        String out;
+        String err;
     };
 
     /**

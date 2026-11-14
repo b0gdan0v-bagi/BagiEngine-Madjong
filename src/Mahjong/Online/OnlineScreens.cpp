@@ -31,7 +31,7 @@ namespace BECore::Mahjong {
     }
 
     void OnlineScreens::SetStoredRoom(StringView room) {
-        const eastl::string text(room.data(), room.size());
+        const String text(room.data(), room.size());
         if (_storedRoom != text) {
             _storedRoom = text;
             Bump();
@@ -344,7 +344,7 @@ namespace BECore::Mahjong {
             return false;
         }
         // A copy: the client's list is refilled by the answer to this join's failure
-        const eastl::string code = client.Rooms().rooms[index].code;
+        const String code = client.Rooms().rooms[index].code;
         _origin = OnlinePage::Rooms;
         _inRoom = false;
         const bool sent = client.JoinListed(url, code, _name.Text());
@@ -375,7 +375,7 @@ namespace BECore::Mahjong {
         if (!TakesPaste()) {
             return false;
         }
-        const Optional<eastl::string> code = TextEntry::CleanRoomCode(text);
+        const Optional<String> code = TextEntry::CleanRoomCode(text);
         if (!code) {
             if (_page == OnlinePage::Join) {
                 // The form has no pad note: the line under its title says it
@@ -414,7 +414,7 @@ namespace BECore::Mahjong {
         if (_page != OnlinePage::Lobby) {
             return {};
         }
-        const eastl::string& room = client.Lobby().room.empty() ? client.Room() : client.Lobby().room;
+        const String& room = client.Lobby().room.empty() ? client.Room() : client.Lobby().room;
         return room;
     }
 

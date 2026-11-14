@@ -33,7 +33,7 @@ namespace BECore::Mahjong::Arena {
     struct TableStats {
         uint32_t first = 0;
         int count = 0;
-        eastl::string player;
+        String player;
         int64_t hands = 0;
         int64_t drawn = 0;
         /// The won hands by how they were won, indexed by `WinSource`.
@@ -75,12 +75,12 @@ namespace BECore::Mahjong::Arena {
 
     /// Plays the hands and sums them: the same result at any `jobs` (the tallies are integers and every seed has its own slot, summed in
     /// seed order). The error is that of the lowest seed that failed (a refused action of the model), or a bad config.
-    [[nodiscard]] std::expected<TableStats, eastl::string> RunTableStats(const TableStatsConfig& config);
+    [[nodiscard]] std::expected<TableStats, String> RunTableStats(const TableStatsConfig& config);
 
     /// The report in fixed text (the numbers by `Format`, a fixed precision, no locale): the same stats give the same bytes. It lists, by the
     /// number of declared opponents, the own turns, the chance that another seat wins in the next round (per mille) and the survival after
     /// 1..`kTableStatsRounds` rounds next to `(1 - h)^i`; the mean score of a winner and the mean standing score of the seats that did not win,
     /// East and not East; the share of the won hands by how they were won.
-    [[nodiscard]] eastl::string FormatTableStats(const TableStats& stats);
+    [[nodiscard]] String FormatTableStats(const TableStats& stats);
 
 }  // namespace BECore::Mahjong::Arena

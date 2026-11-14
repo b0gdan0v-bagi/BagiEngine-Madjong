@@ -329,7 +329,7 @@ namespace BECore::Mahjong {
          * could not make, or with nobody left to decide; a result that does not fit the phase. Concealed tiles are sorted. The model
          * is then exactly the one that was captured: the same actions are legal and the same play follows.
          */
-        [[nodiscard]] static std::expected<HandModel, eastl::string> Restore(HandState state);
+        [[nodiscard]] static std::expected<HandModel, String> Restore(HandState state);
         /**
          * @brief Builds a model that a client only shows (a table of an online room), from plain data, **without any check**: a tile
          *        may be invalid (a hand or a wall the client is not told), the counts, the claim window and the hand sizes are taken as

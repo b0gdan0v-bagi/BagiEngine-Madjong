@@ -40,7 +40,7 @@ namespace BECore::Mahjong {
         BE_CLASS(MahjongMatchSave)
 
         /// The `Start`, `Action` and `Settlement` events of the match, one line each (`MatchSaveText`)
-        BE_REFLECT_FIELD eastl::string log;
+        BE_REFLECT_FIELD String log;
 
         bool operator==(const MahjongMatchSave& other) const {
             return log == other.log;
@@ -57,24 +57,24 @@ namespace BECore::Mahjong {
         BE_CLASS(MahjongPrefsSave)
 
         /// The id of the language of the string table ("en", "ru"); the game checks it against the table
-        BE_REFLECT_FIELD eastl::string language = "en";
+        BE_REFLECT_FIELD String language = "en";
         /// The hints switch
         BE_REFLECT_FIELD bool hintsOn = true;
         /// The coach's notes (`HintsMode::Coach`); implies `hintsOn`, a copy written before the mode reads false
         BE_REFLECT_FIELD bool coach = false;
         /// Who plays each seat, four letters as in the control `reset`: P a person, C a computer
-        BE_REFLECT_FIELD eastl::string seats = "PCCC";
+        BE_REFLECT_FIELD String seats = "PCCC";
         /// 16 or 8
         BE_REFLECT_FIELD int32_t hands = kFullMatchHands;
         /// The level of the computer players, its number as text `1` .. `10` (`LevelText`); a copy of an older build holds `easy` or
         /// `normal` (`TryParseLevelName`)
-        BE_REFLECT_FIELD eastl::string level = "5";
+        BE_REFLECT_FIELD String level = "5";
         /// The level of each seat, four numbers `1` .. `10` separated by commas ("5,2,6,10", seat 0 first; a person's seat too). Empty: all
         /// four seats are at `level`, which is what an older copy and a table of one level hold (`MakePrefs` leaves it empty then). When it
         /// is not empty it wins; `level` then holds the level of the lowest computer seat.
-        BE_REFLECT_FIELD eastl::string levels;
+        BE_REFLECT_FIELD String levels;
         /// The speed of the table (`SpeedText`: `slow` | `normal` | `fast`); a copy written before the setting holds the default
-        BE_REFLECT_FIELD eastl::string speed = "normal";
+        BE_REFLECT_FIELD String speed = "normal";
 
         bool operator==(const MahjongPrefsSave& other) const {
             return language == other.language && hintsOn == other.hintsOn && coach == other.coach && seats == other.seats && hands == other.hands && level == other.level && levels == other.levels &&
@@ -92,9 +92,9 @@ namespace BECore::Mahjong {
         BE_CLASS(MahjongOnlineSave)
 
         /// The player's name as the fields hold it (UTF-8); empty when none was typed
-        BE_REFLECT_FIELD eastl::string name;
+        BE_REFLECT_FIELD String name;
         /// The session as the JSON text of `SessionToJson` (`url`, `room`, `token`); empty when no room is kept
-        BE_REFLECT_FIELD eastl::string session;
+        BE_REFLECT_FIELD String session;
 
         bool operator==(const MahjongOnlineSave& other) const {
             return name == other.name && session == other.session;
@@ -103,13 +103,13 @@ namespace BECore::Mahjong {
 
     /// What `MahjongOnlineSave` holds, checked and in the types the game uses: a name (empty: none) and a session (`IsValid()` false: none).
     struct OnlineValues {
-        eastl::string name;
+        String name;
         RoomSession session;
     };
 
     /// The choices of `MahjongPrefsSave`, checked and in the types the game uses.
     struct PrefsValues {
-        eastl::string language;
+        String language;
         HintsMode hintsMode = kDefaultHintsMode;
         SeatSetup seats = kDefaultSeatSetup;
         int handsPerMatch = kFullMatchHands;
@@ -122,14 +122,14 @@ namespace BECore::Mahjong {
      * (the form of `MatchLogJson.h`, ending in a newline), with no `Hand` and `End` events (the replay deals again and ends the match)
      * and no `seats` (the breakdowns) in a settlement (reading does not need them). Events of another kind are skipped.
      */
-    [[nodiscard]] eastl::string MatchSaveText(const eastl::vector<MatchLogEvent>& events);
+    [[nodiscard]] String MatchSaveText(const eastl::vector<MatchLogEvent>& events);
 
     /**
      * @brief The events of a saved text, or the error: the line number and what is wrong (not JSON, a member missing or wrong), that the
      * first event is not a `Start`, that a `Hand` or `End` line is there, or that there are more than `kMaxSavedEvents` lines. Nothing is
      * replayed here; `ReplayMatchLog` decides whether the match comes out.
      */
-    [[nodiscard]] std::expected<eastl::vector<MatchLogEvent>, eastl::string> ParseMatchSaveText(StringView text);
+    [[nodiscard]] std::expected<eastl::vector<MatchLogEvent>, String> ParseMatchSaveText(StringView text);
 
     /// The state of the prefs slot from the choices of the game (`coach` implies `hintsOn`).
     [[nodiscard]] MahjongPrefsSave MakePrefs(StringView language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, const SeatLevels& levels, AnimationSpeed speed = kDefaultAnimationSpeed,
@@ -141,14 +141,14 @@ namespace BECore::Mahjong {
     /// The choices of a prefs state (`coach` wins over `hintsOn`: Coach, else Hints or Off), or the first thing wrong: seats not four letters P / C, a `levels` text that is not four numbers `1` ..
     /// `10`, a level that is not `1` .. `10` (or the old names `easy` / `normal`; not read when `levels` is there), a speed that is not `slow` / `normal` / `fast`, hands other than 16 and 8, an empty
     /// language.
-    [[nodiscard]] std::expected<PrefsValues, eastl::string> ReadPrefs(const MahjongPrefsSave& prefs);
+    [[nodiscard]] std::expected<PrefsValues, String> ReadPrefs(const MahjongPrefsSave& prefs);
 
     /// The state of the online slot: @p session invalid keeps no room.
     [[nodiscard]] MahjongOnlineSave MakeOnlineSave(StringView name, const RoomSession& session);
 
     /// The values of an online state, or the first thing wrong: a name that `SanitizePlayerName` refuses, or a session text that is not a
     /// room and a token (`SessionFromJson`). The error never repeats the token.
-    [[nodiscard]] std::expected<OnlineValues, eastl::string> ReadOnline(const MahjongOnlineSave& save);
+    [[nodiscard]] std::expected<OnlineValues, String> ReadOnline(const MahjongOnlineSave& save);
 
     /**
      * @brief The sink of a session that keeps the match for the save: the `Start`, `Action` and `Settlement` events of the current match.

@@ -15,12 +15,12 @@ namespace BECore::Mahjong {
 
     }  // namespace
 
-    eastl::string Subst(StringView text, WordArgs args) {
+    String Subst(StringView text, WordArgs args) {
         return Subst(text, eastl::span<const WordArg>(args.begin(), args.size()));
     }
 
-    eastl::string Subst(StringView text, eastl::span<const WordArg> args) {
-        eastl::string out;
+    String Subst(StringView text, eastl::span<const WordArg> args) {
+        String out;
         size_t at = 0;
         while (at < text.size()) {
             const size_t open = text.find('{', at);
@@ -47,24 +47,24 @@ namespace BECore::Mahjong {
         return out;
     }
 
-    eastl::string Tr(const UIStrings& strings, StringView key) {
+    String Tr(const UIStrings& strings, StringView key) {
         const Optional<StringView> found = strings.Find(key);
-        return found ? eastl::string(found->data(), found->size()) : eastl::string(key.data(), key.size());
+        return found ? String(found->data(), found->size()) : String(key.data(), key.size());
     }
 
-    eastl::string Tr(const UIStrings& strings, StringView key, WordArgs args) {
+    String Tr(const UIStrings& strings, StringView key, WordArgs args) {
         return Subst(Tr(strings, key), args);
     }
 
-    eastl::string Tr(const UIStrings& strings, StringView key, eastl::span<const WordArg> args) {
+    String Tr(const UIStrings& strings, StringView key, eastl::span<const WordArg> args) {
         return Subst(Tr(strings, key), args);
     }
 
-    eastl::string WindName(const UIStrings& strings, Wind wind) {
+    String WindName(const UIStrings& strings, Wind wind) {
         return Tr(strings, Format("wind.{}", EnumUtils<Wind>::ToString(wind)).c_str());
     }
 
-    eastl::string WindLetter(const UIStrings& strings, Wind wind) {
+    String WindLetter(const UIStrings& strings, Wind wind) {
         return Tr(strings, Format("wind.letter.{}", EnumUtils<Wind>::ToString(wind)).c_str());
     }
 

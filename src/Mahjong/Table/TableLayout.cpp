@@ -598,8 +598,8 @@ namespace BECore::Mahjong {
         /// The messages of one check, each once (the same table is checked for every viewer).
         class CheckReport {
         public:
-            void Add(const eastl::string& message) {
-                for (const eastl::string& known : _messages) {
+            void Add(const String& message) {
+                for (const String& known : _messages) {
                     if (known == message) {
                         return;
                     }
@@ -607,12 +607,12 @@ namespace BECore::Mahjong {
                 _messages.push_back(message);
             }
 
-            eastl::vector<eastl::string> Take() {
+            eastl::vector<String> Take() {
                 return eastl::move(_messages);
             }
 
         private:
-            eastl::vector<eastl::string> _messages;
+            eastl::vector<String> _messages;
         };
 
         bool IsSolid(const Rect& rect) noexcept {
@@ -634,7 +634,7 @@ namespace BECore::Mahjong {
 
         /// A rectangle of the table the others must keep off, with the words for a message.
         struct NamedRect {
-            eastl::string name;
+            String name;
             Rect rect;
         };
 
@@ -645,7 +645,7 @@ namespace BECore::Mahjong {
 
         constexpr const char* kRoleNames[] = {"hand", "meld", "bonus", "discard", "wall stack"};
 
-        void CheckSlotsInView(const TableLayout& layout, const eastl::string& tag, CheckReport& report) {
+        void CheckSlotsInView(const TableLayout& layout, const String& tag, CheckReport& report) {
             const Rect view(0.0f, 0.0f, layout.viewWidth, layout.viewHeight);
             for (const TileSlot& slot : layout.slots) {
                 if (Contains(view, slot.rect)) {
@@ -660,7 +660,7 @@ namespace BECore::Mahjong {
             }
         }
 
-        void CheckZonesClear(const TableLayout& layout, const eastl::string& tag, CheckReport& report) {
+        void CheckZonesClear(const TableLayout& layout, const String& tag, CheckReport& report) {
             eastl::vector<NamedRect> solids;
             for (int position = 0; position < kSeatCount; ++position) {
                 const Seat seat = SeatAtPosition(layout.viewer, position);
@@ -692,7 +692,7 @@ namespace BECore::Mahjong {
                 for (const NamedRect& solid : solids) {
                     if (IsSolid(solid.rect) && Overlaps(plate, solid.rect)) {
                         report.Add(Format("{}: the plate of position {} overlaps {}", tag, position, solid.name));
-                    } else if (IsSolid(solid.rect) && solid.name.find("row") == eastl::string::npos && Overlaps(Grown(plate, kPlatePadding - kCheckTolerance), solid.rect)) {
+                    } else if (IsSolid(solid.rect) && solid.name.find("row") == String::npos && Overlaps(Grown(plate, kPlatePadding - kCheckTolerance), solid.rect)) {
                         report.Add(Format("{}: the plate of position {} is nearer than {} units to {}", tag, position, kPlatePadding, solid.name));
                     }
                 }
@@ -706,7 +706,7 @@ namespace BECore::Mahjong {
 
         /// The free regions of the shape of `layout` (built from `spec`): inside the view, and for a shape with zones of its own clear of
         /// every tile, discard block, wall ring and plate of the worst-case table (a `like` shape is the same table moved).
-        void CheckFreeRegions(const TableLayout& layout, const TableLayoutSpec& spec, const eastl::string& tag, bool clearOfTable, CheckReport& report) {
+        void CheckFreeRegions(const TableLayout& layout, const TableLayoutSpec& spec, const String& tag, bool clearOfTable, CheckReport& report) {
             eastl::vector<FreeZone> regions;
             FitFreeZones(FrameOf(spec, layout.shape, layout.viewWidth, layout.viewHeight), regions);
             const Rect view(0.0f, 0.0f, layout.viewWidth, layout.viewHeight);
@@ -744,7 +744,7 @@ namespace BECore::Mahjong {
         }
 
         /// The tiles of the zones of one seat (by screen position) as they solve: too small, or under the minimum the zone asks.
-        void CheckSolvedSeat(const SeatSpec& seat, int position, const ZoneDesign& design, const eastl::string& tag, CheckReport& report) {
+        void CheckSolvedSeat(const SeatSpec& seat, int position, const ZoneDesign& design, const String& tag, CheckReport& report) {
             const bool vertical = IsSideSeat(position);
             struct Row {
                 const char* name;
@@ -769,7 +769,7 @@ namespace BECore::Mahjong {
             }
         }
 
-        void CheckSolvedShape(const ShapeSpec& zones, const ZoneDesign& design, const eastl::string& tag, CheckReport& report) {
+        void CheckSolvedShape(const ShapeSpec& zones, const ZoneDesign& design, const String& tag, CheckReport& report) {
             for (int position = 0; position < kSeatCount; ++position) {
                 CheckSolvedSeat(zones.seats[static_cast<size_t>(position)], position, design, tag, report);
             }
@@ -781,7 +781,7 @@ namespace BECore::Mahjong {
                 report.Add(Format("{}: the viewer's hand tile is {} wide, under kViewerHandTileW {}", tag, desktopHand, kViewerHandTileW));
             }
             if (zones.hasPhone) {
-                const eastl::string phoneTag = Format("{}, phone profile", tag);
+                const String phoneTag = Format("{}, phone profile", tag);
                 CheckSolvedSeat(zones.phone, 0, design, phoneTag, report);
                 const float widest = WidestPhoneHandTileW(zones, design);
                 if (widest != kPhoneHandTileMaxW) {
@@ -790,7 +790,7 @@ namespace BECore::Mahjong {
             }
         }
 
-        void CheckTable(const TableLayoutSpec& spec, TableShape shape, const TableProfile& profile, const eastl::string& tag, bool whole, CheckReport& report) {
+        void CheckTable(const TableLayoutSpec& spec, TableShape shape, const TableProfile& profile, const String& tag, bool whole, CheckReport& report) {
             for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
                 const TableLayout layout = MakeTableLayout(WorstCaseInput(viewer, profile), spec, DesignWidthOf(shape), DesignHeightOf(shape));
                 CheckSlotsInView(layout, tag, report);
@@ -803,10 +803,10 @@ namespace BECore::Mahjong {
 
     }  // namespace
 
-    eastl::vector<eastl::string> CheckTableLayoutSpec(const TableLayoutSpec& spec) {
+    eastl::vector<String> CheckTableLayoutSpec(const TableLayoutSpec& spec) {
         CheckReport report;
         for (const TableShape shape : EnumUtils<TableShape>::Values()) {
-            const eastl::string tag = Format("shape '{}'", ShapeNameOf(shape));
+            const String tag = Format("shape '{}'", ShapeNameOf(shape));
             const ShapeSpec* zones = ZonesOf(spec, shape);
             if (zones == nullptr) {
                 report.Add(Format("{}: the spec does not describe it", tag));
@@ -819,7 +819,7 @@ namespace BECore::Mahjong {
             }
             CheckTable(spec, shape, TableProfile{}, tag, own, report);
             if (IsLandscapeLike(shape) && zones->hasPhone) {
-                const eastl::string phoneTag = Format("{}, phone profile", tag);
+                const String phoneTag = Format("{}, phone profile", tag);
                 for (size_t step = 0; step < kPhoneWidthSteps; ++step) {
                     const float along = static_cast<float>(step) / static_cast<float>(kPhoneWidthSteps - 1);
                     const TableProfile profile{true, kViewerHandTileW + along * (kPhoneHandTileMaxW - kViewerHandTileW)};

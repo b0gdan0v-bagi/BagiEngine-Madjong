@@ -67,8 +67,8 @@ namespace BECore::Mahjong::Arena {
      * A refused action, a computer seat with nothing to choose from or a hand that does not end is a defect and comes back as an error
      * text naming the seed and the seat; it is never swallowed.
      */
-    [[nodiscard]] std::expected<HandRecord, eastl::string> PlayArenaHand(uint32_t seed, const ArenaPlayers& players, bool timing = false, const WorldLoop* worlds = nullptr,
-                                                                         const HandObserver* observer = nullptr);
+    [[nodiscard]] std::expected<HandRecord, String> PlayArenaHand(uint32_t seed, const ArenaPlayers& players, bool timing = false, const WorldLoop* worlds = nullptr,
+                                                                  const HandObserver* observer = nullptr);
 
     /// The most actions one hand may take before it counts as stuck (a hand is at most about 4 x 70).
     inline constexpr int kArenaStepLimit = 2000;

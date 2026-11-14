@@ -30,14 +30,14 @@ namespace BECore::Mahjong {
         /// One pass over the file: the messages collect in `errors`, each starting with the place (`where`) it was found.
         class SpecReader {
         public:
-            eastl::vector<eastl::string> errors;
+            eastl::vector<String> errors;
 
-            void Fail(const eastl::string& where, const eastl::string& what) {
+            void Fail(const String& where, const String& what) {
                 errors.push_back(Format("TableLayout: {}: {}", where, what));
             }
 
             /// Every attribute of the element must be one of `allowed`: a typo is an error, not a setting that is ignored.
-            void CheckAttributes(const pugi::xml_node& node, const eastl::string& where, std::initializer_list<const char*> allowed) {
+            void CheckAttributes(const pugi::xml_node& node, const String& where, std::initializer_list<const char*> allowed) {
                 for (const pugi::xml_attribute attribute : node.attributes()) {
                     bool known = false;
                     for (const char* name : allowed) {
@@ -49,7 +49,7 @@ namespace BECore::Mahjong {
                 }
             }
 
-            Optional<float> ReadFloat(const pugi::xml_node& node, const eastl::string& where, const char* name, bool required) {
+            Optional<float> ReadFloat(const pugi::xml_node& node, const String& where, const char* name, bool required) {
                 const pugi::xml_attribute attribute = node.attribute(name);
                 if (!attribute) {
                     if (required) {
@@ -68,7 +68,7 @@ namespace BECore::Mahjong {
                 return value;
             }
 
-            Optional<float> ReadFraction(const pugi::xml_node& node, const eastl::string& where, const char* name, bool required) {
+            Optional<float> ReadFraction(const pugi::xml_node& node, const String& where, const char* name, bool required) {
                 const Optional<float> value = ReadFloat(node, where, name, required);
                 if (value && !(*value >= 0.0f && *value <= 1.0f)) {
                     Fail(where, Format("attribute '{}': {} is outside 0..1", name, node.attribute(name).value()));
@@ -77,7 +77,7 @@ namespace BECore::Mahjong {
                 return value;
             }
 
-            Optional<int> ReadInt(const pugi::xml_node& node, const eastl::string& where, const char* name, int least, int most) {
+            Optional<int> ReadInt(const pugi::xml_node& node, const String& where, const char* name, int least, int most) {
                 const pugi::xml_attribute attribute = node.attribute(name);
                 if (!attribute) {
                     return std::nullopt;
@@ -97,7 +97,7 @@ namespace BECore::Mahjong {
                 return static_cast<int>(value);
             }
 
-            Optional<bool> ReadBool(const pugi::xml_node& node, const eastl::string& where, const char* name) {
+            Optional<bool> ReadBool(const pugi::xml_node& node, const String& where, const char* name) {
                 const pugi::xml_attribute attribute = node.attribute(name);
                 if (!attribute) {
                     return std::nullopt;
@@ -111,7 +111,7 @@ namespace BECore::Mahjong {
             }
 
             /// x, y, w and h: fractions of the design view, all four required.
-            ZoneRect ReadRect(const pugi::xml_node& node, const eastl::string& where) {
+            ZoneRect ReadRect(const pugi::xml_node& node, const String& where) {
                 ZoneRect rect;
                 rect.x = ReadFraction(node, where, "x", true).value_or(0.0f);
                 rect.y = ReadFraction(node, where, "y", true).value_or(0.0f);
@@ -120,7 +120,7 @@ namespace BECore::Mahjong {
                 return rect;
             }
 
-            StripZone ReadStrip(const pugi::xml_node& node, const eastl::string& where) {
+            StripZone ReadStrip(const pugi::xml_node& node, const String& where) {
                 CheckAttributes(node, where, {"x", "y", "w", "h", "align", "spread", "tile", "minTileW"});
                 StripZone zone;
                 zone.rect = ReadRect(node, where);
@@ -149,7 +149,7 @@ namespace BECore::Mahjong {
                 return zone;
             }
 
-            DiscardZone ReadDiscards(const pugi::xml_node& node, const eastl::string& where) {
+            DiscardZone ReadDiscards(const pugi::xml_node& node, const String& where) {
                 CheckAttributes(node, where, {"x", "y", "w", "h", "rows"});
                 DiscardZone zone;
                 zone.rect = ReadRect(node, where);
@@ -157,17 +157,17 @@ namespace BECore::Mahjong {
                 return zone;
             }
 
-            ZoneRect ReadPlain(const pugi::xml_node& node, const eastl::string& where) {
+            ZoneRect ReadPlain(const pugi::xml_node& node, const String& where) {
                 CheckAttributes(node, where, {"x", "y", "w", "h"});
                 return ReadRect(node, where);
             }
 
             /// `<Free name="..." x y w h/>`: a free-ground region of the shape. The name is kept once per shape and is not empty; the region has
             /// an area (whether it lies on the table is `CheckTableLayoutSpec`'s to say).
-            void ReadFree(const pugi::xml_node& node, const eastl::string& shapeWhere, ShapeSpec& shape) {
+            void ReadFree(const pugi::xml_node& node, const String& shapeWhere, ShapeSpec& shape) {
                 const pugi::xml_attribute nameAttribute = node.attribute("name");
                 const StringView name = nameAttribute.value();
-                const eastl::string where = name.empty() ? Format("{}, {}", shapeWhere, kFreeElement) : Format("{}, {} '{}'", shapeWhere, kFreeElement, name);
+                const String where = name.empty() ? Format("{}, {}", shapeWhere, kFreeElement) : Format("{}, {} '{}'", shapeWhere, kFreeElement, name);
                 CheckAttributes(node, where, {"name", "x", "y", "w", "h"});
                 const size_t errorsBefore = errors.size();
                 FreeRegion region;
@@ -195,14 +195,14 @@ namespace BECore::Mahjong {
             }
 
             /// The children of a `Seat` (or of the `Phone` override): Hand, Melds, Bonus, Discards and Plate, each once.
-            void ReadSeatZones(const pugi::xml_node& node, const eastl::string& where, SeatSpec& seat) {
+            void ReadSeatZones(const pugi::xml_node& node, const String& where, SeatSpec& seat) {
                 unsigned seen = 0;
                 for (const pugi::xml_node child : node.children()) {
                     if (child.type() != pugi::node_element) {
                         continue;
                     }
                     const StringView name = child.name();
-                    const eastl::string childWhere = Format("{}, {}", where, child.name());
+                    const String childWhere = Format("{}, {}", where, child.name());
                     unsigned bit = 0;
                     if (name == kHandElement) {
                         bit = 1U;
@@ -237,7 +237,7 @@ namespace BECore::Mahjong {
             }
 
             void ReadShape(const pugi::xml_node& node, TableShape shape, ShapeSpec& out) {
-                const eastl::string where = Format("shape '{}'", EnumUtils<TableShape>::ToString(shape));
+                const String where = Format("shape '{}'", EnumUtils<TableShape>::ToString(shape));
                 CheckAttributes(node, where, {"name", "like", "inset"});
                 out.present = true;
                 const pugi::xml_attribute like = node.attribute("like");
@@ -259,7 +259,7 @@ namespace BECore::Mahjong {
                     if (name == kSeatElement) {
                         ReadSeat(child, where, out, seatsSeen);
                     } else if (name == kWallElement) {
-                        const eastl::string wallWhere = Format("{}, {}", where, kWallElement);
+                        const String wallWhere = Format("{}, {}", where, kWallElement);
                         if (wallSeen) {
                             Fail(where, "'Wall' is given twice");
                         }
@@ -268,7 +268,7 @@ namespace BECore::Mahjong {
                     } else if (name == kFreeElement) {
                         ReadFree(child, where, out);
                     } else if (name == kPhoneElement) {
-                        const eastl::string phoneWhere = Format("{}, {}", where, kPhoneElement);
+                        const String phoneWhere = Format("{}, {}", where, kPhoneElement);
                         if (phoneSeen) {
                             Fail(where, "'Phone' is given twice");
                         }
@@ -293,7 +293,7 @@ namespace BECore::Mahjong {
                 }
             }
 
-            void ReadLikeShape(const pugi::xml_node& node, const eastl::string& where, const char* likeName, ShapeSpec& out) {
+            void ReadLikeShape(const pugi::xml_node& node, const String& where, const char* likeName, ShapeSpec& out) {
                 const Optional<TableShape> source = EnumUtils<TableShape>::Cast(likeName);
                 if (!source) {
                     Fail(where, Format("attribute 'like': '{}' is not a shape", likeName));
@@ -310,7 +310,7 @@ namespace BECore::Mahjong {
                 }
             }
 
-            void ReadSeat(const pugi::xml_node& node, const eastl::string& shapeWhere, ShapeSpec& shape, unsigned& seatsSeen) {
+            void ReadSeat(const pugi::xml_node& node, const String& shapeWhere, ShapeSpec& shape, unsigned& seatsSeen) {
                 CheckAttributes(node, shapeWhere, {"position"});
                 const Optional<int> position = ReadInt(node, shapeWhere, "position", 0, kSeatCount - 1);
                 if (!position) {
@@ -319,7 +319,7 @@ namespace BECore::Mahjong {
                     }
                     return;
                 }
-                const eastl::string where = Format("{}, seat {}", shapeWhere, *position);
+                const String where = Format("{}, seat {}", shapeWhere, *position);
                 if ((seatsSeen & (1U << *position)) != 0U) {
                     Fail(where, "the seat is given twice");
                 }
@@ -366,7 +366,7 @@ namespace BECore::Mahjong {
         }
         for (const TableShape shape : EnumUtils<TableShape>::Values()) {
             const ShapeSpec& own = parse.spec.Shape(shape);
-            const eastl::string where = Format("shape '{}'", EnumUtils<TableShape>::ToString(shape));
+            const String where = Format("shape '{}'", EnumUtils<TableShape>::ToString(shape));
             if (!own.present) {
                 reader.Fail("TableLayout", Format("{} is missing", where));
             } else if (own.like) {

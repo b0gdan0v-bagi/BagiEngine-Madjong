@@ -377,7 +377,7 @@ namespace BECore::Mahjong {
         HintCard card;
         if (next.source != CardSource::None) {
             const UIStrings& strings = CoreManager::GetUIStrings();
-            const eastl::string tally = CardTallyText(strings, next.hand, next.match);
+            const String tally = CardTallyText(strings, next.hand, next.match);
             card = next.source == CardSource::Note ? MakeNoteCard(strings, *game->GetCoach().Note(), tally) : MakeAdviceCard(strings, _adviceView, *_explained, tally);
         }
         PublishCard(card, next.source != CardSource::None);

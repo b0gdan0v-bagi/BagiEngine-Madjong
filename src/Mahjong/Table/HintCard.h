@@ -35,19 +35,19 @@ namespace BECore::Mahjong {
     struct CardRow {
         CardRowKind kind = CardRowKind::Other;
         eastl::array<Tile, kMaxCardTiles> tiles{};
-        eastl::string who;
-        eastl::string move;
-        eastl::string steps;
-        eastl::string useful;
+        String who;
+        String move;
+        String steps;
+        String useful;
         CardTrend trend = CardTrend::None;
     };
 
     /// The whole card in the language it was made in. `now` is empty when there are no rows (a complete hand: nothing to compare).
     struct HintCard {
-        eastl::string title;
-        eastl::string now;
+        String title;
+        String now;
         eastl::vector<CardRow> rows;
-        eastl::vector<eastl::string> footer;
+        eastl::vector<String> footer;
     };
 
     /// The card of the advice of `explained` on `view` (`ExplainAdviceFor(view)`), with `tally` (`CardTallyText`, maybe empty) as the last line.
@@ -57,6 +57,6 @@ namespace BECore::Mahjong {
     [[nodiscard]] HintCard MakeNoteCard(const UIStrings& strings, const CoachNote& note, StringView tally);
 
     /// The short tally of the card: the hand and the match, or the match alone with no move in the hand; empty with no move in the match.
-    [[nodiscard]] eastl::string CardTallyText(const UIStrings& strings, const CoachTally& hand, const CoachTally& match);
+    [[nodiscard]] String CardTallyText(const UIStrings& strings, const CoachTally& hand, const CoachTally& match);
 
 }  // namespace BECore::Mahjong

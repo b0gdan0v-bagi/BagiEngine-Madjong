@@ -33,7 +33,7 @@ namespace BECore::Mahjong {
 
     struct SaveProblem {
         SaveProblemKind kind = SaveProblemKind::Missing;
-        eastl::string detail;
+        String detail;
     };
 
     /**

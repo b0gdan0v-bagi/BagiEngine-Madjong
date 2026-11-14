@@ -220,7 +220,7 @@ namespace BECore::Mahjong {
 
     /// The name of a region of the table (`TableRegions.h`): at most this long, so a layout and a spec keep it without the heap.
     inline constexpr size_t kMaxRegionNameLength = 31;
-    using RegionName = eastl::fixed_string<char, kMaxRegionNameLength + 1, false>;
+    using RegionName = FixedString<kMaxRegionNameLength + 1, false>;
 
     /// A free-ground region of the layout (`ShapeSpec::freeRegions`), fitted to the view like a zone: a place a canvas of the table may use,
     /// clear of every tile and plate of the worst-case table.
@@ -303,7 +303,7 @@ namespace BECore::Mahjong {
     /// view, zones that overlap each other or a hand, meld or bonus row, a seat plate that overlaps a slot or lies nearer than
     /// `kPlatePadding` to a discard block or the wall ring, a tile under its zone's `minTileW`, a zone too small for its tiles, the
     /// viewer's hand tile under `kViewerHandTileW`, the widest phone tile other than `kPhoneHandTileMaxW`. Empty when the spec is sound.
-    [[nodiscard]] eastl::vector<eastl::string> CheckTableLayoutSpec(const TableLayoutSpec& spec);
+    [[nodiscard]] eastl::vector<String> CheckTableLayoutSpec(const TableLayoutSpec& spec);
 
     /// The smallest rectangle that holds every slot of `role` of `seat` (`seat` ignored for the wall); empty when there is none.
     [[nodiscard]] Rect BoundsOf(const TableLayout& layout, SlotRole role, Seat seat);

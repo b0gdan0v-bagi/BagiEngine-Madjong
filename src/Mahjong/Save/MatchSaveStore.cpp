@@ -24,7 +24,7 @@ namespace BECore::Mahjong {
             if (error.kind == SaveErrorKind::NotFound) {
                 return SaveProblem{SaveProblemKind::Missing, error.detail};
             }
-            eastl::string detail = error.detail;
+            String detail = error.detail;
             if (detail.empty()) {
                 detail = EnumUtils<SaveErrorKind>::ToString(error.kind);
             }
@@ -150,7 +150,7 @@ namespace BECore::Mahjong {
         if (const auto loaded = _service.Load(kOnlineSlot, kMahjongSaveSchema, state); !loaded) {
             return std::unexpected(ProblemOf(loaded.error()));
         }
-        std::expected<OnlineValues, eastl::string> values = ReadOnline(state);
+        std::expected<OnlineValues, String> values = ReadOnline(state);
         if (!values) {
             return std::unexpected(SaveProblem{SaveProblemKind::Broken, eastl::move(values.error())});
         }

@@ -11,7 +11,7 @@ namespace BECore::Mahjong::Arena {
 
     namespace {
 
-        eastl::string Where(uint32_t seed, Seat seat) {
+        String Where(uint32_t seed, Seat seat) {
             return Format("seed {} seat {}", seed, static_cast<int>(seat));
         }
 
@@ -65,7 +65,7 @@ namespace BECore::Mahjong::Arena {
 
     }  // namespace
 
-    std::expected<HandRecord, eastl::string> PlayArenaHand(uint32_t seed, const ArenaPlayers& players, bool timing, const WorldLoop* worlds, const HandObserver* observer) {
+    std::expected<HandRecord, String> PlayArenaHand(uint32_t seed, const ArenaPlayers& players, bool timing, const WorldLoop* worlds, const HandObserver* observer) {
         const MahjongSettings settings;
         MahjongRng wallRng(seed);
         const Seat east = static_cast<Seat>(seed % kSeatCount);

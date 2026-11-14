@@ -459,7 +459,7 @@ namespace BECore::Mahjong {
 
         Optional<std::filesystem::file_time_type> _layoutStamp;  // the stamp of the file of the config `TableLayout` at the last look, none when it has none
         std::chrono::steady_clock::time_point _layoutPolled;     // the last look
-        eastl::string _layoutRefused;                            // the text of the refusal that was logged last, empty when the last offer was not refused
+        String _layoutRefused;                                   // the text of the refusal that was logged last, empty when the last offer was not refused
         static MahjongTableComponent* s_active;
     };
 

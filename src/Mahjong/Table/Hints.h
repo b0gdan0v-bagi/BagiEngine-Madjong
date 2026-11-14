@@ -40,7 +40,7 @@ namespace BECore::Mahjong {
 
     /// One sentence that says `advice` in the language of `strings` ("Discard 5 Dots.", "Take the discard to make a pung of 5 Dots."):
     /// one key `hints.advice.*` per kind with placeholders. `view` names the pending discard of a claim. Never empty.
-    [[nodiscard]] eastl::string AdviceText(const UIStrings& strings, const TableView& view, const HandAction& advice);
+    [[nodiscard]] String AdviceText(const UIStrings& strings, const TableView& view, const HandAction& advice);
 
     /// The advice of `AdviceFor(view)` with the numbers it was chosen by (`ExplainAdvice`); its action equals `AdviceFor(view)`.
     /// Empty when there is nothing to do.

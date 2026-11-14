@@ -46,7 +46,7 @@ namespace BECore::Mahjong {
         }
     }
 
-    void MatchUploader::SetMatchIdSource(std::function<eastl::string()> source) {
+    void MatchUploader::SetMatchIdSource(std::function<String()> source) {
         _idSource = std::move(source);
         if (!_idSource) {
             Drop();
@@ -82,19 +82,19 @@ namespace BECore::Mahjong {
         _sink->Send(piece);
     }
 
-    std::expected<eastl::string, eastl::string> AssemblePieces(const eastl::vector<UploadPiece>& pieces) {
+    std::expected<String, String> AssemblePieces(const eastl::vector<UploadPiece>& pieces) {
         if (pieces.empty()) {
-            return std::unexpected(eastl::string("no pieces"));
+            return std::unexpected(String("no pieces"));
         }
         eastl::vector<const UploadPiece*> ordered;
         for (const UploadPiece& piece : pieces) {
             if (piece.matchId != pieces.front().matchId) {
-                return std::unexpected(eastl::string("the pieces are of different matches"));
+                return std::unexpected(String("the pieces are of different matches"));
             }
             ordered.push_back(&piece);
         }
         std::stable_sort(ordered.begin(), ordered.end(), [](const UploadPiece* left, const UploadPiece* right) { return left->index < right->index; });
-        eastl::string log;
+        String log;
         for (size_t position = 0; position < ordered.size(); ++position) {
             const UploadPiece& piece = *ordered[position];
             if (position > 0 && piece.index == ordered[position - 1]->index) {

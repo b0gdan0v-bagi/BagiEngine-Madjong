@@ -30,34 +30,34 @@ namespace BECore::Mahjong::Arena {
         constexpr StringView kColumnGap = "  ";
         constexpr StringView kNone = "-";
 
-        void AddLine(eastl::string& text, StringView label, const eastl::string& value) {
+        void AddLine(String& text, StringView label, const String& value) {
             text.append(Format("{:<{}}{}\n", label, kLabelWidth, value));
         }
 
-        eastl::string Joined(const CountList& list) {
-            eastl::string text;
+        String Joined(const CountList& list) {
+            String text;
             for (const auto& [key, count] : list) {
                 text.append(Format("{}{} {}", text.empty() ? "" : ", ", key, count));
             }
-            return text.empty() ? eastl::string("-") : text;
+            return text.empty() ? String("-") : text;
         }
 
-        eastl::string SpreadText(const Spread& spread) {
+        String SpreadText(const Spread& spread) {
             return Format("min {}, mean {:.{}f}, max {}", spread.min, spread.mean, kMeanPrecision, spread.max);
         }
 
-        eastl::string DroppedText(const LogCorpus& corpus) {
-            eastl::string text;
+        String DroppedText(const LogCorpus& corpus) {
+            String text;
             for (size_t problem = 0; problem < corpus.dropped.size(); ++problem) {
                 text.append(Format("{}{} {}", problem == 0 ? "" : ", ", EnumUtils<LogProblem>::ToString(static_cast<LogProblem>(problem)), corpus.dropped[problem]));
             }
             return text;
         }
 
-        void AddPlatforms(eastl::string& text, const LogCorpus& corpus) {
+        void AddPlatforms(String& text, const LogCorpus& corpus) {
             constexpr eastl::array<MatchPlatform, 3> kOrder{MatchPlatform::Desktop, MatchPlatform::Web, MatchPlatform::Unknown};
             static_assert(kOrder.size() == EnumUtils<MatchPlatform>::Count());
-            eastl::string value;
+            String value;
             for (size_t index = 0; index < kOrder.size(); ++index) {
                 value.append(Format("{}{} {}", index == 0 ? "" : ", ", PlatformName(kOrder[index]), corpus.platforms[static_cast<size_t>(kOrder[index])]));
             }
@@ -68,13 +68,13 @@ namespace BECore::Mahjong::Arena {
             return whole > 0 ? kPercent * static_cast<double>(part) / static_cast<double>(whole) : 0.0;
         }
 
-        eastl::string Plain(double value) {
+        String Plain(double value) {
             return Format("{:.{}f}", value, kPrecision);
         }
 
-        eastl::string WithInterval(const MeanInterval& interval) {
+        String WithInterval(const MeanInterval& interval) {
             if (interval.n == 0) {
-                return eastl::string(kNone.data(), kNone.size());
+                return String(kNone.data(), kNone.size());
             }
             if (!interval.hasInterval) {
                 return Plain(interval.mean);
@@ -82,7 +82,7 @@ namespace BECore::Mahjong::Arena {
             return Format("{:.{}f} +- {:.{}f}", interval.mean, kPrecision, interval.half, kPrecision);
         }
 
-        void AddCell(eastl::string& text, const eastl::string& cell, int width) {
+        void AddCell(String& text, const String& cell, int width) {
             text.append(Format("{}{:>{}}", kColumnGap, cell, width));
         }
 
@@ -125,7 +125,7 @@ namespace BECore::Mahjong::Arena {
 
         /// One match of the corpus, once analysed: the same slot is written by one thread only.
         struct MatchSlot {
-            std::expected<TesterMatch, eastl::string> tester;
+            std::expected<TesterMatch, String> tester;
             RealMatch real;
         };
 
@@ -134,8 +134,8 @@ namespace BECore::Mahjong::Arena {
             slot.tester = AnalyzeTesterMatch(log.name, log.verdict.events, bots);
         }
 
-        eastl::string BotRows(const BotAgreement& bot, int nameWidth) {
-            eastl::string text;
+        String BotRows(const BotAgreement& bot, int nameWidth) {
+            String text;
             for (size_t row = 0; row < kTesterRowCount; ++row) {
                 const StringView phase = row == kTesterBothRow ? "both" : (row == static_cast<size_t>(TesterPhase::DiscardTurn) ? "discard turn" : "claim window");
                 text.append(Format("{:<{}}", row == 0 ? bot.player.name.c_str() : "", nameWidth));
@@ -147,11 +147,11 @@ namespace BECore::Mahjong::Arena {
             return text;
         }
 
-        void AddAgreement(eastl::string& text, const LogAnalysis& analysis) {
+        void AddAgreement(String& text, const LogAnalysis& analysis) {
             const TesterResult& tester = analysis.tester;
             text.append("\nAgreement of the people with the bots (the logged action is the same as the bot's choice)\n");
             text.append(Format("matches analysed {}, not analysed {}\n", tester.matches, analysis.notAnalysed.size()));
-            for (const eastl::string& reason : analysis.notAnalysed) {
+            for (const String& reason : analysis.notAnalysed) {
                 text.append(Format("{}{}\n", kIndent, OneLine(reason)));
             }
             text.append(Format("+- is {} standard errors over the matches (a 95 percent interval); the match is the sample, not the decision\n", kIntervalZ));
@@ -169,11 +169,11 @@ namespace BECore::Mahjong::Arena {
             }
         }
 
-        eastl::string GroupLabel(size_t group) {
-            return group == kMixedGroup ? eastl::string(kMixedLabel.data(), kMixedLabel.size()) : Format("{}", group + static_cast<size_t>(kMinLevel));
+        String GroupLabel(size_t group) {
+            return group == kMixedGroup ? String(kMixedLabel.data(), kMixedLabel.size()) : Format("{}", group + static_cast<size_t>(kMinLevel));
         }
 
-        void AddRealGame(eastl::string& text, const LogAnalysis& analysis) {
+        void AddRealGame(String& text, const LogAnalysis& analysis) {
             text.append("\nReal games by the level of the computers met (the logged results of the people's seat-hands at tables with a computer)\n");
             text.append("A table whose computers are not all at one level is `mixed`; a hand not finished is not counted; the match is the unit of the intervals\n");
             text.append(Format("{:<{}}", "level", kGroupWidth));
@@ -199,7 +199,7 @@ namespace BECore::Mahjong::Arena {
                 AddCell(text, WithInterval(row.pointsPerHand), kPointsCellWidth);
                 AddCell(text, WithInterval(row.drawnPercent), kPercentCellWidth);
                 AddCell(text, WithInterval(row.declaredPercent), kPercentCellWidth);
-                AddCell(text, row.tally.wins > 0 ? Plain(static_cast<double>(row.tally.winScore) / static_cast<double>(row.tally.wins)) : eastl::string(kNone.data(), kNone.size()), kScoreWidth);
+                AddCell(text, row.tally.wins > 0 ? Plain(static_cast<double>(row.tally.winScore) / static_cast<double>(row.tally.wins)) : String(kNone.data(), kNone.size()), kScoreWidth);
                 text.push_back('\n');
             }
             if (!any) {
@@ -207,7 +207,7 @@ namespace BECore::Mahjong::Arena {
             }
         }
 
-        void AddDifferences(eastl::string& text, const LogAnalysis& analysis, int maxDifferences) {
+        void AddDifferences(String& text, const LogAnalysis& analysis, int maxDifferences) {
             const TesterResult& tester = analysis.tester;
             const size_t shown = eastl::min(tester.differences.size(), static_cast<size_t>(eastl::max(0, maxDifferences)));
             text.append(Format("\nDifferences from {}: {} in all, {} listed (log order)\n", tester.bots.empty() ? "-" : tester.bots.front().player.name.c_str(), tester.differences.size(), shown));
@@ -221,8 +221,8 @@ namespace BECore::Mahjong::Arena {
 
     }  // namespace
 
-    eastl::string FormatCheckLines(const eastl::vector<CheckedLog>& logs) {
-        eastl::string text;
+    String FormatCheckLines(const eastl::vector<CheckedLog>& logs) {
+        String text;
         for (const CheckedLog& log : logs) {
             if (log.verdict.ok) {
                 text.append(Format("{}\t{}\n", kCheckOk, OneLine(log.name)));
@@ -233,8 +233,8 @@ namespace BECore::Mahjong::Arena {
         return text;
     }
 
-    eastl::string FormatCorpusSummary(const LogCorpus& corpus) {
-        eastl::string text = "Match logs\n";
+    String FormatCorpusSummary(const LogCorpus& corpus) {
+        String text = "Match logs\n";
         AddLine(text, "files read", Format("{}", corpus.files));
         AddLine(text, "replayed", Format("{}", corpus.replayed));
         AddLine(text, "dropped", Format("{} ({})", corpus.files - corpus.replayed, DroppedText(corpus)));
@@ -362,8 +362,8 @@ namespace BECore::Mahjong::Arena {
         return analysis;
     }
 
-    eastl::string FormatLogAnalysis(const LogAnalysis& analysis, int maxDifferences) {
-        eastl::string text;
+    String FormatLogAnalysis(const LogAnalysis& analysis, int maxDifferences) {
+        String text;
         AddAgreement(text, analysis);
         AddRealGame(text, analysis);
         AddDifferences(text, analysis, maxDifferences);

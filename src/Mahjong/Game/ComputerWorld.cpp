@@ -324,7 +324,7 @@ namespace BECore::Mahjong {
         }
 
         if (!window) {
-            std::expected<HandModel, eastl::string> model = HandModel::Restore(eastl::move(state));
+            std::expected<HandModel, String> model = HandModel::Restore(eastl::move(state));
             if (!model || model->LegalActions(view.seat) != view.legal) {
                 return std::nullopt;
             }
@@ -346,7 +346,7 @@ namespace BECore::Mahjong {
             for (size_t i = 0; i < others.size(); ++i) {
                 trial.claimStatus[others[i]] = (mask >> i) & 1U ? ClaimStatus::Waiting : ClaimStatus::NotInWindow;
             }
-            std::expected<HandModel, eastl::string> model = HandModel::Restore(eastl::move(trial));
+            std::expected<HandModel, String> model = HandModel::Restore(eastl::move(trial));
             if (model) {
                 if (model->LegalActions(view.seat) != view.legal) {
                     return std::nullopt;

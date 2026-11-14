@@ -31,12 +31,12 @@ namespace BECore::Mahjong::Analyzer {
      * that point for the seat that acted, and the model is dropped. An error text for a log that does not replay, a hand or an index
      * out of range.
      */
-    [[nodiscard]] std::expected<LogPosition, eastl::string> PositionFromLog(const eastl::vector<MatchLogEvent>& events, int hand, int actionIndex);
+    [[nodiscard]] std::expected<LogPosition, String> PositionFromLog(const eastl::vector<MatchLogEvent>& events, int hand, int actionIndex);
 
     /// Every decision of `seat` in hand number `hand`, in log order (see `LogPosition` for the numbering). An error text for a log that
     /// does not replay, a hand out of range, a number that is no seat, or a seat that has no decision in that hand. A decision with a
     /// single legal action is listed too: the caller decides what to do with it.
-    [[nodiscard]] std::expected<eastl::vector<LogPosition>, eastl::string> PositionsOfSeat(const eastl::vector<MatchLogEvent>& events, int hand, Seat seat);
+    [[nodiscard]] std::expected<eastl::vector<LogPosition>, String> PositionsOfSeat(const eastl::vector<MatchLogEvent>& events, int hand, Seat seat);
 
     // clang-format off
     /**
@@ -66,7 +66,7 @@ namespace BECore::Mahjong::Analyzer {
      *
      * An error text names the line (`line 5: ...`) where one is to blame.
      */
-    [[nodiscard]] std::expected<TableView, eastl::string> ParsePosition(StringView text);
+    [[nodiscard]] std::expected<TableView, String> ParsePosition(StringView text);
     // clang-format on
 
 }  // namespace BECore::Mahjong::Analyzer

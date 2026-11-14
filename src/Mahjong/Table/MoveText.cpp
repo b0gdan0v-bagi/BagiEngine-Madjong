@@ -28,11 +28,11 @@ namespace BECore::Mahjong {
 
     }  // namespace
 
-    eastl::string MoveText(const UIStrings& strings, const HandMove& move, Wind seatWind) {
+    String MoveText(const UIStrings& strings, const HandMove& move, Wind seatWind) {
         if (!IsSeat(move.seat)) {
             return {};
         }
-        const eastl::string seat = SeatName(strings, move.seat, seatWind);
+        const String seat = SeatName(strings, move.seat, seatWind);
         if (move.kind == MoveKind::ConcealedKong) {
             return Tr(strings, KeyOf(move), {{"seat", seat}});  // the tiles of a concealed kong are not public
         }

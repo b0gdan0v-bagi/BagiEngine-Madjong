@@ -17,7 +17,7 @@ namespace BECore::Mahjong {
         constexpr int kMixLastShift = 31;
         constexpr int kHalfSeedBits = 32;
 
-        std::unexpected<ControlError> Fail(StringView code, eastl::string message) {
+        std::unexpected<ControlError> Fail(StringView code, String message) {
             return std::unexpected(MakeControlError(code, std::move(message)));
         }
 
@@ -64,7 +64,7 @@ namespace BECore::Mahjong {
 
     SeatedGameInfo MahjongSeatedGame::Info() {
         // Every member sees these options of the host in the lobby, before the start
-        return SeatedGameInfo{eastl::string(kSeatedGameName), kSeatCount, {"hands", "level", eastl::string(kHintsAllowedKey)}};
+        return SeatedGameInfo{String(kSeatedGameName), kSeatCount, {"hands", "level", String(kHintsAllowedKey)}};
     }
 
     int MahjongSeatedGame::GetSeatCount() const {
@@ -160,7 +160,7 @@ namespace BECore::Mahjong {
         }
         view["ready"] = std::move(ready);
         view["format"] = kOnlineViewFormat;
-        view[std::string(kHintsAllowedKey.data(), kHintsAllowedKey.size())] = _hintsAllowed;
+        view[ToStdString(kHintsAllowedKey)] = _hintsAllowed;
         return view;
     }
 

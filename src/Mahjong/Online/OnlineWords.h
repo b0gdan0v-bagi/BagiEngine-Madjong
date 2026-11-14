@@ -110,7 +110,7 @@ namespace BECore::Mahjong {
     inline constexpr StringView kOnlinePasteRefusedKey = "online.paste.refused";
 
     /// The text of @p key in the current language. Only `online.error.unknown` has a placeholder (`{code}`, filled with @p arg).
-    [[nodiscard]] eastl::string OnlineNoticeText(const UIStrings& strings, StringView key, StringView arg = {});
+    [[nodiscard]] String OnlineNoticeText(const UIStrings& strings, StringView key, StringView arg = {});
 
     /**
      * @brief What a lobby seat says about its occupant: "Empty", "Computer", the name of a person, "{name} (you)", "{name} (away)".
@@ -118,6 +118,6 @@ namespace BECore::Mahjong {
      * @p name is kept as it is (UTF-8, whatever the person typed). @p mine wins over @p away: a client never shows its own seat as away.
      * @param connected only for a person: false is "away".
      */
-    [[nodiscard]] eastl::string OnlineSeatText(const UIStrings& strings, BECore::SeatKind kind, StringView name, bool mine, bool connected);
+    [[nodiscard]] String OnlineSeatText(const UIStrings& strings, BECore::SeatKind kind, StringView name, bool mine, bool connected);
 
 }  // namespace BECore::Mahjong

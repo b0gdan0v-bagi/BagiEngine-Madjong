@@ -84,7 +84,7 @@ namespace BECore::Mahjong {
         }
 
         /// The keys of the pad of the focused field in the language of the last `Refresh`; empty outside the `Entry` page.
-        [[nodiscard]] const eastl::vector<eastl::string>& Pad() const {
+        [[nodiscard]] const eastl::vector<String>& Pad() const {
             return _pad;
         }
 
@@ -111,7 +111,7 @@ namespace BECore::Mahjong {
         }
 
         /// The code of the room `Return` would enter; empty with `CanReturn()` false.
-        [[nodiscard]] const eastl::string& ReturnRoom() const {
+        [[nodiscard]] const String& ReturnRoom() const {
             return _returnRoom;
         }
 
@@ -119,7 +119,7 @@ namespace BECore::Mahjong {
         [[nodiscard]] StringView NoticeKey() const {
             return _noticeKey;
         }
-        [[nodiscard]] const eastl::string& NoticeArg() const {
+        [[nodiscard]] const String& NoticeArg() const {
             return _noticeArg;
         }
 
@@ -276,24 +276,24 @@ namespace BECore::Mahjong {
         /// The player has edited the name or an earlier run stored it: it no longer follows the default of the language.
         bool _nameOwn = false;
         OnlineRoomOptions _options;
-        eastl::vector<eastl::string> _pad;
+        eastl::vector<String> _pad;
         bool _padValid = false;
         TextEntry::Kind _padKind = TextEntry::Kind::Name;
         uint64_t _padStringsVersion = 0;
         uint64_t _defaultNameStringsVersion = 0;
         bool _hasStrings = false;
-        eastl::string _storedRoom;
+        String _storedRoom;
         uint32_t _seenRevision = 0;
         bool _revisionKnown = false;
         bool _canReturn = false;
-        eastl::string _returnRoom;
+        String _returnRoom;
         StringView _noticeKey;
-        eastl::string _noticeArg;
+        String _noticeArg;
         uint32_t _seenNotice = 0;
         StringView _statusKey;
         OnlineCopyState _copyState = OnlineCopyState::None;
         /// The room the page showed at the last `Sync`: another one ends the state of the copy button.
-        eastl::string _copyRoom;
+        String _copyRoom;
         OnlinePasteNote _pasteNote = OnlinePasteNote::None;
         /// The client has been in a room (lobby or game) since the last request: the end of it goes to the `Menu`.
         bool _inRoom = false;

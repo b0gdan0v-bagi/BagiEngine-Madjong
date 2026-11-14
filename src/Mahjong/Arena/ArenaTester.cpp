@@ -106,7 +106,7 @@ namespace BECore::Mahjong::Arena {
         return hash;
     }
 
-    eastl::string ValidateTesterBots(const eastl::vector<ArenaPlayer>& bots) {
+    String ValidateTesterBots(const eastl::vector<ArenaPlayer>& bots) {
         if (bots.empty()) {
             return "no bot to compare the people with";
         }
@@ -118,12 +118,12 @@ namespace BECore::Mahjong::Arena {
         return {};
     }
 
-    std::expected<TesterMatch, eastl::string> AnalyzeTesterMatch(StringView logName, const eastl::vector<MatchLogEvent>& events, const eastl::vector<ArenaPlayer>& bots) {
+    std::expected<TesterMatch, String> AnalyzeTesterMatch(StringView logName, const eastl::vector<MatchLogEvent>& events, const eastl::vector<ArenaPlayer>& bots) {
         const eastl::vector<ActionRef> refs = ActionRefs(events);
         TesterMatch match;
         match.bots.resize(bots.size());
         for (const auto& [hand, seat] : PersonTurns(refs)) {
-            const std::expected<eastl::vector<Analyzer::LogPosition>, eastl::string> positions = Analyzer::PositionsOfSeat(events, hand, seat);
+            const std::expected<eastl::vector<Analyzer::LogPosition>, String> positions = Analyzer::PositionsOfSeat(events, hand, seat);
             if (!positions.has_value()) {
                 return std::unexpected(Format("{}: {}", logName, positions.error().c_str()));
             }
@@ -142,7 +142,7 @@ namespace BECore::Mahjong::Arena {
                     ++count.decisions;
                     count.equal += choice.equal ? 1 : 0;
                     if (bot == 0 && !choice.equal) {
-                        match.differences.push_back({eastl::string(logName.data(), logName.size()), position.hand, position.actionIndex, position.seat, position.logged, choice.chosen});
+                        match.differences.push_back({String(logName.data(), logName.size()), position.hand, position.actionIndex, position.seat, position.logged, choice.chosen});
                     }
                 }
             }

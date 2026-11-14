@@ -81,8 +81,8 @@ namespace BECore::Mahjong {
 
     TextEntry::TextEntry(Kind kind) : _kind(kind) {}
 
-    eastl::vector<eastl::string> TextEntry::Pad(const UIStrings& strings) const {
-        eastl::vector<eastl::string> keys;
+    eastl::vector<String> TextEntry::Pad(const UIStrings& strings) const {
+        eastl::vector<String> keys;
         keys.reserve(kPadMaxKeys);
         if (_kind == Kind::Code) {
             for (const char c : RoomLimits::kRoomCodeAlphabet) {
@@ -90,7 +90,7 @@ namespace BECore::Mahjong {
             }
             return keys;
         }
-        const eastl::string letters = Tr(strings, kPadLettersKey);
+        const String letters = Tr(strings, kPadLettersKey);
         size_t pos = 0;
         while (pos < letters.size() && keys.size() < kPadMaxKeys) {
             const size_t start = pos;
@@ -183,13 +183,13 @@ namespace BECore::Mahjong {
         return std::nullopt;
     }
 
-    Optional<eastl::string> TextEntry::CleanRoomCode(StringView text) {
+    Optional<String> TextEntry::CleanRoomCode(StringView text) {
         if (text.empty() || text.size() > kMaxPasteBytes) {
             return std::nullopt;
         }
 
         // The whole text is one code, written with spaces or dashes, maybe longer than a code
-        eastl::string squashed;
+        String squashed;
         bool onlyCode = true;
         for (const char c : text) {
             if (IsPasteSeparator(c)) {
@@ -206,11 +206,11 @@ namespace BECore::Mahjong {
             if (squashed.size() < RoomLimits::kRoomCodeLength) {
                 return std::nullopt;
             }
-            return eastl::string(squashed.data(), RoomLimits::kRoomCodeLength);
+            return String(squashed.data(), RoomLimits::kRoomCodeLength);
         }
 
         // A sentence: the one word of the code's length that is made of the code's characters
-        Optional<eastl::string> found;
+        Optional<String> found;
         size_t pos = 0;
         while (pos < text.size()) {
             if (!IsAsciiAlphanumeric(text[pos])) {
@@ -224,7 +224,7 @@ namespace BECore::Mahjong {
             if (pos - start != RoomLimits::kRoomCodeLength) {
                 continue;
             }
-            eastl::string word;
+            String word;
             for (size_t i = start; i < pos; ++i) {
                 const Optional<char> letter = CodeLetter(text[i]);
                 if (!letter) {
@@ -243,7 +243,7 @@ namespace BECore::Mahjong {
         return found;
     }
 
-    eastl::string TextEntry::DefaultName(const UIStrings& strings) {
+    String TextEntry::DefaultName(const UIStrings& strings) {
         return Tr(strings, kDefaultNameKey);
     }
 

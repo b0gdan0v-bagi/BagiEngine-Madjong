@@ -12,7 +12,7 @@ namespace BECore::Mahjong {
     /// (empty: none). The nickname goes into a log only while the consent is `Granted`; keeping it here is not sending it.
     struct UploadPrefs {
         UploadConsent consent = UploadConsent::Unasked;
-        eastl::string nickname;
+        String nickname;
 
         [[nodiscard]] bool operator==(const UploadPrefs& other) const = default;
     };
@@ -25,7 +25,7 @@ namespace BECore::Mahjong {
     [[nodiscard]] UploadPrefs ParseUploadPrefs(StringView text);
 
     /// The text of the file for `prefs`; `ParseUploadPrefs` of it gives `prefs` back (a nickname `TextEntry` refuses is left out)
-    [[nodiscard]] eastl::string FormatUploadPrefs(const UploadPrefs& prefs);
+    [[nodiscard]] String FormatUploadPrefs(const UploadPrefs& prefs);
 
     /// The most bytes of the file that are read (a real one is under a hundred)
     inline constexpr size_t kMaxUploadPrefsBytes = 1024;

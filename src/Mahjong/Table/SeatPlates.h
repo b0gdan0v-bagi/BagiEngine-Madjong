@@ -23,7 +23,7 @@ namespace BECore::Mahjong {
         Seat seat = 0;
         /// "Seat 2" and, for the person at a table with exactly one person, the word "You" (`SeatLabel` without the wind); in a room the name of the player
         /// (a computer keeps its number) and "You" on the viewer's seat.
-        eastl::string name;
+        String name;
         /// A person or a computer (`session.KindOf`): the emblem of the plate.
         SeatKind kind = SeatKind::Person;
         /// The level of the seat (`session.LevelOf`); a person has one too, which the emblem ignores.

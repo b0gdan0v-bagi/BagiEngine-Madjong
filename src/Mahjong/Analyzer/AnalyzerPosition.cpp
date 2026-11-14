@@ -10,18 +10,18 @@ namespace BECore::Mahjong::Analyzer {
 
     namespace {
 
-        using Failure = std::unexpected<eastl::string>;
+        using Failure = std::unexpected<String>;
 
         // ---------------------------------------------------------------------------------------------------------------------------
         // Positions from a log
         // ---------------------------------------------------------------------------------------------------------------------------
 
-        eastl::string ReplayText(const ReplayError& error) {
+        String ReplayText(const ReplayError& error) {
             return Format("the log does not replay: event {} ({})", error.index, EnumUtils<ReplayProblem>::ToString(error.problem));
         }
 
         /// The indexes of the `Action` events of hand number `hand`, in log order. Hand K is what follows K-1 `Settlement` events.
-        std::expected<eastl::vector<size_t>, eastl::string> ActionEventsOfHand(const eastl::vector<MatchLogEvent>& events, int hand) {
+        std::expected<eastl::vector<size_t>, String> ActionEventsOfHand(const eastl::vector<MatchLogEvent>& events, int hand) {
             int settlements = 0;
             for (const MatchLogEvent& event : events) {
                 settlements += event.kind == MatchLogKind::Settlement ? 1 : 0;
@@ -45,7 +45,7 @@ namespace BECore::Mahjong::Analyzer {
         }
 
         /// A fresh `Match` that has replayed the events before `end`.
-        std::expected<Match, eastl::string> ReplayedBefore(const eastl::vector<MatchLogEvent>& events, size_t end) {
+        std::expected<Match, String> ReplayedBefore(const eastl::vector<MatchLogEvent>& events, size_t end) {
             const eastl::vector<MatchLogEvent> prefix(events.begin(), events.begin() + static_cast<ptrdiff_t>(end));
             Match match;
             if (const ReplayStatus replayed = ReplayMatchLog(prefix, match); !replayed) {
@@ -54,7 +54,7 @@ namespace BECore::Mahjong::Analyzer {
             return match;
         }
 
-        std::expected<LogPosition, eastl::string> MakeLogPosition(const HandModel& model, const MatchLogEvent& event, size_t eventIndex, int hand, int actionIndex) {
+        std::expected<LogPosition, String> MakeLogPosition(const HandModel& model, const MatchLogEvent& event, size_t eventIndex, int hand, int actionIndex) {
             if (!IsSeat(event.seat)) {
                 return Failure(Format("event {} names seat {}, which is no seat", eventIndex, event.seat));
             }
@@ -75,7 +75,7 @@ namespace BECore::Mahjong::Analyzer {
         // ---------------------------------------------------------------------------------------------------------------------------
 
         using Words = eastl::vector<StringView>;
-        using Problem = Optional<eastl::string>;
+        using Problem = Optional<String>;
 
         constexpr char kCommentMark = '#';
         constexpr StringView kBlanks = " \t\r";
@@ -85,7 +85,7 @@ namespace BECore::Mahjong::Analyzer {
         constexpr int kMeldLimit = kSetsInHand;
         constexpr int kBonusCopies = 1;
 
-        eastl::string LineError(int line, const eastl::string& text) {
+        String LineError(int line, const String& text) {
             return Format("line {}: {}", line, text.c_str());
         }
 
@@ -394,20 +394,20 @@ namespace BECore::Mahjong::Analyzer {
         }
 
         /// The state of the position as the text describes it, with the unseen tiles dealt in a fixed order.
-        std::expected<HandState, eastl::string> BuildState(Draft& draft) {
+        std::expected<HandState, String> BuildState(Draft& draft) {
             if (draft.handLine == 0) {
-                return Failure(eastl::string("the position has no 'hand' line"));
+                return Failure(String("the position has no 'hand' line"));
             }
             const Phase phase = draft.phase.value_or(Phase::Discard);
             const bool claim = phase == Phase::Claim;
             if (claim && draft.pendingLine == 0) {
-                return Failure(eastl::string("phase claim needs a 'pending <tile> from <seat>' line"));
+                return Failure(String("phase claim needs a 'pending <tile> from <seat>' line"));
             }
             if (!claim && draft.pendingLine != 0) {
-                return Failure(LineError(draft.pendingLine, eastl::string("'pending' belongs to phase claim")));
+                return Failure(LineError(draft.pendingLine, String("'pending' belongs to phase claim")));
             }
             if (claim && draft.hasDrew) {
-                return Failure(LineError(draft.drewLine, eastl::string("'drew' belongs to phase discard")));
+                return Failure(LineError(draft.drewLine, String("'drew' belongs to phase discard")));
             }
             if (claim && draft.pendingFrom == draft.seat) {
                 return Failure(LineError(draft.pendingLine, Format("the seat cannot claim its own discard (seat {})", draft.seat)));
@@ -540,9 +540,9 @@ namespace BECore::Mahjong::Analyzer {
 
         /// The model of `state`; a claim window needs to know which of the other seats could claim, which the hands decide and `Restore`
         /// checks, so the guesses are tried from "nobody else" up.
-        std::expected<HandModel, eastl::string> BuildModel(HandState state, Seat viewer) {
+        std::expected<HandModel, String> BuildModel(HandState state, Seat viewer) {
             if (state.phase != Phase::Claim) {
-                std::expected<HandModel, eastl::string> model = HandModel::Restore(eastl::move(state));
+                std::expected<HandModel, String> model = HandModel::Restore(eastl::move(state));
                 if (!model.has_value()) {
                     return Failure(Format("the position cannot exist: {}", model.error().c_str()));
                 }
@@ -554,14 +554,14 @@ namespace BECore::Mahjong::Analyzer {
                     others.push_back(seat);
                 }
             }
-            eastl::string firstProblem;
+            String firstProblem;
             for (unsigned mask = 0; mask < (1U << others.size()); ++mask) {
                 HandState trial = state;
                 trial.claimStatus[viewer] = ClaimStatus::Waiting;
                 for (size_t i = 0; i < others.size(); ++i) {
                     trial.claimStatus[others[i]] = ((mask >> i) & 1U) != 0 ? ClaimStatus::Waiting : ClaimStatus::NotInWindow;
                 }
-                std::expected<HandModel, eastl::string> model = HandModel::Restore(eastl::move(trial));
+                std::expected<HandModel, String> model = HandModel::Restore(eastl::move(trial));
                 if (model.has_value()) {
                     return model;
                 }
@@ -574,8 +574,8 @@ namespace BECore::Mahjong::Analyzer {
 
     }  // namespace
 
-    std::expected<LogPosition, eastl::string> PositionFromLog(const eastl::vector<MatchLogEvent>& events, int hand, int actionIndex) {
-        const std::expected<eastl::vector<size_t>, eastl::string> actions = ActionEventsOfHand(events, hand);
+    std::expected<LogPosition, String> PositionFromLog(const eastl::vector<MatchLogEvent>& events, int hand, int actionIndex) {
+        const std::expected<eastl::vector<size_t>, String> actions = ActionEventsOfHand(events, hand);
         if (!actions.has_value()) {
             return Failure(actions.error());
         }
@@ -583,18 +583,18 @@ namespace BECore::Mahjong::Analyzer {
             return Failure(Format("action {} is out of range: hand {} has {} actions (numbered from 0)", actionIndex, hand, actions->size()));
         }
         const size_t target = (*actions)[static_cast<size_t>(actionIndex)];
-        const std::expected<Match, eastl::string> match = ReplayedBefore(events, target);
+        const std::expected<Match, String> match = ReplayedBefore(events, target);
         if (!match.has_value()) {
             return Failure(match.error());
         }
         return MakeLogPosition(match->Hand(), events[target], target, hand, actionIndex);
     }
 
-    std::expected<eastl::vector<LogPosition>, eastl::string> PositionsOfSeat(const eastl::vector<MatchLogEvent>& events, int hand, Seat seat) {
+    std::expected<eastl::vector<LogPosition>, String> PositionsOfSeat(const eastl::vector<MatchLogEvent>& events, int hand, Seat seat) {
         if (!IsSeat(seat)) {
             return Failure(Format("{} is no seat (0..3)", seat));
         }
-        const std::expected<eastl::vector<size_t>, eastl::string> actions = ActionEventsOfHand(events, hand);
+        const std::expected<eastl::vector<size_t>, String> actions = ActionEventsOfHand(events, hand);
         if (!actions.has_value()) {
             return Failure(actions.error());
         }
@@ -604,7 +604,7 @@ namespace BECore::Mahjong::Analyzer {
                 return Failure(Format("the actions of hand {} are not contiguous in the log (event {})", hand, (*actions)[i]));
             }
         }
-        std::expected<Match, eastl::string> match = ReplayedBefore(events, actions->front());
+        std::expected<Match, String> match = ReplayedBefore(events, actions->front());
         if (!match.has_value()) {
             return Failure(match.error());
         }
@@ -616,7 +616,7 @@ namespace BECore::Mahjong::Analyzer {
                 continue;  // a log from before windows settled early
             }
             if (event.seat == seat) {
-                std::expected<LogPosition, eastl::string> position = MakeLogPosition(match->Hand(), event, eventIndex, hand, static_cast<int>(i));
+                std::expected<LogPosition, String> position = MakeLogPosition(match->Hand(), event, eventIndex, hand, static_cast<int>(i));
                 if (!position.has_value()) {
                     return Failure(position.error());
                 }
@@ -632,7 +632,7 @@ namespace BECore::Mahjong::Analyzer {
         return positions;
     }
 
-    std::expected<TableView, eastl::string> ParsePosition(StringView text) {
+    std::expected<TableView, String> ParsePosition(StringView text) {
         eastl::vector<Words> lines;
         eastl::vector<int> numbers;
         SplitLines(text, lines, numbers);
@@ -642,11 +642,11 @@ namespace BECore::Mahjong::Analyzer {
                 return Failure(*problem);
             }
         }
-        std::expected<HandState, eastl::string> state = BuildState(draft);
+        std::expected<HandState, String> state = BuildState(draft);
         if (!state.has_value()) {
             return Failure(state.error());
         }
-        std::expected<HandModel, eastl::string> model = BuildModel(eastl::move(*state), draft.seat);
+        std::expected<HandModel, String> model = BuildModel(eastl::move(*state), draft.seat);
         if (!model.has_value()) {
             return Failure(model.error());
         }

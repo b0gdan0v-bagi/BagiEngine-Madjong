@@ -14,6 +14,6 @@ namespace BECore::Mahjong {
      * placeholders `{seat}` and `{tile}`, in the current language of `strings`. Public data only: the sentence of a concealed kong names no
      * tile (the move has none). Empty for a move of no seat.
      */
-    [[nodiscard]] eastl::string MoveText(const UIStrings& strings, const HandMove& move, Wind seatWind);
+    [[nodiscard]] String MoveText(const UIStrings& strings, const HandMove& move, Wind seatWind);
 
 }  // namespace BECore::Mahjong

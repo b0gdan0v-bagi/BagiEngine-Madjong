@@ -96,7 +96,7 @@ namespace BECore::Mahjong {
     struct OnlineViewError {
         OnlineViewErrorKind kind = OnlineViewErrorKind::Malformed;
         /// Names the key, as in `seats[2].melds[0].kind: has to be a string`. For a screen's notice the kind is enough; the text is for the log.
-        eastl::string text;
+        String text;
     };
 
     /**

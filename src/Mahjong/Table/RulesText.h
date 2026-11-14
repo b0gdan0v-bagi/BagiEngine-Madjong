@@ -54,11 +54,11 @@ namespace BECore::Mahjong {
 
     /// One page of the rules in the current language.
     struct RulesPage {
-        eastl::string title;
+        String title;
         /// The prose, one label each, at most `kRulesMaxLines` of at most `kRulesMaxLineLength` code points.
-        eastl::vector<eastl::string> lines;
+        eastl::vector<String> lines;
         /// Short items with a number ("Dragon set: x2"), at most `kRulesMaxItems`, shown in `kRulesItemColumns` columns.
-        eastl::vector<eastl::string> items;
+        eastl::vector<String> items;
         /// The examples: at most `kRulesMaxTileRows` rows of at most `kRulesMaxRowTiles` playable tiles each (no text, so no language).
         eastl::vector<eastl::vector<Tile>> tileRows;
     };
@@ -70,7 +70,7 @@ namespace BECore::Mahjong {
     [[nodiscard]] RulesPage FormatRulesPage(const UIStrings& strings, int page);
 
     /// "Page 3 of 13" (key `rules.pager`, `{n}` is `page + 1`, `{total}` the number of pages); the page is clamped into the range.
-    [[nodiscard]] eastl::string RulesPagerText(const UIStrings& strings, int page);
+    [[nodiscard]] String RulesPagerText(const UIStrings& strings, int page);
 
     /// The height in view units that a page needs inside the plate: the blocks it uses (the title and the pager always, the lines, the items
     /// in `kRulesItemColumns` columns, each tile row) with `kRulesBlockGap` between them. A page whose height is above `kRulesInnerHeight`

@@ -22,7 +22,7 @@ namespace BECore::Mahjong {
         }
 
         /// The local time as `2026-11-09T14-03-55` (no colons: the name is a file name on every platform).
-        std::string TimeStamp() {
+        String TimeStamp() {
             const std::time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
             std::tm local{};
 #ifdef _WIN32
@@ -38,7 +38,7 @@ namespace BECore::Mahjong {
 
         /// `<directory>/<stamp>_seed<seed>.jsonl`, or with `-2`, `-3` ... before the extension while that file exists.
         std::filesystem::path FreeFileName(const std::filesystem::path& directory, uint32_t seed) {
-            const std::string stem = Format("{}_seed{}", TimeStamp(), seed).c_str();
+            const String stem = Format("{}_seed{}", TimeStamp(), seed);
             std::filesystem::path path = directory / Format("{}{}", stem, kFileExtension).c_str();
             std::error_code error;
             for (int copy = kFirstCopySuffix; std::filesystem::exists(path, error) && copy < kMaxCopySuffix; ++copy) {
@@ -112,8 +112,7 @@ namespace BECore::Mahjong {
     }
 
     void MatchLogWriter::Write(const MatchLogEvent& event) {
-        const std::string line = EventToJson(event).dump();
-        _file << line << '\n';
+        _file << EventToJson(event).dump() << '\n';
         _file.flush();
         if (!_file) {
             LOG_WARNING(Format("MatchLogWriter: writing to '{}' failed, the rest of this match is not logged", _path.string()));

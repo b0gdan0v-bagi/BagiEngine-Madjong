@@ -111,7 +111,7 @@ namespace BECore::Mahjong {
         // What the rows of `Options` show now
         bool _rowsPublished = false;
         UploadConsent _publishedConsent = UploadConsent::Unasked;
-        eastl::string _publishedNickname;
+        String _publishedNickname;
         uint64_t _publishedStrings = 0;
 
         static MahjongUploadComponent* s_active;

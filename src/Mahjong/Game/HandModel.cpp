@@ -190,7 +190,7 @@ namespace BECore::Mahjong {
         return state;
     }
 
-    std::expected<HandModel, eastl::string> HandModel::Restore(HandState state) {
+    std::expected<HandModel, String> HandModel::Restore(HandState state) {
         if (EastOf(state.seatWinds) == kNoSeat) {
             return std::unexpected(Format("the seat winds do not hold East exactly once"));
         }

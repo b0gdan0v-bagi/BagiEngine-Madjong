@@ -13,7 +13,7 @@ namespace BECore::Mahjong {
     using SeatSetup = eastl::array<SeatKind, kSeatCount>;
 
     /// The name of each seat's player, indexed by seat; empty where a table has none (a local game names no one).
-    using SeatNames = eastl::array<eastl::string, kSeatCount>;
+    using SeatNames = eastl::array<String, kSeatCount>;
 
     /// Seat 0 is a person, the others are computers.
     inline constexpr SeatSetup kDefaultSeatSetup{SeatKind::Person, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
@@ -40,9 +40,9 @@ namespace BECore::Mahjong {
     /// was given (`TableSession::SetLogOrigin`).
     struct MatchLogOrigin {
         MatchPlatform platform = MatchPlatform::Unknown;
-        eastl::string build;        // the build id (a short git hash), empty when not known
-        eastl::string gameVersion;  // the version for testers, empty when not known
-        eastl::string nickname;     // what a tester typed to be found by (only after a consent), empty: none
+        String build;        // the build id (a short git hash), empty when not known
+        String gameVersion;  // the version for testers, empty when not known
+        String nickname;     // what a tester typed to be found by (only after a consent), empty: none
 
         bool operator==(const MatchLogOrigin&) const = default;
     };
@@ -215,7 +215,7 @@ namespace BECore::Mahjong {
             return _remote;
         }
         /// The name of the player of `seat` that `ShowRemote` gave; empty for a local game and for a number that is no seat.
-        [[nodiscard]] const eastl::string& NameOf(Seat seat) const noexcept;
+        [[nodiscard]] const String& NameOf(Seat seat) const noexcept;
 
         /// The level of each seat of the match started last (the entries of person seats are kept, they play nothing); all `kDefaultLevel`
         /// before the first start.

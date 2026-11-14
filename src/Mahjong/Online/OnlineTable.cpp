@@ -26,7 +26,7 @@ namespace BECore::Mahjong {
         constexpr NamedValue<WinSource> kWinSources[] = {{"discard", WinSource::Discard}, {"self_draw", WinSource::SelfDraw}, {"robbed_kong", WinSource::RobbedKong}};
         constexpr NamedValue<SessionPhase> kSessionPhases[] = {{"playing", SessionPhase::Playing}, {"hand_over", SessionPhase::HandOver}, {"match_over", SessionPhase::MatchOver}};
 
-        StringView ViewOf(const eastl::string& text) {
+        StringView ViewOf(const String& text) {
             return text;
         }
 
@@ -78,7 +78,7 @@ namespace BECore::Mahjong {
                 }
                 _failed = true;
                 _error.kind = kind;
-                eastl::string& text = _error.text;
+                String& text = _error.text;
                 text.clear();
                 for (const PathPart& part : _path) {
                     if (!text.empty()) {
@@ -177,11 +177,11 @@ namespace BECore::Mahjong {
                 return true;
             }
 
-            bool GetString(const Json& object, StringView key, eastl::string& out) {
+            bool GetString(const Json& object, StringView key, String& out) {
                 if (Need(object, key) == nullptr) {
                     return false;
                 }
-                const Optional<eastl::string> text = GetJsonString(object, key);
+                const Optional<String> text = GetJsonString(object, key);
                 if (!text) {
                     return Fail(key, "has to be a string");
                 }
@@ -221,7 +221,8 @@ namespace BECore::Mahjong {
                 if (!item.is_string()) {
                     return Fail(key, "has to be a string with a tile");
                 }
-                const std::string& text = item.get_ref<const std::string&>();
+                //-NoStd: Json holds its strings as std::string
+                const auto& text = item.get_ref<const std::string&>();
                 const Optional<Tile> tile = TryParse(FromStd(text));
                 if (!tile) {
                     return Fail(key, Format("'{}' is not a tile", text.c_str()).c_str());
@@ -535,7 +536,7 @@ namespace BECore::Mahjong {
             const Json& _actions;
             OnlineTable& _t;
             eastl::vector<PathPart> _path;
-            eastl::string _word;
+            String _word;
             OnlineViewError _error;
             bool _failed = false;
         };

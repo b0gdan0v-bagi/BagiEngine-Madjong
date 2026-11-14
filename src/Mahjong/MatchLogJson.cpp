@@ -74,18 +74,18 @@ namespace BECore::Mahjong {
 
         // ----- reading: every read is checked, the error names the member -----
 
-        using Failure = std::unexpected<eastl::string>;
+        using Failure = std::unexpected<String>;
 
         Failure Fail(StringView member, StringView what) {
             return std::unexpected(Format("{}: {}", member, what));
         }
 
-        StringView EaView(const eastl::string& text) {
+        StringView EaView(const String& text) {
             return StringView(text.c_str(), text.size());
         }
 
         /// An integer member within [low, high].
-        std::expected<int64_t, eastl::string> ReadInt(const Json& object, StringView key, int64_t low, int64_t high) {
+        std::expected<int64_t, String> ReadInt(const Json& object, StringView key, int64_t low, int64_t high) {
             const Optional<int64_t> value = GetJsonInt(object, key);
             if (!value) {
                 return Fail(key, "has to be an integer");
@@ -96,7 +96,7 @@ namespace BECore::Mahjong {
             return *value;
         }
 
-        std::expected<int, eastl::string> ReadIntMember(const Json& object, StringView key) {
+        std::expected<int, String> ReadIntMember(const Json& object, StringView key) {
             const auto value = ReadInt(object, key, std::numeric_limits<int>::min(), std::numeric_limits<int>::max());
             if (!value) {
                 return std::unexpected(value.error());
@@ -104,7 +104,7 @@ namespace BECore::Mahjong {
             return static_cast<int>(*value);
         }
 
-        std::expected<bool, eastl::string> ReadBool(const Json& object, StringView key) {
+        std::expected<bool, String> ReadBool(const Json& object, StringView key) {
             const Optional<bool> value = GetJsonBool(object, key);
             if (!value) {
                 return Fail(key, "has to be true or false");
@@ -112,15 +112,15 @@ namespace BECore::Mahjong {
             return *value;
         }
 
-        std::expected<eastl::string, eastl::string> ReadString(const Json& object, StringView key) {
-            const Optional<eastl::string> value = GetJsonString(object, key);
+        std::expected<String, String> ReadString(const Json& object, StringView key) {
+            const Optional<String> value = GetJsonString(object, key);
             if (!value) {
                 return Fail(key, "has to be a string");
             }
             return *value;
         }
 
-        std::expected<Seat, eastl::string> ReadSeat(const Json& object, StringView key) {
+        std::expected<Seat, String> ReadSeat(const Json& object, StringView key) {
             const auto value = ReadInt(object, key, 0, kSeatCount - 1);
             if (!value) {
                 return std::unexpected(value.error());
@@ -129,7 +129,7 @@ namespace BECore::Mahjong {
         }
 
         /// A seat, or null for no seat (`kNoSeat`).
-        std::expected<Seat, eastl::string> ReadSeatOrNull(const Json& object, StringView key) {
+        std::expected<Seat, String> ReadSeatOrNull(const Json& object, StringView key) {
             const Json* member = FindJsonMember(object, key);
             if (member != nullptr && member->is_null()) {
                 return kNoSeat;
@@ -137,15 +137,15 @@ namespace BECore::Mahjong {
             return ReadSeat(object, key);
         }
 
-        std::expected<Wind, eastl::string> ReadWindText(const eastl::string& text, StringView member) {
-            const Optional<Wind> wind = EnumUtils<Wind>::Cast(EaView(text));
+        std::expected<Wind, String> ReadWindText(StringView text, StringView member) {
+            const Optional<Wind> wind = EnumUtils<Wind>::Cast(text);
             if (!wind) {
                 return Fail(member, Format("is not a wind: \"{}\"", text).c_str());
             }
             return *wind;
         }
 
-        std::expected<Wind, eastl::string> ReadWind(const Json& object, StringView key) {
+        std::expected<Wind, String> ReadWind(const Json& object, StringView key) {
             const auto text = ReadString(object, key);
             if (!text) {
                 return std::unexpected(text.error());
@@ -154,7 +154,7 @@ namespace BECore::Mahjong {
         }
 
         /// The array member `key`, or the error.
-        std::expected<const Json*, eastl::string> ReadArray(const Json& object, StringView key, size_t size) {
+        std::expected<const Json*, String> ReadArray(const Json& object, StringView key, size_t size) {
             const Json* member = FindJsonMember(object, key);
             if (member == nullptr || !member->is_array()) {
                 return Fail(key, "has to be an array");
@@ -166,11 +166,12 @@ namespace BECore::Mahjong {
         }
 
         /// A tile from the string at `item`, `member` names it in the error.
-        std::expected<Tile, eastl::string> ReadTileItem(const Json& item, StringView member) {
+        std::expected<Tile, String> ReadTileItem(const Json& item, StringView member) {
             if (!item.is_string()) {
                 return Fail(member, "has to hold tiles as strings");
             }
-            const std::string& text = item.get_ref<const std::string&>();
+            //-NoStd: Json holds its strings as std::string
+            const auto& text = item.get_ref<const std::string&>();
             const Optional<Tile> tile = TryParse(FromStd(text));
             if (!tile) {
                 return Fail(member, Format("is not a tile: \"{}\"", text).c_str());
@@ -178,7 +179,7 @@ namespace BECore::Mahjong {
             return *tile;
         }
 
-        std::expected<eastl::vector<Tile>, eastl::string> ReadTiles(const Json& object, StringView key) {
+        std::expected<eastl::vector<Tile>, String> ReadTiles(const Json& object, StringView key) {
             const Json* member = FindJsonMember(object, key);
             if (member == nullptr || !member->is_array()) {
                 return Fail(key, "has to be an array of tiles");
@@ -209,7 +210,7 @@ namespace BECore::Mahjong {
             return item.get<int64_t>();
         }
 
-        std::expected<SeatScores, eastl::string> ReadSeatScores(const Json& object, StringView key) {
+        std::expected<SeatScores, String> ReadSeatScores(const Json& object, StringView key) {
             const auto list = ReadArray(object, key, kSeatCount);
             if (!list) {
                 return std::unexpected(list.error());
@@ -227,7 +228,7 @@ namespace BECore::Mahjong {
         }
 
         /// The `levels` of a version 4 `start`: four integers 1..10.
-        std::expected<SeatLevels, eastl::string> ReadSeatLevels(const Json& object, StringView key) {
+        std::expected<SeatLevels, String> ReadSeatLevels(const Json& object, StringView key) {
             const auto list = ReadArray(object, key, kSeatCount);
             if (!list) {
                 return std::unexpected(list.error());
@@ -247,9 +248,9 @@ namespace BECore::Mahjong {
 
         /// The `nickname` of a version 6 `start`: absent is none; a string of at most `kMaxMatchLogNicknameBytes` bytes without a control
         /// character is kept, anything else is refused.
-        std::expected<eastl::string, eastl::string> ReadNickname(const Json& object) {
+        std::expected<String, String> ReadNickname(const Json& object) {
             if (FindJsonMember(object, kNicknameKey) == nullptr) {
-                return eastl::string();
+                return String();
             }
             auto nickname = ReadString(object, kNicknameKey);
             if (!nickname) {
@@ -268,7 +269,7 @@ namespace BECore::Mahjong {
         }
 
         /// The `platform`, `build` and `gameVersion` of a version 5 `start`.
-        std::expected<MatchLogOrigin, eastl::string> ReadOrigin(const Json& object) {
+        std::expected<MatchLogOrigin, String> ReadOrigin(const Json& object) {
             const auto platform = ReadString(object, "platform");
             if (!platform) {
                 return std::unexpected(platform.error());
@@ -294,7 +295,7 @@ namespace BECore::Mahjong {
             return origin;
         }
 
-        std::expected<MahjongSettings, eastl::string> ReadSettings(const Json& object) {
+        std::expected<MahjongSettings, String> ReadSettings(const Json& object) {
             const Json* member = FindJsonMember(object, "settings");
             if (member == nullptr || !member->is_object()) {
                 return Fail("settings", "has to be an object");
@@ -328,7 +329,7 @@ namespace BECore::Mahjong {
             return settings;
         }
 
-        std::expected<MatchLogEvent, eastl::string> StartFromJson(const Json& json) {
+        std::expected<MatchLogEvent, String> StartFromJson(const Json& json) {
             MatchLogEvent event;
             event.kind = MatchLogKind::Start;
             const auto version = ReadIntMember(json, "version");
@@ -402,7 +403,7 @@ namespace BECore::Mahjong {
             return event;
         }
 
-        std::expected<MatchLogEvent, eastl::string> HandFromJson(const Json& json) {
+        std::expected<MatchLogEvent, String> HandFromJson(const Json& json) {
             MatchLogEvent event;
             event.kind = MatchLogKind::Hand;
             const auto number = ReadInt(json, "number", 0, std::numeric_limits<int>::max());
@@ -430,7 +431,8 @@ namespace BECore::Mahjong {
                 if (!item.is_string()) {
                     return Fail("winds", "has to hold wind names as strings");
                 }
-                const auto wind = ReadWindText(eastl::string(item.get_ref<const std::string&>().c_str()), "winds");
+                //-NoStd: Json holds its strings as std::string
+                const auto wind = ReadWindText(FromStd(item.get_ref<const std::string&>()), "winds");
                 if (!wind) {
                     return std::unexpected(wind.error());
                 }
@@ -458,7 +460,7 @@ namespace BECore::Mahjong {
             return event;
         }
 
-        std::expected<MatchLogEvent, eastl::string> ActionFromEventJson(const Json& json) {
+        std::expected<MatchLogEvent, String> ActionFromEventJson(const Json& json) {
             MatchLogEvent event;
             event.kind = MatchLogKind::Action;
             const auto seat = ReadSeat(json, "seat");
@@ -492,7 +494,7 @@ namespace BECore::Mahjong {
             return event;
         }
 
-        std::expected<MatchLogEvent, eastl::string> SettlementFromJson(const Json& json) {
+        std::expected<MatchLogEvent, String> SettlementFromJson(const Json& json) {
             MatchLogEvent event;
             event.kind = MatchLogKind::Settlement;
             HandSettlement& settlement = event.settlement;
@@ -535,7 +537,7 @@ namespace BECore::Mahjong {
             return event;
         }
 
-        std::expected<MatchLogEvent, eastl::string> EndFromJson(const Json& json) {
+        std::expected<MatchLogEvent, String> EndFromJson(const Json& json) {
             MatchLogEvent event;
             event.kind = MatchLogKind::End;
             const auto scores = ReadSeatScores(json, "scores");
@@ -635,9 +637,9 @@ namespace BECore::Mahjong {
         return json;
     }
 
-    std::expected<MatchLogEvent, eastl::string> EventFromJson(const Json& json) {
+    std::expected<MatchLogEvent, String> EventFromJson(const Json& json) {
         if (!json.is_object()) {
-            return std::unexpected(eastl::string("the line has to be a JSON object"));
+            return std::unexpected(String("the line has to be a JSON object"));
         }
         const auto name = ReadString(json, "event");
         if (!name) {
@@ -662,7 +664,7 @@ namespace BECore::Mahjong {
         return Fail("event", Format("is not a known event: \"{}\"", *name).c_str());
     }
 
-    std::expected<eastl::vector<MatchLogEvent>, eastl::string> ParseMatchLog(StringView lines) {
+    std::expected<eastl::vector<MatchLogEvent>, String> ParseMatchLog(StringView lines) {
         eastl::vector<MatchLogEvent> events;
         size_t lineNumber = 0;
         size_t begin = 0;
@@ -681,7 +683,7 @@ namespace BECore::Mahjong {
             if (!parsed) {
                 return std::unexpected(Format("line {}: not JSON: {}", lineNumber, parsed.error().message));
             }
-            std::expected<MatchLogEvent, eastl::string> event = EventFromJson(*parsed);
+            std::expected<MatchLogEvent, String> event = EventFromJson(*parsed);
             if (!event) {
                 return std::unexpected(Format("line {}: {}", lineNumber, event.error()));
             }

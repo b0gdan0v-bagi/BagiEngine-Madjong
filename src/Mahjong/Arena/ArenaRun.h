@@ -106,7 +106,7 @@ namespace BECore::Mahjong::Arena {
     /// Whether `config` can be played: empty when it can, else the text that says why not (no focus player, fewer than one seed, a range
     /// that runs past the largest seed, `jobs` outside 1 to `kMaxJobs`). `RunArena` refuses a config with this text; a front end asks first to tell a bad argument from
     /// a refused action.
-    [[nodiscard]] eastl::string ValidateArenaConfig(const ArenaConfig& config);
+    [[nodiscard]] String ValidateArenaConfig(const ArenaConfig& config);
 
     /**
      * @brief Plays the config and returns the totals and the per-seed rows of every focus player.
@@ -122,14 +122,14 @@ namespace BECore::Mahjong::Arena {
      * model (the error of `PlayArenaHand`, with the name of the focus player in front): the run stops, and the error is that of the
      * lowest seed (then the first focus player in the list) that failed, whatever the number of threads.
      */
-    [[nodiscard]] std::expected<ArenaResult, eastl::string> RunArena(const ArenaConfig& config);
+    [[nodiscard]] std::expected<ArenaResult, String> RunArena(const ArenaConfig& config);
 
     /// How a hand is played: `PlayArenaHand` for the program. `RunArena` calls it from several threads when `jobs` is above 1, so it must
     /// not write anything shared. `worlds` is the loop of the calling seed thread's `WorldThreads`, for the search decisions of the hand
     /// (`PlayArenaHand`'s fourth parameter); it lives for the call.
-    using ArenaHandPlayer = std::function<std::expected<HandRecord, eastl::string>(uint32_t seed, const ArenaPlayers& players, bool timing, const WorldLoop& worlds)>;
+    using ArenaHandPlayer = std::function<std::expected<HandRecord, String>(uint32_t seed, const ArenaPlayers& players, bool timing, const WorldLoop& worlds)>;
 
     /// `RunArena` with another way to play a hand (a seam for the tests: a hand that fails on chosen seeds). The error rules are the same.
-    [[nodiscard]] std::expected<ArenaResult, eastl::string> RunArena(const ArenaConfig& config, const ArenaHandPlayer& playHand);
+    [[nodiscard]] std::expected<ArenaResult, String> RunArena(const ArenaConfig& config, const ArenaHandPlayer& playHand);
 
 }  // namespace BECore::Mahjong::Arena

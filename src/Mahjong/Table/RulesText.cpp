@@ -86,12 +86,12 @@ namespace BECore::Mahjong {
             RulesArgs& operator=(const RulesArgs&) = delete;
 
             /// The text of `key` with every placeholder filled.
-            [[nodiscard]] eastl::string Text(StringView key) const {
+            [[nodiscard]] String Text(StringView key) const {
                 return Tr(_strings, key, eastl::span<const WordArg>(_args.data(), _args.size()));
             }
 
         private:
-            void Add(StringView name, eastl::string value) {
+            void Add(StringView name, String value) {
                 _values.push_back({name, eastl::move(value)});
             }
             void Number(StringView name, long long value) {
@@ -99,7 +99,7 @@ namespace BECore::Mahjong {
             }
 
             const UIStrings& _strings;
-            eastl::vector<eastl::pair<StringView, eastl::string>> _values;
+            eastl::vector<eastl::pair<StringView, String>> _values;
             eastl::vector<WordArg> _args;
         };
 
@@ -138,10 +138,10 @@ namespace BECore::Mahjong {
             return {Row("2p 3p 4p 5s 5s 5s 7m 8m 9m Ew Ew 6p 7p")};
         }
 
-        using Items = eastl::vector<eastl::string>;
+        using Items = eastl::vector<String>;
 
         /// A line of the score as the score table prints it ("Pung of 5 Dots: 2", "Dragon set: x2"), with the numbers given by the caller.
-        eastl::string ScoreItem(const UIStrings& strings, ScoreKind kind, Tile tile, int points, int doubles) {
+        String ScoreItem(const UIStrings& strings, ScoreKind kind, Tile tile, int points, int doubles) {
             return ScoreLineText(strings, ScoreLine{kind, tile, points, doubles});
         }
 
@@ -166,8 +166,8 @@ namespace BECore::Mahjong {
             const Tile dragon = Tile::FromDragon(0);
             const int simplePung = kOpenSimplePungPoints;
             const int honourPung = simplePung * kHonourPointsFactor;
-            const auto open = [&](const eastl::string& line) { return Tr(strings, "rules.points.open", {{"line", line}}); };
-            const auto concealed = [&](const eastl::string& line) { return Tr(strings, "rules.points.concealed", {{"line", line}}); };
+            const auto open = [&](const String& line) { return Tr(strings, "rules.points.open", {{"line", line}}); };
+            const auto concealed = [&](const String& line) { return Tr(strings, "rules.points.concealed", {{"line", line}}); };
             Items items;
             items.push_back(open(ScoreItem(strings, ScoreKind::Pung, simple, simplePung, 0)));
             items.push_back(open(ScoreItem(strings, ScoreKind::Pung, terminal, honourPung, 0)));
@@ -293,7 +293,7 @@ namespace BECore::Mahjong {
         return out;
     }
 
-    eastl::string RulesPagerText(const UIStrings& strings, int page) {
+    String RulesPagerText(const UIStrings& strings, int page) {
         const int shown = std::clamp(page, 0, std::max(RulesPageCount() - 1, 0)) + 1;
         return Tr(strings, "rules.pager", {{"n", Format("{}", shown)}, {"total", Format("{}", RulesPageCount())}});
     }

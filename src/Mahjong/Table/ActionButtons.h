@@ -42,7 +42,7 @@ namespace BECore::Mahjong {
 
     /// The name of the element with a `UIImageComponent` that pictures tile `t` (0..`maxTiles` - 1) on the button, as the scene file has it: the element of
     /// the button, `Tile` and the number ("Chow1Tile2").
-    [[nodiscard]] inline eastl::string TileImageName(ButtonKind kind, int t) {
+    [[nodiscard]] inline String TileImageName(ButtonKind kind, int t) {
         return Format("{}Tile{}", SpecOf(kind).element, t);
     }
 
@@ -57,10 +57,10 @@ namespace BECore::Mahjong {
     [[nodiscard]] StringView HintKey(ButtonKind kind) noexcept;
 
     /// The word on the button in the current language of `strings`.
-    [[nodiscard]] eastl::string WordOf(const UIStrings& strings, ButtonKind kind);
+    [[nodiscard]] String WordOf(const UIStrings& strings, ButtonKind kind);
 
     /// The sentence that tells the player what the button does, in the current language of `strings` (never empty).
-    [[nodiscard]] eastl::string HintOf(const UIStrings& strings, ButtonKind kind);
+    [[nodiscard]] String HintOf(const UIStrings& strings, ButtonKind kind);
 
     /// One button: shown or not, the action it performs (`Declare` performs none: it only sets the flag of the next discard), the
     /// tiles to picture on it (`tileCount` of `tiles`, in the order to draw; at most `SpecOf(kind).maxTiles`, fewer when the tile is

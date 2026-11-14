@@ -135,11 +135,11 @@ namespace BECore::Mahjong {
         _newGameWordRoom = room;
         _newGameWordStrings = stringsVersion;
         // The button of the HUD menu and of the standings: in a room it leaves the room instead of dealing a new match
-        const eastl::string word = Tr(CoreManager::GetUIStrings(), room ? "hud.leaveRoom" : "hud.newGame");
+        const String word = Tr(CoreManager::GetUIStrings(), room ? "hud.leaveRoom" : "hud.newGame");
         CoreManager::GetUIVars().Set("newGameWord"_intern, StringView(word));
     }
 
-    eastl::string MahjongHudComponent::RoomLine(const MahjongGame& game, const UIStrings& strings) {
+    String MahjongHudComponent::RoomLine(const MahjongGame& game, const UIStrings& strings) {
         const OnlineClient* client = game.FindOnline();
         if (client == nullptr) {
             return {};
@@ -162,7 +162,7 @@ namespace BECore::Mahjong {
         if (client->Stage() == OnlineStage::Reconnecting) {
             return OnlineNoticeText(strings, kOnlineReconnectingKey);
         }
-        return _noteKey.empty() ? eastl::string() : OnlineNoticeText(strings, _noteKey, _noteArg);
+        return _noteKey.empty() ? String() : OnlineNoticeText(strings, _noteKey, _noteArg);
     }
 
     void MahjongHudComponent::OnDraw() {
@@ -201,7 +201,7 @@ namespace BECore::Mahjong {
         UIVars& vars = CoreManager::GetUIVars();
         // The line under the discards: in a room the connection or a word of the client first; else the last move, in words, only while a hand is
         // played and has a move (the end screens speak after it)
-        eastl::string lastMove;
+        String lastMove;
         if (game->IsOnlineTable()) {
             lastMove = RoomLine(*game, strings);
         } else {
@@ -369,21 +369,21 @@ namespace BECore::Mahjong {
         const MatchProgress after = NextProgress(MatchProgress{match.HandsPlayed(), match.East()}, settlement.kind, settlement.winner, match.GetSettings());
         vars.Set("handOverButton"_intern, StringView(Tr(strings, IsMatchOver(after.handsPlayed, match.GetSettings()) ? "handover.finish" : "handover.next")));
         // The row under the lines: in a room how many have read the plate (the coach is off there), else the coach's tally
-        eastl::string tally;
+        String tally;
         if (room != nullptr) {
             tally = ReadyText(strings, room->Table());
             SetNextHandDisabled(!CanSendNextHand(*room));
         } else {
             const CoachLedger& coach = game.GetCoach();
             const MoveContext context = game.CoachContext();
-            tally = game.CoachActive() ? FormatCoachTally(strings, coach.HandTallyOf(HandKeyOf(context)), coach.MatchTallyOf(context.startCount)) : eastl::string();
+            tally = game.CoachActive() ? FormatCoachTally(strings, coach.HandTallyOf(HandKeyOf(context)), coach.MatchTallyOf(context.startCount)) : String();
             SetNextHandDisabled(false);
         }
         vars.Set("handOverCoach"_intern, StringView(tally));
         UICanvasComponent::SetElementVisibleByName(GetScene(), "HandCoachRow"_intern, !tally.empty());
     }
 
-    eastl::string MahjongHudComponent::ReadyText(const UIStrings& strings, const OnlineTable& table) {
+    String MahjongHudComponent::ReadyText(const UIStrings& strings, const OnlineTable& table) {
         int ready = 0;
         for (const bool seat : table.ready) {
             ready += seat ? 1 : 0;
@@ -505,7 +505,7 @@ namespace BECore::Mahjong {
             vars.Set(SeatVar("standingScore", row), StringView(standing.score));
             UICanvasComponent::SetElementVisibleByName(GetScene(), SeatVar("StandingFirst", row), standing.first);
         }
-        const eastl::string tally = game.CoachActive() ? FormatCoachTally(strings, CoachTally{}, game.GetCoach().MatchTallyOf(game.CoachContext().startCount)) : eastl::string();
+        const String tally = game.CoachActive() ? FormatCoachTally(strings, CoachTally{}, game.GetCoach().MatchTallyOf(game.CoachContext().startCount)) : String();
         vars.Set("matchOverCoach"_intern, StringView(tally));
         UICanvasComponent::SetElementVisibleByName(GetScene(), "MatchCoachRow"_intern, !tally.empty());
     }

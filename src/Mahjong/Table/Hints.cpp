@@ -76,7 +76,7 @@ namespace BECore::Mahjong {
         return ExplainAdvice(view);
     }
 
-    eastl::string AdviceText(const UIStrings& strings, const TableView& view, const HandAction& advice) {
+    String AdviceText(const UIStrings& strings, const TableView& view, const HandAction& advice) {
         const char* key = AdviceKey(advice);
         switch (advice.kind) {
             case ActionKind::Discard:

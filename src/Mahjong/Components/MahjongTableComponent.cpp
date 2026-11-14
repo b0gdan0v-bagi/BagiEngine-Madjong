@@ -496,14 +496,14 @@ namespace BECore::Mahjong {
             }
             return true;
         }
-        eastl::string text;
-        for (const eastl::string& error : offer.errors) {
+        String text;
+        for (const String& error : offer.errors) {
             text += error;
             text += '\n';
         }
         if (text != _layoutRefused) {
             _layoutRefused = text;
-            for (const eastl::string& error : offer.errors) {
+            for (const String& error : offer.errors) {
                 LOG_ERROR(Format("MahjongTableComponent: the table layout is refused, the last good one stays: {}", error));
             }
         }
@@ -681,7 +681,7 @@ namespace BECore::Mahjong {
         if (hintKey != _hintKey || strings.GetVersion() != _hintStringsVersion || !vars.Has(actionHint)) {
             _hintKey = hintKey;
             _hintStringsVersion = strings.GetVersion();
-            const eastl::string hint = hintKey.empty() ? eastl::string() : Tr(strings, hintKey);
+            const String hint = hintKey.empty() ? String() : Tr(strings, hintKey);
             vars.Set(actionHint, StringView(hint));
             UICanvasComponent::SetElementVisibleByName(scene, "Hint"_intern, !hint.empty());
         }
@@ -1081,7 +1081,7 @@ namespace BECore::Mahjong {
         }
         _textTile = tile;
         _textStringsVersion = strings.GetVersion();
-        const eastl::string text = tile.IsValid() ? SelectedTileText(strings, tile) : eastl::string();
+        const String text = tile.IsValid() ? SelectedTileText(strings, tile) : String();
         vars.Set(name, StringView(text));
     }
 
@@ -1128,13 +1128,13 @@ namespace BECore::Mahjong {
         const bool wordsChanged = tile.IsValid() && strings.GetVersion() != _hoverStringsVersion;
         if (tile != _hoverTile || wordsChanged || !vars.Has(name)) {
             _hoverTile = tile;
-            const eastl::string text = tile.IsValid() ? TileName(strings, tile) : eastl::string();
+            const String text = tile.IsValid() ? TileName(strings, tile) : String();
             vars.Set(name, StringView(text));
         }
         const PoolString dangerName = "tileHoverDanger"_intern;
         const bool dangerMoved = danger != _hoverDanger;
         if (dangerMoved || wordsChanged || !vars.Has(dangerName)) {
-            const eastl::string text = danger != DangerMark::None ? Tr(strings, DangerHoverKey(danger)) : eastl::string();
+            const String text = danger != DangerMark::None ? Tr(strings, DangerHoverKey(danger)) : String();
             vars.Set(dangerName, StringView(text));
         }
         if (tile.IsValid()) {

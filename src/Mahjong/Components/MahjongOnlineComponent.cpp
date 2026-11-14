@@ -151,8 +151,8 @@ namespace BECore::Mahjong {
         }
 
         /// The text of a row of the `Rooms` page: the host's name (the player's text, put in as a value) and the facts the listing carried, a missing one left out.
-        eastl::string RoomRowText(const UIStrings& strings, const OnlineListedRoom& room) {
-            eastl::string facts = Tr(strings, kRoomFreeKey, {{"n", Format("{}", room.free)}});
+        String RoomRowText(const UIStrings& strings, const OnlineListedRoom& room) {
+            String facts = Tr(strings, kRoomFreeKey, {{"n", Format("{}", room.free)}});
             const auto add = [&](StringView text) {
                 facts.append(kFactSeparator.data(), kFactSeparator.size());
                 facts.append(text.data(), text.size());
@@ -604,24 +604,24 @@ namespace BECore::Mahjong {
     void MahjongOnlineComponent::PublishVariables(const OnlineClient& client, const UIStrings& strings) {
         UIVars& vars = CoreManager::GetUIVars();
         const OnlineLobby& lobby = client.Lobby();
-        vars.Set("onlineNotice"_intern, StringView(_screens.NoticeKey().empty() ? eastl::string() : OnlineNoticeText(strings, _screens.NoticeKey(), _screens.NoticeArg())));
-        vars.Set("onlineStatus"_intern, StringView(_screens.StatusKey().empty() ? eastl::string() : Tr(strings, _screens.StatusKey())));
+        vars.Set("onlineNotice"_intern, StringView(_screens.NoticeKey().empty() ? String() : OnlineNoticeText(strings, _screens.NoticeKey(), _screens.NoticeArg())));
+        vars.Set("onlineStatus"_intern, StringView(_screens.StatusKey().empty() ? String() : Tr(strings, _screens.StatusKey())));
         vars.Set("onlineName"_intern, StringView(_screens.Name().Text()));
         vars.Set("onlineCode"_intern, StringView(_screens.Code().Text()));
         vars.Set("onlineEntryValue"_intern, StringView(_screens.Focused().Text()));
-        vars.Set("onlineEntryNote"_intern, StringView(_screens.PasteNoteKey().empty() ? eastl::string() : Tr(strings, _screens.PasteNoteKey())));
+        vars.Set("onlineEntryNote"_intern, StringView(_screens.PasteNoteKey().empty() ? String() : Tr(strings, _screens.PasteNoteKey())));
         vars.Set("onlineCopy"_intern, StringView(Tr(strings, CopyKeyOf(_screens.CopyState()))));
         vars.Set("onlineHands"_intern, _screens.Options().hands);
         vars.Set("onlineLevel"_intern, _screens.Options().level);
         vars.Set("onlineOpen"_intern, _screens.Options().isPublic ? kOpenValue : kCodeValue);
         vars.Set("onlineHints"_intern, _screens.Options().hintsAllowed ? kHintsAllowedValue : kHintsOffValue);
         const OnlineRoomOptions* hosted = client.HostedOptions();
-        vars.Set("onlineHostLine"_intern, StringView(hosted == nullptr ? eastl::string() : Tr(strings, hosted->hintsAllowed ? kOnlineLobbyHintsAllowedKey : kOnlineLobbyHintsOffKey)));
+        vars.Set("onlineHostLine"_intern, StringView(hosted == nullptr ? String() : Tr(strings, hosted->hintsAllowed ? kOnlineLobbyHintsAllowedKey : kOnlineLobbyHintsOffKey)));
         // A guest reads the host's choice about hints from the lobby, on the one line under the title
         const Optional<bool> guestHints = lobby.hintsAllowed;
         vars.Set("onlineWaiting"_intern, StringView(Tr(strings, !guestHints ? kOnlineWaitHostKey : (*guestHints ? kOnlineWaitHostHintsAllowedKey : kOnlineWaitHostHintsOffKey))));
         // The room: the title of the lobby while there is one, else the room `Return` would enter
-        const eastl::string& room = _screens.Page() == OnlinePage::Lobby ? (lobby.room.empty() ? client.Room() : lobby.room) : _screens.ReturnRoom();
+        const String& room = _screens.Page() == OnlinePage::Lobby ? (lobby.room.empty() ? client.Room() : lobby.room) : _screens.ReturnRoom();
         vars.Set("onlineRoom"_intern, StringView(room));
         for (size_t seat = 0; seat < kSeatCount; ++seat) {
             const OnlineLobbySeat& at = lobby.seats[seat];
@@ -739,7 +739,7 @@ namespace BECore::Mahjong {
         _padPublished = true;
         _padField = field;
         _padStrings = strings.GetVersion();
-        const eastl::vector<eastl::string>& pad = _screens.Pad();
+        const eastl::vector<String>& pad = _screens.Pad();
         UIVars& vars = CoreManager::GetUIVars();
         for (size_t key = 0; key < TextEntry::kPadMaxKeys; ++key) {
             const bool has = key < pad.size();

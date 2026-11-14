@@ -109,7 +109,7 @@ namespace BECore::Mahjong::Arena {
                 world.live.assign(wall.begin() + looseCount, wall.begin() + looseCount + liveCount);
                 world.dead.assign(wall.begin() + looseCount + liveCount, wall.end());
             }
-            std::expected<HandModel, eastl::string> restored = HandModel::Restore(eastl::move(world));
+            std::expected<HandModel, String> restored = HandModel::Restore(eastl::move(world));
             if (!restored.has_value()) {
                 return std::nullopt;
             }

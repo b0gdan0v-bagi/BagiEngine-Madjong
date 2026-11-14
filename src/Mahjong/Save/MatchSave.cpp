@@ -73,8 +73,8 @@ namespace BECore::Mahjong {
 
     }  // namespace
 
-    eastl::string MatchSaveText(const eastl::vector<MatchLogEvent>& events) {
-        eastl::string text;
+    String MatchSaveText(const eastl::vector<MatchLogEvent>& events) {
+        String text;
         for (const MatchLogEvent& event : events) {
             if (event.kind == MatchLogKind::Hand || event.kind == MatchLogKind::End) {
                 continue;
@@ -83,23 +83,23 @@ namespace BECore::Mahjong {
             if (event.kind == MatchLogKind::Settlement) {
                 json.erase(kSettlementBreakdownsKey);
             }
-            const std::string line = json.dump();
+            const auto line = json.dump();
             text.append(line.data(), line.size());
             text.push_back('\n');
         }
         return text;
     }
 
-    std::expected<eastl::vector<MatchLogEvent>, eastl::string> ParseMatchSaveText(StringView text) {
+    std::expected<eastl::vector<MatchLogEvent>, String> ParseMatchSaveText(StringView text) {
         if (const size_t lines = CountLines(text); lines > kMaxSavedEvents) {
             return std::unexpected(Format("the saved match has {} lines, more than the {} allowed", lines, kMaxSavedEvents));
         }
-        std::expected<eastl::vector<MatchLogEvent>, eastl::string> events = ParseMatchLog(text);
+        std::expected<eastl::vector<MatchLogEvent>, String> events = ParseMatchLog(text);
         if (!events) {
             return events;
         }
         if (events->empty()) {
-            return std::unexpected(eastl::string("the saved match is empty"));
+            return std::unexpected(String("the saved match is empty"));
         }
         for (size_t index = 0; index < events->size(); ++index) {
             const MatchLogKind kind = (*events)[index].kind;
@@ -144,10 +144,10 @@ namespace BECore::Mahjong {
         return prefs;
     }
 
-    std::expected<PrefsValues, eastl::string> ReadPrefs(const MahjongPrefsSave& prefs) {
+    std::expected<PrefsValues, String> ReadPrefs(const MahjongPrefsSave& prefs) {
         PrefsValues values;
         if (prefs.language.empty()) {
-            return std::unexpected(eastl::string("the language is empty"));
+            return std::unexpected(String("the language is empty"));
         }
         values.language = prefs.language;
         values.hintsMode = prefs.coach ? HintsMode::Coach : (prefs.hintsOn ? HintsMode::Hints : HintsMode::Off);
@@ -190,28 +190,28 @@ namespace BECore::Mahjong {
         MahjongOnlineSave save;
         save.name.assign(name.data(), name.size());
         if (session.IsValid()) {
-            const std::string text = SessionToJson(session).dump();
+            const auto text = SessionToJson(session).dump();
             save.session.assign(text.data(), text.size());
         }
         return save;
     }
 
-    std::expected<OnlineValues, eastl::string> ReadOnline(const MahjongOnlineSave& save) {
+    std::expected<OnlineValues, String> ReadOnline(const MahjongOnlineSave& save) {
         OnlineValues values;
         if (!save.name.empty()) {
             if (!SanitizePlayerName(save.name)) {
-                return std::unexpected(eastl::string("the name is not one a room accepts"));
+                return std::unexpected(String("the name is not one a room accepts"));
             }
             values.name = save.name;
         }
         if (!save.session.empty()) {
             const std::expected<Json, ControlError> parsed = ParseJson(StringView(save.session.c_str(), save.session.size()));
             if (!parsed) {
-                return std::unexpected(eastl::string("the session is not JSON"));
+                return std::unexpected(String("the session is not JSON"));
             }
             Optional<RoomSession> session = SessionFromJson(*parsed);
             if (!session) {
-                return std::unexpected(eastl::string("the session is not a room with a token"));
+                return std::unexpected(String("the session is not a room with a token"));
             }
             values.session = eastl::move(*session);
         }

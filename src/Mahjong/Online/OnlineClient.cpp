@@ -22,8 +22,8 @@ namespace BECore::Mahjong {
         constexpr StringView kLeftReasonLeft = "left";
 
         /// A code from the server is shown in a notice only when it is plain: letters, digits and underscores, so a hostile server cannot put a text on the screen.
-        eastl::string SafeArg(StringView code) {
-            eastl::string arg;
+        String SafeArg(StringView code) {
+            String arg;
             for (const char c : code) {
                 const bool plain = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_';
                 if (plain && arg.size() < kMaxNoticeArgBytes) {
@@ -61,12 +61,12 @@ namespace BECore::Mahjong {
             SetNoticeForCode(OnlineCodes::kInvalidParams);
             return false;
         }
-        const Optional<eastl::string> sanitized = SanitizePlayerName(name);
+        const Optional<String> sanitized = SanitizePlayerName(name);
         if (!sanitized) {
             SetNoticeForCode(RoomErrors::kBadName);
             return false;
         }
-        const Json json = Json::object({{"hands", options.hands}, {"level", options.level}, {std::string(kHintsAllowedKey.data(), kHintsAllowedKey.size()), options.hintsAllowed}});
+        const Json json = Json::object({{"hands", options.hands}, {"level", options.level}, {ToStdString(kHintsAllowedKey), options.hintsAllowed}});
         const bool sent = Report(_client.Host(url, kSeatedGameName, *sanitized, json, options.isPublic));
         if (sent) {
             _requesting = true;
@@ -87,7 +87,7 @@ namespace BECore::Mahjong {
     }
 
     bool OnlineClient::SendJoin(StringView url, StringView code, StringView name, bool fromList) {
-        const Optional<eastl::string> sanitized = SanitizePlayerName(name);
+        const Optional<String> sanitized = SanitizePlayerName(name);
         if (!sanitized) {
             SetNoticeForCode(RoomErrors::kBadName);
             return false;
@@ -564,20 +564,20 @@ namespace BECore::Mahjong {
 
     Json SessionToJson(const RoomSession& session) {
         Json json = Json::object();
-        json[std::string(kSessionUrlKey.data(), kSessionUrlKey.size())] = std::string(session.url.data(), session.url.size());
-        json[std::string(kSessionRoomKey.data(), kSessionRoomKey.size())] = std::string(session.room.data(), session.room.size());
-        json[std::string(kSessionTokenKey.data(), kSessionTokenKey.size())] = std::string(session.token.data(), session.token.size());
+        json[ToStdString(kSessionUrlKey)] = ToStdString(session.url);
+        json[ToStdString(kSessionRoomKey)] = ToStdString(session.room);
+        json[ToStdString(kSessionTokenKey)] = ToStdString(session.token);
         return json;
     }
 
     Optional<RoomSession> SessionFromJson(const Json& json) {
-        const Optional<eastl::string> url = GetJsonString(json, kSessionUrlKey);
-        const Optional<eastl::string> room = GetJsonString(json, kSessionRoomKey);
-        const Optional<eastl::string> token = GetJsonString(json, kSessionTokenKey);
+        const Optional<String> url = GetJsonString(json, kSessionUrlKey);
+        const Optional<String> room = GetJsonString(json, kSessionRoomKey);
+        const Optional<String> token = GetJsonString(json, kSessionTokenKey);
         if (!url || !room || !token || url->empty()) {
             return std::nullopt;
         }
-        const Optional<eastl::string> code = NormalizeRoomCode(*room);
+        const Optional<String> code = NormalizeRoomCode(*room);
         if (!code || !IsWellFormedToken(*token)) {
             return std::nullopt;
         }

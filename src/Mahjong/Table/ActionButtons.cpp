@@ -70,11 +70,11 @@ namespace BECore::Mahjong {
         return SpecOf(kind).hintKey;
     }
 
-    eastl::string WordOf(const UIStrings& strings, ButtonKind kind) {
+    String WordOf(const UIStrings& strings, ButtonKind kind) {
         return Tr(strings, SpecOf(kind).wordKey);
     }
 
-    eastl::string HintOf(const UIStrings& strings, ButtonKind kind) {
+    String HintOf(const UIStrings& strings, ButtonKind kind) {
         return Tr(strings, SpecOf(kind).hintKey);
     }
 
