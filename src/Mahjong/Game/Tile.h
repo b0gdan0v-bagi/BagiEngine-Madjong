@@ -141,7 +141,7 @@ namespace BECore::Mahjong {
     /// F1..F4 flowers, T1..T4 seasons. "??" for an invalid tile.
     [[nodiscard]] StringView ToString(Tile tile) noexcept;
 
-    /// Case sensitive; nullopt for anything else.
+    /// Reads one tile in the notation above (case sensitive); nullopt for anything else.
     [[nodiscard]] Optional<Tile> TryParse(StringView text) noexcept;
 
     /// Reads tiles separated by spaces ("1p 2p 3p"); an empty text gives an empty list, a bad token or a doubled space gives nullopt.

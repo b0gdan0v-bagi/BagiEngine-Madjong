@@ -16,8 +16,9 @@ namespace BECore::Mahjong {
     void AddWinnerPoints(const ScoreInput& input, bool onlyWinning, ScoreBreakdown& breakdown);
 
     /// The doubles only a winner has, read on `reading` and on the points already in `breakdown` (so it is called last): see
-    /// `Game/CLAUDE.md` ("Scoring"). The doubles about the shape of the hand need a reading of four sets and a pair and are skipped for
-    /// any other.
+    /// `Game/CLAUDE.md` ("Scoring"). The doubles about the shape of the hand (`OnlyPungs`, `NoPoints`, `LittleFourWinds`,
+    /// `LittleThreeDragons`, `TerminalsOrHonoursEverywhere`, `FullyConcealed`, `SeveralKongs`) need a reading of four sets and a pair
+    /// and are skipped for any other.
     void AddWinnerDoubles(const Reading& reading, const ScoreInput& input, ScoreBreakdown& breakdown);
 
 }  // namespace BECore::Mahjong

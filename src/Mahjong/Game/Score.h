@@ -112,7 +112,9 @@ namespace BECore::Mahjong {
     /// The score of one seat: the lines of the best reading and what they add up to.
     struct ScoreBreakdown {
         bool won = false;
-        /// The lines of the best reading in a stable order (the order of `ScoreKind`; the score table prints them as they are).
+        /// The lines of the best reading, in the order `ScoreReading` (`Score.cpp`) adds them, family by family: the winner's points; the
+        /// points of the pungs and kongs in the reading's set order, then of the pair, then of the bonus tiles; the doubles of the sets,
+        /// of one suit, of the bonus tiles; the winner's doubles. The score table prints them as they are.
         Vector<ScoreLine> lines;
         int points = 0;
         int doubles = 0;

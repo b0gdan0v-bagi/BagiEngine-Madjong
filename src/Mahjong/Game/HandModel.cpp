@@ -784,7 +784,7 @@ namespace BECore::Mahjong {
 
     void HandModel::CompleteKong(Seat seat, Tile tile) {
         PlayerHand& hand = _hands[seat];
-        // The pung is there, and so is the fourth tile: a valid `_drawnTile` lies in the hand . So a pung that
+        // The pung is there, and so is the fourth tile: a valid `_drawnTile` lies in the hand. So a pung that
         // is missing is skipped silently and the result of `RemoveConcealed` is not looked at.
         if (Meld* pung = FindPung(hand, tile)) {
             pung->kind = MeldKind::Kong;

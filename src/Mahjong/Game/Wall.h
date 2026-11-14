@@ -40,7 +40,7 @@ namespace BECore::Mahjong {
      * Ring index 0 is the right end of East's own side. The sides lie **clockwise** in the ring: side `s` (counted counter-clockwise
      * from East's wall, see `BreakSide`) starts at ring position `((kSeatCount - s) % kSeatCount) * perSide` stacks, so the index is
      * the physical position of the break as on a real table. The wall is broken after `eastDice + ownerDice` stacks counted from the
-     * right end of the side `eastDice` picks, wrapping round the ring.
+     * right end of the side `eastDice` picks, wrapping round the ring. Both dice are totals of 2d6 (2..12).
      */
     [[nodiscard]] constexpr int BreakIndex(int eastDice, int ownerDice, int perSide) noexcept {
         const int stacksInRing = kSeatCount * perSide;

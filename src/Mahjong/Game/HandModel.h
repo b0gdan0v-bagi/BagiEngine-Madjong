@@ -11,7 +11,6 @@ namespace BECore::Mahjong {
 
     /// Where a hand stands. A draw is automatic, so a seat only ever sees a phase it can act in. `Discard`: `CurrentSeat()` holds one
     /// tile too many. `Claim` / `RobKong`: a window is open on `PendingTile()`; `CurrentSeat()` is the discarder / the kong's owner.
-
     CORE_ENUM(Phase, uint8_t, Discard, Claim, RobKong, Finished)
 
     /// Why an action was refused. A refused action changes nothing.
@@ -287,8 +286,9 @@ namespace BECore::Mahjong {
          *        may be invalid (a hand or a wall the client is not told). Only a front end builds one; the rules never do
          *        (`Game/CLAUDE.md`, "Display copies").
          *
-         * A reader asks `Tile::IsValid` before it reads a tile of a hidden place. The model is **display only** (`IsDisplayOnly`, also
-         * a copy of it): `Begin` and every action are refused with `WrongPhase`, `LegalActions` and `LegalClaims` are empty.
+         * A reader asks `Tile::IsValid` before it reads a tile of a hidden place. Concealed tiles are not sorted. The model is
+         * **display only** (`IsDisplayOnly`, also a copy of it): `Begin` and every action are refused with `WrongPhase`, `LegalActions`
+         * and `LegalClaims` are empty.
          */
         [[nodiscard]] static HandModel ForDisplay(HandState state);
         /// Whether the model was made by `ForDisplay`.

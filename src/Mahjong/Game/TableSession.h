@@ -145,7 +145,8 @@ namespace BECore::Mahjong {
      *   non-const `Match::Start`) is not seen and so not logged.
      * - **Remote mode** (`ShowRemote`): the session shows a table that is played elsewhere (an online room) over a match made by
      *   `Match::ShowRemote`. It plays nothing: every step, action, `NextHand` and `Reveal` gives its usual refusal, nothing is logged
-     *   and no observer is told. `Actor()` is the actor the caller gave. An accepted `StartMatch` / `ResumeMatch` leaves the mode.
+     *   and no observer is told. `Actor()` is the actor the caller gave, `GetPhase()` still follows the match and `HandoffPending()` is
+     *   false. An accepted `StartMatch` / `ResumeMatch` leaves the mode.
      * - The move observer (`SetMoveObserver`) is told of an accepted `PerformPerson` only, after the version moved and the log line
      *   went out, with `MakeTableView(hand, actor)` made before the action; with none set no view is made. Computer steps, `Reveal`,
      *   `NextHand` and `ResumeMatch` never report, a refused action reports nothing.

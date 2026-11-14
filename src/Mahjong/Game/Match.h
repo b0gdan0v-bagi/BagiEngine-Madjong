@@ -29,7 +29,8 @@ namespace BECore::Mahjong {
      * @brief The progress after a hand: pure bookkeeping, so a test covers every case without playing a hand.
      *
      * East wins: East deals again (the hand counts as `kEastRepeatCountsAsHand` says). A drawn hand with `settings.replayDrawnHand`
-     * moves nothing and does not count. `winner` is read only for `ResultKind::Win`.
+     * moves nothing and does not count; a drawn hand without it is drawn, not replayed: the hand counts and the deal moves on. `winner`
+     * is read only for `ResultKind::Win`.
      */
     [[nodiscard]] MatchProgress NextProgress(MatchProgress progress, ResultKind kind, Seat winner, const MahjongSettings& settings) noexcept;
 
