@@ -75,8 +75,8 @@ namespace BECore::Mahjong::Tests {
     class MahjongTableScreenTest : public MahjongTableTestBase {
     protected:
         /// The names of all the elements of the canvas on `node` that have one.
-        std::set<String> ElementNamesOf(const char* node) const {
-            std::set<String> names;
+        Set<String> ElementNamesOf(const char* node) const {
+            Set<String> names;
             const auto canvas = Canvas(node);
             EXPECT_TRUE(canvas) << node;
             Vector<const UIElement*> pending;
@@ -231,7 +231,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         auto canvas = Canvas("Actions");
         ASSERT_TRUE(canvas);
-        std::set<String> names;
+        Set<String> names;
         Vector<const UIElement*> pending{&canvas->GetRoot()};
         while (!pending.empty()) {
             const UIElement* element = pending.back();
@@ -525,8 +525,8 @@ namespace BECore::Mahjong::Tests {
         }
         // And nothing else: the same names, except the hint label that only the canvas with a pointer has and the hint button of the hints,
         // which is in the node `HintsButton` on the table and in the row here
-        std::set<String> wideNames = ElementNamesOf("Actions");
-        const std::set<String> narrowNames = ElementNamesOf("ActionsCompact");
+        Set<String> wideNames = ElementNamesOf("Actions");
+        const Set<String> narrowNames = ElementNamesOf("ActionsCompact");
         EXPECT_EQ(wideNames.erase("Hint"), 1u);
         wideNames.insert("HintButton");
         EXPECT_EQ(wideNames, narrowNames);

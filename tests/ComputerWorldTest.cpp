@@ -263,7 +263,7 @@ namespace BECore::Mahjong::Tests {
         int views = 0;
         int worlds = 0;
         int declaredOpponents = 0;
-        std::set<int> phases;
+        Set<int> phases;
         for (uint32_t seed = 0; seed < kPlayoutSeedCount; ++seed) {
             MahjongRng rng(seed + 500);
             HandModel model = BeginSeed(seed, rng);

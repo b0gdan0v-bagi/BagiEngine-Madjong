@@ -351,7 +351,7 @@ namespace BECore::Mahjong::Tests {
 
             // The hub (and with it the game) is destroyed before the members its game unregisters from
             MahjongSeatedGame* _game = nullptr;
-            std::map<ConnectionId, Client> _clients;
+            Map<ConnectionId, Client> _clients;
             RoomsJudgeLog _judge;
             SeatedGameRegistry _registry;
             RoomHub _hub;

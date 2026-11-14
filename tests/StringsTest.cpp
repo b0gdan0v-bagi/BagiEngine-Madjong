@@ -42,9 +42,9 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Every key the scene asks for with `{#key}`.
-        std::set<String> KeysOfTheScene() {
+        Set<String> KeysOfTheScene() {
             const std::string text = ToStdString(SceneText());  //-NoStd: std::regex runs over std::string
-            std::set<String> keys;
+            Set<String> keys;
             const std::regex reference(R"(\{#([^}]+)\})");
             for (auto it = std::sregex_iterator(text.begin(), text.end(), reference); it != std::sregex_iterator(); ++it) {
                 keys.insert(FromStdString((*it)[1].str()));
@@ -53,8 +53,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Every string literal of the sources of the game that has the shape of a key (`area.name`, `area.name.more`): the keys code asks for by name.
-        std::set<String> KeysNamedInCode() {
-            std::set<String> keys;
+        Set<String> KeysNamedInCode() {
+            Set<String> keys;
             const std::regex literal(R"re("([a-z]+(?:\.[A-Za-z0-9]+)+)")re");
             for (const auto& entry : std::filesystem::recursive_directory_iterator(GameRoot() / "src" / "Mahjong")) {
                 const String extension = FromStdString(entry.path().extension().string());
@@ -71,8 +71,8 @@ namespace BECore::Mahjong::Tests {
 
         /// The keys code builds from an enum value: the families that are walked, not named (`wind.<Wind>`, `wind.letter.<Wind>`, `suit.<suit>`, `score.kind.<ScoreKind>`, `button.<ButtonKind>`,
         /// `hint.<ButtonKind>`).
-        std::set<String> KeysBuiltFromEnums() {
-            std::set<String> keys;
+        Set<String> KeysBuiltFromEnums() {
+            Set<String> keys;
             for (const Wind wind : EnumUtils<Wind>::Values()) {
                 keys.insert(Format("wind.{}", EnumUtils<Wind>::ToString(wind)));
                 keys.insert(Format("wind.letter.{}", EnumUtils<Wind>::ToString(wind)));
@@ -136,7 +136,7 @@ namespace BECore::Mahjong::Tests {
         const LanguageEntries& base = languages[0];
 
         for (const LanguageEntries& other : languages) {
-            std::map<String, String> byKey;
+            Map<String, String> byKey;
             for (const StringEntry& entry : other.entries) {
                 EXPECT_TRUE(byKey.emplace(entry.key, entry.text).second) << other.id << ": the key " << entry.key << " is there twice";
             }
@@ -162,7 +162,7 @@ namespace BECore::Mahjong::Tests {
         const std::string text = ToStdString(SceneText());  //-NoStd: std::regex runs over std::string
         ASSERT_FALSE(text.empty()) << ShippedSceneConfig().string();
         // Looked up in the entries of each language: `Find` falls back to the default language and would hide a missing translation
-        std::map<String, std::set<String>> keysOf;
+        Map<String, Set<String>> keysOf;
         for (const LanguageEntries& language : ReadShippedEntries()) {
             for (const StringEntry& entry : language.entries) {
                 keysOf[language.id].insert(entry.key);
@@ -183,14 +183,14 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(StringsTest, EveryKeyOfTheFileIsUsedByTheSceneOrByCode) {
-        const std::set<String> scene = KeysOfTheScene();
-        const std::set<String> named = KeysNamedInCode();
-        const std::set<String> walked = KeysBuiltFromEnums();
+        const Set<String> scene = KeysOfTheScene();
+        const Set<String> named = KeysNamedInCode();
+        const Set<String> walked = KeysBuiltFromEnums();
         ASSERT_FALSE(scene.empty());
         ASSERT_FALSE(named.empty());
         ASSERT_FALSE(walked.empty());
 
-        std::set<String> inTheFile;
+        Set<String> inTheFile;
         for (const LanguageEntries& language : ReadShippedEntries()) {
             for (const StringEntry& entry : language.entries) {
                 inTheFile.insert(entry.key);
@@ -260,7 +260,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(StringsTest, PlaceholderNamesFindsTheNamesAndSkipsReferences) {
-        EXPECT_EQ((PlaceholderNames("Seat {n} ({wind}) {#key} {n}")), (std::set<String>{"n", "wind"}));
+        EXPECT_EQ((PlaceholderNames("Seat {n} ({wind}) {#key} {n}")), (Set<String>{"n", "wind"}));
         EXPECT_TRUE(PlaceholderNames("plain").empty());
     }
 

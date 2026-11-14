@@ -176,7 +176,7 @@ namespace BECore::Mahjong::Tests {
         const HandModel concealedKongTurn = MakeModel(kongSpec);
 
         const HandModel* const models[] = {&plainTurn, &waitingTurn, &declared, &chowWindow, &pungWindow, &robbingWindow, &upgradeTurn, &concealedKongTurn};
-        std::set<String> listedKinds;
+        Set<String> listedKinds;
         for (const HandModel* model : models) {
             ExpectAcceptedExactlyWhenListed(*model);
             for (Seat seat = 0; seat < kSeatCount; ++seat) {

@@ -245,7 +245,7 @@ namespace BECore::Mahjong::Tests {
     TEST(ComputerTurnTest, TheRoundWindIsAValueHonourToo) {
         // Round wind South: the south wind is kept; the west wind and the north wind are worthless, either of them goes (not the south).
         const HandModel model = MakeModel(SpecOf("1s 2s 3s 4s 5s 6s 7m 8m 9m 5p 5p Sw Ww", "Nw"), kSeat0, Wind::South);
-        std::set<String> discarded;
+        Set<String> discarded;
 
         for (uint32_t seed = 1; seed <= 16; ++seed) {
             const HandAction action = Choice(model, kSeat0, seed);
@@ -431,7 +431,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(ComputerTurnTest, TheAnswerIsAlwaysListedAndTheSameViewAndSeedGiveTheSameAnswer) {
         int turns = 0;
-        std::set<ActionKind> kinds;
+        Set<ActionKind> kinds;
         for (int index = 0; index < kRandomHands; ++index) {
             const uint32_t seed = kRandomFirstSeed + static_cast<uint32_t>(index);
             MahjongSettings settings;
@@ -694,7 +694,7 @@ namespace BECore::Mahjong::Tests {
         // The dragons Rd and Wd are equal in danger and keep value, so the rng breaks the tie as it does with the knob off.
         MarkPassed(view, "Rd");
         MarkPassed(view, "Wd");
-        std::set<uint8_t> picked;
+        Set<uint8_t> picked;
         for (uint32_t seed = 1; seed <= 16; ++seed) {
             picked.insert(DecideWith(view, true, seed).tile.Id());
         }

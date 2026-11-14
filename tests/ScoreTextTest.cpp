@@ -173,7 +173,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
         ForEachLanguage(strings, [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
-            std::set<String> kinds;
+            Set<String> kinds;
             for (const ScoreKind kind : EnumUtils<ScoreKind>::Values()) {
                 const String name = ScoreKindName(strings, kind);
                 EXPECT_FALSE(name.empty());
@@ -182,7 +182,7 @@ namespace BECore::Mahjong::Tests {
             }
             EXPECT_EQ(kinds.size(), EnumUtils<ScoreKind>::Count());
 
-            std::set<String> tiles;
+            Set<String> tiles;
             for (uint8_t id = 0; id < kTileIdCount; ++id) {
                 const String name = TileName(strings, Tile(id));
                 EXPECT_FALSE(name.empty()) << int{id};
@@ -387,7 +387,7 @@ namespace BECore::Mahjong::Tests {
             const String winner = SeatName(strings, kSeat2, Wind::West);
             const String from = SeatName(strings, kSeat3, Wind::North);
 
-            std::set<String> headlines;
+            Set<String> headlines;
             for (const WinSource source : {WinSource::SelfDraw, WinSource::Discard, WinSource::RobbedKong}) {
                 for (const Seat origin : {kSeat3, kNoSeat}) {
                     result.source = source;

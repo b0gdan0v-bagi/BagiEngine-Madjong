@@ -195,7 +195,7 @@ namespace BECore::Mahjong::Tests {
 
         /// The bars of `kKeepsWaitingMark` are exactly one inside the bottom edge of each slot of the viewer's hand whose tile is in `ids`:
         /// `kKeepsWaitingBarHeight` high, as wide as the tile, drawn after the face of the tile and inside the view.
-        void ExpectKeepWaitingBarsOn(const std::set<int>& ids) const {
+        void ExpectKeepWaitingBarsOn(const Set<int>& ids) const {
             const Seat viewer = _table->GetLayout().viewer;
             const Vector<Rect> bars = RectsOf(kKeepsWaitingMark);
             const Vector<size_t> calls = CallsOf(kKeepsWaitingMark);
@@ -235,8 +235,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The tiles of the viewer's hand that keep it waiting if discarded, from the pure function on the viewer's view.
-        std::set<int> SafeDiscards(Seat viewer = kSeat0) const {
-            std::set<int> ids;
+        Set<int> SafeDiscards(Seat viewer = kSeat0) const {
+            Set<int> ids;
             const auto keeps = KeepsWaitingDiscards(MakeTableView(Hand(), viewer));
             for (size_t id = 0; id < keeps.size(); ++id) {
                 if (keeps[id]) {
@@ -1033,7 +1033,7 @@ namespace BECore::Mahjong::Tests {
         // Seat 0 holds the winning hand with the 5p it drew: several discards leave the 13 tiles waiting
         ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, AllDeclaredModel("5p")));
         ASSERT_EQ(_game->GetSession().GetPhase(), SessionPhase::Playing);
-        const std::set<int> safe = SafeDiscards();
+        const Set<int> safe = SafeDiscards();
         ASSERT_GE(safe.size(), 3u);
         ASSERT_NO_FATAL_FAILURE(ExpectKeepWaitingBarsOn(safe));
         EXPECT_TRUE(RectsOf(kDeclareMark).empty()) << "the bar of the hints is for a hand that has not declared";
@@ -1051,7 +1051,7 @@ namespace BECore::Mahjong::Tests {
         Draw();
         ASSERT_NO_FATAL_FAILURE(ExpectKeepWaitingBarsOn(SafeDiscards()));
         EXPECT_EQ(RectsOf(kKeepsWaitingMark).size(), 1u);
-        EXPECT_EQ(SafeDiscards(), std::set<int>{T("Rd").Id()});
+        EXPECT_EQ(SafeDiscards(), Set<int>{T("Rd").Id()});
     }
 
     TEST_F(MahjongTableMarksTest, TheBarAndTheTintOfTheDrawnTileCanLieOnTheSameTile) {
@@ -1341,7 +1341,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(ExpectMarksOnPlates(kNoSeat, kSeat0));
 
         // The whole match: after each hand and after the last one (the winds of the last hand stay, though Match::East() is the next deal's)
-        std::set<Seat> dealers;
+        Set<Seat> dealers;
         ASSERT_NO_FATAL_FAILURE(PlayMatchToTheEnd([&] {
             Draw();
             dealers.insert(EastOfTheHand());
@@ -1495,7 +1495,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableMarksTest, EveryLevelHasItsOwnPictureOnAComputerPlate) {
-        std::set<int> cells;
+        Set<int> cells;
         for (const ComputerLevel level : kAllLevels) {
             _game->SetLevel(level);
             ASSERT_NO_FATAL_FAILURE(StartWith(kAllComputers, MakeModel(SpecOf(kPlainHand, "9p"))));

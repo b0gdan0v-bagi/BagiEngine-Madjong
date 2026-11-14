@@ -38,7 +38,7 @@ namespace BECore::Mahjong::Tests {
                 const Vector<String> pad = entry.Pad(strings);
                 EXPECT_FALSE(pad.empty()) << language.ToStringView().data();
                 EXPECT_LE(pad.size(), TextEntry::kPadMaxKeys) << language.ToStringView().data();
-                std::set<String> seen;
+                Set<String> seen;
                 for (const String& key : pad) {
                     EXPECT_EQ(Utf8::CountCodePoints(key), 1u) << Std(key);
                     EXPECT_TRUE(seen.insert(Std(key)).second) << Std(key) << " is on the pad twice";

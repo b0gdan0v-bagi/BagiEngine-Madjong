@@ -44,7 +44,7 @@ namespace BECore::Mahjong::Tests {
     TEST(SeatsTest, OffsetIsOneToThreeForDifferentSeats) {
         for (Seat from = 0; from < kSeatCount; ++from) {
             EXPECT_EQ(Offset(from, from), 0);
-            std::set<int> seen;
+            Set<int> seen;
             for (Seat to = 0; to < kSeatCount; ++to) {
                 if (to == from) {
                     continue;
@@ -83,11 +83,11 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(SeatsTest, RollSeatWindsGivesEachWindOnce) {
-        std::set<Seat> easts;
+        Set<Seat> easts;
         for (uint32_t seed = 0; seed < kSeedsToTry; ++seed) {
             MahjongRng rng(seed);
             const SeatWinds winds = RollSeatWinds(rng);
-            std::set<Wind> seen(winds.begin(), winds.end());
+            Set<Wind> seen(winds.begin(), winds.end());
             ASSERT_EQ(seen.size(), static_cast<size_t>(kSeatCount)) << "seed " << seed;
             Seat east = -1;
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
@@ -148,7 +148,7 @@ namespace BECore::Mahjong::Tests {
                 first.push_back(probe.Roll2d6());
             }
             const int best = *std::max_element(first.begin(), first.end());
-            std::set<Seat> tied;
+            Set<Seat> tied;
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 if (first[seat] == best) {
                     tied.insert(seat);

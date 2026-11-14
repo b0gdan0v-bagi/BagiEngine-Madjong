@@ -63,8 +63,8 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// The names of the `{placeholders}` of a text (a `{#key}` reference is not one).
-    inline std::set<String> PlaceholderNames(StringView text) {
-        std::set<String> names;
+    inline Set<String> PlaceholderNames(StringView text) {
+        Set<String> names;
         size_t at = 0;
         while ((at = text.find('{', at)) != StringView::npos) {
             const size_t close = text.find('}', at);

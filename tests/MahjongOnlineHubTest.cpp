@@ -278,7 +278,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(RunUntil(world, players, [&] { return host.Client().Lobby().humans == kSeatCount; }));
         ASSERT_NO_FATAL_FAILURE(StartAndWait(world, host, players));
 
-        std::set<int> seats;
+        Set<int> seats;
         for (const HubPlayer* player : players) {
             seats.insert(player->Client().Seat());
             EXPECT_EQ(player->Table().seat, player->Client().Seat());

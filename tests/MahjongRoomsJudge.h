@@ -23,7 +23,7 @@ namespace BECore::Mahjong::Tests {
     namespace RoomsJudgeDetail {
 
         using Offences = Vector<String>;
-        using KeySet = std::set<String>;
+        using KeySet = Set<String>;
 
         constexpr int kJudgedSeatCount = 4;
 

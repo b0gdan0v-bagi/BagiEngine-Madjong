@@ -766,7 +766,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(compact);
         size_t compactWindows = 0;
         // The windows (and user scales) where the rule keeps `Actions` under the minimum, each with its number of simulations
-        eastl::map<String, size_t> keptWindows;
+        Map<String, size_t> keptWindows;
         const auto visit = [&](const MatrixWindow& window, bool ofTheMatrix) {
             for (const float userScale : {1.0f, 1.5f}) {
                 const UICanvasResolved resolved = LayOutInWindow(*compact, window, CanvasScaleMode::ScaleWithScreen, userScale);
@@ -793,7 +793,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_GT(compactWindows, 0u);
         // A new window that keeps `Actions` under the minimum has to be named here and in CLAUDE.md: the portrait 480 x 480 at both user scales (no
         // bar under the table), in its three simulations (no insets, a notch, side insets)
-        const eastl::map<String, size_t> expectedKept{{"480x480 x1.0", 3u}, {"480x480 x1.5", 3u}};
+        const Map<String, size_t> expectedKept{{"480x480 x1.0", 3u}, {"480x480 x1.5", 3u}};
         EXPECT_EQ(keptWindows, expectedKept);
     }
 
@@ -930,7 +930,7 @@ namespace BECore::Mahjong::Tests {
     namespace {
 
         /// The names of the interactive elements (those that take clicks: buttons, toggles, segments) of `element` and below.
-        void CollectInteractive(const UIElement& element, std::set<String>& names) {
+        void CollectInteractive(const UIElement& element, Set<String>& names) {
             if (element.IsInteractive()) {
                 names.insert(String(element.name.ToStringView().data(), element.name.ToStringView().size()));
             }
@@ -939,8 +939,8 @@ namespace BECore::Mahjong::Tests {
             }
         }
 
-        std::set<String> InteractiveOf(UICanvasComponent& canvas) {
-            std::set<String> names;
+        Set<String> InteractiveOf(UICanvasComponent& canvas) {
+            Set<String> names;
             CollectInteractive(canvas.GetRoot(), names);
             return names;
         }
@@ -961,7 +961,7 @@ namespace BECore::Mahjong::Tests {
             }
             ++canvases;
             const String node(child->GetName().ToStringView().data(), child->GetName().ToStringView().size());
-            const std::set<String> names = InteractiveOf(*canvas);
+            const Set<String> names = InteractiveOf(*canvas);
             controls += names.size();
             if (names.empty()) {
                 continue;
@@ -988,8 +988,8 @@ namespace BECore::Mahjong::Tests {
         const auto hints = Canvas("HintsButton");
         const auto compact = Canvas("ActionsCompact");
         ASSERT_TRUE(actions && hints && compact);
-        std::set<String> expected = InteractiveOf(*actions);
-        const std::set<String> hintNames = InteractiveOf(*hints);
+        Set<String> expected = InteractiveOf(*actions);
+        const Set<String> hintNames = InteractiveOf(*hints);
         EXPECT_FALSE(hintNames.empty());
         expected.insert(hintNames.begin(), hintNames.end());
         EXPECT_EQ(InteractiveOf(*compact), expected) << "a button added to Actions or to HintsButton needs its copy in ActionsCompact, or the narrow windows lose it";

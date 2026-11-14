@@ -158,7 +158,7 @@ namespace BECore::Mahjong::Tests {
         Table table;
         ASSERT_NO_FATAL_FAILURE(table.Start(kTwoPeople));
         MahjongRng rng(kSeed);
-        std::set<Seat> bottoms;
+        Set<Seat> bottoms;
         int covered = 0;
         for (int actions = 0; actions < kActionLimit && table.session.GetPhase() == SessionPhase::Playing; ++actions) {
             if (!table.session.ActorIsPerson()) {
@@ -337,7 +337,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(table.Start(PersonAt(2)));
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
-        std::set<String> names;
+        Set<String> names;
         ForEachLanguage(strings, [&](PoolString language) {
             ASSERT_NO_FATAL_FAILURE(ExpectPlates(strings, table, 2));
             for (const SeatPlateText& plate : MakeSeatPlates(strings, table.session, table.match)) {

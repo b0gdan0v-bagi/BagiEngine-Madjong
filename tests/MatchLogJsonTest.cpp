@@ -106,7 +106,7 @@ namespace BECore::Mahjong::Tests {
     }  // namespace
 
     TEST_F(MatchLogJsonTest, EveryEventOfAPlayedMatchSurvivesTheRoundTrip) {
-        std::set<MatchLogKind> kinds;
+        Set<MatchLogKind> kinds;
         for (uint32_t seed = kSeed; seed < kSeed + kSeedsToPlay; ++seed) {
             const Vector<MatchLogEvent> events = PlayedLog(seed);
             ASSERT_GT(events.size(), 3u);
@@ -144,7 +144,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MatchLogJsonTest, TheActionIsTheControlApisActionJson) {
-        std::set<ActionKind> seen;
+        Set<ActionKind> seen;
         for (uint32_t seed = kSeed; seed < kSeed + kSeedsToPlay; ++seed) {
             for (const MatchLogEvent& event : PlayedLog(seed)) {
                 if (event.kind != MatchLogKind::Action) {
@@ -298,7 +298,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_FALSE(legal.empty());
         ASSERT_TRUE(session.PerformPerson(legal.front()).has_value());
         session.RunComputers();
-        std::set<String> seen;
+        Set<String> seen;
         for (const MatchLogEvent& event : log.Events()) {
             if (event.kind == MatchLogKind::Action) {
                 const Json json = EventToJson(event);
@@ -306,7 +306,7 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_EQ(Member(json, "by"), event.seat == person ? "person" : "computer");
             }
         }
-        EXPECT_EQ(seen, (std::set<String>{"person", "computer"}));
+        EXPECT_EQ(seen, (Set<String>{"person", "computer"}));
     }
 
     TEST_F(MatchLogJsonTest, TheOriginRoundTripsForEveryPlatformAndEmptyStrings) {

@@ -77,8 +77,8 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MahjongRngTest, DiceAreOneToSixAndEveryFaceAppears) {
         MahjongRng rng(11);
-        std::set<int> faces;
-        std::set<int> totals;
+        Set<int> faces;
+        Set<int> totals;
         for (int i = 0; i < kDiceRolls; ++i) {
             const int die = rng.RollDie();
             ASSERT_GE(die, 1);

@@ -274,7 +274,7 @@ namespace BECore::Mahjong {
             Vector<int64_t> _alive;
             int _unseenTotal = 0;
             Array<int, kKindCount> _openCopies{};
-            eastl::map<StateKey, Value> _memo;
+            Map<StateKey, Value> _memo;
         };
 
         DiscardValue MakeDiscardValue(Tile tile, const Value& value) {

@@ -562,8 +562,8 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        std::set<String> KeysOf(const Json& object) {
-            std::set<String> keys;
+        Set<String> KeysOf(const Json& object) {
+            Set<String> keys;
             for (const auto& item : object.items()) {
                 keys.insert(FromStdString(item.key()));
             }
@@ -573,9 +573,9 @@ namespace BECore::Mahjong::Tests {
     }  // namespace
 
     TEST(MahjongSeatedGameViewTest, AViewHoldsOnlyTheOwnTilesWhileTheHandIsPlayedAndNoKindOrLevel) {
-        const std::set<String> topKeys = {"phase",    "seat", "seatWind",    "roundWind",  "east",    "hand",  "turn",   "seats",
-                                          "discards", "wall", "handsPlayed", "handsTotal", "version", "ready", "format", "hintsAllowed"};
-        const std::set<String> seatKeys = {"wind", "score", "concealedCount", "melds", "concealedKongs", "bonus", "discardCount", "calling"};
+        const Set<String> topKeys = {"phase",    "seat", "seatWind",    "roundWind",  "east",    "hand",  "turn",   "seats",
+                                     "discards", "wall", "handsPlayed", "handsTotal", "version", "ready", "format", "hintsAllowed"};
+        const Set<String> seatKeys = {"wind", "score", "concealedCount", "melds", "concealedKongs", "bonus", "discardCount", "calling"};
         MahjongSeatedGame game = Started();
         for (int step = 0; step < kStepLimit && PhaseIs(game, SessionPhase::Playing); ++step) {
             for (int seat = 0; seat < kSeatCount; ++seat) {

@@ -70,8 +70,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The ids of the tiles marked as declaring.
-        std::set<int> MarkedTiles(const TableView& view) {
-            std::set<int> marked;
+        Set<int> MarkedTiles(const TableView& view) {
+            Set<int> marked;
             const auto declaring = DeclaringDiscards(view);
             for (size_t id = 0; id < declaring.size(); ++id) {
                 if (declaring[id]) {
@@ -81,8 +81,8 @@ namespace BECore::Mahjong::Tests {
             return marked;
         }
 
-        std::set<int> Ids(std::initializer_list<const char*> tiles) {
-            std::set<int> ids;
+        Set<int> Ids(std::initializer_list<const char*> tiles) {
+            Set<int> ids;
             for (const char* tile : tiles) {
                 ids.insert(T(tile).Id());
             }
@@ -377,7 +377,7 @@ namespace BECore::Mahjong::Tests {
         const TableView view = MakeTableView(model, kSeat0);
 
         EXPECT_EQ(MarkedTiles(view), Ids({"5p", "6p"}));
-        std::set<int> fromLegal;
+        Set<int> fromLegal;
         for (const HandAction& action : view.legal) {
             if (action.kind == ActionKind::Discard && action.declareCalling) {
                 fromLegal.insert(action.tile.Id());
@@ -398,7 +398,7 @@ namespace BECore::Mahjong::Tests {
         Lap(model, "Gd Wd Gd Nw", {kSeat0});
         const TableView view = MakeTableView(model, kSeat0);
         ASSERT_TRUE(view.own.callingDeclared);
-        std::set<int> fromLegal;
+        Set<int> fromLegal;
         for (const HandAction& action : view.legal) {
             if (action.kind == ActionKind::Discard && action.declareCalling) {
                 fromLegal.insert(action.tile.Id());
@@ -561,7 +561,7 @@ namespace BECore::Mahjong::Tests {
         };
 
         ForEachLanguage(strings, [&](PoolString language) {
-            std::set<String> seen;
+            Set<String> seen;
             for (const Case& one : cases) {
                 const String text = AdviceText(strings, view, one.advice);
                 EXPECT_FALSE(text.empty()) << language.ToStringView().data();
@@ -664,7 +664,7 @@ namespace BECore::Mahjong::Tests {
                     EXPECT_EQ(line.find("hints."), String::npos) << where << ": a key is missing: " << line;
                 }
                 const Vector<String> footer = FooterOf(card);
-                EXPECT_EQ(std::set<String>(footer.begin(), footer.end()).size(), footer.size()) << where << ": a line is said twice";
+                EXPECT_EQ(Set<String>(footer.begin(), footer.end()).size(), footer.size()) << where << ": a line is said twice";
             }
         });
     }
@@ -872,7 +872,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(strings.SetLanguage("en"_intern));
         TableView view = WithDeclaredOpponent(ReasonCases().front().view);
         const Tile advised = ExplainAdviceFor(view)->Action().tile;
-        std::set<String> said;
+        Set<String> said;
 
         for (const uint8_t copies : {static_cast<uint8_t>(0), kCopiesPerTile}) {
             view.visible[advised.Id()] = std::max(view.visible[advised.Id()], copies);

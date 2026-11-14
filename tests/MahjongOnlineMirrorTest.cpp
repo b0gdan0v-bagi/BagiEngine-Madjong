@@ -66,7 +66,7 @@ namespace BECore::Mahjong::Tests {
 
         /// What the cases have met, to hold that the comparison covers the phases the task names.
         struct Coverage {
-            std::set<int> phases;
+            Set<int> phases;
             int windowViewerWaiting = 0;
             int windowViewerPassed = 0;
             int ownConcealedKong = 0;
@@ -511,7 +511,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         struct MoveCoverage {
-            std::set<int> kinds;
+            Set<int> kinds;
             int declared = 0;
         };
 

@@ -48,8 +48,8 @@ namespace BECore::Mahjong::Tests {
     }  // namespace
 
     TEST(ActionButtonsTest, EveryButtonHasItsOwnActionAndValueAndIsFoundByThem) {
-        std::set<std::pair<String, String>> seen;
-        std::set<String> elements;
+        Set<std::pair<String, String>> seen;
+        Set<String> elements;
         for (int i = 0; i < kButtonCount; ++i) {
             const ButtonKind kind = static_cast<ButtonKind>(i);
             const ButtonSpec& spec = SpecOf(kind);
@@ -69,7 +69,7 @@ namespace BECore::Mahjong::Tests {
     TEST(ActionButtonsTest, EveryButtonHasAWordKeyAndAHintKeyAndBothLanguagesHaveThem) {
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
-        std::set<String> hintKeys;
+        Set<String> hintKeys;
         for (int i = 0; i < kButtonCount; ++i) {
             const ButtonKind kind = static_cast<ButtonKind>(i);
             const ButtonSpec& spec = SpecOf(kind);
@@ -105,8 +105,8 @@ namespace BECore::Mahjong::Tests {
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
         ForEachLanguage(strings, [&](PoolString language) {
-            std::set<String> hints;
-            std::set<String> keys;
+            Set<String> hints;
+            Set<String> keys;
             for (int i = 0; i < kButtonCount; ++i) {
                 const ButtonKind kind = static_cast<ButtonKind>(i);
                 const String hint = HintOf(strings, kind);

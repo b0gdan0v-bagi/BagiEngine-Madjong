@@ -142,7 +142,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MahjongSceneFilesTest, EveryNodeIsInAFileOfItsOwn) {
         // Every xml file of config/ is loaded by ConfigManager as a config named by its stem; the `Mahjong` prefix of the node files also keeps them clear of the stems of the engine's config.
-        std::map<String, int> stems;
+        Map<String, int> stems;
         for (const std::filesystem::directory_entry& entry : std::filesystem::recursive_directory_iterator(ShippedConfigDirectory())) {
             if (entry.is_regular_file() && entry.path().extension() == ".xml") {
                 ++stems[FromStdString(entry.path().stem().string())];
@@ -169,11 +169,11 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(MahjongSceneFilesTest, NoNodeFileIsLeftOut) {
-        std::set<String> expected;
+        Set<String> expected;
         for (const SceneNode& node : kSceneNodes) {
             expected.insert(FromStdString(NodeFilePath(node.name).filename().string()));
         }
-        std::set<String> found;
+        Set<String> found;
         for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(ShippedNodesDirectory())) {
             found.insert(FromStdString(entry.path().filename().string()));
         }
@@ -188,7 +188,7 @@ namespace BECore::Mahjong::Tests {
         const Vector<pugi::xml_node> nodes = ElementChildren(scene.child("nodes"));
         ASSERT_EQ(nodes.size(), std::size(kSceneNodes));
 
-        std::set<String> names;
+        Set<String> names;
         for (size_t i = 0; i < nodes.size(); ++i) {
             EXPECT_STREQ(nodes[i].attribute("name").as_string(), kSceneNodes[i].name) << "position " << i;
             EXPECT_EQ(nodes[i].attribute("layer").as_int(0), kSceneNodes[i].layer) << kSceneNodes[i].name;
@@ -214,7 +214,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(LoadShippedSceneDocument(document));
         // A canvas on the table is laid out against the view, whose aspect is the view's own, so each shape's variant carries the text of the view's
         // `when` (the narrow one also says `orientation:landscape`: a portrait view is under the narrow aspect too) and the three exclude each other
-        std::set<String> allowed;
+        Set<String> allowed;
         for (const SceneViewVariant& view : SceneViewVariants()) {
             allowed.insert(view.when.ToText().c_str());
         }
@@ -278,7 +278,7 @@ namespace BECore::Mahjong::Tests {
     TEST(MahjongSceneFilesTest, EveryRegionNameOfTheTableNodesExistsInTheSpecOfEveryShape) {
         pugi::xml_document document;
         ASSERT_TRUE(LoadShippedSceneDocument(document));
-        std::set<String> used;
+        Set<String> used;
         for (const char* node : kRegionNodes) {
             const String attributes = Format("//node[@name='{}']//@region", node);
             for (const pugi::xpath_node& region : document.select_nodes(attributes.c_str())) {

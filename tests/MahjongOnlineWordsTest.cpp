@@ -20,8 +20,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The text of every key of one language of the shipped file.
-        std::map<String, String> TextsOf(const String& language) {
-            std::map<String, String> texts;
+        Map<String, String> TextsOf(const String& language) {
+            Map<String, String> texts;
             for (const LanguageEntries& entries : ReadShippedEntries()) {
                 if (entries.id == language) {
                     for (const StringEntry& entry : entries.entries) {
@@ -32,7 +32,7 @@ namespace BECore::Mahjong::Tests {
             return texts;
         }
 
-        std::set<String> PlaceholdersAllowedFor(const String& key) {
+        Set<String> PlaceholdersAllowedFor(const String& key) {
             if (key == kOnlineUnknownKey.data()) {
                 return {"code"};
             }
@@ -40,8 +40,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Every key of `OnlineWords.h`, the codes' and the fixed ones.
-        std::set<String> AllOnlineKeys() {
-            std::set<String> keys;
+        Set<String> AllOnlineKeys() {
+            Set<String> keys;
             for (const OnlineCodeWord& word : kKnownOnlineCodes) {
                 keys.insert(Std(word.key));
             }
@@ -58,8 +58,8 @@ namespace BECore::Mahjong::Tests {
     }  // namespace
 
     TEST(MahjongOnlineWords, EveryKnownCodeHasAKeyInBothLanguagesWithOnlyTheDocumentedPlaceholders) {
-        const std::map<String, String> en = TextsOf("en");
-        const std::map<String, String> ru = TextsOf("ru");
+        const Map<String, String> en = TextsOf("en");
+        const Map<String, String> ru = TextsOf("ru");
         ASSERT_FALSE(en.empty());
         ASSERT_FALSE(ru.empty());
 
@@ -115,7 +115,7 @@ namespace BECore::Mahjong::Tests {
         }
         EXPECT_EQ(OnlineErrorKey(RoomClientCloseReasons::kRateLimited), OnlineErrorKey(RoomErrors::kRateLimited));
         // A code is listed once
-        std::set<String> seen;
+        Set<String> seen;
         for (const OnlineCodeWord& word : kKnownOnlineCodes) {
             EXPECT_TRUE(seen.insert(Std(word.code)).second) << Std(word.code) << " is listed twice";
         }

@@ -435,7 +435,7 @@ namespace BECore::Mahjong::Tests {
 
         // The server is unavailable once, then answers; a piece posted twice is the same bytes
         double now = kStart;
-        std::map<String, String> byPath;
+        Map<String, String> byPath;
         size_t seen = 0;
         for (int frame = 0; frame < 100 && fixture.sink.QueuedPieces() > 0; ++frame) {
             fixture.sink.Pump(now);

@@ -83,7 +83,7 @@ namespace BECore::Mahjong::Tests {
         for (const char* language : {"en", "ru"}) {
             SCOPED_TRACE(language);
             const UIStrings& strings = Words(language);
-            std::set<String> sentences;
+            Set<String> sentences;
             for (const HandMove& move : EveryMove()) {
                 const String text = MoveText(strings, move, Wind::South);
                 EXPECT_FALSE(text.empty());

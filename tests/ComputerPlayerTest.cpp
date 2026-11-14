@@ -169,7 +169,7 @@ namespace BECore::Mahjong::Tests {
     // ----- the seeds -----
 
     TEST(ComputerPlayerTest, SeatSeedsDifferBetweenSeatsAndBetweenTablesAndRepeat) {
-        std::set<uint32_t> seen;
+        Set<uint32_t> seen;
         for (uint32_t table = 0; table < 50; ++table) {
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 EXPECT_EQ(SeatSeed(table, seat), SeatSeed(table, seat));

@@ -70,7 +70,7 @@ namespace BECore::Mahjong::Tests {
                 words.push_back(tip);
             }
         });
-        const std::set<String> distinct(words.begin(), words.end());
+        const Set<String> distinct(words.begin(), words.end());
         EXPECT_EQ(distinct.size(), words.size()) << "six different words: three buttons, two languages";
     }
 

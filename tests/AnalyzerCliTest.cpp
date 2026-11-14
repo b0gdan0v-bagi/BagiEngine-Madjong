@@ -63,9 +63,9 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// A reader over a few named strings.
-        Analyzer::FileReader ReaderOf(std::map<String, String> files) {
+        Analyzer::FileReader ReaderOf(Map<String, String> files) {
             return [files = std::move(files)](StringView path) -> std::expected<String, String> {
-                const auto found = files.find(String(path));
+                const auto found = files.find(path);
                 if (found == files.end()) {
                     return std::unexpected(String("no such file"));
                 }

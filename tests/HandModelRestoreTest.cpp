@@ -172,9 +172,9 @@ namespace BECore::Mahjong::Tests {
 
         /// What the playouts have seen, to hold that they cover the phases and the kinds of move.
         struct Coverage {
-            std::set<int> phases;
-            std::set<int> moves;
-            std::set<int> statuses;
+            Set<int> phases;
+            Set<int> moves;
+            Set<int> statuses;
             int flowerHands = 0;
             int bonusTilesSeen = 0;
             int finishedWins = 0;

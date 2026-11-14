@@ -65,8 +65,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The seats whose tiles the client must not see, kinds that seat holds and the viewer does not.
-        std::set<uint8_t> KindsOnlyOthersHold(const HandModel& hand, Seat viewer) {
-            std::set<uint8_t> mine;
+        Set<uint8_t> KindsOnlyOthersHold(const HandModel& hand, Seat viewer) {
+            Set<uint8_t> mine;
             for (const Tile tile : hand.GetHand(viewer).concealed) {
                 mine.insert(tile.Id());
             }
@@ -75,7 +75,7 @@ namespace BECore::Mahjong::Tests {
                     mine.insert(static_cast<uint8_t>(meld.first.Id() + offset));
                 }
             }
-            std::set<uint8_t> hidden;
+            Set<uint8_t> hidden;
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 if (seat == viewer) {
                     continue;
@@ -680,7 +680,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongGameControlTest, ActionsOfEveryKindAreAcceptedWhenPlayedThroughTheApi) {
         // Over many matches the person takes the claims, kongs, declarations and wins that the chooser prefers; between them every kind
         // that random play reaches is accepted. (The kongs and the robbery have their own tests on fixed walls.)
-        std::set<String> played;
+        Set<String> played;
         MahjongRng rng(3);
         for (uint32_t seed = 1; seed <= 40; ++seed) {
             ASSERT_NO_FATAL_FAILURE(Reset(Format("{{\"seed\": {}, \"seats\": \"PCCC\", \"hands\": 8}}", seed).c_str()));

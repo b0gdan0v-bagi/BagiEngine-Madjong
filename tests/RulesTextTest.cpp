@@ -129,8 +129,8 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(RulesTextTest, NoTwoPagesShareATitleAndEveryLanguageSaysItsOwn) {
-        std::set<String> english;
-        std::set<String> russian;
+        Set<String> english;
+        Set<String> russian;
         ForEveryPage([&](PoolString language, int, const RulesPage& content) {
             const bool isRussian = language == "ru"_intern;
             EXPECT_TRUE((isRussian ? russian : english).insert(content.title).second) << content.title.c_str() << " is the title of two pages";
@@ -571,7 +571,7 @@ namespace BECore::Mahjong::Tests {
             const String where = Where(language, kLimitPage);
             const RulesPage page = FormatRulesPage(strings, kLimitPage);
             ASSERT_EQ(page.items.size(), static_cast<size_t>(kLimitKinds)) << where;
-            std::set<String> names;
+            Set<String> names;
             for (int kind = kFirst; kind <= kLast; ++kind) {
                 const String expected = ScoreLineText(strings, ScoreLine{static_cast<ScoreKind>(kind), Tile{}, 0, 0});
                 EXPECT_EQ(page.items[static_cast<size_t>(kind - kFirst)], expected) << where;
