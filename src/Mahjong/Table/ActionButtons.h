@@ -69,7 +69,7 @@ namespace BECore::Mahjong {
     struct ButtonState {
         bool shown = false;
         HandAction action;
-        eastl::array<Tile, kMaxButtonTiles> tiles;
+        Array<Tile, kMaxButtonTiles> tiles;
         int tileCount = 0;
         StringView hintKey;
 
@@ -77,7 +77,7 @@ namespace BECore::Mahjong {
     };
 
     struct ActionButtons {
-        eastl::array<ButtonState, kButtonCount> buttons;
+        Array<ButtonState, kButtonCount> buttons;
 
         [[nodiscard]] const ButtonState& operator[](ButtonKind kind) const noexcept {
             return buttons[static_cast<size_t>(kind)];
@@ -96,11 +96,11 @@ namespace BECore::Mahjong {
      * `Win` and `Pass` as they are. The tiles to picture: the three of a chow, the `pendingTile` (the discard or the robbed kong's tile;
      * none when unknown) for the claims of mahjong, pung and kong, the tile of a concealed or upgraded kong.
      */
-    [[nodiscard]] ActionButtons MakeActionButtons(const eastl::vector<HandAction>& legal, Optional<Tile> pendingTile = std::nullopt);
+    [[nodiscard]] ActionButtons MakeActionButtons(const Vector<HandAction>& legal, Optional<Tile> pendingTile = std::nullopt);
 
     /// The tiles of the hand a chow takes: the two of its sequence besides the pending discard.
     struct ChowTakes {
-        eastl::array<Tile, 2> tiles;
+        Array<Tile, 2> tiles;
         int count = 0;
     };
 

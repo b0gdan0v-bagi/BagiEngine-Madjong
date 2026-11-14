@@ -15,8 +15,8 @@ namespace BECore::Mahjong {
             bool operator==(const PileEntry&) const noexcept = default;
         };
 
-        eastl::vector<PileEntry> PileOf(const TableSnapshot& snapshot) {
-            eastl::vector<PileEntry> pile(snapshot.pile.size());
+        Vector<PileEntry> PileOf(const TableSnapshot& snapshot) {
+            Vector<PileEntry> pile(snapshot.pile.size());
             for (size_t entry = 0; entry < pile.size(); ++entry) {
                 pile[entry].tile = snapshot.pile[entry];
             }
@@ -54,17 +54,17 @@ namespace BECore::Mahjong {
         /// One planning pass: it remembers which copies of the tiles of the face-up hands are already flying out of their hands.
         class Planner {
         public:
-            Planner(const TableSnapshot& before, const TableSnapshot& after, eastl::span<const HandMove> newMoves) : _before(before), _after(after), _moves(newMoves), _beforePile(PileOf(before)) {
+            Planner(const TableSnapshot& before, const TableSnapshot& after, Span<const HandMove> newMoves) : _before(before), _after(after), _moves(newMoves), _beforePile(PileOf(before)) {
                 for (Seat seat = 0; seat < kSeatCount; ++seat) {
                     _used[seat].assign(before.openHand[seat].size(), false);
                 }
-                const eastl::vector<PileEntry> afterPile = PileOf(after);
+                const Vector<PileEntry> afterPile = PileOf(after);
                 while (_shared < _beforePile.size() && _shared < afterPile.size() && _beforePile[_shared] == afterPile[_shared]) {
                     ++_shared;
                 }
             }
 
-            eastl::vector<TileFlight> Run() {
+            Vector<TileFlight> Run() {
                 for (const TileSlot& slot : _after.layout.slots) {
                     switch (slot.role) {
                         case SlotRole::DiscardTile:
@@ -93,7 +93,7 @@ namespace BECore::Mahjong {
             /// The slot of `before` a tile of `seat` leaves its hand from; null when the seat has no hand slot there.
             const TileSlot* HandSource(Seat seat, Tile tile) {
                 if (IsSeat(seat)) {
-                    const eastl::vector<Tile>& open = _before.openHand[seat];
+                    const Vector<Tile>& open = _before.openHand[seat];
                     for (size_t i = 0; i < open.size(); ++i) {
                         if (_used[seat][i] || open[i] != tile) {
                             continue;
@@ -128,7 +128,7 @@ namespace BECore::Mahjong {
                 if (FindSlot(_before.layout, SlotKey::Of(slot)) != nullptr || slot.seat < 0 || slot.seat >= kSeatCount) {
                     return;
                 }
-                const eastl::vector<Meld>& melds = _after.melds[slot.seat];
+                const Vector<Meld>& melds = _after.melds[slot.seat];
                 if (slot.index < 0 || static_cast<size_t>(slot.index) >= melds.size()) {
                     return;
                 }
@@ -193,11 +193,11 @@ namespace BECore::Mahjong {
 
             const TableSnapshot& _before;
             const TableSnapshot& _after;
-            eastl::span<const HandMove> _moves;
-            eastl::array<eastl::vector<bool>, kSeatCount> _used;
-            eastl::vector<PileEntry> _beforePile;
+            Span<const HandMove> _moves;
+            Array<Vector<bool>, kSeatCount> _used;
+            Vector<PileEntry> _beforePile;
             size_t _shared = 0;
-            eastl::vector<TileFlight> _flights;
+            Vector<TileFlight> _flights;
         };
 
     }  // namespace
@@ -209,7 +209,7 @@ namespace BECore::Mahjong {
         return meld.first;
     }
 
-    eastl::vector<TileFlight> PlanFlights(const TableSnapshot& before, const TableSnapshot& after, eastl::span<const HandMove> newMoves) {
+    Vector<TileFlight> PlanFlights(const TableSnapshot& before, const TableSnapshot& after, Span<const HandMove> newMoves) {
         if (before.layout.slots.empty() || before.layout.viewer != after.layout.viewer || before.layout.viewWidth != after.layout.viewWidth || before.layout.viewHeight != after.layout.viewHeight) {
             return {};
         }

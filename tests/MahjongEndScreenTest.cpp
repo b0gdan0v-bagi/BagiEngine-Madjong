@@ -157,7 +157,7 @@ namespace BECore::Mahjong::Tests {
 
         struct WorstTexts {
             String headline;
-            eastl::array<String, kScoreColumns> cells;  // the longest text of each column of the score table
+            Array<String, kScoreColumns> cells;  // the longest text of each column of the score table
             String summary;
             String standingName;   // the longest name of a standings row
             String standingScore;  // and the biggest score
@@ -171,9 +171,9 @@ namespace BECore::Mahjong::Tests {
             WorstTexts worst;
             worst.tile = LongestTile(strings, [](Tile tile) { return !tile.IsBonus(); });  // a winning tile is never a flower
 
-            std::vector<String> headlines;
-            std::array<std::vector<String>, kScoreColumns> columns;
-            std::vector<String> summaries;
+            Vector<String> headlines;
+            Array<Vector<String>, kScoreColumns> columns;
+            Vector<String> summaries;
             for (Seat winner = 0; winner < kSeatCount; ++winner) {
                 for (Seat east = 0; east < kSeatCount; ++east) {
                     HandSettlement settlement;
@@ -221,8 +221,8 @@ namespace BECore::Mahjong::Tests {
             worst.summary = LongestText(summaries);
 
             // The standings: a row with the last place and the biggest score, the headline of three tied seats and of a single winner
-            std::vector<String> standings;
-            std::vector<String> standingsHeadlines;
+            Vector<String> standings;
+            Vector<String> standingsHeadlines;
             for (Seat person = 0; person < kSeatCount; ++person) {
                 SeatSetup seats{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
                 seats[person] = SeatKind::Person;
@@ -773,7 +773,7 @@ namespace BECore::Mahjong::Tests {
             }
             EXPECT_EQ(GapBelow(tiles->rect, lines->rect), kScoreTableGap);
             EXPECT_EQ(lines->rect.w, headline->rect.w);
-            std::vector<float> columns;  // the distinct left edges of the lines: four columns
+            Vector<float> columns;  // the distinct left edges of the lines: four columns
             for (int i = 0; i < kMaxScoreLines; ++i) {
                 const UIElement* line = Element("HandOver", Format("ScoreLine{}", i).c_str());
                 ASSERT_NE(line, nullptr) << i;
@@ -902,7 +902,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(summary->rect.y + summary->rect.h, plate.y + plate.h - kModalPadding) << "the plate ends with the summary band";
             EXPECT_EQ(details->rect.y + details->rect.h, summary->rect.y + summary->rect.h) << "the details stack is exactly full";
             ExpectTheTableInsideThePlate(plate, "portrait");
-            std::vector<float> columns;
+            Vector<float> columns;
             for (int i = 0; i < kMaxScoreLines; ++i) {
                 const UIElement* line = Element("HandOver", Format("ScoreLine{}", i).c_str());
                 ASSERT_NE(line, nullptr) << i;
@@ -939,7 +939,7 @@ namespace BECore::Mahjong::Tests {
         /// they lie in a row above the large hand, under the foot of the plate (a known gap, "Left for the owner" of the entry
         /// `mahjong-phone-hand-size`); the viewer's concealed tiles are held in every profile.
         void ExpectNoHandUnder(const Rect& rect, const TableLayout& layout, const char* label, bool exceptViewersSets = false) {
-            std::array<size_t, kSeatCount> slotsOfSeat{};
+            Array<size_t, kSeatCount> slotsOfSeat{};
             for (const TileSlot& slot : layout.slots) {
                 if (!IsHandSlot(slot)) {
                     continue;
@@ -1000,7 +1000,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(details->rect.y + details->rect.h, summary->rect.y + summary->rect.h) << "the details stack is exactly full";
             EXPECT_EQ(gap->rect.h, kScoreButtonGapHeight);
             ExpectTheTableInsideThePlate(plate, "narrow");
-            std::vector<float> columns;
+            Vector<float> columns;
             for (int i = 0; i < kMaxScoreLines; ++i) {
                 const UIElement* line = Element("HandOver", Format("ScoreLine{}", i).c_str());
                 ASSERT_NE(line, nullptr) << i;
@@ -1381,7 +1381,7 @@ namespace BECore::Mahjong::Tests {
             }
             ExpectPassesTheMatrix("HandOver", EngineTouchMinimum());
             ExpectPassesTheMatrix("HandOverAction", EngineTouchMinimum());
-            const std::vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("HandOver"), kButtonAir);  // each window against the view of its shape
+            const Vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("HandOver"), kButtonAir);  // each window against the view of its shape
             EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
             EXPECT_GE(Element("HandOverAction", "NextHand")->rect.h, kMinControlHeight);
         });
@@ -1431,7 +1431,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(Shown("HudMenu"));
         auto plate = Canvas("HandOver");
         ASSERT_TRUE(plate);
-        std::vector<const UIElement*> controls;
+        Vector<const UIElement*> controls;
         CollectControls(plate->GetRoot(), controls);
         for (const UIElement* control : controls) {
             EXPECT_FALSE(control->IsInteractive()) << control->name.ToStringView().data() << ": the plate is text, the button is in HandOverAction";

@@ -184,20 +184,20 @@ namespace BECore::Mahjong::Arena {
 
     TEST(ArenaStatsTest, ThePerSeedSeriesAreTheFourRotationsDividedByFour) {
         const FocusResult normal = NormalFocus();
-        const eastl::vector<double> points = SeedSeries(normal, SeedMetric::PointsPerHand);
+        const Vector<double> points = SeedSeries(normal, SeedMetric::PointsPerHand);
         ASSERT_EQ(points.size(), 4u);
         EXPECT_EQ(points[0], 100.0);
         EXPECT_EQ(points[1], 50.0);
         EXPECT_EQ(points[2], 0.0);
         EXPECT_EQ(points[3], -50.0);
-        const eastl::vector<double> wins = SeedSeries(normal, SeedMetric::WinPercent);
+        const Vector<double> wins = SeedSeries(normal, SeedMetric::WinPercent);
         EXPECT_EQ(wins[0], 50.0);
         EXPECT_EQ(wins[1], 25.0);
         EXPECT_EQ(wins[2], 0.0);
-        const eastl::vector<double> drawn = SeedSeries(normal, SeedMetric::DrawnPercent);
+        const Vector<double> drawn = SeedSeries(normal, SeedMetric::DrawnPercent);
         EXPECT_EQ(drawn[2], 25.0);
         EXPECT_EQ(drawn[0], 0.0);
-        const eastl::vector<double> declared = SeedSeries(normal, SeedMetric::DeclaredPercent);
+        const Vector<double> declared = SeedSeries(normal, SeedMetric::DeclaredPercent);
         EXPECT_EQ(declared[0], 75.0);
         EXPECT_EQ(declared[2], 25.0);
 
@@ -271,7 +271,7 @@ namespace BECore::Mahjong::Arena {
     TEST(ArenaStatsTest, TheStyleSeriesAreThePerSeedShareAndStandingScore) {
         const FocusResult normal = NormalFocus();
         // gave win %: 1, 1, 0, 2 of 4 hands.
-        const eastl::vector<double> gave = SeedSeries(normal, SeedMetric::GaveWinPercent);
+        const Vector<double> gave = SeedSeries(normal, SeedMetric::GaveWinPercent);
         ASSERT_EQ(gave.size(), 4u);
         EXPECT_EQ(gave[0], 25.0);
         EXPECT_EQ(gave[2], 0.0);
@@ -279,7 +279,7 @@ namespace BECore::Mahjong::Arena {
         EXPECT_NEAR(MetricInterval(normal, SeedMetric::GaveWinPercent).mean, 25.0, kTolerance);
         EXPECT_NEAR(MetricInterval(normal, SeedMetric::GaveWinPercent).sd, std::sqrt(1250.0 / 3.0), kTolerance);
         // standing score: the sum over the lost hands of the seed divided by their number, 80 / 2, 90 / 3, 150 / 3, 60 / 3.
-        const eastl::vector<double> standing = SeedSeries(normal, SeedMetric::StandingScore);
+        const Vector<double> standing = SeedSeries(normal, SeedMetric::StandingScore);
         ASSERT_EQ(standing.size(), 4u);
         EXPECT_EQ(standing[0], 40.0);
         EXPECT_EQ(standing[1], 30.0);
@@ -295,7 +295,7 @@ namespace BECore::Mahjong::Arena {
         FocusResult normal = NormalFocus();
         normal.rows[2] = Row(kFirstSeed + 2, 0, 4, 0, 1, 0, 0, 0, 0);
         // The seed is left out of the series, so the series is shorter than the rows; the share of the given wins keeps it (0 %).
-        const eastl::vector<double> standing = SeedSeries(normal, SeedMetric::StandingScore);
+        const Vector<double> standing = SeedSeries(normal, SeedMetric::StandingScore);
         ASSERT_EQ(standing.size(), 3u);
         EXPECT_EQ(standing[0], 40.0);
         EXPECT_EQ(standing[1], 30.0);

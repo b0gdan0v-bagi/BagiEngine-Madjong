@@ -610,7 +610,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_TRUE(plateElement != nullptr);
             ASSERT_FALSE(plateElement->rect.IsEmpty()) << window.label.c_str();
             const Rect plateRect = ToView(plateElement->rect, *plate, window);
-            std::vector<Rect> texts;
+            Vector<Rect> texts;
             for (const char* name : kTexts) {
                 const UIElement* element = Element("HandOver", name);
                 ASSERT_NE(element, nullptr) << name;
@@ -676,7 +676,7 @@ namespace BECore::Mahjong::Tests {
     protected:
         /// Shows the buttons of `kinds` (with their pictures) in the compact canvas and no others, and the hint button, which ends every set
         /// (the hints offer it in a turn and in a claim window); the canvas is shown by hand.
-        void ShowCompactButtons(UICanvasComponent& compact, const std::vector<ButtonKind>& kinds) {
+        void ShowCompactButtons(UICanvasComponent& compact, const Vector<ButtonKind>& kinds) {
             ASSERT_TRUE(compact.SetElementVisible("HintButton"_intern, true));
             for (int i = 0; i < kButtonCount; ++i) {
                 const ButtonSpec& spec = SpecOf(static_cast<ButtonKind>(i));
@@ -698,7 +698,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The buttons and pictures of `kinds`, and the hint button, in the compact canvas laid out in the window lie clear of the table and inside the window.
-        void ExpectCompactRowClearOfTheTable(UICanvasComponent& compact, const MatrixWindow& window, const std::vector<ButtonKind>& kinds, const TableLayout& layout, float userScale = 1.0f) {
+        void ExpectCompactRowClearOfTheTable(UICanvasComponent& compact, const MatrixWindow& window, const Vector<ButtonKind>& kinds, const TableLayout& layout, float userScale = 1.0f) {
             LayOutInWindow(compact, window, CanvasScaleMode::ScaleWithScreen, userScale);
             // The whole row, all its lines: the stack is as high as it is given, and it lies clear of the table
             const UIElement* row = Element("ActionsCompact", "ActionRow");
@@ -738,7 +738,7 @@ namespace BECore::Mahjong::Tests {
 
         size_t checked = 0;
         size_t sideInsets = 0;
-        for (const std::vector<ButtonKind>& kinds : FullestButtonSets()) {
+        for (const Vector<ButtonKind>& kinds : FullestButtonSets()) {
             ASSERT_NO_FATAL_FAILURE(ShowCompactButtons(*compact, kinds));
             for (const MatrixWindow& window : CompactWindows()) {
                 const TableLayout layout = MakeWorstCaseTableLayout(0, window);  // the table as the window draws it (the view of its shape)
@@ -823,7 +823,7 @@ namespace BECore::Mahjong::Tests {
             if (IsCompactWindow(window, userScale)) {
                 ++compactWindows;
                 EXPECT_GE(BarUnderTableOf(window) - BottomInsetOf(window), rowPixels) << label << ": the bar, less the bottom inset, holds the whole row";
-                for (const std::vector<ButtonKind>& kinds : FullestButtonSets()) {
+                for (const Vector<ButtonKind>& kinds : FullestButtonSets()) {
                     ASSERT_NO_FATAL_FAILURE(ShowCompactButtons(*compact, kinds));
                     ExpectCompactRowClearOfTheTable(*compact, window, kinds, layout, userScale);
                 }

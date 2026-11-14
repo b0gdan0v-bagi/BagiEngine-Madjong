@@ -43,7 +43,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The log of a match of four computers on `seed`.
-        eastl::vector<MatchLogEvent> PlayedLog(uint32_t seed) {
+        Vector<MatchLogEvent> PlayedLog(uint32_t seed) {
             Match match;
             TableSession session(match);
             MatchLog log;
@@ -58,7 +58,7 @@ namespace BECore::Mahjong::Tests {
             return log.Events();
         }
 
-        int HandCount(const eastl::vector<MatchLogEvent>& events) {
+        int HandCount(const Vector<MatchLogEvent>& events) {
             int settlements = 0;
             for (const MatchLogEvent& event : events) {
                 settlements += event.kind == MatchLogKind::Settlement ? 1 : 0;
@@ -66,7 +66,7 @@ namespace BECore::Mahjong::Tests {
             return settlements;
         }
 
-        int ActionCount(const eastl::vector<MatchLogEvent>& events, int hand) {
+        int ActionCount(const Vector<MatchLogEvent>& events, int hand) {
             int count = 0;
             int current = 1;
             for (const MatchLogEvent& event : events) {
@@ -112,7 +112,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The view before action number `index` of hand number `hand`, by playing the match by hand: no replay function involved.
-        String ViewPlayedByHand(const eastl::vector<MatchLogEvent>& events, int hand, int index) {
+        String ViewPlayedByHand(const Vector<MatchLogEvent>& events, int hand, int index) {
             Match match;
             int current = 1;
             int count = 0;
@@ -141,13 +141,13 @@ namespace BECore::Mahjong::Tests {
             return {};
         }
 
-        String ViewOfLog(const eastl::vector<MatchLogEvent>& events, int hand, int index) {
+        String ViewOfLog(const Vector<MatchLogEvent>& events, int hand, int index) {
             const std::expected<LogPosition, String> position = Analyzer::PositionFromLog(events, hand, index);
             EXPECT_TRUE(position.has_value()) << (position.has_value() ? "" : position.error().c_str());
             return position.has_value() ? ViewText(position->view) : String();
         }
 
-        size_t IndexOfKind(const eastl::vector<MatchLogEvent>& events, MatchLogKind kind, size_t from = 0) {
+        size_t IndexOfKind(const Vector<MatchLogEvent>& events, MatchLogKind kind, size_t from = 0) {
             for (size_t index = from; index < events.size(); ++index) {
                 if (events[index].kind == kind) {
                     return index;
@@ -156,7 +156,7 @@ namespace BECore::Mahjong::Tests {
             return events.size();
         }
 
-        size_t IndexOfFirstAction(const eastl::vector<MatchLogEvent>& events, size_t from = 0) {
+        size_t IndexOfFirstAction(const Vector<MatchLogEvent>& events, size_t from = 0) {
             return IndexOfKind(events, MatchLogKind::Action, from);
         }
 
@@ -202,7 +202,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(AnalyzerPositionTest, TheViewOfALogPositionIsTheViewOfAMatchPlayedByHandToTheSamePoint) {
         for (const uint32_t seed : {kSeedA, kSeedB, kSeedC}) {
-            const eastl::vector<MatchLogEvent> events = PlayedLog(seed);
+            const Vector<MatchLogEvent> events = PlayedLog(seed);
             ASSERT_GE(HandCount(events), kShortMatchHands);
             for (const int hand : {1, 2, 3}) {
                 const int actions = ActionCount(events, hand);
@@ -215,7 +215,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(AnalyzerPositionTest, ALogPositionNamesTheSeatTheHandTheIndexAndTheLoggedAction) {
-        const eastl::vector<MatchLogEvent> events = PlayedLog(kSeedA);
+        const Vector<MatchLogEvent> events = PlayedLog(kSeedA);
         const std::expected<LogPosition, String> first = Analyzer::PositionFromLog(events, 1, 0);
         ASSERT_TRUE(first.has_value());
         CheckMembers(*first);
@@ -238,7 +238,7 @@ namespace BECore::Mahjong::Tests {
     TEST(AnalyzerPositionTest, AClaimWindowActionOfASeatThatIsNotFirstToDecideIsFound) {
         bool found = false;
         for (const uint32_t seed : {kSeedA, kSeedB, kSeedC}) {
-            const eastl::vector<MatchLogEvent> events = PlayedLog(seed);
+            const Vector<MatchLogEvent> events = PlayedLog(seed);
             for (int hand = 1; hand <= HandCount(events) && !found; ++hand) {
                 const int actions = ActionCount(events, hand);
                 for (int index = 1; index < actions && !found; ++index) {
@@ -259,13 +259,13 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(AnalyzerPositionTest, TheDecisionsOfASeatAreListedInLogOrderAndEqualTheSinglePositions) {
-        const eastl::vector<MatchLogEvent> events = PlayedLog(kSeedB);
+        const Vector<MatchLogEvent> events = PlayedLog(kSeedB);
         for (const int hand : {1, 2}) {
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                const std::expected<eastl::vector<LogPosition>, String> positions = Analyzer::PositionsOfSeat(events, hand, seat);
+                const std::expected<Vector<LogPosition>, String> positions = Analyzer::PositionsOfSeat(events, hand, seat);
                 ASSERT_TRUE(positions.has_value()) << positions.error().c_str();
                 // The indexes are those of the seat's Action events among the hand's, in order.
-                eastl::vector<int> expected;
+                Vector<int> expected;
                 int current = 1;
                 int index = 0;
                 for (const MatchLogEvent& event : events) {
@@ -292,8 +292,8 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(AnalyzerPositionTest, ALogWithoutItsHandAndEndEventsGivesTheSameViewsAndTheSameNumbers) {
-        const eastl::vector<MatchLogEvent> events = PlayedLog(kSeedA);
-        eastl::vector<MatchLogEvent> bare;
+        const Vector<MatchLogEvent> events = PlayedLog(kSeedA);
+        Vector<MatchLogEvent> bare;
         for (const MatchLogEvent& event : events) {
             if (event.kind != MatchLogKind::Hand && event.kind != MatchLogKind::End) {
                 bare.push_back(event);
@@ -310,7 +310,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(AnalyzerPositionTest, APositionOutOfRangeOrOfALogThatDoesNotReplayIsAnErrorThatSaysSo) {
-        const eastl::vector<MatchLogEvent> events = PlayedLog(kSeedA);
+        const Vector<MatchLogEvent> events = PlayedLog(kSeedA);
         EXPECT_TRUE(Mentions(Analyzer::PositionFromLog(events, 0, 0).error(), "hand 0"));
         EXPECT_TRUE(Mentions(Analyzer::PositionFromLog(events, kFarHand, 0).error(), "hand 99"));
         EXPECT_TRUE(Mentions(Analyzer::PositionFromLog(events, 1, -1).error(), "action -1"));
@@ -320,7 +320,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(Analyzer::PositionsOfSeat(events, kFarHand, kSeat0).has_value());
 
         // The first action is changed into one the rules refuse: the log does not replay, the error names the event.
-        eastl::vector<MatchLogEvent> broken = events;
+        Vector<MatchLogEvent> broken = events;
         broken[IndexOfFirstAction(broken)].action = HandAction::MakeDiscard(T("F4"));
         const std::expected<LogPosition, String> refused = Analyzer::PositionFromLog(broken, 1, 1);
         ASSERT_FALSE(refused.has_value());
@@ -330,16 +330,16 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(AnalyzerPositionTest, ASeatWithoutADecisionInTheHandIsAnErrorThatNamesIt) {
-        const eastl::vector<MatchLogEvent> events = PlayedLog(kSeedA);
+        const Vector<MatchLogEvent> events = PlayedLog(kSeedA);
         const size_t firstAction = IndexOfFirstAction(events);
         // The log ends after the first action: only one seat has decided.
-        const eastl::vector<MatchLogEvent> cut(events.begin(), events.begin() + static_cast<ptrdiff_t>(firstAction + 1));
+        const Vector<MatchLogEvent> cut(events.begin(), events.begin() + static_cast<ptrdiff_t>(firstAction + 1));
         const Seat decided = events[firstAction].seat;
         const Seat idle = decided == kSeat0 ? kSeat1 : kSeat0;
-        const std::expected<eastl::vector<LogPosition>, String> none = Analyzer::PositionsOfSeat(cut, 1, idle);
+        const std::expected<Vector<LogPosition>, String> none = Analyzer::PositionsOfSeat(cut, 1, idle);
         ASSERT_FALSE(none.has_value());
         EXPECT_TRUE(Mentions(none.error(), "no decision"));
-        const std::expected<eastl::vector<LogPosition>, String> one = Analyzer::PositionsOfSeat(cut, 1, decided);
+        const std::expected<Vector<LogPosition>, String> one = Analyzer::PositionsOfSeat(cut, 1, decided);
         ASSERT_TRUE(one.has_value());
         EXPECT_EQ(one->size(), 1U);
     }

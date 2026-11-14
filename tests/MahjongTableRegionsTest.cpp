@@ -21,8 +21,8 @@ namespace BECore::Mahjong::Tests {
             }
 
             /// The windows the table is drawn in: the design of each shape and every window of the touch checks (the phone profile among them).
-            static std::vector<MatrixWindow> Windows() {
-                std::vector<MatrixWindow> windows;
+            static Vector<MatrixWindow> Windows() {
+                Vector<MatrixWindow> windows;
                 for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait, TableShape::Narrow, TableShape::Wide}) {
                     windows.push_back(DesignWindowOf(shape));
                 }
@@ -34,7 +34,7 @@ namespace BECore::Mahjong::Tests {
             void ExpectHoldsTheRegionsOfTheLayout(const char* node, const String& where) {
                 const auto canvas = Canvas(node);
                 ASSERT_TRUE(canvas) << node;
-                const eastl::vector<TableRegion> expected = MakeTableRegions(_table->GetLayout());
+                const Vector<TableRegion> expected = MakeTableRegions(_table->GetLayout());
                 ASSERT_FALSE(expected.empty()) << where;
                 const UIRegionSet& held = canvas->GetRegions();
                 EXPECT_EQ(held.Size(), expected.size()) << node << " " << where;

@@ -382,7 +382,7 @@ namespace BECore::Mahjong::Tests {
         const TableView view = MakeTableView(model, kSeat1);
         const int before = Shanten(CountTiles(view.own.concealed), 0);
 
-        const eastl::vector<RatedClaim> options = RateClaims(view, before, kNormalProfile);
+        const Vector<RatedClaim> options = RateClaims(view, before, kNormalProfile);
 
         size_t listed = 0;
         for (const HandAction& action : view.legal) {
@@ -429,7 +429,7 @@ namespace BECore::Mahjong::Tests {
                     MahjongRng chooser(seed + static_cast<uint32_t>(compared));
                     const HandAction answer = ChooseClaimAction(view, chooser);
                     if (FindMahjong(view) == nullptr && before > kWaitingShanten) {
-                        const eastl::vector<RatedClaim> options = RateClaims(view, before, kNormalProfile);
+                        const Vector<RatedClaim> options = RateClaims(view, before, kNormalProfile);
                         const RatedClaim* best = nullptr;
                         for (const RatedClaim& option : options) {
                             if (option.acceptable && (best == nullptr || IsBetterClaim(option, *best))) {
@@ -476,7 +476,7 @@ namespace BECore::Mahjong::Tests {
         /// The same seat with its 1s 2s 3s already an open chow: the hand has lost `FullyConcealed` before the window.
         TableView OpenWaitingKongView(const HandModel& model) {
             TableView view = WaitingKongView(model);
-            eastl::vector<Tile> concealed;
+            Vector<Tile> concealed;
             for (const Tile tile : view.own.concealed) {
                 if (tile != T("1s") && tile != T("2s") && tile != T("3s")) {
                     concealed.push_back(tile);

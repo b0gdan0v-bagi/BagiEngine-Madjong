@@ -54,8 +54,8 @@ namespace BECore::Mahjong {
         int shantenBefore = 0;
         TurnOption chosen;
         int equalChoices = 0;
-        eastl::vector<TurnOption> alternatives;
-        eastl::vector<TileCopies> waits;
+        Vector<TurnOption> alternatives;
+        Vector<TileCopies> waits;
         int kongShantenAfter = 0;
         int kongAcceptanceBefore = 0;
         int kongAcceptanceAfter = 0;
@@ -79,8 +79,8 @@ namespace BECore::Mahjong {
         ClaimStep step = ClaimStep::NoGain;
         int shantenBefore = 0;
         Optional<RatedClaim> chosen;
-        eastl::vector<RatedClaim> alternatives;
-        eastl::vector<TileCopies> waits;
+        Vector<RatedClaim> alternatives;
+        Vector<TileCopies> waits;
         Optional<WaitingKong> waitingKong;
     };
 

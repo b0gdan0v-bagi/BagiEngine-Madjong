@@ -169,7 +169,7 @@ namespace BECore::Mahjong {
         void PublishEndScreens(const MahjongGame* game);
         void PublishHandOver(const MahjongGame& game);
         /// Sets the pictures `WinTile0` .. of the winning hand and shows exactly those (the row `WinTiles` with them), the mark of the winning tile on the last.
-        void PublishWinningTiles(const eastl::vector<Tile>& tiles);
+        void PublishWinningTiles(const Vector<Tile>& tiles);
         void PublishMatchOver(const MahjongGame& game);
         /// Shows or hides the score table `HandOver` with its button `HandOverAction`; `HudMenu` (New game) is hidden while it is shown.
         void ShowHandOver(bool shown);

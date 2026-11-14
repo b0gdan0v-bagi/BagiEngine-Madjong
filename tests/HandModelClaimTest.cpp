@@ -115,10 +115,10 @@ namespace BECore::Mahjong::Tests {
 
         ASSERT_EQ(model.GetPhase(), Phase::Claim);
         EXPECT_EQ(model.CurrentSeat(), kSeat0);  // the discarder, in the claim window
-        const eastl::vector<Seat> pending = model.PendingClaimSeats();
+        const Vector<Seat> pending = model.PendingClaimSeats();
         ASSERT_EQ(pending.size(), 1u);
         EXPECT_EQ(pending[0], kSeat1);
-        const eastl::vector<ClaimOption> options = model.LegalClaims(kSeat1);
+        const Vector<ClaimOption> options = model.LegalClaims(kSeat1);
         ASSERT_EQ(options.size(), 1u);
         EXPECT_EQ(options[0].kind, ClaimKind::Chow);
         EXPECT_EQ(options[0].chowFirst, T("4p"));
@@ -171,7 +171,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(model.Discard(kSeat0, T("5p")).has_value());
         ASSERT_EQ(model.GetPhase(), Phase::Claim);
 
-        const eastl::vector<ClaimOption> options = model.LegalClaims(kSeat1);
+        const Vector<ClaimOption> options = model.LegalClaims(kSeat1);
         ASSERT_EQ(options.size(), 3u);
         EXPECT_EQ(options[0], (ClaimOption{ClaimKind::Chow, T("3p")}));
         EXPECT_EQ(options[1], (ClaimOption{ClaimKind::Chow, T("4p")}));
@@ -245,7 +245,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(model.Discard(kSeat3, T(kRed)).has_value());
 
         ASSERT_EQ(model.GetPhase(), Phase::Claim);
-        const eastl::vector<ClaimOption> options = model.LegalClaims(kSeat1);
+        const Vector<ClaimOption> options = model.LegalClaims(kSeat1);
         ASSERT_EQ(options.size(), 1u);
         EXPECT_EQ(options[0].kind, ClaimKind::Pung);
         ASSERT_TRUE(model.Claim(kSeat1, ClaimKind::Pung).has_value());
@@ -272,7 +272,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(model.GetPhase(), Phase::Claim);
         const size_t liveBefore = model.GetWall().LiveCount();
 
-        const eastl::vector<ClaimOption> options = model.LegalClaims(kSeat2);
+        const Vector<ClaimOption> options = model.LegalClaims(kSeat2);
         ASSERT_EQ(options.size(), 2u);
         EXPECT_EQ(options[0].kind, ClaimKind::Pung);
         EXPECT_EQ(options[1].kind, ClaimKind::Kong);
@@ -351,7 +351,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(model.GetPhase(), Phase::Claim);
         ASSERT_EQ(model.PendingClaimSeats().size(), 1u);
         EXPECT_EQ(model.PendingClaimSeats()[0], kSeat0);
-        const eastl::vector<ClaimOption> options = model.LegalClaims(kSeat0);
+        const Vector<ClaimOption> options = model.LegalClaims(kSeat0);
         ASSERT_EQ(options.size(), 1u);
         EXPECT_EQ(options[0].kind, ClaimKind::Mahjong);
 
@@ -415,7 +415,7 @@ namespace BECore::Mahjong::Tests {
     TEST(HandModelClaimTest, MahjongBeatsAPungAndAChowWhenAllThreeClaim) {
         HandModel model = PriorityWindow();
         ASSERT_EQ(model.GetPhase(), Phase::Claim);
-        const eastl::vector<Seat> pending = model.PendingClaimSeats();
+        const Vector<Seat> pending = model.PendingClaimSeats();
         ASSERT_EQ(pending.size(), 3u);
 
         ASSERT_TRUE(model.Claim(kSeat0, ClaimKind::Chow, T(kPriorityChow)).has_value());
@@ -628,7 +628,7 @@ namespace BECore::Mahjong::Tests {
         Lap(model, "9p Wd Gd", {kSeat0});
         ASSERT_TRUE(model.Discard(kSeat3, T("5p")).has_value());
         ASSERT_EQ(model.GetPhase(), Phase::Claim);
-        const eastl::vector<ClaimOption> options = model.LegalClaims(kSeat0);
+        const Vector<ClaimOption> options = model.LegalClaims(kSeat0);
         ASSERT_EQ(options.size(), 2u);
         EXPECT_EQ(options[0].kind, ClaimKind::Mahjong);
         EXPECT_EQ(options[1].kind, ClaimKind::Pung);

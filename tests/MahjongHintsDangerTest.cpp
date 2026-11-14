@@ -94,8 +94,8 @@ namespace BECore::Mahjong::Tests {
             Draw();
         }
 
-        std::vector<Rect> RectsOf(const Color& color) const {
-            std::vector<Rect> found;
+        Vector<Rect> RectsOf(const Color& color) const {
+            Vector<Rect> found;
             for (const DrawCall& call : _renderer->calls) {
                 if (call.kind == DrawKind::Rect && SameColor(call.color, color)) {
                     found.push_back(call.rect);
@@ -105,8 +105,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Every bar of the three danger colours, in draw order.
-        std::vector<Rect> DangerBars() const {
-            std::vector<Rect> bars;
+        Vector<Rect> DangerBars() const {
+            Vector<Rect> bars;
             for (const Color& color : {kSafeMark, kRiskyMark, kDangerMark}) {
                 for (const Rect& bar : RectsOf(color)) {
                     bars.push_back(bar);
@@ -116,8 +116,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The tiles of the viewer's hand: slot (the last layout) and tile.
-        std::vector<std::pair<TileSlot, Tile>> HandTiles() const {
-            std::vector<std::pair<TileSlot, Tile>> tiles;
+        Vector<std::pair<TileSlot, Tile>> HandTiles() const {
+            Vector<std::pair<TileSlot, Tile>> tiles;
             const PlayerHand& held = Hand().GetHand(_table->GetLayout().viewer);
             for (const TileSlot& slot : _table->GetLayout().slots) {
                 if (slot.role == SlotRole::HandTile && slot.seat == _table->GetLayout().viewer) {
@@ -128,8 +128,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The bars of `color` that lie inside the left half of `slot` (its danger bar; there is at most one).
-        std::vector<Rect> BarsOnSlot(const Color& color, const Rect& slot) const {
-            std::vector<Rect> found;
+        Vector<Rect> BarsOnSlot(const Color& color, const Rect& slot) const {
+            Vector<Rect> found;
             for (const Rect& bar : RectsOf(color)) {
                 if (Inside(bar, Rect(slot.x, slot.y, slot.w * 0.5f, slot.h))) {
                     found.push_back(bar);
@@ -160,7 +160,7 @@ namespace BECore::Mahjong::Tests {
 
         /// Every bar of a danger colour clear of every other bar of the table that lies on a hand tile.
         void ExpectClearOfTheOtherMarks(const String& where) const {
-            const std::vector<Rect> bars = DangerBars();
+            const Vector<Rect> bars = DangerBars();
             for (size_t i = 0; i < bars.size(); ++i) {
                 for (size_t j = i + 1; j < bars.size(); ++j) {
                     EXPECT_FALSE(Overlap(bars[i], bars[j])) << where << ": two danger bars";
@@ -189,7 +189,7 @@ namespace BECore::Mahjong::Tests {
             const Color* expected = ColorOfTile(tile);
             size_t found = 0;
             for (const Color& color : {kSafeMark, kRiskyMark, kDangerMark}) {
-                const std::vector<Rect> bars = BarsOnSlot(color, slot.rect);
+                const Vector<Rect> bars = BarsOnSlot(color, slot.rect);
                 if (&color == expected) {
                     ASSERT_EQ(bars.size(), 1u) << ToStd(ToString(tile));
                     EXPECT_FLOAT_EQ(bars[0].w, kDangerMarkWidth);
@@ -282,7 +282,7 @@ namespace BECore::Mahjong::Tests {
         }
         ASSERT_GE(index, 0);
         const Rect slotRect = HandSlot(index)->rect;
-        const std::vector<Rect> before = BarsOnSlot(kDangerMark, slotRect);
+        const Vector<Rect> before = BarsOnSlot(kDangerMark, slotRect);
         ASSERT_EQ(before.size(), 1u);
         const size_t bars = DangerBars().size();
 
@@ -390,7 +390,7 @@ namespace BECore::Mahjong::Tests {
         Scene& scene = *_manager->GetSceneByName("MahjongScene"_intern);
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
-            std::vector<String> lines;
+            Vector<String> lines;
             for (const DangerMark mark : {DangerMark::Safe, DangerMark::Risky, DangerMark::Dangerous}) {
                 lines.push_back(Tr(CoreManager::GetUIStrings(), DangerHoverKey(mark)));
             }

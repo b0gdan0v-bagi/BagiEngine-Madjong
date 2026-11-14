@@ -14,7 +14,7 @@ namespace BECore::Mahjong::Arena {
     inline constexpr uint32_t kRandomSeatSeedOffset = 5;
 
     /// The four players of a hand, by seat.
-    using ArenaPlayers = eastl::array<ArenaPlayer, kSeatCount>;
+    using ArenaPlayers = Array<ArenaPlayer, kSeatCount>;
 
     /// What happened in one hand of the arena. Plain data.
     struct HandRecord {
@@ -34,14 +34,14 @@ namespace BECore::Mahjong::Arena {
         Seat from = kNoSeat;
         /// The kinds of the lines of the winner's breakdown, each once, in the order of the breakdown (empty for a drawn hand; a limit
         /// hand is its one line).
-        eastl::vector<ScoreKind> winKinds;
+        Vector<ScoreKind> winKinds;
         /// Whether the seat declared the calling hand in this hand.
-        eastl::array<bool, kSeatCount> declared{};
+        Array<bool, kSeatCount> declared{};
         /// The actions each seat chose (a seat decides once per action it takes).
-        eastl::array<int, kSeatCount> decisions{};
+        Array<int, kSeatCount> decisions{};
         /// The wall-clock time each seat spent choosing, in nanoseconds; filled only when timing was asked for (it is the one number
         /// that is not a function of the arguments).
-        eastl::array<int64_t, kSeatCount> nanoseconds{};
+        Array<int64_t, kSeatCount> nanoseconds{};
     };
 
     /// Called before each action of a hand with the model as it stands and the seat that is about to act (`PlayArenaHand`'s observer);

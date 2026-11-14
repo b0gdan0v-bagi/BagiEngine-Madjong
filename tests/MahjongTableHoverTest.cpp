@@ -174,7 +174,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongTableHoverTest, AnOpponentsConcealedTileShowsNothing) {
         ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, MakeModel(SpecOf(kPlainHand, "9p"))));
         for (Seat seat = kSeat1; seat < kSeatCount; ++seat) {
-            for (const TileSlot& slot : std::vector<TileSlot>(_table->GetLayout().slots.begin(), _table->GetLayout().slots.end())) {
+            for (const TileSlot& slot : Vector<TileSlot>(_table->GetLayout().slots.begin(), _table->GetLayout().slots.end())) {
                 if (slot.role != SlotRole::HandTile || slot.seat != seat) {
                     continue;
                 }
@@ -186,7 +186,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongTableHoverTest, ASpectatorSeesTheNamesOfTheOpenHandsAndTheDiscards) {
         ASSERT_NO_FATAL_FAILURE(StartSpectating());  // a watched match: every hand is face up
-        const std::vector<TileSlot> slots(_table->GetLayout().slots.begin(), _table->GetLayout().slots.end());
+        const Vector<TileSlot> slots(_table->GetLayout().slots.begin(), _table->GetLayout().slots.end());
         int discards = 0;
         for (const TileSlot& slot : slots) {
             if (slot.role == SlotRole::HandTile) {
@@ -315,7 +315,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongTableHoverTest, ThePlateLiesInsideTheViewAndDoesNotCoverTheTileItNames) {
         ASSERT_NO_FATAL_FAILURE(StartSpectating());
         int checked = 0;
-        const std::vector<TileSlot> slots(_table->GetLayout().slots.begin(), _table->GetLayout().slots.end());
+        const Vector<TileSlot> slots(_table->GetLayout().slots.begin(), _table->GetLayout().slots.end());
         for (const TileSlot& slot : slots) {
             if (slot.role == SlotRole::HandTile || slot.role == SlotRole::WallStack) {
                 continue;
@@ -361,7 +361,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, MakeModel(SpecOf(kPlainHand, "9p"))));
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
-            std::vector<String> candidates;
+            Vector<String> candidates;
             for (uint8_t id = 0; id < kTileIdCount; ++id) {
                 candidates.push_back(TileName(CoreManager::GetUIStrings(), Tile{id}));
             }
@@ -409,7 +409,7 @@ namespace BECore::Mahjong::Tests {
         const auto before = control->GetState();
         ASSERT_TRUE(before.has_value());
 
-        const std::vector<TileSlot> slots(_table->GetLayout().slots.begin(), _table->GetLayout().slots.end());
+        const Vector<TileSlot> slots(_table->GetLayout().slots.begin(), _table->GetLayout().slots.end());
         for (const TileSlot& slot : slots) {
             PointAt(slot.rect);
         }

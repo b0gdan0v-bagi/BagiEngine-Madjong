@@ -122,8 +122,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Everything a card says, one string per line and per row (the cells of a row joined by `|`, the tiles in notation).
-        std::vector<String> TextOf(const HintCard& card) {
-            std::vector<String> text{card.title, card.now};
+        Vector<String> TextOf(const HintCard& card) {
+            Vector<String> text{card.title, card.now};
             for (const CardRow& row : card.rows) {
                 String tiles;
                 for (const Tile tile : row.tiles) {
@@ -189,7 +189,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(note.taken, Discard("5p"));
         EXPECT_EQ(note.advised, *AdviceFor(view));
         EXPECT_EQ(note.stepsBefore, Shanten(counts, 0));
-        const eastl::vector<DiscardOption> rated = RateDiscards(counts, 0, view);
+        const Vector<DiscardOption> rated = RateDiscards(counts, 0, view);
         const auto advisedAt = std::find_if(rated.begin(), rated.end(), [&](const DiscardOption& o) { return o.tile == note.advised.tile; });
         const auto taken = std::find_if(rated.begin(), rated.end(), [](const DiscardOption& o) { return o.tile == T("5p"); });
         ASSERT_TRUE(advisedAt != rated.end() && taken != rated.end());
@@ -411,7 +411,7 @@ namespace BECore::Mahjong::Tests {
             TableView view = WindowView(kWaitingOnPung, "Rd");
             view.liveCount = kLiveForValues;
             if (open) {
-                eastl::vector<Tile> concealed;
+                Vector<Tile> concealed;
                 for (const Tile tile : view.own.concealed) {
                     if (tile != T("1s") && tile != T("2s") && tile != T("3s")) {
                         concealed.push_back(tile);
@@ -502,7 +502,7 @@ namespace BECore::Mahjong::Tests {
         const HandAction other = *advice == kPung ? ChowOf("4p") : kPung;
         ASSERT_TRUE(CanJudge(view, other));
         const int before = Shanten(CountTiles(view.own.concealed), 0);
-        eastl::vector<RatedClaim> rated = RateClaims(view, before, ProfileOf(kDefaultLevel));
+        Vector<RatedClaim> rated = RateClaims(view, before, ProfileOf(kDefaultLevel));
         const auto find = [&](const HandAction& action) {
             for (const RatedClaim& option : rated) {
                 if (option.action == action) {
@@ -622,7 +622,7 @@ namespace BECore::Mahjong::Tests {
     TEST(CoachTest, EveryKindOfNoteMakesAWholeCardInBothLanguages) {
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
-        std::vector<CoachNote> notes;
+        Vector<CoachNote> notes;
         notes.push_back(NoteOf(PairedView(), Discard("5p")));
         notes.push_back(NoteOf(DeclaringView(), Discard("5p", true)));
         notes.push_back(NoteOf(DeclaringView(), Discard("Ew", false)));
@@ -638,7 +638,7 @@ namespace BECore::Mahjong::Tests {
             const String tally = CardTallyText(strings, CoachTally{1, 2}, CoachTally{3, 4});
             for (const CoachNote& note : notes) {
                 const HintCard card = CardOf(note, strings, tally);
-                const std::vector<String> text = TextOf(card);
+                const Vector<String> text = TextOf(card);
                 ASSERT_EQ(card.rows.size(), 2u) << language.ToStringView().data();
                 EXPECT_EQ(card.rows[0].kind, CardRowKind::Best);
                 EXPECT_EQ(card.rows[1].kind, CardRowKind::Yours);
@@ -659,7 +659,7 @@ namespace BECore::Mahjong::Tests {
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
         const CoachNote note = NoteOf(PairedView(), Discard("5p"));
-        std::vector<std::vector<String>> byLanguage;
+        Vector<Vector<String>> byLanguage;
 
         ForEachLanguage(strings, [&](PoolString) { byLanguage.push_back(TextOf(CardOf(note, strings))); });
 

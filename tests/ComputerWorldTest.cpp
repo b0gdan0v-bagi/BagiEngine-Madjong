@@ -44,7 +44,7 @@ namespace BECore::Mahjong::Tests {
             return Format("{}{}/{}/{}/{}/{}", Name(meld.kind), ToString(meld.first), meld.concealed, meld.from, meld.fromDiscard, ToString(meld.claimed));
         }
 
-        String MeldsText(const eastl::vector<Meld>& melds) {
+        String MeldsText(const Vector<Meld>& melds) {
             String text;
             for (const Meld& meld : melds) {
                 text += " " + MeldText(meld);
@@ -52,7 +52,7 @@ namespace BECore::Mahjong::Tests {
             return text;
         }
 
-        String TilesText(const eastl::vector<Tile>& tiles) {
+        String TilesText(const Vector<Tile>& tiles) {
             String text;
             for (const Tile tile : tiles) {
                 AppendFormat(text, " {}", ToString(tile));
@@ -112,7 +112,7 @@ namespace BECore::Mahjong::Tests {
 
         /// Every tile of the set once over the hands, melds, bonus tiles, pile and the three parts of the wall.
         ::testing::AssertionResult EveryTileOnce(const HandModel& world) {
-            std::array<int, kTileIdCount> counts{};
+            Array<int, kTileIdCount> counts{};
             const auto add = [&counts](Tile tile, int copies = 1) { counts[tile.Id()] += copies; };
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 const PlayerHand& hand = world.GetHand(seat);
@@ -388,7 +388,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(ComputerWorldTest, TheSameViewAndTheSameRngGiveTheSameWorldAndTheSameRngState) {
-        const eastl::vector<HandModel> models = {UpgradeModel({kSeat2, kSeat3}), ClaimWindow(), RobbingWindow(), AfterConcealedKong(), SelfDrawWinModel()};
+        const Vector<HandModel> models = {UpgradeModel({kSeat2, kSeat3}), ClaimWindow(), RobbingWindow(), AfterConcealedKong(), SelfDrawWinModel()};
         for (size_t index = 0; index < models.size(); ++index) {
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 const TableView view = MakeTableView(models[index], seat);
@@ -643,7 +643,7 @@ namespace BECore::Mahjong::Tests {
         const double share = static_cast<double>(kDealtTiles) / static_cast<double>(pool);
 
         // Kinds with 4, 3 and 2 unseen copies: how many of them an opponent holds, on average, is unseen * 13 / pool.
-        eastl::vector<Tile> kinds;
+        Vector<Tile> kinds;
         for (const int unseen : {4, 3, 2}) {
             for (uint8_t id = 0; id < kKindCount; ++id) {
                 if (UnseenCopies(view, Tile{id}) == unseen) {
@@ -653,7 +653,7 @@ namespace BECore::Mahjong::Tests {
             }
         }
         ASSERT_EQ(kinds.size(), 3U) << "the deal leaves kinds with four, three and two unseen copies";
-        eastl::array<eastl::array<double, kSeatCount>, 3> held{};
+        Array<Array<double, kSeatCount>, 3> held{};
         MahjongRng rng(51);
         for (int i = 0; i < kFrequencyWorlds; ++i) {
             const Optional<HandModel> world = SampleWorld(view, rng);

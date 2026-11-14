@@ -100,7 +100,7 @@ namespace BECore::Mahjong {
         return "playing";
     }
 
-    Json MeldsToJson(const eastl::vector<Meld>& melds) {
+    Json MeldsToJson(const Vector<Meld>& melds) {
         Json list = Json::array();
         for (const Meld& meld : melds) {
             list.push_back(MeldToJson(meld));

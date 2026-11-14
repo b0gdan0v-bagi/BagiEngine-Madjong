@@ -40,6 +40,6 @@ namespace BECore::Mahjong {
      * suit within two ranks) are tried, because no other tile can join a set. A kind of which the caller passes four copies is still
      * listed: the caller subtracts the copies it cannot get (the view of the player knows what lies in the pile).
      */
-    [[nodiscard]] eastl::vector<Tile> ImprovingTiles(const TileCounts& counts, int meldCount);
+    [[nodiscard]] Vector<Tile> ImprovingTiles(const TileCounts& counts, int meldCount);
 
 }  // namespace BECore::Mahjong

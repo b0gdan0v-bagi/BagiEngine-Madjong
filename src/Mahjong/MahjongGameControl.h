@@ -26,7 +26,7 @@ namespace BECore::Mahjong {
     [[nodiscard]] Json SeatOrNull(Seat seat);
 
     /// A list of tiles in the notation of `Tile.h`.
-    [[nodiscard]] Json TilesToJson(const eastl::vector<Tile>& tiles);
+    [[nodiscard]] Json TilesToJson(const Vector<Tile>& tiles);
 
     /// One number per seat (points, scores, changes).
     [[nodiscard]] Json SeatScoresToJson(const SeatScores& scores);

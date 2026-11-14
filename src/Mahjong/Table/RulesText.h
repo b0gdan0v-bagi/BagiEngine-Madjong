@@ -56,11 +56,11 @@ namespace BECore::Mahjong {
     struct RulesPage {
         String title;
         /// The prose, one label each, at most `kRulesMaxLines` of at most `kRulesMaxLineLength` code points.
-        eastl::vector<String> lines;
+        Vector<String> lines;
         /// Short items with a number ("Dragon set: x2"), at most `kRulesMaxItems`, shown in `kRulesItemColumns` columns.
-        eastl::vector<String> items;
+        Vector<String> items;
         /// The examples: at most `kRulesMaxTileRows` rows of at most `kRulesMaxRowTiles` playable tiles each (no text, so no language).
-        eastl::vector<eastl::vector<Tile>> tileRows;
+        Vector<Vector<Tile>> tileRows;
     };
 
     /// How many pages the rules have.

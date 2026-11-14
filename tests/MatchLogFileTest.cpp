@@ -74,8 +74,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The files of `folder`, by name.
-        std::vector<fs::path> FilesIn(const fs::path& folder) {
-            std::vector<fs::path> files;
+        Vector<fs::path> FilesIn(const fs::path& folder) {
+            Vector<fs::path> files;
             std::error_code error;
             for (fs::directory_iterator it(folder, error); !error && it != fs::directory_iterator(); it.increment(error)) {
                 files.push_back(it->path());
@@ -84,8 +84,8 @@ namespace BECore::Mahjong::Tests {
             return files;
         }
 
-        std::vector<String> LinesOf(const String& text) {
-            std::vector<String> lines;
+        Vector<String> LinesOf(const String& text) {
+            Vector<String> lines;
             std::istringstream stream(ToStdString(text));
             for (std::string line; std::getline(stream, line);) {  //-NoStd: getline fills a std::string
                 lines.push_back(FromStdString(line));
@@ -198,13 +198,13 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(table.Start());
         table.PlayMatch();
 
-        const std::vector<fs::path> files = FilesIn(folder);
+        const Vector<fs::path> files = FilesIn(folder);
         ASSERT_EQ(files.size(), 1u);
         EXPECT_TRUE(std::regex_match(files[0].filename().string(), std::regex(kFileNamePattern))) << files[0].filename().string();
         EXPECT_EQ(files[0], table.writer.Path());
         EXPECT_FALSE(table.writer.IsOpen()) << "the file is closed at End";
 
-        const std::vector<String> lines = LinesOf(ReadFile(files[0]));
+        const Vector<String> lines = LinesOf(ReadFile(files[0]));
         ASSERT_EQ(lines.size(), table.tee.Log().Events().size());
         for (size_t index = 0; index < lines.size(); ++index) {
             const auto parsed = ParseJson(lines[index].c_str());
@@ -222,7 +222,7 @@ namespace BECore::Mahjong::Tests {
         table.PlayMatch();
         ASSERT_EQ(table.match.History().size(), static_cast<size_t>(kShortMatchHands));
 
-        const std::vector<fs::path> files = FilesIn(folder);
+        const Vector<fs::path> files = FilesIn(folder);
         ASSERT_EQ(files.size(), 1u);
         const auto events = ParseMatchLog(ReadFile(files[0]).c_str());
         ASSERT_TRUE(events.has_value()) << events.error().c_str();
@@ -236,12 +236,12 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MatchLogFileTest, TheSameSeedInTheSameSecondGetsAFileOfItsOwn) {
         WrittenTable table;
-        std::vector<fs::path> paths;
+        Vector<fs::path> paths;
         for (int start = 0; start < kStartsInARow; ++start) {
             ASSERT_NO_FATAL_FAILURE(table.Start());
             paths.push_back(table.writer.Path());
         }
-        const std::vector<fs::path> files = FilesIn(folder);
+        const Vector<fs::path> files = FilesIn(folder);
         EXPECT_EQ(files.size(), static_cast<size_t>(kStartsInARow));
         std::sort(paths.begin(), paths.end());
         EXPECT_EQ(std::unique(paths.begin(), paths.end()), paths.end()) << "two matches share a file";
@@ -250,7 +250,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_TRUE(std::regex_match(file.filename().string(), fileName)) << file.filename().string();
         }
         // the suffix exists exactly for the files that share their second with an earlier one
-        std::vector<String> stamps;
+        Vector<String> stamps;
         for (const fs::path& file : files) {
             stamps.push_back(FromStdString(file.filename().string().substr(0, kExampleStamp.size())));
         }

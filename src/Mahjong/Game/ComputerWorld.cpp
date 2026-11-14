@@ -11,14 +11,14 @@ namespace BECore::Mahjong {
     namespace {
 
         /// The other seats' unseen copies, per kind, as signed numbers (the pile arithmetic goes below 0 on a view no hand makes).
-        using KindNumbers = eastl::array<int, kKindCount>;
+        using KindNumbers = Array<int, kKindCount>;
 
         /// What is drawn for one seat that is not the viewer: its hidden tiles and its melds (the open ones, then the concealed kongs).
         struct SeatSample {
-            eastl::vector<Meld> melds;
+            Vector<Meld> melds;
             /// How many concealed tiles the seat has to be given from the pool.
             int hiddenCount = 0;
-            eastl::vector<Tile> hidden;
+            Vector<Tile> hidden;
         };
 
         /// The seat that holds East when `view.seat` has `view.seatWind`.
@@ -33,7 +33,7 @@ namespace BECore::Mahjong {
         }
 
         /// Whether `melds` holds an open pung of `tile` (what an upgraded kong grows from).
-        bool HasOpenPung(const eastl::vector<Meld>& melds, Tile tile) noexcept {
+        bool HasOpenPung(const Vector<Meld>& melds, Tile tile) noexcept {
             for (const Meld& meld : melds) {
                 if (meld.kind == MeldKind::Pung && !meld.concealed && meld.first == tile) {
                     return true;
@@ -44,7 +44,7 @@ namespace BECore::Mahjong {
 
         /// Takes `count` random tiles out of `pool[begin..)` and puts them at `pool[begin..begin + count)` (a partial Fisher-Yates; the
         /// pool stays a bag of the same tiles, so a rejected draw needs no undoing). `count` must not exceed what is left.
-        void DrawToFront(eastl::vector<Tile>& pool, size_t begin, size_t count, MahjongRng& rng) {
+        void DrawToFront(Vector<Tile>& pool, size_t begin, size_t count, MahjongRng& rng) {
             for (size_t i = 0; i < count; ++i) {
                 const size_t left = pool.size() - begin - i;
                 const size_t pick = begin + i + rng.Below(static_cast<uint32_t>(left));
@@ -53,7 +53,7 @@ namespace BECore::Mahjong {
         }
 
         /// Whether the hidden tiles `pool[begin..begin + count)` and the melds make a waiting hand of 13 tiles.
-        bool DrawnHandWaits(const eastl::vector<Tile>& pool, size_t begin, const SeatSample& sample, const TileCounts& meldTiles) {
+        bool DrawnHandWaits(const Vector<Tile>& pool, size_t begin, const SeatSample& sample, const TileCounts& meldTiles) {
             TileCounts counts{};
             for (size_t i = 0; i < static_cast<size_t>(sample.hiddenCount); ++i) {
                 ++counts[pool[begin + i].Id()];
@@ -66,7 +66,7 @@ namespace BECore::Mahjong {
             TileCounts counts = CountTiles(view.own.concealed);
             const TileCounts meldTiles = CountMeldTiles(view.own.melds);
             const int meldCount = static_cast<int>(view.own.melds.size());
-            eastl::vector<Tile> candidates;
+            Vector<Tile> candidates;
             for (const Tile tile : view.own.concealed) {
                 if (!candidates.empty() && candidates.back() == tile) {
                     continue;
@@ -109,7 +109,7 @@ namespace BECore::Mahjong {
         }
 
         // The other seats: the melds (the concealed kongs are kinds of the pool with all four copies) and the number of hidden tiles.
-        eastl::array<SeatSample, kSeatCount> samples;
+        Array<SeatSample, kSeatCount> samples;
         int hiddenTotal = 0;
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             if (seat == view.seat) {
@@ -119,7 +119,7 @@ namespace BECore::Mahjong {
             const PublicSeat& info = view.seats[seat];
             sample.melds = info.openMelds;
             for (int kong = 0; kong < info.concealedKongs; ++kong) {
-                eastl::vector<Tile> kinds;
+                Vector<Tile> kinds;
                 for (uint8_t id = 0; id < kKindCount; ++id) {
                     if (unseen[id] == kCopiesPerTile) {
                         kinds.push_back(Tile{id});
@@ -145,7 +145,7 @@ namespace BECore::Mahjong {
             hiddenTotal += sample.hiddenCount;
         }
 
-        eastl::vector<Tile> pool;
+        Vector<Tile> pool;
         for (uint8_t id = 0; id < kKindCount; ++id) {
             for (int copy = 0; copy < unseen[id]; ++copy) {
                 pool.push_back(Tile{id});
@@ -156,7 +156,7 @@ namespace BECore::Mahjong {
         }
 
         // The bonus tiles: whether the set has them, and the ones nobody has laid open.
-        eastl::array<bool, kTileIdCount> bonusOpen{};
+        Array<bool, kTileIdCount> bonusOpen{};
         int bonusOpenCount = 0;
         for (const PublicSeat& info : view.seats) {
             for (const Tile tile : info.bonus) {
@@ -197,7 +197,7 @@ namespace BECore::Mahjong {
         }
 
         // The wall: what is left of the pool and the unseen bonus tiles, in random order.
-        eastl::vector<Tile> wall(pool.begin() + begin, pool.end());
+        Vector<Tile> wall(pool.begin() + begin, pool.end());
         for (uint8_t id = kFirstFlowerId; id < kTileIdCount; ++id) {
             if (flowers && !bonusOpen[id]) {
                 wall.push_back(Tile{id});
@@ -210,11 +210,11 @@ namespace BECore::Mahjong {
         KindNumbers pileCounts{};
         const TileCounts ownTiles = CountTiles(view.own.concealed);
         const TileCounts ownMeldTiles = CountMeldTiles(view.own.melds);
-        eastl::array<TileCounts, kSeatCount> openMeldTiles{};
+        Array<TileCounts, kSeatCount> openMeldTiles{};
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             openMeldTiles[seat] = CountMeldTiles(view.seats[seat].openMelds);
         }
-        eastl::array<int, kSeatCount> quota{};
+        Array<int, kSeatCount> quota{};
         int pileSize = 0;
         for (uint8_t id = 0; id < kKindCount; ++id) {
             int count = view.visible[id] - ownTiles[id] - ownMeldTiles[id];
@@ -256,7 +256,7 @@ namespace BECore::Mahjong {
             --pileCounts[view.pendingTile.Id()];
             --quota[view.currentSeat];
         }
-        eastl::vector<Tile> pileTiles;
+        Vector<Tile> pileTiles;
         for (uint8_t id = 0; id < kKindCount; ++id) {
             for (int copy = 0; copy < pileCounts[id]; ++copy) {
                 pileTiles.push_back(Tile{id});
@@ -333,7 +333,7 @@ namespace BECore::Mahjong {
 
         // The window: the seat of the view is in it and decides first; which of the others could claim is fixed by their hands, and
         // `Restore` refuses a wrong guess, so the guesses are tried from "nobody else" up.
-        eastl::vector<Seat> others;
+        Vector<Seat> others;
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             if (seat != view.seat && seat != view.currentSeat) {
                 others.push_back(seat);

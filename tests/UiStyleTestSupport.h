@@ -53,8 +53,8 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// The discard blocks and the wall ring grown by `kPlatePadding`: what the HUD and the seat plates keep clear of (the table paints no plate there).
-    inline eastl::vector<Rect> ZonePlates(const TableLayout& layout) {
-        eastl::vector<Rect> plates;
+    inline Vector<Rect> ZonePlates(const TableLayout& layout) {
+        Vector<Rect> plates;
         for (const Rect& zone : layout.zones.discards) {
             plates.push_back(Grown(zone, kPlatePadding));
         }

@@ -19,7 +19,7 @@ namespace BECore::Mahjong {
     /// for `Low` (the ordinary case is not worth a mark) and for every kind not in the concealed hand. All `None` unless some opponent has
     /// declared (`HasDeclaredOpponent`), the viewer is to act in `Phase::Discard` (`view.currentSeat == view.seat`) and has something to
     /// choose from (`view.legal` not empty): off the viewer's turn, in a claim or robbing window and after the end there is no discard to mark.
-    [[nodiscard]] eastl::array<DangerMark, kTileIdCount> DangerMarks(const TableView& view);
+    [[nodiscard]] Array<DangerMark, kTileIdCount> DangerMarks(const TableView& view);
 
     /// The colour of the bar of `mark` (`kSafeMark`, `kRiskyMark`, `kDangerMark`; `None` has no bar and gets `kDangerMark`).
     [[nodiscard]] Color DangerMarkColor(DangerMark mark) noexcept;

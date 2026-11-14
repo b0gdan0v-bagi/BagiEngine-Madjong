@@ -33,7 +33,7 @@ namespace BECore::Mahjong {
             return note;
         }
 
-        const DiscardOption* FindOption(const eastl::vector<DiscardOption>& rated, Tile tile) {
+        const DiscardOption* FindOption(const Vector<DiscardOption>& rated, Tile tile) {
             for (const DiscardOption& option : rated) {
                 if (option.tile == tile) {
                     return &option;
@@ -60,7 +60,7 @@ namespace BECore::Mahjong {
             const TileCounts counts = CountTiles(before.own.concealed);
             const bool readDanger = ProfileOf(kDefaultLevel).readDanger;
             const auto rate = [&](Tile tile) -> Optional<DiscardOption> {
-                const eastl::vector<DiscardOption> rated = RateDiscards(counts, MeldCountOf(before), before, readDanger);
+                const Vector<DiscardOption> rated = RateDiscards(counts, MeldCountOf(before), before, readDanger);
                 const DiscardOption* option = FindOption(rated, tile);
                 return option != nullptr ? Optional<DiscardOption>(*option) : std::nullopt;
             };

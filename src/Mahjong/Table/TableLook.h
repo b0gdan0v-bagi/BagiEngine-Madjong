@@ -16,7 +16,7 @@ namespace BECore::Mahjong {
     struct FeltPixels {
         uint32_t width = 0;
         uint32_t height = 0;
-        eastl::vector<uint8_t> rgba;
+        Vector<uint8_t> rgba;
     };
 
     /**

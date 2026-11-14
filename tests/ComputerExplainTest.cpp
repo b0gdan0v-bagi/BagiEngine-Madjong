@@ -88,18 +88,18 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The unseen copies of the winning tiles of the concealed tiles without `discard`, as `WinningTiles` lists them.
-        std::vector<std::pair<String, int>> WaitsOfThirteen(const TableView& view, Tile discard) {
+        Vector<std::pair<String, int>> WaitsOfThirteen(const TableView& view, Tile discard) {
             TileCounts counts = CountTiles(view.own.concealed);
             --counts[discard.Id()];
-            std::vector<std::pair<String, int>> waits;
+            Vector<std::pair<String, int>> waits;
             for (const Tile tile : WinningTiles(counts, MeldCountOf(view), CountMeldTiles(view.own.melds))) {
                 waits.emplace_back(ToString(tile), UnseenCopies(view, tile));
             }
             return waits;
         }
 
-        std::vector<std::pair<String, int>> Listed(const eastl::vector<TileCopies>& waits) {
-            std::vector<std::pair<String, int>> listed;
+        Vector<std::pair<String, int>> Listed(const Vector<TileCopies>& waits) {
+            Vector<std::pair<String, int>> listed;
             for (const TileCopies& wait : waits) {
                 listed.emplace_back(ToString(wait.tile), wait.unseen);
             }
@@ -170,7 +170,7 @@ namespace BECore::Mahjong::Tests {
         // The two others of the same rating (Rd, Ew) come next, then the rest; the alternatives are the entries after the advised one.
         EXPECT_EQ(turn.equalChoices, 2);
         ASSERT_EQ(turn.alternatives.size(), 2u);
-        eastl::vector<DiscardOption> expected;
+        Vector<DiscardOption> expected;
         for (const DiscardOption& option : RateDiscards(counts, 0, view)) {
             if (option.tile != T("Nw") && expected.size() < 2) {
                 expected.push_back(option);
@@ -208,7 +208,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(turn.chosen.waitKinds, 2);
         EXPECT_EQ(turn.chosen.waitCopies, 8);
         EXPECT_EQ(Listed(turn.waits), WaitsOfThirteen(view, T("6p")));
-        EXPECT_EQ(Listed(turn.waits), (std::vector<std::pair<String, int>>{{"4p", 4}, {"7p", 4}}));
+        EXPECT_EQ(Listed(turn.waits), (Vector<std::pair<String, int>>{{"4p", 4}, {"7p", 4}}));
         ExpectNumbersOf(turn.chosen, RatedDiscard(view, T("6p")));
         ASSERT_EQ(turn.alternatives.size(), 1u);
         EXPECT_EQ(turn.alternatives[0].tile, T("5p"));
@@ -243,7 +243,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_FALSE(turn.alternatives.empty());
         EXPECT_EQ(turn.alternatives[0].tile, T("5p"));
         EXPECT_EQ(turn.alternatives[0].waitCopies, 4);
-        const eastl::vector<WaitingDiscard> listed = WaitingDiscards(view, false);
+        const Vector<WaitingDiscard> listed = WaitingDiscards(view, false);
         for (const WaitingDiscard& discard : listed) {
             if (discard.tile == T("5p")) {
                 EXPECT_EQ(turn.alternatives[0].waitCopies, discard.copies);
@@ -343,7 +343,7 @@ namespace BECore::Mahjong::Tests {
         const HandModel model = WindowModel("4p 6p 5p 5p 1s 2s 3s 7s 8s 9s Nw Nw Wd", "5p");
         const TableView view = MakeTableView(model, kSeat1);
         const int before = Shanten(CountTiles(view.own.concealed), 0);
-        const eastl::vector<RatedClaim> rated = RateClaims(view, before, kNormalProfile);
+        const Vector<RatedClaim> rated = RateClaims(view, before, kNormalProfile);
         ASSERT_GE(rated.size(), 2u);
 
         const ClaimExplanation claim = ClaimOf(ExplainAdvice(view));
@@ -396,12 +396,12 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(claim.action, kPass);
         EXPECT_EQ(claim.step, ClaimStep::WaitingHand);
         EXPECT_FALSE(claim.chosen.has_value());
-        std::vector<std::pair<String, int>> expected;
+        Vector<std::pair<String, int>> expected;
         for (const Tile tile : WinningTiles(view.own)) {
             expected.emplace_back(ToString(tile), UnseenCopies(view, tile));
         }
         EXPECT_EQ(Listed(claim.waits), expected);
-        EXPECT_EQ(Listed(claim.waits), (std::vector<std::pair<String, int>>{{"4p", 2}, {"Rd", 1}}));
+        EXPECT_EQ(Listed(claim.waits), (Vector<std::pair<String, int>>{{"4p", 2}, {"Rd", 1}}));
     }
 
     TEST(ComputerExplainTest, PassingWithNoGainListsTheBestClaimAsNotAcceptable) {

@@ -187,7 +187,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(ScoreLimitTest, ThirteenOrphansOnEveryOneOfTheThirteenKinds) {
         // The 13-sided wait: every kind of the thirteen completes the hand with its pair.
-        const eastl::vector<Tile> kinds = ParseTiles(kOrphans).value();
+        const Vector<Tile> kinds = ParseTiles(kOrphans).value();
         ASSERT_EQ(kinds.size(), static_cast<size_t>(kThirteenOrphanKinds));
         for (const Tile kind : kinds) {
             const String winning = ToString(kind).data();

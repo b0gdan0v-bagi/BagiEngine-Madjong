@@ -32,7 +32,7 @@ namespace BECore::Mahjong::Arena {
             return spec;
         }
 
-        size_t FirstOf(const eastl::vector<MatchLogEvent>& events, MatchLogKind kind) {
+        size_t FirstOf(const Vector<MatchLogEvent>& events, MatchLogKind kind) {
             for (size_t index = 0; index < events.size(); ++index) {
                 if (events[index].kind == kind) {
                     return index;
@@ -45,14 +45,14 @@ namespace BECore::Mahjong::Arena {
             return {name, text};
         }
 
-        LogSource SourceOf(eastl::vector<LogFile> files) {
-            return [files](StringView) -> std::expected<eastl::vector<LogFile>, String> { return files; };
+        LogSource SourceOf(Vector<LogFile> files) {
+            return [files](StringView) -> std::expected<Vector<LogFile>, String> { return files; };
         }
 
     }  // namespace
 
     TEST(ArenaLogsTest, ALogThatReachesItsEndIsOkAndComplete) {
-        const eastl::vector<MatchLogEvent> events = PlayLog(PersonMatch(kSeedA, MatchPlatform::Desktop, "a1b2c3d"));
+        const Vector<MatchLogEvent> events = PlayLog(PersonMatch(kSeedA, MatchPlatform::Desktop, "a1b2c3d"));
         const LogVerdict verdict = CheckMatchLog(View(LogText(events)));
         EXPECT_TRUE(verdict.ok);
         EXPECT_TRUE(verdict.complete);
@@ -63,21 +63,21 @@ namespace BECore::Mahjong::Arena {
     TEST(ArenaLogsTest, ALogThatStopsEarlyIsOkAndNotComplete) {
         LogSpec spec = PersonMatch(kSeedA, MatchPlatform::Web, "a1b2c3d");
         spec.stopAfterHands = kGivenUpAfter;
-        const eastl::vector<MatchLogEvent> events = PlayLog(spec);
+        const Vector<MatchLogEvent> events = PlayLog(spec);
         ASSERT_NE(events.back().kind, MatchLogKind::End);
         const LogVerdict verdict = CheckMatchLog(View(LogText(events)));
         EXPECT_TRUE(verdict.ok);
         EXPECT_FALSE(verdict.complete);
 
         // Cut in the middle of a hand: still ok.
-        eastl::vector<MatchLogEvent> cut(events.begin(), events.begin() + static_cast<ptrdiff_t>(FirstOf(events, MatchLogKind::Settlement)) - 1);
+        Vector<MatchLogEvent> cut(events.begin(), events.begin() + static_cast<ptrdiff_t>(FirstOf(events, MatchLogKind::Settlement)) - 1);
         const LogVerdict inHand = CheckMatchLog(View(LogText(cut)));
         EXPECT_TRUE(inHand.ok);
         EXPECT_FALSE(inHand.complete);
     }
 
     TEST(ArenaLogsTest, ALogOfAnOlderVersionIsOkWithAnUnknownPlatform) {
-        const eastl::vector<MatchLogEvent> events = PlayLog(PersonMatch(kSeedB, MatchPlatform::Web, "a1b2c3d"));
+        const Vector<MatchLogEvent> events = PlayLog(PersonMatch(kSeedB, MatchPlatform::Web, "a1b2c3d"));
         const LogVerdict verdict = CheckMatchLog(View(LogTextVersionFour(events)));
         ASSERT_TRUE(verdict.ok) << verdict.reason.c_str();
         EXPECT_EQ(verdict.events.front().origin.platform, MatchPlatform::Unknown);
@@ -116,7 +116,7 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaLogsTest, AChangedActionDoesNotReplayAndTheEventIsNamed) {
-        eastl::vector<MatchLogEvent> events = PlayLog(PersonMatch(kSeedA, MatchPlatform::Desktop, "x"));
+        Vector<MatchLogEvent> events = PlayLog(PersonMatch(kSeedA, MatchPlatform::Desktop, "x"));
         const size_t action = FirstOf(events, MatchLogKind::Action);
         events[action].action = HandAction::MakeDeclareWin();
         const LogVerdict verdict = CheckMatchLog(View(LogText(events)));
@@ -126,7 +126,7 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaLogsTest, AChangedSettlementDoesNotReplayAndTheEventIsNamed) {
-        eastl::vector<MatchLogEvent> events = PlayLog(PersonMatch(kSeedA, MatchPlatform::Desktop, "x"));
+        Vector<MatchLogEvent> events = PlayLog(PersonMatch(kSeedA, MatchPlatform::Desktop, "x"));
         const size_t settlement = FirstOf(events, MatchLogKind::Settlement);
         events[settlement].settlement.deltas[0] += 1;
         const LogVerdict verdict = CheckMatchLog(View(LogText(events)));
@@ -139,7 +139,7 @@ namespace BECore::Mahjong::Arena {
         const LogVerdict empty = CheckMatchLog("");
         EXPECT_FALSE(empty.ok);
         EXPECT_EQ(String(empty.reason.c_str()), "does not replay: event 0 (NoStart)");
-        eastl::vector<MatchLogEvent> events = PlayLog(PersonMatch(kSeedA, MatchPlatform::Desktop, "x"));
+        Vector<MatchLogEvent> events = PlayLog(PersonMatch(kSeedA, MatchPlatform::Desktop, "x"));
         events.erase(events.begin());
         const LogVerdict headless = CheckMatchLog(View(LogText(events)));
         EXPECT_FALSE(headless.ok);
@@ -161,7 +161,7 @@ namespace BECore::Mahjong::Arena {
 
     TEST(ArenaLogsTest, ThePathIsPassedToTheSourceAndItsErrorComesBack) {
         String seen;
-        const LogSource source = [&seen](StringView path) -> std::expected<eastl::vector<LogFile>, String> {
+        const LogSource source = [&seen](StringView path) -> std::expected<Vector<LogFile>, String> {
             seen = String(path);
             return std::unexpected(String("no such folder"));
         };
@@ -177,10 +177,10 @@ namespace BECore::Mahjong::Arena {
         mixed.levels = {ComputerLevel{1}, ComputerLevel{3}, ComputerLevel{5}, ComputerLevel{10}};
         LogSpec given = PersonMatch(kSeedC, MatchPlatform::Desktop, "a1b2c3d");
         given.stopAfterHands = kGivenUpAfter;
-        const eastl::vector<MatchLogEvent> first = PlayLog(PersonMatch(kSeedA, MatchPlatform::Desktop, "a1b2c3d"));
-        const eastl::vector<MatchLogEvent> second = PlayLog(mixed);
-        const eastl::vector<MatchLogEvent> third = PlayLog(given);
-        const eastl::vector<MatchLogEvent> older = PlayLog(PersonMatch(kSeedC, MatchPlatform::Web, "z"));
+        const Vector<MatchLogEvent> first = PlayLog(PersonMatch(kSeedA, MatchPlatform::Desktop, "a1b2c3d"));
+        const Vector<MatchLogEvent> second = PlayLog(mixed);
+        const Vector<MatchLogEvent> third = PlayLog(given);
+        const Vector<MatchLogEvent> older = PlayLog(PersonMatch(kSeedC, MatchPlatform::Web, "z"));
         const LogSource source = SourceOf({FileOf("1.jsonl", LogText(first)), FileOf("2.jsonl", LogText(second)), FileOf("3.jsonl", LogText(third)), FileOf("4.jsonl", LogTextVersionFour(older)),
                                            FileOf("5.jsonl", "nonsense"), FileOf("6.jsonl", "")});
         const auto logs = ReadLogs(source, ".");
@@ -244,7 +244,7 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaLogsTest, TheCheckLinesAreExactlyTheFormatTheCollectingToolReads) {
-        eastl::vector<CheckedLog> logs(3);
+        Vector<CheckedLog> logs(3);
         logs[0].name = "a.jsonl";
         logs[0].verdict.ok = true;
         logs[1].name = "dir/b.jsonl";

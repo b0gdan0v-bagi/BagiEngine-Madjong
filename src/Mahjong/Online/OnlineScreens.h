@@ -84,7 +84,7 @@ namespace BECore::Mahjong {
         }
 
         /// The keys of the pad of the focused field in the language of the last `Refresh`; empty outside the `Entry` page.
-        [[nodiscard]] const eastl::vector<String>& Pad() const {
+        [[nodiscard]] const Vector<String>& Pad() const {
             return _pad;
         }
 
@@ -276,7 +276,7 @@ namespace BECore::Mahjong {
         /// The player has edited the name or an earlier run stored it: it no longer follows the default of the language.
         bool _nameOwn = false;
         OnlineRoomOptions _options;
-        eastl::vector<String> _pad;
+        Vector<String> _pad;
         bool _padValid = false;
         TextEntry::Kind _padKind = TextEntry::Kind::Name;
         uint64_t _padStringsVersion = 0;

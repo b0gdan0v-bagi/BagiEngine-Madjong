@@ -34,8 +34,8 @@ namespace BECore::Mahjong {
         return Rect(plate.x + (plate.w - width) * 0.5f, plate.y + kNameBoxTop * unit, width, kNameBoxHeight * unit);
     }
 
-    eastl::array<SeatPlateText, kSeatCount> MakeSeatPlates(const UIStrings& strings, const TableSession& session, const Match& match) {
-        eastl::array<SeatPlateText, kSeatCount> plates;
+    Array<SeatPlateText, kSeatCount> MakeSeatPlates(const UIStrings& strings, const TableSession& session, const Match& match) {
+        Array<SeatPlateText, kSeatCount> plates;
         const HandModel& hand = match.Hand();
         const Seat bottom = BottomSeat(session);
         const Seat turn = TurnSeat(session, hand);

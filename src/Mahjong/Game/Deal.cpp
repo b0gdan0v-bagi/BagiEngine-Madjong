@@ -21,8 +21,8 @@ namespace BECore::Mahjong {
 
     }  // namespace
 
-    eastl::array<PlayerHand, kSeatCount> DealHands(Wall& wall, Seat east, bool flowers) {
-        eastl::array<PlayerHand, kSeatCount> hands;
+    Array<PlayerHand, kSeatCount> DealHands(Wall& wall, Seat east, bool flowers) {
+        Array<PlayerHand, kSeatCount> hands;
         for (int round = 0; round < kDealBlockRounds; ++round) {
             for (int step = 0; step < kSeatCount; ++step) {
                 PlayerHand& hand = hands[(east + step) % kSeatCount];

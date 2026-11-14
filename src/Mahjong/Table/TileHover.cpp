@@ -28,7 +28,7 @@ namespace BECore::Mahjong {
 
     Optional<Tile> TileOfSlot(const HandModel& hand, const TileSlot& slot, bool seatFaceUp) noexcept {
         if (slot.role == SlotRole::DiscardTile) {
-            const eastl::vector<DiscardEntry>& pile = hand.Discards();
+            const Vector<DiscardEntry>& pile = hand.Discards();
             return InRange(slot.index, pile.size()) ? Optional<Tile>(pile[slot.index].tile) : std::nullopt;
         }
         if (slot.role == SlotRole::WallStack || !IsSeat(slot.seat)) {

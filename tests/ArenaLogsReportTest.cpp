@@ -65,13 +65,13 @@ Differences from normal: 141 in all, 2 listed (log order)
             return spec;
         }
 
-        LogSource SourceOf(eastl::vector<LogFile> files) {
-            return [files](StringView) -> std::expected<eastl::vector<LogFile>, String> { return files; };
+        LogSource SourceOf(Vector<LogFile> files) {
+            return [files](StringView) -> std::expected<Vector<LogFile>, String> { return files; };
         }
 
         /// The known corpus: a Normal person among Normal computers, one among Easy ones, one among Easy and Normal computers (mixed), a
         /// match given up after a hand, and a version 4 log (no origin) of an Easy table.
-        eastl::vector<LogFile> KnownCorpus() {
+        Vector<LogFile> KnownCorpus() {
             const SeatLevels mixed{ComputerLevel::Normal, ComputerLevel::Easy, ComputerLevel::Normal, ComputerLevel::Normal};
             return {{"d.jsonl", LogText(PlayLog(Played(kSeedA, kLogPersonFirst, UniformLevels(ComputerLevel::Normal), 1)))},
                     {"a.jsonl", LogText(PlayLog(Played(kSeedA, kLogPersonFirst, UniformLevels(ComputerLevel::Normal))))},
@@ -80,16 +80,16 @@ Differences from normal: 141 in all, 2 listed (log order)
                     {"b.jsonl", LogText(PlayLog(Played(kSeedB, kLogPersonFirst, UniformLevels(ComputerLevel::Easy))))}};
         }
 
-        eastl::vector<CheckedLog> Checked(const eastl::vector<LogFile>& files) {
+        Vector<CheckedLog> Checked(const Vector<LogFile>& files) {
             const auto logs = ReadLogs(SourceOf(files), ".");
             EXPECT_TRUE(logs.has_value());
-            return logs.has_value() ? *logs : eastl::vector<CheckedLog>{};
+            return logs.has_value() ? *logs : Vector<CheckedLog>{};
         }
 
         /// The numbers of the people's seats counted again from the settlements, the way a reader of the log would.
-        ArenaTally Oracle(const eastl::vector<MatchLogEvent>& events) {
+        ArenaTally Oracle(const Vector<MatchLogEvent>& events) {
             ArenaTally tally;
-            eastl::array<bool, kSeatCount> declared{};
+            Array<bool, kSeatCount> declared{};
             for (const MatchLogEvent& event : events) {
                 if (event.kind == MatchLogKind::Action && event.action.kind == ActionKind::Discard && event.action.declareCalling) {
                     declared[static_cast<size_t>(event.seat)] = true;
@@ -131,7 +131,7 @@ Differences from normal: 141 in all, 2 listed (log order)
 
     TEST(ArenaLogsReportTest, TheNumbersOfAMatchAreTheSettlementsOfThePeoplesSeats) {
         for (const uint32_t seed : {kSeedA, kSeedB, kSeedC}) {
-            const eastl::vector<MatchLogEvent> events = PlayLog(Played(seed, kLogPersonFirst, UniformLevels(ComputerLevel::Normal)));
+            const Vector<MatchLogEvent> events = PlayLog(Played(seed, kLogPersonFirst, UniformLevels(ComputerLevel::Normal)));
             const RealMatch real = RealGameOfMatch(events);
             const ArenaTally expected = Oracle(events);
             EXPECT_TRUE(real.counted) << seed;
@@ -146,8 +146,7 @@ Differences from normal: 141 in all, 2 listed (log order)
     }
 
     TEST(ArenaLogsReportTest, TwoPersonsAreTwoSeatHandsOfAHand) {
-        const eastl::vector<MatchLogEvent> events =
-            PlayLog(Played(kSeedA, SeatSetup{SeatKind::Person, SeatKind::Person, SeatKind::Computer, SeatKind::Computer}, UniformLevels(ComputerLevel::Normal)));
+        const Vector<MatchLogEvent> events = PlayLog(Played(kSeedA, SeatSetup{SeatKind::Person, SeatKind::Person, SeatKind::Computer, SeatKind::Computer}, UniformLevels(ComputerLevel::Normal)));
         const RealMatch real = RealGameOfMatch(events);
         EXPECT_EQ(real.tally.hands, 2 * CountEvents(events, MatchLogKind::Settlement));
         EXPECT_EQ(real.tally.points, Oracle(events).points);
@@ -155,12 +154,12 @@ Differences from normal: 141 in all, 2 listed (log order)
 
     TEST(ArenaLogsReportTest, AHandThatIsNotFinishedIsNotCounted) {
         // Given up after one hand: the second hand was dealt and played in part and has no settlement.
-        const eastl::vector<MatchLogEvent> events = PlayLog(Played(kSeedA, kLogPersonFirst, UniformLevels(ComputerLevel::Normal), 1));
+        const Vector<MatchLogEvent> events = PlayLog(Played(kSeedA, kLogPersonFirst, UniformLevels(ComputerLevel::Normal), 1));
         ASSERT_GT(CountEvents(events, MatchLogKind::Hand), 1);
         const RealMatch real = RealGameOfMatch(events);
         EXPECT_EQ(real.tally.hands, 1);
         // A log cut before its first settlement counts nothing and is not a match of the table.
-        eastl::vector<MatchLogEvent> early;
+        Vector<MatchLogEvent> early;
         for (const MatchLogEvent& event : events) {
             if (event.kind == MatchLogKind::Settlement) {
                 break;
@@ -190,7 +189,7 @@ Differences from normal: 141 in all, 2 listed (log order)
 
     TEST(ArenaLogsReportTest, TheMatchIsTheUnitOfTheIntervals) {
         // A long match with 1 win in 8 and a short one with 1 in 2: the mean of the two shares, not the pooled share.
-        const eastl::vector<RealMatch> matches{Counted(0, 8, 1, 80), Counted(0, 2, 1, -20), RealMatch{}};
+        const Vector<RealMatch> matches{Counted(0, 8, 1, 80), Counted(0, 2, 1, -20), RealMatch{}};
         const RealGame game = MergeRealGame(matches);
         EXPECT_EQ(game[0].matches, 2);
         EXPECT_EQ(game[0].tally.hands, 10);
@@ -204,7 +203,7 @@ Differences from normal: 141 in all, 2 listed (log order)
     }
 
     TEST(ArenaLogsReportTest, TheAnalysisHoldsTheThreeParts) {
-        const eastl::vector<CheckedLog> logs = Checked(KnownCorpus());
+        const Vector<CheckedLog> logs = Checked(KnownCorpus());
         const LogAnalysis analysis = AnalyseLogs(logs, {Bot("normal")}, 1);
         EXPECT_TRUE(analysis.notAnalysed.empty());
         EXPECT_EQ(analysis.tester.matches, 5);
@@ -231,7 +230,7 @@ Differences from normal: 141 in all, 2 listed (log order)
     }
 
     TEST(ArenaLogsReportTest, TheSameBytesAtAnyNumberOfThreads) {
-        const eastl::vector<CheckedLog> logs = Checked(KnownCorpus());
+        const Vector<CheckedLog> logs = Checked(KnownCorpus());
         const String single = FormatLogAnalysis(AnalyseLogs(logs, {Bot("normal"), Bot("easy")}, 1), kShownDifferences);
         EXPECT_FALSE(single.empty());
         for (const int jobs : {2, 5, 64}) {
@@ -240,14 +239,14 @@ Differences from normal: 141 in all, 2 listed (log order)
     }
 
     TEST(ArenaLogsReportTest, TheOrderOfTheSourceDoesNotChangeTheBytes) {
-        eastl::vector<LogFile> files = KnownCorpus();
+        Vector<LogFile> files = KnownCorpus();
         const String one = FormatLogAnalysis(AnalyseLogs(Checked(files), {Bot("normal")}, 2), kShownDifferences);
         eastl::reverse(files.begin(), files.end());
         EXPECT_EQ(FormatLogAnalysis(AnalyseLogs(Checked(files), {Bot("normal")}, 2), kShownDifferences), one);
     }
 
     TEST(ArenaLogsReportTest, AMatchThatCannotBeAnalysedIsNamedAndCountedAndStillInTheRealNumbers) {
-        eastl::vector<CheckedLog> logs = Checked(KnownCorpus());
+        Vector<CheckedLog> logs = Checked(KnownCorpus());
         // It replayed in the check, but a position cannot be built from it: its first action is not the first one that was legal.
         for (CheckedLog& log : logs) {
             if (log.name != "a.jsonl") {

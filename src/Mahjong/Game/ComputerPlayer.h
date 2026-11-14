@@ -114,7 +114,7 @@ namespace BECore::Mahjong {
         HandStatus PlayMatch(Match& match);
 
     private:
-        eastl::array<ComputerPlayer, kSeatCount> _players;
+        Array<ComputerPlayer, kSeatCount> _players;
     };
 
 }  // namespace BECore::Mahjong

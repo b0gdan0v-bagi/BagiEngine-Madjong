@@ -309,7 +309,7 @@ namespace BECore::Mahjong::Tests {
         int listed = 0;
         ForEachRandomHand(13, kHandsPerProbingProperty, [&](const TileCounts& counts, int meldCount) {
             const int shanten = Shanten(counts, meldCount);
-            const eastl::vector<Tile> improving = ImprovingTiles(counts, meldCount);
+            const Vector<Tile> improving = ImprovingTiles(counts, meldCount);
             EXPECT_EQ(improving.empty(), shanten == kShantenComplete);
             EXPECT_TRUE(std::is_sorted(improving.begin(), improving.end()));
             TileCounts probe = counts;

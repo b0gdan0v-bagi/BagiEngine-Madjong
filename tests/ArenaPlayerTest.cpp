@@ -192,7 +192,7 @@ namespace BECore::Mahjong::Arena {
     TEST(ArenaPlayerTest, TheKnobsTableCoversEveryFieldOfTheProfile) {
         // Each row sets its own field and no other; between them the rows set all ten fields of `LevelProfile` (an eleventh field
         // without a row stops the build in ArenaPlayer.cpp, which names every field).
-        eastl::array<bool, kProfileFieldCount> moved{};
+        Array<bool, kProfileFieldCount> moved{};
         for (const ProfileKnob& knob : kProfileKnobs) {
             ASSERT_NE(knob.percent == nullptr, knob.flag == nullptr) << knob.name.data() << ": exactly one member";
             const String name(knob.name.data(), knob.name.size());
@@ -254,7 +254,7 @@ namespace BECore::Mahjong::Arena {
             MahjongRng play(seed + 1);
             while (hand.GetPhase() != Phase::Finished) {
                 const Seat actor = ComputerTable::NextActor(hand);
-                const eastl::vector<HandAction> actions = hand.LegalActions(actor);
+                const Vector<HandAction> actions = hand.LegalActions(actor);
                 ASSERT_FALSE(actions.empty());
                 const HandAction arena = ChooseSeekWin(actions, left);
                 const HandAction tests = Choose(actions, Mode::SeekWin, right);
@@ -364,7 +364,7 @@ namespace BECore::Mahjong::Arena {
                 continue;
             }
             ++wins;
-            eastl::vector<ScoreKind> expected;
+            Vector<ScoreKind> expected;
             for (const ScoreLine& line : settlement.breakdowns[settlement.winner].lines) {
                 if (eastl::find(expected.begin(), expected.end(), line.kind) == expected.end()) {
                     expected.push_back(line.kind);

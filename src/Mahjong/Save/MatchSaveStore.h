@@ -59,9 +59,9 @@ namespace BECore::Mahjong {
         }
 
         /// The `Start`, `Action` and `Settlement` events of a match into the `match` slot. False, and one warning, when it was not written.
-        bool SaveMatch(const eastl::vector<MatchLogEvent>& events);
+        bool SaveMatch(const Vector<MatchLogEvent>& events);
         /// The events of the `match` slot, parsed (`ParseMatchSaveText`; whether they replay is for `ReplayMatchLog` to say).
-        [[nodiscard]] std::expected<eastl::vector<MatchLogEvent>, SaveProblem> LoadMatch() const;
+        [[nodiscard]] std::expected<Vector<MatchLogEvent>, SaveProblem> LoadMatch() const;
         /// Removes the `match` slot (nothing when there is none).
         void ClearMatch();
 

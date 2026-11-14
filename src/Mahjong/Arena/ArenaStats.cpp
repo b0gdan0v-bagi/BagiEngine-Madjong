@@ -30,7 +30,7 @@ namespace BECore::Mahjong::Arena {
 
     }  // namespace
 
-    MeanInterval MeanCi(const eastl::vector<double>& values) {
+    MeanInterval MeanCi(const Vector<double>& values) {
         MeanInterval interval;
         interval.n = values.size();
         if (values.empty()) {
@@ -56,8 +56,8 @@ namespace BECore::Mahjong::Arena {
         return interval;
     }
 
-    eastl::vector<double> SeedSeries(const FocusResult& focus, SeedMetric metric) {
-        eastl::vector<double> series;
+    Vector<double> SeedSeries(const FocusResult& focus, SeedMetric metric) {
+        Vector<double> series;
         series.reserve(focus.rows.size());
         for (const SeedRow& row : focus.rows) {
             if (const Optional<double> value = RowNumber(row, metric)) {
@@ -75,7 +75,7 @@ namespace BECore::Mahjong::Arena {
         if (a.rows.size() != b.rows.size()) {
             return {};
         }
-        eastl::vector<double> differences;
+        Vector<double> differences;
         differences.reserve(a.rows.size());
         for (size_t index = 0; index < a.rows.size(); ++index) {
             if (a.rows[index].seed != b.rows[index].seed) {

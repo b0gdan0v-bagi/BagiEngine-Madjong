@@ -141,7 +141,7 @@ namespace BECore::Mahjong::Tests {
             for (const Output& output : kOutputs) {
                 ExpectWordsFit(node, output.width, output.height, air);
             }
-            const std::vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas(node), air);
+            const Vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas(node), air);
             EXPECT_TRUE(cut.empty()) << node << ": " << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
             Draw();  // the checks laid the canvas out for other windows: the next click needs the rects of this one
         }
@@ -715,7 +715,7 @@ namespace BECore::Mahjong::Tests {
 
         /// Frames of the scene and of the other people of the room until @p done: the clock of the world moves by a tick, the others read what came, the scene updates and draws.
         template <typename Done>
-        bool PumpUntil(Done done, const std::vector<HubPlayer*>& others = {}) {
+        bool PumpUntil(Done done, const Vector<HubPlayer*>& others = {}) {
             for (int count = 0; count < kPumpLimit; ++count) {
                 if (done()) {
                     return true;
@@ -738,7 +738,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Only the others read what came: the scene shows what it showed.
-        void LetOthersRun(const std::vector<HubPlayer*>& others, const std::function<bool()>& done) {
+        void LetOthersRun(const Vector<HubPlayer*>& others, const std::function<bool()>& done) {
             for (int count = 0; count < kPumpLimit && !done(); ++count) {
                 _world.Advance(kTick);
                 for (HubPlayer* other : others) {
@@ -747,7 +747,7 @@ namespace BECore::Mahjong::Tests {
             }
         }
 
-        void Join(HubPlayer& player, const String& code, const char* name, const std::vector<HubPlayer*>& others) {
+        void Join(HubPlayer& player, const String& code, const char* name, const Vector<HubPlayer*>& others) {
             ASSERT_TRUE(player.Client().Join(kUrl, String(code.c_str()), name));
             ASSERT_TRUE(PumpUntil([&] { return player.Client().Stage() == OnlineStage::Lobby; }, others));
         }
@@ -1201,7 +1201,7 @@ namespace BECore::Mahjong::Tests {
     class MahjongOnlineRoomsPageTest : public MahjongOnlineRoomTest {
     protected:
         /// A person hosts a room that others can list; true when it is in its lobby.
-        bool HostOpen(HubPlayer& host, const char* name, bool hintsAllowed, const std::vector<HubPlayer*>& pumped) {
+        bool HostOpen(HubPlayer& host, const char* name, bool hintsAllowed, const Vector<HubPlayer*>& pumped) {
             OnlineRoomOptions options;
             options.hands = kShortMatchHands;
             options.level = 3;
@@ -1214,7 +1214,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The panel on the `Rooms` page with the first list on it.
-        void OpenTheRooms(const std::vector<HubPlayer*>& pumped) {
+        void OpenTheRooms(const Vector<HubPlayer*>& pumped) {
             ASSERT_NO_FATAL_FAILURE(OpenPanel());
             Act("MahjongOnlineRooms");
             ASSERT_EQ(Screens().Page(), OnlinePage::Rooms);
@@ -1227,7 +1227,7 @@ namespace BECore::Mahjong::Tests {
         HubPlayer ann(_world);
         HubPlayer bo(_world);
         HubPlayer hidden(_world);
-        const std::vector<HubPlayer*> all = {&ann, &bo, &hidden};
+        const Vector<HubPlayer*> all = {&ann, &bo, &hidden};
         ASSERT_TRUE(HostOpen(ann, "Ann", false, all));
         ASSERT_TRUE(HostOpen(bo, "Bo", true, all));
         ASSERT_TRUE(hidden.Client().Host(kUrl, "Hidden", OnlineRoomOptions{}));
@@ -1276,7 +1276,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongOnlineRoomsPageTest, ARoomGoneBetweenTheListAndTheTapShowsTheNoticeAndTheListWithoutItAndEscapeEndsTheBrowsing) {
         HubPlayer gone(_world);
         HubPlayer stays(_world);
-        const std::vector<HubPlayer*> all = {&gone, &stays};
+        const Vector<HubPlayer*> all = {&gone, &stays};
         ASSERT_TRUE(HostOpen(gone, "Gone", false, all));
         ASSERT_TRUE(HostOpen(stays, "Stays", false, all));
         ASSERT_NO_FATAL_FAILURE(OpenTheRooms(all));
@@ -1308,7 +1308,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongOnlineRoomsPageTest, AnEmptyListOffersToHostAndRefreshAsksAgain) {
         HubPlayer late(_world);
-        const std::vector<HubPlayer*> all = {&late};
+        const Vector<HubPlayer*> all = {&late};
         ASSERT_NO_FATAL_FAILURE(OpenTheRooms(all));
         EXPECT_EQ(Var("onlineStatus"), "No open rooms. Host one.");
         EXPECT_TRUE(ItemShown(kOnline, "OnlineStatus"));
@@ -1336,10 +1336,10 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongOnlineRoomsPageTest, MoreThanThreeRoomsPageByThePageButtonAndTheVisibilityChoiceMakesARoomThatOthersList) {
-        std::vector<std::unique_ptr<HubPlayer>> hosts;
-        std::vector<HubPlayer*> all;
+        Vector<UniquePtr<HubPlayer>> hosts;
+        Vector<HubPlayer*> all;
         for (const char* name : {"Ann", "Bo", "Cy", "Di"}) {
-            hosts.push_back(std::make_unique<HubPlayer>(_world));
+            hosts.push_back(MakeUnique<HubPlayer>(_world));
             all.push_back(hosts.back().get());
             ASSERT_TRUE(HostOpen(*hosts.back(), name, false, all));
         }
@@ -1388,10 +1388,10 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongOnlineRoomsPageTest, TheRoomsPageAndTheHostFormPassTheSizeMatrixInBothLanguagesAndAQuietFrameSetsNothing) {
-        std::vector<std::unique_ptr<HubPlayer>> hosts;
-        std::vector<HubPlayer*> all;
+        Vector<UniquePtr<HubPlayer>> hosts;
+        Vector<HubPlayer*> all;
         for (const char* name : {"Ann", "Bo", "Cy", "Di"}) {
-            hosts.push_back(std::make_unique<HubPlayer>(_world));
+            hosts.push_back(MakeUnique<HubPlayer>(_world));
             all.push_back(hosts.back().get());
             ASSERT_TRUE(HostOpen(*hosts.back(), name, true, all));
         }

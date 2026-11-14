@@ -30,7 +30,7 @@ namespace BECore::Mahjong::Tests {
         int stopAfterHands = 0;
     };
 
-    inline eastl::vector<MatchLogEvent> PlayLog(const LogSpec& spec) {
+    inline Vector<MatchLogEvent> PlayLog(const LogSpec& spec) {
         MahjongSettings settings;
         settings.handsPerMatch = spec.hands;
         Match match;
@@ -39,7 +39,7 @@ namespace BECore::Mahjong::Tests {
         MatchLog log;
         session.SetLogSink(&log);
         EXPECT_TRUE(session.StartMatch(settings, spec.seed, spec.seats, spec.levels).has_value());
-        eastl::vector<ComputerPlayer> people;
+        Vector<ComputerPlayer> people;
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             people.emplace_back(SeatSeed(spec.seed, seat), spec.levels[static_cast<size_t>(seat)]);
         }
@@ -63,7 +63,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// The text of a log: one JSON line per event, as `MatchLogWriter` writes them.
-    inline String LogText(const eastl::vector<MatchLogEvent>& events) {
+    inline String LogText(const Vector<MatchLogEvent>& events) {
         String text;
         for (const MatchLogEvent& event : events) {
             text.append(DumpJson(EventToJson(event)));
@@ -73,7 +73,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// A log of a format before the origin: version 4, no `platform`, `build` or `gameVersion`.
-    inline String LogTextVersionFour(const eastl::vector<MatchLogEvent>& events) {
+    inline String LogTextVersionFour(const Vector<MatchLogEvent>& events) {
         constexpr int kOlderVersion = 4;
         Json start = EventToJson(events.front());
         start["version"] = kOlderVersion;
@@ -82,12 +82,12 @@ namespace BECore::Mahjong::Tests {
         start.erase("gameVersion");
         String text = DumpJson(start);
         text.push_back('\n');
-        const eastl::vector<MatchLogEvent> rest(events.begin() + 1, events.end());
+        const Vector<MatchLogEvent> rest(events.begin() + 1, events.end());
         text.append(LogText(rest));
         return text;
     }
 
-    inline int CountEvents(const eastl::vector<MatchLogEvent>& events, MatchLogKind kind) {
+    inline int CountEvents(const Vector<MatchLogEvent>& events, MatchLogKind kind) {
         int count = 0;
         for (const MatchLogEvent& event : events) {
             count += event.kind == kind ? 1 : 0;

@@ -74,7 +74,7 @@ namespace BECore::Mahjong {
                 return model.CurrentSeat();
             case Phase::Claim:
             case Phase::RobKong: {
-                const eastl::vector<Seat> pending = model.PendingClaimSeats();
+                const Vector<Seat> pending = model.PendingClaimSeats();
                 return pending.empty() ? kNoSeat : pending.front();
             }
             case Phase::Finished:

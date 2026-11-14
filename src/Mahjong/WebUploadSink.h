@@ -106,7 +106,7 @@ namespace BECore::Mahjong {
         [[nodiscard]] size_t QueuedBytes() const;
 
         IWebPoster* _poster = nullptr;
-        eastl::vector<UploadPiece> _queue;
+        Vector<UploadPiece> _queue;
         WebPostId _inFlight = 0;
         double _retryAt = 0.0;
         double _backoff = kFirstBackoffSeconds;

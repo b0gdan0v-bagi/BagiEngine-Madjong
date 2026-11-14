@@ -18,7 +18,7 @@ namespace BECore::Mahjong::Tests {
 
         using std::chrono::milliseconds;
         using std::chrono::seconds;
-        using Players = std::vector<HubPlayer*>;
+        using Players = Vector<HubPlayer*>;
 
         constexpr StringView kUrl = "ws://hub.test";
         constexpr milliseconds kTick{10};
@@ -230,7 +230,7 @@ namespace BECore::Mahjong::Tests {
         // the computers are ready at once and do not take the end screen from the people
         Settle(world, players);
         EXPECT_TRUE(AllInPhase(players, SessionPhase::HandOver));
-        const eastl::array<bool, kSeatCount> peopleWait = {false, true, false, true};
+        const Array<bool, kSeatCount> peopleWait = {false, true, false, true};
         EXPECT_TRUE(host.Table().ready == peopleWait);
         EXPECT_TRUE(guest.Table().ready == peopleWait);
 
@@ -238,7 +238,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(RunUntil(world, players, [&] { return AllInPhase(players, SessionPhase::Playing) && host.Table().handsPlayed == 1 && guest.Table().handsPlayed == 1; }));
         for (const HubPlayer* player : players) {
             EXPECT_FALSE(player->Table().result.has_value());
-            EXPECT_TRUE(player->Table().ready == (eastl::array<bool, kSeatCount>{}));
+            EXPECT_TRUE(player->Table().ready == (Array<bool, kSeatCount>{}));
             ExpectNoNotice(*player);
         }
         ExpectJudgedClean(world);

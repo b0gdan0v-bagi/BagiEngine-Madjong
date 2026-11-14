@@ -28,10 +28,10 @@ namespace {
     }
 
     /// The `*.jsonl` files under `path` (names relative to it, `/` separated; the caller sorts), or the one file `path` names.
-    std::expected<eastl::vector<BECore::Mahjong::Arena::LogFile>, BECore::String> ReadLogFiles(BECore::StringView path) {
+    std::expected<BECore::Vector<BECore::Mahjong::Arena::LogFile>, BECore::String> ReadLogFiles(BECore::StringView path) {
         const fs::path root{BECore::ToStdString(path)};
         std::error_code error;
-        eastl::vector<BECore::Mahjong::Arena::LogFile> files;
+        BECore::Vector<BECore::Mahjong::Arena::LogFile> files;
         if (fs::is_regular_file(root, error)) {
             std::expected<BECore::Mahjong::Arena::LogFile, BECore::String> file = ReadLogFile(root, BECore::FromStd(root.filename().generic_string()));
             if (!file.has_value()) {
@@ -67,7 +67,7 @@ namespace {
 }  // namespace
 
 int main(int argc, char** argv) {
-    eastl::vector<BECore::StringView> args;
+    BECore::Vector<BECore::StringView> args;
     for (int index = 1; index < argc; ++index) {
         args.push_back(argv[index]);
     }

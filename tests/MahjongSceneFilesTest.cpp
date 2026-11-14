@@ -50,8 +50,8 @@ namespace BECore::Mahjong::Tests {
 
         /// The root elements of the `SceneView` canvas of the node `node` of the expanded scene (the elements that lie against the canvas, not those
         /// inside a stack).
-        std::vector<pugi::xml_node> RootElementsOf(const pugi::xml_document& document, const char* node) {
-            std::vector<pugi::xml_node> found;
+        Vector<pugi::xml_node> RootElementsOf(const pugi::xml_document& document, const char* node) {
+            Vector<pugi::xml_node> found;
             const String path = Format("//node[@name='{}']//component[@space='SceneView']/elements/element", node);
             for (const pugi::xpath_node& element : document.select_nodes(path.c_str())) {
                 found.push_back(element.node());
@@ -83,8 +83,8 @@ namespace BECore::Mahjong::Tests {
             return length > 1 && value[length - 1] == '%';
         }
 
-        std::vector<pugi::xml_node> ElementChildren(const pugi::xml_node& parent) {
-            std::vector<pugi::xml_node> elements;
+        Vector<pugi::xml_node> ElementChildren(const pugi::xml_node& parent) {
+            Vector<pugi::xml_node> elements;
             for (const pugi::xml_node& child : parent.children()) {
                 if (child.type() == pugi::node_element) {
                     elements.push_back(child);
@@ -99,7 +99,7 @@ namespace BECore::Mahjong::Tests {
         pugi::xml_document document;
         ASSERT_TRUE(document.load_file(ShippedSceneConfig().c_str())) << ShippedSceneConfig().string();
         const pugi::xml_node scenes = document.child("SceneManager").child("scenes");
-        const std::vector<pugi::xml_node> sceneElements = ElementChildren(scenes);
+        const Vector<pugi::xml_node> sceneElements = ElementChildren(scenes);
         ASSERT_EQ(sceneElements.size(), 1u) << "exactly one scene";
         const pugi::xml_node scene = sceneElements[0];
         EXPECT_STREQ(scene.name(), "scene");
@@ -111,7 +111,7 @@ namespace BECore::Mahjong::Tests {
         // The other views, in the order of the file: the portrait design for an output that is at least as high as it is wide, the narrow one for
         // a landscape output at most kNarrowMaxAspect times as wide as high, the wide one for an output kWideMinAspect times as wide as high or
         // more (`ShapeOfOutput`)
-        const std::vector<pugi::xml_node> views = ElementChildren(scene.child("viewVariants"));
+        const Vector<pugi::xml_node> views = ElementChildren(scene.child("viewVariants"));
         ASSERT_EQ(views.size(), 3u);
         EXPECT_STREQ(views[0].name(), "view");
         EXPECT_STREQ(views[0].attribute("name").as_string(), "Portrait");
@@ -129,7 +129,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(views[2].attribute("width").as_float(), kWideViewWidth);
         EXPECT_EQ(views[2].attribute("height").as_float(), kViewHeight);
 
-        const std::vector<pugi::xml_node> nodes = ElementChildren(scene.child("nodes"));
+        const Vector<pugi::xml_node> nodes = ElementChildren(scene.child("nodes"));
         ASSERT_EQ(nodes.size(), std::size(kSceneNodes));
         for (size_t i = 0; i < nodes.size(); ++i) {
             const char* name = kSceneNodes[i].name;
@@ -185,7 +185,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(LoadShippedSceneDocument(document));
         const pugi::xml_node scene = document.child("SceneManager").child("scenes").child("scene");
         ASSERT_TRUE(scene);
-        const std::vector<pugi::xml_node> nodes = ElementChildren(scene.child("nodes"));
+        const Vector<pugi::xml_node> nodes = ElementChildren(scene.child("nodes"));
         ASSERT_EQ(nodes.size(), std::size(kSceneNodes));
 
         std::set<String> names;
@@ -235,7 +235,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(LoadShippedSceneDocument(document));
         size_t named = 0;
         for (const char* node : kRegionNodes) {
-            const std::vector<pugi::xml_node> elements = RootElementsOf(document, node);
+            const Vector<pugi::xml_node> elements = RootElementsOf(document, node);
             ASSERT_FALSE(elements.empty()) << node << " has a SceneView canvas";
             for (const pugi::xml_node& element : elements) {
                 const char* name = element.attribute("name").as_string();
@@ -288,7 +288,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_GT(used.size(), 4u);
         const TableLayoutSpec& spec = ShippedTableLayoutSpec();
         for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait, TableShape::Wide, TableShape::Narrow}) {
-            const eastl::vector<TableRegion> regions = MakeTableRegions(MakeTableLayout(WorstCaseTableInput(0), spec, DesignWidthOf(shape), DesignHeightOf(shape)));
+            const Vector<TableRegion> regions = MakeTableRegions(MakeTableLayout(WorstCaseTableInput(0), spec, DesignWidthOf(shape), DesignHeightOf(shape)));
             for (const String& name : used) {
                 bool found = false;
                 for (const TableRegion& region : regions) {
@@ -323,7 +323,7 @@ namespace BECore::Mahjong::Tests {
         for (const char* node : kRegionNodes) {
             const auto canvas = Canvas(node);
             ASSERT_TRUE(canvas) << node;
-            std::vector<UIElement*> pending{&canvas->GetRoot()};
+            Vector<UIElement*> pending{&canvas->GetRoot()};
             while (!pending.empty()) {
                 UIElement* element = pending.back();
                 pending.pop_back();
@@ -345,12 +345,12 @@ namespace BECore::Mahjong::Tests {
 
         // The elements that lie in free ground are inside their region and clear of every tile of the worst-case table, in every window of the table
         // (the phone profile included), and a grid unit off every plate
-        const std::vector<const char*> nodes(std::begin(kRegionNodes), std::end(kRegionNodes));
+        const Vector<const char*> nodes(std::begin(kRegionNodes), std::end(kRegionNodes));
         const char* const freeGroundNodes[] = {"Hud", "Hints", "HintsButton", "Actions"};
         ForEachTableWindow([&](const MatrixWindow& window) {
             SCOPED_TRACE(window.label.c_str());
             const TableLayout layout = MakeWorstCaseTableLayout(0, window);
-            const eastl::vector<TableRegion> regions = MakeTableRegions(layout);
+            const Vector<TableRegion> regions = MakeTableRegions(layout);
             LayOutOnTheTable(nodes, window);
             for (const char* node : freeGroundNodes) {
                 const auto canvas = Canvas(node);
@@ -417,7 +417,7 @@ namespace BECore::Mahjong::Tests {
                                     Output{480, 480},  Output{1, 1},       Output{0, 0},       Output{390, 844},   Output{915, 330},   Output{1080, 1920}, Output{1024, 768},
                                     Output{1080, 768}, Output{1200, 800},  Output{1500, 1000}, Output{1999, 1000}, Output{1400, 1000}, Output{640, 480}}) {
             const ActiveSceneView picked =
-                SceneViewSelector::Pick(scene->GetViewWidth(), scene->GetViewHeight(), eastl::span<const SceneViewVariant>(variants.data(), variants.size()), output.width, output.height);
+                SceneViewSelector::Pick(scene->GetViewWidth(), scene->GetViewHeight(), Span<const SceneViewVariant>(variants.data(), variants.size()), output.width, output.height);
             const TableShape shape = ShapeOfOutput(output.width, output.height);
             EXPECT_EQ(picked.width, DesignWidthOf(shape)) << output.width << " x " << output.height;
             EXPECT_EQ(picked.height, DesignHeightOf(shape)) << output.width << " x " << output.height;

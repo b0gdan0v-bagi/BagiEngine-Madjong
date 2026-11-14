@@ -18,8 +18,8 @@ namespace BECore::Mahjong {
             return false;
         }
 
-        eastl::vector<ReadingSet> MeldSets(const PlayerHand& hand) {
-            eastl::vector<ReadingSet> sets;
+        Vector<ReadingSet> MeldSets(const PlayerHand& hand) {
+            Vector<ReadingSet> sets;
             for (const Meld& meld : hand.melds) {
                 sets.push_back({meld.kind, meld.first, meld.concealed});
             }
@@ -28,7 +28,7 @@ namespace BECore::Mahjong {
 
         /// The readings of a decomposition of the winner's concealed tiles: one per place the winning tile may sit when a claim made the
         /// win (that set is open), one for a self-draw. A winning tile found nowhere (it is not in the hand) gives the plain reading.
-        void AddDecompositionReadings(const ScoreInput& input, const eastl::vector<ReadingSet>& melds, const Decomposition& found, eastl::vector<Reading>& readings) {
+        void AddDecompositionReadings(const ScoreInput& input, const Vector<ReadingSet>& melds, const Decomposition& found, Vector<Reading>& readings) {
             Reading base;
             base.sets = melds;
             for (const ShapeSet& set : found.sets) {
@@ -114,10 +114,10 @@ namespace BECore::Mahjong {
         return points;
     }
 
-    eastl::vector<Reading> BuildReadings(const ScoreInput& input) {
-        eastl::vector<Reading> readings;
+    Vector<Reading> BuildReadings(const ScoreInput& input) {
+        Vector<Reading> readings;
         if (input.won) {
-            const eastl::vector<ReadingSet> melds = MeldSets(input.hand);
+            const Vector<ReadingSet> melds = MeldSets(input.hand);
             const int setsNeeded = kSetsInHand - static_cast<int>(melds.size());
             for (const Decomposition& found : Decompose(CountTiles(input.hand.concealed), setsNeeded)) {
                 AddDecompositionReadings(input, melds, found, readings);

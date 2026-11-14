@@ -137,7 +137,7 @@ namespace BECore::Mahjong::Tests {
 
         /// Whether one of the last `last` tile draws is at `rect` and shows `face` (nullopt: a back).
         bool TileAmongLast(size_t last, const Rect& rect, const Optional<Tile>& face) const {
-            const std::vector<DrawCall> calls = TileCalls();
+            const Vector<DrawCall> calls = TileCalls();
             const Rect source = face ? SourceRect(*face) : BackRect();
             for (size_t i = calls.size() > last ? calls.size() - last : 0; i < calls.size(); ++i) {
                 if (SameRect(calls[i].rect, rect) && SameSource(calls[i], source)) {
@@ -180,7 +180,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The state of the flights `fraction` of their time into the batch, as the last draw shows it.
-        void ExpectAt(const std::vector<Arrival>& arrivals, float fraction) const {
+        void ExpectAt(const Vector<Arrival>& arrivals, float fraction) const {
             ExpectEverySlotDrawnOnce();
             for (const Arrival& arrival : arrivals) {
                 const Rect expected = BoxWhere(arrival, fraction);
@@ -235,7 +235,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The batch just drawn flies exactly `arrivals`: at its start, half way and landed (the clock of the table moves between draws).
-        void ExpectFlightsRun(const std::vector<Arrival>& arrivals) {
+        void ExpectFlightsRun(const Vector<Arrival>& arrivals) {
             ASSERT_EQ(_table->FlightCount(), arrivals.size());
             ExpectAt(arrivals, 0.0f);
             AdvanceTime(kHalfFlight);
@@ -259,8 +259,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The meld tile slots of `seat`'s meld `meld` in the last layout, by part.
-        std::vector<const TileSlot*> MeldSlots(Seat seat, int meld) const {
-            std::vector<const TileSlot*> found;
+        Vector<const TileSlot*> MeldSlots(Seat seat, int meld) const {
+            Vector<const TileSlot*> found;
             for (const TileSlot& slot : _table->GetLayout().slots) {
                 if (slot.role == SlotRole::MeldTile && slot.seat == seat && slot.index == meld) {
                     found.push_back(&slot);
@@ -270,8 +270,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The arrivals of a claimed set of `seat` (meld 0): the claimed tile comes from `claimedFrom`, the other tiles from `fromHand` in order.
-        std::vector<Arrival> ClaimArrivals(Seat seat, const FlightOrigin& claimedFrom, const std::vector<FlightOrigin>& fromHand, const Tile claimedTile) const {
-            std::vector<Arrival> arrivals;
+        Vector<Arrival> ClaimArrivals(Seat seat, const FlightOrigin& claimedFrom, const Vector<FlightOrigin>& fromHand, const Tile claimedTile) const {
+            Vector<Arrival> arrivals;
             size_t next = 0;
             for (const TileSlot* slot : MeldSlots(seat, 0)) {
                 Arrival arrival;
@@ -371,8 +371,8 @@ namespace BECore::Mahjong::Tests {
 
         /// The rectangles drawn in `color` in the last frame, in the order drawn: a rect's own, or the box of the vertices of that colour in a geometry call (the base, the tint and the frame of a
         /// seat plate are one mesh).
-        std::vector<Rect> RectsOf(const Color& color) const {
-            std::vector<Rect> found;
+        Vector<Rect> RectsOf(const Color& color) const {
+            Vector<Rect> found;
             for (const MarkDraw& draw : MarksOf(_renderer->calls, color)) {
                 found.push_back(draw.rect);
             }
@@ -381,7 +381,7 @@ namespace BECore::Mahjong::Tests {
 
         /// `color` is drawn exactly once in the last frame, at `rect`.
         void ExpectOneRectAt(const Color& color, const Rect& rect, const char* what) const {
-            const std::vector<Rect> found = RectsOf(color);
+            const Vector<Rect> found = RectsOf(color);
             ASSERT_EQ(found.size(), 1u) << what;
             EXPECT_TRUE(SameRect(found[0], rect)) << what << ": at " << found[0].x << "," << found[0].y << " " << found[0].w << "x" << found[0].h << ", expected " << rect.x << "," << rect.y << " "
                                                   << rect.w << "x" << rect.h;
@@ -432,7 +432,7 @@ namespace BECore::Mahjong::Tests {
         Draw();
 
         // A tile that leaves a hand that shows nothing leaves from the middle of it (14 tiles: the eighth), and shows its face from the start
-        const std::vector<Arrival> arrivals = {Pile(MiddleHand(before, kSeat1), kSeat1, 1, T("Gd")), DrawnBy(before, kSeat2)};
+        const Vector<Arrival> arrivals = {Pile(MiddleHand(before, kSeat1), kSeat1, 1, T("Gd")), DrawnBy(before, kSeat2)};
         ASSERT_EQ(Model().DrawnTile(kSeat2), T("Rd"));
         ExpectFlightsRun(arrivals);
     }
@@ -504,7 +504,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(Hand().GetHand(kSeat0).melds.size(), 1u);
         Draw();
 
-        const std::vector<Arrival> arrivals =
+        const Vector<Arrival> arrivals =
             ClaimArrivals(kSeat0, RectOf(before, SlotRole::DiscardTile, kSeat3, 3), {RectOf(before, SlotRole::HandTile, kSeat0, gd), RectOf(before, SlotRole::HandTile, kSeat0, gd + 1)}, T("Gd"));
         ASSERT_EQ(arrivals.size(), 3u);
         for (const float fraction : {0.0f, 0.5f, 1.0f}) {
@@ -532,7 +532,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(Hand().Discards().size(), 1u);
         Draw();
 
-        const std::vector<Arrival> arrivals = {Pile(RectOf(before, SlotRole::HandTile, kSeat0, index), kSeat0, 0, T("4s")), DrawnBy(before, kSeat1)};
+        const Vector<Arrival> arrivals = {Pile(RectOf(before, SlotRole::HandTile, kSeat0, index), kSeat0, 0, T("4s")), DrawnBy(before, kSeat1)};
         ExpectFlightsRun(arrivals);
     }
 
@@ -549,8 +549,8 @@ namespace BECore::Mahjong::Tests {
 
         ASSERT_EQ(Hand().Discards().size(), 1u);
         ASSERT_EQ(Hand().Discards()[0].tile, T("4p"));
-        const std::vector<Arrival> either = {Pile(RectOf(before, SlotRole::HandTile, kSeat0, first), kSeat0, 0, T("4p"))};
-        const std::vector<Arrival> other = {Pile(RectOf(before, SlotRole::HandTile, kSeat0, first + 1), kSeat0, 0, T("4p"))};
+        const Vector<Arrival> either = {Pile(RectOf(before, SlotRole::HandTile, kSeat0, first), kSeat0, 0, T("4p"))};
+        const Vector<Arrival> other = {Pile(RectOf(before, SlotRole::HandTile, kSeat0, first + 1), kSeat0, 0, T("4p"))};
         ASSERT_EQ(_table->FlightCount(), 2u);
         const Optional<Tile> face = T("4p");
         const bool fromFirst = TileAmongLast(2, Where(either[0], 0.0f), face);
@@ -610,7 +610,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(Hand().GetHand(kSeat1).melds.size(), 1u);
         Draw();
 
-        const std::vector<Arrival> arrivals =
+        const Vector<Arrival> arrivals =
             ClaimArrivals(kSeat1, RectOf(before, SlotRole::DiscardTile, kSeat0, 0), {RectOf(before, SlotRole::HandTile, kSeat1, five), RectOf(before, SlotRole::HandTile, kSeat1, five + 1)}, T("5p"));
         ExpectFlightsRun(arrivals);
     }
@@ -641,7 +641,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(Hand().GetHand(kSeat1).melds[0].kind, MeldKind::Kong);
         Draw();
 
-        std::vector<Arrival> arrivals =
+        Vector<Arrival> arrivals =
             ClaimArrivals(kSeat1, RectOf(before, SlotRole::DiscardTile, kSeat0, 0),
                           {RectOf(before, SlotRole::HandTile, kSeat1, 0), RectOf(before, SlotRole::HandTile, kSeat1, 1), RectOf(before, SlotRole::HandTile, kSeat1, 2)}, T("5p"));
         // The loose tile drawn after the kong is the wall's, like any draw
@@ -667,7 +667,7 @@ namespace BECore::Mahjong::Tests {
 
         // The discard never was in a frame: the claimed tile leaves the hand of the discarder (the viewer's own slot of that tile)
         const FlightOrigin seat1Middle = MiddleHand(before, kSeat1);
-        std::vector<Arrival> arrivals = ClaimArrivals(kSeat1, RectOf(before, SlotRole::HandTile, kSeat0, red), {seat1Middle, seat1Middle}, T("Rd"));
+        Vector<Arrival> arrivals = ClaimArrivals(kSeat1, RectOf(before, SlotRole::HandTile, kSeat0, red), {seat1Middle, seat1Middle}, T("Rd"));
         ASSERT_EQ(Hand().Discards().size(), 1u) << "the claimed tile left the pile";
         arrivals.push_back(Pile(seat1Middle, kSeat1, 0, Hand().Discards()[0].tile));
         if (Model().DrawnTile(kSeat2).IsValid()) {
@@ -687,7 +687,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(Model().DeclareConcealedKong(kSeat0, T("1p")).has_value());
         Draw();
 
-        std::vector<Arrival> arrivals;
+        Vector<Arrival> arrivals;
         for (const TileSlot* slot : MeldSlots(kSeat0, 0)) {
             Arrival arrival;
             arrival.from = RectOf(before, SlotRole::HandTile, kSeat0, slot->part);  // the four 1p are the first four tiles of the sorted hand
@@ -716,7 +716,7 @@ namespace BECore::Mahjong::Tests {
         Draw();
 
         const FlightOrigin middle = MiddleHand(before, kSeat1);
-        std::vector<Arrival> arrivals;
+        Vector<Arrival> arrivals;
         for (const TileSlot* slot : MeldSlots(kSeat1, 0)) {
             Arrival arrival;
             arrival.from = middle;
@@ -730,7 +730,7 @@ namespace BECore::Mahjong::Tests {
         arrivals.push_back(DrawnBy(before, kSeat1));
         // All five are backs while they fly: no tile in the air shows a face
         ExpectEverySlotDrawnOnce();
-        const std::vector<DrawCall> calls = TileCalls();
+        const Vector<DrawCall> calls = TileCalls();
         for (size_t i = calls.size() - arrivals.size(); i < calls.size(); ++i) {
             EXPECT_TRUE(SameSource(calls[i], BackRect())) << "a tile in the air at call " << i << " shows a face";
         }
@@ -854,7 +854,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(_table->FlightCount(), 2u);
         ExpectEverySlotDrawnOnce();
         const Rect landed = RectOf(_table->GetLayout(), SlotRole::DiscardTile, kSeat1, 1);
-        const std::vector<DrawCall> calls = TileCalls();
+        const Vector<DrawCall> calls = TileCalls();
         bool seen = false;
         for (size_t i = 0; i + 2 < calls.size(); ++i) {
             seen = seen || (SameRect(calls[i].rect, landed) && SameSource(calls[i], SourceRect(T("Gd"))));
@@ -898,7 +898,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableFlightTest, TheModelAndTheSessionAreTheSameWithFlightsOnAndOffOverAWholeHandOfComputers) {
-        const auto play = [&](bool flights, std::vector<String>& log) {
+        const auto play = [&](bool flights, Vector<String>& log) {
             ASSERT_NO_FATAL_FAILURE(Start(kAllComputers, kSeed));
             _table->SetTileFlightSeconds(flights ? kTileFlightSeconds : 0.0f);
             Draw();
@@ -913,8 +913,8 @@ namespace BECore::Mahjong::Tests {
             }
             ASSERT_NE(Session().GetPhase(), SessionPhase::Playing) << "the hand ended";
         };
-        std::vector<String> withFlights;
-        std::vector<String> without;
+        Vector<String> withFlights;
+        Vector<String> without;
         ASSERT_NO_FATAL_FAILURE(play(true, withFlights));
         ASSERT_NO_FATAL_FAILURE(play(false, without));
         EXPECT_EQ(withFlights, without);
@@ -960,8 +960,8 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongTableFlightTest, TheBarOfTheClaimedEdgeTravelsWithTheClaimedTile) {
         TableLayout before;
         ASSERT_NO_FATAL_FAILURE(PungByThePerson(before));
-        const std::vector<Arrival> arrivals = ClaimArrivals(kSeat1, RectOf(before, SlotRole::DiscardTile, kSeat0, 0),
-                                                            {RectOf(before, SlotRole::HandTile, kSeat1, 1), RectOf(before, SlotRole::HandTile, kSeat1, 2)}, T("5p"));  // 4p 5p 5p 6p ...
+        const Vector<Arrival> arrivals = ClaimArrivals(kSeat1, RectOf(before, SlotRole::DiscardTile, kSeat0, 0),
+                                                       {RectOf(before, SlotRole::HandTile, kSeat1, 1), RectOf(before, SlotRole::HandTile, kSeat1, 2)}, T("5p"));  // 4p 5p 5p 6p ...
         Edge edge = Edge::None;
         Arrival flying;
         for (const Arrival& arrival : arrivals) {
@@ -1008,7 +1008,7 @@ namespace BECore::Mahjong::Tests {
         AtStartHalfAndLanding([&](float fraction) {
             const Rect tile = Where(drawn, fraction);
             const Rect bar(tile.x, tile.y + tile.h - kKeepsWaitingBarHeight, tile.w, kKeepsWaitingBarHeight);
-            const std::vector<Rect> bars = RectsOf(kKeepsWaitingMark);
+            const Vector<Rect> bars = RectsOf(kKeepsWaitingMark);
             const bool onTheFlyingTile = std::any_of(bars.begin(), bars.end(), [&](const Rect& found) { return SameRect(found, bar); });
             EXPECT_TRUE(onTheFlyingTile) << "fraction " << fraction << ": the bar of the drawn Nw is inside the bottom edge of the tile in the air";
             ExpectOneRectAt(kDrawnTileMark, tile, "the tint of the drawn tile");
@@ -1017,8 +1017,8 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableFlightTest, TheTurnBackdropTheCallingFrameAndTheSeatPlatesAreTheSameWithAFlightAsWithout) {
-        const std::vector<Color> colors = {kTurnMark, kSeatPlate, kSeatTurnFrame, kDealerMark, kCallingFrame};
-        const auto play = [&](bool flights, std::vector<std::vector<Rect>>& seen) {
+        const Vector<Color> colors = {kTurnMark, kSeatPlate, kSeatTurnFrame, kDealerMark, kCallingFrame};
+        const auto play = [&](bool flights, Vector<Vector<Rect>>& seen) {
             _table->SetTileFlightSeconds(flights ? kTileFlightSeconds : 0.0f);
             ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, ViewerDeclaredModel()));
             const int drawn = IndexOf(kSeat0, T("Nw"));
@@ -1032,8 +1032,8 @@ namespace BECore::Mahjong::Tests {
                 seen.push_back(RectsOf(color));
             }
         };
-        std::vector<std::vector<Rect>> with;
-        std::vector<std::vector<Rect>> without;
+        Vector<Vector<Rect>> with;
+        Vector<Vector<Rect>> without;
         ASSERT_NO_FATAL_FAILURE(play(true, with));
         ASSERT_NO_FATAL_FAILURE(play(false, without));
         ASSERT_EQ(with.size(), without.size());
@@ -1177,7 +1177,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_FALSE(Session().HandoffPending());
         Draw();
 
-        std::vector<Arrival> arrivals;
+        Vector<Arrival> arrivals;
         for (const TileSlot* slot : MeldSlots(kSeat0, 0)) {
             Arrival arrival;
             arrival.from = RectOf(before, SlotRole::HandTile, kSeat0, slot->part);
@@ -1225,7 +1225,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_GT(flying, 0u);
             AdvanceTime(kQuarter * 0.4f);
             Draw();
-            const std::vector<DrawCall> calls = TileCalls();
+            const Vector<DrawCall> calls = TileCalls();
 
             if (rules) {
                 _game->OpenRules();
@@ -1235,7 +1235,7 @@ namespace BECore::Mahjong::Tests {
             AdvanceTime(5.0f);
             Draw();
             EXPECT_EQ(_table->FlightCount(), flying) << (rules ? "rules" : "setup");
-            const std::vector<DrawCall> still = TileCalls();
+            const Vector<DrawCall> still = TileCalls();
             ASSERT_EQ(still.size(), calls.size());
             for (size_t i = 0; i < calls.size(); ++i) {
                 EXPECT_TRUE(SameRect(calls[i].rect, still[i].rect)) << "call " << i << " moved while the table was paused";

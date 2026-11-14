@@ -21,7 +21,7 @@ namespace BECore::Mahjong {
      * scores. Several readings of one hand are possible; `ScoreSeat` scores each and keeps the best.
      */
     struct Reading {
-        eastl::vector<ReadingSet> sets;
+        Vector<ReadingSet> sets;
         Tile pair;
     };
 
@@ -38,7 +38,7 @@ namespace BECore::Mahjong {
      * - A seat that does not win: one reading from what stands, see `Reading`. Chows in the concealed tiles score nothing and are not
      *   looked for.
      */
-    [[nodiscard]] eastl::vector<Reading> BuildReadings(const ScoreInput& input);
+    [[nodiscard]] Vector<Reading> BuildReadings(const ScoreInput& input);
 
     /// A reading of four sets and a pair: the shape of a win by sets.
     [[nodiscard]] inline bool IsCompleteReading(const Reading& reading) noexcept {

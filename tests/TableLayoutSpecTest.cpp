@@ -100,7 +100,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// One message of `problems` has every one of `parts`.
-        void ExpectProblem(const eastl::vector<String>& problems, std::initializer_list<const char*> parts) {
+        void ExpectProblem(const Vector<String>& problems, std::initializer_list<const char*> parts) {
             String all;
             for (const String& problem : problems) {
                 bool every = true;
@@ -419,7 +419,7 @@ namespace BECore::Mahjong::Tests {
         const String text = Replaced(FileXml(), ShapeXml("Portrait"), ShapeXml("Portrait", Format("{}{}", kFreeXml, FreeXml("table.moveLine", "x=\"0\" y=\"0\" w=\"1\" h=\"0.5\""))));
         const TableLayoutSpecParse parse = ParseText(text);
         EXPECT_TRUE(parse.Ok());
-        const eastl::vector<FreeRegion>& regions = parse.spec.Shape(TableShape::Portrait).freeRegions;
+        const Vector<FreeRegion>& regions = parse.spec.Shape(TableShape::Portrait).freeRegions;
         ASSERT_EQ(regions.size(), 2U);
         EXPECT_STREQ(regions[0].name.c_str(), "table.hint");
         EXPECT_TRUE((regions[0].rect == ZoneRect{0.0625f, 0.5f, 0.125f, 0.25f}));
@@ -458,7 +458,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(TableLayoutSpecTest, TheShippedSpecPassesTheCheck) {
-        const eastl::vector<String> problems = CheckTableLayoutSpec(ShippedTableLayoutSpec());
+        const Vector<String> problems = CheckTableLayoutSpec(ShippedTableLayoutSpec());
         for (const String& problem : problems) {
             ADD_FAILURE() << problem.c_str();
         }
@@ -536,7 +536,7 @@ namespace BECore::Mahjong::Tests {
     TEST(TableLayoutSpecTest, AFreeRegionOnGroundNoTileReachesPassesTheCheck) {
         TableLayoutSpec spec = ShippedTableLayoutSpec();
         spec.Shape(TableShape::Landscape).freeRegions.push_back(CornerRegion());
-        const eastl::vector<String> problems = CheckTableLayoutSpec(spec);
+        const Vector<String> problems = CheckTableLayoutSpec(spec);
         for (const String& problem : problems) {
             ADD_FAILURE() << problem.c_str();
         }
@@ -556,7 +556,7 @@ namespace BECore::Mahjong::Tests {
         portrait.freeRegions.push_back(FreeRegion{"table.onBlock", portrait.seats[2].discards.rect});
         portrait.freeRegions.push_back(FreeRegion{"table.onPlate", portrait.seats[1].plate});
         portrait.freeRegions.push_back(FreeRegion{"table.inRing", ZoneRect{portrait.wall.x + portrait.wall.w / 2.0f - 0.01f, portrait.wall.y + portrait.wall.h / 2.0f - 0.01f, 0.02f, 0.02f}});
-        const eastl::vector<String> problems = CheckTableLayoutSpec(spec);
+        const Vector<String> problems = CheckTableLayoutSpec(spec);
         ExpectProblem(problems, {"shape 'Portrait'", "free region 'table.onBlock'", "the discard block of position 2"});
         ExpectProblem(problems, {"shape 'Portrait'", "free region 'table.onPlate'", "the plate of position 1"});
         ExpectProblem(problems, {"shape 'Portrait'", "free region 'table.inRing'", "the wall ring"});
@@ -572,7 +572,7 @@ namespace BECore::Mahjong::Tests {
         // Wide borrows Landscape's regions and lies a wing in: a region at the right edge of Landscape leaves the wide view at the wing's inset
         TableLayoutSpec spec = ShippedTableLayoutSpec();
         spec.Shape(TableShape::Landscape).freeRegions.push_back(FreeRegion{"table.edge", ZoneRect{0.99f, 0.0f, 0.01f, 0.01f}});
-        const eastl::vector<String> problems = CheckTableLayoutSpec(spec);
+        const Vector<String> problems = CheckTableLayoutSpec(spec);
         for (const String& problem : problems) {
             EXPECT_EQ(problem.find("outside the view"), String::npos) << problem.c_str();
         }
@@ -583,7 +583,7 @@ namespace BECore::Mahjong::Tests {
     TEST(TableLayoutSpecTest, AProblemIsReportedOnceWhateverTheViewer) {
         TableLayoutSpec spec = ShippedTableLayoutSpec();
         spec.Shape(TableShape::Portrait).seats[0].discards.rect = spec.Shape(TableShape::Portrait).seats[2].discards.rect;
-        const eastl::vector<String> problems = CheckTableLayoutSpec(spec);
+        const Vector<String> problems = CheckTableLayoutSpec(spec);
         for (size_t first = 0; first < problems.size(); ++first) {
             for (size_t second = first + 1; second < problems.size(); ++second) {
                 EXPECT_NE(problems[first], problems[second]);

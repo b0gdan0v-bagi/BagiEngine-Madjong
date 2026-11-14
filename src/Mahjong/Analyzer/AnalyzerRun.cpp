@@ -13,8 +13,8 @@ namespace BECore::Mahjong::Analyzer {
             return view.phase == Phase::Discard ? ChooseTurnAction(view, rng, kNormalProfile) : ChooseClaimAction(view, rng, kNormalProfile);
         }
 
-        eastl::vector<double> AsDoubles(const eastl::vector<int>& values) {
-            eastl::vector<double> result;
+        Vector<double> AsDoubles(const Vector<int>& values) {
+            Vector<double> result;
             result.reserve(values.size());
             for (const int value : values) {
                 result.push_back(static_cast<double>(value));
@@ -23,9 +23,9 @@ namespace BECore::Mahjong::Analyzer {
         }
 
         /// `a - b` world by world; the rows have one length (the same worlds for every action).
-        ActionDifference PairedDifference(const eastl::vector<int>& a, const eastl::vector<int>& b) {
+        ActionDifference PairedDifference(const Vector<int>& a, const Vector<int>& b) {
             ASSERT(a.size() == b.size(), "PairedDifference: the rows are of different worlds");
-            eastl::vector<double> differences;
+            Vector<double> differences;
             differences.reserve(a.size());
             for (size_t world = 0; world < a.size(); ++world) {
                 differences.push_back(static_cast<double>(a[world] - b[world]));
@@ -59,7 +59,7 @@ namespace BECore::Mahjong::Analyzer {
             return std::unexpected(String("the search over the legal actions could not begin"));
         }
         run->RunWorlds(loop);
-        const eastl::vector<eastl::vector<int>>& values = run->Values();
+        const Vector<Vector<int>>& values = run->Values();
         if (values.empty() || values.front().empty()) {
             return std::unexpected(String("no world could be sampled for this position"));
         }

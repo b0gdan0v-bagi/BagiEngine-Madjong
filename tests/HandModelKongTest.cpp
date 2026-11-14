@@ -472,7 +472,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(model.GetHand(kSeat1).callingDeclared);
         ASSERT_EQ(model.CurrentSeat(), kSeat0);
         ASSERT_EQ(model.GetHand(kSeat0).CountConcealed(T("9p")), kCopiesPerTile);
-        const eastl::vector<Tile> waits = WinningTiles(model.GetHand(kSeat1));
+        const Vector<Tile> waits = WinningTiles(model.GetHand(kSeat1));
         ASSERT_NE(eastl::find(waits.begin(), waits.end(), T("9p")), waits.end());
 
         ASSERT_TRUE(model.DeclareConcealedKong(kSeat0, T("9p")).has_value());
@@ -497,10 +497,10 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(model.GetPhase(), Phase::RobKong);
         EXPECT_EQ(model.CurrentSeat(), kSeat1);
         EXPECT_EQ(model.PendingTile(), T(kFifth));
-        const eastl::vector<Seat> pending = model.PendingClaimSeats();
+        const Vector<Seat> pending = model.PendingClaimSeats();
         ASSERT_EQ(pending.size(), 1u);
         EXPECT_EQ(pending[0], kSeat2);
-        const eastl::vector<ClaimOption> options = model.LegalClaims(kSeat2);
+        const Vector<ClaimOption> options = model.LegalClaims(kSeat2);
         ASSERT_EQ(options.size(), 1u);
         EXPECT_EQ(options[0].kind, ClaimKind::Mahjong);
         EXPECT_TRUE(model.LegalClaims(kSeat3).empty());

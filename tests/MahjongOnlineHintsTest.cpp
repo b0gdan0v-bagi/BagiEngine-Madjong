@@ -41,9 +41,9 @@ namespace BECore::Mahjong::Tests {
 
         /// Each seat in turn discards the next tile of @p tiles; the state after every discard is kept (the room is shown one move at a time, as a client
         /// that stays connected sees it: the log of a hand is inferred from the views, and a gap would coalesce the moves).
-        void Play(std::vector<HandModel>& states, const String& tiles, std::initializer_list<Seat> declaring = {}) {
+        void Play(Vector<HandModel>& states, const String& tiles, std::initializer_list<Seat> declaring = {}) {
             HandModel model = states.back();
-            const eastl::vector<Tile> parsed = ParseTiles(tiles).value();
+            const Vector<Tile> parsed = ParseTiles(tiles).value();
             for (const Tile tile : parsed) {
                 const Seat seat = model.CurrentSeat();
                 const bool declare = eastl::find(declaring.begin(), declaring.end(), seat) != declaring.end();
@@ -55,14 +55,14 @@ namespace BECore::Mahjong::Tests {
 
         /// The lap of the notes above on a fixed wall, state by state; the last is the viewer to act with 14 tiles, or, when @p viewerHasDiscarded, seat 1 (a
         /// person who waits) to act after the viewer's declaring discard.
-        std::vector<HandModel> PlayedStates(const char* seat2, const char* seat3, bool viewerHasDiscarded) {
+        Vector<HandModel> PlayedStates(const char* seat2, const char* seat3, bool viewerHasDiscarded) {
             FixedWallSpec spec;
             spec.hands[kSeat0] = kViewerHand;
             spec.hands[kSeat1] = kWaitingHand;
             spec.hands[kSeat2] = seat2;
             spec.hands[kSeat3] = seat3;
             spec.live = kLive;
-            std::vector<HandModel> states{MakeModel(spec)};
+            Vector<HandModel> states{MakeModel(spec)};
             Play(states, "Ew Rd Nw Ww");
             Play(states, "Gd Wd 9m Ew", {kSeat1});
             EXPECT_EQ(states.back().CurrentSeat(), kSeat0);
@@ -73,7 +73,7 @@ namespace BECore::Mahjong::Tests {
             return states;
         }
 
-        int Count(const eastl::array<bool, kTileIdCount>& flags, const eastl::vector<Tile>& hand) {
+        int Count(const Array<bool, kTileIdCount>& flags, const Vector<Tile>& hand) {
             int count = 0;
             for (const Tile tile : hand) {
                 count += flags[tile.Id()] ? 1 : 0;
@@ -107,7 +107,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The room's game plays through @p states, the client seeing each in turn.
-        void LayStates(const std::vector<HandModel>& states) {
+        void LayStates(const Vector<HandModel>& states) {
             for (const HandModel& state : states) {
                 ASSERT_NO_FATAL_FAILURE(LayOnServer(state));
             }
@@ -118,8 +118,8 @@ namespace BECore::Mahjong::Tests {
             return MakeTableView(_world.Game()->GetMatch().Hand(), kHostSeat);
         }
 
-        std::vector<Rect> RectsOf(const Color& color) const {
-            std::vector<Rect> found;
+        Vector<Rect> RectsOf(const Color& color) const {
+            Vector<Rect> found;
             for (const DrawCall& call : _renderer->calls) {
                 if (call.kind == DrawKind::Rect && SameColor(call.color, color)) {
                     found.push_back(call.rect);
@@ -196,7 +196,7 @@ namespace BECore::Mahjong::Tests {
         const TableView server = ServerView();
         const auto declaring = DeclaringDiscards(server);
         const auto dangers = DangerMarks(server);
-        const eastl::vector<Tile>& held = Hand().GetHand(kHostSeat).concealed;
+        const Vector<Tile>& held = Hand().GetHand(kHostSeat).concealed;
 
         EXPECT_TRUE(_game->HintsActive());
         EXPECT_TRUE(ButtonShown());
@@ -256,9 +256,9 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(StartHintsRoom(true));
         ASSERT_NO_FATAL_FAILURE(LayStates(PlayedStates(kSeat2Hand, kSeat3Hand, true)));
         ASSERT_EQ(_game->GetSession().Actor(), kIdleSeat);
-        const std::vector<WaitEntry> expected = [&] {
-            const eastl::vector<WaitEntry> row = WaitingTiles(ServerView());
-            return std::vector<WaitEntry>(row.begin(), row.end());
+        const Vector<WaitEntry> expected = [&] {
+            const Vector<WaitEntry> row = WaitingTiles(ServerView());
+            return Vector<WaitEntry>(row.begin(), row.end());
         }();
         ASSERT_FALSE(expected.empty()) << "the viewer waits";
         EXPECT_EQ(ShownWaitCells(), static_cast<int>(expected.size()));
@@ -344,10 +344,10 @@ namespace BECore::Mahjong::Tests {
             size_t declare = 0;
             size_t dangers = 0;
             String advice;
-            std::vector<uint8_t> visible;
+            Vector<uint8_t> visible;
         };
         Shown shown[2];
-        eastl::vector<Tile> hidden[2];
+        Vector<Tile> hidden[2];
         const char* const seat2[] = {kSeat2Hand, kOtherSeat2Hand};
         const char* const seat3[] = {kSeat3Hand, kOtherSeat3Hand};
         for (int variant = 0; variant < 2; ++variant) {
@@ -458,7 +458,7 @@ namespace BECore::Mahjong::Tests {
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             const UIStrings& strings = CoreManager::GetUIStrings();
-            std::vector<String> lines;
+            Vector<String> lines;
             for (const char* key : {"online.table.hintsAllowed", "online.table.hintsAllowedOff", "online.table.hintsOff"}) {
                 lines.push_back(Tr(strings, key));
             }
@@ -466,7 +466,7 @@ namespace BECore::Mahjong::Tests {
             Draw();
             ASSERT_TRUE(OnScreen("Hints", "RoomHintsText"));
             ExpectPassesTheMatrix("Hints", EngineTouchMinimum());
-            const std::vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Hints"), 0.0f);
+            const Vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Hints"), 0.0f);
             EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
         });
     }
@@ -608,7 +608,7 @@ namespace BECore::Mahjong::Tests {
             if (_game->GetSession().GetPhase() == SessionPhase::HandOver) {
                 ++hands;
                 _game->GetOnline().Act(0);
-                for (const std::unique_ptr<HubPlayer>& other : _others) {
+                for (const UniquePtr<HubPlayer>& other : _others) {
                     other->ActFirst();
                 }
                 ASSERT_TRUE(PlayUntil([&] { return _game->GetSession().GetPhase() != SessionPhase::HandOver; }, false, kMatchFrames));

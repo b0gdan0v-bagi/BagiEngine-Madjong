@@ -364,8 +364,8 @@ namespace BECore::Mahjong::Tests {
     namespace {
 
         /// Every action a seat could try (the canonical ones of the hand tests, as JSON) and the ready check.
-        eastl::vector<Json> EveryAttempt() {
-            eastl::vector<Json> attempts;
+        Vector<Json> EveryAttempt() {
+            Vector<Json> attempts;
             for (const HandAction& action : EveryCanonicalAction()) {
                 attempts.push_back(ActionToJson(action));
             }
@@ -375,7 +375,7 @@ namespace BECore::Mahjong::Tests {
 
         /// Accepted iff listed, for every seat in the position of `game`.
         void ExpectAcceptedExactlyWhenListed(const MahjongSeatedGame& game) {
-            static const eastl::vector<Json> attempts = EveryAttempt();
+            static const Vector<Json> attempts = EveryAttempt();
             for (int seat = 0; seat < kSeatCount; ++seat) {
                 const Json listed = ActionsOf(game, seat);
                 for (const Json& action : listed) {

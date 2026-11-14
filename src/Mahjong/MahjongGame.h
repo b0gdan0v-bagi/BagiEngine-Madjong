@@ -389,7 +389,7 @@ namespace BECore::Mahjong {
         CoachLedger _roomCoach;             // the ledger of a room's table: nobody observes the display session, the table component feeds it
         uint64_t _roomTables = 0;           // the tables of a room shown so far: the match of the room's ledger
         MahjongGameControl _control{*this};
-        eastl::unique_ptr<OnlineClient> _online;
+        UniquePtr<OnlineClient> _online;
         // The table of a room as a display copy (`Online/OnlineMirror.h`); the local pair above never sees it
         Match _displayMatch;
         TableSession _displaySession{_displayMatch};  // after _displayMatch: it keeps a reference

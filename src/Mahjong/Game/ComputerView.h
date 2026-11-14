@@ -11,10 +11,10 @@ namespace BECore::Mahjong {
     /// What everybody sees of a seat. A concealed kong lies face down, so it is only counted, not named.
     struct PublicSeat {
         /// The melds with `!concealed`: chows, pungs, open and upgraded kongs.
-        eastl::vector<Meld> openMelds;
+        Vector<Meld> openMelds;
         int concealedKongs = 0;
         /// The flowers and seasons laid open; `bonusCount` is their number.
-        eastl::vector<Tile> bonus;
+        Vector<Tile> bonus;
         int bonusCount = 0;
         int discardCount = 0;
         bool callingDeclared = false;
@@ -56,12 +56,12 @@ namespace BECore::Mahjong {
         Wind roundWind = Wind::East;
         /// The whole hand of `seat`.
         PlayerHand own;
-        eastl::array<PublicSeat, kSeatCount> seats;
+        Array<PublicSeat, kSeatCount> seats;
         TileCounts visible{};
         /// The tiles a regular draw can still take (`Wall::LiveCount`).
         int liveCount = 0;
         /// `HandModel::LegalActions(seat)`: the list the player chooses from.
-        eastl::vector<HandAction> legal;
+        Vector<HandAction> legal;
     };
 
     /// The view of `seat` on `model`; empty (`TableView{}`) for a number that is no seat.

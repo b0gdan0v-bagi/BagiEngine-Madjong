@@ -8,7 +8,7 @@ namespace BECore::Mahjong {
     namespace {
 
         /// The keys of the three dragons, in tile order.
-        constexpr eastl::array<StringView, kDragonCount> kDragonKeys{"tile.dragon.Red", "tile.dragon.White", "tile.dragon.Green"};
+        constexpr Array<StringView, kDragonCount> kDragonKeys{"tile.dragon.Red", "tile.dragon.White", "tile.dragon.Green"};
 
         /// Lines about a set or a pair: "Pung of 5 Dots".
         bool NamesItsTileWithOf(ScoreKind kind) noexcept {
@@ -44,11 +44,11 @@ namespace BECore::Mahjong {
         /// The cell of a drawn hand where a hand score and a change would stand.
         constexpr StringView kNoCell = "-";
 
-        constexpr eastl::array<StringView, 5> kColumnKeys{"handover.col.seat", "handover.col.wind", "handover.col.hand", "handover.col.change", "handover.col.total"};
+        constexpr Array<StringView, 5> kColumnKeys{"handover.col.seat", "handover.col.wind", "handover.col.hand", "handover.col.change", "handover.col.total"};
 
         /// The winner's tiles for the plate: the melds as laid, the concealed tiles in their order, the winning tile moved to the end.
-        eastl::vector<Tile> WinningTilesOf(const HandResult& result, const PlayerHand* hand) {
-            eastl::vector<Tile> tiles;
+        Vector<Tile> WinningTilesOf(const HandResult& result, const PlayerHand* hand) {
+            Vector<Tile> tiles;
             if (hand == nullptr) {
                 if (result.winningTile.IsValid()) {
                     tiles.push_back(result.winningTile);
@@ -213,7 +213,7 @@ namespace BECore::Mahjong {
 
     StandingsTable FormatStandings(const UIStrings& strings, const Match& match, const SeatWho& who) {
         StandingsTable table;
-        const eastl::array<Seat, kSeatCount> order = match.Standings();
+        const Array<Seat, kSeatCount> order = match.Standings();
         const SeatScores& scores = match.Scores();
         // The wind is not part of the name here: the match is over and "Seat 3 (East)" would name the next deal
         int place = 1;

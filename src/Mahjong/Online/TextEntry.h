@@ -34,7 +34,7 @@ namespace BECore::Mahjong {
 
         /// The keys of this kind's pad in the current language, each one UTF-8 character: the room code alphabet; or the letters of `online.pad.letters`, the ten digits and a space.
         /// At most `kPadMaxKeys`, none twice.
-        [[nodiscard]] eastl::vector<String> Pad(const UIStrings& strings) const;
+        [[nodiscard]] Vector<String> Pad(const UIStrings& strings) const;
 
         /// Appends @p character (exactly one UTF-8 character, a code folded to upper case). False and nothing changed when the field cannot hold it: a character outside
         /// the kind's set, or the text would pass the limit (5 characters, 24 bytes).

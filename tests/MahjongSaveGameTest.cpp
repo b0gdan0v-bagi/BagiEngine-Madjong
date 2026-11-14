@@ -169,18 +169,18 @@ namespace BECore::Mahjong::Tests {
             }
 
             /// The match slot written with `events`, by a store of its own.
-            void WriteMatch(const eastl::vector<MatchLogEvent>& events) const {
+            void WriteMatch(const Vector<MatchLogEvent>& events) const {
                 MatchSaveStore store(CoreManager::GetFileSystem());
                 ASSERT_TRUE(store.Open(folder));
                 ASSERT_TRUE(store.SaveMatch(events));
             }
 
-            eastl::vector<MatchLogEvent> ReadMatch() const {
+            Vector<MatchLogEvent> ReadMatch() const {
                 MatchSaveStore store(CoreManager::GetFileSystem());
                 EXPECT_TRUE(store.Open(folder));
                 auto events = store.LoadMatch();
                 EXPECT_TRUE(events.has_value());
-                return events ? *events : eastl::vector<MatchLogEvent>();
+                return events ? *events : Vector<MatchLogEvent>();
             }
 
             fs::path Slot(const char* name) const {
@@ -531,7 +531,7 @@ namespace BECore::Mahjong::Tests {
         Reset(*game, "{\"seed\": 3, \"seats\": \"CCCC\", \"hands\": 8}");
         NextHand(*game);  // a settlement is in the log
         game->FlushSave();
-        const eastl::vector<MatchLogEvent> good = ReadMatch();
+        const Vector<MatchLogEvent> good = ReadMatch();
         ASSERT_GT(good.size(), 2u);
 
         {
@@ -549,7 +549,7 @@ namespace BECore::Mahjong::Tests {
             ExpectNotOffered("a newer version");
         }
         {
-            eastl::vector<MatchLogEvent> wrongSeat = good;
+            Vector<MatchLogEvent> wrongSeat = good;
             for (MatchLogEvent& event : wrongSeat) {
                 if (event.kind == MatchLogKind::Action) {
                     event.seat = NextSeat(event.seat);
@@ -560,7 +560,7 @@ namespace BECore::Mahjong::Tests {
             ExpectNotOffered("an action of the wrong seat");
         }
         {
-            eastl::vector<MatchLogEvent> paid = good;
+            Vector<MatchLogEvent> paid = good;
             for (MatchLogEvent& event : paid) {
                 if (event.kind == MatchLogKind::Settlement) {
                     event.settlement.deltas[0] += 10;
@@ -570,7 +570,7 @@ namespace BECore::Mahjong::Tests {
             ExpectNotOffered("a settlement that pays otherwise");
         }
         {
-            WriteMatch(eastl::vector<MatchLogEvent>(good.begin() + 1, good.end()));
+            WriteMatch(Vector<MatchLogEvent>(good.begin() + 1, good.end()));
             ExpectNotOffered("a first line that is not a start");
         }
     }

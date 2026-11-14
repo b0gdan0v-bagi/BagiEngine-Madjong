@@ -21,7 +21,7 @@ namespace BECore::Mahjong::Arena {
     struct ArenaConfig {
         uint32_t first = kDefaultFirstSeed;
         int count = kDefaultSeedCount;
-        eastl::vector<ArenaPlayer> focus;
+        Vector<ArenaPlayer> focus;
         ArenaPlayer others;
         /// Measure the time of the decisions (the one number that is not a function of the config).
         bool timing = false;
@@ -74,7 +74,7 @@ namespace BECore::Mahjong::Arena {
         /// The sum of the seat's rounded scores (`scores`) over its lost hands: the "standing" score of `ArenaTable`.
         int64_t standingScore = 0;
         /// The won hands whose winner's breakdown has the kind (a kind once per won hand).
-        eastl::array<int64_t, kScoreKindCount> winsByKind{};
+        Array<int64_t, kScoreKindCount> winsByKind{};
         /// The actions chosen, and (only with timing) the nanoseconds spent choosing them.
         int64_t decisions = 0;
         int64_t nanoseconds = 0;
@@ -84,14 +84,14 @@ namespace BECore::Mahjong::Arena {
     struct FocusResult {
         ArenaPlayer player;
         /// One row per seed, in seed order.
-        eastl::vector<SeedRow> rows;
+        Vector<SeedRow> rows;
         /// The focus player on its four seats: `hands` is `kSeatCount * count`.
         ArenaTally focus;
         /// The three other seats together, summed over the seats: `hands` is `(kSeatCount - 1) * kSeatCount * count`; a drawn hand counts
         /// three times in `drawn`. Divide by `kSeatCount - 1` for a seat's average.
         ArenaTally others;
         /// The hands the focus player won while sitting on the seat.
-        eastl::array<int64_t, kSeatCount> winsBySeat{};
+        Array<int64_t, kSeatCount> winsBySeat{};
     };
 
     struct ArenaResult {
@@ -100,7 +100,7 @@ namespace BECore::Mahjong::Arena {
         ArenaPlayer others;
         bool timing = false;
         /// In the order of `ArenaConfig::focus`.
-        eastl::vector<FocusResult> focus;
+        Vector<FocusResult> focus;
     };
 
     /// Whether `config` can be played: empty when it can, else the text that says why not (no focus player, fewer than one seed, a range

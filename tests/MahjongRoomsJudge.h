@@ -22,7 +22,7 @@ namespace BECore::Mahjong::Tests {
 
     namespace RoomsJudgeDetail {
 
-        using Offences = std::vector<String>;
+        using Offences = Vector<String>;
         using KeySet = std::set<String>;
 
         constexpr int kJudgedSeatCount = 4;
@@ -297,7 +297,7 @@ namespace BECore::Mahjong::Tests {
 
     /// What is wrong with one text that a client received; empty when nothing. @p seat is the seat the client holds (from its `joined`),
     /// -1 before it has one. A text that is not a JSON object is an offence.
-    inline std::vector<String> JudgeRoomMessage(StringView text, int seat) {
+    inline Vector<String> JudgeRoomMessage(StringView text, int seat) {
         using namespace RoomsJudgeDetail;
         Offences offences;
         const auto parsed = ParseJson(text);
@@ -336,9 +336,9 @@ namespace BECore::Mahjong::Tests {
     class RoomsJudgeLog {
     public:
         /// Judges @p text for the client of @p seat; the offences are kept and returned.
-        std::vector<String> Text(StringView text, int seat) {
+        Vector<String> Text(StringView text, int seat) {
             ++_texts;
-            std::vector<String> offences = JudgeRoomMessage(text, seat);
+            Vector<String> offences = JudgeRoomMessage(text, seat);
             _offences.insert(_offences.end(), offences.begin(), offences.end());
             return offences;
         }
@@ -356,14 +356,14 @@ namespace BECore::Mahjong::Tests {
             return _nonText;
         }
 
-        [[nodiscard]] const std::vector<String>& Offences() const {
+        [[nodiscard]] const Vector<String>& Offences() const {
             return _offences;
         }
 
     private:
         size_t _texts = 0;
         size_t _nonText = 0;
-        std::vector<String> _offences;
+        Vector<String> _offences;
     };
 
 }  // namespace BECore::Mahjong::Tests

@@ -329,7 +329,7 @@ namespace BECore::Mahjong::Tests {
         const TableView view = MakeTableView(model, kSeat0);
         ASSERT_EQ(view.visible[T("Rd").Id()], 3);
         ASSERT_EQ(RateDiscards(CountTiles(view.own.concealed), 0, view).front().tile, T("Rd"));
-        const eastl::vector<DiscardValue> values = ValueDiscards(view, kOwnDrawsTestDepth);
+        const Vector<DiscardValue> values = ValueDiscards(view, kOwnDrawsTestDepth);
         ASSERT_FALSE(values.empty());
         ASSERT_NE(values.front().tile, T("Rd"));
 
@@ -367,7 +367,7 @@ namespace BECore::Mahjong::Tests {
         // own wind and the round wind), so the pair wait is worth more though it wins less often.
         const HandModel model = MakeModel(SpecOf("1s 2s 3s 4s 5s 6s 7m 8m 9m 5p 6p 6p Ew", "Ew"));
         const TableView view = MakeTableView(model, kSeat0);
-        const eastl::vector<DiscardValue> waits = ValueWaits(view);
+        const Vector<DiscardValue> waits = ValueWaits(view);
         ASSERT_EQ(waits.size(), 2u);
         ASSERT_EQ(waits.front().tile, T("5p"));
         MahjongRng normalRng(kRngSeed);
@@ -455,7 +455,7 @@ namespace BECore::Mahjong::Tests {
                     ++turns;
                     continue;
                 }
-                const eastl::vector<HandAction> actions = hand.LegalActions(actor);
+                const Vector<HandAction> actions = hand.LegalActions(actor);
                 ASSERT_FALSE(actions.empty());
                 ASSERT_TRUE(hand.Apply(actor, Choose(actions, Mode::SeekWin, rng)).has_value());
             }
@@ -475,8 +475,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The tied group of `RateDiscards`: the entries equal to the first in shanten, acceptance and keep.
-        eastl::vector<Tile> BestGroup(const eastl::vector<DiscardOption>& options) {
-            eastl::vector<Tile> group;
+        Vector<Tile> BestGroup(const Vector<DiscardOption>& options) {
+            Vector<Tile> group;
             for (const DiscardOption& option : options) {
                 if (option.shanten == options.front().shanten && option.acceptance == options.front().acceptance && option.keep == options.front().keep) {
                     group.push_back(option.tile);
@@ -540,7 +540,7 @@ namespace BECore::Mahjong::Tests {
         const TableView view = MakeTableView(model, kSeat0);
         const TileCounts counts = CountTiles(view.own.concealed);
 
-        const eastl::vector<DiscardOption> options = RateDiscards(counts, 0, view);
+        const Vector<DiscardOption> options = RateDiscards(counts, 0, view);
 
         size_t kinds = 0;
         for (const uint8_t count : counts) {
@@ -575,14 +575,14 @@ namespace BECore::Mahjong::Tests {
                 if (hand.GetPhase() == Phase::Discard) {
                     const TableView view = MakeTableView(hand, actor);
                     const TileCounts counts = CountTiles(view.own.concealed);
-                    const eastl::vector<DiscardOption> options = RateDiscards(counts, MeldCountOf(view), view);
+                    const Vector<DiscardOption> options = RateDiscards(counts, MeldCountOf(view), view);
                     ASSERT_FALSE(options.empty());
                     const DiscardRating best = BestDiscardRating(counts, MeldCountOf(view), view);
                     EXPECT_EQ(options.front().tile, best.tile) << "hand " << index << " step " << step;
                     EXPECT_EQ(options.front().shanten, best.shanten);
                     EXPECT_EQ(options.front().acceptance, best.acceptance);
 
-                    const eastl::vector<Tile> group = BestGroup(options);
+                    const Vector<Tile> group = BestGroup(options);
                     ties += group.size() > 1 ? 1 : 0;
                     for (uint32_t pick = 1; pick <= 4; ++pick) {
                         MahjongRng picker(pick);
@@ -667,7 +667,7 @@ namespace BECore::Mahjong::Tests {
     TEST(ComputerTurnTest, TheDangerTieBreakDiscardsTheSafeKindWhereTheKnobOffDiscardsTheDangerousOne) {
         TableView view = DangerView(kThreeLoneTiles);
         MarkPassed(view, "Gd");
-        const eastl::vector<DiscardOption> rated = RateDiscards(CountTiles(view.own.concealed), 0, view);
+        const Vector<DiscardOption> rated = RateDiscards(CountTiles(view.own.concealed), 0, view);
         // The three lone tiles are equal in shanten and acceptance: only the keep value (5s 2, the dragons 3) tells them apart without danger.
         ASSERT_GE(rated.size(), 3u);
         EXPECT_EQ(rated[0].tile, T("5s"));
@@ -723,7 +723,7 @@ namespace BECore::Mahjong::Tests {
         TableView view = DangerView(kThreeLoneTiles);
         view.visible[T("5s").Id()] = kCopiesPerTile;
         MarkPassed(view, "Gd");
-        const eastl::vector<DiscardOption> rated = RateDiscards(CountTiles(view.own.concealed), 0, view);
+        const Vector<DiscardOption> rated = RateDiscards(CountTiles(view.own.concealed), 0, view);
         ASSERT_EQ(rated.front().tile, T("5s"));
         ASSERT_GT(rated.front().acceptance, rated[1].acceptance);
         ASSERT_EQ(DangerOf(view, T("5s")), Danger::High);
@@ -737,7 +737,7 @@ namespace BECore::Mahjong::Tests {
         // The 6s and the dragon are the two lone tiles of a hand one step from waiting (equal acceptance); every other discard leaves a
         // higher shanten. All of those are made safe: the knob still chooses between the two (the dragon, the lower danger), not a safe one.
         TableView view = DangerView("1p 2p 3p 4p 5p 6p 7p 8p 2m 3m 5s 5s 6s Gd");
-        const eastl::vector<DiscardOption> rated = RateDiscards(CountTiles(view.own.concealed), 0, view);
+        const Vector<DiscardOption> rated = RateDiscards(CountTiles(view.own.concealed), 0, view);
         ASSERT_GE(rated.size(), 3u);
         ASSERT_EQ(rated[0].shanten, rated[1].shanten);
         ASSERT_EQ(rated[0].acceptance, rated[1].acceptance);
@@ -756,7 +756,7 @@ namespace BECore::Mahjong::Tests {
     TEST(ComputerTurnTest, ADeclaringDiscardOfEqualCopiesGoesToTheSaferWaitWhenTheKnobIsOn) {
         // Discarding the 5m waits on the dragon, discarding the dragon waits on the 5m: 3 unseen copies each. The 5m is the dangerous one.
         const TableView view = DangerView(kTwoTankiWaits);
-        const eastl::vector<WaitingDiscard> waiting = WaitingDiscards(view, true, true);
+        const Vector<WaitingDiscard> waiting = WaitingDiscards(view, true, true);
         ASSERT_EQ(waiting.size(), 2u);
         ASSERT_EQ(waiting[0].copies, waiting[1].copies);
         ASSERT_EQ(DangerOf(view, T("5m")), Danger::High);

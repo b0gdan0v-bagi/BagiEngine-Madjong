@@ -51,8 +51,8 @@ namespace BECore::Mahjong::Tests {
         static_assert(sizeof(kSpeedSegments) / sizeof(kSpeedSegments[0]) == EnumUtils<AnimationSpeed>::Count());
 
         /// Everything that takes input or shows a word on the page, for the matrix tests.
-        std::vector<const char*> Controls() {
-            std::vector<const char*> names;
+        Vector<const char*> Controls() {
+            Vector<const char*> names;
             for (const PageRow& row : kRows) {
                 names.insert(names.end(), row.segments, row.segments + row.count);
             }
@@ -210,7 +210,7 @@ namespace BECore::Mahjong::Tests {
             for (const auto& output : kOutputs) {
                 ExpectWordsFit("Options", output.width, output.height, kButtonAir);
             }
-            const std::vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Options"), kButtonAir);
+            const Vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Options"), kButtonAir);
             EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
         });
     }
@@ -239,7 +239,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(OpenPage());
         auto page = Canvas("Options");
         const float minTouch = EngineTouchMinimum();
-        std::vector<const char*> bands{"Title"};
+        Vector<const char*> bands{"Title"};
         for (const PageRow& row : kRows) {
             bands.push_back(row.row);
         }

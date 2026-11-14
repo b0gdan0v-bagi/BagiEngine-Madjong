@@ -52,6 +52,6 @@ namespace BECore::Mahjong {
 
     /// The four plates by screen position (0 bottom, 1 right, 2 top, 3 left; `SeatAtPosition(BottomSeat(session), position)` is the seat
     /// at each), in the current language of `strings`.
-    [[nodiscard]] eastl::array<SeatPlateText, kSeatCount> MakeSeatPlates(const UIStrings& strings, const TableSession& session, const Match& match);
+    [[nodiscard]] Array<SeatPlateText, kSeatCount> MakeSeatPlates(const UIStrings& strings, const TableSession& session, const Match& match);
 
 }  // namespace BECore::Mahjong

@@ -59,7 +59,7 @@ namespace BECore::Mahjong::Tests {
             return MakeViewMessage(kRoom, seat, game.GetStateVersion(), false, game.GetSeatView(seat).value(), game.GetSeatActions(seat).value());
         }
 
-        String LobbyText(int hostSeat, const eastl::vector<LobbySeat>& seats, RoomPhase phase = RoomPhase::Lobby) {
+        String LobbyText(int hostSeat, const Vector<LobbySeat>& seats, RoomPhase phase = RoomPhase::Lobby) {
             LobbySnapshot lobby;
             lobby.room = kRoom;
             lobby.game = kSeatedGameName;
@@ -69,11 +69,11 @@ namespace BECore::Mahjong::Tests {
             return MakeLobbyMessage(lobby);
         }
 
-        eastl::vector<LobbySeat> HostAlone() {
+        Vector<LobbySeat> HostAlone() {
             return {{0, BECore::SeatKind::Human, "Ann", true}, {1, BECore::SeatKind::Empty, {}, false}, {2, BECore::SeatKind::Empty, {}, false}, {3, BECore::SeatKind::Empty, {}, false}};
         }
 
-        eastl::vector<LobbySeat> AnnAndBob() {
+        Vector<LobbySeat> AnnAndBob() {
             return {{0, BECore::SeatKind::Human, "Ann", true}, {1, BECore::SeatKind::Human, "Bob", true}, {2, BECore::SeatKind::Computer, {}, false}, {3, BECore::SeatKind::Computer, {}, false}};
         }
 
@@ -91,7 +91,7 @@ namespace BECore::Mahjong::Tests {
                 settings.backoffStart = kBackoff;
                 settings.backoffMax = kBackoff;
                 settings.reconnectGiveUp = kGiveUp;
-                _client = std::make_unique<OnlineClient>(settings);
+                _client = MakeUnique<OnlineClient>(settings);
             }
 
             void Pump() {
@@ -148,7 +148,7 @@ namespace BECore::Mahjong::Tests {
 
             ManualClock _clock;
             FakeTransports _transports;
-            std::unique_ptr<OnlineClient> _client;
+            UniquePtr<OnlineClient> _client;
         };
 
         const char* KeyOf(const OnlineClient& client) {
@@ -283,7 +283,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongOnlineClientTest, TheLobbyShowsAPersonWhoseConnectionIsDownAsAway) {
         EnterAsHost();
-        eastl::vector<LobbySeat> seats = AnnAndBob();
+        Vector<LobbySeat> seats = AnnAndBob();
         seats[1].connected = false;
         Receive(LobbyText(0, seats));
 
@@ -303,7 +303,7 @@ namespace BECore::Mahjong::Tests {
         Pump();
         ASSERT_FALSE(_client->IsHost());
 
-        eastl::vector<LobbySeat> alone = AnnAndBob();
+        Vector<LobbySeat> alone = AnnAndBob();
         alone[0] = {0, BECore::SeatKind::Empty, {}, false};
         Receive(LobbyText(1, alone));
         EXPECT_TRUE(_client->IsHost());

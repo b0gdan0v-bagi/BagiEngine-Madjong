@@ -46,7 +46,7 @@ namespace BECore::Mahjong {
             return list;
         }
 
-        Json SeatsInOrderToJson(const eastl::array<Seat, kSeatCount>& seats) {
+        Json SeatsInOrderToJson(const Array<Seat, kSeatCount>& seats) {
             Json list = Json::array();
             for (const Seat seat : seats) {
                 list.push_back(seat);
@@ -179,12 +179,12 @@ namespace BECore::Mahjong {
             return *tile;
         }
 
-        std::expected<eastl::vector<Tile>, String> ReadTiles(const Json& object, StringView key) {
+        std::expected<Vector<Tile>, String> ReadTiles(const Json& object, StringView key) {
             const Json* member = FindJsonMember(object, key);
             if (member == nullptr || !member->is_array()) {
                 return Fail(key, "has to be an array of tiles");
             }
-            eastl::vector<Tile> tiles;
+            Vector<Tile> tiles;
             for (const Json& item : *member) {
                 const auto tile = ReadTileItem(item, key);
                 if (!tile) {
@@ -664,8 +664,8 @@ namespace BECore::Mahjong {
         return Fail("event", Format("is not a known event: \"{}\"", *name).c_str());
     }
 
-    std::expected<eastl::vector<MatchLogEvent>, String> ParseMatchLog(StringView lines) {
-        eastl::vector<MatchLogEvent> events;
+    std::expected<Vector<MatchLogEvent>, String> ParseMatchLog(StringView lines) {
+        Vector<MatchLogEvent> events;
         size_t lineNumber = 0;
         size_t begin = 0;
         while (begin <= lines.size()) {

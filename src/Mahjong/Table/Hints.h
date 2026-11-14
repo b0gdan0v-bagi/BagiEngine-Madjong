@@ -28,11 +28,11 @@ namespace BECore::Mahjong {
     /// The tiles that would complete the viewer's hand, in the order of the tile ids, each with its `UnseenCopies`. Empty unless the
     /// concealed tiles are `3n + 1` and the hand is waiting (`WinningTiles(view.own)`: the copies in the melds counted). It does not
     /// depend on whose turn it is or on the calling-hand declaration.
-    [[nodiscard]] eastl::vector<WaitEntry> WaitingTiles(const TableView& view);
+    [[nodiscard]] Vector<WaitEntry> WaitingTiles(const TableView& view);
 
     /// `true` for the id of each tile whose discard declares the calling hand: the `Discard` actions of `view.legal` with
     /// `declareCalling` (exactly what the `Declare` switch of the table allows). All false when the viewer has no turn.
-    [[nodiscard]] eastl::array<bool, kTileIdCount> DeclaringDiscards(const TableView& view);
+    [[nodiscard]] Array<bool, kTileIdCount> DeclaringDiscards(const TableView& view);
 
     /// What the computer player would do in the viewer's place: `ComputerPlayer(kAdviceSeed).Choose(view)` (`kAdviceSeed` is in `Game/ComputerExplain.h`). An element of `view.legal`;
     /// empty when `view.legal` is empty (nothing to do).

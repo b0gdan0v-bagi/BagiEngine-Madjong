@@ -110,7 +110,7 @@ namespace BECore::Mahjong::Tests {
         /// One fake connection: what the hub sent it and what it learned from `joined`.
         struct Client {
             ConnectionId id = 0;
-            std::vector<Received> received;
+            Vector<Received> received;
             bool closed = false;
             String room;
             int seat = -1;
@@ -175,7 +175,7 @@ namespace BECore::Mahjong::Tests {
         class RoomsHarness {
         public:
             explicit RoomsHarness(Leak leak = Leak::None, uint64_t randomSeed = 42) : _hub(_registry, MakeSettings(), MakeRandom(randomSeed), MakeSink()) {
-                const auto factory = [this, leak]() -> eastl::unique_ptr<ISeatedGame> {
+                const auto factory = [this, leak]() -> UniquePtr<ISeatedGame> {
                     if (leak == Leak::None) {
                         return eastl::make_unique<Tracked<MahjongSeatedGame>>(this);
                     }
@@ -264,8 +264,8 @@ namespace BECore::Mahjong::Tests {
             }
 
             /// A room of @p people clients (the host first), not started; the seats left over are the computers' on `start`.
-            std::vector<ConnectionId> MakeLobby(int people, const char* options = kShortMatch) {
-                std::vector<ConnectionId> ids;
+            Vector<ConnectionId> MakeLobby(int people, const char* options = kShortMatch) {
+                Vector<ConnectionId> ids;
                 const ConnectionId host = Connect();
                 Create(host, "P0", options);
                 ids.push_back(host);
@@ -362,7 +362,7 @@ namespace BECore::Mahjong::Tests {
 
         /// Ticks the clock and lets the persons play until @p done; false when it does not come in time.
         template <typename Done>
-        bool RunUntil(RoomsHarness& harness, const std::vector<ConnectionId>& persons, Done done, bool withNextHand = true) {
+        bool RunUntil(RoomsHarness& harness, const Vector<ConnectionId>& persons, Done done, bool withNextHand = true) {
             for (int step = 0; step < kTickLimit; ++step) {
                 if (done()) {
                     return true;
@@ -375,7 +375,7 @@ namespace BECore::Mahjong::Tests {
             return done();
         }
 
-        bool AllInPhase(RoomsHarness& harness, const std::vector<ConnectionId>& persons, const char* phase) {
+        bool AllInPhase(RoomsHarness& harness, const Vector<ConnectionId>& persons, const char* phase) {
             for (const ConnectionId id : persons) {
                 if (harness.At(id).Phase() != phase) {
                     return false;
@@ -384,7 +384,7 @@ namespace BECore::Mahjong::Tests {
             return true;
         }
 
-        void ExpectNoErrors(RoomsHarness& harness, const std::vector<ConnectionId>& persons) {
+        void ExpectNoErrors(RoomsHarness& harness, const Vector<ConnectionId>& persons) {
             for (const ConnectionId id : persons) {
                 EXPECT_EQ(harness.At(id).Count("error"), 0u) << harness.At(id).LastErrorCode();
             }
@@ -412,7 +412,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MahjongRoomsPlayTest, TwoPeopleAndTwoComputersPlayAHandThenAShortMatchAndEveryTextIsJudged) {
         RoomsHarness harness;
-        const std::vector<ConnectionId> people = harness.MakeLobby(kPersonSeats);
+        const Vector<ConnectionId> people = harness.MakeLobby(kPersonSeats);
         harness.Start(people[0]);
         ASSERT_NE(harness.Game(), nullptr);
         for (const ConnectionId id : people) {
@@ -456,7 +456,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MahjongRoomsPlayTest, FourPeopleWithStaleActionsPlayAHandAndOnlyTheStaleOnesAreRefused) {
         RoomsHarness harness;
-        const std::vector<ConnectionId> people = harness.MakeLobby(kSeatCount);
+        const Vector<ConnectionId> people = harness.MakeLobby(kSeatCount);
         harness.Start(people[0]);
         ASSERT_NE(harness.Game(), nullptr);
 
@@ -501,7 +501,7 @@ namespace BECore::Mahjong::Tests {
     namespace {
 
         /// Ticks until the game waits for @p seat (it has actions) while the other persons answer; false when it does not come.
-        bool RunUntilSeatWaits(RoomsHarness& harness, const std::vector<ConnectionId>& others, int seat) {
+        bool RunUntilSeatWaits(RoomsHarness& harness, const Vector<ConnectionId>& others, int seat) {
             for (int step = 0; step < kTickLimit; ++step) {
                 if (!harness.Game()->GetSeatActions(seat).value().empty()) {
                     return true;
@@ -514,7 +514,7 @@ namespace BECore::Mahjong::Tests {
             return false;
         }
 
-        void ExpectNothingMovesFor(RoomsHarness& harness, const std::vector<ConnectionId>& others, int seconds_) {
+        void ExpectNothingMovesFor(RoomsHarness& harness, const Vector<ConnectionId>& others, int seconds_) {
             const uint64_t before = harness.Game()->GetStateVersion();
             for (int second = 0; second < seconds_; ++second) {
                 harness.Tick(seconds(1));
@@ -546,7 +546,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MahjongRoomsPlayTest, APersonWhoDropsMidHandIsNotPlayedForInsideTheGraceAndAComputerPlaysAfterIt) {
         RoomsHarness harness;
-        std::vector<ConnectionId> people = harness.MakeLobby(kPersonSeats);
+        Vector<ConnectionId> people = harness.MakeLobby(kPersonSeats);
         harness.Start(people[0]);
         ASSERT_NE(harness.Game(), nullptr);
         const String room = harness.At(people[1]).room;
@@ -569,7 +569,7 @@ namespace BECore::Mahjong::Tests {
 
         // the person returns with the token, gets its own view, and is in control again
         const ConnectionId back = ReturnWithToken(harness, room, token, kAway);
-        const std::vector<ConnectionId> playing = {people[0], back};
+        const Vector<ConnectionId> playing = {people[0], back};
         ASSERT_TRUE(RunUntilSeatWaits(harness, {people[0]}, kAway));
         const uint64_t waiting = harness.Game()->GetStateVersion();
         harness.Tick();
@@ -582,7 +582,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MahjongRoomsPlayTest, APersonWhoDropsOnTheEndScreenIsReadyForByAComputerAfterTheGrace) {
         RoomsHarness harness;
-        const std::vector<ConnectionId> people = harness.MakeLobby(kPersonSeats);
+        const Vector<ConnectionId> people = harness.MakeLobby(kPersonSeats);
         harness.Start(people[0]);
         ASSERT_NE(harness.Game(), nullptr);
         const String room = harness.At(people[1]).room;
@@ -615,7 +615,7 @@ namespace BECore::Mahjong::Tests {
     TEST(MahjongRoomsJudgeTest, AGameThatSendsTheNeighboursHandIsCaughtOnTheWire) {
         RoomsHarness harness(Leak::ExtraKey);
         harness.SetFailOnOffence(false);
-        const std::vector<ConnectionId> people = harness.MakeLobby(kPersonSeats);
+        const Vector<ConnectionId> people = harness.MakeLobby(kPersonSeats);
         harness.Start(people[0]);
         ASSERT_TRUE(RunUntil(harness, people, [&] { return AllInPhase(harness, people, "hand_over"); }, false));
         ASSERT_FALSE(harness.Judge().Offences().empty()) << "the judge must be able to fail";
@@ -637,7 +637,7 @@ namespace BECore::Mahjong::Tests {
             return Dump(json);
         }
 
-        bool Says(const std::vector<String>& offences, const char* part) {
+        bool Says(const Vector<String>& offences, const char* part) {
             return std::any_of(offences.begin(), offences.end(), [&](const String& offence) { return offence.find(part) != String::npos; });
         }
 
@@ -668,7 +668,7 @@ namespace BECore::Mahjong::Tests {
         PlayToHandOver(game);
         ASSERT_EQ(PhaseOfMatch(game.GetMatch()), SessionPhase::HandOver);
         for (int seat = 0; seat < kSeatCount; ++seat) {
-            const std::vector<String> offences = JudgeRoomMessage(ViewTextOf(game, seat), seat);
+            const Vector<String> offences = JudgeRoomMessage(ViewTextOf(game, seat), seat);
             EXPECT_TRUE(offences.empty()) << seat << ": " << (offences.empty() ? "" : offences.front());
         }
         EXPECT_TRUE(JudgeRoomMessage(MakeViewMessage("ABCDE", 0, 0, false, Json::object(), Json::array()), 0).empty()) << "the view before the start is empty";
@@ -737,8 +737,8 @@ namespace BECore::Mahjong::Tests {
         /// The state of a hand with everything @p viewer cannot see shuffled: the concealed tiles of the other three seats and the
         /// three parts of the wall, the sizes as they were.
         HandState WithHiddenTilesShuffled(HandState state, Seat viewer, const RandomFn& rng) {
-            std::vector<Tile> pool;
-            const auto take = [&](const eastl::vector<Tile>& tiles) { pool.insert(pool.end(), tiles.begin(), tiles.end()); };
+            Vector<Tile> pool;
+            const auto take = [&](const Vector<Tile>& tiles) { pool.insert(pool.end(), tiles.begin(), tiles.end()); };
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 if (seat != viewer) {
                     take(state.hands[static_cast<size_t>(seat)].concealed);
@@ -751,14 +751,14 @@ namespace BECore::Mahjong::Tests {
                 std::swap(pool[index - 1], pool[rng() % index]);
             }
             size_t next = 0;
-            const auto fill = [&](eastl::vector<Tile>& tiles) {
+            const auto fill = [&](Vector<Tile>& tiles) {
                 for (Tile& tile : tiles) {
                     tile = pool[next++];
                 }
             };
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 if (seat != viewer) {
-                    eastl::vector<Tile>& concealed = state.hands[static_cast<size_t>(seat)].concealed;
+                    Vector<Tile>& concealed = state.hands[static_cast<size_t>(seat)].concealed;
                     fill(concealed);
                     eastl::sort(concealed.begin(), concealed.end(), [](Tile a, Tile b) { return a.Id() < b.Id(); });
                 }
@@ -767,7 +767,7 @@ namespace BECore::Mahjong::Tests {
             fill(state.loose);
             fill(state.dead);
             // the tile just drawn lies in the hand of the seat to act; it stays a tile of that hand
-            const eastl::vector<Tile>& current = state.hands[static_cast<size_t>(state.current)].concealed;
+            const Vector<Tile>& current = state.hands[static_cast<size_t>(state.current)].concealed;
             if (state.current != viewer && state.drawnTile.IsValid() && !current.empty()) {
                 state.drawnTile = current.back();
             }
@@ -881,7 +881,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MahjongRoomsHostileTest, HostileActionObjectsGetAStableErrorAndChangeNothing) {
         RoomsHarness harness;
-        const std::vector<ConnectionId> people = harness.MakeLobby(kPersonSeats);
+        const Vector<ConnectionId> people = harness.MakeLobby(kPersonSeats);
         harness.Start(people[0]);
         ASSERT_NE(harness.Game(), nullptr);
 
@@ -906,7 +906,7 @@ namespace BECore::Mahjong::Tests {
             String action;
             const char* code;
         };
-        const std::vector<Attempt> attempts = {
+        const Vector<Attempt> attempts = {
             {"{}", "invalid_params"},
             {"{\"type\":7}", "invalid_params"},
             {"{\"type\":null}", "invalid_params"},
@@ -968,7 +968,7 @@ namespace BECore::Mahjong::Tests {
         constexpr int kSettingMoves = 200;
 
         /// The `hintsAllowed` of every view a client received: each one has the key, a boolean, and says @p expected.
-        void ExpectEveryViewSays(RoomsHarness& harness, const std::vector<ConnectionId>& people, bool expected) {
+        void ExpectEveryViewSays(RoomsHarness& harness, const Vector<ConnectionId>& people, bool expected) {
             for (const ConnectionId id : people) {
                 size_t views = 0;
                 for (const Received& message : harness.At(id).received) {
@@ -986,7 +986,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Raw texts of a client that tries to change the room's setting after the room was made
-        std::vector<String> SettingAttempts(const String& room, int seat) {
+        Vector<String> SettingAttempts(const String& room, int seat) {
             const String extra = ",\"hintsAllowed\":true,\"options\":{\"hintsAllowed\":true}";
             return {Format("{{\"v\":1,\"type\":\"join_room\",\"code\":\"{}\",\"name\":\"Cheat\"{}}}", room, extra), Format("{{\"v\":1,\"type\":\"choose_seat\",\"seat\":{}{}}}", seat, extra),
                     Format("{{\"v\":1,\"type\":\"start\"{}}}", extra)};
@@ -997,7 +997,7 @@ namespace BECore::Mahjong::Tests {
     TEST(MahjongRoomsHintsTest, EverySeatOfARoomMadeWithHintsAllowedSaysSoAndOneMadeWithoutSaysNot) {
         for (const bool allowed : {true, false}) {
             RoomsHarness harness;
-            const std::vector<ConnectionId> people = harness.MakeLobby(kPersonSeats, allowed ? kHintsRoom : kShortMatch);
+            const Vector<ConnectionId> people = harness.MakeLobby(kPersonSeats, allowed ? kHintsRoom : kShortMatch);
             harness.Start(people[0]);
             ASSERT_NE(harness.Game(), nullptr);
             for (int seat = 0; seat < kSeatCount; ++seat) {
@@ -1012,7 +1012,7 @@ namespace BECore::Mahjong::Tests {
     TEST(MahjongRoomsHintsTest, ASettingThatIsNotABooleanIsInvalidParamsNamingTheKeyAndTheRoomStaysInTheLobby) {
         for (const char* options : {"{\"hintsAllowed\": \"yes\"}", "{\"hintsAllowed\": 1}", "{\"hintsAllowed\": null}", "{\"hintsAllowed\": []}", "{\"hintsAllowed\": {}}"}) {
             RoomsHarness harness;
-            const std::vector<ConnectionId> people = harness.MakeLobby(kPersonSeats, options);
+            const Vector<ConnectionId> people = harness.MakeLobby(kPersonSeats, options);
             harness.Start(people[0]);
             EXPECT_EQ(harness.At(people[0]).LastErrorCode(), "invalid_params") << options;
             EXPECT_NE(StringAt(harness.At(people[0]).Last("error")->json, "message").find("hintsAllowed"), String::npos) << options;
@@ -1034,7 +1034,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MahjongRoomsHintsTest, AClientCannotTurnTheSettingOnAgainstTheRoom) {
         RoomsHarness harness;
-        std::vector<ConnectionId> everyone = harness.MakeLobby(kPersonSeats);
+        Vector<ConnectionId> everyone = harness.MakeLobby(kPersonSeats);
         const String room = harness.At(everyone[0]).room;
         // a third person joins with the setting in the message
         const ConnectionId third = harness.Connect();

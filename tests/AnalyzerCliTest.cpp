@@ -15,7 +15,7 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        using Args = eastl::vector<StringView>;
+        using Args = Vector<StringView>;
 
         constexpr SeatSetup kAllComputers{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
         constexpr int kHandLimit = 200;
@@ -86,7 +86,7 @@ namespace BECore::Mahjong::Tests {
         CliRun RunWith(const Analyzer::FileReader& reader, const Args& args) {
             Analyzer::AnalyzerCliOutput output;
             CliRun run;
-            run.code = Analyzer::RunAnalyzerCli(eastl::span<const StringView>(args.data(), args.size()), reader, output);
+            run.code = Analyzer::RunAnalyzerCli(Span<const StringView>(args.data(), args.size()), reader, output);
             run.out = output.out.c_str();
             run.err = output.err.c_str();
             return run;
@@ -97,7 +97,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         std::expected<Analyzer::AnalyzerArgs, String> Parse(const Args& args) {
-            return Analyzer::ParseAnalyzerArgs(eastl::span<const StringView>(args.data(), args.size()));
+            return Analyzer::ParseAnalyzerArgs(Span<const StringView>(args.data(), args.size()));
         }
 
         String ErrorOf(const Args& args) {
@@ -129,12 +129,12 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The decisions of a seat in hand 1 of the played log.
-        eastl::vector<Analyzer::LogPosition> DecisionsOf(Seat seat) {
-            const std::expected<eastl::vector<MatchLogEvent>, String> events = ParseMatchLog(CompleteLog());
+        Vector<Analyzer::LogPosition> DecisionsOf(Seat seat) {
+            const std::expected<Vector<MatchLogEvent>, String> events = ParseMatchLog(CompleteLog());
             EXPECT_TRUE(events.has_value());
-            const std::expected<eastl::vector<Analyzer::LogPosition>, String> positions = Analyzer::PositionsOfSeat(*events, 1, seat);
+            const std::expected<Vector<Analyzer::LogPosition>, String> positions = Analyzer::PositionsOfSeat(*events, 1, seat);
             EXPECT_TRUE(positions.has_value());
-            return positions.has_value() ? *positions : eastl::vector<Analyzer::LogPosition>();
+            return positions.has_value() ? *positions : Vector<Analyzer::LogPosition>();
         }
 
     }  // namespace
@@ -222,7 +222,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(AnalyzerCliTest, OneLogDecisionGivesTheHeaderAndARowPerLegalAction) {
-        const std::expected<eastl::vector<MatchLogEvent>, String> events = ParseMatchLog(CompleteLog());
+        const std::expected<Vector<MatchLogEvent>, String> events = ParseMatchLog(CompleteLog());
         ASSERT_TRUE(events.has_value());
         const std::expected<Analyzer::LogPosition, String> position = Analyzer::PositionFromLog(*events, 1, 0);
         ASSERT_TRUE(position.has_value());
@@ -240,7 +240,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(AnalyzerCliTest, ASeatGivesOneReportPerDecisionAndASkipLineForASingleLegalAction) {
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            const eastl::vector<Analyzer::LogPosition> decisions = DecisionsOf(seat);
+            const Vector<Analyzer::LogPosition> decisions = DecisionsOf(seat);
             size_t compared = 0;
             for (const Analyzer::LogPosition& decision : decisions) {
                 compared += decision.view.legal.size() > 1 ? 1 : 0;

@@ -61,7 +61,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// What the canvas shows: the notation of each tile of a shown cell and its count text.
-        using Row = std::vector<std::pair<String, String>>;
+        using Row = Vector<std::pair<String, String>>;
 
     }  // namespace
 
@@ -158,8 +158,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The rectangles drawn in `color`, in the order of the draw calls.
-        std::vector<Rect> RectsOf(const Color& color) const {
-            std::vector<Rect> found;
+        Vector<Rect> RectsOf(const Color& color) const {
+            Vector<Rect> found;
             for (const DrawCall& call : _renderer->calls) {
                 if (call.kind == DrawKind::Rect && call.color.r == color.r && call.color.g == color.g && call.color.b == color.b && call.color.a == color.a) {
                     found.push_back(call.rect);
@@ -169,8 +169,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The marks under the hand: for each slot of the viewer's hand whose tile is in `tiles`, the bar the component should draw.
-        std::vector<Rect> ExpectedBars(const eastl::array<bool, kTileIdCount>& tiles) const {
-            std::vector<Rect> bars;
+        Vector<Rect> ExpectedBars(const Array<bool, kTileIdCount>& tiles) const {
+            Vector<Rect> bars;
             const PlayerHand& held = Hand().GetHand(_table->GetLayout().viewer);
             for (const TileSlot& slot : _table->GetLayout().slots) {
                 if (slot.role == SlotRole::HandTile && slot.seat == _table->GetLayout().viewer && tiles[held.concealed[slot.index].Id()]) {
@@ -225,7 +225,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The variables of the card: what `MakeAdviceCard` says for `seat`'s view now, in the current language, with the tally of the game.
-        std::vector<String> ExpectedWhy(Seat seat) const {
+        Vector<String> ExpectedWhy(Seat seat) const {
             const TableView view = ViewOf(seat);
             const Optional<Explanation> explained = ExplainAdviceFor(view);
             if (!explained.has_value()) {
@@ -237,7 +237,7 @@ namespace BECore::Mahjong::Tests {
             return CardTexts(MakeAdviceCard(strings, view, *explained, tally));
         }
 
-        std::vector<String> WhyVars() const {
+        Vector<String> WhyVars() const {
             return CardVars();
         }
 
@@ -735,7 +735,7 @@ namespace BECore::Mahjong::Tests {
         // Two tables that differ only in the hands of the other seats and in the live wall after the viewer's draw
         const auto run = [&](const char* seat1, const char* seat2, const char* seat3, const String& live) {
             Row row;
-            std::vector<String> counts;
+            Vector<String> counts;
             [&] {
                 ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
                 FixedWallSpec spec;
@@ -780,7 +780,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(StartEast(kSingleWait, "9p"));
         ASSERT_TRUE(Discard("9p"));
         Draw();
-        std::vector<String> seen;
+        Vector<String> seen;
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             Draw();
@@ -849,7 +849,7 @@ namespace BECore::Mahjong::Tests {
                 ExpectWordsFit("Hints", output.width, output.height, 0.0f);
             }
             // The same on the whole matrix, each window against the view of its shape (the portrait variant of the file)
-            const std::vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Hints"), 0.0f);
+            const Vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Hints"), 0.0f);
             EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
         });
     }
@@ -904,11 +904,11 @@ namespace BECore::Mahjong::Tests {
         // 123s 456s 789m 234p Ew and a drawn 9p: the 9p goes and the hand waits on the Ew, or the Ew goes and it waits on the 9p
         ASSERT_NO_FATAL_FAILURE(StartEast(kSingleWait, "9p"));
         ASSERT_TRUE(_game->GetSession().ActorIsPerson());
-        const eastl::array<bool, kTileIdCount> declaring = DeclaringDiscards(ViewOf(kSeat0));
-        const std::vector<Rect> expected = ExpectedBars(declaring);
+        const Array<bool, kTileIdCount> declaring = DeclaringDiscards(ViewOf(kSeat0));
+        const Vector<Rect> expected = ExpectedBars(declaring);
         ASSERT_EQ(expected.size(), 2u) << "the 9p and the east wind";
 
-        const std::vector<Rect> bars = RectsOf(kDeclareMark);
+        const Vector<Rect> bars = RectsOf(kDeclareMark);
 
         ASSERT_EQ(bars.size(), expected.size());
         for (size_t i = 0; i < bars.size(); ++i) {
@@ -1376,7 +1376,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongHintsTest, TheLanguageSwitchWordsTheAdviceAgain) {
         ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
         Press();
-        std::vector<String> seen;
+        Vector<String> seen;
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             Draw();
@@ -1427,7 +1427,7 @@ namespace BECore::Mahjong::Tests {
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             const UIStrings& strings = CoreManager::GetUIStrings();
-            std::vector<String> sentences;
+            Vector<String> sentences;
             TableView view;
             view.pendingTile = T("5p");
             const auto add = [&](const HandAction& action) { sentences.push_back(AdviceText(strings, view, action)); };
@@ -1459,7 +1459,7 @@ namespace BECore::Mahjong::Tests {
                 ExpectWordsFit("HintsButton", output.width, output.height, 0.0f);
             }
             for (const char* node : {"Hints", "HintsButton"}) {
-                const std::vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas(node), 0.0f);
+                const Vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas(node), 0.0f);
                 EXPECT_TRUE(cut.empty()) << node << ": " << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
             }
             // The button is a 56-unit control on a canvas that the table's fit scales: the engine's minimum holds wherever `Actions` does, and in
@@ -1504,11 +1504,11 @@ namespace BECore::Mahjong::Tests {
 
         /// The cards of every kind of advice over every tile and big numbers, in the language of `strings`, with the longest tally and
         /// every sentence of an advice as a title: the texts the card may have to hold.
-        std::vector<HintCard> EveryCard(const UIStrings& strings) {
+        Vector<HintCard> EveryCard(const UIStrings& strings) {
             constexpr int kBig = 99;
             constexpr int kKeepClasses[] = {kKeepWorthless, kKeepTerminal, kKeepSimple, kKeepValueTile};
             const String tally = CardTallyText(strings, CoachTally{kBig, kBig}, CoachTally{kBig * 9, kBig * 9});
-            std::vector<HintCard> cards;
+            Vector<HintCard> cards;
             TableView view;
             const auto say = [&](const Explanation& explained) { cards.push_back(MakeAdviceCard(strings, view, explained, tally)); };
             const auto title = [&](const HandAction& action) {
@@ -1696,7 +1696,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongHintsTest, TheLanguageSwitchWordsTheReasonsAgain) {
         ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
         ASSERT_NO_FATAL_FAILURE(OpenWhy());
-        std::vector<String> seen;
+        Vector<String> seen;
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             Draw();
@@ -1743,7 +1743,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongHintsTest, TheReasonsDoNotSeeTheOtherHands) {
         // Two tables that differ only in the hands of the other seats and the live wall after the viewer's draw
         const auto run = [&](const char* seat1, const char* seat3, const String& live) {
-            std::vector<String> lines;
+            Vector<String> lines;
             [&] {
                 ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
                 FixedWallSpec spec = SpecOf(kBestIsTheNorthWind, "Nw");
@@ -1757,8 +1757,8 @@ namespace BECore::Mahjong::Tests {
             }();
             return lines;
         };
-        const std::vector<String> plain = run(kQuiet1, kQuiet3, "4p Rd Gd Wd");
-        const std::vector<String> loaded = run("7p 7p 7p 2s 5s 8s 2m 5m 8m Ww Nw Gd Wd", "4p 4p 3s 6s 9s 3m 6m 9m Sw Ww Nw Gd Rd", "4p Gd Rd Wd");
+        const Vector<String> plain = run(kQuiet1, kQuiet3, "4p Rd Gd Wd");
+        const Vector<String> loaded = run("7p 7p 7p 2s 5s 8s 2m 5m 8m Ww Nw Gd Wd", "4p 4p 3s 6s 9s 3m 6m 9m Sw Ww Nw Gd Rd", "4p Gd Rd Wd");
         EXPECT_FALSE(plain.front().empty());
         EXPECT_EQ(plain, loaded);
     }
@@ -1777,7 +1777,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_TRUE(Inside(panel->rect, ring)) << panel->rect.x << "," << panel->rect.y << " " << panel->rect.w << "x" << panel->rect.h;
             EXPECT_NEAR(panel->rect.w, ring.w, 0.5f) << "the whole ring: no wall stack shows beside the card";
             EXPECT_NEAR(panel->rect.h, ring.h, 0.5f);
-            std::vector<String> parts{"CardTitle", "CardHead", "CardFoot0", "CardFoot1"};
+            Vector<String> parts{"CardTitle", "CardHead", "CardFoot0", "CardFoot1"};
             for (size_t i = 0; i < kMaxCardRows; ++i) {
                 parts.push_back(CellName("CardRow", static_cast<int>(i)));
                 for (const char* cell : {"CardWho", "CardMove", "CardSteps", "CardUseful"}) {
@@ -1815,7 +1815,7 @@ namespace BECore::Mahjong::Tests {
             for (const Output& output : kOutputs) {
                 ExpectWordsFit("HintsWhy", output.width, output.height, 0.0f);
             }
-            const std::vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("HintsWhy"), 0.0f);
+            const Vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("HintsWhy"), 0.0f);
             EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
         });
     }

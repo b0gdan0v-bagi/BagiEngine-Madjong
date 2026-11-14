@@ -30,8 +30,8 @@ namespace BECore::Mahjong {
         }
 
         /// The pictures of `action`: the tile of a discard or a kong of the hand, the pending tile of a pung or kong claim, the three of a chow.
-        eastl::array<Tile, kMaxCardTiles> TilesOf(const HandAction& action, Tile pending) noexcept {
-            eastl::array<Tile, kMaxCardTiles> tiles{};
+        Array<Tile, kMaxCardTiles> TilesOf(const HandAction& action, Tile pending) noexcept {
+            Array<Tile, kMaxCardTiles> tiles{};
             switch (action.kind) {
                 case ActionKind::Discard:
                 case ActionKind::ConcealedKong:

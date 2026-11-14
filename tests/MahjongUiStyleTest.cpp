@@ -88,7 +88,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The font size and the position and size attributes of an `element` or of a `set` of a variant (`name` is the element it speaks of).
-        void CheckFontAndGrid(const pugi::xml_node& node, const String& name, bool tilePicture, std::vector<Violation>& found) {
+        void CheckFontAndGrid(const pugi::xml_node& node, const String& name, bool tilePicture, Vector<Violation>& found) {
             const auto flag = [&](Rule rule, const char* attribute) { found.push_back({rule, name, attribute, AttributeOf(node, attribute)}); };
 
             if (node.attribute("fontSize")) {
@@ -135,7 +135,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The corner radius and the border width of an `element` or of a `set` of a variant: the radii are on the scale of the skin (or round), the border is one width.
-        void CheckSkinScale(const pugi::xml_node& node, const String& name, std::vector<Violation>& found) {
+        void CheckSkinScale(const pugi::xml_node& node, const String& name, Vector<Violation>& found) {
             if (node.attribute("cornerRadius")) {
                 const Optional<UICorners> corners = UIText::ParseCorners(node.attribute("cornerRadius").as_string());
                 const auto fits = [&](float radius) { return OnTheCornerScale(radius) || IsRoundBox(node, radius); };
@@ -152,7 +152,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The colours of the skin of an element and its shadow and glow (colour in the palette, numbers on the grid).
-        void CheckSkinPaint(const pugi::xml_node& element, const String& name, std::vector<Violation>& found) {
+        void CheckSkinPaint(const pugi::xml_node& element, const String& name, Vector<Violation>& found) {
             for (const char* attribute : kSkinColourAttributes) {
                 if (element.attribute(attribute)) {
                     const Optional<Color> color = UIText::ParseColor(element.attribute(attribute).as_string());
@@ -176,7 +176,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// What a `UITextComponent` and a `UIImageComponent` bring: the outline and shadow colours of a text, the tints of a picture, the font family and weight.
-        void CheckSkinComponent(const pugi::xml_node& component, const String& name, std::vector<Violation>& found) {
+        void CheckSkinComponent(const pugi::xml_node& component, const String& name, Vector<Violation>& found) {
             const auto flag = [&](Rule rule, const char* attribute) { found.push_back({rule, name, attribute, AttributeOf(component, attribute)}); };
             for (const char* attribute : kTintAttributes) {
                 if (component.attribute(attribute)) {
@@ -227,7 +227,7 @@ namespace BECore::Mahjong::Tests {
 
         /// The `transition*` fields of a canvas against the named numbers: a card of `kMotionCards` has the show, hide, ease and the rise, a plate of `kMotionPlates` the same without the rise (the
         /// field stays at 1), no canvas has a slide, and a canvas of neither list has none of the fields. `name` is the node the canvas belongs to.
-        void CheckMotion(const pugi::xml_node& canvas, const String& name, std::vector<Violation>& found) {
+        void CheckMotion(const pugi::xml_node& canvas, const String& name, Vector<Violation>& found) {
             const auto flag = [&](const char* attribute) { found.push_back({Rule::Motion, name, attribute, AttributeOf(canvas, attribute)}); };
             const bool card = IsOneOf(name, kMotionCards);
             const bool plate = IsOneOf(name, kMotionPlates);
@@ -258,7 +258,7 @@ namespace BECore::Mahjong::Tests {
             }
         }
 
-        void CheckElement(const pugi::xml_node& element, std::vector<Violation>& found) {
+        void CheckElement(const pugi::xml_node& element, Vector<Violation>& found) {
             const String name = AttributeOf(element, "name");
             const auto flag = [&](Rule rule, const char* attribute) { found.push_back({rule, name, attribute, AttributeOf(element, attribute)}); };
 
@@ -308,7 +308,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Every `element` of the document, at any depth (they sit in `elements` and `children`, inside components, inside nodes).
-        void Walk(const pugi::xml_node& node, std::vector<Violation>& found, int& count) {
+        void Walk(const pugi::xml_node& node, Vector<Violation>& found, int& count) {
             for (const pugi::xml_node child : node.children()) {
                 if (StringView(child.name()) == "element") {
                     CheckElement(child, found);
@@ -329,7 +329,7 @@ namespace BECore::Mahjong::Tests {
         struct Report {
             bool parsed = false;
             int elements = 0;
-            std::vector<Violation> violations;
+            Vector<Violation> violations;
         };
 
         Report CheckStyle(const String& xml) {
@@ -344,13 +344,13 @@ namespace BECore::Mahjong::Tests {
             return ShippedSceneXml();
         }
 
-        std::vector<Violation> Of(const Report& report, Rule rule) {
-            std::vector<Violation> found;
+        Vector<Violation> Of(const Report& report, Rule rule) {
+            Vector<Violation> found;
             std::copy_if(report.violations.begin(), report.violations.end(), std::back_inserter(found), [rule](const Violation& v) { return v.rule == rule; });
             return found;
         }
 
-        String Describe(const std::vector<Violation>& violations) {
+        String Describe(const Vector<Violation>& violations) {
             String text;
             for (const Violation& v : violations) {
                 text += "\n  " + v.element + " " + v.attribute + "=\"" + v.value + "\"";

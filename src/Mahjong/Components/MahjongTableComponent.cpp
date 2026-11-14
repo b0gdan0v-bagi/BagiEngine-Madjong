@@ -95,7 +95,7 @@ namespace BECore::Mahjong {
         }
 
         /// Whether the two lists name the same regions at the same rectangles, in the same order.
-        bool SameRegions(const eastl::vector<TableRegion>& a, const eastl::vector<TableRegion>& b) {
+        bool SameRegions(const Vector<TableRegion>& a, const Vector<TableRegion>& b) {
             if (a.size() != b.size()) {
                 return false;
             }
@@ -222,7 +222,7 @@ namespace BECore::Mahjong {
 
         /// The index of the last copy of `tile` in the sorted `concealed` tiles (`AddConcealed` sorts equal tiles together and the tile that
         /// was added last, a drawn or a won one, is the last of them).
-        int LastCopyIndex(const eastl::vector<Tile>& concealed, Tile tile) {
+        int LastCopyIndex(const Vector<Tile>& concealed, Tile tile) {
             for (int i = static_cast<int>(concealed.size()) - 1; i >= 0; --i) {
                 if (concealed[static_cast<size_t>(i)] == tile) {
                     return i;
@@ -558,7 +558,7 @@ namespace BECore::Mahjong {
         return DeclareTurn{game.GetSession().Actor(), game.GetMatch().Hand().Discards().size()};
     }
 
-    const eastl::vector<HandAction>& MahjongTableComponent::LegalFor(const MahjongGame& game, Seat actor) {
+    const Vector<HandAction>& MahjongTableComponent::LegalFor(const MahjongGame& game, Seat actor) {
         if (!game.IsOnlineTable()) {
             _legal = game.GetMatch().Hand().LegalActions(actor);
             return _legal;
@@ -579,7 +579,7 @@ namespace BECore::Mahjong {
             return game.GetSession().PerformPerson(action);
         }
         OnlineClient& client = game.GetOnline();
-        const eastl::vector<ControlAction>& listed = client.Table().actions;
+        const Vector<ControlAction>& listed = client.Table().actions;
         // The coach of the room judges the move the player sends, on the view he chose it on (before the table moves on)
         CoachLedger& coach = game.GetCoach();
         Optional<TableView> before;
@@ -728,7 +728,7 @@ namespace BECore::Mahjong {
         if (!_selected || !PersonActs(game) || hand.GetPhase() != Phase::Discard || session.Version() != _selectedVersion || SeenHandOf(game) != _selectedHand || TurnOf(game) != _selectedTurn) {
             return false;
         }
-        const eastl::vector<Tile>& concealed = hand.GetHand(session.Actor()).concealed;
+        const Vector<Tile>& concealed = hand.GetHand(session.Actor()).concealed;
         return *_selected >= 0 && *_selected < static_cast<int>(concealed.size()) && concealed[static_cast<size_t>(*_selected)] == _selectedTile && TapToSelect();
     }
 
@@ -870,7 +870,7 @@ namespace BECore::Mahjong {
         BE_PROFILE_SCOPE("MahjongTable::FollowMoves");
         BE_PROFILE_SCOPE("MahjongTable::FollowMoves");
         const Match& match = game.GetMatch();
-        const eastl::vector<HandMove>& moves = match.Hand().Moves();
+        const Vector<HandMove>& moves = match.Hand().Moves();
         const SeenHand now = SeenHandOf(game);
         if (now != _seenHand || moves.size() < _movesSeen) {
             // Another hand, match or game: what is on the table now is not news
@@ -924,13 +924,13 @@ namespace BECore::Mahjong {
             return;
         }
         // Nothing new is the common frame: no move since the last draw, no tile drawn from the wall and no win (a win is no move)
-        const eastl::vector<HandMove>& moves = hand.Moves();
-        const eastl::span<const HandMove> fresh(moves.data() + news.first, moves.size() - news.first);
+        const Vector<HandMove>& moves = hand.Moves();
+        const Span<const HandMove> fresh(moves.data() + news.first, moves.size() - news.first);
         const bool newWin = _shown.winSeat != kNoSeat && before.winSeat == kNoSeat;
         if (fresh.empty() && _shown.wallRemaining >= before.wallRemaining && !newWin) {
             return;
         }
-        eastl::vector<TileFlight> planned = PlanFlights(before, _shown, fresh);
+        Vector<TileFlight> planned = PlanFlights(before, _shown, fresh);
         if (!planned.empty()) {
             EndFlights();  // the running flights end at their targets: their slots are drawn in place from now on
             _flights = eastl::move(planned);
@@ -1189,7 +1189,7 @@ namespace BECore::Mahjong {
             return;
         }
         // The names are interned for the new set only; a name that left the spec is withdrawn from every canvas
-        eastl::vector<PoolString> names;
+        Vector<PoolString> names;
         names.reserve(_regions.size());
         for (const TableRegion& region : _regions) {
             names.push_back(PoolString::Intern(region.name));
@@ -1333,7 +1333,7 @@ namespace BECore::Mahjong {
         const TableLayout& layout = _shown.layout;
         // The two tiles of the viewer's hand that the offered chow takes (the hovered one; the only one when a single chow is on offer) are
         // framed in place: only in a hand that is face up and while the viewer is the person to act (so not under the cover)
-        eastl::array<int, 2> chowIndex{-1, -1};
+        Array<int, 2> chowIndex{-1, -1};
         if (IsSeat(bottom) && PersonActs(*game) && session.Actor() == bottom && faces.seat == bottom) {
             _chowTakes = ChowTilesTaken(_published, hand.PendingTile(), _hoveredButton);
             const PlayerHand& viewer = hand.GetHand(bottom);
@@ -1357,7 +1357,7 @@ namespace BECore::Mahjong {
 
         // The discards that keep a declared hand waiting: only on the viewer's own turn in a hand that is face up (the guard is cheap, the
         // view is made only when it can say something); not tied to the hints switch
-        eastl::array<bool, kTileIdCount> keepsWaiting{};
+        Array<bool, kTileIdCount> keepsWaiting{};
         if (IsSeat(bottom) && session.GetPhase() == SessionPhase::Playing && faces.seat == bottom && hand.GetPhase() == Phase::Discard && hand.CurrentSeat() == bottom &&
             hand.GetHand(bottom).callingDeclared) {
             // The view allocates: the bars are worked out again only when the session moved (the same key as the buttons)
@@ -1507,7 +1507,7 @@ namespace BECore::Mahjong {
             }
         }
         // The tiles that cannot declare the calling hand when they are discarded, while the next discard is to declare it
-        eastl::array<bool, kTileIdCount> cannotDeclare{};
+        Array<bool, kTileIdCount> cannotDeclare{};
         if (_declareNext) {
             cannotDeclare.fill(true);
             for (const HandAction& action : LegalFor(*game, session.Actor())) {

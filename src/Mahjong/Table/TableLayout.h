@@ -202,12 +202,12 @@ namespace BECore::Mahjong {
         Seat viewer = 0;
         /// The profile of the viewer's side; a phone `handTileW` outside `kViewerHandTileW .. kPhoneHandTileMaxW` is clamped into it.
         TableProfile profile;
-        eastl::array<int, kSeatCount> concealedCount{};
+        Array<int, kSeatCount> concealedCount{};
         /// The melds as laid: a chow or pung is three tiles, a kong four (a concealed kong is laid as four tiles too).
-        eastl::array<eastl::vector<Meld>, kSeatCount> melds;
-        eastl::array<int, kSeatCount> bonusCount{};
+        Array<Vector<Meld>, kSeatCount> melds;
+        Array<int, kSeatCount> bonusCount{};
         /// The seat of each entry of the pile, in the order discarded (`HandModel::Discards()`).
-        eastl::vector<Seat> discardSeats;
+        Vector<Seat> discardSeats;
         /// `Wall::Remaining()`: two tiles make a stack.
         int wallRemaining = 0;
     };
@@ -236,13 +236,13 @@ namespace BECore::Mahjong {
     /// of the wall ring. The centre panel is the inside of the wall ring (the ring less one wall stack on every side): it holds no slot
     /// and no wall stack, and is the same for every viewer.
     struct TableZones {
-        eastl::array<Rect, kSeatCount> discards{};
+        Array<Rect, kSeatCount> discards{};
         Rect wall;
-        eastl::array<Rect, kSeatCount> seatPlates{};
+        Array<Rect, kSeatCount> seatPlates{};
         Rect centerPanel;
         /// The free-ground regions of the spec for this shape, fitted like the zones (`ShapeSpec::freeRegions`, in the order of the file);
         /// empty for a spec without any. Clear of every slot and zone above for the worst-case table (`CheckTableLayoutSpec`).
-        eastl::vector<FreeZone> freeRegions;
+        Vector<FreeZone> freeRegions;
     };
 
     /// The slots of the four seats and the wall: per seat the hand, the melds, the bonus tiles, then the pile, then the wall stacks.
@@ -255,7 +255,7 @@ namespace BECore::Mahjong {
         TableProfile profile;
         float viewWidth = kViewWidth;
         float viewHeight = kViewHeight;
-        eastl::vector<TileSlot> slots;
+        Vector<TileSlot> slots;
         TableZones zones;
     };
 
@@ -303,7 +303,7 @@ namespace BECore::Mahjong {
     /// view, zones that overlap each other or a hand, meld or bonus row, a seat plate that overlaps a slot or lies nearer than
     /// `kPlatePadding` to a discard block or the wall ring, a tile under its zone's `minTileW`, a zone too small for its tiles, the
     /// viewer's hand tile under `kViewerHandTileW`, the widest phone tile other than `kPhoneHandTileMaxW`. Empty when the spec is sound.
-    [[nodiscard]] eastl::vector<String> CheckTableLayoutSpec(const TableLayoutSpec& spec);
+    [[nodiscard]] Vector<String> CheckTableLayoutSpec(const TableLayoutSpec& spec);
 
     /// The smallest rectangle that holds every slot of `role` of `seat` (`seat` ignored for the wall); empty when there is none.
     [[nodiscard]] Rect BoundsOf(const TableLayout& layout, SlotRole role, Seat seat);

@@ -37,8 +37,8 @@ namespace BECore::Mahjong::Tests {
         /// The tiles in the model, counted by kind: hands (concealed, melds with a kong as four, laid-open bonus tiles), the pile and
         /// every part of the wall. The tile of a claim that is waiting is in the pile, the fourth tile of a kong that is waiting is in
         /// the hand; both are counted once.
-        std::array<int, kTileIdCount> CountEveryTile(const HandModel& model) {
-            std::array<int, kTileIdCount> counts{};
+        Array<int, kTileIdCount> CountEveryTile(const HandModel& model) {
+            Array<int, kTileIdCount> counts{};
             const auto add = [&counts](Tile tile, int copies = 1) { counts[tile.Id()] += copies; };
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 const PlayerHand& hand = model.GetHand(seat);
@@ -94,9 +94,9 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The invariants that hold between two actions. Returns false (after reporting) at the first one that does not.
-        bool CheckInvariants(const HandModel& model, bool flowers, const eastl::vector<Tile>& deadWall, const String& where) {
+        bool CheckInvariants(const HandModel& model, bool flowers, const Vector<Tile>& deadWall, const String& where) {
             const size_t setSize = flowers ? kTileSetSizeWithBonus : kTileSetSize;
-            const std::array<int, kTileIdCount> counts = CountEveryTile(model);
+            const Array<int, kTileIdCount> counts = CountEveryTile(model);
             size_t total = 0;
             for (uint8_t id = 0; id < kTileIdCount; ++id) {
                 const Tile tile{id};
@@ -145,7 +145,7 @@ namespace BECore::Mahjong::Tests {
                 ADD_FAILURE() << "seed " << seed << ": Begin refused the seat winds";
                 return false;
             }
-            const eastl::vector<Tile> deadWall = model.GetWall().DeadWall();
+            const Vector<Tile> deadWall = model.GetWall().DeadWall();
             const String seedText = Format("seed {}", seed);
             if (!CheckInvariants(model, settings.flowers, deadWall, seedText + " after Begin")) {
                 return false;
@@ -174,7 +174,7 @@ namespace BECore::Mahjong::Tests {
                         return false;
                     }
                 }
-                const eastl::vector<HandAction> actions = model.LegalActions(actor);
+                const Vector<HandAction> actions = model.LegalActions(actor);
                 if (actions.empty()) {
                     ADD_FAILURE() << where << ": seat " << actor << " is to act but has no legal action";
                     return false;

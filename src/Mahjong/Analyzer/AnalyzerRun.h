@@ -62,7 +62,7 @@ namespace BECore::Mahjong::Analyzer {
         /// What the Normal player does on the view with `config.normalSeed`; always one of the rows.
         HandAction normalChoice;
         /// One row per element of `view.legal`, in its order (a discard with and without `declareCalling` are two rows).
-        eastl::vector<ActionRow> rows;
+        Vector<ActionRow> rows;
     };
 
     /**

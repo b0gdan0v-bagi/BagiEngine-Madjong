@@ -45,8 +45,8 @@ namespace BECore::Mahjong {
 
     /// The regions of `layout`: the plates by screen position, the centre panel, the wall ring, then the free regions in the order of the spec.
     /// A layout of a spec without free regions gives the zone regions only. `regions` keeps its capacity (the table asks every frame).
-    void RebuildTableRegions(const TableLayout& layout, eastl::vector<TableRegion>& regions);
+    void RebuildTableRegions(const TableLayout& layout, Vector<TableRegion>& regions);
 
-    [[nodiscard]] eastl::vector<TableRegion> MakeTableRegions(const TableLayout& layout);
+    [[nodiscard]] Vector<TableRegion> MakeTableRegions(const TableLayout& layout);
 
 }  // namespace BECore::Mahjong

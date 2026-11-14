@@ -122,14 +122,14 @@ namespace BECore::Mahjong {
      * (the form of `MatchLogJson.h`, ending in a newline), with no `Hand` and `End` events (the replay deals again and ends the match)
      * and no `seats` (the breakdowns) in a settlement (reading does not need them). Events of another kind are skipped.
      */
-    [[nodiscard]] String MatchSaveText(const eastl::vector<MatchLogEvent>& events);
+    [[nodiscard]] String MatchSaveText(const Vector<MatchLogEvent>& events);
 
     /**
      * @brief The events of a saved text, or the error: the line number and what is wrong (not JSON, a member missing or wrong), that the
      * first event is not a `Start`, that a `Hand` or `End` line is there, or that there are more than `kMaxSavedEvents` lines. Nothing is
      * replayed here; `ReplayMatchLog` decides whether the match comes out.
      */
-    [[nodiscard]] std::expected<eastl::vector<MatchLogEvent>, String> ParseMatchSaveText(StringView text);
+    [[nodiscard]] std::expected<Vector<MatchLogEvent>, String> ParseMatchSaveText(StringView text);
 
     /// The state of the prefs slot from the choices of the game (`coach` implies `hintsOn`).
     [[nodiscard]] MahjongPrefsSave MakePrefs(StringView language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, const SeatLevels& levels, AnimationSpeed speed = kDefaultAnimationSpeed,
@@ -180,7 +180,7 @@ namespace BECore::Mahjong {
         }
 
         /// The `Start`, `Action` and `Settlement` events of the current match; empty for a match that is not kept
-        [[nodiscard]] const eastl::vector<MatchLogEvent>& Events() const noexcept {
+        [[nodiscard]] const Vector<MatchLogEvent>& Events() const noexcept {
             return _events;
         }
         [[nodiscard]] uint64_t Counter() const noexcept {
@@ -193,7 +193,7 @@ namespace BECore::Mahjong {
 
     private:
         IMatchLogSink* _next = nullptr;
-        eastl::vector<MatchLogEvent> _events;
+        Vector<MatchLogEvent> _events;
         uint64_t _counter = 0;
         bool _wantRecording = true;
         bool _recording = false;

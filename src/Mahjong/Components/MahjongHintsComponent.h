@@ -125,11 +125,11 @@ namespace BECore::Mahjong {
         void DropAdvice();
         void DrawMarks(const MahjongGame& game) const;
 
-        eastl::vector<WaitEntry> _row;                      ///< the row as it should be on screen
-        eastl::vector<WaitEntry> _published;                ///< the row as it is on the canvas
-        eastl::array<bool, kTileIdCount> _declaring{};      ///< the tiles whose discard declares the calling hand
-        eastl::array<DangerMark, kTileIdCount> _dangers{};  ///< the danger of each tile of the hand while an opponent has declared
-        bool _offered = false;                              ///< the button is offered: hints apply and the viewer has actions
+        Vector<WaitEntry> _row;                      ///< the row as it should be on screen
+        Vector<WaitEntry> _published;                ///< the row as it is on the canvas
+        Array<bool, kTileIdCount> _declaring{};      ///< the tiles whose discard declares the calling hand
+        Array<DangerMark, kTileIdCount> _dangers{};  ///< the danger of each tile of the hand while an opponent has declared
+        bool _offered = false;                       ///< the button is offered: hints apply and the viewer has actions
         bool _offeredShown = false;
         bool _known = false;  ///< `_key` and what follows from it are worked out
         Key _key;

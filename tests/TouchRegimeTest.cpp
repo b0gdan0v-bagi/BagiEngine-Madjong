@@ -24,7 +24,7 @@ namespace BECore::Mahjong::Tests {
 
         /// The lines the buttons of these widths make in a row of `safeWidth` units, wrapped in order with `kCompactSpacing` between them as a
         /// wrapped stack does, and the height of that many lines.
-        float WrappedHeight(const std::vector<float>& widths, float safeWidth) {
+        float WrappedHeight(const Vector<float>& widths, float safeWidth) {
             int lines = 1;
             float used = 0.0f;
             for (const float width : widths) {
@@ -182,8 +182,8 @@ namespace BECore::Mahjong::Tests {
         // The thresholds are counted for the eight buttons of 100 of the claim window (seven and the hint button); the fullest turn (a win,
         // three concealed kongs, the upgrade, the hint button and the declaration, which is wider and comes last) never needs more lines,
         // wrapped in the order of the file
-        const std::vector<float> claim(static_cast<size_t>(kCompactButtonCount), kCompactButtonWidth);
-        const std::vector<float> turn = {kCompactButtonWidth, kCompactButtonWidth, kCompactButtonWidth, kCompactButtonWidth, kCompactButtonWidth, kCompactButtonWidth, kCompactDeclareWidth};
+        const Vector<float> claim(static_cast<size_t>(kCompactButtonCount), kCompactButtonWidth);
+        const Vector<float> turn = {kCompactButtonWidth, kCompactButtonWidth, kCompactButtonWidth, kCompactButtonWidth, kCompactButtonWidth, kCompactButtonWidth, kCompactDeclareWidth};
         ASSERT_LE(turn.size(), claim.size());
         for (float width = 250.0f; width <= 1400.0f; width += 0.25f) {
             const float safe = kCompactSafeShare * width;
@@ -191,9 +191,9 @@ namespace BECore::Mahjong::Tests {
             EXPECT_GE(CompactRowHeight(width), WrappedHeight(turn, safe)) << width << ": the turn";
         }
         // Every part of the two sets (a window shows the buttons it is offered, and wrapping is not monotone in general): never more lines
-        for (const std::vector<float>* set : {&claim, &turn}) {
+        for (const Vector<float>* set : {&claim, &turn}) {
             for (unsigned mask = 1; mask < (1u << set->size()); ++mask) {
-                std::vector<float> part;
+                Vector<float> part;
                 for (size_t i = 0; i < set->size(); ++i) {
                     if ((mask >> i & 1u) != 0u) {
                         part.push_back((*set)[i]);

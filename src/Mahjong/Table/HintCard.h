@@ -34,7 +34,7 @@ namespace BECore::Mahjong {
     /// number (a pass that gains nothing has no unseen tiles that help).
     struct CardRow {
         CardRowKind kind = CardRowKind::Other;
-        eastl::array<Tile, kMaxCardTiles> tiles{};
+        Array<Tile, kMaxCardTiles> tiles{};
         String who;
         String move;
         String steps;
@@ -46,8 +46,8 @@ namespace BECore::Mahjong {
     struct HintCard {
         String title;
         String now;
-        eastl::vector<CardRow> rows;
-        eastl::vector<String> footer;
+        Vector<CardRow> rows;
+        Vector<String> footer;
     };
 
     /// The card of the advice of `explained` on `view` (`ExplainAdviceFor(view)`), with `tally` (`CardTallyText`, maybe empty) as the last line.

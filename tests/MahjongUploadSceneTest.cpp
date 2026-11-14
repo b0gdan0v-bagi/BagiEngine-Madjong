@@ -80,7 +80,7 @@ namespace BECore::Mahjong::Tests {
             }
 
             bool available = true;
-            std::vector<Post> posts;
+            Vector<Post> posts;
         };
 
         class KeptSink final : public IMatchUploadSink {
@@ -88,7 +88,7 @@ namespace BECore::Mahjong::Tests {
             void Send(const UploadPiece& piece) override {
                 pieces.push_back(piece);
             }
-            std::vector<UploadPiece> pieces;
+            Vector<UploadPiece> pieces;
         };
 
         String ReadFile(const fs::path& path) {
@@ -464,7 +464,7 @@ namespace BECore::Mahjong::Tests {
             for (const Output& output : kOutputs) {
                 ExpectWordsFit(kConsent, output.width, output.height, kButtonAir);
             }
-            const std::vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas(kConsent), kButtonAir);
+            const Vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas(kConsent), kButtonAir);
             EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
         });
     }
@@ -691,7 +691,7 @@ namespace BECore::Mahjong::Tests {
             for (const Output& output : kOutputs) {
                 ExpectWordsFit(kOptions, output.width, output.height, kButtonAir);
             }
-            const std::vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas(kOptions), kButtonAir);
+            const Vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas(kOptions), kButtonAir);
             EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
         });
     }

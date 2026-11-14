@@ -71,7 +71,7 @@ namespace BECore::Mahjong {
         /// What `seat` may send now; `nextHand` stands for the ready check, `hand` for the actions in the hand.
         struct SeatMoves {
             bool nextHand = false;
-            eastl::vector<HandAction> hand;
+            Vector<HandAction> hand;
 
             [[nodiscard]] bool Empty() const noexcept {
                 return !nextHand && hand.empty();
@@ -86,7 +86,7 @@ namespace BECore::Mahjong {
         bool _hintsAllowed = false;
         uint32_t _matchSeed = 0;
         uint64_t _version = 0;
-        eastl::array<bool, kSeatCount> _ready{};
+        Array<bool, kSeatCount> _ready{};
     };
 
 }  // namespace BECore::Mahjong

@@ -22,7 +22,7 @@ namespace BECore::Mahjong::Tests {
         constexpr SeatSetup kAllComputers{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
 
         /// The saved events of a short stretch of a match: the start, a whole hand of computers, its settlement and the first moves of the next.
-        eastl::vector<MatchLogEvent> PlayedEvents() {
+        Vector<MatchLogEvent> PlayedEvents() {
             Match match;
             TableSession session(match);
             MatchRecorder recorder;
@@ -57,7 +57,7 @@ namespace BECore::Mahjong::Tests {
                 fs::remove_all(_base);
                 fs::create_directories(_base);
                 folder = _base / "saves";
-                store = std::make_unique<MatchSaveStore>(_fileSystem);
+                store = MakeUnique<MatchSaveStore>(_fileSystem);
             }
 
             void TearDown() override {
@@ -95,7 +95,7 @@ namespace BECore::Mahjong::Tests {
             }
 
             fs::path folder;
-            std::unique_ptr<MatchSaveStore> store;
+            UniquePtr<MatchSaveStore> store;
 
         private:
             fs::path _base;
@@ -105,7 +105,7 @@ namespace BECore::Mahjong::Tests {
     }  // namespace
 
     TEST_F(MatchSaveStoreTest, AMatchSurvivesTheRoundTrip) {
-        const eastl::vector<MatchLogEvent> events = PlayedEvents();
+        const Vector<MatchLogEvent> events = PlayedEvents();
         ASSERT_TRUE(store->Open(folder));
         EXPECT_TRUE(store->IsOn());
         ASSERT_TRUE(store->SaveMatch(events));

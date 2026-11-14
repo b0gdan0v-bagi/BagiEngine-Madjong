@@ -53,7 +53,7 @@ namespace BECore::Mahjong::Analyzer {
      * `--log` without `--hand` or without one of `--action` / `--seat`, `--action` together with `--seat`, or `--hand`, `--action`
      * or `--seat` without a `--log`.
      */
-    [[nodiscard]] std::expected<AnalyzerArgs, String> ParseAnalyzerArgs(eastl::span<const StringView> args);
+    [[nodiscard]] std::expected<AnalyzerArgs, String> ParseAnalyzerArgs(Span<const StringView> args);
 
     /// The text of a file, or the error text. The program supplies the real one; `kStandardInputName` is its to interpret.
     using FileReader = std::function<std::expected<String, String>(StringView path)>;
@@ -73,6 +73,6 @@ namespace BECore::Mahjong::Analyzer {
      * so (a JSON object with `skipped`). The first failure stops the run: its error goes to `err`, the reports before it stay in `out`
      * (`kExitAnalysisFailed`). The same arguments and files give the same bytes at any `--jobs`.
      */
-    [[nodiscard]] int RunAnalyzerCli(eastl::span<const StringView> args, const FileReader& readFile, AnalyzerCliOutput& output);
+    [[nodiscard]] int RunAnalyzerCli(Span<const StringView> args, const FileReader& readFile, AnalyzerCliOutput& output);
 
 }  // namespace BECore::Mahjong::Analyzer

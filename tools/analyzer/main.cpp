@@ -25,7 +25,7 @@ namespace {
 }  // namespace
 
 int main(int argc, char** argv) {
-    eastl::vector<BECore::StringView> args;
+    BECore::Vector<BECore::StringView> args;
     for (int index = 1; index < argc; ++index) {
         args.push_back(argv[index]);
     }

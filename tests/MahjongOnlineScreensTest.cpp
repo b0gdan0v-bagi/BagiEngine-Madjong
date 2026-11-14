@@ -68,7 +68,7 @@ namespace BECore::Mahjong::Tests {
             OnlineScreens screens;
         };
 
-        using People = std::vector<Person*>;
+        using People = Vector<Person*>;
 
         void Step(MahjongHubWorld& world, const People& people) {
             world.Advance(kTick);
@@ -839,10 +839,10 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MahjongOnlineScreens, FiveRoomsAreThreeRowsAPageAndTheNextPageWrapsAround) {
         MahjongHubWorld world;
-        std::vector<std::unique_ptr<Person>> hosts;
+        Vector<UniquePtr<Person>> hosts;
         const char* const names[] = {"Ann", "Bob", "Cy", "Di", "Ed"};
         for (const char* name : names) {
-            hosts.push_back(std::make_unique<Person>(world));
+            hosts.push_back(MakeUnique<Person>(world));
             ASSERT_TRUE(HostRoomVisible(world, *hosts.back(), name, true)) << name;
         }
         Person guest(world);
@@ -1072,10 +1072,10 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MahjongOnlineScreens, AShorterRefreshedListClampsThePageAndAQuietFrameChangesNothing) {
         MahjongHubWorld world;
-        std::vector<std::unique_ptr<Person>> hosts;
+        Vector<UniquePtr<Person>> hosts;
         People all;
         for (const char* name : {"Ann", "Bob", "Cy", "Di"}) {
-            hosts.push_back(std::make_unique<Person>(world));
+            hosts.push_back(MakeUnique<Person>(world));
             ASSERT_TRUE(HostRoomVisible(world, *hosts.back(), name, true)) << name;
             all.push_back(hosts.back().get());
         }

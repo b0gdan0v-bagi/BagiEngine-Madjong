@@ -59,7 +59,7 @@ namespace BECore::Mahjong::Tests {
 
     /// The connections one client made, in order (a reconnect makes a new one).
     struct HubClientLinks {
-        std::vector<std::shared_ptr<HubLink>> links;
+        Vector<std::shared_ptr<HubLink>> links;
 
         [[nodiscard]] HubLink& Last() {
             return *links.back();
@@ -168,7 +168,7 @@ namespace BECore::Mahjong::Tests {
         };
 
         SeatedGameRegistry& MakeRegistry() {
-            const bool registered = _registry.Register(MahjongSeatedGame::Info(), [this]() -> eastl::unique_ptr<ISeatedGame> { return eastl::make_unique<TrackedGame>(*this); });
+            const bool registered = _registry.Register(MahjongSeatedGame::Info(), [this]() -> UniquePtr<ISeatedGame> { return eastl::make_unique<TrackedGame>(*this); });
             EXPECT_TRUE(registered);
             return _registry;
         }
@@ -276,7 +276,7 @@ namespace BECore::Mahjong::Tests {
     };
 
     inline RoomTransportFactory MahjongHubWorld::Factory(HubClientLinks& links) {
-        return [this, &links]() -> eastl::unique_ptr<IRoomTransport> {
+        return [this, &links]() -> UniquePtr<IRoomTransport> {
             auto link = std::make_shared<HubLink>();
             links.links.push_back(link);
             return eastl::make_unique<MahjongHubTransport>(*this, link);

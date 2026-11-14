@@ -33,8 +33,8 @@ namespace BECore::Mahjong::Tests {
     class MahjongTableUiTest : public MahjongTableTestBase {
     protected:
         /// The rectangles drawn in exactly this colour, in the order drawn.
-        std::vector<DrawCall> RectsOf(const Color& color) const {
-            std::vector<DrawCall> found;
+        Vector<DrawCall> RectsOf(const Color& color) const {
+            Vector<DrawCall> found;
             for (const DrawCall& call : _renderer->calls) {
                 if (call.kind == DrawKind::Rect && SameColor(call.color, color)) {
                     found.push_back(call);
@@ -211,7 +211,7 @@ namespace BECore::Mahjong::Tests {
         Draw();
 
         ASSERT_GE(_renderer->calls.size(), 9u);
-        const std::vector<DrawCall> rim = RectsOf(kFeltRim);
+        const Vector<DrawCall> rim = RectsOf(kFeltRim);
         ASSERT_EQ(rim.size(), 4u);
         for (size_t i = 0; i < rim.size(); ++i) {
             EXPECT_EQ(rim[i].rect.x, _renderer->calls[1 + i].rect.x) << "the rim is drawn right after the felt";
@@ -230,7 +230,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
 
-        const std::vector<DrawCall> lip = RectsOf(kFeltLip);
+        const Vector<DrawCall> lip = RectsOf(kFeltLip);
         ASSERT_EQ(lip.size(), 4u);
         float area = 0.0f;
         for (size_t i = 0; i < lip.size(); ++i) {
@@ -270,7 +270,7 @@ namespace BECore::Mahjong::Tests {
         Draw();
 
         const TableLayout& layout = _table->GetLayout();
-        std::vector<Rect> zones(layout.zones.seatPlates.begin(), layout.zones.seatPlates.end());
+        Vector<Rect> zones(layout.zones.seatPlates.begin(), layout.zones.seatPlates.end());
         zones.push_back(layout.zones.centerPanel);
         // The view is the output, so a unit is a pixel: the shadow reaches its offset and blur past the zone, the fill and the borders stay in it (a pixel of feather)
         const float shadowMargin = kShadowOffsetY + kShadowBlur;
@@ -319,8 +319,8 @@ namespace BECore::Mahjong::Tests {
         Draw();
 
         const TableLayout& layout = _table->GetLayout();
-        const std::vector<DrawCall> tight = RectsOf(kTileShadow);
-        const std::vector<DrawCall> soft = RectsOf(kTileShadowSoft);
+        const Vector<DrawCall> tight = RectsOf(kTileShadow);
+        const Vector<DrawCall> soft = RectsOf(kTileShadowSoft);
         ASSERT_EQ(static_cast<int>(tight.size()), NotWallStacks(layout));
         ASSERT_EQ(soft.size(), tight.size()) << "one pair per tile";
         // Every tight layer comes right after its soft one
@@ -356,7 +356,7 @@ namespace BECore::Mahjong::Tests {
         Draw();
 
         const TableLayout& layout = _table->GetLayout();
-        const std::vector<DrawCall> calls = TileCalls();
+        const Vector<DrawCall> calls = TileCalls();
         ASSERT_EQ(calls.size(), layout.slots.size());
         int stacks = 0;
         for (size_t i = 0; i < calls.size(); ++i) {
@@ -510,7 +510,7 @@ namespace BECore::Mahjong::Tests {
         const TableLayout expected = MakeTableLayout(input);
         const TableLayout& drawn = _table->GetLayout();
         ASSERT_EQ(drawn.slots.size(), expected.slots.size());
-        std::array<int, 5> roles{};
+        Array<int, 5> roles{};
         for (size_t i = 0; i < expected.slots.size(); ++i) {
             EXPECT_EQ(drawn.slots[i].role, expected.slots[i].role) << i;
             EXPECT_EQ(drawn.slots[i].rect.x, expected.slots[i].rect.x) << i;
@@ -643,7 +643,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_EQ(claimed->seat, claimer);
             ASSERT_NE(claimed->rotation, 0.0f);
             EXPECT_EQ(claimed->claimEdge, Edge::Bottom) << "seat 0, where the claim came from, is at the bottom of the screen";
-            const std::vector<DrawCall> bars = RectsOf(kClaimedEdge);
+            const Vector<DrawCall> bars = RectsOf(kClaimedEdge);
             ASSERT_EQ(bars.size(), 1u) << "seat " << claimer;
             const Rect& bar = bars[0].rect;
             const Rect& tile = claimed->rect;

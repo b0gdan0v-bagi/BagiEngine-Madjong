@@ -87,14 +87,14 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(shown.claimed, want.claimed) << where;
         }
 
-        void ExpectOpenMeldsEqual(const eastl::vector<Meld>& shown, const eastl::vector<Meld>& want, const String& where) {
+        void ExpectOpenMeldsEqual(const Vector<Meld>& shown, const Vector<Meld>& want, const String& where) {
             ASSERT_EQ(shown.size(), want.size()) << where;
             for (size_t index = 0; index < want.size(); ++index) {
                 ExpectMeldEqual(shown[index], want[index], Format("{}[{}]", where, index));
             }
         }
 
-        bool NoValidTile(const eastl::vector<Tile>& tiles) {
+        bool NoValidTile(const Vector<Tile>& tiles) {
             return eastl::none_of(tiles.begin(), tiles.end(), [](Tile tile) { return tile.IsValid(); });
         }
 
@@ -430,8 +430,8 @@ namespace BECore::Mahjong::Tests {
 
         /// The log of the real hand as a client can see it: an upgrade whose kong is not completed yet (the robbing window) or was robbed
         /// leaves the pung a pung in the view, so the tracker cannot know it.
-        eastl::vector<HandMove> VisibleMoves(const HandModel& hand) {
-            eastl::vector<HandMove> moves = hand.Moves();
+        Vector<HandMove> VisibleMoves(const HandModel& hand) {
+            Vector<HandMove> moves = hand.Moves();
             const bool robbing = hand.GetPhase() == Phase::RobKong;
             const bool robbed = hand.GetPhase() == Phase::Finished && hand.Result() && hand.Result()->source == WinSource::RobbedKong;
             if ((robbing || robbed) && !moves.empty() && moves.back().kind == MoveKind::UpgradeKong) {
@@ -446,7 +446,7 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_EQ(move.meld, kNoMeld);
                 return;
             }
-            eastl::vector<Meld> melds;
+            Vector<Meld> melds;
             DisplayMelds(table, move.seat, melds);
             ASSERT_GE(move.meld, 0);
             ASSERT_LT(static_cast<size_t>(move.meld), melds.size());
@@ -472,7 +472,7 @@ namespace BECore::Mahjong::Tests {
             }
             if (move.seat == viewer) {
                 // The own melds are listed as the model keeps them.
-                const eastl::vector<HandMove> real_moves = VisibleMoves(real);
+                const Vector<HandMove> real_moves = VisibleMoves(real);
                 for (const HandMove& want : real_moves) {
                     if (SameMove(want, move) && want.meld == move.meld) {
                         return;
@@ -482,7 +482,7 @@ namespace BECore::Mahjong::Tests {
             }
         }
 
-        String Describe(const eastl::vector<HandMove>& moves) {
+        String Describe(const Vector<HandMove>& moves) {
             String text;
             for (const HandMove& move : moves) {
                 AppendFormat(text, " {}/{}/{}/{}", static_cast<int>(move.kind), move.seat, ToString(move.tile), move.from);
@@ -491,7 +491,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// `part` is `whole` with moves left out; a declaration the tracker marks is the model's (it may leave one unmarked).
-        bool IsSubsequence(const eastl::vector<HandMove>& part, const eastl::vector<HandMove>& whole) {
+        bool IsSubsequence(const Vector<HandMove>& part, const Vector<HandMove>& whole) {
             size_t at = 0;
             for (const HandMove& move : part) {
                 const auto fits = [&move](const HandMove& real) {
@@ -518,7 +518,7 @@ namespace BECore::Mahjong::Tests {
         /// Plays a match; each viewer seat has a tracker that sees every `every`-th view of the hand (all of them for 1).
         void PlayAndFollow(uint64_t seed, int every, MoveCoverage& coverage) {
             MahjongSeatedGame game = Started(seed);
-            eastl::array<MoveTracker, kSeatCount> trackers;
+            Array<MoveTracker, kSeatCount> trackers;
             for (int step = 0; step < kStepLimit; ++step) {
                 const bool last = game.IsFinished();
                 for (int seat = 0; seat < kSeatCount; ++seat) {
@@ -527,8 +527,8 @@ namespace BECore::Mahjong::Tests {
                     }
                     const OnlineTable table = ReadTable(game, seat);
                     const size_t before = trackers[static_cast<size_t>(seat)].Moves().size();
-                    const eastl::vector<HandMove>& moves = trackers[static_cast<size_t>(seat)].Follow(table);
-                    const eastl::vector<HandMove> real = VisibleMoves(game.GetMatch().Hand());
+                    const Vector<HandMove>& moves = trackers[static_cast<size_t>(seat)].Follow(table);
+                    const Vector<HandMove> real = VisibleMoves(game.GetMatch().Hand());
                     if (every == 1) {
                         // One view per move: the log is the model's.
                         ASSERT_EQ(moves.size(), real.size()) << "seed " << seed << " viewer " << seat << " step " << step;
@@ -603,11 +603,11 @@ namespace BECore::Mahjong::Tests {
         table.seats[1].melds.push_back(claimed);
         table.discards.clear();
         table.version += 1;
-        const eastl::vector<HandMove>& moves = tracker.Follow(table);
+        const Vector<HandMove>& moves = tracker.Follow(table);
         ASSERT_EQ(moves.size(), 1U);
         EXPECT_EQ(moves[0].kind, MoveKind::ClaimKong);
         EXPECT_EQ(moves[0].meld, 1);
-        eastl::vector<Meld> melds;
+        Vector<Meld> melds;
         DisplayMelds(table, 1, melds);
         ASSERT_EQ(melds.size(), 2U);
         EXPECT_FALSE(melds[static_cast<size_t>(moves[0].meld)].concealed);
@@ -634,7 +634,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_TRUE(StepOnce(game));
             tracker.Follow(ReadTable(game, 1));
         }
-        const eastl::vector<HandMove> kept = tracker.Moves();
+        const Vector<HandMove> kept = tracker.Moves();
         ASSERT_FALSE(kept.empty());
         OnlineTable table = ReadTable(game, 1);
         table.version += 1;

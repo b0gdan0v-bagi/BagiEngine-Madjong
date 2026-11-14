@@ -45,7 +45,7 @@ namespace BECore::Mahjong {
 
     /// Every pung, kong and chow of `view.legal` (no mahjong, no pass), in that order, rated with `RateClaim`; `shantenBefore` is the
     /// shanten of the hand as it is. `ChooseClaimAction` keeps the best of the acceptable ones.
-    [[nodiscard]] eastl::vector<RatedClaim> RateClaims(const TableView& view, int shantenBefore, const LevelProfile& profile);
+    [[nodiscard]] Vector<RatedClaim> RateClaims(const TableView& view, int shantenBefore, const LevelProfile& profile);
 
     /// A kong of the discard offered to a waiting hand that keeps the wait, and what the hand is worth with it and without it.
     struct WaitingKong {

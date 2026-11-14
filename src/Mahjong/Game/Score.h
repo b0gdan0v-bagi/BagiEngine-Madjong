@@ -120,7 +120,7 @@ namespace BECore::Mahjong {
         /// The lines of the best reading, in a stable order: the winner's points (`Win`, the wall tile, the only winning tile), the points
         /// of the sets in the order of the reading, the pair, the bonus tiles; then the doubles for everyone, then the doubles for the
         /// winner. The score table prints them as they are.
-        eastl::vector<ScoreLine> lines;
+        Vector<ScoreLine> lines;
         /// The sum of the points of the lines.
         int points = 0;
         /// The sum of the doubles of the lines (x4 is 2 doubles, x8 is 3).

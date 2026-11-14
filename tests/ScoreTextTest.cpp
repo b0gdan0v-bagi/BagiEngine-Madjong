@@ -86,7 +86,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// A settlement that East wins by a self-draw with the given lines; the payments are made up and add up to zero.
-        HandSettlement MadeUpWin(const eastl::vector<ScoreLine>& lines) {
+        HandSettlement MadeUpWin(const Vector<ScoreLine>& lines) {
             HandSettlement settlement;
             settlement.kind = ResultKind::Win;
             settlement.winner = kSeat2;
@@ -104,7 +104,7 @@ namespace BECore::Mahjong::Tests {
     // ----- the names -----
 
     TEST(ScoreTextTest, EveryScoreKindHasANonEmptyDistinctName) {
-        eastl::vector<String> seen;
+        Vector<String> seen;
         for (const ScoreKind kind : EnumUtils<ScoreKind>::Values()) {
             const String name = ScoreKindName(En(), kind);
             EXPECT_FALSE(name.empty()) << EnumUtils<ScoreKind>::ToString(kind).data();
@@ -115,7 +115,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(ScoreTextTest, EveryTileHasADistinctNameAndTheSamplesReadRight) {
-        eastl::vector<String> seen;
+        Vector<String> seen;
         for (uint8_t id = 0; id < kTileIdCount; ++id) {
             const String name = TileName(En(), Tile(id));
             EXPECT_FALSE(name.empty()) << int{id};
@@ -314,7 +314,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(ScoreTextTest, AWinnerWithMoreThanSixteenLinesGetsASummaryInTheLastOne) {
-        eastl::vector<ScoreLine> lines;
+        Vector<ScoreLine> lines;
         for (int i = 0; i < kMaxScoreLines + 4; ++i) {
             lines.push_back(MakeLine(ScoreKind::Bonus, "F1", 4, 0));
         }
@@ -438,11 +438,11 @@ namespace BECore::Mahjong::Tests {
 
         ASSERT_EQ(table.winningTiles.size(), 14u);
         EXPECT_EQ(table.winningTiles.back(), T("4p")) << "the winning tile is the last one";
-        eastl::vector<Tile> others;
+        Vector<Tile> others;
         for (size_t i = 0; i + 1 < table.winningTiles.size(); ++i) {
             others.push_back(table.winningTiles[i]);
         }
-        eastl::vector<Tile> expected = hand.concealed;
+        Vector<Tile> expected = hand.concealed;
         expected.erase(eastl::find(expected.begin(), expected.end(), T("4p")));
         EXPECT_EQ(others, expected) << "the other 13 keep the order of the hand";
     }
@@ -460,7 +460,7 @@ namespace BECore::Mahjong::Tests {
         const ScoreTable table = FormatScoreTable(En(), settlement, result, TotalsAfter(settlement), kNoPeople, &hand);
 
         ASSERT_EQ(table.winningTiles.size(), static_cast<size_t>(kMaxWinningTiles - 1)) << "three tiles in a chow, four in a kong, two in the pair";
-        const eastl::vector<Tile> expected = {T("1m"), T("1m"), T("1m"), T("1m"), T("Rd"), T("Rd"), T("Rd"), T("Rd"), T("3s"), T("4s"), T("5s"), T("Ew"), T("Ew"), T("Ew"), T("Ew"), T("5p"), T("5p")};
+        const Vector<Tile> expected = {T("1m"), T("1m"), T("1m"), T("1m"), T("Rd"), T("Rd"), T("Rd"), T("Rd"), T("3s"), T("4s"), T("5s"), T("Ew"), T("Ew"), T("Ew"), T("Ew"), T("5p"), T("5p")};
         EXPECT_EQ(table.winningTiles, expected) << "a chow runs up from its first tile";
 
         hand.melds.push_back(OpenKong(T("9m")));  // not a hand a game can reach: never more than the most the plate holds
@@ -492,7 +492,7 @@ namespace BECore::Mahjong::Tests {
 
         const ScoreTable table = FormatScoreTable(En(), settlement, result, TotalsAfter(settlement), kNoPeople, &hand);
 
-        const eastl::vector<Tile> expected = {T("2p"), T("9s"), T("5p")};
+        const Vector<Tile> expected = {T("2p"), T("9s"), T("5p")};
         EXPECT_EQ(table.winningTiles, expected);
     }
 
@@ -531,7 +531,7 @@ namespace BECore::Mahjong::Tests {
         settlement.breakdowns[kSeat2].score = 20;
         EXPECT_STREQ(FormatScoreTable(Ru(), settlement, result, TotalsAfter(settlement), kNoPeople).summary.c_str(), "Выигрышная кость Красный дракон: 20 очк., счёт 20");
 
-        eastl::vector<ScoreLine> lines;
+        Vector<ScoreLine> lines;
         for (int i = 0; i < kMaxScoreLines + 4; ++i) {
             lines.push_back(MakeLine(ScoreKind::Bonus, "F1", 4, 0));
         }

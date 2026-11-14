@@ -386,11 +386,11 @@ namespace BECore::Mahjong::Tests {
     TEST(MatchTest, StandingsOrderTheSeatsByPointsAndTiesBySeat) {
         Match match = StartedMatch();
         ASSERT_TRUE(match.ApplySettlement(MadeUp(match, ResultKind::Win, 1, {-30, 90, 0, -60})).has_value());
-        EXPECT_EQ(match.Standings(), (eastl::array<Seat, kSeatCount>{1, 2, 0, 3}));
+        EXPECT_EQ(match.Standings(), (Array<Seat, kSeatCount>{1, 2, 0, 3}));
 
         ASSERT_TRUE(match.ApplySettlement(MadeUp(match, ResultKind::Win, 0, {120, -90, 0, -30})).has_value());
         // 2090, 2000, 2000, 1910: seats 1 and 2 are level and stay in seat order.
-        EXPECT_EQ(match.Standings(), (eastl::array<Seat, kSeatCount>{0, 1, 2, 3}));
+        EXPECT_EQ(match.Standings(), (Array<Seat, kSeatCount>{0, 1, 2, 3}));
     }
 
     TEST(MatchTest, TwoSeatsAtTheTopStayInSeatOrder) {
@@ -398,13 +398,13 @@ namespace BECore::Mahjong::Tests {
 
         ASSERT_TRUE(match.ApplySettlement(MadeUp(match, ResultKind::Win, 0, {10, -20, 0, 10})).has_value());
 
-        EXPECT_EQ(match.Standings(), (eastl::array<Seat, kSeatCount>{0, 3, 2, 1}));
+        EXPECT_EQ(match.Standings(), (Array<Seat, kSeatCount>{0, 3, 2, 1}));
     }
 
     TEST(MatchTest, StandingsAtTheStartAreInSeatOrder) {
         const Match match = StartedMatch();
 
-        EXPECT_EQ(match.Standings(), (eastl::array<Seat, kSeatCount>{0, 1, 2, 3}));
+        EXPECT_EQ(match.Standings(), (Array<Seat, kSeatCount>{0, 1, 2, 3}));
     }
 
     // ----- EndHand -----

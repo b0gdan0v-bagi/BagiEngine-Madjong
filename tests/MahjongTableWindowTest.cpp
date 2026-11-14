@@ -59,8 +59,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The rectangles drawn in `color`: a rect's own, or the box of the vertices of that colour in a geometry call (the tint of a seat plate is a layer of its mesh).
-        std::vector<Rect> RectsOf(const Color& color) const {
-            std::vector<Rect> found;
+        Vector<Rect> RectsOf(const Color& color) const {
+            Vector<Rect> found;
             for (const MarkDraw& draw : MarksOf(_renderer->calls, color)) {
                 found.push_back(draw.rect);
             }
@@ -80,7 +80,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(_game->GetSession().Actor(), kSeat1) << "the computer with the claim is the one asked first";
 
         // Two tints of the turn: behind the hand of the discarder and over its seat plate; nothing on seat 1, which holds the first claim
-        const std::vector<Rect> marks = RectsOf(kTurnMark);
+        const Vector<Rect> marks = RectsOf(kTurnMark);
 
         ASSERT_EQ(marks.size(), 2u);
         const Rect expected = MarkOf(kSeat0);
@@ -94,7 +94,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongTableWindowTest, TheFrameOnTheDiscardIsNotDrawnWhenOnlyAComputerMayClaim) {
         ASSERT_NO_FATAL_FAILURE(PersonDiscardsFive(true));
         ASSERT_EQ(Hand().GetPhase(), Phase::Claim);
-        ASSERT_EQ(Hand().PendingClaimSeats(), (eastl::vector<Seat>{kSeat1})) << "the only seat that may claim is a computer";
+        ASSERT_EQ(Hand().PendingClaimSeats(), (Vector<Seat>{kSeat1})) << "the only seat that may claim is a computer";
 
         EXPECT_TRUE(RectsOf(kPendingFrame).empty()) << "a frame would tell the person that a computer holds a claim";
     }
@@ -102,10 +102,10 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongTableWindowTest, TheFrameOnTheDiscardIsDrawnForAViewerWhoMayClaimIt) {
         ASSERT_NO_FATAL_FAILURE(ComputerDiscardsFive(true));
         ASSERT_EQ(Hand().GetPhase(), Phase::Claim);
-        ASSERT_EQ(Hand().PendingClaimSeats(), (eastl::vector<Seat>{kSeat1}));
+        ASSERT_EQ(Hand().PendingClaimSeats(), (Vector<Seat>{kSeat1}));
         ASSERT_EQ(_table->GetLayout().viewer, kSeat1);
 
-        const std::vector<Rect> frames = RectsOf(kPendingFrame);
+        const Vector<Rect> frames = RectsOf(kPendingFrame);
 
         ASSERT_EQ(frames.size(), 1u);
         // It lies round the last tile of the pile

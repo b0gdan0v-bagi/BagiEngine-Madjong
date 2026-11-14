@@ -22,7 +22,7 @@ namespace BECore::Mahjong::Arena {
     /// The number of fields of `LevelProfile`, and so of rows of `kProfileKnobs`.
     inline constexpr size_t kProfileFieldCount = 11;
 
-    inline constexpr eastl::array<ProfileKnob, kProfileFieldCount> kProfileKnobs{{
+    inline constexpr Array<ProfileKnob, kProfileFieldCount> kProfileKnobs{{
         {"skipAcceptancePercent", &LevelProfile::skipAcceptancePercent, nullptr, kPercentBase},
         {"skipDeclarationPercent", &LevelProfile::skipDeclarationPercent, nullptr, kPercentBase},
         {"skipClaimPercent", &LevelProfile::skipClaimPercent, nullptr, kPercentBase},
@@ -68,6 +68,6 @@ namespace BECore::Mahjong::Arena {
      * A win when it can; else one of the discards that declare the calling hand and the kongs and claims (a pung, a kong, a chow, a
      * concealed or an upgraded kong), picked by `rng`; else any listed action. `actions` must not be empty.
      */
-    [[nodiscard]] HandAction ChooseSeekWin(const eastl::vector<HandAction>& actions, MahjongRng& rng);
+    [[nodiscard]] HandAction ChooseSeekWin(const Vector<HandAction>& actions, MahjongRng& rng);
 
 }  // namespace BECore::Mahjong::Arena

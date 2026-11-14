@@ -19,23 +19,23 @@ namespace BECore::Mahjong::Tests {
         constexpr int kDiceRolls = 6000;
         constexpr int kShuffleSeeds = 20;
 
-        std::vector<uint32_t> BelowSequence(uint32_t seed, uint32_t n, size_t count) {
+        Vector<uint32_t> BelowSequence(uint32_t seed, uint32_t n, size_t count) {
             MahjongRng rng(seed);
-            std::vector<uint32_t> values;
+            Vector<uint32_t> values;
             for (size_t i = 0; i < count; ++i) {
                 values.push_back(rng.Below(n));
             }
             return values;
         }
 
-        eastl::vector<Tile> ShuffledSet(uint32_t seed, bool flowers = false) {
+        Vector<Tile> ShuffledSet(uint32_t seed, bool flowers = false) {
             MahjongRng rng(seed);
-            eastl::vector<Tile> tiles = BuildTileSet(flowers);
+            Vector<Tile> tiles = BuildTileSet(flowers);
             rng.Shuffle(tiles);
             return tiles;
         }
 
-        String Join(const eastl::vector<Tile>& tiles, size_t count) {
+        String Join(const Vector<Tile>& tiles, size_t count) {
             String text;
             for (size_t i = 0; i < count && i < tiles.size(); ++i) {
                 if (i > 0) {
@@ -105,8 +105,8 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MahjongRngTest, ShuffleKeepsTheMultiset) {
         for (const bool flowers : {false, true}) {
-            eastl::vector<Tile> original = BuildTileSet(flowers);
-            eastl::vector<Tile> shuffled = ShuffledSet(4, flowers);
+            Vector<Tile> original = BuildTileSet(flowers);
+            Vector<Tile> shuffled = ShuffledSet(4, flowers);
             ASSERT_EQ(shuffled.size(), original.size());
             EXPECT_NE(shuffled, original);
             eastl::sort(original.begin(), original.end());
@@ -124,10 +124,10 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MahjongRngTest, ShuffleHandlesSmallInputs) {
         MahjongRng rng(1);
-        eastl::vector<int> empty;
+        Vector<int> empty;
         rng.Shuffle(empty);
         EXPECT_TRUE(empty.empty());
-        eastl::vector<int> single = {42};
+        Vector<int> single = {42};
         rng.Shuffle(single);
         ASSERT_EQ(single.size(), 1u);
         EXPECT_EQ(single[0], 42);
@@ -137,7 +137,7 @@ namespace BECore::Mahjong::Tests {
     // 1791095845 4282876139 3093770124 ..., taken modulo 1000). The mt19937 stream is fixed by the standard and the shuffle
     // is written by hand, so they are the same on every platform; a change here means a seed no longer gives the same game.
     TEST(MahjongRngTest, GoldenBelowOfSeedOne) {
-        const std::vector<uint32_t> expected = {845, 139, 124, 368, 263, 313, 491, 341};
+        const Vector<uint32_t> expected = {845, 139, 124, 368, 263, 313, 491, 341};
         EXPECT_EQ(BelowSequence(kGoldenSeed, kGoldenRange, expected.size()), expected);
     }
 

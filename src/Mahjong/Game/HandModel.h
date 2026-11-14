@@ -175,7 +175,7 @@ namespace BECore::Mahjong {
         Tile tile;
         Seat winner = kNoSeat;
         ClaimKind winningKind = ClaimKind::Chow;
-        eastl::vector<LostClaim> beaten;
+        Vector<LostClaim> beaten;
     };
 
     /**
@@ -193,18 +193,18 @@ namespace BECore::Mahjong {
         SeatWinds seatWinds{};
         Wind roundWind = Wind::East;
         Seat east = 0;
-        eastl::vector<Tile> loose;
-        eastl::vector<Tile> live;
-        eastl::vector<Tile> dead;
-        eastl::array<PlayerHand, kSeatCount> hands;
-        eastl::vector<DiscardEntry> discards;
-        eastl::vector<HandMove> moves;
+        Vector<Tile> loose;
+        Vector<Tile> live;
+        Vector<Tile> dead;
+        Array<PlayerHand, kSeatCount> hands;
+        Vector<DiscardEntry> discards;
+        Vector<HandMove> moves;
         Phase phase = Phase::Finished;
         Seat current = 0;
         Tile drawnTile;
         bool drawnLoose = false;
-        eastl::array<ClaimStatus, kSeatCount> claimStatus{};
-        eastl::array<ClaimOption, kSeatCount> claims;
+        Array<ClaimStatus, kSeatCount> claimStatus{};
+        Array<ClaimOption, kSeatCount> claims;
         Tile pendingTile;
         Optional<HandResult> result;
         Optional<ClaimWindowResult> lastWindow;
@@ -272,7 +272,7 @@ namespace BECore::Mahjong {
             return _hands[seat];
         }
         /// The shared pile in the order discarded.
-        [[nodiscard]] const eastl::vector<DiscardEntry>& Discards() const noexcept {
+        [[nodiscard]] const Vector<DiscardEntry>& Discards() const noexcept {
             return _discards;
         }
         [[nodiscard]] const Wall& GetWall() const noexcept {
@@ -287,7 +287,7 @@ namespace BECore::Mahjong {
         }
         /// Every accepted move of this hand in order (discards, carried-out claims of a chow, pung or kong, concealed and upgraded
         /// kongs); `Begin` clears it. Passes, wins, bonus tiles and the end of a hand are not in it (`Result()` has the end).
-        [[nodiscard]] const eastl::vector<HandMove>& Moves() const noexcept {
+        [[nodiscard]] const Vector<HandMove>& Moves() const noexcept {
             return _moves;
         }
         /// How the last claim window of `Phase::Claim` was settled (not the robbing window, which leaves it as it was); nullopt before
@@ -400,7 +400,7 @@ namespace BECore::Mahjong {
         /// calling-hand declaration where `Discard` would accept it), `DeclareWin`, a `ConcealedKong` for each tile held four times,
         /// an `UpgradeKong` for the open pung of the tile drawn this turn, if there is one; or, in a window, the `LegalClaims` plus
         /// `Pass`. Empty for a seat that is not to act and for a number that is no seat.
-        [[nodiscard]] eastl::vector<HandAction> LegalActions(Seat seat) const;
+        [[nodiscard]] Vector<HandAction> LegalActions(Seat seat) const;
         /// Carries out `action` for `seat` through the method of its kind. Errors are those of the method (`NotYourTurn` for a number
         /// that is no seat); a refused action changes nothing. An action that `LegalActions` would not list (once the fields
         /// its kind ignores are left empty) is refused.
@@ -411,12 +411,12 @@ namespace BECore::Mahjong {
         HandStatus Pass(Seat seat);
 
         /// The seats in the window that have not decided yet, in seat order. Empty outside `Phase::Claim` and `Phase::RobKong`.
-        [[nodiscard]] eastl::vector<Seat> PendingClaimSeats() const;
+        [[nodiscard]] Vector<Seat> PendingClaimSeats() const;
         /// Whether `seat` is one of `PendingClaimSeats()`, without making the list (a frame of the table asks it).
         [[nodiscard]] bool AwaitsClaim(Seat seat) const noexcept;
         /// The claims `seat` can make on the pending tile (a pass is always possible besides). Empty for a seat that is not in the
         /// window or has decided, and outside `Phase::Claim` and `Phase::RobKong`; in `Phase::RobKong` at most a mahjong claim.
-        [[nodiscard]] eastl::vector<ClaimOption> LegalClaims(Seat seat) const;
+        [[nodiscard]] Vector<ClaimOption> LegalClaims(Seat seat) const;
         /// The tile the window is about: the discard in `Phase::Claim`, the kong's fourth tile in `Phase::RobKong`; invalid in every
         /// other phase (it is reset when the window closes).
         [[nodiscard]] Tile PendingTile() const noexcept {
@@ -467,9 +467,9 @@ namespace BECore::Mahjong {
         Wind _roundWind = Wind::East;
         Seat _east = 0;
         Wall _wall;
-        eastl::array<PlayerHand, kSeatCount> _hands;
-        eastl::vector<DiscardEntry> _discards;
-        eastl::vector<HandMove> _moves;
+        Array<PlayerHand, kSeatCount> _hands;
+        Vector<DiscardEntry> _discards;
+        Vector<HandMove> _moves;
         Phase _phase = Phase::Finished;
         Seat _current = 0;
         /// The tile `_current` has just drawn (invalid when the extra tile is not a draw, e.g. after a claim) and whether it came from
@@ -477,8 +477,8 @@ namespace BECore::Mahjong {
         Tile _drawnTile;
         bool _drawnLoose = false;
         /// The claim window: where each seat stands and what the seats that claimed asked for.
-        eastl::array<ClaimStatus, kSeatCount> _claimStatus{};
-        eastl::array<ClaimOption, kSeatCount> _claims;
+        Array<ClaimStatus, kSeatCount> _claimStatus{};
+        Array<ClaimOption, kSeatCount> _claims;
         /// The tile the open window is about (`PendingTile()`); invalid while no window is open.
         Tile _pendingTile;
         /// The last settled claim window (`LastClaimWindow()`) and how many were settled in this hand.

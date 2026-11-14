@@ -35,7 +35,7 @@ namespace BECore::Mahjong::Arena {
             list.emplace_back(key, 1);
         }
 
-        Spread SpreadOf(const eastl::vector<int>& values) {
+        Spread SpreadOf(const Vector<int>& values) {
             Spread spread;
             if (values.empty()) {
                 return spread;
@@ -52,14 +52,14 @@ namespace BECore::Mahjong::Arena {
             return spread;
         }
 
-        const MatchLogEvent* StartOf(const eastl::vector<MatchLogEvent>& events) {
+        const MatchLogEvent* StartOf(const Vector<MatchLogEvent>& events) {
             return !events.empty() && events.front().kind == MatchLogKind::Start ? &events.front() : nullptr;
         }
 
     }  // namespace
 
     LogVerdict CheckMatchLog(StringView text) {
-        std::expected<eastl::vector<MatchLogEvent>, String> parsed = ParseMatchLog(text);
+        std::expected<Vector<MatchLogEvent>, String> parsed = ParseMatchLog(text);
         if (!parsed.has_value()) {
             return Rejected(LogProblem::Unreadable, Format("unreadable: {}", parsed.error()));
         }
@@ -74,13 +74,13 @@ namespace BECore::Mahjong::Arena {
         return verdict;
     }
 
-    std::expected<eastl::vector<CheckedLog>, String> ReadLogs(const LogSource& source, StringView path) {
-        std::expected<eastl::vector<LogFile>, String> files = source(path);
+    std::expected<Vector<CheckedLog>, String> ReadLogs(const LogSource& source, StringView path) {
+        std::expected<Vector<LogFile>, String> files = source(path);
         if (!files.has_value()) {
             return std::unexpected(files.error());
         }
         eastl::sort(files->begin(), files->end(), [](const LogFile& a, const LogFile& b) { return a.name != b.name ? a.name < b.name : a.text < b.text; });
-        eastl::vector<CheckedLog> logs;
+        Vector<CheckedLog> logs;
         logs.reserve(files->size());
         for (const LogFile& file : *files) {
             logs.push_back({file.name, CheckMatchLog(file.text)});
@@ -88,10 +88,10 @@ namespace BECore::Mahjong::Arena {
         return logs;
     }
 
-    LogCorpus SummariseLogs(const eastl::vector<CheckedLog>& logs) {
+    LogCorpus SummariseLogs(const Vector<CheckedLog>& logs) {
         LogCorpus corpus;
-        eastl::vector<int> handCounts;
-        eastl::vector<int> actionCounts;
+        Vector<int> handCounts;
+        Vector<int> actionCounts;
         for (const CheckedLog& log : logs) {
             ++corpus.files;
             if (!log.verdict.ok) {

@@ -39,7 +39,7 @@ namespace BECore::Mahjong::Tests {
             return spec;
         }
 
-        size_t Count(const eastl::vector<HandAction>& actions, ActionKind kind) {
+        size_t Count(const Vector<HandAction>& actions, ActionKind kind) {
             size_t count = 0;
             for (const HandAction& action : actions) {
                 count += action.kind == kind ? 1 : 0;
@@ -48,8 +48,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The seats that have something to do.
-        std::vector<Seat> SeatsWithActions(const HandModel& model) {
-            std::vector<Seat> seats;
+        Vector<Seat> SeatsWithActions(const HandModel& model) {
+            Vector<Seat> seats;
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 if (!model.LegalActions(seat).empty()) {
                     seats.push_back(seat);
@@ -105,7 +105,7 @@ namespace BECore::Mahjong::Tests {
         HandModel model = MakeModel(spec);
         ASSERT_EQ(model.GetHand(kSeat0).concealed.size(), kTilesInHand + 1);
 
-        const eastl::vector<HandAction> actions = model.LegalActions(kSeat0);
+        const Vector<HandAction> actions = model.LegalActions(kSeat0);
 
         EXPECT_EQ(actions.size(), kTilesInHand + 1);  // every tile of the hand is different
         EXPECT_EQ(Count(actions, ActionKind::Discard), actions.size());
@@ -122,7 +122,7 @@ namespace BECore::Mahjong::Tests {
         spec.live = kRed;
         HandModel model = MakeModel(spec);
 
-        const eastl::vector<HandAction> actions = model.LegalActions(kSeat0);
+        const Vector<HandAction> actions = model.LegalActions(kSeat0);
 
         EXPECT_EQ(actions.size(), kTilesInHand);  // 14 tiles, one pair
         EXPECT_EQ(std::count(actions.begin(), actions.end(), HandAction::MakeDiscard(T("1p"))), 1);
@@ -233,7 +233,7 @@ namespace BECore::Mahjong::Tests {
         spec.live = kEast;
         HandModel model = MakeModel(spec);
 
-        const eastl::vector<HandAction> actions = model.LegalActions(kSeat0);
+        const Vector<HandAction> actions = model.LegalActions(kSeat0);
 
         EXPECT_TRUE(Has(actions, HandAction::MakeConcealedKong(T(kEast))));
         EXPECT_EQ(Count(actions, ActionKind::ConcealedKong), 1u);
@@ -246,7 +246,7 @@ namespace BECore::Mahjong::Tests {
         HandModel model = UpgradeModel();
         ASSERT_EQ(model.GetPhase(), Phase::Discard);
 
-        const eastl::vector<HandAction> actions = model.LegalActions(kSeat1);
+        const Vector<HandAction> actions = model.LegalActions(kSeat1);
 
         EXPECT_TRUE(Has(actions, HandAction::MakeUpgradeKong(T(kFifth))));
         EXPECT_EQ(Count(actions, ActionKind::UpgradeKong), 1u);
@@ -261,7 +261,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(hand.concealed.size(), kTilesInHand + 1);
         ASSERT_FALSE(hand.callingDeclared);
 
-        const eastl::vector<HandAction> actions = model.LegalActions(kSeat0);
+        const Vector<HandAction> actions = model.LegalActions(kSeat0);
 
         EXPECT_EQ(Count(actions, ActionKind::DeclareWin), 0u);  // a winning shape, but not declared
         EXPECT_EQ(Error(model.Apply(kSeat0, HandAction::MakeDeclareWin())), HandError::NotCalling);
@@ -286,7 +286,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(model.GetHand(kSeat0).callingDeclared);
         ASSERT_EQ(model.CurrentSeat(), kSeat0);
 
-        const eastl::vector<HandAction> actions = model.LegalActions(kSeat0);
+        const Vector<HandAction> actions = model.LegalActions(kSeat0);
 
         EXPECT_TRUE(Has(actions, HandAction::MakeDeclareWin()));
         for (const HandAction& action : actions) {
@@ -303,19 +303,19 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(model.Apply(kSeat0, HandAction::MakeDiscard(T(kRed))).has_value());
         ASSERT_EQ(model.GetPhase(), Phase::Claim);
 
-        const eastl::vector<HandAction> actions = model.LegalActions(kSeat2);
+        const Vector<HandAction> actions = model.LegalActions(kSeat2);
 
         ASSERT_EQ(actions.size(), 3u);
         EXPECT_TRUE(Has(actions, HandAction::MakeClaim(ClaimKind::Pung)));
         EXPECT_TRUE(Has(actions, HandAction::MakeClaim(ClaimKind::Kong)));
         EXPECT_TRUE(Has(actions, HandAction::MakePass()));
-        EXPECT_EQ(SeatsWithActions(model), std::vector<Seat>{kSeat2});  // the discarder and the seats with no claim are out
+        EXPECT_EQ(SeatsWithActions(model), Vector<Seat>{kSeat2});  // the discarder and the seats with no claim are out
         ExpectEveryLegalActionIsAccepted(model);
 
         ASSERT_TRUE(model.Apply(kSeat2, HandAction::MakePass()).has_value());
         EXPECT_EQ(model.GetPhase(), Phase::Discard);
         EXPECT_EQ(model.CurrentSeat(), kSeat1);
-        EXPECT_EQ(SeatsWithActions(model), std::vector<Seat>{kSeat1});
+        EXPECT_EQ(SeatsWithActions(model), Vector<Seat>{kSeat1});
     }
 
     TEST(HandModelActionsTest, AChowIsOfferedOncePerSequenceToTheNextSeatOnly) {
@@ -326,7 +326,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(model.Apply(kSeat0, HandAction::MakeDiscard(T(kFifth))).has_value());
         ASSERT_EQ(model.GetPhase(), Phase::Claim);
 
-        const eastl::vector<HandAction> actions = model.LegalActions(kSeat1);
+        const Vector<HandAction> actions = model.LegalActions(kSeat1);
 
         ASSERT_EQ(actions.size(), 4u);  // 3-4-5, 4-5-6, 5-6-7 and the pass
         EXPECT_EQ(actions[0], HandAction::MakeClaim(ClaimKind::Chow, T("3p")));
@@ -341,12 +341,12 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(model.Apply(kSeat1, HandAction::MakeUpgradeKong(T(kFifth))).has_value());
         ASSERT_EQ(model.GetPhase(), Phase::RobKong);
 
-        const eastl::vector<HandAction> actions = model.LegalActions(kSeat2);
+        const Vector<HandAction> actions = model.LegalActions(kSeat2);
 
         ASSERT_EQ(actions.size(), 2u);
         EXPECT_EQ(actions[0], HandAction::MakeClaim(ClaimKind::Mahjong));
         EXPECT_EQ(actions[1], HandAction::MakePass());
-        EXPECT_EQ(SeatsWithActions(model), std::vector<Seat>{kSeat2});  // the owner of the kong and the undeclared seat are out
+        EXPECT_EQ(SeatsWithActions(model), Vector<Seat>{kSeat2});  // the owner of the kong and the undeclared seat are out
         ExpectEveryLegalActionIsAccepted(model);
     }
 

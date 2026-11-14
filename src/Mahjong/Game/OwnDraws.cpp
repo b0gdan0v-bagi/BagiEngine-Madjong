@@ -11,7 +11,7 @@ namespace BECore::Mahjong {
     namespace {
 
         /// The memo key: the concealed counts, the copies drawn on the line per kind, the draws used.
-        using StateKey = eastl::array<uint8_t, 2 * kKindCount + 1>;
+        using StateKey = Array<uint8_t, 2 * kKindCount + 1>;
 
         /// The value of a state per unit of the probability of reaching it. All sums, so two values add and a value scales by a chance.
         struct Value {
@@ -141,7 +141,7 @@ namespace BECore::Mahjong {
             /// The closed form of a hand that waits, after `used` draws, over the draws the wall leaves: a draw wins with the chance `p`
             /// of the unseen winning copies, the hand does not change, and what is left of the chance is another seat's win (the standing
             /// hand, worth `notWinning`) or a drawn hand.
-            [[nodiscard]] Value Waiting(const TileCounts& counts, const TileCounts& drawn, int used, const eastl::vector<Tile>& winning, int64_t notWinning) const {
+            [[nodiscard]] Value Waiting(const TileCounts& counts, const TileCounts& drawn, int used, const Vector<Tile>& winning, int64_t notWinning) const {
                 int64_t copies = 0;
                 int64_t scoreSum = 0;
                 int64_t paySum = 0;
@@ -182,7 +182,7 @@ namespace BECore::Mahjong {
                 ++hand[id];
                 TileCounts nowDrawn = drawn;
                 ++nowDrawn[id];
-                eastl::vector<uint8_t> lowest;
+                Vector<uint8_t> lowest;
                 int lowestShanten = 0;
                 for (uint8_t discard = 0; discard < kKindCount; ++discard) {
                     if (hand[discard] == 0) {
@@ -231,7 +231,7 @@ namespace BECore::Mahjong {
                 // Another seat won between the last draw and this one: the standing hand pays.
                 value.rest = used > 0 ? ProbTimes(_alive[used - 1] - _alive[used], notWinning) : 0;
                 if (used < _draws) {
-                    const eastl::vector<Tile> winning = WinningTiles(counts, _meldCount, _meldTiles);
+                    const Vector<Tile> winning = WinningTiles(counts, _meldCount, _meldTiles);
                     if (!winning.empty()) {
                         Add(value, Waiting(counts, drawn, used, winning, notWinning));
                     } else if (used < _depth && UnseenTotal(drawn) > 0) {
@@ -271,9 +271,9 @@ namespace BECore::Mahjong {
             bool _east = false;
             /// The draws the seat has left at the start: the wall's hard limit.
             int _draws = 0;
-            eastl::vector<int64_t> _alive;
+            Vector<int64_t> _alive;
             int _unseenTotal = 0;
-            eastl::array<int, kKindCount> _openCopies{};
+            Array<int, kKindCount> _openCopies{};
             eastl::map<StateKey, Value> _memo;
         };
 
@@ -298,9 +298,9 @@ namespace BECore::Mahjong {
             int order = 0;  // the position in the order the ties are kept in: lower first
         };
 
-        eastl::vector<DiscardValue> BestFirst(eastl::vector<Ranked> ranked) {
+        Vector<DiscardValue> BestFirst(Vector<Ranked> ranked) {
             eastl::sort(ranked.begin(), ranked.end(), [](const Ranked& a, const Ranked& b) { return a.value.expected != b.value.expected ? a.value.expected > b.value.expected : a.order < b.order; });
-            eastl::vector<DiscardValue> values;
+            Vector<DiscardValue> values;
             for (const Ranked& entry : ranked) {
                 values.push_back(entry.value);
             }
@@ -309,11 +309,11 @@ namespace BECore::Mahjong {
 
     }  // namespace
 
-    eastl::vector<DiscardValue> ValueDiscards(const TableView& view, int depth) {
+    Vector<DiscardValue> ValueDiscards(const TableView& view, int depth) {
         if (depth < 1 || !IsOwnDiscardTurn(view)) {
             return {};
         }
-        eastl::array<bool, kKindCount> listed{};
+        Array<bool, kKindCount> listed{};
         for (const HandAction& action : view.legal) {
             if (action.kind == ActionKind::Discard && !action.declareCalling && action.tile.IsPlayable()) {
                 listed[action.tile.Id()] = true;
@@ -321,7 +321,7 @@ namespace BECore::Mahjong {
         }
         TileCounts counts = CountTiles(view.own.concealed);
         // The chooser's order; the best shanten and the slack are those of the listed discards.
-        eastl::vector<DiscardOption> options;
+        Vector<DiscardOption> options;
         for (const DiscardOption& option : RateDiscards(counts, MeldCountOf(view), view)) {
             if (listed[option.tile.Id()]) {
                 options.push_back(option);
@@ -332,7 +332,7 @@ namespace BECore::Mahjong {
         }
         const int bestShanten = options.front().shanten;
         Evaluator evaluator(view, eastl::min(depth, kOwnDrawsMaxDepth));
-        eastl::vector<Ranked> ranked;
+        Vector<Ranked> ranked;
         for (const DiscardOption& option : options) {
             if (option.shanten > bestShanten + kSearchShantenSlack || static_cast<int>(ranked.size()) >= kOwnDrawsMaxCandidates) {
                 continue;
@@ -344,12 +344,12 @@ namespace BECore::Mahjong {
         return BestFirst(eastl::move(ranked));
     }
 
-    eastl::vector<DiscardValue> ValueWaits(const TableView& view) {
+    Vector<DiscardValue> ValueWaits(const TableView& view) {
         if (!IsOwnDiscardTurn(view)) {
             return {};
         }
         // The order of the ties: the most unseen winning copies, the lowest `KeepValue`, the lowest tile id.
-        eastl::vector<WaitingDiscard> waiting = WaitingDiscards(view, true);
+        Vector<WaitingDiscard> waiting = WaitingDiscards(view, true);
         eastl::sort(waiting.begin(), waiting.end(), [](const WaitingDiscard& a, const WaitingDiscard& b) {
             if (a.copies != b.copies) {
                 return a.copies > b.copies;
@@ -358,7 +358,7 @@ namespace BECore::Mahjong {
         });
         TileCounts counts = CountTiles(view.own.concealed);
         Evaluator evaluator(view, 0);
-        eastl::vector<Ranked> ranked;
+        Vector<Ranked> ranked;
         for (const WaitingDiscard& discard : waiting) {
             --counts[discard.tile.Id()];
             ranked.push_back({MakeDiscardValue(discard.tile, evaluator.Start(counts)), static_cast<int>(ranked.size())});

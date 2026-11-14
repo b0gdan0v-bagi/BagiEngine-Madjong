@@ -148,7 +148,7 @@ namespace BECore::Mahjong {
         uint64_t _padStrings = 0;
         // The second use of the pad: the nickname of the tester (no `OnlineScreens` page)
         TextEntry _nicknameEntry{TextEntry::Kind::Name};
-        eastl::vector<String> _nicknamePad;
+        Vector<String> _nicknamePad;
         uint64_t _nicknameStrings = 0;
         bool _nicknameActive = false;
         bool _nicknameClosing = false;    // `Done` or Escape stored it: the pad goes at the next `Follow`

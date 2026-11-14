@@ -120,7 +120,7 @@ namespace BECore::Mahjong::Tests {
                 }
             }
             // The standings list every seat once, best first.
-            const eastl::array<Seat, kSeatCount> standings = match.Standings();
+            const Array<Seat, kSeatCount> standings = match.Standings();
             int listed = 0;
             for (size_t place = 0; place < standings.size(); ++place) {
                 ASSERT_TRUE(IsSeat(standings[place])) << _where;
@@ -167,8 +167,8 @@ namespace BECore::Mahjong::Tests {
         bool _eastWon = false;
         MatchProgress _before;
         Wind _roundWind = Wind::East;
-        eastl::array<int, kSeatCount> _eastHands{};
-        eastl::array<int, kRoundsPerMatch> _roundHands{};
+        Array<int, kSeatCount> _eastHands{};
+        Array<int, kRoundsPerMatch> _roundHands{};
     };
 
 }  // namespace BECore::Mahjong::Tests

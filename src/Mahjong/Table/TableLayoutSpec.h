@@ -79,10 +79,10 @@ namespace BECore::Mahjong {
         TableShape likeShape = TableShape::Landscape;
         float inset = 0.0f;
         /// By screen position: 0 bottom, 1 right, 2 top, 3 left.
-        eastl::array<SeatSpec, kSeatCount> seats;
+        Array<SeatSpec, kSeatCount> seats;
         ZoneRect wall;
         /// The free-ground regions of the shape, by name (a name once).
-        eastl::vector<FreeRegion> freeRegions;
+        Vector<FreeRegion> freeRegions;
         /// The viewer's side (position 0) for the phone profile; read when `hasPhone`.
         bool hasPhone = false;
         SeatSpec phone;
@@ -94,7 +94,7 @@ namespace BECore::Mahjong {
 
     /// The whole spec: one `ShapeSpec` per `TableShape`, indexed by `+shape`.
     struct TableLayoutSpec {
-        eastl::array<ShapeSpec, kTableShapeCount> shapes;
+        Array<ShapeSpec, kTableShapeCount> shapes;
 
         [[nodiscard]] const ShapeSpec& Shape(TableShape shape) const noexcept {
             return shapes[static_cast<size_t>(+shape)];

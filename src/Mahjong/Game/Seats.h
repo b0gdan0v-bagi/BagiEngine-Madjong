@@ -31,7 +31,7 @@ namespace BECore::Mahjong {
     }
 
     /// The wind of each seat, indexed by seat.
-    using SeatWinds = eastl::array<Wind, kSeatCount>;
+    using SeatWinds = Array<Wind, kSeatCount>;
 
     /// The seat winds when `east` is the dealer: South is `NextSeat(east)`, then West, then North.
     [[nodiscard]] SeatWinds MakeSeatWinds(Seat east) noexcept;

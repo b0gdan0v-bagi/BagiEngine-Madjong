@@ -41,7 +41,7 @@ namespace BECore::Mahjong::Tests {
         constexpr int kOwnDrawsTestDepth = 2;
 
         struct PlayedMatch {
-            eastl::vector<HandSettlement> history;
+            Vector<HandSettlement> history;
             SeatScores scores{};
             int steps = 0;
         };
@@ -61,7 +61,7 @@ namespace BECore::Mahjong::Tests {
                 ASSERT_LT(handSteps, kStepLimitPerHand) << where << ": the hand does not end";
                 const Seat actor = ComputerTable::NextActor(hand);
                 ASSERT_TRUE(IsSeat(actor)) << where;
-                const eastl::vector<HandAction> legal = hand.LegalActions(actor);
+                const Vector<HandAction> legal = hand.LegalActions(actor);
                 ASSERT_FALSE(legal.empty()) << where << " seat " << actor;
                 const StepResult step = table.Step(hand);
                 ASSERT_TRUE(step.has_value()) << where << " seat " << actor << ": " << Name(step.error());
@@ -104,13 +104,13 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// One hand by four `ComputerPlayer`s that need not share a profile: the actor's own player decides, its action is listed and accepted.
-        void StepMixedHand(eastl::array<ComputerPlayer, kSeatCount>& players, HandModel& hand, const String& where, int& steps, int& searchSteps) {
+        void StepMixedHand(Array<ComputerPlayer, kSeatCount>& players, HandModel& hand, const String& where, int& steps, int& searchSteps) {
             int handSteps = 0;
             while (hand.GetPhase() != Phase::Finished) {
                 ASSERT_LT(handSteps, kStepLimitPerHand) << where << ": the hand does not end";
                 const Seat actor = ComputerTable::NextActor(hand);
                 ASSERT_TRUE(IsSeat(actor)) << where;
-                const eastl::vector<HandAction> legal = hand.LegalActions(actor);
+                const Vector<HandAction> legal = hand.LegalActions(actor);
                 const Optional<HandAction> action = players[actor].Decide(hand, actor);
                 ASSERT_TRUE(action.has_value()) << where << " seat " << actor;
                 EXPECT_TRUE(Has(legal, *action)) << where << " seat " << actor << " chose " << Name(action->kind) << " " << ToStd(ToString(action->tile));
@@ -182,7 +182,7 @@ namespace BECore::Mahjong::Tests {
         search.searchWorlds = kSearchTestWorlds;
         search.searchCandidates = kSearchTestCandidates;
         auto playerOf = [&](Seat seat) { return seat == kSearchSeat ? ComputerPlayer(SeatSeed(kSearchMatchSeed, seat), search) : ComputerPlayer(SeatSeed(kSearchMatchSeed, seat)); };
-        eastl::array<ComputerPlayer, kSeatCount> players{playerOf(0), playerOf(1), playerOf(2), playerOf(3)};
+        Array<ComputerPlayer, kSeatCount> players{playerOf(0), playerOf(1), playerOf(2), playerOf(3)};
 
         MatchTotals totals;
         MatchAudit audit(settings, where, totals);
@@ -214,7 +214,7 @@ namespace BECore::Mahjong::Tests {
         valued.ownDrawsDepth = kOwnDrawsTestDepth;
         valued.ownDrawsPickWait = true;
         auto playerOf = [&](Seat seat) { return seat == kSearchSeat ? ComputerPlayer(SeatSeed(kSearchMatchSeed, seat), valued) : ComputerPlayer(SeatSeed(kSearchMatchSeed, seat)); };
-        eastl::array<ComputerPlayer, kSeatCount> players{playerOf(0), playerOf(1), playerOf(2), playerOf(3)};
+        Array<ComputerPlayer, kSeatCount> players{playerOf(0), playerOf(1), playerOf(2), playerOf(3)};
 
         MatchTotals totals;
         MatchAudit audit(settings, where, totals);

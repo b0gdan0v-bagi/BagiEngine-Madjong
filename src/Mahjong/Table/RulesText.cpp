@@ -87,7 +87,7 @@ namespace BECore::Mahjong {
 
             /// The text of `key` with every placeholder filled.
             [[nodiscard]] String Text(StringView key) const {
-                return Tr(_strings, key, eastl::span<const WordArg>(_args.data(), _args.size()));
+                return Tr(_strings, key, Span<const WordArg>(_args.data(), _args.size()));
             }
 
         private:
@@ -99,26 +99,26 @@ namespace BECore::Mahjong {
             }
 
             const UIStrings& _strings;
-            eastl::vector<eastl::pair<StringView, String>> _values;
-            eastl::vector<WordArg> _args;
+            Vector<eastl::pair<StringView, String>> _values;
+            Vector<WordArg> _args;
         };
 
-        using TileRows = eastl::vector<eastl::vector<Tile>>;
+        using TileRows = Vector<Vector<Tile>>;
 
         /// A row of tiles from the notation of `Tile.h`; the examples are written the way a player reads them.
-        eastl::vector<Tile> Row(StringView notation) {
+        Vector<Tile> Row(StringView notation) {
             const auto tiles = ParseTiles(notation);
             ASSERT(tiles.has_value(), "RulesText: an example row is not in the notation of Tile.h");
-            return tiles.value_or(eastl::vector<Tile>{});
+            return tiles.value_or(Vector<Tile>{});
         }
 
         /// Page 1: one suit from the lowest rank to the highest, then the honours (four winds, three dragons).
         TileRows TileRowsOfTiles() {
-            eastl::vector<Tile> suit;
+            Vector<Tile> suit;
             for (int rank = 1; rank <= kRanksPerSuit; ++rank) {
                 suit.push_back(Tile::Suited(TileSuit::Dots, rank));
             }
-            eastl::vector<Tile> honours;
+            Vector<Tile> honours;
             for (int wind = 0; wind < kWindCount; ++wind) {
                 honours.push_back(Tile::FromWind(wind));
             }
@@ -138,7 +138,7 @@ namespace BECore::Mahjong {
             return {Row("2p 3p 4p 5s 5s 5s 7m 8m 9m Ew Ew 6p 7p")};
         }
 
-        using Items = eastl::vector<String>;
+        using Items = Vector<String>;
 
         /// A line of the score as the score table prints it ("Pung of 5 Dots: 2", "Dragon set: x2"), with the numbers given by the caller.
         String ScoreItem(const UIStrings& strings, ScoreKind kind, Tile tile, int points, int doubles) {
@@ -243,7 +243,7 @@ namespace BECore::Mahjong {
         /// of its examples (null for none).
         struct PageSpec {
             const char* title;
-            eastl::array<const char*, kRulesMaxLines> lines;
+            Array<const char*, kRulesMaxLines> lines;
             Items (*items)(const UIStrings&);
             TileRows (*tileRows)();
         };

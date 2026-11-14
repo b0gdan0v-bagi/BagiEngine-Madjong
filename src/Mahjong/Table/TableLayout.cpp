@@ -50,10 +50,10 @@ namespace BECore::Mahjong {
         };
 
         /// The offsets of one strip: as many as the most a strip holds (four kongs) without the heap, more only for an input past the rules
-        using StripOffsetList = eastl::fixed_vector<float, kMaxMeldTiles, true>;
+        using StripOffsetList = SmallVector<float, kMaxMeldTiles>;
 
         /// The offsets along the strip's axis of `groups` of tiles (`kMeldGap` between two groups), squeezed to the capacity.
-        StripOffsetList StripOffsets(const Strip& strip, eastl::span<const int> groups) {
+        StripOffsetList StripOffsets(const Strip& strip, Span<const int> groups) {
             const float length = strip.vertical ? strip.tileH : strip.tileW;
             StripOffsetList offsets;
             float position = 0.0f;
@@ -155,8 +155,8 @@ namespace BECore::Mahjong {
             return kSeatCount - Offset(owner, meld.from) - 1;
         }
 
-        void AddMelds(TableLayout& layout, const ViewFit& fit, const SeatGeometry& geometry, Seat seat, int position, const eastl::vector<Meld>& melds) {
-            eastl::fixed_vector<int, kMaxMelds, true> groups;
+        void AddMelds(TableLayout& layout, const ViewFit& fit, const SeatGeometry& geometry, Seat seat, int position, const Vector<Meld>& melds) {
+            SmallVector<int, kMaxMelds> groups;
             for (const Meld& meld : melds) {
                 groups.push_back(MeldTileCount(meld));
             }
@@ -207,8 +207,8 @@ namespace BECore::Mahjong {
         }
 
         /// The discards of the seats, in the pile's order; each seat counts its own tiles to find the cell in its block.
-        void AddDiscards(TableLayout& layout, const ViewFit& fit, const eastl::array<SeatGeometry, kSeatCount>& geometries, const TableInput& input) {
-            eastl::array<int, kSeatCount> pileOfSeat{};
+        void AddDiscards(TableLayout& layout, const ViewFit& fit, const Array<SeatGeometry, kSeatCount>& geometries, const TableInput& input) {
+            Array<int, kSeatCount> pileOfSeat{};
             for (const Seat seat : input.discardSeats) {
                 if (IsSeat(seat)) {
                     ++pileOfSeat[seat];
@@ -217,14 +217,14 @@ namespace BECore::Mahjong {
             // A pile of more rows than the block holds squeezes its rows together; the pitch is the same for the whole pile of a seat.
             // A row is as thick as a tile is high, upright or turned: the thickness is `discardTileH` of the seat's geometry on the
             // screen's vertical for the bottom and top seats and on its horizontal for the side seats.
-            eastl::array<float, kSeatCount> rowPitchOfSeat{};
+            Array<float, kSeatCount> rowPitchOfSeat{};
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 const int rows = (pileOfSeat[seat] + kDiscardsPerRow - 1) / kDiscardsPerRow;
                 const int position = SeatPosition(layout.viewer, seat);
                 const SeatGeometry& geometry = geometries[position];
                 rowPitchOfSeat[seat] = DiscardRowPitch(rows, position == 1 || position == 3 ? geometry.discardW : geometry.discardH, geometry.discardTileH);
             }
-            eastl::array<int, kSeatCount> placed{};
+            Array<int, kSeatCount> placed{};
             for (size_t entry = 0; entry < input.discardSeats.size(); ++entry) {
                 const Seat seat = input.discardSeats[entry];
                 if (!IsSeat(seat)) {
@@ -446,7 +446,7 @@ namespace BECore::Mahjong {
 
         /// The free regions of the frame's shape fitted like its zones (snapped to a quarter unit by edges, then mapped into the view), into
         /// `out`, which keeps its capacity.
-        void FitFreeZones(const ShapeFrame& frame, eastl::vector<FreeZone>& out) {
+        void FitFreeZones(const ShapeFrame& frame, Vector<FreeZone>& out) {
             out.clear();
             if (frame.zones == nullptr) {
                 return;
@@ -466,8 +466,8 @@ namespace BECore::Mahjong {
 
     void RebuildTableLayout(TableLayout& layout, const TableInput& input, const TableLayoutSpec& spec, float viewWidth, float viewHeight) {
         BE_PROFILE_SCOPE("RebuildTableLayout");
-        eastl::vector<TileSlot> slots = eastl::move(layout.slots);
-        eastl::vector<FreeZone> freeRegions = eastl::move(layout.zones.freeRegions);
+        Vector<TileSlot> slots = eastl::move(layout.slots);
+        Vector<FreeZone> freeRegions = eastl::move(layout.zones.freeRegions);
         slots.clear();  // the capacity stays: a table drawn every frame builds its slots without the heap
         freeRegions.clear();
         layout = TableLayout{};
@@ -491,8 +491,8 @@ namespace BECore::Mahjong {
             layout.profile.handTileW = eastl::max(DesktopHandTileW(*zones, design), eastl::min(input.profile.handTileW, WidestPhoneHandTileW(*zones, design)));
         }
 
-        eastl::array<SeatGeometry, kSeatCount> geometries;
-        eastl::array<Rect, kSeatCount> plates;
+        Array<SeatGeometry, kSeatCount> geometries;
+        Array<Rect, kSeatCount> plates;
         for (int position = 0; position < kSeatCount; ++position) {
             const bool phoneSeat = phone && position == 0;
             const SeatSpec& seat = phoneSeat ? zones->phone : zones->seats[static_cast<size_t>(position)];
@@ -549,8 +549,8 @@ namespace BECore::Mahjong {
             logged = true;
             LOG_ERROR("TableLayout: no layout spec is set, the table has no tiles (SetActiveTableLayoutSpec)");
         }
-        eastl::vector<TileSlot> slots = eastl::move(layout.slots);
-        eastl::vector<FreeZone> freeRegions = eastl::move(layout.zones.freeRegions);
+        Vector<TileSlot> slots = eastl::move(layout.slots);
+        Vector<FreeZone> freeRegions = eastl::move(layout.zones.freeRegions);
         slots.clear();
         freeRegions.clear();
         layout = TableLayout{};
@@ -607,12 +607,12 @@ namespace BECore::Mahjong {
                 _messages.push_back(message);
             }
 
-            eastl::vector<String> Take() {
+            Vector<String> Take() {
                 return eastl::move(_messages);
             }
 
         private:
-            eastl::vector<String> _messages;
+            Vector<String> _messages;
         };
 
         bool IsSolid(const Rect& rect) noexcept {
@@ -661,7 +661,7 @@ namespace BECore::Mahjong {
         }
 
         void CheckZonesClear(const TableLayout& layout, const String& tag, CheckReport& report) {
-            eastl::vector<NamedRect> solids;
+            Vector<NamedRect> solids;
             for (int position = 0; position < kSeatCount; ++position) {
                 const Seat seat = SeatAtPosition(layout.viewer, position);
                 const SlotRole rows[] = {SlotRole::HandTile, SlotRole::MeldTile, SlotRole::BonusTile};
@@ -707,7 +707,7 @@ namespace BECore::Mahjong {
         /// The free regions of the shape of `layout` (built from `spec`): inside the view, and for a shape with zones of its own clear of
         /// every tile, discard block, wall ring and plate of the worst-case table (a `like` shape is the same table moved).
         void CheckFreeRegions(const TableLayout& layout, const TableLayoutSpec& spec, const String& tag, bool clearOfTable, CheckReport& report) {
-            eastl::vector<FreeZone> regions;
+            Vector<FreeZone> regions;
             FitFreeZones(FrameOf(spec, layout.shape, layout.viewWidth, layout.viewHeight), regions);
             const Rect view(0.0f, 0.0f, layout.viewWidth, layout.viewHeight);
             for (const FreeZone& region : regions) {
@@ -803,7 +803,7 @@ namespace BECore::Mahjong {
 
     }  // namespace
 
-    eastl::vector<String> CheckTableLayoutSpec(const TableLayoutSpec& spec) {
+    Vector<String> CheckTableLayoutSpec(const TableLayoutSpec& spec) {
         CheckReport report;
         for (const TableShape shape : EnumUtils<TableShape>::Values()) {
             const String tag = Format("shape '{}'", ShapeNameOf(shape));

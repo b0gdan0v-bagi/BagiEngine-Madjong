@@ -30,7 +30,7 @@ namespace BECore::Mahjong::Tests {
             return std::filesystem::path(__FILE__).parent_path().parent_path();
         }
 
-        uint32_t ReadBigEndian(const std::vector<unsigned char>& bytes, size_t offset) {
+        uint32_t ReadBigEndian(const Vector<unsigned char>& bytes, size_t offset) {
             return (static_cast<uint32_t>(bytes[offset]) << 24) | (static_cast<uint32_t>(bytes[offset + 1]) << 16) | (static_cast<uint32_t>(bytes[offset + 2]) << 8) |
                    static_cast<uint32_t>(bytes[offset + 3]);
         }
@@ -80,14 +80,14 @@ namespace BECore::Mahjong::Tests {
             }
         }
 
-        eastl::vector<Sprite> _sprites;
+        Vector<Sprite> _sprites;
     };
 
     TEST_F(TileSpritesTest, ThePngIsAnRgbaPictureOfTheAtlasSize) {
         const std::filesystem::path pngPath = GameRoot() / kAtlasPath;
         std::ifstream file(pngPath, std::ios::binary);
         ASSERT_TRUE(file.is_open()) << pngPath.string();
-        std::vector<unsigned char> head(kIhdrDataOffset + kIhdrSize);
+        Vector<unsigned char> head(kIhdrDataOffset + kIhdrSize);
         file.read(reinterpret_cast<char*>(head.data()), static_cast<std::streamsize>(head.size()));
         ASSERT_EQ(static_cast<size_t>(file.gcount()), head.size());
         EXPECT_TRUE(std::equal(std::begin(kPngSignature), std::end(kPngSignature), head.begin()));

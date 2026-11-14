@@ -31,8 +31,8 @@ namespace BECore::Mahjong::Tests {
             return text;
         }
 
-        std::vector<String> DescribeAll(const eastl::vector<Decomposition>& decompositions) {
-            std::vector<String> texts;
+        Vector<String> DescribeAll(const Vector<Decomposition>& decompositions) {
+            Vector<String> texts;
             for (const Decomposition& decomposition : decompositions) {
                 texts.push_back(Describe(decomposition));
             }
@@ -70,13 +70,13 @@ namespace BECore::Mahjong::Tests {
     TEST(HandShapeTest, PlainHandOfFourSetsAndAPairWins) {
         EXPECT_TRUE(Wins(kPlainWin));
 
-        const eastl::vector<Decomposition> found = Decompose(Counts(kPlainWin), kSetsInHand);
+        const Vector<Decomposition> found = Decompose(Counts(kPlainWin), kSetsInHand);
         ASSERT_EQ(found.size(), 1u);
         EXPECT_EQ(Describe(found[0]), "Rd: C1p C4s C7m PEw");
     }
 
     TEST(HandShapeTest, SetsOfAllSuitsAndHonoursAreFound) {
-        const eastl::vector<Decomposition> found = Decompose(Counts("1p 1p 1p 4s 5s 6s 9m 9m 9m Sw Sw Sw Gd Gd"), kSetsInHand);
+        const Vector<Decomposition> found = Decompose(Counts("1p 1p 1p 4s 5s 6s 9m 9m 9m Sw Sw Sw Gd Gd"), kSetsInHand);
 
         ASSERT_EQ(found.size(), 1u);
         EXPECT_EQ(found[0].pair, Tile::FromDragon(2));
@@ -110,19 +110,19 @@ namespace BECore::Mahjong::Tests {
         // Three pungs of 1p 2p 3p or three chows 1p 2p 3p.
         const TileCounts counts = Counts("1p 1p 1p 2p 2p 2p 3p 3p 3p 4s 5s 6s Ew Ew");
 
-        EXPECT_EQ(DescribeAll(Decompose(counts, kSetsInHand)), (std::vector<String>{"Ew: C1p C1p C1p C4s", "Ew: P1p P2p P3p C4s"}));
+        EXPECT_EQ(DescribeAll(Decompose(counts, kSetsInHand)), (Vector<String>{"Ew: C1p C1p C1p C4s", "Ew: P1p P2p P3p C4s"}));
     }
 
     TEST(HandShapeTest, SplitsWithDifferentPairsAreAllReturned) {
         // Pair 4p with three pungs or three chows, or pair 1p with the chows 1p 2p 3p, 2p 3p 4p, 2p 3p 4p.
         const TileCounts counts = Counts("1p 1p 1p 2p 2p 2p 3p 3p 3p 4p 4p");
 
-        EXPECT_EQ(DescribeAll(Decompose(counts, kSetsInHand - kOneMeld)), (std::vector<String>{"1p: C1p C2p C2p", "4p: C1p C1p C1p", "4p: P1p P2p P3p"}));
+        EXPECT_EQ(DescribeAll(Decompose(counts, kSetsInHand - kOneMeld)), (Vector<String>{"1p: C1p C2p C2p", "4p: C1p C1p C1p", "4p: P1p P2p P3p"}));
     }
 
     TEST(HandShapeTest, EachSplitIsReturnedOnce) {
         // 1p x4 is a pung and a chow with 2p 3p; the two orders of taking them are one split.
-        const eastl::vector<Decomposition> found = Decompose(Counts("1p 1p 1p 1p 2p 3p 4s 5s 6s 7m 8m 9m Ew Ew"), kSetsInHand);
+        const Vector<Decomposition> found = Decompose(Counts("1p 1p 1p 1p 2p 3p 4s 5s 6s 7m 8m 9m Ew Ew"), kSetsInHand);
 
         ASSERT_EQ(found.size(), 1u);
         EXPECT_EQ(Describe(found[0]), "Ew: P1p C1p C4s C7m");
@@ -197,7 +197,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(HandShapeTest, FourMeldsLeaveALonePairToDecompose) {
-        const eastl::vector<Decomposition> found = Decompose(Counts("Rd Rd"), 0);
+        const Vector<Decomposition> found = Decompose(Counts("Rd Rd"), 0);
 
         ASSERT_EQ(found.size(), 1u);
         EXPECT_EQ(found[0].pair, Tile::FromDragon(0));
@@ -257,7 +257,7 @@ namespace BECore::Mahjong::Tests {
         // 1p 2p 3p four times each: four chows, or three pungs and one chow.
         const TileCounts counts = Counts("1p 1p 1p 1p 2p 2p 2p 2p 3p 3p 3p 3p Ew Ew");
 
-        EXPECT_EQ(DescribeAll(Decompose(counts, kSetsInHand)), (std::vector<String>{"Ew: C1p C1p C1p C1p", "Ew: P1p C1p P2p P3p"}));
+        EXPECT_EQ(DescribeAll(Decompose(counts, kSetsInHand)), (Vector<String>{"Ew: C1p C1p C1p C1p", "Ew: P1p C1p P2p P3p"}));
     }
 
     TEST(HandShapeTest, SevenPairsAndThirteenOrphansWinWithoutADecomposition) {
@@ -271,7 +271,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(HandShapeTest, CountMeldTilesCountsEveryTileOfEveryMeld) {
-        eastl::vector<Meld> melds;
+        Vector<Meld> melds;
         melds.push_back({MeldKind::Chow, false, Tile::Suited(TileSuit::Dots, 7)});
         melds.push_back({MeldKind::Pung, false, Tile::FromWind(0)});
         melds.push_back({MeldKind::Kong, true, Tile::FromDragon(0)});
@@ -287,7 +287,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(HandShapeTest, AChowThatCouldNotExistHoldsNothing) {
         // A sequence starts at a 1..7 of a suit: 8p 9p 1s is no chow, nor is a chow of honours.
-        eastl::vector<Meld> melds;
+        Vector<Meld> melds;
         melds.push_back({MeldKind::Chow, false, Tile::Suited(TileSuit::Dots, 8)});
         melds.push_back({MeldKind::Chow, false, Tile::Suited(TileSuit::Characters, 9)});
         melds.push_back({MeldKind::Chow, false, Tile::FromWind(0)});
@@ -304,7 +304,7 @@ namespace BECore::Mahjong::Tests {
         // An open pung of 5p, and the hand waits on 5p for its pair: the fourth copy is in the hand, the fifth does not exist.
         PlayerHand hand;
         hand.melds.push_back({MeldKind::Pung, false, Tile::Suited(TileSuit::Dots, 5)});
-        const eastl::vector<Tile> concealed = ParseTiles("5p 1s 2s 3s 4s 5s 6s Ew Ew Ew").value();
+        const Vector<Tile> concealed = ParseTiles("5p 1s 2s 3s 4s 5s 6s Ew Ew Ew").value();
         for (const Tile tile : concealed) {
             hand.AddConcealed(tile);
         }
@@ -318,11 +318,11 @@ namespace BECore::Mahjong::Tests {
     TEST(HandShapeTest, TheSeatOverloadOffersTheOtherWaits) {
         PlayerHand hand;
         hand.melds.push_back({MeldKind::Pung, false, Tile::Suited(TileSuit::Dots, 5)});
-        const eastl::vector<Tile> concealed = ParseTiles("1s 2s 4s 5s 6s Ew Ew Ew 7m 7m").value();
+        const Vector<Tile> concealed = ParseTiles("1s 2s 4s 5s 6s Ew Ew Ew 7m 7m").value();
         for (const Tile tile : concealed) {
             hand.AddConcealed(tile);
         }
-        const eastl::vector<Tile> waits = WinningTiles(hand);
+        const Vector<Tile> waits = WinningTiles(hand);
 
         ASSERT_EQ(waits.size(), 1u);
         EXPECT_EQ(waits[0], Tile::Suited(TileSuit::Bamboo, 3));

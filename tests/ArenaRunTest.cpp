@@ -76,7 +76,7 @@ namespace BECore::Mahjong::Arena {
                    left.standingScore == right.standingScore && left.winsByKind == right.winsByKind && left.decisions == right.decisions;
         }
 
-        bool SameRows(const eastl::vector<SeedRow>& left, const eastl::vector<SeedRow>& right) {
+        bool SameRows(const Vector<SeedRow>& left, const Vector<SeedRow>& right) {
             if (left.size() != right.size()) {
                 return false;
             }
@@ -607,7 +607,7 @@ namespace BECore::Mahjong::Arena {
             // `count` 0 does nothing, 1 is not spread, fewer than the threads and many more than the threads are all covered.
             for (int round = 0; round < 3; ++round) {
                 for (const int count : {0, 1, 3, 50}) {
-                    std::vector<std::atomic<int>> hits(static_cast<size_t>(count));
+                    Vector<std::atomic<int>> hits(static_cast<size_t>(count));
                     loop(count, [&](int index) { ++hits[static_cast<size_t>(index)]; });
                     for (int index = 0; index < count; ++index) {
                         EXPECT_EQ(hits[static_cast<size_t>(index)].load(), 1) << "threads " << threads << " count " << count << " index " << index;
@@ -615,7 +615,7 @@ namespace BECore::Mahjong::Arena {
                 }
             }
             // The results of the bodies are in the caller's memory when `ForEach` returns, with no other synchronisation.
-            std::vector<int> squares(100);
+            Vector<int> squares(100);
             pool.ForEach(100, [&](int index) { squares[static_cast<size_t>(index)] = index * index; });
             for (int index = 0; index < 100; ++index) {
                 EXPECT_EQ(squares[static_cast<size_t>(index)], index * index);

@@ -28,9 +28,9 @@ namespace BECore::Mahjong::Tests {
 
         /// The portrait windows the table is checked in: the design size, two phones (bars on the top and the bottom), a 3:4 tablet and a
         /// square (bars on the sides).
-        const std::vector<MatrixWindow>& PortraitWindows() {
-            static const std::vector<MatrixWindow> windows{DesignWindowOf(TableShape::Portrait), MakePhoneWindow(390.0f, 844.0f, 3.0f), MakePhoneWindow(360.0f, 640.0f, 2.0f),
-                                                           MakePhoneWindow(768.0f, 1024.0f, 1.0f), MakePhoneWindow(480.0f, 480.0f, 1.0f)};
+        const Vector<MatrixWindow>& PortraitWindows() {
+            static const Vector<MatrixWindow> windows{DesignWindowOf(TableShape::Portrait), MakePhoneWindow(390.0f, 844.0f, 3.0f), MakePhoneWindow(360.0f, 640.0f, 2.0f),
+                                                      MakePhoneWindow(768.0f, 1024.0f, 1.0f), MakePhoneWindow(480.0f, 480.0f, 1.0f)};
             return windows;
         }
 
@@ -44,7 +44,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The four bars of width `width` on the border of `rect`, inside it, as the table draws a frame.
-        std::vector<Rect> BarsOf(const Rect& rect, float width) {
+        Vector<Rect> BarsOf(const Rect& rect, float width) {
             return {Rect(rect.x, rect.y, rect.w, width), Rect(rect.x, rect.y + rect.h - width, rect.w, width), Rect(rect.x, rect.y + width, width, rect.h - 2.0f * width),
                     Rect(rect.x + rect.w - width, rect.y + width, width, rect.h - 2.0f * width)};
         }
@@ -89,8 +89,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The rectangles drawn in `color` (output pixels), in the order drawn.
-        std::vector<Rect> RectsOf(const Color& color) const {
-            std::vector<Rect> found;
+        Vector<Rect> RectsOf(const Color& color) const {
+            Vector<Rect> found;
             for (const DrawCall& call : _renderer->calls) {
                 if (call.kind == DrawKind::Rect && SameColor(call.color, color)) {
                     found.push_back(call.rect);
@@ -100,8 +100,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// How many of `expected` (view units, carried through the fit of the window) are among the rects drawn in `color`.
-        int CountDrawn(const MatrixWindow& window, const Color& color, const std::vector<Rect>& expected) const {
-            const std::vector<Rect> drawn = RectsOf(color);
+        int CountDrawn(const MatrixWindow& window, const Color& color, const Vector<Rect>& expected) const {
+            const Vector<Rect> drawn = RectsOf(color);
             int found = 0;
             for (const Rect& want : expected) {
                 const Rect out = Out(window, want);
@@ -299,7 +299,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(_table->SelectedHandIndex(), index) << "tap-to-select is on in a 390 x 844 @3 window";
         const Rect raised = RaisedRect(slotRect);
         EXPECT_FLOAT_EQ(raised.y, slotRect.y - kSelectedTileRise);
-        const std::vector<DrawCall> calls = TileCalls();
+        const Vector<DrawCall> calls = TileCalls();
         ASSERT_FALSE(calls.empty());
         EXPECT_TRUE(NearRect(calls.back().rect, Out(window, raised))) << "the raised tile is drawn last, at its raised rect";
 
@@ -364,7 +364,7 @@ namespace BECore::Mahjong::Tests {
 
             const ChowTakes& takes = _table->GetChowTakes();
             ASSERT_EQ(takes.count, 2) << window.label.c_str();
-            std::vector<Rect> expected;
+            Vector<Rect> expected;
             for (int k = 0; k < takes.count; ++k) {
                 const int index = IndexOf(kSeat1, takes.tiles[static_cast<size_t>(k)]);
                 const TileSlot* slot = SlotOf(SlotRole::HandTile, kSeat1, index);
@@ -378,7 +378,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTablePortraitTest, TheActionCanvasesFollowTheCompactRuleOfThePortraitView) {
-        std::vector<MatrixWindow> windows = PortraitWindows();
+        Vector<MatrixWindow> windows = PortraitWindows();
         windows.push_back(NarrowPortraitWindow());
         size_t compact = 0;
         size_t plain = 0;

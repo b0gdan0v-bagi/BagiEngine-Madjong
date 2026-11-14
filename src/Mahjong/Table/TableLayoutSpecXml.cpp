@@ -30,7 +30,7 @@ namespace BECore::Mahjong {
         /// One pass over the file: the messages collect in `errors`, each starting with the place (`where`) it was found.
         class SpecReader {
         public:
-            eastl::vector<String> errors;
+            Vector<String> errors;
 
             void Fail(const String& where, const String& what) {
                 errors.push_back(Format("TableLayout: {}: {}", where, what));

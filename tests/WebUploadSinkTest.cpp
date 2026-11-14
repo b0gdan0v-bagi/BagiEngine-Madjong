@@ -72,7 +72,7 @@ namespace BECore::Mahjong::Tests {
 
             bool available = true;
             bool refuseStart = false;
-            std::vector<Post> posts;
+            Vector<Post> posts;
             WebPostId pending = 0;
             bool answered = false;
             WebPostResult answer;
@@ -453,7 +453,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(fixture.sink.Counters().retried, 1U);
         ASSERT_EQ(byPath.size(), static_cast<size_t>(kShortMatchHands) + 1);
 
-        eastl::vector<UploadPiece> pieces;
+        Vector<UploadPiece> pieces;
         for (const auto& [path, body] : byPath) {
             UploadPiece piece;
             piece.matchId = "0123456789abcdef0123456789abcdef";

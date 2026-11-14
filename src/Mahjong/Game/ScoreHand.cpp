@@ -13,7 +13,7 @@ namespace BECore::Mahjong {
             }
             switch (meld.kind) {
                 case MeldKind::Chow: {
-                    const eastl::array<Tile, kTilesPerSet> members = ChowTiles(meld.first);
+                    const Array<Tile, kTilesPerSet> members = ChowTiles(meld.first);
                     return static_cast<int>(eastl::count(members.begin(), members.end(), tile));
                 }
                 case MeldKind::Pung:

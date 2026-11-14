@@ -120,8 +120,8 @@ namespace BECore::Mahjong::Tests {
             return std::nullopt;
         }
 
-        eastl::vector<TableView> FindDecisions(bool turn) {
-            eastl::vector<TableView> views;
+        Vector<TableView> FindDecisions(bool turn) {
+            Vector<TableView> views;
             for (int i = 0; i < kStatesPerPhase; ++i) {
                 if (const Optional<TableView> view = FindDecision(kFirstStateSeed + static_cast<uint32_t>(i), turn, i % 4)) {
                     views.push_back(*view);
@@ -186,7 +186,7 @@ namespace BECore::Mahjong::Tests {
                         body(i);
                     }
                 };
-                std::vector<std::thread> helpers;
+                Vector<std::thread> helpers;
                 for (int t = 1; t < threads; ++t) {
                     helpers.emplace_back(work);
                 }
@@ -229,7 +229,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(ComputerSearchTest, WithTheKnobOffNothingIsDrawnAndTheAnswerIsNormals) {
-        const eastl::vector<TableView> views = {MakeTableView(TurnModel(), kSeat0), MakeTableView(WindowModel(kPungHand, "5p"), kSeat1)};
+        const Vector<TableView> views = {MakeTableView(TurnModel(), kSeat0), MakeTableView(WindowModel(kPungHand, "5p"), kSeat1)};
         for (const TableView& view : views) {
             MahjongRng rng(kRngSeed);
             EXPECT_FALSE(view.phase == Phase::Discard ? SearchTurnAction(view, rng, kNormalProfile).has_value() : SearchClaimAction(view, rng, kNormalProfile).has_value());
@@ -362,7 +362,7 @@ namespace BECore::Mahjong::Tests {
     TEST(ComputerSearchTest, NormalsChoiceIsTheFirstCandidateAndEveryCandidateIsListed) {
         const auto check = [](const TableView& view, int maxCount, const String& where) {
             const HandAction baseline = Normal(view, MahjongRng(kRngSeed));
-            const eastl::vector<HandAction> candidates = view.phase == Phase::Discard ? TurnCandidates(view, baseline, maxCount) : ClaimCandidates(view, baseline, maxCount);
+            const Vector<HandAction> candidates = view.phase == Phase::Discard ? TurnCandidates(view, baseline, maxCount) : ClaimCandidates(view, baseline, maxCount);
             ASSERT_FALSE(candidates.empty()) << where;
             EXPECT_EQ(candidates.front(), baseline) << where;
             EXPECT_LE(static_cast<int>(candidates.size()), maxCount) << where;
@@ -373,8 +373,8 @@ namespace BECore::Mahjong::Tests {
                 }
             }
         };
-        const eastl::vector<TableView> turns = FindDecisions(true);
-        const eastl::vector<TableView> windows = FindDecisions(false);
+        const Vector<TableView> turns = FindDecisions(true);
+        const Vector<TableView> windows = FindDecisions(false);
         ASSERT_GE(turns.size(), static_cast<size_t>(kStatesPerPhase / 2));
         ASSERT_GE(windows.size(), static_cast<size_t>(kStatesPerPhase / 2));
         for (const int maxCount : {kSearchMinCandidates, kCandidates, kSearchMaxCandidates}) {
@@ -391,7 +391,7 @@ namespace BECore::Mahjong::Tests {
         // East draws the red dragon into 123s 456s 789m 5p 6p 9p Nw: shanten 1 whichever of 9p, Nw and Rd goes; the others are alternatives.
         const TableView turn = MakeTableView(MakeModel(SpecOf("1s 2s 3s 4s 5s 6s 7m 8m 9m 5p 6p 9p Nw", "Rd")), kSeat0);
         const HandAction baseline = Normal(turn, MahjongRng(kRngSeed));
-        const eastl::vector<HandAction> turnCandidates = TurnCandidates(turn, baseline, kSearchMaxCandidates);
+        const Vector<HandAction> turnCandidates = TurnCandidates(turn, baseline, kSearchMaxCandidates);
         EXPECT_GE(turnCandidates.size(), 2U);
         for (const HandAction& candidate : turnCandidates) {
             EXPECT_EQ(candidate.kind, ActionKind::Discard);
@@ -401,7 +401,7 @@ namespace BECore::Mahjong::Tests {
         const TableView ready = MakeTableView(TurnModel(), kSeat0);
         const HandAction declaration = Normal(ready, MahjongRng(kRngSeed));
         ASSERT_TRUE(declaration.kind == ActionKind::Discard && declaration.declareCalling);
-        const eastl::vector<HandAction> declaring = TurnCandidates(ready, declaration, kSearchMaxCandidates);
+        const Vector<HandAction> declaring = TurnCandidates(ready, declaration, kSearchMaxCandidates);
         EXPECT_GE(declaring.size(), 2U);
         for (const HandAction& candidate : declaring) {
             EXPECT_EQ(candidate.kind, ActionKind::Discard);
@@ -411,13 +411,13 @@ namespace BECore::Mahjong::Tests {
         const TableView window = MakeTableView(WindowModel(kPungHand, "5p"), kSeat1);
         const HandAction claim = Normal(window, MahjongRng(kRngSeed));
         ASSERT_EQ(claim, HandAction::MakeClaim(ClaimKind::Pung));
-        const eastl::vector<HandAction> claimCandidates = ClaimCandidates(window, claim, kSearchMaxCandidates);
+        const Vector<HandAction> claimCandidates = ClaimCandidates(window, claim, kSearchMaxCandidates);
         ASSERT_GE(claimCandidates.size(), 2U);
         EXPECT_EQ(claimCandidates[0], HandAction::MakeClaim(ClaimKind::Pung));
         EXPECT_EQ(claimCandidates[1], HandAction::MakePass());
         // A kong on offer is a candidate of the turn (the hand is Normal's kong test: four equal tiles).
         const TableView kong = MakeTableView(MakeModel(SpecOf("1p 1p 1p 1p 2s 3s 9s 1m 4m 7m Ew Sw Rd", "Wd")), kSeat0);
-        const eastl::vector<HandAction> kongCandidates = TurnCandidates(kong, HandAction::MakeDiscard(T("Wd")), kSearchMaxCandidates);
+        const Vector<HandAction> kongCandidates = TurnCandidates(kong, HandAction::MakeDiscard(T("Wd")), kSearchMaxCandidates);
         EXPECT_TRUE(Has(kongCandidates, HandAction::MakeConcealedKong(T("1p"))));
     }
 
@@ -425,7 +425,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(ComputerSearchTest, TheAnswerIsListedRepeatableAndAHugeMarginKeepsNormalsChoice) {
         for (const bool turn : {true, false}) {
-            const eastl::vector<TableView> views = FindDecisions(turn);
+            const Vector<TableView> views = FindDecisions(turn);
             ASSERT_GE(views.size(), static_cast<size_t>(kStatesPerPhase / 2)) << (turn ? "turns" : "windows");
             int overridden = 0;
             for (size_t i = 0; i < views.size(); ++i) {
@@ -457,7 +457,7 @@ namespace BECore::Mahjong::Tests {
             int margin;
         };
         for (const bool turn : {true, false}) {
-            const eastl::vector<TableView> views = FindDecisions(turn);
+            const Vector<TableView> views = FindDecisions(turn);
             ASSERT_GE(views.size(), kViewsPerPhase);
             for (size_t i = 0; i < kViewsPerPhase; ++i) {
                 for (const Knobs knobs : {Knobs{1, 0}, Knobs{2, 30}, Knobs{5, 0}, Knobs{5, 30}}) {
@@ -485,7 +485,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(ComputerSearchTest, AStepAfterTheEndChangesNothingAndACopyOfAHalfSteppedRunFinishesAlike) {
         for (const bool turn : {true, false}) {
-            const eastl::vector<TableView> views = FindDecisions(turn);
+            const Vector<TableView> views = FindDecisions(turn);
             ASSERT_FALSE(views.empty());
             const TableView& view = views.front();
             const LevelProfile profile = SearchProfile(3, kCandidates);
@@ -553,10 +553,10 @@ namespace BECore::Mahjong::Tests {
             int worlds;
             int margin;
         };
-        const eastl::vector<std::pair<const char*, WorldLoop>> loops = {
+        const Vector<std::pair<const char*, WorldLoop>> loops = {
             {"serial", SerialLoop}, {"reversed", ReversedLoop}, {"1 thread", ThreadLoop(1)}, {"2 threads", ThreadLoop(2)}, {"5 threads", ThreadLoop(5)}};
         for (const bool turn : {true, false}) {
-            const eastl::vector<TableView> views = FindDecisions(turn);
+            const Vector<TableView> views = FindDecisions(turn);
             ASSERT_GE(views.size(), kViewsPerPhase);
             for (size_t i = 0; i < kViewsPerPhase; ++i) {
                 for (const Knobs knobs : {Knobs{3, 0}, Knobs{5, 30}}) {
@@ -592,7 +592,7 @@ namespace BECore::Mahjong::Tests {
     TEST(ComputerSearchTest, ARunOverTheCandidatesOfASearchHasThatSearchsValuesInAnyOrder) {
         constexpr int kSeamWorlds = 4;
         for (const bool turn : {true, false}) {
-            const eastl::vector<TableView> views = FindDecisions(turn);
+            const Vector<TableView> views = FindDecisions(turn);
             ASSERT_FALSE(views.empty());
             const TableView& view = views.front();
             const LevelProfile profile = SearchProfile(kSeamWorlds);
@@ -621,7 +621,7 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_EQ(run->Values(), search->Values()) << (turn ? "turn" : "window");
                 EXPECT_EQ(run->DroppedWorlds(), search->DroppedWorlds());
                 EXPECT_EQ(run->DroppedWorlds(), 0);
-                for (const eastl::vector<int>& row : run->Values()) {
+                for (const Vector<int>& row : run->Values()) {
                     EXPECT_EQ(static_cast<int>(row.size()), kSeamWorlds);
                 }
             }
@@ -630,14 +630,14 @@ namespace BECore::Mahjong::Tests {
 
     TEST(ComputerSearchTest, TheSeamTakesTheCallersListWithNoBaselineAndNoSecondCandidate) {
         const TableView view = MakeTableView(TurnModel(), kSeat0);
-        const eastl::vector<HandAction> one = {view.legal.back()};
+        const Vector<HandAction> one = {view.legal.back()};
         Optional<SearchRun> run = BeginSearchOver(view, one, kRngSeed, 3);
         ASSERT_TRUE(run.has_value());
         run->RunWorlds(SerialLoop);
         ASSERT_EQ(run->Values().size(), 1U);
         EXPECT_EQ(run->Values().front().size(), 3U);
         // The list is kept as given, in order: the first element is no "Normal choice".
-        const eastl::vector<HandAction> reversed = {view.legal.back(), view.legal.front()};
+        const Vector<HandAction> reversed = {view.legal.back(), view.legal.front()};
         Optional<SearchRun> two = BeginSearchOver(view, reversed, kRngSeed, 3);
         ASSERT_TRUE(two.has_value());
         EXPECT_EQ(two->Candidates(), reversed);
@@ -683,7 +683,7 @@ namespace BECore::Mahjong::Tests {
             run->RunWorlds(SerialLoop);
             EXPECT_EQ(run->DroppedWorlds(), 0);
             ASSERT_EQ(run->Values().size(), view->legal.size());
-            for (const eastl::vector<int>& row : run->Values()) {
+            for (const Vector<int>& row : run->Values()) {
                 EXPECT_EQ(static_cast<int>(row.size()), kSeamWorlds);
             }
         }
@@ -714,14 +714,14 @@ namespace BECore::Mahjong::Tests {
         run->RunWorlds(SerialLoop);
         EXPECT_TRUE(run->Done());
         EXPECT_EQ(run->DroppedWorlds(), 3);
-        for (const eastl::vector<int>& row : run->Values()) {
+        for (const Vector<int>& row : run->Values()) {
             EXPECT_TRUE(row.empty());
         }
     }
 
     TEST(ComputerSearchTest, APlayedWorldIsRepeatableAndChangesNothingOfTheRun) {
         for (const bool turn : {true, false}) {
-            const eastl::vector<TableView> views = FindDecisions(turn);
+            const Vector<TableView> views = FindDecisions(turn);
             ASSERT_FALSE(views.empty());
             MahjongRng rng(kRngSeed);
             Optional<SearchRun> run = Begin(views.front(), rng, SearchProfile(3, kCandidates));
@@ -777,7 +777,7 @@ namespace BECore::Mahjong::Tests {
         const int candidates = begin(0).StepsTotal() / kRunWorlds;
         ASSERT_GE(candidates, kSearchMinCandidates);
         MahjongRng baselineRng(kRngSeed);
-        const eastl::vector<HandAction> listed = TurnCandidates(view, Normal(view, baselineRng), kCandidates);
+        const Vector<HandAction> listed = TurnCandidates(view, Normal(view, baselineRng), kCandidates);
         ASSERT_EQ(static_cast<int>(listed.size()), candidates);
 
         // Candidate 1 is 10 points better than the baseline in every world that was played, the middle world was not.
@@ -788,7 +788,7 @@ namespace BECore::Mahjong::Tests {
         const SearchWorld skipped;
         {
             SearchRun run = begin(0);
-            const eastl::array<SearchWorld, kRunWorlds> worlds = {better, skipped, better};
+            const Array<SearchWorld, kRunWorlds> worlds = {better, skipped, better};
             run.Finish(worlds);
             EXPECT_TRUE(run.Done());
             EXPECT_EQ(run.StepsDone(), run.StepsTotal());
@@ -797,12 +797,12 @@ namespace BECore::Mahjong::Tests {
         {
             // One played world has no spread to measure, so a margin keeps the baseline; so does a run where none was played.
             SearchRun one = begin(30);
-            const eastl::array<SearchWorld, kRunWorlds> single = {skipped, better, skipped};
+            const Array<SearchWorld, kRunWorlds> single = {skipped, better, skipped};
             one.Finish(single);
             EXPECT_TRUE(one.Done());
             EXPECT_EQ(one.Result(), listed[0]);
             SearchRun none = begin(0);
-            const eastl::array<SearchWorld, kRunWorlds> nothing = {skipped, skipped, skipped};
+            const Array<SearchWorld, kRunWorlds> nothing = {skipped, skipped, skipped};
             none.Finish(nothing);
             EXPECT_TRUE(none.Done());
             EXPECT_EQ(none.Result(), listed[0]);
@@ -817,7 +817,7 @@ namespace BECore::Mahjong::Tests {
             return *BeginTurnSearch(view, rng, profile);
         };
         SearchRun source = begin();
-        eastl::vector<SearchWorld> worlds;
+        Vector<SearchWorld> worlds;
         for (int i = 0; i < source.WorldCount(); ++i) {
             worlds.push_back(source.PlayWorld(i));
         }
@@ -838,9 +838,9 @@ namespace BECore::Mahjong::Tests {
         // The wrong count, a played world with a short row.
         {
             SearchRun run = begin();
-            run.Finish(eastl::span<const SearchWorld>(worlds.data(), worlds.size() - 1));
+            run.Finish(Span<const SearchWorld>(worlds.data(), worlds.size() - 1));
             EXPECT_EQ(Shown(run), Shown(begin()));
-            eastl::vector<SearchWorld> shortRow = worlds;
+            Vector<SearchWorld> shortRow = worlds;
             shortRow[1].values.pop_back();
             run.Finish(shortRow);
             EXPECT_EQ(Shown(run), Shown(begin()));
@@ -853,7 +853,7 @@ namespace BECore::Mahjong::Tests {
             run.Finish(worlds);
             const HandAction answer = run.Result();
             const String shown = Shown(run);
-            eastl::vector<SearchWorld> rigged = worlds;
+            Vector<SearchWorld> rigged = worlds;
             for (SearchWorld& world : rigged) {
                 world.values.front() = -1000000;
             }
@@ -888,7 +888,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(ComputerSearchTest, ASourceThatSamplesAsTheSearchDoesGivesTheValuesOfNoSource) {
         for (const bool turn : {true, false}) {
-            const eastl::vector<TableView> views = FindDecisions(turn);
+            const Vector<TableView> views = FindDecisions(turn);
             ASSERT_FALSE(views.empty());
             const TableView& view = views.front();
             const LevelProfile profile = SearchProfile(3, kCandidates);
@@ -920,12 +920,12 @@ namespace BECore::Mahjong::Tests {
     TEST(ComputerSearchTest, ASourceIsCalledOncePerWorldWithTheWorldsOwnRngAtAnyThreadCount) {
         constexpr int kSourceWorlds = 4;
         for (const bool turn : {true, false}) {
-            const eastl::vector<TableView> views = FindDecisions(turn);
+            const Vector<TableView> views = FindDecisions(turn);
             ASSERT_FALSE(views.empty());
             const TableView& view = views.front();
             const LevelProfile profile = SearchProfile(kSourceWorlds, kCandidates);
             const uint32_t base = BaseSeedOf(MahjongRng(kRngSeed));
-            eastl::vector<uint32_t> expected;
+            Vector<uint32_t> expected;
             for (uint32_t i = 0; i < static_cast<uint32_t>(kSourceWorlds); ++i) {
                 expected.push_back(FirstDrawOfWorld(base, i));
             }
@@ -933,7 +933,7 @@ namespace BECore::Mahjong::Tests {
 
             for (const int threads : {1, 4}) {
                 std::mutex lock;
-                eastl::vector<uint32_t> draws;
+                Vector<uint32_t> draws;
                 MahjongRng rng(kRngSeed);
                 Optional<SearchRun> run = Begin(view, rng, profile);
                 ASSERT_TRUE(run.has_value());
@@ -961,7 +961,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(ComputerSearchTest, ASourceThatMakesNoWorldOrOneTheCandidateDoesNotApplyInDropsTheWorlds) {
         for (const bool turn : {true, false}) {
-            const eastl::vector<TableView> views = FindDecisions(turn);
+            const Vector<TableView> views = FindDecisions(turn);
             ASSERT_FALSE(views.empty());
             const TableView& view = views.front();
             const LevelProfile profile = SearchProfile(3, kCandidates);
@@ -1023,7 +1023,7 @@ namespace BECore::Mahjong::Tests {
     // and `BeginClaimSearch` never give. This holds every level 1..10 (and a search profile, so the check is not vacuous: the levels
     // do not search) to a run with no source.
     TEST(ComputerSearchTest, NoLevelMakesARunThatHasASourceOfWorlds) {
-        eastl::vector<TableView> views = FindDecisions(true);
+        Vector<TableView> views = FindDecisions(true);
         for (const TableView& view : FindDecisions(false)) {
             views.push_back(view);
         }
@@ -1092,7 +1092,7 @@ namespace BECore::Mahjong::Tests {
                 ASSERT_TRUE(match.Start(settings, seed).has_value());
                 // One search seat (seat 0) against three Normal seats, each with its own player.
                 ComputerPlayer searcher(SeatSeed(seed, kSeat0), SearchProfile(1, kCandidates));
-                eastl::array<ComputerPlayer, kSeatCount> players = {searcher, ComputerPlayer(SeatSeed(seed, kSeat1)), ComputerPlayer(SeatSeed(seed, kSeat2)), ComputerPlayer(SeatSeed(seed, kSeat3))};
+                Array<ComputerPlayer, kSeatCount> players = {searcher, ComputerPlayer(SeatSeed(seed, kSeat1)), ComputerPlayer(SeatSeed(seed, kSeat2)), ComputerPlayer(SeatSeed(seed, kSeat3))};
                 HandModel& hand = match.Hand();
                 int steps = 0;
                 while (hand.GetPhase() != Phase::Finished && ++steps < kStepLimit) {

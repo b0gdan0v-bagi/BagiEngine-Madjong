@@ -50,9 +50,9 @@ namespace BECore::Mahjong::Tests {
         /// sentence, every wind letter, every seat with and without the mark of "you" at a table of one person), not typed in.
         static void SetWorstVars() {
             const UIStrings& strings = CoreManager::GetUIStrings();
-            std::vector<String> rounds;
-            std::vector<String> letters;
-            std::vector<String> names;
+            Vector<String> rounds;
+            Vector<String> letters;
+            Vector<String> names;
             for (int wind = 0; wind < kSeatCount; ++wind) {
                 letters.push_back(WindLetter(strings, static_cast<Wind>(wind)));
                 for (int number = 1; number <= kFullMatchHands / kRoundsPerMatch; ++number) {
@@ -192,7 +192,7 @@ namespace BECore::Mahjong::Tests {
         /// The longest sentence that names a selected tile in the current language (every kind of tile that has a long name).
         static String LongestSelectedText() {
             const UIStrings& strings = CoreManager::GetUIStrings();
-            std::vector<String> candidates;
+            Vector<String> candidates;
             for (const Tile tile : {T("9m"), T("Ew"), T("Rd"), T("Wd"), T("Gd"), T("F1"), T("T4"), T("5s"), T("1p")}) {
                 candidates.push_back(SelectedTileText(strings, tile));
             }
@@ -202,7 +202,7 @@ namespace BECore::Mahjong::Tests {
         /// The longest sentence of the move line in the current language: every kind of move with every seat, wind and the longest tile names.
         static String LongestMoveText() {
             const UIStrings& strings = CoreManager::GetUIStrings();
-            std::vector<String> candidates;
+            Vector<String> candidates;
             const Tile tiles[] = {T("9m"), T("Ew"), T("Rd"), T("Wd"), T("Gd"), T("F1"), T("T4"), T("5s")};
             for (int wind = 0; wind < kSeatCount; ++wind) {
                 for (Seat seat = 0; seat < kSeatCount; ++seat) {
@@ -420,7 +420,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
         // Everything that hides in the file is shown, so that its place is asked for
-        const std::vector<const char*> nodes{"Hud", "Actions", "Hints", "HintsButton", "SeatPlates", "CenterPanel"};
+        const Vector<const char*> nodes{"Hud", "Actions", "Hints", "HintsButton", "SeatPlates", "CenterPanel"};
         for (const char* node : nodes) {
             const auto canvas = Canvas(node);
             ASSERT_TRUE(canvas) << node;
@@ -435,7 +435,7 @@ namespace BECore::Mahjong::Tests {
             // The file is by screen position and the viewer of the worst-case layout is seat 0, so position p is seat p: the label of a plate
             // names the region of its plate, so it lies inside the plate (the phone profile's lifted bottom plate included), centred on it
             // and under the ring box of the emblem (the view of a shape is its design, so a unit is one view unit)
-            eastl::vector<Rect> plates;
+            Vector<Rect> plates;
             for (int position = 0; position < kSeatCount; ++position) {
                 const UIElement* name = Element("SeatPlates", Format("PlateName{}", position).c_str());
                 ASSERT_NE(name, nullptr) << position;
@@ -455,7 +455,7 @@ namespace BECore::Mahjong::Tests {
                 const char* node;
                 const char* element;
             };
-            const std::vector<Neighbour> neighbours{{"Hud", "MoveLine"}, {"Actions", "Hint"}, {"Actions", "ActionRow"}, {"Hints", "WaitPanel"}, {"Hints", "AdviceText"}, {"HintsButton", "HintButton"}};
+            const Vector<Neighbour> neighbours{{"Hud", "MoveLine"}, {"Actions", "Hint"}, {"Actions", "ActionRow"}, {"Hints", "WaitPanel"}, {"Hints", "AdviceText"}, {"HintsButton", "HintButton"}};
             for (const Neighbour& neighbour : neighbours) {
                 const UIElement* element = Element(neighbour.node, neighbour.element);
                 ASSERT_NE(element, nullptr) << neighbour.element;
@@ -469,7 +469,7 @@ namespace BECore::Mahjong::Tests {
             // The hints (the corner of the removed round box) keep a grid unit from every other element of the HUD, from the plates under the
             // discard blocks and from the centre panel, which they leave free
             const Neighbour hints[] = {{"Hints", "WaitPanel"}, {"Hints", "AdviceText"}, {"HintsButton", "HintButton"}};
-            eastl::vector<Rect> others = ZonePlates(layout);
+            Vector<Rect> others = ZonePlates(layout);
             others.push_back(layout.zones.centerPanel);
             for (const Neighbour& other : neighbours) {
                 others.push_back(Element(other.node, other.element)->rect);
@@ -605,7 +605,7 @@ namespace BECore::Mahjong::Tests {
             }
             // The same on the whole matrix, each canvas against the view of its window's shape (the portrait variants of the files)
             for (const char* node : {"Hud", "SeatPlates", "CenterPanel", "HudMenu"}) {
-                const std::vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas(node), kButtonAir);
+                const Vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas(node), kButtonAir);
                 EXPECT_TRUE(cut.empty()) << node << ": " << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
             }
             EXPECT_GE(Element("HudMenu", "NewGame")->rect.h, kMinControlHeight);
@@ -630,7 +630,7 @@ namespace BECore::Mahjong::Tests {
             for (const Output& output : kOutputs) {
                 ExpectWordsFit("HudMenu", output.width, output.height, kButtonAir);
             }
-            const std::vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("HudMenu"), kButtonAir);
+            const Vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("HudMenu"), kButtonAir);
             EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
         });
     }
@@ -666,7 +666,7 @@ namespace BECore::Mahjong::Tests {
             for (const Output& output : kOutputs) {
                 ExpectWordsFit("Setup", output.width, output.height, kButtonAir);
             }
-            const std::vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Setup"), kButtonAir);
+            const Vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Setup"), kButtonAir);
             EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
         });
     }
@@ -697,9 +697,9 @@ namespace BECore::Mahjong::Tests {
         // lie against each other (the group is the card, a row has no colour); each row has a muted caption and a choice group.
         struct Group {
             String name, caption;
-            std::vector<String> rows;
+            Vector<String> rows;
         };
-        const std::vector<Group> groups{{"SeatsGroup", "SeatsCaption", {"SeatRow0", "SeatRow1", "SeatRow2", "SeatRow3"}}, {"MatchGroup", "MatchCaption", {"HandsRow"}}};
+        const Vector<Group> groups{{"SeatsGroup", "SeatsCaption", {"SeatRow0", "SeatRow1", "SeatRow2", "SeatRow3"}}, {"MatchGroup", "MatchCaption", {"HandsRow"}}};
         const Rect* above = &title->rect;
         for (const Group& entry : groups) {
             SCOPED_TRACE(entry.name);
@@ -838,7 +838,7 @@ namespace BECore::Mahjong::Tests {
             const TableLayout layout = MakeWorstCaseTableLayout(0, window);
 
             // The plates the table paints under the discard blocks and the wall ring
-            const eastl::vector<Rect> plates = ZonePlates(layout);
+            const Vector<Rect> plates = ZonePlates(layout);
 
             // The line of the last move is hidden until a move is made: shown here, so that its place is checked too
             Canvas("Hud")->SetElementVisible("MoveLine"_intern, true);
@@ -1001,7 +1001,7 @@ namespace BECore::Mahjong::Tests {
             for (const Output& output : kOutputs) {
                 ExpectWordsFit("Hud", output.width, output.height, kButtonAir);
             }
-            const std::vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Hud"), kButtonAir);  // in the portrait view too: the plate is narrower there
+            const Vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Hud"), kButtonAir);  // in the portrait view too: the plate is narrower there
             EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
         });
     }
@@ -1013,7 +1013,7 @@ namespace BECore::Mahjong::Tests {
         Draw();
         EXPECT_FALSE(OnScreen("Hud", "SelectedTile")) << "hidden while nothing is selected";
         // Everything that hides in the files is shown, so that its place is asked for
-        const std::vector<const char*> nodes{"Hud", "Actions", "Hints", "HintsButton"};
+        const Vector<const char*> nodes{"Hud", "Actions", "Hints", "HintsButton"};
         for (const char* node : nodes) {
             const auto canvas = Canvas(node);
             ASSERT_TRUE(canvas) << node;
@@ -1024,7 +1024,7 @@ namespace BECore::Mahjong::Tests {
         for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait, TableShape::Wide, TableShape::Narrow}) {
             const MatrixWindow window = DesignWindowOf(shape);
             const TableLayout layout = MakeWorstCaseTableLayout(0, window);
-            const eastl::vector<Rect> plates = ZonePlates(layout);
+            const Vector<Rect> plates = ZonePlates(layout);
             ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
                 SCOPED_TRACE(Format("{} {}", window.label.c_str(), language.ToStringView().data()).c_str());
                 const String longest = LongestSelectedText();
@@ -1478,11 +1478,11 @@ namespace BECore::Mahjong::Tests {
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             ExpectPassesTheMatrix("Setup", EngineTouchMinimum());
-            const std::vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Setup"), kButtonAir);
+            const Vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Setup"), kButtonAir);
             EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
 
             // The header text of a dropdown is not among the words above (it is no plain label): it keeps the whole width and shows "10"
-            std::vector<String> narrow;
+            Vector<String> narrow;
             auto setup = Canvas("Setup");
             ForEachMatrixWindow([&](const MatrixWindow& window) {
                 for (const CanvasScaleMode mode : {CanvasScaleMode::ConstantPixelSize, CanvasScaleMode::ScaleWithScreen, CanvasScaleMode::ConstantPhysicalSize}) {
@@ -1897,7 +1897,7 @@ namespace BECore::Mahjong::Tests {
             for (const Output& output : kOutputs) {
                 ExpectWordsFit("Setup", output.width, output.height, kButtonAir);
             }
-            const std::vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Setup"), kButtonAir);
+            const Vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Setup"), kButtonAir);
             EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
         });
         ASSERT_TRUE(_game->SetLanguage("ru"_intern));

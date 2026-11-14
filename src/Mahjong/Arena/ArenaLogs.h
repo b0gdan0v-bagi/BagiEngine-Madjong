@@ -13,7 +13,7 @@ namespace BECore::Mahjong::Arena {
     /// The seam for the files, as the analyzer has `FileReader`: the `*.jsonl` files of `path` (a folder, searched recursively, or one
     /// file) with their text, or the error text when the path cannot be read. The program supplies the real one; a test supplies strings.
     /// The order is the reader's own: `ReadLogs` sorts by name, so the report does not depend on it.
-    using LogSource = std::function<std::expected<eastl::vector<LogFile>, String>(StringView path)>;
+    using LogSource = std::function<std::expected<Vector<LogFile>, String>(StringView path)>;
 
     /// `text` with every tab and line break turned into a space: a cell of a tab separated line, a reason on one line.
     [[nodiscard]] String OneLine(String text);
@@ -29,7 +29,7 @@ namespace BECore::Mahjong::Arena {
         LogProblem problem = LogProblem::Unreadable;
         String reason;
         /// An `ok` log: its events, and whether it reached its `End` (a match that was given up stops early and is still `ok`).
-        eastl::vector<MatchLogEvent> events;
+        Vector<MatchLogEvent> events;
         bool complete = false;
     };
 
@@ -48,10 +48,10 @@ namespace BECore::Mahjong::Arena {
     };
 
     /// The files of `path` through `source`, sorted by name (byte order), each checked. The error text is the source's.
-    [[nodiscard]] std::expected<eastl::vector<CheckedLog>, String> ReadLogs(const LogSource& source, StringView path);
+    [[nodiscard]] std::expected<Vector<CheckedLog>, String> ReadLogs(const LogSource& source, StringView path);
 
     /// A key and how many times it was met, in the report's order.
-    using CountList = eastl::vector<eastl::pair<String, int>>;
+    using CountList = Vector<eastl::pair<String, int>>;
 
     /// The smallest, mean and largest of a count over the matches of the corpus (all 0 for none).
     struct Spread {
@@ -65,8 +65,8 @@ namespace BECore::Mahjong::Arena {
         int files = 0;
         int replayed = 0;
         /// Dropped files per `LogProblem`, and the dropped files in name order with their reasons.
-        eastl::array<int, EnumUtils<LogProblem>::Count()> dropped{};
-        eastl::vector<eastl::pair<String, String>> droppedFiles;
+        Array<int, EnumUtils<LogProblem>::Count()> dropped{};
+        Vector<eastl::pair<String, String>> droppedFiles;
         int complete = 0;
         int abandoned = 0;
         /// The hands settled, over all matches.
@@ -76,9 +76,9 @@ namespace BECore::Mahjong::Arena {
         /// Seat setups (`PCCC`) in letter order.
         CountList setups;
         /// The computer seats at each level `1..kMaxLevel` (a person's seat has a level in the log too; it is not counted).
-        eastl::array<int, kMaxLevel> computerLevels{};
+        Array<int, kMaxLevel> computerLevels{};
         /// Matches per `MatchPlatform`, indexed by the enum value.
-        eastl::array<int, EnumUtils<MatchPlatform>::Count()> platforms{};
+        Array<int, EnumUtils<MatchPlatform>::Count()> platforms{};
         /// Matches per build id in id order; a log with no build id is under `kNoBuild`.
         CountList builds;
         /// Hands settled and actions taken per match.
@@ -90,6 +90,6 @@ namespace BECore::Mahjong::Arena {
     inline constexpr StringView kNoBuild = "unknown";
 
     /// Counts `logs` (from `ReadLogs`). The same logs give the same corpus.
-    [[nodiscard]] LogCorpus SummariseLogs(const eastl::vector<CheckedLog>& logs);
+    [[nodiscard]] LogCorpus SummariseLogs(const Vector<CheckedLog>& logs);
 
 }  // namespace BECore::Mahjong::Arena

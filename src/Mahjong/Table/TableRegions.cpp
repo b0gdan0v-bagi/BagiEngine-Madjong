@@ -14,7 +14,7 @@ namespace BECore::Mahjong {
         return false;
     }
 
-    void RebuildTableRegions(const TableLayout& layout, eastl::vector<TableRegion>& regions) {
+    void RebuildTableRegions(const TableLayout& layout, Vector<TableRegion>& regions) {
         regions.clear();
         for (int position = 0; position < kSeatCount; ++position) {
             regions.push_back(TableRegion{kPlateRegionNames[position], layout.zones.seatPlates[SeatAtPosition(layout.viewer, position)]});
@@ -26,8 +26,8 @@ namespace BECore::Mahjong {
         }
     }
 
-    eastl::vector<TableRegion> MakeTableRegions(const TableLayout& layout) {
-        eastl::vector<TableRegion> regions;
+    Vector<TableRegion> MakeTableRegions(const TableLayout& layout) {
+        Vector<TableRegion> regions;
         RebuildTableRegions(layout, regions);
         return regions;
     }

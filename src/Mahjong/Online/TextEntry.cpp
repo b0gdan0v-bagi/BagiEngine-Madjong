@@ -81,8 +81,8 @@ namespace BECore::Mahjong {
 
     TextEntry::TextEntry(Kind kind) : _kind(kind) {}
 
-    eastl::vector<String> TextEntry::Pad(const UIStrings& strings) const {
-        eastl::vector<String> keys;
+    Vector<String> TextEntry::Pad(const UIStrings& strings) const {
+        Vector<String> keys;
         keys.reserve(kPadMaxKeys);
         if (_kind == Kind::Code) {
             for (const char c : RoomLimits::kRoomCodeAlphabet) {

@@ -68,7 +68,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// Whether `actions` holds `wanted`.
-    inline bool Has(const eastl::vector<HandAction>& actions, const HandAction& wanted) {
+    inline bool Has(const Vector<HandAction>& actions, const HandAction& wanted) {
         return eastl::find(actions.begin(), actions.end(), wanted) != actions.end();
     }
 
@@ -105,7 +105,7 @@ namespace BECore::Mahjong::Tests {
     /// Each seat in turn discards the next tile of `tiles`; the seats in `declaring` declare the calling hand with their discard.
     /// No discard of a lap may open a claim window.
     inline void Lap(HandModel& model, const String& tiles, std::initializer_list<Seat> declaring = {}) {
-        const eastl::vector<Tile> parsed = ParseTiles(tiles).value();
+        const Vector<Tile> parsed = ParseTiles(tiles).value();
         for (const Tile tile : parsed) {
             const Seat seat = model.CurrentSeat();
             const bool declare = eastl::find(declaring.begin(), declaring.end(), seat) != declaring.end();
@@ -127,9 +127,9 @@ namespace BECore::Mahjong::Tests {
 
     /// Every canonical action a seat could try, listed or not: a discard of each playable kind with and without the declaration, the
     /// win, both kongs of each kind, a claim of each kind (a chow with every possible first tile, and with none), the pass.
-    inline const eastl::vector<HandAction>& EveryCanonicalAction() {
-        static const eastl::vector<HandAction> candidates = [] {
-            eastl::vector<HandAction> list;
+    inline const Vector<HandAction>& EveryCanonicalAction() {
+        static const Vector<HandAction> candidates = [] {
+            Vector<HandAction> list;
             list.push_back(HandAction::MakeDeclareWin());
             list.push_back(HandAction::MakePass());
             list.push_back(HandAction::MakeClaim(ClaimKind::Chow));
@@ -152,7 +152,7 @@ namespace BECore::Mahjong::Tests {
     /// `Apply` accepts a canonical action of `seat` exactly when `LegalActions(seat)` lists it (each tried on a copy). The failure
     /// names the first action that disagrees.
     inline ::testing::AssertionResult AcceptedExactlyWhenListed(const HandModel& model, Seat seat) {
-        const eastl::vector<HandAction> legal = model.LegalActions(seat);
+        const Vector<HandAction> legal = model.LegalActions(seat);
         for (const HandAction& candidate : EveryCanonicalAction()) {
             HandModel copy = model;
             const bool accepted = copy.Apply(seat, candidate).has_value();
@@ -183,7 +183,7 @@ namespace BECore::Mahjong::Tests {
         if (model.GetPhase() == Phase::Discard) {
             return model.CurrentSeat();
         }
-        const eastl::vector<Seat> pending = model.PendingClaimSeats();
+        const Vector<Seat> pending = model.PendingClaimSeats();
         return pending.empty() ? kNoSeat : pending[rng.Below(static_cast<uint32_t>(pending.size()))];
     }
 
@@ -192,13 +192,13 @@ namespace BECore::Mahjong::Tests {
         return action.kind == ActionKind::DeclareWin || (action.kind == ActionKind::Claim && action.claim == ClaimKind::Mahjong);
     }
 
-    inline HandAction PickRandom(const eastl::vector<HandAction>& actions, MahjongRng& rng) {
+    inline HandAction PickRandom(const Vector<HandAction>& actions, MahjongRng& rng) {
         return actions[rng.Below(static_cast<uint32_t>(actions.size()))];
     }
 
     /// The action a player of `mode` takes from a non-empty list.
-    inline HandAction Choose(const eastl::vector<HandAction>& actions, Mode mode, MahjongRng& rng) {
-        eastl::vector<HandAction> wanted;
+    inline HandAction Choose(const Vector<HandAction>& actions, Mode mode, MahjongRng& rng) {
+        Vector<HandAction> wanted;
         for (const HandAction& action : actions) {
             if (mode == Mode::NeverWin) {
                 if (!WinsTheHand(action)) {
@@ -225,7 +225,7 @@ namespace BECore::Mahjong::Tests {
         while (hand.GetPhase() != Phase::Finished) {
             const Seat actor = NextActor(hand, rng);
             ASSERT_NE(actor, kNoSeat);
-            const eastl::vector<HandAction> actions = hand.LegalActions(actor);
+            const Vector<HandAction> actions = hand.LegalActions(actor);
             ASSERT_FALSE(actions.empty());
             ASSERT_TRUE(hand.Apply(actor, Choose(actions, mode, rng)).has_value());
         }

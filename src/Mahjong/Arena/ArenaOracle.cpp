@@ -71,7 +71,7 @@ namespace BECore::Mahjong::Arena {
             if (wins[normal.tile.Id()] == 0) {
                 return normal;
             }
-            const eastl::vector<DiscardOption> options = RateDiscards(CountTiles(view.own.concealed), MeldCountOf(view), view);
+            const Vector<DiscardOption> options = RateDiscards(CountTiles(view.own.concealed), MeldCountOf(view), view);
             if (options.empty()) {
                 return normal;
             }
@@ -101,7 +101,7 @@ namespace BECore::Mahjong::Arena {
             if (!wallOrderKnown) {
                 const size_t looseCount = world.loose.size();
                 const size_t liveCount = world.live.size();
-                eastl::vector<Tile> wall = world.loose;
+                Vector<Tile> wall = world.loose;
                 wall.insert(wall.end(), world.live.begin(), world.live.end());
                 wall.insert(wall.end(), world.dead.begin(), world.dead.end());
                 rng.Shuffle(wall);

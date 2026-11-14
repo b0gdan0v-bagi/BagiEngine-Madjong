@@ -23,13 +23,13 @@ namespace BECore::Mahjong {
     }
 
     Seat DecideEast(const SeatRoller& roll) {
-        eastl::vector<Seat> running;
+        Vector<Seat> running;
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             running.push_back(seat);
         }
         while (running.size() > 1) {
             int best = 0;
-            eastl::vector<Seat> leaders;
+            Vector<Seat> leaders;
             for (const Seat seat : running) {
                 const int total = roll(seat);
                 // The first roll of the round starts the leaders, whatever it is, so a roller that returns 0 or less still ends.

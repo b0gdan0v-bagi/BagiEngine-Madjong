@@ -37,16 +37,16 @@ namespace BECore::Mahjong {
         /// The winner's sum and the winning tile ("Winning tile 4 Dots: 36 points x 8 = 288, score 290"); for a drawn hand "No payments".
         String summary;
         /// The captions of the five columns of `rows`: seat, wind, hand, change, total.
-        eastl::array<String, 5> columns;
+        Array<String, 5> columns;
         /// One row per seat, by seat.
-        eastl::array<ScoreRow, kSeatCount> rows;
+        Array<ScoreRow, kSeatCount> rows;
         /// The winning seat, `kNoSeat` for a drawn hand: its row is the one that is lit.
         Seat winner = kNoSeat;
         /// The tiles of the winning hand as the plate shows them: the melds as laid, then the concealed tiles, the winning tile last;
         /// at most `kMaxWinningTiles`. Empty for a drawn hand. When the caller passes no hand, only `result.winningTile`.
-        eastl::vector<Tile> winningTiles;
+        Vector<Tile> winningTiles;
         /// The winner's lines in the order of the breakdown, at most `kMaxScoreLines`; empty for a drawn hand.
-        eastl::vector<String> lines;
+        Vector<String> lines;
     };
 
     /// One seat of the standings.
@@ -63,7 +63,7 @@ namespace BECore::Mahjong {
     /// The screen at the end of a match: the winner (or the tied seats) and the seats by points, best first.
     struct StandingsTable {
         String headline;
-        eastl::array<StandingRow, kSeatCount> rows;
+        Array<StandingRow, kSeatCount> rows;
     };
 
     /// "5 Dots", "East Wind", "Red Dragon", "Flower 1", "Season 3"; "No tile" for an invalid one.

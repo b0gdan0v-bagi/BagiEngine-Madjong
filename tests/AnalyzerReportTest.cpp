@@ -274,7 +274,7 @@ namespace BECore::Mahjong::Analyzer {
         ASSERT_NE(FindJsonMember(json, "actions"), nullptr);
         const Json& actions = *FindJsonMember(json, "actions");
         ASSERT_EQ(actions.size(), ClaimAnalysis().rows.size());
-        const eastl::vector<HandAction> sorted = {kChow, kPass, kPung, kKong, kMahjong};
+        const Vector<HandAction> sorted = {kChow, kPass, kPung, kKong, kMahjong};
         for (size_t index = 0; index < actions.size(); ++index) {
             const std::expected<ControlAction, ControlError> action = ActionFromJson(*FindJsonMember(actions[index], "action"));
             ASSERT_TRUE(action.has_value()) << index;

@@ -20,7 +20,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// Replaces the contents of `strings` by the shipped `config/UIStrings.xml` and returns what `LoadFromXml` complained about (empty when the file is sound).
-    inline eastl::vector<String> LoadShippedStrings(UIStrings& strings) {
+    inline Vector<String> LoadShippedStrings(UIStrings& strings) {
         strings.Clear();
         auto config = XmlConfig::Create();
         if (!config.LoadFromFile(ShippedStringsPath())) {
@@ -38,12 +38,12 @@ namespace BECore::Mahjong::Tests {
     /// The strings of one `<language>` of the shipped file, in file order.
     struct LanguageEntries {
         String id;
-        std::vector<StringEntry> entries;
+        Vector<StringEntry> entries;
     };
 
     /// Every language of the shipped `config/UIStrings.xml` with its strings: the table itself cannot list its keys, the parity checks read the file.
-    inline std::vector<LanguageEntries> ReadShippedEntries() {
-        std::vector<LanguageEntries> languages;
+    inline Vector<LanguageEntries> ReadShippedEntries() {
+        Vector<LanguageEntries> languages;
         auto config = XmlConfig::Create();
         if (!config.LoadFromFile(ShippedStringsPath())) {
             return languages;
@@ -84,7 +84,7 @@ namespace BECore::Mahjong::Tests {
     template <typename Check>
     void ForEachLanguage(UIStrings& strings, Check&& check) {
         const PoolString saved = strings.GetLanguage();
-        const eastl::vector<PoolString> languages = strings.GetLanguages();
+        const Vector<PoolString> languages = strings.GetLanguages();
         for (const PoolString language : languages) {
             ASSERT_TRUE(strings.SetLanguage(language)) << language.ToStringView().data();
             check(language);
@@ -93,7 +93,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// The longest text of `candidates` by code points (how a line of text is measured in any language, the bytes of Cyrillic are twice as many); the first of equals; empty for none.
-    inline String LongestText(const std::vector<String>& candidates) {
+    inline String LongestText(const Vector<String>& candidates) {
         String longest;
         size_t most = 0;
         for (const String& candidate : candidates) {

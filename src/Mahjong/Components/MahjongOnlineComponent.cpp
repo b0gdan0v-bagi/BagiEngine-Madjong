@@ -688,7 +688,7 @@ namespace BECore::Mahjong {
 
     void MahjongOnlineComponent::PublishRooms(const OnlineClient& client, const UIStrings& strings) {
         UIVars& vars = CoreManager::GetUIVars();
-        const eastl::vector<OnlineListedRoom>& listed = client.Rooms().rooms;
+        const Vector<OnlineListedRoom>& listed = client.Rooms().rooms;
         for (size_t row = 0; row < static_cast<size_t>(OnlineScreens::kRoomsPerPage); ++row) {
             const bool has = row < static_cast<size_t>(_screens.RoomsOnPage()) && _screens.RoomIndex(static_cast<int>(row)) < listed.size();
             vars.Set(_listVars[row], has ? StringView(RoomRowText(strings, listed[_screens.RoomIndex(static_cast<int>(row))])) : StringView());
@@ -739,7 +739,7 @@ namespace BECore::Mahjong {
         _padPublished = true;
         _padField = field;
         _padStrings = strings.GetVersion();
-        const eastl::vector<String>& pad = _screens.Pad();
+        const Vector<String>& pad = _screens.Pad();
         UIVars& vars = CoreManager::GetUIVars();
         for (size_t key = 0; key < TextEntry::kPadMaxKeys; ++key) {
             const bool has = key < pad.size();

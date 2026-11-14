@@ -26,7 +26,7 @@ namespace BECore::Mahjong {
         TableView ViewAfterKong(const TableView& view) {
             TableView after = view;
             int left = kKongTilesFromHand;
-            eastl::vector<Tile> concealed;
+            Vector<Tile> concealed;
             for (const Tile tile : view.own.concealed) {
                 if (left > 0 && tile == view.pendingTile) {
                     --left;
@@ -47,8 +47,8 @@ namespace BECore::Mahjong {
         }
 
         /// The acceptable claims no other acceptable claim beats (several when they are equal in every respect).
-        eastl::vector<HandAction> BestClaims(const TableView& view, int shantenBefore, const LevelProfile& profile) {
-            eastl::vector<RatedClaim> best;
+        Vector<HandAction> BestClaims(const TableView& view, int shantenBefore, const LevelProfile& profile) {
+            Vector<RatedClaim> best;
             for (const RatedClaim& candidate : RateClaims(view, shantenBefore, profile)) {
                 if (!candidate.acceptable) {
                     continue;
@@ -61,7 +61,7 @@ namespace BECore::Mahjong {
                 }
                 best.push_back(candidate);
             }
-            eastl::vector<HandAction> actions;
+            Vector<HandAction> actions;
             for (const RatedClaim& candidate : best) {
                 actions.push_back(candidate.action);
             }
@@ -118,8 +118,8 @@ namespace BECore::Mahjong {
         return a.rank > b.rank;
     }
 
-    eastl::vector<RatedClaim> RateClaims(const TableView& view, int shantenBefore, const LevelProfile& profile) {
-        eastl::vector<RatedClaim> options;
+    Vector<RatedClaim> RateClaims(const TableView& view, int shantenBefore, const LevelProfile& profile) {
+        Vector<RatedClaim> options;
         for (const HandAction& action : view.legal) {
             if (action.kind != ActionKind::Claim || action.claim == ClaimKind::Mahjong) {
                 continue;
@@ -169,7 +169,7 @@ namespace BECore::Mahjong {
                 return {*searched, searched->kind == ActionKind::Claim ? ClaimStep::Claim : ClaimStep::NoGain};
             }
         }
-        const eastl::vector<HandAction> best = BestClaims(view, shantenBefore, profile);
+        const Vector<HandAction> best = BestClaims(view, shantenBefore, profile);
         if (best.empty()) {
             return {HandAction::MakePass(), ClaimStep::NoGain};
         }

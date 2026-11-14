@@ -43,7 +43,7 @@ namespace BECore::Mahjong::Tests {
         /// are about the turn, so a claim window that the scattered hands happen to open is passed by every seat (the claims have their
         /// own tests, `HandModelClaimTest`).
         void DiscardEach(HandModel& model, const String& tiles) {
-            const eastl::vector<Tile> parsed = ParseTiles(tiles).value();
+            const Vector<Tile> parsed = ParseTiles(tiles).value();
             for (const Tile tile : parsed) {
                 const Seat seat = model.CurrentSeat();
                 const HandStatus status = model.Discard(seat, tile);
@@ -165,7 +165,7 @@ namespace BECore::Mahjong::Tests {
         HandModel model = MakeModel(spec);
         DiscardEach(model, "9p 4m 6m 8p 5m");
 
-        const eastl::vector<DiscardEntry>& pile = model.Discards();
+        const Vector<DiscardEntry>& pile = model.Discards();
         ASSERT_EQ(pile.size(), 5u);
         const char* const tiles[] = {"9p", "4m", "6m", "8p", "5m"};
         const Seat seats[] = {kSeat0, kSeat1, kSeat2, kSeat3, kSeat0};

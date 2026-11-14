@@ -100,8 +100,8 @@ namespace BECore::Mahjong::Tests {
 
         /// Plays `model` to its end by `Decide` of four players seeded like a table's: what `ComputerTable::Step` must equal.
         void PlayByDecide(HandModel& model, uint32_t seed, const LevelProfile& profile) {
-            eastl::array<ComputerPlayer, kSeatCount> players = {ComputerPlayer(SeatSeed(seed, 0), profile), ComputerPlayer(SeatSeed(seed, 1), profile), ComputerPlayer(SeatSeed(seed, 2), profile),
-                                                                ComputerPlayer(SeatSeed(seed, 3), profile)};
+            Array<ComputerPlayer, kSeatCount> players = {ComputerPlayer(SeatSeed(seed, 0), profile), ComputerPlayer(SeatSeed(seed, 1), profile), ComputerPlayer(SeatSeed(seed, 2), profile),
+                                                         ComputerPlayer(SeatSeed(seed, 3), profile)};
             for (int step = 0; model.GetPhase() != Phase::Finished && step < kStepLimit; ++step) {
                 const Seat actor = ComputerTable::NextActor(model);
                 const Optional<HandAction> action = players[actor].Decide(model, actor);
@@ -188,7 +188,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(ComputerTable::NextActor(turn), kSeat0);
 
         const HandModel window = WindowOfTwoModel();
-        ASSERT_EQ(window.PendingClaimSeats(), (eastl::vector<Seat>{kSeat1, kSeat3}));
+        ASSERT_EQ(window.PendingClaimSeats(), (Vector<Seat>{kSeat1, kSeat3}));
         EXPECT_EQ(ComputerTable::NextActor(window), kSeat1);
 
         EXPECT_EQ(ComputerTable::NextActor(HandModel{}), kNoSeat) << "a model never begun is a finished hand";
@@ -249,7 +249,7 @@ namespace BECore::Mahjong::Tests {
     TEST(ComputerPlayerTest, FourPlayersPlayAHandToTheWinTheFirstOneDeclaredTwoTurnsEarlier) {
         HandModel model = WinningWallModel();
         ComputerTable table(kSeed);
-        eastl::vector<HandAction> eastActions;
+        Vector<HandAction> eastActions;
 
         for (int steps = 0; model.GetPhase() != Phase::Finished; ++steps) {
             ASSERT_LT(steps, 100);
@@ -290,9 +290,9 @@ namespace BECore::Mahjong::Tests {
         int ready = 0;
         for (uint32_t seed = 1; seed <= kHandSeeds; ++seed) {
             HandModel model = PlayedHandModel(seed);
-            eastl::array<ComputerPlayer, kSeatCount> begun = {ComputerPlayer(SeatSeed(seed, 0), profile), ComputerPlayer(SeatSeed(seed, 1), profile), ComputerPlayer(SeatSeed(seed, 2), profile),
-                                                              ComputerPlayer(SeatSeed(seed, 3), profile)};
-            eastl::array<ComputerPlayer, kSeatCount> chosen = begun;
+            Array<ComputerPlayer, kSeatCount> begun = {ComputerPlayer(SeatSeed(seed, 0), profile), ComputerPlayer(SeatSeed(seed, 1), profile), ComputerPlayer(SeatSeed(seed, 2), profile),
+                                                       ComputerPlayer(SeatSeed(seed, 3), profile)};
+            Array<ComputerPlayer, kSeatCount> chosen = begun;
             for (int step = 0; model.GetPhase() != Phase::Finished && step < kStepLimit; ++step) {
                 const Seat actor = ComputerTable::NextActor(model);
                 const TableView view = MakeTableView(model, actor);
@@ -323,8 +323,7 @@ namespace BECore::Mahjong::Tests {
     TEST(ComputerPlayerTest, BeginAnswersReadyWithNoSearchProfileAndForTheDecisionsASearchLeavesAlone) {
         const UnsearchedViews views = ScanForUnsearchedViews();
         const LevelProfile profile = SearchProfile();
-        const eastl::vector<std::pair<const char*, const Optional<TableView>*>> cases = {
-            {"a win", &views.win}, {"a mahjong claim", &views.mahjong}, {"a waiting hand that passes", &views.waitingPass}};
+        const Vector<std::pair<const char*, const Optional<TableView>*>> cases = {{"a win", &views.win}, {"a mahjong claim", &views.mahjong}, {"a waiting hand that passes", &views.waitingPass}};
         for (const auto& [name, view] : cases) {
             ASSERT_TRUE(view->has_value()) << name << " was not found";
             ComputerPlayer begun(kSeed, profile);

@@ -37,18 +37,18 @@ namespace BECore::Mahjong::Arena {
         int64_t hands = 0;
         int64_t drawn = 0;
         /// The won hands by how they were won, indexed by `WinSource`.
-        eastl::array<int64_t, kWinSourceCount> wonBySource{};
+        Array<int64_t, kWinSourceCount> wonBySource{};
         /// `[declared opponents][i - 1]`.
-        eastl::array<eastl::array<RoundCount, kTableStatsRounds>, kDeclaredCases> rounds{};
+        Array<Array<RoundCount, kTableStatsRounds>, kDeclaredCases> rounds{};
         /// The score of the winner of a won hand, by whether the winner was East (index 0) or not (1).
-        eastl::array<SampleSums, kEastCases> winnerScore{};
+        Array<SampleSums, kEastCases> winnerScore{};
         /// The standing score of each seat that did not win in a won hand, by whether that seat was East (index 0) or not (1).
-        eastl::array<SampleSums, kEastCases> standingScore{};
+        Array<SampleSums, kEastCases> standingScore{};
     };
 
     /// The number of declared opponents of each own turn of a seat, in the order of its turns: what the observer of a hand collects. An
     /// own turn is an action in the `Discard` phase (a drawn tile, a claimed pung or chow, or the tile after a kong).
-    using OwnTurns = eastl::array<eastl::vector<int>, kSeatCount>;
+    using OwnTurns = Array<Vector<int>, kSeatCount>;
 
     /// The observer that fills `turns` (cleared first) as `PlayArenaHand` calls it: at each action of the `Discard` phase the actor's turn
     /// is appended with the number of the other three seats that have declared the calling hand.

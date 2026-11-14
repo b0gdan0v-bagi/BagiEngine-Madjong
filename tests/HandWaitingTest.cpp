@@ -27,11 +27,11 @@ namespace BECore::Mahjong::Tests {
             return CountTiles(ParseTiles(text).value());
         }
 
-        eastl::vector<Tile> WaitsOn(const String& text) {
-            return eastl::vector<Tile>{ParseTiles(text).value()[0]};
+        Vector<Tile> WaitsOn(const String& text) {
+            return Vector<Tile>{ParseTiles(text).value()[0]};
         }
 
-        String Describe(const eastl::vector<Tile>& tiles) {
+        String Describe(const Vector<Tile>& tiles) {
             String text;
             for (const Tile tile : tiles) {
                 AppendFormat(text, "{} ", ToString(tile));
@@ -40,8 +40,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// What `WinningTiles` returned before the prune: every kind whose four copies are not all held is added and tried.
-        eastl::vector<Tile> ReferenceWinningTiles(const Sample& sample) {
-            eastl::vector<Tile> tiles;
+        Vector<Tile> ReferenceWinningTiles(const Sample& sample) {
+            Vector<Tile> tiles;
             if (TotalTiles(sample.counts) != kWinningHandTiles - 1 - sample.meldCount * kTilesPerSet) {
                 return tiles;
             }
@@ -133,7 +133,7 @@ namespace BECore::Mahjong::Tests {
             bool AddOrphansShape() {
                 const uint32_t skipped = Below(kOrphanKinds + 1);  // kOrphanKinds: none skipped
                 int index = 0;
-                eastl::vector<uint8_t> held;
+                Vector<uint8_t> held;
                 for (uint8_t id = 0; id < kKindCount; ++id) {
                     const Tile tile{id};
                     if (!tile.IsTerminal() && !tile.IsHonour()) {
@@ -223,7 +223,7 @@ namespace BECore::Mahjong::Tests {
 
         /// `IsWaiting` and `WinningTiles` against the reference on one hand; returns whether the hand waits.
         bool ExpectSameAsReference(const Sample& sample) {
-            const eastl::vector<Tile> expected = ReferenceWinningTiles(sample);
+            const Vector<Tile> expected = ReferenceWinningTiles(sample);
             EXPECT_EQ(WinningTiles(sample.counts, sample.meldCount, sample.meldTiles), expected) << "reference: " << Describe(expected);
             EXPECT_EQ(IsWaiting(sample.counts, sample.meldCount, sample.meldTiles), !expected.empty()) << "reference: " << Describe(expected);
             return !expected.empty();

@@ -59,7 +59,7 @@ namespace BECore::Mahjong::Tests {
             return MakeTableView(ViewerModel(seat1, live), kSeat1);
         }
 
-        using Waits = std::vector<std::pair<String, int>>;
+        using Waits = Vector<std::pair<String, int>>;
 
         Waits WaitsOf(const TableView& view) {
             Waits waits;
@@ -149,8 +149,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Every kind of advice, each on a hand worked out by hand (the numbers are those of `ComputerExplainTest`).
-        std::vector<ReasonCase> ReasonCases() {
-            std::vector<ReasonCase> cases;
+        Vector<ReasonCase> ReasonCases() {
+            Vector<ReasonCase> cases;
             cases.push_back(TurnCase("discard", MakeModel(SpecOf("1s 2s 3s 4s 5s 6s 7m 8m 9m 5p 5p Rd Ew", "Nw")), kSeat0, TurnStep::Discard));
             cases.push_back(TurnCase("declare", MakeModel(SpecOf("1s 2s 3s 4s 5s 6s 7m 8m 9m 5p 6p 6p Ew", "Ew")), kSeat0, TurnStep::Declare));
             HandModel keeping = MakeModel(SpecOf(kTwoSidedWait, "Gd Wd Gd Nw 6p"));
@@ -183,7 +183,7 @@ namespace BECore::Mahjong::Tests {
         const char* const kDangerSentences[] = {"Safe against the ready hand.", "Low danger from the ready hand.", "Risky against the ready hand.", "Dangerous against the ready hand."};
         constexpr const char* kSafestTie = "this one is the safest.";
 
-        bool HasDangerLine(const std::vector<String>& lines) {
+        bool HasDangerLine(const Vector<String>& lines) {
             return std::any_of(lines.begin(), lines.end(),
                                [](const String& line) { return std::any_of(std::begin(kDangerSentences), std::end(kDangerSentences), [&](const char* sentence) { return line == sentence; }); });
         }
@@ -226,8 +226,8 @@ namespace BECore::Mahjong::Tests {
             return Format("{}|{}|{}|{}|{}", row.who, tiles, row.move, row.steps, row.useful);
         }
 
-        std::vector<String> FooterOf(const HintCard& card) {
-            std::vector<String> lines;
+        Vector<String> FooterOf(const HintCard& card) {
+            Vector<String> lines;
             for (const String& line : card.footer) {
                 lines.push_back(line);
             }
@@ -235,8 +235,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Everything the card says: the title, the head, a string per row, the lines under them.
-        std::vector<String> TextOf(const HintCard& card) {
-            std::vector<String> text{card.title, card.now};
+        Vector<String> TextOf(const HintCard& card) {
+            Vector<String> text{card.title, card.now};
             for (const CardRow& row : card.rows) {
                 text.push_back(RowText(row));
             }
@@ -247,7 +247,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The lines under the rows of the card of `view` (no tally).
-        std::vector<String> Lines(const UIStrings& strings, const TableView& view) {
+        Vector<String> Lines(const UIStrings& strings, const TableView& view) {
             return FooterOf(CardOf(strings, view));
         }
 
@@ -287,7 +287,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(HintsTest, ThirteenOrphansListsAllThirteenKinds) {
-        const eastl::vector<WaitEntry> waits = WaitingTiles(ViewOfSeat1(kOrphansWait));
+        const Vector<WaitEntry> waits = WaitingTiles(ViewOfSeat1(kOrphansWait));
 
         ASSERT_EQ(static_cast<int>(waits.size()), kMaxWaitingTiles);
         for (size_t i = 0; i < waits.size(); ++i) {
@@ -545,9 +545,9 @@ namespace BECore::Mahjong::Tests {
         view.pendingTile = T("5p");
         struct Case {
             HandAction advice;
-            std::vector<const char*> tiles;
+            Vector<const char*> tiles;
         };
-        const std::vector<Case> cases{
+        const Vector<Case> cases{
             {HandAction::MakeDiscard(T("7s")), {"7s"}},
             {HandAction::MakeDiscard(T("Nw"), true), {"Nw"}},
             {HandAction::MakeDeclareWin(), {}},
@@ -593,20 +593,20 @@ namespace BECore::Mahjong::Tests {
     TEST(HintsTest, TheKeysOfThePanelAreInBothLanguages) {
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
-        const std::vector<const char*> keys{"hints.waitCaption",      "hints.adviseButton",       "setup.hints",
-                                            "options.hintsHints",     "options.hintsCoach",       "setup.off",
-                                            "hints.card.now",         "hints.card.steps",         "hints.card.useful",
-                                            "hints.card.ready",       "hints.card.title.chow",    "hints.why.tie.none",
-                                            "hints.why.tie.keep",     "hints.why.tie.chance",     "hints.why.tie.danger",
-                                            "hints.why.danger.safe",  "hints.why.danger.low",     "hints.why.danger.medium",
-                                            "hints.why.danger.high",  "hints.why.keep.worthless", "hints.why.keep.terminal",
-                                            "hints.why.keep.simple",  "hints.why.keep.value",     "hints.card.best",
-                                            "hints.card.yours",       "hints.card.declare",       "hints.card.kong",
-                                            "hints.card.pung",        "hints.card.chow",          "hints.card.pass",
-                                            "hints.card.mahjong",     "hints.card.noKong",        "hints.why.kong.noWorse",
-                                            "hints.why.win",          "hints.why.claim.mahjong",  "hints.why.claim.value",
-                                            "hints.why.pass.waiting", "hints.why.pass.noGain",    "hints.why.pass.points",
-                                            "hints.why.kong.points"};
+        const Vector<const char*> keys{"hints.waitCaption",      "hints.adviseButton",       "setup.hints",
+                                       "options.hintsHints",     "options.hintsCoach",       "setup.off",
+                                       "hints.card.now",         "hints.card.steps",         "hints.card.useful",
+                                       "hints.card.ready",       "hints.card.title.chow",    "hints.why.tie.none",
+                                       "hints.why.tie.keep",     "hints.why.tie.chance",     "hints.why.tie.danger",
+                                       "hints.why.danger.safe",  "hints.why.danger.low",     "hints.why.danger.medium",
+                                       "hints.why.danger.high",  "hints.why.keep.worthless", "hints.why.keep.terminal",
+                                       "hints.why.keep.simple",  "hints.why.keep.value",     "hints.card.best",
+                                       "hints.card.yours",       "hints.card.declare",       "hints.card.kong",
+                                       "hints.card.pung",        "hints.card.chow",          "hints.card.pass",
+                                       "hints.card.mahjong",     "hints.card.noKong",        "hints.why.kong.noWorse",
+                                       "hints.why.win",          "hints.why.claim.mahjong",  "hints.why.claim.value",
+                                       "hints.why.pass.waiting", "hints.why.pass.noGain",    "hints.why.pass.points",
+                                       "hints.why.kong.points"};
 
         ForEachLanguage(strings, [&](PoolString language) {
             for (const char* key : keys) {
@@ -637,7 +637,7 @@ namespace BECore::Mahjong::Tests {
     TEST(HintsTest, EveryKindOfAdviceHasACardInEveryLanguage) {
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
-        const std::vector<ReasonCase> cases = ReasonCases();
+        const Vector<ReasonCase> cases = ReasonCases();
 
         ForEachLanguage(strings, [&](PoolString language) {
             for (const ReasonCase& one : cases) {
@@ -657,13 +657,13 @@ namespace BECore::Mahjong::Tests {
                     EXPECT_EQ(card.rows[0].kind, CardRowKind::Best) << where;
                     EXPECT_FALSE(card.rows[0].who.empty()) << where;
                 }
-                const std::vector<String> text = TextOf(card);
+                const Vector<String> text = TextOf(card);
                 for (const String& line : text) {
                     EXPECT_EQ(line.find('{'), String::npos) << where << ": " << line;
                     EXPECT_EQ(line.find('}'), String::npos) << where << ": " << line;
                     EXPECT_EQ(line.find("hints."), String::npos) << where << ": a key is missing: " << line;
                 }
-                const std::vector<String> footer = FooterOf(card);
+                const Vector<String> footer = FooterOf(card);
                 EXPECT_EQ(std::set<String>(footer.begin(), footer.end()).size(), footer.size()) << where << ": a line is said twice";
             }
         });
@@ -673,7 +673,7 @@ namespace BECore::Mahjong::Tests {
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
         ASSERT_TRUE(strings.SetLanguage("en"_intern));
-        const std::vector<ReasonCase> cases = ReasonCases();
+        const Vector<ReasonCase> cases = ReasonCases();
         const auto of = [&](const char* name) -> const TableView& {
             for (const ReasonCase& one : cases) {
                 if (String(one.name) == name) {
@@ -709,7 +709,7 @@ namespace BECore::Mahjong::Tests {
         const TurnExplanation declaring = *ExplainAdviceFor(of("declare"))->turn;
         EXPECT_EQ(RowText(declare.rows[0]), Format("Best|{} |declare|ready|8", ToString(declaring.chosen.tile)));
         EXPECT_EQ(RowText(declare.rows[1]), "|5p ||ready|4");
-        EXPECT_EQ(FooterOf(declare), (std::vector<String>{"No other tile rates as well."}));
+        EXPECT_EQ(FooterOf(declare), (Vector<String>{"No other tile rates as well."}));
 
         // A kong: the hand with it against the hand without it.
         const TurnExplanation kong = *ExplainAdviceFor(of("concealedKong"))->turn;
@@ -717,7 +717,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(kongCard.rows.size(), 2u);
         EXPECT_EQ(RowText(kongCard.rows[0]), Format("Best|Ew |Kong|{}|{}", StepsWord(kong.kongShantenAfter), kong.kongAcceptanceAfter));
         EXPECT_EQ(RowText(kongCard.rows[1]), Format("||No kong|{}|{}", StepsWord(kong.shantenBefore), kong.kongAcceptanceBefore));
-        EXPECT_EQ(FooterOf(kongCard), (std::vector<String>{"The kong does not make the hand worse."}));
+        EXPECT_EQ(FooterOf(kongCard), (Vector<String>{"The kong does not make the hand worse."}));
 
         // A claim: the pung of the pending tile with the numbers after it.
         const ClaimExplanation pung = *ExplainAdviceFor(of("claimPung"))->claim;
@@ -730,7 +730,7 @@ namespace BECore::Mahjong::Tests {
         // A pass: a hand that waits stays ready with its 3 unseen winning copies; a pass that gains nothing keeps its steps.
         const HintCard waiting = CardOf(strings, of("passWaiting"));
         EXPECT_EQ(RowText(waiting.rows[0]), "Best||Pass|ready|3");
-        EXPECT_EQ(FooterOf(waiting), (std::vector<String>{"Your hand waits: a claim would break it."}));
+        EXPECT_EQ(FooterOf(waiting), (Vector<String>{"Your hand waits: a claim would break it."}));
         const ClaimExplanation noGain = *ExplainAdviceFor(of("passNoGain"))->claim;
         const HintCard noGainCard = CardOf(strings, of("passNoGain"));
         ASSERT_EQ(noGain.alternatives.size(), 1u);
@@ -738,7 +738,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(RowText(noGainCard.rows[0]), Format("Best||Pass|{}|", StepsWord(noGain.shantenBefore)));
         EXPECT_EQ(noGainCard.rows[0].trend, CardTrend::Same);
         EXPECT_EQ(RowText(noGainCard.rows[1]), Format("|5m |Pung|{}|{}", StepsWord(noGain.alternatives[0].after.shanten), noGain.alternatives[0].after.acceptance));
-        EXPECT_EQ(FooterOf(noGainCard), (std::vector<String>{"No claim brings the hand closer to ready."}));
+        EXPECT_EQ(FooterOf(noGainCard), (Vector<String>{"No claim brings the hand closer to ready."}));
 
         // The listed claims after the advised one are rows of their own.
         const ClaimExplanation withAlternatives = *ExplainAdviceFor(of("claimWithAlternatives"))->claim;
@@ -750,9 +750,9 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(alternativeCard.rows[1 + at].useful, BECore::ToString(withAlternatives.alternatives[at].after.acceptance));
         }
 
-        EXPECT_EQ(Lines(strings, of("win")), (std::vector<String>{"A complete hand: nothing beats a win."}));
-        EXPECT_EQ(Lines(strings, of("claimMahjong")), (std::vector<String>{"Take it: a win ends the hand."}));
-        EXPECT_EQ(Lines(strings, of("robbedKong")), (std::vector<String>{"Take it: a win ends the hand."}));
+        EXPECT_EQ(Lines(strings, of("win")), (Vector<String>{"A complete hand: nothing beats a win."}));
+        EXPECT_EQ(Lines(strings, of("claimMahjong")), (Vector<String>{"Take it: a win ends the hand."}));
+        EXPECT_EQ(Lines(strings, of("robbedKong")), (Vector<String>{"Take it: a win ends the hand."}));
     }
 
     TEST(HintsTest, AnEqualTieIsSettledByTheKeepClassOrLeftToChance) {
@@ -765,7 +765,7 @@ namespace BECore::Mahjong::Tests {
         const TableView alikeView = MakeTableView(alike, kSeat0);
         const TurnExplanation alikeTurn = *ExplainAdviceFor(alikeView)->turn;
         ASSERT_GT(alikeTurn.equalChoices, 0);
-        const std::vector<String> alikeLines = Lines(strings, alikeView);
+        const Vector<String> alikeLines = Lines(strings, alikeView);
         EXPECT_NE(std::find(alikeLines.begin(), alikeLines.end(), Format("Rated the same: {} more; any of them will do.", alikeTurn.equalChoices)), alikeLines.end());
 
         // The worthless north wind goes before the value tiles that rate the same: the keep class settles the tie.
@@ -773,7 +773,7 @@ namespace BECore::Mahjong::Tests {
         const TurnExplanation turn = *ExplainAdviceFor(discard)->turn;
         ASSERT_GT(turn.equalChoices, 0);
         ASSERT_EQ(turn.alternatives.front().keep > turn.chosen.keep, true);
-        const std::vector<String> lines = Lines(strings, discard);
+        const Vector<String> lines = Lines(strings, discard);
         EXPECT_NE(std::find(lines.begin(), lines.end(), Format("Rated the same: {} more; drop a useless honour first.", turn.equalChoices)), lines.end());
     }
 
@@ -842,7 +842,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(turn.step, TurnStep::Discard);
         ASSERT_EQ(turn.declaredOpponents, 1);
 
-        const std::vector<String> lines = Lines(strings, view);
+        const Vector<String> lines = Lines(strings, view);
 
         ASSERT_EQ(lines.size(), kMaxCardFooter);
         EXPECT_EQ(lines[0], kDangerSentences[static_cast<size_t>(turn.chosen.danger)]);
@@ -857,7 +857,7 @@ namespace BECore::Mahjong::Tests {
         for (const ReasonCase& one : ReasonCases()) {
             EXPECT_FALSE(HasDangerLine(Lines(strings, one.view))) << one.name << ": nobody has declared";
 
-            const std::vector<String> lines = Lines(strings, WithDeclaredOpponent(one.view));
+            const Vector<String> lines = Lines(strings, WithDeclaredOpponent(one.view));
             const bool discards = one.turnStep.has_value() && (*one.turnStep == TurnStep::Discard || *one.turnStep == TurnStep::Declare || *one.turnStep == TurnStep::KeepWaiting);
             EXPECT_EQ(HasDangerLine(lines), discards) << one.name;
             EXPECT_LE(lines.size(), kMaxCardFooter) << one.name;
@@ -878,7 +878,7 @@ namespace BECore::Mahjong::Tests {
             view.visible[advised.Id()] = std::max(view.visible[advised.Id()], copies);
             const TurnExplanation turn = *ExplainAdviceFor(view)->turn;
             ASSERT_EQ(turn.chosen.tile, advised);
-            const std::vector<String> lines = Lines(strings, view);
+            const Vector<String> lines = Lines(strings, view);
             ASSERT_FALSE(lines.empty());
             EXPECT_EQ(lines[0], kDangerSentences[static_cast<size_t>(turn.chosen.danger)]);
             said.insert(lines[0]);
@@ -927,10 +927,10 @@ namespace BECore::Mahjong::Tests {
     TEST(HintsTest, TheDangerSentencesAreInBothLanguagesAndNoLongerThanTheLongestLineUnderTheRows) {
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
-        const std::vector<String> mine{"hints.why.danger.safe", "hints.why.danger.low", "hints.why.danger.medium", "hints.why.danger.high", "hints.why.tie.danger"};
+        const Vector<String> mine{"hints.why.danger.safe", "hints.why.danger.low", "hints.why.danger.medium", "hints.why.danger.high", "hints.why.tie.danger"};
         // The lines under the rows of the card share one label: a danger sentence is no longer than the longest of them (the tally of the hand)
-        const std::vector<String> others{"coach.card.tally.hand",   "hints.why.tie.none",    "hints.why.tie.keep",     "hints.why.tie.chance",  "hints.why.kong.noWorse", "hints.why.win",
-                                         "hints.why.claim.mahjong", "hints.why.claim.value", "hints.why.pass.waiting", "hints.why.pass.noGain", "hints.why.pass.points",  "hints.why.kong.points"};
+        const Vector<String> others{"coach.card.tally.hand",   "hints.why.tie.none",    "hints.why.tie.keep",     "hints.why.tie.chance",  "hints.why.kong.noWorse", "hints.why.win",
+                                    "hints.why.claim.mahjong", "hints.why.claim.value", "hints.why.pass.waiting", "hints.why.pass.noGain", "hints.why.pass.points",  "hints.why.kong.points"};
         ForEachLanguage(strings, [&](PoolString language) {
             size_t longest = 0;
             for (const String& key : others) {
@@ -950,9 +950,9 @@ namespace BECore::Mahjong::Tests {
         const TableView view = WithDeclaredOpponent(ReasonCases().front().view);
 
         ASSERT_TRUE(strings.SetLanguage("en"_intern));
-        const std::vector<String> english = Lines(strings, view);
+        const Vector<String> english = Lines(strings, view);
         ASSERT_TRUE(strings.SetLanguage("ru"_intern));
-        const std::vector<String> russian = Lines(strings, view);
+        const Vector<String> russian = Lines(strings, view);
 
         ASSERT_EQ(english.size(), kMaxCardFooter);
         EXPECT_EQ(russian.size(), kMaxCardFooter);

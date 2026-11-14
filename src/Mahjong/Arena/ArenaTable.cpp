@@ -28,7 +28,7 @@ namespace BECore::Mahjong::Arena {
             return declared;
         }
 
-        void AddOwnTurnRounds(TableStats& stats, const eastl::vector<int>& declared, bool otherWon) {
+        void AddOwnTurnRounds(TableStats& stats, const Vector<int>& declared, bool otherWon) {
             const int turns = static_cast<int>(declared.size());
             for (int turn = 1; turn <= turns; ++turn) {
                 const size_t bucket = static_cast<size_t>(declared[static_cast<size_t>(turn - 1)]);
@@ -140,7 +140,7 @@ namespace BECore::Mahjong::Arena {
     }
 
     HandObserver MakeOwnTurnObserver(OwnTurns& turns) {
-        for (eastl::vector<int>& seat : turns) {
+        for (Vector<int>& seat : turns) {
             seat.clear();
         }
         return [&turns](const HandModel& hand, Seat actor) {
@@ -182,8 +182,8 @@ namespace BECore::Mahjong::Arena {
         }
         const size_t seedCount = static_cast<size_t>(config.count);
         // One slot per seed: a thread writes only the slots of the seeds it took; the slots are summed in seed order.
-        eastl::vector<TableStats> slots(seedCount);
-        eastl::vector<String> errors(seedCount);
+        Vector<TableStats> slots(seedCount);
+        Vector<String> errors(seedCount);
         std::atomic<int> nextSeed{0};
         std::atomic<int> lowestFailed{config.count};
         ArenaPlayers players;
@@ -209,7 +209,7 @@ namespace BECore::Mahjong::Arena {
             }
         };
         const int threadCount = std::min(config.jobs, config.count);
-        eastl::vector<std::thread> threads;
+        Vector<std::thread> threads;
         for (int thread = 1; thread < threadCount; ++thread) {
             threads.emplace_back(work);
         }

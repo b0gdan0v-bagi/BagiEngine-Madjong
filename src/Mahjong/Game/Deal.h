@@ -25,6 +25,6 @@ namespace BECore::Mahjong {
      * A wall too short to deal from (tests only) ends the deal early: the seats hold what they got. East's first draw is not part of
      * the deal.
      */
-    [[nodiscard]] eastl::array<PlayerHand, kSeatCount> DealHands(Wall& wall, Seat east, bool flowers);
+    [[nodiscard]] Array<PlayerHand, kSeatCount> DealHands(Wall& wall, Seat east, bool flowers);
 
 }  // namespace BECore::Mahjong

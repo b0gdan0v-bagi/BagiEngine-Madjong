@@ -104,6 +104,6 @@ namespace BECore::Mahjong {
      * concatenated. The error says why not: no pieces, pieces of different matches, an index repeated or missing (the first is 0), or a
      * piece after one that ended the match. A match that stops on an `Open` piece (the tab was closed) is assembled as it is.
      */
-    [[nodiscard]] std::expected<String, String> AssemblePieces(const eastl::vector<UploadPiece>& pieces);
+    [[nodiscard]] std::expected<String, String> AssemblePieces(const Vector<UploadPiece>& pieces);
 
 }  // namespace BECore::Mahjong

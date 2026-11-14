@@ -35,7 +35,7 @@ namespace BECore::Mahjong::Tests {
         ForEachLanguage(strings, [&](PoolString language) {
             for (const TextEntry::Kind kind : {TextEntry::Kind::Code, TextEntry::Kind::Name}) {
                 const TextEntry entry(kind);
-                const eastl::vector<String> pad = entry.Pad(strings);
+                const Vector<String> pad = entry.Pad(strings);
                 EXPECT_FALSE(pad.empty()) << language.ToStringView().data();
                 EXPECT_LE(pad.size(), TextEntry::kPadMaxKeys) << language.ToStringView().data();
                 std::set<String> seen;
@@ -53,16 +53,16 @@ namespace BECore::Mahjong::Tests {
     TEST(MahjongOnlineEntry, ThePadOfACodeIsTheRoomAlphabetAndThePadOfANameIsTheLettersOfTheLanguageDigitsAndASpace) {
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
-        const eastl::vector<String> code = TextEntry(TextEntry::Kind::Code).Pad(strings);
+        const Vector<String> code = TextEntry(TextEntry::Kind::Code).Pad(strings);
         ASSERT_EQ(code.size(), RoomLimits::kRoomCodeAlphabet.size());
         for (size_t i = 0; i < code.size(); ++i) {
             EXPECT_EQ(Std(code[i]), String(1, RoomLimits::kRoomCodeAlphabet[i]));
         }
 
         ASSERT_TRUE(strings.SetLanguage("en"_intern));
-        const eastl::vector<String> latin = TextEntry(TextEntry::Kind::Name).Pad(strings);
+        const Vector<String> latin = TextEntry(TextEntry::Kind::Name).Pad(strings);
         ASSERT_TRUE(strings.SetLanguage("ru"_intern));
-        const eastl::vector<String> cyrillic = TextEntry(TextEntry::Kind::Name).Pad(strings);
+        const Vector<String> cyrillic = TextEntry(TextEntry::Kind::Name).Pad(strings);
         EXPECT_EQ(Std(latin.front()), "A");
         EXPECT_EQ(Std(cyrillic.front()), kA);
         EXPECT_EQ(Std(latin.back()), " ");

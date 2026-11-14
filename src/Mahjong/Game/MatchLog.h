@@ -39,8 +39,8 @@ namespace BECore::Mahjong {
         Seat east = 0;
         Wind roundWind = Wind::East;
         SeatWinds winds{};
-        eastl::array<eastl::vector<Tile>, kSeatCount> concealed;
-        eastl::array<eastl::vector<Tile>, kSeatCount> bonus;
+        Array<Vector<Tile>, kSeatCount> concealed;
+        Array<Vector<Tile>, kSeatCount> bonus;
 
         // Action
         Seat seat = kNoSeat;
@@ -52,7 +52,7 @@ namespace BECore::Mahjong {
 
         // End
         SeatScores scores{};
-        eastl::array<Seat, kSeatCount> standings{};
+        Array<Seat, kSeatCount> standings{};
 
         bool operator==(const MatchLogEvent& other) const;
     };
@@ -77,7 +77,7 @@ namespace BECore::Mahjong {
             _events.push_back(event);
         }
 
-        [[nodiscard]] const eastl::vector<MatchLogEvent>& Events() const noexcept {
+        [[nodiscard]] const Vector<MatchLogEvent>& Events() const noexcept {
             return _events;
         }
         void Clear() noexcept {
@@ -85,7 +85,7 @@ namespace BECore::Mahjong {
         }
 
     private:
-        eastl::vector<MatchLogEvent> _events;
+        Vector<MatchLogEvent> _events;
     };
 
     /// Why a replay stopped.
@@ -128,6 +128,6 @@ namespace BECore::Mahjong {
      * again), so a log with and a log without them echo the same events. Events reach the echo before a later event is found wrong:
      * validate on a scratch match first when a failure must leave no trace.
      */
-    [[nodiscard]] ReplayStatus ReplayMatchLog(const eastl::vector<MatchLogEvent>& events, Match& match, IMatchLogSink* echo = nullptr);
+    [[nodiscard]] ReplayStatus ReplayMatchLog(const Vector<MatchLogEvent>& events, Match& match, IMatchLogSink* echo = nullptr);
 
 }  // namespace BECore::Mahjong

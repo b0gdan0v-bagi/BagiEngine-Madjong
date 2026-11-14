@@ -55,7 +55,7 @@ namespace BECore::Mahjong::Arena {
         }
 
         void AddPlatforms(String& text, const LogCorpus& corpus) {
-            constexpr eastl::array<MatchPlatform, 3> kOrder{MatchPlatform::Desktop, MatchPlatform::Web, MatchPlatform::Unknown};
+            constexpr Array<MatchPlatform, 3> kOrder{MatchPlatform::Desktop, MatchPlatform::Web, MatchPlatform::Unknown};
             static_assert(kOrder.size() == EnumUtils<MatchPlatform>::Count());
             String value;
             for (size_t index = 0; index < kOrder.size(); ++index) {
@@ -88,9 +88,9 @@ namespace BECore::Mahjong::Arena {
 
         /// The people's seats of a table, and its computer seats' levels; empty `levels` when it has none.
         struct Table {
-            eastl::array<bool, kSeatCount> person{};
+            Array<bool, kSeatCount> person{};
             int persons = 0;
-            eastl::vector<int> levels;
+            Vector<int> levels;
         };
 
         Table TableOf(const MatchLogEvent& start) {
@@ -107,7 +107,7 @@ namespace BECore::Mahjong::Arena {
         }
 
         /// The place of a table in the groups: its one level, or the mixed row.
-        size_t GroupOf(const eastl::vector<int>& levels) {
+        size_t GroupOf(const Vector<int>& levels) {
             const bool one = eastl::all_of(levels.begin(), levels.end(), [&](int level) { return level == levels.front(); });
             return one ? static_cast<size_t>(levels.front() - kMinLevel) : kMixedGroup;
         }
@@ -129,7 +129,7 @@ namespace BECore::Mahjong::Arena {
             RealMatch real;
         };
 
-        void AnalyseMatch(const CheckedLog& log, const eastl::vector<ArenaPlayer>& bots, MatchSlot& slot) {
+        void AnalyseMatch(const CheckedLog& log, const Vector<ArenaPlayer>& bots, MatchSlot& slot) {
             slot.real = RealGameOfMatch(log.verdict.events);
             slot.tester = AnalyzeTesterMatch(log.name, log.verdict.events, bots);
         }
@@ -221,7 +221,7 @@ namespace BECore::Mahjong::Arena {
 
     }  // namespace
 
-    String FormatCheckLines(const eastl::vector<CheckedLog>& logs) {
+    String FormatCheckLines(const Vector<CheckedLog>& logs) {
         String text;
         for (const CheckedLog& log : logs) {
             if (log.verdict.ok) {
@@ -257,7 +257,7 @@ namespace BECore::Mahjong::Arena {
         return text;
     }
 
-    RealMatch RealGameOfMatch(const eastl::vector<MatchLogEvent>& events) {
+    RealMatch RealGameOfMatch(const Vector<MatchLogEvent>& events) {
         RealMatch real;
         if (events.empty() || events.front().kind != MatchLogKind::Start) {
             return real;
@@ -267,7 +267,7 @@ namespace BECore::Mahjong::Arena {
             return real;
         }
         real.group = GroupOf(table.levels);
-        eastl::array<bool, kSeatCount> declared{};
+        Array<bool, kSeatCount> declared{};
         for (const MatchLogEvent& event : events) {
             if (event.kind == MatchLogKind::Action && event.action.kind == ActionKind::Discard && event.action.declareCalling && event.seat != kNoSeat) {
                 declared[static_cast<size_t>(event.seat)] = true;
@@ -284,12 +284,12 @@ namespace BECore::Mahjong::Arena {
         return real;
     }
 
-    RealGame MergeRealGame(const eastl::vector<RealMatch>& matches) {
+    RealGame MergeRealGame(const Vector<RealMatch>& matches) {
         RealGame game;
-        eastl::array<eastl::vector<double>, kRealGroupCount> wins;
-        eastl::array<eastl::vector<double>, kRealGroupCount> points;
-        eastl::array<eastl::vector<double>, kRealGroupCount> drawn;
-        eastl::array<eastl::vector<double>, kRealGroupCount> declared;
+        Array<Vector<double>, kRealGroupCount> wins;
+        Array<Vector<double>, kRealGroupCount> points;
+        Array<Vector<double>, kRealGroupCount> drawn;
+        Array<Vector<double>, kRealGroupCount> declared;
         for (const RealMatch& match : matches) {
             if (!match.counted) {
                 continue;
@@ -317,15 +317,15 @@ namespace BECore::Mahjong::Arena {
         return game;
     }
 
-    LogAnalysis AnalyseLogs(const eastl::vector<CheckedLog>& logs, const eastl::vector<ArenaPlayer>& bots, int jobs) {
-        eastl::vector<const CheckedLog*> replayed;
+    LogAnalysis AnalyseLogs(const Vector<CheckedLog>& logs, const Vector<ArenaPlayer>& bots, int jobs) {
+        Vector<const CheckedLog*> replayed;
         for (const CheckedLog& log : logs) {
             if (log.verdict.ok) {
                 replayed.push_back(&log);
             }
         }
         // One slot per match: a thread writes only the slots of the matches it took, and the merge below runs in name order.
-        eastl::vector<MatchSlot> slots(replayed.size());
+        Vector<MatchSlot> slots(replayed.size());
         std::atomic<size_t> next{0};
         const auto work = [&] {
             for (;;) {
@@ -337,7 +337,7 @@ namespace BECore::Mahjong::Arena {
             }
         };
         const size_t threadCount = eastl::min(static_cast<size_t>(eastl::max(jobs, 1)), replayed.size());
-        eastl::vector<std::thread> threads;
+        Vector<std::thread> threads;
         for (size_t thread = 1; thread < threadCount; ++thread) {
             threads.emplace_back(work);
         }
@@ -347,8 +347,8 @@ namespace BECore::Mahjong::Arena {
         }
 
         LogAnalysis analysis;
-        eastl::vector<TesterMatch> testerMatches;
-        eastl::vector<RealMatch> realMatches;
+        Vector<TesterMatch> testerMatches;
+        Vector<RealMatch> realMatches;
         for (const MatchSlot& slot : slots) {
             realMatches.push_back(slot.real);
             if (slot.tester.has_value()) {

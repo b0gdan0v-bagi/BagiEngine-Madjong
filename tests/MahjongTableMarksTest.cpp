@@ -73,8 +73,8 @@ namespace BECore::Mahjong::Tests {
     class MahjongTableMarksTest : public MahjongTableTestBase {
     protected:
         /// The index in `_renderer->calls` of each draw of `color`: a rect of it, or a geometry call with a vertex of it (the tint and the frame of a plate are layers of its mesh).
-        std::vector<size_t> CallsOf(const Color& color) const {
-            std::vector<size_t> found;
+        Vector<size_t> CallsOf(const Color& color) const {
+            Vector<size_t> found;
             for (const MarkDraw& draw : MarksOf(_renderer->calls, color)) {
                 found.push_back(draw.call);
             }
@@ -82,8 +82,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The rectangles of those draws, in the order drawn: a rect's own, or the box of the vertices of `color` in a geometry call.
-        std::vector<Rect> RectsOf(const Color& color) const {
-            std::vector<Rect> found;
+        Vector<Rect> RectsOf(const Color& color) const {
+            Vector<Rect> found;
             for (const MarkDraw& draw : MarksOf(_renderer->calls, color)) {
                 found.push_back(draw.rect);
             }
@@ -100,8 +100,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The slots of the hand of `seat` in the order of the concealed tiles.
-        std::vector<const TileSlot*> HandSlots(Seat seat) const {
-            std::vector<const TileSlot*> found;
+        Vector<const TileSlot*> HandSlots(Seat seat) const {
+            Vector<const TileSlot*> found;
             for (const TileSlot& slot : _table->GetLayout().slots) {
                 if (slot.role == SlotRole::HandTile && slot.seat == seat) {
                     found.push_back(&slot);
@@ -112,7 +112,7 @@ namespace BECore::Mahjong::Tests {
 
         /// The hand of `seat` is one plain row: from tile to tile the step is always the same.
         void ExpectPlainRow(Seat seat) const {
-            const std::vector<const TileSlot*> slots = HandSlots(seat);
+            const Vector<const TileSlot*> slots = HandSlots(seat);
             ASSERT_GE(slots.size(), 3u) << "seat " << seat;
             const float dx = slots[1]->rect.x - slots[0]->rect.x;
             const float dy = slots[1]->rect.y - slots[0]->rect.y;
@@ -126,10 +126,10 @@ namespace BECore::Mahjong::Tests {
         /// to the slot's rect, drawn after the tile itself.
         void ExpectDrawnMarked(int drawn) const {
             ASSERT_NO_FATAL_FAILURE(ExpectPlainRow(_table->GetLayout().viewer));
-            const std::vector<const TileSlot*> slots = HandSlots(_table->GetLayout().viewer);
+            const Vector<const TileSlot*> slots = HandSlots(_table->GetLayout().viewer);
             ASSERT_LT(drawn, static_cast<int>(slots.size()));
             const Rect& rect = slots[static_cast<size_t>(drawn)]->rect;
-            const std::vector<size_t> tints = CallsOf(kDrawnTileMark);
+            const Vector<size_t> tints = CallsOf(kDrawnTileMark);
             ASSERT_EQ(tints.size(), 1u);
             const DrawCall& tint = _renderer->calls[tints[0]];
             EXPECT_EQ(tint.rect.x, rect.x);
@@ -163,7 +163,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The four bars of `kCallingFrame` that should lie round the hand of `seat` in the last layout, worked out here.
-        std::vector<Rect> FrameOf(Seat seat) const {
+        Vector<Rect> FrameOf(Seat seat) const {
             const Rect bounds = BoundsOf(_table->GetLayout(), SlotRole::HandTile, seat);
             const Rect padded(bounds.x - kActingMargin, bounds.y - kActingMargin, bounds.w + 2.0f * kActingMargin, bounds.h + 2.0f * kActingMargin);
             const float width = kCallingFrameWidth;
@@ -173,7 +173,7 @@ namespace BECore::Mahjong::Tests {
 
         /// The frame of `seat` is in the draw calls (all four bars, once each).
         void ExpectFramed(Seat seat) const {
-            const std::vector<Rect> drawn = RectsOf(kCallingFrame);
+            const Vector<Rect> drawn = RectsOf(kCallingFrame);
             for (const Rect& bar : FrameOf(seat)) {
                 int found = 0;
                 for (const Rect& rect : drawn) {
@@ -197,8 +197,8 @@ namespace BECore::Mahjong::Tests {
         /// `kKeepsWaitingBarHeight` high, as wide as the tile, drawn after the face of the tile and inside the view.
         void ExpectKeepWaitingBarsOn(const std::set<int>& ids) const {
             const Seat viewer = _table->GetLayout().viewer;
-            const std::vector<Rect> bars = RectsOf(kKeepsWaitingMark);
-            const std::vector<size_t> calls = CallsOf(kKeepsWaitingMark);
+            const Vector<Rect> bars = RectsOf(kKeepsWaitingMark);
+            const Vector<size_t> calls = CallsOf(kKeepsWaitingMark);
             int expected = 0;
             for (const TileSlot* slot : HandSlots(viewer)) {
                 const Tile tile = Hand().GetHand(viewer).concealed[static_cast<size_t>(slot->index)];
@@ -274,7 +274,7 @@ namespace BECore::Mahjong::Tests {
 
         /// The highlight is drawn exactly once, behind the meld `meld` of `seat`.
         void ExpectHighlightOn(Seat seat, int meld) const {
-            const std::vector<Rect> fills = RectsOf(kClaimHighlight);
+            const Vector<Rect> fills = RectsOf(kClaimHighlight);
             ASSERT_EQ(fills.size(), 1u);
             const Rect expected = HighlightOf(seat, meld);
             EXPECT_NEAR(fills[0].x, expected.x, kEpsilon);
@@ -324,10 +324,10 @@ namespace BECore::Mahjong::Tests {
 
         /// The draws of the emblem atlas whose rectangle is the ring box of the plate of `seat` and whose source is `cell` (design window:
         /// the view is the output and a unit is one pixel).
-        std::vector<DrawCall> EmblemDraws(Seat seat, int cell) const {
+        Vector<DrawCall> EmblemDraws(Seat seat, int cell) const {
             const Rect box = EmblemBox(PlateOf(seat), 1.0f);
             const Rect source = EmblemRect(cell);
-            std::vector<DrawCall> found;
+            Vector<DrawCall> found;
             for (const DrawCall& call : EmblemCalls()) {
                 if (SameRect(call.rect, box) && call.source.has_value() && SameRect(*call.source, source)) {
                     found.push_back(call);
@@ -348,12 +348,12 @@ namespace BECore::Mahjong::Tests {
         /// The seat shows exactly the picture `cell` and the rings in `rings` (tints worked out from the palette roles), nothing else.
         void ExpectEmblem(Seat seat, int cell, bool turnRing, bool callingRing) const {
             ASSERT_EQ(EmblemDraws(seat, cell).size(), 1u) << "picture, seat " << seat;
-            const std::vector<DrawCall> turn = EmblemDraws(seat, kTurnRingCell);
+            const Vector<DrawCall> turn = EmblemDraws(seat, kTurnRingCell);
             ASSERT_EQ(turn.size(), turnRing ? 1u : 0u) << "turn ring, seat " << seat;
             if (turnRing) {
                 EXPECT_TRUE(SameColor(turn[0].color, kSeatTurnFrame)) << "seat " << seat;
             }
-            const std::vector<DrawCall> calling = EmblemDraws(seat, kCallingRingCell);
+            const Vector<DrawCall> calling = EmblemDraws(seat, kCallingRingCell);
             ASSERT_EQ(calling.size(), callingRing ? 1u : 0u) << "calling ring, seat " << seat;
             if (callingRing) {
                 EXPECT_TRUE(SameColor(calling[0].color, kCallingFrame)) << "seat " << seat;
@@ -369,7 +369,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The four bars `DrawFrame` should lay on the border of `rect`, worked out here (the frame of the calling hand and of the emblem box are still bars).
-        static std::vector<Rect> BarsOf(const Rect& rect, float width) {
+        static Vector<Rect> BarsOf(const Rect& rect, float width) {
             return {Rect(rect.x, rect.y, rect.w, width), Rect(rect.x, rect.y + rect.h - width, rect.w, width), Rect(rect.x, rect.y + width, width, rect.h - 2.0f * width),
                     Rect(rect.x + rect.w - width, rect.y + width, width, rect.h - 2.0f * width)};
         }
@@ -386,8 +386,8 @@ namespace BECore::Mahjong::Tests {
 
         /// The plate of `seat` carries the tint and the frame of the turn, each once, in the one call that is its base.
         bool TurnShownOn(Seat seat) const {
-            const std::vector<size_t> tints = CallsOf(kTurnMark);
-            const std::vector<size_t> frames = CallsOf(kSeatTurnFrame);
+            const Vector<size_t> tints = CallsOf(kTurnMark);
+            const Vector<size_t> frames = CallsOf(kSeatTurnFrame);
             const int base = PanelCallAt(_renderer->calls, PlateOf(seat));
             if (base < 0 || CountOf(kTurnMark, PlateOf(seat)) != 1 || CountOf(kSeatTurnFrame, PlateOf(seat)) != 1) {
                 return false;
@@ -423,7 +423,7 @@ namespace BECore::Mahjong::Tests {
 
         /// The base of every plate is drawn once, after the felt, the rim and its lip (no plate of a zone lies between) and before the first tile.
         void ExpectBasePlatesInOrder() const {
-            const std::vector<size_t> lip = CallsOf(kFeltLip);
+            const Vector<size_t> lip = CallsOf(kFeltLip);
             ASSERT_EQ(lip.size(), 4u);
             size_t firstTile = _renderer->calls.size();
             for (size_t i = 0; i < _renderer->calls.size(); ++i) {
@@ -489,12 +489,12 @@ namespace BECore::Mahjong::Tests {
             }
             EXPECT_EQ(RectsOf(kPanelTurnLight).size(), IsSeat(turn) ? 1u : 0u);
             EXPECT_EQ(RectsOf(kPanelDealerMark).size(), IsSeat(dealer) ? 1u : 0u);
-            std::vector<size_t> marks = CallsOf(kPanelTurnLight);
+            Vector<size_t> marks = CallsOf(kPanelTurnLight);
             for (const size_t call : CallsOf(kPanelDealerMark)) {
                 marks.push_back(call);
             }
             ASSERT_EQ(PanelCountAt(_renderer->calls, panel), 1) << "one ground";
-            const std::vector<size_t> grounds{static_cast<size_t>(PanelCallAt(_renderer->calls, panel))};
+            const Vector<size_t> grounds{static_cast<size_t>(PanelCallAt(_renderer->calls, panel))};
             size_t firstTile = _renderer->calls.size();
             for (size_t i = 0; i < _renderer->calls.size(); ++i) {
                 const DrawCall& call = _renderer->calls[i];
@@ -569,13 +569,13 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(Hand().Discards().size(), 1u);
         const TileSlot* first = SlotOf(SlotRole::DiscardTile, kSeat0, 0);
         ASSERT_NE(first, nullptr);
-        std::vector<Rect> tints = RectsOf(kLastDiscardMark);
+        Vector<Rect> tints = RectsOf(kLastDiscardMark);
         ASSERT_EQ(tints.size(), 1u);
         EXPECT_EQ(tints[0].x, first->rect.x);
         EXPECT_EQ(tints[0].y, first->rect.y);
         EXPECT_EQ(tints[0].w, first->rect.w);
         EXPECT_EQ(tints[0].h, first->rect.h);
-        const std::vector<size_t> shadows = CallsOf(kTileShadow);
+        const Vector<size_t> shadows = CallsOf(kTileShadow);
         const auto shadowOfFirst =
             std::find_if(shadows.begin(), shadows.end(), [&](size_t i) { return _renderer->calls[i].rect.x == first->rect.x + 2.0f && _renderer->calls[i].rect.y == first->rect.y + 2.0f; });
         ASSERT_NE(shadowOfFirst, shadows.end());
@@ -652,8 +652,8 @@ namespace BECore::Mahjong::Tests {
         Draw();
         ASSERT_EQ(Hand().GetPhase(), Phase::Claim);
 
-        const std::vector<size_t> frames = CallsOf(kPendingFrame);
-        const std::vector<size_t> tints = CallsOf(kLastDiscardMark);
+        const Vector<size_t> frames = CallsOf(kPendingFrame);
+        const Vector<size_t> tints = CallsOf(kLastDiscardMark);
         ASSERT_EQ(frames.size(), 1u);
         ASSERT_EQ(tints.size(), 1u);
         EXPECT_LT(frames[0], tints[0]) << "the tint lies over the face, inside the frame";
@@ -809,7 +809,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(claimed->seat, kSeat1);
         EXPECT_EQ(claimed->part, 0) << "from the seat before it: the first tile";
         EXPECT_EQ(claimed->claimEdge, Edge::Bottom) << "a seat on the right faces the bottom, where seat 0 sits";
-        const std::vector<Rect> bars = RectsOf(kClaimedEdge);
+        const Vector<Rect> bars = RectsOf(kClaimedEdge);
         ASSERT_EQ(bars.size(), 1u);
         const Rect expected = BarOf(claimed->rect, Edge::Bottom);
         EXPECT_EQ(bars[0].x, expected.x);
@@ -817,8 +817,8 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(bars[0].w, expected.w);
         EXPECT_EQ(bars[0].h, expected.h);
         // The bar is on the face: after the tile, inside it
-        const std::vector<size_t> calls = CallsOf(kClaimedEdge);
-        const std::vector<size_t> shadows = CallsOf(kTileShadow);
+        const Vector<size_t> calls = CallsOf(kClaimedEdge);
+        const Vector<size_t> shadows = CallsOf(kTileShadow);
         const auto shadow =
             std::find_if(shadows.begin(), shadows.end(), [&](size_t i) { return _renderer->calls[i].rect.x == claimed->rect.x + 2.0f && _renderer->calls[i].rect.y == claimed->rect.y + 2.0f; });
         ASSERT_NE(shadow, shadows.end());
@@ -839,7 +839,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NE(claimed, nullptr);
         ASSERT_EQ(_table->GetLayout().viewer, kSeat1);
         EXPECT_EQ(claimed->claimEdge, Edge::Left);
-        const std::vector<Rect> bars = RectsOf(kClaimedEdge);
+        const Vector<Rect> bars = RectsOf(kClaimedEdge);
         ASSERT_EQ(bars.size(), 1u);
         const Rect expected = BarOf(claimed->rect, Edge::Left);
         EXPECT_EQ(bars[0].x, expected.x);
@@ -925,7 +925,7 @@ namespace BECore::Mahjong::Tests {
         Lay(model);
         Draw();
 
-        const std::vector<Rect> bars = RectsOf(kCallingFrame);
+        const Vector<Rect> bars = RectsOf(kCallingFrame);
         ASSERT_EQ(bars.size(), 4u);
         ASSERT_NO_FATAL_FAILURE(ExpectFramed(kSeat2));
         ASSERT_NO_FATAL_FAILURE(ExpectFramesInsideTheView());
@@ -968,7 +968,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongTableMarksTest, TheFrameLiesBehindTheTilesOfItsHand) {
         ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, AllDeclaredModel()));
-        const std::vector<size_t> frames = CallsOf(kCallingFrame);
+        const Vector<size_t> frames = CallsOf(kCallingFrame);
         ASSERT_EQ(frames.size(), 16u);
         const size_t lastFrame = frames.back();
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
@@ -1059,8 +1059,8 @@ namespace BECore::Mahjong::Tests {
         const int drawn = IndexOf(kSeat0, T("Rd"));
         ASSERT_NO_FATAL_FAILURE(ExpectDrawnMarked(drawn));
         const Rect& rect = SlotOf(SlotRole::HandTile, kSeat0, drawn)->rect;
-        const std::vector<size_t> tints = CallsOf(kDrawnTileMark);
-        const std::vector<size_t> bars = CallsOf(kKeepsWaitingMark);
+        const Vector<size_t> tints = CallsOf(kDrawnTileMark);
+        const Vector<size_t> bars = CallsOf(kKeepsWaitingMark);
         ASSERT_EQ(bars.size(), 1u);
         const Rect& bar = _renderer->calls[bars[0]].rect;
         EXPECT_GE(bar.x, rect.x);
@@ -1175,7 +1175,7 @@ namespace BECore::Mahjong::Tests {
         Elapse(kComputerStepSeconds);
         Draw();
 
-        const eastl::vector<HandMove>& moves = Hand().Moves();
+        const Vector<HandMove>& moves = Hand().Moves();
         ASSERT_EQ(moves.size(), 3u);
         EXPECT_EQ(moves[1].kind, MoveKind::ClaimPung);
         EXPECT_EQ(moves[2].kind, MoveKind::Discard) << "the claimer discarded within the same pause";
@@ -1183,7 +1183,7 @@ namespace BECore::Mahjong::Tests {
         // Behind the tiles of the set: before the shadow of its first tile
         const TileSlot* first = SlotOf(SlotRole::MeldTile, kSeat1, 0, 0);
         ASSERT_NE(first, nullptr);
-        const std::vector<size_t> shadows = CallsOf(kTileShadow);
+        const Vector<size_t> shadows = CallsOf(kTileShadow);
         const auto shadow =
             std::find_if(shadows.begin(), shadows.end(), [&](size_t i) { return _renderer->calls[i].rect.x == first->rect.x + 2.0f && _renderer->calls[i].rect.y == first->rect.y + 2.0f; });
         ASSERT_NE(shadow, shadows.end());
@@ -1640,11 +1640,11 @@ namespace BECore::Mahjong::Tests {
             Draw();
             ++windows;
             // Four pictures, four calling rings and the turn ring of seat 0, each in the ring box of one plate
-            const std::vector<DrawCall> emblems = EmblemCalls();
+            const Vector<DrawCall> emblems = EmblemCalls();
             EXPECT_EQ(emblems.size(), 9u) << window.label.c_str();
             const ViewTransform fit = TableFit(window);
             const float unit = LayoutScale(ViewOf(window).width, ViewOf(window).height);
-            std::array<size_t, kSeatCount> perPlate{};
+            Array<size_t, kSeatCount> perPlate{};
             for (const DrawCall& call : emblems) {
                 bool inside = false;
                 for (Seat seat = 0; seat < kSeatCount; ++seat) {

@@ -29,7 +29,7 @@ namespace BECore::Mahjong::Tests {
                 pieces.push_back(piece);
             }
 
-            eastl::vector<UploadPiece> pieces;
+            Vector<UploadPiece> pieces;
         };
 
         MahjongSettings ShortMatch() {
@@ -89,7 +89,7 @@ namespace BECore::Mahjong::Tests {
         };
 
         /// Parses and replays `text`: the log is whole as far as it goes. Returns the events.
-        eastl::vector<MatchLogEvent> ExpectReplays(const String& text) {
+        Vector<MatchLogEvent> ExpectReplays(const String& text) {
             const auto events = ParseMatchLog(View(text));
             EXPECT_TRUE(events.has_value()) << (events.has_value() ? "" : events.error().c_str());
             if (!events.has_value()) {
@@ -206,7 +206,7 @@ namespace BECore::Mahjong::Tests {
 
         const auto assembled = AssemblePieces(table.sink.pieces);
         ASSERT_TRUE(assembled.has_value()) << assembled.error().c_str();
-        const eastl::vector<MatchLogEvent> events = ExpectReplays(*assembled);
+        const Vector<MatchLogEvent> events = ExpectReplays(*assembled);
         EXPECT_EQ(events.back().kind, MatchLogKind::End);
         EXPECT_EQ(String(assembled->c_str(), assembled->size()), ReadFile(file));
 
@@ -241,12 +241,12 @@ namespace BECore::Mahjong::Tests {
         table.session.RunComputers();  // part of the second hand is played, then the game stops
         table.uploader.Abandon();
 
-        eastl::vector<UploadPiece> pieces = table.sink.pieces;
+        Vector<UploadPiece> pieces = table.sink.pieces;
         ASSERT_FALSE(pieces.empty());
         EXPECT_EQ(pieces.back().end, UploadPieceEnd::Abandoned);
         const auto assembled = AssemblePieces(pieces);
         ASSERT_TRUE(assembled.has_value()) << assembled.error().c_str();
-        const eastl::vector<MatchLogEvent> events = ExpectReplays(*assembled);
+        const Vector<MatchLogEvent> events = ExpectReplays(*assembled);
         EXPECT_FALSE(events.empty());
         EXPECT_NE(events.back().kind, MatchLogKind::End);
 
@@ -305,7 +305,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(table.sink.pieces.front().index, 0u);
         const auto assembled = AssemblePieces(table.sink.pieces);
         ASSERT_TRUE(assembled.has_value()) << assembled.error().c_str();
-        const eastl::vector<MatchLogEvent> events = ExpectReplays(*assembled);
+        const Vector<MatchLogEvent> events = ExpectReplays(*assembled);
         ASSERT_FALSE(events.empty());
         EXPECT_EQ(events.front().kind, MatchLogKind::Start);
         EXPECT_EQ(events.front().seed, kOtherSeed);
@@ -347,7 +347,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MatchUploadTest, AssemblingTakesThePiecesInIndexOrder) {
-        const eastl::vector<UploadPiece> pieces{Piece("m", 2, UploadPieceEnd::Ended, "c\n"), Piece("m", 0, UploadPieceEnd::Open, "a\n"), Piece("m", 1, UploadPieceEnd::Open, "b\n")};
+        const Vector<UploadPiece> pieces{Piece("m", 2, UploadPieceEnd::Ended, "c\n"), Piece("m", 0, UploadPieceEnd::Open, "a\n"), Piece("m", 1, UploadPieceEnd::Open, "b\n")};
         const auto assembled = AssemblePieces(pieces);
         ASSERT_TRUE(assembled.has_value());
         EXPECT_EQ(*assembled, "a\nb\nc\n");

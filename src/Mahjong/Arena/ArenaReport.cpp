@@ -212,7 +212,7 @@ namespace BECore::Mahjong::Arena {
         }
 
         void AddKindTable(String& text, const FocusResult& focus) {
-            eastl::vector<size_t> kinds;
+            Vector<size_t> kinds;
             for (size_t kind = 0; kind < kScoreKindCount; ++kind) {
                 if (focus.focus.winsByKind[kind] > 0 || focus.others.winsByKind[kind] > 0) {
                     kinds.push_back(kind);

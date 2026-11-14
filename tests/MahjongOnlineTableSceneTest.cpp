@@ -58,10 +58,10 @@ namespace BECore::Mahjong::Tests {
         /// its own tiles face up and no other seat's, once it is over the four hands of `result`.
         void ExpectNoPeeking() {
             const OnlineTable& table = Table();
-            const std::vector<DrawCall> calls = TileCalls();
+            const Vector<DrawCall> calls = TileCalls();
             const TableLayout& layout = _table->GetLayout();
             ASSERT_EQ(calls.size(), layout.slots.size());
-            std::array<std::vector<uint8_t>, kSeatCount> faces;
+            Array<Vector<uint8_t>, kSeatCount> faces;
             for (size_t i = 0; i < calls.size(); ++i) {
                 const TileSlot& slot = layout.slots[i];
                 if (slot.role != SlotRole::HandTile || !calls[i].source.has_value()) {
@@ -71,8 +71,8 @@ namespace BECore::Mahjong::Tests {
                     faces[static_cast<size_t>(slot.seat)].push_back(face->Id());
                 }
             }
-            const auto idsOf = [](const eastl::vector<Tile>& tiles) {
-                std::vector<uint8_t> ids;
+            const auto idsOf = [](const Vector<Tile>& tiles) {
+                Vector<uint8_t> ids;
                 for (const Tile tile : tiles) {
                     ids.push_back(tile.Id());
                 }
@@ -80,9 +80,9 @@ namespace BECore::Mahjong::Tests {
                 return ids;
             };
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                std::vector<uint8_t>& drawn = faces[static_cast<size_t>(seat)];
+                Vector<uint8_t>& drawn = faces[static_cast<size_t>(seat)];
                 std::sort(drawn.begin(), drawn.end());
-                std::vector<uint8_t> allowed;
+                Vector<uint8_t> allowed;
                 if (table.phase != SessionPhase::Playing && table.result.has_value()) {
                     allowed = idsOf(table.result->seats[static_cast<size_t>(seat)].concealed);
                 } else if (seat == table.seat) {
@@ -145,7 +145,7 @@ namespace BECore::Mahjong::Tests {
                 if (done()) {
                     return true;
                 }
-                for (const std::unique_ptr<HubPlayer>& other : _others) {
+                for (const UniquePtr<HubPlayer>& other : _others) {
                     other->ActFirst();
                 }
                 ViewerActsThroughTheScene();
@@ -154,8 +154,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The files of the save folder that hold the match, by name.
-        std::vector<std::pair<String, String>> MatchSlot() const {
-            std::vector<std::pair<String, String>> files;
+        Vector<std::pair<String, String>> MatchSlot() const {
+            Vector<std::pair<String, String>> files;
             for (const auto& entry : std::filesystem::directory_iterator(_folder)) {
                 const String name = FromStdString(entry.path().filename().string());
                 if (name.find(String(kMatchSlot.data(), kMatchSlot.size())) == String::npos) {
@@ -181,13 +181,13 @@ namespace BECore::Mahjong::Tests {
         _game->OpenSetup();
         Frame();
         Frame();
-        const std::vector<std::pair<String, String>> savedBefore = MatchSlot();
+        const Vector<std::pair<String, String>> savedBefore = MatchSlot();
         ASSERT_FALSE(savedBefore.empty()) << "the local match is saved";
         const bool canContinue = _game->CanContinue();
         const Match* const local = &_game->GetLocalMatch();
         const uint64_t localVersion = _game->GetLocalSession().Version();
         const uint64_t localStarts = _game->GetLocalSession().StartCount();
-        const eastl::array<int, kSeatCount> localScores = _game->GetLocalMatch().Scores();
+        const Array<int, kSeatCount> localScores = _game->GetLocalMatch().Scores();
         const size_t localMoves = _game->GetLocalMatch().Hand().Moves().size();
         EXPECT_EQ(&_game->GetMatch(), local);
         EXPECT_FALSE(_game->IsOnlineTable());
@@ -288,7 +288,7 @@ namespace BECore::Mahjong::Tests {
         }
         EXPECT_GT(claims, 0) << "a window that lists a pass lists a claim";
         EXPECT_FALSE(_table->GetButtons()[ButtonKind::Declare].shown);
-        EXPECT_EQ(Hand().PendingClaimSeats(), eastl::vector<Seat>{Viewer()});
+        EXPECT_EQ(Hand().PendingClaimSeats(), Vector<Seat>{Viewer()});
 
         const uint64_t version = _world.Game()->GetStateVersion();
         EmitAction(SpecOf(ButtonKind::Pass).action, SpecOf(ButtonKind::Pass).value);
@@ -316,12 +316,11 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(StartRoom());
         // A window in which the game's client and another person may both decide
         const auto otherDecides = [&] {
-            return eastl::any_of(_others.begin(), _others.end(),
-                                 [](const std::unique_ptr<HubPlayer>& other) { return !other->Table().actions.empty() && other->Client().Stage() == OnlineStage::Game; });
+            return eastl::any_of(_others.begin(), _others.end(), [](const UniquePtr<HubPlayer>& other) { return !other->Table().actions.empty() && other->Client().Stage() == OnlineStage::Game; });
         };
         ASSERT_TRUE(PlayUntil([&] { return Lists(ActionKind::Pass) && Hand().GetPhase() == Phase::Claim && otherDecides(); }));
         Draw();
-        for (const std::unique_ptr<HubPlayer>& other : _others) {
+        for (const UniquePtr<HubPlayer>& other : _others) {
             other->ActFirst();  // the other decides: the view of the game's client is old before it clicks
         }
         const uint64_t shown = Table().version;
@@ -551,7 +550,7 @@ namespace BECore::Mahjong::Tests {
                 ++hands;
                 // all four read the plate
                 _game->GetOnline().Act(0);
-                for (const std::unique_ptr<HubPlayer>& other : _others) {
+                for (const UniquePtr<HubPlayer>& other : _others) {
                     other->ActFirst();
                 }
                 ASSERT_TRUE(PlayUntil([&] { return _game->GetSession().GetPhase() != SessionPhase::HandOver; }, false, kMatchFrames));

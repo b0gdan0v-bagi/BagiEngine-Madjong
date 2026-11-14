@@ -19,10 +19,10 @@ namespace BECore::Mahjong::Arena {
         constexpr uint32_t kFirstSeed = 4000;
         constexpr uint32_t kOtherFirstSeed = 17;
 
-        using Args = eastl::vector<StringView>;
+        using Args = Vector<StringView>;
 
         std::expected<ArenaArgs, String> Parse(const Args& args) {
-            return ParseArenaArgs(eastl::span<const StringView>(args.data(), args.size()));
+            return ParseArenaArgs(Span<const StringView>(args.data(), args.size()));
         }
 
         String ErrorOf(const Args& args) {
@@ -38,7 +38,7 @@ namespace BECore::Mahjong::Arena {
         }
 
         int RunProgram(const Args& args, ArenaCliOutput& output) {
-            return RunArenaCli(eastl::span<const StringView>(args.data(), args.size()), output);
+            return RunArenaCli(Span<const StringView>(args.data(), args.size()), output);
         }
 
         bool Contains(const String& text, StringView part) {
@@ -48,15 +48,15 @@ namespace BECore::Mahjong::Arena {
         constexpr uint32_t kLogSeed = 41;
 
         int RunLogs(const Args& args, const LogSource& source, ArenaCliOutput& output) {
-            return RunArenaCli(eastl::span<const StringView>(args.data(), args.size()), source, output);
+            return RunArenaCli(Span<const StringView>(args.data(), args.size()), source, output);
         }
 
-        LogSource SourceOf(eastl::vector<LogFile> files) {
-            return [files](StringView) -> std::expected<eastl::vector<LogFile>, String> { return files; };
+        LogSource SourceOf(Vector<LogFile> files) {
+            return [files](StringView) -> std::expected<Vector<LogFile>, String> { return files; };
         }
 
         /// A good log, a log cut short and a log that is no log, in an order that is not the sorted one.
-        eastl::vector<LogFile> SomeLogs() {
+        Vector<LogFile> SomeLogs() {
             Tests::LogSpec played;
             played.seed = kLogSeed;
             played.seats = Tests::kLogPersonFirst;
@@ -346,7 +346,7 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaCliTest, TheSummaryIsPrintedWithoutCheckAndDoesNotDependOnTheOrderOfTheSource) {
-        eastl::vector<LogFile> files = SomeLogs();
+        Vector<LogFile> files = SomeLogs();
         ArenaCliOutput one;
         EXPECT_EQ(RunLogs({"--logs", "folder"}, SourceOf(files), one), kExitOk);
         EXPECT_TRUE(Contains(one.out, "files read        3\n"));
@@ -414,7 +414,7 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaCliTest, APathThatCannotBeReadIsExitOne) {
-        const LogSource missing = [](StringView path) -> std::expected<eastl::vector<LogFile>, String> { return std::unexpected(Format("cannot read \"{}\"", String(path.data(), path.size()))); };
+        const LogSource missing = [](StringView path) -> std::expected<Vector<LogFile>, String> { return std::unexpected(Format("cannot read \"{}\"", String(path.data(), path.size()))); };
         for (const bool check : {true, false}) {
             ArenaCliOutput output;
             Args args{"--logs", "nowhere"};
@@ -433,9 +433,9 @@ namespace BECore::Mahjong::Arena {
 
     TEST(ArenaCliTest, BadLogArgumentsPrintTheErrorAndReadNothing) {
         bool read = false;
-        const LogSource watching = [&read](StringView) -> std::expected<eastl::vector<LogFile>, String> {
+        const LogSource watching = [&read](StringView) -> std::expected<Vector<LogFile>, String> {
             read = true;
-            return eastl::vector<LogFile>{};
+            return Vector<LogFile>{};
         };
         ArenaCliOutput output;
         EXPECT_EQ(RunLogs({"--logs", "x", "--seeds", "3"}, watching, output), kExitBadArguments);

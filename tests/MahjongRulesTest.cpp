@@ -77,8 +77,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The rectangles drawn in `color` by the last draw.
-        std::vector<Rect> RectsOf(const Color& color) const {
-            std::vector<Rect> found;
+        Vector<Rect> RectsOf(const Color& color) const {
+            Vector<Rect> found;
             for (const DrawCall& call : _renderer->calls) {
                 if (call.kind == DrawKind::Rect && call.color.r == color.r && call.color.g == color.g && call.color.b == color.b && call.color.a == color.a) {
                     found.push_back(call.rect);
@@ -163,8 +163,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The children of the plate that the page shows, in the order of the file (a hidden one has no rect).
-        std::vector<const UIElement*> ShownBlocks() const {
-            std::vector<const UIElement*> blocks;
+        Vector<const UIElement*> ShownBlocks() const {
+            Vector<const UIElement*> blocks;
             const UIElement* plate = Element("Rules", "Plate");
             if (plate != nullptr) {
                 for (const auto& child : plate->children) {
@@ -517,7 +517,7 @@ namespace BECore::Mahjong::Tests {
                 }
                 // The same on the whole matrix, each window against the view of its shape (the plate is 94% of the 720 wide portrait view); the bar
                 // is a Screen canvas, which the view does not touch
-                const std::vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Rules"), kButtonAir);
+                const Vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Rules"), kButtonAir);
                 EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
                 // The matrix leaves the layout as it ran last: draw again for the next page
                 Draw();
@@ -555,7 +555,7 @@ namespace BECore::Mahjong::Tests {
                 ASSERT_NO_FATAL_FAILURE(GoToPage(page));
                 const RulesPage expected = FormatRulesPage(CoreManager::GetUIStrings(), page);
                 const Rect& inner = plate->rect;
-                const std::vector<const UIElement*> blocks = ShownBlocks();
+                const Vector<const UIElement*> blocks = ShownBlocks();
                 ASSERT_GE(blocks.size(), 2u) << "at least the title and the pager";
                 EXPECT_EQ(Element("Rules", "Title"), blocks[0]);
                 EXPECT_EQ(Element("Rules", "Pager"), blocks[1]);
@@ -799,7 +799,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         auto plate = Canvas("Rules");
         ASSERT_TRUE(plate);
-        std::vector<const UIElement*> controls;
+        Vector<const UIElement*> controls;
         CollectControls(plate->GetRoot(), controls);
         for (const UIElement* control : controls) {
             EXPECT_FALSE(control->IsInteractive()) << control->name.ToStringView().data() << ": the pages are text, the buttons are in RulesAction";

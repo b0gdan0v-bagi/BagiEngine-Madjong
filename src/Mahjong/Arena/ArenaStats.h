@@ -35,12 +35,12 @@ namespace BECore::Mahjong::Arena {
      * The values are one per seed: the four rotations of a seed play one wall, so the seed is the independent unit. No values give
      * `n` 0 and a mean of 0; one value gives its mean and no interval (`hasInterval` false). A constant series has `half` 0.
      */
-    [[nodiscard]] MeanInterval MeanCi(const eastl::vector<double>& values);
+    [[nodiscard]] MeanInterval MeanCi(const Vector<double>& values);
 
     /// The per-seed value of `metric` for one focus player, in seed order: the number of the seed's four rotations divided by
     /// `kSeatCount` (`PointsPerHand` in points, the percents in percent of the hands). A seed without a value (`StandingScore` of a seed
     /// with no lost hand) is left out, so the series can be shorter than the rows.
-    [[nodiscard]] eastl::vector<double> SeedSeries(const FocusResult& focus, SeedMetric metric);
+    [[nodiscard]] Vector<double> SeedSeries(const FocusResult& focus, SeedMetric metric);
 
     /// `MeanCi` of the series of `metric` of one focus player.
     [[nodiscard]] MeanInterval MetricInterval(const FocusResult& focus, SeedMetric metric);

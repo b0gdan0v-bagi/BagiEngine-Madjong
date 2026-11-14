@@ -157,7 +157,7 @@ namespace BECore::Mahjong::Analyzer {
             if (!text.has_value()) {
                 return text.error();
             }
-            const std::expected<eastl::vector<MatchLogEvent>, String> events = ParseMatchLog(StringView(text->data(), text->size()));
+            const std::expected<Vector<MatchLogEvent>, String> events = ParseMatchLog(StringView(text->data(), text->size()));
             if (!events.has_value()) {
                 return Format("{}: {}", file, events.error().c_str());
             }
@@ -168,7 +168,7 @@ namespace BECore::Mahjong::Analyzer {
                 }
                 return reporter.Report(position->view, LabelOfLogPosition(args.logFile, *position));
             }
-            const std::expected<eastl::vector<LogPosition>, String> positions = PositionsOfSeat(*events, args.hand, *args.seat);
+            const std::expected<Vector<LogPosition>, String> positions = PositionsOfSeat(*events, args.hand, *args.seat);
             if (!positions.has_value()) {
                 return Format("{}: {}", file, positions.error().c_str());
             }
@@ -231,7 +231,7 @@ namespace BECore::Mahjong::Analyzer {
                       fmt::arg("help", kHelpOption), fmt::arg("ok", kExitOk), fmt::arg("failed", kExitAnalysisFailed), fmt::arg("bad", kExitBadArguments));
     }
 
-    std::expected<AnalyzerArgs, String> ParseAnalyzerArgs(eastl::span<const StringView> args) {
+    std::expected<AnalyzerArgs, String> ParseAnalyzerArgs(Span<const StringView> args) {
         AnalyzerArgs parsed;
         for (size_t index = 0; index < args.size(); ++index) {
             const StringView option = args[index];
@@ -296,7 +296,7 @@ namespace BECore::Mahjong::Analyzer {
         return parsed;
     }
 
-    int RunAnalyzerCli(eastl::span<const StringView> args, const FileReader& readFile, AnalyzerCliOutput& output) {
+    int RunAnalyzerCli(Span<const StringView> args, const FileReader& readFile, AnalyzerCliOutput& output) {
         const std::expected<AnalyzerArgs, String> parsed = ParseAnalyzerArgs(args);
         if (!parsed.has_value()) {
             output.err = Format("error: {}\n\n{}", parsed.error().c_str(), AnalyzerUsage().c_str());

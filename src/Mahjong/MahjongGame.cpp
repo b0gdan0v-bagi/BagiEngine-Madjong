@@ -289,14 +289,14 @@ namespace BECore::Mahjong {
     }
 
     bool MahjongGame::ResumeSavedMatch() {
-        std::expected<eastl::vector<MatchLogEvent>, SaveProblem> loaded = _store.LoadMatch();
+        std::expected<Vector<MatchLogEvent>, SaveProblem> loaded = _store.LoadMatch();
         if (!loaded) {
             if (loaded.error().kind == SaveProblemKind::Broken) {
                 LOG_WARNING(Format("MahjongGame: the saved match is not used: {}", loaded.error().detail));
             }
             return false;
         }
-        const eastl::vector<MatchLogEvent>& events = *loaded;
+        const Vector<MatchLogEvent>& events = *loaded;
         Match scratch;  // the replay is checked here, and a finished match is not offered, before the session is touched
         if (const ReplayStatus replayed = ReplayMatchLog(events, scratch); !replayed) {
             LOG_WARNING(Format("MahjongGame: the saved match is not used: event {} does not replay ({})", replayed.error().index, EnumUtils<ReplayProblem>::ToString(replayed.error().problem)));

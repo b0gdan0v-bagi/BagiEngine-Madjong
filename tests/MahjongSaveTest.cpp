@@ -72,7 +72,7 @@ namespace BECore::Mahjong::Tests {
                         break;
                 }
                 if (session.ActorIsPerson()) {
-                    const eastl::vector<HandAction> legal = match.Hand().LegalActions(session.Actor());
+                    const Vector<HandAction> legal = match.Hand().LegalActions(session.Actor());
                     if (legal.empty() || !session.PerformPerson(Choose(legal, Mode::SeekWin, rng))) {
                         ADD_FAILURE() << "the action of the person was refused";
                         return false;
@@ -137,8 +137,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The events a saved match keeps: no `Hand` and no `End` (the replay deals again).
-        eastl::vector<MatchLogEvent> WithoutHandsAndEnd(const eastl::vector<MatchLogEvent>& events) {
-            eastl::vector<MatchLogEvent> kept;
+        Vector<MatchLogEvent> WithoutHandsAndEnd(const Vector<MatchLogEvent>& events) {
+            Vector<MatchLogEvent> kept;
             for (const MatchLogEvent& event : events) {
                 if (event.kind != MatchLogKind::Hand && event.kind != MatchLogKind::End) {
                     kept.push_back(event);
@@ -151,7 +151,7 @@ namespace BECore::Mahjong::Tests {
         struct Checkpoint {
             String name;
             Observation seen;
-            eastl::vector<MatchLogEvent> full;
+            Vector<MatchLogEvent> full;
         };
 
         /// Whether the hand `HandOver` waits for is the last one of the match.
@@ -163,8 +163,8 @@ namespace BECore::Mahjong::Tests {
 
         /// Plays a match of `seats` at `level` on `seed` and keeps a checkpoint at the first deal, after 1, 17 and 60 steps, in the
         /// first claim window, at the first and at the last score table, at the start of the second hand and at the end.
-        eastl::vector<Checkpoint> RecordMatch(uint32_t seed, const SeatSetup& seats, ComputerLevel level) {
-            eastl::vector<Checkpoint> points;
+        Vector<Checkpoint> RecordMatch(uint32_t seed, const SeatSetup& seats, ComputerLevel level) {
+            Vector<Checkpoint> points;
             Table table;
             table.Start(seed, seats, level);
             if (table.session.GetPhase() != SessionPhase::Playing) {
@@ -245,14 +245,14 @@ namespace BECore::Mahjong::Tests {
         };
 
         /// The log of a whole match of four computers, with its `Hand` and `End` events.
-        eastl::vector<MatchLogEvent> WholeLog(uint32_t seed = 3) {
+        Vector<MatchLogEvent> WholeLog(uint32_t seed = 3) {
             Table table;
             table.Start(seed, kCCCC, ComputerLevel::Normal);
             table.PlayOn();
             return table.log.Events();
         }
 
-        size_t IndexOf(const eastl::vector<MatchLogEvent>& events, MatchLogKind kind, size_t from = 0) {
+        size_t IndexOf(const Vector<MatchLogEvent>& events, MatchLogKind kind, size_t from = 0) {
             for (size_t index = from; index < events.size(); ++index) {
                 if (events[index].kind == kind) {
                     return index;
@@ -267,7 +267,7 @@ namespace BECore::Mahjong::Tests {
         for (const uint32_t seed : kSeeds) {
             for (const SeatSetup& seats : kSetups) {
                 for (const ComputerLevel level : kLevels) {
-                    const eastl::vector<Checkpoint> points = RecordMatch(seed, seats, level);
+                    const Vector<Checkpoint> points = RecordMatch(seed, seats, level);
                     ASSERT_GE(points.size(), 7u);
                     for (const Checkpoint& point : points) {
                         const String where = Label(point, seats, level);
@@ -285,7 +285,7 @@ namespace BECore::Mahjong::Tests {
     TEST(MahjongSaveTest, TheSinkOfAResumedSessionGetsTheWholeLog) {
         for (const uint32_t seed : kSeeds) {
             for (const SeatSetup& seats : {kPCCC, kCCCC}) {
-                const eastl::vector<Checkpoint> points = RecordMatch(seed, seats, ComputerLevel::Normal);
+                const Vector<Checkpoint> points = RecordMatch(seed, seats, ComputerLevel::Normal);
                 for (const Checkpoint& point : points) {
                     const String where = Label(point, seats, ComputerLevel::Normal);
                     Table resumed;
@@ -306,7 +306,7 @@ namespace BECore::Mahjong::Tests {
         for (const uint32_t seed : kSeeds) {
             for (const SeatSetup& seats : kSetups) {
                 const ComputerLevel level = seed % 2 == 0 ? ComputerLevel::Normal : ComputerLevel::Easy;
-                const eastl::vector<Checkpoint> points = RecordMatch(seed, seats, level);
+                const Vector<Checkpoint> points = RecordMatch(seed, seats, level);
                 for (const Checkpoint& point : points) {
                     const String where = Label(point, seats, level);
                     Table resumed;
@@ -329,7 +329,7 @@ namespace BECore::Mahjong::Tests {
     TEST(MahjongSaveTest, TheViewerAndTheCoverFollowTheSeatsOfTheResumedTable) {
         for (const uint32_t seed : kSeeds) {
             for (const SeatSetup& seats : kSetups) {
-                const eastl::vector<Checkpoint> points = RecordMatch(seed, seats, ComputerLevel::Normal);
+                const Vector<Checkpoint> points = RecordMatch(seed, seats, ComputerLevel::Normal);
                 for (const Checkpoint& point : points) {
                     const String where = Label(point, seats, ComputerLevel::Normal);
                     Table resumed;
@@ -360,8 +360,8 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MahjongSaveTest, AResumeReplacesAMatchInProgress) {
         Busy busy;
-        const eastl::vector<MatchLogEvent> log = WholeLog();
-        const eastl::vector<MatchLogEvent> cut(log.begin(), log.begin() + static_cast<ptrdiff_t>(IndexOf(log, MatchLogKind::Settlement)));
+        const Vector<MatchLogEvent> log = WholeLog();
+        const Vector<MatchLogEvent> cut(log.begin(), log.begin() + static_cast<ptrdiff_t>(IndexOf(log, MatchLogKind::Settlement)));
         const uint64_t before = busy.table.session.Version();
         const size_t logged = busy.table.log.Events().size();
         ASSERT_TRUE(busy.table.session.ResumeMatch(WithoutHandsAndEnd(cut), kCCCC, ComputerLevel::Normal).has_value());
@@ -377,7 +377,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(MahjongSaveTest, ALogThatIsNotAMatchIsRefusedAndNothingChanges) {
-        const eastl::vector<MatchLogEvent> whole = WholeLog();
+        const Vector<MatchLogEvent> whole = WholeLog();
         ASSERT_GT(whole.size(), 10u);
         const size_t firstAction = IndexOf(whole, MatchLogKind::Action);
         const size_t firstSettlement = IndexOf(whole, MatchLogKind::Settlement);
@@ -386,22 +386,22 @@ namespace BECore::Mahjong::Tests {
 
         struct Case {
             String name;
-            eastl::vector<MatchLogEvent> events;
+            Vector<MatchLogEvent> events;
             size_t index;
             ReplayProblem problem;
         };
-        eastl::vector<Case> cases;
+        Vector<Case> cases;
 
         // An action of the wrong seat.
-        eastl::vector<MatchLogEvent> wrongSeat = WithoutHandsAndEnd(whole);
+        Vector<MatchLogEvent> wrongSeat = WithoutHandsAndEnd(whole);
         const size_t savedAction = IndexOf(wrongSeat, MatchLogKind::Action);
         wrongSeat[savedAction].seat = NextSeat(wrongSeat[savedAction].seat);
         cases.push_back({"wrong seat", wrongSeat, savedAction, ReplayProblem::ActionRefused});
 
         // A tile that the seat does not hold.
-        eastl::vector<MatchLogEvent> wrongTile = WithoutHandsAndEnd(whole);
+        Vector<MatchLogEvent> wrongTile = WithoutHandsAndEnd(whole);
         {
-            const eastl::vector<Tile>& held = whole[1].concealed[static_cast<size_t>(wrongTile[savedAction].seat)];
+            const Vector<Tile>& held = whole[1].concealed[static_cast<size_t>(wrongTile[savedAction].seat)];
             Tile missing{0};
             for (uint8_t id = 0; id < kKindCount; ++id) {
                 if (eastl::find(held.begin(), held.end(), Tile{id}) == held.end()) {
@@ -414,19 +414,19 @@ namespace BECore::Mahjong::Tests {
         cases.push_back({"tile not held", wrongTile, savedAction, ReplayProblem::ActionRefused});
 
         // A settlement that pays otherwise, late in the log.
-        eastl::vector<MatchLogEvent> paid = WithoutHandsAndEnd(whole);
+        Vector<MatchLogEvent> paid = WithoutHandsAndEnd(whole);
         const size_t savedSettlement = IndexOf(paid, MatchLogKind::Settlement);
         paid[savedSettlement].settlement.deltas[0] += 10;
         cases.push_back({"other deltas", paid, savedSettlement, ReplayProblem::SettlementMismatch});
 
         // A Hand event that the deal does not make.
-        eastl::vector<MatchLogEvent> redealt = whole;
+        Vector<MatchLogEvent> redealt = whole;
         redealt[1].concealed[0].clear();
         cases.push_back({"other deal", redealt, 1, ReplayProblem::HandMismatch});
 
         cases.push_back({"empty", {}, 0, ReplayProblem::NoStart});
-        cases.push_back({"no start", eastl::vector<MatchLogEvent>(whole.begin() + 1, whole.end()), 0, ReplayProblem::NoStart});
-        eastl::vector<MatchLogEvent> bad = WithoutHandsAndEnd(whole);
+        cases.push_back({"no start", Vector<MatchLogEvent>(whole.begin() + 1, whole.end()), 0, ReplayProblem::NoStart});
+        Vector<MatchLogEvent> bad = WithoutHandsAndEnd(whole);
         bad[0].settings.handsPerMatch = kUnplayableHandsPerMatch;
         cases.push_back({"bad settings", bad, 0, ReplayProblem::BadSettings});
 
@@ -446,7 +446,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(MahjongSaveTest, TheEchoOfAReplayDoesNotDependOnTheHandAndEndEventsOfTheLog) {
-        const eastl::vector<MatchLogEvent> whole = WholeLog();
+        const Vector<MatchLogEvent> whole = WholeLog();
         Match first;
         MatchLog withHands;
         ASSERT_TRUE(ReplayMatchLog(whole, first, &withHands).has_value());
@@ -463,7 +463,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(MahjongSaveTest, ReplayingWithoutAnEchoIsAsBefore) {
-        const eastl::vector<MatchLogEvent> whole = WholeLog();
+        const Vector<MatchLogEvent> whole = WholeLog();
         Match plain;
         Match echoed;
         MatchLog sink;
@@ -515,7 +515,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The text of the full match log (all five kinds with the breakdowns), for the size to be compared with.
-        size_t FullLogSize(const eastl::vector<MatchLogEvent>& events) {
+        size_t FullLogSize(const Vector<MatchLogEvent>& events) {
             size_t size = 0;
             for (const MatchLogEvent& event : events) {
                 size += EventToJson(event).dump().size() + 1;
@@ -546,11 +546,11 @@ namespace BECore::Mahjong::Tests {
         for (const Played& played : {Played{3, kCCCC, ComputerLevel::Normal, kAllSteps}, Played{11, kPCCC, ComputerLevel::Easy, kAllSteps}, Played{5, kPPCC, ComputerLevel::Normal, 400}}) {
             const String where = Format("seed {} {}", played.seed, Plain(SeatsToLetters(played.seats)));
             const Recorded recorded(played.seed, played.seats, played.level, played.steps);
-            const eastl::vector<MatchLogEvent>& all = recorded.log.Events();
+            const Vector<MatchLogEvent>& all = recorded.log.Events();
             const String text = MatchSaveText(all);
             const auto parsed = ParseMatchSaveText(StringView(text.c_str(), text.size()));
             ASSERT_TRUE(parsed.has_value()) << where << ": " << (parsed ? "" : parsed.error().c_str());
-            const eastl::vector<MatchLogEvent> want = WithoutHandsAndEnd(all);
+            const Vector<MatchLogEvent> want = WithoutHandsAndEnd(all);
             ASSERT_EQ(parsed->size(), want.size()) << where;
             for (size_t index = 0; index < want.size(); ++index) {
                 EXPECT_TRUE((*parsed)[index] == want[index]) << where << ": event " << index;
@@ -685,7 +685,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(recorder.IsRecording());
 
         const Recorded first(3, kCCCC, ComputerLevel::Normal, kAllSteps);
-        const eastl::vector<MatchLogEvent>& all = first.log.Events();
+        const Vector<MatchLogEvent>& all = first.log.Events();
         for (const MatchLogEvent& event : all) {
             recorder.OnEvent(event);
         }

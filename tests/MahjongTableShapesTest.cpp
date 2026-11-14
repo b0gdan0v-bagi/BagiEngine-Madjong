@@ -27,7 +27,7 @@ namespace BECore::Mahjong::Tests {
         constexpr float kHalfFlight = kTileFlightSeconds * 0.5f;
 
         /// The windows of a shape the table is checked in: its design window, and the fitted ones (bars on the sides, or above and below).
-        std::vector<MatrixWindow> WindowsOf(TableShape shape) {
+        Vector<MatrixWindow> WindowsOf(TableShape shape) {
             if (shape == TableShape::Narrow) {
                 return {DesignWindowOf(shape),
                         MakePhoneWindow(1024.0f, 768.0f, 1.0f),
@@ -51,7 +51,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The four bars of width `width` on the border of `rect`, inside it, as the table draws a frame.
-        std::vector<Rect> BarsOf(const Rect& rect, float width) {
+        Vector<Rect> BarsOf(const Rect& rect, float width) {
             return {Rect(rect.x, rect.y, rect.w, width), Rect(rect.x, rect.y + rect.h - width, rect.w, width), Rect(rect.x, rect.y + width, width, rect.h - 2.0f * width),
                     Rect(rect.x + rect.w - width, rect.y + width, width, rect.h - 2.0f * width)};
         }
@@ -96,8 +96,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The rectangles drawn in `color` (output pixels), in the order drawn.
-        std::vector<Rect> RectsOf(const Color& color) const {
-            std::vector<Rect> found;
+        Vector<Rect> RectsOf(const Color& color) const {
+            Vector<Rect> found;
             for (const DrawCall& call : _renderer->calls) {
                 if (call.kind == DrawKind::Rect && SameColor(call.color, color)) {
                     found.push_back(call.rect);
@@ -107,8 +107,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// How many of `expected` (view units, carried through the fit of the window) are among the rects drawn in `color`.
-        int CountDrawn(const MatrixWindow& window, const Color& color, const std::vector<Rect>& expected) const {
-            const std::vector<Rect> drawn = RectsOf(color);
+        int CountDrawn(const MatrixWindow& window, const Color& color, const Vector<Rect>& expected) const {
+            const Vector<Rect> drawn = RectsOf(color);
             int found = 0;
             for (const Rect& want : expected) {
                 const Rect out = Out(window, want);
@@ -353,7 +353,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_EQ(_table->SelectedHandIndex(), index) << window.label.c_str();
             const Rect raised = RaisedRect(slotRect);
             EXPECT_FLOAT_EQ(raised.y, slotRect.y - kSelectedTileRise);
-            const std::vector<DrawCall> calls = TileCalls();
+            const Vector<DrawCall> calls = TileCalls();
             ASSERT_FALSE(calls.empty());
             EXPECT_TRUE(NearRect(calls.back().rect, Out(window, raised))) << window.label.c_str() << ": the raised tile is drawn last, at its raised rect";
 
@@ -422,7 +422,7 @@ namespace BECore::Mahjong::Tests {
 
                 const ChowTakes& takes = _table->GetChowTakes();
                 ASSERT_EQ(takes.count, 2) << NameOf(shape) << " " << window.label.c_str();
-                std::vector<Rect> expected;
+                Vector<Rect> expected;
                 for (int k = 0; k < takes.count; ++k) {
                     const int index = IndexOf(kSeat1, takes.tiles[static_cast<size_t>(k)]);
                     const TileSlot* slot = SlotOf(SlotRole::HandTile, kSeat1, index);

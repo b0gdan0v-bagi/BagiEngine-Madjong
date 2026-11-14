@@ -284,7 +284,7 @@ namespace BECore::Mahjong {
                 return read(*member);
             }
 
-            bool GetTiles(const Json& object, StringView key, eastl::vector<Tile>& out) {
+            bool GetTiles(const Json& object, StringView key, Vector<Tile>& out) {
                 out.clear();
                 return ForEach(object, key, [&](const Json& item) {
                     Tile tile;
@@ -366,7 +366,7 @@ namespace BECore::Mahjong {
                        GetTile(item, "claimed", meld.claimed, true);
             }
 
-            bool ReadMelds(const Json& object, StringView key, eastl::vector<Meld>& out) {
+            bool ReadMelds(const Json& object, StringView key, Vector<Meld>& out) {
                 out.clear();
                 return ForEach(object, key, [&](const Json& item) {
                     Meld meld;
@@ -535,7 +535,7 @@ namespace BECore::Mahjong {
             const Json& _view;
             const Json& _actions;
             OnlineTable& _t;
-            eastl::vector<PathPart> _path;
+            Vector<PathPart> _path;
             String _word;
             OnlineViewError _error;
             bool _failed = false;
@@ -551,7 +551,7 @@ namespace BECore::Mahjong {
         return read;
     }
 
-    void ListHandActions(const OnlineTable& table, eastl::vector<HandAction>& out) {
+    void ListHandActions(const OnlineTable& table, Vector<HandAction>& out) {
         out.clear();
         for (const ControlAction& action : table.actions) {
             if (!action.nextHand) {

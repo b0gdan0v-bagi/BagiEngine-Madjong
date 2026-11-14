@@ -8,7 +8,7 @@ namespace BECore::Mahjong {
         constexpr const char* kChowHint = "hint.ClaimChow";
         constexpr const char* kConcealedKongHint = "hint.ConcealedKong";
 
-        constexpr eastl::array<ButtonSpec, kButtonCount> kSpecs{{
+        constexpr Array<ButtonSpec, kButtonCount> kSpecs{{
             {"Win", "MahjongWin", "", "button.Win", "hint.Win", 0},
             {"Mahjong", "MahjongClaimMahjong", "", "button.ClaimMahjong", "hint.ClaimMahjong", 1},
             {"Pung", "MahjongClaimPung", "", "button.ClaimPung", "hint.ClaimPung", 1},
@@ -78,7 +78,7 @@ namespace BECore::Mahjong {
         return Tr(strings, SpecOf(kind).hintKey);
     }
 
-    ActionButtons MakeActionButtons(const eastl::vector<HandAction>& legal, Optional<Tile> pendingTile) {
+    ActionButtons MakeActionButtons(const Vector<HandAction>& legal, Optional<Tile> pendingTile) {
         const Tile pending = pendingTile.value_or(Tile{});
         ActionButtons buttons;
         int chows = 0;

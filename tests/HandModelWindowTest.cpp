@@ -206,7 +206,7 @@ namespace BECore::Mahjong::Tests {
         HandModel model = PriorityWindow();
 
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            const eastl::vector<Seat> pending = model.PendingClaimSeats();
+            const Vector<Seat> pending = model.PendingClaimSeats();
             EXPECT_EQ(model.AwaitsClaim(seat), eastl::find(pending.begin(), pending.end(), seat) != pending.end()) << seat;
         }
         EXPECT_FALSE(model.AwaitsClaim(kNoSeat));

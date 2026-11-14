@@ -32,7 +32,7 @@ namespace BECore::Mahjong {
 
     /// One of non-empty `ties` by `rng` (the first when there is only one: no number is drawn).
     template <typename T>
-    const T& PickOne(const eastl::vector<T>& ties, MahjongRng& rng) {
+    const T& PickOne(const Vector<T>& ties, MahjongRng& rng) {
         return ties.size() == 1 ? ties.front() : ties[rng.Below(static_cast<uint32_t>(ties.size()))];
     }
 
@@ -62,7 +62,7 @@ namespace BECore::Mahjong {
 
     /// The listed discards with `declareCalling == declaring` that leave a waiting hand (steps 2 and 4 of the turn, and the candidates of
     /// the search), in the order of `view.legal`. With `readDanger` each carries the danger of its tile (`LevelProfile::readDanger`).
-    [[nodiscard]] eastl::vector<WaitingDiscard> WaitingDiscards(const TableView& view, bool declaring, bool readDanger = false);
+    [[nodiscard]] Vector<WaitingDiscard> WaitingDiscards(const TableView& view, bool declaring, bool readDanger = false);
 
     /// How good the best discard of a hand of `3n + 2` tiles is: the tile, the shanten and the acceptance of the `3n + 1` tiles left.
     struct DiscardRating {
@@ -99,7 +99,7 @@ namespace BECore::Mahjong {
     /// danger (all 0 without `readDanger`), the lowest `KeepValue`, then the lowest tile id. The first entry is `BestDiscardRating`; the
     /// entries equal to it in all four numbers are the candidates `BestDiscard` picks from. Unlike `BestDiscard` it computes the
     /// acceptance of every kind.
-    [[nodiscard]] eastl::vector<DiscardOption> RateDiscards(const TileCounts& counts, int meldCount, const TableView& view, bool readDanger = false);
+    [[nodiscard]] Vector<DiscardOption> RateDiscards(const TileCounts& counts, int meldCount, const TableView& view, bool readDanger = false);
 
     /// What `KongIsNoWorse` compares for a listed kong `action` (`ConcealedKong` or `UpgradeKong`) of the hand `counts`: the shanten and the
     /// acceptance of the hand without the kong (the four tiles, or the one drawn, out, a meld more); `tile` invalid.

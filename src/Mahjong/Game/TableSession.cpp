@@ -64,11 +64,11 @@ namespace BECore::Mahjong {
         return {};
     }
 
-    ReplayStatus TableSession::ResumeMatch(const eastl::vector<MatchLogEvent>& events, const SeatSetup& seats, ComputerLevel level) {
+    ReplayStatus TableSession::ResumeMatch(const Vector<MatchLogEvent>& events, const SeatSetup& seats, ComputerLevel level) {
         return ResumeMatch(events, seats, UniformLevels(level));
     }
 
-    ReplayStatus TableSession::ResumeMatch(const eastl::vector<MatchLogEvent>& events, const SeatSetup& seats, const SeatLevels& levels) {
+    ReplayStatus TableSession::ResumeMatch(const Vector<MatchLogEvent>& events, const SeatSetup& seats, const SeatLevels& levels) {
         BE_PROFILE_SCOPE("TableSession::ResumeMatch");
         Match scratch;
         if (ReplayStatus checked = ReplayMatchLog(events, scratch); !checked) {
@@ -272,7 +272,7 @@ namespace BECore::Mahjong {
     }
 
     Optional<HandSettlement> TableSession::LastSettlement() const {
-        const eastl::vector<HandSettlement>& history = _match.History();
+        const Vector<HandSettlement>& history = _match.History();
         return history.empty() ? std::nullopt : Optional<HandSettlement>(history.back());
     }
 

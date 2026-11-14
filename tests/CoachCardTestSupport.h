@@ -14,8 +14,8 @@
 namespace BECore::Mahjong::Tests {
 
     /// The names of the variables of the card: the title, the head, each cell of each row, the lines under the rows.
-    inline std::vector<String> CardVarNames() {
-        std::vector<String> names{"cardTitle", "cardNow"};
+    inline Vector<String> CardVarNames() {
+        Vector<String> names{"cardTitle", "cardNow"};
         for (const char* cell : {"cardWho", "cardMove", "cardSteps", "cardUseful"}) {
             for (size_t i = 0; i < kMaxCardRows; ++i) {
                 names.push_back(Format("{}{}", cell, i));
@@ -28,9 +28,9 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// What `card` puts into the variables, in the order of `CardVarNames`, empty where it has nothing.
-    inline std::vector<String> CardTexts(const HintCard& card) {
+    inline Vector<String> CardTexts(const HintCard& card) {
         const auto text = [](const String& value) { return String(value.data(), value.size()); };
-        std::vector<String> texts{text(card.title), text(card.now)};
+        Vector<String> texts{text(card.title), text(card.now)};
         const auto cells = [&](auto member) {
             for (size_t i = 0; i < kMaxCardRows; ++i) {
                 texts.push_back(i < card.rows.size() ? text(card.rows[i].*member) : String());
@@ -47,8 +47,8 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// What the variables of the card hold now.
-    inline std::vector<String> CardVars() {
-        std::vector<String> values;
+    inline Vector<String> CardVars() {
+        Vector<String> values;
         for (const String& name : CardVarNames()) {
             values.push_back(Var(name.c_str()));
         }
@@ -65,18 +65,18 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// Sets every variable of the card to the longest text it takes over `cards` (each cell of every row to the longest of that cell).
-    inline void SetLongestCardTexts(const std::vector<HintCard>& cards) {
-        const std::vector<String> names = CardVarNames();
-        std::vector<std::vector<String>> candidates(names.size());
+    inline void SetLongestCardTexts(const Vector<HintCard>& cards) {
+        const Vector<String> names = CardVarNames();
+        Vector<Vector<String>> candidates(names.size());
         for (const HintCard& card : cards) {
-            const std::vector<String> texts = CardTexts(card);
+            const Vector<String> texts = CardTexts(card);
             for (size_t at = 0; at < texts.size(); ++at) {
                 candidates[at].emplace_back(texts[at].c_str());
             }
         }
         // A cell of a row takes the longest of that cell in any row, a line under the rows the longest of any line
         const auto widen = [&](size_t first, size_t count) {
-            std::vector<String> all;
+            Vector<String> all;
             for (size_t at = first; at < first + count; ++at) {
                 all.insert(all.end(), candidates[at].begin(), candidates[at].end());
             }

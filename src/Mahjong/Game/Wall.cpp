@@ -4,7 +4,7 @@
 
 namespace BECore::Mahjong {
 
-    Wall Wall::FromOrder(eastl::vector<Tile> order) {
+    Wall Wall::FromOrder(Vector<Tile> order) {
         Wall wall;
         const size_t loose = eastl::min(kLooseTiles, order.size());
         const size_t dead = eastl::min(kDeadWallTiles, order.size() - loose);
@@ -17,7 +17,7 @@ namespace BECore::Mahjong {
         return wall;
     }
 
-    Wall Wall::FromParts(eastl::vector<Tile> loose, eastl::vector<Tile> live, eastl::vector<Tile> dead) {
+    Wall Wall::FromParts(Vector<Tile> loose, Vector<Tile> live, Vector<Tile> dead) {
         Wall wall;
         wall._loose = eastl::move(loose);
         wall._live = eastl::move(live);
@@ -47,7 +47,7 @@ namespace BECore::Mahjong {
     }
 
     Wall MakeWall(MahjongRng& rng, const MahjongSettings& settings, Seat east) {
-        eastl::vector<Tile> ring = BuildTileSet(settings.flowers);
+        Vector<Tile> ring = BuildTileSet(settings.flowers);
         rng.Shuffle(ring);
 
         WallBreak wallBreak;

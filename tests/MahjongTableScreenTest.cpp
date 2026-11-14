@@ -79,7 +79,7 @@ namespace BECore::Mahjong::Tests {
             std::set<String> names;
             const auto canvas = Canvas(node);
             EXPECT_TRUE(canvas) << node;
-            std::vector<const UIElement*> pending;
+            Vector<const UIElement*> pending;
             if (canvas) {
                 pending.push_back(&canvas->GetRoot());
             }
@@ -150,7 +150,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The longest text (by code points, the measure of a line of text in any language) of `candidates`.
-        static String Longest(const std::vector<String>& candidates) {
+        static String Longest(const Vector<String>& candidates) {
             String longest;
             size_t most = 0;
             for (const String& candidate : candidates) {
@@ -232,7 +232,7 @@ namespace BECore::Mahjong::Tests {
         auto canvas = Canvas("Actions");
         ASSERT_TRUE(canvas);
         std::set<String> names;
-        std::vector<const UIElement*> pending{&canvas->GetRoot()};
+        Vector<const UIElement*> pending{&canvas->GetRoot()};
         while (!pending.empty()) {
             const UIElement* element = pending.back();
             pending.pop_back();
@@ -263,7 +263,7 @@ namespace BECore::Mahjong::Tests {
         // Every button with all its pictures, once per language of the table (a language added to the file is covered without touching the test)
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
-            for (const std::vector<ButtonKind>& kinds : FullestButtonSets()) {
+            for (const Vector<ButtonKind>& kinds : FullestButtonSets()) {
                 for (int i = 0; i < kButtonCount; ++i) {
                     SetShown(static_cast<ButtonKind>(i), false);
                 }
@@ -334,7 +334,7 @@ namespace BECore::Mahjong::Tests {
             }
         }
         ASSERT_FALSE(band.IsEmpty());
-        for (const std::vector<ButtonKind>& kinds : FullestButtonSets()) {
+        for (const Vector<ButtonKind>& kinds : FullestButtonSets()) {
             for (int i = 0; i < kButtonCount; ++i) {
                 SetShown(static_cast<ButtonKind>(i), false);
             }
@@ -381,7 +381,7 @@ namespace BECore::Mahjong::Tests {
         const TableLayout layout = MakeWorstCaseTableLayout(0, design);
         ASSERT_EQ(layout.shape, TableShape::Narrow);
         const Rect& block = layout.zones.discards[0];  // the viewer's discards, the row's neighbour on the left
-        for (const std::vector<ButtonKind>& kinds : FullestButtonSets()) {
+        for (const Vector<ButtonKind>& kinds : FullestButtonSets()) {
             for (int i = 0; i < kButtonCount; ++i) {
                 SetShown(static_cast<ButtonKind>(i), false);
             }
@@ -419,19 +419,19 @@ namespace BECore::Mahjong::Tests {
         // The longest sentence in the hint, the fullest turn and window shown: every word of the canvas fits in every narrow window of every language
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
-            std::vector<String> sentences;
+            Vector<String> sentences;
             for (int i = 0; i < kButtonCount; ++i) {
                 sentences.push_back(HintOf(CoreManager::GetUIStrings(), static_cast<ButtonKind>(i)));
             }
             CoreManager::GetUIVars().Set("actionHint"_intern, StringView(Longest(sentences)));
-            for (const std::vector<ButtonKind>& kinds : FullestButtonSets()) {
+            for (const Vector<ButtonKind>& kinds : FullestButtonSets()) {
                 for (int i = 0; i < kButtonCount; ++i) {
                     SetShown(static_cast<ButtonKind>(i), false);
                 }
                 for (const ButtonKind kind : kinds) {
                     SetShown(kind, true);
                 }
-                const std::vector<String> cut = WordsThatDoNotFitOnTheMatrix(*canvas, 0.0f, TableShape::Narrow);
+                const Vector<String> cut = WordsThatDoNotFitOnTheMatrix(*canvas, 0.0f, TableShape::Narrow);
                 for (const String& line : cut) {
                     ADD_FAILURE() << line;
                 }
@@ -481,7 +481,7 @@ namespace BECore::Mahjong::Tests {
         // The rule counts the buttons of the fullest window, and the hint button that the hints offer with it: the biggest set the canvases
         // have to hold at once
         size_t fullest = 0;
-        for (const std::vector<ButtonKind>& kinds : FullestButtonSets()) {
+        for (const Vector<ButtonKind>& kinds : FullestButtonSets()) {
             fullest = std::max(fullest, kinds.size());
         }
         EXPECT_EQ(static_cast<size_t>(kCompactButtonCount), fullest + 1u);
@@ -550,7 +550,7 @@ namespace BECore::Mahjong::Tests {
         const auto compact = Canvas("ActionsCompact");
         ASSERT_TRUE(compact);
         compact->UpdateLayout(kViewWidth, kViewHeight);
-        const eastl::vector<UIVariant>& variants = compact->GetLayout().variants;
+        const Vector<UIVariant>& variants = compact->GetLayout().variants;
 
         // k buttons to a line need k * width + (k - 1) * spacing of the safe area, which is at least 82 % of the canvas. A canvas up to the width
         // where k buttons stop fitting holds k - 1 to a line, so the claim window's buttons make ceil(count / (k - 1)) lines, and a stack has
@@ -590,7 +590,7 @@ namespace BECore::Mahjong::Tests {
         const float minTouch = EngineTouchMinimum();
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
-            for (const std::vector<ButtonKind>& kinds : FullestButtonSets()) {
+            for (const Vector<ButtonKind>& kinds : FullestButtonSets()) {
                 for (int i = 0; i < kButtonCount; ++i) {
                     SetShown(static_cast<ButtonKind>(i), false, "ActionsCompact");
                 }
@@ -619,7 +619,7 @@ namespace BECore::Mahjong::Tests {
 
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
-            std::vector<String> sentences;
+            Vector<String> sentences;
             for (int i = 0; i < kButtonCount; ++i) {
                 sentences.push_back(HintOf(CoreManager::GetUIStrings(), static_cast<ButtonKind>(i)));
             }
@@ -627,7 +627,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_LE(Utf8::CountCodePoints(longest), kMaxHintLength);
             CoreManager::GetUIVars().Set("actionHint"_intern, StringView(longest));
             // With the fullest turn and the fullest window under it, as the matrix test of the buttons has them
-            for (const std::vector<ButtonKind>& kinds : FullestButtonSets()) {
+            for (const Vector<ButtonKind>& kinds : FullestButtonSets()) {
                 for (int i = 0; i < kButtonCount; ++i) {
                     SetShown(static_cast<ButtonKind>(i), false);
                 }
@@ -668,7 +668,7 @@ namespace BECore::Mahjong::Tests {
             for (const TileSlot& slot : layout.slots) {
                 EXPECT_TRUE(Apart(slot.rect, plate)) << window.label.c_str() << ": the hint covers role " << static_cast<int>(slot.role) << " seat " << slot.seat << " index " << slot.index;
             }
-            const eastl::vector<Rect> plates = ZonePlates(layout);
+            const Vector<Rect> plates = ZonePlates(layout);
             for (size_t i = 0; i < plates.size(); ++i) {
                 EXPECT_TRUE(Apart(plates[i], Grown(plate, kGridUnit))) << window.label.c_str() << ": the hint is less than one grid unit from plate " << i;
             }
@@ -685,7 +685,7 @@ namespace BECore::Mahjong::Tests {
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             // The longest name any seat can have, from the real function: every seat with every wind
-            std::vector<String> names;
+            Vector<String> names;
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 for (int wind = 0; wind < kSeatCount; ++wind) {
                     names.push_back(SeatName(CoreManager::GetUIStrings(), seat, static_cast<Wind>(wind)));
@@ -705,7 +705,7 @@ namespace BECore::Mahjong::Tests {
         UICanvasComponent::SetVisibleByName(*_manager->GetSceneByName("MahjongScene"_intern), "Handoff"_intern, true);
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
-            std::vector<String> names;
+            Vector<String> names;
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 for (int wind = 0; wind < kSeatCount; ++wind) {
                     names.push_back(SeatName(CoreManager::GetUIStrings(), seat, static_cast<Wind>(wind)));
@@ -741,7 +741,7 @@ namespace BECore::Mahjong::Tests {
                 return;
             }
             const TableLayout layout = MakeWorstCaseTableLayout(0, window);
-            for (const std::vector<ButtonKind>& kinds : FullestButtonSets()) {
+            for (const Vector<ButtonKind>& kinds : FullestButtonSets()) {
                 for (int i = 0; i < kButtonCount; ++i) {
                     SetShown(static_cast<ButtonKind>(i), false);
                 }

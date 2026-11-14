@@ -58,8 +58,8 @@ namespace BECore::Mahjong::Arena {
             uint32_t rngSeed = 0;
         };
 
-        eastl::vector<Position> Positions(int seeds, int stride) {
-            eastl::vector<Position> positions;
+        Vector<Position> Positions(int seeds, int stride) {
+            Vector<Position> positions;
             const ArenaPlayers players = Table(Player("normal"));
             for (int index = 0; index < seeds; ++index) {
                 const uint32_t seed = kFirstSeed + static_cast<uint32_t>(index);
@@ -151,8 +151,8 @@ namespace BECore::Mahjong::Arena {
         }
 
         /// The kinds of the three lists of the wall together, sorted.
-        eastl::vector<Tile> WallTiles(const HandModel& hand) {
-            eastl::vector<Tile> tiles = hand.GetWall().LiveTiles();
+        Vector<Tile> WallTiles(const HandModel& hand) {
+            Vector<Tile> tiles = hand.GetWall().LiveTiles();
             tiles.insert(tiles.end(), hand.GetWall().LooseTiles().begin(), hand.GetWall().LooseTiles().end());
             tiles.insert(tiles.end(), hand.GetWall().DeadWall().begin(), hand.GetWall().DeadWall().end());
             eastl::sort(tiles.begin(), tiles.end());
@@ -161,12 +161,12 @@ namespace BECore::Mahjong::Arena {
 
         /// The positions of the hands played (every action of a hand with Normal on the seats), the actor's own view a decision of a
         /// search: `phase` Discard or Claim, and a search run that would begin on it with the shipped budget.
-        eastl::vector<Position> SearchedPositions(Phase phase, size_t count) {
+        Vector<Position> SearchedPositions(Phase phase, size_t count) {
             LevelProfile search = kNormalProfile;
             search.searchWorlds = kSearchWorlds;
             search.searchCandidates = kSearchCandidates;
             search.searchMargin = kSearchMargin;
-            eastl::vector<Position> found;
+            Vector<Position> found;
             for (const Position& position : Positions(kStateSeedCount, 1)) {
                 const TableView view = MakeTableView(position.hand, position.actor);
                 MahjongRng rng(position.rngSeed);
@@ -189,7 +189,7 @@ namespace BECore::Mahjong::Arena {
     }  // namespace
 
     TEST(ArenaOracleTest, TheAcceptanceViewDiffersFromTheRealViewOnlyInVisible) {
-        const eastl::vector<Position> positions = Positions(kStateSeedCount, kStateStride);
+        const Vector<Position> positions = Positions(kStateSeedCount, kStateStride);
         ASSERT_GE(positions.size(), 30U);
         bool sawDiscard = false;
         bool sawClaim = false;
@@ -330,7 +330,7 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaOracleTest, TheWorldsOfTheHandsOracleKeepTheOpponentsHandsAndOnlyReorderTheWall) {
-        eastl::vector<Position> positions = Positions(kStateSeedCount, kStateStride);
+        Vector<Position> positions = Positions(kStateSeedCount, kStateStride);
         positions.push_back({RobKongModel(), kSeat2, 1});
         bool sawRobKong = false;
         int reordered = 0;
@@ -375,7 +375,7 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaOracleTest, TheWorldsOfTheWholeHandOracleAreTheRealTable) {
-        eastl::vector<Position> positions = Positions(kStateSeedCount, kStateStride);
+        Vector<Position> positions = Positions(kStateSeedCount, kStateStride);
         positions.push_back({RobKongModel(), kSeat2, 1});
         for (const Position& position : positions) {
             const TableView view = MakeTableView(position.hand, position.actor);
@@ -404,7 +404,7 @@ namespace BECore::Mahjong::Arena {
             EXPECT_EQ(oracle.profile.searchCandidates, kSearchCandidates);
             EXPECT_EQ(oracle.profile.searchMargin, kSearchMargin);
             for (const Phase phase : {Phase::Discard, Phase::Claim}) {
-                const eastl::vector<Position> found = SearchedPositions(phase, kPositionsOfAKind);
+                const Vector<Position> found = SearchedPositions(phase, kPositionsOfAKind);
                 EXPECT_EQ(found.size(), static_cast<size_t>(kPositionsOfAKind)) << spec << " " << Name(phase);
                 for (const Position& position : found) {
                     const TableView view = MakeTableView(position.hand, position.actor);

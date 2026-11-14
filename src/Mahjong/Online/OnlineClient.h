@@ -51,7 +51,7 @@ namespace BECore::Mahjong {
         bool pending = false;
         /// The server cut the list at its cap: more rooms are open.
         bool more = false;
-        eastl::vector<OnlineListedRoom> rooms;
+        Vector<OnlineListedRoom> rooms;
     };
 
     /// One seat of the lobby, with the facts a screen needs so that it reads no `RoomClient`.
@@ -71,7 +71,7 @@ namespace BECore::Mahjong {
         /// The code of the room; empty when there is no lobby to show.
         String room;
         RoomPhase phase = RoomPhase::Lobby;
-        eastl::array<OnlineLobbySeat, kSeatCount> seats;
+        Array<OnlineLobbySeat, kSeatCount> seats;
         /// This client is the host of a room that has not started.
         bool canStart = false;
         /// How many seats a person holds.
@@ -250,8 +250,8 @@ namespace BECore::Mahjong {
 
         RoomClient _client;
         /// Members, so a frame keeps their capacity.
-        eastl::vector<RoomClientEvent> _events;
-        eastl::vector<RoomClientEvent> _discarded;
+        Vector<RoomClientEvent> _events;
+        Vector<RoomClientEvent> _discarded;
         OnlineTable _table;
         OnlineTable _scratch;
         bool _hasTable = false;

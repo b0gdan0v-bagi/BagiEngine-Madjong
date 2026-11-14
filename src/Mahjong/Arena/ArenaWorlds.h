@@ -38,7 +38,7 @@ namespace BECore::Mahjong::Arena {
         void Helper();
         void TakeIndexes(const std::function<void(int index)>& body, int count);
 
-        eastl::vector<std::thread> _helpers;
+        Vector<std::thread> _helpers;
         std::mutex _mutex;
         std::condition_variable _wake;
         std::condition_variable _finished;

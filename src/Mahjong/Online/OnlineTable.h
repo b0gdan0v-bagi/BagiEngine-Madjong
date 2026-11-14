@@ -17,9 +17,9 @@ namespace BECore::Mahjong {
         int score = 0;
         int concealedCount = 0;
         /// A meld with `from` and `claimed` that JSON gave as null holds `kNoSeat` and an invalid tile.
-        eastl::vector<Meld> melds;
+        Vector<Meld> melds;
         int concealedKongs = 0;
-        eastl::vector<Tile> bonus;
+        Vector<Tile> bonus;
         int discardCount = 0;
         bool calling = false;
     };
@@ -35,9 +35,9 @@ namespace BECore::Mahjong {
 
     /// The tiles of one seat once the hand is over: all four hands are public then.
     struct OnlineResultSeat {
-        eastl::vector<Tile> concealed;
-        eastl::vector<Meld> melds;
-        eastl::vector<Tile> bonus;
+        Vector<Tile> concealed;
+        Vector<Meld> melds;
+        Vector<Tile> bonus;
     };
 
     /// How a finished hand ended. The breakdown lines are not read here: they stay in the raw view of the client.
@@ -50,7 +50,7 @@ namespace BECore::Mahjong {
         Seat from = kNoSeat;
         bool loose = false;
         bool lastLiveTile = false;
-        eastl::array<OnlineResultSeat, kSeatCount> seats;
+        Array<OnlineResultSeat, kSeatCount> seats;
         SeatScores scores{};
         SeatScores deltas{};
     };
@@ -73,19 +73,19 @@ namespace BECore::Mahjong {
         Wind roundWind = Wind::East;
         Seat east = kNoSeat;
         /// The own concealed tiles, as sent (sorted).
-        eastl::vector<Tile> hand;
+        Vector<Tile> hand;
         OnlineTurn turn;
-        eastl::array<OnlineSeat, kSeatCount> seats;
+        Array<OnlineSeat, kSeatCount> seats;
         /// The pile in the order discarded.
-        eastl::vector<DiscardEntry> discards;
+        Vector<DiscardEntry> discards;
         /// The live tiles left.
         int wall = 0;
         int handsPlayed = 0;
         int handsTotal = 0;
         uint64_t version = 0;
         /// The seats that sent `next_hand` in the finished hand.
-        eastl::array<bool, kSeatCount> ready{};
-        eastl::vector<ControlAction> actions;
+        Array<bool, kSeatCount> ready{};
+        Vector<ControlAction> actions;
         /// Present exactly when `phase` is not `Playing`.
         Optional<OnlineResult> result;
     };
@@ -114,6 +114,6 @@ namespace BECore::Mahjong {
 
     /// Fills @p out with the hand actions among `table.actions` (the `next_hand` ready check is not one), in the server's order. Keeps the
     /// capacity of @p out. The `legal` list of a `TableView` of the viewer's display hand.
-    void ListHandActions(const OnlineTable& table, eastl::vector<HandAction>& out);
+    void ListHandActions(const OnlineTable& table, Vector<HandAction>& out);
 
 }  // namespace BECore::Mahjong

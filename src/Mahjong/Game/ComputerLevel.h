@@ -88,7 +88,7 @@ namespace BECore::Mahjong {
 
     /// The level of each seat of a table, indexed by seat. All four entries are kept, also those of seats a person plays: a seat that
     /// becomes a computer again plays at the level it had. Only the entries of computer seats play.
-    using SeatLevels = eastl::array<ComputerLevel, kSeatCount>;
+    using SeatLevels = Array<ComputerLevel, kSeatCount>;
 
     /// Every seat at `level`.
     [[nodiscard]] constexpr SeatLevels UniformLevels(ComputerLevel level) noexcept {

@@ -28,19 +28,19 @@ namespace BECore::Mahjong {
      * the listed concealed and upgraded kongs, then the discards (not the declaring ones) that leave a shanten at most
      * `kSearchShantenSlack` above the best, best first (the shanten, the acceptance, the lowest `KeepValue`, the lowest id).
      */
-    [[nodiscard]] eastl::vector<HandAction> TurnCandidates(const TableView& view, const HandAction& baseline, int maxCount);
+    [[nodiscard]] Vector<HandAction> TurnCandidates(const TableView& view, const HandAction& baseline, int maxCount);
 
     /**
      * @brief The candidates of a search in a claim window: `baseline` first, then `Pass` and every listed pung, kong and chow, the
      *        claims by `RateClaim` (the lowest shanten, the highest acceptance, `ClaimRank`), at most `maxCount` in all, no two equal.
      */
-    [[nodiscard]] eastl::vector<HandAction> ClaimCandidates(const TableView& view, const HandAction& baseline, int maxCount);
+    [[nodiscard]] Vector<HandAction> ClaimCandidates(const TableView& view, const HandAction& baseline, int maxCount);
 
     /// One world of a search played through: `values[c]` is the points of candidate `c` in it. `played` is false for a world that
     /// cannot be sampled, or whose rollout the model refuses: the worlds `Step()` drops.
     struct SearchWorld {
         bool played = false;
-        eastl::vector<int> values;
+        Vector<int> values;
     };
 
     /// The loop a tool supplies to `SearchRun::RunWorlds`: runs `body(i)` for every `i` in `[0, count)`, in any order and on any
@@ -94,7 +94,7 @@ namespace BECore::Mahjong {
 
         /// Takes the worlds `PlayWorld` gave, one slot per index in order, and makes the run `Done()`. A no-op (the contract) on a run
         /// that was stepped or finished already, when the count is not `WorldCount()`, or a played world has not one value per candidate.
-        void Finish(eastl::span<const SearchWorld> worlds);
+        void Finish(Span<const SearchWorld> worlds);
 
         /// `PlayWorld` for every index through `loop` (slot `i` is written by `body(i)` only), then `Finish`. A no-op on a run that was
         /// stepped or finished already.
@@ -106,11 +106,11 @@ namespace BECore::Mahjong {
         [[nodiscard]] HandAction Result() const;
 
         /// The candidates in the order the values are listed in (the order `BeginSearchOver` was given).
-        [[nodiscard]] const eastl::vector<HandAction>& Candidates() const noexcept;
+        [[nodiscard]] const Vector<HandAction>& Candidates() const noexcept;
 
         /// `Values()[c]` is the points of candidate `c` in every world that was played, the same worlds in the same order for every
         /// candidate (so the rows have one length and pair by index). Complete when `Done()`.
-        [[nodiscard]] const eastl::vector<eastl::vector<int>>& Values() const noexcept;
+        [[nodiscard]] const Vector<Vector<int>>& Values() const noexcept;
 
         /// The worlds that could not be played (`WorldCount()` minus the length of one row of `Values()`). Valid when `Done()`.
         [[nodiscard]] int DroppedWorlds() const noexcept;
@@ -122,27 +122,27 @@ namespace BECore::Mahjong {
     private:
         friend Optional<SearchRun> BeginTurnSearch(const TableView& view, MahjongRng& rng, const LevelProfile& profile);
         friend Optional<SearchRun> BeginClaimSearch(const TableView& view, MahjongRng& rng, const LevelProfile& profile);
-        friend Optional<SearchRun> BeginSearchOver(const TableView& view, eastl::vector<HandAction> actions, uint32_t baseSeed, int worlds);
+        friend Optional<SearchRun> BeginSearchOver(const TableView& view, Vector<HandAction> actions, uint32_t baseSeed, int worlds);
 
-        SearchRun(const TableView& view, eastl::vector<HandAction> candidates, uint32_t base, const LevelProfile& profile);
+        SearchRun(const TableView& view, Vector<HandAction> candidates, uint32_t base, const LevelProfile& profile);
 
         [[nodiscard]] int StepsPerWorld() const noexcept;
         [[nodiscard]] bool Untouched() const noexcept;
         void NextWorld();
 
         TableView _view;
-        eastl::vector<HandAction> _candidates;
+        Vector<HandAction> _candidates;
         uint32_t _base = 0;
         int _worlds = 0;
         int _margin = 0;
         /// `_values[c]`: the points of candidate `c` in every world that was played through (the same worlds for every candidate).
-        eastl::vector<eastl::vector<int>> _values;
+        Vector<Vector<int>> _values;
         int _worldIndex = 0;
         int _candidateIndex = 0;
         WorldSource _source;
         Optional<HandModel> _sampled;
         uint32_t _tableSeed = 0;
-        eastl::vector<int> _row;
+        Vector<int> _row;
     };
 
     /**
@@ -176,7 +176,7 @@ namespace BECore::Mahjong {
      * that the actions are listed (an action the model refuses drops its world, as in any run). `nullopt` for a view with no legal
      * action, an empty list or fewer than one world. The margin is 0; read `Values()` after `RunWorlds` (or the steps), not `Result()`.
      */
-    [[nodiscard]] Optional<SearchRun> BeginSearchOver(const TableView& view, eastl::vector<HandAction> actions, uint32_t baseSeed, int worlds);
+    [[nodiscard]] Optional<SearchRun> BeginSearchOver(const TableView& view, Vector<HandAction> actions, uint32_t baseSeed, int worlds);
 
     /// Where a chooser puts a search it did not run (`ChooseTurnAction` / `ChooseClaimAction` with a non-null handoff): the run that
     /// `SearchTurnAction` / `SearchClaimAction` would have stepped to its end. Empty when the decision is not a search; the chooser's

@@ -62,7 +62,7 @@ namespace BECore::Mahjong {
 
     /// The melds of @p seat as the display hand holds them: the own seat's as the view lists them, another's open melds and then its
     /// concealed kongs with invalid tiles. The index of a meld in this list is the `meld` of a `HandMove` (`MoveTracker`).
-    void DisplayMelds(const OnlineTable& table, Seat seat, eastl::vector<Meld>& out);
+    void DisplayMelds(const OnlineTable& table, Seat seat, Vector<Meld>& out);
 
     /// What tells one table from another: a new hand or match (`handsPlayed`, east), a view that went back in time, the same hand
     /// replayed after a draw (the earlier view was over, this one is played) or another seat of the viewer.
@@ -106,8 +106,8 @@ namespace BECore::Mahjong {
     class MoveTracker {
     public:
         /// Takes in the next table of the hand and returns the log (valid until the next call).
-        const eastl::vector<HandMove>& Follow(const OnlineTable& table);
-        [[nodiscard]] const eastl::vector<HandMove>& Moves() const noexcept {
+        const Vector<HandMove>& Follow(const OnlineTable& table);
+        [[nodiscard]] const Vector<HandMove>& Moves() const noexcept {
             return _moves;
         }
         /// Forgets the table and the log: the next `Follow` starts afresh.
@@ -116,21 +116,21 @@ namespace BECore::Mahjong {
     private:
         /// What the next step needs of the previous table.
         struct Snapshot {
-            eastl::vector<DiscardEntry> pile;
-            eastl::array<eastl::vector<Meld>, kSeatCount> open;
-            eastl::array<int, kSeatCount> concealedKongs{};
-            eastl::array<bool, kSeatCount> calling{};
+            Vector<DiscardEntry> pile;
+            Array<Vector<Meld>, kSeatCount> open;
+            Array<int, kSeatCount> concealedKongs{};
+            Array<bool, kSeatCount> calling{};
         };
 
         void Take(const OnlineTable& table, Snapshot& into);
         /// Appends the moves of the step from `_before` to `table`; false (nothing appended) when the step cannot be explained.
         bool Explain(const OnlineTable& table);
 
-        eastl::vector<HandMove> _moves;
+        Vector<HandMove> _moves;
         Snapshot _before;
         Snapshot _now;
-        eastl::vector<HandMove> _step;
-        eastl::vector<Meld> _melds;
+        Vector<HandMove> _step;
+        Vector<Meld> _melds;
         TableKey _key;
     };
 

@@ -21,7 +21,7 @@ namespace BECore::Mahjong::Analyzer {
         }
 
         /// The indexes of the `Action` events of hand number `hand`, in log order. Hand K is what follows K-1 `Settlement` events.
-        std::expected<eastl::vector<size_t>, String> ActionEventsOfHand(const eastl::vector<MatchLogEvent>& events, int hand) {
+        std::expected<Vector<size_t>, String> ActionEventsOfHand(const Vector<MatchLogEvent>& events, int hand) {
             int settlements = 0;
             for (const MatchLogEvent& event : events) {
                 settlements += event.kind == MatchLogKind::Settlement ? 1 : 0;
@@ -29,7 +29,7 @@ namespace BECore::Mahjong::Analyzer {
             if (hand < 1 || hand > settlements + 1) {
                 return Failure(Format("hand {} is out of range: the hands of this log are numbered 1..{} (hand K is what follows K-1 settlements)", hand, settlements + 1));
             }
-            eastl::vector<size_t> actions;
+            Vector<size_t> actions;
             int current = 1;
             for (size_t index = 0; index < events.size(); ++index) {
                 if (events[index].kind == MatchLogKind::Settlement) {
@@ -45,8 +45,8 @@ namespace BECore::Mahjong::Analyzer {
         }
 
         /// A fresh `Match` that has replayed the events before `end`.
-        std::expected<Match, String> ReplayedBefore(const eastl::vector<MatchLogEvent>& events, size_t end) {
-            const eastl::vector<MatchLogEvent> prefix(events.begin(), events.begin() + static_cast<ptrdiff_t>(end));
+        std::expected<Match, String> ReplayedBefore(const Vector<MatchLogEvent>& events, size_t end) {
+            const Vector<MatchLogEvent> prefix(events.begin(), events.begin() + static_cast<ptrdiff_t>(end));
             Match match;
             if (const ReplayStatus replayed = ReplayMatchLog(prefix, match); !replayed) {
                 return Failure(ReplayText(replayed.error()));
@@ -74,7 +74,7 @@ namespace BECore::Mahjong::Analyzer {
         // Positions from the tile notation
         // ---------------------------------------------------------------------------------------------------------------------------
 
-        using Words = eastl::vector<StringView>;
+        using Words = Vector<StringView>;
         using Problem = Optional<String>;
 
         constexpr char kCommentMark = '#';
@@ -105,9 +105,9 @@ namespace BECore::Mahjong::Analyzer {
 
         /// What a seat is given in the text.
         struct SeatDraft {
-            eastl::vector<Meld> melds;
-            eastl::vector<Tile> discards;
-            eastl::vector<Tile> bonus;
+            Vector<Meld> melds;
+            Vector<Tile> discards;
+            Vector<Tile> bonus;
             bool hasDiscards = false;
             bool hasBonus = false;
             bool calling = false;
@@ -121,7 +121,7 @@ namespace BECore::Mahjong::Analyzer {
             Optional<Seat> east;
             Optional<Wind> round;
             Optional<Phase> phase;
-            eastl::vector<Tile> hand;
+            Vector<Tile> hand;
             int handLine = 0;
             Tile drew;
             bool drewNone = false;
@@ -132,9 +132,9 @@ namespace BECore::Mahjong::Analyzer {
             int pendingLine = 0;
             Optional<int> wall;
             int wallLine = 0;
-            eastl::array<SeatDraft, kSeatCount> seats;
+            Array<SeatDraft, kSeatCount> seats;
             /// The copies named so far, per tile id; a kind has four, a bonus tile one.
-            eastl::array<int, kTileIdCount> used{};
+            Array<int, kTileIdCount> used{};
             bool seenSeat = false;
             bool seenEast = false;
         };
@@ -150,7 +150,7 @@ namespace BECore::Mahjong::Analyzer {
         }
 
         /// Reads `words[from..)` as playable tiles (or bonus tiles) and notes them; the problem names the line.
-        Problem TakeTiles(Draft& draft, int line, const Words& words, size_t from, bool bonus, eastl::vector<Tile>& out) {
+        Problem TakeTiles(Draft& draft, int line, const Words& words, size_t from, bool bonus, Vector<Tile>& out) {
             for (size_t i = from; i < words.size(); ++i) {
                 const Optional<Tile> tile = TryParse(words[i]);
                 if (!tile.has_value() || tile->IsBonus() != bonus) {
@@ -368,7 +368,7 @@ namespace BECore::Mahjong::Analyzer {
         }
 
         /// The text split into lines of words; empty lines and comments are gone. `numbers` holds the 1-based number of each kept line.
-        void SplitLines(StringView text, eastl::vector<Words>& lines, eastl::vector<int>& numbers) {
+        void SplitLines(StringView text, Vector<Words>& lines, Vector<int>& numbers) {
             int number = 0;
             size_t start = 0;
             while (start <= text.size()) {
@@ -435,7 +435,7 @@ namespace BECore::Mahjong::Analyzer {
             state.current = claim ? draft.pendingFrom : draft.seat;
 
             // The pile: seat by seat in turn from East, as the table is played; the pending discard is the last.
-            eastl::array<size_t, kSeatCount> next{};
+            Array<size_t, kSeatCount> next{};
             for (bool placed = true; placed;) {
                 placed = false;
                 for (int step = 0; step < kSeatCount; ++step) {
@@ -452,7 +452,7 @@ namespace BECore::Mahjong::Analyzer {
             }
 
             // The discards a seat has made: its pile tiles, the pending one, and the ones other seats' melds took from it.
-            eastl::array<int, kSeatCount> discardCount{};
+            Array<int, kSeatCount> discardCount{};
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 discardCount[seat] += static_cast<int>(draft.seats[seat].discards.size());
                 for (const Meld& meld : draft.seats[seat].melds) {
@@ -466,7 +466,7 @@ namespace BECore::Mahjong::Analyzer {
             }
 
             // The unseen tiles in the order of the set; the other hands take their share first, the wall the rest.
-            eastl::vector<Tile> pool;
+            Vector<Tile> pool;
             for (uint8_t id = 0; id < kTileIdCount; ++id) {
                 const Tile tile{id};
                 if (tile.IsBonus() && !state.settings.flowers) {
@@ -548,7 +548,7 @@ namespace BECore::Mahjong::Analyzer {
                 }
                 return model;
             }
-            eastl::vector<Seat> others;
+            Vector<Seat> others;
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 if (seat != viewer && seat != state.current) {
                     others.push_back(seat);
@@ -574,8 +574,8 @@ namespace BECore::Mahjong::Analyzer {
 
     }  // namespace
 
-    std::expected<LogPosition, String> PositionFromLog(const eastl::vector<MatchLogEvent>& events, int hand, int actionIndex) {
-        const std::expected<eastl::vector<size_t>, String> actions = ActionEventsOfHand(events, hand);
+    std::expected<LogPosition, String> PositionFromLog(const Vector<MatchLogEvent>& events, int hand, int actionIndex) {
+        const std::expected<Vector<size_t>, String> actions = ActionEventsOfHand(events, hand);
         if (!actions.has_value()) {
             return Failure(actions.error());
         }
@@ -590,11 +590,11 @@ namespace BECore::Mahjong::Analyzer {
         return MakeLogPosition(match->Hand(), events[target], target, hand, actionIndex);
     }
 
-    std::expected<eastl::vector<LogPosition>, String> PositionsOfSeat(const eastl::vector<MatchLogEvent>& events, int hand, Seat seat) {
+    std::expected<Vector<LogPosition>, String> PositionsOfSeat(const Vector<MatchLogEvent>& events, int hand, Seat seat) {
         if (!IsSeat(seat)) {
             return Failure(Format("{} is no seat (0..3)", seat));
         }
-        const std::expected<eastl::vector<size_t>, String> actions = ActionEventsOfHand(events, hand);
+        const std::expected<Vector<size_t>, String> actions = ActionEventsOfHand(events, hand);
         if (!actions.has_value()) {
             return Failure(actions.error());
         }
@@ -608,7 +608,7 @@ namespace BECore::Mahjong::Analyzer {
         if (!match.has_value()) {
             return Failure(match.error());
         }
-        eastl::vector<LogPosition> positions;
+        Vector<LogPosition> positions;
         for (size_t i = 0; i < actions->size(); ++i) {
             const size_t eventIndex = (*actions)[i];
             const MatchLogEvent& event = events[eventIndex];
@@ -633,8 +633,8 @@ namespace BECore::Mahjong::Analyzer {
     }
 
     std::expected<TableView, String> ParsePosition(StringView text) {
-        eastl::vector<Words> lines;
-        eastl::vector<int> numbers;
+        Vector<Words> lines;
+        Vector<int> numbers;
         SplitLines(text, lines, numbers);
         Draft draft;
         for (size_t i = 0; i < lines.size(); ++i) {

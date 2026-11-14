@@ -33,7 +33,7 @@ namespace BECore::Mahjong::Tests {
                 pieces.push_back(piece);
             }
 
-            eastl::vector<UploadPiece> pieces;
+            Vector<UploadPiece> pieces;
         };
 
         String ReadFile(const fs::path& path) {
@@ -186,7 +186,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(PlayHand());
         game->Stop();
 
-        std::vector<String> ids;
+        Vector<String> ids;
         for (const UploadPiece& piece : sink.pieces) {
             const String id(piece.matchId.c_str(), piece.matchId.size());
             if (ids.empty() || ids.back() != id) {

@@ -78,6 +78,6 @@ namespace BECore::Mahjong {
     [[nodiscard]] std::expected<MatchLogEvent, String> EventFromJson(const Json& json);
 
     /// A whole log file: lines of JSON, blank lines skipped. The error names the line number (counted from 1) and what is wrong with it.
-    [[nodiscard]] std::expected<eastl::vector<MatchLogEvent>, String> ParseMatchLog(StringView lines);
+    [[nodiscard]] std::expected<Vector<MatchLogEvent>, String> ParseMatchLog(StringView lines);
 
 }  // namespace BECore::Mahjong

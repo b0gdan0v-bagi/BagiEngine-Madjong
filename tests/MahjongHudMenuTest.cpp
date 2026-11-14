@@ -58,7 +58,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongHudMenuTest, TheTooltipOfEachButtonSaysItsWordInBothLanguages) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
-        std::vector<String> words;
+        Vector<String> words;
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             Draw();

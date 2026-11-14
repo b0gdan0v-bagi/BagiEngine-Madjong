@@ -145,7 +145,7 @@ namespace BECore::Mahjong {
         return IsSeat(seat) ? Json(seat) : Json(nullptr);
     }
 
-    Json TilesToJson(const eastl::vector<Tile>& tiles) {
+    Json TilesToJson(const Vector<Tile>& tiles) {
         Json list = Json::array();
         for (const Tile tile : tiles) {
             list.push_back(TileToJson(tile));
@@ -375,7 +375,7 @@ namespace BECore::Mahjong {
             if (!session.ActorIsPerson()) {
                 return IllegalAction("it is not a person's turn");
             }
-            const eastl::vector<HandAction> legal = _game.GetLocalMatch().Hand().LegalActions(session.Actor());
+            const Vector<HandAction> legal = _game.GetLocalMatch().Hand().LegalActions(session.Actor());
             if (eastl::find(legal.begin(), legal.end(), parsed->hand) == legal.end()) {
                 return IllegalAction("the action is not among the legal actions now (see list_actions)");
             }

@@ -309,7 +309,7 @@ namespace BECore::Mahjong {
         _shownLines = count;
     }
 
-    void MahjongHudComponent::PublishWinningTiles(const eastl::vector<Tile>& tiles) {
+    void MahjongHudComponent::PublishWinningTiles(const Vector<Tile>& tiles) {
         Scene& scene = GetScene();
         const IntrusivePtr<UICanvasComponent> canvas = CanvasOf(scene, "HandOver"_intern);
         ASSERT(canvas != nullptr, "PublishWinningTiles: the node HandOver has no canvas");

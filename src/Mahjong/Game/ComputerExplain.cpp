@@ -7,8 +7,8 @@ namespace BECore::Mahjong {
     namespace {
 
         /// The winning tiles `tiles` with their unseen copies.
-        eastl::vector<TileCopies> CopiesOf(const TableView& view, const eastl::vector<Tile>& tiles) {
-            eastl::vector<TileCopies> copies;
+        Vector<TileCopies> CopiesOf(const TableView& view, const Vector<Tile>& tiles) {
+            Vector<TileCopies> copies;
             for (const Tile tile : tiles) {
                 copies.push_back({tile, UnseenCopies(view, tile)});
             }
@@ -16,13 +16,13 @@ namespace BECore::Mahjong {
         }
 
         /// The winning tiles of the 13 that stay when `counts` (the concealed tiles) lose `discard`.
-        eastl::vector<TileCopies> WaitsAfterDiscard(const TableView& view, TileCounts counts, Tile discard) {
+        Vector<TileCopies> WaitsAfterDiscard(const TableView& view, TileCounts counts, Tile discard) {
             --counts[discard.Id()];
             return CopiesOf(view, WinningTiles(counts, MeldCountOf(view), CountMeldTiles(view.own.melds)));
         }
 
         /// The rated discard of kind `tile`, with the waits of the hand that stays.
-        TurnOption MakeTurnOption(const TableView& view, const TileCounts& counts, const eastl::vector<DiscardOption>& rated, const DangerTable& dangers, Tile tile) {
+        TurnOption MakeTurnOption(const TableView& view, const TileCounts& counts, const Vector<DiscardOption>& rated, const DangerTable& dangers, Tile tile) {
             TurnOption option;
             option.tile = tile;
             option.danger = dangers[tile.Id()];
@@ -43,8 +43,8 @@ namespace BECore::Mahjong {
 
         /// The discards that leave a waiting hand, best first as the chooser ranks them: the most unseen winning copies, then the lowest
         /// danger (with the knob), then the lowest keep value, then the lowest tile id.
-        eastl::vector<WaitingDiscard> RankWaitingDiscards(const TableView& view, bool declaring, bool readDanger) {
-            eastl::vector<WaitingDiscard> discards = WaitingDiscards(view, declaring, readDanger);
+        Vector<WaitingDiscard> RankWaitingDiscards(const TableView& view, bool declaring, bool readDanger) {
+            Vector<WaitingDiscard> discards = WaitingDiscards(view, declaring, readDanger);
             eastl::sort(discards.begin(), discards.end(), [](const WaitingDiscard& a, const WaitingDiscard& b) {
                 if (a.copies != b.copies) {
                     return a.copies > b.copies;
@@ -57,8 +57,7 @@ namespace BECore::Mahjong {
             return discards;
         }
 
-        void ExplainWaitingDiscard(const TableView& view, const TileCounts& counts, const eastl::vector<DiscardOption>& rated, const DangerTable& dangers, bool readDanger,
-                                   TurnExplanation& explanation) {
+        void ExplainWaitingDiscard(const TableView& view, const TileCounts& counts, const Vector<DiscardOption>& rated, const DangerTable& dangers, bool readDanger, TurnExplanation& explanation) {
             const bool declaring = explanation.step == TurnStep::Declare;
             const Tile advised = explanation.action.tile;
             explanation.chosen = MakeTurnOption(view, counts, rated, dangers, advised);
@@ -74,7 +73,7 @@ namespace BECore::Mahjong {
             }
         }
 
-        void ExplainDiscard(const TableView& view, const TileCounts& counts, const eastl::vector<DiscardOption>& rated, const DangerTable& dangers, TurnExplanation& explanation) {
+        void ExplainDiscard(const TableView& view, const TileCounts& counts, const Vector<DiscardOption>& rated, const DangerTable& dangers, TurnExplanation& explanation) {
             const Tile advised = explanation.action.tile;
             explanation.chosen = MakeTurnOption(view, counts, rated, dangers, advised);
             for (const DiscardOption& entry : rated) {
@@ -128,8 +127,8 @@ namespace BECore::Mahjong {
 
         /// The claims of `options` with `acceptable` as given, apart from `chosen`, best first by `IsBetterClaim` (equal ones keep the
         /// order of the window).
-        eastl::vector<RatedClaim> RankedClaims(const eastl::vector<RatedClaim>& options, bool acceptable, const Optional<RatedClaim>& chosen) {
-            eastl::vector<RatedClaim> ranked;
+        Vector<RatedClaim> RankedClaims(const Vector<RatedClaim>& options, bool acceptable, const Optional<RatedClaim>& chosen) {
+            Vector<RatedClaim> ranked;
             for (const RatedClaim& option : options) {
                 if (option.acceptable != acceptable || (chosen.has_value() && option.action == chosen->action)) {
                     continue;
@@ -173,7 +172,7 @@ namespace BECore::Mahjong {
                 }
                 case ClaimStep::Claim:
                 case ClaimStep::NoGain: {
-                    const eastl::vector<RatedClaim> options = RateClaims(view, explanation.shantenBefore, profile);
+                    const Vector<RatedClaim> options = RateClaims(view, explanation.shantenBefore, profile);
                     if (decision.step == ClaimStep::Claim) {
                         for (const RatedClaim& option : options) {
                             if (option.action == decision.action) {

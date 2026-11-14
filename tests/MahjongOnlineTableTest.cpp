@@ -100,14 +100,14 @@ namespace BECore::Mahjong::Tests {
             }
         }
 
-        void ExpectMelds(const eastl::vector<Meld>& read, const eastl::vector<Meld>& want, const String& where) {
+        void ExpectMelds(const Vector<Meld>& read, const Vector<Meld>& want, const String& where) {
             ASSERT_EQ(read.size(), want.size()) << where;
             for (size_t index = 0; index < want.size(); ++index) {
                 ExpectMeld(read[index], want[index], Format("{}.melds[{}]", where, index));
             }
         }
 
-        void ExpectTiles(const eastl::vector<Tile>& read, const eastl::vector<Tile>& want, const String& where) {
+        void ExpectTiles(const Vector<Tile>& read, const Vector<Tile>& want, const String& where) {
             ASSERT_EQ(read.size(), want.size()) << where;
             for (size_t index = 0; index < want.size(); ++index) {
                 EXPECT_EQ(read[index], want[index]) << where << "[" << index << "]";
@@ -340,7 +340,7 @@ namespace BECore::Mahjong::Tests {
 
             OnlineTable table;
             ASSERT_TRUE(ReadSeat(game, 0, table).has_value());
-            EXPECT_EQ(table.ready, (eastl::array<bool, kSeatCount>{false, false, true, false}));
+            EXPECT_EQ(table.ready, (Array<bool, kSeatCount>{false, false, true, false}));
             ExpectEverySeatMatches(game);
         }
     }
@@ -457,7 +457,7 @@ namespace BECore::Mahjong::Tests {
         // each of these is read into the pair that held `true`: nothing of the earlier read survives
         Json missing = ViewJson(game, 0);
         missing.erase("hintsAllowed");
-        std::vector<Json> views{missing};
+        Vector<Json> views{missing};
         for (const Json& wrong : {Json("true"), Json(1), Json(0), Json(nullptr), Json::array(), Json::object()}) {
             Json view = ViewJson(game, 0);
             view["hintsAllowed"] = wrong;
@@ -477,7 +477,7 @@ namespace BECore::Mahjong::Tests {
     TEST(MahjongOnlineTableTest, TheHandActionsOfATableAreTheServersListWithoutTheReadyCheckAndKeepTheCapacity) {
         OnlineTable table;
         ASSERT_TRUE(ReadOnlineView(RichHandOverView(), ActionsWithEverything(), table).has_value());
-        eastl::vector<HandAction> list;
+        Vector<HandAction> list;
         ListHandActions(table, list);
         ASSERT_EQ(list.size(), 4u);
         EXPECT_EQ(list[0], HandAction::MakeDiscard(T("1p"), true));

@@ -52,7 +52,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Every kind of move, with the tiles and seats the sentences name.
-        std::vector<HandMove> EveryMove() {
+        Vector<HandMove> EveryMove() {
             return {Discard(1, "5p"), Discard(2, "Ew", true), Claim(MoveKind::ClaimChow, 2, "4s", 1), Claim(MoveKind::ClaimPung, 3, "Rd", 1), Claim(MoveKind::ClaimKong, 0, "9m", 2),
                     ConcealedKong(3), UpgradeKong(1, "F1")};
         }

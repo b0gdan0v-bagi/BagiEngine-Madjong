@@ -39,7 +39,7 @@ namespace BECore::Mahjong {
         /// The sentence that names `wall` ("Wall 83").
         String wallText;
         /// By screen position (0 bottom, 1 right, 2 top, 3 left; `SeatAtPosition(BottomSeat(session), position)` is the seat at each).
-        eastl::array<CenterPanelSeat, kSeatCount> seats;
+        Array<CenterPanelSeat, kSeatCount> seats;
     };
 
     /// The panel in the current language of `strings`.

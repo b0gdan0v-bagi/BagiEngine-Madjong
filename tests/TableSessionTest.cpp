@@ -85,7 +85,7 @@ namespace BECore::Mahjong::Tests {
 
         /// A person takes the action of `mode` from the legal ones of the actor.
         HandStatus PersonActs(TableSession& session, const HandModel& hand, Mode mode, MahjongRng& rng) {
-            const eastl::vector<HandAction> legal = hand.LegalActions(session.Actor());
+            const Vector<HandAction> legal = hand.LegalActions(session.Actor());
             EXPECT_FALSE(legal.empty());
             return session.PerformPerson(Choose(legal, mode, rng));
         }
@@ -286,7 +286,7 @@ namespace BECore::Mahjong::Tests {
         Table table;
         ASSERT_TRUE(table.session.StartMatch(ShortMatch(), kSeed + 5, kAllComputers, ComputerLevel::Easy).has_value());
         const String before = State(table);
-        eastl::vector<MatchLogEvent> broken = log.Events();
+        Vector<MatchLogEvent> broken = log.Events();
         broken[0].settings.handsPerMatch = kUnplayableHandsPerMatch;
         const ReplayStatus refused = table.session.ResumeMatch(broken, kAllComputers, levels);
         ASSERT_FALSE(refused.has_value());
@@ -364,7 +364,7 @@ namespace BECore::Mahjong::Tests {
                 if (hand.GetPhase() == Phase::Discard) {
                     ASSERT_EQ(table.session.Actor(), hand.CurrentSeat());
                 } else if (hand.PendingClaimSeats().size() >= 2) {
-                    const eastl::vector<Seat> pending = hand.PendingClaimSeats();
+                    const Vector<Seat> pending = hand.PendingClaimSeats();
                     ASSERT_EQ(table.session.Actor(), pending.front());
                     const Seat first = pending.front();
                     ASSERT_TRUE(table.session.PerformPerson(HandAction::MakePass()).has_value());
@@ -399,7 +399,7 @@ namespace BECore::Mahjong::Tests {
         // The actor is a computer: the step is one of its legal actions, applied, and moves the version once.
         ASSERT_NO_FATAL_FAILURE(table.Start(PersonAt(NextSeat(east))));
         const Seat actor = table.session.Actor();
-        const eastl::vector<HandAction> legal = table.match.Hand().LegalActions(actor);
+        const Vector<HandAction> legal = table.match.Hand().LegalActions(actor);
         const uint64_t version = table.session.Version();
         const StepResult step = table.session.StepComputer();
         ASSERT_TRUE(step.has_value());
@@ -449,7 +449,7 @@ namespace BECore::Mahjong::Tests {
         // The actor is a computer: refused.
         ASSERT_NO_FATAL_FAILURE(table.Start(PersonAt(NextSeat(east))));
         String before = State(table);
-        const eastl::vector<HandAction> legal = table.match.Hand().LegalActions(east);
+        const Vector<HandAction> legal = table.match.Hand().LegalActions(east);
         ASSERT_FALSE(legal.empty());
         EXPECT_EQ(Error(table.session.PerformPerson(legal.front())), HandError::NotYourTurn);
         EXPECT_EQ(State(table), before);
@@ -464,7 +464,7 @@ namespace BECore::Mahjong::Tests {
 
         // A listed one is accepted and moves the version once.
         const uint64_t version = table.session.Version();
-        const eastl::vector<HandAction> listed = table.match.Hand().LegalActions(east);
+        const Vector<HandAction> listed = table.match.Hand().LegalActions(east);
         ASSERT_TRUE(table.session.PerformPerson(listed.front()).has_value());
         EXPECT_EQ(table.session.Version(), version + 1);
     }
@@ -750,7 +750,7 @@ namespace BECore::Mahjong::Tests {
                     ASSERT_TRUE(stale.table.session.StartMatch(ShortMatch(), kSeed, PersonAfterEast(kSeed), SearchProfile()).has_value());
                     break;
                 case Change::ResumeMatch: {
-                    const eastl::vector<MatchLogEvent> events = stale.log.Events();
+                    const Vector<MatchLogEvent> events = stale.log.Events();
                     ASSERT_TRUE(stale.table.session.ResumeMatch(events, PersonAfterEast(kSeed), kDefaultLevel).has_value());
                     break;
                 }
@@ -851,7 +851,7 @@ namespace BECore::Mahjong::Tests {
                 records.push_back({before, action, context, _session.Version(), _log.Events().size()});
             }
 
-            std::vector<Record> records;
+            Vector<Record> records;
 
         private:
             const TableSession& _session;

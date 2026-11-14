@@ -39,7 +39,7 @@ namespace BECore::Mahjong::Arena {
             SeedRow row;
             ArenaTally focus;
             ArenaTally others;
-            eastl::array<int64_t, kSeatCount> winsBySeat{};
+            Array<int64_t, kSeatCount> winsBySeat{};
         };
 
         void AddTally(ArenaTally& total, const ArenaTally& part) {
@@ -63,7 +63,7 @@ namespace BECore::Mahjong::Arena {
 
         /// Plays the seed `config.first + index` for every focus player into `plays[f]` (`f` the place in the focus list). An empty
         /// string is done; else the error of the first focus player whose hand failed.
-        String PlaySeed(const ArenaConfig& config, const ArenaHandPlayer& playHand, int index, const WorldLoop& worlds, eastl::span<SeedPlay> plays) {
+        String PlaySeed(const ArenaConfig& config, const ArenaHandPlayer& playHand, int index, const WorldLoop& worlds, Span<SeedPlay> plays) {
             ArenaPlayers players;
             players.fill(config.others);
             const uint32_t seed = config.first + static_cast<uint32_t>(index);
@@ -142,8 +142,8 @@ namespace BECore::Mahjong::Arena {
         const size_t focusCount = config.focus.size();
         const size_t seedCount = static_cast<size_t>(config.count);
         // One slot per (seed, focus player) and one error per seed: a thread writes only the slots of the seeds it took.
-        eastl::vector<SeedPlay> plays(seedCount * focusCount);
-        eastl::vector<String> errors(seedCount);
+        Vector<SeedPlay> plays(seedCount * focusCount);
+        Vector<String> errors(seedCount);
         std::atomic<int> nextSeed{0};
         // The lowest seed that failed so far: seeds are taken in order, so every lower seed is already taken and will finish, and a
         // thread that takes a higher one has nothing to add.
@@ -157,7 +157,7 @@ namespace BECore::Mahjong::Arena {
                 if (index >= config.count || index > lowestFailed.load()) {
                     return;
                 }
-                errors[static_cast<size_t>(index)] = PlaySeed(config, playHand, index, worlds, eastl::span<SeedPlay>(plays.data() + static_cast<size_t>(index) * focusCount, focusCount));
+                errors[static_cast<size_t>(index)] = PlaySeed(config, playHand, index, worlds, Span<SeedPlay>(plays.data() + static_cast<size_t>(index) * focusCount, focusCount));
                 if (!errors[static_cast<size_t>(index)].empty()) {
                     int seen = lowestFailed.load();
                     while (index < seen && !lowestFailed.compare_exchange_weak(seen, index)) {
@@ -166,7 +166,7 @@ namespace BECore::Mahjong::Arena {
             }
         };
         const int threadCount = ThreadsFor(config);
-        eastl::vector<std::thread> threads;
+        Vector<std::thread> threads;
         for (int thread = 1; thread < threadCount; ++thread) {
             threads.emplace_back(work);
         }

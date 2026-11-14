@@ -73,7 +73,7 @@ namespace BECore::Mahjong {
 
     }  // namespace
 
-    String MatchSaveText(const eastl::vector<MatchLogEvent>& events) {
+    String MatchSaveText(const Vector<MatchLogEvent>& events) {
         String text;
         for (const MatchLogEvent& event : events) {
             if (event.kind == MatchLogKind::Hand || event.kind == MatchLogKind::End) {
@@ -90,11 +90,11 @@ namespace BECore::Mahjong {
         return text;
     }
 
-    std::expected<eastl::vector<MatchLogEvent>, String> ParseMatchSaveText(StringView text) {
+    std::expected<Vector<MatchLogEvent>, String> ParseMatchSaveText(StringView text) {
         if (const size_t lines = CountLines(text); lines > kMaxSavedEvents) {
             return std::unexpected(Format("the saved match has {} lines, more than the {} allowed", lines, kMaxSavedEvents));
         }
-        std::expected<eastl::vector<MatchLogEvent>, String> events = ParseMatchLog(text);
+        std::expected<Vector<MatchLogEvent>, String> events = ParseMatchLog(text);
         if (!events) {
             return events;
         }

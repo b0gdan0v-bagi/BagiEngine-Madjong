@@ -19,7 +19,7 @@ namespace BECore::Mahjong {
 
         /// The danger number (`Danger`) of every kind, all 0 unless `readDanger` and some opponent has declared: one table per decision,
         /// and the one place the knob is looked at, so a knob that is off or a table with no declared opponent compares exactly as before.
-        using DangerRanks = eastl::array<int, kKindCount>;
+        using DangerRanks = Array<int, kKindCount>;
 
         DangerRanks DangerRanksOf(const TableView& view, bool readDanger) {
             DangerRanks ranks{};
@@ -51,12 +51,12 @@ namespace BECore::Mahjong {
         }
 
         /// The best of non-empty `candidates` by `IsBetter`; equal ones go to `rng`.
-        Tile PickBest(const eastl::vector<Candidate>& candidates, MahjongRng& rng) {
+        Tile PickBest(const Vector<Candidate>& candidates, MahjongRng& rng) {
             size_t best = 0;
             for (size_t i = 1; i < candidates.size(); ++i) {
                 best = IsBetter(candidates[i], candidates[best]) ? i : best;
             }
-            eastl::vector<Tile> ties;
+            Vector<Tile> ties;
             for (const Candidate& candidate : candidates) {
                 if (!IsBetter(candidates[best], candidate)) {
                     ties.push_back(candidate.tile);
@@ -67,7 +67,7 @@ namespace BECore::Mahjong {
 
         /// The unseen copies of the tiles that complete `counts` (13 - 3 * `meldCount` concealed tiles); `kNotWaiting` when none does.
         int UnseenWinningCopies(const TableView& view, const TileCounts& counts, int meldCount, const TileCounts& meldTiles) {
-            const eastl::vector<Tile> winning = WinningTiles(counts, meldCount, meldTiles);
+            const Vector<Tile> winning = WinningTiles(counts, meldCount, meldTiles);
             if (winning.empty()) {
                 return kNotWaiting;
             }
@@ -80,7 +80,7 @@ namespace BECore::Mahjong {
 
         /// Step 2 and 4: the discard that declares the calling hand (`declaring`), or keeps the declared hand waiting.
         Optional<HandAction> ChooseWaitingDiscard(const TableView& view, MahjongRng& rng, bool declaring, bool readDanger) {
-            eastl::vector<Candidate> candidates;
+            Vector<Candidate> candidates;
             for (const WaitingDiscard& discard : WaitingDiscards(view, declaring, readDanger)) {
                 candidates.push_back({discard.tile, discard.copies, discard.keep, discard.danger});
             }
@@ -93,7 +93,7 @@ namespace BECore::Mahjong {
         /// Step 2 with `ownDrawsPickWait`: the discard that declares the calling hand and has the best expected value (no rng: ties are
         /// `ValueWaits`' order).
         Optional<HandAction> ChooseValuedDeclaration(const TableView& view) {
-            const eastl::vector<DiscardValue> waits = ValueWaits(view);
+            const Vector<DiscardValue> waits = ValueWaits(view);
             if (waits.empty()) {
                 return std::nullopt;
             }
@@ -139,7 +139,7 @@ namespace BECore::Mahjong {
         /// The kinds whose discard leaves the lowest shanten, and that shanten.
         struct LowestShanten {
             int shanten = 0;
-            eastl::vector<uint8_t> kinds;
+            Vector<uint8_t> kinds;
         };
 
         LowestShanten FindLowestShanten(const TileCounts& counts, int meldCount) {
@@ -175,7 +175,7 @@ namespace BECore::Mahjong {
         struct BestDiscards {
             int shanten = 0;
             int acceptance = 0;
-            eastl::vector<Candidate> candidates;
+            Vector<Candidate> candidates;
         };
 
         BestDiscards FindBestDiscards(const TileCounts& counts, int meldCount, const TableView& view, bool readDanger) {
@@ -201,7 +201,7 @@ namespace BECore::Mahjong {
         /// The discard of an inattentive seat: of the discards that leave the lowest shanten the lowest `KeepValue`, then `rng`; the
         /// acceptance is not looked at.
         Tile DiscardWithoutAcceptance(const TileCounts& counts, const TableView& view, MahjongRng& rng) {
-            eastl::vector<Candidate> candidates;
+            Vector<Candidate> candidates;
             for (const uint8_t id : FindLowestShanten(counts, MeldCountOf(view)).kinds) {
                 const Tile tile{id};
                 candidates.push_back({tile, 0, KeepValue(tile, view.seatWind, view.roundWind)});
@@ -216,7 +216,7 @@ namespace BECore::Mahjong {
                 return HandAction::MakeDiscard(DiscardWithoutAcceptance(counts, view, rng));
             }
             if (profile.ownDrawsDepth > 0) {
-                const eastl::vector<DiscardValue> values = ValueDiscards(view, profile.ownDrawsDepth);
+                const Vector<DiscardValue> values = ValueDiscards(view, profile.ownDrawsDepth);
                 if (!values.empty()) {
                     return HandAction::MakeDiscard(values.front().tile);
                 }
@@ -294,11 +294,11 @@ namespace BECore::Mahjong {
         return copies;
     }
 
-    eastl::vector<WaitingDiscard> WaitingDiscards(const TableView& view, bool declaring, bool readDanger) {
+    Vector<WaitingDiscard> WaitingDiscards(const TableView& view, bool declaring, bool readDanger) {
         const DangerRanks dangers = DangerRanksOf(view, readDanger);
         TileCounts counts = CountTiles(view.own.concealed);
         const TileCounts meldTiles = CountMeldTiles(view.own.melds);
-        eastl::vector<WaitingDiscard> discards;
+        Vector<WaitingDiscard> discards;
         for (const HandAction& action : view.legal) {
             if (action.kind != ActionKind::Discard || action.declareCalling != declaring) {
                 continue;
@@ -313,9 +313,9 @@ namespace BECore::Mahjong {
         return discards;
     }
 
-    eastl::vector<DiscardOption> RateDiscards(const TileCounts& counts, int meldCount, const TableView& view, bool readDanger) {
+    Vector<DiscardOption> RateDiscards(const TileCounts& counts, int meldCount, const TableView& view, bool readDanger) {
         const DangerRanks dangers = DangerRanksOf(view, readDanger);
-        eastl::vector<DiscardOption> options;
+        Vector<DiscardOption> options;
         TileCounts rest = counts;
         for (uint8_t id = 0; id < kKindCount; ++id) {
             if (counts[id] != 0) {

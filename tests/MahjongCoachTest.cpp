@@ -68,7 +68,7 @@ namespace BECore::Mahjong::Tests {
             return CardVars()[index];
         }
 
-        std::vector<String> NoteVars() const {
+        Vector<String> NoteVars() const {
             return CardVars();
         }
 
@@ -83,7 +83,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// What the pure helper says about the note the ledger holds now, in the current language, with the tally of the game.
-        std::vector<String> ExpectedLines() const {
+        Vector<String> ExpectedLines() const {
             if (const Optional<CoachNote>& note = _game->GetCoach().Note()) {
                 return CardTexts(MakeNoteCard(CoreManager::GetUIStrings(), *note, Tally()));
             }
@@ -147,7 +147,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongCoachTest, ALanguageSwitchWordsTheNoteAgain) {
         ASSERT_NO_FATAL_FAILURE(PutNoteUp());
-        std::vector<std::vector<String>> seen;
+        Vector<Vector<String>> seen;
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             Draw();
@@ -222,7 +222,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongCoachTest, TheNoteOutlivesTheComputersTurnsAndASteadyFrameChangesNothing) {
         ASSERT_NO_FATAL_FAILURE(PutNoteUp());
-        const std::vector<String> words = NoteVars();
+        const Vector<String> words = NoteVars();
         ASSERT_NO_FATAL_FAILURE(ToThePersonsNextTurn());
         EXPECT_TRUE(NoteShown()) << "the computers moved, the person has not";
         EXPECT_EQ(NoteVars(), words);
@@ -251,7 +251,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongCoachTest, TheNextAcceptedActionReplacesTheNoteOrTakesItDown) {
         ASSERT_NO_FATAL_FAILURE(PutNoteUp());
         ASSERT_NO_FATAL_FAILURE(ToThePersonsNextTurn());
-        const std::vector<String> first = NoteVars();
+        const Vector<String> first = NoteVars();
 
         const TableView view = MakeTableView(Hand(), kSeat0);
         const Optional<HandAction> advice = AdviceFor(view);
@@ -384,7 +384,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongCoachTest, TheNoteIsTheSameForTwoTablesThatDifferOnlyInWhatTheViewerCannotSee) {
         const auto run = [&](const char* seat1, const char* seat3) {
-            std::vector<String> lines;
+            Vector<String> lines;
             [&] {
                 _game->SetHintsMode(HintsMode::Coach);
                 ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
@@ -400,8 +400,8 @@ namespace BECore::Mahjong::Tests {
             }();
             return lines;
         };
-        const std::vector<String> plain = run(kQuiet1, kQuiet3);
-        const std::vector<String> loaded = run("7p 7p 7p 2s 5s 8s 2m 5m 8m Ww Nw Gd Wd", "4p 4p 3s 6s 9s 3m 6m 9m Sw Ww Nw Gd Rd");
+        const Vector<String> plain = run(kQuiet1, kQuiet3);
+        const Vector<String> loaded = run("7p 7p 7p 2s 5s 8s 2m 5m 8m Ww Nw Gd Wd", "4p 4p 3s 6s 9s 3m 6m 9m Sw Ww Nw Gd Rd");
         EXPECT_FALSE(plain.front().empty());
         EXPECT_EQ(plain, loaded);
     }
@@ -453,7 +453,7 @@ namespace BECore::Mahjong::Tests {
                 chosen = HandAction::MakeDeclareWin();
                 EmitAction("MahjongWin");
             } else {
-                const eastl::vector<Tile>& concealed = Hand().GetHand(actor).concealed;
+                const Vector<Tile>& concealed = Hand().GetHand(actor).concealed;
                 const int index = static_cast<int>(concealed.size()) - 1;
                 chosen = HandAction::MakeDiscard(concealed[static_cast<size_t>(index)], false);
                 ClickHandTile(index);  // no canvas takes it: the table does
@@ -513,7 +513,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongCoachTest, TheCardOfANotePassesTheSizeMatrixAndTheLongestTextOfEveryCellFitsInEveryLanguage) {
         ASSERT_NO_FATAL_FAILURE(PutNoteUp());
-        std::vector<CoachNote> notes;
+        Vector<CoachNote> notes;
         notes.push_back(LongNote("Nw", "9p"));
         notes.push_back(LongNote("Rd", "9m"));
         CoachNote chow = LongNote("Rd", "9m");
@@ -533,7 +533,7 @@ namespace BECore::Mahjong::Tests {
             Draw();  // the words of the language
             const UIStrings& strings = CoreManager::GetUIStrings();
             const String tally = CardTallyText(strings, CoachTally{99, 99}, CoachTally{999, 999});
-            std::vector<HintCard> cards;
+            Vector<HintCard> cards;
             for (const CoachNote& note : notes) {
                 cards.push_back(MakeNoteCard(strings, note, tally));
             }
@@ -544,7 +544,7 @@ namespace BECore::Mahjong::Tests {
             for (const auto& output : kOutputs) {
                 ExpectWordsFit("HintsWhy", output[0], output[1], 0.0f);
             }
-            const std::vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("HintsWhy"), 0.0f);
+            const Vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("HintsWhy"), 0.0f);
             EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
         });
     }

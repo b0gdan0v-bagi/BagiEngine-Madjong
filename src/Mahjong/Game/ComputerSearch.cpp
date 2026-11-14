@@ -32,18 +32,18 @@ namespace BECore::Mahjong {
             return a.action.tile.Id() < b.action.tile.Id();
         }
 
-        bool Contains(const eastl::vector<HandAction>& actions, const HandAction& action) {
+        bool Contains(const Vector<HandAction>& actions, const HandAction& action) {
             return eastl::find(actions.begin(), actions.end(), action) != actions.end();
         }
 
         /// Adds `action` when there is room and it is not there yet.
-        void Add(eastl::vector<HandAction>& actions, const HandAction& action, int maxCount) {
+        void Add(Vector<HandAction>& actions, const HandAction& action, int maxCount) {
             if (static_cast<int>(actions.size()) < maxCount && !Contains(actions, action)) {
                 actions.push_back(action);
             }
         }
 
-        void AddRanked(eastl::vector<HandAction>& actions, eastl::vector<RankedDiscard>& ranked, int maxCount) {
+        void AddRanked(Vector<HandAction>& actions, Vector<RankedDiscard>& ranked, int maxCount) {
             eastl::sort(ranked.begin(), ranked.end(), IsListedBefore);
             for (const RankedDiscard& discard : ranked) {
                 Add(actions, discard.action, maxCount);
@@ -52,8 +52,8 @@ namespace BECore::Mahjong {
 
         /// The listed discards with `declareCalling == declaring` that leave a waiting hand, ranked by the unseen copies they wait on (the
         /// list `ComputerTurn.h` makes for steps 2 and 4 of the turn, so the candidates are ranked as Normal ranks them).
-        eastl::vector<RankedDiscard> RankedWaitingDiscards(const TableView& view, bool declaring) {
-            eastl::vector<RankedDiscard> ranked;
+        Vector<RankedDiscard> RankedWaitingDiscards(const TableView& view, bool declaring) {
+            Vector<RankedDiscard> ranked;
             for (const WaitingDiscard& discard : WaitingDiscards(view, declaring)) {
                 ranked.push_back({HandAction::MakeDiscard(discard.tile, declaring), 0, discard.copies, discard.keep});
             }
@@ -61,10 +61,10 @@ namespace BECore::Mahjong {
         }
 
         /// The listed plain discards within `kSearchShantenSlack` of the best shanten, ranked by the shanten and the acceptance of the rest.
-        eastl::vector<RankedDiscard> NearBestDiscards(const TableView& view) {
+        Vector<RankedDiscard> NearBestDiscards(const TableView& view) {
             TileCounts counts = CountTiles(view.own.concealed);
             const int melds = MeldCountOf(view);
-            eastl::vector<RankedDiscard> ranked;
+            Vector<RankedDiscard> ranked;
             int best = std::numeric_limits<int>::max();
             for (const HandAction& action : view.legal) {
                 if (action.kind != ActionKind::Discard || action.declareCalling) {
@@ -129,7 +129,7 @@ namespace BECore::Mahjong {
             double error = 0.0;
         };
 
-        PairedDifference Difference(const eastl::vector<int>& candidate, const eastl::vector<int>& baseline) {
+        PairedDifference Difference(const Vector<int>& candidate, const Vector<int>& baseline) {
             const size_t n = baseline.size();
             PairedDifference result;
             for (size_t i = 0; i < n; ++i) {
@@ -164,14 +164,14 @@ namespace BECore::Mahjong {
 
     }  // namespace
 
-    eastl::vector<HandAction> TurnCandidates(const TableView& view, const HandAction& baseline, int maxCount) {
-        eastl::vector<HandAction> candidates;
+    Vector<HandAction> TurnCandidates(const TableView& view, const HandAction& baseline, int maxCount) {
+        Vector<HandAction> candidates;
         Add(candidates, baseline, maxCount);
         if (baseline.kind == ActionKind::Discard && baseline.declareCalling) {
-            eastl::vector<RankedDiscard> declaring = RankedWaitingDiscards(view, true);
+            Vector<RankedDiscard> declaring = RankedWaitingDiscards(view, true);
             AddRanked(candidates, declaring, maxCount);
         } else if (baseline.kind == ActionKind::Discard && view.own.callingDeclared) {
-            eastl::vector<RankedDiscard> keeping = RankedWaitingDiscards(view, false);
+            Vector<RankedDiscard> keeping = RankedWaitingDiscards(view, false);
             AddRanked(candidates, keeping, maxCount);
         } else {
             for (const HandAction& action : view.legal) {
@@ -179,23 +179,23 @@ namespace BECore::Mahjong {
                     Add(candidates, action, maxCount);
                 }
             }
-            eastl::vector<RankedDiscard> near = NearBestDiscards(view);
+            Vector<RankedDiscard> near = NearBestDiscards(view);
             AddRanked(candidates, near, maxCount);
         }
         return candidates;
     }
 
-    eastl::vector<HandAction> ClaimCandidates(const TableView& view, const HandAction& baseline, int maxCount) {
+    Vector<HandAction> ClaimCandidates(const TableView& view, const HandAction& baseline, int maxCount) {
         struct RankedClaim {
             HandAction action;
             DiscardRating after;
             int rank = 0;
             size_t order = 0;
         };
-        eastl::vector<HandAction> candidates;
+        Vector<HandAction> candidates;
         Add(candidates, baseline, maxCount);
         Add(candidates, HandAction::MakePass(), maxCount);
-        eastl::vector<RankedClaim> claims;
+        Vector<RankedClaim> claims;
         for (const HandAction& action : view.legal) {
             if (action.kind == ActionKind::Claim && action.claim != ClaimKind::Mahjong) {
                 claims.push_back({action, RateClaim(view, action), ClaimRank(action.claim), claims.size()});
@@ -216,7 +216,7 @@ namespace BECore::Mahjong {
         return candidates;
     }
 
-    SearchRun::SearchRun(const TableView& view, eastl::vector<HandAction> candidates, uint32_t base, const LevelProfile& profile)
+    SearchRun::SearchRun(const TableView& view, Vector<HandAction> candidates, uint32_t base, const LevelProfile& profile)
         : _view(view), _candidates(eastl::move(candidates)), _base(base), _worlds(profile.searchWorlds), _margin(profile.searchMargin), _values(_candidates.size()) {}
 
     bool SearchRun::Done() const noexcept {
@@ -316,7 +316,7 @@ namespace BECore::Mahjong {
         return world;
     }
 
-    void SearchRun::Finish(eastl::span<const SearchWorld> worlds) {
+    void SearchRun::Finish(Span<const SearchWorld> worlds) {
         if (!Untouched() || Done() || static_cast<int>(worlds.size()) != _worlds) {
             return;
         }
@@ -340,16 +340,16 @@ namespace BECore::Mahjong {
         if (!Untouched() || Done()) {
             return;
         }
-        eastl::vector<SearchWorld> worlds(static_cast<size_t>(_worlds));
+        Vector<SearchWorld> worlds(static_cast<size_t>(_worlds));
         loop(_worlds, [this, &worlds](int index) { worlds[static_cast<size_t>(index)] = PlayWorld(index); });
         Finish(worlds);
     }
 
-    const eastl::vector<HandAction>& SearchRun::Candidates() const noexcept {
+    const Vector<HandAction>& SearchRun::Candidates() const noexcept {
         return _candidates;
     }
 
-    const eastl::vector<eastl::vector<int>>& SearchRun::Values() const noexcept {
+    const Vector<Vector<int>>& SearchRun::Values() const noexcept {
         return _values;
     }
 
@@ -380,7 +380,7 @@ namespace BECore::Mahjong {
         }
         MahjongRng baselineRng = rng;
         const HandAction baseline = ChooseTurnAction(view, baselineRng, WithoutSearch(profile));
-        eastl::vector<HandAction> candidates = TurnCandidates(view, baseline, profile.searchCandidates);
+        Vector<HandAction> candidates = TurnCandidates(view, baseline, profile.searchCandidates);
         if (static_cast<int>(candidates.size()) < kSearchMinCandidates) {
             return std::nullopt;
         }
@@ -394,14 +394,14 @@ namespace BECore::Mahjong {
         }
         MahjongRng baselineRng = rng;
         const HandAction baseline = ChooseClaimAction(view, baselineRng, WithoutSearch(profile));
-        eastl::vector<HandAction> candidates = ClaimCandidates(view, baseline, profile.searchCandidates);
+        Vector<HandAction> candidates = ClaimCandidates(view, baseline, profile.searchCandidates);
         if (static_cast<int>(candidates.size()) < kSearchMinCandidates) {
             return std::nullopt;
         }
         return SearchRun(view, eastl::move(candidates), rng.Below(kSearchBaseSeedRange), profile);
     }
 
-    Optional<SearchRun> BeginSearchOver(const TableView& view, eastl::vector<HandAction> actions, uint32_t baseSeed, int worlds) {
+    Optional<SearchRun> BeginSearchOver(const TableView& view, Vector<HandAction> actions, uint32_t baseSeed, int worlds) {
         if (view.legal.empty() || actions.empty() || worlds < 1) {
             return std::nullopt;
         }

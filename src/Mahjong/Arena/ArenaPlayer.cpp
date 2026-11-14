@@ -53,7 +53,7 @@ namespace BECore::Mahjong::Arena {
             StringView name;
             OracleKind kind;
         };
-        constexpr eastl::array<OracleSpec, 4> kOracleSpecs{{
+        constexpr Array<OracleSpec, 4> kOracleSpecs{{
             {"oracle-acceptance", OracleKind::Acceptance},
             {"oracle-hands", OracleKind::Hands},
             {"oracle-whole", OracleKind::WholeHand},
@@ -63,7 +63,7 @@ namespace BECore::Mahjong::Arena {
         constexpr StringView kOracleNamesText = "oracle-acceptance, oracle-hands, oracle-whole, oracle-defence";
 
         /// The knobs of the search: `oracle-acceptance` plays no search, so a spec that sets one is refused.
-        constexpr eastl::array<StringView, 3> kSearchKnobNames = {{"searchWorlds", "searchCandidates", "searchMargin"}};
+        constexpr Array<StringView, 3> kSearchKnobNames = {{"searchWorlds", "searchCandidates", "searchMargin"}};
 
         /// The oracles that are a search player: their profile starts from the shipped search budget.
         bool IsSearchOracle(OracleKind kind) {
@@ -80,7 +80,7 @@ namespace BECore::Mahjong::Arena {
         }
 
         /// Applies `knob=value` (`part`) to `profile`; the error names the part.
-        Optional<String> ApplyKnob(StringView part, LevelProfile& profile, eastl::array<bool, kProfileFieldCount>& seen) {
+        Optional<String> ApplyKnob(StringView part, LevelProfile& profile, Array<bool, kProfileFieldCount>& seen) {
             const size_t equals = part.find('=');
             if (equals == StringView::npos) {
                 return Format("\"{}\" is no knob=value (a knob is set as name=number)", part);
@@ -158,7 +158,7 @@ namespace BECore::Mahjong::Arena {
         if (knobs.empty()) {
             return std::unexpected(Format("no knobs after the colon in \"{}\"", spec));
         }
-        eastl::array<bool, kProfileFieldCount> seen{};
+        Array<bool, kProfileFieldCount> seen{};
         size_t begin = 0;
         while (begin <= knobs.size()) {
             const size_t comma = knobs.find(',', begin);
@@ -184,8 +184,8 @@ namespace BECore::Mahjong::Arena {
         return player;
     }
 
-    HandAction ChooseSeekWin(const eastl::vector<HandAction>& actions, MahjongRng& rng) {
-        eastl::vector<HandAction> wanted;
+    HandAction ChooseSeekWin(const Vector<HandAction>& actions, MahjongRng& rng) {
+        Vector<HandAction> wanted;
         for (const HandAction& action : actions) {
             const bool wins = action.kind == ActionKind::DeclareWin || (action.kind == ActionKind::Claim && action.claim == ClaimKind::Mahjong);
             if (wins) {
@@ -197,7 +197,7 @@ namespace BECore::Mahjong::Arena {
                 wanted.push_back(action);
             }
         }
-        const eastl::vector<HandAction>& from = wanted.empty() ? actions : wanted;
+        const Vector<HandAction>& from = wanted.empty() ? actions : wanted;
         return from[rng.Below(static_cast<uint32_t>(from.size()))];
     }
 

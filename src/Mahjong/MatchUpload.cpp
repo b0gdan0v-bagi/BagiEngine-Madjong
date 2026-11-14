@@ -82,11 +82,11 @@ namespace BECore::Mahjong {
         _sink->Send(piece);
     }
 
-    std::expected<String, String> AssemblePieces(const eastl::vector<UploadPiece>& pieces) {
+    std::expected<String, String> AssemblePieces(const Vector<UploadPiece>& pieces) {
         if (pieces.empty()) {
             return std::unexpected(String("no pieces"));
         }
-        eastl::vector<const UploadPiece*> ordered;
+        Vector<const UploadPiece*> ordered;
         for (const UploadPiece& piece : pieces) {
             if (piece.matchId != pieces.front().matchId) {
                 return std::unexpected(String("the pieces are of different matches"));

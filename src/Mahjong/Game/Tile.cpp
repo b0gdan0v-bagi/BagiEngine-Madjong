@@ -67,8 +67,8 @@ namespace BECore::Mahjong {
         return std::nullopt;
     }
 
-    Optional<eastl::vector<Tile>> ParseTiles(StringView text) {
-        eastl::vector<Tile> tiles;
+    Optional<Vector<Tile>> ParseTiles(StringView text) {
+        Vector<Tile> tiles;
         if (text.empty()) {
             return tiles;
         }

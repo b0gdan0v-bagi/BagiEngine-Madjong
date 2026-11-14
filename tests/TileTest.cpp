@@ -191,7 +191,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(TileTest, SetHasFourOfEachPlayableKindAndOneOfEachBonus) {
         for (const bool flowers : {false, true}) {
-            eastl::array<int, kTileIdCount> counts{};
+            Array<int, kTileIdCount> counts{};
             for (const Tile tile : BuildTileSet(flowers)) {
                 ASSERT_TRUE(tile.IsValid());
                 ++counts[tile.Id()];

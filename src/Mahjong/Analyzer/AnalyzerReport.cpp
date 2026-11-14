@@ -36,7 +36,7 @@ namespace BECore::Mahjong::Analyzer {
             return rounded == 0.0 ? 0.0 : rounded;
         }
 
-        String TilesText(const eastl::vector<Tile>& tiles) {
+        String TilesText(const Vector<Tile>& tiles) {
             String text;
             for (const Tile tile : tiles) {
                 text.append(Format("{}{}", text.empty() ? "" : " ", ToString(tile)));
@@ -78,7 +78,7 @@ namespace BECore::Mahjong::Analyzer {
             return text;
         }
 
-        String MeldsText(const eastl::vector<Meld>& melds) {
+        String MeldsText(const Vector<Meld>& melds) {
             String text;
             for (const Meld& meld : melds) {
                 text.append(Format("{}{}", text.empty() ? "" : "; ", MeldText(meld)));
@@ -87,8 +87,8 @@ namespace BECore::Mahjong::Analyzer {
         }
 
         /// The rows in the order of the report: highest mean first, the earlier row first among equal means.
-        eastl::vector<size_t> ReportOrder(const PositionAnalysis& analysis) {
-            eastl::vector<size_t> order;
+        Vector<size_t> ReportOrder(const PositionAnalysis& analysis) {
+            Vector<size_t> order;
             order.reserve(analysis.rows.size());
             for (size_t index = 0; index < analysis.rows.size(); ++index) {
                 order.push_back(index);
@@ -121,7 +121,7 @@ namespace BECore::Mahjong::Analyzer {
 
         /// The notes of a row, in a fixed order.
         String NoteText(const ActionRow& row, const PositionLabel& label) {
-            eastl::vector<StringView> notes;
+            Vector<StringView> notes;
             if (row.isBest) {
                 notes.push_back(kNoteBest);
             }

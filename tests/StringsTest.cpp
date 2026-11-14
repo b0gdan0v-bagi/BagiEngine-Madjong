@@ -104,7 +104,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(StringsTest, TheShippedFileLoadsWithNoProblems) {
         UIStrings strings;
-        const eastl::vector<String> problems = LoadShippedStrings(strings);
+        const Vector<String> problems = LoadShippedStrings(strings);
 
         EXPECT_TRUE(problems.empty()) << (problems.empty() ? "" : problems[0].c_str());
     }
@@ -131,7 +131,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(StringsTest, BothLanguagesHaveTheSameKeysAndThePlaceholdersOfEachKey) {
-        const std::vector<LanguageEntries> languages = ReadShippedEntries();
+        const Vector<LanguageEntries> languages = ReadShippedEntries();
         ASSERT_EQ(languages.size(), 2u);
         const LanguageEntries& base = languages[0];
 

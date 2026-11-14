@@ -547,7 +547,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FLOAT_EQ(raised.y, slot->rect.y - kSelectedTileRise);
         EXPECT_FLOAT_EQ(raised.h, slot->rect.h);
 
-        const std::vector<DrawCall> calls = TileCalls();
+        const Vector<DrawCall> calls = TileCalls();
         ASSERT_EQ(calls.size(), _table->GetLayout().slots.size());
         const DrawCall& last = calls.back();
         EXPECT_EQ(last.rect.x, raised.x);

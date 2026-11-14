@@ -28,7 +28,7 @@ namespace BECore::Mahjong::Tests {
         constexpr int kContinuationEvery = 6;
         constexpr int kContinuationSeedCount = 40;
 
-        void AppendTiles(String& text, const eastl::vector<Tile>& tiles) {
+        void AppendTiles(String& text, const Vector<Tile>& tiles) {
             for (const Tile tile : tiles) {
                 text += " ";
                 AppendFormat(text, "{}", ToString(tile));
@@ -145,7 +145,7 @@ namespace BECore::Mahjong::Tests {
                 const Seat actorB = NextActor(b, rngB);
                 ASSERT_EQ(actorA, actorB) << at;
                 ASSERT_TRUE(IsSeat(actorA)) << at;
-                const eastl::vector<HandAction> actions = a.LegalActions(actorA);
+                const Vector<HandAction> actions = a.LegalActions(actorA);
                 ASSERT_FALSE(actions.empty()) << at;
                 const HandAction actionA = Choose(actions, Mode::SeekWin, rngA);
                 const HandAction actionB = Choose(b.LegalActions(actorB), Mode::SeekWin, rngB);
@@ -235,7 +235,7 @@ namespace BECore::Mahjong::Tests {
         /// The state as a client of `viewer` knows it: the tiles of the wall and of the other hands are invalid tiles (counts kept).
         HandState HiddenFrom(const HandModel& model, Seat viewer) {
             HandState state = model.Capture();
-            const auto hide = [](eastl::vector<Tile>& tiles) {
+            const auto hide = [](Vector<Tile>& tiles) {
                 for (Tile& tile : tiles) {
                     tile = Tile{};
                 }

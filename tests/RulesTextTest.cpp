@@ -102,7 +102,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_LE(content.lines.size(), static_cast<size_t>(kRulesMaxLines)) << where;
             EXPECT_LE(content.items.size(), static_cast<size_t>(kRulesMaxItems)) << where;
             EXPECT_LE(content.tileRows.size(), static_cast<size_t>(kRulesMaxTileRows)) << where;
-            for (const eastl::vector<Tile>& row : content.tileRows) {
+            for (const Vector<Tile>& row : content.tileRows) {
                 EXPECT_FALSE(row.empty()) << where;
                 EXPECT_LE(row.size(), static_cast<size_t>(kRulesMaxRowTiles)) << where;
             }
@@ -144,7 +144,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(RulesTextTest, EveryTileOfAnExampleIsAPlayableTile) {
         ForEveryPage([](PoolString language, int page, const RulesPage& content) {
-            for (const eastl::vector<Tile>& row : content.tileRows) {
+            for (const Vector<Tile>& row : content.tileRows) {
                 for (const Tile tile : row) {
                     EXPECT_TRUE(tile.IsValid() && tile.IsPlayable()) << Where(language, page);
                 }
@@ -175,13 +175,13 @@ namespace BECore::Mahjong::Tests {
     TEST(RulesTextTest, TheExampleOfTheSetsPageIsAWholeWinningHand) {
         const RulesPage page = FormatRulesPage(Words(), 1);
         ASSERT_EQ(page.tileRows.size(), 1u);
-        const eastl::vector<Tile>& hand = page.tileRows[0];
+        const Vector<Tile>& hand = page.tileRows[0];
         EXPECT_EQ(hand.size(), static_cast<size_t>(kDealtTiles + 1));
         EXPECT_EQ(hand.size(), static_cast<size_t>(kWinningHandTiles));
         const TileCounts counts = CountTiles(hand);
         EXPECT_EQ(TotalTiles(counts), kWinningHandTiles);
         EXPECT_TRUE(IsWinningShape(counts, 0));
-        const eastl::vector<Decomposition> splits = Decompose(counts, kSetsInHand);
+        const Vector<Decomposition> splits = Decompose(counts, kSetsInHand);
         ASSERT_FALSE(splits.empty());  // four sets and a pair, not one of the special hands
         // the page says: a chow, a pung, a chow, a pung of dragons and a pair
         const Decomposition& split = splits[0];
@@ -205,11 +205,11 @@ namespace BECore::Mahjong::Tests {
     TEST(RulesTextTest, TheExampleOfTheCallingPageIsAWaitingHandThatIsNotComplete) {
         const RulesPage page = FormatRulesPage(Words(), 5);
         ASSERT_EQ(page.tileRows.size(), 1u);
-        const eastl::vector<Tile>& hand = page.tileRows[0];
+        const Vector<Tile>& hand = page.tileRows[0];
         EXPECT_EQ(hand.size(), static_cast<size_t>(kDealtTiles));
         const TileCounts counts = CountTiles(hand);
         EXPECT_TRUE(IsWaiting(counts, 0, TileCounts{}));
-        const eastl::vector<Tile> waits = WinningTiles(counts, 0);
+        const Vector<Tile> waits = WinningTiles(counts, 0);
         EXPECT_EQ(waits.size(), 2u);  // "this hand waits for two kinds"
         for (const Tile wait : waits) {
             TileCounts completed = counts;
@@ -394,7 +394,7 @@ namespace BECore::Mahjong::Tests {
     TEST(RulesTextTest, TheTextFollowsTheLanguageAndTheTilesDoNot) {
         UIStrings& strings = Words();
         ASSERT_TRUE(strings.SetLanguage("en"_intern));
-        eastl::vector<RulesPage> english;
+        Vector<RulesPage> english;
         for (int page = 0; page < RulesPageCount(); ++page) {
             english.push_back(FormatRulesPage(strings, page));
         }
@@ -531,7 +531,7 @@ namespace BECore::Mahjong::Tests {
         ScoreInput calling = win(kNoPointsTiles, "4p");
         calling.hand.callingDeclared = true;
         calling.hand.callingAtDiscardCount = 0;
-        const eastl::vector<eastl::pair<ScoreKind, ScoreInput>> cases = {
+        const Vector<eastl::pair<ScoreKind, ScoreInput>> cases = {
             {ScoreKind::OnlyPungs, win("2p 2p 2p 5s 5s 5s 7m 7m 7m 9m 9m 9m 4s 4s", "4s")},
             {ScoreKind::NoPoints, win(kNoPointsTiles, "4p", WinSource::Discard)},
             {ScoreKind::LooseTile, loose},

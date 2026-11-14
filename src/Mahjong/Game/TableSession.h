@@ -10,10 +10,10 @@ namespace BECore::Mahjong {
     CORE_ENUM(SeatKind, uint8_t, Person, Computer)
 
     /// The kind of each seat, indexed by seat.
-    using SeatSetup = eastl::array<SeatKind, kSeatCount>;
+    using SeatSetup = Array<SeatKind, kSeatCount>;
 
     /// The name of each seat's player, indexed by seat; empty where a table has none (a local game names no one).
-    using SeatNames = eastl::array<String, kSeatCount>;
+    using SeatNames = Array<String, kSeatCount>;
 
     /// Seat 0 is a person, the others are computers.
     inline constexpr SeatSetup kDefaultSeatSetup{SeatKind::Person, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
@@ -196,9 +196,9 @@ namespace BECore::Mahjong {
          * after `StartMatch`: with two or more people or none nobody, so the cover is up for a person to act (`HandoffPending`).
          * Include `Game/MatchLog.h` to call it.
          */
-        std::expected<void, ReplayError> ResumeMatch(const eastl::vector<MatchLogEvent>& events, const SeatSetup& seats, const SeatLevels& levels);
+        std::expected<void, ReplayError> ResumeMatch(const Vector<MatchLogEvent>& events, const SeatSetup& seats, const SeatLevels& levels);
         /// `ResumeMatch` with `UniformLevels(level)`.
-        std::expected<void, ReplayError> ResumeMatch(const eastl::vector<MatchLogEvent>& events, const SeatSetup& seats, ComputerLevel level);
+        std::expected<void, ReplayError> ResumeMatch(const Vector<MatchLogEvent>& events, const SeatSetup& seats, ComputerLevel level);
 
         /**
          * @brief Shows a table that is played elsewhere (the session goes into remote mode, see the class comment); the match has been
