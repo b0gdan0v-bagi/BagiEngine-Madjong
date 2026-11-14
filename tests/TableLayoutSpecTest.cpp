@@ -606,7 +606,7 @@ namespace BECore::Mahjong::Tests {
         /// The `attribute` of the `zone` of seat `position` in the shape `shape` of the document.
         pugi::xml_attribute Attribute(const char* shape, int position, const char* zone, const char* attribute) {
             pugi::xml_node shapeNode = _document.document_element().find_child_by_attribute("Shape", "name", shape);
-            pugi::xml_node seat = shapeNode.find_child_by_attribute("Seat", "position", std::to_string(position).c_str());
+            pugi::xml_node seat = shapeNode.find_child_by_attribute("Seat", "position", BECore::ToString(position).c_str());
             return seat.child(zone).attribute(attribute);
         }
 

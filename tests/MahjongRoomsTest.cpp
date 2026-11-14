@@ -271,7 +271,7 @@ namespace BECore::Mahjong::Tests {
                 ids.push_back(host);
                 for (int index = 1; index < people; ++index) {
                     const ConnectionId guest = Connect();
-                    JoinByName(guest, At(host).room, ("P" + std::to_string(index)).c_str());
+                    JoinByName(guest, At(host).room, Format("P{}", index).c_str());
                     ids.push_back(guest);
                 }
                 return ids;

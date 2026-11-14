@@ -84,7 +84,7 @@ namespace BECore::Mahjong::Tests {
 
         MatrixWindow WindowOf(float width, float height) {
             MatrixWindow window = DesignWindow();
-            window.label = (std::to_string(static_cast<int>(width)) + "x" + std::to_string(static_cast<int>(height))).c_str();
+            window.label = Format("{}x{}", static_cast<int>(width), static_cast<int>(height)).c_str();
             window.outputWidth = width;
             window.outputHeight = height;
             return window;

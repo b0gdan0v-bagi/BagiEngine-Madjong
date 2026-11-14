@@ -100,7 +100,7 @@ namespace BECore::Mahjong::Tests {
 
         /// The display copy of `table` against the real model `game` plays, for the viewer `seat`.
         void ExpectMirrorsTheModel(const MahjongSeatedGame& game, int seat, Coverage& coverage) {
-            SCOPED_TRACE("viewer " + std::to_string(seat) + ", version " + std::to_string(game.GetStateVersion()));
+            SCOPED_TRACE(Format("viewer {}, version {}", seat, game.GetStateVersion()).c_str());
             const Match& real = game.GetMatch();
             const HandModel& want = real.Hand();
             const OnlineTable table = ReadTable(game, seat);

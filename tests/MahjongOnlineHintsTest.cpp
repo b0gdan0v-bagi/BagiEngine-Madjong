@@ -182,7 +182,7 @@ namespace BECore::Mahjong::Tests {
         int ShownWaitCells() const {
             int shown = 0;
             for (int i = 0; i < kMaxWaitingTiles; ++i) {
-                shown += OnScreen("Hints", ("WaitCell" + std::to_string(i)).c_str()) ? 1 : 0;
+                shown += OnScreen("Hints", Format("WaitCell{}", i).c_str()) ? 1 : 0;
             }
             return shown;
         }

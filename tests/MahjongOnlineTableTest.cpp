@@ -141,7 +141,7 @@ namespace BECore::Mahjong::Tests {
 
         /// Every fact of @p table equals what the adapter was given for @p seat: the view of `MakeTableView` and the public table.
         void ExpectMatchesModel(const OnlineTable& table, const MahjongSeatedGame& game, int seat) {
-            SCOPED_TRACE("seat " + std::to_string(seat) + ", version " + std::to_string(game.GetStateVersion()));
+            SCOPED_TRACE(Format("seat {}, version {}", seat, game.GetStateVersion()).c_str());
             const Match& match = game.GetMatch();
             const HandModel& hand = match.Hand();
             const TableView view = MakeTableView(hand, seat);

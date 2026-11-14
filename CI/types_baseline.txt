@@ -6,7 +6,7 @@
 #   function                                          callables-move-only
 #   fstream, include-stream, getline                  engine-file-layer
 #   directory-iterator                                engine-file-layer, engine-path-type
-#   every other id (type, to_string, fmt, sto,
+#   every other id (type, fmt, sto,
 #   stable-sort)                                      mahjong-type-aliases (this game's entry; it empties them)
 # Whoever empties a rule deletes its lines here.
 src/Mahjong/Analyzer/AnalyzerCli.cpp fmt 19
@@ -182,12 +182,10 @@ tests/ArenaRunTest.cpp type 4
 tests/ArenaStatsTest.cpp type 7
 tests/ArenaTesterTest.cpp type 20
 tests/CallingMarksTest.cpp type 8
-tests/CenterPanelTest.cpp to_string 1
 tests/CoachCardTestSupport.h type 12
 tests/CoachTest.cpp type 9
 tests/ComputerClaimTest.cpp type 3
 tests/ComputerExplainTest.cpp type 18
-tests/ComputerLevelTest.cpp to_string 1
 tests/ComputerLevelTest.cpp type 19
 tests/ComputerMatchTest.cpp type 6
 tests/ComputerPlayerTest.cpp type 8
@@ -221,7 +219,6 @@ tests/MahjongCoachTest.cpp type 13
 tests/MahjongEndScreenTest.cpp function 1
 tests/MahjongEndScreenTest.cpp type 13
 tests/MahjongGameControlTest.cpp function 1
-tests/MahjongGameControlTest.cpp to_string 3
 tests/MahjongGameControlTest.cpp type 33
 tests/MahjongGameUploadTest.cpp fstream 1
 tests/MahjongGameUploadTest.cpp type 2
@@ -235,10 +232,8 @@ tests/MahjongHudTest.cpp fstream 1
 tests/MahjongHudTest.cpp type 21
 tests/MahjongOnlineClientTest.cpp type 7
 tests/MahjongOnlineEntryTest.cpp type 5
-tests/MahjongOnlineHintsTest.cpp to_string 1
 tests/MahjongOnlineHintsTest.cpp type 18
 tests/MahjongOnlineHubTest.cpp type 4
-tests/MahjongOnlineMirrorTest.cpp to_string 2
 tests/MahjongOnlineMirrorTest.cpp type 18
 tests/MahjongOnlineSceneTest.cpp function 1
 tests/MahjongOnlineSceneTest.cpp type 17
@@ -248,18 +243,14 @@ tests/MahjongOnlineTableSceneTest.cpp fstream 1
 tests/MahjongOnlineTableSceneTest.cpp type 19
 tests/MahjongOnlineTableTest.cpp function 1
 tests/MahjongOnlineTableTest.cpp sto 1
-tests/MahjongOnlineTableTest.cpp to_string 2
 tests/MahjongOnlineTableTest.cpp type 7
 tests/MahjongOnlineTableTestSupport.h type 5
 tests/MahjongOnlineWordsTest.cpp type 8
-tests/MahjongOptionsTest.cpp to_string 2
 tests/MahjongOptionsTest.cpp type 5
 tests/MahjongRngTest.cpp type 12
 tests/MahjongRoomsJudge.h type 7
 tests/MahjongRoomsTest.cpp function 1
-tests/MahjongRoomsTest.cpp to_string 1
 tests/MahjongRoomsTest.cpp type 33
-tests/MahjongRulesTest.cpp to_string 1
 tests/MahjongRulesTest.cpp type 7
 tests/MahjongSaveGameTest.cpp fstream 2
 tests/MahjongSaveGameTest.cpp type 7
@@ -284,13 +275,11 @@ tests/MahjongTableSpectateTest.cpp type 5
 tests/MahjongTableTestSupport.h type 23
 tests/MahjongTableUiTest.cpp type 10
 tests/MahjongTableWindowTest.cpp type 6
-tests/MahjongTouchSizeTest.cpp to_string 2
 tests/MahjongTouchSizeTest.cpp type 13
 tests/MahjongTouchTestSupport.h function 5
 tests/MahjongTouchTestSupport.h type 17
 tests/MahjongUiStyleTest.cpp type 18
 tests/MahjongUploadSceneTest.cpp fstream 1
-tests/MahjongUploadSceneTest.cpp to_string 2
 tests/MahjongUploadSceneTest.cpp type 4
 tests/MatchLogFileTest.cpp fstream 2
 tests/MatchLogFileTest.cpp type 10
@@ -313,7 +302,6 @@ tests/StringsTest.cpp directory-iterator 1
 tests/StringsTest.cpp fstream 1
 tests/StringsTest.cpp type 16
 tests/StringsTestSupport.h type 8
-tests/TableLayoutSpecTest.cpp to_string 1
 tests/TableLayoutSpecTest.cpp type 7
 tests/TableLayoutTest.cpp type 72
 tests/TableRegionsTest.cpp type 10

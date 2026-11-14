@@ -135,7 +135,7 @@ namespace BECore::Mahjong::Tests {
             }
             for (int row = 0; row < kRulesMaxTileRows; ++row) {
                 const bool hasRow = row < static_cast<int>(expected.tileRows.size());
-                EXPECT_EQ(OnScreen("Rules", ("RulesTileRow" + std::to_string(row)).c_str()), hasRow) << "tile row " << row << " of page " << page;
+                EXPECT_EQ(OnScreen("Rules", Format("RulesTileRow{}", row).c_str()), hasRow) << "tile row " << row << " of page " << page;
                 for (int column = 0; column < kRulesMaxRowTiles; ++column) {
                     const String name = Format("RulesTile{}", row * kRulesMaxRowTiles + column);
                     const bool has = hasRow && column < static_cast<int>(expected.tileRows[static_cast<size_t>(row)].size());

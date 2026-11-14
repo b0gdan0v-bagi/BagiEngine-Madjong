@@ -77,7 +77,7 @@ namespace BECore::Mahjong::Tests {
             const CenterPanelText panel = MakeCenterPanel(Words(), table.session, table.match);
             const HandModel& hand = table.match.Hand();
             EXPECT_EQ(panel.wall, static_cast<int>(hand.GetWall().LiveCount()));
-            EXPECT_NE(panel.wallText.find(std::to_string(panel.wall).c_str()), String::npos) << panel.wallText;
+            EXPECT_NE(panel.wallText.find(BECore::ToString(panel.wall).c_str()), String::npos) << panel.wallText;
             EXPECT_EQ(panel.wallText.find('{'), String::npos);
             EXPECT_EQ(panel.round.find('{'), String::npos);
             const Seat turn = table.session.GetPhase() == SessionPhase::Playing ? hand.CurrentSeat() : kNoSeat;

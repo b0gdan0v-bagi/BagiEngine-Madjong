@@ -229,7 +229,7 @@ namespace BECore::Mahjong::Tests {
         /// The pad key whose letter is @p letter (the pad is the name pad of the language); the index, else -1
         int PadIndexOf(const char* letter) const {
             for (int key = 0; key < static_cast<int>(TextEntry::kPadMaxKeys); ++key) {
-                if (Var(("padKey" + std::to_string(key)).c_str()) == letter) {
+                if (Var(Format("padKey{}", key).c_str()) == letter) {
                     return key;
                 }
             }
@@ -239,7 +239,7 @@ namespace BECore::Mahjong::Tests {
         void TypeKey(const char* letter) {
             const int index = PadIndexOf(letter);
             ASSERT_GE(index, 0) << letter;
-            EmitAction("MahjongOnlineKey", std::to_string(index).c_str());
+            EmitAction("MahjongOnlineKey", BECore::ToString(index).c_str());
             Frames(1);
         }
 

@@ -683,7 +683,7 @@ namespace BECore::Mahjong::Tests {
         std::set<String> played;
         MahjongRng rng(3);
         for (uint32_t seed = 1; seed <= 40; ++seed) {
-            ASSERT_NO_FATAL_FAILURE(Reset(("{\"seed\": " + std::to_string(seed) + ", \"seats\": \"PCCC\", \"hands\": 8}").c_str()));
+            ASSERT_NO_FATAL_FAILURE(Reset(Format("{{\"seed\": {}, \"seats\": \"PCCC\", \"hands\": 8}}", seed).c_str()));
             for (int step = 0; step < kActionLimitPerMatch; ++step) {
                 const Json state = State();
                 const String phase = Str(Member(state, "phase"));
@@ -835,7 +835,7 @@ namespace BECore::Mahjong::Tests {
         }
         // The limits of a seed are accepted.
         EXPECT_TRUE(control->Reset(Parse("{\"seed\": 0}")).has_value());
-        EXPECT_TRUE(control->Reset(Parse(("{\"seed\": " + std::to_string(kMaxSeed) + "}").c_str())).has_value());
+        EXPECT_TRUE(control->Reset(Parse(Format("{{\"seed\": {}}}", kMaxSeed).c_str())).has_value());
     }
 
     TEST_F(MahjongGameControlTest, ResetKeepsWhatItLeavesOutAndStoresWhatItSets) {
@@ -854,7 +854,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongGameControlTest, ResetSetsTheLevelAndTheStateSaysIt) {
         for (const ComputerLevel level : kAllLevels) {
             const int number = LevelNumber(level);
-            ASSERT_NO_FATAL_FAILURE(Reset(("{\"seed\": 8, \"seats\": \"PCCC\", \"level\": " + std::to_string(number) + "}").c_str()));
+            ASSERT_NO_FATAL_FAILURE(Reset(Format("{{\"seed\": 8, \"seats\": \"PCCC\", \"level\": {}}}", number).c_str()));
             EXPECT_EQ(game->GetLevels()[0], level) << number;
             EXPECT_EQ(game->GetLevels(), UniformLevels(level)) << number;
             EXPECT_EQ(game->GetSession().Levels(), UniformLevels(level)) << number;

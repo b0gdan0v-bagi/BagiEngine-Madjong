@@ -164,7 +164,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(LevelNumber(level), expected);
             EXPECT_EQ(LevelOf(expected), level);
             const StringView text = LevelText(level);
-            EXPECT_EQ(ToStd(text), std::to_string(expected));
+            EXPECT_EQ(text, StringView(BECore::ToString(expected)));
             EXPECT_EQ(TryParseLevel(text), level) << ToStd(text);
             ++expected;
         }
