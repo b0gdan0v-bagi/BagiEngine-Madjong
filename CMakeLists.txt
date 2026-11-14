@@ -109,6 +109,15 @@ if(ENGINE_BUILD_TESTS)
         )
     endif()
 
+    # The type rules of BECore/Types/CLAUDE.md as a check over the game's sources (raw std:: / eastl:: types, allocating calls:
+    # engine/CI/scripts/check_types.py). CI/types_baseline.txt lists what other entries still own (std::function: callables-move-only;
+    # file streams and directory iterators: engine-file-layer, engine-path-type); it only shrinks, a new hit or a line that is gone fails
+    if(Python3_FOUND)
+        add_test(NAME MahjongTypesCheck
+            COMMAND ${Python3_EXECUTABLE} ${BAGI_ENGINE_DIR}/CI/scripts/check_types.py --root ${CMAKE_CURRENT_SOURCE_DIR}
+                --baseline ${CMAKE_CURRENT_SOURCE_DIR}/CI/types_baseline.txt)
+    endif()
+
     # tools/collect_logs.py with a fake verifier and temp folders (no build needed); Python 3 standard library only
     if(Python3_FOUND)
         add_test(NAME MahjongCollectLogs COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/collect_logs_test.py)

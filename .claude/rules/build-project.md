@@ -136,6 +136,14 @@ python3 engine/CI/scripts/strip_pch_includes.py --all --root . --dir src/Mahjong
 
 `--root .` is never left out: without it the script strips the engine's sources. The order stays: dry run, a bounded folder, the build and the tests, then a wider scope.
 
+## Includes
+
+The engine's rules for includes and types hold here; the check this game runs:
+
+| Field | Value here |
+|-------|------------|
+| Types check | `python3 engine/CI/scripts/check_types.py --root . --baseline CI/types_baseline.txt`; ctest `MahjongTypesCheck`. Raw `std::` / `eastl::` types and allocating calls (the rule table is at the head of the script); a real boundary says `//-NoStd: <why>`. The baseline lists the hits other entries own and only shrinks: a new hit is fixed or marked, never added with `--update-baseline`; `--allow <folder>:<rule>[,<rule>]` allows rules in a folder |
+
 ## Launcher
 
 none. The engine launcher (`!start.cmd`, `!start.command`) is the engine repository's; this game has none.
