@@ -9,7 +9,7 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        /// The number of a flower or a season, 0..3 (the wind of the same number is East..North).
+        /// 0..3, the number of the wind that a bonus tile matches.
         int BonusNumber(Tile bonus) noexcept {
             static_assert(kFlowerCount == kSeasonCount && kFlowerCount == kWindCount, "a bonus tile is numbered like a wind");
             return bonus.Id() < kFirstSeasonId ? bonus.Id() - kFirstFlowerId : bonus.Id() - kFirstSeasonId;
@@ -17,7 +17,6 @@ namespace BECore::Mahjong {
 
         // ----- points -----
 
-        /// The points of a pung or kong (a chow scores nothing).
         int SetPoints(const ReadingSet& set) noexcept {
             int points = kOpenSimplePungPoints;
             points *= set.first.IsSimple() ? 1 : kHonourPointsFactor;
@@ -49,8 +48,7 @@ namespace BECore::Mahjong {
 
         // ----- doubles for everyone -----
 
-        /// A pung or a kong of dragons, of the own wind, of the round wind: a line per set and per reason (a set of the East wind of
-        /// an East seat in the East round has two).
+        /// A line per set and per reason (a set of the East wind of an East seat in the East round has two).
         void AddSetDoubles(const Reading& reading, const ScoreInput& input, ScoreBreakdown& breakdown) {
             for (const ReadingSet& set : reading.sets) {
                 if (set.kind == MeldKind::Chow) {
@@ -68,8 +66,7 @@ namespace BECore::Mahjong {
             }
         }
 
-        /// One suit with honours or without: read on every tile the seat holds, the concealed ones and those of the melds. Bonus tiles
-        /// are not looked at.
+        /// Read on every tile the seat holds, the melds' too.
         void AddOneSuitDoubles(const ScoreInput& input, ScoreBreakdown& breakdown) {
             const SuitSummary suits = SummariseSuits(input.hand);
             if (!suits.IsOneSuit()) {
@@ -82,7 +79,7 @@ namespace BECore::Mahjong {
             }
         }
 
-        /// A flower or a season of the own wind's number, of the round wind's number: a line per tile and per reason.
+        /// A line per tile and per reason.
         void AddBonusDoubles(const ScoreInput& input, ScoreBreakdown& breakdown) {
             for (const Tile bonus : input.hand.bonus) {
                 if (BonusNumber(bonus) == static_cast<int>(input.seatWind)) {
@@ -96,7 +93,7 @@ namespace BECore::Mahjong {
 
         // ----- totals -----
 
-        /// `points` x 2^`doubles`, 64-bit inside and cut off at the largest `int`.
+        /// 64-bit inside, cut off at the largest `int`.
         int ShiftSaturating(int points, int doubles) noexcept {
             constexpr int64_t kMax = std::numeric_limits<int>::max();
             int64_t value = points;
@@ -116,7 +113,6 @@ namespace BECore::Mahjong {
             breakdown.score = RoundUpToTen(breakdown.raw < cap ? breakdown.raw : cap);
         }
 
-        /// The score of one reading: all its lines.
         /// `onlyWinningTile` is read from the hand, not from the reading, so `ScoreSeat` finds it once.
         ScoreBreakdown ScoreReading(const ScoreInput& input, const Reading& reading, bool onlyWinningTile) {
             ScoreBreakdown breakdown;
@@ -137,7 +133,7 @@ namespace BECore::Mahjong {
             return breakdown;
         }
 
-        /// The score of a limit hand: its one line and the limit (no points, no doubles, nothing else is read from the hand).
+        /// The score of a limit hand: its one line and the limit, nothing else is read from the hand.
         ScoreBreakdown LimitHandBreakdown(const ScoreInput& input, ScoreKind limitHand) {
             ScoreBreakdown breakdown;
             breakdown.won = true;

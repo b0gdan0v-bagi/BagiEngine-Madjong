@@ -29,7 +29,7 @@ namespace BECore::Mahjong {
             }
         }
 
-        /// Nothing scores but the 20 for winning: no wall tile, no only winning tile, no flower, no pung, kong or scoring pair.
+        /// Nothing scores but the win itself: no wall tile, no only winning tile, no flower, no pung, kong or scoring pair.
         void AddNoPoints(ScoreBreakdown& breakdown) {
             if (SumPoints(breakdown) == kWinPoints) {
                 AddLine(breakdown, ScoreKind::NoPoints, Tile{}, 0, kNoPointsDoubles);
@@ -48,7 +48,7 @@ namespace BECore::Mahjong {
             }
         }
 
-        /// Every set and the pair holds a terminal or an honour (a chow `1 2 3` or `7 8 9` does, the pair counts).
+        /// Every set and the pair holds a terminal or an honour (a chow `1 2 3` or `7 8 9` does).
         void AddTerminalsOrHonoursEverywhere(const Reading& reading, ScoreBreakdown& breakdown) {
             const bool setsOk = CountSets(reading, HoldsTerminalOrHonour) == kSetsInHand;
             if (setsOk && (reading.pair.IsTerminal() || reading.pair.IsHonour())) {
@@ -64,7 +64,6 @@ namespace BECore::Mahjong {
             }
         }
 
-        /// Two or three kongs, open or concealed (four is a limit hand).
         void AddSeveralKongs(const Reading& reading, ScoreBreakdown& breakdown) {
             const int kongs = CountSets(reading, IsKong);
             if (kongs >= kSeveralKongsCount && kongs < kSetsInHand) {

@@ -6,7 +6,6 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        /// How many tiles of the kind `tile` the open meld `meld` holds.
         int CopiesInMeld(const Meld& meld, Tile tile) noexcept {
             if (meld.concealed) {
                 return 0;

@@ -9,17 +9,14 @@ namespace BECore::Mahjong {
     /// Who plays a seat: a person (a front end asks for its actions) or a computer player (the session plays it).
     CORE_ENUM(SeatKind, uint8_t, Person, Computer)
 
-    /// The kind of each seat, indexed by seat.
     using SeatSetup = Array<SeatKind, kSeatCount>;
 
     /// The name of each seat's player, indexed by seat; empty where a table has none (a local game names no one).
     using SeatNames = Array<String, kSeatCount>;
 
-    /// Seat 0 is a person, the others are computers.
     inline constexpr SeatSetup kDefaultSeatSetup{SeatKind::Person, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
 
-    /// The level of the lowest seat that `seats` makes a computer, `kDefaultLevel` when no seat is one: what a client that knows one level
-    /// for the whole table is told.
+    /// The level of the lowest computer seat (`kDefaultLevel` when none): what a client that knows one level for the table is told.
     [[nodiscard]] constexpr ComputerLevel FirstComputerLevel(const SeatSetup& seats, const SeatLevels& levels) noexcept {
         for (size_t seat = 0; seat < seats.size(); ++seat) {
             if (seats[seat] == SeatKind::Computer) {
@@ -50,7 +47,7 @@ namespace BECore::Mahjong {
     /// Where the table stands for a front end: some seat has to act, the hand is over and waits for `NextHand`, or the match is over.
     CORE_ENUM(SessionPhase, uint8_t, Playing, HandOver, MatchOver)
 
-    /// The most steps `RunComputers` takes in one call; a hand of four computer players takes a few hundred, so more is a defect.
+    /// The most steps `RunComputers` takes in one call; more is a defect.
     inline constexpr int kMaxComputerSteps = 2000;
 
     class IMatchLogSink;
@@ -67,7 +64,6 @@ namespace BECore::Mahjong {
      */
     class ComputerStepJob {
     public:
-        /// The seat that acts.
         [[nodiscard]] Seat Actor() const noexcept {
             return _actor;
         }
@@ -84,13 +80,11 @@ namespace BECore::Mahjong {
                 _decision.run->Step();
             }
         }
-        /// `Step` until `Done()`.
         void Run() {
             while (!Done()) {
                 Step();
             }
         }
-        /// The action chosen; valid when `Done()`.
         [[nodiscard]] HandAction Action() const {
             return Ready() ? *_decision.action : _decision.run->Result();
         }
@@ -130,38 +124,28 @@ namespace BECore::Mahjong {
 
     /**
      * @brief The one object every front end drives: a `Match` with the seats set up as people and computers. Plain C++, no scene.
+     *        The contract: `Game/CLAUDE.md` ("Table session").
      *
-     * The control API, the table component and the HUD never drive `Match`, `HandModel` and `ComputerTable` by themselves, so the
-     * rules of "who acts next" and "when does the state change" exist once. The session keeps a reference to the match, which belongs
-     * to its owner (`MahjongGame`) and must outlive it.
+     * The control API, the table component and the HUD never drive `Match`, `HandModel` and `ComputerTable` by themselves, so "who
+     * acts next" and "when does the state change" exist once. The session keeps a reference to the match, which belongs to its owner
+     * (`MahjongGame`) and must outlive it.
      *
-     * - `StartMatch` begins a match and the computer players of the same seed, each seat at its level (`SeatLevels`: one number for
-     *   the whole table is `UniformLevels`). The levels of seats a person plays are kept too and play nothing.
-     * - `Actor` is the seat that has to act (the first pending seat in a claim window; the result does not depend on the order).
-     *   `StepComputer` plays one action of a computer actor, `RunComputers` plays until a person has to act or the hand is over,
-     *   `PerformPerson` applies the action of a person actor, `NextHand` settles a finished hand and deals on.
-     * - A computer's step in two halves (a search seat may take long, so a front end can compute it elsewhere): `BeginComputerStep`
-     *   makes a `ComputerStepJob` (the player's rng draws here, on the caller's thread) and `FinishComputerStep` applies a done job
-     *   as `StepComputer` does, but only while `Version()` and `StartCount()` are those of the job: any change in between (a start, a
-     *   resume, another step, a person's action, a settled hand, a `Reveal` that moved the viewer) makes it stale and nothing changes.
-     *   `StepComputer` is both halves with the job run to its end, so its answers do not depend on who runs the job.
-     * - `Version` grows on every change a front end must see (a start, a step, an accepted action, a settled hand, a `Reveal` that
-     *   changes the viewer) and never goes back, so a front end redraws or publishes only when it moved. A refused call changes nothing.
-     * - Hot seat: with exactly one person that seat is the viewer always (no cover); with none the viewer is `kNoSeat` (a spectator
-     *   sees no concealed hand until the hand is over); with two or more the viewer is the person who acted last, and it becomes
-     *   `kNoSeat` as soon as another person has to act (a start, a step, an action, a settled hand), so the screen is covered
-     *   (`HandoffPending`) until that person calls `Reveal`. The same person acting again keeps the viewer. In `HandOver` and
-     *   `MatchOver` every hand is shown: front ends read `GetPhase()` then and not the viewer.
+     * - `StepComputer` is both halves of a computer's step with the job run to its end, so its answers do not depend on who runs the
+     *   job. `BeginComputerStep` draws the player's rng on the caller's thread; `FinishComputerStep` applies a done job only while
+     *   `Version()` and `StartCount()` are the job's: any change in between makes it stale and nothing changes.
+     * - `Version` grows on every change a front end must see and never goes back, so a front end redraws or publishes only when it
+     *   moved. A refused call changes nothing.
+     * - Hot seat: with exactly one person that seat is the viewer always; with none the viewer is `kNoSeat` (a spectator sees no
+     *   concealed hand until the hand is over); with two or more the viewer is the person who acted last, and it becomes `kNoSeat`
+     *   as soon as another person has to act, so the screen is covered (`HandoffPending`) until that person calls `Reveal`. In
+     *   `HandOver` and `MatchOver` every hand is shown: front ends read `GetPhase()` then and not the viewer.
      * - The match log (`Game/MatchLog.h`): with a sink set (`SetLogSink`), every accepted change is reported to it as an event, in
-     *   order (the `Start` carries the origin set by `SetLogOrigin`): `StartMatch` (Start, Hand), `StepComputer` / `PerformPerson` (Action), `NextHand` (Settlement, then Hand or End). A
+     *   order: `StartMatch` (Start, Hand), `StepComputer` / `PerformPerson` (Action), `NextHand` (Settlement, then Hand or End). A
      *   refused call, `Reveal` and a start with bad settings report nothing. A match started behind the session's back (through the
      *   non-const `Match::Start`) is not seen and so not logged.
-     * - `ResumeMatch` puts the session where a recorded log left it (a saved match), see there.
      * - **Remote mode** (`ShowRemote`): the session shows a table that is played elsewhere (an online room) over a match made by
-     *   `Match::ShowRemote`. It plays nothing: `StepComputer`, `BeginComputerStep`, `FinishComputerStep`, `RunComputers`,
-     *   `PerformPerson`, `NextHand` and `Reveal` change nothing and give their usual refusals (`HandoffPending()` is false), nothing is
-     *   logged and no observer is told. `Actor()` is the actor the caller gave, `GetPhase()` still follows the match. `StartMatch` and
-     *   `ResumeMatch` (accepted) leave the mode.
+     *   `Match::ShowRemote`. It plays nothing: every step, action, `NextHand` and `Reveal` gives its usual refusal, nothing is logged
+     *   and no observer is told. `Actor()` is the actor the caller gave. An accepted `StartMatch` / `ResumeMatch` leaves the mode.
      * - The move observer (`SetMoveObserver`) is told of an accepted `PerformPerson` only, after the version moved and the log line
      *   went out, with `MakeTableView(hand, actor)` made before the action; with none set no view is made. Computer steps, `Reveal`,
      *   `NextHand` and `ResumeMatch` never report, a refused action reports nothing.
@@ -177,7 +161,6 @@ namespace BECore::Mahjong {
         /// `Match::Start(settings, seed)` with `seats` and computer players seeded `seed`, seat `i` at `levels[i]`. `BadSettings`, and
         /// nothing changes (the version and the levels too), unless `IsPlayable(settings)`.
         MatchStatus StartMatch(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats, const SeatLevels& levels);
-        /// `StartMatch` with `UniformLevels(level)`.
         MatchStatus StartMatch(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats, ComputerLevel level = kDefaultLevel);
         /// `StartMatch` where every computer seat plays by `profile` (a profile that is no level, e.g. a search seat; the seam of the
         /// tests). `Levels()` and the log's `Start` event report `kDefaultLevel`, and a saved match does not keep the profile: a match
@@ -197,7 +180,6 @@ namespace BECore::Mahjong {
          * Include `Game/MatchLog.h` to call it.
          */
         std::expected<void, ReplayError> ResumeMatch(const Vector<MatchLogEvent>& events, const SeatSetup& seats, const SeatLevels& levels);
-        /// `ResumeMatch` with `UniformLevels(level)`.
         std::expected<void, ReplayError> ResumeMatch(const Vector<MatchLogEvent>& events, const SeatSetup& seats, ComputerLevel level);
 
         /**
@@ -210,7 +192,6 @@ namespace BECore::Mahjong {
          * match, not another view of the same one).
          */
         void ShowRemote(const SeatSetup& seats, const SeatLevels& levels, const SeatNames& names, Seat viewer, Seat actor, bool newTable);
-        /// Whether the session is in remote mode.
         [[nodiscard]] bool IsRemote() const noexcept {
             return _remote;
         }
@@ -262,7 +243,6 @@ namespace BECore::Mahjong {
 
         /// The seat to act while `Playing`, `kNoSeat` otherwise.
         [[nodiscard]] Seat Actor() const;
-        /// Whether the actor is a seat of a person.
         [[nodiscard]] bool ActorIsPerson() const;
 
         /// One action of the actor, chosen by its computer player and applied. `WrongPhase` unless `Playing`, `NotYourTurn` when the
@@ -280,7 +260,7 @@ namespace BECore::Mahjong {
         /// `action` for the actor, a person. `WrongPhase` unless `Playing`, `NotYourTurn` when the actor is a computer, otherwise the
         /// error of `HandModel::Apply`. An accepted action makes the actor the viewer (it has seen its hand).
         HandStatus PerformPerson(const HandAction& action);
-        /// `Match::EndHand`: settles the finished hand and deals the next. `HandNotFinished` and `NotInHand` as there.
+        /// `Match::EndHand`, with its errors.
         std::expected<HandSettlement, MatchError> NextHand();
         /// The settlement `NextHand` applied last (the last element of `Match::History()`), nullopt before any. The settlement of a
         /// hand that is `HandOver` is `SettleHand(Hand())`.
@@ -292,10 +272,10 @@ namespace BECore::Mahjong {
         }
         /// `Playing`, two or more people, the actor is a person and is not the viewer: the screen waits for that person's `Reveal`.
         [[nodiscard]] bool HandoffPending() const;
-        /// The actor, a person, becomes the viewer (nothing when no person has to act).
+        /// The actor, a person, becomes the viewer.
         void Reveal();
 
-        /// Grows on every change a front end must see, never goes back; 0 before the first start.
+        /// 0 before the first start; see the class comment.
         [[nodiscard]] uint64_t Version() const noexcept {
             return _version;
         }
@@ -309,7 +289,7 @@ namespace BECore::Mahjong {
         [[nodiscard]] uint64_t StartCount() const noexcept {
             return _starts;
         }
-        /// The `MoveContext` of the hand as it stands now (what the observer is told with a move).
+        /// What the observer is told with a move.
         [[nodiscard]] MoveContext Context() const {
             return MoveContext{_starts, _match.HandsPlayed(), _match.History().size(), PersonCount()};
         }
