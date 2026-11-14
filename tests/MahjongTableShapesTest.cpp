@@ -1,9 +1,8 @@
-#include "ComputerTestSupport.h"
-#include "MahjongTouchTestSupport.h"
-#include "UiStyleTestSupport.h"
-
 #include <Mahjong/Table/TapSelect.h>
 #include <Mahjong/Table/UiPalette.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/MahjongTouchTestSupport.h>
+#include <tests/UiStyleTestSupport.h>
 
 /**
  * The table in the narrow and the wide view (`Table/TableLayout.h`, `TableShape`), after the pattern of `MahjongTablePortraitTest`: the scene

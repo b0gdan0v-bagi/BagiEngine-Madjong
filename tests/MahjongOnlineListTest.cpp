@@ -1,9 +1,8 @@
-#include "MahjongHubTransport.h"
-
 #include <Common/Printers.h>
 #include <Mahjong/Online/OnlineWords.h>
 #include <Rooms/RoomErrors.h>
 #include <gtest/gtest.h>
+#include <tests/MahjongHubTransport.h>
 
 /**
  * Browsing the open rooms with `OnlineClient` over a real `RoomHub` with `MahjongSeatedGame` (`MahjongHubTransport.h`): who is listed and with

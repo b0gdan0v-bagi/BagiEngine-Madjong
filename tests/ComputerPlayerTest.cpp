@@ -1,7 +1,3 @@
-#include "ComputerTestSupport.h"
-#include "FixedWall.h"
-#include "HandTestSupport.h"
-
 #include <Mahjong/Game/ComputerClaim.h>
 #include <Mahjong/Game/ComputerPlayer.h>
 #include <Mahjong/Game/ComputerTurn.h>
@@ -9,6 +5,9 @@
 #include <Mahjong/Game/Shanten.h>
 #include <gtest/gtest.h>
 #include <set>
+#include <tests/ComputerTestSupport.h>
+#include <tests/FixedWall.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * `ComputerPlayer` and `ComputerTable`: `Decide` (empty for a seat with nothing to do, an element of the list otherwise), `Choose` on

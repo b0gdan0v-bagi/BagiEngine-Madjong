@@ -1,9 +1,8 @@
-#include "ComputerTestSupport.h"
-
 #include <Mahjong/Analyzer/AnalyzerRun.h>
 #include <Mahjong/Arena/ArenaWorlds.h>
 #include <Mahjong/Game/ComputerClaim.h>
 #include <gtest/gtest.h>
+#include <tests/ComputerTestSupport.h>
 
 /**
  * The analysis of one position (Analyzer/AnalyzerRun.h): one row per legal action in the order of `view.legal`, the EV of each over

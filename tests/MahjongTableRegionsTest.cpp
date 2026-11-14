@@ -1,9 +1,8 @@
-#include "MahjongTableTestSupport.h"
-#include "MahjongTouchTestSupport.h"
-#include "ShippedTableLayout.h"
-
 #include <Mahjong/Components/MahjongTableComponent.h>
 #include <Mahjong/Table/TableRegions.h>
+#include <tests/MahjongTableTestSupport.h>
+#include <tests/MahjongTouchTestSupport.h>
+#include <tests/ShippedTableLayout.h>
 
 /**
  * The table publishes `MakeTableRegions` of its layout to the `SceneView` canvas of every node in `kRegionNodes` (`PublishRegions`), so that

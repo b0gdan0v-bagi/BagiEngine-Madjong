@@ -1,7 +1,5 @@
 #pragma once
 
-#include "MahjongRoomsJudge.h"
-
 #include <BECore/Rooms/ManualClock.h>
 #include <BECore/Rooms/TestRandom.h>
 #include <Games/SeatedGameRegistry.h>
@@ -14,6 +12,7 @@
 #include <gtest/gtest.h>
 #include <map>
 #include <memory>
+#include <tests/MahjongRoomsJudge.h>
 #include <vector>
 
 /**

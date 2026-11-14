@@ -1,13 +1,12 @@
 #pragma once
 
-#include "MahjongButtonSupport.h"
-#include "MahjongTableTestSupport.h"
-
 #include <BECore/Renderer/ViewTransform.h>
 #include <BECore/UI/UICanvasComponent.h>
 #include <BECore/UI/UIPreview.h>
 #include <Mahjong/Table/TableLayout.h>
 #include <Mahjong/Table/TouchRegime.h>
+#include <tests/MahjongButtonSupport.h>
+#include <tests/MahjongTableTestSupport.h>
 
 /**
  * What the tests of the touch size share (`MahjongTouchSizeTest`, and the screen tests that run a canvas over the size matrix): the

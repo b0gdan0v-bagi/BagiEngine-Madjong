@@ -1,6 +1,5 @@
-#include "HandTestSupport.h"
-
 #include <Mahjong/Game/Match.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * The match: the start, the bookkeeping of the deal and the count (`NextProgress`, `RoundWindOf`, a table of cases), and the match fed

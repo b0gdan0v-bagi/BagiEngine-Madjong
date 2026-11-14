@@ -1,10 +1,9 @@
-#include "ComputerTestSupport.h"
-#include "MahjongTableTestSupport.h"
-#include "UiStyleTestSupport.h"
-
 #include <BECore/Control/Json.h>
 #include <Mahjong/Table/ScoreText.h>
 #include <Mahjong/Table/TileHover.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/MahjongTableTestSupport.h>
+#include <tests/UiStyleTestSupport.h>
 
 /**
  * The name on hover in the scene (`Components/MahjongTableComponent.h`, "The name on hover"; the node `TileHover`): the mouse pointer over a

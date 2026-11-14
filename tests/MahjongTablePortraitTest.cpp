@@ -1,9 +1,8 @@
-#include "ComputerTestSupport.h"
-#include "MahjongTouchTestSupport.h"
-#include "UiStyleTestSupport.h"
-
 #include <Mahjong/Table/TapSelect.h>
 #include <Mahjong/Table/UiPalette.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/MahjongTouchTestSupport.h>
+#include <tests/UiStyleTestSupport.h>
 
 /**
  * The table in the portrait view (`Table/TableLayout.h`, `TableShape`): the scene picks the view of 720 x 1280 for an output at least as

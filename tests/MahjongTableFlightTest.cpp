@@ -1,10 +1,9 @@
-#include "ComputerTestSupport.h"
-#include "MahjongTableTestSupport.h"
-#include "UiStyleTestSupport.h"
-
 #include <Events/SceneEvents.h>
 #include <Mahjong/Table/TileFlights.h>
 #include <Mahjong/Table/UiPalette.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/MahjongTableTestSupport.h>
+#include <tests/UiStyleTestSupport.h>
 
 /**
  * The tiles that fly to their place (`Components/MahjongTableComponent.h`, "Flights"; the planner is `Table/TileFlights.h`). The shipped

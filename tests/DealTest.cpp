@@ -1,5 +1,3 @@
-#include "FixedWall.h"
-
 #include <EASTL/algorithm.h>
 #include <Mahjong/Game/Deal.h>
 #include <Mahjong/Game/MahjongRng.h>
@@ -9,6 +7,7 @@
 #include <Mahjong/Game/TileSet.h>
 #include <Mahjong/Game/Wall.h>
 #include <gtest/gtest.h>
+#include <tests/FixedWall.h>
 
 /**
  * The deal: 13 tiles per seat, the order the wall is dealt in, bonus tiles replaced from the loose tiles. Pure logic: no engine

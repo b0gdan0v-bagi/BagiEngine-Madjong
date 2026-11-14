@@ -1,10 +1,9 @@
-#include "ComputerTestSupport.h"
-#include "MahjongButtonSupport.h"
-#include "MahjongTableTestSupport.h"
-#include "MahjongTouchTestSupport.h"
-
 #include <BECore/UI/UIImageComponent.h>
 #include <Events/InputEvents.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/MahjongButtonSupport.h>
+#include <tests/MahjongTableTestSupport.h>
+#include <tests/MahjongTouchTestSupport.h>
 
 /**
  * The action buttons of the table (`Table/ActionButtons.h`, the canvas `Actions` of the shipped scene): which buttons are on screen for a

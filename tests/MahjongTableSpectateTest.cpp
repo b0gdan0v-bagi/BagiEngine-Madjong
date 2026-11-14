@@ -1,9 +1,8 @@
-#include "ComputerTestSupport.h"
-#include "MahjongTableTestSupport.h"
-#include "UiStyleTestSupport.h"
-
 #include <Mahjong/Table/TileAtlas.h>
 #include <Mahjong/Table/UiPalette.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/MahjongTableTestSupport.h>
+#include <tests/UiStyleTestSupport.h>
 
 /**
  * A watched match, no seat a person (`Components/MahjongTableComponent.h`, "No peeking"): while the hand is played the concealed tiles of

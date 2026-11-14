@@ -1,13 +1,12 @@
-#include "MahjongButtonSupport.h"
-#include "MahjongTableTestSupport.h"
-#include "MahjongTouchTestSupport.h"
-#include "StringsTestSupport.h"
-
 #include <BECore/UI/UIDropdown.h>
 #include <Mahjong/Online/OnlineWords.h>
 #include <Mahjong/Online/TextEntry.h>
 #include <Mahjong/Table/Words.h>
 #include <initializer_list>
+#include <tests/MahjongButtonSupport.h>
+#include <tests/MahjongTableTestSupport.h>
+#include <tests/MahjongTouchTestSupport.h>
+#include <tests/StringsTestSupport.h>
 #include <vector>
 
 /**

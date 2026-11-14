@@ -1,5 +1,3 @@
-#include "FixedWall.h"
-
 #include <EASTL/algorithm.h>
 #include <Mahjong/Game/Deal.h>
 #include <Mahjong/Game/PlayerHand.h>
@@ -8,6 +6,7 @@
 #include <Mahjong/Game/Wall.h>
 #include <gtest/gtest-spi.h>
 #include <gtest/gtest.h>
+#include <tests/FixedWall.h>
 
 /**
  * The test helper `FixedWall.h` itself: the layout of the wall, the padding, the cut live wall. Pure logic: no engine services.

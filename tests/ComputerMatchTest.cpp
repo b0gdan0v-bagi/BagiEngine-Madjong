@@ -1,9 +1,8 @@
-#include "HandTestSupport.h"
-#include "MatchTestSupport.h"
-
 #include <Mahjong/Game/ComputerPlayer.h>
 #include <Mahjong/Game/Match.h>
 #include <gtest/gtest.h>
+#include <tests/HandTestSupport.h>
+#include <tests/MatchTestSupport.h>
 
 /**
  * Whole matches played by four computer players (`ComputerTable`), for fixed seeds, flowers off and on, 16 and 8 hands, a drawn hand

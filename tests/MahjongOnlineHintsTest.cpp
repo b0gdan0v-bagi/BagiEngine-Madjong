@@ -1,10 +1,3 @@
-#include "CoachCardTestSupport.h"
-#include "FixedWall.h"
-#include "HandTestSupport.h"
-#include "MahjongOnlineTableTestSupport.h"
-#include "MahjongTouchTestSupport.h"
-#include "UiStyleTestSupport.h"
-
 #include <Common/Printers.h>
 #include <Mahjong/Components/MahjongHintsComponent.h>
 #include <Mahjong/Game/ComputerView.h>
@@ -13,6 +6,12 @@
 #include <Mahjong/Table/Hints.h>
 #include <Mahjong/Table/ScoreText.h>
 #include <Mahjong/Table/UiPalette.h>
+#include <tests/CoachCardTestSupport.h>
+#include <tests/FixedWall.h>
+#include <tests/HandTestSupport.h>
+#include <tests/MahjongOnlineTableTestSupport.h>
+#include <tests/MahjongTouchTestSupport.h>
+#include <tests/UiStyleTestSupport.h>
 
 /**
  * The hints at the table of a room (`Components/MahjongHintsComponent.h`, `MahjongGame::HintsActive()`): the host decides whether they exist, the

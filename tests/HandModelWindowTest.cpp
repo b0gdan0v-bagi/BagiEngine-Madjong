@@ -1,9 +1,8 @@
-#include "FixedWall.h"
-#include "HandTestSupport.h"
-
 #include <Mahjong/Game/HandModel.h>
 #include <Mahjong/Game/Tile.h>
 #include <gtest/gtest.h>
+#include <tests/FixedWall.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * `HandModel::LastClaimWindow()`: how the last claim window was settled, with the claims that lost. Fixed walls say what every seat

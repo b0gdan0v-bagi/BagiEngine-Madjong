@@ -1,6 +1,3 @@
-#include "ScoreTestSupport.h"
-#include "StringsTestSupport.h"
-
 #include <Mahjong/Game/Deal.h>
 #include <Mahjong/Game/HandShape.h>
 #include <Mahjong/Game/Match.h>
@@ -10,6 +7,8 @@
 #include <Mahjong/Table/RulesText.h>
 #include <Mahjong/Table/ScoreText.h>
 #include <set>
+#include <tests/ScoreTestSupport.h>
+#include <tests/StringsTestSupport.h>
 
 /**
  * The rules pages (`Table/RulesText.h`). Pure logic over the shipped string table: no engine services. The tests hold the limits of a page, the

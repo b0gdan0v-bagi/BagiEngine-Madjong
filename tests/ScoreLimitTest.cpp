@@ -1,6 +1,5 @@
-#include "ScoreTestSupport.h"
-
 #include <Mahjong/Game/HandShape.h>
+#include <tests/ScoreTestSupport.h>
 
 /**
  * The limit hands of `ScoreSeat` (the owner's eleven, 12 kinds because seven pairs has two; two of them are about the last / loose

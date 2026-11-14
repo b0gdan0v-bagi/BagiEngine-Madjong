@@ -1,7 +1,3 @@
-#include "ComputerTestSupport.h"
-#include "FixedWall.h"
-#include "HandTestSupport.h"
-
 #include <EASTL/algorithm.h>
 #include <EASTL/sort.h>
 #include <Mahjong/Game/ComputerTurn.h>
@@ -9,6 +5,9 @@
 #include <Mahjong/Game/OwnDraws.h>
 #include <cmath>
 #include <gtest/gtest.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/FixedWall.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * `ValueDiscards` and `ValueWaits`: a discard rated in points from the seat's own draws, on positions worked out by hand (a comment

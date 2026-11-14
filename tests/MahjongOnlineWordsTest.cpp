@@ -1,11 +1,10 @@
-#include "StringsTestSupport.h"
-
 #include <Common/Printers.h>
 #include <Mahjong/Online/OnlineWords.h>
 #include <Mahjong/Table/Words.h>
 #include <gtest/gtest.h>
 #include <map>
 #include <set>
+#include <tests/StringsTestSupport.h>
 
 /**
  * The words of the client of a room (`Online/OnlineWords.h`): every code it can meet has a key that the shipped file has in both languages, with only the placeholders the header

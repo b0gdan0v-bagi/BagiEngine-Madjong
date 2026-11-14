@@ -1,8 +1,7 @@
-#include "ArenaLogTestSupport.h"
-
 #include <Common/Printers.h>
 #include <Mahjong/Arena/ArenaLogsReport.h>
 #include <gtest/gtest.h>
+#include <tests/ArenaLogTestSupport.h>
 
 /**
  * The match logs of the arena's log mode (`Arena/ArenaLogs.h`, `ArenaLogsReport.h`): the verdict on one log with its reason, the files

@@ -1,11 +1,10 @@
-#include "MahjongButtonSupport.h"
-#include "MahjongTouchTestSupport.h"
-#include "UiStyleTestSupport.h"
-
 #include <BECore/Text/Utf8.h>
 #include <BECore/UI/UIImageComponent.h>
 #include <BECore/UI/UIToggleComponent.h>
 #include <Mahjong/Table/SeatName.h>
+#include <tests/MahjongButtonSupport.h>
+#include <tests/MahjongTouchTestSupport.h>
+#include <tests/UiStyleTestSupport.h>
 
 /**
  * The canvases of the shipped scene that belong to the table (`Actions`, `Handoff`): the buttons of the component are the buttons of the

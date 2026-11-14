@@ -1,6 +1,3 @@
-#include "ComputerTestSupport.h"
-#include "MatchTestSupport.h"
-
 #include <EASTL/sort.h>
 #include <Mahjong/Game/ComputerClaim.h>
 #include <Mahjong/Game/ComputerLevel.h>
@@ -10,6 +7,8 @@
 #include <Mahjong/Game/ComputerWorld.h>
 #include <Mahjong/Game/Shanten.h>
 #include <gtest/gtest.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/MatchTestSupport.h>
 #include <thread>
 
 /**

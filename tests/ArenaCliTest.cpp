@@ -1,8 +1,7 @@
-#include "ArenaLogTestSupport.h"
-
 #include <Common/Printers.h>
 #include <Mahjong/Arena/ArenaCli.h>
 #include <gtest/gtest.h>
+#include <tests/ArenaLogTestSupport.h>
 #include <thread>
 
 /**

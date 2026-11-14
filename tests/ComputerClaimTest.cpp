@@ -1,12 +1,11 @@
-#include "ComputerTestSupport.h"
-#include "FixedWall.h"
-#include "HandTestSupport.h"
-
 #include <Mahjong/Game/ComputerClaim.h>
 #include <Mahjong/Game/ComputerView.h>
 #include <Mahjong/Game/HandModel.h>
 #include <Mahjong/Game/Match.h>
 #include <gtest/gtest.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/FixedWall.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * `ChooseClaimAction`: the choices of a computer player when a discard (or an upgraded kong) is up for claiming, one case per rule, on

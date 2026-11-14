@@ -1,11 +1,10 @@
-#include "FixedWall.h"
-#include "HandTestSupport.h"
-
 #include <Mahjong/Game/HandModel.h>
 #include <Mahjong/Game/HandShape.h>
 #include <Mahjong/Game/Tile.h>
 #include <gtest/gtest.h>
 #include <set>
+#include <tests/FixedWall.h>
+#include <tests/HandTestSupport.h>
 #include <vector>
 
 /**

@@ -1,7 +1,6 @@
-#include "MahjongTouchTestSupport.h"
-#include "UiStyleTestSupport.h"
-
 #include <Mahjong/Table/UiPalette.h>
+#include <tests/MahjongTouchTestSupport.h>
+#include <tests/UiStyleTestSupport.h>
 
 /**
  * The rack under the viewer's hand (`kHandRack`, `kHandRackLip`, `MahjongTableComponent`): one plate for the seat at the bottom, drawn

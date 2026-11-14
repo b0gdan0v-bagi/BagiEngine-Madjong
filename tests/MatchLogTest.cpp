@@ -1,7 +1,6 @@
-#include "HandTestSupport.h"
-
 #include <Mahjong/Game/MatchLog.h>
 #include <gtest/gtest.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * The recorder of a match (`Game/MatchLog.h`) and its hook in `TableSession`: the events of a whole match in order, what is not

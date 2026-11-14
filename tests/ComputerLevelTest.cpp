@@ -1,11 +1,10 @@
-#include "ComputerTestSupport.h"
-#include "MatchTestSupport.h"
-
 #include <Mahjong/Game/ComputerClaim.h>
 #include <Mahjong/Game/ComputerLevel.h>
 #include <Mahjong/Game/ComputerPlayer.h>
 #include <Mahjong/Game/ComputerTurn.h>
 #include <gtest/gtest.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/MatchTestSupport.h>
 
 /**
  * `ComputerLevel` (the numbers, the two parsers, the default), the golden of the Normal player and the profiles of the levels. The golden is

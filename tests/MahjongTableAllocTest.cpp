@@ -1,8 +1,3 @@
-#include "ComputerTestSupport.h"
-#include "MahjongOnlineTableTestSupport.h"
-#include "MahjongTableTestSupport.h"
-#include "MahjongTouchTestSupport.h"
-
 #include <BECore/Clipboard/FakeClipboard.h>
 #include <BECore/Profiler/Alloc/AllocTracker.h>
 #include <Mahjong/Components/MahjongHintsComponent.h>
@@ -11,6 +6,10 @@
 #include <Mahjong/Table/Coach.h>
 #include <Mahjong/Table/ScoreText.h>
 #include <Mahjong/UploadPrefs.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/MahjongOnlineTableTestSupport.h>
+#include <tests/MahjongTableTestSupport.h>
+#include <tests/MahjongTouchTestSupport.h>
 
 // The table drawn again with nothing changed allocates nothing (the entry steady-frame-allocs): the layout, its input and the snapshots
 // keep the capacity of their lists between draws. Only a build that counts allocations can see it (`macos-profile`).

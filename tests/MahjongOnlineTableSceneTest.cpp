@@ -1,6 +1,3 @@
-#include "MahjongButtonSupport.h"
-#include "MahjongOnlineTableTestSupport.h"
-
 #include <BECore/Control/Json.h>
 #include <BECore/UI/UIImageComponent.h>
 #include <BECore/UI/UIInputClicker.h>
@@ -14,6 +11,8 @@
 #include <Mahjong/Table/TileHover.h>
 #include <Rooms/RoomProtocol.h>
 #include <memory>
+#include <tests/MahjongButtonSupport.h>
+#include <tests/MahjongOnlineTableTestSupport.h>
 #include <thread>
 
 /**

@@ -1,11 +1,10 @@
-#include "ComputerTestSupport.h"
-#include "MahjongTableTestSupport.h"
-#include "UiStyleTestSupport.h"
-
 #include <BECore/Control/Json.h>
 #include <Events/SceneEvents.h>
 #include <Mahjong/Table/TileFlights.h>
 #include <Mahjong/Table/UiPalette.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/MahjongTableTestSupport.h>
+#include <tests/UiStyleTestSupport.h>
 
 /**
  * A claim that loses to a better one in a claim window (`Components/MahjongTableComponent.h`, "A claim that lost"): for

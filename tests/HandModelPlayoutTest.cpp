@@ -1,5 +1,3 @@
-#include "HandTestSupport.h"
-
 #include <EASTL/algorithm.h>
 #include <Mahjong/Game/Deal.h>
 #include <Mahjong/Game/HandModel.h>
@@ -11,6 +9,7 @@
 #include <Mahjong/Game/TileSet.h>
 #include <Mahjong/Game/Wall.h>
 #include <gtest/gtest.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * Whole hands played with random legal actions, for many seeds. After every action the invariants of a hand hold: no tile is lost or

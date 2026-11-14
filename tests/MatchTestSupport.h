@@ -1,8 +1,7 @@
 #pragma once
 
-#include "ScoreTestSupport.h"
-
 #include <Mahjong/Game/Match.h>
+#include <tests/ScoreTestSupport.h>
 
 /**
  * What the tests that play whole matches share (`MatchPlayoutTest`, `ComputerMatchTest`): the settings of match number `index`, and

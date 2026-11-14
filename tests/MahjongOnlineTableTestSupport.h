@@ -1,12 +1,11 @@
 #pragma once
 
-#include "MahjongHubTransport.h"
-#include "MahjongTableTestSupport.h"
-
 #include <Common/TempPath.h>
 #include <Mahjong/Save/MatchSave.h>
 #include <chrono>
 #include <memory>
+#include <tests/MahjongHubTransport.h>
+#include <tests/MahjongTableTestSupport.h>
 #include <vector>
 
 /**

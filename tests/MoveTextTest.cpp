@@ -1,9 +1,8 @@
-#include "HandTestSupport.h"
-#include "StringsTestSupport.h"
-
 #include <Mahjong/Table/MoveText.h>
 #include <Mahjong/Table/SeatName.h>
 #include <set>
+#include <tests/HandTestSupport.h>
+#include <tests/StringsTestSupport.h>
 
 /**
  * The move line of the HUD (`Table/MoveText.h`). Pure logic: no engine services. The English and Russian sentences are written out here,

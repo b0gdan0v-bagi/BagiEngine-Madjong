@@ -1,8 +1,3 @@
-#include "HandTestSupport.h"
-#include "ShippedTableLayout.h"
-#include "StringsTestSupport.h"
-#include "UiStyleTestSupport.h"
-
 #include <Mahjong/Game/TableSession.h>
 #include <Mahjong/Table/ScoreText.h>
 #include <Mahjong/Table/SeatName.h>
@@ -12,6 +7,10 @@
 #include <cmath>
 #include <gtest/gtest.h>
 #include <set>
+#include <tests/HandTestSupport.h>
+#include <tests/ShippedTableLayout.h>
+#include <tests/StringsTestSupport.h>
+#include <tests/UiStyleTestSupport.h>
 
 /**
  * The plates of the seats (`Table/SeatPlates.h`): which seat lies at each side of the table, and what its plate says (the name and the

@@ -1,6 +1,5 @@
-#include "MatchTestSupport.h"
-
 #include <Mahjong/Game/Match.h>
+#include <tests/MatchTestSupport.h>
 
 /**
  * Whole matches played with random legal actions to the end, for several seeds (flowers off and on, 16 and 8 hands, a drawn hand

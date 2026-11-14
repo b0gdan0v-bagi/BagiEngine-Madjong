@@ -1,10 +1,3 @@
-#include "ComputerTestSupport.h"
-#include "MahjongButtonSupport.h"
-#include "MahjongHubTransport.h"
-#include "MahjongTableTestSupport.h"
-#include "MahjongTouchTestSupport.h"
-#include "StringsTestSupport.h"
-
 #include <BECore/Clipboard/FakeClipboard.h>
 #include <Common/TempPath.h>
 #include <CoreSDL/SDLEvents.h>
@@ -13,6 +6,12 @@
 #include <Mahjong/Online/OnlineWords.h>
 #include <Mahjong/Online/TextEntry.h>
 #include <Rooms/RoomErrors.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/MahjongButtonSupport.h>
+#include <tests/MahjongHubTransport.h>
+#include <tests/MahjongTableTestSupport.h>
+#include <tests/MahjongTouchTestSupport.h>
+#include <tests/StringsTestSupport.h>
 
 /**
  * The online panel in the shipped scene (`Components/MahjongOnlineComponent.h`, the nodes `Online` and `OnlineEntry`): the `Online` button of `Setup` opens it over `Setup`, the pages

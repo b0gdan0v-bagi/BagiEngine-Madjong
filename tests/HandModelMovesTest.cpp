@@ -1,10 +1,9 @@
-#include "ComputerTestSupport.h"
-#include "FixedWall.h"
-#include "HandTestSupport.h"
-
 #include <Mahjong/Game/HandModel.h>
 #include <Mahjong/Game/Tile.h>
 #include <gtest/gtest.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/FixedWall.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * What the model keeps for a front end besides the hands: `DrawnTile(seat)` (the tile just drawn, a regular or a loose one, nothing

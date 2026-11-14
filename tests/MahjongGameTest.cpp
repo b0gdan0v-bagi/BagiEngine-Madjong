@@ -1,7 +1,3 @@
-#include "HandTestSupport.h"
-#include "ShippedScene.h"
-#include "StringsTestSupport.h"
-
 #include <BECore/GameManager/CoreManager.h>
 #include <BECore/Reflection/XmlDeserializer.h>
 #include <BECore/Scene/Scene.h>
@@ -10,6 +6,9 @@
 #include <Games/GameManager.h>
 #include <Mahjong/MahjongGame.h>
 #include <gtest/gtest.h>
+#include <tests/HandTestSupport.h>
+#include <tests/ShippedScene.h>
+#include <tests/StringsTestSupport.h>
 
 /**
  * The game is registered and starts on its scene: the shipped scene (SceneConfig.xml and its node files, `ShippedScene.h`) is read from the source tree (a game's content is not mounted in the

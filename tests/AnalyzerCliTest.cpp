@@ -1,9 +1,8 @@
-#include "HandTestSupport.h"
-
 #include <BECore/Control/Json.h>
 #include <Mahjong/Analyzer/AnalyzerCli.h>
 #include <Mahjong/MatchLogJson.h>
 #include <gtest/gtest.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * The command line of the analyzer (Analyzer/AnalyzerCli.h, the program `BagiMahjongAnalyzer`): the arguments (defaults, every option,

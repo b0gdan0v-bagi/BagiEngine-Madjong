@@ -1,12 +1,11 @@
-#include "ComputerTestSupport.h"
-#include "FixedWall.h"
-#include "HandTestSupport.h"
-
 #include <Mahjong/Game/ComputerView.h>
 #include <Mahjong/Game/DiscardDanger.h>
 #include <Mahjong/Game/HandModel.h>
 #include <Mahjong/Table/DangerMarks.h>
 #include <gtest/gtest.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/FixedWall.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * The danger marks of the hand tiles (`Table/DangerMarks.h`, pure logic): the mapping from the grades of `DiscardDanger.h`, nothing off

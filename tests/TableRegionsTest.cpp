@@ -1,10 +1,9 @@
-#include "ShippedTableLayout.h"
-
 #include <Common/Printers.h>
 #include <Mahjong/Table/TableRegions.h>
 #include <Mahjong/Table/TableSolver.h>
 #include <cmath>
 #include <gtest/gtest.h>
+#include <tests/ShippedTableLayout.h>
 
 /**
  * `Table/TableRegions.h`: the regions the table publishes. The zone regions are the layout's own plates (by screen position), centre panel

@@ -1,6 +1,3 @@
-#include "ComputerTestSupport.h"
-#include "HandTestSupport.h"
-
 #include <EASTL/algorithm.h>
 #include <Mahjong/Game/HandModel.h>
 #include <Mahjong/Game/MahjongRng.h>
@@ -10,6 +7,8 @@
 #include <Mahjong/Game/Wall.h>
 #include <gtest/gtest.h>
 #include <set>
+#include <tests/ComputerTestSupport.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * `HandModel::Capture` / `Restore`: a hand rebuilt from its data is the same hand. For the states of seeded random playouts (flowers

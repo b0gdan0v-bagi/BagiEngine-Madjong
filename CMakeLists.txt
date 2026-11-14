@@ -85,6 +85,8 @@ if(ENGINE_BUILD_TESTS)
         LINK RoomsModule
         WHOLE_ARCHIVE MahjongModule
     )
+    # The repository root is the include root of the test helpers: they are included as <tests/Name.h>
+    target_include_directories(MahjongTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
     # Starts BagiMahjong with the control API and plays a hand and a match over WebSocket (ctest entry BagiMahjongControlSmoke);
     # without the control server (ENGINE_WITH_REMOTE_CONTROL=OFF) the smoke could never connect

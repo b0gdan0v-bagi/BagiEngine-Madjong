@@ -1,7 +1,6 @@
-#include "ScoreTestSupport.h"
-
 #include <Mahjong/Game/Payments.h>
 #include <Mahjong/Game/ScoreHand.h>
+#include <tests/ScoreTestSupport.h>
 
 /**
  * `SettleHand` end to end: hands played on fixed walls to a self-draw, a win on a discard, a robbed kong and a drawn hand, then

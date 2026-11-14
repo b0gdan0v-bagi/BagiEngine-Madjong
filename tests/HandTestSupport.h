@@ -1,7 +1,5 @@
 #pragma once
 
-#include "FixedWall.h"
-
 #include <Common/Printers.h>
 #include <EASTL/algorithm.h>
 #include <Mahjong/Game/ComputerLevel.h>
@@ -12,6 +10,7 @@
 #include <Mahjong/Game/Seats.h>
 #include <Mahjong/Game/Tile.h>
 #include <gtest/gtest.h>
+#include <tests/FixedWall.h>
 
 /**
  * What the tests of a `HandModel` share: the seat names, `kExpectedStartingScore`, a sum of a number per seat, the name of an enum value

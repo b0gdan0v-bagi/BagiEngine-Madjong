@@ -1,5 +1,3 @@
-#include "HandTestSupport.h"
-
 #include <Common/Printers.h>
 #include <Mahjong/Game/MatchLog.h>
 #include <Mahjong/Game/TableSession.h>
@@ -7,6 +5,7 @@
 #include <Mahjong/MatchLogJson.h>
 #include <Mahjong/Save/MatchSave.h>
 #include <gtest/gtest.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * The text of a saved match, the prefs and the recorder (`Save/MatchSave.h`), and the way from a played match to a resumed one.

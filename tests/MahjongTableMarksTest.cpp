@@ -1,14 +1,13 @@
-#include "ComputerTestSupport.h"
-#include "MahjongTableTestSupport.h"
-#include "MahjongTouchTestSupport.h"
-#include "UiStyleTestSupport.h"
-
 #include <Events/SceneEvents.h>
 #include <Mahjong/Table/CallingMarks.h>
 #include <Mahjong/Table/EmblemAtlas.h>
 #include <Mahjong/Table/SeatPlates.h>
 #include <Mahjong/Table/UiPalette.h>
 #include <set>
+#include <tests/ComputerTestSupport.h>
+#include <tests/MahjongTableTestSupport.h>
+#include <tests/MahjongTouchTestSupport.h>
+#include <tests/UiStyleTestSupport.h>
 
 /**
  * The marks of the last move on the table (`Components/MahjongTableComponent.h`): the tint on the last discard, the tint on the tile the

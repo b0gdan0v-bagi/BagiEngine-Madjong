@@ -1,11 +1,5 @@
 #pragma once
 
-#include "HandTestSupport.h"
-#include "MahjongButtonSupport.h"
-#include "ShippedScene.h"
-#include "StringsTestSupport.h"
-#include "UiStyleTestSupport.h"
-
 #include <BECore/GameManager/CoreManager.h>
 #include <BECore/Reflection/XmlDeserializer.h>
 #include <BECore/Scene/Scene.h>
@@ -24,6 +18,11 @@
 #include <Mahjong/Table/TileAtlas.h>
 #include <Mahjong/Table/TileFlights.h>
 #include <gtest/gtest.h>
+#include <tests/HandTestSupport.h>
+#include <tests/MahjongButtonSupport.h>
+#include <tests/ShippedScene.h>
+#include <tests/StringsTestSupport.h>
+#include <tests/UiStyleTestSupport.h>
 
 /**
  * What the tests of the table component share (`MahjongTableUiTest`, `MahjongTableInputTest`, `MahjongTableActionsTest`,

@@ -1,8 +1,7 @@
-#include "HandTestSupport.h"
-
 #include <Mahjong/Game/MatchLog.h>
 #include <Mahjong/Game/TableSession.h>
 #include <gtest/gtest.h>
+#include <tests/HandTestSupport.h>
 #include <thread>
 #include <vector>
 
