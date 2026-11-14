@@ -317,7 +317,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// The middle of an element of a canvas in output pixels, as the last layout of the canvas puts it (a click point).
-    inline std::pair<float, float> OutputCenterOf(const UICanvasComponent& canvas, const UIElement& element) {
+    inline Pair<float, float> OutputCenterOf(const UICanvasComponent& canvas, const UIElement& element) {
         const Rect output = canvas.GetLayout().GetResolved().transform.ToOutput(element.rect.x, element.rect.y, element.rect.w, element.rect.h);
         return {output.x + output.w * 0.5f, output.y + output.h * 0.5f};
     }

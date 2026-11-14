@@ -95,7 +95,7 @@ namespace BECore::Mahjong::Arena {
     }  // namespace
 
     WorldSource MakeTrueWorlds(const HandModel& hand, bool wallOrderKnown) {
-        const std::shared_ptr<const HandState> real = std::make_shared<const HandState>(hand.Capture());
+        const SharedPtr<const HandState> real = MakeShared<const HandState>(hand.Capture());
         return [real, wallOrderKnown](const TableView&, MahjongRng& rng) -> Optional<HandModel> {
             HandState world = *real;
             if (!wallOrderKnown) {

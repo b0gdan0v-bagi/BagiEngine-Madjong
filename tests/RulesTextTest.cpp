@@ -531,7 +531,7 @@ namespace BECore::Mahjong::Tests {
         ScoreInput calling = win(kNoPointsTiles, "4p");
         calling.hand.callingDeclared = true;
         calling.hand.callingAtDiscardCount = 0;
-        const Vector<eastl::pair<ScoreKind, ScoreInput>> cases = {
+        const Vector<Pair<ScoreKind, ScoreInput>> cases = {
             {ScoreKind::OnlyPungs, win("2p 2p 2p 5s 5s 5s 7m 7m 7m 9m 9m 9m 4s 4s", "4s")},
             {ScoreKind::NoPoints, win(kNoPointsTiles, "4p", WinSource::Discard)},
             {ScoreKind::LooseTile, loose},

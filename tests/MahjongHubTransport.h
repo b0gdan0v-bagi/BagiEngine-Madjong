@@ -59,7 +59,7 @@ namespace BECore::Mahjong::Tests {
 
     /// The connections one client made, in order (a reconnect makes a new one).
     struct HubClientLinks {
-        Vector<std::shared_ptr<HubLink>> links;
+        Vector<SharedPtr<HubLink>> links;
 
         [[nodiscard]] HubLink& Last() {
             return *links.back();
@@ -143,7 +143,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The transport calls these.
-        void Connect(const std::shared_ptr<HubLink>& link);
+        void Connect(const SharedPtr<HubLink>& link);
         void Deliver(HubLink& link, StringView text);
         void Disconnect(HubLink& link, uint16_t code, StringView reason);
 
@@ -168,7 +168,7 @@ namespace BECore::Mahjong::Tests {
         };
 
         SeatedGameRegistry& MakeRegistry() {
-            const bool registered = _registry.Register(MahjongSeatedGame::Info(), [this]() -> UniquePtr<ISeatedGame> { return eastl::make_unique<TrackedGame>(*this); });
+            const bool registered = _registry.Register(MahjongSeatedGame::Info(), [this]() -> UniquePtr<ISeatedGame> { return MakeUnique<TrackedGame>(*this); });
             EXPECT_TRUE(registered);
             return _registry;
         }
@@ -223,7 +223,7 @@ namespace BECore::Mahjong::Tests {
         BECore::Tests::ManualClock _clock;
         SeatedGameRegistry _registry;
         RoomHub _hub;
-        Map<ConnectionId, std::shared_ptr<HubLink>> _byId;
+        Map<ConnectionId, SharedPtr<HubLink>> _byId;
         ConnectionId _nextId = 1;
         bool _refusing = false;
     };
@@ -231,7 +231,7 @@ namespace BECore::Mahjong::Tests {
     /// An `IRoomTransport` that talks to a `MahjongHubWorld`.
     class MahjongHubTransport final : public IRoomTransport {
     public:
-        MahjongHubTransport(MahjongHubWorld& world, std::shared_ptr<HubLink> link) : _world(world), _link(std::move(link)) {}
+        MahjongHubTransport(MahjongHubWorld& world, SharedPtr<HubLink> link) : _world(world), _link(std::move(link)) {}
 
         ~MahjongHubTransport() override {
             // Letting go of a connection ends it, as closing the socket does
@@ -272,18 +272,18 @@ namespace BECore::Mahjong::Tests {
 
     private:
         MahjongHubWorld& _world;
-        std::shared_ptr<HubLink> _link;
+        SharedPtr<HubLink> _link;
     };
 
     inline RoomTransportFactory MahjongHubWorld::Factory(HubClientLinks& links) {
         return [this, &links]() -> UniquePtr<IRoomTransport> {
-            auto link = std::make_shared<HubLink>();
+            auto link = MakeShared<HubLink>();
             links.links.push_back(link);
-            return eastl::make_unique<MahjongHubTransport>(*this, link);
+            return MakeUnique<MahjongHubTransport>(*this, link);
         };
     }
 
-    inline void MahjongHubWorld::Connect(const std::shared_ptr<HubLink>& link) {
+    inline void MahjongHubWorld::Connect(const SharedPtr<HubLink>& link) {
         if (_refusing) {
             link->QueueClosed(kRoomTransportAbnormalClosure, "connection refused");
             return;

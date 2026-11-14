@@ -122,7 +122,7 @@ namespace BECore::Mahjong {
 
         OnlineScreens _screens;
         /// Alive while the component is attached; a read of the clipboard that is still pending holds a `weak_ptr` of it.
-        std::shared_ptr<int> _alive;
+        SharedPtr<int> _alive;
         PoolString _seatVars[kSeatCount];
         static constexpr size_t kListRowCount = static_cast<size_t>(OnlineScreens::kRoomsPerPage);
         PoolString _listVars[kListRowCount];

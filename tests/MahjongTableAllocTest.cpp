@@ -327,7 +327,7 @@ namespace BECore::Mahjong::Tests {
 
         /// Another person hosts a room on the hub; the code of it.
         String HostElsewhere() {
-            _others.push_back(std::make_unique<HubPlayer>(_world));
+            _others.push_back(MakeUnique<HubPlayer>(_world));
             HubPlayer& host = *_others.back();
             EXPECT_TRUE(host.Client().Host(kUrl, "Hanna", OnlineRoomOptions{kShortMatchHands, kMinLevel}));
             EXPECT_TRUE(PumpUntil([&] { return host.Client().Stage() == OnlineStage::Lobby; }));
@@ -565,7 +565,7 @@ namespace BECore::Mahjong::Tests {
 
         // Four open rooms: three rows and the page button
         for (const char* name : {"Hanna", "Ivo", "Jan", "Kai"}) {
-            _others.push_back(std::make_unique<HubPlayer>(_world));
+            _others.push_back(MakeUnique<HubPlayer>(_world));
             HubPlayer& host = *_others.back();
             OnlineRoomOptions options{kShortMatchHands, kMinLevel};
             options.isPublic = true;

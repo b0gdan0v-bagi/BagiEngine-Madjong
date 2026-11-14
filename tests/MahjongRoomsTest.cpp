@@ -61,7 +61,7 @@ namespace BECore::Mahjong::Tests {
 
         /// A deterministic stream of well-mixed words (splitmix64)
         RandomFn MakeRandom(uint64_t seed) {
-            auto state = eastl::make_shared<uint64_t>(seed);
+            auto state = MakeShared<uint64_t>(seed);
             return [state]() -> uint64_t {
                 uint64_t z = (*state += kMixIncrement);
                 z = (z ^ (z >> kMixFirstShift)) * kMixFirstMultiplier;
@@ -177,9 +177,9 @@ namespace BECore::Mahjong::Tests {
             explicit RoomsHarness(Leak leak = Leak::None, uint64_t randomSeed = 42) : _hub(_registry, MakeSettings(), MakeRandom(randomSeed), MakeSink()) {
                 const auto factory = [this, leak]() -> UniquePtr<ISeatedGame> {
                     if (leak == Leak::None) {
-                        return eastl::make_unique<Tracked<MahjongSeatedGame>>(this);
+                        return MakeUnique<Tracked<MahjongSeatedGame>>(this);
                     }
-                    return eastl::make_unique<Tracked<LeakyMahjongSeatedGame>>(this, leak);
+                    return MakeUnique<Tracked<LeakyMahjongSeatedGame>>(this, leak);
                 };
                 EXPECT_TRUE(_registry.Register(MahjongSeatedGame::Info(), factory));
             }

@@ -450,7 +450,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongUiStyleTest, ASizeOffTheGridIsCaught) {
-        for (const auto& [from, to] : {std::pair<const char*, const char*>{"width=\"104\"", "width=\"102\""},
+        for (const auto& [from, to] : {Pair<const char*, const char*>{"width=\"104\"", "width=\"102\""},
                                        {"spacing=\"8\"", "spacing=\"6\""},
                                        {"padding=\"16\"", "padding=\"15\""},
                                        {"y=\"72\"", "y=\"73\""},
@@ -518,7 +518,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongUiStyleTest, ASkinColourOffThePaletteIsCaught) {
-        for (const auto& [from, to] : {std::pair<const char*, const char*>{"borderColor=\"140,150,180,255\"", "borderColor=\"140,150,181,255\""},
+        for (const auto& [from, to] : {Pair<const char*, const char*>{"borderColor=\"140,150,180,255\"", "borderColor=\"140,150,181,255\""},
                                        {"gradientColor=\"26,78,40,255\"", "gradientColor=\"26,78,41,255\""},
                                        {"highlight=\"255,255,255,60\"", "highlight=\"255,255,255,61\""},
                                        {"shadow=\"0,4,8,0,0,0,0,90\"", "shadow=\"0,4,8,0,0,0,0,91\""},
@@ -533,7 +533,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongUiStyleTest, ATextOutlineShadowOrTintOffThePaletteIsCaught) {
-        for (const auto& [from, to] : {std::pair<const char*, const char*>{"textOutline=\"2,16,18,26,255\"", "textOutline=\"2,16,18,26,254\""},
+        for (const auto& [from, to] : {Pair<const char*, const char*>{"textOutline=\"2,16,18,26,255\"", "textOutline=\"2,16,18,26,254\""},
                                        {"textShadow=\"0,2,0,0,0,90\"", "textShadow=\"0,2,0,0,0,91\""},
                                        {"tint=\"255,255,255,255\" hoverTint", "tint=\"255,255,254,255\" hoverTint"},
                                        {"hoverTint=\"255,255,255,255\"", "hoverTint=\"250,250,250,255\""}}) {
@@ -548,7 +548,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongUiStyleTest, ACornerRadiusOrBorderWidthOffTheScaleIsCaught) {
-        for (const auto& [from, to] : {std::pair<const char*, const char*>{"cornerRadius=\"12\"", "cornerRadius=\"10\""},
+        for (const auto& [from, to] : {Pair<const char*, const char*>{"cornerRadius=\"12\"", "cornerRadius=\"10\""},
                                        {"cornerRadius=\"12\"", "cornerRadius=\"16,16,16,9\""},
                                        {"cornerRadius=\"12\"", "cornerRadius=\"big\""},
                                        {"borderWidth=\"2\"", "borderWidth=\"3\""}}) {
@@ -568,7 +568,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongUiStyleTest, TheNumbersOfAShadowOrGlowOffTheGridAreCaught) {
-        for (const auto& [from, to] : {std::pair<const char*, const char*>{"shadow=\"0,4,8,0,0,0,0,90\"", "shadow=\"0,3,8,0,0,0,0,90\""},
+        for (const auto& [from, to] : {Pair<const char*, const char*>{"shadow=\"0,4,8,0,0,0,0,90\"", "shadow=\"0,3,8,0,0,0,0,90\""},
                                        {"shadow=\"0,4,8,0,0,0,0,90\"", "shadow=\"2,4,8,0,0,0,0,90\""},
                                        {"shadow=\"0,4,8,0,0,0,0,90\"", "shadow=\"0,4,6,0,0,0,0,90\""},
                                        {"shadow=\"0,4,8,0,0,0,0,90\"", "shadow=\"0,4,8,1,0,0,0,90\""},
@@ -581,7 +581,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongUiStyleTest, AFontFamilyOrWeightOfNoneOfTheGameIsCaught) {
         for (const auto& [from, to] :
-             {std::pair<const char*, const char*>{"fontFamily=\"Russo One\"", "fontFamily=\"Arial\""}, {"fontWeight=\"700\"", "fontWeight=\"600\""}, {"fontWeight=\"700\"", "fontWeight=\"bold\""}}) {
+             {Pair<const char*, const char*>{"fontFamily=\"Russo One\"", "fontFamily=\"Arial\""}, {"fontWeight=\"700\"", "fontWeight=\"600\""}, {"fontWeight=\"700\"", "fontWeight=\"bold\""}}) {
             String components = kSkinText;
             const size_t at = components.find(from);
             ASSERT_NE(at, String::npos) << from;
@@ -600,7 +600,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongUiStyleTest, ACanvasMotionOffTheNamedNumbersIsCaught) {
-        for (const auto& [from, to] : {std::pair<const char*, const char*>{"transitionDuration=\"0.18\"", "transitionDuration=\"0.2\""},
+        for (const auto& [from, to] : {Pair<const char*, const char*>{"transitionDuration=\"0.18\"", "transitionDuration=\"0.2\""},
                                        {"transitionHideDuration=\"0.12\"", "transitionHideDuration=\"0.5\""},
                                        {"transitionEase=\"QuadOut\"", "transitionEase=\"Linear\""},
                                        {"transitionScaleFrom=\"0.96\"", "transitionScaleFrom=\"0.9\""},

@@ -189,7 +189,7 @@ namespace BECore::Mahjong {
     void MahjongOnlineComponent::OnAttached() {
         static_assert(kItemCount == ItemCount, "the header sizes its arrays by the items");
         s_active = this;
-        _alive = std::make_shared<int>(0);
+        _alive = MakeShared<int>(0);
         for (size_t i = 0; i < kItemCount; ++i) {
             _itemNames[i] = PoolString::Intern(kItemNames[i]);
             _items[i] = -1;
@@ -329,7 +329,7 @@ namespace BECore::Mahjong {
 
     void MahjongOnlineComponent::RequestPaste() {
         // The answer comes from a later `Update()` and the request cannot be withdrawn: the callback holds no pointer to this, only a token that dies with the component
-        const std::weak_ptr<int> alive = _alive;
+        const eastl::weak_ptr<int> alive = _alive;
         CoreManager::GetClipboard().RequestText([alive](const ClipboardText& answer) {
             if (alive.lock() == nullptr) {
                 return;

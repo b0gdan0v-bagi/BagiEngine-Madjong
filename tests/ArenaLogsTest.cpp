@@ -203,8 +203,8 @@ namespace BECore::Mahjong::Arena {
         EXPECT_EQ(corpus.personSeats, 3);
         EXPECT_EQ(corpus.computerSeats, 13);
         ASSERT_EQ(corpus.setups.size(), 2U);
-        EXPECT_EQ(corpus.setups[0], (eastl::pair<String, int>("CCCC", 1)));
-        EXPECT_EQ(corpus.setups[1], (eastl::pair<String, int>("PCCC", 3)));
+        EXPECT_EQ(corpus.setups[0], (Pair<String, int>("CCCC", 1)));
+        EXPECT_EQ(corpus.setups[1], (Pair<String, int>("PCCC", 3)));
 
         // Levels: the three person matches are all Normal (5) at three computer seats each; the mixed table is 1, 3, 5, 10.
         EXPECT_EQ(corpus.computerLevels[0], 1);
@@ -217,9 +217,9 @@ namespace BECore::Mahjong::Arena {
         EXPECT_EQ(corpus.platforms[static_cast<size_t>(MatchPlatform::Web)], 1);
         EXPECT_EQ(corpus.platforms[static_cast<size_t>(MatchPlatform::Unknown)], 1) << "the version 4 log";
         ASSERT_EQ(corpus.builds.size(), 3U);
-        EXPECT_EQ(corpus.builds[0], (eastl::pair<String, int>("a1b2c3d", 2)));
-        EXPECT_EQ(corpus.builds[1], (eastl::pair<String, int>("e5f6a7b", 1)));
-        EXPECT_EQ(corpus.builds[2], (eastl::pair<String, int>("unknown", 1)));
+        EXPECT_EQ(corpus.builds[0], (Pair<String, int>("a1b2c3d", 2)));
+        EXPECT_EQ(corpus.builds[1], (Pair<String, int>("e5f6a7b", 1)));
+        EXPECT_EQ(corpus.builds[2], (Pair<String, int>("unknown", 1)));
 
         const int shortest = eastl::min(eastl::min(CountEvents(first, MatchLogKind::Settlement), CountEvents(second, MatchLogKind::Settlement)),
                                         eastl::min(CountEvents(third, MatchLogKind::Settlement), CountEvents(older, MatchLogKind::Settlement)));

@@ -90,7 +90,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The middle of a rect of the view in output pixels.
-        static std::pair<float, float> OutCentre(const MatrixWindow& window, const Rect& rect) {
+        static Pair<float, float> OutCentre(const MatrixWindow& window, const Rect& rect) {
             const Rect out = Out(window, rect);
             return {out.x + out.w * 0.5f, out.y + out.h * 0.5f};
         }
@@ -144,10 +144,10 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// A click point of the hand tile `index` of the viewer in `window`.
-        std::pair<float, float> HandTilePoint(const MatrixWindow& window, int index) const {
+        Pair<float, float> HandTilePoint(const MatrixWindow& window, int index) const {
             const TileSlot* slot = SlotOf(SlotRole::HandTile, kSeat0, index);
             EXPECT_NE(slot, nullptr) << index;
-            return slot != nullptr ? OutCentre(window, slot->rect) : std::pair<float, float>{0.0f, 0.0f};
+            return slot != nullptr ? OutCentre(window, slot->rect) : Pair<float, float>{0.0f, 0.0f};
         }
 
         void FlyThreeSteps(const MatrixWindow& window);

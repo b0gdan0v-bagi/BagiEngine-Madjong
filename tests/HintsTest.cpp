@@ -59,7 +59,7 @@ namespace BECore::Mahjong::Tests {
             return MakeTableView(ViewerModel(seat1, live), kSeat1);
         }
 
-        using Waits = Vector<std::pair<String, int>>;
+        using Waits = Vector<Pair<String, int>>;
 
         Waits WaitsOf(const TableView& view) {
             Waits waits;

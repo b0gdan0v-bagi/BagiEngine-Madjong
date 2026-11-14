@@ -269,7 +269,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableActionsTest, EachChowButtonClaimsItsOwnSequence) {
-        for (const auto& [value, first] : {std::pair{"0", "4p"}, std::pair{"1", "5p"}}) {
+        for (const auto& [value, first] : {Pair<const char*, const char*>{"0", "4p"}, Pair<const char*, const char*>{"1", "5p"}}) {
             ASSERT_NO_FATAL_FAILURE(StartWith(kPersonAtSeat1, ClaimWindowModel()));
 
             EmitAction("MahjongClaimChow", value);
@@ -712,7 +712,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(CanvasShown("ActionsCompact"));
 
         // 731 x 411: a button of `Actions` is 31.97 px, but the table fills the window and the compact row would lie on the viewer's hand
-        for (const auto& [width, height] : {std::pair{731.0f, 411.0f}, std::pair{1000.0f, 400.0f}, std::pair{720.0f, 405.0f}}) {
+        for (const auto& [width, height] : {Pair<float, float>{731.0f, 411.0f}, Pair<float, float>{1000.0f, 400.0f}, Pair<float, float>{720.0f, 405.0f}}) {
             SetOutputSize(*_renderer, width, height);
             Draw();
             EXPECT_TRUE(CanvasShown("Actions")) << width << " x " << height;
@@ -729,7 +729,7 @@ namespace BECore::Mahjong::Tests {
         // The row is as high as the width of its canvas makes it (the stack starts its lines at its top): 72 px under 1043.91 units. The narrow table
         // has buttons of 32 px or more from 617 px wide, so what keeps `Actions` is a bar under the row: 480 x 360 and 500 x 400 (bars of 9 and 22
         // px), 600 x 570 (71.7 px for 73.7), or no bar at all (600 x 420, the table fills the height)
-        for (const auto& [width, height] : {std::pair{600.0f, 420.0f}, std::pair{480.0f, 360.0f}, std::pair{500.0f, 400.0f}, std::pair{600.0f, 570.0f}}) {
+        for (const auto& [width, height] : {Pair<float, float>{600.0f, 420.0f}, Pair<float, float>{480.0f, 360.0f}, Pair<float, float>{500.0f, 400.0f}, Pair<float, float>{600.0f, 570.0f}}) {
             SetOutputSize(*_renderer, width, height);
             Draw();
             EXPECT_TRUE(CanvasShown("Actions")) << width << " x " << height;

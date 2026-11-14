@@ -6,7 +6,7 @@
 namespace BECore::Mahjong {
 
     /// One `{name}` placeholder of a text and the words that replace it.
-    using WordArg = std::pair<StringView, StringView>;
+    using WordArg = Pair<StringView, StringView>;
     using WordArgs = std::initializer_list<WordArg>;
 
     /// `text` with every `{name}` replaced by the value of that name in `args`. A placeholder that is not in `args` and an unclosed `{` stay as written.

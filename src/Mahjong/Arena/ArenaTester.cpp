@@ -49,13 +49,13 @@ namespace BECore::Mahjong::Arena {
         }
 
         /// The (hand, seat) pairs in which a person acts, in log order.
-        Vector<eastl::pair<int, Seat>> PersonTurns(const Vector<ActionRef>& refs) {
-            Vector<eastl::pair<int, Seat>> turns;
+        Vector<Pair<int, Seat>> PersonTurns(const Vector<ActionRef>& refs) {
+            Vector<Pair<int, Seat>> turns;
             for (const ActionRef& ref : refs) {
                 if (ref.by != SeatKind::Person) {
                     continue;
                 }
-                const eastl::pair<int, Seat> turn(ref.hand, ref.seat);
+                const Pair<int, Seat> turn(ref.hand, ref.seat);
                 if (eastl::find(turns.begin(), turns.end(), turn) == turns.end()) {
                     turns.push_back(turn);
                 }

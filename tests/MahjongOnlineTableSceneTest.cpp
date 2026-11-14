@@ -154,8 +154,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The files of the save folder that hold the match, by name.
-        Vector<std::pair<String, String>> MatchSlot() const {
-            Vector<std::pair<String, String>> files;
+        Vector<Pair<String, String>> MatchSlot() const {
+            Vector<Pair<String, String>> files;
             for (const auto& entry : std::filesystem::directory_iterator(_folder)) {
                 const String name = FromStdString(entry.path().filename().string());
                 if (name.find(String(kMatchSlot.data(), kMatchSlot.size())) == String::npos) {
@@ -181,7 +181,7 @@ namespace BECore::Mahjong::Tests {
         _game->OpenSetup();
         Frame();
         Frame();
-        const Vector<std::pair<String, String>> savedBefore = MatchSlot();
+        const Vector<Pair<String, String>> savedBefore = MatchSlot();
         ASSERT_FALSE(savedBefore.empty()) << "the local match is saved";
         const bool canContinue = _game->CanContinue();
         const Match* const local = &_game->GetLocalMatch();

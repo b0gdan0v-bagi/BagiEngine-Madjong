@@ -83,7 +83,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The middle of a rect of the view in output pixels.
-        static std::pair<float, float> OutCentre(const MatrixWindow& window, const Rect& rect) {
+        static Pair<float, float> OutCentre(const MatrixWindow& window, const Rect& rect) {
             const Rect out = Out(window, rect);
             return {out.x + out.w * 0.5f, out.y + out.h * 0.5f};
         }

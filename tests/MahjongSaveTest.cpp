@@ -760,7 +760,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(read->levels, UniformLevels(level)) << ToStd(LevelText(level));
         }
         // A copy written before the scale of numbers holds the name of a level
-        for (const auto& [name, level] : {std::pair{"easy", ComputerLevel::Easy}, std::pair{"normal", ComputerLevel::Normal}}) {
+        for (const auto& [name, level] : {Pair<const char*, ComputerLevel>{"easy", ComputerLevel::Easy}, Pair<const char*, ComputerLevel>{"normal", ComputerLevel::Normal}}) {
             MahjongPrefsSave prefs;
             prefs.level = name;
             const auto read = ReadPrefs(prefs);

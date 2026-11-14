@@ -20,7 +20,7 @@ int main(int argc, char* argv[]) {
     }
 
     SeatedGameRegistry registry;
-    registry.Register(Mahjong::MahjongSeatedGame::Info(), [] { return eastl::make_unique<Mahjong::MahjongSeatedGame>(); });
+    registry.Register(Mahjong::MahjongSeatedGame::Info(), [] { return MakeUnique<Mahjong::MahjongSeatedGame>(); });
 
     return RunRoomServer(registry, *args);
 }

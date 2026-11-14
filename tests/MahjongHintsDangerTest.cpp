@@ -116,8 +116,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The tiles of the viewer's hand: slot (the last layout) and tile.
-        Vector<std::pair<TileSlot, Tile>> HandTiles() const {
-            Vector<std::pair<TileSlot, Tile>> tiles;
+        Vector<Pair<TileSlot, Tile>> HandTiles() const {
+            Vector<Pair<TileSlot, Tile>> tiles;
             const PlayerHand& held = Hand().GetHand(_table->GetLayout().viewer);
             for (const TileSlot& slot : _table->GetLayout().slots) {
                 if (slot.role == SlotRole::HandTile && slot.seat == _table->GetLayout().viewer) {

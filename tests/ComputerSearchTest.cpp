@@ -553,7 +553,7 @@ namespace BECore::Mahjong::Tests {
             int worlds;
             int margin;
         };
-        const Vector<std::pair<const char*, WorldLoop>> loops = {
+        const Vector<Pair<const char*, WorldLoop>> loops = {
             {"serial", SerialLoop}, {"reversed", ReversedLoop}, {"1 thread", ThreadLoop(1)}, {"2 threads", ThreadLoop(2)}, {"5 threads", ThreadLoop(5)}};
         for (const bool turn : {true, false}) {
             const Vector<TableView> views = FindDecisions(turn);

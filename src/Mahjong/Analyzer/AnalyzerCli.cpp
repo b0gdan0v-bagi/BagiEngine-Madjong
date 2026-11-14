@@ -67,7 +67,8 @@ namespace BECore::Mahjong::Analyzer {
                 return Format("give the position: {} FILE with {} and {} or {}, or {} FILE", kLogOption, kHandOption, kActionOption, kSeatOption, kPositionOption);
             }
             if (fromText) {
-                for (const auto& [set, name] : {std::pair{args.hand != 0, kHandOption}, std::pair{args.action.has_value(), kActionOption}, std::pair{args.seat.has_value(), kSeatOption}}) {
+                for (const auto& [set, name] : {Pair<bool, StringView>{args.hand != 0, kHandOption}, Pair<bool, StringView>{args.action.has_value(), kActionOption},
+                                                Pair<bool, StringView>{args.seat.has_value(), kSeatOption}}) {
                     if (set) {
                         return Format("{} is for {}, not for {}", name, kLogOption, kPositionOption);
                     }

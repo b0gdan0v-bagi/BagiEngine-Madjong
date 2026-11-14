@@ -234,7 +234,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(WebUploadSinkTest, UnauthorizedAndNotFoundEndThePostingForTheSession) {
-        const std::pair<int, WebUploadState> cases[] = {{kStatusUnauthorized, WebUploadState::Unauthorized}, {kStatusNotFound, WebUploadState::NoStore}};
+        const Pair<int, WebUploadState> cases[] = {{kStatusUnauthorized, WebUploadState::Unauthorized}, {kStatusNotFound, WebUploadState::NoStore}};
         for (const auto& [status, state] : cases) {
             SinkFixture fixture;
             fixture.sink.Send(Piece("one", 0));

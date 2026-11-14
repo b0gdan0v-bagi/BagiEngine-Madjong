@@ -48,7 +48,7 @@ namespace BECore::Mahjong::Tests {
     }  // namespace
 
     TEST(ActionButtonsTest, EveryButtonHasItsOwnActionAndValueAndIsFoundByThem) {
-        Set<std::pair<String, String>> seen;
+        Set<Pair<String, String>> seen;
         Set<String> elements;
         for (int i = 0; i < kButtonCount; ++i) {
             const ButtonKind kind = static_cast<ButtonKind>(i);
@@ -121,10 +121,10 @@ namespace BECore::Mahjong::Tests {
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
         ASSERT_TRUE(strings.SetLanguage("en"_intern));
-        const std::pair<ButtonKind, const char*> words[] = {{ButtonKind::Win, "Mahjong!"},      {ButtonKind::ClaimMahjong, "Mahjong!"}, {ButtonKind::ClaimPung, "Pung"},
-                                                            {ButtonKind::ClaimKong, "Kong"},    {ButtonKind::ClaimChow0, "Chow"},       {ButtonKind::ClaimChow2, "Chow"},
-                                                            {ButtonKind::Pass, "Pass"},         {ButtonKind::ConcealedKong1, "Kong"},   {ButtonKind::UpgradeKong, "Add to pung"},
-                                                            {ButtonKind::Declare, "Ready hand"}};
+        const Pair<ButtonKind, const char*> words[] = {{ButtonKind::Win, "Mahjong!"},      {ButtonKind::ClaimMahjong, "Mahjong!"}, {ButtonKind::ClaimPung, "Pung"},
+                                                       {ButtonKind::ClaimKong, "Kong"},    {ButtonKind::ClaimChow0, "Chow"},       {ButtonKind::ClaimChow2, "Chow"},
+                                                       {ButtonKind::Pass, "Pass"},         {ButtonKind::ConcealedKong1, "Kong"},   {ButtonKind::UpgradeKong, "Add to pung"},
+                                                       {ButtonKind::Declare, "Ready hand"}};
         for (const auto& [kind, word] : words) {
             EXPECT_EQ(WordOf(strings, kind), String(word)) << SpecOf(kind).element;
         }

@@ -112,7 +112,7 @@ namespace BECore::Mahjong::Tests {
 
         /// The zones are the groups of slots of one role and seat (the wall is one); none may overlap another.
         void ExpectNoZoneOverlaps(const TableLayout& layout) {
-            Vector<std::pair<String, Rect>> zones;
+            Vector<Pair<String, Rect>> zones;
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 for (const SlotRole role : kSeatRoles) {
                     const Rect bounds = BoundsOf(layout, role, seat);
@@ -1070,8 +1070,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The (part, edge) of every meld tile of `owner`'s meld `meld` that has an edge.
-        Vector<std::pair<int, Edge>> ClaimedTiles(const TableLayout& layout, Seat owner, int meld) {
-            Vector<std::pair<int, Edge>> found;
+        Vector<Pair<int, Edge>> ClaimedTiles(const TableLayout& layout, Seat owner, int meld) {
+            Vector<Pair<int, Edge>> found;
             for (const TileSlot& slot : SlotsOf(layout, SlotRole::MeldTile, owner)) {
                 if (slot.index == meld && slot.claimEdge != Edge::None) {
                     found.emplace_back(slot.part, slot.claimEdge);
@@ -1108,7 +1108,7 @@ namespace BECore::Mahjong::Tests {
                         input.melds[owner] = {MakeMeld(MeldKind::Pung), ClaimedMeld(kind, (owner + offset) % kSeatCount, "5p", "5p")};
                         const TableLayout layout = MakeTableLayout(input);
                         const int expectedPart = 3 - offset;  // the previous seat: first tile, across: middle, the next seat: last
-                        const Vector<std::pair<int, Edge>> claimed = ClaimedTiles(layout, owner, 1);
+                        const Vector<Pair<int, Edge>> claimed = ClaimedTiles(layout, owner, 1);
                         ASSERT_EQ(claimed.size(), 1u) << "viewer " << viewer << " owner " << owner << " offset " << offset;
                         EXPECT_EQ(claimed[0].first, expectedPart);
                         EXPECT_EQ(claimed[0].second, ExpectedEdge(SeatPosition(viewer, owner), offset)) << "viewer " << viewer << " owner " << owner << " offset " << offset;
@@ -1126,7 +1126,7 @@ namespace BECore::Mahjong::Tests {
                 for (int part = 0; part < 3; ++part) {
                     TableInput input = QuietInput(viewer);
                     input.melds[owner] = {ClaimedMeld(MeldKind::Chow, (owner + 3) % kSeatCount, "4p", kClaimed[part])};
-                    const Vector<std::pair<int, Edge>> claimed = ClaimedTiles(MakeTableLayout(input), owner, 0);
+                    const Vector<Pair<int, Edge>> claimed = ClaimedTiles(MakeTableLayout(input), owner, 0);
                     ASSERT_EQ(claimed.size(), 1u);
                     EXPECT_EQ(claimed[0].first, part);
                     EXPECT_EQ(claimed[0].second, ExpectedEdge(SeatPosition(viewer, owner), 3));
@@ -1157,7 +1157,7 @@ namespace BECore::Mahjong::Tests {
         TableInput input = QuietInput(0);
         input.melds[2] = {ClaimedMeld(MeldKind::Kong, 1, "5p", "5p")};  // the pung of seat 2 was claimed from the seat before it
         for (const ViewSize& size : kViewSizes) {
-            const Vector<std::pair<int, Edge>> claimed = ClaimedTiles(MakeTableLayout(input, size.width, size.height), 2, 0);
+            const Vector<Pair<int, Edge>> claimed = ClaimedTiles(MakeTableLayout(input, size.width, size.height), 2, 0);
             ASSERT_EQ(claimed.size(), 1u);
             EXPECT_EQ(claimed[0].first, 0);
             EXPECT_EQ(claimed[0].second, Edge::Right);  // seat 2 is at the top for the viewer 0; the previous seat: right
@@ -2112,7 +2112,7 @@ namespace BECore::Mahjong::Tests {
                     for (int offset = 1; offset < kSeatCount; ++offset) {
                         TableInput input = QuietInput(viewer);
                         input.melds[owner] = {MakeMeld(MeldKind::Pung), ClaimedMeld(kind, (owner + offset) % kSeatCount, "5p", "5p")};
-                        const Vector<std::pair<int, Edge>> claimed = ClaimedTiles(InPortrait(input), owner, 1);
+                        const Vector<Pair<int, Edge>> claimed = ClaimedTiles(InPortrait(input), owner, 1);
                         ASSERT_EQ(claimed.size(), 1u) << "viewer " << viewer << " owner " << owner << " offset " << offset;
                         EXPECT_EQ(claimed[0].first, 3 - offset);
                         EXPECT_EQ(claimed[0].second, ExpectedEdge(SeatPosition(viewer, owner), offset)) << "viewer " << viewer << " owner " << owner << " offset " << offset;
@@ -2124,7 +2124,7 @@ namespace BECore::Mahjong::Tests {
         for (const ViewSize& size : kViewSizes) {
             TableInput input = QuietInput(2);
             input.melds[0] = {ClaimedMeld(MeldKind::Chow, 3, "4p", "5p")};
-            const Vector<std::pair<int, Edge>> claimed = ClaimedTiles(MakeTableLayout(input, size.width, size.height), 0, 0);
+            const Vector<Pair<int, Edge>> claimed = ClaimedTiles(MakeTableLayout(input, size.width, size.height), 0, 0);
             ASSERT_EQ(claimed.size(), 1u) << size.width << "x" << size.height;
             EXPECT_EQ(claimed[0].first, 1);
             EXPECT_EQ(claimed[0].second, ExpectedEdge(SeatPosition(2, 0), 3));

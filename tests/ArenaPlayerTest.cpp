@@ -112,7 +112,7 @@ namespace BECore::Mahjong::Arena {
 
     TEST(ArenaPlayerTest, TheOraclesAreReadOnTheNormalProfile) {
         static_assert(kProfileFieldCount == 11, "an oracle is no LevelProfile field");
-        for (const auto& [spec, kind] : {std::pair<const char*, OracleKind>{"oracle-acceptance", OracleKind::Acceptance}, {"oracle-defence", OracleKind::Defence}}) {
+        for (const auto& [spec, kind] : {Pair<const char*, OracleKind>{"oracle-acceptance", OracleKind::Acceptance}, {"oracle-defence", OracleKind::Defence}}) {
             const ArenaPlayer player = Player(spec);
             EXPECT_EQ(player.oracle, kind) << spec;
             EXPECT_FALSE(player.random);
@@ -125,7 +125,7 @@ namespace BECore::Mahjong::Arena {
         EXPECT_EQ(knobs.profile.searchWorlds, 2);
         EXPECT_EQ(knobs.profile.skipClaimPercent, 10);
         // The search oracles start from the shipped budget and the knobs override it.
-        for (const auto& [spec, kind] : {std::pair<const char*, OracleKind>{"oracle-hands", OracleKind::Hands}, {"oracle-whole", OracleKind::WholeHand}}) {
+        for (const auto& [spec, kind] : {Pair<const char*, OracleKind>{"oracle-hands", OracleKind::Hands}, {"oracle-whole", OracleKind::WholeHand}}) {
             const ArenaPlayer player = Player(spec);
             EXPECT_EQ(player.oracle, kind) << spec;
             EXPECT_EQ(player.name, spec);

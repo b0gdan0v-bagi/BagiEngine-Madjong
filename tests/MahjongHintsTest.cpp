@@ -61,7 +61,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// What the canvas shows: the notation of each tile of a shown cell and its count text.
-        using Row = Vector<std::pair<String, String>>;
+        using Row = Vector<Pair<String, String>>;
 
     }  // namespace
 
@@ -753,7 +753,7 @@ namespace BECore::Mahjong::Tests {
                     counts.push_back(Var(CellName("hintCount", i).c_str()));
                 }
             }();
-            return std::make_pair(row, counts);
+            return MakePair(row, counts);
         };
         const auto plain = run(kQuiet1, kQuiet2, kQuiet3, "4p Rd Gd Wd");
         // Seat 1 holds three of the 7p and seat 3 two of the 4p: hidden from the viewer, so nothing may change

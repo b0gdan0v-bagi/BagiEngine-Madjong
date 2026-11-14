@@ -247,7 +247,7 @@ namespace BECore::Mahjong {
 
     OnlineClient& MahjongGame::GetOnline() {
         if (!_online) {
-            _online = eastl::make_unique<OnlineClient>(_onlineSettings);
+            _online = MakeUnique<OnlineClient>(_onlineSettings);
         }
         return *_online;
     }

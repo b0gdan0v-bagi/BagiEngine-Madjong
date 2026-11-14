@@ -51,8 +51,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Every (actor, action) of `kWholeHands` hands played by a table, in order.
-        Vector<std::pair<Seat, HandAction>> PlayActed(ComputerTable& table, uint32_t seed) {
-            Vector<std::pair<Seat, HandAction>> acted;
+        Vector<Pair<Seat, HandAction>> PlayActed(ComputerTable& table, uint32_t seed) {
+            Vector<Pair<Seat, HandAction>> acted;
             Match match;
             EXPECT_TRUE(match.Start(SettingsOf(0), seed).has_value());
             for (int hand = 0; hand < kWholeHands && match.GetPhase() == MatchPhase::InHand; ++hand) {
@@ -264,13 +264,13 @@ namespace BECore::Mahjong::Tests {
     TEST(ComputerLevelTest, AnEasySeatIsTheFirstToPlayOtherwiseThanANormalTable) {
         constexpr uint32_t kSeed = 31;
         ComputerTable normal(kSeed, ComputerLevel::Normal);
-        const Vector<std::pair<Seat, HandAction>> expected = PlayActed(normal, kSeed);
+        const Vector<Pair<Seat, HandAction>> expected = PlayActed(normal, kSeed);
         ASSERT_FALSE(expected.empty());
         for (Seat easySeat = 0; easySeat < kSeatCount; ++easySeat) {
             SeatLevels levels = UniformLevels(ComputerLevel::Normal);
             levels[static_cast<size_t>(easySeat)] = ComputerLevel::Easy;
             ComputerTable mixed(kSeed, levels);
-            const Vector<std::pair<Seat, HandAction>> played = PlayActed(mixed, kSeed);
+            const Vector<Pair<Seat, HandAction>> played = PlayActed(mixed, kSeed);
             size_t first = 0;
             while (first < played.size() && first < expected.size() && played[first] == expected[first]) {
                 ++first;

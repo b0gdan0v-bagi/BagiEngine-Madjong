@@ -323,7 +323,7 @@ namespace BECore::Mahjong::Tests {
     TEST(ComputerPlayerTest, BeginAnswersReadyWithNoSearchProfileAndForTheDecisionsASearchLeavesAlone) {
         const UnsearchedViews views = ScanForUnsearchedViews();
         const LevelProfile profile = SearchProfile();
-        const Vector<std::pair<const char*, const Optional<TableView>*>> cases = {{"a win", &views.win}, {"a mahjong claim", &views.mahjong}, {"a waiting hand that passes", &views.waitingPass}};
+        const Vector<Pair<const char*, const Optional<TableView>*>> cases = {{"a win", &views.win}, {"a mahjong claim", &views.mahjong}, {"a waiting hand that passes", &views.waitingPass}};
         for (const auto& [name, view] : cases) {
             ASSERT_TRUE(view->has_value()) << name << " was not found";
             ComputerPlayer begun(kSeed, profile);

@@ -483,7 +483,7 @@ namespace BECore::Mahjong::Tests {
         Json versionTwo = EventToJson(start);
         versionTwo.erase("levels");
         versionTwo["version"] = kMatchLogLevelVersion;
-        for (const auto& [name, level] : {std::pair{"easy", ComputerLevel::Easy}, std::pair{"normal", ComputerLevel::Normal}}) {
+        for (const auto& [name, level] : {Pair<const char*, ComputerLevel>{"easy", ComputerLevel::Easy}, Pair<const char*, ComputerLevel>{"normal", ComputerLevel::Normal}}) {
             const auto back = EventFromJson(With(versionTwo, "level", name));
             ASSERT_TRUE(back.has_value()) << back.error().c_str();
             EXPECT_EQ(back->levels, UniformLevels(level)) << name;

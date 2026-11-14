@@ -51,7 +51,7 @@ namespace BECore::Mahjong::Arena {
     [[nodiscard]] std::expected<Vector<CheckedLog>, String> ReadLogs(const LogSource& source, StringView path);
 
     /// A key and how many times it was met, in the report's order.
-    using CountList = Vector<eastl::pair<String, int>>;
+    using CountList = Vector<Pair<String, int>>;
 
     /// The smallest, mean and largest of a count over the matches of the corpus (all 0 for none).
     struct Spread {
@@ -66,7 +66,7 @@ namespace BECore::Mahjong::Arena {
         int replayed = 0;
         /// Dropped files per `LogProblem`, and the dropped files in name order with their reasons.
         Array<int, EnumUtils<LogProblem>::Count()> dropped{};
-        Vector<eastl::pair<String, String>> droppedFiles;
+        Vector<Pair<String, String>> droppedFiles;
         int complete = 0;
         int abandoned = 0;
         /// The hands settled, over all matches.

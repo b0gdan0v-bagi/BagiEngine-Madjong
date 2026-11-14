@@ -189,7 +189,7 @@ namespace BECore::Mahjong::Tests {
         GTEST_SKIP() << "needs a task that is parked (BE_SINGLE_THREAD runs it inside Start)";
 #endif
         const ComputerStepJob job = FirstJob(SearchProfile(kSearchMaxWorlds), kSeed);
-        auto thinking = std::make_unique<ComputerThinking>();
+        auto thinking = MakeUnique<ComputerThinking>();
         ASSERT_TRUE(thinking->Start(job));
         EXPECT_TRUE(thinking->Running());
         thinking.reset();

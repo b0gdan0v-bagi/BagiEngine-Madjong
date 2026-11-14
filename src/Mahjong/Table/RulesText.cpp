@@ -99,7 +99,7 @@ namespace BECore::Mahjong {
             }
 
             const UIStrings& _strings;
-            Vector<eastl::pair<StringView, String>> _values;
+            Vector<Pair<StringView, String>> _values;
             Vector<WordArg> _args;
         };
 
