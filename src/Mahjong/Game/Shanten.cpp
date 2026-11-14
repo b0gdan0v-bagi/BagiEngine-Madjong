@@ -9,12 +9,11 @@ namespace BECore::Mahjong {
         CORE_ENUM(Role, uint8_t, Pung, Chow, Pair, PartialPair, PartialNeighbour, PartialGap, Isolated)
 
         constexpr int kMostSetsNeeded = kSetsInHand;
-        /// Two tiles that are next to each other (4 5); two that reach a chow over one rank (1 3) are `kChowReachRanks` apart.
         constexpr int kNeighbourRanks = 1;
         /// A set lowers the number by two steps with three tiles: the most a tile can do is 2/3 of a step.
         constexpr int kStepsPerSet = 2;
 
-        /// The search over the readings of `held` into sets, partial sets and a pair. Works on its own copy of the counts.
+        /// The search over the readings of `held` into sets, partial sets and a pair, on its own copy of the counts.
         class Searcher {
         public:
             Searcher(const TileCounts& counts, int needed) : _needed(needed) {
@@ -30,7 +29,6 @@ namespace BECore::Mahjong {
             }
 
         private:
-            /// Whether the search can stop: nothing is lower than a complete hand.
             [[nodiscard]] bool Done() const noexcept {
                 return _best <= kShantenComplete;
             }
@@ -116,20 +114,17 @@ namespace BECore::Mahjong {
                 }
             }
 
-            /// Takes (`delta` -1) or puts back (+1) `count` copies of the kind `id`.
             void TakeSame(int id, int count, int delta) noexcept {
                 _held[id] = static_cast<int8_t>(_held[id] + count * delta);
                 _remaining += count * delta;
             }
 
-            /// Takes or puts back the three tiles of the chow that starts at `id`.
             void TakeChow(int id, int delta) noexcept {
                 for (int step = 0; step < kTilesPerSet; ++step) {
                     TakeSame(id + step, 1, delta);
                 }
             }
 
-            /// Takes or puts back the tile `id` and the one `distance` ranks above it.
             void TakePartial(int id, int distance, int delta) noexcept {
                 TakeSame(id, 1, delta);
                 TakeSame(id + distance, 1, delta);

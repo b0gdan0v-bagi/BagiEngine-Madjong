@@ -28,7 +28,7 @@ namespace BECore::Mahjong {
             return nullptr;
         }
 
-        /// The same, for a hand that is changed (`CompleteKong` turns the pung it finds into a kong).
+        /// Mutable overload (`CompleteKong` turns the pung it finds into a kong).
         Meld* FindPung(PlayerHand& hand, Tile tile) {
             return const_cast<Meld*>(FindPung(static_cast<const PlayerHand&>(hand), tile));
         }
@@ -60,7 +60,6 @@ namespace BECore::Mahjong {
             return IsWinningShape(CountTiles(hand.concealed), static_cast<int>(hand.melds.size()));
         }
 
-        /// The sequences of `tile` that `hand` can complete from its concealed tiles, as the lowest tile of each.
         Vector<Tile> ChowStarts(const PlayerHand& hand, Tile tile) {
             Vector<Tile> starts;
             if (!tile.IsSuit()) {
@@ -201,7 +200,6 @@ namespace BECore::Mahjong {
             return std::unexpected(Format("the current seat {} is no seat", state.current));
         }
 
-        // Every tile of the set, once: counted over everything the state holds.
         Array<int, kTileIdCount> counts{};
         const auto add = [&counts](Tile tile, int copies = 1) {
             if (!tile.IsValid()) {
@@ -786,7 +784,7 @@ namespace BECore::Mahjong {
 
     void HandModel::CompleteKong(Seat seat, Tile tile) {
         PlayerHand& hand = _hands[seat];
-        // The pung is there, and so is the fourth tile: a valid `_drawnTile` lies in the hand (see the declaration). So a pung that
+        // The pung is there, and so is the fourth tile: a valid `_drawnTile` lies in the hand . So a pung that
         // is missing is skipped silently and the result of `RemoveConcealed` is not looked at.
         if (Meld* pung = FindPung(hand, tile)) {
             pung->kind = MeldKind::Kong;

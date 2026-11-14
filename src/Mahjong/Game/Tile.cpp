@@ -16,7 +16,7 @@ namespace BECore::Mahjong {
         constexpr char kWindNames[kWindCount] = {'E', 'S', 'W', 'N'};
         constexpr char kDragonNames[kDragonCount] = {'R', 'W', 'G'};
 
-        /// The two characters of every id, built once: ids are few and the table makes ToString a lookup returning a view of static storage.
+        /// ToString returns a view into this table, so it is built once and lives for the whole run.
         struct NameTable {
             char text[kTileIdCount][kTokenLength + 1] = {};
 

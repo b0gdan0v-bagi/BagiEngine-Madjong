@@ -15,9 +15,9 @@ namespace BECore::Mahjong {
      *        `handsPerMatch`, `replayDrawnHand` and `startingScore`.
      */
     struct MahjongSettings {
-        /// 16 (kFullMatchHands) or 8 (kShortMatchHands).
+        /// `kFullMatchHands` or `kShortMatchHands`.
         int handsPerMatch = kFullMatchHands;
-        /// Play with the eight flower and season tiles (144 tiles instead of 136).
+        /// Play with the flower and season tiles.
         bool flowers = false;
         /// A drawn hand is replayed by the same East instead of counting towards handsPerMatch.
         bool replayDrawnHand = true;

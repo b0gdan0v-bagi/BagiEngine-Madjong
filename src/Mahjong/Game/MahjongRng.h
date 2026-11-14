@@ -11,7 +11,7 @@ namespace BECore::Mahjong {
      *        every platform.
      *
      * Only the raw `mt19937` stream is used (its output is fixed by the standard). Never `std::shuffle` or `std::*_distribution`: their
-     * output differs between standard libraries. The modulo bias of `Below` (n does not divide 2^32) is below 1e-8 for the n used here.
+     * output differs between standard libraries. The modulo bias of `Below` is negligible for the n used here.
      */
     class MahjongRng {
     public:
@@ -33,7 +33,6 @@ namespace BECore::Mahjong {
             return n == 0 ? 0 : _rng() % n;
         }
 
-        /// One die, 1..6.
         [[nodiscard]] int RollDie() {
             return 1 + static_cast<int>(Below(kDieFaces));
         }
@@ -44,8 +43,8 @@ namespace BECore::Mahjong {
             return first + RollDie();
         }
 
-        /// Fisher-Yates, written by hand: for a size i from the item count down to 2, the item at index i - 1 swaps with the one at
-        /// index `Below(i)`.
+        /// Fisher-Yates, written by hand so a seed gives one order everywhere: for a size i from the item count down to 2, the item at
+        /// index i - 1 swaps with the one at index `Below(i)`.
         template <typename T>
         void Shuffle(Vector<T>& items) {
             for (size_t i = items.size(); i > 1; --i) {

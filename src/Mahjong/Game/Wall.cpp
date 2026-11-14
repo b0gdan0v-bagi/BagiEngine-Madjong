@@ -56,7 +56,6 @@ namespace BECore::Mahjong {
         wallBreak.seat = (east + BreakSide(wallBreak.eastDice)) % kSeatCount;
         wallBreak.index = BreakIndex(wallBreak.eastDice, wallBreak.ownerDice, StacksPerSide(settings.flowers));
 
-        // The draw order is the ring read from the break onwards, round the end of the ring.
         eastl::rotate(ring.begin(), ring.begin() + wallBreak.index, ring.end());
         Wall wall = Wall::FromOrder(eastl::move(ring));
         wall._break = wallBreak;

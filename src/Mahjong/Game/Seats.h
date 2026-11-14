@@ -9,18 +9,16 @@ namespace BECore::Mahjong {
     using Seat = int;
     inline constexpr int kSeatCount = 4;
 
-    /// The wind of a seat. The numbering is the same as the winds of Tile (East = 0 ... North = 3).
+    /// The numbering is the same as the winds of Tile.
     CORE_ENUM(Wind, uint8_t, East, South, West, North)
 
     /// No seat (the winner of a drawn hand, the East of winds that name none).
     inline constexpr Seat kNoSeat = -1;
 
-    /// Whether `seat` is one of the four seats.
     [[nodiscard]] constexpr bool IsSeat(Seat seat) noexcept {
         return seat >= 0 && seat < kSeatCount;
     }
 
-    /// The seat that plays after `seat`.
     [[nodiscard]] constexpr Seat NextSeat(Seat seat) noexcept {
         return (seat + 1) % kSeatCount;
     }
@@ -30,7 +28,6 @@ namespace BECore::Mahjong {
         return (to - from + kSeatCount) % kSeatCount;
     }
 
-    /// The wind of each seat, indexed by seat.
     using SeatWinds = Array<Wind, kSeatCount>;
 
     /// The seat winds when `east` is the dealer: South is `NextSeat(east)`, then West, then North.
