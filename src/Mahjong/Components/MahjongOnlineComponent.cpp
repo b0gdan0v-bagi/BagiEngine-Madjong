@@ -475,7 +475,7 @@ namespace BECore::Mahjong {
         if (game == nullptr || !game->IsOptionsOpen() || _nicknameActive) {
             return false;
         }
-        if (!_nicknameEntry.Set(current)) {
+        if (!_nicknameEntry.Replace(current)) {
             _nicknameEntry.Clear();
         }
         _nicknameActive = true;

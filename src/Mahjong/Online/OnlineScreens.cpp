@@ -23,7 +23,7 @@ namespace BECore::Mahjong {
 
     void OnlineScreens::SetStoredName(eastl::string_view name) {
         TextEntry candidate(TextEntry::Kind::Name);
-        if (!candidate.Set(name) || !candidate.IsComplete()) {
+        if (!candidate.Replace(name) || !candidate.IsComplete()) {
             return;
         }
         Assign(_name, candidate);
@@ -42,7 +42,7 @@ namespace BECore::Mahjong {
         const uint64_t stringsVersion = strings.GetVersion();
         if (!_nameOwn && (!_hasStrings || stringsVersion != _defaultNameStringsVersion)) {
             TextEntry candidate(TextEntry::Kind::Name);
-            if (!candidate.Set(TextEntry::DefaultName(strings))) {
+            if (!candidate.Replace(TextEntry::DefaultName(strings))) {
                 candidate.Clear();
             }
             Assign(_name, candidate);
@@ -386,7 +386,7 @@ namespace BECore::Mahjong {
             return false;
         }
         TextEntry candidate(TextEntry::Kind::Code);
-        if (!candidate.Set(*code)) {
+        if (!candidate.Replace(*code)) {
             return false;
         }
         ClearNotice();

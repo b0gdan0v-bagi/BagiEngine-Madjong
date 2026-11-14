@@ -149,7 +149,7 @@ namespace BECore::Mahjong {
         _text.clear();
     }
 
-    bool TextEntry::Set(eastl::string_view text) {
+    bool TextEntry::Replace(eastl::string_view text) {
         TextEntry candidate(_kind);
         size_t pos = 0;
         while (pos < text.size()) {

@@ -45,7 +45,7 @@ namespace BECore::Mahjong {
         /// The nickname as the name field would keep it: empty when the field would refuse it
         eastl::string CleanNickname(eastl::string_view text) {
             TextEntry entry(TextEntry::Kind::Name);
-            if (text.size() > kMaxMatchLogNicknameBytes || !entry.Set(text)) {
+            if (text.size() > kMaxMatchLogNicknameBytes || !entry.Replace(text)) {
                 return {};
             }
             return entry.Text();

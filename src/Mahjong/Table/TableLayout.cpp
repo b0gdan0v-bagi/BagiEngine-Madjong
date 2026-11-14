@@ -93,7 +93,7 @@ namespace BECore::Mahjong {
             float offsetX = 0.0f;
             float offsetY = 0.0f;
 
-            [[nodiscard]] Rect Map(const Rect& rect) const {
+            [[nodiscard]] Rect MapRect(const Rect& rect) const {
                 return Rect(offsetX + rect.x * scale, offsetY + rect.y * scale, rect.w * scale, rect.h * scale);
             }
         };
@@ -110,7 +110,7 @@ namespace BECore::Mahjong {
         }
 
         void AddSlot(TableLayout& layout, const ViewFit& fit, const Rect& rect, SlotRole role, Seat seat, int index, float rotation, int part = 0, Edge claimEdge = Edge::None) {
-            layout.slots.push_back(TileSlot{fit.Map(rect), role, seat, index, part, claimEdge, rotation});
+            layout.slots.push_back(TileSlot{fit.MapRect(rect), role, seat, index, part, claimEdge, rotation});
         }
 
         /// The hand in input order, one plain row; a spread one (the portrait table) puts tile `i` at `i` times the pitch that makes 14
@@ -452,7 +452,7 @@ namespace BECore::Mahjong {
                 return;
             }
             for (const FreeRegion& region : frame.zones->freeRegions) {
-                out.push_back(FreeZone{region.name, frame.fit.Map(SnapZone(region.rect, frame.design.width, frame.design.height))});
+                out.push_back(FreeZone{region.name, frame.fit.MapRect(SnapZone(region.rect, frame.design.width, frame.design.height))});
             }
         }
 
@@ -502,16 +502,16 @@ namespace BECore::Mahjong {
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             const int position = SeatPosition(layout.viewer, seat);
             const SeatGeometry& geometry = geometries[position];
-            layout.zones.discards[seat] = fit.Map(Rect(geometry.discardX, geometry.discardY, geometry.discardW, geometry.discardH));
-            layout.zones.seatPlates[seat] = fit.Map(plates[position]);
+            layout.zones.discards[seat] = fit.MapRect(Rect(geometry.discardX, geometry.discardY, geometry.discardW, geometry.discardH));
+            layout.zones.seatPlates[seat] = fit.MapRect(plates[position]);
             AddHand(layout, fit, geometry, seat, ClampCount(input.concealedCount[seat]));
             AddMelds(layout, fit, geometry, seat, position, input.melds[seat]);
             AddBonus(layout, fit, geometry, seat, ClampCount(input.bonusCount[seat]));
         }
         AddDiscards(layout, fit, geometries, input);
         const SolvedWall ring = SolveWall(SnapZone(zones->wall, design.width, design.height));
-        layout.zones.wall = fit.Map(Rect(ring.x, ring.y, ring.w, ring.h));
-        layout.zones.centerPanel = fit.Map(Rect(ring.x + ring.stack, ring.y + ring.stack, ring.w - 2.0f * ring.stack, ring.h - 2.0f * ring.stack));
+        layout.zones.wall = fit.MapRect(Rect(ring.x, ring.y, ring.w, ring.h));
+        layout.zones.centerPanel = fit.MapRect(Rect(ring.x + ring.stack, ring.y + ring.stack, ring.w - 2.0f * ring.stack, ring.h - 2.0f * ring.stack));
         FitFreeZones(frame, layout.zones.freeRegions);
         const int stacks = WallStackCount(input.wallRemaining);
         for (int stack = 0; stack < stacks; ++stack) {

@@ -46,7 +46,7 @@ namespace BECore::Mahjong {
         void Clear();
 
         /// Replaces the text by @p text when every character of it is accepted and it fits; otherwise nothing changes and the result is false.
-        bool Set(eastl::string_view text);
+        bool Replace(eastl::string_view text);
 
         [[nodiscard]] const eastl::string& Text() const {
             return _text;

@@ -162,18 +162,18 @@ namespace BECore::Mahjong::Tests {
     TEST(MahjongOnlineEntry, SetTakesAWholeTextOrNothing) {
         TextEntry name(TextEntry::Kind::Name);
         name.Append("a");
-        EXPECT_TRUE(name.Set(std::string("Bob ").append(kYa).c_str()));
+        EXPECT_TRUE(name.Replace(std::string("Bob ").append(kYa).c_str()));
         EXPECT_EQ(Std(name.Text()), std::string("Bob ") + kYa);
-        EXPECT_FALSE(name.Set("Bob!"));
-        EXPECT_FALSE(name.Set("a very long name that passes the limit"));
+        EXPECT_FALSE(name.Replace("Bob!"));
+        EXPECT_FALSE(name.Replace("a very long name that passes the limit"));
         EXPECT_EQ(Std(name.Text()), std::string("Bob ") + kYa);
-        EXPECT_TRUE(name.Set(""));
+        EXPECT_TRUE(name.Replace(""));
         EXPECT_TRUE(name.Text().empty());
 
         TextEntry code(TextEntry::Kind::Code);
-        EXPECT_TRUE(code.Set("abcde"));
+        EXPECT_TRUE(code.Replace("abcde"));
         EXPECT_EQ(Std(code.Text()), "ABCDE");
-        EXPECT_FALSE(code.Set("ABCDEF"));
+        EXPECT_FALSE(code.Replace("ABCDEF"));
         EXPECT_EQ(Std(code.Text()), "ABCDE");
     }
 
@@ -257,7 +257,7 @@ namespace BECore::Mahjong::Tests {
         TextEntry field(TextEntry::Kind::Code);
         const std::optional<eastl::string> code = TextEntry::CleanRoomCode("ab3-k9");
         ASSERT_TRUE(code.has_value());
-        EXPECT_TRUE(field.Set(*code));
+        EXPECT_TRUE(field.Replace(*code));
         EXPECT_TRUE(field.IsComplete());
     }
 
@@ -266,7 +266,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
         ForEachLanguage(strings, [&](PoolString language) {
             TextEntry name(TextEntry::Kind::Name);
-            EXPECT_TRUE(name.Set(TextEntry::DefaultName(strings))) << language.ToStringView().data();
+            EXPECT_TRUE(name.Replace(TextEntry::DefaultName(strings))) << language.ToStringView().data();
             EXPECT_TRUE(name.IsComplete()) << language.ToStringView().data();
         });
         ASSERT_TRUE(strings.SetLanguage("en"_intern));
