@@ -10,10 +10,10 @@ namespace BECore::Mahjong {
     CORE_ENUM(SeatKind, uint8_t, Person, Computer)
 
     /// The kind of each seat, indexed by seat.
-    using SeatSetup = eastl::array<SeatKind, kSeatCount>;
+    using SeatSetup = Array<SeatKind, kSeatCount>;
 
     /// The name of each seat's player, indexed by seat; empty where a table has none (a local game names no one).
-    using SeatNames = eastl::array<eastl::string, kSeatCount>;
+    using SeatNames = Array<String, kSeatCount>;
 
     /// Seat 0 is a person, the others are computers.
     inline constexpr SeatSetup kDefaultSeatSetup{SeatKind::Person, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
@@ -40,9 +40,9 @@ namespace BECore::Mahjong {
     /// was given (`TableSession::SetLogOrigin`).
     struct MatchLogOrigin {
         MatchPlatform platform = MatchPlatform::Unknown;
-        eastl::string build;        // the build id (a short git hash), empty when not known
-        eastl::string gameVersion;  // the version for testers, empty when not known
-        eastl::string nickname;     // what a tester typed to be found by (only after a consent), empty: none
+        String build;        // the build id (a short git hash), empty when not known
+        String gameVersion;  // the version for testers, empty when not known
+        String nickname;     // what a tester typed to be found by (only after a consent), empty: none
 
         bool operator==(const MatchLogOrigin&) const = default;
     };
@@ -196,9 +196,9 @@ namespace BECore::Mahjong {
          * after `StartMatch`: with two or more people or none nobody, so the cover is up for a person to act (`HandoffPending`).
          * Include `Game/MatchLog.h` to call it.
          */
-        std::expected<void, ReplayError> ResumeMatch(const eastl::vector<MatchLogEvent>& events, const SeatSetup& seats, const SeatLevels& levels);
+        std::expected<void, ReplayError> ResumeMatch(const Vector<MatchLogEvent>& events, const SeatSetup& seats, const SeatLevels& levels);
         /// `ResumeMatch` with `UniformLevels(level)`.
-        std::expected<void, ReplayError> ResumeMatch(const eastl::vector<MatchLogEvent>& events, const SeatSetup& seats, ComputerLevel level);
+        std::expected<void, ReplayError> ResumeMatch(const Vector<MatchLogEvent>& events, const SeatSetup& seats, ComputerLevel level);
 
         /**
          * @brief Shows a table that is played elsewhere (the session goes into remote mode, see the class comment); the match has been
@@ -215,7 +215,7 @@ namespace BECore::Mahjong {
             return _remote;
         }
         /// The name of the player of `seat` that `ShowRemote` gave; empty for a local game and for a number that is no seat.
-        [[nodiscard]] const eastl::string& NameOf(Seat seat) const noexcept;
+        [[nodiscard]] const String& NameOf(Seat seat) const noexcept;
 
         /// The level of each seat of the match started last (the entries of person seats are kept, they play nothing); all `kDefaultLevel`
         /// before the first start.
@@ -270,10 +270,10 @@ namespace BECore::Mahjong {
         StepResult StepComputer();
         /// The first half of `StepComputer`: the job of the actor's step, the player's rng drawn, the model and the version unchanged.
         /// `nullopt` (nothing drawn) unless `Playing` with a computer as the actor.
-        [[nodiscard]] std::optional<ComputerStepJob> BeginComputerStep();
+        [[nodiscard]] Optional<ComputerStepJob> BeginComputerStep();
         /// The second half: `job` (done) is applied, logged and counted as `StepComputer` does, and its `StepResult` returned; `nullopt`
         /// when the job is stale (`Version()` or `StartCount()` is not the job's), with nothing changed or logged.
-        [[nodiscard]] std::optional<StepResult> FinishComputerStep(const ComputerStepJob& job);
+        [[nodiscard]] Optional<StepResult> FinishComputerStep(const ComputerStepJob& job);
         /// `StepComputer` until a person has to act or the hand is over: the number of steps. At most `kMaxComputerSteps`; more
         /// (or a refused step) is a defect and asserts.
         int RunComputers();
@@ -284,7 +284,7 @@ namespace BECore::Mahjong {
         std::expected<HandSettlement, MatchError> NextHand();
         /// The settlement `NextHand` applied last (the last element of `Match::History()`), nullopt before any. The settlement of a
         /// hand that is `HandOver` is `SettleHand(Hand())`.
-        [[nodiscard]] std::optional<HandSettlement> LastSettlement() const;
+        [[nodiscard]] Optional<HandSettlement> LastSettlement() const;
 
         /// The person whose concealed tiles the screen shows, `kNoSeat` for nobody (everything covered). See the class comment.
         [[nodiscard]] Seat Viewer() const noexcept {
@@ -331,7 +331,7 @@ namespace BECore::Mahjong {
         void LogAfterSettlement();
 
         Match& _match;
-        std::optional<ComputerTable> _table;
+        Optional<ComputerTable> _table;
         SeatSetup _seats = kDefaultSeatSetup;
         SeatLevels _levels = UniformLevels(kDefaultLevel);
         Seat _viewer = kNoSeat;

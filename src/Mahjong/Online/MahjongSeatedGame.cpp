@@ -17,7 +17,7 @@ namespace BECore::Mahjong {
         constexpr int kMixLastShift = 31;
         constexpr int kHalfSeedBits = 32;
 
-        std::unexpected<ControlError> Fail(eastl::string_view code, eastl::string message) {
+        std::unexpected<ControlError> Fail(StringView code, String message) {
             return std::unexpected(MakeControlError(code, std::move(message)));
         }
 
@@ -32,7 +32,7 @@ namespace BECore::Mahjong {
 
         /// What an answer may say of an applied action to every seat: the action as the table shows it. A concealed kong names no
         /// tile (the others only count it) and a pass says nothing (it would tell that the seat could claim): `nullopt`.
-        std::optional<Json> PublicActionToJson(const HandAction& action) {
+        Optional<Json> PublicActionToJson(const HandAction& action) {
             switch (action.kind) {
                 case ActionKind::Pass:
                     return std::nullopt;
@@ -64,7 +64,7 @@ namespace BECore::Mahjong {
 
     SeatedGameInfo MahjongSeatedGame::Info() {
         // Every member sees these options of the host in the lobby, before the start
-        return SeatedGameInfo{eastl::string(kSeatedGameName), kSeatCount, {"hands", "level", eastl::string(kHintsAllowedKey)}};
+        return SeatedGameInfo{String(kSeatedGameName), kSeatCount, {"hands", "level", String(kHintsAllowedKey)}};
     }
 
     int MahjongSeatedGame::GetSeatCount() const {
@@ -110,7 +110,7 @@ namespace BECore::Mahjong {
         ComputerLevel level = kDefaultLevel;
         if (FindJsonMember(options, "level") != nullptr) {
             const auto number = GetJsonInt(options, "level");
-            const std::optional<ComputerLevel> read = number ? LevelOf(*number) : std::nullopt;
+            const Optional<ComputerLevel> read = number ? LevelOf(*number) : std::nullopt;
             if (!read) {
                 return Fail(ControlErrors::kInvalidParams, Format("'level' has to be {}", LevelRangeText().c_str()));
             }
@@ -118,7 +118,7 @@ namespace BECore::Mahjong {
         }
         bool hintsAllowed = false;
         if (FindJsonMember(options, kHintsAllowedKey) != nullptr) {
-            const std::optional<bool> flag = GetJsonBool(options, kHintsAllowedKey);
+            const Optional<bool> flag = GetJsonBool(options, kHintsAllowedKey);
             if (!flag) {
                 return Fail(ControlErrors::kInvalidParams, Format("'{}' has to be true or false", kHintsAllowedKey.data()));
             }
@@ -160,7 +160,7 @@ namespace BECore::Mahjong {
         }
         view["ready"] = std::move(ready);
         view["format"] = kOnlineViewFormat;
-        view[std::string(kHintsAllowedKey.data(), kHintsAllowedKey.size())] = _hintsAllowed;
+        view[ToStdString(kHintsAllowedKey)] = _hintsAllowed;
         return view;
     }
 
@@ -218,7 +218,7 @@ namespace BECore::Mahjong {
         ++_version;
         if (parsed->nextHand) {
             outcome["applied"] = NextHandActionToJson();
-        } else if (std::optional<Json> shown = PublicActionToJson(parsed->hand)) {
+        } else if (Optional<Json> shown = PublicActionToJson(parsed->hand)) {
             outcome["applied"] = std::move(*shown);
         }
         outcome["phase"] = MakeJsonString(PhaseName(PhaseOfMatch(_match)));
@@ -226,7 +226,7 @@ namespace BECore::Mahjong {
         return outcome;
     }
 
-    std::optional<Json> MahjongSeatedGame::ChooseComputerAction(int seat) const {
+    Optional<Json> MahjongSeatedGame::ChooseComputerAction(int seat) const {
         const SeatMoves moves = MovesOf(seat);
         if (moves.Empty()) {
             return std::nullopt;
@@ -235,7 +235,7 @@ namespace BECore::Mahjong {
             return NextHandActionToJson();
         }
         ComputerPlayer player(SeatSeed(MixSeed(_matchSeed, _version), seat), _level);
-        const std::optional<HandAction> chosen = player.Decide(_match.Hand(), seat);
+        const Optional<HandAction> chosen = player.Decide(_match.Hand(), seat);
         if (!chosen) {
             return std::nullopt;
         }

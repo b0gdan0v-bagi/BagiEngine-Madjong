@@ -120,7 +120,7 @@ namespace BECore::Mahjong {
         /// The lines of the best reading, in a stable order: the winner's points (`Win`, the wall tile, the only winning tile), the points
         /// of the sets in the order of the reading, the pair, the bonus tiles; then the doubles for everyone, then the doubles for the
         /// winner. The score table prints them as they are.
-        eastl::vector<ScoreLine> lines;
+        Vector<ScoreLine> lines;
         /// The sum of the points of the lines.
         int points = 0;
         /// The sum of the doubles of the lines (x4 is 2 doubles, x8 is 3).
@@ -128,7 +128,7 @@ namespace BECore::Mahjong {
         /// `points` x 2^`doubles`, saturating at the largest `int`.
         int raw = 0;
         /// The limit hand the winner holds, if any (its single line is in `lines`).
-        std::optional<ScoreKind> limitHand;
+        Optional<ScoreKind> limitHand;
         /// `RoundUpToTen(min(raw, LimitCap(limit)))`; a limit hand scores `LimitCap(limit)`.
         int score = 0;
     };

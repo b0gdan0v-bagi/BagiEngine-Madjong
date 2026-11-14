@@ -64,7 +64,7 @@ namespace BECore::Mahjong::Tests {
             SlotRole role = SlotRole::HandTile;
             Seat seat = 0;
             int index = 0;
-            std::optional<Tile> face;
+            Optional<Tile> face;
         };
 
     }  // namespace
@@ -96,7 +96,7 @@ namespace BECore::Mahjong::Tests {
         /// The person claims a pung at seat 0 against a computer's mahjong at seat 2: the computer decides at the next step, the hand ends.
         void PersonPungsAndAComputerWins() {
             ASSERT_NO_FATAL_FAILURE(StartWindow(kPersonAtSeat0, WindowModel(WindowSpec(kPungHand, kQuietHand, kSeatWaits), {kSeat2})));
-            ASSERT_EQ(Hand().PendingClaimSeats(), (eastl::vector<Seat>{kSeat0, kSeat2}));
+            ASSERT_EQ(Hand().PendingClaimSeats(), (Vector<Seat>{kSeat0, kSeat2}));
             _before = _table->GetLayout();
             EmitAction("MahjongClaimPung");
             ASSERT_EQ(Hand().GetPhase(), Phase::Claim) << "seat 2 has yet to decide";
@@ -109,7 +109,7 @@ namespace BECore::Mahjong::Tests {
         /// The person claims a chow at seat 0 against a computer's pung at seat 1.
         void PersonChowsAndAComputerPungs() {
             ASSERT_NO_FATAL_FAILURE(StartWindow(kPersonAtSeat0, WindowModel(WindowSpec(kChowHand, kSeatPungs, kSeatWaits), {})));
-            ASSERT_EQ(Hand().PendingClaimSeats(), (eastl::vector<Seat>{kSeat0, kSeat1}));
+            ASSERT_EQ(Hand().PendingClaimSeats(), (Vector<Seat>{kSeat0, kSeat1}));
             _before = _table->GetLayout();
             EmitAction("MahjongClaimChow", "0");
             ASSERT_EQ(Hand().GetPhase(), Phase::Claim) << "seat 1 has yet to decide";
@@ -118,8 +118,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The rectangles drawn in `color`: a rect's own, and the box of the vertices of that colour in a geometry call (the frame and the blink of a plate are rounded layers of their own).
-        std::vector<Rect> RectsOf(const Color& color) const {
-            std::vector<Rect> found;
+        Vector<Rect> RectsOf(const Color& color) const {
+            Vector<Rect> found;
             for (const MarkDraw& draw : MarksOf(_renderer->calls, color)) {
                 found.push_back(draw.rect);
             }
@@ -180,7 +180,7 @@ namespace BECore::Mahjong::Tests {
 
         /// The last copy of `tile` in the concealed tiles of `seat`, worked out here.
         int LastCopy(Seat seat, Tile tile) const {
-            const eastl::vector<Tile>& concealed = Hand().GetHand(seat).concealed;
+            const Vector<Tile>& concealed = Hand().GetHand(seat).concealed;
             int found = -1;
             for (size_t i = 0; i < concealed.size(); ++i) {
                 found = concealed[i] == tile ? static_cast<int>(i) : found;
@@ -189,7 +189,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Whether one of the tile draws is at `rect` and shows `face` (nullopt: a back).
-        bool TileAt(const Rect& rect, const std::optional<Tile>& face) const {
+        bool TileAt(const Rect& rect, const Optional<Tile>& face) const {
             const Rect source = face ? SourceRect(*face) : BackRect();
             for (const DrawCall& call : TileCalls()) {
                 if (SameRect(call.rect, rect) && call.source.has_value() && SameRect(*call.source, source)) {
@@ -274,7 +274,7 @@ namespace BECore::Mahjong::Tests {
                 firstTile = firstTile < 0 ? at : firstTile;
             } else if (BoxOfColor(call, kClaimLostFrame)) {
                 frameAt = frameAt < 0 ? at : frameAt;
-            } else if (const std::optional<Rect> box = BoxOfColor(call, kClaimHighlight); box && SameBox(*box, PlateOf(kSeat2))) {
+            } else if (const Optional<Rect> box = BoxOfColor(call, kClaimHighlight); box && SameBox(*box, PlateOf(kSeat2))) {
                 blinkAt = at;
             }
         }
@@ -302,14 +302,14 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongTableLostClaimTest, AWinningTileHeldTwiceFliesItsLastCopyAndTheOtherCopyStaysInPlace) {
         // Seat 2 waits on the 4p alone and holds one: the concealed tiles after the win are 4p 4p 1s ..., the second 4p is the new one
         ASSERT_NO_FATAL_FAILURE(StartWindow(kPersonAtSeat0, WindowModel(WindowSpec(kQuietHand, kSeatPungs, kSeatWaitsAlone), {kSeat2})));
-        ASSERT_EQ(Hand().PendingClaimSeats(), (eastl::vector<Seat>{kSeat1, kSeat2}));
+        ASSERT_EQ(Hand().PendingClaimSeats(), (Vector<Seat>{kSeat1, kSeat2}));
         const TableLayout before = _table->GetLayout();
         AdvanceTime(kComputerStepSeconds);  // the computers decide one after the other within the pause
         ASSERT_EQ(Hand().GetPhase(), Phase::Finished);
         ASSERT_EQ(Hand().Result()->winner, kSeat2);
         Draw();
 
-        const eastl::vector<Tile>& concealed = Hand().GetHand(kSeat2).concealed;
+        const Vector<Tile>& concealed = Hand().GetHand(kSeat2).concealed;
         ASSERT_GE(concealed.size(), 2u);
         ASSERT_EQ(concealed[0], T("4p"));
         ASSERT_EQ(concealed[1], T("4p"));
@@ -345,7 +345,7 @@ namespace BECore::Mahjong::Tests {
 
         // The person claims the pung and nobody else claims: the person is the winner of a window nobody lost
         ASSERT_NO_FATAL_FAILURE(StartWindow(kPersonAtSeat0, WindowModel(WindowSpec(kPungHand, kQuietHand, kSeatWaits), {})));
-        ASSERT_EQ(Hand().PendingClaimSeats(), (eastl::vector<Seat>{kSeat0}));
+        ASSERT_EQ(Hand().PendingClaimSeats(), (Vector<Seat>{kSeat0}));
         EmitAction("MahjongClaimPung");
         ASSERT_EQ(Hand().GetHand(kSeat0).melds.size(), 1u);
         Draw();
@@ -578,7 +578,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongTableLostClaimTest, AClaimOfAComputerThatLostToAMahjongHoldsNothing) {
         // The person has no claim; seat 1 pungs, seat 2 wins: the beaten seat is a computer
         ASSERT_NO_FATAL_FAILURE(StartWindow(kPersonAtSeat0, WindowModel(WindowSpec(kQuietHand, kSeatPungs, kSeatWaits), {kSeat2})));
-        ASSERT_EQ(Hand().PendingClaimSeats(), (eastl::vector<Seat>{kSeat1, kSeat2}));
+        ASSERT_EQ(Hand().PendingClaimSeats(), (Vector<Seat>{kSeat1, kSeat2}));
         AdvanceTime(kComputerStepSeconds);
         ASSERT_EQ(Hand().GetPhase(), Phase::Finished);
         ASSERT_EQ(Hand().Result()->winner, kSeat2);

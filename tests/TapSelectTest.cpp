@@ -12,7 +12,7 @@ namespace BECore::Mahjong::Tests {
     namespace {
 
         constexpr float kMinTouch = 32.0f;
-        constexpr std::optional<int> kNone = std::nullopt;
+        constexpr Optional<int> kNone = std::nullopt;
 
         TapOutcome Out(TapAction action, int index = 0) {
             return TapOutcome{action, index};

@@ -33,7 +33,7 @@ namespace BECore::Mahjong {
             return note;
         }
 
-        const DiscardOption* FindOption(const eastl::vector<DiscardOption>& rated, Tile tile) {
+        const DiscardOption* FindOption(const Vector<DiscardOption>& rated, Tile tile) {
             for (const DiscardOption& option : rated) {
                 if (option.tile == tile) {
                     return &option;
@@ -44,7 +44,7 @@ namespace BECore::Mahjong {
 
         /// The unseen winning copies of the 13 tiles that stay after the discard `taken`, when they wait (as `WaitingDiscards` lists it for the
         /// kind of discard, declaring or not).
-        std::optional<int> WaitingCopiesOf(const TableView& before, const HandAction& taken, bool readDanger) {
+        Optional<int> WaitingCopiesOf(const TableView& before, const HandAction& taken, bool readDanger) {
             for (const WaitingDiscard& discard : WaitingDiscards(before, taken.declareCalling, readDanger)) {
                 if (discard.tile == taken.tile) {
                     return discard.copies;
@@ -54,15 +54,15 @@ namespace BECore::Mahjong {
         }
 
         /// The note of a turn whose advice is `turn`; nullopt when `taken` agrees.
-        std::optional<CoachNote> JudgeTurn(const TableView& before, const TurnExplanation& turn, const HandAction& taken) {
+        Optional<CoachNote> JudgeTurn(const TableView& before, const TurnExplanation& turn, const HandAction& taken) {
             CoachNote note = MakeNote(before, turn.action, taken);
             note.stepsBefore = turn.shantenBefore;
             const TileCounts counts = CountTiles(before.own.concealed);
             const bool readDanger = ProfileOf(kDefaultLevel).readDanger;
-            const auto rate = [&](Tile tile) -> std::optional<DiscardOption> {
-                const eastl::vector<DiscardOption> rated = RateDiscards(counts, MeldCountOf(before), before, readDanger);
+            const auto rate = [&](Tile tile) -> Optional<DiscardOption> {
+                const Vector<DiscardOption> rated = RateDiscards(counts, MeldCountOf(before), before, readDanger);
                 const DiscardOption* option = FindOption(rated, tile);
-                return option != nullptr ? std::optional<DiscardOption>(*option) : std::nullopt;
+                return option != nullptr ? Optional<DiscardOption>(*option) : std::nullopt;
             };
             if (IsKong(taken)) {
                 note.takenSide = RatedSide(RateKong(before, counts, taken));
@@ -77,12 +77,12 @@ namespace BECore::Mahjong {
                     if (taken.kind != ActionKind::Discard) {
                         return note;
                     }
-                    if (const std::optional<int> copies = WaitingCopiesOf(before, taken, readDanger)) {
+                    if (const Optional<int> copies = WaitingCopiesOf(before, taken, readDanger)) {
                         note.takenSide = WaitingSide(*copies);
                         const bool declaring = turn.step == TurnStep::Declare;
-                        return taken.declareCalling == declaring && *copies == turn.chosen.waitCopies ? std::nullopt : std::optional<CoachNote>(note);
+                        return taken.declareCalling == declaring && *copies == turn.chosen.waitCopies ? std::nullopt : Optional<CoachNote>(note);
                     }
-                    if (const std::optional<DiscardOption> option = rate(taken.tile)) {
+                    if (const Optional<DiscardOption> option = rate(taken.tile)) {
                         note.takenSide = RatedSide(option->shanten, option->acceptance);
                     }
                     return note;
@@ -91,9 +91,9 @@ namespace BECore::Mahjong {
                     note.advisedSide = RatedSide(turn.kongShantenAfter, turn.kongAcceptanceAfter);
                     if (IsKong(taken)) {
                         const bool noWorse = KongIsNoWorse(before, counts, taken, BestDiscardRating(counts, MeldCountOf(before), before));
-                        return noWorse ? std::nullopt : std::optional<CoachNote>(note);
+                        return noWorse ? std::nullopt : Optional<CoachNote>(note);
                     }
-                    if (const std::optional<DiscardOption> option = taken.kind == ActionKind::Discard ? rate(taken.tile) : std::nullopt) {
+                    if (const Optional<DiscardOption> option = taken.kind == ActionKind::Discard ? rate(taken.tile) : std::nullopt) {
                         note.takenSide = RatedSide(option->shanten, option->acceptance);
                         if (note.takenSide == note.advisedSide) {
                             return std::nullopt;
@@ -104,7 +104,7 @@ namespace BECore::Mahjong {
                 case TurnStep::Discard: {
                     note.advisedSide = RatedSide(turn.chosen.shanten, turn.chosen.acceptance);
                     if (taken.kind == ActionKind::Discard) {
-                        if (const std::optional<DiscardOption> option = rate(taken.tile)) {
+                        if (const Optional<DiscardOption> option = rate(taken.tile)) {
                             note.takenSide = RatedSide(option->shanten, option->acceptance);
                             if (note.takenSide == note.advisedSide) {
                                 return std::nullopt;
@@ -118,7 +118,7 @@ namespace BECore::Mahjong {
         }
 
         /// The note of a window whose advice is `claim`; nullopt when `taken` agrees.
-        std::optional<CoachNote> JudgeClaim(const TableView& before, const ClaimExplanation& claim, const HandAction& taken) {
+        Optional<CoachNote> JudgeClaim(const TableView& before, const ClaimExplanation& claim, const HandAction& taken) {
             CoachNote note = MakeNote(before, claim.action, taken);
             note.stepsBefore = claim.shantenBefore;
             if (claim.step == ClaimStep::Mahjong) {
@@ -163,11 +163,11 @@ namespace BECore::Mahjong {
         return false;
     }
 
-    std::optional<CoachNote> JudgeMove(const TableView& before, const HandAction& taken) {
+    Optional<CoachNote> JudgeMove(const TableView& before, const HandAction& taken) {
         if (!CanJudge(before, taken)) {
             return std::nullopt;
         }
-        const std::optional<Explanation> explained = ExplainAdviceFor(before);
+        const Optional<Explanation> explained = ExplainAdviceFor(before);
         if (!explained.has_value() || explained->Action() == taken) {
             return std::nullopt;
         }
@@ -206,7 +206,7 @@ namespace BECore::Mahjong {
         }
         _key = key;
         _keyed = true;
-        std::optional<CoachNote> note = JudgeMove(before, action);
+        Optional<CoachNote> note = JudgeMove(before, action);
         ++_hand.moves;
         ++_match.moves;
         if (!note.has_value()) {

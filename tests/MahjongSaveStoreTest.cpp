@@ -16,13 +16,13 @@ namespace BECore::Mahjong::Tests {
 
         constexpr uint32_t kSeed = 9;
         constexpr const char* kFolderPrefix = "BagiMahjongSaveStoreTest";
-        constexpr eastl::string_view kRoom = "K7M4Q";
-        constexpr eastl::string_view kToken = "00112233445566778899aabbccddeeff";
-        constexpr eastl::string_view kUrl = "ws://rooms.test:8080";
+        constexpr StringView kRoom = "K7M4Q";
+        constexpr StringView kToken = "00112233445566778899aabbccddeeff";
+        constexpr StringView kUrl = "ws://rooms.test:8080";
         constexpr SeatSetup kAllComputers{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
 
         /// The saved events of a short stretch of a match: the start, a whole hand of computers, its settlement and the first moves of the next.
-        eastl::vector<MatchLogEvent> PlayedEvents() {
+        Vector<MatchLogEvent> PlayedEvents() {
             Match match;
             TableSession session(match);
             MatchRecorder recorder;
@@ -57,7 +57,7 @@ namespace BECore::Mahjong::Tests {
                 fs::remove_all(_base);
                 fs::create_directories(_base);
                 folder = _base / "saves";
-                store = std::make_unique<MatchSaveStore>(_fileSystem);
+                store = MakeUnique<MatchSaveStore>(_fileSystem);
             }
 
             void TearDown() override {
@@ -80,9 +80,10 @@ namespace BECore::Mahjong::Tests {
                 ASSERT_TRUE(service.Save(kOnlineSlot, kMahjongSaveSchema, save).has_value());
             }
 
-            void PutBytes(const char* name, const std::string& bytes) const {
+            void PutBytes(const char* name, const String& bytes) const {
                 fs::create_directories(folder);
-                std::ofstream(folder / name, std::ios::binary) << bytes;
+                std::ofstream file(folder / name, std::ios::binary);
+                file.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
             }
 
             /// The problem of loading the match slot: `Broken` with a sentence.
@@ -94,7 +95,7 @@ namespace BECore::Mahjong::Tests {
             }
 
             fs::path folder;
-            std::unique_ptr<MatchSaveStore> store;
+            UniquePtr<MatchSaveStore> store;
 
         private:
             fs::path _base;
@@ -104,7 +105,7 @@ namespace BECore::Mahjong::Tests {
     }  // namespace
 
     TEST_F(MatchSaveStoreTest, AMatchSurvivesTheRoundTrip) {
-        const eastl::vector<MatchLogEvent> events = PlayedEvents();
+        const Vector<MatchLogEvent> events = PlayedEvents();
         ASSERT_TRUE(store->Open(folder));
         EXPECT_TRUE(store->IsOn());
         ASSERT_TRUE(store->SaveMatch(events));
@@ -246,11 +247,11 @@ namespace BECore::Mahjong::Tests {
             ASSERT_FALSE(loaded.has_value());
             EXPECT_EQ(loaded.error().kind, SaveProblemKind::Broken);
             EXPECT_FALSE(loaded.error().detail.empty());
-            EXPECT_EQ(loaded.error().detail.find(kToken.data()), eastl::string::npos);
+            EXPECT_EQ(loaded.error().detail.find(kToken.data()), String::npos);
         };
 
         MahjongOnlineSave save = MakeOnlineSave("Ann", SomeSession());
-        const eastl::string good = save.session;
+        const String good = save.session;
 
         save.session = "{\"url\":\"ws://x\"";  // not JSON
         expectBroken(save);

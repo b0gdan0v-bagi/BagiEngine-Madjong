@@ -28,10 +28,10 @@ namespace BECore::Mahjong {
     [[nodiscard]] SessionPhase PhaseOfMatch(const Match& match) noexcept;
 
     /// "playing" | "hand_over" | "match_over".
-    [[nodiscard]] eastl::string_view PhaseName(SessionPhase phase);
+    [[nodiscard]] StringView PhaseName(SessionPhase phase);
 
     /// The open melds of a seat as the state lists them.
-    [[nodiscard]] Json MeldsToJson(const eastl::vector<Meld>& melds);
+    [[nodiscard]] Json MeldsToJson(const Vector<Meld>& melds);
 
     /// What a finished hand came to, all four hands open: the `result` of the state.
     [[nodiscard]] Json ResultToJson(const HandModel& hand);

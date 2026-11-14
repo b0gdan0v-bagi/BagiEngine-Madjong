@@ -28,7 +28,7 @@ namespace BECore::Mahjong::Arena {
         constexpr int64_t kPinnedEqual = 82;
 
         ArenaPlayer Bot(const char* spec) {
-            const std::expected<ArenaPlayer, eastl::string> player = ParseArenaPlayer(spec);
+            const std::expected<ArenaPlayer, String> player = ParseArenaPlayer(spec);
             EXPECT_TRUE(player.has_value());
             return player.has_value() ? *player : ArenaPlayer{};
         }
@@ -41,15 +41,15 @@ namespace BECore::Mahjong::Arena {
             return spec;
         }
 
-        TesterMatch Analysed(const eastl::vector<MatchLogEvent>& events, const eastl::vector<ArenaPlayer>& bots) {
-            const std::expected<TesterMatch, eastl::string> match = AnalyzeTesterMatch(kLogName, events, bots);
+        TesterMatch Analysed(const Vector<MatchLogEvent>& events, const Vector<ArenaPlayer>& bots) {
+            const std::expected<TesterMatch, String> match = AnalyzeTesterMatch(kLogName, events, bots);
             EXPECT_TRUE(match.has_value()) << (match.has_value() ? "" : match.error().c_str());
             return match.has_value() ? *match : TesterMatch{};
         }
 
         /// Every decision of a person in `events` with its position, in (hand, seat) order: the list the tests compare the analysis with.
-        eastl::vector<Analyzer::LogPosition> PersonPositions(const eastl::vector<MatchLogEvent>& events) {
-            eastl::vector<Analyzer::LogPosition> positions;
+        Vector<Analyzer::LogPosition> PersonPositions(const Vector<MatchLogEvent>& events) {
+            Vector<Analyzer::LogPosition> positions;
             const int hands = CountEvents(events, MatchLogKind::Settlement) + 1;
             for (int hand = 1; hand <= hands; ++hand) {
                 for (Seat seat = 0; seat < kSeatCount; ++seat) {
@@ -103,13 +103,13 @@ namespace BECore::Mahjong::Arena {
     TEST(ArenaTesterTest, TheBotsMustBeComputerPlayers) {
         EXPECT_TRUE(ValidateTesterBots({Bot("normal"), Bot("easy:skipClaimPercent=20"), Bot("normal:searchWorlds=2,searchCandidates=2,searchMargin=0")}).empty());
         EXPECT_FALSE(ValidateTesterBots({}).empty());
-        const eastl::string random = ValidateTesterBots({Bot("normal"), Bot("random")});
-        EXPECT_NE(random.find("random"), eastl::string::npos);
+        const String random = ValidateTesterBots({Bot("normal"), Bot("random")});
+        EXPECT_NE(random.find("random"), String::npos);
     }
 
     TEST(ArenaTesterTest, ADecisionWithOneLegalActionIsForcedAndNotAsked) {
-        const eastl::vector<MatchLogEvent> events = PlayLog(PersonsAt(kLogPersonFirst, ComputerLevel::Normal));
-        const eastl::vector<Analyzer::LogPosition> positions = PersonPositions(events);
+        const Vector<MatchLogEvent> events = PlayLog(PersonsAt(kLogPersonFirst, ComputerLevel::Normal));
+        const Vector<Analyzer::LogPosition> positions = PersonPositions(events);
         ASSERT_FALSE(positions.empty());
         TableView view = positions.front().view;
         ASSERT_GT(view.legal.size(), 1U);
@@ -124,7 +124,7 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaTesterTest, EveryDecisionWithAChoiceIsCountedOnceAndNothingElse) {
-        const eastl::vector<MatchLogEvent> events = PlayLog(PersonsAt(kLogPersonFirst, ComputerLevel::Normal));
+        const Vector<MatchLogEvent> events = PlayLog(PersonsAt(kLogPersonFirst, ComputerLevel::Normal));
         int64_t choices = 0;
         int64_t discards = 0;
         for (const Analyzer::LogPosition& position : PersonPositions(events)) {
@@ -142,7 +142,7 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaTesterTest, APersonPlayedByNormalAgreesWithNormalWhereTheTieBreakDoesNotMatter) {
-        const eastl::vector<MatchLogEvent> events = PlayLog(PersonsAt(kLogPersonFirst, ComputerLevel::Normal));
+        const Vector<MatchLogEvent> events = PlayLog(PersonsAt(kLogPersonFirst, ComputerLevel::Normal));
         const ArenaPlayer normal = Bot("normal");
         int64_t fixed = 0;
         for (const Analyzer::LogPosition& position : PersonPositions(events)) {
@@ -150,7 +150,7 @@ namespace BECore::Mahjong::Arena {
                 continue;
             }
             // The decision does not depend on the rng when every tie-break seed gives the same choice.
-            eastl::vector<HandAction> answers;
+            Vector<HandAction> answers;
             for (uint32_t seed = 0; seed < kRngSamples; ++seed) {
                 const HandAction chosen = AnalyzeTesterDecision(position.view, position.logged, normal, seed + kNormalLevelSeed).chosen;
                 if (!Has(answers, chosen)) {
@@ -168,7 +168,7 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaTesterTest, APersonPlayedByALowerLevelShowsDifferencesThatNameTheDecision) {
-        const eastl::vector<MatchLogEvent> events = PlayLog(PersonsAt(kLogPersonFirst, ComputerLevel::Easy));
+        const Vector<MatchLogEvent> events = PlayLog(PersonsAt(kLogPersonFirst, ComputerLevel::Easy));
         const TesterMatch match = Analysed(events, {Bot("normal")});
         ASSERT_FALSE(match.differences.empty());
         EXPECT_EQ(static_cast<int64_t>(match.differences.size()), Total(match, 0) - Equal(match, 0));
@@ -192,7 +192,7 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaTesterTest, TheFirstBotIsTheReferenceOfTheDifferences) {
-        const eastl::vector<MatchLogEvent> events = PlayLog(PersonsAt(kLogPersonFirst, ComputerLevel::Easy));
+        const Vector<MatchLogEvent> events = PlayLog(PersonsAt(kLogPersonFirst, ComputerLevel::Easy));
         const TesterMatch normalFirst = Analysed(events, {Bot("normal"), Bot("easy")});
         const TesterMatch easyFirst = Analysed(events, {Bot("easy"), Bot("normal")});
         EXPECT_EQ(static_cast<int64_t>(normalFirst.differences.size()), Total(normalFirst, 0) - Equal(normalFirst, 0));
@@ -205,7 +205,7 @@ namespace BECore::Mahjong::Arena {
 
     TEST(ArenaTesterTest, TwoPersonsAtOneTableAreBothAnalysed) {
         const SeatSetup twoPersons{SeatKind::Person, SeatKind::Person, SeatKind::Computer, SeatKind::Computer};
-        const eastl::vector<MatchLogEvent> both = PlayLog(PersonsAt(twoPersons, ComputerLevel::Easy));
+        const Vector<MatchLogEvent> both = PlayLog(PersonsAt(twoPersons, ComputerLevel::Easy));
         int64_t choices = 0;
         int64_t second = 0;
         for (const Analyzer::LogPosition& position : PersonPositions(both)) {
@@ -225,8 +225,8 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaTesterTest, ALogWithNoPersonGivesNoDecisionsAndNoError) {
-        const eastl::vector<MatchLogEvent> events = PlayLog(PersonsAt(kLogAllComputers, ComputerLevel::Normal));
-        const std::expected<TesterMatch, eastl::string> match = AnalyzeTesterMatch(kLogName, events, {Bot("normal"), Bot("easy")});
+        const Vector<MatchLogEvent> events = PlayLog(PersonsAt(kLogAllComputers, ComputerLevel::Normal));
+        const std::expected<TesterMatch, String> match = AnalyzeTesterMatch(kLogName, events, {Bot("normal"), Bot("easy")});
         ASSERT_TRUE(match.has_value());
         ASSERT_EQ(match->bots.size(), 2U);
         EXPECT_EQ(Total(*match, 0), 0);
@@ -235,20 +235,20 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaTesterTest, ALogThatCannotBeTurnedIntoPositionsIsAnErrorThatNamesIt) {
-        eastl::vector<MatchLogEvent> events = PlayLog(PersonsAt(kLogPersonFirst, ComputerLevel::Normal));
+        Vector<MatchLogEvent> events = PlayLog(PersonsAt(kLogPersonFirst, ComputerLevel::Normal));
         for (MatchLogEvent& event : events) {
             if (event.kind == MatchLogKind::Action) {
                 event.action = HandAction::MakeDeclareWin();
                 break;
             }
         }
-        const std::expected<TesterMatch, eastl::string> match = AnalyzeTesterMatch(kLogName, events, {Bot("normal")});
+        const std::expected<TesterMatch, String> match = AnalyzeTesterMatch(kLogName, events, {Bot("normal")});
         EXPECT_FALSE(match.has_value());
-        EXPECT_EQ(std::string(match.error().c_str()).rfind(kLogName, 0), size_t{0});
+        EXPECT_EQ(String(match.error().c_str()).rfind(kLogName, 0), size_t{0});
     }
 
     TEST(ArenaTesterTest, TwoPositionsWithTheSameViewAndDifferentHiddenTilesGiveTheSameChoice) {
-        const eastl::vector<MatchLogEvent> events = PlayLog(PersonsAt(kLogPersonFirst, ComputerLevel::Normal, kSeedB));
+        const Vector<MatchLogEvent> events = PlayLog(PersonsAt(kLogPersonFirst, ComputerLevel::Normal, kSeedB));
         // The model at the first decision of the person: the log up to its action, replayed.
         size_t first = 0;
         while (first < events.size() && !(events[first].kind == MatchLogKind::Action && events[first].by == SeatKind::Person)) {
@@ -256,7 +256,7 @@ namespace BECore::Mahjong::Arena {
         }
         ASSERT_LT(first, events.size());
         Match match;
-        ASSERT_TRUE(ReplayMatchLog(eastl::vector<MatchLogEvent>(events.begin(), events.begin() + static_cast<ptrdiff_t>(first)), match).has_value());
+        ASSERT_TRUE(ReplayMatchLog(Vector<MatchLogEvent>(events.begin(), events.begin() + static_cast<ptrdiff_t>(first)), match).has_value());
         const Seat seat = events[first].seat;
         HandState state = match.Hand().Capture();
         // Swap a concealed tile of another seat with a live-wall tile of another kind: what the person sees stays.
@@ -275,7 +275,7 @@ namespace BECore::Mahjong::Arena {
             }
         }
         ASSERT_TRUE(swapped);
-        const std::expected<HandModel, eastl::string> changed = HandModel::Restore(state);
+        const std::expected<HandModel, String> changed = HandModel::Restore(state);
         ASSERT_TRUE(changed.has_value()) << changed.error().c_str();
         ASSERT_NE(Snapshot(match.Hand()), Snapshot(*changed));
 
@@ -292,8 +292,8 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaTesterTest, TheSameLogTwiceGivesTheSameNumbers) {
-        const eastl::vector<MatchLogEvent> events = PlayLog(PersonsAt(kLogPersonFirst, ComputerLevel::Easy));
-        const eastl::vector<ArenaPlayer> bots{Bot("normal"), Bot("easy:skipClaimPercent=20"), Bot("10")};
+        const Vector<MatchLogEvent> events = PlayLog(PersonsAt(kLogPersonFirst, ComputerLevel::Easy));
+        const Vector<ArenaPlayer> bots{Bot("normal"), Bot("easy:skipClaimPercent=20"), Bot("10")};
         const TesterMatch one = Analysed(events, bots);
         const TesterMatch two = Analysed(events, bots);
         ASSERT_EQ(one.bots.size(), two.bots.size());
@@ -350,7 +350,7 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaTesterTest, AMatchOfTheKnownPlayersHasPinnedNumbers) {
-        const eastl::vector<MatchLogEvent> events = PlayLog(PersonsAt(kLogPersonFirst, ComputerLevel::Normal));
+        const Vector<MatchLogEvent> events = PlayLog(PersonsAt(kLogPersonFirst, ComputerLevel::Normal));
         const TesterMatch match = Analysed(events, {Bot("normal")});
         EXPECT_EQ(Total(match, 0), kPinnedDecisions);
         EXPECT_EQ(Equal(match, 0), kPinnedEqual);

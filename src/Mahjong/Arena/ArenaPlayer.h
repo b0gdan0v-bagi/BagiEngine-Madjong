@@ -12,7 +12,7 @@ namespace BECore::Mahjong::Arena {
     /// new field of `LevelProfile` needs a row here and a larger `kProfileFieldCount` (the build stops in ArenaPlayer.cpp, which names
     /// every field, and `ArenaPlayerTest` fails when a row does not move its own field).
     struct ProfileKnob {
-        eastl::string_view name;
+        StringView name;
         /// Exactly one of the two members is set: the field is an `int` percent, or a `bool`.
         int LevelProfile::* percent = nullptr;
         bool LevelProfile::* flag = nullptr;
@@ -22,7 +22,7 @@ namespace BECore::Mahjong::Arena {
     /// The number of fields of `LevelProfile`, and so of rows of `kProfileKnobs`.
     inline constexpr size_t kProfileFieldCount = 11;
 
-    inline constexpr eastl::array<ProfileKnob, kProfileFieldCount> kProfileKnobs{{
+    inline constexpr Array<ProfileKnob, kProfileFieldCount> kProfileKnobs{{
         {"skipAcceptancePercent", &LevelProfile::skipAcceptancePercent, nullptr, kPercentBase},
         {"skipDeclarationPercent", &LevelProfile::skipDeclarationPercent, nullptr, kPercentBase},
         {"skipClaimPercent", &LevelProfile::skipClaimPercent, nullptr, kPercentBase},
@@ -47,17 +47,17 @@ namespace BECore::Mahjong::Arena {
         bool random = false;
         OracleKind oracle = OracleKind::None;
         LevelProfile profile = kNormalProfile;
-        eastl::string name = "normal";
+        String name = "normal";
     };
 
     /// The player of `spec`: `random`, a level (`1` .. `10`, or the names `easy` = 1 and `normal` = 5), or a level with knobs, `<level>:<knob>=<value>,...` (the
     /// knobs of `kProfileKnobs`, each at most once; the level's profile is the start and the listed knobs are set on it). An oracle is
     /// `oracle-<name>` (`oracle-acceptance`, `oracle-hands`, `oracle-whole`, `oracle-defence`), with the same optional knobs on the Normal profile.
     /// The names are exactly the lowercase ones. A bad spec is an error text that names the part that is wrong; nothing is thrown.
-    [[nodiscard]] std::expected<ArenaPlayer, eastl::string> ParseArenaPlayer(std::string_view spec);
+    [[nodiscard]] std::expected<ArenaPlayer, String> ParseArenaPlayer(StringView spec);
 
     /// The name of a player for a table (`ArenaPlayer::name`).
-    [[nodiscard]] inline const eastl::string& PlayerName(const ArenaPlayer& player) noexcept {
+    [[nodiscard]] inline const String& PlayerName(const ArenaPlayer& player) noexcept {
         return player.name;
     }
 
@@ -68,6 +68,6 @@ namespace BECore::Mahjong::Arena {
      * A win when it can; else one of the discards that declare the calling hand and the kongs and claims (a pung, a kong, a chow, a
      * concealed or an upgraded kong), picked by `rng`; else any listed action. `actions` must not be empty.
      */
-    [[nodiscard]] HandAction ChooseSeekWin(const eastl::vector<HandAction>& actions, MahjongRng& rng);
+    [[nodiscard]] HandAction ChooseSeekWin(const Vector<HandAction>& actions, MahjongRng& rng);
 
 }  // namespace BECore::Mahjong::Arena

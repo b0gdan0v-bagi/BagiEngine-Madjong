@@ -16,11 +16,11 @@ namespace BECore::Mahjong {
         CenterPanelText panel;
         const HandModel& hand = match.Hand();
         panel.handInRound = HandNumberInRound(match);
-        const eastl::string number = Format("{}", panel.handInRound);
-        const eastl::string roundWind = WindName(strings, match.RoundWind());
+        const String number = Format("{}", panel.handInRound);
+        const String roundWind = WindName(strings, match.RoundWind());
         panel.round = Tr(strings, "panel.round", {{"wind", roundWind}, {"n", number}});
         panel.wall = static_cast<int>(hand.GetWall().LiveCount());
-        const eastl::string wall = Format("{}", panel.wall);
+        const String wall = Format("{}", panel.wall);
         panel.wallText = Tr(strings, "panel.wall", {{"wall", wall}});
         const Seat bottom = BottomSeat(session);
         const Seat turn = TurnSeat(session, hand);

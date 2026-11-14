@@ -37,7 +37,7 @@ namespace BECore::Mahjong::Tests {
         };
 
         /// The log of a match of four computers (8 hands) on `seed`.
-        eastl::vector<MatchLogEvent> PlayedLog(uint32_t seed) {
+        Vector<MatchLogEvent> PlayedLog(uint32_t seed) {
             Match match;
             TableSession session(match);
             MatchLog log;
@@ -55,7 +55,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The first event of `kind`.
-        const MatchLogEvent& First(const eastl::vector<MatchLogEvent>& events, MatchLogKind kind) {
+        const MatchLogEvent& First(const Vector<MatchLogEvent>& events, MatchLogKind kind) {
             for (const MatchLogEvent& event : events) {
                 if (event.kind == kind) {
                     return event;
@@ -72,8 +72,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The error text of an event read from `json` ("" when it is accepted).
-        eastl::string ErrorOf(const Json& json) {
-            const std::expected<MatchLogEvent, eastl::string> event = EventFromJson(json);
+        String ErrorOf(const Json& json) {
+            const std::expected<MatchLogEvent, String> event = EventFromJson(json);
             return event ? "" : event.error();
         }
 
@@ -85,21 +85,20 @@ namespace BECore::Mahjong::Tests {
 
         /// Whether `event` with the member `key` changed to `value` is refused with an error that names `key`.
         ::testing::AssertionResult ChangedMemberIsRefused(const MatchLogEvent& event, const char* key, Json value) {
-            const eastl::string error = ErrorOf(With(EventToJson(event), key, std::move(value)));
+            const String error = ErrorOf(With(EventToJson(event), key, std::move(value)));
             if (error.empty()) {
                 return ::testing::AssertionFailure() << "'" << key << "' changed and still accepted";
             }
-            if (error.find(key) == eastl::string::npos) {
+            if (error.find(key) == String::npos) {
                 return ::testing::AssertionFailure() << "the error does not name '" << key << "': " << error.c_str();
             }
             return ::testing::AssertionSuccess();
         }
 
-        std::string TextOf(const eastl::vector<MatchLogEvent>& events) {
-            std::string text;
+        String TextOf(const Vector<MatchLogEvent>& events) {
+            String text;
             for (const MatchLogEvent& event : events) {
-                text += EventToJson(event).dump();
-                text += '\n';
+                AppendFormat(text, "{}\n", EventToJson(event).dump());
             }
             return text;
         }
@@ -107,21 +106,21 @@ namespace BECore::Mahjong::Tests {
     }  // namespace
 
     TEST_F(MatchLogJsonTest, EveryEventOfAPlayedMatchSurvivesTheRoundTrip) {
-        std::set<MatchLogKind> kinds;
+        Set<MatchLogKind> kinds;
         for (uint32_t seed = kSeed; seed < kSeed + kSeedsToPlay; ++seed) {
-            const eastl::vector<MatchLogEvent> events = PlayedLog(seed);
+            const Vector<MatchLogEvent> events = PlayedLog(seed);
             ASSERT_GT(events.size(), 3u);
             for (size_t index = 0; index < events.size(); ++index) {
                 const MatchLogEvent& event = events[index];
                 kinds.insert(event.kind);
-                const std::expected<MatchLogEvent, eastl::string> back = EventFromJson(EventToJson(event));
+                const std::expected<MatchLogEvent, String> back = EventFromJson(EventToJson(event));
                 ASSERT_TRUE(back.has_value()) << "seed " << seed << " event " << index << ": " << back.error().c_str();
                 EXPECT_EQ(*back, event) << "seed " << seed << " event " << index;
 
                 // Through the text of a line too.
                 const auto parsed = ParseJson(DumpJson(EventToJson(event)));
                 ASSERT_TRUE(parsed.has_value());
-                const std::expected<MatchLogEvent, eastl::string> viaText = EventFromJson(*parsed);
+                const std::expected<MatchLogEvent, String> viaText = EventFromJson(*parsed);
                 ASSERT_TRUE(viaText.has_value()) << viaText.error().c_str();
                 EXPECT_EQ(*viaText, event);
             }
@@ -145,7 +144,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MatchLogJsonTest, TheActionIsTheControlApisActionJson) {
-        std::set<ActionKind> seen;
+        Set<ActionKind> seen;
         for (uint32_t seed = kSeed; seed < kSeed + kSeedsToPlay; ++seed) {
             for (const MatchLogEvent& event : PlayedLog(seed)) {
                 if (event.kind != MatchLogKind::Action) {
@@ -163,7 +162,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MatchLogJsonTest, TheStartLineHasTheDocumentedMembers) {
-        const eastl::vector<MatchLogEvent> events = PlayedLog(kSeed);
+        const Vector<MatchLogEvent> events = PlayedLog(kSeed);
         const Json json = EventToJson(events.front());
         EXPECT_EQ(Member(json, "event"), "start");
         EXPECT_EQ(Member(json, "version"), kMatchLogFormatVersion);
@@ -236,14 +235,14 @@ namespace BECore::Mahjong::Tests {
         const MatchLogEvent start = PlayedLog(kSeed).front();
         Json without = EventToJson(start);
         without.erase("levels");
-        const eastl::string missing = ErrorOf(without);
-        EXPECT_NE(missing.find("levels"), eastl::string::npos) << missing.c_str();
+        const String missing = ErrorOf(without);
+        EXPECT_NE(missing.find("levels"), String::npos) << missing.c_str();
 
         // A version 4 line that has only the old `level` is refused: it names `levels`
         Json onlyLevel = without;
         onlyLevel["level"] = 3;
-        const eastl::string old = ErrorOf(onlyLevel);
-        EXPECT_NE(old.find("levels"), eastl::string::npos) << old.c_str();
+        const String old = ErrorOf(onlyLevel);
+        EXPECT_NE(old.find("levels"), String::npos) << old.c_str();
 
         EXPECT_TRUE(ChangedMemberIsRefused(start, "levels", Json::array({5, 5, 5})));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "levels", Json::array({5, 5, 5, 5, 5})));
@@ -299,15 +298,15 @@ namespace BECore::Mahjong::Tests {
         ASSERT_FALSE(legal.empty());
         ASSERT_TRUE(session.PerformPerson(legal.front()).has_value());
         session.RunComputers();
-        std::set<std::string> seen;
+        Set<String> seen;
         for (const MatchLogEvent& event : log.Events()) {
             if (event.kind == MatchLogKind::Action) {
                 const Json json = EventToJson(event);
-                seen.insert(Member(json, "by").get<std::string>());
+                seen.insert(FromStdString(Member(json, "by").get<std::string>()));  //-NoStd: nlohmann reads a string as std::string
                 EXPECT_EQ(Member(json, "by"), event.seat == person ? "person" : "computer");
             }
         }
-        EXPECT_EQ(seen, (std::set<std::string>{"person", "computer"}));
+        EXPECT_EQ(seen, (Set<String>{"person", "computer"}));
     }
 
     TEST_F(MatchLogJsonTest, TheOriginRoundTripsForEveryPlatformAndEmptyStrings) {
@@ -363,8 +362,8 @@ namespace BECore::Mahjong::Tests {
         for (const char* key : {"platform", "build", "gameVersion"}) {
             Json without = EventToJson(start);
             without.erase(key);
-            const eastl::string missing = ErrorOf(without);
-            EXPECT_NE(missing.find(key), eastl::string::npos) << key << ": " << missing.c_str();
+            const String missing = ErrorOf(without);
+            EXPECT_NE(missing.find(key), String::npos) << key << ": " << missing.c_str();
             EXPECT_TRUE(ChangedMemberIsRefused(start, key, 5));
             EXPECT_TRUE(ChangedMemberIsRefused(start, key, nullptr));
             EXPECT_TRUE(ChangedMemberIsRefused(start, key, Json::array()));
@@ -407,7 +406,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MatchLogJsonTest, TheNicknameIsCheckedAndAnErrorNamesIt) {
         MatchLogEvent start = PlayedLog(kSeed).front();
         start.origin.nickname = "Anna";
-        const std::string longest(kMaxMatchLogNicknameBytes, 'a');
+        const std::string longest(kMaxMatchLogNicknameBytes, 'a');  //-NoStd: the Json input is a std::string
         EXPECT_EQ(kMaxMatchLogNicknameBytes, 24u);
         EXPECT_TRUE(EventFromJson(With(EventToJson(start), "nickname", longest)).has_value());
         EXPECT_TRUE(ChangedMemberIsRefused(start, "nickname", longest + "a")) << "25 bytes";
@@ -415,7 +414,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(ChangedMemberIsRefused(start, "nickname", nullptr));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "nickname", Json::array()));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "nickname", "An\nna"));
-        EXPECT_TRUE(ChangedMemberIsRefused(start, "nickname", std::string("An\0na", 5)));
+        EXPECT_TRUE(ChangedMemberIsRefused(start, "nickname", std::string("An\0na", 5)));  //-NoStd: the Json input, with an embedded NUL
         EXPECT_TRUE(ChangedMemberIsRefused(start, "nickname", "An\x7F"));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "nickname", "\t"));
     }
@@ -435,7 +434,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_TRUE(plain.has_value()) << plain.error().c_str();
             EXPECT_TRUE(plain->origin.nickname.empty());
             // A nickname the version has no place for is not looked at, even one a version 6 reader would refuse.
-            for (const Json& stray : {Json("Anna"), Json(5), Json(std::string(kMaxMatchLogNicknameBytes + 1, 'x'))}) {
+            for (const Json& stray : {Json("Anna"), Json(5), Json(std::string(kMaxMatchLogNicknameBytes + 1, 'x'))}) {  //-NoStd: the Json input
                 const auto ignored = EventFromJson(With(json, "nickname", stray));
                 ASSERT_TRUE(ignored.has_value()) << "version " << version << ": " << ignored.error().c_str();
                 EXPECT_TRUE(ignored->origin.nickname.empty());
@@ -445,7 +444,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MatchLogJsonTest, AWholeLogWithANicknameInItsStartParsesAndReplays) {
-        eastl::vector<MatchLogEvent> events = PlayedLog(kSeed);
+        Vector<MatchLogEvent> events = PlayedLog(kSeed);
         events.front().origin = {MatchPlatform::Web, "a1b2c3d", "0.1.0", "Anna"};
         const auto parsed = ParseMatchLog(TextOf(events).c_str());
         ASSERT_TRUE(parsed.has_value()) << parsed.error().c_str();
@@ -459,9 +458,9 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MatchLogJsonTest, AVersionThreeStartKeepsItsOneLevelAsFourEqualOnes) {
         // A line as the game wrote it before the level of each seat
-        const std::string line =
+        const String line =
             R"({"event":"start","version":3,"seed":41,"settings":{"handsPerMatch":4,"flowers":false,"replayDrawnHand":true,"limit":500,"startingScore":2000},"seats":"PCCC","level":3})";
-        const auto json = ParseJson(eastl::string_view(line.data(), line.size()));
+        const auto json = ParseJson(line);
         ASSERT_TRUE(json.has_value());
         const auto back = EventFromJson(*json);
         ASSERT_TRUE(back.has_value()) << back.error().c_str();
@@ -471,12 +470,12 @@ namespace BECore::Mahjong::Tests {
 
         // Version 3 needs its number 1..10; `levels` is not looked at
         for (const Json& bad : {Json(0), Json(11), Json(-1), Json("5"), Json("normal"), Json(2.5), Json(nullptr)}) {
-            const eastl::string error = ErrorOf(With(*json, "level", bad));
-            EXPECT_NE(error.find("level"), eastl::string::npos) << bad.dump();
+            const String error = ErrorOf(With(*json, "level", bad));
+            EXPECT_NE(error.find("level"), String::npos) << bad.dump();
         }
         Json without = *json;
         without.erase("level");
-        EXPECT_NE(ErrorOf(without).find("level"), eastl::string::npos);
+        EXPECT_NE(ErrorOf(without).find("level"), String::npos);
     }
 
     TEST_F(MatchLogJsonTest, AVersionTwoStartNeedsALevelOfTheTwoNamesAndReadsThemAsOneAndFive) {
@@ -484,31 +483,31 @@ namespace BECore::Mahjong::Tests {
         Json versionTwo = EventToJson(start);
         versionTwo.erase("levels");
         versionTwo["version"] = kMatchLogLevelVersion;
-        for (const auto& [name, level] : {std::pair{"easy", ComputerLevel::Easy}, std::pair{"normal", ComputerLevel::Normal}}) {
+        for (const auto& [name, level] : {Pair<const char*, ComputerLevel>{"easy", ComputerLevel::Easy}, Pair<const char*, ComputerLevel>{"normal", ComputerLevel::Normal}}) {
             const auto back = EventFromJson(With(versionTwo, "level", name));
             ASSERT_TRUE(back.has_value()) << back.error().c_str();
             EXPECT_EQ(back->levels, UniformLevels(level)) << name;
         }
         Json without = versionTwo;
         without.erase("level");
-        const eastl::string missing = ErrorOf(without);
-        EXPECT_NE(missing.find("level"), eastl::string::npos) << missing.c_str();
+        const String missing = ErrorOf(without);
+        EXPECT_NE(missing.find("level"), String::npos) << missing.c_str();
         for (const char* bad : {"Easy", "Hard", "easy ", "expert", "", "1", "5"}) {
             EXPECT_FALSE(EventFromJson(With(versionTwo, "level", bad)).has_value()) << "'" << bad << "'";
         }
         EXPECT_FALSE(EventFromJson(With(versionTwo, "level", 1)).has_value()) << "version 2 wrote names, not numbers";
         // An unknown name is answered with the two names
-        const eastl::string unknown = ErrorOf(With(versionTwo, "level", "expert"));
-        EXPECT_NE(unknown.find("easy or normal"), eastl::string::npos) << unknown.c_str();
-        EXPECT_EQ(unknown.find("hard"), eastl::string::npos) << unknown.c_str();
+        const String unknown = ErrorOf(With(versionTwo, "level", "expert"));
+        EXPECT_NE(unknown.find("easy or normal"), String::npos) << unknown.c_str();
+        EXPECT_EQ(unknown.find("hard"), String::npos) << unknown.c_str();
     }
 
     TEST_F(MatchLogJsonTest, AVersionTwoStartThatNamesHardReadsAsNormal) {
-        const eastl::vector<MatchLogEvent> events = PlayedLog(kSeed);
+        const Vector<MatchLogEvent> events = PlayedLog(kSeed);
         const MatchLogEvent& start = events.front();
         ASSERT_EQ(start.kind, MatchLogKind::Start);
         ASSERT_EQ(start.levels, UniformLevels(ComputerLevel::Normal));
-        Json hard = With(EventToJson(start), "level", std::string(kMatchLogRetiredLevelName));
+        Json hard = With(EventToJson(start), "level", ToStdString(kMatchLogRetiredLevelName));
         hard.erase("levels");
         hard["version"] = kMatchLogLevelVersion;
         const auto back = EventFromJson(hard);
@@ -517,11 +516,10 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(*back, start);
 
         // The whole file, with its first line written as an old game wrote it, reads back as the same log and replays.
-        std::string text = hard.dump();
+        String text = FromStdString(hard.dump());
         text += '\n';
         for (size_t index = 1; index < events.size(); ++index) {
-            text += EventToJson(events[index]).dump();
-            text += '\n';
+            AppendFormat(text, "{}\n", EventToJson(events[index]).dump());
         }
         const auto parsed = ParseMatchLog(text);
         ASSERT_TRUE(parsed.has_value()) << parsed.error().c_str();
@@ -538,7 +536,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MatchLogJsonTest, TheHandLineListsFourteenTilesForEastAndThirteenForTheOthers) {
-        const eastl::vector<MatchLogEvent> events = PlayedLog(kSeed);
+        const Vector<MatchLogEvent> events = PlayedLog(kSeed);
         const MatchLogEvent& hand = First(events, MatchLogKind::Hand);
         const Json json = EventToJson(hand);
         EXPECT_EQ(Member(json, "event"), "hand");
@@ -601,8 +599,8 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MatchLogJsonTest, AWholeFileIsReadBackAndReplays) {
-        const eastl::vector<MatchLogEvent> events = PlayedLog(kSeed);
-        std::string text = TextOf(events);
+        const Vector<MatchLogEvent> events = PlayedLog(kSeed);
+        String text = TextOf(events);
         // Blank lines and a CRLF ending are skipped / tolerated.
         const size_t firstBreak = text.find('\n');
         text.insert(firstBreak + 1, "\n   \n");
@@ -622,32 +620,32 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MatchLogJsonTest, AMalformedLineIsAnErrorWithItsLineNumber) {
-        const eastl::vector<MatchLogEvent> events = PlayedLog(kSeed);
-        const std::string valid = EventToJson(events.front()).dump();
+        const Vector<MatchLogEvent> events = PlayedLog(kSeed);
+        const String valid = FromStdString(EventToJson(events.front()).dump());
         struct Case {
-            std::string line;
+            String line;
             const char* expected;  // a part of the error text
         };
-        const std::vector<Case> cases = {
+        const Vector<Case> cases = {
             {"[1, 2]", "JSON object"},        {"42", "JSON object"},
             {"{\"seed\": 1}", "event"},       {"{\"event\": \"nonsense\"}", "event"},
             {"{\"event\": 5}", "event"},      {"{\"event\": \"start\", ", "not JSON"},
-            {"this is not JSON", "not JSON"}, {With(EventToJson(First(events, MatchLogKind::Action)), "seat", kBadSeat).dump(), "seat"},
+            {"this is not JSON", "not JSON"}, {FromStdString(With(EventToJson(First(events, MatchLogKind::Action)), "seat", kBadSeat).dump()), "seat"},
         };
         for (const Case& test : cases) {
-            const std::string text = valid + "\n\n" + test.line + "\n" + valid + "\n";
+            const String text = Format("{}\n\n{}\n{}\n", valid, test.line, valid);
             const auto parsed = ParseMatchLog(text);
             ASSERT_FALSE(parsed.has_value()) << test.line;
             EXPECT_EQ(parsed.error().rfind("line 3: ", 0), 0u) << parsed.error().c_str();
-            EXPECT_NE(parsed.error().find(test.expected), eastl::string::npos) << test.line << " -> " << parsed.error().c_str();
+            EXPECT_NE(parsed.error().find(test.expected), String::npos) << test.line << " -> " << parsed.error().c_str();
         }
         // The first and a late line are named too.
         EXPECT_EQ(ParseMatchLog("{").error().rfind("line 1: ", 0), 0u);
-        EXPECT_EQ(ParseMatchLog(valid + "\n" + valid + "\n[]").error().rfind("line 3: ", 0), 0u);
+        EXPECT_EQ(ParseMatchLog(Format("{}\n{}\n[]", valid, valid)).error().rfind("line 3: ", 0), 0u);
     }
 
     TEST_F(MatchLogJsonTest, EveryWrongMemberIsRefusedAndNamed) {
-        const eastl::vector<MatchLogEvent> events = PlayedLog(kSeed);
+        const Vector<MatchLogEvent> events = PlayedLog(kSeed);
         const MatchLogEvent& start = events.front();
         EXPECT_TRUE(ChangedMemberIsRefused(start, "seats", "PCC"));
         EXPECT_TRUE(ChangedMemberIsRefused(start, "seats", "PCCX"));
@@ -659,8 +657,8 @@ namespace BECore::Mahjong::Tests {
         {
             Json settings = EventToJson(start)["settings"];
             settings["limit"] = "many";
-            const eastl::string error = ErrorOf(With(EventToJson(start), "settings", settings));
-            EXPECT_NE(error.find("limit"), eastl::string::npos) << error.c_str();
+            const String error = ErrorOf(With(EventToJson(start), "settings", settings));
+            EXPECT_NE(error.find("limit"), String::npos) << error.c_str();
         }
 
         const MatchLogEvent& hand = First(events, MatchLogKind::Hand);
@@ -672,11 +670,11 @@ namespace BECore::Mahjong::Tests {
         {
             Json json = EventToJson(hand);
             json["deal"][1]["concealed"][0] = kBadTile;
-            const eastl::string error = ErrorOf(json);
-            EXPECT_NE(error.find("concealed"), eastl::string::npos) << error.c_str();
-            EXPECT_NE(error.find(kBadTile), eastl::string::npos) << error.c_str();
+            const String error = ErrorOf(json);
+            EXPECT_NE(error.find("concealed"), String::npos) << error.c_str();
+            EXPECT_NE(error.find(kBadTile), String::npos) << error.c_str();
             json["deal"][1]["concealed"][0] = 5;
-            EXPECT_NE(ErrorOf(json).find("concealed"), eastl::string::npos);
+            EXPECT_NE(ErrorOf(json).find("concealed"), String::npos);
         }
 
         const MatchLogEvent& action = First(events, MatchLogKind::Action);
@@ -690,7 +688,7 @@ namespace BECore::Mahjong::Tests {
             Json json = EventToJson(action);
             json["action"] = ActionToJson(HandAction::MakeDiscard(T("5p")));
             json["action"]["tile"] = kBadTile;
-            EXPECT_NE(ErrorOf(json).find("action"), eastl::string::npos);
+            EXPECT_NE(ErrorOf(json).find("action"), String::npos);
         }
 
         const MatchLogEvent& settlement = First(events, MatchLogKind::Settlement);
@@ -724,15 +722,15 @@ namespace BECore::Mahjong::Tests {
                 }
                 Json without = json;
                 without.erase(item.key());
-                const eastl::string error = ErrorOf(without);
+                const String error = ErrorOf(without);
                 EXPECT_FALSE(error.empty()) << "without '" << item.key() << "'";
-                EXPECT_NE(error.find(item.key().c_str()), eastl::string::npos) << error.c_str();
+                EXPECT_NE(error.find(item.key().c_str()), String::npos) << error.c_str();
             }
         }
     }
 
     TEST_F(MatchLogJsonTest, TheBreakdownsOfASettlementAreNotRequiredToReadItBack) {
-        const eastl::vector<MatchLogEvent> events = PlayedLog(kSeed);
+        const Vector<MatchLogEvent> events = PlayedLog(kSeed);
         const MatchLogEvent& settlement = First(events, MatchLogKind::Settlement);
         Json json = EventToJson(settlement);
         json.erase("seats");
@@ -747,9 +745,9 @@ namespace BECore::Mahjong::Tests {
             for (size_t seat = 0; seat < kSeatCount; ++seat) {
                 seats[seat] = ((bits >> seat) & 1) != 0 ? SeatKind::Person : SeatKind::Computer;
             }
-            const eastl::string letters = SeatsToLetters(seats);
+            const String letters = SeatsToLetters(seats);
             EXPECT_EQ(letters.size(), 4u);
-            const std::optional<SeatSetup> back = ReadSeats(letters);
+            const Optional<SeatSetup> back = ReadSeats(letters);
             ASSERT_TRUE(back.has_value());
             EXPECT_EQ(*back, seats);
         }

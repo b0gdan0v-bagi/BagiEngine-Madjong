@@ -47,7 +47,7 @@ namespace BECore::Mahjong {
         /// Fisher-Yates, written by hand: for a size i from the item count down to 2, the item at index i - 1 swaps with the one at
         /// index `Below(i)`.
         template <typename T>
-        void Shuffle(eastl::vector<T>& items) {
+        void Shuffle(Vector<T>& items) {
             for (size_t i = items.size(); i > 1; --i) {
                 const size_t j = Below(static_cast<uint32_t>(i));
                 eastl::swap(items[i - 1], items[j]);

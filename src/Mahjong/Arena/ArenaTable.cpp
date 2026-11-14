@@ -28,7 +28,7 @@ namespace BECore::Mahjong::Arena {
             return declared;
         }
 
-        void AddOwnTurnRounds(TableStats& stats, const eastl::vector<int>& declared, bool otherWon) {
+        void AddOwnTurnRounds(TableStats& stats, const Vector<int>& declared, bool otherWon) {
             const int turns = static_cast<int>(declared.size());
             for (int turn = 1; turn <= turns; ++turn) {
                 const size_t bucket = static_cast<size_t>(declared[static_cast<size_t>(turn - 1)]);
@@ -67,11 +67,11 @@ namespace BECore::Mahjong::Arena {
             return kIntervalZ * std::sqrt(std::max(variance, 0.0) / n);
         }
 
-        void AddRight(eastl::string& text, const eastl::string& cell, int width) {
+        void AddRight(String& text, const String& cell, int width) {
             text.append(Format("{}{:>{}}", kColumnGap, cell, width));
         }
 
-        void EndLine(eastl::string& text, size_t lineStart) {
+        void EndLine(String& text, size_t lineStart) {
             size_t end = text.size();
             while (end > lineStart && text[end - 1] == ' ') {
                 --end;
@@ -80,7 +80,7 @@ namespace BECore::Mahjong::Arena {
             text.push_back('\n');
         }
 
-        eastl::string Fixed(double value, int precision = kPrecision) {
+        String Fixed(double value, int precision = kPrecision) {
             return Format("{:.{}f}", value, precision);
         }
 
@@ -88,7 +88,7 @@ namespace BECore::Mahjong::Arena {
             return whole > 0 ? kPercent * static_cast<double>(part) / static_cast<double>(whole) : 0.0;
         }
 
-        void AddRoundsTable(eastl::string& text, const TableStats& stats) {
+        void AddRoundsTable(String& text, const TableStats& stats) {
             text.append("\nanother seat wins in the following round, by the opponents that have declared (d)\n");
             text.append("  each row: own turns observed, per mille that another seat wins in the next round, survival % after 1..4 rounds; the row below is (1-h)^i\n");
             size_t start = text.size();
@@ -123,7 +123,7 @@ namespace BECore::Mahjong::Arena {
             }
         }
 
-        void AddScoreRow(eastl::string& text, std::string_view label, const SampleSums& sums) {
+        void AddScoreRow(String& text, StringView label, const SampleSums& sums) {
             const size_t start = text.size();
             text.append(Format("{:<{}}", label, kLabelWidth));
             AddRight(text, Format("{}", sums.n), kNumberWidth);
@@ -140,7 +140,7 @@ namespace BECore::Mahjong::Arena {
     }
 
     HandObserver MakeOwnTurnObserver(OwnTurns& turns) {
-        for (eastl::vector<int>& seat : turns) {
+        for (Vector<int>& seat : turns) {
             seat.clear();
         }
         return [&turns](const HandModel& hand, Seat actor) {
@@ -169,21 +169,21 @@ namespace BECore::Mahjong::Arena {
         }
     }
 
-    std::expected<TableStats, eastl::string> RunTableStats(const TableStatsConfig& config) {
+    std::expected<TableStats, String> RunTableStats(const TableStatsConfig& config) {
         ArenaConfig valid;
         valid.first = config.first;
         valid.count = config.count;
         valid.focus.push_back(config.player);
         valid.others = config.player;
         valid.jobs = config.jobs;
-        const eastl::string problem = ValidateArenaConfig(valid);
+        const String problem = ValidateArenaConfig(valid);
         if (!problem.empty()) {
             return std::unexpected(problem);
         }
         const size_t seedCount = static_cast<size_t>(config.count);
         // One slot per seed: a thread writes only the slots of the seeds it took; the slots are summed in seed order.
-        eastl::vector<TableStats> slots(seedCount);
-        eastl::vector<eastl::string> errors(seedCount);
+        Vector<TableStats> slots(seedCount);
+        Vector<String> errors(seedCount);
         std::atomic<int> nextSeed{0};
         std::atomic<int> lowestFailed{config.count};
         ArenaPlayers players;
@@ -197,7 +197,7 @@ namespace BECore::Mahjong::Arena {
                 OwnTurns turns;
                 const HandObserver observer = MakeOwnTurnObserver(turns);
                 const uint32_t seed = config.first + static_cast<uint32_t>(index);
-                const std::expected<HandRecord, eastl::string> record = PlayArenaHand(seed, players, false, nullptr, &observer);
+                const std::expected<HandRecord, String> record = PlayArenaHand(seed, players, false, nullptr, &observer);
                 if (record.has_value()) {
                     AddHand(slots[static_cast<size_t>(index)], *record, turns);
                     continue;
@@ -209,7 +209,7 @@ namespace BECore::Mahjong::Arena {
             }
         };
         const int threadCount = std::min(config.jobs, config.count);
-        eastl::vector<std::thread> threads;
+        Vector<std::thread> threads;
         for (int thread = 1; thread < threadCount; ++thread) {
             threads.emplace_back(work);
         }
@@ -217,7 +217,7 @@ namespace BECore::Mahjong::Arena {
         for (std::thread& thread : threads) {
             thread.join();
         }
-        for (const eastl::string& error : errors) {
+        for (const String& error : errors) {
             if (!error.empty()) {
                 return std::unexpected(error);
             }
@@ -247,8 +247,8 @@ namespace BECore::Mahjong::Arena {
         return total;
     }
 
-    eastl::string FormatTableStats(const TableStats& stats) {
-        eastl::string text;
+    String FormatTableStats(const TableStats& stats) {
+        String text;
         const int64_t last = static_cast<int64_t>(stats.first) + stats.count - 1;
         text.append(Format("Table statistics: four {} seats, seeds {} .. {} ({} hands)\n", stats.player, stats.first, last, stats.hands));
         const int64_t won = stats.hands - stats.drawn;

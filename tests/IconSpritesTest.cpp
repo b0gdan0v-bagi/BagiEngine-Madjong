@@ -33,7 +33,7 @@ namespace BECore::Mahjong::Tests {
         constexpr int kIconAtlasWidth = kIconCellSize * kIconColumns;
         constexpr int kIconAtlasHeight = kIconCellSize * kIconRows;
         constexpr const char* kIconAtlasPath = "assets/icons/icons.png";
-        constexpr eastl::string_view kIconSpritePrefix = "Icon_";
+        constexpr StringView kIconSpritePrefix = "Icon_";
         constexpr const char* kIconNames[] = {"Icon_Rules", "Icon_Options", "Icon_NewGame", "Icon_Leave", "Icon_Close", "Icon_Back", "Icon_Next", "Icon_Hint"};
         constexpr size_t kIconCount = sizeof(kIconNames) / sizeof(kIconNames[0]);
 
@@ -41,14 +41,14 @@ namespace BECore::Mahjong::Tests {
             return std::filesystem::path(__FILE__).parent_path().parent_path();
         }
 
-        uint32_t ReadBigEndian(const std::vector<unsigned char>& bytes, size_t offset) {
+        uint32_t ReadBigEndian(const Vector<unsigned char>& bytes, size_t offset) {
             return (static_cast<uint32_t>(bytes[offset]) << 24) | (static_cast<uint32_t>(bytes[offset + 1]) << 16) | (static_cast<uint32_t>(bytes[offset + 2]) << 8) |
                    static_cast<uint32_t>(bytes[offset + 3]);
         }
 
         struct Sprite {
-            eastl::string name;
-            eastl::string texturePath;
+            String name;
+            String texturePath;
             Rect rect;
         };
 
@@ -71,15 +71,15 @@ namespace BECore::Mahjong::Tests {
             const XmlNode sprites = config.GetRoot().GetChild("sprites");
             ASSERT_TRUE(static_cast<bool>(sprites));
             for (const XmlNode node : sprites.Children()) {
-                if (node.Name() != eastl::string_view("sprite")) {
+                if (node.Name() != StringView("sprite")) {
                     continue;
                 }
                 Sprite sprite;
-                sprite.name = eastl::string(node.GetAttribute("name").value_or(""));
+                sprite.name = String(node.GetAttribute("name").value_or(""));
                 if (sprite.name.compare(0, kIconSpritePrefix.size(), kIconSpritePrefix.data()) != 0) {
                     continue;  // the tiles are TileSpritesTest's
                 }
-                sprite.texturePath = eastl::string(node.GetAttribute("texturePath").value_or(""));
+                sprite.texturePath = String(node.GetAttribute("texturePath").value_or(""));
                 const XmlNode source = node.GetChild("srcRect");
                 ASSERT_TRUE(static_cast<bool>(source)) << sprite.name.c_str();
                 sprite.rect = Rect(source.ParseAttribute<float>("x").value_or(-1.0f), source.ParseAttribute<float>("y").value_or(-1.0f), source.ParseAttribute<float>("w").value_or(-1.0f),
@@ -88,18 +88,18 @@ namespace BECore::Mahjong::Tests {
             }
         }
 
-        eastl::vector<Sprite> _sprites;
+        Vector<Sprite> _sprites;
     };
 
     TEST_F(IconSpritesTest, ThePngIsAnRgbaPictureOfTheAtlasSize) {
         const std::filesystem::path pngPath = GameRoot() / kIconAtlasPath;
         std::ifstream file(pngPath, std::ios::binary);
         ASSERT_TRUE(file.is_open()) << pngPath.string();
-        std::vector<unsigned char> head(kIhdrDataOffset + kIhdrSize);
+        Vector<unsigned char> head(kIhdrDataOffset + kIhdrSize);
         file.read(reinterpret_cast<char*>(head.data()), static_cast<std::streamsize>(head.size()));
         ASSERT_EQ(static_cast<size_t>(file.gcount()), head.size());
         EXPECT_TRUE(std::equal(std::begin(kPngSignature), std::end(kPngSignature), head.begin()));
-        EXPECT_EQ(std::string(head.begin() + kIhdrTypeOffset, head.begin() + kIhdrDataOffset), "IHDR");
+        EXPECT_EQ(std::string(head.begin() + kIhdrTypeOffset, head.begin() + kIhdrDataOffset), "IHDR");  //-NoStd: the bytes of the PNG chunk type
         EXPECT_EQ(ReadBigEndian(head, kIhdrDataOffset), static_cast<uint32_t>(kIconAtlasWidth));
         EXPECT_EQ(ReadBigEndian(head, kIhdrDataOffset + kIhdrHeightOffset), static_cast<uint32_t>(kIconAtlasHeight));
         EXPECT_EQ(head[kIhdrDataOffset + kIhdrDepthOffset], kBitDepth);
@@ -111,8 +111,8 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(_sprites.size(), kIconCount);
         for (size_t index = 0; index < kIconCount; ++index) {
             const Sprite& sprite = _sprites[index];
-            EXPECT_EQ(sprite.name, eastl::string(kIconNames[index]));
-            EXPECT_EQ(sprite.texturePath, eastl::string(kIconAtlasPath)) << sprite.name.c_str();
+            EXPECT_EQ(sprite.name, String(kIconNames[index]));
+            EXPECT_EQ(sprite.texturePath, String(kIconAtlasPath)) << sprite.name.c_str();
             const int column = static_cast<int>(index) % kIconColumns;
             const int row = static_cast<int>(index) / kIconColumns;
             EXPECT_EQ(sprite.rect.x, static_cast<float>(column * kIconCellSize)) << sprite.name.c_str();

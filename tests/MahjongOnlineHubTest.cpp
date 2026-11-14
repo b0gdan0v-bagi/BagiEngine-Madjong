@@ -1,5 +1,6 @@
 #include "MahjongHubTransport.h"
 
+#include <Common/Printers.h>
 #include <Mahjong/MahjongGameControl.h>
 #include <Mahjong/Online/OnlineWords.h>
 #include <Rooms/RoomErrors.h>
@@ -17,9 +18,9 @@ namespace BECore::Mahjong::Tests {
 
         using std::chrono::milliseconds;
         using std::chrono::seconds;
-        using Players = std::vector<HubPlayer*>;
+        using Players = Vector<HubPlayer*>;
 
-        constexpr eastl::string_view kUrl = "ws://hub.test";
+        constexpr StringView kUrl = "ws://hub.test";
         constexpr milliseconds kTick{10};
         constexpr int kStepLimit = 60000;
         constexpr int kWarmUpVersion = 20;
@@ -96,7 +97,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         void ExpectNoNotice(const HubPlayer& player) {
-            EXPECT_EQ(player.Client().Notice().serial, 0u) << std::string(player.Client().Notice().key.data(), player.Client().Notice().key.size());
+            EXPECT_EQ(player.Client().Notice().serial, 0u) << String(player.Client().Notice().key.data(), player.Client().Notice().key.size());
         }
 
         /// What the table of @p seat holds is what the adapter gives that seat now (the caller has checked that the versions agree).
@@ -229,7 +230,7 @@ namespace BECore::Mahjong::Tests {
         // the computers are ready at once and do not take the end screen from the people
         Settle(world, players);
         EXPECT_TRUE(AllInPhase(players, SessionPhase::HandOver));
-        const eastl::array<bool, kSeatCount> peopleWait = {false, true, false, true};
+        const Array<bool, kSeatCount> peopleWait = {false, true, false, true};
         EXPECT_TRUE(host.Table().ready == peopleWait);
         EXPECT_TRUE(guest.Table().ready == peopleWait);
 
@@ -237,7 +238,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(RunUntil(world, players, [&] { return AllInPhase(players, SessionPhase::Playing) && host.Table().handsPlayed == 1 && guest.Table().handsPlayed == 1; }));
         for (const HubPlayer* player : players) {
             EXPECT_FALSE(player->Table().result.has_value());
-            EXPECT_TRUE(player->Table().ready == (eastl::array<bool, kSeatCount>{}));
+            EXPECT_TRUE(player->Table().ready == (Array<bool, kSeatCount>{}));
             ExpectNoNotice(*player);
         }
         ExpectJudgedClean(world);
@@ -277,7 +278,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(RunUntil(world, players, [&] { return host.Client().Lobby().humans == kSeatCount; }));
         ASSERT_NO_FATAL_FAILURE(StartAndWait(world, host, players));
 
-        std::set<int> seats;
+        Set<int> seats;
         for (const HubPlayer* player : players) {
             seats.insert(player->Client().Seat());
             EXPECT_EQ(player->Table().seat, player->Client().Seat());
@@ -384,7 +385,7 @@ namespace BECore::Mahjong::Tests {
 
         // the app closes: the model keeps the session, the game stores it as JSON and reads it again after the restart
         guest.Client().Disconnect();
-        const std::optional<RoomSession> stored = SessionFromJson(SessionToJson(guest.Client().SessionToKeep()));
+        const Optional<RoomSession> stored = SessionFromJson(SessionToJson(guest.Client().SessionToKeep()));
         ASSERT_TRUE(stored.has_value());
 
         HubPlayer back(world);
@@ -428,7 +429,7 @@ namespace BECore::Mahjong::Tests {
         HubPlayer guest(world);
         ASSERT_NO_FATAL_FAILURE(HostRoom(world, host));
         ASSERT_NO_FATAL_FAILURE(JoinRoom(world, guest, host, "Bob"));
-        const std::string room(guest.Client().Room().c_str(), guest.Client().Room().size());
+        const String room(guest.Client().Room().c_str(), guest.Client().Room().size());
         ASSERT_TRUE(RunUntil(world, {&host, &guest}, [&] { return guest.Client().Lobby().humans == 2; }));
         EXPECT_FALSE(guest.Client().IsHost());
 
@@ -438,7 +439,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(guest.Client().Lobby().canStart);
         EXPECT_TRUE(guest.Client().Lobby().seats[static_cast<size_t>(guest.Client().Seat())].host);
         EXPECT_EQ(guest.Client().Lobby().humans, 1);
-        EXPECT_EQ(std::string(guest.Client().Room().c_str()), room) << "the room goes on";
+        EXPECT_EQ(String(guest.Client().Room().c_str()), room) << "the room goes on";
 
         // the new host starts a game alone; a newcomer finds the room started
         ASSERT_NO_FATAL_FAILURE(StartAndWait(world, guest, {&guest}));

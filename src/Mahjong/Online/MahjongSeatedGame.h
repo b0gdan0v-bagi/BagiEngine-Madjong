@@ -8,7 +8,7 @@
 namespace BECore::Mahjong {
 
     /// The name a room server registers the game under (`create_room {game}`).
-    inline constexpr eastl::string_view kSeatedGameName = "mahjong";
+    inline constexpr StringView kSeatedGameName = "mahjong";
 
     /// The `format` number in every view of a started game. A client reads exactly its own number and says so in words when a server
     /// sends another. Bump it with every change of the keys or the meaning of a view that an old client cannot read (a change in
@@ -17,7 +17,7 @@ namespace BECore::Mahjong {
 
     /// The key of the room setting "hints and the coach are allowed at this table": an option of `Start` and a boolean in every view of a
     /// started game. Additive, so `kOnlineViewFormat` stays: a reader that does not know the key reads "not allowed".
-    inline constexpr eastl::string_view kHintsAllowedKey = "hintsAllowed";
+    inline constexpr StringView kHintsAllowedKey = "hintsAllowed";
 
     /// The seed of the computer that answers at state version `version` of a match seeded `seed`: one function of both, so the same state
     /// gives the same answer and the next state another one.
@@ -50,7 +50,7 @@ namespace BECore::Mahjong {
         [[nodiscard]] std::expected<Json, ControlError> GetSeatView(int seat) const override;
         [[nodiscard]] std::expected<Json, ControlError> GetSeatActions(int seat) const override;
         std::expected<Json, ControlError> PerformSeatAction(int seat, const Json& action) override;
-        [[nodiscard]] std::optional<Json> ChooseComputerAction(int seat) const override;
+        [[nodiscard]] Optional<Json> ChooseComputerAction(int seat) const override;
         [[nodiscard]] bool IsFinished() const override;
         [[nodiscard]] uint64_t GetStateVersion() const override;
 
@@ -71,7 +71,7 @@ namespace BECore::Mahjong {
         /// What `seat` may send now; `nextHand` stands for the ready check, `hand` for the actions in the hand.
         struct SeatMoves {
             bool nextHand = false;
-            eastl::vector<HandAction> hand;
+            Vector<HandAction> hand;
 
             [[nodiscard]] bool Empty() const noexcept {
                 return !nextHand && hand.empty();
@@ -86,7 +86,7 @@ namespace BECore::Mahjong {
         bool _hintsAllowed = false;
         uint32_t _matchSeed = 0;
         uint64_t _version = 0;
-        eastl::array<bool, kSeatCount> _ready{};
+        Array<bool, kSeatCount> _ready{};
     };
 
 }  // namespace BECore::Mahjong

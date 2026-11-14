@@ -70,13 +70,13 @@ namespace BECore::Mahjong::Tests {
         };
 
         /// What a refused call must leave as it was: the hand, the scores, the count, the version, the viewer and the phase.
-        std::string State(const Table& table) {
-            std::string text = Snapshot(table.match.Hand()) + " | scores";
+        String State(const Table& table) {
+            String text = Format("{} | scores", Snapshot(table.match.Hand()));
             for (const int score : table.match.Scores()) {
-                text += " " + std::to_string(score);
+                AppendFormat(text, " {}", score);
             }
-            text += " | hands " + std::to_string(table.match.HandsPlayed()) + " version " + std::to_string(table.session.Version());
-            text += " viewer " + std::to_string(table.session.Viewer()) + " phase " + Name(table.session.GetPhase());
+            AppendFormat(text, " | hands {} version {}", table.match.HandsPlayed(), table.session.Version());
+            AppendFormat(text, " viewer {} phase {}", table.session.Viewer(), Name(table.session.GetPhase()));
             for (const ComputerLevel level : table.session.Levels()) {
                 text += " level " + Name(level);
             }
@@ -85,7 +85,7 @@ namespace BECore::Mahjong::Tests {
 
         /// A person takes the action of `mode` from the legal ones of the actor.
         HandStatus PersonActs(TableSession& session, const HandModel& hand, Mode mode, MahjongRng& rng) {
-            const eastl::vector<HandAction> legal = hand.LegalActions(session.Actor());
+            const Vector<HandAction> legal = hand.LegalActions(session.Actor());
             EXPECT_FALSE(legal.empty());
             return session.PerformPerson(Choose(legal, mode, rng));
         }
@@ -160,7 +160,7 @@ namespace BECore::Mahjong::Tests {
     TEST(TableSessionTest, ABadHandsPerMatchIsRefusedAndNothingChanges) {
         Table table;
         ASSERT_NO_FATAL_FAILURE(table.Start(kDefaultSeatSetup));
-        const std::string before = State(table);
+        const String before = State(table);
         MahjongSettings bad;
         bad.handsPerMatch = kUnplayableHandsPerMatch;
         const MatchStatus refused = table.session.StartMatch(bad, kSeed + 1, kAllComputers);
@@ -201,7 +201,7 @@ namespace BECore::Mahjong::Tests {
     TEST(TableSessionTest, ARefusedStartKeepsTheOldLevelAndTheMatch) {
         Table table;
         ASSERT_NO_FATAL_FAILURE(table.StartAt(ComputerLevel::Easy));
-        const std::string before = State(table);
+        const String before = State(table);
         MahjongSettings bad;
         bad.handsPerMatch = kUnplayableHandsPerMatch;
         const MatchStatus refused = table.session.StartMatch(bad, kSeed + 1, kAllComputers, ComputerLevel::Normal);
@@ -237,7 +237,7 @@ namespace BECore::Mahjong::Tests {
     TEST(TableSessionTest, ARefusedStartOfSeatLevelsChangesNothing) {
         Table table;
         ASSERT_TRUE(table.session.StartMatch(ShortMatch(), kSeed, kAllComputers, SeatLevels{ComputerLevel{2}, ComputerLevel{4}, ComputerLevel{6}, ComputerLevel{8}}).has_value());
-        const std::string before = State(table);
+        const String before = State(table);
         MahjongSettings bad;
         bad.handsPerMatch = kUnplayableHandsPerMatch;
         const MatchStatus refused = table.session.StartMatch(bad, kSeed + 1, kDefaultSeatSetup, UniformLevels(ComputerLevel::Easy));
@@ -285,8 +285,8 @@ namespace BECore::Mahjong::Tests {
         const SeatLevels levels{ComputerLevel{10}, ComputerLevel{2}, ComputerLevel{5}, ComputerLevel{1}};
         Table table;
         ASSERT_TRUE(table.session.StartMatch(ShortMatch(), kSeed + 5, kAllComputers, ComputerLevel::Easy).has_value());
-        const std::string before = State(table);
-        eastl::vector<MatchLogEvent> broken = log.Events();
+        const String before = State(table);
+        Vector<MatchLogEvent> broken = log.Events();
         broken[0].settings.handsPerMatch = kUnplayableHandsPerMatch;
         const ReplayStatus refused = table.session.ResumeMatch(broken, kAllComputers, levels);
         ASSERT_FALSE(refused.has_value());
@@ -364,7 +364,7 @@ namespace BECore::Mahjong::Tests {
                 if (hand.GetPhase() == Phase::Discard) {
                     ASSERT_EQ(table.session.Actor(), hand.CurrentSeat());
                 } else if (hand.PendingClaimSeats().size() >= 2) {
-                    const eastl::vector<Seat> pending = hand.PendingClaimSeats();
+                    const Vector<Seat> pending = hand.PendingClaimSeats();
                     ASSERT_EQ(table.session.Actor(), pending.front());
                     const Seat first = pending.front();
                     ASSERT_TRUE(table.session.PerformPerson(HandAction::MakePass()).has_value());
@@ -390,7 +390,7 @@ namespace BECore::Mahjong::Tests {
         const Seat east = table.match.East();
         ASSERT_NO_FATAL_FAILURE(table.Start(PersonAt(east)));
         // The actor is a person: a step is refused and changes nothing.
-        const std::string before = State(table);
+        const String before = State(table);
         const StepResult refused = table.session.StepComputer();
         ASSERT_FALSE(refused.has_value());
         EXPECT_EQ(refused.error(), HandError::NotYourTurn);
@@ -399,7 +399,7 @@ namespace BECore::Mahjong::Tests {
         // The actor is a computer: the step is one of its legal actions, applied, and moves the version once.
         ASSERT_NO_FATAL_FAILURE(table.Start(PersonAt(NextSeat(east))));
         const Seat actor = table.session.Actor();
-        const eastl::vector<HandAction> legal = table.match.Hand().LegalActions(actor);
+        const Vector<HandAction> legal = table.match.Hand().LegalActions(actor);
         const uint64_t version = table.session.Version();
         const StepResult step = table.session.StepComputer();
         ASSERT_TRUE(step.has_value());
@@ -448,8 +448,8 @@ namespace BECore::Mahjong::Tests {
         const Seat east = table.match.East();
         // The actor is a computer: refused.
         ASSERT_NO_FATAL_FAILURE(table.Start(PersonAt(NextSeat(east))));
-        std::string before = State(table);
-        const eastl::vector<HandAction> legal = table.match.Hand().LegalActions(east);
+        String before = State(table);
+        const Vector<HandAction> legal = table.match.Hand().LegalActions(east);
         ASSERT_FALSE(legal.empty());
         EXPECT_EQ(Error(table.session.PerformPerson(legal.front())), HandError::NotYourTurn);
         EXPECT_EQ(State(table), before);
@@ -464,7 +464,7 @@ namespace BECore::Mahjong::Tests {
 
         // A listed one is accepted and moves the version once.
         const uint64_t version = table.session.Version();
-        const eastl::vector<HandAction> listed = table.match.Hand().LegalActions(east);
+        const Vector<HandAction> listed = table.match.Hand().LegalActions(east);
         ASSERT_TRUE(table.session.PerformPerson(listed.front()).has_value());
         EXPECT_EQ(table.session.Version(), version + 1);
     }
@@ -472,7 +472,7 @@ namespace BECore::Mahjong::Tests {
     TEST(TableSessionTest, NextHandNeedsAFinishedHandAndSettlesIt) {
         Table table;
         ASSERT_NO_FATAL_FAILURE(table.Start(kAllComputers));
-        const std::string before = State(table);
+        const String before = State(table);
         const auto early = table.session.NextHand();
         ASSERT_FALSE(early.has_value());
         EXPECT_EQ(early.error(), MatchError::HandNotFinished);
@@ -511,7 +511,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(table.match.GetPhase(), MatchPhase::Finished);
         EXPECT_EQ(table.match.HandsPlayed(), settings.handsPerMatch);
         EXPECT_EQ(table.session.Actor(), kNoSeat);
-        const std::string before = State(table);
+        const String before = State(table);
         const auto refused = table.session.NextHand();
         ASSERT_FALSE(refused.has_value());
         EXPECT_EQ(refused.error(), MatchError::NotInHand);
@@ -665,7 +665,7 @@ namespace BECore::Mahjong::Tests {
             const StepResult expected = whole.table.session.StepComputer();
             ASSERT_TRUE(expected.has_value());
 
-            std::optional<ComputerStepJob> job = halves.table.session.BeginComputerStep();
+            Optional<ComputerStepJob> job = halves.table.session.BeginComputerStep();
             ASSERT_TRUE(job.has_value());
             EXPECT_EQ(job->Version(), halves.table.session.Version());
             EXPECT_EQ(job->StartCount(), halves.table.session.StartCount());
@@ -675,7 +675,7 @@ namespace BECore::Mahjong::Tests {
             while (!job->Done()) {
                 job->Step();
             }
-            const std::optional<StepResult> finished = halves.table.session.FinishComputerStep(*job);
+            const Optional<StepResult> finished = halves.table.session.FinishComputerStep(*job);
             ASSERT_TRUE(finished.has_value());
             ASSERT_TRUE(finished->has_value());
             EXPECT_TRUE(**finished == *expected) << "step " << step;
@@ -741,7 +741,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_GT(stale.table.session.RunComputers(), 0);
             MahjongRng rng(kSeed);
             ASSERT_TRUE(PersonActs(stale.table.session, stale.table.match.Hand(), Mode::NeverWin, rng).has_value());
-            std::optional<ComputerStepJob> job = stale.table.session.BeginComputerStep();
+            Optional<ComputerStepJob> job = stale.table.session.BeginComputerStep();
             ASSERT_TRUE(job.has_value());
             job->Run();
 
@@ -750,7 +750,7 @@ namespace BECore::Mahjong::Tests {
                     ASSERT_TRUE(stale.table.session.StartMatch(ShortMatch(), kSeed, PersonAfterEast(kSeed), SearchProfile()).has_value());
                     break;
                 case Change::ResumeMatch: {
-                    const eastl::vector<MatchLogEvent> events = stale.log.Events();
+                    const Vector<MatchLogEvent> events = stale.log.Events();
                     ASSERT_TRUE(stale.table.session.ResumeMatch(events, PersonAfterEast(kSeed), kDefaultLevel).has_value());
                     break;
                 }
@@ -778,7 +778,7 @@ namespace BECore::Mahjong::Tests {
                     break;
             }
 
-            const std::string before = State(stale.table);
+            const String before = State(stale.table);
             const size_t events = stale.log.Events().size();
             EXPECT_FALSE(stale.table.session.FinishComputerStep(*job).has_value());
             EXPECT_EQ(State(stale.table), before);
@@ -794,7 +794,7 @@ namespace BECore::Mahjong::Tests {
         int searched = 0;
         for (int step = 0; local.table.session.GetPhase() == SessionPhase::Playing; ++step) {
             ASSERT_LT(step, kActionLimitPerMatch);
-            std::optional<ComputerStepJob> job = remote.table.session.BeginComputerStep();
+            Optional<ComputerStepJob> job = remote.table.session.BeginComputerStep();
             ASSERT_TRUE(job.has_value());
             searched += job->Ready() ? 0 : 1;
             if (!job->Ready()) {
@@ -805,7 +805,7 @@ namespace BECore::Mahjong::Tests {
             }
             const StepResult expected = local.table.session.StepComputer();
             ASSERT_TRUE(expected.has_value());
-            const std::optional<StepResult> finished = remote.table.session.FinishComputerStep(*job);
+            const Optional<StepResult> finished = remote.table.session.FinishComputerStep(*job);
             ASSERT_TRUE(finished.has_value());
             ASSERT_TRUE(finished->has_value());
             ASSERT_TRUE(**finished == *expected) << "step " << step;
@@ -851,7 +851,7 @@ namespace BECore::Mahjong::Tests {
                 records.push_back({before, action, context, _session.Version(), _log.Events().size()});
             }
 
-            std::vector<Record> records;
+            Vector<Record> records;
 
         private:
             const TableSession& _session;
@@ -976,7 +976,7 @@ namespace BECore::Mahjong::Tests {
             void Show(Seat viewer, Seat actor, bool newTable, const SeatSetup& seats = kAllPeople) {
                 match.ShowRemote(source.match.GetSettings(), MatchPhase::InHand, source.match.HandsPlayed(), source.match.East(), source.match.Scores(),
                                  HandModel::ForDisplay(source.match.Hand().Capture()));
-                names = {eastl::string("Ann"), eastl::string("Bob"), eastl::string("Cy"), eastl::string("Di")};
+                names = {String("Ann"), String("Bob"), String("Cy"), String("Di")};
                 session.ShowRemote(seats, UniformLevels(ComputerLevel::Easy), names, viewer, actor, newTable);
             }
         };
@@ -1022,11 +1022,11 @@ namespace BECore::Mahjong::Tests {
         remote.Show(kSeat2, waited, true, kTwoPeople);
         const uint64_t version = remote.session.Version();
         const uint64_t starts = remote.session.StartCount();
-        const std::string hand = Snapshot(remote.match.Hand());
+        const String hand = Snapshot(remote.match.Hand());
         // A job begun before the mode: stale.
         Table other;
         ASSERT_NO_FATAL_FAILURE(other.Start(kAllComputers));
-        const std::optional<ComputerStepJob> job = other.session.BeginComputerStep();
+        const Optional<ComputerStepJob> job = other.session.BeginComputerStep();
         ASSERT_TRUE(job.has_value());
 
         EXPECT_EQ(remote.session.StepComputer().error(), HandError::WrongPhase);

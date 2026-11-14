@@ -19,7 +19,7 @@ namespace BECore::Mahjong {
     inline constexpr HintsMode kDefaultHintsMode = HintsMode::Hints;
 
     /// The id of a mode in the saved preferences, the variable `hintsChoice` and the values of the buttons of the page: `off`, `hints`, `coach`.
-    [[nodiscard]] constexpr std::string_view HintsModeText(HintsMode mode) noexcept {
+    [[nodiscard]] constexpr StringView HintsModeText(HintsMode mode) noexcept {
         switch (mode) {
             case HintsMode::Off:
                 return "off";
@@ -32,7 +32,7 @@ namespace BECore::Mahjong {
     }
 
     /// The mode of an id, or nothing for any other text (client text, a damaged save).
-    [[nodiscard]] constexpr std::optional<HintsMode> TryParseHintsMode(std::string_view text) noexcept {
+    [[nodiscard]] constexpr Optional<HintsMode> TryParseHintsMode(StringView text) noexcept {
         for (const HintsMode mode : EnumUtils<HintsMode>::Values()) {
             if (HintsModeText(mode) == text) {
                 return mode;
@@ -90,7 +90,7 @@ namespace BECore::Mahjong {
      * complete hand (`DeclareWin`, a mahjong claim) differs from anything else. nullopt when it agrees and when there is nothing to
      * judge (`CanJudge` false).
      */
-    [[nodiscard]] std::optional<CoachNote> JudgeMove(const TableView& before, const HandAction& taken);
+    [[nodiscard]] Optional<CoachNote> JudgeMove(const TableView& before, const HandAction& taken);
 
     /// The moves that agreed with the computer's choice and all the moves judged.
     struct CoachTally {
@@ -138,7 +138,7 @@ namespace BECore::Mahjong {
         void OnPersonMove(const TableView& before, const HandAction& action, const MoveContext& context) override;
 
         /// The note of the last recorded move, empty when it agreed, when it was dropped or while disabled.
-        [[nodiscard]] const std::optional<CoachNote>& Note() const noexcept {
+        [[nodiscard]] const Optional<CoachNote>& Note() const noexcept {
             return _note;
         }
         void ClearNote();
@@ -165,7 +165,7 @@ namespace BECore::Mahjong {
 
     private:
         bool _enabled = false;
-        std::optional<CoachNote> _note;
+        Optional<CoachNote> _note;
         uint64_t _version = 0;
         bool _keyed = false;
         CoachHandKey _key;

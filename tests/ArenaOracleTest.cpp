@@ -33,9 +33,9 @@ namespace BECore::Mahjong::Arena {
         constexpr int kSearchedHandCount = 2;
         constexpr uint32_t kRngStride = 1000;
 
-        ArenaPlayer Player(std::string_view spec) {
-            const std::expected<ArenaPlayer, eastl::string> player = ParseArenaPlayer(spec);
-            EXPECT_TRUE(player.has_value()) << spec << ": " << (player.has_value() ? "" : player.error().c_str());
+        ArenaPlayer Player(StringView spec) {
+            const std::expected<ArenaPlayer, String> player = ParseArenaPlayer(spec);
+            EXPECT_TRUE(player.has_value()) << ToStd(spec) << ": " << (player.has_value() ? "" : player.error().c_str());
             return player.value_or(ArenaPlayer{});
         }
 
@@ -58,8 +58,8 @@ namespace BECore::Mahjong::Arena {
             uint32_t rngSeed = 0;
         };
 
-        eastl::vector<Position> Positions(int seeds, int stride) {
-            eastl::vector<Position> positions;
+        Vector<Position> Positions(int seeds, int stride) {
+            Vector<Position> positions;
             const ArenaPlayers players = Table(Player("normal"));
             for (int index = 0; index < seeds; ++index) {
                 const uint32_t seed = kFirstSeed + static_cast<uint32_t>(index);
@@ -133,7 +133,7 @@ namespace BECore::Mahjong::Arena {
         HandModel DefenceModel(const char* seat1, bool seat1Declared) {
             HandState state = MakeModel(DefenceSpec(seat1)).Capture();
             state.hands[kSeat1].callingDeclared = seat1Declared;
-            std::expected<HandModel, eastl::string> restored = HandModel::Restore(std::move(state));
+            std::expected<HandModel, String> restored = HandModel::Restore(std::move(state));
             EXPECT_TRUE(restored.has_value()) << (restored.has_value() ? "" : restored.error().c_str());
             return restored.value_or(HandModel{});
         }
@@ -151,8 +151,8 @@ namespace BECore::Mahjong::Arena {
         }
 
         /// The kinds of the three lists of the wall together, sorted.
-        eastl::vector<Tile> WallTiles(const HandModel& hand) {
-            eastl::vector<Tile> tiles = hand.GetWall().LiveTiles();
+        Vector<Tile> WallTiles(const HandModel& hand) {
+            Vector<Tile> tiles = hand.GetWall().LiveTiles();
             tiles.insert(tiles.end(), hand.GetWall().LooseTiles().begin(), hand.GetWall().LooseTiles().end());
             tiles.insert(tiles.end(), hand.GetWall().DeadWall().begin(), hand.GetWall().DeadWall().end());
             eastl::sort(tiles.begin(), tiles.end());
@@ -161,12 +161,12 @@ namespace BECore::Mahjong::Arena {
 
         /// The positions of the hands played (every action of a hand with Normal on the seats), the actor's own view a decision of a
         /// search: `phase` Discard or Claim, and a search run that would begin on it with the shipped budget.
-        eastl::vector<Position> SearchedPositions(Phase phase, size_t count) {
+        Vector<Position> SearchedPositions(Phase phase, size_t count) {
             LevelProfile search = kNormalProfile;
             search.searchWorlds = kSearchWorlds;
             search.searchCandidates = kSearchCandidates;
             search.searchMargin = kSearchMargin;
-            eastl::vector<Position> found;
+            Vector<Position> found;
             for (const Position& position : Positions(kStateSeedCount, 1)) {
                 const TableView view = MakeTableView(position.hand, position.actor);
                 MahjongRng rng(position.rngSeed);
@@ -189,7 +189,7 @@ namespace BECore::Mahjong::Arena {
     }  // namespace
 
     TEST(ArenaOracleTest, TheAcceptanceViewDiffersFromTheRealViewOnlyInVisible) {
-        const eastl::vector<Position> positions = Positions(kStateSeedCount, kStateStride);
+        const Vector<Position> positions = Positions(kStateSeedCount, kStateStride);
         ASSERT_GE(positions.size(), 30U);
         bool sawDiscard = false;
         bool sawClaim = false;
@@ -210,7 +210,7 @@ namespace BECore::Mahjong::Arena {
             for (uint8_t id = 0; id < kTileIdCount; ++id) {
                 const Tile tile{id};
                 if (tile.IsPlayable()) {
-                    EXPECT_EQ(UnseenCopies(oracle, tile), drawable[id]) << ToString(tile);
+                    EXPECT_EQ(UnseenCopies(oracle, tile), drawable[id]) << ToStd(ToString(tile));
                 }
             }
         }
@@ -330,7 +330,7 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaOracleTest, TheWorldsOfTheHandsOracleKeepTheOpponentsHandsAndOnlyReorderTheWall) {
-        eastl::vector<Position> positions = Positions(kStateSeedCount, kStateStride);
+        Vector<Position> positions = Positions(kStateSeedCount, kStateStride);
         positions.push_back({RobKongModel(), kSeat2, 1});
         bool sawRobKong = false;
         int reordered = 0;
@@ -341,8 +341,8 @@ namespace BECore::Mahjong::Arena {
             const WorldSource source = MakeTrueWorlds(real, false);
             MahjongRng first(position.rngSeed);
             MahjongRng second(position.rngSeed + 1);
-            const std::optional<HandModel> world = source(view, first);
-            const std::optional<HandModel> other = source(view, second);
+            const Optional<HandModel> world = source(view, first);
+            const Optional<HandModel> other = source(view, second);
             ASSERT_TRUE(world.has_value());
             ASSERT_TRUE(other.has_value());
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
@@ -375,14 +375,14 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaOracleTest, TheWorldsOfTheWholeHandOracleAreTheRealTable) {
-        eastl::vector<Position> positions = Positions(kStateSeedCount, kStateStride);
+        Vector<Position> positions = Positions(kStateSeedCount, kStateStride);
         positions.push_back({RobKongModel(), kSeat2, 1});
         for (const Position& position : positions) {
             const TableView view = MakeTableView(position.hand, position.actor);
             const WorldSource source = MakeTrueWorlds(position.hand, true);
             MahjongRng first(position.rngSeed);
             MahjongRng second(position.rngSeed + 1);
-            const std::optional<HandModel> world = source(view, first);
+            const Optional<HandModel> world = source(view, first);
             ASSERT_TRUE(world.has_value());
             EXPECT_EQ(Snapshot(*world), Snapshot(position.hand));
             EXPECT_EQ(world->GetWall().LiveTiles(), position.hand.GetWall().LiveTiles());
@@ -404,7 +404,7 @@ namespace BECore::Mahjong::Arena {
             EXPECT_EQ(oracle.profile.searchCandidates, kSearchCandidates);
             EXPECT_EQ(oracle.profile.searchMargin, kSearchMargin);
             for (const Phase phase : {Phase::Discard, Phase::Claim}) {
-                const eastl::vector<Position> found = SearchedPositions(phase, kPositionsOfAKind);
+                const Vector<Position> found = SearchedPositions(phase, kPositionsOfAKind);
                 EXPECT_EQ(found.size(), static_cast<size_t>(kPositionsOfAKind)) << spec << " " << Name(phase);
                 for (const Position& position : found) {
                     const TableView view = MakeTableView(position.hand, position.actor);
@@ -451,7 +451,7 @@ namespace BECore::Mahjong::Arena {
         for (const char* spec : {"oracle-acceptance", "oracle-defence", "oracle-defence:searchWorlds=2"}) {
             const ArenaPlayers players = Table(Player(spec));
             // The search of the last spec plays whole hands in each decision: a few hands are enough.
-            const int hands = std::string_view(spec).find("searchWorlds") == std::string_view::npos ? kWholeHandCount : kSearchedHandCount;
+            const int hands = StringView(spec).find("searchWorlds") == StringView::npos ? kWholeHandCount : kSearchedHandCount;
             for (int index = 0; index < hands; ++index) {
                 const auto record = PlayArenaHand(kFirstSeed + static_cast<uint32_t>(index), players);
                 EXPECT_TRUE(record.has_value()) << spec << ": " << (record.has_value() ? "" : record.error().c_str());

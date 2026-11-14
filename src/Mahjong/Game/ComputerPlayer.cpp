@@ -46,7 +46,7 @@ namespace BECore::Mahjong {
         return {action, std::nullopt};
     }
 
-    std::optional<HandAction> ComputerPlayer::Decide(const HandModel& model, Seat seat) {
+    Optional<HandAction> ComputerPlayer::Decide(const HandModel& model, Seat seat) {
         const TableView view = MakeTableView(model, seat);
         if (view.legal.empty()) {
             return std::nullopt;
@@ -74,7 +74,7 @@ namespace BECore::Mahjong {
                 return model.CurrentSeat();
             case Phase::Claim:
             case Phase::RobKong: {
-                const eastl::vector<Seat> pending = model.PendingClaimSeats();
+                const Vector<Seat> pending = model.PendingClaimSeats();
                 return pending.empty() ? kNoSeat : pending.front();
             }
             case Phase::Finished:

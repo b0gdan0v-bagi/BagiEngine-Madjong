@@ -5,6 +5,7 @@
 #include "MahjongTouchTestSupport.h"
 #include "UiStyleTestSupport.h"
 
+#include <Common/Printers.h>
 #include <Mahjong/Components/MahjongHintsComponent.h>
 #include <Mahjong/Game/ComputerView.h>
 #include <Mahjong/Table/ActionButtons.h>
@@ -40,28 +41,28 @@ namespace BECore::Mahjong::Tests {
 
         /// Each seat in turn discards the next tile of @p tiles; the state after every discard is kept (the room is shown one move at a time, as a client
         /// that stays connected sees it: the log of a hand is inferred from the views, and a gap would coalesce the moves).
-        void Play(std::vector<HandModel>& states, const std::string& tiles, std::initializer_list<Seat> declaring = {}) {
+        void Play(Vector<HandModel>& states, const String& tiles, std::initializer_list<Seat> declaring = {}) {
             HandModel model = states.back();
-            const eastl::vector<Tile> parsed = ParseTiles(tiles).value();
+            const Vector<Tile> parsed = ParseTiles(tiles).value();
             for (const Tile tile : parsed) {
                 const Seat seat = model.CurrentSeat();
                 const bool declare = eastl::find(declaring.begin(), declaring.end(), seat) != declaring.end();
-                EXPECT_TRUE(model.Discard(seat, tile, declare).has_value()) << "seat " << seat << " " << ToString(tile);
-                EXPECT_EQ(model.GetPhase(), Phase::Discard) << "the discard of " << ToString(tile) << " opened a window";
+                EXPECT_TRUE(model.Discard(seat, tile, declare).has_value()) << "seat " << seat << " " << ToStd(ToString(tile));
+                EXPECT_EQ(model.GetPhase(), Phase::Discard) << "the discard of " << ToStd(ToString(tile)) << " opened a window";
                 states.push_back(model);
             }
         }
 
         /// The lap of the notes above on a fixed wall, state by state; the last is the viewer to act with 14 tiles, or, when @p viewerHasDiscarded, seat 1 (a
         /// person who waits) to act after the viewer's declaring discard.
-        std::vector<HandModel> PlayedStates(const char* seat2, const char* seat3, bool viewerHasDiscarded) {
+        Vector<HandModel> PlayedStates(const char* seat2, const char* seat3, bool viewerHasDiscarded) {
             FixedWallSpec spec;
             spec.hands[kSeat0] = kViewerHand;
             spec.hands[kSeat1] = kWaitingHand;
             spec.hands[kSeat2] = seat2;
             spec.hands[kSeat3] = seat3;
             spec.live = kLive;
-            std::vector<HandModel> states{MakeModel(spec)};
+            Vector<HandModel> states{MakeModel(spec)};
             Play(states, "Ew Rd Nw Ww");
             Play(states, "Gd Wd 9m Ew", {kSeat1});
             EXPECT_EQ(states.back().CurrentSeat(), kSeat0);
@@ -72,7 +73,7 @@ namespace BECore::Mahjong::Tests {
             return states;
         }
 
-        int Count(const eastl::array<bool, kTileIdCount>& flags, const eastl::vector<Tile>& hand) {
+        int Count(const Array<bool, kTileIdCount>& flags, const Vector<Tile>& hand) {
             int count = 0;
             for (const Tile tile : hand) {
                 count += flags[tile.Id()] ? 1 : 0;
@@ -106,7 +107,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The room's game plays through @p states, the client seeing each in turn.
-        void LayStates(const std::vector<HandModel>& states) {
+        void LayStates(const Vector<HandModel>& states) {
             for (const HandModel& state : states) {
                 ASSERT_NO_FATAL_FAILURE(LayOnServer(state));
             }
@@ -117,8 +118,8 @@ namespace BECore::Mahjong::Tests {
             return MakeTableView(_world.Game()->GetMatch().Hand(), kHostSeat);
         }
 
-        std::vector<Rect> RectsOf(const Color& color) const {
-            std::vector<Rect> found;
+        Vector<Rect> RectsOf(const Color& color) const {
+            Vector<Rect> found;
             for (const DrawCall& call : _renderer->calls) {
                 if (call.kind == DrawKind::Rect && SameColor(call.color, color)) {
                     found.push_back(call.rect);
@@ -181,7 +182,7 @@ namespace BECore::Mahjong::Tests {
         int ShownWaitCells() const {
             int shown = 0;
             for (int i = 0; i < kMaxWaitingTiles; ++i) {
-                shown += OnScreen("Hints", ("WaitCell" + std::to_string(i)).c_str()) ? 1 : 0;
+                shown += OnScreen("Hints", Format("WaitCell{}", i).c_str()) ? 1 : 0;
             }
             return shown;
         }
@@ -195,7 +196,7 @@ namespace BECore::Mahjong::Tests {
         const TableView server = ServerView();
         const auto declaring = DeclaringDiscards(server);
         const auto dangers = DangerMarks(server);
-        const eastl::vector<Tile>& held = Hand().GetHand(kHostSeat).concealed;
+        const Vector<Tile>& held = Hand().GetHand(kHostSeat).concealed;
 
         EXPECT_TRUE(_game->HintsActive());
         EXPECT_TRUE(ButtonShown());
@@ -217,13 +218,13 @@ namespace BECore::Mahjong::Tests {
         }
 
         // The advice is the one of the server's own seat view
-        const std::optional<HandAction> advice = AdviceFor(server);
+        const Optional<HandAction> advice = AdviceFor(server);
         ASSERT_TRUE(advice.has_value());
         const uint64_t version = _game->GetSession().Version();
         PressHint();
         ASSERT_TRUE(AdviceShown());
-        const eastl::string expected = AdviceText(CoreManager::GetUIStrings(), server, *advice);
-        EXPECT_EQ(Var("hintAdvice"), std::string(expected.c_str(), expected.size()));
+        const String expected = AdviceText(CoreManager::GetUIStrings(), server, *advice);
+        EXPECT_EQ(Var("hintAdvice"), String(expected.c_str(), expected.size()));
         EXPECT_EQ(_game->GetSession().Version(), version) << "a hint never moves the table";
         EXPECT_TRUE(Lists(ActionKind::Discard)) << "and sends nothing";
     }
@@ -255,15 +256,15 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(StartHintsRoom(true));
         ASSERT_NO_FATAL_FAILURE(LayStates(PlayedStates(kSeat2Hand, kSeat3Hand, true)));
         ASSERT_EQ(_game->GetSession().Actor(), kIdleSeat);
-        const std::vector<WaitEntry> expected = [&] {
-            const eastl::vector<WaitEntry> row = WaitingTiles(ServerView());
-            return std::vector<WaitEntry>(row.begin(), row.end());
+        const Vector<WaitEntry> expected = [&] {
+            const Vector<WaitEntry> row = WaitingTiles(ServerView());
+            return Vector<WaitEntry>(row.begin(), row.end());
         }();
         ASSERT_FALSE(expected.empty()) << "the viewer waits";
         EXPECT_EQ(ShownWaitCells(), static_cast<int>(expected.size()));
         EXPECT_TRUE(WaitingRowShown());
         for (size_t i = 0; i < expected.size(); ++i) {
-            EXPECT_EQ(Var(("hintCount" + std::to_string(i)).c_str()), std::to_string(expected[i].unseen)) << i;
+            EXPECT_EQ(Var(Format("hintCount{}", i).c_str()), BECore::ToString(expected[i].unseen)) << i;
         }
         EXPECT_FALSE(ButtonShown()) << "it is not the viewer's turn";
         EXPECT_TRUE(RectsOf(kDeclareMark).empty());
@@ -342,11 +343,11 @@ namespace BECore::Mahjong::Tests {
         struct Shown {
             size_t declare = 0;
             size_t dangers = 0;
-            std::string advice;
-            std::vector<uint8_t> visible;
+            String advice;
+            Vector<uint8_t> visible;
         };
         Shown shown[2];
-        eastl::vector<Tile> hidden[2];
+        Vector<Tile> hidden[2];
         const char* const seat2[] = {kSeat2Hand, kOtherSeat2Hand};
         const char* const seat3[] = {kSeat3Hand, kOtherSeat3Hand};
         for (int variant = 0; variant < 2; ++variant) {
@@ -397,9 +398,9 @@ namespace BECore::Mahjong::Tests {
             for (const char* language : {"en", "ru"}) {
                 ASSERT_TRUE(_game->SetLanguage(PoolString::Intern(language)));
                 Frame();
-                const eastl::string expected = Tr(CoreManager::GetUIStrings(), test.key);
+                const String expected = Tr(CoreManager::GetUIStrings(), test.key);
                 EXPECT_TRUE(OnScreen("Hints", "RoomHintsText")) << test.key << " " << language;
-                EXPECT_EQ(Var("roomHintsText"), std::string(expected.c_str(), expected.size())) << test.key << " " << language;
+                EXPECT_EQ(Var("roomHintsText"), String(expected.c_str(), expected.size())) << test.key << " " << language;
                 EXPECT_FALSE(expected.empty());
             }
             ASSERT_TRUE(_game->SetLanguage("en"_intern));
@@ -413,8 +414,8 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(StartHintsRoom(true, HintsMode::Off));
         ASSERT_NO_FATAL_FAILURE(LayStates(PlayedStates(kSeat2Hand, kSeat3Hand, false)));
         const auto say = [&](const char* key) {
-            const eastl::string expected = Tr(CoreManager::GetUIStrings(), key);
-            return OnScreen("Hints", "RoomHintsText") && Var("roomHintsText") == std::string(expected.c_str(), expected.size());
+            const String expected = Tr(CoreManager::GetUIStrings(), key);
+            return OnScreen("Hints", "RoomHintsText") && Var("roomHintsText") == String(expected.c_str(), expected.size());
         };
         EXPECT_TRUE(say("online.table.hintsAllowedOff")) << "it says where to switch them on";
 
@@ -457,15 +458,15 @@ namespace BECore::Mahjong::Tests {
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             const UIStrings& strings = CoreManager::GetUIStrings();
-            std::vector<eastl::string> lines;
+            Vector<String> lines;
             for (const char* key : {"online.table.hintsAllowed", "online.table.hintsAllowedOff", "online.table.hintsOff"}) {
                 lines.push_back(Tr(strings, key));
             }
-            CoreManager::GetUIVars().Set("roomHintsText"_intern, eastl::string_view(LongestText(lines)));
+            CoreManager::GetUIVars().Set("roomHintsText"_intern, StringView(LongestText(lines)));
             Draw();
             ASSERT_TRUE(OnScreen("Hints", "RoomHintsText"));
             ExpectPassesTheMatrix("Hints", EngineTouchMinimum());
-            const std::vector<std::string> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Hints"), 0.0f);
+            const Vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Hints"), 0.0f);
             EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
         });
     }
@@ -490,11 +491,11 @@ namespace BECore::Mahjong::Tests {
         const CoachLedger& coach = _game->GetCoach();
         ASSERT_TRUE(coach.Enabled());
         const TableView before = ServerView();
-        const std::optional<HandAction> advice = AdviceFor(before);
+        const Optional<HandAction> advice = AdviceFor(before);
         ASSERT_TRUE(advice.has_value());
         const HandAction taken = HandAction::MakeDiscard(T("1s"));
         ASSERT_NE(*advice, taken) << "the move differs from the computer's choice";
-        const std::optional<CoachNote> expected = JudgeMove(before, taken);
+        const Optional<CoachNote> expected = JudgeMove(before, taken);
         ASSERT_TRUE(expected.has_value());
 
         ASSERT_TRUE(DiscardThroughTheTable("1s"));
@@ -508,7 +509,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(coach.MatchTally(), (CoachTally{0, 1}));
         ASSERT_TRUE(CardShown());
         const UIStrings& strings = CoreManager::GetUIStrings();
-        const eastl::string tally = CardTallyText(strings, coach.HandTally(), coach.MatchTally());
+        const String tally = CardTallyText(strings, coach.HandTally(), coach.MatchTally());
         EXPECT_EQ(CardVars(), CardTexts(MakeNoteCard(strings, *expected, tally)));
     }
 
@@ -516,8 +517,8 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(StartHintsRoom(true, HintsMode::Coach));
         ASSERT_NO_FATAL_FAILURE(LayStates(PlayedStates(kSeat2Hand, kSeat3Hand, false)));
         const CoachLedger& coach = _game->GetCoach();
-        const std::optional<HandAction> advice = AdviceFor(ServerView());
-        ASSERT_EQ(advice, std::optional<HandAction>(HandAction::MakeDiscard(T("Ew"), true)));
+        const Optional<HandAction> advice = AdviceFor(ServerView());
+        ASSERT_EQ(advice, Optional<HandAction>(HandAction::MakeDiscard(T("Ew"), true)));
 
         ASSERT_TRUE(DiscardThroughTheTable("Ew", true));
         Frame();
@@ -607,7 +608,7 @@ namespace BECore::Mahjong::Tests {
             if (_game->GetSession().GetPhase() == SessionPhase::HandOver) {
                 ++hands;
                 _game->GetOnline().Act(0);
-                for (const std::unique_ptr<HubPlayer>& other : _others) {
+                for (const UniquePtr<HubPlayer>& other : _others) {
                     other->ActFirst();
                 }
                 ASSERT_TRUE(PlayUntil([&] { return _game->GetSession().GetPhase() != SessionPhase::HandOver; }, false, kMatchFrames));
@@ -618,7 +619,7 @@ namespace BECore::Mahjong::Tests {
         Frame();
         EXPECT_EQ(coach.MatchTally(), tally) << "the tally survives the hands of the match";
         ASSERT_TRUE(OnScreen("MatchOver", "MatchCoachRow"));
-        const eastl::string expected = FormatCoachTally(CoreManager::GetUIStrings(), CoachTally{}, tally);
+        const String expected = FormatCoachTally(CoreManager::GetUIStrings(), CoachTally{}, tally);
         EXPECT_STREQ(Var("matchOverCoach").c_str(), expected.c_str());
     }
 

@@ -7,9 +7,9 @@
 namespace BECore::Mahjong {
 
     /// How a seat is named on screen: "Seat 2 (South)" (seats count from 1 for a person; `wind` is the seat's wind in the hand). The words are the keys `seat.name` and `wind.*`.
-    [[nodiscard]] inline eastl::string SeatName(const UIStrings& strings, Seat seat, Wind wind) {
-        const eastl::string number = Format("{}", seat + 1);
-        const eastl::string windName = WindName(strings, wind);
+    [[nodiscard]] inline String SeatName(const UIStrings& strings, Seat seat, Wind wind) {
+        const String number = Format("{}", seat + 1);
+        const String windName = WindName(strings, wind);
         return Tr(strings, "seat.name", {{"n", number}, {"wind", windName}});
     }
 
@@ -37,7 +37,7 @@ namespace BECore::Mahjong {
         SeatWho(const TableSession& session) noexcept : _seats(&session.Seats()), _room(session.IsRemote() ? &session : nullptr) {}  // NOLINT(google-explicit-constructor)
 
         /// The name of the person at @p seat in a room; null for a computer, a seat with no name and a local table.
-        [[nodiscard]] const eastl::string* PlayerName(Seat seat) const noexcept {
+        [[nodiscard]] const String* PlayerName(Seat seat) const noexcept {
             if (_room == nullptr || !IsSeat(seat) || (*_seats)[seat] != SeatKind::Person || _room->NameOf(seat).empty()) {
                 return nullptr;
             }
@@ -54,7 +54,7 @@ namespace BECore::Mahjong {
     };
 
     /// `name`, and the word `seat.you` after it when `seat` is "you".
-    [[nodiscard]] inline eastl::string MarkYou(const UIStrings& strings, eastl::string name, Seat seat, const SeatWho& who) {
+    [[nodiscard]] inline String MarkYou(const UIStrings& strings, String name, Seat seat, const SeatWho& who) {
         if (who.IsYou(seat)) {
             name += Tr(strings, "seat.you");
         }
@@ -62,19 +62,19 @@ namespace BECore::Mahjong {
     }
 
     /// `SeatName`, and the word `seat.you` after it for "you"; a person with a name in a room has it instead of the number ("Ann (South)").
-    [[nodiscard]] inline eastl::string SeatLabel(const UIStrings& strings, Seat seat, Wind wind, const SeatWho& who) {
-        if (const eastl::string* player = who.PlayerName(seat)) {
+    [[nodiscard]] inline String SeatLabel(const UIStrings& strings, Seat seat, Wind wind, const SeatWho& who) {
+        if (const String* player = who.PlayerName(seat)) {
             return MarkYou(strings, Tr(strings, "seat.playerWind", {{"name", *player}, {"wind", WindName(strings, wind)}}), seat, who);
         }
         return MarkYou(strings, SeatName(strings, seat, wind), seat, who);
     }
 
     /// "Seat 2" without the wind (where the wind would name the wrong deal), or the name of the player in a room, and the word `seat.you` for "you".
-    [[nodiscard]] inline eastl::string SeatLabel(const UIStrings& strings, Seat seat, const SeatWho& who) {
-        if (const eastl::string* player = who.PlayerName(seat)) {
+    [[nodiscard]] inline String SeatLabel(const UIStrings& strings, Seat seat, const SeatWho& who) {
+        if (const String* player = who.PlayerName(seat)) {
             return MarkYou(strings, *player, seat, who);
         }
-        const eastl::string number = Format("{}", seat + 1);
+        const String number = Format("{}", seat + 1);
         return MarkYou(strings, Tr(strings, "seat.short", {{"n", number}}), seat, who);
     }
 

@@ -25,16 +25,16 @@ namespace BECore::Mahjong::Arena {
         constexpr uint32_t kFirstSeed = 4000;
         constexpr int kSeedCount = 60;
 
-        ArenaPlayer Player(std::string_view spec) {
-            const std::expected<ArenaPlayer, eastl::string> player = ParseArenaPlayer(spec);
-            EXPECT_TRUE(player.has_value()) << spec << ": " << (player.has_value() ? "" : player.error().c_str());
+        ArenaPlayer Player(StringView spec) {
+            const std::expected<ArenaPlayer, String> player = ParseArenaPlayer(spec);
+            EXPECT_TRUE(player.has_value()) << ToStd(spec) << ": " << (player.has_value() ? "" : player.error().c_str());
             return player.value_or(ArenaPlayer{});
         }
 
-        std::string ErrorOf(std::string_view spec) {
-            const std::expected<ArenaPlayer, eastl::string> player = ParseArenaPlayer(spec);
-            EXPECT_FALSE(player.has_value()) << "\"" << spec << "\" should be refused";
-            return player.has_value() ? std::string() : std::string(player.error().c_str());
+        String ErrorOf(StringView spec) {
+            const std::expected<ArenaPlayer, String> player = ParseArenaPlayer(spec);
+            EXPECT_FALSE(player.has_value()) << "\"" << ToStd(spec) << "\" should be refused";
+            return player.has_value() ? String() : String(player.error().c_str());
         }
 
         bool SameProfile(const LevelProfile& left, const LevelProfile& right) {
@@ -50,8 +50,8 @@ namespace BECore::Mahjong::Arena {
             return players;
         }
 
-        ::testing::AssertionResult Contains(const std::string& text, const char* part) {
-            return text.find(part) != std::string::npos ? ::testing::AssertionSuccess() : ::testing::AssertionFailure() << "\"" << text << "\" lacks \"" << part << "\"";
+        ::testing::AssertionResult Contains(const String& text, const char* part) {
+            return text.find(part) != String::npos ? ::testing::AssertionSuccess() : ::testing::AssertionFailure() << "\"" << text << "\" lacks \"" << part << "\"";
         }
 
     }  // namespace
@@ -112,7 +112,7 @@ namespace BECore::Mahjong::Arena {
 
     TEST(ArenaPlayerTest, TheOraclesAreReadOnTheNormalProfile) {
         static_assert(kProfileFieldCount == 11, "an oracle is no LevelProfile field");
-        for (const auto& [spec, kind] : {std::pair<const char*, OracleKind>{"oracle-acceptance", OracleKind::Acceptance}, {"oracle-defence", OracleKind::Defence}}) {
+        for (const auto& [spec, kind] : {Pair<const char*, OracleKind>{"oracle-acceptance", OracleKind::Acceptance}, {"oracle-defence", OracleKind::Defence}}) {
             const ArenaPlayer player = Player(spec);
             EXPECT_EQ(player.oracle, kind) << spec;
             EXPECT_FALSE(player.random);
@@ -125,7 +125,7 @@ namespace BECore::Mahjong::Arena {
         EXPECT_EQ(knobs.profile.searchWorlds, 2);
         EXPECT_EQ(knobs.profile.skipClaimPercent, 10);
         // The search oracles start from the shipped budget and the knobs override it.
-        for (const auto& [spec, kind] : {std::pair<const char*, OracleKind>{"oracle-hands", OracleKind::Hands}, {"oracle-whole", OracleKind::WholeHand}}) {
+        for (const auto& [spec, kind] : {Pair<const char*, OracleKind>{"oracle-hands", OracleKind::Hands}, {"oracle-whole", OracleKind::WholeHand}}) {
             const ArenaPlayer player = Player(spec);
             EXPECT_EQ(player.oracle, kind) << spec;
             EXPECT_EQ(player.name, spec);
@@ -150,7 +150,7 @@ namespace BECore::Mahjong::Arena {
         }
         // A bad oracle name names the part and lists the four oracles.
         for (const char* spec : {"oracle-wise", "oracle-", "oracle-acceptance2:searchWorlds=2"}) {
-            const std::string error = ErrorOf(spec);
+            const String error = ErrorOf(spec);
             EXPECT_TRUE(Contains(error, "oracle")) << error;
             for (const char* name : {"oracle-acceptance", "oracle-hands", "oracle-whole", "oracle-defence"}) {
                 EXPECT_TRUE(Contains(error, name)) << error;
@@ -161,7 +161,7 @@ namespace BECore::Mahjong::Arena {
         EXPECT_TRUE(Contains(ErrorOf("oracle-defence:searchWorlds=4097"), "4097"));
         // oracle-acceptance plays no search: a search knob is refused by name, the other knobs stay.
         for (const char* spec : {"oracle-acceptance:searchWorlds=2", "oracle-acceptance:skipClaimPercent=5,searchMargin=10", "oracle-acceptance:searchCandidates=4"}) {
-            const std::string error = ErrorOf(spec);
+            const String error = ErrorOf(spec);
             EXPECT_TRUE(Contains(error, "oracle-acceptance")) << error;
             EXPECT_TRUE(Contains(error, "plays no search")) << error;
         }
@@ -192,14 +192,14 @@ namespace BECore::Mahjong::Arena {
     TEST(ArenaPlayerTest, TheKnobsTableCoversEveryFieldOfTheProfile) {
         // Each row sets its own field and no other; between them the rows set all ten fields of `LevelProfile` (an eleventh field
         // without a row stops the build in ArenaPlayer.cpp, which names every field).
-        eastl::array<bool, kProfileFieldCount> moved{};
+        Array<bool, kProfileFieldCount> moved{};
         for (const ProfileKnob& knob : kProfileKnobs) {
             ASSERT_NE(knob.percent == nullptr, knob.flag == nullptr) << knob.name.data() << ": exactly one member";
-            const std::string name(knob.name.data(), knob.name.size());
+            const String name(knob.name.data(), knob.name.size());
             // Normal has every percent, the worlds, the margin and the depth at 0, the candidates at their default and the take-value flag on (the pick-wait and
             // danger flags off): the other value is the largest value, and for a flag the opposite of Normal's.
             const int other = knob.percent != nullptr ? knob.maxValue : (kNormalProfile.*knob.flag ? 0 : 1);
-            const ArenaPlayer player = Player("normal:" + name + "=" + std::to_string(other));
+            const ArenaPlayer player = Player(Format("normal:{}={}", name, other));
             const LevelProfile& set = player.profile;
             const bool changed[kProfileFieldCount] = {set.skipAcceptancePercent != kNormalProfile.skipAcceptancePercent,
                                                       set.skipDeclarationPercent != kNormalProfile.skipDeclarationPercent,
@@ -217,8 +217,8 @@ namespace BECore::Mahjong::Arena {
                 moved[index] = moved[index] || changed[index];
             }
             // The largest value is accepted, one above it is refused.
-            EXPECT_FALSE(ParseArenaPlayer("normal:" + name + "=" + std::to_string(knob.maxValue + 1)).has_value()) << name;
-            EXPECT_TRUE(ParseArenaPlayer("normal:" + name + "=" + std::to_string(knob.maxValue)).has_value()) << name;
+            EXPECT_FALSE(ParseArenaPlayer(Format("normal:{}={}", name, knob.maxValue + 1)).has_value()) << name;
+            EXPECT_TRUE(ParseArenaPlayer(Format("normal:{}={}", name, knob.maxValue)).has_value()) << name;
         }
         EXPECT_EQ(static_cast<size_t>(std::count(moved.begin(), moved.end(), true)), kProfileFieldCount);
     }
@@ -254,7 +254,7 @@ namespace BECore::Mahjong::Arena {
             MahjongRng play(seed + 1);
             while (hand.GetPhase() != Phase::Finished) {
                 const Seat actor = ComputerTable::NextActor(hand);
-                const eastl::vector<HandAction> actions = hand.LegalActions(actor);
+                const Vector<HandAction> actions = hand.LegalActions(actor);
                 ASSERT_FALSE(actions.empty());
                 const HandAction arena = ChooseSeekWin(actions, left);
                 const HandAction tests = Choose(actions, Mode::SeekWin, right);
@@ -271,8 +271,8 @@ namespace BECore::Mahjong::Arena {
     TEST(ArenaPlayerTest, AHandIsDeterministicAndKeepsItsBooks) {
         const ArenaPlayers players = Table(Player("normal"), 1, Player("random"));
         for (uint32_t seed = kFirstSeed; seed < kFirstSeed + 8; ++seed) {
-            const std::expected<HandRecord, eastl::string> first = PlayArenaHand(seed, players);
-            const std::expected<HandRecord, eastl::string> second = PlayArenaHand(seed, players);
+            const std::expected<HandRecord, String> first = PlayArenaHand(seed, players);
+            const std::expected<HandRecord, String> second = PlayArenaHand(seed, players);
             ASSERT_TRUE(first.has_value()) << first.error().c_str();
             ASSERT_TRUE(second.has_value());
             EXPECT_EQ(first->kind, second->kind);
@@ -296,13 +296,13 @@ namespace BECore::Mahjong::Arena {
         const ArenaPlayers players = Table(Player("normal:searchWorlds=1,searchCandidates=2,searchMargin=0"), 1, Player("random"));
         constexpr uint32_t kSearchSeeds = 2;
         for (uint32_t seed = kFirstSeed; seed < kFirstSeed + kSearchSeeds; ++seed) {
-            const std::expected<HandRecord, eastl::string> plain = PlayArenaHand(seed, players);
+            const std::expected<HandRecord, String> plain = PlayArenaHand(seed, players);
             ASSERT_TRUE(plain.has_value()) << plain.error().c_str();
             EXPECT_GT(plain->decisions[1], 0);
             for (const int threads : {1, 2, 5}) {
                 WorldThreads pool(threads);
                 const WorldLoop loop = pool.AsLoop();
-                const std::expected<HandRecord, eastl::string> looped = PlayArenaHand(seed, players, false, &loop);
+                const std::expected<HandRecord, String> looped = PlayArenaHand(seed, players, false, &loop);
                 ASSERT_TRUE(looped.has_value()) << looped.error().c_str();
                 EXPECT_EQ(looped->kind, plain->kind) << "seed " << seed << " threads " << threads;
                 EXPECT_EQ(looped->winner, plain->winner) << "seed " << seed << " threads " << threads;
@@ -319,8 +319,8 @@ namespace BECore::Mahjong::Arena {
         const ArenaPlayers players = Table(Player("normal"), 0, Player("random"));
         WorldThreads pool(3);
         const WorldLoop loop = pool.AsLoop();
-        const std::expected<HandRecord, eastl::string> plain = PlayArenaHand(kFirstSeed, players);
-        const std::expected<HandRecord, eastl::string> looped = PlayArenaHand(kFirstSeed, players, true, &loop);
+        const std::expected<HandRecord, String> plain = PlayArenaHand(kFirstSeed, players);
+        const std::expected<HandRecord, String> looped = PlayArenaHand(kFirstSeed, players, true, &loop);
         ASSERT_TRUE(plain.has_value());
         ASSERT_TRUE(looped.has_value());
         EXPECT_EQ(looped->deltas, plain->deltas);
@@ -330,8 +330,8 @@ namespace BECore::Mahjong::Arena {
 
     TEST(ArenaPlayerTest, TimingIsKeptOnlyWhenAskedFor) {
         const ArenaPlayers players = Table(Player("normal"), 0, Player("random"));
-        const std::expected<HandRecord, eastl::string> plain = PlayArenaHand(kFirstSeed, players, false);
-        const std::expected<HandRecord, eastl::string> timed = PlayArenaHand(kFirstSeed, players, true);
+        const std::expected<HandRecord, String> plain = PlayArenaHand(kFirstSeed, players, false);
+        const std::expected<HandRecord, String> timed = PlayArenaHand(kFirstSeed, players, true);
         ASSERT_TRUE(plain.has_value());
         ASSERT_TRUE(timed.has_value());
         // The play is the same; only the clock is added.
@@ -354,7 +354,7 @@ namespace BECore::Mahjong::Arena {
             ASSERT_TRUE(table.PlayHand(hand).has_value());
             const HandSettlement settlement = SettleHand(hand);
 
-            const std::expected<HandRecord, eastl::string> record = PlayArenaHand(seed, players);
+            const std::expected<HandRecord, String> record = PlayArenaHand(seed, players);
             ASSERT_TRUE(record.has_value()) << record.error().c_str();
             EXPECT_EQ(record->winner, settlement.winner) << "seed " << seed;
             EXPECT_EQ(record->scores, settlement.scores);
@@ -364,7 +364,7 @@ namespace BECore::Mahjong::Arena {
                 continue;
             }
             ++wins;
-            eastl::vector<ScoreKind> expected;
+            Vector<ScoreKind> expected;
             for (const ScoreLine& line : settlement.breakdowns[settlement.winner].lines) {
                 if (eastl::find(expected.begin(), expected.end(), line.kind) == expected.end()) {
                     expected.push_back(line.kind);
@@ -391,7 +391,7 @@ namespace BECore::Mahjong::Arena {
         int focusPoints = 0;
         for (int index = 0; index < kSeedCount; ++index) {
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                const std::expected<HandRecord, eastl::string> record = PlayArenaHand(kFirstSeed + static_cast<uint32_t>(index), Table(normal, seat, random));
+                const std::expected<HandRecord, String> record = PlayArenaHand(kFirstSeed + static_cast<uint32_t>(index), Table(normal, seat, random));
                 ASSERT_TRUE(record.has_value()) << record.error().c_str();
                 ++hands;
                 focusWins += record->winner == seat ? 1 : 0;
@@ -419,7 +419,7 @@ namespace BECore::Mahjong::Arena {
             ComputerTable table(seed, ComputerLevel::Easy);
             ASSERT_TRUE(table.PlayHand(hand).has_value());
             const HandSettlement settlement = SettleHand(hand);
-            const std::expected<HandRecord, eastl::string> record = PlayArenaHand(seed, players);
+            const std::expected<HandRecord, String> record = PlayArenaHand(seed, players);
             ASSERT_TRUE(record.has_value());
             EXPECT_EQ(record->deltas, settlement.deltas) << "seed " << seed;
             EXPECT_EQ(record->winner, settlement.winner) << "seed " << seed;

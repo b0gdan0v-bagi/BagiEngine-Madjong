@@ -45,27 +45,26 @@ namespace BECore::Mahjong::Tests {
         }
 
         PositionAnalysis Analyze(const TableView& view, const AnalyzerConfig& config = ConfigOf()) {
-            const std::expected<PositionAnalysis, eastl::string> analysis = Analyzer::AnalyzePosition(view, config, PlainLoop);
+            const std::expected<PositionAnalysis, String> analysis = Analyzer::AnalyzePosition(view, config, PlainLoop);
             EXPECT_TRUE(analysis.has_value()) << (analysis.has_value() ? "" : analysis.error().c_str());
             return analysis.has_value() ? *analysis : PositionAnalysis{};
         }
 
         /// An action as text for a failure message and for `Describe`.
-        std::string Label(const HandAction& action) {
-            return Name(action.kind) + " " + (action.tile.IsValid() ? std::string(ToString(action.tile)) : std::string("-")) + (action.declareCalling ? " declare" : "") + " " + Name(action.claim) +
-                   " " + (action.chowFirst.IsValid() ? std::string(ToString(action.chowFirst)) : std::string("-"));
+        String Label(const HandAction& action) {
+            return Format("{} {}{} {} {}", Name(action.kind), action.tile.IsValid() ? ToString(action.tile) : StringView("-"), action.declareCalling ? " declare" : "", Name(action.claim),
+                          action.chowFirst.IsValid() ? ToString(action.chowFirst) : StringView("-"));
         }
 
-        std::string Interval(const Arena::MeanInterval& interval) {
+        String Interval(const Arena::MeanInterval& interval) {
             char text[160];
             std::snprintf(text, sizeof text, "n%zu m%.17g sd%.17g h%.17g i%d", interval.n, interval.mean, interval.sd, interval.half, interval.hasInterval ? 1 : 0);
             return text;
         }
 
         /// Every field of an analysis as text, to compare two analyses exactly.
-        std::string Describe(const PositionAnalysis& analysis) {
-            std::string text = std::to_string(analysis.seat) + " " + Name(analysis.phase) + " " + std::to_string(analysis.worldsAsked) + "/" + std::to_string(analysis.worldsPlayed) + "/" +
-                               std::to_string(analysis.worldsDropped) + " normal " + Label(analysis.normalChoice) + "\n";
+        String Describe(const PositionAnalysis& analysis) {
+            String text = Format("{} {} {}/{}/{} normal {}\n", analysis.seat, Name(analysis.phase), analysis.worldsAsked, analysis.worldsPlayed, analysis.worldsDropped, Label(analysis.normalChoice));
             for (const ActionRow& row : analysis.rows) {
                 text += Label(row.action) + " | " + Interval(row.ev) + " | " + Interval(row.vsBest.interval) + (row.vsBest.significant ? "*" : "") + " | " + Interval(row.vsNormal.interval) +
                         (row.vsNormal.significant ? "*" : "") + " | " + (row.isBest ? "best" : "") + (row.isNormal ? "normal" : "") + "\n";
@@ -156,7 +155,7 @@ namespace BECore::Mahjong::Tests {
         const TableView window = MakeTableView(RobbingModel(), kSeat2);
         for (const TableView* view : {&turn, &window}) {
             const AnalyzerConfig config = ConfigOf(kFewWorlds);
-            const std::string reference = Describe(Analyze(*view, config));
+            const String reference = Describe(Analyze(*view, config));
             EXPECT_EQ(Describe(Analyze(*view, config)), reference);
 
             const auto backwards = Analyzer::AnalyzePosition(*view, config, BackwardsLoop);
@@ -191,7 +190,7 @@ namespace BECore::Mahjong::Tests {
             }
         }
         ASSERT_TRUE(swapped);
-        const std::expected<HandModel, eastl::string> other = HandModel::Restore(state);
+        const std::expected<HandModel, String> other = HandModel::Restore(state);
         ASSERT_TRUE(other.has_value()) << other.error().c_str();
         ASSERT_NE(Snapshot(model), Snapshot(*other));
 
@@ -262,7 +261,7 @@ namespace BECore::Mahjong::Tests {
         const auto failure = [](const TableView& view, const AnalyzerConfig& config) {
             const auto analysis = Analyzer::AnalyzePosition(view, config, PlainLoop);
             EXPECT_FALSE(analysis.has_value());
-            return analysis.has_value() ? std::string() : std::string(analysis.error().c_str());
+            return analysis.has_value() ? String() : String(analysis.error().c_str());
         };
         const TableView view = MakeTableView(TurnModel(), kSeat0);
 
@@ -273,7 +272,7 @@ namespace BECore::Mahjong::Tests {
 
         TableView unsampled = view;
         unsampled.liveCount += 5;
-        EXPECT_NE(failure(unsampled, ConfigOf(kFewWorlds)).find("sampled"), std::string::npos);
+        EXPECT_NE(failure(unsampled, ConfigOf(kFewWorlds)).find("sampled"), String::npos);
     }
 
 }  // namespace BECore::Mahjong::Tests

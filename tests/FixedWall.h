@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Common/Printers.h>
 #include <Mahjong/Game/Deal.h>
 #include <Mahjong/Game/HandModel.h>
 #include <Mahjong/Game/MahjongSettings.h>
@@ -35,17 +36,17 @@ namespace BECore::Mahjong::Tests {
      *   ring.
      */
     struct FixedWallSpec {
-        std::array<std::string, kSeatCount> hands;
-        std::string live;
-        std::string loose;
-        std::optional<int> liveAfterDeal;
+        Array<String, kSeatCount> hands;
+        String live;
+        String loose;
+        Optional<int> liveAfterDeal;
     };
 
     namespace FixedWallDetail {
 
         /// The tiles of a text; a bad text fails the test and gives no tiles.
-        inline eastl::vector<Tile> Parse(const std::string& text, const char* what) {
-            const std::optional<eastl::vector<Tile>> tiles = ParseTiles(text);
+        inline Vector<Tile> Parse(const String& text, const char* what) {
+            const Optional<Vector<Tile>> tiles = ParseTiles(text);
             if (!tiles.has_value()) {
                 ADD_FAILURE() << "FixedWallSpec." << what << ": cannot read the tiles \"" << text << "\"";
                 return {};
@@ -63,19 +64,19 @@ namespace BECore::Mahjong::Tests {
      */
     inline Wall MakeFixedWall(const FixedWallSpec& spec, bool flowers, Seat east = 0) {
         // How many copies of each kind are left to use.
-        std::array<int, kTileIdCount> left{};
+        Array<int, kTileIdCount> left{};
         for (uint8_t id = 0; id < kTileIdCount; ++id) {
             const Tile tile{id};
             left[id] = tile.IsBonus() ? (flowers ? 1 : 0) : kCopiesPerTile;
         }
         const auto take = [&left](Tile tile) {
             if (--left[tile.Id()] < 0) {
-                ADD_FAILURE() << "FixedWallSpec uses more copies of " << ToString(tile) << " than the set has";
+                ADD_FAILURE() << "FixedWallSpec uses more copies of " << ToStd(ToString(tile)) << " than the set has";
                 left[tile.Id()] = 0;
             }
         };
 
-        std::array<eastl::vector<Tile>, kSeatCount> hands;
+        Array<Vector<Tile>, kSeatCount> hands;
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             hands[seat] = FixedWallDetail::Parse(spec.hands[seat], "hands");
             EXPECT_EQ(hands[seat].size(), static_cast<size_t>(kDealtTiles)) << "FixedWallSpec.hands[" << seat << "] needs 13 tiles";
@@ -83,8 +84,8 @@ namespace BECore::Mahjong::Tests {
                 take(tile);
             }
         }
-        const eastl::vector<Tile> live = FixedWallDetail::Parse(spec.live, "live");
-        eastl::vector<Tile> loose = FixedWallDetail::Parse(spec.loose, "loose");
+        const Vector<Tile> live = FixedWallDetail::Parse(spec.live, "live");
+        Vector<Tile> loose = FixedWallDetail::Parse(spec.loose, "loose");
         for (const Tile tile : live) {
             take(tile);
         }
@@ -93,7 +94,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         // Unused tiles in the order of the set: the front pads, the last 14 are the dead wall.
-        eastl::vector<Tile> pool;
+        Vector<Tile> pool;
         for (uint8_t id = 0; id < kTileIdCount; ++id) {
             pool.insert(pool.end(), static_cast<size_t>(left[id]), Tile{id});
         }
@@ -106,9 +107,9 @@ namespace BECore::Mahjong::Tests {
             return pool[nextPad++];
         };
 
-        eastl::vector<Tile> order;
+        Vector<Tile> order;
         // The reserve; the tiles after the first two refill it from the live tail.
-        eastl::vector<Tile> refills;
+        Vector<Tile> refills;
         for (size_t i = 0; i < loose.size(); ++i) {
             if (i < kLooseTiles) {
                 order.push_back(loose[i]);

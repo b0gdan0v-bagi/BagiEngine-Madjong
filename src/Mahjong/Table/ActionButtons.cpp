@@ -8,7 +8,7 @@ namespace BECore::Mahjong {
         constexpr const char* kChowHint = "hint.ClaimChow";
         constexpr const char* kConcealedKongHint = "hint.ConcealedKong";
 
-        constexpr eastl::array<ButtonSpec, kButtonCount> kSpecs{{
+        constexpr Array<ButtonSpec, kButtonCount> kSpecs{{
             {"Win", "MahjongWin", "", "button.Win", "hint.Win", 0},
             {"Mahjong", "MahjongClaimMahjong", "", "button.ClaimMahjong", "hint.ClaimMahjong", 1},
             {"Pung", "MahjongClaimPung", "", "button.ClaimPung", "hint.ClaimPung", 1},
@@ -53,7 +53,7 @@ namespace BECore::Mahjong {
         return kSpecs[static_cast<size_t>(kind)];
     }
 
-    std::optional<ButtonKind> ButtonOf(eastl::string_view action, eastl::string_view value) noexcept {
+    Optional<ButtonKind> ButtonOf(StringView action, StringView value) noexcept {
         for (size_t i = 0; i < kSpecs.size(); ++i) {
             if (action == kSpecs[i].action && value == kSpecs[i].value) {
                 return static_cast<ButtonKind>(i);
@@ -66,19 +66,19 @@ namespace BECore::Mahjong {
         return std::nullopt;
     }
 
-    eastl::string_view HintKey(ButtonKind kind) noexcept {
+    StringView HintKey(ButtonKind kind) noexcept {
         return SpecOf(kind).hintKey;
     }
 
-    eastl::string WordOf(const UIStrings& strings, ButtonKind kind) {
+    String WordOf(const UIStrings& strings, ButtonKind kind) {
         return Tr(strings, SpecOf(kind).wordKey);
     }
 
-    eastl::string HintOf(const UIStrings& strings, ButtonKind kind) {
+    String HintOf(const UIStrings& strings, ButtonKind kind) {
         return Tr(strings, SpecOf(kind).hintKey);
     }
 
-    ActionButtons MakeActionButtons(const eastl::vector<HandAction>& legal, std::optional<Tile> pendingTile) {
+    ActionButtons MakeActionButtons(const Vector<HandAction>& legal, Optional<Tile> pendingTile) {
         const Tile pending = pendingTile.value_or(Tile{});
         ActionButtons buttons;
         int chows = 0;
@@ -134,12 +134,12 @@ namespace BECore::Mahjong {
         return buttons;
     }
 
-    ChowTakes ChowTilesTaken(const ActionButtons& buttons, Tile pending, std::optional<ButtonKind> hovered) {
+    ChowTakes ChowTilesTaken(const ActionButtons& buttons, Tile pending, Optional<ButtonKind> hovered) {
         ChowTakes takes;
         if (!pending.IsValid()) {
             return takes;
         }
-        std::optional<ButtonKind> chosen;
+        Optional<ButtonKind> chosen;
         if (hovered && *hovered >= ButtonKind::ClaimChow0 && *hovered <= ButtonKind::ClaimChow2 && buttons[*hovered].shown) {
             chosen = hovered;
         } else {

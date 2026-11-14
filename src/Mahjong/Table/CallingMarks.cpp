@@ -2,8 +2,8 @@
 
 namespace BECore::Mahjong {
 
-    eastl::array<bool, kTileIdCount> KeepsWaitingDiscards(const TableView& view) {
-        eastl::array<bool, kTileIdCount> keeps{};
+    Array<bool, kTileIdCount> KeepsWaitingDiscards(const TableView& view) {
+        Array<bool, kTileIdCount> keeps{};
         if (!IsSeat(view.seat) || !view.own.callingDeclared || view.phase != Phase::Discard || view.currentSeat != view.seat || view.legal.empty()) {
             return keeps;
         }

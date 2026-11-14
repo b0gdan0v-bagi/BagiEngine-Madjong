@@ -35,12 +35,12 @@ namespace BECore::Mahjong::Tests {
         // pair leaves it 3 away (the partial sets beyond the sets still needed count for nothing).
         constexpr const char* kPartials = "3p 4p 6p 7p 3s 4s 6s 7s 1m 9m Nw";
 
-        std::string WithPair(const char* pair) {
-            return std::string(kPartials) + " " + pair;
+        String WithPair(const char* pair) {
+            return Format("{} {}", kPartials, pair);
         }
 
         /// East throws `discard`, the only tile of the live wall. Seat 1 holds `seat1`.
-        HandModel WindowModel(const std::string& seat1, const char* discard, Wind roundWind = Wind::East) {
+        HandModel WindowModel(const String& seat1, const char* discard, Wind roundWind = Wind::East) {
             FixedWallSpec spec;
             spec.hands[kSeat0] = kEast;
             spec.hands[kSeat1] = seat1;
@@ -382,7 +382,7 @@ namespace BECore::Mahjong::Tests {
         const TableView view = MakeTableView(model, kSeat1);
         const int before = Shanten(CountTiles(view.own.concealed), 0);
 
-        const eastl::vector<RatedClaim> options = RateClaims(view, before, kNormalProfile);
+        const Vector<RatedClaim> options = RateClaims(view, before, kNormalProfile);
 
         size_t listed = 0;
         for (const HandAction& action : view.legal) {
@@ -429,7 +429,7 @@ namespace BECore::Mahjong::Tests {
                     MahjongRng chooser(seed + static_cast<uint32_t>(compared));
                     const HandAction answer = ChooseClaimAction(view, chooser);
                     if (FindMahjong(view) == nullptr && before > kWaitingShanten) {
-                        const eastl::vector<RatedClaim> options = RateClaims(view, before, kNormalProfile);
+                        const Vector<RatedClaim> options = RateClaims(view, before, kNormalProfile);
                         const RatedClaim* best = nullptr;
                         for (const RatedClaim& option : options) {
                             if (option.acceptable && (best == nullptr || IsBetterClaim(option, *best))) {
@@ -476,7 +476,7 @@ namespace BECore::Mahjong::Tests {
         /// The same seat with its 1s 2s 3s already an open chow: the hand has lost `FullyConcealed` before the window.
         TableView OpenWaitingKongView(const HandModel& model) {
             TableView view = WaitingKongView(model);
-            eastl::vector<Tile> concealed;
+            Vector<Tile> concealed;
             for (const Tile tile : view.own.concealed) {
                 if (tile != T("1s") && tile != T("2s") && tile != T("3s")) {
                     concealed.push_back(tile);
@@ -515,7 +515,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(ComputerClaimTest, RateWaitingKongRatesOnlyAKongThatKeepsTheWait) {
-        const std::optional<WaitingKong> kong = RateWaitingKong(WaitingKongView(WindowModel(kWaitingOnPung, "Rd")));
+        const Optional<WaitingKong> kong = RateWaitingKong(WaitingKongView(WindowModel(kWaitingOnPung, "Rd")));
         ASSERT_TRUE(kong.has_value());
         EXPECT_EQ(kong->kong, HandAction::MakeClaim(ClaimKind::Kong));
 
@@ -525,7 +525,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(ComputerClaimTest, AConcealedWaitingHandWeighsTheKongAgainstTheConcealedDouble) {
         const TableView view = WaitingKongView(WindowModel(kWaitingOnPung, "Rd"));
-        const std::optional<WaitingKong> kong = RateWaitingKong(view);
+        const Optional<WaitingKong> kong = RateWaitingKong(view);
         ASSERT_TRUE(kong.has_value());
         MahjongRng rng(kRngSeed);
 
@@ -544,7 +544,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(ComputerClaimTest, AnOpenWaitingHandTakesTheKongThatKeepsItsWait) {
         const TableView view = OpenWaitingKongView(WindowModel(kWaitingOnPung, "Rd"));
-        const std::optional<WaitingKong> kong = RateWaitingKong(view);
+        const Optional<WaitingKong> kong = RateWaitingKong(view);
         ASSERT_TRUE(kong.has_value());
         EXPECT_GT(kong->kongValue, kong->passValue) << "nothing is lost, the kong adds points and a loose tile";
         for (uint32_t seed = 1; seed <= kRngSeeds; ++seed) {

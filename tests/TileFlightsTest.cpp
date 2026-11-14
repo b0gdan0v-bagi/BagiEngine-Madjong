@@ -28,13 +28,13 @@ namespace BECore::Mahjong::Tests {
         /// What a frame shows, in the terms of the test; `Snapshot` turns it into a `TableSnapshot` through the real layout.
         struct Scene {
             Seat viewer = kViewer;
-            eastl::array<int, kSeatCount> concealed{kHandSize, kHandSize, kHandSize, kHandSize};
-            eastl::array<eastl::vector<Meld>, kSeatCount> melds;
-            eastl::vector<PileItem> pile;
+            Array<int, kSeatCount> concealed{kHandSize, kHandSize, kHandSize, kHandSize};
+            Array<Vector<Meld>, kSeatCount> melds;
+            Vector<PileItem> pile;
             int wall = kWallTiles;
-            eastl::vector<Tile> viewerHand;
+            Vector<Tile> viewerHand;
             /// The face-up concealed tiles of the other seats (`viewerHand` is the viewer's); a hand of backs has none.
-            eastl::array<eastl::vector<Tile>, kSeatCount> openHand;
+            Array<Vector<Tile>, kSeatCount> openHand;
             Seat drawSeat = kNoSeat;
             int drawIndex = -1;
             Seat winSeat = kNoSeat;
@@ -47,7 +47,7 @@ namespace BECore::Mahjong::Tests {
             TableInput input;
             input.viewer = scene.viewer;
             input.concealedCount = scene.concealed;
-            eastl::array<eastl::vector<Tile>, kSeatCount> open = scene.openHand;
+            Array<Vector<Tile>, kSeatCount> open = scene.openHand;
             if (!scene.viewerHand.empty()) {
                 open[scene.viewer] = scene.viewerHand;
             }
@@ -87,8 +87,8 @@ namespace BECore::Mahjong::Tests {
             return meld;
         }
 
-        eastl::vector<Tile> Tiles(std::initializer_list<const char*> texts) {
-            eastl::vector<Tile> tiles;
+        Vector<Tile> Tiles(std::initializer_list<const char*> texts) {
+            Vector<Tile> tiles;
             for (const char* text : texts) {
                 tiles.push_back(T(text));
             }
@@ -114,7 +114,7 @@ namespace BECore::Mahjong::Tests {
             return nullptr;
         }
 
-        const TileFlight* FlightOf(const eastl::vector<TileFlight>& flights, const SlotKey& key) {
+        const TileFlight* FlightOf(const Vector<TileFlight>& flights, const SlotKey& key) {
             for (const TileFlight& flight : flights) {
                 if (flight.key == key) {
                     return &flight;
@@ -146,7 +146,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// A flight must name a slot of the new frame, once.
-        void ExpectOnlySlotsOfAfter(const eastl::vector<TileFlight>& flights, const TableSnapshot& after) {
+        void ExpectOnlySlotsOfAfter(const Vector<TileFlight>& flights, const TableSnapshot& after) {
             for (size_t i = 0; i < flights.size(); ++i) {
                 EXPECT_NE(Find(after, flights[i].key), nullptr) << "flight " << i;
                 for (size_t j = i + 1; j < flights.size(); ++j) {

@@ -9,8 +9,8 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        std::string_view View(const eastl::string& text) {
-            return std::string_view(text.c_str(), text.size());
+        StringView View(const String& text) {
+            return StringView(text.c_str(), text.size());
         }
 
     }  // namespace
@@ -43,11 +43,11 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(BuildInfoTest, TheBuildIdIsAShortHashOrUnknown) {
-        const std::string_view id = BuildId();
+        const StringView id = BuildId();
         ASSERT_FALSE(id.empty());
         if (id != "unknown") {
             EXPECT_GE(id.size(), 4u);
-            EXPECT_EQ(id.find_first_not_of("0123456789abcdef"), std::string_view::npos) << id;
+            EXPECT_EQ(id.find_first_not_of("0123456789abcdef"), StringView::npos) << ToStd(id);
         }
     }
 

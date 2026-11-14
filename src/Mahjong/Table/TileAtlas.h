@@ -54,7 +54,7 @@ namespace BECore::Mahjong {
     }
 
     /// The name of the sprite of a tile in TextureLibrary.xml (an invalid tile has none: the back's name).
-    [[nodiscard]] inline eastl::string SpriteName(Tile tile) {
+    [[nodiscard]] inline String SpriteName(Tile tile) {
         if (!tile.IsValid()) {
             return kBackSpriteName;
         }

@@ -35,7 +35,7 @@ namespace BECore::Mahjong {
     inline constexpr const char* kFreeRegionNames[] = {kMoveLineRegionName, kSelectedTileRegionName, kHintRegionName, kActionsRegionName, kWaitingRegionName, kHintButtonRegionName, kAdviceRegionName};
 
     /// Whether `name` is the name of a zone region (a free region may not take it).
-    [[nodiscard]] bool IsZoneRegionName(eastl::string_view name) noexcept;
+    [[nodiscard]] bool IsZoneRegionName(StringView name) noexcept;
 
     /// A region of the table: its name and rectangle in view units.
     struct TableRegion {
@@ -45,8 +45,8 @@ namespace BECore::Mahjong {
 
     /// The regions of `layout`: the plates by screen position, the centre panel, the wall ring, then the free regions in the order of the spec.
     /// A layout of a spec without free regions gives the zone regions only. `regions` keeps its capacity (the table asks every frame).
-    void RebuildTableRegions(const TableLayout& layout, eastl::vector<TableRegion>& regions);
+    void RebuildTableRegions(const TableLayout& layout, Vector<TableRegion>& regions);
 
-    [[nodiscard]] eastl::vector<TableRegion> MakeTableRegions(const TableLayout& layout);
+    [[nodiscard]] Vector<TableRegion> MakeTableRegions(const TableLayout& layout);
 
 }  // namespace BECore::Mahjong

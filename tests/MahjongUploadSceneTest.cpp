@@ -3,6 +3,7 @@
 #include "MahjongTouchTestSupport.h"
 #include "UiStyleTestSupport.h"
 
+#include <Common/Printers.h>
 #include <CoreSDL/SDLEvents.h>
 #include <Mahjong/Components/MahjongUploadComponent.h>
 #include <Mahjong/MatchLogJson.h>
@@ -54,15 +55,15 @@ namespace BECore::Mahjong::Tests {
         class AnsweringPoster final : public IWebPoster {
         public:
             struct Post {
-                std::string path;
-                std::string body;
+                String path;
+                String body;
             };
 
             [[nodiscard]] bool Available() const override {
                 return available;
             }
-            std::expected<WebPostId, eastl::string> Start(eastl::string_view path, eastl::string_view body) override {
-                posts.push_back({std::string(path.data(), path.size()), std::string(body.data(), body.size())});
+            std::expected<WebPostId, String> Start(StringView path, StringView body) override {
+                posts.push_back({String(path.data(), path.size()), String(body.data(), body.size())});
                 return static_cast<WebPostId>(posts.size());
             }
             WebPostResult Poll(WebPostId /*id*/) override {
@@ -70,8 +71,8 @@ namespace BECore::Mahjong::Tests {
             }
 
             /// The bodies in the order they were posted, put together
-            [[nodiscard]] eastl::string Assembled() const {
-                eastl::string all;
+            [[nodiscard]] String Assembled() const {
+                String all;
                 for (const Post& post : posts) {
                     all.append(post.body.data(), post.body.size());
                 }
@@ -79,7 +80,7 @@ namespace BECore::Mahjong::Tests {
             }
 
             bool available = true;
-            std::vector<Post> posts;
+            Vector<Post> posts;
         };
 
         class KeptSink final : public IMatchUploadSink {
@@ -87,14 +88,14 @@ namespace BECore::Mahjong::Tests {
             void Send(const UploadPiece& piece) override {
                 pieces.push_back(piece);
             }
-            std::vector<UploadPiece> pieces;
+            Vector<UploadPiece> pieces;
         };
 
-        std::string ReadFile(const fs::path& path) {
+        String ReadFile(const fs::path& path) {
             std::ifstream file(path, std::ios::binary);
             std::stringstream text;
             text << file.rdbuf();
-            return text.str();
+            return FromStdString(text.str());
         }
 
     }  // namespace
@@ -184,12 +185,12 @@ namespace BECore::Mahjong::Tests {
         void ExpectPostedMatchReplays() const {
             ASSERT_FALSE(_poster.posts.empty());
             for (size_t i = 0; i < _poster.posts.size(); ++i) {
-                const std::string& path = _poster.posts[i].path;
+                const String& path = _poster.posts[i].path;
                 EXPECT_EQ(path.rfind("/matches/", 0), 0U) << path;
-                EXPECT_EQ(path.substr(path.rfind('/') + 1), std::to_string(i)) << "the pieces go in order";
+                EXPECT_EQ(path.substr(path.rfind('/') + 1), BECore::ToString(i)) << "the pieces go in order";
             }
-            const eastl::string all = _poster.Assembled();
-            const auto events = ParseMatchLog(std::string_view(all.c_str(), all.size()));
+            const String all = _poster.Assembled();
+            const auto events = ParseMatchLog(StringView(all.c_str(), all.size()));
             ASSERT_TRUE(events.has_value()) << events.error().c_str();
             Match replayed;
             const ReplayStatus status = ReplayMatchLog(*events, replayed);
@@ -228,7 +229,7 @@ namespace BECore::Mahjong::Tests {
         /// The pad key whose letter is @p letter (the pad is the name pad of the language); the index, else -1
         int PadIndexOf(const char* letter) const {
             for (int key = 0; key < static_cast<int>(TextEntry::kPadMaxKeys); ++key) {
-                if (Var(("padKey" + std::to_string(key)).c_str()) == letter) {
+                if (Var(Format("padKey{}", key).c_str()) == letter) {
                     return key;
                 }
             }
@@ -238,7 +239,7 @@ namespace BECore::Mahjong::Tests {
         void TypeKey(const char* letter) {
             const int index = PadIndexOf(letter);
             ASSERT_GE(index, 0) << letter;
-            EmitAction("MahjongOnlineKey", std::to_string(index).c_str());
+            EmitAction("MahjongOnlineKey", BECore::ToString(index).c_str());
             Frames(1);
         }
 
@@ -341,13 +342,13 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(ConsentShown());
         EXPECT_EQ(_game->GetUploadPrefs(), kept);
         EXPECT_EQ(_game->GetUpload().Consent(), UploadConsent::Granted);
-        EXPECT_EQ(_game->GetLocalSession().LogOrigin().nickname, eastl::string(kNickname));
+        EXPECT_EQ(_game->GetLocalSession().LogOrigin().nickname, String(kNickname));
 
         ASSERT_NO_FATAL_FAILURE(PlayMatch());
         ASSERT_NO_FATAL_FAILURE(Drain());
         ExpectPostedMatchReplays();
-        const std::string& first = _poster.posts.front().body;
-        EXPECT_NE(first.find("\"nickname\":\"Anna\""), std::string::npos) << first;
+        const String& first = _poster.posts.front().body;
+        EXPECT_NE(first.find("\"nickname\":\"Anna\""), String::npos) << first;
     }
 
     TEST_F(MahjongUploadSceneTest, ADeclinedChoiceInTheFileIsReadAndNothingIsAsked) {
@@ -364,16 +365,16 @@ namespace BECore::Mahjong::Tests {
         typed.nickname = kNickname;  // typed before, the consent still open
         ASSERT_TRUE(StoreUploadPrefs(_prefsFolder, typed));
         ASSERT_NO_FATAL_FAILURE(ShowQuestion());
-        EXPECT_EQ(_game->GetUploadPrefs().nickname, eastl::string(kNickname));
+        EXPECT_EQ(_game->GetUploadPrefs().nickname, String(kNickname));
         EXPECT_TRUE(_game->GetLocalSession().LogOrigin().nickname.empty());
         ASSERT_NO_FATAL_FAILURE(Answer(kAccept));
-        EXPECT_EQ(_game->GetLocalSession().LogOrigin().nickname, eastl::string(kNickname));
-        EXPECT_EQ(Stored().nickname, eastl::string(kNickname));
+        EXPECT_EQ(_game->GetLocalSession().LogOrigin().nickname, String(kNickname));
+        EXPECT_EQ(Stored().nickname, String(kNickname));
 
         ASSERT_NO_FATAL_FAILURE(PlayMatch());
         ASSERT_NO_FATAL_FAILURE(Drain());
         ASSERT_FALSE(_poster.posts.empty());
-        EXPECT_NE(_poster.posts.front().body.find("\"nickname\":\"Anna\""), std::string::npos);
+        EXPECT_NE(_poster.posts.front().body.find("\"nickname\":\"Anna\""), String::npos);
     }
 
     TEST_F(MahjongUploadSceneTest, DeclineKeepsTheNicknameOutOfEveryLog) {
@@ -383,7 +384,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(ShowQuestion());
         ASSERT_NO_FATAL_FAILURE(Answer(kDecline));
         EXPECT_TRUE(_game->GetLocalSession().LogOrigin().nickname.empty());
-        EXPECT_EQ(Stored().nickname, eastl::string(kNickname)) << "kept for later, not sent";
+        EXPECT_EQ(Stored().nickname, String(kNickname)) << "kept for later, not sent";
     }
 
     TEST_F(MahjongUploadSceneTest, TheChoiceThatIsNotRememberedIsSaidInEveryPiece) {
@@ -440,8 +441,8 @@ namespace BECore::Mahjong::Tests {
         _manager.Reset();
         ASSERT_EQ(_poster.posts.size(), 1U);
         EXPECT_EQ(_poster.posts.front().path.substr(_poster.posts.front().path.rfind('/')), "/0");
-        const std::string& body = _poster.posts.front().body;
-        EXPECT_NE(body.find("\"start\""), std::string::npos) << body.substr(0, 120);
+        const String& body = _poster.posts.front().body;
+        EXPECT_NE(body.find("\"start\""), String::npos) << body.substr(0, 120);
     }
 
     TEST_F(MahjongUploadSceneTest, TheQuestionSaysTheWordsOfTheOwnerInBothLanguagesAndPassesTheSizeMatrixAtTheTouchSize) {
@@ -463,7 +464,7 @@ namespace BECore::Mahjong::Tests {
             for (const Output& output : kOutputs) {
                 ExpectWordsFit(kConsent, output.width, output.height, kButtonAir);
             }
-            const std::vector<std::string> cut = WordsThatDoNotFitOnTheMatrix(*Canvas(kConsent), kButtonAir);
+            const Vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas(kConsent), kButtonAir);
             EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
         });
     }
@@ -605,7 +606,7 @@ namespace BECore::Mahjong::Tests {
         EmitAction("MahjongOnlineBackspace");
         Frames(1);
         EXPECT_EQ(Var("onlineEntryValue"), "B");
-        EXPECT_EQ(Stored().nickname, eastl::string()) << "stored when the pad is done";
+        EXPECT_EQ(Stored().nickname, String()) << "stored when the pad is done";
         ASSERT_NO_FATAL_FAILURE(PressKeyboard(SDLK_A, true));
         ASSERT_NO_FATAL_FAILURE(PressKeyboard(SDLK_N));
         EXPECT_EQ(Var("onlineEntryValue"), "BAn");
@@ -614,16 +615,16 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(EntryShown());
         EXPECT_TRUE(OptionsShown());
         EXPECT_FALSE(Canvas("Online")->TakesInput());
-        EXPECT_EQ(Stored().nickname, eastl::string("BAn"));
-        EXPECT_EQ(_game->GetUploadPrefs().nickname, eastl::string("BAn"));
+        EXPECT_EQ(Stored().nickname, String("BAn"));
+        EXPECT_EQ(_game->GetUploadPrefs().nickname, String("BAn"));
         EXPECT_EQ(DisplayText(Element(kOptions, kNicknameField)), "BAn");
-        EXPECT_EQ(_game->GetLocalSession().LogOrigin().nickname, eastl::string("BAn"));
+        EXPECT_EQ(_game->GetLocalSession().LogOrigin().nickname, String("BAn"));
 
         _game->CloseOptions();
         ASSERT_NO_FATAL_FAILURE(PlayMatch());
         ASSERT_NO_FATAL_FAILURE(Drain());
         ExpectPostedMatchReplays();
-        EXPECT_NE(_poster.posts.front().body.find("\"nickname\":\"BAn\""), std::string::npos);
+        EXPECT_NE(_poster.posts.front().body.find("\"nickname\":\"BAn\""), String::npos);
     }
 
     TEST_F(MahjongUploadSceneTest, EscapeAndEnterOnThePadStoreTheNicknameAndGoBackToTheOptionsPage) {
@@ -634,7 +635,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(EntryShown());
         EXPECT_TRUE(OptionsShown()) << "the Escape of the pad is not the page's";
         EXPECT_TRUE(_game->IsOptionsOpen());
-        EXPECT_EQ(Stored().nickname, eastl::string("x"));
+        EXPECT_EQ(Stored().nickname, String("x"));
 
         ASSERT_NO_FATAL_FAILURE(OpenPad());
         EXPECT_EQ(Var("onlineEntryValue"), "x") << "the pad starts on the nickname";
@@ -642,7 +643,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(PressKeyboard(SDLK_RETURN));
         EXPECT_FALSE(EntryShown());
         EXPECT_TRUE(OptionsShown());
-        EXPECT_EQ(Stored().nickname, eastl::string("xy"));
+        EXPECT_EQ(Stored().nickname, String("xy"));
 
         PressKeyboard(SDLK_ESCAPE);  // with the pad down this one is the page's
         EXPECT_FALSE(OptionsShown());
@@ -656,12 +657,12 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(TypeKey("Z"));
         ASSERT_TRUE(ClickElement(kEntry, kEntryDone));
         Frames();
-        EXPECT_EQ(Stored().nickname, eastl::string("Z"));
+        EXPECT_EQ(Stored().nickname, String("Z"));
         EXPECT_EQ(Stored().consent, UploadConsent::Declined);
         EXPECT_TRUE(_game->GetLocalSession().LogOrigin().nickname.empty());
         ASSERT_TRUE(ClickElement(kOptions, kSend));
         Frames();
-        EXPECT_EQ(_game->GetLocalSession().LogOrigin().nickname, eastl::string("Z"));
+        EXPECT_EQ(_game->GetLocalSession().LogOrigin().nickname, String("Z"));
     }
 
     TEST_F(MahjongUploadSceneTest, ThePadForTheNicknameGoesWhenThePageIsClosedUnderIt) {
@@ -690,7 +691,7 @@ namespace BECore::Mahjong::Tests {
             for (const Output& output : kOutputs) {
                 ExpectWordsFit(kOptions, output.width, output.height, kButtonAir);
             }
-            const std::vector<std::string> cut = WordsThatDoNotFitOnTheMatrix(*Canvas(kOptions), kButtonAir);
+            const Vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas(kOptions), kButtonAir);
             EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
         });
     }
@@ -704,7 +705,7 @@ namespace BECore::Mahjong::Tests {
         ForEachMatrixWindow([&](const MatrixWindow& window) {
             for (const CanvasScaleMode mode : modes) {
                 for (const float userScale : {1.0f, 1.5f}) {
-                    const std::string label = Format("{} {} x{}", window.label.c_str(), EnumUtils<CanvasScaleMode>::ToString(mode).data(), userScale).c_str();
+                    const String label = Format("{} {} x{}", window.label.c_str(), EnumUtils<CanvasScaleMode>::ToString(mode).data(), userScale).c_str();
                     const UICanvasResolved resolved = LayOutInWindow(*page, window, mode, userScale);
                     const UIElement* plate = Element(kOptions, "Plate");
                     ASSERT_NE(plate, nullptr);
@@ -716,7 +717,7 @@ namespace BECore::Mahjong::Tests {
                         const UIElement* band = Element(kOptions, name);
                         ASSERT_NE(band, nullptr) << name;
                         if (band->rect.IsEmpty()) {
-                            EXPECT_TRUE(std::string(name) == "Title" || std::string(name) == "NicknameNote") << label << ": " << name << " may give way, no row may";
+                            EXPECT_TRUE(String(name) == "Title" || String(name) == "NicknameNote") << label << ": " << name << " may give way, no row may";
                             continue;
                         }
                         EXPECT_GE(band->rect.y, plate->rect.y - 0.01f) << label << " " << name;

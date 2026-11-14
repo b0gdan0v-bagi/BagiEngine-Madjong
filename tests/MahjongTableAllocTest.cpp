@@ -326,8 +326,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Another person hosts a room on the hub; the code of it.
-        eastl::string HostElsewhere() {
-            _others.push_back(std::make_unique<HubPlayer>(_world));
+        String HostElsewhere() {
+            _others.push_back(MakeUnique<HubPlayer>(_world));
             HubPlayer& host = *_others.back();
             EXPECT_TRUE(host.Client().Host(kUrl, "Hanna", OnlineRoomOptions{kShortMatchHands, kMinLevel}));
             EXPECT_TRUE(PumpUntil([&] { return host.Client().Stage() == OnlineStage::Lobby; }));
@@ -385,7 +385,7 @@ namespace BECore::Mahjong::Tests {
         // A guest: the client leaves and joins the room of another person
         ASSERT_TRUE(_game->GetOnline().Leave());
         ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Idle; }));
-        const eastl::string code = HostElsewhere();
+        const String code = HostElsewhere();
         ASSERT_TRUE(_game->GetOnline().Join(kUrl, code, "Cy"));
         ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Lobby; }));
         ASSERT_NO_FATAL_FAILURE(ExpectTheLobby("OnlineWaiting"));
@@ -475,7 +475,7 @@ namespace BECore::Mahjong::Tests {
             [[nodiscard]] bool Available() const override {
                 return true;
             }
-            std::expected<WebPostId, eastl::string> Start(eastl::string_view /*path*/, eastl::string_view /*body*/) override {
+            std::expected<WebPostId, String> Start(StringView /*path*/, StringView /*body*/) override {
                 return WebPostId{1};
             }
             WebPostResult Poll(WebPostId /*id*/) override {
@@ -565,7 +565,7 @@ namespace BECore::Mahjong::Tests {
 
         // Four open rooms: three rows and the page button
         for (const char* name : {"Hanna", "Ivo", "Jan", "Kai"}) {
-            _others.push_back(std::make_unique<HubPlayer>(_world));
+            _others.push_back(MakeUnique<HubPlayer>(_world));
             HubPlayer& host = *_others.back();
             OnlineRoomOptions options{kShortMatchHands, kMinLevel};
             options.isPublic = true;

@@ -13,7 +13,7 @@ namespace BECore::Mahjong {
             }
             switch (meld.kind) {
                 case MeldKind::Chow: {
-                    const eastl::array<Tile, kTilesPerSet> members = ChowTiles(meld.first);
+                    const Array<Tile, kTilesPerSet> members = ChowTiles(meld.first);
                     return static_cast<int>(eastl::count(members.begin(), members.end(), tile));
                 }
                 case MeldKind::Pung:
@@ -24,7 +24,7 @@ namespace BECore::Mahjong {
             return 0;
         }
 
-        ScoreInput MakeScoreInput(const HandModel& model, Seat seat, const std::optional<HandResult>& result) {
+        ScoreInput MakeScoreInput(const HandModel& model, Seat seat, const Optional<HandResult>& result) {
             ScoreInput input;
             input.hand = model.GetHand(seat);
             input.seatWind = model.SeatWind(seat);
@@ -51,7 +51,7 @@ namespace BECore::Mahjong {
     }
 
     HandSettlement SettleHand(const HandModel& finished) {
-        const std::optional<HandResult>& result = finished.Result();
+        const Optional<HandResult>& result = finished.Result();
         HandSettlement settlement;
         settlement.kind = result.has_value() ? result->kind : ResultKind::Drawn;
         settlement.winner = settlement.kind == ResultKind::Win ? result->winner : kNoSeat;

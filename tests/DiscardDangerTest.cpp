@@ -58,7 +58,7 @@ namespace BECore::Mahjong::Tests {
             spec.hands[kSeat1] = kWaitingHand;
             spec.hands[kSeat2] = seat2;
             spec.hands[kSeat3] = seat3;
-            spec.live = std::string("Ew Rd Nw Ww Gd Wd 9m Ew Rd ") + tail;
+            spec.live = Format("Ew Rd Nw Ww Gd Wd 9m Ew Rd {}", tail);
             return spec;
         }
 
@@ -229,7 +229,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(DangerOf(view, Tile{}), Danger::Safe);
         EXPECT_EQ(DangerOf(view, T("F1")), Danger::Safe);
         for (uint8_t id = 0; id < kKindCount; ++id) {
-            EXPECT_EQ(table[id], DangerOf(view, Tile{id})) << ToString(Tile{id});
+            EXPECT_EQ(table[id], DangerOf(view, Tile{id})) << ToStd(ToString(Tile{id}));
         }
     }
 
@@ -302,7 +302,7 @@ namespace BECore::Mahjong::Tests {
         const HandModel model = TwoLapsModel();
         const TableView view = MakeTableView(model, kSeat0);
         MahjongRng rng(kWorldSeed);
-        const std::optional<HandModel> world = SampleWorld(view, rng);
+        const Optional<HandModel> world = SampleWorld(view, rng);
         ASSERT_TRUE(world.has_value());
 
         const TableView sampled = MakeTableView(*world, kSeat0);

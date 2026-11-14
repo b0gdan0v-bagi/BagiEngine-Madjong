@@ -45,7 +45,7 @@ namespace BECore::Mahjong {
 
     /// Every pung, kong and chow of `view.legal` (no mahjong, no pass), in that order, rated with `RateClaim`; `shantenBefore` is the
     /// shanten of the hand as it is. `ChooseClaimAction` keeps the best of the acceptable ones.
-    [[nodiscard]] eastl::vector<RatedClaim> RateClaims(const TableView& view, int shantenBefore, const LevelProfile& profile);
+    [[nodiscard]] Vector<RatedClaim> RateClaims(const TableView& view, int shantenBefore, const LevelProfile& profile);
 
     /// A kong of the discard offered to a waiting hand that keeps the wait, and what the hand is worth with it and without it.
     struct WaitingKong {
@@ -63,7 +63,7 @@ namespace BECore::Mahjong {
     /// The kong of `view.pendingTile` when it is listed and the hand after it still waits (`RateClaim` at `kWaitingShanten`), rated
     /// by points: the kong gives its points and the loose tile, and the hand loses `FullyConcealed` once it is open. nullopt
     /// otherwise. A pure function of the view, no rng.
-    [[nodiscard]] std::optional<WaitingKong> RateWaitingKong(const TableView& view);
+    [[nodiscard]] Optional<WaitingKong> RateWaitingKong(const TableView& view);
 
     /// The rule of the window that decided (the numbers of the list in `ChooseClaimAction`).
     enum class ClaimStep {

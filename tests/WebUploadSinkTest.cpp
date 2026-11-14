@@ -1,4 +1,5 @@
 #include <Common/EngineEnvironment.h>
+#include <Common/Printers.h>
 #include <Mahjong/MatchLogJson.h>
 #include <Mahjong/WebUploadSink.h>
 #include <gtest/gtest.h>
@@ -31,19 +32,19 @@ namespace BECore::Mahjong::Tests {
         class FakePoster final : public IWebPoster {
         public:
             struct Post {
-                std::string path;
-                std::string body;
+                String path;
+                String body;
             };
 
             [[nodiscard]] bool Available() const override {
                 return available;
             }
 
-            std::expected<WebPostId, eastl::string> Start(eastl::string_view path, eastl::string_view body) override {
+            std::expected<WebPostId, String> Start(StringView path, StringView body) override {
                 if (refuseStart) {
-                    return std::unexpected(eastl::string("refused"));
+                    return std::unexpected(String("refused"));
                 }
-                posts.push_back({std::string(path.data(), path.size()), std::string(body.data(), body.size())});
+                posts.push_back({String(path.data(), path.size()), String(body.data(), body.size())});
                 pending = static_cast<WebPostId>(posts.size());
                 answered = false;
                 return pending;
@@ -71,7 +72,7 @@ namespace BECore::Mahjong::Tests {
 
             bool available = true;
             bool refuseStart = false;
-            std::vector<Post> posts;
+            Vector<Post> posts;
             WebPostId pending = 0;
             bool answered = false;
             WebPostResult answer;
@@ -233,7 +234,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(WebUploadSinkTest, UnauthorizedAndNotFoundEndThePostingForTheSession) {
-        const std::pair<int, WebUploadState> cases[] = {{kStatusUnauthorized, WebUploadState::Unauthorized}, {kStatusNotFound, WebUploadState::NoStore}};
+        const Pair<int, WebUploadState> cases[] = {{kStatusUnauthorized, WebUploadState::Unauthorized}, {kStatusNotFound, WebUploadState::NoStore}};
         for (const auto& [status, state] : cases) {
             SinkFixture fixture;
             fixture.sink.Send(Piece("one", 0));
@@ -418,7 +419,7 @@ namespace BECore::Mahjong::Tests {
         MatchLog log;
         uploader.SetNext(&log);
         uploader.SetSink(&fixture.sink);
-        uploader.SetMatchIdSource([] { return eastl::string("0123456789abcdef0123456789abcdef"); });
+        uploader.SetMatchIdSource([] { return String("0123456789abcdef0123456789abcdef"); });
         uploader.SetConsent(UploadConsent::Granted, true);
         session.SetLogSink(&uploader);
         MahjongSettings settings;
@@ -434,7 +435,7 @@ namespace BECore::Mahjong::Tests {
 
         // The server is unavailable once, then answers; a piece posted twice is the same bytes
         double now = kStart;
-        std::map<std::string, std::string> byPath;
+        Map<String, String> byPath;
         size_t seen = 0;
         for (int frame = 0; frame < 100 && fixture.sink.QueuedPieces() > 0; ++frame) {
             fixture.sink.Pump(now);
@@ -452,17 +453,19 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(fixture.sink.Counters().retried, 1U);
         ASSERT_EQ(byPath.size(), static_cast<size_t>(kShortMatchHands) + 1);
 
-        eastl::vector<UploadPiece> pieces;
+        Vector<UploadPiece> pieces;
         for (const auto& [path, body] : byPath) {
             UploadPiece piece;
             piece.matchId = "0123456789abcdef0123456789abcdef";
-            piece.index = static_cast<uint32_t>(std::stoul(path.substr(path.rfind('/') + 1)));
+            const String number = path.substr(path.rfind('/') + 1);
+            const auto parsed = std::from_chars(number.data(), number.data() + number.size(), piece.index);
+            ASSERT_EQ(parsed.ec, std::errc()) << path.c_str();
             piece.lines.assign(body.data(), body.size());
             pieces.push_back(piece);
         }
         const auto assembled = AssemblePieces(pieces);
         ASSERT_TRUE(assembled.has_value()) << assembled.error().c_str();
-        const auto events = ParseMatchLog(std::string_view(assembled->c_str(), assembled->size()));
+        const auto events = ParseMatchLog(StringView(assembled->c_str(), assembled->size()));
         ASSERT_TRUE(events.has_value()) << events.error().c_str();
         Match replayed;
         EXPECT_TRUE(ReplayMatchLog(*events, replayed).has_value());

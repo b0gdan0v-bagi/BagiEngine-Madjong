@@ -18,7 +18,7 @@ namespace BECore::Mahjong {
         /// The seat at this screen position.
         Seat seat = 0;
         /// The seat's wind in the hand shown, one letter ("E"; the last hand once the match is over).
-        eastl::string wind;
+        String wind;
         /// The seat's points in `Match::Scores()`.
         int score = 0;
         /// The seat holds East in the hand shown (read from the winds of the hand like the plates do: after the last hand `Match::East()` is the next one's).
@@ -31,15 +31,15 @@ namespace BECore::Mahjong {
     /// of a hand.
     struct CenterPanelText {
         /// The round wind and the number of the hand in it ("East 1": one key with placeholders).
-        eastl::string round;
+        String round;
         /// The number of the hand in its round (`HandNumberInRound`).
         int handInRound = 1;
         /// The tiles left in the live wall.
         int wall = 0;
         /// The sentence that names `wall` ("Wall 83").
-        eastl::string wallText;
+        String wallText;
         /// By screen position (0 bottom, 1 right, 2 top, 3 left; `SeatAtPosition(BottomSeat(session), position)` is the seat at each).
-        eastl::array<CenterPanelSeat, kSeatCount> seats;
+        Array<CenterPanelSeat, kSeatCount> seats;
     };
 
     /// The panel in the current language of `strings`.

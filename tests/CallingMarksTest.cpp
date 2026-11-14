@@ -34,12 +34,12 @@ namespace BECore::Mahjong::Tests {
                 spec.hands[kSeat1] = kWaitingHand1;
                 spec.hands[kSeat2] = kSeat2Waits;
                 spec.hands[kSeat3] = kSeat3Waits;
-                spec.live = std::string("Gd Rd Wd Gd ") + lastDraw + " 1p 2p 3p";
+                spec.live = Format("Gd Rd Wd Gd {} 1p 2p 3p", lastDraw);
             } else {
                 spec.hands[kSeat1] = "1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Nw Ww";
                 spec.hands[kSeat2] = "2p 5p 8p 2s 5s 8s 2m 5m 8m Sw Ew Nw Ww";
                 spec.hands[kSeat3] = "3p 6p 9p 3s 6s 9s 3m 6m 9m Ew Nw Ww Gd";
-                spec.live = std::string("Gd Rd Wd Gd ") + lastDraw + " Ew Ww Nw";
+                spec.live = Format("Gd Rd Wd Gd {} Ew Ww Nw", lastDraw);
             }
             HandModel model = MakeModel(spec);
             if (others) {
@@ -52,8 +52,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The ids of the tiles that are marked.
-        std::set<int> Marked(const TableView& view) {
-            std::set<int> marked;
+        Set<int> Marked(const TableView& view) {
+            Set<int> marked;
             const auto keeps = KeepsWaitingDiscards(view);
             for (size_t id = 0; id < keeps.size(); ++id) {
                 if (keeps[id]) {
@@ -63,8 +63,8 @@ namespace BECore::Mahjong::Tests {
             return marked;
         }
 
-        std::set<int> Ids(std::initializer_list<const char*> tiles) {
-            std::set<int> ids;
+        Set<int> Ids(std::initializer_list<const char*> tiles) {
+            Set<int> ids;
             for (const char* tile : tiles) {
                 ids.insert(T(tile).Id());
             }
@@ -72,8 +72,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// What the function should say, worked out another way: one copy of each held tile leaves the hand, `WinningTiles` of what stays.
-        std::set<int> BruteForce(const PlayerHand& hand) {
-            std::set<int> marked;
+        Set<int> BruteForce(const PlayerHand& hand) {
+            Set<int> marked;
             for (const Tile tile : hand.concealed) {
                 PlayerHand rest = hand;
                 rest.RemoveConcealed(tile);
@@ -198,7 +198,7 @@ namespace BECore::Mahjong::Tests {
         const HandModel model = DeclaredModel("5p");
         const TableView view = MakeTableView(model, kSeat0);
         ASSERT_TRUE(std::any_of(view.legal.begin(), view.legal.end(), [](const HandAction& action) { return action.kind == ActionKind::DeclareWin; }));
-        const std::set<int> marked = Marked(view);
+        const Set<int> marked = Marked(view);
         EXPECT_EQ(marked, BruteForce(view.own));
         for (const char* tile : {"5p", "4p", "6p", "Sw", "1s", "4m"}) {
             EXPECT_TRUE(marked.contains(T(tile).Id())) << tile;
@@ -294,7 +294,7 @@ namespace BECore::Mahjong::Tests {
             const PlayerHand hand = RandomHand(rng, meldCount);
             ASSERT_EQ(hand.concealed.size(), static_cast<size_t>(kTilesPerSet * (kSetsInHand - meldCount) + kTilesInPair)) << "round " << round;
             const TableView view = TurnView(hand);
-            const std::set<int> marked = Marked(view);
+            const Set<int> marked = Marked(view);
             EXPECT_EQ(marked, BruteForce(view.own)) << "round " << round;
             waitingHands += marked.empty() ? 0 : 1;
             withMelds += (meldCount > 0 && !marked.empty()) ? 1 : 0;

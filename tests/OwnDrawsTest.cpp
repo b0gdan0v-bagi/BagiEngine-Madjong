@@ -49,7 +49,7 @@ namespace BECore::Mahjong::Tests {
             for (const Tile tile : view.own.concealed) {
                 ++view.visible[tile.Id()];
             }
-            const eastl::vector<Tile> open = ParseTiles(pile).value();
+            const Vector<Tile> open = ParseTiles(pile).value();
             for (const Tile tile : open) {
                 ++view.visible[tile.Id()];
             }
@@ -69,12 +69,12 @@ namespace BECore::Mahjong::Tests {
             return view;
         }
 
-        const DiscardValue* Find(const eastl::vector<DiscardValue>& values, const char* tile) {
+        const DiscardValue* Find(const Vector<DiscardValue>& values, const char* tile) {
             const auto found = eastl::find_if(values.begin(), values.end(), [tile](const DiscardValue& value) { return value.tile == T(tile); });
             return found == values.end() ? nullptr : &*found;
         }
 
-        void ExpectEqual(const eastl::vector<DiscardValue>& a, const eastl::vector<DiscardValue>& b) {
+        void ExpectEqual(const Vector<DiscardValue>& a, const Vector<DiscardValue>& b) {
             ASSERT_EQ(a.size(), b.size());
             for (size_t i = 0; i < a.size(); ++i) {
                 EXPECT_EQ(a[i].tile, b[i].tile) << "entry " << i;
@@ -95,8 +95,8 @@ namespace BECore::Mahjong::Tests {
         const TableView view = MakeView(kPairsHand);
         TileCounts counts = CountTiles(view.own.concealed);
 
-        const eastl::vector<DiscardOption> rating = RateDiscards(counts, 0, view);
-        const eastl::vector<DiscardValue> values = ValueDiscards(view, kDepth);
+        const Vector<DiscardOption> rating = RateDiscards(counts, 0, view);
+        const Vector<DiscardValue> values = ValueDiscards(view, kDepth);
 
         ASSERT_GE(rating.size(), 4u);
         EXPECT_EQ(rating[0].acceptance, rating[3].acceptance);
@@ -119,8 +119,8 @@ namespace BECore::Mahjong::Tests {
         const TableView view = MakeView(kPairsHand, "Rd");
         TileCounts counts = CountTiles(view.own.concealed);
 
-        const eastl::vector<DiscardOption> rating = RateDiscards(counts, 0, view);
-        const eastl::vector<DiscardValue> values = ValueDiscards(view, kDepth);
+        const Vector<DiscardOption> rating = RateDiscards(counts, 0, view);
+        const Vector<DiscardValue> values = ValueDiscards(view, kDepth);
 
         ASSERT_FALSE(rating.empty());
         EXPECT_EQ(rating.front().tile, T("Rd"));
@@ -140,7 +140,7 @@ namespace BECore::Mahjong::Tests {
         // 3 copies of each are unseen. Points of a win: 20 win + 2 self-draw + 2 only winning tile + 8 concealed terminal pung = 32, and the pair
         // of dragons adds 2 for Gd = 34. Doubles: fully concealed and the declaration with the first discard (the view has made none): x4.
         // 32 x 4 = 128 -> 130, 34 x 4 = 136 -> 140.
-        const eastl::vector<DiscardValue> waits = ValueWaits(MakeView(kTankiHand));
+        const Vector<DiscardValue> waits = ValueWaits(MakeView(kTankiHand));
 
         ASSERT_EQ(waits.size(), 2u);
         EXPECT_EQ(waits[0].tile, T("5p"));  // discarding 5p keeps the wait on Gd
@@ -164,7 +164,7 @@ namespace BECore::Mahjong::Tests {
             expected += std::pow(alive * (1.0 - p), i - 1) * p;
         }
 
-        const eastl::vector<DiscardValue> values = ValueDiscards(MakeView(kTankiHand, "", kWall), kDepth);
+        const Vector<DiscardValue> values = ValueDiscards(MakeView(kTankiHand, "", kWall), kDepth);
 
         const DiscardValue* tanki = Find(values, "5p");
         ASSERT_NE(tanki, nullptr);
@@ -178,8 +178,8 @@ namespace BECore::Mahjong::Tests {
         busy.seats[kSeat1].callingDeclared = true;
         busy.seats[kSeat2].callingDeclared = true;
 
-        const eastl::vector<DiscardValue> quietValues = ValueDiscards(quiet, kDepth);
-        const eastl::vector<DiscardValue> busyValues = ValueDiscards(busy, kDepth);
+        const Vector<DiscardValue> quietValues = ValueDiscards(quiet, kDepth);
+        const Vector<DiscardValue> busyValues = ValueDiscards(busy, kDepth);
 
         ASSERT_NE(Find(quietValues, "5p"), nullptr);
         ASSERT_NE(Find(busyValues, "5p"), nullptr);
@@ -197,8 +197,8 @@ namespace BECore::Mahjong::Tests {
         const TableView viewA = MakeTableView(MakeModel(first), kSeat0);
         const TableView viewB = MakeTableView(MakeModel(second), kSeat0);
 
-        const eastl::vector<DiscardValue> a = ValueDiscards(viewA, kDepth + 1);
-        const eastl::vector<DiscardValue> b = ValueDiscards(viewB, kDepth + 1);
+        const Vector<DiscardValue> a = ValueDiscards(viewA, kDepth + 1);
+        const Vector<DiscardValue> b = ValueDiscards(viewB, kDepth + 1);
 
         ASSERT_FALSE(a.empty());
         ExpectEqual(a, b);
@@ -207,11 +207,11 @@ namespace BECore::Mahjong::Tests {
 
     TEST(OwnDrawsTest, TheSameInputGivesTheSameOutputAlsoAfterAnotherCall) {
         const TableView view = MakeView(kOneFromWaiting);
-        const eastl::vector<DiscardValue> first = ValueDiscards(view, kDepth + 1);
+        const Vector<DiscardValue> first = ValueDiscards(view, kDepth + 1);
 
-        const eastl::vector<DiscardValue> other = ValueDiscards(MakeView(kPairsHand, "Rd"), kDepth);
-        const eastl::vector<DiscardValue> second = ValueDiscards(view, kDepth + 1);
-        const eastl::vector<DiscardValue> third = ValueDiscards(view, kDepth + 1);
+        const Vector<DiscardValue> other = ValueDiscards(MakeView(kPairsHand, "Rd"), kDepth);
+        const Vector<DiscardValue> second = ValueDiscards(view, kDepth + 1);
+        const Vector<DiscardValue> third = ValueDiscards(view, kDepth + 1);
 
         ASSERT_FALSE(other.empty());
         ASSERT_FALSE(first.empty());
@@ -222,7 +222,7 @@ namespace BECore::Mahjong::Tests {
     TEST(OwnDrawsTest, WithNoDrawLeftTheHandCannotWin) {
         // A wall of 3 tiles leaves the seat 3 / 4 = 0 draws: no win, and a hand that reaches the end of the wall is a drawn hand (0).
         const TableView view = MakeView(kTankiHand, "", kSeatCount - 1);
-        const eastl::vector<DiscardValue> values = ValueDiscards(view, kDepth);
+        const Vector<DiscardValue> values = ValueDiscards(view, kDepth);
         TileCounts counts = CountTiles(view.own.concealed);
 
         ASSERT_FALSE(values.empty());
@@ -261,7 +261,7 @@ namespace BECore::Mahjong::Tests {
         const TableView view = MakeView(kOneFromWaiting);
         int previous = -1;
         for (int depth = 1; depth <= kOwnDrawsMaxDepth; ++depth) {
-            const eastl::vector<DiscardValue> values = ValueDiscards(view, depth);
+            const Vector<DiscardValue> values = ValueDiscards(view, depth);
             const DiscardValue* value = Find(values, "9s");
             ASSERT_NE(value, nullptr) << "depth " << depth;
             EXPECT_GT(value->winChance, previous) << "depth " << depth;
@@ -281,7 +281,7 @@ namespace BECore::Mahjong::Tests {
         // Take the plain discard of 5p out of the list: only its declaring variant stays, which is not a candidate.
         view.legal.erase(eastl::remove(view.legal.begin(), view.legal.end(), HandAction::MakeDiscard(T("5p"))), view.legal.end());
 
-        const eastl::vector<DiscardValue> values = ValueDiscards(view, kDepth);
+        const Vector<DiscardValue> values = ValueDiscards(view, kDepth);
 
         ASSERT_FALSE(values.empty());
         EXPECT_LE(values.size(), static_cast<size_t>(kOwnDrawsMaxCandidates));
@@ -301,7 +301,7 @@ namespace BECore::Mahjong::Tests {
     TEST(OwnDrawsTest, ValueWaitsListsOnlyTheDiscardsThatDeclare) {
         const TableView view = MakeView(kTankiHand);
 
-        const eastl::vector<DiscardValue> waits = ValueWaits(view);
+        const Vector<DiscardValue> waits = ValueWaits(view);
 
         ASSERT_EQ(waits.size(), 2u);
         for (const DiscardValue& wait : waits) {

@@ -38,8 +38,8 @@ namespace BECore::Mahjong::Tests {
             return match;
         }
 
-        std::optional<MatchError> ErrorOf(const MatchStatus& status) {
-            return status.has_value() ? std::nullopt : std::optional<MatchError>(status.error());
+        Optional<MatchError> ErrorOf(const MatchStatus& status) {
+            return status.has_value() ? std::nullopt : Optional<MatchError>(status.error());
         }
 
         /// A settlement of the hand in progress that nobody played: the kind, the winner and the change of the points.
@@ -129,7 +129,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(MatchTest, DifferentSeedsGiveDifferentMatches) {
-        const std::string first = Snapshot(StartedMatch(MahjongSettings{}, 1).Hand());
+        const String first = Snapshot(StartedMatch(MahjongSettings{}, 1).Hand());
         bool differs = false;
         for (uint32_t seed = 2; seed < 20; ++seed) {
             differs = differs || Snapshot(StartedMatch(MahjongSettings{}, seed).Hand()) != first;
@@ -146,7 +146,7 @@ namespace BECore::Mahjong::Tests {
 
             Match running = StartedMatch();
             ASSERT_TRUE(running.ApplySettlement(SomeoneElseWins(running)).has_value());
-            const std::string before = Snapshot(running.Hand());
+            const String before = Snapshot(running.Hand());
             const SeatScores scores = running.Scores();
             const Seat east = running.East();
 
@@ -258,7 +258,7 @@ namespace BECore::Mahjong::Tests {
     TEST(MatchTest, ADrawnHandIsReplayedByTheSameEastWhenTheSettingSaysSo) {
         Match match = StartedMatch(Settings(kExpectedFullHands, true));
         const Seat east = match.East();
-        const std::string firstHand = Snapshot(match.Hand());
+        const String firstHand = Snapshot(match.Hand());
 
         ASSERT_TRUE(match.ApplySettlement(Drawn(match)).has_value());
 
@@ -366,7 +366,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_TRUE(match.ApplySettlement(SomeoneElseWins(match)).has_value());
         }
         ASSERT_EQ(match.GetPhase(), MatchPhase::InHand);
-        const std::string lastHand = Snapshot(match.Hand());
+        const String lastHand = Snapshot(match.Hand());
 
         ASSERT_TRUE(match.ApplySettlement(MadeUp(match, ResultKind::Win, match.East(), kTransfer)).has_value());
 
@@ -386,11 +386,11 @@ namespace BECore::Mahjong::Tests {
     TEST(MatchTest, StandingsOrderTheSeatsByPointsAndTiesBySeat) {
         Match match = StartedMatch();
         ASSERT_TRUE(match.ApplySettlement(MadeUp(match, ResultKind::Win, 1, {-30, 90, 0, -60})).has_value());
-        EXPECT_EQ(match.Standings(), (eastl::array<Seat, kSeatCount>{1, 2, 0, 3}));
+        EXPECT_EQ(match.Standings(), (Array<Seat, kSeatCount>{1, 2, 0, 3}));
 
         ASSERT_TRUE(match.ApplySettlement(MadeUp(match, ResultKind::Win, 0, {120, -90, 0, -30})).has_value());
         // 2090, 2000, 2000, 1910: seats 1 and 2 are level and stay in seat order.
-        EXPECT_EQ(match.Standings(), (eastl::array<Seat, kSeatCount>{0, 1, 2, 3}));
+        EXPECT_EQ(match.Standings(), (Array<Seat, kSeatCount>{0, 1, 2, 3}));
     }
 
     TEST(MatchTest, TwoSeatsAtTheTopStayInSeatOrder) {
@@ -398,20 +398,20 @@ namespace BECore::Mahjong::Tests {
 
         ASSERT_TRUE(match.ApplySettlement(MadeUp(match, ResultKind::Win, 0, {10, -20, 0, 10})).has_value());
 
-        EXPECT_EQ(match.Standings(), (eastl::array<Seat, kSeatCount>{0, 3, 2, 1}));
+        EXPECT_EQ(match.Standings(), (Array<Seat, kSeatCount>{0, 3, 2, 1}));
     }
 
     TEST(MatchTest, StandingsAtTheStartAreInSeatOrder) {
         const Match match = StartedMatch();
 
-        EXPECT_EQ(match.Standings(), (eastl::array<Seat, kSeatCount>{0, 1, 2, 3}));
+        EXPECT_EQ(match.Standings(), (Array<Seat, kSeatCount>{0, 1, 2, 3}));
     }
 
     // ----- EndHand -----
 
     TEST(MatchTest, EndHandIsRefusedBeforeTheHandIsFinishedAndChangesNothing) {
         Match match = StartedMatch();
-        const std::string before = Snapshot(match.Hand());
+        const String before = Snapshot(match.Hand());
 
         const auto ended = match.EndHand();
 

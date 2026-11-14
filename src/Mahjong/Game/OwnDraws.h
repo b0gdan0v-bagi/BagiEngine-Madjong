@@ -46,7 +46,7 @@ namespace BECore::Mahjong {
      * a score); a draw is taken from the whole unseen pool, the opponents' concealed tiles included, as every unseen copy is; the tile
      * of an unchanged draw is not counted as seen or as discarded; a win on the last live tile is not marked.
      */
-    [[nodiscard]] eastl::vector<DiscardValue> ValueDiscards(const TableView& view, int depth);
+    [[nodiscard]] Vector<DiscardValue> ValueDiscards(const TableView& view, int depth);
 
     /**
      * @brief The discards that declare the calling hand (the listed ones that leave a waiting hand), rated in the same closed form,
@@ -55,7 +55,7 @@ namespace BECore::Mahjong {
      * For step 2 of the turn: the declaration with the wait that is worth the most. Empty when the view is not a seat's own discard turn
      * or no discard declares.
      */
-    [[nodiscard]] eastl::vector<DiscardValue> ValueWaits(const TableView& view);
+    [[nodiscard]] Vector<DiscardValue> ValueWaits(const TableView& view);
 
     /**
      * @brief The seat's hand as it is held (3n + 1 tiles: in a claim window, or a view made for a claim), in milli-points, in the

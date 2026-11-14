@@ -15,7 +15,7 @@ namespace BECore::Mahjong {
         Seat east = 0;
         Wind roundWind = Wind::East;
         /// Every seat's score, also in a drawn hand (a seat that does not win scores the sets and the pair that stand).
-        eastl::array<ScoreBreakdown, kSeatCount> breakdowns;
+        Array<ScoreBreakdown, kSeatCount> breakdowns;
         /// The rounded score of each seat (`breakdowns[seat].score`).
         SeatScores scores{};
         /// What `Settle` makes of `scores`: the change of each seat's points; all zeros for a drawn hand.

@@ -30,16 +30,16 @@ namespace BECore::Mahjong::Tests {
             return std::filesystem::path(__FILE__).parent_path().parent_path();
         }
 
-        uint32_t ReadBigEndian(const std::vector<unsigned char>& bytes, size_t offset) {
+        uint32_t ReadBigEndian(const Vector<unsigned char>& bytes, size_t offset) {
             return (static_cast<uint32_t>(bytes[offset]) << 24) | (static_cast<uint32_t>(bytes[offset + 1]) << 16) | (static_cast<uint32_t>(bytes[offset + 2]) << 8) |
                    static_cast<uint32_t>(bytes[offset + 3]);
         }
 
-        constexpr eastl::string_view kTileSpritePrefix = "Tile_";
+        constexpr StringView kTileSpritePrefix = "Tile_";
 
         struct Sprite {
-            eastl::string name;
-            eastl::string texturePath;
+            String name;
+            String texturePath;
             Rect rect;
         };
 
@@ -63,15 +63,15 @@ namespace BECore::Mahjong::Tests {
             const XmlNode sprites = config.GetRoot().GetChild("sprites");
             ASSERT_TRUE(static_cast<bool>(sprites));
             for (const XmlNode node : sprites.Children()) {
-                if (node.Name() != eastl::string_view("sprite")) {
+                if (node.Name() != StringView("sprite")) {
                     continue;
                 }
                 Sprite sprite;
-                sprite.name = eastl::string(node.GetAttribute("name").value_or(""));
+                sprite.name = String(node.GetAttribute("name").value_or(""));
                 if (sprite.name.compare(0, kTileSpritePrefix.size(), kTileSpritePrefix.data()) != 0) {
                     continue;  // the library also holds the icons (IconSpritesTest)
                 }
-                sprite.texturePath = eastl::string(node.GetAttribute("texturePath").value_or(""));
+                sprite.texturePath = String(node.GetAttribute("texturePath").value_or(""));
                 const XmlNode source = node.GetChild("srcRect");
                 ASSERT_TRUE(static_cast<bool>(source)) << sprite.name.c_str();
                 sprite.rect = Rect(source.ParseAttribute<float>("x").value_or(-1.0f), source.ParseAttribute<float>("y").value_or(-1.0f), source.ParseAttribute<float>("w").value_or(-1.0f),
@@ -80,18 +80,18 @@ namespace BECore::Mahjong::Tests {
             }
         }
 
-        eastl::vector<Sprite> _sprites;
+        Vector<Sprite> _sprites;
     };
 
     TEST_F(TileSpritesTest, ThePngIsAnRgbaPictureOfTheAtlasSize) {
         const std::filesystem::path pngPath = GameRoot() / kAtlasPath;
         std::ifstream file(pngPath, std::ios::binary);
         ASSERT_TRUE(file.is_open()) << pngPath.string();
-        std::vector<unsigned char> head(kIhdrDataOffset + kIhdrSize);
+        Vector<unsigned char> head(kIhdrDataOffset + kIhdrSize);
         file.read(reinterpret_cast<char*>(head.data()), static_cast<std::streamsize>(head.size()));
         ASSERT_EQ(static_cast<size_t>(file.gcount()), head.size());
         EXPECT_TRUE(std::equal(std::begin(kPngSignature), std::end(kPngSignature), head.begin()));
-        EXPECT_EQ(std::string(head.begin() + kIhdrTypeOffset, head.begin() + kIhdrDataOffset), "IHDR");
+        EXPECT_EQ(std::string(head.begin() + kIhdrTypeOffset, head.begin() + kIhdrDataOffset), "IHDR");  //-NoStd: the bytes of the PNG chunk type
         EXPECT_EQ(ReadBigEndian(head, kIhdrDataOffset), static_cast<uint32_t>(kAtlasWidth));
         EXPECT_EQ(ReadBigEndian(head, kIhdrDataOffset + kIhdrHeightOffset), static_cast<uint32_t>(kAtlasHeight));
         EXPECT_EQ(head[kIhdrDataOffset + kIhdrDepthOffset], kBitDepth);
@@ -102,7 +102,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(TileSpritesTest, TheLibraryHoldsOneSpritePerTileAndTheBack) {
         ASSERT_EQ(_sprites.size(), static_cast<size_t>(kDrawnCells));
         for (const Sprite& sprite : _sprites) {
-            EXPECT_EQ(sprite.texturePath, eastl::string(kAtlasPath)) << sprite.name.c_str();
+            EXPECT_EQ(sprite.texturePath, String(kAtlasPath)) << sprite.name.c_str();
         }
     }
 
@@ -120,7 +120,7 @@ namespace BECore::Mahjong::Tests {
         }
         const Sprite& back = _sprites[kBackCell];
         const Rect expectedBack = BackRect();
-        EXPECT_EQ(back.name, eastl::string(kBackSpriteName));
+        EXPECT_EQ(back.name, String(kBackSpriteName));
         EXPECT_EQ(back.rect.x, expectedBack.x);
         EXPECT_EQ(back.rect.y, expectedBack.y);
         EXPECT_EQ(back.rect.w, expectedBack.w);
@@ -132,7 +132,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(kStackCell, kBackCell + 1);
         const Sprite& stack = _sprites[kStackCell];
         const Rect expected = StackRect();
-        EXPECT_EQ(stack.name, eastl::string(kStackSpriteName));
+        EXPECT_EQ(stack.name, String(kStackSpriteName));
         EXPECT_EQ(stack.rect.x, expected.x);
         EXPECT_EQ(stack.rect.y, expected.y);
         EXPECT_EQ(stack.rect.w, expected.w);
@@ -144,12 +144,12 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(TileSpritesTest, SpriteNamesAreDistinctAndFollowTheNotation) {
-        EXPECT_EQ(SpriteName(*TryParse("5p")), eastl::string("Tile_5p"));
-        EXPECT_EQ(SpriteName(*TryParse("Ew")), eastl::string("Tile_Ew"));
-        EXPECT_EQ(SpriteName(*TryParse("Rd")), eastl::string("Tile_Rd"));
-        EXPECT_EQ(SpriteName(*TryParse("F1")), eastl::string("Tile_F1"));
-        EXPECT_EQ(SpriteName(*TryParse("T4")), eastl::string("Tile_T4"));
-        EXPECT_EQ(SpriteName(Tile{}), eastl::string(kBackSpriteName));
+        EXPECT_EQ(SpriteName(*TryParse("5p")), String("Tile_5p"));
+        EXPECT_EQ(SpriteName(*TryParse("Ew")), String("Tile_Ew"));
+        EXPECT_EQ(SpriteName(*TryParse("Rd")), String("Tile_Rd"));
+        EXPECT_EQ(SpriteName(*TryParse("F1")), String("Tile_F1"));
+        EXPECT_EQ(SpriteName(*TryParse("T4")), String("Tile_T4"));
+        EXPECT_EQ(SpriteName(Tile{}), String(kBackSpriteName));
         for (size_t first = 0; first < _sprites.size(); ++first) {
             for (size_t second = first + 1; second < _sprites.size(); ++second) {
                 EXPECT_NE(_sprites[first].name, _sprites[second].name);

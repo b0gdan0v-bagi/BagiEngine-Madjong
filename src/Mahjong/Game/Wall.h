@@ -78,18 +78,18 @@ namespace BECore::Mahjong {
         Wall() = default;
 
         /// A wall from tiles in draw order (the first tile is the first loose tile). Any length; the break is not recorded.
-        [[nodiscard]] static Wall FromOrder(eastl::vector<Tile> order);
+        [[nodiscard]] static Wall FromOrder(Vector<Tile> order);
 
         /// A wall from its three parts exactly as given (for `HandModel::Restore` and the tests): `loose` front first, `live` in draw
         /// order, `dead` in draw order. No layout is guessed from the sizes and the break is not recorded.
-        [[nodiscard]] static Wall FromParts(eastl::vector<Tile> loose, eastl::vector<Tile> live, eastl::vector<Tile> dead);
+        [[nodiscard]] static Wall FromParts(Vector<Tile> loose, Vector<Tile> live, Vector<Tile> dead);
 
         /// The next tile of the live wall, or `nullopt` when it is empty. Never touches the loose tiles or the dead wall.
-        [[nodiscard]] std::optional<Tile> Draw();
+        [[nodiscard]] Optional<Tile> Draw();
 
         /// The front of the reserve, then the reserve is refilled from the live tail when the live wall has a tile left; `nullopt`
         /// when the reserve is empty.
-        [[nodiscard]] std::optional<Tile> DrawLoose();
+        [[nodiscard]] Optional<Tile> DrawLoose();
 
         /// Tiles a regular `Draw` can still take.
         [[nodiscard]] size_t LiveCount() const noexcept {
@@ -109,16 +109,16 @@ namespace BECore::Mahjong {
         }
 
         /// The loose reserve, front first (the tile `DrawLoose` takes next).
-        [[nodiscard]] const eastl::vector<Tile>& LooseTiles() const noexcept {
+        [[nodiscard]] const Vector<Tile>& LooseTiles() const noexcept {
             return _loose;
         }
         /// The dead wall in draw order; for inspection only, nothing takes from it.
-        [[nodiscard]] const eastl::vector<Tile>& DeadWall() const noexcept {
+        [[nodiscard]] const Vector<Tile>& DeadWall() const noexcept {
             return _dead;
         }
         /// The live tiles still to be drawn, in draw order.
-        [[nodiscard]] eastl::vector<Tile> LiveTiles() const {
-            return eastl::vector<Tile>(_live.begin() + _liveBegin, _live.begin() + _liveEnd);
+        [[nodiscard]] Vector<Tile> LiveTiles() const {
+            return Vector<Tile>(_live.begin() + _liveBegin, _live.begin() + _liveEnd);
         }
 
         [[nodiscard]] const WallBreak& GetBreak() const noexcept {
@@ -128,9 +128,9 @@ namespace BECore::Mahjong {
     private:
         friend Wall MakeWall(MahjongRng& rng, const MahjongSettings& settings, Seat east);
 
-        eastl::vector<Tile> _loose;
-        eastl::vector<Tile> _live;
-        eastl::vector<Tile> _dead;
+        Vector<Tile> _loose;
+        Vector<Tile> _live;
+        Vector<Tile> _dead;
         size_t _liveBegin = 0;
         size_t _liveEnd = 0;
         WallBreak _break;

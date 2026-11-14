@@ -27,8 +27,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Tiles with distinct ids 0..count-1 (count <= 42) in that order, to see which tile a draw took.
-        eastl::vector<Tile> Sequence(size_t count) {
-            eastl::vector<Tile> tiles;
+        Vector<Tile> Sequence(size_t count) {
+            Vector<Tile> tiles;
             for (size_t i = 0; i < count; ++i) {
                 tiles.push_back(Tile{static_cast<uint8_t>(i)});
             }
@@ -36,8 +36,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Every tile of a wall: the reserve, the live wall, the dead wall (a copy is taken; the wall is not changed).
-        std::vector<int> AllTiles(const Wall& wall) {
-            std::vector<int> ids;
+        Vector<int> AllTiles(const Wall& wall) {
+            Vector<int> ids;
             for (const Tile tile : wall.LooseTiles()) {
                 ids.push_back(tile.Id());
             }
@@ -50,8 +50,8 @@ namespace BECore::Mahjong::Tests {
             return ids;
         }
 
-        std::vector<int> Ids(const eastl::vector<Tile>& tiles) {
-            std::vector<int> ids;
+        Vector<int> Ids(const Vector<Tile>& tiles) {
+            Vector<int> ids;
             for (const Tile tile : tiles) {
                 ids.push_back(tile.Id());
             }
@@ -86,9 +86,9 @@ namespace BECore::Mahjong::Tests {
         for (const bool flowers : {false, true}) {
             MahjongRng rng(kSeed);
             const Wall wall = MakeWall(rng, Settings(flowers), 0);
-            std::vector<int> ids = AllTiles(wall);
+            Vector<int> ids = AllTiles(wall);
             std::sort(ids.begin(), ids.end());
-            std::vector<int> expected = Ids(BuildTileSet(flowers));
+            Vector<int> expected = Ids(BuildTileSet(flowers));
             std::sort(expected.begin(), expected.end());
             EXPECT_EQ(ids, expected);
         }
@@ -173,7 +173,7 @@ namespace BECore::Mahjong::Tests {
             const Wall wall = MakeWall(rng, Settings(flowers), 0);
 
             MahjongRng replay(kSeed);
-            eastl::vector<Tile> ring = BuildTileSet(flowers);
+            Vector<Tile> ring = BuildTileSet(flowers);
             replay.Shuffle(ring);
             const int eastDice = replay.Roll2d6();
             const int ownerDice = replay.Roll2d6();
@@ -206,7 +206,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(WallTest, DifferentSeedsGiveDifferentWalls) {
         MahjongRng reference(kSeed);
-        const std::vector<int> expected = AllTiles(MakeWall(reference, Settings(false), 0));
+        const Vector<int> expected = AllTiles(MakeWall(reference, Settings(false), 0));
         for (uint32_t seed = kSeed + 1; seed < kSeed + kSeedsToTry; ++seed) {
             MahjongRng rng(seed);
             EXPECT_NE(AllTiles(MakeWall(rng, Settings(false), 0)), expected) << "seed " << seed;
@@ -227,20 +227,20 @@ namespace BECore::Mahjong::Tests {
 
     TEST(WallTest, FromOrderSplitsLooseLiveAndDead) {
         const Wall wall = Wall::FromOrder(Sequence(kShortWallSize));
-        EXPECT_EQ(Ids(wall.LooseTiles()), (std::vector<int>{0, 1}));
+        EXPECT_EQ(Ids(wall.LooseTiles()), (Vector<int>{0, 1}));
         EXPECT_EQ(wall.LiveCount(), kShortWallSize - kLooseTiles - kDeadWallTiles);
         EXPECT_EQ(wall.LiveTiles().front().Id(), 2);
         EXPECT_EQ(wall.LiveTiles().back().Id(), 15);
-        EXPECT_EQ(Ids(wall.DeadWall()), (std::vector<int>{16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29}));
+        EXPECT_EQ(Ids(wall.DeadWall()), (Vector<int>{16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29}));
     }
 
     TEST(WallTest, DrawsComeInOrderAndNeverTouchTheLast14) {
         Wall wall = Wall::FromOrder(Sequence(kShortWallSize));
-        std::vector<int> drawn;
-        while (const std::optional<Tile> tile = wall.Draw()) {
+        Vector<int> drawn;
+        while (const Optional<Tile> tile = wall.Draw()) {
             drawn.push_back(tile->Id());
         }
-        EXPECT_EQ(drawn, (std::vector<int>{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}));
+        EXPECT_EQ(drawn, (Vector<int>{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}));
         EXPECT_EQ(wall.LiveCount(), 0U);
         EXPECT_FALSE(wall.Draw().has_value());
         // The dead wall and the reserve are still whole.
@@ -251,18 +251,18 @@ namespace BECore::Mahjong::Tests {
 
     TEST(WallTest, LooseDrawReturnsTheReserveFrontAndRefillsFromTheLiveTail) {
         Wall wall = Wall::FromOrder(Sequence(kShortWallSize));
-        const std::optional<Tile> first = wall.DrawLoose();
+        const Optional<Tile> first = wall.DrawLoose();
         ASSERT_TRUE(first.has_value());
         EXPECT_EQ(first->Id(), 0);
         // The live tail was tile 15 (the one just before the dead wall); it joins the back of the reserve.
-        EXPECT_EQ(Ids(wall.LooseTiles()), (std::vector<int>{1, 15}));
+        EXPECT_EQ(Ids(wall.LooseTiles()), (Vector<int>{1, 15}));
         EXPECT_EQ(wall.LiveCount(), kShortWallSize - kLooseTiles - kDeadWallTiles - 1);
         EXPECT_EQ(wall.LiveTiles().back().Id(), 14);
 
-        const std::optional<Tile> second = wall.DrawLoose();
+        const Optional<Tile> second = wall.DrawLoose();
         ASSERT_TRUE(second.has_value());
         EXPECT_EQ(second->Id(), 1);
-        EXPECT_EQ(Ids(wall.LooseTiles()), (std::vector<int>{15, 14}));
+        EXPECT_EQ(Ids(wall.LooseTiles()), (Vector<int>{15, 14}));
         EXPECT_EQ(wall.LiveCount(), kShortWallSize - kLooseTiles - kDeadWallTiles - 2);
         EXPECT_EQ(wall.DeadWallSize(), kDeadWallTiles);
     }
@@ -289,7 +289,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(wall.DrawLoose()->Id(), 1);  // refill takes 2
         EXPECT_EQ(wall.LiveCount(), 0U);
         EXPECT_EQ(wall.LooseCount(), 2U);
-        EXPECT_EQ(Ids(wall.LooseTiles()), (std::vector<int>{3, 2}));
+        EXPECT_EQ(Ids(wall.LooseTiles()), (Vector<int>{3, 2}));
 
         // The live wall is empty: the reserve is not refilled any more and shrinks.
         EXPECT_EQ(wall.DrawLoose()->Id(), 3);
@@ -300,7 +300,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(wall.Draw().has_value());
         // Through all of it the dead wall stayed whole.
         EXPECT_EQ(wall.DeadWallSize(), kDeadWallTiles);
-        EXPECT_EQ(Ids(wall.DeadWall()), (std::vector<int>{4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17}));
+        EXPECT_EQ(Ids(wall.DeadWall()), (Vector<int>{4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17}));
         EXPECT_EQ(wall.Remaining(), kDeadWallTiles);
     }
 
@@ -324,7 +324,7 @@ namespace BECore::Mahjong::Tests {
     TEST(WallTest, DrainingAFullWallLeavesExactlyTheDeadWall) {
         MahjongRng rng(kSeed);
         Wall wall = MakeWall(rng, Settings(false), 0);
-        const std::vector<Tile> dead(wall.DeadWall().begin(), wall.DeadWall().end());
+        const Vector<Tile> dead(wall.DeadWall().begin(), wall.DeadWall().end());
         size_t taken = 0;
         while (wall.Draw().has_value()) {
             ++taken;
@@ -340,22 +340,22 @@ namespace BECore::Mahjong::Tests {
 
     TEST(WallTest, FromPartsKeepsTheThreePartsExactlyAsGiven) {
         // Sizes that FromOrder would never choose: one loose tile, three live tiles, two dead ones.
-        const eastl::vector<Tile> all = Sequence(6);
+        const Vector<Tile> all = Sequence(6);
         const Wall wall = Wall::FromParts({all[0]}, {all[1], all[2], all[3]}, {all[4], all[5]});
         EXPECT_EQ(wall.LooseCount(), 1U);
         EXPECT_EQ(wall.LiveCount(), 3U);
         EXPECT_EQ(wall.DeadWallSize(), 2U);
         EXPECT_EQ(wall.Remaining(), 6U);
-        EXPECT_EQ(wall.LooseTiles(), (eastl::vector<Tile>{all[0]}));
-        EXPECT_EQ(wall.LiveTiles(), (eastl::vector<Tile>{all[1], all[2], all[3]}));
-        EXPECT_EQ(wall.DeadWall(), (eastl::vector<Tile>{all[4], all[5]}));
+        EXPECT_EQ(wall.LooseTiles(), (Vector<Tile>{all[0]}));
+        EXPECT_EQ(wall.LiveTiles(), (Vector<Tile>{all[1], all[2], all[3]}));
+        EXPECT_EQ(wall.DeadWall(), (Vector<Tile>{all[4], all[5]}));
 
         // It draws like any wall: the live front, the loose front with a refill from the live tail.
         Wall draw = wall;
         EXPECT_EQ(draw.Draw(), all[1]);
         EXPECT_EQ(draw.DrawLoose(), all[0]);
-        EXPECT_EQ(draw.LooseTiles(), (eastl::vector<Tile>{all[3]}));
-        EXPECT_EQ(draw.LiveTiles(), (eastl::vector<Tile>{all[2]}));
+        EXPECT_EQ(draw.LooseTiles(), (Vector<Tile>{all[3]}));
+        EXPECT_EQ(draw.LiveTiles(), (Vector<Tile>{all[2]}));
     }
 
     TEST(WallTest, FromPartsOfAWallsPartsIsTheSameWall) {
@@ -369,8 +369,8 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(rebuilt.DeadWall(), wall.DeadWall());
         // The same draws follow.
         while (true) {
-            const std::optional<Tile> a = wall.Draw();
-            const std::optional<Tile> b = rebuilt.Draw();
+            const Optional<Tile> a = wall.Draw();
+            const Optional<Tile> b = rebuilt.Draw();
             ASSERT_EQ(a, b);
             if (!a.has_value()) {
                 break;

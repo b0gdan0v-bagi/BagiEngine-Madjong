@@ -128,7 +128,7 @@ namespace BECore::Mahjong {
 
     /// The colours of the scene file, by role (`kUiPaletteNames` holds the role of each, in the same order).
     inline constexpr int kUiPaletteSize = 28;
-    inline constexpr eastl::array<Color, kUiPaletteSize> kUiPalette{{
+    inline constexpr Array<Color, kUiPaletteSize> kUiPalette{{
         {0, 0, 0, 200},        // scrim
         {36, 40, 52, 255},     // surface
         {48, 54, 72, 255},     // surfaceRaised
@@ -159,7 +159,7 @@ namespace BECore::Mahjong {
         {70, 84, 128, 255},    // placeBadge
     }};
     // clang-format off
-    inline constexpr eastl::array<const char*, kUiPaletteSize> kUiPaletteNames{{
+    inline constexpr Array<const char*, kUiPaletteSize> kUiPaletteNames{{
         "scrim",
         "surface",
         "surfaceRaised",
@@ -193,7 +193,7 @@ namespace BECore::Mahjong {
 
     /// The type scale: small (the hint, the winner's lines, captions), body (the HUD, rows, ordinary buttons), title (the headline of a
     /// screen, its main button). No other `fontSize` in the scene file.
-    inline constexpr eastl::array<int, 3> kFontScale{{18, 22, 28}};
+    inline constexpr Array<int, 3> kFontScale{{18, 22, 28}};
 
     /// The families of the text (`TextConfig.xml` of the engine): the display font of headlines and scores (with an outline of `kTextOutlineWidth` units in the `outline` role) and the
     /// text font, whose bold (`kFontWeightBold`) is the text of a button. A family is not a size: `kFontScale` stays the only sizes.
@@ -209,7 +209,7 @@ namespace BECore::Mahjong {
     inline constexpr int kCornerSmall = 8;
     inline constexpr int kCornerMiddle = 12;
     inline constexpr int kCornerLarge = 16;
-    inline constexpr eastl::array<int, 3> kCornerScale{{kCornerSmall, kCornerMiddle, kCornerLarge}};
+    inline constexpr Array<int, 3> kCornerScale{{kCornerSmall, kCornerMiddle, kCornerLarge}};
     inline constexpr int kBorderWidth = 2;
     inline constexpr int kShadowOffsetY = 4;
     inline constexpr int kShadowBlur = 8;

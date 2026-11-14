@@ -29,7 +29,7 @@ namespace BECore::Mahjong::Tests {
     /// The colour of a role of the palette (an entry of `kUiPaletteNames`: `surface`, `header`, `textMuted`, `accent`, ...).
     inline Color PaletteColor(const char* role) {
         for (int i = 0; i < kUiPaletteSize; ++i) {
-            if (eastl::string_view(kUiPaletteNames[i]) == role) {
+            if (StringView(kUiPaletteNames[i]) == role) {
                 return kUiPalette[i];
             }
         }
@@ -53,8 +53,8 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// The discard blocks and the wall ring grown by `kPlatePadding`: what the HUD and the seat plates keep clear of (the table paints no plate there).
-    inline eastl::vector<Rect> ZonePlates(const TableLayout& layout) {
-        eastl::vector<Rect> plates;
+    inline Vector<Rect> ZonePlates(const TableLayout& layout) {
+        Vector<Rect> plates;
         for (const Rect& zone : layout.zones.discards) {
             plates.push_back(Grown(zone, kPlatePadding));
         }

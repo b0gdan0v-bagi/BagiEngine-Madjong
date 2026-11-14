@@ -20,12 +20,12 @@ namespace BECore::Mahjong::Tests {
         constexpr const char* kThreeChows = "5s 6s 7s 7m 8m 9m 3m 4m 5m";
         constexpr const char* kNoPointsHand = "5s 6s 7s 7m 8m 9m 3m 4m 5m 2p 3p 4p Ww Ww";
 
-        ScoreBreakdown Win(const std::string& concealed, const char* winningTile, WinSource source = WinSource::SelfDraw, std::initializer_list<Meld> melds = {}) {
+        ScoreBreakdown Win(const String& concealed, const char* winningTile, WinSource source = WinSource::SelfDraw, std::initializer_list<Meld> melds = {}) {
             return ScoreSeat(MakeWinnerInput(concealed, winningTile, source, melds));
         }
 
-        std::string WithChows(const char* tiles) {
-            return std::string(kThreeChows) + " " + tiles;
+        String WithChows(const char* tiles) {
+            return Format("{} {}", kThreeChows, tiles);
         }
 
     }  // namespace

@@ -1,0 +1,49 @@
+# The hits of engine/CI/scripts/check_types.py that other entries still own: `<path> <rule id> <count>`, sorted.
+# The list only shrinks: a fix removes or lowers its lines, and `python3 engine/CI/scripts/check_types.py --root . --baseline
+# CI/types_baseline.txt --update-baseline` rewrites the file after it. A diff that adds a line or raises a count is a finding: fix the
+# new hit with the alias of BECore/Types, or mark a real boundary `//-NoStd: <why>`; never baseline it.
+# Who removes which lines (the entry mahjong-type-aliases emptied every other rule id: type, to_string, fmt, sto, stable-sort):
+#   function                                          callables-move-only
+#   fstream, include-stream, getline                  engine-file-layer
+#   directory-iterator                                engine-file-layer, engine-path-type
+# Whoever empties a rule deletes its lines here.
+src/Mahjong/Analyzer/AnalyzerCli.h function 1
+src/Mahjong/Arena/ArenaHand.h function 1
+src/Mahjong/Arena/ArenaLogs.h function 1
+src/Mahjong/Arena/ArenaOracle.cpp function 1
+src/Mahjong/Arena/ArenaRun.h function 1
+src/Mahjong/Arena/ArenaWorlds.cpp function 4
+src/Mahjong/Arena/ArenaWorlds.h function 3
+src/Mahjong/Game/ComputerSearch.h function 3
+src/Mahjong/Game/Seats.h function 1
+src/Mahjong/MatchLogWriter.h fstream 1
+src/Mahjong/MatchUpload.cpp function 1
+src/Mahjong/MatchUpload.h function 2
+src/Mahjong/UploadPrefs.cpp fstream 2
+tests/AnalyzerRunTest.cpp function 2
+tests/ComputerSearchTest.cpp function 3
+tests/EmblemSpritesTest.cpp fstream 1
+tests/IconSpritesTest.cpp fstream 1
+tests/MahjongEndScreenTest.cpp function 1
+tests/MahjongGameControlTest.cpp function 1
+tests/MahjongGameUploadTest.cpp fstream 1
+tests/MahjongHudTest.cpp fstream 1
+tests/MahjongOnlineSceneTest.cpp function 1
+tests/MahjongOnlineTableSceneTest.cpp directory-iterator 1
+tests/MahjongOnlineTableSceneTest.cpp fstream 1
+tests/MahjongOnlineTableTest.cpp function 1
+tests/MahjongRoomsTest.cpp function 1
+tests/MahjongSaveGameTest.cpp fstream 2
+tests/MahjongSaveStoreTest.cpp fstream 2
+tests/MahjongSceneFilesTest.cpp directory-iterator 2
+tests/MahjongTouchTestSupport.h function 5
+tests/MahjongUploadSceneTest.cpp fstream 1
+tests/MatchLogFileTest.cpp fstream 2
+tests/MatchUploadTest.cpp fstream 1
+tests/StringsTest.cpp directory-iterator 1
+tests/StringsTest.cpp fstream 1
+tests/TileSpritesTest.cpp fstream 1
+tests/UploadPrefsTest.cpp fstream 1
+tools/analyzer/main.cpp fstream 1
+tools/analyzer/main.cpp include-stream 1
+tools/arena/main.cpp fstream 1

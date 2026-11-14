@@ -29,7 +29,7 @@ namespace BECore::Mahjong {
             return true;
         }
 
-        bool AnyCompleteReading(const eastl::vector<Reading>& readings) noexcept {
+        bool AnyCompleteReading(const Vector<Reading>& readings) noexcept {
             return eastl::any_of(readings.begin(), readings.end(), IsCompleteReading);
         }
 
@@ -48,7 +48,7 @@ namespace BECore::Mahjong {
         // ----- hands made of sets: any complete reading that has them -----
 
         /// Four pungs or kongs, none open, of one suit (no honours, so the pair is of the suit too).
-        bool HasConcealedPungsOneSuit(const eastl::vector<Reading>& readings, const PlayerHand& hand) {
+        bool HasConcealedPungsOneSuit(const Vector<Reading>& readings, const PlayerHand& hand) {
             if (!SummariseSuits(hand).IsOneSuitNoHonours()) {
                 return false;
             }
@@ -59,7 +59,7 @@ namespace BECore::Mahjong {
         }
 
         /// Only green tiles in pungs or kongs and a pair: a chow `2 3 4` of bamboo is green but not allowed, so the readings decide.
-        bool HasAllGreen(const eastl::vector<Reading>& readings, const TileCounts& held) {
+        bool HasAllGreen(const Vector<Reading>& readings, const TileCounts& held) {
             if (!EveryHeldTile(held, [](Tile tile) { return tile.IsGreen(); })) {
                 return false;
             }
@@ -101,13 +101,13 @@ namespace BECore::Mahjong {
             return IsCompleteReading(reading) && CountSets(reading, IsKong) == kSetsInHand;
         }
 
-        bool AnyReading(const eastl::vector<Reading>& readings, bool (*hasHand)(const Reading&) noexcept) noexcept {
+        bool AnyReading(const Vector<Reading>& readings, bool (*hasHand)(const Reading&) noexcept) noexcept {
             return eastl::any_of(readings.begin(), readings.end(), hasHand);
         }
 
     }  // namespace
 
-    std::optional<ScoreKind> FindLimitHand(const eastl::vector<Reading>& readings, const ScoreInput& input) {
+    Optional<ScoreKind> FindLimitHand(const Vector<Reading>& readings, const ScoreInput& input) {
         if (!input.won) {
             return std::nullopt;
         }

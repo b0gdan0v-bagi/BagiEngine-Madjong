@@ -27,7 +27,7 @@ namespace BECore::Mahjong {
         }
 
         /// The copies `seat` sees: see `TableView`.
-        TileCounts CountVisible(const HandModel& model, Seat seat, const eastl::array<PublicSeat, kSeatCount>& seats) {
+        TileCounts CountVisible(const HandModel& model, Seat seat, const Array<PublicSeat, kSeatCount>& seats) {
             const PlayerHand& own = model.GetHand(seat);
             TileCounts visible = CountTiles(own.concealed);
             AddCounts(visible, CountMeldTiles(own.melds));
@@ -50,8 +50,8 @@ namespace BECore::Mahjong {
 
         /// `discardedKinds` and `passedKinds` of every seat from the log of the hand: a discard with `declaredCalling` starts the "after"
         /// of its seat (claims and kongs are not discards).
-        void FillDiscardHistory(const HandModel& model, eastl::array<PublicSeat, kSeatCount>& seats) {
-            eastl::array<bool, kSeatCount> declared{};
+        void FillDiscardHistory(const HandModel& model, Array<PublicSeat, kSeatCount>& seats) {
+            Array<bool, kSeatCount> declared{};
             for (const HandMove& move : model.Moves()) {
                 if (move.kind != MoveKind::Discard || !move.tile.IsPlayable()) {
                     continue;

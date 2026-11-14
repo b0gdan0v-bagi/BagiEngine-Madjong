@@ -40,11 +40,11 @@ namespace BECore::Mahjong::Arena {
     /// The rng seed of the decision at `hand` (1-based) and `actionIndex` (0-based) of the log `logName`: FNV-1a over the bytes of the
     /// name and of the two numbers (four bytes each, least significant first) from a constant start, so one log gives one answer on
     /// every platform and nothing of the machine, the order or the other bots is in it.
-    [[nodiscard]] uint32_t DecisionSeed(std::string_view logName, int hand, int actionIndex);
+    [[nodiscard]] uint32_t DecisionSeed(StringView logName, int hand, int actionIndex);
 
     /// Empty when every player of `bots` can be asked about a view; else the text that says why not (`random` is no bot here) and
     /// when `bots` is empty.
-    [[nodiscard]] eastl::string ValidateTesterBots(const eastl::vector<ArenaPlayer>& bots);
+    [[nodiscard]] String ValidateTesterBots(const Vector<ArenaPlayer>& bots);
 
     /// The decisions that were counted and the ones that agreed, per phase.
     struct PhaseCount {
@@ -53,12 +53,12 @@ namespace BECore::Mahjong::Arena {
 
         bool operator==(const PhaseCount&) const = default;
     };
-    using PhaseCounts = eastl::array<PhaseCount, kTesterPhaseCount>;
+    using PhaseCounts = Array<PhaseCount, kTesterPhaseCount>;
 
     /// A decision where the person's logged action is not what the reference bot chooses. The numbers are those of
     /// `Analyzer::PositionFromLog` (hand 1-based, action index 0-based), so `--log <log> --hand K --action I` of the analyzer opens it.
     struct TesterDifference {
-        eastl::string log;
+        String log;
         int hand = 0;
         int actionIndex = 0;
         Seat seat = kNoSeat;
@@ -69,9 +69,9 @@ namespace BECore::Mahjong::Arena {
     /// One match against all the bots.
     struct TesterMatch {
         /// One entry per bot, in the order of the bots.
-        eastl::vector<PhaseCounts> bots;
+        Vector<PhaseCounts> bots;
         /// Against the first bot, in log order (hand, then action).
-        eastl::vector<TesterDifference> differences;
+        Vector<TesterDifference> differences;
     };
 
     /**
@@ -82,28 +82,28 @@ namespace BECore::Mahjong::Arena {
      * the same for every bot. A log with no person acts gives zero decisions and no error. The error text names the log and what the
      * position could not be built from. `bots` has been through `ValidateTesterBots`.
      */
-    [[nodiscard]] std::expected<TesterMatch, eastl::string> AnalyzeTesterMatch(std::string_view logName, const eastl::vector<MatchLogEvent>& events, const eastl::vector<ArenaPlayer>& bots);
+    [[nodiscard]] std::expected<TesterMatch, String> AnalyzeTesterMatch(StringView logName, const Vector<MatchLogEvent>& events, const Vector<ArenaPlayer>& bots);
 
     /// The agreement of one bot with the people: the counts, and the share of equal choices in percent with its interval.
     struct BotAgreement {
         ArenaPlayer player;
-        eastl::array<int64_t, kTesterRowCount> decisions{};
-        eastl::array<int64_t, kTesterRowCount> equal{};
+        Array<int64_t, kTesterRowCount> decisions{};
+        Array<int64_t, kTesterRowCount> equal{};
         /// The **match** is the unit: the mean over the matches of their own share (a match with no decision in the row is left out),
         /// with the 95 % interval of `MeanCi`. The decisions of one match are not independent, so they are not the sample.
-        eastl::array<MeanInterval, kTesterRowCount> share{};
+        Array<MeanInterval, kTesterRowCount> share{};
     };
 
     struct TesterResult {
         /// In the order of the bots; the first is the reference of `differences`.
-        eastl::vector<BotAgreement> bots;
+        Vector<BotAgreement> bots;
         /// Every difference, in the order of the matches and then of the log. Printing may cap them; the count is always `size()`.
-        eastl::vector<TesterDifference> differences;
+        Vector<TesterDifference> differences;
         /// The matches that were analysed.
         int matches = 0;
     };
 
     /// The agreement of `bots` over `matches` (the results of `AnalyzeTesterMatch`, in name order). The same matches give the same result.
-    [[nodiscard]] TesterResult MergeTesterMatches(const eastl::vector<ArenaPlayer>& bots, const eastl::vector<TesterMatch>& matches);
+    [[nodiscard]] TesterResult MergeTesterMatches(const Vector<ArenaPlayer>& bots, const Vector<TesterMatch>& matches);
 
 }  // namespace BECore::Mahjong::Arena

@@ -27,6 +27,6 @@ namespace BECore::Mahjong::Arena {
      * Fixed-width columns, numbers by `Format` with a fixed precision and no locale: the same result gives the same bytes on every
      * platform.
      */
-    [[nodiscard]] eastl::string FormatArenaReport(const ArenaResult& result, const ArenaReportOptions& options = {});
+    [[nodiscard]] String FormatArenaReport(const ArenaResult& result, const ArenaReportOptions& options = {});
 
 }  // namespace BECore::Mahjong::Arena

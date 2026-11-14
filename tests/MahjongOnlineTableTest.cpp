@@ -3,6 +3,7 @@
 #include "HandTestSupport.h"
 
 #include <BECore/Control/Json.h>
+#include <Common/Printers.h>
 #include <Mahjong/MahjongStateJson.h>
 #include <Mahjong/Online/MahjongSeatedGame.h>
 #include <Mahjong/Online/OnlineTable.h>
@@ -29,9 +30,9 @@ namespace BECore::Mahjong::Tests {
             return ParseJson(text).value();
         }
 
-        std::string Dump(const Json& json) {
-            const eastl::string text = DumpJson(json);
-            return std::string(text.c_str(), text.size());
+        String Dump(const Json& json) {
+            const String text = DumpJson(json);
+            return String(text.c_str(), text.size());
         }
 
         MahjongSeatedGame Started(uint64_t seed = kSeed) {
@@ -46,7 +47,7 @@ namespace BECore::Mahjong::Tests {
 
         bool StepOnce(MahjongSeatedGame& game) {
             for (int seat = 0; seat < kSeatCount; ++seat) {
-                if (const std::optional<Json> action = game.ChooseComputerAction(seat)) {
+                if (const Optional<Json> action = game.ChooseComputerAction(seat)) {
                     const auto done = game.PerformSeatAction(seat, *action);
                     EXPECT_TRUE(done.has_value());
                     return done.has_value();
@@ -79,13 +80,13 @@ namespace BECore::Mahjong::Tests {
             return ReadOnlineView(ViewJson(game, seat), ActionsJson(game, seat), table);
         }
 
-        std::string TextOf(const OnlineViewError& error) {
-            return std::string(error.text.c_str(), error.text.size());
+        String TextOf(const OnlineViewError& error) {
+            return String(error.text.c_str(), error.text.size());
         }
 
         // ----- the comparison with the model -----
 
-        void ExpectMeld(const Meld& read, const Meld& want, const std::string& where) {
+        void ExpectMeld(const Meld& read, const Meld& want, const String& where) {
             EXPECT_EQ(read.kind, want.kind) << where;
             EXPECT_EQ(read.concealed, want.concealed) << where;
             EXPECT_EQ(read.first, want.first) << where;
@@ -99,14 +100,14 @@ namespace BECore::Mahjong::Tests {
             }
         }
 
-        void ExpectMelds(const eastl::vector<Meld>& read, const eastl::vector<Meld>& want, const std::string& where) {
+        void ExpectMelds(const Vector<Meld>& read, const Vector<Meld>& want, const String& where) {
             ASSERT_EQ(read.size(), want.size()) << where;
             for (size_t index = 0; index < want.size(); ++index) {
-                ExpectMeld(read[index], want[index], where + ".melds[" + std::to_string(index) + "]");
+                ExpectMeld(read[index], want[index], Format("{}.melds[{}]", where, index));
             }
         }
 
-        void ExpectTiles(const eastl::vector<Tile>& read, const eastl::vector<Tile>& want, const std::string& where) {
+        void ExpectTiles(const Vector<Tile>& read, const Vector<Tile>& want, const String& where) {
             ASSERT_EQ(read.size(), want.size()) << where;
             for (size_t index = 0; index < want.size(); ++index) {
                 EXPECT_EQ(read[index], want[index]) << where << "[" << index << "]";
@@ -131,7 +132,7 @@ namespace BECore::Mahjong::Tests {
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 const PlayerHand& tiles = hand.GetHand(seat);
                 const OnlineResultSeat& shown = read.seats[static_cast<size_t>(seat)];
-                const std::string where = "result.seats[" + std::to_string(seat) + "]";
+                const String where = Format("result.seats[{}]", seat);
                 ExpectTiles(shown.concealed, tiles.concealed, where + ".concealed");
                 ExpectMelds(shown.melds, tiles.melds, where);
                 ExpectTiles(shown.bonus, tiles.bonus, where + ".bonus");
@@ -140,7 +141,7 @@ namespace BECore::Mahjong::Tests {
 
         /// Every fact of @p table equals what the adapter was given for @p seat: the view of `MakeTableView` and the public table.
         void ExpectMatchesModel(const OnlineTable& table, const MahjongSeatedGame& game, int seat) {
-            SCOPED_TRACE("seat " + std::to_string(seat) + ", version " + std::to_string(game.GetStateVersion()));
+            SCOPED_TRACE(Format("seat {}, version {}", seat, game.GetStateVersion()).c_str());
             const Match& match = game.GetMatch();
             const HandModel& hand = match.Hand();
             const TableView view = MakeTableView(hand, seat);
@@ -161,7 +162,7 @@ namespace BECore::Mahjong::Tests {
             for (Seat other = 0; other < kSeatCount; ++other) {
                 const OnlineSeat& shown = table.seats[static_cast<size_t>(other)];
                 const PublicSeat& open = view.seats[static_cast<size_t>(other)];
-                const std::string where = "seats[" + std::to_string(other) + "]";
+                const String where = Format("seats[{}]", other);
                 EXPECT_EQ(shown.wind, hand.SeatWind(other)) << where;
                 EXPECT_EQ(shown.score, match.Scores()[static_cast<size_t>(other)]) << where;
                 EXPECT_EQ(shown.concealedCount, static_cast<int>(hand.GetHand(other).concealed.size())) << where;
@@ -257,18 +258,18 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The path "seats/2/melds/0/kind" in the text a failure names: "seats[2].melds[0].kind".
-        std::string NamedPath(const std::string& path) {
-            std::string named;
+        String NamedPath(const String& path) {
+            String named;
             size_t start = 0;
             while (start <= path.size()) {
                 const size_t end = path.find('/', start);
-                const std::string step = path.substr(start, end == std::string::npos ? std::string::npos : end - start);
+                const String step = path.substr(start, end == String::npos ? String::npos : end - start);
                 if (!step.empty() && std::isdigit(static_cast<unsigned char>(step[0]))) {
                     named += "[" + step + "]";
                 } else {
                     named += (named.empty() ? "" : ".") + step;
                 }
-                if (end == std::string::npos) {
+                if (end == String::npos) {
                     break;
                 }
                 start = end + 1;
@@ -276,22 +277,26 @@ namespace BECore::Mahjong::Tests {
             return named;
         }
 
-        Json* At(Json& root, const std::string& path) {
+        Json* At(Json& root, const String& path) {
             Json* node = &root;
             size_t start = 0;
             while (start <= path.size() && node != nullptr) {
                 const size_t end = path.find('/', start);
-                const std::string step = path.substr(start, end == std::string::npos ? std::string::npos : end - start);
+                const String step = path.substr(start, end == String::npos ? String::npos : end - start);
                 if (node->is_array()) {
-                    const size_t index = static_cast<size_t>(std::stoul(step));
+                    size_t index = 0;
+                    const auto parsed = std::from_chars(step.data(), step.data() + step.size(), index);
+                    if (parsed.ec != std::errc()) {
+                        return nullptr;
+                    }
                     node = index < node->size() ? &(*node)[index] : nullptr;
                 } else if (node->is_object()) {
-                    const auto found = node->find(step);
+                    const auto found = node->find(step.c_str());
                     node = found == node->end() ? nullptr : &*found;
                 } else {
                     return nullptr;
                 }
-                if (end == std::string::npos) {
+                if (end == String::npos) {
                     break;
                 }
                 start = end + 1;
@@ -300,29 +305,29 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// What the reader makes of a table, as text: the fields a failed read must not have changed.
-        std::string Describe(const OnlineTable& table) {
-            std::string text = std::to_string(table.format) + "/" + std::to_string(table.version) + "/" + std::to_string(table.seat) + "/" + std::to_string(table.wall) + "/";
+        String Describe(const OnlineTable& table) {
+            String text = Format("{}/{}/{}/{}/", table.format, table.version, table.seat, table.wall);
             for (const Tile tile : table.hand) {
-                text += std::string(ToString(tile)) + ",";
+                AppendFormat(text, "{},", ToString(tile));
             }
-            text += "/" + std::to_string(table.discards.size()) + "/" + std::to_string(table.actions.size()) + "/" + (table.result ? "result" : "none");
+            AppendFormat(text, "/{}/{}/{}", table.discards.size(), table.actions.size(), (table.result ? "result" : "none"));
             for (const OnlineSeat& seat : table.seats) {
-                text += "/" + std::to_string(seat.score) + ":" + std::to_string(seat.melds.size());
+                AppendFormat(text, "/{}:{}", seat.score, seat.melds.size());
             }
             return text;
         }
 
         /// A bad text is refused with an error that names @p key, of the kind @p kind, and leaves a table that had a good read as it was.
-        void ExpectRefused(const Json& view, const Json& actions, const std::string& key, OnlineViewErrorKind kind, const std::string& what) {
+        void ExpectRefused(const Json& view, const Json& actions, const String& key, OnlineViewErrorKind kind, const String& what) {
             SCOPED_TRACE(what);
             OnlineTable table;
             const Json good = RichHandOverView();
             ASSERT_TRUE(ReadOnlineView(good, ActionsWithEverything(), table).has_value());
-            const std::string before = Describe(table);
+            const String before = Describe(table);
             const auto read = ReadOnlineView(view, actions, table);
             ASSERT_FALSE(read.has_value());
             EXPECT_EQ(read.error().kind, kind);
-            EXPECT_NE(TextOf(read.error()).find(key), std::string::npos) << TextOf(read.error()) << " should name " << key;
+            EXPECT_NE(TextOf(read.error()).find(key), String::npos) << TextOf(read.error()) << " should name " << key;
             EXPECT_EQ(Describe(table), before) << "a refused view must leave the table as it was";
         }
 
@@ -339,7 +344,7 @@ namespace BECore::Mahjong::Tests {
 
             OnlineTable table;
             ASSERT_TRUE(ReadSeat(game, 0, table).has_value());
-            EXPECT_EQ(table.ready, (eastl::array<bool, kSeatCount>{false, false, true, false}));
+            EXPECT_EQ(table.ready, (Array<bool, kSeatCount>{false, false, true, false}));
             ExpectEverySeatMatches(game);
         }
     }
@@ -456,7 +461,7 @@ namespace BECore::Mahjong::Tests {
         // each of these is read into the pair that held `true`: nothing of the earlier read survives
         Json missing = ViewJson(game, 0);
         missing.erase("hintsAllowed");
-        std::vector<Json> views{missing};
+        Vector<Json> views{missing};
         for (const Json& wrong : {Json("true"), Json(1), Json(0), Json(nullptr), Json::array(), Json::object()}) {
             Json view = ViewJson(game, 0);
             view["hintsAllowed"] = wrong;
@@ -476,7 +481,7 @@ namespace BECore::Mahjong::Tests {
     TEST(MahjongOnlineTableTest, TheHandActionsOfATableAreTheServersListWithoutTheReadyCheckAndKeepTheCapacity) {
         OnlineTable table;
         ASSERT_TRUE(ReadOnlineView(RichHandOverView(), ActionsWithEverything(), table).has_value());
-        eastl::vector<HandAction> list;
+        Vector<HandAction> list;
         ListHandActions(table, list);
         ASSERT_EQ(list.size(), 4u);
         EXPECT_EQ(list[0], HandAction::MakeDiscard(T("1p"), true));
@@ -625,8 +630,8 @@ namespace BECore::Mahjong::Tests {
                                       "result/deltas/3"};
         const Json good = RichHandOverView();
         for (const char* path : kPaths) {
-            const std::string where = path;
-            const std::string named = NamedPath(where);
+            const String where = path;
+            const String named = NamedPath(where);
             Json copy = good;
             Json* node = At(copy, where);
             ASSERT_NE(node, nullptr) << where;
@@ -637,12 +642,12 @@ namespace BECore::Mahjong::Tests {
             ExpectRefused(wrong, ActionsWithEverything(), named, OnlineViewErrorKind::Malformed, "wrong type at " + where);
 
             const size_t cut = where.find_last_of('/');
-            const std::string parentPath = cut == std::string::npos ? "" : where.substr(0, cut);
-            const std::string last = cut == std::string::npos ? where : where.substr(cut + 1);
+            const String parentPath = cut == String::npos ? "" : where.substr(0, cut);
+            const String last = cut == String::npos ? where : where.substr(cut + 1);
             Json* parent = parentPath.empty() ? &copy : At(copy, parentPath);
             ASSERT_NE(parent, nullptr) << where;
             if (parent->is_object()) {
-                parent->erase(last);
+                parent->erase(last.c_str());
                 ExpectRefused(copy, ActionsWithEverything(), named, OnlineViewErrorKind::Malformed, "missing " + where);
             }
         }
@@ -650,7 +655,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MahjongOnlineTableTest, ABadTileASeatOutOfRangeAndANegativeCountAreRefusedWithTheKey) {
         const Json actions = ActionsWithEverything();
-        const auto refuse = [&](const std::string& path, const Json& value) {
+        const auto refuse = [&](const String& path, const Json& value) {
             Json view = RichHandOverView();
             Json* node = At(view, path);
             ASSERT_NE(node, nullptr) << path;
@@ -688,7 +693,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MahjongOnlineTableTest, ListsOfTheWrongLengthAreRefusedWithTheKey) {
         const Json actions = ActionsWithEverything();
-        const auto refuse = [&](const std::function<void(Json&)>& change, const std::string& key) {
+        const auto refuse = [&](const std::function<void(Json&)>& change, const String& key) {
             Json view = RichHandOverView();
             change(view);
             ExpectRefused(view, actions, key, OnlineViewErrorKind::Malformed, key);

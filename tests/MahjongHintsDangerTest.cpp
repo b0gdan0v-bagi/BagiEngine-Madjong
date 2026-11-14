@@ -4,6 +4,7 @@
 #include "StringsTestSupport.h"
 #include "UiStyleTestSupport.h"
 
+#include <Common/Printers.h>
 #include <Mahjong/Components/MahjongHintsComponent.h>
 #include <Mahjong/Table/DangerMarks.h>
 #include <Mahjong/Table/TapSelect.h>
@@ -61,14 +62,14 @@ namespace BECore::Mahjong::Tests {
             spec.hands[kSeat3] = kSeat3Hand;
             // A declared viewer would win on an Ew discarded by seat 3, which ends the lap: seat 3 discards a 2m instead
             const char* const last = viewerDeclares ? "2m" : "Ew";
-            spec.live = std::string("Ew Rd Nw Ww Gd Wd 9m ") + last + " Rd 1p 2p";
+            spec.live = Format("Ew Rd Nw Ww Gd Wd 9m {} Rd 1p 2p", last);
             HandModel model = MakeModel(spec);
             if (viewerDeclares) {
                 Lap(model, "Ew Rd Nw Ww", {kSeat0});
             } else {
                 Lap(model, "Ew Rd Nw Ww");
             }
-            const std::string second = std::string("Gd Wd 9m ") + last;
+            const String second = Format("Gd Wd 9m {}", last);
             if (declared) {
                 Lap(model, second, {kSeat1});
             } else {
@@ -93,8 +94,8 @@ namespace BECore::Mahjong::Tests {
             Draw();
         }
 
-        std::vector<Rect> RectsOf(const Color& color) const {
-            std::vector<Rect> found;
+        Vector<Rect> RectsOf(const Color& color) const {
+            Vector<Rect> found;
             for (const DrawCall& call : _renderer->calls) {
                 if (call.kind == DrawKind::Rect && SameColor(call.color, color)) {
                     found.push_back(call.rect);
@@ -104,8 +105,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Every bar of the three danger colours, in draw order.
-        std::vector<Rect> DangerBars() const {
-            std::vector<Rect> bars;
+        Vector<Rect> DangerBars() const {
+            Vector<Rect> bars;
             for (const Color& color : {kSafeMark, kRiskyMark, kDangerMark}) {
                 for (const Rect& bar : RectsOf(color)) {
                     bars.push_back(bar);
@@ -115,8 +116,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The tiles of the viewer's hand: slot (the last layout) and tile.
-        std::vector<std::pair<TileSlot, Tile>> HandTiles() const {
-            std::vector<std::pair<TileSlot, Tile>> tiles;
+        Vector<Pair<TileSlot, Tile>> HandTiles() const {
+            Vector<Pair<TileSlot, Tile>> tiles;
             const PlayerHand& held = Hand().GetHand(_table->GetLayout().viewer);
             for (const TileSlot& slot : _table->GetLayout().slots) {
                 if (slot.role == SlotRole::HandTile && slot.seat == _table->GetLayout().viewer) {
@@ -127,8 +128,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The bars of `color` that lie inside the left half of `slot` (its danger bar; there is at most one).
-        std::vector<Rect> BarsOnSlot(const Color& color, const Rect& slot) const {
-            std::vector<Rect> found;
+        Vector<Rect> BarsOnSlot(const Color& color, const Rect& slot) const {
+            Vector<Rect> found;
             for (const Rect& bar : RectsOf(color)) {
                 if (Inside(bar, Rect(slot.x, slot.y, slot.w * 0.5f, slot.h))) {
                     found.push_back(bar);
@@ -158,8 +159,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Every bar of a danger colour clear of every other bar of the table that lies on a hand tile.
-        void ExpectClearOfTheOtherMarks(const std::string& where) const {
-            const std::vector<Rect> bars = DangerBars();
+        void ExpectClearOfTheOtherMarks(const String& where) const {
+            const Vector<Rect> bars = DangerBars();
             for (size_t i = 0; i < bars.size(); ++i) {
                 for (size_t j = i + 1; j < bars.size(); ++j) {
                     EXPECT_FALSE(Overlap(bars[i], bars[j])) << where << ": two danger bars";
@@ -188,19 +189,19 @@ namespace BECore::Mahjong::Tests {
             const Color* expected = ColorOfTile(tile);
             size_t found = 0;
             for (const Color& color : {kSafeMark, kRiskyMark, kDangerMark}) {
-                const std::vector<Rect> bars = BarsOnSlot(color, slot.rect);
+                const Vector<Rect> bars = BarsOnSlot(color, slot.rect);
                 if (&color == expected) {
-                    ASSERT_EQ(bars.size(), 1u) << ToString(tile);
+                    ASSERT_EQ(bars.size(), 1u) << ToStd(ToString(tile));
                     EXPECT_FLOAT_EQ(bars[0].w, kDangerMarkWidth);
-                    EXPECT_GT(bars[0].x, slot.rect.x) << ToString(tile) << ": inside the tile";
-                    EXPECT_GT(bars[0].y, slot.rect.y + kWindMarkBarHeight - 0.01f) << ToString(tile) << ": under the wind bar";
-                    EXPECT_LT(bars[0].y + bars[0].h, slot.rect.y + slot.rect.h - kKeepsWaitingBarHeight + 0.01f) << ToString(tile) << ": over the keeps-waiting bar";
+                    EXPECT_GT(bars[0].x, slot.rect.x) << ToStd(ToString(tile)) << ": inside the tile";
+                    EXPECT_GT(bars[0].y, slot.rect.y + kWindMarkBarHeight - 0.01f) << ToStd(ToString(tile)) << ": under the wind bar";
+                    EXPECT_LT(bars[0].y + bars[0].h, slot.rect.y + slot.rect.h - kKeepsWaitingBarHeight + 0.01f) << ToStd(ToString(tile)) << ": over the keeps-waiting bar";
                     EXPECT_GT(bars[0].h, 0.0f);
                     EXPECT_LE(bars[0].y + bars[0].h, kViewHeight);
                 }
                 found += bars.size();
             }
-            EXPECT_EQ(found, expected != nullptr ? 1u : 0u) << ToString(tile);
+            EXPECT_EQ(found, expected != nullptr ? 1u : 0u) << ToStd(ToString(tile));
         }
         for (const char* text : kUnmarkedTiles) {
             const Tile tile = T(text);
@@ -281,7 +282,7 @@ namespace BECore::Mahjong::Tests {
         }
         ASSERT_GE(index, 0);
         const Rect slotRect = HandSlot(index)->rect;
-        const std::vector<Rect> before = BarsOnSlot(kDangerMark, slotRect);
+        const Vector<Rect> before = BarsOnSlot(kDangerMark, slotRect);
         ASSERT_EQ(before.size(), 1u);
         const size_t bars = DangerBars().size();
 
@@ -322,7 +323,7 @@ namespace BECore::Mahjong::Tests {
             for (const auto& [slot, tile] : HandTiles()) {
                 for (const Color& color : {kSafeMark, kRiskyMark, kDangerMark}) {
                     for (const Rect& bar : BarsOnSlot(color, slot.rect)) {
-                        EXPECT_TRUE(Inside(bar, slot.rect)) << window.label.c_str() << " " << ToString(tile);
+                        EXPECT_TRUE(Inside(bar, slot.rect)) << window.label.c_str() << " " << ToStd(ToString(tile));
                         EXPECT_GT(bar.h, 0.0f) << window.label.c_str();
                     }
                 }
@@ -349,7 +350,7 @@ namespace BECore::Mahjong::Tests {
         const auto marks = DangerMarks(MakeTableView(Hand(), kSeat0));
         size_t worded = 0;
         for (const auto& [slot, tile] : HandTiles()) {
-            SCOPED_TRACE(ToString(tile));
+            SCOPED_TRACE(ToStd(ToString(tile)));
             HoverAt(slot.rect.x + slot.rect.w * 0.5f, slot.rect.y + slot.rect.h * 0.5f);
             Draw();
             Draw();  // the hints draw after the table: the word follows the bar within a frame
@@ -362,8 +363,8 @@ namespace BECore::Mahjong::Tests {
             }
             ++worded;
             ASSERT_TRUE(OnScreen("TileHover", "TileHoverDanger"));
-            const eastl::string expected = Tr(CoreManager::GetUIStrings(), DangerHoverKey(mark));
-            EXPECT_EQ(Var("tileHoverDanger"), std::string(expected.data(), expected.size()));
+            const String expected = Tr(CoreManager::GetUIStrings(), DangerHoverKey(mark));
+            EXPECT_EQ(Var("tileHoverDanger"), String(expected.data(), expected.size()));
             const auto* label = Element("TileHover", "TileHoverDanger")->GetComponent<UITextComponent>();
             ASSERT_NE(label, nullptr);
             EXPECT_TRUE(SameColor(label->textColor, DangerMarkColor(mark)));
@@ -389,13 +390,13 @@ namespace BECore::Mahjong::Tests {
         Scene& scene = *_manager->GetSceneByName("MahjongScene"_intern);
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
-            std::vector<eastl::string> lines;
+            Vector<String> lines;
             for (const DangerMark mark : {DangerMark::Safe, DangerMark::Risky, DangerMark::Dangerous}) {
                 lines.push_back(Tr(CoreManager::GetUIStrings(), DangerHoverKey(mark)));
             }
-            const eastl::string longest = LongestText(lines);
-            CoreManager::GetUIVars().Set("tileHoverText"_intern, eastl::string_view("9 Dots"));
-            CoreManager::GetUIVars().Set("tileHoverDanger"_intern, eastl::string_view(longest));
+            const String longest = LongestText(lines);
+            CoreManager::GetUIVars().Set("tileHoverText"_intern, StringView("9 Dots"));
+            CoreManager::GetUIVars().Set("tileHoverDanger"_intern, StringView(longest));
             UIElement* plate = Element("TileHover", "TileHoverPlate");
             plate->style.rect.height = UILength::Px(92.0f);
             UICanvasComponent::SetElementVisibleByName(scene, "TileHoverPlate"_intern, true);

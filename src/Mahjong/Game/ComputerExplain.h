@@ -54,8 +54,8 @@ namespace BECore::Mahjong {
         int shantenBefore = 0;
         TurnOption chosen;
         int equalChoices = 0;
-        eastl::vector<TurnOption> alternatives;
-        eastl::vector<TileCopies> waits;
+        Vector<TurnOption> alternatives;
+        Vector<TileCopies> waits;
         int kongShantenAfter = 0;
         int kongAcceptanceBefore = 0;
         int kongAcceptanceAfter = 0;
@@ -78,16 +78,16 @@ namespace BECore::Mahjong {
         HandAction action;
         ClaimStep step = ClaimStep::NoGain;
         int shantenBefore = 0;
-        std::optional<RatedClaim> chosen;
-        eastl::vector<RatedClaim> alternatives;
-        eastl::vector<TileCopies> waits;
-        std::optional<WaitingKong> waitingKong;
+        Optional<RatedClaim> chosen;
+        Vector<RatedClaim> alternatives;
+        Vector<TileCopies> waits;
+        Optional<WaitingKong> waitingKong;
     };
 
     /// The explanation of one advice: the member of the phase of the view is set.
     struct Explanation {
-        std::optional<TurnExplanation> turn;
-        std::optional<ClaimExplanation> claim;
+        Optional<TurnExplanation> turn;
+        Optional<ClaimExplanation> claim;
 
         /// The advised action.
         [[nodiscard]] const HandAction& Action() const noexcept {
@@ -104,6 +104,6 @@ namespace BECore::Mahjong {
      * reflected in `TurnStep` / `ClaimStep` and here. Dispatches on `view.phase` as `ComputerPlayer::Choose` does; nullopt when
      * `view.legal` is empty or the phase is `Finished`. Sees only the view, so it cannot peek.
      */
-    [[nodiscard]] std::optional<Explanation> ExplainAdvice(const TableView& view, const LevelProfile& profile = ProfileOf(kDefaultLevel));
+    [[nodiscard]] Optional<Explanation> ExplainAdvice(const TableView& view, const LevelProfile& profile = ProfileOf(kDefaultLevel));
 
 }  // namespace BECore::Mahjong

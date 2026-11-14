@@ -7,17 +7,17 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        constexpr eastl::string_view kConsentKey = "consent";
-        constexpr eastl::string_view kNicknameKey = "nickname";
-        constexpr eastl::string_view kUnasked = "unasked";
-        constexpr eastl::string_view kGranted = "granted";
-        constexpr eastl::string_view kDeclined = "declined";
-        constexpr eastl::string_view kTempSuffix = ".tmp";
+        constexpr StringView kConsentKey = "consent";
+        constexpr StringView kNicknameKey = "nickname";
+        constexpr StringView kUnasked = "unasked";
+        constexpr StringView kGranted = "granted";
+        constexpr StringView kDeclined = "declined";
+        constexpr StringView kTempSuffix = ".tmp";
         constexpr char kLineEnd = '\n';
         constexpr char kCarriageReturn = '\r';
         constexpr char kAssign = '=';
 
-        std::optional<UploadConsent> ConsentFromText(eastl::string_view text) {
+        Optional<UploadConsent> ConsentFromText(StringView text) {
             if (text == kUnasked) {
                 return UploadConsent::Unasked;
             }
@@ -30,7 +30,7 @@ namespace BECore::Mahjong {
             return std::nullopt;
         }
 
-        eastl::string_view ConsentText(UploadConsent consent) {
+        StringView ConsentText(UploadConsent consent) {
             switch (consent) {
                 case UploadConsent::Granted:
                     return kGranted;
@@ -43,33 +43,33 @@ namespace BECore::Mahjong {
         }
 
         /// The nickname as the name field would keep it: empty when the field would refuse it
-        eastl::string CleanNickname(eastl::string_view text) {
+        String CleanNickname(StringView text) {
             TextEntry entry(TextEntry::Kind::Name);
-            if (text.size() > kMaxMatchLogNicknameBytes || !entry.Set(text)) {
+            if (text.size() > kMaxMatchLogNicknameBytes || !entry.Replace(text)) {
                 return {};
             }
             return entry.Text();
         }
 
         std::filesystem::path FileOf(const std::filesystem::path& directory) {
-            return directory / std::string(kUploadPrefsFile.data(), kUploadPrefsFile.size());
+            return directory / ToStd(kUploadPrefsFile);
         }
 
     }  // namespace
 
-    UploadPrefs ParseUploadPrefs(eastl::string_view text) {
+    UploadPrefs ParseUploadPrefs(StringView text) {
         if (text.size() > kMaxUploadPrefsBytes) {
             return {};
         }
-        std::optional<UploadConsent> consent;
-        std::optional<eastl::string> nickname;
+        Optional<UploadConsent> consent;
+        Optional<String> nickname;
         size_t position = 0;
         while (position < text.size()) {
             size_t end = text.find(kLineEnd, position);
-            if (end == eastl::string_view::npos) {
+            if (end == StringView::npos) {
                 end = text.size();
             }
-            eastl::string_view line = text.substr(position, end - position);
+            StringView line = text.substr(position, end - position);
             position = end + 1;
             if (line.ends_with(kCarriageReturn)) {
                 line.remove_suffix(1);
@@ -78,11 +78,11 @@ namespace BECore::Mahjong {
                 continue;
             }
             const size_t assign = line.find(kAssign);
-            if (assign == eastl::string_view::npos) {
+            if (assign == StringView::npos) {
                 return {};
             }
-            const eastl::string_view key = line.substr(0, assign);
-            const eastl::string_view value = line.substr(assign + 1);
+            const StringView key = line.substr(0, assign);
+            const StringView value = line.substr(assign + 1);
             if (key == kConsentKey && !consent.has_value()) {
                 consent = ConsentFromText(value);
                 if (!consent.has_value()) {
@@ -105,14 +105,14 @@ namespace BECore::Mahjong {
         return prefs;
     }
 
-    eastl::string FormatUploadPrefs(const UploadPrefs& prefs) {
-        eastl::string text;
+    String FormatUploadPrefs(const UploadPrefs& prefs) {
+        String text;
         text.append(kConsentKey.data(), kConsentKey.size());
         text.push_back(kAssign);
-        const eastl::string_view consentText = ConsentText(prefs.consent);
+        const StringView consentText = ConsentText(prefs.consent);
         text.append(consentText.data(), consentText.size());
         text.push_back(kLineEnd);
-        const eastl::string nickname = CleanNickname(prefs.nickname);
+        const String nickname = CleanNickname(prefs.nickname);
         if (!nickname.empty()) {
             text.append(kNicknameKey.data(), kNicknameKey.size());
             text.push_back(kAssign);
@@ -131,10 +131,10 @@ namespace BECore::Mahjong {
             return {};
         }
         // One byte more than the limit tells a file that is too big from one that just fits
-        eastl::string bytes(kMaxUploadPrefsBytes + 1, '\0');
+        String bytes(kMaxUploadPrefsBytes + 1, '\0');
         file.read(bytes.data(), static_cast<std::streamsize>(bytes.size()));
         bytes.resize(static_cast<size_t>(file.gcount()));
-        return ParseUploadPrefs(eastl::string_view(bytes.data(), bytes.size()));
+        return ParseUploadPrefs(bytes);
     }
 
     bool StoreUploadPrefs(const std::filesystem::path& directory, const UploadPrefs& prefs) {
@@ -145,8 +145,8 @@ namespace BECore::Mahjong {
         std::filesystem::create_directories(directory, error);
         const std::filesystem::path target = FileOf(directory);
         std::filesystem::path temp = target;
-        temp += std::string(kTempSuffix.data(), kTempSuffix.size());
-        const eastl::string text = FormatUploadPrefs(prefs);
+        temp += ToStd(kTempSuffix);
+        const String text = FormatUploadPrefs(prefs);
         {
             std::ofstream file(temp, std::ios::binary | std::ios::trunc);
             if (!file) {

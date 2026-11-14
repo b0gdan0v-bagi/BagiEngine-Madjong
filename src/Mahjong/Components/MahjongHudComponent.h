@@ -139,9 +139,9 @@ namespace BECore::Mahjong {
         /// Sets `newGameWord`, the caption of the HUD button and of the standings' button: "New game", in a room "Leave room".
         void PublishNewGameWord(const MahjongGame* game);
         /// What the line under the discards says in a room instead of the last move: the lost connection, else the client's latest word while the table has not moved; empty if neither.
-        eastl::string RoomLine(const MahjongGame& game, const UIStrings& strings);
+        String RoomLine(const MahjongGame& game, const UIStrings& strings);
         /// "Ready for the next hand: 2 of 4"; empty while nobody has sent `next_hand`.
-        static eastl::string ReadyText(const UIStrings& strings, const OnlineTable& table);
+        static String ReadyText(const UIStrings& strings, const OnlineTable& table);
         /// The client is in the game and the server lists `next_hand` for it now.
         static bool CanSendNextHand(const OnlineClient& client);
         /// Disables (or enables) the button `NextHand`: in a room after the own `next_hand`, while the link is down.
@@ -169,7 +169,7 @@ namespace BECore::Mahjong {
         void PublishEndScreens(const MahjongGame* game);
         void PublishHandOver(const MahjongGame& game);
         /// Sets the pictures `WinTile0` .. of the winning hand and shows exactly those (the row `WinTiles` with them), the mark of the winning tile on the last.
-        void PublishWinningTiles(const eastl::vector<Tile>& tiles);
+        void PublishWinningTiles(const Vector<Tile>& tiles);
         void PublishMatchOver(const MahjongGame& game);
         /// Shows or hides the score table `HandOver` with its button `HandOverAction`; `HudMenu` (New game) is hidden while it is shown.
         void ShowHandOver(bool shown);
@@ -210,8 +210,8 @@ namespace BECore::Mahjong {
         uint64_t _newGameWordStrings = 0;
         bool _roomLineSeen = false;  // the word of the client at the table's start is not new
         uint32_t _noticeSeen = 0;
-        eastl::string_view _noteKey;  // the word of the client that came while the table is up, and the version of the table it came at
-        eastl::string _noteArg;
+        StringView _noteKey;  // the word of the client that came while the table is up, and the version of the table it came at
+        String _noteArg;
         uint64_t _noteTable = 0;
         bool _leaveSent = false;
         static MahjongHudComponent* s_active;

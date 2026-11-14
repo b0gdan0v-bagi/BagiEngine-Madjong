@@ -306,7 +306,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(HandModelMovesTest, ARefusedActionLogsNothing) {
         HandModel model = MakeModel(SpecOf(kEastQuiet, "5p"));
-        const std::string before = Snapshot(model);
+        const String before = Snapshot(model);
 
         EXPECT_EQ(Error(model.Discard(kSeat1, T("5p"))), HandError::NotYourTurn);
         EXPECT_EQ(Error(model.Discard(kSeat0, T("9p"))), HandError::TileNotInHand);

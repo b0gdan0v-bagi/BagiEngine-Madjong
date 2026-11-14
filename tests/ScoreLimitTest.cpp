@@ -27,17 +27,17 @@ namespace BECore::Mahjong::Tests {
         constexpr const char* kPlainWithOneDot = "1p 2p 3p 7m 8m 9m 5s 6s 7s Ww Ww Ww 4m 4m";
         constexpr const char* kPlainWithFiveDots = "3p 4p 5p 7m 8m 9m 5s 6s 7s Ww Ww Ww 4m 4m";
 
-        ScoreBreakdown Win(const std::string& concealed, const char* winningTile, WinSource source = WinSource::SelfDraw, std::initializer_list<Meld> melds = {}) {
+        ScoreBreakdown Win(const String& concealed, const char* winningTile, WinSource source = WinSource::SelfDraw, std::initializer_list<Meld> melds = {}) {
             return ScoreSeat(MakeWinnerInput(concealed, winningTile, source, melds));
         }
 
-        ScoreInput LastTileInput(const std::string& concealed, const char* winningTile) {
+        ScoreInput LastTileInput(const String& concealed, const char* winningTile) {
             ScoreInput input = MakeWinnerInput(concealed, winningTile);
             input.result.lastLiveTile = true;
             return input;
         }
 
-        ScoreInput LooseTileInput(const std::string& concealed, const char* winningTile) {
+        ScoreInput LooseTileInput(const String& concealed, const char* winningTile) {
             ScoreInput input = MakeWinnerInput(concealed, winningTile);
             input.result.loose = true;
             return input;
@@ -187,11 +187,11 @@ namespace BECore::Mahjong::Tests {
 
     TEST(ScoreLimitTest, ThirteenOrphansOnEveryOneOfTheThirteenKinds) {
         // The 13-sided wait: every kind of the thirteen completes the hand with its pair.
-        const eastl::vector<Tile> kinds = ParseTiles(kOrphans).value();
+        const Vector<Tile> kinds = ParseTiles(kOrphans).value();
         ASSERT_EQ(kinds.size(), static_cast<size_t>(kThirteenOrphanKinds));
         for (const Tile kind : kinds) {
-            const std::string winning = ToString(kind).data();
-            ExpectLimitHand(Win(std::string(kOrphans) + " " + winning, winning.c_str()), ScoreKind::ThirteenOrphans);
+            const String winning = ToString(kind).data();
+            ExpectLimitHand(Win(Format("{} {}", kOrphans, winning), winning.c_str()), ScoreKind::ThirteenOrphans);
         }
     }
 

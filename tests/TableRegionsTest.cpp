@@ -1,5 +1,6 @@
 #include "ShippedTableLayout.h"
 
+#include <Common/Printers.h>
 #include <Mahjong/Table/TableRegions.h>
 #include <Mahjong/Table/TableSolver.h>
 #include <cmath>
@@ -41,7 +42,7 @@ namespace BECore::Mahjong::Tests {
             return input;
         }
 
-        const TableRegion* Find(const eastl::vector<TableRegion>& regions, const char* name) {
+        const TableRegion* Find(const Vector<TableRegion>& regions, const char* name) {
             for (const TableRegion& region : regions) {
                 if (region.name == name) {
                     return &region;
@@ -50,15 +51,15 @@ namespace BECore::Mahjong::Tests {
             return nullptr;
         }
 
-        void ExpectSameRect(const Rect& actual, const Rect& expected, const std::string& where) {
+        void ExpectSameRect(const Rect& actual, const Rect& expected, const String& where) {
             EXPECT_NEAR(actual.x, expected.x, kTolerance) << where;
             EXPECT_NEAR(actual.y, expected.y, kTolerance) << where;
             EXPECT_NEAR(actual.w, expected.w, kTolerance) << where;
             EXPECT_NEAR(actual.h, expected.h, kTolerance) << where;
         }
 
-        std::string Where(const ViewSize& view, Seat viewer) {
-            return std::to_string(view.width) + "x" + std::to_string(view.height) + " viewer " + std::to_string(viewer);
+        String Where(const ViewSize& view, Seat viewer) {
+            return Format("{}x{} viewer {}", view.width, view.height, viewer);
         }
 
         /// The fraction `zone` of the shape the spec borrows from, fitted into a view of `view` by hand: the rule of the layout written out.
@@ -81,12 +82,12 @@ namespace BECore::Mahjong::Tests {
         for (const ViewSize& view : kViews) {
             for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
                 const TableLayout layout = MakeTableLayout(InputOf(viewer), spec, view.width, view.height);
-                const eastl::vector<TableRegion> regions = MakeTableRegions(layout);
-                const std::string where = Where(view, viewer);
+                const Vector<TableRegion> regions = MakeTableRegions(layout);
+                const String where = Where(view, viewer);
                 ASSERT_GE(regions.size(), static_cast<size_t>(kSeatCount) + 2) << where;
                 for (int position = 0; position < kSeatCount; ++position) {
-                    EXPECT_STREQ(regions[static_cast<size_t>(position)].name.c_str(), ("table.plate." + std::to_string(position)).c_str()) << where;
-                    ExpectSameRect(regions[static_cast<size_t>(position)].rect, layout.zones.seatPlates[SeatAtPosition(viewer, position)], where + " plate " + std::to_string(position));
+                    EXPECT_STREQ(regions[static_cast<size_t>(position)].name.c_str(), Format("table.plate.{}", position).c_str()) << where;
+                    ExpectSameRect(regions[static_cast<size_t>(position)].rect, layout.zones.seatPlates[SeatAtPosition(viewer, position)], Format("{} plate {}", where, position));
                 }
                 EXPECT_STREQ(regions[kSeatCount].name.c_str(), "table.centerPanel");
                 ExpectSameRect(regions[kSeatCount].rect, layout.zones.centerPanel, where + " centre panel");
@@ -103,8 +104,8 @@ namespace BECore::Mahjong::Tests {
         phone.profile = TableProfile{true, 60.0f};
         const TableLayout desktopLayout = MakeTableLayout(desktop, spec);
         const TableLayout phoneLayout = MakeTableLayout(phone, spec);
-        const eastl::vector<TableRegion> desktopRegions = MakeTableRegions(desktopLayout);
-        const eastl::vector<TableRegion> phoneRegions = MakeTableRegions(phoneLayout);
+        const Vector<TableRegion> desktopRegions = MakeTableRegions(desktopLayout);
+        const Vector<TableRegion> phoneRegions = MakeTableRegions(phoneLayout);
         ASSERT_TRUE(phoneLayout.profile.phone);
         EXPECT_LT(phoneRegions[0].rect.y, desktopRegions[0].rect.y);
         ExpectSameRect(phoneRegions[0].rect, phoneLayout.zones.seatPlates[2], "phone plate");
@@ -129,7 +130,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_NE(zones, nullptr);
             ASSERT_GE(zones->freeRegions.size(), 2U) << Where(view, 0);
             for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
-                const eastl::vector<TableRegion> regions = MakeTableRegions(MakeTableLayout(InputOf(viewer), spec, view.width, view.height));
+                const Vector<TableRegion> regions = MakeTableRegions(MakeTableLayout(InputOf(viewer), spec, view.width, view.height));
                 ASSERT_EQ(regions.size(), static_cast<size_t>(kSeatCount) + 2 + zones->freeRegions.size()) << Where(view, viewer);
                 const Rect viewRect(0.0f, 0.0f, view.width, view.height);
                 for (size_t index = 0; index < zones->freeRegions.size(); ++index) {
@@ -149,9 +150,9 @@ namespace BECore::Mahjong::Tests {
     TEST(TableRegionsTest, TheFreeRegionsOfTheViewDoNotDependOnTheViewer) {
         const TableLayoutSpec spec = ShippedSpecWithTestRegions();
         for (const ViewSize& view : kViews) {
-            const eastl::vector<TableRegion> first = MakeTableRegions(MakeTableLayout(InputOf(0), spec, view.width, view.height));
+            const Vector<TableRegion> first = MakeTableRegions(MakeTableLayout(InputOf(0), spec, view.width, view.height));
             for (Seat viewer = 1; viewer < kSeatCount; ++viewer) {
-                const eastl::vector<TableRegion> other = MakeTableRegions(MakeTableLayout(InputOf(viewer), spec, view.width, view.height));
+                const Vector<TableRegion> other = MakeTableRegions(MakeTableLayout(InputOf(viewer), spec, view.width, view.height));
                 ASSERT_EQ(first.size(), other.size());
                 for (size_t index = kSeatCount; index < first.size(); ++index) {
                     EXPECT_EQ(first[index].name, other[index].name);
@@ -163,8 +164,8 @@ namespace BECore::Mahjong::Tests {
 
     TEST(TableRegionsTest, TheWideRegionsAreTheLandscapeOnesShiftedByTheWing) {
         const TableLayoutSpec spec = ShippedSpecWithTestRegions();
-        const eastl::vector<TableRegion> landscape = MakeTableRegions(MakeTableLayout(InputOf(1), spec, kViewWidth, kViewHeight));
-        const eastl::vector<TableRegion> wide = MakeTableRegions(MakeTableLayout(InputOf(1), spec, kWideViewWidth, kViewHeight));
+        const Vector<TableRegion> landscape = MakeTableRegions(MakeTableLayout(InputOf(1), spec, kViewWidth, kViewHeight));
+        const Vector<TableRegion> wide = MakeTableRegions(MakeTableLayout(InputOf(1), spec, kWideViewWidth, kViewHeight));
         ASSERT_EQ(landscape.size(), wide.size());
         ASSERT_GT(landscape.size(), static_cast<size_t>(kSeatCount) + 2);
         for (size_t index = 0; index < landscape.size(); ++index) {
@@ -202,7 +203,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(TableRegionsTest, TheShippedFreeRegionsAreFittedIntoEveryViewOfEveryShape) {
         for (const ViewSize& view : kViews) {
-            const eastl::vector<TableRegion> regions = MakeTableRegions(MakeTableLayout(InputOf(0), view.width, view.height));
+            const Vector<TableRegion> regions = MakeTableRegions(MakeTableLayout(InputOf(0), view.width, view.height));
             for (const char* name : kFreeRegionNames) {
                 const TableRegion* found = Find(regions, name);
                 ASSERT_NE(found, nullptr) << name << " in " << Where(view, 0);
@@ -215,7 +216,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(TableRegionsTest, TheTestRegionsPassTheCheckOfTheSpec) {
-        for (const eastl::string& problem : CheckTableLayoutSpec(ShippedSpecWithTestRegions())) {
+        for (const String& problem : CheckTableLayoutSpec(ShippedSpecWithTestRegions())) {
             ADD_FAILURE() << problem.c_str();
         }
     }

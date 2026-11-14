@@ -33,22 +33,22 @@ namespace BECore::Mahjong::Arena {
     struct TableStats {
         uint32_t first = 0;
         int count = 0;
-        eastl::string player;
+        String player;
         int64_t hands = 0;
         int64_t drawn = 0;
         /// The won hands by how they were won, indexed by `WinSource`.
-        eastl::array<int64_t, kWinSourceCount> wonBySource{};
+        Array<int64_t, kWinSourceCount> wonBySource{};
         /// `[declared opponents][i - 1]`.
-        eastl::array<eastl::array<RoundCount, kTableStatsRounds>, kDeclaredCases> rounds{};
+        Array<Array<RoundCount, kTableStatsRounds>, kDeclaredCases> rounds{};
         /// The score of the winner of a won hand, by whether the winner was East (index 0) or not (1).
-        eastl::array<SampleSums, kEastCases> winnerScore{};
+        Array<SampleSums, kEastCases> winnerScore{};
         /// The standing score of each seat that did not win in a won hand, by whether that seat was East (index 0) or not (1).
-        eastl::array<SampleSums, kEastCases> standingScore{};
+        Array<SampleSums, kEastCases> standingScore{};
     };
 
     /// The number of declared opponents of each own turn of a seat, in the order of its turns: what the observer of a hand collects. An
     /// own turn is an action in the `Discard` phase (a drawn tile, a claimed pung or chow, or the tile after a kong).
-    using OwnTurns = eastl::array<eastl::vector<int>, kSeatCount>;
+    using OwnTurns = Array<Vector<int>, kSeatCount>;
 
     /// The observer that fills `turns` (cleared first) as `PlayArenaHand` calls it: at each action of the `Discard` phase the actor's turn
     /// is appended with the number of the other three seats that have declared the calling hand.
@@ -75,12 +75,12 @@ namespace BECore::Mahjong::Arena {
 
     /// Plays the hands and sums them: the same result at any `jobs` (the tallies are integers and every seed has its own slot, summed in
     /// seed order). The error is that of the lowest seed that failed (a refused action of the model), or a bad config.
-    [[nodiscard]] std::expected<TableStats, eastl::string> RunTableStats(const TableStatsConfig& config);
+    [[nodiscard]] std::expected<TableStats, String> RunTableStats(const TableStatsConfig& config);
 
     /// The report in fixed text (the numbers by `Format`, a fixed precision, no locale): the same stats give the same bytes. It lists, by the
     /// number of declared opponents, the own turns, the chance that another seat wins in the next round (per mille) and the survival after
     /// 1..`kTableStatsRounds` rounds next to `(1 - h)^i`; the mean score of a winner and the mean standing score of the seats that did not win,
     /// East and not East; the share of the won hands by how they were won.
-    [[nodiscard]] eastl::string FormatTableStats(const TableStats& stats);
+    [[nodiscard]] String FormatTableStats(const TableStats& stats);
 
 }  // namespace BECore::Mahjong::Arena

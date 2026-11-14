@@ -39,7 +39,7 @@ namespace BECore::Mahjong {
         constexpr float kHoverPlateHeight = 48.0f;
         constexpr float kHoverPlateTallHeight = 92.0f;
 
-        constexpr eastl::string_view kRevealAction = "MahjongReveal";
+        constexpr StringView kRevealAction = "MahjongReveal";
         /// The tint of a turned tile: white leaves the atlas as it is (the plain `DrawTexture` has the same default).
         constexpr Color kUntinted{255, 255, 255, 255};
         constexpr Color kPlainFace{238, 230, 205, 255};
@@ -95,7 +95,7 @@ namespace BECore::Mahjong {
         }
 
         /// Whether the two lists name the same regions at the same rectangles, in the same order.
-        bool SameRegions(const eastl::vector<TableRegion>& a, const eastl::vector<TableRegion>& b) {
+        bool SameRegions(const Vector<TableRegion>& a, const Vector<TableRegion>& b) {
             if (a.size() != b.size()) {
                 return false;
             }
@@ -116,7 +116,7 @@ namespace BECore::Mahjong {
 
         /// The shown button of `Actions` under the pointer (the canvas sets `UIElement::hovered` from the mouse); none when there is none.
         /// Only the buttons of `Actions` are hovered: a touch screen has no hover, and `ActionsCompact` has no label for the hint.
-        std::optional<ButtonKind> HoveredButton(const IntrusivePtr<UICanvasComponent>& actions, const ActionButtons& buttons) {
+        Optional<ButtonKind> HoveredButton(const IntrusivePtr<UICanvasComponent>& actions, const ActionButtons& buttons) {
             for (int i = 0; i < kButtonCount; ++i) {
                 const ButtonKind kind = static_cast<ButtonKind>(i);
                 if (!buttons[kind].shown) {
@@ -222,7 +222,7 @@ namespace BECore::Mahjong {
 
         /// The index of the last copy of `tile` in the sorted `concealed` tiles (`AddConcealed` sorts equal tiles together and the tile that
         /// was added last, a drawn or a won one, is the last of them).
-        int LastCopyIndex(const eastl::vector<Tile>& concealed, Tile tile) {
+        int LastCopyIndex(const Vector<Tile>& concealed, Tile tile) {
             for (int i = static_cast<int>(concealed.size()) - 1; i >= 0; --i) {
                 if (concealed[static_cast<size_t>(i)] == tile) {
                     return i;
@@ -496,14 +496,14 @@ namespace BECore::Mahjong {
             }
             return true;
         }
-        eastl::string text;
-        for (const eastl::string& error : offer.errors) {
+        String text;
+        for (const String& error : offer.errors) {
             text += error;
             text += '\n';
         }
         if (text != _layoutRefused) {
             _layoutRefused = text;
-            for (const eastl::string& error : offer.errors) {
+            for (const String& error : offer.errors) {
                 LOG_ERROR(Format("MahjongTableComponent: the table layout is refused, the last good one stays: {}", error));
             }
         }
@@ -519,7 +519,7 @@ namespace BECore::Mahjong {
         std::error_code error;
         const std::filesystem::path file = CoreManager::GetConfigManager().GetConfigFilePath("TableLayout"_intern);
         const std::filesystem::file_time_type stamp = std::filesystem::last_write_time(file, error);
-        _layoutStamp = error ? std::nullopt : std::optional(stamp);
+        _layoutStamp = error ? std::nullopt : Optional<std::filesystem::file_time_type>(stamp);
     }
 
     void MahjongTableComponent::PollTableLayoutSpec() {
@@ -558,7 +558,7 @@ namespace BECore::Mahjong {
         return DeclareTurn{game.GetSession().Actor(), game.GetMatch().Hand().Discards().size()};
     }
 
-    const eastl::vector<HandAction>& MahjongTableComponent::LegalFor(const MahjongGame& game, Seat actor) {
+    const Vector<HandAction>& MahjongTableComponent::LegalFor(const MahjongGame& game, Seat actor) {
         if (!game.IsOnlineTable()) {
             _legal = game.GetMatch().Hand().LegalActions(actor);
             return _legal;
@@ -579,10 +579,10 @@ namespace BECore::Mahjong {
             return game.GetSession().PerformPerson(action);
         }
         OnlineClient& client = game.GetOnline();
-        const eastl::vector<ControlAction>& listed = client.Table().actions;
+        const Vector<ControlAction>& listed = client.Table().actions;
         // The coach of the room judges the move the player sends, on the view he chose it on (before the table moves on)
         CoachLedger& coach = game.GetCoach();
-        std::optional<TableView> before;
+        Optional<TableView> before;
         if (coach.Enabled()) {
             before = MahjongHintsComponent::ViewOf(game, game.GetSession().Viewer());
         }
@@ -676,13 +676,13 @@ namespace BECore::Mahjong {
         // looked up again when the language changed under it
         const UIStrings& strings = CoreManager::GetUIStrings();
         _hoveredButton = compact ? std::nullopt : HoveredButton(actionsCanvas, buttons);
-        const eastl::string_view hintKey = _hoveredButton ? buttons[*_hoveredButton].hintKey : eastl::string_view{};
+        const StringView hintKey = _hoveredButton ? buttons[*_hoveredButton].hintKey : StringView{};
         const PoolString actionHint = "actionHint"_intern;
         if (hintKey != _hintKey || strings.GetVersion() != _hintStringsVersion || !vars.Has(actionHint)) {
             _hintKey = hintKey;
             _hintStringsVersion = strings.GetVersion();
-            const eastl::string hint = hintKey.empty() ? eastl::string() : Tr(strings, hintKey);
-            vars.Set(actionHint, eastl::string_view(hint));
+            const String hint = hintKey.empty() ? String() : Tr(strings, hintKey);
+            vars.Set(actionHint, StringView(hint));
             UICanvasComponent::SetElementVisibleByName(scene, "Hint"_intern, !hint.empty());
         }
 
@@ -690,7 +690,7 @@ namespace BECore::Mahjong {
         const bool handoff = game != nullptr && game->GetSession().HandoffPending();
         if (handoff) {
             const Seat actor = game->GetSession().Actor();
-            vars.Set("handoffSeat"_intern, eastl::string_view(SeatName(strings, actor, game->GetMatch().Hand().SeatWind(actor))));
+            vars.Set("handoffSeat"_intern, StringView(SeatName(strings, actor, game->GetMatch().Hand().SeatWind(actor))));
         }
         if (handoff != _handoffShown) {
             _handoffShown = handoff;
@@ -728,7 +728,7 @@ namespace BECore::Mahjong {
         if (!_selected || !PersonActs(game) || hand.GetPhase() != Phase::Discard || session.Version() != _selectedVersion || SeenHandOf(game) != _selectedHand || TurnOf(game) != _selectedTurn) {
             return false;
         }
-        const eastl::vector<Tile>& concealed = hand.GetHand(session.Actor()).concealed;
+        const Vector<Tile>& concealed = hand.GetHand(session.Actor()).concealed;
         return *_selected >= 0 && *_selected < static_cast<int>(concealed.size()) && concealed[static_cast<size_t>(*_selected)] == _selectedTile && TapToSelect();
     }
 
@@ -739,7 +739,7 @@ namespace BECore::Mahjong {
         }
     }
 
-    void MahjongTableComponent::TapHandTile(MahjongGame& game, const std::optional<int>& hit) {
+    void MahjongTableComponent::TapHandTile(MahjongGame& game, const Optional<int>& hit) {
         TableSession& session = game.GetSession();
         const HandModel& hand = game.GetMatch().Hand();
         const TapOutcome outcome = StepTap(_selected, hit, TapToSelect());
@@ -781,7 +781,7 @@ namespace BECore::Mahjong {
             return;
         }
         RefreshSelection(game);
-        const std::optional<int> hit = HitHandTile(_shown.layout, GetScene().ScreenToSceneX(event.button.x), GetScene().ScreenToSceneY(event.button.y));
+        const Optional<int> hit = HitHandTile(_shown.layout, GetScene().ScreenToSceneX(event.button.x), GetScene().ScreenToSceneY(event.button.y));
         const Seat actor = game->GetSession().Actor();
         const PlayerHand& held = game->GetMatch().Hand().GetHand(actor);
         // The layout is the last frame's: it has to be of this hand
@@ -812,7 +812,7 @@ namespace BECore::Mahjong {
             }
             return;
         }
-        const std::optional<ButtonKind> kind = ButtonOf(event.action.ToStringView(), event.value.ToStringView());
+        const Optional<ButtonKind> kind = ButtonOf(event.action.ToStringView(), event.value.ToStringView());
         if (!kind) {
             return;
         }
@@ -851,7 +851,7 @@ namespace BECore::Mahjong {
 
     void MahjongTableComponent::HoldScoreTableIfBeaten(const MahjongGame& game, int serialBefore) {
         const HandModel& hand = game.GetMatch().Hand();
-        const std::optional<ClaimWindowResult>& window = hand.LastClaimWindow();
+        const Optional<ClaimWindowResult>& window = hand.LastClaimWindow();
         if (!window || window->serial == serialBefore || hand.GetPhase() != Phase::Finished || !hand.Result()) {
             return;
         }
@@ -870,7 +870,7 @@ namespace BECore::Mahjong {
         BE_PROFILE_SCOPE("MahjongTable::FollowMoves");
         BE_PROFILE_SCOPE("MahjongTable::FollowMoves");
         const Match& match = game.GetMatch();
-        const eastl::vector<HandMove>& moves = match.Hand().Moves();
+        const Vector<HandMove>& moves = match.Hand().Moves();
         const SeenHand now = SeenHandOf(game);
         if (now != _seenHand || moves.size() < _movesSeen) {
             // Another hand, match or game: what is on the table now is not news
@@ -898,7 +898,7 @@ namespace BECore::Mahjong {
         _movesSeen = moves.size();
         // A claim window settled since the last frame: when a claim lost in it, the winner and the losers are marked for a while (a pass is no
         // claim, so a window that nobody claimed in or that all passed marks nothing)
-        if (const std::optional<ClaimWindowResult>& window = match.Hand().LastClaimWindow(); window && window->serial != _windowSeen) {
+        if (const Optional<ClaimWindowResult>& window = match.Hand().LastClaimWindow(); window && window->serial != _windowSeen) {
             _windowSeen = window->serial;
             _lostLeft = 0.0f;
             if (!window->beaten.empty()) {
@@ -924,13 +924,13 @@ namespace BECore::Mahjong {
             return;
         }
         // Nothing new is the common frame: no move since the last draw, no tile drawn from the wall and no win (a win is no move)
-        const eastl::vector<HandMove>& moves = hand.Moves();
-        const eastl::span<const HandMove> fresh(moves.data() + news.first, moves.size() - news.first);
+        const Vector<HandMove>& moves = hand.Moves();
+        const Span<const HandMove> fresh(moves.data() + news.first, moves.size() - news.first);
         const bool newWin = _shown.winSeat != kNoSeat && before.winSeat == kNoSeat;
         if (fresh.empty() && _shown.wallRemaining >= before.wallRemaining && !newWin) {
             return;
         }
-        eastl::vector<TileFlight> planned = PlanFlights(before, _shown, fresh);
+        Vector<TileFlight> planned = PlanFlights(before, _shown, fresh);
         if (!planned.empty()) {
             EndFlights();  // the running flights end at their targets: their slots are drawn in place from now on
             _flights = eastl::move(planned);
@@ -984,7 +984,7 @@ namespace BECore::Mahjong {
 
     bool MahjongTableComponent::BeginComputerStep(TableSession& session, const HandModel& hand) {
         BE_PROFILE_SCOPE("MahjongTable::BeginComputerStep");
-        std::optional<ComputerStepJob> job = session.BeginComputerStep();
+        Optional<ComputerStepJob> job = session.BeginComputerStep();
         if (!job) {
             return false;
         }
@@ -1027,12 +1027,12 @@ namespace BECore::Mahjong {
             if (!_step && !BeginComputerStep(session, hand)) {
                 return;
             }
-            std::optional<ComputerStepJob> job = _thinking.TakeFinished();
+            Optional<ComputerStepJob> job = _thinking.TakeFinished();
             if (!job) {
                 return;
             }
             _step.reset();
-            const std::optional<StepResult> stepped = session.FinishComputerStep(*job);
+            const Optional<StepResult> stepped = session.FinishComputerStep(*job);
             if (!stepped) {
                 _burst = Burst::None;
                 continue;
@@ -1081,8 +1081,8 @@ namespace BECore::Mahjong {
         }
         _textTile = tile;
         _textStringsVersion = strings.GetVersion();
-        const eastl::string text = tile.IsValid() ? SelectedTileText(strings, tile) : eastl::string();
-        vars.Set(name, eastl::string_view(text));
+        const String text = tile.IsValid() ? SelectedTileText(strings, tile) : String();
+        vars.Set(name, StringView(text));
     }
 
     void MahjongTableComponent::PublishHover(const MahjongGame* game, float viewWidth, float viewHeight) {
@@ -1103,7 +1103,7 @@ namespace BECore::Mahjong {
                 slot = nullptr;
             }
             if (slot != nullptr) {
-                const std::optional<Tile> shown = TileOfSlot(game->GetMatch().Hand(), *slot, FacesOf(game->GetSession()).Shows(slot->seat));
+                const Optional<Tile> shown = TileOfSlot(game->GetMatch().Hand(), *slot, FacesOf(game->GetSession()).Shows(slot->seat));
                 tile = shown.value_or(Tile{});
             }
             if (!tile.IsValid()) {
@@ -1128,14 +1128,14 @@ namespace BECore::Mahjong {
         const bool wordsChanged = tile.IsValid() && strings.GetVersion() != _hoverStringsVersion;
         if (tile != _hoverTile || wordsChanged || !vars.Has(name)) {
             _hoverTile = tile;
-            const eastl::string text = tile.IsValid() ? TileName(strings, tile) : eastl::string();
-            vars.Set(name, eastl::string_view(text));
+            const String text = tile.IsValid() ? TileName(strings, tile) : String();
+            vars.Set(name, StringView(text));
         }
         const PoolString dangerName = "tileHoverDanger"_intern;
         const bool dangerMoved = danger != _hoverDanger;
         if (dangerMoved || wordsChanged || !vars.Has(dangerName)) {
-            const eastl::string text = danger != DangerMark::None ? Tr(strings, DangerHoverKey(danger)) : eastl::string();
-            vars.Set(dangerName, eastl::string_view(text));
+            const String text = danger != DangerMark::None ? Tr(strings, DangerHoverKey(danger)) : String();
+            vars.Set(dangerName, StringView(text));
         }
         if (tile.IsValid()) {
             _hoverStringsVersion = strings.GetVersion();
@@ -1189,10 +1189,10 @@ namespace BECore::Mahjong {
             return;
         }
         // The names are interned for the new set only; a name that left the spec is withdrawn from every canvas
-        eastl::vector<PoolString> names;
+        Vector<PoolString> names;
         names.reserve(_regions.size());
         for (const TableRegion& region : _regions) {
-            names.push_back(PoolString::Intern(eastl::string_view(region.name.data(), region.name.size())));
+            names.push_back(PoolString::Intern(region.name));
         }
         for (const PoolString& old : _regionNames) {
             if (eastl::find(names.begin(), names.end(), old) == names.end()) {
@@ -1333,7 +1333,7 @@ namespace BECore::Mahjong {
         const TableLayout& layout = _shown.layout;
         // The two tiles of the viewer's hand that the offered chow takes (the hovered one; the only one when a single chow is on offer) are
         // framed in place: only in a hand that is face up and while the viewer is the person to act (so not under the cover)
-        eastl::array<int, 2> chowIndex{-1, -1};
+        Array<int, 2> chowIndex{-1, -1};
         if (IsSeat(bottom) && PersonActs(*game) && session.Actor() == bottom && faces.seat == bottom) {
             _chowTakes = ChowTilesTaken(_published, hand.PendingTile(), _hoveredButton);
             const PlayerHand& viewer = hand.GetHand(bottom);
@@ -1357,7 +1357,7 @@ namespace BECore::Mahjong {
 
         // The discards that keep a declared hand waiting: only on the viewer's own turn in a hand that is face up (the guard is cheap, the
         // view is made only when it can say something); not tied to the hints switch
-        eastl::array<bool, kTileIdCount> keepsWaiting{};
+        Array<bool, kTileIdCount> keepsWaiting{};
         if (IsSeat(bottom) && session.GetPhase() == SessionPhase::Playing && faces.seat == bottom && hand.GetPhase() == Phase::Discard && hand.CurrentSeat() == bottom &&
             hand.GetHand(bottom).callingDeclared) {
             // The view allocates: the bars are worked out again only when the session moved (the same key as the buttons)
@@ -1385,7 +1385,7 @@ namespace BECore::Mahjong {
         // stack seen from above (its own cell, a plain back without the atlas) instead of a tile. A turned tile (a side seat, or a tile in
         // the air between two turns) hands the draw the unturned rectangle and the turn about the pivot; a tile that is not turned is the
         // plain draw of its rectangle (`place.upright`, which is the screen rectangle then).
-        const auto drawFace = [&](const TilePlacement& place, std::optional<Tile> face, bool stack = false) {
+        const auto drawFace = [&](const TilePlacement& place, Optional<Tile> face, bool stack = false) {
             const Rect& upright = place.upright;
             const DrawTransform turn{place.rotation, place.pivotX, place.pivotY};
             const bool turned = !turn.IsIdentity();
@@ -1419,7 +1419,7 @@ namespace BECore::Mahjong {
             renderer.DrawFilledRect(rect.x + kShadowOffset * unit - margin, rect.y + kShadowOffset * unit - margin, rect.w + 2.0f * margin, rect.h + 2.0f * margin, kTileShadowSoft);
             renderer.DrawFilledRect(rect.x + kShadowOffset * unit, rect.y + kShadowOffset * unit, rect.w, rect.h, kTileShadow);
         };
-        const auto drawTile = [&](const Rect& rect, const TilePlacement& place, std::optional<Tile> face) {
+        const auto drawTile = [&](const Rect& rect, const TilePlacement& place, Optional<Tile> face) {
             drawShadow(rect);
             drawFace(place, face);
         };
@@ -1507,7 +1507,7 @@ namespace BECore::Mahjong {
             }
         }
         // The tiles that cannot declare the calling hand when they are discarded, while the next discard is to declare it
-        eastl::array<bool, kTileIdCount> cannotDeclare{};
+        Array<bool, kTileIdCount> cannotDeclare{};
         if (_declareNext) {
             cannotDeclare.fill(true);
             for (const HandAction& action : LegalFor(*game, session.Actor())) {
@@ -1546,7 +1546,7 @@ namespace BECore::Mahjong {
             const PlayerHand& held = hand.GetHand(slot.seat);
             switch (slot.role) {
                 case SlotRole::HandTile:
-                    drawTile(rect, place, faces.Shows(slot.seat) ? std::optional<Tile>(held.concealed[slot.index]) : std::nullopt);
+                    drawTile(rect, place, faces.Shows(slot.seat) ? Optional<Tile>(held.concealed[slot.index]) : std::nullopt);
                     if (slot.seat == bottom && slot.index == drawnIndex) {
                         renderer.DrawFilledRect(rect.x, rect.y, rect.w, rect.h, kDrawnTileMark);
                     }
@@ -1568,7 +1568,7 @@ namespace BECore::Mahjong {
                     const Meld& meld = held.melds[slot.index];
                     // An open set is public; a concealed kong is as hidden as the hand it was made from.
                     const bool shown = !meld.concealed || faces.Shows(slot.seat);
-                    drawTile(rect, place, shown ? std::optional<Tile>(MeldTileAt(meld, slot.part)) : std::nullopt);
+                    drawTile(rect, place, shown ? Optional<Tile>(MeldTileAt(meld, slot.part)) : std::nullopt);
                     if (slot.claimEdge != Edge::None) {
                         const Rect bar = EdgeBar(rect, slot.claimEdge, kClaimedEdgeWidth * unit);
                         renderer.DrawFilledRect(bar.x, bar.y, bar.w, bar.h, kClaimedEdge);

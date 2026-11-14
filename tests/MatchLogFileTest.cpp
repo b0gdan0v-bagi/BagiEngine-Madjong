@@ -31,8 +31,8 @@ namespace BECore::Mahjong::Tests {
         constexpr int kControlStepLimit = 400;
         constexpr const char* kFolderStem = "bagi-mahjong-match-logs";
         /// A stamp and a name of the shape the writer makes, for the length of their parts only.
-        constexpr std::string_view kExampleStamp = "2026-11-09T14-03-55";
-        constexpr std::string_view kExampleStem = "2026-11-09T14-03-55_seed41";
+        constexpr StringView kExampleStamp = "2026-11-09T14-03-55";
+        constexpr StringView kExampleStem = "2026-11-09T14-03-55_seed41";
         /// `2026-11-09T14-03-55_seed41.jsonl`, with `-2` ... before the extension for a second file of the same second.
         constexpr const char* kFileNamePattern = R"(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}_seed41(-\d+)?\.jsonl)";
 
@@ -66,16 +66,16 @@ namespace BECore::Mahjong::Tests {
 
         [[maybe_unused]] ::testing::Environment* const kMatchLogFolderEnvironment = ::testing::AddGlobalTestEnvironment(new MatchLogFolderEnvironment);
 
-        std::string ReadFile(const fs::path& path) {
+        String ReadFile(const fs::path& path) {
             std::ifstream file(path);
             std::stringstream text;
             text << file.rdbuf();
-            return text.str();
+            return FromStdString(text.str());
         }
 
         /// The files of `folder`, by name.
-        std::vector<fs::path> FilesIn(const fs::path& folder) {
-            std::vector<fs::path> files;
+        Vector<fs::path> FilesIn(const fs::path& folder) {
+            Vector<fs::path> files;
             std::error_code error;
             for (fs::directory_iterator it(folder, error); !error && it != fs::directory_iterator(); it.increment(error)) {
                 files.push_back(it->path());
@@ -84,11 +84,11 @@ namespace BECore::Mahjong::Tests {
             return files;
         }
 
-        std::vector<std::string> LinesOf(const std::string& text) {
-            std::vector<std::string> lines;
-            std::istringstream stream(text);
-            for (std::string line; std::getline(stream, line);) {
-                lines.push_back(line);
+        Vector<String> LinesOf(const String& text) {
+            Vector<String> lines;
+            std::istringstream stream(ToStdString(text));
+            for (std::string line; std::getline(stream, line);) {  //-NoStd: getline fills a std::string
+                lines.push_back(FromStdString(line));
             }
             return lines;
         }
@@ -182,8 +182,8 @@ namespace BECore::Mahjong::Tests {
             fs::path _before;
         };
 
-        std::string Str(const Json& json) {
-            return json.is_string() ? json.get<std::string>() : std::string("<not a string>");
+        String Str(const Json& json) {
+            return json.is_string() ? FromStdString(json.get<std::string>()) : String("<not a string>");  //-NoStd: nlohmann reads a string as std::string
         }
 
     }  // namespace
@@ -198,13 +198,13 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(table.Start());
         table.PlayMatch();
 
-        const std::vector<fs::path> files = FilesIn(folder);
+        const Vector<fs::path> files = FilesIn(folder);
         ASSERT_EQ(files.size(), 1u);
         EXPECT_TRUE(std::regex_match(files[0].filename().string(), std::regex(kFileNamePattern))) << files[0].filename().string();
         EXPECT_EQ(files[0], table.writer.Path());
         EXPECT_FALSE(table.writer.IsOpen()) << "the file is closed at End";
 
-        const std::vector<std::string> lines = LinesOf(ReadFile(files[0]));
+        const Vector<String> lines = LinesOf(ReadFile(files[0]));
         ASSERT_EQ(lines.size(), table.tee.Log().Events().size());
         for (size_t index = 0; index < lines.size(); ++index) {
             const auto parsed = ParseJson(lines[index].c_str());
@@ -222,7 +222,7 @@ namespace BECore::Mahjong::Tests {
         table.PlayMatch();
         ASSERT_EQ(table.match.History().size(), static_cast<size_t>(kShortMatchHands));
 
-        const std::vector<fs::path> files = FilesIn(folder);
+        const Vector<fs::path> files = FilesIn(folder);
         ASSERT_EQ(files.size(), 1u);
         const auto events = ParseMatchLog(ReadFile(files[0]).c_str());
         ASSERT_TRUE(events.has_value()) << events.error().c_str();
@@ -236,12 +236,12 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MatchLogFileTest, TheSameSeedInTheSameSecondGetsAFileOfItsOwn) {
         WrittenTable table;
-        std::vector<fs::path> paths;
+        Vector<fs::path> paths;
         for (int start = 0; start < kStartsInARow; ++start) {
             ASSERT_NO_FATAL_FAILURE(table.Start());
             paths.push_back(table.writer.Path());
         }
-        const std::vector<fs::path> files = FilesIn(folder);
+        const Vector<fs::path> files = FilesIn(folder);
         EXPECT_EQ(files.size(), static_cast<size_t>(kStartsInARow));
         std::sort(paths.begin(), paths.end());
         EXPECT_EQ(std::unique(paths.begin(), paths.end()), paths.end()) << "two matches share a file";
@@ -250,14 +250,13 @@ namespace BECore::Mahjong::Tests {
             EXPECT_TRUE(std::regex_match(file.filename().string(), fileName)) << file.filename().string();
         }
         // the suffix exists exactly for the files that share their second with an earlier one
-        std::vector<std::string> stamps;
+        Vector<String> stamps;
         for (const fs::path& file : files) {
-            stamps.push_back(file.filename().string().substr(0, kExampleStamp.size()));
+            stamps.push_back(FromStdString(file.filename().string().substr(0, kExampleStamp.size())));
         }
         std::sort(stamps.begin(), stamps.end());
         const auto distinctStamps = static_cast<size_t>(std::unique(stamps.begin(), stamps.end()) - stamps.begin());
-        const auto suffixed =
-            static_cast<size_t>(std::count_if(files.begin(), files.end(), [](const fs::path& file) { return file.stem().string().find("-", kExampleStem.size()) != std::string::npos; }));
+        const auto suffixed = static_cast<size_t>(std::count_if(files.begin(), files.end(), [](const fs::path& file) { return file.stem().string().find("-", kExampleStem.size()) != String::npos; }));
         EXPECT_EQ(suffixed, files.size() - distinctStamps);
     }
 
@@ -349,7 +348,7 @@ namespace BECore::Mahjong::Tests {
         const uint32_t seed = StartWithEastAtSeat0(*game);
         ASSERT_TRUE(game->GetMatchLog().IsOpen());
         EXPECT_EQ(game->GetMatchLog().Path().parent_path(), folder);
-        EXPECT_NE(game->GetMatchLog().Path().filename().string().find("_seed" + std::to_string(seed)), std::string::npos);
+        EXPECT_NE(game->GetMatchLog().Path().filename().string().find(Format("_seed{}", seed).c_str()), String::npos);
 
         // a control reset begins another match, with its own file
         const fs::path first = game->GetMatchLog().Path();
@@ -380,7 +379,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(events.has_value()) << events.error().c_str();
         const MatchLogOrigin& origin = events->front().origin;
         EXPECT_EQ(origin.platform, MatchPlatform::Desktop) << "a desktop build of the tests";
-        EXPECT_EQ(std::string_view(origin.gameVersion.c_str(), origin.gameVersion.size()), kGameVersion);
+        EXPECT_EQ(StringView(origin.gameVersion.c_str(), origin.gameVersion.size()), kGameVersion);
         EXPECT_FALSE(origin.build.empty());
         EXPECT_EQ(origin, MakeMatchOrigin(kBrowserBuild));
 

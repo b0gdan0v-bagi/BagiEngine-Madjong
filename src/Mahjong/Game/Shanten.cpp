@@ -135,7 +135,7 @@ namespace BECore::Mahjong {
                 TakeSame(id + distance, 1, delta);
             }
 
-            eastl::array<int8_t, kKindCount> _held{};
+            Array<int8_t, kKindCount> _held{};
             /// The tiles of `_held` taken together: the tiles no role has been given yet.
             int _remaining = 0;
             int _needed = 0;
@@ -153,8 +153,8 @@ namespace BECore::Mahjong {
         return Searcher(counts, needed).Run();
     }
 
-    eastl::vector<Tile> ImprovingTiles(const TileCounts& counts, int meldCount) {
-        eastl::vector<Tile> improving;
+    Vector<Tile> ImprovingTiles(const TileCounts& counts, int meldCount) {
+        Vector<Tile> improving;
         const int current = Shanten(counts, meldCount);
         if (current <= kShantenComplete) {
             return improving;

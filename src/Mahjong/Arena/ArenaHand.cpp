@@ -11,7 +11,7 @@ namespace BECore::Mahjong::Arena {
 
     namespace {
 
-        eastl::string Where(uint32_t seed, Seat seat) {
+        String Where(uint32_t seed, Seat seat) {
             return Format("seed {} seat {}", seed, static_cast<int>(seat));
         }
 
@@ -65,7 +65,7 @@ namespace BECore::Mahjong::Arena {
 
     }  // namespace
 
-    std::expected<HandRecord, eastl::string> PlayArenaHand(uint32_t seed, const ArenaPlayers& players, bool timing, const WorldLoop* worlds, const HandObserver* observer) {
+    std::expected<HandRecord, String> PlayArenaHand(uint32_t seed, const ArenaPlayers& players, bool timing, const WorldLoop* worlds, const HandObserver* observer) {
         const MahjongSettings settings;
         MahjongRng wallRng(seed);
         const Seat east = static_cast<Seat>(seed % kSeatCount);
@@ -74,7 +74,7 @@ namespace BECore::Mahjong::Arena {
             return std::unexpected(Format("seed {}: the hand did not begin", seed));
         }
 
-        eastl::array<MahjongRng, kSeatCount> seatRngs;
+        Array<MahjongRng, kSeatCount> seatRngs;
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             seatRngs[seat].Seed(SeatSeed(seed, seat));
         }
@@ -97,7 +97,7 @@ namespace BECore::Mahjong::Arena {
             const auto started = timing ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point();
             HandAction action;
             if (player.random) {
-                const eastl::vector<HandAction> legal = hand.LegalActions(actor);
+                const Vector<HandAction> legal = hand.LegalActions(actor);
                 if (legal.empty()) {
                     return std::unexpected(Format("{}: the random seat has no legal action", Where(seed, actor)));
                 }

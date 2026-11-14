@@ -10,7 +10,7 @@ namespace BECore::Mahjong {
         constexpr int kPungTiles = 3;
         constexpr int kKongTiles = 4;
 
-        eastl::string_view TurnPhaseName(Phase phase) {
+        StringView TurnPhaseName(Phase phase) {
             switch (phase) {
                 case Phase::Discard:
                     return "discard";
@@ -24,7 +24,7 @@ namespace BECore::Mahjong {
             return "finished";
         }
 
-        eastl::string_view MeldKindName(MeldKind kind) {
+        StringView MeldKindName(MeldKind kind) {
             switch (kind) {
                 case MeldKind::Chow:
                     return "chow";
@@ -36,11 +36,11 @@ namespace BECore::Mahjong {
             return "pung";
         }
 
-        eastl::string_view ResultKindName(ResultKind kind) {
+        StringView ResultKindName(ResultKind kind) {
             return kind == ResultKind::Win ? "win" : "drawn";
         }
 
-        eastl::string_view SourceName(WinSource source) {
+        StringView SourceName(WinSource source) {
             switch (source) {
                 case WinSource::Discard:
                     return "discard";
@@ -88,7 +88,7 @@ namespace BECore::Mahjong {
         return match.Hand().GetPhase() == Phase::Finished ? SessionPhase::HandOver : SessionPhase::Playing;
     }
 
-    eastl::string_view PhaseName(SessionPhase phase) {
+    StringView PhaseName(SessionPhase phase) {
         switch (phase) {
             case SessionPhase::Playing:
                 return "playing";
@@ -100,7 +100,7 @@ namespace BECore::Mahjong {
         return "playing";
     }
 
-    Json MeldsToJson(const eastl::vector<Meld>& melds) {
+    Json MeldsToJson(const Vector<Meld>& melds) {
         Json list = Json::array();
         for (const Meld& meld : melds) {
             list.push_back(MeldToJson(meld));

@@ -1,3 +1,4 @@
+#include <Common/Printers.h>
 #include <EASTL/algorithm.h>
 #include <Mahjong/Game/MahjongSettings.h>
 #include <Mahjong/Game/Tile.h>
@@ -43,10 +44,10 @@ namespace BECore::Mahjong::Tests {
     namespace {
 
         /// The green tiles by id: bamboo 2, 3, 4, 6, 8 and the green dragon.
-        const std::set<uint8_t> kGreenIds = {10, 11, 12, 14, 16, 33};
+        const Set<uint8_t> kGreenIds = {10, 11, 12, 14, 16, 33};
 
-        std::string Str(Tile tile) {
-            return std::string(ToString(tile));
+        String Str(Tile tile) {
+            return String(ToString(tile));
         }
 
     }  // namespace
@@ -139,7 +140,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(TileTest, NotationRoundTripForAllIds) {
-        std::set<std::string> names;
+        Set<String> names;
         for (uint8_t id = 0; id < kTileIdCount; ++id) {
             const Tile tile{id};
             const auto parsed = TryParse(ToString(tile));
@@ -190,7 +191,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(TileTest, SetHasFourOfEachPlayableKindAndOneOfEachBonus) {
         for (const bool flowers : {false, true}) {
-            eastl::array<int, kTileIdCount> counts{};
+            Array<int, kTileIdCount> counts{};
             for (const Tile tile : BuildTileSet(flowers)) {
                 ASSERT_TRUE(tile.IsValid());
                 ++counts[tile.Id()];

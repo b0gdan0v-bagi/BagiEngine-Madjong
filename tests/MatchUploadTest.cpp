@@ -29,7 +29,7 @@ namespace BECore::Mahjong::Tests {
                 pieces.push_back(piece);
             }
 
-            eastl::vector<UploadPiece> pieces;
+            Vector<UploadPiece> pieces;
         };
 
         MahjongSettings ShortMatch() {
@@ -38,15 +38,15 @@ namespace BECore::Mahjong::Tests {
             return settings;
         }
 
-        std::string_view View(const eastl::string& text) {
-            return std::string_view(text.c_str(), text.size());
+        StringView View(const String& text) {
+            return StringView(text.c_str(), text.size());
         }
 
-        std::string ReadFile(const fs::path& path) {
+        String ReadFile(const fs::path& path) {
             std::ifstream file(path, std::ios::binary);
             std::stringstream text;
             text << file.rdbuf();
-            return text.str();
+            return FromStdString(text.str());
         }
 
         /// A session of four computers whose events go to a recording uploader, and from it to an in-memory log.
@@ -61,7 +61,7 @@ namespace BECore::Mahjong::Tests {
             explicit UploadTable(UploadConsent consent = UploadConsent::Granted, bool remembered = true) {
                 uploader.SetNext(&log);
                 uploader.SetSink(&sink);
-                uploader.SetMatchIdSource([this] { return eastl::string(Format("match-{}", ++idsDrawn)); });
+                uploader.SetMatchIdSource([this] { return String(Format("match-{}", ++idsDrawn)); });
                 uploader.SetConsent(consent, remembered);
                 session.SetLogSink(&uploader);
             }
@@ -89,7 +89,7 @@ namespace BECore::Mahjong::Tests {
         };
 
         /// Parses and replays `text`: the log is whole as far as it goes. Returns the events.
-        eastl::vector<MatchLogEvent> ExpectReplays(const eastl::string& text) {
+        Vector<MatchLogEvent> ExpectReplays(const String& text) {
             const auto events = ParseMatchLog(View(text));
             EXPECT_TRUE(events.has_value()) << (events.has_value() ? "" : events.error().c_str());
             if (!events.has_value()) {
@@ -153,7 +153,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(noSource.uploader.IsRecording());
 
         UploadTable emptyId;
-        emptyId.uploader.SetMatchIdSource([] { return eastl::string(); });
+        emptyId.uploader.SetMatchIdSource([] { return String(); });
         ASSERT_NO_FATAL_FAILURE(emptyId.Start());
         ASSERT_NO_FATAL_FAILURE(emptyId.PlayMatch());
         EXPECT_TRUE(emptyId.sink.pieces.empty()) << "a match with no id would collide in the store";
@@ -206,9 +206,9 @@ namespace BECore::Mahjong::Tests {
 
         const auto assembled = AssemblePieces(table.sink.pieces);
         ASSERT_TRUE(assembled.has_value()) << assembled.error().c_str();
-        const eastl::vector<MatchLogEvent> events = ExpectReplays(*assembled);
+        const Vector<MatchLogEvent> events = ExpectReplays(*assembled);
         EXPECT_EQ(events.back().kind, MatchLogKind::End);
-        EXPECT_EQ(std::string(assembled->c_str(), assembled->size()), ReadFile(file));
+        EXPECT_EQ(String(assembled->c_str(), assembled->size()), ReadFile(file));
 
         std::error_code error;
         fs::remove_all(folder, error);
@@ -241,12 +241,12 @@ namespace BECore::Mahjong::Tests {
         table.session.RunComputers();  // part of the second hand is played, then the game stops
         table.uploader.Abandon();
 
-        eastl::vector<UploadPiece> pieces = table.sink.pieces;
+        Vector<UploadPiece> pieces = table.sink.pieces;
         ASSERT_FALSE(pieces.empty());
         EXPECT_EQ(pieces.back().end, UploadPieceEnd::Abandoned);
         const auto assembled = AssemblePieces(pieces);
         ASSERT_TRUE(assembled.has_value()) << assembled.error().c_str();
-        const eastl::vector<MatchLogEvent> events = ExpectReplays(*assembled);
+        const Vector<MatchLogEvent> events = ExpectReplays(*assembled);
         EXPECT_FALSE(events.empty());
         EXPECT_NE(events.back().kind, MatchLogKind::End);
 
@@ -305,7 +305,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(table.sink.pieces.front().index, 0u);
         const auto assembled = AssemblePieces(table.sink.pieces);
         ASSERT_TRUE(assembled.has_value()) << assembled.error().c_str();
-        const eastl::vector<MatchLogEvent> events = ExpectReplays(*assembled);
+        const Vector<MatchLogEvent> events = ExpectReplays(*assembled);
         ASSERT_FALSE(events.empty());
         EXPECT_EQ(events.front().kind, MatchLogKind::Start);
         EXPECT_EQ(events.front().seed, kOtherSeed);
@@ -347,7 +347,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MatchUploadTest, AssemblingTakesThePiecesInIndexOrder) {
-        const eastl::vector<UploadPiece> pieces{Piece("m", 2, UploadPieceEnd::Ended, "c\n"), Piece("m", 0, UploadPieceEnd::Open, "a\n"), Piece("m", 1, UploadPieceEnd::Open, "b\n")};
+        const Vector<UploadPiece> pieces{Piece("m", 2, UploadPieceEnd::Ended, "c\n"), Piece("m", 0, UploadPieceEnd::Open, "a\n"), Piece("m", 1, UploadPieceEnd::Open, "b\n")};
         const auto assembled = AssemblePieces(pieces);
         ASSERT_TRUE(assembled.has_value());
         EXPECT_EQ(*assembled, "a\nb\nc\n");
@@ -368,7 +368,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(AssemblePieces({Piece("m", 0, UploadPieceEnd::Ended), Piece("m", 1)}).has_value()) << "a piece after Ended";
         EXPECT_FALSE(AssemblePieces({Piece("m", 0, UploadPieceEnd::Abandoned), Piece("m", 1)}).has_value()) << "a piece after Abandoned";
         const auto gap = AssemblePieces({Piece("m", 0), Piece("m", 2)});
-        EXPECT_NE(std::string(gap.error().c_str()).find("1"), std::string::npos) << "the error names the missing piece";
+        EXPECT_NE(String(gap.error().c_str()).find("1"), String::npos) << "the error names the missing piece";
     }
 
 }  // namespace BECore::Mahjong::Tests

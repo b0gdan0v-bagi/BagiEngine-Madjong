@@ -16,7 +16,7 @@ namespace BECore::Mahjong::Arena {
         static_assert(ProfileHasKnownFields());
 
         /// The value of `text` as a whole number (an optional minus sign), nullopt when anything else is in it.
-        std::optional<int> ParseNumber(std::string_view text) {
+        Optional<int> ParseNumber(StringView text) {
             int value = 0;
             const char* const end = text.data() + text.size();
             const auto parsed = std::from_chars(text.data(), end, value);
@@ -26,17 +26,17 @@ namespace BECore::Mahjong::Arena {
             return value;
         }
 
-        const ProfileKnob* FindKnob(std::string_view name) {
+        const ProfileKnob* FindKnob(StringView name) {
             for (const ProfileKnob& knob : kProfileKnobs) {
-                if (name == std::string_view(knob.name.data(), knob.name.size())) {
+                if (name == knob.name) {
                     return &knob;
                 }
             }
             return nullptr;
         }
 
-        eastl::string KnobNamesText() {
-            eastl::string names;
+        String KnobNamesText() {
+            String names;
             for (const ProfileKnob& knob : kProfileKnobs) {
                 names += names.empty() ? "" : ", ";
                 names.append(knob.name.data(), knob.name.size());
@@ -44,33 +44,33 @@ namespace BECore::Mahjong::Arena {
             return names;
         }
 
-        eastl::string LevelAndRandomNamesText() {
+        String LevelAndRandomNamesText() {
             return Format("a level {}..{}, easy (1), normal ({}) or random", kMinLevel, kMaxLevel, LevelNumber(ComputerLevel::Normal));
         }
 
         /// The oracle specs the parser knows: the head of a spec, up to the colon.
         struct OracleSpec {
-            std::string_view name;
+            StringView name;
             OracleKind kind;
         };
-        constexpr eastl::array<OracleSpec, 4> kOracleSpecs{{
+        constexpr Array<OracleSpec, 4> kOracleSpecs{{
             {"oracle-acceptance", OracleKind::Acceptance},
             {"oracle-hands", OracleKind::Hands},
             {"oracle-whole", OracleKind::WholeHand},
             {"oracle-defence", OracleKind::Defence},
         }};
-        constexpr std::string_view kOracleHeadPrefix = "oracle-";
-        constexpr std::string_view kOracleNamesText = "oracle-acceptance, oracle-hands, oracle-whole, oracle-defence";
+        constexpr StringView kOracleHeadPrefix = "oracle-";
+        constexpr StringView kOracleNamesText = "oracle-acceptance, oracle-hands, oracle-whole, oracle-defence";
 
         /// The knobs of the search: `oracle-acceptance` plays no search, so a spec that sets one is refused.
-        constexpr eastl::array<std::string_view, 3> kSearchKnobNames = {{"searchWorlds", "searchCandidates", "searchMargin"}};
+        constexpr Array<StringView, 3> kSearchKnobNames = {{"searchWorlds", "searchCandidates", "searchMargin"}};
 
         /// The oracles that are a search player: their profile starts from the shipped search budget.
         bool IsSearchOracle(OracleKind kind) {
             return kind == OracleKind::Hands || kind == OracleKind::WholeHand;
         }
 
-        const OracleSpec* FindOracle(std::string_view head) {
+        const OracleSpec* FindOracle(StringView head) {
             for (const OracleSpec& oracle : kOracleSpecs) {
                 if (head == oracle.name) {
                     return &oracle;
@@ -80,13 +80,13 @@ namespace BECore::Mahjong::Arena {
         }
 
         /// Applies `knob=value` (`part`) to `profile`; the error names the part.
-        std::optional<eastl::string> ApplyKnob(std::string_view part, LevelProfile& profile, eastl::array<bool, kProfileFieldCount>& seen) {
+        Optional<String> ApplyKnob(StringView part, LevelProfile& profile, Array<bool, kProfileFieldCount>& seen) {
             const size_t equals = part.find('=');
-            if (equals == std::string_view::npos) {
+            if (equals == StringView::npos) {
                 return Format("\"{}\" is no knob=value (a knob is set as name=number)", part);
             }
-            const std::string_view name = part.substr(0, equals);
-            const std::string_view valueText = part.substr(equals + 1);
+            const StringView name = part.substr(0, equals);
+            const StringView valueText = part.substr(equals + 1);
             const ProfileKnob* const knob = FindKnob(name);
             if (knob == nullptr) {
                 return Format("unknown knob \"{}\" (the knobs are {})", name, KnobNamesText());
@@ -95,7 +95,7 @@ namespace BECore::Mahjong::Arena {
             if (seen[index]) {
                 return Format("knob \"{}\" is set twice", name);
             }
-            const std::optional<int> value = ParseNumber(valueText);
+            const Optional<int> value = ParseNumber(valueText);
             if (!value.has_value()) {
                 return Format("the value \"{}\" of \"{}\" is no whole number", valueText, name);
             }
@@ -113,16 +113,16 @@ namespace BECore::Mahjong::Arena {
 
     }  // namespace
 
-    std::expected<ArenaPlayer, eastl::string> ParseArenaPlayer(std::string_view spec) {
+    std::expected<ArenaPlayer, String> ParseArenaPlayer(StringView spec) {
         if (spec.empty()) {
             return std::unexpected(Format("empty player spec (use {}, or a level with knobs: easy:skipClaimPercent=20)", LevelAndRandomNamesText()));
         }
         const size_t colon = spec.find(':');
-        const std::string_view head = spec.substr(0, colon);
+        const StringView head = spec.substr(0, colon);
         ArenaPlayer player;
         player.name = Format("{}", spec);
         if (head == "random") {
-            if (colon != std::string_view::npos) {
+            if (colon != StringView::npos) {
                 return std::unexpected(Format("\"random\" takes no knobs: \"{}\"", spec));
             }
             player.random = true;
@@ -142,7 +142,7 @@ namespace BECore::Mahjong::Arena {
                 player.profile.searchMargin = kSearchMargin;
             }
         } else {
-            std::optional<ComputerLevel> level = TryParseLevel(head);
+            Optional<ComputerLevel> level = TryParseLevel(head);
             if (!level.has_value()) {
                 level = TryParseLevelName(head);
             }
@@ -151,25 +151,25 @@ namespace BECore::Mahjong::Arena {
             }
             player.profile = ProfileOf(*level);
         }
-        if (colon == std::string_view::npos) {
+        if (colon == StringView::npos) {
             return player;
         }
-        const std::string_view knobs = spec.substr(colon + 1);
+        const StringView knobs = spec.substr(colon + 1);
         if (knobs.empty()) {
             return std::unexpected(Format("no knobs after the colon in \"{}\"", spec));
         }
-        eastl::array<bool, kProfileFieldCount> seen{};
+        Array<bool, kProfileFieldCount> seen{};
         size_t begin = 0;
         while (begin <= knobs.size()) {
             const size_t comma = knobs.find(',', begin);
-            const size_t end = comma == std::string_view::npos ? knobs.size() : comma;
-            if (const std::optional<eastl::string> error = ApplyKnob(knobs.substr(begin, end - begin), player.profile, seen)) {
+            const size_t end = comma == StringView::npos ? knobs.size() : comma;
+            if (const Optional<String> error = ApplyKnob(knobs.substr(begin, end - begin), player.profile, seen)) {
                 return std::unexpected(*error);
             }
             begin = end + 1;
         }
         if (player.oracle == OracleKind::Acceptance) {
-            for (const std::string_view searchKnob : kSearchKnobNames) {
+            for (const StringView searchKnob : kSearchKnobNames) {
                 const ProfileKnob* const knob = FindKnob(searchKnob);
                 if (knob != nullptr && seen[static_cast<size_t>(knob - kProfileKnobs.data())]) {
                     return std::unexpected(Format("\"{}\": oracle-acceptance plays no search, so \"{}\" would do nothing there (the search oracles are oracle-hands and "
@@ -184,8 +184,8 @@ namespace BECore::Mahjong::Arena {
         return player;
     }
 
-    HandAction ChooseSeekWin(const eastl::vector<HandAction>& actions, MahjongRng& rng) {
-        eastl::vector<HandAction> wanted;
+    HandAction ChooseSeekWin(const Vector<HandAction>& actions, MahjongRng& rng) {
+        Vector<HandAction> wanted;
         for (const HandAction& action : actions) {
             const bool wins = action.kind == ActionKind::DeclareWin || (action.kind == ActionKind::Claim && action.claim == ClaimKind::Mahjong);
             if (wins) {
@@ -197,7 +197,7 @@ namespace BECore::Mahjong::Arena {
                 wanted.push_back(action);
             }
         }
-        const eastl::vector<HandAction>& from = wanted.empty() ? actions : wanted;
+        const Vector<HandAction>& from = wanted.empty() ? actions : wanted;
         return from[rng.Below(static_cast<uint32_t>(from.size()))];
     }
 

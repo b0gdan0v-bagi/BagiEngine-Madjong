@@ -8,7 +8,7 @@ namespace BECore::Mahjong {
     namespace {
 
         /// The keys of the three dragons, in tile order.
-        constexpr eastl::array<eastl::string_view, kDragonCount> kDragonKeys{"tile.dragon.Red", "tile.dragon.White", "tile.dragon.Green"};
+        constexpr Array<StringView, kDragonCount> kDragonKeys{"tile.dragon.Red", "tile.dragon.White", "tile.dragon.Green"};
 
         /// Lines about a set or a pair: "Pung of 5 Dots".
         bool NamesItsTileWithOf(ScoreKind kind) noexcept {
@@ -42,13 +42,13 @@ namespace BECore::Mahjong {
         constexpr int kTilesPerSet = 3;
         constexpr int kTilesPerKong = 4;
         /// The cell of a drawn hand where a hand score and a change would stand.
-        constexpr eastl::string_view kNoCell = "-";
+        constexpr StringView kNoCell = "-";
 
-        constexpr eastl::array<eastl::string_view, 5> kColumnKeys{"handover.col.seat", "handover.col.wind", "handover.col.hand", "handover.col.change", "handover.col.total"};
+        constexpr Array<StringView, 5> kColumnKeys{"handover.col.seat", "handover.col.wind", "handover.col.hand", "handover.col.change", "handover.col.total"};
 
         /// The winner's tiles for the plate: the melds as laid, the concealed tiles in their order, the winning tile moved to the end.
-        eastl::vector<Tile> WinningTilesOf(const HandResult& result, const PlayerHand* hand) {
-            eastl::vector<Tile> tiles;
+        Vector<Tile> WinningTilesOf(const HandResult& result, const PlayerHand* hand) {
+            Vector<Tile> tiles;
             if (hand == nullptr) {
                 if (result.winningTile.IsValid()) {
                     tiles.push_back(result.winningTile);
@@ -91,10 +91,10 @@ namespace BECore::Mahjong {
             return int64_t{1} << std::clamp(doubles, 0, kMostDoubles);
         }
 
-        eastl::string WinHeadline(const UIStrings& strings, const HandSettlement& settlement, const HandResult& result, const SeatWho& who) {
+        String WinHeadline(const UIStrings& strings, const HandSettlement& settlement, const HandResult& result, const SeatWho& who) {
             const SeatWinds winds = MakeSeatWinds(settlement.east);
             const auto label = [&](Seat seat) { return SeatLabel(strings, seat, winds[seat], who); };
-            const eastl::string winner = label(settlement.winner);
+            const String winner = label(settlement.winner);
             const bool knowsFrom = IsSeat(result.from);
             switch (result.source) {
                 case WinSource::SelfDraw:
@@ -107,16 +107,16 @@ namespace BECore::Mahjong {
             return winner;
         }
 
-        eastl::string WinSummary(const UIStrings& strings, const ScoreBreakdown& breakdown, const HandResult& result) {
-            const eastl::string tile = TileName(strings, result.winningTile);
-            const eastl::string score = Format("{}", breakdown.score);
+        String WinSummary(const UIStrings& strings, const ScoreBreakdown& breakdown, const HandResult& result) {
+            const String tile = TileName(strings, result.winningTile);
+            const String score = Format("{}", breakdown.score);
             if (breakdown.limitHand) {
                 return Tr(strings, "handover.summary.limit", {{"tile", tile}, {"score", score}});
             }
-            const eastl::string points = Format("{}", breakdown.points);
+            const String points = Format("{}", breakdown.points);
             if (breakdown.doubles > 0) {
-                const eastl::string multiplier = Format("{}", Multiplier(breakdown.doubles));
-                const eastl::string raw = Format("{}", breakdown.raw);
+                const String multiplier = Format("{}", Multiplier(breakdown.doubles));
+                const String raw = Format("{}", breakdown.raw);
                 return Tr(strings, "handover.summary.doubles", {{"tile", tile}, {"points", points}, {"multiplier", multiplier}, {"raw", raw}, {"score", score}});
             }
             return Tr(strings, "handover.summary.plain", {{"tile", tile}, {"points", points}, {"score", score}});
@@ -124,13 +124,13 @@ namespace BECore::Mahjong {
 
     }  // namespace
 
-    eastl::string TileName(const UIStrings& strings, Tile tile) {
+    String TileName(const UIStrings& strings, Tile tile) {
         if (!tile.IsValid()) {
             return Tr(strings, "tile.none");
         }
         if (tile.IsSuit()) {
-            const eastl::string rank = Format("{}", tile.Rank());
-            const eastl::string suit = Tr(strings, Format("suit.{}", EnumUtils<TileSuit>::ToString(tile.Suit())).c_str());
+            const String rank = Format("{}", tile.Rank());
+            const String suit = Tr(strings, Format("suit.{}", EnumUtils<TileSuit>::ToString(tile.Suit())).c_str());
             return Tr(strings, "tile.suit", {{"rank", rank}, {"suit", suit}});
         }
         if (tile.IsWind()) {
@@ -140,33 +140,33 @@ namespace BECore::Mahjong {
             return Tr(strings, kDragonKeys[tile.Id() - kFirstDragonId]);
         }
         if (tile.Id() < kFirstSeasonId) {
-            const eastl::string number = Format("{}", tile.Id() - kFirstFlowerId + 1);
+            const String number = Format("{}", tile.Id() - kFirstFlowerId + 1);
             return Tr(strings, "tile.flower", {{"n", number}});
         }
-        const eastl::string number = Format("{}", tile.Id() - kFirstSeasonId + 1);
+        const String number = Format("{}", tile.Id() - kFirstSeasonId + 1);
         return Tr(strings, "tile.season", {{"n", number}});
     }
 
-    eastl::string ScoreKindName(const UIStrings& strings, ScoreKind kind) {
+    String ScoreKindName(const UIStrings& strings, ScoreKind kind) {
         return Tr(strings, Format("score.kind.{}", EnumUtils<ScoreKind>::ToString(kind)).c_str());
     }
 
-    eastl::string ScoreLineText(const UIStrings& strings, const ScoreLine& line) {
-        const eastl::string name = ScoreKindName(strings, line.kind);
+    String ScoreLineText(const UIStrings& strings, const ScoreLine& line) {
+        const String name = ScoreKindName(strings, line.kind);
         if (IsLimitKind(line.kind)) {
             return Tr(strings, "score.limit", {{"name", name}});
         }
-        eastl::string text = name;
+        String text = name;
         if (line.tile.IsValid() && NamesItsTileWithOf(line.kind)) {
             text = Tr(strings, "score.of", {{"name", name}, {"tile", TileName(strings, line.tile)}});
         } else if (line.tile.IsValid() && NamesItsTileInBrackets(line.kind)) {
             text = Tr(strings, "score.bracket", {{"name", name}, {"tile", TileName(strings, line.tile)}});
         }
         if (line.doubles > 0) {
-            const eastl::string multiplier = Format("{}", Multiplier(line.doubles));
+            const String multiplier = Format("{}", Multiplier(line.doubles));
             return Tr(strings, "score.doubles", {{"name", text}, {"multiplier", multiplier}});
         }
-        const eastl::string points = Format("{}", line.points);
+        const String points = Format("{}", line.points);
         return Tr(strings, "score.points", {{"name", text}, {"points", points}});
     }
 
@@ -213,7 +213,7 @@ namespace BECore::Mahjong {
 
     StandingsTable FormatStandings(const UIStrings& strings, const Match& match, const SeatWho& who) {
         StandingsTable table;
-        const eastl::array<Seat, kSeatCount> order = match.Standings();
+        const Array<Seat, kSeatCount> order = match.Standings();
         const SeatScores& scores = match.Scores();
         // The wind is not part of the name here: the match is over and "Seat 3 (East)" would name the next deal
         int place = 1;
@@ -232,7 +232,7 @@ namespace BECore::Mahjong {
         if (tied == 1) {
             table.headline = Tr(strings, "matchover.wins", {{"winner", SeatLabel(strings, order[0], who)}});
         } else {
-            eastl::string names;
+            String names;
             for (int i = 0; i < tied; ++i) {
                 names += Format("{}{}", i > 0 ? ", " : "", SeatLabel(strings, order[i], who));
             }
@@ -241,7 +241,7 @@ namespace BECore::Mahjong {
         return table;
     }
 
-    eastl::string FormatCoachTally(const UIStrings& strings, const CoachTally& hand, const CoachTally& match) {
+    String FormatCoachTally(const UIStrings& strings, const CoachTally& hand, const CoachTally& match) {
         if (match.moves <= 0) {
             return {};
         }

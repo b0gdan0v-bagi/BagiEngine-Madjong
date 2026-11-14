@@ -32,9 +32,9 @@ namespace BECore::Mahjong {
      * discards the seat had made when it declared (0 on the first discard); `discardCount` counts the seat's own discards.
      */
     struct PlayerHand {
-        eastl::vector<Tile> concealed;
-        eastl::vector<Meld> melds;
-        eastl::vector<Tile> bonus;
+        Vector<Tile> concealed;
+        Vector<Meld> melds;
+        Vector<Tile> bonus;
         bool callingDeclared = false;
         int callingAtDiscardCount = 0;
         int discardCount = 0;

@@ -6,14 +6,14 @@
 namespace BECore::Mahjong::Arena {
 
     /// The first cell of a `--check` line.
-    inline constexpr std::string_view kCheckOk = "ok";
-    inline constexpr std::string_view kCheckBad = "bad";
+    inline constexpr StringView kCheckOk = "ok";
+    inline constexpr StringView kCheckBad = "bad";
 
     /**
      * @brief The text of `--check`: one line per file in the order of `logs`, `ok<TAB><name>` or `bad<TAB><name><TAB><reason>`, and
      *        nothing else (a tab or a line break in a name is written as a space). `tools/collect_logs.py` reads exactly this.
      */
-    [[nodiscard]] eastl::string FormatCheckLines(const eastl::vector<CheckedLog>& logs);
+    [[nodiscard]] String FormatCheckLines(const Vector<CheckedLog>& logs);
 
     /**
      * @brief The text of the corpus summary: files read, replayed and dropped (per reason, and the dropped files with their reasons),
@@ -22,7 +22,7 @@ namespace BECore::Mahjong::Arena {
      *
      * Fixed-width text, numbers by `Format` with a fixed precision and no locale: the same corpus gives the same bytes everywhere.
      */
-    [[nodiscard]] eastl::string FormatCorpusSummary(const LogCorpus& corpus);
+    [[nodiscard]] String FormatCorpusSummary(const LogCorpus& corpus);
 
     /// The groups of the real-game numbers: the computers met at level `1..kMaxLevel` (the place is the level minus 1), and the table
     /// whose computer seats are not all at one level (`kMixedGroup`).
@@ -40,7 +40,7 @@ namespace BECore::Mahjong::Arena {
     };
 
     /// Reads `events` (a log that replays) for the numbers of the people's seats. The events alone, no positions.
-    [[nodiscard]] RealMatch RealGameOfMatch(const eastl::vector<MatchLogEvent>& events);
+    [[nodiscard]] RealMatch RealGameOfMatch(const Vector<MatchLogEvent>& events);
 
     /// One group of the real-game table: the pooled counts and, with the **match** as the unit, the mean over the matches of each
     /// match's own number with its 95 % interval.
@@ -52,10 +52,10 @@ namespace BECore::Mahjong::Arena {
         MeanInterval drawnPercent;
         MeanInterval declaredPercent;
     };
-    using RealGame = eastl::array<RealGroup, kRealGroupCount>;
+    using RealGame = Array<RealGroup, kRealGroupCount>;
 
     /// The groups over `matches` (in name order): the numbers of the uncounted ones are left out. The same matches give the same table.
-    [[nodiscard]] RealGame MergeRealGame(const eastl::vector<RealMatch>& matches);
+    [[nodiscard]] RealGame MergeRealGame(const Vector<RealMatch>& matches);
 
     /// Everything the log mode computes beyond the corpus summary.
     struct LogAnalysis {
@@ -63,7 +63,7 @@ namespace BECore::Mahjong::Arena {
         TesterResult tester;
         /// The matches that replayed but whose positions could not be built: one text each (it names the log), in name order. They are
         /// counted here and not in `tester`; their real-game numbers come from the events alone and are counted.
-        eastl::vector<eastl::string> notAnalysed;
+        Vector<String> notAnalysed;
         RealGame realGame;
     };
 
@@ -73,7 +73,7 @@ namespace BECore::Mahjong::Arena {
      * `jobs` threads take whole matches into slots of their own and the slots are merged in name order, so the result, and the text
      * made of it, are the same bytes at any `jobs`. A bot sees a `TableView` and nothing else (`AnalyzeTesterDecision`).
      */
-    [[nodiscard]] LogAnalysis AnalyseLogs(const eastl::vector<CheckedLog>& logs, const eastl::vector<ArenaPlayer>& bots, int jobs);
+    [[nodiscard]] LogAnalysis AnalyseLogs(const Vector<CheckedLog>& logs, const Vector<ArenaPlayer>& bots, int jobs);
 
     /// The default of `--differences`: how many differences the report lists.
     inline constexpr int kDefaultDifferences = 20;
@@ -85,6 +85,6 @@ namespace BECore::Mahjong::Arena {
      * Fixed-width text, fixed precision, no locale: the same analysis gives the same bytes everywhere. Only logged numbers are printed;
      * the agreement of testers measures how people play, not what is best.
      */
-    [[nodiscard]] eastl::string FormatLogAnalysis(const LogAnalysis& analysis, int maxDifferences);
+    [[nodiscard]] String FormatLogAnalysis(const LogAnalysis& analysis, int maxDifferences);
 
 }  // namespace BECore::Mahjong::Arena

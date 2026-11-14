@@ -114,8 +114,8 @@ namespace BECore::Mahjong {
         *this = eastl::move(next);
     }
 
-    eastl::array<Seat, kSeatCount> Match::Standings() const {
-        eastl::array<Seat, kSeatCount> seats{};
+    Array<Seat, kSeatCount> Match::Standings() const {
+        Array<Seat, kSeatCount> seats{};
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             seats[seat] = seat;
         }

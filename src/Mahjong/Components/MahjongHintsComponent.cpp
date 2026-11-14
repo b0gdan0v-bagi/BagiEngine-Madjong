@@ -20,42 +20,42 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        constexpr eastl::string_view kSetHintsAction = "MahjongSetHints";
-        constexpr eastl::string_view kAdviceAction = "MahjongHintAdvice";
+        constexpr StringView kSetHintsAction = "MahjongSetHints";
+        constexpr StringView kAdviceAction = "MahjongHintAdvice";
         // The names of the canvas on the node `Hints`: the cells of the row (`WaitCell<i>` holds `WaitTile<i>` and `WaitCount<i>`), the
         // variable of each count (`hintCount<i>`), the panel, the button and the label of the advice (its variable is `hintAdvice`)
-        constexpr eastl::string_view kWaitCellPrefix = "WaitCell";
-        constexpr eastl::string_view kWaitTilePrefix = "WaitTile";
-        constexpr eastl::string_view kHintCountPrefix = "hintCount";
-        constexpr eastl::string_view kWaitPanel = "WaitPanel";
-        constexpr eastl::string_view kHintButton = "HintButton";
-        constexpr eastl::string_view kAdviceLabel = "AdviceText";
-        constexpr eastl::string_view kAdviceVar = "hintAdvice";
-        constexpr eastl::string_view kRoomHintsLabel = "RoomHintsText";
-        constexpr eastl::string_view kRoomHintsVar = "roomHintsText";
+        constexpr StringView kWaitCellPrefix = "WaitCell";
+        constexpr StringView kWaitTilePrefix = "WaitTile";
+        constexpr StringView kHintCountPrefix = "hintCount";
+        constexpr StringView kWaitPanel = "WaitPanel";
+        constexpr StringView kHintButton = "HintButton";
+        constexpr StringView kAdviceLabel = "AdviceText";
+        constexpr StringView kAdviceVar = "hintAdvice";
+        constexpr StringView kRoomHintsLabel = "RoomHintsText";
+        constexpr StringView kRoomHintsVar = "roomHintsText";
         // The card of the coach (node `HintsWhy`, `Table/HintCard.h`): the plate, the head row, row `i` (`CardRow<i>` with the label
         // `CardSteps<i>` and the pictures `Card<i>Tile<k>`) and the variables of the words
-        constexpr eastl::string_view kCoachCard = "CoachCard";
-        constexpr eastl::string_view kCardHead = "CardHead";
-        constexpr eastl::string_view kCardRowPrefix = "CardRow";
-        constexpr eastl::string_view kCardStepsPrefix = "CardSteps";
-        constexpr eastl::string_view kCardTitleVar = "cardTitle";
-        constexpr eastl::string_view kCardNowVar = "cardNow";
-        constexpr eastl::string_view kCardWhoVar = "cardWho";
-        constexpr eastl::string_view kCardMoveVar = "cardMove";
-        constexpr eastl::string_view kCardStepsVar = "cardSteps";
-        constexpr eastl::string_view kCardUsefulVar = "cardUseful";
-        constexpr eastl::string_view kCardFootVar = "cardFoot";
+        constexpr StringView kCoachCard = "CoachCard";
+        constexpr StringView kCardHead = "CardHead";
+        constexpr StringView kCardRowPrefix = "CardRow";
+        constexpr StringView kCardStepsPrefix = "CardSteps";
+        constexpr StringView kCardTitleVar = "cardTitle";
+        constexpr StringView kCardNowVar = "cardNow";
+        constexpr StringView kCardWhoVar = "cardWho";
+        constexpr StringView kCardMoveVar = "cardMove";
+        constexpr StringView kCardStepsVar = "cardSteps";
+        constexpr StringView kCardUsefulVar = "cardUseful";
+        constexpr StringView kCardFootVar = "cardFoot";
 
         constexpr float kMarkGap = 1.0f;         ///< between the tile and its bar
         constexpr float kMarkThickness = 4.0f;   ///< the bar, and below the hand there are 8 units to the edge of the view
         constexpr float kFrameThickness = 3.0f;  ///< drawn inside the edge of the tile
 
-        PoolString IndexedName(eastl::string_view prefix, int index) {
+        PoolString IndexedName(StringView prefix, int index) {
             return PoolString::Intern(Format("{}{}", prefix, index));
         }
 
-        PoolString NameOf(eastl::string_view name) {
+        PoolString NameOf(StringView name) {
             return PoolString::Intern(name);
         }
 
@@ -161,7 +161,7 @@ namespace BECore::Mahjong {
         return key;
     }
 
-    std::optional<TableView> MahjongHintsComponent::ViewToAdvise(const MahjongGame* game) {
+    Optional<TableView> MahjongHintsComponent::ViewToAdvise(const MahjongGame* game) {
         if (!KeyOf(game).applies) {
             return std::nullopt;
         }
@@ -254,7 +254,7 @@ namespace BECore::Mahjong {
         BE_PROFILE_SCOPE("MahjongHints::Advise");
         TableView view = ViewOf(game, key.viewer);
         _explained = ExplainAdviceFor(view);
-        _advice = _explained ? std::optional<HandAction>(_explained->Action()) : AdviceFor(view);
+        _advice = _explained ? Optional<HandAction>(_explained->Action()) : AdviceFor(view);
         _advised = true;
         _adviceKey = key;
         _adviceView = std::move(view);
@@ -287,12 +287,12 @@ namespace BECore::Mahjong {
         if (show && (!_adviceShown || _adviceDirty || strings.GetVersion() != _adviceStringsVersion)) {
             _adviceDirty = false;
             _adviceStringsVersion = strings.GetVersion();
-            vars.Set(NameOf(kAdviceVar), eastl::string_view(AdviceText(strings, _adviceView, *_advice)));
+            vars.Set(NameOf(kAdviceVar), StringView(AdviceText(strings, _adviceView, *_advice)));
         }
         if (show != _adviceShown) {
             _adviceShown = show;
             if (!show) {
-                vars.Set(NameOf(kAdviceVar), eastl::string_view());  // nothing of the last advice stays in a variable
+                vars.Set(NameOf(kAdviceVar), StringView());  // nothing of the last advice stays in a variable
             }
             UICanvasComponent::SetElementVisibleByName(scene, NameOf(kAdviceLabel), show);
         }
@@ -314,16 +314,16 @@ namespace BECore::Mahjong {
         UIVars& vars = CoreManager::GetUIVars();
         switch (word) {
             case RoomHintsWord::Allowed:
-                vars.Set(NameOf(kRoomHintsVar), eastl::string_view(Tr(strings, "online.table.hintsAllowed")));
+                vars.Set(NameOf(kRoomHintsVar), StringView(Tr(strings, "online.table.hintsAllowed")));
                 break;
             case RoomHintsWord::AllowedOff:
-                vars.Set(NameOf(kRoomHintsVar), eastl::string_view(Tr(strings, "online.table.hintsAllowedOff")));
+                vars.Set(NameOf(kRoomHintsVar), StringView(Tr(strings, "online.table.hintsAllowedOff")));
                 break;
             case RoomHintsWord::NotAllowed:
-                vars.Set(NameOf(kRoomHintsVar), eastl::string_view(Tr(strings, "online.table.hintsOff")));
+                vars.Set(NameOf(kRoomHintsVar), StringView(Tr(strings, "online.table.hintsOff")));
                 break;
             case RoomHintsWord::None:
-                vars.Set(NameOf(kRoomHintsVar), eastl::string_view());  // nothing of the last word stays in a variable
+                vars.Set(NameOf(kRoomHintsVar), StringView());  // nothing of the last word stays in a variable
                 break;
         }
         _roomStringsVersion = strings.GetVersion();
@@ -377,7 +377,7 @@ namespace BECore::Mahjong {
         HintCard card;
         if (next.source != CardSource::None) {
             const UIStrings& strings = CoreManager::GetUIStrings();
-            const eastl::string tally = CardTallyText(strings, next.hand, next.match);
+            const String tally = CardTallyText(strings, next.hand, next.match);
             card = next.source == CardSource::Note ? MakeNoteCard(strings, *game->GetCoach().Note(), tally) : MakeAdviceCard(strings, _adviceView, *_explained, tally);
         }
         PublishCard(card, next.source != CardSource::None);
@@ -386,8 +386,8 @@ namespace BECore::Mahjong {
     void MahjongHintsComponent::PublishCard(const HintCard& card, bool open) {
         UIVars& vars = CoreManager::GetUIVars();
         // Nothing of the last card stays in a variable once it is down: every variable is set, empty where the card has nothing
-        vars.Set(NameOf(kCardTitleVar), eastl::string_view(card.title));
-        vars.Set(NameOf(kCardNowVar), eastl::string_view(card.now));
+        vars.Set(NameOf(kCardTitleVar), StringView(card.title));
+        vars.Set(NameOf(kCardNowVar), StringView(card.now));
         UICanvasComponent* canvas = CanvasWith(GetScene().GetRootNode(), NameOf(kCoachCard));
         if (canvas == nullptr) {
             return;
@@ -396,10 +396,10 @@ namespace BECore::Mahjong {
         for (size_t i = 0; i < kMaxCardRows; ++i) {
             const int at = static_cast<int>(i);
             const CardRow* row = i < card.rows.size() ? &card.rows[i] : nullptr;
-            vars.Set(IndexedName(kCardWhoVar, at), row != nullptr ? eastl::string_view(row->who) : eastl::string_view());
-            vars.Set(IndexedName(kCardMoveVar, at), row != nullptr ? eastl::string_view(row->move) : eastl::string_view());
-            vars.Set(IndexedName(kCardStepsVar, at), row != nullptr ? eastl::string_view(row->steps) : eastl::string_view());
-            vars.Set(IndexedName(kCardUsefulVar, at), row != nullptr ? eastl::string_view(row->useful) : eastl::string_view());
+            vars.Set(IndexedName(kCardWhoVar, at), row != nullptr ? StringView(row->who) : StringView());
+            vars.Set(IndexedName(kCardMoveVar, at), row != nullptr ? StringView(row->move) : StringView());
+            vars.Set(IndexedName(kCardStepsVar, at), row != nullptr ? StringView(row->steps) : StringView());
+            vars.Set(IndexedName(kCardUsefulVar, at), row != nullptr ? StringView(row->useful) : StringView());
             const PoolString rowName = IndexedName(kCardRowPrefix, at);
             if (UIElement* element = root.FindByName(rowName)) {
                 element->color = RowFill(row != nullptr ? row->kind : CardRowKind::Other);
@@ -418,7 +418,7 @@ namespace BECore::Mahjong {
             canvas->SetElementVisible(rowName, row != nullptr);
         }
         for (size_t i = 0; i < kMaxCardFooter; ++i) {
-            vars.Set(IndexedName(kCardFootVar, static_cast<int>(i)), i < card.footer.size() ? eastl::string_view(card.footer[i]) : eastl::string_view());
+            vars.Set(IndexedName(kCardFootVar, static_cast<int>(i)), i < card.footer.size() ? StringView(card.footer[i]) : StringView());
         }
         canvas->SetElementVisible(NameOf(kCardHead), !card.rows.empty());
         canvas->SetElementVisible(NameOf(kCoachCard), open);
@@ -462,7 +462,7 @@ namespace BECore::Mahjong {
         }
         const auto& concealed = game.GetMatch().Hand().GetHand(viewer).concealed;
         const Tile advised = _advice && _advice->kind == ActionKind::Discard ? _advice->tile : Tile{};
-        const std::optional<int> raised = table->SelectedHandIndex();
+        const Optional<int> raised = table->SelectedHandIndex();
         // The bar of the danger sits between the bars the table draws along the top and the bottom edge of a hand tile (scaled with the view)
         const Scene& scene = GetScene();
         const float unit = LayoutScale(scene.GetViewWidth(), scene.GetViewHeight());
@@ -493,8 +493,8 @@ namespace BECore::Mahjong {
     }
 
     void MahjongHintsComponent::PublishChoice(const MahjongGame& game) {
-        const std::string_view id = HintsModeText(game.GetHintsMode());
-        CoreManager::GetUIVars().Set("hintsChoice"_intern, eastl::string_view(id.data(), id.size()));
+        const StringView id = HintsModeText(game.GetHintsMode());
+        CoreManager::GetUIVars().Set("hintsChoice"_intern, id);
     }
 
     void MahjongHintsComponent::OnAction(const InputEvents::ActionEvent& event) {
@@ -503,7 +503,7 @@ namespace BECore::Mahjong {
         if (game == nullptr) {
             return;
         }
-        const eastl::string_view action = event.action.ToStringView();
+        const StringView action = event.action.ToStringView();
         if (action == kAdviceAction) {
             // What is offered now, not what the last frame showed: a late press changes nothing
             if (!ViewToAdvise(game)) {
@@ -518,8 +518,8 @@ namespace BECore::Mahjong {
             return;  // not ours, or a click that arrives while the page is not open
         }
         // Only the three values the panel offers; client text is never read as anything else
-        const eastl::string_view value = event.value.ToStringView();
-        if (const std::optional<HintsMode> mode = TryParseHintsMode(std::string_view(value.data(), value.size()))) {
+        const StringView value = event.value.ToStringView();
+        if (const Optional<HintsMode> mode = TryParseHintsMode(value)) {
             game->SetHintsMode(*mode);
         }
         PublishChoice(*game);

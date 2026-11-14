@@ -104,7 +104,7 @@ namespace BECore::Mahjong {
         };
         [[nodiscard]] static Key KeyOf(const MahjongGame* game);
         /// The view of the viewer when the hints apply and the viewer is to act with something to choose from, else nullopt.
-        [[nodiscard]] static std::optional<TableView> ViewToAdvise(const MahjongGame* game);
+        [[nodiscard]] static Optional<TableView> ViewToAdvise(const MahjongGame* game);
 
         /// Works the row, the marks and the button out again when the table changed (else keeps them).
         void Refresh(const MahjongGame* game, const Key& key);
@@ -125,24 +125,24 @@ namespace BECore::Mahjong {
         void DropAdvice();
         void DrawMarks(const MahjongGame& game) const;
 
-        eastl::vector<WaitEntry> _row;                      ///< the row as it should be on screen
-        eastl::vector<WaitEntry> _published;                ///< the row as it is on the canvas
-        eastl::array<bool, kTileIdCount> _declaring{};      ///< the tiles whose discard declares the calling hand
-        eastl::array<DangerMark, kTileIdCount> _dangers{};  ///< the danger of each tile of the hand while an opponent has declared
-        bool _offered = false;                              ///< the button is offered: hints apply and the viewer has actions
+        Vector<WaitEntry> _row;                      ///< the row as it should be on screen
+        Vector<WaitEntry> _published;                ///< the row as it is on the canvas
+        Array<bool, kTileIdCount> _declaring{};      ///< the tiles whose discard declares the calling hand
+        Array<DangerMark, kTileIdCount> _dangers{};  ///< the danger of each tile of the hand while an opponent has declared
+        bool _offered = false;                       ///< the button is offered: hints apply and the viewer has actions
         bool _offeredShown = false;
         bool _known = false;  ///< `_key` and what follows from it are worked out
         Key _key;
 
-        bool _adviceOn = false;             ///< the switch `Hint`
-        bool _adviceOnShown = false;        ///< the buttons are drawn `selected`
-        bool _advised = false;              ///< the advice of the table of `_adviceKey` was worked out (it may have none)
-        std::optional<HandAction> _advice;  ///< the advice worked out on the table of `_adviceKey`
-        TableView _adviceView;              ///< the view it was asked on (the sentence names the pending discard of a window)
+        bool _adviceOn = false;        ///< the switch `Hint`
+        bool _adviceOnShown = false;   ///< the buttons are drawn `selected`
+        bool _advised = false;         ///< the advice of the table of `_adviceKey` was worked out (it may have none)
+        Optional<HandAction> _advice;  ///< the advice worked out on the table of `_adviceKey`
+        TableView _adviceView;         ///< the view it was asked on (the sentence names the pending discard of a window)
         Key _adviceKey;
-        std::optional<Explanation> _explained;  ///< the reasons of `_advice`, asked on the same table
-        uint64_t _adviceGeneration = 0;         ///< grows with every advice worked out, so the card knows a new one
-        bool _adviceDirty = false;              ///< the sentence is to be published again (worked out again)
+        Optional<Explanation> _explained;  ///< the reasons of `_advice`, asked on the same table
+        uint64_t _adviceGeneration = 0;    ///< grows with every advice worked out, so the card knows a new one
+        bool _adviceDirty = false;         ///< the sentence is to be published again (worked out again)
         bool _adviceShown = false;
         uint64_t _adviceStringsVersion = 0;
 

@@ -29,7 +29,7 @@ namespace BECore::Mahjong {
     inline constexpr uint8_t kCopiesPerTile = 4;
 
     /// Counting array over the playable kinds: counts[tile.Id()] is how many copies of the kind are held.
-    using TileCounts = eastl::array<uint8_t, kKindCount>;
+    using TileCounts = Array<uint8_t, kKindCount>;
 
     /// The suit of a tile; None for honours and bonus tiles.
     CORE_ENUM(TileSuit, uint8_t, None, Dots, Bamboo, Characters)
@@ -140,19 +140,19 @@ namespace BECore::Mahjong {
     private:
         static constexpr int kGreenDragonIndex = 2;
         /// The bamboo ranks printed in green only.
-        static constexpr eastl::array kGreenBambooRanks = {2, 3, 4, 6, 8};
+        static constexpr Array<int, 5> kGreenBambooRanks = {2, 3, 4, 6, 8};
 
         uint8_t _id = kInvalidId;
     };
 
     /// The notation of a tile: 1p..9p dots, 1s..9s bamboo, 1m..9m characters, Ew Sw Ww Nw winds, Rd Wd Gd dragons,
     /// F1..F4 flowers, T1..T4 seasons. "??" for an invalid tile.
-    [[nodiscard]] std::string_view ToString(Tile tile) noexcept;
+    [[nodiscard]] StringView ToString(Tile tile) noexcept;
 
     /// Reads one tile in the notation above (case sensitive); nullopt for anything else.
-    [[nodiscard]] std::optional<Tile> TryParse(std::string_view text) noexcept;
+    [[nodiscard]] Optional<Tile> TryParse(StringView text) noexcept;
 
     /// Reads tiles separated by spaces ("1p 2p 3p"); an empty text gives an empty list, a bad token or a doubled space gives nullopt.
-    [[nodiscard]] std::optional<eastl::vector<Tile>> ParseTiles(std::string_view text);
+    [[nodiscard]] Optional<Vector<Tile>> ParseTiles(StringView text);
 
 }  // namespace BECore::Mahjong

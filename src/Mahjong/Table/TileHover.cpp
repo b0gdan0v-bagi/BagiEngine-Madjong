@@ -26,10 +26,10 @@ namespace BECore::Mahjong {
         return nullptr;
     }
 
-    std::optional<Tile> TileOfSlot(const HandModel& hand, const TileSlot& slot, bool seatFaceUp) noexcept {
+    Optional<Tile> TileOfSlot(const HandModel& hand, const TileSlot& slot, bool seatFaceUp) noexcept {
         if (slot.role == SlotRole::DiscardTile) {
-            const eastl::vector<DiscardEntry>& pile = hand.Discards();
-            return InRange(slot.index, pile.size()) ? std::optional<Tile>(pile[slot.index].tile) : std::nullopt;
+            const Vector<DiscardEntry>& pile = hand.Discards();
+            return InRange(slot.index, pile.size()) ? Optional<Tile>(pile[slot.index].tile) : std::nullopt;
         }
         if (slot.role == SlotRole::WallStack || !IsSeat(slot.seat)) {
             return std::nullopt;
@@ -37,16 +37,16 @@ namespace BECore::Mahjong {
         const PlayerHand& held = hand.GetHand(slot.seat);
         switch (slot.role) {
             case SlotRole::HandTile:
-                return seatFaceUp && InRange(slot.index, held.concealed.size()) ? std::optional<Tile>(held.concealed[slot.index]) : std::nullopt;
+                return seatFaceUp && InRange(slot.index, held.concealed.size()) ? Optional<Tile>(held.concealed[slot.index]) : std::nullopt;
             case SlotRole::MeldTile: {
                 if (!InRange(slot.index, held.melds.size())) {
                     return std::nullopt;
                 }
                 const Meld& meld = held.melds[slot.index];
-                return !meld.concealed || seatFaceUp ? std::optional<Tile>(MeldTileAt(meld, slot.part)) : std::nullopt;
+                return !meld.concealed || seatFaceUp ? Optional<Tile>(MeldTileAt(meld, slot.part)) : std::nullopt;
             }
             case SlotRole::BonusTile:
-                return InRange(slot.index, held.bonus.size()) ? std::optional<Tile>(held.bonus[slot.index]) : std::nullopt;
+                return InRange(slot.index, held.bonus.size()) ? Optional<Tile>(held.bonus[slot.index]) : std::nullopt;
             default:
                 return std::nullopt;
         }

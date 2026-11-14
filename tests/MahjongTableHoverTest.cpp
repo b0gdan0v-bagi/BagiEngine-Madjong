@@ -83,9 +83,9 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The name as the player sees it: the text of the label of the plate when the plate is on screen, else empty. The variable has to agree.
-        std::string PlateText() const {
+        String PlateText() const {
             const bool shown = OnScreen("TileHover", "TileHoverPlate");
-            const std::string variable = Var("tileHoverText");
+            const String variable = Var("tileHoverText");
             EXPECT_EQ(shown, !variable.empty()) << "the plate is shown exactly while there is a name";
             const UIElement* element = Element("TileHover", "TileHoverLabel");
             const auto* label = element != nullptr ? element->GetComponent<UITextComponent>() : nullptr;
@@ -93,17 +93,17 @@ namespace BECore::Mahjong::Tests {
             if (!shown || label == nullptr) {
                 return {};
             }
-            EXPECT_EQ(std::string(label->GetDisplayText().data(), label->GetDisplayText().size()), variable);
+            EXPECT_EQ(String(label->GetDisplayText().data(), label->GetDisplayText().size()), variable);
             return variable;
         }
 
         /// The name of a tile in the current language, as the plate words it.
-        static std::string NameOf(Tile tile) {
-            const eastl::string name = TileName(CoreManager::GetUIStrings(), tile);
-            return std::string(name.data(), name.size());
+        static String NameOf(Tile tile) {
+            const String name = TileName(CoreManager::GetUIStrings(), tile);
+            return String(name.data(), name.size());
         }
 
-        static std::string NameOf(const char* tile) {
+        static String NameOf(const char* tile) {
             return NameOf(T(tile));
         }
 
@@ -136,7 +136,7 @@ namespace BECore::Mahjong::Tests {
 
         ASSERT_TRUE(CoreManager::GetUIStrings().SetLanguage("ru"_intern));
         Draw();
-        const std::string russian = PlateText();
+        const String russian = PlateText();
         EXPECT_FALSE(russian.empty()) << "the plate stays while the pointer rests, in the new language";
         EXPECT_EQ(russian, NameOf("9p"));
         EXPECT_NE(russian, "9 Dots");
@@ -174,7 +174,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongTableHoverTest, AnOpponentsConcealedTileShowsNothing) {
         ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, MakeModel(SpecOf(kPlainHand, "9p"))));
         for (Seat seat = kSeat1; seat < kSeatCount; ++seat) {
-            for (const TileSlot& slot : std::vector<TileSlot>(_table->GetLayout().slots.begin(), _table->GetLayout().slots.end())) {
+            for (const TileSlot& slot : Vector<TileSlot>(_table->GetLayout().slots.begin(), _table->GetLayout().slots.end())) {
                 if (slot.role != SlotRole::HandTile || slot.seat != seat) {
                     continue;
                 }
@@ -186,7 +186,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongTableHoverTest, ASpectatorSeesTheNamesOfTheOpenHandsAndTheDiscards) {
         ASSERT_NO_FATAL_FAILURE(StartSpectating());  // a watched match: every hand is face up
-        const std::vector<TileSlot> slots(_table->GetLayout().slots.begin(), _table->GetLayout().slots.end());
+        const Vector<TileSlot> slots(_table->GetLayout().slots.begin(), _table->GetLayout().slots.end());
         int discards = 0;
         for (const TileSlot& slot : slots) {
             if (slot.role == SlotRole::HandTile) {
@@ -315,7 +315,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongTableHoverTest, ThePlateLiesInsideTheViewAndDoesNotCoverTheTileItNames) {
         ASSERT_NO_FATAL_FAILURE(StartSpectating());
         int checked = 0;
-        const std::vector<TileSlot> slots(_table->GetLayout().slots.begin(), _table->GetLayout().slots.end());
+        const Vector<TileSlot> slots(_table->GetLayout().slots.begin(), _table->GetLayout().slots.end());
         for (const TileSlot& slot : slots) {
             if (slot.role == SlotRole::HandTile || slot.role == SlotRole::WallStack) {
                 continue;
@@ -361,13 +361,13 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, MakeModel(SpecOf(kPlainHand, "9p"))));
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
-            std::vector<eastl::string> candidates;
+            Vector<String> candidates;
             for (uint8_t id = 0; id < kTileIdCount; ++id) {
                 candidates.push_back(TileName(CoreManager::GetUIStrings(), Tile{id}));
             }
-            const eastl::string longest = LongestText(candidates);
+            const String longest = LongestText(candidates);
             ASSERT_FALSE(longest.empty());
-            CoreManager::GetUIVars().Set("tileHoverText"_intern, eastl::string_view(longest));
+            CoreManager::GetUIVars().Set("tileHoverText"_intern, StringView(longest));
             UICanvasComponent::SetElementVisibleByName(*_manager->GetSceneByName("MahjongScene"_intern), "TileHoverPlate"_intern, true);
 
             ExpectWordsFit("TileHover", kViewWidth, kViewHeight, 0.0f);
@@ -376,7 +376,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_NE(element, nullptr);
             const auto* label = element->GetComponent<UITextComponent>();
             ASSERT_NE(label, nullptr);
-            EXPECT_EQ(std::string(label->GetDisplayText().data(), label->GetDisplayText().size()), std::string(longest.data(), longest.size()));
+            EXPECT_EQ(String(label->GetDisplayText().data(), label->GetDisplayText().size()), String(longest.data(), longest.size()));
             UICanvasComponent::SetElementVisibleByName(*_manager->GetSceneByName("MahjongScene"_intern), "TileHoverPlate"_intern, false);
         });
     }
@@ -405,11 +405,11 @@ namespace BECore::Mahjong::Tests {
         IControllableGame* control = _game->AsControllable();
         ASSERT_NE(control, nullptr);
         const uint64_t version = _game->GetSession().Version();
-        const std::string snapshot = Snapshot(Hand());
+        const String snapshot = Snapshot(Hand());
         const auto before = control->GetState();
         ASSERT_TRUE(before.has_value());
 
-        const std::vector<TileSlot> slots(_table->GetLayout().slots.begin(), _table->GetLayout().slots.end());
+        const Vector<TileSlot> slots(_table->GetLayout().slots.begin(), _table->GetLayout().slots.end());
         for (const TileSlot& slot : slots) {
             PointAt(slot.rect);
         }

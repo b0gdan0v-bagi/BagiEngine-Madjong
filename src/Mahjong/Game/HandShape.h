@@ -32,14 +32,14 @@ namespace BECore::Mahjong {
     /// The concealed tiles split into sets and a pair. `sets` are in the order of `first` (a pung before the chows of the same `first`).
     struct Decomposition {
         Tile pair;
-        eastl::vector<ShapeSet> sets;
+        Vector<ShapeSet> sets;
 
         bool operator==(const Decomposition&) const = default;
     };
 
     /// The three tiles of the chow that starts at `first`, lowest first. `first` has to be a suit tile of rank 1..`kLastChowStartRank`.
-    [[nodiscard]] constexpr eastl::array<Tile, kTilesPerSet> ChowTiles(Tile first) noexcept {
-        eastl::array<Tile, kTilesPerSet> tiles;
+    [[nodiscard]] constexpr Array<Tile, kTilesPerSet> ChowTiles(Tile first) noexcept {
+        Array<Tile, kTilesPerSet> tiles;
         for (int step = 0; step < kTilesPerSet; ++step) {
             tiles[step] = Tile{static_cast<uint8_t>(first.Id() + step)};
         }
@@ -47,10 +47,10 @@ namespace BECore::Mahjong {
     }
 
     /// Counts the playable tiles of `tiles` (a bonus or an invalid tile is skipped).
-    [[nodiscard]] TileCounts CountTiles(const eastl::vector<Tile>& tiles) noexcept;
+    [[nodiscard]] TileCounts CountTiles(const Vector<Tile>& tiles) noexcept;
 
     /// The tiles the melds hold, per kind (a chow one of each of its three, a pung three, a kong four).
-    [[nodiscard]] TileCounts CountMeldTiles(const eastl::vector<Meld>& melds) noexcept;
+    [[nodiscard]] TileCounts CountMeldTiles(const Vector<Meld>& melds) noexcept;
 
     /// The number of tiles `counts` holds.
     [[nodiscard]] int TotalTiles(const TileCounts& counts) noexcept;
@@ -63,7 +63,7 @@ namespace BECore::Mahjong {
      * with the same pair and the same sets are one: each split is returned once. Scoring (stage 3) picks the best of them. Only the
      * four-sets-and-a-pair splits are found: seven pairs and thirteen orphans have none, although `IsWinningShape` accepts them.
      */
-    [[nodiscard]] eastl::vector<Decomposition> Decompose(const TileCounts& counts, int setsNeeded);
+    [[nodiscard]] Vector<Decomposition> Decompose(const TileCounts& counts, int setsNeeded);
 
     /// Whether `counts` holds a tile that a tile of kind `id` could sit next to in a set or a pair: the same kind, or for a suit tile any
     /// tile of its suit within two ranks (a chow reaches over one rank at most). A kind that fails this cannot complete a hand of four
@@ -95,11 +95,11 @@ namespace BECore::Mahjong {
      * A kind the hand already holds four times in `counts` is not offered. The copies in the seat's own melds are not seen here, so a
      * seat with melds uses the overloads below.
      */
-    [[nodiscard]] eastl::vector<Tile> WinningTiles(const TileCounts& counts, int meldCount);
+    [[nodiscard]] Vector<Tile> WinningTiles(const TileCounts& counts, int meldCount);
 
     /// As above, and a kind whose four copies are all in `counts` and `meldTiles` (the tiles of the seat's melds, `CountMeldTiles`)
     /// is not offered either: the seat cannot win on a fifth copy.
-    [[nodiscard]] eastl::vector<Tile> WinningTiles(const TileCounts& counts, int meldCount, const TileCounts& meldTiles);
+    [[nodiscard]] Vector<Tile> WinningTiles(const TileCounts& counts, int meldCount, const TileCounts& meldTiles);
 
     /// Whether the hand is waiting: `WinningTiles(counts, meldCount, meldTiles)` is not empty (the same rule for the copies in the melds).
     /// Cheaper than that: it stops at the first winning kind and probes only the kinds next to a held tile (and the orphans for
@@ -107,6 +107,6 @@ namespace BECore::Mahjong {
     [[nodiscard]] bool IsWaiting(const TileCounts& counts, int meldCount, const TileCounts& meldTiles);
 
     /// The waits of a seat: `hand.concealed` against `hand.melds`, the copies in the melds counted. Use this one for a seat.
-    [[nodiscard]] eastl::vector<Tile> WinningTiles(const PlayerHand& hand);
+    [[nodiscard]] Vector<Tile> WinningTiles(const PlayerHand& hand);
 
 }  // namespace BECore::Mahjong

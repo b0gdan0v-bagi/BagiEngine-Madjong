@@ -15,8 +15,8 @@ namespace BECore::Mahjong {
             return directory;
         }
 
-        std::optional<SaveStorageState>& StorageOverride() {
-            static std::optional<SaveStorageState> state;
+        Optional<SaveStorageState>& StorageOverride() {
+            static Optional<SaveStorageState> state;
             return state;
         }
 
@@ -24,7 +24,7 @@ namespace BECore::Mahjong {
             if (error.kind == SaveErrorKind::NotFound) {
                 return SaveProblem{SaveProblemKind::Missing, error.detail};
             }
-            eastl::string detail = error.detail;
+            String detail = error.detail;
             if (detail.empty()) {
                 detail = EnumUtils<SaveErrorKind>::ToString(error.kind);
             }
@@ -56,11 +56,11 @@ namespace BECore::Mahjong {
     }
 
     SaveStorageState MatchSaveStorage() {
-        const std::optional<SaveStorageState>& forced = StorageOverride();
+        const Optional<SaveStorageState>& forced = StorageOverride();
         return forced ? *forced : GetSaveStorageState();
     }
 
-    void SetMatchSaveStorage(std::optional<SaveStorageState> state) {
+    void SetMatchSaveStorage(Optional<SaveStorageState> state) {
         StorageOverride() = state;
     }
 
@@ -83,7 +83,7 @@ namespace BECore::Mahjong {
     }
 
     template <typename State>
-    bool MatchSaveStore::Write(eastl::string_view slot, const State& state) {
+    bool MatchSaveStore::Write(StringView slot, const State& state) {
         if (const auto saved = _service.Save(slot, kMahjongSaveSchema, state); !saved) {
             LOG_WARNING(Format("MatchSaveStore: the slot '{}' could not be written: {}", slot, saved.error().detail));
             return false;
@@ -91,7 +91,7 @@ namespace BECore::Mahjong {
         return true;
     }
 
-    bool MatchSaveStore::SaveMatch(const eastl::vector<MatchLogEvent>& events) {
+    bool MatchSaveStore::SaveMatch(const Vector<MatchLogEvent>& events) {
         BE_PROFILE_SCOPE("MatchSave::SaveMatch");
         if (!IsOn()) {
             return false;
@@ -101,7 +101,7 @@ namespace BECore::Mahjong {
         return Write(kMatchSlot, state);
     }
 
-    std::expected<eastl::vector<MatchLogEvent>, SaveProblem> MatchSaveStore::LoadMatch() const {
+    std::expected<Vector<MatchLogEvent>, SaveProblem> MatchSaveStore::LoadMatch() const {
         BE_PROFILE_SCOPE("MatchSave::LoadMatch");
         if (!IsOn()) {
             return std::unexpected(SavingIsOff());
@@ -110,7 +110,7 @@ namespace BECore::Mahjong {
         if (const auto loaded = _service.Load(kMatchSlot, kMahjongSaveSchema, state); !loaded) {
             return std::unexpected(ProblemOf(loaded.error()));
         }
-        auto events = ParseMatchSaveText(std::string_view(state.log.c_str(), state.log.size()));
+        auto events = ParseMatchSaveText(StringView(state.log.c_str(), state.log.size()));
         if (!events) {
             return std::unexpected(SaveProblem{SaveProblemKind::Broken, eastl::move(events.error())});
         }
@@ -150,7 +150,7 @@ namespace BECore::Mahjong {
         if (const auto loaded = _service.Load(kOnlineSlot, kMahjongSaveSchema, state); !loaded) {
             return std::unexpected(ProblemOf(loaded.error()));
         }
-        std::expected<OnlineValues, eastl::string> values = ReadOnline(state);
+        std::expected<OnlineValues, String> values = ReadOnline(state);
         if (!values) {
             return std::unexpected(SaveProblem{SaveProblemKind::Broken, eastl::move(values.error())});
         }

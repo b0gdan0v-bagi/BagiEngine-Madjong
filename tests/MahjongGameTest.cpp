@@ -91,7 +91,7 @@ namespace BECore::Mahjong::Tests {
         const Seat east = game->GetMatch().East();
         const SeatWinds winds = game->GetMatch().Winds();
         const SeatScores scores = game->GetMatch().Scores();
-        const std::string hand = Snapshot(game->GetMatch().Hand());
+        const String hand = Snapshot(game->GetMatch().Hand());
         ASSERT_TRUE(game->StartMatch(kSeed).has_value());
 
         EXPECT_EQ(game->GetMatch().East(), east);
@@ -161,7 +161,7 @@ namespace BECore::Mahjong::Tests {
         // Settings that cannot be played are refused and the match in play is left as it is.
         settings.handsPerMatch = kUnplayableHandsPerMatch;
         game->SetSettings(settings);
-        const std::string hand = Snapshot(game->GetMatch().Hand());
+        const String hand = Snapshot(game->GetMatch().Hand());
         const MatchStatus refused = game->StartMatch(kSeed);
         ASSERT_FALSE(refused.has_value());
         EXPECT_EQ(refused.error(), MatchError::BadSettings);
@@ -195,13 +195,13 @@ namespace BECore::Mahjong::Tests {
 
             // StartMatch reaches the session with the level, a Reset and a second StartMatch keep it
             ASSERT_TRUE(game->StartMatch(kSeed).has_value());
-            EXPECT_EQ(game->GetSession().Levels(), UniformLevels(level)) << LevelText(level);
+            EXPECT_EQ(game->GetSession().Levels(), UniformLevels(level)) << ToStd(LevelText(level));
             game->Reset();
-            EXPECT_EQ(game->GetLevels()[0], level) << LevelText(level);
-            EXPECT_EQ(game->GetSession().Levels(), UniformLevels(level)) << LevelText(level);
+            EXPECT_EQ(game->GetLevels()[0], level) << ToStd(LevelText(level));
+            EXPECT_EQ(game->GetSession().Levels(), UniformLevels(level)) << ToStd(LevelText(level));
             ASSERT_TRUE(game->StartMatch(kSeed + 1).has_value());
-            EXPECT_EQ(game->GetLevels()[0], level) << LevelText(level);
-            EXPECT_EQ(game->GetSession().Levels(), UniformLevels(level)) << LevelText(level);
+            EXPECT_EQ(game->GetLevels()[0], level) << ToStd(LevelText(level));
+            EXPECT_EQ(game->GetSession().Levels(), UniformLevels(level)) << ToStd(LevelText(level));
         }
     }
 

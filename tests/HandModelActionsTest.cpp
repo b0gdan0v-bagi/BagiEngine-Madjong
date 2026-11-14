@@ -39,7 +39,7 @@ namespace BECore::Mahjong::Tests {
             return spec;
         }
 
-        size_t Count(const eastl::vector<HandAction>& actions, ActionKind kind) {
+        size_t Count(const Vector<HandAction>& actions, ActionKind kind) {
             size_t count = 0;
             for (const HandAction& action : actions) {
                 count += action.kind == kind ? 1 : 0;
@@ -48,8 +48,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The seats that have something to do.
-        std::vector<Seat> SeatsWithActions(const HandModel& model) {
-            std::vector<Seat> seats;
+        Vector<Seat> SeatsWithActions(const HandModel& model) {
+            Vector<Seat> seats;
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 if (!model.LegalActions(seat).empty()) {
                     seats.push_back(seat);
@@ -68,7 +68,7 @@ namespace BECore::Mahjong::Tests {
             spec.hands[kSeat1] = "5p 5p 8p 2s 5s 8s 2m 5m 8m Ww Nw Gd Wd";
             spec.hands[kSeat2] = "4p 6p 1s 2s 3s 4m 5m 6m 7s 8s 9s Ew Ew";
             spec.hands[kSeat3] = "4p 6p 1m 2m 3m 4s 5s 6s 7m 8m 9m Ww Ww";
-            spec.live = std::string(kFifth) + " Rd Gd Wd " + kFifth;
+            spec.live = Format("{} Rd Gd Wd {}", kFifth, kFifth);
             spec.loose = "9m 9s";
             return spec;
         }
@@ -89,7 +89,7 @@ namespace BECore::Mahjong::Tests {
         // East waits on the red dragon (a pair wait) and draws it.
         constexpr const char* kWaitingEast = "1p 2p 3p 4s 5s 6s 7m 8m 9m Ew Ew Ew Rd";
 
-        FixedWallSpec WaitingSpec(const std::string& live) {
+        FixedWallSpec WaitingSpec(const String& live) {
             FixedWallSpec spec = QuietSpec();
             spec.hands[kSeat0] = kWaitingEast;
             spec.hands[kSeat1] = "2p 5p 8p 2s 5s 8s 2m 5m 8m Ww Nw Gd Wd";
@@ -105,7 +105,7 @@ namespace BECore::Mahjong::Tests {
         HandModel model = MakeModel(spec);
         ASSERT_EQ(model.GetHand(kSeat0).concealed.size(), kTilesInHand + 1);
 
-        const eastl::vector<HandAction> actions = model.LegalActions(kSeat0);
+        const Vector<HandAction> actions = model.LegalActions(kSeat0);
 
         EXPECT_EQ(actions.size(), kTilesInHand + 1);  // every tile of the hand is different
         EXPECT_EQ(Count(actions, ActionKind::Discard), actions.size());
@@ -122,7 +122,7 @@ namespace BECore::Mahjong::Tests {
         spec.live = kRed;
         HandModel model = MakeModel(spec);
 
-        const eastl::vector<HandAction> actions = model.LegalActions(kSeat0);
+        const Vector<HandAction> actions = model.LegalActions(kSeat0);
 
         EXPECT_EQ(actions.size(), kTilesInHand);  // 14 tiles, one pair
         EXPECT_EQ(std::count(actions.begin(), actions.end(), HandAction::MakeDiscard(T("1p"))), 1);
@@ -176,12 +176,12 @@ namespace BECore::Mahjong::Tests {
         const HandModel concealedKongTurn = MakeModel(kongSpec);
 
         const HandModel* const models[] = {&plainTurn, &waitingTurn, &declared, &chowWindow, &pungWindow, &robbingWindow, &upgradeTurn, &concealedKongTurn};
-        std::set<std::string> listedKinds;
+        Set<String> listedKinds;
         for (const HandModel* model : models) {
             ExpectAcceptedExactlyWhenListed(*model);
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 for (const HandAction& action : model->LegalActions(seat)) {
-                    std::string kind = Name(action.kind);
+                    String kind = Name(action.kind);
                     if (action.kind == ActionKind::Claim) {
                         kind += Name(action.claim);
                     } else if (action.kind == ActionKind::Discard && action.declareCalling) {
@@ -208,7 +208,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(model.LegalActions(kSeat3).empty());
         EXPECT_TRUE(model.LegalActions(-1).empty());
         EXPECT_TRUE(model.LegalActions(kNoSuchSeat).empty());
-        const std::string before = Snapshot(model);
+        const String before = Snapshot(model);
         EXPECT_EQ(Error(model.Apply(-1, HandAction::MakePass())), HandError::NotYourTurn);
         EXPECT_EQ(Error(model.Apply(kNoSuchSeat, HandAction::MakeDiscard(T("1p")))), HandError::NotYourTurn);
         EXPECT_EQ(Snapshot(model), before);
@@ -233,7 +233,7 @@ namespace BECore::Mahjong::Tests {
         spec.live = kEast;
         HandModel model = MakeModel(spec);
 
-        const eastl::vector<HandAction> actions = model.LegalActions(kSeat0);
+        const Vector<HandAction> actions = model.LegalActions(kSeat0);
 
         EXPECT_TRUE(Has(actions, HandAction::MakeConcealedKong(T(kEast))));
         EXPECT_EQ(Count(actions, ActionKind::ConcealedKong), 1u);
@@ -246,7 +246,7 @@ namespace BECore::Mahjong::Tests {
         HandModel model = UpgradeModel();
         ASSERT_EQ(model.GetPhase(), Phase::Discard);
 
-        const eastl::vector<HandAction> actions = model.LegalActions(kSeat1);
+        const Vector<HandAction> actions = model.LegalActions(kSeat1);
 
         EXPECT_TRUE(Has(actions, HandAction::MakeUpgradeKong(T(kFifth))));
         EXPECT_EQ(Count(actions, ActionKind::UpgradeKong), 1u);
@@ -261,7 +261,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(hand.concealed.size(), kTilesInHand + 1);
         ASSERT_FALSE(hand.callingDeclared);
 
-        const eastl::vector<HandAction> actions = model.LegalActions(kSeat0);
+        const Vector<HandAction> actions = model.LegalActions(kSeat0);
 
         EXPECT_EQ(Count(actions, ActionKind::DeclareWin), 0u);  // a winning shape, but not declared
         EXPECT_EQ(Error(model.Apply(kSeat0, HandAction::MakeDeclareWin())), HandError::NotCalling);
@@ -270,8 +270,8 @@ namespace BECore::Mahjong::Tests {
             PlayerHand rest = hand;
             rest.RemoveConcealed(tile);
             const bool waiting = !WinningTiles(rest).empty();
-            EXPECT_EQ(Has(actions, HandAction::MakeDiscard(tile, true)), waiting) << ToString(tile);
-            EXPECT_TRUE(Has(actions, HandAction::MakeDiscard(tile))) << ToString(tile);
+            EXPECT_EQ(Has(actions, HandAction::MakeDiscard(tile, true)), waiting) << ToStd(ToString(tile));
+            EXPECT_TRUE(Has(actions, HandAction::MakeDiscard(tile))) << ToStd(ToString(tile));
             declaring += waiting ? 1 : 0;
         }
         EXPECT_GT(declaring, 0u);
@@ -286,7 +286,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(model.GetHand(kSeat0).callingDeclared);
         ASSERT_EQ(model.CurrentSeat(), kSeat0);
 
-        const eastl::vector<HandAction> actions = model.LegalActions(kSeat0);
+        const Vector<HandAction> actions = model.LegalActions(kSeat0);
 
         EXPECT_TRUE(Has(actions, HandAction::MakeDeclareWin()));
         for (const HandAction& action : actions) {
@@ -303,19 +303,19 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(model.Apply(kSeat0, HandAction::MakeDiscard(T(kRed))).has_value());
         ASSERT_EQ(model.GetPhase(), Phase::Claim);
 
-        const eastl::vector<HandAction> actions = model.LegalActions(kSeat2);
+        const Vector<HandAction> actions = model.LegalActions(kSeat2);
 
         ASSERT_EQ(actions.size(), 3u);
         EXPECT_TRUE(Has(actions, HandAction::MakeClaim(ClaimKind::Pung)));
         EXPECT_TRUE(Has(actions, HandAction::MakeClaim(ClaimKind::Kong)));
         EXPECT_TRUE(Has(actions, HandAction::MakePass()));
-        EXPECT_EQ(SeatsWithActions(model), std::vector<Seat>{kSeat2});  // the discarder and the seats with no claim are out
+        EXPECT_EQ(SeatsWithActions(model), Vector<Seat>{kSeat2});  // the discarder and the seats with no claim are out
         ExpectEveryLegalActionIsAccepted(model);
 
         ASSERT_TRUE(model.Apply(kSeat2, HandAction::MakePass()).has_value());
         EXPECT_EQ(model.GetPhase(), Phase::Discard);
         EXPECT_EQ(model.CurrentSeat(), kSeat1);
-        EXPECT_EQ(SeatsWithActions(model), std::vector<Seat>{kSeat1});
+        EXPECT_EQ(SeatsWithActions(model), Vector<Seat>{kSeat1});
     }
 
     TEST(HandModelActionsTest, AChowIsOfferedOncePerSequenceToTheNextSeatOnly) {
@@ -326,7 +326,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(model.Apply(kSeat0, HandAction::MakeDiscard(T(kFifth))).has_value());
         ASSERT_EQ(model.GetPhase(), Phase::Claim);
 
-        const eastl::vector<HandAction> actions = model.LegalActions(kSeat1);
+        const Vector<HandAction> actions = model.LegalActions(kSeat1);
 
         ASSERT_EQ(actions.size(), 4u);  // 3-4-5, 4-5-6, 5-6-7 and the pass
         EXPECT_EQ(actions[0], HandAction::MakeClaim(ClaimKind::Chow, T("3p")));
@@ -341,12 +341,12 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(model.Apply(kSeat1, HandAction::MakeUpgradeKong(T(kFifth))).has_value());
         ASSERT_EQ(model.GetPhase(), Phase::RobKong);
 
-        const eastl::vector<HandAction> actions = model.LegalActions(kSeat2);
+        const Vector<HandAction> actions = model.LegalActions(kSeat2);
 
         ASSERT_EQ(actions.size(), 2u);
         EXPECT_EQ(actions[0], HandAction::MakeClaim(ClaimKind::Mahjong));
         EXPECT_EQ(actions[1], HandAction::MakePass());
-        EXPECT_EQ(SeatsWithActions(model), std::vector<Seat>{kSeat2});  // the owner of the kong and the undeclared seat are out
+        EXPECT_EQ(SeatsWithActions(model), Vector<Seat>{kSeat2});  // the owner of the kong and the undeclared seat are out
         ExpectEveryLegalActionIsAccepted(model);
     }
 
@@ -354,7 +354,7 @@ namespace BECore::Mahjong::Tests {
         FixedWallSpec spec = QuietSpec();
         spec.live = kRed;
         HandModel model = MakeModel(spec);
-        const std::string before = Snapshot(model);
+        const String before = Snapshot(model);
 
         EXPECT_EQ(Error(model.Apply(kSeat0, HandAction::MakeDiscard(T("9m")))), HandError::TileNotInHand);  // not held
         EXPECT_EQ(Error(model.Apply(kSeat0, HandAction::MakeDiscard(Tile{}))), HandError::TileNotInHand);
@@ -374,7 +374,7 @@ namespace BECore::Mahjong::Tests {
         HandModel claimWindow = MakeModel(claimSpec);
         ASSERT_TRUE(claimWindow.Apply(kSeat0, HandAction::MakeDiscard(T(kRed))).has_value());
         ASSERT_EQ(claimWindow.GetPhase(), Phase::Claim);
-        const std::string windowBefore = Snapshot(claimWindow);
+        const String windowBefore = Snapshot(claimWindow);
         EXPECT_EQ(Error(claimWindow.Apply(kSeat0, HandAction::MakeDiscard(T("1p")))), HandError::WrongPhase);
         EXPECT_EQ(Error(claimWindow.Apply(kSeat1, HandAction::MakePass())), HandError::NotYourTurn);
         EXPECT_EQ(Error(claimWindow.Apply(kSeat2, HandAction::MakeClaim(ClaimKind::Chow, T("3p")))), HandError::IllegalClaim);

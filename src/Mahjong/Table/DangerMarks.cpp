@@ -22,8 +22,8 @@ namespace BECore::Mahjong {
 
     }  // namespace
 
-    eastl::array<DangerMark, kTileIdCount> DangerMarks(const TableView& view) {
-        eastl::array<DangerMark, kTileIdCount> marks{};
+    Array<DangerMark, kTileIdCount> DangerMarks(const TableView& view) {
+        Array<DangerMark, kTileIdCount> marks{};
         if (!IsSeat(view.seat) || view.phase != Phase::Discard || view.currentSeat != view.seat || view.legal.empty() || !HasDeclaredOpponent(view)) {
             return marks;
         }
@@ -50,7 +50,7 @@ namespace BECore::Mahjong {
         return kDangerMark;
     }
 
-    eastl::string_view DangerHoverKey(DangerMark mark) noexcept {
+    StringView DangerHoverKey(DangerMark mark) noexcept {
         switch (mark) {
             case DangerMark::Safe:
                 return "hints.hover.safe";

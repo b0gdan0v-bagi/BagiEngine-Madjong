@@ -3,6 +3,7 @@
 #include "HandTestSupport.h"
 #include "StringsTestSupport.h"
 
+#include <Common/Printers.h>
 #include <Mahjong/Game/ComputerClaim.h>
 #include <Mahjong/Game/ComputerTurn.h>
 #include <Mahjong/Game/HandModel.h>
@@ -29,10 +30,6 @@ namespace BECore::Mahjong::Tests {
 
         HandAction Discard(const char* tile, bool declare = false) {
             return HandAction::MakeDiscard(T(tile), declare);
-        }
-
-        std::string Std(const eastl::string& text) {
-            return std::string(text.data(), text.size());
         }
 
         const UIStrings& Words() {
@@ -111,7 +108,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         CoachNote NoteOf(const TableView& view, const HandAction& taken) {
-            const std::optional<CoachNote> note = JudgeMove(view, taken);
+            const Optional<CoachNote> note = JudgeMove(view, taken);
             EXPECT_TRUE(note.has_value());
             return note.value_or(CoachNote{});
         }
@@ -120,28 +117,30 @@ namespace BECore::Mahjong::Tests {
             return {starts, hands, settled, persons};
         }
 
-        HintCard CardOf(const CoachNote& note, const UIStrings& strings = Words(), eastl::string_view tally = {}) {
+        HintCard CardOf(const CoachNote& note, const UIStrings& strings = Words(), StringView tally = {}) {
             return MakeNoteCard(strings, note, tally);
         }
 
         /// Everything a card says, one string per line and per row (the cells of a row joined by `|`, the tiles in notation).
-        std::vector<std::string> TextOf(const HintCard& card) {
-            std::vector<std::string> text{Std(card.title), Std(card.now)};
+        Vector<String> TextOf(const HintCard& card) {
+            Vector<String> text{card.title, card.now};
             for (const CardRow& row : card.rows) {
-                std::string tiles;
+                String tiles;
                 for (const Tile tile : row.tiles) {
-                    tiles += tile.IsValid() ? std::string(ToString(tile)) + " " : "";
+                    if (tile.IsValid()) {
+                        AppendFormat(tiles, "{} ", ToString(tile));
+                    }
                 }
-                text.push_back(Std(row.who) + "|" + tiles + "|" + Std(row.move) + "|" + Std(row.steps) + "|" + Std(row.useful));
+                text.push_back(Format("{}|{}|{}|{}|{}", row.who, tiles, row.move, row.steps, row.useful));
             }
-            for (const eastl::string& line : card.footer) {
-                text.push_back(Std(line));
+            for (const String& line : card.footer) {
+                text.push_back(line);
             }
             return text;
         }
 
-        bool FooterHas(const HintCard& card, const std::string& part) {
-            return std::any_of(card.footer.begin(), card.footer.end(), [&](const eastl::string& line) { return Std(line).find(part) != std::string::npos; });
+        bool FooterHas(const HintCard& card, const String& part) {
+            return std::any_of(card.footer.begin(), card.footer.end(), [&](const String& line) { return line.find(part) != String::npos; });
         }
 
     }  // namespace
@@ -165,7 +164,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(CoachTest, ADiscardThatIsTheAdviceSaysNothing) {
         const TableView view = PairedView();
-        const std::optional<HandAction> advice = AdviceFor(view);
+        const Optional<HandAction> advice = AdviceFor(view);
         ASSERT_TRUE(advice.has_value());
 
         EXPECT_FALSE(JudgeMove(view, *advice).has_value());
@@ -190,7 +189,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(note.taken, Discard("5p"));
         EXPECT_EQ(note.advised, *AdviceFor(view));
         EXPECT_EQ(note.stepsBefore, Shanten(counts, 0));
-        const eastl::vector<DiscardOption> rated = RateDiscards(counts, 0, view);
+        const Vector<DiscardOption> rated = RateDiscards(counts, 0, view);
         const auto advisedAt = std::find_if(rated.begin(), rated.end(), [&](const DiscardOption& o) { return o.tile == note.advised.tile; });
         const auto taken = std::find_if(rated.begin(), rated.end(), [](const DiscardOption& o) { return o.tile == T("5p"); });
         ASSERT_TRUE(advisedAt != rated.end() && taken != rated.end());
@@ -231,8 +230,8 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(note.takenSide, note.advisedSide);
         const HintCard card = CardOf(note);
         ASSERT_EQ(card.rows.size(), 2u);
-        EXPECT_EQ(Std(card.rows[0].move), "declare");
-        EXPECT_EQ(Std(card.rows[1].move), "");
+        EXPECT_EQ(card.rows[0].move, "declare");
+        EXPECT_EQ(card.rows[1].move, "");
         EXPECT_EQ(card.rows[0].useful, card.rows[1].useful);
         EXPECT_TRUE(FooterHas(card, "did not declare")) << ::testing::PrintToString(TextOf(card));
     }
@@ -248,7 +247,7 @@ namespace BECore::Mahjong::Tests {
         for (const char* tile : {"5m", "Gd"}) {
             view.legal.push_back(HandAction::MakeDiscard(T(tile), true));
         }
-        const std::optional<HandAction> advice = AdviceFor(view);
+        const Optional<HandAction> advice = AdviceFor(view);
         ASSERT_TRUE(advice.has_value());
 
         for (const char* tile : {"5m", "Gd"}) {
@@ -258,7 +257,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(CoachTest, KeepingTheWaitIsJudgedByTheWaitingCopiesAndBreakingItDiffers) {
         const TableView view = KeepingView();
-        const std::optional<HandAction> advice = AdviceFor(view);
+        const Optional<HandAction> advice = AdviceFor(view);
         ASSERT_TRUE(advice.has_value());
         ASSERT_EQ(advice->tile, T("6p"));
 
@@ -293,7 +292,7 @@ namespace BECore::Mahjong::Tests {
         const TableView view = MakeTableView(MakeModel(SpecOf("1s 2s 3s 4s 5s 6s 7m 8m 9m 4p 4p 4p Rd", "4p")), kSeat0);
         const HandAction kong = HandAction::MakeConcealedKong(T("4p"));
         ASSERT_TRUE(CanJudge(view, kong));
-        const std::optional<HandAction> advice = AdviceFor(view);
+        const Optional<HandAction> advice = AdviceFor(view);
         ASSERT_TRUE(advice.has_value());
         ASSERT_NE(*advice, kong);
         ASSERT_TRUE(advice->declareCalling);
@@ -336,16 +335,16 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(note.stepsBefore, 1);
         EXPECT_FALSE(note.handWaits);
         const HintCard card = CardOf(note);
-        EXPECT_NE(Std(card.title).find("pung of 5 Dots"), std::string::npos) << Std(card.title);
+        EXPECT_NE(card.title.find("pung of 5 Dots"), String::npos) << card.title;
         ASSERT_EQ(card.rows.size(), 2u);
         EXPECT_EQ(card.rows[0].kind, CardRowKind::Best);
-        EXPECT_EQ(Std(card.rows[0].move), "Pung");
+        EXPECT_EQ(card.rows[0].move, "Pung");
         EXPECT_EQ(card.rows[0].tiles[0], T("5p"));
-        EXPECT_EQ(Std(card.rows[0].steps), "ready");
+        EXPECT_EQ(card.rows[0].steps, "ready");
         EXPECT_EQ(card.rows[0].trend, CardTrend::Closer);
         EXPECT_EQ(card.rows[1].kind, CardRowKind::Yours);
-        EXPECT_EQ(Std(card.rows[1].move), "Pass");
-        EXPECT_EQ(Std(card.rows[1].steps), "1") << "a pass keeps the steps it had";
+        EXPECT_EQ(card.rows[1].move, "Pass");
+        EXPECT_EQ(card.rows[1].steps, "1") << "a pass keeps the steps it had";
         EXPECT_EQ(card.rows[1].trend, CardTrend::Same);
     }
 
@@ -371,13 +370,13 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(note.handWaits);
         const HintCard card = CardOf(note);
         ASSERT_EQ(card.rows.size(), 2u);
-        EXPECT_EQ(Std(card.rows[0].move), "Pass");
-        EXPECT_EQ(Std(card.rows[0].steps), std::to_string(note.stepsBefore));
-        EXPECT_EQ(Std(card.rows[0].useful), "") << "nothing counts the tiles that help a pass";
-        EXPECT_EQ(Std(card.rows[1].move), "Pung");
+        EXPECT_EQ(card.rows[0].move, "Pass");
+        EXPECT_EQ(card.rows[0].steps, BECore::ToString(note.stepsBefore));
+        EXPECT_EQ(card.rows[0].useful, "") << "nothing counts the tiles that help a pass";
+        EXPECT_EQ(card.rows[1].move, "Pung");
         EXPECT_EQ(card.rows[1].tiles[0], T("5m"));
-        EXPECT_EQ(Std(card.rows[1].steps), note.takenSide.steps == 0 ? std::string("ready") : std::to_string(note.takenSide.steps));
-        EXPECT_EQ(Std(card.rows[1].useful), std::to_string(note.takenSide.copies));
+        EXPECT_EQ(card.rows[1].steps, note.takenSide.steps == 0 ? String("ready") : BECore::ToString(note.takenSide.steps));
+        EXPECT_EQ(card.rows[1].useful, BECore::ToString(note.takenSide.copies));
         EXPECT_TRUE(FooterHas(card, "No claim brings")) << ::testing::PrintToString(TextOf(card));
     }
 
@@ -390,10 +389,10 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(note.handWaits);
         const HintCard card = CardOf(note);
         ASSERT_EQ(card.rows.size(), 2u);
-        EXPECT_EQ(Std(card.rows[0].move), "Pass");
-        EXPECT_EQ(Std(card.rows[0].steps), "ready") << "the pass keeps the hand that waits";
+        EXPECT_EQ(card.rows[0].move, "Pass");
+        EXPECT_EQ(card.rows[0].steps, "ready") << "the pass keeps the hand that waits";
         EXPECT_EQ(note.advisedSide.numbers, CoachNumbers::Waiting);
-        EXPECT_EQ(Std(card.rows[0].useful), std::to_string(note.advisedSide.copies)) << "the pass row counts the wait, so the rows compare";
+        EXPECT_EQ(card.rows[0].useful, BECore::ToString(note.advisedSide.copies)) << "the pass row counts the wait, so the rows compare";
         EXPECT_FALSE(card.rows[0].useful.empty());
         EXPECT_TRUE(FooterHas(card, "a claim would break it")) << ::testing::PrintToString(TextOf(card));
     }
@@ -412,7 +411,7 @@ namespace BECore::Mahjong::Tests {
             TableView view = WindowView(kWaitingOnPung, "Rd");
             view.liveCount = kLiveForValues;
             if (open) {
-                eastl::vector<Tile> concealed;
+                Vector<Tile> concealed;
                 for (const Tile tile : view.own.concealed) {
                     if (tile != T("1s") && tile != T("2s") && tile != T("3s")) {
                         concealed.push_back(tile);
@@ -437,7 +436,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         HintCard AdviceCardOf(const TableView& view) {
-            const std::optional<Explanation> explained = ExplainAdvice(view, ByPoints());
+            const Optional<Explanation> explained = ExplainAdvice(view, ByPoints());
             EXPECT_TRUE(explained.has_value());
             return explained.has_value() ? MakeAdviceCard(Words(), view, *explained, {}) : HintCard{};
         }
@@ -453,16 +452,16 @@ namespace BECore::Mahjong::Tests {
 
         const HintCard card = CardOf(note);
         ASSERT_EQ(card.rows.size(), 2u) << ::testing::PrintToString(TextOf(card));
-        EXPECT_EQ(Std(card.rows[0].move), "Pass");
-        EXPECT_EQ(Std(card.rows[0].steps), "ready");
-        EXPECT_EQ(Std(card.rows[0].useful), "3") << "three 4p are unseen";
-        EXPECT_EQ(Std(card.rows[1].steps), "ready") << "the kong keeps the wait";
-        EXPECT_EQ(Std(card.rows[1].useful), "3");
+        EXPECT_EQ(card.rows[0].move, "Pass");
+        EXPECT_EQ(card.rows[0].steps, "ready");
+        EXPECT_EQ(card.rows[0].useful, "3") << "three 4p are unseen";
+        EXPECT_EQ(card.rows[1].steps, "ready") << "the kong keeps the wait";
+        EXPECT_EQ(card.rows[1].useful, "3");
     }
 
     TEST(CoachTest, TheAdviceCardOfAConcealedWaitingHandPassesTheKongByPoints) {
         const TableView view = WaitingKongView(false);
-        const std::optional<Explanation> explained = ExplainAdvice(view, ByPoints());
+        const Optional<Explanation> explained = ExplainAdvice(view, ByPoints());
         ASSERT_TRUE(explained.has_value() && explained->claim.has_value());
         ASSERT_EQ(explained->claim->step, ClaimStep::WaitingPass);
         ASSERT_TRUE(explained->claim->waitingKong.has_value());
@@ -471,17 +470,17 @@ namespace BECore::Mahjong::Tests {
         const HintCard card = AdviceCardOf(view);
 
         ASSERT_EQ(card.rows.size(), 2u) << ::testing::PrintToString(TextOf(card));
-        EXPECT_EQ(Std(card.rows[0].move), "Pass");
-        EXPECT_EQ(Std(card.rows[0].useful), "3");
-        EXPECT_EQ(Std(card.rows[1].move), "Kong");
-        EXPECT_EQ(Std(card.rows[1].steps), "ready");
+        EXPECT_EQ(card.rows[0].move, "Pass");
+        EXPECT_EQ(card.rows[0].useful, "3");
+        EXPECT_EQ(card.rows[1].move, "Kong");
+        EXPECT_EQ(card.rows[1].steps, "ready");
         EXPECT_TRUE(FooterHas(card, "concealed hand is worth more")) << ::testing::PrintToString(TextOf(card));
         EXPECT_FALSE(FooterHas(card, "a claim would break it")) << "the kong does not break the wait";
     }
 
     TEST(CoachTest, TheAdviceCardOfAnOpenWaitingHandTakesTheKongByPoints) {
         const TableView view = WaitingKongView(true);
-        const std::optional<Explanation> explained = ExplainAdvice(view, ByPoints());
+        const Optional<Explanation> explained = ExplainAdvice(view, ByPoints());
         ASSERT_TRUE(explained.has_value() && explained->claim.has_value());
         ASSERT_EQ(explained->claim->step, ClaimStep::WaitingKong);
         EXPECT_EQ(explained->Action(), kKong);
@@ -489,21 +488,21 @@ namespace BECore::Mahjong::Tests {
         const HintCard card = AdviceCardOf(view);
 
         ASSERT_EQ(card.rows.size(), 2u) << ::testing::PrintToString(TextOf(card));
-        EXPECT_EQ(Std(card.rows[0].move), "Kong");
-        EXPECT_EQ(Std(card.rows[0].steps), "ready");
-        EXPECT_EQ(Std(card.rows[1].move), "Pass");
-        EXPECT_EQ(Std(card.rows[1].useful), "3");
+        EXPECT_EQ(card.rows[0].move, "Kong");
+        EXPECT_EQ(card.rows[0].steps, "ready");
+        EXPECT_EQ(card.rows[1].move, "Pass");
+        EXPECT_EQ(card.rows[1].useful, "3");
         EXPECT_TRUE(FooterHas(card, "keeps your wait and is worth more")) << ::testing::PrintToString(TextOf(card));
     }
 
     TEST(CoachTest, TheOtherClaimIsJudgedByTheNumbersAfterIt) {
         const TableView view = PungOrChowView();
-        const std::optional<HandAction> advice = AdviceFor(view);
+        const Optional<HandAction> advice = AdviceFor(view);
         ASSERT_TRUE(advice.has_value());
         const HandAction other = *advice == kPung ? ChowOf("4p") : kPung;
         ASSERT_TRUE(CanJudge(view, other));
         const int before = Shanten(CountTiles(view.own.concealed), 0);
-        eastl::vector<RatedClaim> rated = RateClaims(view, before, ProfileOf(kDefaultLevel));
+        Vector<RatedClaim> rated = RateClaims(view, before, ProfileOf(kDefaultLevel));
         const auto find = [&](const HandAction& action) {
             for (const RatedClaim& option : rated) {
                 if (option.action == action) {
@@ -516,7 +515,7 @@ namespace BECore::Mahjong::Tests {
         const DiscardRating advised = find(*advice);
         const DiscardRating taken = find(other);
 
-        const std::optional<CoachNote> note = JudgeMove(view, other);
+        const Optional<CoachNote> note = JudgeMove(view, other);
 
         EXPECT_EQ(note.has_value(), advised.shanten != taken.shanten || advised.acceptance != taken.acceptance);
         if (note.has_value()) {
@@ -535,7 +534,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(note.takenSide.numbers, CoachNumbers::None);
         const HintCard card = CardOf(note);
         ASSERT_EQ(card.rows.size(), 2u);
-        EXPECT_EQ(Std(card.rows[0].move), "Mahjong");
+        EXPECT_EQ(card.rows[0].move, "Mahjong");
         EXPECT_TRUE(FooterHas(card, "complete")) << ::testing::PrintToString(TextOf(card));
         EXPECT_FALSE(JudgeMove(view, HandAction::MakeClaim(ClaimKind::Mahjong)).has_value());
     }
@@ -549,14 +548,14 @@ namespace BECore::Mahjong::Tests {
             spec.hands[kSeat1] = other ? kQuiet3 : kQuiet1;
             spec.hands[kSeat2] = other ? kQuiet1 : kQuiet2;
             spec.hands[kSeat3] = other ? kQuiet2 : kQuiet3;
-            spec.live = std::string("Ew ") + (other ? "Gd Wd Nw" : "Nw Wd Gd");
+            spec.live = Format("Ew {}", (other ? "Gd Wd Nw" : "Nw Wd Gd"));
             return MakeTableView(MakeModel(spec), kSeat0);
         };
         const TableView a = turn(false);
         const TableView b = turn(true);
         for (const HandAction& action : a.legal) {
-            const std::optional<CoachNote> noteA = JudgeMove(a, action);
-            const std::optional<CoachNote> noteB = JudgeMove(b, action);
+            const Optional<CoachNote> noteA = JudgeMove(a, action);
+            const Optional<CoachNote> noteB = JudgeMove(b, action);
             ASSERT_EQ(noteA.has_value(), noteB.has_value());
             if (noteA.has_value()) {
                 EXPECT_EQ(*noteA, *noteB);
@@ -578,8 +577,8 @@ namespace BECore::Mahjong::Tests {
         const TableView c = window("1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Rd Wd", kQuiet3);
         const TableView d = window("2p 8p 2s 5s 8s 2m 5m 8m Ww Gd Rd Wd 9p", "4p 7p 4s 7s 4m 7m 1s 1m 9s 9m Rd Wd Gd");
         for (const HandAction& action : c.legal) {
-            const std::optional<CoachNote> noteC = JudgeMove(c, action);
-            const std::optional<CoachNote> noteD = JudgeMove(d, action);
+            const Optional<CoachNote> noteC = JudgeMove(c, action);
+            const Optional<CoachNote> noteD = JudgeMove(d, action);
             ASSERT_EQ(noteC.has_value(), noteD.has_value());
             if (noteC.has_value()) {
                 EXPECT_EQ(*noteC, *noteD);
@@ -594,8 +593,8 @@ namespace BECore::Mahjong::Tests {
 
         const HintCard card = CardOf(note);
 
-        EXPECT_EQ(Std(card.title), "Computer: " + Std(AdviceText(Words(), PairedView(), note.advised)));
-        EXPECT_EQ(Std(card.now), "Steps to ready now: 1");
+        EXPECT_EQ(card.title, Format("Computer: {}", AdviceText(Words(), PairedView(), note.advised)));
+        EXPECT_EQ(card.now, "Steps to ready now: 1");
         ASSERT_EQ(card.rows.size(), 2u);
         EXPECT_EQ(TextOf(card)[2], "Best|Nw ||1|8");
         EXPECT_EQ(TextOf(card)[3], "Yours|5p ||2|27");
@@ -608,22 +607,22 @@ namespace BECore::Mahjong::Tests {
         const CoachNote note = NoteOf(MahjongView(), kPass);
         const CoachTally hand{2, 3};
         const CoachTally match{5, 9};
-        const eastl::string tally = CardTallyText(Words(), hand, match);
-        EXPECT_EQ(Std(tally), "Like the computer: 2 of 3 this hand, 5 of 9 in all");
-        EXPECT_EQ(Std(CardTallyText(Words(), CoachTally{}, match)), "Like the computer: 5 of 9 in the match");
+        const String tally = CardTallyText(Words(), hand, match);
+        EXPECT_EQ(tally, "Like the computer: 2 of 3 this hand, 5 of 9 in all");
+        EXPECT_EQ(CardTallyText(Words(), CoachTally{}, match), "Like the computer: 5 of 9 in the match");
         EXPECT_TRUE(CardTallyText(Words(), CoachTally{}, CoachTally{}).empty());
 
         const HintCard card = CardOf(note, Words(), tally);
 
         ASSERT_EQ(card.footer.size(), kMaxCardFooter);
-        EXPECT_NE(Std(card.footer[0]).find("complete"), std::string::npos);
+        EXPECT_NE(card.footer[0].find("complete"), String::npos);
         EXPECT_EQ(card.footer.back(), tally);
     }
 
     TEST(CoachTest, EveryKindOfNoteMakesAWholeCardInBothLanguages) {
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
-        std::vector<CoachNote> notes;
+        Vector<CoachNote> notes;
         notes.push_back(NoteOf(PairedView(), Discard("5p")));
         notes.push_back(NoteOf(DeclaringView(), Discard("5p", true)));
         notes.push_back(NoteOf(DeclaringView(), Discard("Ew", false)));
@@ -636,10 +635,10 @@ namespace BECore::Mahjong::Tests {
         notes.push_back(NoteOf(WindowView("2m 3m 8m 8m 1s 2s 3s 7s 8s 9s Nw Nw Wd", "4m"), kPass));
 
         ForEachLanguage(strings, [&](PoolString language) {
-            const eastl::string tally = CardTallyText(strings, CoachTally{1, 2}, CoachTally{3, 4});
+            const String tally = CardTallyText(strings, CoachTally{1, 2}, CoachTally{3, 4});
             for (const CoachNote& note : notes) {
                 const HintCard card = CardOf(note, strings, tally);
-                const std::vector<std::string> text = TextOf(card);
+                const Vector<String> text = TextOf(card);
                 ASSERT_EQ(card.rows.size(), 2u) << language.ToStringView().data();
                 EXPECT_EQ(card.rows[0].kind, CardRowKind::Best);
                 EXPECT_EQ(card.rows[1].kind, CardRowKind::Yours);
@@ -647,10 +646,10 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_FALSE(card.now.empty());
                 EXPECT_LE(card.footer.size(), kMaxCardFooter);
                 EXPECT_EQ(card.footer.back(), tally);
-                for (const std::string& line : text) {
-                    EXPECT_EQ(line.find("coach."), std::string::npos) << line;
-                    EXPECT_EQ(line.find("hints."), std::string::npos) << line;
-                    EXPECT_EQ(line.find('{'), std::string::npos) << line;
+                for (const String& line : text) {
+                    EXPECT_EQ(line.find("coach."), String::npos) << line;
+                    EXPECT_EQ(line.find("hints."), String::npos) << line;
+                    EXPECT_EQ(line.find('{'), String::npos) << line;
                 }
             }
         });
@@ -660,7 +659,7 @@ namespace BECore::Mahjong::Tests {
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
         const CoachNote note = NoteOf(PairedView(), Discard("5p"));
-        std::vector<std::vector<std::string>> byLanguage;
+        Vector<Vector<String>> byLanguage;
 
         ForEachLanguage(strings, [&](PoolString) { byLanguage.push_back(TextOf(CardOf(note, strings))); });
 

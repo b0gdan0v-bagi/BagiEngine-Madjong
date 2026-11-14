@@ -101,7 +101,7 @@ namespace BECore::Mahjong::Tests {
         /// Every concealed tile of every seat, and every tile of a concealed kong, is drawn as its own face: the source of the draw is
         /// the atlas cell of the tile the model holds there.
         void ExpectEveryHiddenTileFaceUp() const {
-            const std::vector<DrawCall> calls = TileCalls();
+            const Vector<DrawCall> calls = TileCalls();
             const auto& slots = _table->GetLayout().slots;
             ASSERT_EQ(calls.size(), slots.size());
             int concealed = 0;
@@ -122,7 +122,7 @@ namespace BECore::Mahjong::Tests {
 
         /// No hand tile, no concealed kong tile is a back.
         void ExpectNoBackInAHand() const {
-            const std::vector<DrawCall> calls = TileCalls();
+            const Vector<DrawCall> calls = TileCalls();
             const auto& slots = _table->GetLayout().slots;
             ASSERT_EQ(calls.size(), slots.size());
             for (size_t i = 0; i < slots.size(); ++i) {
@@ -134,7 +134,7 @@ namespace BECore::Mahjong::Tests {
 
         /// The hand tiles of `seat` drawn as backs in the last frame.
         int BacksOf(Seat seat) const {
-            const std::vector<DrawCall> calls = TileCalls();
+            const Vector<DrawCall> calls = TileCalls();
             const auto& slots = _table->GetLayout().slots;
             int backs = 0;
             for (size_t i = 0; i < slots.size() && i < calls.size(); ++i) {
@@ -185,7 +185,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(Hand().GetHand(kSeat1).melds[0].concealed);
         ExpectEveryHiddenTileFaceUp();
         int kongFaces = 0;
-        const std::vector<DrawCall> calls = TileCalls();
+        const Vector<DrawCall> calls = TileCalls();
         for (size_t i = 0; i < calls.size(); ++i) {
             const TileSlot& slot = _table->GetLayout().slots[i];
             kongFaces += slot.role == SlotRole::MeldTile && slot.seat == kSeat1 && SameSource(calls[i], SourceRect(T("5p"))) ? 1 : 0;
@@ -249,7 +249,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(StartWith(kAllComputers, DeclaredModel()));
         EXPECT_EQ(ViewerMarkCount(), 0);
         ASSERT_NO_FATAL_FAILURE(StartWith(kAllComputers, WindowModel()));
-        const eastl::vector<Seat> asked = Hand().PendingClaimSeats();
+        const Vector<Seat> asked = Hand().PendingClaimSeats();
         ASSERT_NE(eastl::find(asked.begin(), asked.end(), kSeat0), asked.end()) << "seat 0 has a claim, and nobody is asked";
         EXPECT_EQ(ViewerMarkCount(), 0);
     }

@@ -29,7 +29,7 @@ namespace BECore::Mahjong::Tests {
         TableLayoutSpecParse parse;
         if (LoadShippedTableLayoutDocument(document)) {
             parse = ParseTableLayoutSpec(document.document_element());
-            for (const eastl::string& error : parse.errors) {
+            for (const String& error : parse.errors) {
                 ADD_FAILURE() << error.c_str();
             }
         }

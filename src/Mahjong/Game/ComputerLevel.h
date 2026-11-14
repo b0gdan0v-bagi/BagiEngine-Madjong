@@ -42,7 +42,7 @@ namespace BECore::Mahjong {
     }
 
     /// The level of `number`, or nothing outside 1..10.
-    [[nodiscard]] constexpr std::optional<ComputerLevel> LevelOf(int64_t number) noexcept {
+    [[nodiscard]] constexpr Optional<ComputerLevel> LevelOf(int64_t number) noexcept {
         if (number < kMinLevel || number > kMaxLevel) {
             return std::nullopt;
         }
@@ -54,8 +54,8 @@ namespace BECore::Mahjong {
 
     /// The text of a level: its number, `1` .. `10` (the value of the `Options` dropdown and of the saved `Setup` choices). A value
     /// outside 1..10 asserts in debug and answers the text of the default.
-    [[nodiscard]] constexpr std::string_view LevelText(ComputerLevel level) noexcept {
-        constexpr std::string_view kTexts[kLevelCount] = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10"};
+    [[nodiscard]] constexpr StringView LevelText(ComputerLevel level) noexcept {
+        constexpr StringView kTexts[kLevelCount] = {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10"};
         const int number = LevelNumber(level);
         if (number < kMinLevel || number > kMaxLevel) {
             ASSERT(false, "a value outside ComputerLevel");
@@ -65,7 +65,7 @@ namespace BECore::Mahjong {
     }
 
     /// The level whose `LevelText` is `text`: exactly `1` .. `10` (no sign, no leading zero, no spaces), nothing else.
-    [[nodiscard]] constexpr std::optional<ComputerLevel> TryParseLevel(std::string_view text) noexcept {
+    [[nodiscard]] constexpr Optional<ComputerLevel> TryParseLevel(StringView text) noexcept {
         for (const ComputerLevel level : kAllLevels) {
             if (text == LevelText(level)) {
                 return level;
@@ -76,7 +76,7 @@ namespace BECore::Mahjong {
 
     /// The level of a name of the two named levels before the scale of numbers: `easy` (1) and `normal` (5), lowercase. Read where such
     /// names were written (the saved `Setup` choices, a version 2 match log) and accepted by the arena; never written.
-    [[nodiscard]] constexpr std::optional<ComputerLevel> TryParseLevelName(std::string_view text) noexcept {
+    [[nodiscard]] constexpr Optional<ComputerLevel> TryParseLevelName(StringView text) noexcept {
         if (text == "easy") {
             return ComputerLevel::Easy;
         }
@@ -88,7 +88,7 @@ namespace BECore::Mahjong {
 
     /// The level of each seat of a table, indexed by seat. All four entries are kept, also those of seats a person plays: a seat that
     /// becomes a computer again plays at the level it had. Only the entries of computer seats play.
-    using SeatLevels = eastl::array<ComputerLevel, kSeatCount>;
+    using SeatLevels = Array<ComputerLevel, kSeatCount>;
 
     /// Every seat at `level`.
     [[nodiscard]] constexpr SeatLevels UniformLevels(ComputerLevel level) noexcept {
@@ -208,7 +208,7 @@ namespace BECore::Mahjong {
     }
 
     /// The levels for an error text: "a whole number 1..10".
-    [[nodiscard]] inline eastl::string LevelRangeText() {
+    [[nodiscard]] inline String LevelRangeText() {
         return Format("a whole number {}..{}", kMinLevel, kMaxLevel);
     }
 

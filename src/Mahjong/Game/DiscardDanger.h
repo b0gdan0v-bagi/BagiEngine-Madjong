@@ -16,7 +16,7 @@ namespace BECore::Mahjong {
     inline constexpr int kSequenceWaysMedium = 2;
 
     /// The grade of every playable kind, indexed by `Tile::Id()`.
-    using DangerTable = eastl::array<Danger, kKindCount>;
+    using DangerTable = Array<Danger, kKindCount>;
 
     /**
      * @brief The rules of the reading, for the seat `v = view.seat` that is about to discard, per kind `t`, against every declared

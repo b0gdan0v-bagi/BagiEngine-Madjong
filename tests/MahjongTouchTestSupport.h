@@ -20,7 +20,7 @@ namespace BECore::Mahjong::Tests {
 
     /// One window of `UILayoutMatrix()`.
     struct MatrixWindow {
-        eastl::string label;
+        String label;
         float outputWidth = 0.0f;
         float outputHeight = 0.0f;
         Rect safeArea;
@@ -132,30 +132,30 @@ namespace BECore::Mahjong::Tests {
     /// taller one, 851 x 393, and 915 x 330 with the insets of the sides, all at density 2.6: every one of them is wider than 2 : 1, so
     /// the wide view), then two portrait ones (390 x 844 at 3 and 360 x 640 at 2). The matrix holds the wide windows of a monitor (21:9
     /// and 32:9 at several sizes, with and without insets).
-    inline const std::vector<MatrixWindow>& PhoneWindows() {
+    inline const Vector<MatrixWindow>& PhoneWindows() {
         constexpr float kPhoneDensity = 2.6f;
         constexpr float kTallPhoneDensity = 3.0f;
         constexpr float kSmallPhoneDensity = 2.0f;
-        static const std::vector<MatrixWindow> windows{MakePhoneWindow(915.0f, 330.0f, kPhoneDensity),
-                                                       MakePhoneWindow(780.0f, 300.0f, kPhoneDensity),
-                                                       MakePhoneWindow(851.0f, 393.0f, kPhoneDensity),
-                                                       MakePhoneWindow(915.0f, 330.0f, kPhoneDensity, SafeAreaSimulation::SideInsets),
-                                                       MakePhoneWindow(780.0f, 300.0f, kPhoneDensity, SafeAreaSimulation::TopNotch),
-                                                       MakePhoneWindow(390.0f, 844.0f, kTallPhoneDensity),
-                                                       MakePhoneWindow(360.0f, 640.0f, kSmallPhoneDensity)};
+        static const Vector<MatrixWindow> windows{MakePhoneWindow(915.0f, 330.0f, kPhoneDensity),
+                                                  MakePhoneWindow(780.0f, 300.0f, kPhoneDensity),
+                                                  MakePhoneWindow(851.0f, 393.0f, kPhoneDensity),
+                                                  MakePhoneWindow(915.0f, 330.0f, kPhoneDensity, SafeAreaSimulation::SideInsets),
+                                                  MakePhoneWindow(780.0f, 300.0f, kPhoneDensity, SafeAreaSimulation::TopNotch),
+                                                  MakePhoneWindow(390.0f, 844.0f, kTallPhoneDensity),
+                                                  MakePhoneWindow(360.0f, 640.0f, kSmallPhoneDensity)};
         return windows;
     }
 
     /// The windows of the compact row (the matrix has none: the narrow table's buttons are 33 px or more in every one of its windows, and the
     /// portrait table's under 339 px wide ones are outside it): the near-square narrow windows, 610 x 600 with side insets too (the inset
     /// lifts the row, so the rule keeps `Actions` there: the window is here for the tests that name it), and two portrait ones. Density 1.
-    inline const std::vector<MatrixWindow>& CompactWindows() {
-        static const std::vector<MatrixWindow> windows{MakePhoneWindow(kCompactWindowWidth, kCompactWindowHeight, 1.0f),
-                                                       MakePhoneWindow(kCompactWindowWidth, kCompactWindowHeight, 1.0f, SafeAreaSimulation::SideInsets),
-                                                       MakePhoneWindow(600.0f, 580.0f, 1.0f),
-                                                       MakePhoneWindow(560.0f, 550.0f, 1.0f),
-                                                       MakePhoneWindow(300.0f, 800.0f, 1.0f),
-                                                       MakePhoneWindow(320.0f, 900.0f, 1.0f, SafeAreaSimulation::SideInsets)};
+    inline const Vector<MatrixWindow>& CompactWindows() {
+        static const Vector<MatrixWindow> windows{MakePhoneWindow(kCompactWindowWidth, kCompactWindowHeight, 1.0f),
+                                                  MakePhoneWindow(kCompactWindowWidth, kCompactWindowHeight, 1.0f, SafeAreaSimulation::SideInsets),
+                                                  MakePhoneWindow(600.0f, 580.0f, 1.0f),
+                                                  MakePhoneWindow(560.0f, 550.0f, 1.0f),
+                                                  MakePhoneWindow(300.0f, 800.0f, 1.0f),
+                                                  MakePhoneWindow(320.0f, 900.0f, 1.0f, SafeAreaSimulation::SideInsets)};
         return windows;
     }
 
@@ -163,12 +163,12 @@ namespace BECore::Mahjong::Tests {
     /// sizes a monitor window or a tablet browser has (1024 x 768, 1080 x 768 the design, 1200 x 800, 800 x 600, 640 x 480, 1500 x 1000 and
     /// 1400 x 1000, a 5:4 monitor) and a tablet 1024 x 768 at density 2. Kept apart from `PhoneWindows` because the loops that run over the
     /// matrix alone (`ForEachMatrixAndNarrowWindow`) visit them too.
-    inline const std::vector<MatrixWindow>& NarrowWindows() {
+    inline const Vector<MatrixWindow>& NarrowWindows() {
         constexpr float kTabletDensity = 2.0f;
-        static const std::vector<MatrixWindow> windows{MakePhoneWindow(1024.0f, 768.0f, 1.0f),  MakePhoneWindow(kNarrowViewWidth, kNarrowViewHeight, 1.0f),
-                                                       MakePhoneWindow(1200.0f, 800.0f, 1.0f),  MakePhoneWindow(800.0f, 600.0f, 1.0f),
-                                                       MakePhoneWindow(640.0f, 480.0f, 1.0f),   MakePhoneWindow(1500.0f, 1000.0f, 1.0f),
-                                                       MakePhoneWindow(1400.0f, 1000.0f, 1.0f), MakePhoneWindow(1024.0f, 768.0f, kTabletDensity)};
+        static const Vector<MatrixWindow> windows{MakePhoneWindow(1024.0f, 768.0f, 1.0f),  MakePhoneWindow(kNarrowViewWidth, kNarrowViewHeight, 1.0f),
+                                                  MakePhoneWindow(1200.0f, 800.0f, 1.0f),  MakePhoneWindow(800.0f, 600.0f, 1.0f),
+                                                  MakePhoneWindow(640.0f, 480.0f, 1.0f),   MakePhoneWindow(1500.0f, 1000.0f, 1.0f),
+                                                  MakePhoneWindow(1400.0f, 1000.0f, 1.0f), MakePhoneWindow(1024.0f, 768.0f, kTabletDensity)};
         return windows;
     }
 
@@ -296,8 +296,8 @@ namespace BECore::Mahjong::Tests {
 
     /// The fullest turn (a win, a declaration, three kongs and the upgrade) and the fullest claim window (all claims, three chows,
     /// pass): the buttons the action canvases have to hold at once.
-    inline const std::vector<std::vector<ButtonKind>>& FullestButtonSets() {
-        static const std::vector<std::vector<ButtonKind>> sets{
+    inline const Vector<Vector<ButtonKind>>& FullestButtonSets() {
+        static const Vector<Vector<ButtonKind>> sets{
             {ButtonKind::Win, ButtonKind::Declare, ButtonKind::ConcealedKong0, ButtonKind::ConcealedKong1, ButtonKind::ConcealedKong2, ButtonKind::UpgradeKong},
             {ButtonKind::ClaimMahjong, ButtonKind::ClaimKong, ButtonKind::ClaimPung, ButtonKind::ClaimChow0, ButtonKind::ClaimChow1, ButtonKind::ClaimChow2, ButtonKind::Pass}};
         return sets;
@@ -317,7 +317,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// The middle of an element of a canvas in output pixels, as the last layout of the canvas puts it (a click point).
-    inline std::pair<float, float> OutputCenterOf(const UICanvasComponent& canvas, const UIElement& element) {
+    inline Pair<float, float> OutputCenterOf(const UICanvasComponent& canvas, const UIElement& element) {
         const Rect output = canvas.GetLayout().GetResolved().transform.ToOutput(element.rect.x, element.rect.y, element.rect.w, element.rect.h);
         return {output.x + output.w * 0.5f, output.y + output.h * 0.5f};
     }
@@ -385,8 +385,7 @@ namespace BECore::Mahjong::Tests {
     /// canvas runs with each of the three scale modes and the user scales 1.0 and 1.5, a `SceneView` canvas once, as the engine's helper
     /// does. Every canvas is laid out against the view of its window's shape; `portraitWindows` false leaves the portrait windows out (a
     /// canvas with no portrait variant yet). Returns the failures, empty when the canvas passes.
-    inline eastl::vector<UIMatrixFailure> MatrixFailuresExceptTouchWhere(UICanvasComponent& canvas, float minTouchSize, const std::function<bool(const MatrixWindow&)>& skip,
-                                                                         bool portraitWindows = true) {
+    inline Vector<UIMatrixFailure> MatrixFailuresExceptTouchWhere(UICanvasComponent& canvas, float minTouchSize, const std::function<bool(const MatrixWindow&)>& skip, bool portraitWindows = true) {
         canvas.UpdateLayout(kViewWidth, kViewHeight);
         UICanvasLayout& layout = canvas.GetLayout();
         const UICanvasScaleParams saved = layout.params;
@@ -395,7 +394,7 @@ namespace BECore::Mahjong::Tests {
         const CanvasScaleMode modes[] = {CanvasScaleMode::ConstantPixelSize, CanvasScaleMode::ScaleWithScreen, CanvasScaleMode::ConstantPhysicalSize};
         const float userScales[] = {1.0f, 1.5f};
 
-        eastl::vector<UIMatrixFailure> failures;
+        Vector<UIMatrixFailure> failures;
         ForEachMatrixAndNarrowWindow([&](const MatrixWindow& window) {
             if (!portraitWindows && ShapeOf(window) == TableShape::Portrait) {
                 return;
@@ -417,12 +416,12 @@ namespace BECore::Mahjong::Tests {
                     UILayoutValidatorOptions options;
                     options.minTouchSize = minTouchSize;
                     options.pixelDensity = window.pixelDensity;
-                    eastl::vector<UILayoutIssue> issues = layout.Validate(options);
+                    Vector<UILayoutIssue> issues = layout.Validate(options);
                     if (dropTouch) {
                         issues.erase(eastl::remove_if(issues.begin(), issues.end(), [](const UILayoutIssue& issue) { return issue.kind == UILayoutIssueKind::TouchTargetTooSmall; }), issues.end());
                     }
                     if (!issues.empty()) {
-                        const eastl::string_view modeName = screen ? EnumUtils<CanvasScaleMode>::ToString(mode) : eastl::string_view("-");
+                        const StringView modeName = screen ? EnumUtils<CanvasScaleMode>::ToString(mode) : StringView("-");
                         failures.push_back({Format("{} {} x{}", window.label, modeName, userScale), std::move(issues)});
                     }
                 }
@@ -438,7 +437,7 @@ namespace BECore::Mahjong::Tests {
     /// this asks every shown label and button on the text it shows, with `air` units kept free each side of an interactive one, in every
     /// window, scale mode and user scale of the matrix (a `SceneView` canvas once per window; with `only` the windows of that shape alone).
     /// Returns a line per control that cuts its text, empty when every word fits.
-    inline std::vector<std::string> WordsThatDoNotFitOnTheMatrix(UICanvasComponent& canvas, float air, std::optional<TableShape> only = std::nullopt) {
+    inline Vector<String> WordsThatDoNotFitOnTheMatrix(UICanvasComponent& canvas, float air, Optional<TableShape> only = std::nullopt) {
         canvas.UpdateLayout(kViewWidth, kViewHeight);
         UICanvasLayout& layout = canvas.GetLayout();
         const UICanvasScaleParams saved = layout.params;
@@ -447,7 +446,7 @@ namespace BECore::Mahjong::Tests {
         const CanvasScaleMode modes[] = {CanvasScaleMode::ConstantPixelSize, CanvasScaleMode::ScaleWithScreen, CanvasScaleMode::ConstantPhysicalSize};
         const float userScales[] = {1.0f, 1.5f};
 
-        std::vector<std::string> cut;
+        Vector<String> cut;
         ForEachMatrixAndNarrowWindow([&](const MatrixWindow& window) {
             if (only.has_value() && ShapeOf(window) != *only) {
                 return;
@@ -465,7 +464,7 @@ namespace BECore::Mahjong::Tests {
                     }
                     layout.Update(ContextOf(window, userScale));
                     const float scale = layout.GetResolved().scale;
-                    std::vector<const UIElement*> controls;
+                    Vector<const UIElement*> controls;
                     CollectTextControls(canvas.GetRoot(), controls);
                     for (const UIElement* control : controls) {
                         if (control->rect.IsEmpty()) {
@@ -474,9 +473,9 @@ namespace BECore::Mahjong::Tests {
                         const float spare = control->IsInteractive() ? air : 0.0f;
                         const UIContentFit fit = control->CheckContent(control->rect.w - 2.0f * spare, control->rect.h, scale);
                         if (fit.hasContent && !fit.fits) {
-                            const eastl::string_view modeName = screen ? EnumUtils<CanvasScaleMode>::ToString(mode) : eastl::string_view("-");
-                            cut.push_back(std::string(
-                                Format("{} {} x{}: {} ({} x {}) scale {}", window.label, modeName, userScale, control->name.ToStringView(), control->rect.w, control->rect.h, scale).c_str()));
+                            const StringView modeName = screen ? EnumUtils<CanvasScaleMode>::ToString(mode) : StringView("-");
+                            cut.push_back(
+                                String(Format("{} {} x{}: {} ({} x {}) scale {}", window.label, modeName, userScale, control->name.ToStringView(), control->rect.w, control->rect.h, scale).c_str()));
                         }
                     }
                 }

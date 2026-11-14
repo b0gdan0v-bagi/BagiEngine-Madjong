@@ -26,7 +26,7 @@ namespace BECore::Mahjong {
     [[nodiscard]] Json SeatOrNull(Seat seat);
 
     /// A list of tiles in the notation of `Tile.h`.
-    [[nodiscard]] Json TilesToJson(const eastl::vector<Tile>& tiles);
+    [[nodiscard]] Json TilesToJson(const Vector<Tile>& tiles);
 
     /// One number per seat (points, scores, changes).
     [[nodiscard]] Json SeatScoresToJson(const SeatScores& scores);
@@ -36,8 +36,8 @@ namespace BECore::Mahjong {
     [[nodiscard]] Json BreakdownToJson(const ScoreBreakdown& breakdown);
 
     /// The setup of "PCCC"-style letters (P a person, C a computer), nullopt unless it is exactly four of them; and back.
-    [[nodiscard]] std::optional<SeatSetup> ReadSeats(const eastl::string& letters);
-    [[nodiscard]] eastl::string SeatsToLetters(const SeatSetup& seats);
+    [[nodiscard]] Optional<SeatSetup> ReadSeats(const String& letters);
+    [[nodiscard]] String SeatsToLetters(const SeatSetup& seats);
 
     /// An action as the object `list_actions` gives: {"type": "discard", "tile", "declareCalling"}, {"type": "win"},
     /// {"type": "concealed_kong" | "upgrade_kong", "tile"}, {"type": "claim", "claim": "chow" | "pung" | "kong" | "mahjong", "first" for

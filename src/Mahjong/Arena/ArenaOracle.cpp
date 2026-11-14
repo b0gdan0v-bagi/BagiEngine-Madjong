@@ -71,7 +71,7 @@ namespace BECore::Mahjong::Arena {
             if (wins[normal.tile.Id()] == 0) {
                 return normal;
             }
-            const eastl::vector<DiscardOption> options = RateDiscards(CountTiles(view.own.concealed), MeldCountOf(view), view);
+            const Vector<DiscardOption> options = RateDiscards(CountTiles(view.own.concealed), MeldCountOf(view), view);
             if (options.empty()) {
                 return normal;
             }
@@ -95,13 +95,13 @@ namespace BECore::Mahjong::Arena {
     }  // namespace
 
     WorldSource MakeTrueWorlds(const HandModel& hand, bool wallOrderKnown) {
-        const std::shared_ptr<const HandState> real = std::make_shared<const HandState>(hand.Capture());
-        return [real, wallOrderKnown](const TableView&, MahjongRng& rng) -> std::optional<HandModel> {
+        const SharedPtr<const HandState> real = MakeShared<const HandState>(hand.Capture());
+        return [real, wallOrderKnown](const TableView&, MahjongRng& rng) -> Optional<HandModel> {
             HandState world = *real;
             if (!wallOrderKnown) {
                 const size_t looseCount = world.loose.size();
                 const size_t liveCount = world.live.size();
-                eastl::vector<Tile> wall = world.loose;
+                Vector<Tile> wall = world.loose;
                 wall.insert(wall.end(), world.live.begin(), world.live.end());
                 wall.insert(wall.end(), world.dead.begin(), world.dead.end());
                 rng.Shuffle(wall);
@@ -109,7 +109,7 @@ namespace BECore::Mahjong::Arena {
                 world.live.assign(wall.begin() + looseCount, wall.begin() + looseCount + liveCount);
                 world.dead.assign(wall.begin() + looseCount + liveCount, wall.end());
             }
-            std::expected<HandModel, eastl::string> restored = HandModel::Restore(eastl::move(world));
+            std::expected<HandModel, String> restored = HandModel::Restore(eastl::move(world));
             if (!restored.has_value()) {
                 return std::nullopt;
             }

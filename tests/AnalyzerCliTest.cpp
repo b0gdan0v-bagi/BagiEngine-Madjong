@@ -15,7 +15,7 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        using Args = eastl::vector<std::string_view>;
+        using Args = Vector<StringView>;
 
         constexpr SeatSetup kAllComputers{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
         constexpr int kHandLimit = 200;
@@ -34,7 +34,7 @@ namespace BECore::Mahjong::Tests {
                                                "pending 5p from 3\n";
 
         /// The match log of four computers as the text of a log file.
-        std::string PlayedLogText(bool withHandEvents) {
+        String PlayedLogText(bool withHandEvents) {
             Match match;
             TableSession session(match);
             MatchLog log;
@@ -48,28 +48,28 @@ namespace BECore::Mahjong::Tests {
                     EXPECT_TRUE(session.NextHand().has_value());
                 }
             }
-            std::string text;
+            String text;
             for (const MatchLogEvent& event : log.Events()) {
                 if (withHandEvents || event.kind != MatchLogKind::Hand) {
-                    text += EventToJson(event).dump() + "\n";
+                    AppendFormat(text, "{}\n", EventToJson(event).dump());
                 }
             }
             return text;
         }
 
-        const std::string& CompleteLog() {
-            static const std::string text = PlayedLogText(true);
+        const String& CompleteLog() {
+            static const String text = PlayedLogText(true);
             return text;
         }
 
         /// A reader over a few named strings.
-        Analyzer::FileReader ReaderOf(std::map<std::string, std::string> files) {
-            return [files = std::move(files)](std::string_view path) -> std::expected<eastl::string, eastl::string> {
-                const auto found = files.find(std::string(path));
+        Analyzer::FileReader ReaderOf(Map<String, String> files) {
+            return [files = std::move(files)](StringView path) -> std::expected<String, String> {
+                const auto found = files.find(path);
                 if (found == files.end()) {
-                    return std::unexpected(eastl::string("no such file"));
+                    return std::unexpected(String("no such file"));
                 }
-                return eastl::string(found->second.data(), found->second.size());
+                return String(found->second.data(), found->second.size());
             };
         }
 
@@ -79,14 +79,14 @@ namespace BECore::Mahjong::Tests {
 
         struct CliRun {
             int code = 0;
-            std::string out;
-            std::string err;
+            String out;
+            String err;
         };
 
         CliRun RunWith(const Analyzer::FileReader& reader, const Args& args) {
             Analyzer::AnalyzerCliOutput output;
             CliRun run;
-            run.code = Analyzer::RunAnalyzerCli(eastl::span<const std::string_view>(args.data(), args.size()), reader, output);
+            run.code = Analyzer::RunAnalyzerCli(Span<const StringView>(args.data(), args.size()), reader, output);
             run.out = output.out.c_str();
             run.err = output.err.c_str();
             return run;
@@ -96,52 +96,52 @@ namespace BECore::Mahjong::Tests {
             return RunWith(StandardReader(), args);
         }
 
-        std::expected<Analyzer::AnalyzerArgs, eastl::string> Parse(const Args& args) {
-            return Analyzer::ParseAnalyzerArgs(eastl::span<const std::string_view>(args.data(), args.size()));
+        std::expected<Analyzer::AnalyzerArgs, String> Parse(const Args& args) {
+            return Analyzer::ParseAnalyzerArgs(Span<const StringView>(args.data(), args.size()));
         }
 
-        std::string ErrorOf(const Args& args) {
-            const std::expected<Analyzer::AnalyzerArgs, eastl::string> parsed = Parse(args);
+        String ErrorOf(const Args& args) {
+            const std::expected<Analyzer::AnalyzerArgs, String> parsed = Parse(args);
             EXPECT_FALSE(parsed.has_value());
-            return parsed.has_value() ? std::string() : std::string(parsed.error().c_str());
+            return parsed.has_value() ? String() : String(parsed.error().c_str());
         }
 
-        size_t Count(const std::string& text, const std::string& part) {
+        size_t Count(const String& text, const String& part) {
             size_t count = 0;
-            for (size_t at = text.find(part); at != std::string::npos; at = text.find(part, at + part.size())) {
+            for (size_t at = text.find(part); at != String::npos; at = text.find(part, at + part.size())) {
                 ++count;
             }
             return count;
         }
 
-        bool Has(const std::string& text, const std::string& part) {
-            return text.find(part) != std::string::npos;
+        bool Has(const String& text, const String& part) {
+            return text.find(part) != String::npos;
         }
 
         /// The rows of the table of the first report in `text`: the lines between the `action` header line and the next empty line.
-        size_t TableRows(const std::string& text) {
+        size_t TableRows(const String& text) {
             const size_t header = text.find("\naction ");
-            EXPECT_NE(header, std::string::npos);
+            EXPECT_NE(header, String::npos);
             const size_t begin = text.find('\n', header + 1);
             const size_t end = text.find("\n\n", begin);
-            const std::string table = text.substr(begin + 1, (end == std::string::npos ? text.size() : end) - begin - 1);
+            const String table = text.substr(begin + 1, (end == String::npos ? text.size() : end) - begin - 1);
             return Count(table, "\n") + (table.empty() || table.back() == '\n' ? 0 : 1);
         }
 
         /// The decisions of a seat in hand 1 of the played log.
-        eastl::vector<Analyzer::LogPosition> DecisionsOf(Seat seat) {
-            const std::expected<eastl::vector<MatchLogEvent>, eastl::string> events = ParseMatchLog(CompleteLog());
+        Vector<Analyzer::LogPosition> DecisionsOf(Seat seat) {
+            const std::expected<Vector<MatchLogEvent>, String> events = ParseMatchLog(CompleteLog());
             EXPECT_TRUE(events.has_value());
-            const std::expected<eastl::vector<Analyzer::LogPosition>, eastl::string> positions = Analyzer::PositionsOfSeat(*events, 1, seat);
+            const std::expected<Vector<Analyzer::LogPosition>, String> positions = Analyzer::PositionsOfSeat(*events, 1, seat);
             EXPECT_TRUE(positions.has_value());
-            return positions.has_value() ? *positions : eastl::vector<Analyzer::LogPosition>();
+            return positions.has_value() ? *positions : Vector<Analyzer::LogPosition>();
         }
 
     }  // namespace
 
     TEST(AnalyzerCliTest, TheDefaultsAreTheDefaultsOfTheConfigAndEveryOptionIsRead) {
         const Args minimal{"--position", kPositionName};
-        const std::expected<Analyzer::AnalyzerArgs, eastl::string> defaults = Parse(minimal);
+        const std::expected<Analyzer::AnalyzerArgs, String> defaults = Parse(minimal);
         ASSERT_TRUE(defaults.has_value());
         EXPECT_EQ(defaults->positionFile, kPositionName);
         EXPECT_EQ(defaults->config.worlds, Analyzer::kDefaultWorlds);
@@ -151,7 +151,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(defaults->help);
 
         const Args oneDecision{"--log", kLogName, "--hand", "2", "--action", "5", "--worlds", "30", "--seed", "9", "--jobs", "2", "--json"};
-        const std::expected<Analyzer::AnalyzerArgs, eastl::string> decision = Parse(oneDecision);
+        const std::expected<Analyzer::AnalyzerArgs, String> decision = Parse(oneDecision);
         ASSERT_TRUE(decision.has_value()) << decision.error().c_str();
         EXPECT_EQ(decision->logFile, kLogName);
         EXPECT_EQ(decision->hand, 2);
@@ -163,20 +163,20 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(decision->jobs, 2);
         EXPECT_TRUE(decision->json);
 
-        const std::expected<Analyzer::AnalyzerArgs, eastl::string> seat = Parse({"--log", kLogName, "--hand", "1", "--seat", "3"});
+        const std::expected<Analyzer::AnalyzerArgs, String> seat = Parse({"--log", kLogName, "--hand", "1", "--seat", "3"});
         ASSERT_TRUE(seat.has_value());
         ASSERT_TRUE(seat->seat.has_value());
         EXPECT_EQ(*seat->seat, 3);
         EXPECT_FALSE(seat->action.has_value());
 
-        const std::expected<Analyzer::AnalyzerArgs, eastl::string> allCores = Parse({"--position", kPositionName, "--jobs", "0"});
+        const std::expected<Analyzer::AnalyzerArgs, String> allCores = Parse({"--position", kPositionName, "--jobs", "0"});
         ASSERT_TRUE(allCores.has_value());
         EXPECT_GE(allCores->jobs, 1);
         EXPECT_LE(allCores->jobs, Analyzer::kMaxJobs);
     }
 
     TEST(AnalyzerCliTest, HelpWinsOverEverythingAfterItAndAnalyzesNothing) {
-        const std::expected<Analyzer::AnalyzerArgs, eastl::string> parsed = Parse({"--help", "--bogus"});
+        const std::expected<Analyzer::AnalyzerArgs, String> parsed = Parse({"--help", "--bogus"});
         ASSERT_TRUE(parsed.has_value());
         EXPECT_TRUE(parsed->help);
         const CliRun run = RunCli({"--help"});
@@ -222,9 +222,9 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(AnalyzerCliTest, OneLogDecisionGivesTheHeaderAndARowPerLegalAction) {
-        const std::expected<eastl::vector<MatchLogEvent>, eastl::string> events = ParseMatchLog(CompleteLog());
+        const std::expected<Vector<MatchLogEvent>, String> events = ParseMatchLog(CompleteLog());
         ASSERT_TRUE(events.has_value());
-        const std::expected<Analyzer::LogPosition, eastl::string> position = Analyzer::PositionFromLog(*events, 1, 0);
+        const std::expected<Analyzer::LogPosition, String> position = Analyzer::PositionFromLog(*events, 1, 0);
         ASSERT_TRUE(position.has_value());
 
         const CliRun run = RunCli({"--log", kLogName, "--hand", "1", "--action", "0", "--worlds", kWorlds});
@@ -232,7 +232,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(run.err.empty());
         EXPECT_TRUE(Has(run.out, "EV of every legal action"));
         EXPECT_TRUE(Has(run.out, "not an equilibrium"));
-        EXPECT_TRUE(Has(run.out, std::string("position: ") + kLogName + ", hand 1, action 0"));
+        EXPECT_TRUE(Has(run.out, Format("position: {}, hand 1, action 0", kLogName)));
         EXPECT_EQ(TableRows(run.out), position->view.legal.size());
         EXPECT_EQ(Count(run.out, "logged"), 1U);
         EXPECT_EQ(Count(run.out, "position:"), 1U);
@@ -240,12 +240,12 @@ namespace BECore::Mahjong::Tests {
 
     TEST(AnalyzerCliTest, ASeatGivesOneReportPerDecisionAndASkipLineForASingleLegalAction) {
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            const eastl::vector<Analyzer::LogPosition> decisions = DecisionsOf(seat);
+            const Vector<Analyzer::LogPosition> decisions = DecisionsOf(seat);
             size_t compared = 0;
             for (const Analyzer::LogPosition& decision : decisions) {
                 compared += decision.view.legal.size() > 1 ? 1 : 0;
             }
-            const std::string seatText = std::to_string(seat);
+            const String seatText = Format("{}", seat);
             const CliRun text = RunCli({"--log", kLogName, "--hand", "1", "--seat", seatText, "--worlds", kFewWorlds});
             EXPECT_EQ(text.code, Analyzer::kExitOk) << text.err;
             EXPECT_EQ(Count(text.out, "position:"), compared) << "seat " << seat;
@@ -261,16 +261,16 @@ namespace BECore::Mahjong::Tests {
         const CliRun run = RunCli({"--log", kLogName, "--hand", "1", "--action", "0", "--worlds", kWorlds, "--json"});
         ASSERT_EQ(run.code, Analyzer::kExitOk) << run.err;
         ASSERT_EQ(Count(run.out, "\n"), 1U);
-        const std::expected<Json, ControlError> json = ParseJson(eastl::string(run.out.c_str()));
+        const std::expected<Json, ControlError> json = ParseJson(String(run.out.c_str()));
         ASSERT_TRUE(json.has_value());
         EXPECT_EQ((*json)["version"].get<int>(), Analyzer::kAnalysisJsonVersion);
-        EXPECT_EQ((*json)["source"].get<std::string>(), kLogName);
+        EXPECT_EQ((*json)["source"].get<std::string>(), kLogName);  //-NoStd: nlohmann reads a string as std::string
         EXPECT_EQ((*json)["hand"].get<int>(), 1);
         EXPECT_TRUE((*json)["actions"].is_array());
     }
 
     TEST(AnalyzerCliTest, TheBytesAreTheSameAtAnyNumberOfJobs) {
-        const std::string jobs = std::to_string(kOtherJobs);
+        const String jobs = Format("{}", kOtherJobs);
         for (const bool json : {false, true}) {
             Args one{"--log", kLogName, "--hand", "1", "--action", "2", "--worlds", kWorlds, "--seed", "5", "--jobs", "1"};
             Args several = one;
@@ -300,9 +300,9 @@ namespace BECore::Mahjong::Tests {
             ASSERT_EQ(complete.code, Analyzer::kExitOk) << complete.err;
             ASSERT_EQ(bare.code, Analyzer::kExitOk) << bare.err;
             // The report names the file it came from: that is the one line allowed to differ.
-            std::string normalized = bare.out;
-            for (size_t at = normalized.find("bare.jsonl"); at != std::string::npos; at = normalized.find("bare.jsonl", at)) {
-                normalized.replace(at, std::string("bare.jsonl").size(), "complete.jsonl");
+            String normalized = bare.out;
+            for (size_t at = normalized.find("bare.jsonl"); at != String::npos; at = normalized.find("bare.jsonl", at)) {
+                normalized.replace(at, String("bare.jsonl").size(), "complete.jsonl");
             }
             EXPECT_EQ(complete.out, normalized) << "seat " << seat;
         }
@@ -311,7 +311,7 @@ namespace BECore::Mahjong::Tests {
     TEST(AnalyzerCliTest, AHandWrittenPositionIsReadThroughTheReader) {
         const CliRun run = RunCli({"--position", kPositionName, "--worlds", kWorlds});
         EXPECT_EQ(run.code, Analyzer::kExitOk) << run.err;
-        EXPECT_TRUE(Has(run.out, std::string("position: ") + kPositionName));
+        EXPECT_TRUE(Has(run.out, Format("position: {}", kPositionName)));
         EXPECT_TRUE(Has(run.out, "claim pung"));
         EXPECT_TRUE(Has(run.out, "pass"));
         EXPECT_FALSE(Has(run.out, "logged"));

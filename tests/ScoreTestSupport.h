@@ -67,9 +67,9 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// The input of a seat that does not win: the concealed tiles and the bonus tiles as notation, the melds, the winds.
-    inline ScoreInput MakeInput(const std::string& concealed, std::initializer_list<Meld> melds = {}, const std::string& bonus = "", Wind seatWind = Wind::East, Wind roundWind = Wind::East) {
+    inline ScoreInput MakeInput(const String& concealed, std::initializer_list<Meld> melds = {}, const String& bonus = "", Wind seatWind = Wind::East, Wind roundWind = Wind::East) {
         ScoreInput input;
-        const eastl::vector<Tile> tiles = ParseTiles(concealed).value();
+        const Vector<Tile> tiles = ParseTiles(concealed).value();
         for (const Tile tile : tiles) {
             input.hand.AddConcealed(tile);
         }
@@ -83,7 +83,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// The input of the winner: `concealed` holds the winning tile `winningTile`, which came by `source`.
-    inline ScoreInput MakeWinnerInput(const std::string& concealed, const char* winningTile, WinSource source = WinSource::SelfDraw, std::initializer_list<Meld> melds = {}, Wind seatWind = Wind::East,
+    inline ScoreInput MakeWinnerInput(const String& concealed, const char* winningTile, WinSource source = WinSource::SelfDraw, std::initializer_list<Meld> melds = {}, Wind seatWind = Wind::East,
                                       Wind roundWind = Wind::East) {
         ScoreInput input = MakeInput(concealed, melds, "", seatWind, roundWind);
         input.won = true;

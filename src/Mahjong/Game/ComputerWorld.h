@@ -54,6 +54,6 @@ namespace BECore::Mahjong {
      * does not fit the places (no wall length is possible, a hand too short, a kong with no kind to be, a pile that disagrees with
      * the discard counts, a robbed kong with no pung, or `legal` that the sample cannot reproduce).
      */
-    [[nodiscard]] std::optional<HandModel> SampleWorld(const TableView& view, MahjongRng& rng);
+    [[nodiscard]] Optional<HandModel> SampleWorld(const TableView& view, MahjongRng& rng);
 
 }  // namespace BECore::Mahjong

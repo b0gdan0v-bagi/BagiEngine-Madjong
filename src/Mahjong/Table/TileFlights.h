@@ -48,10 +48,10 @@ namespace BECore::Mahjong {
     struct TableSnapshot {
         TableLayout layout;
         /// Per seat its concealed tiles in order (slot `HandTile` `i` is tile `i`); empty when that hand was not face up (a row of backs).
-        eastl::array<eastl::vector<Tile>, kSeatCount> openHand;
+        Array<Vector<Tile>, kSeatCount> openHand;
         /// `Discards()` by entry (the seat of an entry is that of its `DiscardTile` slot).
-        eastl::vector<Tile> pile;
-        eastl::array<eastl::vector<Meld>, kSeatCount> melds;
+        Vector<Tile> pile;
+        Array<Vector<Meld>, kSeatCount> melds;
         int wallRemaining = 0;
         /// The seat that has just drawn and holds the tile, `kNoSeat` otherwise.
         Seat drawSeat = kNoSeat;
@@ -92,7 +92,7 @@ namespace BECore::Mahjong {
      *
      * Empty when `before` has no slots, the viewer or the view size differ, or nothing is new. In the order of the slots of `after`.
      */
-    [[nodiscard]] eastl::vector<TileFlight> PlanFlights(const TableSnapshot& before, const TableSnapshot& after, eastl::span<const HandMove> newMoves);
+    [[nodiscard]] Vector<TileFlight> PlanFlights(const TableSnapshot& before, const TableSnapshot& after, Span<const HandMove> newMoves);
 
     /// How a tile is handed to a draw: the unturned rectangle, the turn in degrees clockwise and the pivot (`DrawTransform`); the tile
     /// covers the screen rectangle it was made from when the turn is a quarter or three quarters.

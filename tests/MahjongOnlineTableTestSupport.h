@@ -21,7 +21,7 @@ namespace BECore::Mahjong::Tests {
         constexpr int kPumpLimit = 2000;
         constexpr std::chrono::milliseconds kTick{10};
         constexpr float kFrameSeconds = 1.0f / 60.0f;
-        constexpr eastl::string_view kUrl = "ws://hub.test";
+        constexpr StringView kUrl = "ws://hub.test";
         constexpr const char* kHostName = "Ann";
 
     }  // namespace
@@ -52,7 +52,7 @@ namespace BECore::Mahjong::Tests {
         /// One frame as the application runs it: the clock of the world, the others read what came, the scene updates and draws.
         void Frame() {
             _world.Advance(kTick);
-            for (const std::unique_ptr<HubPlayer>& other : _others) {
+            for (const UniquePtr<HubPlayer>& other : _others) {
                 other->Update();
             }
             AdvanceTime(kFrameSeconds);
@@ -83,7 +83,7 @@ namespace BECore::Mahjong::Tests {
                 if (static_cast<int>(_others.size()) == others) {
                     break;
                 }
-                _others.push_back(std::make_unique<HubPlayer>(_world));
+                _others.push_back(MakeUnique<HubPlayer>(_world));
                 HubPlayer& player = *_others.back();
                 ASSERT_TRUE(player.Client().Join(kUrl, client.Room(), name));
                 ASSERT_TRUE(PumpUntil([&] { return player.Client().Stage() == OnlineStage::Lobby; }));
@@ -119,7 +119,7 @@ namespace BECore::Mahjong::Tests {
                 if (done()) {
                     return true;
                 }
-                for (const std::unique_ptr<HubPlayer>& other : _others) {
+                for (const UniquePtr<HubPlayer>& other : _others) {
                     other->ActFirst();
                 }
                 OnlineClient& client = _game->GetOnline();
@@ -133,7 +133,7 @@ namespace BECore::Mahjong::Tests {
 
         MahjongHubWorld _world;
         HubClientLinks _links;
-        std::vector<std::unique_ptr<HubPlayer>> _others;
+        Vector<UniquePtr<HubPlayer>> _others;
         std::filesystem::path _folder;
     };
 

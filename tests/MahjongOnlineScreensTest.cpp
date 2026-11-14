@@ -2,6 +2,7 @@
 #include "ShippedScene.h"
 #include "StringsTestSupport.h"
 
+#include <Common/Printers.h>
 #include <Mahjong/Online/OnlineScreens.h>
 #include <Mahjong/Online/OnlineServerUrl.h>
 #include <Mahjong/Online/OnlineWords.h>
@@ -18,15 +19,15 @@ namespace BECore::Mahjong::Tests {
 
         using std::chrono::milliseconds;
 
-        constexpr eastl::string_view kUrl = "ws://hub.test";
+        constexpr StringView kUrl = "ws://hub.test";
         constexpr milliseconds kTick{10};
         constexpr int kStepLimit = 20000;
         constexpr int kSettleSteps = 10;
         constexpr int kSeats = 4;
         constexpr int kHostSeat = 0;
 
-        std::string Std(eastl::string_view text) {
-            return std::string(text.data(), text.size());
+        String Std(StringView text) {
+            return String(text.data(), text.size());
         }
 
         /// One person at one screen: the client on a world, the pages over it and a string table of its own.
@@ -57,7 +58,7 @@ namespace BECore::Mahjong::Tests {
                 while (screens.Backspace()) {
                 }
                 for (const char* c = text; *c != '\0'; ++c) {
-                    ASSERT_TRUE(screens.Type(eastl::string_view(c, 1))) << *c;
+                    ASSERT_TRUE(screens.Type(StringView(c, 1))) << *c;
                 }
                 ASSERT_TRUE(screens.Done());
             }
@@ -67,7 +68,7 @@ namespace BECore::Mahjong::Tests {
             OnlineScreens screens;
         };
 
-        using People = std::vector<Person*>;
+        using People = Vector<Person*>;
 
         void Step(MahjongHubWorld& world, const People& people) {
             world.Advance(kTick);
@@ -113,7 +114,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// A person types a name and the code and enters; the caller waits.
-        bool EnterRoom(Person& person, const eastl::string& code, const char* name) {
+        bool EnterRoom(Person& person, const String& code, const char* name) {
             person.screens.Open(person.Client());
             EXPECT_TRUE(person.screens.ShowJoin());
             person.Fill(OnlineField::Name, name);
@@ -146,15 +147,15 @@ namespace BECore::Mahjong::Tests {
             return RunUntil(world, pumped, [&] { return !person.Client().Rooms().pending; });
         }
 
-        std::string HostOfRow(Person& person, int row) {
+        String HostOfRow(Person& person, int row) {
             return Std(person.Client().Rooms().rooms[person.screens.RoomIndex(row)].host);
         }
 
-        std::string NoticeOf(const Person& person) {
+        String NoticeOf(const Person& person) {
             return Std(person.screens.NoticeKey());
         }
 
-        std::string KeyOf(eastl::string_view code) {
+        String KeyOf(StringView code) {
             return Std(OnlineErrorKey(code));
         }
 
@@ -249,7 +250,7 @@ namespace BECore::Mahjong::Tests {
         Person guest(world);
         ASSERT_TRUE(HostRoom(world, host));
 
-        eastl::string lower = host.Client().Room();
+        String lower = host.Client().Room();
         for (char& c : lower) {
             c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
         }
@@ -495,7 +496,7 @@ namespace BECore::Mahjong::Tests {
         Person first(world);
         ASSERT_TRUE(HostRoom(world, first));
         ASSERT_TRUE(StartGame(world, first));
-        const eastl::string room = first.Client().Room();
+        const String room = first.Client().Room();
         const RoomSession session = first.Client().SessionToKeep();
         ASSERT_TRUE(session.IsValid());
 
@@ -551,7 +552,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(second.screens.Resume(second.Client(), session));
         ASSERT_TRUE(RunUntil(world, {&second}, [&] { return InStage(second, OnlineStage::Idle) && second.screens.Page() != OnlinePage::Lobby; }));
         EXPECT_EQ(second.screens.Page(), OnlinePage::Menu);
-        const std::string key = NoticeOf(second);
+        const String key = NoticeOf(second);
         EXPECT_TRUE(key == KeyOf(RoomErrors::kUnknownRoom) || key == KeyOf(RoomErrors::kBadToken)) << key;
         EXPECT_FALSE(second.screens.CanReturn());
         EXPECT_FALSE(second.Client().SessionToKeep().IsValid());
@@ -624,7 +625,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Std(person.screens.Code().Text()), "MM7NN");
         ASSERT_TRUE(person.screens.Done());
         ASSERT_TRUE(person.screens.FocusField(OnlineField::Name));
-        const std::string name = Std(person.screens.Name().Text());
+        const String name = Std(person.screens.Name().Text());
         EXPECT_FALSE(person.screens.PasteCode("zz7zz"));
         EXPECT_EQ(Std(person.screens.Code().Text()), "MM7NN");
         EXPECT_EQ(Std(person.screens.Name().Text()), name);
@@ -758,12 +759,12 @@ namespace BECore::Mahjong::Tests {
         /// The config as the game reads it: a root with a `webServer` attribute (`value` null: no attribute).
         OnlineServerConfig ConfigWith(const char* value) {
             const XmlConfig config = XmlConfig::Create();
-            const eastl::string xml = value != nullptr ? eastl::string("<root webServer=\"") + value + "\"/>" : eastl::string("<root/>");
-            EXPECT_TRUE(config.LoadFromString(eastl::string_view(xml.data(), xml.size())));
+            const String xml = value != nullptr ? Format("<root webServer=\"{}\"/>", value) : String("<root/>");
+            EXPECT_TRUE(config.LoadFromString(xml));
             return ReadOnlineServerConfig(config.GetRoot());
         }
 
-        const eastl::string kStandardUrl(kDefaultOnlineServerUrl.data(), kDefaultOnlineServerUrl.size());
+        const String kStandardUrl(kDefaultOnlineServerUrl.data(), kDefaultOnlineServerUrl.size());
 
     }  // namespace
 
@@ -771,21 +772,21 @@ namespace BECore::Mahjong::Tests {
         const OnlineServerConfig hosted = ConfigWith("wss://rooms.example.test");
         EXPECT_EQ(OnlineServerUrl(false, nullptr, hosted), kStandardUrl);
         EXPECT_EQ(OnlineServerUrl(false, "", hosted), kStandardUrl) << "an empty variable is no variable";
-        EXPECT_EQ(OnlineServerUrl(false, "ws://example.test:9", hosted), eastl::string("ws://example.test:9"));
+        EXPECT_EQ(OnlineServerUrl(false, "ws://example.test:9", hosted), String("ws://example.test:9"));
         EXPECT_EQ(OnlineServerUrl(false, nullptr, OnlineServerConfig{}), kStandardUrl);
         EXPECT_EQ(Std(kStandardUrl).rfind("ws", 0), 0u);
     }
 
     TEST(MahjongOnlineServerUrl, TheBrowserTakesTheConfigAndNothingElse) {
-        EXPECT_EQ(OnlineServerUrl(true, nullptr, ConfigWith("wss://rooms.example.test")), eastl::string("wss://rooms.example.test"));
-        EXPECT_EQ(OnlineServerUrl(true, "ws://example.test:9", ConfigWith("wss://rooms.example.test")), eastl::string("wss://rooms.example.test")) << "the browser has no environment";
+        EXPECT_EQ(OnlineServerUrl(true, nullptr, ConfigWith("wss://rooms.example.test")), String("wss://rooms.example.test"));
+        EXPECT_EQ(OnlineServerUrl(true, "ws://example.test:9", ConfigWith("wss://rooms.example.test")), String("wss://rooms.example.test")) << "the browser has no environment";
         EXPECT_EQ(OnlineServerUrl(true, nullptr, ConfigWith("ws://localhost:8080")), kStandardUrl) << "a plain address is accepted";
         EXPECT_TRUE(OnlineServerUrl(true, nullptr, OnlineServerConfig{}).empty()) << "no localhost default in the browser";
         EXPECT_TRUE(OnlineServerUrl(true, "ws://example.test:9", OnlineServerConfig{}).empty());
     }
 
     TEST(MahjongOnlineServerUrl, OnlyAWebSocketAddressReadsAsSet) {
-        EXPECT_EQ(ConfigWith("wss://rooms.example.test").webServer, eastl::string("wss://rooms.example.test"));
+        EXPECT_EQ(ConfigWith("wss://rooms.example.test").webServer, String("wss://rooms.example.test"));
         EXPECT_EQ(ConfigWith("ws://localhost:8080").webServer, kStandardUrl);
         EXPECT_TRUE(ConfigWith(nullptr).webServer.empty());
         EXPECT_TRUE(ConfigWith("").webServer.empty());
@@ -797,7 +798,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MahjongOnlineServerUrl, TheShippedConfigNamesASecureServer) {
         const XmlConfig config = XmlConfig::Create();
-        ASSERT_TRUE(config.LoadFromFile(ShippedConfigDirectory() / (std::string(kOnlineConfigName.data(), kOnlineConfigName.size()) + ".xml")));
+        ASSERT_TRUE(config.LoadFromFile(ShippedConfigDirectory() / Format("{}.xml", kOnlineConfigName).c_str()));
         const OnlineServerConfig shipped = ReadOnlineServerConfig(config.GetRoot());
         EXPECT_EQ(Std(shipped.webServer).rfind("wss://", 0), 0u) << "a typo in config/MahjongOnlineConfig.xml reads as not set: " << Std(shipped.webServer);
         // The browser build offers `Online` exactly when this is not empty (the component hides the button on an empty address) and connects to it
@@ -838,10 +839,10 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MahjongOnlineScreens, FiveRoomsAreThreeRowsAPageAndTheNextPageWrapsAround) {
         MahjongHubWorld world;
-        std::vector<std::unique_ptr<Person>> hosts;
+        Vector<UniquePtr<Person>> hosts;
         const char* const names[] = {"Ann", "Bob", "Cy", "Di", "Ed"};
         for (const char* name : names) {
-            hosts.push_back(std::make_unique<Person>(world));
+            hosts.push_back(MakeUnique<Person>(world));
             ASSERT_TRUE(HostRoomVisible(world, *hosts.back(), name, true)) << name;
         }
         Person guest(world);
@@ -1071,10 +1072,10 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MahjongOnlineScreens, AShorterRefreshedListClampsThePageAndAQuietFrameChangesNothing) {
         MahjongHubWorld world;
-        std::vector<std::unique_ptr<Person>> hosts;
+        Vector<UniquePtr<Person>> hosts;
         People all;
         for (const char* name : {"Ann", "Bob", "Cy", "Di"}) {
-            hosts.push_back(std::make_unique<Person>(world));
+            hosts.push_back(MakeUnique<Person>(world));
             ASSERT_TRUE(HostRoomVisible(world, *hosts.back(), name, true)) << name;
             all.push_back(hosts.back().get());
         }

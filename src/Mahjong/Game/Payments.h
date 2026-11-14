@@ -6,7 +6,7 @@
 namespace BECore::Mahjong {
 
     /// A number per seat (indexed by seat): the rounded scores of a hand, or the change of each seat's points.
-    using SeatScores = eastl::array<int, kSeatCount>;
+    using SeatScores = Array<int, kSeatCount>;
 
     /// Every payment between two seats of which one is East is this times larger: East pays and receives double.
     inline constexpr int kEastPaymentFactor = 2;

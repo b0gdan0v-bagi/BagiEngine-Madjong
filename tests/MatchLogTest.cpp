@@ -60,7 +60,7 @@ namespace BECore::Mahjong::Tests {
         /// A match played to its end by four computers on `seed`, and its log.
         struct PlayedMatch {
             Match match;
-            eastl::vector<MatchLogEvent> events;
+            Vector<MatchLogEvent> events;
             int steps = 0;
         };
 
@@ -75,7 +75,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The first event of `kind` at or after `from`.
-        size_t IndexOf(const eastl::vector<MatchLogEvent>& events, MatchLogKind kind, size_t from = 0) {
+        size_t IndexOf(const Vector<MatchLogEvent>& events, MatchLogKind kind, size_t from = 0) {
             for (size_t index = from; index < events.size(); ++index) {
                 if (events[index].kind == kind) {
                     return index;
@@ -88,7 +88,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MatchLogTest, AMatchOfComputersIsLoggedInOrder) {
         const PlayedMatch played = Play(kSeed);
-        const eastl::vector<MatchLogEvent>& events = played.events;
+        const Vector<MatchLogEvent>& events = played.events;
         ASSERT_GT(events.size(), 3u);
         EXPECT_EQ(events.front().kind, MatchLogKind::Start);
         EXPECT_EQ(events.back().kind, MatchLogKind::End);
@@ -246,7 +246,7 @@ namespace BECore::Mahjong::Tests {
         const PlayedMatch played = Play(kSeed);
 
         // An action the hand cannot take: East has declared nothing, so no win.
-        eastl::vector<MatchLogEvent> swapped = played.events;
+        Vector<MatchLogEvent> swapped = played.events;
         const size_t action = IndexOf(swapped, MatchLogKind::Action);
         ASSERT_LT(action, swapped.size());
         swapped[action].action = HandAction::MakeDeclareWin();
@@ -257,7 +257,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(status.error().problem, ReplayProblem::ActionRefused);
 
         // Another seed deals another hand: the first Hand event no longer matches.
-        eastl::vector<MatchLogEvent> reseeded = played.events;
+        Vector<MatchLogEvent> reseeded = played.events;
         reseeded[0].seed += 1;
         Match second;
         status = ReplayMatchLog(reseeded, second);
@@ -266,7 +266,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(status.error().problem, ReplayProblem::HandMismatch);
 
         // A settlement that pays otherwise.
-        eastl::vector<MatchLogEvent> paid = played.events;
+        Vector<MatchLogEvent> paid = played.events;
         const size_t settlement = IndexOf(paid, MatchLogKind::Settlement);
         ASSERT_LT(settlement, paid.size());
         paid[settlement].settlement.deltas[0] += 10;
@@ -277,7 +277,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(status.error().problem, ReplayProblem::SettlementMismatch);
 
         // The final scores of the End event.
-        eastl::vector<MatchLogEvent> ended = played.events;
+        Vector<MatchLogEvent> ended = played.events;
         ended.back().scores[1] += 10;
         Match fourth;
         status = ReplayMatchLog(ended, fourth);
@@ -292,7 +292,7 @@ namespace BECore::Mahjong::Tests {
         constexpr uint32_t kSeedsToTry = 20;
         for (uint32_t seed = kSeed; seed < kSeed + kSeedsToTry; ++seed) {
             const PlayedMatch played = Play(seed);
-            eastl::vector<MatchLogEvent> old;
+            Vector<MatchLogEvent> old;
             Match scratch;
             int added = 0;
             for (const MatchLogEvent& event : played.events) {
@@ -302,7 +302,7 @@ namespace BECore::Mahjong::Tests {
                 } else if (event.kind == MatchLogKind::Settlement) {
                     ASSERT_TRUE(scratch.EndHand().has_value());
                 } else if (event.kind == MatchLogKind::Action) {
-                    const eastl::vector<Seat> waiting = scratch.Hand().PendingClaimSeats();
+                    const Vector<Seat> waiting = scratch.Hand().PendingClaimSeats();
                     ASSERT_TRUE(scratch.Hand().Apply(event.seat, event.action).has_value());
                     if (waiting.empty() || !IsDecisionOfASettledWindow(scratch, HandAction::MakePass())) {
                         continue;
@@ -328,7 +328,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(replayed.Scores(), played.match.Scores());
 
             // A pass that does not follow the decision that settled a window is refused as before: here before the first action.
-            eastl::vector<MatchLogEvent> stray = played.events;
+            Vector<MatchLogEvent> stray = played.events;
             const size_t action = IndexOf(stray, MatchLogKind::Action);
             ASSERT_LT(action, stray.size());
             MatchLogEvent pass = stray[action];
@@ -353,12 +353,12 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(status.error().problem, ReplayProblem::NoStart);
 
         const PlayedMatch played = Play(kSeed);
-        eastl::vector<MatchLogEvent> headless(played.events.begin() + 1, played.events.end());
+        Vector<MatchLogEvent> headless(played.events.begin() + 1, played.events.end());
         status = ReplayMatchLog(headless, match);
         ASSERT_FALSE(status.has_value());
         EXPECT_EQ(status.error().problem, ReplayProblem::NoStart);
 
-        eastl::vector<MatchLogEvent> bad = played.events;
+        Vector<MatchLogEvent> bad = played.events;
         bad[0].settings.handsPerMatch = kUnplayableHandsPerMatch;
         status = ReplayMatchLog(bad, match);
         ASSERT_FALSE(status.has_value());

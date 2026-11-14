@@ -15,7 +15,7 @@ namespace BECore::Mahjong::Analyzer {
     /// Where a position came from. All of it may be empty: a position nobody named is printed without a source line.
     struct PositionLabel {
         /// The name of the log file as given on the command line, or the name of a hand-written text; empty = unnamed.
-        eastl::string source;
+        String source;
         /// A position from a log: the numbers of `LogPosition` (hand 1-based, action 0-based) and the action the log's player took.
         /// `hand` 0 = not from a log.
         int hand = 0;
@@ -25,11 +25,11 @@ namespace BECore::Mahjong::Analyzer {
     };
 
     /// The label of `position` of the log file `file`.
-    [[nodiscard]] PositionLabel LabelOfLogPosition(eastl::string_view file, const LogPosition& position);
+    [[nodiscard]] PositionLabel LabelOfLogPosition(StringView file, const LogPosition& position);
 
     /// An action as short text: `discard 5p`, `discard 5p declare`, `win`, `kong 5p concealed`, `upgrade 5p`, `claim chow 3s-4s-5s`
     /// (by `chowFirst`), `claim pung`, `claim kong`, `claim mahjong`, `pass`. The one place that writes an action for a person.
-    [[nodiscard]] eastl::string ActionNotation(const HandAction& action);
+    [[nodiscard]] String ActionNotation(const HandAction& action);
 
     /**
      * @brief The text of one analysis: the header, the position and the table of the actions, best EV first.
@@ -44,7 +44,7 @@ namespace BECore::Mahjong::Analyzer {
      *
      * Fixed-width columns, numbers with `kReportPrecision` digits and no locale: the same input gives the same bytes on every platform.
      */
-    [[nodiscard]] eastl::string FormatAnalysisReport(const TableView& view, const PositionAnalysis& analysis, const PositionLabel& label);
+    [[nodiscard]] String FormatAnalysisReport(const TableView& view, const PositionAnalysis& analysis, const PositionLabel& label);
 
     /**
      * @brief The analysis as a JSON object.
@@ -65,6 +65,6 @@ namespace BECore::Mahjong::Analyzer {
     [[nodiscard]] Json AnalysisToJson(const TableView& view, const PositionAnalysis& analysis, const PositionLabel& label);
 
     /// `AnalysisToJson` as one line (no spaces, no newline).
-    [[nodiscard]] eastl::string FormatAnalysisJson(const TableView& view, const PositionAnalysis& analysis, const PositionLabel& label);
+    [[nodiscard]] String FormatAnalysisJson(const TableView& view, const PositionAnalysis& analysis, const PositionLabel& label);
 
 }  // namespace BECore::Mahjong::Analyzer

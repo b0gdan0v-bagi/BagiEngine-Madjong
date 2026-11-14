@@ -100,7 +100,7 @@ namespace BECore::Mahjong {
         if (!winning.IsValid() || !before.RemoveConcealed(winning)) {
             return false;
         }
-        const eastl::vector<Tile> waits = WinningTiles(before);
+        const Vector<Tile> waits = WinningTiles(before);
         return waits.size() == 1 && waits[0] == winning;
     }
 

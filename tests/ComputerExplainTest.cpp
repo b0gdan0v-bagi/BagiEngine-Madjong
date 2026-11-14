@@ -47,18 +47,18 @@ namespace BECore::Mahjong::Tests {
 
         /// East has declared the waiting `hand` and then draws `fourth`.
         HandModel DeclaredPungModel(const char* hand, const char* fourth) {
-            HandModel model = MakeModel(SpecOf(hand, std::string("Gd Wd Gd Nw ") + fourth));
+            HandModel model = MakeModel(SpecOf(hand, Format("Gd Wd Gd Nw {}", fourth)));
             Lap(model, "Gd Wd Gd Nw", {kSeat0});
             return model;
         }
 
-        const TurnExplanation& TurnOf(const std::optional<Explanation>& explained) {
+        const TurnExplanation& TurnOf(const Optional<Explanation>& explained) {
             EXPECT_TRUE(explained.has_value() && explained->turn.has_value());
             static const TurnExplanation kEmpty;
             return explained.has_value() && explained->turn.has_value() ? *explained->turn : kEmpty;
         }
 
-        const ClaimExplanation& ClaimOf(const std::optional<Explanation>& explained) {
+        const ClaimExplanation& ClaimOf(const Optional<Explanation>& explained) {
             EXPECT_TRUE(explained.has_value() && explained->claim.has_value());
             static const ClaimExplanation kEmpty;
             return explained.has_value() && explained->claim.has_value() ? *explained->claim : kEmpty;
@@ -76,7 +76,7 @@ namespace BECore::Mahjong::Tests {
                     return option;
                 }
             }
-            ADD_FAILURE() << "no rating for " << ToString(tile);
+            ADD_FAILURE() << "no rating for " << ToStd(ToString(tile));
             return {};
         }
 
@@ -88,59 +88,56 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The unseen copies of the winning tiles of the concealed tiles without `discard`, as `WinningTiles` lists them.
-        std::vector<std::pair<std::string, int>> WaitsOfThirteen(const TableView& view, Tile discard) {
+        Vector<Pair<String, int>> WaitsOfThirteen(const TableView& view, Tile discard) {
             TileCounts counts = CountTiles(view.own.concealed);
             --counts[discard.Id()];
-            std::vector<std::pair<std::string, int>> waits;
+            Vector<Pair<String, int>> waits;
             for (const Tile tile : WinningTiles(counts, MeldCountOf(view), CountMeldTiles(view.own.melds))) {
-                waits.emplace_back(std::string(ToString(tile)), UnseenCopies(view, tile));
+                waits.emplace_back(ToString(tile), UnseenCopies(view, tile));
             }
             return waits;
         }
 
-        std::vector<std::pair<std::string, int>> Listed(const eastl::vector<TileCopies>& waits) {
-            std::vector<std::pair<std::string, int>> listed;
+        Vector<Pair<String, int>> Listed(const Vector<TileCopies>& waits) {
+            Vector<Pair<String, int>> listed;
             for (const TileCopies& wait : waits) {
-                listed.emplace_back(std::string(ToString(wait.tile)), wait.unseen);
+                listed.emplace_back(ToString(wait.tile), wait.unseen);
             }
             return listed;
         }
 
-        std::string Digest(const TurnOption& option) {
-            return std::string(ToString(option.tile)) + ":" + std::to_string(option.shanten) + "," + std::to_string(option.acceptance) + "," + std::to_string(option.keep) + "," +
-                   std::to_string(option.waitKinds) + "," + std::to_string(option.waitCopies);
+        String Digest(const TurnOption& option) {
+            return Format("{}:{},{},{},{},{}", ToString(option.tile), option.shanten, option.acceptance, option.keep, option.waitKinds, option.waitCopies);
         }
 
-        std::string Digest(const RatedClaim& option) {
-            return std::to_string(static_cast<int>(option.action.claim)) + ":" + std::to_string(option.after.shanten) + "," + std::to_string(option.after.acceptance) + "," +
-                   std::to_string(option.rank) + "," + std::to_string(option.acceptable);
+        String Digest(const RatedClaim& option) {
+            return Format("{}:{},{},{},{}", static_cast<int>(option.action.claim), option.after.shanten, option.after.acceptance, option.rank, option.acceptable);
         }
 
         /// Everything an explanation says, as one string, so two explanations can be compared.
-        std::string Digest(const std::optional<Explanation>& explained) {
+        String Digest(const Optional<Explanation>& explained) {
             if (!explained.has_value()) {
                 return "none";
             }
-            std::string text;
+            String text;
             if (explained->turn.has_value()) {
                 const TurnExplanation& turn = *explained->turn;
-                text = std::to_string(static_cast<int>(turn.step)) + "|" + std::string(ToString(turn.action.tile)) + "|" + std::to_string(turn.shantenBefore) + "|" + Digest(turn.chosen) + "|" +
-                       std::to_string(turn.equalChoices) + "|" + std::to_string(turn.kongShantenAfter) + "," + std::to_string(turn.kongAcceptanceBefore) + "," +
-                       std::to_string(turn.kongAcceptanceAfter);
+                text = Format("{}|{}|{}|{}|{}|{},{},{}", static_cast<int>(turn.step), ToString(turn.action.tile), turn.shantenBefore, Digest(turn.chosen), turn.equalChoices, turn.kongShantenAfter,
+                              turn.kongAcceptanceBefore, turn.kongAcceptanceAfter);
                 for (const TurnOption& option : turn.alternatives) {
                     text += "|" + Digest(option);
                 }
                 for (const TileCopies& wait : turn.waits) {
-                    text += "|" + std::string(ToString(wait.tile)) + "x" + std::to_string(wait.unseen);
+                    AppendFormat(text, "|{}x{}", ToString(wait.tile), wait.unseen);
                 }
             } else {
                 const ClaimExplanation& claim = *explained->claim;
-                text = std::to_string(static_cast<int>(claim.step)) + "|" + std::to_string(claim.shantenBefore) + "|" + (claim.chosen.has_value() ? Digest(*claim.chosen) : "-");
+                text = Format("{}|{}|{}", static_cast<int>(claim.step), claim.shantenBefore, (claim.chosen.has_value() ? Digest(*claim.chosen) : "-"));
                 for (const RatedClaim& option : claim.alternatives) {
                     text += "|" + Digest(option);
                 }
                 for (const TileCopies& wait : claim.waits) {
-                    text += "|" + std::string(ToString(wait.tile)) + "x" + std::to_string(wait.unseen);
+                    AppendFormat(text, "|{}x{}", ToString(wait.tile), wait.unseen);
                 }
             }
             return text;
@@ -157,7 +154,7 @@ namespace BECore::Mahjong::Tests {
         const TableView view = MakeTableView(model, kSeat0);
         const TileCounts counts = CountTiles(view.own.concealed);
 
-        const std::optional<Explanation> explained = ExplainAdvice(view);
+        const Optional<Explanation> explained = ExplainAdvice(view);
         const TurnExplanation& turn = TurnOf(explained);
 
         EXPECT_EQ(turn.action, PlayersChoice(view));
@@ -173,7 +170,7 @@ namespace BECore::Mahjong::Tests {
         // The two others of the same rating (Rd, Ew) come next, then the rest; the alternatives are the entries after the advised one.
         EXPECT_EQ(turn.equalChoices, 2);
         ASSERT_EQ(turn.alternatives.size(), 2u);
-        eastl::vector<DiscardOption> expected;
+        Vector<DiscardOption> expected;
         for (const DiscardOption& option : RateDiscards(counts, 0, view)) {
             if (option.tile != T("Nw") && expected.size() < 2) {
                 expected.push_back(option);
@@ -211,7 +208,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(turn.chosen.waitKinds, 2);
         EXPECT_EQ(turn.chosen.waitCopies, 8);
         EXPECT_EQ(Listed(turn.waits), WaitsOfThirteen(view, T("6p")));
-        EXPECT_EQ(Listed(turn.waits), (std::vector<std::pair<std::string, int>>{{"4p", 4}, {"7p", 4}}));
+        EXPECT_EQ(Listed(turn.waits), (Vector<Pair<String, int>>{{"4p", 4}, {"7p", 4}}));
         ExpectNumbersOf(turn.chosen, RatedDiscard(view, T("6p")));
         ASSERT_EQ(turn.alternatives.size(), 1u);
         EXPECT_EQ(turn.alternatives[0].tile, T("5p"));
@@ -222,8 +219,8 @@ namespace BECore::Mahjong::Tests {
         // The numbers are the ones `WaitingDiscards` ranks by.
         for (const WaitingDiscard& discard : WaitingDiscards(view, true)) {
             const TurnOption& option = discard.tile == T("6p") ? turn.chosen : turn.alternatives[0];
-            EXPECT_EQ(option.waitCopies, discard.copies) << ToString(discard.tile);
-            EXPECT_EQ(option.keep, discard.keep) << ToString(discard.tile);
+            EXPECT_EQ(option.waitCopies, discard.copies) << ToStd(ToString(discard.tile));
+            EXPECT_EQ(option.keep, discard.keep) << ToStd(ToString(discard.tile));
         }
     }
 
@@ -246,7 +243,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_FALSE(turn.alternatives.empty());
         EXPECT_EQ(turn.alternatives[0].tile, T("5p"));
         EXPECT_EQ(turn.alternatives[0].waitCopies, 4);
-        const eastl::vector<WaitingDiscard> listed = WaitingDiscards(view, false);
+        const Vector<WaitingDiscard> listed = WaitingDiscards(view, false);
         for (const WaitingDiscard& discard : listed) {
             if (discard.tile == T("5p")) {
                 EXPECT_EQ(turn.alternatives[0].waitCopies, discard.copies);
@@ -346,7 +343,7 @@ namespace BECore::Mahjong::Tests {
         const HandModel model = WindowModel("4p 6p 5p 5p 1s 2s 3s 7s 8s 9s Nw Nw Wd", "5p");
         const TableView view = MakeTableView(model, kSeat1);
         const int before = Shanten(CountTiles(view.own.concealed), 0);
-        const eastl::vector<RatedClaim> rated = RateClaims(view, before, kNormalProfile);
+        const Vector<RatedClaim> rated = RateClaims(view, before, kNormalProfile);
         ASSERT_GE(rated.size(), 2u);
 
         const ClaimExplanation claim = ClaimOf(ExplainAdvice(view));
@@ -399,12 +396,12 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(claim.action, kPass);
         EXPECT_EQ(claim.step, ClaimStep::WaitingHand);
         EXPECT_FALSE(claim.chosen.has_value());
-        std::vector<std::pair<std::string, int>> expected;
+        Vector<Pair<String, int>> expected;
         for (const Tile tile : WinningTiles(view.own)) {
-            expected.emplace_back(std::string(ToString(tile)), UnseenCopies(view, tile));
+            expected.emplace_back(ToString(tile), UnseenCopies(view, tile));
         }
         EXPECT_EQ(Listed(claim.waits), expected);
-        EXPECT_EQ(Listed(claim.waits), (std::vector<std::pair<std::string, int>>{{"4p", 2}, {"Rd", 1}}));
+        EXPECT_EQ(Listed(claim.waits), (Vector<Pair<String, int>>{{"4p", 2}, {"Rd", 1}}));
     }
 
     TEST(ComputerExplainTest, PassingWithNoGainListsTheBestClaimAsNotAcceptable) {
@@ -470,11 +467,11 @@ namespace BECore::Mahjong::Tests {
             spec.hands[kSeat1] = other ? kQuiet3 : kQuiet1;
             spec.hands[kSeat2] = other ? kQuiet1 : kQuiet2;
             spec.hands[kSeat3] = other ? kQuiet2 : kQuiet3;
-            spec.live = std::string("Ew ") + (other ? "Gd Wd Nw" : "Nw Wd Gd");
+            spec.live = Format("Ew {}", (other ? "Gd Wd Nw" : "Nw Wd Gd"));
             return MakeModel(spec);
         };
-        const std::optional<Explanation> a = ExplainAdvice(MakeTableView(turn(false), kSeat0));
-        const std::optional<Explanation> b = ExplainAdvice(MakeTableView(turn(true), kSeat0));
+        const Optional<Explanation> a = ExplainAdvice(MakeTableView(turn(false), kSeat0));
+        const Optional<Explanation> b = ExplainAdvice(MakeTableView(turn(true), kSeat0));
         ASSERT_TRUE(a.has_value());
         EXPECT_EQ(Digest(a), Digest(b));
 
@@ -491,7 +488,7 @@ namespace BECore::Mahjong::Tests {
         };
         const HandModel c = window("1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Rd Wd", kQuiet3);
         const HandModel d = window("2p 8p 2s 5s 8s 2m 5m 8m Ww Gd Rd Wd 9p", "4p 7p 4s 7s 4m 7m 1s 1m 9s 9m Rd Wd Gd");
-        const std::optional<Explanation> windowA = ExplainAdvice(MakeTableView(c, kSeat1));
+        const Optional<Explanation> windowA = ExplainAdvice(MakeTableView(c, kSeat1));
         ASSERT_TRUE(windowA.has_value());
         EXPECT_EQ(Digest(windowA), Digest(ExplainAdvice(MakeTableView(d, kSeat1))));
     }
@@ -520,7 +517,7 @@ namespace BECore::Mahjong::Tests {
                     const Seat actor = ComputerTable::NextActor(match.Hand());
                     ASSERT_NE(actor, kNoSeat);
                     const TableView view = MakeTableView(match.Hand(), actor);
-                    const std::optional<Explanation> explained = ExplainAdvice(view, profile);
+                    const Optional<Explanation> explained = ExplainAdvice(view, profile);
                     ASSERT_TRUE(explained.has_value()) << "hand " << index << " step " << step;
                     EXPECT_EQ(explained->Action(), PlayersChoice(view, profile)) << "hand " << index << " step " << step;
                     if (explained->turn.has_value()) {
@@ -605,10 +602,10 @@ namespace BECore::Mahjong::Tests {
             view.legal.push_back(HandAction::MakeDiscard(T(tile), true));
         }
 
-        const std::optional<Explanation> off = ExplainAdvice(view);
+        const Optional<Explanation> off = ExplainAdvice(view);
         LevelProfile on = kNormalProfile;
         on.readDanger = true;
-        const std::optional<Explanation> withKnob = ExplainAdvice(view, on);
+        const Optional<Explanation> withKnob = ExplainAdvice(view, on);
 
         const TurnExplanation& plain = TurnOf(off);
         EXPECT_EQ(plain.declaredOpponents, 1);
@@ -633,7 +630,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(ComputerExplainTest, WithNoDeclaredOpponentEveryOptionIsSafe) {
         const HandModel model = MakeModel(SpecOf(kTwoSided, "Gd"));
-        const std::optional<Explanation> explained = ExplainAdvice(MakeTableView(model, kSeat0));
+        const Optional<Explanation> explained = ExplainAdvice(MakeTableView(model, kSeat0));
 
         const TurnExplanation& turn = TurnOf(explained);
         EXPECT_EQ(turn.declaredOpponents, 0);

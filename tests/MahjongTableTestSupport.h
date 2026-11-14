@@ -48,8 +48,8 @@ namespace BECore::Mahjong::Tests {
     /// The view variants the shipped scene declares, in the order of the file (`MahjongSceneFilesTest` holds the file to it): the portrait
     /// view (`orientation:portrait`), the narrow one (`orientation:landscape;maxAspect:1.55`) and the wide one (`minAspect:2`, the landscape
     /// table with a wing on each side), each with the design size of its shape. The windows of the tests pick their view from it.
-    inline const std::vector<SceneViewVariant>& SceneViewVariants() {
-        static const std::vector<SceneViewVariant> variants = [] {
+    inline const Vector<SceneViewVariant>& SceneViewVariants() {
+        static const Vector<SceneViewVariant> variants = [] {
             SceneViewVariant portrait;
             portrait.name = "Portrait"_intern;
             portrait.when.orientation = UIOrientation::Portrait;
@@ -66,7 +66,7 @@ namespace BECore::Mahjong::Tests {
             wide.when.minAspect = kWideMinAspect;
             wide.width = kWideViewWidth;
             wide.height = kViewHeight;
-            return std::vector<SceneViewVariant>{portrait, narrow, wide};
+            return Vector<SceneViewVariant>{portrait, narrow, wide};
         }();
         return variants;
     }
@@ -74,7 +74,7 @@ namespace BECore::Mahjong::Tests {
     /// The view the scene draws with in an output of this size (`SceneViewSelector::Pick` over `SceneViewVariants`).
     inline ActiveSceneView ViewOfOutput(float outputWidth, float outputHeight) {
         const auto& variants = SceneViewVariants();
-        return SceneViewSelector::Pick(kViewWidth, kViewHeight, eastl::span<const SceneViewVariant>(variants.data(), variants.size()), outputWidth, outputHeight);
+        return SceneViewSelector::Pick(kViewWidth, kViewHeight, Span<const SceneViewVariant>(variants.data(), variants.size()), outputWidth, outputHeight);
     }
 
     /// The input of the table with every zone at its capacity (14 concealed tiles, four kongs and 8 bonus tiles a seat, 100 discards, the
@@ -106,7 +106,7 @@ namespace BECore::Mahjong::Tests {
     /// Sets the regions of `layout` (`MakeTableRegions`) on `regions`, as the table publishes them to its canvases.
     inline void PublishRegionsOf(UIRegionSet& regions, const TableLayout& layout) {
         for (const TableRegion& region : MakeTableRegions(layout)) {
-            regions.Set(PoolString::Intern(eastl::string_view(region.name.data(), region.name.size())), region.rect);
+            regions.Set(PoolString::Intern(region.name), region.rect);
         }
     }
 
@@ -139,9 +139,9 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// The text of a `UIVars` variable.
-    inline std::string Var(const char* name) {
-        const eastl::string_view value = CoreManager::GetUIVars().Get(PoolString::Intern(name));
-        return std::string(value.data(), value.size());
+    inline String Var(const char* name) {
+        const StringView value = CoreManager::GetUIVars().Get(PoolString::Intern(name));
+        return String(value.data(), value.size());
     }
 
     /// Where a flight starts: the screen rectangle of the old slot and its turn. It reads as the rectangle where only that is wanted.
@@ -157,7 +157,7 @@ namespace BECore::Mahjong::Tests {
     /// The box around the quad that `place` makes (view units), worked out here from the corners; what the renderer records as the `rect` of
     /// a tile draw.
     inline Rect BoxOf(const TilePlacement& place) {
-        const std::array<Vec2, 4> corners = MakeTransformedQuad(place.upright, DrawTransform{place.rotation, place.pivotX, place.pivotY});
+        const auto corners = MakeTransformedQuad(place.upright, DrawTransform{place.rotation, place.pivotX, place.pivotY});
         float left = corners[0].x;
         float top = corners[0].y;
         float right = left;
@@ -240,7 +240,7 @@ namespace BECore::Mahjong::Tests {
             return nullptr;
         }
 
-        eastl::vector<TurnedDraw> turned;
+        Vector<TurnedDraw> turned;
 
     private:
         void Record(DrawCall&& call, const Rect& upright, const DrawTransform& transform) {
@@ -259,7 +259,7 @@ namespace BECore::Mahjong::Tests {
                 cosine = turn == 0.0f ? 1.0f : (turn == 180.0f ? -1.0f : 0.0f);
                 sine = turn == 90.0f ? 1.0f : (turn == 270.0f ? -1.0f : 0.0f);
             }
-            std::array<Vec2, 4> corners = MakeTransformedQuad(upright, transform);
+            auto corners = MakeTransformedQuad(upright, transform);
             if (exact) {
                 const float xs[2] = {upright.x, upright.x + upright.w};
                 const float ys[2] = {upright.y, upright.y + upright.h};
@@ -297,7 +297,7 @@ namespace BECore::Mahjong::Tests {
 
     /// The box around the vertices of the geometry call `call` that carry exactly `color` (a fill is `color` all over its opaque core, a gradient only along its top row, a border or a highlight is
     /// flat; the feather ring has alpha 0): none when the call is no geometry or none of its vertices does.
-    inline std::optional<Rect> BoxOfColor(const DrawCall& call, const Color& color) {
+    inline Optional<Rect> BoxOfColor(const DrawCall& call, const Color& color) {
         if (call.kind != DrawKind::Geometry) {
             return std::nullopt;
         }
@@ -316,7 +316,7 @@ namespace BECore::Mahjong::Tests {
             bottom = found ? std::max(bottom, vertex.y) : vertex.y;
             found = true;
         }
-        return found ? std::optional<Rect>(Rect(left, top, right - left, bottom - top)) : std::nullopt;
+        return found ? Optional<Rect>(Rect(left, top, right - left, bottom - top)) : std::nullopt;
     }
 
     /// One draw of a mark in a colour: the index of its call and its rectangle (a plain rect's own, or the box of the vertices of that colour in a geometry call).
@@ -327,12 +327,12 @@ namespace BECore::Mahjong::Tests {
 
     /// Every draw of `color` in `calls`, in the order drawn: the rects of that colour and the geometry calls with a vertex of that colour. A panel of the table is one geometry call (its base,
     /// its tint and its frame), so the plate's marks are found among them by their colours.
-    inline std::vector<MarkDraw> MarksOf(const eastl::vector<DrawCall>& calls, const Color& color) {
-        std::vector<MarkDraw> found;
+    inline Vector<MarkDraw> MarksOf(const Vector<DrawCall>& calls, const Color& color) {
+        Vector<MarkDraw> found;
         for (size_t i = 0; i < calls.size(); ++i) {
             if (calls[i].kind == DrawKind::Rect && SameColor(calls[i].color, color)) {
                 found.push_back(MarkDraw{i, calls[i].rect});
-            } else if (const std::optional<Rect> box = BoxOfColor(calls[i], color)) {
+            } else if (const Optional<Rect> box = BoxOfColor(calls[i], color)) {
                 found.push_back(MarkDraw{i, *box});
             }
         }
@@ -341,9 +341,9 @@ namespace BECore::Mahjong::Tests {
 
     /// The index of the geometry call that is the base of a panel over `zone`: it carries the fill `kSeatPlate` and its border `kSeatPlateFrame` runs round the zone (the border is the one thing whose
     /// vertices reach every corner). The HUD's canvases mesh the same fill colour, so a panel is found by its place; -1 when none.
-    inline int PanelCallAt(const eastl::vector<DrawCall>& calls, const Rect& zone) {
+    inline int PanelCallAt(const Vector<DrawCall>& calls, const Rect& zone) {
         for (size_t i = 0; i < calls.size(); ++i) {
-            const std::optional<Rect> frame = BoxOfColor(calls[i], kSeatPlateFrame);
+            const Optional<Rect> frame = BoxOfColor(calls[i], kSeatPlateFrame);
             if (frame && SameBox(*frame, zone) && BoxOfColor(calls[i], kSeatPlate)) {
                 return static_cast<int>(i);
             }
@@ -352,10 +352,10 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// How many geometry calls are a panel base over `zone` (`PanelCallAt` finds the first): a panel is drawn once.
-    inline int PanelCountAt(const eastl::vector<DrawCall>& calls, const Rect& zone) {
+    inline int PanelCountAt(const Vector<DrawCall>& calls, const Rect& zone) {
         int found = 0;
         for (const DrawCall& call : calls) {
-            const std::optional<Rect> frame = BoxOfColor(call, kSeatPlateFrame);
+            const Optional<Rect> frame = BoxOfColor(call, kSeatPlateFrame);
             found += (frame && SameBox(*frame, zone) && BoxOfColor(call, kSeatPlate)) ? 1 : 0;
         }
         return found;
@@ -390,7 +390,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_NE(_game, nullptr);
             _table = MahjongTableComponent::GetActive();
             ASSERT_NE(_table, nullptr);
-            const std::vector<uint8_t> pixels(kTextureSide * kTextureSide * 4, 255);
+            const Vector<uint8_t> pixels(kTextureSide * kTextureSide * 4, 255);
             IntrusivePtr<ITexture> atlas = _renderer->CreateTexture(pixels.data(), kTextureSide, kTextureSide);
             _atlasTexture = atlas.Get();
             _table->SetAtlasTexture(std::move(atlas));
@@ -448,8 +448,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The draw calls of the seat emblems and their rings, in draw order.
-        std::vector<DrawCall> EmblemCalls() const {
-            std::vector<DrawCall> calls;
+        Vector<DrawCall> EmblemCalls() const {
+            Vector<DrawCall> calls;
             for (const DrawCall& call : _renderer->calls) {
                 if (call.kind == DrawKind::Texture && call.texture == _emblemTexture) {
                     calls.push_back(call);
@@ -466,8 +466,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The draw calls of tiles, in the order of the layout's slots.
-        std::vector<DrawCall> TileCalls() const {
-            std::vector<DrawCall> calls;
+        Vector<DrawCall> TileCalls() const {
+            Vector<DrawCall> calls;
             for (const DrawCall& call : _renderer->calls) {
                 if (call.kind == DrawKind::Texture && call.texture == _atlasTexture) {
                     calls.push_back(call);
@@ -559,7 +559,7 @@ namespace BECore::Mahjong::Tests {
         /// the table is a fixed design that the safe area does not move), so their elements are where the layout of the window's table
         /// (`TableLayoutFor`) can be compared with them. The next `Draw` lays them out for the fixture's output again. `Window` is `MatrixWindow`.
         template <class Window>
-        void LayOutOnTheTable(const std::vector<const char*>& nodes, const Window& window) {
+        void LayOutOnTheTable(const Vector<const char*>& nodes, const Window& window) {
             for (const char* node : nodes) {
                 const auto canvas = Canvas(node);
                 ASSERT_TRUE(canvas) << node;
@@ -573,7 +573,7 @@ namespace BECore::Mahjong::Tests {
             return canvas ? canvas->GetRoot().FindByName(PoolString::Intern(element)) : nullptr;
         }
 
-        static void CollectControls(const UIElement& element, std::vector<const UIElement*>& found) {
+        static void CollectControls(const UIElement& element, Vector<const UIElement*>& found) {
             CollectTextControls(element, found);
         }
 
@@ -613,7 +613,7 @@ namespace BECore::Mahjong::Tests {
 
             // A `SceneView` canvas is laid out against the view each case of the matrix gets from the scene's view variants
             const auto& variants = SceneViewVariants();
-            const UIMatrixViews views{kViewWidth, kViewHeight, eastl::span<const SceneViewVariant>(variants.data(), variants.size())};
+            const UIMatrixViews views{kViewWidth, kViewHeight, Span<const SceneViewVariant>(variants.data(), variants.size())};
             const auto failures = ValidateOnMatrix(canvas->GetLayout(), options, base, views, publishRegions);
 
             EXPECT_TRUE(failures.empty()) << node << ": " << DescribeMatrixFailures(failures).c_str();
@@ -625,7 +625,7 @@ namespace BECore::Mahjong::Tests {
             auto canvas = Canvas(node);
             ASSERT_TRUE(canvas) << node;
             canvas->UpdateLayout(outputWidth, outputHeight);
-            std::vector<const UIElement*> controls;
+            Vector<const UIElement*> controls;
             CollectControls(canvas->GetRoot(), controls);
             const float scale = canvas->GetLayout().GetResolved().scale;
             for (const UIElement* control : controls) {
@@ -640,15 +640,15 @@ namespace BECore::Mahjong::Tests {
 
         /// What the model says the slot shows: a tile, or nullopt for a back. `allFaces` says that every concealed tile is open, otherwise
         /// only those of `faceSeat`.
-        std::optional<Tile> Expected(const TileSlot& slot, bool allFaces, Seat faceSeat) const {
+        Optional<Tile> Expected(const TileSlot& slot, bool allFaces, Seat faceSeat) const {
             const PlayerHand& held = Hand().GetHand(slot.seat);
             const bool open = allFaces || slot.seat == faceSeat;
             switch (slot.role) {
                 case SlotRole::HandTile:
-                    return open ? std::optional<Tile>(held.concealed[slot.index]) : std::nullopt;
+                    return open ? Optional<Tile>(held.concealed[slot.index]) : std::nullopt;
                 case SlotRole::MeldTile: {
                     const Meld& meld = held.melds[slot.index];
-                    return (!meld.concealed || open) ? std::optional<Tile>(LaidTile(meld, slot.part)) : std::nullopt;
+                    return (!meld.concealed || open) ? Optional<Tile>(LaidTile(meld, slot.part)) : std::nullopt;
                 }
                 case SlotRole::BonusTile:
                     return held.bonus[slot.index];
@@ -663,13 +663,13 @@ namespace BECore::Mahjong::Tests {
         /// Every slot of the layout was drawn once, in order, at its rect, with the face the model allows; nothing else was a tile. A slot is
         /// drawn turned exactly when its `rotation` is not 0, about the centre of its rect, with the unturned rectangle `UprightRect`.
         void ExpectTableDrawn(bool allFaces, Seat faceSeat) {
-            const std::vector<DrawCall> calls = TileCalls();
+            const Vector<DrawCall> calls = TileCalls();
             const TableLayout& layout = _table->GetLayout();
             ASSERT_EQ(calls.size(), layout.slots.size());
             size_t callIndex = 0;
             for (size_t i = 0; i < calls.size(); ++i) {
                 const TileSlot& slot = layout.slots[i];
-                const std::optional<Tile> tile = Expected(slot, allFaces, faceSeat);
+                const Optional<Tile> tile = Expected(slot, allFaces, faceSeat);
                 const Rect expected = slot.role == SlotRole::WallStack ? StackRect() : tile ? SourceRect(*tile) : BackRect();
                 ASSERT_TRUE(calls[i].source.has_value()) << "slot " << i;
                 EXPECT_EQ(calls[i].source->x, expected.x) << "slot " << i << " role " << static_cast<int>(slot.role) << " seat " << slot.seat;
@@ -702,7 +702,7 @@ namespace BECore::Mahjong::Tests {
 
         /// The number of hand tiles of `seat` in the layout that are drawn face up.
         int FaceUpHandTiles(Seat seat) const {
-            const std::vector<DrawCall> calls = TileCalls();
+            const Vector<DrawCall> calls = TileCalls();
             const TableLayout& layout = _table->GetLayout();
             int faceUp = 0;
             for (size_t i = 0; i < calls.size() && i < layout.slots.size(); ++i) {

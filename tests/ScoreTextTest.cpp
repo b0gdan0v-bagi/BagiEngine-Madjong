@@ -15,7 +15,7 @@ namespace BECore::Mahjong::Tests {
     namespace {
 
         /// The shipped table with the given language current; one per language, loaded once (the tests only read it).
-        const UIStrings& Words(std::string_view language) {
+        const UIStrings& Words(StringView language) {
             static UIStrings english;
             static UIStrings russian;
             static const bool loaded = [] {
@@ -35,10 +35,6 @@ namespace BECore::Mahjong::Tests {
 
         const UIStrings& Ru() {
             return Words("ru");
-        }
-
-        std::string Std(const eastl::string& text) {
-            return std::string(text.data(), text.size());
         }
 
         constexpr SeatSetup kNoPeople{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
@@ -71,13 +67,13 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// A row's five cells as the screen reads them left to right.
-        std::string Cells(const ScoreRow& row) {
-            return Std(row.name) + "|" + Std(row.wind) + "|" + Std(row.hand) + "|" + Std(row.change) + "|" + Std(row.total);
+        String Cells(const ScoreRow& row) {
+            return Format("{}|{}|{}|{}|{}", row.name, row.wind, row.hand, row.change, row.total);
         }
 
         /// A standing as "place|name|score", and "|first" for a first place.
-        std::string Standing(const StandingRow& row) {
-            return std::to_string(row.place) + "|" + Std(row.name) + "|" + Std(row.score) + (row.first ? "|first" : "");
+        String Standing(const StandingRow& row) {
+            return Format("{}|{}|{}{}", row.place, row.name, row.score, (row.first ? "|first" : ""));
         }
 
         ScoreLine MakeLine(ScoreKind kind, const char* tile, int points, int doubles) {
@@ -90,7 +86,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// A settlement that East wins by a self-draw with the given lines; the payments are made up and add up to zero.
-        HandSettlement MadeUpWin(const eastl::vector<ScoreLine>& lines) {
+        HandSettlement MadeUpWin(const Vector<ScoreLine>& lines) {
             HandSettlement settlement;
             settlement.kind = ResultKind::Win;
             settlement.winner = kSeat2;
@@ -108,9 +104,9 @@ namespace BECore::Mahjong::Tests {
     // ----- the names -----
 
     TEST(ScoreTextTest, EveryScoreKindHasANonEmptyDistinctName) {
-        eastl::vector<eastl::string> seen;
+        Vector<String> seen;
         for (const ScoreKind kind : EnumUtils<ScoreKind>::Values()) {
-            const eastl::string name = ScoreKindName(En(), kind);
+            const String name = ScoreKindName(En(), kind);
             EXPECT_FALSE(name.empty()) << EnumUtils<ScoreKind>::ToString(kind).data();
             EXPECT_EQ(eastl::find(seen.begin(), seen.end(), name), seen.end()) << "the name '" << name.c_str() << "' is used twice";
             seen.push_back(name);
@@ -119,9 +115,9 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(ScoreTextTest, EveryTileHasADistinctNameAndTheSamplesReadRight) {
-        eastl::vector<eastl::string> seen;
+        Vector<String> seen;
         for (uint8_t id = 0; id < kTileIdCount; ++id) {
-            const eastl::string name = TileName(En(), Tile(id));
+            const String name = TileName(En(), Tile(id));
             EXPECT_FALSE(name.empty()) << int{id};
             EXPECT_EQ(eastl::find(seen.begin(), seen.end(), name), seen.end()) << name.c_str();
             seen.push_back(name);
@@ -177,27 +173,27 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
         ForEachLanguage(strings, [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
-            std::set<std::string> kinds;
+            Set<String> kinds;
             for (const ScoreKind kind : EnumUtils<ScoreKind>::Values()) {
-                const std::string name = Std(ScoreKindName(strings, kind));
+                const String name = ScoreKindName(strings, kind);
                 EXPECT_FALSE(name.empty());
-                EXPECT_EQ(name.find("score.kind."), std::string::npos) << "the key stands in for a missing text: " << name;
+                EXPECT_EQ(name.find("score.kind."), String::npos) << "the key stands in for a missing text: " << name;
                 EXPECT_TRUE(kinds.insert(name).second) << "the name '" << name << "' is used twice";
             }
             EXPECT_EQ(kinds.size(), EnumUtils<ScoreKind>::Count());
 
-            std::set<std::string> tiles;
+            Set<String> tiles;
             for (uint8_t id = 0; id < kTileIdCount; ++id) {
-                const std::string name = Std(TileName(strings, Tile(id)));
+                const String name = TileName(strings, Tile(id));
                 EXPECT_FALSE(name.empty()) << int{id};
-                EXPECT_EQ(name.find("tile."), std::string::npos) << name;
-                EXPECT_EQ(name.find("suit."), std::string::npos) << name;
-                EXPECT_EQ(name.find("wind."), std::string::npos) << name;
-                EXPECT_EQ(name.find('{'), std::string::npos) << "a placeholder was left: " << name;
+                EXPECT_EQ(name.find("tile."), String::npos) << name;
+                EXPECT_EQ(name.find("suit."), String::npos) << name;
+                EXPECT_EQ(name.find("wind."), String::npos) << name;
+                EXPECT_EQ(name.find('{'), String::npos) << "a placeholder was left: " << name;
                 EXPECT_TRUE(tiles.insert(name).second) << "the name '" << name << "' is used twice";
             }
             EXPECT_EQ(tiles.size(), static_cast<size_t>(kTileIdCount));
-            EXPECT_EQ(Std(TileName(strings, Tile{})).find("tile.none"), std::string::npos);
+            EXPECT_EQ(TileName(strings, Tile{}).find("tile.none"), String::npos);
         });
     }
 
@@ -264,8 +260,8 @@ namespace BECore::Mahjong::Tests {
         const ScoreTable two = FormatScoreTable(En(), settlement, *model.Result(), TotalsAfter(settlement), kTwoSeatsOfPeople);
 
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            EXPECT_EQ(Std(none.rows[seat].name).find("You"), std::string::npos) << seat;
-            EXPECT_EQ(Std(two.rows[seat].name).find("You"), std::string::npos) << seat;
+            EXPECT_EQ(none.rows[seat].name.find("You"), String::npos) << seat;
+            EXPECT_EQ(two.rows[seat].name.find("You"), String::npos) << seat;
         }
     }
 
@@ -318,7 +314,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(ScoreTextTest, AWinnerWithMoreThanSixteenLinesGetsASummaryInTheLastOne) {
-        eastl::vector<ScoreLine> lines;
+        Vector<ScoreLine> lines;
         for (int i = 0; i < kMaxScoreLines + 4; ++i) {
             lines.push_back(MakeLine(ScoreKind::Bonus, "F1", 4, 0));
         }
@@ -339,7 +335,7 @@ namespace BECore::Mahjong::Tests {
     TEST(ScoreTextTest, ALargeNumberOfDoublesNeverOverflowsTheMultiplier) {
         const HandSettlement settlement = MadeUpWin({MakeLine(ScoreKind::OnlyPungs, "", 0, 100)});
 
-        const eastl::string text = ScoreLineText(En(), settlement.breakdowns[kSeat2].lines[0]);
+        const String text = ScoreLineText(En(), settlement.breakdowns[kSeat2].lines[0]);
 
         EXPECT_FALSE(text.empty());
     }
@@ -388,35 +384,35 @@ namespace BECore::Mahjong::Tests {
             result.kind = ResultKind::Win;
             result.winner = kSeat2;
             result.winningTile = T("5p");
-            const std::string winner = Std(SeatName(strings, kSeat2, Wind::West));
-            const std::string from = Std(SeatName(strings, kSeat3, Wind::North));
+            const String winner = SeatName(strings, kSeat2, Wind::West);
+            const String from = SeatName(strings, kSeat3, Wind::North);
 
-            std::set<std::string> headlines;
+            Set<String> headlines;
             for (const WinSource source : {WinSource::SelfDraw, WinSource::Discard, WinSource::RobbedKong}) {
                 for (const Seat origin : {kSeat3, kNoSeat}) {
                     result.source = source;
                     result.from = origin;
-                    const std::string headline = Std(FormatScoreTable(strings, settlement, result, TotalsAfter(settlement), kNoPeople).headline);
-                    EXPECT_NE(headline.find(winner), std::string::npos) << headline;
-                    EXPECT_EQ(headline.find("handover."), std::string::npos) << "a key stands in for a missing text: " << headline;
-                    EXPECT_EQ(headline.find('{'), std::string::npos) << "a placeholder was left: " << headline;
-                    EXPECT_EQ(headline.find(from) != std::string::npos, source != WinSource::SelfDraw && origin == kSeat3) << headline;
+                    const String headline = FormatScoreTable(strings, settlement, result, TotalsAfter(settlement), kNoPeople).headline;
+                    EXPECT_NE(headline.find(winner), String::npos) << headline;
+                    EXPECT_EQ(headline.find("handover."), String::npos) << "a key stands in for a missing text: " << headline;
+                    EXPECT_EQ(headline.find('{'), String::npos) << "a placeholder was left: " << headline;
+                    EXPECT_EQ(headline.find(from) != String::npos, source != WinSource::SelfDraw && origin == kSeat3) << headline;
                     headlines.insert(headline);
                 }
             }
             EXPECT_EQ(headlines.size(), 5u) << "self-draw, discard (known / unknown), robbed kong (known / unknown)";
 
             const ScoreTable won = FormatScoreTable(strings, settlement, result, TotalsAfter(settlement), kNoPeople);
-            EXPECT_EQ(Std(won.summary).find("handover."), std::string::npos);
-            EXPECT_EQ(Std(won.summary).find('{'), std::string::npos);
-            EXPECT_NE(Std(won.summary).find("2"), std::string::npos);
-            for (const eastl::string& caption : won.columns) {
+            EXPECT_EQ(won.summary.find("handover."), String::npos);
+            EXPECT_EQ(won.summary.find('{'), String::npos);
+            EXPECT_NE(won.summary.find("2"), String::npos);
+            for (const String& caption : won.columns) {
                 EXPECT_FALSE(caption.empty());
-                EXPECT_EQ(Std(caption).find("handover."), std::string::npos) << "a key stands in for a missing text: " << Std(caption);
+                EXPECT_EQ(caption.find("handover."), String::npos) << "a key stands in for a missing text: " << caption;
             }
             for (const ScoreRow& row : won.rows) {
-                EXPECT_EQ(Cells(row).find("handover."), std::string::npos) << Cells(row);
-                EXPECT_EQ(Cells(row).find('{'), std::string::npos) << Cells(row);
+                EXPECT_EQ(Cells(row).find("handover."), String::npos) << Cells(row);
+                EXPECT_EQ(Cells(row).find('{'), String::npos) << Cells(row);
             }
             EXPECT_STREQ(won.rows[kSeat2].change.c_str(), "+300") << "the sign stays in the cell";
             EXPECT_STREQ(won.rows[kSeat0].change.c_str(), "-100");
@@ -442,11 +438,11 @@ namespace BECore::Mahjong::Tests {
 
         ASSERT_EQ(table.winningTiles.size(), 14u);
         EXPECT_EQ(table.winningTiles.back(), T("4p")) << "the winning tile is the last one";
-        eastl::vector<Tile> others;
+        Vector<Tile> others;
         for (size_t i = 0; i + 1 < table.winningTiles.size(); ++i) {
             others.push_back(table.winningTiles[i]);
         }
-        eastl::vector<Tile> expected = hand.concealed;
+        Vector<Tile> expected = hand.concealed;
         expected.erase(eastl::find(expected.begin(), expected.end(), T("4p")));
         EXPECT_EQ(others, expected) << "the other 13 keep the order of the hand";
     }
@@ -464,7 +460,7 @@ namespace BECore::Mahjong::Tests {
         const ScoreTable table = FormatScoreTable(En(), settlement, result, TotalsAfter(settlement), kNoPeople, &hand);
 
         ASSERT_EQ(table.winningTiles.size(), static_cast<size_t>(kMaxWinningTiles - 1)) << "three tiles in a chow, four in a kong, two in the pair";
-        const eastl::vector<Tile> expected = {T("1m"), T("1m"), T("1m"), T("1m"), T("Rd"), T("Rd"), T("Rd"), T("Rd"), T("3s"), T("4s"), T("5s"), T("Ew"), T("Ew"), T("Ew"), T("Ew"), T("5p"), T("5p")};
+        const Vector<Tile> expected = {T("1m"), T("1m"), T("1m"), T("1m"), T("Rd"), T("Rd"), T("Rd"), T("Rd"), T("3s"), T("4s"), T("5s"), T("Ew"), T("Ew"), T("Ew"), T("Ew"), T("5p"), T("5p")};
         EXPECT_EQ(table.winningTiles, expected) << "a chow runs up from its first tile";
 
         hand.melds.push_back(OpenKong(T("9m")));  // not a hand a game can reach: never more than the most the plate holds
@@ -496,7 +492,7 @@ namespace BECore::Mahjong::Tests {
 
         const ScoreTable table = FormatScoreTable(En(), settlement, result, TotalsAfter(settlement), kNoPeople, &hand);
 
-        const eastl::vector<Tile> expected = {T("2p"), T("9s"), T("5p")};
+        const Vector<Tile> expected = {T("2p"), T("9s"), T("5p")};
         EXPECT_EQ(table.winningTiles, expected);
     }
 
@@ -512,7 +508,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(table.rows[kSeat1].change[0], '+');
             EXPECT_EQ(table.rows[kSeat0].change[0], '-');
             for (const ScoreRow& row : table.rows) {
-                EXPECT_EQ(Cells(row).find('{'), std::string::npos) << Cells(row);
+                EXPECT_EQ(Cells(row).find('{'), String::npos) << Cells(row);
             }
         }
     }
@@ -535,7 +531,7 @@ namespace BECore::Mahjong::Tests {
         settlement.breakdowns[kSeat2].score = 20;
         EXPECT_STREQ(FormatScoreTable(Ru(), settlement, result, TotalsAfter(settlement), kNoPeople).summary.c_str(), "Выигрышная кость Красный дракон: 20 очк., счёт 20");
 
-        eastl::vector<ScoreLine> lines;
+        Vector<ScoreLine> lines;
         for (int i = 0; i < kMaxScoreLines + 4; ++i) {
             lines.push_back(MakeLine(ScoreKind::Bonus, "F1", 4, 0));
         }

@@ -42,25 +42,25 @@ namespace BECore::Mahjong {
 
     /// The name of the element with a `UIImageComponent` that pictures tile `t` (0..`maxTiles` - 1) on the button, as the scene file has it: the element of
     /// the button, `Tile` and the number ("Chow1Tile2").
-    [[nodiscard]] inline eastl::string TileImageName(ButtonKind kind, int t) {
+    [[nodiscard]] inline String TileImageName(ButtonKind kind, int t) {
         return Format("{}Tile{}", SpecOf(kind).element, t);
     }
 
     /// The values of the toggle `Declare`: it emits the state it asks for (`SpecOf(Declare).value` is "on", this is the other one).
-    inline constexpr eastl::string_view kDeclareOn = "on";
-    inline constexpr eastl::string_view kDeclareOff = "off";
+    inline constexpr StringView kDeclareOn = "on";
+    inline constexpr StringView kDeclareOff = "off";
 
     /// The button that emits `action` with `value`, nullopt for an action that no button emits.
-    [[nodiscard]] std::optional<ButtonKind> ButtonOf(eastl::string_view action, eastl::string_view value) noexcept;
+    [[nodiscard]] Optional<ButtonKind> ButtonOf(StringView action, StringView value) noexcept;
 
     /// The key of the sentence that tells the player what the button does (`SpecOf(kind).hintKey`, never empty).
-    [[nodiscard]] eastl::string_view HintKey(ButtonKind kind) noexcept;
+    [[nodiscard]] StringView HintKey(ButtonKind kind) noexcept;
 
     /// The word on the button in the current language of `strings`.
-    [[nodiscard]] eastl::string WordOf(const UIStrings& strings, ButtonKind kind);
+    [[nodiscard]] String WordOf(const UIStrings& strings, ButtonKind kind);
 
     /// The sentence that tells the player what the button does, in the current language of `strings` (never empty).
-    [[nodiscard]] eastl::string HintOf(const UIStrings& strings, ButtonKind kind);
+    [[nodiscard]] String HintOf(const UIStrings& strings, ButtonKind kind);
 
     /// One button: shown or not, the action it performs (`Declare` performs none: it only sets the flag of the next discard), the
     /// tiles to picture on it (`tileCount` of `tiles`, in the order to draw; at most `SpecOf(kind).maxTiles`, fewer when the tile is
@@ -69,15 +69,15 @@ namespace BECore::Mahjong {
     struct ButtonState {
         bool shown = false;
         HandAction action;
-        eastl::array<Tile, kMaxButtonTiles> tiles;
+        Array<Tile, kMaxButtonTiles> tiles;
         int tileCount = 0;
-        eastl::string_view hintKey;
+        StringView hintKey;
 
         bool operator==(const ButtonState&) const = default;
     };
 
     struct ActionButtons {
-        eastl::array<ButtonState, kButtonCount> buttons;
+        Array<ButtonState, kButtonCount> buttons;
 
         [[nodiscard]] const ButtonState& operator[](ButtonKind kind) const noexcept {
             return buttons[static_cast<size_t>(kind)];
@@ -96,11 +96,11 @@ namespace BECore::Mahjong {
      * `Win` and `Pass` as they are. The tiles to picture: the three of a chow, the `pendingTile` (the discard or the robbed kong's tile;
      * none when unknown) for the claims of mahjong, pung and kong, the tile of a concealed or upgraded kong.
      */
-    [[nodiscard]] ActionButtons MakeActionButtons(const eastl::vector<HandAction>& legal, std::optional<Tile> pendingTile = std::nullopt);
+    [[nodiscard]] ActionButtons MakeActionButtons(const Vector<HandAction>& legal, Optional<Tile> pendingTile = std::nullopt);
 
     /// The tiles of the hand a chow takes: the two of its sequence besides the pending discard.
     struct ChowTakes {
-        eastl::array<Tile, 2> tiles;
+        Array<Tile, 2> tiles;
         int count = 0;
     };
 
@@ -109,6 +109,6 @@ namespace BECore::Mahjong {
      * (no pointer on a chow) those of the one chow on offer; none when two or three chows are offered and none is hovered, or when no chow is.
      * The sequence is the three tiles pictured on the button less the `pending` discard (the first equal one).
      */
-    [[nodiscard]] ChowTakes ChowTilesTaken(const ActionButtons& buttons, Tile pending, std::optional<ButtonKind> hovered);
+    [[nodiscard]] ChowTakes ChowTilesTaken(const ActionButtons& buttons, Tile pending, Optional<ButtonKind> hovered);
 
 }  // namespace BECore::Mahjong

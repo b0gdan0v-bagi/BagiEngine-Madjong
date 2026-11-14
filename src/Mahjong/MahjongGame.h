@@ -18,7 +18,7 @@
 namespace BECore::Mahjong {
 
     /// The language the game speaks until `SetLanguage` says otherwise (the default language of `config/UIStrings.xml`).
-    inline constexpr eastl::string_view kDefaultLanguage = "en";
+    inline constexpr StringView kDefaultLanguage = "en";
 
     /**
      * @brief Concrete IGame for mahjong: it owns the match (`Game/Match.h`), the rules of classic Chinese mahjong for four seats, and
@@ -268,7 +268,7 @@ namespace BECore::Mahjong {
             return _storedOnline;
         }
         /// Remembers the player's name; saved by `FlushSave()` when it differs.
-        void SetOnlineName(eastl::string_view name);
+        void SetOnlineName(StringView name);
 
         /// The language of the words, an id of `config/UIStrings.xml`. Kept across `Reset()` and `StartMatch`.
         PoolString GetLanguage() const {
@@ -389,7 +389,7 @@ namespace BECore::Mahjong {
         CoachLedger _roomCoach;             // the ledger of a room's table: nobody observes the display session, the table component feeds it
         uint64_t _roomTables = 0;           // the tables of a room shown so far: the match of the room's ledger
         MahjongGameControl _control{*this};
-        eastl::unique_ptr<OnlineClient> _online;
+        UniquePtr<OnlineClient> _online;
         // The table of a room as a display copy (`Online/OnlineMirror.h`); the local pair above never sees it
         Match _displayMatch;
         TableSession _displaySession{_displayMatch};  // after _displayMatch: it keeps a reference

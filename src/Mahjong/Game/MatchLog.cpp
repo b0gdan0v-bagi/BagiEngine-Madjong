@@ -72,7 +72,7 @@ namespace BECore::Mahjong {
         return phase != Phase::Claim && phase != Phase::RobKong;
     }
 
-    ReplayStatus ReplayMatchLog(const eastl::vector<MatchLogEvent>& events, Match& match, IMatchLogSink* echo) {
+    ReplayStatus ReplayMatchLog(const Vector<MatchLogEvent>& events, Match& match, IMatchLogSink* echo) {
         if (events.empty() || events.front().kind != MatchLogKind::Start) {
             return std::unexpected(At(0, ReplayProblem::NoStart));
         }

@@ -36,15 +36,15 @@ namespace BECore::Mahjong::Tests {
         /// What the client polls.
         std::deque<RoomTransportEvent> toClient;
 
-        void QueueText(eastl::string_view text) {
+        void QueueText(StringView text) {
             RoomTransportEvent event;
             event.kind = RoomTransportEventKind::Text;
-            event.text = eastl::string(text);
+            event.text = String(text);
             toClient.push_back(std::move(event));
         }
 
         /// The one `Closed` of the connection; a second call does nothing.
-        void QueueClosed(uint16_t code, eastl::string_view reason) {
+        void QueueClosed(uint16_t code, StringView reason) {
             if (closedQueued) {
                 return;
             }
@@ -52,14 +52,14 @@ namespace BECore::Mahjong::Tests {
             RoomTransportEvent event;
             event.kind = RoomTransportEventKind::Closed;
             event.closeCode = code;
-            event.reason = eastl::string(reason);
+            event.reason = String(reason);
             toClient.push_back(std::move(event));
         }
     };
 
     /// The connections one client made, in order (a reconnect makes a new one).
     struct HubClientLinks {
-        std::vector<std::shared_ptr<HubLink>> links;
+        Vector<SharedPtr<HubLink>> links;
 
         [[nodiscard]] HubLink& Last() {
             return *links.back();
@@ -143,9 +143,9 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The transport calls these.
-        void Connect(const std::shared_ptr<HubLink>& link);
-        void Deliver(HubLink& link, eastl::string_view text);
-        void Disconnect(HubLink& link, uint16_t code, eastl::string_view reason);
+        void Connect(const SharedPtr<HubLink>& link);
+        void Deliver(HubLink& link, StringView text);
+        void Disconnect(HubLink& link, uint16_t code, StringView reason);
 
     private:
         static constexpr uint64_t kRandomSeed = 11;
@@ -168,19 +168,19 @@ namespace BECore::Mahjong::Tests {
         };
 
         SeatedGameRegistry& MakeRegistry() {
-            const bool registered = _registry.Register(MahjongSeatedGame::Info(), [this]() -> eastl::unique_ptr<ISeatedGame> { return eastl::make_unique<TrackedGame>(*this); });
+            const bool registered = _registry.Register(MahjongSeatedGame::Info(), [this]() -> UniquePtr<ISeatedGame> { return MakeUnique<TrackedGame>(*this); });
             EXPECT_TRUE(registered);
             return _registry;
         }
 
         HubSink MakeSink() {
             HubSink sink;
-            sink.send = [this](ConnectionId id, eastl::string text) {
+            sink.send = [this](ConnectionId id, String text) {
                 if (const auto found = _byId.find(id); found != _byId.end()) {
                     OnSent(*found->second, text);
                 }
             };
-            sink.close = [this](ConnectionId id, eastl::string reason) {
+            sink.close = [this](ConnectionId id, String reason) {
                 const auto found = _byId.find(id);
                 if (found == _byId.end()) {
                     return;
@@ -192,10 +192,10 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Judges the text for the seat its receiver holds, then queues it.
-        void OnSent(HubLink& link, const eastl::string& text) {
-            const std::string_view view(text.data(), text.size());
+        void OnSent(HubLink& link, const String& text) {
+            const StringView view(text.data(), text.size());
             const auto parsed = ParseJson(text);
-            const eastl::string type = parsed ? GetJsonString(*parsed, "type").value_or(eastl::string()) : eastl::string();
+            const String type = parsed ? GetJsonString(*parsed, "type").value_or(String()) : String();
             // The seat of a client is what its `joined` said, then what the client chose; never what a later message claims
             if (parsed && type == "joined") {
                 link.judgeSeat = static_cast<int>(GetJsonInt(*parsed, "seat").value_or(-1));
@@ -208,7 +208,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// What `RoomWebSocketServer` tells the client when the hub ends its connection.
-        static uint16_t GetCloseCode(const eastl::string& reason) {
+        static uint16_t GetCloseCode(const String& reason) {
             constexpr uint16_t kPolicyViolation = 1008;
             constexpr uint16_t kTryAgainLater = 1013;
             if (reason == "rate_limited" || reason == "too_many_failed_joins") {
@@ -223,7 +223,7 @@ namespace BECore::Mahjong::Tests {
         BECore::Tests::ManualClock _clock;
         SeatedGameRegistry _registry;
         RoomHub _hub;
-        std::map<ConnectionId, std::shared_ptr<HubLink>> _byId;
+        Map<ConnectionId, SharedPtr<HubLink>> _byId;
         ConnectionId _nextId = 1;
         bool _refusing = false;
     };
@@ -231,7 +231,7 @@ namespace BECore::Mahjong::Tests {
     /// An `IRoomTransport` that talks to a `MahjongHubWorld`.
     class MahjongHubTransport final : public IRoomTransport {
     public:
-        MahjongHubTransport(MahjongHubWorld& world, std::shared_ptr<HubLink> link) : _world(world), _link(std::move(link)) {}
+        MahjongHubTransport(MahjongHubWorld& world, SharedPtr<HubLink> link) : _world(world), _link(std::move(link)) {}
 
         ~MahjongHubTransport() override {
             // Letting go of a connection ends it, as closing the socket does
@@ -240,12 +240,12 @@ namespace BECore::Mahjong::Tests {
             }
         }
 
-        std::expected<void, eastl::string> Open(eastl::string_view /*url*/) override {
+        std::expected<void, String> Open(StringView /*url*/) override {
             _world.Connect(_link);
             return {};
         }
 
-        bool SendText(eastl::string_view text) override {
+        bool SendText(StringView text) override {
             if (!_link->open) {
                 return false;
             }
@@ -253,7 +253,7 @@ namespace BECore::Mahjong::Tests {
             return true;
         }
 
-        void Close(uint16_t code, eastl::string_view reason) override {
+        void Close(uint16_t code, StringView reason) override {
             _world.Disconnect(*_link, code, reason);
         }
 
@@ -272,18 +272,18 @@ namespace BECore::Mahjong::Tests {
 
     private:
         MahjongHubWorld& _world;
-        std::shared_ptr<HubLink> _link;
+        SharedPtr<HubLink> _link;
     };
 
     inline RoomTransportFactory MahjongHubWorld::Factory(HubClientLinks& links) {
-        return [this, &links]() -> eastl::unique_ptr<IRoomTransport> {
-            auto link = std::make_shared<HubLink>();
+        return [this, &links]() -> UniquePtr<IRoomTransport> {
+            auto link = MakeShared<HubLink>();
             links.links.push_back(link);
-            return eastl::make_unique<MahjongHubTransport>(*this, link);
+            return MakeUnique<MahjongHubTransport>(*this, link);
         };
     }
 
-    inline void MahjongHubWorld::Connect(const std::shared_ptr<HubLink>& link) {
+    inline void MahjongHubWorld::Connect(const SharedPtr<HubLink>& link) {
         if (_refusing) {
             link->QueueClosed(kRoomTransportAbnormalClosure, "connection refused");
             return;
@@ -297,11 +297,11 @@ namespace BECore::Mahjong::Tests {
         link->toClient.push_back(std::move(opened));
     }
 
-    inline void MahjongHubWorld::Deliver(HubLink& link, eastl::string_view text) {
+    inline void MahjongHubWorld::Deliver(HubLink& link, StringView text) {
         _hub.OnMessage(link.id, text, _clock.Now());
     }
 
-    inline void MahjongHubWorld::Disconnect(HubLink& link, uint16_t code, eastl::string_view reason) {
+    inline void MahjongHubWorld::Disconnect(HubLink& link, uint16_t code, StringView reason) {
         if (link.open) {
             link.open = false;
             _hub.OnDisconnected(link.id, _clock.Now());

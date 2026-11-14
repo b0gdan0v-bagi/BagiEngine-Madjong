@@ -64,11 +64,11 @@ namespace BECore::Mahjong {
         return {};
     }
 
-    ReplayStatus TableSession::ResumeMatch(const eastl::vector<MatchLogEvent>& events, const SeatSetup& seats, ComputerLevel level) {
+    ReplayStatus TableSession::ResumeMatch(const Vector<MatchLogEvent>& events, const SeatSetup& seats, ComputerLevel level) {
         return ResumeMatch(events, seats, UniformLevels(level));
     }
 
-    ReplayStatus TableSession::ResumeMatch(const eastl::vector<MatchLogEvent>& events, const SeatSetup& seats, const SeatLevels& levels) {
+    ReplayStatus TableSession::ResumeMatch(const Vector<MatchLogEvent>& events, const SeatSetup& seats, const SeatLevels& levels) {
         BE_PROFILE_SCOPE("TableSession::ResumeMatch");
         Match scratch;
         if (ReplayStatus checked = ReplayMatchLog(events, scratch); !checked) {
@@ -105,8 +105,8 @@ namespace BECore::Mahjong {
         }
     }
 
-    const eastl::string& TableSession::NameOf(Seat seat) const noexcept {
-        static const eastl::string kNoName;
+    const String& TableSession::NameOf(Seat seat) const noexcept {
+        static const String kNoName;
         return IsSeat(seat) ? _names[static_cast<size_t>(seat)] : kNoName;
     }
 
@@ -179,12 +179,12 @@ namespace BECore::Mahjong {
         return step;
     }
 
-    std::optional<ComputerStepJob> TableSession::BeginComputerStep() {
+    Optional<ComputerStepJob> TableSession::BeginComputerStep() {
         std::expected<ComputerStepJob, HandError> job = MakeComputerJob();
-        return job ? std::optional<ComputerStepJob>(std::move(*job)) : std::nullopt;
+        return job ? Optional<ComputerStepJob>(std::move(*job)) : std::nullopt;
     }
 
-    std::optional<StepResult> TableSession::FinishComputerStep(const ComputerStepJob& job) {
+    Optional<StepResult> TableSession::FinishComputerStep(const ComputerStepJob& job) {
         if (_remote || job.Version() != _version || job.StartCount() != _starts) {
             return std::nullopt;
         }
@@ -232,7 +232,7 @@ namespace BECore::Mahjong {
         if (KindOf(actor) != SeatKind::Person) {
             return std::unexpected(HandError::NotYourTurn);
         }
-        std::optional<TableView> before;
+        Optional<TableView> before;
         if (_observer != nullptr) {
             before = MakeTableView(_match.Hand(), actor);
         }
@@ -271,9 +271,9 @@ namespace BECore::Mahjong {
         return settled;
     }
 
-    std::optional<HandSettlement> TableSession::LastSettlement() const {
-        const eastl::vector<HandSettlement>& history = _match.History();
-        return history.empty() ? std::nullopt : std::optional<HandSettlement>(history.back());
+    Optional<HandSettlement> TableSession::LastSettlement() const {
+        const Vector<HandSettlement>& history = _match.History();
+        return history.empty() ? std::nullopt : Optional<HandSettlement>(history.back());
     }
 
     bool TableSession::HandoffPending() const {

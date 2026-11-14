@@ -37,8 +37,8 @@ namespace BECore::Mahjong::Tests {
             SceneEvents::SceneUpdateEvent::Emit(seconds);
         }
 
-        std::string StdString(eastl::string_view text) {
-            return std::string(text.data(), text.size());
+        String StdString(StringView text) {
+            return String(text.data(), text.size());
         }
 
     }  // namespace
@@ -66,19 +66,19 @@ namespace BECore::Mahjong::Tests {
             return canvas && canvas->TakesInput();
         }
 
-        std::string Text(const char* node, const char* element) const {
+        String Text(const char* node, const char* element) const {
             const UIElement* found = Element(node, element);
             return DisplayText(found, "<none>");
         }
 
-        std::string SpriteOf(const char* element) const {
+        String SpriteOf(const char* element) const {
             const auto* image = Element("Rules", element) != nullptr ? Element("Rules", element)->GetComponent<UIImageComponent>() : nullptr;
-            return image != nullptr ? std::string(image->sprite.ToStringView().data(), image->sprite.ToStringView().size()) : std::string("<none>");
+            return image != nullptr ? String(image->sprite.ToStringView().data(), image->sprite.ToStringView().size()) : String("<none>");
         }
 
         /// The rectangles drawn in `color` by the last draw.
-        std::vector<Rect> RectsOf(const Color& color) const {
-            std::vector<Rect> found;
+        Vector<Rect> RectsOf(const Color& color) const {
+            Vector<Rect> found;
             for (const DrawCall& call : _renderer->calls) {
                 if (call.kind == DrawKind::Rect && call.color.r == color.r && call.color.g == color.g && call.color.b == color.b && call.color.a == color.a) {
                     found.push_back(call.rect);
@@ -116,32 +116,32 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(Text("Rules", "PagerChip"), StdString(RulesPagerText(strings, page)));
             for (int i = 0; i < kRulesMaxLines; ++i) {
                 const bool has = i < static_cast<int>(expected.lines.size());
-                const std::string name = "RulesLine" + std::to_string(i);
+                const String name = Format("RulesLine{}", i);
                 EXPECT_EQ(OnScreen("Rules", name.c_str()), has) << "line " << i << " of page " << page;
-                EXPECT_EQ(Var(("rulesLine" + std::to_string(i)).c_str()), has ? StdString(expected.lines[static_cast<size_t>(i)]) : std::string()) << "line " << i;
+                EXPECT_EQ(Var(Format("rulesLine{}", i).c_str()), has ? StdString(expected.lines[static_cast<size_t>(i)]) : String()) << "line " << i;
                 // The text of a row is in a child of the raised row (a text has no inset): the row and its bar come and go together
-                EXPECT_EQ(Text("Rules", ("RulesLineText" + std::to_string(i)).c_str()), has ? StdString(expected.lines[static_cast<size_t>(i)]) : std::string()) << "line " << i;
+                EXPECT_EQ(Text("Rules", Format("RulesLineText{}", i).c_str()), has ? StdString(expected.lines[static_cast<size_t>(i)]) : String()) << "line " << i;
             }
             for (int i = 0; i < kRulesMaxItems; ++i) {
                 const bool has = i < static_cast<int>(expected.items.size());
-                const std::string name = "RulesItem" + std::to_string(i);
+                const String name = Format("RulesItem{}", i);
                 EXPECT_EQ(OnScreen("Rules", name.c_str()), has) << "item " << i << " of page " << page;
-                EXPECT_EQ(Var(("rulesItem" + std::to_string(i)).c_str()), has ? StdString(expected.items[static_cast<size_t>(i)]) : std::string()) << "item " << i;
-                EXPECT_EQ(Text("Rules", ("RulesItemText" + std::to_string(i)).c_str()), has ? StdString(expected.items[static_cast<size_t>(i)]) : std::string()) << "item " << i;
+                EXPECT_EQ(Var(Format("rulesItem{}", i).c_str()), has ? StdString(expected.items[static_cast<size_t>(i)]) : String()) << "item " << i;
+                EXPECT_EQ(Text("Rules", Format("RulesItemText{}", i).c_str()), has ? StdString(expected.items[static_cast<size_t>(i)]) : String()) << "item " << i;
             }
             for (int row = 0; row < kRulesMaxItems / kRulesItemColumns; ++row) {
-                const std::string name = "RulesItemRow" + std::to_string(row);
+                const String name = Format("RulesItemRow{}", row);
                 EXPECT_EQ(OnScreen("Rules", name.c_str()), row * kRulesItemColumns < static_cast<int>(expected.items.size())) << name << " of page " << page;
             }
             for (int row = 0; row < kRulesMaxTileRows; ++row) {
                 const bool hasRow = row < static_cast<int>(expected.tileRows.size());
-                EXPECT_EQ(OnScreen("Rules", ("RulesTileRow" + std::to_string(row)).c_str()), hasRow) << "tile row " << row << " of page " << page;
+                EXPECT_EQ(OnScreen("Rules", Format("RulesTileRow{}", row).c_str()), hasRow) << "tile row " << row << " of page " << page;
                 for (int column = 0; column < kRulesMaxRowTiles; ++column) {
-                    const std::string name = "RulesTile" + std::to_string(row * kRulesMaxRowTiles + column);
+                    const String name = Format("RulesTile{}", row * kRulesMaxRowTiles + column);
                     const bool has = hasRow && column < static_cast<int>(expected.tileRows[static_cast<size_t>(row)].size());
                     EXPECT_EQ(OnScreen("Rules", name.c_str()), has) << name << " of page " << page;
                     if (has) {
-                        EXPECT_EQ(SpriteOf(name.c_str()), std::string(SpriteName(expected.tileRows[static_cast<size_t>(row)][static_cast<size_t>(column)]).c_str())) << name;
+                        EXPECT_EQ(SpriteOf(name.c_str()), String(SpriteName(expected.tileRows[static_cast<size_t>(row)][static_cast<size_t>(column)]).c_str())) << name;
                     }
                 }
             }
@@ -163,8 +163,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The children of the plate that the page shows, in the order of the file (a hidden one has no rect).
-        std::vector<const UIElement*> ShownBlocks() const {
-            std::vector<const UIElement*> blocks;
+        Vector<const UIElement*> ShownBlocks() const {
+            Vector<const UIElement*> blocks;
             const UIElement* plate = Element("Rules", "Plate");
             if (plate != nullptr) {
                 for (const auto& child : plate->children) {
@@ -281,8 +281,8 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         ASSERT_NO_FATAL_FAILURE(PressRules());
         ASSERT_NO_FATAL_FAILURE(PressBar("RulesNext"));
-        const std::string english = Var("rulesTitle");
-        const std::string englishButton = Text("RulesAction", "RulesNext");
+        const String english = Var("rulesTitle");
+        const String englishButton = Text("RulesAction", "RulesNext");
         ASSERT_FALSE(english.empty());
 
         ASSERT_TRUE(_game->SetLanguage("ru"_intern));
@@ -398,7 +398,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(PressRules());
         TableSession& session = _game->GetSession();
         const uint64_t version = session.Version();
-        const std::string snapshot = Snapshot(Hand());
+        const String snapshot = Snapshot(Hand());
 
         for (int i = 0; i < 5; ++i) {
             Elapse(kLongWait);
@@ -418,7 +418,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, kWaitingHand));
         ASSERT_NO_FATAL_FAILURE(PressRules());
         const uint64_t version = _game->GetSession().Version();
-        const std::string snapshot = Snapshot(Hand());
+        const String snapshot = Snapshot(Hand());
 
         // The first tile of the row lies left of the buttons of the bar, so the click is the modal canvas's and no button's
         ASSERT_NE(HandSlot(0), nullptr);
@@ -517,7 +517,7 @@ namespace BECore::Mahjong::Tests {
                 }
                 // The same on the whole matrix, each window against the view of its shape (the plate is 94% of the 720 wide portrait view); the bar
                 // is a Screen canvas, which the view does not touch
-                const std::vector<std::string> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Rules"), kButtonAir);
+                const Vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Rules"), kButtonAir);
                 EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
                 // The matrix leaves the layout as it ran last: draw again for the next page
                 Draw();
@@ -555,7 +555,7 @@ namespace BECore::Mahjong::Tests {
                 ASSERT_NO_FATAL_FAILURE(GoToPage(page));
                 const RulesPage expected = FormatRulesPage(CoreManager::GetUIStrings(), page);
                 const Rect& inner = plate->rect;
-                const std::vector<const UIElement*> blocks = ShownBlocks();
+                const Vector<const UIElement*> blocks = ShownBlocks();
                 ASSERT_GE(blocks.size(), 2u) << "at least the title and the pager";
                 EXPECT_EQ(Element("Rules", "Title"), blocks[0]);
                 EXPECT_EQ(Element("Rules", "Pager"), blocks[1]);
@@ -799,7 +799,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         auto plate = Canvas("Rules");
         ASSERT_TRUE(plate);
-        std::vector<const UIElement*> controls;
+        Vector<const UIElement*> controls;
         CollectControls(plate->GetRoot(), controls);
         for (const UIElement* control : controls) {
             EXPECT_FALSE(control->IsInteractive()) << control->name.ToStringView().data() << ": the pages are text, the buttons are in RulesAction";
@@ -814,7 +814,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_TRUE(_game->SetLanguage("en"_intern));
             ASSERT_NO_FATAL_FAILURE(GoToPage(page));
             const RulesPage english = FormatRulesPage(CoreManager::GetUIStrings(), page);
-            const std::string englishTitle = Var("rulesTitle");
+            const String englishTitle = Var("rulesTitle");
 
             ASSERT_TRUE(_game->SetLanguage("ru"_intern));
             Draw();

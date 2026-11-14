@@ -51,8 +51,8 @@ namespace BECore::Mahjong::Tests {
         static_assert(sizeof(kSpeedSegments) / sizeof(kSpeedSegments[0]) == EnumUtils<AnimationSpeed>::Count());
 
         /// Everything that takes input or shows a word on the page, for the matrix tests.
-        std::vector<const char*> Controls() {
-            std::vector<const char*> names;
+        Vector<const char*> Controls() {
+            Vector<const char*> names;
             for (const PageRow& row : kRows) {
                 names.insert(names.end(), row.segments, row.segments + row.count);
             }
@@ -84,7 +84,7 @@ namespace BECore::Mahjong::Tests {
 
         MatrixWindow WindowOf(float width, float height) {
             MatrixWindow window = DesignWindow();
-            window.label = (std::to_string(static_cast<int>(width)) + "x" + std::to_string(static_cast<int>(height))).c_str();
+            window.label = Format("{}x{}", static_cast<int>(width), static_cast<int>(height)).c_str();
             window.outputWidth = width;
             window.outputHeight = height;
             return window;
@@ -120,11 +120,11 @@ namespace BECore::Mahjong::Tests {
             return button != nullptr && button->selected;
         }
 
-        std::string Text(const char* element) const {
+        String Text(const char* element) const {
             const UIElement* found = Element("Options", element);
             if (found != nullptr && found->Cast<UIDropdown>() != nullptr) {
                 const UIElement* chosen = found->Cast<UIDropdown>()->FindChosenOption();  // the header shows the chosen option
-                return chosen != nullptr ? DisplayText(chosen) : std::string("<none chosen>");
+                return chosen != nullptr ? DisplayText(chosen) : String("<none chosen>");
             }
             return DisplayText(found);
         }
@@ -210,7 +210,7 @@ namespace BECore::Mahjong::Tests {
             for (const auto& output : kOutputs) {
                 ExpectWordsFit("Options", output.width, output.height, kButtonAir);
             }
-            const std::vector<std::string> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Options"), kButtonAir);
+            const Vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Options"), kButtonAir);
             EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
         });
     }
@@ -239,7 +239,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(OpenPage());
         auto page = Canvas("Options");
         const float minTouch = EngineTouchMinimum();
-        std::vector<const char*> bands{"Title"};
+        Vector<const char*> bands{"Title"};
         for (const PageRow& row : kRows) {
             bands.push_back(row.row);
         }
@@ -251,7 +251,7 @@ namespace BECore::Mahjong::Tests {
         ForEachMatrixWindow([&](const MatrixWindow& window) {
             for (const CanvasScaleMode mode : modes) {
                 for (const float userScale : {1.0f, 1.5f}) {
-                    const std::string label = Format("{} {} x{}", window.label.c_str(), EnumUtils<CanvasScaleMode>::ToString(mode).data(), userScale).c_str();
+                    const String label = Format("{} {} x{}", window.label.c_str(), EnumUtils<CanvasScaleMode>::ToString(mode).data(), userScale).c_str();
                     const UICanvasResolved resolved = LayOutInWindow(*page, window, mode, userScale);
                     const UIElement* plate = Element("Options", "Plate");
                     ASSERT_NE(plate, nullptr);
@@ -329,7 +329,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(group->rect.x + group->rect.w, row->rect.x + row->rect.w - kRowPadding);
             EXPECT_EQ(group->rect.y, row->rect.y + kRowPadding);
             EXPECT_EQ(group->rect.y + group->rect.h, row->rect.y + row->rect.h - kRowPadding);
-            for (const char* name : std::span<const char* const>(entry.segments, entry.count)) {
+            for (const char* name : Span<const char* const>(entry.segments, entry.count)) {
                 const auto* segment = Element("Options", name);
                 ASSERT_NE(segment, nullptr) << name;
                 EXPECT_TRUE(SameColor(segment->selectedColor, PaletteColor("primary"))) << name;

@@ -1,6 +1,6 @@
 # tests/ — MahjongTests and the control smoke test
 
-Rules of the engine: `engine/.claude/rules/tests-module.md`. New rule code gets a gtest case. A new feature gets a new test file when the existing one is big and shared. **This file lists helpers and what each file is for, not what each test checks** — the test names say that.
+Rules of the engine: `engine/.claude/rules/tests-module.md`. New rule code gets a gtest case. A new feature gets a new test file when the existing one is big and shared. Tests spell the engine's types like the rest of the game (root `CLAUDE.md`, "Types"; `MahjongTypesCheck` covers `tests/`). **This file lists helpers and what each file is for, not what each test checks** — the test names say that.
 
 ## Helpers (header only)
 

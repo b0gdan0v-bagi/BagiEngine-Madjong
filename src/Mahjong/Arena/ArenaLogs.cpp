@@ -7,7 +7,7 @@
 
 namespace BECore::Mahjong::Arena {
 
-    eastl::string OneLine(eastl::string text) {
+    String OneLine(String text) {
         for (char& letter : text) {
             if (letter == '\t' || letter == '\n' || letter == '\r') {
                 letter = ' ';
@@ -18,14 +18,14 @@ namespace BECore::Mahjong::Arena {
 
     namespace {
 
-        LogVerdict Rejected(LogProblem problem, const eastl::string& reason) {
+        LogVerdict Rejected(LogProblem problem, const String& reason) {
             LogVerdict verdict;
             verdict.problem = problem;
             verdict.reason = OneLine(reason);
             return verdict;
         }
 
-        void Count(CountList& list, const eastl::string& key) {
+        void Count(CountList& list, const String& key) {
             for (auto& entry : list) {
                 if (entry.first == key) {
                     ++entry.second;
@@ -35,7 +35,7 @@ namespace BECore::Mahjong::Arena {
             list.emplace_back(key, 1);
         }
 
-        Spread SpreadOf(const eastl::vector<int>& values) {
+        Spread SpreadOf(const Vector<int>& values) {
             Spread spread;
             if (values.empty()) {
                 return spread;
@@ -52,14 +52,14 @@ namespace BECore::Mahjong::Arena {
             return spread;
         }
 
-        const MatchLogEvent* StartOf(const eastl::vector<MatchLogEvent>& events) {
+        const MatchLogEvent* StartOf(const Vector<MatchLogEvent>& events) {
             return !events.empty() && events.front().kind == MatchLogKind::Start ? &events.front() : nullptr;
         }
 
     }  // namespace
 
-    LogVerdict CheckMatchLog(std::string_view text) {
-        std::expected<eastl::vector<MatchLogEvent>, eastl::string> parsed = ParseMatchLog(text);
+    LogVerdict CheckMatchLog(StringView text) {
+        std::expected<Vector<MatchLogEvent>, String> parsed = ParseMatchLog(text);
         if (!parsed.has_value()) {
             return Rejected(LogProblem::Unreadable, Format("unreadable: {}", parsed.error()));
         }
@@ -74,24 +74,24 @@ namespace BECore::Mahjong::Arena {
         return verdict;
     }
 
-    std::expected<eastl::vector<CheckedLog>, eastl::string> ReadLogs(const LogSource& source, std::string_view path) {
-        std::expected<eastl::vector<LogFile>, eastl::string> files = source(path);
+    std::expected<Vector<CheckedLog>, String> ReadLogs(const LogSource& source, StringView path) {
+        std::expected<Vector<LogFile>, String> files = source(path);
         if (!files.has_value()) {
             return std::unexpected(files.error());
         }
         eastl::sort(files->begin(), files->end(), [](const LogFile& a, const LogFile& b) { return a.name != b.name ? a.name < b.name : a.text < b.text; });
-        eastl::vector<CheckedLog> logs;
+        Vector<CheckedLog> logs;
         logs.reserve(files->size());
         for (const LogFile& file : *files) {
-            logs.push_back({file.name, CheckMatchLog(std::string_view(file.text.data(), file.text.size()))});
+            logs.push_back({file.name, CheckMatchLog(file.text)});
         }
         return logs;
     }
 
-    LogCorpus SummariseLogs(const eastl::vector<CheckedLog>& logs) {
+    LogCorpus SummariseLogs(const Vector<CheckedLog>& logs) {
         LogCorpus corpus;
-        eastl::vector<int> handCounts;
-        eastl::vector<int> actionCounts;
+        Vector<int> handCounts;
+        Vector<int> actionCounts;
         for (const CheckedLog& log : logs) {
             ++corpus.files;
             if (!log.verdict.ok) {
@@ -125,7 +125,7 @@ namespace BECore::Mahjong::Arena {
             }
             Count(corpus.setups, SeatsToLetters(start->seats));
             ++corpus.platforms[static_cast<size_t>(start->origin.platform)];
-            Count(corpus.builds, start->origin.build.empty() ? eastl::string(kNoBuild.data(), kNoBuild.size()) : start->origin.build);
+            Count(corpus.builds, start->origin.build.empty() ? String(kNoBuild.data(), kNoBuild.size()) : start->origin.build);
         }
         eastl::sort(corpus.setups.begin(), corpus.setups.end());
         eastl::sort(corpus.builds.begin(), corpus.builds.end());

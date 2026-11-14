@@ -1,5 +1,6 @@
 #include "ShippedTableLayout.h"
 
+#include <Common/Printers.h>
 #include <Mahjong/Table/TableLayout.h>
 #include <Mahjong/Table/TableLayoutSpec.h>
 #include <Mahjong/Table/TableRegions.h>
@@ -82,8 +83,8 @@ namespace BECore::Mahjong::Tests {
             return input;
         }
 
-        std::vector<TileSlot> SlotsOf(const TableLayout& layout, SlotRole role, Seat seat) {
-            std::vector<TileSlot> found;
+        Vector<TileSlot> SlotsOf(const TableLayout& layout, SlotRole role, Seat seat) {
+            Vector<TileSlot> found;
             for (const TileSlot& slot : layout.slots) {
                 if (slot.role == role && slot.seat == seat) {
                     found.push_back(slot);
@@ -111,12 +112,12 @@ namespace BECore::Mahjong::Tests {
 
         /// The zones are the groups of slots of one role and seat (the wall is one); none may overlap another.
         void ExpectNoZoneOverlaps(const TableLayout& layout) {
-            std::vector<std::pair<std::string, Rect>> zones;
+            Vector<Pair<String, Rect>> zones;
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 for (const SlotRole role : kSeatRoles) {
                     const Rect bounds = BoundsOf(layout, role, seat);
                     if (!bounds.IsEmpty()) {
-                        zones.emplace_back("role " + std::to_string(static_cast<int>(role)) + " of seat " + std::to_string(seat), bounds);
+                        zones.emplace_back(Format("role {} of seat {}", static_cast<int>(role), seat), bounds);
                     }
                 }
             }
@@ -136,14 +137,14 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The five zones of the plates: the discard block of each seat, then the wall ring.
-        std::vector<Rect> PlateZones(const TableLayout& layout) {
-            std::vector<Rect> zones(layout.zones.discards.begin(), layout.zones.discards.end());
+        Vector<Rect> PlateZones(const TableLayout& layout) {
+            Vector<Rect> zones(layout.zones.discards.begin(), layout.zones.discards.end());
             zones.push_back(layout.zones.wall);
             return zones;
         }
 
         void ExpectZonesAreSound(const TableLayout& layout) {
-            const std::vector<Rect> zones = PlateZones(layout);
+            const Vector<Rect> zones = PlateZones(layout);
             for (size_t first = 0; first < zones.size(); ++first) {
                 EXPECT_GT(zones[first].w, 0.0f) << "zone " << first;
                 EXPECT_GT(zones[first].h, 0.0f) << "zone " << first;
@@ -342,7 +343,7 @@ namespace BECore::Mahjong::Tests {
                 TableInput input = QuietInput(viewer);
                 input.concealedCount[viewer] = count;
                 const TableLayout layout = MakeTableLayout(input);
-                const std::vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, viewer);
+                const Vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, viewer);
                 ASSERT_EQ(static_cast<int>(hand.size()), count);
                 const TileSize tile = ExpectOneTileSize(layout, SlotRole::HandTile, viewer);
                 EXPECT_GE(tile.w, kViewerHandTileW) << "large enough to touch";
@@ -365,7 +366,7 @@ namespace BECore::Mahjong::Tests {
             const TableInput input = QuietInput(viewer);
             const TableLayout layout = MakeTableLayout(input);
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                const std::vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, seat);
+                const Vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, seat);
                 EXPECT_EQ(static_cast<int>(hand.size()), input.concealedCount[seat]);
                 const TileSize tile = ExpectOneTileSize(layout, SlotRole::HandTile, seat);
                 if (seat != viewer) {
@@ -626,7 +627,7 @@ namespace BECore::Mahjong::Tests {
             input.discardSeats.push_back(2);
         }
         const TableLayout layout = MakeTableLayout(input);
-        const std::vector<TileSlot> pile = SlotsOf(layout, SlotRole::DiscardTile, 2);
+        const Vector<TileSlot> pile = SlotsOf(layout, SlotRole::DiscardTile, 2);
         ASSERT_EQ(pile.size(), 7u);
         const TileSize tile = ExpectOneTileSize(layout, SlotRole::DiscardTile, 2);
         for (int i = 0; i < kDiscardsPerRow; ++i) {
@@ -676,8 +677,8 @@ namespace BECore::Mahjong::Tests {
             const TableLayout layout = MakeTableLayout(input);
             const Seat right = SeatAtPosition(viewer, 1);
             const Seat left = SeatAtPosition(viewer, 3);
-            const std::vector<TileSlot> rightPile = SlotsOf(layout, SlotRole::DiscardTile, right);
-            const std::vector<TileSlot> leftPile = SlotsOf(layout, SlotRole::DiscardTile, left);
+            const Vector<TileSlot> rightPile = SlotsOf(layout, SlotRole::DiscardTile, right);
+            const Vector<TileSlot> leftPile = SlotsOf(layout, SlotRole::DiscardTile, left);
             ASSERT_EQ(rightPile.size(), 7u);
             ASSERT_EQ(leftPile.size(), 7u);
             const TileSize leftTile = ExpectOneTileSize(layout, SlotRole::DiscardTile, left);
@@ -714,7 +715,7 @@ namespace BECore::Mahjong::Tests {
                 for (const int position : {1, 3}) {
                     const Seat seat = SeatAtPosition(viewer, position);
                     const TableLayout layout = MakeTableLayout(WorstInput(viewer, kWorstPile, seat), design.width, design.height);
-                    const std::vector<TileSlot> pile = SlotsOf(layout, SlotRole::DiscardTile, seat);
+                    const Vector<TileSlot> pile = SlotsOf(layout, SlotRole::DiscardTile, seat);
                     const Rect& zone = layout.zones.discards[seat];
                     const int rows = (static_cast<int>(pile.size()) + kDiscardsPerRow - 1) / kDiscardsPerRow;
                     ASSERT_GT(rows, kDiscardRowCapacity) << "the worst pile is longer than the block holds";
@@ -741,7 +742,7 @@ namespace BECore::Mahjong::Tests {
         const TableLayout layout = MakeTableLayout(input);
         int seen = 0;
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            const std::vector<TileSlot> pile = SlotsOf(layout, SlotRole::DiscardTile, seat);
+            const Vector<TileSlot> pile = SlotsOf(layout, SlotRole::DiscardTile, seat);
             int own = 0;
             for (size_t entry = 0; entry < input.discardSeats.size(); ++entry) {
                 if (input.discardSeats[entry] != seat) {
@@ -776,7 +777,7 @@ namespace BECore::Mahjong::Tests {
         input.melds[0] = {MakeMeld(MeldKind::Chow), MakeMeld(MeldKind::Kong), MakeMeld(MeldKind::Pung)};
         input.concealedCount[0] = 4;
         const TableLayout layout = MakeTableLayout(input);
-        const std::vector<TileSlot> melds = SlotsOf(layout, SlotRole::MeldTile, 0);
+        const Vector<TileSlot> melds = SlotsOf(layout, SlotRole::MeldTile, 0);
         ASSERT_EQ(melds.size(), 10u);
         const TileSize tile = ExpectOneTileSize(layout, SlotRole::MeldTile, 0);
         EXPECT_LT(tile.w, TileSizeOf(layout, SlotRole::HandTile, 0).w) << "a meld tile is smaller than a hand tile";
@@ -802,7 +803,7 @@ namespace BECore::Mahjong::Tests {
         input.bonusCount = {3, 2, 0, 8};
         const TableLayout layout = MakeTableLayout(input);
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            const std::vector<TileSlot> bonus = SlotsOf(layout, SlotRole::BonusTile, seat);
+            const Vector<TileSlot> bonus = SlotsOf(layout, SlotRole::BonusTile, seat);
             ASSERT_EQ(static_cast<int>(bonus.size()), input.bonusCount[seat]);
             if (bonus.empty()) {
                 continue;
@@ -827,7 +828,7 @@ namespace BECore::Mahjong::Tests {
         for (const int remaining : {0, 1, 2, 3, 57, 92, 143, kWorstWall}) {
             TableInput input = QuietInput(2);
             input.wallRemaining = remaining;
-            const std::vector<TileSlot> wall = SlotsOf(MakeTableLayout(input), SlotRole::WallStack, 0);
+            const Vector<TileSlot> wall = SlotsOf(MakeTableLayout(input), SlotRole::WallStack, 0);
             ASSERT_EQ(static_cast<int>(wall.size()), (remaining + 1) / 2) << "remaining " << remaining;
             for (size_t i = 0; i < wall.size(); ++i) {
                 EXPECT_EQ(wall[i].index, static_cast<int>(i));
@@ -842,7 +843,7 @@ namespace BECore::Mahjong::Tests {
         TableInput input = QuietInput(0);
         input.wallRemaining = kWorstWall;
         const TableLayout layout = MakeTableLayout(input);
-        const std::vector<TileSlot> wall = SlotsOf(layout, SlotRole::WallStack, 0);
+        const Vector<TileSlot> wall = SlotsOf(layout, SlotRole::WallStack, 0);
         ASSERT_EQ(static_cast<int>(wall.size()), kWallRingCells);
         const TileSize stack = ExpectOneTileSize(layout, SlotRole::WallStack, 0);
         for (size_t i = 0; i < wall.size(); ++i) {
@@ -855,10 +856,10 @@ namespace BECore::Mahjong::Tests {
     TEST(TableLayoutTest, HitHandTileFindsTheTileAtItsCentreAndNothingOutside) {
         for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
             const TableLayout layout = MakeTableLayout(BusyInput(viewer));
-            const std::vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, viewer);
+            const Vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, viewer);
             ASSERT_EQ(hand.size(), 14u);
             for (const TileSlot& slot : hand) {
-                const std::optional<int> hit = HitHandTile(layout, slot.rect.x + slot.rect.w / 2.0f, slot.rect.y + slot.rect.h / 2.0f);
+                const Optional<int> hit = HitHandTile(layout, slot.rect.x + slot.rect.w / 2.0f, slot.rect.y + slot.rect.h / 2.0f);
                 ASSERT_TRUE(hit.has_value());
                 EXPECT_EQ(*hit, slot.index);
             }
@@ -896,7 +897,7 @@ namespace BECore::Mahjong::Tests {
         TableInput input = QuietInput(0);
         input.concealedCount[0] = 40;
         const TableLayout layout = MakeTableLayout(input);
-        const std::vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, 0);
+        const Vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, 0);
         ASSERT_EQ(hand.size(), 40u);
         const float below = hand[0].rect.y + hand[0].rect.h + 2.0f;
         EXPECT_EQ(HitHandTile(layout, hand[10].rect.x + 0.5f, below), 10);
@@ -906,7 +907,7 @@ namespace BECore::Mahjong::Tests {
     TEST(TableLayoutTest, TheMarginUnderTheTilesAndTheWholeHeightOfTheStripHitTheTileAbove) {
         for (const ViewSize& size : kViewSizes) {
             const TableLayout layout = MakeTableLayout(BusyInput(0), size.width, size.height);
-            const std::vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, 0);
+            const Vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, 0);
             ASSERT_EQ(hand.size(), 14u);
             // the bottom of the table fitted into the view: the table is centred, so there may be a bar under it
             const float fit = LayoutScale(size.width, size.height);
@@ -924,7 +925,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(TableLayoutTest, TheHandStripStopsAtTheEdgesOfTheFirstAndTheLastTile) {
         const TableLayout layout = MakeTableLayout(BusyInput(0));
-        const std::vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, 0);
+        const Vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, 0);
         const float y = hand[0].rect.y + hand[0].rect.h / 2.0f;
         EXPECT_FALSE(HitHandTile(layout, hand.front().rect.x - 0.5f, y).has_value());
         EXPECT_EQ(HitHandTile(layout, hand.front().rect.x + 0.1f, y), 0);
@@ -951,7 +952,7 @@ namespace BECore::Mahjong::Tests {
         for (const ViewSize& size : kViewSizes) {
             for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
                 const TableLayout layout = MakeTableLayout(WorstInput(viewer, kWorstPile, kNoSeat), size.width, size.height);
-                const std::vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, viewer);
+                const Vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, viewer);
                 ASSERT_EQ(hand.size(), 14u);
                 // the strip as the rule defines it, down to the bottom of the fitted view
                 const Rect handBounds = BoundsOf(layout, SlotRole::HandTile, viewer);
@@ -989,7 +990,7 @@ namespace BECore::Mahjong::Tests {
             }
             const float x = slot.rect.x + slot.rect.w / 2.0f;
             const float y = slot.rect.y + slot.rect.h / 2.0f;
-            const std::optional<int> hit = HitHandTile(layout, x, y);
+            const Optional<int> hit = HitHandTile(layout, x, y);
             if (hit) {
                 ADD_FAILURE() << "a slot of role " << static_cast<int>(slot.role) << " of seat " << slot.seat << " hits hand tile " << *hit;
             }
@@ -1000,11 +1001,11 @@ namespace BECore::Mahjong::Tests {
         TableInput input = QuietInput(0);
         input.concealedCount[0] = 40;
         const TableLayout layout = MakeTableLayout(input);
-        const std::vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, 0);
+        const Vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, 0);
         ASSERT_EQ(hand.size(), 40u);
         ASSERT_TRUE(Overlaps(hand[0].rect, hand[1].rect));
         // the point where tile 1 begins is over tile 0 too: the later one wins
-        const std::optional<int> hit = HitHandTile(layout, hand[1].rect.x + kTolerance, hand[1].rect.y + 1.0f);
+        const Optional<int> hit = HitHandTile(layout, hand[1].rect.x + kTolerance, hand[1].rect.y + 1.0f);
         ASSERT_TRUE(hit.has_value());
         EXPECT_EQ(*hit, 1);
         // the last tile is hit at its centre, and the first where nothing covers it
@@ -1043,11 +1044,11 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        Tile Parsed(std::string_view text) {
+        Tile Parsed(StringView text) {
             return TryParse(text).value();
         }
 
-        Meld ClaimedMeld(MeldKind kind, Seat from, std::string_view first, std::string_view claimed) {
+        Meld ClaimedMeld(MeldKind kind, Seat from, StringView first, StringView claimed) {
             Meld meld = MakeMeld(kind);
             meld.first = Parsed(first);
             meld.claimed = Parsed(claimed);
@@ -1069,8 +1070,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The (part, edge) of every meld tile of `owner`'s meld `meld` that has an edge.
-        std::vector<std::pair<int, Edge>> ClaimedTiles(const TableLayout& layout, Seat owner, int meld) {
-            std::vector<std::pair<int, Edge>> found;
+        Vector<Pair<int, Edge>> ClaimedTiles(const TableLayout& layout, Seat owner, int meld) {
+            Vector<Pair<int, Edge>> found;
             for (const TileSlot& slot : SlotsOf(layout, SlotRole::MeldTile, owner)) {
                 if (slot.index == meld && slot.claimEdge != Edge::None) {
                     found.emplace_back(slot.part, slot.claimEdge);
@@ -1090,7 +1091,7 @@ namespace BECore::Mahjong::Tests {
             const TileSize tile = ExpectOneTileSize(layout, SlotRole::HandTile, viewer);
             EXPECT_NEAR(hand.w, static_cast<float>(kMaxConcealedTiles) * tile.w, kTolerance) << "14 tiles side by side, none left over";
             EXPECT_LE(hand.x + hand.w, melds.x + kTolerance);
-            const std::vector<TileSlot> tiles = SlotsOf(layout, SlotRole::HandTile, viewer);
+            const Vector<TileSlot> tiles = SlotsOf(layout, SlotRole::HandTile, viewer);
             ASSERT_EQ(static_cast<int>(tiles.size()), kMaxConcealedTiles);
             for (size_t i = 1; i < tiles.size(); ++i) {
                 EXPECT_NEAR(tiles[i].rect.x - tiles[i - 1].rect.x, tile.w, kTolerance) << "tile " << i;
@@ -1107,7 +1108,7 @@ namespace BECore::Mahjong::Tests {
                         input.melds[owner] = {MakeMeld(MeldKind::Pung), ClaimedMeld(kind, (owner + offset) % kSeatCount, "5p", "5p")};
                         const TableLayout layout = MakeTableLayout(input);
                         const int expectedPart = 3 - offset;  // the previous seat: first tile, across: middle, the next seat: last
-                        const std::vector<std::pair<int, Edge>> claimed = ClaimedTiles(layout, owner, 1);
+                        const Vector<Pair<int, Edge>> claimed = ClaimedTiles(layout, owner, 1);
                         ASSERT_EQ(claimed.size(), 1u) << "viewer " << viewer << " owner " << owner << " offset " << offset;
                         EXPECT_EQ(claimed[0].first, expectedPart);
                         EXPECT_EQ(claimed[0].second, ExpectedEdge(SeatPosition(viewer, owner), offset)) << "viewer " << viewer << " owner " << owner << " offset " << offset;
@@ -1125,7 +1126,7 @@ namespace BECore::Mahjong::Tests {
                 for (int part = 0; part < 3; ++part) {
                     TableInput input = QuietInput(viewer);
                     input.melds[owner] = {ClaimedMeld(MeldKind::Chow, (owner + 3) % kSeatCount, "4p", kClaimed[part])};
-                    const std::vector<std::pair<int, Edge>> claimed = ClaimedTiles(MakeTableLayout(input), owner, 0);
+                    const Vector<Pair<int, Edge>> claimed = ClaimedTiles(MakeTableLayout(input), owner, 0);
                     ASSERT_EQ(claimed.size(), 1u);
                     EXPECT_EQ(claimed[0].first, part);
                     EXPECT_EQ(claimed[0].second, ExpectedEdge(SeatPosition(viewer, owner), 3));
@@ -1156,7 +1157,7 @@ namespace BECore::Mahjong::Tests {
         TableInput input = QuietInput(0);
         input.melds[2] = {ClaimedMeld(MeldKind::Kong, 1, "5p", "5p")};  // the pung of seat 2 was claimed from the seat before it
         for (const ViewSize& size : kViewSizes) {
-            const std::vector<std::pair<int, Edge>> claimed = ClaimedTiles(MakeTableLayout(input, size.width, size.height), 2, 0);
+            const Vector<Pair<int, Edge>> claimed = ClaimedTiles(MakeTableLayout(input, size.width, size.height), 2, 0);
             ASSERT_EQ(claimed.size(), 1u);
             EXPECT_EQ(claimed[0].first, 0);
             EXPECT_EQ(claimed[0].second, Edge::Right);  // seat 2 is at the top for the viewer 0; the previous seat: right
@@ -1168,7 +1169,7 @@ namespace BECore::Mahjong::Tests {
         input.melds[0] = {MakeMeld(MeldKind::Chow), MakeMeld(MeldKind::Kong)};
         input.melds[2] = {MakeMeld(MeldKind::Pung)};
         const TableLayout layout = MakeTableLayout(input);
-        const std::vector<TileSlot> melds = SlotsOf(layout, SlotRole::MeldTile, 0);
+        const Vector<TileSlot> melds = SlotsOf(layout, SlotRole::MeldTile, 0);
         const TileSize tile = ExpectOneTileSize(layout, SlotRole::MeldTile, 0);
         const Rect chow = BoundsOfMeld(layout, 0, 0);
         const Rect kong = BoundsOfMeld(layout, 0, 1);
@@ -1230,7 +1231,7 @@ namespace BECore::Mahjong::Tests {
         input.melds[3] = {MakeMeld(MeldKind::Kong), MakeMeld(MeldKind::Pung)};
         const TableLayout layout = MakeTableLayout(input);
         for (const Seat seat : {1, 3}) {
-            const std::vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, seat);
+            const Vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, seat);
             ASSERT_EQ(hand.size(), 13u);
             const TileSize handTile = ExpectOneTileSize(layout, SlotRole::HandTile, seat);
             for (size_t i = 0; i < hand.size(); ++i) {
@@ -1241,14 +1242,14 @@ namespace BECore::Mahjong::Tests {
                     EXPECT_NEAR(hand[i].rect.y - hand[i - 1].rect.y, hand[i].rect.h, kTolerance) << "the pitch is the height of the turned tile";
                 }
             }
-            const std::vector<TileSlot> bonus = SlotsOf(layout, SlotRole::BonusTile, seat);
+            const Vector<TileSlot> bonus = SlotsOf(layout, SlotRole::BonusTile, seat);
             ASSERT_EQ(bonus.size(), 3u);
             ExpectOneTileSize(layout, SlotRole::BonusTile, seat);
             for (size_t i = 1; i < bonus.size(); ++i) {
                 EXPECT_EQ(bonus[i].rect.x, bonus[0].rect.x);
                 EXPECT_NEAR(bonus[i].rect.y - bonus[i - 1].rect.y, bonus[i].rect.h, kTolerance);
             }
-            const std::vector<TileSlot> melds = SlotsOf(layout, SlotRole::MeldTile, seat);
+            const Vector<TileSlot> melds = SlotsOf(layout, SlotRole::MeldTile, seat);
             ASSERT_GE(melds.size(), 6u);
             ExpectOneTileSize(layout, SlotRole::MeldTile, seat);
             for (size_t i = 1; i < melds.size(); ++i) {
@@ -1335,8 +1336,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Every table the phone profile has to hold for `viewer`: the worst ones (the pile of each seat and spread), a busy and a quiet one.
-        std::vector<TableInput> PhoneTables(Seat viewer, float handTileW) {
-            std::vector<TableInput> tables;
+        Vector<TableInput> PhoneTables(Seat viewer, float handTileW) {
+            Vector<TableInput> tables;
             for (const Seat discardSeat : {kNoSeat, 0, 1, 2, 3}) {
                 tables.push_back(PhoneInput(WorstInput(viewer, kWorstPile, discardSeat), handTileW));
             }
@@ -1350,8 +1351,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The slots of every seat but `viewer`, and the wall, in layout order.
-        std::vector<TileSlot> SlotsApartFromTheViewers(const TableLayout& layout) {
-            std::vector<TileSlot> found;
+        Vector<TileSlot> SlotsApartFromTheViewers(const TableLayout& layout) {
+            Vector<TileSlot> found;
             for (const TileSlot& slot : layout.slots) {
                 if (slot.role == SlotRole::WallStack || slot.seat != layout.viewer) {
                     found.push_back(slot);
@@ -1419,7 +1420,7 @@ namespace BECore::Mahjong::Tests {
         for (const float handTileW : kPhoneTileWidths) {
             for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
                 const TableLayout layout = MakeTableLayout(PhoneInput(WorstInput(viewer, kWorstPile, kNoSeat), handTileW));
-                const std::vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, viewer);
+                const Vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, viewer);
                 ASSERT_EQ(static_cast<int>(hand.size()), kMaxConcealedTiles);
                 for (int i = 0; i < kMaxConcealedTiles; ++i) {
                     EXPECT_EQ(hand[i].index, i);
@@ -1443,9 +1444,9 @@ namespace BECore::Mahjong::Tests {
     TEST(TableLayoutTest, AShortPhoneHandKeepsItsTilesWhereTheFullOneHasThem) {
         for (const int count : {1, 13}) {
             TableInput input = PhoneInput(QuietInput(0), 70.0f);
-            const std::vector<TileSlot> full = SlotsOf(MakeTableLayout(input), SlotRole::HandTile, 0);
+            const Vector<TileSlot> full = SlotsOf(MakeTableLayout(input), SlotRole::HandTile, 0);
             input.concealedCount[0] = count;
-            const std::vector<TileSlot> hand = SlotsOf(MakeTableLayout(input), SlotRole::HandTile, 0);
+            const Vector<TileSlot> hand = SlotsOf(MakeTableLayout(input), SlotRole::HandTile, 0);
             ASSERT_EQ(static_cast<int>(hand.size()), count);
             for (int i = 0; i < count; ++i) {
                 EXPECT_EQ(hand[i].rect.x, full[i].rect.x);
@@ -1464,8 +1465,8 @@ namespace BECore::Mahjong::Tests {
                 const TableInput desktopInput = WorstInput(viewer, kWorstPile, kNoSeat);
                 const TableLayout desktop = MakeTableLayout(desktopInput);
                 const TableLayout phone = MakeTableLayout(PhoneInput(desktopInput, handTileW));
-                const std::vector<TileSlot> expected = SlotsApartFromTheViewers(desktop);
-                const std::vector<TileSlot> slots = SlotsApartFromTheViewers(phone);
+                const Vector<TileSlot> expected = SlotsApartFromTheViewers(desktop);
+                const Vector<TileSlot> slots = SlotsApartFromTheViewers(phone);
                 ASSERT_EQ(expected.size(), slots.size());
                 for (size_t i = 0; i < expected.size(); ++i) {
                     EXPECT_TRUE(SameRect(expected[i].rect, slots[i].rect)) << "slot " << i << " of seat " << expected[i].seat << " viewer " << viewer;
@@ -1506,7 +1507,7 @@ namespace BECore::Mahjong::Tests {
         for (const int pile : {1, 6, 18, 19, 40, kWorstPile}) {
             const TableLayout layout = MakeTableLayout(PhoneInput(WorstInput(0, pile, 0), kPhoneHandTileMaxW));
             const Rect& zone = layout.zones.discards[0];
-            const std::vector<TileSlot> discards = SlotsOf(layout, SlotRole::DiscardTile, 0);
+            const Vector<TileSlot> discards = SlotsOf(layout, SlotRole::DiscardTile, 0);
             ASSERT_EQ(static_cast<int>(discards.size()), pile);
             for (const TileSlot& slot : discards) {
                 EXPECT_TRUE(Holds(zone, slot.rect)) << "pile " << pile << " tile " << slot.index;
@@ -1518,7 +1519,7 @@ namespace BECore::Mahjong::Tests {
             }
         }
         // three rows lie as the desktop block's rows do, without overlap: the block is as high as its three rows
-        const std::vector<TileSlot> three = SlotsOf(MakeTableLayout(PhoneInput(WorstInput(0, 18, 0), kPhoneHandTileMaxW)), SlotRole::DiscardTile, 0);
+        const Vector<TileSlot> three = SlotsOf(MakeTableLayout(PhoneInput(WorstInput(0, 18, 0), kPhoneHandTileMaxW)), SlotRole::DiscardTile, 0);
         EXPECT_EQ(three[kDiscardsPerRow].rect.y - three[0].rect.y, three[0].rect.h);
     }
 
@@ -1757,7 +1758,7 @@ namespace BECore::Mahjong::Tests {
     TEST(TableLayoutTest, TheNarrowViewersHandIsOneRowOfFourteenTilesOfTheDesktopSizeInsideTheRackAndTheRimAndHitsByItsIndex) {
         for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
             const TableLayout layout = InNarrow(WorstInput(viewer, kWorstPile, kNoSeat));
-            const std::vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, viewer);
+            const Vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, viewer);
             ASSERT_EQ(static_cast<int>(hand.size()), kMaxConcealedTiles);
             for (int i = 0; i < kMaxConcealedTiles; ++i) {
                 EXPECT_EQ(hand[i].rect.w, kViewerHandTileW);
@@ -1828,8 +1829,8 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(narrow.zones.wall.w, landscape.zones.wall.w);
         EXPECT_EQ(narrow.zones.wall.h, landscape.zones.wall.h);
         EXPECT_NEAR(RectCentreX(narrow.zones.wall), kNarrowViewWidth / 2.0f, kTolerance);
-        const std::vector<TileSlot> landscapeWall = SlotsOf(landscape, SlotRole::WallStack, 0);
-        const std::vector<TileSlot> narrowWall = SlotsOf(narrow, SlotRole::WallStack, 0);
+        const Vector<TileSlot> landscapeWall = SlotsOf(landscape, SlotRole::WallStack, 0);
+        const Vector<TileSlot> narrowWall = SlotsOf(narrow, SlotRole::WallStack, 0);
         ASSERT_EQ(landscapeWall.size(), narrowWall.size());
         for (size_t i = 0; i < narrowWall.size(); ++i) {
             EXPECT_EQ(narrowWall[i].index, landscapeWall[i].index);
@@ -1910,7 +1911,7 @@ namespace BECore::Mahjong::Tests {
     TEST(TableLayoutTest, ThePortraitHandIsOneRowOfFourteenTilesOfTheDesktopSizeRestingOnTheRimInsideTheRack) {
         for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
             const TableLayout layout = InPortrait(WorstInput(viewer, kWorstPile, kNoSeat));
-            const std::vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, viewer);
+            const Vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, viewer);
             ASSERT_EQ(static_cast<int>(hand.size()), kMaxConcealedTiles);
             for (int i = 0; i < kMaxConcealedTiles; ++i) {
                 EXPECT_EQ(hand[i].index, i);
@@ -1931,9 +1932,9 @@ namespace BECore::Mahjong::Tests {
         }
         // a short hand keeps its tiles where the full one has them; more tiles are squeezed into the row
         TableInput input = QuietInput(0);
-        const std::vector<TileSlot> full = SlotsOf(InPortrait(input), SlotRole::HandTile, 0);
+        const Vector<TileSlot> full = SlotsOf(InPortrait(input), SlotRole::HandTile, 0);
         input.concealedCount[0] = 13;
-        const std::vector<TileSlot> thirteen = SlotsOf(InPortrait(input), SlotRole::HandTile, 0);
+        const Vector<TileSlot> thirteen = SlotsOf(InPortrait(input), SlotRole::HandTile, 0);
         ASSERT_EQ(thirteen.size(), 13u);
         for (size_t i = 0; i < thirteen.size(); ++i) {
             EXPECT_EQ(thirteen[i].rect.x, full[i].rect.x);
@@ -2037,8 +2038,8 @@ namespace BECore::Mahjong::Tests {
     TEST(TableLayoutTest, ThePortraitWallRingHasTheCellsAndTheOrderOfTheLandscapeOne) {
         TableInput input = QuietInput(1);
         input.wallRemaining = kWorstWall;
-        const std::vector<TileSlot> landscape = SlotsOf(InLandscape(input), SlotRole::WallStack, 0);
-        const std::vector<TileSlot> portrait = SlotsOf(InPortrait(input), SlotRole::WallStack, 0);
+        const Vector<TileSlot> landscape = SlotsOf(InLandscape(input), SlotRole::WallStack, 0);
+        const Vector<TileSlot> portrait = SlotsOf(InPortrait(input), SlotRole::WallStack, 0);
         ASSERT_EQ(landscape.size(), portrait.size());
         ASSERT_EQ(static_cast<int>(portrait.size()), kWallRingCells);
         const float shiftX = portrait[0].rect.x - landscape[0].rect.x;
@@ -2087,7 +2088,7 @@ namespace BECore::Mahjong::Tests {
         for (const int pile : {1, 6, 7, 30, 36, 37, kWorstPile}) {
             const TableLayout layout = InPortrait(WorstInput(0, pile, 0));
             const Rect& zone = layout.zones.discards[0];
-            const std::vector<TileSlot> discards = SlotsOf(layout, SlotRole::DiscardTile, 0);
+            const Vector<TileSlot> discards = SlotsOf(layout, SlotRole::DiscardTile, 0);
             ASSERT_EQ(static_cast<int>(discards.size()), pile);
             const float tileW = discards[0].rect.w;
             const float tileH = discards[0].rect.h;
@@ -2111,7 +2112,7 @@ namespace BECore::Mahjong::Tests {
                     for (int offset = 1; offset < kSeatCount; ++offset) {
                         TableInput input = QuietInput(viewer);
                         input.melds[owner] = {MakeMeld(MeldKind::Pung), ClaimedMeld(kind, (owner + offset) % kSeatCount, "5p", "5p")};
-                        const std::vector<std::pair<int, Edge>> claimed = ClaimedTiles(InPortrait(input), owner, 1);
+                        const Vector<Pair<int, Edge>> claimed = ClaimedTiles(InPortrait(input), owner, 1);
                         ASSERT_EQ(claimed.size(), 1u) << "viewer " << viewer << " owner " << owner << " offset " << offset;
                         EXPECT_EQ(claimed[0].first, 3 - offset);
                         EXPECT_EQ(claimed[0].second, ExpectedEdge(SeatPosition(viewer, owner), offset)) << "viewer " << viewer << " owner " << owner << " offset " << offset;
@@ -2123,7 +2124,7 @@ namespace BECore::Mahjong::Tests {
         for (const ViewSize& size : kViewSizes) {
             TableInput input = QuietInput(2);
             input.melds[0] = {ClaimedMeld(MeldKind::Chow, 3, "4p", "5p")};
-            const std::vector<std::pair<int, Edge>> claimed = ClaimedTiles(MakeTableLayout(input, size.width, size.height), 0, 0);
+            const Vector<Pair<int, Edge>> claimed = ClaimedTiles(MakeTableLayout(input, size.width, size.height), 0, 0);
             ASSERT_EQ(claimed.size(), 1u) << size.width << "x" << size.height;
             EXPECT_EQ(claimed[0].first, 1);
             EXPECT_EQ(claimed[0].second, ExpectedEdge(SeatPosition(2, 0), 3));
@@ -2141,25 +2142,25 @@ namespace BECore::Mahjong::Tests {
             input.discardSeats.push_back(seat);
         }
         for (const TableLayout& layout : {InLandscape(input), MakeTableLayout(input)}) {
-            const eastl::array<Rect, 4> discards = {Rect(544, 442, 168, 185), Rect(968, 268, 185, 168), Rect(562, 94, 156, 170), Rect(124, 268, 185, 168)};
-            const eastl::array<Rect, 4> plates = {Rect(96, 532, 152, 80), Rect(1000, 180, 152, 80), Rect(400, 100, 152, 80), Rect(124, 180, 152, 80)};
+            const Array<Rect, 4> discards = {Rect(544, 442, 168, 185), Rect(968, 268, 185, 168), Rect(562, 94, 156, 170), Rect(124, 268, 185, 168)};
+            const Array<Rect, 4> plates = {Rect(96, 532, 152, 80), Rect(1000, 180, 152, 80), Rect(400, 100, 152, 80), Rect(124, 180, 152, 80)};
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 EXPECT_TRUE(SameRect(layout.zones.discards[seat], discards[seat])) << "seat " << seat;
                 EXPECT_TRUE(SameRect(layout.zones.seatPlates[seat], plates[seat])) << "seat " << seat;
             }
             EXPECT_TRUE(SameRect(layout.zones.wall, Rect(458, 268, 364, 168)));
             EXPECT_TRUE(SameRect(layout.zones.centerPanel, Rect(472, 282, 336, 140)));
-            const eastl::array<Rect, 4> firstHand = {Rect(72, 648, 48, 64), Rect(1230, 128, 42, 32), Rect(444, 8, 35, 46), Rect(8, 128, 42, 32)};
-            const eastl::array<Rect, 4> firstMeld = {Rect(764, 672, 30, 40), Rect(1189, 128, 37, 28), Rect(436, 58, 24, 32), Rect(54, 128, 37, 28)};
-            const eastl::array<Rect, 4> firstBonus = {Rect(72, 616, 24, 32), Rect(1161, 192, 24, 18), Rect(852, 58, 17, 22), Rect(95, 192, 24, 18)};
-            const eastl::array<Rect, 4> firstDiscard = {Rect(544, 442, 28, 37), Rect(1116, 408, 37, 28), Rect(562, 94, 26, 34), Rect(124, 268, 37, 28)};
+            const Array<Rect, 4> firstHand = {Rect(72, 648, 48, 64), Rect(1230, 128, 42, 32), Rect(444, 8, 35, 46), Rect(8, 128, 42, 32)};
+            const Array<Rect, 4> firstMeld = {Rect(764, 672, 30, 40), Rect(1189, 128, 37, 28), Rect(436, 58, 24, 32), Rect(54, 128, 37, 28)};
+            const Array<Rect, 4> firstBonus = {Rect(72, 616, 24, 32), Rect(1161, 192, 24, 18), Rect(852, 58, 17, 22), Rect(95, 192, 24, 18)};
+            const Array<Rect, 4> firstDiscard = {Rect(544, 442, 28, 37), Rect(1116, 408, 37, 28), Rect(562, 94, 26, 34), Rect(124, 268, 37, 28)};
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 EXPECT_TRUE(SameRect(SlotsOf(layout, SlotRole::HandTile, seat)[0].rect, firstHand[seat])) << "hand of seat " << seat;
                 EXPECT_TRUE(SameRect(SlotsOf(layout, SlotRole::MeldTile, seat)[0].rect, firstMeld[seat])) << "melds of seat " << seat;
                 EXPECT_TRUE(SameRect(SlotsOf(layout, SlotRole::BonusTile, seat)[0].rect, firstBonus[seat])) << "bonus of seat " << seat;
                 EXPECT_TRUE(SameRect(SlotsOf(layout, SlotRole::DiscardTile, seat)[0].rect, firstDiscard[seat])) << "discard of seat " << seat;
             }
-            const std::vector<TileSlot> wall = SlotsOf(layout, SlotRole::WallStack, 0);
+            const Vector<TileSlot> wall = SlotsOf(layout, SlotRole::WallStack, 0);
             EXPECT_TRUE(SameRect(wall.front().rect, Rect(458, 268, 14, 14)));
             EXPECT_TRUE(SameRect(wall.back().rect, Rect(458, 282, 14, 14)));
         }
@@ -2176,7 +2177,7 @@ namespace BECore::Mahjong::Tests {
             float width;
             float height;
             Rect hand;
-            eastl::array<Rect, 4> plates;
+            Array<Rect, 4> plates;
         };
         const Golden goldens[] = {
             {"narrow", kNarrowViewWidth, kNarrowViewHeight, Rect(204, 696, 48, 64), {Rect(88, 532, 152, 80), Rect(800, 180, 152, 80), Rect(300, 96, 152, 80), Rect(120, 180, 152, 80)}},
@@ -2208,7 +2209,7 @@ namespace BECore::Mahjong::Tests {
             const char* name;
             float width;
             float height;
-            eastl::array<Sizes, 3> opponents;
+            Array<Sizes, 3> opponents;
         };
         const Golden goldens[] = {{"narrow", kNarrowViewWidth, kNarrowViewHeight, {{{30, 25, 18, 28}, {35, 24, 17, 26}, {30, 25, 18, 28}}}},
                                   {"portrait", kPortraitViewWidth, kPortraitViewHeight, {{{32, 28, 18, 28}, {36, 24, 17, 26}, {32, 28, 18, 28}}}}};
@@ -2233,7 +2234,7 @@ namespace BECore::Mahjong::Tests {
         // What the canvases of the table rely on is the free regions of config/TableLayout.xml, not numbers of the node files: the check of the
         // spec holds each one inside the view and clear of every tile, block, ring and plate (the phone profile included).
         const TableLayoutSpec& spec = ShippedTableLayoutSpec();
-        for (const eastl::string& problem : CheckTableLayoutSpec(spec)) {
+        for (const String& problem : CheckTableLayoutSpec(spec)) {
             ADD_FAILURE() << problem.c_str();
         }
         for (const TableShape shape : EnumUtils<TableShape>::Values()) {

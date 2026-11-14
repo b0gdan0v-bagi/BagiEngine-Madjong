@@ -30,8 +30,8 @@ namespace BECore::Mahjong::Tests {
         // One suit of dots: all nine ranks and two more tiles.
         constexpr const char* kDots = "1p 2p 3p 4p 5p 6p 7p 8p 9p 2p 3p";
 
-        ScoreBreakdown Score(const std::string& tiles, Wind seatWind = Wind::East, Wind roundWind = Wind::East) {
-            return ScoreSeat(MakeInput(std::string(kQuietChows) + " " + tiles, {}, "", seatWind, roundWind));
+        ScoreBreakdown Score(const String& tiles, Wind seatWind = Wind::East, Wind roundWind = Wind::East) {
+            return ScoreSeat(MakeInput(Format("{} {}", kQuietChows, tiles), {}, "", seatWind, roundWind));
         }
 
         ScoreBreakdown ScoreWithMelds(std::initializer_list<Meld> melds, Wind seatWind = Wind::East, Wind roundWind = Wind::East) {
@@ -99,7 +99,7 @@ namespace BECore::Mahjong::Tests {
     // ----- one suit -----
 
     TEST(ScoreDoublesTest, OneSuitWithHonoursDoublesOnce) {
-        const ScoreBreakdown breakdown = ScoreSeat(MakeInput(std::string(kDots) + " Ww Ww"));
+        const ScoreBreakdown breakdown = ScoreSeat(MakeInput(Format("{} Ww Ww", kDots)));
 
         EXPECT_EQ(breakdown.doubles, kOneDouble);
         EXPECT_EQ(LineDoubles(breakdown, ScoreKind::OneSuitWithHonours), kOneDouble);
@@ -228,7 +228,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(ScoreDoublesTest, ALimitBelowTenOrBelowZeroScoresNothing) {
-        ScoreInput input = MakeInput(std::string(kQuietChows) + " 5p 5p 5p");
+        ScoreInput input = MakeInput(Format("{} 5p 5p 5p", kQuietChows));
         for (const int limit : {kLimitBelowTen, 0, -kLowerLimit}) {
             input.limit = limit;
             EXPECT_EQ(ScoreSeat(input).score, 0) << limit;
@@ -236,7 +236,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(ScoreDoublesTest, ALimitOfIntMaxDoesNotOverflow) {
-        std::string flowers = "F1";
+        String flowers = "F1";
         for (int count = 1; count < kManyFlowers; ++count) {
             flowers += " F1";
         }
@@ -250,7 +250,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(ScoreDoublesTest, TheRawScoreSaturatesAndTheLimitStillCaps) {
-        std::string flowers = "F1";
+        String flowers = "F1";
         for (int count = 1; count < kManyFlowers; ++count) {
             flowers += " F1";
         }

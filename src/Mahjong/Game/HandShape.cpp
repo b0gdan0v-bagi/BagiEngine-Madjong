@@ -13,7 +13,7 @@ namespace BECore::Mahjong {
         /// stopped. The lowest tile can only sit in a set that starts at it: at most one pung and, for every other copy, a chow, so each
         /// split is met exactly once.
         template <class Visit>
-        bool VisitSplits(TileCounts& counts, uint8_t from, eastl::vector<ShapeSet>& sets, Visit& visit) {
+        bool VisitSplits(TileCounts& counts, uint8_t from, Vector<ShapeSet>& sets, Visit& visit) {
             uint8_t id = from;
             while (id < kKindCount && counts[id] == 0) {
                 ++id;
@@ -69,13 +69,13 @@ namespace BECore::Mahjong {
             if (setsNeeded < 0 || setsNeeded > kSetsInHand || TotalTiles(counts) != setsNeeded * kTilesPerSet + kTilesInPair) {
                 return false;
             }
-            eastl::vector<ShapeSet> sets;
+            Vector<ShapeSet> sets;
             for (uint8_t id = 0; id < kKindCount; ++id) {
                 if (counts[id] < kTilesInPair) {
                     continue;
                 }
                 counts[id] -= kTilesInPair;
-                auto withPair = [&](const eastl::vector<ShapeSet>& found) { return visit(Tile{id}, found); };
+                auto withPair = [&](const Vector<ShapeSet>& found) { return visit(Tile{id}, found); };
                 const bool stop = VisitSplits(counts, 0, sets, withPair);
                 counts[id] += kTilesInPair;
                 if (stop) {
@@ -139,7 +139,7 @@ namespace BECore::Mahjong {
         return false;
     }
 
-    TileCounts CountTiles(const eastl::vector<Tile>& tiles) noexcept {
+    TileCounts CountTiles(const Vector<Tile>& tiles) noexcept {
         TileCounts counts{};
         for (const Tile tile : tiles) {
             if (tile.IsPlayable()) {
@@ -149,7 +149,7 @@ namespace BECore::Mahjong {
         return counts;
     }
 
-    TileCounts CountMeldTiles(const eastl::vector<Meld>& melds) noexcept {
+    TileCounts CountMeldTiles(const Vector<Meld>& melds) noexcept {
         TileCounts counts{};
         for (const Meld& meld : melds) {
             if (!meld.first.IsPlayable()) {
@@ -178,9 +178,9 @@ namespace BECore::Mahjong {
         return total;
     }
 
-    eastl::vector<Decomposition> Decompose(const TileCounts& counts, int setsNeeded) {
-        eastl::vector<Decomposition> found;
-        VisitDecompositions(counts, setsNeeded, [&](Tile pair, const eastl::vector<ShapeSet>& sets) {
+    Vector<Decomposition> Decompose(const TileCounts& counts, int setsNeeded) {
+        Vector<Decomposition> found;
+        VisitDecompositions(counts, setsNeeded, [&](Tile pair, const Vector<ShapeSet>& sets) {
             found.push_back({pair, sets});
             return false;
         });
@@ -232,15 +232,15 @@ namespace BECore::Mahjong {
         if (meldCount == 0 && (IsThirteenOrphans(counts) || IsSevenPairs(counts))) {
             return true;
         }
-        return VisitDecompositions(counts, kSetsInHand - meldCount, [](Tile, const eastl::vector<ShapeSet>&) { return true; });
+        return VisitDecompositions(counts, kSetsInHand - meldCount, [](Tile, const Vector<ShapeSet>&) { return true; });
     }
 
-    eastl::vector<Tile> WinningTiles(const TileCounts& counts, int meldCount) {
+    Vector<Tile> WinningTiles(const TileCounts& counts, int meldCount) {
         return WinningTiles(counts, meldCount, TileCounts{});
     }
 
-    eastl::vector<Tile> WinningTiles(const TileCounts& counts, int meldCount, const TileCounts& meldTiles) {
-        eastl::vector<Tile> tiles;
+    Vector<Tile> WinningTiles(const TileCounts& counts, int meldCount, const TileCounts& meldTiles) {
+        Vector<Tile> tiles;
         VisitWinningKinds(counts, meldCount, meldTiles, [&](Tile tile) {
             tiles.push_back(tile);
             return false;
@@ -252,7 +252,7 @@ namespace BECore::Mahjong {
         return VisitWinningKinds(counts, meldCount, meldTiles, [](Tile) { return true; });
     }
 
-    eastl::vector<Tile> WinningTiles(const PlayerHand& hand) {
+    Vector<Tile> WinningTiles(const PlayerHand& hand) {
         return WinningTiles(CountTiles(hand.concealed), static_cast<int>(hand.melds.size()), CountMeldTiles(hand.melds));
     }
 

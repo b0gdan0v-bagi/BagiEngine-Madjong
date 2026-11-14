@@ -74,7 +74,7 @@ namespace BECore::Mahjong {
 
         /// Opens the pad on the tester's nickname (`MahjongUploadComponent`, the row of `Options`) with @p current typed; false unless `Options` is open and the pad is not
         /// already up. `Done` and Escape hand the text to `MahjongUploadComponent::SetNickname` and go back to `Options`. The online screens are not involved.
-        bool OpenNicknameEntry(eastl::string_view current);
+        bool OpenNicknameEntry(StringView current);
         /// Whether the pad is up for the nickname (until the frame after `Done` or Escape, so the HUD, which hears the same Escape, leaves `Options` open).
         [[nodiscard]] bool IsNicknameEntryOpen() const noexcept {
             return _nicknameActive;
@@ -96,7 +96,7 @@ namespace BECore::Mahjong {
         void RequestPaste();
 
         void OnNicknameKey(MahjongGame& game, const SDLEvents::KeyDownEvent& event);
-        void OnNicknameAction(MahjongGame& game, eastl::string_view action, eastl::string_view value);
+        void OnNicknameAction(MahjongGame& game, StringView action, StringView value);
         /// Hands the typed nickname to the upload component and lets the pad go at the next `Follow`.
         void FinishNickname();
         void PublishNickname(const UIStrings& strings);
@@ -122,7 +122,7 @@ namespace BECore::Mahjong {
 
         OnlineScreens _screens;
         /// Alive while the component is attached; a read of the clipboard that is still pending holds a `weak_ptr` of it.
-        std::shared_ptr<int> _alive;
+        SharedPtr<int> _alive;
         PoolString _seatVars[kSeatCount];
         static constexpr size_t kListRowCount = static_cast<size_t>(OnlineScreens::kRoomsPerPage);
         PoolString _listVars[kListRowCount];
@@ -148,7 +148,7 @@ namespace BECore::Mahjong {
         uint64_t _padStrings = 0;
         // The second use of the pad: the nickname of the tester (no `OnlineScreens` page)
         TextEntry _nicknameEntry{TextEntry::Kind::Name};
-        eastl::vector<eastl::string> _nicknamePad;
+        Vector<String> _nicknamePad;
         uint64_t _nicknameStrings = 0;
         bool _nicknameActive = false;
         bool _nicknameClosing = false;    // `Done` or Escape stored it: the pad goes at the next `Follow`

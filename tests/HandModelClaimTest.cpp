@@ -77,7 +77,7 @@ namespace BECore::Mahjong::Tests {
             spec.hands[kSeat1] = "4p 4p 7p 1s 4s 7s 2m 5m 8m Sw Ww Rd 9p";
             spec.hands[kSeat2] = "3p 5p 4s 5s 6s 7m 8m 9m Ew Ew Ew 1m 1m";
             spec.hands[kSeat3] = "2p 5p 8p 2s 5s 8s 2m 5m 8m Rd Wd Nw 9s";
-            spec.live = std::string("Wd Gd Nw ") + kPriorityTile;
+            spec.live = Format("Wd Gd Nw {}", kPriorityTile);
             HandModel model = MakeModel(spec);
             Lap(model, "Wd Gd Nw", {kSeat2});
             EXPECT_TRUE(model.GetHand(kSeat2).callingDeclared);
@@ -92,15 +92,15 @@ namespace BECore::Mahjong::Tests {
         FixedWallSpec MahjongSpec() {
             FixedWallSpec spec = QuietSpec();
             spec.hands[kSeat0] = kWaitsOnRedA;
-            spec.live = std::string(kUseless) + " Wd Gd " + kRed;
+            spec.live = Format("{} Wd Gd {}", kUseless, kRed);
             return spec;
         }
 
-        HandModel MahjongWindow(std::optional<int> liveAfterDeal = std::nullopt) {
+        HandModel MahjongWindow(Optional<int> liveAfterDeal = std::nullopt) {
             FixedWallSpec spec = MahjongSpec();
             spec.liveAfterDeal = liveAfterDeal;
             HandModel model = MakeModel(spec);
-            Lap(model, std::string(kUseless) + " Wd Gd", {kSeat0});
+            Lap(model, Format("{} Wd Gd", kUseless), {kSeat0});
             EXPECT_EQ(model.CurrentSeat(), kSeat3);
             EXPECT_TRUE(model.Discard(kSeat3, T(kRed)).has_value());
             return model;
@@ -115,17 +115,17 @@ namespace BECore::Mahjong::Tests {
 
         ASSERT_EQ(model.GetPhase(), Phase::Claim);
         EXPECT_EQ(model.CurrentSeat(), kSeat0);  // the discarder, in the claim window
-        const eastl::vector<Seat> pending = model.PendingClaimSeats();
+        const Vector<Seat> pending = model.PendingClaimSeats();
         ASSERT_EQ(pending.size(), 1u);
         EXPECT_EQ(pending[0], kSeat1);
-        const eastl::vector<ClaimOption> options = model.LegalClaims(kSeat1);
+        const Vector<ClaimOption> options = model.LegalClaims(kSeat1);
         ASSERT_EQ(options.size(), 1u);
         EXPECT_EQ(options[0].kind, ClaimKind::Chow);
         EXPECT_EQ(options[0].chowFirst, T("4p"));
         EXPECT_TRUE(model.LegalClaims(kSeat2).empty());  // it holds 4p 6p too, but is not the next seat
         EXPECT_TRUE(model.LegalClaims(kSeat3).empty());
 
-        const std::string before = Snapshot(model);
+        const String before = Snapshot(model);
         EXPECT_EQ(Error(model.Claim(kSeat2, ClaimKind::Chow, T("4p"))), HandError::NotYourTurn);
         EXPECT_EQ(Error(model.Claim(kSeat3, ClaimKind::Chow, T("3p"))), HandError::NotYourTurn);
         EXPECT_EQ(Error(model.Claim(kSeat0, ClaimKind::Chow, T("4p"))), HandError::NotYourTurn);  // the discarder
@@ -171,14 +171,14 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(model.Discard(kSeat0, T("5p")).has_value());
         ASSERT_EQ(model.GetPhase(), Phase::Claim);
 
-        const eastl::vector<ClaimOption> options = model.LegalClaims(kSeat1);
+        const Vector<ClaimOption> options = model.LegalClaims(kSeat1);
         ASSERT_EQ(options.size(), 3u);
         EXPECT_EQ(options[0], (ClaimOption{ClaimKind::Chow, T("3p")}));
         EXPECT_EQ(options[1], (ClaimOption{ClaimKind::Chow, T("4p")}));
         EXPECT_EQ(options[2], (ClaimOption{ClaimKind::Chow, T("5p")}));
 
         // A sequence the seat cannot complete, and a chow without a sequence, are refused and change nothing.
-        const std::string before = Snapshot(model);
+        const String before = Snapshot(model);
         EXPECT_EQ(Error(model.Claim(kSeat1, ClaimKind::Chow, T("2p"))), HandError::IllegalClaim);
         EXPECT_EQ(Error(model.Claim(kSeat1, ClaimKind::Chow, T("6p"))), HandError::IllegalClaim);
         EXPECT_EQ(Error(model.Claim(kSeat1, ClaimKind::Chow)), HandError::IllegalClaim);
@@ -245,7 +245,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(model.Discard(kSeat3, T(kRed)).has_value());
 
         ASSERT_EQ(model.GetPhase(), Phase::Claim);
-        const eastl::vector<ClaimOption> options = model.LegalClaims(kSeat1);
+        const Vector<ClaimOption> options = model.LegalClaims(kSeat1);
         ASSERT_EQ(options.size(), 1u);
         EXPECT_EQ(options[0].kind, ClaimKind::Pung);
         ASSERT_TRUE(model.Claim(kSeat1, ClaimKind::Pung).has_value());
@@ -272,7 +272,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(model.GetPhase(), Phase::Claim);
         const size_t liveBefore = model.GetWall().LiveCount();
 
-        const eastl::vector<ClaimOption> options = model.LegalClaims(kSeat2);
+        const Vector<ClaimOption> options = model.LegalClaims(kSeat2);
         ASSERT_EQ(options.size(), 2u);
         EXPECT_EQ(options[0].kind, ClaimKind::Pung);
         EXPECT_EQ(options[1].kind, ClaimKind::Kong);
@@ -303,7 +303,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(model.Discard(kSeat0, T(kRed)).has_value());
         ASSERT_EQ(model.GetPhase(), Phase::Claim);
         ASSERT_EQ(model.LegalClaims(kSeat2).size(), 2u);  // pung and kong
-        const std::string before = Snapshot(model);
+        const String before = Snapshot(model);
 
         ASSERT_TRUE(model.Pass(kSeat2).has_value());
 
@@ -331,7 +331,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(model.PendingClaimSeats().size(), 1u);
         EXPECT_EQ(model.PendingClaimSeats()[0], kSeat3);
         EXPECT_TRUE(model.LegalClaims(kSeat2).empty());
-        const std::string before = Snapshot(model);
+        const String before = Snapshot(model);
         // Whether a seat is in the window is asked first, for every kind of claim; the declaration only for a seat in it.
         EXPECT_EQ(Error(model.Claim(kSeat2, ClaimKind::Mahjong)), HandError::NotYourTurn);
         EXPECT_EQ(Error(model.Claim(kSeat2, ClaimKind::Pung)), HandError::NotYourTurn);
@@ -351,7 +351,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(model.GetPhase(), Phase::Claim);
         ASSERT_EQ(model.PendingClaimSeats().size(), 1u);
         EXPECT_EQ(model.PendingClaimSeats()[0], kSeat0);
-        const eastl::vector<ClaimOption> options = model.LegalClaims(kSeat0);
+        const Vector<ClaimOption> options = model.LegalClaims(kSeat0);
         ASSERT_EQ(options.size(), 1u);
         EXPECT_EQ(options[0].kind, ClaimKind::Mahjong);
 
@@ -401,9 +401,9 @@ namespace BECore::Mahjong::Tests {
     TEST(HandModelClaimTest, ADeclaredSeatGetsNoWindowForATileThatDoesNotCompleteItsHand) {
         // Seat 0 has declared (it waits on the red dragon). A discard that is not the red dragon opens no window for it.
         FixedWallSpec spec = MahjongSpec();
-        spec.live = std::string(kUseless) + " Wd Gd Wd";
+        spec.live = Format("{} Wd Gd Wd", kUseless);
         HandModel model = MakeModel(spec);
-        Lap(model, std::string(kUseless) + " Wd Gd", {kSeat0});
+        Lap(model, Format("{} Wd Gd", kUseless), {kSeat0});
 
         ASSERT_TRUE(model.Discard(kSeat3, T("Wd")).has_value());
 
@@ -415,7 +415,7 @@ namespace BECore::Mahjong::Tests {
     TEST(HandModelClaimTest, MahjongBeatsAPungAndAChowWhenAllThreeClaim) {
         HandModel model = PriorityWindow();
         ASSERT_EQ(model.GetPhase(), Phase::Claim);
-        const eastl::vector<Seat> pending = model.PendingClaimSeats();
+        const Vector<Seat> pending = model.PendingClaimSeats();
         ASSERT_EQ(pending.size(), 3u);
 
         ASSERT_TRUE(model.Claim(kSeat0, ClaimKind::Chow, T(kPriorityChow)).has_value());
@@ -516,7 +516,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(model.GetPhase(), Phase::Claim);
 
         // Claims the seat cannot make: a pung or a kong without the tiles, a chow by a seat that is not next, a mahjong that is not one.
-        const std::string before = Snapshot(model);
+        const String before = Snapshot(model);
         EXPECT_EQ(Error(model.Claim(kSeat0, ClaimKind::Pung)), HandError::IllegalClaim);
         EXPECT_EQ(Error(model.Claim(kSeat1, ClaimKind::Kong)), HandError::IllegalClaim);
         EXPECT_EQ(Error(model.Claim(kSeat1, ClaimKind::Chow, T(kPriorityChow))), HandError::IllegalClaim);
@@ -530,7 +530,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(model.GetClaimStatus(kSeat0), ClaimStatus::Claimed);
         EXPECT_EQ(model.GetClaimStatus(kSeat1), ClaimStatus::Passed);
         EXPECT_EQ(model.GetClaimStatus(kSeat2), ClaimStatus::Waiting);
-        const std::string decided = Snapshot(model);
+        const String decided = Snapshot(model);
         EXPECT_EQ(Error(model.Pass(kSeat0)), HandError::AlreadyDecided);
         EXPECT_EQ(Error(model.Claim(kSeat0, ClaimKind::Chow, T(kPriorityChow))), HandError::AlreadyDecided);
         EXPECT_EQ(Error(model.Claim(kSeat1, ClaimKind::Pung)), HandError::AlreadyDecided);
@@ -542,7 +542,7 @@ namespace BECore::Mahjong::Tests {
         // In the window only the claims are possible ...
         HandModel window = PriorityWindow();
         ASSERT_EQ(window.GetPhase(), Phase::Claim);
-        const std::string inWindow = Snapshot(window);
+        const String inWindow = Snapshot(window);
         EXPECT_EQ(Error(window.Discard(kSeat3, T("Rd"))), HandError::WrongPhase);
         EXPECT_EQ(Error(window.Discard(kSeat0, T("5p"))), HandError::WrongPhase);
         EXPECT_EQ(Error(window.DeclareWin(kSeat2)), HandError::WrongPhase);
@@ -553,7 +553,7 @@ namespace BECore::Mahjong::Tests {
         spec.live = kRed;
         HandModel turn = MakeModel(spec);
         ASSERT_EQ(turn.GetPhase(), Phase::Discard);
-        const std::string inTurn = Snapshot(turn);
+        const String inTurn = Snapshot(turn);
         EXPECT_EQ(Error(turn.Claim(kSeat1, ClaimKind::Pung)), HandError::WrongPhase);
         EXPECT_EQ(Error(turn.Pass(kSeat1)), HandError::WrongPhase);
         EXPECT_TRUE(turn.PendingClaimSeats().empty());
@@ -628,7 +628,7 @@ namespace BECore::Mahjong::Tests {
         Lap(model, "9p Wd Gd", {kSeat0});
         ASSERT_TRUE(model.Discard(kSeat3, T("5p")).has_value());
         ASSERT_EQ(model.GetPhase(), Phase::Claim);
-        const eastl::vector<ClaimOption> options = model.LegalClaims(kSeat0);
+        const Vector<ClaimOption> options = model.LegalClaims(kSeat0);
         ASSERT_EQ(options.size(), 2u);
         EXPECT_EQ(options[0].kind, ClaimKind::Mahjong);
         EXPECT_EQ(options[1].kind, ClaimKind::Pung);
@@ -637,7 +637,7 @@ namespace BECore::Mahjong::Tests {
 
         const PlayerHand& hand = model.GetHand(kSeat0);
         EXPECT_TRUE(IsWinningShape(CountTiles(hand.concealed), static_cast<int>(hand.melds.size())));
-        const std::string before = Snapshot(model);
+        const String before = Snapshot(model);
         EXPECT_EQ(Error(model.DeclareWin(kSeat0)), HandError::CannotWin);
         EXPECT_EQ(Snapshot(model), before);
         ASSERT_TRUE(model.Discard(kSeat0, T(kRed)).has_value());
@@ -655,7 +655,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(model.CurrentSeat(), kSeat2);
 
         // 7m is part of a set: without it the hand is not waiting. 9p leaves three sets, the meld and a lone Gd.
-        const std::string before = Snapshot(model);
+        const String before = Snapshot(model);
         EXPECT_EQ(Error(model.Discard(kSeat2, T("7m"), true)), HandError::NotWaiting);
         EXPECT_EQ(Snapshot(model), before);
         ASSERT_TRUE(model.Discard(kSeat2, T("9p"), true).has_value());

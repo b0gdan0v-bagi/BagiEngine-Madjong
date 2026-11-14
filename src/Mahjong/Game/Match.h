@@ -120,7 +120,7 @@ namespace BECore::Mahjong {
             return _settings.handsPerMatch;
         }
         /// Every hand settled so far, in order, a replayed drawn hand too.
-        [[nodiscard]] const eastl::vector<HandSettlement>& History() const noexcept {
+        [[nodiscard]] const Vector<HandSettlement>& History() const noexcept {
             return _history;
         }
 
@@ -141,7 +141,7 @@ namespace BECore::Mahjong {
         MatchStatus ApplySettlement(const HandSettlement& settlement);
 
         /// The seats by points, best first; equal points in seat order.
-        [[nodiscard]] eastl::array<Seat, kSeatCount> Standings() const;
+        [[nodiscard]] Array<Seat, kSeatCount> Standings() const;
 
         /**
          * @brief Shows a match that is played elsewhere (an online room): everything is taken over as it is, nothing is checked or
@@ -168,7 +168,7 @@ namespace BECore::Mahjong {
         MatchProgress _progress;
         SeatScores _scores{};
         HandModel _hand;
-        eastl::vector<HandSettlement> _history;
+        Vector<HandSettlement> _history;
     };
 
 }  // namespace BECore::Mahjong

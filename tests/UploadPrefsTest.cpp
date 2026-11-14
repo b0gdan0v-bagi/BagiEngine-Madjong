@@ -23,8 +23,8 @@ namespace BECore::Mahjong::Tests {
             return prefs;
         }
 
-        eastl::string_view View(const char* text) {
-            return eastl::string_view(text);
+        StringView View(const char* text) {
+            return StringView(text);
         }
 
         class UploadPrefsTest : public ::testing::Test {
@@ -42,8 +42,9 @@ namespace BECore::Mahjong::Tests {
                 fs::remove_all(folder, error);
             }
 
-            void Write(const std::string& bytes) const {
-                std::ofstream(folder / "upload.txt", std::ios::binary) << bytes;
+            void Write(const String& bytes) const {
+                std::ofstream file(folder / "upload.txt", std::ios::binary);
+                file.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
             }
 
             fs::path folder;
@@ -77,9 +78,9 @@ namespace BECore::Mahjong::Tests {
                                  "consent=granted\nemail=a@b.c\n", "consent=granted\nnoequals\n", "Consent=granted\n", "\xff\xfe\x00\x01"}) {
             EXPECT_EQ(ParseUploadPrefs(View(text)), defaults) << text;
         }
-        std::string big = "consent=granted\nnickname=";
+        String big = "consent=granted\nnickname=";
         big.append(kMaxUploadPrefsBytes, 'a');
-        EXPECT_EQ(ParseUploadPrefs(eastl::string_view(big.data(), big.size())), defaults) << "over the limit";
+        EXPECT_EQ(ParseUploadPrefs(big), defaults) << "over the limit";
         Write(big);
         EXPECT_EQ(LoadUploadPrefs(folder), defaults) << "a big file is not read whole";
         Write("consent=granted\n\xff\xfe");

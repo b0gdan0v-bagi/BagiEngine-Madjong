@@ -14,9 +14,9 @@ namespace BECore::Mahjong {
         constexpr int kMatchIdWords = 4;  // 4 x 32 bits
 
         /// A random id of 128 bits as 32 hex digits, from `std::random_device` alone: nothing of the seed, the time or the machine.
-        eastl::string RandomMatchId() {
+        String RandomMatchId() {
             std::random_device device;
-            eastl::string id;
+            String id;
             for (int word = 0; word < kMatchIdWords; ++word) {
                 id.append(Format("{:08x}", static_cast<uint32_t>(device())));
             }
@@ -175,12 +175,12 @@ namespace BECore::Mahjong {
             return;
         }
         _savedPrefs = *loaded;  // what the slot holds, so nothing is written until a choice changes
-        const std::expected<PrefsValues, eastl::string> values = ReadPrefs(*loaded);
+        const std::expected<PrefsValues, String> values = ReadPrefs(*loaded);
         if (!values) {
             LOG_WARNING(Format("MahjongGame: the saved settings are not used: {}", values.error()));
             return;
         }
-        SetLanguage(PoolString::Intern(eastl::string_view(values->language.c_str(), values->language.size())));  // a language the table lacks stays out
+        SetLanguage(PoolString::Intern(StringView(values->language.c_str(), values->language.size())));  // a language the table lacks stays out
         SetHintsMode(values->hintsMode);
         _seats = values->seats;
         _settings.handsPerMatch = values->handsPerMatch;
@@ -247,7 +247,7 @@ namespace BECore::Mahjong {
 
     OnlineClient& MahjongGame::GetOnline() {
         if (!_online) {
-            _online = eastl::make_unique<OnlineClient>(_onlineSettings);
+            _online = MakeUnique<OnlineClient>(_onlineSettings);
         }
         return *_online;
     }
@@ -260,7 +260,7 @@ namespace BECore::Mahjong {
         return true;
     }
 
-    void MahjongGame::SetOnlineName(eastl::string_view name) {
+    void MahjongGame::SetOnlineName(StringView name) {
         if (_storedOnline.name != name) {
             _storedOnline.name.assign(name.data(), name.size());
             _onlineDirty = true;
@@ -289,14 +289,14 @@ namespace BECore::Mahjong {
     }
 
     bool MahjongGame::ResumeSavedMatch() {
-        std::expected<eastl::vector<MatchLogEvent>, SaveProblem> loaded = _store.LoadMatch();
+        std::expected<Vector<MatchLogEvent>, SaveProblem> loaded = _store.LoadMatch();
         if (!loaded) {
             if (loaded.error().kind == SaveProblemKind::Broken) {
                 LOG_WARNING(Format("MahjongGame: the saved match is not used: {}", loaded.error().detail));
             }
             return false;
         }
-        const eastl::vector<MatchLogEvent>& events = *loaded;
+        const Vector<MatchLogEvent>& events = *loaded;
         Match scratch;  // the replay is checked here, and a finished match is not offered, before the session is touched
         if (const ReplayStatus replayed = ReplayMatchLog(events, scratch); !replayed) {
             LOG_WARNING(Format("MahjongGame: the saved match is not used: event {} does not replay ({})", replayed.error().index, EnumUtils<ReplayProblem>::ToString(replayed.error().problem)));

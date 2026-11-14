@@ -61,8 +61,8 @@ namespace BECore::Mahjong {
         }
 
         /// The sequences of `tile` that `hand` can complete from its concealed tiles, as the lowest tile of each.
-        eastl::vector<Tile> ChowStarts(const PlayerHand& hand, Tile tile) {
-            eastl::vector<Tile> starts;
+        Vector<Tile> ChowStarts(const PlayerHand& hand, Tile tile) {
+            Vector<Tile> starts;
             if (!tile.IsSuit()) {
                 return starts;
             }
@@ -83,8 +83,8 @@ namespace BECore::Mahjong {
 
         /// Every claim `seat` could make on `tile` discarded by `from`, or added to a kong of `from` (`mahjongOnly`: a kong can be
         /// robbed only to win). A mahjong claim needs the calling-hand declaration.
-        eastl::vector<ClaimOption> ClaimOptionsFor(const PlayerHand& hand, Seat seat, Seat from, Tile tile, bool mahjongOnly) {
-            eastl::vector<ClaimOption> options;
+        Vector<ClaimOption> ClaimOptionsFor(const PlayerHand& hand, Seat seat, Seat from, Tile tile, bool mahjongOnly) {
+            Vector<ClaimOption> options;
             if (seat == from || !tile.IsPlayable()) {
                 return options;
             }
@@ -190,7 +190,7 @@ namespace BECore::Mahjong {
         return state;
     }
 
-    std::expected<HandModel, eastl::string> HandModel::Restore(HandState state) {
+    std::expected<HandModel, String> HandModel::Restore(HandState state) {
         if (EastOf(state.seatWinds) == kNoSeat) {
             return std::unexpected(Format("the seat winds do not hold East exactly once"));
         }
@@ -202,7 +202,7 @@ namespace BECore::Mahjong {
         }
 
         // Every tile of the set, once: counted over everything the state holds.
-        eastl::array<int, kTileIdCount> counts{};
+        Array<int, kTileIdCount> counts{};
         const auto add = [&counts](Tile tile, int copies = 1) {
             if (!tile.IsValid()) {
                 return false;
@@ -251,7 +251,7 @@ namespace BECore::Mahjong {
             }
             add(entry.tile);
         }
-        for (const eastl::vector<Tile>* part : {&state.loose, &state.live, &state.dead}) {
+        for (const Vector<Tile>* part : {&state.loose, &state.live, &state.dead}) {
             for (const Tile tile : *part) {
                 if (!add(tile)) {
                     return std::unexpected(Format("the wall holds a tile that is not a tile (id {})", tile.Id()));
@@ -360,7 +360,7 @@ namespace BECore::Mahjong {
                 }
                 // Who is in the window is fixed by the hands when it opens, and no hand changes meanwhile: the seats that could claim.
                 model._claimStatus[seat] = ClaimStatus::Waiting;
-                const eastl::vector<ClaimOption> options = model.LegalClaims(seat);
+                const Vector<ClaimOption> options = model.LegalClaims(seat);
                 model._claimStatus[seat] = status;
                 if (status == ClaimStatus::NotInWindow) {
                     if (!options.empty()) {
@@ -527,7 +527,7 @@ namespace BECore::Mahjong {
             }
         }
         ClaimOption claim{kind, kind == ClaimKind::Chow ? chowFirst : Tile{}};
-        const eastl::vector<ClaimOption> options = ClaimOptionsFor(hand, seat, _current, tile, _phase == Phase::RobKong);
+        const Vector<ClaimOption> options = ClaimOptionsFor(hand, seat, _current, tile, _phase == Phase::RobKong);
         if (eastl::find(options.begin(), options.end(), claim) == options.end()) {
             return std::unexpected(HandError::IllegalClaim);
         }
@@ -552,8 +552,8 @@ namespace BECore::Mahjong {
         return {};
     }
 
-    eastl::vector<Seat> HandModel::PendingClaimSeats() const {
-        eastl::vector<Seat> seats;
+    Vector<Seat> HandModel::PendingClaimSeats() const {
+        Vector<Seat> seats;
         if (_phase == Phase::Claim || _phase == Phase::RobKong) {
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 if (_claimStatus[seat] == ClaimStatus::Waiting) {
@@ -568,15 +568,15 @@ namespace BECore::Mahjong {
         return (_phase == Phase::Claim || _phase == Phase::RobKong) && IsSeat(seat) && _claimStatus[seat] == ClaimStatus::Waiting;
     }
 
-    eastl::vector<ClaimOption> HandModel::LegalClaims(Seat seat) const {
+    Vector<ClaimOption> HandModel::LegalClaims(Seat seat) const {
         if (_displayOnly || (_phase != Phase::Claim && _phase != Phase::RobKong) || !IsSeat(seat) || _claimStatus[seat] != ClaimStatus::Waiting) {
             return {};
         }
         return ClaimOptionsFor(_hands[seat], seat, _current, _pendingTile, _phase == Phase::RobKong);
     }
 
-    eastl::vector<HandAction> HandModel::LegalActions(Seat seat) const {
-        eastl::vector<HandAction> actions;
+    Vector<HandAction> HandModel::LegalActions(Seat seat) const {
+        Vector<HandAction> actions;
         if (_displayOnly || !IsSeat(seat)) {
             return actions;
         }
@@ -647,8 +647,8 @@ namespace BECore::Mahjong {
         Receive(seat, _wall.Draw(), false);
     }
 
-    void HandModel::Receive(Seat seat, std::optional<Tile> first, bool loose) {
-        std::optional<Tile> tile = first;
+    void HandModel::Receive(Seat seat, Optional<Tile> first, bool loose) {
+        Optional<Tile> tile = first;
         while (tile.has_value() && _settings.flowers && tile->IsBonus()) {
             _hands[seat].bonus.push_back(*tile);
             tile = _wall.DrawLoose();

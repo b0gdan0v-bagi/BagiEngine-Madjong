@@ -56,7 +56,7 @@ namespace BECore::Mahjong::Tests {
                 Match match;
                 TableSession session(match);
                 EXPECT_TRUE(session.StartMatch(settings, seed, kAllComputers, profile).has_value());
-                const std::optional<ComputerStepJob> job = session.BeginComputerStep();
+                const Optional<ComputerStepJob> job = session.BeginComputerStep();
                 if (job && !job->Ready()) {
                     return seed;
                 }
@@ -93,7 +93,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// What `StepComputer` of a session of the same seed and profile does `steps` times.
-        std::string TwinAfter(uint64_t steps, int worlds) const {
+        String TwinAfter(uint64_t steps, int worlds) const {
             Match match;
             TableSession twin(match);
             EXPECT_TRUE(twin.StartMatch(_game->GetSettings(), _seed, kAllComputers, SearchProfile(worlds)).has_value());
@@ -136,7 +136,7 @@ namespace BECore::Mahjong::Tests {
 #endif
         ASSERT_NO_FATAL_FAILURE(StartSearchTable(kWorldsSlow));
         const uint64_t version = Version();
-        const std::string before = Snapshot(Hand());
+        const String before = Snapshot(Hand());
         Elapse(Pause() * (kMostOf + kTheRest));  // the pause is over: only the answer is missing
         int framesWhileThinking = 0;
         for (int frame = 0; frame < 20; ++frame) {
@@ -199,7 +199,7 @@ namespace BECore::Mahjong::Tests {
 #endif
         ASSERT_TRUE(_game->StartMatch(kSeed).has_value());  // every seat at its level: no search
         const uint64_t version = Version();
-        const std::string before = Snapshot(Hand());
+        const String before = Snapshot(Hand());
         Elapse(kFrame);
         EXPECT_FALSE(_table->ComputerThinks());
         EXPECT_EQ(Version(), version);
@@ -213,7 +213,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_NO_FATAL_FAILURE(StartSearchTable(kWorldsSlow));
             Elapse(Pause() * 0.3f);
             const uint64_t version = Version();
-            const std::string before = Snapshot(Hand());
+            const String before = Snapshot(Hand());
             if (rules) {
                 _game->OpenRules();
             } else {
@@ -235,7 +235,7 @@ namespace BECore::Mahjong::Tests {
         const uint64_t version = Version();
         ASSERT_TRUE(_game->GetSession().StepComputer().has_value());  // what a control client's action does: the version moves
         EXPECT_EQ(Version(), version + 1);
-        const std::string before = Snapshot(Hand());
+        const String before = Snapshot(Hand());
         Elapse(kFrame);
         EXPECT_EQ(Version(), version + 1) << "the job of the old version is not applied";
         EXPECT_EQ(Snapshot(Hand()), before);

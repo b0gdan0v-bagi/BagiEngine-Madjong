@@ -11,19 +11,19 @@ namespace BECore::Mahjong {
 
         constexpr size_t kMaxNoticeArgBytes = 32;
 
-        constexpr eastl::string_view kHandsKey = "hands";
-        constexpr eastl::string_view kLevelKey = "level";
+        constexpr StringView kHandsKey = "hands";
+        constexpr StringView kLevelKey = "level";
 
-        constexpr eastl::string_view kSessionUrlKey = "url";
-        constexpr eastl::string_view kSessionRoomKey = "room";
-        constexpr eastl::string_view kSessionTokenKey = "token";
+        constexpr StringView kSessionUrlKey = "url";
+        constexpr StringView kSessionRoomKey = "room";
+        constexpr StringView kSessionTokenKey = "token";
 
         /// The reason of `left` after the player's own `leave`: nothing to say.
-        constexpr eastl::string_view kLeftReasonLeft = "left";
+        constexpr StringView kLeftReasonLeft = "left";
 
         /// A code from the server is shown in a notice only when it is plain: letters, digits and underscores, so a hostile server cannot put a text on the screen.
-        eastl::string SafeArg(eastl::string_view code) {
-            eastl::string arg;
+        String SafeArg(StringView code) {
+            String arg;
             for (const char c : code) {
                 const bool plain = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_';
                 if (plain && arg.size() < kMaxNoticeArgBytes) {
@@ -34,7 +34,7 @@ namespace BECore::Mahjong {
         }
 
         /// The ends of a connection after which asking again would get the same answer (`RoomClient/CLAUDE.md`, "Where it stops"): the session is no use any more.
-        bool EndsTheSession(eastl::string_view reason) {
+        bool EndsTheSession(StringView reason) {
             return reason == RoomClientCloseReasons::kRoomGone || reason == RoomClientCloseReasons::kReplaced || reason == RoomClientCloseReasons::kGaveUp;
         }
 
@@ -54,19 +54,19 @@ namespace BECore::Mahjong {
         return true;
     }
 
-    bool OnlineClient::Host(eastl::string_view url, eastl::string_view name, const OnlineRoomOptions& options) {
+    bool OnlineClient::Host(StringView url, StringView name, const OnlineRoomOptions& options) {
         const bool handsOk = options.hands == kShortMatchHands || options.hands == kFullMatchHands;
         const bool levelOk = options.level >= kMinLevel && options.level <= kMaxLevel;
         if (!handsOk || !levelOk) {
             SetNoticeForCode(OnlineCodes::kInvalidParams);
             return false;
         }
-        const std::optional<eastl::string> sanitized = SanitizePlayerName(name);
+        const Optional<String> sanitized = SanitizePlayerName(name);
         if (!sanitized) {
             SetNoticeForCode(RoomErrors::kBadName);
             return false;
         }
-        const Json json = Json::object({{"hands", options.hands}, {"level", options.level}, {std::string(kHintsAllowedKey.data(), kHintsAllowedKey.size()), options.hintsAllowed}});
+        const Json json = Json::object({{"hands", options.hands}, {"level", options.level}, {ToStdString(kHintsAllowedKey), options.hintsAllowed}});
         const bool sent = Report(_client.Host(url, kSeatedGameName, *sanitized, json, options.isPublic));
         if (sent) {
             _requesting = true;
@@ -78,16 +78,16 @@ namespace BECore::Mahjong {
         return sent;
     }
 
-    bool OnlineClient::Join(eastl::string_view url, eastl::string_view code, eastl::string_view name) {
+    bool OnlineClient::Join(StringView url, StringView code, StringView name) {
         return SendJoin(url, code, name, false);
     }
 
-    bool OnlineClient::JoinListed(eastl::string_view url, eastl::string_view code, eastl::string_view name) {
+    bool OnlineClient::JoinListed(StringView url, StringView code, StringView name) {
         return SendJoin(url, code, name, true);
     }
 
-    bool OnlineClient::SendJoin(eastl::string_view url, eastl::string_view code, eastl::string_view name, bool fromList) {
-        const std::optional<eastl::string> sanitized = SanitizePlayerName(name);
+    bool OnlineClient::SendJoin(StringView url, StringView code, StringView name, bool fromList) {
+        const Optional<String> sanitized = SanitizePlayerName(name);
         if (!sanitized) {
             SetNoticeForCode(RoomErrors::kBadName);
             return false;
@@ -107,7 +107,7 @@ namespace BECore::Mahjong {
         return sent;
     }
 
-    bool OnlineClient::Browse(eastl::string_view url) {
+    bool OnlineClient::Browse(StringView url) {
         if (_stage == OnlineStage::Browsing) {
             if (_rooms.pending) {
                 return false;
@@ -130,7 +130,7 @@ namespace BECore::Mahjong {
         return sent;
     }
 
-    std::expected<void, ControlError> OnlineClient::AskForRooms(eastl::string_view url) {
+    std::expected<void, ControlError> OnlineClient::AskForRooms(StringView url) {
         std::expected<void, ControlError> result = _client.ListRooms(url, kSeatedGameName);
         if (result) {
             _rooms.pending = true;
@@ -354,10 +354,10 @@ namespace BECore::Mahjong {
             room.hands.reset();
             room.level.reset();
             room.hintsAllowed = GetJsonBool(listing.options, kHintsAllowedKey);
-            if (const std::optional<int64_t> hands = GetJsonInt(listing.options, kHandsKey); hands && (*hands == kShortMatchHands || *hands == kFullMatchHands)) {
+            if (const Optional<int64_t> hands = GetJsonInt(listing.options, kHandsKey); hands && (*hands == kShortMatchHands || *hands == kFullMatchHands)) {
                 room.hands = static_cast<int>(*hands);
             }
-            if (const std::optional<int64_t> level = GetJsonInt(listing.options, kLevelKey); level && *level >= kMinLevel && *level <= kMaxLevel) {
+            if (const Optional<int64_t> level = GetJsonInt(listing.options, kLevelKey); level && *level >= kMinLevel && *level <= kMaxLevel) {
                 room.level = static_cast<int>(*level);
             }
         }
@@ -540,15 +540,15 @@ namespace BECore::Mahjong {
         Bump();
     }
 
-    void OnlineClient::SetNotice(eastl::string_view key, eastl::string_view arg) {
+    void OnlineClient::SetNotice(StringView key, StringView arg) {
         _notice.key = key;
         _notice.arg.assign(arg.data(), arg.size());
         ++_notice.serial;
         Bump();
     }
 
-    void OnlineClient::SetNoticeForCode(eastl::string_view code) {
-        const eastl::string_view key = OnlineErrorKey(code);
+    void OnlineClient::SetNoticeForCode(StringView code) {
+        const StringView key = OnlineErrorKey(code);
         if (key == kOnlineUnknownKey) {
             SetNotice(key, SafeArg(code));
         } else {
@@ -564,20 +564,20 @@ namespace BECore::Mahjong {
 
     Json SessionToJson(const RoomSession& session) {
         Json json = Json::object();
-        json[std::string(kSessionUrlKey.data(), kSessionUrlKey.size())] = std::string(session.url.data(), session.url.size());
-        json[std::string(kSessionRoomKey.data(), kSessionRoomKey.size())] = std::string(session.room.data(), session.room.size());
-        json[std::string(kSessionTokenKey.data(), kSessionTokenKey.size())] = std::string(session.token.data(), session.token.size());
+        json[ToStdString(kSessionUrlKey)] = ToStdString(session.url);
+        json[ToStdString(kSessionRoomKey)] = ToStdString(session.room);
+        json[ToStdString(kSessionTokenKey)] = ToStdString(session.token);
         return json;
     }
 
-    std::optional<RoomSession> SessionFromJson(const Json& json) {
-        const std::optional<eastl::string> url = GetJsonString(json, kSessionUrlKey);
-        const std::optional<eastl::string> room = GetJsonString(json, kSessionRoomKey);
-        const std::optional<eastl::string> token = GetJsonString(json, kSessionTokenKey);
+    Optional<RoomSession> SessionFromJson(const Json& json) {
+        const Optional<String> url = GetJsonString(json, kSessionUrlKey);
+        const Optional<String> room = GetJsonString(json, kSessionRoomKey);
+        const Optional<String> token = GetJsonString(json, kSessionTokenKey);
         if (!url || !room || !token || url->empty()) {
             return std::nullopt;
         }
-        const std::optional<eastl::string> code = NormalizeRoomCode(*room);
+        const Optional<String> code = NormalizeRoomCode(*room);
         if (!code || !IsWellFormedToken(*token)) {
             return std::nullopt;
         }

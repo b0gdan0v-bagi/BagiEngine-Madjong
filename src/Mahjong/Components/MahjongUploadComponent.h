@@ -48,9 +48,9 @@ namespace BECore::Mahjong {
     public:
         /// What a test replaces (a field left empty is the real thing); set before the scene is made and cleared after.
         struct Overrides {
-            IWebPoster* poster = nullptr;                 ///< not owned
-            std::optional<std::filesystem::path> folder;  ///< the folder of `upload.txt` (empty path: nowhere)
-            std::optional<bool> remembered;               ///< `MahjongGame::SavesAreRemembered()`
+            IWebPoster* poster = nullptr;            ///< not owned
+            Optional<std::filesystem::path> folder;  ///< the folder of `upload.txt` (empty path: nowhere)
+            Optional<bool> remembered;               ///< `MahjongGame::SavesAreRemembered()`
         };
         [[nodiscard]] static Overrides& TestOverrides() noexcept;
 
@@ -82,7 +82,7 @@ namespace BECore::Mahjong {
 
         /// Sets the nickname (the `Name` rules were applied by the pad), keeps it in the file and, while the consent is `Granted`, in the origin of the
         /// next match. Nothing when not running.
-        void SetNickname(eastl::string_view nickname);
+        void SetNickname(StringView nickname);
 
     private:
         void OnAction(const InputEvents::ActionEvent& event);
@@ -111,7 +111,7 @@ namespace BECore::Mahjong {
         // What the rows of `Options` show now
         bool _rowsPublished = false;
         UploadConsent _publishedConsent = UploadConsent::Unasked;
-        eastl::string _publishedNickname;
+        String _publishedNickname;
         uint64_t _publishedStrings = 0;
 
         static MahjongUploadComponent* s_active;

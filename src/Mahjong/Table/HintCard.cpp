@@ -8,12 +8,12 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        eastl::string Num(int value) {
+        String Num(int value) {
             return Format("{}", value);
         }
 
         /// The steps to a ready hand as the card says them: a number, the word "ready" for none left.
-        eastl::string StepsText(const UIStrings& strings, int steps) {
+        String StepsText(const UIStrings& strings, int steps) {
             return steps <= 0 ? Tr(strings, "hints.card.ready") : Num(steps);
         }
 
@@ -30,8 +30,8 @@ namespace BECore::Mahjong {
         }
 
         /// The pictures of `action`: the tile of a discard or a kong of the hand, the pending tile of a pung or kong claim, the three of a chow.
-        eastl::array<Tile, kMaxCardTiles> TilesOf(const HandAction& action, Tile pending) noexcept {
-            eastl::array<Tile, kMaxCardTiles> tiles{};
+        Array<Tile, kMaxCardTiles> TilesOf(const HandAction& action, Tile pending) noexcept {
+            Array<Tile, kMaxCardTiles> tiles{};
             switch (action.kind) {
                 case ActionKind::Discard:
                 case ActionKind::ConcealedKong:
@@ -57,7 +57,7 @@ namespace BECore::Mahjong {
 
         /// The title of a card that names `action`: the sentence of the advice, but a chow only by its kind (its three tiles are the
         /// pictures of the row, and their names would not fit the title).
-        eastl::string TitleOf(const UIStrings& strings, Tile pending, const HandAction& action) {
+        String TitleOf(const UIStrings& strings, Tile pending, const HandAction& action) {
             if (action.kind == ActionKind::Claim && action.claim == ClaimKind::Chow) {
                 return Tr(strings, "hints.card.title.chow");
             }
@@ -68,10 +68,10 @@ namespace BECore::Mahjong {
         }
 
         /// The word of the kind of `action`; a plain discard needs none (its picture says it), a declaring one says so.
-        eastl::string MoveWord(const UIStrings& strings, const HandAction& action) {
+        String MoveWord(const UIStrings& strings, const HandAction& action) {
             switch (action.kind) {
                 case ActionKind::Discard:
-                    return action.declareCalling ? Tr(strings, "hints.card.declare") : eastl::string();
+                    return action.declareCalling ? Tr(strings, "hints.card.declare") : String();
                 case ActionKind::ConcealedKong:
                 case ActionKind::UpgradeKong:
                     return Tr(strings, "hints.card.kong");
@@ -95,7 +95,7 @@ namespace BECore::Mahjong {
             return Tr(strings, "hints.card.pass");
         }
 
-        eastl::string WhoWord(const UIStrings& strings, CardRowKind kind) {
+        String WhoWord(const UIStrings& strings, CardRowKind kind) {
             switch (kind) {
                 case CardRowKind::Best:
                     return Tr(strings, "hints.card.best");
@@ -135,16 +135,16 @@ namespace BECore::Mahjong {
             HintCard& card;
             size_t room;
 
-            Footer(HintCard& target, eastl::string_view tally) : card(target), room(kMaxCardFooter - (tally.empty() ? 0 : 1)) {}
+            Footer(HintCard& target, StringView tally) : card(target), room(kMaxCardFooter - (tally.empty() ? 0 : 1)) {}
 
-            void Add(eastl::string line) {
+            void Add(String line) {
                 if (!line.empty() && card.footer.size() < room) {
                     card.footer.push_back(eastl::move(line));
                 }
             }
         };
 
-        void EndFooter(HintCard& card, eastl::string_view tally) {
+        void EndFooter(HintCard& card, StringView tally) {
             if (!tally.empty()) {
                 card.footer.emplace_back(tally);
             }
@@ -162,7 +162,7 @@ namespace BECore::Mahjong {
         }
 
         /// The danger of the advised discard (only with a declared opponent, for a step that discards).
-        eastl::string DangerLine(const UIStrings& strings, Danger danger) {
+        String DangerLine(const UIStrings& strings, Danger danger) {
             switch (danger) {
                 case Danger::Safe:
                     return Tr(strings, "hints.why.danger.safe");
@@ -179,7 +179,7 @@ namespace BECore::Mahjong {
         /// How the tie of equal choices was settled. The first alternative is the best of the others, so it is the equal one with the
         /// danger and then the keep value that come first: when the danger (read only with the knob of the advice player, against a
         /// declared opponent) differs, it decided; an equal keep value too leaves the choice to chance.
-        eastl::string TieLine(const UIStrings& strings, const TurnExplanation& turn) {
+        String TieLine(const UIStrings& strings, const TurnExplanation& turn) {
             if (turn.equalChoices == 0) {
                 return Tr(strings, "hints.why.tie.none");
             }
@@ -327,7 +327,7 @@ namespace BECore::Mahjong {
 
     }  // namespace
 
-    HintCard MakeAdviceCard(const UIStrings& strings, const TableView& view, const Explanation& explained, eastl::string_view tally) {
+    HintCard MakeAdviceCard(const UIStrings& strings, const TableView& view, const Explanation& explained, StringView tally) {
         HintCard card;
         card.title = TitleOf(strings, view.pendingTile, explained.Action());
         Footer footer(card, tally);
@@ -346,7 +346,7 @@ namespace BECore::Mahjong {
         return card;
     }
 
-    HintCard MakeNoteCard(const UIStrings& strings, const CoachNote& note, eastl::string_view tally) {
+    HintCard MakeNoteCard(const UIStrings& strings, const CoachNote& note, StringView tally) {
         HintCard card;
         card.title = Tr(strings, "coach.would", {{"advice", TitleOf(strings, note.pending, note.advised)}});
         Footer footer(card, tally);
@@ -366,7 +366,7 @@ namespace BECore::Mahjong {
         return card;
     }
 
-    eastl::string CardTallyText(const UIStrings& strings, const CoachTally& hand, const CoachTally& match) {
+    String CardTallyText(const UIStrings& strings, const CoachTally& hand, const CoachTally& match) {
         if (match.moves <= 0) {
             return {};
         }

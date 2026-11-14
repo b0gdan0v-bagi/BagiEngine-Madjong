@@ -151,8 +151,8 @@ namespace BECore::Mahjong {
     }  // namespace
 
     ScoreBreakdown ScoreSeat(const ScoreInput& input) {
-        const eastl::vector<Reading> readings = BuildReadings(input);
-        if (const std::optional<ScoreKind> limitHand = FindLimitHand(readings, input)) {
+        const Vector<Reading> readings = BuildReadings(input);
+        if (const Optional<ScoreKind> limitHand = FindLimitHand(readings, input)) {
             return LimitHandBreakdown(input, *limitHand);
         }
         ScoreBreakdown best;

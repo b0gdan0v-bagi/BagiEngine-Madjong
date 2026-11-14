@@ -38,15 +38,15 @@ namespace BECore::Mahjong::Tests {
             SDLEvents::KeyDownEvent::Emit(key, shift ? SDL_KMOD_LSHIFT : SDL_KMOD_NONE, repeat);
         }
 
-        std::string Std(eastl::string_view text) {
-            return std::string(text.data(), text.size());
+        String Std(StringView text) {
+            return String(text.data(), text.size());
         }
 
         void PressWith(SDL_Keycode key, SDL_Keymod mod) {
             SDLEvents::KeyDownEvent::Emit(key, mod, false);
         }
 
-        void Paste(eastl::string_view text) {
+        void Paste(StringView text) {
             ClipboardEvents::PasteEvent::Emit(text);
         }
 
@@ -87,7 +87,7 @@ namespace BECore::Mahjong::Tests {
             return found != nullptr && found->style.visible;
         }
 
-        std::string Text(const char* node, const char* element) const {
+        String Text(const char* node, const char* element) const {
             return DisplayText(Element(node, element));
         }
 
@@ -98,7 +98,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// A clipboard in memory instead of the system's, for the rest of the test.
-        void UseClipboard(eastl::string_view content = {}) {
+        void UseClipboard(StringView content = {}) {
             _clipboard = New<FakeClipboard>(content);
             _clipboardScope.emplace(_clipboard);
         }
@@ -141,13 +141,13 @@ namespace BECore::Mahjong::Tests {
             for (const Output& output : kOutputs) {
                 ExpectWordsFit(node, output.width, output.height, air);
             }
-            const std::vector<std::string> cut = WordsThatDoNotFitOnTheMatrix(*Canvas(node), air);
+            const Vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas(node), air);
             EXPECT_TRUE(cut.empty()) << node << ": " << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
             Draw();  // the checks laid the canvas out for other windows: the next click needs the rects of this one
         }
 
         IntrusivePtr<FakeClipboard> _clipboard;
-        std::optional<ScopedClipboardBackend> _clipboardScope;
+        Optional<ScopedClipboardBackend> _clipboardScope;
     };
 
     TEST_F(MahjongOnlineSceneTest, TheOnlineButtonOpensThePanelOverSetupAndClosingItGivesSetupBack) {
@@ -178,7 +178,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(OpenPanel());
         Lay(MakeModel(SpecOf("1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Gd Rd", "9p"), kSeat0));
         Draw();
-        const std::string before = Snapshot(Hand());
+        const String before = Snapshot(Hand());
         ClickHandTile(0);
         EmitAction("MahjongPass");
         EmitAction("MahjongWin");
@@ -526,7 +526,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(ClickElement(kOnline, "OnlineName"));
         Draw();
         ASSERT_EQ(Screens().Focus(), OnlineField::Name);
-        const std::string name = Var("onlineEntryValue");
+        const String name = Var("onlineEntryValue");
         PressWith(SDLK_V, SDL_KMOD_LCTRL);
         PressWith(SDLK_A, SDL_KMOD_LGUI);
         Frame();
@@ -691,7 +691,7 @@ namespace BECore::Mahjong::Tests {
         constexpr milliseconds kTick{10};
         constexpr size_t kRoomCodeLength = 5;
         constexpr const char* kTempFolder = "BagiMahjongOnlineSceneTest";
-        constexpr eastl::string_view kUrl = "ws://hub.test";
+        constexpr StringView kUrl = "ws://hub.test";
 
     }  // namespace
 
@@ -715,7 +715,7 @@ namespace BECore::Mahjong::Tests {
 
         /// Frames of the scene and of the other people of the room until @p done: the clock of the world moves by a tick, the others read what came, the scene updates and draws.
         template <typename Done>
-        bool PumpUntil(Done done, const std::vector<HubPlayer*>& others = {}) {
+        bool PumpUntil(Done done, const Vector<HubPlayer*>& others = {}) {
             for (int count = 0; count < kPumpLimit; ++count) {
                 if (done()) {
                     return true;
@@ -738,7 +738,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Only the others read what came: the scene shows what it showed.
-        void LetOthersRun(const std::vector<HubPlayer*>& others, const std::function<bool()>& done) {
+        void LetOthersRun(const Vector<HubPlayer*>& others, const std::function<bool()>& done) {
             for (int count = 0; count < kPumpLimit && !done(); ++count) {
                 _world.Advance(kTick);
                 for (HubPlayer* other : others) {
@@ -747,8 +747,8 @@ namespace BECore::Mahjong::Tests {
             }
         }
 
-        void Join(HubPlayer& player, const std::string& code, const char* name, const std::vector<HubPlayer*>& others) {
-            ASSERT_TRUE(player.Client().Join(kUrl, eastl::string(code.c_str()), name));
+        void Join(HubPlayer& player, const String& code, const char* name, const Vector<HubPlayer*>& others) {
+            ASSERT_TRUE(player.Client().Join(kUrl, String(code.c_str()), name));
             ASSERT_TRUE(PumpUntil([&] { return player.Client().Stage() == OnlineStage::Lobby; }, others));
         }
 
@@ -769,7 +769,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The Join form: the code is typed on the keyboard of the pad page and Enter is clicked; the name stays the default one.
-        void EnterByTheCode(const std::string& code) {
+        void EnterByTheCode(const String& code) {
             ASSERT_NO_FATAL_FAILURE(OpenPanel());
             ASSERT_NO_FATAL_FAILURE(GoToTheJoinForm());
             ASSERT_TRUE(ClickElement(kOnline, "OnlineCode"));
@@ -782,12 +782,12 @@ namespace BECore::Mahjong::Tests {
             ASSERT_TRUE(ClickElement(kOnline, "OnlineEnter"));
         }
 
-        std::string SeatText(size_t seat) const {
+        String SeatText(size_t seat) const {
             return Var(Format("onlineSeat{}", seat).c_str());
         }
 
-        std::string Notice() const {
-            return ItemShown(kOnline, "OnlineNotice") ? Var("onlineNotice") : std::string();
+        String Notice() const {
+            return ItemShown(kOnline, "OnlineNotice") ? Var("onlineNotice") : String();
         }
 
         /// The game object made again, as a restart of the program does: the scene stays, the game starts on the same folder and its client on a new transport.
@@ -814,9 +814,9 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(PumpUntil([&] { return Screens().Page() == OnlinePage::Lobby && _game->GetOnline().Stage() == OnlineStage::Lobby; }));
 
         // The lobby: the code, the host on the first seat, the rest empty and free to take
-        const std::string code = Var("onlineRoom");
+        const String code = Var("onlineRoom");
         ASSERT_EQ(code.size(), kRoomCodeLength);
-        EXPECT_EQ(code, std::string(_game->GetOnline().Room().c_str()));
+        EXPECT_EQ(code, String(_game->GetOnline().Room().c_str()));
         EXPECT_EQ(Text(kOnline, "OnlineTitleLobby"), "Room " + code);
         EXPECT_TRUE(ItemShown(kOnline, "OnlineTitleLobby"));
         EXPECT_FALSE(ItemShown(kOnline, "OnlineNameRow"));
@@ -902,7 +902,7 @@ namespace BECore::Mahjong::Tests {
         Frame();
 
         // The second player joins, the host starts: both tables carry the choice
-        const std::string code = Var("onlineRoom");
+        const String code = Var("onlineRoom");
         HubPlayer bo(_world);
         ASSERT_NO_FATAL_FAILURE(Join(bo, code, "Bo", {&bo}));
         ASSERT_TRUE(PumpUntil([&] { return SeatText(1) == "Bo"; }, {&bo}));
@@ -918,7 +918,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(GoToTheHostForm());
         ASSERT_TRUE(ClickElement(kOnline, "OnlineCreate"));
         ASSERT_TRUE(PumpUntil([&] { return Screens().Page() == OnlinePage::Lobby && _game->GetOnline().Stage() == OnlineStage::Lobby; }));
-        const std::string code = Var("onlineRoom");
+        const String code = Var("onlineRoom");
         ASSERT_EQ(code.size(), kRoomCodeLength);
 
         ASSERT_TRUE(ItemShown(kOnline, "OnlineCopy"));
@@ -993,7 +993,7 @@ namespace BECore::Mahjong::Tests {
         HubPlayer bo(_world);
         ASSERT_TRUE(bo.Client().Host(kUrl, "Bo", OnlineRoomOptions{}));
         ASSERT_TRUE(PumpUntil([&] { return bo.Client().Stage() == OnlineStage::Lobby; }, {&bo}));
-        const std::string boRoom(bo.Client().Room().c_str());
+        const String boRoom(bo.Client().Room().c_str());
         _clipboard->SetContent(("Join my room " + boRoom + ", please").c_str());
         ASSERT_NO_FATAL_FAILURE(GoToTheJoinForm());
         ASSERT_TRUE(ClickElement(kOnline, "OnlineCode"));
@@ -1039,7 +1039,7 @@ namespace BECore::Mahjong::Tests {
         HubPlayer host(_world);
         ASSERT_TRUE(host.Client().Host(kUrl, "Hanna", OnlineRoomOptions{kShortMatchHands, kMinLevel, true}));
         ASSERT_TRUE(PumpUntil([&] { return host.Client().Stage() == OnlineStage::Lobby; }, {&host}));
-        const std::string code(host.Client().Room().c_str());
+        const String code(host.Client().Room().c_str());
 
         ASSERT_NO_FATAL_FAILURE(EnterByTheCode(code));
         ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Lobby; }, {&host}));
@@ -1053,7 +1053,7 @@ namespace BECore::Mahjong::Tests {
         HubPlayer host(_world);
         ASSERT_TRUE(host.Client().Host(kUrl, "Hanna", OnlineRoomOptions{kShortMatchHands, kMinLevel}));
         ASSERT_TRUE(PumpUntil([&] { return host.Client().Stage() == OnlineStage::Lobby; }, {&host}));
-        const std::string code(host.Client().Room().c_str());
+        const String code(host.Client().Room().c_str());
 
         ASSERT_NO_FATAL_FAILURE(EnterByTheCode(code));
         ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Lobby; }, {&host}));
@@ -1075,11 +1075,11 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(ItemShown(kOnline, "OnlineSit3")) << "the screen was not drawn since";
         ASSERT_TRUE(ClickElement(kOnline, "OnlineSit3"));
         ASSERT_TRUE(PumpUntil([&] { return !Notice().empty(); }, {&host, &cy}));
-        EXPECT_EQ(Notice(), std::string(OnlineNoticeText(CoreManager::GetUIStrings(), OnlineErrorKey(RoomErrors::kSeatTaken)).c_str()));
+        EXPECT_EQ(Notice(), String(OnlineNoticeText(CoreManager::GetUIStrings(), OnlineErrorKey(RoomErrors::kSeatTaken)).c_str()));
         ASSERT_TRUE(PumpUntil([&] { return SeatText(3) == "Cy"; }, {&host, &cy}));
         EXPECT_EQ(SeatText(1), "Player (you)") << "the seat of the guest did not move";
         EXPECT_TRUE(ItemShown(kOnline, "OnlineSit2")) << "the seat Cy left is free";
-        const std::string notice = Notice();
+        const String notice = Notice();
         for (int i = 0; i < 5; ++i) {
             Frame();
         }
@@ -1100,7 +1100,7 @@ namespace BECore::Mahjong::Tests {
         HubPlayer host(_world);
         ASSERT_TRUE(host.Client().Host(kUrl, "Hanna", OnlineRoomOptions{kShortMatchHands, kMinLevel}));
         ASSERT_TRUE(PumpUntil([&] { return host.Client().Stage() == OnlineStage::Lobby; }, {&host}));
-        const std::string code(host.Client().Room().c_str());
+        const String code(host.Client().Room().c_str());
         ASSERT_NO_FATAL_FAILURE(EnterByTheCode(code));
         ASSERT_TRUE(PumpUntil([&] { return Screens().Page() == OnlinePage::Lobby && SeatText(1) == "Player (you)"; }, {&host}));
 
@@ -1128,7 +1128,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(TypeName("Anna"));
         ASSERT_TRUE(ClickElement(kOnline, "OnlineCreate"));
         ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Lobby; }));
-        const std::string code = Var("onlineRoom");
+        const String code = Var("onlineRoom");
         HubPlayer bo(_world);
         ASSERT_NO_FATAL_FAILURE(Join(bo, code, "Bo", {&bo}));
         ASSERT_TRUE(ClickElement(kOnline, "OnlineStart"));
@@ -1174,7 +1174,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(GoToTheHostForm());
         ASSERT_TRUE(ClickElement(kOnline, "OnlineCreate"));
         ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Lobby; }));
-        const std::string code = Var("onlineRoom");
+        const String code = Var("onlineRoom");
         Frame();
         ASSERT_TRUE(_game->StoredOnline().session.IsValid());
 
@@ -1186,7 +1186,7 @@ namespace BECore::Mahjong::Tests {
 
         ASSERT_TRUE(ClickElement(kOnline, "OnlineMenuReturn"));
         ASSERT_TRUE(PumpUntil([&] { return !Notice().empty(); }));
-        EXPECT_EQ(Notice(), std::string(OnlineNoticeText(CoreManager::GetUIStrings(), OnlineErrorKey(RoomClientCloseReasons::kRoomGone)).c_str()));
+        EXPECT_EQ(Notice(), String(OnlineNoticeText(CoreManager::GetUIStrings(), OnlineErrorKey(RoomClientCloseReasons::kRoomGone)).c_str()));
         EXPECT_EQ(Screens().Page(), OnlinePage::Menu);
         EXPECT_FALSE(ItemShown(kOnline, "OnlineMenuReturn")) << "there is no room to return to";
         EXPECT_FALSE(_game->StoredOnline().session.IsValid());
@@ -1201,7 +1201,7 @@ namespace BECore::Mahjong::Tests {
     class MahjongOnlineRoomsPageTest : public MahjongOnlineRoomTest {
     protected:
         /// A person hosts a room that others can list; true when it is in its lobby.
-        bool HostOpen(HubPlayer& host, const char* name, bool hintsAllowed, const std::vector<HubPlayer*>& pumped) {
+        bool HostOpen(HubPlayer& host, const char* name, bool hintsAllowed, const Vector<HubPlayer*>& pumped) {
             OnlineRoomOptions options;
             options.hands = kShortMatchHands;
             options.level = 3;
@@ -1214,7 +1214,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The panel on the `Rooms` page with the first list on it.
-        void OpenTheRooms(const std::vector<HubPlayer*>& pumped) {
+        void OpenTheRooms(const Vector<HubPlayer*>& pumped) {
             ASSERT_NO_FATAL_FAILURE(OpenPanel());
             Act("MahjongOnlineRooms");
             ASSERT_EQ(Screens().Page(), OnlinePage::Rooms);
@@ -1227,7 +1227,7 @@ namespace BECore::Mahjong::Tests {
         HubPlayer ann(_world);
         HubPlayer bo(_world);
         HubPlayer hidden(_world);
-        const std::vector<HubPlayer*> all = {&ann, &bo, &hidden};
+        const Vector<HubPlayer*> all = {&ann, &bo, &hidden};
         ASSERT_TRUE(HostOpen(ann, "Ann", false, all));
         ASSERT_TRUE(HostOpen(bo, "Bo", true, all));
         ASSERT_TRUE(hidden.Client().Host(kUrl, "Hidden", OnlineRoomOptions{}));
@@ -1266,7 +1266,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(ClickElement(kOnline, "OnlineRoomRow1"));
         EXPECT_EQ(Screens().Page(), OnlinePage::Lobby);
         ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Lobby; }, all));
-        EXPECT_EQ(Var("onlineRoom"), std::string(bo.Client().Room().c_str()));
+        EXPECT_EQ(Var("onlineRoom"), String(bo.Client().Room().c_str()));
         ASSERT_TRUE(PumpUntil([&] { return SeatText(1) == "Zed (you)"; }, all));
         EXPECT_EQ(SeatText(0), "Bo");
         EXPECT_EQ(_game->StoredOnline().name, "Zed") << "a name sent from the list is stored as on Enter";
@@ -1276,7 +1276,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongOnlineRoomsPageTest, ARoomGoneBetweenTheListAndTheTapShowsTheNoticeAndTheListWithoutItAndEscapeEndsTheBrowsing) {
         HubPlayer gone(_world);
         HubPlayer stays(_world);
-        const std::vector<HubPlayer*> all = {&gone, &stays};
+        const Vector<HubPlayer*> all = {&gone, &stays};
         ASSERT_TRUE(HostOpen(gone, "Gone", false, all));
         ASSERT_TRUE(HostOpen(stays, "Stays", false, all));
         ASSERT_NO_FATAL_FAILURE(OpenTheRooms(all));
@@ -1287,7 +1287,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(ClickElement(kOnline, "OnlineRoomRow0"));
         ASSERT_TRUE(PumpUntil([&] { return !Notice().empty() && _game->GetOnline().Rooms().loaded && !_game->GetOnline().Rooms().pending; }, all));
         EXPECT_EQ(Screens().Page(), OnlinePage::Rooms);
-        EXPECT_EQ(Notice(), std::string(OnlineNoticeText(CoreManager::GetUIStrings(), OnlineErrorKey(RoomErrors::kUnknownRoom)).c_str()));
+        EXPECT_EQ(Notice(), String(OnlineNoticeText(CoreManager::GetUIStrings(), OnlineErrorKey(RoomErrors::kUnknownRoom)).c_str()));
         EXPECT_FALSE(ItemShown(kOnline, "OnlineRoomRow1"));
         ASSERT_TRUE(ItemShown(kOnline, "OnlineRoomRow0"));
         EXPECT_EQ(Var("onlineListRow0"), "Stays: 3 free, 8 hands, level 3");
@@ -1308,7 +1308,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongOnlineRoomsPageTest, AnEmptyListOffersToHostAndRefreshAsksAgain) {
         HubPlayer late(_world);
-        const std::vector<HubPlayer*> all = {&late};
+        const Vector<HubPlayer*> all = {&late};
         ASSERT_NO_FATAL_FAILURE(OpenTheRooms(all));
         EXPECT_EQ(Var("onlineStatus"), "No open rooms. Host one.");
         EXPECT_TRUE(ItemShown(kOnline, "OnlineStatus"));
@@ -1336,10 +1336,10 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongOnlineRoomsPageTest, MoreThanThreeRoomsPageByThePageButtonAndTheVisibilityChoiceMakesARoomThatOthersList) {
-        std::vector<std::unique_ptr<HubPlayer>> hosts;
-        std::vector<HubPlayer*> all;
+        Vector<UniquePtr<HubPlayer>> hosts;
+        Vector<HubPlayer*> all;
         for (const char* name : {"Ann", "Bo", "Cy", "Di"}) {
-            hosts.push_back(std::make_unique<HubPlayer>(_world));
+            hosts.push_back(MakeUnique<HubPlayer>(_world));
             all.push_back(hosts.back().get());
             ASSERT_TRUE(HostOpen(*hosts.back(), name, false, all));
         }
@@ -1374,7 +1374,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(Element(kOnline, "OnlineOpenOpen")->selected);
         ASSERT_TRUE(ClickElement(kOnline, "OnlineCreate"));
         ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Lobby; }, all));
-        const std::string code = Var("onlineRoom");
+        const String code = Var("onlineRoom");
 
         HubPlayer seeker(_world);
         all.push_back(&seeker);
@@ -1382,16 +1382,16 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(PumpUntil([&] { return seeker.Client().Rooms().loaded; }, all));
         bool listed = false;
         for (const OnlineListedRoom& room : seeker.Client().Rooms().rooms) {
-            listed = listed || std::string(room.code.c_str()) == code;
+            listed = listed || String(room.code.c_str()) == code;
         }
         EXPECT_TRUE(listed) << "an Open room is on the list of others";
     }
 
     TEST_F(MahjongOnlineRoomsPageTest, TheRoomsPageAndTheHostFormPassTheSizeMatrixInBothLanguagesAndAQuietFrameSetsNothing) {
-        std::vector<std::unique_ptr<HubPlayer>> hosts;
-        std::vector<HubPlayer*> all;
+        Vector<UniquePtr<HubPlayer>> hosts;
+        Vector<HubPlayer*> all;
         for (const char* name : {"Ann", "Bo", "Cy", "Di"}) {
-            hosts.push_back(std::make_unique<HubPlayer>(_world));
+            hosts.push_back(MakeUnique<HubPlayer>(_world));
             all.push_back(hosts.back().get());
             ASSERT_TRUE(HostOpen(*hosts.back(), name, true, all));
         }

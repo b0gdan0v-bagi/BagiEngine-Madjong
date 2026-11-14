@@ -16,7 +16,7 @@ namespace BECore::Mahjong::Analyzer {
         constexpr int kHandWorlds = 100;
         constexpr uint32_t kSeed = 7;
 
-        Tile T(std::string_view text) {
+        Tile T(StringView text) {
             return TryParse(text).value();
         }
 
@@ -111,25 +111,25 @@ namespace BECore::Mahjong::Analyzer {
             return label;
         }
 
-        std::string Str(const eastl::string& text) {
-            return std::string(text.c_str(), text.size());
+        String Str(const String& text) {
+            return String(text.c_str(), text.size());
         }
 
-        bool Has(const eastl::string& text, std::string_view part) {
-            return std::string_view(text.data(), text.size()).find(part) != std::string_view::npos;
+        bool Has(const String& text, StringView part) {
+            return StringView(text).find(part) != StringView::npos;
         }
 
         /// The lines of `text` that start with `prefix` (the table rows are found by their action).
-        std::string LineOf(const eastl::string& text, std::string_view prefix) {
-            const std::string_view all(text.data(), text.size());
+        String LineOf(const String& text, StringView prefix) {
+            const StringView all(text.data(), text.size());
             size_t start = 0;
             while (start < all.size()) {
                 const size_t end = all.find('\n', start);
-                const std::string_view line = all.substr(start, end == std::string_view::npos ? std::string_view::npos : end - start);
+                const StringView line = all.substr(start, end == StringView::npos ? StringView::npos : end - start);
                 if (line.starts_with(prefix)) {
-                    return std::string(line);
+                    return String(line);
                 }
-                if (end == std::string_view::npos) {
+                if (end == StringView::npos) {
                     break;
                 }
                 start = end + 1;
@@ -154,31 +154,31 @@ namespace BECore::Mahjong::Analyzer {
     }
 
     TEST(AnalyzerReportTest, TheTextOfAClaimPositionIsTheGoldenText) {
-        const eastl::string text = FormatAnalysisReport(ClaimView(), ClaimAnalysis(), LogLabel());
-        const std::string golden = "EV of every legal action, in points at the end of the hand\n"
-                                   "The opponents are Normal players (level 5) and the seat itself plays Normal after the chosen action.\n"
-                                   "Hidden tiles are sampled uniformly from the tiles the seat cannot see (the approximations of ComputerWorld.h).\n"
-                                   "The points are those of this hand only (a drawn hand pays 0), against Normal bots: like a poker chart against a known pool, not an equilibrium.\n"
-                                   "worlds: asked 100, played 98, dropped 2; seed 7; Normal's choice seed 1\n"
-                                   "+- is 1.96 standard errors over the worlds (a 95 percent interval); a world is one sample of the hidden tiles with its rollout seed.\n"
-                                   "vs best and vs Normal are paired by world (the same worlds and rollout seeds), so their intervals are tighter than those of two means;\n"
-                                   "vs best has a small bias: the best row was picked by the same worlds.\n"
-                                   "\n"
-                                   "position: logs/matches/a.jsonl, hand 3, action 17\n"
-                                   "seat 2 (West wind), round South, phase Claim, live tiles 70\n"
-                                   "hand: 3s 4s 5p 5p 7s 8s 2m 3m 4m Nw\n"
-                                   "melds: pung Rd from seat 0\n"
-                                   "pending: 5p from seat 1\n"
-                                   "seat 0: discards 5\n"
-                                   "seat 1: discards 6, calling\n"
-                                   "seat 3: discards 4, concealed kongs 1, bonus F1\n"
-                                   "\n"
-                                   "action                         EV        +-    vs best        +-  vs Normal        +-  note\n"
-                                   "claim chow 3s-4s-5s          3.50      0.70                           +2.27      0.90  best, better than Normal\n"
-                                   "pass                         1.23      0.50      -2.27      0.80                       Normal, worse than best\n"
-                                   "claim pung                   1.23      0.61      -2.27      1.50      +0.00      0.40  logged, worse than best\n"
-                                   "claim kong                   0.50                -3.00                -0.73\n"
-                                   "claim mahjong               -1.00      0.30      -4.50      0.60      -2.23      0.50  worse than best, worse than Normal\n";
+        const String text = FormatAnalysisReport(ClaimView(), ClaimAnalysis(), LogLabel());
+        const String golden = "EV of every legal action, in points at the end of the hand\n"
+                              "The opponents are Normal players (level 5) and the seat itself plays Normal after the chosen action.\n"
+                              "Hidden tiles are sampled uniformly from the tiles the seat cannot see (the approximations of ComputerWorld.h).\n"
+                              "The points are those of this hand only (a drawn hand pays 0), against Normal bots: like a poker chart against a known pool, not an equilibrium.\n"
+                              "worlds: asked 100, played 98, dropped 2; seed 7; Normal's choice seed 1\n"
+                              "+- is 1.96 standard errors over the worlds (a 95 percent interval); a world is one sample of the hidden tiles with its rollout seed.\n"
+                              "vs best and vs Normal are paired by world (the same worlds and rollout seeds), so their intervals are tighter than those of two means;\n"
+                              "vs best has a small bias: the best row was picked by the same worlds.\n"
+                              "\n"
+                              "position: logs/matches/a.jsonl, hand 3, action 17\n"
+                              "seat 2 (West wind), round South, phase Claim, live tiles 70\n"
+                              "hand: 3s 4s 5p 5p 7s 8s 2m 3m 4m Nw\n"
+                              "melds: pung Rd from seat 0\n"
+                              "pending: 5p from seat 1\n"
+                              "seat 0: discards 5\n"
+                              "seat 1: discards 6, calling\n"
+                              "seat 3: discards 4, concealed kongs 1, bonus F1\n"
+                              "\n"
+                              "action                         EV        +-    vs best        +-  vs Normal        +-  note\n"
+                              "claim chow 3s-4s-5s          3.50      0.70                           +2.27      0.90  best, better than Normal\n"
+                              "pass                         1.23      0.50      -2.27      0.80                       Normal, worse than best\n"
+                              "claim pung                   1.23      0.61      -2.27      1.50      +0.00      0.40  logged, worse than best\n"
+                              "claim kong                   0.50                -3.00                -0.73\n"
+                              "claim mahjong               -1.00      0.30      -4.50      0.60      -2.23      0.50  worse than best, worse than Normal\n";
         EXPECT_EQ(Str(text), golden);
     }
 
@@ -189,7 +189,7 @@ namespace BECore::Mahjong::Analyzer {
 
     TEST(AnalyzerReportTest, RowsAreSortedByTheMeanAndTheOrderOfLegalBreaksATie) {
         PositionAnalysis analysis = ClaimAnalysis();
-        const eastl::string text = FormatAnalysisReport(ClaimView(), analysis, PositionLabel{});
+        const String text = FormatAnalysisReport(ClaimView(), analysis, PositionLabel{});
         EXPECT_LT(text.find("claim chow"), text.find("pass  "));
         EXPECT_LT(text.find("pass  "), text.find("claim pung"));
         EXPECT_LT(text.find("claim pung"), text.find("claim kong"));
@@ -197,31 +197,31 @@ namespace BECore::Mahjong::Analyzer {
 
         // The two rows of the same mean swap places when their order in `legal` does.
         eastl::swap(analysis.rows[0], analysis.rows[1]);
-        const eastl::string swapped = FormatAnalysisReport(ClaimView(), analysis, PositionLabel{});
+        const String swapped = FormatAnalysisReport(ClaimView(), analysis, PositionLabel{});
         EXPECT_LT(swapped.find("claim pung"), swapped.find("pass  "));
     }
 
     TEST(AnalyzerReportTest, TheMarksFollowTheRowsAndTheLabel) {
-        const eastl::string text = FormatAnalysisReport(ClaimView(), ClaimAnalysis(), LogLabel());
+        const String text = FormatAnalysisReport(ClaimView(), ClaimAnalysis(), LogLabel());
         EXPECT_TRUE(Has(text, "best, better than Normal"));
         EXPECT_TRUE(Has(LineOf(text, "pass").c_str(), "Normal, worse than best"));
         EXPECT_TRUE(Has(LineOf(text, "claim pung").c_str(), "logged"));
         EXPECT_FALSE(Has(LineOf(text, "claim chow").c_str(), "logged"));
 
         // No log: nothing is `logged`, no source line and no hand number.
-        const eastl::string plain = FormatAnalysisReport(ClaimView(), ClaimAnalysis(), PositionLabel{});
+        const String plain = FormatAnalysisReport(ClaimView(), ClaimAnalysis(), PositionLabel{});
         EXPECT_FALSE(Has(plain, "logged"));
         EXPECT_FALSE(Has(plain, "position:"));
         // A named hand-written text prints its name only.
         PositionLabel named;
         named.source = "tests/pung.txt";
-        const eastl::string byName = FormatAnalysisReport(ClaimView(), ClaimAnalysis(), named);
+        const String byName = FormatAnalysisReport(ClaimView(), ClaimAnalysis(), named);
         EXPECT_TRUE(Has(byName, "position: tests/pung.txt\n"));
         EXPECT_FALSE(Has(byName, "hand 3"));
     }
 
     TEST(AnalyzerReportTest, ACellWithoutANumberOrAnIntervalIsBlankNeverNan) {
-        const eastl::string text = FormatAnalysisReport(ClaimView(), ClaimAnalysis(), LogLabel());
+        const String text = FormatAnalysisReport(ClaimView(), ClaimAnalysis(), LogLabel());
         EXPECT_FALSE(Has(text, "nan"));
         EXPECT_FALSE(Has(text, "inf"));
         // The best row has no difference to itself, the kong has no interval at all.
@@ -229,7 +229,7 @@ namespace BECore::Mahjong::Analyzer {
         EXPECT_FALSE(Has(LineOf(text, "claim chow").c_str(), "-0"));
 
         // An analysis of nothing prints a table of the header only.
-        const eastl::string empty = FormatAnalysisReport(TableView{}, PositionAnalysis{}, PositionLabel{});
+        const String empty = FormatAnalysisReport(TableView{}, PositionAnalysis{}, PositionLabel{});
         EXPECT_FALSE(Has(empty, "nan"));
     }
 
@@ -241,7 +241,7 @@ namespace BECore::Mahjong::Analyzer {
     }
 
     TEST(AnalyzerReportTest, TheHeaderStatesEveryApproximation) {
-        const eastl::string text = FormatAnalysisReport(ClaimView(), ClaimAnalysis(), PositionLabel{});
+        const String text = FormatAnalysisReport(ClaimView(), ClaimAnalysis(), PositionLabel{});
         EXPECT_TRUE(Has(text, "opponents are Normal players (level 5)"));
         EXPECT_TRUE(Has(text, "the seat itself plays Normal after the chosen action"));
         EXPECT_TRUE(Has(text, "sampled uniformly"));
@@ -255,26 +255,26 @@ namespace BECore::Mahjong::Analyzer {
     }
 
     TEST(AnalyzerReportTest, TheJsonIsTheGoldenLine) {
-        const eastl::string line = FormatAnalysisJson(ClaimView(), ClaimAnalysis(), LogLabel());
+        const String line = FormatAnalysisJson(ClaimView(), ClaimAnalysis(), LogLabel());
         EXPECT_EQ(std::count(line.begin(), line.end(), '\n'), 0);
-        const std::string golden =
+        const String golden =
             R"({"actionIndex":17,"actions":[{"action":{"claim":"chow","first":"3s","type":"claim"},"best":true,"ev":3.5,"half":0.7,"logged":false,"normal":false,"text":"claim chow 3s-4s-5s","vsBest":null,"vsNormal":{"half":0.9,"mean":2.27,"significant":true}},{"action":{"type":"pass"},"best":false,"ev":1.23,"half":0.5,"logged":false,"normal":true,"text":"pass","vsBest":{"half":0.8,"mean":-2.27,"significant":true},"vsNormal":null},{"action":{"claim":"pung","type":"claim"},"best":false,"ev":1.23,"half":0.61,"logged":true,"normal":false,"text":"claim pung","vsBest":{"half":1.5,"mean":-2.27,"significant":true},"vsNormal":{"half":0.4,"mean":0.0,"significant":false}},{"action":{"claim":"kong","type":"claim"},"best":false,"ev":0.5,"half":null,"logged":false,"normal":false,"text":"claim kong","vsBest":{"half":null,"mean":-3.0,"significant":false},"vsNormal":{"half":null,"mean":-0.73,"significant":false}},{"action":{"claim":"mahjong","type":"claim"},"best":false,"ev":-1.0,"half":0.3,"logged":false,"normal":false,"text":"claim mahjong","vsBest":{"half":0.6,"mean":-4.5,"significant":true},"vsNormal":{"half":0.5,"mean":-2.23,"significant":true}}],"hand":3,"hiddenTiles":"uniform","intervalZ":1.96,"liveTiles":70,"logged":{"claim":"pung","type":"claim"},"normalSeed":1,"opponentLevel":5,"opponents":"normal","own":"3s 4s 5p 5p 7s 8s 2m 3m 4m Nw","pending":"5p","phase":"Claim","points":"this hand","roundWind":"South","seat":2,"seatAfterAction":"normal","seatWind":"West","seed":7,"source":"logs/matches/a.jsonl","version":1,"worldsAsked":100,"worldsDropped":2,"worldsPlayed":98})";
         EXPECT_EQ(Str(line), golden);
     }
 
     TEST(AnalyzerReportTest, TheJsonReadsBackAndItsActionsAreAcceptedByTheControlApi) {
-        const eastl::string line = FormatAnalysisJson(ClaimView(), ClaimAnalysis(), LogLabel());
-        const std::expected<Json, ControlError> parsed = ParseJson(eastl::string_view(line.c_str(), line.size()));
+        const String line = FormatAnalysisJson(ClaimView(), ClaimAnalysis(), LogLabel());
+        const std::expected<Json, ControlError> parsed = ParseJson(StringView(line.c_str(), line.size()));
         ASSERT_TRUE(parsed.has_value());
         const Json& json = *parsed;
         EXPECT_EQ(GetJsonInt(json, "version"), kAnalysisJsonVersion);
         EXPECT_EQ(GetJsonInt(json, "seat"), 2);
         EXPECT_EQ(GetJsonInt(json, "worldsPlayed"), kHandWorlds - 2);
-        EXPECT_EQ(GetJsonString(json, "phase")->c_str(), std::string("Claim"));
+        EXPECT_EQ(GetJsonString(json, "phase")->c_str(), String("Claim"));
         ASSERT_NE(FindJsonMember(json, "actions"), nullptr);
         const Json& actions = *FindJsonMember(json, "actions");
         ASSERT_EQ(actions.size(), ClaimAnalysis().rows.size());
-        const eastl::vector<HandAction> sorted = {kChow, kPass, kPung, kKong, kMahjong};
+        const Vector<HandAction> sorted = {kChow, kPass, kPung, kKong, kMahjong};
         for (size_t index = 0; index < actions.size(); ++index) {
             const std::expected<ControlAction, ControlError> action = ActionFromJson(*FindJsonMember(actions[index], "action"));
             ASSERT_TRUE(action.has_value()) << index;

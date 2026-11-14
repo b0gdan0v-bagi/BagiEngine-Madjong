@@ -25,7 +25,7 @@ namespace BECore::Mahjong::Tests {
             const MahjongSettings settings = SettingsOf(index);
             const Mode mode = index == kNeverWinMatch ? Mode::NeverWin : Mode::SeekWin;
             const uint32_t seed = kFirstSeed + static_cast<uint32_t>(index);
-            const std::string where = "match " + std::to_string(index) + " (seed " + std::to_string(seed) + ")";
+            const String where = Format("match {} (seed {})", index, seed);
             Match match;
             ASSERT_TRUE(match.Start(settings, seed).has_value()) << where;
             MahjongRng rng(seed);

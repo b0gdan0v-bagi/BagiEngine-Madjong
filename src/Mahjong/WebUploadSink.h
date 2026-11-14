@@ -12,7 +12,7 @@ namespace BECore::Mahjong {
         /// Whether a post can be made at all (a browser page with `window.bagiWebPost`)
         [[nodiscard]] virtual bool Available() const = 0;
         /// Starts a POST of `body` to `path` and returns at once; the error names the refusal
-        [[nodiscard]] virtual std::expected<WebPostId, eastl::string> Start(eastl::string_view path, eastl::string_view body) = 0;
+        [[nodiscard]] virtual std::expected<WebPostId, String> Start(StringView path, StringView body) = 0;
         /// `Pending` until the answer arrives, then `Done` (with the HTTP status) or `Failed`, once
         [[nodiscard]] virtual WebPostResult Poll(WebPostId id) = 0;
     };
@@ -21,7 +21,7 @@ namespace BECore::Mahjong {
     class EngineWebPoster final : public IWebPoster {
     public:
         [[nodiscard]] bool Available() const override;
-        [[nodiscard]] std::expected<WebPostId, eastl::string> Start(eastl::string_view path, eastl::string_view body) override;
+        [[nodiscard]] std::expected<WebPostId, String> Start(StringView path, StringView body) override;
         [[nodiscard]] WebPostResult Poll(WebPostId id) override;
     };
 
@@ -99,22 +99,22 @@ namespace BECore::Mahjong {
         void OnAnswer(const WebPostResult& result, double nowSeconds);
         void RetryLater(double nowSeconds);
         /// By value: the caller often names the id of a queued piece, which the removal moves
-        void DropMatch(eastl::string matchId);
+        void DropMatch(String matchId);
         void Disable(WebUploadState reason);
         void EnforceBounds();
         void BuildPath(const UploadPiece& piece);
         [[nodiscard]] size_t QueuedBytes() const;
 
         IWebPoster* _poster = nullptr;
-        eastl::vector<UploadPiece> _queue;
+        Vector<UploadPiece> _queue;
         WebPostId _inFlight = 0;
         double _retryAt = 0.0;
         double _backoff = kFirstBackoffSeconds;
         WebUploadState _state = WebUploadState::Active;
         WebUploadCounters _counters;
         /// The match dropped last: what still arrives of it is dropped (only one match produces pieces at a time)
-        eastl::string _droppedMatchId;
-        eastl::string _path;
+        String _droppedMatchId;
+        String _path;
     };
 
 }  // namespace BECore::Mahjong

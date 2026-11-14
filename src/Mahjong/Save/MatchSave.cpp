@@ -13,17 +13,17 @@ namespace BECore::Mahjong {
         constexpr const char* kSettlementBreakdownsKey = "seats";
 
         /// The line number (from 1) of the `index`th event of a text: the lines that are not blank, as `ParseMatchLog` counts them.
-        size_t LineOfEvent(std::string_view text, size_t index) {
+        size_t LineOfEvent(StringView text, size_t index) {
             size_t lineNumber = 0;
             size_t seen = 0;
             size_t begin = 0;
             while (begin <= text.size()) {
                 size_t end = text.find('\n', begin);
-                if (end == std::string_view::npos) {
+                if (end == StringView::npos) {
                     end = text.size();
                 }
                 ++lineNumber;
-                if (text.substr(begin, end - begin).find_first_not_of(" \t\r") != std::string_view::npos) {
+                if (text.substr(begin, end - begin).find_first_not_of(" \t\r") != StringView::npos) {
                     if (seen == index) {
                         return lineNumber;
                     }
@@ -34,15 +34,15 @@ namespace BECore::Mahjong {
             return lineNumber;
         }
 
-        size_t CountLines(std::string_view text) {
+        size_t CountLines(StringView text) {
             size_t count = 0;
             size_t begin = 0;
             while (begin < text.size()) {
                 size_t end = text.find('\n', begin);
-                if (end == std::string_view::npos) {
+                if (end == StringView::npos) {
                     end = text.size();
                 }
-                if (text.substr(begin, end - begin).find_first_not_of(" \t\r") != std::string_view::npos) {
+                if (text.substr(begin, end - begin).find_first_not_of(" \t\r") != StringView::npos) {
                     ++count;
                 }
                 begin = end + 1;
@@ -53,28 +53,28 @@ namespace BECore::Mahjong {
         constexpr char kLevelsSeparator = ',';
 
         /// The four levels of a `levels` text ("5,2,6,10"), or nothing when it is not exactly four numbers 1..10.
-        std::optional<SeatLevels> ParseLevelsText(std::string_view text) {
+        Optional<SeatLevels> ParseLevelsText(StringView text) {
             SeatLevels levels = UniformLevels(kDefaultLevel);
             for (size_t seat = 0; seat < levels.size(); ++seat) {
                 const bool last = seat + 1 == levels.size();
                 const size_t end = text.find(kLevelsSeparator);
-                if ((end == std::string_view::npos) != last) {
+                if ((end == StringView::npos) != last) {
                     return std::nullopt;
                 }
-                const std::optional<ComputerLevel> level = TryParseLevel(text.substr(0, end));
+                const Optional<ComputerLevel> level = TryParseLevel(text.substr(0, end));
                 if (!level) {
                     return std::nullopt;
                 }
                 levels[seat] = *level;
-                text = last ? std::string_view() : text.substr(end + 1);
+                text = last ? StringView() : text.substr(end + 1);
             }
             return levels;
         }
 
     }  // namespace
 
-    eastl::string MatchSaveText(const eastl::vector<MatchLogEvent>& events) {
-        eastl::string text;
+    String MatchSaveText(const Vector<MatchLogEvent>& events) {
+        String text;
         for (const MatchLogEvent& event : events) {
             if (event.kind == MatchLogKind::Hand || event.kind == MatchLogKind::End) {
                 continue;
@@ -83,23 +83,23 @@ namespace BECore::Mahjong {
             if (event.kind == MatchLogKind::Settlement) {
                 json.erase(kSettlementBreakdownsKey);
             }
-            const std::string line = json.dump();
+            const auto line = json.dump();
             text.append(line.data(), line.size());
             text.push_back('\n');
         }
         return text;
     }
 
-    std::expected<eastl::vector<MatchLogEvent>, eastl::string> ParseMatchSaveText(std::string_view text) {
+    std::expected<Vector<MatchLogEvent>, String> ParseMatchSaveText(StringView text) {
         if (const size_t lines = CountLines(text); lines > kMaxSavedEvents) {
             return std::unexpected(Format("the saved match has {} lines, more than the {} allowed", lines, kMaxSavedEvents));
         }
-        std::expected<eastl::vector<MatchLogEvent>, eastl::string> events = ParseMatchLog(text);
+        std::expected<Vector<MatchLogEvent>, String> events = ParseMatchLog(text);
         if (!events) {
             return events;
         }
         if (events->empty()) {
-            return std::unexpected(eastl::string("the saved match is empty"));
+            return std::unexpected(String("the saved match is empty"));
         }
         for (size_t index = 0; index < events->size(); ++index) {
             const MatchLogKind kind = (*events)[index].kind;
@@ -113,45 +113,45 @@ namespace BECore::Mahjong {
         return events;
     }
 
-    MahjongPrefsSave MakePrefs(eastl::string_view language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, ComputerLevel level, AnimationSpeed speed, bool coach) {
+    MahjongPrefsSave MakePrefs(StringView language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, ComputerLevel level, AnimationSpeed speed, bool coach) {
         return MakePrefs(language, hintsOn, seats, handsPerMatch, UniformLevels(level), speed, coach);
     }
 
-    MahjongPrefsSave MakePrefs(eastl::string_view language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, const SeatLevels& levels, AnimationSpeed speed, bool coach) {
+    MahjongPrefsSave MakePrefs(StringView language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, const SeatLevels& levels, AnimationSpeed speed, bool coach) {
         MahjongPrefsSave prefs;
         prefs.language.assign(language.data(), language.size());
         prefs.hintsOn = hintsOn || coach;
         prefs.coach = coach;
         prefs.seats = SeatsToLetters(seats);
         prefs.hands = handsPerMatch;
-        const std::string_view text = LevelText(FirstComputerLevel(seats, levels));
+        const StringView text = LevelText(FirstComputerLevel(seats, levels));
         prefs.level.assign(text.data(), text.size());
         if (levels != UniformLevels(levels[0])) {
             for (size_t seat = 0; seat < levels.size(); ++seat) {
                 if (seat > 0) {
                     prefs.levels.push_back(kLevelsSeparator);
                 }
-                const std::string_view number = LevelText(levels[seat]);
+                const StringView number = LevelText(levels[seat]);
                 prefs.levels.append(number.data(), number.size());
             }
         } else if (std::ranges::none_of(seats, [](SeatKind kind) { return kind == SeatKind::Computer; })) {
             // `level` is the default when nobody is a computer, so it cannot carry the one level of the table
-            const std::string_view number = LevelText(levels[0]);
+            const StringView number = LevelText(levels[0]);
             prefs.level.assign(number.data(), number.size());
         }
-        const std::string_view speedText = SpeedText(speed);
+        const StringView speedText = SpeedText(speed);
         prefs.speed.assign(speedText.data(), speedText.size());
         return prefs;
     }
 
-    std::expected<PrefsValues, eastl::string> ReadPrefs(const MahjongPrefsSave& prefs) {
+    std::expected<PrefsValues, String> ReadPrefs(const MahjongPrefsSave& prefs) {
         PrefsValues values;
         if (prefs.language.empty()) {
-            return std::unexpected(eastl::string("the language is empty"));
+            return std::unexpected(String("the language is empty"));
         }
         values.language = prefs.language;
         values.hintsMode = prefs.coach ? HintsMode::Coach : (prefs.hintsOn ? HintsMode::Hints : HintsMode::Off);
-        const std::optional<SeatSetup> seats = ReadSeats(prefs.seats);
+        const Optional<SeatSetup> seats = ReadSeats(prefs.seats);
         if (!seats) {
             return std::unexpected(Format("the seats '{}' are not four letters P or C", prefs.seats));
         }
@@ -161,15 +161,15 @@ namespace BECore::Mahjong {
         }
         values.handsPerMatch = prefs.hands;
         if (!prefs.levels.empty()) {  // one level per seat: it wins over `level`
-            const std::optional<SeatLevels> levels = ParseLevelsText(std::string_view(prefs.levels.c_str(), prefs.levels.size()));
+            const Optional<SeatLevels> levels = ParseLevelsText(StringView(prefs.levels.c_str(), prefs.levels.size()));
             if (!levels) {
                 return std::unexpected(Format("the levels '{}' are not four numbers {}..{} separated by commas", prefs.levels, kMinLevel, kMaxLevel));
             }
             values.levels = *levels;
         } else {
             // A copy written before the scale of numbers holds a name (`easy` | `normal`): read as the level of that name
-            const std::string_view levelText(prefs.level.c_str(), prefs.level.size());
-            std::optional<ComputerLevel> level = TryParseLevel(levelText);
+            const StringView levelText(prefs.level.c_str(), prefs.level.size());
+            Optional<ComputerLevel> level = TryParseLevel(levelText);
             if (!level) {
                 level = TryParseLevelName(levelText);
             }
@@ -178,7 +178,7 @@ namespace BECore::Mahjong {
             }
             values.levels = UniformLevels(*level);
         }
-        const std::optional<AnimationSpeed> speed = TryParseSpeed(std::string_view(prefs.speed.c_str(), prefs.speed.size()));
+        const Optional<AnimationSpeed> speed = TryParseSpeed(StringView(prefs.speed.c_str(), prefs.speed.size()));
         if (!speed) {
             return std::unexpected(Format("the speed '{}' is not slow, normal or fast", prefs.speed));
         }
@@ -186,32 +186,32 @@ namespace BECore::Mahjong {
         return values;
     }
 
-    MahjongOnlineSave MakeOnlineSave(eastl::string_view name, const RoomSession& session) {
+    MahjongOnlineSave MakeOnlineSave(StringView name, const RoomSession& session) {
         MahjongOnlineSave save;
         save.name.assign(name.data(), name.size());
         if (session.IsValid()) {
-            const std::string text = SessionToJson(session).dump();
+            const auto text = SessionToJson(session).dump();
             save.session.assign(text.data(), text.size());
         }
         return save;
     }
 
-    std::expected<OnlineValues, eastl::string> ReadOnline(const MahjongOnlineSave& save) {
+    std::expected<OnlineValues, String> ReadOnline(const MahjongOnlineSave& save) {
         OnlineValues values;
         if (!save.name.empty()) {
             if (!SanitizePlayerName(save.name)) {
-                return std::unexpected(eastl::string("the name is not one a room accepts"));
+                return std::unexpected(String("the name is not one a room accepts"));
             }
             values.name = save.name;
         }
         if (!save.session.empty()) {
-            const std::expected<Json, ControlError> parsed = ParseJson(eastl::string_view(save.session.c_str(), save.session.size()));
+            const std::expected<Json, ControlError> parsed = ParseJson(StringView(save.session.c_str(), save.session.size()));
             if (!parsed) {
-                return std::unexpected(eastl::string("the session is not JSON"));
+                return std::unexpected(String("the session is not JSON"));
             }
-            std::optional<RoomSession> session = SessionFromJson(*parsed);
+            Optional<RoomSession> session = SessionFromJson(*parsed);
             if (!session) {
-                return std::unexpected(eastl::string("the session is not a room with a token"));
+                return std::unexpected(String("the session is not a room with a token"));
             }
             values.session = eastl::move(*session);
         }

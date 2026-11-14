@@ -28,23 +28,23 @@ namespace BECore::Mahjong {
     /// The tiles that would complete the viewer's hand, in the order of the tile ids, each with its `UnseenCopies`. Empty unless the
     /// concealed tiles are `3n + 1` and the hand is waiting (`WinningTiles(view.own)`: the copies in the melds counted). It does not
     /// depend on whose turn it is or on the calling-hand declaration.
-    [[nodiscard]] eastl::vector<WaitEntry> WaitingTiles(const TableView& view);
+    [[nodiscard]] Vector<WaitEntry> WaitingTiles(const TableView& view);
 
     /// `true` for the id of each tile whose discard declares the calling hand: the `Discard` actions of `view.legal` with
     /// `declareCalling` (exactly what the `Declare` switch of the table allows). All false when the viewer has no turn.
-    [[nodiscard]] eastl::array<bool, kTileIdCount> DeclaringDiscards(const TableView& view);
+    [[nodiscard]] Array<bool, kTileIdCount> DeclaringDiscards(const TableView& view);
 
     /// What the computer player would do in the viewer's place: `ComputerPlayer(kAdviceSeed).Choose(view)` (`kAdviceSeed` is in `Game/ComputerExplain.h`). An element of `view.legal`;
     /// empty when `view.legal` is empty (nothing to do).
-    [[nodiscard]] std::optional<HandAction> AdviceFor(const TableView& view);
+    [[nodiscard]] Optional<HandAction> AdviceFor(const TableView& view);
 
     /// One sentence that says `advice` in the language of `strings` ("Discard 5 Dots.", "Take the discard to make a pung of 5 Dots."):
     /// one key `hints.advice.*` per kind with placeholders. `view` names the pending discard of a claim. Never empty.
-    [[nodiscard]] eastl::string AdviceText(const UIStrings& strings, const TableView& view, const HandAction& advice);
+    [[nodiscard]] String AdviceText(const UIStrings& strings, const TableView& view, const HandAction& advice);
 
     /// The advice of `AdviceFor(view)` with the numbers it was chosen by (`ExplainAdvice`); its action equals `AdviceFor(view)`.
     /// Empty when there is nothing to do.
-    [[nodiscard]] std::optional<Explanation> ExplainAdviceFor(const TableView& view);
+    [[nodiscard]] Optional<Explanation> ExplainAdviceFor(const TableView& view);
 
     /**
      * @brief Whether the hints are on screen now: `hintsOn` (`MahjongGame::HintsActive()`: the player's mode, unless a room forbids hints), the table is not paused behind a modal screen

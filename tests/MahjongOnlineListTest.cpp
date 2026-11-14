@@ -1,5 +1,6 @@
 #include "MahjongHubTransport.h"
 
+#include <Common/Printers.h>
 #include <Mahjong/Online/OnlineWords.h>
 #include <Rooms/RoomErrors.h>
 #include <gtest/gtest.h>
@@ -16,7 +17,7 @@ namespace BECore::Mahjong::Tests {
         using std::chrono::milliseconds;
         using std::chrono::seconds;
 
-        constexpr eastl::string_view kUrl = "ws://hub.test";
+        constexpr StringView kUrl = "ws://hub.test";
         constexpr milliseconds kTick{10};
         constexpr int kStepLimit = 2000;
         constexpr int kHostLevel = 3;
@@ -82,7 +83,7 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_TRUE(_world.Judge().Offences().empty()) << _world.Judge().Offences().front();
             }
 
-            static eastl::string_view NoticeKey(const HubPlayer& player) {
+            static StringView NoticeKey(const HubPlayer& player) {
                 return player.Client().Notice().key;
             }
 
@@ -110,9 +111,9 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(room.code, open.Client().Room());
         EXPECT_EQ(room.host, "{name}%s");
         EXPECT_EQ(room.free, kFirstSeats - 1);
-        EXPECT_EQ(room.hands, std::optional<int>(kShortMatchHands));
-        EXPECT_EQ(room.level, std::optional<int>(kHostLevel));
-        EXPECT_EQ(room.hintsAllowed, std::optional<bool>(true));
+        EXPECT_EQ(room.hands, Optional<int>(kShortMatchHands));
+        EXPECT_EQ(room.level, Optional<int>(kHostLevel));
+        EXPECT_EQ(room.hintsAllowed, Optional<bool>(true));
         // a guest browsing is in no room: nothing of a room to keep or to show
         EXPECT_FALSE(guest.Client().SessionToKeep().IsValid());
         EXPECT_TRUE(guest.Client().Room().empty());
@@ -156,7 +157,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(RunUntil([&] { return listed.Client().Rooms().loaded; }, {&listed}));
         ASSERT_EQ(listed.Client().Rooms().rooms.size(), 1u);
 
-        const eastl::string code = listed.Client().Rooms().rooms.front().code;
+        const String code = listed.Client().Rooms().rooms.front().code;
         ASSERT_TRUE(listed.Client().JoinListed(kUrl, code, "Bob"));
         EXPECT_EQ(listed.Client().Stage(), OnlineStage::Connecting);
         ASSERT_TRUE(RunUntil([&] { return listed.Client().Stage() == OnlineStage::Lobby; }, {&host, &listed}));
@@ -189,7 +190,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(HostRoom(stays, OpenRoom(), "Stays"));
         ASSERT_TRUE(BrowseAndLoad(guest));
         ASSERT_EQ(guest.Client().Rooms().rooms.size(), 2u);
-        const eastl::string goneCode = gone.Client().Room();
+        const String goneCode = gone.Client().Room();
         ASSERT_EQ(guest.Client().Rooms().rooms.front().code, goneCode);
         const size_t connections = _world.Hub().GetConnectionCount();
 

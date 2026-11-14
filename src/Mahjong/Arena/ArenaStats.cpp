@@ -7,7 +7,7 @@ namespace BECore::Mahjong::Arena {
     namespace {
 
         /// The number of `metric` in one seed row (over its `kSeatCount` hands); empty when the row has none.
-        std::optional<double> RowNumber(const SeedRow& row, SeedMetric metric) {
+        Optional<double> RowNumber(const SeedRow& row, SeedMetric metric) {
             switch (metric) {
                 case SeedMetric::PointsPerHand:
                     return static_cast<double>(row.pointsOfFocus) / kSeatCount;
@@ -30,7 +30,7 @@ namespace BECore::Mahjong::Arena {
 
     }  // namespace
 
-    MeanInterval MeanCi(const eastl::vector<double>& values) {
+    MeanInterval MeanCi(const Vector<double>& values) {
         MeanInterval interval;
         interval.n = values.size();
         if (values.empty()) {
@@ -56,11 +56,11 @@ namespace BECore::Mahjong::Arena {
         return interval;
     }
 
-    eastl::vector<double> SeedSeries(const FocusResult& focus, SeedMetric metric) {
-        eastl::vector<double> series;
+    Vector<double> SeedSeries(const FocusResult& focus, SeedMetric metric) {
+        Vector<double> series;
         series.reserve(focus.rows.size());
         for (const SeedRow& row : focus.rows) {
-            if (const std::optional<double> value = RowNumber(row, metric)) {
+            if (const Optional<double> value = RowNumber(row, metric)) {
                 series.push_back(*value);
             }
         }
@@ -75,14 +75,14 @@ namespace BECore::Mahjong::Arena {
         if (a.rows.size() != b.rows.size()) {
             return {};
         }
-        eastl::vector<double> differences;
+        Vector<double> differences;
         differences.reserve(a.rows.size());
         for (size_t index = 0; index < a.rows.size(); ++index) {
             if (a.rows[index].seed != b.rows[index].seed) {
                 return {};
             }
-            const std::optional<double> left = RowNumber(a.rows[index], metric);
-            const std::optional<double> right = RowNumber(b.rows[index], metric);
+            const Optional<double> left = RowNumber(a.rows[index], metric);
+            const Optional<double> right = RowNumber(b.rows[index], metric);
             if (left && right) {
                 differences.push_back(*left - *right);
             }

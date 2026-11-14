@@ -43,8 +43,8 @@ namespace BECore::Mahjong {
 
     }  // namespace
 
-    eastl::vector<WaitEntry> WaitingTiles(const TableView& view) {
-        eastl::vector<WaitEntry> entries;
+    Vector<WaitEntry> WaitingTiles(const TableView& view) {
+        Vector<WaitEntry> entries;
         if (view.own.concealed.size() % kTilesPerSet != kWaitingRemainder) {
             return entries;
         }
@@ -54,8 +54,8 @@ namespace BECore::Mahjong {
         return entries;
     }
 
-    eastl::array<bool, kTileIdCount> DeclaringDiscards(const TableView& view) {
-        eastl::array<bool, kTileIdCount> declaring{};
+    Array<bool, kTileIdCount> DeclaringDiscards(const TableView& view) {
+        Array<bool, kTileIdCount> declaring{};
         for (const HandAction& action : view.legal) {
             if (action.kind == ActionKind::Discard && action.declareCalling && action.tile.IsValid()) {
                 declaring[action.tile.Id()] = true;
@@ -64,7 +64,7 @@ namespace BECore::Mahjong {
         return declaring;
     }
 
-    std::optional<HandAction> AdviceFor(const TableView& view) {
+    Optional<HandAction> AdviceFor(const TableView& view) {
         if (view.legal.empty()) {
             return std::nullopt;
         }
@@ -72,11 +72,11 @@ namespace BECore::Mahjong {
         return player.Choose(view);
     }
 
-    std::optional<Explanation> ExplainAdviceFor(const TableView& view) {
+    Optional<Explanation> ExplainAdviceFor(const TableView& view) {
         return ExplainAdvice(view);
     }
 
-    eastl::string AdviceText(const UIStrings& strings, const TableView& view, const HandAction& advice) {
+    String AdviceText(const UIStrings& strings, const TableView& view, const HandAction& advice) {
         const char* key = AdviceKey(advice);
         switch (advice.kind) {
             case ActionKind::Discard:
@@ -86,7 +86,7 @@ namespace BECore::Mahjong {
             case ActionKind::Claim:
                 if (advice.claim == ClaimKind::Chow) {
                     // An action of the legal list always has a valid `chowFirst`; a made-up one names three invalid tiles.
-                    const auto tiles = advice.chowFirst.IsValid() ? ChowTiles(advice.chowFirst) : eastl::array<Tile, kTilesPerSet>{};
+                    const auto tiles = advice.chowFirst.IsValid() ? ChowTiles(advice.chowFirst) : Array<Tile, kTilesPerSet>{};
                     return Tr(strings, key, {{"first", TileName(strings, tiles[0])}, {"second", TileName(strings, tiles[1])}, {"third", TileName(strings, tiles[2])}});
                 }
                 if (advice.claim == ClaimKind::Pung || advice.claim == ClaimKind::Kong) {

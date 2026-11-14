@@ -20,8 +20,8 @@ namespace BECore::Mahjong::Tests {
     class MahjongHandRackTest : public MahjongTableTestBase {
     protected:
         /// The index of each draw of `color`: a rect of it, or a geometry call with a vertex of it (the tint of a seat plate is part of the plate's mesh).
-        std::vector<size_t> CallsOf(const Color& color) const {
-            std::vector<size_t> found;
+        Vector<size_t> CallsOf(const Color& color) const {
+            Vector<size_t> found;
             for (const MarkDraw& draw : MarksOf(_renderer->calls, color)) {
                 found.push_back(draw.call);
             }
@@ -41,8 +41,8 @@ namespace BECore::Mahjong::Tests {
 
         /// The plate and the body of the rack of the last draw; fails when it is not drawn exactly once.
         void RackOf(Rect& plate, Rect& body) const {
-            const std::vector<size_t> lip = CallsOf(kHandRackLip);
-            const std::vector<size_t> wood = CallsOf(kHandRack);
+            const Vector<size_t> lip = CallsOf(kHandRackLip);
+            const Vector<size_t> wood = CallsOf(kHandRack);
             ASSERT_EQ(lip.size(), 1u);
             ASSERT_EQ(wood.size(), 1u);
             EXPECT_EQ(wood[0], lip[0] + 1) << "the body is drawn right on the plate";

@@ -34,7 +34,7 @@ namespace BECore::Mahjong {
         }
 
         /// The melds of @p seat as the hand lists them once the hand is over (all four are public then) or while it is played.
-        void MeldsOf(const OnlineTable& table, Seat seat, eastl::vector<Meld>& out) {
+        void MeldsOf(const OnlineTable& table, Seat seat, Vector<Meld>& out) {
             out.clear();
             const size_t index = static_cast<size_t>(seat);
             if (Finished(table)) {
@@ -93,7 +93,7 @@ namespace BECore::Mahjong {
 
     }  // namespace
 
-    void DisplayMelds(const OnlineTable& table, Seat seat, eastl::vector<Meld>& out) {
+    void DisplayMelds(const OnlineTable& table, Seat seat, Vector<Meld>& out) {
         out.clear();
         if (IsSeat(seat)) {
             MeldsOf(table, seat, out);
@@ -240,7 +240,7 @@ namespace BECore::Mahjong {
         }
     }
 
-    const eastl::vector<HandMove>& MoveTracker::Follow(const OnlineTable& table) {
+    const Vector<HandMove>& MoveTracker::Follow(const OnlineTable& table) {
         const TableKey now = KeyOf(table);
         if (IsAnotherTable(_key, now)) {
             _moves.clear();
@@ -273,16 +273,16 @@ namespace BECore::Mahjong {
 
         // The melds: new ones are appended, a pung may have become a kong, none vanishes.
         struct SeatChange {
-            eastl::vector<size_t> upgraded;
+            Vector<size_t> upgraded;
             size_t firstNewOpen = 0;
             int newConcealed = 0;
         };
-        eastl::array<SeatChange, kSeatCount> changes;
+        Array<SeatChange, kSeatCount> changes;
         int claims = 0;
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             const size_t index = static_cast<size_t>(seat);
-            const eastl::vector<Meld>& was = before.open[index];
-            const eastl::vector<Meld>& is = now.open[index];
+            const Vector<Meld>& was = before.open[index];
+            const Vector<Meld>& is = now.open[index];
             if (is.size() < was.size() || now.concealedKongs[index] < before.concealedKongs[index]) {
                 return false;
             }
@@ -301,7 +301,7 @@ namespace BECore::Mahjong {
         }
 
         // The claim that took the last discard.
-        std::optional<HandMove> claim;
+        Optional<HandMove> claim;
         if (gone == 1) {
             const DiscardEntry& taken = before.pile.back();
             for (Seat seat = 0; seat < kSeatCount && !claim; ++seat) {
@@ -333,15 +333,15 @@ namespace BECore::Mahjong {
 
         // The moves, in this order: the claim, then for each new discard the kongs of its seat before it, then the kongs that are left.
         // The melds' indices are those of the display list of the new table.
-        eastl::array<eastl::vector<int>, kSeatCount> openAt;
-        eastl::array<eastl::vector<int>, kSeatCount> concealedAt;
+        Array<Vector<int>, kSeatCount> openAt;
+        Array<Vector<int>, kSeatCount> concealedAt;
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             MeldsOf(table, seat, _melds);
             for (size_t position = 0; position < _melds.size(); ++position) {
                 (_melds[position].concealed ? concealedAt : openAt)[static_cast<size_t>(seat)].push_back(static_cast<int>(position));
             }
         }
-        const auto indexOf = [](const eastl::vector<int>& positions, size_t number) { return number < positions.size() ? positions[number] : kNoMeld; };
+        const auto indexOf = [](const Vector<int>& positions, size_t number) { return number < positions.size() ? positions[number] : kNoMeld; };
         const auto emitKongs = [&](Seat seat) {
             const size_t index = static_cast<size_t>(seat);
             SeatChange& change = changes[index];
@@ -372,7 +372,7 @@ namespace BECore::Mahjong {
         }
         // A declaration turned on in this step belongs to the discard of its seat; with two discards of one seat in the step it cannot
         // be told which, so none is marked.
-        eastl::array<int, kSeatCount> discardsHere{};
+        Array<int, kSeatCount> discardsHere{};
         for (size_t entry = kept; entry < now.pile.size(); ++entry) {
             if (IsSeat(now.pile[entry].seat)) {
                 ++discardsHere[static_cast<size_t>(now.pile[entry].seat)];

@@ -1,3 +1,4 @@
+#include <Common/Printers.h>
 #include <Mahjong/Arena/ArenaReport.h>
 #include <Mahjong/Arena/ArenaRun.h>
 #include <Mahjong/Arena/ArenaWorlds.h>
@@ -40,9 +41,9 @@ namespace BECore::Mahjong::Arena {
         constexpr int kLoopIndexes = 6;
         constexpr std::chrono::milliseconds kProbeSleep{5};
 
-        ArenaPlayer Player(std::string_view spec) {
-            const std::expected<ArenaPlayer, eastl::string> player = ParseArenaPlayer(spec);
-            EXPECT_TRUE(player.has_value()) << std::string(spec.data(), spec.size());
+        ArenaPlayer Player(StringView spec) {
+            const std::expected<ArenaPlayer, String> player = ParseArenaPlayer(spec);
+            EXPECT_TRUE(player.has_value()) << String(spec.data(), spec.size());
             return player.value_or(ArenaPlayer{});
         }
 
@@ -58,15 +59,15 @@ namespace BECore::Mahjong::Arena {
         }
 
         ArenaResult PlayConfig(const ArenaConfig& config) {
-            std::expected<ArenaResult, eastl::string> result = RunArena(config);
+            std::expected<ArenaResult, String> result = RunArena(config);
             EXPECT_TRUE(result.has_value()) << (result.has_value() ? "" : result.error().c_str());
             return result.has_value() ? eastl::move(*result) : ArenaResult{};
         }
 
-        std::string ErrorOf(const ArenaConfig& config) {
-            const std::expected<ArenaResult, eastl::string> result = RunArena(config);
+        String ErrorOf(const ArenaConfig& config) {
+            const std::expected<ArenaResult, String> result = RunArena(config);
             EXPECT_FALSE(result.has_value());
-            return result.has_value() ? std::string() : std::string(result.error().c_str());
+            return result.has_value() ? String() : String(result.error().c_str());
         }
 
         bool SameTally(const ArenaTally& left, const ArenaTally& right) {
@@ -75,7 +76,7 @@ namespace BECore::Mahjong::Arena {
                    left.standingScore == right.standingScore && left.winsByKind == right.winsByKind && left.decisions == right.decisions;
         }
 
-        bool SameRows(const eastl::vector<SeedRow>& left, const eastl::vector<SeedRow>& right) {
+        bool SameRows(const Vector<SeedRow>& left, const Vector<SeedRow>& right) {
             if (left.size() != right.size()) {
                 return false;
             }
@@ -132,15 +133,15 @@ namespace BECore::Mahjong::Arena {
         }
 
         FocusResult PlayMadeUp(MakeRecord make) {
-            const ArenaHandPlayer player = [make](uint32_t, const ArenaPlayers& players, bool, const WorldLoop&) -> std::expected<HandRecord, eastl::string> {
+            const ArenaHandPlayer player = [make](uint32_t, const ArenaPlayers& players, bool, const WorldLoop&) -> std::expected<HandRecord, String> {
                 for (Seat seat = 0; seat < kSeatCount; ++seat) {
                     if (players[seat].name == "normal") {
                         return make(seat);
                     }
                 }
-                return std::unexpected(eastl::string("no focus seat"));
+                return std::unexpected(String("no focus seat"));
             };
-            const std::expected<ArenaResult, eastl::string> result = RunArena(ConfigOf({"normal"}, "random", 1), player);
+            const std::expected<ArenaResult, String> result = RunArena(ConfigOf({"normal"}, "random", 1), player);
             EXPECT_TRUE(result.has_value()) << (result.has_value() ? "" : result.error().c_str());
             return result.has_value() ? result->focus.at(0) : FocusResult{};
         }
@@ -315,7 +316,7 @@ namespace BECore::Mahjong::Arena {
             ArenaPlayers players;
             players.fill(others);
             players[focusSeat] = focus;
-            const std::expected<HandRecord, eastl::string> record = PlayArenaHand(kSeed, players);
+            const std::expected<HandRecord, String> record = PlayArenaHand(kSeed, players);
             ASSERT_TRUE(record.has_value());
             expected.pointsOfFocus += record->deltas[focusSeat];
             expected.winsOfFocus += record->winner == focusSeat ? 1 : 0;
@@ -388,7 +389,7 @@ namespace BECore::Mahjong::Arena {
         for (uint32_t seed = kFirstSeed; seed < kFirstSeed + kFewSeeds; ++seed) {
             ArenaPlayers players;
             players.fill(Player("normal"));
-            const std::expected<HandRecord, eastl::string> record = PlayArenaHand(seed, players);
+            const std::expected<HandRecord, String> record = PlayArenaHand(seed, players);
             ASSERT_TRUE(record.has_value());
             EXPECT_EQ(IsSeat(record->from), record->kind == ResultKind::Win) << "seed " << seed;
             if (record->source == WinSource::SelfDraw && IsSeat(record->winner)) {
@@ -490,18 +491,18 @@ namespace BECore::Mahjong::Arena {
 
     TEST(ArenaRunTest, ABadConfigIsAnError) {
         EXPECT_FALSE(ErrorOf(ConfigOf({"normal"}, "random", kNoSeeds)).empty());
-        EXPECT_NE(ErrorOf(ConfigOf({"normal"}, "random", kNegativeSeeds)).find("-3"), std::string::npos);
-        EXPECT_NE(ErrorOf(ConfigOf({}, "random", kFewSeeds)).find("no focus"), std::string::npos);
+        EXPECT_NE(ErrorOf(ConfigOf({"normal"}, "random", kNegativeSeeds)).find("-3"), String::npos);
+        EXPECT_NE(ErrorOf(ConfigOf({}, "random", kFewSeeds)).find("no focus"), String::npos);
         // The seeds run past the largest one.
-        const std::string past = ErrorOf(ConfigOf({"normal"}, "random", kTwoSeeds, std::numeric_limits<uint32_t>::max()));
-        EXPECT_NE(past.find("4294967295"), std::string::npos) << past;
+        const String past = ErrorOf(ConfigOf({"normal"}, "random", kTwoSeeds, std::numeric_limits<uint32_t>::max()));
+        EXPECT_NE(past.find("4294967295"), String::npos) << past;
     }
 
     TEST(ArenaRunTest, TheThreadsDoNotChangeTheResult) {
         ArenaConfig config = ConfigOf({"normal", "easy:skipClaimPercent=20"}, "random", kThreadSeeds);
         EXPECT_EQ(config.jobs, kDefaultJobs) << "the default is one thread";
         const ArenaResult single = PlayConfig(config);
-        const eastl::string singleReport = FormatArenaReport(single);
+        const String singleReport = FormatArenaReport(single);
         EXPECT_FALSE(singleReport.empty());
         for (const int jobs : kJobCounts) {
             config.jobs = jobs;
@@ -520,7 +521,7 @@ namespace BECore::Mahjong::Arena {
         // threads). A search seed is the dear part of the file in Debug, so no run is made twice.
         ArenaConfig config = ConfigOf({kSearchFocus}, "random", kTwoSeeds);
         const ArenaResult single = PlayConfig(config);
-        const eastl::string singleReport = FormatArenaReport(single);
+        const String singleReport = FormatArenaReport(single);
         EXPECT_GT(single.focus.at(0).focus.decisions, 0);
         config.jobs = kManyJobs;
         const ArenaResult threaded = PlayConfig(config);
@@ -545,7 +546,7 @@ namespace BECore::Mahjong::Arena {
         for (const char* spec : {"oracle-hands:searchWorlds=1,searchCandidates=2,searchMargin=0", "oracle-whole:searchWorlds=1,searchCandidates=2,searchMargin=0"}) {
             ArenaConfig config = ConfigOf({spec}, "random", kTwoSeeds);
             const ArenaResult single = PlayConfig(config);
-            const eastl::string singleReport = FormatArenaReport(single);
+            const String singleReport = FormatArenaReport(single);
             EXPECT_GT(single.focus.at(0).focus.decisions, 0) << spec;
             for (const int jobs : {kFewJobs, kManyJobs}) {
                 config.jobs = jobs;
@@ -568,7 +569,7 @@ namespace BECore::Mahjong::Arena {
             std::atomic<int> running{0};
             std::atomic<int> peakOfAll{0};
             std::atomic<int> peakOfOneLoop{0};
-            const ArenaHandPlayer probing = [&](uint32_t, const ArenaPlayers&, bool, const WorldLoop& worlds) -> std::expected<HandRecord, eastl::string> {
+            const ArenaHandPlayer probing = [&](uint32_t, const ArenaPlayers&, bool, const WorldLoop& worlds) -> std::expected<HandRecord, String> {
                 std::atomic<int> inLoop{0};
                 std::atomic<int> peak{0};
                 worlds(kLoopIndexes, [&](int) {
@@ -588,7 +589,7 @@ namespace BECore::Mahjong::Arena {
             };
             ArenaConfig config = ConfigOf({"normal"}, "random", split.seeds);
             config.jobs = split.jobs;
-            const std::expected<ArenaResult, eastl::string> result = RunArena(config, probing);
+            const std::expected<ArenaResult, String> result = RunArena(config, probing);
             ASSERT_TRUE(result.has_value()) << result.error().c_str();
             EXPECT_LE(peakOfOneLoop.load(), split.worldThreads) << "jobs " << split.jobs << " seeds " << split.seeds;
             EXPECT_LE(peakOfAll.load(), split.jobs) << "jobs " << split.jobs << " seeds " << split.seeds;
@@ -606,7 +607,7 @@ namespace BECore::Mahjong::Arena {
             // `count` 0 does nothing, 1 is not spread, fewer than the threads and many more than the threads are all covered.
             for (int round = 0; round < 3; ++round) {
                 for (const int count : {0, 1, 3, 50}) {
-                    std::vector<std::atomic<int>> hits(static_cast<size_t>(count));
+                    Vector<std::atomic<int>> hits(static_cast<size_t>(count));
                     loop(count, [&](int index) { ++hits[static_cast<size_t>(index)]; });
                     for (int index = 0; index < count; ++index) {
                         EXPECT_EQ(hits[static_cast<size_t>(index)].load(), 1) << "threads " << threads << " count " << count << " index " << index;
@@ -614,7 +615,7 @@ namespace BECore::Mahjong::Arena {
                 }
             }
             // The results of the bodies are in the caller's memory when `ForEach` returns, with no other synchronisation.
-            std::vector<int> squares(100);
+            Vector<int> squares(100);
             pool.ForEach(100, [&](int index) { squares[static_cast<size_t>(index)] = index * index; });
             for (int index = 0; index < 100; ++index) {
                 EXPECT_EQ(squares[static_cast<size_t>(index)], index * index);
@@ -637,7 +638,7 @@ namespace BECore::Mahjong::Arena {
 
     TEST(ArenaRunTest, AFailingHandGivesTheErrorOfTheLowestSeedWhateverTheThreads) {
         // Seeds 4002 and 4004 fail (the second one for the second focus player only); the others are played as they are.
-        const ArenaHandPlayer failing = [](uint32_t seed, const ArenaPlayers& players, bool timing, const WorldLoop& worlds) -> std::expected<HandRecord, eastl::string> {
+        const ArenaHandPlayer failing = [](uint32_t seed, const ArenaPlayers& players, bool timing, const WorldLoop& worlds) -> std::expected<HandRecord, String> {
             if (seed == 4004 || (seed == 4002 && players[0].name != "normal" && players[1].name != "normal" && players[2].name != "normal" && players[3].name != "normal")) {
                 return std::unexpected(Format("seed {}: made up", seed));
             }
@@ -646,12 +647,12 @@ namespace BECore::Mahjong::Arena {
         ArenaConfig config = ConfigOf({"normal", "easy"}, "random", kThreadSeeds);
         for (const int jobs : kJobCounts) {
             config.jobs = jobs;
-            const std::expected<ArenaResult, eastl::string> result = RunArena(config, failing);
+            const std::expected<ArenaResult, String> result = RunArena(config, failing);
             ASSERT_FALSE(result.has_value()) << jobs;
-            EXPECT_EQ(std::string(result.error().c_str()), "focus easy: seed 4002: made up") << "jobs " << jobs;
+            EXPECT_EQ(String(result.error().c_str()), "focus easy: seed 4002: made up") << "jobs " << jobs;
         }
         // Only a later seed fails: it is the error, again for every thread count.
-        const ArenaHandPlayer later = [](uint32_t seed, const ArenaPlayers& players, bool timing, const WorldLoop& worlds) -> std::expected<HandRecord, eastl::string> {
+        const ArenaHandPlayer later = [](uint32_t seed, const ArenaPlayers& players, bool timing, const WorldLoop& worlds) -> std::expected<HandRecord, String> {
             if (seed >= 4004) {
                 return std::unexpected(Format("seed {}: made up", seed));
             }
@@ -659,18 +660,18 @@ namespace BECore::Mahjong::Arena {
         };
         for (const int jobs : kJobCounts) {
             config.jobs = jobs;
-            const std::expected<ArenaResult, eastl::string> result = RunArena(config, later);
+            const std::expected<ArenaResult, String> result = RunArena(config, later);
             ASSERT_FALSE(result.has_value()) << jobs;
-            EXPECT_EQ(std::string(result.error().c_str()), "focus normal: seed 4004: made up") << "jobs " << jobs;
+            EXPECT_EQ(String(result.error().c_str()), "focus normal: seed 4004: made up") << "jobs " << jobs;
         }
     }
 
     TEST(ArenaRunTest, TheNumberOfThreadsIsChecked) {
         ArenaConfig config = ConfigOf({"normal"}, "random", kTwoSeeds);
         config.jobs = 0;
-        EXPECT_NE(ErrorOf(config).find("number of threads is 0"), std::string::npos);
+        EXPECT_NE(ErrorOf(config).find("number of threads is 0"), String::npos);
         config.jobs = kTooManyJobs;
-        EXPECT_NE(ErrorOf(config).find("from 1 to 256"), std::string::npos);
+        EXPECT_NE(ErrorOf(config).find("from 1 to 256"), String::npos);
         config.jobs = -1;
         EXPECT_FALSE(ErrorOf(config).empty());
         // More threads than seeds is fine: the extra ones are not started.

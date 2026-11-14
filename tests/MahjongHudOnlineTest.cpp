@@ -51,25 +51,24 @@ namespace BECore::Mahjong::Tests {
         };
 
         /// The page `Menu` (with `Return` offered), `Host`, `Join` and the `Lobby` (a seat that can be taken on every row, the host's `Start`): the elements each shows.
-        const std::vector<const char*> kMenuPage = {"OnlineTitleMenu", "OnlineMenuHost", "OnlineMenuJoin", "OnlineMenuRooms", "OnlineMenuReturn"};
-        const std::vector<const char*> kHostPage = {"OnlineTitleHost", "OnlineNameRow", "OnlineHandsRow", "OnlineLevelRow", "OnlineHintsRow",
-                                                    "OnlineOpenRow",   "OnlineGap",     "OnlineButtons",  "OnlineCreate"};
-        const std::vector<const char*> kJoinPage = {"OnlineTitleJoin", "OnlineNameRow", "OnlineCodeRow", "OnlineGap", "OnlineButtons", "OnlineEnter"};
-        const std::vector<const char*> kLobbyPage = {"OnlineTitleLobby", "OnlineSeatRow0", "OnlineSeatRow1", "OnlineSeatRow2", "OnlineSeatRow3", "OnlineSit0", "OnlineSit1",
-                                                     "OnlineSit2",       "OnlineSit3",     "OnlineGap",      "OnlineButtons",  "OnlineStart",    "OnlineCopy", "OnlineLeave"};
+        const Vector<const char*> kMenuPage = {"OnlineTitleMenu", "OnlineMenuHost", "OnlineMenuJoin", "OnlineMenuRooms", "OnlineMenuReturn"};
+        const Vector<const char*> kHostPage = {"OnlineTitleHost", "OnlineNameRow", "OnlineHandsRow", "OnlineLevelRow", "OnlineHintsRow", "OnlineOpenRow", "OnlineGap", "OnlineButtons", "OnlineCreate"};
+        const Vector<const char*> kJoinPage = {"OnlineTitleJoin", "OnlineNameRow", "OnlineCodeRow", "OnlineGap", "OnlineButtons", "OnlineEnter"};
+        const Vector<const char*> kLobbyPage = {"OnlineTitleLobby", "OnlineSeatRow0", "OnlineSeatRow1", "OnlineSeatRow2", "OnlineSeatRow3", "OnlineSit0", "OnlineSit1",
+                                                "OnlineSit2",       "OnlineSit3",     "OnlineGap",      "OnlineButtons",  "OnlineStart",    "OnlineCopy", "OnlineLeave"};
         /// The `Rooms` page with three rows on the first of several pages, and with an empty list (the offer to host).
-        const std::vector<const char*> kRoomsPage = {"OnlineTitleRooms", "OnlineNameRow", "OnlineRoomRow0", "OnlineRoomRow1", "OnlineRoomRow2",
-                                                     "OnlineGap",        "OnlineButtons", "OnlineRefresh",  "OnlineMore",     "OnlineRoomsBack"};
-        const std::vector<const char*> kRoomsEmptyPage = {"OnlineTitleRooms", "OnlineNameRow", "OnlineGap", "OnlineButtons", "OnlineRefresh", "OnlineRoomsHost", "OnlineRoomsBack"};
+        const Vector<const char*> kRoomsPage = {"OnlineTitleRooms", "OnlineNameRow", "OnlineRoomRow0", "OnlineRoomRow1", "OnlineRoomRow2",
+                                                "OnlineGap",        "OnlineButtons", "OnlineRefresh",  "OnlineMore",     "OnlineRoomsBack"};
+        const Vector<const char*> kRoomsEmptyPage = {"OnlineTitleRooms", "OnlineNameRow", "OnlineGap", "OnlineButtons", "OnlineRefresh", "OnlineRoomsHost", "OnlineRoomsBack"};
         /// The lines that take the place under the title, one at a time.
         const char* const kInfoLines[] = {"OnlineNotice", "OnlineStatus", "OnlineWaiting", "OnlineHostLine"};
 
         /// The widest character of @p candidates by the number of code points of a text of it, which is how a line is measured; here the longest text in a language is wanted,
         /// so the first of the pad.
-        eastl::string RepeatedLetter(const UIStrings& strings, size_t bytes) {
-            const eastl::vector<eastl::string> pad = TextEntry(TextEntry::Kind::Name).Pad(strings);
-            const eastl::string& letter = pad.front();
-            eastl::string name;
+        String RepeatedLetter(const UIStrings& strings, size_t bytes) {
+            const Vector<String> pad = TextEntry(TextEntry::Kind::Name).Pad(strings);
+            const String& letter = pad.front();
+            String name;
             while (name.size() + letter.size() <= bytes) {
                 name += letter;
             }
@@ -95,12 +94,11 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Shows exactly these elements of @p kPageElements (the rest of them hidden).
-        void ShowOnly(const std::vector<const char*>& shown, const char* infoLine = nullptr) {
+        void ShowOnly(const Vector<const char*>& shown, const char* infoLine = nullptr) {
             const auto canvas = Canvas(kOnline);
             ASSERT_TRUE(canvas);
             for (const char* name : kPageElements) {
-                const bool visible =
-                    std::find_if(shown.begin(), shown.end(), [&](const char* s) { return std::string(s) == name; }) != shown.end() || (infoLine != nullptr && std::string(infoLine) == name);
+                const bool visible = std::find_if(shown.begin(), shown.end(), [&](const char* s) { return String(s) == name; }) != shown.end() || (infoLine != nullptr && String(infoLine) == name);
                 ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(name), visible)) << name;
             }
         }
@@ -110,29 +108,29 @@ namespace BECore::Mahjong::Tests {
         static void SetWorstVars() {
             const UIStrings& strings = CoreManager::GetUIStrings();
             UIVars& vars = CoreManager::GetUIVars();
-            std::vector<eastl::string> notices;
+            Vector<String> notices;
             for (const OnlineCodeWord& word : kKnownOnlineCodes) {
                 notices.push_back(OnlineNoticeText(strings, word.key));
             }
             notices.push_back(OnlineNoticeText(strings, kOnlineUnknownKey, "too_many_failed_joins"));
             notices.push_back(OnlineNoticeText(strings, kOnlineBadViewKey));
-            vars.Set("onlineNotice"_intern, eastl::string_view(LongestText(notices)));
+            vars.Set("onlineNotice"_intern, StringView(LongestText(notices)));
             vars.Set("onlineStatus"_intern,
-                     eastl::string_view(LongestText({Tr(strings, kOnlineConnectingKey), Tr(strings, kOnlineReconnectingKey), Tr(strings, kOnlineBrowsingKey), Tr(strings, kOnlineNoRoomsKey)})));
+                     StringView(LongestText({Tr(strings, kOnlineConnectingKey), Tr(strings, kOnlineReconnectingKey), Tr(strings, kOnlineBrowsingKey), Tr(strings, kOnlineNoRoomsKey)})));
             // A room row: the widest name that is kept whole elsewhere and every fact the listing can carry
-            const eastl::string facts = Tr(strings, "online.rooms.free", {{"n", "3"}}) + ", " + Tr(strings, "online.rooms.hands", {{"n", "16"}}) + ", " +
-                                        Tr(strings, "online.rooms.level", {{"n", "10"}}) + ", " + Tr(strings, "online.rooms.hints");
-            const eastl::string row = Tr(strings, "online.rooms.row", {{"host", eastl::string_view(RepeatedLetter(strings, kListNameBytes))}, {"facts", eastl::string_view(facts)}});
+            const String facts = Format("{}, {}, {}, {}", Tr(strings, "online.rooms.free", {{"n", "3"}}), Tr(strings, "online.rooms.hands", {{"n", "16"}}),
+                                        Tr(strings, "online.rooms.level", {{"n", "10"}}), Tr(strings, "online.rooms.hints"));
+            const String row = Tr(strings, "online.rooms.row", {{"host", StringView(RepeatedLetter(strings, kListNameBytes))}, {"facts", StringView(facts)}});
             for (size_t index = 0; index < kListRows; ++index) {
-                vars.Set(PoolString::Intern(Format("onlineListRow{}", index)), eastl::string_view(row));
+                vars.Set(PoolString::Intern(Format("onlineListRow{}", index)), StringView(row));
             }
-            vars.Set("onlineMore"_intern, eastl::string_view(Tr(strings, "online.rooms.page", {{"n", "2"}, {"m", "9"}})));
+            vars.Set("onlineMore"_intern, StringView(Tr(strings, "online.rooms.page", {{"n", "2"}, {"m", "9"}})));
 
-            const eastl::string name = RepeatedLetter(strings, kNameBytes);
-            const eastl::string seatName = RepeatedLetter(strings, kSeatNameBytes);
-            vars.Set("onlineHostLine"_intern, eastl::string_view(LongestText({Tr(strings, kOnlineLobbyHintsAllowedKey), Tr(strings, kOnlineLobbyHintsOffKey)})));
-            vars.Set("onlineWaiting"_intern, eastl::string_view(LongestText({Tr(strings, kOnlineWaitHostKey), Tr(strings, kOnlineWaitHostHintsAllowedKey), Tr(strings, kOnlineWaitHostHintsOffKey)})));
-            std::vector<eastl::string> seats;
+            const String name = RepeatedLetter(strings, kNameBytes);
+            const String seatName = RepeatedLetter(strings, kSeatNameBytes);
+            vars.Set("onlineHostLine"_intern, StringView(LongestText({Tr(strings, kOnlineLobbyHintsAllowedKey), Tr(strings, kOnlineLobbyHintsOffKey)})));
+            vars.Set("onlineWaiting"_intern, StringView(LongestText({Tr(strings, kOnlineWaitHostKey), Tr(strings, kOnlineWaitHostHintsAllowedKey), Tr(strings, kOnlineWaitHostHintsOffKey)})));
+            Vector<String> seats;
             for (const bool mine : {false, true}) {
                 for (const bool connected : {false, true}) {
                     seats.push_back(OnlineSeatText(strings, BECore::SeatKind::Human, seatName, mine, connected));
@@ -141,18 +139,18 @@ namespace BECore::Mahjong::Tests {
             seats.push_back(OnlineSeatText(strings, BECore::SeatKind::Computer, {}, false, true));
             seats.push_back(OnlineSeatText(strings, BECore::SeatKind::Empty, {}, false, true));
             for (size_t seat = 0; seat < kSeats; ++seat) {
-                vars.Set(PoolString::Intern(Format("onlineSeat{}", seat)), eastl::string_view(LongestText(seats)));
+                vars.Set(PoolString::Intern(Format("onlineSeat{}", seat)), StringView(LongestText(seats)));
             }
-            vars.Set("onlineCopy"_intern, eastl::string_view(LongestText({Tr(strings, kOnlineCopyKey), Tr(strings, kOnlineCopiedKey), Tr(strings, kOnlineCopyFailedKey)})));
-            vars.Set("onlineEntryNote"_intern, eastl::string_view(LongestText({Tr(strings, kOnlinePasteNotCodeKey), Tr(strings, kOnlinePasteEmptyKey), Tr(strings, kOnlinePasteRefusedKey)})));
-            vars.Set("onlineName"_intern, eastl::string_view(name));
-            vars.Set("onlineEntryValue"_intern, eastl::string_view(name));
+            vars.Set("onlineCopy"_intern, StringView(LongestText({Tr(strings, kOnlineCopyKey), Tr(strings, kOnlineCopiedKey), Tr(strings, kOnlineCopyFailedKey)})));
+            vars.Set("onlineEntryNote"_intern, StringView(LongestText({Tr(strings, kOnlinePasteNotCodeKey), Tr(strings, kOnlinePasteEmptyKey), Tr(strings, kOnlinePasteRefusedKey)})));
+            vars.Set("onlineName"_intern, StringView(name));
+            vars.Set("onlineEntryValue"_intern, StringView(name));
             vars.Set("onlineCode"_intern, "WWWWW");
             vars.Set("onlineRoom"_intern, "WWWWW");
 
-            const eastl::vector<eastl::string> pad = TextEntry(TextEntry::Kind::Name).Pad(strings);
+            const Vector<String> pad = TextEntry(TextEntry::Kind::Name).Pad(strings);
             for (size_t key = 0; key < TextEntry::kPadMaxKeys; ++key) {
-                vars.Set(PoolString::Intern(Format("padKey{}", key)), eastl::string_view(pad[key % pad.size()]));
+                vars.Set(PoolString::Intern(Format("padKey{}", key)), StringView(pad[key % pad.size()]));
             }
         }
 
@@ -163,11 +161,11 @@ namespace BECore::Mahjong::Tests {
             for (const Output& output : kOutputs) {
                 ExpectWordsFit(node, output.width, output.height, air);
             }
-            const std::vector<std::string> cut = WordsThatDoNotFitOnTheMatrix(*Canvas(node), air);
+            const Vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas(node), air);
             EXPECT_TRUE(cut.empty()) << node << ": " << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
         }
 
-        std::string Text(const char* node, const char* element) const {
+        String Text(const char* node, const char* element) const {
             return DisplayText(Element(node, element));
         }
     };
@@ -194,11 +192,11 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(Prepare());
         struct Control {
             const char* node;
-            std::string element;
+            String element;
             const char* action;
-            std::string value;
+            String value;
         };
-        std::vector<Control> controls = {
+        Vector<Control> controls = {
             {kOnline, "OnlineClose", "MahjongOnlineClose", ""},
             {kOnline, "OnlineMenuHost", "MahjongOnlineHost", ""},
             {kOnline, "OnlineMenuJoin", "MahjongOnlineJoin", ""},
@@ -273,7 +271,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(SetCanvasShown(kOnline, true));
         struct Page {
             const char* label;
-            const std::vector<const char*>* shown;
+            const Vector<const char*>* shown;
         };
         const Page pages[] = {{"Menu", &kMenuPage}, {"Host", &kHostPage}, {"Join", &kJoinPage}, {"Lobby", &kLobbyPage}, {"Rooms", &kRoomsPage}, {"RoomsEmpty", &kRoomsEmptyPage}};
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
@@ -281,7 +279,7 @@ namespace BECore::Mahjong::Tests {
             SetWorstVars();
             for (const Page& page : pages) {
                 // every line that can stand under the title, then none
-                std::vector<const char*> lines(std::begin(kInfoLines), std::end(kInfoLines));
+                Vector<const char*> lines(std::begin(kInfoLines), std::end(kInfoLines));
                 lines.push_back(nullptr);
                 for (const char* line : lines) {
                     SCOPED_TRACE(Format("{} {}", page.label, line != nullptr ? line : "no line").c_str());
@@ -321,7 +319,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongHudOnlineTest, ThePagesSayTheirWordsInTheLanguageOfTheGame) {
         ASSERT_NO_FATAL_FAILURE(Prepare());
         ASSERT_NO_FATAL_FAILURE(SetCanvasShown(kOnline, true));
-        ASSERT_NO_FATAL_FAILURE(ShowOnly(std::vector<const char*>{}));
+        ASSERT_NO_FATAL_FAILURE(ShowOnly(Vector<const char*>{}));
         CoreManager::GetUIVars().Set("onlineRoom"_intern, "K7M2Q");
         Draw();
         EXPECT_EQ(Text(kOnline, "OnlineTitleMenu"), "Play online");

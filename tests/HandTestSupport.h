@@ -2,6 +2,7 @@
 
 #include "FixedWall.h"
 
+#include <Common/Printers.h>
 #include <EASTL/algorithm.h>
 #include <Mahjong/Game/ComputerLevel.h>
 #include <Mahjong/Game/HandModel.h>
@@ -46,14 +47,14 @@ namespace BECore::Mahjong::Tests {
 
     /// The name of an enum value, for a failure message.
     template <typename E>
-    std::string Name(E value) {
+    String Name(E value) {
         const auto name = EnumUtils<E>::ToString(value);
-        return std::string(name.data(), name.size());
+        return String(name.data(), name.size());
     }
 
     /// The name of a level, for a failure message: its number (`LevelText`).
-    inline std::string Name(ComputerLevel level) {
-        return std::string(LevelText(level));
+    inline String Name(ComputerLevel level) {
+        return String(LevelText(level));
     }
 
     /// The tile of a text such as "5p" or "Rd"; the text is the test's own, so a bad one aborts at once.
@@ -62,55 +63,55 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// The error of a status, nullopt for a success (to compare with `EXPECT_EQ`).
-    inline std::optional<HandError> Error(const HandStatus& status) {
-        return status.has_value() ? std::nullopt : std::optional<HandError>(status.error());
+    inline Optional<HandError> Error(const HandStatus& status) {
+        return status.has_value() ? std::nullopt : Optional<HandError>(status.error());
     }
 
     /// Whether `actions` holds `wanted`.
-    inline bool Has(const eastl::vector<HandAction>& actions, const HandAction& wanted) {
+    inline bool Has(const Vector<HandAction>& actions, const HandAction& wanted) {
         return eastl::find(actions.begin(), actions.end(), wanted) != actions.end();
     }
 
     /// Everything an action could change, as text: phase and seat to act, per seat the concealed tiles, the melds (kind, first
     /// tile, concealed), the bonus tiles, the calling fields and the claim status, then the pile, the live and loose counts and
     /// whether a result exists.
-    inline std::string Snapshot(const HandModel& model) {
-        std::string text = std::to_string(static_cast<int>(model.GetPhase())) + " seat " + std::to_string(model.CurrentSeat());
+    inline String Snapshot(const HandModel& model) {
+        String text = Format("{} seat {}", static_cast<int>(model.GetPhase()), model.CurrentSeat());
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             const PlayerHand& hand = model.GetHand(seat);
             text += " |";
             for (const Tile tile : hand.concealed) {
                 text += " ";
-                text += ToString(tile);
+                AppendFormat(text, "{}", ToString(tile));
             }
             text += " melds";
             for (const Meld& meld : hand.melds) {
-                text += " " + std::to_string(static_cast<int>(meld.kind)) + std::string(ToString(meld.first)) + std::to_string(meld.concealed);
+                text += Format(" {}{}{}", static_cast<int>(meld.kind), ToString(meld.first), meld.concealed);
             }
-            text += " bonus " + std::to_string(hand.bonus.size());
-            text += " calling " + std::to_string(hand.callingDeclared) + "/" + std::to_string(hand.callingAtDiscardCount) + "/" + std::to_string(hand.discardCount);
-            text += " claim " + std::to_string(static_cast<int>(model.GetClaimStatus(seat)));
+            text += Format(" bonus {}", hand.bonus.size());
+            text += Format(" calling {}/{}/{}", hand.callingDeclared, hand.callingAtDiscardCount, hand.discardCount);
+            text += Format(" claim {}", static_cast<int>(model.GetClaimStatus(seat)));
         }
         text += " | pile";
         for (const DiscardEntry& entry : model.Discards()) {
             text += " ";
-            text += ToString(entry.tile);
+            AppendFormat(text, "{}", ToString(entry.tile));
         }
-        text += " | live " + std::to_string(model.GetWall().LiveCount()) + " loose " + std::to_string(model.GetWall().LooseCount());
+        text += Format(" | live {} loose {}", model.GetWall().LiveCount(), model.GetWall().LooseCount());
         text += model.Result().has_value() ? " result" : " open";
         return text;
     }
 
     /// Each seat in turn discards the next tile of `tiles`; the seats in `declaring` declare the calling hand with their discard.
     /// No discard of a lap may open a claim window.
-    inline void Lap(HandModel& model, const std::string& tiles, std::initializer_list<Seat> declaring = {}) {
-        const eastl::vector<Tile> parsed = ParseTiles(tiles).value();
+    inline void Lap(HandModel& model, const String& tiles, std::initializer_list<Seat> declaring = {}) {
+        const Vector<Tile> parsed = ParseTiles(tiles).value();
         for (const Tile tile : parsed) {
             const Seat seat = model.CurrentSeat();
             const bool declare = eastl::find(declaring.begin(), declaring.end(), seat) != declaring.end();
             const HandStatus status = model.Discard(seat, tile, declare);
-            ASSERT_TRUE(status.has_value()) << "seat " << seat << " cannot discard " << ToString(tile);
-            ASSERT_EQ(model.GetPhase(), Phase::Discard) << "the discard of " << ToString(tile) << " by seat " << seat << " opened a window";
+            ASSERT_TRUE(status.has_value()) << "seat " << seat << " cannot discard " << ToStd(ToString(tile));
+            ASSERT_EQ(model.GetPhase(), Phase::Discard) << "the discard of " << ToStd(ToString(tile)) << " by seat " << seat << " opened a window";
         }
     }
 
@@ -119,16 +120,16 @@ namespace BECore::Mahjong::Tests {
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             for (const HandAction& action : model.LegalActions(seat)) {
                 HandModel copy = model;
-                EXPECT_TRUE(copy.Apply(seat, action).has_value()) << "seat " << seat << " action " << static_cast<int>(action.kind) << " " << ToString(action.tile);
+                EXPECT_TRUE(copy.Apply(seat, action).has_value()) << "seat " << seat << " action " << static_cast<int>(action.kind) << " " << ToStd(ToString(action.tile));
             }
         }
     }
 
     /// Every canonical action a seat could try, listed or not: a discard of each playable kind with and without the declaration, the
     /// win, both kongs of each kind, a claim of each kind (a chow with every possible first tile, and with none), the pass.
-    inline const eastl::vector<HandAction>& EveryCanonicalAction() {
-        static const eastl::vector<HandAction> candidates = [] {
-            eastl::vector<HandAction> list;
+    inline const Vector<HandAction>& EveryCanonicalAction() {
+        static const Vector<HandAction> candidates = [] {
+            Vector<HandAction> list;
             list.push_back(HandAction::MakeDeclareWin());
             list.push_back(HandAction::MakePass());
             list.push_back(HandAction::MakeClaim(ClaimKind::Chow));
@@ -151,14 +152,14 @@ namespace BECore::Mahjong::Tests {
     /// `Apply` accepts a canonical action of `seat` exactly when `LegalActions(seat)` lists it (each tried on a copy). The failure
     /// names the first action that disagrees.
     inline ::testing::AssertionResult AcceptedExactlyWhenListed(const HandModel& model, Seat seat) {
-        const eastl::vector<HandAction> legal = model.LegalActions(seat);
+        const Vector<HandAction> legal = model.LegalActions(seat);
         for (const HandAction& candidate : EveryCanonicalAction()) {
             HandModel copy = model;
             const bool accepted = copy.Apply(seat, candidate).has_value();
             const bool listed = Has(legal, candidate);
             if (accepted != listed) {
-                return ::testing::AssertionFailure() << "seat " << seat << " action " << Name(candidate.kind) << " tile " << ToString(candidate.tile) << " declare " << candidate.declareCalling
-                                                     << " claim " << Name(candidate.claim) << " chowFirst " << ToString(candidate.chowFirst)
+                return ::testing::AssertionFailure() << "seat " << seat << " action " << Name(candidate.kind) << " tile " << ToStd(ToString(candidate.tile)) << " declare " << candidate.declareCalling
+                                                     << " claim " << Name(candidate.claim) << " chowFirst " << ToStd(ToString(candidate.chowFirst))
                                                      << (accepted ? " is accepted but not listed" : " is listed but refused");
             }
         }
@@ -182,7 +183,7 @@ namespace BECore::Mahjong::Tests {
         if (model.GetPhase() == Phase::Discard) {
             return model.CurrentSeat();
         }
-        const eastl::vector<Seat> pending = model.PendingClaimSeats();
+        const Vector<Seat> pending = model.PendingClaimSeats();
         return pending.empty() ? kNoSeat : pending[rng.Below(static_cast<uint32_t>(pending.size()))];
     }
 
@@ -191,13 +192,13 @@ namespace BECore::Mahjong::Tests {
         return action.kind == ActionKind::DeclareWin || (action.kind == ActionKind::Claim && action.claim == ClaimKind::Mahjong);
     }
 
-    inline HandAction PickRandom(const eastl::vector<HandAction>& actions, MahjongRng& rng) {
+    inline HandAction PickRandom(const Vector<HandAction>& actions, MahjongRng& rng) {
         return actions[rng.Below(static_cast<uint32_t>(actions.size()))];
     }
 
     /// The action a player of `mode` takes from a non-empty list.
-    inline HandAction Choose(const eastl::vector<HandAction>& actions, Mode mode, MahjongRng& rng) {
-        eastl::vector<HandAction> wanted;
+    inline HandAction Choose(const Vector<HandAction>& actions, Mode mode, MahjongRng& rng) {
+        Vector<HandAction> wanted;
         for (const HandAction& action : actions) {
             if (mode == Mode::NeverWin) {
                 if (!WinsTheHand(action)) {
@@ -224,7 +225,7 @@ namespace BECore::Mahjong::Tests {
         while (hand.GetPhase() != Phase::Finished) {
             const Seat actor = NextActor(hand, rng);
             ASSERT_NE(actor, kNoSeat);
-            const eastl::vector<HandAction> actions = hand.LegalActions(actor);
+            const Vector<HandAction> actions = hand.LegalActions(actor);
             ASSERT_FALSE(actions.empty());
             ASSERT_TRUE(hand.Apply(actor, Choose(actions, mode, rng)).has_value());
         }

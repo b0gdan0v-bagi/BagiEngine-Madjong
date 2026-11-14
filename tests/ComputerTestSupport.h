@@ -20,7 +20,7 @@ namespace BECore::Mahjong::Tests {
     inline constexpr const char* kQuiet3 = "3p 6p 9p 3s 6s 9s 3m 6m 9m Sw Ww Nw Gd";
 
     /// East holds `east` (13 tiles), the others the quiet hands; `live` is the start of the live wall.
-    inline FixedWallSpec SpecOf(const char* east, const std::string& live) {
+    inline FixedWallSpec SpecOf(const char* east, const String& live) {
         FixedWallSpec spec;
         spec.hands[kSeat0] = east;
         spec.hands[kSeat1] = kQuiet1;

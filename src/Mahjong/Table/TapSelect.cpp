@@ -17,7 +17,7 @@ namespace BECore::Mahjong {
         return handTileW < minTouchSize * pixelDensity / fit;
     }
 
-    TapOutcome StepTap(const std::optional<int>& selected, const std::optional<int>& hit, bool tapToSelect) noexcept {
+    TapOutcome StepTap(const Optional<int>& selected, const Optional<int>& hit, bool tapToSelect) noexcept {
         if (!tapToSelect) {
             return hit ? TapOutcome{TapAction::Discard, *hit} : TapOutcome{};
         }
@@ -33,7 +33,7 @@ namespace BECore::Mahjong {
         return raised;
     }
 
-    eastl::string SelectedTileText(const UIStrings& strings, Tile tile) {
+    String SelectedTileText(const UIStrings& strings, Tile tile) {
         return Tr(strings, "table.selectedTile", {{"tile", TileName(strings, tile)}});
     }
 

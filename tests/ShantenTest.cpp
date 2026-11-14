@@ -1,3 +1,4 @@
+#include <Common/Printers.h>
 #include <Mahjong/Game/HandShape.h>
 #include <Mahjong/Game/MahjongRng.h>
 #include <Mahjong/Game/Shanten.h>
@@ -22,20 +23,20 @@ namespace BECore::Mahjong::Tests {
         /// One tile in this many of a crowded hand is of any kind.
         constexpr uint32_t kStrangerOneIn = 6;
 
-        TileCounts Counts(const std::string& text) {
+        TileCounts Counts(const String& text) {
             return CountTiles(ParseTiles(text).value());
         }
 
-        int ShantenOf(const std::string& hand, int meldCount = 0) {
+        int ShantenOf(const String& hand, int meldCount = 0) {
             return Shanten(Counts(hand), meldCount);
         }
 
         /// The improving tiles as the notation in the order of the tile ids.
-        std::string Improving(const std::string& hand, int meldCount = 0) {
-            std::string text;
+        String Improving(const String& hand, int meldCount = 0) {
+            String text;
             for (const Tile tile : ImprovingTiles(Counts(hand), meldCount)) {
                 text += text.empty() ? "" : " ";
-                text += ToString(tile);
+                AppendFormat(text, "{}", ToString(tile));
             }
             return text;
         }
@@ -170,13 +171,13 @@ namespace BECore::Mahjong::Tests {
                 const int meldCount = i % kSetsInHand;
                 const bool extraTile = (i / kSetsInHand) % 2 == 1;
                 const TileCounts counts = maker.Make(HandSize(meldCount, extraTile));
-                std::string text;
+                String text;
                 for (uint8_t id = 0; id < kKindCount; ++id) {
                     for (int c = 0; c < counts[id]; ++c) {
-                        text += std::string{ToString(Tile{id})} + " ";
+                        AppendFormat(text, "{} ", ToString(Tile{id}));
                     }
                 }
-                SCOPED_TRACE(testing::Message() << "hand " << i << ", " << meldCount << " melds: " << text);
+                SCOPED_TRACE(testing::Message() << "hand " << i << ", " << meldCount << " melds: " << text.c_str());
                 check(counts, meldCount);
             }
         }
@@ -195,7 +196,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(ShantenTest, AWaitingHandIsZero) {
-        const std::string sets = "4s 5s 6s 7m 8m 9m Rd Rd Rd";
+        const String sets = "4s 5s 6s 7m 8m 9m Rd Rd Rd";
         EXPECT_EQ(ShantenOf(sets + " Ew Ew 4p 5p"), 0) << "two-sided";
         EXPECT_EQ(ShantenOf(sets + " Ew Ew 1p 2p"), 0) << "edge";
         EXPECT_EQ(ShantenOf(sets + " Ew Ew 4p 6p"), 0) << "middle";
@@ -243,7 +244,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(ShantenTest, MeldsAreNotInTheCountsButCountAsSets) {
-        const std::string tiles = "1p 2p 3p 4s 5s 6s 7m 8m 9m Ew Rd";
+        const String tiles = "1p 2p 3p 4s 5s 6s 7m 8m 9m Ew Rd";
         EXPECT_EQ(ShantenOf(tiles, 1), 0) << "one meld: three sets and two singles are enough to wait";
         EXPECT_EQ(ShantenOf(tiles, 0), 2) << "the same tiles with no meld need a fourth set";
     }
@@ -308,7 +309,7 @@ namespace BECore::Mahjong::Tests {
         int listed = 0;
         ForEachRandomHand(13, kHandsPerProbingProperty, [&](const TileCounts& counts, int meldCount) {
             const int shanten = Shanten(counts, meldCount);
-            const eastl::vector<Tile> improving = ImprovingTiles(counts, meldCount);
+            const Vector<Tile> improving = ImprovingTiles(counts, meldCount);
             EXPECT_EQ(improving.empty(), shanten == kShantenComplete);
             EXPECT_TRUE(std::is_sorted(improving.begin(), improving.end()));
             TileCounts probe = counts;
@@ -318,7 +319,7 @@ namespace BECore::Mahjong::Tests {
                 --probe[id];
                 const bool isListed = std::find(improving.begin(), improving.end(), Tile{id}) != improving.end();
                 const bool lowers = shanten != kShantenComplete && after < shanten;
-                EXPECT_EQ(isListed, lowers) << "kind " << ToString(Tile{id});
+                EXPECT_EQ(isListed, lowers) << "kind " << ToStd(ToString(Tile{id}));
                 if (lowers) {
                     EXPECT_EQ(after, shanten - 1);
                 }
@@ -366,14 +367,14 @@ namespace BECore::Mahjong::Tests {
             TileCounts probe = counts;
             for (uint8_t id = 0; id < kKindCount; ++id) {
                 ++probe[id];
-                EXPECT_LE(Shanten(probe, meldCount), shanten) << "adding " << ToString(Tile{id});
+                EXPECT_LE(Shanten(probe, meldCount), shanten) << "adding " << ToStd(ToString(Tile{id}));
                 --probe[id];
                 if (counts[id] == 0) {
                     continue;
                 }
                 --probe[id];
-                EXPECT_GE(Shanten(probe, meldCount), shanten) << "discarding " << ToString(Tile{id}) << " lowered the number";
-                EXPECT_LE(Shanten(probe, meldCount), shanten + 1) << "discarding " << ToString(Tile{id}) << " raised it by two";
+                EXPECT_GE(Shanten(probe, meldCount), shanten) << "discarding " << ToStd(ToString(Tile{id})) << " lowered the number";
+                EXPECT_LE(Shanten(probe, meldCount), shanten + 1) << "discarding " << ToStd(ToString(Tile{id})) << " raised it by two";
                 ++probe[id];
             }
         });

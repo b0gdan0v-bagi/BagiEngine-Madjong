@@ -9,9 +9,9 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        constexpr eastl::string_view kPadLettersKey = "online.pad.letters";
-        constexpr eastl::string_view kDefaultNameKey = "online.name.default";
-        constexpr eastl::string_view kDigits = "0123456789";
+        constexpr StringView kPadLettersKey = "online.pad.letters";
+        constexpr StringView kDefaultNameKey = "online.name.default";
+        constexpr StringView kDigits = "0123456789";
         constexpr char kSpace = ' ';
 
         constexpr char32_t kCyrillicYoUpper = 0x0401;
@@ -20,7 +20,7 @@ namespace BECore::Mahjong {
         constexpr char32_t kCyrillicLast = 0x044F;
 
         /// The only code point of @p character; nothing when it holds none, several or a malformed sequence.
-        std::optional<char32_t> SingleCodePoint(eastl::string_view character) {
+        Optional<char32_t> SingleCodePoint(StringView character) {
             if (character.empty()) {
                 return std::nullopt;
             }
@@ -57,7 +57,7 @@ namespace BECore::Mahjong {
         }
 
         bool IsCodeCharacter(char32_t codePoint) {
-            return codePoint < 0x80 && RoomLimits::kRoomCodeAlphabet.find(static_cast<char>(codePoint)) != eastl::string_view::npos;
+            return codePoint < 0x80 && RoomLimits::kRoomCodeAlphabet.find(static_cast<char>(codePoint)) != StringView::npos;
         }
 
         bool IsAsciiAlphanumeric(char c) {
@@ -69,7 +69,7 @@ namespace BECore::Mahjong {
         }
 
         /// @p c folded to upper case when it belongs to the room code alphabet; nothing otherwise.
-        std::optional<char> CodeLetter(char c) {
+        Optional<char> CodeLetter(char c) {
             const char folded = static_cast<char>(FoldCodeCharacter(static_cast<char32_t>(static_cast<unsigned char>(c))));
             if (!IsCodeCharacter(static_cast<char32_t>(static_cast<unsigned char>(folded)))) {
                 return std::nullopt;
@@ -81,8 +81,8 @@ namespace BECore::Mahjong {
 
     TextEntry::TextEntry(Kind kind) : _kind(kind) {}
 
-    eastl::vector<eastl::string> TextEntry::Pad(const UIStrings& strings) const {
-        eastl::vector<eastl::string> keys;
+    Vector<String> TextEntry::Pad(const UIStrings& strings) const {
+        Vector<String> keys;
         keys.reserve(kPadMaxKeys);
         if (_kind == Kind::Code) {
             for (const char c : RoomLimits::kRoomCodeAlphabet) {
@@ -90,7 +90,7 @@ namespace BECore::Mahjong {
             }
             return keys;
         }
-        const eastl::string letters = Tr(strings, kPadLettersKey);
+        const String letters = Tr(strings, kPadLettersKey);
         size_t pos = 0;
         while (pos < letters.size() && keys.size() < kPadMaxKeys) {
             const size_t start = pos;
@@ -111,8 +111,8 @@ namespace BECore::Mahjong {
         return keys;
     }
 
-    bool TextEntry::Append(eastl::string_view character) {
-        const std::optional<char32_t> codePoint = SingleCodePoint(character);
+    bool TextEntry::Append(StringView character) {
+        const Optional<char32_t> codePoint = SingleCodePoint(character);
         if (!codePoint) {
             return false;
         }
@@ -149,7 +149,7 @@ namespace BECore::Mahjong {
         _text.clear();
     }
 
-    bool TextEntry::Set(eastl::string_view text) {
+    bool TextEntry::Replace(StringView text) {
         TextEntry candidate(_kind);
         size_t pos = 0;
         while (pos < text.size()) {
@@ -170,7 +170,7 @@ namespace BECore::Mahjong {
         return SanitizePlayerName(_text).has_value();
     }
 
-    std::optional<char> TextEntry::CharFromKeycode(uint32_t keycode, bool shift) {
+    Optional<char> TextEntry::CharFromKeycode(uint32_t keycode, bool shift) {
         if (keycode >= 'a' && keycode <= 'z') {
             return static_cast<char>(shift ? keycode - 'a' + 'A' : keycode);
         }
@@ -183,19 +183,19 @@ namespace BECore::Mahjong {
         return std::nullopt;
     }
 
-    std::optional<eastl::string> TextEntry::CleanRoomCode(eastl::string_view text) {
+    Optional<String> TextEntry::CleanRoomCode(StringView text) {
         if (text.empty() || text.size() > kMaxPasteBytes) {
             return std::nullopt;
         }
 
         // The whole text is one code, written with spaces or dashes, maybe longer than a code
-        eastl::string squashed;
+        String squashed;
         bool onlyCode = true;
         for (const char c : text) {
             if (IsPasteSeparator(c)) {
                 continue;
             }
-            const std::optional<char> letter = IsAsciiAlphanumeric(c) ? CodeLetter(c) : std::nullopt;
+            const Optional<char> letter = IsAsciiAlphanumeric(c) ? CodeLetter(c) : std::nullopt;
             if (!letter) {
                 onlyCode = false;
                 break;
@@ -206,11 +206,11 @@ namespace BECore::Mahjong {
             if (squashed.size() < RoomLimits::kRoomCodeLength) {
                 return std::nullopt;
             }
-            return eastl::string(squashed.data(), RoomLimits::kRoomCodeLength);
+            return String(squashed.data(), RoomLimits::kRoomCodeLength);
         }
 
         // A sentence: the one word of the code's length that is made of the code's characters
-        std::optional<eastl::string> found;
+        Optional<String> found;
         size_t pos = 0;
         while (pos < text.size()) {
             if (!IsAsciiAlphanumeric(text[pos])) {
@@ -224,9 +224,9 @@ namespace BECore::Mahjong {
             if (pos - start != RoomLimits::kRoomCodeLength) {
                 continue;
             }
-            eastl::string word;
+            String word;
             for (size_t i = start; i < pos; ++i) {
-                const std::optional<char> letter = CodeLetter(text[i]);
+                const Optional<char> letter = CodeLetter(text[i]);
                 if (!letter) {
                     break;
                 }
@@ -243,7 +243,7 @@ namespace BECore::Mahjong {
         return found;
     }
 
-    eastl::string TextEntry::DefaultName(const UIStrings& strings) {
+    String TextEntry::DefaultName(const UIStrings& strings) {
         return Tr(strings, kDefaultNameKey);
     }
 

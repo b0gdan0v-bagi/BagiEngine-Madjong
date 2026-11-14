@@ -23,7 +23,7 @@ namespace BECore::Mahjong::Tests {
 
         constexpr const char* kFolderPrefix = "BagiMahjongOnlineSaveTest";
         constexpr const char* kOnlineFile = "online.save";
-        constexpr eastl::string_view kUrl = "ws://hub.test";
+        constexpr StringView kUrl = "ws://hub.test";
         constexpr milliseconds kTick{10};
         constexpr int kStepLimit = 2000;
 
@@ -189,7 +189,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongOnlineSaveTest, AStoredSessionBringsThePlayerBackAfterTheGameObjectIsMadeAgain) {
-        std::string room;
+        String room;
         {
             IntrusivePtr<MahjongGame> game = StartedGame();
             ASSERT_TRUE(game->GetOnline().Host(kUrl, "Ann", OnlineRoomOptions{kShortMatchHands, kMinLevel}));

@@ -71,7 +71,7 @@ namespace BECore::Mahjong::Tests {
             /// The three random seats of every hand together.
             Tally random;
             /// Hands the computer played on seat `i` and won.
-            eastl::array<int, kSeatCount> winsOnSeat{};
+            Array<int, kSeatCount> winsOnSeat{};
             int drawn = 0;
         };
 
@@ -97,13 +97,13 @@ namespace BECore::Mahjong::Tests {
             HandModel hand;
             ASSERT_TRUE(hand.Begin(settings, MakeWall(wallRng, settings, east), MakeSeatWinds(east), Wind::East).has_value());
 
-            const eastl::array<SeatPlayer, kSeatCount> players = [&] {
-                eastl::array<SeatPlayer, kSeatCount> seats;
+            const Array<SeatPlayer, kSeatCount> players = [&] {
+                Array<SeatPlayer, kSeatCount> seats;
                 seats.fill(others);
                 seats[computerSeat] = focus;
                 return seats;
             }();
-            eastl::vector<ComputerPlayer> computers;
+            Vector<ComputerPlayer> computers;
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 computers.push_back(ComputerPlayer(SeatSeed(seed, seat), players[seat].level));
             }
@@ -115,7 +115,7 @@ namespace BECore::Mahjong::Tests {
                 ASSERT_TRUE(IsSeat(actor));
                 HandAction action;
                 if (players[actor].computer) {
-                    const std::optional<HandAction> chosen = computers[actor].Decide(hand, actor);
+                    const Optional<HandAction> chosen = computers[actor].Decide(hand, actor);
                     ASSERT_TRUE(chosen.has_value()) << "seed " << seed << ": the computer seat " << actor << " has no action";
                     action = *chosen;
                 } else {

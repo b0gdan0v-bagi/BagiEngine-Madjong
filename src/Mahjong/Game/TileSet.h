@@ -13,6 +13,6 @@ namespace BECore::Mahjong {
      *        set, the eight bonus tiles in id order. 136 tiles, or 144 with flowers. The order is the input of the seeded shuffle, so it
      *        is part of what makes a seed give the same game; do not change it.
      */
-    [[nodiscard]] eastl::vector<Tile> BuildTileSet(bool flowers);
+    [[nodiscard]] Vector<Tile> BuildTileSet(bool flowers);
 
 }  // namespace BECore::Mahjong

@@ -25,7 +25,7 @@ namespace BECore::Mahjong {
     /// What the storage makes of the save folder, as `MahjongGame` reads it at `Start()`: `GetSaveStorageState()` of the engine
     /// (`NotApplicable` off the browser) unless a test plays one with `SetMatchSaveStorage`; nullopt restores the engine's answer.
     [[nodiscard]] SaveStorageState MatchSaveStorage();
-    void SetMatchSaveStorage(std::optional<SaveStorageState> state);
+    void SetMatchSaveStorage(Optional<SaveStorageState> state);
 
     /// Why a slot could not be read: `Missing` is the usual case (nothing saved yet, or saving is off), `Broken` is a file that is there
     /// and cannot be used (damaged, of another game or version, or a state whose text is wrong); `detail` says what.
@@ -33,7 +33,7 @@ namespace BECore::Mahjong {
 
     struct SaveProblem {
         SaveProblemKind kind = SaveProblemKind::Missing;
-        eastl::string detail;
+        String detail;
     };
 
     /**
@@ -59,9 +59,9 @@ namespace BECore::Mahjong {
         }
 
         /// The `Start`, `Action` and `Settlement` events of a match into the `match` slot. False, and one warning, when it was not written.
-        bool SaveMatch(const eastl::vector<MatchLogEvent>& events);
+        bool SaveMatch(const Vector<MatchLogEvent>& events);
         /// The events of the `match` slot, parsed (`ParseMatchSaveText`; whether they replay is for `ReplayMatchLog` to say).
-        [[nodiscard]] std::expected<eastl::vector<MatchLogEvent>, SaveProblem> LoadMatch() const;
+        [[nodiscard]] std::expected<Vector<MatchLogEvent>, SaveProblem> LoadMatch() const;
         /// Removes the `match` slot (nothing when there is none).
         void ClearMatch();
 
@@ -77,7 +77,7 @@ namespace BECore::Mahjong {
 
     private:
         template <typename State>
-        bool Write(eastl::string_view slot, const State& state);
+        bool Write(StringView slot, const State& state);
 
         SaveGameService _service;
         std::filesystem::path _directory;  // the directory last asked for, also when it failed

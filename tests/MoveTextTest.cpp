@@ -13,7 +13,7 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        const UIStrings& Words(std::string_view language) {
+        const UIStrings& Words(StringView language) {
             static UIStrings english;
             static UIStrings russian;
             static const bool loaded = [] {
@@ -27,16 +27,12 @@ namespace BECore::Mahjong::Tests {
             return language == "ru" ? russian : english;
         }
 
-        std::string Std(const eastl::string& text) {
-            return std::string(text.data(), text.size());
+        String En(const HandMove& move, Wind wind) {
+            return MoveText(Words("en"), move, wind);
         }
 
-        std::string En(const HandMove& move, Wind wind) {
-            return Std(MoveText(Words("en"), move, wind));
-        }
-
-        std::string Ru(const HandMove& move, Wind wind) {
-            return Std(MoveText(Words("ru"), move, wind));
+        String Ru(const HandMove& move, Wind wind) {
+            return MoveText(Words("ru"), move, wind);
         }
 
         HandMove Discard(Seat seat, const char* tile, bool declaring = false) {
@@ -56,7 +52,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Every kind of move, with the tiles and seats the sentences name.
-        std::vector<HandMove> EveryMove() {
+        Vector<HandMove> EveryMove() {
             return {Discard(1, "5p"), Discard(2, "Ew", true), Claim(MoveKind::ClaimChow, 2, "4s", 1), Claim(MoveKind::ClaimPung, 3, "Rd", 1), Claim(MoveKind::ClaimKong, 0, "9m", 2),
                     ConcealedKong(3), UpgradeKong(1, "F1")};
         }
@@ -87,14 +83,14 @@ namespace BECore::Mahjong::Tests {
         for (const char* language : {"en", "ru"}) {
             SCOPED_TRACE(language);
             const UIStrings& strings = Words(language);
-            std::set<std::string> sentences;
+            Set<String> sentences;
             for (const HandMove& move : EveryMove()) {
-                const std::string text = Std(MoveText(strings, move, Wind::South));
+                const String text = MoveText(strings, move, Wind::South);
                 EXPECT_FALSE(text.empty());
-                EXPECT_EQ(text.find('{'), std::string::npos) << text;
-                EXPECT_EQ(text.find('}'), std::string::npos) << text;
-                EXPECT_EQ(text.find("move."), std::string::npos) << "the key is missing: " << text;
-                EXPECT_NE(text.find(Std(SeatName(strings, move.seat, Wind::South))), std::string::npos) << text << " names its seat";
+                EXPECT_EQ(text.find('{'), String::npos) << text;
+                EXPECT_EQ(text.find('}'), String::npos) << text;
+                EXPECT_EQ(text.find("move."), String::npos) << "the key is missing: " << text;
+                EXPECT_NE(text.find(SeatName(strings, move.seat, Wind::South)), String::npos) << text << " names its seat";
                 sentences.insert(text);
             }
             EXPECT_EQ(sentences.size(), EveryMove().size());
@@ -104,23 +100,23 @@ namespace BECore::Mahjong::Tests {
     TEST(MoveTextTest, TheSentencesOfAClaimNameTheTileAndTheConcealedKongNamesNone) {
         for (const UIStrings* strings : {&Words("en"), &Words("ru")}) {
             const HandMove concealed = ConcealedKong(2);
-            const std::string kong = Std(MoveText(*strings, concealed, Wind::West));
+            const String kong = MoveText(*strings, concealed, Wind::West);
             // No tile of the four: not a rank, not a suit, not a dragon, not a wind
             for (const char* word : {"Dots", "Bamboo", "Characters", "Dragon", "Wind", "Круги", "Бамбук", "Знаки", "дракон", "Ветер"}) {
-                EXPECT_EQ(kong.find(word), std::string::npos) << kong;
+                EXPECT_EQ(kong.find(word), String::npos) << kong;
             }
             // A concealed kong carries a tile in no case: even a move that has one says none
             HandMove withTile = concealed;
             withTile.tile = T("5p");
-            EXPECT_EQ(Std(MoveText(*strings, withTile, Wind::West)), kong);
+            EXPECT_EQ(MoveText(*strings, withTile, Wind::West), kong);
         }
     }
 
     TEST(MoveTextTest, TheRussianWordsKeepTheirOrderOfTheTranslation) {
         // The tile is not at the end in every sentence: the order belongs to the translation, the code joins nothing
-        const std::string chow = Ru(Claim(MoveKind::ClaimChow, 1, "1s", 0), Wind::South);
+        const String chow = Ru(Claim(MoveKind::ClaimChow, 1, "1s", 0), Wind::South);
         EXPECT_LT(chow.find("Бамбук 1"), chow.find("в чи"));
-        const std::string upgrade = Ru(UpgradeKong(1, "5p"), Wind::South);
+        const String upgrade = Ru(UpgradeKong(1, "5p"), Wind::South);
         EXPECT_LT(upgrade.find("Круги 5"), upgrade.find("к пуну"));
     }
 
