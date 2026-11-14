@@ -87,7 +87,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// A match with the people of `seats`, then East (seat 0) holding `waiting` and drawing `drawn`; `liveAfterDeal` shortens the wall.
-        void StartEast(const char* waiting, const char* drawn, const SeatSetup& seats = kDefaultSeatSetup, std::optional<int> liveAfterDeal = std::nullopt) {
+        void StartEast(const char* waiting, const char* drawn, const SeatSetup& seats = kDefaultSeatSetup, Optional<int> liveAfterDeal = std::nullopt) {
             ASSERT_NO_FATAL_FAILURE(Start(seats));
             FixedWallSpec spec = SpecOf(waiting, drawn);
             spec.liveAfterDeal = liveAfterDeal;
@@ -196,7 +196,7 @@ namespace BECore::Mahjong::Tests {
         /// The sentence the pure helper says for `seat`'s view now, in the current language.
         std::string SentenceFor(Seat seat) const {
             const TableView view = ViewOf(seat);
-            const std::optional<HandAction> advice = AdviceFor(view);
+            const Optional<HandAction> advice = AdviceFor(view);
             const eastl::string text = advice ? AdviceText(CoreManager::GetUIStrings(), view, *advice) : eastl::string();
             return std::string(text.data(), text.size());
         }
@@ -226,7 +226,7 @@ namespace BECore::Mahjong::Tests {
         /// The variables of the card: what `MakeAdviceCard` says for `seat`'s view now, in the current language, with the tally of the game.
         std::vector<std::string> ExpectedWhy(Seat seat) const {
             const TableView view = ViewOf(seat);
-            const std::optional<Explanation> explained = ExplainAdviceFor(view);
+            const Optional<Explanation> explained = ExplainAdviceFor(view);
             if (!explained.has_value()) {
                 return CardTexts(HintCard{});
             }
@@ -595,7 +595,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(row.size(), static_cast<size_t>(kWaitCells));
         int previous = -1;
         for (const auto& [tile, count] : row) {
-            const std::optional<Tile> parsed = TryParse(tile);
+            const Optional<Tile> parsed = TryParse(tile);
             ASSERT_TRUE(parsed.has_value()) << tile;
             EXPECT_GT(static_cast<int>(parsed->Id()), previous) << "ascending ids";
             previous = parsed->Id();
@@ -719,7 +719,7 @@ namespace BECore::Mahjong::Tests {
                     EXPECT_TRUE(ShownRow().empty()) << "step " << step;
                 }
                 if (session.ActorIsPerson()) {
-                    const std::optional<HandAction> action = person.Decide(Hand(), session.Actor());
+                    const Optional<HandAction> action = person.Decide(Hand(), session.Actor());
                     ASSERT_TRUE(action.has_value());
                     ASSERT_TRUE(session.PerformPerson(*action).has_value());
                 } else {
@@ -1115,7 +1115,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(StartEast(kBestIsTheNorthWind, "Nw"));
         ASSERT_TRUE(ButtonShown());
         ASSERT_TRUE(RectsOf(kAdvisedFrame).empty());
-        const std::optional<HandAction> advice = AdviceFor(ViewOf(kSeat0));
+        const Optional<HandAction> advice = AdviceFor(ViewOf(kSeat0));
         ASSERT_TRUE(advice.has_value());
         ASSERT_EQ(*advice, HandAction::MakeDiscard(T("Nw"))) << "worked out in HintsTest";
         const uint64_t version = _game->GetSession().Version();
@@ -1173,7 +1173,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(RectsOf(kDeclareMark).size(), 2u);
 
         // The advice frame of the advised tile rises too
-        const std::optional<HandAction> advice = AdviceFor(ViewOf(kSeat0));
+        const Optional<HandAction> advice = AdviceFor(ViewOf(kSeat0));
         ASSERT_TRUE(advice.has_value());
         ASSERT_EQ(advice->kind, ActionKind::Discard);
         ASSERT_EQ(advice->tile, T("9p")) << "worked out in HintsTest: the advice is the 9p";
@@ -1255,7 +1255,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongHintsTest, InAClaimWindowTheSentenceNamesTheClaimTheComputerWouldMake) {
         ASSERT_NO_FATAL_FAILURE(StartWindow(kWindowPung, "5p"));
-        ASSERT_EQ(AdviceFor(ViewOf(kSeat1)), std::optional<HandAction>(HandAction::MakeClaim(ClaimKind::Pung)));
+        ASSERT_EQ(AdviceFor(ViewOf(kSeat1)), Optional<HandAction>(HandAction::MakeClaim(ClaimKind::Pung)));
         const uint64_t version = _game->GetSession().Version();
 
         Press();
@@ -1269,7 +1269,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongHintsTest, InAClaimWindowTheAdviceMayBeToLetTheDiscardGo) {
         ASSERT_NO_FATAL_FAILURE(StartWindow(kWindowPass, "5m"));
-        ASSERT_EQ(AdviceFor(ViewOf(kSeat1)), std::optional<HandAction>(HandAction::MakePass()));
+        ASSERT_EQ(AdviceFor(ViewOf(kSeat1)), Optional<HandAction>(HandAction::MakePass()));
 
         Press();
 

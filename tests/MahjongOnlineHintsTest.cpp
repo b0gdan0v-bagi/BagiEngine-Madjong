@@ -217,7 +217,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         // The advice is the one of the server's own seat view
-        const std::optional<HandAction> advice = AdviceFor(server);
+        const Optional<HandAction> advice = AdviceFor(server);
         ASSERT_TRUE(advice.has_value());
         const uint64_t version = _game->GetSession().Version();
         PressHint();
@@ -490,11 +490,11 @@ namespace BECore::Mahjong::Tests {
         const CoachLedger& coach = _game->GetCoach();
         ASSERT_TRUE(coach.Enabled());
         const TableView before = ServerView();
-        const std::optional<HandAction> advice = AdviceFor(before);
+        const Optional<HandAction> advice = AdviceFor(before);
         ASSERT_TRUE(advice.has_value());
         const HandAction taken = HandAction::MakeDiscard(T("1s"));
         ASSERT_NE(*advice, taken) << "the move differs from the computer's choice";
-        const std::optional<CoachNote> expected = JudgeMove(before, taken);
+        const Optional<CoachNote> expected = JudgeMove(before, taken);
         ASSERT_TRUE(expected.has_value());
 
         ASSERT_TRUE(DiscardThroughTheTable("1s"));
@@ -516,8 +516,8 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(StartHintsRoom(true, HintsMode::Coach));
         ASSERT_NO_FATAL_FAILURE(LayStates(PlayedStates(kSeat2Hand, kSeat3Hand, false)));
         const CoachLedger& coach = _game->GetCoach();
-        const std::optional<HandAction> advice = AdviceFor(ServerView());
-        ASSERT_EQ(advice, std::optional<HandAction>(HandAction::MakeDiscard(T("Ew"), true)));
+        const Optional<HandAction> advice = AdviceFor(ServerView());
+        ASSERT_EQ(advice, Optional<HandAction>(HandAction::MakeDiscard(T("Ew"), true)));
 
         ASSERT_TRUE(DiscardThroughTheTable("Ew", true));
         Frame();

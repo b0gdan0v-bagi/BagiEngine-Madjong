@@ -73,24 +73,24 @@ namespace BECore::Mahjong {
         }
 
         /// The seat that `MahjongSetSeatN` is about; nullopt for another action.
-        std::optional<Seat> SeatOfAction(eastl::string_view action) {
+        Optional<Seat> SeatOfAction(eastl::string_view action) {
             if (action.size() != kSetSeatPrefix.size() + 1 || action.substr(0, kSetSeatPrefix.size()) != kSetSeatPrefix) {
                 return std::nullopt;
             }
             const int seat = action.back() - '0';
-            return IsSeat(seat) ? std::optional<Seat>(seat) : std::nullopt;
+            return IsSeat(seat) ? Optional<Seat>(seat) : std::nullopt;
         }
 
         /// The seat that `MahjongSetSeatLevelN` is about; nullopt for another action.
-        std::optional<Seat> SeatOfLevelAction(eastl::string_view action) {
+        Optional<Seat> SeatOfLevelAction(eastl::string_view action) {
             if (action.size() != kSetSeatLevelPrefix.size() + 1 || action.substr(0, kSetSeatLevelPrefix.size()) != kSetSeatLevelPrefix) {
                 return std::nullopt;
             }
             const int seat = action.back() - '0';
-            return IsSeat(seat) ? std::optional<Seat>(seat) : std::nullopt;
+            return IsSeat(seat) ? Optional<Seat>(seat) : std::nullopt;
         }
 
-        std::optional<SeatKind> KindOfValue(eastl::string_view value) {
+        Optional<SeatKind> KindOfValue(eastl::string_view value) {
             if (value == kPersonId) {
                 return SeatKind::Person;
             }
@@ -628,7 +628,7 @@ namespace BECore::Mahjong {
         if (action == kSetSpeedAction) {
             // The page is where the speed is set; client text is parsed by `TryParseSpeed`, anything else is ignored
             const eastl::string_view text = event.value.ToStringView();
-            const std::optional<AnimationSpeed> speed = TryParseSpeed(std::string_view(text.data(), text.size()));
+            const Optional<AnimationSpeed> speed = TryParseSpeed(std::string_view(text.data(), text.size()));
             if (game->IsOptionsOpen() && speed) {
                 game->SetAnimationSpeed(*speed);
                 PublishSpeedChoice(*game);
@@ -708,17 +708,17 @@ namespace BECore::Mahjong {
             }
             return;
         }
-        if (const std::optional<Seat> levelSeat = SeatOfLevelAction(action)) {
+        if (const Optional<Seat> levelSeat = SeatOfLevelAction(action)) {
             // Only `1` .. `10` (`TryParseLevel`); the level is the panel's until `Start`
             const eastl::string_view text = event.value.ToStringView();
-            if (const std::optional<ComputerLevel> level = TryParseLevel(std::string_view(text.data(), text.size()))) {
+            if (const Optional<ComputerLevel> level = TryParseLevel(std::string_view(text.data(), text.size()))) {
                 _pendingLevels[*levelSeat] = *level;
                 PublishSeatLevels();
             }
             return;
         }
-        const std::optional<Seat> seat = SeatOfAction(action);
-        const std::optional<SeatKind> kind = KindOfValue(event.value.ToStringView());
+        const Optional<Seat> seat = SeatOfAction(action);
+        const Optional<SeatKind> kind = KindOfValue(event.value.ToStringView());
         if (seat && kind) {
             _pending[*seat] = *kind;
             PublishSeatKinds();

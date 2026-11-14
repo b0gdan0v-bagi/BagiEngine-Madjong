@@ -41,7 +41,7 @@ namespace BECore::Mahjong {
         [[nodiscard]] bool Running() const;
 
         /// The finished job, once; nullopt while it runs, when nothing was started and after `Drop`. Poll it in `OnUpdate`.
-        [[nodiscard]] std::optional<ComputerStepJob> TakeFinished();
+        [[nodiscard]] Optional<ComputerStepJob> TakeFinished();
 
         /// Cancels the run: the task ends at its next check and nothing of it is ever handed out.
         void Drop();

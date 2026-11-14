@@ -301,7 +301,7 @@ namespace BECore::Mahjong {
         }
 
         // The claim that took the last discard.
-        std::optional<HandMove> claim;
+        Optional<HandMove> claim;
         if (gone == 1) {
             const DiscardEntry& taken = before.pile.back();
             for (Seat seat = 0; seat < kSeatCount && !claim; ++seat) {

@@ -36,7 +36,7 @@ namespace BECore::Mahjong {
     [[nodiscard]] Json BreakdownToJson(const ScoreBreakdown& breakdown);
 
     /// The setup of "PCCC"-style letters (P a person, C a computer), nullopt unless it is exactly four of them; and back.
-    [[nodiscard]] std::optional<SeatSetup> ReadSeats(const eastl::string& letters);
+    [[nodiscard]] Optional<SeatSetup> ReadSeats(const eastl::string& letters);
     [[nodiscard]] eastl::string SeatsToLetters(const SeatSetup& seats);
 
     /// An action as the object `list_actions` gives: {"type": "discard", "tile", "declareCalling"}, {"type": "win"},

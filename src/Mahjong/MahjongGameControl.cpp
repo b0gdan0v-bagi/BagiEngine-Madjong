@@ -42,7 +42,7 @@ namespace BECore::Mahjong {
 
         /// The `levels` of a `reset`: an array of four integers 1..10; nullopt for anything else (a number above INT64_MAX included, as
         /// `GetJsonInt` refuses it).
-        std::optional<SeatLevels> ReadResetLevels(const Json& list) {
+        Optional<SeatLevels> ReadResetLevels(const Json& list) {
             if (!list.is_array() || list.size() != kSeatCount) {
                 return std::nullopt;
             }
@@ -62,7 +62,7 @@ namespace BECore::Mahjong {
                 } else {
                     number = item.get<int64_t>();
                 }
-                const std::optional<ComputerLevel> level = LevelOf(number);
+                const Optional<ComputerLevel> level = LevelOf(number);
                 if (!level) {
                     return std::nullopt;
                 }
@@ -88,7 +88,7 @@ namespace BECore::Mahjong {
         }
 
         /// The kind of a claim named in JSON, nullopt for another text.
-        std::optional<ClaimKind> ClaimFromName(eastl::string_view name) {
+        Optional<ClaimKind> ClaimFromName(eastl::string_view name) {
             for (const ClaimKind kind : {ClaimKind::Chow, ClaimKind::Pung, ClaimKind::Kong, ClaimKind::Mahjong}) {
                 if (name == ClaimName(kind)) {
                     return kind;
@@ -128,7 +128,7 @@ namespace BECore::Mahjong {
             if (!text) {
                 return InvalidParams(Format("'{}' has to be a string with a tile such as \"5p\", \"Ew\", \"Rd\"", key));
             }
-            const std::optional<Tile> tile = TryParse(std::string_view(text->data(), text->size()));
+            const Optional<Tile> tile = TryParse(std::string_view(text->data(), text->size()));
             if (!tile) {
                 return InvalidParams(Format("'{}' is not a tile: \"{}\"", key, text->c_str()));
             }
@@ -178,7 +178,7 @@ namespace BECore::Mahjong {
     }
 
     /// The seat setup of a `seats` string such as "PCCC", nullopt unless it is four letters P or C.
-    std::optional<SeatSetup> ReadSeats(const eastl::string& letters) {
+    Optional<SeatSetup> ReadSeats(const eastl::string& letters) {
         if (letters.size() != kSeatLetterCount) {
             return std::nullopt;
         }
@@ -275,7 +275,7 @@ namespace BECore::Mahjong {
             action.hand = name == kTypeConcealedKong ? HandAction::MakeConcealedKong(*tile) : HandAction::MakeUpgradeKong(*tile);
         } else if (name == kTypeClaim) {
             const auto claimName = GetJsonString(json, "claim");
-            const std::optional<ClaimKind> claim = claimName ? ClaimFromName(eastl::string_view(claimName->c_str(), claimName->size())) : std::nullopt;
+            const Optional<ClaimKind> claim = claimName ? ClaimFromName(eastl::string_view(claimName->c_str(), claimName->size())) : std::nullopt;
             if (!claim) {
                 return InvalidParams("'claim' has to be \"chow\", \"pung\", \"kong\" or \"mahjong\"");
             }
@@ -409,7 +409,7 @@ namespace BECore::Mahjong {
         SeatSetup seats = _game.GetSeats();
         if (FindJsonMember(options, "seats") != nullptr) {
             const auto letters = GetJsonString(options, "seats");
-            const std::optional<SeatSetup> read = letters ? ReadSeats(*letters) : std::nullopt;
+            const Optional<SeatSetup> read = letters ? ReadSeats(*letters) : std::nullopt;
             if (!read) {
                 return InvalidParams("'seats' has to be four letters, P for a person and C for a computer, such as \"PCCC\"");
             }
@@ -422,14 +422,14 @@ namespace BECore::Mahjong {
             if (FindJsonMember(options, "level") != nullptr) {
                 return InvalidParams("'level' and 'levels' cannot be given together");
             }
-            const std::optional<SeatLevels> read = ReadResetLevels(*levelsMember);
+            const Optional<SeatLevels> read = ReadResetLevels(*levelsMember);
             if (!read) {
                 return InvalidParams(Format("'levels' has to be an array of {} integers, each {}", kSeatCount, LevelRangeText().c_str()));
             }
             levels = *read;
         } else if (FindJsonMember(options, "level") != nullptr) {
             const auto number = GetJsonInt(options, "level");
-            const std::optional<ComputerLevel> read = number ? LevelOf(*number) : std::nullopt;
+            const Optional<ComputerLevel> read = number ? LevelOf(*number) : std::nullopt;
             if (!read) {
                 return InvalidParams(Format("'level' has to be {}", LevelRangeText().c_str()));
             }

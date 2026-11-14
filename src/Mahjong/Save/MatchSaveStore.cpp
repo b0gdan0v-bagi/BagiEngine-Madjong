@@ -15,8 +15,8 @@ namespace BECore::Mahjong {
             return directory;
         }
 
-        std::optional<SaveStorageState>& StorageOverride() {
-            static std::optional<SaveStorageState> state;
+        Optional<SaveStorageState>& StorageOverride() {
+            static Optional<SaveStorageState> state;
             return state;
         }
 
@@ -56,11 +56,11 @@ namespace BECore::Mahjong {
     }
 
     SaveStorageState MatchSaveStorage() {
-        const std::optional<SaveStorageState>& forced = StorageOverride();
+        const Optional<SaveStorageState>& forced = StorageOverride();
         return forced ? *forced : GetSaveStorageState();
     }
 
-    void SetMatchSaveStorage(std::optional<SaveStorageState> state) {
+    void SetMatchSaveStorage(Optional<SaveStorageState> state) {
         StorageOverride() = state;
     }
 

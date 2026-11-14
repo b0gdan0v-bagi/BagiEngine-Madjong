@@ -51,7 +51,7 @@ namespace BECore::Mahjong {
     inline constexpr eastl::string_view kDeclareOff = "off";
 
     /// The button that emits `action` with `value`, nullopt for an action that no button emits.
-    [[nodiscard]] std::optional<ButtonKind> ButtonOf(eastl::string_view action, eastl::string_view value) noexcept;
+    [[nodiscard]] Optional<ButtonKind> ButtonOf(eastl::string_view action, eastl::string_view value) noexcept;
 
     /// The key of the sentence that tells the player what the button does (`SpecOf(kind).hintKey`, never empty).
     [[nodiscard]] eastl::string_view HintKey(ButtonKind kind) noexcept;
@@ -96,7 +96,7 @@ namespace BECore::Mahjong {
      * `Win` and `Pass` as they are. The tiles to picture: the three of a chow, the `pendingTile` (the discard or the robbed kong's tile;
      * none when unknown) for the claims of mahjong, pung and kong, the tile of a concealed or upgraded kong.
      */
-    [[nodiscard]] ActionButtons MakeActionButtons(const eastl::vector<HandAction>& legal, std::optional<Tile> pendingTile = std::nullopt);
+    [[nodiscard]] ActionButtons MakeActionButtons(const eastl::vector<HandAction>& legal, Optional<Tile> pendingTile = std::nullopt);
 
     /// The tiles of the hand a chow takes: the two of its sequence besides the pending discard.
     struct ChowTakes {
@@ -109,6 +109,6 @@ namespace BECore::Mahjong {
      * (no pointer on a chow) those of the one chow on offer; none when two or three chows are offered and none is hovered, or when no chow is.
      * The sequence is the three tiles pictured on the button less the `pending` discard (the first equal one).
      */
-    [[nodiscard]] ChowTakes ChowTilesTaken(const ActionButtons& buttons, Tile pending, std::optional<ButtonKind> hovered);
+    [[nodiscard]] ChowTakes ChowTilesTaken(const ActionButtons& buttons, Tile pending, Optional<ButtonKind> hovered);
 
 }  // namespace BECore::Mahjong

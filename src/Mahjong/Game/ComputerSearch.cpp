@@ -98,10 +98,10 @@ namespace BECore::Mahjong {
             uint32_t tableSeed = 0;
         };
 
-        std::optional<SampledWorld> SampleWorldOf(const TableView& view, uint32_t base, int worldIndex, const WorldSource& source) {
+        Optional<SampledWorld> SampleWorldOf(const TableView& view, uint32_t base, int worldIndex, const WorldSource& source) {
             const uint32_t index = static_cast<uint32_t>(worldIndex) * kSeedsPerWorld;
             MahjongRng worldRng(DerivedSeed(base, index));
-            std::optional<HandModel> sampled = source ? source(view, worldRng) : SampleWorld(view, worldRng);
+            Optional<HandModel> sampled = source ? source(view, worldRng) : SampleWorld(view, worldRng);
             if (!sampled.has_value()) {
                 return std::nullopt;
             }
@@ -110,7 +110,7 @@ namespace BECore::Mahjong {
 
         /// The points of `seat` when `action` is applied in `world` and four Normal players play the hand out with `tableSeed`; nullopt
         /// when the model refuses a step (a defect of the sample, not a result).
-        std::optional<int> Rollout(const HandModel& world, Seat seat, const HandAction& action, uint32_t tableSeed) {
+        Optional<int> Rollout(const HandModel& world, Seat seat, const HandAction& action, uint32_t tableSeed) {
             BE_PROFILE_SCOPE("Search::Rollout");
             HandModel model = world;
             if (!model.Apply(seat, action).has_value()) {
@@ -248,7 +248,7 @@ namespace BECore::Mahjong {
             return;
         }
         if (_candidateIndex == 0) {
-            std::optional<SampledWorld> sampled = SampleWorldOf(_view, _base, _worldIndex, _source);
+            Optional<SampledWorld> sampled = SampleWorldOf(_view, _base, _worldIndex, _source);
             if (!sampled.has_value()) {
                 NextWorld();
                 return;
@@ -257,7 +257,7 @@ namespace BECore::Mahjong {
             _tableSeed = sampled->tableSeed;
             _row.clear();
         }
-        const std::optional<int> value = Rollout(*_sampled, _view.seat, _candidates[static_cast<size_t>(_candidateIndex)], _tableSeed);
+        const Optional<int> value = Rollout(*_sampled, _view.seat, _candidates[static_cast<size_t>(_candidateIndex)], _tableSeed);
         if (!value.has_value()) {
             // A defect of the sample: the world is dropped with its partial row, as a whole.
             NextWorld();
@@ -298,13 +298,13 @@ namespace BECore::Mahjong {
         if (index < 0 || index >= _worlds) {
             return world;
         }
-        const std::optional<SampledWorld> sampled = SampleWorldOf(_view, _base, index, _source);
+        const Optional<SampledWorld> sampled = SampleWorldOf(_view, _base, index, _source);
         if (!sampled.has_value()) {
             return world;
         }
         world.values.reserve(_candidates.size());
         for (const HandAction& candidate : _candidates) {
-            const std::optional<int> value = Rollout(sampled->model, _view.seat, candidate, sampled->tableSeed);
+            const Optional<int> value = Rollout(sampled->model, _view.seat, candidate, sampled->tableSeed);
             if (!value.has_value()) {
                 // A defect of the sample: the world is dropped with its partial row, as `Step()` drops it.
                 world.values.clear();
@@ -374,7 +374,7 @@ namespace BECore::Mahjong {
         return BeatsMargin(bestDifference, _margin) ? _candidates[best] : _candidates.front();
     }
 
-    std::optional<SearchRun> BeginTurnSearch(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
+    Optional<SearchRun> BeginTurnSearch(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
         if (profile.searchWorlds <= 0 || profile.searchCandidates < kSearchMinCandidates || view.phase != Phase::Discard || view.legal.empty() || FindAction(view, ActionKind::DeclareWin) != nullptr) {
             return std::nullopt;
         }
@@ -387,7 +387,7 @@ namespace BECore::Mahjong {
         return SearchRun(view, eastl::move(candidates), rng.Below(kSearchBaseSeedRange), profile);
     }
 
-    std::optional<SearchRun> BeginClaimSearch(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
+    Optional<SearchRun> BeginClaimSearch(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
         if (profile.searchWorlds <= 0 || profile.searchCandidates < kSearchMinCandidates || view.legal.empty() || (view.phase != Phase::Claim && view.phase != Phase::RobKong) ||
             FindMahjong(view) != nullptr) {
             return std::nullopt;
@@ -401,7 +401,7 @@ namespace BECore::Mahjong {
         return SearchRun(view, eastl::move(candidates), rng.Below(kSearchBaseSeedRange), profile);
     }
 
-    std::optional<SearchRun> BeginSearchOver(const TableView& view, eastl::vector<HandAction> actions, uint32_t baseSeed, int worlds) {
+    Optional<SearchRun> BeginSearchOver(const TableView& view, eastl::vector<HandAction> actions, uint32_t baseSeed, int worlds) {
         if (view.legal.empty() || actions.empty() || worlds < 1) {
             return std::nullopt;
         }
@@ -413,7 +413,7 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        std::optional<HandAction> RunToEnd(std::optional<SearchRun> run) {
+        Optional<HandAction> RunToEnd(Optional<SearchRun> run) {
             if (!run.has_value()) {
                 return std::nullopt;
             }
@@ -425,11 +425,11 @@ namespace BECore::Mahjong {
 
     }  // namespace
 
-    std::optional<HandAction> SearchTurnAction(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
+    Optional<HandAction> SearchTurnAction(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
         return RunToEnd(BeginTurnSearch(view, rng, profile));
     }
 
-    std::optional<HandAction> SearchClaimAction(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
+    Optional<HandAction> SearchClaimAction(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
         return RunToEnd(BeginClaimSearch(view, rng, profile));
     }
 

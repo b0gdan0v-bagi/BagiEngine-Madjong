@@ -62,8 +62,8 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// The error of a status, nullopt for a success (to compare with `EXPECT_EQ`).
-    inline std::optional<HandError> Error(const HandStatus& status) {
-        return status.has_value() ? std::nullopt : std::optional<HandError>(status.error());
+    inline Optional<HandError> Error(const HandStatus& status) {
+        return status.has_value() ? std::nullopt : Optional<HandError>(status.error());
     }
 
     /// Whether `actions` holds `wanted`.

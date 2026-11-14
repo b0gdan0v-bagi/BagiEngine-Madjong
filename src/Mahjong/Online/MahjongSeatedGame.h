@@ -50,7 +50,7 @@ namespace BECore::Mahjong {
         [[nodiscard]] std::expected<Json, ControlError> GetSeatView(int seat) const override;
         [[nodiscard]] std::expected<Json, ControlError> GetSeatActions(int seat) const override;
         std::expected<Json, ControlError> PerformSeatAction(int seat, const Json& action) override;
-        [[nodiscard]] std::optional<Json> ChooseComputerAction(int seat) const override;
+        [[nodiscard]] Optional<Json> ChooseComputerAction(int seat) const override;
         [[nodiscard]] bool IsFinished() const override;
         [[nodiscard]] uint64_t GetStateVersion() const override;
 

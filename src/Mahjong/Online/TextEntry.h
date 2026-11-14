@@ -57,7 +57,7 @@ namespace BECore::Mahjong {
 
         /// The character a key of the keyboard types, by its SDL keycode (the keycodes of letters, digits and the space are their ASCII values, lower case for a letter, so
         /// `shift` makes it upper case); nothing for any other key.
-        [[nodiscard]] static std::optional<char> CharFromKeycode(uint32_t keycode, bool shift);
+        [[nodiscard]] static Optional<char> CharFromKeycode(uint32_t keycode, bool shift);
 
         /// The longest text `CleanRoomCode` looks at: a hostile clipboard is not scanned.
         static constexpr size_t kMaxPasteBytes = 1024;
@@ -65,7 +65,7 @@ namespace BECore::Mahjong {
         /// The room code in a pasted @p text, or nothing. A code with spaces or dashes ("  ab3k9 ", "AB3-K9") or longer than needed (cut to its length) is the code itself; an
         /// invite line is searched for the one word that can be a code (5 letters or digits of the code alphabet): none, or two (an English word like "hands" can be one too), is
         /// refused and never guessed. Empty text, text over `kMaxPasteBytes` and a code with a letter outside ASCII are refused.
-        [[nodiscard]] static std::optional<eastl::string> CleanRoomCode(eastl::string_view text);
+        [[nodiscard]] static Optional<eastl::string> CleanRoomCode(eastl::string_view text);
 
         /// The name a player starts with (`online.name.default`).
         [[nodiscard]] static eastl::string DefaultName(const UIStrings& strings);

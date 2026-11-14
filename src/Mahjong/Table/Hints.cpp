@@ -64,7 +64,7 @@ namespace BECore::Mahjong {
         return declaring;
     }
 
-    std::optional<HandAction> AdviceFor(const TableView& view) {
+    Optional<HandAction> AdviceFor(const TableView& view) {
         if (view.legal.empty()) {
             return std::nullopt;
         }
@@ -72,7 +72,7 @@ namespace BECore::Mahjong {
         return player.Choose(view);
     }
 
-    std::optional<Explanation> ExplainAdviceFor(const TableView& view) {
+    Optional<Explanation> ExplainAdviceFor(const TableView& view) {
         return ExplainAdvice(view);
     }
 

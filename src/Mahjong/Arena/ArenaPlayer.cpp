@@ -16,7 +16,7 @@ namespace BECore::Mahjong::Arena {
         static_assert(ProfileHasKnownFields());
 
         /// The value of `text` as a whole number (an optional minus sign), nullopt when anything else is in it.
-        std::optional<int> ParseNumber(std::string_view text) {
+        Optional<int> ParseNumber(std::string_view text) {
             int value = 0;
             const char* const end = text.data() + text.size();
             const auto parsed = std::from_chars(text.data(), end, value);
@@ -80,7 +80,7 @@ namespace BECore::Mahjong::Arena {
         }
 
         /// Applies `knob=value` (`part`) to `profile`; the error names the part.
-        std::optional<eastl::string> ApplyKnob(std::string_view part, LevelProfile& profile, eastl::array<bool, kProfileFieldCount>& seen) {
+        Optional<eastl::string> ApplyKnob(std::string_view part, LevelProfile& profile, eastl::array<bool, kProfileFieldCount>& seen) {
             const size_t equals = part.find('=');
             if (equals == std::string_view::npos) {
                 return Format("\"{}\" is no knob=value (a knob is set as name=number)", part);
@@ -95,7 +95,7 @@ namespace BECore::Mahjong::Arena {
             if (seen[index]) {
                 return Format("knob \"{}\" is set twice", name);
             }
-            const std::optional<int> value = ParseNumber(valueText);
+            const Optional<int> value = ParseNumber(valueText);
             if (!value.has_value()) {
                 return Format("the value \"{}\" of \"{}\" is no whole number", valueText, name);
             }
@@ -142,7 +142,7 @@ namespace BECore::Mahjong::Arena {
                 player.profile.searchMargin = kSearchMargin;
             }
         } else {
-            std::optional<ComputerLevel> level = TryParseLevel(head);
+            Optional<ComputerLevel> level = TryParseLevel(head);
             if (!level.has_value()) {
                 level = TryParseLevelName(head);
             }
@@ -163,7 +163,7 @@ namespace BECore::Mahjong::Arena {
         while (begin <= knobs.size()) {
             const size_t comma = knobs.find(',', begin);
             const size_t end = comma == std::string_view::npos ? knobs.size() : comma;
-            if (const std::optional<eastl::string> error = ApplyKnob(knobs.substr(begin, end - begin), player.profile, seen)) {
+            if (const Optional<eastl::string> error = ApplyKnob(knobs.substr(begin, end - begin), player.profile, seen)) {
                 return std::unexpected(*error);
             }
             begin = end + 1;

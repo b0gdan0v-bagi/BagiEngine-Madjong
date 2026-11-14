@@ -96,7 +96,7 @@ namespace BECore::Mahjong::Arena {
 
     WorldSource MakeTrueWorlds(const HandModel& hand, bool wallOrderKnown) {
         const std::shared_ptr<const HandState> real = std::make_shared<const HandState>(hand.Capture());
-        return [real, wallOrderKnown](const TableView&, MahjongRng& rng) -> std::optional<HandModel> {
+        return [real, wallOrderKnown](const TableView&, MahjongRng& rng) -> Optional<HandModel> {
             HandState world = *real;
             if (!wallOrderKnown) {
                 const size_t looseCount = world.loose.size();

@@ -17,7 +17,7 @@ namespace BECore::Mahjong {
         constexpr char kCarriageReturn = '\r';
         constexpr char kAssign = '=';
 
-        std::optional<UploadConsent> ConsentFromText(eastl::string_view text) {
+        Optional<UploadConsent> ConsentFromText(eastl::string_view text) {
             if (text == kUnasked) {
                 return UploadConsent::Unasked;
             }
@@ -61,8 +61,8 @@ namespace BECore::Mahjong {
         if (text.size() > kMaxUploadPrefsBytes) {
             return {};
         }
-        std::optional<UploadConsent> consent;
-        std::optional<eastl::string> nickname;
+        Optional<UploadConsent> consent;
+        Optional<eastl::string> nickname;
         size_t position = 0;
         while (position < text.size()) {
             size_t end = text.find(kLineEnd, position);

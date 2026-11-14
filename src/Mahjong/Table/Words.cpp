@@ -48,7 +48,7 @@ namespace BECore::Mahjong {
     }
 
     eastl::string Tr(const UIStrings& strings, eastl::string_view key) {
-        const std::optional<eastl::string_view> found = strings.Find(key);
+        const Optional<eastl::string_view> found = strings.Find(key);
         return found ? eastl::string(found->data(), found->size()) : eastl::string(key.data(), key.size());
     }
 

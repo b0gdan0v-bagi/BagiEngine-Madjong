@@ -128,7 +128,7 @@ namespace BECore::Mahjong {
 
         /// The claims of `options` with `acceptable` as given, apart from `chosen`, best first by `IsBetterClaim` (equal ones keep the
         /// order of the window).
-        eastl::vector<RatedClaim> RankedClaims(const eastl::vector<RatedClaim>& options, bool acceptable, const std::optional<RatedClaim>& chosen) {
+        eastl::vector<RatedClaim> RankedClaims(const eastl::vector<RatedClaim>& options, bool acceptable, const Optional<RatedClaim>& chosen) {
             eastl::vector<RatedClaim> ranked;
             for (const RatedClaim& option : options) {
                 if (option.acceptable != acceptable || (chosen.has_value() && option.action == chosen->action)) {
@@ -196,7 +196,7 @@ namespace BECore::Mahjong {
 
     }  // namespace
 
-    std::optional<Explanation> ExplainAdvice(const TableView& view, const LevelProfile& profile) {
+    Optional<Explanation> ExplainAdvice(const TableView& view, const LevelProfile& profile) {
         if (view.legal.empty()) {
             return std::nullopt;
         }

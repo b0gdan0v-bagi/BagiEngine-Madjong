@@ -515,7 +515,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(ComputerClaimTest, RateWaitingKongRatesOnlyAKongThatKeepsTheWait) {
-        const std::optional<WaitingKong> kong = RateWaitingKong(WaitingKongView(WindowModel(kWaitingOnPung, "Rd")));
+        const Optional<WaitingKong> kong = RateWaitingKong(WaitingKongView(WindowModel(kWaitingOnPung, "Rd")));
         ASSERT_TRUE(kong.has_value());
         EXPECT_EQ(kong->kong, HandAction::MakeClaim(ClaimKind::Kong));
 
@@ -525,7 +525,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(ComputerClaimTest, AConcealedWaitingHandWeighsTheKongAgainstTheConcealedDouble) {
         const TableView view = WaitingKongView(WindowModel(kWaitingOnPung, "Rd"));
-        const std::optional<WaitingKong> kong = RateWaitingKong(view);
+        const Optional<WaitingKong> kong = RateWaitingKong(view);
         ASSERT_TRUE(kong.has_value());
         MahjongRng rng(kRngSeed);
 
@@ -544,7 +544,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(ComputerClaimTest, AnOpenWaitingHandTakesTheKongThatKeepsItsWait) {
         const TableView view = OpenWaitingKongView(WindowModel(kWaitingOnPung, "Rd"));
-        const std::optional<WaitingKong> kong = RateWaitingKong(view);
+        const Optional<WaitingKong> kong = RateWaitingKong(view);
         ASSERT_TRUE(kong.has_value());
         EXPECT_GT(kong->kongValue, kong->passValue) << "nothing is lost, the kong adds points and a loose tile";
         for (uint32_t seed = 1; seed <= kRngSeeds; ++seed) {

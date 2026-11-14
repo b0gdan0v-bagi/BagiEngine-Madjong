@@ -25,7 +25,7 @@ namespace BECore::Mahjong {
     /// What the storage makes of the save folder, as `MahjongGame` reads it at `Start()`: `GetSaveStorageState()` of the engine
     /// (`NotApplicable` off the browser) unless a test plays one with `SetMatchSaveStorage`; nullopt restores the engine's answer.
     [[nodiscard]] SaveStorageState MatchSaveStorage();
-    void SetMatchSaveStorage(std::optional<SaveStorageState> state);
+    void SetMatchSaveStorage(Optional<SaveStorageState> state);
 
     /// Why a slot could not be read: `Missing` is the usual case (nothing saved yet, or saving is off), `Broken` is a file that is there
     /// and cannot be used (damaged, of another game or version, or a state whose text is wrong); `detail` says what.

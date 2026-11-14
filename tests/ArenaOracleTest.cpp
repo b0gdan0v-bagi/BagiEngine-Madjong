@@ -341,8 +341,8 @@ namespace BECore::Mahjong::Arena {
             const WorldSource source = MakeTrueWorlds(real, false);
             MahjongRng first(position.rngSeed);
             MahjongRng second(position.rngSeed + 1);
-            const std::optional<HandModel> world = source(view, first);
-            const std::optional<HandModel> other = source(view, second);
+            const Optional<HandModel> world = source(view, first);
+            const Optional<HandModel> other = source(view, second);
             ASSERT_TRUE(world.has_value());
             ASSERT_TRUE(other.has_value());
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
@@ -382,7 +382,7 @@ namespace BECore::Mahjong::Arena {
             const WorldSource source = MakeTrueWorlds(position.hand, true);
             MahjongRng first(position.rngSeed);
             MahjongRng second(position.rngSeed + 1);
-            const std::optional<HandModel> world = source(view, first);
+            const Optional<HandModel> world = source(view, first);
             ASSERT_TRUE(world.has_value());
             EXPECT_EQ(Snapshot(*world), Snapshot(position.hand));
             EXPECT_EQ(world->GetWall().LiveTiles(), position.hand.GetWall().LiveTiles());

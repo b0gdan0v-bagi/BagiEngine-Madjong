@@ -53,7 +53,7 @@ namespace BECore::Mahjong {
         constexpr char kLevelsSeparator = ',';
 
         /// The four levels of a `levels` text ("5,2,6,10"), or nothing when it is not exactly four numbers 1..10.
-        std::optional<SeatLevels> ParseLevelsText(std::string_view text) {
+        Optional<SeatLevels> ParseLevelsText(std::string_view text) {
             SeatLevels levels = UniformLevels(kDefaultLevel);
             for (size_t seat = 0; seat < levels.size(); ++seat) {
                 const bool last = seat + 1 == levels.size();
@@ -61,7 +61,7 @@ namespace BECore::Mahjong {
                 if ((end == std::string_view::npos) != last) {
                     return std::nullopt;
                 }
-                const std::optional<ComputerLevel> level = TryParseLevel(text.substr(0, end));
+                const Optional<ComputerLevel> level = TryParseLevel(text.substr(0, end));
                 if (!level) {
                     return std::nullopt;
                 }
@@ -151,7 +151,7 @@ namespace BECore::Mahjong {
         }
         values.language = prefs.language;
         values.hintsMode = prefs.coach ? HintsMode::Coach : (prefs.hintsOn ? HintsMode::Hints : HintsMode::Off);
-        const std::optional<SeatSetup> seats = ReadSeats(prefs.seats);
+        const Optional<SeatSetup> seats = ReadSeats(prefs.seats);
         if (!seats) {
             return std::unexpected(Format("the seats '{}' are not four letters P or C", prefs.seats));
         }
@@ -161,7 +161,7 @@ namespace BECore::Mahjong {
         }
         values.handsPerMatch = prefs.hands;
         if (!prefs.levels.empty()) {  // one level per seat: it wins over `level`
-            const std::optional<SeatLevels> levels = ParseLevelsText(std::string_view(prefs.levels.c_str(), prefs.levels.size()));
+            const Optional<SeatLevels> levels = ParseLevelsText(std::string_view(prefs.levels.c_str(), prefs.levels.size()));
             if (!levels) {
                 return std::unexpected(Format("the levels '{}' are not four numbers {}..{} separated by commas", prefs.levels, kMinLevel, kMaxLevel));
             }
@@ -169,7 +169,7 @@ namespace BECore::Mahjong {
         } else {
             // A copy written before the scale of numbers holds a name (`easy` | `normal`): read as the level of that name
             const std::string_view levelText(prefs.level.c_str(), prefs.level.size());
-            std::optional<ComputerLevel> level = TryParseLevel(levelText);
+            Optional<ComputerLevel> level = TryParseLevel(levelText);
             if (!level) {
                 level = TryParseLevelName(levelText);
             }
@@ -178,7 +178,7 @@ namespace BECore::Mahjong {
             }
             values.levels = UniformLevels(*level);
         }
-        const std::optional<AnimationSpeed> speed = TryParseSpeed(std::string_view(prefs.speed.c_str(), prefs.speed.size()));
+        const Optional<AnimationSpeed> speed = TryParseSpeed(std::string_view(prefs.speed.c_str(), prefs.speed.size()));
         if (!speed) {
             return std::unexpected(Format("the speed '{}' is not slow, normal or fast", prefs.speed));
         }
@@ -209,7 +209,7 @@ namespace BECore::Mahjong {
             if (!parsed) {
                 return std::unexpected(eastl::string("the session is not JSON"));
             }
-            std::optional<RoomSession> session = SessionFromJson(*parsed);
+            Optional<RoomSession> session = SessionFromJson(*parsed);
             if (!session) {
                 return std::unexpected(eastl::string("the session is not a room with a token"));
             }

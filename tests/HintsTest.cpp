@@ -125,8 +125,8 @@ namespace BECore::Mahjong::Tests {
         struct ReasonCase {
             const char* name;
             TableView view;
-            std::optional<TurnStep> turnStep;
-            std::optional<ClaimStep> claimStep;
+            Optional<TurnStep> turnStep;
+            Optional<ClaimStep> claimStep;
         };
 
         ReasonCase TurnCase(const char* name, const HandModel& model, Seat seat, TurnStep step) {
@@ -213,7 +213,7 @@ namespace BECore::Mahjong::Tests {
 
         /// The card of the advice of `view` (`ExplainAdviceFor`) with `tally` under it.
         HintCard CardOf(const UIStrings& strings, const TableView& view, eastl::string_view tally = {}) {
-            const std::optional<Explanation> explained = ExplainAdviceFor(view);
+            const Optional<Explanation> explained = ExplainAdviceFor(view);
             EXPECT_TRUE(explained.has_value());
             return explained.has_value() ? MakeAdviceCard(strings, view, *explained, tally) : HintCard{};
         }
@@ -259,7 +259,7 @@ namespace BECore::Mahjong::Tests {
 
         /// The person who has to act follows the advice.
         void PersonFollowsTheAdvice(TableSession& session, const Match& match) {
-            const std::optional<HandAction> action = AdviceFor(MakeTableView(match.Hand(), session.Actor()));
+            const Optional<HandAction> action = AdviceFor(MakeTableView(match.Hand(), session.Actor()));
             ASSERT_TRUE(action.has_value());
             ASSERT_TRUE(session.PerformPerson(*action).has_value());
         }
@@ -424,7 +424,7 @@ namespace BECore::Mahjong::Tests {
         const HandModel turn = MakeModel(SpecOf("1s 2s 3s 4s 5s 6s 7m 8m 9m 5p 5p Rd Ew", "Nw"));
         const TableView view = MakeTableView(turn, kSeat0);
 
-        const std::optional<HandAction> advice = AdviceFor(view);
+        const Optional<HandAction> advice = AdviceFor(view);
 
         ASSERT_TRUE(advice.has_value());
         EXPECT_EQ(*advice, ComputerChoice(view));
@@ -438,23 +438,23 @@ namespace BECore::Mahjong::Tests {
         const HandModel model = MakeModel(SpecOf("1s 2s 3s 4s 5s 6s 7m 8m 9m 5p 6p 6p Ew", "Ew"));
 
         // 4p 7p (4 + 4 unseen copies) beat the pair wait on 6p and Ew (2 + 2).
-        EXPECT_EQ(AdviceFor(MakeTableView(model, kSeat0)), std::optional<HandAction>(HandAction::MakeDiscard(T("6p"), true)));
+        EXPECT_EQ(AdviceFor(MakeTableView(model, kSeat0)), Optional<HandAction>(HandAction::MakeDiscard(T("6p"), true)));
     }
 
     TEST(HintsTest, TheAdviceInAClaimWindow) {
         // A pung that lowers the shanten is claimed, a pung of a simple tile that does nothing is passed, a chow that completes a set is claimed.
         const HandModel pung = WindowModel("5p 5p 1s 2s 3s 4s 5s 6s 7m 8m 9m Nw Wd", "5p");
         const TableView pungView = MakeTableView(pung, kSeat1);
-        EXPECT_EQ(AdviceFor(pungView), std::optional<HandAction>(HandAction::MakeClaim(ClaimKind::Pung)));
+        EXPECT_EQ(AdviceFor(pungView), Optional<HandAction>(HandAction::MakeClaim(ClaimKind::Pung)));
         EXPECT_EQ(*AdviceFor(pungView), ComputerChoice(pungView));
 
         const HandModel pass = WindowModel("3p 4p 6p 7p 3s 4s 6s 7s 1m 9m Nw 5m 5m", "5m");
         const TableView passView = MakeTableView(pass, kSeat1);
         ASSERT_TRUE(Has(passView.legal, HandAction::MakeClaim(ClaimKind::Pung)));
-        EXPECT_EQ(AdviceFor(passView), std::optional<HandAction>(HandAction::MakePass()));
+        EXPECT_EQ(AdviceFor(passView), Optional<HandAction>(HandAction::MakePass()));
 
         const HandModel chow = WindowModel("4p 6p 1s 2s 3s 4s 5s 6s 7m 8m 9m Nw Wd", "5p");
-        EXPECT_EQ(AdviceFor(MakeTableView(chow, kSeat1)), std::optional<HandAction>(HandAction::MakeClaim(ClaimKind::Chow, T("4p"))));
+        EXPECT_EQ(AdviceFor(MakeTableView(chow, kSeat1)), Optional<HandAction>(HandAction::MakeClaim(ClaimKind::Chow, T("4p"))));
     }
 
     TEST(HintsTest, TheAdviceInARobbedKongWindowTakesMahjong) {
@@ -463,7 +463,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(model.GetPhase(), Phase::RobKong);
         const TableView view = MakeTableView(model, kSeat2);
 
-        EXPECT_EQ(AdviceFor(view), std::optional<HandAction>(HandAction::MakeClaim(ClaimKind::Mahjong)));
+        EXPECT_EQ(AdviceFor(view), Optional<HandAction>(HandAction::MakeClaim(ClaimKind::Mahjong)));
     }
 
     TEST(HintsTest, NoAdviceWhenThereIsNothingToDo) {
@@ -482,7 +482,7 @@ namespace BECore::Mahjong::Tests {
             for (int step = 0; step < 60 && !match.Hand().Result().has_value(); ++step) {
                 const Seat actor = ComputerTable::NextActor(match.Hand());
                 const TableView view = MakeTableView(match.Hand(), actor);
-                const std::optional<HandAction> advice = AdviceFor(view);
+                const Optional<HandAction> advice = AdviceFor(view);
                 ASSERT_TRUE(advice.has_value()) << "seed " << seed << " step " << step;
                 EXPECT_TRUE(Has(view.legal, *advice));
                 EXPECT_EQ(AdviceFor(view), advice);
@@ -620,7 +620,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(HintsTest, TheExplainedAdviceIsTheAdviceOfEveryKind) {
         for (const ReasonCase& one : ReasonCases()) {
-            const std::optional<Explanation> explained = ExplainAdviceFor(one.view);
+            const Optional<Explanation> explained = ExplainAdviceFor(one.view);
             ASSERT_TRUE(explained.has_value()) << one.name;
             EXPECT_EQ(explained->Action(), *AdviceFor(one.view)) << one.name;
             ASSERT_EQ(explained->turn.has_value(), one.turnStep.has_value()) << one.name;

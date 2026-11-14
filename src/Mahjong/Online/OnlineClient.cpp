@@ -61,7 +61,7 @@ namespace BECore::Mahjong {
             SetNoticeForCode(OnlineCodes::kInvalidParams);
             return false;
         }
-        const std::optional<eastl::string> sanitized = SanitizePlayerName(name);
+        const Optional<eastl::string> sanitized = SanitizePlayerName(name);
         if (!sanitized) {
             SetNoticeForCode(RoomErrors::kBadName);
             return false;
@@ -87,7 +87,7 @@ namespace BECore::Mahjong {
     }
 
     bool OnlineClient::SendJoin(eastl::string_view url, eastl::string_view code, eastl::string_view name, bool fromList) {
-        const std::optional<eastl::string> sanitized = SanitizePlayerName(name);
+        const Optional<eastl::string> sanitized = SanitizePlayerName(name);
         if (!sanitized) {
             SetNoticeForCode(RoomErrors::kBadName);
             return false;
@@ -354,10 +354,10 @@ namespace BECore::Mahjong {
             room.hands.reset();
             room.level.reset();
             room.hintsAllowed = GetJsonBool(listing.options, kHintsAllowedKey);
-            if (const std::optional<int64_t> hands = GetJsonInt(listing.options, kHandsKey); hands && (*hands == kShortMatchHands || *hands == kFullMatchHands)) {
+            if (const Optional<int64_t> hands = GetJsonInt(listing.options, kHandsKey); hands && (*hands == kShortMatchHands || *hands == kFullMatchHands)) {
                 room.hands = static_cast<int>(*hands);
             }
-            if (const std::optional<int64_t> level = GetJsonInt(listing.options, kLevelKey); level && *level >= kMinLevel && *level <= kMaxLevel) {
+            if (const Optional<int64_t> level = GetJsonInt(listing.options, kLevelKey); level && *level >= kMinLevel && *level <= kMaxLevel) {
                 room.level = static_cast<int>(*level);
             }
         }
@@ -570,14 +570,14 @@ namespace BECore::Mahjong {
         return json;
     }
 
-    std::optional<RoomSession> SessionFromJson(const Json& json) {
-        const std::optional<eastl::string> url = GetJsonString(json, kSessionUrlKey);
-        const std::optional<eastl::string> room = GetJsonString(json, kSessionRoomKey);
-        const std::optional<eastl::string> token = GetJsonString(json, kSessionTokenKey);
+    Optional<RoomSession> SessionFromJson(const Json& json) {
+        const Optional<eastl::string> url = GetJsonString(json, kSessionUrlKey);
+        const Optional<eastl::string> room = GetJsonString(json, kSessionRoomKey);
+        const Optional<eastl::string> token = GetJsonString(json, kSessionTokenKey);
         if (!url || !room || !token || url->empty()) {
             return std::nullopt;
         }
-        const std::optional<eastl::string> code = NormalizeRoomCode(*room);
+        const Optional<eastl::string> code = NormalizeRoomCode(*room);
         if (!code || !IsWellFormedToken(*token)) {
             return std::nullopt;
         }

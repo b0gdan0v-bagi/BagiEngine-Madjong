@@ -38,9 +38,9 @@ namespace BECore::Mahjong {
         eastl::string host;
         /// Seats a person can still take.
         int free = 0;
-        std::optional<int> hands;
-        std::optional<int> level;
-        std::optional<bool> hintsAllowed;
+        Optional<int> hands;
+        Optional<int> level;
+        Optional<bool> hintsAllowed;
     };
 
     /// The last list of open rooms, for the `Rooms` page.
@@ -78,7 +78,7 @@ namespace BECore::Mahjong {
         int humans = 0;
         /// Whether the host allowed hints and the coach, from the public options of the lobby; none when the lobby does not say
         /// (a server from before the lobby carried options).
-        std::optional<bool> hintsAllowed;
+        Optional<bool> hintsAllowed;
     };
 
     /// One thing for a screen to say: a key of `config/UIStrings.xml` (`OnlineWords.h`), the code for the one key that names it, and a
@@ -258,7 +258,7 @@ namespace BECore::Mahjong {
         /// `_table` is the latest view of the client: false after a view that was not read, until the next good one.
         bool _tableIsLatest = false;
         OnlineLobby _lobby;
-        std::optional<OnlineRoomOptions> _hosted;
+        Optional<OnlineRoomOptions> _hosted;
         bool _lobbyDirty = false;
         int _lobbySeat = -1;
         bool _lobbyHost = false;
@@ -285,6 +285,6 @@ namespace BECore::Mahjong {
 
     /// The session of @p json; nullopt for anything that is not an object with a `url`, a `room` that can be a room code and a `token`
     /// of the form a room hands out. The room comes back in upper case.
-    [[nodiscard]] std::optional<RoomSession> SessionFromJson(const Json& json);
+    [[nodiscard]] Optional<RoomSession> SessionFromJson(const Json& json);
 
 }  // namespace BECore::Mahjong

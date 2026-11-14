@@ -87,7 +87,7 @@ namespace BECore::Mahjong {
         eastl::array<bool, kSeatCount> ready{};
         eastl::vector<ControlAction> actions;
         /// Present exactly when `phase` is not `Playing`.
-        std::optional<OnlineResult> result;
+        Optional<OnlineResult> result;
     };
 
     /// Why a view was not read: `Format` for a `format` that is missing or is not the number this client speaks, `Malformed` for the rest.

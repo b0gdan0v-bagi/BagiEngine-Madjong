@@ -55,7 +55,7 @@ namespace BECore::Mahjong::Tests {
             const ButtonSpec& spec = SpecOf(kind);
             EXPECT_TRUE(seen.insert({spec.action, spec.value}).second) << spec.element;
             EXPECT_TRUE(elements.insert(spec.element).second) << spec.element;
-            const std::optional<ButtonKind> found = ButtonOf(spec.action, spec.value);
+            const Optional<ButtonKind> found = ButtonOf(spec.action, spec.value);
             ASSERT_TRUE(found.has_value()) << spec.element;
             EXPECT_EQ(*found, kind) << spec.element;
         }

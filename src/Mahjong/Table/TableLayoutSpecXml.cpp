@@ -49,7 +49,7 @@ namespace BECore::Mahjong {
                 }
             }
 
-            std::optional<float> ReadFloat(const pugi::xml_node& node, const eastl::string& where, const char* name, bool required) {
+            Optional<float> ReadFloat(const pugi::xml_node& node, const eastl::string& where, const char* name, bool required) {
                 const pugi::xml_attribute attribute = node.attribute(name);
                 if (!attribute) {
                     if (required) {
@@ -68,8 +68,8 @@ namespace BECore::Mahjong {
                 return value;
             }
 
-            std::optional<float> ReadFraction(const pugi::xml_node& node, const eastl::string& where, const char* name, bool required) {
-                const std::optional<float> value = ReadFloat(node, where, name, required);
+            Optional<float> ReadFraction(const pugi::xml_node& node, const eastl::string& where, const char* name, bool required) {
+                const Optional<float> value = ReadFloat(node, where, name, required);
                 if (value && !(*value >= 0.0f && *value <= 1.0f)) {
                     Fail(where, Format("attribute '{}': {} is outside 0..1", name, node.attribute(name).value()));
                     return std::nullopt;
@@ -77,7 +77,7 @@ namespace BECore::Mahjong {
                 return value;
             }
 
-            std::optional<int> ReadInt(const pugi::xml_node& node, const eastl::string& where, const char* name, int least, int most) {
+            Optional<int> ReadInt(const pugi::xml_node& node, const eastl::string& where, const char* name, int least, int most) {
                 const pugi::xml_attribute attribute = node.attribute(name);
                 if (!attribute) {
                     return std::nullopt;
@@ -97,7 +97,7 @@ namespace BECore::Mahjong {
                 return static_cast<int>(value);
             }
 
-            std::optional<bool> ReadBool(const pugi::xml_node& node, const eastl::string& where, const char* name) {
+            Optional<bool> ReadBool(const pugi::xml_node& node, const eastl::string& where, const char* name) {
                 const pugi::xml_attribute attribute = node.attribute(name);
                 if (!attribute) {
                     return std::nullopt;
@@ -294,7 +294,7 @@ namespace BECore::Mahjong {
             }
 
             void ReadLikeShape(const pugi::xml_node& node, const eastl::string& where, const char* likeName, ShapeSpec& out) {
-                const std::optional<TableShape> source = EnumUtils<TableShape>::Cast(likeName);
+                const Optional<TableShape> source = EnumUtils<TableShape>::Cast(likeName);
                 if (!source) {
                     Fail(where, Format("attribute 'like': '{}' is not a shape", likeName));
                 } else {
@@ -312,7 +312,7 @@ namespace BECore::Mahjong {
 
             void ReadSeat(const pugi::xml_node& node, const eastl::string& shapeWhere, ShapeSpec& shape, unsigned& seatsSeen) {
                 CheckAttributes(node, shapeWhere, {"position"});
-                const std::optional<int> position = ReadInt(node, shapeWhere, "position", 0, kSeatCount - 1);
+                const Optional<int> position = ReadInt(node, shapeWhere, "position", 0, kSeatCount - 1);
                 if (!position) {
                     if (!node.attribute("position")) {
                         Fail(shapeWhere, "a seat has no attribute 'position'");
@@ -352,7 +352,7 @@ namespace BECore::Mahjong {
                 continue;
             }
             const char* name = child.attribute("name").value();
-            const std::optional<TableShape> shape = EnumUtils<TableShape>::Cast(name);
+            const Optional<TableShape> shape = EnumUtils<TableShape>::Cast(name);
             if (!shape) {
                 reader.Fail("TableLayout", Format("shape '{}' is not a shape (Landscape, Portrait, Wide or Narrow)", name));
                 continue;

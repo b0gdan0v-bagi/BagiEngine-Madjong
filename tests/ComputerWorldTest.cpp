@@ -175,7 +175,7 @@ namespace BECore::Mahjong::Tests {
                 }
                 MahjongRng rng(seed * 7 + static_cast<uint32_t>(seat));
                 for (int i = 0; i < count; ++i) {
-                    const std::optional<HandModel> world = SampleWorld(view, rng);
+                    const Optional<HandModel> world = SampleWorld(view, rng);
                     const std::string at = where + " seat " + std::to_string(seat) + " world " + std::to_string(i);
                     EXPECT_TRUE(world.has_value()) << at;
                     if (world.has_value()) {
@@ -311,7 +311,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_GT(ExpectWorldsFit(upgrade, 2, kFixedWorldCount, "upgrade turn"), 0);
             const TableView view = MakeTableView(upgrade, kSeat1);
             MahjongRng rng(3);
-            std::optional<HandModel> world = SampleWorld(view, rng);
+            Optional<HandModel> world = SampleWorld(view, rng);
             ASSERT_TRUE(world.has_value());
             EXPECT_EQ(world->DrawnTile(kSeat1), T("5p")) << "the tile of the listed upgrade is the drawn one";
             EXPECT_TRUE(world->Apply(kSeat1, HandAction::MakeUpgradeKong(T("5p"))).has_value());
@@ -323,7 +323,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_GT(ExpectWorldsFit(robbing, 4, kFixedWorldCount, "robbing window"), 0);
             const TableView view = MakeTableView(robbing, kSeat2);
             MahjongRng rng(5);
-            const std::optional<HandModel> world = SampleWorld(view, rng);
+            const Optional<HandModel> world = SampleWorld(view, rng);
             ASSERT_TRUE(world.has_value());
             EXPECT_EQ(world->GetPhase(), Phase::RobKong);
             EXPECT_EQ(world->CurrentSeat(), kSeat1);
@@ -343,7 +343,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_EQ(otherView.seats[kSeat0].concealedKongs, 1);
             MahjongRng rng(8);
             for (int i = 0; i < kFixedWorldCount; ++i) {
-                const std::optional<HandModel> world = SampleWorld(otherView, rng);
+                const Optional<HandModel> world = SampleWorld(otherView, rng);
                 ASSERT_TRUE(world.has_value());
                 int kongs = 0;
                 for (const Meld& meld : world->GetHand(kSeat0).melds) {
@@ -361,7 +361,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_GT(ExpectWorldsFit(winning, 9, kFixedWorldCount, "self-draw win"), 0);
             MahjongRng rng(10);
             for (int i = 0; i < kFixedWorldCount; ++i) {
-                std::optional<HandModel> world = SampleWorld(view, rng);
+                Optional<HandModel> world = SampleWorld(view, rng);
                 ASSERT_TRUE(world.has_value());
                 EXPECT_TRUE(world->DrawnTile(kSeat0).IsValid());
                 ASSERT_TRUE(world->Apply(kSeat0, HandAction::MakeDeclareWin()).has_value());
@@ -377,7 +377,7 @@ namespace BECore::Mahjong::Tests {
         const HandModel plain = MakeModel(SpecOf("1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Gd Rd", "Wd"));
         const TableView view = MakeTableView(plain, kSeat0);
         MahjongRng rng(11);
-        const std::optional<HandModel> world = SampleWorld(view, rng);
+        const Optional<HandModel> world = SampleWorld(view, rng);
         ASSERT_TRUE(world.has_value());
         EXPECT_FALSE(world->DrawnTile(kSeat0).IsValid());
         EXPECT_EQ(world->GetPhase(), Phase::Discard);
@@ -398,14 +398,14 @@ namespace BECore::Mahjong::Tests {
                 }
                 MahjongRng a(77 + static_cast<uint32_t>(index));
                 MahjongRng b(77 + static_cast<uint32_t>(index));
-                const std::optional<HandModel> worldA = SampleWorld(view, a);
-                const std::optional<HandModel> worldB = SampleWorld(view, b);
+                const Optional<HandModel> worldA = SampleWorld(view, a);
+                const Optional<HandModel> worldB = SampleWorld(view, b);
                 ASSERT_TRUE(worldA.has_value() && worldB.has_value()) << "model " << index << " seat " << seat;
                 EXPECT_EQ(WorldText(*worldA), WorldText(*worldB)) << "model " << index << " seat " << seat;
                 EXPECT_EQ(RngState(a), RngState(b)) << "model " << index << " seat " << seat;
                 // Another rng state gives another world (the hidden tiles are drawn, not copied from anywhere).
                 MahjongRng c(78 + static_cast<uint32_t>(index));
-                const std::optional<HandModel> worldC = SampleWorld(view, c);
+                const Optional<HandModel> worldC = SampleWorld(view, c);
                 ASSERT_TRUE(worldC.has_value());
                 EXPECT_NE(WorldText(*worldA), WorldText(*worldC)) << "model " << index << " seat " << seat;
             }
@@ -434,8 +434,8 @@ namespace BECore::Mahjong::Tests {
         for (uint32_t seed = 1; seed <= 5; ++seed) {
             MahjongRng a(seed);
             MahjongRng b(seed);
-            const std::optional<HandModel> worldA = SampleWorld(viewA, a);
-            const std::optional<HandModel> worldB = SampleWorld(viewB, b);
+            const Optional<HandModel> worldA = SampleWorld(viewA, a);
+            const Optional<HandModel> worldB = SampleWorld(viewB, b);
             ASSERT_TRUE(worldA.has_value() && worldB.has_value());
             EXPECT_EQ(WorldText(*worldA), WorldText(*worldB)) << "rng seed " << seed;
             EXPECT_EQ(RngState(a), RngState(b)) << "rng seed " << seed;
@@ -443,7 +443,7 @@ namespace BECore::Mahjong::Tests {
 
         // And the worlds are not the real tables: the truth is one of very many consistent worlds.
         MahjongRng rng(99);
-        const std::optional<HandModel> world = SampleWorld(viewA, rng);
+        const Optional<HandModel> world = SampleWorld(viewA, rng);
         ASSERT_TRUE(world.has_value());
         EXPECT_NE(world->GetHand(kSeat1).concealed, modelA.GetHand(kSeat1).concealed);
     }
@@ -457,7 +457,7 @@ namespace BECore::Mahjong::Tests {
         MahjongRng rng(21);
         int waitingThirteen = 0;
         for (int i = 0; i < kFixedWorldCount; ++i) {
-            const std::optional<HandModel> world = SampleWorld(view, rng);
+            const Optional<HandModel> world = SampleWorld(view, rng);
             ASSERT_TRUE(world.has_value());
             for (const Seat seat : {kSeat2, kSeat3}) {
                 const PlayerHand& hand = world->GetHand(seat);
@@ -480,7 +480,7 @@ namespace BECore::Mahjong::Tests {
                 const Seat actor = NextActor(play, playRng);
                 const TableView actorView = MakeTableView(play, actor);
                 MahjongRng worldRng(seed * 13 + static_cast<uint32_t>(step));
-                if (const std::optional<HandModel> world = SampleWorld(actorView, worldRng)) {
+                if (const Optional<HandModel> world = SampleWorld(actorView, worldRng)) {
                     for (Seat other = 0; other < kSeatCount; ++other) {
                         const PlayerHand& hand = world->GetHand(other);
                         const int melds = static_cast<int>(hand.melds.size());
@@ -517,7 +517,7 @@ namespace BECore::Mahjong::Tests {
                 const Seat actor = NextActor(model, rng);
                 const TableView view = MakeTableView(model, actor);
                 MahjongRng worldRng(seed * 17 + static_cast<uint32_t>(step));
-                const std::optional<HandModel> world = SampleWorld(view, worldRng);
+                const Optional<HandModel> world = SampleWorld(view, worldRng);
                 ASSERT_TRUE(world.has_value()) << "seed " << seed << " step " << step;
                 ASSERT_EQ(world->GetSettings().flowers, seed % 2 == 1) << "seed " << seed << " step " << step;
                 ASSERT_TRUE(model.Apply(actor, Choose(model.LegalActions(actor), Mode::SeekWin, rng)).has_value());
@@ -533,7 +533,7 @@ namespace BECore::Mahjong::Tests {
             }
             const TableView view = MakeTableView(model, kSeat0);
             MahjongRng rng(31);
-            const std::optional<HandModel> world = SampleWorld(view, rng);
+            const Optional<HandModel> world = SampleWorld(view, rng);
             ASSERT_TRUE(world.has_value()) << "flowers " << flowers;
             EXPECT_EQ(world->GetSettings().flowers, flowers);
             int bonusInWall = 0;
@@ -657,7 +657,7 @@ namespace BECore::Mahjong::Tests {
         eastl::array<eastl::array<double, kSeatCount>, 3> held{};
         MahjongRng rng(51);
         for (int i = 0; i < kFrequencyWorlds; ++i) {
-            const std::optional<HandModel> world = SampleWorld(view, rng);
+            const Optional<HandModel> world = SampleWorld(view, rng);
             ASSERT_TRUE(world.has_value());
             for (size_t k = 0; k < kinds.size(); ++k) {
                 for (Seat seat = 0; seat < kSeatCount; ++seat) {

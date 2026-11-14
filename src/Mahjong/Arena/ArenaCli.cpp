@@ -27,7 +27,7 @@ namespace BECore::Mahjong::Arena {
         /// The value of `text` as a whole number of type `T`; nullopt when anything else is in it (a `+`, a space, a letter, too large;
         /// a `-` only for an unsigned `T`: a signed one reads it and `ValidateArenaConfig` refuses the number).
         template <typename T>
-        std::optional<T> ParseWhole(std::string_view text) {
+        Optional<T> ParseWhole(std::string_view text) {
             T value{};
             const char* const end = text.data() + text.size();
             const auto parsed = std::from_chars(text.data(), end, value);
@@ -68,7 +68,7 @@ namespace BECore::Mahjong::Arena {
 
         template <typename T>
         std::expected<T, eastl::string> ParseNumberOption(std::string_view option, std::string_view value, T smallest) {
-            const std::optional<T> number = ParseWhole<T>(value);
+            const Optional<T> number = ParseWhole<T>(value);
             if (!number.has_value()) {
                 return std::unexpected(Format("{}: \"{}\" is not a whole number from {} to {}", option, value, smallest, std::numeric_limits<T>::max()));
             }
@@ -77,7 +77,7 @@ namespace BECore::Mahjong::Arena {
 
         /// The threads of `--jobs N`: N from 1 to `kMaxJobs`, and 0 for the hardware concurrency (at least 1, at most `kMaxJobs`).
         std::expected<int, eastl::string> ParseJobs(std::string_view value) {
-            const std::optional<uint32_t> number = ParseWhole<uint32_t>(value);
+            const Optional<uint32_t> number = ParseWhole<uint32_t>(value);
             if (!number.has_value() || *number > static_cast<uint32_t>(kMaxJobs)) {
                 return std::unexpected(Format("{}: \"{}\" is not a whole number from 0 to {}", kJobsOption, value, kMaxJobs));
             }

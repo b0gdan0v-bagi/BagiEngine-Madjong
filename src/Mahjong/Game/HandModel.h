@@ -206,8 +206,8 @@ namespace BECore::Mahjong {
         eastl::array<ClaimStatus, kSeatCount> claimStatus{};
         eastl::array<ClaimOption, kSeatCount> claims;
         Tile pendingTile;
-        std::optional<HandResult> result;
-        std::optional<ClaimWindowResult> lastWindow;
+        Optional<HandResult> result;
+        Optional<ClaimWindowResult> lastWindow;
         int windowSerial = 0;
     };
 
@@ -292,11 +292,11 @@ namespace BECore::Mahjong {
         }
         /// How the last claim window of `Phase::Claim` was settled (not the robbing window, which leaves it as it was); nullopt before
         /// the first one of the hand. `Begin` clears it.
-        [[nodiscard]] const std::optional<ClaimWindowResult>& LastClaimWindow() const noexcept {
+        [[nodiscard]] const Optional<ClaimWindowResult>& LastClaimWindow() const noexcept {
             return _lastWindow;
         }
         /// The outcome once the phase is `Finished`.
-        [[nodiscard]] const std::optional<HandResult>& Result() const noexcept {
+        [[nodiscard]] const Optional<HandResult>& Result() const noexcept {
             return _result;
         }
         [[nodiscard]] const MahjongSettings& GetSettings() const noexcept {
@@ -434,7 +434,7 @@ namespace BECore::Mahjong {
         /// Gives `seat` its tile: `first` (the draw that was due, nullopt when there was none), then replacements from the loose
         /// reserve while the tile is a bonus tile. `loose` says that `first` came from the reserve. Ends the hand as drawn when no
         /// tile is left; otherwise `seat` holds the tile and the phase is `Discard`.
-        void Receive(Seat seat, std::optional<Tile> first, bool loose);
+        void Receive(Seat seat, Optional<Tile> first, bool loose);
         /// The regular draw of `seat` (from the live wall).
         void StartTurn(Seat seat);
         /// What follows the discard of `tile` by `seat`: the claim window when a seat can claim, otherwise the next seat draws.
@@ -482,10 +482,10 @@ namespace BECore::Mahjong {
         /// The tile the open window is about (`PendingTile()`); invalid while no window is open.
         Tile _pendingTile;
         /// The last settled claim window (`LastClaimWindow()`) and how many were settled in this hand.
-        std::optional<ClaimWindowResult> _lastWindow;
+        Optional<ClaimWindowResult> _lastWindow;
         int _windowSerial = 0;
         /// Starts as a drawn hand: a model that was never begun is finished, and a finished hand has a result.
-        std::optional<HandResult> _result = HandResult{};
+        Optional<HandResult> _result = HandResult{};
         /// Set by `ForDisplay` only: every action and `Begin` are refused.
         bool _displayOnly = false;
     };

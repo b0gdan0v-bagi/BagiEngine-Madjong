@@ -118,7 +118,7 @@ namespace BECore::Mahjong {
                 if (Need(object, key) == nullptr) {
                     return false;
                 }
-                const std::optional<int64_t> number = GetJsonInt(object, key);
+                const Optional<int64_t> number = GetJsonInt(object, key);
                 if (!number) {
                     return Fail(key, "has to be an integer");
                 }
@@ -151,7 +151,7 @@ namespace BECore::Mahjong {
                 if (Need(object, key) == nullptr) {
                     return false;
                 }
-                const std::optional<bool> flag = GetJsonBool(object, key);
+                const Optional<bool> flag = GetJsonBool(object, key);
                 if (!flag) {
                     return Fail(key, "has to be true or false");
                 }
@@ -181,7 +181,7 @@ namespace BECore::Mahjong {
                 if (Need(object, key) == nullptr) {
                     return false;
                 }
-                const std::optional<eastl::string> text = GetJsonString(object, key);
+                const Optional<eastl::string> text = GetJsonString(object, key);
                 if (!text) {
                     return Fail(key, "has to be a string");
                 }
@@ -222,7 +222,7 @@ namespace BECore::Mahjong {
                     return Fail(key, "has to be a string with a tile");
                 }
                 const std::string& text = item.get_ref<const std::string&>();
-                const std::optional<Tile> tile = TryParse(std::string_view(text));
+                const Optional<Tile> tile = TryParse(std::string_view(text));
                 if (!tile) {
                     return Fail(key, Format("'{}' is not a tile", text.c_str()).c_str());
                 }
@@ -322,7 +322,7 @@ namespace BECore::Mahjong {
                 if (member == nullptr) {
                     return Fail("format", "is missing", OnlineViewErrorKind::Format);
                 }
-                const std::optional<int64_t> number = GetJsonInt(_view, "format");
+                const Optional<int64_t> number = GetJsonInt(_view, "format");
                 if (!number) {
                     return Fail("format", "has to be an integer", OnlineViewErrorKind::Format);
                 }
@@ -505,7 +505,7 @@ namespace BECore::Mahjong {
 
             /// The room's setting; missing or not a boolean is false, never a read error (additive key: `Online/CLAUDE.md`).
             void ReadHintsAllowed() {
-                const std::optional<bool> flag = GetJsonBool(_view, kHintsAllowedKey);
+                const Optional<bool> flag = GetJsonBool(_view, kHintsAllowedKey);
                 _t.hintsAllowed = flag.value_or(false);
             }
 

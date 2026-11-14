@@ -56,7 +56,7 @@ namespace BECore::Mahjong::Tests {
                 Match match;
                 TableSession session(match);
                 EXPECT_TRUE(session.StartMatch(settings, seed, kAllComputers, profile).has_value());
-                const std::optional<ComputerStepJob> job = session.BeginComputerStep();
+                const Optional<ComputerStepJob> job = session.BeginComputerStep();
                 if (job && !job->Ready()) {
                     return seed;
                 }

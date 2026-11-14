@@ -270,10 +270,10 @@ namespace BECore::Mahjong {
         StepResult StepComputer();
         /// The first half of `StepComputer`: the job of the actor's step, the player's rng drawn, the model and the version unchanged.
         /// `nullopt` (nothing drawn) unless `Playing` with a computer as the actor.
-        [[nodiscard]] std::optional<ComputerStepJob> BeginComputerStep();
+        [[nodiscard]] Optional<ComputerStepJob> BeginComputerStep();
         /// The second half: `job` (done) is applied, logged and counted as `StepComputer` does, and its `StepResult` returned; `nullopt`
         /// when the job is stale (`Version()` or `StartCount()` is not the job's), with nothing changed or logged.
-        [[nodiscard]] std::optional<StepResult> FinishComputerStep(const ComputerStepJob& job);
+        [[nodiscard]] Optional<StepResult> FinishComputerStep(const ComputerStepJob& job);
         /// `StepComputer` until a person has to act or the hand is over: the number of steps. At most `kMaxComputerSteps`; more
         /// (or a refused step) is a defect and asserts.
         int RunComputers();
@@ -284,7 +284,7 @@ namespace BECore::Mahjong {
         std::expected<HandSettlement, MatchError> NextHand();
         /// The settlement `NextHand` applied last (the last element of `Match::History()`), nullopt before any. The settlement of a
         /// hand that is `HandOver` is `SettleHand(Hand())`.
-        [[nodiscard]] std::optional<HandSettlement> LastSettlement() const;
+        [[nodiscard]] Optional<HandSettlement> LastSettlement() const;
 
         /// The person whose concealed tiles the screen shows, `kNoSeat` for nobody (everything covered). See the class comment.
         [[nodiscard]] Seat Viewer() const noexcept {
@@ -331,7 +331,7 @@ namespace BECore::Mahjong {
         void LogAfterSettlement();
 
         Match& _match;
-        std::optional<ComputerTable> _table;
+        Optional<ComputerTable> _table;
         SeatSetup _seats = kDefaultSeatSetup;
         SeatLevels _levels = UniformLevels(kDefaultLevel);
         Seat _viewer = kNoSeat;

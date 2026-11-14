@@ -45,7 +45,7 @@ namespace BECore::Mahjong::Tests {
             for (int step = 0; step < kStepLimit && PhaseOfMatch(game.GetMatch()) == SessionPhase::Playing; ++step) {
                 bool moved = false;
                 for (int seat = 0; seat < kSeatCount && !moved; ++seat) {
-                    if (const std::optional<Json> action = game.ChooseComputerAction(seat)) {
+                    if (const Optional<Json> action = game.ChooseComputerAction(seat)) {
                         ASSERT_TRUE(game.PerformSeatAction(seat, *action).has_value());
                         moved = true;
                     }
@@ -225,7 +225,7 @@ namespace BECore::Mahjong::Tests {
         const Json* flag = FindJsonMember(create.options, "hintsAllowed");
         ASSERT_NE(flag, nullptr);
         EXPECT_TRUE(flag->is_boolean());
-        EXPECT_EQ(GetJsonBool(create.options, "hintsAllowed"), std::optional<bool>(true));
+        EXPECT_EQ(GetJsonBool(create.options, "hintsAllowed"), Optional<bool>(true));
         EXPECT_EQ(GetJsonInt(create.options, "hands"), 8);
     }
 
@@ -704,7 +704,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_NE(text.find(kRoom.data()), eastl::string::npos);
 
         MakeClient();
-        const std::optional<RoomSession> session = SessionFromJson(ParseJson(text).value());
+        const Optional<RoomSession> session = SessionFromJson(ParseJson(text).value());
         ASSERT_TRUE(session.has_value());
         EXPECT_EQ(session->room, kRoom);
         EXPECT_EQ(session->token, kToken);
@@ -758,7 +758,7 @@ namespace BECore::Mahjong::Tests {
         session.url = kUrl;
         session.room = "abcde";
         session.token = kToken;
-        const std::optional<RoomSession> back = SessionFromJson(SessionToJson(session));
+        const Optional<RoomSession> back = SessionFromJson(SessionToJson(session));
         ASSERT_TRUE(back.has_value());
         EXPECT_EQ(back->room, kRoom);
 

@@ -43,7 +43,7 @@ namespace BECore::Mahjong {
      * (`HitHandTile`). With `tapToSelect` off a hit discards at once and no hit does nothing. With it on, a hit on the selected tile
      * discards it, a hit on another tile moves the selection there, and no hit clears the selection (`Nothing` when there was none).
      */
-    [[nodiscard]] TapOutcome StepTap(const std::optional<int>& selected, const std::optional<int>& hit, bool tapToSelect) noexcept;
+    [[nodiscard]] TapOutcome StepTap(const Optional<int>& selected, const Optional<int>& hit, bool tapToSelect) noexcept;
 
     /// The screen rectangle of a selected tile whose slot is `slotRect`: the slot moved up by `kSelectedTileRise` design units at the
     /// scale of the layout (`slotRect.h / kViewerHandTileH`). The hit region does not follow it.

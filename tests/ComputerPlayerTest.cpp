@@ -66,9 +66,9 @@ namespace BECore::Mahjong::Tests {
         /// The first view of each kind a search must leave alone, found by playing Normal hands: a win, a mahjong claim, a window of a
         /// waiting hand with something to claim (a window opens only for a seat with a claim, so one with only `Pass` does not occur).
         struct UnsearchedViews {
-            std::optional<TableView> win;
-            std::optional<TableView> mahjong;
-            std::optional<TableView> waitingPass;
+            Optional<TableView> win;
+            Optional<TableView> mahjong;
+            Optional<TableView> waitingPass;
         };
 
         UnsearchedViews ScanForUnsearchedViews() {
@@ -104,7 +104,7 @@ namespace BECore::Mahjong::Tests {
                                                                 ComputerPlayer(SeatSeed(seed, 3), profile)};
             for (int step = 0; model.GetPhase() != Phase::Finished && step < kStepLimit; ++step) {
                 const Seat actor = ComputerTable::NextActor(model);
-                const std::optional<HandAction> action = players[actor].Decide(model, actor);
+                const Optional<HandAction> action = players[actor].Decide(model, actor);
                 ASSERT_TRUE(action.has_value());
                 ASSERT_TRUE(model.Apply(actor, *action).has_value());
             }
@@ -140,13 +140,13 @@ namespace BECore::Mahjong::Tests {
     TEST(ComputerPlayerTest, DecideAnswersWithAnElementOfTheListOnTheTurnAndInAWindow) {
         const HandModel turn = WinningWallModel();
         ComputerPlayer player(kSeed);
-        const std::optional<HandAction> onTurn = player.Decide(turn, kSeat0);
+        const Optional<HandAction> onTurn = player.Decide(turn, kSeat0);
         ASSERT_TRUE(onTurn.has_value());
         EXPECT_TRUE(Has(turn.LegalActions(kSeat0), *onTurn));
 
         const HandModel window = WindowOfTwoModel();
         for (const Seat seat : window.PendingClaimSeats()) {
-            const std::optional<HandAction> answer = player.Decide(window, seat);
+            const Optional<HandAction> answer = player.Decide(window, seat);
             ASSERT_TRUE(answer.has_value()) << "seat " << seat;
             EXPECT_TRUE(Has(window.LegalActions(seat), *answer)) << "seat " << seat;
         }
@@ -323,7 +323,7 @@ namespace BECore::Mahjong::Tests {
     TEST(ComputerPlayerTest, BeginAnswersReadyWithNoSearchProfileAndForTheDecisionsASearchLeavesAlone) {
         const UnsearchedViews views = ScanForUnsearchedViews();
         const LevelProfile profile = SearchProfile();
-        const eastl::vector<std::pair<const char*, const std::optional<TableView>*>> cases = {
+        const eastl::vector<std::pair<const char*, const Optional<TableView>*>> cases = {
             {"a win", &views.win}, {"a mahjong claim", &views.mahjong}, {"a waiting hand that passes", &views.waitingPass}};
         for (const auto& [name, view] : cases) {
             ASSERT_TRUE(view->has_value()) << name << " was not found";
@@ -417,7 +417,7 @@ namespace BECore::Mahjong::Tests {
         const Seat actor = ComputerTable::NextActor(model);
         const StepResult refused = ComputerTable::FinishStep(model, actor, HandAction::MakePass());
         ASSERT_FALSE(refused.has_value()) << "a pass on the own turn is not listed";
-        EXPECT_EQ(std::optional<HandError>(refused.error()), Error(model.Apply(actor, HandAction::MakePass())));
+        EXPECT_EQ(Optional<HandError>(refused.error()), Error(model.Apply(actor, HandAction::MakePass())));
     }
 
     TEST(ComputerPlayerTest, PlayMatchPlaysEveryHandOfAMatchAndLeavesItFinished) {

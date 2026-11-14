@@ -49,7 +49,7 @@ namespace BECore::Mahjong {
     }
 
     /// The speed of an id, or nothing for any other text (client text, an old or damaged save).
-    [[nodiscard]] constexpr std::optional<AnimationSpeed> TryParseSpeed(std::string_view text) noexcept {
+    [[nodiscard]] constexpr Optional<AnimationSpeed> TryParseSpeed(std::string_view text) noexcept {
         for (const AnimationSpeed speed : EnumUtils<AnimationSpeed>::Values()) {
             if (SpeedText(speed) == text) {
                 return speed;

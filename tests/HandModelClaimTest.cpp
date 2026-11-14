@@ -96,7 +96,7 @@ namespace BECore::Mahjong::Tests {
             return spec;
         }
 
-        HandModel MahjongWindow(std::optional<int> liveAfterDeal = std::nullopt) {
+        HandModel MahjongWindow(Optional<int> liveAfterDeal = std::nullopt) {
             FixedWallSpec spec = MahjongSpec();
             spec.liveAfterDeal = liveAfterDeal;
             HandModel model = MakeModel(spec);

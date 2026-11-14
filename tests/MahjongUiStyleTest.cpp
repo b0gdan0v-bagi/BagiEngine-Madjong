@@ -63,7 +63,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         bool IsFontWeight(const std::string& weight) {
-            const std::optional<float> value = UIText::ParseFiniteFloat(weight.c_str());
+            const Optional<float> value = UIText::ParseFiniteFloat(weight.c_str());
             return value && (*value == static_cast<float>(kFontWeightRegular) || *value == static_cast<float>(kFontWeightBold));
         }
 
@@ -91,7 +91,7 @@ namespace BECore::Mahjong::Tests {
             const auto flag = [&](Rule rule, const char* attribute) { found.push_back({rule, name, attribute, AttributeOf(node, attribute)}); };
 
             if (node.attribute("fontSize")) {
-                const std::optional<float> size = UIText::ParseFiniteFloat(node.attribute("fontSize").as_string());
+                const Optional<float> size = UIText::ParseFiniteFloat(node.attribute("fontSize").as_string());
                 if (!size || !OnTheFontScale(*size)) {
                     flag(Rule::FontSize, "fontSize");
                 }
@@ -102,7 +102,7 @@ namespace BECore::Mahjong::Tests {
             }
             for (const char* attribute : kLengthAttributes) {
                 if (node.attribute(attribute)) {
-                    const std::optional<UILength> length = UIText::ParseLength(node.attribute(attribute).as_string());
+                    const Optional<UILength> length = UIText::ParseLength(node.attribute(attribute).as_string());
                     if (!length || (length->unit == UIUnit::Pixels && !OnTheGrid(length->value))) {
                         flag(Rule::Grid, attribute);
                     }
@@ -110,7 +110,7 @@ namespace BECore::Mahjong::Tests {
             }
             for (const char* attribute : kNumberAttributes) {
                 if (node.attribute(attribute)) {
-                    const std::optional<float> number = UIText::ParseFiniteFloat(node.attribute(attribute).as_string());
+                    const Optional<float> number = UIText::ParseFiniteFloat(node.attribute(attribute).as_string());
                     if (!number || !OnTheGrid(*number)) {
                         flag(Rule::Grid, attribute);
                     }
@@ -118,7 +118,7 @@ namespace BECore::Mahjong::Tests {
             }
             for (const char* attribute : kEdgeAttributes) {
                 if (node.attribute(attribute)) {
-                    const std::optional<UIEdges> edges = UIText::ParseEdges(node.attribute(attribute).as_string());
+                    const Optional<UIEdges> edges = UIText::ParseEdges(node.attribute(attribute).as_string());
                     if (!edges || !OnTheGrid(edges->left) || !OnTheGrid(edges->top) || !OnTheGrid(edges->right) || !OnTheGrid(edges->bottom)) {
                         flag(Rule::Grid, attribute);
                     }
@@ -128,22 +128,22 @@ namespace BECore::Mahjong::Tests {
 
         /// A round button has a radius of half its side: width and height are one number of pixels and the radius is half of it.
         bool IsRoundBox(const pugi::xml_node& node, float radius) {
-            const std::optional<UILength> width = UIText::ParseLength(node.attribute("width").as_string());
-            const std::optional<UILength> height = UIText::ParseLength(node.attribute("height").as_string());
+            const Optional<UILength> width = UIText::ParseLength(node.attribute("width").as_string());
+            const Optional<UILength> height = UIText::ParseLength(node.attribute("height").as_string());
             return width && height && width->unit == UIUnit::Pixels && height->unit == UIUnit::Pixels && width->value == height->value && width->value == 2.0f * radius;
         }
 
         /// The corner radius and the border width of an `element` or of a `set` of a variant: the radii are on the scale of the skin (or round), the border is one width.
         void CheckSkinScale(const pugi::xml_node& node, const std::string& name, std::vector<Violation>& found) {
             if (node.attribute("cornerRadius")) {
-                const std::optional<UICorners> corners = UIText::ParseCorners(node.attribute("cornerRadius").as_string());
+                const Optional<UICorners> corners = UIText::ParseCorners(node.attribute("cornerRadius").as_string());
                 const auto fits = [&](float radius) { return OnTheCornerScale(radius) || IsRoundBox(node, radius); };
                 if (!corners || !fits(corners->topLeft) || !fits(corners->topRight) || !fits(corners->bottomRight) || !fits(corners->bottomLeft)) {
                     found.push_back({Rule::Scale, name, "cornerRadius", AttributeOf(node, "cornerRadius")});
                 }
             }
             if (node.attribute("borderWidth")) {
-                const std::optional<float> width = UIText::ParseFiniteFloat(node.attribute("borderWidth").as_string());
+                const Optional<float> width = UIText::ParseFiniteFloat(node.attribute("borderWidth").as_string());
                 if (!width || (*width != 0.0f && *width != static_cast<float>(kBorderWidth))) {
                     found.push_back({Rule::Scale, name, "borderWidth", AttributeOf(node, "borderWidth")});
                 }
@@ -154,7 +154,7 @@ namespace BECore::Mahjong::Tests {
         void CheckSkinPaint(const pugi::xml_node& element, const std::string& name, std::vector<Violation>& found) {
             for (const char* attribute : kSkinColourAttributes) {
                 if (element.attribute(attribute)) {
-                    const std::optional<Color> color = UIText::ParseColor(element.attribute(attribute).as_string());
+                    const Optional<Color> color = UIText::ParseColor(element.attribute(attribute).as_string());
                     if (!color || !OnThePalette(*color)) {
                         found.push_back({Rule::Colour, name, attribute, AttributeOf(element, attribute)});
                     }
@@ -164,7 +164,7 @@ namespace BECore::Mahjong::Tests {
                 if (!element.attribute(attribute)) {
                     continue;
                 }
-                const std::optional<UIShadowSpec> spec = UIText::ParseShadow(element.attribute(attribute).as_string());
+                const Optional<UIShadowSpec> spec = UIText::ParseShadow(element.attribute(attribute).as_string());
                 if (!spec || !OnThePalette(spec->color)) {
                     found.push_back({Rule::Colour, name, attribute, AttributeOf(element, attribute)});
                 }
@@ -179,7 +179,7 @@ namespace BECore::Mahjong::Tests {
             const auto flag = [&](Rule rule, const char* attribute) { found.push_back({rule, name, attribute, AttributeOf(component, attribute)}); };
             for (const char* attribute : kTintAttributes) {
                 if (component.attribute(attribute)) {
-                    const std::optional<Color> color = UIText::ParseColor(component.attribute(attribute).as_string());
+                    const Optional<Color> color = UIText::ParseColor(component.attribute(attribute).as_string());
                     if (!color || !OnThePalette(*color)) {
                         flag(Rule::Colour, attribute);
                     }
@@ -220,7 +220,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         bool IsFloat(const pugi::xml_attribute& attribute, float expected) {
-            const std::optional<float> value = UIText::ParseFiniteFloat(attribute.as_string());
+            const Optional<float> value = UIText::ParseFiniteFloat(attribute.as_string());
             return value && std::abs(*value - expected) < 1e-6f;
         }
 
@@ -265,7 +265,7 @@ namespace BECore::Mahjong::Tests {
                 if (!element.attribute(attribute)) {
                     continue;
                 }
-                const std::optional<Color> color = UIText::ParseColor(element.attribute(attribute).as_string());
+                const Optional<Color> color = UIText::ParseColor(element.attribute(attribute).as_string());
                 if (!color || !OnThePalette(*color)) {
                     flag(Rule::Colour, attribute);
                 }
@@ -276,7 +276,7 @@ namespace BECore::Mahjong::Tests {
                     if (!component.attribute(attribute)) {
                         continue;
                     }
-                    const std::optional<Color> color = UIText::ParseColor(component.attribute(attribute).as_string());
+                    const Optional<Color> color = UIText::ParseColor(component.attribute(attribute).as_string());
                     if (!color || !OnThePalette(*color)) {
                         found.push_back({Rule::Colour, name, attribute, AttributeOf(component, attribute)});
                     }

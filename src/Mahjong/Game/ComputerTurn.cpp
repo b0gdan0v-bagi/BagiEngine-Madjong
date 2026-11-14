@@ -79,7 +79,7 @@ namespace BECore::Mahjong {
         }
 
         /// Step 2 and 4: the discard that declares the calling hand (`declaring`), or keeps the declared hand waiting.
-        std::optional<HandAction> ChooseWaitingDiscard(const TableView& view, MahjongRng& rng, bool declaring, bool readDanger) {
+        Optional<HandAction> ChooseWaitingDiscard(const TableView& view, MahjongRng& rng, bool declaring, bool readDanger) {
             eastl::vector<Candidate> candidates;
             for (const WaitingDiscard& discard : WaitingDiscards(view, declaring, readDanger)) {
                 candidates.push_back({discard.tile, discard.copies, discard.keep, discard.danger});
@@ -92,7 +92,7 @@ namespace BECore::Mahjong {
 
         /// Step 2 with `ownDrawsPickWait`: the discard that declares the calling hand and has the best expected value (no rng: ties are
         /// `ValueWaits`' order).
-        std::optional<HandAction> ChooseValuedDeclaration(const TableView& view) {
+        Optional<HandAction> ChooseValuedDeclaration(const TableView& view) {
             const eastl::vector<DiscardValue> waits = ValueWaits(view);
             if (waits.empty()) {
                 return std::nullopt;
@@ -101,9 +101,9 @@ namespace BECore::Mahjong {
         }
 
         /// Step 3: the first listed kong that does not hurt the hand.
-        std::optional<HandAction> ChooseKong(const TableView& view) {
+        Optional<HandAction> ChooseKong(const TableView& view) {
             const TileCounts counts = CountTiles(view.own.concealed);
-            std::optional<DiscardRating> current;
+            Optional<DiscardRating> current;
             for (const HandAction& action : view.legal) {
                 if (action.kind != ActionKind::ConcealedKong && action.kind != ActionKind::UpgradeKong) {
                     continue;
@@ -377,21 +377,21 @@ namespace BECore::Mahjong {
                 if ((handoff->run = BeginTurnSearch(view, rng, profile))) {
                     return {HandAction::MakePass(), TurnStep::Discard};
                 }
-            } else if (const std::optional<HandAction> searched = SearchTurnAction(view, rng, profile)) {
+            } else if (const Optional<HandAction> searched = SearchTurnAction(view, rng, profile)) {
                 return {*searched, StepOfSearched(view, *searched)};
             }
         }
-        const std::optional<HandAction> declaration = profile.ownDrawsPickWait ? ChooseValuedDeclaration(view) : ChooseWaitingDiscard(view, rng, true, profile.readDanger);
+        const Optional<HandAction> declaration = profile.ownDrawsPickWait ? ChooseValuedDeclaration(view) : ChooseWaitingDiscard(view, rng, true, profile.readDanger);
         if (declaration.has_value()) {
             if (!Roll(rng, profile.skipDeclarationPercent)) {
                 return {*declaration, TurnStep::Declare};
             }
         }
-        if (const std::optional<HandAction> kong = ChooseKong(view)) {
+        if (const Optional<HandAction> kong = ChooseKong(view)) {
             return {*kong, TurnStep::Kong};
         }
         if (view.own.callingDeclared) {
-            if (const std::optional<HandAction> keeping = ChooseWaitingDiscard(view, rng, false, profile.readDanger)) {
+            if (const Optional<HandAction> keeping = ChooseWaitingDiscard(view, rng, false, profile.readDanger)) {
                 return {*keeping, TurnStep::KeepWaiting};
             }
         }

@@ -63,7 +63,7 @@ namespace BECore::Mahjong {
     /// The kong of `view.pendingTile` when it is listed and the hand after it still waits (`RateClaim` at `kWaitingShanten`), rated
     /// by points: the kong gives its points and the loose tile, and the hand loses `FullyConcealed` once it is open. nullopt
     /// otherwise. A pure function of the view, no rng.
-    [[nodiscard]] std::optional<WaitingKong> RateWaitingKong(const TableView& view);
+    [[nodiscard]] Optional<WaitingKong> RateWaitingKong(const TableView& view);
 
     /// The rule of the window that decided (the numbers of the list in `ChooseClaimAction`).
     enum class ClaimStep {

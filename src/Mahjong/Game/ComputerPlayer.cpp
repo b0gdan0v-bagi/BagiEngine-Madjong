@@ -46,7 +46,7 @@ namespace BECore::Mahjong {
         return {action, std::nullopt};
     }
 
-    std::optional<HandAction> ComputerPlayer::Decide(const HandModel& model, Seat seat) {
+    Optional<HandAction> ComputerPlayer::Decide(const HandModel& model, Seat seat) {
         const TableView view = MakeTableView(model, seat);
         if (view.legal.empty()) {
             return std::nullopt;

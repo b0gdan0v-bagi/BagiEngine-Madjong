@@ -55,7 +55,7 @@ namespace BECore::Mahjong::Tests {
 
         bool StepOnce(MahjongSeatedGame& game) {
             for (int seat = 0; seat < kSeatCount; ++seat) {
-                if (const std::optional<Json> action = game.ChooseComputerAction(seat)) {
+                if (const Optional<Json> action = game.ChooseComputerAction(seat)) {
                     const auto done = game.PerformSeatAction(seat, *action);
                     EXPECT_TRUE(done.has_value());
                     return done.has_value();

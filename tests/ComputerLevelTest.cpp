@@ -83,7 +83,7 @@ namespace BECore::Mahjong::Tests {
             for (int hand = 0; hand < kWholeHands && match.GetPhase() == MatchPhase::InHand; ++hand) {
                 while (match.Hand().GetPhase() != Phase::Finished) {
                     const Seat actor = ComputerTable::NextActor(match.Hand());
-                    const std::optional<HandAction> action = players[actor].Decide(match.Hand(), actor);
+                    const Optional<HandAction> action = players[actor].Decide(match.Hand(), actor);
                     EXPECT_TRUE(action.has_value());
                     if (!action || !match.Hand().Apply(actor, *action)) {
                         return actions;

@@ -99,7 +99,7 @@ namespace BECore::Mahjong::Tests {
 
         /// The first decision of the wanted kind from `seed` on, after `skip` earlier ones, that a search would look at: a turn with no
         /// win, or a window with no mahjong claim, a hand that does not wait and at least two actions. Normal plays up to it.
-        std::optional<TableView> FindDecision(uint32_t seed, bool turn, int skip) {
+        Optional<TableView> FindDecision(uint32_t seed, bool turn, int skip) {
             Match match;
             EXPECT_TRUE(match.Start(SettingsOf(static_cast<int>(seed % 2)), seed).has_value());
             HandModel& hand = match.Hand();
@@ -123,7 +123,7 @@ namespace BECore::Mahjong::Tests {
         eastl::vector<TableView> FindDecisions(bool turn) {
             eastl::vector<TableView> views;
             for (int i = 0; i < kStatesPerPhase; ++i) {
-                if (const std::optional<TableView> view = FindDecision(kFirstStateSeed + static_cast<uint32_t>(i), turn, i % 4)) {
+                if (const Optional<TableView> view = FindDecision(kFirstStateSeed + static_cast<uint32_t>(i), turn, i % 4)) {
                     views.push_back(*view);
                 }
             }
@@ -134,11 +134,11 @@ namespace BECore::Mahjong::Tests {
             return view.phase == Phase::Discard ? ChooseTurnAction(view, rng, kNormalProfile) : ChooseClaimAction(view, rng, kNormalProfile);
         }
 
-        std::optional<SearchRun> Begin(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
+        Optional<SearchRun> Begin(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
             return view.phase == Phase::Discard ? BeginTurnSearch(view, rng, profile) : BeginClaimSearch(view, rng, profile);
         }
 
-        std::optional<HandAction> AtOnce(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
+        Optional<HandAction> AtOnce(const TableView& view, MahjongRng& rng, const LevelProfile& profile) {
             return view.phase == Phase::Discard ? SearchTurnAction(view, rng, profile) : SearchClaimAction(view, rng, profile);
         }
 
@@ -257,7 +257,7 @@ namespace BECore::Mahjong::Tests {
             const TableView view = MakeTableView(TurnModel(), kSeat0);
             ASSERT_GE(TurnCandidates(view, Normal(view, MahjongRng(kRngSeed)), kCandidates).size(), static_cast<size_t>(kSearchMinCandidates));
             MahjongRng rng(kRngSeed);
-            const std::optional<HandAction> answer = SearchTurnAction(view, rng, SearchProfile());
+            const Optional<HandAction> answer = SearchTurnAction(view, rng, SearchProfile());
             ASSERT_TRUE(answer.has_value());
             EXPECT_TRUE(Has(view.legal, *answer));
             EXPECT_EQ(RngState(rng), RngState(AfterOneDraw(MahjongRng(kRngSeed))));
@@ -265,7 +265,7 @@ namespace BECore::Mahjong::Tests {
         {
             const TableView view = MakeTableView(WindowModel(kPungHand, "5p"), kSeat1);
             MahjongRng rng(kRngSeed);
-            const std::optional<HandAction> answer = SearchClaimAction(view, rng, SearchProfile());
+            const Optional<HandAction> answer = SearchClaimAction(view, rng, SearchProfile());
             ASSERT_TRUE(answer.has_value());
             EXPECT_TRUE(Has(view.legal, *answer));
             EXPECT_EQ(RngState(rng), RngState(AfterOneDraw(MahjongRng(kRngSeed))));
@@ -284,7 +284,7 @@ namespace BECore::Mahjong::Tests {
 
         for (const TableView& view : {turn, window}) {
             MahjongRng rng(kRngSeed);
-            const std::optional<HandAction> answer = view.phase == Phase::Discard ? SearchTurnAction(view, rng, SearchProfile()) : SearchClaimAction(view, rng, SearchProfile());
+            const Optional<HandAction> answer = view.phase == Phase::Discard ? SearchTurnAction(view, rng, SearchProfile()) : SearchClaimAction(view, rng, SearchProfile());
             ASSERT_TRUE(answer.has_value());
             EXPECT_EQ(*answer, Normal(view, MahjongRng(kRngSeed)));
             EXPECT_EQ(RngState(rng), RngState(AfterOneDraw(MahjongRng(kRngSeed))));
@@ -465,8 +465,8 @@ namespace BECore::Mahjong::Tests {
                     const std::string where = std::string(turn ? "turn " : "window ") + std::to_string(i) + " worlds " + std::to_string(knobs.worlds) + " margin " + std::to_string(knobs.margin);
                     MahjongRng atOnce(kRngSeed + static_cast<uint32_t>(i));
                     MahjongRng begun(kRngSeed + static_cast<uint32_t>(i));
-                    const std::optional<HandAction> expected = AtOnce(views[i], atOnce, profile);
-                    std::optional<SearchRun> run = Begin(views[i], begun, profile);
+                    const Optional<HandAction> expected = AtOnce(views[i], atOnce, profile);
+                    Optional<SearchRun> run = Begin(views[i], begun, profile);
                     ASSERT_EQ(run.has_value(), expected.has_value()) << where;
                     ASSERT_TRUE(run.has_value()) << where;
                     // The one draw is made by the factory, before any step.
@@ -490,7 +490,7 @@ namespace BECore::Mahjong::Tests {
             const TableView& view = views.front();
             const LevelProfile profile = SearchProfile(3, kCandidates);
             MahjongRng rng(kRngSeed);
-            std::optional<SearchRun> run = Begin(view, rng, profile);
+            Optional<SearchRun> run = Begin(view, rng, profile);
             ASSERT_TRUE(run.has_value());
             const int half = run->StepsTotal() / 2;
             for (int i = 0; i < half; ++i) {
@@ -563,16 +563,16 @@ namespace BECore::Mahjong::Tests {
                     const LevelProfile profile = SearchProfile(knobs.worlds, kCandidates, knobs.margin);
                     const std::string where = std::string(turn ? "turn " : "window ") + std::to_string(i) + " worlds " + std::to_string(knobs.worlds) + " margin " + std::to_string(knobs.margin);
                     MahjongRng atOnce(kRngSeed + static_cast<uint32_t>(i));
-                    const std::optional<HandAction> expected = AtOnce(views[i], atOnce, profile);
+                    const Optional<HandAction> expected = AtOnce(views[i], atOnce, profile);
                     ASSERT_TRUE(expected.has_value()) << where;
                     MahjongRng stepping(kRngSeed + static_cast<uint32_t>(i));
-                    std::optional<SearchRun> stepped = Begin(views[i], stepping, profile);
+                    Optional<SearchRun> stepped = Begin(views[i], stepping, profile);
                     ASSERT_TRUE(stepped.has_value()) << where;
                     StepToEnd(*stepped, where);
 
                     for (const auto& [name, loop] : loops) {
                         MahjongRng rng(kRngSeed + static_cast<uint32_t>(i));
-                        std::optional<SearchRun> run = Begin(views[i], rng, profile);
+                        Optional<SearchRun> run = Begin(views[i], rng, profile);
                         ASSERT_TRUE(run.has_value()) << where << " " << name;
                         EXPECT_EQ(run->WorldCount(), knobs.worlds) << where;
                         run->RunWorlds(loop);
@@ -597,19 +597,19 @@ namespace BECore::Mahjong::Tests {
             const TableView& view = views.front();
             const LevelProfile profile = SearchProfile(kSeamWorlds);
             MahjongRng rng(kRngSeed);
-            std::optional<SearchRun> search = Begin(view, rng, profile);
+            Optional<SearchRun> search = Begin(view, rng, profile);
             ASSERT_TRUE(search.has_value());
             StepToEnd(*search, "search");
             ASSERT_FALSE(search->Values().front().empty());
 
             const auto over = [&] {
-                std::optional<SearchRun> run = BeginSearchOver(view, search->Candidates(), BaseSeedOf(MahjongRng(kRngSeed)), kSeamWorlds);
+                Optional<SearchRun> run = BeginSearchOver(view, search->Candidates(), BaseSeedOf(MahjongRng(kRngSeed)), kSeamWorlds);
                 EXPECT_TRUE(run.has_value());
                 return run;
             };
-            std::optional<SearchRun> serial = over();
-            std::optional<SearchRun> backwards = over();
-            std::optional<SearchRun> stepped = over();
+            Optional<SearchRun> serial = over();
+            Optional<SearchRun> backwards = over();
+            Optional<SearchRun> stepped = over();
             ASSERT_TRUE(serial.has_value() && backwards.has_value() && stepped.has_value());
             EXPECT_EQ(serial->WorldCount(), kSeamWorlds);
             EXPECT_EQ(serial->Candidates(), search->Candidates());
@@ -631,14 +631,14 @@ namespace BECore::Mahjong::Tests {
     TEST(ComputerSearchTest, TheSeamTakesTheCallersListWithNoBaselineAndNoSecondCandidate) {
         const TableView view = MakeTableView(TurnModel(), kSeat0);
         const eastl::vector<HandAction> one = {view.legal.back()};
-        std::optional<SearchRun> run = BeginSearchOver(view, one, kRngSeed, 3);
+        Optional<SearchRun> run = BeginSearchOver(view, one, kRngSeed, 3);
         ASSERT_TRUE(run.has_value());
         run->RunWorlds(SerialLoop);
         ASSERT_EQ(run->Values().size(), 1U);
         EXPECT_EQ(run->Values().front().size(), 3U);
         // The list is kept as given, in order: the first element is no "Normal choice".
         const eastl::vector<HandAction> reversed = {view.legal.back(), view.legal.front()};
-        std::optional<SearchRun> two = BeginSearchOver(view, reversed, kRngSeed, 3);
+        Optional<SearchRun> two = BeginSearchOver(view, reversed, kRngSeed, 3);
         ASSERT_TRUE(two.has_value());
         EXPECT_EQ(two->Candidates(), reversed);
         two->RunWorlds(SerialLoop);
@@ -677,7 +677,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(Has(window.legal, HandAction::MakePass()));
 
         for (const TableView* view : {&turn, &win, &window}) {
-            std::optional<SearchRun> run = BeginSearchOver(*view, view->legal, kRngSeed, kSeamWorlds);
+            Optional<SearchRun> run = BeginSearchOver(*view, view->legal, kRngSeed, kSeamWorlds);
             ASSERT_TRUE(run.has_value());
             EXPECT_EQ(run->Candidates(), view->legal);
             run->RunWorlds(SerialLoop);
@@ -689,7 +689,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         // The win pays: it is the best row in every world, and the same points whichever world it is played in.
-        std::optional<SearchRun> run = BeginSearchOver(win, win.legal, kRngSeed, kSeamWorlds);
+        Optional<SearchRun> run = BeginSearchOver(win, win.legal, kRngSeed, kSeamWorlds);
         ASSERT_TRUE(run.has_value());
         run->RunWorlds(SerialLoop);
         for (size_t c = 0; c < win.legal.size(); ++c) {
@@ -709,7 +709,7 @@ namespace BECore::Mahjong::Tests {
     TEST(ComputerSearchTest, TheSeamCountsTheWorldsThatCannotBeSampled) {
         TableView view = MakeTableView(TurnModel(), kSeat0);
         view.liveCount += 5;
-        std::optional<SearchRun> run = BeginSearchOver(view, view.legal, kRngSeed, 3);
+        Optional<SearchRun> run = BeginSearchOver(view, view.legal, kRngSeed, 3);
         ASSERT_TRUE(run.has_value());
         run->RunWorlds(SerialLoop);
         EXPECT_TRUE(run->Done());
@@ -724,7 +724,7 @@ namespace BECore::Mahjong::Tests {
             const eastl::vector<TableView> views = FindDecisions(turn);
             ASSERT_FALSE(views.empty());
             MahjongRng rng(kRngSeed);
-            std::optional<SearchRun> run = Begin(views.front(), rng, SearchProfile(3, kCandidates));
+            Optional<SearchRun> run = Begin(views.front(), rng, SearchProfile(3, kCandidates));
             ASSERT_TRUE(run.has_value());
             const std::string before = Shown(*run);
             const int candidates = run->StepsTotal() / run->WorldCount();
@@ -740,7 +740,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_FALSE(run->PlayWorld(run->WorldCount()).played);
             // The run still steps to the answer it would have had untouched.
             MahjongRng reference(kRngSeed);
-            const std::optional<HandAction> expected = AtOnce(views.front(), reference, SearchProfile(3, kCandidates));
+            const Optional<HandAction> expected = AtOnce(views.front(), reference, SearchProfile(3, kCandidates));
             StepToEnd(*run, "after PlayWorld");
             EXPECT_EQ(run->Result(), *expected);
         }
@@ -753,7 +753,7 @@ namespace BECore::Mahjong::Tests {
         window.liveCount += 5;
         for (const TableView& view : {turn, window}) {
             MahjongRng rng(kRngSeed);
-            std::optional<SearchRun> run = Begin(view, rng, SearchProfile());
+            Optional<SearchRun> run = Begin(view, rng, SearchProfile());
             ASSERT_TRUE(run.has_value());
             for (int index = 0; index < run->WorldCount(); ++index) {
                 EXPECT_FALSE(run->PlayWorld(index).played);
@@ -770,7 +770,7 @@ namespace BECore::Mahjong::Tests {
         constexpr int kRunWorlds = 3;
         const auto begin = [&](int margin) {
             MahjongRng rng(kRngSeed);
-            std::optional<SearchRun> run = BeginTurnSearch(view, rng, SearchProfile(kRunWorlds, kCandidates, margin));
+            Optional<SearchRun> run = BeginTurnSearch(view, rng, SearchProfile(kRunWorlds, kCandidates, margin));
             EXPECT_TRUE(run.has_value());
             return *run;
         };
@@ -874,7 +874,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         WorldSource NoWorldSource() {
-            return [](const TableView&, MahjongRng&) -> std::optional<HandModel> { return std::nullopt; };
+            return [](const TableView&, MahjongRng&) -> Optional<HandModel> { return std::nullopt; };
         }
 
         /// The first number world `index` of a run with `base` draws from its own rng (`DerivedSeed(base, 2 * index)` is the seed).
@@ -893,9 +893,9 @@ namespace BECore::Mahjong::Tests {
             const TableView& view = views.front();
             const LevelProfile profile = SearchProfile(3, kCandidates);
             MahjongRng plainRng(kRngSeed);
-            std::optional<SearchRun> plain = Begin(view, plainRng, profile);
+            Optional<SearchRun> plain = Begin(view, plainRng, profile);
             MahjongRng sourcedRng(kRngSeed);
-            std::optional<SearchRun> sourced = Begin(view, sourcedRng, profile);
+            Optional<SearchRun> sourced = Begin(view, sourcedRng, profile);
             ASSERT_TRUE(plain.has_value() && sourced.has_value());
             EXPECT_FALSE(sourced->HasWorldSource());
             ASSERT_TRUE(sourced->UseWorldSource(SamplingSource()));
@@ -909,7 +909,7 @@ namespace BECore::Mahjong::Tests {
 
             // A stepped run takes the source the same way.
             MahjongRng steppedRng(kRngSeed);
-            std::optional<SearchRun> stepped = Begin(view, steppedRng, profile);
+            Optional<SearchRun> stepped = Begin(view, steppedRng, profile);
             ASSERT_TRUE(stepped.has_value());
             ASSERT_TRUE(stepped->UseWorldSource(SamplingSource()));
             StepToEnd(*stepped, "stepped with a source");
@@ -935,7 +935,7 @@ namespace BECore::Mahjong::Tests {
                 std::mutex lock;
                 eastl::vector<uint32_t> draws;
                 MahjongRng rng(kRngSeed);
-                std::optional<SearchRun> run = Begin(view, rng, profile);
+                Optional<SearchRun> run = Begin(view, rng, profile);
                 ASSERT_TRUE(run.has_value());
                 ASSERT_TRUE(run->UseWorldSource([&](const TableView& v, MahjongRng& worldRng) {
                     MahjongRng probe = worldRng;
@@ -950,7 +950,7 @@ namespace BECore::Mahjong::Tests {
 
             // Two plays of the same world give the same row: the source gets the same rng each time.
             MahjongRng rng(kRngSeed);
-            std::optional<SearchRun> run = Begin(view, rng, profile);
+            Optional<SearchRun> run = Begin(view, rng, profile);
             ASSERT_TRUE(run.has_value());
             ASSERT_TRUE(run->UseWorldSource(SamplingSource()));
             for (int index = 0; index < kSourceWorlds; ++index) {
@@ -966,10 +966,10 @@ namespace BECore::Mahjong::Tests {
             const TableView& view = views.front();
             const LevelProfile profile = SearchProfile(3, kCandidates);
             // A model that was never begun is a finished hand: no candidate applies in it.
-            const WorldSource finished = [](const TableView&, MahjongRng&) { return std::optional<HandModel>(HandModel()); };
+            const WorldSource finished = [](const TableView&, MahjongRng&) { return Optional<HandModel>(HandModel()); };
             for (const WorldSource& source : {NoWorldSource(), finished}) {
                 MahjongRng rng(kRngSeed);
-                std::optional<SearchRun> run = Begin(view, rng, profile);
+                Optional<SearchRun> run = Begin(view, rng, profile);
                 ASSERT_TRUE(run.has_value());
                 ASSERT_TRUE(run->UseWorldSource(source));
                 for (int index = 0; index < run->WorldCount(); ++index) {
@@ -1097,7 +1097,7 @@ namespace BECore::Mahjong::Tests {
                 int steps = 0;
                 while (hand.GetPhase() != Phase::Finished && ++steps < kStepLimit) {
                     const Seat actor = ComputerTable::NextActor(hand);
-                    const std::optional<HandAction> action = players[actor].Decide(hand, actor);
+                    const Optional<HandAction> action = players[actor].Decide(hand, actor);
                     ASSERT_TRUE(action.has_value()) << "seed " << seed << " flowers " << flowers << " step " << steps;
                     ASSERT_TRUE(hand.Apply(actor, *action).has_value()) << "seed " << seed << " flowers " << flowers << " step " << steps;
                 }

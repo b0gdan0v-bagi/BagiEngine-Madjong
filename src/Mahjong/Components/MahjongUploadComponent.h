@@ -48,9 +48,9 @@ namespace BECore::Mahjong {
     public:
         /// What a test replaces (a field left empty is the real thing); set before the scene is made and cleared after.
         struct Overrides {
-            IWebPoster* poster = nullptr;                 ///< not owned
-            std::optional<std::filesystem::path> folder;  ///< the folder of `upload.txt` (empty path: nowhere)
-            std::optional<bool> remembered;               ///< `MahjongGame::SavesAreRemembered()`
+            IWebPoster* poster = nullptr;            ///< not owned
+            Optional<std::filesystem::path> folder;  ///< the folder of `upload.txt` (empty path: nowhere)
+            Optional<bool> remembered;               ///< `MahjongGame::SavesAreRemembered()`
         };
         [[nodiscard]] static Overrides& TestOverrides() noexcept;
 

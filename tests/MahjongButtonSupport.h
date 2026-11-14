@@ -72,7 +72,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// The text as shown (`{#key}` and `{name}` expanded); nothing when the element shows none.
-    inline std::optional<std::string> ShownText(const UIElement* element) {
+    inline Optional<std::string> ShownText(const UIElement* element) {
         const auto* text = TextOf(element);
         if (text == nullptr) {
             return std::nullopt;

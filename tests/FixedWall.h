@@ -38,14 +38,14 @@ namespace BECore::Mahjong::Tests {
         std::array<std::string, kSeatCount> hands;
         std::string live;
         std::string loose;
-        std::optional<int> liveAfterDeal;
+        Optional<int> liveAfterDeal;
     };
 
     namespace FixedWallDetail {
 
         /// The tiles of a text; a bad text fails the test and gives no tiles.
         inline eastl::vector<Tile> Parse(const std::string& text, const char* what) {
-            const std::optional<eastl::vector<Tile>> tiles = ParseTiles(text);
+            const Optional<eastl::vector<Tile>> tiles = ParseTiles(text);
             if (!tiles.has_value()) {
                 ADD_FAILURE() << "FixedWallSpec." << what << ": cannot read the tiles \"" << text << "\"";
                 return {};

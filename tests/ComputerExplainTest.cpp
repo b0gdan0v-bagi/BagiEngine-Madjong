@@ -52,13 +52,13 @@ namespace BECore::Mahjong::Tests {
             return model;
         }
 
-        const TurnExplanation& TurnOf(const std::optional<Explanation>& explained) {
+        const TurnExplanation& TurnOf(const Optional<Explanation>& explained) {
             EXPECT_TRUE(explained.has_value() && explained->turn.has_value());
             static const TurnExplanation kEmpty;
             return explained.has_value() && explained->turn.has_value() ? *explained->turn : kEmpty;
         }
 
-        const ClaimExplanation& ClaimOf(const std::optional<Explanation>& explained) {
+        const ClaimExplanation& ClaimOf(const Optional<Explanation>& explained) {
             EXPECT_TRUE(explained.has_value() && explained->claim.has_value());
             static const ClaimExplanation kEmpty;
             return explained.has_value() && explained->claim.has_value() ? *explained->claim : kEmpty;
@@ -117,7 +117,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Everything an explanation says, as one string, so two explanations can be compared.
-        std::string Digest(const std::optional<Explanation>& explained) {
+        std::string Digest(const Optional<Explanation>& explained) {
             if (!explained.has_value()) {
                 return "none";
             }
@@ -157,7 +157,7 @@ namespace BECore::Mahjong::Tests {
         const TableView view = MakeTableView(model, kSeat0);
         const TileCounts counts = CountTiles(view.own.concealed);
 
-        const std::optional<Explanation> explained = ExplainAdvice(view);
+        const Optional<Explanation> explained = ExplainAdvice(view);
         const TurnExplanation& turn = TurnOf(explained);
 
         EXPECT_EQ(turn.action, PlayersChoice(view));
@@ -473,8 +473,8 @@ namespace BECore::Mahjong::Tests {
             spec.live = std::string("Ew ") + (other ? "Gd Wd Nw" : "Nw Wd Gd");
             return MakeModel(spec);
         };
-        const std::optional<Explanation> a = ExplainAdvice(MakeTableView(turn(false), kSeat0));
-        const std::optional<Explanation> b = ExplainAdvice(MakeTableView(turn(true), kSeat0));
+        const Optional<Explanation> a = ExplainAdvice(MakeTableView(turn(false), kSeat0));
+        const Optional<Explanation> b = ExplainAdvice(MakeTableView(turn(true), kSeat0));
         ASSERT_TRUE(a.has_value());
         EXPECT_EQ(Digest(a), Digest(b));
 
@@ -491,7 +491,7 @@ namespace BECore::Mahjong::Tests {
         };
         const HandModel c = window("1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Rd Wd", kQuiet3);
         const HandModel d = window("2p 8p 2s 5s 8s 2m 5m 8m Ww Gd Rd Wd 9p", "4p 7p 4s 7s 4m 7m 1s 1m 9s 9m Rd Wd Gd");
-        const std::optional<Explanation> windowA = ExplainAdvice(MakeTableView(c, kSeat1));
+        const Optional<Explanation> windowA = ExplainAdvice(MakeTableView(c, kSeat1));
         ASSERT_TRUE(windowA.has_value());
         EXPECT_EQ(Digest(windowA), Digest(ExplainAdvice(MakeTableView(d, kSeat1))));
     }
@@ -520,7 +520,7 @@ namespace BECore::Mahjong::Tests {
                     const Seat actor = ComputerTable::NextActor(match.Hand());
                     ASSERT_NE(actor, kNoSeat);
                     const TableView view = MakeTableView(match.Hand(), actor);
-                    const std::optional<Explanation> explained = ExplainAdvice(view, profile);
+                    const Optional<Explanation> explained = ExplainAdvice(view, profile);
                     ASSERT_TRUE(explained.has_value()) << "hand " << index << " step " << step;
                     EXPECT_EQ(explained->Action(), PlayersChoice(view, profile)) << "hand " << index << " step " << step;
                     if (explained->turn.has_value()) {
@@ -605,10 +605,10 @@ namespace BECore::Mahjong::Tests {
             view.legal.push_back(HandAction::MakeDiscard(T(tile), true));
         }
 
-        const std::optional<Explanation> off = ExplainAdvice(view);
+        const Optional<Explanation> off = ExplainAdvice(view);
         LevelProfile on = kNormalProfile;
         on.readDanger = true;
-        const std::optional<Explanation> withKnob = ExplainAdvice(view, on);
+        const Optional<Explanation> withKnob = ExplainAdvice(view, on);
 
         const TurnExplanation& plain = TurnOf(off);
         EXPECT_EQ(plain.declaredOpponents, 1);
@@ -633,7 +633,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(ComputerExplainTest, WithNoDeclaredOpponentEveryOptionIsSafe) {
         const HandModel model = MakeModel(SpecOf(kTwoSided, "Gd"));
-        const std::optional<Explanation> explained = ExplainAdvice(MakeTableView(model, kSeat0));
+        const Optional<Explanation> explained = ExplainAdvice(MakeTableView(model, kSeat0));
 
         const TurnExplanation& turn = TurnOf(explained);
         EXPECT_EQ(turn.declaredOpponents, 0);

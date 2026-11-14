@@ -15,8 +15,8 @@ namespace BECore::Mahjong::Tests {
         constexpr uint8_t kDimAlpha = 200;  // `color="0,0,0,200"` of the `Dim` element
 
         /// The alpha of the dim of `Setup` as drawn in the last frame (the rect of black that covers the view, or the 0.96 of it while the card rises); nullopt when it was not drawn.
-        std::optional<uint8_t> DimAlpha(const TurnRecordingRenderer& renderer) {
-            std::optional<uint8_t> alpha;
+        Optional<uint8_t> DimAlpha(const TurnRecordingRenderer& renderer) {
+            Optional<uint8_t> alpha;
             for (const DrawCall& call : renderer.calls) {
                 if (call.kind == DrawKind::Rect && call.color.r == 0 && call.color.g == 0 && call.color.b == 0 && call.rect.w >= kDimMinShare * kViewWidth &&
                     call.rect.h >= kDimMinShare * kViewHeight) {
@@ -82,7 +82,7 @@ namespace BECore::Mahjong::Tests {
         Draw();
         CoreManager::GetTime().Advance(0.125);
         Draw();
-        const std::optional<uint8_t> halfway = DimAlpha(*_renderer);
+        const Optional<uint8_t> halfway = DimAlpha(*_renderer);
         ASSERT_TRUE(halfway.has_value());
         EXPECT_GT(*halfway, 0);
         EXPECT_LT(*halfway, kDimAlpha);

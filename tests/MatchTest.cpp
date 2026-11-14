@@ -38,8 +38,8 @@ namespace BECore::Mahjong::Tests {
             return match;
         }
 
-        std::optional<MatchError> ErrorOf(const MatchStatus& status) {
-            return status.has_value() ? std::nullopt : std::optional<MatchError>(status.error());
+        Optional<MatchError> ErrorOf(const MatchStatus& status) {
+            return status.has_value() ? std::nullopt : Optional<MatchError>(status.error());
         }
 
         /// A settlement of the hand in progress that nobody played: the kind, the winner and the change of the points.

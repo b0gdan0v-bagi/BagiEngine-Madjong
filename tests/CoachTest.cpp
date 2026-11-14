@@ -111,7 +111,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         CoachNote NoteOf(const TableView& view, const HandAction& taken) {
-            const std::optional<CoachNote> note = JudgeMove(view, taken);
+            const Optional<CoachNote> note = JudgeMove(view, taken);
             EXPECT_TRUE(note.has_value());
             return note.value_or(CoachNote{});
         }
@@ -165,7 +165,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(CoachTest, ADiscardThatIsTheAdviceSaysNothing) {
         const TableView view = PairedView();
-        const std::optional<HandAction> advice = AdviceFor(view);
+        const Optional<HandAction> advice = AdviceFor(view);
         ASSERT_TRUE(advice.has_value());
 
         EXPECT_FALSE(JudgeMove(view, *advice).has_value());
@@ -248,7 +248,7 @@ namespace BECore::Mahjong::Tests {
         for (const char* tile : {"5m", "Gd"}) {
             view.legal.push_back(HandAction::MakeDiscard(T(tile), true));
         }
-        const std::optional<HandAction> advice = AdviceFor(view);
+        const Optional<HandAction> advice = AdviceFor(view);
         ASSERT_TRUE(advice.has_value());
 
         for (const char* tile : {"5m", "Gd"}) {
@@ -258,7 +258,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(CoachTest, KeepingTheWaitIsJudgedByTheWaitingCopiesAndBreakingItDiffers) {
         const TableView view = KeepingView();
-        const std::optional<HandAction> advice = AdviceFor(view);
+        const Optional<HandAction> advice = AdviceFor(view);
         ASSERT_TRUE(advice.has_value());
         ASSERT_EQ(advice->tile, T("6p"));
 
@@ -293,7 +293,7 @@ namespace BECore::Mahjong::Tests {
         const TableView view = MakeTableView(MakeModel(SpecOf("1s 2s 3s 4s 5s 6s 7m 8m 9m 4p 4p 4p Rd", "4p")), kSeat0);
         const HandAction kong = HandAction::MakeConcealedKong(T("4p"));
         ASSERT_TRUE(CanJudge(view, kong));
-        const std::optional<HandAction> advice = AdviceFor(view);
+        const Optional<HandAction> advice = AdviceFor(view);
         ASSERT_TRUE(advice.has_value());
         ASSERT_NE(*advice, kong);
         ASSERT_TRUE(advice->declareCalling);
@@ -437,7 +437,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         HintCard AdviceCardOf(const TableView& view) {
-            const std::optional<Explanation> explained = ExplainAdvice(view, ByPoints());
+            const Optional<Explanation> explained = ExplainAdvice(view, ByPoints());
             EXPECT_TRUE(explained.has_value());
             return explained.has_value() ? MakeAdviceCard(Words(), view, *explained, {}) : HintCard{};
         }
@@ -462,7 +462,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(CoachTest, TheAdviceCardOfAConcealedWaitingHandPassesTheKongByPoints) {
         const TableView view = WaitingKongView(false);
-        const std::optional<Explanation> explained = ExplainAdvice(view, ByPoints());
+        const Optional<Explanation> explained = ExplainAdvice(view, ByPoints());
         ASSERT_TRUE(explained.has_value() && explained->claim.has_value());
         ASSERT_EQ(explained->claim->step, ClaimStep::WaitingPass);
         ASSERT_TRUE(explained->claim->waitingKong.has_value());
@@ -481,7 +481,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(CoachTest, TheAdviceCardOfAnOpenWaitingHandTakesTheKongByPoints) {
         const TableView view = WaitingKongView(true);
-        const std::optional<Explanation> explained = ExplainAdvice(view, ByPoints());
+        const Optional<Explanation> explained = ExplainAdvice(view, ByPoints());
         ASSERT_TRUE(explained.has_value() && explained->claim.has_value());
         ASSERT_EQ(explained->claim->step, ClaimStep::WaitingKong);
         EXPECT_EQ(explained->Action(), kKong);
@@ -498,7 +498,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(CoachTest, TheOtherClaimIsJudgedByTheNumbersAfterIt) {
         const TableView view = PungOrChowView();
-        const std::optional<HandAction> advice = AdviceFor(view);
+        const Optional<HandAction> advice = AdviceFor(view);
         ASSERT_TRUE(advice.has_value());
         const HandAction other = *advice == kPung ? ChowOf("4p") : kPung;
         ASSERT_TRUE(CanJudge(view, other));
@@ -516,7 +516,7 @@ namespace BECore::Mahjong::Tests {
         const DiscardRating advised = find(*advice);
         const DiscardRating taken = find(other);
 
-        const std::optional<CoachNote> note = JudgeMove(view, other);
+        const Optional<CoachNote> note = JudgeMove(view, other);
 
         EXPECT_EQ(note.has_value(), advised.shanten != taken.shanten || advised.acceptance != taken.acceptance);
         if (note.has_value()) {
@@ -555,8 +555,8 @@ namespace BECore::Mahjong::Tests {
         const TableView a = turn(false);
         const TableView b = turn(true);
         for (const HandAction& action : a.legal) {
-            const std::optional<CoachNote> noteA = JudgeMove(a, action);
-            const std::optional<CoachNote> noteB = JudgeMove(b, action);
+            const Optional<CoachNote> noteA = JudgeMove(a, action);
+            const Optional<CoachNote> noteB = JudgeMove(b, action);
             ASSERT_EQ(noteA.has_value(), noteB.has_value());
             if (noteA.has_value()) {
                 EXPECT_EQ(*noteA, *noteB);
@@ -578,8 +578,8 @@ namespace BECore::Mahjong::Tests {
         const TableView c = window("1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Rd Wd", kQuiet3);
         const TableView d = window("2p 8p 2s 5s 8s 2m 5m 8m Ww Gd Rd Wd 9p", "4p 7p 4s 7s 4m 7m 1s 1m 9s 9m Rd Wd Gd");
         for (const HandAction& action : c.legal) {
-            const std::optional<CoachNote> noteC = JudgeMove(c, action);
-            const std::optional<CoachNote> noteD = JudgeMove(d, action);
+            const Optional<CoachNote> noteC = JudgeMove(c, action);
+            const Optional<CoachNote> noteD = JudgeMove(d, action);
             ASSERT_EQ(noteC.has_value(), noteD.has_value());
             if (noteC.has_value()) {
                 EXPECT_EQ(*noteC, *noteD);

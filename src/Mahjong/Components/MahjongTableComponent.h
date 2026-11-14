@@ -205,7 +205,7 @@ namespace BECore::Mahjong {
 
         /// The index (in the concealed tiles of the viewer) of the tile drawn raised by the last `OnDraw`; none when no tile is selected. The
         /// hints draw their marks on `RaisedRect` of that slot.
-        [[nodiscard]] std::optional<int> SelectedHandIndex() const noexcept {
+        [[nodiscard]] Optional<int> SelectedHandIndex() const noexcept {
             return _drawnSelected;
         }
 
@@ -282,7 +282,7 @@ namespace BECore::Mahjong {
         /// Drops the selection that no longer holds (and any, with no game).
         void RefreshSelection(const MahjongGame* game);
         /// A click on a hand tile: `StepTap` says what it does. Needs `PersonToAct()`.
-        void TapHandTile(MahjongGame& game, const std::optional<int>& hit);
+        void TapHandTile(MahjongGame& game, const Optional<int>& hit);
         /// What the person to act at @p actor may do now: `LegalActions` of the hand, and in a room the server's own list (`OnlineTable::actions`,
         /// without `next_hand`: a display hand lists nothing). Valid until the next call.
         [[nodiscard]] const eastl::vector<HandAction>& LegalFor(const MahjongGame& game, Seat actor);
@@ -390,28 +390,28 @@ namespace BECore::Mahjong {
 
             bool operator==(const ButtonsKey&) const = default;
         };
-        std::optional<ButtonsKey> _offeredKey;      // the key of `_offered`; none while no person acts
+        Optional<ButtonsKey> _offeredKey;           // the key of `_offered`; none while no person acts
         ActionButtons _offered;                     // `MakeActionButtons` of the person to act, made again only when the key moves
         eastl::vector<HandAction> _legal;           // `LegalFor`, a member so that it keeps its capacity
-        std::optional<ButtonsKey> _keepsKey;        // the key `_keeps` was made for; none while the keeps-waiting bars are not asked for
+        Optional<ButtonsKey> _keepsKey;             // the key `_keeps` was made for; none while the keeps-waiting bars are not asked for
         eastl::array<bool, kTileIdCount> _keeps{};  // `KeepsWaitingDiscards` of the viewer's own turn
-        std::optional<ButtonKind> _hoveredButton;   // the shown button of `Actions` under the pointer at the last publication
+        Optional<ButtonKind> _hoveredButton;        // the shown button of `Actions` under the pointer at the last publication
         ChowTakes _chowTakes;                       // what the last `OnDraw` framed in the hand for the offered chow
         eastl::string_view _hintKey;                // the key of the sentence in `actionHint` (a literal of `SpecOf`, which lives as long as the program)
         uint64_t _hintStringsVersion = 0;           // the version of the string table that sentence was looked up at
         bool _handoffShown = false;
         bool _compactActions = false;  // `ActionsCompact` is the shown canvas of the buttons; the scene file starts with `Actions`
         bool _declareNext = false;
-        bool _touchSeen = false;                  // a click made by a touch or a pen was seen: the tap regime stays on from then
-        std::optional<bool> _drawnSmallHandTile;  // `SmallHandTileNow()` of the last draw: what the regime reads between draws
-        std::optional<int> _selected;             // the selected hand tile (an index of the concealed tiles of the person to act) and what it holds for
-        Tile _selectedTile;                       // the tile it was made on
-        DeclareTurn _selectedTurn;                // the turn,
-        uint64_t _selectedVersion = 0;            // the version of the session
-        SeenHand _selectedHand;                   // and the hand and match
-        std::optional<int> _drawnSelected;        // the tile the last `OnDraw` raised
-        bool _selectedLabelShown = false;         // the label `SelectedTile` is shown
-        Tile _textTile;                           // the tile `selectedTileText` names now (invalid for none) and the string table version it was worded at
+        bool _touchSeen = false;             // a click made by a touch or a pen was seen: the tap regime stays on from then
+        Optional<bool> _drawnSmallHandTile;  // `SmallHandTileNow()` of the last draw: what the regime reads between draws
+        Optional<int> _selected;             // the selected hand tile (an index of the concealed tiles of the person to act) and what it holds for
+        Tile _selectedTile;                  // the tile it was made on
+        DeclareTurn _selectedTurn;           // the turn,
+        uint64_t _selectedVersion = 0;       // the version of the session
+        SeenHand _selectedHand;              // and the hand and match
+        Optional<int> _drawnSelected;        // the tile the last `OnDraw` raised
+        bool _selectedLabelShown = false;    // the label `SelectedTile` is shown
+        Tile _textTile;                      // the tile `selectedTileText` names now (invalid for none) and the string table version it was worded at
         uint64_t _textStringsVersion = 0;
         float _pointerX = 0.0f;  // the pointer of the mouse in output pixels, valid while `_pointerSeen`: the last motion the table got (converted to the view when
         float _pointerY = 0.0f;  // it is used, so a resized window keeps it where it is on the screen)
@@ -428,7 +428,7 @@ namespace BECore::Mahjong {
             uint64_t version = 0;
             uint64_t starts = 0;
         };
-        std::optional<StepInProgress> _step;
+        Optional<StepInProgress> _step;
         ComputerThinking _thinking;  // runs the search of `_step`; ends with the component
         /// After the first step of a pause that was in a claim window: the other computers of the window and the discard after it go
         /// without another pause. `_burstSerial` is the window serial before the first step (`HoldScoreTableIfBeaten`).
@@ -457,9 +457,9 @@ namespace BECore::Mahjong {
         eastl::vector<PoolString> _regionNames;                                           // and the interned names of them, in the same order
         eastl::array<IntrusivePtr<UICanvasComponent>, kRegionNodeCount> _regionCanvases;  // the canvases of `kRegionNodes`, null for a node the scene lacks
 
-        std::optional<std::filesystem::file_time_type> _layoutStamp;  // the stamp of the file of the config `TableLayout` at the last look, none when it has none
-        std::chrono::steady_clock::time_point _layoutPolled;          // the last look
-        eastl::string _layoutRefused;                                 // the text of the refusal that was logged last, empty when the last offer was not refused
+        Optional<std::filesystem::file_time_type> _layoutStamp;  // the stamp of the file of the config `TableLayout` at the last look, none when it has none
+        std::chrono::steady_clock::time_point _layoutPolled;     // the last look
+        eastl::string _layoutRefused;                            // the text of the refusal that was logged last, empty when the last offer was not refused
         static MahjongTableComponent* s_active;
     };
 

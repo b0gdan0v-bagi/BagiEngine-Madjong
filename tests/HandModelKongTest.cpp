@@ -125,7 +125,7 @@ namespace BECore::Mahjong::Tests {
             return spec;
         }
 
-        HandModel LooseWinModel(std::optional<int> liveAfterDeal = std::nullopt) {
+        HandModel LooseWinModel(Optional<int> liveAfterDeal = std::nullopt) {
             FixedWallSpec spec = LooseWinSpec();
             spec.liveAfterDeal = liveAfterDeal;
             HandModel model = MakeModel(spec);

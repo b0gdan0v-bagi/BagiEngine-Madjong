@@ -647,8 +647,8 @@ namespace BECore::Mahjong {
         Receive(seat, _wall.Draw(), false);
     }
 
-    void HandModel::Receive(Seat seat, std::optional<Tile> first, bool loose) {
-        std::optional<Tile> tile = first;
+    void HandModel::Receive(Seat seat, Optional<Tile> first, bool loose) {
+        Optional<Tile> tile = first;
         while (tile.has_value() && _settings.flowers && tile->IsBonus()) {
             _hands[seat].bonus.push_back(*tile);
             tile = _wall.DrawLoose();

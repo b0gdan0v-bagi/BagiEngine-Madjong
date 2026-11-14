@@ -107,7 +107,7 @@ namespace BECore::Mahjong {
 
     }  // namespace
 
-    std::optional<ScoreKind> FindLimitHand(const eastl::vector<Reading>& readings, const ScoreInput& input) {
+    Optional<ScoreKind> FindLimitHand(const eastl::vector<Reading>& readings, const ScoreInput& input) {
         if (!input.won) {
             return std::nullopt;
         }

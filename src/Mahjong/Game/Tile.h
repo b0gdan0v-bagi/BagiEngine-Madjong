@@ -150,9 +150,9 @@ namespace BECore::Mahjong {
     [[nodiscard]] std::string_view ToString(Tile tile) noexcept;
 
     /// Reads one tile in the notation above (case sensitive); nullopt for anything else.
-    [[nodiscard]] std::optional<Tile> TryParse(std::string_view text) noexcept;
+    [[nodiscard]] Optional<Tile> TryParse(std::string_view text) noexcept;
 
     /// Reads tiles separated by spaces ("1p 2p 3p"); an empty text gives an empty list, a bad token or a doubled space gives nullopt.
-    [[nodiscard]] std::optional<eastl::vector<Tile>> ParseTiles(std::string_view text);
+    [[nodiscard]] Optional<eastl::vector<Tile>> ParseTiles(std::string_view text);
 
 }  // namespace BECore::Mahjong

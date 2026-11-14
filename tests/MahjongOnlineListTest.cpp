@@ -110,9 +110,9 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(room.code, open.Client().Room());
         EXPECT_EQ(room.host, "{name}%s");
         EXPECT_EQ(room.free, kFirstSeats - 1);
-        EXPECT_EQ(room.hands, std::optional<int>(kShortMatchHands));
-        EXPECT_EQ(room.level, std::optional<int>(kHostLevel));
-        EXPECT_EQ(room.hintsAllowed, std::optional<bool>(true));
+        EXPECT_EQ(room.hands, Optional<int>(kShortMatchHands));
+        EXPECT_EQ(room.level, Optional<int>(kHostLevel));
+        EXPECT_EQ(room.hintsAllowed, Optional<bool>(true));
         // a guest browsing is in no room: nothing of a room to keep or to show
         EXPECT_FALSE(guest.Client().SessionToKeep().IsValid());
         EXPECT_TRUE(guest.Client().Room().empty());

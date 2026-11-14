@@ -16,6 +16,6 @@ namespace BECore::Mahjong {
      * A hand that is two limit hands is named by the more specific one: seven pairs of honours is `SevenPairsHonours`, not `HonoursOnly`;
      * otherwise the first in the order of `ScoreKind`. They score the same, so only the name differs.
      */
-    [[nodiscard]] std::optional<ScoreKind> FindLimitHand(const eastl::vector<Reading>& readings, const ScoreInput& input);
+    [[nodiscard]] Optional<ScoreKind> FindLimitHand(const eastl::vector<Reading>& readings, const ScoreInput& input);
 
 }  // namespace BECore::Mahjong

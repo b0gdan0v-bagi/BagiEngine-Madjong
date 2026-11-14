@@ -858,7 +858,7 @@ namespace BECore::Mahjong::Tests {
             const std::vector<TileSlot> hand = SlotsOf(layout, SlotRole::HandTile, viewer);
             ASSERT_EQ(hand.size(), 14u);
             for (const TileSlot& slot : hand) {
-                const std::optional<int> hit = HitHandTile(layout, slot.rect.x + slot.rect.w / 2.0f, slot.rect.y + slot.rect.h / 2.0f);
+                const Optional<int> hit = HitHandTile(layout, slot.rect.x + slot.rect.w / 2.0f, slot.rect.y + slot.rect.h / 2.0f);
                 ASSERT_TRUE(hit.has_value());
                 EXPECT_EQ(*hit, slot.index);
             }
@@ -989,7 +989,7 @@ namespace BECore::Mahjong::Tests {
             }
             const float x = slot.rect.x + slot.rect.w / 2.0f;
             const float y = slot.rect.y + slot.rect.h / 2.0f;
-            const std::optional<int> hit = HitHandTile(layout, x, y);
+            const Optional<int> hit = HitHandTile(layout, x, y);
             if (hit) {
                 ADD_FAILURE() << "a slot of role " << static_cast<int>(slot.role) << " of seat " << slot.seat << " hits hand tile " << *hit;
             }
@@ -1004,7 +1004,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(hand.size(), 40u);
         ASSERT_TRUE(Overlaps(hand[0].rect, hand[1].rect));
         // the point where tile 1 begins is over tile 0 too: the later one wins
-        const std::optional<int> hit = HitHandTile(layout, hand[1].rect.x + kTolerance, hand[1].rect.y + 1.0f);
+        const Optional<int> hit = HitHandTile(layout, hand[1].rect.x + kTolerance, hand[1].rect.y + 1.0f);
         ASSERT_TRUE(hit.has_value());
         EXPECT_EQ(*hit, 1);
         // the last tile is hit at its centre, and the first where nothing covers it

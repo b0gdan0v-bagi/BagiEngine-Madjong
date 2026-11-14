@@ -316,6 +316,6 @@ namespace BECore::Mahjong {
     /// the first tile to the right edge of the last; inside it the tile whose horizontal span is nearest x wins (a gap goes to the nearest
     /// tile; where tiles overlap or on a tie, the later one). Nothing outside the strip (the bonus row lies above it, the melds to its
     /// right), nothing for a seat that is not the viewer or without hand tiles. The region is the unraised strip.
-    [[nodiscard]] std::optional<int> HitHandTile(const TableLayout& layout, float x, float y);
+    [[nodiscard]] Optional<int> HitHandTile(const TableLayout& layout, float x, float y);
 
 }  // namespace BECore::Mahjong

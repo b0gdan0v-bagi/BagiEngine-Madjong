@@ -50,7 +50,7 @@ namespace BECore::Mahjong::Tests {
     class MahjongCoachTest : public MahjongTableTestBase {
     protected:
         /// A match in the mode `mode` with East (seat 0, the person) holding `kPaired` and drawing `drawn`.
-        void StartEast(HintsMode mode, const SeatSetup& seats = kDefaultSeatSetup, const char* drawn = kDrawn, std::optional<int> liveAfterDeal = std::nullopt) {
+        void StartEast(HintsMode mode, const SeatSetup& seats = kDefaultSeatSetup, const char* drawn = kDrawn, Optional<int> liveAfterDeal = std::nullopt) {
             _game->SetHintsMode(mode);
             ASSERT_NO_FATAL_FAILURE(Start(seats));
             FixedWallSpec spec = SpecOf(kPaired, drawn);
@@ -88,7 +88,7 @@ namespace BECore::Mahjong::Tests {
 
         /// What the pure helper says about the note the ledger holds now, in the current language, with the tally of the game.
         std::vector<std::string> ExpectedLines() const {
-            if (const std::optional<CoachNote>& note = _game->GetCoach().Note()) {
+            if (const Optional<CoachNote>& note = _game->GetCoach().Note()) {
                 return CardTexts(MakeNoteCard(CoreManager::GetUIStrings(), *note, Tally()));
             }
             return CardTexts(HintCard{});
@@ -102,7 +102,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// A discard of the person at seat 0 that `JudgeMove` says differs, or nothing.
-        std::optional<HandAction> DifferingDiscard() const {
+        Optional<HandAction> DifferingDiscard() const {
             const TableView view = MakeTableView(Hand(), kSeat0);
             for (const HandAction& action : view.legal) {
                 if (action.kind == ActionKind::Discard && JudgeMove(view, action).has_value()) {
@@ -258,7 +258,7 @@ namespace BECore::Mahjong::Tests {
         const std::vector<std::string> first = NoteVars();
 
         const TableView view = MakeTableView(Hand(), kSeat0);
-        const std::optional<HandAction> advice = AdviceFor(view);
+        const Optional<HandAction> advice = AdviceFor(view);
         ASSERT_TRUE(advice.has_value());
         ASSERT_TRUE(_game->GetSession().PerformPerson(*advice).has_value());
         Draw();
@@ -267,7 +267,7 @@ namespace BECore::Mahjong::Tests {
 
         ASSERT_NO_FATAL_FAILURE(PutNoteUp());
         ASSERT_NO_FATAL_FAILURE(ToThePersonsNextTurn());
-        const std::optional<HandAction> differing = DifferingDiscard();
+        const Optional<HandAction> differing = DifferingDiscard();
         ASSERT_TRUE(differing.has_value());
         ASSERT_TRUE(_game->GetSession().PerformPerson(*differing).has_value());
         Draw();
@@ -448,7 +448,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_TRUE(session.ActorIsPerson());
             const Seat actor = session.Actor();
             const TableView view = MakeTableView(Hand(), actor);
-            std::optional<HandAction> chosen;
+            Optional<HandAction> chosen;
             const uint64_t version = session.Version();
             if (std::any_of(view.legal.begin(), view.legal.end(), [](const HandAction& action) { return action.kind == ActionKind::Pass; })) {
                 chosen = HandAction::MakePass();

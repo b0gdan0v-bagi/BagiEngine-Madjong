@@ -11,8 +11,8 @@ namespace BECore::Mahjong {
     /// What `ComputerPlayer::Begin` hands back: exactly one member is set. `action` is the answer; `run` is a search that is begun and
     /// not yet played (the caller steps it to its end, wherever, and takes `Result()`).
     struct PlayerDecision {
-        std::optional<HandAction> action;
-        std::optional<SearchRun> run;
+        Optional<HandAction> action;
+        Optional<SearchRun> run;
     };
 
     /**
@@ -44,7 +44,7 @@ namespace BECore::Mahjong {
         [[nodiscard]] PlayerDecision Begin(const TableView& view);
 
         /// `Choose` on `MakeTableView(model, seat)`; nullopt when `model.LegalActions(seat)` is empty (nothing to do, or not a seat).
-        [[nodiscard]] std::optional<HandAction> Decide(const HandModel& model, Seat seat);
+        [[nodiscard]] Optional<HandAction> Decide(const HandModel& model, Seat seat);
 
     private:
         MahjongRng _rng;

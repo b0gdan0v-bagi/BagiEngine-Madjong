@@ -375,7 +375,7 @@ namespace BECore::Mahjong {
         if (!TakesPaste()) {
             return false;
         }
-        const std::optional<eastl::string> code = TextEntry::CleanRoomCode(text);
+        const Optional<eastl::string> code = TextEntry::CleanRoomCode(text);
         if (!code) {
             if (_page == OnlinePage::Join) {
                 // The form has no pad note: the line under its title says it

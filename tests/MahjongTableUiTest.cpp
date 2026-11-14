@@ -279,7 +279,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_GE(call, 0) << "the panel at " << zone.x << "," << zone.y;
             int sameBase = 0;
             for (const DrawCall& other : _renderer->calls) {
-                const std::optional<Rect> frame = BoxOfColor(other, kSeatPlateFrame);
+                const Optional<Rect> frame = BoxOfColor(other, kSeatPlateFrame);
                 sameBase += (frame && SameBox(*frame, zone)) ? 1 : 0;
             }
             EXPECT_EQ(sameBase, 1) << "one base call per panel";

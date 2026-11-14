@@ -438,7 +438,7 @@ namespace BECore::Mahjong::Tests {
     /// this asks every shown label and button on the text it shows, with `air` units kept free each side of an interactive one, in every
     /// window, scale mode and user scale of the matrix (a `SceneView` canvas once per window; with `only` the windows of that shape alone).
     /// Returns a line per control that cuts its text, empty when every word fits.
-    inline std::vector<std::string> WordsThatDoNotFitOnTheMatrix(UICanvasComponent& canvas, float air, std::optional<TableShape> only = std::nullopt) {
+    inline std::vector<std::string> WordsThatDoNotFitOnTheMatrix(UICanvasComponent& canvas, float air, Optional<TableShape> only = std::nullopt) {
         canvas.UpdateLayout(kViewWidth, kViewHeight);
         UICanvasLayout& layout = canvas.GetLayout();
         const UICanvasScaleParams saved = layout.params;

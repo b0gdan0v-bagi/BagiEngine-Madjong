@@ -75,7 +75,7 @@ namespace BECore::Mahjong::Analyzer {
         // ---------------------------------------------------------------------------------------------------------------------------
 
         using Words = eastl::vector<std::string_view>;
-        using Problem = std::optional<eastl::string>;
+        using Problem = Optional<eastl::string>;
 
         constexpr char kCommentMark = '#';
         constexpr std::string_view kBlanks = " \t\r";
@@ -89,7 +89,7 @@ namespace BECore::Mahjong::Analyzer {
             return Format("line {}: {}", line, text.c_str());
         }
 
-        std::optional<int> ParseNumber(std::string_view word) {
+        Optional<int> ParseNumber(std::string_view word) {
             int value = 0;
             const auto [end, error] = std::from_chars(word.data(), word.data() + word.size(), value);
             if (error != std::errc{} || end != word.data() + word.size() || value < 0) {
@@ -98,8 +98,8 @@ namespace BECore::Mahjong::Analyzer {
             return value;
         }
 
-        std::optional<Seat> ParseSeat(std::string_view word) {
-            const std::optional<int> number = ParseNumber(word);
+        Optional<Seat> ParseSeat(std::string_view word) {
+            const Optional<int> number = ParseNumber(word);
             return number.has_value() && IsSeat(*number) ? number : std::nullopt;
         }
 
@@ -118,9 +118,9 @@ namespace BECore::Mahjong::Analyzer {
         /// Everything the text says, before it is checked as a whole.
         struct Draft {
             Seat seat = 0;
-            std::optional<Seat> east;
-            std::optional<Wind> round;
-            std::optional<Phase> phase;
+            Optional<Seat> east;
+            Optional<Wind> round;
+            Optional<Phase> phase;
             eastl::vector<Tile> hand;
             int handLine = 0;
             Tile drew;
@@ -130,7 +130,7 @@ namespace BECore::Mahjong::Analyzer {
             Tile pending;
             Seat pendingFrom = kNoSeat;
             int pendingLine = 0;
-            std::optional<int> wall;
+            Optional<int> wall;
             int wallLine = 0;
             eastl::array<SeatDraft, kSeatCount> seats;
             /// The copies named so far, per tile id; a kind has four, a bonus tile one.
@@ -152,7 +152,7 @@ namespace BECore::Mahjong::Analyzer {
         /// Reads `words[from..)` as playable tiles (or bonus tiles) and notes them; the problem names the line.
         Problem TakeTiles(Draft& draft, int line, const Words& words, size_t from, bool bonus, eastl::vector<Tile>& out) {
             for (size_t i = from; i < words.size(); ++i) {
-                const std::optional<Tile> tile = TryParse(words[i]);
+                const Optional<Tile> tile = TryParse(words[i]);
                 if (!tile.has_value() || tile->IsBonus() != bonus) {
                     return LineError(line, Format("'{}' is not {} tile in the notation of Tile.h", words[i], bonus ? "a flower or season" : "a playable"));
                 }
@@ -170,7 +170,7 @@ namespace BECore::Mahjong::Analyzer {
             if (words.size() != kMinWords && words.size() != kFromWords) {
                 return LineError(line, Format("meld needs a seat, chow|pung|kong|ckong, a tile and optionally 'from <seat>'"));
             }
-            const std::optional<Seat> owner = ParseSeat(words[1]);
+            const Optional<Seat> owner = ParseSeat(words[1]);
             if (!owner.has_value()) {
                 return LineError(line, Format("'{}' is not a seat (0..3)", words[1]));
             }
@@ -186,13 +186,13 @@ namespace BECore::Mahjong::Analyzer {
             } else {
                 return LineError(line, Format("'{}' is not a meld kind (chow, pung, kong, ckong)", kind));
             }
-            const std::optional<Tile> tile = TryParse(words[3]);
+            const Optional<Tile> tile = TryParse(words[3]);
             if (!tile.has_value() || !tile->IsPlayable()) {
                 return LineError(line, Format("'{}' is not a playable tile", words[3]));
             }
             meld.first = *tile;
             meld.claimed = *tile;
-            std::optional<Seat> from;
+            Optional<Seat> from;
             if (words.size() == kFromWords) {
                 from = words[4] == kFromWord ? ParseSeat(words[5]) : std::nullopt;
                 if (!from.has_value() || *from == *owner || meld.concealed) {
@@ -234,7 +234,7 @@ namespace BECore::Mahjong::Analyzer {
         /// One line of the text. `words[0]` is the key.
         Problem ApplyLine(Draft& draft, int line, const Words& words) {
             const std::string_view key = words[0];
-            const auto needSeat = [&](size_t index) -> std::optional<Seat> { return index < words.size() ? ParseSeat(words[index]) : std::nullopt; };
+            const auto needSeat = [&](size_t index) -> Optional<Seat> { return index < words.size() ? ParseSeat(words[index]) : std::nullopt; };
             const auto once = [&](bool& seen) -> Problem {
                 if (seen) {
                     return LineError(line, Format("'{}' is given twice", key));
@@ -248,7 +248,7 @@ namespace BECore::Mahjong::Analyzer {
                 if (const Problem again = once(seen)) {
                     return again;
                 }
-                const std::optional<Seat> seat = words.size() == 2 ? needSeat(1) : std::nullopt;
+                const Optional<Seat> seat = words.size() == 2 ? needSeat(1) : std::nullopt;
                 if (!seat.has_value()) {
                     return LineError(line, Format("{} needs one seat number 0..3", key));
                 }
@@ -260,7 +260,7 @@ namespace BECore::Mahjong::Analyzer {
                 return std::nullopt;
             }
             if (key == "round") {
-                const std::optional<Wind> wind = words.size() == 2 ? EnumUtils<Wind>::Cast(words[1]) : std::nullopt;
+                const Optional<Wind> wind = words.size() == 2 ? EnumUtils<Wind>::Cast(words[1]) : std::nullopt;
                 if (!wind.has_value() || draft.round.has_value()) {
                     return LineError(line, Format("round needs one wind (East, South, West, North), once"));
                 }
@@ -300,7 +300,7 @@ namespace BECore::Mahjong::Analyzer {
                     draft.drewNone = true;
                     return std::nullopt;
                 }
-                const std::optional<Tile> tile = TryParse(words[1]);
+                const Optional<Tile> tile = TryParse(words[1]);
                 if (!tile.has_value() || !tile->IsPlayable()) {
                     return LineError(line, Format("'{}' is not a playable tile", words[1]));
                 }
@@ -311,7 +311,7 @@ namespace BECore::Mahjong::Analyzer {
                 return ParseMeld(draft, line, words);
             }
             if (key == "discards" || key == "bonus") {
-                const std::optional<Seat> seat = needSeat(1);
+                const Optional<Seat> seat = needSeat(1);
                 if (!seat.has_value()) {
                     return LineError(line, Format("{} needs a seat 0..3 first", key));
                 }
@@ -327,8 +327,8 @@ namespace BECore::Mahjong::Analyzer {
                 return TakeTiles(draft, line, words, 2, bonus, bonus ? target.bonus : target.discards);
             }
             if (key == "pending") {
-                const std::optional<Tile> tile = words.size() == 4 ? TryParse(words[1]) : std::nullopt;
-                const std::optional<Seat> from = words.size() == 4 && words[2] == kFromWord ? needSeat(3) : std::nullopt;
+                const Optional<Tile> tile = words.size() == 4 ? TryParse(words[1]) : std::nullopt;
+                const Optional<Seat> from = words.size() == 4 && words[2] == kFromWord ? needSeat(3) : std::nullopt;
                 if (draft.pendingLine != 0 || !tile.has_value() || !tile->IsPlayable() || !from.has_value()) {
                     return LineError(line, Format("pending needs 'pending <tile> from <seat>', once"));
                 }
@@ -341,7 +341,7 @@ namespace BECore::Mahjong::Analyzer {
                 return std::nullopt;
             }
             if (key == "calling") {
-                const std::optional<Seat> seat = needSeat(1);
+                const Optional<Seat> seat = needSeat(1);
                 const bool first = words.size() == 3 && words[2] == kFirstWord;
                 if (!seat.has_value() || (words.size() != 2 && !first)) {
                     return LineError(line, Format("calling needs a seat and optionally 'first'"));
@@ -356,7 +356,7 @@ namespace BECore::Mahjong::Analyzer {
                 return std::nullopt;
             }
             if (key == "wall") {
-                const std::optional<int> count = words.size() == 2 ? ParseNumber(words[1]) : std::nullopt;
+                const Optional<int> count = words.size() == 2 ? ParseNumber(words[1]) : std::nullopt;
                 if (draft.wall.has_value() || !count.has_value()) {
                     return LineError(line, Format("wall needs one number of live tiles, once"));
                 }

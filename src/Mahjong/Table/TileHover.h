@@ -20,7 +20,7 @@ namespace BECore::Mahjong {
     /// with (`drawSlot` of `MahjongTableComponent`): a hand tile of a seat whose hand is face up (`seatFaceUp`: `Faces::Shows(seat)`), a
     /// meld tile unless the meld is a concealed kong and the hand is face down, every bonus tile and every discard. The hover reads what
     /// the draw puts face up and nothing else, so it cannot peek.
-    [[nodiscard]] std::optional<Tile> TileOfSlot(const HandModel& hand, const TileSlot& slot, bool seatFaceUp) noexcept;
+    [[nodiscard]] Optional<Tile> TileOfSlot(const HandModel& hand, const TileSlot& slot, bool seatFaceUp) noexcept;
 
     /// Where the name plate of a tile at `tile` goes in a view of `viewWidth` x `viewHeight`: below the tile, above it when it does not
     /// fit, kept inside the view. The engine's rule for the tooltip of a button (`UITooltip::Place`), applied to a tile.

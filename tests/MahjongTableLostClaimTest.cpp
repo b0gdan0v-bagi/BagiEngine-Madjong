@@ -64,7 +64,7 @@ namespace BECore::Mahjong::Tests {
             SlotRole role = SlotRole::HandTile;
             Seat seat = 0;
             int index = 0;
-            std::optional<Tile> face;
+            Optional<Tile> face;
         };
 
     }  // namespace
@@ -189,7 +189,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Whether one of the tile draws is at `rect` and shows `face` (nullopt: a back).
-        bool TileAt(const Rect& rect, const std::optional<Tile>& face) const {
+        bool TileAt(const Rect& rect, const Optional<Tile>& face) const {
             const Rect source = face ? SourceRect(*face) : BackRect();
             for (const DrawCall& call : TileCalls()) {
                 if (SameRect(call.rect, rect) && call.source.has_value() && SameRect(*call.source, source)) {
@@ -274,7 +274,7 @@ namespace BECore::Mahjong::Tests {
                 firstTile = firstTile < 0 ? at : firstTile;
             } else if (BoxOfColor(call, kClaimLostFrame)) {
                 frameAt = frameAt < 0 ? at : frameAt;
-            } else if (const std::optional<Rect> box = BoxOfColor(call, kClaimHighlight); box && SameBox(*box, PlateOf(kSeat2))) {
+            } else if (const Optional<Rect> box = BoxOfColor(call, kClaimHighlight); box && SameBox(*box, PlateOf(kSeat2))) {
                 blinkAt = at;
             }
         }

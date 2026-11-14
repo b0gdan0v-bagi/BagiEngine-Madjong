@@ -161,7 +161,7 @@ namespace BECore::Mahjong {
         return key;
     }
 
-    std::optional<TableView> MahjongHintsComponent::ViewToAdvise(const MahjongGame* game) {
+    Optional<TableView> MahjongHintsComponent::ViewToAdvise(const MahjongGame* game) {
         if (!KeyOf(game).applies) {
             return std::nullopt;
         }
@@ -254,7 +254,7 @@ namespace BECore::Mahjong {
         BE_PROFILE_SCOPE("MahjongHints::Advise");
         TableView view = ViewOf(game, key.viewer);
         _explained = ExplainAdviceFor(view);
-        _advice = _explained ? std::optional<HandAction>(_explained->Action()) : AdviceFor(view);
+        _advice = _explained ? Optional<HandAction>(_explained->Action()) : AdviceFor(view);
         _advised = true;
         _adviceKey = key;
         _adviceView = std::move(view);
@@ -462,7 +462,7 @@ namespace BECore::Mahjong {
         }
         const auto& concealed = game.GetMatch().Hand().GetHand(viewer).concealed;
         const Tile advised = _advice && _advice->kind == ActionKind::Discard ? _advice->tile : Tile{};
-        const std::optional<int> raised = table->SelectedHandIndex();
+        const Optional<int> raised = table->SelectedHandIndex();
         // The bar of the danger sits between the bars the table draws along the top and the bottom edge of a hand tile (scaled with the view)
         const Scene& scene = GetScene();
         const float unit = LayoutScale(scene.GetViewWidth(), scene.GetViewHeight());
@@ -519,7 +519,7 @@ namespace BECore::Mahjong {
         }
         // Only the three values the panel offers; client text is never read as anything else
         const eastl::string_view value = event.value.ToStringView();
-        if (const std::optional<HintsMode> mode = TryParseHintsMode(std::string_view(value.data(), value.size()))) {
+        if (const Optional<HintsMode> mode = TryParseHintsMode(std::string_view(value.data(), value.size()))) {
             game->SetHintsMode(*mode);
         }
         PublishChoice(*game);

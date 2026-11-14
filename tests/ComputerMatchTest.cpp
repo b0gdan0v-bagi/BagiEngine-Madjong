@@ -111,7 +111,7 @@ namespace BECore::Mahjong::Tests {
                 const Seat actor = ComputerTable::NextActor(hand);
                 ASSERT_TRUE(IsSeat(actor)) << where;
                 const eastl::vector<HandAction> legal = hand.LegalActions(actor);
-                const std::optional<HandAction> action = players[actor].Decide(hand, actor);
+                const Optional<HandAction> action = players[actor].Decide(hand, actor);
                 ASSERT_TRUE(action.has_value()) << where << " seat " << actor;
                 EXPECT_TRUE(Has(legal, *action)) << where << " seat " << actor << " chose " << Name(action->kind) << " " << ToString(action->tile);
                 const auto applied = hand.Apply(actor, *action);

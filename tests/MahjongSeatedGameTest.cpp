@@ -502,7 +502,7 @@ namespace BECore::Mahjong::Tests {
             const uint64_t before = game.GetStateVersion();
             bool someoneActs = false;
             for (int seat = 0; seat < kSeatCount; ++seat) {
-                const std::optional<Json> action = game.ChooseComputerAction(seat);
+                const Optional<Json> action = game.ChooseComputerAction(seat);
                 EXPECT_EQ(action.has_value(), !ActionsOf(game, seat).empty()) << "seat " << seat;
                 if (action) {
                     EXPECT_TRUE(Lists(ActionsOf(game, seat), *action)) << "seat " << seat << " " << Dump(*action);

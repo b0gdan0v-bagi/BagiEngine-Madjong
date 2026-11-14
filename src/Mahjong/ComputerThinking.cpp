@@ -30,7 +30,7 @@ namespace BECore::Mahjong {
 
         CancellationToken token = CancellationToken::Create();
         /// Written by the task before `done` is stored with release (or by `Start` for a ready job), read after an acquire load.
-        std::optional<ComputerStepJob> result;
+        Optional<ComputerStepJob> result;
         std::atomic<bool> done{false};
 
     private:
@@ -80,11 +80,11 @@ namespace BECore::Mahjong {
         return _state && !_state->done.load(std::memory_order_acquire);
     }
 
-    std::optional<ComputerStepJob> ComputerThinking::TakeFinished() {
+    Optional<ComputerStepJob> ComputerThinking::TakeFinished() {
         if (!_state || !_state->done.load(std::memory_order_acquire)) {
             return std::nullopt;
         }
-        std::optional<ComputerStepJob> finished = std::move(_state->result);
+        Optional<ComputerStepJob> finished = std::move(_state->result);
         _state.Reset();
         return finished;
     }

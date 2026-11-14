@@ -653,7 +653,7 @@ namespace BECore::Mahjong::Tests {
         void PlayToHandOver(MahjongSeatedGame& game) {
             for (int step = 0; step < kTickLimit && PhaseOfMatch(game.GetMatch()) == SessionPhase::Playing; ++step) {
                 for (int seat = 0; seat < kSeatCount; ++seat) {
-                    if (const std::optional<Json> action = game.ChooseComputerAction(seat)) {
+                    if (const Optional<Json> action = game.ChooseComputerAction(seat)) {
                         ASSERT_TRUE(game.PerformSeatAction(seat, *action).has_value());
                         break;
                     }
@@ -811,7 +811,7 @@ namespace BECore::Mahjong::Tests {
                 }
                 bool moved = false;
                 for (int seat = 0; seat < kSeatCount && !moved; ++seat) {
-                    if (const std::optional<Json> action = game.ChooseComputerAction(seat)) {
+                    if (const Optional<Json> action = game.ChooseComputerAction(seat)) {
                         EXPECT_TRUE(game.PerformSeatAction(seat, *action).has_value());
                         moved = true;
                     }
@@ -850,7 +850,7 @@ namespace BECore::Mahjong::Tests {
                     differing += twin.GetSeatView(0).value() == game.GetSeatView(0).value() ? 0 : 1;
                 }
                 for (int seat = 0; seat < kSeatCount; ++seat) {
-                    if (const std::optional<Json> action = game.ChooseComputerAction(seat)) {
+                    if (const Optional<Json> action = game.ChooseComputerAction(seat)) {
                         ASSERT_TRUE(game.PerformSeatAction(seat, *action).has_value());
                         break;
                     }

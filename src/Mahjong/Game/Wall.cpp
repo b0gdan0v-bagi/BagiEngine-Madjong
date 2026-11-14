@@ -27,14 +27,14 @@ namespace BECore::Mahjong {
         return wall;
     }
 
-    std::optional<Tile> Wall::Draw() {
+    Optional<Tile> Wall::Draw() {
         if (LiveCount() == 0) {
             return std::nullopt;
         }
         return _live[_liveBegin++];
     }
 
-    std::optional<Tile> Wall::DrawLoose() {
+    Optional<Tile> Wall::DrawLoose() {
         if (_loose.empty()) {
             return std::nullopt;
         }

@@ -384,7 +384,7 @@ namespace BECore::Mahjong::Tests {
 
         // the app closes: the model keeps the session, the game stores it as JSON and reads it again after the restart
         guest.Client().Disconnect();
-        const std::optional<RoomSession> stored = SessionFromJson(SessionToJson(guest.Client().SessionToKeep()));
+        const Optional<RoomSession> stored = SessionFromJson(SessionToJson(guest.Client().SessionToKeep()));
         ASSERT_TRUE(stored.has_value());
 
         HubPlayer back(world);

@@ -147,7 +147,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         IntrusivePtr<FakeClipboard> _clipboard;
-        std::optional<ScopedClipboardBackend> _clipboardScope;
+        Optional<ScopedClipboardBackend> _clipboardScope;
     };
 
     TEST_F(MahjongOnlineSceneTest, TheOnlineButtonOpensThePanelOverSetupAndClosingItGivesSetupBack) {

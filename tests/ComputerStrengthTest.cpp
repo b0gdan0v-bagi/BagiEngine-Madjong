@@ -115,7 +115,7 @@ namespace BECore::Mahjong::Tests {
                 ASSERT_TRUE(IsSeat(actor));
                 HandAction action;
                 if (players[actor].computer) {
-                    const std::optional<HandAction> chosen = computers[actor].Decide(hand, actor);
+                    const Optional<HandAction> chosen = computers[actor].Decide(hand, actor);
                     ASSERT_TRUE(chosen.has_value()) << "seed " << seed << ": the computer seat " << actor << " has no action";
                     action = *chosen;
                 } else {

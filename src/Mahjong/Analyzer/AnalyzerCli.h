@@ -28,8 +28,8 @@ namespace BECore::Mahjong::Analyzer {
         /// `--log FILE` with `--hand K` and `--action I` (one decision) or `--seat S` (every decision of that seat in the hand).
         eastl::string logFile;
         int hand = 0;
-        std::optional<int> action;
-        std::optional<Seat> seat;
+        Optional<int> action;
+        Optional<Seat> seat;
         /// `--position FILE`: a hand-written position (`ParsePosition`).
         eastl::string positionFile;
         /// `--worlds`, `--seed`; `normalSeed` stays the default.

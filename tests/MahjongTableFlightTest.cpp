@@ -68,7 +68,7 @@ namespace BECore::Mahjong::Tests {
             Seat seat = 0;
             int index = 0;
             int part = 0;
-            std::optional<Tile> face;
+            Optional<Tile> face;
         };
 
         bool SameSource(const DrawCall& call, const Rect& source) {
@@ -136,7 +136,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Whether one of the last `last` tile draws is at `rect` and shows `face` (nullopt: a back).
-        bool TileAmongLast(size_t last, const Rect& rect, const std::optional<Tile>& face) const {
+        bool TileAmongLast(size_t last, const Rect& rect, const Optional<Tile>& face) const {
             const std::vector<DrawCall> calls = TileCalls();
             const Rect source = face ? SourceRect(*face) : BackRect();
             for (size_t i = calls.size() > last ? calls.size() - last : 0; i < calls.size(); ++i) {
@@ -196,7 +196,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The turned draw of the tile draw over `box` that shows `face` (nullopt: a back); null when that draw is not turned or is not there.
-        const TurnedDraw* TurnedAt(const Rect& box, const std::optional<Tile>& face) const {
+        const TurnedDraw* TurnedAt(const Rect& box, const Optional<Tile>& face) const {
             const Rect source = face ? SourceRect(*face) : BackRect();
             for (size_t i = 0; i < _renderer->calls.size(); ++i) {
                 const DrawCall& call = _renderer->calls[i];
@@ -552,7 +552,7 @@ namespace BECore::Mahjong::Tests {
         const std::vector<Arrival> either = {Pile(RectOf(before, SlotRole::HandTile, kSeat0, first), kSeat0, 0, T("4p"))};
         const std::vector<Arrival> other = {Pile(RectOf(before, SlotRole::HandTile, kSeat0, first + 1), kSeat0, 0, T("4p"))};
         ASSERT_EQ(_table->FlightCount(), 2u);
-        const std::optional<Tile> face = T("4p");
+        const Optional<Tile> face = T("4p");
         const bool fromFirst = TileAmongLast(2, Where(either[0], 0.0f), face);
         const bool fromSecond = TileAmongLast(2, Where(other[0], 0.0f), face);
         EXPECT_TRUE(fromFirst || fromSecond) << "the pair's tile left from one of its two places";

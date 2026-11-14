@@ -322,13 +322,13 @@ namespace BECore::Mahjong {
         return any ? Rect(left, top, right - left, bottom - top) : Rect();
     }
 
-    std::optional<int> HitHandTile(const TableLayout& layout, float x, float y) {
+    Optional<int> HitHandTile(const TableLayout& layout, float x, float y) {
         bool any = false;
         float left = 0.0f;
         float right = 0.0f;
         float top = 0.0f;
         float bottom = 0.0f;
-        std::optional<int> nearest;
+        Optional<int> nearest;
         float nearestDistance = 0.0f;
         for (const TileSlot& slot : layout.slots) {
             if (slot.role != SlotRole::HandTile || slot.seat != layout.viewer) {

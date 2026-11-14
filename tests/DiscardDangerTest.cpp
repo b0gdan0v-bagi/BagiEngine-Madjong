@@ -302,7 +302,7 @@ namespace BECore::Mahjong::Tests {
         const HandModel model = TwoLapsModel();
         const TableView view = MakeTableView(model, kSeat0);
         MahjongRng rng(kWorldSeed);
-        const std::optional<HandModel> world = SampleWorld(view, rng);
+        const Optional<HandModel> world = SampleWorld(view, rng);
         ASSERT_TRUE(world.has_value());
 
         const TableView sampled = MakeTableView(*world, kSeat0);

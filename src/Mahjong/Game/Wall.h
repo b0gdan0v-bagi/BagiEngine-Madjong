@@ -85,11 +85,11 @@ namespace BECore::Mahjong {
         [[nodiscard]] static Wall FromParts(eastl::vector<Tile> loose, eastl::vector<Tile> live, eastl::vector<Tile> dead);
 
         /// The next tile of the live wall, or `nullopt` when it is empty. Never touches the loose tiles or the dead wall.
-        [[nodiscard]] std::optional<Tile> Draw();
+        [[nodiscard]] Optional<Tile> Draw();
 
         /// The front of the reserve, then the reserve is refilled from the live tail when the live wall has a tile left; `nullopt`
         /// when the reserve is empty.
-        [[nodiscard]] std::optional<Tile> DrawLoose();
+        [[nodiscard]] Optional<Tile> DrawLoose();
 
         /// Tiles a regular `Draw` can still take.
         [[nodiscard]] size_t LiveCount() const noexcept {

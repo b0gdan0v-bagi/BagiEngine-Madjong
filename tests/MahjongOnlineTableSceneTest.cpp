@@ -48,9 +48,9 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The tile an atlas cell shows face up; none for the back, the wall stack and anything else.
-        static std::optional<Tile> FaceOfCell(const Rect& source) {
+        static Optional<Tile> FaceOfCell(const Rect& source) {
             const int cell = static_cast<int>(source.y) / kCellHeight * kAtlasColumns + static_cast<int>(source.x) / kCellWidth;
-            return cell < kTileIdCount ? std::optional<Tile>(Tile(static_cast<uint8_t>(cell))) : std::nullopt;
+            return cell < kTileIdCount ? Optional<Tile>(Tile(static_cast<uint8_t>(cell))) : std::nullopt;
         }
 
         /// **No peeking in the scene:** the faces of the hand slots of this frame's draw, by seat, set against what the server told this client and nothing else: while a hand is played
@@ -66,7 +66,7 @@ namespace BECore::Mahjong::Tests {
                 if (slot.role != SlotRole::HandTile || !calls[i].source.has_value()) {
                     continue;
                 }
-                if (const std::optional<Tile> face = FaceOfCell(*calls[i].source)) {
+                if (const Optional<Tile> face = FaceOfCell(*calls[i].source)) {
                     faces[static_cast<size_t>(slot.seat)].push_back(face->Id());
                 }
             }

@@ -55,7 +55,7 @@ namespace BECore::Mahjong {
         return std::string_view(kNames.text[tile.Id()], kTokenLength);
     }
 
-    std::optional<Tile> TryParse(std::string_view text) noexcept {
+    Optional<Tile> TryParse(std::string_view text) noexcept {
         if (text.size() != kTokenLength) {
             return std::nullopt;
         }
@@ -67,7 +67,7 @@ namespace BECore::Mahjong {
         return std::nullopt;
     }
 
-    std::optional<eastl::vector<Tile>> ParseTiles(std::string_view text) {
+    Optional<eastl::vector<Tile>> ParseTiles(std::string_view text) {
         eastl::vector<Tile> tiles;
         if (text.empty()) {
             return tiles;

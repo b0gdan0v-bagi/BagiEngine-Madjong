@@ -56,7 +56,7 @@ namespace BECore::Mahjong::Tests {
             const SeatSetup seats{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
             EXPECT_TRUE(session.StartMatch(settings, seed, seats, profile).has_value());
             for (int step = 0; step < kStepLimit; ++step) {
-                std::optional<ComputerStepJob> job = session.BeginComputerStep();
+                Optional<ComputerStepJob> job = session.BeginComputerStep();
                 if (!job) {
                     break;
                 }
@@ -77,8 +77,8 @@ namespace BECore::Mahjong::Tests {
             return copy.Action();
         }
 
-        std::optional<ComputerStepJob> Poll(ComputerThinking& thinking) {
-            std::optional<ComputerStepJob> finished;
+        Optional<ComputerStepJob> Poll(ComputerThinking& thinking) {
+            Optional<ComputerStepJob> finished;
             EXPECT_TRUE(WaitUntil([&] {
                 finished = thinking.TakeFinished();
                 return finished.has_value();
@@ -108,7 +108,7 @@ namespace BECore::Mahjong::Tests {
 #if BE_SINGLE_THREAD
             EXPECT_FALSE(thinking.Running()) << "the first slice runs inside Start and nothing parks before the first frame";
 #endif
-            const std::optional<ComputerStepJob> finished = Poll(thinking);
+            const Optional<ComputerStepJob> finished = Poll(thinking);
             ASSERT_TRUE(finished.has_value());
             EXPECT_TRUE(finished->Done());
             EXPECT_EQ(finished->Actor(), job.Actor());
@@ -128,7 +128,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(thinking.Start(job));
         EXPECT_EQ(ComputerThinking::TasksAlive(), before);
         EXPECT_FALSE(thinking.Running());
-        const std::optional<ComputerStepJob> finished = thinking.TakeFinished();
+        const Optional<ComputerStepJob> finished = thinking.TakeFinished();
         ASSERT_TRUE(finished.has_value());
         EXPECT_TRUE(finished->Action() == job.Action());
     }
@@ -176,7 +176,7 @@ namespace BECore::Mahjong::Tests {
         ComputerThinking thinking;
         ASSERT_TRUE(thinking.Start(slow));
         ASSERT_TRUE(thinking.Start(quick));
-        const std::optional<ComputerStepJob> finished = Poll(thinking);
+        const Optional<ComputerStepJob> finished = Poll(thinking);
         ASSERT_TRUE(finished.has_value());
         EXPECT_EQ(finished->Actor(), quick.Actor());
         EXPECT_TRUE(finished->Action() == AtOnce(quick));
@@ -201,7 +201,7 @@ namespace BECore::Mahjong::Tests {
         for (uint32_t seed = kSeed; seed < kSeed + 2; ++seed) {
             const ComputerStepJob job = FirstJob(SearchProfile(1), seed);
             ASSERT_TRUE(thinking.Start(job));
-            const std::optional<ComputerStepJob> finished = Poll(thinking);
+            const Optional<ComputerStepJob> finished = Poll(thinking);
             ASSERT_TRUE(finished.has_value());
             EXPECT_TRUE(finished->Action() == AtOnce(job));
         }

@@ -297,7 +297,7 @@ namespace BECore::Mahjong::Tests {
 
     /// The box around the vertices of the geometry call `call` that carry exactly `color` (a fill is `color` all over its opaque core, a gradient only along its top row, a border or a highlight is
     /// flat; the feather ring has alpha 0): none when the call is no geometry or none of its vertices does.
-    inline std::optional<Rect> BoxOfColor(const DrawCall& call, const Color& color) {
+    inline Optional<Rect> BoxOfColor(const DrawCall& call, const Color& color) {
         if (call.kind != DrawKind::Geometry) {
             return std::nullopt;
         }
@@ -316,7 +316,7 @@ namespace BECore::Mahjong::Tests {
             bottom = found ? std::max(bottom, vertex.y) : vertex.y;
             found = true;
         }
-        return found ? std::optional<Rect>(Rect(left, top, right - left, bottom - top)) : std::nullopt;
+        return found ? Optional<Rect>(Rect(left, top, right - left, bottom - top)) : std::nullopt;
     }
 
     /// One draw of a mark in a colour: the index of its call and its rectangle (a plain rect's own, or the box of the vertices of that colour in a geometry call).
@@ -332,7 +332,7 @@ namespace BECore::Mahjong::Tests {
         for (size_t i = 0; i < calls.size(); ++i) {
             if (calls[i].kind == DrawKind::Rect && SameColor(calls[i].color, color)) {
                 found.push_back(MarkDraw{i, calls[i].rect});
-            } else if (const std::optional<Rect> box = BoxOfColor(calls[i], color)) {
+            } else if (const Optional<Rect> box = BoxOfColor(calls[i], color)) {
                 found.push_back(MarkDraw{i, *box});
             }
         }
@@ -343,7 +343,7 @@ namespace BECore::Mahjong::Tests {
     /// vertices reach every corner). The HUD's canvases mesh the same fill colour, so a panel is found by its place; -1 when none.
     inline int PanelCallAt(const eastl::vector<DrawCall>& calls, const Rect& zone) {
         for (size_t i = 0; i < calls.size(); ++i) {
-            const std::optional<Rect> frame = BoxOfColor(calls[i], kSeatPlateFrame);
+            const Optional<Rect> frame = BoxOfColor(calls[i], kSeatPlateFrame);
             if (frame && SameBox(*frame, zone) && BoxOfColor(calls[i], kSeatPlate)) {
                 return static_cast<int>(i);
             }
@@ -355,7 +355,7 @@ namespace BECore::Mahjong::Tests {
     inline int PanelCountAt(const eastl::vector<DrawCall>& calls, const Rect& zone) {
         int found = 0;
         for (const DrawCall& call : calls) {
-            const std::optional<Rect> frame = BoxOfColor(call, kSeatPlateFrame);
+            const Optional<Rect> frame = BoxOfColor(call, kSeatPlateFrame);
             found += (frame && SameBox(*frame, zone) && BoxOfColor(call, kSeatPlate)) ? 1 : 0;
         }
         return found;
@@ -640,15 +640,15 @@ namespace BECore::Mahjong::Tests {
 
         /// What the model says the slot shows: a tile, or nullopt for a back. `allFaces` says that every concealed tile is open, otherwise
         /// only those of `faceSeat`.
-        std::optional<Tile> Expected(const TileSlot& slot, bool allFaces, Seat faceSeat) const {
+        Optional<Tile> Expected(const TileSlot& slot, bool allFaces, Seat faceSeat) const {
             const PlayerHand& held = Hand().GetHand(slot.seat);
             const bool open = allFaces || slot.seat == faceSeat;
             switch (slot.role) {
                 case SlotRole::HandTile:
-                    return open ? std::optional<Tile>(held.concealed[slot.index]) : std::nullopt;
+                    return open ? Optional<Tile>(held.concealed[slot.index]) : std::nullopt;
                 case SlotRole::MeldTile: {
                     const Meld& meld = held.melds[slot.index];
-                    return (!meld.concealed || open) ? std::optional<Tile>(LaidTile(meld, slot.part)) : std::nullopt;
+                    return (!meld.concealed || open) ? Optional<Tile>(LaidTile(meld, slot.part)) : std::nullopt;
                 }
                 case SlotRole::BonusTile:
                     return held.bonus[slot.index];
@@ -669,7 +669,7 @@ namespace BECore::Mahjong::Tests {
             size_t callIndex = 0;
             for (size_t i = 0; i < calls.size(); ++i) {
                 const TileSlot& slot = layout.slots[i];
-                const std::optional<Tile> tile = Expected(slot, allFaces, faceSeat);
+                const Optional<Tile> tile = Expected(slot, allFaces, faceSeat);
                 const Rect expected = slot.role == SlotRole::WallStack ? StackRect() : tile ? SourceRect(*tile) : BackRect();
                 ASSERT_TRUE(calls[i].source.has_value()) << "slot " << i;
                 EXPECT_EQ(calls[i].source->x, expected.x) << "slot " << i << " role " << static_cast<int>(slot.role) << " seat " << slot.seat;

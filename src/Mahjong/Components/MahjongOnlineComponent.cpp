@@ -129,7 +129,7 @@ namespace BECore::Mahjong {
             return PoolString::Intern(Format("{}{}", base, index));
         }
 
-        std::optional<size_t> ParseIndex(eastl::string_view text) {
+        Optional<size_t> ParseIndex(eastl::string_view text) {
             size_t number = 0;
             const auto [end, error] = std::from_chars(text.data(), text.data() + text.size(), number);
             if (error != std::errc() || end != text.data() + text.size()) {
@@ -310,7 +310,7 @@ namespace BECore::Mahjong {
                 if (_screens.Done()) {
                     StoreName(*game);
                 }
-            } else if (const std::optional<char> typed = TextEntry::CharFromKeycode(static_cast<uint32_t>(event.key), (event.mod & SDL_KMOD_SHIFT) != 0)) {
+            } else if (const Optional<char> typed = TextEntry::CharFromKeycode(static_cast<uint32_t>(event.key), (event.mod & SDL_KMOD_SHIFT) != 0)) {
                 const char character = *typed;
                 _screens.Type(eastl::string_view(&character, 1));
             }
@@ -394,7 +394,7 @@ namespace BECore::Mahjong {
                 _screens.FocusField(value == kNameValue ? OnlineField::Name : OnlineField::Code);
             }
         } else if (action == kKeyAction) {
-            if (const std::optional<size_t> index = ParseIndex(value)) {
+            if (const Optional<size_t> index = ParseIndex(value)) {
                 _screens.PressKey(*index);
             }
         } else if (action == kBackspaceAction) {
@@ -405,11 +405,11 @@ namespace BECore::Mahjong {
             }
         } else if (action == kHandsAction) {
             // Only the two numbers the panel offers; client text is never parsed into another number
-            if (const std::optional<size_t> hands = ParseIndex(value); hands && (*hands == kFullMatchHands || *hands == kShortMatchHands)) {
+            if (const Optional<size_t> hands = ParseIndex(value); hands && (*hands == kFullMatchHands || *hands == kShortMatchHands)) {
                 _screens.SetHands(static_cast<int>(*hands));
             }
         } else if (action == kLevelAction) {
-            if (const std::optional<ComputerLevel> level = TryParseLevel(std::string_view(value.data(), value.size()))) {
+            if (const Optional<ComputerLevel> level = TryParseLevel(std::string_view(value.data(), value.size()))) {
                 _screens.SetLevel(LevelNumber(*level));
             }
         } else if (action == kHintsAction) {
@@ -424,7 +424,7 @@ namespace BECore::Mahjong {
             _screens.Enter(client, OnlineServerUrl());
             StoreName(*game);
         } else if (action == kSitAction) {
-            if (const std::optional<size_t> seat = ParseIndex(value); seat && *seat < kSeatCount) {
+            if (const Optional<size_t> seat = ParseIndex(value); seat && *seat < kSeatCount) {
                 _screens.Sit(client, static_cast<int>(*seat));
             }
         } else if (action == kStartAction) {
@@ -449,7 +449,7 @@ namespace BECore::Mahjong {
             }
         } else if (action == kJoinListedAction) {
             // The row is asked again of the list as it is now
-            if (const std::optional<size_t> row = ParseIndex(value); row && *row < static_cast<size_t>(OnlineScreens::kRoomsPerPage)) {
+            if (const Optional<size_t> row = ParseIndex(value); row && *row < static_cast<size_t>(OnlineScreens::kRoomsPerPage)) {
                 _screens.JoinRoom(client, OnlineServerUrl(), static_cast<int>(*row));
                 StoreName(*game);
             }
@@ -509,7 +509,7 @@ namespace BECore::Mahjong {
             // A held key types once; Enter does not repeat
         } else if (event.key == SDLK_RETURN || event.key == SDLK_KP_ENTER) {
             FinishNickname();
-        } else if (const std::optional<char> typed = TextEntry::CharFromKeycode(static_cast<uint32_t>(event.key), (event.mod & SDL_KMOD_SHIFT) != 0)) {
+        } else if (const Optional<char> typed = TextEntry::CharFromKeycode(static_cast<uint32_t>(event.key), (event.mod & SDL_KMOD_SHIFT) != 0)) {
             const char character = *typed;
             _nicknameDirty = _nicknameEntry.Append(eastl::string_view(&character, 1)) || _nicknameDirty;
         }
@@ -520,7 +520,7 @@ namespace BECore::Mahjong {
             return;
         }
         if (action == kKeyAction) {
-            if (const std::optional<size_t> index = ParseIndex(value); index && *index < _nicknamePad.size()) {
+            if (const Optional<size_t> index = ParseIndex(value); index && *index < _nicknamePad.size()) {
                 _nicknameDirty = _nicknameEntry.Append(eastl::string_view(_nicknamePad[*index].data(), _nicknamePad[*index].size())) || _nicknameDirty;
             }
         } else if (action == kBackspaceAction) {
@@ -618,7 +618,7 @@ namespace BECore::Mahjong {
         const OnlineRoomOptions* hosted = client.HostedOptions();
         vars.Set("onlineHostLine"_intern, eastl::string_view(hosted == nullptr ? eastl::string() : Tr(strings, hosted->hintsAllowed ? kOnlineLobbyHintsAllowedKey : kOnlineLobbyHintsOffKey)));
         // A guest reads the host's choice about hints from the lobby, on the one line under the title
-        const std::optional<bool> guestHints = lobby.hintsAllowed;
+        const Optional<bool> guestHints = lobby.hintsAllowed;
         vars.Set("onlineWaiting"_intern, eastl::string_view(Tr(strings, !guestHints ? kOnlineWaitHostKey : (*guestHints ? kOnlineWaitHostHintsAllowedKey : kOnlineWaitHostHintsOffKey))));
         // The room: the title of the lobby while there is one, else the room `Return` would enter
         const eastl::string& room = _screens.Page() == OnlinePage::Lobby ? (lobby.room.empty() ? client.Room() : lobby.room) : _screens.ReturnRoom();

@@ -128,7 +128,7 @@ namespace BECore::Mahjong {
         /// `points` x 2^`doubles`, saturating at the largest `int`.
         int raw = 0;
         /// The limit hand the winner holds, if any (its single line is in `lines`).
-        std::optional<ScoreKind> limitHand;
+        Optional<ScoreKind> limitHand;
         /// `RoundUpToTen(min(raw, LimitCap(limit)))`; a limit hand scores `LimitCap(limit)`.
         int score = 0;
     };

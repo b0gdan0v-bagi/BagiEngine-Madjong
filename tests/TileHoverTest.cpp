@@ -124,12 +124,12 @@ namespace BECore::Mahjong::Tests {
         const TileSlot* theirs = Find(layout, SlotRole::HandTile, kSeat2, 4);
         ASSERT_NE(mine, nullptr);
         ASSERT_NE(theirs, nullptr);
-        const std::optional<Tile> shown = TileOfSlot(model, *mine, kFaceUp);
+        const Optional<Tile> shown = TileOfSlot(model, *mine, kFaceUp);
         ASSERT_TRUE(shown.has_value());
         EXPECT_EQ(*shown, model.GetHand(kSeat0).concealed[4]);
         EXPECT_FALSE(TileOfSlot(model, *mine, kFaceDown).has_value()) << "the viewer's hand under the cover";
         EXPECT_FALSE(TileOfSlot(model, *theirs, kFaceDown).has_value());
-        const std::optional<Tile> atTheEnd = TileOfSlot(model, *theirs, kFaceUp);
+        const Optional<Tile> atTheEnd = TileOfSlot(model, *theirs, kFaceUp);
         ASSERT_TRUE(atTheEnd.has_value()) << "at the end of a hand every hand is face up";
         EXPECT_EQ(*atTheEnd, model.GetHand(kSeat2).concealed[4]);
     }
@@ -141,11 +141,11 @@ namespace BECore::Mahjong::Tests {
         ASSERT_FALSE(model.Discards().empty());
         const TileSlot* meld = Find(layout, SlotRole::MeldTile, kSeat1, 0, 1);
         ASSERT_NE(meld, nullptr);
-        EXPECT_EQ(TileOfSlot(model, *meld, kFaceDown), std::optional<Tile>(T("5p")));
+        EXPECT_EQ(TileOfSlot(model, *meld, kFaceDown), Optional<Tile>(T("5p")));
         const int last = static_cast<int>(model.Discards().size()) - 1;
         const TileSlot* pile = Find(layout, SlotRole::DiscardTile, model.Discards()[last].seat, last);
         ASSERT_NE(pile, nullptr);
-        EXPECT_EQ(TileOfSlot(model, *pile, kFaceDown), std::optional<Tile>(model.Discards()[last].tile));
+        EXPECT_EQ(TileOfSlot(model, *pile, kFaceDown), Optional<Tile>(model.Discards()[last].tile));
     }
 
     TEST(TileHoverTest, TileOfSlotNamesABonusTile) {
@@ -156,7 +156,7 @@ namespace BECore::Mahjong::Tests {
         const TableLayout layout = MakeTableLayout(InputOfModel(model));
         const TileSlot* bonus = Find(layout, SlotRole::BonusTile, kSeat0, 0);
         ASSERT_NE(bonus, nullptr);
-        EXPECT_EQ(TileOfSlot(model, *bonus, kFaceDown), std::optional<Tile>(model.GetHand(kSeat0).bonus[0]));
+        EXPECT_EQ(TileOfSlot(model, *bonus, kFaceDown), Optional<Tile>(model.GetHand(kSeat0).bonus[0]));
     }
 
     TEST(TileHoverTest, AConcealedKongShowsOnlyWhileItsHandIsFaceUp) {
@@ -168,7 +168,7 @@ namespace BECore::Mahjong::Tests {
         const TileSlot* tile = Find(layout, SlotRole::MeldTile, kSeat0, 0, 2);
         ASSERT_NE(tile, nullptr);
         EXPECT_FALSE(TileOfSlot(model, *tile, kFaceDown).has_value());
-        EXPECT_EQ(TileOfSlot(model, *tile, kFaceUp), std::optional<Tile>(T("7p")));
+        EXPECT_EQ(TileOfSlot(model, *tile, kFaceUp), Optional<Tile>(T("7p")));
     }
 
     TEST(TileHoverTest, AnOpenKongShowsWhetherOrNotTheHandIsFaceUp) {
@@ -179,7 +179,7 @@ namespace BECore::Mahjong::Tests {
         const TableLayout layout = MakeTableLayout(InputOfModel(model));
         const TileSlot* tile = Find(layout, SlotRole::MeldTile, kSeat1, 0, 3);
         ASSERT_NE(tile, nullptr);
-        EXPECT_EQ(TileOfSlot(model, *tile, kFaceDown), std::optional<Tile>(T("5p")));
+        EXPECT_EQ(TileOfSlot(model, *tile, kFaceDown), Optional<Tile>(T("5p")));
     }
 
     TEST(TileHoverTest, TileOfSlotGivesNoneForAnIndexOutsideTheModelAndForAWallStack) {

@@ -749,7 +749,7 @@ namespace BECore::Mahjong::Tests {
             }
             const eastl::string letters = SeatsToLetters(seats);
             EXPECT_EQ(letters.size(), 4u);
-            const std::optional<SeatSetup> back = ReadSeats(letters);
+            const Optional<SeatSetup> back = ReadSeats(letters);
             ASSERT_TRUE(back.has_value());
             EXPECT_EQ(*back, seats);
         }

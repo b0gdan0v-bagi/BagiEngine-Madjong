@@ -130,7 +130,7 @@ namespace BECore::Mahjong {
         return options;
     }
 
-    std::optional<WaitingKong> RateWaitingKong(const TableView& view) {
+    Optional<WaitingKong> RateWaitingKong(const TableView& view) {
         for (const HandAction& action : view.legal) {
             if (action.kind != ActionKind::Claim || action.claim != ClaimKind::Kong) {
                 continue;
@@ -154,7 +154,7 @@ namespace BECore::Mahjong {
         const int shantenBefore = Shanten(CountTiles(view.own.concealed), MeldCountOf(view));
         if (shantenBefore <= kWaitingShanten) {
             if (profile.waitingKongByPoints) {
-                if (const std::optional<WaitingKong> kong = RateWaitingKong(view)) {
+                if (const Optional<WaitingKong> kong = RateWaitingKong(view)) {
                     return kong->KongIsBetter() ? ClaimDecision{kong->kong, ClaimStep::WaitingKong} : ClaimDecision{HandAction::MakePass(), ClaimStep::WaitingPass};
                 }
             }
@@ -165,7 +165,7 @@ namespace BECore::Mahjong {
                 if ((handoff->run = BeginClaimSearch(view, rng, profile))) {
                     return {HandAction::MakePass(), ClaimStep::Claim};
                 }
-            } else if (const std::optional<HandAction> searched = SearchClaimAction(view, rng, profile)) {
+            } else if (const Optional<HandAction> searched = SearchClaimAction(view, rng, profile)) {
                 return {*searched, searched->kind == ActionKind::Claim ? ClaimStep::Claim : ClaimStep::NoGain};
             }
         }

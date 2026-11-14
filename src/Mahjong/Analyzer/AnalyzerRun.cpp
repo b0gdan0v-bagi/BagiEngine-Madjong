@@ -54,7 +54,7 @@ namespace BECore::Mahjong::Analyzer {
         if (config.worlds < 1) {
             return std::unexpected(eastl::string("the number of worlds must be at least 1"));
         }
-        std::optional<SearchRun> run = BeginSearchOver(view, view.legal, BaseSeedOf(config.seed), config.worlds);
+        Optional<SearchRun> run = BeginSearchOver(view, view.legal, BaseSeedOf(config.seed), config.worlds);
         if (!run.has_value()) {
             return std::unexpected(eastl::string("the search over the legal actions could not begin"));
         }

@@ -24,7 +24,7 @@ namespace BECore::Mahjong::Analyzer {
 
         /// The value of `text` as a whole number of type `T`; nullopt when anything else is in it (a sign, a space, a letter, too large).
         template <typename T>
-        std::optional<T> ParseWhole(std::string_view text) {
+        Optional<T> ParseWhole(std::string_view text) {
             T value{};
             const char* const end = text.data() + text.size();
             const auto parsed = std::from_chars(text.data(), end, value);
@@ -36,7 +36,7 @@ namespace BECore::Mahjong::Analyzer {
 
         /// `option`'s value as a number from `smallest` to `largest`, or the error that names the option and the range.
         std::expected<int, eastl::string> ParseRanged(std::string_view option, std::string_view value, int smallest, int largest) {
-            const std::optional<int> number = ParseWhole<int>(value);
+            const Optional<int> number = ParseWhole<int>(value);
             if (!number.has_value() || *number < smallest || *number > largest) {
                 return std::unexpected(Format("{}: \"{}\" is not a whole number from {} to {}", option, value, smallest, largest));
             }
@@ -113,7 +113,7 @@ namespace BECore::Mahjong::Analyzer {
             }
 
             /// Analyzes `view` and appends its report; the error text when the analysis fails.
-            std::optional<eastl::string> Report(const TableView& view, const PositionLabel& label) {
+            Optional<eastl::string> Report(const TableView& view, const PositionLabel& label) {
                 const std::expected<PositionAnalysis, eastl::string> analysis = AnalyzePosition(view, _config, _loop);
                 if (!analysis.has_value()) {
                     return analysis.error();
@@ -151,7 +151,7 @@ namespace BECore::Mahjong::Analyzer {
         };
 
         /// The decisions asked of the log, analyzed one after another; the error text of the first that fails.
-        std::optional<eastl::string> ReportLog(const AnalyzerArgs& args, const FileReader& readFile, Reporter& reporter) {
+        Optional<eastl::string> ReportLog(const AnalyzerArgs& args, const FileReader& readFile, Reporter& reporter) {
             const std::string_view file(args.logFile.data(), args.logFile.size());
             const std::expected<eastl::string, eastl::string> text = readFile(file);
             if (!text.has_value()) {
@@ -177,14 +177,14 @@ namespace BECore::Mahjong::Analyzer {
                     reporter.Skip(reporter.IsJson() ? SkippedJson(file, position) : SkippedText(position));
                     continue;
                 }
-                if (const std::optional<eastl::string> error = reporter.Report(position.view, LabelOfLogPosition(args.logFile, position))) {
+                if (const Optional<eastl::string> error = reporter.Report(position.view, LabelOfLogPosition(args.logFile, position))) {
                     return Format("{}: hand {} action {}: {}", file, position.hand, position.actionIndex, error->c_str());
                 }
             }
             return std::nullopt;
         }
 
-        std::optional<eastl::string> ReportPosition(const AnalyzerArgs& args, const FileReader& readFile, Reporter& reporter) {
+        Optional<eastl::string> ReportPosition(const AnalyzerArgs& args, const FileReader& readFile, Reporter& reporter) {
             const std::string_view file(args.positionFile.data(), args.positionFile.size());
             const std::expected<eastl::string, eastl::string> text = readFile(file);
             if (!text.has_value()) {
@@ -257,7 +257,7 @@ namespace BECore::Mahjong::Analyzer {
             } else if (option == kPositionOption) {
                 parsed.positionFile = Text(value);
             } else if (option == kSeedOption) {
-                const std::optional<uint32_t> seed = ParseWhole<uint32_t>(value);
+                const Optional<uint32_t> seed = ParseWhole<uint32_t>(value);
                 if (!seed.has_value()) {
                     return std::unexpected(Format("{}: \"{}\" is not a whole number from 0 to {}", option, value, std::numeric_limits<uint32_t>::max()));
                 }
@@ -308,7 +308,7 @@ namespace BECore::Mahjong::Analyzer {
         }
         Arena::WorldThreads threads(parsed->jobs);
         Reporter reporter(parsed->config, threads.AsLoop(), parsed->json, output.out);
-        const std::optional<eastl::string> error = parsed->logFile.empty() ? ReportPosition(*parsed, readFile, reporter) : ReportLog(*parsed, readFile, reporter);
+        const Optional<eastl::string> error = parsed->logFile.empty() ? ReportPosition(*parsed, readFile, reporter) : ReportLog(*parsed, readFile, reporter);
         if (error.has_value()) {
             output.err = Format("error: {}\n", error->c_str());
             return kExitAnalysisFailed;

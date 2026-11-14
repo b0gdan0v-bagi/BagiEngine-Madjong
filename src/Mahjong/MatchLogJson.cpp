@@ -86,7 +86,7 @@ namespace BECore::Mahjong {
 
         /// An integer member within [low, high].
         std::expected<int64_t, eastl::string> ReadInt(const Json& object, eastl::string_view key, int64_t low, int64_t high) {
-            const std::optional<int64_t> value = GetJsonInt(object, key);
+            const Optional<int64_t> value = GetJsonInt(object, key);
             if (!value) {
                 return Fail(key, "has to be an integer");
             }
@@ -105,7 +105,7 @@ namespace BECore::Mahjong {
         }
 
         std::expected<bool, eastl::string> ReadBool(const Json& object, eastl::string_view key) {
-            const std::optional<bool> value = GetJsonBool(object, key);
+            const Optional<bool> value = GetJsonBool(object, key);
             if (!value) {
                 return Fail(key, "has to be true or false");
             }
@@ -113,7 +113,7 @@ namespace BECore::Mahjong {
         }
 
         std::expected<eastl::string, eastl::string> ReadString(const Json& object, eastl::string_view key) {
-            const std::optional<eastl::string> value = GetJsonString(object, key);
+            const Optional<eastl::string> value = GetJsonString(object, key);
             if (!value) {
                 return Fail(key, "has to be a string");
             }
@@ -138,7 +138,7 @@ namespace BECore::Mahjong {
         }
 
         std::expected<Wind, eastl::string> ReadWindText(const eastl::string& text, eastl::string_view member) {
-            const std::optional<Wind> wind = EnumUtils<Wind>::Cast(EaView(text));
+            const Optional<Wind> wind = EnumUtils<Wind>::Cast(EaView(text));
             if (!wind) {
                 return Fail(member, Format("is not a wind: \"{}\"", text).c_str());
             }
@@ -171,7 +171,7 @@ namespace BECore::Mahjong {
                 return Fail(member, "has to hold tiles as strings");
             }
             const std::string& text = item.get_ref<const std::string&>();
-            const std::optional<Tile> tile = TryParse(text);
+            const Optional<Tile> tile = TryParse(text);
             if (!tile) {
                 return Fail(member, Format("is not a tile: \"{}\"", text).c_str());
             }
@@ -195,7 +195,7 @@ namespace BECore::Mahjong {
         }
 
         /// An array item as an integer, nullopt for anything else; a number above INT64_MAX is refused like `GetJsonInt` does.
-        std::optional<int64_t> ReadIntItem(const Json& item) {
+        Optional<int64_t> ReadIntItem(const Json& item) {
             if (!item.is_number_integer()) {
                 return std::nullopt;
             }
@@ -217,7 +217,7 @@ namespace BECore::Mahjong {
             SeatScores scores{};
             size_t index = 0;
             for (const Json& item : **list) {
-                const std::optional<int64_t> value = ReadIntItem(item);
+                const Optional<int64_t> value = ReadIntItem(item);
                 if (!value || *value < std::numeric_limits<int>::min() || *value > std::numeric_limits<int>::max()) {
                     return Fail(key, "has to hold integers");
                 }
@@ -235,8 +235,8 @@ namespace BECore::Mahjong {
             SeatLevels levels = UniformLevels(kDefaultLevel);
             size_t index = 0;
             for (const Json& item : **list) {
-                const std::optional<int64_t> number = ReadIntItem(item);
-                const std::optional<ComputerLevel> level = number ? LevelOf(*number) : std::nullopt;
+                const Optional<int64_t> number = ReadIntItem(item);
+                const Optional<ComputerLevel> level = number ? LevelOf(*number) : std::nullopt;
                 if (!level) {
                     return Fail(key, Format("has to hold integers {}..{}", kMinLevel, kMaxLevel).c_str());
                 }
@@ -352,7 +352,7 @@ namespace BECore::Mahjong {
             if (!letters) {
                 return std::unexpected(letters.error());
             }
-            const std::optional<SeatSetup> seats = ReadSeats(*letters);
+            const Optional<SeatSetup> seats = ReadSeats(*letters);
             if (!seats) {
                 return Fail("seats", Format("has to be four letters, P for a person and C for a computer: \"{}\"", *letters).c_str());
             }
@@ -393,7 +393,7 @@ namespace BECore::Mahjong {
                     event.levels = UniformLevels(ComputerLevel::Normal);
                     return event;
                 }
-                const std::optional<ComputerLevel> level = TryParseLevelName(levelName);
+                const Optional<ComputerLevel> level = TryParseLevelName(levelName);
                 if (!level) {
                     return Fail("level", Format("has to be easy or normal in version {}: \"{}\"", kMatchLogLevelVersion, *name).c_str());
                 }
@@ -549,7 +549,7 @@ namespace BECore::Mahjong {
             }
             size_t index = 0;
             for (const Json& item : **standings) {
-                const std::optional<int64_t> value = ReadIntItem(item);
+                const Optional<int64_t> value = ReadIntItem(item);
                 if (!value || *value < 0 || *value >= kSeatCount) {
                     return Fail("standings", "has to hold seats 0..3");
                 }

@@ -665,7 +665,7 @@ namespace BECore::Mahjong::Tests {
             const StepResult expected = whole.table.session.StepComputer();
             ASSERT_TRUE(expected.has_value());
 
-            std::optional<ComputerStepJob> job = halves.table.session.BeginComputerStep();
+            Optional<ComputerStepJob> job = halves.table.session.BeginComputerStep();
             ASSERT_TRUE(job.has_value());
             EXPECT_EQ(job->Version(), halves.table.session.Version());
             EXPECT_EQ(job->StartCount(), halves.table.session.StartCount());
@@ -675,7 +675,7 @@ namespace BECore::Mahjong::Tests {
             while (!job->Done()) {
                 job->Step();
             }
-            const std::optional<StepResult> finished = halves.table.session.FinishComputerStep(*job);
+            const Optional<StepResult> finished = halves.table.session.FinishComputerStep(*job);
             ASSERT_TRUE(finished.has_value());
             ASSERT_TRUE(finished->has_value());
             EXPECT_TRUE(**finished == *expected) << "step " << step;
@@ -741,7 +741,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_GT(stale.table.session.RunComputers(), 0);
             MahjongRng rng(kSeed);
             ASSERT_TRUE(PersonActs(stale.table.session, stale.table.match.Hand(), Mode::NeverWin, rng).has_value());
-            std::optional<ComputerStepJob> job = stale.table.session.BeginComputerStep();
+            Optional<ComputerStepJob> job = stale.table.session.BeginComputerStep();
             ASSERT_TRUE(job.has_value());
             job->Run();
 
@@ -794,7 +794,7 @@ namespace BECore::Mahjong::Tests {
         int searched = 0;
         for (int step = 0; local.table.session.GetPhase() == SessionPhase::Playing; ++step) {
             ASSERT_LT(step, kActionLimitPerMatch);
-            std::optional<ComputerStepJob> job = remote.table.session.BeginComputerStep();
+            Optional<ComputerStepJob> job = remote.table.session.BeginComputerStep();
             ASSERT_TRUE(job.has_value());
             searched += job->Ready() ? 0 : 1;
             if (!job->Ready()) {
@@ -805,7 +805,7 @@ namespace BECore::Mahjong::Tests {
             }
             const StepResult expected = local.table.session.StepComputer();
             ASSERT_TRUE(expected.has_value());
-            const std::optional<StepResult> finished = remote.table.session.FinishComputerStep(*job);
+            const Optional<StepResult> finished = remote.table.session.FinishComputerStep(*job);
             ASSERT_TRUE(finished.has_value());
             ASSERT_TRUE(finished->has_value());
             ASSERT_TRUE(**finished == *expected) << "step " << step;
@@ -1026,7 +1026,7 @@ namespace BECore::Mahjong::Tests {
         // A job begun before the mode: stale.
         Table other;
         ASSERT_NO_FATAL_FAILURE(other.Start(kAllComputers));
-        const std::optional<ComputerStepJob> job = other.session.BeginComputerStep();
+        const Optional<ComputerStepJob> job = other.session.BeginComputerStep();
         ASSERT_TRUE(job.has_value());
 
         EXPECT_EQ(remote.session.StepComputer().error(), HandError::WrongPhase);

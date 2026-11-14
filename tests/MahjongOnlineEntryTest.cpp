@@ -179,8 +179,8 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MahjongOnlineEntry, CharFromKeycodeKnowsLettersDigitsAndTheSpaceOnly) {
         for (uint32_t keycode = 0; keycode < 0x200; ++keycode) {
-            const std::optional<char> plain = TextEntry::CharFromKeycode(keycode, false);
-            const std::optional<char> shifted = TextEntry::CharFromKeycode(keycode, true);
+            const Optional<char> plain = TextEntry::CharFromKeycode(keycode, false);
+            const Optional<char> shifted = TextEntry::CharFromKeycode(keycode, true);
             const bool letter = keycode >= 'a' && keycode <= 'z';
             const bool digit = keycode >= '0' && keycode <= '9';
             if (letter) {
@@ -202,7 +202,7 @@ namespace BECore::Mahjong::Tests {
 
         /// "refused" for nothing
         std::string Cleaned(eastl::string_view text) {
-            const std::optional<eastl::string> code = TextEntry::CleanRoomCode(text);
+            const Optional<eastl::string> code = TextEntry::CleanRoomCode(text);
             return code ? Std(*code) : std::string("<refused>");
         }
 
@@ -255,7 +255,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MahjongOnlineEntry, ACleanedCodeIsOneTheFieldTakes) {
         TextEntry field(TextEntry::Kind::Code);
-        const std::optional<eastl::string> code = TextEntry::CleanRoomCode("ab3-k9");
+        const Optional<eastl::string> code = TextEntry::CleanRoomCode("ab3-k9");
         ASSERT_TRUE(code.has_value());
         EXPECT_TRUE(field.Replace(*code));
         EXPECT_TRUE(field.IsComplete());
