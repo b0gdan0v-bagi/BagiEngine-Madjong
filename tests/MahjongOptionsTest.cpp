@@ -329,7 +329,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(group->rect.x + group->rect.w, row->rect.x + row->rect.w - kRowPadding);
             EXPECT_EQ(group->rect.y, row->rect.y + kRowPadding);
             EXPECT_EQ(group->rect.y + group->rect.h, row->rect.y + row->rect.h - kRowPadding);
-            for (const char* name : std::span<const char* const>(entry.segments, entry.count)) {
+            for (const char* name : Span<const char* const>(entry.segments, entry.count)) {
                 const auto* segment = Element("Options", name);
                 ASSERT_NE(segment, nullptr) << name;
                 EXPECT_TRUE(SameColor(segment->selectedColor, PaletteColor("primary"))) << name;

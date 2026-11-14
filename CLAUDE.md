@@ -28,6 +28,7 @@ A nested `CLAUDE.md` loads when you work in its folder.
 
 - The rules live in `Game/` as plain C++ that a test drives without a scene. `Game/` and `Table/` know no JSON, no scene and no renderer.
 - Components reach the game through `MahjongGame::GetActive()`, check it is the active game, and change it only through `GetSession()` (`TableSession`). A match is started only through the session.
+- **Types:** the game spells the types of `BECore/Types` (`String`, `StringView`, `Vector`, `Optional`, `Format`, `ToString`), never `std::string` or `eastl::vector`. A real boundary (nlohmann `Json`, `std::filesystem`, a stream, a gtest name) keeps the `std::` type with `//-NoStd: <why>` on its line. `MahjongTypesCheck` enforces it over `CI/types_baseline.txt`, which only shrinks (`.claude/rules/build-project.md`, "Types check").
 - The seed of a match is chosen in `MahjongGame` (`std::random_device`), never in the rules; rules randomness only through `MahjongRng`.
 - **No peeking:** a computer player, the hints, the marks and the control state see only `MakeTableView(model, seat)` or public data.
 - Every visible word is a key of `config/UIStrings.xml` in both languages.

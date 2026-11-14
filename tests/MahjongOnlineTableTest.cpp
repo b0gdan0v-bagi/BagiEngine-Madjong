@@ -284,7 +284,11 @@ namespace BECore::Mahjong::Tests {
                 const size_t end = path.find('/', start);
                 const String step = path.substr(start, end == String::npos ? String::npos : end - start);
                 if (node->is_array()) {
-                    const size_t index = static_cast<size_t>(std::stoul(step.c_str()));
+                    size_t index = 0;
+                    const auto parsed = std::from_chars(step.data(), step.data() + step.size(), index);
+                    if (parsed.ec != std::errc()) {
+                        return nullptr;
+                    }
                     node = index < node->size() ? &(*node)[index] : nullptr;
                 } else if (node->is_object()) {
                     const auto found = node->find(step.c_str());

@@ -93,7 +93,7 @@ namespace BECore::Mahjong {
             }
             ordered.push_back(&piece);
         }
-        std::stable_sort(ordered.begin(), ordered.end(), [](const UploadPiece* left, const UploadPiece* right) { return left->index < right->index; });
+        std::sort(ordered.begin(), ordered.end(), [](const UploadPiece* left, const UploadPiece* right) { return left->index < right->index; });
         String log;
         for (size_t position = 0; position < ordered.size(); ++position) {
             const UploadPiece& piece = *ordered[position];

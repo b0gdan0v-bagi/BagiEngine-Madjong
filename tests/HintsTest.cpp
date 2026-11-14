@@ -698,7 +698,11 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(RowText(card.rows[1 + at]), Format("|{} ||{}|{}", ToString(option.tile), StepsWord(option.shanten), option.acceptance));
         }
         for (const CardRow& row : card.rows) {
-            const int steps = row.steps == "ready" ? 0 : std::stoi(row.steps.c_str());
+            int steps = 0;
+            if (row.steps != "ready") {
+                const auto parsed = std::from_chars(row.steps.data(), row.steps.data() + row.steps.size(), steps);
+                ASSERT_EQ(parsed.ec, std::errc()) << RowText(row);
+            }
             const CardTrend expected = steps < turn.shantenBefore ? CardTrend::Closer : (steps == turn.shantenBefore ? CardTrend::Same : CardTrend::Farther);
             EXPECT_EQ(row.trend, expected) << RowText(row);
         }

@@ -457,7 +457,9 @@ namespace BECore::Mahjong::Tests {
         for (const auto& [path, body] : byPath) {
             UploadPiece piece;
             piece.matchId = "0123456789abcdef0123456789abcdef";
-            piece.index = static_cast<uint32_t>(std::stoul(path.substr(path.rfind('/') + 1).c_str()));
+            const String number = path.substr(path.rfind('/') + 1);
+            const auto parsed = std::from_chars(number.data(), number.data() + number.size(), piece.index);
+            ASSERT_EQ(parsed.ec, std::errc()) << path.c_str();
             piece.lines.assign(body.data(), body.size());
             pieces.push_back(piece);
         }
