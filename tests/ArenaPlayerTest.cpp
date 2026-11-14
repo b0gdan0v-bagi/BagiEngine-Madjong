@@ -25,15 +25,15 @@ namespace BECore::Mahjong::Arena {
         constexpr uint32_t kFirstSeed = 4000;
         constexpr int kSeedCount = 60;
 
-        ArenaPlayer Player(std::string_view spec) {
+        ArenaPlayer Player(StringView spec) {
             const std::expected<ArenaPlayer, eastl::string> player = ParseArenaPlayer(spec);
-            EXPECT_TRUE(player.has_value()) << spec << ": " << (player.has_value() ? "" : player.error().c_str());
+            EXPECT_TRUE(player.has_value()) << ToStd(spec) << ": " << (player.has_value() ? "" : player.error().c_str());
             return player.value_or(ArenaPlayer{});
         }
 
-        std::string ErrorOf(std::string_view spec) {
+        std::string ErrorOf(StringView spec) {
             const std::expected<ArenaPlayer, eastl::string> player = ParseArenaPlayer(spec);
-            EXPECT_FALSE(player.has_value()) << "\"" << spec << "\" should be refused";
+            EXPECT_FALSE(player.has_value()) << "\"" << ToStd(spec) << "\" should be refused";
             return player.has_value() ? std::string() : std::string(player.error().c_str());
         }
 
@@ -199,7 +199,7 @@ namespace BECore::Mahjong::Arena {
             // Normal has every percent, the worlds, the margin and the depth at 0, the candidates at their default and the take-value flag on (the pick-wait and
             // danger flags off): the other value is the largest value, and for a flag the opposite of Normal's.
             const int other = knob.percent != nullptr ? knob.maxValue : (kNormalProfile.*knob.flag ? 0 : 1);
-            const ArenaPlayer player = Player("normal:" + name + "=" + std::to_string(other));
+            const ArenaPlayer player = Player(FromStd("normal:" + name + "=" + std::to_string(other)));
             const LevelProfile& set = player.profile;
             const bool changed[kProfileFieldCount] = {set.skipAcceptancePercent != kNormalProfile.skipAcceptancePercent,
                                                       set.skipDeclarationPercent != kNormalProfile.skipDeclarationPercent,
@@ -217,8 +217,8 @@ namespace BECore::Mahjong::Arena {
                 moved[index] = moved[index] || changed[index];
             }
             // The largest value is accepted, one above it is refused.
-            EXPECT_FALSE(ParseArenaPlayer("normal:" + name + "=" + std::to_string(knob.maxValue + 1)).has_value()) << name;
-            EXPECT_TRUE(ParseArenaPlayer("normal:" + name + "=" + std::to_string(knob.maxValue)).has_value()) << name;
+            EXPECT_FALSE(ParseArenaPlayer(FromStd("normal:" + name + "=" + std::to_string(knob.maxValue + 1))).has_value()) << name;
+            EXPECT_TRUE(ParseArenaPlayer(FromStd("normal:" + name + "=" + std::to_string(knob.maxValue))).has_value()) << name;
         }
         EXPECT_EQ(static_cast<size_t>(std::count(moved.begin(), moved.end(), true)), kProfileFieldCount);
     }

@@ -47,7 +47,7 @@ namespace BECore::Mahjong::Tests {
     /// Loads the expanded scene into @p deserializer, ready for `SceneManager::Deserialize`.
     inline bool LoadShippedScene(XmlDeserializer& deserializer) {
         const std::string xml = ShippedSceneXml();
-        return !xml.empty() && deserializer.LoadFromString(eastl::string_view(xml.data(), xml.size()));
+        return !xml.empty() && deserializer.LoadFromString(FromStd(xml));
     }
 
 }  // namespace BECore::Mahjong::Tests

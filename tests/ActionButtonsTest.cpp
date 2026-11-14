@@ -30,7 +30,7 @@ namespace BECore::Mahjong::Tests {
             std::vector<std::string> tiles;
             const ButtonState& button = buttons[kind];
             for (int i = 0; i < button.tileCount; ++i) {
-                tiles.emplace_back(ToString(button.tiles[static_cast<size_t>(i)]));
+                tiles.emplace_back(ToStdString(ToString(button.tiles[static_cast<size_t>(i)])));
             }
             return tiles;
         }
@@ -76,7 +76,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_NE(spec.wordKey, nullptr) << spec.element;
             ASSERT_NE(spec.hintKey, nullptr) << spec.element;
             EXPECT_EQ(std::string(spec.wordKey), "button." + std::string(EnumUtils<ButtonKind>::ToString(kind).data())) << "the key of the word is derived from the kind";
-            EXPECT_EQ(HintKey(kind), eastl::string_view(spec.hintKey));
+            EXPECT_EQ(HintKey(kind), StringView(spec.hintKey));
             EXPECT_GE(spec.maxTiles, 0) << spec.element;
             EXPECT_LE(spec.maxTiles, kMaxButtonTiles) << spec.element;
             hintKeys.insert(spec.hintKey);
@@ -204,7 +204,7 @@ namespace BECore::Mahjong::Tests {
 
         for (int i = 0; i < kButtonCount; ++i) {
             const ButtonKind kind = static_cast<ButtonKind>(i);
-            EXPECT_EQ(buttons[kind].hintKey, buttons[kind].shown ? HintKey(kind) : eastl::string_view{}) << SpecOf(kind).element;
+            EXPECT_EQ(buttons[kind].hintKey, buttons[kind].shown ? HintKey(kind) : StringView{}) << SpecOf(kind).element;
         }
     }
 

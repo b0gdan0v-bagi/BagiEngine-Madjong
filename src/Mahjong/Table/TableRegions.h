@@ -35,7 +35,7 @@ namespace BECore::Mahjong {
     inline constexpr const char* kFreeRegionNames[] = {kMoveLineRegionName, kSelectedTileRegionName, kHintRegionName, kActionsRegionName, kWaitingRegionName, kHintButtonRegionName, kAdviceRegionName};
 
     /// Whether `name` is the name of a zone region (a free region may not take it).
-    [[nodiscard]] bool IsZoneRegionName(eastl::string_view name) noexcept;
+    [[nodiscard]] bool IsZoneRegionName(StringView name) noexcept;
 
     /// A region of the table: its name and rectangle in view units.
     struct TableRegion {

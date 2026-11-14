@@ -67,11 +67,11 @@ namespace BECore::Mahjong::Tests {
             const eastl::string longestName = LongestText(names);
             const eastl::string longestLetter = LongestText(letters);
             UIVars& vars = CoreManager::GetUIVars();
-            vars.Set("panelRound"_intern, eastl::string_view(LongestText(rounds)));
-            vars.Set("panelWall"_intern, eastl::string_view(Tr(strings, "panel.wall", {{"wall", Format("{}", kTileSetSizeWithBonus)}})));
+            vars.Set("panelRound"_intern, StringView(LongestText(rounds)));
+            vars.Set("panelWall"_intern, StringView(Tr(strings, "panel.wall", {{"wall", Format("{}", kTileSetSizeWithBonus)}})));
             for (int position = 0; position < kSeatCount; ++position) {
-                vars.Set(PoolString::Intern(Format("plateName{}", position)), eastl::string_view(longestName));
-                vars.Set(PoolString::Intern(Format("panelWind{}", position)), eastl::string_view(longestLetter));
+                vars.Set(PoolString::Intern(Format("plateName{}", position)), StringView(longestName));
+                vars.Set(PoolString::Intern(Format("panelWind{}", position)), StringView(longestLetter));
                 vars.Set(PoolString::Intern(Format("panelScore{}", position)), "-9999");
             }
         }
@@ -626,7 +626,7 @@ namespace BECore::Mahjong::Tests {
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             const UIStrings& strings = CoreManager::GetUIStrings();
-            CoreManager::GetUIVars().Set("newGameWord"_intern, eastl::string_view(LongestText({Tr(strings, "hud.newGame"), Tr(strings, "hud.leaveRoom")})));
+            CoreManager::GetUIVars().Set("newGameWord"_intern, StringView(LongestText({Tr(strings, "hud.newGame"), Tr(strings, "hud.leaveRoom")})));
             ExpectPassesTheMatrix("HudMenu", EngineTouchMinimum());
             for (const Output& output : kOutputs) {
                 ExpectWordsFit("HudMenu", output.width, output.height, kButtonAir);
@@ -996,7 +996,7 @@ namespace BECore::Mahjong::Tests {
             SetWorstVars();
             const eastl::string longest = LongestMoveText();
             ASSERT_FALSE(longest.empty());
-            CoreManager::GetUIVars().Set("lastMove"_intern, eastl::string_view(longest));
+            CoreManager::GetUIVars().Set("lastMove"_intern, StringView(longest));
 
             ExpectPassesTheMatrix("Hud", EngineTouchMinimum());
             for (const Output& output : kOutputs) {
@@ -1030,7 +1030,7 @@ namespace BECore::Mahjong::Tests {
                 SCOPED_TRACE(Format("{} {}", window.label.c_str(), language.ToStringView().data()).c_str());
                 const eastl::string longest = LongestSelectedText();
                 ASSERT_FALSE(longest.empty());
-                CoreManager::GetUIVars().Set("selectedTileText"_intern, eastl::string_view(longest));
+                CoreManager::GetUIVars().Set("selectedTileText"_intern, StringView(longest));
                 LayOutOnTheTable(nodes, window);
 
                 const UIElement* label = Element("Hud", "SelectedTile");
@@ -1351,7 +1351,7 @@ namespace BECore::Mahjong::Tests {
         const SeatLevels before = _game->GetLevels();
 
         for (const ComputerLevel level : kAllLevels) {
-            const std::string text(LevelText(level));
+            const std::string text = ToStdString(LevelText(level));
             EmitAction("MahjongSetSeatLevel2", text.c_str());
             EXPECT_EQ(Hud()->PendingLevels()[2], level) << text;
             EXPECT_EQ(SeatLevelVar(2), text);

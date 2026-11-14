@@ -66,10 +66,10 @@ namespace BECore::Mahjong {
 
     /// The name of the level `Hard` of the first slice of the computer levels. It played exactly like Normal and is gone, but files were
     /// written with it: a version 2 `start` that names it is read as `Normal`, not refused. Only version 2 has names.
-    inline constexpr std::string_view kMatchLogRetiredLevelName = "hard";
+    inline constexpr StringView kMatchLogRetiredLevelName = "hard";
 
     /// The `platform` text of a `start`: `desktop`, `web` or `unknown`.
-    [[nodiscard]] eastl::string_view PlatformName(MatchPlatform platform);
+    [[nodiscard]] StringView PlatformName(MatchPlatform platform);
 
     /// One event as the object of its line.
     [[nodiscard]] Json EventToJson(const MatchLogEvent& event);
@@ -78,6 +78,6 @@ namespace BECore::Mahjong {
     [[nodiscard]] std::expected<MatchLogEvent, eastl::string> EventFromJson(const Json& json);
 
     /// A whole log file: lines of JSON, blank lines skipped. The error names the line number (counted from 1) and what is wrong with it.
-    [[nodiscard]] std::expected<eastl::vector<MatchLogEvent>, eastl::string> ParseMatchLog(std::string_view lines);
+    [[nodiscard]] std::expected<eastl::vector<MatchLogEvent>, eastl::string> ParseMatchLog(StringView lines);
 
 }  // namespace BECore::Mahjong

@@ -45,7 +45,7 @@ namespace BECore::Mahjong::Tests {
 
         /// The tiles of a text; a bad text fails the test and gives no tiles.
         inline eastl::vector<Tile> Parse(const std::string& text, const char* what) {
-            const Optional<eastl::vector<Tile>> tiles = ParseTiles(text);
+            const Optional<eastl::vector<Tile>> tiles = ParseTiles(FromStd(text));
             if (!tiles.has_value()) {
                 ADD_FAILURE() << "FixedWallSpec." << what << ": cannot read the tiles \"" << text << "\"";
                 return {};
@@ -70,7 +70,7 @@ namespace BECore::Mahjong::Tests {
         }
         const auto take = [&left](Tile tile) {
             if (--left[tile.Id()] < 0) {
-                ADD_FAILURE() << "FixedWallSpec uses more copies of " << ToString(tile) << " than the set has";
+                ADD_FAILURE() << "FixedWallSpec uses more copies of " << ToStd(ToString(tile)) << " than the set has";
                 left[tile.Id()] = 0;
             }
         };

@@ -461,7 +461,7 @@ namespace BECore::Mahjong::Tests {
         // A line as the game wrote it before the level of each seat
         const std::string line =
             R"({"event":"start","version":3,"seed":41,"settings":{"handsPerMatch":4,"flowers":false,"replayDrawnHand":true,"limit":500,"startingScore":2000},"seats":"PCCC","level":3})";
-        const auto json = ParseJson(eastl::string_view(line.data(), line.size()));
+        const auto json = ParseJson(FromStd(line));
         ASSERT_TRUE(json.has_value());
         const auto back = EventFromJson(*json);
         ASSERT_TRUE(back.has_value()) << back.error().c_str();
@@ -508,7 +508,7 @@ namespace BECore::Mahjong::Tests {
         const MatchLogEvent& start = events.front();
         ASSERT_EQ(start.kind, MatchLogKind::Start);
         ASSERT_EQ(start.levels, UniformLevels(ComputerLevel::Normal));
-        Json hard = With(EventToJson(start), "level", std::string(kMatchLogRetiredLevelName));
+        Json hard = With(EventToJson(start), "level", ToStdString(kMatchLogRetiredLevelName));
         hard.erase("levels");
         hard["version"] = kMatchLogLevelVersion;
         const auto back = EventFromJson(hard);
@@ -523,7 +523,7 @@ namespace BECore::Mahjong::Tests {
             text += EventToJson(events[index]).dump();
             text += '\n';
         }
-        const auto parsed = ParseMatchLog(text);
+        const auto parsed = ParseMatchLog(FromStd(text));
         ASSERT_TRUE(parsed.has_value()) << parsed.error().c_str();
         EXPECT_EQ(*parsed, events);
         Match replayed;
@@ -607,7 +607,7 @@ namespace BECore::Mahjong::Tests {
         const size_t firstBreak = text.find('\n');
         text.insert(firstBreak + 1, "\n   \n");
         text.insert(firstBreak, "\r");
-        const auto parsed = ParseMatchLog(text);
+        const auto parsed = ParseMatchLog(FromStd(text));
         ASSERT_TRUE(parsed.has_value()) << parsed.error().c_str();
         EXPECT_EQ(*parsed, events);
 
@@ -636,14 +636,14 @@ namespace BECore::Mahjong::Tests {
         };
         for (const Case& test : cases) {
             const std::string text = valid + "\n\n" + test.line + "\n" + valid + "\n";
-            const auto parsed = ParseMatchLog(text);
+            const auto parsed = ParseMatchLog(FromStd(text));
             ASSERT_FALSE(parsed.has_value()) << test.line;
             EXPECT_EQ(parsed.error().rfind("line 3: ", 0), 0u) << parsed.error().c_str();
             EXPECT_NE(parsed.error().find(test.expected), eastl::string::npos) << test.line << " -> " << parsed.error().c_str();
         }
         // The first and a late line are named too.
         EXPECT_EQ(ParseMatchLog("{").error().rfind("line 1: ", 0), 0u);
-        EXPECT_EQ(ParseMatchLog(valid + "\n" + valid + "\n[]").error().rfind("line 3: ", 0), 0u);
+        EXPECT_EQ(ParseMatchLog(FromStd(valid + "\n" + valid + "\n[]")).error().rfind("line 3: ", 0), 0u);
     }
 
     TEST_F(MatchLogJsonTest, EveryWrongMemberIsRefusedAndNamed) {

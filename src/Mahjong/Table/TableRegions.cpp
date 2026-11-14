@@ -2,7 +2,7 @@
 
 namespace BECore::Mahjong {
 
-    bool IsZoneRegionName(eastl::string_view name) noexcept {
+    bool IsZoneRegionName(StringView name) noexcept {
         if (name == kCenterPanelRegionName || name == kWallRegionName) {
             return true;
         }

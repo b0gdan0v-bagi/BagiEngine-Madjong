@@ -18,7 +18,7 @@ namespace BECore::Mahjong {
         return WebPostIsAvailable();
     }
 
-    std::expected<WebPostId, eastl::string> EngineWebPoster::Start(eastl::string_view path, eastl::string_view body) {
+    std::expected<WebPostId, eastl::string> EngineWebPoster::Start(StringView path, StringView body) {
         return WebPostStart(path, body, {});
     }
 

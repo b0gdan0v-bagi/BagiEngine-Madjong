@@ -295,10 +295,10 @@ namespace BECore::Mahjong::Tests {
 
     /// What is wrong with one text that a client received; empty when nothing. @p seat is the seat the client holds (from its `joined`),
     /// -1 before it has one. A text that is not a JSON object is an offence.
-    inline std::vector<std::string> JudgeRoomMessage(std::string_view text, int seat) {
+    inline std::vector<std::string> JudgeRoomMessage(StringView text, int seat) {
         using namespace RoomsJudgeDetail;
         Offences offences;
-        const auto parsed = ParseJson(eastl::string_view(text.data(), text.size()));
+        const auto parsed = ParseJson(text);
         if (!parsed || !parsed->is_object()) {
             offences.push_back("message: is not a JSON object");
             return offences;
@@ -334,7 +334,7 @@ namespace BECore::Mahjong::Tests {
     class RoomsJudgeLog {
     public:
         /// Judges @p text for the client of @p seat; the offences are kept and returned.
-        std::vector<std::string> Text(std::string_view text, int seat) {
+        std::vector<std::string> Text(StringView text, int seat) {
             ++_texts;
             std::vector<std::string> offences = JudgeRoomMessage(text, seat);
             _offences.insert(_offences.end(), offences.begin(), offences.end());

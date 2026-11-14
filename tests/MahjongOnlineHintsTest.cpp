@@ -42,12 +42,12 @@ namespace BECore::Mahjong::Tests {
         /// that stays connected sees it: the log of a hand is inferred from the views, and a gap would coalesce the moves).
         void Play(std::vector<HandModel>& states, const std::string& tiles, std::initializer_list<Seat> declaring = {}) {
             HandModel model = states.back();
-            const eastl::vector<Tile> parsed = ParseTiles(tiles).value();
+            const eastl::vector<Tile> parsed = ParseTiles(FromStd(tiles)).value();
             for (const Tile tile : parsed) {
                 const Seat seat = model.CurrentSeat();
                 const bool declare = eastl::find(declaring.begin(), declaring.end(), seat) != declaring.end();
-                EXPECT_TRUE(model.Discard(seat, tile, declare).has_value()) << "seat " << seat << " " << ToString(tile);
-                EXPECT_EQ(model.GetPhase(), Phase::Discard) << "the discard of " << ToString(tile) << " opened a window";
+                EXPECT_TRUE(model.Discard(seat, tile, declare).has_value()) << "seat " << seat << " " << ToStd(ToString(tile));
+                EXPECT_EQ(model.GetPhase(), Phase::Discard) << "the discard of " << ToStd(ToString(tile)) << " opened a window";
                 states.push_back(model);
             }
         }
@@ -461,7 +461,7 @@ namespace BECore::Mahjong::Tests {
             for (const char* key : {"online.table.hintsAllowed", "online.table.hintsAllowedOff", "online.table.hintsOff"}) {
                 lines.push_back(Tr(strings, key));
             }
-            CoreManager::GetUIVars().Set("roomHintsText"_intern, eastl::string_view(LongestText(lines)));
+            CoreManager::GetUIVars().Set("roomHintsText"_intern, StringView(LongestText(lines)));
             Draw();
             ASSERT_TRUE(OnScreen("Hints", "RoomHintsText"));
             ExpectPassesTheMatrix("Hints", EngineTouchMinimum());

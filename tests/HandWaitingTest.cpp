@@ -23,17 +23,17 @@ namespace BECore::Mahjong::Tests {
         };
 
         TileCounts Counts(const std::string& text) {
-            return CountTiles(ParseTiles(text).value());
+            return CountTiles(ParseTiles(FromStd(text)).value());
         }
 
         eastl::vector<Tile> WaitsOn(const std::string& text) {
-            return eastl::vector<Tile>{ParseTiles(text).value()[0]};
+            return eastl::vector<Tile>{ParseTiles(FromStd(text)).value()[0]};
         }
 
         std::string Describe(const eastl::vector<Tile>& tiles) {
             std::string text;
             for (const Tile tile : tiles) {
-                text += std::string{ToString(tile)} + " ";
+                text += ToStdString(ToString(tile)) + " ";
             }
             return text;
         }

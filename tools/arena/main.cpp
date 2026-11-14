@@ -10,7 +10,7 @@ namespace {
 
     namespace fs = std::filesystem;
 
-    constexpr std::string_view kLogExtension = ".jsonl";
+    constexpr BECore::StringView kLogExtension = ".jsonl";
 
     eastl::string Quoted(const fs::path& path) {
         const std::string text = path.generic_string();
@@ -27,8 +27,8 @@ namespace {
     }
 
     /// The `*.jsonl` files under `path` (names relative to it, `/` separated; the caller sorts), or the one file `path` names.
-    std::expected<eastl::vector<BECore::Mahjong::Arena::LogFile>, eastl::string> ReadLogFiles(std::string_view path) {
-        const fs::path root{std::string(path)};
+    std::expected<eastl::vector<BECore::Mahjong::Arena::LogFile>, eastl::string> ReadLogFiles(BECore::StringView path) {
+        const fs::path root{BECore::ToStdString(path)};
         std::error_code error;
         eastl::vector<BECore::Mahjong::Arena::LogFile> files;
         if (fs::is_regular_file(root, error)) {
@@ -44,7 +44,7 @@ namespace {
         }
         fs::recursive_directory_iterator iterator(root, error);
         for (const fs::recursive_directory_iterator end; !error && iterator != end; iterator.increment(error)) {
-            if (!iterator->is_regular_file(error) || iterator->path().extension() != kLogExtension) {
+            if (!iterator->is_regular_file(error) || iterator->path().extension() != BECore::ToStd(kLogExtension)) {
                 continue;
             }
             const fs::path relative = fs::relative(iterator->path(), root, error);
@@ -66,7 +66,7 @@ namespace {
 }  // namespace
 
 int main(int argc, char** argv) {
-    eastl::vector<std::string_view> args;
+    eastl::vector<BECore::StringView> args;
     for (int index = 1; index < argc; ++index) {
         args.push_back(argv[index]);
     }

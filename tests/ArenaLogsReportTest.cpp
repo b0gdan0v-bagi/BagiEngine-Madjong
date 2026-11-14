@@ -66,7 +66,7 @@ Differences from normal: 141 in all, 2 listed (log order)
         }
 
         LogSource SourceOf(eastl::vector<LogFile> files) {
-            return [files](std::string_view) -> std::expected<eastl::vector<LogFile>, eastl::string> { return files; };
+            return [files](StringView) -> std::expected<eastl::vector<LogFile>, eastl::string> { return files; };
         }
 
         /// The known corpus: a Normal person among Normal computers, one among Easy ones, one among Easy and Normal computers (mixed), a
@@ -113,8 +113,8 @@ Differences from normal: 141 in all, 2 listed (log order)
             return tally;
         }
 
-        bool Contains(const eastl::string& text, std::string_view part) {
-            return std::string_view(text.data(), text.size()).find(part) != std::string_view::npos;
+        bool Contains(const eastl::string& text, StringView part) {
+            return StringView(text).find(part) != StringView::npos;
         }
 
         RealMatch Counted(size_t group, int64_t hands, int64_t wins, int64_t points) {

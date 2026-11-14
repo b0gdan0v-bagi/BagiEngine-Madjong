@@ -19,25 +19,25 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        constexpr eastl::string_view kAcceptAction = "MahjongUploadAccept";
-        constexpr eastl::string_view kDeclineAction = "MahjongUploadDecline";
-        constexpr eastl::string_view kSetUploadAction = "MahjongSetUpload";
-        constexpr eastl::string_view kNicknameAction = "MahjongNickname";
-        constexpr eastl::string_view kOnValue = "on";
-        constexpr eastl::string_view kOffValue = "off";
+        constexpr StringView kAcceptAction = "MahjongUploadAccept";
+        constexpr StringView kDeclineAction = "MahjongUploadDecline";
+        constexpr StringView kSetUploadAction = "MahjongSetUpload";
+        constexpr StringView kNicknameAction = "MahjongNickname";
+        constexpr StringView kOnValue = "on";
+        constexpr StringView kOffValue = "off";
         // The node of the question (`config/nodes/MahjongConsent.xml`)
-        constexpr eastl::string_view kConsentNode = "Consent";
+        constexpr StringView kConsentNode = "Consent";
         // The page `Options` (`config/nodes/MahjongOptions.xml`): the rows this component shows, the plate they grow and the label of the nickname
-        constexpr eastl::string_view kOptionsNode = "Options";
-        constexpr eastl::string_view kOptionsPlate = "Plate";
-        constexpr eastl::string_view kNicknameField = "NicknameField";
-        constexpr eastl::string_view kOptionsRows[] = {"UploadRow", "NicknameRow", "NicknameNote"};
+        constexpr StringView kOptionsNode = "Options";
+        constexpr StringView kOptionsPlate = "Plate";
+        constexpr StringView kNicknameField = "NicknameField";
+        constexpr StringView kOptionsRows[] = {"UploadRow", "NicknameRow", "NicknameNote"};
         // 376 high without the rows, plus what the file's header comment counts for them: two rows of 64 and a note of 24, three gaps of 8
         constexpr float kOptionsPlateMaxHeight = 376.0f + 2.0f * 64.0f + 24.0f + 3.0f * 8.0f;
         // The roles `text` and `textMuted` in `kUiPalette` / `kUiPaletteNames`
         constexpr size_t kTextIndex = 9;
         constexpr size_t kTextMutedIndex = 10;
-        constexpr eastl::string_view kNicknameNoneKey = "options.nicknameNone";
+        constexpr StringView kNicknameNoneKey = "options.nicknameNone";
 
         IntrusivePtr<UICanvasComponent> FindCanvasOf(Scene& scene, PoolString nodeName) {
             for (const auto& child : scene.GetRootNode().GetChildren()) {
@@ -102,7 +102,7 @@ namespace BECore::Mahjong {
         const UploadPrefs& prefs = game.GetUploadPrefs();
         game.GetUpload().SetConsent(prefs.consent, _remembered);
         // A nickname goes into a log only while the consent is `Granted`: a local file never carries a name that was not sent
-        const eastl::string_view nickname = prefs.consent == UploadConsent::Granted ? eastl::string_view(prefs.nickname) : eastl::string_view();
+        const StringView nickname = prefs.consent == UploadConsent::Granted ? StringView(prefs.nickname) : StringView();
         game.GetLocalSession().SetLogOrigin(MakeMatchOrigin(kBrowserBuild, nickname));
     }
 
@@ -118,7 +118,7 @@ namespace BECore::Mahjong {
         PublishConsentScreen(consent == UploadConsent::Unasked);
     }
 
-    void MahjongUploadComponent::SetNickname(eastl::string_view nickname) {
+    void MahjongUploadComponent::SetNickname(StringView nickname) {
         MahjongGame* game = MahjongGame::GetActive();
         if (!_running || game == nullptr) {
             return;
@@ -130,7 +130,7 @@ namespace BECore::Mahjong {
 
     void MahjongUploadComponent::ShowOptionsRows() {
         Scene& scene = GetScene();
-        for (const eastl::string_view row : kOptionsRows) {
+        for (const StringView row : kOptionsRows) {
             UICanvasComponent::SetElementVisibleByName(scene, PoolString::Intern(row), true);
         }
         const IntrusivePtr<UICanvasComponent> options = FindCanvasOf(scene, PoolString::Intern(kOptionsNode));
@@ -159,11 +159,11 @@ namespace BECore::Mahjong {
                 vars.Set("uploadChoice"_intern, kOffValue);
                 break;
             case UploadConsent::Unasked:
-                vars.Set("uploadChoice"_intern, eastl::string_view());
+                vars.Set("uploadChoice"_intern, StringView());
                 break;
         }
         const bool none = prefs.nickname.empty();
-        vars.Set("uploadNickname"_intern, eastl::string_view(none ? Tr(strings, kNicknameNoneKey) : prefs.nickname));
+        vars.Set("uploadNickname"_intern, StringView(none ? Tr(strings, kNicknameNoneKey) : prefs.nickname));
         const IntrusivePtr<UICanvasComponent> options = FindCanvasOf(GetScene(), PoolString::Intern(kOptionsNode));
         UIElement* field = options ? options->GetRoot().FindByName(PoolString::Intern(kNicknameField)) : nullptr;
         if (UITextComponent* label = field != nullptr ? field->GetComponent<UITextComponent>() : nullptr) {
@@ -203,7 +203,7 @@ namespace BECore::Mahjong {
         if (!_running) {
             return;
         }
-        const eastl::string_view action = event.action.ToStringView();
+        const StringView action = event.action.ToStringView();
         if (action == kSetUploadAction || action == kNicknameAction) {
             // The rows of `Options`; a click that arrives when the page is not up, or under the question, is stale
             const MahjongGame* game = MahjongGame::GetActive();
@@ -214,7 +214,7 @@ namespace BECore::Mahjong {
                 if (MahjongOnlineComponent* pad = MahjongOnlineComponent::GetActive()) {
                     pad->OpenNicknameEntry(game->GetUploadPrefs().nickname);
                 }
-            } else if (const eastl::string_view value = event.value.ToStringView(); value == kOnValue || value == kOffValue) {
+            } else if (const StringView value = event.value.ToStringView(); value == kOnValue || value == kOffValue) {
                 Choose(value == kOnValue ? UploadConsent::Granted : UploadConsent::Declined);
             }
             return;

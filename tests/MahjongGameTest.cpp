@@ -195,13 +195,13 @@ namespace BECore::Mahjong::Tests {
 
             // StartMatch reaches the session with the level, a Reset and a second StartMatch keep it
             ASSERT_TRUE(game->StartMatch(kSeed).has_value());
-            EXPECT_EQ(game->GetSession().Levels(), UniformLevels(level)) << LevelText(level);
+            EXPECT_EQ(game->GetSession().Levels(), UniformLevels(level)) << ToStd(LevelText(level));
             game->Reset();
-            EXPECT_EQ(game->GetLevels()[0], level) << LevelText(level);
-            EXPECT_EQ(game->GetSession().Levels(), UniformLevels(level)) << LevelText(level);
+            EXPECT_EQ(game->GetLevels()[0], level) << ToStd(LevelText(level));
+            EXPECT_EQ(game->GetSession().Levels(), UniformLevels(level)) << ToStd(LevelText(level));
             ASSERT_TRUE(game->StartMatch(kSeed + 1).has_value());
-            EXPECT_EQ(game->GetLevels()[0], level) << LevelText(level);
-            EXPECT_EQ(game->GetSession().Levels(), UniformLevels(level)) << LevelText(level);
+            EXPECT_EQ(game->GetLevels()[0], level) << ToStd(LevelText(level));
+            EXPECT_EQ(game->GetSession().Levels(), UniformLevels(level)) << ToStd(LevelText(level));
         }
     }
 

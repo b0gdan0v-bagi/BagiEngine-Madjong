@@ -163,9 +163,9 @@ namespace BECore::Mahjong::Tests {
         for (const ComputerLevel level : kAllLevels) {
             EXPECT_EQ(LevelNumber(level), expected);
             EXPECT_EQ(LevelOf(expected), level);
-            const std::string_view text = LevelText(level);
-            EXPECT_EQ(text, std::to_string(expected));
-            EXPECT_EQ(TryParseLevel(text), level) << text;
+            const StringView text = LevelText(level);
+            EXPECT_EQ(ToStd(text), std::to_string(expected));
+            EXPECT_EQ(TryParseLevel(text), level) << ToStd(text);
             ++expected;
         }
         EXPECT_EQ(LevelNumber(ComputerLevel::Easy), 1);
@@ -206,7 +206,7 @@ namespace BECore::Mahjong::Tests {
             ComputerTable table(31, level);
             const eastl::vector<HandAction> played = PlayActions(table, 31);
             ASSERT_FALSE(played.empty());
-            EXPECT_EQ(PlayActionsByPlayers(31, UniformLevels(level)), played) << LevelText(level);
+            EXPECT_EQ(PlayActionsByPlayers(31, UniformLevels(level)), played) << ToStd(LevelText(level));
             byLevel.push_back(played);
         }
         EXPECT_NE(byLevel[LevelNumber(ComputerLevel::Easy) - kMinLevel], byLevel[LevelNumber(ComputerLevel::Normal) - kMinLevel]);
@@ -243,8 +243,8 @@ namespace BECore::Mahjong::Tests {
             ComputerTable one(31, level);
             ComputerTable uniform(31, UniformLevels(level));
             const eastl::vector<HandAction> expected = PlayActions(one, 31);
-            ASSERT_FALSE(expected.empty()) << LevelText(level);
-            EXPECT_EQ(PlayActions(uniform, 31), expected) << LevelText(level);
+            ASSERT_FALSE(expected.empty()) << ToStd(LevelText(level));
+            EXPECT_EQ(PlayActions(uniform, 31), expected) << ToStd(LevelText(level));
         }
     }
 
@@ -297,23 +297,23 @@ namespace BECore::Mahjong::Tests {
         for (const ComputerLevel level : kAllLevels) {
             const LevelProfile& profile = ProfileOf(level);
             for (const int percent : {profile.skipAcceptancePercent, profile.skipDeclarationPercent, profile.skipClaimPercent}) {
-                EXPECT_GE(percent, 0) << LevelText(level);
-                EXPECT_LE(percent, kPercentBase) << LevelText(level);
+                EXPECT_GE(percent, 0) << ToStd(LevelText(level));
+                EXPECT_LE(percent, kPercentBase) << ToStd(LevelText(level));
             }
-            EXPECT_EQ(profile.searchWorlds, 0) << LevelText(level);
-            EXPECT_EQ(profile.ownDrawsDepth, 0) << LevelText(level) << ": the own-draws value is off in every level";
-            EXPECT_FALSE(profile.ownDrawsPickWait) << LevelText(level);
-            EXPECT_FALSE(profile.readDanger) << LevelText(level) << ": the danger tie-break is off in every level (until the arena says otherwise)";
+            EXPECT_EQ(profile.searchWorlds, 0) << ToStd(LevelText(level));
+            EXPECT_EQ(profile.ownDrawsDepth, 0) << ToStd(LevelText(level)) << ": the own-draws value is off in every level";
+            EXPECT_FALSE(profile.ownDrawsPickWait) << ToStd(LevelText(level));
+            EXPECT_FALSE(profile.readDanger) << ToStd(LevelText(level)) << ": the danger tie-break is off in every level (until the arena says otherwise)";
             if (LevelNumber(level) >= LevelNumber(ComputerLevel::Normal)) {
-                EXPECT_EQ(&profile, &kNormalProfile) << LevelText(level) << ": no player above Normal exists inside the time rule (docs/bot-search.md)";
+                EXPECT_EQ(&profile, &kNormalProfile) << ToStd(LevelText(level)) << ": no player above Normal exists inside the time rule (docs/bot-search.md)";
             } else if (weaker != nullptr) {
                 // Every knob of a level below Normal gives way no more than the level under it
-                EXPECT_LE(profile.skipAcceptancePercent, weaker->skipAcceptancePercent) << LevelText(level);
-                EXPECT_LE(profile.skipDeclarationPercent, weaker->skipDeclarationPercent) << LevelText(level);
-                EXPECT_LE(profile.skipClaimPercent, weaker->skipClaimPercent) << LevelText(level);
-                EXPECT_GE(profile.takeValueClaimsAtEqualShanten, weaker->takeValueClaimsAtEqualShanten) << LevelText(level);
+                EXPECT_LE(profile.skipAcceptancePercent, weaker->skipAcceptancePercent) << ToStd(LevelText(level));
+                EXPECT_LE(profile.skipDeclarationPercent, weaker->skipDeclarationPercent) << ToStd(LevelText(level));
+                EXPECT_LE(profile.skipClaimPercent, weaker->skipClaimPercent) << ToStd(LevelText(level));
+                EXPECT_GE(profile.takeValueClaimsAtEqualShanten, weaker->takeValueClaimsAtEqualShanten) << ToStd(LevelText(level));
                 // ... and a step is a step: the declaration skip (the biggest knob) is strictly lower than the level under it
-                EXPECT_LT(profile.skipDeclarationPercent, weaker->skipDeclarationPercent) << LevelText(level);
+                EXPECT_LT(profile.skipDeclarationPercent, weaker->skipDeclarationPercent) << ToStd(LevelText(level));
             }
             weaker = &profile;
         }
@@ -412,7 +412,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_TRUE(Has(view.legal, action));
             TileCounts counts = CountTiles(view.own.concealed);
             --counts[action.tile.Id()];
-            EXPECT_EQ(Shanten(counts, 0), 1) << "rng seed " << seed << " discards " << ToString(action.tile);
+            EXPECT_EQ(Shanten(counts, 0), 1) << "rng seed " << seed << " discards " << ToStd(ToString(action.tile));
         }
     }
 
@@ -518,15 +518,15 @@ namespace BECore::Mahjong::Tests {
                     ComputerPlayer first(playerSeed, level);
                     ComputerPlayer second(playerSeed, level);
                     const HandAction chosen = first.Choose(view);
-                    EXPECT_TRUE(Has(view.legal, chosen)) << LevelText(level) << " hand " << index << " step " << steps;
-                    EXPECT_EQ(chosen, second.Choose(view)) << LevelText(level) << " hand " << index << " step " << steps;
+                    EXPECT_TRUE(Has(view.legal, chosen)) << ToStd(LevelText(level)) << " hand " << index << " step " << steps;
+                    EXPECT_EQ(chosen, second.Choose(view)) << ToStd(LevelText(level)) << " hand " << index << " step " << steps;
                     (view.phase == Phase::Discard ? turns : windows) += 1;
-                    ASSERT_TRUE(hand.Apply(actor, chosen).has_value()) << LevelText(level) << " hand " << index << " step " << steps;
+                    ASSERT_TRUE(hand.Apply(actor, chosen).has_value()) << ToStd(LevelText(level)) << " hand " << index << " step " << steps;
                 }
-                EXPECT_EQ(hand.GetPhase(), Phase::Finished) << LevelText(level) << " hand " << index;
+                EXPECT_EQ(hand.GetPhase(), Phase::Finished) << ToStd(LevelText(level)) << " hand " << index;
             }
-            EXPECT_GT(turns, kRandomHands) << LevelText(level);
-            EXPECT_GT(windows, 0) << LevelText(level);
+            EXPECT_GT(turns, kRandomHands) << ToStd(LevelText(level));
+            EXPECT_GT(windows, 0) << ToStd(LevelText(level));
         }
     }
 
@@ -548,7 +548,7 @@ namespace BECore::Mahjong::Tests {
             for (uint32_t seed = 1; seed <= kRngSeeds; ++seed) {
                 ComputerPlayer playerA(seed, level);
                 ComputerPlayer playerB(seed, level);
-                EXPECT_EQ(playerA.Choose(MakeTableView(a, kSeat0)), playerB.Choose(MakeTableView(b, kSeat0))) << LevelText(level) << " seed " << seed;
+                EXPECT_EQ(playerA.Choose(MakeTableView(a, kSeat0)), playerB.Choose(MakeTableView(b, kSeat0))) << ToStd(LevelText(level)) << " seed " << seed;
             }
         }
     }

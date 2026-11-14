@@ -15,7 +15,7 @@ namespace BECore::Mahjong::Tests {
     namespace {
 
         /// The shipped table with the given language current; one per language, loaded once (the tests only read it).
-        const UIStrings& Words(std::string_view language) {
+        const UIStrings& Words(StringView language) {
             static UIStrings english;
             static UIStrings russian;
             static const bool loaded = [] {

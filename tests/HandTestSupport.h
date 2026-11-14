@@ -53,7 +53,7 @@ namespace BECore::Mahjong::Tests {
 
     /// The name of a level, for a failure message: its number (`LevelText`).
     inline std::string Name(ComputerLevel level) {
-        return std::string(LevelText(level));
+        return ToStdString(LevelText(level));
     }
 
     /// The tile of a text such as "5p" or "Rd"; the text is the test's own, so a bad one aborts at once.
@@ -81,11 +81,11 @@ namespace BECore::Mahjong::Tests {
             text += " |";
             for (const Tile tile : hand.concealed) {
                 text += " ";
-                text += ToString(tile);
+                text += ToStd(ToString(tile));
             }
             text += " melds";
             for (const Meld& meld : hand.melds) {
-                text += " " + std::to_string(static_cast<int>(meld.kind)) + std::string(ToString(meld.first)) + std::to_string(meld.concealed);
+                text += " " + std::to_string(static_cast<int>(meld.kind)) + ToStdString(ToString(meld.first)) + std::to_string(meld.concealed);
             }
             text += " bonus " + std::to_string(hand.bonus.size());
             text += " calling " + std::to_string(hand.callingDeclared) + "/" + std::to_string(hand.callingAtDiscardCount) + "/" + std::to_string(hand.discardCount);
@@ -94,7 +94,7 @@ namespace BECore::Mahjong::Tests {
         text += " | pile";
         for (const DiscardEntry& entry : model.Discards()) {
             text += " ";
-            text += ToString(entry.tile);
+            text += ToStd(ToString(entry.tile));
         }
         text += " | live " + std::to_string(model.GetWall().LiveCount()) + " loose " + std::to_string(model.GetWall().LooseCount());
         text += model.Result().has_value() ? " result" : " open";
@@ -104,13 +104,13 @@ namespace BECore::Mahjong::Tests {
     /// Each seat in turn discards the next tile of `tiles`; the seats in `declaring` declare the calling hand with their discard.
     /// No discard of a lap may open a claim window.
     inline void Lap(HandModel& model, const std::string& tiles, std::initializer_list<Seat> declaring = {}) {
-        const eastl::vector<Tile> parsed = ParseTiles(tiles).value();
+        const eastl::vector<Tile> parsed = ParseTiles(FromStd(tiles)).value();
         for (const Tile tile : parsed) {
             const Seat seat = model.CurrentSeat();
             const bool declare = eastl::find(declaring.begin(), declaring.end(), seat) != declaring.end();
             const HandStatus status = model.Discard(seat, tile, declare);
-            ASSERT_TRUE(status.has_value()) << "seat " << seat << " cannot discard " << ToString(tile);
-            ASSERT_EQ(model.GetPhase(), Phase::Discard) << "the discard of " << ToString(tile) << " by seat " << seat << " opened a window";
+            ASSERT_TRUE(status.has_value()) << "seat " << seat << " cannot discard " << ToStd(ToString(tile));
+            ASSERT_EQ(model.GetPhase(), Phase::Discard) << "the discard of " << ToStd(ToString(tile)) << " by seat " << seat << " opened a window";
         }
     }
 
@@ -119,7 +119,7 @@ namespace BECore::Mahjong::Tests {
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             for (const HandAction& action : model.LegalActions(seat)) {
                 HandModel copy = model;
-                EXPECT_TRUE(copy.Apply(seat, action).has_value()) << "seat " << seat << " action " << static_cast<int>(action.kind) << " " << ToString(action.tile);
+                EXPECT_TRUE(copy.Apply(seat, action).has_value()) << "seat " << seat << " action " << static_cast<int>(action.kind) << " " << ToStd(ToString(action.tile));
             }
         }
     }
@@ -157,8 +157,8 @@ namespace BECore::Mahjong::Tests {
             const bool accepted = copy.Apply(seat, candidate).has_value();
             const bool listed = Has(legal, candidate);
             if (accepted != listed) {
-                return ::testing::AssertionFailure() << "seat " << seat << " action " << Name(candidate.kind) << " tile " << ToString(candidate.tile) << " declare " << candidate.declareCalling
-                                                     << " claim " << Name(candidate.claim) << " chowFirst " << ToString(candidate.chowFirst)
+                return ::testing::AssertionFailure() << "seat " << seat << " action " << Name(candidate.kind) << " tile " << ToStd(ToString(candidate.tile)) << " declare " << candidate.declareCalling
+                                                     << " claim " << Name(candidate.claim) << " chowFirst " << ToStd(ToString(candidate.chowFirst))
                                                      << (accepted ? " is accepted but not listed" : " is listed but refused");
             }
         }

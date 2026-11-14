@@ -190,17 +190,17 @@ namespace BECore::Mahjong::Tests {
             for (const Color& color : {kSafeMark, kRiskyMark, kDangerMark}) {
                 const std::vector<Rect> bars = BarsOnSlot(color, slot.rect);
                 if (&color == expected) {
-                    ASSERT_EQ(bars.size(), 1u) << ToString(tile);
+                    ASSERT_EQ(bars.size(), 1u) << ToStd(ToString(tile));
                     EXPECT_FLOAT_EQ(bars[0].w, kDangerMarkWidth);
-                    EXPECT_GT(bars[0].x, slot.rect.x) << ToString(tile) << ": inside the tile";
-                    EXPECT_GT(bars[0].y, slot.rect.y + kWindMarkBarHeight - 0.01f) << ToString(tile) << ": under the wind bar";
-                    EXPECT_LT(bars[0].y + bars[0].h, slot.rect.y + slot.rect.h - kKeepsWaitingBarHeight + 0.01f) << ToString(tile) << ": over the keeps-waiting bar";
+                    EXPECT_GT(bars[0].x, slot.rect.x) << ToStd(ToString(tile)) << ": inside the tile";
+                    EXPECT_GT(bars[0].y, slot.rect.y + kWindMarkBarHeight - 0.01f) << ToStd(ToString(tile)) << ": under the wind bar";
+                    EXPECT_LT(bars[0].y + bars[0].h, slot.rect.y + slot.rect.h - kKeepsWaitingBarHeight + 0.01f) << ToStd(ToString(tile)) << ": over the keeps-waiting bar";
                     EXPECT_GT(bars[0].h, 0.0f);
                     EXPECT_LE(bars[0].y + bars[0].h, kViewHeight);
                 }
                 found += bars.size();
             }
-            EXPECT_EQ(found, expected != nullptr ? 1u : 0u) << ToString(tile);
+            EXPECT_EQ(found, expected != nullptr ? 1u : 0u) << ToStd(ToString(tile));
         }
         for (const char* text : kUnmarkedTiles) {
             const Tile tile = T(text);
@@ -322,7 +322,7 @@ namespace BECore::Mahjong::Tests {
             for (const auto& [slot, tile] : HandTiles()) {
                 for (const Color& color : {kSafeMark, kRiskyMark, kDangerMark}) {
                     for (const Rect& bar : BarsOnSlot(color, slot.rect)) {
-                        EXPECT_TRUE(Inside(bar, slot.rect)) << window.label.c_str() << " " << ToString(tile);
+                        EXPECT_TRUE(Inside(bar, slot.rect)) << window.label.c_str() << " " << ToStd(ToString(tile));
                         EXPECT_GT(bar.h, 0.0f) << window.label.c_str();
                     }
                 }
@@ -349,7 +349,7 @@ namespace BECore::Mahjong::Tests {
         const auto marks = DangerMarks(MakeTableView(Hand(), kSeat0));
         size_t worded = 0;
         for (const auto& [slot, tile] : HandTiles()) {
-            SCOPED_TRACE(ToString(tile));
+            SCOPED_TRACE(ToStd(ToString(tile)));
             HoverAt(slot.rect.x + slot.rect.w * 0.5f, slot.rect.y + slot.rect.h * 0.5f);
             Draw();
             Draw();  // the hints draw after the table: the word follows the bar within a frame
@@ -394,8 +394,8 @@ namespace BECore::Mahjong::Tests {
                 lines.push_back(Tr(CoreManager::GetUIStrings(), DangerHoverKey(mark)));
             }
             const eastl::string longest = LongestText(lines);
-            CoreManager::GetUIVars().Set("tileHoverText"_intern, eastl::string_view("9 Dots"));
-            CoreManager::GetUIVars().Set("tileHoverDanger"_intern, eastl::string_view(longest));
+            CoreManager::GetUIVars().Set("tileHoverText"_intern, StringView("9 Dots"));
+            CoreManager::GetUIVars().Set("tileHoverDanger"_intern, StringView(longest));
             UIElement* plate = Element("TileHover", "TileHoverPlate");
             plate->style.rect.height = UILength::Px(92.0f);
             UICanvasComponent::SetElementVisibleByName(scene, "TileHoverPlate"_intern, true);

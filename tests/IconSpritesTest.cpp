@@ -33,7 +33,7 @@ namespace BECore::Mahjong::Tests {
         constexpr int kIconAtlasWidth = kIconCellSize * kIconColumns;
         constexpr int kIconAtlasHeight = kIconCellSize * kIconRows;
         constexpr const char* kIconAtlasPath = "assets/icons/icons.png";
-        constexpr eastl::string_view kIconSpritePrefix = "Icon_";
+        constexpr StringView kIconSpritePrefix = "Icon_";
         constexpr const char* kIconNames[] = {"Icon_Rules", "Icon_Options", "Icon_NewGame", "Icon_Leave", "Icon_Close", "Icon_Back", "Icon_Next", "Icon_Hint"};
         constexpr size_t kIconCount = sizeof(kIconNames) / sizeof(kIconNames[0]);
 
@@ -71,7 +71,7 @@ namespace BECore::Mahjong::Tests {
             const XmlNode sprites = config.GetRoot().GetChild("sprites");
             ASSERT_TRUE(static_cast<bool>(sprites));
             for (const XmlNode node : sprites.Children()) {
-                if (node.Name() != eastl::string_view("sprite")) {
+                if (node.Name() != StringView("sprite")) {
                     continue;
                 }
                 Sprite sprite;

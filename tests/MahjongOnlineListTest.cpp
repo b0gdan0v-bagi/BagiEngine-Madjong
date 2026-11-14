@@ -16,7 +16,7 @@ namespace BECore::Mahjong::Tests {
         using std::chrono::milliseconds;
         using std::chrono::seconds;
 
-        constexpr eastl::string_view kUrl = "ws://hub.test";
+        constexpr StringView kUrl = "ws://hub.test";
         constexpr milliseconds kTick{10};
         constexpr int kStepLimit = 2000;
         constexpr int kHostLevel = 3;
@@ -82,7 +82,7 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_TRUE(_world.Judge().Offences().empty()) << _world.Judge().Offences().front();
             }
 
-            static eastl::string_view NoticeKey(const HubPlayer& player) {
+            static StringView NoticeKey(const HubPlayer& player) {
                 return player.Client().Notice().key;
             }
 

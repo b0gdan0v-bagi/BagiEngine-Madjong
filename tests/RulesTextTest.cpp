@@ -33,7 +33,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Whether `text` holds a digit outside its `{placeholders}`: a number that was typed in and not taken from the rules.
-        bool HasDigitOutsidePlaceholders(std::string_view text) {
+        bool HasDigitOutsidePlaceholders(StringView text) {
             bool inside = false;
             for (const char c : text) {
                 if (c == '{') {
@@ -309,7 +309,7 @@ namespace BECore::Mahjong::Tests {
                     continue;
                 }
                 ++checked;
-                EXPECT_FALSE(HasDigitOutsidePlaceholders(entry.text)) << language.id << ": " << entry.key << ": " << entry.text;
+                EXPECT_FALSE(HasDigitOutsidePlaceholders(FromStd(entry.text))) << language.id << ": " << entry.key << ": " << entry.text;
             }
         }
         EXPECT_GE(checked, 2 * (1 + 13 + 4 * 13));  // at least the pager, the titles and four lines of each page in both languages

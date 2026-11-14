@@ -39,7 +39,7 @@ namespace BECore::Mahjong::Tests {
                 const UIRegionSet& held = canvas->GetRegions();
                 EXPECT_EQ(held.Size(), expected.size()) << node << " " << where;
                 for (const TableRegion& region : expected) {
-                    const Rect* found = held.Find(PoolString::Intern(eastl::string_view(region.name.data(), region.name.size())));
+                    const Rect* found = held.Find(PoolString::Intern(region.name));
                     ASSERT_NE(found, nullptr) << node << " lacks " << region.name.c_str() << " " << where;
                     EXPECT_FLOAT_EQ(found->x, region.rect.x) << node << " " << region.name.c_str() << " " << where;
                     EXPECT_FLOAT_EQ(found->y, region.rect.y) << node << " " << region.name.c_str() << " " << where;

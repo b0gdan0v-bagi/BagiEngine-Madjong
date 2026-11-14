@@ -23,7 +23,7 @@ namespace BECore::Mahjong::Arena {
         constexpr const char* kEasy = "easy";
         constexpr const char* kRandom = "random";
 
-        ArenaPlayer Player(std::string_view spec) {
+        ArenaPlayer Player(StringView spec) {
             const std::expected<ArenaPlayer, eastl::string> player = ParseArenaPlayer(spec);
             EXPECT_TRUE(player.has_value()) << std::string(spec.data(), spec.size());
             return player.value_or(ArenaPlayer{});

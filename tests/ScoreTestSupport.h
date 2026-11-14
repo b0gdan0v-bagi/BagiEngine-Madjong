@@ -69,14 +69,14 @@ namespace BECore::Mahjong::Tests {
     /// The input of a seat that does not win: the concealed tiles and the bonus tiles as notation, the melds, the winds.
     inline ScoreInput MakeInput(const std::string& concealed, std::initializer_list<Meld> melds = {}, const std::string& bonus = "", Wind seatWind = Wind::East, Wind roundWind = Wind::East) {
         ScoreInput input;
-        const eastl::vector<Tile> tiles = ParseTiles(concealed).value();
+        const eastl::vector<Tile> tiles = ParseTiles(FromStd(concealed)).value();
         for (const Tile tile : tiles) {
             input.hand.AddConcealed(tile);
         }
         for (const Meld& meld : melds) {
             input.hand.melds.push_back(meld);
         }
-        input.hand.bonus = ParseTiles(bonus).value();
+        input.hand.bonus = ParseTiles(FromStd(bonus)).value();
         input.seatWind = seatWind;
         input.roundWind = roundWind;
         return input;

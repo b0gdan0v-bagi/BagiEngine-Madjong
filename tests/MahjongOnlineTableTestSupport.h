@@ -21,7 +21,7 @@ namespace BECore::Mahjong::Tests {
         constexpr int kPumpLimit = 2000;
         constexpr std::chrono::milliseconds kTick{10};
         constexpr float kFrameSeconds = 1.0f / 60.0f;
-        constexpr eastl::string_view kUrl = "ws://hub.test";
+        constexpr StringView kUrl = "ws://hub.test";
         constexpr const char* kHostName = "Ann";
 
     }  // namespace

@@ -76,7 +76,7 @@ namespace BECore::Mahjong::Tests {
                     return option;
                 }
             }
-            ADD_FAILURE() << "no rating for " << ToString(tile);
+            ADD_FAILURE() << "no rating for " << ToStd(ToString(tile));
             return {};
         }
 
@@ -93,7 +93,7 @@ namespace BECore::Mahjong::Tests {
             --counts[discard.Id()];
             std::vector<std::pair<std::string, int>> waits;
             for (const Tile tile : WinningTiles(counts, MeldCountOf(view), CountMeldTiles(view.own.melds))) {
-                waits.emplace_back(std::string(ToString(tile)), UnseenCopies(view, tile));
+                waits.emplace_back(ToStdString(ToString(tile)), UnseenCopies(view, tile));
             }
             return waits;
         }
@@ -101,13 +101,13 @@ namespace BECore::Mahjong::Tests {
         std::vector<std::pair<std::string, int>> Listed(const eastl::vector<TileCopies>& waits) {
             std::vector<std::pair<std::string, int>> listed;
             for (const TileCopies& wait : waits) {
-                listed.emplace_back(std::string(ToString(wait.tile)), wait.unseen);
+                listed.emplace_back(ToStdString(ToString(wait.tile)), wait.unseen);
             }
             return listed;
         }
 
         std::string Digest(const TurnOption& option) {
-            return std::string(ToString(option.tile)) + ":" + std::to_string(option.shanten) + "," + std::to_string(option.acceptance) + "," + std::to_string(option.keep) + "," +
+            return ToStdString(ToString(option.tile)) + ":" + std::to_string(option.shanten) + "," + std::to_string(option.acceptance) + "," + std::to_string(option.keep) + "," +
                    std::to_string(option.waitKinds) + "," + std::to_string(option.waitCopies);
         }
 
@@ -124,14 +124,14 @@ namespace BECore::Mahjong::Tests {
             std::string text;
             if (explained->turn.has_value()) {
                 const TurnExplanation& turn = *explained->turn;
-                text = std::to_string(static_cast<int>(turn.step)) + "|" + std::string(ToString(turn.action.tile)) + "|" + std::to_string(turn.shantenBefore) + "|" + Digest(turn.chosen) + "|" +
+                text = std::to_string(static_cast<int>(turn.step)) + "|" + ToStdString(ToString(turn.action.tile)) + "|" + std::to_string(turn.shantenBefore) + "|" + Digest(turn.chosen) + "|" +
                        std::to_string(turn.equalChoices) + "|" + std::to_string(turn.kongShantenAfter) + "," + std::to_string(turn.kongAcceptanceBefore) + "," +
                        std::to_string(turn.kongAcceptanceAfter);
                 for (const TurnOption& option : turn.alternatives) {
                     text += "|" + Digest(option);
                 }
                 for (const TileCopies& wait : turn.waits) {
-                    text += "|" + std::string(ToString(wait.tile)) + "x" + std::to_string(wait.unseen);
+                    text += "|" + ToStdString(ToString(wait.tile)) + "x" + std::to_string(wait.unseen);
                 }
             } else {
                 const ClaimExplanation& claim = *explained->claim;
@@ -140,7 +140,7 @@ namespace BECore::Mahjong::Tests {
                     text += "|" + Digest(option);
                 }
                 for (const TileCopies& wait : claim.waits) {
-                    text += "|" + std::string(ToString(wait.tile)) + "x" + std::to_string(wait.unseen);
+                    text += "|" + ToStdString(ToString(wait.tile)) + "x" + std::to_string(wait.unseen);
                 }
             }
             return text;
@@ -222,8 +222,8 @@ namespace BECore::Mahjong::Tests {
         // The numbers are the ones `WaitingDiscards` ranks by.
         for (const WaitingDiscard& discard : WaitingDiscards(view, true)) {
             const TurnOption& option = discard.tile == T("6p") ? turn.chosen : turn.alternatives[0];
-            EXPECT_EQ(option.waitCopies, discard.copies) << ToString(discard.tile);
-            EXPECT_EQ(option.keep, discard.keep) << ToString(discard.tile);
+            EXPECT_EQ(option.waitCopies, discard.copies) << ToStd(ToString(discard.tile));
+            EXPECT_EQ(option.keep, discard.keep) << ToStd(ToString(discard.tile));
         }
     }
 
@@ -401,7 +401,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(claim.chosen.has_value());
         std::vector<std::pair<std::string, int>> expected;
         for (const Tile tile : WinningTiles(view.own)) {
-            expected.emplace_back(std::string(ToString(tile)), UnseenCopies(view, tile));
+            expected.emplace_back(ToStdString(ToString(tile)), UnseenCopies(view, tile));
         }
         EXPECT_EQ(Listed(claim.waits), expected);
         EXPECT_EQ(Listed(claim.waits), (std::vector<std::pair<std::string, int>>{{"4p", 2}, {"Rd", 1}}));

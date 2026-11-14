@@ -61,7 +61,7 @@ namespace BECore::Mahjong::Tests {
             [[nodiscard]] bool Available() const override {
                 return available;
             }
-            std::expected<WebPostId, eastl::string> Start(eastl::string_view path, eastl::string_view body) override {
+            std::expected<WebPostId, eastl::string> Start(StringView path, StringView body) override {
                 posts.push_back({std::string(path.data(), path.size()), std::string(body.data(), body.size())});
                 return static_cast<WebPostId>(posts.size());
             }
@@ -189,7 +189,7 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_EQ(path.substr(path.rfind('/') + 1), std::to_string(i)) << "the pieces go in order";
             }
             const eastl::string all = _poster.Assembled();
-            const auto events = ParseMatchLog(std::string_view(all.c_str(), all.size()));
+            const auto events = ParseMatchLog(StringView(all.c_str(), all.size()));
             ASSERT_TRUE(events.has_value()) << events.error().c_str();
             Match replayed;
             const ReplayStatus status = ReplayMatchLog(*events, replayed);

@@ -43,11 +43,11 @@ namespace BECore::Mahjong::Tests {
         /// are about the turn, so a claim window that the scattered hands happen to open is passed by every seat (the claims have their
         /// own tests, `HandModelClaimTest`).
         void DiscardEach(HandModel& model, const std::string& tiles) {
-            const eastl::vector<Tile> parsed = ParseTiles(tiles).value();
+            const eastl::vector<Tile> parsed = ParseTiles(FromStd(tiles)).value();
             for (const Tile tile : parsed) {
                 const Seat seat = model.CurrentSeat();
                 const HandStatus status = model.Discard(seat, tile);
-                ASSERT_TRUE(status.has_value()) << "seat " << seat << " cannot discard " << ToString(tile);
+                ASSERT_TRUE(status.has_value()) << "seat " << seat << " cannot discard " << ToStd(ToString(tile));
                 for (const Seat pending : model.PendingClaimSeats()) {
                     ASSERT_TRUE(model.Pass(pending).has_value()) << "seat " << pending << " cannot pass";
                 }

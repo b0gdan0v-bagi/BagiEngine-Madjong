@@ -82,21 +82,21 @@ namespace BECore::Mahjong::Tests {
         /// Everything a view holds, as text, to compare two views.
         std::string ViewText(const TableView& view) {
             std::string text = "seat " + std::to_string(view.seat) + " phase " + Name(view.phase) + " current " + std::to_string(view.currentSeat) + " pending " +
-                               std::string(ToString(view.pendingTile)) + " winds " + Name(view.seatWind) + "/" + Name(view.roundWind) + " own";
+                               ToStdString(ToString(view.pendingTile)) + " winds " + Name(view.seatWind) + "/" + Name(view.roundWind) + " own";
             for (const Tile tile : view.own.concealed) {
-                text += " " + std::string(ToString(tile));
+                text += " " + ToStdString(ToString(tile));
             }
             for (const Meld& meld : view.own.melds) {
-                text += " | meld " + Name(meld.kind) + " " + std::string(ToString(meld.first)) + " " + std::to_string(meld.concealed);
+                text += " | meld " + Name(meld.kind) + " " + ToStdString(ToString(meld.first)) + " " + std::to_string(meld.concealed);
             }
             text += " calling " + std::to_string(view.own.callingDeclared) + "/" + std::to_string(view.own.callingAtDiscardCount) + "/" + std::to_string(view.own.discardCount);
             for (const PublicSeat& seat : view.seats) {
                 text += " || open";
                 for (const Meld& meld : seat.openMelds) {
-                    text += " " + Name(meld.kind) + std::string(ToString(meld.first));
+                    text += " " + Name(meld.kind) + ToStdString(ToString(meld.first));
                 }
                 for (const Tile tile : seat.bonus) {
-                    text += " bonus:" + std::string(ToString(tile));
+                    text += " bonus:" + ToStdString(ToString(tile));
                 }
                 text += " ck " + std::to_string(seat.concealedKongs) + " disc " + std::to_string(seat.discardCount) + " calling " + std::to_string(seat.callingDeclared);
             }
@@ -106,7 +106,7 @@ namespace BECore::Mahjong::Tests {
             }
             text += " live " + std::to_string(view.liveCount) + " legal";
             for (const HandAction& action : view.legal) {
-                text += " " + Name(action.kind) + ":" + std::string(ToString(action.tile)) + std::to_string(action.declareCalling) + Name(action.claim) + std::string(ToString(action.chowFirst));
+                text += " " + Name(action.kind) + ":" + ToStdString(ToString(action.tile)) + std::to_string(action.declareCalling) + Name(action.claim) + ToStdString(ToString(action.chowFirst));
             }
             return text;
         }
@@ -166,13 +166,13 @@ namespace BECore::Mahjong::Tests {
 
         /// The view of a hand-written position, or a failure with the error text.
         TableView Parse(const std::string& text) {
-            const std::expected<TableView, eastl::string> view = Analyzer::ParsePosition(text);
+            const std::expected<TableView, eastl::string> view = Analyzer::ParsePosition(FromStd(text));
             EXPECT_TRUE(view.has_value()) << (view.has_value() ? "" : view.error().c_str());
             return view.has_value() ? *view : TableView{};
         }
 
         eastl::string ParseError(const std::string& text) {
-            const std::expected<TableView, eastl::string> view = Analyzer::ParsePosition(text);
+            const std::expected<TableView, eastl::string> view = Analyzer::ParsePosition(FromStd(text));
             EXPECT_FALSE(view.has_value()) << "the position should have been refused";
             return view.has_value() ? eastl::string() : view.error();
         }

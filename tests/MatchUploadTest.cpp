@@ -38,8 +38,8 @@ namespace BECore::Mahjong::Tests {
             return settings;
         }
 
-        std::string_view View(const eastl::string& text) {
-            return std::string_view(text.c_str(), text.size());
+        StringView View(const eastl::string& text) {
+            return StringView(text.c_str(), text.size());
         }
 
         std::string ReadFile(const fs::path& path) {

@@ -74,7 +74,7 @@ namespace BECore::Mahjong {
 
         /// Opens the pad on the tester's nickname (`MahjongUploadComponent`, the row of `Options`) with @p current typed; false unless `Options` is open and the pad is not
         /// already up. `Done` and Escape hand the text to `MahjongUploadComponent::SetNickname` and go back to `Options`. The online screens are not involved.
-        bool OpenNicknameEntry(eastl::string_view current);
+        bool OpenNicknameEntry(StringView current);
         /// Whether the pad is up for the nickname (until the frame after `Done` or Escape, so the HUD, which hears the same Escape, leaves `Options` open).
         [[nodiscard]] bool IsNicknameEntryOpen() const noexcept {
             return _nicknameActive;
@@ -96,7 +96,7 @@ namespace BECore::Mahjong {
         void RequestPaste();
 
         void OnNicknameKey(MahjongGame& game, const SDLEvents::KeyDownEvent& event);
-        void OnNicknameAction(MahjongGame& game, eastl::string_view action, eastl::string_view value);
+        void OnNicknameAction(MahjongGame& game, StringView action, StringView value);
         /// Hands the typed nickname to the upload component and lets the pad go at the next `Follow`.
         void FinishNickname();
         void PublishNickname(const UIStrings& strings);

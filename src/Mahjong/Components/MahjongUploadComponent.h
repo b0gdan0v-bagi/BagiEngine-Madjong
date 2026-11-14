@@ -82,7 +82,7 @@ namespace BECore::Mahjong {
 
         /// Sets the nickname (the `Name` rules were applied by the pad), keeps it in the file and, while the consent is `Granted`, in the origin of the
         /// next match. Nothing when not running.
-        void SetNickname(eastl::string_view nickname);
+        void SetNickname(StringView nickname);
 
     private:
         void OnAction(const InputEvents::ActionEvent& event);

@@ -52,8 +52,8 @@ namespace BECore::Mahjong::Tests {
 
         /// An action as text for a failure message and for `Describe`.
         std::string Label(const HandAction& action) {
-            return Name(action.kind) + " " + (action.tile.IsValid() ? std::string(ToString(action.tile)) : std::string("-")) + (action.declareCalling ? " declare" : "") + " " + Name(action.claim) +
-                   " " + (action.chowFirst.IsValid() ? std::string(ToString(action.chowFirst)) : std::string("-"));
+            return Name(action.kind) + " " + (action.tile.IsValid() ? ToStdString(ToString(action.tile)) : std::string("-")) + (action.declareCalling ? " declare" : "") + " " + Name(action.claim) +
+                   " " + (action.chowFirst.IsValid() ? ToStdString(ToString(action.chowFirst)) : std::string("-"));
         }
 
         std::string Interval(const Arena::MeanInterval& interval) {

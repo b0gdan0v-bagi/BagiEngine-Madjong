@@ -74,14 +74,14 @@ namespace BECore::Mahjong::Analyzer {
         // Positions from the tile notation
         // ---------------------------------------------------------------------------------------------------------------------------
 
-        using Words = eastl::vector<std::string_view>;
+        using Words = eastl::vector<StringView>;
         using Problem = Optional<eastl::string>;
 
         constexpr char kCommentMark = '#';
-        constexpr std::string_view kBlanks = " \t\r";
-        constexpr std::string_view kFromWord = "from";
-        constexpr std::string_view kFirstWord = "first";
-        constexpr std::string_view kNoneWord = "none";
+        constexpr StringView kBlanks = " \t\r";
+        constexpr StringView kFromWord = "from";
+        constexpr StringView kFirstWord = "first";
+        constexpr StringView kNoneWord = "none";
         constexpr int kMeldLimit = kSetsInHand;
         constexpr int kBonusCopies = 1;
 
@@ -89,7 +89,7 @@ namespace BECore::Mahjong::Analyzer {
             return Format("line {}: {}", line, text.c_str());
         }
 
-        Optional<int> ParseNumber(std::string_view word) {
+        Optional<int> ParseNumber(StringView word) {
             int value = 0;
             const auto [end, error] = std::from_chars(word.data(), word.data() + word.size(), value);
             if (error != std::errc{} || end != word.data() + word.size() || value < 0) {
@@ -98,7 +98,7 @@ namespace BECore::Mahjong::Analyzer {
             return value;
         }
 
-        Optional<Seat> ParseSeat(std::string_view word) {
+        Optional<Seat> ParseSeat(StringView word) {
             const Optional<int> number = ParseNumber(word);
             return number.has_value() && IsSeat(*number) ? number : std::nullopt;
         }
@@ -175,7 +175,7 @@ namespace BECore::Mahjong::Analyzer {
                 return LineError(line, Format("'{}' is not a seat (0..3)", words[1]));
             }
             Meld meld;
-            const std::string_view kind = words[2];
+            const StringView kind = words[2];
             if (kind == "chow") {
                 meld.kind = MeldKind::Chow;
             } else if (kind == "pung") {
@@ -233,7 +233,7 @@ namespace BECore::Mahjong::Analyzer {
 
         /// One line of the text. `words[0]` is the key.
         Problem ApplyLine(Draft& draft, int line, const Words& words) {
-            const std::string_view key = words[0];
+            const StringView key = words[0];
             const auto needSeat = [&](size_t index) -> Optional<Seat> { return index < words.size() ? ParseSeat(words[index]) : std::nullopt; };
             const auto once = [&](bool& seen) -> Problem {
                 if (seen) {
@@ -368,23 +368,23 @@ namespace BECore::Mahjong::Analyzer {
         }
 
         /// The text split into lines of words; empty lines and comments are gone. `numbers` holds the 1-based number of each kept line.
-        void SplitLines(std::string_view text, eastl::vector<Words>& lines, eastl::vector<int>& numbers) {
+        void SplitLines(StringView text, eastl::vector<Words>& lines, eastl::vector<int>& numbers) {
             int number = 0;
             size_t start = 0;
             while (start <= text.size()) {
                 const size_t end = text.find('\n', start);
-                std::string_view line = text.substr(start, end == std::string_view::npos ? std::string_view::npos : end - start);
+                StringView line = text.substr(start, end == StringView::npos ? StringView::npos : end - start);
                 ++number;
-                start = end == std::string_view::npos ? text.size() + 1 : end + 1;
-                if (const size_t comment = line.find(kCommentMark); comment != std::string_view::npos) {
+                start = end == StringView::npos ? text.size() + 1 : end + 1;
+                if (const size_t comment = line.find(kCommentMark); comment != StringView::npos) {
                     line = line.substr(0, comment);
                 }
                 Words words;
                 size_t at = line.find_first_not_of(kBlanks);
-                while (at != std::string_view::npos) {
+                while (at != StringView::npos) {
                     const size_t stop = line.find_first_of(kBlanks, at);
-                    words.push_back(line.substr(at, stop == std::string_view::npos ? std::string_view::npos : stop - at));
-                    at = stop == std::string_view::npos ? stop : line.find_first_not_of(kBlanks, stop);
+                    words.push_back(line.substr(at, stop == StringView::npos ? StringView::npos : stop - at));
+                    at = stop == StringView::npos ? stop : line.find_first_not_of(kBlanks, stop);
                 }
                 if (!words.empty()) {
                     lines.push_back(eastl::move(words));
@@ -632,7 +632,7 @@ namespace BECore::Mahjong::Analyzer {
         return positions;
     }
 
-    std::expected<TableView, eastl::string> ParsePosition(std::string_view text) {
+    std::expected<TableView, eastl::string> ParsePosition(StringView text) {
         eastl::vector<Words> lines;
         eastl::vector<int> numbers;
         SplitLines(text, lines, numbers);

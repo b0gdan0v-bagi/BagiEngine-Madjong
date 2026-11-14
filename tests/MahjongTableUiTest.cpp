@@ -689,7 +689,7 @@ namespace BECore::Mahjong::Tests {
                 ++hand;
                 const Tile tile = own.concealed[static_cast<size_t>(slot.index)];
                 const WindMark want = tile == T("Ew") ? test.onEastTile : tile == T("Sw") ? test.onSouthTile : tile == T("Ww") ? test.onWestTile : tile == T("Nw") ? test.onNorthTile : WindMark::None;
-                EXPECT_EQ(MarkDrawnOn(slot), want) << test.name << ", " << ToString(tile);
+                EXPECT_EQ(MarkDrawnOn(slot), want) << test.name << ", " << ToStd(ToString(tile));
                 rects += want == WindMark::None ? 0 : (want == WindMark::Both ? 2 : 1);
             }
             EXPECT_EQ(hand, static_cast<int>(own.concealed.size())) << test.name;

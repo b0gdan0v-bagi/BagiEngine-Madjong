@@ -16,7 +16,7 @@ namespace BECore::Mahjong::Analyzer {
         constexpr int kHandWorlds = 100;
         constexpr uint32_t kSeed = 7;
 
-        Tile T(std::string_view text) {
+        Tile T(StringView text) {
             return TryParse(text).value();
         }
 
@@ -115,21 +115,21 @@ namespace BECore::Mahjong::Analyzer {
             return std::string(text.c_str(), text.size());
         }
 
-        bool Has(const eastl::string& text, std::string_view part) {
-            return std::string_view(text.data(), text.size()).find(part) != std::string_view::npos;
+        bool Has(const eastl::string& text, StringView part) {
+            return StringView(text).find(part) != StringView::npos;
         }
 
         /// The lines of `text` that start with `prefix` (the table rows are found by their action).
-        std::string LineOf(const eastl::string& text, std::string_view prefix) {
-            const std::string_view all(text.data(), text.size());
+        std::string LineOf(const eastl::string& text, StringView prefix) {
+            const StringView all(text.data(), text.size());
             size_t start = 0;
             while (start < all.size()) {
                 const size_t end = all.find('\n', start);
-                const std::string_view line = all.substr(start, end == std::string_view::npos ? std::string_view::npos : end - start);
+                const StringView line = all.substr(start, end == StringView::npos ? StringView::npos : end - start);
                 if (line.starts_with(prefix)) {
-                    return std::string(line);
+                    return ToStdString(line);
                 }
-                if (end == std::string_view::npos) {
+                if (end == StringView::npos) {
                     break;
                 }
                 start = end + 1;
@@ -264,7 +264,7 @@ namespace BECore::Mahjong::Analyzer {
 
     TEST(AnalyzerReportTest, TheJsonReadsBackAndItsActionsAreAcceptedByTheControlApi) {
         const eastl::string line = FormatAnalysisJson(ClaimView(), ClaimAnalysis(), LogLabel());
-        const std::expected<Json, ControlError> parsed = ParseJson(eastl::string_view(line.c_str(), line.size()));
+        const std::expected<Json, ControlError> parsed = ParseJson(StringView(line.c_str(), line.size()));
         ASSERT_TRUE(parsed.has_value());
         const Json& json = *parsed;
         EXPECT_EQ(GetJsonInt(json, "version"), kAnalysisJsonVersion);

@@ -270,8 +270,8 @@ namespace BECore::Mahjong::Tests {
             PlayerHand rest = hand;
             rest.RemoveConcealed(tile);
             const bool waiting = !WinningTiles(rest).empty();
-            EXPECT_EQ(Has(actions, HandAction::MakeDiscard(tile, true)), waiting) << ToString(tile);
-            EXPECT_TRUE(Has(actions, HandAction::MakeDiscard(tile))) << ToString(tile);
+            EXPECT_EQ(Has(actions, HandAction::MakeDiscard(tile, true)), waiting) << ToStd(ToString(tile));
+            EXPECT_TRUE(Has(actions, HandAction::MakeDiscard(tile))) << ToStd(ToString(tile));
             declaring += waiting ? 1 : 0;
         }
         EXPECT_GT(declaring, 0u);

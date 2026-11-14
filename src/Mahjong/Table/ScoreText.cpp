@@ -8,7 +8,7 @@ namespace BECore::Mahjong {
     namespace {
 
         /// The keys of the three dragons, in tile order.
-        constexpr eastl::array<eastl::string_view, kDragonCount> kDragonKeys{"tile.dragon.Red", "tile.dragon.White", "tile.dragon.Green"};
+        constexpr eastl::array<StringView, kDragonCount> kDragonKeys{"tile.dragon.Red", "tile.dragon.White", "tile.dragon.Green"};
 
         /// Lines about a set or a pair: "Pung of 5 Dots".
         bool NamesItsTileWithOf(ScoreKind kind) noexcept {
@@ -42,9 +42,9 @@ namespace BECore::Mahjong {
         constexpr int kTilesPerSet = 3;
         constexpr int kTilesPerKong = 4;
         /// The cell of a drawn hand where a hand score and a change would stand.
-        constexpr eastl::string_view kNoCell = "-";
+        constexpr StringView kNoCell = "-";
 
-        constexpr eastl::array<eastl::string_view, 5> kColumnKeys{"handover.col.seat", "handover.col.wind", "handover.col.hand", "handover.col.change", "handover.col.total"};
+        constexpr eastl::array<StringView, 5> kColumnKeys{"handover.col.seat", "handover.col.wind", "handover.col.hand", "handover.col.change", "handover.col.total"};
 
         /// The winner's tiles for the plate: the melds as laid, the concealed tiles in their order, the winning tile moved to the end.
         eastl::vector<Tile> WinningTilesOf(const HandResult& result, const PlayerHand* hand) {

@@ -38,7 +38,7 @@ namespace BECore::Mahjong::Tests {
             SDLEvents::KeyDownEvent::Emit(key, shift ? SDL_KMOD_LSHIFT : SDL_KMOD_NONE, repeat);
         }
 
-        std::string Std(eastl::string_view text) {
+        std::string Std(StringView text) {
             return std::string(text.data(), text.size());
         }
 
@@ -46,7 +46,7 @@ namespace BECore::Mahjong::Tests {
             SDLEvents::KeyDownEvent::Emit(key, mod, false);
         }
 
-        void Paste(eastl::string_view text) {
+        void Paste(StringView text) {
             ClipboardEvents::PasteEvent::Emit(text);
         }
 
@@ -98,7 +98,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// A clipboard in memory instead of the system's, for the rest of the test.
-        void UseClipboard(eastl::string_view content = {}) {
+        void UseClipboard(StringView content = {}) {
             _clipboard = New<FakeClipboard>(content);
             _clipboardScope.emplace(_clipboard);
         }
@@ -691,7 +691,7 @@ namespace BECore::Mahjong::Tests {
         constexpr milliseconds kTick{10};
         constexpr size_t kRoomCodeLength = 5;
         constexpr const char* kTempFolder = "BagiMahjongOnlineSceneTest";
-        constexpr eastl::string_view kUrl = "ws://hub.test";
+        constexpr StringView kUrl = "ws://hub.test";
 
     }  // namespace
 

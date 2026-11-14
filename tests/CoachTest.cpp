@@ -120,7 +120,7 @@ namespace BECore::Mahjong::Tests {
             return {starts, hands, settled, persons};
         }
 
-        HintCard CardOf(const CoachNote& note, const UIStrings& strings = Words(), eastl::string_view tally = {}) {
+        HintCard CardOf(const CoachNote& note, const UIStrings& strings = Words(), StringView tally = {}) {
             return MakeNoteCard(strings, note, tally);
         }
 
@@ -130,7 +130,7 @@ namespace BECore::Mahjong::Tests {
             for (const CardRow& row : card.rows) {
                 std::string tiles;
                 for (const Tile tile : row.tiles) {
-                    tiles += tile.IsValid() ? std::string(ToString(tile)) + " " : "";
+                    tiles += tile.IsValid() ? ToStdString(ToString(tile)) + " " : "";
                 }
                 text.push_back(Std(row.who) + "|" + tiles + "|" + Std(row.move) + "|" + Std(row.steps) + "|" + Std(row.useful));
             }

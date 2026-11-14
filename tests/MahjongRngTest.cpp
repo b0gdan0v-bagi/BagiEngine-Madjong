@@ -41,7 +41,7 @@ namespace BECore::Mahjong::Tests {
                 if (i > 0) {
                     text += ' ';
                 }
-                text += ToString(tiles[i]);
+                text += ToStd(ToString(tiles[i]));
             }
             return text;
         }

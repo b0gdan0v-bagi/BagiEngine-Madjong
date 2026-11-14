@@ -123,7 +123,7 @@ namespace BECore::Mahjong::Arena {
             }
         }
 
-        void AddScoreRow(eastl::string& text, std::string_view label, const SampleSums& sums) {
+        void AddScoreRow(eastl::string& text, StringView label, const SampleSums& sums) {
             const size_t start = text.size();
             text.append(Format("{:<{}}", label, kLabelWidth));
             AddRight(text, Format("{}", sums.n), kNumberWidth);

@@ -12,7 +12,7 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        std::string Std(eastl::string_view text) {
+        std::string Std(StringView text) {
             return std::string(text.data(), text.size());
         }
 
@@ -201,7 +201,7 @@ namespace BECore::Mahjong::Tests {
     namespace {
 
         /// "refused" for nothing
-        std::string Cleaned(eastl::string_view text) {
+        std::string Cleaned(StringView text) {
             const Optional<eastl::string> code = TextEntry::CleanRoomCode(text);
             return code ? Std(*code) : std::string("<refused>");
         }
@@ -246,9 +246,9 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MahjongOnlineEntry, APastedTextOverTheLimitIsNotScanned) {
         const std::string limit(TextEntry::kMaxPasteBytes, 'a');
-        EXPECT_EQ(Cleaned(eastl::string_view(limit.data(), limit.size())), "AAAAA") << "the limit itself is read";
+        EXPECT_EQ(Cleaned(FromStd(limit)), "AAAAA") << "the limit itself is read";
         const std::string over(TextEntry::kMaxPasteBytes + 1, 'a');
-        EXPECT_EQ(Cleaned(eastl::string_view(over.data(), over.size())), "<refused>");
+        EXPECT_EQ(Cleaned(FromStd(over)), "<refused>");
         const std::string spaces(TextEntry::kMaxPasteBytes + 1, ' ');
         EXPECT_EQ(Cleaned((spaces + "ab3k9").c_str()), "<refused>");
     }

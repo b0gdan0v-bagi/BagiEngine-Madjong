@@ -221,7 +221,7 @@ namespace BECore::Mahjong::Tests {
                 const Seat viewer = Member(state, "seat").get<int>();
                 const std::string text = std::string(DumpJson(state).c_str()) + std::string(DumpJson(Actions()).c_str());
                 for (const uint8_t id : KindsOnlyOthersHold(hand, viewer)) {
-                    const std::string quoted = "\"" + std::string(ToString(Tile{id})) + "\"";
+                    const std::string quoted = "\"" + ToStdString(ToString(Tile{id})) + "\"";
                     // The piles and the open sets are public, so a kind that only others hold can be there only when it lies open.
                     bool lies_open = false;
                     for (const DiscardEntry& entry : hand.Discards()) {
@@ -273,7 +273,7 @@ namespace BECore::Mahjong::Tests {
         std::vector<int> HandIds(const Json& hand) {
             std::vector<int> ids;
             for (const Json& item : hand) {
-                const auto tile = TryParse(Str(item));
+                const auto tile = TryParse(FromStd(Str(item)));
                 ids.push_back(tile ? tile->Id() : -1);
             }
             return ids;
@@ -725,7 +725,7 @@ namespace BECore::Mahjong::Tests {
         }
         ASSERT_TRUE(missing.IsValid());
 
-        const std::string tile(ToString(missing));
+        const std::string tile = ToStdString(ToString(missing));
         const std::string illegal[] = {
             "{\"type\": \"discard\", \"tile\": \"" + tile + "\"}",
             "{\"type\": \"discard\", \"tile\": \"F1\"}",
@@ -933,7 +933,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongGameControlTest, AWholeMatchAtEveryLevelEndsLegallyWithAllThePoints) {
         for (const ComputerLevel level : kAllLevels) {
-            const std::string name(LevelText(level));
+            const std::string name = ToStdString(LevelText(level));
             ASSERT_NO_FATAL_FAILURE(Reset(("{\"seed\": 5, \"seats\": \"CCCC\", \"hands\": 8, \"level\": " + name + "}").c_str()));
             int hands = 0;
             for (; hands < kHandLimitPerMatch && Str(Member(State(), "phase")) != "match_over"; ++hands) {

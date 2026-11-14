@@ -485,7 +485,7 @@ namespace BECore::Mahjong::Tests {
         std::string Describe(const eastl::vector<HandMove>& moves) {
             std::string text;
             for (const HandMove& move : moves) {
-                text += " " + std::to_string(static_cast<int>(move.kind)) + "/" + std::to_string(move.seat) + "/" + std::string(ToString(move.tile)) + "/" + std::to_string(move.from);
+                text += " " + std::to_string(static_cast<int>(move.kind)) + "/" + std::to_string(move.seat) + "/" + ToStdString(ToString(move.tile)) + "/" + std::to_string(move.from);
             }
             return text;
         }

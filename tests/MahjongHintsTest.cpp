@@ -130,7 +130,7 @@ namespace BECore::Mahjong::Tests {
         Row ExpectedRow(Seat viewer) const {
             Row row;
             for (const WaitEntry& entry : WaitingTiles(MakeTableView(Hand(), viewer))) {
-                row.emplace_back(std::string(ToString(entry.tile)), std::to_string(entry.unseen));
+                row.emplace_back(ToStdString(ToString(entry.tile)), std::to_string(entry.unseen));
             }
             return row;
         }
@@ -595,7 +595,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(row.size(), static_cast<size_t>(kWaitCells));
         int previous = -1;
         for (const auto& [tile, count] : row) {
-            const Optional<Tile> parsed = TryParse(tile);
+            const Optional<Tile> parsed = TryParse(FromStd(tile));
             ASSERT_TRUE(parsed.has_value()) << tile;
             EXPECT_GT(static_cast<int>(parsed->Id()), previous) << "ascending ids";
             previous = parsed->Id();
@@ -1448,7 +1448,7 @@ namespace BECore::Mahjong::Tests {
             add(HandAction::MakePass());
             add(HandAction::MakeDeclareWin());
             const eastl::string longest = LongestText(sentences);
-            CoreManager::GetUIVars().Set("hintAdvice"_intern, eastl::string_view(longest));
+            CoreManager::GetUIVars().Set("hintAdvice"_intern, StringView(longest));
             Draw();
             ASSERT_TRUE(AdviceShown());
             ASSERT_TRUE(ButtonShown());

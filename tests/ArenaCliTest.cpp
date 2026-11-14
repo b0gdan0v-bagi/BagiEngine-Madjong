@@ -18,10 +18,10 @@ namespace BECore::Mahjong::Arena {
         constexpr uint32_t kFirstSeed = 4000;
         constexpr uint32_t kOtherFirstSeed = 17;
 
-        using Args = eastl::vector<std::string_view>;
+        using Args = eastl::vector<StringView>;
 
         std::expected<ArenaArgs, eastl::string> Parse(const Args& args) {
-            return ParseArenaArgs(eastl::span<const std::string_view>(args.data(), args.size()));
+            return ParseArenaArgs(eastl::span<const StringView>(args.data(), args.size()));
         }
 
         std::string ErrorOf(const Args& args) {
@@ -37,21 +37,21 @@ namespace BECore::Mahjong::Arena {
         }
 
         int RunProgram(const Args& args, ArenaCliOutput& output) {
-            return RunArenaCli(eastl::span<const std::string_view>(args.data(), args.size()), output);
+            return RunArenaCli(eastl::span<const StringView>(args.data(), args.size()), output);
         }
 
-        bool Contains(const eastl::string& text, std::string_view part) {
-            return std::string_view(text.data(), text.size()).find(part) != std::string_view::npos;
+        bool Contains(const eastl::string& text, StringView part) {
+            return StringView(text).find(part) != StringView::npos;
         }
 
         constexpr uint32_t kLogSeed = 41;
 
         int RunLogs(const Args& args, const LogSource& source, ArenaCliOutput& output) {
-            return RunArenaCli(eastl::span<const std::string_view>(args.data(), args.size()), source, output);
+            return RunArenaCli(eastl::span<const StringView>(args.data(), args.size()), source, output);
         }
 
         LogSource SourceOf(eastl::vector<LogFile> files) {
-            return [files](std::string_view) -> std::expected<eastl::vector<LogFile>, eastl::string> { return files; };
+            return [files](StringView) -> std::expected<eastl::vector<LogFile>, eastl::string> { return files; };
         }
 
         /// A good log, a log cut short and a log that is no log, in an order that is not the sorted one.
@@ -65,9 +65,9 @@ namespace BECore::Mahjong::Arena {
         }
 
         /// The option and the count of seeds that every run of the program in this file uses.
-        Args FewSeeds(std::initializer_list<std::string_view> more = {}) {
+        Args FewSeeds(std::initializer_list<StringView> more = {}) {
             Args args{"--seeds", "3"};
-            for (const std::string_view argument : more) {
+            for (const StringView argument : more) {
                 args.push_back(argument);
             }
             return args;
@@ -196,15 +196,15 @@ namespace BECore::Mahjong::Arena {
 
     TEST(ArenaCliTest, TheUsageSaysTheDefaultsAndTheIntervalRule) {
         const eastl::string usage = ArenaUsage();
-        for (const std::string_view option : {"--focus", "--others", "--first", "--seeds", "--jobs", "--time", "--help"}) {
-            EXPECT_TRUE(Contains(usage, option)) << std::string(option);
+        for (const StringView option : {"--focus", "--others", "--first", "--seeds", "--jobs", "--time", "--help"}) {
+            EXPECT_TRUE(Contains(usage, option)) << ToStdString(option);
         }
         EXPECT_TRUE(Contains(usage, "default 4000"));
         EXPECT_TRUE(Contains(usage, "default 250"));
         EXPECT_TRUE(Contains(usage, "default normal"));
         EXPECT_TRUE(Contains(usage, "default random"));
-        for (const std::string_view oracle : {"oracle-acceptance", "oracle-hands", "oracle-whole", "oracle-defence"}) {
-            EXPECT_TRUE(Contains(usage, oracle)) << std::string(oracle);
+        for (const StringView oracle : {"oracle-acceptance", "oracle-hands", "oracle-whole", "oracle-defence"}) {
+            EXPECT_TRUE(Contains(usage, oracle)) << ToStdString(oracle);
         }
         EXPECT_TRUE(Contains(usage, "1.96 standard errors"));
         EXPECT_TRUE(Contains(usage, "the seed is the sample"));
@@ -270,16 +270,16 @@ namespace BECore::Mahjong::Arena {
         ArenaCliOutput single;
         EXPECT_EQ(RunProgram(FewSeeds({"--focus", "normal,easy", "--jobs", "1"}), single), kExitOk);
         EXPECT_FALSE(single.out.empty());
-        for (const std::string_view jobs : {"2", "5", "0"}) {
+        for (const StringView jobs : {"2", "5", "0"}) {
             ArenaCliOutput threaded;
-            EXPECT_EQ(RunProgram(FewSeeds({"--focus", "normal,easy", "--jobs", jobs}), threaded), kExitOk) << std::string(jobs);
-            EXPECT_EQ(threaded.out, single.out) << "jobs " << std::string(jobs);
+            EXPECT_EQ(RunProgram(FewSeeds({"--focus", "normal,easy", "--jobs", jobs}), threaded), kExitOk) << ToStdString(jobs);
+            EXPECT_EQ(threaded.out, single.out) << "jobs " << ToStdString(jobs);
             EXPECT_TRUE(threaded.err.empty());
         }
     }
 
     TEST(ArenaCliTest, TheWorldsOfOneSeedDoNotChangeTheBytes) {
-        constexpr std::string_view kSearchFocus = "normal:searchWorlds=2,searchCandidates=2,searchMargin=0";
+        constexpr StringView kSearchFocus = "normal:searchWorlds=2,searchCandidates=2,searchMargin=0";
         ArenaCliOutput single;
         EXPECT_EQ(RunProgram({"--seeds", "1", "--focus", kSearchFocus, "--jobs", "1"}, single), kExitOk);
         EXPECT_FALSE(single.out.empty());
@@ -389,10 +389,10 @@ namespace BECore::Mahjong::Arena {
         EXPECT_LT(summary, agreement);
         EXPECT_LT(agreement, real);
         EXPECT_LT(real, differences);
-        for (const std::string_view jobs : {"2", "5", "0"}) {
+        for (const StringView jobs : {"2", "5", "0"}) {
             ArenaCliOutput threaded;
-            EXPECT_EQ(RunLogs({"--logs", "folder", "--jobs", jobs}, SourceOf(SomeLogs()), threaded), kExitOk) << std::string(jobs);
-            EXPECT_EQ(threaded.out, single.out) << "jobs " << std::string(jobs);
+            EXPECT_EQ(RunLogs({"--logs", "folder", "--jobs", jobs}, SourceOf(SomeLogs()), threaded), kExitOk) << ToStdString(jobs);
+            EXPECT_EQ(threaded.out, single.out) << "jobs " << ToStdString(jobs);
         }
     }
 
@@ -413,7 +413,7 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaCliTest, APathThatCannotBeReadIsExitOne) {
-        const LogSource missing = [](std::string_view path) -> std::expected<eastl::vector<LogFile>, eastl::string> {
+        const LogSource missing = [](StringView path) -> std::expected<eastl::vector<LogFile>, eastl::string> {
             return std::unexpected(eastl::string("cannot read \"") + eastl::string(path.data(), path.size()) + "\"");
         };
         for (const bool check : {true, false}) {
@@ -434,7 +434,7 @@ namespace BECore::Mahjong::Arena {
 
     TEST(ArenaCliTest, BadLogArgumentsPrintTheErrorAndReadNothing) {
         bool read = false;
-        const LogSource watching = [&read](std::string_view) -> std::expected<eastl::vector<LogFile>, eastl::string> {
+        const LogSource watching = [&read](StringView) -> std::expected<eastl::vector<LogFile>, eastl::string> {
             read = true;
             return eastl::vector<LogFile>{};
         };
@@ -452,10 +452,10 @@ namespace BECore::Mahjong::Arena {
         EXPECT_EQ(parsed.config.count, 5);
         EXPECT_EQ(parsed.config.jobs, 2);
         EXPECT_FALSE(ArgsOf({}).tableStats);
-        for (const std::string_view other : {"--focus", "--others"}) {
+        for (const StringView other : {"--focus", "--others"}) {
             const std::string error = ErrorOf({"--table-stats", other, "normal"});
             EXPECT_NE(error.find("--table-stats"), std::string::npos) << error;
-            EXPECT_NE(error.find(std::string(other)), std::string::npos) << error;
+            EXPECT_NE(error.find(ToStdString(other)), std::string::npos) << error;
             EXPECT_FALSE(Parse({other, "normal", "--table-stats"}).has_value());
         }
         EXPECT_FALSE(Parse({"--table-stats", "--time"}).has_value());

@@ -13,7 +13,7 @@ namespace BECore::Mahjong::Arena {
         constexpr int kLevelWidth = 7;
         constexpr int kCountWidth = 7;
         constexpr int kMeanPrecision = 2;
-        constexpr std::string_view kIndent = "  ";
+        constexpr StringView kIndent = "  ";
         constexpr int kPrecision = 2;
         constexpr int kBotNameMinWidth = 22;
         constexpr int kPhaseWidth = 14;
@@ -26,11 +26,11 @@ namespace BECore::Mahjong::Arena {
         constexpr int kPointsCellWidth = 20;
         constexpr int kPercentCellWidth = 16;
         constexpr int kScoreWidth = 14;
-        constexpr std::string_view kMixedLabel = "mixed";
-        constexpr std::string_view kColumnGap = "  ";
-        constexpr std::string_view kNone = "-";
+        constexpr StringView kMixedLabel = "mixed";
+        constexpr StringView kColumnGap = "  ";
+        constexpr StringView kNone = "-";
 
-        void AddLine(eastl::string& text, std::string_view label, const eastl::string& value) {
+        void AddLine(eastl::string& text, StringView label, const eastl::string& value) {
             text.append(Format("{:<{}}{}\n", label, kLabelWidth, value));
         }
 
@@ -131,13 +131,13 @@ namespace BECore::Mahjong::Arena {
 
         void AnalyseMatch(const CheckedLog& log, const eastl::vector<ArenaPlayer>& bots, MatchSlot& slot) {
             slot.real = RealGameOfMatch(log.verdict.events);
-            slot.tester = AnalyzeTesterMatch(std::string_view(log.name.data(), log.name.size()), log.verdict.events, bots);
+            slot.tester = AnalyzeTesterMatch(log.name, log.verdict.events, bots);
         }
 
         eastl::string BotRows(const BotAgreement& bot, int nameWidth) {
             eastl::string text;
             for (size_t row = 0; row < kTesterRowCount; ++row) {
-                const std::string_view phase = row == kTesterBothRow ? "both" : (row == static_cast<size_t>(TesterPhase::DiscardTurn) ? "discard turn" : "claim window");
+                const StringView phase = row == kTesterBothRow ? "both" : (row == static_cast<size_t>(TesterPhase::DiscardTurn) ? "discard turn" : "claim window");
                 text.append(Format("{:<{}}", row == 0 ? bot.player.name.c_str() : "", nameWidth));
                 text.append(Format("{}{:<{}}", kColumnGap, phase, kPhaseWidth));
                 AddCell(text, Format("{}", bot.decisions[row]), kDecisionsWidth);

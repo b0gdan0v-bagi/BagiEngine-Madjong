@@ -16,9 +16,9 @@ namespace BECore::Mahjong::Tests {
 
         constexpr uint32_t kSeed = 9;
         constexpr const char* kFolderPrefix = "BagiMahjongSaveStoreTest";
-        constexpr eastl::string_view kRoom = "K7M4Q";
-        constexpr eastl::string_view kToken = "00112233445566778899aabbccddeeff";
-        constexpr eastl::string_view kUrl = "ws://rooms.test:8080";
+        constexpr StringView kRoom = "K7M4Q";
+        constexpr StringView kToken = "00112233445566778899aabbccddeeff";
+        constexpr StringView kUrl = "ws://rooms.test:8080";
         constexpr SeatSetup kAllComputers{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
 
         /// The saved events of a short stretch of a match: the start, a whole hand of computers, its settlement and the first moves of the next.

@@ -12,13 +12,13 @@ namespace BECore::Mahjong {
         constexpr char kPersonLetter = 'P';
         constexpr char kComputerLetter = 'C';
 
-        constexpr eastl::string_view kTypeDiscard = "discard";
-        constexpr eastl::string_view kTypeWin = "win";
-        constexpr eastl::string_view kTypeConcealedKong = "concealed_kong";
-        constexpr eastl::string_view kTypeUpgradeKong = "upgrade_kong";
-        constexpr eastl::string_view kTypeClaim = "claim";
-        constexpr eastl::string_view kTypePass = "pass";
-        constexpr eastl::string_view kTypeNextHand = "next_hand";
+        constexpr StringView kTypeDiscard = "discard";
+        constexpr StringView kTypeWin = "win";
+        constexpr StringView kTypeConcealedKong = "concealed_kong";
+        constexpr StringView kTypeUpgradeKong = "upgrade_kong";
+        constexpr StringView kTypeClaim = "claim";
+        constexpr StringView kTypePass = "pass";
+        constexpr StringView kTypeNextHand = "next_hand";
 
         std::unexpected<ControlError> InvalidParams(eastl::string message) {
             return std::unexpected(MakeControlError(ControlErrors::kInvalidParams, std::move(message)));
@@ -36,8 +36,8 @@ namespace BECore::Mahjong {
             return std::unexpected(MakeControlError(GameControlErrors::kIllegalAction, std::move(message)));
         }
 
-        eastl::string_view View(std::string_view text) {
-            return eastl::string_view(text.data(), text.size());
+        StringView View(StringView text) {
+            return text;
         }
 
         /// The `levels` of a `reset`: an array of four integers 1..10; nullopt for anything else (a number above INT64_MAX included, as
@@ -73,7 +73,7 @@ namespace BECore::Mahjong {
 
         // ----- the names of the enums in JSON -----
 
-        eastl::string_view ClaimName(ClaimKind kind) {
+        StringView ClaimName(ClaimKind kind) {
             switch (kind) {
                 case ClaimKind::Chow:
                     return "chow";
@@ -88,7 +88,7 @@ namespace BECore::Mahjong {
         }
 
         /// The kind of a claim named in JSON, nullopt for another text.
-        Optional<ClaimKind> ClaimFromName(eastl::string_view name) {
+        Optional<ClaimKind> ClaimFromName(StringView name) {
             for (const ClaimKind kind : {ClaimKind::Chow, ClaimKind::Pung, ClaimKind::Kong, ClaimKind::Mahjong}) {
                 if (name == ClaimName(kind)) {
                     return kind;
@@ -123,12 +123,12 @@ namespace BECore::Mahjong {
 
         // ----- reading what a client sent -----
 
-        std::expected<Tile, ControlError> ReadTile(const Json& object, eastl::string_view key) {
+        std::expected<Tile, ControlError> ReadTile(const Json& object, StringView key) {
             const auto text = GetJsonString(object, key);
             if (!text) {
                 return InvalidParams(Format("'{}' has to be a string with a tile such as \"5p\", \"Ew\", \"Rd\"", key));
             }
-            const Optional<Tile> tile = TryParse(std::string_view(text->data(), text->size()));
+            const Optional<Tile> tile = TryParse(StringView(text->data(), text->size()));
             if (!tile) {
                 return InvalidParams(Format("'{}' is not a tile: \"{}\"", key, text->c_str()));
             }
@@ -244,7 +244,7 @@ namespace BECore::Mahjong {
         if (!type) {
             return InvalidParams("'type' has to be a string: discard, win, concealed_kong, upgrade_kong, claim, pass or next_hand");
         }
-        const eastl::string_view name(type->c_str(), type->size());
+        const StringView name(type->c_str(), type->size());
         ControlAction action;
 
         if (name == kTypeNextHand) {
@@ -275,7 +275,7 @@ namespace BECore::Mahjong {
             action.hand = name == kTypeConcealedKong ? HandAction::MakeConcealedKong(*tile) : HandAction::MakeUpgradeKong(*tile);
         } else if (name == kTypeClaim) {
             const auto claimName = GetJsonString(json, "claim");
-            const Optional<ClaimKind> claim = claimName ? ClaimFromName(eastl::string_view(claimName->c_str(), claimName->size())) : std::nullopt;
+            const Optional<ClaimKind> claim = claimName ? ClaimFromName(StringView(claimName->c_str(), claimName->size())) : std::nullopt;
             if (!claim) {
                 return InvalidParams("'claim' has to be \"chow\", \"pung\", \"kong\" or \"mahjong\"");
             }

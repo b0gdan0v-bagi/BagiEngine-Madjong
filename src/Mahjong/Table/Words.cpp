@@ -4,7 +4,7 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        const eastl::string_view* FindArg(eastl::span<const WordArg> args, eastl::string_view name) {
+        const StringView* FindArg(eastl::span<const WordArg> args, StringView name) {
             for (const WordArg& arg : args) {
                 if (arg.first == name) {
                     return &arg.second;
@@ -15,28 +15,28 @@ namespace BECore::Mahjong {
 
     }  // namespace
 
-    eastl::string Subst(eastl::string_view text, WordArgs args) {
+    eastl::string Subst(StringView text, WordArgs args) {
         return Subst(text, eastl::span<const WordArg>(args.begin(), args.size()));
     }
 
-    eastl::string Subst(eastl::string_view text, eastl::span<const WordArg> args) {
+    eastl::string Subst(StringView text, eastl::span<const WordArg> args) {
         eastl::string out;
         size_t at = 0;
         while (at < text.size()) {
             const size_t open = text.find('{', at);
-            if (open == eastl::string_view::npos) {
+            if (open == StringView::npos) {
                 break;
             }
             out.append(text.data() + at, open - at);
             const size_t close = text.find('}', open);
             const size_t nextOpen = text.find('{', open + 1);
-            if (close == eastl::string_view::npos || (nextOpen != eastl::string_view::npos && nextOpen < close)) {
+            if (close == StringView::npos || (nextOpen != StringView::npos && nextOpen < close)) {
                 out.push_back('{');  // not a placeholder: written as it is, a later '{' may still start one
                 at = open + 1;
                 continue;
             }
-            const eastl::string_view name = text.substr(open + 1, close - open - 1);
-            if (const eastl::string_view* value = FindArg(args, name)) {
+            const StringView name = text.substr(open + 1, close - open - 1);
+            if (const StringView* value = FindArg(args, name)) {
                 out.append(value->data(), value->size());
             } else {
                 out.append(text.data() + open, close - open + 1);
@@ -47,16 +47,16 @@ namespace BECore::Mahjong {
         return out;
     }
 
-    eastl::string Tr(const UIStrings& strings, eastl::string_view key) {
-        const Optional<eastl::string_view> found = strings.Find(key);
+    eastl::string Tr(const UIStrings& strings, StringView key) {
+        const Optional<StringView> found = strings.Find(key);
         return found ? eastl::string(found->data(), found->size()) : eastl::string(key.data(), key.size());
     }
 
-    eastl::string Tr(const UIStrings& strings, eastl::string_view key, WordArgs args) {
+    eastl::string Tr(const UIStrings& strings, StringView key, WordArgs args) {
         return Subst(Tr(strings, key), args);
     }
 
-    eastl::string Tr(const UIStrings& strings, eastl::string_view key, eastl::span<const WordArg> args) {
+    eastl::string Tr(const UIStrings& strings, StringView key, eastl::span<const WordArg> args) {
         return Subst(Tr(strings, key), args);
     }
 

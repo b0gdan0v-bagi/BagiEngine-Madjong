@@ -37,7 +37,7 @@ namespace BECore::Mahjong::Tests {
             SceneEvents::SceneUpdateEvent::Emit(seconds);
         }
 
-        std::string StdString(eastl::string_view text) {
+        std::string StdString(StringView text) {
             return std::string(text.data(), text.size());
         }
 

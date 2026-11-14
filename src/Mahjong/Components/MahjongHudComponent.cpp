@@ -25,28 +25,28 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        constexpr eastl::string_view kSetSeatPrefix = "MahjongSetSeat";
-        constexpr eastl::string_view kSetSeatLevelPrefix = "MahjongSetSeatLevel";
-        constexpr eastl::string_view kSetHandsAction = "MahjongSetHands";
+        constexpr StringView kSetSeatPrefix = "MahjongSetSeat";
+        constexpr StringView kSetSeatLevelPrefix = "MahjongSetSeatLevel";
+        constexpr StringView kSetHandsAction = "MahjongSetHands";
         // The ids of the two segments of `Hands` (the values of the buttons in the scene file): the numbers of `MahjongSettings.h` as text
-        constexpr eastl::string_view kFullHandsId = "16";
-        constexpr eastl::string_view kShortHandsId = "8";
+        constexpr StringView kFullHandsId = "16";
+        constexpr StringView kShortHandsId = "8";
         static_assert(kFullMatchHands == 16 && kShortMatchHands == 8, "the ids and the buttons `Hands16` / `Hands8` of the scene follow these numbers");
-        constexpr eastl::string_view kPersonId = "person";
-        constexpr eastl::string_view kComputerId = "computer";
-        constexpr eastl::string_view kNewGameAction = "MahjongNewGame";
-        constexpr eastl::string_view kStartAction = "MahjongStart";
-        constexpr eastl::string_view kContinueAction = "MahjongContinue";
-        constexpr eastl::string_view kNextHandAction = "MahjongNextHand";
-        constexpr eastl::string_view kSetLanguageAction = "MahjongSetLanguage";
-        constexpr eastl::string_view kOptionsAction = "MahjongOptions";
-        constexpr eastl::string_view kOptionsBackAction = "MahjongOptionsBack";
-        constexpr eastl::string_view kSetupCloseAction = "MahjongSetupClose";
-        constexpr eastl::string_view kSetSpeedAction = "MahjongSetSpeed";
-        constexpr eastl::string_view kRulesAction = "MahjongRules";
-        constexpr eastl::string_view kRulesNextAction = "MahjongRulesNext";
-        constexpr eastl::string_view kRulesBackAction = "MahjongRulesBack";
-        constexpr eastl::string_view kRulesCloseAction = "MahjongRulesClose";
+        constexpr StringView kPersonId = "person";
+        constexpr StringView kComputerId = "computer";
+        constexpr StringView kNewGameAction = "MahjongNewGame";
+        constexpr StringView kStartAction = "MahjongStart";
+        constexpr StringView kContinueAction = "MahjongContinue";
+        constexpr StringView kNextHandAction = "MahjongNextHand";
+        constexpr StringView kSetLanguageAction = "MahjongSetLanguage";
+        constexpr StringView kOptionsAction = "MahjongOptions";
+        constexpr StringView kOptionsBackAction = "MahjongOptionsBack";
+        constexpr StringView kSetupCloseAction = "MahjongSetupClose";
+        constexpr StringView kSetSpeedAction = "MahjongSetSpeed";
+        constexpr StringView kRulesAction = "MahjongRules";
+        constexpr StringView kRulesNextAction = "MahjongRulesNext";
+        constexpr StringView kRulesBackAction = "MahjongRulesBack";
+        constexpr StringView kRulesCloseAction = "MahjongRulesClose";
 
         /// "RulesLine3": the element or variable `base` of number `index`.
         PoolString NumberedName(const char* base, int index) {
@@ -68,12 +68,12 @@ namespace BECore::Mahjong {
             return PoolString::Intern(Format("{}{}", base, index));
         }
 
-        eastl::string_view KindId(SeatKind kind) {
+        StringView KindId(SeatKind kind) {
             return kind == SeatKind::Person ? kPersonId : kComputerId;
         }
 
         /// The seat that `MahjongSetSeatN` is about; nullopt for another action.
-        Optional<Seat> SeatOfAction(eastl::string_view action) {
+        Optional<Seat> SeatOfAction(StringView action) {
             if (action.size() != kSetSeatPrefix.size() + 1 || action.substr(0, kSetSeatPrefix.size()) != kSetSeatPrefix) {
                 return std::nullopt;
             }
@@ -82,7 +82,7 @@ namespace BECore::Mahjong {
         }
 
         /// The seat that `MahjongSetSeatLevelN` is about; nullopt for another action.
-        Optional<Seat> SeatOfLevelAction(eastl::string_view action) {
+        Optional<Seat> SeatOfLevelAction(StringView action) {
             if (action.size() != kSetSeatLevelPrefix.size() + 1 || action.substr(0, kSetSeatLevelPrefix.size()) != kSetSeatLevelPrefix) {
                 return std::nullopt;
             }
@@ -90,7 +90,7 @@ namespace BECore::Mahjong {
             return IsSeat(seat) ? Optional<Seat>(seat) : std::nullopt;
         }
 
-        Optional<SeatKind> KindOfValue(eastl::string_view value) {
+        Optional<SeatKind> KindOfValue(StringView value) {
             if (value == kPersonId) {
                 return SeatKind::Person;
             }
@@ -136,7 +136,7 @@ namespace BECore::Mahjong {
         _newGameWordStrings = stringsVersion;
         // The button of the HUD menu and of the standings: in a room it leaves the room instead of dealing a new match
         const eastl::string word = Tr(CoreManager::GetUIStrings(), room ? "hud.leaveRoom" : "hud.newGame");
-        CoreManager::GetUIVars().Set("newGameWord"_intern, eastl::string_view(word));
+        CoreManager::GetUIVars().Set("newGameWord"_intern, StringView(word));
     }
 
     eastl::string MahjongHudComponent::RoomLine(const MahjongGame& game, const UIStrings& strings) {
@@ -211,18 +211,18 @@ namespace BECore::Mahjong {
             const HandMove& move = hand.Moves().back();
             lastMove = MoveText(strings, move, hand.SeatWind(move.seat));
         }
-        vars.Set("lastMove"_intern, eastl::string_view(lastMove));
+        vars.Set("lastMove"_intern, StringView(lastMove));
         ShowMoveLine(!lastMove.empty());
 
         // The plates' names and the centre panel, by screen position: the seat there, its wind letter and its score
         const auto plates = MakeSeatPlates(strings, session, match);
         const CenterPanelText panel = MakeCenterPanel(strings, session, match);
-        vars.Set("panelRound"_intern, eastl::string_view(panel.round));
-        vars.Set("panelWall"_intern, eastl::string_view(panel.wallText));
+        vars.Set("panelRound"_intern, StringView(panel.round));
+        vars.Set("panelWall"_intern, StringView(panel.wallText));
         for (int position = 0; position < kSeatCount; ++position) {
             const CenterPanelSeat& side = panel.seats[position];
-            vars.Set(SeatVar("plateName", position), eastl::string_view(plates[position].name));
-            vars.Set(SeatVar("panelWind", position), eastl::string_view(side.wind));
+            vars.Set(SeatVar("plateName", position), StringView(plates[position].name));
+            vars.Set(SeatVar("panelWind", position), StringView(side.wind));
             vars.Set(SeatVar("panelScore", position), side.score);
         }
     }
@@ -246,8 +246,8 @@ namespace BECore::Mahjong {
         // The dropdown of a seat is there exactly while the seat is a computer; the level of a person's seat is kept, only not shown
         UIVars& vars = CoreManager::GetUIVars();
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            const std::string_view text = LevelText(_pendingLevels[seat]);
-            vars.Set(SeatVar("seatLevel", seat), eastl::string_view(text.data(), text.size()));
+            const StringView text = LevelText(_pendingLevels[seat]);
+            vars.Set(SeatVar("seatLevel", seat), text);
             UICanvasComponent::SetElementVisibleByName(GetScene(), SeatVar("SeatLevel", seat), _pending[seat] == SeatKind::Computer);
         }
     }
@@ -262,8 +262,8 @@ namespace BECore::Mahjong {
     }
 
     void MahjongHudComponent::PublishSpeedChoice(const MahjongGame& game) const {
-        const std::string_view text = SpeedText(game.GetAnimationSpeed());
-        CoreManager::GetUIVars().Set("speedChoice"_intern, eastl::string_view(text.data(), text.size()));
+        const StringView text = SpeedText(game.GetAnimationSpeed());
+        CoreManager::GetUIVars().Set("speedChoice"_intern, text);
     }
 
     void MahjongHudComponent::PublishSetup(const MahjongGame* game) {
@@ -349,11 +349,11 @@ namespace BECore::Mahjong {
                                                   IsSeat(settlement.winner) ? &match.Hand().GetHand(settlement.winner) : nullptr);
 
         UIVars& vars = CoreManager::GetUIVars();
-        vars.Set("handOverHeadline"_intern, eastl::string_view(table.headline));
-        vars.Set("handOverSummary"_intern, eastl::string_view(table.summary));
+        vars.Set("handOverHeadline"_intern, StringView(table.headline));
+        vars.Set("handOverSummary"_intern, StringView(table.summary));
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             const ScoreRow& row = table.rows[seat];
-            const eastl::string_view cells[] = {row.name, row.wind, row.hand, row.change, row.total};
+            const StringView cells[] = {row.name, row.wind, row.hand, row.change, row.total};
             for (int column = 0; column < static_cast<int>(std::size(cells)); ++column) {
                 vars.Set(PoolString::Intern(Format("handOverCell{}_{}", seat, column)), cells[column]);
             }
@@ -362,12 +362,12 @@ namespace BECore::Mahjong {
         PublishWinningTiles(table.winningTiles);
         for (int i = 0; i < kMaxScoreLines; ++i) {
             const bool has = i < static_cast<int>(table.lines.size());
-            vars.Set(PoolString::Intern(Format("scoreLine{}", i)), has ? eastl::string_view(table.lines[i]) : eastl::string_view());
+            vars.Set(PoolString::Intern(Format("scoreLine{}", i)), has ? StringView(table.lines[i]) : StringView());
         }
         ShowScoreLines(static_cast<int>(table.lines.size()));
         // The last hand of the match ends it: the button says so
         const MatchProgress after = NextProgress(MatchProgress{match.HandsPlayed(), match.East()}, settlement.kind, settlement.winner, match.GetSettings());
-        vars.Set("handOverButton"_intern, eastl::string_view(Tr(strings, IsMatchOver(after.handsPlayed, match.GetSettings()) ? "handover.finish" : "handover.next")));
+        vars.Set("handOverButton"_intern, StringView(Tr(strings, IsMatchOver(after.handsPlayed, match.GetSettings()) ? "handover.finish" : "handover.next")));
         // The row under the lines: in a room how many have read the plate (the coach is off there), else the coach's tally
         eastl::string tally;
         if (room != nullptr) {
@@ -379,7 +379,7 @@ namespace BECore::Mahjong {
             tally = game.CoachActive() ? FormatCoachTally(strings, coach.HandTallyOf(HandKeyOf(context)), coach.MatchTallyOf(context.startCount)) : eastl::string();
             SetNextHandDisabled(false);
         }
-        vars.Set("handOverCoach"_intern, eastl::string_view(tally));
+        vars.Set("handOverCoach"_intern, StringView(tally));
         UICanvasComponent::SetElementVisibleByName(GetScene(), "HandCoachRow"_intern, !tally.empty());
     }
 
@@ -431,16 +431,16 @@ namespace BECore::Mahjong {
         const UIStrings& strings = CoreManager::GetUIStrings();
         const RulesPage page = FormatRulesPage(strings, _rulesPage);
         UIVars& vars = CoreManager::GetUIVars();
-        vars.Set("rulesTitle"_intern, eastl::string_view(page.title));
-        vars.Set("rulesPager"_intern, eastl::string_view(RulesPagerText(strings, _rulesPage)));
+        vars.Set("rulesTitle"_intern, StringView(page.title));
+        vars.Set("rulesPager"_intern, StringView(RulesPagerText(strings, _rulesPage)));
         for (int i = 0; i < kRulesMaxLines; ++i) {
             const bool has = i < static_cast<int>(page.lines.size());
-            vars.Set(NumberedName("rulesLine", i), has ? eastl::string_view(page.lines[static_cast<size_t>(i)]) : eastl::string_view());
+            vars.Set(NumberedName("rulesLine", i), has ? StringView(page.lines[static_cast<size_t>(i)]) : StringView());
             UICanvasComponent::SetElementVisibleByName(scene, NumberedName("RulesLine", i), has);
         }
         for (int i = 0; i < kRulesMaxItems; ++i) {
             const bool has = i < static_cast<int>(page.items.size());
-            vars.Set(NumberedName("rulesItem", i), has ? eastl::string_view(page.items[static_cast<size_t>(i)]) : eastl::string_view());
+            vars.Set(NumberedName("rulesItem", i), has ? StringView(page.items[static_cast<size_t>(i)]) : StringView());
             UICanvasComponent::SetElementVisibleByName(scene, NumberedName("RulesItem", i), has);
         }
         for (int row = 0; row < kRulesMaxItems / kRulesItemColumns; ++row) {
@@ -497,16 +497,16 @@ namespace BECore::Mahjong {
         const UIStrings& strings = CoreManager::GetUIStrings();
         const StandingsTable table = FormatStandings(strings, game.GetMatch(), SeatWho(game.GetSession()));
         UIVars& vars = CoreManager::GetUIVars();
-        vars.Set("matchOverHeadline"_intern, eastl::string_view(table.headline));
+        vars.Set("matchOverHeadline"_intern, StringView(table.headline));
         for (Seat row = 0; row < kSeatCount; ++row) {
             const StandingRow& standing = table.rows[row];
-            vars.Set(SeatVar("standingPlace", row), eastl::string_view(Format("{}", standing.place)));
-            vars.Set(SeatVar("standingName", row), eastl::string_view(standing.name));
-            vars.Set(SeatVar("standingScore", row), eastl::string_view(standing.score));
+            vars.Set(SeatVar("standingPlace", row), StringView(Format("{}", standing.place)));
+            vars.Set(SeatVar("standingName", row), StringView(standing.name));
+            vars.Set(SeatVar("standingScore", row), StringView(standing.score));
             UICanvasComponent::SetElementVisibleByName(GetScene(), SeatVar("StandingFirst", row), standing.first);
         }
         const eastl::string tally = game.CoachActive() ? FormatCoachTally(strings, CoachTally{}, game.GetCoach().MatchTallyOf(game.CoachContext().startCount)) : eastl::string();
-        vars.Set("matchOverCoach"_intern, eastl::string_view(tally));
+        vars.Set("matchOverCoach"_intern, StringView(tally));
         UICanvasComponent::SetElementVisibleByName(GetScene(), "MatchCoachRow"_intern, !tally.empty());
     }
 
@@ -591,7 +591,7 @@ namespace BECore::Mahjong {
         if (game == nullptr) {
             return;
         }
-        const eastl::string_view action = event.action.ToStringView();
+        const StringView action = event.action.ToStringView();
         if (action == kNewGameAction) {
             if (game->IsOnlineTable()) {
                 LeaveRoom(*game);  // the room's table has no new game: the button leaves, and the end of the table opens `Setup`
@@ -627,8 +627,8 @@ namespace BECore::Mahjong {
         }
         if (action == kSetSpeedAction) {
             // The page is where the speed is set; client text is parsed by `TryParseSpeed`, anything else is ignored
-            const eastl::string_view text = event.value.ToStringView();
-            const Optional<AnimationSpeed> speed = TryParseSpeed(std::string_view(text.data(), text.size()));
+            const StringView text = event.value.ToStringView();
+            const Optional<AnimationSpeed> speed = TryParseSpeed(text);
             if (game->IsOptionsOpen() && speed) {
                 game->SetAnimationSpeed(*speed);
                 PublishSpeedChoice(*game);
@@ -701,7 +701,7 @@ namespace BECore::Mahjong {
         }
         if (action == kSetHandsAction) {
             // Only the two numbers the panel offers; client text is never parsed into another number
-            const eastl::string_view value = event.value.ToStringView();
+            const StringView value = event.value.ToStringView();
             if (value == kFullHandsId || value == kShortHandsId) {
                 _pendingHands = value == kFullHandsId ? kFullMatchHands : kShortMatchHands;
                 PublishHandsChoice();
@@ -710,8 +710,8 @@ namespace BECore::Mahjong {
         }
         if (const Optional<Seat> levelSeat = SeatOfLevelAction(action)) {
             // Only `1` .. `10` (`TryParseLevel`); the level is the panel's until `Start`
-            const eastl::string_view text = event.value.ToStringView();
-            if (const Optional<ComputerLevel> level = TryParseLevel(std::string_view(text.data(), text.size()))) {
+            const StringView text = event.value.ToStringView();
+            if (const Optional<ComputerLevel> level = TryParseLevel(text)) {
                 _pendingLevels[*levelSeat] = *level;
                 PublishSeatLevels();
             }

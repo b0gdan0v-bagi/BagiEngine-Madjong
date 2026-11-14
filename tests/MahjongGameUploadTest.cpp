@@ -94,7 +94,7 @@ namespace BECore::Mahjong::Tests {
             }
 
             static void ExpectReplays(const eastl::string& text) {
-                const auto events = ParseMatchLog(std::string_view(text.c_str(), text.size()));
+                const auto events = ParseMatchLog(StringView(text.c_str(), text.size()));
                 ASSERT_TRUE(events.has_value()) << events.error().c_str();
                 Match replayed;
                 const ReplayStatus status = ReplayMatchLog(*events, replayed);
@@ -127,7 +127,7 @@ namespace BECore::Mahjong::Tests {
 
         const fs::path file = game->GetMatchLog().Path();
         ASSERT_FALSE(file.empty());
-        const auto events = ParseMatchLog(ReadFile(file));
+        const auto events = ParseMatchLog(FromStd(ReadFile(file)));
         ASSERT_TRUE(events.has_value());
         EXPECT_EQ(events->back().kind, MatchLogKind::End);
         EXPECT_EQ(events->front().seed, kOtherSeed);

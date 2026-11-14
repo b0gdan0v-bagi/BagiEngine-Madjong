@@ -36,7 +36,7 @@ namespace BECore::Mahjong {
     }
 
     /// The id of a speed in the saved settings, the variable `speedChoice` and the values of the buttons of the page: `slow`, `normal`, `fast`.
-    [[nodiscard]] constexpr std::string_view SpeedText(AnimationSpeed speed) noexcept {
+    [[nodiscard]] constexpr StringView SpeedText(AnimationSpeed speed) noexcept {
         switch (speed) {
             case AnimationSpeed::Slow:
                 return "slow";
@@ -49,7 +49,7 @@ namespace BECore::Mahjong {
     }
 
     /// The speed of an id, or nothing for any other text (client text, an old or damaged save).
-    [[nodiscard]] constexpr Optional<AnimationSpeed> TryParseSpeed(std::string_view text) noexcept {
+    [[nodiscard]] constexpr Optional<AnimationSpeed> TryParseSpeed(StringView text) noexcept {
         for (const AnimationSpeed speed : EnumUtils<AnimationSpeed>::Values()) {
             if (SpeedText(speed) == text) {
                 return speed;

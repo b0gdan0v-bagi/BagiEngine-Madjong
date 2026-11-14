@@ -23,7 +23,7 @@ namespace BECore::Mahjong::Tests {
         constexpr uint32_t kStrangerOneIn = 6;
 
         TileCounts Counts(const std::string& text) {
-            return CountTiles(ParseTiles(text).value());
+            return CountTiles(ParseTiles(FromStd(text)).value());
         }
 
         int ShantenOf(const std::string& hand, int meldCount = 0) {
@@ -35,7 +35,7 @@ namespace BECore::Mahjong::Tests {
             std::string text;
             for (const Tile tile : ImprovingTiles(Counts(hand), meldCount)) {
                 text += text.empty() ? "" : " ";
-                text += ToString(tile);
+                text += ToStd(ToString(tile));
             }
             return text;
         }
@@ -173,7 +173,7 @@ namespace BECore::Mahjong::Tests {
                 std::string text;
                 for (uint8_t id = 0; id < kKindCount; ++id) {
                     for (int c = 0; c < counts[id]; ++c) {
-                        text += std::string{ToString(Tile{id})} + " ";
+                        text += ToStdString(ToString(Tile{id})) + " ";
                     }
                 }
                 SCOPED_TRACE(testing::Message() << "hand " << i << ", " << meldCount << " melds: " << text);
@@ -318,7 +318,7 @@ namespace BECore::Mahjong::Tests {
                 --probe[id];
                 const bool isListed = std::find(improving.begin(), improving.end(), Tile{id}) != improving.end();
                 const bool lowers = shanten != kShantenComplete && after < shanten;
-                EXPECT_EQ(isListed, lowers) << "kind " << ToString(Tile{id});
+                EXPECT_EQ(isListed, lowers) << "kind " << ToStd(ToString(Tile{id}));
                 if (lowers) {
                     EXPECT_EQ(after, shanten - 1);
                 }
@@ -366,14 +366,14 @@ namespace BECore::Mahjong::Tests {
             TileCounts probe = counts;
             for (uint8_t id = 0; id < kKindCount; ++id) {
                 ++probe[id];
-                EXPECT_LE(Shanten(probe, meldCount), shanten) << "adding " << ToString(Tile{id});
+                EXPECT_LE(Shanten(probe, meldCount), shanten) << "adding " << ToStd(ToString(Tile{id}));
                 --probe[id];
                 if (counts[id] == 0) {
                     continue;
                 }
                 --probe[id];
-                EXPECT_GE(Shanten(probe, meldCount), shanten) << "discarding " << ToString(Tile{id}) << " lowered the number";
-                EXPECT_LE(Shanten(probe, meldCount), shanten + 1) << "discarding " << ToString(Tile{id}) << " raised it by two";
+                EXPECT_GE(Shanten(probe, meldCount), shanten) << "discarding " << ToStd(ToString(Tile{id})) << " lowered the number";
+                EXPECT_LE(Shanten(probe, meldCount), shanten + 1) << "discarding " << ToStd(ToString(Tile{id})) << " raised it by two";
                 ++probe[id];
             }
         });

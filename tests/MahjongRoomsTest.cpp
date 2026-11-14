@@ -121,17 +121,17 @@ namespace BECore::Mahjong::Tests {
             /// The version of the view this client last answered, so that it answers each view once
             uint64_t actedVersion = kNever;
 
-            [[nodiscard]] size_t Count(std::string_view type) const {
+            [[nodiscard]] size_t Count(StringView type) const {
                 size_t count = 0;
                 for (const Received& message : received) {
-                    count += message.type == type ? 1 : 0;
+                    count += FromStd(message.type) == type ? 1 : 0;
                 }
                 return count;
             }
 
-            [[nodiscard]] const Received* Last(std::string_view type) const {
+            [[nodiscard]] const Received* Last(StringView type) const {
                 for (size_t index = received.size(); index > 0; --index) {
-                    if (received[index - 1].type == type) {
+                    if (FromStd(received[index - 1].type) == type) {
                         return &received[index - 1];
                     }
                 }
@@ -236,7 +236,7 @@ namespace BECore::Mahjong::Tests {
             }
 
             void SendText(ConnectionId id, const std::string& text) {
-                _hub.OnMessage(id, eastl::string_view(text.data(), text.size()), _now);
+                _hub.OnMessage(id, FromStd(text), _now);
             }
 
             void Send(ConnectionId id, const ClientMessage& message) {
@@ -329,7 +329,7 @@ namespace BECore::Mahjong::Tests {
                 Client& client = At(id);
                 Received message;
                 message.text = text;
-                const auto parsed = ParseJson(eastl::string_view(text.data(), text.size()));
+                const auto parsed = ParseJson(FromStd(text));
                 if (parsed) {
                     message.json = *parsed;
                     message.type = StringAt(message.json, "type");
@@ -340,7 +340,7 @@ namespace BECore::Mahjong::Tests {
                     client.seat = static_cast<int>(IntAt(message.json, "seat"));
                     client.token = StringAt(message.json, "token");
                 }
-                for (const std::string& offence : _judge.Text(text, client.seat)) {
+                for (const std::string& offence : _judge.Text(FromStd(text), client.seat)) {
                     if (_failOnOffence) {
                         ADD_FAILURE() << "seat " << client.seat << ": " << offence << "\n" << text;
                     }
@@ -666,50 +666,50 @@ namespace BECore::Mahjong::Tests {
     TEST(MahjongRoomsJudgeTest, HonestViewsPassTheJudgeAtEveryStageOfAHand) {
         MahjongSeatedGame game = StartedGame();
         for (int seat = 0; seat < kSeatCount; ++seat) {
-            EXPECT_TRUE(JudgeRoomMessage(ViewTextOf(game, seat), seat).empty()) << seat;
+            EXPECT_TRUE(JudgeRoomMessage(FromStd(ViewTextOf(game, seat)), seat).empty()) << seat;
         }
         PlayToHandOver(game);
         ASSERT_EQ(PhaseOfMatch(game.GetMatch()), SessionPhase::HandOver);
         for (int seat = 0; seat < kSeatCount; ++seat) {
-            const std::vector<std::string> offences = JudgeRoomMessage(ViewTextOf(game, seat), seat);
+            const std::vector<std::string> offences = JudgeRoomMessage(FromStd(ViewTextOf(game, seat)), seat);
             EXPECT_TRUE(offences.empty()) << seat << ": " << (offences.empty() ? "" : offences.front());
         }
-        EXPECT_TRUE(JudgeRoomMessage(Std(MakeViewMessage("ABCDE", 0, 0, false, Json::object(), Json::array())), 0).empty()) << "the view before the start is empty";
+        EXPECT_TRUE(JudgeRoomMessage(FromStd(Std(MakeViewMessage("ABCDE", 0, 0, false, Json::object(), Json::array()))), 0).empty()) << "the view before the start is empty";
     }
 
     TEST(MahjongRoomsJudgeTest, TheJudgeFindsWhatItIsMeantToFindInHandMadeTexts) {
         MahjongSeatedGame game = StartedGame();
         const std::string honest = ViewTextOf(game, 0);
-        ASSERT_TRUE(JudgeRoomMessage(honest, 0).empty());
+        ASSERT_TRUE(JudgeRoomMessage(FromStd(honest), 0).empty());
 
         // another seat's tiles in a key of their own, a `hands` key, a wall
-        EXPECT_TRUE(Says(JudgeRoomMessage(Mutated(honest, [](Json& json) { json["view"]["hands"] = Json::array(); }), 0), "'hands'"));
-        EXPECT_TRUE(Says(JudgeRoomMessage(Mutated(honest, [](Json& json) { json["view"]["seats"][1]["concealed"] = Json::array({"1p", "2p"}); }), 0), "'concealed'"));
-        EXPECT_TRUE(Says(JudgeRoomMessage(Mutated(honest, [](Json& json) { json["view"]["wall"] = Json::array({"1p"}); }), 0), "view.wall"));
-        EXPECT_TRUE(Says(JudgeRoomMessage(Mutated(honest, [](Json& json) { json["hand"] = Json::array({"1p"}); }), 0), "'hand'"));
+        EXPECT_TRUE(Says(JudgeRoomMessage(FromStd(Mutated(honest, [](Json& json) { json["view"]["hands"] = Json::array(); })), 0), "'hands'"));
+        EXPECT_TRUE(Says(JudgeRoomMessage(FromStd(Mutated(honest, [](Json& json) { json["view"]["seats"][1]["concealed"] = Json::array({"1p", "2p"}); })), 0), "'concealed'"));
+        EXPECT_TRUE(Says(JudgeRoomMessage(FromStd(Mutated(honest, [](Json& json) { json["view"]["wall"] = Json::array({"1p"}); })), 0), "view.wall"));
+        EXPECT_TRUE(Says(JudgeRoomMessage(FromStd(Mutated(honest, [](Json& json) { json["hand"] = Json::array({"1p"}); })), 0), "'hand'"));
         // the own list shorter than the count says (another seat's list pasted in, a tile dropped)
-        EXPECT_TRUE(Says(JudgeRoomMessage(Mutated(honest, [](Json& json) { json["view"]["hand"].erase(json["view"]["hand"].begin()); }), 0), "view.hand"));
+        EXPECT_TRUE(Says(JudgeRoomMessage(FromStd(Mutated(honest, [](Json& json) { json["view"]["hand"].erase(json["view"]["hand"].begin()); })), 0), "view.hand"));
         // a concealed meld of another seat
         const std::string melds = Mutated(honest, [](Json& json) {
             json["view"]["seats"][2]["melds"] =
                 Json::array({Parse("{\"kind\":\"kong\",\"tiles\":[\"1p\",\"1p\",\"1p\",\"1p\"],\"concealed\":true,\"from\":null,\"fromDiscard\":false,\"claimed\":null}")});
         });
-        EXPECT_TRUE(Says(JudgeRoomMessage(melds, 0), "concealed meld of another seat"));
+        EXPECT_TRUE(Says(JudgeRoomMessage(FromStd(melds), 0), "concealed meld of another seat"));
         // the format number: required, an integer
-        EXPECT_TRUE(Says(JudgeRoomMessage(Mutated(honest, [](Json& json) { json["view"].erase("format"); }), 0), "'format'"));
-        EXPECT_TRUE(Says(JudgeRoomMessage(Mutated(honest, [](Json& json) { json["view"]["format"] = "1"; }), 0), "view.format"));
+        EXPECT_TRUE(Says(JudgeRoomMessage(FromStd(Mutated(honest, [](Json& json) { json["view"].erase("format"); })), 0), "'format'"));
+        EXPECT_TRUE(Says(JudgeRoomMessage(FromStd(Mutated(honest, [](Json& json) { json["view"]["format"] = "1"; })), 0), "view.format"));
         // a view of another seat than the client's
-        EXPECT_TRUE(Says(JudgeRoomMessage(honest, 1), "seat of the client"));
+        EXPECT_TRUE(Says(JudgeRoomMessage(FromStd(honest), 1), "seat of the client"));
         // `result` while the hand is played, copied from a finished hand
         MahjongSeatedGame finished = StartedGame();
         PlayToHandOver(finished);
         const Json result = finished.GetSeatView(0).value()["result"];
-        EXPECT_TRUE(Says(JudgeRoomMessage(Mutated(honest, [&](Json& json) { json["view"]["result"] = result; }), 0), "view.result"));
+        EXPECT_TRUE(Says(JudgeRoomMessage(FromStd(Mutated(honest, [&](Json& json) { json["view"]["result"] = result; })), 0), "view.result"));
         // the same result is fine when the hand is over, and not with a hand list that is not tiles
         const std::string over = ViewTextOf(finished, 0);
-        EXPECT_TRUE(JudgeRoomMessage(over, 0).empty());
-        EXPECT_FALSE(JudgeRoomMessage(Mutated(over, [](Json& json) { json["view"]["result"]["seats"][1]["concealed"] = 5; }), 0).empty());
-        EXPECT_FALSE(JudgeRoomMessage(Mutated(over, [](Json& json) { json["view"]["result"]["extra"] = 1; }), 0).empty());
+        EXPECT_TRUE(JudgeRoomMessage(FromStd(over), 0).empty());
+        EXPECT_FALSE(JudgeRoomMessage(FromStd(Mutated(over, [](Json& json) { json["view"]["result"]["seats"][1]["concealed"] = 5; })), 0).empty());
+        EXPECT_FALSE(JudgeRoomMessage(FromStd(Mutated(over, [](Json& json) { json["view"]["result"]["extra"] = 1; })), 0).empty());
         // the other messages carry no list of tiles
         EXPECT_FALSE(JudgeRoomMessage("{\"v\":1,\"type\":\"joined\",\"room\":\"ABCDE\",\"player\":1,\"token\":\"x\",\"seat\":0,\"host\":true,\"hand\":[\"1p\"]}", 0).empty());
         EXPECT_FALSE(JudgeRoomMessage("{\"v\":1,\"type\":\"lobby\",\"room\":\"ABCDE\",\"game\":\"mahjong\",\"phase\":\"playing\",\"host\":0,\"seats\":[],\"hands\":[]}", 0).empty());

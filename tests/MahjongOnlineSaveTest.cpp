@@ -23,7 +23,7 @@ namespace BECore::Mahjong::Tests {
 
         constexpr const char* kFolderPrefix = "BagiMahjongOnlineSaveTest";
         constexpr const char* kOnlineFile = "online.save";
-        constexpr eastl::string_view kUrl = "ws://hub.test";
+        constexpr StringView kUrl = "ws://hub.test";
         constexpr milliseconds kTick{10};
         constexpr int kStepLimit = 2000;
 

@@ -19,7 +19,7 @@ namespace BECore::Mahjong::Tests {
         using std::chrono::seconds;
         using Players = std::vector<HubPlayer*>;
 
-        constexpr eastl::string_view kUrl = "ws://hub.test";
+        constexpr StringView kUrl = "ws://hub.test";
         constexpr milliseconds kTick{10};
         constexpr int kStepLimit = 60000;
         constexpr int kWarmUpVersion = 20;

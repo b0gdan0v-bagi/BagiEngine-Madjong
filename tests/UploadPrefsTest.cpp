@@ -23,8 +23,8 @@ namespace BECore::Mahjong::Tests {
             return prefs;
         }
 
-        eastl::string_view View(const char* text) {
-            return eastl::string_view(text);
+        StringView View(const char* text) {
+            return StringView(text);
         }
 
         class UploadPrefsTest : public ::testing::Test {
@@ -79,7 +79,7 @@ namespace BECore::Mahjong::Tests {
         }
         std::string big = "consent=granted\nnickname=";
         big.append(kMaxUploadPrefsBytes, 'a');
-        EXPECT_EQ(ParseUploadPrefs(eastl::string_view(big.data(), big.size())), defaults) << "over the limit";
+        EXPECT_EQ(ParseUploadPrefs(FromStd(big)), defaults) << "over the limit";
         Write(big);
         EXPECT_EQ(LoadUploadPrefs(folder), defaults) << "a big file is not read whole";
         Write("consent=granted\n\xff\xfe");

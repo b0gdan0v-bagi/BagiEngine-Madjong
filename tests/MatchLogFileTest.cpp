@@ -31,8 +31,8 @@ namespace BECore::Mahjong::Tests {
         constexpr int kControlStepLimit = 400;
         constexpr const char* kFolderStem = "bagi-mahjong-match-logs";
         /// A stamp and a name of the shape the writer makes, for the length of their parts only.
-        constexpr std::string_view kExampleStamp = "2026-11-09T14-03-55";
-        constexpr std::string_view kExampleStem = "2026-11-09T14-03-55_seed41";
+        constexpr StringView kExampleStamp = "2026-11-09T14-03-55";
+        constexpr StringView kExampleStem = "2026-11-09T14-03-55_seed41";
         /// `2026-11-09T14-03-55_seed41.jsonl`, with `-2` ... before the extension for a second file of the same second.
         constexpr const char* kFileNamePattern = R"(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}_seed41(-\d+)?\.jsonl)";
 
@@ -380,7 +380,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(events.has_value()) << events.error().c_str();
         const MatchLogOrigin& origin = events->front().origin;
         EXPECT_EQ(origin.platform, MatchPlatform::Desktop) << "a desktop build of the tests";
-        EXPECT_EQ(std::string_view(origin.gameVersion.c_str(), origin.gameVersion.size()), kGameVersion);
+        EXPECT_EQ(StringView(origin.gameVersion.c_str(), origin.gameVersion.size()), kGameVersion);
         EXPECT_FALSE(origin.build.empty());
         EXPECT_EQ(origin, MakeMatchOrigin(kBrowserBuild));
 

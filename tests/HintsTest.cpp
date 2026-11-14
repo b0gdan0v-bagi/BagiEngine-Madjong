@@ -63,7 +63,7 @@ namespace BECore::Mahjong::Tests {
         Waits WaitsOf(const TableView& view) {
             Waits waits;
             for (const WaitEntry& entry : WaitingTiles(view)) {
-                waits.emplace_back(std::string(ToString(entry.tile)), entry.unseen);
+                waits.emplace_back(ToStdString(ToString(entry.tile)), entry.unseen);
             }
             return waits;
         }
@@ -212,7 +212,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The card of the advice of `view` (`ExplainAdviceFor`) with `tally` under it.
-        HintCard CardOf(const UIStrings& strings, const TableView& view, eastl::string_view tally = {}) {
+        HintCard CardOf(const UIStrings& strings, const TableView& view, StringView tally = {}) {
             const Optional<Explanation> explained = ExplainAdviceFor(view);
             EXPECT_TRUE(explained.has_value());
             return explained.has_value() ? MakeAdviceCard(strings, view, *explained, tally) : HintCard{};
@@ -222,7 +222,7 @@ namespace BECore::Mahjong::Tests {
         std::string RowText(const CardRow& row) {
             std::string tiles;
             for (const Tile tile : row.tiles) {
-                tiles += tile.IsValid() ? std::string(ToString(tile)) + " " : "";
+                tiles += tile.IsValid() ? ToStdString(ToString(tile)) + " " : "";
             }
             return Std(row.who) + "|" + tiles + "|" + Std(row.move) + "|" + Std(row.steps) + "|" + Std(row.useful);
         }
@@ -292,7 +292,7 @@ namespace BECore::Mahjong::Tests {
 
         ASSERT_EQ(static_cast<int>(waits.size()), kMaxWaitingTiles);
         for (size_t i = 0; i < waits.size(); ++i) {
-            EXPECT_EQ(waits[i].unseen, 3) << ToString(waits[i].tile);
+            EXPECT_EQ(waits[i].unseen, 3) << ToStd(ToString(waits[i].tile));
             if (i > 0) {
                 EXPECT_LT(waits[i - 1].tile.Id(), waits[i].tile.Id());
             }
@@ -692,12 +692,12 @@ namespace BECore::Mahjong::Tests {
         const HintCard card = CardOf(strings, discard);
         EXPECT_EQ(Std(card.now), "Steps to ready now: " + StepsWord(turn.shantenBefore));
         ASSERT_EQ(card.rows.size(), 3u);
-        EXPECT_EQ(RowText(card.rows[0]), "Best|" + std::string(ToString(turn.chosen.tile)) + " ||" + StepsWord(turn.chosen.shanten) + "|" + number(turn.chosen.acceptance));
+        EXPECT_EQ(RowText(card.rows[0]), "Best|" + ToStdString(ToString(turn.chosen.tile)) + " ||" + StepsWord(turn.chosen.shanten) + "|" + number(turn.chosen.acceptance));
         ASSERT_EQ(turn.alternatives.size(), 2u);
         for (size_t at = 0; at < turn.alternatives.size(); ++at) {
             const TurnOption& option = turn.alternatives[at];
             EXPECT_EQ(card.rows[1 + at].kind, CardRowKind::Other);
-            EXPECT_EQ(RowText(card.rows[1 + at]), "|" + std::string(ToString(option.tile)) + " ||" + StepsWord(option.shanten) + "|" + number(option.acceptance));
+            EXPECT_EQ(RowText(card.rows[1 + at]), "|" + ToStdString(ToString(option.tile)) + " ||" + StepsWord(option.shanten) + "|" + number(option.acceptance));
         }
         for (const CardRow& row : card.rows) {
             const int steps = row.steps == "ready" ? 0 : std::stoi(Std(row.steps));
@@ -709,7 +709,7 @@ namespace BECore::Mahjong::Tests {
         const HintCard declare = CardOf(strings, of("declare"));
         ASSERT_GE(declare.rows.size(), 2u);
         const TurnExplanation declaring = *ExplainAdviceFor(of("declare"))->turn;
-        EXPECT_EQ(RowText(declare.rows[0]), "Best|" + std::string(ToString(declaring.chosen.tile)) + " |declare|ready|8");
+        EXPECT_EQ(RowText(declare.rows[0]), "Best|" + ToStdString(ToString(declaring.chosen.tile)) + " |declare|ready|8");
         EXPECT_EQ(RowText(declare.rows[1]), "|5p ||ready|4");
         EXPECT_EQ(FooterOf(declare), (std::vector<std::string>{"No other tile rates as well."}));
 

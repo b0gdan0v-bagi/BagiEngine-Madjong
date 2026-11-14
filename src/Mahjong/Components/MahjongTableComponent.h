@@ -397,7 +397,7 @@ namespace BECore::Mahjong {
         eastl::array<bool, kTileIdCount> _keeps{};  // `KeepsWaitingDiscards` of the viewer's own turn
         Optional<ButtonKind> _hoveredButton;        // the shown button of `Actions` under the pointer at the last publication
         ChowTakes _chowTakes;                       // what the last `OnDraw` framed in the hand for the offered chow
-        eastl::string_view _hintKey;                // the key of the sentence in `actionHint` (a literal of `SpecOf`, which lives as long as the program)
+        StringView _hintKey;                        // the key of the sentence in `actionHint` (a literal of `SpecOf`, which lives as long as the program)
         uint64_t _hintStringsVersion = 0;           // the version of the string table that sentence was looked up at
         bool _handoffShown = false;
         bool _compactActions = false;  // `ActionsCompact` is the shown canvas of the buttons; the scene file starts with `Actions`

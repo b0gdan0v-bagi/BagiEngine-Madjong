@@ -50,11 +50,11 @@ namespace BECore::Mahjong::Tests {
         }
         for (const XmlNode language : config.GetRoot().Children()) {
             LanguageEntries one;
-            const auto id = language.ParseAttribute<eastl::string_view>("id");
+            const auto id = language.ParseAttribute<StringView>("id");
             one.id = id ? std::string(id->data(), id->size()) : std::string();
             for (const XmlNode string : language.Children()) {
-                const auto key = string.ParseAttribute<eastl::string_view>("key");
-                const auto text = string.ParseAttribute<eastl::string_view>("text");
+                const auto key = string.ParseAttribute<StringView>("key");
+                const auto text = string.ParseAttribute<StringView>("text");
                 one.entries.push_back({key ? std::string(key->data(), key->size()) : std::string(), text ? std::string(text->data(), text->size()) : std::string()});
             }
             languages.push_back(std::move(one));
@@ -63,17 +63,17 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// The names of the `{placeholders}` of a text (a `{#key}` reference is not one).
-    inline std::set<std::string> PlaceholderNames(std::string_view text) {
+    inline std::set<std::string> PlaceholderNames(StringView text) {
         std::set<std::string> names;
         size_t at = 0;
-        while ((at = text.find('{', at)) != std::string_view::npos) {
+        while ((at = text.find('{', at)) != StringView::npos) {
             const size_t close = text.find('}', at);
-            if (close == std::string_view::npos) {
+            if (close == StringView::npos) {
                 break;
             }
-            const std::string_view name = text.substr(at + 1, close - at - 1);
-            if (!name.empty() && name.find('{') == std::string_view::npos && name.front() != '#') {
-                names.insert(std::string(name));
+            const StringView name = text.substr(at + 1, close - at - 1);
+            if (!name.empty() && name.find('{') == StringView::npos && name.front() != '#') {
+                names.insert(ToStdString(name));
             }
             at = close + 1;
         }

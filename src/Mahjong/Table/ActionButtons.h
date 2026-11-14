@@ -47,14 +47,14 @@ namespace BECore::Mahjong {
     }
 
     /// The values of the toggle `Declare`: it emits the state it asks for (`SpecOf(Declare).value` is "on", this is the other one).
-    inline constexpr eastl::string_view kDeclareOn = "on";
-    inline constexpr eastl::string_view kDeclareOff = "off";
+    inline constexpr StringView kDeclareOn = "on";
+    inline constexpr StringView kDeclareOff = "off";
 
     /// The button that emits `action` with `value`, nullopt for an action that no button emits.
-    [[nodiscard]] Optional<ButtonKind> ButtonOf(eastl::string_view action, eastl::string_view value) noexcept;
+    [[nodiscard]] Optional<ButtonKind> ButtonOf(StringView action, StringView value) noexcept;
 
     /// The key of the sentence that tells the player what the button does (`SpecOf(kind).hintKey`, never empty).
-    [[nodiscard]] eastl::string_view HintKey(ButtonKind kind) noexcept;
+    [[nodiscard]] StringView HintKey(ButtonKind kind) noexcept;
 
     /// The word on the button in the current language of `strings`.
     [[nodiscard]] eastl::string WordOf(const UIStrings& strings, ButtonKind kind);
@@ -71,7 +71,7 @@ namespace BECore::Mahjong {
         HandAction action;
         eastl::array<Tile, kMaxButtonTiles> tiles;
         int tileCount = 0;
-        eastl::string_view hintKey;
+        StringView hintKey;
 
         bool operator==(const ButtonState&) const = default;
     };

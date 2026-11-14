@@ -221,7 +221,7 @@ namespace BECore::Mahjong::Tests {
                         EXPECT_LT(tileCall, calls[i]) << "the bar lies over the face";
                     }
                 }
-                EXPECT_EQ(found, 1) << "tile " << ToString(tile) << " at " << slot->index;
+                EXPECT_EQ(found, 1) << "tile " << ToStd(ToString(tile)) << " at " << slot->index;
                 EXPECT_GE(want.y + want.h, slot->rect.y);
                 EXPECT_LE(want.y + want.h, slot->rect.y + slot->rect.h);
             }

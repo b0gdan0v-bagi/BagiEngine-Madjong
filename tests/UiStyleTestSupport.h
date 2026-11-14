@@ -29,7 +29,7 @@ namespace BECore::Mahjong::Tests {
     /// The colour of a role of the palette (an entry of `kUiPaletteNames`: `surface`, `header`, `textMuted`, `accent`, ...).
     inline Color PaletteColor(const char* role) {
         for (int i = 0; i < kUiPaletteSize; ++i) {
-            if (eastl::string_view(kUiPaletteNames[i]) == role) {
+            if (StringView(kUiPaletteNames[i]) == role) {
                 return kUiPalette[i];
             }
         }

@@ -21,9 +21,9 @@ namespace BECore::Mahjong::Tests {
         using BECore::Tests::ManualClock;
         using std::chrono::milliseconds;
 
-        constexpr eastl::string_view kUrl = "ws://127.0.0.1:9000";
-        constexpr eastl::string_view kRoom = "ABCDE";
-        constexpr eastl::string_view kToken = "00112233445566778899aabbccddeeff";
+        constexpr StringView kUrl = "ws://127.0.0.1:9000";
+        constexpr StringView kRoom = "ABCDE";
+        constexpr StringView kToken = "00112233445566778899aabbccddeeff";
         constexpr uint64_t kSeed = 23;
         constexpr milliseconds kBackoff(100);
         constexpr milliseconds kGiveUp(5000);
@@ -111,12 +111,12 @@ namespace BECore::Mahjong::Tests {
                 return _transports.Last();
             }
 
-            void Receive(eastl::string_view text) {
+            void Receive(StringView text) {
                 Link().PushText(text);
                 Pump();
             }
 
-            void ReceiveError(eastl::string_view code, eastl::string_view ref) {
+            void ReceiveError(StringView code, StringView ref) {
                 Receive(MakeErrorMessage(code, "text of the server", ref));
             }
 
@@ -479,8 +479,8 @@ namespace BECore::Mahjong::Tests {
     // ---- Errors of a request ------------------------------------------------------------------------------------------------------
 
     TEST_F(MahjongOnlineClientTest, ARefusedJoinIsItsWordAndTheStageGoesBackToIdleWithTheConnectionClosed) {
-        const eastl::string_view codes[] = {RoomErrors::kUnknownRoom, RoomErrors::kRoomFull, RoomErrors::kGameStarted, RoomErrors::kBadName};
-        for (const eastl::string_view code : codes) {
+        const StringView codes[] = {RoomErrors::kUnknownRoom, RoomErrors::kRoomFull, RoomErrors::kGameStarted, RoomErrors::kBadName};
+        for (const StringView code : codes) {
             const size_t links = _transports.Count();
             ASSERT_TRUE(_client->Join(kUrl, "ABCDE", "Bob")) << code.data();
             EXPECT_EQ(_client->Stage(), OnlineStage::Connecting);

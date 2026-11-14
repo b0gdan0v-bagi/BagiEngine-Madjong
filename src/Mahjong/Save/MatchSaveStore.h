@@ -77,7 +77,7 @@ namespace BECore::Mahjong {
 
     private:
         template <typename State>
-        bool Write(eastl::string_view slot, const State& state);
+        bool Write(StringView slot, const State& state);
 
         SaveGameService _service;
         std::filesystem::path _directory;  // the directory last asked for, also when it failed

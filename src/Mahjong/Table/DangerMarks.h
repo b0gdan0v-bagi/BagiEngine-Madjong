@@ -26,6 +26,6 @@ namespace BECore::Mahjong {
 
     /// The key of the line that says what the bar of `mark` means (`hints.hover.*`), worded under the name of a hovered hand tile; empty for
     /// `None`.
-    [[nodiscard]] eastl::string_view DangerHoverKey(DangerMark mark) noexcept;
+    [[nodiscard]] StringView DangerHoverKey(DangerMark mark) noexcept;
 
 }  // namespace BECore::Mahjong

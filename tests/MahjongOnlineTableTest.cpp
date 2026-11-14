@@ -303,7 +303,7 @@ namespace BECore::Mahjong::Tests {
         std::string Describe(const OnlineTable& table) {
             std::string text = std::to_string(table.format) + "/" + std::to_string(table.version) + "/" + std::to_string(table.seat) + "/" + std::to_string(table.wall) + "/";
             for (const Tile tile : table.hand) {
-                text += std::string(ToString(tile)) + ",";
+                text += ToStdString(ToString(tile)) + ",";
             }
             text += "/" + std::to_string(table.discards.size()) + "/" + std::to_string(table.actions.size()) + "/" + (table.result ? "result" : "none");
             for (const OnlineSeat& seat : table.seats) {

@@ -422,7 +422,7 @@ namespace BECore::Mahjong::Tests {
                         issues.erase(eastl::remove_if(issues.begin(), issues.end(), [](const UILayoutIssue& issue) { return issue.kind == UILayoutIssueKind::TouchTargetTooSmall; }), issues.end());
                     }
                     if (!issues.empty()) {
-                        const eastl::string_view modeName = screen ? EnumUtils<CanvasScaleMode>::ToString(mode) : eastl::string_view("-");
+                        const StringView modeName = screen ? EnumUtils<CanvasScaleMode>::ToString(mode) : StringView("-");
                         failures.push_back({Format("{} {} x{}", window.label, modeName, userScale), std::move(issues)});
                     }
                 }
@@ -474,7 +474,7 @@ namespace BECore::Mahjong::Tests {
                         const float spare = control->IsInteractive() ? air : 0.0f;
                         const UIContentFit fit = control->CheckContent(control->rect.w - 2.0f * spare, control->rect.h, scale);
                         if (fit.hasContent && !fit.fits) {
-                            const eastl::string_view modeName = screen ? EnumUtils<CanvasScaleMode>::ToString(mode) : eastl::string_view("-");
+                            const StringView modeName = screen ? EnumUtils<CanvasScaleMode>::ToString(mode) : StringView("-");
                             cut.push_back(std::string(
                                 Format("{} {} x{}: {} ({} x {}) scale {}", window.label, modeName, userScale, control->name.ToStringView(), control->rect.w, control->rect.h, scale).c_str()));
                         }

@@ -89,7 +89,7 @@ namespace BECore::Mahjong::Tests {
         for (const Tile tile : view.own.concealed) {
             const Danger grade = dangers[tile.Id()];
             const DangerMark expected = grade == Danger::Safe ? DangerMark::Safe : grade == Danger::Medium ? DangerMark::Risky : grade == Danger::High ? DangerMark::Dangerous : DangerMark::None;
-            EXPECT_EQ(marks[tile.Id()], expected) << ToString(tile);
+            EXPECT_EQ(marks[tile.Id()], expected) << ToStd(ToString(tile));
         }
     }
 
@@ -100,7 +100,7 @@ namespace BECore::Mahjong::Tests {
         const auto marks = DangerMarks(view);
         for (size_t id = 0; id < marks.size(); ++id) {
             const bool held = id == T("5p").Id() || id == T("2p").Id();
-            EXPECT_EQ(marks[id] != DangerMark::None, held) << ToString(Tile{static_cast<uint8_t>(id)});
+            EXPECT_EQ(marks[id] != DangerMark::None, held) << ToStd(ToString(Tile{static_cast<uint8_t>(id)}));
         }
     }
 

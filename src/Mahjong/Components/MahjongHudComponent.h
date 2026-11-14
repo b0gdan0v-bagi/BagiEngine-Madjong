@@ -210,7 +210,7 @@ namespace BECore::Mahjong {
         uint64_t _newGameWordStrings = 0;
         bool _roomLineSeen = false;  // the word of the client at the table's start is not new
         uint32_t _noticeSeen = 0;
-        eastl::string_view _noteKey;  // the word of the client that came while the table is up, and the version of the table it came at
+        StringView _noteKey;  // the word of the client that came while the table is up, and the version of the table it came at
         eastl::string _noteArg;
         uint64_t _noteTable = 0;
         bool _leaveSent = false;

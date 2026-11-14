@@ -53,7 +53,7 @@ namespace BECore::Mahjong {
         return kSpecs[static_cast<size_t>(kind)];
     }
 
-    Optional<ButtonKind> ButtonOf(eastl::string_view action, eastl::string_view value) noexcept {
+    Optional<ButtonKind> ButtonOf(StringView action, StringView value) noexcept {
         for (size_t i = 0; i < kSpecs.size(); ++i) {
             if (action == kSpecs[i].action && value == kSpecs[i].value) {
                 return static_cast<ButtonKind>(i);
@@ -66,7 +66,7 @@ namespace BECore::Mahjong {
         return std::nullopt;
     }
 
-    eastl::string_view HintKey(ButtonKind kind) noexcept {
+    StringView HintKey(ButtonKind kind) noexcept {
         return SpecOf(kind).hintKey;
     }
 

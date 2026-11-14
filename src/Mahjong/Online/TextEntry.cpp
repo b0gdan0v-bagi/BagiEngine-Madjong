@@ -9,9 +9,9 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        constexpr eastl::string_view kPadLettersKey = "online.pad.letters";
-        constexpr eastl::string_view kDefaultNameKey = "online.name.default";
-        constexpr eastl::string_view kDigits = "0123456789";
+        constexpr StringView kPadLettersKey = "online.pad.letters";
+        constexpr StringView kDefaultNameKey = "online.name.default";
+        constexpr StringView kDigits = "0123456789";
         constexpr char kSpace = ' ';
 
         constexpr char32_t kCyrillicYoUpper = 0x0401;
@@ -20,7 +20,7 @@ namespace BECore::Mahjong {
         constexpr char32_t kCyrillicLast = 0x044F;
 
         /// The only code point of @p character; nothing when it holds none, several or a malformed sequence.
-        Optional<char32_t> SingleCodePoint(eastl::string_view character) {
+        Optional<char32_t> SingleCodePoint(StringView character) {
             if (character.empty()) {
                 return std::nullopt;
             }
@@ -57,7 +57,7 @@ namespace BECore::Mahjong {
         }
 
         bool IsCodeCharacter(char32_t codePoint) {
-            return codePoint < 0x80 && RoomLimits::kRoomCodeAlphabet.find(static_cast<char>(codePoint)) != eastl::string_view::npos;
+            return codePoint < 0x80 && RoomLimits::kRoomCodeAlphabet.find(static_cast<char>(codePoint)) != StringView::npos;
         }
 
         bool IsAsciiAlphanumeric(char c) {
@@ -111,7 +111,7 @@ namespace BECore::Mahjong {
         return keys;
     }
 
-    bool TextEntry::Append(eastl::string_view character) {
+    bool TextEntry::Append(StringView character) {
         const Optional<char32_t> codePoint = SingleCodePoint(character);
         if (!codePoint) {
             return false;
@@ -149,7 +149,7 @@ namespace BECore::Mahjong {
         _text.clear();
     }
 
-    bool TextEntry::Replace(eastl::string_view text) {
+    bool TextEntry::Replace(StringView text) {
         TextEntry candidate(_kind);
         size_t pos = 0;
         while (pos < text.size()) {
@@ -183,7 +183,7 @@ namespace BECore::Mahjong {
         return std::nullopt;
     }
 
-    Optional<eastl::string> TextEntry::CleanRoomCode(eastl::string_view text) {
+    Optional<eastl::string> TextEntry::CleanRoomCode(StringView text) {
         if (text.empty() || text.size() > kMaxPasteBytes) {
             return std::nullopt;
         }

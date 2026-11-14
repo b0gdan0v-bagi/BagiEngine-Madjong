@@ -367,7 +367,7 @@ namespace BECore::Mahjong::Tests {
             }
             const eastl::string longest = LongestText(candidates);
             ASSERT_FALSE(longest.empty());
-            CoreManager::GetUIVars().Set("tileHoverText"_intern, eastl::string_view(longest));
+            CoreManager::GetUIVars().Set("tileHoverText"_intern, StringView(longest));
             UICanvasComponent::SetElementVisibleByName(*_manager->GetSceneByName("MahjongScene"_intern), "TileHoverPlate"_intern, true);
 
             ExpectWordsFit("TileHover", kViewWidth, kViewHeight, 0.0f);

@@ -106,7 +106,7 @@ namespace BECore::Mahjong::Tests {
     /// Sets the regions of `layout` (`MakeTableRegions`) on `regions`, as the table publishes them to its canvases.
     inline void PublishRegionsOf(UIRegionSet& regions, const TableLayout& layout) {
         for (const TableRegion& region : MakeTableRegions(layout)) {
-            regions.Set(PoolString::Intern(eastl::string_view(region.name.data(), region.name.size())), region.rect);
+            regions.Set(PoolString::Intern(region.name), region.rect);
         }
     }
 
@@ -140,7 +140,7 @@ namespace BECore::Mahjong::Tests {
 
     /// The text of a `UIVars` variable.
     inline std::string Var(const char* name) {
-        const eastl::string_view value = CoreManager::GetUIVars().Get(PoolString::Intern(name));
+        const StringView value = CoreManager::GetUIVars().Get(PoolString::Intern(name));
         return std::string(value.data(), value.size());
     }
 

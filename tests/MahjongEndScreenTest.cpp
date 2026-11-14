@@ -706,7 +706,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(ShowTheWorstScoreTable(*canvas));  // the worst case: the sixteen lines, the tally row and eighteen tiles shown
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
-            CoreManager::GetUIVars().Set("handOverHeadline"_intern, eastl::string_view(FindWorstTexts(CoreManager::GetUIStrings()).headline));
+            CoreManager::GetUIVars().Set("handOverHeadline"_intern, StringView(FindWorstTexts(CoreManager::GetUIStrings()).headline));
             canvas->UpdateLayout(kViewWidth, kViewHeight);
 
             const UIElement* plateElement = Element("HandOver", "Plate");
@@ -848,7 +848,7 @@ namespace BECore::Mahjong::Tests {
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             const WorstTexts worst = FindWorstTexts(CoreManager::GetUIStrings());
-            CoreManager::GetUIVars().Set("handOverHeadline"_intern, eastl::string_view(worst.headline));
+            CoreManager::GetUIVars().Set("handOverHeadline"_intern, StringView(worst.headline));
             LayOutInWindow(*canvas, window);
             LayOutInWindow(*action, window, CanvasScaleMode::ScaleWithScreen, 1.0f);
 
@@ -969,7 +969,7 @@ namespace BECore::Mahjong::Tests {
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             const WorstTexts worst = FindWorstTexts(CoreManager::GetUIStrings());
-            CoreManager::GetUIVars().Set("handOverHeadline"_intern, eastl::string_view(worst.headline));
+            CoreManager::GetUIVars().Set("handOverHeadline"_intern, StringView(worst.headline));
             LayOutInWindow(*canvas, window);
             LayOutInWindow(*action, window, CanvasScaleMode::ScaleWithScreen, 1.0f);
 
@@ -1050,11 +1050,11 @@ namespace BECore::Mahjong::Tests {
             SCOPED_TRACE(language.ToStringView().data());
             const WorstTexts worst = FindWorstTexts(CoreManager::GetUIStrings());
             UIVars& vars = CoreManager::GetUIVars();
-            vars.Set("handOverHeadline"_intern, eastl::string_view(worst.headline));
-            vars.Set("handOverSummary"_intern, eastl::string_view(worst.summary));
+            vars.Set("handOverHeadline"_intern, StringView(worst.headline));
+            vars.Set("handOverSummary"_intern, StringView(worst.summary));
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 for (int column = 0; column < kScoreColumns; ++column) {
-                    vars.Set(PoolString::Intern(Format("handOverCell{}_{}", seat, column)), eastl::string_view(worst.cells[static_cast<size_t>(column)]));
+                    vars.Set(PoolString::Intern(Format("handOverCell{}_{}", seat, column)), StringView(worst.cells[static_cast<size_t>(column)]));
                 }
             }
             canvas->UpdateLayout(kViewWidth, kViewHeight);
@@ -1125,7 +1125,7 @@ namespace BECore::Mahjong::Tests {
         }
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
-            CoreManager::GetUIVars().Set("matchOverHeadline"_intern, eastl::string_view(FindWorstTexts(CoreManager::GetUIStrings()).standingsHeadline));
+            CoreManager::GetUIVars().Set("matchOverHeadline"_intern, StringView(FindWorstTexts(CoreManager::GetUIStrings()).standingsHeadline));
             canvas->UpdateLayout(kViewWidth, kViewHeight);
 
             const UIElement* plateElement = Element("MatchOver", "Plate");
@@ -1347,13 +1347,13 @@ namespace BECore::Mahjong::Tests {
             const UIStrings& strings = CoreManager::GetUIStrings();
             const WorstTexts worst = FindWorstTexts(strings);
             UIVars& vars = CoreManager::GetUIVars();
-            vars.Set("handOverHeadline"_intern, eastl::string_view(worst.headline));
-            vars.Set("handOverSummary"_intern, eastl::string_view(worst.summary));
-            vars.Set("handOverCoach"_intern, eastl::string_view(worst.handTally));
-            vars.Set("handOverButton"_intern, eastl::string_view(LongestText({Tr(strings, "handover.next"), Tr(strings, "handover.finish")})));
+            vars.Set("handOverHeadline"_intern, StringView(worst.headline));
+            vars.Set("handOverSummary"_intern, StringView(worst.summary));
+            vars.Set("handOverCoach"_intern, StringView(worst.handTally));
+            vars.Set("handOverButton"_intern, StringView(LongestText({Tr(strings, "handover.next"), Tr(strings, "handover.finish")})));
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 for (int column = 0; column < kScoreColumns; ++column) {
-                    vars.Set(PoolString::Intern(Format("handOverCell{}_{}", seat, column)), eastl::string_view(worst.cells[static_cast<size_t>(column)]));
+                    vars.Set(PoolString::Intern(Format("handOverCell{}_{}", seat, column)), StringView(worst.cells[static_cast<size_t>(column)]));
                 }
             }
 
@@ -1367,7 +1367,7 @@ namespace BECore::Mahjong::Tests {
                     line.doubles = doubles;
                     const eastl::string text = ScoreLineText(strings, line);
                     for (int i = 0; i < kMaxScoreLines; ++i) {
-                        vars.Set(PoolString::Intern(Format("scoreLine{}", i)), eastl::string_view(text));
+                        vars.Set(PoolString::Intern(Format("scoreLine{}", i)), StringView(text));
                     }
                     SCOPED_TRACE(EnumUtils<ScoreKind>::ToString(kind).data());
                     for (const Output& output : kOutputs) {
@@ -1397,12 +1397,12 @@ namespace BECore::Mahjong::Tests {
             SCOPED_TRACE(language.ToStringView().data());
             const WorstTexts worst = FindWorstTexts(CoreManager::GetUIStrings());
             UIVars& vars = CoreManager::GetUIVars();
-            vars.Set("matchOverHeadline"_intern, eastl::string_view(worst.standingsHeadline));
-            vars.Set("matchOverCoach"_intern, eastl::string_view(worst.matchTally));
+            vars.Set("matchOverHeadline"_intern, StringView(worst.standingsHeadline));
+            vars.Set("matchOverCoach"_intern, StringView(worst.matchTally));
             for (int row = 0; row < kSeatCount; ++row) {
-                vars.Set(PoolString::Intern(Format("standingPlace{}", row)), eastl::string_view("4"));
-                vars.Set(PoolString::Intern(Format("standingName{}", row)), eastl::string_view(worst.standingName));
-                vars.Set(PoolString::Intern(Format("standingScore{}", row)), eastl::string_view(worst.standingScore));
+                vars.Set(PoolString::Intern(Format("standingPlace{}", row)), StringView("4"));
+                vars.Set(PoolString::Intern(Format("standingName{}", row)), StringView(worst.standingName));
+                vars.Set(PoolString::Intern(Format("standingScore{}", row)), StringView(worst.standingScore));
                 ASSERT_TRUE(Canvas("MatchOver")->SetElementVisible(PoolString::Intern(Format("StandingFirst{}", row)), true));  // the highlights, all lit: the worst case
             }
 

@@ -90,7 +90,7 @@ namespace BECore::Mahjong::Tests {
         widen(2 + 4 * kMaxCardRows, kMaxCardFooter);
         for (size_t at = 0; at < names.size(); ++at) {
             const eastl::string longest = LongestText(candidates[at]);
-            CoreManager::GetUIVars().Set(PoolString::Intern(eastl::string_view(names[at].data(), names[at].size())), eastl::string_view(longest));
+            CoreManager::GetUIVars().Set(PoolString::Intern(FromStd(names[at])), StringView(longest));
         }
     }
 

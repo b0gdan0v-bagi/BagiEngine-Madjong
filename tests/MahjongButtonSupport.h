@@ -77,7 +77,7 @@ namespace BECore::Mahjong::Tests {
         if (text == nullptr) {
             return std::nullopt;
         }
-        const eastl::string_view shown = text->GetDisplayText();
+        const StringView shown = text->GetDisplayText();
         return std::string(shown.data(), shown.size());
     }
 

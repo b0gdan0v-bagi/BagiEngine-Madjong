@@ -18,14 +18,14 @@ namespace BECore::Mahjong::Tests {
 
         using std::chrono::milliseconds;
 
-        constexpr eastl::string_view kUrl = "ws://hub.test";
+        constexpr StringView kUrl = "ws://hub.test";
         constexpr milliseconds kTick{10};
         constexpr int kStepLimit = 20000;
         constexpr int kSettleSteps = 10;
         constexpr int kSeats = 4;
         constexpr int kHostSeat = 0;
 
-        std::string Std(eastl::string_view text) {
+        std::string Std(StringView text) {
             return std::string(text.data(), text.size());
         }
 
@@ -57,7 +57,7 @@ namespace BECore::Mahjong::Tests {
                 while (screens.Backspace()) {
                 }
                 for (const char* c = text; *c != '\0'; ++c) {
-                    ASSERT_TRUE(screens.Type(eastl::string_view(c, 1))) << *c;
+                    ASSERT_TRUE(screens.Type(StringView(c, 1))) << *c;
                 }
                 ASSERT_TRUE(screens.Done());
             }
@@ -154,7 +154,7 @@ namespace BECore::Mahjong::Tests {
             return Std(person.screens.NoticeKey());
         }
 
-        std::string KeyOf(eastl::string_view code) {
+        std::string KeyOf(StringView code) {
             return Std(OnlineErrorKey(code));
         }
 
@@ -759,7 +759,7 @@ namespace BECore::Mahjong::Tests {
         OnlineServerConfig ConfigWith(const char* value) {
             const XmlConfig config = XmlConfig::Create();
             const eastl::string xml = value != nullptr ? eastl::string("<root webServer=\"") + value + "\"/>" : eastl::string("<root/>");
-            EXPECT_TRUE(config.LoadFromString(eastl::string_view(xml.data(), xml.size())));
+            EXPECT_TRUE(config.LoadFromString(xml));
             return ReadOnlineServerConfig(config.GetRoot());
         }
 

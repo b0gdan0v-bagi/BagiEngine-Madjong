@@ -13,7 +13,7 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        const UIStrings& Words(std::string_view language) {
+        const UIStrings& Words(StringView language) {
             static UIStrings english;
             static UIStrings russian;
             static const bool loaded = [] {

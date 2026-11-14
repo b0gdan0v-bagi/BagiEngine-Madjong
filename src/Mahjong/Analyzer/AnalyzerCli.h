@@ -21,7 +21,7 @@ namespace BECore::Mahjong::Analyzer {
     inline constexpr int kDefaultJobs = 1;
 
     /// The name of a file that stands for the standard input (the reader of the program decides what it reads).
-    inline constexpr std::string_view kStandardInputName = "-";
+    inline constexpr StringView kStandardInputName = "-";
 
     /// What the command line asks for.
     struct AnalyzerArgs {
@@ -53,10 +53,10 @@ namespace BECore::Mahjong::Analyzer {
      * `--log` without `--hand` or without one of `--action` / `--seat`, `--action` together with `--seat`, or `--hand`, `--action`
      * or `--seat` without a `--log`.
      */
-    [[nodiscard]] std::expected<AnalyzerArgs, eastl::string> ParseAnalyzerArgs(eastl::span<const std::string_view> args);
+    [[nodiscard]] std::expected<AnalyzerArgs, eastl::string> ParseAnalyzerArgs(eastl::span<const StringView> args);
 
     /// The text of a file, or the error text. The program supplies the real one; `kStandardInputName` is its to interpret.
-    using FileReader = std::function<std::expected<eastl::string, eastl::string>(std::string_view path)>;
+    using FileReader = std::function<std::expected<eastl::string, eastl::string>(StringView path)>;
 
     /// What the program prints: the reports or the usage to `out`, an error (and the usage for bad arguments) to `err`.
     struct AnalyzerCliOutput {
@@ -73,6 +73,6 @@ namespace BECore::Mahjong::Analyzer {
      * so (a JSON object with `skipped`). The first failure stops the run: its error goes to `err`, the reports before it stay in `out`
      * (`kExitAnalysisFailed`). The same arguments and files give the same bytes at any `--jobs`.
      */
-    [[nodiscard]] int RunAnalyzerCli(eastl::span<const std::string_view> args, const FileReader& readFile, AnalyzerCliOutput& output);
+    [[nodiscard]] int RunAnalyzerCli(eastl::span<const StringView> args, const FileReader& readFile, AnalyzerCliOutput& output);
 
 }  // namespace BECore::Mahjong::Analyzer

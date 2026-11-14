@@ -7,11 +7,11 @@
 
 namespace BECore::Mahjong {
 
-    std::string_view BuildId() {
+    StringView BuildId() {
         return MAHJONG_BUILD_ID;
     }
 
-    MatchLogOrigin MakeMatchOrigin(bool browser, eastl::string_view nickname) {
+    MatchLogOrigin MakeMatchOrigin(bool browser, StringView nickname) {
         MatchLogOrigin origin;
         origin.platform = browser ? MatchPlatform::Web : MatchPlatform::Desktop;
         origin.build.assign(BuildId().data(), BuildId().size());

@@ -135,7 +135,7 @@ namespace BECore::Mahjong {
             HintCard& card;
             size_t room;
 
-            Footer(HintCard& target, eastl::string_view tally) : card(target), room(kMaxCardFooter - (tally.empty() ? 0 : 1)) {}
+            Footer(HintCard& target, StringView tally) : card(target), room(kMaxCardFooter - (tally.empty() ? 0 : 1)) {}
 
             void Add(eastl::string line) {
                 if (!line.empty() && card.footer.size() < room) {
@@ -144,7 +144,7 @@ namespace BECore::Mahjong {
             }
         };
 
-        void EndFooter(HintCard& card, eastl::string_view tally) {
+        void EndFooter(HintCard& card, StringView tally) {
             if (!tally.empty()) {
                 card.footer.emplace_back(tally);
             }
@@ -327,7 +327,7 @@ namespace BECore::Mahjong {
 
     }  // namespace
 
-    HintCard MakeAdviceCard(const UIStrings& strings, const TableView& view, const Explanation& explained, eastl::string_view tally) {
+    HintCard MakeAdviceCard(const UIStrings& strings, const TableView& view, const Explanation& explained, StringView tally) {
         HintCard card;
         card.title = TitleOf(strings, view.pendingTile, explained.Action());
         Footer footer(card, tally);
@@ -346,7 +346,7 @@ namespace BECore::Mahjong {
         return card;
     }
 
-    HintCard MakeNoteCard(const UIStrings& strings, const CoachNote& note, eastl::string_view tally) {
+    HintCard MakeNoteCard(const UIStrings& strings, const CoachNote& note, StringView tally) {
         HintCard card;
         card.title = Tr(strings, "coach.would", {{"advice", TitleOf(strings, note.pending, note.advised)}});
         Footer footer(card, tally);

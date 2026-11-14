@@ -18,7 +18,7 @@
 namespace BECore::Mahjong {
 
     /// The language the game speaks until `SetLanguage` says otherwise (the default language of `config/UIStrings.xml`).
-    inline constexpr eastl::string_view kDefaultLanguage = "en";
+    inline constexpr StringView kDefaultLanguage = "en";
 
     /**
      * @brief Concrete IGame for mahjong: it owns the match (`Game/Match.h`), the rules of classic Chinese mahjong for four seats, and
@@ -268,7 +268,7 @@ namespace BECore::Mahjong {
             return _storedOnline;
         }
         /// Remembers the player's name; saved by `FlushSave()` when it differs.
-        void SetOnlineName(eastl::string_view name);
+        void SetOnlineName(StringView name);
 
         /// The language of the words, an id of `config/UIStrings.xml`. Kept across `Reset()` and `StartMatch`.
         PoolString GetLanguage() const {

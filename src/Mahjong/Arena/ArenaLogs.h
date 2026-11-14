@@ -13,7 +13,7 @@ namespace BECore::Mahjong::Arena {
     /// The seam for the files, as the analyzer has `FileReader`: the `*.jsonl` files of `path` (a folder, searched recursively, or one
     /// file) with their text, or the error text when the path cannot be read. The program supplies the real one; a test supplies strings.
     /// The order is the reader's own: `ReadLogs` sorts by name, so the report does not depend on it.
-    using LogSource = std::function<std::expected<eastl::vector<LogFile>, eastl::string>(std::string_view path)>;
+    using LogSource = std::function<std::expected<eastl::vector<LogFile>, eastl::string>(StringView path)>;
 
     /// `text` with every tab and line break turned into a space: a cell of a tab separated line, a reason on one line.
     [[nodiscard]] eastl::string OneLine(eastl::string text);
@@ -39,7 +39,7 @@ namespace BECore::Mahjong::Arena {
      * `ok` when both work. A rules change makes old logs stop replaying; the reason names the event and the `ReplayProblem` so that is
      * told, not lost. A log with no `End` replays as far as it goes and is `ok` (given up), `complete` false.
      */
-    [[nodiscard]] LogVerdict CheckMatchLog(std::string_view text);
+    [[nodiscard]] LogVerdict CheckMatchLog(StringView text);
 
     /// A file and its verdict.
     struct CheckedLog {
@@ -48,7 +48,7 @@ namespace BECore::Mahjong::Arena {
     };
 
     /// The files of `path` through `source`, sorted by name (byte order), each checked. The error text is the source's.
-    [[nodiscard]] std::expected<eastl::vector<CheckedLog>, eastl::string> ReadLogs(const LogSource& source, std::string_view path);
+    [[nodiscard]] std::expected<eastl::vector<CheckedLog>, eastl::string> ReadLogs(const LogSource& source, StringView path);
 
     /// A key and how many times it was met, in the report's order.
     using CountList = eastl::vector<eastl::pair<eastl::string, int>>;
@@ -87,7 +87,7 @@ namespace BECore::Mahjong::Arena {
     };
 
     /// The key of `LogCorpus::builds` for a log that has no build id (an older format, or a source archive).
-    inline constexpr std::string_view kNoBuild = "unknown";
+    inline constexpr StringView kNoBuild = "unknown";
 
     /// Counts `logs` (from `ReadLogs`). The same logs give the same corpus.
     [[nodiscard]] LogCorpus SummariseLogs(const eastl::vector<CheckedLog>& logs);

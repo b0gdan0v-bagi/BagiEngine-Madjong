@@ -572,7 +572,7 @@ namespace BECore::Mahjong {
         constexpr int kCheckedPileSize = 100;
         constexpr size_t kPhoneWidthSteps = 3;
 
-        eastl::string_view ShapeNameOf(TableShape shape) {
+        StringView ShapeNameOf(TableShape shape) {
             return EnumUtils<TableShape>::ToString(shape);
         }
 

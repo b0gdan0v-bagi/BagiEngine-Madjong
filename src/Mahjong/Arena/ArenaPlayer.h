@@ -12,7 +12,7 @@ namespace BECore::Mahjong::Arena {
     /// new field of `LevelProfile` needs a row here and a larger `kProfileFieldCount` (the build stops in ArenaPlayer.cpp, which names
     /// every field, and `ArenaPlayerTest` fails when a row does not move its own field).
     struct ProfileKnob {
-        eastl::string_view name;
+        StringView name;
         /// Exactly one of the two members is set: the field is an `int` percent, or a `bool`.
         int LevelProfile::* percent = nullptr;
         bool LevelProfile::* flag = nullptr;
@@ -54,7 +54,7 @@ namespace BECore::Mahjong::Arena {
     /// knobs of `kProfileKnobs`, each at most once; the level's profile is the start and the listed knobs are set on it). An oracle is
     /// `oracle-<name>` (`oracle-acceptance`, `oracle-hands`, `oracle-whole`, `oracle-defence`), with the same optional knobs on the Normal profile.
     /// The names are exactly the lowercase ones. A bad spec is an error text that names the part that is wrong; nothing is thrown.
-    [[nodiscard]] std::expected<ArenaPlayer, eastl::string> ParseArenaPlayer(std::string_view spec);
+    [[nodiscard]] std::expected<ArenaPlayer, eastl::string> ParseArenaPlayer(StringView spec);
 
     /// The name of a player for a table (`ArenaPlayer::name`).
     [[nodiscard]] inline const eastl::string& PlayerName(const ArenaPlayer& player) noexcept {

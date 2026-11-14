@@ -66,7 +66,7 @@ namespace BECore::Mahjong::Analyzer {
      *
      * An error text names the line (`line 5: ...`) where one is to blame.
      */
-    [[nodiscard]] std::expected<TableView, eastl::string> ParsePosition(std::string_view text);
+    [[nodiscard]] std::expected<TableView, eastl::string> ParsePosition(StringView text);
     // clang-format on
 
 }  // namespace BECore::Mahjong::Analyzer

@@ -8,7 +8,7 @@ namespace BECore::Mahjong {
     namespace {
 
         /// The key of the sentence of a kind of move.
-        eastl::string_view KeyOf(const HandMove& move) noexcept {
+        StringView KeyOf(const HandMove& move) noexcept {
             switch (move.kind) {
                 case MoveKind::Discard:
                     return move.declaredCalling ? "move.discardCalling" : "move.discard";

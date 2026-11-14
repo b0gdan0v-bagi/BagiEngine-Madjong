@@ -46,7 +46,7 @@ namespace BECore::Mahjong::Tests {
         const std::set<uint8_t> kGreenIds = {10, 11, 12, 14, 16, 33};
 
         std::string Str(Tile tile) {
-            return std::string(ToString(tile));
+            return ToStdString(ToString(tile));
         }
 
     }  // namespace

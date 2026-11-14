@@ -25,7 +25,7 @@ namespace BECore::Mahjong::Analyzer {
     };
 
     /// The label of `position` of the log file `file`.
-    [[nodiscard]] PositionLabel LabelOfLogPosition(eastl::string_view file, const LogPosition& position);
+    [[nodiscard]] PositionLabel LabelOfLogPosition(StringView file, const LogPosition& position);
 
     /// An action as short text: `discard 5p`, `discard 5p declare`, `win`, `kong 5p concealed`, `upgrade 5p`, `claim chow 3s-4s-5s`
     /// (by `chowFirst`), `claim pung`, `claim kong`, `claim mahjong`, `pass`. The one place that writes an action for a person.

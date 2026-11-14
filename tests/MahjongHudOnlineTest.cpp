@@ -116,22 +116,22 @@ namespace BECore::Mahjong::Tests {
             }
             notices.push_back(OnlineNoticeText(strings, kOnlineUnknownKey, "too_many_failed_joins"));
             notices.push_back(OnlineNoticeText(strings, kOnlineBadViewKey));
-            vars.Set("onlineNotice"_intern, eastl::string_view(LongestText(notices)));
+            vars.Set("onlineNotice"_intern, StringView(LongestText(notices)));
             vars.Set("onlineStatus"_intern,
-                     eastl::string_view(LongestText({Tr(strings, kOnlineConnectingKey), Tr(strings, kOnlineReconnectingKey), Tr(strings, kOnlineBrowsingKey), Tr(strings, kOnlineNoRoomsKey)})));
+                     StringView(LongestText({Tr(strings, kOnlineConnectingKey), Tr(strings, kOnlineReconnectingKey), Tr(strings, kOnlineBrowsingKey), Tr(strings, kOnlineNoRoomsKey)})));
             // A room row: the widest name that is kept whole elsewhere and every fact the listing can carry
             const eastl::string facts = Tr(strings, "online.rooms.free", {{"n", "3"}}) + ", " + Tr(strings, "online.rooms.hands", {{"n", "16"}}) + ", " +
                                         Tr(strings, "online.rooms.level", {{"n", "10"}}) + ", " + Tr(strings, "online.rooms.hints");
-            const eastl::string row = Tr(strings, "online.rooms.row", {{"host", eastl::string_view(RepeatedLetter(strings, kListNameBytes))}, {"facts", eastl::string_view(facts)}});
+            const eastl::string row = Tr(strings, "online.rooms.row", {{"host", StringView(RepeatedLetter(strings, kListNameBytes))}, {"facts", StringView(facts)}});
             for (size_t index = 0; index < kListRows; ++index) {
-                vars.Set(PoolString::Intern(Format("onlineListRow{}", index)), eastl::string_view(row));
+                vars.Set(PoolString::Intern(Format("onlineListRow{}", index)), StringView(row));
             }
-            vars.Set("onlineMore"_intern, eastl::string_view(Tr(strings, "online.rooms.page", {{"n", "2"}, {"m", "9"}})));
+            vars.Set("onlineMore"_intern, StringView(Tr(strings, "online.rooms.page", {{"n", "2"}, {"m", "9"}})));
 
             const eastl::string name = RepeatedLetter(strings, kNameBytes);
             const eastl::string seatName = RepeatedLetter(strings, kSeatNameBytes);
-            vars.Set("onlineHostLine"_intern, eastl::string_view(LongestText({Tr(strings, kOnlineLobbyHintsAllowedKey), Tr(strings, kOnlineLobbyHintsOffKey)})));
-            vars.Set("onlineWaiting"_intern, eastl::string_view(LongestText({Tr(strings, kOnlineWaitHostKey), Tr(strings, kOnlineWaitHostHintsAllowedKey), Tr(strings, kOnlineWaitHostHintsOffKey)})));
+            vars.Set("onlineHostLine"_intern, StringView(LongestText({Tr(strings, kOnlineLobbyHintsAllowedKey), Tr(strings, kOnlineLobbyHintsOffKey)})));
+            vars.Set("onlineWaiting"_intern, StringView(LongestText({Tr(strings, kOnlineWaitHostKey), Tr(strings, kOnlineWaitHostHintsAllowedKey), Tr(strings, kOnlineWaitHostHintsOffKey)})));
             std::vector<eastl::string> seats;
             for (const bool mine : {false, true}) {
                 for (const bool connected : {false, true}) {
@@ -141,18 +141,18 @@ namespace BECore::Mahjong::Tests {
             seats.push_back(OnlineSeatText(strings, BECore::SeatKind::Computer, {}, false, true));
             seats.push_back(OnlineSeatText(strings, BECore::SeatKind::Empty, {}, false, true));
             for (size_t seat = 0; seat < kSeats; ++seat) {
-                vars.Set(PoolString::Intern(Format("onlineSeat{}", seat)), eastl::string_view(LongestText(seats)));
+                vars.Set(PoolString::Intern(Format("onlineSeat{}", seat)), StringView(LongestText(seats)));
             }
-            vars.Set("onlineCopy"_intern, eastl::string_view(LongestText({Tr(strings, kOnlineCopyKey), Tr(strings, kOnlineCopiedKey), Tr(strings, kOnlineCopyFailedKey)})));
-            vars.Set("onlineEntryNote"_intern, eastl::string_view(LongestText({Tr(strings, kOnlinePasteNotCodeKey), Tr(strings, kOnlinePasteEmptyKey), Tr(strings, kOnlinePasteRefusedKey)})));
-            vars.Set("onlineName"_intern, eastl::string_view(name));
-            vars.Set("onlineEntryValue"_intern, eastl::string_view(name));
+            vars.Set("onlineCopy"_intern, StringView(LongestText({Tr(strings, kOnlineCopyKey), Tr(strings, kOnlineCopiedKey), Tr(strings, kOnlineCopyFailedKey)})));
+            vars.Set("onlineEntryNote"_intern, StringView(LongestText({Tr(strings, kOnlinePasteNotCodeKey), Tr(strings, kOnlinePasteEmptyKey), Tr(strings, kOnlinePasteRefusedKey)})));
+            vars.Set("onlineName"_intern, StringView(name));
+            vars.Set("onlineEntryValue"_intern, StringView(name));
             vars.Set("onlineCode"_intern, "WWWWW");
             vars.Set("onlineRoom"_intern, "WWWWW");
 
             const eastl::vector<eastl::string> pad = TextEntry(TextEntry::Kind::Name).Pad(strings);
             for (size_t key = 0; key < TextEntry::kPadMaxKeys; ++key) {
-                vars.Set(PoolString::Intern(Format("padKey{}", key)), eastl::string_view(pad[key % pad.size()]));
+                vars.Set(PoolString::Intern(Format("padKey{}", key)), StringView(pad[key % pad.size()]));
             }
         }
 

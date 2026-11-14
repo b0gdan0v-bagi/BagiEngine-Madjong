@@ -40,7 +40,7 @@ namespace BECore::Mahjong::Arena {
         constexpr int kLoopIndexes = 6;
         constexpr std::chrono::milliseconds kProbeSleep{5};
 
-        ArenaPlayer Player(std::string_view spec) {
+        ArenaPlayer Player(StringView spec) {
             const std::expected<ArenaPlayer, eastl::string> player = ParseArenaPlayer(spec);
             EXPECT_TRUE(player.has_value()) << std::string(spec.data(), spec.size());
             return player.value_or(ArenaPlayer{});

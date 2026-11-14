@@ -17,8 +17,8 @@ namespace BECore::Mahjong::Arena {
     inline constexpr int kExitBadArguments = 2;
 
     /// The player of `--focus` when it is left out, and of `--others`.
-    inline constexpr std::string_view kDefaultFocusSpec = "normal";
-    inline constexpr std::string_view kDefaultOthersSpec = "random";
+    inline constexpr StringView kDefaultFocusSpec = "normal";
+    inline constexpr StringView kDefaultOthersSpec = "random";
 
     /// What the command line asks for.
     struct ArenaArgs {
@@ -52,7 +52,7 @@ namespace BECore::Mahjong::Arena {
      * `--differences N` (the log mode only; `--jobs` then plays whole matches in threads). A bad argument is an error text that names it: an unknown option, a missing or malformed
      * value, a bad player spec, a range of seeds that `ValidateArenaConfig` refuses, a word that is no option.
      */
-    [[nodiscard]] std::expected<ArenaArgs, eastl::string> ParseArenaArgs(eastl::span<const std::string_view> args);
+    [[nodiscard]] std::expected<ArenaArgs, eastl::string> ParseArenaArgs(eastl::span<const StringView> args);
 
     /// What the program prints: the report or the usage to `out`, an error and the usage to `err`.
     struct ArenaCliOutput {
@@ -67,7 +67,7 @@ namespace BECore::Mahjong::Arena {
      * (`kExitBadArguments`); a refused action of the model prints its error to `err` (`kExitRefusedAction`); else the report of
      * `FormatArenaReport` goes to `out`. The same arguments give the same bytes, `--time` apart.
      */
-    [[nodiscard]] int RunArenaCli(eastl::span<const std::string_view> args, ArenaCliOutput& output);
+    [[nodiscard]] int RunArenaCli(eastl::span<const StringView> args, ArenaCliOutput& output);
 
     /**
      * @brief The same program with a reader of files, which `--logs` needs (the overload above has none: `--logs` is then `kExitCannotRead`).
@@ -76,6 +76,6 @@ namespace BECore::Mahjong::Arena {
      * of the logs that replay and then `FormatLogAnalysis` (the agreement with the bots of `--focus`, the real-game numbers, the differences); a path the source cannot read prints its error to `err`
      * (`kExitCannotRead`). The same files give the same bytes, whatever order the source lists them in.
      */
-    [[nodiscard]] int RunArenaCli(eastl::span<const std::string_view> args, const LogSource& source, ArenaCliOutput& output);
+    [[nodiscard]] int RunArenaCli(eastl::span<const StringView> args, const LogSource& source, ArenaCliOutput& output);
 
 }  // namespace BECore::Mahjong::Arena

@@ -6,7 +6,7 @@ namespace BECore::Mahjong {
 
     /// The file of the tester's choice, in the save folder of the page (`PersistentSaveDirectory()`). Its name has a dot, so it is no
     /// `SaveGameService` slot: the game's own saves and `List()` never see it.
-    inline constexpr eastl::string_view kUploadPrefsFile = "upload.txt";
+    inline constexpr StringView kUploadPrefsFile = "upload.txt";
 
     /// What the tester chose about sending the matches: the consent (`Unasked` until the screen was answered) and an optional nickname
     /// (empty: none). The nickname goes into a log only while the consent is `Granted`; keeping it here is not sending it.
@@ -22,7 +22,7 @@ namespace BECore::Mahjong {
      * player:** text that is damaged (not UTF-8 text of these two keys, an unknown key or consent, a key twice, no consent, over
      * `kMaxUploadPrefsBytes`) reads as the defaults, and a nickname that `TextEntry` of kind `Name` would refuse reads as empty.
      */
-    [[nodiscard]] UploadPrefs ParseUploadPrefs(eastl::string_view text);
+    [[nodiscard]] UploadPrefs ParseUploadPrefs(StringView text);
 
     /// The text of the file for `prefs`; `ParseUploadPrefs` of it gives `prefs` back (a nickname `TextEntry` refuses is left out)
     [[nodiscard]] eastl::string FormatUploadPrefs(const UploadPrefs& prefs);

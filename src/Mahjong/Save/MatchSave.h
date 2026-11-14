@@ -10,7 +10,7 @@
 namespace BECore::Mahjong {
 
     /// The id of the game in a save file (`SaveSchema::game`)
-    inline constexpr eastl::string_view kMahjongSaveGame = "Mahjong";
+    inline constexpr StringView kMahjongSaveGame = "Mahjong";
 
     /// The version of the state schema that is written now
     inline constexpr uint32_t kMahjongSaveVersion = 1;
@@ -22,10 +22,10 @@ namespace BECore::Mahjong {
     inline constexpr SaveSchema kMahjongSaveSchema{kMahjongSaveGame, kMahjongSaveVersion, kMahjongSaveMinVersion};
 
     /// The slot of the match in progress and the slot of the choices of `Setup`
-    inline constexpr eastl::string_view kMatchSlot = "match";
-    inline constexpr eastl::string_view kPrefsSlot = "settings";
+    inline constexpr StringView kMatchSlot = "match";
+    inline constexpr StringView kPrefsSlot = "settings";
     /// The slot of the online play: the player's name and the session of the room to return to
-    inline constexpr eastl::string_view kOnlineSlot = "online";
+    inline constexpr StringView kOnlineSlot = "online";
 
     /// The most lines a saved match may have: a sanity cap on what is parsed (a 16-hand match of four players is a few thousand events)
     inline constexpr size_t kMaxSavedEvents = 50000;
@@ -129,13 +129,13 @@ namespace BECore::Mahjong {
      * first event is not a `Start`, that a `Hand` or `End` line is there, or that there are more than `kMaxSavedEvents` lines. Nothing is
      * replayed here; `ReplayMatchLog` decides whether the match comes out.
      */
-    [[nodiscard]] std::expected<eastl::vector<MatchLogEvent>, eastl::string> ParseMatchSaveText(std::string_view text);
+    [[nodiscard]] std::expected<eastl::vector<MatchLogEvent>, eastl::string> ParseMatchSaveText(StringView text);
 
     /// The state of the prefs slot from the choices of the game (`coach` implies `hintsOn`).
-    [[nodiscard]] MahjongPrefsSave MakePrefs(eastl::string_view language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, const SeatLevels& levels,
-                                             AnimationSpeed speed = kDefaultAnimationSpeed, bool coach = false);
+    [[nodiscard]] MahjongPrefsSave MakePrefs(StringView language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, const SeatLevels& levels, AnimationSpeed speed = kDefaultAnimationSpeed,
+                                             bool coach = false);
     /// The same for a table of one level.
-    [[nodiscard]] MahjongPrefsSave MakePrefs(eastl::string_view language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, ComputerLevel level, AnimationSpeed speed = kDefaultAnimationSpeed,
+    [[nodiscard]] MahjongPrefsSave MakePrefs(StringView language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, ComputerLevel level, AnimationSpeed speed = kDefaultAnimationSpeed,
                                              bool coach = false);
 
     /// The choices of a prefs state (`coach` wins over `hintsOn`: Coach, else Hints or Off), or the first thing wrong: seats not four letters P / C, a `levels` text that is not four numbers `1` ..
@@ -144,7 +144,7 @@ namespace BECore::Mahjong {
     [[nodiscard]] std::expected<PrefsValues, eastl::string> ReadPrefs(const MahjongPrefsSave& prefs);
 
     /// The state of the online slot: @p session invalid keeps no room.
-    [[nodiscard]] MahjongOnlineSave MakeOnlineSave(eastl::string_view name, const RoomSession& session);
+    [[nodiscard]] MahjongOnlineSave MakeOnlineSave(StringView name, const RoomSession& session);
 
     /// The values of an online state, or the first thing wrong: a name that `SanitizePlayerName` refuses, or a session text that is not a
     /// room and a token (`SessionFromJson`). The error never repeats the token.

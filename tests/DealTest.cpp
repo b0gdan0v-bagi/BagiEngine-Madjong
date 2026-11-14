@@ -38,7 +38,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         std::vector<int> Ids(const std::string& text) {
-            return Ids(ParseTiles(text).value());
+            return Ids(ParseTiles(FromStd(text)).value());
         }
 
         std::vector<int> SortedIds(const eastl::vector<Tile>& tiles) {
@@ -48,7 +48,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         std::vector<int> SortedIds(const std::string& text) {
-            return SortedIds(ParseTiles(text).value());
+            return SortedIds(ParseTiles(FromStd(text)).value());
         }
 
         /// Every tile held by the four hands (concealed and bonus) and left in the wall, sorted.

@@ -84,7 +84,7 @@ namespace BECore::Mahjong {
     /// One thing for a screen to say: a key of `config/UIStrings.xml` (`OnlineWords.h`), the code for the one key that names it, and a
     /// serial so a screen shows each notice once (0 is none yet).
     struct OnlineNotice {
-        eastl::string_view key;
+        StringView key;
         eastl::string arg;
         uint32_t serial = 0;
     };
@@ -111,16 +111,16 @@ namespace BECore::Mahjong {
 
         /// Creates a room of Mahjong on the server at @p url. @p options wrong (hands not 8 or 16, level outside 1..10) or a name the server
         /// would refuse: a notice and no connection.
-        bool Host(eastl::string_view url, eastl::string_view name, const OnlineRoomOptions& options = {});
+        bool Host(StringView url, StringView name, const OnlineRoomOptions& options = {});
         /// Enters the room @p code (any case). A code that cannot be one is `unknown_room` at once; a bad name is `bad_name`.
-        bool Join(eastl::string_view url, eastl::string_view code, eastl::string_view name);
+        bool Join(StringView url, StringView code, StringView name);
         /// Starts browsing the open rooms of @p url (from `Idle`: opens a connection) or asks again on the open one (from `Browsing`; nothing
         /// while an ask is still unanswered). Any other stage is refused with the `wrong_state` notice. The list is the answer to `Rooms()`.
         /// The model never asks by itself: a screen presses Refresh.
-        bool Browse(eastl::string_view url);
+        bool Browse(StringView url);
         /// `Join` of a code from the list: on the connection that lists. A refusal (`unknown_room`, `room_full`, `game_started`, any error)
         /// keeps the connection, makes its notice and asks the list again, so the player is back on a list without the gone room.
-        bool JoinListed(eastl::string_view url, eastl::string_view code, eastl::string_view name);
+        bool JoinListed(StringView url, StringView code, StringView name);
         /// Comes back into the room of a session that an earlier run kept. `invalid_session` for one that cannot be a room and a token.
         bool Resume(const RoomSession& session);
         /// Asks for a seat, in the lobby only (no notice elsewhere). `CanChoose` says whether the lobby shows the seat free.
@@ -238,12 +238,12 @@ namespace BECore::Mahjong {
         /// Ends browsing and clears the list (the connection is the caller's to close, or the model's `Settle()`).
         void EndBrowsing();
         /// Asks the server for the list on the connection that is open (`pending` until the answer or the refusal).
-        std::expected<void, ControlError> AskForRooms(eastl::string_view url);
-        bool SendJoin(eastl::string_view url, eastl::string_view code, eastl::string_view name, bool fromList);
+        std::expected<void, ControlError> AskForRooms(StringView url);
+        bool SendJoin(StringView url, StringView code, StringView name, bool fromList);
         void KeepSession(const RoomSession& session);
         void ForgetSession();
-        void SetNotice(eastl::string_view key, eastl::string_view arg = {});
-        void SetNoticeForCode(eastl::string_view code);
+        void SetNotice(StringView key, StringView arg = {});
+        void SetNoticeForCode(StringView code);
         /// Turns an immediate refusal of a command into a notice; true when the command was sent.
         bool Report(const std::expected<void, ControlError>& result);
         void Bump();

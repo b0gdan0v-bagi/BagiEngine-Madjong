@@ -2,17 +2,16 @@
 // src/Mahjong/Analyzer/AnalyzerCli; this file only hands over the arguments, reads the files and writes the streams.
 #include <Mahjong/Analyzer/AnalyzerCli.h>
 #include <cstdio>
-#include <fstream>
 #include <iostream>
 #include <iterator>
 
 namespace {
 
-    std::expected<eastl::string, eastl::string> ReadFile(std::string_view path) {
+    std::expected<eastl::string, eastl::string> ReadFile(BECore::StringView path) {
         std::istream* stream = &std::cin;
         std::ifstream file;
         if (path != BECore::Mahjong::Analyzer::kStandardInputName) {
-            file.open(std::string(path), std::ios::binary);
+            file.open(BECore::ToStdString(path), std::ios::binary);
             if (!file) {
                 return std::unexpected(eastl::string("cannot read the file \"") + eastl::string(path.data(), path.size()) + "\"");
             }
@@ -25,7 +24,7 @@ namespace {
 }  // namespace
 
 int main(int argc, char** argv) {
-    eastl::vector<std::string_view> args;
+    eastl::vector<BECore::StringView> args;
     for (int index = 1; index < argc; ++index) {
         args.push_back(argv[index]);
     }

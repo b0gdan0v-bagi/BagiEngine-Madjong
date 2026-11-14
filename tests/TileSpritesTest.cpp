@@ -35,7 +35,7 @@ namespace BECore::Mahjong::Tests {
                    static_cast<uint32_t>(bytes[offset + 3]);
         }
 
-        constexpr eastl::string_view kTileSpritePrefix = "Tile_";
+        constexpr StringView kTileSpritePrefix = "Tile_";
 
         struct Sprite {
             eastl::string name;
@@ -63,7 +63,7 @@ namespace BECore::Mahjong::Tests {
             const XmlNode sprites = config.GetRoot().GetChild("sprites");
             ASSERT_TRUE(static_cast<bool>(sprites));
             for (const XmlNode node : sprites.Children()) {
-                if (node.Name() != eastl::string_view("sprite")) {
+                if (node.Name() != StringView("sprite")) {
                     continue;
                 }
                 Sprite sprite;

@@ -191,7 +191,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongTouchSizeTest, AScreenCanvasIsItsOwnRectAtTheDesignSizeAndScaledByItsOwnScaleElsewhere) {
         ASSERT_NO_FATAL_FAILURE(Start(kTwoPeople));
         // Shown by hand, and no draw after it (a draw would hide it again): the cover is a Screen canvas with a floor on its scale
-        CoreManager::GetUIVars().Set("handoffSeat"_intern, eastl::string_view("Seat 2 (South)"));
+        CoreManager::GetUIVars().Set("handoffSeat"_intern, StringView("Seat 2 (South)"));
         UICanvasComponent::SetVisibleByName(*_manager->GetSceneByName("MahjongScene"_intern), "Handoff"_intern, true);
         auto cover = Canvas("Handoff");
         ASSERT_TRUE(cover);

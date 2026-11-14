@@ -12,23 +12,19 @@ namespace BECore::Mahjong::Analyzer {
         constexpr int kNumberWidth = 9;
         constexpr int kHalfWidth = 8;
         constexpr const char* kColumnGap = "  ";
-        constexpr eastl::string_view kNoteBest = "best";
-        constexpr eastl::string_view kNoteNormal = "Normal";
-        constexpr eastl::string_view kNoteLogged = "logged";
-        constexpr eastl::string_view kNoteWorseThanBest = "worse than best";
-        constexpr eastl::string_view kNoteBetterThanNormal = "better than Normal";
-        constexpr eastl::string_view kNoteWorseThanNormal = "worse than Normal";
-        constexpr eastl::string_view kNoteSeparator = ", ";
-        constexpr eastl::string_view kOpponentsKind = "normal";
-        constexpr eastl::string_view kSeatAfterActionKind = "normal";
-        constexpr eastl::string_view kHiddenKind = "uniform";
-        constexpr eastl::string_view kPointsKind = "this hand";
+        constexpr StringView kNoteBest = "best";
+        constexpr StringView kNoteNormal = "Normal";
+        constexpr StringView kNoteLogged = "logged";
+        constexpr StringView kNoteWorseThanBest = "worse than best";
+        constexpr StringView kNoteBetterThanNormal = "better than Normal";
+        constexpr StringView kNoteWorseThanNormal = "worse than Normal";
+        constexpr StringView kNoteSeparator = ", ";
+        constexpr StringView kOpponentsKind = "normal";
+        constexpr StringView kSeatAfterActionKind = "normal";
+        constexpr StringView kHiddenKind = "uniform";
+        constexpr StringView kPointsKind = "this hand";
 
-        eastl::string Text(std::string_view view) {
-            return eastl::string(view.data(), view.size());
-        }
-
-        eastl::string Text(eastl::string_view view) {
+        eastl::string Text(StringView view) {
             return eastl::string(view.data(), view.size());
         }
 
@@ -125,7 +121,7 @@ namespace BECore::Mahjong::Analyzer {
 
         /// The notes of a row, in a fixed order.
         eastl::string NoteText(const ActionRow& row, const PositionLabel& label) {
-            eastl::vector<eastl::string_view> notes;
+            eastl::vector<StringView> notes;
             if (row.isBest) {
                 notes.push_back(kNoteBest);
             }
@@ -142,7 +138,7 @@ namespace BECore::Mahjong::Analyzer {
                 notes.push_back(row.vsNormal.interval.mean > 0.0 ? kNoteBetterThanNormal : kNoteWorseThanNormal);
             }
             eastl::string text;
-            for (const eastl::string_view note : notes) {
+            for (const StringView note : notes) {
                 text.append(Format("{}{}", text.empty() ? "" : Text(kNoteSeparator), Text(note)));
             }
             return text;
@@ -300,7 +296,7 @@ namespace BECore::Mahjong::Analyzer {
 
     }  // namespace
 
-    PositionLabel LabelOfLogPosition(eastl::string_view file, const LogPosition& position) {
+    PositionLabel LabelOfLogPosition(StringView file, const LogPosition& position) {
         PositionLabel label;
         label.source = Text(file);
         label.hand = position.hand;

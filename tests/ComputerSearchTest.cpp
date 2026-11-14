@@ -217,7 +217,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(ComputerSearchTest, TheSearchIsOffInEveryLevelAndNeutralByDefault) {
         for (const ComputerLevel level : kAllLevels) {
-            EXPECT_EQ(ProfileOf(level).searchWorlds, 0) << LevelText(level);
+            EXPECT_EQ(ProfileOf(level).searchWorlds, 0) << ToStd(LevelText(level));
         }
         EXPECT_EQ(kNormalProfile.searchWorlds, 0);
         EXPECT_EQ(kNormalProfile.searchCandidates, kSearchDefaultCandidates);
@@ -1032,7 +1032,7 @@ namespace BECore::Mahjong::Tests {
             for (size_t i = 0; i < views.size(); ++i) {
                 ComputerPlayer player(kRngSeed + static_cast<uint32_t>(i), level);
                 PlayerDecision decision = player.Begin(views[i]);
-                EXPECT_FALSE(decision.run.has_value() && decision.run->HasWorldSource()) << LevelText(level) << " view " << i;
+                EXPECT_FALSE(decision.run.has_value() && decision.run->HasWorldSource()) << ToStd(LevelText(level)) << " view " << i;
             }
         }
         int searched = 0;

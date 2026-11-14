@@ -6,8 +6,8 @@
 namespace BECore::Mahjong::Arena {
 
     /// The first cell of a `--check` line.
-    inline constexpr std::string_view kCheckOk = "ok";
-    inline constexpr std::string_view kCheckBad = "bad";
+    inline constexpr StringView kCheckOk = "ok";
+    inline constexpr StringView kCheckBad = "bad";
 
     /**
      * @brief The text of `--check`: one line per file in the order of `logs`, `ok<TAB><name>` or `bad<TAB><name><TAB><reason>`, and

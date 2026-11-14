@@ -180,7 +180,7 @@ namespace BECore::Mahjong {
             LOG_WARNING(Format("MahjongGame: the saved settings are not used: {}", values.error()));
             return;
         }
-        SetLanguage(PoolString::Intern(eastl::string_view(values->language.c_str(), values->language.size())));  // a language the table lacks stays out
+        SetLanguage(PoolString::Intern(StringView(values->language.c_str(), values->language.size())));  // a language the table lacks stays out
         SetHintsMode(values->hintsMode);
         _seats = values->seats;
         _settings.handsPerMatch = values->handsPerMatch;
@@ -260,7 +260,7 @@ namespace BECore::Mahjong {
         return true;
     }
 
-    void MahjongGame::SetOnlineName(eastl::string_view name) {
+    void MahjongGame::SetOnlineName(StringView name) {
         if (_storedOnline.name != name) {
             _storedOnline.name.assign(name.data(), name.size());
             _onlineDirty = true;

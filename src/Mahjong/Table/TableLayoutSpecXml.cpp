@@ -41,7 +41,7 @@ namespace BECore::Mahjong {
                 for (const pugi::xml_attribute attribute : node.attributes()) {
                     bool known = false;
                     for (const char* name : allowed) {
-                        known = known || eastl::string_view(attribute.name()) == name;
+                        known = known || StringView(attribute.name()) == name;
                     }
                     if (!known) {
                         Fail(where, Format("unknown attribute '{}'", attribute.name()));
@@ -102,7 +102,7 @@ namespace BECore::Mahjong {
                 if (!attribute) {
                     return std::nullopt;
                 }
-                const eastl::string_view text = attribute.value();
+                const StringView text = attribute.value();
                 if (text == "true" || text == "false") {
                     return text == "true";
                 }
@@ -125,7 +125,7 @@ namespace BECore::Mahjong {
                 StripZone zone;
                 zone.rect = ReadRect(node, where);
                 if (const pugi::xml_attribute align = node.attribute("align")) {
-                    const eastl::string_view text = align.value();
+                    const StringView text = align.value();
                     if (text == "start") {
                         zone.align = ZoneAlign::Start;
                     } else if (text == "center") {
@@ -138,7 +138,7 @@ namespace BECore::Mahjong {
                 }
                 zone.spread = ReadBool(node, where, "spread").value_or(false);
                 if (const pugi::xml_attribute tile = node.attribute("tile")) {
-                    const eastl::string_view text = tile.value();
+                    const StringView text = tile.value();
                     if (text == kTileProfile) {
                         zone.profileTile = true;
                     } else if (text != kTileSolve) {
@@ -166,7 +166,7 @@ namespace BECore::Mahjong {
             /// an area (whether it lies on the table is `CheckTableLayoutSpec`'s to say).
             void ReadFree(const pugi::xml_node& node, const eastl::string& shapeWhere, ShapeSpec& shape) {
                 const pugi::xml_attribute nameAttribute = node.attribute("name");
-                const eastl::string_view name = nameAttribute.value();
+                const StringView name = nameAttribute.value();
                 const eastl::string where = name.empty() ? Format("{}, {}", shapeWhere, kFreeElement) : Format("{}, {} '{}'", shapeWhere, kFreeElement, name);
                 CheckAttributes(node, where, {"name", "x", "y", "w", "h"});
                 const size_t errorsBefore = errors.size();
@@ -201,7 +201,7 @@ namespace BECore::Mahjong {
                     if (child.type() != pugi::node_element) {
                         continue;
                     }
-                    const eastl::string_view name = child.name();
+                    const StringView name = child.name();
                     const eastl::string childWhere = Format("{}, {}", where, child.name());
                     unsigned bit = 0;
                     if (name == kHandElement) {
@@ -255,7 +255,7 @@ namespace BECore::Mahjong {
                     if (child.type() != pugi::node_element) {
                         continue;
                     }
-                    const eastl::string_view name = child.name();
+                    const StringView name = child.name();
                     if (name == kSeatElement) {
                         ReadSeat(child, where, out, seatsSeen);
                     } else if (name == kWallElement) {
@@ -334,7 +334,7 @@ namespace BECore::Mahjong {
         TableLayoutSpecParse parse;
         SpecReader reader;
         pugi::xml_node table = root;
-        if (eastl::string_view(root.name()) != kRootName) {
+        if (StringView(root.name()) != kRootName) {
             table = root.child(kRootName);
         }
         if (!table) {
@@ -347,7 +347,7 @@ namespace BECore::Mahjong {
             if (child.type() != pugi::node_element) {
                 continue;
             }
-            if (eastl::string_view(child.name()) != kShapeElement) {
+            if (StringView(child.name()) != kShapeElement) {
                 reader.Fail("TableLayout", Format("unknown element '{}'", child.name()));
                 continue;
             }

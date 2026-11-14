@@ -65,7 +65,7 @@ namespace BECore::Mahjong::Tests {
                 ASSERT_FALSE(legal.empty()) << where << " seat " << actor;
                 const StepResult step = table.Step(hand);
                 ASSERT_TRUE(step.has_value()) << where << " seat " << actor << ": " << Name(step.error());
-                EXPECT_TRUE(Has(legal, *step)) << where << " seat " << actor << " chose " << Name(step->kind) << " " << ToString(step->tile);
+                EXPECT_TRUE(Has(legal, *step)) << where << " seat " << actor << " chose " << Name(step->kind) << " " << ToStd(ToString(step->tile));
                 ++handSteps;
                 ++steps;
             }
@@ -113,7 +113,7 @@ namespace BECore::Mahjong::Tests {
                 const eastl::vector<HandAction> legal = hand.LegalActions(actor);
                 const Optional<HandAction> action = players[actor].Decide(hand, actor);
                 ASSERT_TRUE(action.has_value()) << where << " seat " << actor;
-                EXPECT_TRUE(Has(legal, *action)) << where << " seat " << actor << " chose " << Name(action->kind) << " " << ToString(action->tile);
+                EXPECT_TRUE(Has(legal, *action)) << where << " seat " << actor << " chose " << Name(action->kind) << " " << ToStd(ToString(action->tile));
                 const auto applied = hand.Apply(actor, *action);
                 ASSERT_TRUE(applied.has_value()) << where << " seat " << actor << ": " << Name(applied.error());
                 ++handSteps;
@@ -135,13 +135,13 @@ namespace BECore::Mahjong::Tests {
                 }
                 ++matches;
                 PlayedMatch played;
-                ASSERT_NO_FATAL_FAILURE(PlayAudited(index, level, totals, played)) << LevelText(level);
+                ASSERT_NO_FATAL_FAILURE(PlayAudited(index, level, totals, played)) << ToStd(LevelText(level));
                 steps += played.steps;
 
                 // The same seed played again, by `PlayMatch`, gives the same match: the winner, the kind and the change of every hand.
                 PlayedMatch again;
-                ASSERT_NO_FATAL_FAILURE(PlayWithTheTable(index, level, again)) << LevelText(level);
-                const std::string where = WhereOf(index) + " at " + std::string(LevelText(level));
+                ASSERT_NO_FATAL_FAILURE(PlayWithTheTable(index, level, again)) << ToStd(LevelText(level));
+                const std::string where = WhereOf(index) + " at " + ToStdString(LevelText(level));
                 ASSERT_EQ(again.history.size(), played.history.size()) << where;
                 for (size_t hand = 0; hand < played.history.size(); ++hand) {
                     EXPECT_EQ(again.history[hand].kind, played.history[hand].kind) << where << " hand " << hand;
@@ -151,9 +151,9 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_EQ(again.scores, played.scores) << where;
             }
             EXPECT_GT(matches, 0);
-            EXPECT_GT(steps, 0) << LevelText(level);
-            EXPECT_GT(totals.wins, 0) << "four computer players of level " << LevelText(level) << " never won a hand";
-            const std::string name(LevelText(level));
+            EXPECT_GT(steps, 0) << ToStd(LevelText(level));
+            EXPECT_GT(totals.wins, 0) << "four computer players of level " << ToStd(LevelText(level)) << " never won a hand";
+            const std::string name = ToStdString(LevelText(level));
             RecordProperty(name + "Wins", totals.wins);
             RecordProperty(name + "Draws", totals.draws);
             RecordProperty(name + "Replays", totals.replays);

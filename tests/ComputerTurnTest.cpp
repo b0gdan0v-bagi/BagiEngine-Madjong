@@ -203,7 +203,7 @@ namespace BECore::Mahjong::Tests {
         for (uint32_t seed = 1; seed <= 8; ++seed) {
             const HandAction action = Choice(model, kSeat1, seed);
             EXPECT_EQ(action.kind, ActionKind::Discard) << "rng seed " << seed;
-            EXPECT_FALSE(action.tile == T("4p") || action.tile == T("5p") || action.tile == T("6p")) << ToString(action.tile);
+            EXPECT_FALSE(action.tile == T("4p") || action.tile == T("5p") || action.tile == T("6p")) << ToStd(ToString(action.tile));
         }
     }
 
@@ -250,7 +250,7 @@ namespace BECore::Mahjong::Tests {
         for (uint32_t seed = 1; seed <= 16; ++seed) {
             const HandAction action = Choice(model, kSeat0, seed);
             ASSERT_EQ(action.kind, ActionKind::Discard) << "rng seed " << seed;
-            discarded.insert(std::string(ToString(action.tile)));
+            discarded.insert(ToStdString(ToString(action.tile)));
         }
 
         EXPECT_EQ(discarded.count("Sw"), 0u);

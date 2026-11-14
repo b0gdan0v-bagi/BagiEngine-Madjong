@@ -4,7 +4,7 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        constexpr std::string_view kInvalidName = "??";
+        constexpr StringView kInvalidName = "??";
         constexpr char kTokenSeparator = ' ';
         constexpr size_t kTokenLength = 2;
 
@@ -48,26 +48,26 @@ namespace BECore::Mahjong {
 
     }  // namespace
 
-    std::string_view ToString(Tile tile) noexcept {
+    StringView ToString(Tile tile) noexcept {
         if (!tile.IsValid()) {
             return kInvalidName;
         }
-        return std::string_view(kNames.text[tile.Id()], kTokenLength);
+        return StringView(kNames.text[tile.Id()], kTokenLength);
     }
 
-    Optional<Tile> TryParse(std::string_view text) noexcept {
+    Optional<Tile> TryParse(StringView text) noexcept {
         if (text.size() != kTokenLength) {
             return std::nullopt;
         }
         for (uint8_t id = 0; id < kTileIdCount; ++id) {
-            if (text == std::string_view(kNames.text[id], kTokenLength)) {
+            if (text == StringView(kNames.text[id], kTokenLength)) {
                 return Tile{id};
             }
         }
         return std::nullopt;
     }
 
-    Optional<eastl::vector<Tile>> ParseTiles(std::string_view text) {
+    Optional<eastl::vector<Tile>> ParseTiles(StringView text) {
         eastl::vector<Tile> tiles;
         if (text.empty()) {
             return tiles;
@@ -75,12 +75,12 @@ namespace BECore::Mahjong {
         size_t start = 0;
         while (true) {
             const size_t end = text.find(kTokenSeparator, start);
-            const auto tile = TryParse(text.substr(start, end == std::string_view::npos ? std::string_view::npos : end - start));
+            const auto tile = TryParse(text.substr(start, end == StringView::npos ? StringView::npos : end - start));
             if (!tile) {
                 return std::nullopt;
             }
             tiles.push_back(*tile);
-            if (end == std::string_view::npos) {
+            if (end == StringView::npos) {
                 return tiles;
             }
             start = end + 1;

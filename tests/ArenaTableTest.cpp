@@ -182,11 +182,11 @@ namespace BECore::Mahjong::Arena {
         const std::expected<TableStats, eastl::string> stats = RunTableStats(ConfigOf(2, 1));
         ASSERT_TRUE(stats.has_value());
         const eastl::string text = FormatTableStats(*stats);
-        const std::string_view view(text.data(), text.size());
-        EXPECT_NE(view.find("Table statistics: four normal seats, seeds 4000 .. 4001 (2 hands)"), std::string_view::npos);
-        EXPECT_NE(view.find("(1-h)^i"), std::string_view::npos);
-        EXPECT_NE(view.find("winner, East"), std::string_view::npos);
-        EXPECT_NE(view.find("standing, not East"), std::string_view::npos);
+        const StringView view(text.data(), text.size());
+        EXPECT_NE(view.find("Table statistics: four normal seats, seeds 4000 .. 4001 (2 hands)"), StringView::npos);
+        EXPECT_NE(view.find("(1-h)^i"), StringView::npos);
+        EXPECT_NE(view.find("winner, East"), StringView::npos);
+        EXPECT_NE(view.find("standing, not East"), StringView::npos);
         EXPECT_EQ(FormatTableStats(*stats), text);
     }
 

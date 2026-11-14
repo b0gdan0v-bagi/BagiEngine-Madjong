@@ -4,7 +4,7 @@
 
 namespace BECore::Mahjong {
 
-    eastl::string_view OnlineErrorKey(eastl::string_view code) {
+    StringView OnlineErrorKey(StringView code) {
         for (const OnlineCodeWord& word : kKnownOnlineCodes) {
             if (word.code == code) {
                 return word.key;
@@ -13,15 +13,15 @@ namespace BECore::Mahjong {
         return kOnlineUnknownKey;
     }
 
-    bool IsSilentOnlineCode(eastl::string_view code) {
+    bool IsSilentOnlineCode(StringView code) {
         return code == RoomErrors::kStaleAction;
     }
 
-    eastl::string OnlineNoticeText(const UIStrings& strings, eastl::string_view key, eastl::string_view arg) {
+    eastl::string OnlineNoticeText(const UIStrings& strings, StringView key, StringView arg) {
         return Tr(strings, key, {{"code", arg}});
     }
 
-    eastl::string OnlineSeatText(const UIStrings& strings, BECore::SeatKind kind, eastl::string_view name, bool mine, bool connected) {
+    eastl::string OnlineSeatText(const UIStrings& strings, BECore::SeatKind kind, StringView name, bool mine, bool connected) {
         switch (kind) {
             case BECore::SeatKind::Empty:
                 return Tr(strings, "online.seat.empty");

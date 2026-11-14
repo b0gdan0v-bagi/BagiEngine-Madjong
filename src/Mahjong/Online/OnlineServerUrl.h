@@ -3,13 +3,13 @@
 namespace BECore::Mahjong {
 
     /// The address of the room server when `BAGI_MAHJONG_SERVER` is not set on a desktop: the default port of `BagiMahjongServer` on this machine.
-    inline constexpr eastl::string_view kDefaultOnlineServerUrl = "ws://localhost:8080";
+    inline constexpr StringView kDefaultOnlineServerUrl = "ws://localhost:8080";
 
     /// The name of the environment variable that gives a desktop build another server.
-    inline constexpr eastl::string_view kOnlineServerVariable = "BAGI_MAHJONG_SERVER";
+    inline constexpr StringView kOnlineServerVariable = "BAGI_MAHJONG_SERVER";
 
     /// The name of the config (`config/MahjongOnlineConfig.xml`) that holds the address for the browser build.
-    inline constexpr eastl::string_view kOnlineConfigName = "MahjongOnlineConfig";
+    inline constexpr StringView kOnlineConfigName = "MahjongOnlineConfig";
 
     /// What `MahjongOnlineConfig.xml` says.
     struct OnlineServerConfig {

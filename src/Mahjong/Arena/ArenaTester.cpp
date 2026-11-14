@@ -96,7 +96,7 @@ namespace BECore::Mahjong::Arena {
         return choice;
     }
 
-    uint32_t DecisionSeed(std::string_view logName, int hand, int actionIndex) {
+    uint32_t DecisionSeed(StringView logName, int hand, int actionIndex) {
         uint32_t hash = kFnvBasis;
         for (const char letter : logName) {
             MixByte(hash, static_cast<uint8_t>(letter));
@@ -118,7 +118,7 @@ namespace BECore::Mahjong::Arena {
         return {};
     }
 
-    std::expected<TesterMatch, eastl::string> AnalyzeTesterMatch(std::string_view logName, const eastl::vector<MatchLogEvent>& events, const eastl::vector<ArenaPlayer>& bots) {
+    std::expected<TesterMatch, eastl::string> AnalyzeTesterMatch(StringView logName, const eastl::vector<MatchLogEvent>& events, const eastl::vector<ArenaPlayer>& bots) {
         const eastl::vector<ActionRef> refs = ActionRefs(events);
         TesterMatch match;
         match.bots.resize(bots.size());

@@ -12,7 +12,7 @@ namespace BECore::Mahjong {
         /// Whether a post can be made at all (a browser page with `window.bagiWebPost`)
         [[nodiscard]] virtual bool Available() const = 0;
         /// Starts a POST of `body` to `path` and returns at once; the error names the refusal
-        [[nodiscard]] virtual std::expected<WebPostId, eastl::string> Start(eastl::string_view path, eastl::string_view body) = 0;
+        [[nodiscard]] virtual std::expected<WebPostId, eastl::string> Start(StringView path, StringView body) = 0;
         /// `Pending` until the answer arrives, then `Done` (with the HTTP status) or `Failed`, once
         [[nodiscard]] virtual WebPostResult Poll(WebPostId id) = 0;
     };
@@ -21,7 +21,7 @@ namespace BECore::Mahjong {
     class EngineWebPoster final : public IWebPoster {
     public:
         [[nodiscard]] bool Available() const override;
-        [[nodiscard]] std::expected<WebPostId, eastl::string> Start(eastl::string_view path, eastl::string_view body) override;
+        [[nodiscard]] std::expected<WebPostId, eastl::string> Start(StringView path, StringView body) override;
         [[nodiscard]] WebPostResult Poll(WebPostId id) override;
     };
 

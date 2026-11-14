@@ -39,7 +39,7 @@ namespace BECore::Mahjong::Tests {
                 return available;
             }
 
-            std::expected<WebPostId, eastl::string> Start(eastl::string_view path, eastl::string_view body) override {
+            std::expected<WebPostId, eastl::string> Start(StringView path, StringView body) override {
                 if (refuseStart) {
                     return std::unexpected(eastl::string("refused"));
                 }
@@ -462,7 +462,7 @@ namespace BECore::Mahjong::Tests {
         }
         const auto assembled = AssemblePieces(pieces);
         ASSERT_TRUE(assembled.has_value()) << assembled.error().c_str();
-        const auto events = ParseMatchLog(std::string_view(assembled->c_str(), assembled->size()));
+        const auto events = ParseMatchLog(StringView(assembled->c_str(), assembled->size()));
         ASSERT_TRUE(events.has_value()) << events.error().c_str();
         Match replayed;
         EXPECT_TRUE(ReplayMatchLog(*events, replayed).has_value());

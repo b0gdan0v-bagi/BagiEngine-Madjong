@@ -39,7 +39,7 @@ namespace BECore::Mahjong {
         constexpr float kHoverPlateHeight = 48.0f;
         constexpr float kHoverPlateTallHeight = 92.0f;
 
-        constexpr eastl::string_view kRevealAction = "MahjongReveal";
+        constexpr StringView kRevealAction = "MahjongReveal";
         /// The tint of a turned tile: white leaves the atlas as it is (the plain `DrawTexture` has the same default).
         constexpr Color kUntinted{255, 255, 255, 255};
         constexpr Color kPlainFace{238, 230, 205, 255};
@@ -676,13 +676,13 @@ namespace BECore::Mahjong {
         // looked up again when the language changed under it
         const UIStrings& strings = CoreManager::GetUIStrings();
         _hoveredButton = compact ? std::nullopt : HoveredButton(actionsCanvas, buttons);
-        const eastl::string_view hintKey = _hoveredButton ? buttons[*_hoveredButton].hintKey : eastl::string_view{};
+        const StringView hintKey = _hoveredButton ? buttons[*_hoveredButton].hintKey : StringView{};
         const PoolString actionHint = "actionHint"_intern;
         if (hintKey != _hintKey || strings.GetVersion() != _hintStringsVersion || !vars.Has(actionHint)) {
             _hintKey = hintKey;
             _hintStringsVersion = strings.GetVersion();
             const eastl::string hint = hintKey.empty() ? eastl::string() : Tr(strings, hintKey);
-            vars.Set(actionHint, eastl::string_view(hint));
+            vars.Set(actionHint, StringView(hint));
             UICanvasComponent::SetElementVisibleByName(scene, "Hint"_intern, !hint.empty());
         }
 
@@ -690,7 +690,7 @@ namespace BECore::Mahjong {
         const bool handoff = game != nullptr && game->GetSession().HandoffPending();
         if (handoff) {
             const Seat actor = game->GetSession().Actor();
-            vars.Set("handoffSeat"_intern, eastl::string_view(SeatName(strings, actor, game->GetMatch().Hand().SeatWind(actor))));
+            vars.Set("handoffSeat"_intern, StringView(SeatName(strings, actor, game->GetMatch().Hand().SeatWind(actor))));
         }
         if (handoff != _handoffShown) {
             _handoffShown = handoff;
@@ -1082,7 +1082,7 @@ namespace BECore::Mahjong {
         _textTile = tile;
         _textStringsVersion = strings.GetVersion();
         const eastl::string text = tile.IsValid() ? SelectedTileText(strings, tile) : eastl::string();
-        vars.Set(name, eastl::string_view(text));
+        vars.Set(name, StringView(text));
     }
 
     void MahjongTableComponent::PublishHover(const MahjongGame* game, float viewWidth, float viewHeight) {
@@ -1129,13 +1129,13 @@ namespace BECore::Mahjong {
         if (tile != _hoverTile || wordsChanged || !vars.Has(name)) {
             _hoverTile = tile;
             const eastl::string text = tile.IsValid() ? TileName(strings, tile) : eastl::string();
-            vars.Set(name, eastl::string_view(text));
+            vars.Set(name, StringView(text));
         }
         const PoolString dangerName = "tileHoverDanger"_intern;
         const bool dangerMoved = danger != _hoverDanger;
         if (dangerMoved || wordsChanged || !vars.Has(dangerName)) {
             const eastl::string text = danger != DangerMark::None ? Tr(strings, DangerHoverKey(danger)) : eastl::string();
-            vars.Set(dangerName, eastl::string_view(text));
+            vars.Set(dangerName, StringView(text));
         }
         if (tile.IsValid()) {
             _hoverStringsVersion = strings.GetVersion();
@@ -1192,7 +1192,7 @@ namespace BECore::Mahjong {
         eastl::vector<PoolString> names;
         names.reserve(_regions.size());
         for (const TableRegion& region : _regions) {
-            names.push_back(PoolString::Intern(eastl::string_view(region.name.data(), region.name.size())));
+            names.push_back(PoolString::Intern(region.name));
         }
         for (const PoolString& old : _regionNames) {
             if (eastl::find(names.begin(), names.end(), old) == names.end()) {

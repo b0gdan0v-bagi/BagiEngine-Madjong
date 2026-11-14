@@ -41,8 +41,8 @@ namespace BECore::Mahjong::Tests {
         constexpr double kOftenWaitShare = 0.35;
 
         std::string MeldText(const Meld& meld) {
-            return Name(meld.kind) + std::string(ToString(meld.first)) + "/" + std::to_string(meld.concealed) + "/" + std::to_string(meld.from) + "/" + std::to_string(meld.fromDiscard) + "/" +
-                   std::string(ToString(meld.claimed));
+            return Name(meld.kind) + ToStdString(ToString(meld.first)) + "/" + std::to_string(meld.concealed) + "/" + std::to_string(meld.from) + "/" + std::to_string(meld.fromDiscard) + "/" +
+                   ToStdString(ToString(meld.claimed));
         }
 
         std::string MeldsText(const eastl::vector<Meld>& melds) {
@@ -56,7 +56,7 @@ namespace BECore::Mahjong::Tests {
         std::string TilesText(const eastl::vector<Tile>& tiles) {
             std::string text;
             for (const Tile tile : tiles) {
-                text += " " + std::string(ToString(tile));
+                text += " " + ToStdString(ToString(tile));
             }
             return text;
         }
@@ -149,7 +149,7 @@ namespace BECore::Mahjong::Tests {
                 const Tile tile{id};
                 const int expected = tile.IsBonus() ? (world.GetSettings().flowers ? 1 : 0) : kCopiesPerTile;
                 if (counts[id] != expected) {
-                    return ::testing::AssertionFailure() << ToString(tile) << " is there " << counts[id] << " times, not " << expected;
+                    return ::testing::AssertionFailure() << ToStd(ToString(tile)) << " is there " << counts[id] << " times, not " << expected;
                 }
             }
             return ::testing::AssertionSuccess();
@@ -161,7 +161,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_TRUE(EveryTileOnce(world)) << where;
             for (const HandAction& action : view.legal) {
                 HandModel copy = world;
-                EXPECT_TRUE(copy.Apply(view.seat, action).has_value()) << where << ": " << Name(action.kind) << " " << ToString(action.tile) << " is refused in the world";
+                EXPECT_TRUE(copy.Apply(view.seat, action).has_value()) << where << ": " << Name(action.kind) << " " << ToStd(ToString(action.tile)) << " is refused in the world";
             }
         }
 
@@ -202,9 +202,9 @@ namespace BECore::Mahjong::Tests {
             std::string text = Snapshot(world) + " flowers " + std::to_string(state.settings.flowers) + " east " + std::to_string(state.east) + " | loose" + TilesText(state.loose) + " | live" +
                                TilesText(state.live) + " | dead" + TilesText(state.dead) + " | pile";
             for (const DiscardEntry& entry : state.discards) {
-                text += " " + std::string(ToString(entry.tile)) + "@" + std::to_string(entry.seat);
+                text += " " + ToStdString(ToString(entry.tile)) + "@" + std::to_string(entry.seat);
             }
-            text += " | drawn " + std::string(ToString(state.drawnTile)) + " pending " + std::string(ToString(state.pendingTile));
+            text += " | drawn " + ToStdString(ToString(state.drawnTile)) + " pending " + ToStdString(ToString(state.pendingTile));
             for (const PlayerHand& hand : state.hands) {
                 text += " | " + MeldsText(hand.melds) + " calling " + std::to_string(hand.callingAtDiscardCount);
             }
@@ -671,7 +671,7 @@ namespace BECore::Mahjong::Tests {
                 if (seat == view.seat) {
                     continue;
                 }
-                EXPECT_NEAR(held[k][seat] / kFrequencyWorlds, expected, kFrequencyTolerance) << ToString(kinds[k]) << " in the hand of seat " << seat;
+                EXPECT_NEAR(held[k][seat] / kFrequencyWorlds, expected, kFrequencyTolerance) << ToStd(ToString(kinds[k])) << " in the hand of seat " << seat;
             }
         }
     }

@@ -33,14 +33,14 @@ namespace BECore::Mahjong::Tests {
             EXPECT_FLOAT_EQ(ScaledSeconds(2.0f, speed), 2.0f * SpeedFactor(speed));
             EXPECT_LT(SpeedFactor(speed), previous) << "the speeds go from the slowest to the fastest";
             previous = SpeedFactor(speed);
-            EXPECT_LT(ScaledSeconds(kTileFlightSeconds, speed), ScaledSeconds(kComputerStepSeconds, speed)) << SpeedText(speed);
+            EXPECT_LT(ScaledSeconds(kTileFlightSeconds, speed), ScaledSeconds(kComputerStepSeconds, speed)) << ToStd(SpeedText(speed));
         }
     }
 
     TEST(AnimationSpeedTest, TheIdsRoundTripAndAnyOtherTextIsNoSpeed) {
         for (const AnimationSpeed speed : EnumUtils<AnimationSpeed>::Values()) {
             const auto parsed = TryParseSpeed(SpeedText(speed));
-            ASSERT_TRUE(parsed.has_value()) << SpeedText(speed);
+            ASSERT_TRUE(parsed.has_value()) << ToStd(SpeedText(speed));
             EXPECT_EQ(*parsed, speed);
         }
         for (const char* text : {"", "Slow", "NORMAL", "fast ", "1", "warp"}) {

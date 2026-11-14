@@ -40,7 +40,7 @@ namespace BECore::Mahjong::Arena {
     /// The rng seed of the decision at `hand` (1-based) and `actionIndex` (0-based) of the log `logName`: FNV-1a over the bytes of the
     /// name and of the two numbers (four bytes each, least significant first) from a constant start, so one log gives one answer on
     /// every platform and nothing of the machine, the order or the other bots is in it.
-    [[nodiscard]] uint32_t DecisionSeed(std::string_view logName, int hand, int actionIndex);
+    [[nodiscard]] uint32_t DecisionSeed(StringView logName, int hand, int actionIndex);
 
     /// Empty when every player of `bots` can be asked about a view; else the text that says why not (`random` is no bot here) and
     /// when `bots` is empty.
@@ -82,7 +82,7 @@ namespace BECore::Mahjong::Arena {
      * the same for every bot. A log with no person acts gives zero decisions and no error. The error text names the log and what the
      * position could not be built from. `bots` has been through `ValidateTesterBots`.
      */
-    [[nodiscard]] std::expected<TesterMatch, eastl::string> AnalyzeTesterMatch(std::string_view logName, const eastl::vector<MatchLogEvent>& events, const eastl::vector<ArenaPlayer>& bots);
+    [[nodiscard]] std::expected<TesterMatch, eastl::string> AnalyzeTesterMatch(StringView logName, const eastl::vector<MatchLogEvent>& events, const eastl::vector<ArenaPlayer>& bots);
 
     /// The agreement of one bot with the people: the counts, and the share of equal choices in percent with its interval.
     struct BotAgreement {

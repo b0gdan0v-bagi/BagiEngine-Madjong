@@ -147,12 +147,12 @@ namespace BECore::Mahjong {
 
     /// The notation of a tile: 1p..9p dots, 1s..9s bamboo, 1m..9m characters, Ew Sw Ww Nw winds, Rd Wd Gd dragons,
     /// F1..F4 flowers, T1..T4 seasons. "??" for an invalid tile.
-    [[nodiscard]] std::string_view ToString(Tile tile) noexcept;
+    [[nodiscard]] StringView ToString(Tile tile) noexcept;
 
     /// Reads one tile in the notation above (case sensitive); nullopt for anything else.
-    [[nodiscard]] Optional<Tile> TryParse(std::string_view text) noexcept;
+    [[nodiscard]] Optional<Tile> TryParse(StringView text) noexcept;
 
     /// Reads tiles separated by spaces ("1p 2p 3p"); an empty text gives an empty list, a bad token or a doubled space gives nullopt.
-    [[nodiscard]] Optional<eastl::vector<Tile>> ParseTiles(std::string_view text);
+    [[nodiscard]] Optional<eastl::vector<Tile>> ParseTiles(StringView text);
 
 }  // namespace BECore::Mahjong

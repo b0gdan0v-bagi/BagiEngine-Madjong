@@ -16,7 +16,7 @@ namespace BECore::Mahjong {
 
         template <typename TEnum>
         struct NamedValue {
-            eastl::string_view name;
+            StringView name;
             TEnum value;
         };
 
@@ -26,8 +26,8 @@ namespace BECore::Mahjong {
         constexpr NamedValue<WinSource> kWinSources[] = {{"discard", WinSource::Discard}, {"self_draw", WinSource::SelfDraw}, {"robbed_kong", WinSource::RobbedKong}};
         constexpr NamedValue<SessionPhase> kSessionPhases[] = {{"playing", SessionPhase::Playing}, {"hand_over", SessionPhase::HandOver}, {"match_over", SessionPhase::MatchOver}};
 
-        eastl::string_view ViewOf(const eastl::string& text) {
-            return eastl::string_view(text.data(), text.size());
+        StringView ViewOf(const eastl::string& text) {
+            return text;
         }
 
         /// One reading of one view into one table. The path of the member being read is kept in a list, so a failure names it
@@ -50,14 +50,14 @@ namespace BECore::Mahjong {
 
         private:
             struct PathPart {
-                eastl::string_view key;
+                StringView key;
                 int index = kNoIndex;
             };
 
             /// The member being read, for the length of a scope.
             class Scope {
             public:
-                Scope(ViewReader& reader, eastl::string_view key, int index = kNoIndex) : _reader(reader) {
+                Scope(ViewReader& reader, StringView key, int index = kNoIndex) : _reader(reader) {
                     _reader._path.push_back(PathPart{key, index});
                 }
                 ~Scope() {
@@ -72,7 +72,7 @@ namespace BECore::Mahjong {
 
             // ----- errors -----
 
-            bool Fail(eastl::string_view key, eastl::string_view what, OnlineViewErrorKind kind = OnlineViewErrorKind::Malformed) {
+            bool Fail(StringView key, StringView what, OnlineViewErrorKind kind = OnlineViewErrorKind::Malformed) {
                 if (_failed) {
                     return false;
                 }
@@ -106,7 +106,7 @@ namespace BECore::Mahjong {
             // ----- members -----
 
             /// The member @p key of @p object, nullptr (with the failure set) when it is missing.
-            const Json* Need(const Json& object, eastl::string_view key) {
+            const Json* Need(const Json& object, StringView key) {
                 const Json* member = FindJsonMember(object, key);
                 if (member == nullptr) {
                     Fail(key, "is missing");
@@ -114,7 +114,7 @@ namespace BECore::Mahjong {
                 return member;
             }
 
-            bool GetInt(const Json& object, eastl::string_view key, int64_t low, int64_t high, int64_t& out) {
+            bool GetInt(const Json& object, StringView key, int64_t low, int64_t high, int64_t& out) {
                 if (Need(object, key) == nullptr) {
                     return false;
                 }
@@ -129,7 +129,7 @@ namespace BECore::Mahjong {
                 return true;
             }
 
-            bool GetCount(const Json& object, eastl::string_view key, int& out) {
+            bool GetCount(const Json& object, StringView key, int& out) {
                 int64_t number = 0;
                 if (!GetInt(object, key, 0, kMaxCount, number)) {
                     return false;
@@ -138,7 +138,7 @@ namespace BECore::Mahjong {
                 return true;
             }
 
-            bool GetScore(const Json& object, eastl::string_view key, int& out) {
+            bool GetScore(const Json& object, StringView key, int& out) {
                 int64_t number = 0;
                 if (!GetInt(object, key, std::numeric_limits<int>::min(), kMaxCount, number)) {
                     return false;
@@ -147,7 +147,7 @@ namespace BECore::Mahjong {
                 return true;
             }
 
-            bool GetBool(const Json& object, eastl::string_view key, bool& out) {
+            bool GetBool(const Json& object, StringView key, bool& out) {
                 if (Need(object, key) == nullptr) {
                     return false;
                 }
@@ -160,7 +160,7 @@ namespace BECore::Mahjong {
             }
 
             /// A seat 0..3; with @p nullable a JSON null is `kNoSeat`.
-            bool GetSeat(const Json& object, eastl::string_view key, Seat& out, bool nullable) {
+            bool GetSeat(const Json& object, StringView key, Seat& out, bool nullable) {
                 const Json* member = Need(object, key);
                 if (member == nullptr) {
                     return false;
@@ -177,7 +177,7 @@ namespace BECore::Mahjong {
                 return true;
             }
 
-            bool GetString(const Json& object, eastl::string_view key, eastl::string& out) {
+            bool GetString(const Json& object, StringView key, eastl::string& out) {
                 if (Need(object, key) == nullptr) {
                     return false;
                 }
@@ -190,7 +190,7 @@ namespace BECore::Mahjong {
             }
 
             template <typename TEnum, size_t N>
-            bool GetNamed(const Json& object, eastl::string_view key, const NamedValue<TEnum> (&names)[N], TEnum& out) {
+            bool GetNamed(const Json& object, StringView key, const NamedValue<TEnum> (&names)[N], TEnum& out) {
                 if (!GetString(object, key, _word)) {
                     return false;
                 }
@@ -203,7 +203,7 @@ namespace BECore::Mahjong {
                 return Fail(key, Format("'{}' is not a known name", _word.c_str()).c_str());
             }
 
-            bool GetWind(const Json& object, eastl::string_view key, Wind& out) {
+            bool GetWind(const Json& object, StringView key, Wind& out) {
                 if (!GetString(object, key, _word)) {
                     return false;
                 }
@@ -217,12 +217,12 @@ namespace BECore::Mahjong {
             }
 
             /// A tile of the notation in a JSON string.
-            bool ReadTileText(const Json& item, eastl::string_view key, Tile& out) {
+            bool ReadTileText(const Json& item, StringView key, Tile& out) {
                 if (!item.is_string()) {
                     return Fail(key, "has to be a string with a tile");
                 }
                 const std::string& text = item.get_ref<const std::string&>();
-                const Optional<Tile> tile = TryParse(std::string_view(text));
+                const Optional<Tile> tile = TryParse(FromStd(text));
                 if (!tile) {
                     return Fail(key, Format("'{}' is not a tile", text.c_str()).c_str());
                 }
@@ -230,7 +230,7 @@ namespace BECore::Mahjong {
                 return true;
             }
 
-            bool GetTile(const Json& object, eastl::string_view key, Tile& out, bool nullable) {
+            bool GetTile(const Json& object, StringView key, Tile& out, bool nullable) {
                 const Json* member = Need(object, key);
                 if (member == nullptr) {
                     return false;
@@ -243,7 +243,7 @@ namespace BECore::Mahjong {
             }
 
             /// The member @p key as an array; nullptr (failure set) when it is missing or is not one.
-            const Json* GetArray(const Json& object, eastl::string_view key) {
+            const Json* GetArray(const Json& object, StringView key) {
                 const Json* member = Need(object, key);
                 if (member != nullptr && !member->is_array()) {
                     Fail(key, "has to be a list");
@@ -254,7 +254,7 @@ namespace BECore::Mahjong {
 
             /// Calls @p read(item) for each element of the list @p key, with the path `key[i]` while it reads.
             template <typename TRead>
-            bool ForEach(const Json& object, eastl::string_view key, TRead&& read) {
+            bool ForEach(const Json& object, StringView key, TRead&& read) {
                 const Json* list = GetArray(object, key);
                 if (list == nullptr) {
                     return false;
@@ -271,7 +271,7 @@ namespace BECore::Mahjong {
 
             /// Calls @p read(member) for the object @p key, with the path `key` while it reads.
             template <typename TRead>
-            bool InObject(const Json& object, eastl::string_view key, TRead&& read) {
+            bool InObject(const Json& object, StringView key, TRead&& read) {
                 const Json* member = Need(object, key);
                 if (member == nullptr) {
                     return false;
@@ -283,7 +283,7 @@ namespace BECore::Mahjong {
                 return read(*member);
             }
 
-            bool GetTiles(const Json& object, eastl::string_view key, eastl::vector<Tile>& out) {
+            bool GetTiles(const Json& object, StringView key, eastl::vector<Tile>& out) {
                 out.clear();
                 return ForEach(object, key, [&](const Json& item) {
                     Tile tile;
@@ -296,7 +296,7 @@ namespace BECore::Mahjong {
             }
 
             /// Four numbers, one per seat.
-            bool GetSeatScores(const Json& object, eastl::string_view key, SeatScores& out) {
+            bool GetSeatScores(const Json& object, StringView key, SeatScores& out) {
                 const Json* list = GetArray(object, key);
                 if (list == nullptr) {
                     return false;
@@ -365,7 +365,7 @@ namespace BECore::Mahjong {
                        GetTile(item, "claimed", meld.claimed, true);
             }
 
-            bool ReadMelds(const Json& object, eastl::string_view key, eastl::vector<Meld>& out) {
+            bool ReadMelds(const Json& object, StringView key, eastl::vector<Meld>& out) {
                 out.clear();
                 return ForEach(object, key, [&](const Json& item) {
                     Meld meld;

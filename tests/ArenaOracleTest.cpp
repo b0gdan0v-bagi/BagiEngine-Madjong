@@ -33,9 +33,9 @@ namespace BECore::Mahjong::Arena {
         constexpr int kSearchedHandCount = 2;
         constexpr uint32_t kRngStride = 1000;
 
-        ArenaPlayer Player(std::string_view spec) {
+        ArenaPlayer Player(StringView spec) {
             const std::expected<ArenaPlayer, eastl::string> player = ParseArenaPlayer(spec);
-            EXPECT_TRUE(player.has_value()) << spec << ": " << (player.has_value() ? "" : player.error().c_str());
+            EXPECT_TRUE(player.has_value()) << ToStd(spec) << ": " << (player.has_value() ? "" : player.error().c_str());
             return player.value_or(ArenaPlayer{});
         }
 
@@ -210,7 +210,7 @@ namespace BECore::Mahjong::Arena {
             for (uint8_t id = 0; id < kTileIdCount; ++id) {
                 const Tile tile{id};
                 if (tile.IsPlayable()) {
-                    EXPECT_EQ(UnseenCopies(oracle, tile), drawable[id]) << ToString(tile);
+                    EXPECT_EQ(UnseenCopies(oracle, tile), drawable[id]) << ToStd(ToString(tile));
                 }
             }
         }
@@ -451,7 +451,7 @@ namespace BECore::Mahjong::Arena {
         for (const char* spec : {"oracle-acceptance", "oracle-defence", "oracle-defence:searchWorlds=2"}) {
             const ArenaPlayers players = Table(Player(spec));
             // The search of the last spec plays whole hands in each decision: a few hands are enough.
-            const int hands = std::string_view(spec).find("searchWorlds") == std::string_view::npos ? kWholeHandCount : kSearchedHandCount;
+            const int hands = StringView(spec).find("searchWorlds") == StringView::npos ? kWholeHandCount : kSearchedHandCount;
             for (int index = 0; index < hands; ++index) {
                 const auto record = PlayArenaHand(kFirstSeed + static_cast<uint32_t>(index), players);
                 EXPECT_TRUE(record.has_value()) << spec << ": " << (record.has_value() ? "" : record.error().c_str());

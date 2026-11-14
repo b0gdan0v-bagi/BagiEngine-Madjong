@@ -102,7 +102,7 @@ namespace BECore::Mahjong::Tests {
                 const Tile tile{id};
                 const int expected = tile.IsBonus() ? (flowers ? 1 : 0) : kCopiesPerTile;
                 if (counts[id] != expected) {
-                    ADD_FAILURE() << where << ": " << ToString(tile) << " is there " << counts[id] << " times, not " << expected;
+                    ADD_FAILURE() << where << ": " << ToStd(ToString(tile)) << " is there " << counts[id] << " times, not " << expected;
                     return false;
                 }
                 total += static_cast<size_t>(counts[id]);
@@ -162,7 +162,7 @@ namespace BECore::Mahjong::Tests {
                     for (const HandAction& action : model.LegalActions(seat)) {
                         HandModel copy = model;
                         if (!copy.Apply(seat, action).has_value()) {
-                            ADD_FAILURE() << where << ": seat " << seat << " is offered " << Name(action.kind) << " " << ToString(action.tile) << " but Apply refuses it";
+                            ADD_FAILURE() << where << ": seat " << seat << " is offered " << Name(action.kind) << " " << ToStd(ToString(action.tile)) << " but Apply refuses it";
                             return false;
                         }
                     }

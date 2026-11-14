@@ -309,16 +309,16 @@ namespace BECore::Mahjong::Tests {
         /// Every `element` of the document, at any depth (they sit in `elements` and `children`, inside components, inside nodes).
         void Walk(const pugi::xml_node& node, std::vector<Violation>& found, int& count) {
             for (const pugi::xml_node child : node.children()) {
-                if (std::string_view(child.name()) == "element") {
+                if (StringView(child.name()) == "element") {
                     CheckElement(child, found);
                     ++count;
-                } else if (std::string_view(child.name()) == "set") {
+                } else if (StringView(child.name()) == "set") {
                     // a variant sets font and geometry (no colour) of the element it names; a tile picture is told by the name alone
                     const std::string name = AttributeOf(child, "element");
                     CheckFontAndGrid(child, name, IsTilePictureName(name), found);
                     CheckSkinScale(child, name, found);
                     ++count;
-                } else if (std::string_view(child.name()) == "component" && AttributeOf(child, "type") == "UICanvasComponent") {
+                } else if (StringView(child.name()) == "component" && AttributeOf(child, "type") == "UICanvasComponent") {
                     CheckMotion(child, AttributeOf(child.parent().parent(), "name"), found);  // component -> components -> node
                 }
                 Walk(child, found, count);

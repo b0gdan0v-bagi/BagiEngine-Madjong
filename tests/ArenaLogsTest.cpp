@@ -19,8 +19,8 @@ namespace BECore::Mahjong::Arena {
         constexpr uint32_t kSeedC = 123;
         constexpr int kGivenUpAfter = 1;
 
-        std::string_view View(const eastl::string& text) {
-            return std::string_view(text.data(), text.size());
+        StringView View(const eastl::string& text) {
+            return text;
         }
 
         LogSpec PersonMatch(uint32_t seed, MatchPlatform platform, const char* build) {
@@ -45,7 +45,7 @@ namespace BECore::Mahjong::Arena {
         }
 
         LogSource SourceOf(eastl::vector<LogFile> files) {
-            return [files](std::string_view) -> std::expected<eastl::vector<LogFile>, eastl::string> { return files; };
+            return [files](StringView) -> std::expected<eastl::vector<LogFile>, eastl::string> { return files; };
         }
 
     }  // namespace
@@ -160,8 +160,8 @@ namespace BECore::Mahjong::Arena {
 
     TEST(ArenaLogsTest, ThePathIsPassedToTheSourceAndItsErrorComesBack) {
         std::string seen;
-        const LogSource source = [&seen](std::string_view path) -> std::expected<eastl::vector<LogFile>, eastl::string> {
-            seen = std::string(path);
+        const LogSource source = [&seen](StringView path) -> std::expected<eastl::vector<LogFile>, eastl::string> {
+            seen = ToStdString(path);
             return std::unexpected(eastl::string("no such folder"));
         };
         const auto logs = ReadLogs(source, "logs/matches");

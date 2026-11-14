@@ -475,7 +475,7 @@ namespace BECore::Mahjong::Tests {
             [[nodiscard]] bool Available() const override {
                 return true;
             }
-            std::expected<WebPostId, eastl::string> Start(eastl::string_view /*path*/, eastl::string_view /*body*/) override {
+            std::expected<WebPostId, eastl::string> Start(StringView /*path*/, StringView /*body*/) override {
                 return WebPostId{1};
             }
             WebPostResult Poll(WebPostId /*id*/) override {

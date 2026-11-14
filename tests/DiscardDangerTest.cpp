@@ -229,7 +229,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(DangerOf(view, Tile{}), Danger::Safe);
         EXPECT_EQ(DangerOf(view, T("F1")), Danger::Safe);
         for (uint8_t id = 0; id < kKindCount; ++id) {
-            EXPECT_EQ(table[id], DangerOf(view, Tile{id})) << ToString(Tile{id});
+            EXPECT_EQ(table[id], DangerOf(view, Tile{id})) << ToStd(ToString(Tile{id}));
         }
     }
 

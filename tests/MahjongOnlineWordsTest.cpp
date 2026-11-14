@@ -14,7 +14,7 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        std::string Std(eastl::string_view text) {
+        std::string Std(StringView text) {
             return std::string(text.data(), text.size());
         }
 
@@ -65,13 +65,13 @@ namespace BECore::Mahjong::Tests {
         for (const std::string& key : AllOnlineKeys()) {
             ASSERT_TRUE(en.contains(key)) << key << " is missing in en";
             ASSERT_TRUE(ru.contains(key)) << key << " is missing in ru";
-            EXPECT_EQ(PlaceholderNames(en.at(key)), PlaceholdersAllowedFor(key)) << key;
-            EXPECT_EQ(PlaceholderNames(ru.at(key)), PlaceholdersAllowedFor(key)) << key;
+            EXPECT_EQ(PlaceholderNames(FromStd(en.at(key))), PlaceholdersAllowedFor(key)) << key;
+            EXPECT_EQ(PlaceholderNames(FromStd(ru.at(key))), PlaceholdersAllowedFor(key)) << key;
         }
     }
 
     TEST(MahjongOnlineWords, EveryCodeOfTheRoomLayersIsInTheTable) {
-        const eastl::string_view codes[] = {
+        const StringView codes[] = {
             RoomErrors::kBadMessage,
             RoomErrors::kUnsupportedVersion,
             RoomErrors::kMessageTooLarge,
@@ -109,7 +109,7 @@ namespace BECore::Mahjong::Tests {
             OnlineCodes::kRoomClosed,
             OnlineCodes::kRoomFinished,
         };
-        for (const eastl::string_view code : codes) {
+        for (const StringView code : codes) {
             EXPECT_NE(OnlineErrorKey(code), kOnlineUnknownKey) << Std(code);
         }
         EXPECT_EQ(OnlineErrorKey(RoomClientCloseReasons::kRateLimited), OnlineErrorKey(RoomErrors::kRateLimited));
@@ -148,7 +148,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
         ForEachLanguage(strings, [&](PoolString language) {
             for (const std::string& key : AllOnlineKeys()) {
-                const eastl::string text = OnlineNoticeText(strings, eastl::string_view(key.data(), key.size()), "x");
+                const eastl::string text = OnlineNoticeText(strings, FromStd(key), "x");
                 EXPECT_NE(Std(text), key) << language.ToStringView().data() << ": " << key << " has no text";
                 EXPECT_FALSE(text.empty()) << key;
             }
@@ -158,7 +158,7 @@ namespace BECore::Mahjong::Tests {
     TEST(MahjongOnlineWords, SeatTextForEachKindInBothLanguages) {
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
-        const eastl::string_view name = "Анна 🀄";
+        const StringView name = "Анна 🀄";
 
         ForEachLanguage(strings, [&](PoolString language) {
             const bool russian = language == "ru"_intern;

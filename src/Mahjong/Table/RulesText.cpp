@@ -79,34 +79,34 @@ namespace BECore::Mahjong {
                 // Built after the last `Add`, so no growth of `_values` moves a string under a view.
                 _args.reserve(_values.size());
                 for (const auto& [name, value] : _values) {
-                    _args.push_back({name, eastl::string_view(value.data(), value.size())});
+                    _args.push_back({name, value});
                 }
             }
             RulesArgs(const RulesArgs&) = delete;
             RulesArgs& operator=(const RulesArgs&) = delete;
 
             /// The text of `key` with every placeholder filled.
-            [[nodiscard]] eastl::string Text(eastl::string_view key) const {
+            [[nodiscard]] eastl::string Text(StringView key) const {
                 return Tr(_strings, key, eastl::span<const WordArg>(_args.data(), _args.size()));
             }
 
         private:
-            void Add(eastl::string_view name, eastl::string value) {
+            void Add(StringView name, eastl::string value) {
                 _values.push_back({name, eastl::move(value)});
             }
-            void Number(eastl::string_view name, long long value) {
+            void Number(StringView name, long long value) {
                 Add(name, Format("{}", value));
             }
 
             const UIStrings& _strings;
-            eastl::vector<eastl::pair<eastl::string_view, eastl::string>> _values;
+            eastl::vector<eastl::pair<StringView, eastl::string>> _values;
             eastl::vector<WordArg> _args;
         };
 
         using TileRows = eastl::vector<eastl::vector<Tile>>;
 
         /// A row of tiles from the notation of `Tile.h`; the examples are written the way a player reads them.
-        eastl::vector<Tile> Row(std::string_view notation) {
+        eastl::vector<Tile> Row(StringView notation) {
             const auto tiles = ParseTiles(notation);
             ASSERT(tiles.has_value(), "RulesText: an example row is not in the notation of Tile.h");
             return tiles.value_or(eastl::vector<Tile>{});

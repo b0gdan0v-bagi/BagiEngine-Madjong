@@ -17,7 +17,7 @@ namespace BECore::Mahjong {
         constexpr int kMixLastShift = 31;
         constexpr int kHalfSeedBits = 32;
 
-        std::unexpected<ControlError> Fail(eastl::string_view code, eastl::string message) {
+        std::unexpected<ControlError> Fail(StringView code, eastl::string message) {
             return std::unexpected(MakeControlError(code, std::move(message)));
         }
 

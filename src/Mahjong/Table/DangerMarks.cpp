@@ -50,7 +50,7 @@ namespace BECore::Mahjong {
         return kDangerMark;
     }
 
-    eastl::string_view DangerHoverKey(DangerMark mark) noexcept {
+    StringView DangerHoverKey(DangerMark mark) noexcept {
         switch (mark) {
             case DangerMark::Safe:
                 return "hints.hover.safe";

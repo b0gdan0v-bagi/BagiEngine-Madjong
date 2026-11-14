@@ -31,7 +31,7 @@ namespace BECore::Mahjong::Tests {
         void AppendTiles(std::string& text, const eastl::vector<Tile>& tiles) {
             for (const Tile tile : tiles) {
                 text += " ";
-                text += ToString(tile);
+                text += ToStd(ToString(tile));
             }
         }
 
@@ -56,29 +56,29 @@ namespace BECore::Mahjong::Tests {
                 AppendTiles(text, hand.concealed);
                 text += " melds";
                 for (const Meld& meld : hand.melds) {
-                    text += " " + std::to_string(static_cast<int>(meld.kind)) + "/" + std::to_string(meld.concealed) + "/" + std::string(ToString(meld.first)) + "/" + std::to_string(meld.from) + "/" +
-                            std::to_string(meld.fromDiscard) + "/" + std::string(ToString(meld.claimed));
+                    text += " " + std::to_string(static_cast<int>(meld.kind)) + "/" + std::to_string(meld.concealed) + "/" + ToStdString(ToString(meld.first)) + "/" + std::to_string(meld.from) + "/" +
+                            std::to_string(meld.fromDiscard) + "/" + ToStdString(ToString(meld.claimed));
                 }
                 text += " bonus";
                 AppendTiles(text, hand.bonus);
                 text += " calling " + std::to_string(hand.callingDeclared) + "/" + std::to_string(hand.callingAtDiscardCount) + "/" + std::to_string(hand.discardCount);
                 text += " status " + std::to_string(static_cast<int>(state.claimStatus[seat])) + " claim " + std::to_string(static_cast<int>(state.claims[seat].kind)) + "/" +
-                        std::string(ToString(state.claims[seat].chowFirst));
+                        ToStdString(ToString(state.claims[seat].chowFirst));
             }
             text += " | pile";
             for (const DiscardEntry& entry : state.discards) {
-                text += " " + std::string(ToString(entry.tile)) + "@" + std::to_string(entry.seat);
+                text += " " + ToStdString(ToString(entry.tile)) + "@" + std::to_string(entry.seat);
             }
             text += " | moves";
             for (const HandMove& move : state.moves) {
-                text += " " + std::to_string(static_cast<int>(move.kind)) + "/" + std::to_string(move.seat) + "/" + std::string(ToString(move.tile)) + "/" + std::to_string(move.from) + "/" +
+                text += " " + std::to_string(static_cast<int>(move.kind)) + "/" + std::to_string(move.seat) + "/" + ToStdString(ToString(move.tile)) + "/" + std::to_string(move.from) + "/" +
                         std::to_string(move.meld) + "/" + std::to_string(move.declaredCalling);
             }
-            text += " | phase " + std::to_string(static_cast<int>(state.phase)) + " current " + std::to_string(state.current) + " drawn " + std::string(ToString(state.drawnTile)) + "/" +
-                    std::to_string(state.drawnLoose) + " pending " + std::string(ToString(state.pendingTile));
+            text += " | phase " + std::to_string(static_cast<int>(state.phase)) + " current " + std::to_string(state.current) + " drawn " + ToStdString(ToString(state.drawnTile)) + "/" +
+                    std::to_string(state.drawnLoose) + " pending " + ToStdString(ToString(state.pendingTile));
             if (state.result.has_value()) {
                 const HandResult& result = *state.result;
-                text += " result " + std::to_string(static_cast<int>(result.kind)) + "/" + std::to_string(result.winner) + "/" + std::string(ToString(result.winningTile)) + "/" +
+                text += " result " + std::to_string(static_cast<int>(result.kind)) + "/" + std::to_string(result.winner) + "/" + ToStdString(ToString(result.winningTile)) + "/" +
                         std::to_string(static_cast<int>(result.source)) + "/" + std::to_string(result.from) + "/" + std::to_string(result.loose) + "/" + std::to_string(result.lastLiveTile);
             } else {
                 text += " open";
@@ -86,10 +86,10 @@ namespace BECore::Mahjong::Tests {
             text += " | windows " + std::to_string(state.windowSerial);
             if (state.lastWindow.has_value()) {
                 const ClaimWindowResult& window = *state.lastWindow;
-                text += " last " + std::to_string(window.serial) + "/" + std::to_string(window.from) + "/" + std::string(ToString(window.tile)) + "/" + std::to_string(window.winner) + "/" +
+                text += " last " + std::to_string(window.serial) + "/" + std::to_string(window.from) + "/" + ToStdString(ToString(window.tile)) + "/" + std::to_string(window.winner) + "/" +
                         std::to_string(static_cast<int>(window.winningKind)) + " beaten";
                 for (const LostClaim& lost : window.beaten) {
-                    text += " " + std::to_string(lost.seat) + "/" + std::to_string(static_cast<int>(lost.kind)) + "/" + std::string(ToString(lost.chowFirst));
+                    text += " " + std::to_string(lost.seat) + "/" + std::to_string(static_cast<int>(lost.kind)) + "/" + ToStdString(ToString(lost.chowFirst));
                 }
             }
             return text;
@@ -101,8 +101,8 @@ namespace BECore::Mahjong::Tests {
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 text += "[" + std::to_string(seat) + ":";
                 for (const HandAction& action : model.LegalActions(seat)) {
-                    text += " " + Name(action.kind) + "/" + std::string(ToString(action.tile)) + "/" + std::to_string(action.declareCalling) + "/" + Name(action.claim) + "/" +
-                            std::string(ToString(action.chowFirst));
+                    text += " " + Name(action.kind) + "/" + ToStdString(ToString(action.tile)) + "/" + std::to_string(action.declareCalling) + "/" + Name(action.claim) + "/" +
+                            ToStdString(ToString(action.chowFirst));
                 }
                 text += "]";
             }

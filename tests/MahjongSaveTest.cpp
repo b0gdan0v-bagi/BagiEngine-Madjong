@@ -212,7 +212,7 @@ namespace BECore::Mahjong::Tests {
             for (const SeatKind kind : seats) {
                 text += kind == SeatKind::Person ? 'P' : 'C';
             }
-            return text + " " + std::string(LevelText(level));
+            return text + " " + ToStdString(LevelText(level));
         }
 
         /// A started session in the middle of a match, to see what a refused resume leaves.
@@ -233,8 +233,8 @@ namespace BECore::Mahjong::Tests {
                     text += " " + std::to_string(score);
                 }
                 text += " hands " + std::to_string(table.match.HandsPlayed()) + " version " + std::to_string(session.Version());
-                text += " viewer " + std::to_string(session.Viewer()) + " levels " + std::string(LevelText(session.LevelOf(0))) + std::string(LevelText(session.LevelOf(1))) +
-                        std::string(LevelText(session.LevelOf(2))) + std::string(LevelText(session.LevelOf(3))) + " phase " + Name(session.GetPhase());
+                text += " viewer " + std::to_string(session.Viewer()) + " levels " + ToStdString(LevelText(session.LevelOf(0))) + ToStdString(LevelText(session.LevelOf(1))) +
+                        ToStdString(LevelText(session.LevelOf(2))) + ToStdString(LevelText(session.LevelOf(3))) + " phase " + Name(session.GetPhase());
                 text += " actor " + std::to_string(session.Actor()) + " seats ";
                 for (const SeatKind kind : session.Seats()) {
                     text += kind == SeatKind::Person ? 'P' : 'C';
@@ -524,7 +524,7 @@ namespace BECore::Mahjong::Tests {
 
         /// The error of a text that does not parse as a saved match.
         std::string ParseError(const std::string& text) {
-            const auto parsed = ParseMatchSaveText(text);
+            const auto parsed = ParseMatchSaveText(FromStd(text));
             EXPECT_FALSE(parsed.has_value());
             return parsed ? std::string() : Plain(parsed.error());
         }
@@ -547,7 +547,7 @@ namespace BECore::Mahjong::Tests {
             const Recorded recorded(played.seed, played.seats, played.level, played.steps);
             const eastl::vector<MatchLogEvent>& all = recorded.log.Events();
             const eastl::string text = MatchSaveText(all);
-            const auto parsed = ParseMatchSaveText(std::string_view(text.c_str(), text.size()));
+            const auto parsed = ParseMatchSaveText(StringView(text.c_str(), text.size()));
             ASSERT_TRUE(parsed.has_value()) << where << ": " << (parsed ? "" : parsed.error().c_str());
             const eastl::vector<MatchLogEvent> want = WithoutHandsAndEnd(all);
             ASSERT_EQ(parsed->size(), want.size()) << where;
@@ -578,7 +578,7 @@ namespace BECore::Mahjong::Tests {
             const std::string where = Plain(SeatsToLetters(seats));
             const Recorded recorded(5, seats, mixed, 120);
             const eastl::string text = MatchSaveText(recorded.log.Events());
-            const auto parsed = ParseMatchSaveText(std::string_view(text.c_str(), text.size()));
+            const auto parsed = ParseMatchSaveText(StringView(text.c_str(), text.size()));
             ASSERT_TRUE(parsed.has_value()) << where << ": " << (parsed ? "" : parsed.error().c_str());
             EXPECT_EQ((*parsed)[0].levels, mixed) << where;
 
@@ -603,7 +603,7 @@ namespace BECore::Mahjong::Tests {
         old.replace(old.find("\"levels\":[3,3,3,3]"), 18, "\"level\":3");
         const std::string oldText = old + current.substr(firstBreak);
 
-        const auto parsed = ParseMatchSaveText(oldText);
+        const auto parsed = ParseMatchSaveText(FromStd(oldText));
         ASSERT_TRUE(parsed.has_value()) << parsed.error().c_str();
         EXPECT_EQ((*parsed)[0].levels, UniformLevels(ComputerLevel{3}));
         EXPECT_TRUE(*parsed == WithoutHandsAndEnd(recorded.log.Events()));
@@ -627,7 +627,7 @@ namespace BECore::Mahjong::Tests {
         const std::string startLine = start.dump();
         const std::string oldText = startLine + current.substr(firstBreak);
 
-        const auto parsed = ParseMatchSaveText(oldText);
+        const auto parsed = ParseMatchSaveText(FromStd(oldText));
         ASSERT_TRUE(parsed.has_value()) << parsed.error().c_str();
         EXPECT_EQ((*parsed)[0].origin, MatchLogOrigin{});
         EXPECT_TRUE(*parsed == WithoutHandsAndEnd(recorded.log.Events())) << "the recorded match was made with no origin set";
@@ -755,8 +755,8 @@ namespace BECore::Mahjong::Tests {
             const MahjongPrefsSave prefs = MakePrefs("en", true, kDefaultSeatSetup, kFullMatchHands, level);
             EXPECT_EQ(prefs.level, eastl::string(LevelText(level).data(), LevelText(level).size()));
             const auto read = ReadPrefs(prefs);
-            ASSERT_TRUE(read.has_value()) << LevelText(level);
-            EXPECT_EQ(read->levels, UniformLevels(level)) << LevelText(level);
+            ASSERT_TRUE(read.has_value()) << ToStd(LevelText(level));
+            EXPECT_EQ(read->levels, UniformLevels(level)) << ToStd(LevelText(level));
         }
         // A copy written before the scale of numbers holds the name of a level
         for (const auto& [name, level] : {std::pair{"easy", ComputerLevel::Easy}, std::pair{"normal", ComputerLevel::Normal}}) {
@@ -861,7 +861,7 @@ namespace BECore::Mahjong::Tests {
                 const std::string where = std::to_string(steps) + " steps " + Plain(SeatsToLetters(seats));
                 const Recorded recorded(13, seats, ComputerLevel::Easy, steps);
                 const eastl::string text = MatchSaveText(recorded.recorder.Events());
-                const auto parsed = ParseMatchSaveText(std::string_view(text.c_str(), text.size()));
+                const auto parsed = ParseMatchSaveText(StringView(text.c_str(), text.size()));
                 ASSERT_TRUE(parsed.has_value()) << where;
                 Table resumed;
                 const ReplayStatus status = resumed.session.ResumeMatch(*parsed, (*parsed)[0].seats, (*parsed)[0].levels);

@@ -116,7 +116,7 @@ namespace BECore::Mahjong {
         }
 
         /// The notice to show: a key of `OnlineWords.h` and its argument; the key is empty when there is none.
-        [[nodiscard]] eastl::string_view NoticeKey() const {
+        [[nodiscard]] StringView NoticeKey() const {
             return _noticeKey;
         }
         [[nodiscard]] const eastl::string& NoticeArg() const {
@@ -124,12 +124,12 @@ namespace BECore::Mahjong {
         }
 
         /// The key of the status line ("Connecting...", "The connection was lost. Reconnecting..."); empty when there is none.
-        [[nodiscard]] eastl::string_view StatusKey() const {
+        [[nodiscard]] StringView StatusKey() const {
             return _statusKey;
         }
 
         /// The code of the room on the `Lobby` page (the lobby's, else the client's); empty on any other page. The copy button puts exactly this on the clipboard.
-        [[nodiscard]] eastl::string_view RoomCodeToCopy(const OnlineClient& client) const;
+        [[nodiscard]] StringView RoomCodeToCopy(const OnlineClient& client) const;
 
         /// The `Rooms` page: the page shown (0-based), how many pages the list has (at least 1), how many rows this page has (0..`kRoomsPerPage`) and the index in
         /// `OnlineClient::Rooms().rooms` of the row @p row of this page.
@@ -155,16 +155,16 @@ namespace BECore::Mahjong {
         }
 
         /// The key of the paste note's words (`OnlineWords.h`); empty with no note.
-        [[nodiscard]] eastl::string_view PasteNoteKey() const;
+        [[nodiscard]] StringView PasteNoteKey() const;
 
         // ---- What the game gives ----
 
         /// The name stored by an earlier run; a name the field cannot hold changes nothing. Until the player edits the name it is the default one of the current language.
-        void SetStoredName(eastl::string_view name);
+        void SetStoredName(StringView name);
 
         /// The code of the room of a session an earlier run kept (empty: none). The game stores what the client keeps, so it is dropped when the client's session moves
         /// (`SessionRevision()`: a new room, a `Leave`, a room that is gone).
-        void SetStoredRoom(eastl::string_view room);
+        void SetStoredRoom(StringView room);
 
         /// Follows the language: the pad of the focused field and the default name are made again when the language moved. The component calls it before it publishes.
         void Refresh(const UIStrings& strings);
@@ -183,13 +183,13 @@ namespace BECore::Mahjong {
         /// The `Menu`'s choices. `ShowRooms` starts browsing the open rooms of @p url; the page opens when that was sent.
         bool ShowHost();
         bool ShowJoin();
-        bool ShowRooms(OnlineClient& client, eastl::string_view url);
+        bool ShowRooms(OnlineClient& client, StringView url);
 
         /// Opens the `Entry` page for @p field of the page on show: the `Name` of the `Host`, `Join` and `Rooms` pages, the `Code` of the `Join` form only.
         bool FocusField(OnlineField field);
         /// Types a character into the focused field of the `Entry` page: the key @p index of `Pad()`, or one UTF-8 character of the keyboard.
         bool PressKey(size_t index);
-        bool Type(eastl::string_view character);
+        bool Type(StringView character);
         bool Backspace();
         /// The `Entry` page back to its form.
         bool Done();
@@ -202,8 +202,8 @@ namespace BECore::Mahjong {
         bool SetPublic(bool isPublic);
 
         /// Sends the form. Fields that are not complete send nothing and say why in the notice (`bad_name`, `unknown_room`).
-        bool Create(OnlineClient& client, eastl::string_view url);
-        bool Enter(OnlineClient& client, eastl::string_view url);
+        bool Create(OnlineClient& client, StringView url);
+        bool Enter(OnlineClient& client, StringView url);
         /// `Menu` only, with `CanReturn()`: comes back into @p session (the client's own `SessionToKeep()`, or the one the game stored).
         bool Resume(OnlineClient& client, const RoomSession& session);
         /// `Lobby` only: takes @p seat when the lobby offers it (`CanChoose`), asks the host's start, leaves the room (or the attempt to enter one).
@@ -212,11 +212,11 @@ namespace BECore::Mahjong {
         bool Leave(OnlineClient& client);
 
         /// `Rooms` only. `RefreshRooms` asks the list again (or opens the connection again after it closed); it does nothing while a list request is in flight.
-        bool RefreshRooms(OnlineClient& client, eastl::string_view url);
+        bool RefreshRooms(OnlineClient& client, StringView url);
         /// The next page of the list, the first one after the last; false when the list has one page.
         bool NextRoomsPage();
         /// Joins the room of the row @p row of this page, with the name on the page (an incomplete one is the `bad_name` notice). A row that is not there now sends nothing.
-        bool JoinRoom(OnlineClient& client, eastl::string_view url, int row);
+        bool JoinRoom(OnlineClient& client, StringView url, int row);
         /// The offer of an empty list: ends the browsing and shows the `Host` form.
         bool HostFromRooms(OnlineClient& client);
 
@@ -225,7 +225,7 @@ namespace BECore::Mahjong {
 
         /// Sets the code from a pasted @p text (`TextEntry::CleanRoomCode`): on the `Join` form, or the `Entry` page of the `Code`. A text with no code changes nothing and says so: the pad
         /// note `NotACode` on the `Entry` page, the notice on the `Join` form (which has no pad). Any other page: false, nothing said.
-        bool PasteCode(eastl::string_view text);
+        bool PasteCode(StringView text);
         /// The read of the clipboard gave no text (@p status not `Ok`): the note `Empty`, or `Refused` when it was not allowed or there is no clipboard. Same pages as `PasteCode`.
         bool NoteNothingToPaste(ClipboardStatus status);
 
@@ -254,7 +254,7 @@ namespace BECore::Mahjong {
         [[nodiscard]] bool TakesPaste() const {
             return _page == OnlinePage::Join || (_page == OnlinePage::Entry && _focus == OnlineField::Code);
         }
-        void SetLocalNotice(eastl::string_view key);
+        void SetLocalNotice(StringView key);
         void RebuildPad(const UIStrings& strings);
         void ClearPad();
         [[nodiscard]] TextEntry& FocusedEntry() {
@@ -287,10 +287,10 @@ namespace BECore::Mahjong {
         bool _revisionKnown = false;
         bool _canReturn = false;
         eastl::string _returnRoom;
-        eastl::string_view _noticeKey;
+        StringView _noticeKey;
         eastl::string _noticeArg;
         uint32_t _seenNotice = 0;
-        eastl::string_view _statusKey;
+        StringView _statusKey;
         OnlineCopyState _copyState = OnlineCopyState::None;
         /// The room the page showed at the last `Sync`: another one ends the state of the copy button.
         eastl::string _copyRoom;

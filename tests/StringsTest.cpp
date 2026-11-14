@@ -145,7 +145,7 @@ namespace BECore::Mahjong::Tests {
             for (const StringEntry& entry : base.entries) {
                 const auto found = byKey.find(entry.key);
                 ASSERT_NE(found, byKey.end()) << other.id << " lacks " << entry.key;
-                EXPECT_EQ(PlaceholderNames(found->second), PlaceholderNames(entry.text)) << other.id << ": the placeholders of " << entry.key;
+                EXPECT_EQ(PlaceholderNames(FromStd(found->second)), PlaceholderNames(FromStd(entry.text))) << other.id << ": the placeholders of " << entry.key;
             }
             EXPECT_EQ(other.entries.size(), base.entries.size()) << other.id << " has keys " << base.id << " has not";
         }

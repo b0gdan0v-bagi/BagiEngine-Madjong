@@ -423,7 +423,7 @@ namespace BECore::Mahjong::Tests {
             for (int i = 0; i < kButtonCount; ++i) {
                 sentences.push_back(HintOf(CoreManager::GetUIStrings(), static_cast<ButtonKind>(i)));
             }
-            CoreManager::GetUIVars().Set("actionHint"_intern, eastl::string_view(Longest(sentences)));
+            CoreManager::GetUIVars().Set("actionHint"_intern, StringView(Longest(sentences)));
             for (const std::vector<ButtonKind>& kinds : FullestButtonSets()) {
                 for (int i = 0; i < kButtonCount; ++i) {
                     SetShown(static_cast<ButtonKind>(i), false);
@@ -625,7 +625,7 @@ namespace BECore::Mahjong::Tests {
             }
             const eastl::string longest = Longest(sentences);
             EXPECT_LE(Utf8::CountCodePoints(longest), kMaxHintLength);
-            CoreManager::GetUIVars().Set("actionHint"_intern, eastl::string_view(longest));
+            CoreManager::GetUIVars().Set("actionHint"_intern, StringView(longest));
             // With the fullest turn and the fullest window under it, as the matrix test of the buttons has them
             for (const std::vector<ButtonKind>& kinds : FullestButtonSets()) {
                 for (int i = 0; i < kButtonCount; ++i) {
@@ -691,7 +691,7 @@ namespace BECore::Mahjong::Tests {
                     names.push_back(SeatName(CoreManager::GetUIStrings(), seat, static_cast<Wind>(wind)));
                 }
             }
-            CoreManager::GetUIVars().Set("handoffSeat"_intern, eastl::string_view(Longest(names)));
+            CoreManager::GetUIVars().Set("handoffSeat"_intern, StringView(Longest(names)));
 
             ExpectPassesTheMatrix("Handoff", EngineTouchMinimum());
             for (const Output& output : kOutputs) {
@@ -711,7 +711,7 @@ namespace BECore::Mahjong::Tests {
                     names.push_back(SeatName(CoreManager::GetUIStrings(), seat, static_cast<Wind>(wind)));
                 }
             }
-            CoreManager::GetUIVars().Set("handoffSeat"_intern, eastl::string_view(Longest(names)));
+            CoreManager::GetUIVars().Set("handoffSeat"_intern, StringView(Longest(names)));
             Draw();
             Canvas("Handoff")->UpdateLayout(kViewWidth, kViewHeight);
 

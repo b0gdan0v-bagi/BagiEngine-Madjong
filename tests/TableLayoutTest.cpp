@@ -1043,11 +1043,11 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        Tile Parsed(std::string_view text) {
+        Tile Parsed(StringView text) {
             return TryParse(text).value();
         }
 
-        Meld ClaimedMeld(MeldKind kind, Seat from, std::string_view first, std::string_view claimed) {
+        Meld ClaimedMeld(MeldKind kind, Seat from, StringView first, StringView claimed) {
             Meld meld = MakeMeld(kind);
             meld.first = Parsed(first);
             meld.claimed = Parsed(claimed);

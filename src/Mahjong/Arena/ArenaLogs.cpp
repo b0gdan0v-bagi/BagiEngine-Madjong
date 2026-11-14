@@ -58,7 +58,7 @@ namespace BECore::Mahjong::Arena {
 
     }  // namespace
 
-    LogVerdict CheckMatchLog(std::string_view text) {
+    LogVerdict CheckMatchLog(StringView text) {
         std::expected<eastl::vector<MatchLogEvent>, eastl::string> parsed = ParseMatchLog(text);
         if (!parsed.has_value()) {
             return Rejected(LogProblem::Unreadable, Format("unreadable: {}", parsed.error()));
@@ -74,7 +74,7 @@ namespace BECore::Mahjong::Arena {
         return verdict;
     }
 
-    std::expected<eastl::vector<CheckedLog>, eastl::string> ReadLogs(const LogSource& source, std::string_view path) {
+    std::expected<eastl::vector<CheckedLog>, eastl::string> ReadLogs(const LogSource& source, StringView path) {
         std::expected<eastl::vector<LogFile>, eastl::string> files = source(path);
         if (!files.has_value()) {
             return std::unexpected(files.error());
@@ -83,7 +83,7 @@ namespace BECore::Mahjong::Arena {
         eastl::vector<CheckedLog> logs;
         logs.reserve(files->size());
         for (const LogFile& file : *files) {
-            logs.push_back({file.name, CheckMatchLog(std::string_view(file.text.data(), file.text.size()))});
+            logs.push_back({file.name, CheckMatchLog(file.text)});
         }
         return logs;
     }

@@ -17,16 +17,16 @@ namespace BECore::Mahjong::Tests {
         constexpr int kFourMelds = kSetsInHand;
 
         TileCounts Counts(const std::string& text) {
-            return CountTiles(ParseTiles(text).value());
+            return CountTiles(ParseTiles(FromStd(text)).value());
         }
 
         /// "<pair>: <set> <set> ...", a chow as C<first> and a pung as P<first> (the order `Decompose` returns).
         std::string Describe(const Decomposition& decomposition) {
-            std::string text{ToString(decomposition.pair)};
+            std::string text = ToStdString(ToString(decomposition.pair));
             text += ":";
             for (const ShapeSet& set : decomposition.sets) {
                 text += set.kind == MeldKind::Chow ? " C" : " P";
-                text += ToString(set.first);
+                text += ToStd(ToString(set.first));
             }
             return text;
         }
@@ -45,7 +45,7 @@ namespace BECore::Mahjong::Tests {
             std::string text;
             for (const Tile tile : WinningTiles(Counts(hand), meldCount)) {
                 text += text.empty() ? "" : " ";
-                text += ToString(tile);
+                text += ToStd(ToString(tile));
             }
             return text;
         }

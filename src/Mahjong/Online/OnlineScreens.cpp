@@ -21,7 +21,7 @@ namespace BECore::Mahjong {
 
     // ---- What the game gives -----------------------------------------------------------------------------------------------------
 
-    void OnlineScreens::SetStoredName(eastl::string_view name) {
+    void OnlineScreens::SetStoredName(StringView name) {
         TextEntry candidate(TextEntry::Kind::Name);
         if (!candidate.Replace(name) || !candidate.IsComplete()) {
             return;
@@ -30,7 +30,7 @@ namespace BECore::Mahjong {
         _nameOwn = true;
     }
 
-    void OnlineScreens::SetStoredRoom(eastl::string_view room) {
+    void OnlineScreens::SetStoredRoom(StringView room) {
         const eastl::string text(room.data(), room.size());
         if (_storedRoom != text) {
             _storedRoom = text;
@@ -122,7 +122,7 @@ namespace BECore::Mahjong {
         return true;
     }
 
-    bool OnlineScreens::ShowRooms(OnlineClient& client, eastl::string_view url) {
+    bool OnlineScreens::ShowRooms(OnlineClient& client, StringView url) {
         if (_page != OnlinePage::Menu || client.Stage() != OnlineStage::Idle) {
             return false;
         }
@@ -156,10 +156,10 @@ namespace BECore::Mahjong {
             return false;
         }
         // The pad is a member that is not touched while its key is typed
-        return Type(eastl::string_view(_pad[index].data(), _pad[index].size()));
+        return Type(_pad[index]);
     }
 
-    bool OnlineScreens::Type(eastl::string_view character) {
+    bool OnlineScreens::Type(StringView character) {
         if (_page != OnlinePage::Entry) {
             return false;
         }
@@ -225,7 +225,7 @@ namespace BECore::Mahjong {
         return true;
     }
 
-    bool OnlineScreens::Create(OnlineClient& client, eastl::string_view url) {
+    bool OnlineScreens::Create(OnlineClient& client, StringView url) {
         if (_page != OnlinePage::Host || client.Stage() != OnlineStage::Idle) {
             return false;
         }
@@ -241,7 +241,7 @@ namespace BECore::Mahjong {
         return sent;
     }
 
-    bool OnlineScreens::Enter(OnlineClient& client, eastl::string_view url) {
+    bool OnlineScreens::Enter(OnlineClient& client, StringView url) {
         if (_page != OnlinePage::Join || client.Stage() != OnlineStage::Idle) {
             return false;
         }
@@ -309,7 +309,7 @@ namespace BECore::Mahjong {
         return done;
     }
 
-    bool OnlineScreens::RefreshRooms(OnlineClient& client, eastl::string_view url) {
+    bool OnlineScreens::RefreshRooms(OnlineClient& client, StringView url) {
         const OnlineStage stage = client.Stage();
         if (_page != OnlinePage::Rooms || (stage != OnlineStage::Browsing && stage != OnlineStage::Idle) || client.Rooms().pending) {
             return false;
@@ -330,7 +330,7 @@ namespace BECore::Mahjong {
         return true;
     }
 
-    bool OnlineScreens::JoinRoom(OnlineClient& client, eastl::string_view url, int row) {
+    bool OnlineScreens::JoinRoom(OnlineClient& client, StringView url, int row) {
         if (_page != OnlinePage::Rooms || client.Stage() != OnlineStage::Browsing || row < 0 || row >= RoomsOnPage()) {
             return false;
         }
@@ -371,7 +371,7 @@ namespace BECore::Mahjong {
         return true;
     }
 
-    bool OnlineScreens::PasteCode(eastl::string_view text) {
+    bool OnlineScreens::PasteCode(StringView text) {
         if (!TakesPaste()) {
             return false;
         }
@@ -410,15 +410,15 @@ namespace BECore::Mahjong {
         return std::clamp(_roomCount - _roomsPage * kRoomsPerPage, 0, kRoomsPerPage);
     }
 
-    eastl::string_view OnlineScreens::RoomCodeToCopy(const OnlineClient& client) const {
+    StringView OnlineScreens::RoomCodeToCopy(const OnlineClient& client) const {
         if (_page != OnlinePage::Lobby) {
             return {};
         }
         const eastl::string& room = client.Lobby().room.empty() ? client.Room() : client.Lobby().room;
-        return eastl::string_view(room.data(), room.size());
+        return room;
     }
 
-    eastl::string_view OnlineScreens::PasteNoteKey() const {
+    StringView OnlineScreens::PasteNoteKey() const {
         switch (_pasteNote) {
             case OnlinePasteNote::NotACode:
                 return kOnlinePasteNotCodeKey;
@@ -452,13 +452,13 @@ namespace BECore::Mahjong {
         // A refreshed list can be shorter than the page the player is on
         Assign(_roomsPage, std::min(_roomsPage, RoomsPageCount() - 1));
 
-        eastl::string_view status;
+        StringView status;
         if (stage == OnlineStage::Connecting) {
             status = kOnlineConnectingKey;
         } else if (stage == OnlineStage::Reconnecting) {
             status = kOnlineReconnectingKey;
         } else if (stage == OnlineStage::Browsing) {
-            status = !list.loaded ? kOnlineBrowsingKey : RoomsEmpty() ? kOnlineNoRoomsKey : eastl::string_view();
+            status = !list.loaded ? kOnlineBrowsingKey : RoomsEmpty() ? kOnlineNoRoomsKey : StringView();
         }
         Assign(_statusKey, status);
 
@@ -477,9 +477,7 @@ namespace BECore::Mahjong {
         const RoomSession& kept = client.SessionToKeep();
         const bool canReturn = stage == OnlineStage::Idle && (kept.IsValid() || !_storedRoom.empty());
         Assign(_canReturn, canReturn);
-        const eastl::string_view room = !canReturn       ? eastl::string_view()
-                                        : kept.IsValid() ? eastl::string_view(kept.room.data(), kept.room.size())
-                                                         : eastl::string_view(_storedRoom.data(), _storedRoom.size());
+        const StringView room = !canReturn ? StringView() : kept.IsValid() ? StringView(kept.room) : StringView(_storedRoom);
         if (_returnRoom != room) {
             _returnRoom.assign(room.data(), room.size());
             Bump();
@@ -500,7 +498,7 @@ namespace BECore::Mahjong {
         }
 
         // The copy button speaks of one room
-        const eastl::string_view copyRoom = RoomCodeToCopy(client);
+        const StringView copyRoom = RoomCodeToCopy(client);
         if (_copyRoom != copyRoom) {
             _copyRoom.assign(copyRoom.data(), copyRoom.size());
             ResetCopy();
@@ -548,7 +546,7 @@ namespace BECore::Mahjong {
         }
     }
 
-    void OnlineScreens::SetLocalNotice(eastl::string_view key) {
+    void OnlineScreens::SetLocalNotice(StringView key) {
         _noticeKey = key;
         _noticeArg.clear();
         Bump();

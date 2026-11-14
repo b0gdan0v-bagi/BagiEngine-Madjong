@@ -23,9 +23,9 @@ namespace BECore::Mahjong::Arena {
         constexpr int kKindMinWidth = 24;
         constexpr const char* kColumnGap = "  ";
         constexpr const char* kIndent = "  ";
-        constexpr std::string_view kSignificantWord = "significant";
+        constexpr StringView kSignificantWord = "significant";
         constexpr int kSignificantWidth = static_cast<int>(kSignificantWord.size());
-        constexpr std::string_view kOthersLabel = "others (per seat)";
+        constexpr StringView kOthersLabel = "others (per seat)";
         constexpr double kNanosecondsPerMicrosecond = 1000.0;
         constexpr size_t kOthersSeats = kSeatCount - 1;
 

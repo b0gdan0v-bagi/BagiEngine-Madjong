@@ -38,7 +38,7 @@ namespace BECore::Mahjong {
 
         /// Appends @p character (exactly one UTF-8 character, a code folded to upper case). False and nothing changed when the field cannot hold it: a character outside
         /// the kind's set, or the text would pass the limit (5 characters, 24 bytes).
-        bool Append(eastl::string_view character);
+        bool Append(StringView character);
 
         /// Removes the last whole UTF-8 character. False when the text is empty.
         bool Backspace();
@@ -46,7 +46,7 @@ namespace BECore::Mahjong {
         void Clear();
 
         /// Replaces the text by @p text when every character of it is accepted and it fits; otherwise nothing changes and the result is false.
-        bool Replace(eastl::string_view text);
+        bool Replace(StringView text);
 
         [[nodiscard]] const eastl::string& Text() const {
             return _text;
@@ -65,7 +65,7 @@ namespace BECore::Mahjong {
         /// The room code in a pasted @p text, or nothing. A code with spaces or dashes ("  ab3k9 ", "AB3-K9") or longer than needed (cut to its length) is the code itself; an
         /// invite line is searched for the one word that can be a code (5 letters or digits of the code alphabet): none, or two (an English word like "hands" can be one too), is
         /// refused and never guessed. Empty text, text over `kMaxPasteBytes` and a code with a letter outside ASCII are refused.
-        [[nodiscard]] static Optional<eastl::string> CleanRoomCode(eastl::string_view text);
+        [[nodiscard]] static Optional<eastl::string> CleanRoomCode(StringView text);
 
         /// The name a player starts with (`online.name.default`).
         [[nodiscard]] static eastl::string DefaultName(const UIStrings& strings);

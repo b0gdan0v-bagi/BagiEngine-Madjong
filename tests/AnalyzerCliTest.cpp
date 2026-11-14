@@ -15,7 +15,7 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        using Args = eastl::vector<std::string_view>;
+        using Args = eastl::vector<StringView>;
 
         constexpr SeatSetup kAllComputers{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
         constexpr int kHandLimit = 200;
@@ -64,8 +64,8 @@ namespace BECore::Mahjong::Tests {
 
         /// A reader over a few named strings.
         Analyzer::FileReader ReaderOf(std::map<std::string, std::string> files) {
-            return [files = std::move(files)](std::string_view path) -> std::expected<eastl::string, eastl::string> {
-                const auto found = files.find(std::string(path));
+            return [files = std::move(files)](StringView path) -> std::expected<eastl::string, eastl::string> {
+                const auto found = files.find(ToStdString(path));
                 if (found == files.end()) {
                     return std::unexpected(eastl::string("no such file"));
                 }
@@ -86,7 +86,7 @@ namespace BECore::Mahjong::Tests {
         CliRun RunWith(const Analyzer::FileReader& reader, const Args& args) {
             Analyzer::AnalyzerCliOutput output;
             CliRun run;
-            run.code = Analyzer::RunAnalyzerCli(eastl::span<const std::string_view>(args.data(), args.size()), reader, output);
+            run.code = Analyzer::RunAnalyzerCli(eastl::span<const StringView>(args.data(), args.size()), reader, output);
             run.out = output.out.c_str();
             run.err = output.err.c_str();
             return run;
@@ -97,7 +97,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         std::expected<Analyzer::AnalyzerArgs, eastl::string> Parse(const Args& args) {
-            return Analyzer::ParseAnalyzerArgs(eastl::span<const std::string_view>(args.data(), args.size()));
+            return Analyzer::ParseAnalyzerArgs(eastl::span<const StringView>(args.data(), args.size()));
         }
 
         std::string ErrorOf(const Args& args) {
@@ -130,7 +130,7 @@ namespace BECore::Mahjong::Tests {
 
         /// The decisions of a seat in hand 1 of the played log.
         eastl::vector<Analyzer::LogPosition> DecisionsOf(Seat seat) {
-            const std::expected<eastl::vector<MatchLogEvent>, eastl::string> events = ParseMatchLog(CompleteLog());
+            const std::expected<eastl::vector<MatchLogEvent>, eastl::string> events = ParseMatchLog(FromStd(CompleteLog()));
             EXPECT_TRUE(events.has_value());
             const std::expected<eastl::vector<Analyzer::LogPosition>, eastl::string> positions = Analyzer::PositionsOfSeat(*events, 1, seat);
             EXPECT_TRUE(positions.has_value());
@@ -222,7 +222,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(AnalyzerCliTest, OneLogDecisionGivesTheHeaderAndARowPerLegalAction) {
-        const std::expected<eastl::vector<MatchLogEvent>, eastl::string> events = ParseMatchLog(CompleteLog());
+        const std::expected<eastl::vector<MatchLogEvent>, eastl::string> events = ParseMatchLog(FromStd(CompleteLog()));
         ASSERT_TRUE(events.has_value());
         const std::expected<Analyzer::LogPosition, eastl::string> position = Analyzer::PositionFromLog(*events, 1, 0);
         ASSERT_TRUE(position.has_value());
@@ -246,11 +246,11 @@ namespace BECore::Mahjong::Tests {
                 compared += decision.view.legal.size() > 1 ? 1 : 0;
             }
             const std::string seatText = std::to_string(seat);
-            const CliRun text = RunCli({"--log", kLogName, "--hand", "1", "--seat", seatText, "--worlds", kFewWorlds});
+            const CliRun text = RunCli({"--log", kLogName, "--hand", "1", "--seat", FromStd(seatText), "--worlds", kFewWorlds});
             EXPECT_EQ(text.code, Analyzer::kExitOk) << text.err;
             EXPECT_EQ(Count(text.out, "position:"), compared) << "seat " << seat;
             EXPECT_EQ(Count(text.out, "skipped: "), decisions.size() - compared) << "seat " << seat;
-            const CliRun json = RunCli({"--log", kLogName, "--hand", "1", "--seat", seatText, "--worlds", kFewWorlds, "--json"});
+            const CliRun json = RunCli({"--log", kLogName, "--hand", "1", "--seat", FromStd(seatText), "--worlds", kFewWorlds, "--json"});
             EXPECT_EQ(json.code, Analyzer::kExitOk);
             EXPECT_EQ(Count(json.out, "\n"), decisions.size());
             EXPECT_EQ(Count(json.out, "\"skipped\":"), decisions.size() - compared);
@@ -274,7 +274,7 @@ namespace BECore::Mahjong::Tests {
         for (const bool json : {false, true}) {
             Args one{"--log", kLogName, "--hand", "1", "--action", "2", "--worlds", kWorlds, "--seed", "5", "--jobs", "1"};
             Args several = one;
-            several.back() = jobs;
+            several.back() = FromStd(jobs);
             if (json) {
                 one.push_back("--json");
                 several.push_back("--json");

@@ -19,7 +19,7 @@ namespace BECore::Mahjong {
     inline constexpr HintsMode kDefaultHintsMode = HintsMode::Hints;
 
     /// The id of a mode in the saved preferences, the variable `hintsChoice` and the values of the buttons of the page: `off`, `hints`, `coach`.
-    [[nodiscard]] constexpr std::string_view HintsModeText(HintsMode mode) noexcept {
+    [[nodiscard]] constexpr StringView HintsModeText(HintsMode mode) noexcept {
         switch (mode) {
             case HintsMode::Off:
                 return "off";
@@ -32,7 +32,7 @@ namespace BECore::Mahjong {
     }
 
     /// The mode of an id, or nothing for any other text (client text, a damaged save).
-    [[nodiscard]] constexpr Optional<HintsMode> TryParseHintsMode(std::string_view text) noexcept {
+    [[nodiscard]] constexpr Optional<HintsMode> TryParseHintsMode(StringView text) noexcept {
         for (const HintsMode mode : EnumUtils<HintsMode>::Values()) {
             if (HintsModeText(mode) == text) {
                 return mode;

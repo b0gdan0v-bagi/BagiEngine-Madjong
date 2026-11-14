@@ -83,7 +83,7 @@ namespace BECore::Mahjong {
     }
 
     template <typename State>
-    bool MatchSaveStore::Write(eastl::string_view slot, const State& state) {
+    bool MatchSaveStore::Write(StringView slot, const State& state) {
         if (const auto saved = _service.Save(slot, kMahjongSaveSchema, state); !saved) {
             LOG_WARNING(Format("MatchSaveStore: the slot '{}' could not be written: {}", slot, saved.error().detail));
             return false;
@@ -110,7 +110,7 @@ namespace BECore::Mahjong {
         if (const auto loaded = _service.Load(kMatchSlot, kMahjongSaveSchema, state); !loaded) {
             return std::unexpected(ProblemOf(loaded.error()));
         }
-        auto events = ParseMatchSaveText(std::string_view(state.log.c_str(), state.log.size()));
+        auto events = ParseMatchSaveText(StringView(state.log.c_str(), state.log.size()));
         if (!events) {
             return std::unexpected(SaveProblem{SaveProblemKind::Broken, eastl::move(events.error())});
         }
