@@ -118,6 +118,10 @@ if(ENGINE_BUILD_TESTS)
         add_test(NAME MahjongTypesCheck
             COMMAND ${Python3_EXECUTABLE} ${BAGI_ENGINE_DIR}/CI/scripts/check_types.py --root ${CMAKE_CURRENT_SOURCE_DIR}
                 --baseline ${CMAKE_CURRENT_SOURCE_DIR}/CI/types_baseline.txt)
+
+        # engine/CI/scripts/check_includes.py: the quoted include only for a .cpp and its own header, the rest <...> from an include root
+        add_test(NAME MahjongIncludesCheck
+            COMMAND ${Python3_EXECUTABLE} ${BAGI_ENGINE_DIR}/CI/scripts/check_includes.py --root ${CMAKE_CURRENT_SOURCE_DIR})
     endif()
 
     # tools/collect_logs.py with a fake verifier and temp folders (no build needed); Python 3 standard library only

@@ -4,6 +4,8 @@ Rules of the engine: `engine/.claude/rules/tests-module.md`. New rule code gets 
 
 ## Helpers (header only)
 
+A helper is included as `<tests/Name.h>` (the repository root is the include root of `MahjongTests`); the table keeps the bare file names.
+
 | Header | Use it for |
 |--------|-----------|
 | `FixedWall.h` | `FixedWallSpec { hands[4], live, loose, liveAfterDeal }`, `MakeFixedWall`, `MakeModel`: **every test that needs to know what a seat holds or draws** (padding never exceeds four copies) |
