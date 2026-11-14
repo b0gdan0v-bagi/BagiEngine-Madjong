@@ -20,9 +20,9 @@ namespace BECore::Mahjong {
      *
      * `Choose` dispatches on the phase: `ChooseTurnAction` on the own turn, `ChooseClaimAction` in a claim window or a robbed-kong
      * window. The player owns a `MahjongRng` that only breaks ties, so one seed gives the same play on every platform. It never sees
-     * a `HandModel` except through `Decide`, which makes the view first. It has a `ComputerLevel` (default Normal, the player described
-     * in `CLAUDE.md`) and plays by `ProfileOf(level)`; the constructor that takes a `LevelProfile` plays by those numbers (tests and the
-     * arena play a profile that is no level, e.g. a search seat) and reports `Level()` Normal.
+     * a `HandModel` except through `Decide`, which makes the view first. It plays by `ProfileOf(level)` (default Normal:
+     * `Game/CLAUDE.md`, "Computer player"); the constructor that takes a `LevelProfile` plays by those numbers (tests and the arena
+     * play profiles that are no level, e.g. a search seat) and reports `Level()` Normal.
      */
     class ComputerPlayer {
     public:
@@ -52,9 +52,8 @@ namespace BECore::Mahjong {
         LevelProfile _profile;
     };
 
-    /// The rng seed of seat `seat` at a table seeded `tableSeed`: a fixed mixing, one roll of an `MahjongRng` seeded `tableSeed * 4 + seat`
-    /// (never a draw from the machine), so the four seats play differently and one table seed is one table. A number that is no seat is
-    /// mixed like any other.
+    /// The rng seed of seat `seat` at a table seeded `tableSeed`: a fixed mixing (never a draw from the machine), so the four seats
+    /// play differently and one table seed is one table. A number that is no seat is mixed like any other.
     [[nodiscard]] uint32_t SeatSeed(uint32_t tableSeed, Seat seat);
 
     /// What `ComputerTable::Step` did: the action it applied (an element of the actor's `LegalActions`), or why the model refused it.
@@ -65,9 +64,9 @@ namespace BECore::Mahjong {
      *
      * Seat `i` is a `ComputerPlayer` seeded `SeatSeed(tableSeed, i)`. `Step` asks the next actor for an action and applies it through
      * `HandModel::Apply`; it never falls back to another action, so an action the model refuses is a defect and comes back as the
-     * error. The table does not know a seat setup (which seats are people) yet; it drives whatever model it is given. Each seat has
-     * a level of its own (`SeatLevels`, `LevelOf`); the seat seeds do not depend on any level, so one table seed gives the same
-     * tie-breaks at every level, and a table of `UniformLevels(l)` plays exactly what the one-level constructor made.
+     * error. The table knows no seat setup (which seats are people); it drives whatever model it is given. Each seat has a level of
+     * its own (`SeatLevels`, `LevelOf`); the seat seeds do not depend on any level, so one table seed gives the same tie-breaks at
+     * every level.
      */
     class ComputerTable {
     public:
