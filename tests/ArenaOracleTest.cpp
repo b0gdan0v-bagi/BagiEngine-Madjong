@@ -34,7 +34,7 @@ namespace BECore::Mahjong::Arena {
         constexpr uint32_t kRngStride = 1000;
 
         ArenaPlayer Player(StringView spec) {
-            const std::expected<ArenaPlayer, eastl::string> player = ParseArenaPlayer(spec);
+            const std::expected<ArenaPlayer, String> player = ParseArenaPlayer(spec);
             EXPECT_TRUE(player.has_value()) << ToStd(spec) << ": " << (player.has_value() ? "" : player.error().c_str());
             return player.value_or(ArenaPlayer{});
         }
@@ -133,7 +133,7 @@ namespace BECore::Mahjong::Arena {
         HandModel DefenceModel(const char* seat1, bool seat1Declared) {
             HandState state = MakeModel(DefenceSpec(seat1)).Capture();
             state.hands[kSeat1].callingDeclared = seat1Declared;
-            std::expected<HandModel, eastl::string> restored = HandModel::Restore(std::move(state));
+            std::expected<HandModel, String> restored = HandModel::Restore(std::move(state));
             EXPECT_TRUE(restored.has_value()) << (restored.has_value() ? "" : restored.error().c_str());
             return restored.value_or(HandModel{});
         }

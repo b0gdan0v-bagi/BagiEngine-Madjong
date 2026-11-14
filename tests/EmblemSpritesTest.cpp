@@ -57,7 +57,7 @@ namespace BECore::Mahjong::Tests {
         file.read(reinterpret_cast<char*>(head.data()), static_cast<std::streamsize>(head.size()));
         ASSERT_EQ(static_cast<size_t>(file.gcount()), head.size());
         EXPECT_TRUE(std::equal(std::begin(kPngSignature), std::end(kPngSignature), head.begin()));
-        EXPECT_EQ(std::string(head.begin() + kIhdrTypeOffset, head.begin() + kIhdrDataOffset), "IHDR");
+        EXPECT_EQ(std::string(head.begin() + kIhdrTypeOffset, head.begin() + kIhdrDataOffset), "IHDR");  //-NoStd: the bytes of the PNG chunk type
         EXPECT_EQ(ReadBigEndian(head, kIhdrDataOffset), static_cast<uint32_t>(kEmblemAtlasWidth));
         EXPECT_EQ(ReadBigEndian(head, kIhdrDataOffset + kIhdrHeightOffset), static_cast<uint32_t>(kEmblemAtlasHeight));
         EXPECT_EQ(head[kIhdrDataOffset + kIhdrDepthOffset], kBitDepth);

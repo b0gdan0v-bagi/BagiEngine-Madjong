@@ -1,3 +1,4 @@
+#include <Common/Printers.h>
 #include <Mahjong/Game/HandShape.h>
 #include <Mahjong/Game/MahjongRng.h>
 #include <Mahjong/Game/Tile.h>
@@ -22,18 +23,18 @@ namespace BECore::Mahjong::Tests {
             int meldCount = 0;
         };
 
-        TileCounts Counts(const std::string& text) {
-            return CountTiles(ParseTiles(FromStd(text)).value());
+        TileCounts Counts(const String& text) {
+            return CountTiles(ParseTiles(text).value());
         }
 
-        eastl::vector<Tile> WaitsOn(const std::string& text) {
-            return eastl::vector<Tile>{ParseTiles(FromStd(text)).value()[0]};
+        eastl::vector<Tile> WaitsOn(const String& text) {
+            return eastl::vector<Tile>{ParseTiles(text).value()[0]};
         }
 
-        std::string Describe(const eastl::vector<Tile>& tiles) {
-            std::string text;
+        String Describe(const eastl::vector<Tile>& tiles) {
+            String text;
             for (const Tile tile : tiles) {
-                text += ToStdString(ToString(tile)) + " ";
+                AppendFormat(text, "{} ", ToString(tile));
             }
             return text;
         }

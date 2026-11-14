@@ -56,15 +56,15 @@ namespace BECore::Mahjong::Tests {
             return ParseJson(text).value();
         }
 
-        std::string ReadFile(const fs::path& path) {
+        String ReadFile(const fs::path& path) {
             std::ifstream file(path, std::ios::binary);
             std::stringstream text;
             text << file.rdbuf();
-            return text.str();
+            return FromStdString(text.str());
         }
 
-        std::string Str(const Json& json) {
-            return json.is_string() ? json.get<std::string>() : std::string("<not a string>");
+        String Str(const Json& json) {
+            return json.is_string() ? FromStdString(json.get<std::string>()) : String("<not a string>");  //-NoStd: nlohmann reads a string as std::string
         }
 
         class MahjongSaveGameTest : public ::testing::Test {
@@ -189,7 +189,7 @@ namespace BECore::Mahjong::Tests {
 
             /// A save that is not used: a random match is dealt, the game is playable and the file stays as it is until a match replaces it.
             void ExpectNotOffered(const char* what) const {
-                const std::string before = ReadFile(Slot(kMatchFile));
+                const String before = ReadFile(Slot(kMatchFile));
                 IntrusivePtr<MahjongGame> game = StartedGame();
                 EXPECT_FALSE(game->CanContinue()) << what;
                 EXPECT_TRUE(game->IsSetupOpen()) << what;
@@ -432,7 +432,7 @@ namespace BECore::Mahjong::Tests {
         Reset(*game, "{\"seed\": 5, \"seats\": \"PCCC\", \"hands\": 8}");
         PlayFirstActions(*game, kPersonActions);
         game->FlushSave();
-        const std::string saved = ReadFile(Slot(kMatchFile));
+        const String saved = ReadFile(Slot(kMatchFile));
 
         IntrusivePtr<MahjongGame> second = StartedGame();  // deals a background match only if nothing is saved: here it resumes
         second->FlushSave();
@@ -626,9 +626,9 @@ namespace BECore::Mahjong::Tests {
             earlier->SetOnlineName("Ann");
             earlier->FlushSave();
         }
-        const std::string match = ReadFile(Slot(kMatchFile));
-        const std::string prefs = ReadFile(Slot(kPrefsFile));
-        const std::string online = ReadFile(Slot(kOnlineFile));
+        const String match = ReadFile(Slot(kMatchFile));
+        const String prefs = ReadFile(Slot(kPrefsFile));
+        const String online = ReadFile(Slot(kOnlineFile));
         ASSERT_FALSE(match.empty());
 
         SetMatchSaveStorage(SaveStorageState::NotRemembered);

@@ -189,7 +189,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongOnlineSaveTest, AStoredSessionBringsThePlayerBackAfterTheGameObjectIsMadeAgain) {
-        std::string room;
+        String room;
         {
             IntrusivePtr<MahjongGame> game = StartedGame();
             ASSERT_TRUE(game->GetOnline().Host(kUrl, "Ann", OnlineRoomOptions{kShortMatchHands, kMinLevel}));

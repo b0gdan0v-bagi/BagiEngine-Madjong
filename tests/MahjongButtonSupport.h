@@ -45,9 +45,9 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// The text as written in the file (`{#key}` not expanded); empty when the element shows none.
-    inline eastl::string ElementText(const UIElement* element) {
+    inline String ElementText(const UIElement* element) {
         const auto* text = TextOf(element);
-        return text != nullptr ? text->text : eastl::string{};
+        return text != nullptr ? text->text : String{};
     }
 
     /// Whether the element shows a text (carries a `UITextComponent`). The header of a `UIDropdown` is not asked: it keeps the whole width
@@ -72,26 +72,26 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// The text as shown (`{#key}` and `{name}` expanded); nothing when the element shows none.
-    inline Optional<std::string> ShownText(const UIElement* element) {
+    inline Optional<String> ShownText(const UIElement* element) {
         const auto* text = TextOf(element);
         if (text == nullptr) {
             return std::nullopt;
         }
         const StringView shown = text->GetDisplayText();
-        return std::string(shown.data(), shown.size());
+        return String(shown.data(), shown.size());
     }
 
     /// The tooltip as the canvas shows it (`{#key}` and `{name}` expanded); nothing when the element has none. An icon-only button says its word here.
-    inline std::string ShownTooltip(const UIElement* element) {
+    inline String ShownTooltip(const UIElement* element) {
         if (element == nullptr || element->GetTooltipText().empty()) {
             return {};
         }
-        const eastl::string shown = CoreManager::GetUIVars().Expand(CoreManager::GetUIStrings().Resolve(element->GetTooltipText()));
-        return std::string(shown.data(), shown.size());
+        const String shown = CoreManager::GetUIVars().Expand(CoreManager::GetUIStrings().Resolve(element->GetTooltipText()));
+        return String(shown.data(), shown.size());
     }
 
     /// The text as shown, or `fallback` when the element shows none.
-    inline std::string DisplayText(const UIElement* element, const char* fallback = "<no label>") {
+    inline String DisplayText(const UIElement* element, const char* fallback = "<no label>") {
         return ShownText(element).value_or(fallback);
     }
 

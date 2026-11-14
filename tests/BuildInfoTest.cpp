@@ -9,7 +9,7 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        StringView View(const eastl::string& text) {
+        StringView View(const String& text) {
             return StringView(text.c_str(), text.size());
         }
 

@@ -51,7 +51,7 @@ namespace BECore::Mahjong::Tests {
     TEST(AnimationSpeedTest, ThePrefsHoldTheSpeedAndACopyWithoutItReadsAsNormal) {
         for (const AnimationSpeed speed : EnumUtils<AnimationSpeed>::Values()) {
             const MahjongPrefsSave prefs = MakePrefs("en", true, kDefaultSeatSetup, kFullMatchHands, kDefaultLevel, speed);
-            EXPECT_EQ(prefs.speed, eastl::string(SpeedText(speed).data(), SpeedText(speed).size()));
+            EXPECT_EQ(prefs.speed, String(SpeedText(speed).data(), SpeedText(speed).size()));
             const auto read = ReadPrefs(prefs);
             ASSERT_TRUE(read.has_value()) << (read ? "" : read.error().c_str());
             EXPECT_EQ(read->speed, speed);
@@ -68,7 +68,7 @@ namespace BECore::Mahjong::Tests {
         broken.speed = "warp";
         const auto read = ReadPrefs(broken);
         ASSERT_FALSE(read.has_value());
-        EXPECT_NE(std::string(read.error().c_str()).find("speed"), std::string::npos);
+        EXPECT_NE(String(read.error().c_str()).find("speed"), String::npos);
     }
 
 }  // namespace BECore::Mahjong::Tests

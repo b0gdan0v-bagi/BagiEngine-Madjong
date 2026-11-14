@@ -20,24 +20,24 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// Replaces the contents of `strings` by the shipped `config/UIStrings.xml` and returns what `LoadFromXml` complained about (empty when the file is sound).
-    inline eastl::vector<eastl::string> LoadShippedStrings(UIStrings& strings) {
+    inline eastl::vector<String> LoadShippedStrings(UIStrings& strings) {
         strings.Clear();
         auto config = XmlConfig::Create();
         if (!config.LoadFromFile(ShippedStringsPath())) {
-            return {eastl::string("the file did not load")};
+            return {String("the file did not load")};
         }
         return strings.LoadFromXml(config.GetRoot());
     }
 
     /// One `<string key text>` of the shipped file.
     struct StringEntry {
-        std::string key;
-        std::string text;
+        String key;
+        String text;
     };
 
     /// The strings of one `<language>` of the shipped file, in file order.
     struct LanguageEntries {
-        std::string id;
+        String id;
         std::vector<StringEntry> entries;
     };
 
@@ -51,11 +51,11 @@ namespace BECore::Mahjong::Tests {
         for (const XmlNode language : config.GetRoot().Children()) {
             LanguageEntries one;
             const auto id = language.ParseAttribute<StringView>("id");
-            one.id = id ? std::string(id->data(), id->size()) : std::string();
+            one.id = id ? String(id->data(), id->size()) : String();
             for (const XmlNode string : language.Children()) {
                 const auto key = string.ParseAttribute<StringView>("key");
                 const auto text = string.ParseAttribute<StringView>("text");
-                one.entries.push_back({key ? std::string(key->data(), key->size()) : std::string(), text ? std::string(text->data(), text->size()) : std::string()});
+                one.entries.push_back({key ? String(key->data(), key->size()) : String(), text ? String(text->data(), text->size()) : String()});
             }
             languages.push_back(std::move(one));
         }
@@ -63,8 +63,8 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// The names of the `{placeholders}` of a text (a `{#key}` reference is not one).
-    inline std::set<std::string> PlaceholderNames(StringView text) {
-        std::set<std::string> names;
+    inline std::set<String> PlaceholderNames(StringView text) {
+        std::set<String> names;
         size_t at = 0;
         while ((at = text.find('{', at)) != StringView::npos) {
             const size_t close = text.find('}', at);
@@ -73,7 +73,7 @@ namespace BECore::Mahjong::Tests {
             }
             const StringView name = text.substr(at + 1, close - at - 1);
             if (!name.empty() && name.find('{') == StringView::npos && name.front() != '#') {
-                names.insert(ToStdString(name));
+                names.insert(String(name));
             }
             at = close + 1;
         }
@@ -93,10 +93,10 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// The longest text of `candidates` by code points (how a line of text is measured in any language, the bytes of Cyrillic are twice as many); the first of equals; empty for none.
-    inline eastl::string LongestText(const std::vector<eastl::string>& candidates) {
-        eastl::string longest;
+    inline String LongestText(const std::vector<String>& candidates) {
+        String longest;
         size_t most = 0;
-        for (const eastl::string& candidate : candidates) {
+        for (const String& candidate : candidates) {
             const size_t length = Utf8::CountCodePoints(candidate);
             if (length > most) {
                 most = length;

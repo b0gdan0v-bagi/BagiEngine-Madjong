@@ -40,7 +40,7 @@ namespace BECore::Mahjong::Tests {
             for (size_t seat = 0; seat < kSeatCount; ++seat) {
                 OnlineLobbySeat& entry = lobby.seats[seat];
                 entry.kind = seat % 2 == 0 ? BECore::SeatKind::Human : BECore::SeatKind::Computer;
-                entry.name = seat % 2 == 0 ? eastl::string(seat == 0 ? "Ann" : "Cy") : eastl::string();
+                entry.name = seat % 2 == 0 ? String(seat == 0 ? "Ann" : "Cy") : String();
                 entry.away = seat == 2;
             }
             return lobby;
@@ -78,7 +78,7 @@ namespace BECore::Mahjong::Tests {
             int checks = 0;
         };
 
-        void ExpectMeldEqual(const Meld& shown, const Meld& want, const std::string& where) {
+        void ExpectMeldEqual(const Meld& shown, const Meld& want, const String& where) {
             EXPECT_EQ(shown.kind, want.kind) << where;
             EXPECT_EQ(shown.concealed, want.concealed) << where;
             EXPECT_EQ(shown.first, want.first) << where;
@@ -87,10 +87,10 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(shown.claimed, want.claimed) << where;
         }
 
-        void ExpectOpenMeldsEqual(const eastl::vector<Meld>& shown, const eastl::vector<Meld>& want, const std::string& where) {
+        void ExpectOpenMeldsEqual(const eastl::vector<Meld>& shown, const eastl::vector<Meld>& want, const String& where) {
             ASSERT_EQ(shown.size(), want.size()) << where;
             for (size_t index = 0; index < want.size(); ++index) {
-                ExpectMeldEqual(shown[index], want[index], where + "[" + std::to_string(index) + "]");
+                ExpectMeldEqual(shown[index], want[index], Format("{}[{}]", where, index));
             }
         }
 
@@ -177,7 +177,7 @@ namespace BECore::Mahjong::Tests {
             for (Seat other = 0; other < kSeatCount; ++other) {
                 const PublicSeat& shownSeat = shownView.seats[static_cast<size_t>(other)];
                 const PublicSeat& wantSeat = wantView.seats[static_cast<size_t>(other)];
-                const std::string where = "seats[" + std::to_string(other) + "]";
+                const String where = Format("seats[{}]", other);
                 ExpectOpenMeldsEqual(shownSeat.openMelds, wantSeat.openMelds, where + ".openMelds");
                 EXPECT_EQ(shownSeat.concealedKongs, wantSeat.concealedKongs) << where;
                 EXPECT_EQ(shownSeat.bonus, wantSeat.bonus) << where;
@@ -237,7 +237,7 @@ namespace BECore::Mahjong::Tests {
                     EXPECT_EQ(hand.GetHand(other).bonus, want.GetHand(other).bonus) << "seat " << other;
                     ASSERT_EQ(hand.GetHand(other).melds.size(), want.GetHand(other).melds.size());
                     for (size_t index = 0; index < want.GetHand(other).melds.size(); ++index) {
-                        ExpectMeldEqual(hand.GetHand(other).melds[index], want.GetHand(other).melds[index], "seat " + std::to_string(other));
+                        ExpectMeldEqual(hand.GetHand(other).melds[index], want.GetHand(other).melds[index], Format("seat {}", other));
                     }
                 }
             }
@@ -482,10 +482,10 @@ namespace BECore::Mahjong::Tests {
             }
         }
 
-        std::string Describe(const eastl::vector<HandMove>& moves) {
-            std::string text;
+        String Describe(const eastl::vector<HandMove>& moves) {
+            String text;
             for (const HandMove& move : moves) {
-                text += " " + std::to_string(static_cast<int>(move.kind)) + "/" + std::to_string(move.seat) + "/" + ToStdString(ToString(move.tile)) + "/" + std::to_string(move.from);
+                AppendFormat(text, " {}/{}/{}/{}", static_cast<int>(move.kind), move.seat, ToString(move.tile), move.from);
             }
             return text;
         }

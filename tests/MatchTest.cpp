@@ -129,7 +129,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(MatchTest, DifferentSeedsGiveDifferentMatches) {
-        const std::string first = Snapshot(StartedMatch(MahjongSettings{}, 1).Hand());
+        const String first = Snapshot(StartedMatch(MahjongSettings{}, 1).Hand());
         bool differs = false;
         for (uint32_t seed = 2; seed < 20; ++seed) {
             differs = differs || Snapshot(StartedMatch(MahjongSettings{}, seed).Hand()) != first;
@@ -146,7 +146,7 @@ namespace BECore::Mahjong::Tests {
 
             Match running = StartedMatch();
             ASSERT_TRUE(running.ApplySettlement(SomeoneElseWins(running)).has_value());
-            const std::string before = Snapshot(running.Hand());
+            const String before = Snapshot(running.Hand());
             const SeatScores scores = running.Scores();
             const Seat east = running.East();
 
@@ -258,7 +258,7 @@ namespace BECore::Mahjong::Tests {
     TEST(MatchTest, ADrawnHandIsReplayedByTheSameEastWhenTheSettingSaysSo) {
         Match match = StartedMatch(Settings(kExpectedFullHands, true));
         const Seat east = match.East();
-        const std::string firstHand = Snapshot(match.Hand());
+        const String firstHand = Snapshot(match.Hand());
 
         ASSERT_TRUE(match.ApplySettlement(Drawn(match)).has_value());
 
@@ -366,7 +366,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_TRUE(match.ApplySettlement(SomeoneElseWins(match)).has_value());
         }
         ASSERT_EQ(match.GetPhase(), MatchPhase::InHand);
-        const std::string lastHand = Snapshot(match.Hand());
+        const String lastHand = Snapshot(match.Hand());
 
         ASSERT_TRUE(match.ApplySettlement(MadeUp(match, ResultKind::Win, match.East(), kTransfer)).has_value());
 
@@ -411,7 +411,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MatchTest, EndHandIsRefusedBeforeTheHandIsFinishedAndChangesNothing) {
         Match match = StartedMatch();
-        const std::string before = Snapshot(match.Hand());
+        const String before = Snapshot(match.Hand());
 
         const auto ended = match.EndHand();
 

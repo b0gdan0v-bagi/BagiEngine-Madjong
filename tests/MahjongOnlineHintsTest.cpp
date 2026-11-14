@@ -5,6 +5,7 @@
 #include "MahjongTouchTestSupport.h"
 #include "UiStyleTestSupport.h"
 
+#include <Common/Printers.h>
 #include <Mahjong/Components/MahjongHintsComponent.h>
 #include <Mahjong/Game/ComputerView.h>
 #include <Mahjong/Table/ActionButtons.h>
@@ -40,9 +41,9 @@ namespace BECore::Mahjong::Tests {
 
         /// Each seat in turn discards the next tile of @p tiles; the state after every discard is kept (the room is shown one move at a time, as a client
         /// that stays connected sees it: the log of a hand is inferred from the views, and a gap would coalesce the moves).
-        void Play(std::vector<HandModel>& states, const std::string& tiles, std::initializer_list<Seat> declaring = {}) {
+        void Play(std::vector<HandModel>& states, const String& tiles, std::initializer_list<Seat> declaring = {}) {
             HandModel model = states.back();
-            const eastl::vector<Tile> parsed = ParseTiles(FromStd(tiles)).value();
+            const eastl::vector<Tile> parsed = ParseTiles(tiles).value();
             for (const Tile tile : parsed) {
                 const Seat seat = model.CurrentSeat();
                 const bool declare = eastl::find(declaring.begin(), declaring.end(), seat) != declaring.end();
@@ -222,8 +223,8 @@ namespace BECore::Mahjong::Tests {
         const uint64_t version = _game->GetSession().Version();
         PressHint();
         ASSERT_TRUE(AdviceShown());
-        const eastl::string expected = AdviceText(CoreManager::GetUIStrings(), server, *advice);
-        EXPECT_EQ(Var("hintAdvice"), std::string(expected.c_str(), expected.size()));
+        const String expected = AdviceText(CoreManager::GetUIStrings(), server, *advice);
+        EXPECT_EQ(Var("hintAdvice"), String(expected.c_str(), expected.size()));
         EXPECT_EQ(_game->GetSession().Version(), version) << "a hint never moves the table";
         EXPECT_TRUE(Lists(ActionKind::Discard)) << "and sends nothing";
     }
@@ -263,7 +264,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(ShownWaitCells(), static_cast<int>(expected.size()));
         EXPECT_TRUE(WaitingRowShown());
         for (size_t i = 0; i < expected.size(); ++i) {
-            EXPECT_EQ(Var(("hintCount" + std::to_string(i)).c_str()), std::to_string(expected[i].unseen)) << i;
+            EXPECT_EQ(Var(Format("hintCount{}", i).c_str()), BECore::ToString(expected[i].unseen)) << i;
         }
         EXPECT_FALSE(ButtonShown()) << "it is not the viewer's turn";
         EXPECT_TRUE(RectsOf(kDeclareMark).empty());
@@ -342,7 +343,7 @@ namespace BECore::Mahjong::Tests {
         struct Shown {
             size_t declare = 0;
             size_t dangers = 0;
-            std::string advice;
+            String advice;
             std::vector<uint8_t> visible;
         };
         Shown shown[2];
@@ -397,9 +398,9 @@ namespace BECore::Mahjong::Tests {
             for (const char* language : {"en", "ru"}) {
                 ASSERT_TRUE(_game->SetLanguage(PoolString::Intern(language)));
                 Frame();
-                const eastl::string expected = Tr(CoreManager::GetUIStrings(), test.key);
+                const String expected = Tr(CoreManager::GetUIStrings(), test.key);
                 EXPECT_TRUE(OnScreen("Hints", "RoomHintsText")) << test.key << " " << language;
-                EXPECT_EQ(Var("roomHintsText"), std::string(expected.c_str(), expected.size())) << test.key << " " << language;
+                EXPECT_EQ(Var("roomHintsText"), String(expected.c_str(), expected.size())) << test.key << " " << language;
                 EXPECT_FALSE(expected.empty());
             }
             ASSERT_TRUE(_game->SetLanguage("en"_intern));
@@ -413,8 +414,8 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(StartHintsRoom(true, HintsMode::Off));
         ASSERT_NO_FATAL_FAILURE(LayStates(PlayedStates(kSeat2Hand, kSeat3Hand, false)));
         const auto say = [&](const char* key) {
-            const eastl::string expected = Tr(CoreManager::GetUIStrings(), key);
-            return OnScreen("Hints", "RoomHintsText") && Var("roomHintsText") == std::string(expected.c_str(), expected.size());
+            const String expected = Tr(CoreManager::GetUIStrings(), key);
+            return OnScreen("Hints", "RoomHintsText") && Var("roomHintsText") == String(expected.c_str(), expected.size());
         };
         EXPECT_TRUE(say("online.table.hintsAllowedOff")) << "it says where to switch them on";
 
@@ -457,7 +458,7 @@ namespace BECore::Mahjong::Tests {
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             const UIStrings& strings = CoreManager::GetUIStrings();
-            std::vector<eastl::string> lines;
+            std::vector<String> lines;
             for (const char* key : {"online.table.hintsAllowed", "online.table.hintsAllowedOff", "online.table.hintsOff"}) {
                 lines.push_back(Tr(strings, key));
             }
@@ -465,7 +466,7 @@ namespace BECore::Mahjong::Tests {
             Draw();
             ASSERT_TRUE(OnScreen("Hints", "RoomHintsText"));
             ExpectPassesTheMatrix("Hints", EngineTouchMinimum());
-            const std::vector<std::string> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Hints"), 0.0f);
+            const std::vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Hints"), 0.0f);
             EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
         });
     }
@@ -508,7 +509,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(coach.MatchTally(), (CoachTally{0, 1}));
         ASSERT_TRUE(CardShown());
         const UIStrings& strings = CoreManager::GetUIStrings();
-        const eastl::string tally = CardTallyText(strings, coach.HandTally(), coach.MatchTally());
+        const String tally = CardTallyText(strings, coach.HandTally(), coach.MatchTally());
         EXPECT_EQ(CardVars(), CardTexts(MakeNoteCard(strings, *expected, tally)));
     }
 
@@ -618,7 +619,7 @@ namespace BECore::Mahjong::Tests {
         Frame();
         EXPECT_EQ(coach.MatchTally(), tally) << "the tally survives the hands of the match";
         ASSERT_TRUE(OnScreen("MatchOver", "MatchCoachRow"));
-        const eastl::string expected = FormatCoachTally(CoreManager::GetUIStrings(), CoachTally{}, tally);
+        const String expected = FormatCoachTally(CoreManager::GetUIStrings(), CoachTally{}, tally);
         EXPECT_STREQ(Var("matchOverCoach").c_str(), expected.c_str());
     }
 

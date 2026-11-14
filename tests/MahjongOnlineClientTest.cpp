@@ -55,11 +55,11 @@ namespace BECore::Mahjong::Tests {
             ASSERT_EQ(PhaseOfMatch(game.GetMatch()), SessionPhase::HandOver);
         }
 
-        eastl::string ViewText(const MahjongSeatedGame& game, int seat) {
+        String ViewText(const MahjongSeatedGame& game, int seat) {
             return MakeViewMessage(kRoom, seat, game.GetStateVersion(), false, game.GetSeatView(seat).value(), game.GetSeatActions(seat).value());
         }
 
-        eastl::string LobbyText(int hostSeat, const eastl::vector<LobbySeat>& seats, RoomPhase phase = RoomPhase::Lobby) {
+        String LobbyText(int hostSeat, const eastl::vector<LobbySeat>& seats, RoomPhase phase = RoomPhase::Lobby) {
             LobbySnapshot lobby;
             lobby.room = kRoom;
             lobby.game = kSeatedGameName;
@@ -75,10 +75,6 @@ namespace BECore::Mahjong::Tests {
 
         eastl::vector<LobbySeat> AnnAndBob() {
             return {{0, BECore::SeatKind::Human, "Ann", true}, {1, BECore::SeatKind::Human, "Bob", true}, {2, BECore::SeatKind::Computer, {}, false}, {3, BECore::SeatKind::Computer, {}, false}};
-        }
-
-        std::string Std(const eastl::string& text) {
-            return std::string(text.c_str(), text.size());
         }
 
         class MahjongOnlineClientTest : public ::testing::Test {
@@ -700,8 +696,8 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongOnlineClientTest, ASessionGoesThroughJsonAndResumesInANewClient) {
         EnterAsHost();
-        const eastl::string text = DumpJson(SessionToJson(_client->SessionToKeep()));
-        EXPECT_NE(text.find(kRoom.data()), eastl::string::npos);
+        const String text = DumpJson(SessionToJson(_client->SessionToKeep()));
+        EXPECT_NE(text.find(kRoom.data()), String::npos);
 
         MakeClient();
         const Optional<RoomSession> session = SessionFromJson(ParseJson(text).value());

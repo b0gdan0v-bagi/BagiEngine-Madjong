@@ -1,3 +1,4 @@
+#include <Common/Printers.h>
 #include <Mahjong/Game/HandShape.h>
 #include <Mahjong/Game/MahjongRng.h>
 #include <Mahjong/Game/Shanten.h>
@@ -22,20 +23,20 @@ namespace BECore::Mahjong::Tests {
         /// One tile in this many of a crowded hand is of any kind.
         constexpr uint32_t kStrangerOneIn = 6;
 
-        TileCounts Counts(const std::string& text) {
-            return CountTiles(ParseTiles(FromStd(text)).value());
+        TileCounts Counts(const String& text) {
+            return CountTiles(ParseTiles(text).value());
         }
 
-        int ShantenOf(const std::string& hand, int meldCount = 0) {
+        int ShantenOf(const String& hand, int meldCount = 0) {
             return Shanten(Counts(hand), meldCount);
         }
 
         /// The improving tiles as the notation in the order of the tile ids.
-        std::string Improving(const std::string& hand, int meldCount = 0) {
-            std::string text;
+        String Improving(const String& hand, int meldCount = 0) {
+            String text;
             for (const Tile tile : ImprovingTiles(Counts(hand), meldCount)) {
                 text += text.empty() ? "" : " ";
-                text += ToStd(ToString(tile));
+                AppendFormat(text, "{}", ToString(tile));
             }
             return text;
         }
@@ -170,13 +171,13 @@ namespace BECore::Mahjong::Tests {
                 const int meldCount = i % kSetsInHand;
                 const bool extraTile = (i / kSetsInHand) % 2 == 1;
                 const TileCounts counts = maker.Make(HandSize(meldCount, extraTile));
-                std::string text;
+                String text;
                 for (uint8_t id = 0; id < kKindCount; ++id) {
                     for (int c = 0; c < counts[id]; ++c) {
-                        text += ToStdString(ToString(Tile{id})) + " ";
+                        AppendFormat(text, "{} ", ToString(Tile{id}));
                     }
                 }
-                SCOPED_TRACE(testing::Message() << "hand " << i << ", " << meldCount << " melds: " << text);
+                SCOPED_TRACE(testing::Message() << "hand " << i << ", " << meldCount << " melds: " << text.c_str());
                 check(counts, meldCount);
             }
         }
@@ -195,7 +196,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(ShantenTest, AWaitingHandIsZero) {
-        const std::string sets = "4s 5s 6s 7m 8m 9m Rd Rd Rd";
+        const String sets = "4s 5s 6s 7m 8m 9m Rd Rd Rd";
         EXPECT_EQ(ShantenOf(sets + " Ew Ew 4p 5p"), 0) << "two-sided";
         EXPECT_EQ(ShantenOf(sets + " Ew Ew 1p 2p"), 0) << "edge";
         EXPECT_EQ(ShantenOf(sets + " Ew Ew 4p 6p"), 0) << "middle";
@@ -243,7 +244,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(ShantenTest, MeldsAreNotInTheCountsButCountAsSets) {
-        const std::string tiles = "1p 2p 3p 4s 5s 6s 7m 8m 9m Ew Rd";
+        const String tiles = "1p 2p 3p 4s 5s 6s 7m 8m 9m Ew Rd";
         EXPECT_EQ(ShantenOf(tiles, 1), 0) << "one meld: three sets and two singles are enough to wait";
         EXPECT_EQ(ShantenOf(tiles, 0), 2) << "the same tiles with no meld need a fourth set";
     }

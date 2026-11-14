@@ -1,3 +1,4 @@
+#include <Common/Printers.h>
 #include <Mahjong/Arena/ArenaReport.h>
 #include <cmath>
 #include <gtest/gtest.h>
@@ -24,8 +25,8 @@ namespace BECore::Mahjong::Arena {
         constexpr const char* kRandom = "random";
 
         ArenaPlayer Player(StringView spec) {
-            const std::expected<ArenaPlayer, eastl::string> player = ParseArenaPlayer(spec);
-            EXPECT_TRUE(player.has_value()) << std::string(spec.data(), spec.size());
+            const std::expected<ArenaPlayer, String> player = ParseArenaPlayer(spec);
+            EXPECT_TRUE(player.has_value()) << String(spec.data(), spec.size());
             return player.value_or(ArenaPlayer{});
         }
 
@@ -142,12 +143,8 @@ namespace BECore::Mahjong::Arena {
             return result;
         }
 
-        bool Contains(const eastl::string& text, const char* part) {
-            return text.find(part) != eastl::string::npos;
-        }
-
-        std::string Std(const eastl::string& text) {
-            return std::string(text.c_str(), text.size());
+        bool Contains(const String& text, const char* part) {
+            return text.find(part) != String::npos;
         }
 
     }  // namespace
@@ -351,7 +348,7 @@ namespace BECore::Mahjong::Arena {
         config.count = kMirrorSeeds;
         config.focus = {Player(kNormal), Player(kNormal)};
         config.others = Player(kNormal);
-        const std::expected<ArenaResult, eastl::string> run = RunArena(config);
+        const std::expected<ArenaResult, String> run = RunArena(config);
         ASSERT_TRUE(run.has_value()) << (run.has_value() ? "" : run.error().c_str());
         const FocusResult& focus = run->focus[0];
         const MeanInterval points = MetricInterval(focus, SeedMetric::PointsPerHand);
@@ -372,55 +369,55 @@ namespace BECore::Mahjong::Arena {
             EXPECT_FALSE(IsSignificant(same)) << static_cast<int>(metric);
         }
         // The report of that run says so.
-        const eastl::string text = FormatArenaReport(*run);
-        EXPECT_TRUE(Contains(text, "+0.00 +- 0.00")) << Std(text);
-        EXPECT_FALSE(Contains(text, "significant")) << Std(text);
+        const String text = FormatArenaReport(*run);
+        EXPECT_TRUE(Contains(text, "+0.00 +- 0.00")) << text;
+        EXPECT_FALSE(Contains(text, "significant")) << text;
     }
 
     TEST(ArenaStatsTest, TheReportOfAMadeUpResult) {
-        const eastl::string text = FormatArenaReport(MadeUp(false, true));
-        const std::string expected = "Bot arena: seeds 100 .. 103 (4 seeds, 16 hands per focus player)\n"
-                                     "focus: normal, easy; others: random\n"
-                                     "+- is 1.96 standard errors over the seeds (a 95 percent interval); the 4 rotations of a seed play one wall, so a seed is one sample\n"
-                                     "\n"
-                                     "player                    hands            wins %           points/hand     drawn %  declared %   avg win score\n"
-                                     "normal                       16    25.00 +- 20.00        25.00 +- 63.26        6.25       50.00           37.50\n"
-                                     "  others (per seat)          16             22.92                 -8.33        6.25       50.00           30.00\n"
-                                     "easy                         16      0.00 +- 0.00       -31.25 +- 12.25        6.25       18.75            0.00\n"
-                                     "  others (per seat)          16             31.25                 10.42        6.25        0.00           40.00\n"
-                                     "\n"
-                                     "how the hands end\n"
-                                     "player                        gave win %  self-draw % of wins      standing score  points/lost hand\n"
-                                     "normal                    25.00 +- 20.00                75.00      35.00 +- 12.65            -79.09\n"
-                                     "  others (per seat)                 6.25                45.45               41.50            -77.50\n"
-                                     "easy                      43.75 +- 23.46                 0.00       57.50 +- 6.33            -78.67\n"
-                                     "  others (per seat)                 4.17                40.00               42.40            -76.70\n"
-                                     "gave win %: the hands another seat won on the seat's discard (or by robbing its kong), of all its hands\n"
-                                     "lost hand: a hand another seat won; standing score: the seat's mean score over its lost hands; points/lost hand: its mean change of points over them\n"
-                                     "\n"
-                                     "paired difference against normal (the same seeds)\n"
-                                     "player                           points/hand                         wins %\n"
-                                     "easy                         -56.25 +- 73.16                -25.00 +- 20.00  significant\n"
-                                     "\n"
-                                     "paired difference against normal (the same seeds), how the hands end\n"
-                                     "player                        gave win %                   standing score\n"
-                                     "easy                     +18.75 +- 23.46                  +22.50 +- 16.25  significant\n"
-                                     "\n"
-                                     "score lines in the won hands, % of the won hands (normal: 4 wins, others: 11 wins)\n"
-                                     "line                          normal      others\n"
-                                     "Win                           100.00      100.00\n"
-                                     "WinTileFromWall                25.00        0.00\n"
-                                     "OnlyPungs                       0.00       18.18\n"
-                                     "\n"
-                                     "score lines in the won hands, % of the won hands (easy: 0 wins, others: 15 wins)\n"
-                                     "line                            easy      others\n"
-                                     "Win                             0.00      100.00\n";
-        EXPECT_EQ(Std(text), expected);
+        const String text = FormatArenaReport(MadeUp(false, true));
+        const String expected = "Bot arena: seeds 100 .. 103 (4 seeds, 16 hands per focus player)\n"
+                                "focus: normal, easy; others: random\n"
+                                "+- is 1.96 standard errors over the seeds (a 95 percent interval); the 4 rotations of a seed play one wall, so a seed is one sample\n"
+                                "\n"
+                                "player                    hands            wins %           points/hand     drawn %  declared %   avg win score\n"
+                                "normal                       16    25.00 +- 20.00        25.00 +- 63.26        6.25       50.00           37.50\n"
+                                "  others (per seat)          16             22.92                 -8.33        6.25       50.00           30.00\n"
+                                "easy                         16      0.00 +- 0.00       -31.25 +- 12.25        6.25       18.75            0.00\n"
+                                "  others (per seat)          16             31.25                 10.42        6.25        0.00           40.00\n"
+                                "\n"
+                                "how the hands end\n"
+                                "player                        gave win %  self-draw % of wins      standing score  points/lost hand\n"
+                                "normal                    25.00 +- 20.00                75.00      35.00 +- 12.65            -79.09\n"
+                                "  others (per seat)                 6.25                45.45               41.50            -77.50\n"
+                                "easy                      43.75 +- 23.46                 0.00       57.50 +- 6.33            -78.67\n"
+                                "  others (per seat)                 4.17                40.00               42.40            -76.70\n"
+                                "gave win %: the hands another seat won on the seat's discard (or by robbing its kong), of all its hands\n"
+                                "lost hand: a hand another seat won; standing score: the seat's mean score over its lost hands; points/lost hand: its mean change of points over them\n"
+                                "\n"
+                                "paired difference against normal (the same seeds)\n"
+                                "player                           points/hand                         wins %\n"
+                                "easy                         -56.25 +- 73.16                -25.00 +- 20.00  significant\n"
+                                "\n"
+                                "paired difference against normal (the same seeds), how the hands end\n"
+                                "player                        gave win %                   standing score\n"
+                                "easy                     +18.75 +- 23.46                  +22.50 +- 16.25  significant\n"
+                                "\n"
+                                "score lines in the won hands, % of the won hands (normal: 4 wins, others: 11 wins)\n"
+                                "line                          normal      others\n"
+                                "Win                           100.00      100.00\n"
+                                "WinTileFromWall                25.00        0.00\n"
+                                "OnlyPungs                       0.00       18.18\n"
+                                "\n"
+                                "score lines in the won hands, % of the won hands (easy: 0 wins, others: 15 wins)\n"
+                                "line                            easy      others\n"
+                                "Win                             0.00      100.00\n";
+        EXPECT_EQ(text, expected);
     }
 
     TEST(ArenaStatsTest, OnlyTheScoreLinesThatOccurHaveARow) {
-        const eastl::string text = FormatArenaReport(MadeUp(false, true));
-        EXPECT_TRUE(Contains(text, "Win ")) << Std(text);
+        const String text = FormatArenaReport(MadeUp(false, true));
+        EXPECT_TRUE(Contains(text, "Win ")) << text;
         EXPECT_TRUE(Contains(text, "WinTileFromWall"));
         EXPECT_TRUE(Contains(text, "OnlyPungs"));
         EXPECT_FALSE(Contains(text, "LittleFourWinds"));
@@ -428,25 +425,25 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaStatsTest, TheTimingTableIsThereOnlyWithTiming) {
-        const eastl::string quiet = FormatArenaReport(MadeUp(false, true));
+        const String quiet = FormatArenaReport(MadeUp(false, true));
         EXPECT_FALSE(Contains(quiet, "wall clock"));
         EXPECT_FALSE(Contains(quiet, "per decision"));
         EXPECT_FALSE(Contains(quiet, "decisions"));
-        const eastl::string timed = FormatArenaReport(MadeUp(true, true));
-        EXPECT_TRUE(Contains(timed, "wall clock, not deterministic")) << Std(timed);
+        const String timed = FormatArenaReport(MadeUp(true, true));
+        EXPECT_TRUE(Contains(timed, "wall clock, not deterministic")) << timed;
         EXPECT_TRUE(Contains(timed, "us per decision"));
         // 800000 ns over 400 decisions is 2000 ns, 2 us.
-        EXPECT_TRUE(Contains(timed, "400")) << Std(timed);
+        EXPECT_TRUE(Contains(timed, "400")) << timed;
         EXPECT_TRUE(Contains(timed, "2.00"));
     }
 
     TEST(ArenaStatsTest, TheSameResultGivesTheSameTextTwice) {
         const ArenaResult result = MadeUp(true, true);
-        EXPECT_EQ(Std(FormatArenaReport(result)), Std(FormatArenaReport(result)));
+        EXPECT_EQ(FormatArenaReport(result), FormatArenaReport(result));
     }
 
     TEST(ArenaStatsTest, OneFocusPlayerHasNoPairedTable) {
-        const eastl::string text = FormatArenaReport(MadeUp(false, false));
+        const String text = FormatArenaReport(MadeUp(false, false));
         EXPECT_TRUE(Contains(text, "how the hands end")) << "the table of the hands is there for one player too";
         EXPECT_FALSE(Contains(text, "paired difference"));
         EXPECT_FALSE(Contains(text, "significant"));
@@ -456,14 +453,14 @@ namespace BECore::Mahjong::Arena {
         ArenaResult result = MadeUp(false, false);
         result.count = 1;
         result.focus[0].rows.resize(1);
-        const eastl::string text = FormatArenaReport(result);
-        EXPECT_TRUE(Contains(text, "no interval")) << Std(text);
-        EXPECT_FALSE(Contains(text, "+-")) << Std(text);
+        const String text = FormatArenaReport(result);
+        EXPECT_TRUE(Contains(text, "no interval")) << text;
+        EXPECT_FALSE(Contains(text, "+-")) << text;
     }
 
     TEST(ArenaStatsTest, TheKindTablesCanBeLeftOut) {
-        const eastl::string with = FormatArenaReport(MadeUp(false, true));
-        const eastl::string without = FormatArenaReport(MadeUp(false, true), ArenaReportOptions{.kinds = false});
+        const String with = FormatArenaReport(MadeUp(false, true));
+        const String without = FormatArenaReport(MadeUp(false, true), ArenaReportOptions{.kinds = false});
         EXPECT_TRUE(Contains(with, "score lines"));
         EXPECT_FALSE(Contains(without, "score lines"));
         EXPECT_FALSE(Contains(without, "OnlyPungs"));

@@ -35,15 +35,15 @@ namespace BECore::Mahjong::Tests {
         /// The live wall of a lap: East draws the useless tile, the three others a tile each, then East draws `last`.
         FixedWallSpec LapSpec(const char* last) {
             FixedWallSpec spec = BaseSpec();
-            spec.live = std::string(kUselessTile) + " 4m 6m 8p " + last;
+            spec.live = Format("{} 4m 6m 8p {}", kUselessTile, last);
             return spec;
         }
 
         /// Each seat in turn discards the next tile of `tiles` (a lap's `live`: every seat discards what it has just drawn). These tests
         /// are about the turn, so a claim window that the scattered hands happen to open is passed by every seat (the claims have their
         /// own tests, `HandModelClaimTest`).
-        void DiscardEach(HandModel& model, const std::string& tiles) {
-            const eastl::vector<Tile> parsed = ParseTiles(FromStd(tiles)).value();
+        void DiscardEach(HandModel& model, const String& tiles) {
+            const eastl::vector<Tile> parsed = ParseTiles(tiles).value();
             for (const Tile tile : parsed) {
                 const Seat seat = model.CurrentSeat();
                 const HandStatus status = model.Discard(seat, tile);
@@ -56,7 +56,7 @@ namespace BECore::Mahjong::Tests {
 
         /// The model after East declared on its first discard and the three others discarded what they drew: East is to act again,
         /// holding the last tile of `LapSpec(last)`.
-        HandModel AfterTheDeclaration(const char* last, bool flowers = false, const std::string& loose = "") {
+        HandModel AfterTheDeclaration(const char* last, bool flowers = false, const String& loose = "") {
             FixedWallSpec spec = LapSpec(last);
             spec.loose = loose;
             HandModel model = MakeModel(spec, kSeat0, Wind::East, flowers);
@@ -84,7 +84,7 @@ namespace BECore::Mahjong::Tests {
         SeatWinds twoEast = MakeSeatWinds(kSeat0);
         twoEast[kSeat2] = Wind::East;
         HandModel model = MakeModel(BaseSpec());
-        const std::string before = Snapshot(model);
+        const String before = Snapshot(model);
 
         for (const SeatWinds& winds : {noEast, twoEast}) {
             EXPECT_EQ(Error(model.Begin(MahjongSettings{}, MakeFixedWall(BaseSpec(), false), winds, Wind::East)), HandError::BadSeatWinds);
@@ -146,7 +146,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(HandModelTurnTest, ADiscardMovesTheTurnToTheNextSeatWhoNowHasFourteen) {
         FixedWallSpec spec = BaseSpec();
-        spec.live = std::string(kUselessTile) + " 4m";
+        spec.live = Format("{} 4m", kUselessTile);
         HandModel model = MakeModel(spec);
 
         ASSERT_TRUE(model.Discard(kSeat0, T(kUselessTile)).has_value());
@@ -181,7 +181,7 @@ namespace BECore::Mahjong::Tests {
         FixedWallSpec spec = BaseSpec();
         spec.live = kUselessTile;
         HandModel model = MakeModel(spec);
-        const std::string before = Snapshot(model);
+        const String before = Snapshot(model);
 
         EXPECT_EQ(Error(model.Discard(kSeat1, T("1m"))), HandError::NotYourTurn);
         EXPECT_EQ(Error(model.Discard(-1, T(kUselessTile))), HandError::NotYourTurn);
@@ -194,7 +194,7 @@ namespace BECore::Mahjong::Tests {
         FixedWallSpec spec = BaseSpec();
         spec.live = kUselessTile;
         HandModel model = MakeModel(spec);
-        const std::string before = Snapshot(model);
+        const String before = Snapshot(model);
 
         EXPECT_EQ(Error(model.Discard(kSeat0, T("Gd"))), HandError::TileNotInHand);
         EXPECT_EQ(Error(model.Discard(kSeat0, T("Gd"), true)), HandError::TileNotInHand);
@@ -207,7 +207,7 @@ namespace BECore::Mahjong::Tests {
         spec.liveAfterDeal = 0;
         HandModel model = MakeModel(spec);
         ASSERT_EQ(model.GetPhase(), Phase::Finished);
-        const std::string before = Snapshot(model);
+        const String before = Snapshot(model);
 
         EXPECT_EQ(Error(model.Discard(kSeat0, T(kWaitingTile))), HandError::WrongPhase);
         EXPECT_EQ(Error(model.DeclareWin(kSeat0)), HandError::WrongPhase);
@@ -218,7 +218,7 @@ namespace BECore::Mahjong::Tests {
         FixedWallSpec spec = BaseSpec();
         spec.live = kWaitingTile;
         HandModel model = MakeModel(spec);
-        const std::string before = Snapshot(model);
+        const String before = Snapshot(model);
 
         EXPECT_EQ(Error(model.DeclareWin(kSeat0)), HandError::NotCalling);
         EXPECT_EQ(Snapshot(model), before);
@@ -230,7 +230,7 @@ namespace BECore::Mahjong::Tests {
         FixedWallSpec spec = BaseSpec();
         spec.live = kUselessTile;
         HandModel model = MakeModel(spec);
-        const std::string before = Snapshot(model);
+        const String before = Snapshot(model);
 
         EXPECT_EQ(Error(model.Discard(kSeat0, T(kNeededTile), true)), HandError::NotWaiting);
         EXPECT_EQ(Snapshot(model), before);
@@ -257,7 +257,7 @@ namespace BECore::Mahjong::Tests {
     TEST(HandModelTurnTest, ADeclarationOnALaterDiscardStoresTheNumberOfEarlierDiscards) {
         FixedWallSpec spec = LapSpec(kUselessTile);
         HandModel model = MakeModel(spec);
-        DiscardEach(model, std::string(kUselessTile) + " 4m 6m 8p");
+        DiscardEach(model, Format("{} 4m 6m 8p", kUselessTile));
         ASSERT_EQ(model.CurrentSeat(), kSeat0);
 
         ASSERT_TRUE(model.Discard(kSeat0, T(kUselessTile), true).has_value());
@@ -270,7 +270,7 @@ namespace BECore::Mahjong::Tests {
     TEST(HandModelTurnTest, ASeatThatHasDeclaredCannotDeclareAgain) {
         HandModel model = AfterTheDeclaration("5m");
         ASSERT_EQ(model.CurrentSeat(), kSeat0);
-        const std::string before = Snapshot(model);
+        const String before = Snapshot(model);
 
         EXPECT_EQ(Error(model.Discard(kSeat0, T("5m"), true)), HandError::AlreadyCalling);
         EXPECT_EQ(Snapshot(model), before);
@@ -317,7 +317,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(HandModelTurnTest, ADeclaredSeatWithoutAWinningHandCannotWin) {
         HandModel model = AfterTheDeclaration("5m");
-        const std::string before = Snapshot(model);
+        const String before = Snapshot(model);
 
         EXPECT_EQ(Error(model.DeclareWin(kSeat0)), HandError::CannotWin);
         EXPECT_EQ(Snapshot(model), before);
@@ -369,7 +369,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(HandModelTurnTest, ASelfDrawWinOnAReplacementTileCountsAsLoose) {
         // East declared, the others discard, East draws a flower and its replacement is the winning tile.
-        HandModel model = AfterTheDeclaration("F1", true, std::string(kWaitingTile) + " 3s");
+        HandModel model = AfterTheDeclaration("F1", true, Format("{} 3s", kWaitingTile));
         ASSERT_EQ(model.CurrentSeat(), kSeat0);
         EXPECT_EQ(model.GetHand(kSeat0).bonus.size(), 1u);
 
@@ -402,7 +402,7 @@ namespace BECore::Mahjong::Tests {
         // The five live tiles of the lap are drawn; the sixth is the refill that the loose draw takes from the live tail.
         constexpr int kLiveWithOneRefill = 6;
         FixedWallSpec spec = LapSpec("F1");
-        spec.loose = std::string(kWaitingTile) + " 3s 5s";
+        spec.loose = Format("{} 3s 5s", kWaitingTile);
         spec.liveAfterDeal = kLiveWithOneRefill;
         HandModel model = MakeModel(spec, kSeat0, Wind::East, true);
         ASSERT_TRUE(model.Discard(kSeat0, T(kUselessTile), true).has_value());
@@ -420,7 +420,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(HandModelTurnTest, ABonusTileDrawnByAnotherSeatIsReplacedToo) {
         FixedWallSpec spec = BaseSpec();
-        spec.live = std::string(kUselessTile) + " T2";
+        spec.live = Format("{} T2", kUselessTile);
         spec.loose = "Gd 3s";
         HandModel model = MakeModel(spec, kSeat0, Wind::East, true);
 
@@ -434,10 +434,10 @@ namespace BECore::Mahjong::Tests {
 
     TEST(HandModelTurnTest, AnEmptyLiveWallEndsTheHandAsDrawnWhenTheNextDrawIsDue) {
         FixedWallSpec spec = BaseSpec();
-        spec.live = std::string(kUselessTile) + " 4m";
+        spec.live = Format("{} 4m", kUselessTile);
         spec.liveAfterDeal = 2;
         HandModel model = MakeModel(spec);
-        DiscardEach(model, std::string(kUselessTile) + " 4m");
+        DiscardEach(model, Format("{} 4m", kUselessTile));
 
         // 4m was the last live tile; it is discarded and seat 2 finds nothing to draw.
         EXPECT_EQ(model.GetPhase(), Phase::Finished);

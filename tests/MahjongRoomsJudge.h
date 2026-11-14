@@ -22,31 +22,32 @@ namespace BECore::Mahjong::Tests {
 
     namespace RoomsJudgeDetail {
 
-        using Offences = std::vector<std::string>;
-        using KeySet = std::set<std::string>;
+        using Offences = std::vector<String>;
+        using KeySet = std::set<String>;
 
         constexpr int kJudgedSeatCount = 4;
 
-        inline void Offend(Offences& offences, const std::string& where, const std::string& what) {
-            offences.push_back(where + ": " + what);
+        inline void Offend(Offences& offences, const String& where, const String& what) {
+            offences.push_back(Format("{}: {}", where, what));
         }
 
         /// The object has every key of @p required and no key beyond @p required and @p optional.
-        inline bool CheckKeys(const Json& value, const std::string& where, const KeySet& required, const KeySet& optional, Offences& offences) {
+        inline bool CheckKeys(const Json& value, const String& where, const KeySet& required, const KeySet& optional, Offences& offences) {
             if (!value.is_object()) {
                 Offend(offences, where, "is not an object");
                 return false;
             }
             bool good = true;
             for (const auto& item : value.items()) {
-                if (!required.contains(item.key()) && !optional.contains(item.key())) {
-                    Offend(offences, where, "has the key '" + item.key() + "' that the schema does not know");
+                const String key = FromStdString(item.key());
+                if (!required.contains(key) && !optional.contains(key)) {
+                    Offend(offences, where, Format("has the key '{}' that the schema does not know", key));
                     good = false;
                 }
             }
-            for (const std::string& key : required) {
-                if (!value.contains(key)) {
-                    Offend(offences, where, "lacks the key '" + key + "'");
+            for (const String& key : required) {
+                if (!value.contains(ToStd(key))) {
+                    Offend(offences, where, Format("lacks the key '{}'", key));
                     good = false;
                 }
             }
@@ -81,21 +82,21 @@ namespace BECore::Mahjong::Tests {
             return value.is_boolean();
         }
 
-        inline void CheckList(const Json& object, const char* key, bool (*isItem)(const Json&), const char* what, const std::string& where, Offences& offences) {
+        inline void CheckList(const Json& object, const char* key, bool (*isItem)(const Json&), const char* what, const String& where, Offences& offences) {
             const Json* list = Member(object, key);
             if (list != nullptr && !IsListOf(*list, isItem)) {
-                Offend(offences, where + "." + key, std::string("is not a list of ") + what);
+                Offend(offences, Format("{}.{}", where, key), Format("is not a list of {}", what));
             }
         }
 
-        inline void CheckNumber(const Json& object, const char* key, const std::string& where, Offences& offences) {
+        inline void CheckNumber(const Json& object, const char* key, const String& where, Offences& offences) {
             const Json* number = Member(object, key);
             if (number != nullptr && !number->is_number_integer()) {
                 Offend(offences, where + "." + key, "is not an integer");
             }
         }
 
-        inline void CheckMeld(const Json& meld, const std::string& where, bool mustBeOpen, Offences& offences) {
+        inline void CheckMeld(const Json& meld, const String& where, bool mustBeOpen, Offences& offences) {
             if (!CheckKeys(meld, where, {"kind", "tiles", "concealed", "from", "fromDiscard", "claimed"}, {}, offences)) {
                 return;
             }
@@ -108,7 +109,7 @@ namespace BECore::Mahjong::Tests {
             }
         }
 
-        inline void CheckMelds(const Json& owner, const std::string& where, bool mustBeOpen, Offences& offences) {
+        inline void CheckMelds(const Json& owner, const String& where, bool mustBeOpen, Offences& offences) {
             const Json* melds = Member(owner, "melds");
             if (melds == nullptr || !melds->is_array()) {
                 Offend(offences, where + ".melds", "is not a list");
@@ -116,12 +117,12 @@ namespace BECore::Mahjong::Tests {
             }
             size_t index = 0;
             for (const Json& meld : *melds) {
-                CheckMeld(meld, where + ".melds[" + std::to_string(index++) + "]", mustBeOpen, offences);
+                CheckMeld(meld, Format("{}.melds[{}]", where, index++), mustBeOpen, offences);
             }
         }
 
         inline void CheckSeatEntry(const Json& entry, int index, int viewer, Offences& offences) {
-            const std::string where = "view.seats[" + std::to_string(index) + "]";
+            const String where = Format("view.seats[{}]", index);
             if (!CheckKeys(entry, where, {"wind", "score", "concealedCount", "melds", "concealedKongs", "bonus", "discardCount", "calling"}, {}, offences)) {
                 return;
             }
@@ -133,7 +134,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         inline void CheckResult(const Json& result, Offences& offences) {
-            const std::string where = "view.result";
+            const String where = "view.result";
             if (!CheckKeys(result, where, {"kind", "winner", "winningTile", "source", "from", "loose", "lastLiveTile", "seats", "scores", "deltas"}, {}, offences)) {
                 return;
             }
@@ -144,7 +145,7 @@ namespace BECore::Mahjong::Tests {
             }
             int index = 0;
             for (const Json& entry : *seats) {
-                const std::string at = where + ".seats[" + std::to_string(index++) + "]";
+                const String at = Format("{}.seats[{}]", where, index++);
                 if (!CheckKeys(entry, at, {"concealed", "melds", "bonus", "breakdown"}, {}, offences)) {
                     continue;
                 }
@@ -156,15 +157,16 @@ namespace BECore::Mahjong::Tests {
         }
 
         inline void CheckState(const Json& state, int seat, Offences& offences) {
-            const std::string where = "view";
+            const String where = "view";
             if (!CheckKeys(state, where,
                            {"phase", "seat", "seatWind", "roundWind", "east", "hand", "turn", "seats", "discards", "wall", "handsPlayed", "handsTotal", "version", "ready", "format", "hintsAllowed"},
                            {"result"}, offences)) {
                 return;
             }
             const Json& phase = state["phase"];
-            const bool playing = phase.is_string() && phase.get<std::string>() == "playing";
-            const bool known = playing || (phase.is_string() && (phase.get<std::string>() == "hand_over" || phase.get<std::string>() == "match_over"));
+            const String phaseName = phase.is_string() ? FromStdString(phase.get<std::string>()) : String();  //-NoStd: nlohmann reads a string as std::string
+            const bool playing = phaseName == "playing";
+            const bool known = playing || phaseName == "hand_over" || phaseName == "match_over";
             if (!known) {
                 Offend(offences, "view.phase", "is not playing, hand_over or match_over");
             }
@@ -247,7 +249,7 @@ namespace BECore::Mahjong::Tests {
                 if (CheckKeys(*options, "lobby.options", {}, {"hands", "level", "hintsAllowed"}, offences)) {
                     for (auto it = options->begin(); it != options->end(); ++it) {
                         if (!it.value().is_boolean() && !it.value().is_number_integer()) {
-                            Offend(offences, "lobby.options." + it.key(), "is not a boolean or an integer");
+                            Offend(offences, Format("lobby.options.{}", it.key()), "is not a boolean or an integer");
                         }
                     }
                 }
@@ -283,7 +285,7 @@ namespace BECore::Mahjong::Tests {
                     if (CheckKeys(*options, "rooms.rooms[].options", {}, {"hands", "level", "hintsAllowed"}, offences)) {
                         for (auto it = options->begin(); it != options->end(); ++it) {
                             if (!it.value().is_boolean() && !it.value().is_number_integer()) {
-                                Offend(offences, "rooms.rooms[].options." + it.key(), "is not a boolean or an integer");
+                                Offend(offences, Format("rooms.rooms[].options.{}", it.key()), "is not a boolean or an integer");
                             }
                         }
                     }
@@ -295,7 +297,7 @@ namespace BECore::Mahjong::Tests {
 
     /// What is wrong with one text that a client received; empty when nothing. @p seat is the seat the client holds (from its `joined`),
     /// -1 before it has one. A text that is not a JSON object is an offence.
-    inline std::vector<std::string> JudgeRoomMessage(StringView text, int seat) {
+    inline std::vector<String> JudgeRoomMessage(StringView text, int seat) {
         using namespace RoomsJudgeDetail;
         Offences offences;
         const auto parsed = ParseJson(text);
@@ -309,7 +311,7 @@ namespace BECore::Mahjong::Tests {
             offences.push_back("message: has no type");
             return offences;
         }
-        const std::string name = type->get<std::string>();
+        const String name = FromStdString(type->get<std::string>());  //-NoStd: nlohmann reads a string as std::string
         if (name == "view") {
             CheckView(root, seat, offences);
         } else if (name == "lobby") {
@@ -334,9 +336,9 @@ namespace BECore::Mahjong::Tests {
     class RoomsJudgeLog {
     public:
         /// Judges @p text for the client of @p seat; the offences are kept and returned.
-        std::vector<std::string> Text(StringView text, int seat) {
+        std::vector<String> Text(StringView text, int seat) {
             ++_texts;
-            std::vector<std::string> offences = JudgeRoomMessage(text, seat);
+            std::vector<String> offences = JudgeRoomMessage(text, seat);
             _offences.insert(_offences.end(), offences.begin(), offences.end());
             return offences;
         }
@@ -354,14 +356,14 @@ namespace BECore::Mahjong::Tests {
             return _nonText;
         }
 
-        [[nodiscard]] const std::vector<std::string>& Offences() const {
+        [[nodiscard]] const std::vector<String>& Offences() const {
             return _offences;
         }
 
     private:
         size_t _texts = 0;
         size_t _nonText = 0;
-        std::vector<std::string> _offences;
+        std::vector<String> _offences;
     };
 
 }  // namespace BECore::Mahjong::Tests

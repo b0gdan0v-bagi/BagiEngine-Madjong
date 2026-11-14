@@ -125,7 +125,7 @@ namespace BECore::Mahjong::Tests {
         constexpr const char* kOther3 = "3p 6p 9p 3s 6s 9s 4m 7m Gd Wd 2m 7p 8s";
         constexpr const char* kPartials = "3p 4p 6p 7p 3s 4s 6s 7s 1m 9m Nw";
 
-        HandModel WindowModel(const std::string& seat1, const char* discard) {
+        HandModel WindowModel(const String& seat1, const char* discard) {
             FixedWallSpec spec;
             spec.hands[kSeat0] = kEast;
             spec.hands[kSeat1] = seat1;
@@ -371,7 +371,7 @@ namespace BECore::Mahjong::Tests {
     TEST(ComputerLevelTest, AValuePungAtEqualShantenIsTakenByNormalAndPassedWhenTheKnobIsOff) {
         // Four partial sets, a pair of the red dragon and three single tiles: the pung leaves the shanten as it is, and a dragon scores
         // a double.
-        const HandModel model = WindowModel(std::string(kPartials) + " Rd Rd", "Rd");
+        const HandModel model = WindowModel(Format("{} Rd Rd", kPartials), "Rd");
         LevelProfile picky = kNormalProfile;
         picky.takeValueClaimsAtEqualShanten = false;
 

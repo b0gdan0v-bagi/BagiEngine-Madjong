@@ -1,4 +1,5 @@
 #include <Common/EngineEnvironment.h>
+#include <Common/Printers.h>
 #include <Mahjong/MatchLogJson.h>
 #include <Mahjong/WebUploadSink.h>
 #include <gtest/gtest.h>
@@ -31,19 +32,19 @@ namespace BECore::Mahjong::Tests {
         class FakePoster final : public IWebPoster {
         public:
             struct Post {
-                std::string path;
-                std::string body;
+                String path;
+                String body;
             };
 
             [[nodiscard]] bool Available() const override {
                 return available;
             }
 
-            std::expected<WebPostId, eastl::string> Start(StringView path, StringView body) override {
+            std::expected<WebPostId, String> Start(StringView path, StringView body) override {
                 if (refuseStart) {
-                    return std::unexpected(eastl::string("refused"));
+                    return std::unexpected(String("refused"));
                 }
-                posts.push_back({std::string(path.data(), path.size()), std::string(body.data(), body.size())});
+                posts.push_back({String(path.data(), path.size()), String(body.data(), body.size())});
                 pending = static_cast<WebPostId>(posts.size());
                 answered = false;
                 return pending;
@@ -418,7 +419,7 @@ namespace BECore::Mahjong::Tests {
         MatchLog log;
         uploader.SetNext(&log);
         uploader.SetSink(&fixture.sink);
-        uploader.SetMatchIdSource([] { return eastl::string("0123456789abcdef0123456789abcdef"); });
+        uploader.SetMatchIdSource([] { return String("0123456789abcdef0123456789abcdef"); });
         uploader.SetConsent(UploadConsent::Granted, true);
         session.SetLogSink(&uploader);
         MahjongSettings settings;
@@ -434,7 +435,7 @@ namespace BECore::Mahjong::Tests {
 
         // The server is unavailable once, then answers; a piece posted twice is the same bytes
         double now = kStart;
-        std::map<std::string, std::string> byPath;
+        std::map<String, String> byPath;
         size_t seen = 0;
         for (int frame = 0; frame < 100 && fixture.sink.QueuedPieces() > 0; ++frame) {
             fixture.sink.Pump(now);
@@ -456,7 +457,7 @@ namespace BECore::Mahjong::Tests {
         for (const auto& [path, body] : byPath) {
             UploadPiece piece;
             piece.matchId = "0123456789abcdef0123456789abcdef";
-            piece.index = static_cast<uint32_t>(std::stoul(path.substr(path.rfind('/') + 1)));
+            piece.index = static_cast<uint32_t>(std::stoul(path.substr(path.rfind('/') + 1).c_str()));
             piece.lines.assign(body.data(), body.size());
             pieces.push_back(piece);
         }

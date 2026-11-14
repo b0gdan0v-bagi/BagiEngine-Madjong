@@ -58,7 +58,7 @@ namespace BECore::Mahjong::Tests {
 
         // East has declared the waiting `hand` (it draws a Gd on its first turn and discards it) and then draws `fourth`.
         HandModel DeclaredPungModel(const char* hand, const char* fourth) {
-            FixedWallSpec spec = SpecOf(hand, std::string("Gd Wd Gd Nw ") + fourth);
+            FixedWallSpec spec = SpecOf(hand, Format("Gd Wd Gd Nw {}", fourth));
             HandModel model = MakeModel(spec);
             Lap(model, "Gd Wd Gd Nw", {kSeat0});
             return model;
@@ -245,12 +245,12 @@ namespace BECore::Mahjong::Tests {
     TEST(ComputerTurnTest, TheRoundWindIsAValueHonourToo) {
         // Round wind South: the south wind is kept; the west wind and the north wind are worthless, either of them goes (not the south).
         const HandModel model = MakeModel(SpecOf("1s 2s 3s 4s 5s 6s 7m 8m 9m 5p 5p Sw Ww", "Nw"), kSeat0, Wind::South);
-        std::set<std::string> discarded;
+        std::set<String> discarded;
 
         for (uint32_t seed = 1; seed <= 16; ++seed) {
             const HandAction action = Choice(model, kSeat0, seed);
             ASSERT_EQ(action.kind, ActionKind::Discard) << "rng seed " << seed;
-            discarded.insert(ToStdString(ToString(action.tile)));
+            discarded.insert(String(ToString(action.tile)));
         }
 
         EXPECT_EQ(discarded.count("Sw"), 0u);

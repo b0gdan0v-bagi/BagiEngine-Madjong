@@ -23,7 +23,7 @@ namespace BECore::Mahjong::Tests {
             spec.hands[kSeat1] = "4p 4p 7p 1s 4s 7s 2m 5m 8m Sw Ww Rd 9p";
             spec.hands[kSeat2] = "3p 5p 4s 5s 6s 7m 8m 9m Ew Ew Ew 1m 1m";
             spec.hands[kSeat3] = "2p 5p 8p 2s 5s 8s 2m 5m 8m Rd Wd Nw 9s";
-            spec.live = std::string("Wd Gd Nw ") + kPriorityTile;
+            spec.live = Format("Wd Gd Nw {}", kPriorityTile);
             HandModel model = MakeModel(spec);
             Lap(model, "Wd Gd Nw", {kSeat2});
             EXPECT_TRUE(model.GetHand(kSeat2).callingDeclared);
@@ -239,7 +239,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(model.LastClaimWindow()->serial, 1);
         EXPECT_EQ(model.LastClaimWindow()->from, kSeat0);
         EXPECT_EQ(model.LastClaimWindow()->winner, kSeat1);
-        const std::string open = Snapshot(model);
+        const String open = Snapshot(model);
 
         // An action that is refused (seat 3 is not in the window, seat 1 is the discarder) changes nothing, the record included.
         EXPECT_EQ(Error(model.Claim(kSeat3, ClaimKind::Pung)), HandError::NotYourTurn);
@@ -263,7 +263,7 @@ namespace BECore::Mahjong::Tests {
     TEST(HandModelWindowTest, ARefusedClaimLeavesTheWindowAndTheRecordAlone) {
         HandModel model = PriorityWindow();
         ASSERT_TRUE(model.Claim(kSeat0, ClaimKind::Chow, T(kPriorityChow)).has_value());
-        const std::string decided = Snapshot(model);
+        const String decided = Snapshot(model);
 
         EXPECT_EQ(Error(model.Claim(kSeat0, ClaimKind::Chow, T(kPriorityChow))), HandError::AlreadyDecided);
         EXPECT_EQ(Error(model.Pass(kSeat0)), HandError::AlreadyDecided);

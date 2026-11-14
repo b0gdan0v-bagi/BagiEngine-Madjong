@@ -58,7 +58,7 @@ namespace BECore::Mahjong::Tests {
         FixedWallSpec ConcealedKongSpec() {
             FixedWallSpec spec = QuietSpec();
             spec.live = kEast;
-            spec.loose = std::string(kLoose) + " 4s";
+            spec.loose = Format("{} 4s", kLoose);
             return spec;
         }
 
@@ -81,11 +81,11 @@ namespace BECore::Mahjong::Tests {
             // Seats 2 and 3 wait on the 5p, and declare when a test says so.
             spec.hands[kSeat2] = "4p 6p 1s 2s 3s 4m 5m 6m 7s 8s 9s Ew Ew";
             spec.hands[kSeat3] = "4p 6p 1m 2m 3m 4s 5s 6s 7m 8m 9m Ww Ww";
-            spec.live = std::string(kFifth) + " Rd Gd Wd " + lastDraw;
+            spec.live = Format("{} Rd Gd Wd {}", kFifth, lastDraw);
             if (secondLapDraws[0] != '\0') {
-                spec.live += std::string(" ") + secondLapDraws;
+                spec.live += Format(" {}", secondLapDraws);
             }
-            spec.loose = std::string(kUpgradeLoose) + " 9s";
+            spec.loose = Format("{} 9s", kUpgradeLoose);
             return spec;
         }
 
@@ -120,8 +120,8 @@ namespace BECore::Mahjong::Tests {
             spec.hands[kSeat1] = kQuiet1;
             spec.hands[kSeat2] = kQuiet2;
             spec.hands[kSeat3] = kQuiet3;
-            spec.live = std::string(kFirstDiscard) + " Wd Gd Nw " + kEast;
-            spec.loose = std::string(kWaitingTile) + " Sw 1m";
+            spec.live = Format("{} Wd Gd Nw {}", kFirstDiscard, kEast);
+            spec.loose = Format("{} Sw 1m", kWaitingTile);
             return spec;
         }
 
@@ -129,7 +129,7 @@ namespace BECore::Mahjong::Tests {
             FixedWallSpec spec = LooseWinSpec();
             spec.liveAfterDeal = liveAfterDeal;
             HandModel model = MakeModel(spec);
-            Lap(model, std::string(kFirstDiscard) + " Wd Gd Nw", {kSeat0});
+            Lap(model, Format("{} Wd Gd Nw", kFirstDiscard), {kSeat0});
             EXPECT_TRUE(model.GetHand(kSeat0).callingDeclared);
             EXPECT_EQ(model.CurrentSeat(), kSeat0);
             EXPECT_EQ(model.GetHand(kSeat0).CountConcealed(T(kEast)), kCopiesPerTile);
@@ -185,7 +185,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(HandModelKongTest, AConcealedKongThatIsNotPossibleIsRefusedAndNothingChanges) {
         HandModel model = MakeModel(ConcealedKongSpec());
-        const std::string before = Snapshot(model);
+        const String before = Snapshot(model);
 
         EXPECT_EQ(Error(model.DeclareConcealedKong(kSeat1, T(kEast))), HandError::NotYourTurn);
         EXPECT_EQ(Error(model.DeclareConcealedKong(-1, T(kEast))), HandError::NotYourTurn);
@@ -202,7 +202,7 @@ namespace BECore::Mahjong::Tests {
         spec.live = "Sw";
         HandModel model = MakeModel(spec);
         ASSERT_TRUE(model.DeclareConcealedKong(kSeat0, T("Sw")).has_value());
-        const std::string before = Snapshot(model);
+        const String before = Snapshot(model);
 
         EXPECT_EQ(Error(model.DeclareConcealedKong(kSeat0, T(kEast))), HandError::IllegalKong);
         EXPECT_EQ(Snapshot(model), before);
@@ -213,7 +213,7 @@ namespace BECore::Mahjong::Tests {
         spec.liveAfterDeal = 0;
         HandModel finished = MakeModel(spec);
         ASSERT_EQ(finished.GetPhase(), Phase::Finished);
-        const std::string before = Snapshot(finished);
+        const String before = Snapshot(finished);
 
         EXPECT_EQ(Error(finished.DeclareConcealedKong(kSeat0, T(kEast))), HandError::WrongPhase);
         EXPECT_EQ(Error(finished.UpgradeKong(kSeat0, T(kEast))), HandError::WrongPhase);
@@ -355,7 +355,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(HandModelKongTest, AnUpgradeNeedsAnOpenPungOfThatTile) {
         HandModel model = UpgradeModel();
-        const std::string before = Snapshot(model);
+        const String before = Snapshot(model);
 
         EXPECT_EQ(Error(model.UpgradeKong(kSeat2, T(kFifth))), HandError::NotYourTurn);
         EXPECT_EQ(Error(model.UpgradeKong(kSeat1, T("8p"))), HandError::IllegalKong);  // no pung of 8p
@@ -369,7 +369,7 @@ namespace BECore::Mahjong::Tests {
         HandModel model = UpgradeModel({}, "8p");
         ASSERT_EQ(model.GetHand(kSeat1).melds.size(), 1u);
         ASSERT_EQ(model.GetHand(kSeat1).CountConcealed(T(kFifth)), 0);
-        const std::string before = Snapshot(model);
+        const String before = Snapshot(model);
 
         EXPECT_EQ(Error(model.UpgradeKong(kSeat1, T(kFifth))), HandError::IllegalKong);
         EXPECT_EQ(Snapshot(model), before);
@@ -385,7 +385,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(model.CurrentSeat(), kSeat1);
         ASSERT_EQ(model.GetHand(kSeat1).CountConcealed(T(kFifth)), 1);
         ASSERT_EQ(model.GetHand(kSeat1).CountConcealed(T(kNextDraw)), 2);
-        const std::string before = Snapshot(model);
+        const String before = Snapshot(model);
 
         EXPECT_EQ(Error(model.UpgradeKong(kSeat1, T(kFifth))), HandError::IllegalKong);
         EXPECT_EQ(Error(model.Apply(kSeat1, HandAction::MakeUpgradeKong(T(kFifth)))), HandError::IllegalKong);
@@ -407,7 +407,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(model.GetPhase(), Phase::Discard);
         ASSERT_EQ(model.CurrentSeat(), kSeat1);
         ASSERT_EQ(model.GetHand(kSeat1).CountConcealed(T(kFifth)), 1);
-        const std::string before = Snapshot(model);
+        const String before = Snapshot(model);
 
         EXPECT_EQ(Error(model.UpgradeKong(kSeat1, T(kFifth))), HandError::IllegalKong);
         EXPECT_EQ(Snapshot(model), before);
@@ -507,7 +507,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(model.LegalClaims(kSeat0).empty());
         EXPECT_TRUE(model.LegalClaims(kSeat1).empty());
 
-        const std::string before = Snapshot(model);
+        const String before = Snapshot(model);
         EXPECT_EQ(Error(model.Claim(kSeat2, ClaimKind::Pung)), HandError::IllegalClaim);
         EXPECT_EQ(Error(model.Claim(kSeat2, ClaimKind::Kong)), HandError::IllegalClaim);
         EXPECT_EQ(Error(model.Claim(kSeat2, ClaimKind::Chow, T("4p"))), HandError::IllegalClaim);

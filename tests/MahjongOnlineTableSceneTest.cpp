@@ -4,6 +4,7 @@
 #include <BECore/Control/Json.h>
 #include <BECore/UI/UIImageComponent.h>
 #include <BECore/UI/UIInputClicker.h>
+#include <Common/Printers.h>
 #include <Common/TempPath.h>
 #include <Mahjong/Online/OnlineWords.h>
 #include <Mahjong/Save/MatchSave.h>
@@ -25,7 +26,7 @@ namespace BECore::Mahjong::Tests {
 
     class MahjongOnlineTableSceneTest : public MahjongOnlineTableTestBase {
     protected:
-        std::string Text(const char* node, const char* element) const {
+        String Text(const char* node, const char* element) const {
             return DisplayText(Element(node, element));
         }
 
@@ -37,9 +38,9 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The room's name of the player at @p seat, as the lobby has it.
-        std::string LobbyName(Seat seat) const {
-            const eastl::string& name = _game->GetOnline().Lobby().seats[static_cast<size_t>(seat)].name;
-            return std::string(name.c_str(), name.size());
+        String LobbyName(Seat seat) const {
+            const String& name = _game->GetOnline().Lobby().seats[static_cast<size_t>(seat)].name;
+            return String(name.c_str(), name.size());
         }
 
         /// Frames until the hand is over for the game's client: the others and the client itself play on (the first action of each list) and stop short of the first `next_hand`.
@@ -153,17 +154,17 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The files of the save folder that hold the match, by name.
-        std::vector<std::pair<std::string, std::string>> MatchSlot() const {
-            std::vector<std::pair<std::string, std::string>> files;
+        std::vector<std::pair<String, String>> MatchSlot() const {
+            std::vector<std::pair<String, String>> files;
             for (const auto& entry : std::filesystem::directory_iterator(_folder)) {
-                const std::string name = entry.path().filename().string();
-                if (name.find(std::string(kMatchSlot.data(), kMatchSlot.size())) == std::string::npos) {
+                const String name = FromStdString(entry.path().filename().string());
+                if (name.find(String(kMatchSlot.data(), kMatchSlot.size())) == String::npos) {
                     continue;
                 }
                 std::ifstream in(entry.path(), std::ios::binary);
                 std::ostringstream content;
                 content << in.rdbuf();
-                files.emplace_back(name, content.str());
+                files.emplace_back(name, FromStdString(content.str()));
             }
             return files;
         }
@@ -180,7 +181,7 @@ namespace BECore::Mahjong::Tests {
         _game->OpenSetup();
         Frame();
         Frame();
-        const std::vector<std::pair<std::string, std::string>> savedBefore = MatchSlot();
+        const std::vector<std::pair<String, String>> savedBefore = MatchSlot();
         ASSERT_FALSE(savedBefore.empty()) << "the local match is saved";
         const bool canContinue = _game->CanContinue();
         const Match* const local = &_game->GetLocalMatch();
@@ -356,17 +357,17 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(IsSeat(viewer));
         for (int position = 0; position < kSeatCount; ++position) {
             const Seat seat = SeatAtPosition(viewer, position);
-            const std::string expected = LobbyName(seat) + (seat == viewer ? " You" : "");
+            const String expected = Format("{}{}", LobbyName(seat), seat == viewer ? " You" : "");
             EXPECT_EQ(Var(Format("plateName{}", position).c_str()), expected) << "position " << position;
             EXPECT_EQ(Text("SeatPlates", Format("PlateName{}", position).c_str()), expected);
         }
-        EXPECT_EQ(Var("plateName0"), std::string(kHostName) + " You") << "the host sits at seat 0 and at the bottom";
+        EXPECT_EQ(Var("plateName0"), Format("{} You", kHostName)) << "the host sits at seat 0 and at the bottom";
         EXPECT_EQ(Var("panelRound"), "East 1") << "the centre panel follows the display match";
-        EXPECT_EQ(Var("panelWall"), "Wall " + std::to_string(Hand().GetWall().LiveCount()));
+        EXPECT_EQ(Var("panelWall"), Format("Wall {}", Hand().GetWall().LiveCount()));
 
         ASSERT_TRUE(_game->SetLanguage("ru"_intern));
         Frame();
-        EXPECT_EQ(Var("plateName0"), std::string(kHostName) + " Вы");
+        EXPECT_EQ(Var("plateName0"), Format("{} Вы", kHostName));
         EXPECT_EQ(Var("panelRound"), "Восток 1");
     }
 
@@ -409,7 +410,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Stage() == OnlineStage::Reconnecting; }));
         Frame();
         EXPECT_TRUE(_game->IsOnlineTable()) << "the last view stays";
-        const std::string status = std::string(OnlineNoticeText(CoreManager::GetUIStrings(), kOnlineReconnectingKey).c_str());
+        const String status = String(OnlineNoticeText(CoreManager::GetUIStrings(), kOnlineReconnectingKey).c_str());
         EXPECT_EQ(Var("lastMove"), status);
         EXPECT_TRUE(OnScreen("Hud", "MoveLine"));
         EXPECT_EQ(Text("Hud", "MoveText"), status);
@@ -419,7 +420,7 @@ namespace BECore::Mahjong::Tests {
 
         ASSERT_TRUE(_game->SetLanguage("ru"_intern));
         Frame();
-        EXPECT_EQ(Var("lastMove"), std::string(OnlineNoticeText(CoreManager::GetUIStrings(), kOnlineReconnectingKey).c_str()));
+        EXPECT_EQ(Var("lastMove"), String(OnlineNoticeText(CoreManager::GetUIStrings(), kOnlineReconnectingKey).c_str()));
         ASSERT_TRUE(_game->SetLanguage("en"_intern));
 
         _world.SetRefusing(false);
@@ -435,7 +436,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(_game->GetOnline().Host(kUrl, kHostName));  // not possible in a room: a word, and the table stays
         ASSERT_TRUE(PumpUntil([&] { return _game->GetOnline().Notice().serial != before; }));
         Frame();
-        const std::string word = std::string(OnlineNoticeText(CoreManager::GetUIStrings(), _game->GetOnline().Notice().key, _game->GetOnline().Notice().arg).c_str());
+        const String word = String(OnlineNoticeText(CoreManager::GetUIStrings(), _game->GetOnline().Notice().key, _game->GetOnline().Notice().arg).c_str());
         ASSERT_FALSE(word.empty());
         EXPECT_TRUE(_game->IsOnlineTable());
         EXPECT_EQ(Var("lastMove"), word);
@@ -471,7 +472,7 @@ namespace BECore::Mahjong::Tests {
         }
         ASSERT_FALSE(_game->IsOnlineTable());
         Frame();
-        const std::string word = std::string(OnlineNoticeText(CoreManager::GetUIStrings(), OnlineErrorKey(RoomClientCloseReasons::kGaveUp)).c_str());
+        const String word = String(OnlineNoticeText(CoreManager::GetUIStrings(), OnlineErrorKey(RoomClientCloseReasons::kGaveUp)).c_str());
         EXPECT_TRUE(_game->IsSetupOpen());
         EXPECT_TRUE(_game->IsOnlineOpen()) << "the panel is the place to say why";
         EXPECT_EQ(Var("onlineNotice"), word);
@@ -490,10 +491,10 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(NextHandDisabled());
         EXPECT_FALSE(OnScreen("HandOver", "HandCoachRow")) << "nobody has read the plate yet";
         EXPECT_EQ(Text("HandOverAction", "NextHand"), _game->GetMatch().HandsPlayed() + 1 >= _game->GetMatch().HandsTotal() ? "Finish match" : "Next hand");
-        const std::string headline = Text("HandOver", "Headline");
-        bool namesAPlayer = headline.find("Drawn") != std::string::npos;
+        const String headline = Text("HandOver", "Headline");
+        bool namesAPlayer = headline.find("Drawn") != String::npos;
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
-            namesAPlayer = namesAPlayer || headline.find(LobbyName(seat)) != std::string::npos;
+            namesAPlayer = namesAPlayer || headline.find(LobbyName(seat)) != String::npos;
         }
         EXPECT_TRUE(namesAPlayer) << "the headline names a player of the room: " << headline;
 
@@ -526,10 +527,10 @@ namespace BECore::Mahjong::Tests {
                 const OnlineResult& result = *Table().result;
                 const Match& match = _game->GetMatch();
                 for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                    const std::string total = std::to_string(match.Scores()[seat] + result.deltas[seat]);
+                    const String total = Format("{}", match.Scores()[seat] + result.deltas[seat]);
                     EXPECT_EQ(Var(Format("handOverCell{}_4", seat).c_str()), total) << "the total cell of seat " << seat << " is the match's points plus the server's change";
                     if (result.winner != kNoSeat) {
-                        EXPECT_EQ(Var(Format("handOverCell{}_2", seat).c_str()), std::to_string(result.scores[seat])) << "the hand cell is the server's score: seat " << seat;
+                        EXPECT_EQ(Var(Format("handOverCell{}_2", seat).c_str()), BECore::ToString(result.scores[seat])) << "the hand cell is the server's score: seat " << seat;
                         EXPECT_EQ(Var(Format("handOverCell{}_3", seat).c_str()), Format("{:+}", result.deltas[seat]).c_str()) << "the change cell is the server's change: seat " << seat;
                     }
                 }
@@ -562,18 +563,18 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(OnScreen("MatchOver", "Headline"));
         const Match& match = _game->GetMatch();
         const StandingsTable table = FormatStandings(CoreManager::GetUIStrings(), match, SeatWho(_game->GetSession()));
-        EXPECT_EQ(Text("MatchOver", "Headline"), std::string(table.headline.c_str()));
-        std::string rows;
+        EXPECT_EQ(Text("MatchOver", "Headline"), String(table.headline.c_str()));
+        String rows;
         for (int row = 0; row < kSeatCount; ++row) {
             const StandingRow& expected = table.rows[static_cast<size_t>(row)];
-            EXPECT_EQ(Text("MatchOver", Format("StandingPlace{}", row).c_str()), std::string(Format("{}", expected.place).c_str()));
-            EXPECT_EQ(Text("MatchOver", Format("StandingName{}", row).c_str()), std::string(expected.name.c_str()));
-            EXPECT_EQ(Text("MatchOver", Format("StandingScore{}", row).c_str()), std::string(expected.score.c_str()));
+            EXPECT_EQ(Text("MatchOver", Format("StandingPlace{}", row).c_str()), String(Format("{}", expected.place).c_str()));
+            EXPECT_EQ(Text("MatchOver", Format("StandingName{}", row).c_str()), String(expected.name.c_str()));
+            EXPECT_EQ(Text("MatchOver", Format("StandingScore{}", row).c_str()), String(expected.score.c_str()));
             EXPECT_EQ(OnScreen("MatchOver", Format("StandingFirst{}", row).c_str()), expected.first);
             rows += Text("MatchOver", Format("StandingName{}", row).c_str()) + "\n";
         }
-        EXPECT_NE(rows.find(std::string(kHostName) + " You"), std::string::npos) << rows;
-        EXPECT_NE(rows.find("Seat 2"), std::string::npos) << "a computer keeps its number: " << rows;
+        EXPECT_NE(rows.find(Format("{} You", kHostName)), String::npos) << rows;
+        EXPECT_NE(rows.find("Seat 2"), String::npos) << "a computer keeps its number: " << rows;
         EXPECT_EQ(Text("MatchOver", "NewGame"), "Leave room");
 
         ASSERT_TRUE(ClickElement("MatchOver", "NewGame"));
@@ -647,7 +648,7 @@ namespace BECore::Mahjong::Tests {
         Frame();
         EXPECT_TRUE(_game->IsSetupOpen());
         EXPECT_TRUE(_game->IsOnlineOpen());
-        EXPECT_EQ(Var("onlineNotice"), std::string(OnlineNoticeText(CoreManager::GetUIStrings(), kOnlineViewFormatKey).c_str()));
+        EXPECT_EQ(Var("onlineNotice"), String(OnlineNoticeText(CoreManager::GetUIStrings(), kOnlineViewFormatKey).c_str()));
         EXPECT_TRUE(OnScreen("Online", "OnlineNotice"));
         EXPECT_EQ(_game->GetOnline().Stage(), OnlineStage::Idle);
         EXPECT_FALSE(_game->GetSession().IsRemote()) << "the local game is back";

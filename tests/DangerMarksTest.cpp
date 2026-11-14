@@ -59,7 +59,7 @@ namespace BECore::Mahjong::Tests {
             spec.hands[kSeat1] = kWaitingHand;
             spec.hands[kSeat2] = seat2;
             spec.hands[kSeat3] = seat3;
-            spec.live = std::string("Ew Rd Nw Ww Gd Wd 9m Ew Rd ") + tail;
+            spec.live = Format("Ew Rd Nw Ww Gd Wd 9m Ew Rd {}", tail);
             HandModel model = MakeModel(spec);
             Lap(model, "Ew Rd Nw Ww");
             Lap(model, "Gd Wd 9m Ew", {kSeat1});

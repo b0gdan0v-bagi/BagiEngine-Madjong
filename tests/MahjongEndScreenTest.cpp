@@ -150,30 +150,30 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The cell of a row of the score table by column: name, wind, hand, change, total.
-        const eastl::string& CellOf(const ScoreRow& row, int column) {
-            const eastl::string* const cells[kScoreColumns] = {&row.name, &row.wind, &row.hand, &row.change, &row.total};
+        const String& CellOf(const ScoreRow& row, int column) {
+            const String* const cells[kScoreColumns] = {&row.name, &row.wind, &row.hand, &row.change, &row.total};
             return *cells[column];
         }
 
         struct WorstTexts {
-            eastl::string headline;
-            eastl::array<eastl::string, kScoreColumns> cells;  // the longest text of each column of the score table
-            eastl::string summary;
-            eastl::string standingName;   // the longest name of a standings row
-            eastl::string standingScore;  // and the biggest score
-            eastl::string standingsHeadline;
-            eastl::string handTally;   // the longest line of the coach's tally under the score table
-            eastl::string matchTally;  // and under the standings
-            Tile tile;                 // the winning tile with the longest name (not a flower)
+            String headline;
+            eastl::array<String, kScoreColumns> cells;  // the longest text of each column of the score table
+            String summary;
+            String standingName;   // the longest name of a standings row
+            String standingScore;  // and the biggest score
+            String standingsHeadline;
+            String handTally;   // the longest line of the coach's tally under the score table
+            String matchTally;  // and under the standings
+            Tile tile;          // the winning tile with the longest name (not a flower)
         };
 
         WorstTexts FindWorstTexts(const UIStrings& strings) {
             WorstTexts worst;
             worst.tile = LongestTile(strings, [](Tile tile) { return !tile.IsBonus(); });  // a winning tile is never a flower
 
-            std::vector<eastl::string> headlines;
-            std::array<std::vector<eastl::string>, kScoreColumns> columns;
-            std::vector<eastl::string> summaries;
+            std::vector<String> headlines;
+            std::array<std::vector<String>, kScoreColumns> columns;
+            std::vector<String> summaries;
             for (Seat winner = 0; winner < kSeatCount; ++winner) {
                 for (Seat east = 0; east < kSeatCount; ++east) {
                     HandSettlement settlement;
@@ -221,8 +221,8 @@ namespace BECore::Mahjong::Tests {
             worst.summary = LongestText(summaries);
 
             // The standings: a row with the last place and the biggest score, the headline of three tied seats and of a single winner
-            std::vector<eastl::string> standings;
-            std::vector<eastl::string> standingsHeadlines;
+            std::vector<String> standings;
+            std::vector<String> standingsHeadlines;
             for (Seat person = 0; person < kSeatCount; ++person) {
                 SeatSetup seats{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
                 seats[person] = SeatKind::Person;
@@ -245,7 +245,7 @@ namespace BECore::Mahjong::Tests {
             worst.standingsHeadline = LongestText(standingsHeadlines);
             constexpr CoachTally kBig{999, 999};
             // The row also says how many of the room have read the plate
-            const eastl::string ready = Tr(strings, "online.table.ready", {{"n", Format("{}", kSeatCount)}, {"total", Format("{}", kSeatCount)}});
+            const String ready = Tr(strings, "online.table.ready", {{"n", Format("{}", kSeatCount)}, {"total", Format("{}", kSeatCount)}});
             worst.handTally = LongestText({FormatCoachTally(strings, kBig, kBig), ready});
             worst.matchTally = FormatCoachTally(strings, CoachTally{}, kBig);
             return worst;
@@ -258,7 +258,7 @@ namespace BECore::Mahjong::Tests {
         /// Expects the rows of the table and the tiles to lie inside the plate's inner area and the cells inside their row.
         void ExpectTheTableInsideThePlate(const Rect& plate, const char* label) const {
             const Rect inner(plate.x + kModalPadding, plate.y + kModalPadding, plate.w - 2.0f * kModalPadding, plate.h - 2.0f * kModalPadding);
-            auto inside = [&](const Rect& rect, const Rect& frame, const eastl::string& what) {
+            auto inside = [&](const Rect& rect, const Rect& frame, const String& what) {
                 EXPECT_GE(rect.x, frame.x - 0.01f) << label << ": " << what.c_str();
                 EXPECT_LE(rect.x + rect.w, frame.x + frame.w + 0.01f) << label << ": " << what.c_str();
                 EXPECT_GE(rect.y, frame.y - 0.01f) << label << ": " << what.c_str();
@@ -300,7 +300,7 @@ namespace BECore::Mahjong::Tests {
             Draw();
         }
 
-        std::string Text(const char* node, const char* element) const {
+        String Text(const char* node, const char* element) const {
             const UIElement* found = Element(node, element);
             return DisplayText(found);
         }
@@ -342,7 +342,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The tally line a hand of the person, shown now, must carry: from the ledger, in the current language.
-        eastl::string ExpectedHandTally() const {
+        String ExpectedHandTally() const {
             const CoachLedger& coach = _game->GetCoach();
             const TableSession& session = _game->GetSession();
             return FormatCoachTally(CoreManager::GetUIStrings(), coach.HandTallyOf(HandKeyOf(session)), coach.MatchTallyOf(session.StartCount()));
@@ -405,7 +405,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Text("HandOver", "Summary"), expected.summary.c_str());
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             for (int column = 0; column < kScoreColumns; ++column) {
-                const std::string name = Format("handOverCell{}_{}", seat, column).c_str();
+                const String name = Format("handOverCell{}_{}", seat, column).c_str();
                 EXPECT_EQ(Var(name.c_str()), CellOf(expected.rows[seat], column).c_str());
                 EXPECT_EQ(Text("HandOver", Format("ScoreCell{}_{}", seat, column).c_str()), CellOf(expected.rows[seat], column).c_str());
             }
@@ -639,7 +639,7 @@ namespace BECore::Mahjong::Tests {
             int finishing = 0;
             for (int hand = 0; hand < kHandLimit && _game->GetMatch().GetPhase() != MatchPhase::Finished; ++hand) {
                 ASSERT_NO_FATAL_FAILURE(PlayHandOver());
-                const std::string label = Text("HandOverAction", "NextHand");
+                const String label = Text("HandOverAction", "NextHand");
                 const bool says = label == Tr(strings, "handover.finish").c_str();
                 ASSERT_TRUE(says || label == Tr(strings, "handover.next").c_str()) << label;
                 ASSERT_TRUE(ClickElement("HandOverAction", "NextHand"));
@@ -1243,12 +1243,12 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(hand.moves, moves) << "every accepted action of the person is a counted move";
         EXPECT_LE(hand.agreed, hand.moves);
         EXPECT_EQ(_game->GetCoach().MatchTally(), hand) << "the first hand of the match";
-        const eastl::string expected = ExpectedHandTally();
+        const String expected = ExpectedHandTally();
         ASSERT_FALSE(expected.empty());
         EXPECT_STREQ(Var("handOverCoach").c_str(), expected.c_str());
         EXPECT_TRUE(OnScreen("HandOver", "HandCoachRow"));
-        EXPECT_EQ(Text("HandOver", "HandCoachRow"), std::string(expected.c_str()));
-        EXPECT_NE(expected.find(Format("{}", moves).c_str()), eastl::string::npos);
+        EXPECT_EQ(Text("HandOver", "HandCoachRow"), String(expected.c_str()));
+        EXPECT_NE(expected.find(Format("{}", moves).c_str()), String::npos);
 
         // The row is paid for inside the plate: the button, the gap and the plate are where they are without it
         const UIElement* plate = Element("HandOver", "Plate");
@@ -1308,7 +1308,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(Shown("MatchOver"));
 
         EXPECT_EQ(_game->GetCoach().MatchTally().moves, moves);
-        const eastl::string expected = FormatCoachTally(CoreManager::GetUIStrings(), CoachTally{}, _game->GetCoach().MatchTally());
+        const String expected = FormatCoachTally(CoreManager::GetUIStrings(), CoachTally{}, _game->GetCoach().MatchTally());
         ASSERT_FALSE(expected.empty());
         EXPECT_STREQ(Var("matchOverCoach").c_str(), expected.c_str());
         EXPECT_TRUE(OnScreen("MatchOver", "MatchCoachRow"));
@@ -1365,7 +1365,7 @@ namespace BECore::Mahjong::Tests {
                     line.tile = LongestTile(strings, [&](Tile tile) { return CanNameTile(kind, tile); });  // the longest tile this kind can name
                     line.points = kWorstLinePoints;
                     line.doubles = doubles;
-                    const eastl::string text = ScoreLineText(strings, line);
+                    const String text = ScoreLineText(strings, line);
                     for (int i = 0; i < kMaxScoreLines; ++i) {
                         vars.Set(PoolString::Intern(Format("scoreLine{}", i)), StringView(text));
                     }
@@ -1381,7 +1381,7 @@ namespace BECore::Mahjong::Tests {
             }
             ExpectPassesTheMatrix("HandOver", EngineTouchMinimum());
             ExpectPassesTheMatrix("HandOverAction", EngineTouchMinimum());
-            const std::vector<std::string> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("HandOver"), kButtonAir);  // each window against the view of its shape
+            const std::vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("HandOver"), kButtonAir);  // each window against the view of its shape
             EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
             EXPECT_GE(Element("HandOverAction", "NextHand")->rect.h, kMinControlHeight);
         });

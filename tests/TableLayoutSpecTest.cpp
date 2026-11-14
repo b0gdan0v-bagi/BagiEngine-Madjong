@@ -37,12 +37,12 @@ namespace BECore::Mahjong::Tests {
                                            "<Discards x=\"0.25\" y=\"0.5\" w=\"0.125\" h=\"0.0625\"/>"
                                            "<Plate x=\"0.25\" y=\"0.5\" w=\"0.125\" h=\"0.0625\"/>";
 
-        std::string SeatXml(int position) {
-            return "<Seat position=\"" + std::to_string(position) + "\">" + kSeatZones + "</Seat>";
+        String SeatXml(int position) {
+            return Format("<Seat position=\"{}\">{}</Seat>", position, kSeatZones);
         }
 
-        std::string ShapeXml(const std::string& name, const std::string& extra = {}) {
-            std::string text = "<Shape name=\"" + name + "\">";
+        String ShapeXml(const String& name, const String& extra = {}) {
+            String text = Format("<Shape name=\"{}\">", name);
             for (int position = 0; position < kSeatCount; ++position) {
                 text += SeatXml(position);
             }
@@ -50,20 +50,20 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// A complete file: the four shapes, Wide like Landscape. A test breaks it by replacing a piece.
-        std::string FileXml() {
+        String FileXml() {
             return "<TableLayout>" + ShapeXml("Landscape") + ShapeXml("Portrait") + ShapeXml("Narrow") + "<Shape name=\"Wide\" like=\"Landscape\" inset=\"0.125\"/></TableLayout>";
         }
 
-        std::string Replaced(std::string text, const std::string& from, const std::string& to) {
+        String Replaced(String text, const String& from, const String& to) {
             const size_t at = text.find(from);
-            EXPECT_NE(at, std::string::npos) << "the base text has no '" << from << "'";
-            if (at != std::string::npos) {
+            EXPECT_NE(at, String::npos) << "the base text has no '" << from << "'";
+            if (at != String::npos) {
                 text.replace(at, from.size(), to);
             }
             return text;
         }
 
-        TableLayoutSpecParse ParseText(const std::string& text) {
+        TableLayoutSpecParse ParseText(const String& text) {
             pugi::xml_document document;
             const pugi::xml_parse_result result = document.load_string(text.c_str(), pugi::parse_default | pugi::parse_comments);
             EXPECT_TRUE(result) << result.description();
@@ -72,10 +72,10 @@ namespace BECore::Mahjong::Tests {
 
         /// Whether one message of the parse has every one of `parts`.
         bool HasError(const TableLayoutSpecParse& parse, std::initializer_list<const char*> parts) {
-            for (const eastl::string& error : parse.errors) {
+            for (const String& error : parse.errors) {
                 bool all = true;
                 for (const char* part : parts) {
-                    all = all && error.find(part) != eastl::string::npos;
+                    all = all && error.find(part) != String::npos;
                 }
                 if (all) {
                     return true;
@@ -84,33 +84,33 @@ namespace BECore::Mahjong::Tests {
             return false;
         }
 
-        void ExpectError(const std::string& text, std::initializer_list<const char*> parts) {
+        void ExpectError(const String& text, std::initializer_list<const char*> parts) {
             const TableLayoutSpecParse parse = ParseText(text);
             EXPECT_FALSE(parse.Ok()) << text;
-            std::string all;
-            for (const eastl::string& error : parse.errors) {
-                all += std::string(error.c_str()) + "\n";
+            String all;
+            for (const String& error : parse.errors) {
+                all += Format("{}\n", error.c_str());
             }
             EXPECT_TRUE(HasError(parse, parts)) << "no message has all of the parts; the messages are:\n" << all;
         }
 
-        std::string ShapeName(TableShape shape) {
+        String ShapeName(TableShape shape) {
             const auto name = EnumUtils<TableShape>::ToString(shape);
-            return std::string(name.data(), name.size());
+            return String(name.data(), name.size());
         }
 
         /// One message of `problems` has every one of `parts`.
-        void ExpectProblem(const eastl::vector<eastl::string>& problems, std::initializer_list<const char*> parts) {
-            std::string all;
-            for (const eastl::string& problem : problems) {
+        void ExpectProblem(const eastl::vector<String>& problems, std::initializer_list<const char*> parts) {
+            String all;
+            for (const String& problem : problems) {
                 bool every = true;
                 for (const char* part : parts) {
-                    every = every && problem.find(part) != eastl::string::npos;
+                    every = every && problem.find(part) != String::npos;
                 }
                 if (every) {
                     return;
                 }
-                all += std::string(problem.c_str()) + "\n";
+                all += Format("{}\n", problem.c_str());
             }
             ADD_FAILURE() << "no message has all of the parts; the messages are:\n" << all;
         }
@@ -134,7 +134,7 @@ namespace BECore::Mahjong::Tests {
             return shape;
         }
 
-        void ExpectInUnitRange(const ZoneRect& zone, const std::string& where) {
+        void ExpectInUnitRange(const ZoneRect& zone, const String& where) {
             EXPECT_GE(zone.x, 0.0f) << where;
             EXPECT_GE(zone.y, 0.0f) << where;
             EXPECT_GT(zone.w, 0.0f) << where;
@@ -201,7 +201,7 @@ namespace BECore::Mahjong::Tests {
             return std::fabs(a.x - b.x) <= kSameRectTolerance && std::fabs(a.y - b.y) <= kSameRectTolerance && std::fabs(a.w - b.w) <= kSameRectTolerance && std::fabs(a.h - b.h) <= kSameRectTolerance;
         }
 
-        void ExpectSameLayouts(const TableLayout& data, const TableLayout& other, const std::string& where) {
+        void ExpectSameLayouts(const TableLayout& data, const TableLayout& other, const String& where) {
             ASSERT_EQ(data.slots.size(), other.slots.size()) << where;
             EXPECT_EQ(data.viewer, other.viewer) << where;
             EXPECT_EQ(data.shape, other.shape) << where;
@@ -261,10 +261,10 @@ namespace BECore::Mahjong::Tests {
         for (const TableShape shape : EnumUtils<TableShape>::Values()) {
             const ShapeSpec* zones = ZonesOf(spec, shape);
             ASSERT_NE(zones, nullptr);
-            const std::string name = ShapeName(shape);
+            const String name = ShapeName(shape);
             for (int position = 0; position < kSeatCount; ++position) {
                 const SeatSpec& seat = zones->seats[static_cast<size_t>(position)];
-                const std::string where = name + " seat " + std::to_string(position);
+                const String where = Format("{} seat {}", name, position);
                 ExpectInUnitRange(seat.hand.rect, where + " hand");
                 ExpectInUnitRange(seat.melds.rect, where + " melds");
                 ExpectInUnitRange(seat.bonus.rect, where + " bonus");
@@ -296,13 +296,13 @@ namespace BECore::Mahjong::Tests {
         expected.Shape(TableShape::Narrow) = PlainShape();
         expected.Shape(TableShape::Wide) = wide;
 
-        const std::string phone = "<Phone><Hand x=\"0.25\" y=\"0.5\" w=\"0.125\" h=\"0.0625\" align=\"end\" tile=\"profile\"/>"
-                                  "<Melds x=\"0.25\" y=\"0.5\" w=\"0.125\" h=\"0.0625\"/><Bonus x=\"0.25\" y=\"0.5\" w=\"0.125\" h=\"0.0625\"/>"
-                                  "<Discards x=\"0.25\" y=\"0.5\" w=\"0.125\" h=\"0.0625\"/><Plate x=\"0.25\" y=\"0.5\" w=\"0.125\" h=\"0.0625\"/></Phone>";
-        std::string text = Replaced(FileXml(), "<Wall x=\"0.25\" y=\"0.5\" w=\"0.5\" h=\"0.25\"/></Shape>", "<Wall x=\"0.25\" y=\"0.5\" w=\"0.5\" h=\"0.25\"/>" + phone + "</Shape>");
+        const String phone = "<Phone><Hand x=\"0.25\" y=\"0.5\" w=\"0.125\" h=\"0.0625\" align=\"end\" tile=\"profile\"/>"
+                             "<Melds x=\"0.25\" y=\"0.5\" w=\"0.125\" h=\"0.0625\"/><Bonus x=\"0.25\" y=\"0.5\" w=\"0.125\" h=\"0.0625\"/>"
+                             "<Discards x=\"0.25\" y=\"0.5\" w=\"0.125\" h=\"0.0625\"/><Plate x=\"0.25\" y=\"0.5\" w=\"0.125\" h=\"0.0625\"/></Phone>";
+        String text = Replaced(FileXml(), "<Wall x=\"0.25\" y=\"0.5\" w=\"0.5\" h=\"0.25\"/></Shape>", Format("<Wall x=\"0.25\" y=\"0.5\" w=\"0.5\" h=\"0.25\"/>{}</Shape>", phone));
         text = Replaced(text, "<Hand x=\"0.25\" y=\"0.5\" w=\"0.125\" h=\"0.0625\"/>", "<Hand x=\"0.25\" y=\"0.5\" w=\"0.125\" h=\"0.0625\" align=\"center\" spread=\"true\" minTileW=\"7\"/>");
         const size_t discards = text.find("<Discards", text.find("<Seat position=\"1\">"));
-        ASSERT_NE(discards, std::string::npos);
+        ASSERT_NE(discards, String::npos);
         text.insert(text.find("/>", discards), " rows=\"3\"");
 
         const TableLayoutSpecParse parse = ParseText(text);
@@ -323,7 +323,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(TableLayoutSpecTest, CommentsAreNotElements) {
-        std::string text = Replaced(FileXml(), "<TableLayout>", "<TableLayout><!-- a -->");
+        String text = Replaced(FileXml(), "<TableLayout>", "<TableLayout><!-- a -->");
         text = Replaced(text, "<Shape name=\"Landscape\">", "<Shape name=\"Landscape\"><!-- b -->");
         text = Replaced(text, "<Seat position=\"2\">", "<Seat position=\"2\"><!-- c -->");
         text = Replaced(text, "inset=\"0.125\"/>", "inset=\"0.125\"><!-- d --></Shape>");
@@ -370,21 +370,21 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(TableLayoutSpecTest, ABadValueOfAKnownAttributeIsAnError) {
-        const std::string hand = "<Hand x=\"0.25\" y=\"0.5\" w=\"0.125\" h=\"0.0625\"/>";
-        const auto withHand = [&](const std::string& attributes) { return Replaced(FileXml(), hand, "<Hand x=\"0.25\" y=\"0.5\" w=\"0.125\" h=\"0.0625\" " + attributes + "/>"); };
+        const String hand = "<Hand x=\"0.25\" y=\"0.5\" w=\"0.125\" h=\"0.0625\"/>";
+        const auto withHand = [&](const String& attributes) { return Replaced(FileXml(), hand, Format("<Hand x=\"0.25\" y=\"0.5\" w=\"0.125\" h=\"0.0625\" {}/>", attributes)); };
         ExpectError(withHand("align=\"middle\""), {"Hand", "attribute 'align'", "'middle'"});
         ExpectError(withHand("tile=\"big\""), {"Hand", "attribute 'tile'", "'big'"});
         ExpectError(withHand("spread=\"yes\""), {"Hand", "attribute 'spread'", "true or false"});
         ExpectError(withHand("minTileW=\"-3\""), {"Hand", "attribute 'minTileW'"});
         ExpectError(withHand("minTileW=\"2.5\""), {"Hand", "attribute 'minTileW'", "whole number"});
-        const std::string discards = "<Discards x=\"0.25\" y=\"0.5\" w=\"0.125\" h=\"0.0625\"/>";
+        const String discards = "<Discards x=\"0.25\" y=\"0.5\" w=\"0.125\" h=\"0.0625\"/>";
         ExpectError(Replaced(FileXml(), discards, "<Discards x=\"0.25\" y=\"0.5\" w=\"0.125\" h=\"0.0625\" rows=\"0\"/>"), {"Discards", "attribute 'rows'"});
         ExpectError(Replaced(FileXml(), "<Seat position=\"1\">", "<Seat position=\"4\">"), {"attribute 'position'"});
         ExpectError(Replaced(FileXml(), "<Seat position=\"1\">", "<Seat>"), {"no attribute 'position'"});
     }
 
     TEST(TableLayoutSpecTest, ALikeShapeNamesAShapeThatHasZonesOfItsOwn) {
-        const std::string wide = "<Shape name=\"Wide\" like=\"Landscape\" inset=\"0.125\"/>";
+        const String wide = "<Shape name=\"Wide\" like=\"Landscape\" inset=\"0.125\"/>";
         ExpectError(Replaced(FileXml(), wide, "<Shape name=\"Wide\" like=\"Round\" inset=\"0.125\"/>"), {"shape 'Wide'", "attribute 'like'", "'Round' is not a shape"});
         ExpectError(Replaced(FileXml(), wide, "<Shape name=\"Wide\" like=\"Wide\"/>"), {"shape 'Wide'", "'like' itself"});
         ExpectError(Replaced(FileXml(), ShapeXml("Narrow"), "<Shape name=\"Narrow\" like=\"Wide\"/>"), {"shape 'Narrow'", "itself 'like'"});
@@ -394,7 +394,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(TableLayoutSpecTest, ThePhoneOverrideIsForTheLandscapeShapesAndIsComplete) {
-        const std::string phone = "<Phone>" + std::string(kSeatZones) + "</Phone>";
+        const String phone = Format("<Phone>{}</Phone>", kSeatZones);
         ExpectError(Replaced(FileXml(), ShapeXml("Portrait"), ShapeXml("Portrait", phone)), {"shape 'Portrait'", "Phone", "landscape shapes only"});
         ExpectError(Replaced(FileXml(), ShapeXml("Landscape"), ShapeXml("Landscape", "<Phone><Hand x=\"0.25\" y=\"0.5\" w=\"0.125\" h=\"0.0625\"/></Phone>")), {"Phone", "'Melds' is missing"});
         ExpectError(Replaced(FileXml(), ShapeXml("Landscape"), ShapeXml("Landscape", phone + phone)), {"shape 'Landscape'", "'Phone' is given twice"});
@@ -404,7 +404,7 @@ namespace BECore::Mahjong::Tests {
 
         constexpr const char* kFreeXml = "<Free name=\"table.hint\" x=\"0.0625\" y=\"0.5\" w=\"0.125\" h=\"0.25\"/>";
 
-        std::string FreeXml(const std::string& name, const std::string& rect = "x=\"0.0625\" y=\"0.5\" w=\"0.125\" h=\"0.25\"") {
+        String FreeXml(const String& name, const String& rect = "x=\"0.0625\" y=\"0.5\" w=\"0.125\" h=\"0.25\"") {
             return "<Free name=\"" + name + "\" " + rect + "/>";
         }
 
@@ -416,7 +416,7 @@ namespace BECore::Mahjong::Tests {
     }  // namespace
 
     TEST(TableLayoutSpecTest, AFreeRegionIsReadWithItsNameAndFractions) {
-        const std::string text = Replaced(FileXml(), ShapeXml("Portrait"), ShapeXml("Portrait", kFreeXml + FreeXml("table.moveLine", "x=\"0\" y=\"0\" w=\"1\" h=\"0.5\"")));
+        const String text = Replaced(FileXml(), ShapeXml("Portrait"), ShapeXml("Portrait", Format("{}{}", kFreeXml, FreeXml("table.moveLine", "x=\"0\" y=\"0\" w=\"1\" h=\"0.5\""))));
         const TableLayoutSpecParse parse = ParseText(text);
         EXPECT_TRUE(parse.Ok());
         const eastl::vector<FreeRegion>& regions = parse.spec.Shape(TableShape::Portrait).freeRegions;
@@ -430,8 +430,8 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(TableLayoutSpecTest, ABadFreeRegionIsRefusedAndNamedByShapeAndRegion) {
-        const auto withFree = [&](const std::string& regions) { return Replaced(FileXml(), ShapeXml("Narrow"), ShapeXml("Narrow", regions)); };
-        ExpectError(withFree(kFreeXml + FreeXml("table.hint")), {"shape 'Narrow'", "Free 'table.hint'", "given twice"});
+        const auto withFree = [&](const String& regions) { return Replaced(FileXml(), ShapeXml("Narrow"), ShapeXml("Narrow", regions)); };
+        ExpectError(withFree(Format("{}{}", kFreeXml, FreeXml("table.hint"))), {"shape 'Narrow'", "Free 'table.hint'", "given twice"});
         ExpectError(withFree(FreeXml("table.wall")), {"shape 'Narrow'", "Free 'table.wall'", "zone region"});
         ExpectError(withFree(FreeXml("")), {"shape 'Narrow'", "Free", "attribute 'name' is empty"});
         ExpectError(withFree("<Free x=\"0.1\" y=\"0.1\" w=\"0.1\" h=\"0.1\"/>"), {"shape 'Narrow'", "Free", "missing attribute 'name'"});
@@ -440,7 +440,7 @@ namespace BECore::Mahjong::Tests {
         ExpectError(withFree(FreeXml("table.hint", "x=\"0.5\" y=\"0.5\" w=\"0.1\"")), {"Free 'table.hint'", "missing attribute 'h'"});
         ExpectError(withFree(FreeXml("table.hint", "x=\"0.5\" y=\"0.5\" w=\"0\" h=\"0.1\"")), {"Free 'table.hint'", "no area"});
         ExpectError(withFree(FreeXml("table.hint", "x=\"0.5\" y=\"0.5\" w=\"0.1\" h=\"0.1\" size=\"3\"")), {"Free 'table.hint'", "unknown attribute 'size'"});
-        ExpectError(Replaced(FileXml(), "inset=\"0.125\"/>", "inset=\"0.125\">" + std::string(kFreeXml) + "</Shape>"), {"shape 'Wide'", "no zones of its own"});
+        ExpectError(Replaced(FileXml(), "inset=\"0.125\"/>", Format("inset=\"0.125\">{}</Shape>", kFreeXml)), {"shape 'Wide'", "no zones of its own"});
     }
 
     TEST(TableLayoutSpecTest, TheLayoutWithoutASpecReadsTheActiveOne) {
@@ -458,8 +458,8 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(TableLayoutSpecTest, TheShippedSpecPassesTheCheck) {
-        const eastl::vector<eastl::string> problems = CheckTableLayoutSpec(ShippedTableLayoutSpec());
-        for (const eastl::string& problem : problems) {
+        const eastl::vector<String> problems = CheckTableLayoutSpec(ShippedTableLayoutSpec());
+        for (const String& problem : problems) {
             ADD_FAILURE() << problem.c_str();
         }
     }
@@ -536,8 +536,8 @@ namespace BECore::Mahjong::Tests {
     TEST(TableLayoutSpecTest, AFreeRegionOnGroundNoTileReachesPassesTheCheck) {
         TableLayoutSpec spec = ShippedTableLayoutSpec();
         spec.Shape(TableShape::Landscape).freeRegions.push_back(CornerRegion());
-        const eastl::vector<eastl::string> problems = CheckTableLayoutSpec(spec);
-        for (const eastl::string& problem : problems) {
+        const eastl::vector<String> problems = CheckTableLayoutSpec(spec);
+        for (const String& problem : problems) {
             ADD_FAILURE() << problem.c_str();
         }
     }
@@ -556,7 +556,7 @@ namespace BECore::Mahjong::Tests {
         portrait.freeRegions.push_back(FreeRegion{"table.onBlock", portrait.seats[2].discards.rect});
         portrait.freeRegions.push_back(FreeRegion{"table.onPlate", portrait.seats[1].plate});
         portrait.freeRegions.push_back(FreeRegion{"table.inRing", ZoneRect{portrait.wall.x + portrait.wall.w / 2.0f - 0.01f, portrait.wall.y + portrait.wall.h / 2.0f - 0.01f, 0.02f, 0.02f}});
-        const eastl::vector<eastl::string> problems = CheckTableLayoutSpec(spec);
+        const eastl::vector<String> problems = CheckTableLayoutSpec(spec);
         ExpectProblem(problems, {"shape 'Portrait'", "free region 'table.onBlock'", "the discard block of position 2"});
         ExpectProblem(problems, {"shape 'Portrait'", "free region 'table.onPlate'", "the plate of position 1"});
         ExpectProblem(problems, {"shape 'Portrait'", "free region 'table.inRing'", "the wall ring"});
@@ -572,9 +572,9 @@ namespace BECore::Mahjong::Tests {
         // Wide borrows Landscape's regions and lies a wing in: a region at the right edge of Landscape leaves the wide view at the wing's inset
         TableLayoutSpec spec = ShippedTableLayoutSpec();
         spec.Shape(TableShape::Landscape).freeRegions.push_back(FreeRegion{"table.edge", ZoneRect{0.99f, 0.0f, 0.01f, 0.01f}});
-        const eastl::vector<eastl::string> problems = CheckTableLayoutSpec(spec);
-        for (const eastl::string& problem : problems) {
-            EXPECT_EQ(problem.find("outside the view"), eastl::string::npos) << problem.c_str();
+        const eastl::vector<String> problems = CheckTableLayoutSpec(spec);
+        for (const String& problem : problems) {
+            EXPECT_EQ(problem.find("outside the view"), String::npos) << problem.c_str();
         }
         spec.Shape(TableShape::Wide).inset = 0.2f;
         ExpectProblem(CheckTableLayoutSpec(spec), {"shape 'Wide'", "free region 'table.edge'", "outside the view"});
@@ -583,7 +583,7 @@ namespace BECore::Mahjong::Tests {
     TEST(TableLayoutSpecTest, AProblemIsReportedOnceWhateverTheViewer) {
         TableLayoutSpec spec = ShippedTableLayoutSpec();
         spec.Shape(TableShape::Portrait).seats[0].discards.rect = spec.Shape(TableShape::Portrait).seats[2].discards.rect;
-        const eastl::vector<eastl::string> problems = CheckTableLayoutSpec(spec);
+        const eastl::vector<String> problems = CheckTableLayoutSpec(spec);
         for (size_t first = 0; first < problems.size(); ++first) {
             for (size_t second = first + 1; second < problems.size(); ++second) {
                 EXPECT_NE(problems[first], problems[second]);

@@ -34,12 +34,12 @@ namespace BECore::Mahjong::Tests {
                 spec.hands[kSeat1] = kWaitingHand1;
                 spec.hands[kSeat2] = kSeat2Waits;
                 spec.hands[kSeat3] = kSeat3Waits;
-                spec.live = std::string("Gd Rd Wd Gd ") + lastDraw + " 1p 2p 3p";
+                spec.live = Format("Gd Rd Wd Gd {} 1p 2p 3p", lastDraw);
             } else {
                 spec.hands[kSeat1] = "1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Nw Ww";
                 spec.hands[kSeat2] = "2p 5p 8p 2s 5s 8s 2m 5m 8m Sw Ew Nw Ww";
                 spec.hands[kSeat3] = "3p 6p 9p 3s 6s 9s 3m 6m 9m Ew Nw Ww Gd";
-                spec.live = std::string("Gd Rd Wd Gd ") + lastDraw + " Ew Ww Nw";
+                spec.live = Format("Gd Rd Wd Gd {} Ew Ww Nw", lastDraw);
             }
             HandModel model = MakeModel(spec);
             if (others) {

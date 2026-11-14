@@ -28,8 +28,8 @@ namespace BECore::Mahjong::Tests {
             return ids;
         }
 
-        std::vector<int> Ids(const std::string& text) {
-            return Ids(ParseTiles(FromStd(text)).value());
+        std::vector<int> Ids(const String& text) {
+            return Ids(ParseTiles(text).value());
         }
 
         FixedWallSpec PlainSpec() {
@@ -92,7 +92,7 @@ namespace BECore::Mahjong::Tests {
             Wall wall = MakeFixedWall(spec, false, east);
             const eastl::array<PlayerHand, kSeatCount> hands = DealHands(wall, east, false);
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                eastl::vector<Tile> expected = ParseTiles(FromStd(spec.hands[seat])).value();
+                eastl::vector<Tile> expected = ParseTiles(spec.hands[seat]).value();
                 std::sort(expected.begin(), expected.end());
                 EXPECT_EQ(Ids(hands[seat].concealed), Ids(expected)) << "east " << east << " seat " << seat;
             }

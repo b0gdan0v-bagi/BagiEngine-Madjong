@@ -94,7 +94,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The invariants that hold between two actions. Returns false (after reporting) at the first one that does not.
-        bool CheckInvariants(const HandModel& model, bool flowers, const eastl::vector<Tile>& deadWall, const std::string& where) {
+        bool CheckInvariants(const HandModel& model, bool flowers, const eastl::vector<Tile>& deadWall, const String& where) {
             const size_t setSize = flowers ? kTileSetSizeWithBonus : kTileSetSize;
             const std::array<int, kTileIdCount> counts = CountEveryTile(model);
             size_t total = 0;
@@ -146,13 +146,13 @@ namespace BECore::Mahjong::Tests {
                 return false;
             }
             const eastl::vector<Tile> deadWall = model.GetWall().DeadWall();
-            const std::string seedText = "seed " + std::to_string(seed);
+            const String seedText = Format("seed {}", seed);
             if (!CheckInvariants(model, settings.flowers, deadWall, seedText + " after Begin")) {
                 return false;
             }
 
             for (int step = 0; step < kStepLimit && model.GetPhase() != Phase::Finished; ++step) {
-                const std::string where = seedText + " step " + std::to_string(step);
+                const String where = Format("{} step {}", seedText, step);
                 const Seat actor = NextActor(model, rng);
                 if (!IsSeat(actor)) {
                     ADD_FAILURE() << where << ": nobody is to act in phase " << Name(model.GetPhase());

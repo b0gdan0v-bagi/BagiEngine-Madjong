@@ -31,7 +31,7 @@ namespace BECore::Mahjong::Tests {
             }
 
             /// The canvas of `node` holds exactly the regions of the layout of the last draw, each at its rectangle.
-            void ExpectHoldsTheRegionsOfTheLayout(const char* node, const std::string& where) {
+            void ExpectHoldsTheRegionsOfTheLayout(const char* node, const String& where) {
                 const auto canvas = Canvas(node);
                 ASSERT_TRUE(canvas) << node;
                 const eastl::vector<TableRegion> expected = MakeTableRegions(_table->GetLayout());
@@ -48,7 +48,7 @@ namespace BECore::Mahjong::Tests {
                 }
             }
 
-            void ExpectEveryCanvasHoldsTheRegions(const std::string& where) {
+            void ExpectEveryCanvasHoldsTheRegions(const String& where) {
                 for (const char* node : kRegionNodes) {
                     ExpectHoldsTheRegionsOfTheLayout(node, where);
                 }

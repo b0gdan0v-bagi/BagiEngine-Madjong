@@ -16,23 +16,23 @@ namespace BECore::Mahjong::Tests {
         constexpr int kThreeMelds = 3;
         constexpr int kFourMelds = kSetsInHand;
 
-        TileCounts Counts(const std::string& text) {
-            return CountTiles(ParseTiles(FromStd(text)).value());
+        TileCounts Counts(const String& text) {
+            return CountTiles(ParseTiles(text).value());
         }
 
         /// "<pair>: <set> <set> ...", a chow as C<first> and a pung as P<first> (the order `Decompose` returns).
-        std::string Describe(const Decomposition& decomposition) {
-            std::string text = ToStdString(ToString(decomposition.pair));
+        String Describe(const Decomposition& decomposition) {
+            String text(ToString(decomposition.pair));
             text += ":";
             for (const ShapeSet& set : decomposition.sets) {
                 text += set.kind == MeldKind::Chow ? " C" : " P";
-                text += ToStd(ToString(set.first));
+                AppendFormat(text, "{}", ToString(set.first));
             }
             return text;
         }
 
-        std::vector<std::string> DescribeAll(const eastl::vector<Decomposition>& decompositions) {
-            std::vector<std::string> texts;
+        std::vector<String> DescribeAll(const eastl::vector<Decomposition>& decompositions) {
+            std::vector<String> texts;
             for (const Decomposition& decomposition : decompositions) {
                 texts.push_back(Describe(decomposition));
             }
@@ -41,16 +41,16 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The winning tiles as the notation separated by spaces.
-        std::string Waits(const std::string& hand, int meldCount = kNoMelds) {
-            std::string text;
+        String Waits(const String& hand, int meldCount = kNoMelds) {
+            String text;
             for (const Tile tile : WinningTiles(Counts(hand), meldCount)) {
                 text += text.empty() ? "" : " ";
-                text += ToStd(ToString(tile));
+                AppendFormat(text, "{}", ToString(tile));
             }
             return text;
         }
 
-        bool Wins(const std::string& hand, int meldCount = kNoMelds) {
+        bool Wins(const String& hand, int meldCount = kNoMelds) {
             return IsWinningShape(Counts(hand), meldCount);
         }
 
@@ -110,14 +110,14 @@ namespace BECore::Mahjong::Tests {
         // Three pungs of 1p 2p 3p or three chows 1p 2p 3p.
         const TileCounts counts = Counts("1p 1p 1p 2p 2p 2p 3p 3p 3p 4s 5s 6s Ew Ew");
 
-        EXPECT_EQ(DescribeAll(Decompose(counts, kSetsInHand)), (std::vector<std::string>{"Ew: C1p C1p C1p C4s", "Ew: P1p P2p P3p C4s"}));
+        EXPECT_EQ(DescribeAll(Decompose(counts, kSetsInHand)), (std::vector<String>{"Ew: C1p C1p C1p C4s", "Ew: P1p P2p P3p C4s"}));
     }
 
     TEST(HandShapeTest, SplitsWithDifferentPairsAreAllReturned) {
         // Pair 4p with three pungs or three chows, or pair 1p with the chows 1p 2p 3p, 2p 3p 4p, 2p 3p 4p.
         const TileCounts counts = Counts("1p 1p 1p 2p 2p 2p 3p 3p 3p 4p 4p");
 
-        EXPECT_EQ(DescribeAll(Decompose(counts, kSetsInHand - kOneMeld)), (std::vector<std::string>{"1p: C1p C2p C2p", "4p: C1p C1p C1p", "4p: P1p P2p P3p"}));
+        EXPECT_EQ(DescribeAll(Decompose(counts, kSetsInHand - kOneMeld)), (std::vector<String>{"1p: C1p C2p C2p", "4p: C1p C1p C1p", "4p: P1p P2p P3p"}));
     }
 
     TEST(HandShapeTest, EachSplitIsReturnedOnce) {
@@ -257,7 +257,7 @@ namespace BECore::Mahjong::Tests {
         // 1p 2p 3p four times each: four chows, or three pungs and one chow.
         const TileCounts counts = Counts("1p 1p 1p 1p 2p 2p 2p 2p 3p 3p 3p 3p Ew Ew");
 
-        EXPECT_EQ(DescribeAll(Decompose(counts, kSetsInHand)), (std::vector<std::string>{"Ew: C1p C1p C1p C1p", "Ew: P1p C1p P2p P3p"}));
+        EXPECT_EQ(DescribeAll(Decompose(counts, kSetsInHand)), (std::vector<String>{"Ew: C1p C1p C1p C1p", "Ew: P1p C1p P2p P3p"}));
     }
 
     TEST(HandShapeTest, SevenPairsAndThirteenOrphansWinWithoutADecomposition) {

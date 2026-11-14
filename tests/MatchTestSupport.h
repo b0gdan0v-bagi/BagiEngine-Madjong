@@ -57,7 +57,7 @@ namespace BECore::Mahjong::Tests {
     /// each in `ASSERT_NO_FATAL_FAILURE`.
     class MatchAudit {
     public:
-        MatchAudit(const MahjongSettings& settings, std::string where, MatchTotals& totals)
+        MatchAudit(const MahjongSettings& settings, String where, MatchTotals& totals)
             : _settings(settings), _where(std::move(where)), _totals(totals), _handsPerRound(settings.handsPerMatch / kRoundsPerMatch) {}
 
         /// Before the hand is played: remembers where the match stands and checks the hand was dealt for it.
@@ -70,7 +70,7 @@ namespace BECore::Mahjong::Tests {
 
         /// After `EndHand` returned `settlement` for hand number `_handIndex` of the match (replayed draws included).
         void AfterHand(const Match& match, const HandSettlement& settlement) {
-            const std::string where = HandWhere();
+            const String where = HandWhere();
             // The settlement is of this hand and well formed.
             EXPECT_EQ(settlement.east, _before.east) << where;
             EXPECT_EQ(settlement.roundWind, _roundWind) << where;
@@ -138,8 +138,8 @@ namespace BECore::Mahjong::Tests {
         }
 
     private:
-        std::string HandWhere() const {
-            return _where + " hand " + std::to_string(_handIndex);
+        String HandWhere() const {
+            return Format("{} hand {}", _where, _handIndex);
         }
 
         void Count(const HandSettlement& settlement, int grew) {
@@ -159,7 +159,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         MahjongSettings _settings;
-        std::string _where;
+        String _where;
         MatchTotals& _totals;
         int _handsPerRound = 0;
         int _handIndex = 0;

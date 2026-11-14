@@ -1,5 +1,6 @@
 #include <BECore/GameManager/CoreManager.h>
 #include <Common/EngineEnvironment.h>
+#include <Common/Printers.h>
 #include <Common/TempPath.h>
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/MatchLogJson.h>
@@ -35,11 +36,11 @@ namespace BECore::Mahjong::Tests {
             eastl::vector<UploadPiece> pieces;
         };
 
-        std::string ReadFile(const fs::path& path) {
+        String ReadFile(const fs::path& path) {
             std::ifstream file(path, std::ios::binary);
             std::stringstream text;
             text << file.rdbuf();
-            return text.str();
+            return FromStdString(text.str());
         }
 
         class MahjongGameUploadTest : public ::testing::Test {
@@ -93,7 +94,7 @@ namespace BECore::Mahjong::Tests {
                 ASSERT_EQ(session.GetPhase(), SessionPhase::MatchOver);
             }
 
-            static void ExpectReplays(const eastl::string& text) {
+            static void ExpectReplays(const String& text) {
                 const auto events = ParseMatchLog(StringView(text.c_str(), text.size()));
                 ASSERT_TRUE(events.has_value()) << events.error().c_str();
                 Match replayed;
@@ -127,7 +128,7 @@ namespace BECore::Mahjong::Tests {
 
         const fs::path file = game->GetMatchLog().Path();
         ASSERT_FALSE(file.empty());
-        const auto events = ParseMatchLog(FromStd(ReadFile(file)));
+        const auto events = ParseMatchLog(ReadFile(file));
         ASSERT_TRUE(events.has_value());
         EXPECT_EQ(events->back().kind, MatchLogKind::End);
         EXPECT_EQ(events->front().seed, kOtherSeed);
@@ -146,7 +147,7 @@ namespace BECore::Mahjong::Tests {
         const auto assembled = AssemblePieces(sink.pieces);
         ASSERT_TRUE(assembled.has_value()) << assembled.error().c_str();
         ExpectReplays(*assembled);
-        EXPECT_EQ(std::string(assembled->c_str(), assembled->size()), ReadFile(game->GetMatchLog().Path())) << "the writer still gets every event";
+        EXPECT_EQ(String(assembled->c_str(), assembled->size()), ReadFile(game->GetMatchLog().Path())) << "the writer still gets every event";
     }
 
     TEST_F(MahjongGameUploadTest, StopInTheMiddleOfAMatchSendsAnAbandonedPiece) {
@@ -185,9 +186,9 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(PlayHand());
         game->Stop();
 
-        std::vector<std::string> ids;
+        std::vector<String> ids;
         for (const UploadPiece& piece : sink.pieces) {
-            const std::string id(piece.matchId.c_str(), piece.matchId.size());
+            const String id(piece.matchId.c_str(), piece.matchId.size());
             if (ids.empty() || ids.back() != id) {
                 ids.push_back(id);
             }
@@ -195,8 +196,8 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(ids.size(), 2u);
         EXPECT_NE(ids[0], ids[1]);
         const std::regex hex32("[0-9a-f]{32}");
-        for (const std::string& id : ids) {
-            EXPECT_TRUE(std::regex_match(id, hex32)) << id;
+        for (const String& id : ids) {
+            EXPECT_TRUE(std::regex_match(id.c_str(), hex32)) << id;
         }
     }
 
@@ -210,7 +211,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(PlayHand());
         game->GetSession().RunComputers();
         game->FlushSave();
-        const std::string saved = ReadFile(saves / kMatchFile);
+        const String saved = ReadFile(saves / kMatchFile);
         ASSERT_FALSE(saved.empty());
         game.Reset();
 

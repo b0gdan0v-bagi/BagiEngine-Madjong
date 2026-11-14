@@ -35,44 +35,42 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Everything a view holds, as text, to compare two views.
-        std::string ViewText(const TableView& view) {
-            std::string text = "seat " + std::to_string(view.seat) + " phase " + Name(view.phase) + " current " + std::to_string(view.currentSeat) + " pending " +
-                               ToStdString(ToString(view.pendingTile)) + " winds " + Name(view.seatWind) + "/" + Name(view.roundWind);
+        String ViewText(const TableView& view) {
+            String text =
+                Format("seat {} phase {} current {} pending {} winds {}/{}", view.seat, Name(view.phase), view.currentSeat, ToString(view.pendingTile), Name(view.seatWind), Name(view.roundWind));
             text += " own";
             for (const Tile tile : view.own.concealed) {
-                text += " " + ToStdString(ToString(tile));
+                AppendFormat(text, " {}", ToString(tile));
             }
             for (const Meld& meld : view.own.melds) {
-                text += " | meld " + Name(meld.kind) + " " + ToStdString(ToString(meld.first)) + " " + std::to_string(meld.concealed);
+                AppendFormat(text, " | meld {} {} {}", Name(meld.kind), ToString(meld.first), meld.concealed);
             }
-            text += " bonus " + std::to_string(view.own.bonus.size()) + " calling " + std::to_string(view.own.callingDeclared) + "/" + std::to_string(view.own.callingAtDiscardCount) + "/" +
-                    std::to_string(view.own.discardCount);
+            AppendFormat(text, " bonus {} calling {}/{}/{}", view.own.bonus.size(), view.own.callingDeclared, view.own.callingAtDiscardCount, view.own.discardCount);
             for (const PublicSeat& seat : view.seats) {
                 text += " || open";
                 for (const Meld& meld : seat.openMelds) {
-                    text += " " + Name(meld.kind) + ToStdString(ToString(meld.first));
+                    AppendFormat(text, " {}{}", Name(meld.kind), ToString(meld.first));
                 }
                 for (const Tile tile : seat.bonus) {
-                    text += " bonus:" + ToStdString(ToString(tile));
+                    AppendFormat(text, " bonus:{}", ToString(tile));
                 }
-                text += " ck " + std::to_string(seat.concealedKongs) + " bonus " + std::to_string(seat.bonusCount) + " disc " + std::to_string(seat.discardCount) + " calling " +
-                        std::to_string(seat.callingDeclared);
+                AppendFormat(text, " ck {} bonus {} disc {} calling {}", seat.concealedKongs, seat.bonusCount, seat.discardCount, seat.callingDeclared);
                 text += " discarded";
                 for (const uint8_t copies : seat.discardedKinds) {
-                    text += " " + std::to_string(copies);
+                    AppendFormat(text, " {}", copies);
                 }
                 text += " passed";
                 for (const uint8_t copies : seat.passedKinds) {
-                    text += " " + std::to_string(copies);
+                    AppendFormat(text, " {}", copies);
                 }
             }
             text += " visible";
             for (const uint8_t copies : view.visible) {
-                text += " " + std::to_string(copies);
+                AppendFormat(text, " {}", copies);
             }
-            text += " live " + std::to_string(view.liveCount) + " legal";
+            AppendFormat(text, " live {} legal", view.liveCount);
             for (const HandAction& action : view.legal) {
-                text += " " + Name(action.kind) + ":" + ToStdString(ToString(action.tile)) + std::to_string(action.declareCalling);
+                AppendFormat(text, " {}:{}{}", Name(action.kind), ToString(action.tile), action.declareCalling);
             }
             return text;
         }

@@ -37,10 +37,6 @@ namespace BECore::Mahjong::Tests {
             return strings;
         }
 
-        std::string Std(const eastl::string& text) {
-            return std::string(text.data(), text.size());
-        }
-
         struct Table {
             Match match;
             TableSession session{match};
@@ -65,9 +61,9 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The name a plate shows: "Seat 2", and the word `seat.you` after it for the person at a table with one person.
-        eastl::string ExpectedName(const UIStrings& strings, Seat seat, bool you) {
-            const eastl::string number = Format("{}", seat + 1);
-            eastl::string name = Tr(strings, "seat.short", {{"n", number}});
+        String ExpectedName(const UIStrings& strings, Seat seat, bool you) {
+            const String number = Format("{}", seat + 1);
+            String name = Tr(strings, "seat.short", {{"n", number}});
             if (you) {
                 name += Tr(strings, "seat.you");
             }
@@ -89,9 +85,9 @@ namespace BECore::Mahjong::Tests {
                 ASSERT_EQ(plate.seat, seat) << "position " << position;
                 EXPECT_EQ(plate.seat, SeatAtPosition(bottom, position));
                 const bool you = people == 1 && table.session.Seats()[static_cast<size_t>(seat)] == SeatKind::Person;
-                EXPECT_EQ(Std(plate.name), Std(ExpectedName(strings, seat, you))) << "position " << position;
+                EXPECT_EQ(plate.name, ExpectedName(strings, seat, you)) << "position " << position;
                 EXPECT_EQ(plate.turn, seat == turn) << "position " << position;
-                EXPECT_EQ(plate.name.find('{'), eastl::string::npos);
+                EXPECT_EQ(plate.name.find('{'), String::npos);
                 turns += plate.turn ? 1 : 0;
             }
             EXPECT_EQ(turns, turn == kNoSeat ? 0 : 1);
@@ -142,7 +138,7 @@ namespace BECore::Mahjong::Tests {
             const auto plates = MakeSeatPlates(Words(), table.session, table.match);
             EXPECT_EQ(plates[0].seat, person);
             for (int position = 0; position < kSeatCount; ++position) {
-                const bool hasYou = Std(plates[static_cast<size_t>(position)].name) == Std(ExpectedName(Words(), person, true));
+                const bool hasYou = plates[static_cast<size_t>(position)].name == ExpectedName(Words(), person, true);
                 EXPECT_EQ(hasYou, position == 0) << "person " << person << " position " << position;
             }
         }
@@ -154,7 +150,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(BottomSeat(table.session), 0);
         ASSERT_NO_FATAL_FAILURE(ExpectPlates(Words(), table, 0));
         for (const SeatPlateText& plate : MakeSeatPlates(Words(), table.session, table.match)) {
-            EXPECT_EQ(plate.name.find(Std(Tr(Words(), "seat.you")).c_str()), eastl::string::npos) << Std(plate.name);
+            EXPECT_EQ(plate.name.find(Tr(Words(), "seat.you").c_str()), String::npos) << plate.name;
         }
     }
 
@@ -185,7 +181,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(bottoms.size(), 2u) << "the bottom seat never moved to the other person";
         // Both people keep the bottom after their action, and nobody is "you" among two
         for (const SeatPlateText& plate : MakeSeatPlates(Words(), table.session, table.match)) {
-            EXPECT_EQ(Std(plate.name).find("You"), std::string::npos);
+            EXPECT_EQ(plate.name.find("You"), String::npos);
         }
     }
 
@@ -341,12 +337,12 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(table.Start(PersonAt(2)));
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
-        std::set<std::string> names;
+        std::set<String> names;
         ForEachLanguage(strings, [&](PoolString language) {
             ASSERT_NO_FATAL_FAILURE(ExpectPlates(strings, table, 2));
             for (const SeatPlateText& plate : MakeSeatPlates(strings, table.session, table.match)) {
                 EXPECT_FALSE(plate.name.empty()) << language.ToStringView().data();
-                names.insert(Std(plate.name));
+                names.insert(plate.name);
             }
         });
         // Four seats in each of the two languages, and no word is shared between them
@@ -382,26 +378,26 @@ namespace BECore::Mahjong::Tests {
         match.ShowRemote(source.match.GetSettings(), MatchPhase::InHand, 0, source.match.East(), source.match.Scores(), HandModel::ForDisplay(source.match.Hand().Capture()));
         // Seats 0 and 2 are people, seat 3 is a person who has no name; the viewer is seat 2
         const SeatSetup seats{SeatKind::Person, SeatKind::Computer, SeatKind::Person, SeatKind::Person};
-        const SeatNames names{eastl::string("Ann"), eastl::string(), eastl::string("Cy"), eastl::string()};
+        const SeatNames names{String("Ann"), String(), String("Cy"), String()};
         session.ShowRemote(seats, UniformLevels(kDefaultLevel), names, 2, kNoSeat, true);
 
         const auto plates = MakeSeatPlates(Words(), session, match);
         EXPECT_EQ(plates[0].seat, 2);
-        EXPECT_EQ(Std(plates[0].name), "Cy You") << "the viewer, though several people sit";
-        EXPECT_EQ(Std(plates[1].name), "Seat 4") << "a person with no name has a number";
-        EXPECT_EQ(Std(plates[2].name), "Ann");
-        EXPECT_EQ(Std(plates[3].name), "Seat 2") << "a computer keeps its number";
+        EXPECT_EQ(plates[0].name, "Cy You") << "the viewer, though several people sit";
+        EXPECT_EQ(plates[1].name, "Seat 4") << "a person with no name has a number";
+        EXPECT_EQ(plates[2].name, "Ann");
+        EXPECT_EQ(plates[3].name, "Seat 2") << "a computer keeps its number";
 
         // The sentences that name a seat say the same
-        EXPECT_EQ(Std(SeatLabel(Words(), 0, Wind::South, SeatWho(session))), "Ann (South)");
-        EXPECT_EQ(Std(SeatLabel(Words(), 2, Wind::East, SeatWho(session))), "Cy (East) You");
-        EXPECT_EQ(Std(SeatLabel(Words(), 1, Wind::West, SeatWho(session))), "Seat 2 (West)");
+        EXPECT_EQ(SeatLabel(Words(), 0, Wind::South, SeatWho(session)), "Ann (South)");
+        EXPECT_EQ(SeatLabel(Words(), 2, Wind::East, SeatWho(session)), "Cy (East) You");
+        EXPECT_EQ(SeatLabel(Words(), 1, Wind::West, SeatWho(session)), "Seat 2 (West)");
         const StandingsTable standings = FormatStandings(Words(), match, SeatWho(session));
-        EXPECT_EQ(Std(standings.headline), "Tied for first: Ann, Seat 2, Cy You, Seat 4");
+        EXPECT_EQ(standings.headline, "Tied for first: Ann, Seat 2, Cy You, Seat 4");
 
         // A table with no room knows no names: the one person is "you", as before
         const SeatSetup local{SeatKind::Person, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
-        EXPECT_EQ(Std(SeatLabel(Words(), 0, SeatWho(local))), "Seat 1 You");
+        EXPECT_EQ(SeatLabel(Words(), 0, SeatWho(local)), "Seat 1 You");
     }
 
 }  // namespace BECore::Mahjong::Tests

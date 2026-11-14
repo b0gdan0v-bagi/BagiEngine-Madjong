@@ -31,15 +31,15 @@ namespace BECore::Mahjong::Tests {
             {"OnlineEntry", 33}, {"Consent", 34},   {"Rules", 35},      {"RulesAction", 36},
         };
 
-        std::string NodeFileStem(const char* name) {
-            return std::string("Mahjong") + name;
+        String NodeFileStem(const char* name) {
+            return Format("Mahjong{}", name);
         }
 
         std::filesystem::path NodeFilePath(const char* name) {
-            return ShippedNodesDirectory() / (NodeFileStem(name) + ".xml");
+            return ShippedNodesDirectory() / Format("{}.xml", NodeFileStem(name)).c_str();
         }
 
-        std::string ReferenceOf(const char* name) {
+        String ReferenceOf(const char* name) {
             return "nodes/" + NodeFileStem(name);
         }
 
@@ -52,7 +52,7 @@ namespace BECore::Mahjong::Tests {
         /// inside a stack).
         std::vector<pugi::xml_node> RootElementsOf(const pugi::xml_document& document, const char* node) {
             std::vector<pugi::xml_node> found;
-            const std::string path = std::string("//node[@name='") + node + "']//component[@space='SceneView']/elements/element";
+            const String path = Format("//node[@name='{}']//component[@space='SceneView']/elements/element", node);
             for (const pugi::xpath_node& element : document.select_nodes(path.c_str())) {
                 found.push_back(element.node());
             }
@@ -71,7 +71,7 @@ namespace BECore::Mahjong::Tests {
 
         bool IsListedUnanchored(const char* node, const char* element) {
             for (const UnanchoredElement& listed : kUnanchoredElements) {
-                if (std::string(listed.node) == node && std::string(listed.element) == element) {
+                if (String(listed.node) == node && String(listed.element) == element) {
                     return true;
                 }
             }
@@ -136,16 +136,16 @@ namespace BECore::Mahjong::Tests {
             EXPECT_STREQ(nodes[i].name(), "node") << name;
             EXPECT_EQ(AttributeCount(nodes[i]), 1u) << name << ": a reference carries no other attribute (the layer is in the node file)";
             EXPECT_TRUE(ElementChildren(nodes[i]).empty()) << name << ": a reference has no child";
-            EXPECT_EQ(std::string(nodes[i].attribute("ref").as_string()), ReferenceOf(name)) << "position " << i;
+            EXPECT_EQ(String(nodes[i].attribute("ref").as_string()), ReferenceOf(name)) << "position " << i;
         }
     }
 
     TEST(MahjongSceneFilesTest, EveryNodeIsInAFileOfItsOwn) {
         // Every xml file of config/ is loaded by ConfigManager as a config named by its stem; the `Mahjong` prefix of the node files also keeps them clear of the stems of the engine's config.
-        std::map<std::string, int> stems;
+        std::map<String, int> stems;
         for (const std::filesystem::directory_entry& entry : std::filesystem::recursive_directory_iterator(ShippedConfigDirectory())) {
             if (entry.is_regular_file() && entry.path().extension() == ".xml") {
-                ++stems[entry.path().stem().string()];
+                ++stems[FromStdString(entry.path().stem().string())];
             }
         }
         for (const SceneNode& node : kSceneNodes) {
@@ -169,13 +169,13 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(MahjongSceneFilesTest, NoNodeFileIsLeftOut) {
-        std::set<std::string> expected;
+        std::set<String> expected;
         for (const SceneNode& node : kSceneNodes) {
-            expected.insert(NodeFilePath(node.name).filename().string());
+            expected.insert(FromStdString(NodeFilePath(node.name).filename().string()));
         }
-        std::set<std::string> found;
+        std::set<String> found;
         for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(ShippedNodesDirectory())) {
-            found.insert(entry.path().filename().string());
+            found.insert(FromStdString(entry.path().filename().string()));
         }
         EXPECT_EQ(found, expected) << "config/nodes/ holds exactly the files of kSceneNodes";
     }
@@ -188,7 +188,7 @@ namespace BECore::Mahjong::Tests {
         const std::vector<pugi::xml_node> nodes = ElementChildren(scene.child("nodes"));
         ASSERT_EQ(nodes.size(), std::size(kSceneNodes));
 
-        std::set<std::string> names;
+        std::set<String> names;
         for (size_t i = 0; i < nodes.size(); ++i) {
             EXPECT_STREQ(nodes[i].attribute("name").as_string(), kSceneNodes[i].name) << "position " << i;
             EXPECT_EQ(nodes[i].attribute("layer").as_int(0), kSceneNodes[i].layer) << kSceneNodes[i].name;
@@ -198,11 +198,11 @@ namespace BECore::Mahjong::Tests {
 
         const auto componentOf = [&](const char* node) {
             for (const pugi::xml_node& candidate : nodes) {
-                if (std::string(candidate.attribute("name").as_string()) == node) {
-                    return std::string(candidate.child("components").child("component").attribute("type").as_string());
+                if (String(candidate.attribute("name").as_string()) == node) {
+                    return String(candidate.child("components").child("component").attribute("type").as_string());
                 }
             }
-            return std::string();
+            return String();
         };
         EXPECT_EQ(componentOf("Table"), "MahjongTableComponent");
         EXPECT_EQ(componentOf("Hud"), "MahjongHudComponent");
@@ -214,7 +214,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(LoadShippedSceneDocument(document));
         // A canvas on the table is laid out against the view, whose aspect is the view's own, so each shape's variant carries the text of the view's
         // `when` (the narrow one also says `orientation:landscape`: a portrait view is under the narrow aspect too) and the three exclude each other
-        std::set<std::string> allowed;
+        std::set<String> allowed;
         for (const SceneViewVariant& view : SceneViewVariants()) {
             allowed.insert(view.when.ToText().c_str());
         }
@@ -222,7 +222,7 @@ namespace BECore::Mahjong::Tests {
         size_t found = 0;
         // (a `Screen` canvas sees the window, not the view: `HudMenu` splits the narrow windows at an aspect of its own, so its variants are not held to it)
         for (const pugi::xpath_node& variant : document.select_nodes("//component[@space='SceneView']//variant[@when]")) {
-            const std::string when = variant.node().attribute("when").as_string();
+            const String when = variant.node().attribute("when").as_string();
             EXPECT_EQ(allowed.count(when), 1u) << "a variant that is not the condition of a view: " << when;
             ++found;
         }
@@ -248,7 +248,7 @@ namespace BECore::Mahjong::Tests {
             }
         }
         for (const UnanchoredElement& listed : kUnanchoredElements) {
-            EXPECT_TRUE(document.select_node((std::string("//node[@name='") + listed.node + "']//element[@name='" + listed.element + "']").c_str())) << "an exception that is gone: " << listed.element;
+            EXPECT_TRUE(document.select_node((Format("//node[@name='{}']//element[@name='{}']", listed.node, listed.element)).c_str())) << "an exception that is gone: " << listed.element;
             EXPECT_GT(std::strlen(listed.reason), 0u);
         }
         EXPECT_GT(named, 0u);
@@ -265,7 +265,7 @@ namespace BECore::Mahjong::Tests {
                 }
             }
             // A variant of such a canvas is a real difference (a size class, an arrangement), so it sets no offset in units
-            const std::string sets = std::string("//node[@name='") + node + "']//variants//set";
+            const String sets = Format("//node[@name='{}']//variants//set", node);
             for (const pugi::xpath_node& set : document.select_nodes(sets.c_str())) {
                 for (const char* axis : {"x", "y"}) {
                     const char* value = set.node().attribute(axis).as_string();
@@ -278,9 +278,9 @@ namespace BECore::Mahjong::Tests {
     TEST(MahjongSceneFilesTest, EveryRegionNameOfTheTableNodesExistsInTheSpecOfEveryShape) {
         pugi::xml_document document;
         ASSERT_TRUE(LoadShippedSceneDocument(document));
-        std::set<std::string> used;
+        std::set<String> used;
         for (const char* node : kRegionNodes) {
-            const std::string attributes = std::string("//node[@name='") + node + "']//@region";
+            const String attributes = Format("//node[@name='{}']//@region", node);
             for (const pugi::xpath_node& region : document.select_nodes(attributes.c_str())) {
                 used.insert(region.attribute().as_string());
             }
@@ -289,7 +289,7 @@ namespace BECore::Mahjong::Tests {
         const TableLayoutSpec& spec = ShippedTableLayoutSpec();
         for (const TableShape shape : {TableShape::Landscape, TableShape::Portrait, TableShape::Wide, TableShape::Narrow}) {
             const eastl::vector<TableRegion> regions = MakeTableRegions(MakeTableLayout(WorstCaseTableInput(0), spec, DesignWidthOf(shape), DesignHeightOf(shape)));
-            for (const std::string& name : used) {
+            for (const String& name : used) {
                 bool found = false;
                 for (const TableRegion& region : regions) {
                     found = found || name == region.name.c_str();

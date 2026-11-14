@@ -139,9 +139,9 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// The text of a `UIVars` variable.
-    inline std::string Var(const char* name) {
+    inline String Var(const char* name) {
         const StringView value = CoreManager::GetUIVars().Get(PoolString::Intern(name));
-        return std::string(value.data(), value.size());
+        return String(value.data(), value.size());
     }
 
     /// Where a flight starts: the screen rectangle of the old slot and its turn. It reads as the rectangle where only that is wanted.

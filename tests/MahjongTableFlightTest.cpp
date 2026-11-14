@@ -898,7 +898,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableFlightTest, TheModelAndTheSessionAreTheSameWithFlightsOnAndOffOverAWholeHandOfComputers) {
-        const auto play = [&](bool flights, std::vector<std::string>& log) {
+        const auto play = [&](bool flights, std::vector<String>& log) {
             ASSERT_NO_FATAL_FAILURE(Start(kAllComputers, kSeed));
             _table->SetTileFlightSeconds(flights ? kTileFlightSeconds : 0.0f);
             Draw();
@@ -909,12 +909,12 @@ namespace BECore::Mahjong::Tests {
                     Draw();
                     ExpectEverySlotDrawnOnce();
                 }
-                log.push_back(std::to_string(Session().Version() - firstVersion) + " " + Snapshot(Hand()));
+                log.push_back(Format("{} {}", Session().Version() - firstVersion, Snapshot(Hand())));
             }
             ASSERT_NE(Session().GetPhase(), SessionPhase::Playing) << "the hand ended";
         };
-        std::vector<std::string> withFlights;
-        std::vector<std::string> without;
+        std::vector<String> withFlights;
+        std::vector<String> without;
         ASSERT_NO_FATAL_FAILURE(play(true, withFlights));
         ASSERT_NO_FATAL_FAILURE(play(false, without));
         EXPECT_EQ(withFlights, without);

@@ -722,7 +722,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongTableUiTest, DrawingChangesNothing) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         ASSERT_TRUE(StepUntil([&] { return _game->GetSession().ActorIsPerson(); }));
-        const std::string hand = Snapshot(Hand());
+        const String hand = Snapshot(Hand());
         const uint64_t version = _game->GetSession().Version();
         const Seat viewer = _game->GetSession().Viewer();
 

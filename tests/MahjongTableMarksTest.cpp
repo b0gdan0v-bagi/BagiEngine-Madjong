@@ -155,7 +155,7 @@ namespace BECore::Mahjong::Tests {
             spec.hands[kSeat1] = kWaitingHand1;
             spec.hands[kSeat2] = kSeat2Waits;
             spec.hands[kSeat3] = kSeat3Waits;
-            spec.live = std::string("Gd Rd Wd Gd ") + lastDraw;
+            spec.live = Format("Gd Rd Wd Gd {}", lastDraw);
             HandModel model = MakeModel(spec);
             Lap(model, "Gd Rd Wd Gd", {kSeat0, kSeat1, kSeat2, kSeat3});
             EXPECT_EQ(model.CurrentSeat(), kSeat0);

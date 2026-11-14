@@ -2,6 +2,7 @@
 #include "UiStyleTestSupport.h"
 
 #include <BECore/UI/UIValueText.h>
+#include <Common/Printers.h>
 #include <cmath>
 
 /**
@@ -22,9 +23,9 @@ namespace BECore::Mahjong::Tests {
 
         struct Violation {
             Rule rule;
-            std::string element;
-            std::string attribute;
-            std::string value;
+            String element;
+            String attribute;
+            String value;
         };
 
         constexpr const char* kColourAttributes[] = {"color", "hoverColor", "pressedColor", "disabledColor", "selectedColor", "trackColor", "fillColor", "thumbColor"};
@@ -42,7 +43,7 @@ namespace BECore::Mahjong::Tests {
         /// ... and the four edges in one attribute.
         constexpr const char* kEdgeAttributes[] = {"padding", "margin"};
 
-        std::string AttributeOf(const pugi::xml_node& node, const char* name) {
+        String AttributeOf(const pugi::xml_node& node, const char* name) {
             return node.attribute(name).as_string("");
         }
 
@@ -58,11 +59,11 @@ namespace BECore::Mahjong::Tests {
             return radius == 0.0f || std::any_of(kCornerScale.begin(), kCornerScale.end(), [&](int entry) { return static_cast<float>(entry) == radius; });
         }
 
-        bool IsFontFamily(const std::string& family) {
+        bool IsFontFamily(const String& family) {
             return family == kFontFamilyDisplay || family == kFontFamilyText;
         }
 
-        bool IsFontWeight(const std::string& weight) {
+        bool IsFontWeight(const String& weight) {
             const Optional<float> value = UIText::ParseFiniteFloat(weight.c_str());
             return value && (*value == static_cast<float>(kFontWeightRegular) || *value == static_cast<float>(kFontWeightBold));
         }
@@ -72,9 +73,9 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The tile pictures of the action buttons (`Chow0Tile1`) keep the 3:4 of an atlas cell and are the one exception to the grid.
-        bool IsTilePictureName(const std::string& name) {
+        bool IsTilePictureName(const String& name) {
             const size_t at = name.rfind("Tile");
-            return at != std::string::npos && at + 4 < name.size() && std::all_of(name.begin() + static_cast<std::ptrdiff_t>(at) + 4, name.end(), [](char c) { return c >= '0' && c <= '9'; });
+            return at != String::npos && at + 4 < name.size() && std::all_of(name.begin() + static_cast<std::ptrdiff_t>(at) + 4, name.end(), [](char c) { return c >= '0' && c <= '9'; });
         }
 
         bool HasComponent(const pugi::xml_node& element, const char* type) {
@@ -87,7 +88,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The font size and the position and size attributes of an `element` or of a `set` of a variant (`name` is the element it speaks of).
-        void CheckFontAndGrid(const pugi::xml_node& node, const std::string& name, bool tilePicture, std::vector<Violation>& found) {
+        void CheckFontAndGrid(const pugi::xml_node& node, const String& name, bool tilePicture, std::vector<Violation>& found) {
             const auto flag = [&](Rule rule, const char* attribute) { found.push_back({rule, name, attribute, AttributeOf(node, attribute)}); };
 
             if (node.attribute("fontSize")) {
@@ -134,7 +135,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The corner radius and the border width of an `element` or of a `set` of a variant: the radii are on the scale of the skin (or round), the border is one width.
-        void CheckSkinScale(const pugi::xml_node& node, const std::string& name, std::vector<Violation>& found) {
+        void CheckSkinScale(const pugi::xml_node& node, const String& name, std::vector<Violation>& found) {
             if (node.attribute("cornerRadius")) {
                 const Optional<UICorners> corners = UIText::ParseCorners(node.attribute("cornerRadius").as_string());
                 const auto fits = [&](float radius) { return OnTheCornerScale(radius) || IsRoundBox(node, radius); };
@@ -151,7 +152,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The colours of the skin of an element and its shadow and glow (colour in the palette, numbers on the grid).
-        void CheckSkinPaint(const pugi::xml_node& element, const std::string& name, std::vector<Violation>& found) {
+        void CheckSkinPaint(const pugi::xml_node& element, const String& name, std::vector<Violation>& found) {
             for (const char* attribute : kSkinColourAttributes) {
                 if (element.attribute(attribute)) {
                     const Optional<Color> color = UIText::ParseColor(element.attribute(attribute).as_string());
@@ -175,7 +176,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// What a `UITextComponent` and a `UIImageComponent` bring: the outline and shadow colours of a text, the tints of a picture, the font family and weight.
-        void CheckSkinComponent(const pugi::xml_node& component, const std::string& name, std::vector<Violation>& found) {
+        void CheckSkinComponent(const pugi::xml_node& component, const String& name, std::vector<Violation>& found) {
             const auto flag = [&](Rule rule, const char* attribute) { found.push_back({rule, name, attribute, AttributeOf(component, attribute)}); };
             for (const char* attribute : kTintAttributes) {
                 if (component.attribute(attribute)) {
@@ -215,7 +216,7 @@ namespace BECore::Mahjong::Tests {
         constexpr const char* kMotionAttributes[] = {"transitionDuration", "transitionHideDuration", "transitionEase", "transitionScaleFrom", "transitionSlideX", "transitionSlideY", "transitionFade"};
 
         template <size_t N>
-        bool IsOneOf(const std::string& name, const char* const (&names)[N]) {
+        bool IsOneOf(const String& name, const char* const (&names)[N]) {
             return std::any_of(std::begin(names), std::end(names), [&](const char* entry) { return name == entry; });
         }
 
@@ -226,7 +227,7 @@ namespace BECore::Mahjong::Tests {
 
         /// The `transition*` fields of a canvas against the named numbers: a card of `kMotionCards` has the show, hide, ease and the rise, a plate of `kMotionPlates` the same without the rise (the
         /// field stays at 1), no canvas has a slide, and a canvas of neither list has none of the fields. `name` is the node the canvas belongs to.
-        void CheckMotion(const pugi::xml_node& canvas, const std::string& name, std::vector<Violation>& found) {
+        void CheckMotion(const pugi::xml_node& canvas, const String& name, std::vector<Violation>& found) {
             const auto flag = [&](const char* attribute) { found.push_back({Rule::Motion, name, attribute, AttributeOf(canvas, attribute)}); };
             const bool card = IsOneOf(name, kMotionCards);
             const bool plate = IsOneOf(name, kMotionPlates);
@@ -258,7 +259,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         void CheckElement(const pugi::xml_node& element, std::vector<Violation>& found) {
-            const std::string name = AttributeOf(element, "name");
+            const String name = AttributeOf(element, "name");
             const auto flag = [&](Rule rule, const char* attribute) { found.push_back({rule, name, attribute, AttributeOf(element, attribute)}); };
 
             for (const char* attribute : kColourAttributes) {
@@ -291,11 +292,11 @@ namespace BECore::Mahjong::Tests {
             // A button (an element with a `UIInputClicker`) and a toggle row do something and keep the action on the clicker or on the
             // `UIToggleComponent`; a segment of a choice group may leave it to the group, and an option of a dropdown always does (a
             // choice emits the dropdown's action with the option's value)
-            const std::string parentType = AttributeOf(element.parent().parent(), "type");  // element -> children -> element
+            const String parentType = AttributeOf(element.parent().parent(), "type");  // element -> children -> element
             const bool groupChild = parentType == "UISegmented" || parentType == "UIDropdown";
             for (const pugi::xml_node component : element.child("components").children("component")) {
                 // A toggle row's clicker has no action: its `UIToggleComponent` decides what a click emits and holds the action
-                const std::string componentType = AttributeOf(component, "type");
+                const String componentType = AttributeOf(component, "type");
                 const bool toggleRow = HasComponent(element, "UIToggleComponent");
                 if (componentType == "UIInputClicker" && AttributeOf(component, "action").empty() && !groupChild && !toggleRow) {
                     flag(Rule::Action, "action");
@@ -314,7 +315,7 @@ namespace BECore::Mahjong::Tests {
                     ++count;
                 } else if (StringView(child.name()) == "set") {
                     // a variant sets font and geometry (no colour) of the element it names; a tile picture is told by the name alone
-                    const std::string name = AttributeOf(child, "element");
+                    const String name = AttributeOf(child, "element");
                     CheckFontAndGrid(child, name, IsTilePictureName(name), found);
                     CheckSkinScale(child, name, found);
                     ++count;
@@ -331,7 +332,7 @@ namespace BECore::Mahjong::Tests {
             std::vector<Violation> violations;
         };
 
-        Report CheckStyle(const std::string& xml) {
+        Report CheckStyle(const String& xml) {
             Report report;
             pugi::xml_document document;
             report.parsed = document.load_string(xml.c_str());
@@ -339,7 +340,7 @@ namespace BECore::Mahjong::Tests {
             return report;
         }
 
-        std::string ShippedText() {
+        String ShippedText() {
             return ShippedSceneXml();
         }
 
@@ -349,8 +350,8 @@ namespace BECore::Mahjong::Tests {
             return found;
         }
 
-        std::string Describe(const std::vector<Violation>& violations) {
-            std::string text;
+        String Describe(const std::vector<Violation>& violations) {
+            String text;
             for (const Violation& v : violations) {
                 text += "\n  " + v.element + " " + v.attribute + "=\"" + v.value + "\"";
             }
@@ -358,17 +359,17 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// `text` with the first `from` replaced by `to`; the test fails when there is none (a copy that was not broken proves nothing).
-        std::string Broken(std::string text, const std::string& from, const std::string& to) {
+        String Broken(String text, const String& from, const String& to) {
             const size_t at = text.find(from);
-            EXPECT_NE(at, std::string::npos) << from << " is not in the file";
-            if (at != std::string::npos) {
+            EXPECT_NE(at, String::npos) << from << " is not in the file";
+            if (at != String::npos) {
                 text.replace(at, from.size(), to);
             }
             return text;
         }
 
         /// A scene with one element, for the rules at their edges; `components` are the `component` nodes of the element.
-        std::string OneElement(const std::string& attributes, const std::string& components = "") {
+        String OneElement(const String& attributes, const String& components = "") {
             return "<SceneManager><scenes><scene><nodes><node><components><component><elements><element " + attributes + "><components>" + components +
                    "</components></element></elements></component></components></node></nodes></scene></scenes></SceneManager>";
         }
@@ -386,11 +387,11 @@ namespace BECore::Mahjong::Tests {
                                           "<component type=\"UIImageComponent\" tint=\"255,255,255,255\" hoverTint=\"255,255,255,255\" />";
 
         /// The skin of `kSkinAttributes` with the first `from` of it replaced by `to`, in an element with the text and picture of `kSkinText`.
-        Report SkinWith(const std::string& from, const std::string& to, const std::string& components = kSkinText) {
-            std::string attributes = kSkinAttributes;
+        Report SkinWith(const String& from, const String& to, const String& components = kSkinText) {
+            String attributes = kSkinAttributes;
             const size_t at = attributes.find(from);
-            EXPECT_NE(at, std::string::npos) << from << " is not in the skin";
-            if (at != std::string::npos) {
+            EXPECT_NE(at, String::npos) << from << " is not in the skin";
+            if (at != String::npos) {
                 attributes.replace(at, from.size(), to);
             }
             return CheckStyle(OneElement(attributes, components));
@@ -405,7 +406,7 @@ namespace BECore::Mahjong::Tests {
             _report = CheckStyle(_text);
         }
 
-        std::string _text;
+        String _text;
         Report _report;
     };
 
@@ -462,8 +463,8 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongUiStyleTest, TheSetNodesOfAVariantAreHeldToTheFontAndGridRules) {
-        const std::string variant = "<root><element type=\"UIElement\" name=\"A\"><components><component type=\"UITextComponent\" /></components></element><variant><set element=\"A\" x=\"16\" "
-                                    "fontSize=\"18\" width=\"50%\" /></variant></root>";
+        const String variant = "<root><element type=\"UIElement\" name=\"A\"><components><component type=\"UITextComponent\" /></components></element><variant><set element=\"A\" x=\"16\" "
+                               "fontSize=\"18\" width=\"50%\" /></variant></root>";
         EXPECT_TRUE(CheckStyle(variant).violations.empty());
         const Report offGrid = CheckStyle(Broken(variant, "x=\"16\"", "x=\"17\""));
         ASSERT_EQ(Of(offGrid, Rule::Grid).size(), 1u);
@@ -536,10 +537,10 @@ namespace BECore::Mahjong::Tests {
                                        {"textShadow=\"0,2,0,0,0,90\"", "textShadow=\"0,2,0,0,0,91\""},
                                        {"tint=\"255,255,255,255\" hoverTint", "tint=\"255,255,254,255\" hoverTint"},
                                        {"hoverTint=\"255,255,255,255\"", "hoverTint=\"250,250,250,255\""}}) {
-            std::string components = kSkinText;
+            String components = kSkinText;
             const size_t at = components.find(from);
-            ASSERT_NE(at, std::string::npos) << from;
-            components.replace(at, std::string(from).size(), to);
+            ASSERT_NE(at, String::npos) << from;
+            components.replace(at, String(from).size(), to);
             const Report report = CheckStyle(OneElement(kSkinAttributes, components));
             EXPECT_EQ(Of(report, Rule::Colour).size(), 1u) << to;
             EXPECT_EQ(report.violations.size(), 1u) << to;
@@ -560,8 +561,8 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(CheckStyle(OneElement("type=\"UIElement\" name=\"Round\" width=\"56\" height=\"48\" cornerRadius=\"28\"", kClicker)).violations.empty());
         EXPECT_FALSE(CheckStyle(OneElement("type=\"UIElement\" name=\"Round\" width=\"56\" height=\"56\" cornerRadius=\"24\"", kClicker)).violations.empty());
         // the `set` of a variant is held to the same scale
-        const std::string variant = "<root><element type=\"UIElement\" name=\"A\"><components><component type=\"UITextComponent\" /></components></element><variant><set element=\"A\" "
-                                    "cornerRadius=\"12\" /></variant></root>";
+        const String variant = "<root><element type=\"UIElement\" name=\"A\"><components><component type=\"UITextComponent\" /></components></element><variant><set element=\"A\" "
+                               "cornerRadius=\"12\" /></variant></root>";
         EXPECT_TRUE(CheckStyle(variant).violations.empty());
         EXPECT_FALSE(Of(CheckStyle(Broken(variant, "cornerRadius=\"12\"", "cornerRadius=\"13\"")), Rule::Scale).empty());
     }
@@ -581,10 +582,10 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongUiStyleTest, AFontFamilyOrWeightOfNoneOfTheGameIsCaught) {
         for (const auto& [from, to] :
              {std::pair<const char*, const char*>{"fontFamily=\"Russo One\"", "fontFamily=\"Arial\""}, {"fontWeight=\"700\"", "fontWeight=\"600\""}, {"fontWeight=\"700\"", "fontWeight=\"bold\""}}) {
-            std::string components = kSkinText;
+            String components = kSkinText;
             const size_t at = components.find(from);
-            ASSERT_NE(at, std::string::npos) << from;
-            components.replace(at, std::string(from).size(), to);
+            ASSERT_NE(at, String::npos) << from;
+            components.replace(at, String(from).size(), to);
             const Report report = CheckStyle(OneElement(kSkinAttributes, components));
             EXPECT_EQ(Of(report, Rule::Family).size(), 1u) << to;
             EXPECT_EQ(report.violations.size(), 1u) << to;
@@ -594,8 +595,8 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongUiStyleTest, EveryCanvasMotionOfTheFileIsTheNamedOne) {
         EXPECT_TRUE(Of(_report, Rule::Motion).empty()) << Describe(Of(_report, Rule::Motion));
         // the walk did find the canvases: a card and a plate of the lists carry the fields in the file
-        EXPECT_NE(_text.find("transitionScaleFrom=\"0.96\""), std::string::npos);
-        EXPECT_NE(_text.find("transitionDuration=\"0.18\""), std::string::npos);
+        EXPECT_NE(_text.find("transitionScaleFrom=\"0.96\""), String::npos);
+        EXPECT_NE(_text.find("transitionDuration=\"0.18\""), String::npos);
     }
 
     TEST_F(MahjongUiStyleTest, ACanvasMotionOffTheNamedNumbersIsCaught) {
@@ -613,8 +614,8 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongUiStyleTest, TheMotionRuleKnowsCardsPlatesAndTheCanvasesWithNone) {
         const auto canvas = [](const char* node, const char* attributes) {
-            return std::string("<SceneManager><scenes><scene><nodes><node name=\"") + node + "\"><components><component type=\"UICanvasComponent\" " + attributes +
-                   " /></components></node></nodes></scene></scenes></SceneManager>";
+            return Format("<SceneManager><scenes><scene><nodes><node name=\"{}\"><components><component type=\"UICanvasComponent\" {} /></components></node></nodes></scene></scenes></SceneManager>",
+                          node, attributes);
         };
         constexpr const char* kRise = "transitionDuration=\"0.18\" transitionHideDuration=\"0.12\" transitionEase=\"QuadOut\" transitionScaleFrom=\"0.96\"";
         constexpr const char* kFade = "transitionDuration=\"0.18\" transitionHideDuration=\"0.12\" transitionEase=\"QuadOut\"";

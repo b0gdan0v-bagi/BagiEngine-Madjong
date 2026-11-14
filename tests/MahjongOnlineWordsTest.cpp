@@ -1,5 +1,6 @@
 #include "StringsTestSupport.h"
 
+#include <Common/Printers.h>
 #include <Mahjong/Online/OnlineWords.h>
 #include <Mahjong/Table/Words.h>
 #include <gtest/gtest.h>
@@ -14,13 +15,13 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        std::string Std(StringView text) {
-            return std::string(text.data(), text.size());
+        String Std(StringView text) {
+            return String(text.data(), text.size());
         }
 
         /// The text of every key of one language of the shipped file.
-        std::map<std::string, std::string> TextsOf(const std::string& language) {
-            std::map<std::string, std::string> texts;
+        std::map<String, String> TextsOf(const String& language) {
+            std::map<String, String> texts;
             for (const LanguageEntries& entries : ReadShippedEntries()) {
                 if (entries.id == language) {
                     for (const StringEntry& entry : entries.entries) {
@@ -31,7 +32,7 @@ namespace BECore::Mahjong::Tests {
             return texts;
         }
 
-        std::set<std::string> PlaceholdersAllowedFor(const std::string& key) {
+        std::set<String> PlaceholdersAllowedFor(const String& key) {
             if (key == kOnlineUnknownKey.data()) {
                 return {"code"};
             }
@@ -39,8 +40,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Every key of `OnlineWords.h`, the codes' and the fixed ones.
-        std::set<std::string> AllOnlineKeys() {
-            std::set<std::string> keys;
+        std::set<String> AllOnlineKeys() {
+            std::set<String> keys;
             for (const OnlineCodeWord& word : kKnownOnlineCodes) {
                 keys.insert(Std(word.key));
             }
@@ -57,16 +58,16 @@ namespace BECore::Mahjong::Tests {
     }  // namespace
 
     TEST(MahjongOnlineWords, EveryKnownCodeHasAKeyInBothLanguagesWithOnlyTheDocumentedPlaceholders) {
-        const std::map<std::string, std::string> en = TextsOf("en");
-        const std::map<std::string, std::string> ru = TextsOf("ru");
+        const std::map<String, String> en = TextsOf("en");
+        const std::map<String, String> ru = TextsOf("ru");
         ASSERT_FALSE(en.empty());
         ASSERT_FALSE(ru.empty());
 
-        for (const std::string& key : AllOnlineKeys()) {
+        for (const String& key : AllOnlineKeys()) {
             ASSERT_TRUE(en.contains(key)) << key << " is missing in en";
             ASSERT_TRUE(ru.contains(key)) << key << " is missing in ru";
-            EXPECT_EQ(PlaceholderNames(FromStd(en.at(key))), PlaceholdersAllowedFor(key)) << key;
-            EXPECT_EQ(PlaceholderNames(FromStd(ru.at(key))), PlaceholdersAllowedFor(key)) << key;
+            EXPECT_EQ(PlaceholderNames(en.at(key)), PlaceholdersAllowedFor(key)) << key;
+            EXPECT_EQ(PlaceholderNames(ru.at(key)), PlaceholdersAllowedFor(key)) << key;
         }
     }
 
@@ -114,7 +115,7 @@ namespace BECore::Mahjong::Tests {
         }
         EXPECT_EQ(OnlineErrorKey(RoomClientCloseReasons::kRateLimited), OnlineErrorKey(RoomErrors::kRateLimited));
         // A code is listed once
-        std::set<std::string> seen;
+        std::set<String> seen;
         for (const OnlineCodeWord& word : kKnownOnlineCodes) {
             EXPECT_TRUE(seen.insert(Std(word.code)).second) << Std(word.code) << " is listed twice";
         }
@@ -127,9 +128,9 @@ namespace BECore::Mahjong::Tests {
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
         ForEachLanguage(strings, [&](PoolString) {
-            const eastl::string text = OnlineNoticeText(strings, OnlineErrorKey("from_a_newer_server"), "from_a_newer_server");
-            EXPECT_NE(Std(text).find("from_a_newer_server"), std::string::npos) << Std(text);
-            EXPECT_EQ(Std(text).find('{'), std::string::npos) << Std(text);
+            const String text = OnlineNoticeText(strings, OnlineErrorKey("from_a_newer_server"), "from_a_newer_server");
+            EXPECT_NE(Std(text).find("from_a_newer_server"), String::npos) << Std(text);
+            EXPECT_EQ(Std(text).find('{'), String::npos) << Std(text);
         });
     }
 
@@ -147,8 +148,8 @@ namespace BECore::Mahjong::Tests {
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
         ForEachLanguage(strings, [&](PoolString language) {
-            for (const std::string& key : AllOnlineKeys()) {
-                const eastl::string text = OnlineNoticeText(strings, FromStd(key), "x");
+            for (const String& key : AllOnlineKeys()) {
+                const String text = OnlineNoticeText(strings, key, "x");
                 EXPECT_NE(Std(text), key) << language.ToStringView().data() << ": " << key << " has no text";
                 EXPECT_FALSE(text.empty()) << key;
             }

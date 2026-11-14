@@ -1,5 +1,6 @@
 #include "StringsTestSupport.h"
 
+#include <Common/Printers.h>
 #include <Mahjong/Online/TextEntry.h>
 #include <Rooms/RoomLimits.h>
 #include <gtest/gtest.h>
@@ -12,8 +13,8 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        std::string Std(StringView text) {
-            return std::string(text.data(), text.size());
+        String Std(StringView text) {
+            return String(text.data(), text.size());
         }
 
         void TypeAll(TextEntry& entry, std::initializer_list<const char*> characters) {
@@ -34,11 +35,11 @@ namespace BECore::Mahjong::Tests {
         ForEachLanguage(strings, [&](PoolString language) {
             for (const TextEntry::Kind kind : {TextEntry::Kind::Code, TextEntry::Kind::Name}) {
                 const TextEntry entry(kind);
-                const eastl::vector<eastl::string> pad = entry.Pad(strings);
+                const eastl::vector<String> pad = entry.Pad(strings);
                 EXPECT_FALSE(pad.empty()) << language.ToStringView().data();
                 EXPECT_LE(pad.size(), TextEntry::kPadMaxKeys) << language.ToStringView().data();
-                std::set<std::string> seen;
-                for (const eastl::string& key : pad) {
+                std::set<String> seen;
+                for (const String& key : pad) {
                     EXPECT_EQ(Utf8::CountCodePoints(key), 1u) << Std(key);
                     EXPECT_TRUE(seen.insert(Std(key)).second) << Std(key) << " is on the pad twice";
                     // every key of the pad can be typed by it
@@ -52,23 +53,23 @@ namespace BECore::Mahjong::Tests {
     TEST(MahjongOnlineEntry, ThePadOfACodeIsTheRoomAlphabetAndThePadOfANameIsTheLettersOfTheLanguageDigitsAndASpace) {
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
-        const eastl::vector<eastl::string> code = TextEntry(TextEntry::Kind::Code).Pad(strings);
+        const eastl::vector<String> code = TextEntry(TextEntry::Kind::Code).Pad(strings);
         ASSERT_EQ(code.size(), RoomLimits::kRoomCodeAlphabet.size());
         for (size_t i = 0; i < code.size(); ++i) {
-            EXPECT_EQ(Std(code[i]), std::string(1, RoomLimits::kRoomCodeAlphabet[i]));
+            EXPECT_EQ(Std(code[i]), String(1, RoomLimits::kRoomCodeAlphabet[i]));
         }
 
         ASSERT_TRUE(strings.SetLanguage("en"_intern));
-        const eastl::vector<eastl::string> latin = TextEntry(TextEntry::Kind::Name).Pad(strings);
+        const eastl::vector<String> latin = TextEntry(TextEntry::Kind::Name).Pad(strings);
         ASSERT_TRUE(strings.SetLanguage("ru"_intern));
-        const eastl::vector<eastl::string> cyrillic = TextEntry(TextEntry::Kind::Name).Pad(strings);
+        const eastl::vector<String> cyrillic = TextEntry(TextEntry::Kind::Name).Pad(strings);
         EXPECT_EQ(Std(latin.front()), "A");
         EXPECT_EQ(Std(cyrillic.front()), kA);
         EXPECT_EQ(Std(latin.back()), " ");
         EXPECT_EQ(Std(cyrillic.back()), " ");
         EXPECT_EQ(Std(cyrillic[cyrillic.size() - 2]), "9");
-        EXPECT_NE(std::find(cyrillic.begin(), cyrillic.end(), eastl::string(kYa)), cyrillic.end());
-        EXPECT_EQ(std::find(latin.begin(), latin.end(), eastl::string(kYa)), latin.end());
+        EXPECT_NE(std::find(cyrillic.begin(), cyrillic.end(), String(kYa)), cyrillic.end());
+        EXPECT_EQ(std::find(latin.begin(), latin.end(), String(kYa)), latin.end());
     }
 
     TEST(MahjongOnlineEntry, ACodeAcceptsOnlyItsAlphabetFoldsCaseAndStopsAtFive) {
@@ -122,8 +123,8 @@ namespace BECore::Mahjong::Tests {
     TEST(MahjongOnlineEntry, ANameKeepsTheCaseTakesBothAlphabetsAndRefusesTheRest) {
         TextEntry name(TextEntry::Kind::Name);
         TypeAll(name, {"a", "B", " ", "7", kYa, kYoLower});
-        EXPECT_EQ(Std(name.Text()), std::string("aB 7") + kYa + kYoLower);
-        const std::string before = Std(name.Text());
+        EXPECT_EQ(Std(name.Text()), Format("aB 7{}{}", kYa, kYoLower));
+        const String before = Std(name.Text());
         for (const char* refused : {"!", "-", "\n", "\xC3\xA9" /* é */, "\xE2\x82\xAC" /* euro */, "ab", "\xFF"}) {
             EXPECT_FALSE(name.Append(refused)) << refused;
         }
@@ -134,7 +135,7 @@ namespace BECore::Mahjong::Tests {
         TextEntry name(TextEntry::Kind::Name);
         TypeAll(name, {"a", kYa, kYoLower});
         EXPECT_TRUE(name.Backspace());
-        EXPECT_EQ(Std(name.Text()), std::string("a") + kYa);
+        EXPECT_EQ(Std(name.Text()), Format("a{}", kYa));
         EXPECT_TRUE(name.Backspace());
         EXPECT_EQ(Std(name.Text()), "a");
         EXPECT_TRUE(name.Backspace());
@@ -162,11 +163,11 @@ namespace BECore::Mahjong::Tests {
     TEST(MahjongOnlineEntry, SetTakesAWholeTextOrNothing) {
         TextEntry name(TextEntry::Kind::Name);
         name.Append("a");
-        EXPECT_TRUE(name.Replace(std::string("Bob ").append(kYa).c_str()));
-        EXPECT_EQ(Std(name.Text()), std::string("Bob ") + kYa);
+        EXPECT_TRUE(name.Replace(String("Bob ").append(kYa).c_str()));
+        EXPECT_EQ(Std(name.Text()), Format("Bob {}", kYa));
         EXPECT_FALSE(name.Replace("Bob!"));
         EXPECT_FALSE(name.Replace("a very long name that passes the limit"));
-        EXPECT_EQ(Std(name.Text()), std::string("Bob ") + kYa);
+        EXPECT_EQ(Std(name.Text()), Format("Bob {}", kYa));
         EXPECT_TRUE(name.Replace(""));
         EXPECT_TRUE(name.Text().empty());
 
@@ -201,9 +202,9 @@ namespace BECore::Mahjong::Tests {
     namespace {
 
         /// "refused" for nothing
-        std::string Cleaned(StringView text) {
-            const Optional<eastl::string> code = TextEntry::CleanRoomCode(text);
-            return code ? Std(*code) : std::string("<refused>");
+        String Cleaned(StringView text) {
+            const Optional<String> code = TextEntry::CleanRoomCode(text);
+            return code ? Std(*code) : String("<refused>");
         }
 
     }  // namespace
@@ -245,17 +246,17 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(MahjongOnlineEntry, APastedTextOverTheLimitIsNotScanned) {
-        const std::string limit(TextEntry::kMaxPasteBytes, 'a');
-        EXPECT_EQ(Cleaned(FromStd(limit)), "AAAAA") << "the limit itself is read";
-        const std::string over(TextEntry::kMaxPasteBytes + 1, 'a');
-        EXPECT_EQ(Cleaned(FromStd(over)), "<refused>");
-        const std::string spaces(TextEntry::kMaxPasteBytes + 1, ' ');
+        const String limit(TextEntry::kMaxPasteBytes, 'a');
+        EXPECT_EQ(Cleaned(limit), "AAAAA") << "the limit itself is read";
+        const String over(TextEntry::kMaxPasteBytes + 1, 'a');
+        EXPECT_EQ(Cleaned(over), "<refused>");
+        const String spaces(TextEntry::kMaxPasteBytes + 1, ' ');
         EXPECT_EQ(Cleaned((spaces + "ab3k9").c_str()), "<refused>");
     }
 
     TEST(MahjongOnlineEntry, ACleanedCodeIsOneTheFieldTakes) {
         TextEntry field(TextEntry::Kind::Code);
-        const Optional<eastl::string> code = TextEntry::CleanRoomCode("ab3-k9");
+        const Optional<String> code = TextEntry::CleanRoomCode("ab3-k9");
         ASSERT_TRUE(code.has_value());
         EXPECT_TRUE(field.Replace(*code));
         EXPECT_TRUE(field.IsComplete());

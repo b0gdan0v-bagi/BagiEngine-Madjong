@@ -120,11 +120,11 @@ namespace BECore::Mahjong::Tests {
             return button != nullptr && button->selected;
         }
 
-        std::string Text(const char* element) const {
+        String Text(const char* element) const {
             const UIElement* found = Element("Options", element);
             if (found != nullptr && found->Cast<UIDropdown>() != nullptr) {
                 const UIElement* chosen = found->Cast<UIDropdown>()->FindChosenOption();  // the header shows the chosen option
-                return chosen != nullptr ? DisplayText(chosen) : std::string("<none chosen>");
+                return chosen != nullptr ? DisplayText(chosen) : String("<none chosen>");
             }
             return DisplayText(found);
         }
@@ -210,7 +210,7 @@ namespace BECore::Mahjong::Tests {
             for (const auto& output : kOutputs) {
                 ExpectWordsFit("Options", output.width, output.height, kButtonAir);
             }
-            const std::vector<std::string> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Options"), kButtonAir);
+            const std::vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas("Options"), kButtonAir);
             EXPECT_TRUE(cut.empty()) << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
         });
     }
@@ -251,7 +251,7 @@ namespace BECore::Mahjong::Tests {
         ForEachMatrixWindow([&](const MatrixWindow& window) {
             for (const CanvasScaleMode mode : modes) {
                 for (const float userScale : {1.0f, 1.5f}) {
-                    const std::string label = Format("{} {} x{}", window.label.c_str(), EnumUtils<CanvasScaleMode>::ToString(mode).data(), userScale).c_str();
+                    const String label = Format("{} {} x{}", window.label.c_str(), EnumUtils<CanvasScaleMode>::ToString(mode).data(), userScale).c_str();
                     const UICanvasResolved resolved = LayOutInWindow(*page, window, mode, userScale);
                     const UIElement* plate = Element("Options", "Plate");
                     ASSERT_NE(plate, nullptr);

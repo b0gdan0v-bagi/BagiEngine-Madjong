@@ -50,12 +50,12 @@ namespace BECore::Mahjong::Tests {
             return kFirstSeed + static_cast<uint32_t>(index);
         }
 
-        std::string WhereOf(int index) {
-            return "match " + std::to_string(index) + " (seed " + std::to_string(SeedOf(index)) + ")";
+        String WhereOf(int index) {
+            return Format("match {} (seed {})", index, SeedOf(index));
         }
 
         /// One hand, a step at a time: every action is listed for its actor and accepted.
-        void StepHand(ComputerTable& table, HandModel& hand, const std::string& where, int& steps) {
+        void StepHand(ComputerTable& table, HandModel& hand, const String& where, int& steps) {
             int handSteps = 0;
             while (hand.GetPhase() != Phase::Finished) {
                 ASSERT_LT(handSteps, kStepLimitPerHand) << where << ": the hand does not end";
@@ -74,7 +74,7 @@ namespace BECore::Mahjong::Tests {
         /// Plays match number `index` with the checks of `MatchAudit` after every hand. A failed ASSERT ends the function.
         void PlayAudited(int index, ComputerLevel level, MatchTotals& totals, PlayedMatch& played) {
             const MahjongSettings settings = SettingsOf(index);
-            const std::string where = WhereOf(index);
+            const String where = WhereOf(index);
             Match match;
             ASSERT_TRUE(match.Start(settings, SeedOf(index)).has_value()) << where;
             ComputerTable table(SeedOf(index), level);
@@ -83,7 +83,7 @@ namespace BECore::Mahjong::Tests {
             while (match.GetPhase() == MatchPhase::InHand) {
                 ASSERT_LT(audit.HandIndex(), kHandLimit) << where << ": the match does not end";
                 ASSERT_NO_FATAL_FAILURE(audit.BeforeHand(match));
-                ASSERT_NO_FATAL_FAILURE(StepHand(table, match.Hand(), where + " hand " + std::to_string(audit.HandIndex()), played.steps));
+                ASSERT_NO_FATAL_FAILURE(StepHand(table, match.Hand(), Format("{} hand {}", where, audit.HandIndex()), played.steps));
                 const auto ended = match.EndHand();
                 ASSERT_TRUE(ended.has_value()) << where << ": " << Name(ended.error());
                 ASSERT_NO_FATAL_FAILURE(audit.AfterHand(match, ended.value()));
@@ -104,7 +104,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// One hand by four `ComputerPlayer`s that need not share a profile: the actor's own player decides, its action is listed and accepted.
-        void StepMixedHand(eastl::array<ComputerPlayer, kSeatCount>& players, HandModel& hand, const std::string& where, int& steps, int& searchSteps) {
+        void StepMixedHand(eastl::array<ComputerPlayer, kSeatCount>& players, HandModel& hand, const String& where, int& steps, int& searchSteps) {
             int handSteps = 0;
             while (hand.GetPhase() != Phase::Finished) {
                 ASSERT_LT(handSteps, kStepLimitPerHand) << where << ": the hand does not end";
@@ -141,7 +141,7 @@ namespace BECore::Mahjong::Tests {
                 // The same seed played again, by `PlayMatch`, gives the same match: the winner, the kind and the change of every hand.
                 PlayedMatch again;
                 ASSERT_NO_FATAL_FAILURE(PlayWithTheTable(index, level, again)) << ToStd(LevelText(level));
-                const std::string where = WhereOf(index) + " at " + ToStdString(LevelText(level));
+                const String where = Format("{} at {}", WhereOf(index), LevelText(level));
                 ASSERT_EQ(again.history.size(), played.history.size()) << where;
                 for (size_t hand = 0; hand < played.history.size(); ++hand) {
                     EXPECT_EQ(again.history[hand].kind, played.history[hand].kind) << where << " hand " << hand;
@@ -153,11 +153,11 @@ namespace BECore::Mahjong::Tests {
             EXPECT_GT(matches, 0);
             EXPECT_GT(steps, 0) << ToStd(LevelText(level));
             EXPECT_GT(totals.wins, 0) << "four computer players of level " << ToStd(LevelText(level)) << " never won a hand";
-            const std::string name = ToStdString(LevelText(level));
-            RecordProperty(name + "Wins", totals.wins);
-            RecordProperty(name + "Draws", totals.draws);
-            RecordProperty(name + "Replays", totals.replays);
-            RecordProperty(name + "Steps", steps);
+            const String name(LevelText(level));
+            RecordProperty(Format("{}Wins", name).c_str(), totals.wins);
+            RecordProperty(Format("{}Draws", name).c_str(), totals.draws);
+            RecordProperty(Format("{}Replays", name).c_str(), totals.replays);
+            RecordProperty(Format("{}Steps", name).c_str(), steps);
         }
     }
 
@@ -174,7 +174,7 @@ namespace BECore::Mahjong::Tests {
     TEST(ComputerMatchTest, OneSearchSeatAmongThreeNormalSeatsPlaysAShortMatchLegally) {
         MahjongSettings settings;
         settings.handsPerMatch = kSearchMatchHands;
-        const std::string where = "search match (seed " + std::to_string(kSearchMatchSeed) + ")";
+        const String where = Format("search match (seed {})", kSearchMatchSeed);
         Match match;
         ASSERT_TRUE(match.Start(settings, kSearchMatchSeed).has_value()) << where;
 
@@ -191,7 +191,7 @@ namespace BECore::Mahjong::Tests {
         while (match.GetPhase() == MatchPhase::InHand) {
             ASSERT_LT(audit.HandIndex(), kHandLimit) << where << ": the match does not end";
             ASSERT_NO_FATAL_FAILURE(audit.BeforeHand(match));
-            ASSERT_NO_FATAL_FAILURE(StepMixedHand(players, match.Hand(), where + " hand " + std::to_string(audit.HandIndex()), steps, searchSteps));
+            ASSERT_NO_FATAL_FAILURE(StepMixedHand(players, match.Hand(), Format("{} hand {}", where, audit.HandIndex()), steps, searchSteps));
             const auto ended = match.EndHand();
             ASSERT_TRUE(ended.has_value()) << where << ": " << Name(ended.error());
             ASSERT_NO_FATAL_FAILURE(audit.AfterHand(match, ended.value()));
@@ -206,7 +206,7 @@ namespace BECore::Mahjong::Tests {
     TEST(ComputerMatchTest, OneOwnDrawsSeatAmongThreeNormalSeatsPlaysAShortMatchLegally) {
         MahjongSettings settings;
         settings.handsPerMatch = kSearchMatchHands;
-        const std::string where = "own-draws match (seed " + std::to_string(kSearchMatchSeed) + ")";
+        const String where = Format("own-draws match (seed {})", kSearchMatchSeed);
         Match match;
         ASSERT_TRUE(match.Start(settings, kSearchMatchSeed).has_value()) << where;
 
@@ -223,7 +223,7 @@ namespace BECore::Mahjong::Tests {
         while (match.GetPhase() == MatchPhase::InHand) {
             ASSERT_LT(audit.HandIndex(), kHandLimit) << where << ": the match does not end";
             ASSERT_NO_FATAL_FAILURE(audit.BeforeHand(match));
-            ASSERT_NO_FATAL_FAILURE(StepMixedHand(players, match.Hand(), where + " hand " + std::to_string(audit.HandIndex()), steps, valuedSteps));
+            ASSERT_NO_FATAL_FAILURE(StepMixedHand(players, match.Hand(), Format("{} hand {}", where, audit.HandIndex()), steps, valuedSteps));
             const auto ended = match.EndHand();
             ASSERT_TRUE(ended.has_value()) << where << ": " << Name(ended.error());
             ASSERT_NO_FATAL_FAILURE(audit.AfterHand(match, ended.value()));

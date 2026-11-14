@@ -26,11 +26,11 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The pictured tiles of a button in the notation, in order.
-        std::vector<std::string> Pictured(const ActionButtons& buttons, ButtonKind kind) {
-            std::vector<std::string> tiles;
+        std::vector<String> Pictured(const ActionButtons& buttons, ButtonKind kind) {
+            std::vector<String> tiles;
             const ButtonState& button = buttons[kind];
             for (int i = 0; i < button.tileCount; ++i) {
-                tiles.emplace_back(ToStdString(ToString(button.tiles[static_cast<size_t>(i)])));
+                tiles.emplace_back(ToString(button.tiles[static_cast<size_t>(i)]));
             }
             return tiles;
         }
@@ -48,8 +48,8 @@ namespace BECore::Mahjong::Tests {
     }  // namespace
 
     TEST(ActionButtonsTest, EveryButtonHasItsOwnActionAndValueAndIsFoundByThem) {
-        std::set<std::pair<std::string, std::string>> seen;
-        std::set<std::string> elements;
+        std::set<std::pair<String, String>> seen;
+        std::set<String> elements;
         for (int i = 0; i < kButtonCount; ++i) {
             const ButtonKind kind = static_cast<ButtonKind>(i);
             const ButtonSpec& spec = SpecOf(kind);
@@ -69,27 +69,27 @@ namespace BECore::Mahjong::Tests {
     TEST(ActionButtonsTest, EveryButtonHasAWordKeyAndAHintKeyAndBothLanguagesHaveThem) {
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
-        std::set<std::string> hintKeys;
+        std::set<String> hintKeys;
         for (int i = 0; i < kButtonCount; ++i) {
             const ButtonKind kind = static_cast<ButtonKind>(i);
             const ButtonSpec& spec = SpecOf(kind);
             ASSERT_NE(spec.wordKey, nullptr) << spec.element;
             ASSERT_NE(spec.hintKey, nullptr) << spec.element;
-            EXPECT_EQ(std::string(spec.wordKey), "button." + std::string(EnumUtils<ButtonKind>::ToString(kind).data())) << "the key of the word is derived from the kind";
+            EXPECT_EQ(String(spec.wordKey), Format("button.{}", EnumUtils<ButtonKind>::ToString(kind).data())) << "the key of the word is derived from the kind";
             EXPECT_EQ(HintKey(kind), StringView(spec.hintKey));
             EXPECT_GE(spec.maxTiles, 0) << spec.element;
             EXPECT_LE(spec.maxTiles, kMaxButtonTiles) << spec.element;
             hintKeys.insert(spec.hintKey);
             ForEachLanguage(strings, [&](PoolString language) {
-                const std::string where = std::string(spec.element) + " in " + language.ToStringView().data();
-                const eastl::string word = WordOf(strings, kind);
-                const eastl::string hint = HintOf(strings, kind);
+                const String where = Format("{} in {}", spec.element, language.ToStringView().data());
+                const String word = WordOf(strings, kind);
+                const String hint = HintOf(strings, kind);
                 EXPECT_FALSE(word.empty()) << where;
-                EXPECT_NE(word, eastl::string(spec.wordKey)) << where << ": the word is translated";
+                EXPECT_NE(word, String(spec.wordKey)) << where << ": the word is translated";
                 EXPECT_FALSE(hint.empty()) << where;
-                EXPECT_NE(hint, eastl::string(spec.hintKey)) << where << ": the hint is translated";
+                EXPECT_NE(hint, String(spec.hintKey)) << where << ": the hint is translated";
                 EXPECT_LE(Utf8::CountCodePoints(hint), kMaxHintLength) << where;
-                EXPECT_EQ(hint.find('{'), eastl::string::npos) << where << ": a hint has no placeholder";
+                EXPECT_EQ(hint.find('{'), String::npos) << where << ": a hint has no placeholder";
             });
         }
         // The three chows explain themselves alike and so do the three concealed kongs; every other sentence is its own
@@ -105,12 +105,12 @@ namespace BECore::Mahjong::Tests {
         UIStrings strings;
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
         ForEachLanguage(strings, [&](PoolString language) {
-            std::set<std::string> hints;
-            std::set<std::string> keys;
+            std::set<String> hints;
+            std::set<String> keys;
             for (int i = 0; i < kButtonCount; ++i) {
                 const ButtonKind kind = static_cast<ButtonKind>(i);
-                const eastl::string hint = HintOf(strings, kind);
-                hints.insert(std::string(hint.data(), hint.size()));
+                const String hint = HintOf(strings, kind);
+                hints.insert(String(hint.data(), hint.size()));
                 keys.insert(SpecOf(kind).hintKey);
             }
             EXPECT_EQ(hints.size(), keys.size()) << language.ToStringView().data();
@@ -126,13 +126,13 @@ namespace BECore::Mahjong::Tests {
                                                             {ButtonKind::Pass, "Pass"},         {ButtonKind::ConcealedKong1, "Kong"},   {ButtonKind::UpgradeKong, "Add to pung"},
                                                             {ButtonKind::Declare, "Ready hand"}};
         for (const auto& [kind, word] : words) {
-            EXPECT_EQ(WordOf(strings, kind), eastl::string(word)) << SpecOf(kind).element;
+            EXPECT_EQ(WordOf(strings, kind), String(word)) << SpecOf(kind).element;
         }
         ASSERT_TRUE(strings.SetLanguage("ru"_intern));
-        EXPECT_EQ(WordOf(strings, ButtonKind::ClaimPung), eastl::string("Пун"));
-        EXPECT_EQ(WordOf(strings, ButtonKind::ClaimChow1), eastl::string("Чи"));
-        EXPECT_EQ(WordOf(strings, ButtonKind::Pass), eastl::string("Пас"));
-        EXPECT_EQ(HintOf(strings, ButtonKind::Pass), eastl::string("Пропустить сброшенную кость."));
+        EXPECT_EQ(WordOf(strings, ButtonKind::ClaimPung), String("Пун"));
+        EXPECT_EQ(WordOf(strings, ButtonKind::ClaimChow1), String("Чи"));
+        EXPECT_EQ(WordOf(strings, ButtonKind::Pass), String("Пас"));
+        EXPECT_EQ(HintOf(strings, ButtonKind::Pass), String("Пропустить сброшенную кость."));
         for (const ButtonKind kind : {ButtonKind::ClaimChow0, ButtonKind::ClaimChow1, ButtonKind::ClaimChow2}) {
             EXPECT_EQ(SpecOf(kind).maxTiles, 3) << SpecOf(kind).element;
         }
@@ -160,8 +160,8 @@ namespace BECore::Mahjong::Tests {
     TEST(ActionButtonsTest, AChowPicturesItsThreeTilesInOrder) {
         const ActionButtons buttons = MakeActionButtons(Claims({{ClaimKind::Chow, T("4p")}, {ClaimKind::Chow, T("7s")}}), T("5p"));
 
-        EXPECT_EQ(Pictured(buttons, ButtonKind::ClaimChow0), (std::vector<std::string>{"4p", "5p", "6p"}));
-        EXPECT_EQ(Pictured(buttons, ButtonKind::ClaimChow1), (std::vector<std::string>{"7s", "8s", "9s"})) << "the chow at the end of a suit";
+        EXPECT_EQ(Pictured(buttons, ButtonKind::ClaimChow0), (std::vector<String>{"4p", "5p", "6p"}));
+        EXPECT_EQ(Pictured(buttons, ButtonKind::ClaimChow1), (std::vector<String>{"7s", "8s", "9s"})) << "the chow at the end of a suit";
         EXPECT_EQ(buttons[ButtonKind::ClaimChow0].hintKey, HintKey(ButtonKind::ClaimChow0));
     }
 
@@ -171,7 +171,7 @@ namespace BECore::Mahjong::Tests {
         const ActionButtons buttons = MakeActionButtons(list, T("Rd"));
 
         for (const ButtonKind kind : {ButtonKind::ClaimMahjong, ButtonKind::ClaimPung, ButtonKind::ClaimKong}) {
-            EXPECT_EQ(Pictured(buttons, kind), std::vector<std::string>{"Rd"}) << SpecOf(kind).element;
+            EXPECT_EQ(Pictured(buttons, kind), std::vector<String>{"Rd"}) << SpecOf(kind).element;
             EXPECT_EQ(buttons[kind].hintKey, HintKey(kind));
         }
         EXPECT_TRUE(Pictured(buttons, ButtonKind::Pass).empty());
@@ -188,9 +188,9 @@ namespace BECore::Mahjong::Tests {
                                                          HandAction::MakeConcealedKong(T("9m")), HandAction::MakeUpgradeKong(T("Ew"))},
                                                         T("3s"));
 
-        EXPECT_EQ(Pictured(buttons, ButtonKind::ConcealedKong0), std::vector<std::string>{"5p"});
-        EXPECT_EQ(Pictured(buttons, ButtonKind::ConcealedKong1), std::vector<std::string>{"9m"});
-        EXPECT_EQ(Pictured(buttons, ButtonKind::UpgradeKong), std::vector<std::string>{"Ew"});
+        EXPECT_EQ(Pictured(buttons, ButtonKind::ConcealedKong0), std::vector<String>{"5p"});
+        EXPECT_EQ(Pictured(buttons, ButtonKind::ConcealedKong1), std::vector<String>{"9m"});
+        EXPECT_EQ(Pictured(buttons, ButtonKind::UpgradeKong), std::vector<String>{"Ew"});
         EXPECT_TRUE(Pictured(buttons, ButtonKind::Win).empty());
         EXPECT_TRUE(Pictured(buttons, ButtonKind::Declare).empty());
         EXPECT_TRUE(buttons[ButtonKind::Declare].shown);
@@ -250,9 +250,9 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(buttons[ButtonKind::ConcealedKong0].action, HandAction::MakeConcealedKong(T("5p")));
         EXPECT_EQ(buttons[ButtonKind::ConcealedKong1].action, HandAction::MakeConcealedKong(T("9m")));
         EXPECT_EQ(buttons[ButtonKind::UpgradeKong].action, HandAction::MakeUpgradeKong(T("Ew")));
-        EXPECT_EQ(Pictured(buttons, ButtonKind::ConcealedKong0), std::vector<std::string>{"5p"});
-        EXPECT_EQ(Pictured(buttons, ButtonKind::ConcealedKong1), std::vector<std::string>{"9m"});
-        EXPECT_EQ(Pictured(buttons, ButtonKind::UpgradeKong), std::vector<std::string>{"Ew"});
+        EXPECT_EQ(Pictured(buttons, ButtonKind::ConcealedKong0), std::vector<String>{"5p"});
+        EXPECT_EQ(Pictured(buttons, ButtonKind::ConcealedKong1), std::vector<String>{"9m"});
+        EXPECT_EQ(Pictured(buttons, ButtonKind::UpgradeKong), std::vector<String>{"Ew"});
     }
 
     TEST(ActionButtonsTest, TheClaimsOfAWindowEachGetTheirButtonAndChowsArePicturedBySequence) {
@@ -269,21 +269,21 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(buttons[ButtonKind::ClaimChow0].action, HandAction::MakeClaim(ClaimKind::Chow, T("4p")));
         EXPECT_EQ(buttons[ButtonKind::ClaimChow2].action, HandAction::MakeClaim(ClaimKind::Chow, T("7s")));
         EXPECT_EQ(buttons[ButtonKind::Pass].action, HandAction::MakePass());
-        EXPECT_EQ(Pictured(buttons, ButtonKind::ClaimChow0), (std::vector<std::string>{"4p", "5p", "6p"}));
-        EXPECT_EQ(Pictured(buttons, ButtonKind::ClaimChow1), (std::vector<std::string>{"5p", "6p", "7p"}));
-        EXPECT_EQ(Pictured(buttons, ButtonKind::ClaimChow2), (std::vector<std::string>{"7s", "8s", "9s"}));
+        EXPECT_EQ(Pictured(buttons, ButtonKind::ClaimChow0), (std::vector<String>{"4p", "5p", "6p"}));
+        EXPECT_EQ(Pictured(buttons, ButtonKind::ClaimChow1), (std::vector<String>{"5p", "6p", "7p"}));
+        EXPECT_EQ(Pictured(buttons, ButtonKind::ClaimChow2), (std::vector<String>{"7s", "8s", "9s"}));
     }
 
     TEST(ActionButtonsTest, AFourthChowIsDroppedAndAFourthConcealedKongToo) {
         // The rules never list more (a tile has three sequences, fourteen tiles hold three fours); a longer list must not write outside
         // the table
         const ActionButtons chows = MakeActionButtons(Claims({{ClaimKind::Chow, T("1p")}, {ClaimKind::Chow, T("2p")}, {ClaimKind::Chow, T("3p")}, {ClaimKind::Chow, T("4p")}}));
-        EXPECT_EQ(Pictured(chows, ButtonKind::ClaimChow2), (std::vector<std::string>{"3p", "4p", "5p"}));
+        EXPECT_EQ(Pictured(chows, ButtonKind::ClaimChow2), (std::vector<String>{"3p", "4p", "5p"}));
         EXPECT_EQ(Shown(chows), (std::vector<ButtonKind>{ButtonKind::ClaimChow0, ButtonKind::ClaimChow1, ButtonKind::ClaimChow2, ButtonKind::Pass}));
 
         const ActionButtons kongs =
             MakeActionButtons({HandAction::MakeConcealedKong(T("1p")), HandAction::MakeConcealedKong(T("2p")), HandAction::MakeConcealedKong(T("3p")), HandAction::MakeConcealedKong(T("4p"))});
-        EXPECT_EQ(Pictured(kongs, ButtonKind::ConcealedKong2), std::vector<std::string>{"3p"});
+        EXPECT_EQ(Pictured(kongs, ButtonKind::ConcealedKong2), std::vector<String>{"3p"});
         EXPECT_EQ(Shown(kongs), (std::vector<ButtonKind>{ButtonKind::ConcealedKong0, ButtonKind::ConcealedKong1, ButtonKind::ConcealedKong2}));
     }
 
@@ -297,12 +297,12 @@ namespace BECore::Mahjong::Tests {
 
         const ActionButtons buttons = MakeActionButtons(model.LegalActions(kSeat1), model.Discards().back().tile);
 
-        EXPECT_EQ(Pictured(buttons, ButtonKind::ClaimPung), std::vector<std::string>{"5p"});
-        EXPECT_EQ(Pictured(buttons, ButtonKind::ClaimChow0), (std::vector<std::string>{"4p", "5p", "6p"}));
-        EXPECT_EQ(Pictured(buttons, ButtonKind::ClaimChow1), (std::vector<std::string>{"5p", "6p", "7p"}));
+        EXPECT_EQ(Pictured(buttons, ButtonKind::ClaimPung), std::vector<String>{"5p"});
+        EXPECT_EQ(Pictured(buttons, ButtonKind::ClaimChow0), (std::vector<String>{"4p", "5p", "6p"}));
+        EXPECT_EQ(Pictured(buttons, ButtonKind::ClaimChow1), (std::vector<String>{"5p", "6p", "7p"}));
         EXPECT_EQ(Shown(buttons), (std::vector<ButtonKind>{ButtonKind::ClaimPung, ButtonKind::ClaimChow0, ButtonKind::ClaimChow1, ButtonKind::Pass}));
-        EXPECT_EQ(Pictured(buttons, ButtonKind::ClaimChow0), (std::vector<std::string>{"4p", "5p", "6p"}));
-        EXPECT_EQ(Pictured(buttons, ButtonKind::ClaimChow1), (std::vector<std::string>{"5p", "6p", "7p"}));
+        EXPECT_EQ(Pictured(buttons, ButtonKind::ClaimChow0), (std::vector<String>{"4p", "5p", "6p"}));
+        EXPECT_EQ(Pictured(buttons, ButtonKind::ClaimChow1), (std::vector<String>{"5p", "6p", "7p"}));
         for (int i = 0; i < kButtonCount; ++i) {
             const ButtonState& button = buttons.buttons[static_cast<size_t>(i)];
             if (button.shown && static_cast<ButtonKind>(i) != ButtonKind::Declare) {

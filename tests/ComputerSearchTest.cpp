@@ -46,10 +46,10 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The next numbers of a copy of `rng`, to tell whether two generators stand in the same place.
-        std::string RngState(MahjongRng rng) {
-            std::string text;
+        String RngState(MahjongRng rng) {
+            String text;
             for (uint32_t i = 0; i < kRngDraws; ++i) {
-                text += std::to_string(rng.Below(kRngRange)) + " ";
+                AppendFormat(text, "{} ", rng.Below(kRngRange));
             }
             return text;
         }
@@ -81,7 +81,7 @@ namespace BECore::Mahjong::Tests {
         constexpr const char* kOther3 = "3p 6p 9p 3s 6s 9s 4m 7m Gd Wd 2m 7p 8s";
 
         /// East throws `discard` (the first live tile) at seat 1, which holds `seat1`: the claim window.
-        HandModel WindowModel(const std::string& seat1, const char* discard, const char* other2 = kOther2) {
+        HandModel WindowModel(const String& seat1, const char* discard, const char* other2 = kOther2) {
             FixedWallSpec spec;
             spec.hands[kSeat0] = kEast;
             spec.hands[kSeat1] = seat1;
@@ -143,7 +143,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Steps `run` one `Step()` at a time to its end, checking the counters on the way; returns the number of steps taken.
-        int StepToEnd(SearchRun& run, const std::string& where) {
+        int StepToEnd(SearchRun& run, const String& where) {
             int steps = 0;
             int done = run.StepsDone();
             while (!run.Done()) {
@@ -207,8 +207,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// What a `Finish` that must do nothing leaves: the answer, the counters and `Done()`.
-        std::string Shown(const SearchRun& run) {
-            return std::to_string(run.StepsDone()) + "/" + std::to_string(run.StepsTotal()) + (run.Done() ? " done" : " open");
+        String Shown(const SearchRun& run) {
+            return Format("{}/{}{}", run.StepsDone(), run.StepsTotal(), (run.Done() ? " done" : " open"));
         }
 
     }  // namespace
@@ -360,7 +360,7 @@ namespace BECore::Mahjong::Tests {
     // ----- the candidates -----
 
     TEST(ComputerSearchTest, NormalsChoiceIsTheFirstCandidateAndEveryCandidateIsListed) {
-        const auto check = [](const TableView& view, int maxCount, const std::string& where) {
+        const auto check = [](const TableView& view, int maxCount, const String& where) {
             const HandAction baseline = Normal(view, MahjongRng(kRngSeed));
             const eastl::vector<HandAction> candidates = view.phase == Phase::Discard ? TurnCandidates(view, baseline, maxCount) : ClaimCandidates(view, baseline, maxCount);
             ASSERT_FALSE(candidates.empty()) << where;
@@ -379,10 +379,10 @@ namespace BECore::Mahjong::Tests {
         ASSERT_GE(windows.size(), static_cast<size_t>(kStatesPerPhase / 2));
         for (const int maxCount : {kSearchMinCandidates, kCandidates, kSearchMaxCandidates}) {
             for (size_t i = 0; i < turns.size(); ++i) {
-                check(turns[i], maxCount, "turn " + std::to_string(i));
+                check(turns[i], maxCount, Format("turn {}", i));
             }
             for (size_t i = 0; i < windows.size(); ++i) {
-                check(windows[i], maxCount, "window " + std::to_string(i));
+                check(windows[i], maxCount, Format("window {}", i));
             }
         }
     }
@@ -430,7 +430,7 @@ namespace BECore::Mahjong::Tests {
             int overridden = 0;
             for (size_t i = 0; i < views.size(); ++i) {
                 const TableView& view = views[i];
-                const std::string where = std::string(turn ? "turn " : "window ") + std::to_string(i);
+                const String where = Format("{}{}", String(turn ? "turn " : "window "), i);
                 MahjongRng first(kRngSeed + static_cast<uint32_t>(i));
                 MahjongRng second(kRngSeed + static_cast<uint32_t>(i));
                 const HandAction answer = Searching(view, first, SearchProfile());
@@ -462,7 +462,7 @@ namespace BECore::Mahjong::Tests {
             for (size_t i = 0; i < kViewsPerPhase; ++i) {
                 for (const Knobs knobs : {Knobs{1, 0}, Knobs{2, 30}, Knobs{5, 0}, Knobs{5, 30}}) {
                     const LevelProfile profile = SearchProfile(knobs.worlds, kCandidates, knobs.margin);
-                    const std::string where = std::string(turn ? "turn " : "window ") + std::to_string(i) + " worlds " + std::to_string(knobs.worlds) + " margin " + std::to_string(knobs.margin);
+                    const String where = Format("{}{} worlds {} margin {}", String(turn ? "turn " : "window "), i, knobs.worlds, knobs.margin);
                     MahjongRng atOnce(kRngSeed + static_cast<uint32_t>(i));
                     MahjongRng begun(kRngSeed + static_cast<uint32_t>(i));
                     const Optional<HandAction> expected = AtOnce(views[i], atOnce, profile);
@@ -561,7 +561,7 @@ namespace BECore::Mahjong::Tests {
             for (size_t i = 0; i < kViewsPerPhase; ++i) {
                 for (const Knobs knobs : {Knobs{3, 0}, Knobs{5, 30}}) {
                     const LevelProfile profile = SearchProfile(knobs.worlds, kCandidates, knobs.margin);
-                    const std::string where = std::string(turn ? "turn " : "window ") + std::to_string(i) + " worlds " + std::to_string(knobs.worlds) + " margin " + std::to_string(knobs.margin);
+                    const String where = Format("{}{} worlds {} margin {}", String(turn ? "turn " : "window "), i, knobs.worlds, knobs.margin);
                     MahjongRng atOnce(kRngSeed + static_cast<uint32_t>(i));
                     const Optional<HandAction> expected = AtOnce(views[i], atOnce, profile);
                     ASSERT_TRUE(expected.has_value()) << where;
@@ -726,7 +726,7 @@ namespace BECore::Mahjong::Tests {
             MahjongRng rng(kRngSeed);
             Optional<SearchRun> run = Begin(views.front(), rng, SearchProfile(3, kCandidates));
             ASSERT_TRUE(run.has_value());
-            const std::string before = Shown(*run);
+            const String before = Shown(*run);
             const int candidates = run->StepsTotal() / run->WorldCount();
             for (int index = 0; index < run->WorldCount(); ++index) {
                 const SearchWorld first = run->PlayWorld(index);
@@ -826,7 +826,7 @@ namespace BECore::Mahjong::Tests {
         {
             SearchRun run = begin();
             run.Step();
-            const std::string before = Shown(run);
+            const String before = Shown(run);
             run.Finish(worlds);
             EXPECT_EQ(Shown(run), before);
             EXPECT_FALSE(run.Done());
@@ -852,7 +852,7 @@ namespace BECore::Mahjong::Tests {
             SearchRun run = begin();
             run.Finish(worlds);
             const HandAction answer = run.Result();
-            const std::string shown = Shown(run);
+            const String shown = Shown(run);
             eastl::vector<SearchWorld> rigged = worlds;
             for (SearchWorld& world : rigged) {
                 world.values.front() = -1000000;

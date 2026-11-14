@@ -4,6 +4,7 @@
 #include "StringsTestSupport.h"
 #include "UiStyleTestSupport.h"
 
+#include <Common/Printers.h>
 #include <Mahjong/Components/MahjongHintsComponent.h>
 #include <Mahjong/Table/DangerMarks.h>
 #include <Mahjong/Table/TapSelect.h>
@@ -61,14 +62,14 @@ namespace BECore::Mahjong::Tests {
             spec.hands[kSeat3] = kSeat3Hand;
             // A declared viewer would win on an Ew discarded by seat 3, which ends the lap: seat 3 discards a 2m instead
             const char* const last = viewerDeclares ? "2m" : "Ew";
-            spec.live = std::string("Ew Rd Nw Ww Gd Wd 9m ") + last + " Rd 1p 2p";
+            spec.live = Format("Ew Rd Nw Ww Gd Wd 9m {} Rd 1p 2p", last);
             HandModel model = MakeModel(spec);
             if (viewerDeclares) {
                 Lap(model, "Ew Rd Nw Ww", {kSeat0});
             } else {
                 Lap(model, "Ew Rd Nw Ww");
             }
-            const std::string second = std::string("Gd Wd 9m ") + last;
+            const String second = Format("Gd Wd 9m {}", last);
             if (declared) {
                 Lap(model, second, {kSeat1});
             } else {
@@ -158,7 +159,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Every bar of a danger colour clear of every other bar of the table that lies on a hand tile.
-        void ExpectClearOfTheOtherMarks(const std::string& where) const {
+        void ExpectClearOfTheOtherMarks(const String& where) const {
             const std::vector<Rect> bars = DangerBars();
             for (size_t i = 0; i < bars.size(); ++i) {
                 for (size_t j = i + 1; j < bars.size(); ++j) {
@@ -362,8 +363,8 @@ namespace BECore::Mahjong::Tests {
             }
             ++worded;
             ASSERT_TRUE(OnScreen("TileHover", "TileHoverDanger"));
-            const eastl::string expected = Tr(CoreManager::GetUIStrings(), DangerHoverKey(mark));
-            EXPECT_EQ(Var("tileHoverDanger"), std::string(expected.data(), expected.size()));
+            const String expected = Tr(CoreManager::GetUIStrings(), DangerHoverKey(mark));
+            EXPECT_EQ(Var("tileHoverDanger"), String(expected.data(), expected.size()));
             const auto* label = Element("TileHover", "TileHoverDanger")->GetComponent<UITextComponent>();
             ASSERT_NE(label, nullptr);
             EXPECT_TRUE(SameColor(label->textColor, DangerMarkColor(mark)));
@@ -389,11 +390,11 @@ namespace BECore::Mahjong::Tests {
         Scene& scene = *_manager->GetSceneByName("MahjongScene"_intern);
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
-            std::vector<eastl::string> lines;
+            std::vector<String> lines;
             for (const DangerMark mark : {DangerMark::Safe, DangerMark::Risky, DangerMark::Dangerous}) {
                 lines.push_back(Tr(CoreManager::GetUIStrings(), DangerHoverKey(mark)));
             }
-            const eastl::string longest = LongestText(lines);
+            const String longest = LongestText(lines);
             CoreManager::GetUIVars().Set("tileHoverText"_intern, StringView("9 Dots"));
             CoreManager::GetUIVars().Set("tileHoverDanger"_intern, StringView(longest));
             UIElement* plate = Element("TileHover", "TileHoverPlate");

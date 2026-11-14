@@ -39,7 +39,7 @@ namespace BECore::Mahjong::Tests {
         void QueueText(StringView text) {
             RoomTransportEvent event;
             event.kind = RoomTransportEventKind::Text;
-            event.text = eastl::string(text);
+            event.text = String(text);
             toClient.push_back(std::move(event));
         }
 
@@ -52,7 +52,7 @@ namespace BECore::Mahjong::Tests {
             RoomTransportEvent event;
             event.kind = RoomTransportEventKind::Closed;
             event.closeCode = code;
-            event.reason = eastl::string(reason);
+            event.reason = String(reason);
             toClient.push_back(std::move(event));
         }
     };
@@ -175,12 +175,12 @@ namespace BECore::Mahjong::Tests {
 
         HubSink MakeSink() {
             HubSink sink;
-            sink.send = [this](ConnectionId id, eastl::string text) {
+            sink.send = [this](ConnectionId id, String text) {
                 if (const auto found = _byId.find(id); found != _byId.end()) {
                     OnSent(*found->second, text);
                 }
             };
-            sink.close = [this](ConnectionId id, eastl::string reason) {
+            sink.close = [this](ConnectionId id, String reason) {
                 const auto found = _byId.find(id);
                 if (found == _byId.end()) {
                     return;
@@ -192,10 +192,10 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Judges the text for the seat its receiver holds, then queues it.
-        void OnSent(HubLink& link, const eastl::string& text) {
+        void OnSent(HubLink& link, const String& text) {
             const StringView view(text.data(), text.size());
             const auto parsed = ParseJson(text);
-            const eastl::string type = parsed ? GetJsonString(*parsed, "type").value_or(eastl::string()) : eastl::string();
+            const String type = parsed ? GetJsonString(*parsed, "type").value_or(String()) : String();
             // The seat of a client is what its `joined` said, then what the client chose; never what a later message claims
             if (parsed && type == "joined") {
                 link.judgeSeat = static_cast<int>(GetJsonInt(*parsed, "seat").value_or(-1));
@@ -208,7 +208,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// What `RoomWebSocketServer` tells the client when the hub ends its connection.
-        static uint16_t GetCloseCode(const eastl::string& reason) {
+        static uint16_t GetCloseCode(const String& reason) {
             constexpr uint16_t kPolicyViolation = 1008;
             constexpr uint16_t kTryAgainLater = 1013;
             if (reason == "rate_limited" || reason == "too_many_failed_joins") {
@@ -240,7 +240,7 @@ namespace BECore::Mahjong::Tests {
             }
         }
 
-        std::expected<void, eastl::string> Open(StringView /*url*/) override {
+        std::expected<void, String> Open(StringView /*url*/) override {
             _world.Connect(_link);
             return {};
         }

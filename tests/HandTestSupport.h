@@ -2,6 +2,7 @@
 
 #include "FixedWall.h"
 
+#include <Common/Printers.h>
 #include <EASTL/algorithm.h>
 #include <Mahjong/Game/ComputerLevel.h>
 #include <Mahjong/Game/HandModel.h>
@@ -46,14 +47,14 @@ namespace BECore::Mahjong::Tests {
 
     /// The name of an enum value, for a failure message.
     template <typename E>
-    std::string Name(E value) {
+    String Name(E value) {
         const auto name = EnumUtils<E>::ToString(value);
-        return std::string(name.data(), name.size());
+        return String(name.data(), name.size());
     }
 
     /// The name of a level, for a failure message: its number (`LevelText`).
-    inline std::string Name(ComputerLevel level) {
-        return ToStdString(LevelText(level));
+    inline String Name(ComputerLevel level) {
+        return String(LevelText(level));
     }
 
     /// The tile of a text such as "5p" or "Rd"; the text is the test's own, so a bad one aborts at once.
@@ -74,37 +75,37 @@ namespace BECore::Mahjong::Tests {
     /// Everything an action could change, as text: phase and seat to act, per seat the concealed tiles, the melds (kind, first
     /// tile, concealed), the bonus tiles, the calling fields and the claim status, then the pile, the live and loose counts and
     /// whether a result exists.
-    inline std::string Snapshot(const HandModel& model) {
-        std::string text = std::to_string(static_cast<int>(model.GetPhase())) + " seat " + std::to_string(model.CurrentSeat());
+    inline String Snapshot(const HandModel& model) {
+        String text = Format("{} seat {}", static_cast<int>(model.GetPhase()), model.CurrentSeat());
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             const PlayerHand& hand = model.GetHand(seat);
             text += " |";
             for (const Tile tile : hand.concealed) {
                 text += " ";
-                text += ToStd(ToString(tile));
+                AppendFormat(text, "{}", ToString(tile));
             }
             text += " melds";
             for (const Meld& meld : hand.melds) {
-                text += " " + std::to_string(static_cast<int>(meld.kind)) + ToStdString(ToString(meld.first)) + std::to_string(meld.concealed);
+                text += Format(" {}{}{}", static_cast<int>(meld.kind), ToString(meld.first), meld.concealed);
             }
-            text += " bonus " + std::to_string(hand.bonus.size());
-            text += " calling " + std::to_string(hand.callingDeclared) + "/" + std::to_string(hand.callingAtDiscardCount) + "/" + std::to_string(hand.discardCount);
-            text += " claim " + std::to_string(static_cast<int>(model.GetClaimStatus(seat)));
+            text += Format(" bonus {}", hand.bonus.size());
+            text += Format(" calling {}/{}/{}", hand.callingDeclared, hand.callingAtDiscardCount, hand.discardCount);
+            text += Format(" claim {}", static_cast<int>(model.GetClaimStatus(seat)));
         }
         text += " | pile";
         for (const DiscardEntry& entry : model.Discards()) {
             text += " ";
-            text += ToStd(ToString(entry.tile));
+            AppendFormat(text, "{}", ToString(entry.tile));
         }
-        text += " | live " + std::to_string(model.GetWall().LiveCount()) + " loose " + std::to_string(model.GetWall().LooseCount());
+        text += Format(" | live {} loose {}", model.GetWall().LiveCount(), model.GetWall().LooseCount());
         text += model.Result().has_value() ? " result" : " open";
         return text;
     }
 
     /// Each seat in turn discards the next tile of `tiles`; the seats in `declaring` declare the calling hand with their discard.
     /// No discard of a lap may open a claim window.
-    inline void Lap(HandModel& model, const std::string& tiles, std::initializer_list<Seat> declaring = {}) {
-        const eastl::vector<Tile> parsed = ParseTiles(FromStd(tiles)).value();
+    inline void Lap(HandModel& model, const String& tiles, std::initializer_list<Seat> declaring = {}) {
+        const eastl::vector<Tile> parsed = ParseTiles(tiles).value();
         for (const Tile tile : parsed) {
             const Seat seat = model.CurrentSeat();
             const bool declare = eastl::find(declaring.begin(), declaring.end(), seat) != declaring.end();

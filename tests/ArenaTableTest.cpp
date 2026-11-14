@@ -19,7 +19,7 @@ namespace BECore::Mahjong::Arena {
         constexpr Seat kSeatD = 3;
 
         ArenaPlayer Normal() {
-            const std::expected<ArenaPlayer, eastl::string> player = ParseArenaPlayer("normal");
+            const std::expected<ArenaPlayer, String> player = ParseArenaPlayer("normal");
             EXPECT_TRUE(player.has_value());
             return player.value_or(ArenaPlayer{});
         }
@@ -135,8 +135,8 @@ namespace BECore::Mahjong::Arena {
         for (uint32_t seed = kFirstSeed; seed < kFirstSeed + static_cast<uint32_t>(kFewSeeds); ++seed) {
             OwnTurns turns;
             const HandObserver observer = MakeOwnTurnObserver(turns);
-            const std::expected<HandRecord, eastl::string> watched = PlayArenaHand(seed, players, false, nullptr, &observer);
-            const std::expected<HandRecord, eastl::string> plain = PlayArenaHand(seed, players);
+            const std::expected<HandRecord, String> watched = PlayArenaHand(seed, players, false, nullptr, &observer);
+            const std::expected<HandRecord, String> plain = PlayArenaHand(seed, players);
             ASSERT_TRUE(watched.has_value() && plain.has_value()) << seed;
             EXPECT_EQ(watched->winner, plain->winner) << seed;
             EXPECT_EQ(watched->scores, plain->scores) << seed;
@@ -156,8 +156,8 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaTableTest, TheRunIsTheSameAtAnyNumberOfJobs) {
-        const std::expected<TableStats, eastl::string> single = RunTableStats(ConfigOf(kFewSeeds, 1));
-        const std::expected<TableStats, eastl::string> many = RunTableStats(ConfigOf(kFewSeeds, kManyJobs));
+        const std::expected<TableStats, String> single = RunTableStats(ConfigOf(kFewSeeds, 1));
+        const std::expected<TableStats, String> many = RunTableStats(ConfigOf(kFewSeeds, kManyJobs));
         ASSERT_TRUE(single.has_value() && many.has_value());
         EXPECT_TRUE(SameStats(*single, *many));
         EXPECT_EQ(single->hands, kFewSeeds);
@@ -179,9 +179,9 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaTableTest, TheReportNamesWhatItMeasures) {
-        const std::expected<TableStats, eastl::string> stats = RunTableStats(ConfigOf(2, 1));
+        const std::expected<TableStats, String> stats = RunTableStats(ConfigOf(2, 1));
         ASSERT_TRUE(stats.has_value());
-        const eastl::string text = FormatTableStats(*stats);
+        const String text = FormatTableStats(*stats);
         const StringView view(text.data(), text.size());
         EXPECT_NE(view.find("Table statistics: four normal seats, seeds 4000 .. 4001 (2 hands)"), StringView::npos);
         EXPECT_NE(view.find("(1-h)^i"), StringView::npos);

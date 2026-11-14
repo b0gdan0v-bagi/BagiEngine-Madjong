@@ -58,19 +58,19 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongHudMenuTest, TheTooltipOfEachButtonSaysItsWordInBothLanguages) {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
-        std::vector<std::string> words;
+        std::vector<String> words;
         ForEachLanguage(CoreManager::GetUIStrings(), [&](PoolString language) {
             SCOPED_TRACE(language.ToStringView().data());
             Draw();
             for (const MenuButton& wanted : kMenuButtons) {
-                const std::string tip = ShownTooltip(Element("HudMenu", wanted.name));
-                const eastl::string expected = Tr(CoreManager::GetUIStrings(), wanted.key);
-                EXPECT_EQ(tip, std::string(expected.c_str(), expected.size())) << wanted.name;
+                const String tip = ShownTooltip(Element("HudMenu", wanted.name));
+                const String expected = Tr(CoreManager::GetUIStrings(), wanted.key);
+                EXPECT_EQ(tip, String(expected.c_str(), expected.size())) << wanted.name;
                 EXPECT_NE(tip, wanted.key) << wanted.name << ": the key is in the table";
                 words.push_back(tip);
             }
         });
-        const std::set<std::string> distinct(words.begin(), words.end());
+        const std::set<String> distinct(words.begin(), words.end());
         EXPECT_EQ(distinct.size(), words.size()) << "six different words: three buttons, two languages";
     }
 

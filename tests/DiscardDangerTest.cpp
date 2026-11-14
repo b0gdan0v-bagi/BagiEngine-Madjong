@@ -58,7 +58,7 @@ namespace BECore::Mahjong::Tests {
             spec.hands[kSeat1] = kWaitingHand;
             spec.hands[kSeat2] = seat2;
             spec.hands[kSeat3] = seat3;
-            spec.live = std::string("Ew Rd Nw Ww Gd Wd 9m Ew Rd ") + tail;
+            spec.live = Format("Ew Rd Nw Ww Gd Wd 9m Ew Rd {}", tail);
             return spec;
         }
 

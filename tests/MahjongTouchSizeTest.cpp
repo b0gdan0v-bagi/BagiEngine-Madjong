@@ -66,8 +66,8 @@ namespace BECore::Mahjong::Tests {
             EXPECT_GT(window.outputHeight, 0.0f);
             EXPECT_EQ(window.pixelDensity, 1.0f);
             // The label of the matrix names the simulation, so the two are checked against each other
-            EXPECT_EQ(window.label.find("notch") != eastl::string::npos, window.simulation == SafeAreaSimulation::TopNotch) << window.label.c_str();
-            EXPECT_EQ(window.label.find("side insets") != eastl::string::npos, window.simulation == SafeAreaSimulation::SideInsets) << window.label.c_str();
+            EXPECT_EQ(window.label.find("notch") != String::npos, window.simulation == SafeAreaSimulation::TopNotch) << window.label.c_str();
+            EXPECT_EQ(window.label.find("side insets") != String::npos, window.simulation == SafeAreaSimulation::SideInsets) << window.label.c_str();
             EXPECT_EQ(window.HasInsets(), window.simulation != SafeAreaSimulation::None);
             window.simulation == SafeAreaSimulation::TopNotch ? ++notches : window.simulation == SafeAreaSimulation::SideInsets ? ++sides : ++plain;
             ++visited;
@@ -335,7 +335,7 @@ namespace BECore::Mahjong::Tests {
             const TableLayout layout = MakeWorstCaseTableLayout(0, window);  // the table as the window draws it (`TableProfileFor`)
             for (const CanvasScaleMode mode : modes) {
                 for (const float userScale : {1.0f, 1.5f}) {
-                    const std::string label = Format("{} {} x{}", window.label.c_str(), EnumUtils<CanvasScaleMode>::ToString(mode).data(), userScale).c_str();
+                    const String label = Format("{} {} x{}", window.label.c_str(), EnumUtils<CanvasScaleMode>::ToString(mode).data(), userScale).c_str();
                     const UICanvasResolved resolved = LayOutInWindow(*menu, window, mode, userScale);
                     for (const char* name : buttons) {
                         const UIElement* button = Element("HudMenu", name);
@@ -423,7 +423,7 @@ namespace BECore::Mahjong::Tests {
         ForEachMatrixWindow([&](const MatrixWindow& window) {
             for (const CanvasScaleMode mode : modes) {
                 for (const float userScale : {1.0f, 1.5f}) {
-                    const std::string label = Format("{} {} x{}", window.label.c_str(), EnumUtils<CanvasScaleMode>::ToString(mode).data(), userScale).c_str();
+                    const String label = Format("{} {} x{}", window.label.c_str(), EnumUtils<CanvasScaleMode>::ToString(mode).data(), userScale).c_str();
                     const UICanvasResolved resolved = LayOutInWindow(*setup, window, mode, userScale);
                     const UIElement* plate = Element("Setup", "Plate");
                     ASSERT_NE(plate, nullptr);
@@ -689,7 +689,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// `rect` (in the units of the canvas) lies inside the output of `window` once the canvas has been laid out in it.
-        static void ExpectInsideTheWindow(UICanvasComponent& canvas, const Rect& rect, const MatrixWindow& window, const std::string& label) {
+        static void ExpectInsideTheWindow(UICanvasComponent& canvas, const Rect& rect, const MatrixWindow& window, const String& label) {
             const Rect output = canvas.GetLayout().GetResolved().transform.ToOutput(rect.x, rect.y, rect.w, rect.h);
             EXPECT_GE(output.x, -0.01f) << label;
             EXPECT_GE(output.y, -0.01f) << label;
@@ -703,13 +703,13 @@ namespace BECore::Mahjong::Tests {
             // The whole row, all its lines: the stack is as high as it is given, and it lies clear of the table
             const UIElement* row = Element("ActionsCompact", "ActionRow");
             ASSERT_NE(row, nullptr);
-            ExpectClearOfTable(ToView(row->rect, compact, window), layout, (std::string(window.label.c_str()) + " ActionRow").c_str());
+            ExpectClearOfTable(ToView(row->rect, compact, window), layout, (Format("{} ActionRow", window.label.c_str())).c_str());
             for (const ButtonKind kind : kinds) {
                 const ButtonSpec& spec = SpecOf(kind);
                 const UIElement* button = Element("ActionsCompact", spec.element);
                 ASSERT_NE(button, nullptr) << spec.element;
                 ASSERT_FALSE(button->rect.IsEmpty()) << window.label.c_str() << " " << spec.element;
-                const std::string label = std::string(window.label.c_str()) + " " + spec.element;
+                const String label = Format("{} {}", window.label.c_str(), spec.element);
                 ExpectClearOfTable(ToView(button->rect, compact, window), layout, label.c_str());
                 for (int t = 0; t < spec.maxTiles; ++t) {
                     const UIElement* picture = Element("ActionsCompact", TileImageName(kind, t).c_str());
@@ -723,7 +723,7 @@ namespace BECore::Mahjong::Tests {
             const UIElement* hint = Element("ActionsCompact", "HintButton");
             ASSERT_NE(hint, nullptr);
             ASSERT_FALSE(hint->rect.IsEmpty()) << window.label.c_str() << " HintButton";
-            const std::string hintLabel = std::string(window.label.c_str()) + " HintButton";
+            const String hintLabel = Format("{} HintButton", window.label.c_str());
             ExpectClearOfTable(ToView(hint->rect, compact, window), layout, hintLabel.c_str());
             ExpectInsideTheWindow(compact, hint->rect, window, hintLabel);
         }
@@ -766,13 +766,13 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(compact);
         size_t compactWindows = 0;
         // The windows (and user scales) where the rule keeps `Actions` under the minimum, each with its number of simulations
-        eastl::map<eastl::string, size_t> keptWindows;
+        eastl::map<String, size_t> keptWindows;
         const auto visit = [&](const MatrixWindow& window, bool ofTheMatrix) {
             for (const float userScale : {1.0f, 1.5f}) {
                 const UICanvasResolved resolved = LayOutInWindow(*compact, window, CanvasScaleMode::ScaleWithScreen, userScale);
                 const UIElement* row = Element("ActionsCompact", "ActionRow");
                 ASSERT_NE(row, nullptr);
-                const std::string label = std::string(window.label.c_str()) + " x" + std::to_string(userScale);
+                const String label = Format("{} x{}", String(window.label.c_str()), userScale);
                 // The scale and the row height of the rule are those of the engine's layout of the file
                 EXPECT_NEAR(resolved.scale, CompactScale(window.outputWidth, window.outputHeight, userScale), 0.0001f) << label;
                 EXPECT_FLOAT_EQ(row->rect.h, CompactRowHeight(window.outputWidth / resolved.scale)) << label;
@@ -793,7 +793,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_GT(compactWindows, 0u);
         // A new window that keeps `Actions` under the minimum has to be named here and in CLAUDE.md: the portrait 480 x 480 at both user scales (no
         // bar under the table), in its three simulations (no insets, a notch, side insets)
-        const eastl::map<eastl::string, size_t> expectedKept{{"480x480 x1.0", 3u}, {"480x480 x1.5", 3u}};
+        const eastl::map<String, size_t> expectedKept{{"480x480 x1.0", 3u}, {"480x480 x1.5", 3u}};
         EXPECT_EQ(keptWindows, expectedKept);
     }
 
@@ -817,8 +817,7 @@ namespace BECore::Mahjong::Tests {
         size_t actionsWindows = 0;
         auto check = [&](const MatrixWindow& window, float userScale) {
             const TableLayout layout = MakeWorstCaseTableLayout(0, window);  // the table as the window draws it (`TableProfileFor`)
-            const std::string label = std::string(window.label.c_str()) + " " + std::to_string(static_cast<int>(window.outputWidth)) + "x" + std::to_string(static_cast<int>(window.outputHeight)) +
-                                      " x" + std::to_string(userScale);
+            const String label = Format("{} {}x{} x{}", String(window.label.c_str()), static_cast<int>(window.outputWidth), static_cast<int>(window.outputHeight), userScale);
             const UICanvasResolved resolved = LayOutInWindow(*compact, window, CanvasScaleMode::ScaleWithScreen, userScale);
             const float rowPixels = Element("ActionsCompact", "ActionRow")->rect.h * resolved.scale;
             if (IsCompactWindow(window, userScale)) {
@@ -931,17 +930,17 @@ namespace BECore::Mahjong::Tests {
     namespace {
 
         /// The names of the interactive elements (those that take clicks: buttons, toggles, segments) of `element` and below.
-        void CollectInteractive(const UIElement& element, std::set<std::string>& names) {
+        void CollectInteractive(const UIElement& element, std::set<String>& names) {
             if (element.IsInteractive()) {
-                names.insert(std::string(element.name.ToStringView().data(), element.name.ToStringView().size()));
+                names.insert(String(element.name.ToStringView().data(), element.name.ToStringView().size()));
             }
             for (const auto& child : element.children) {
                 CollectInteractive(*child, names);
             }
         }
 
-        std::set<std::string> InteractiveOf(UICanvasComponent& canvas) {
-            std::set<std::string> names;
+        std::set<String> InteractiveOf(UICanvasComponent& canvas) {
+            std::set<String> names;
             CollectInteractive(canvas.GetRoot(), names);
             return names;
         }
@@ -961,8 +960,8 @@ namespace BECore::Mahjong::Tests {
                 continue;
             }
             ++canvases;
-            const std::string node(child->GetName().ToStringView().data(), child->GetName().ToStringView().size());
-            const std::set<std::string> names = InteractiveOf(*canvas);
+            const String node(child->GetName().ToStringView().data(), child->GetName().ToStringView().size());
+            const std::set<String> names = InteractiveOf(*canvas);
             controls += names.size();
             if (names.empty()) {
                 continue;
@@ -989,8 +988,8 @@ namespace BECore::Mahjong::Tests {
         const auto hints = Canvas("HintsButton");
         const auto compact = Canvas("ActionsCompact");
         ASSERT_TRUE(actions && hints && compact);
-        std::set<std::string> expected = InteractiveOf(*actions);
-        const std::set<std::string> hintNames = InteractiveOf(*hints);
+        std::set<String> expected = InteractiveOf(*actions);
+        const std::set<String> hintNames = InteractiveOf(*hints);
         EXPECT_FALSE(hintNames.empty());
         expected.insert(hintNames.begin(), hintNames.end());
         EXPECT_EQ(InteractiveOf(*compact), expected) << "a button added to Actions or to HintsButton needs its copy in ActionsCompact, or the narrow windows lose it";

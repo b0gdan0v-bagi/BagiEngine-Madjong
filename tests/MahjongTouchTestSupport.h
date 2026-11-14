@@ -20,7 +20,7 @@ namespace BECore::Mahjong::Tests {
 
     /// One window of `UILayoutMatrix()`.
     struct MatrixWindow {
-        eastl::string label;
+        String label;
         float outputWidth = 0.0f;
         float outputHeight = 0.0f;
         Rect safeArea;
@@ -438,7 +438,7 @@ namespace BECore::Mahjong::Tests {
     /// this asks every shown label and button on the text it shows, with `air` units kept free each side of an interactive one, in every
     /// window, scale mode and user scale of the matrix (a `SceneView` canvas once per window; with `only` the windows of that shape alone).
     /// Returns a line per control that cuts its text, empty when every word fits.
-    inline std::vector<std::string> WordsThatDoNotFitOnTheMatrix(UICanvasComponent& canvas, float air, Optional<TableShape> only = std::nullopt) {
+    inline std::vector<String> WordsThatDoNotFitOnTheMatrix(UICanvasComponent& canvas, float air, Optional<TableShape> only = std::nullopt) {
         canvas.UpdateLayout(kViewWidth, kViewHeight);
         UICanvasLayout& layout = canvas.GetLayout();
         const UICanvasScaleParams saved = layout.params;
@@ -447,7 +447,7 @@ namespace BECore::Mahjong::Tests {
         const CanvasScaleMode modes[] = {CanvasScaleMode::ConstantPixelSize, CanvasScaleMode::ScaleWithScreen, CanvasScaleMode::ConstantPhysicalSize};
         const float userScales[] = {1.0f, 1.5f};
 
-        std::vector<std::string> cut;
+        std::vector<String> cut;
         ForEachMatrixAndNarrowWindow([&](const MatrixWindow& window) {
             if (only.has_value() && ShapeOf(window) != *only) {
                 return;
@@ -475,8 +475,8 @@ namespace BECore::Mahjong::Tests {
                         const UIContentFit fit = control->CheckContent(control->rect.w - 2.0f * spare, control->rect.h, scale);
                         if (fit.hasContent && !fit.fits) {
                             const StringView modeName = screen ? EnumUtils<CanvasScaleMode>::ToString(mode) : StringView("-");
-                            cut.push_back(std::string(
-                                Format("{} {} x{}: {} ({} x {}) scale {}", window.label, modeName, userScale, control->name.ToStringView(), control->rect.w, control->rect.h, scale).c_str()));
+                            cut.push_back(
+                                String(Format("{} {} x{}: {} ({} x {}) scale {}", window.label, modeName, userScale, control->name.ToStringView(), control->rect.w, control->rect.h, scale).c_str()));
                         }
                     }
                 }

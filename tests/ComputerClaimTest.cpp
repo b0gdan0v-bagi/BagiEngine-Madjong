@@ -35,12 +35,12 @@ namespace BECore::Mahjong::Tests {
         // pair leaves it 3 away (the partial sets beyond the sets still needed count for nothing).
         constexpr const char* kPartials = "3p 4p 6p 7p 3s 4s 6s 7s 1m 9m Nw";
 
-        std::string WithPair(const char* pair) {
-            return std::string(kPartials) + " " + pair;
+        String WithPair(const char* pair) {
+            return Format("{} {}", kPartials, pair);
         }
 
         /// East throws `discard`, the only tile of the live wall. Seat 1 holds `seat1`.
-        HandModel WindowModel(const std::string& seat1, const char* discard, Wind roundWind = Wind::East) {
+        HandModel WindowModel(const String& seat1, const char* discard, Wind roundWind = Wind::East) {
             FixedWallSpec spec;
             spec.hands[kSeat0] = kEast;
             spec.hands[kSeat1] = seat1;

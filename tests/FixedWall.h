@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Common/Printers.h>
 #include <Mahjong/Game/Deal.h>
 #include <Mahjong/Game/HandModel.h>
 #include <Mahjong/Game/MahjongSettings.h>
@@ -35,17 +36,17 @@ namespace BECore::Mahjong::Tests {
      *   ring.
      */
     struct FixedWallSpec {
-        std::array<std::string, kSeatCount> hands;
-        std::string live;
-        std::string loose;
+        std::array<String, kSeatCount> hands;
+        String live;
+        String loose;
         Optional<int> liveAfterDeal;
     };
 
     namespace FixedWallDetail {
 
         /// The tiles of a text; a bad text fails the test and gives no tiles.
-        inline eastl::vector<Tile> Parse(const std::string& text, const char* what) {
-            const Optional<eastl::vector<Tile>> tiles = ParseTiles(FromStd(text));
+        inline eastl::vector<Tile> Parse(const String& text, const char* what) {
+            const Optional<eastl::vector<Tile>> tiles = ParseTiles(text);
             if (!tiles.has_value()) {
                 ADD_FAILURE() << "FixedWallSpec." << what << ": cannot read the tiles \"" << text << "\"";
                 return {};

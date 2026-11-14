@@ -51,7 +51,7 @@ Differences from normal: 141 in all, 2 listed (log order)
 )GOLDEN";
 
         ArenaPlayer Bot(const char* spec) {
-            const std::expected<ArenaPlayer, eastl::string> player = ParseArenaPlayer(spec);
+            const std::expected<ArenaPlayer, String> player = ParseArenaPlayer(spec);
             EXPECT_TRUE(player.has_value());
             return player.has_value() ? *player : ArenaPlayer{};
         }
@@ -66,7 +66,7 @@ Differences from normal: 141 in all, 2 listed (log order)
         }
 
         LogSource SourceOf(eastl::vector<LogFile> files) {
-            return [files](StringView) -> std::expected<eastl::vector<LogFile>, eastl::string> { return files; };
+            return [files](StringView) -> std::expected<eastl::vector<LogFile>, String> { return files; };
         }
 
         /// The known corpus: a Normal person among Normal computers, one among Easy ones, one among Easy and Normal computers (mixed), a
@@ -113,7 +113,7 @@ Differences from normal: 141 in all, 2 listed (log order)
             return tally;
         }
 
-        bool Contains(const eastl::string& text, StringView part) {
+        bool Contains(const String& text, StringView part) {
             return StringView(text).find(part) != StringView::npos;
         }
 
@@ -232,7 +232,7 @@ Differences from normal: 141 in all, 2 listed (log order)
 
     TEST(ArenaLogsReportTest, TheSameBytesAtAnyNumberOfThreads) {
         const eastl::vector<CheckedLog> logs = Checked(KnownCorpus());
-        const eastl::string single = FormatLogAnalysis(AnalyseLogs(logs, {Bot("normal"), Bot("easy")}, 1), kShownDifferences);
+        const String single = FormatLogAnalysis(AnalyseLogs(logs, {Bot("normal"), Bot("easy")}, 1), kShownDifferences);
         EXPECT_FALSE(single.empty());
         for (const int jobs : {2, 5, 64}) {
             EXPECT_EQ(FormatLogAnalysis(AnalyseLogs(logs, {Bot("normal"), Bot("easy")}, jobs), kShownDifferences), single) << "jobs " << jobs;
@@ -241,7 +241,7 @@ Differences from normal: 141 in all, 2 listed (log order)
 
     TEST(ArenaLogsReportTest, TheOrderOfTheSourceDoesNotChangeTheBytes) {
         eastl::vector<LogFile> files = KnownCorpus();
-        const eastl::string one = FormatLogAnalysis(AnalyseLogs(Checked(files), {Bot("normal")}, 2), kShownDifferences);
+        const String one = FormatLogAnalysis(AnalyseLogs(Checked(files), {Bot("normal")}, 2), kShownDifferences);
         eastl::reverse(files.begin(), files.end());
         EXPECT_EQ(FormatLogAnalysis(AnalyseLogs(Checked(files), {Bot("normal")}, 2), kShownDifferences), one);
     }
@@ -262,10 +262,10 @@ Differences from normal: 141 in all, 2 listed (log order)
         }
         const LogAnalysis analysis = AnalyseLogs(logs, {Bot("normal")}, 2);
         ASSERT_EQ(analysis.notAnalysed.size(), size_t{1});
-        EXPECT_EQ(std::string(analysis.notAnalysed[0].c_str()).rfind("a.jsonl", 0), size_t{0});
+        EXPECT_EQ(String(analysis.notAnalysed[0].c_str()).rfind("a.jsonl", 0), size_t{0});
         EXPECT_EQ(analysis.tester.matches, 4);
         EXPECT_EQ(analysis.realGame[static_cast<size_t>(LevelNumber(ComputerLevel::Normal) - kMinLevel)].matches, 2);
-        const eastl::string text = FormatLogAnalysis(analysis, kShownDifferences);
+        const String text = FormatLogAnalysis(analysis, kShownDifferences);
         EXPECT_TRUE(Contains(text, "matches analysed 4, not analysed 1\n  a.jsonl")) << text.c_str();
     }
 
@@ -273,13 +273,13 @@ Differences from normal: 141 in all, 2 listed (log order)
         const LogAnalysis analysis = AnalyseLogs(Checked(KnownCorpus()), {Bot("easy")}, 1);
         const size_t all = analysis.tester.differences.size();
         ASSERT_GT(all, size_t{3});
-        const eastl::string capped = FormatLogAnalysis(analysis, kShownDifferences);
+        const String capped = FormatLogAnalysis(analysis, kShownDifferences);
         EXPECT_TRUE(Contains(capped, Format("Differences from easy: {} in all, {} listed", all, kShownDifferences).c_str())) << capped.c_str();
         EXPECT_EQ(std::count(capped.begin(), capped.end(), '-') > 0, true);
-        const eastl::string none = FormatLogAnalysis(analysis, 0);
+        const String none = FormatLogAnalysis(analysis, 0);
         EXPECT_TRUE(Contains(none, Format("Differences from easy: {} in all, 0 listed (log order)\n", all).c_str()));
         EXPECT_FALSE(Contains(none, "--hand"));
-        const eastl::string every = FormatLogAnalysis(analysis, static_cast<int>(all) + 5);
+        const String every = FormatLogAnalysis(analysis, static_cast<int>(all) + 5);
         EXPECT_TRUE(Contains(every, Format("{} in all, {} listed", all, all).c_str()));
     }
 
@@ -287,20 +287,20 @@ Differences from normal: 141 in all, 2 listed (log order)
         const LogAnalysis analysis = AnalyseLogs(Checked(KnownCorpus()), {Bot("easy")}, 1);
         ASSERT_FALSE(analysis.tester.differences.empty());
         const TesterDifference& first = analysis.tester.differences.front();
-        const eastl::string text = FormatLogAnalysis(analysis, 1);
+        const String text = FormatLogAnalysis(analysis, 1);
         EXPECT_TRUE(Contains(text, Format("    --log {} --hand {} --action {}\n", first.log.c_str(), first.hand, first.actionIndex).c_str())) << text.c_str();
     }
 
     TEST(ArenaLogsReportTest, ACorpusWithoutAMatchPrintsEmptyTablesAndNoError) {
-        const eastl::string text = FormatLogAnalysis(AnalyseLogs({}, {Bot("normal")}, 3), 20);
+        const String text = FormatLogAnalysis(AnalyseLogs({}, {Bot("normal")}, 3), 20);
         EXPECT_TRUE(Contains(text, "matches analysed 0, not analysed 0"));
         EXPECT_TRUE(Contains(text, "no match with a person and a computer seat was settled"));
         EXPECT_TRUE(Contains(text, "Differences from normal: 0 in all, 0 listed"));
     }
 
     TEST(ArenaLogsReportTest, TheTextOfAKnownCorpusIsPinned) {
-        const eastl::string text = FormatLogAnalysis(AnalyseLogs(Checked(KnownCorpus()), {Bot("normal")}, 1), kShownDifferences);
-        EXPECT_EQ(std::string(text.c_str()), std::string(kPinnedAnalysis));
+        const String text = FormatLogAnalysis(AnalyseLogs(Checked(KnownCorpus()), {Bot("normal")}, 1), kShownDifferences);
+        EXPECT_EQ(String(text.c_str()), String(kPinnedAnalysis));
     }
 
 }  // namespace BECore::Mahjong::Arena

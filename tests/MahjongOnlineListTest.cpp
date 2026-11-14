@@ -1,5 +1,6 @@
 #include "MahjongHubTransport.h"
 
+#include <Common/Printers.h>
 #include <Mahjong/Online/OnlineWords.h>
 #include <Rooms/RoomErrors.h>
 #include <gtest/gtest.h>
@@ -156,7 +157,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(RunUntil([&] { return listed.Client().Rooms().loaded; }, {&listed}));
         ASSERT_EQ(listed.Client().Rooms().rooms.size(), 1u);
 
-        const eastl::string code = listed.Client().Rooms().rooms.front().code;
+        const String code = listed.Client().Rooms().rooms.front().code;
         ASSERT_TRUE(listed.Client().JoinListed(kUrl, code, "Bob"));
         EXPECT_EQ(listed.Client().Stage(), OnlineStage::Connecting);
         ASSERT_TRUE(RunUntil([&] { return listed.Client().Stage() == OnlineStage::Lobby; }, {&host, &listed}));
@@ -189,7 +190,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(HostRoom(stays, OpenRoom(), "Stays"));
         ASSERT_TRUE(BrowseAndLoad(guest));
         ASSERT_EQ(guest.Client().Rooms().rooms.size(), 2u);
-        const eastl::string goneCode = gone.Client().Room();
+        const String goneCode = gone.Client().Room();
         ASSERT_EQ(guest.Client().Rooms().rooms.front().code, goneCode);
         const size_t connections = _world.Hub().GetConnectionCount();
 

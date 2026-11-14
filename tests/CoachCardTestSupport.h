@@ -14,26 +14,26 @@
 namespace BECore::Mahjong::Tests {
 
     /// The names of the variables of the card: the title, the head, each cell of each row, the lines under the rows.
-    inline std::vector<std::string> CardVarNames() {
-        std::vector<std::string> names{"cardTitle", "cardNow"};
+    inline std::vector<String> CardVarNames() {
+        std::vector<String> names{"cardTitle", "cardNow"};
         for (const char* cell : {"cardWho", "cardMove", "cardSteps", "cardUseful"}) {
             for (size_t i = 0; i < kMaxCardRows; ++i) {
-                names.push_back(cell + std::to_string(i));
+                names.push_back(Format("{}{}", cell, i));
             }
         }
         for (size_t i = 0; i < kMaxCardFooter; ++i) {
-            names.push_back("cardFoot" + std::to_string(i));
+            names.push_back(Format("cardFoot{}", i));
         }
         return names;
     }
 
     /// What `card` puts into the variables, in the order of `CardVarNames`, empty where it has nothing.
-    inline std::vector<std::string> CardTexts(const HintCard& card) {
-        const auto text = [](const eastl::string& value) { return std::string(value.data(), value.size()); };
-        std::vector<std::string> texts{text(card.title), text(card.now)};
+    inline std::vector<String> CardTexts(const HintCard& card) {
+        const auto text = [](const String& value) { return String(value.data(), value.size()); };
+        std::vector<String> texts{text(card.title), text(card.now)};
         const auto cells = [&](auto member) {
             for (size_t i = 0; i < kMaxCardRows; ++i) {
-                texts.push_back(i < card.rows.size() ? text(card.rows[i].*member) : std::string());
+                texts.push_back(i < card.rows.size() ? text(card.rows[i].*member) : String());
             }
         };
         cells(&CardRow::who);
@@ -41,22 +41,22 @@ namespace BECore::Mahjong::Tests {
         cells(&CardRow::steps);
         cells(&CardRow::useful);
         for (size_t i = 0; i < kMaxCardFooter; ++i) {
-            texts.push_back(i < card.footer.size() ? text(card.footer[i]) : std::string());
+            texts.push_back(i < card.footer.size() ? text(card.footer[i]) : String());
         }
         return texts;
     }
 
     /// What the variables of the card hold now.
-    inline std::vector<std::string> CardVars() {
-        std::vector<std::string> values;
-        for (const std::string& name : CardVarNames()) {
+    inline std::vector<String> CardVars() {
+        std::vector<String> values;
+        for (const String& name : CardVarNames()) {
             values.push_back(Var(name.c_str()));
         }
         return values;
     }
 
     inline bool NoCardText() {
-        for (const std::string& value : CardVars()) {
+        for (const String& value : CardVars()) {
             if (!value.empty()) {
                 return false;
             }
@@ -66,17 +66,17 @@ namespace BECore::Mahjong::Tests {
 
     /// Sets every variable of the card to the longest text it takes over `cards` (each cell of every row to the longest of that cell).
     inline void SetLongestCardTexts(const std::vector<HintCard>& cards) {
-        const std::vector<std::string> names = CardVarNames();
-        std::vector<std::vector<eastl::string>> candidates(names.size());
+        const std::vector<String> names = CardVarNames();
+        std::vector<std::vector<String>> candidates(names.size());
         for (const HintCard& card : cards) {
-            const std::vector<std::string> texts = CardTexts(card);
+            const std::vector<String> texts = CardTexts(card);
             for (size_t at = 0; at < texts.size(); ++at) {
                 candidates[at].emplace_back(texts[at].c_str());
             }
         }
         // A cell of a row takes the longest of that cell in any row, a line under the rows the longest of any line
         const auto widen = [&](size_t first, size_t count) {
-            std::vector<eastl::string> all;
+            std::vector<String> all;
             for (size_t at = first; at < first + count; ++at) {
                 all.insert(all.end(), candidates[at].begin(), candidates[at].end());
             }
@@ -89,8 +89,8 @@ namespace BECore::Mahjong::Tests {
         }
         widen(2 + 4 * kMaxCardRows, kMaxCardFooter);
         for (size_t at = 0; at < names.size(); ++at) {
-            const eastl::string longest = LongestText(candidates[at]);
-            CoreManager::GetUIVars().Set(PoolString::Intern(FromStd(names[at])), StringView(longest));
+            const String longest = LongestText(candidates[at]);
+            CoreManager::GetUIVars().Set(PoolString::Intern(names[at]), StringView(longest));
         }
     }
 

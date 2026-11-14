@@ -1,6 +1,7 @@
 #include "ShippedScene.h"
 #include "StringsTestSupport.h"
 
+#include <Common/Printers.h>
 #include <Mahjong/Game/Score.h>
 #include <Mahjong/Game/Tile.h>
 #include <Mahjong/Table/ActionButtons.h>
@@ -18,15 +19,11 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        std::string ReadFile(const std::filesystem::path& path) {
+        String ReadFile(const std::filesystem::path& path) {
             std::ifstream file(path, std::ios::binary);
             std::stringstream text;
             text << file.rdbuf();
-            return text.str();
-        }
-
-        std::string Std(const eastl::string& text) {
-            return std::string(text.data(), text.size());
+            return FromStdString(text.str());
         }
 
         std::filesystem::path GameRoot() {
@@ -34,38 +31,39 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// The shipped scene with its node files expanded (`ShippedScene.h`).
-        std::string SceneText() {
+        String SceneText() {
             return ShippedSceneXml();
         }
 
         /// The scene without its comments (which quote attributes as examples).
-        std::string WithoutComments(const std::string& xml) {
-            return std::regex_replace(xml, std::regex(R"(<!--[\s\S]*?-->)"), "");
+        String WithoutComments(const String& xml) {
+            const std::string text = ToStdString(xml);  //-NoStd: std::regex runs over std::string
+            return FromStdString(std::regex_replace(text, std::regex(R"(<!--[\s\S]*?-->)"), ""));
         }
 
         /// Every key the scene asks for with `{#key}`.
-        std::set<std::string> KeysOfTheScene() {
-            const std::string text = SceneText();
-            std::set<std::string> keys;
+        std::set<String> KeysOfTheScene() {
+            const std::string text = ToStdString(SceneText());  //-NoStd: std::regex runs over std::string
+            std::set<String> keys;
             const std::regex reference(R"(\{#([^}]+)\})");
             for (auto it = std::sregex_iterator(text.begin(), text.end(), reference); it != std::sregex_iterator(); ++it) {
-                keys.insert((*it)[1].str());
+                keys.insert(FromStdString((*it)[1].str()));
             }
             return keys;
         }
 
         /// Every string literal of the sources of the game that has the shape of a key (`area.name`, `area.name.more`): the keys code asks for by name.
-        std::set<std::string> KeysNamedInCode() {
-            std::set<std::string> keys;
+        std::set<String> KeysNamedInCode() {
+            std::set<String> keys;
             const std::regex literal(R"re("([a-z]+(?:\.[A-Za-z0-9]+)+)")re");
             for (const auto& entry : std::filesystem::recursive_directory_iterator(GameRoot() / "src" / "Mahjong")) {
-                const std::string extension = entry.path().extension().string();
+                const String extension = FromStdString(entry.path().extension().string());
                 if (!entry.is_regular_file() || (extension != ".h" && extension != ".cpp")) {
                     continue;
                 }
-                const std::string text = ReadFile(entry.path());
+                const std::string text = ToStdString(ReadFile(entry.path()));  //-NoStd: std::regex runs over std::string
                 for (auto it = std::sregex_iterator(text.begin(), text.end(), literal); it != std::sregex_iterator(); ++it) {
-                    keys.insert((*it)[1].str());
+                    keys.insert(FromStdString((*it)[1].str()));
                 }
             }
             return keys;
@@ -73,23 +71,23 @@ namespace BECore::Mahjong::Tests {
 
         /// The keys code builds from an enum value: the families that are walked, not named (`wind.<Wind>`, `wind.letter.<Wind>`, `suit.<suit>`, `score.kind.<ScoreKind>`, `button.<ButtonKind>`,
         /// `hint.<ButtonKind>`).
-        std::set<std::string> KeysBuiltFromEnums() {
-            std::set<std::string> keys;
+        std::set<String> KeysBuiltFromEnums() {
+            std::set<String> keys;
             for (const Wind wind : EnumUtils<Wind>::Values()) {
-                keys.insert(Std(Format("wind.{}", EnumUtils<Wind>::ToString(wind))));
-                keys.insert(Std(Format("wind.letter.{}", EnumUtils<Wind>::ToString(wind))));
+                keys.insert(Format("wind.{}", EnumUtils<Wind>::ToString(wind)));
+                keys.insert(Format("wind.letter.{}", EnumUtils<Wind>::ToString(wind)));
             }
             for (const TileSuit suit : EnumUtils<TileSuit>::Values()) {
                 if (suit != TileSuit::None) {
-                    keys.insert(Std(Format("suit.{}", EnumUtils<TileSuit>::ToString(suit))));
+                    keys.insert(Format("suit.{}", EnumUtils<TileSuit>::ToString(suit)));
                 }
             }
             for (const ScoreKind kind : EnumUtils<ScoreKind>::Values()) {
-                keys.insert(Std(Format("score.kind.{}", EnumUtils<ScoreKind>::ToString(kind))));
+                keys.insert(Format("score.kind.{}", EnumUtils<ScoreKind>::ToString(kind)));
             }
             for (const ButtonKind kind : EnumUtils<ButtonKind>::Values()) {
-                keys.insert(Std(Format("button.{}", EnumUtils<ButtonKind>::ToString(kind))));
-                keys.insert(std::string(HintKey(kind).data(), HintKey(kind).size()));
+                keys.insert(Format("button.{}", EnumUtils<ButtonKind>::ToString(kind)));
+                keys.insert(String(HintKey(kind).data(), HintKey(kind).size()));
             }
             return keys;
         }
@@ -106,7 +104,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(StringsTest, TheShippedFileLoadsWithNoProblems) {
         UIStrings strings;
-        const eastl::vector<eastl::string> problems = LoadShippedStrings(strings);
+        const eastl::vector<String> problems = LoadShippedStrings(strings);
 
         EXPECT_TRUE(problems.empty()) << (problems.empty() ? "" : problems[0].c_str());
     }
@@ -127,8 +125,8 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(LoadShippedStrings(strings).empty());
 
         ForEachLanguage(strings, [&](PoolString) {
-            EXPECT_EQ(Std(Tr(strings, "lang.en")), "English");
-            EXPECT_EQ(Std(Tr(strings, "lang.ru")), "Русский");
+            EXPECT_EQ(Tr(strings, "lang.en"), "English");
+            EXPECT_EQ(Tr(strings, "lang.ru"), "Русский");
         });
     }
 
@@ -138,14 +136,14 @@ namespace BECore::Mahjong::Tests {
         const LanguageEntries& base = languages[0];
 
         for (const LanguageEntries& other : languages) {
-            std::map<std::string, std::string> byKey;
+            std::map<String, String> byKey;
             for (const StringEntry& entry : other.entries) {
                 EXPECT_TRUE(byKey.emplace(entry.key, entry.text).second) << other.id << ": the key " << entry.key << " is there twice";
             }
             for (const StringEntry& entry : base.entries) {
                 const auto found = byKey.find(entry.key);
                 ASSERT_NE(found, byKey.end()) << other.id << " lacks " << entry.key;
-                EXPECT_EQ(PlaceholderNames(FromStd(found->second)), PlaceholderNames(FromStd(entry.text))) << other.id << ": the placeholders of " << entry.key;
+                EXPECT_EQ(PlaceholderNames(found->second), PlaceholderNames(entry.text)) << other.id << ": the placeholders of " << entry.key;
             }
             EXPECT_EQ(other.entries.size(), base.entries.size()) << other.id << " has keys " << base.id << " has not";
         }
@@ -161,10 +159,10 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(StringsTest, EveryReferenceOfTheSceneIsInBothLanguages) {
-        const std::string text = SceneText();
+        const std::string text = ToStdString(SceneText());  //-NoStd: std::regex runs over std::string
         ASSERT_FALSE(text.empty()) << ShippedSceneConfig().string();
         // Looked up in the entries of each language: `Find` falls back to the default language and would hide a missing translation
-        std::map<std::string, std::set<std::string>> keysOf;
+        std::map<String, std::set<String>> keysOf;
         for (const LanguageEntries& language : ReadShippedEntries()) {
             for (const StringEntry& entry : language.entries) {
                 keysOf[language.id].insert(entry.key);
@@ -175,7 +173,7 @@ namespace BECore::Mahjong::Tests {
         const std::regex reference(R"(\{#([^}]+)\})");
         int references = 0;
         for (auto it = std::sregex_iterator(text.begin(), text.end(), reference); it != std::sregex_iterator(); ++it) {
-            const std::string key = (*it)[1].str();
+            const String key = FromStdString((*it)[1].str());
             ++references;
             for (const auto& [language, keys] : keysOf) {
                 EXPECT_TRUE(keys.contains(key)) << "{#" << key << "} of the scene is missing in " << language;
@@ -185,41 +183,42 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(StringsTest, EveryKeyOfTheFileIsUsedByTheSceneOrByCode) {
-        const std::set<std::string> scene = KeysOfTheScene();
-        const std::set<std::string> named = KeysNamedInCode();
-        const std::set<std::string> walked = KeysBuiltFromEnums();
+        const std::set<String> scene = KeysOfTheScene();
+        const std::set<String> named = KeysNamedInCode();
+        const std::set<String> walked = KeysBuiltFromEnums();
         ASSERT_FALSE(scene.empty());
         ASSERT_FALSE(named.empty());
         ASSERT_FALSE(walked.empty());
 
-        std::set<std::string> inTheFile;
+        std::set<String> inTheFile;
         for (const LanguageEntries& language : ReadShippedEntries()) {
             for (const StringEntry& entry : language.entries) {
                 inTheFile.insert(entry.key);
                 EXPECT_TRUE(scene.contains(entry.key) || named.contains(entry.key) || walked.contains(entry.key)) << language.id << ": " << entry.key << " is used by nobody";
             }
         }
-        for (const std::string& key : walked) {
+        for (const String& key : walked) {
             EXPECT_TRUE(inTheFile.contains(key)) << "code builds the key " << key << " and the file has no text for it";
         }
-        for (const std::string& key : named) {
-            if (key.starts_with("handover.") || key.starts_with("matchover.") || key.starts_with("tile.") || key.starts_with("seat.") || key.starts_with("hud.") || key.starts_with("cover.")) {
+        for (const String& key : named) {
+            const StringView name = key;
+            if (name.starts_with("handover.") || name.starts_with("matchover.") || name.starts_with("tile.") || name.starts_with("seat.") || name.starts_with("hud.") || name.starts_with("cover.")) {
                 EXPECT_TRUE(inTheFile.contains(key)) << "code asks for the key " << key << " and the file has no text for it";
             }
         }
     }
 
     TEST(StringsTest, NoTextOfTheSceneIsAPlainWord) {
-        const std::string scene = WithoutComments(SceneText());
+        const std::string scene = ToStdString(WithoutComments(SceneText()));  //-NoStd: std::regex runs over std::string
         ASSERT_FALSE(scene.empty());
 
         // A `text` is empty, a `{variable}`, a `{#key}`, or a mix of those with signs and spaces: no letter outside the braces
         const std::regex attribute(R"re(\stext="([^"]*)")re");
         int texts = 0;
         for (auto it = std::sregex_iterator(scene.begin(), scene.end(), attribute); it != std::sregex_iterator(); ++it) {
-            const std::string text = (*it)[1].str();
+            const std::string text = (*it)[1].str();  //-NoStd: std::regex runs over std::string
             ++texts;
-            const std::string outside = std::regex_replace(text, std::regex(R"(\{[^}]*\})"), "");
+            const std::string outside = std::regex_replace(text, std::regex(R"(\{[^}]*\})"), "");  //-NoStd: std::regex runs over std::string
             const bool word = std::any_of(outside.begin(), outside.end(), [](unsigned char c) { return std::isalpha(c) != 0 || c >= 0x80; });
             EXPECT_FALSE(word) << "text=\"" << text << "\" holds a word that belongs in config/UIStrings.xml";
         }
@@ -229,39 +228,39 @@ namespace BECore::Mahjong::Tests {
     TEST(StringsTest, TrFindsTheTextOfTheCurrentLanguageElseTheDefaultElseTheKey) {
         UIStrings strings = MakeTable();
 
-        EXPECT_EQ(Std(Tr(strings, "only.en")), "English only");
-        EXPECT_EQ(Std(Tr(strings, "no.such.key")), "no.such.key");
+        EXPECT_EQ(Tr(strings, "only.en"), "English only");
+        EXPECT_EQ(Tr(strings, "no.such.key"), "no.such.key");
 
         ASSERT_TRUE(strings.SetLanguage("ru"_intern));
-        EXPECT_EQ(Std(Tr(strings, "greeting")), "Привет, {name}!");
-        EXPECT_EQ(Std(Tr(strings, "only.en")), "English only");  // the default language fills the gap
-        EXPECT_EQ(Std(Tr(strings, "no.such.key")), "no.such.key");
+        EXPECT_EQ(Tr(strings, "greeting"), "Привет, {name}!");
+        EXPECT_EQ(Tr(strings, "only.en"), "English only");  // the default language fills the gap
+        EXPECT_EQ(Tr(strings, "no.such.key"), "no.such.key");
     }
 
     TEST(StringsTest, TrSubstitutesThePlaceholdersAndRussianComesOutAsUtf8) {
         UIStrings strings = MakeTable();
 
-        EXPECT_EQ(Std(Tr(strings, "greeting", {{"name", "Anna"}})), "Hello, Anna!");
+        EXPECT_EQ(Tr(strings, "greeting", {{"name", "Anna"}}), "Hello, Anna!");
         ASSERT_TRUE(strings.SetLanguage("ru"_intern));
-        EXPECT_EQ(Std(Tr(strings, "greeting", {{"name", "Анна"}})), "Привет, Анна!");
-        EXPECT_EQ(Tr(strings, "greeting", {{"name", "x"}}).size(), std::string("Привет, x!").size());  // bytes, not characters
-        EXPECT_EQ(Std(Tr(strings, "no.such.key", {{"name", "x"}})), "no.such.key");
+        EXPECT_EQ(Tr(strings, "greeting", {{"name", "Анна"}}), "Привет, Анна!");
+        EXPECT_EQ(Tr(strings, "greeting", {{"name", "x"}}).size(), String("Привет, x!").size());  // bytes, not characters
+        EXPECT_EQ(Tr(strings, "no.such.key", {{"name", "x"}}), "no.such.key");
     }
 
     TEST(StringsTest, SubstReplacesEveryPlaceholderAndLeavesTheRestAsWritten) {
-        EXPECT_EQ(Std(Subst("Seat {n} ({wind})", {{"n", "2"}, {"wind", "South"}})), "Seat 2 (South)");
-        EXPECT_EQ(Std(Subst("{a}{a}-{b}", {{"a", "1"}, {"b", "2"}})), "11-2");
-        EXPECT_EQ(Std(Subst("{unknown} and {n}", {{"n", "2"}})), "{unknown} and 2");
-        EXPECT_EQ(Std(Subst("no placeholders", {})), "no placeholders");
-        EXPECT_EQ(Std(Subst("", {{"n", "2"}})), "");
-        EXPECT_EQ(Std(Subst("open { and {n}", {{"n", "2"}})), "open { and 2");
-        EXPECT_EQ(Std(Subst("unclosed {n", {{"n", "2"}})), "unclosed {n");
-        EXPECT_EQ(Std(Subst("{}", {{"", "empty"}})), "empty");
-        EXPECT_EQ(Std(Subst("{n}", {{"n", "{n}"}})), "{n}");  // a value is not expanded again
+        EXPECT_EQ(Subst("Seat {n} ({wind})", {{"n", "2"}, {"wind", "South"}}), "Seat 2 (South)");
+        EXPECT_EQ(Subst("{a}{a}-{b}", {{"a", "1"}, {"b", "2"}}), "11-2");
+        EXPECT_EQ(Subst("{unknown} and {n}", {{"n", "2"}}), "{unknown} and 2");
+        EXPECT_EQ(Subst("no placeholders", {}), "no placeholders");
+        EXPECT_EQ(Subst("", {{"n", "2"}}), "");
+        EXPECT_EQ(Subst("open { and {n}", {{"n", "2"}}), "open { and 2");
+        EXPECT_EQ(Subst("unclosed {n", {{"n", "2"}}), "unclosed {n");
+        EXPECT_EQ(Subst("{}", {{"", "empty"}}), "empty");
+        EXPECT_EQ(Subst("{n}", {{"n", "{n}"}}), "{n}");  // a value is not expanded again
     }
 
     TEST(StringsTest, PlaceholderNamesFindsTheNamesAndSkipsReferences) {
-        EXPECT_EQ((PlaceholderNames("Seat {n} ({wind}) {#key} {n}")), (std::set<std::string>{"n", "wind"}));
+        EXPECT_EQ((PlaceholderNames("Seat {n} ({wind}) {#key} {n}")), (std::set<String>{"n", "wind"}));
         EXPECT_TRUE(PlaceholderNames("plain").empty());
     }
 

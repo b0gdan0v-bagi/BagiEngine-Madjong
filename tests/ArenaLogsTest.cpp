@@ -1,5 +1,6 @@
 #include "ArenaLogTestSupport.h"
 
+#include <Common/Printers.h>
 #include <Mahjong/Arena/ArenaLogsReport.h>
 #include <gtest/gtest.h>
 
@@ -19,7 +20,7 @@ namespace BECore::Mahjong::Arena {
         constexpr uint32_t kSeedC = 123;
         constexpr int kGivenUpAfter = 1;
 
-        StringView View(const eastl::string& text) {
+        StringView View(const String& text) {
             return text;
         }
 
@@ -40,12 +41,12 @@ namespace BECore::Mahjong::Arena {
             return events.size();
         }
 
-        LogFile FileOf(const char* name, const eastl::string& text) {
+        LogFile FileOf(const char* name, const String& text) {
             return {name, text};
         }
 
         LogSource SourceOf(eastl::vector<LogFile> files) {
-            return [files](StringView) -> std::expected<eastl::vector<LogFile>, eastl::string> { return files; };
+            return [files](StringView) -> std::expected<eastl::vector<LogFile>, String> { return files; };
         }
 
     }  // namespace
@@ -86,27 +87,27 @@ namespace BECore::Mahjong::Arena {
     TEST(ArenaLogsTest, ALogWithANicknameIsOkAndTheNicknameIsInNoReportText) {
         LogSpec spec = PersonMatch(kSeedA, MatchPlatform::Web, "a1b2c3d");
         spec.origin.nickname = "Zorro";
-        const eastl::string text = LogText(PlayLog(spec));
-        ASSERT_NE(text.find("\"nickname\":\"Zorro\""), eastl::string::npos);
+        const String text = LogText(PlayLog(spec));
+        ASSERT_NE(text.find("\"nickname\":\"Zorro\""), String::npos);
         const LogVerdict verdict = CheckMatchLog(View(text));
         ASSERT_TRUE(verdict.ok) << verdict.reason.c_str();
         EXPECT_TRUE(verdict.complete);
 
         const auto logs = ReadLogs(SourceOf({FileOf("a.jsonl", text)}), ".");
         ASSERT_TRUE(logs.has_value());
-        EXPECT_EQ(FormatCheckLines(*logs).find("Zorro"), eastl::string::npos);
-        EXPECT_EQ(FormatCorpusSummary(SummariseLogs(*logs)).find("Zorro"), eastl::string::npos);
+        EXPECT_EQ(FormatCheckLines(*logs).find("Zorro"), String::npos);
+        EXPECT_EQ(FormatCorpusSummary(SummariseLogs(*logs)).find("Zorro"), String::npos);
     }
 
     TEST(ArenaLogsTest, AnUnreadableLogNamesTheLine) {
-        eastl::string text = LogText(PlayLog(PersonMatch(kSeedA, MatchPlatform::Desktop, "x")));
+        String text = LogText(PlayLog(PersonMatch(kSeedA, MatchPlatform::Desktop, "x")));
         text.append("{\"event\":\"action\",\"seat\":1}\n");
         const LogVerdict verdict = CheckMatchLog(View(text));
         EXPECT_FALSE(verdict.ok);
         EXPECT_EQ(verdict.problem, LogProblem::Unreadable);
         EXPECT_TRUE(verdict.reason.find("unreadable: line ") == 0) << verdict.reason.c_str();
-        EXPECT_EQ(verdict.reason.find('\t'), eastl::string::npos);
-        EXPECT_EQ(verdict.reason.find('\n'), eastl::string::npos);
+        EXPECT_EQ(verdict.reason.find('\t'), String::npos);
+        EXPECT_EQ(verdict.reason.find('\n'), String::npos);
 
         const LogVerdict notJson = CheckMatchLog("this is no log\n");
         EXPECT_FALSE(notJson.ok);
@@ -121,7 +122,7 @@ namespace BECore::Mahjong::Arena {
         const LogVerdict verdict = CheckMatchLog(View(LogText(events)));
         EXPECT_FALSE(verdict.ok);
         EXPECT_EQ(verdict.problem, LogProblem::DoesNotReplay);
-        EXPECT_EQ(std::string(verdict.reason.c_str()), "does not replay: event " + std::to_string(action) + " (ActionRefused)");
+        EXPECT_EQ(String(verdict.reason.c_str()), Format("does not replay: event {} (ActionRefused)", action));
     }
 
     TEST(ArenaLogsTest, AChangedSettlementDoesNotReplayAndTheEventIsNamed) {
@@ -131,13 +132,13 @@ namespace BECore::Mahjong::Arena {
         const LogVerdict verdict = CheckMatchLog(View(LogText(events)));
         EXPECT_FALSE(verdict.ok);
         EXPECT_EQ(verdict.problem, LogProblem::DoesNotReplay);
-        EXPECT_EQ(std::string(verdict.reason.c_str()), "does not replay: event " + std::to_string(settlement) + " (SettlementMismatch)");
+        EXPECT_EQ(String(verdict.reason.c_str()), Format("does not replay: event {} (SettlementMismatch)", settlement));
     }
 
     TEST(ArenaLogsTest, ALogWithoutAStartDoesNotReplay) {
         const LogVerdict empty = CheckMatchLog("");
         EXPECT_FALSE(empty.ok);
-        EXPECT_EQ(std::string(empty.reason.c_str()), "does not replay: event 0 (NoStart)");
+        EXPECT_EQ(String(empty.reason.c_str()), "does not replay: event 0 (NoStart)");
         eastl::vector<MatchLogEvent> events = PlayLog(PersonMatch(kSeedA, MatchPlatform::Desktop, "x"));
         events.erase(events.begin());
         const LogVerdict headless = CheckMatchLog(View(LogText(events)));
@@ -146,7 +147,7 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaLogsTest, TheFilesAreSortedByNameWhateverTheSourceListsFirst) {
-        const eastl::string good = LogText(PlayLog(PersonMatch(kSeedA, MatchPlatform::Desktop, "x")));
+        const String good = LogText(PlayLog(PersonMatch(kSeedA, MatchPlatform::Desktop, "x")));
         const LogSource source = SourceOf({FileOf("b/two.jsonl", good), FileOf("a.jsonl", "garbage"), FileOf("b/one.jsonl", good)});
         const auto logs = ReadLogs(source, "anywhere");
         ASSERT_TRUE(logs.has_value());
@@ -159,14 +160,14 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaLogsTest, ThePathIsPassedToTheSourceAndItsErrorComesBack) {
-        std::string seen;
-        const LogSource source = [&seen](StringView path) -> std::expected<eastl::vector<LogFile>, eastl::string> {
-            seen = ToStdString(path);
-            return std::unexpected(eastl::string("no such folder"));
+        String seen;
+        const LogSource source = [&seen](StringView path) -> std::expected<eastl::vector<LogFile>, String> {
+            seen = String(path);
+            return std::unexpected(String("no such folder"));
         };
         const auto logs = ReadLogs(source, "logs/matches");
         EXPECT_FALSE(logs.has_value());
-        EXPECT_EQ(std::string(logs.error().c_str()), "no such folder");
+        EXPECT_EQ(String(logs.error().c_str()), "no such folder");
         EXPECT_EQ(seen, "logs/matches");
     }
 
@@ -202,8 +203,8 @@ namespace BECore::Mahjong::Arena {
         EXPECT_EQ(corpus.personSeats, 3);
         EXPECT_EQ(corpus.computerSeats, 13);
         ASSERT_EQ(corpus.setups.size(), 2U);
-        EXPECT_EQ(corpus.setups[0], (eastl::pair<eastl::string, int>("CCCC", 1)));
-        EXPECT_EQ(corpus.setups[1], (eastl::pair<eastl::string, int>("PCCC", 3)));
+        EXPECT_EQ(corpus.setups[0], (eastl::pair<String, int>("CCCC", 1)));
+        EXPECT_EQ(corpus.setups[1], (eastl::pair<String, int>("PCCC", 3)));
 
         // Levels: the three person matches are all Normal (5) at three computer seats each; the mixed table is 1, 3, 5, 10.
         EXPECT_EQ(corpus.computerLevels[0], 1);
@@ -216,9 +217,9 @@ namespace BECore::Mahjong::Arena {
         EXPECT_EQ(corpus.platforms[static_cast<size_t>(MatchPlatform::Web)], 1);
         EXPECT_EQ(corpus.platforms[static_cast<size_t>(MatchPlatform::Unknown)], 1) << "the version 4 log";
         ASSERT_EQ(corpus.builds.size(), 3U);
-        EXPECT_EQ(corpus.builds[0], (eastl::pair<eastl::string, int>("a1b2c3d", 2)));
-        EXPECT_EQ(corpus.builds[1], (eastl::pair<eastl::string, int>("e5f6a7b", 1)));
-        EXPECT_EQ(corpus.builds[2], (eastl::pair<eastl::string, int>("unknown", 1)));
+        EXPECT_EQ(corpus.builds[0], (eastl::pair<String, int>("a1b2c3d", 2)));
+        EXPECT_EQ(corpus.builds[1], (eastl::pair<String, int>("e5f6a7b", 1)));
+        EXPECT_EQ(corpus.builds[2], (eastl::pair<String, int>("unknown", 1)));
 
         const int shortest = eastl::min(eastl::min(CountEvents(first, MatchLogKind::Settlement), CountEvents(second, MatchLogKind::Settlement)),
                                         eastl::min(CountEvents(third, MatchLogKind::Settlement), CountEvents(older, MatchLogKind::Settlement)));
@@ -234,7 +235,7 @@ namespace BECore::Mahjong::Arena {
     }
 
     TEST(ArenaLogsTest, TheSameLogsGiveTheSameCorpusAndTheSameText) {
-        const eastl::string text = LogText(PlayLog(PersonMatch(kSeedA, MatchPlatform::Desktop, "a1b2c3d")));
+        const String text = LogText(PlayLog(PersonMatch(kSeedA, MatchPlatform::Desktop, "a1b2c3d")));
         const auto one = ReadLogs(SourceOf({FileOf("x.jsonl", text), FileOf("y.jsonl", "bad")}), ".");
         const auto other = ReadLogs(SourceOf({FileOf("y.jsonl", "bad"), FileOf("x.jsonl", text)}), ".");
         ASSERT_TRUE(one.has_value() && other.has_value());
@@ -250,9 +251,9 @@ namespace BECore::Mahjong::Arena {
         logs[1].verdict.reason = "unreadable: line 2: not JSON";
         logs[2].name = "tab\tname.jsonl";
         logs[2].verdict.reason = "does not replay: event 4 (ActionRefused)";
-        EXPECT_EQ(std::string(FormatCheckLines(logs).c_str()), "ok\ta.jsonl\n"
-                                                               "bad\tdir/b.jsonl\tunreadable: line 2: not JSON\n"
-                                                               "bad\ttab name.jsonl\tdoes not replay: event 4 (ActionRefused)\n");
+        EXPECT_EQ(String(FormatCheckLines(logs).c_str()), "ok\ta.jsonl\n"
+                                                          "bad\tdir/b.jsonl\tunreadable: line 2: not JSON\n"
+                                                          "bad\ttab name.jsonl\tdoes not replay: event 4 (ActionRefused)\n");
         EXPECT_TRUE(FormatCheckLines({}).empty());
     }
 
@@ -275,33 +276,33 @@ namespace BECore::Mahjong::Arena {
         corpus.builds = {{"a1b2c3d", 2}, {"unknown", 1}};
         corpus.matchHands = {3, 6.6666, 9};
         corpus.matchActions = {50, 120.5, 200};
-        EXPECT_EQ(std::string(FormatCorpusSummary(corpus).c_str()), "Match logs\n"
-                                                                    "files read        4\n"
-                                                                    "replayed          3\n"
-                                                                    "dropped           1 (Unreadable 1, DoesNotReplay 0)\n"
-                                                                    "  bad.jsonl: unreadable: line 2: not JSON\n"
-                                                                    "matches           complete 2, abandoned 1\n"
-                                                                    "hands             20\n"
-                                                                    "seats             person 2, computer 10\n"
-                                                                    "seat setups       CCCC 1, PCCC 2\n"
-                                                                    "platforms         desktop 1, web 1, unknown 1\n"
-                                                                    "builds            a1b2c3d 2, unknown 1\n"
-                                                                    "match hands       min 3, mean 6.67, max 9\n"
-                                                                    "match actions     min 50, mean 120.50, max 200\n"
-                                                                    "\n"
-                                                                    "computer seats by level\n"
-                                                                    "level    seats\n"
-                                                                    "1            1\n"
-                                                                    "2            0\n"
-                                                                    "3            2\n"
-                                                                    "4            0\n"
-                                                                    "5            5\n"
-                                                                    "6            0\n"
-                                                                    "7            0\n"
-                                                                    "8            0\n"
-                                                                    "9            0\n"
-                                                                    "10           2\n");
-        EXPECT_NE(FormatCorpusSummary(LogCorpus{}).find("files read        0"), eastl::string::npos);
+        EXPECT_EQ(String(FormatCorpusSummary(corpus).c_str()), "Match logs\n"
+                                                               "files read        4\n"
+                                                               "replayed          3\n"
+                                                               "dropped           1 (Unreadable 1, DoesNotReplay 0)\n"
+                                                               "  bad.jsonl: unreadable: line 2: not JSON\n"
+                                                               "matches           complete 2, abandoned 1\n"
+                                                               "hands             20\n"
+                                                               "seats             person 2, computer 10\n"
+                                                               "seat setups       CCCC 1, PCCC 2\n"
+                                                               "platforms         desktop 1, web 1, unknown 1\n"
+                                                               "builds            a1b2c3d 2, unknown 1\n"
+                                                               "match hands       min 3, mean 6.67, max 9\n"
+                                                               "match actions     min 50, mean 120.50, max 200\n"
+                                                               "\n"
+                                                               "computer seats by level\n"
+                                                               "level    seats\n"
+                                                               "1            1\n"
+                                                               "2            0\n"
+                                                               "3            2\n"
+                                                               "4            0\n"
+                                                               "5            5\n"
+                                                               "6            0\n"
+                                                               "7            0\n"
+                                                               "8            0\n"
+                                                               "9            0\n"
+                                                               "10           2\n");
+        EXPECT_NE(FormatCorpusSummary(LogCorpus{}).find("files read        0"), String::npos);
     }
 
 }  // namespace BECore::Mahjong::Arena

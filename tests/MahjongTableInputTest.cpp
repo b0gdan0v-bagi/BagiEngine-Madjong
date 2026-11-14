@@ -88,7 +88,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongTableInputTest, AClickOnTheFeltOrAnOpponentsTileOrTheWrongButtonDoesNothing) {
         ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup));
-        const std::string before = Snapshot(Hand());
+        const String before = Snapshot(Hand());
         const uint64_t version = _game->GetSession().Version();
 
         Click(5.0f, 5.0f);  // empty felt
@@ -110,7 +110,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongTableInputTest, NoClickIsTakenWhileAComputerHasToAct) {
         ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup, kPlainHand, kSeat1));
         ASSERT_EQ(_game->GetSession().Actor(), kSeat1);
-        const std::string before = Snapshot(Hand());
+        const String before = Snapshot(Hand());
 
         ClickHandTile(0);
 
@@ -122,7 +122,7 @@ namespace BECore::Mahjong::Tests {
         _game->GetSession().RunComputers();
         ASSERT_EQ(_game->GetSession().GetPhase(), SessionPhase::HandOver);
         Draw();
-        const std::string before = Snapshot(Hand());
+        const String before = Snapshot(Hand());
 
         ClickHandTile(0);
 
@@ -160,7 +160,7 @@ namespace BECore::Mahjong::Tests {
         Draw();
         EXPECT_EQ(VeilCalls(), kTilesThatCannotDeclare) << "a veil over each tile that cannot declare, none over 9p and Rd";
 
-        const std::string before = Snapshot(Hand());
+        const String before = Snapshot(Hand());
         ClickHandTile(IndexOf(kSeat0, T("Ew")));
 
         EXPECT_EQ(Snapshot(Hand()), before);
@@ -252,7 +252,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(StartWith(kDefaultSeatSetup));
         const int index = IndexOf(kSeat0, T("9p"));
         const uint64_t version = _game->GetSession().Version();
-        const std::string before = Snapshot(Hand());
+        const String before = Snapshot(Hand());
 
         TapHandTile(index);
         Draw();
@@ -471,7 +471,7 @@ namespace BECore::Mahjong::Tests {
         Lay(model);
         Draw();
         ASSERT_TRUE(_game->GetSession().ActorIsPerson());
-        const std::string before = Snapshot(Hand());
+        const String before = Snapshot(Hand());
 
         TapHandTile(0);
         Draw();
@@ -503,7 +503,7 @@ namespace BECore::Mahjong::Tests {
         Draw();
         const int plain = IndexOf(kSeat0, T("Ew"));
         const int declaring = IndexOf(kSeat0, T("Rd"));
-        const std::string before = Snapshot(Hand());
+        const String before = Snapshot(Hand());
 
         TapHandTile(plain);
         TapHandTile(plain);  // the second tap asks for a discard that does not declare: the model refuses it
@@ -587,8 +587,8 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(CoreManager::GetUIStrings().SetLanguage("ru"_intern));
         Draw();
 
-        const eastl::string expected = SelectedTileText(CoreManager::GetUIStrings(), T("9p"));
-        EXPECT_EQ(Var("selectedTileText"), std::string(expected.data(), expected.size()));
+        const String expected = SelectedTileText(CoreManager::GetUIStrings(), T("9p"));
+        EXPECT_EQ(Var("selectedTileText"), String(expected.data(), expected.size()));
         EXPECT_NE(Var("selectedTileText"), "Selected: 9 Dots");
     }
 
@@ -599,7 +599,7 @@ namespace BECore::Mahjong::Tests {
         TableSession& session = _game->GetSession();
         ASSERT_EQ(session.Actor(), kSeat1);
         const uint64_t version = session.Version();
-        const std::string before = Snapshot(Hand());
+        const String before = Snapshot(Hand());
 
         Elapse(kComputerStepSeconds * kPauseFraction);
         Elapse(kComputerStepSeconds * kPauseFraction);
@@ -632,7 +632,7 @@ namespace BECore::Mahjong::Tests {
         }
         ASSERT_TRUE(session.ActorIsPerson());
         const uint64_t version = session.Version();
-        const std::string before = Snapshot(Hand());
+        const String before = Snapshot(Hand());
 
         for (int i = 0; i < 5; ++i) {
             Elapse(kLongFrame);
@@ -668,7 +668,7 @@ namespace BECore::Mahjong::Tests {
         for (int i = 0; i < kButtonCount; ++i) {
             EXPECT_FALSE(_table->GetButtons().buttons[static_cast<size_t>(i)].shown) << i;
         }
-        const std::string before = Snapshot(Hand());
+        const String before = Snapshot(Hand());
 
         EXPECT_TRUE(ClickHandTile(IndexOf(kSeat0, T("9p")))) << "the modal canvas takes the click";
         EmitAction("MahjongDeclare", "on");
@@ -720,7 +720,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(CoverShown());
         EXPECT_EQ(Var("handoffSeat"), "Seat 2 (South)");
 
-        const std::string before = Snapshot(Hand());
+        const String before = Snapshot(Hand());
         ClickHandTile(0);
         EXPECT_EQ(Snapshot(Hand()), before);
 

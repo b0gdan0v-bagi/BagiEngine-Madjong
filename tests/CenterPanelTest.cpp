@@ -35,10 +35,6 @@ namespace BECore::Mahjong::Tests {
             return strings;
         }
 
-        std::string Std(const eastl::string& text) {
-            return std::string(text.data(), text.size());
-        }
-
         struct Table {
             Match match;
             TableSession session{match};
@@ -72,8 +68,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// "East 1" in the current language: the word of the round and the number.
-        std::string RoundText(int roundIndex, int number) {
-            return std::string(kRoundWords[LanguageIndex()][roundIndex]) + " " + std::to_string(number);
+        String RoundText(int roundIndex, int number) {
+            return Format("{} {}", String(kRoundWords[LanguageIndex()][roundIndex]), number);
         }
 
         /// Checks the panel against the match and the session, with `bottom` the seat the table shows at the bottom.
@@ -81,9 +77,9 @@ namespace BECore::Mahjong::Tests {
             const CenterPanelText panel = MakeCenterPanel(Words(), table.session, table.match);
             const HandModel& hand = table.match.Hand();
             EXPECT_EQ(panel.wall, static_cast<int>(hand.GetWall().LiveCount()));
-            EXPECT_NE(panel.wallText.find(std::to_string(panel.wall).c_str()), eastl::string::npos) << Std(panel.wallText);
-            EXPECT_EQ(panel.wallText.find('{'), eastl::string::npos);
-            EXPECT_EQ(panel.round.find('{'), eastl::string::npos);
+            EXPECT_NE(panel.wallText.find(std::to_string(panel.wall).c_str()), String::npos) << panel.wallText;
+            EXPECT_EQ(panel.wallText.find('{'), String::npos);
+            EXPECT_EQ(panel.round.find('{'), String::npos);
             const Seat turn = table.session.GetPhase() == SessionPhase::Playing ? hand.CurrentSeat() : kNoSeat;
             int dealers = 0;
             int turns = 0;
@@ -91,7 +87,7 @@ namespace BECore::Mahjong::Tests {
                 const CenterPanelSeat& side = panel.seats[static_cast<size_t>(position)];
                 const Seat seat = (bottom + position) % kSeatCount;
                 ASSERT_EQ(side.seat, seat) << "position " << position;
-                EXPECT_EQ(Std(side.wind), kLetters[LanguageIndex()][static_cast<int>(hand.SeatWind(seat))]) << "position " << position;
+                EXPECT_EQ(side.wind, kLetters[LanguageIndex()][static_cast<int>(hand.SeatWind(seat))]) << "position " << position;
                 EXPECT_EQ(side.score, table.match.Scores()[static_cast<size_t>(seat)]) << "position " << position;
                 EXPECT_EQ(side.dealer, hand.SeatWind(seat) == Wind::East) << "position " << position;
                 EXPECT_EQ(side.turn, seat == turn) << "position " << position;
@@ -116,13 +112,13 @@ namespace BECore::Mahjong::Tests {
         for (int played = 0; played < kFullMatchHands; ++played) {
             ASSERT_EQ(table.match.HandsPlayed(), played);
             EXPECT_EQ(HandNumberInRound(table.match), played % 4 + 1) << "hand " << played;
-            InEachLanguage([&](PoolString) { EXPECT_EQ(Std(MakeCenterPanel(Words(), table.session, table.match).round), RoundText(played / 4, played % 4 + 1)) << "hand " << played; });
+            InEachLanguage([&](PoolString) { EXPECT_EQ(MakeCenterPanel(Words(), table.session, table.match).round, RoundText(played / 4, played % 4 + 1)) << "hand " << played; });
             ASSERT_NO_FATAL_FAILURE(table.Settle(ResultKind::Win, NextSeat(table.match.East())));
         }
         // Over: the last hand's number stays, and the round wind is the last one
         ASSERT_EQ(table.match.GetPhase(), MatchPhase::Finished);
         EXPECT_EQ(HandNumberInRound(table.match), 4);
-        InEachLanguage([&](PoolString) { EXPECT_EQ(Std(MakeCenterPanel(Words(), table.session, table.match).round), RoundText(3, 4)); });
+        InEachLanguage([&](PoolString) { EXPECT_EQ(MakeCenterPanel(Words(), table.session, table.match).round, RoundText(3, 4)); });
     }
 
     TEST(CenterPanelTest, TheHandNumberCountsInsideTheRoundForAMatchOf8Hands) {
@@ -130,11 +126,11 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(table.Start(kAllComputers, kSeed, kShortMatchHands));
         for (int played = 0; played < kShortMatchHands; ++played) {
             EXPECT_EQ(HandNumberInRound(table.match), played % 2 + 1) << "hand " << played;
-            InEachLanguage([&](PoolString) { EXPECT_EQ(Std(MakeCenterPanel(Words(), table.session, table.match).round), RoundText(played / 2, played % 2 + 1)) << "hand " << played; });
+            InEachLanguage([&](PoolString) { EXPECT_EQ(MakeCenterPanel(Words(), table.session, table.match).round, RoundText(played / 2, played % 2 + 1)) << "hand " << played; });
             ASSERT_NO_FATAL_FAILURE(table.Settle(ResultKind::Win, NextSeat(table.match.East())));
         }
         EXPECT_EQ(HandNumberInRound(table.match), 2);
-        InEachLanguage([&](PoolString) { EXPECT_EQ(Std(MakeCenterPanel(Words(), table.session, table.match).round), RoundText(3, 2)); });
+        InEachLanguage([&](PoolString) { EXPECT_EQ(MakeCenterPanel(Words(), table.session, table.match).round, RoundText(3, 2)); });
     }
 
     TEST(CenterPanelTest, ADrawnHandThatIsReplayedKeepsTheNumberAndAnEastWinMovesIt) {
@@ -147,7 +143,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(HandNumberInRound(table.match), 2) << "an East repeat counts as a hand";
         ASSERT_NO_FATAL_FAILURE(table.Settle(ResultKind::Drawn, kNoSeat));
         EXPECT_EQ(HandNumberInRound(table.match), 2);
-        EXPECT_EQ(Std(MakeCenterPanel(Words(), table.session, table.match).round), RoundText(0, 2));
+        EXPECT_EQ(MakeCenterPanel(Words(), table.session, table.match).round, RoundText(0, 2));
 
         Table counted;
         ASSERT_NO_FATAL_FAILURE(counted.Start(kAllComputers, kSeed, kFullMatchHands, false));
@@ -226,12 +222,12 @@ namespace BECore::Mahjong::Tests {
         InEachLanguage([&](PoolString) {
             const CenterPanelText a = MakeCenterPanel(Words(), first.session, first.match);
             const CenterPanelText b = MakeCenterPanel(Words(), other.session, other.match);
-            EXPECT_EQ(Std(a.round), Std(b.round));
-            EXPECT_EQ(Std(a.wallText), Std(b.wallText));
+            EXPECT_EQ(a.round, b.round);
+            EXPECT_EQ(a.wallText, b.wallText);
             EXPECT_EQ(a.wall, b.wall);
             for (size_t position = 0; position < kSeatCount; ++position) {
                 EXPECT_EQ(a.seats[position].seat, b.seats[position].seat);
-                EXPECT_EQ(Std(a.seats[position].wind), Std(b.seats[position].wind));
+                EXPECT_EQ(a.seats[position].wind, b.seats[position].wind);
                 EXPECT_EQ(a.seats[position].score, b.seats[position].score);
                 EXPECT_EQ(a.seats[position].dealer, b.seats[position].dealer);
                 EXPECT_EQ(a.seats[position].turn, b.seats[position].turn);
@@ -256,11 +252,11 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(Words().SetLanguage("ru"_intern));
         const CenterPanelText russian = MakeCenterPanel(Words(), table.session, table.match);
         ASSERT_TRUE(Words().SetLanguage("en"_intern));
-        EXPECT_NE(Std(english.round), Std(russian.round));
-        EXPECT_NE(Std(english.wallText), Std(russian.wallText));
-        EXPECT_NE(Std(english.seats[0].wind), Std(russian.seats[0].wind));
+        EXPECT_NE(english.round, russian.round);
+        EXPECT_NE(english.wallText, russian.wallText);
+        EXPECT_NE(english.seats[0].wind, russian.seats[0].wind);
         for (const CenterPanelSeat& side : english.seats) {
-            EXPECT_EQ(Std(side.wind).size(), 1u);
+            EXPECT_EQ(side.wind.size(), 1u);
         }
     }
 

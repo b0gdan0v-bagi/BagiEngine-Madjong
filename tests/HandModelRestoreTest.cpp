@@ -28,22 +28,21 @@ namespace BECore::Mahjong::Tests {
         constexpr int kContinuationEvery = 6;
         constexpr int kContinuationSeedCount = 40;
 
-        void AppendTiles(std::string& text, const eastl::vector<Tile>& tiles) {
+        void AppendTiles(String& text, const eastl::vector<Tile>& tiles) {
             for (const Tile tile : tiles) {
                 text += " ";
-                text += ToStd(ToString(tile));
+                AppendFormat(text, "{}", ToString(tile));
             }
         }
 
         /// Every field of a state as text, so that two states compare as strings.
-        std::string Describe(const HandState& state) {
-            std::string text = "settings " + std::to_string(state.settings.handsPerMatch) + "/" + std::to_string(state.settings.flowers) + "/" + std::to_string(state.settings.replayDrawnHand) + "/" +
-                               std::to_string(state.settings.limit) + "/" + std::to_string(state.settings.startingScore);
+        String Describe(const HandState& state) {
+            String text = Format("settings {}/{}/{}/{}/{}", state.settings.handsPerMatch, state.settings.flowers, state.settings.replayDrawnHand, state.settings.limit, state.settings.startingScore);
             text += " winds";
             for (const Wind wind : state.seatWinds) {
-                text += " " + std::to_string(static_cast<int>(wind));
+                AppendFormat(text, " {}", static_cast<int>(wind));
             }
-            text += " round " + std::to_string(static_cast<int>(state.roundWind)) + " east " + std::to_string(state.east);
+            AppendFormat(text, " round {} east {}", static_cast<int>(state.roundWind), state.east);
             text += " | loose";
             AppendTiles(text, state.loose);
             text += " | live";
@@ -52,57 +51,51 @@ namespace BECore::Mahjong::Tests {
             AppendTiles(text, state.dead);
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 const PlayerHand& hand = state.hands[seat];
-                text += " | seat " + std::to_string(seat) + ":";
+                AppendFormat(text, " | seat {}:", seat);
                 AppendTiles(text, hand.concealed);
                 text += " melds";
                 for (const Meld& meld : hand.melds) {
-                    text += " " + std::to_string(static_cast<int>(meld.kind)) + "/" + std::to_string(meld.concealed) + "/" + ToStdString(ToString(meld.first)) + "/" + std::to_string(meld.from) + "/" +
-                            std::to_string(meld.fromDiscard) + "/" + ToStdString(ToString(meld.claimed));
+                    AppendFormat(text, " {}/{}/{}/{}/{}/{}", static_cast<int>(meld.kind), meld.concealed, ToString(meld.first), meld.from, meld.fromDiscard, ToString(meld.claimed));
                 }
                 text += " bonus";
                 AppendTiles(text, hand.bonus);
-                text += " calling " + std::to_string(hand.callingDeclared) + "/" + std::to_string(hand.callingAtDiscardCount) + "/" + std::to_string(hand.discardCount);
-                text += " status " + std::to_string(static_cast<int>(state.claimStatus[seat])) + " claim " + std::to_string(static_cast<int>(state.claims[seat].kind)) + "/" +
-                        ToStdString(ToString(state.claims[seat].chowFirst));
+                AppendFormat(text, " calling {}/{}/{}", hand.callingDeclared, hand.callingAtDiscardCount, hand.discardCount);
+                AppendFormat(text, " status {} claim {}/{}", static_cast<int>(state.claimStatus[seat]), static_cast<int>(state.claims[seat].kind), ToString(state.claims[seat].chowFirst));
             }
             text += " | pile";
             for (const DiscardEntry& entry : state.discards) {
-                text += " " + ToStdString(ToString(entry.tile)) + "@" + std::to_string(entry.seat);
+                AppendFormat(text, " {}@{}", ToString(entry.tile), entry.seat);
             }
             text += " | moves";
             for (const HandMove& move : state.moves) {
-                text += " " + std::to_string(static_cast<int>(move.kind)) + "/" + std::to_string(move.seat) + "/" + ToStdString(ToString(move.tile)) + "/" + std::to_string(move.from) + "/" +
-                        std::to_string(move.meld) + "/" + std::to_string(move.declaredCalling);
+                AppendFormat(text, " {}/{}/{}/{}/{}/{}", static_cast<int>(move.kind), move.seat, ToString(move.tile), move.from, move.meld, move.declaredCalling);
             }
-            text += " | phase " + std::to_string(static_cast<int>(state.phase)) + " current " + std::to_string(state.current) + " drawn " + ToStdString(ToString(state.drawnTile)) + "/" +
-                    std::to_string(state.drawnLoose) + " pending " + ToStdString(ToString(state.pendingTile));
+            AppendFormat(text, " | phase {} current {} drawn {}/{} pending {}", static_cast<int>(state.phase), state.current, ToString(state.drawnTile), state.drawnLoose, ToString(state.pendingTile));
             if (state.result.has_value()) {
                 const HandResult& result = *state.result;
-                text += " result " + std::to_string(static_cast<int>(result.kind)) + "/" + std::to_string(result.winner) + "/" + ToStdString(ToString(result.winningTile)) + "/" +
-                        std::to_string(static_cast<int>(result.source)) + "/" + std::to_string(result.from) + "/" + std::to_string(result.loose) + "/" + std::to_string(result.lastLiveTile);
+                AppendFormat(text, " result {}/{}/{}/{}/{}/{}/{}", static_cast<int>(result.kind), result.winner, ToString(result.winningTile), static_cast<int>(result.source), result.from,
+                             result.loose, result.lastLiveTile);
             } else {
                 text += " open";
             }
-            text += " | windows " + std::to_string(state.windowSerial);
+            AppendFormat(text, " | windows {}", state.windowSerial);
             if (state.lastWindow.has_value()) {
                 const ClaimWindowResult& window = *state.lastWindow;
-                text += " last " + std::to_string(window.serial) + "/" + std::to_string(window.from) + "/" + ToStdString(ToString(window.tile)) + "/" + std::to_string(window.winner) + "/" +
-                        std::to_string(static_cast<int>(window.winningKind)) + " beaten";
+                AppendFormat(text, " last {}/{}/{}/{}/{} beaten", window.serial, window.from, ToString(window.tile), window.winner, static_cast<int>(window.winningKind));
                 for (const LostClaim& lost : window.beaten) {
-                    text += " " + std::to_string(lost.seat) + "/" + std::to_string(static_cast<int>(lost.kind)) + "/" + ToStdString(ToString(lost.chowFirst));
+                    AppendFormat(text, " {}/{}/{}", lost.seat, static_cast<int>(lost.kind), ToString(lost.chowFirst));
                 }
             }
             return text;
         }
 
         /// The legal actions of every seat as one text.
-        std::string LegalText(const HandModel& model) {
-            std::string text;
+        String LegalText(const HandModel& model) {
+            String text;
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                text += "[" + std::to_string(seat) + ":";
+                AppendFormat(text, "[{}:", seat);
                 for (const HandAction& action : model.LegalActions(seat)) {
-                    text += " " + Name(action.kind) + "/" + ToStdString(ToString(action.tile)) + "/" + std::to_string(action.declareCalling) + "/" + Name(action.claim) + "/" +
-                            ToStdString(ToString(action.chowFirst));
+                    AppendFormat(text, " {}/{}/{}/{}/{}", Name(action.kind), ToString(action.tile), action.declareCalling, Name(action.claim), ToString(action.chowFirst));
                 }
                 text += "]";
             }
@@ -132,8 +125,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// `Restore(Capture(model))` succeeds and is the same hand; returns it (a failure is reported and gives a copy of `model`).
-        HandModel RestoredCopy(const HandModel& model, const std::string& where) {
-            std::expected<HandModel, eastl::string> restored = HandModel::Restore(model.Capture());
+        HandModel RestoredCopy(const HandModel& model, const String& where) {
+            std::expected<HandModel, String> restored = HandModel::Restore(model.Capture());
             if (!restored.has_value()) {
                 ADD_FAILURE() << where << ": Restore refused a captured state: " << restored.error().c_str();
                 return model;
@@ -143,11 +136,11 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Plays `steps` random legal actions on both models, the same ones, and compares after each. Stops at the end of the hand.
-        void PlayAlike(HandModel a, HandModel b, uint32_t seed, int steps, const std::string& where) {
+        void PlayAlike(HandModel a, HandModel b, uint32_t seed, int steps, const String& where) {
             MahjongRng rngA(seed);
             MahjongRng rngB(seed);
             for (int step = 0; step < steps && a.GetPhase() != Phase::Finished; ++step) {
-                const std::string at = where + " continuation step " + std::to_string(step);
+                const String at = Format("{} continuation step {}", where, step);
                 const Seat actorA = NextActor(a, rngA);
                 const Seat actorB = NextActor(b, rngB);
                 ASSERT_EQ(actorA, actorB) << at;
@@ -200,7 +193,7 @@ namespace BECore::Mahjong::Tests {
 
         /// A started model whose state is changed by `change` (on the captured state), restored: the result of the refusal.
         template <typename Change>
-        std::expected<HandModel, eastl::string> RestoreChanged(const HandModel& model, Change change) {
+        std::expected<HandModel, String> RestoreChanged(const HandModel& model, Change change) {
             HandState state = model.Capture();
             change(state);
             return HandModel::Restore(state);
@@ -208,9 +201,9 @@ namespace BECore::Mahjong::Tests {
 
         template <typename Change>
         void ExpectRefused(const HandModel& model, const char* part, Change change) {
-            const std::expected<HandModel, eastl::string> restored = RestoreChanged(model, change);
+            const std::expected<HandModel, String> restored = RestoreChanged(model, change);
             ASSERT_FALSE(restored.has_value()) << "a state that was changed to " << part << " was accepted";
-            EXPECT_NE(restored.error().find(part), eastl::string::npos) << "the text \"" << restored.error().c_str() << "\" does not name \"" << part << "\"";
+            EXPECT_NE(restored.error().find(part), String::npos) << "the text \"" << restored.error().c_str() << "\" does not name \"" << part << "\"";
         }
 
         /// East holds four 1p and the quiet hands: a concealed kong can be declared at once.
@@ -260,7 +253,7 @@ namespace BECore::Mahjong::Tests {
 
         /// Every call that plays the model, tried for every seat and action: all refused, nothing changes.
         void ExpectNotPlayable(HandModel& display, const HandModel& real, const char* where) {
-            const std::string before = Describe(display.Capture());
+            const String before = Describe(display.Capture());
             MahjongRng rng(1);
             EXPECT_EQ(Error(display.Begin(MahjongSettings{}, MakeWall(rng, MahjongSettings{}, 0), MakeSeatWinds(0), Wind::East)), HandError::WrongPhase) << where;
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
@@ -288,7 +281,7 @@ namespace BECore::Mahjong::Tests {
             HandModel model = BeginSeed(seed, rng);
             const Mode mode = (seed / (2 * kSeatCount)) % 2 == 0 ? Mode::SeekWin : Mode::NeverWin;
             for (int step = 0; step < 2000; ++step) {
-                const std::string where = "seed " + std::to_string(seed) + " step " + std::to_string(step);
+                const String where = Format("seed {} step {}", seed, step);
                 Note(model, coverage);
                 const HandModel restored = RestoredCopy(model, where);
                 if (HasFatalFailure()) {
@@ -323,7 +316,7 @@ namespace BECore::Mahjong::Tests {
             HandModel model = BeginSeed(seed, rng);
             for (int step = 0; model.GetPhase() != Phase::Finished; ++step) {
                 if (step % kContinuationEvery == 0) {
-                    const std::string where = "seed " + std::to_string(seed) + " step " + std::to_string(step);
+                    const String where = Format("seed {} step {}", seed, step);
                     const HandModel restored = RestoredCopy(model, where);
                     PlayAlike(model, restored, seed * 31 + static_cast<uint32_t>(step), kContinuationSteps, where);
                     if (HasFatalFailure()) {
@@ -401,7 +394,7 @@ namespace BECore::Mahjong::Tests {
                 const Seat actor = NextActor(model, rng);
                 ASSERT_TRUE(model.Apply(actor, Choose(model.LegalActions(actor), mode, rng)).has_value());
             }
-            const HandModel restored = RestoredCopy(model, "seed " + std::to_string(seed));
+            const HandModel restored = RestoredCopy(model, Format("seed {}", seed));
             EXPECT_EQ(restored.GetPhase(), Phase::Finished);
             EXPECT_EQ(restored.Result()->kind, model.Result()->kind);
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
@@ -414,7 +407,7 @@ namespace BECore::Mahjong::Tests {
         const HandModel model = MakeModel(SpecOf("9m 1p 5s 2p 7m 1s 3p Ew Rd 4p 6p 8p 2m", "Wd"));
         HandState state = model.Capture();
         eastl::reverse(state.hands[kSeat0].concealed.begin(), state.hands[kSeat0].concealed.end());
-        const std::expected<HandModel, eastl::string> restored = HandModel::Restore(state);
+        const std::expected<HandModel, String> restored = HandModel::Restore(state);
         ASSERT_TRUE(restored.has_value()) << restored.error().c_str();
         EXPECT_EQ(restored->GetHand(kSeat0).concealed, model.GetHand(kSeat0).concealed);
     }
@@ -425,7 +418,7 @@ namespace BECore::Mahjong::Tests {
         const HandModel robbing = RobbingWindow();
         for (const HandModel* real : {&turn, &claim, &robbing}) {
             for (const Seat viewer : {kSeat0, kSeat1, kSeat3}) {
-                const std::string where = "phase " + std::to_string(static_cast<int>(real->GetPhase())) + " viewer " + std::to_string(viewer);
+                const String where = Format("phase {} viewer {}", static_cast<int>(real->GetPhase()), viewer);
                 const HandState state = HiddenFrom(*real, viewer);
                 // The hidden state is one no play could reach: Restore refuses it, ForDisplay takes it.
                 EXPECT_FALSE(HandModel::Restore(state).has_value()) << where;

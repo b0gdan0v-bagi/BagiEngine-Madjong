@@ -80,39 +80,39 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Everything a view holds, as text, to compare two views.
-        std::string ViewText(const TableView& view) {
-            std::string text = "seat " + std::to_string(view.seat) + " phase " + Name(view.phase) + " current " + std::to_string(view.currentSeat) + " pending " +
-                               ToStdString(ToString(view.pendingTile)) + " winds " + Name(view.seatWind) + "/" + Name(view.roundWind) + " own";
+        String ViewText(const TableView& view) {
+            String text =
+                Format("seat {} phase {} current {} pending {} winds {}/{} own", view.seat, Name(view.phase), view.currentSeat, ToString(view.pendingTile), Name(view.seatWind), Name(view.roundWind));
             for (const Tile tile : view.own.concealed) {
-                text += " " + ToStdString(ToString(tile));
+                AppendFormat(text, " {}", ToString(tile));
             }
             for (const Meld& meld : view.own.melds) {
-                text += " | meld " + Name(meld.kind) + " " + ToStdString(ToString(meld.first)) + " " + std::to_string(meld.concealed);
+                AppendFormat(text, " | meld {} {} {}", Name(meld.kind), ToString(meld.first), meld.concealed);
             }
-            text += " calling " + std::to_string(view.own.callingDeclared) + "/" + std::to_string(view.own.callingAtDiscardCount) + "/" + std::to_string(view.own.discardCount);
+            AppendFormat(text, " calling {}/{}/{}", view.own.callingDeclared, view.own.callingAtDiscardCount, view.own.discardCount);
             for (const PublicSeat& seat : view.seats) {
                 text += " || open";
                 for (const Meld& meld : seat.openMelds) {
-                    text += " " + Name(meld.kind) + ToStdString(ToString(meld.first));
+                    AppendFormat(text, " {}{}", Name(meld.kind), ToString(meld.first));
                 }
                 for (const Tile tile : seat.bonus) {
-                    text += " bonus:" + ToStdString(ToString(tile));
+                    AppendFormat(text, " bonus:{}", ToString(tile));
                 }
-                text += " ck " + std::to_string(seat.concealedKongs) + " disc " + std::to_string(seat.discardCount) + " calling " + std::to_string(seat.callingDeclared);
+                AppendFormat(text, " ck {} disc {} calling {}", seat.concealedKongs, seat.discardCount, seat.callingDeclared);
             }
             text += " visible";
             for (const uint8_t copies : view.visible) {
-                text += " " + std::to_string(copies);
+                AppendFormat(text, " {}", copies);
             }
-            text += " live " + std::to_string(view.liveCount) + " legal";
+            AppendFormat(text, " live {} legal", view.liveCount);
             for (const HandAction& action : view.legal) {
-                text += " " + Name(action.kind) + ":" + ToStdString(ToString(action.tile)) + std::to_string(action.declareCalling) + Name(action.claim) + ToStdString(ToString(action.chowFirst));
+                AppendFormat(text, " {}:{}{}{}{}", Name(action.kind), ToString(action.tile), action.declareCalling, Name(action.claim), ToString(action.chowFirst));
             }
             return text;
         }
 
         /// The view before action number `index` of hand number `hand`, by playing the match by hand: no replay function involved.
-        std::string ViewPlayedByHand(const eastl::vector<MatchLogEvent>& events, int hand, int index) {
+        String ViewPlayedByHand(const eastl::vector<MatchLogEvent>& events, int hand, int index) {
             Match match;
             int current = 1;
             int count = 0;
@@ -141,10 +141,10 @@ namespace BECore::Mahjong::Tests {
             return {};
         }
 
-        std::string ViewOfLog(const eastl::vector<MatchLogEvent>& events, int hand, int index) {
-            const std::expected<LogPosition, eastl::string> position = Analyzer::PositionFromLog(events, hand, index);
+        String ViewOfLog(const eastl::vector<MatchLogEvent>& events, int hand, int index) {
+            const std::expected<LogPosition, String> position = Analyzer::PositionFromLog(events, hand, index);
             EXPECT_TRUE(position.has_value()) << (position.has_value() ? "" : position.error().c_str());
-            return position.has_value() ? ViewText(position->view) : std::string();
+            return position.has_value() ? ViewText(position->view) : String();
         }
 
         size_t IndexOfKind(const eastl::vector<MatchLogEvent>& events, MatchLogKind kind, size_t from = 0) {
@@ -160,21 +160,21 @@ namespace BECore::Mahjong::Tests {
             return IndexOfKind(events, MatchLogKind::Action, from);
         }
 
-        bool Mentions(const eastl::string& text, const char* part) {
-            return std::string(text.c_str()).find(part) != std::string::npos;
+        bool Mentions(const String& text, const char* part) {
+            return String(text.c_str()).find(part) != String::npos;
         }
 
         /// The view of a hand-written position, or a failure with the error text.
-        TableView Parse(const std::string& text) {
-            const std::expected<TableView, eastl::string> view = Analyzer::ParsePosition(FromStd(text));
+        TableView Parse(const String& text) {
+            const std::expected<TableView, String> view = Analyzer::ParsePosition(text);
             EXPECT_TRUE(view.has_value()) << (view.has_value() ? "" : view.error().c_str());
             return view.has_value() ? *view : TableView{};
         }
 
-        eastl::string ParseError(const std::string& text) {
-            const std::expected<TableView, eastl::string> view = Analyzer::ParsePosition(FromStd(text));
+        String ParseError(const String& text) {
+            const std::expected<TableView, String> view = Analyzer::ParsePosition(text);
             EXPECT_FALSE(view.has_value()) << "the position should have been refused";
-            return view.has_value() ? eastl::string() : view.error();
+            return view.has_value() ? String() : view.error();
         }
 
         // East has 14 tiles and can declare the calling hand with a 5p or a 6p.
@@ -216,7 +216,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(AnalyzerPositionTest, ALogPositionNamesTheSeatTheHandTheIndexAndTheLoggedAction) {
         const eastl::vector<MatchLogEvent> events = PlayedLog(kSeedA);
-        const std::expected<LogPosition, eastl::string> first = Analyzer::PositionFromLog(events, 1, 0);
+        const std::expected<LogPosition, String> first = Analyzer::PositionFromLog(events, 1, 0);
         ASSERT_TRUE(first.has_value());
         CheckMembers(*first);
         EXPECT_EQ(first->hand, 1);
@@ -226,7 +226,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(Has(first->view.legal, first->logged));
 
         // Hand 2 is what follows the first settlement: its first action is an East draw-and-discard of its own.
-        const std::expected<LogPosition, eastl::string> second = Analyzer::PositionFromLog(events, 2, 0);
+        const std::expected<LogPosition, String> second = Analyzer::PositionFromLog(events, 2, 0);
         ASSERT_TRUE(second.has_value());
         EXPECT_EQ(second->hand, 2);
         EXPECT_EQ(second->view.phase, Phase::Discard);
@@ -242,8 +242,8 @@ namespace BECore::Mahjong::Tests {
             for (int hand = 1; hand <= HandCount(events) && !found; ++hand) {
                 const int actions = ActionCount(events, hand);
                 for (int index = 1; index < actions && !found; ++index) {
-                    const std::expected<LogPosition, eastl::string> position = Analyzer::PositionFromLog(events, hand, index);
-                    const std::expected<LogPosition, eastl::string> before = Analyzer::PositionFromLog(events, hand, index - 1);
+                    const std::expected<LogPosition, String> position = Analyzer::PositionFromLog(events, hand, index);
+                    const std::expected<LogPosition, String> before = Analyzer::PositionFromLog(events, hand, index - 1);
                     ASSERT_TRUE(position.has_value() && before.has_value());
                     // The window of the previous action is the same one: the earlier seat has decided, this one is next.
                     if (position->view.phase == Phase::Claim && before->view.phase == Phase::Claim && position->seat != before->seat && before->view.pendingTile == position->view.pendingTile) {
@@ -262,7 +262,7 @@ namespace BECore::Mahjong::Tests {
         const eastl::vector<MatchLogEvent> events = PlayedLog(kSeedB);
         for (const int hand : {1, 2}) {
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
-                const std::expected<eastl::vector<LogPosition>, eastl::string> positions = Analyzer::PositionsOfSeat(events, hand, seat);
+                const std::expected<eastl::vector<LogPosition>, String> positions = Analyzer::PositionsOfSeat(events, hand, seat);
                 ASSERT_TRUE(positions.has_value()) << positions.error().c_str();
                 // The indexes are those of the seat's Action events among the hand's, in order.
                 eastl::vector<int> expected;
@@ -322,7 +322,7 @@ namespace BECore::Mahjong::Tests {
         // The first action is changed into one the rules refuse: the log does not replay, the error names the event.
         eastl::vector<MatchLogEvent> broken = events;
         broken[IndexOfFirstAction(broken)].action = HandAction::MakeDiscard(T("F4"));
-        const std::expected<LogPosition, eastl::string> refused = Analyzer::PositionFromLog(broken, 1, 1);
+        const std::expected<LogPosition, String> refused = Analyzer::PositionFromLog(broken, 1, 1);
         ASSERT_FALSE(refused.has_value());
         EXPECT_TRUE(Mentions(refused.error(), "does not replay"));
         EXPECT_TRUE(Mentions(refused.error(), "ActionRefused"));
@@ -336,10 +336,10 @@ namespace BECore::Mahjong::Tests {
         const eastl::vector<MatchLogEvent> cut(events.begin(), events.begin() + static_cast<ptrdiff_t>(firstAction + 1));
         const Seat decided = events[firstAction].seat;
         const Seat idle = decided == kSeat0 ? kSeat1 : kSeat0;
-        const std::expected<eastl::vector<LogPosition>, eastl::string> none = Analyzer::PositionsOfSeat(cut, 1, idle);
+        const std::expected<eastl::vector<LogPosition>, String> none = Analyzer::PositionsOfSeat(cut, 1, idle);
         ASSERT_FALSE(none.has_value());
         EXPECT_TRUE(Mentions(none.error(), "no decision"));
-        const std::expected<eastl::vector<LogPosition>, eastl::string> one = Analyzer::PositionsOfSeat(cut, 1, decided);
+        const std::expected<eastl::vector<LogPosition>, String> one = Analyzer::PositionsOfSeat(cut, 1, decided);
         ASSERT_TRUE(one.has_value());
         EXPECT_EQ(one->size(), 1U);
     }
@@ -408,17 +408,17 @@ namespace BECore::Mahjong::Tests {
 
         // 136 tiles less the 17 named and the three hands of 13 leave 80 for the wall: 14 dead, 2 loose, 64 live.
         EXPECT_EQ(view.liveCount, 64);
-        EXPECT_EQ(Parse(std::string(kTablePosition) + "wall 66\n").liveCount, 66);
+        EXPECT_EQ(Parse(Format("{}wall 66\n", kTablePosition)).liveCount, 66);
     }
 
     TEST(AnalyzerPositionTest, AWallThatTheTilesNamedCannotLeaveIsRefusedWithItsLine) {
-        const eastl::string error = ParseError(std::string(kTablePosition) + "wall 60\n");
+        const String error = ParseError(Format("{}wall 60\n", kTablePosition));
         EXPECT_TRUE(Mentions(error, "line 10")) << error.c_str();
         EXPECT_TRUE(Mentions(error, "64..66")) << error.c_str();
     }
 
     TEST(AnalyzerPositionTest, ASelfDrawWinNeedsTheDeclarationAndTheDrawnTile) {
-        const std::string winning = "hand 1p 2p 3p 4s 5s 6s 7m 8m 9m Ew Ew Ew Rd Rd\ncalling 0\n";
+        const String winning = "hand 1p 2p 3p 4s 5s 6s 7m 8m 9m Ew Ew Ew Rd Rd\ncalling 0\n";
         EXPECT_TRUE(Has(Parse(winning).legal, HandAction::MakeDeclareWin()));
         EXPECT_TRUE(Has(Parse(winning + "drew Rd\n").legal, HandAction::MakeDeclareWin()));
         EXPECT_FALSE(Has(Parse(winning + "drew none\n").legal, HandAction::MakeDeclareWin())) << "a hand taken by a claim did not draw";
@@ -443,44 +443,44 @@ namespace BECore::Mahjong::Tests {
 
     TEST(AnalyzerPositionTest, APositionThatCannotExistIsRefusedWithAnErrorThatNamesTheLine) {
         // A comment and a blank line first: the line numbers count them.
-        const std::string head = "# a position\n\nseat 0\n";
+        const String head = "# a position\n\nseat 0\n";
         {
-            const eastl::string error = ParseError(head + "hand 1p 1p 1p 1p 1p 2p 3p 4s 5s 6s 7m 8m 9m 9m\n");
+            const String error = ParseError(Format("{}hand 1p 1p 1p 1p 1p 2p 3p 4s 5s 6s 7m 8m 9m 9m\n", head));
             EXPECT_TRUE(Mentions(error, "line 4")) << error.c_str();
             EXPECT_TRUE(Mentions(error, "1p")) << error.c_str();
         }
         {
-            const eastl::string error = ParseError(head + "hand 1p 2p 3p 4s 5s 6s 7m 8m 9m 9m\n");
+            const String error = ParseError(Format("{}hand 1p 2p 3p 4s 5s 6s 7m 8m 9m 9m\n", head));
             EXPECT_TRUE(Mentions(error, "line 4")) << error.c_str();
             EXPECT_TRUE(Mentions(error, "10")) << error.c_str();
         }
         {
-            const eastl::string error = ParseError(head + "banana 3\n");
+            const String error = ParseError(Format("{}banana 3\n", head));
             EXPECT_TRUE(Mentions(error, "line 4")) << error.c_str();
             EXPECT_TRUE(Mentions(error, "banana")) << error.c_str();
         }
         {
-            const eastl::string error = ParseError(head + "hand 1p 2x 3p 4s 5s 6s 7m 8m 9m 9m 9s 9s 1m 2m\n");
+            const String error = ParseError(Format("{}hand 1p 2x 3p 4s 5s 6s 7m 8m 9m 9m 9s 9s 1m 2m\n", head));
             EXPECT_TRUE(Mentions(error, "line 4")) << error.c_str();
             EXPECT_TRUE(Mentions(error, "2x")) << error.c_str();
         }
         {
-            const eastl::string error = ParseError(head + "seat 1\n");
+            const String error = ParseError(Format("{}seat 1\n", head));
             EXPECT_TRUE(Mentions(error, "line 4")) << error.c_str();
         }
         EXPECT_TRUE(Mentions(ParseError("seat 0\n"), "hand")) << "no hand line";
-        EXPECT_TRUE(Mentions(ParseError(std::string(kDiscardPosition) + "pending 5p from 3\n"), "line 2"));
+        EXPECT_TRUE(Mentions(ParseError(Format("{}pending 5p from 3\n", kDiscardPosition)), "line 2"));
         EXPECT_TRUE(Mentions(ParseError("phase claim\nhand 1p 2p 3p 4s 5s 6s 7m 8m 9m Ew Ew Rd Rd\n"), "pending"));
         EXPECT_TRUE(Mentions(ParseError("phase robkong\nhand 1p\n"), "line 1"));
-        EXPECT_TRUE(Mentions(ParseError(std::string(kDiscardPosition) + "meld 1 chow 3s from 3\n"), "line 2")) << "a chow comes from the seat before";
-        EXPECT_TRUE(Mentions(ParseError(std::string(kDiscardPosition) + "drew 9p\n"), "line 2")) << "the drawn tile is not in the hand";
+        EXPECT_TRUE(Mentions(ParseError(Format("{}meld 1 chow 3s from 3\n", kDiscardPosition)), "line 2")) << "a chow comes from the seat before";
+        EXPECT_TRUE(Mentions(ParseError(Format("{}drew 9p\n", kDiscardPosition)), "line 2")) << "the drawn tile is not in the hand";
     }
 
     TEST(AnalyzerPositionTest, AClaimWindowTheSeatCannotAnswerIsRefused) {
         // Seat 0 holds nothing that claims a Ww of seat 3: the window would not have opened for it.
-        const eastl::string error = ParseError("phase claim\n"
-                                               "hand 1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Gd Rd\n"
-                                               "pending Ww from 3\n");
+        const String error = ParseError("phase claim\n"
+                                        "hand 1p 4p 7p 1s 4s 7s 1m 4m 7m Sw Ew Gd Rd\n"
+                                        "pending Ww from 3\n");
         EXPECT_FALSE(error.empty());
         EXPECT_TRUE(Mentions(error, "claim")) << error.c_str();
     }

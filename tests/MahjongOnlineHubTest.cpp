@@ -1,5 +1,6 @@
 #include "MahjongHubTransport.h"
 
+#include <Common/Printers.h>
 #include <Mahjong/MahjongGameControl.h>
 #include <Mahjong/Online/OnlineWords.h>
 #include <Rooms/RoomErrors.h>
@@ -96,7 +97,7 @@ namespace BECore::Mahjong::Tests {
         }
 
         void ExpectNoNotice(const HubPlayer& player) {
-            EXPECT_EQ(player.Client().Notice().serial, 0u) << std::string(player.Client().Notice().key.data(), player.Client().Notice().key.size());
+            EXPECT_EQ(player.Client().Notice().serial, 0u) << String(player.Client().Notice().key.data(), player.Client().Notice().key.size());
         }
 
         /// What the table of @p seat holds is what the adapter gives that seat now (the caller has checked that the versions agree).
@@ -428,7 +429,7 @@ namespace BECore::Mahjong::Tests {
         HubPlayer guest(world);
         ASSERT_NO_FATAL_FAILURE(HostRoom(world, host));
         ASSERT_NO_FATAL_FAILURE(JoinRoom(world, guest, host, "Bob"));
-        const std::string room(guest.Client().Room().c_str(), guest.Client().Room().size());
+        const String room(guest.Client().Room().c_str(), guest.Client().Room().size());
         ASSERT_TRUE(RunUntil(world, {&host, &guest}, [&] { return guest.Client().Lobby().humans == 2; }));
         EXPECT_FALSE(guest.Client().IsHost());
 
@@ -438,7 +439,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(guest.Client().Lobby().canStart);
         EXPECT_TRUE(guest.Client().Lobby().seats[static_cast<size_t>(guest.Client().Seat())].host);
         EXPECT_EQ(guest.Client().Lobby().humans, 1);
-        EXPECT_EQ(std::string(guest.Client().Room().c_str()), room) << "the room goes on";
+        EXPECT_EQ(String(guest.Client().Room().c_str()), room) << "the room goes on";
 
         // the new host starts a game alone; a newcomer finds the room started
         ASSERT_NO_FATAL_FAILURE(StartAndWait(world, guest, {&guest}));

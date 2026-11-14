@@ -28,7 +28,7 @@ namespace BECore::Mahjong::Arena {
         constexpr int64_t kPinnedEqual = 82;
 
         ArenaPlayer Bot(const char* spec) {
-            const std::expected<ArenaPlayer, eastl::string> player = ParseArenaPlayer(spec);
+            const std::expected<ArenaPlayer, String> player = ParseArenaPlayer(spec);
             EXPECT_TRUE(player.has_value());
             return player.has_value() ? *player : ArenaPlayer{};
         }
@@ -42,7 +42,7 @@ namespace BECore::Mahjong::Arena {
         }
 
         TesterMatch Analysed(const eastl::vector<MatchLogEvent>& events, const eastl::vector<ArenaPlayer>& bots) {
-            const std::expected<TesterMatch, eastl::string> match = AnalyzeTesterMatch(kLogName, events, bots);
+            const std::expected<TesterMatch, String> match = AnalyzeTesterMatch(kLogName, events, bots);
             EXPECT_TRUE(match.has_value()) << (match.has_value() ? "" : match.error().c_str());
             return match.has_value() ? *match : TesterMatch{};
         }
@@ -103,8 +103,8 @@ namespace BECore::Mahjong::Arena {
     TEST(ArenaTesterTest, TheBotsMustBeComputerPlayers) {
         EXPECT_TRUE(ValidateTesterBots({Bot("normal"), Bot("easy:skipClaimPercent=20"), Bot("normal:searchWorlds=2,searchCandidates=2,searchMargin=0")}).empty());
         EXPECT_FALSE(ValidateTesterBots({}).empty());
-        const eastl::string random = ValidateTesterBots({Bot("normal"), Bot("random")});
-        EXPECT_NE(random.find("random"), eastl::string::npos);
+        const String random = ValidateTesterBots({Bot("normal"), Bot("random")});
+        EXPECT_NE(random.find("random"), String::npos);
     }
 
     TEST(ArenaTesterTest, ADecisionWithOneLegalActionIsForcedAndNotAsked) {
@@ -226,7 +226,7 @@ namespace BECore::Mahjong::Arena {
 
     TEST(ArenaTesterTest, ALogWithNoPersonGivesNoDecisionsAndNoError) {
         const eastl::vector<MatchLogEvent> events = PlayLog(PersonsAt(kLogAllComputers, ComputerLevel::Normal));
-        const std::expected<TesterMatch, eastl::string> match = AnalyzeTesterMatch(kLogName, events, {Bot("normal"), Bot("easy")});
+        const std::expected<TesterMatch, String> match = AnalyzeTesterMatch(kLogName, events, {Bot("normal"), Bot("easy")});
         ASSERT_TRUE(match.has_value());
         ASSERT_EQ(match->bots.size(), 2U);
         EXPECT_EQ(Total(*match, 0), 0);
@@ -242,9 +242,9 @@ namespace BECore::Mahjong::Arena {
                 break;
             }
         }
-        const std::expected<TesterMatch, eastl::string> match = AnalyzeTesterMatch(kLogName, events, {Bot("normal")});
+        const std::expected<TesterMatch, String> match = AnalyzeTesterMatch(kLogName, events, {Bot("normal")});
         EXPECT_FALSE(match.has_value());
-        EXPECT_EQ(std::string(match.error().c_str()).rfind(kLogName, 0), size_t{0});
+        EXPECT_EQ(String(match.error().c_str()).rfind(kLogName, 0), size_t{0});
     }
 
     TEST(ArenaTesterTest, TwoPositionsWithTheSameViewAndDifferentHiddenTilesGiveTheSameChoice) {
@@ -275,7 +275,7 @@ namespace BECore::Mahjong::Arena {
             }
         }
         ASSERT_TRUE(swapped);
-        const std::expected<HandModel, eastl::string> changed = HandModel::Restore(state);
+        const std::expected<HandModel, String> changed = HandModel::Restore(state);
         ASSERT_TRUE(changed.has_value()) << changed.error().c_str();
         ASSERT_NE(Snapshot(match.Hand()), Snapshot(*changed));
 

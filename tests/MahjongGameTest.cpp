@@ -91,7 +91,7 @@ namespace BECore::Mahjong::Tests {
         const Seat east = game->GetMatch().East();
         const SeatWinds winds = game->GetMatch().Winds();
         const SeatScores scores = game->GetMatch().Scores();
-        const std::string hand = Snapshot(game->GetMatch().Hand());
+        const String hand = Snapshot(game->GetMatch().Hand());
         ASSERT_TRUE(game->StartMatch(kSeed).has_value());
 
         EXPECT_EQ(game->GetMatch().East(), east);
@@ -161,7 +161,7 @@ namespace BECore::Mahjong::Tests {
         // Settings that cannot be played are refused and the match in play is left as it is.
         settings.handsPerMatch = kUnplayableHandsPerMatch;
         game->SetSettings(settings);
-        const std::string hand = Snapshot(game->GetMatch().Hand());
+        const String hand = Snapshot(game->GetMatch().Hand());
         const MatchStatus refused = game->StartMatch(kSeed);
         ASSERT_FALSE(refused.has_value());
         EXPECT_EQ(refused.error(), MatchError::BadSettings);

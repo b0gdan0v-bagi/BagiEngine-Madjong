@@ -35,13 +35,13 @@ namespace BECore::Mahjong::Tests {
             return tiles;
         }
 
-        std::string Join(const eastl::vector<Tile>& tiles, size_t count) {
-            std::string text;
+        String Join(const eastl::vector<Tile>& tiles, size_t count) {
+            String text;
             for (size_t i = 0; i < count && i < tiles.size(); ++i) {
                 if (i > 0) {
                     text += ' ';
                 }
-                text += ToStd(ToString(tiles[i]));
+                AppendFormat(text, "{}", ToString(tiles[i]));
             }
             return text;
         }

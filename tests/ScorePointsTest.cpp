@@ -16,11 +16,11 @@ namespace BECore::Mahjong::Tests {
         constexpr const char* kWestWind = "Ww Ww Ww";
         constexpr const char* kWhiteDragon = "Wd Wd Wd";
 
-        std::string WithQuiet(const char* tiles) {
-            return std::string(kQuietChows) + " " + tiles;
+        String WithQuiet(const char* tiles) {
+            return Format("{} {}", kQuietChows, tiles);
         }
 
-        ScoreBreakdown Score(const std::string& tiles, Wind seatWind = Wind::East, Wind roundWind = Wind::East) {
+        ScoreBreakdown Score(const String& tiles, Wind seatWind = Wind::East, Wind roundWind = Wind::East) {
             return ScoreSeat(MakeInput(WithQuiet(tiles.c_str()), {}, "", seatWind, roundWind));
         }
 
@@ -129,7 +129,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(ScorePointsTest, SetsAndAPairAddUpInTheOrderOfTheReading) {
         // Melds first (in the order laid), then the concealed pungs, then the pair, then the bonus tiles.
-        const ScoreInput input = MakeInput(std::string(kQuietChows) + " 5p 5p 5p Rd Rd", {OpenKong(T("9s")), OpenPung(T("2s"))}, "F3");
+        const ScoreInput input = MakeInput(Format("{} 5p 5p 5p Rd Rd", kQuietChows), {OpenKong(T("9s")), OpenPung(T("2s"))}, "F3");
         const ScoreBreakdown breakdown = ScoreSeat(input);
 
         EXPECT_EQ(breakdown.points, kHonourKongOpen + kSimplePungOpen + kSimplePungConcealed + kScoringPair + kBonusTile);

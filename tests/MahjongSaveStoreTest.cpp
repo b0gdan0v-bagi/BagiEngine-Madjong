@@ -80,9 +80,10 @@ namespace BECore::Mahjong::Tests {
                 ASSERT_TRUE(service.Save(kOnlineSlot, kMahjongSaveSchema, save).has_value());
             }
 
-            void PutBytes(const char* name, const std::string& bytes) const {
+            void PutBytes(const char* name, const String& bytes) const {
                 fs::create_directories(folder);
-                std::ofstream(folder / name, std::ios::binary) << bytes;
+                std::ofstream file(folder / name, std::ios::binary);
+                file.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
             }
 
             /// The problem of loading the match slot: `Broken` with a sentence.
@@ -246,11 +247,11 @@ namespace BECore::Mahjong::Tests {
             ASSERT_FALSE(loaded.has_value());
             EXPECT_EQ(loaded.error().kind, SaveProblemKind::Broken);
             EXPECT_FALSE(loaded.error().detail.empty());
-            EXPECT_EQ(loaded.error().detail.find(kToken.data()), eastl::string::npos);
+            EXPECT_EQ(loaded.error().detail.find(kToken.data()), String::npos);
         };
 
         MahjongOnlineSave save = MakeOnlineSave("Ann", SomeSession());
-        const eastl::string good = save.session;
+        const String good = save.session;
 
         save.session = "{\"url\":\"ws://x\"";  // not JSON
         expectBroken(save);

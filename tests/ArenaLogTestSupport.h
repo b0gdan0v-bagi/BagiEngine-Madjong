@@ -63,8 +63,8 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// The text of a log: one JSON line per event, as `MatchLogWriter` writes them.
-    inline eastl::string LogText(const eastl::vector<MatchLogEvent>& events) {
-        eastl::string text;
+    inline String LogText(const eastl::vector<MatchLogEvent>& events) {
+        String text;
         for (const MatchLogEvent& event : events) {
             text.append(DumpJson(EventToJson(event)));
             text.push_back('\n');
@@ -73,14 +73,14 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// A log of a format before the origin: version 4, no `platform`, `build` or `gameVersion`.
-    inline eastl::string LogTextVersionFour(const eastl::vector<MatchLogEvent>& events) {
+    inline String LogTextVersionFour(const eastl::vector<MatchLogEvent>& events) {
         constexpr int kOlderVersion = 4;
         Json start = EventToJson(events.front());
         start["version"] = kOlderVersion;
         start.erase("platform");
         start.erase("build");
         start.erase("gameVersion");
-        eastl::string text = DumpJson(start);
+        String text = DumpJson(start);
         text.push_back('\n');
         const eastl::vector<MatchLogEvent> rest(events.begin() + 1, events.end());
         text.append(LogText(rest));

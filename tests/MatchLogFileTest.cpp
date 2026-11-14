@@ -66,11 +66,11 @@ namespace BECore::Mahjong::Tests {
 
         [[maybe_unused]] ::testing::Environment* const kMatchLogFolderEnvironment = ::testing::AddGlobalTestEnvironment(new MatchLogFolderEnvironment);
 
-        std::string ReadFile(const fs::path& path) {
+        String ReadFile(const fs::path& path) {
             std::ifstream file(path);
             std::stringstream text;
             text << file.rdbuf();
-            return text.str();
+            return FromStdString(text.str());
         }
 
         /// The files of `folder`, by name.
@@ -84,11 +84,11 @@ namespace BECore::Mahjong::Tests {
             return files;
         }
 
-        std::vector<std::string> LinesOf(const std::string& text) {
-            std::vector<std::string> lines;
-            std::istringstream stream(text);
-            for (std::string line; std::getline(stream, line);) {
-                lines.push_back(line);
+        std::vector<String> LinesOf(const String& text) {
+            std::vector<String> lines;
+            std::istringstream stream(ToStdString(text));
+            for (std::string line; std::getline(stream, line);) {  //-NoStd: getline fills a std::string
+                lines.push_back(FromStdString(line));
             }
             return lines;
         }
@@ -182,8 +182,8 @@ namespace BECore::Mahjong::Tests {
             fs::path _before;
         };
 
-        std::string Str(const Json& json) {
-            return json.is_string() ? json.get<std::string>() : std::string("<not a string>");
+        String Str(const Json& json) {
+            return json.is_string() ? FromStdString(json.get<std::string>()) : String("<not a string>");  //-NoStd: nlohmann reads a string as std::string
         }
 
     }  // namespace
@@ -204,7 +204,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(files[0], table.writer.Path());
         EXPECT_FALSE(table.writer.IsOpen()) << "the file is closed at End";
 
-        const std::vector<std::string> lines = LinesOf(ReadFile(files[0]));
+        const std::vector<String> lines = LinesOf(ReadFile(files[0]));
         ASSERT_EQ(lines.size(), table.tee.Log().Events().size());
         for (size_t index = 0; index < lines.size(); ++index) {
             const auto parsed = ParseJson(lines[index].c_str());
@@ -250,14 +250,13 @@ namespace BECore::Mahjong::Tests {
             EXPECT_TRUE(std::regex_match(file.filename().string(), fileName)) << file.filename().string();
         }
         // the suffix exists exactly for the files that share their second with an earlier one
-        std::vector<std::string> stamps;
+        std::vector<String> stamps;
         for (const fs::path& file : files) {
-            stamps.push_back(file.filename().string().substr(0, kExampleStamp.size()));
+            stamps.push_back(FromStdString(file.filename().string().substr(0, kExampleStamp.size())));
         }
         std::sort(stamps.begin(), stamps.end());
         const auto distinctStamps = static_cast<size_t>(std::unique(stamps.begin(), stamps.end()) - stamps.begin());
-        const auto suffixed =
-            static_cast<size_t>(std::count_if(files.begin(), files.end(), [](const fs::path& file) { return file.stem().string().find("-", kExampleStem.size()) != std::string::npos; }));
+        const auto suffixed = static_cast<size_t>(std::count_if(files.begin(), files.end(), [](const fs::path& file) { return file.stem().string().find("-", kExampleStem.size()) != String::npos; }));
         EXPECT_EQ(suffixed, files.size() - distinctStamps);
     }
 
@@ -349,7 +348,7 @@ namespace BECore::Mahjong::Tests {
         const uint32_t seed = StartWithEastAtSeat0(*game);
         ASSERT_TRUE(game->GetMatchLog().IsOpen());
         EXPECT_EQ(game->GetMatchLog().Path().parent_path(), folder);
-        EXPECT_NE(game->GetMatchLog().Path().filename().string().find("_seed" + std::to_string(seed)), std::string::npos);
+        EXPECT_NE(game->GetMatchLog().Path().filename().string().find(Format("_seed{}", seed).c_str()), String::npos);
 
         // a control reset begins another match, with its own file
         const fs::path first = game->GetMatchLog().Path();

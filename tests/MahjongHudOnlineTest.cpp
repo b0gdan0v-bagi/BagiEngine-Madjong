@@ -66,10 +66,10 @@ namespace BECore::Mahjong::Tests {
 
         /// The widest character of @p candidates by the number of code points of a text of it, which is how a line is measured; here the longest text in a language is wanted,
         /// so the first of the pad.
-        eastl::string RepeatedLetter(const UIStrings& strings, size_t bytes) {
-            const eastl::vector<eastl::string> pad = TextEntry(TextEntry::Kind::Name).Pad(strings);
-            const eastl::string& letter = pad.front();
-            eastl::string name;
+        String RepeatedLetter(const UIStrings& strings, size_t bytes) {
+            const eastl::vector<String> pad = TextEntry(TextEntry::Kind::Name).Pad(strings);
+            const String& letter = pad.front();
+            String name;
             while (name.size() + letter.size() <= bytes) {
                 name += letter;
             }
@@ -99,8 +99,7 @@ namespace BECore::Mahjong::Tests {
             const auto canvas = Canvas(kOnline);
             ASSERT_TRUE(canvas);
             for (const char* name : kPageElements) {
-                const bool visible =
-                    std::find_if(shown.begin(), shown.end(), [&](const char* s) { return std::string(s) == name; }) != shown.end() || (infoLine != nullptr && std::string(infoLine) == name);
+                const bool visible = std::find_if(shown.begin(), shown.end(), [&](const char* s) { return String(s) == name; }) != shown.end() || (infoLine != nullptr && String(infoLine) == name);
                 ASSERT_TRUE(canvas->SetElementVisible(PoolString::Intern(name), visible)) << name;
             }
         }
@@ -110,7 +109,7 @@ namespace BECore::Mahjong::Tests {
         static void SetWorstVars() {
             const UIStrings& strings = CoreManager::GetUIStrings();
             UIVars& vars = CoreManager::GetUIVars();
-            std::vector<eastl::string> notices;
+            std::vector<String> notices;
             for (const OnlineCodeWord& word : kKnownOnlineCodes) {
                 notices.push_back(OnlineNoticeText(strings, word.key));
             }
@@ -120,19 +119,19 @@ namespace BECore::Mahjong::Tests {
             vars.Set("onlineStatus"_intern,
                      StringView(LongestText({Tr(strings, kOnlineConnectingKey), Tr(strings, kOnlineReconnectingKey), Tr(strings, kOnlineBrowsingKey), Tr(strings, kOnlineNoRoomsKey)})));
             // A room row: the widest name that is kept whole elsewhere and every fact the listing can carry
-            const eastl::string facts = Tr(strings, "online.rooms.free", {{"n", "3"}}) + ", " + Tr(strings, "online.rooms.hands", {{"n", "16"}}) + ", " +
-                                        Tr(strings, "online.rooms.level", {{"n", "10"}}) + ", " + Tr(strings, "online.rooms.hints");
-            const eastl::string row = Tr(strings, "online.rooms.row", {{"host", StringView(RepeatedLetter(strings, kListNameBytes))}, {"facts", StringView(facts)}});
+            const String facts = Format("{}, {}, {}, {}", Tr(strings, "online.rooms.free", {{"n", "3"}}), Tr(strings, "online.rooms.hands", {{"n", "16"}}),
+                                        Tr(strings, "online.rooms.level", {{"n", "10"}}), Tr(strings, "online.rooms.hints"));
+            const String row = Tr(strings, "online.rooms.row", {{"host", StringView(RepeatedLetter(strings, kListNameBytes))}, {"facts", StringView(facts)}});
             for (size_t index = 0; index < kListRows; ++index) {
                 vars.Set(PoolString::Intern(Format("onlineListRow{}", index)), StringView(row));
             }
             vars.Set("onlineMore"_intern, StringView(Tr(strings, "online.rooms.page", {{"n", "2"}, {"m", "9"}})));
 
-            const eastl::string name = RepeatedLetter(strings, kNameBytes);
-            const eastl::string seatName = RepeatedLetter(strings, kSeatNameBytes);
+            const String name = RepeatedLetter(strings, kNameBytes);
+            const String seatName = RepeatedLetter(strings, kSeatNameBytes);
             vars.Set("onlineHostLine"_intern, StringView(LongestText({Tr(strings, kOnlineLobbyHintsAllowedKey), Tr(strings, kOnlineLobbyHintsOffKey)})));
             vars.Set("onlineWaiting"_intern, StringView(LongestText({Tr(strings, kOnlineWaitHostKey), Tr(strings, kOnlineWaitHostHintsAllowedKey), Tr(strings, kOnlineWaitHostHintsOffKey)})));
-            std::vector<eastl::string> seats;
+            std::vector<String> seats;
             for (const bool mine : {false, true}) {
                 for (const bool connected : {false, true}) {
                     seats.push_back(OnlineSeatText(strings, BECore::SeatKind::Human, seatName, mine, connected));
@@ -150,7 +149,7 @@ namespace BECore::Mahjong::Tests {
             vars.Set("onlineCode"_intern, "WWWWW");
             vars.Set("onlineRoom"_intern, "WWWWW");
 
-            const eastl::vector<eastl::string> pad = TextEntry(TextEntry::Kind::Name).Pad(strings);
+            const eastl::vector<String> pad = TextEntry(TextEntry::Kind::Name).Pad(strings);
             for (size_t key = 0; key < TextEntry::kPadMaxKeys; ++key) {
                 vars.Set(PoolString::Intern(Format("padKey{}", key)), StringView(pad[key % pad.size()]));
             }
@@ -163,11 +162,11 @@ namespace BECore::Mahjong::Tests {
             for (const Output& output : kOutputs) {
                 ExpectWordsFit(node, output.width, output.height, air);
             }
-            const std::vector<std::string> cut = WordsThatDoNotFitOnTheMatrix(*Canvas(node), air);
+            const std::vector<String> cut = WordsThatDoNotFitOnTheMatrix(*Canvas(node), air);
             EXPECT_TRUE(cut.empty()) << node << ": " << cut.size() << " controls cut their text, the first: " << (cut.empty() ? "" : cut.front());
         }
 
-        std::string Text(const char* node, const char* element) const {
+        String Text(const char* node, const char* element) const {
             return DisplayText(Element(node, element));
         }
     };
@@ -194,9 +193,9 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(Prepare());
         struct Control {
             const char* node;
-            std::string element;
+            String element;
             const char* action;
-            std::string value;
+            String value;
         };
         std::vector<Control> controls = {
             {kOnline, "OnlineClose", "MahjongOnlineClose", ""},

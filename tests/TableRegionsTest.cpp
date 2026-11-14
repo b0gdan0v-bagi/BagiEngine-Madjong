@@ -1,5 +1,6 @@
 #include "ShippedTableLayout.h"
 
+#include <Common/Printers.h>
 #include <Mahjong/Table/TableRegions.h>
 #include <Mahjong/Table/TableSolver.h>
 #include <cmath>
@@ -50,15 +51,15 @@ namespace BECore::Mahjong::Tests {
             return nullptr;
         }
 
-        void ExpectSameRect(const Rect& actual, const Rect& expected, const std::string& where) {
+        void ExpectSameRect(const Rect& actual, const Rect& expected, const String& where) {
             EXPECT_NEAR(actual.x, expected.x, kTolerance) << where;
             EXPECT_NEAR(actual.y, expected.y, kTolerance) << where;
             EXPECT_NEAR(actual.w, expected.w, kTolerance) << where;
             EXPECT_NEAR(actual.h, expected.h, kTolerance) << where;
         }
 
-        std::string Where(const ViewSize& view, Seat viewer) {
-            return std::to_string(view.width) + "x" + std::to_string(view.height) + " viewer " + std::to_string(viewer);
+        String Where(const ViewSize& view, Seat viewer) {
+            return Format("{}x{} viewer {}", view.width, view.height, viewer);
         }
 
         /// The fraction `zone` of the shape the spec borrows from, fitted into a view of `view` by hand: the rule of the layout written out.
@@ -82,11 +83,11 @@ namespace BECore::Mahjong::Tests {
             for (Seat viewer = 0; viewer < kSeatCount; ++viewer) {
                 const TableLayout layout = MakeTableLayout(InputOf(viewer), spec, view.width, view.height);
                 const eastl::vector<TableRegion> regions = MakeTableRegions(layout);
-                const std::string where = Where(view, viewer);
+                const String where = Where(view, viewer);
                 ASSERT_GE(regions.size(), static_cast<size_t>(kSeatCount) + 2) << where;
                 for (int position = 0; position < kSeatCount; ++position) {
-                    EXPECT_STREQ(regions[static_cast<size_t>(position)].name.c_str(), ("table.plate." + std::to_string(position)).c_str()) << where;
-                    ExpectSameRect(regions[static_cast<size_t>(position)].rect, layout.zones.seatPlates[SeatAtPosition(viewer, position)], where + " plate " + std::to_string(position));
+                    EXPECT_STREQ(regions[static_cast<size_t>(position)].name.c_str(), Format("table.plate.{}", position).c_str()) << where;
+                    ExpectSameRect(regions[static_cast<size_t>(position)].rect, layout.zones.seatPlates[SeatAtPosition(viewer, position)], Format("{} plate {}", where, position));
                 }
                 EXPECT_STREQ(regions[kSeatCount].name.c_str(), "table.centerPanel");
                 ExpectSameRect(regions[kSeatCount].rect, layout.zones.centerPanel, where + " centre panel");
@@ -215,7 +216,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(TableRegionsTest, TheTestRegionsPassTheCheckOfTheSpec) {
-        for (const eastl::string& problem : CheckTableLayoutSpec(ShippedSpecWithTestRegions())) {
+        for (const String& problem : CheckTableLayoutSpec(ShippedSpecWithTestRegions())) {
             ADD_FAILURE() << problem.c_str();
         }
     }

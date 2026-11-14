@@ -1,5 +1,6 @@
 #include "ShippedTableLayout.h"
 
+#include <Common/Printers.h>
 #include <Mahjong/Table/TableLayout.h>
 #include <Mahjong/Table/TableLayoutSpec.h>
 #include <Mahjong/Table/TableRegions.h>
@@ -111,12 +112,12 @@ namespace BECore::Mahjong::Tests {
 
         /// The zones are the groups of slots of one role and seat (the wall is one); none may overlap another.
         void ExpectNoZoneOverlaps(const TableLayout& layout) {
-            std::vector<std::pair<std::string, Rect>> zones;
+            std::vector<std::pair<String, Rect>> zones;
             for (Seat seat = 0; seat < kSeatCount; ++seat) {
                 for (const SlotRole role : kSeatRoles) {
                     const Rect bounds = BoundsOf(layout, role, seat);
                     if (!bounds.IsEmpty()) {
-                        zones.emplace_back("role " + std::to_string(static_cast<int>(role)) + " of seat " + std::to_string(seat), bounds);
+                        zones.emplace_back(Format("role {} of seat {}", static_cast<int>(role), seat), bounds);
                     }
                 }
             }
@@ -2233,7 +2234,7 @@ namespace BECore::Mahjong::Tests {
         // What the canvases of the table rely on is the free regions of config/TableLayout.xml, not numbers of the node files: the check of the
         // spec holds each one inside the view and clear of every tile, block, ring and plate (the phone profile included).
         const TableLayoutSpec& spec = ShippedTableLayoutSpec();
-        for (const eastl::string& problem : CheckTableLayoutSpec(spec)) {
+        for (const String& problem : CheckTableLayoutSpec(spec)) {
             ADD_FAILURE() << problem.c_str();
         }
         for (const TableShape shape : EnumUtils<TableShape>::Values()) {

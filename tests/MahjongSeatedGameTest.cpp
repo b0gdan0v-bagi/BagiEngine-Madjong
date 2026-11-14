@@ -33,13 +33,13 @@ namespace BECore::Mahjong::Tests {
             return Parse(text);
         }
 
-        std::string CodeOf(const std::expected<Json, ControlError>& result) {
-            return result ? std::string() : std::string(result.error().code.c_str(), result.error().code.size());
+        String CodeOf(const std::expected<Json, ControlError>& result) {
+            return result ? String() : String(result.error().code.c_str(), result.error().code.size());
         }
 
-        std::string Dump(const Json& json) {
-            const eastl::string text = DumpJson(json);
-            return std::string(text.c_str(), text.size());
+        String Dump(const Json& json) {
+            const String text = DumpJson(json);
+            return String(text.c_str(), text.size());
         }
 
         MahjongSeatedGame Started(uint64_t seed = kSeed, const char* options = "{\"hands\": 8, \"level\": 1}") {
@@ -58,8 +58,8 @@ namespace BECore::Mahjong::Tests {
         }
 
         /// Every seat's view and actions as one text: the state a refused call must leave as it was.
-        std::string Everything(const MahjongSeatedGame& game) {
-            std::string text = std::to_string(game.GetStateVersion());
+        String Everything(const MahjongSeatedGame& game) {
+            String text = Format("{}", game.GetStateVersion());
             for (int seat = 0; seat < kSeatCount; ++seat) {
                 text += Dump(ViewOf(game, seat)) + Dump(ActionsOf(game, seat));
             }
@@ -113,7 +113,7 @@ namespace BECore::Mahjong::Tests {
             spec.hands[kSeat1] = "4p 4p 7p 1s 4s 7s 2m 5m 8m Sw Ww Rd 9p";
             spec.hands[kSeat2] = "3p 5p 4s 5s 6s 7m 8m 9m Ew Ew Ew 1m 1m";
             spec.hands[kSeat3] = "2p 5p 8p 2s 5s 8s 2m 5m 8m Rd Wd Nw 9s";
-            spec.live = std::string("Wd Gd Nw ") + kPriorityTile;
+            spec.live = Format("Wd Gd Nw {}", kPriorityTile);
             HandModel model = MakeModel(spec);
             Lap(model, "Wd Gd Nw", {kSeat2});
             EXPECT_EQ(model.CurrentSeat(), kSeat3);
@@ -190,8 +190,8 @@ namespace BECore::Mahjong::Tests {
             const auto started = game.Start(kSeed, Options(text));
             ASSERT_FALSE(started.has_value()) << text;
             EXPECT_EQ(started.error().code, "invalid_params") << text;
-            const bool namesAKey = started.error().message.find("'hands'") != eastl::string::npos || started.error().message.find("'level'") != eastl::string::npos ||
-                                   started.error().message.find("'hintsAllowed'") != eastl::string::npos;
+            const bool namesAKey =
+                started.error().message.find("'hands'") != String::npos || started.error().message.find("'level'") != String::npos || started.error().message.find("'hintsAllowed'") != String::npos;
             EXPECT_TRUE(namesAKey) << text << ": " << started.error().message.c_str();
             EXPECT_EQ(game.GetStateVersion(), 0u) << text;
         }
@@ -208,7 +208,7 @@ namespace BECore::Mahjong::Tests {
     TEST(MahjongSeatedGameStartTest, AFailedStartLeavesThePreviousMatchAlone) {
         MahjongSeatedGame game = Started();
         ASSERT_TRUE(StepOnce(game));
-        const std::string before = Everything(game);
+        const String before = Everything(game);
         EXPECT_FALSE(game.Start(kSeed + 1, Options("{\"hands\": 5}")).has_value());
         EXPECT_FALSE(game.Start(kSeed + 1, Options("{\"level\": 12}")).has_value());
         EXPECT_EQ(Everything(game), before);
@@ -239,7 +239,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST(MahjongSeatedGameSeatTest, ASeatOutOfRangeIsInvalidSeatOnEveryMethod) {
         MahjongSeatedGame game = Started();
-        const std::string before = Everything(game);
+        const String before = Everything(game);
         for (const int seat : kSeatsOutOfRange) {
             EXPECT_EQ(CodeOf(game.GetSeatView(seat)), "invalid_seat") << seat;
             EXPECT_EQ(CodeOf(game.GetSeatActions(seat)), "invalid_seat") << seat;
@@ -308,7 +308,7 @@ namespace BECore::Mahjong::Tests {
         MahjongSeatedGame game = Started();
         const Seat actor = game.GetMatch().Hand().CurrentSeat();
         const Seat other = (actor + 1) % kSeatCount;
-        const std::string before = Everything(game);
+        const String before = Everything(game);
 
         // invalid_seat before everything, even before a malformed action
         EXPECT_EQ(CodeOf(game.PerformSeatAction(9, Json(nullptr))), "invalid_seat");
@@ -358,7 +358,7 @@ namespace BECore::Mahjong::Tests {
         const auto answer = game.PerformSeatAction(kSeat0, ConcealedKongAction());
         ASSERT_TRUE(answer.has_value());
         EXPECT_EQ((*answer)["applied"], ActionObject("{\"type\":\"concealed_kong\"}"));
-        EXPECT_EQ(Dump(*answer).find("Ew"), std::string::npos) << Dump(*answer);
+        EXPECT_EQ(Dump(*answer).find("Ew"), String::npos) << Dump(*answer);
     }
 
     namespace {
@@ -391,7 +391,7 @@ namespace BECore::Mahjong::Tests {
                     const auto done = copy.PerformSeatAction(seat, attempt);
                     ASSERT_FALSE(done.has_value()) << "seat " << seat << " " << Dump(attempt) << " is not listed but was accepted";
                     // a chow without its first tile is malformed, not just illegal; the rest is well formed
-                    const std::string expected = !ActionFromJson(attempt) ? "invalid_params" : (listed.empty() ? "not_your_turn" : "illegal_action");
+                    const String expected = !ActionFromJson(attempt) ? "invalid_params" : (listed.empty() ? "not_your_turn" : "illegal_action");
                     EXPECT_EQ(CodeOf(done), expected) << "seat " << seat << " " << Dump(attempt);
                     EXPECT_EQ(copy.GetStateVersion(), game.GetStateVersion());
                     if (index % kFullCompareEvery == 0) {
@@ -538,9 +538,9 @@ namespace BECore::Mahjong::Tests {
     namespace {
 
         /// Every view of every seat after every step of a match, as one text.
-        std::string Transcript(uint64_t seed) {
+        String Transcript(uint64_t seed) {
             MahjongSeatedGame game = Started(seed);
-            std::string text;
+            String text;
             for (int step = 0; step < kStepLimit && !game.IsFinished(); ++step) {
                 text += Everything(game);
                 if (!StepOnce(game)) {
@@ -553,7 +553,7 @@ namespace BECore::Mahjong::Tests {
     }  // namespace
 
     TEST(MahjongSeatedGameComputerTest, OneSeedAndOptionsGiveOneSequenceOfViewsAndAnotherSeedDoesNot) {
-        const std::string first = Transcript(kSeed);
+        const String first = Transcript(kSeed);
         EXPECT_EQ(first, Transcript(kSeed));
         EXPECT_NE(first, Transcript(kSeed + 1));
     }
@@ -562,10 +562,10 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        std::set<std::string> KeysOf(const Json& object) {
-            std::set<std::string> keys;
+        std::set<String> KeysOf(const Json& object) {
+            std::set<String> keys;
             for (const auto& item : object.items()) {
-                keys.insert(item.key());
+                keys.insert(FromStdString(item.key()));
             }
             return keys;
         }
@@ -573,9 +573,9 @@ namespace BECore::Mahjong::Tests {
     }  // namespace
 
     TEST(MahjongSeatedGameViewTest, AViewHoldsOnlyTheOwnTilesWhileTheHandIsPlayedAndNoKindOrLevel) {
-        const std::set<std::string> topKeys = {"phase",    "seat", "seatWind",    "roundWind",  "east",    "hand",  "turn",   "seats",
-                                               "discards", "wall", "handsPlayed", "handsTotal", "version", "ready", "format", "hintsAllowed"};
-        const std::set<std::string> seatKeys = {"wind", "score", "concealedCount", "melds", "concealedKongs", "bonus", "discardCount", "calling"};
+        const std::set<String> topKeys = {"phase",    "seat", "seatWind",    "roundWind",  "east",    "hand",  "turn",   "seats",
+                                          "discards", "wall", "handsPlayed", "handsTotal", "version", "ready", "format", "hintsAllowed"};
+        const std::set<String> seatKeys = {"wind", "score", "concealedCount", "melds", "concealedKongs", "bonus", "discardCount", "calling"};
         MahjongSeatedGame game = Started();
         for (int step = 0; step < kStepLimit && PhaseIs(game, SessionPhase::Playing); ++step) {
             for (int seat = 0; seat < kSeatCount; ++seat) {
@@ -626,7 +626,7 @@ namespace BECore::Mahjong::Tests {
                 continue;
             }
             EXPECT_TRUE(view["seats"][0]["melds"].empty()) << "seat " << seat << " sees the kong of seat 0";
-            EXPECT_EQ(Dump(view).find("\"Ew\""), std::string::npos) << "no tile of the kong in the view of seat " << seat;
+            EXPECT_EQ(Dump(view).find("\"Ew\""), String::npos) << "no tile of the kong in the view of seat " << seat;
         }
     }
 
