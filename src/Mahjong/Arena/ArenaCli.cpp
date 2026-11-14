@@ -128,12 +128,12 @@ namespace BECore::Mahjong::Arena {
                       "\n"
                       "interval: the four rotations of a seed share one wall, so the seed is the sample; a number is the mean over the seeds and\n"
                       "+- is 1.96 standard errors (normal approximation, fine from about 100 seeds). Read the paired rows for a difference.\n",
-                      fmt::arg("levels", Format("1..{}, easy = 1, normal = {}", kMaxLevel, LevelNumber(ComputerLevel::Normal)).c_str()), fmt::arg("focus", kFocusOption),
-                      fmt::arg("others", kOthersOption), fmt::arg("first", kFirstOption), fmt::arg("seeds", kSeedsOption), fmt::arg("jobs", kJobsOption), fmt::arg("maxJobs", kMaxJobs),
-                      fmt::arg("jobsDefault", kDefaultJobs), fmt::arg("time", kTimeOption), fmt::arg("logs", kLogsOption), fmt::arg("check", kCheckOption), fmt::arg("differences", kDifferencesOption),
-                      fmt::arg("differencesDefault", kDefaultDifferences), fmt::arg("tableStats", kTableStatsOption), fmt::arg("help", kHelpOption), fmt::arg("focusDefault", kDefaultFocusSpec),
-                      fmt::arg("othersDefault", kDefaultOthersSpec), fmt::arg("firstDefault", kDefaultFirstSeed), fmt::arg("seedsDefault", kDefaultSeedCount), fmt::arg("ok", kExitOk),
-                      fmt::arg("refused", kExitRefusedAction), fmt::arg("bad", kExitBadArguments));
+                      FormatArg("levels", Format("1..{}, easy = 1, normal = {}", kMaxLevel, LevelNumber(ComputerLevel::Normal)).c_str()), FormatArg("focus", kFocusOption),
+                      FormatArg("others", kOthersOption), FormatArg("first", kFirstOption), FormatArg("seeds", kSeedsOption), FormatArg("jobs", kJobsOption), FormatArg("maxJobs", kMaxJobs),
+                      FormatArg("jobsDefault", kDefaultJobs), FormatArg("time", kTimeOption), FormatArg("logs", kLogsOption), FormatArg("check", kCheckOption),
+                      FormatArg("differences", kDifferencesOption), FormatArg("differencesDefault", kDefaultDifferences), FormatArg("tableStats", kTableStatsOption), FormatArg("help", kHelpOption),
+                      FormatArg("focusDefault", kDefaultFocusSpec), FormatArg("othersDefault", kDefaultOthersSpec), FormatArg("firstDefault", kDefaultFirstSeed),
+                      FormatArg("seedsDefault", kDefaultSeedCount), FormatArg("ok", kExitOk), FormatArg("refused", kExitRefusedAction), FormatArg("bad", kExitBadArguments));
     }
 
     std::expected<ArenaArgs, String> ParseArenaArgs(Span<const StringView> args) {

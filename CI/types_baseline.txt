@@ -9,9 +9,7 @@
 #   every other id (type, fmt, sto,
 #   stable-sort)                                      mahjong-type-aliases (this game's entry; it empties them)
 # Whoever empties a rule deletes its lines here.
-src/Mahjong/Analyzer/AnalyzerCli.cpp fmt 19
 src/Mahjong/Analyzer/AnalyzerCli.h function 1
-src/Mahjong/Arena/ArenaCli.cpp fmt 22
 src/Mahjong/Arena/ArenaHand.h function 1
 src/Mahjong/Arena/ArenaLogs.h function 1
 src/Mahjong/Arena/ArenaOracle.cpp function 1

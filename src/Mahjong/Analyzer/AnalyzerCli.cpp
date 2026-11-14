@@ -226,10 +226,10 @@ namespace BECore::Mahjong::Analyzer {
                       "  {help}            this text\n"
                       "\n"
                       "exit code: {ok} done, {failed} a position could not be read or analyzed (the error is printed), {bad} bad arguments.\n",
-                      fmt::arg("log", kLogOption), fmt::arg("hand", kHandOption), fmt::arg("action", kActionOption), fmt::arg("seat", kSeatOption), fmt::arg("position", kPositionOption),
-                      fmt::arg("worlds", kWorldsOption), fmt::arg("minWorlds", kMinWorlds), fmt::arg("maxWorlds", kMaxWorlds), fmt::arg("worldsDefault", kDefaultWorlds), fmt::arg("seed", kSeedOption),
-                      fmt::arg("seedDefault", kDefaultSeed), fmt::arg("jobs", kJobsOption), fmt::arg("maxJobs", kMaxJobs), fmt::arg("jobsDefault", kDefaultJobs), fmt::arg("json", kJsonOption),
-                      fmt::arg("help", kHelpOption), fmt::arg("ok", kExitOk), fmt::arg("failed", kExitAnalysisFailed), fmt::arg("bad", kExitBadArguments));
+                      FormatArg("log", kLogOption), FormatArg("hand", kHandOption), FormatArg("action", kActionOption), FormatArg("seat", kSeatOption), FormatArg("position", kPositionOption),
+                      FormatArg("worlds", kWorldsOption), FormatArg("minWorlds", kMinWorlds), FormatArg("maxWorlds", kMaxWorlds), FormatArg("worldsDefault", kDefaultWorlds),
+                      FormatArg("seed", kSeedOption), FormatArg("seedDefault", kDefaultSeed), FormatArg("jobs", kJobsOption), FormatArg("maxJobs", kMaxJobs), FormatArg("jobsDefault", kDefaultJobs),
+                      FormatArg("json", kJsonOption), FormatArg("help", kHelpOption), FormatArg("ok", kExitOk), FormatArg("failed", kExitAnalysisFailed), FormatArg("bad", kExitBadArguments));
     }
 
     std::expected<AnalyzerArgs, String> ParseAnalyzerArgs(Span<const StringView> args) {
