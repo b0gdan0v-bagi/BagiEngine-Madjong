@@ -88,7 +88,6 @@ namespace BECore::Mahjong {
                 return total;
             }
 
-            /// The seat's hand with the concealed tiles `counts`.
             [[nodiscard]] PlayerHand HandOf(const TileCounts& counts) const {
                 PlayerHand hand;
                 hand.melds = _view.own.melds;

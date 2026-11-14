@@ -7,22 +7,19 @@
 namespace BECore::Mahjong {
 
     /// How often a declared opponent's hidden tiles are drawn again when they do not wait (`SampleWorld`). A random hand of 13 tiles
-    /// almost never waits, so the number is large; measured on playouts at 400 tries: with 4 melds (one hidden tile) and with 3 melds
-    /// (four) the sample waits every time, with 2 melds (seven) in about half of the samples, with fewer almost never. After the last
-    /// try the last draw is kept.
+    /// almost never waits, so the number is large; with few melds it still often fails, and then the last draw is kept.
     inline constexpr int kWorldDeclaredTries = 400;
 
-    /// A declared opponent whose number of discards is not 0 or 1 declared "not on its first discard" in the sample (`SampleWorld`);
-    /// this is the number of discards it had made then.
+    /// The discards a declared opponent with two or more had made when `SampleWorld` has it declare (never on its first discard).
     inline constexpr int kWorldLateDeclarationDiscards = 1;
 
     /**
      * @brief Builds a whole hand that is consistent with what one seat sees: a determinisation for the search player.
      *
      * Reads nothing but `view` and draws only from `rng` (no `HandModel` of the table, no live wall, no other hand), so two tables that
-     * a seat cannot tell apart give the same world and leave `rng` in the same state. The world is a real `HandModel` (`HandModel::Restore`):
-     * `MakeTableView(world, view.seat)` equals `view` in every field (the own hand, the public seats, `visible`, `liveCount`, `legal`, the
-     * phase, the current seat and the pending tile), every kind has all its copies over the whole world, and a rollout can play it on.
+     * a seat cannot tell apart give the same world and leave `rng` in the same state. The world is a real `HandModel`
+     * (`HandModel::Restore`): `MakeTableView(world, view.seat)` equals `view` in every field, every kind has all its copies over the
+     * whole world, and a rollout can play it on.
      *
      * How it is made:
      * - The pool is the unseen copies of every kind (`UnseenCopies`). Every other seat gets its concealed kongs first (a kind with all
@@ -45,10 +42,10 @@ namespace BECore::Mahjong {
      *   the seat of the view decide first): what earlier seats passed before is not in the view, so they decide again.
      *
      * Known approximations, because the view cannot tell: the order and the discarders of the pile; the tiles a declared opponent
-     * really holds (its hand need not wait after the declaration, and the sample of a declared hand with fewer than three melds often does not wait); a
-     * declared opponent with two or more discards declared on its second discard, never its first (`callingAtDiscardCount`
-     * `kWorldLateDeclarationDiscards`, 0 when it has made one), so the double for a declaration on the first discard is never given
-     * to it; the move log is empty; the drawn tile is not from the loose reserve.
+     * really holds (its hand need not wait after the declaration, and the sample of a declared hand with fewer than three melds often
+     * does not wait); a declared opponent with two or more discards declared on its second discard, never its first
+     * (`callingAtDiscardCount` `kWorldLateDeclarationDiscards`, 0 when it has made one), so the double for a declaration on the first
+     * discard is never given to it; the move log is empty; the drawn tile is not from the loose reserve.
      *
      * `nullopt` when the view has no legal action (it is not the seat's turn, or the hand is over), is the view of no seat, or the pool
      * does not fit the places (no wall length is possible, a hand too short, a kong with no kind to be, a pile that disagrees with
