@@ -1,13 +1,12 @@
-#include "MahjongTableTestSupport.h"
-#include "MahjongTouchTestSupport.h"
-#include "ShippedTableLayout.h"
-#include "UiStyleTestSupport.h"
-
 #include <Common/ContentFilesCheck.h>
 #include <Mahjong/Table/TableLayout.h>
 #include <iterator>
 #include <map>
 #include <set>
+#include <tests/MahjongTableTestSupport.h>
+#include <tests/MahjongTouchTestSupport.h>
+#include <tests/ShippedTableLayout.h>
+#include <tests/UiStyleTestSupport.h>
 #include <vector>
 
 /**

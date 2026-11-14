@@ -1,5 +1,3 @@
-#include "ShippedTableLayout.h"
-
 #include <Common/Printers.h>
 #include <Mahjong/Table/TableLayout.h>
 #include <Mahjong/Table/TableLayoutSpec.h>
@@ -8,6 +6,7 @@
 #include <Mahjong/Table/UiPalette.h>
 #include <cmath>
 #include <gtest/gtest.h>
+#include <tests/ShippedTableLayout.h>
 
 /**
  * `Table/TableLayout.h`: the pure layout of the table in view units. Where each seat sits for each viewer, the viewer's hand in one row,

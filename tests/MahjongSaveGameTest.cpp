@@ -1,5 +1,3 @@
-#include "StringsTestSupport.h"
-
 #include <BECore/Control/Json.h>
 #include <BECore/GameManager/CoreManager.h>
 #include <Common/EngineEnvironment.h>
@@ -7,6 +5,7 @@
 #include <Mahjong/Game/ComputerPlayer.h>
 #include <Mahjong/MahjongGame.h>
 #include <gtest/gtest.h>
+#include <tests/StringsTestSupport.h>
 
 /**
  * `MahjongGame` saves and loads (`Save/MatchSave.h`, `Save/MatchSaveStore.h`): the match slot is written by `FlushSave()` and only

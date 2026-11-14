@@ -1,9 +1,8 @@
-#include "MahjongButtonSupport.h"
-#include "MahjongTableTestSupport.h"
-
 #include <BECore/UI/UITooltipComponent.h>
 #include <CoreSDL/SDLEvents.h>
 #include <Mahjong/Components/MahjongHudComponent.h>
+#include <tests/MahjongButtonSupport.h>
+#include <tests/MahjongTableTestSupport.h>
 
 /**
  * The way out of `Setup` (`config/nodes/MahjongSetup.xml`, `Components/MahjongHudComponent.h`): the close cross in the corner of the panel and the

@@ -1,10 +1,9 @@
-#include "FixedWall.h"
-#include "HandTestSupport.h"
-
 #include <Mahjong/Game/HandModel.h>
 #include <Mahjong/Game/HandShape.h>
 #include <Mahjong/Game/Tile.h>
 #include <gtest/gtest.h>
+#include <tests/FixedWall.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * The two kongs of a seat's own turn (the open kong of a claim has `HandModelClaimTest`): the concealed kong, the upgraded kong and

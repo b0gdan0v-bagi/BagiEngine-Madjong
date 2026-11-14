@@ -1,11 +1,10 @@
-#include "ComputerTestSupport.h"
-#include "FixedWall.h"
-#include "HandTestSupport.h"
-
 #include <Mahjong/Game/ComputerTurn.h>
 #include <Mahjong/Game/ComputerView.h>
 #include <Mahjong/Game/HandModel.h>
 #include <gtest/gtest.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/FixedWall.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * `MakeTableView`: what a seat is allowed to see of a hand, on fixed walls. The visible copies (own tiles, piles, open melds, not a

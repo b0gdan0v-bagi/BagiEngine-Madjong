@@ -1,10 +1,9 @@
-#include "StringsTestSupport.h"
-
 #include <Common/Printers.h>
 #include <Mahjong/Online/TextEntry.h>
 #include <Rooms/RoomLimits.h>
 #include <gtest/gtest.h>
 #include <set>
+#include <tests/StringsTestSupport.h>
 
 /**
  * `TextEntry` (`Online/TextEntry.h`): the text of a form field of the online screens, edited from a pad of keys or the keyboard. Pure over the shipped string table.

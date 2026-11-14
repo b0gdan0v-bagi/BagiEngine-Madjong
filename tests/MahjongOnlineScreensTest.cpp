@@ -1,13 +1,12 @@
-#include "MahjongHubTransport.h"
-#include "ShippedScene.h"
-#include "StringsTestSupport.h"
-
 #include <Common/Printers.h>
 #include <Mahjong/Online/OnlineScreens.h>
 #include <Mahjong/Online/OnlineServerUrl.h>
 #include <Mahjong/Online/OnlineWords.h>
 #include <Rooms/RoomErrors.h>
 #include <gtest/gtest.h>
+#include <tests/MahjongHubTransport.h>
+#include <tests/ShippedScene.h>
+#include <tests/StringsTestSupport.h>
 
 /**
  * `OnlineScreens` (`Online/OnlineScreens.h`): the pages of the online panel over `OnlineClient`s on a real `RoomHub` with `MahjongSeatedGame` (the in-memory world of

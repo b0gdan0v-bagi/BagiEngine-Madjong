@@ -1,8 +1,3 @@
-#include "ComputerTestSupport.h"
-#include "FixedWall.h"
-#include "HandTestSupport.h"
-#include "StringsTestSupport.h"
-
 #include <Common/Printers.h>
 #include <Mahjong/Game/ComputerClaim.h>
 #include <Mahjong/Game/ComputerTurn.h>
@@ -11,6 +6,10 @@
 #include <Mahjong/Game/TableSession.h>
 #include <Mahjong/Table/HintCard.h>
 #include <gtest/gtest.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/FixedWall.h>
+#include <tests/HandTestSupport.h>
+#include <tests/StringsTestSupport.h>
 #include <vector>
 
 /**

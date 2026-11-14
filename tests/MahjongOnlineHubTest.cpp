@@ -1,11 +1,10 @@
-#include "MahjongHubTransport.h"
-
 #include <Common/Printers.h>
 #include <Mahjong/MahjongGameControl.h>
 #include <Mahjong/Online/OnlineWords.h>
 #include <Rooms/RoomErrors.h>
 #include <gtest/gtest.h>
 #include <set>
+#include <tests/MahjongHubTransport.h>
 
 /**
  * Four `OnlineClient`s over a real `RoomHub` with `MahjongSeatedGame` (the in-memory world of `MahjongHubTransport.h`): the whole chain

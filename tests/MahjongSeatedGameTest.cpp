@@ -1,11 +1,10 @@
-#include "ComputerTestSupport.h"
-#include "FixedWall.h"
-#include "HandTestSupport.h"
-
 #include <BECore/Control/Json.h>
 #include <Mahjong/MahjongStateJson.h>
 #include <Mahjong/Online/MahjongSeatedGame.h>
 #include <gtest/gtest.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/FixedWall.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * `MahjongSeatedGame` (`Online/MahjongSeatedGame.h`): the four-seat game a room server runs. Plain C++: no scene, no `Application`.

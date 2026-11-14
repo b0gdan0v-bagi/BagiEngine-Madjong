@@ -1,9 +1,8 @@
-#include "ComputerTestSupport.h"
-#include "MahjongTouchTestSupport.h"
-
 #include <Events/SceneEvents.h>
 #include <Mahjong/Table/SeatPlates.h>
 #include <Mahjong/Table/TapSelect.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/MahjongTouchTestSupport.h>
 
 /**
  * The table in a landscape phone (`TableProfileFor`, `Table/TouchRegime.h`): the component builds its layout with the profile the rule

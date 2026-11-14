@@ -1,9 +1,8 @@
-#include "ArenaLogTestSupport.h"
-#include "HandTestSupport.h"
-
 #include <Mahjong/Analyzer/AnalyzerReport.h>
 #include <Mahjong/Arena/ArenaTester.h>
 #include <gtest/gtest.h>
+#include <tests/ArenaLogTestSupport.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * The person's seat against the computer levels (`Arena/ArenaTester.h`): every decision of a person in a replayed log is turned into the

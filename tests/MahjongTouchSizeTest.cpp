@@ -1,9 +1,8 @@
-#include "MahjongTouchTestSupport.h"
-
 #include <EASTL/map.h>
 #include <Mahjong/Components/MahjongHudComponent.h>
 #include <Mahjong/Table/UiPalette.h>
 #include <set>
+#include <tests/MahjongTouchTestSupport.h>
 
 /**
  * The touch size of the shipped scene: every control is a touch target of the engine's minimum in every window of the size matrix. The

@@ -1,5 +1,3 @@
-#include "HandTestSupport.h"
-
 #include <BECore/Control/Json.h>
 #include <Mahjong/Game/ComputerView.h>
 #include <Mahjong/MahjongStateJson.h>
@@ -7,6 +5,7 @@
 #include <Mahjong/Online/OnlineMirror.h>
 #include <gtest/gtest.h>
 #include <set>
+#include <tests/HandTestSupport.h>
 
 /**
  * `OnlineMirror` (`Online/OnlineMirror.h`): the table of a view as a display copy. The tables come from the real `MahjongSeatedGame`

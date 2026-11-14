@@ -1,15 +1,14 @@
-#include "CoachCardTestSupport.h"
-#include "ComputerTestSupport.h"
-#include "MahjongTableTestSupport.h"
-#include "MahjongTouchTestSupport.h"
-#include "UiStyleTestSupport.h"
-
 #include <BECore/Control/Json.h>
 #include <Mahjong/Components/MahjongHintsComponent.h>
 #include <Mahjong/Table/HintCard.h>
 #include <Mahjong/Table/ScoreText.h>
 #include <Mahjong/Table/TableLayout.h>
 #include <Mahjong/Table/UiPalette.h>
+#include <tests/CoachCardTestSupport.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/MahjongTableTestSupport.h>
+#include <tests/MahjongTouchTestSupport.h>
+#include <tests/UiStyleTestSupport.h>
 
 /**
  * The coach's note on the table (`Components/MahjongHintsComponent.h`, `Table/Coach.h`, `Table/HintCard.h`): the card `CoachCard` of the

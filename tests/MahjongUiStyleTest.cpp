@@ -1,9 +1,8 @@
-#include "ShippedScene.h"
-#include "UiStyleTestSupport.h"
-
 #include <BECore/UI/UIValueText.h>
 #include <Common/Printers.h>
 #include <cmath>
+#include <tests/ShippedScene.h>
+#include <tests/UiStyleTestSupport.h>
 
 /**
  * The look of the shipped scene file held to the style of `Table/UiPalette.h` (pure logic: the files are read from the source tree and parsed

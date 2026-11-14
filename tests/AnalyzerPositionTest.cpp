@@ -1,9 +1,8 @@
-#include "HandTestSupport.h"
-
 #include <Mahjong/Analyzer/AnalyzerPosition.h>
 #include <Mahjong/Game/ComputerWorld.h>
 #include <Mahjong/Game/MatchLog.h>
 #include <gtest/gtest.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * The positions of the analyzer (Analyzer/AnalyzerPosition.h): a decision found in a match log of computers (replayed to the point,

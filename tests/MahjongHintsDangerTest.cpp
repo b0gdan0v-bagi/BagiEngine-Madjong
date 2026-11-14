@@ -1,15 +1,14 @@
-#include "ComputerTestSupport.h"
-#include "MahjongTableTestSupport.h"
-#include "MahjongTouchTestSupport.h"
-#include "StringsTestSupport.h"
-#include "UiStyleTestSupport.h"
-
 #include <Common/Printers.h>
 #include <Mahjong/Components/MahjongHintsComponent.h>
 #include <Mahjong/Table/DangerMarks.h>
 #include <Mahjong/Table/TapSelect.h>
 #include <Mahjong/Table/UiPalette.h>
 #include <Mahjong/Table/Words.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/MahjongTableTestSupport.h>
+#include <tests/MahjongTouchTestSupport.h>
+#include <tests/StringsTestSupport.h>
+#include <tests/UiStyleTestSupport.h>
 
 /**
  * The danger marks the hints draw on the viewer's hand (`Components/MahjongHintsComponent.h`, `Table/DangerMarks.h`): a bar inside the left

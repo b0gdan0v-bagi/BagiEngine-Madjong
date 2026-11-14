@@ -1,10 +1,9 @@
-#include "HandTestSupport.h"
-#include "ShippedTableLayout.h"
-
 #include <Mahjong/Table/TableLayout.h>
 #include <Mahjong/Table/TableLayoutSpecXml.h>
 #include <cmath>
 #include <gtest/gtest.h>
+#include <tests/HandTestSupport.h>
+#include <tests/ShippedTableLayout.h>
 
 /**
  * `config/TableLayout.xml` and its reader (`Table/TableLayoutSpecXml.h`): the shipped file parses with no error, a small text gives the spec

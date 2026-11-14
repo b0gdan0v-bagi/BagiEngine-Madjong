@@ -1,10 +1,3 @@
-#include "CoachCardTestSupport.h"
-#include "ComputerTestSupport.h"
-#include "MahjongButtonSupport.h"
-#include "MahjongTableTestSupport.h"
-#include "MahjongTouchTestSupport.h"
-#include "UiStyleTestSupport.h"
-
 #include <BECore/Control/Json.h>
 #include <BECore/UI/UIImageComponent.h>
 #include <Common/Printers.h>
@@ -15,6 +8,12 @@
 #include <Mahjong/Table/TableLayout.h>
 #include <Mahjong/Table/TapSelect.h>
 #include <Mahjong/Table/UiPalette.h>
+#include <tests/CoachCardTestSupport.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/MahjongButtonSupport.h>
+#include <tests/MahjongTableTestSupport.h>
+#include <tests/MahjongTouchTestSupport.h>
+#include <tests/UiStyleTestSupport.h>
 
 /**
  * The hints of the shipped scene (`Components/MahjongHintsComponent.h`, `Table/Hints.h`): the switch `Hints` On | Off of the page

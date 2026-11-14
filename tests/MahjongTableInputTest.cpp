@@ -1,15 +1,14 @@
-#include "ComputerTestSupport.h"
-#include "MahjongButtonSupport.h"
-#include "MahjongTableTestSupport.h"
-#include "MahjongTouchTestSupport.h"
-#include "UiStyleTestSupport.h"
-
 #include <BECore/Control/Json.h>
 #include <BECore/UI/UIToggleComponent.h>
 #include <Events/InputEvents.h>
 #include <Events/SceneEvents.h>
 #include <Mahjong/Table/TapSelect.h>
 #include <Mahjong/Table/UiPalette.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/MahjongButtonSupport.h>
+#include <tests/MahjongTableTestSupport.h>
+#include <tests/MahjongTouchTestSupport.h>
+#include <tests/UiStyleTestSupport.h>
 
 /**
  * Playing on the table with the mouse (`Components/MahjongTableComponent.h`): a click on a tile discards it, `Declare` and the dimmed

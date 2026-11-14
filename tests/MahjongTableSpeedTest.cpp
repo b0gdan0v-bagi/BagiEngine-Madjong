@@ -1,10 +1,9 @@
-#include "ComputerTestSupport.h"
-#include "MahjongTableTestSupport.h"
-#include "UiStyleTestSupport.h"
-
 #include <Events/SceneEvents.h>
 #include <Mahjong/Table/AnimationSpeed.h>
 #include <Mahjong/Table/UiPalette.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/MahjongTableTestSupport.h>
+#include <tests/UiStyleTestSupport.h>
 
 /**
  * The speed of the table on the table itself (`Components/MahjongTableComponent.h`, "Pace"; the factors are `Table/AnimationSpeed.h`):

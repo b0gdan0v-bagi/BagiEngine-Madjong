@@ -1,7 +1,6 @@
-#include "MahjongTableTestSupport.h"
-#include "ShippedTableLayout.h"
-
 #include <Mahjong/Table/TableLayout.h>
+#include <tests/MahjongTableTestSupport.h>
+#include <tests/ShippedTableLayout.h>
 
 /**
  * The table draws the zones of the active spec every frame (`SetActiveTableLayoutSpec`), so a spec set while the game runs shows at the next

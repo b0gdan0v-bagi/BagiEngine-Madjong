@@ -1,9 +1,8 @@
-#include "HandTestSupport.h"
-
 #include <Mahjong/Game/ComputerPlayer.h>
 #include <Mahjong/Game/ScoreHand.h>
 #include <Mahjong/Game/Wall.h>
 #include <gtest/gtest.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * The computer player against random legal play, on the same hands. One seat is a `ComputerPlayer`, the other three draw like the

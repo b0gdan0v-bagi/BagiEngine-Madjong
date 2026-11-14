@@ -1,10 +1,9 @@
 #pragma once
 
-#include "FixedWall.h"
-#include "HandTestSupport.h"
-
 #include <Mahjong/Game/HandModel.h>
 #include <initializer_list>
+#include <tests/FixedWall.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * What the tests of the computer player share (`ComputerViewTest`, `ComputerTurnTest`, `ComputerClaimTest`): the quiet hands of the

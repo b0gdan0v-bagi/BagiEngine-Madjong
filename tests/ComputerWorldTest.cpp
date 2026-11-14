@@ -1,7 +1,3 @@
-#include "ComputerTestSupport.h"
-#include "FixedWall.h"
-#include "HandTestSupport.h"
-
 #include <EASTL/algorithm.h>
 #include <Mahjong/Game/ComputerTurn.h>
 #include <Mahjong/Game/ComputerView.h>
@@ -11,6 +7,9 @@
 #include <Mahjong/Game/MahjongRng.h>
 #include <gtest/gtest.h>
 #include <set>
+#include <tests/ComputerTestSupport.h>
+#include <tests/FixedWall.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * `SampleWorld` (Game/ComputerWorld.h): a whole hand consistent with what one seat sees. The central invariant: for the view of every

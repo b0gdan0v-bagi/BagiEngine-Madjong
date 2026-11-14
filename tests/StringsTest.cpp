@@ -1,6 +1,3 @@
-#include "ShippedScene.h"
-#include "StringsTestSupport.h"
-
 #include <Common/Printers.h>
 #include <Mahjong/Game/Score.h>
 #include <Mahjong/Game/Tile.h>
@@ -10,6 +7,8 @@
 #include <map>
 #include <regex>
 #include <set>
+#include <tests/ShippedScene.h>
+#include <tests/StringsTestSupport.h>
 
 /**
  * The string table of the game (`config/UIStrings.xml`) and the helpers that read it (`Table/Words.h`). Pure logic over a `UIStrings` of the test's own: no scene and no engine

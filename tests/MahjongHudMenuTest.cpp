@@ -1,9 +1,8 @@
-#include "MahjongButtonSupport.h"
-#include "MahjongTableTestSupport.h"
-#include "StringsTestSupport.h"
-
 #include <BECore/UI/UIImageComponent.h>
 #include <Mahjong/Components/MahjongHudComponent.h>
+#include <tests/MahjongButtonSupport.h>
+#include <tests/MahjongTableTestSupport.h>
+#include <tests/StringsTestSupport.h>
 
 /**
  * The three round icon buttons of the HUD (`config/nodes/MahjongHudMenu.xml`): what each is made of, that its tooltip says its word in both languages (and `Leave room`

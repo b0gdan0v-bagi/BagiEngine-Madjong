@@ -1,5 +1,3 @@
-#include "ComputerTestSupport.h"
-
 #include <EASTL/sort.h>
 #include <Mahjong/Arena/ArenaHand.h>
 #include <Mahjong/Arena/ArenaOracle.h>
@@ -9,6 +7,7 @@
 #include <Mahjong/Game/ComputerTurn.h>
 #include <Mahjong/Game/HandShape.h>
 #include <gtest/gtest.h>
+#include <tests/ComputerTestSupport.h>
 
 /**
  * The oracle players of the arena (`src/Mahjong/Arena/ArenaOracle.h`): the view of `oracle-acceptance` differs from the real one only in

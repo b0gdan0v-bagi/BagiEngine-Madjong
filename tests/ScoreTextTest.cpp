@@ -1,10 +1,9 @@
-#include "ScoreTestSupport.h"
-#include "StringsTestSupport.h"
-
 #include <Mahjong/Game/Match.h>
 #include <Mahjong/Table/ScoreText.h>
 #include <Mahjong/Table/SeatName.h>
 #include <set>
+#include <tests/ScoreTestSupport.h>
+#include <tests/StringsTestSupport.h>
 
 /**
  * The words of the end-of-hand screen and of the end-of-match screen (`Table/ScoreText.h`). Pure logic: no engine services. The worked

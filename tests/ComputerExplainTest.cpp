@@ -1,12 +1,11 @@
-#include "ComputerTestSupport.h"
-#include "FixedWall.h"
-#include "HandTestSupport.h"
-
 #include <Mahjong/Game/ComputerExplain.h>
 #include <Mahjong/Game/ComputerPlayer.h>
 #include <Mahjong/Game/HandModel.h>
 #include <Mahjong/Game/Match.h>
 #include <gtest/gtest.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/FixedWall.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * `ExplainAdvice`: the numbers the advice is chosen by, on fixed hands worked out by hand first (the waits of each hand, the unseen

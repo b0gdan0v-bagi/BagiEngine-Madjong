@@ -1,11 +1,10 @@
-#include "HandTestSupport.h"
-#include "StringsTestSupport.h"
-
 #include <Mahjong/Game/TableSession.h>
 #include <Mahjong/Table/CenterPanel.h>
 #include <Mahjong/Table/SeatPlates.h>
 #include <Mahjong/Table/TableLayout.h>
 #include <gtest/gtest.h>
+#include <tests/HandTestSupport.h>
+#include <tests/StringsTestSupport.h>
 
 /**
  * The centre panel inside the wall ring (`Table/CenterPanel.h`): the round wind and the number of the hand in it, the tiles left in the wall,

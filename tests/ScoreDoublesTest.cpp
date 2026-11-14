@@ -1,4 +1,4 @@
-#include "ScoreTestSupport.h"
+#include <tests/ScoreTestSupport.h>
 
 /**
  * The doubles for everyone, the total of a score and the readings (`ScoreSeat`): pungs and kongs of dragons and winds, one suit,

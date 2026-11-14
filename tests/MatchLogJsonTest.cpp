@@ -1,5 +1,3 @@
-#include "HandTestSupport.h"
-
 #include <BECore/Control/Json.h>
 #include <Common/EngineEnvironment.h>
 #include <Mahjong/Game/MatchLog.h>
@@ -7,6 +5,7 @@
 #include <Mahjong/MatchLogJson.h>
 #include <gtest/gtest.h>
 #include <set>
+#include <tests/HandTestSupport.h>
 
 /**
  * The JSON form of the match log (`MatchLogJson.h`): every event converts to an object and back, the actions are the control API's, and a

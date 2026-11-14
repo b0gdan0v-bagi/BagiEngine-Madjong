@@ -1,10 +1,9 @@
 #pragma once
 
-#include "HandTestSupport.h"
-
 #include <Mahjong/Game/Payments.h>
 #include <Mahjong/Game/Score.h>
 #include <Mahjong/Game/ScoreHand.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * What the scoring tests share (`ScorePointsTest`, `ScoreDoublesTest`, `ScoreWinnerTest`, `ScoreLimitTest`, `ScoreHandTest`,

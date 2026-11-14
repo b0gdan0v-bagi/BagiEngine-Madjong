@@ -1,9 +1,8 @@
-#include "MahjongTableTestSupport.h"
-
 #include <Events/SceneEvents.h>
 #include <Mahjong/ComputerThinking.h>
 #include <Mahjong/Game/ComputerLevel.h>
 #include <chrono>
+#include <tests/MahjongTableTestSupport.h>
 #include <thread>
 
 /**

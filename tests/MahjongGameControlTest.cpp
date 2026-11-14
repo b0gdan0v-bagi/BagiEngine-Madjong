@@ -1,15 +1,14 @@
-#include "ComputerTestSupport.h"
-#include "FixedWall.h"
-#include "HandTestSupport.h"
-#include "MahjongHubTransport.h"
-#include "StringsTestSupport.h"
-
 #include <BECore/Control/Json.h>
 #include <BECore/GameManager/CoreManager.h>
 #include <Common/EngineEnvironment.h>
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/MahjongGameControl.h>
 #include <gtest/gtest.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/FixedWall.h>
+#include <tests/HandTestSupport.h>
+#include <tests/MahjongHubTransport.h>
+#include <tests/StringsTestSupport.h>
 
 /**
  * `MahjongGameControl` (`MahjongGameControl.h`): the state a client sees, the actions it can take, `perform_action` with the computers

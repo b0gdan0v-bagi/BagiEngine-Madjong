@@ -1,8 +1,7 @@
-#include "ComputerTestSupport.h"
-#include "MahjongTableTestSupport.h"
-#include "UiStyleTestSupport.h"
-
 #include <Events/SceneEvents.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/MahjongTableTestSupport.h>
+#include <tests/UiStyleTestSupport.h>
 
 /**
  * The claim window on the table (`Components/MahjongTableComponent.h`): the mark and the frame on the discard do not tell a person that a

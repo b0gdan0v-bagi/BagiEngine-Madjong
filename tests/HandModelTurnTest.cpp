@@ -1,9 +1,8 @@
-#include "FixedWall.h"
-#include "HandTestSupport.h"
-
 #include <Mahjong/Game/HandModel.h>
 #include <Mahjong/Game/Tile.h>
 #include <gtest/gtest.h>
+#include <tests/FixedWall.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * The turn of a hand: the start, discards, the calling-hand declaration, the self-draw win, bonus tiles and the drawn hand (the claims

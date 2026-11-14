@@ -1,8 +1,7 @@
-#include "HandTestSupport.h"
-
 #include <Mahjong/Table/TileFlights.h>
 #include <cmath>
 #include <gtest/gtest.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * `Table/TileFlights.h` (pure logic): which slots of the new frame fly and from where. The snapshots are made from `MakeTableLayout`

@@ -1,9 +1,8 @@
-#include "HandTestSupport.h"
-
 #include <Mahjong/Game/OwnDrawsValue.h>
 #include <Mahjong/Game/Score.h>
 #include <climits>
 #include <cstdlib>
+#include <tests/HandTestSupport.h>
 
 /**
  * The arithmetic under the value of a discard from the own draws: what a win pays and what a standing hand is worth against

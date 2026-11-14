@@ -1,5 +1,3 @@
-#include "MahjongRoomsJudge.h"
-
 #include <BECore/Control/Json.h>
 #include <Common/Printers.h>
 #include <EASTL/sort.h>
@@ -9,6 +7,7 @@
 #include <Rooms/RoomHub.h>
 #include <Rooms/RoomProtocol.h>
 #include <gtest/gtest.h>
+#include <tests/MahjongRoomsJudge.h>
 
 /**
  * `MahjongSeatedGame` in rooms: a `RoomHub` (in memory, a clock the test moves, no computer delay) plays whole hands and matches, and

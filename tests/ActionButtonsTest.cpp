@@ -1,10 +1,9 @@
-#include "ComputerTestSupport.h"
-#include "HandTestSupport.h"
-#include "StringsTestSupport.h"
-
 #include <BECore/Text/Utf8.h>
 #include <Mahjong/Table/ActionButtons.h>
 #include <gtest/gtest.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/HandTestSupport.h>
+#include <tests/StringsTestSupport.h>
 
 /**
  * `Table/ActionButtons.h`: the legal actions of a seat as the action buttons of the table. Pure logic: hand-made lists and the lists of

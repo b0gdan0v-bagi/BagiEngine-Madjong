@@ -1,13 +1,12 @@
-#include "ComputerTestSupport.h"
-#include "FixedWall.h"
-#include "HandTestSupport.h"
-
 #include <Mahjong/Game/ComputerView.h>
 #include <Mahjong/Game/ComputerWorld.h>
 #include <Mahjong/Game/DiscardDanger.h>
 #include <Mahjong/Game/HandModel.h>
 #include <Mahjong/Game/MahjongRng.h>
 #include <gtest/gtest.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/FixedWall.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * `DiscardDanger.h`: the danger of a discard against a declared opponent, from public data only. The rules of the reading are tried

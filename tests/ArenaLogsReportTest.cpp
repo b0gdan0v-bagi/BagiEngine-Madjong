@@ -1,7 +1,6 @@
-#include "ArenaLogTestSupport.h"
-
 #include <Mahjong/Arena/ArenaLogsReport.h>
 #include <gtest/gtest.h>
+#include <tests/ArenaLogTestSupport.h>
 
 /**
  * The report of the arena's log mode (`Arena/ArenaLogsReport.h`) beyond the corpus summary: the real-game numbers by the level of the

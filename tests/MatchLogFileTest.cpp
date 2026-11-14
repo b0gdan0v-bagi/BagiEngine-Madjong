@@ -1,5 +1,3 @@
-#include "HandTestSupport.h"
-
 #include <BECore/Control/Json.h>
 #include <Common/EngineEnvironment.h>
 #include <Common/TempPath.h>
@@ -10,6 +8,7 @@
 #include <Mahjong/Platform.h>
 #include <gtest/gtest.h>
 #include <regex>
+#include <tests/HandTestSupport.h>
 #include <vector>
 
 /**

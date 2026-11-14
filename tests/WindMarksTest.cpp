@@ -1,7 +1,6 @@
-#include "HandTestSupport.h"
-
 #include <Mahjong/Table/WindMarks.h>
 #include <gtest/gtest.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * Which tiles the winds of a seat mark (`Table/WindMarks.h`, pure logic): the wind tile of the own seat wind, that of the round wind, both

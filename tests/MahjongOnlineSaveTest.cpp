@@ -1,11 +1,10 @@
-#include "MahjongHubTransport.h"
-#include "StringsTestSupport.h"
-
 #include <BECore/GameManager/CoreManager.h>
 #include <Common/EngineEnvironment.h>
 #include <Common/TempPath.h>
 #include <Mahjong/MahjongGame.h>
 #include <gtest/gtest.h>
+#include <tests/MahjongHubTransport.h>
+#include <tests/StringsTestSupport.h>
 
 /**
  * The online play in `MahjongGame` (`MahjongGame.h`: `GetOnline`, `SetOnlineSettings`, `IsOnlineOpen`, `StoredOnline`, `SetOnlineName`) and

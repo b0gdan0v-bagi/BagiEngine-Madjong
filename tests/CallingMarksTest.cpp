@@ -1,7 +1,3 @@
-#include "ComputerTestSupport.h"
-#include "FixedWall.h"
-#include "HandTestSupport.h"
-
 #include <Mahjong/Game/ComputerView.h>
 #include <Mahjong/Game/HandModel.h>
 #include <Mahjong/Game/HandShape.h>
@@ -9,6 +5,9 @@
 #include <Mahjong/Table/CallingMarks.h>
 #include <gtest/gtest.h>
 #include <set>
+#include <tests/ComputerTestSupport.h>
+#include <tests/FixedWall.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * The discards that keep a declared calling hand waiting (`Table/CallingMarks.h`, pure logic): all false before the declaration, off the

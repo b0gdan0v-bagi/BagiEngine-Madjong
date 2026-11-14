@@ -1,4 +1,4 @@
-#include "ScoreTestSupport.h"
+#include <tests/ScoreTestSupport.h>
 
 /**
  * The points of a hand (`ScoreSeat`): chows, pungs and kongs open and concealed, pairs, bonus tiles. Pure logic: no engine services.

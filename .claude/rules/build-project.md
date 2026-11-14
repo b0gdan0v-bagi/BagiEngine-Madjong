@@ -138,10 +138,11 @@ python3 engine/CI/scripts/strip_pch_includes.py --all --root . --dir src/Mahjong
 
 ## Includes
 
-The engine's rules for includes and types hold here; the check this game runs:
+The engine's rules for includes and types hold here. `#include "..."` only for a `.cpp` / `.mm` including its own header; everything else is `<...>` from an include root: `<Mahjong/...>` from `src/`, a test helper as `<tests/HandTestSupport.h>`. The checks this game runs:
 
 | Field | Value here |
 |-------|------------|
+| Includes check | `python3 engine/CI/scripts/check_includes.py --root .`; ctest `MahjongIncludesCheck` |
 | Types check | `python3 engine/CI/scripts/check_types.py --root . --baseline CI/types_baseline.txt`; ctest `MahjongTypesCheck`. Raw `std::` / `eastl::` types and allocating calls (the rule table is at the head of the script); a real boundary says `//-NoStd: <why>`. The baseline lists the hits other entries own and only shrinks: a new hit is fixed or marked, never added with `--update-baseline`; `--allow <folder>:<rule>[,<rule>]` allows rules in a folder |
 
 ## Launcher

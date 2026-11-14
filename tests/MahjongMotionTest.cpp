@@ -1,6 +1,5 @@
-#include "MahjongTableTestSupport.h"
-
 #include <Mahjong/Components/MahjongHudComponent.h>
+#include <tests/MahjongTableTestSupport.h>
 
 /**
  * The motion of the real `Setup` canvas (`config/nodes/MahjongSetup.xml`, the `kMotion*` of `Table/UiPalette.h`) on the manual clock: closed, opened, a frame at the start of the show (nothing

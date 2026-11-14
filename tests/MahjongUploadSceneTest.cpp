@@ -1,14 +1,13 @@
-#include "MahjongButtonSupport.h"
-#include "MahjongOnlineTableTestSupport.h"
-#include "MahjongTouchTestSupport.h"
-#include "UiStyleTestSupport.h"
-
 #include <Common/Printers.h>
 #include <CoreSDL/SDLEvents.h>
 #include <Mahjong/Components/MahjongUploadComponent.h>
 #include <Mahjong/MatchLogJson.h>
 #include <Mahjong/Online/TextEntry.h>
 #include <Mahjong/UploadPrefs.h>
+#include <tests/MahjongButtonSupport.h>
+#include <tests/MahjongOnlineTableTestSupport.h>
+#include <tests/MahjongTouchTestSupport.h>
+#include <tests/UiStyleTestSupport.h>
 
 /**
  * The glue of the tester upload in the shipped scene (`Components/MahjongUploadComponent.h`, the node `Consent`): where the page cannot post

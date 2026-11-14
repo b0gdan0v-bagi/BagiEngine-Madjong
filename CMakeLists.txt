@@ -85,6 +85,8 @@ if(ENGINE_BUILD_TESTS)
         LINK RoomsModule
         WHOLE_ARCHIVE MahjongModule
     )
+    # The repository root is the include root of the test helpers: they are included as <tests/Name.h>
+    target_include_directories(MahjongTests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
     # Starts BagiMahjong with the control API and plays a hand and a match over WebSocket (ctest entry BagiMahjongControlSmoke);
     # without the control server (ENGINE_WITH_REMOTE_CONTROL=OFF) the smoke could never connect
@@ -116,6 +118,10 @@ if(ENGINE_BUILD_TESTS)
         add_test(NAME MahjongTypesCheck
             COMMAND ${Python3_EXECUTABLE} ${BAGI_ENGINE_DIR}/CI/scripts/check_types.py --root ${CMAKE_CURRENT_SOURCE_DIR}
                 --baseline ${CMAKE_CURRENT_SOURCE_DIR}/CI/types_baseline.txt)
+
+        # engine/CI/scripts/check_includes.py: the quoted include only for a .cpp and its own header, the rest <...> from an include root
+        add_test(NAME MahjongIncludesCheck
+            COMMAND ${Python3_EXECUTABLE} ${BAGI_ENGINE_DIR}/CI/scripts/check_includes.py --root ${CMAKE_CURRENT_SOURCE_DIR})
     endif()
 
     # tools/collect_logs.py with a fake verifier and temp folders (no build needed); Python 3 standard library only

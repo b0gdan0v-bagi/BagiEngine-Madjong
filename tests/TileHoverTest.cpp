@@ -1,7 +1,6 @@
-#include "ComputerTestSupport.h"
-
 #include <Mahjong/Table/TileHover.h>
 #include <gtest/gtest.h>
+#include <tests/ComputerTestSupport.h>
 
 /**
  * `Table/TileHover.h` (pure logic): the slot under a point (the later of two that overlap, never a wall stack), the tile a slot shows

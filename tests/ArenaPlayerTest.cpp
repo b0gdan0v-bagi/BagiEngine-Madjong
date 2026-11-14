@@ -1,5 +1,3 @@
-#include "HandTestSupport.h"
-
 #include <Mahjong/Arena/ArenaHand.h>
 #include <Mahjong/Arena/ArenaPlayer.h>
 #include <Mahjong/Arena/ArenaWorlds.h>
@@ -7,6 +5,7 @@
 #include <Mahjong/Game/ScoreHand.h>
 #include <Mahjong/Game/Wall.h>
 #include <gtest/gtest.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * The players and the one hand of the arena (`src/Mahjong/Arena/`): the text specs of the players, the table of the knobs of

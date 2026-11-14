@@ -1,7 +1,3 @@
-#include "ComputerTestSupport.h"
-#include "FixedWall.h"
-#include "HandTestSupport.h"
-
 #include <EASTL/algorithm.h>
 #include <EASTL/sort.h>
 #include <Mahjong/Game/ComputerTurn.h>
@@ -13,6 +9,9 @@
 #include <Mahjong/Game/OwnDraws.h>
 #include <gtest/gtest.h>
 #include <set>
+#include <tests/ComputerTestSupport.h>
+#include <tests/FixedWall.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * `ChooseTurnAction`: the choices of a computer player on its own turn, one case per rule, on fixed walls with the expected action

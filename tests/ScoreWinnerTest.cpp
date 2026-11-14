@@ -1,4 +1,4 @@
-#include "ScoreTestSupport.h"
+#include <tests/ScoreTestSupport.h>
 
 /**
  * The lines only a winner has (`ScoreSeat`): the 20 for winning, the wall tile and the only winning tile, and the doubles for the

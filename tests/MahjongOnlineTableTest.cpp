@@ -1,7 +1,3 @@
-#include "ComputerTestSupport.h"
-#include "FixedWall.h"
-#include "HandTestSupport.h"
-
 #include <BECore/Control/Json.h>
 #include <Common/Printers.h>
 #include <Mahjong/MahjongStateJson.h>
@@ -9,6 +5,9 @@
 #include <Mahjong/Online/OnlineTable.h>
 #include <cctype>
 #include <gtest/gtest.h>
+#include <tests/ComputerTestSupport.h>
+#include <tests/FixedWall.h>
+#include <tests/HandTestSupport.h>
 
 /**
  * `OnlineTable` (`Online/OnlineTable.h`): the view and the actions of a room, read into plain data. The views come from the real

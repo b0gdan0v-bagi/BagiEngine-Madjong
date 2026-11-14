@@ -1,10 +1,9 @@
 #pragma once
 
-#include "MahjongTableTestSupport.h"
-#include "StringsTestSupport.h"
-
 #include <Mahjong/Table/HintCard.h>
 #include <string>
+#include <tests/MahjongTableTestSupport.h>
+#include <tests/StringsTestSupport.h>
 #include <vector>
 
 /**
