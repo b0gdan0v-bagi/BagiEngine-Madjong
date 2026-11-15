@@ -139,7 +139,7 @@ namespace BECore::Mahjong {
         int searchMargin = 0;
         /// Step 5 of the own turn: the number of the seat's own next draws the discard is rated over (`ValueDiscards`, `OwnDraws.h`, at most
         /// `kOwnDrawsMaxDepth`), in expected points; 0 = Normal's step 5, nothing of the new code runs. A decision with no rated discard
-        /// falls back to Normal's. Draws nothing from the rng (ties go to Normal's order). Off in every level.
+        /// falls back to Normal's. Draws nothing from the rng (ties go to Normal's order). Off in every level: no variant beat Normal inside the time rule (`docs/own-draws-ev.md`).
         int ownDrawsDepth = 0;
         /// Step 2 of the own turn: the discard that declares the calling hand is the one with the best expected value (`ValueWaits`), not
         /// the one with the most unseen winning copies; false = Normal's step 2. Draws nothing from the rng when on. Off in every level.

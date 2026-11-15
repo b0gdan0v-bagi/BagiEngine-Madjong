@@ -1,6 +1,10 @@
 # The value of a discard from the seat's own draws
 
-Slice 1 of the entry `mahjong-own-draws-ev`: a computer seat rates each discard in expected points from its own next draws, and the arena says whether that beats Normal. **Verdict: no switch.** The knobs `ownDrawsDepth` and `ownDrawsPickWait` stay in the tree, off in every level; no level was changed.
+The entry `mahjong-own-draws-ev`: a computer seat rates each discard (and claim, and the declaration) in expected points from its own next draws, and the arena says whether that beats Normal. Two slices, one page: slice 1 (the first sections down to "For slice 2") is kept as history, slice 2 ("Slice 2: ...") is the final record. **Final verdict: no switch.** The knobs `ownDrawsDepth`, `ownDrawsPickWait`, `ownDrawsDiscardWins`, `ownDrawsClaimDepth` and `ownDrawsDeclareDepth` stay in the tree, off in every level; no level was changed. The entry closes (the owner closes it).
+
+**What to believe.** Nothing inside the time rule beats Normal. The one real effect is the depth: depth 2 and 3 turn play toward dearer wins (+5 points a hand on the exploration range) and pay in speed (wins -0.4 to -2.6 %); on a fresh range depth 3 fell to +2.04 +- 3.95 with wins -1.40 sig., so the +5 is probably the best-of-seven pick. The choice of the wait, the win on a discard, the claims and the declaration are empty or harmful. Whether a deeper or better-leafed value would beat Normal is not known.
+
+**The time rule.** Slice 1 used the rule of `docs/bot-search.md` as written: the slowest Debug decision at most 0.3 s. For slice 2 the plan relaxed it for a resumable stepped run (1.0 s in Debug, 30 ms a step; the browser factor behind it a guess), after slice 1's times showed depth 2 at 1.3 s. No variant reached the point where that mattered: none passed the strength conditions, so the stepped run was not built, and the rows below are judged by the 0.3 s rule as well.
 
 ## What is valued
 
@@ -47,7 +51,7 @@ A round is the stretch between an own turn of a seat and its next one; a turn co
 
 **What the table shows beyond the constants.** The survival after two or more rounds is below `(1 - h)^i`: the number of declared opponents grows during the horizon (d = 0 survives 80 % of four rounds, not 97 %), so the model's `Alive` discounts the later draws too little. The structure was fixed before the numbers and was not changed. All 1000 hands were won (Normal does not draw), and 76 % of them on a discard: the own-draws value sees at most the 24 % won on a self-draw.
 
-**Retuning.** Only on the exploration range, once: `h` fitted to the survival after three rounds (37, 235, 382, 518) was played against the measured table for all three variants below and was not better (the paired points of `ownDrawsDepth=1` fell from -7.35 to -8.77, those of the pick-wait stayed at -0.4), so the measured constants stayed.
+**Retuning.** Only on the exploration range, once: `h` fitted to the survival after three rounds (37, 235, 382, 518) was played against the measured table for all three variants below and was within noise (the paired points of `ownDrawsDepth=1` moved from -7.35 to -8.77, those of the pick-wait from -0.41 to -0.36), so the measured constants stayed.
 
 ## Debug time
 
@@ -65,7 +69,7 @@ $D --first 4000 --seeds 16 --jobs 1 --time --others 5 --focus 5:ownDrawsDepth=<D
 | depth 3 + pick-wait | seed 4000 only | 7144 ms (first discard of one hand) | | **out** |
 | depth 4 + pick-wait | seed 4000 only | 21266 ms (first discard of one hand, one run) | | **out** |
 
-Depth 3 and 4 were timed on the first hand of seed 4000 only: the worst of a subset is a lower bound of the worst of the sample, so one decision over 0.3 s is enough to put a depth out. **Depth 2 is out by 4.4 times.** The cost is the first discards (14 tiles, six candidates, the full tree); the mean is far below the rule. Slice 2 therefore starts with the resumable stepped run (`ComputerThinking`), as the plan said. By the rule written first, **no range was played at depth 2, 3 or 4.** Depth 1 was not in the list of the exploration range of the plan (which named 2, 3, 4 "inside the time rule"); it is inside the rule, and it was added to the exploration before any strength number was seen, so every depth the rule lets in was looked at.
+Depth 3 and 4 were timed on the first hand of seed 4000 only (depth 4 once, depth 3 as in the table): the worst of a subset is a lower bound of the worst of the sample, so one decision over 0.3 s is enough to put a depth out. **Depth 2 is out by 4.4 times.** The cost is the first discards (14 tiles, six candidates, the full tree); the mean is far below the rule. Slice 2 therefore starts with the resumable stepped run (`ComputerThinking`), as the plan said. By the rule written first, **no range was played at depth 2, 3 or 4.** Depth 1 was not in the list of the exploration range of the plan (which named 2, 3, 4 "inside the time rule"); it is inside the rule, and it was added to the exploration before any strength number was seen, so every depth the rule lets in was looked at.
 
 ## The ranges
 
@@ -84,7 +88,7 @@ $A --first 4000 --seeds 1000 --jobs 14 --others 5 --focus 5,5:ownDrawsPickWait=1
 | depth 1 | 17.23 +- 1.04 | -7.35 +- 4.28 | 40.75 | 52.38 | -7.35 +- 4.28 sig. | -7.78 +- 1.04 sig. |
 | depth 1 + pick-wait | 17.45 +- 1.05 | -4.63 +- 4.68 | 40.75 | 54.83 | -4.63 +- 4.68 | -7.55 +- 1.05 sig. |
 
-The pick-wait alone is the best variant by the paired points (-0.41), so it alone went to the decision range. (Fitted `h`, same range: pick-wait -0.36 +- 1.12, depth 1 -8.77 +- 4.30 sig., depth 1 + pick-wait -7.25 +- 4.50 sig.)
+The pick-wait alone is the best variant by the paired points (-0.41), so it alone went to the decision range. (Fitted `h`, same range: pick-wait -0.36 +- 1.12 against -0.41, within noise; depth 1 -8.77 +- 4.30 sig., depth 1 + pick-wait -7.25 +- 4.50 sig.)
 
 **Decision range** (`--first 100000 --seeds 1000 --jobs 14`, played once):
 
@@ -106,7 +110,7 @@ By "The rule of the verdict" (all of: both ranges significantly above 0 on point
 ## What part of the value was looked at
 
 - **The choice of the wait (`ownDrawsPickWait`): empty.** The declaring discard it picks changes the average winning score by +0.2 and the wins by -0.1 to -0.3 %: no effect on either range. The waits Normal picks (most unseen copies) are the ones worth the most, to within the noise.
-- **The standing score and doubles, at the depth that fits (1):** the value moves play toward value hands, and the score lines show it: pungs in 78.8 % of the won hands (Normal 66.9), dragon sets 19.0 (16.1), one suit with honours 1.6 (0.4), only pungs 0.7 (0), no-points hands 7.4 (14.2), the average winning score 52.4 (45.5, +15 %). It pays with speed: declared 40.8 % (55.8), wins 17.2 % (25.0), drawn hands 0.55 % (0). With one draw of horizon a hand that does not wait after the draw cannot win, so the number that differs between two discards is the standing hand's score, which is worth more than a one-draw chance to win; the gain in score is smaller than the loss in wins. Concealed against open hands (`FullyConcealed` 4.35 % against 4.59) did not move.
+- **The standing score and doubles, at the depth that fits (1):** the value moves play toward value hands, and the score lines show it: pungs in 78.8 % of the won hands (Normal 66.9), dragon sets 19.0 (16.1), one suit with honours 1.6 (0.4), only pungs 0.7 (0), no-points hands 7.4 (14.2), the average winning score 52.4 (45.5, +15 %). It pays with speed: declared 40.8 % (55.8), wins 17.2 % (25.0), drawn hands 0.55 % (0). With one draw of horizon a hand that does not wait after the draw cannot win, so the number that differs between two discards is the standing hand's score, which is worth more than a one-draw chance to win; the gain in score is smaller than the loss in wins. Concealed hands (`FullyConcealed`) did not move: 4.70 % of the focus seat's hands at depth 1 against Normal's 4.59 (the other seats of the same table: 4.35).
 - **Not looked at:** the claims, the declaration "now or later", and depth 2 and up (out by the time rule). Whether the deeper value would beat Normal is **unknown** from this slice: the one number that says the structure may carry more is the score-line shift at depth 1, which is real and in the intended direction.
 - **The blind spot that stays:** the 76 % of the won hands that are won on a discard are not in the value at all.
 
@@ -225,3 +229,8 @@ By "The rule of the verdict": (1) both ranges with the paired points significant
 - **The depth: this is where the points are, and it does not hold.** Depth 2 gives +5.4 points a hand on the exploration range and pays 2.4 to 2.6 wins % for it (a hand worth more and later); depth 3 loses fewer wins (-0.42) for the same points, then +2.04 and -1.40 sig. on a fresh range. Neither is a result the rule accepts, and both are slow (0.84 s and 11 s in Debug for the first discard). Whether the +5 of depth 2 is real is not known: depth 2 was out of the decision range by the wins rule, as written.
 - **Not played, and why:** depth 4 (21 s a first discard in Debug in slice 1); the confirmation range and the random-seat range (the decision range failed); Debug time of the rows without a depth; a leaf estimate for a hand that does not wait where the search stops (a new entry, "Left for the owner" of the plan).
 - **The entry closes:** the verdict is no switch; the owner closes it.
+
+### Loose ends of the arena code
+
+- `--table-stats` counts a concealed kong as two own turns of the seat (the kong and the replacement draw each open an own turn); this biases `h` slightly and is left as it is.
+- `Arena/ArenaTable.cpp` and `Arena/ArenaRun.cpp` each run the seed-slot thread loop (an atomic next seed, lowest failed seed, a world pool a thread); one helper would remove the copy; it was not made, because the entry ends with no switch and the arena code stays as it is.
