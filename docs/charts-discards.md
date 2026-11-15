@@ -144,8 +144,8 @@ and by the spread between turns. So W = 100 and 1400 seeds are chosen (about 15 
 - **Selected turns.** The turns are those on which the two readings differ and Normal is in step 5: not every turn of a hand. A class is
   a statement about those turns, not about the game.
 - **Many cells, so some are significant by chance.** About one cell in twenty is `significant` at 95 percent with no effect at all,
-  and the tables hold well over fifty cells. A single `significant` cell is a lead; only a class that holds in both ranges of the
-  protocol is read as a finding.
+  and each range holds 34 numbers, so one or two are `significant` by chance alone. A single `significant` cell is a lead; only a
+  class that holds in both ranges of the protocol is read as a finding.
 
 ## Build and run
 
@@ -250,10 +250,11 @@ measured turns, on which the two readings differ.
 | value held: none | 2822 | -3.80 +- 0.93 | significant | 2895 | -3.31 +- 1.27 | significant |
 | value held: single | 9460 | -4.79 +- 0.44 | significant | 9263 | -4.25 +- 0.47 | significant |
 
-- **Whenever the valued discard costs a shanten at 2 shanten or more** it loses: -11.1 +- 0.7 and -10.9 +- 0.7 over 6 800 rows a
-  range, in every cell of the main table at 2 shanten (-11.0 to -13.7 in D, -11.2 to -12.5 in C) and at 3 or more (-5.2 to -13.1).
-  This is the price the reading pays in speed, consistent with its losing over whole matches (`docs/own-draws-ev.md`). Normal's
-  discard is right to keep the shanten there.
+- **Whenever the valued discard costs a shanten at 2 shanten or more** it loses: in every cell of the main table at 2 shanten (-11.0
+  to -13.7 in D, -11.2 to -12.5 in C) and at 3 or more (-5.2 to -13.1). The whole cost cell "one higher" is -11.1 +- 0.7 and
+  -10.9 +- 0.7 over about 6 800 rows a range; it also holds the 1-shanten rows (153 and 156), which do not hold on their own. This is
+  the price the reading pays in speed, consistent with its losing over whole matches (`docs/own-draws-ev.md`). Normal's discard is
+  right to keep the shanten there.
 - **At 2 shanten with the same shanten** the valued discard loses a little with no value tile (-2.7 and -1.6) or a single one (-3.4 and
   -3.4); with a pair or set it is +0.3 and +5.1 (significant in the confirmation range only). At 2 shanten as a whole: -8.2 and -7.1; at
   3 or more: -1.6 and -1.7.
@@ -298,9 +299,10 @@ The input of a later entry, with no change made here. The valued discard is a re
    tiles is held: +55 in about 220 turns a range (0.2 a hand), +12 to +14 with no value tile held in about 280. In these rows the
    valued tile is not one of Normal's ties, so a rule that takes it overrides Normal's ratings of shanten, acceptance, danger and
    keep value, and it needs a feature inside the class that the tables do not carry (which tile; whether the hand is concealed). The next measure is the rule itself, played in the arena over whole matches.
-2. **Nowhere else take a higher shanten.** At 2 shanten or more the valued discard that costs a shanten loses about 11 points in
-   every cell that holds; a better rule leaves Normal's choice there. The one cell that gains (a pair or set at 1 shanten, one higher:
-   +14.8 and +17.7, 51 and 43 rows) holds in the discovery range only.
+2. **Nowhere else take a higher shanten.** At 2 shanten or more the valued discard that costs a shanten loses in every one of the
+   twelve cells (all hold): about 11 to 14 points at 2 shanten and about 5 to 13 at 3 or more; a better rule leaves Normal's choice
+   there. At 1 shanten no cell with a higher shanten holds. The one that gains (a pair or set, one higher: +14.8 and +17.7, 51 and 43
+   rows) is `significant` in the discovery range only, so it is not a finding either.
 3. **The same direction as the claim charts.** The claim charts (`docs/charts-claims.md`) found that Normal passes value honours that
    gain about +30 over passing; here the hand with a pair or set of value tiles at 1 shanten is where its discard loses most. Both
    say the same thing about value tiles near a wait, and neither table alone says that the two losses are one. Whether one rule
