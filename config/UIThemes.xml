@@ -46,4 +46,46 @@
         <color name="plateShadow" value="0,0,0,60"/>
         <color name="plateHighlight" value="255,255,255,36"/>
     </theme>
+    <!-- navy: a dark navy table with gold accents. The felt, its rim and lip are navy at three depths and the plates blue-black; the rack stays the same warm wood as in classic. The
+         buttons are steel blues and a deep red (no green: the felt is not green), gold only where classic uses it (accent, winnerRow, the plates' frame). The marks of the table
+         (UiPalette.h) lie on this felt, so it stays far from the gold family, the wind bars, the danger marks and the dealer's red (MahjongThemesTest holds the distance). -->
+    <theme id="navy">
+        <color name="scrim" value="0,0,0,200"/>
+        <color name="surface" value="20,28,46,255"/>
+        <color name="surfaceRaised" value="30,42,68,255"/>
+        <color name="header" value="34,54,100,255"/>
+        <color name="hudPanel" value="6,14,34,170"/>
+        <color name="primary" value="30,76,140,255"/>
+        <color name="secondary" value="40,64,112,255"/>
+        <color name="neutral" value="58,66,92,255"/>
+        <color name="danger" value="120,34,46,255"/>
+        <color name="text" value="255,255,255,255"/>
+        <color name="textMuted" value="180,192,218,255"/>
+        <color name="accent" value="255,214,80,255"/>
+        <color name="primaryDeep" value="20,52,104,255"/>
+        <color name="secondaryDeep" value="28,44,84,255"/>
+        <color name="neutralDeep" value="40,46,68,255"/>
+        <color name="dangerDeep" value="86,24,34,255"/>
+        <color name="surfaceDeep" value="12,18,32,255"/>
+        <color name="surfaceRaisedDeep" value="22,32,54,255"/>
+        <color name="headerDeep" value="24,40,80,255"/>
+        <color name="hudPanelDeep" value="3,8,22,170"/>
+        <color name="frame" value="62,86,136,255"/>
+        <color name="frameLight" value="132,158,210,255"/>
+        <color name="shadow" value="0,0,0,90"/>
+        <color name="highlight" value="255,255,255,60"/>
+        <color name="outline" value="8,12,24,255"/>
+        <color name="glowPrimary" value="110,170,240,160"/>
+        <color name="winnerRow" value="92,76,30,255"/>
+        <color name="placeBadge" value="52,74,136,255"/>
+        <!-- The table: navy felt, a darker rim, a lighter navy lip; the same wood rack; a muted gold frame on the plates. -->
+        <color name="felt" value="18,34,68,255"/>
+        <color name="feltRim" value="8,16,36,255"/>
+        <color name="feltLip" value="46,74,128,255"/>
+        <color name="handRack" value="92,62,42,255"/>
+        <color name="handRackLip" value="52,34,24,255"/>
+        <color name="plateFrame" value="160,134,70,200"/>
+        <color name="plateShadow" value="0,0,0,60"/>
+        <color name="plateHighlight" value="255,255,255,36"/>
+    </theme>
 </UIThemes>
