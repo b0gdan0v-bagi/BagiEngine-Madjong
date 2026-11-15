@@ -4,7 +4,6 @@ namespace BECore::Mahjong::Arena {
 
     namespace {
 
-        /// The digits after the point of every number of the report.
         constexpr int kPrecision = 2;
         constexpr int kNameMinWidth = 22;
         constexpr int kHandsWidth = 7;
@@ -37,7 +36,6 @@ namespace BECore::Mahjong::Arena {
             return count > 0 ? static_cast<double>(sum) / static_cast<double>(count) : 0.0;
         }
 
-        /// Ends the line: the spaces at its right end go, a newline comes.
         void EndLine(String& text, size_t lineStart) {
             size_t end = text.size();
             while (end > lineStart && text[end - 1] == ' ') {
@@ -81,7 +79,6 @@ namespace BECore::Mahjong::Arena {
             return width;
         }
 
-        /// The rule of the interval, and what it needs.
         String IntervalRule(const ArenaResult& result) {
             if (result.count < static_cast<int>(kMinSeedsForInterval)) {
                 return Format("{} seed: no interval (it needs at least {} seeds)", result.count, kMinSeedsForInterval);

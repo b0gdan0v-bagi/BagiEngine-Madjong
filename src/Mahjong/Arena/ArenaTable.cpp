@@ -56,7 +56,7 @@ namespace BECore::Mahjong::Arena {
             return sums.n > 0 ? static_cast<double>(sums.sum) / static_cast<double>(sums.n) : 0.0;
         }
 
-        /// The half-width of the 95 percent interval of the mean of `sums` (0 with fewer than two samples).
+        /// 0 with fewer than two samples.
         double Half(const SampleSums& sums) {
             if (sums.n < 2) {
                 return 0.0;
