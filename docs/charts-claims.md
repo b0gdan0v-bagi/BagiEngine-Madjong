@@ -271,6 +271,10 @@ are these:
    late (57 and 78 rows, holds); Normal passes every one of them, so nothing changes there either. The kong of a waiting hand, which
    Normal takes in the middle (+80.7 and +68.8, 47 and 36 rows), holds as a gain.
 
+The own-turn discard has its own study with the same protocol, `docs/charts-discards.md`; its results ("What Normal does against it",
+"Left to a better player") name the classes where Normal's discard loses, and one of them (a value pair held, one shanten) points the
+same way as item 2 above.
+
 ## Results
 
 Run on 2026-11-15 with `BagiMahjongCharts` built in Release from the sources of commit `61785ae` (the commit that follows it adds this
