@@ -61,7 +61,7 @@ namespace BECore::Mahjong::Analyzer {
         run->RunWorlds(loop);
         const Vector<Vector<int>>& values = run->Values();
         if (values.empty() || values.front().empty()) {
-            return std::unexpected(String("no world could be sampled for this position"));
+            return std::unexpected(String(kNoWorldReason));
         }
 
         PositionAnalysis analysis;

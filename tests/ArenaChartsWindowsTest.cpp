@@ -209,6 +209,9 @@ namespace BECore::Mahjong::Arena {
         TableView withWin = view;
         withWin.legal.push_back(HandAction::MakeClaim(ClaimKind::Mahjong));
         EXPECT_FALSE(MeasureWindow(withWin, kHandSeed, kWindowIndex, kWorlds, SerialWorldLoop).has_value());
+        TableView noSeat = view;
+        noSeat.seat = kNoSeat;
+        EXPECT_FALSE(MeasureWindow(noSeat, kHandSeed, kWindowIndex, kWorlds, SerialWorldLoop).has_value());
     }
 
 }  // namespace BECore::Mahjong::Arena

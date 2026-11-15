@@ -49,7 +49,7 @@ namespace BECore::Mahjong::Arena {
     struct WindowRows {
         /// One per claim of the window, in the order of `view.legal`; empty when the window was dropped.
         Vector<ClaimRow> rows;
-        /// The analysis could not be made (no world could be sampled for the position); `reason` is its text. Counted by the caller.
+        /// No world could be sampled for the position (the only analysis failure that is not an error); `reason` is its text. Counted by the caller.
         bool dropped = false;
         String reason;
     };
@@ -65,7 +65,8 @@ namespace BECore::Mahjong::Arena {
      *        `AnalysisSeedOf(handSeed, windowIndex)`.
      *
      * The answer is the same for any `loop`. A `view` that is not a claim window with `Pass` and a charted claim, or `worlds` below 1,
-     * is an error of the caller; an analysis that cannot be made is a `dropped` window, not an error.
+     * is an error of the caller, and so is any other error of `AnalyzePosition`; only a position for which no world can be sampled
+     * (`Analyzer::kNoWorldReason`) is a `dropped` window.
      */
     [[nodiscard]] std::expected<WindowRows, String> MeasureWindow(const TableView& view, uint32_t handSeed, int windowIndex, int worlds, const WorldLoop& loop);
 

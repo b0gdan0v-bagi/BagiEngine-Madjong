@@ -93,6 +93,9 @@ namespace BECore::Mahjong::Arena {
         const std::expected<Analyzer::PositionAnalysis, String> analysis = Analyzer::AnalyzePosition(view, config, loop);
         WindowRows measured;
         if (!analysis.has_value()) {
+            if (analysis.error() != Analyzer::kNoWorldReason) {
+                return std::unexpected(analysis.error());
+            }
             measured.dropped = true;
             measured.reason = analysis.error();
             return measured;

@@ -63,7 +63,7 @@ namespace BECore::Mahjong::Arena {
      *
      * Deterministic: the same config gives the same result at any `jobs` (a seed is played by one thread into a slot of its own, the
      * slots are merged in seed order). A refused action or a window that cannot be measured is an error that names the seed; the error
-     * is that of the lowest seed that failed, whatever the number of threads. A window that cannot be analysed is not an error: it is
+     * is that of the lowest seed that failed, whatever the number of threads. A window with no world to sample is not an error: it is
      * counted in `ChartsCounters::dropped`.
      */
     [[nodiscard]] std::expected<ChartsResult, String> RunCharts(const ChartsConfig& config);
