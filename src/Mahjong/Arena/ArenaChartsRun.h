@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Mahjong/Arena/ArenaChartsDiscards.h>
 #include <Mahjong/Arena/ArenaChartsWindows.h>
 #include <Mahjong/Arena/ArenaRun.h>
 #include <Mahjong/Arena/ArenaStats.h>
@@ -11,7 +12,8 @@ namespace BECore::Mahjong::Arena {
     /// The seeds of a run that does not say; a window costs `worlds` rollouts, so the arena's default of 250 seeds would run for hours.
     inline constexpr int kDefaultChartSeeds = 20;
 
-    /// The seeds `first .. first + count - 1`, one hand each with four Normal seats, every claim window measured with `worlds` worlds.
+    /// The seeds `first .. first + count - 1`, one hand each with four Normal seats, every claim window (or measured own turn) measured with
+    /// `worlds` worlds.
     struct ChartsConfig {
         uint32_t first = kDefaultFirstSeed;
         int count = kDefaultChartSeeds;
@@ -84,7 +86,7 @@ namespace BECore::Mahjong::Arena {
 
     [[nodiscard]] bool Matches(const ClaimFilter& filter, const ClaimClass& cls) noexcept;
 
-    /// A group of rows and the mean of their gains over the seeds that have one (`MeanCi` of the per-seed means).
+    /// A group of rows and the mean of their gains over the seeds that have one (`MeanCi` of the per-seed means), for both kinds.
     struct CellStats {
         int64_t rows = 0;
         /// The seeds with at least one row: the `n` of the interval.
@@ -106,5 +108,73 @@ namespace BECore::Mahjong::Arena {
     /// The cell of `filter` over every row of `result`. The unit of the interval is the seed: the mean of the gains of a seed's matching
     /// rows, then `MeanCi` over the seeds that have one.
     [[nodiscard]] Cell Summarise(const ChartsResult& result, const ClaimFilter& filter);
+
+    /// What the own turns of a run came to; integers, so the merge of the seeds does not depend on the order.
+    /// `ownTurns = otherStep + noValue + sameAsNormal + dropped + rows`.
+    struct DiscardCounters {
+        int64_t hands = 0;
+        int64_t ownTurns = 0;
+        /// Turns Normal answers with a win, a declaration, a kong or a kept wait (steps 1 to 4): not charted.
+        int64_t otherStep = 0;
+        /// Turns for which `ValueDiscards` rates no discard.
+        int64_t noValue = 0;
+        /// Turns whose valued tile is one of Normal's own ties.
+        int64_t sameAsNormal = 0;
+        /// Measured turns that could not be analysed (no world); they have no row.
+        int64_t dropped = 0;
+        /// The rows: one per measured turn.
+        int64_t rows = 0;
+
+        void Add(const DiscardCounters& other) noexcept;
+    };
+
+    /// The rows of one seed, in the order the hand played its turns; a seed without a measured turn has none.
+    struct SeedDiscardRows {
+        uint32_t seed = 0;
+        Vector<DiscardRow> rows;
+    };
+
+    struct DiscardChartsResult {
+        uint32_t first = 0;
+        int count = 0;
+        int worlds = 0;
+        DiscardCounters counters;
+        /// One per seed, in seed order.
+        Vector<SeedDiscardRows> seeds;
+    };
+
+    /// How the hand of a seed is played and its own turns collected; `CollectDiscardTurns` with four Normal seats for the program. Called
+    /// from several threads, so it must not write anything shared.
+    using DiscardHandSource = std::function<std::expected<DiscardTurns, String>(uint32_t seed)>;  //-NoStd: stored per run and called from several threads, as ChartsHandSource
+
+    /**
+     * @brief Plays the seeds and measures every own turn the discard charts chart.
+     *
+     * The same engine as `RunCharts` (same bytes at any `jobs`, the error of the lowest failed seed). An error text names the seed, and
+     * the turn when a turn failed. A turn with no world to sample is not an error: it is counted in `DiscardCounters::dropped`.
+     */
+    [[nodiscard]] std::expected<DiscardChartsResult, String> RunDiscardCharts(const ChartsConfig& config);
+
+    /// The seam for a test that makes a whole hand fail on chosen seeds; the error rules are those of `RunDiscardCharts(config)`.
+    [[nodiscard]] std::expected<DiscardChartsResult, String> RunDiscardCharts(const ChartsConfig& config, const DiscardHandSource& source);
+
+    /// The rows a cell holds: a field left empty takes every value.
+    struct DiscardFilter {
+        Optional<ValueHeld> valueHeld;
+        Optional<DiscardShanten> shanten;
+        Optional<ValueCost> cost;
+        Optional<WallStage> stage;
+        Optional<OpenSets> openSets;
+        Optional<bool> east;
+    };
+
+    [[nodiscard]] bool Matches(const DiscardFilter& filter, const DiscardClass& cls) noexcept;
+
+    /// Normal always takes its own discard, so a discard cell has no `takes` / `passes` split.
+    using DiscardCell = CellStats;
+
+    /// The cell of `filter` over every row of `result`. The unit of the interval is the seed: the mean of the gains of a seed's matching
+    /// rows, then `MeanCi` over the seeds that have one.
+    [[nodiscard]] DiscardCell SummariseDiscards(const DiscardChartsResult& result, const DiscardFilter& filter);
 
 }  // namespace BECore::Mahjong::Arena

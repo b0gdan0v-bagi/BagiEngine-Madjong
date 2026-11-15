@@ -1,3 +1,4 @@
+#include <Mahjong/Arena/ArenaChartsReport.h>
 #include <Mahjong/Arena/ArenaChartsRun.h>
 #include <gtest/gtest.h>
 #include <tests/ComputerTestSupport.h>
@@ -20,6 +21,23 @@ namespace BECore::Mahjong::Arena {
         constexpr uint32_t kLaterFailingSeed = 15;
         constexpr double kBigGain = 2.0;
         constexpr double kSmallGain = 1.0;
+        constexpr uint32_t kGoldenFirst = 1;
+        constexpr int kGoldenSeeds = 3;
+        constexpr int kGoldenWorlds = 20;
+        constexpr uint64_t kFnvOffset = 14695981039346656037ULL;
+        constexpr uint64_t kFnvPrime = 1099511628211ULL;
+        constexpr uint64_t kGoldenReportHash = 11082305448135879985ULL;
+        constexpr uint64_t kGoldenMarkdownHash = 8734939666423079044ULL;
+
+        /// FNV-1a, 64 bit, over the bytes of `text`.
+        uint64_t Fnv1a64(const String& text) {
+            uint64_t hash = kFnvOffset;
+            for (const char c : text) {
+                hash ^= static_cast<uint8_t>(c);
+                hash *= kFnvPrime;
+            }
+            return hash;
+        }
 
         ChartsConfig ConfigOf(uint32_t first, int count, int jobs) {
             ChartsConfig config;
@@ -98,6 +116,76 @@ namespace BECore::Mahjong::Arena {
             return result;
         }
 
+        DiscardChartsResult RunDiscardOk(const ChartsConfig& config) {
+            const std::expected<DiscardChartsResult, String> result = RunDiscardCharts(config);
+            EXPECT_TRUE(result.has_value()) << (result.has_value() ? "" : result.error().c_str());
+            return result.value_or(DiscardChartsResult{});
+        }
+
+        const DiscardChartsResult& WholeDiscards() {
+            static const DiscardChartsResult whole = RunDiscardOk(ConfigOf(kFirstSeed, kSeeds, kSomeJobs));
+            return whole;
+        }
+
+        bool SameDiscardCounters(const DiscardCounters& a, const DiscardCounters& b) {
+            return a.hands == b.hands && a.ownTurns == b.ownTurns && a.otherStep == b.otherStep && a.noValue == b.noValue && a.sameAsNormal == b.sameAsNormal && a.dropped == b.dropped &&
+                   a.rows == b.rows;
+        }
+
+        bool SameDiscardRows(const DiscardChartsResult& a, const DiscardChartsResult& b) {
+            if (a.seeds.size() != b.seeds.size()) {
+                return false;
+            }
+            for (size_t s = 0; s < a.seeds.size(); ++s) {
+                const Vector<DiscardRow>& x = a.seeds[s].rows;
+                const Vector<DiscardRow>& y = b.seeds[s].rows;
+                if (a.seeds[s].seed != b.seeds[s].seed || x.size() != y.size()) {
+                    return false;
+                }
+                for (size_t i = 0; i < x.size(); ++i) {
+                    if (!(x[i].cls == y[i].cls) || !(x[i].pair == y[i].pair) || x[i].gain != y[i].gain) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        DiscardFilter ValueHeldFilter(ValueHeld held) {
+            DiscardFilter filter;
+            filter.valueHeld = held;
+            return filter;
+        }
+
+        /// A result of hand-made rows: `perSeed` rows in each of `seeds` seeds, the gain alternating by seed as in `MadeResult`.
+        DiscardChartsResult MadeDiscardResult(int seeds, int perSeed) {
+            DiscardChartsResult result;
+            for (int s = 0; s < seeds; ++s) {
+                SeedDiscardRows seed;
+                seed.seed = static_cast<uint32_t>(s);
+                for (int i = 0; i < perSeed; ++i) {
+                    DiscardRow row;
+                    row.gain = (s % 2 == 0) ? kBigGain : kSmallGain;
+                    seed.rows.push_back(row);
+                }
+                result.seeds.push_back(eastl::move(seed));
+            }
+            return result;
+        }
+
+        /// East holds 13 tiles and draws the first of the live wall: an own discard turn whose valued discard differs from Normal's.
+        TableView OwnTurnWithAPair() {
+            FixedWallSpec spec;
+            spec.hands[kSeat0] = "1p 2p 4p 5p 8p 8p 9p 1s 4s 4s 5s 7s Ew";
+            spec.hands[kSeat1] = kQuiet1;
+            spec.hands[kSeat2] = kQuiet2;
+            spec.hands[kSeat3] = kQuiet3;
+            spec.live = "Wd Rd Wd 1p";
+            spec.loose = "9m 9s";
+            const HandModel model = MakeModel(spec);
+            return MakeTableView(model, kSeat0);
+        }
+
         /// Seat 1 holds a pair of 5p and 4p 6p, so East's 5p is a chow or a pung for it; every tile is already visible when `spent`.
         TableView ChowAndPungWindow(bool spent) {
             FixedWallSpec spec;
@@ -117,6 +205,21 @@ namespace BECore::Mahjong::Arena {
         }
 
     }  // namespace
+
+    /// The bytes of the claim study's report are fixed: the engine of seeds is shared with the discard charts and must not move them.
+    TEST(ArenaChartsRunTest, TheClaimReportKeepsItsBytes) {
+        ChartsConfig config;
+        config.first = kGoldenFirst;
+        config.count = kGoldenSeeds;
+        config.worlds = kGoldenWorlds;
+        config.jobs = 1;
+        const ChartsResult result = RunOk(config);
+        ASSERT_GT(result.counters.rows, 0);
+        const String report = FormatChartsReport(result);
+        const String markdown = FormatChartsMarkdown(result);
+        EXPECT_EQ(Fnv1a64(report), kGoldenReportHash);
+        EXPECT_EQ(Fnv1a64(markdown), kGoldenMarkdownHash);
+    }
 
     TEST(ArenaChartsRunTest, TheSameResultAtAnyNumberOfJobs) {
         const ChartsResult one = RunOk(ConfigOf(kFirstSeed, kSeeds, 1));
@@ -355,6 +458,210 @@ namespace BECore::Mahjong::Arena {
             eastRows += Summarise(result, filter).rows;
         }
         EXPECT_EQ(eastRows, result.counters.rows);
+    }
+
+    TEST(ArenaChartsRunTest, TheDiscardSummaryIsTheSameAtAnyNumberOfJobs) {
+        const DiscardChartsResult one = RunDiscardOk(ConfigOf(kFirstSeed, kSeeds, 1));
+        ASSERT_GT(one.counters.rows, 0);
+        for (const int jobs : {kSomeJobs, kManyJobs}) {
+            const DiscardChartsResult other = RunDiscardOk(ConfigOf(kFirstSeed, kSeeds, jobs));
+            EXPECT_TRUE(SameDiscardCounters(one.counters, other.counters)) << "jobs " << jobs;
+            EXPECT_TRUE(SameDiscardRows(one, other)) << "jobs " << jobs;
+            EXPECT_TRUE(SameCell(SummariseDiscards(one, DiscardFilter{}), SummariseDiscards(other, DiscardFilter{}))) << "jobs " << jobs;
+            for (const ValueHeld held : EnumUtils<ValueHeld>::Values()) {
+                EXPECT_TRUE(SameCell(SummariseDiscards(one, ValueHeldFilter(held)), SummariseDiscards(other, ValueHeldFilter(held)))) << "jobs " << jobs;
+            }
+        }
+    }
+
+    TEST(ArenaChartsRunTest, TwoHalvesOfADiscardRangeHaveTheCountersOfTheWholeAdded) {
+        const DiscardChartsResult& whole = WholeDiscards();
+        const DiscardChartsResult head = RunDiscardOk(ConfigOf(kFirstSeed, kHalf, kSomeJobs));
+        const DiscardChartsResult tail = RunDiscardOk(ConfigOf(kFirstSeed + kHalf, kSeeds - kHalf, kSomeJobs));
+        DiscardCounters sum = head.counters;
+        sum.Add(tail.counters);
+        EXPECT_TRUE(SameDiscardCounters(whole.counters, sum));
+        for (size_t i = 0; i < whole.seeds.size(); ++i) {
+            const SeedDiscardRows& part = i < static_cast<size_t>(kHalf) ? head.seeds[i] : tail.seeds[i - static_cast<size_t>(kHalf)];
+            EXPECT_EQ(whole.seeds[i].seed, kFirstSeed + static_cast<uint32_t>(i));
+            EXPECT_EQ(part.seed, whole.seeds[i].seed);
+            EXPECT_EQ(part.rows.size(), whole.seeds[i].rows.size());
+        }
+    }
+
+    TEST(ArenaChartsRunTest, TheCountersOfADiscardResultAreTheSumOfTheSeedsAndAddUp) {
+        const DiscardChartsResult& result = WholeDiscards();
+        ASSERT_EQ(result.seeds.size(), static_cast<size_t>(kSeeds));
+        EXPECT_EQ(result.counters.hands, kSeeds);
+        int64_t rows = 0;
+        for (const SeedDiscardRows& seed : result.seeds) {
+            rows += static_cast<int64_t>(seed.rows.size());
+        }
+        EXPECT_EQ(rows, result.counters.rows);
+        const DiscardCounters& c = result.counters;
+        EXPECT_GT(c.ownTurns, 0);
+        EXPECT_EQ(c.ownTurns, c.otherStep + c.noValue + c.sameAsNormal + c.dropped + c.rows);
+    }
+
+    TEST(ArenaChartsRunTest, ADiscardHandThatFailsIsAnErrorOfTheLowestSeedWhateverTheJobs) {
+        const DiscardHandSource source = [](uint32_t seed) -> std::expected<DiscardTurns, String> {
+            if (seed == kFailingSeed || seed == kLaterFailingSeed) {
+                return std::unexpected(Format("seed {}: the model refused the action", seed));
+            }
+            return DiscardTurns{};
+        };
+        for (const int jobs : {1, kSomeJobs, kManyJobs}) {
+            const std::expected<DiscardChartsResult, String> result = RunDiscardCharts(ConfigOf(kFirstSeed, kSeeds, jobs), source);
+            ASSERT_FALSE(result.has_value()) << "jobs " << jobs;
+            EXPECT_NE(result.error().find(Format("seed {}:", kFailingSeed)), String::npos) << result.error().c_str();
+            EXPECT_EQ(result.error().find(Format("seed {}:", kLaterFailingSeed)), String::npos) << result.error().c_str();
+        }
+    }
+
+    TEST(ArenaChartsRunTest, ATurnThatCannotBeMeasuredIsAnErrorNamingTheSeedAndTheTurn) {
+        const DiscardHandSource source = [](uint32_t seed) -> std::expected<DiscardTurns, String> {
+            DiscardTurns turns;
+            if (seed == kFailingSeed) {
+                turns.turns.push_back({0, TableView{}, DiscardPair{}});
+            }
+            return turns;
+        };
+        const std::expected<DiscardChartsResult, String> result = RunDiscardCharts(ConfigOf(kFirstSeed, kSeeds, kSomeJobs), source);
+        ASSERT_FALSE(result.has_value());
+        EXPECT_NE(result.error().find(Format("seed {} turn 0", kFailingSeed)), String::npos) << result.error().c_str();
+    }
+
+    TEST(ArenaChartsRunTest, ATurnThatCannotBeAnalysedIsCountedAsDroppedAndAMeasuredOneAsARow) {
+        const TableView open = OwnTurnWithAPair();
+        const DiscardSelection selection = SelectDiscardPair(open);
+        ASSERT_EQ(selection.outcome, DiscardOutcome::Measured);
+        TableView spent = open;
+        spent.visible.fill(kCopiesPerTile);
+        const DiscardHandSource source = [&](uint32_t) -> std::expected<DiscardTurns, String> {
+            DiscardTurns turns;
+            turns.ownTurns = 2;
+            turns.turns.push_back({0, open, selection.pair});
+            turns.turns.push_back({1, spent, selection.pair});
+            return turns;
+        };
+        const std::expected<DiscardChartsResult, String> run = RunDiscardCharts(ConfigOf(kFirstSeed, kHalf, kSomeJobs), source);
+        ASSERT_TRUE(run.has_value()) << (run.has_value() ? "" : run.error().c_str());
+        EXPECT_EQ(run->counters.hands, kHalf);
+        EXPECT_EQ(run->counters.ownTurns, 2 * kHalf);
+        EXPECT_EQ(run->counters.dropped, kHalf);
+        EXPECT_EQ(run->counters.rows, kHalf);
+        for (const SeedDiscardRows& seed : run->seeds) {
+            EXPECT_EQ(seed.rows.size(), 1U);
+        }
+    }
+
+    TEST(ArenaChartsRunTest, TheIntervalOfADiscardCellIsMeanCiOfThePerSeedMeans) {
+        const DiscardChartsResult& result = WholeDiscards();
+        for (const ValueHeld held : EnumUtils<ValueHeld>::Values()) {
+            Vector<double> means;
+            int64_t rows = 0;
+            for (const SeedDiscardRows& seed : result.seeds) {
+                double sum = 0.0;
+                int count = 0;
+                for (const DiscardRow& row : seed.rows) {
+                    if (row.cls.valueHeld == held) {
+                        sum += row.gain;
+                        ++count;
+                    }
+                }
+                rows += count;
+                if (count > 0) {
+                    means.push_back(sum / count);
+                }
+            }
+            const DiscardCell cell = SummariseDiscards(result, ValueHeldFilter(held));
+            const MeanInterval expected = MeanCi(means);
+            EXPECT_EQ(cell.rows, rows);
+            EXPECT_EQ(cell.seeds, static_cast<int64_t>(means.size()));
+            EXPECT_EQ(cell.gain.n, expected.n);
+            EXPECT_EQ(cell.gain.mean, expected.mean);
+            EXPECT_EQ(cell.gain.half, expected.half);
+        }
+    }
+
+    TEST(ArenaChartsRunTest, ADiscardCellUnderTheFewRowsLimitIsFewAndNeverSignificant) {
+        const DiscardChartsResult thin = MadeDiscardResult(8, 2);
+        const DiscardCell thinCell = SummariseDiscards(thin, DiscardFilter{});
+        EXPECT_EQ(thinCell.rows, 16);
+        EXPECT_TRUE(thinCell.few);
+        EXPECT_TRUE(IsSignificant(thinCell.gain));
+        EXPECT_FALSE(thinCell.significant);
+
+        const DiscardCell thickCell = SummariseDiscards(MadeDiscardResult(20, 2), DiscardFilter{});
+        EXPECT_EQ(thickCell.rows, 40);
+        EXPECT_FALSE(thickCell.few);
+        EXPECT_TRUE(thickCell.significant);
+
+        const DiscardCell empty = SummariseDiscards(DiscardChartsResult{}, DiscardFilter{});
+        EXPECT_EQ(empty.rows, 0);
+        EXPECT_EQ(empty.seeds, 0);
+        EXPECT_FALSE(empty.gain.hasInterval);
+        EXPECT_TRUE(empty.few);
+        EXPECT_FALSE(empty.significant);
+    }
+
+    TEST(ArenaChartsRunTest, TheOneWayDiscardTablesAddUpTheCellsOfTheMainTable) {
+        const DiscardChartsResult& result = WholeDiscards();
+        int64_t total = 0;
+        Array<int64_t, EnumUtils<ValueHeld>::Count()> byHeld{};
+        Array<int64_t, EnumUtils<DiscardShanten>::Count()> byShanten{};
+        Array<int64_t, EnumUtils<ValueCost>::Count()> byCost{};
+        for (const ValueHeld held : EnumUtils<ValueHeld>::Values()) {
+            for (const DiscardShanten shanten : EnumUtils<DiscardShanten>::Values()) {
+                for (const ValueCost cost : EnumUtils<ValueCost>::Values()) {
+                    DiscardFilter filter;
+                    filter.valueHeld = held;
+                    filter.shanten = shanten;
+                    filter.cost = cost;
+                    const int64_t rows = SummariseDiscards(result, filter).rows;
+                    total += rows;
+                    byHeld[static_cast<size_t>(held)] += rows;
+                    byShanten[static_cast<size_t>(shanten)] += rows;
+                    byCost[static_cast<size_t>(cost)] += rows;
+                }
+            }
+        }
+        EXPECT_EQ(total, result.counters.rows);
+        EXPECT_EQ(SummariseDiscards(result, DiscardFilter{}).rows, result.counters.rows);
+        for (const ValueHeld held : EnumUtils<ValueHeld>::Values()) {
+            EXPECT_EQ(SummariseDiscards(result, ValueHeldFilter(held)).rows, byHeld[static_cast<size_t>(held)]);
+        }
+        for (const DiscardShanten shanten : EnumUtils<DiscardShanten>::Values()) {
+            DiscardFilter filter;
+            filter.shanten = shanten;
+            EXPECT_EQ(SummariseDiscards(result, filter).rows, byShanten[static_cast<size_t>(shanten)]);
+        }
+        for (const ValueCost cost : EnumUtils<ValueCost>::Values()) {
+            DiscardFilter filter;
+            filter.cost = cost;
+            EXPECT_EQ(SummariseDiscards(result, filter).rows, byCost[static_cast<size_t>(cost)]);
+        }
+        int64_t byStage = 0;
+        for (const WallStage stage : EnumUtils<WallStage>::Values()) {
+            DiscardFilter filter;
+            filter.stage = stage;
+            byStage += SummariseDiscards(result, filter).rows;
+        }
+        EXPECT_EQ(byStage, result.counters.rows);
+        int64_t bySets = 0;
+        for (const OpenSets sets : EnumUtils<OpenSets>::Values()) {
+            DiscardFilter filter;
+            filter.openSets = sets;
+            bySets += SummariseDiscards(result, filter).rows;
+        }
+        EXPECT_EQ(bySets, result.counters.rows);
+        int64_t byEast = 0;
+        for (const bool east : {false, true}) {
+            DiscardFilter filter;
+            filter.east = east;
+            byEast += SummariseDiscards(result, filter).rows;
+        }
+        EXPECT_EQ(byEast, result.counters.rows);
     }
 
 }  // namespace BECore::Mahjong::Arena
