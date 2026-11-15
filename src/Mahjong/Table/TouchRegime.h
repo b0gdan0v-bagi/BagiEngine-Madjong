@@ -71,7 +71,8 @@ namespace BECore::Mahjong {
     /// A height variant of the stack `ActionRow`: a canvas up to `maxWidth` units wide gives the row `height` units (the later, narrower
     /// variant wins, as in the file). A stack has the height it is given and starts its lines at its top, so this is how far above the
     /// bottom of the window the row reaches, whatever number of lines the buttons use. Each width is where k buttons of the claim window
-    /// stop fitting in a line, over `kCompactSafeShare`, and each height is the lines the canvas below it needs.
+    /// stop fitting in a line, over `kCompactSafeShare` (`k * kCompactButtonWidth + (k - 1) * kCompactSpacing` for k = 8, 4, 3, 2, rounded up
+    /// to 0.01), and each height is the lines the canvas below it needs.
     struct CompactRowVariant {
         float maxWidth;
         float height;

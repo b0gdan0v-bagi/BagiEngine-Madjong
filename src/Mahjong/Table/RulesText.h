@@ -34,7 +34,7 @@ namespace BECore::Mahjong {
     inline constexpr int kRulesInnerHeight = kRulesPlateHeight - 2 * kRulesPlatePadding;
     inline constexpr int kRulesTitleHeight = static_cast<int>(kModalTitleHeight);
     inline constexpr int kRulesPagerHeight = 28;
-    /// A line is a label of two rows of the 18 font. In the scene the lines are children of the plate itself, so a stack that hides what
+    /// A line is a label of two rows of the 18 font (a row is 23.5 units high, so two need 47). In the scene the lines are children of the plate itself, so a stack that hides what
     /// a page does not use needs no fixed height; they are the gap of the plate apart.
     inline constexpr int kRulesLineHeight = 48;
     inline constexpr int kRulesLineGap = kRulesBlockGap;

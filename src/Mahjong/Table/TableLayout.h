@@ -30,6 +30,7 @@ namespace BECore::Mahjong {
     /// a row of their own above the hand.
     inline constexpr float kNarrowViewWidth = 1080.0f;
     inline constexpr float kNarrowViewHeight = 768.0f;
+    /// Between 3:2 (narrow) and 16:10 (not).
     inline constexpr float kNarrowMaxAspect = 1.55f;
 
     /// The shape of a view of this size. The comparisons are the engine's `UIVariantCondition` ones, so the scene file and the layout

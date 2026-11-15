@@ -12,7 +12,7 @@ namespace BECore::Mahjong {
      * file.
      *
      * **Gold is the table's family of marks**, and nothing else on the table is gold; the wind bars, the danger marks and the dealer mark
-     * are roles of their own. Every gold mark has an alpha of its own, because the tests find a mark by its colour.
+     * are roles of their own. `kClaimLostFrame`, `kSeatTurnFrame` and `kPanelTurnLight` each have an alpha of their own, because the tests find a mark by its colour.
      */
 
     /// The table.
@@ -124,8 +124,8 @@ namespace BECore::Mahjong {
         {255, 255, 255, 60},   // highlight
         {16, 18, 26, 255},     // outline
         {90, 200, 120, 160},   // glowPrimary
-        {84, 74, 36, 255},     // winnerRow
-        {70, 84, 128, 255},    // placeBadge
+        {84, 74, 36, 255},     // winnerRow: the winner's row (a modal plate, so a gold `accent` border is allowed); a first place in the standings the same
+        {70, 84, 128, 255},    // placeBadge: the badge with the place number
     }};
     // clang-format off
     inline constexpr Array<const char*, kUiPaletteSize> kUiPaletteNames{{

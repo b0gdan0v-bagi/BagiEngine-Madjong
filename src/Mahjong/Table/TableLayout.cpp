@@ -38,7 +38,7 @@ namespace BECore::Mahjong {
             /// The top-left corner of the discard block.
             float discardX = 0.0f;
             float discardY = 0.0f;
-            /// The turn of every tile of the seat, and the size of the discard block as it is laid.
+            /// The turn of every tile of the seat (degrees clockwise), and the size of the discard block as it is laid.
             float rotation = 0.0f;
             float discardW = 0.0f;
             float discardH = 0.0f;
