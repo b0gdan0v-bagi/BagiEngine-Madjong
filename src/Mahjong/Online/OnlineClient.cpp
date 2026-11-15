@@ -18,10 +18,10 @@ namespace BECore::Mahjong {
         constexpr StringView kSessionRoomKey = "room";
         constexpr StringView kSessionTokenKey = "token";
 
-        /// The reason of `left` after the player's own `leave`: nothing to say.
+        /// The reason of the `left` that answers the player's own `leave`: no notice.
         constexpr StringView kLeftReasonLeft = "left";
 
-        /// A code from the server is shown in a notice only when it is plain: letters, digits and underscores, so a hostile server cannot put a text on the screen.
+        /// A server's code reaches a notice only as letters, digits and underscores, so a hostile server cannot put a text on the screen.
         String SafeArg(StringView code) {
             String arg;
             for (const char c : code) {
@@ -33,7 +33,8 @@ namespace BECore::Mahjong {
             return arg;
         }
 
-        /// The ends of a connection after which asking again would get the same answer (`RoomClient/CLAUDE.md`, "Where it stops"): the session is no use any more.
+        /// The closes after which asking again would get the same answer, so the session is no use any more ("Where it stops" bullet of
+        /// `engine/src/Modules/RoomClient/CLAUDE.md`).
         bool EndsTheSession(StringView reason) {
             return reason == RoomClientCloseReasons::kRoomGone || reason == RoomClientCloseReasons::kReplaced || reason == RoomClientCloseReasons::kGaveUp;
         }
@@ -405,7 +406,7 @@ namespace BECore::Mahjong {
 
     void OnlineClient::Settle() {
         if (_client.GetState() == RoomClientState::Connected && !_requesting && !_awaitingClose && !_browsing) {
-            // After an error of a request or a `left`: an open connection with nothing to do would be closed by the server some time later, with a notice nobody asked for
+            // After a refused request or a `left`: left open, the server would close it later with a notice nobody asked for
             CloseConnection();
         }
         SyncLobby();

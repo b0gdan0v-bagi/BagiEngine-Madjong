@@ -4,16 +4,15 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        /// Tiles of the whole set when no bonus tile is in play (a room never offers flowers).
+        /// A room never offers flowers, so the set has no bonus tiles.
         constexpr int kSetTiles = kKindCount * kCopiesPerTile;
-        /// Tiles in a kong: the three of the pung and the fourth.
         constexpr int kKongTileCount = 4;
 
         int MeldTileCount(const Meld& meld) {
             return meld.kind == MeldKind::Kong ? kKongTileCount : kTilesPerSet;
         }
 
-        /// A meld as the model keeps it: a concealed kong has no discarder and no claimed tile (the view says null).
+        /// The view says null for what a concealed kong has not: a discarder and a claimed tile.
         Meld Normalized(Meld meld) {
             if (meld.concealed) {
                 meld.from = 0;
@@ -33,7 +32,7 @@ namespace BECore::Mahjong {
             return table.phase != SessionPhase::Playing && table.result.has_value();
         }
 
-        /// The melds of @p seat as the hand lists them once the hand is over (all four are public then) or while it is played.
+        /// After the hand all four seats' melds are public; while it is played another seat's concealed kongs are hidden.
         void MeldsOf(const OnlineTable& table, Seat seat, Vector<Meld>& out) {
             out.clear();
             const size_t index = static_cast<size_t>(seat);
@@ -54,7 +53,6 @@ namespace BECore::Mahjong {
             }
         }
 
-        /// How many tiles of the set lie in hands, melds, bonus piles and the pile.
         int TilesOutsideTheWall(const DisplayState& state, const OnlineTable& table) {
             int outside = static_cast<int>(table.discards.size());
             for (const PlayerHand& hand : state.hand.hands) {
@@ -261,7 +259,7 @@ namespace BECore::Mahjong {
         const Snapshot& before = _before;
         const Snapshot& now = _now;
 
-        // The pile: what stayed (a common prefix), the entries that left (at most the claimed discard) and the new ones.
+        // The pile: a common prefix stayed, at most the claimed discard left, the rest is new.
         size_t kept = 0;
         while (kept < before.pile.size() && kept < now.pile.size() && before.pile[kept].tile == now.pile[kept].tile && before.pile[kept].seat == now.pile[kept].seat) {
             ++kept;
@@ -331,8 +329,7 @@ namespace BECore::Mahjong {
             return false;
         }
 
-        // The moves, in this order: the claim, then for each new discard the kongs of its seat before it, then the kongs that are left.
-        // The melds' indices are those of the display list of the new table.
+        // The order of the moves: the claim, then for each new discard the kongs of its seat before it, then the kongs that are left.
         Array<Vector<int>, kSeatCount> openAt;
         Array<Vector<int>, kSeatCount> concealedAt;
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
@@ -364,14 +361,12 @@ namespace BECore::Mahjong {
             }
             change.newConcealed = 0;
         };
-        // New open melds that are not the claim of the last discard cannot come from a claim: the checks above refused them.
-        // The claim found its meld among the open ones; its position in the list is another number when an own concealed kong lies before it.
+        // The claim's meld was found among the open ones; its place in the display list differs when an own concealed kong lies before it.
         if (claim) {
             claim->meld = indexOf(openAt[static_cast<size_t>(claim->seat)], static_cast<size_t>(claim->meld));
             _step.push_back(*claim);
         }
-        // A declaration turned on in this step belongs to the discard of its seat; with two discards of one seat in the step it cannot
-        // be told which, so none is marked.
+        // A declaration turned on in this step belongs to the one discard of its seat; with two it cannot be told which, so none is marked.
         Array<int, kSeatCount> discardsHere{};
         for (size_t entry = kept; entry < now.pile.size(); ++entry) {
             if (IsSeat(now.pile[entry].seat)) {
