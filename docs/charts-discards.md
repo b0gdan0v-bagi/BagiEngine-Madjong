@@ -300,7 +300,7 @@ The input of a later entry, with no change made here. The valued discard is a re
    valued tile is not one of Normal's ties, so a rule that takes it overrides Normal's ratings of shanten, acceptance, danger and
    keep value, and it needs a feature inside the class that the tables do not carry (which tile; whether the hand is concealed). The next measure is the rule itself, played in the arena over whole matches.
 2. **Nowhere else take a higher shanten.** At 2 shanten or more the valued discard that costs a shanten loses in every one of the
-   twelve cells (all hold): about 11 to 14 points at 2 shanten and about 5 to 13 at 3 or more; a better rule leaves Normal's choice
+   six cells (all hold in both ranges): about 11 to 14 points at 2 shanten and about 5 to 13 at 3 or more; a better rule leaves Normal's choice
    there. At 1 shanten no cell with a higher shanten holds. The one that gains (a pair or set, one higher: +14.8 and +17.7, 51 and 43
    rows) is `significant` in the discovery range only, so it is not a finding either.
 3. **The same direction as the claim charts.** The claim charts (`docs/charts-claims.md`) found that Normal passes value honours that
