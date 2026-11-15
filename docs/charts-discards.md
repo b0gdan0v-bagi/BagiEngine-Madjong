@@ -66,7 +66,65 @@ counted in each table).
 
 A class **holds** by the rule of `docs/charts-claims.md` ("Protocol", "How a finding is read"): it is `significant` in the discovery range and its confirmation
 mean has the same sign and is `significant` too. A `few` class that agrees in sign between the ranges is a lead, not a finding. The
-ranges and the commands of the study go into a "Protocol" section of this doc, written before the study is run.
+ranges and the commands of the study are in "Protocol" below, which was written before the study was run.
+
+## Protocol
+
+Fixed here, before any number of the study was looked at (the commit that adds this section comes before the run's commit; the cost
+runs below are on a range that is used for nothing else, and of their output only the counters and the times are used: a table of 20
+seeds is no basis for any class).
+
+| Range | Command | Seeds | Worlds |
+|-------|---------|-------|--------|
+| discovery | `BagiMahjongCharts --kind discards --first 500000 --seeds 1400 --worlds 100 --jobs 12 --markdown` | 500000 .. 501399 | 100 |
+| confirmation | `BagiMahjongCharts --kind discards --first 600000 --seeds 1400 --worlds 100 --jobs 12 --markdown` | 600000 .. 601399 | 100 |
+
+- The two ranges are disjoint, of the same size and with the same worlds. Neither touches the cost range (400000 .. 400019), the cost
+  range of the claim study (100000 .. 100019) or its two study ranges (200000 .. 202399 and 300000 .. 302399). The discovery range is
+  run first and read first. The confirmation range is run once, with the same build, and nothing is tuned between the two: no class, no
+  worlds, no seed count, no filter is changed after a number is seen. A run that fails (exit 1) is a defect, fixed with its own test,
+  and the run starts again on the same ranges. No other range is run.
+- The worlds are 100 a turn. The spread between turns (a discard is worth tens of points in one position and minus tens in another) is
+  far larger than the noise of the worlds of one row, so the seeds and rows are worth more than more worlds ("Cost" below).
+- The discovery range is expected to hold about 15 000 rows (about ten and a half a seed). A cell the thirds of the wall or the value
+  held thin out may stay `few`: that is a result.
+- `--jobs 12` is the threads of one run on a machine that other loops share; the output does not depend on it.
+- **How a finding is read.** The cells read are every cell of the main table (18) and of the six one-way tables (stage 3, open sets 3,
+  East 2, shanten 3, cost 2, value held 3: 16), 34 numbers in each range. A class **holds** when it is `significant` in the discovery
+  range and its confirmation mean has the same sign and is `significant` too. A class that holds is a **finding**. A class that is
+  `significant` in one range only, or whose confirmation has the other sign, **does not hold** and is said so. A `few` class that
+  agrees in sign between the two ranges is a **lead**, not a finding: its number is shown with its count and nothing is built on it.
+  Where Normal's rule loses is read from the sign: a class that holds with a positive gain is one where Normal's discard is the worse of
+  the two; one that holds with a negative gain is one where Normal's discard is the better.
+- A finding is a statement about the table of this program (the caveats below), against three Normal bots and one hand's points.
+
+## Cost
+
+`BagiMahjongCharts --kind discards --first 400000 --seeds 20 --worlds W --jobs 10` in Release (`macos-release`, 14 cores, shared with
+other loops: load average 13 to 77 during the runs), run before the protocol was fixed; only the counters and the times are used.
+`user` is the CPU time of all the threads.
+
+| Worlds W | Wall, s | CPU (user), s | CPU per seed, s | Own turns | Rows | Rows per seed |
+|----------|---------|---------------|-----------------|-----------|------|---------------|
+| 100 | 28.3 | 100.5 | 5.0 | 677 | 213 | 10.7 |
+| 250 | 62.4 | 254.7 | 12.7 | 677 | 213 | 10.7 |
+| 500 | 138.1 | 493.7 | 24.7 | 677 | 213 | 10.7 |
+
+The counters do not depend on W (the same turns): of 677 own turns, 114 are `otherStep`, 0 are `noValue`, 350 are `sameAsNormal` and 213
+are measured (31 percent of the own turns, 38 percent of the 563 that Normal answers in step 5); none is not analysable. The cost is
+linear in W and in the seeds. Twenty seeds on ten threads are two rounds on a loaded machine, so the wall time of this small run is
+long against its CPU time; for a long run the wall time is about CPU divided by the cores the machine really gives, which the
+claim study found to be about eight. For the target of about 15 minutes a run (about 7 200 CPU seconds) and at least about 10 000 rows
+in the discovery range:
+
+| W | Seeds in 7 200 CPU s | Rows | CPU for 1400 seeds, s | Wall at about 8 cores, min |
+|---|----------------------|------|-----------------------|----------------------------|
+| 100 | about 1 440 | about 15 300 | 7 000 | about 14.6 |
+| 250 | about 570 | about 6 000 | 17 800 | about 37 |
+| 500 | about 290 | about 3 100 | 34 600 | about 72 |
+
+W 250 or 500 would fit fewer than 10 000 rows in 15 minutes: fewer rows and fewer seeds for an interval whose width is set by the seeds
+and by the spread between turns. So W = 100 and 1400 seeds are chosen (about 15 000 rows, about 15 minutes at eight cores).
 
 ## Caveats
 
