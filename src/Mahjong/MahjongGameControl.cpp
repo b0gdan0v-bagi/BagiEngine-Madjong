@@ -475,14 +475,16 @@ namespace BECore::Mahjong {
         defaults.levels = _game.GetLevels();
         defaults.settings = _game.GetSettings();
         defaults.seed = _lastSeed;
-        const std::expected<SetStateDeal, ControlError> request = ParseSetState(state, defaults);
+        const std::expected<SetStateRequest, ControlError> request = ParseSetState(state, defaults);
         if (!request) {
             return std::unexpected(request.error());
         }
         if (const std::expected<void, ControlError> started = StartSetState(_game, *request); !started) {
             return started;
         }
-        _lastSeed = request->seed;
+        if (const SetStateDeal* deal = std::get_if<SetStateDeal>(&*request)) {
+            _lastSeed = deal->seed;
+        }
         return {};
     }
 

@@ -173,6 +173,12 @@ namespace BECore::Mahjong {
         /// (`BadSettings`, `BadDeal`). The control API's `set_state`.
         MatchStatus StartFixedMatch(uint32_t seed, const FixedStart& state);
 
+        /// Puts the table where `events` (a match log from its `Start`) leave it (`TableSession::ResumeMatch`): the seats and levels of
+        /// the first `Start` become the next match's, the setup and the rules close. Saved like any match a person begins, **never
+        /// uploaded**, and the log echoes into the match log file and the save. The caller checks the log replays first; a refusal
+        /// (the `ReplayError` of the session) changes nothing. The control API's `set_state`.
+        std::expected<void, ReplayError> StartFromLog(const Vector<MatchLogEvent>& events);
+
         /// Whether the panel `Setup` is open. Every new match and every control action close it. While it is open the table is not played.
         bool IsSetupOpen() const {
             return _setupOpen;

@@ -337,6 +337,28 @@ namespace BECore::Mahjong {
         return started;
     }
 
+    std::expected<void, ReplayError> MahjongGame::StartFromLog(const Vector<MatchLogEvent>& events) {
+        if (events.empty()) {
+            return std::unexpected(ReplayError{0, ReplayProblem::NoStart});
+        }
+        ApplyLanguage();
+        const bool wasRecorded = _recorder.IsRecording();
+        const bool wasUploaded = _upload.IsRecording();
+        _recorder.SetRecording(true);
+        _upload.SetRecording(false);
+        const MatchLogEvent& start = events.front();
+        if (std::expected<void, ReplayError> resumed = _session.ResumeMatch(events, start.seats, start.levels); !resumed) {
+            _recorder.SetRecording(wasRecorded);
+            _upload.SetRecording(wasUploaded);
+            return resumed;
+        }
+        _seats = start.seats;
+        _levels = start.levels;
+        CloseSetup();
+        CloseRules();
+        return {};
+    }
+
     void MahjongGame::FlushSave() {
         FollowOnlineSession();  // also with saving off: `StoredOnline()` follows the client
         if (!_store.Open(SaveDirectory())) {

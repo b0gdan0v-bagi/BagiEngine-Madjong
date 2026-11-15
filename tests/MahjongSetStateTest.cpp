@@ -13,10 +13,33 @@ namespace BECore::Mahjong::Tests {
     namespace {
 
         constexpr uint32_t kDefaultSeed = 5;
+        constexpr uint32_t kLogSeed = 41;
         constexpr uint32_t kGivenSeed = 4000000000;
         constexpr int kSecondHandPlayed = 5;
         constexpr int kLastHandOfAShortMatch = kShortMatchHands - 1;
         constexpr const char* kInvalidParams = "invalid_params";
+
+        /// The log of the first hand of a match of four computers (the `Start`, the hand, the actions, its settlement and the next hand
+        /// dealt), as the text of a `.jsonl` file.
+        String LogText(Vector<MatchLogEvent>* events = nullptr) {
+            Match match;
+            TableSession session(match);
+            MatchLog log;
+            session.SetLogSink(&log);
+            const SeatSetup computers{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
+            EXPECT_TRUE(session.StartMatch(MahjongSettings{}, kLogSeed, computers, ComputerLevel::Easy).has_value());
+            session.RunComputers();
+            EXPECT_TRUE(session.NextHand().has_value());
+            String text;
+            for (const MatchLogEvent& event : log.Events()) {
+                text += DumpJson(EventToJson(event));
+                text += '\n';
+            }
+            if (events != nullptr) {
+                *events = log.Events();
+            }
+            return text;
+        }
 
         class MahjongSetStateTest : public ::testing::Test {
         protected:
@@ -40,13 +63,24 @@ namespace BECore::Mahjong::Tests {
                 return state;
             }
 
-            static std::expected<SetStateDeal, ControlError> Read(const Json& state) {
+            static std::expected<SetStateRequest, ControlError> Parse(const Json& state) {
                 return ParseSetState(state, Defaults());
+            }
+
+            /// The deal of a state that has one (a failure, and an empty deal, when it is the other form).
+            static std::expected<SetStateDeal, ControlError> Read(const Json& state) {
+                auto request = Parse(state);
+                if (!request) {
+                    return std::unexpected(request.error());
+                }
+                const SetStateDeal* deal = std::get_if<SetStateDeal>(&*request);
+                EXPECT_NE(deal, nullptr);
+                return deal ? *deal : SetStateDeal{};
             }
 
             /// `state` is refused as `invalid_params` and the message holds `fragment`.
             static void ExpectRefused(const Json& state, const char* fragment) {
-                const auto read = Read(state);
+                const auto read = Parse(state);
                 ASSERT_FALSE(read.has_value()) << DumpJson(state).c_str();
                 EXPECT_EQ(String(read.error().code.c_str(), read.error().code.size()), kInvalidParams) << DumpJson(state).c_str();
                 EXPECT_NE(String(read.error().message.c_str(), read.error().message.size()).find(fragment), String::npos)
@@ -286,6 +320,91 @@ namespace BECore::Mahjong::Tests {
         ExpectRefused(state, "limit");
         state["settings"] = Json::parse(R"({"startingScore": 0.5})");
         ExpectRefused(state, "startingScore");
+    }
+
+    // ----- the form with a log -----
+
+    TEST_F(MahjongSetStateTest, ALogTakesTheSeatsAndLevelsOfTheCall) {
+        Vector<MatchLogEvent> played;
+        const String text = LogText(&played);
+        Json state = Json::object();
+        state["log"] = MakeJsonString(StringView(text.c_str(), text.size()));
+        state["seats"] = "PPCC";
+        state["levels"] = Json::array({3, 4, 5, 6});
+
+        const auto request = Parse(state);
+        ASSERT_TRUE(request.has_value());
+        const SetStateLog* log = std::get_if<SetStateLog>(&*request);
+        ASSERT_NE(log, nullptr);
+        ASSERT_EQ(log->events.size(), played.size());
+        EXPECT_EQ(SeatsToLetters(log->events.front().seats), "PPCC");
+        EXPECT_EQ(LevelNumber(log->events.front().levels[2]), 5);
+        EXPECT_EQ(log->events.front().seed, played.front().seed);
+        EXPECT_EQ(log->events.back(), played.back());
+
+        state.erase("seats");
+        state.erase("levels");
+        const auto defaulted = Parse(state);
+        ASSERT_TRUE(defaulted.has_value());
+        EXPECT_EQ(std::get<SetStateLog>(*defaulted).events.front().seats, Defaults().seats);
+        EXPECT_EQ(std::get<SetStateLog>(*defaulted).events.front().levels, Defaults().levels);
+    }
+
+    TEST_F(MahjongSetStateTest, UntilKeepsTheFirstEvents) {
+        Vector<MatchLogEvent> played;
+        const String text = LogText(&played);
+        Json state = Json::object();
+        state["log"] = MakeJsonString(StringView(text.c_str(), text.size()));
+
+        state["until"] = 1;
+        EXPECT_EQ(std::get<SetStateLog>(*Parse(state)).events.size(), 1u);
+        state["until"] = played.size() - 1;
+        EXPECT_EQ(std::get<SetStateLog>(*Parse(state)).events.size(), played.size() - 1);
+        state["until"] = played.size();
+        EXPECT_EQ(std::get<SetStateLog>(*Parse(state)).events.size(), played.size());
+
+        for (const Json& bad : {Json(0), Json(-1), Json(played.size() + 1), Json(1.5), Json("2"), Json(nullptr)}) {
+            state["until"] = bad;
+            ExpectRefused(state, "until");
+        }
+    }
+
+    TEST_F(MahjongSetStateTest, ABadLogIsRefusedWithTheLineNamed) {
+        Json state = Json::object();
+        state["log"] = 5;
+        ExpectRefused(state, "'log'");
+        state["log"] = "";
+        ExpectRefused(state, "no events");
+        state["log"] = "\n  \n";
+        ExpectRefused(state, "no events");
+        state["log"] = "not json";
+        ExpectRefused(state, "line 1");
+
+        const String text = Format("{}{{\"event\": \"nothing\"}}\n", LogText());
+        state["log"] = MakeJsonString(StringView(text.c_str(), text.size()));
+        ExpectRefused(state, "line ");
+    }
+
+    TEST_F(MahjongSetStateTest, ALogHasNoKeyOfTheDealForm) {
+        const String text = LogText();
+        const Json log = MakeJsonString(StringView(text.c_str(), text.size()));
+        for (const char* key : {"seed", "settings", "scores", "handsPlayed"}) {
+            Json state = Json::object();
+            state["log"] = log;
+            state[key] = Json::object();
+            ExpectRefused(state, key);
+        }
+        Json both = Base();
+        both["log"] = log;
+        ExpectRefused(both, "together");
+        Json untilWithADeal = Base();
+        untilWithADeal["until"] = 3;
+        ExpectRefused(untilWithADeal, "until");
+        Json levels = Json::object();
+        levels["log"] = log;
+        levels["level"] = 3;
+        levels["levels"] = Json::array({1, 2, 3, 4});
+        ExpectRefused(levels, "together");
     }
 
 }  // namespace BECore::Mahjong::Tests

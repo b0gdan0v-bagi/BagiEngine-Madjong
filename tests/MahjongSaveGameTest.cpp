@@ -21,6 +21,7 @@ namespace BECore::Mahjong::Tests {
         constexpr int kStepsPerSeed = 300;
         constexpr int kPersonActions = 2;
         constexpr int kMatchHands = 8;
+        constexpr int kEventsKept = 20;
         constexpr const char* kFolderPrefix = "BagiMahjongSaveGameTest";
         constexpr const char* kMatchFile = "match.save";
         constexpr const char* kPrefsFile = "settings.save";
@@ -475,6 +476,24 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Actions(*second), Actions(*game));
         EXPECT_EQ(second->GetLocalMatch().HandsPlayed(), 5);
         EXPECT_EQ(second->GetLocalMatch().Scores()[3], 900);
+    }
+
+    TEST_F(MahjongSaveGameTest, ALogSetByTheControlIsSavedAndContinues) {
+        IntrusivePtr<MahjongGame> game = NewGame();
+        Reset(*game, "{\"seed\": 3, \"seats\": \"CCCC\", \"hands\": 8}");
+        const String text = ReadFile(game->GetMatchLog().Path());
+        Json request = Json::object();
+        request["log"] = MakeJsonString(StringView(text.c_str(), text.size()));
+        request["seats"] = "PPPP";
+        request["until"] = kEventsKept;
+        ASSERT_TRUE(game->AsControllable()->SetState(request).has_value());
+        game->FlushSave();
+        ASSERT_TRUE(fs::exists(Slot(kMatchFile)));
+
+        IntrusivePtr<MahjongGame> second = StartedGame();
+        ASSERT_TRUE(second->CanContinue());
+        EXPECT_EQ(State(*second), State(*game));
+        EXPECT_EQ(Actions(*second), Actions(*game));
     }
 
     TEST_F(MahjongSaveGameTest, TheChoicesOfSetupAreTheDefaultsOfTheNextGame) {

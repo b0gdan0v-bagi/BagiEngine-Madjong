@@ -4,6 +4,7 @@
 #include <Mahjong/Game/ComputerLevel.h>
 #include <Mahjong/Game/FixedWall.h>
 #include <Mahjong/Game/MahjongSettings.h>
+#include <Mahjong/Game/MatchLog.h>
 #include <Mahjong/Game/TableSession.h>
 
 namespace BECore::Mahjong {
@@ -32,21 +33,34 @@ namespace BECore::Mahjong {
         MahjongSettings settings;
     };
 
-    /**
-     * @brief Reads the `params` of a `set_state` (`src/Mahjong/CLAUDE.md`, "Control API"): `{"deal": {...}, "seed"?, "seats"?, "level"? |
-     *        "levels"?, "settings"?, "scores"?, "handsPlayed"?}`. A pure function of the JSON and the defaults; it touches no game.
-     *
-     * Client data: only the checked helpers of `BECore/Control/Json.h`. Anything malformed or impossible (a deal the strict wall
-     * refuses, a `handsPlayed` outside the match, `deal` with `log`, neither, `level` with `levels`) is `invalid_params` whose text
-     * names the member. `deal` is the object `FixedDealFromJson` reads, so a `state` copied out of a match log is a valid `set_state`.
-     */
-    [[nodiscard]] std::expected<SetStateDeal, ControlError> ParseSetState(const Json& state, const SetStateDefaults& defaults);
+    /// A `set_state` with the prefix of a match log: the events to put the match where they leave it, the first `Start` already
+    /// carrying the seats and levels of the call.
+    struct SetStateLog {
+        Vector<MatchLogEvent> events;
+    };
+
+    using SetStateRequest = Variant<SetStateDeal, SetStateLog>;
 
     /**
-     * @brief Starts the match of `request` on `game`: the position is tried on a scratch `Match` first, and only then the game's
-     *        seats, levels and settings are set (kept for the next match, as after `reset`), the match begins
-     *        (`MahjongGame::StartFixedMatch`) and the computers run to the first person. A refusal changes nothing.
+     * @brief Reads the `params` of a `set_state` (`src/Mahjong/CLAUDE.md`, "Control API"), one of two forms. A pure function of the
+     *        JSON and the defaults; it touches no game.
+     *
+     * - `{"deal": {...}, "seed"?, "seats"?, "level"? | "levels"?, "settings"?, "scores"?, "handsPlayed"?}`: a match from a fixed deal.
+     *   `deal` is the object `FixedDealFromJson` reads, so a `state` copied out of a match log is a valid `set_state`.
+     * - `{"log": "<text of a .jsonl>", "until"?, "seats"?, "level"? | "levels"?}`: the first `until` events of a match log (all when
+     *   absent; 0 or more than there are is refused), parsed by `ParseMatchLog`.
+     *
+     * Client data: only the checked helpers of `BECore/Control/Json.h`. Anything malformed or impossible (a deal the strict wall
+     * refuses, a `handsPlayed` outside the match, a log that does not parse, a key of the other form, `deal` with `log`, neither,
+     * `level` with `levels`) is `invalid_params` whose text names the member.
      */
-    std::expected<void, ControlError> StartSetState(MahjongGame& game, const SetStateDeal& request);
+    [[nodiscard]] std::expected<SetStateRequest, ControlError> ParseSetState(const Json& state, const SetStateDefaults& defaults);
+
+    /**
+     * @brief Starts the match of `request` on `game`: the position or the log is tried on a scratch `Match` first, and only then the
+     *        game's seats, levels (and settings, for a deal) are set (kept for the next match, as after `reset`), the match begins
+     *        (`MahjongGame::StartFixedMatch`, `StartFromLog`) and the computers run to the first person. A refusal changes nothing.
+     */
+    std::expected<void, ControlError> StartSetState(MahjongGame& game, const SetStateRequest& request);
 
 }  // namespace BECore::Mahjong

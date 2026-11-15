@@ -10,6 +10,7 @@ namespace BECore::Mahjong {
 
         constexpr StringView kKeyDeal = "deal";
         constexpr StringView kKeyLog = "log";
+        constexpr StringView kKeyUntil = "until";
         constexpr StringView kKeySeed = "seed";
         constexpr StringView kKeySeats = "seats";
         constexpr StringView kKeyLevel = "level";
@@ -166,77 +167,153 @@ namespace BECore::Mahjong {
             return scores;
         }
 
+        /// The form with `deal` (`state` has it, and no `log`).
+        std::expected<SetStateDeal, ControlError> ParseDeal(const Json& state, const SetStateDefaults& defaults) {
+            if (Has(state, kKeyUntil)) {
+                return InvalidParams("'until' is a key of 'log', not of 'deal'");
+            }
+            const Json* dealMember = FindJsonMember(state, kKeyDeal);
+
+            SetStateDeal request;
+            const auto seed = ReadSeed(state, defaults.seed);
+            if (!seed) {
+                return std::unexpected(seed.error());
+            }
+            request.seed = *seed;
+            request.seats = defaults.seats;
+            request.levels = defaults.levels;
+            if (const auto read = ReadSeatsAndLevels(state, request.seats, request.levels); !read) {
+                return std::unexpected(read.error());
+            }
+            const auto settings = ReadSettings(state, defaults.settings);
+            if (!settings) {
+                return std::unexpected(settings.error());
+            }
+            request.settings = *settings;
+
+            if (Has(state, kKeyHandsPlayed)) {
+                const auto played = ReadInt(state, kKeyHandsPlayed, kKeyHandsPlayed, 0, request.settings.handsPerMatch - 1);
+                if (!played) {
+                    return std::unexpected(played.error());
+                }
+                request.start.handsPlayed = static_cast<int>(*played);
+            }
+            const auto scores = ReadScores(state, request.settings.startingScore);
+            if (!scores) {
+                return std::unexpected(scores.error());
+            }
+            request.start.scores = *scores;
+
+            auto deal = FixedDealFromJson(*dealMember);
+            if (!deal) {
+                return InvalidParams(Format("'deal': {}", deal.error()));
+            }
+            request.start.deal = std::move(*deal);
+            if (const auto wall = TryBuildFixedWall(request.start.deal, request.settings.flowers); !wall) {
+                return InvalidParams(Format("the deal cannot be played: {}", wall.error()));
+            }
+            return request;
+        }
+
+        /// The form with `log` (`state` has it, and no `deal`).
+        std::expected<SetStateLog, ControlError> ParseLog(const Json& state, const SetStateDefaults& defaults) {
+            for (const StringView key : {kKeySeed, kKeySettings, kKeyScores, kKeyHandsPlayed}) {
+                if (Has(state, key)) {
+                    return InvalidParams(Format("'{}' is a key of 'deal', not of 'log'", key));
+                }
+            }
+            const Optional<String> text = GetJsonString(state, kKeyLog);
+            if (!text) {
+                return InvalidParams("'log' has to be a string with the text of a match log (JSON lines)");
+            }
+            std::expected<Vector<MatchLogEvent>, String> parsed = ParseMatchLog(StringView(text->c_str(), text->size()));
+            if (!parsed) {
+                return InvalidParams(Format("'log': {}", parsed.error()));
+            }
+            Vector<MatchLogEvent>& events = *parsed;
+            if (events.empty()) {
+                return InvalidParams("'log' has no events");
+            }
+            if (Has(state, kKeyUntil)) {
+                const auto until = ReadInt(state, kKeyUntil, kKeyUntil, 1, static_cast<int64_t>(events.size()));
+                if (!until) {
+                    return std::unexpected(until.error());
+                }
+                events.resize(static_cast<size_t>(*until));
+            }
+            SeatSetup seats = defaults.seats;
+            SeatLevels levels = defaults.levels;
+            if (const auto read = ReadSeatsAndLevels(state, seats, levels); !read) {
+                return std::unexpected(read.error());
+            }
+            if (events.front().kind == MatchLogKind::Start) {  // a first event that is none is the replay's refusal
+                events.front().seats = seats;
+                events.front().levels = levels;
+            }
+            return SetStateLog{std::move(events)};
+        }
+
+        std::expected<void, ControlError> StartDeal(MahjongGame& game, const SetStateDeal& request) {
+            Match scratch;
+            if (const MatchStatus tried = scratch.Start(request.settings, request.seed, request.start); !tried) {
+                return InvalidParams(Format("the position cannot be played: {}", EnumUtils<MatchError>::ToString(tried.error())));
+            }
+            const MahjongSettings oldSettings = game.GetSettings();
+            const SeatSetup oldSeats = game.GetSeats();
+            const SeatLevels oldLevels = game.GetLevels();
+            game.SetSettings(request.settings);
+            game.SetSeats(request.seats);
+            game.SetLevels(request.levels);
+            if (const MatchStatus started = game.StartFixedMatch(request.seed, request.start); !started) {
+                game.SetSettings(oldSettings);  // cannot happen after the scratch match took it, but a refusal must change nothing
+                game.SetSeats(oldSeats);
+                game.SetLevels(oldLevels);
+                return InvalidParams(Format("the match did not start: {}", EnumUtils<MatchError>::ToString(started.error())));
+            }
+            return {};
+        }
+
+        std::expected<void, ControlError> StartLog(MahjongGame& game, const SetStateLog& request) {
+            Match scratch;
+            if (const ReplayStatus replayed = ReplayMatchLog(request.events, scratch); !replayed) {
+                return InvalidParams(Format("the log does not replay: event {} ({})", replayed.error().index, EnumUtils<ReplayProblem>::ToString(replayed.error().problem)));
+            }
+            if (const auto started = game.StartFromLog(request.events); !started) {
+                return InvalidParams(Format("the match did not start: event {} ({})", started.error().index, EnumUtils<ReplayProblem>::ToString(started.error().problem)));
+            }
+            return {};
+        }
+
     }  // namespace
 
-    std::expected<SetStateDeal, ControlError> ParseSetState(const Json& state, const SetStateDefaults& defaults) {
+    std::expected<SetStateRequest, ControlError> ParseSetState(const Json& state, const SetStateDefaults& defaults) {
         if (!state.is_object()) {
-            return InvalidParams("set_state takes an object with 'deal', a position to start a match from");
+            return InvalidParams("set_state takes an object with 'deal' (a position) or 'log' (a match log)");
         }
-        if (Has(state, kKeyLog)) {
-            return InvalidParams(Has(state, kKeyDeal) ? "'deal' and 'log' cannot be given together" : "'log' is not supported");
+        const bool hasDeal = Has(state, kKeyDeal);
+        const bool hasLog = Has(state, kKeyLog);
+        if (hasDeal == hasLog) {
+            return InvalidParams(hasDeal ? "'deal' and 'log' cannot be given together" : "set_state needs 'deal' (a position) or 'log' (a match log)");
         }
-        const Json* dealMember = FindJsonMember(state, kKeyDeal);
-        if (dealMember == nullptr) {
-            return InvalidParams("set_state needs 'deal' (a position) or 'log' (a match log)");
-        }
-
-        SetStateDeal request;
-        const auto seed = ReadSeed(state, defaults.seed);
-        if (!seed) {
-            return std::unexpected(seed.error());
-        }
-        request.seed = *seed;
-        request.seats = defaults.seats;
-        request.levels = defaults.levels;
-        if (const auto read = ReadSeatsAndLevels(state, request.seats, request.levels); !read) {
-            return std::unexpected(read.error());
-        }
-        const auto settings = ReadSettings(state, defaults.settings);
-        if (!settings) {
-            return std::unexpected(settings.error());
-        }
-        request.settings = *settings;
-
-        if (Has(state, kKeyHandsPlayed)) {
-            const auto played = ReadInt(state, kKeyHandsPlayed, kKeyHandsPlayed, 0, request.settings.handsPerMatch - 1);
-            if (!played) {
-                return std::unexpected(played.error());
+        if (hasLog) {
+            auto log = ParseLog(state, defaults);
+            if (!log) {
+                return std::unexpected(log.error());
             }
-            request.start.handsPlayed = static_cast<int>(*played);
+            return SetStateRequest(std::move(*log));
         }
-        const auto scores = ReadScores(state, request.settings.startingScore);
-        if (!scores) {
-            return std::unexpected(scores.error());
-        }
-        request.start.scores = *scores;
-
-        auto deal = FixedDealFromJson(*dealMember);
+        auto deal = ParseDeal(state, defaults);
         if (!deal) {
-            return InvalidParams(Format("'deal': {}", deal.error()));
+            return std::unexpected(deal.error());
         }
-        request.start.deal = std::move(*deal);
-        if (const auto wall = TryBuildFixedWall(request.start.deal, request.settings.flowers); !wall) {
-            return InvalidParams(Format("the deal cannot be played: {}", wall.error()));
-        }
-        return request;
+        return SetStateRequest(std::move(*deal));
     }
 
-    std::expected<void, ControlError> StartSetState(MahjongGame& game, const SetStateDeal& request) {
-        Match scratch;
-        if (const MatchStatus tried = scratch.Start(request.settings, request.seed, request.start); !tried) {
-            return InvalidParams(Format("the position cannot be played: {}", EnumUtils<MatchError>::ToString(tried.error())));
-        }
-        const MahjongSettings oldSettings = game.GetSettings();
-        const SeatSetup oldSeats = game.GetSeats();
-        const SeatLevels oldLevels = game.GetLevels();
-        game.SetSettings(request.settings);
-        game.SetSeats(request.seats);
-        game.SetLevels(request.levels);
-        if (const MatchStatus started = game.StartFixedMatch(request.seed, request.start); !started) {
-            game.SetSettings(oldSettings);  // cannot happen after the scratch match took it, but a refusal must change nothing
-            game.SetSeats(oldSeats);
-            game.SetLevels(oldLevels);
-            return InvalidParams(Format("the match did not start: {}", EnumUtils<MatchError>::ToString(started.error())));
+    std::expected<void, ControlError> StartSetState(MahjongGame& game, const SetStateRequest& request) {
+        const std::expected<void, ControlError> started =
+            std::holds_alternative<SetStateDeal>(request) ? StartDeal(game, std::get<SetStateDeal>(request)) : StartLog(game, std::get<SetStateLog>(request));
+        if (!started) {
+            return started;
         }
         game.GetLocalSession().RunComputers();
         return {};

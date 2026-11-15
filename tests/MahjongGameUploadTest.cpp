@@ -22,6 +22,7 @@ namespace BECore::Mahjong::Tests {
         constexpr uint32_t kSeed = 7;
         constexpr uint32_t kOtherSeed = 8;
         constexpr int kHandLimitPerMatch = 200;
+        constexpr int kEventsKept = 20;
         constexpr const char* kFolderStem = "bagi-mahjong-game-upload";
         constexpr const char* kSaveFolderStem = "bagi-mahjong-game-upload-saves";
         constexpr const char* kMatchFile = "match.save";
@@ -198,6 +199,23 @@ namespace BECore::Mahjong::Tests {
         // the next match of a person is uploaded again
         ASSERT_TRUE(game->StartMatch(kSeed).has_value());
         EXPECT_TRUE(game->GetUpload().IsRecording());
+    }
+
+    TEST_F(MahjongGameUploadTest, ALogSetByTheControlIsNotUploaded) {
+        ASSERT_TRUE(game->StartMatch(kSeed).has_value());
+        ASSERT_NO_FATAL_FAILURE(PlayHand());
+        game->Stop();
+        const String text = ReadFile(game->GetMatchLog().Path());
+
+        Upload();
+        Json request = Json::object();
+        request["log"] = MakeJsonString(StringView(text.c_str(), text.size()));
+        request["seats"] = "PPPP";
+        request["until"] = kEventsKept;
+        ASSERT_TRUE(game->AsControllable()->SetState(request).has_value());
+        EXPECT_FALSE(game->GetUpload().IsRecording());
+        game->Stop();
+        EXPECT_TRUE(sink.pieces.empty());
     }
 
     TEST_F(MahjongGameUploadTest, TheMatchIdIs32HexDigitsAndTwoMatchesDiffer) {

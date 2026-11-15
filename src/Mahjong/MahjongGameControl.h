@@ -71,8 +71,8 @@ namespace BECore::Mahjong {
      * `list_actions` gives `ActionToJson` of the `LegalActions` of the person seat that has to act, `next_hand` in `hand_over`, nothing
      * otherwise; `perform_action` accepts each as listed. `illegal_action` is a well-formed action that is not listed now,
      * `invalid_params` a malformed one (the message names the key). `reset` takes the options of `src/Mahjong/CLAUDE.md` "Control API",
-     * all optional; anything invalid changes nothing. `set_state` starts a match from a position (`MahjongSetState.h`): the same rules
-     * for the errors, and the match is saved but never uploaded. `no_active_model` before the first match and while
+     * all optional; anything invalid changes nothing. `set_state` starts a match from a position or the prefix of a match log
+     * (`MahjongSetState.h`): the same rules for the errors, and the match is saved but never uploaded. `no_active_model` before the first match and while
      * the game plays in an online room (`MahjongGame::IsOnlineTable()`: the adapter drives the local match only).
      */
     class MahjongGameControl : public IControllableGame {
