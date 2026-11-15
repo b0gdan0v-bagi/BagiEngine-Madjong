@@ -6,17 +6,15 @@
 namespace BECore::Mahjong {
 
     /**
-     * The table as data: where each zone lies, as fractions of the design view of its shape. Plain values, no scene, no XML (the reader is
-     * `TableLayoutSpecXml.h`, the check and the builder over it `TableLayout.h`). A zone says only where tiles may lie; the size of the tile in
-     * it is found by `TableSolver.h`, so a zone is never too small for what the rules allow it to hold or too large for its tiles to be
-     * clear of the next one.
+     * The table as data: where each zone lies, as fractions of the design view of its shape. Plain values, no scene, no XML. A zone says
+     * only where tiles may lie; the size of the tile in it is solved (`TableSolver.h`), so a zone is never too small for what the rules
+     * allow it to hold.
      */
 
-    /// Where a strip's tiles lie across its line (the vertical axis of a row, the horizontal one of a column) when the zone is wider than
-    /// the tile is high.
+    /// Where a strip's tiles lie across its line (the vertical axis of a row, the horizontal one of a column) when the zone is wider.
     CORE_ENUM(ZoneAlign, uint8_t, Start, Center, End)
 
-    /// A zone: x, y, width and height as fractions of the design width and height of the shape (0..1; not snapped, see `SnapZone`).
+    /// A zone as fractions of the design width and height of the shape (0..1; not snapped, see `SnapZone`).
     struct ZoneRect {
         float x = 0.0f;
         float y = 0.0f;
@@ -32,7 +30,7 @@ namespace BECore::Mahjong {
         ZoneAlign align = ZoneAlign::Start;
         /// The tiles are spread over the zone's length instead of lying side by side (the viewer's hand in portrait).
         bool spread = false;
-        /// The tile width is not solved but asked for (the phone profile's hand: `TableInput::profile.handTileW`, clamped).
+        /// The tile width is asked for, not solved (the phone profile's hand: `TableInput::profile.handTileW`, clamped).
         bool profileTile = false;
         /// The smallest tile width the zone may solve to; a spec whose zone solves smaller is refused. 0 asks nothing.
         int minTileW = 0;
@@ -59,9 +57,8 @@ namespace BECore::Mahjong {
         [[nodiscard]] bool operator==(const SeatSpec& other) const noexcept = default;
     };
 
-    /// A named free-ground region: a place for a canvas of the table, as fractions of the design view like a zone. It lies on no tile, no
-    /// discard block, no wall ring and no plate (`CheckTableLayoutSpec`); a region that must lie on the wall or the centre panel is a zone
-    /// region, built from the layout (`TableRegions.h`), not a free one.
+    /// A named free-ground region: a place for a canvas of the table, clear of every tile, block, ring and plate (`CheckTableLayoutSpec`).
+    /// A region that must lie on the wall or the centre panel is a zone region built from the layout (`TableRegions.h`), not a free one.
     struct FreeRegion {
         RegionName name;
         ZoneRect rect;
@@ -70,10 +67,10 @@ namespace BECore::Mahjong {
     };
 
     /// The zones of one shape. A `like` shape borrows every zone of another shape (Wide is Landscape): its seats, wall and phone override
-    /// are not read, and the borrowed table lies `inset` (a fraction of this shape's design width) from the left edge of the view; its free
-    /// regions are the borrowed shape's, shifted with the table.
+    /// are not read, and the borrowed table lies `inset` (a fraction of this shape's design width) from the left edge; its free regions
+    /// are the borrowed shape's, shifted with the table.
     struct ShapeSpec {
-        /// Set when the shape is described in the spec (the reader sets it; a shape the file does not mention stays false).
+        /// Set by the reader when the file describes the shape.
         bool present = false;
         bool like = false;
         TableShape likeShape = TableShape::Landscape;
@@ -83,7 +80,7 @@ namespace BECore::Mahjong {
         ZoneRect wall;
         /// The free-ground regions of the shape, by name (a name once).
         Vector<FreeRegion> freeRegions;
-        /// The viewer's side (position 0) for the phone profile; read when `hasPhone`.
+        /// The viewer's side (position 0) for the phone profile.
         bool hasPhone = false;
         SeatSpec phone;
 
@@ -107,8 +104,8 @@ namespace BECore::Mahjong {
         [[nodiscard]] bool operator==(const TableLayoutSpec& other) const noexcept = default;
     };
 
-    /// The shape whose zones lay out `shape`: the shape itself, or the one it is `like`; null when the spec does not describe it (or its
-    /// `like` is missing or is a `like` itself).
+    /// The shape whose zones lay out `shape`: itself, or the one it is `like`; null when the spec does not describe it (or its `like`
+    /// is missing or a `like` itself).
     [[nodiscard]] const ShapeSpec* ZonesOf(const TableLayoutSpec& spec, TableShape shape) noexcept;
 
 }  // namespace BECore::Mahjong
