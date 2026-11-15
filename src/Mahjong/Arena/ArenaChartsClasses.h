@@ -52,6 +52,8 @@ namespace BECore::Mahjong::Arena {
     /// Early above two thirds, late up to the first third (`kLiveStageThird`).
     [[nodiscard]] WallStage StageOfLiveCount(int liveCount) noexcept;
     [[nodiscard]] OpenSets OpenSetsBin(int open) noexcept;
+    /// The seat's open melds (a concealed kong is not open); the number `OpenSetsBin` bins.
+    [[nodiscard]] int OpenMeldCount(const PlayerHand& hand) noexcept;
 
     /**
      * @brief The class of `claim` in the claim window of `view`.

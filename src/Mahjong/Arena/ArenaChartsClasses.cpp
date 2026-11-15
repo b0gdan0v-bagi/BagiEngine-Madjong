@@ -12,15 +12,15 @@ namespace BECore::Mahjong::Arena {
         constexpr int kOpenTwo = 2;
         constexpr int kEarlyAbove = 2 * kLiveStageThird;
 
-        int OpenMeldCount(const PlayerHand& hand) noexcept {
-            int open = 0;
-            for (const Meld& meld : hand.melds) {
-                open += meld.concealed ? 0 : 1;
-            }
-            return open;
-        }
-
     }  // namespace
+
+    int OpenMeldCount(const PlayerHand& hand) noexcept {
+        int open = 0;
+        for (const Meld& meld : hand.melds) {
+            open += meld.concealed ? 0 : 1;
+        }
+        return open;
+    }
 
     bool IsChartedClaim(const HandAction& action) noexcept {
         return action.kind == ActionKind::Claim && action.claim != ClaimKind::Mahjong;
