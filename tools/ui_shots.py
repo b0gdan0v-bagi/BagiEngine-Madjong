@@ -3,6 +3,7 @@
 
     python3 tools/ui_shots.py --exe build/macos-debug/bin/BagiMahjong --label before
     python3 tools/ui_shots.py --exe build/macos-debug/bin/BagiMahjong --label before --window 720x1280
+    python3 tools/ui_shots.py --exe build/macos-debug/bin/BagiMahjong --label navy --theme navy
 
 Starts one BagiMahjong (--headless --control --manual-clock) and, for each scene, sets up the state through the control API, steps a few
 frames and writes `<NN>-<scene>-<W>x<H>.png` (the native output of the headless window) and a copy scaled down by `maxSize 640` (its longer
@@ -11,6 +12,10 @@ side is 640: 640x360 for the landscape window, 360x640 for the portrait one) int
 and 09-online (the online panel: New game, then the Online button of Setup; the panel opens without a server, it only shows its menu page).
 A scene that needs a particular state (a claim window, a won hand, the cover) tries the seeds `--seed .. --seed + 29` and prints the seed it
 used.
+
+`--theme <id>` (default: the theme the game starts with) first chooses that theme the way a person does: `Options` of `HudMenu`, the segment `Theme<Id>` of the page (the id with a capital first
+letter), `Back`; the game keeps the choice across the resets of the scenes, and the note of each picture names the theme the game reports in `get_state`. A theme that has no segment fails
+with a message that names it.
 
 The size is the window of the headless game (1920 x 1080 from the engine's `SDLWindowConfig.xml`), and no control call changes it. With
 `--window WxH` that is not the default the tool writes a **temporary** `config/SDLWindowConfig.xml` of the game (next to `SceneConfig.xml`;
@@ -29,7 +34,7 @@ import subprocess
 import sys
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any, Iterator, Optional
 
 ENGINE_DIR = Path(os.environ.get("BAGI_ENGINE_DIR") or Path(__file__).resolve().parents[1] / "engine")
 sys.path.insert(0, str(ENGINE_DIR / "tools" / "control"))
@@ -168,6 +173,26 @@ def setup_screen(client: BagiControlClient, seed: int) -> str:
     return f"seed {seed}"
 
 
+def choose_theme(client: BagiControlClient, theme: str) -> None:
+    """Chooses the theme in the page Options, as a person does, and checks the game reports it."""
+    segment = "Theme" + theme[:1].upper() + theme[1:]
+    reset(client, 1, "PCCC")
+    settle(client)
+    client.call("ui_click", {"name": "Options", "canvas": "HudMenu"})
+    tree = settle(client, motion=True)
+    check(canvas_visible(tree, "Options"), "the button Options did not open the page")
+    try:
+        client.call("ui_click", {"name": segment, "canvas": "Options"})
+    except ControlError as error:
+        raise ShotFailure(f"the page Options has no segment {segment} for the theme '{theme}' (add its row in Options and its words): {error}") from error
+    settle(client)
+    chosen = get_state(client).get("theme")
+    check(chosen == theme, f"after the segment {segment} the game has the theme '{chosen}', not '{theme}'")
+    client.call("ui_click", {"name": "Back", "canvas": "Options"})
+    tree = settle(client, motion=True)
+    check(not canvas_visible(tree, "Options"), "Back did not close the page Options")
+
+
 def options_screen(client: BagiControlClient, seed: int) -> str:
     """The page Options over the table: the button Options of the HUD."""
     reset(client, seed, "PCCC")
@@ -292,14 +317,16 @@ def parse_window(text: str) -> tuple[int, int]:
     return int(parts[0]), int(parts[1])
 
 
-def run(exe: Path, folder: Path, seed: int, window: tuple[int, int]) -> None:
+def run(exe: Path, folder: Path, seed: int, window: tuple[int, int], theme: Optional[str]) -> None:
     folder.mkdir(parents=True, exist_ok=True)
     port = free_port()
     with GameProcess(build_game_command(exe, port, headless=True, manual_clock=True), cwd=exe.parent) as game:
         client = game.connect(port)
         try:
+            if theme is not None:
+                choose_theme(client, theme)
             for name, scene in SCENES:
-                note = scene(client, seed)
+                note = f"{scene(client, seed)}, theme {get_state(client).get('theme')}"
                 for path in write_shots(client, folder, name, window):
                     print(f"{path.name}: {note}", flush=True)
             client.call("quit")
@@ -319,6 +346,7 @@ def main() -> int:
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT, help=f"the folder of the folders (default {DEFAULT_OUT}); outside every git work tree")
     parser.add_argument("--window", type=parse_window, default=DEFAULT_WINDOW, metavar="WxH",
                         help="the size of the headless window (default %dx%d); another size is made by a temporary config/SDLWindowConfig.xml" % DEFAULT_WINDOW)
+    parser.add_argument("--theme", help="the theme id to choose in the page Options before the scenes (default: the theme the game starts with)")
     parser.add_argument("--seed", type=int, default=1, help="the first seed (scenes that need a state search from here)")
     args = parser.parse_args()
 
@@ -336,7 +364,7 @@ def main() -> int:
     folder = out / args.label
     try:
         with temporary_window_config(args.window):
-            run(args.exe.resolve(), folder, args.seed, args.window)  # the game runs with its own directory as the working directory
+            run(args.exe.resolve(), folder, args.seed, args.window, args.theme)  # the game runs with its own directory as the working directory
     except (ShotFailure, GameLaunchError) as error:
         print(f"FAILED: {error}")
         return EXIT_FAILED
