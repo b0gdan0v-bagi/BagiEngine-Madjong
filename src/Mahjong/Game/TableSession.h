@@ -168,7 +168,7 @@ namespace BECore::Mahjong {
         /// resumed from a save plays by its levels.
         MatchStatus StartMatch(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats, const LevelProfile& profile);
         /// `StartMatch` from a position (`Match::Start(settings, seed, state)`): the first hand is the deal of `state`, which the `Hand`
-        /// event the sink gets shows. `BadSettings` or `BadDeal`, and nothing changes (the version and the start count too).
+        /// event the sink gets shows, and the `Start` event carries as its `state`. `BadSettings` or `BadDeal`, and nothing changes (the version and the start count too).
         MatchStatus StartMatch(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats, const SeatLevels& levels, const FixedStart& state);
 
         /**
@@ -178,7 +178,8 @@ namespace BECore::Mahjong {
          *
          * The sink gets the whole log as a live match would (`ReplayMatchLog` with the sink as its echo), so a match log file and a
          * recorder are whole. The computer players are made again from the seed of the last `Start` and the random state they had is
-         * not restored: play goes on legally and at the levels, not bit for bit as an uninterrupted match would. The seats and the
+         * not restored: play goes on legally and at the levels, not bit for bit as an uninterrupted match would. `StartCount()` grows: a resumed match is a new table, though its hands played and
+         * history size may equal the old one's. The seats and the
          * levels are the caller's (the `Start` event's own, for a saved match); they are not compared with the log. The viewer is as
          * after `StartMatch`: with two or more people or none nobody, so the cover is up for a person to act (`HandoffPending`).
          * Include `Game/MatchLog.h` to call it.
@@ -288,8 +289,8 @@ namespace BECore::Mahjong {
         void MarkChanged() noexcept {
             ++_version;
         }
-        /// The number of matches begun through `StartMatch` (a refused start is not counted): a front end tells a new match from the old one
-        /// by it, whatever the new match has played since.
+        /// The number of matches begun through `StartMatch` or put in place by `ResumeMatch` (a refused call is not counted): a front end
+        /// tells a new match from the old one by it, whatever the new match has played since.
         [[nodiscard]] uint64_t StartCount() const noexcept {
             return _starts;
         }

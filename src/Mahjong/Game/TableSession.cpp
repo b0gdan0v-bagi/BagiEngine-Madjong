@@ -63,6 +63,9 @@ namespace BECore::Mahjong {
             start.seats = seats;
             start.levels = levels;
             start.origin = _origin;
+            if (state != nullptr) {
+                start.state = *state;
+            }
             _sink->OnEvent(start);
             _sink->OnEvent(MakeHandEvent(_match));
         }
@@ -94,6 +97,7 @@ namespace BECore::Mahjong {
         LeaveRemote();
         _viewer = PersonCount() == 1 ? OnlyPerson(_seats) : kNoSeat;
         ++_version;
+        ++_starts;
         return {};
     }
 

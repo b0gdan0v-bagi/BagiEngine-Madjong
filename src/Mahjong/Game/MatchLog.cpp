@@ -48,7 +48,7 @@ namespace BECore::Mahjong {
         }
         switch (kind) {
             case MatchLogKind::Start:
-                return seed == other.seed && SameSettings(settings, other.settings) && seats == other.seats && levels == other.levels && origin == other.origin;
+                return seed == other.seed && SameSettings(settings, other.settings) && seats == other.seats && levels == other.levels && origin == other.origin && state == other.state;
             case MatchLogKind::Hand:
                 return number == other.number && east == other.east && roundWind == other.roundWind && winds == other.winds && concealed == other.concealed && bonus == other.bonus;
             case MatchLogKind::Action:
@@ -82,8 +82,8 @@ namespace BECore::Mahjong {
             const MatchLogEvent& event = events[index];
             switch (event.kind) {
                 case MatchLogKind::Start:
-                    if (!match.Start(event.settings, event.seed)) {
-                        return std::unexpected(At(index, ReplayProblem::BadSettings));
+                    if (const MatchStatus started = event.state ? match.Start(event.settings, event.seed, *event.state) : match.Start(event.settings, event.seed); !started) {
+                        return std::unexpected(At(index, started.error() == MatchError::BadDeal ? ReplayProblem::BadState : ReplayProblem::BadSettings));
                     }
                     if (echo != nullptr) {
                         echo->OnEvent(event);

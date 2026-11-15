@@ -210,6 +210,8 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(log.Events()[0].seed, kSeed);
         EXPECT_EQ(log.Events()[0].seats, PersonAt(0));
         EXPECT_EQ(log.Events()[0].levels, levels);
+        ASSERT_TRUE(log.Events()[0].state.has_value());
+        EXPECT_TRUE(*log.Events()[0].state == state) << "the Start event carries the position";
         EXPECT_EQ(log.Events()[1], MakeHandEvent(table.match));
 
         // East and the seat after it are computers: they play up to the person at seat 0.
@@ -347,6 +349,31 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(table.session.Levels(), levels) << "the person seat's level too";
         ASSERT_TRUE(table.session.ResumeMatch(log.Events(), kAllComputers, ComputerLevel{7}).has_value());
         EXPECT_EQ(table.session.Levels(), UniformLevels(ComputerLevel{7}));
+    }
+
+    TEST(TableSessionTest, AResumedMatchIsAStartAndARefusedResumeIsNot) {
+        MatchLog log;
+        {
+            Table recorded;
+            recorded.session.SetLogSink(&log);
+            ASSERT_TRUE(recorded.session.StartMatch(ShortMatch(), kSeed, kAllComputers, ComputerLevel::Normal).has_value());
+        }
+        Table table;
+        ASSERT_NO_FATAL_FAILURE(table.StartAt(ComputerLevel::Easy));
+        const uint64_t starts = table.session.StartCount();
+
+        Vector<MatchLogEvent> broken = log.Events();
+        broken[0].settings.handsPerMatch = kUnplayableHandsPerMatch;
+        ASSERT_FALSE(table.session.ResumeMatch(broken, kAllComputers, ComputerLevel::Easy).has_value());
+        EXPECT_EQ(table.session.StartCount(), starts);
+
+        // The same hands played and the same history, yet another table: a front end keyed on StartCount() must see it.
+        const int handsPlayed = table.match.HandsPlayed();
+        const size_t history = table.match.History().size();
+        ASSERT_TRUE(table.session.ResumeMatch(log.Events(), kAllComputers, ComputerLevel::Easy).has_value());
+        EXPECT_EQ(table.match.HandsPlayed(), handsPlayed);
+        EXPECT_EQ(table.match.History().size(), history);
+        EXPECT_EQ(table.session.StartCount(), starts + 1);
     }
 
     TEST(TableSessionTest, TheExplicitNormalLevelPlaysLikeTheDefaultActionByAction) {

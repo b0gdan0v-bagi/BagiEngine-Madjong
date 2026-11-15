@@ -1,5 +1,6 @@
 #include <Mahjong/Game/MatchLog.h>
 #include <gtest/gtest.h>
+#include <tests/FixedWall.h>
 #include <tests/HandTestSupport.h>
 
 /** The recorder of a match (`Game/MatchLog.h`) and its hook in `TableSession`. Pure logic: no engine services, an in-memory `MatchLog`. */
@@ -14,12 +15,31 @@ namespace BECore::Mahjong::Tests {
         constexpr size_t kEastTiles = 14;
         constexpr size_t kOtherTiles = 13;
 
+        /// Steps a loop that looks for a claim window takes before it gives up.
+        constexpr int kStepLimit = 5000;
+
         constexpr SeatSetup kAllComputers{SeatKind::Computer, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
 
         MahjongSettings ShortMatch() {
             MahjongSettings settings;
             settings.handsPerMatch = kShortMatchHands;
             return settings;
+        }
+
+        /// A position to start from: four hands and the tiles that come next, the hands counted and scores of a match under way.
+        FixedStart Position(Seat east, int handsPlayed = 0) {
+            FixedWallSpec spec;
+            spec.hands[0] = "1p 2p 3p 4p 5p 6p 7p 8p 9p 1s 2s 3s 4s";
+            spec.hands[1] = "1m 2m 3m 4m 5m 6m 7m 8m 9m Ew Sw Ww Nw";
+            spec.hands[2] = "1p 2p 3p 4p 5p 6p 7p 8p 9p Rd Wd Gd Ew";
+            spec.hands[3] = "5s 6s 7s 8s 9s 1m 2m 3m 4m 5m 6m 7m 8m";
+            spec.live = "Gd Gd 9m";
+            spec.loose = "4s 5s";
+            FixedStart state;
+            state.deal = MakeFixedDeal(spec, east);
+            state.handsPlayed = handsPlayed;
+            state.scores = {250, 120, -40, 900};
+            return state;
         }
 
         /// A match, its session and a log on it.
@@ -336,6 +356,104 @@ namespace BECore::Mahjong::Tests {
             return;
         }
         FAIL() << "no match of " << kSeedsToTry << " seeds had a window settled early";
+    }
+
+    TEST(MatchLogTest, AMatchFromAPositionIsLoggedWithItAndReplaysEqual) {
+        const FixedStart state = Position(1, 5);
+        LoggedTable table;
+        ASSERT_TRUE(table.session.StartMatch(ShortMatch(), kSeed, kAllComputers, UniformLevels(kDefaultLevel), state).has_value());
+        table.PlayMatch();
+        const Vector<MatchLogEvent>& events = table.log.Events();
+        ASSERT_GT(events.size(), 3u);
+        ASSERT_TRUE(events.front().state.has_value());
+        EXPECT_TRUE(*events.front().state == state);
+        EXPECT_EQ(events[1].number, state.handsPlayed);
+        for (size_t index = 1; index < events.size(); ++index) {
+            EXPECT_FALSE(events[index].state.has_value()) << "only the Start carries it, event " << index;
+        }
+
+        Match replayed;
+        MatchLog echo;
+        const ReplayStatus status = ReplayMatchLog(events, replayed, &echo);
+        ASSERT_TRUE(status.has_value()) << "stopped at event " << status.error().index << ": " << Name(status.error().problem);
+        EXPECT_EQ(echo.Events(), events) << "a replay emits what the live session did, the position included";
+        EXPECT_EQ(replayed.GetPhase(), MatchPhase::Finished);
+        EXPECT_EQ(replayed.Scores(), table.match.Scores());
+        EXPECT_EQ(replayed.Standings(), table.match.Standings());
+        EXPECT_EQ(replayed.History().size(), table.match.History().size());
+    }
+
+    TEST(MatchLogTest, ADifferentPositionMakesTheStartsUnequal) {
+        MatchLogEvent a;
+        a.state = Position(0);
+        MatchLogEvent b = a;
+        EXPECT_TRUE(a == b);
+        b.state->scores[2] += 10;
+        EXPECT_FALSE(a == b);
+        b = a;
+        b.state->deal.hands[3][0] = T("9s");
+        EXPECT_FALSE(a == b);
+        b = a;
+        b.state.reset();
+        EXPECT_FALSE(a == b) << "with and without a position";
+    }
+
+    TEST(MatchLogTest, APositionTheLogWasChangedInStopsAtTheHandOrTheStart) {
+        LoggedTable table;
+        ASSERT_TRUE(table.session.StartMatch(ShortMatch(), kSeed, kAllComputers, UniformLevels(kDefaultLevel), Position(2)).has_value());
+        table.PlayMatch();
+
+        // Two tiles swapped between seats: still a deal the wall takes, but not the hand the log's Hand event holds.
+        Vector<MatchLogEvent> swapped = table.log.Events();
+        ASSERT_TRUE(swapped[0].state.has_value());
+        eastl::swap(swapped[0].state->deal.hands[0][0], swapped[0].state->deal.hands[1][0]);
+        Match first;
+        ReplayStatus status = ReplayMatchLog(swapped, first);
+        ASSERT_FALSE(status.has_value());
+        EXPECT_EQ(status.error().index, 1u);
+        EXPECT_EQ(status.error().problem, ReplayProblem::HandMismatch);
+
+        // A deal the wall refuses, and hands counted outside the match, are the Start's own problem.
+        Vector<MatchLogEvent> refused = table.log.Events();
+        refused[0].state->deal.hands[3].pop_back();
+        Match second;
+        status = ReplayMatchLog(refused, second);
+        ASSERT_FALSE(status.has_value());
+        EXPECT_EQ(status.error().index, 0u);
+        EXPECT_EQ(status.error().problem, ReplayProblem::BadState);
+
+        Vector<MatchLogEvent> counted = table.log.Events();
+        counted[0].state->handsPlayed = kShortMatchHands;
+        status = ReplayMatchLog(counted, second);
+        ASSERT_FALSE(status.has_value());
+        EXPECT_EQ(status.error().problem, ReplayProblem::BadState);
+    }
+
+    TEST(MatchLogTest, AMatchResumedFromAPositionLogIsWhereTheLogLeftItEvenInAClaimWindow) {
+        LoggedTable live;
+        ASSERT_TRUE(live.session.StartMatch(ShortMatch(), kSeed, kAllComputers, UniformLevels(kDefaultLevel), Position(0, 4)).has_value());
+        bool inWindow = false;
+        for (int steps = 0; steps < kStepLimit && !inWindow; ++steps) {
+            if (live.session.GetPhase() == SessionPhase::HandOver) {
+                ASSERT_TRUE(live.session.NextHand().has_value());
+            } else if (live.session.GetPhase() == SessionPhase::MatchOver) {
+                break;
+            } else {
+                ASSERT_TRUE(live.session.StepComputer().has_value());
+            }
+            inWindow = live.session.GetPhase() == SessionPhase::Playing && live.match.Hand().GetPhase() == Phase::Claim;
+        }
+        ASSERT_TRUE(inWindow) << "the match had no claim window";
+
+        LoggedTable resumed;
+        ASSERT_TRUE(resumed.session.ResumeMatch(live.log.Events(), kAllComputers, kDefaultLevel).has_value());
+        EXPECT_EQ(resumed.log.Events(), live.log.Events());
+        EXPECT_EQ(resumed.match.Hand().GetPhase(), Phase::Claim);
+        EXPECT_EQ(Snapshot(resumed.match.Hand()), Snapshot(live.match.Hand()));
+        EXPECT_EQ(resumed.match.Scores(), live.match.Scores());
+        EXPECT_EQ(resumed.match.HandsPlayed(), live.match.HandsPlayed());
+        EXPECT_EQ(resumed.session.Actor(), live.session.Actor());
+        EXPECT_EQ(resumed.session.StartCount(), 1u);
     }
 
     TEST(MatchLogTest, ALogWithoutAStartOrWithBadSettingsDoesNotReplay) {
