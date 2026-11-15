@@ -167,6 +167,9 @@ namespace BECore::Mahjong {
         /// tests). `Levels()` and the log's `Start` event report `kDefaultLevel`, and a saved match does not keep the profile: a match
         /// resumed from a save plays by its levels.
         MatchStatus StartMatch(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats, const LevelProfile& profile);
+        /// `StartMatch` from a position (`Match::Start(settings, seed, state)`): the first hand is the deal of `state`, which the `Hand`
+        /// event the sink gets shows. `BadSettings` or `BadDeal`, and nothing changes (the version and the start count too).
+        MatchStatus StartMatch(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats, const SeatLevels& levels, const FixedStart& state);
 
         /**
          * @brief Puts the session and its match where `events` (a log from its `Start`, `Hand` and `End` events optional) left them,
@@ -296,8 +299,8 @@ namespace BECore::Mahjong {
         }
 
     private:
-        /// `StartMatch` with the table of `levels`, or of `profile` when it is not null.
-        MatchStatus StartWith(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats, const SeatLevels& levels, const LevelProfile* profile);
+        /// `StartMatch` with the table of `levels`, or of `profile` when it is not null; from `state` when that is not null.
+        MatchStatus StartWith(const MahjongSettings& settings, uint32_t seed, const SeatSetup& seats, const SeatLevels& levels, const LevelProfile* profile, const FixedStart* state);
         /// The job of the actor's step, or why there is none (the errors of `StepComputer`).
         [[nodiscard]] std::expected<ComputerStepJob, HandError> MakeComputerJob();
         /// Applies the done `job`, then logs, covers and bumps the version.

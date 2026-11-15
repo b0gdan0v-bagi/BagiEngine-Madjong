@@ -1,6 +1,7 @@
 #include <Mahjong/Game/MatchLog.h>
 #include <Mahjong/Game/TableSession.h>
 #include <gtest/gtest.h>
+#include <tests/FixedWall.h>
 #include <tests/HandTestSupport.h>
 #include <thread>
 #include <vector>
@@ -174,6 +175,64 @@ namespace BECore::Mahjong::Tests {
         bad.handsPerMatch = kUnplayableHandsPerMatch;
         ASSERT_FALSE(table.session.StartMatch(bad, kSeed + 1, kAllComputers).has_value());
         EXPECT_EQ(table.session.StartCount(), 2u);
+    }
+
+    TEST(TableSessionTest, AStartFromAPositionBeginsThereWithTheSeatsAndLevelsGiven) {
+        FixedWallSpec spec;
+        spec.hands[0] = "1p 2p 3p 4p 5p 6p 7p 8p 9p 1s 2s 3s 4s";
+        spec.hands[1] = "1m 2m 3m 4m 5m 6m 7m 8m 9m Ew Sw Ww Nw";
+        spec.hands[2] = "1p 2p 3p 4p 5p 6p 7p 8p 9p Rd Wd Gd Ew";
+        spec.hands[3] = "5s 6s 7s 8s 9s 1m 2m 3m 4m 5m 6m 7m 8m";
+        FixedStart state;
+        state.deal = MakeFixedDeal(spec, 2);
+        state.handsPlayed = 3;
+        state.scores = {1, 2, 3, 4};
+        const SeatLevels levels{ComputerLevel{2}, ComputerLevel{4}, ComputerLevel{6}, ComputerLevel{8}};
+
+        Table table;
+        MatchLog log;
+        table.session.SetLogSink(&log);
+        ASSERT_TRUE(table.session.StartMatch(ShortMatch(), kSeed, PersonAt(0), levels, state).has_value());
+
+        EXPECT_EQ(table.session.GetPhase(), SessionPhase::Playing);
+        EXPECT_EQ(table.session.Seats(), PersonAt(0));
+        EXPECT_EQ(table.session.Levels(), levels);
+        EXPECT_EQ(table.session.Viewer(), 0);
+        EXPECT_GT(table.session.Version(), 0u);
+        EXPECT_EQ(table.session.StartCount(), 1u);
+        EXPECT_EQ(table.match.East(), 2);
+        EXPECT_EQ(table.match.HandsPlayed(), 3);
+        EXPECT_EQ(table.match.Scores(), (SeatScores{1, 2, 3, 4}));
+        EXPECT_EQ(table.session.Actor(), 2) << "East acts first";
+
+        ASSERT_EQ(log.Events().size(), 2u);
+        EXPECT_EQ(log.Events()[0].kind, MatchLogKind::Start);
+        EXPECT_EQ(log.Events()[0].seed, kSeed);
+        EXPECT_EQ(log.Events()[0].seats, PersonAt(0));
+        EXPECT_EQ(log.Events()[0].levels, levels);
+        EXPECT_EQ(log.Events()[1], MakeHandEvent(table.match));
+
+        // East and the seat after it are computers: they play up to the person at seat 0.
+        EXPECT_EQ(table.session.RunComputers(), 2);
+        EXPECT_EQ(table.session.Actor(), 0);
+    }
+
+    TEST(TableSessionTest, AStartFromAPositionTheMatchRefusesChangesNothing) {
+        Table table;
+        ASSERT_NO_FATAL_FAILURE(table.StartAt(ComputerLevel::Easy));
+        const String before = State(table);
+        const uint64_t starts = table.session.StartCount();
+        MatchLog log;
+        table.session.SetLogSink(&log);
+
+        const FixedStart state;  // a deal without hands: the wall refuses it
+        const MatchStatus refused = table.session.StartMatch(ShortMatch(), kSeed + 1, kDefaultSeatSetup, UniformLevels(ComputerLevel{9}), state);
+        ASSERT_FALSE(refused.has_value());
+        EXPECT_EQ(refused.error(), MatchError::BadDeal);
+        EXPECT_EQ(State(table), before);
+        EXPECT_EQ(table.session.StartCount(), starts);
+        EXPECT_EQ(table.session.Seats(), kAllComputers);
+        EXPECT_TRUE(log.Events().empty());
     }
 
     TEST(TableSessionTest, TheLevelIsNormalByDefaultAndAStartKeepsTheOneItGets) {
