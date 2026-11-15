@@ -5,8 +5,9 @@
 #include <tests/UiStyleTestSupport.h>
 
 /**
- * The look of the shipped scene file (`config/SceneConfig.xml` with its node files expanded, `ShippedScene.h`) held to the style of `Table/UiPalette.h`: pure logic, parsed with pugixml, no engine
- * services. A deliberately broken copy of the text shows that each check can fail.
+ * The look of the shipped scene file (`config/SceneConfig.xml` with its node files expanded, `ShippedScene.h`) held to the style of `Table/UiPalette.h`: every colour is a theme token of
+ * `kUiPaletteNames` (`@role`, the colours themselves are in `config/UIThemes.xml`), the tints of a picture are literal white. Pure logic, parsed with pugixml, no engine services. A
+ * deliberately broken copy of the text shows that each check can fail.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -22,10 +23,10 @@ namespace BECore::Mahjong::Tests {
         };
 
         constexpr const char* kColourAttributes[] = {"color", "hoverColor", "pressedColor", "disabledColor", "selectedColor", "trackColor", "fillColor", "thumbColor"};
-        /// ... and the colour of a text, which sits on its `UITextComponent` (the tints of a picture are white by design: not a look).
+        /// ... and the colour of a text, which sits on its `UITextComponent`.
         constexpr const char* kComponentColourAttributes[] = {"textColor"};
-        /// The skin of a box (`Table/UiPalette.h`): the colours of the border, of the end of the gradient and of the top line, the tints of a picture (the icon of a button; a hover tint
-        /// of the palette's white stays white) ...
+        /// The skin of a box (`Table/UiPalette.h`): the colours of the border, of the end of the gradient and of the top line; the tints of a picture (the icon of a button) are white by design,
+        /// the picture's own colours ...
         constexpr const char* kSkinColourAttributes[] = {"borderColor", "gradientColor", "highlight"};
         constexpr const char* kTintAttributes[] = {"tint", "iconTint", "hoverTint", "pressedTint", "disabledTint", "spriteTint"};
         /// ... and the shadow and the glow, `offsetX,offsetY,blur,spread,color`.
@@ -44,8 +45,21 @@ namespace BECore::Mahjong::Tests {
             return std::fmod(value, static_cast<float>(kGridUnit)) == 0.0f;
         }
 
-        bool OnThePalette(const Color& color) {
-            return std::any_of(kUiPalette.begin(), kUiPalette.end(), [&](const Color& entry) { return SameColor(entry, color); });
+        /// A role of the palette: the token `@name` of a colour text, with `name` in `kUiPaletteNames`.
+        bool IsPaletteRole(PoolString token) {
+            return std::any_of(kUiPaletteNames.begin(), kUiPaletteNames.end(), [&](const char* name) { return token.ToStringView() == name; });
+        }
+
+        /// A colour attribute (or the colour part of a compound one) that names a role of the palette; a literal is none.
+        bool IsRoleText(StringView text) {
+            const Optional<UIText::ColorRef> ref = UIText::ParseColorRef(text);
+            return ref && !ref->token.Empty() && IsPaletteRole(ref->token);
+        }
+
+        /// A tint is literal white: the picture's own colours show through it.
+        bool IsWhiteTint(StringView text) {
+            const Optional<Color> color = UIText::ParseColor(text);
+            return color && SameColor(*color, Color{255, 255, 255, 255});
         }
 
         bool OnTheCornerScale(float radius) {
@@ -144,12 +158,11 @@ namespace BECore::Mahjong::Tests {
             }
         }
 
-        /// The colours of the skin of an element and its shadow and glow (colour in the palette, numbers on the grid).
+        /// The colours of the skin of an element and its shadow and glow (the colour a role of the palette, the numbers on the grid).
         void CheckSkinPaint(const pugi::xml_node& element, const String& name, Vector<Violation>& found) {
             for (const char* attribute : kSkinColourAttributes) {
                 if (element.attribute(attribute)) {
-                    const Optional<Color> color = UIText::ParseColor(element.attribute(attribute).as_string());
-                    if (!color || !OnThePalette(*color)) {
+                    if (!IsRoleText(element.attribute(attribute).as_string())) {
                         found.push_back({Rule::Colour, name, attribute, AttributeOf(element, attribute)});
                     }
                 }
@@ -158,8 +171,9 @@ namespace BECore::Mahjong::Tests {
                 if (!element.attribute(attribute)) {
                     continue;
                 }
-                const Optional<UIShadowSpec> spec = UIText::ParseShadow(element.attribute(attribute).as_string());
-                if (!spec || !OnThePalette(spec->color)) {
+                PoolString token;
+                const Optional<UIShadowSpec> spec = UIText::ParseShadow(element.attribute(attribute).as_string(), &token);
+                if (!spec || !IsPaletteRole(token)) {
                     found.push_back({Rule::Colour, name, attribute, AttributeOf(element, attribute)});
                 }
                 if (!spec || !OnTheGrid(spec->offsetX) || !OnTheGrid(spec->offsetY) || !OnTheGrid(spec->blur) || !OnTheGrid(spec->spread)) {
@@ -172,17 +186,15 @@ namespace BECore::Mahjong::Tests {
         void CheckSkinComponent(const pugi::xml_node& component, const String& name, Vector<Violation>& found) {
             const auto flag = [&](Rule rule, const char* attribute) { found.push_back({rule, name, attribute, AttributeOf(component, attribute)}); };
             for (const char* attribute : kTintAttributes) {
-                if (component.attribute(attribute)) {
-                    const Optional<Color> color = UIText::ParseColor(component.attribute(attribute).as_string());
-                    if (!color || !OnThePalette(*color)) {
-                        flag(Rule::Colour, attribute);
-                    }
+                if (component.attribute(attribute) && !IsWhiteTint(component.attribute(attribute).as_string())) {
+                    flag(Rule::Colour, attribute);
                 }
             }
             if (component.attribute("textOutline")) {
                 float width = 0.0f;
                 Color color;
-                if (!UIText::ParseTextOutline(component.attribute("textOutline").as_string(), width, color) || !OnThePalette(color)) {
+                PoolString token;
+                if (!UIText::ParseTextOutline(component.attribute("textOutline").as_string(), width, color, &token) || !IsPaletteRole(token)) {
                     flag(Rule::Colour, "textOutline");
                 }
             }
@@ -190,7 +202,8 @@ namespace BECore::Mahjong::Tests {
                 float offsetX = 0.0f;
                 float offsetY = 0.0f;
                 Color color;
-                if (!UIText::ParseTextShadow(component.attribute("textShadow").as_string(), offsetX, offsetY, color) || !OnThePalette(color)) {
+                PoolString token;
+                if (!UIText::ParseTextShadow(component.attribute("textShadow").as_string(), offsetX, offsetY, color, &token) || !IsPaletteRole(token)) {
                     flag(Rule::Colour, "textShadow");
                 }
             }
@@ -259,8 +272,7 @@ namespace BECore::Mahjong::Tests {
                 if (!element.attribute(attribute)) {
                     continue;
                 }
-                const Optional<Color> color = UIText::ParseColor(element.attribute(attribute).as_string());
-                if (!color || !OnThePalette(*color)) {
+                if (!IsRoleText(element.attribute(attribute).as_string())) {
                     flag(Rule::Colour, attribute);
                 }
             }
@@ -270,8 +282,7 @@ namespace BECore::Mahjong::Tests {
                     if (!component.attribute(attribute)) {
                         continue;
                     }
-                    const Optional<Color> color = UIText::ParseColor(component.attribute(attribute).as_string());
-                    if (!color || !OnThePalette(*color)) {
+                    if (!IsRoleText(component.attribute(attribute).as_string())) {
                         found.push_back({Rule::Colour, name, attribute, AttributeOf(component, attribute)});
                     }
                 }
@@ -372,11 +383,11 @@ namespace BECore::Mahjong::Tests {
         constexpr const char* kImageComponent = "<component type=\"UIImageComponent\" />";
         constexpr const char* kSilentClicker = "<component type=\"UIInputClicker\" />";
         constexpr const char* kClicker = "<component type=\"UIInputClicker\" action=\"A\" />";
-        /// A button with the whole skin, every number and colour of it on the palette and the scale.
+        /// A button with the whole skin, every number of it on the scale and every colour a role of the palette.
         constexpr const char* kSkinAttributes =
-            "type=\"UIElement\" name=\"Skin\" cornerRadius=\"12\" borderWidth=\"2\" borderColor=\"140,150,180,255\" gradientDirection=\"Vertical\" gradientColor=\"26,78,40,255\" "
-            "shadow=\"0,4,8,0,0,0,0,90\" glow=\"0,0,8,0,90,200,120,160\" highlight=\"255,255,255,60\"";
-        constexpr const char* kSkinText = "<component type=\"UITextComponent\" fontFamily=\"Russo One\" fontWeight=\"700\" textOutline=\"2,16,18,26,255\" textShadow=\"0,2,0,0,0,90\" />"
+            "type=\"UIElement\" name=\"Skin\" cornerRadius=\"12\" borderWidth=\"2\" borderColor=\"@frameLight\" gradientDirection=\"Vertical\" gradientColor=\"@primaryDeep\" "
+            "shadow=\"0,4,8,0,@shadow\" glow=\"0,0,8,0,@glowPrimary\" highlight=\"@highlight\"";
+        constexpr const char* kSkinText = "<component type=\"UITextComponent\" fontFamily=\"Russo One\" fontWeight=\"700\" textOutline=\"2,@outline\" textShadow=\"0,2,@shadow\" />"
                                           "<component type=\"UIImageComponent\" tint=\"255,255,255,255\" hoverTint=\"255,255,255,255\" />";
 
         /// The skin of `kSkinAttributes` with the first `from` of it replaced by `to`, in an element with the text and picture of `kSkinText`.
@@ -408,7 +419,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_GT(_report.elements, 100) << "an empty walk would pass every rule";
     }
 
-    TEST_F(MahjongUiStyleTest, EveryColourOfTheFileIsAnEntryOfThePalette) {
+    TEST_F(MahjongUiStyleTest, EveryColourOfTheFileIsARoleOfThePalette) {
         EXPECT_TRUE(Of(_report, Rule::Colour).empty()) << Describe(Of(_report, Rule::Colour));
     }
 
@@ -424,15 +435,19 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(Of(_report, Rule::Action).empty()) << Describe(Of(_report, Rule::Action));
     }
 
-    TEST_F(MahjongUiStyleTest, AColourOneOffThePaletteIsCaught) {
-        const Report report = CheckStyle(Broken(_text, "40,110,60,255", "40,110,61,255"));
+    TEST_F(MahjongUiStyleTest, ALiteralColourOrAnUnknownRoleIsCaught) {
+        // a literal where a role exists: a colour of the palette in numbers, or in the other text form
+        const Report report = CheckStyle(Broken(_text, "color=\"@primary\"", "color=\"40,110,60,255\""));
         EXPECT_FALSE(Of(report, Rule::Colour).empty());
         EXPECT_TRUE(Of(report, Rule::FontSize).empty());
         EXPECT_TRUE(Of(report, Rule::Grid).empty());
-        // ... also in a text colour and as text that is no colour; the other text form of a palette colour is the same colour
-        EXPECT_FALSE(Of(CheckStyle(Broken(_text, "textColor=\"190,196,190,255\"", "textColor=\"190,196,190,254\"")), Rule::Colour).empty());
-        EXPECT_TRUE(Of(CheckStyle(Broken(_text, "selectedColor=\"40,110,60,255\"", "selectedColor=\"#286E3C\"")), Rule::Colour).empty());
-        EXPECT_FALSE(Of(CheckStyle(Broken(_text, "color=\"0,0,0,200\"", "color=\"dark\"")), Rule::Colour).empty());
+        EXPECT_FALSE(Of(CheckStyle(Broken(_text, "selectedColor=\"@primary\"", "selectedColor=\"#286E3C\"")), Rule::Colour).empty());
+        // ... also in a text colour; a role that is no role of the palette, a name that is no token and text that is no colour
+        EXPECT_FALSE(Of(CheckStyle(Broken(_text, "textColor=\"@textMuted\"", "textColor=\"190,196,190,255\"")), Rule::Colour).empty());
+        EXPECT_FALSE(Of(CheckStyle(Broken(_text, "color=\"@primary\"", "color=\"@nope\"")), Rule::Colour).empty());
+        EXPECT_FALSE(Of(CheckStyle(Broken(_text, "color=\"@primary\"", "color=\"@felt\"")), Rule::Colour).empty()) << "a role of the table is not one of the scene";
+        EXPECT_FALSE(Of(CheckStyle(Broken(_text, "color=\"@primary\"", "color=\"@\"")), Rule::Colour).empty());
+        EXPECT_FALSE(Of(CheckStyle(Broken(_text, "color=\"@scrim\"", "color=\"dark\"")), Rule::Colour).empty());
     }
 
     TEST_F(MahjongUiStyleTest, AFontSizeOffTheScaleIsCaught) {
@@ -501,23 +516,24 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(Of(_report, Rule::Family).empty()) << Describe(Of(_report, Rule::Family));
     }
 
-    TEST_F(MahjongUiStyleTest, TheWholeSkinOnThePaletteAndTheScaleIsNoViolation) {
+    TEST_F(MahjongUiStyleTest, TheWholeSkinInRolesOfThePaletteAndOnTheScaleIsNoViolation) {
         EXPECT_TRUE(CheckStyle(OneElement(kSkinAttributes, kSkinText)).violations.empty());
         // four radii (a header band: round on top only), the zero border of a row, a state tint, a hard shadow, the other family
         EXPECT_TRUE(SkinWith("cornerRadius=\"12\"", "cornerRadius=\"16,16,0,0\"").violations.empty());
         EXPECT_TRUE(SkinWith("borderWidth=\"2\"", "borderWidth=\"0\"").violations.empty());
         EXPECT_TRUE(CheckStyle(OneElement(kSkinAttributes, Broken(kSkinText, "Russo One", "PT Sans"))).violations.empty());
-        EXPECT_TRUE(SkinWith("shadow=\"0,4,8,0,0,0,0,90\"", "shadow=\"0,4,0,0,0,0,0,90\"").violations.empty());
+        EXPECT_TRUE(SkinWith("shadow=\"0,4,8,0,@shadow\"", "shadow=\"0,4,0,0,@shadow\"").violations.empty());
     }
 
-    TEST_F(MahjongUiStyleTest, ASkinColourOffThePaletteIsCaught) {
-        for (const auto& [from, to] : {Pair<const char*, const char*>{"borderColor=\"140,150,180,255\"", "borderColor=\"140,150,181,255\""},
-                                       {"gradientColor=\"26,78,40,255\"", "gradientColor=\"26,78,41,255\""},
-                                       {"highlight=\"255,255,255,60\"", "highlight=\"255,255,255,61\""},
-                                       {"shadow=\"0,4,8,0,0,0,0,90\"", "shadow=\"0,4,8,0,0,0,0,91\""},
-                                       {"glow=\"0,0,8,0,90,200,120,160\"", "glow=\"0,0,8,0,90,200,120,161\""},
-                                       {"borderColor=\"140,150,180,255\"", "borderColor=\"grey\""},
-                                       {"shadow=\"0,4,8,0,0,0,0,90\"", "shadow=\"soft\""}}) {
+    TEST_F(MahjongUiStyleTest, ASkinColourThatIsNoRoleOfThePaletteIsCaught) {
+        for (const auto& [from, to] : {Pair<const char*, const char*>{"borderColor=\"@frameLight\"", "borderColor=\"140,150,180,255\""},
+                                       {"gradientColor=\"@primaryDeep\"", "gradientColor=\"@primaryNope\""},
+                                       {"highlight=\"@highlight\"", "highlight=\"255,255,255,60\""},
+                                       {"shadow=\"0,4,8,0,@shadow\"", "shadow=\"0,4,8,0,0,0,0,90\""},
+                                       {"shadow=\"0,4,8,0,@shadow\"", "shadow=\"0,4,8,0,@nope\""},
+                                       {"glow=\"0,0,8,0,@glowPrimary\"", "glow=\"0,0,8,0,90,200,120,160\""},
+                                       {"borderColor=\"@frameLight\"", "borderColor=\"grey\""},
+                                       {"shadow=\"0,4,8,0,@shadow\"", "shadow=\"soft\""}}) {
             const Report report = SkinWith(from, to);
             EXPECT_FALSE(Of(report, Rule::Colour).empty()) << to;
             EXPECT_TRUE(Of(report, Rule::Scale).empty()) << to;
@@ -525,10 +541,13 @@ namespace BECore::Mahjong::Tests {
         }
     }
 
-    TEST_F(MahjongUiStyleTest, ATextOutlineShadowOrTintOffThePaletteIsCaught) {
-        for (const auto& [from, to] : {Pair<const char*, const char*>{"textOutline=\"2,16,18,26,255\"", "textOutline=\"2,16,18,26,254\""},
-                                       {"textShadow=\"0,2,0,0,0,90\"", "textShadow=\"0,2,0,0,0,91\""},
+    TEST_F(MahjongUiStyleTest, ATextOutlineShadowOrTintThatIsNotARoleOrWhiteIsCaught) {
+        for (const auto& [from, to] : {Pair<const char*, const char*>{"textOutline=\"2,@outline\"", "textOutline=\"2,16,18,26,255\""},
+                                       {"textOutline=\"2,@outline\"", "textOutline=\"2,@nope\""},
+                                       {"textShadow=\"0,2,@shadow\"", "textShadow=\"0,2,0,0,0,90\""},
+                                       {"textShadow=\"0,2,@shadow\"", "textShadow=\"0,2,@nope\""},
                                        {"tint=\"255,255,255,255\" hoverTint", "tint=\"255,255,254,255\" hoverTint"},
+                                       {"tint=\"255,255,255,255\" hoverTint", "tint=\"@primary\" hoverTint"},
                                        {"hoverTint=\"255,255,255,255\"", "hoverTint=\"250,250,250,255\""}}) {
             String components = kSkinText;
             const size_t at = components.find(from);
@@ -561,11 +580,11 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongUiStyleTest, TheNumbersOfAShadowOrGlowOffTheGridAreCaught) {
-        for (const auto& [from, to] : {Pair<const char*, const char*>{"shadow=\"0,4,8,0,0,0,0,90\"", "shadow=\"0,3,8,0,0,0,0,90\""},
-                                       {"shadow=\"0,4,8,0,0,0,0,90\"", "shadow=\"2,4,8,0,0,0,0,90\""},
-                                       {"shadow=\"0,4,8,0,0,0,0,90\"", "shadow=\"0,4,6,0,0,0,0,90\""},
-                                       {"shadow=\"0,4,8,0,0,0,0,90\"", "shadow=\"0,4,8,1,0,0,0,90\""},
-                                       {"glow=\"0,0,8,0,90,200,120,160\"", "glow=\"0,0,10,0,90,200,120,160\""}}) {
+        for (const auto& [from, to] : {Pair<const char*, const char*>{"shadow=\"0,4,8,0,@shadow\"", "shadow=\"0,3,8,0,@shadow\""},
+                                       {"shadow=\"0,4,8,0,@shadow\"", "shadow=\"2,4,8,0,@shadow\""},
+                                       {"shadow=\"0,4,8,0,@shadow\"", "shadow=\"0,4,6,0,@shadow\""},
+                                       {"shadow=\"0,4,8,0,@shadow\"", "shadow=\"0,4,8,1,@shadow\""},
+                                       {"glow=\"0,0,8,0,@glowPrimary\"", "glow=\"0,0,10,0,@glowPrimary\""}}) {
             const Report report = SkinWith(from, to);
             EXPECT_EQ(Of(report, Rule::Grid).size(), 1u) << to;
             EXPECT_EQ(report.violations.size(), 1u) << to;
@@ -622,10 +641,10 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongUiStyleTest, TheNamesOfThePaletteAreUniqueAndItsColoursAreDifferent) {
-        for (size_t i = 0; i < kUiPalette.size(); ++i) {
-            for (size_t j = i + 1; j < kUiPalette.size(); ++j) {
+        for (size_t i = 0; i < kUiPaletteNames.size(); ++i) {
+            for (size_t j = i + 1; j < kUiPaletteNames.size(); ++j) {
                 EXPECT_STRNE(kUiPaletteNames[i], kUiPaletteNames[j]);
-                EXPECT_FALSE(SameColor(kUiPalette[i], kUiPalette[j])) << kUiPaletteNames[i] << " and " << kUiPaletteNames[j] << " are one colour";
+                EXPECT_FALSE(SameColor(PaletteColor(kUiPaletteNames[i]), PaletteColor(kUiPaletteNames[j]))) << kUiPaletteNames[i] << " and " << kUiPaletteNames[j] << " are one colour";
             }
         }
     }

@@ -1,11 +1,13 @@
 #pragma once
 
+#include <BECore/Math/Color.h>
+
 namespace BECore::Mahjong {
 
     /// The size of the felt texture in pixels; it is stretched over the view, so the grain is a few view units wide.
     inline constexpr uint32_t kFeltTextureWidth = 320;
     inline constexpr uint32_t kFeltTextureHeight = 180;
-    /// The vignette: `kFelt` times the centre gain in the middle and the edge gain at the corners, between them by the square of the
+    /// The vignette: the felt colour times the centre gain in the middle and the edge gain at the corners, between them by the square of the
     /// distance from the middle.
     inline constexpr float kFeltCentreGain = 1.12f;
     inline constexpr float kFeltEdgeGain = 0.72f;
@@ -20,9 +22,9 @@ namespace BECore::Mahjong {
     };
 
     /**
-     * The felt of the table for `width` x `height` pixels. Deterministic with no random generator, and symmetric left to right and top
+     * The felt of the table for `width` x `height` pixels, in the colour `base` (the `felt` of the theme). Deterministic with no random generator, and symmetric left to right and top
      * to bottom, the grain too. Every pixel is opaque.
      */
-    [[nodiscard]] FeltPixels MakeFeltPixels(uint32_t width, uint32_t height);
+    [[nodiscard]] FeltPixels MakeFeltPixels(uint32_t width, uint32_t height, const Color& base);
 
 }  // namespace BECore::Mahjong

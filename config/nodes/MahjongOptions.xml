@@ -6,22 +6,23 @@
   closes it and opens the pages of the rules, which have no button of their own on the HUD. The rows are the shapes of the rows of Setup: the
   language MahjongSetLanguage (value = the language id, variable language), the hints MahjongSetHints (value off, hints or coach, variable
   hintsChoice, published by MahjongHintsComponent; Coach includes the hints), the speed MahjongSetSpeed (value slow, normal or fast, variable
-  speedChoice; the pace of the computers, the flights and the marks of a claim, at once). A row is a node edit: the plate's maximum height grows by 72 for it.
+  speedChoice; the pace of the computers, the flights and the marks of a claim, at once), the theme MahjongSetTheme (value = a theme id of
+  config/UIThemes.xml, one segment per theme, variable themeChoice; the colours of the whole game, at once). A row is a node edit: the plate's maximum height grows by 72 for it.
   The level is not here: each computer seat has its own on Setup.
   The page is a card like Setup (the skin of config/CLAUDE.md): the plate radius 16, the title band in the display font, each row a raised row of radius 8 with a border,
   the segments the segment skin (regular weight), Rules (neutral) and Back (primary) the button skin in PT Sans bold. Nothing moved by it: the heights above are the same.
-  UploadRow, NicknameRow and NicknameNote are hidden here and MahjongUploadComponent shows them (and sets the plate's maxHeight to 552: 376 plus two rows
+  UploadRow, NicknameRow and NicknameNote are hidden here and MahjongUploadComponent shows them (and sets the plate's maxHeight to 624: 448 plus two rows
   of 64, the note of 24 and three gaps of 8) only where the page can post, so the desktop page is the one above. UploadRow is the shape of a row of segments (action
   MahjongSetUpload, value on or off, variable uploadChoice, empty while the question of MahjongConsent is up; the words are the question's buttons), NicknameField
   a button (MahjongNickname) that opens the pad OnlineEntry on the nickname and says {uploadNickname}, NicknameNote is the line under it. On a canvas of at most 440
   units high the note is hidden (a word of 12 units does not fit its share of the height), on one of at most 440 wide so is the caption of UploadRow.
-  The roomy shape (a canvas of 1280 x 720 units) is the anatomy of the modal screens: the plate is the safe area at most 376 high
-  (32 padding + 48 title band + 3 x 64 rows + 64 ButtonRow + 5 x 8 spacing; BackGap is empty, so the 8 + 8 round it set the buttons 16 apart
+  The roomy shape (a canvas of 1280 x 720 units) is the anatomy of the modal screens: the plate is the safe area at most 448 high
+  (32 padding + 48 title band + 4 x 64 rows + 64 ButtonRow + 6 x 8 spacing; BackGap is empty, so the 8 + 8 round it set the buttons 16 apart
   from the rows) and the title, the rows and ButtonRow (Rules and Back, half the width each) share its height by flex weights that come out at 48 / 64 (0.75 / 1) and stop
   growing there (maxHeight). A row has no vertical padding: its caption and its group are 87.5 % of its height and centred, which
   is the 4 padding round a 56 segment of a row of 64. The variant for a canvas of at most 360 units high hides the Title;
   the variant for a canvas of at most 440 units wide takes the whole safe width for the plate and narrows the caption of
-  Language (64) and hides the captions of the hints and of the speed, whose three words each need the room (112 and 96 wide elsewhere).
+  Language (64) and hides the captions of the hints, the speed and the theme, whose three words each need the room (112 and 96 wide elsewhere).
   Every text may shrink (AutoFit, down to 12 units) instead of being cut. MahjongOptionsTest holds the
   shapes, the touch size and the words on the whole size matrix.
   Motion (UiPalette.h kMotion*): the canvas fades and rises from 0.96 over 0.18 s and leaves in 0.12 s; _transitionInput stays off: a click in the 0.18 s of the show is eaten, none of the choices here is worth a blind click, and a leaving modal frees the screen at once.
@@ -30,30 +31,30 @@
   <components>
     <component type="UICanvasComponent" space="Screen" scaleMode="ScaleWithScreen" referenceWidth="1280" referenceHeight="720" match="0.5" minScale="0.6" useSafeArea="true" modal="true" transitionDuration="0.18" transitionHideDuration="0.12" transitionEase="QuadOut" transitionScaleFrom="0.96" visible="false">
       <elements>
-        <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="0,0,0,200" blocksInput="true" />
-        <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="640" height="100%" maxHeight="376" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="36,40,52,255" blocksInput="true" cornerRadius="16" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="26,29,38,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
+        <element type="UIElement" name="Dim" anchor="Stretch" ignoreSafeArea="true" color="@scrim" blocksInput="true" />
+        <element type="UIStack" name="Plate" anchor="Center" width="94%" maxWidth="640" height="100%" maxHeight="448" direction="Vertical" spacing="8" padding="16" crossAlign="Stretch" color="@surface" blocksInput="true" cornerRadius="16" borderWidth="2" borderColor="@frame" gradientDirection="Vertical" gradientColor="@surfaceDeep" shadow="0,4,8,0,@shadow" highlight="@highlight">
           <children>
-            <element type="UIElement" name="Title" flex="0.75" maxHeight="48" fontSize="28" color="58,66,92,255" cornerRadius="12" gradientDirection="Vertical" gradientColor="42,48,68,255" highlight="255,255,255,60">
+            <element type="UIElement" name="Title" flex="0.75" maxHeight="48" fontSize="28" color="@header" cornerRadius="12" gradientDirection="Vertical" gradientColor="@headerDeep" highlight="@highlight">
               <components>
-                <component type="UITextComponent" fontFamily="Russo One" textOutline="2,16,18,26,255" text="{#options.title}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                <component type="UITextComponent" fontFamily="Russo One" textOutline="2,@outline" text="{#options.title}" align="Center" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
               </components>
             </element>
-            <element type="UIStack" name="LanguageRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+            <element type="UIStack" name="LanguageRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="@surfaceRaised" cornerRadius="8" borderWidth="2" borderColor="@frame" gradientDirection="Vertical" gradientColor="@surfaceRaisedDeep">
               <children>
                 <element type="UIElement" name="LanguageCaption" width="112" height="87.5%" fontSize="22">
                   <components>
-                    <component type="UITextComponent" text="{#setup.language}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                    <component type="UITextComponent" text="{#setup.language}" textColor="@textMuted" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
                   </components>
                 </element>
                 <element type="UISegmented" name="Language" bind="language" flex="1" height="87.5%" direction="Horizontal" spacing="4">
                   <children>
-                    <element type="UIElement" name="LanguageEn" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
+                    <element type="UIElement" name="LanguageEn" flex="1" height="100%" fontSize="22" color="@neutral" selectedColor="@primary" cornerRadius="8" borderWidth="2" borderColor="@frameLight" gradientDirection="Vertical" gradientColor="@neutralDeep" highlight="@highlight">
                       <components>
                         <component type="UITextComponent" text="{#lang.en}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                         <component type="UIInputClicker" action="MahjongSetLanguage" value="en"/>
                       </components>
                     </element>
-                    <element type="UIElement" name="LanguageRu" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
+                    <element type="UIElement" name="LanguageRu" flex="1" height="100%" fontSize="22" color="@neutral" selectedColor="@primary" cornerRadius="8" borderWidth="2" borderColor="@frameLight" gradientDirection="Vertical" gradientColor="@neutralDeep" highlight="@highlight">
                       <components>
                         <component type="UITextComponent" text="{#lang.ru}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                         <component type="UIInputClicker" action="MahjongSetLanguage" value="ru"/>
@@ -63,28 +64,28 @@
                 </element>
               </children>
             </element>
-            <element type="UIStack" name="HintsRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+            <element type="UIStack" name="HintsRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="@surfaceRaised" cornerRadius="8" borderWidth="2" borderColor="@frame" gradientDirection="Vertical" gradientColor="@surfaceRaisedDeep">
               <children>
                 <element type="UIElement" name="HintsCaption" width="112" height="87.5%" fontSize="22">
                   <components>
-                    <component type="UITextComponent" text="{#setup.hints}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                    <component type="UITextComponent" text="{#setup.hints}" textColor="@textMuted" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
                   </components>
                 </element>
                 <element type="UISegmented" name="HintsChoice" bind="hintsChoice" flex="1" height="87.5%" direction="Horizontal" spacing="4">
                   <children>
-                    <element type="UIElement" name="HintsOff" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
+                    <element type="UIElement" name="HintsOff" flex="1" height="100%" fontSize="22" color="@neutral" selectedColor="@primary" cornerRadius="8" borderWidth="2" borderColor="@frameLight" gradientDirection="Vertical" gradientColor="@neutralDeep" highlight="@highlight">
                       <components>
                         <component type="UITextComponent" text="{#setup.off}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                         <component type="UIInputClicker" action="MahjongSetHints" value="off"/>
                       </components>
                     </element>
-                    <element type="UIElement" name="HintsHints" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
+                    <element type="UIElement" name="HintsHints" flex="1" height="100%" fontSize="22" color="@neutral" selectedColor="@primary" cornerRadius="8" borderWidth="2" borderColor="@frameLight" gradientDirection="Vertical" gradientColor="@neutralDeep" highlight="@highlight">
                       <components>
                         <component type="UITextComponent" text="{#options.hintsHints}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                         <component type="UIInputClicker" action="MahjongSetHints" value="hints"/>
                       </components>
                     </element>
-                    <element type="UIElement" name="HintsCoach" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
+                    <element type="UIElement" name="HintsCoach" flex="1" height="100%" fontSize="22" color="@neutral" selectedColor="@primary" cornerRadius="8" borderWidth="2" borderColor="@frameLight" gradientDirection="Vertical" gradientColor="@neutralDeep" highlight="@highlight">
                       <components>
                         <component type="UITextComponent" text="{#options.hintsCoach}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                         <component type="UIInputClicker" action="MahjongSetHints" value="coach"/>
@@ -94,28 +95,28 @@
                 </element>
               </children>
             </element>
-            <element type="UIStack" name="SpeedRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255">
+            <element type="UIStack" name="SpeedRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="@surfaceRaised" cornerRadius="8" borderWidth="2" borderColor="@frame" gradientDirection="Vertical" gradientColor="@surfaceRaisedDeep">
               <children>
                 <element type="UIElement" name="SpeedCaption" width="96" height="87.5%" fontSize="22">
                   <components>
-                    <component type="UITextComponent" text="{#options.speed}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                    <component type="UITextComponent" text="{#options.speed}" textColor="@textMuted" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
                   </components>
                 </element>
                 <element type="UISegmented" name="SpeedChoice" bind="speedChoice" flex="1" height="87.5%" direction="Horizontal" spacing="4">
                   <children>
-                    <element type="UIElement" name="SpeedSlow" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
+                    <element type="UIElement" name="SpeedSlow" flex="1" height="100%" fontSize="22" color="@neutral" selectedColor="@primary" cornerRadius="8" borderWidth="2" borderColor="@frameLight" gradientDirection="Vertical" gradientColor="@neutralDeep" highlight="@highlight">
                       <components>
                         <component type="UITextComponent" text="{#options.speedSlow}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                         <component type="UIInputClicker" action="MahjongSetSpeed" value="slow"/>
                       </components>
                     </element>
-                    <element type="UIElement" name="SpeedNormal" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
+                    <element type="UIElement" name="SpeedNormal" flex="1" height="100%" fontSize="22" color="@neutral" selectedColor="@primary" cornerRadius="8" borderWidth="2" borderColor="@frameLight" gradientDirection="Vertical" gradientColor="@neutralDeep" highlight="@highlight">
                       <components>
                         <component type="UITextComponent" text="{#options.speedNormal}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                         <component type="UIInputClicker" action="MahjongSetSpeed" value="normal"/>
                       </components>
                     </element>
-                    <element type="UIElement" name="SpeedFast" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
+                    <element type="UIElement" name="SpeedFast" flex="1" height="100%" fontSize="22" color="@neutral" selectedColor="@primary" cornerRadius="8" borderWidth="2" borderColor="@frameLight" gradientDirection="Vertical" gradientColor="@neutralDeep" highlight="@highlight">
                       <components>
                         <component type="UITextComponent" text="{#options.speedFast}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                         <component type="UIInputClicker" action="MahjongSetSpeed" value="fast"/>
@@ -125,22 +126,47 @@
                 </element>
               </children>
             </element>
-            <element type="UIStack" name="UploadRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255" visible="false">
+            <element type="UIStack" name="ThemeRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="@surfaceRaised" cornerRadius="8" borderWidth="2" borderColor="@frame" gradientDirection="Vertical" gradientColor="@surfaceRaisedDeep">
+              <children>
+                <element type="UIElement" name="ThemeCaption" width="96" height="87.5%" fontSize="22">
+                  <components>
+                    <component type="UITextComponent" text="{#options.theme}" textColor="@textMuted" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                  </components>
+                </element>
+                <element type="UISegmented" name="ThemeChoice" bind="themeChoice" flex="1" height="87.5%" direction="Horizontal" spacing="4">
+                  <children>
+                    <element type="UIElement" name="ThemeClassic" flex="1" height="100%" fontSize="22" color="@neutral" selectedColor="@primary" cornerRadius="8" borderWidth="2" borderColor="@frameLight" gradientDirection="Vertical" gradientColor="@neutralDeep" highlight="@highlight">
+                      <components>
+                        <component type="UITextComponent" text="{#options.themeClassic}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" action="MahjongSetTheme" value="classic"/>
+                      </components>
+                    </element>
+                    <element type="UIElement" name="ThemeNavy" flex="1" height="100%" fontSize="22" color="@neutral" selectedColor="@primary" cornerRadius="8" borderWidth="2" borderColor="@frameLight" gradientDirection="Vertical" gradientColor="@neutralDeep" highlight="@highlight">
+                      <components>
+                        <component type="UITextComponent" text="{#options.themeNavy}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                        <component type="UIInputClicker" action="MahjongSetTheme" value="navy"/>
+                      </components>
+                    </element>
+                  </children>
+                </element>
+              </children>
+            </element>
+            <element type="UIStack" name="UploadRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="@surfaceRaised" cornerRadius="8" borderWidth="2" borderColor="@frame" gradientDirection="Vertical" gradientColor="@surfaceRaisedDeep" visible="false">
               <children>
                 <element type="UIElement" name="UploadCaption" width="112" height="87.5%" fontSize="22">
                   <components>
-                    <component type="UITextComponent" text="{#options.upload}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                    <component type="UITextComponent" text="{#options.upload}" textColor="@textMuted" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
                   </components>
                 </element>
                 <element type="UISegmented" name="UploadChoice" bind="uploadChoice" flex="1" height="87.5%" direction="Horizontal" spacing="4">
                   <children>
-                    <element type="UIElement" name="UploadSend" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
+                    <element type="UIElement" name="UploadSend" flex="1" height="100%" fontSize="22" color="@neutral" selectedColor="@primary" cornerRadius="8" borderWidth="2" borderColor="@frameLight" gradientDirection="Vertical" gradientColor="@neutralDeep" highlight="@highlight">
                       <components>
                         <component type="UITextComponent" text="{#upload.consent.accept}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                         <component type="UIInputClicker" action="MahjongSetUpload" value="on"/>
                       </components>
                     </element>
-                    <element type="UIElement" name="UploadKeep" flex="1" height="100%" fontSize="22" color="70,70,100,255" selectedColor="40,110,60,255" cornerRadius="8" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" highlight="255,255,255,60">
+                    <element type="UIElement" name="UploadKeep" flex="1" height="100%" fontSize="22" color="@neutral" selectedColor="@primary" cornerRadius="8" borderWidth="2" borderColor="@frameLight" gradientDirection="Vertical" gradientColor="@neutralDeep" highlight="@highlight">
                       <components>
                         <component type="UITextComponent" text="{#upload.consent.decline}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                         <component type="UIInputClicker" action="MahjongSetUpload" value="off"/>
@@ -150,14 +176,14 @@
                 </element>
               </children>
             </element>
-            <element type="UIStack" name="NicknameRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="48,54,72,255" cornerRadius="8" borderWidth="2" borderColor="78,86,116,255" gradientDirection="Vertical" gradientColor="34,38,52,255" visible="false">
+            <element type="UIStack" name="NicknameRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" padding="4,0,4,0" crossAlign="Center" color="@surfaceRaised" cornerRadius="8" borderWidth="2" borderColor="@frame" gradientDirection="Vertical" gradientColor="@surfaceRaisedDeep" visible="false">
               <children>
                 <element type="UIElement" name="NicknameCaption" width="112" height="87.5%" fontSize="22">
                   <components>
-                    <component type="UITextComponent" text="{#options.nickname}" textColor="190,196,190,255" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
+                    <component type="UITextComponent" text="{#options.nickname}" textColor="@textMuted" verticalAlign="Center" overflow="AutoFit" minFontSize="12"/>
                   </components>
                 </element>
-                <element type="UIElement" name="NicknameField" flex="1" height="87.5%" fontSize="22" color="70,70,100,255" cornerRadius="12" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
+                <element type="UIElement" name="NicknameField" flex="1" height="87.5%" fontSize="22" color="@neutral" cornerRadius="12" borderWidth="2" borderColor="@frameLight" gradientDirection="Vertical" gradientColor="@neutralDeep" shadow="0,4,8,0,@shadow" highlight="@highlight">
                   <components>
                     <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{uploadNickname}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongNickname"/>
@@ -167,19 +193,19 @@
             </element>
             <element type="UIElement" name="NicknameNote" flex="0.375" maxHeight="24" fontSize="18" visible="false">
               <components>
-                <component type="UITextComponent" text="{#options.nicknameNote}" textColor="190,196,190,255" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
+                <component type="UITextComponent" text="{#options.nicknameNote}" textColor="@textMuted" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
               </components>
             </element>
             <element type="UIElement" name="BackGap" height="0" />
             <element type="UIStack" name="ButtonRow" flex="1" maxHeight="64" direction="Horizontal" spacing="8" crossAlign="Stretch">
               <children>
-                <element type="UIElement" name="OptionsRules" flex="1" fontSize="28" color="70,70,100,255" cornerRadius="12" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="48,48,72,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
+                <element type="UIElement" name="OptionsRules" flex="1" fontSize="28" color="@neutral" cornerRadius="12" borderWidth="2" borderColor="@frameLight" gradientDirection="Vertical" gradientColor="@neutralDeep" shadow="0,4,8,0,@shadow" highlight="@highlight">
                   <components>
                     <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#hud.rules}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongRules"/>
                   </components>
                 </element>
-                <element type="UIElement" name="Back" flex="1" fontSize="28" color="40,110,60,255" cornerRadius="12" borderWidth="2" borderColor="140,150,180,255" gradientDirection="Vertical" gradientColor="26,78,40,255" shadow="0,4,8,0,0,0,0,90" highlight="255,255,255,60">
+                <element type="UIElement" name="Back" flex="1" fontSize="28" color="@primary" cornerRadius="12" borderWidth="2" borderColor="@frameLight" gradientDirection="Vertical" gradientColor="@primaryDeep" shadow="0,4,8,0,@shadow" highlight="@highlight">
                   <components>
                     <component type="UITextComponent" fontFamily="PT Sans" fontWeight="700" text="{#options.back}" align="Center" verticalAlign="Center" overflow="AutoFit" wrap="false" minFontSize="12"/>
                     <component type="UIInputClicker" action="MahjongOptionsBack"/>
@@ -207,6 +233,7 @@
             <set element="LanguageCaption" width="64" />
             <set element="HintsCaption" visible="false" />
             <set element="SpeedCaption" visible="false" />
+            <set element="ThemeCaption" visible="false" />
             <set element="UploadCaption" visible="false" />
           </overrides>
         </variant>

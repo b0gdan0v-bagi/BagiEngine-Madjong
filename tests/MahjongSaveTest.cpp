@@ -803,6 +803,24 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(ReadPrefs(coachOnly)->hintsMode, HintsMode::Coach) << "a hand-made file with the coach and no hints reads as the coach";
     }
 
+    TEST(MahjongSaveTest, ThePrefsCarryTheThemeAndAnOldFileReadsTheDefault) {
+        const MahjongPrefsSave navy = MakePrefs("en", true, kDefaultSeatSetup, kFullMatchHands, kDefaultLevel, kDefaultAnimationSpeed, false, "navy");
+        EXPECT_EQ(navy.theme, "navy");
+        ASSERT_TRUE(ReadPrefs(navy).has_value());
+        EXPECT_EQ(ReadPrefs(navy)->theme, "navy");
+        EXPECT_FALSE(navy == MakePrefs("en", true, kDefaultSeatSetup, kFullMatchHands, kDefaultLevel));
+
+        const MahjongPrefsSave older;  // a copy written before the theme has none
+        EXPECT_EQ(older.theme, String(kDefaultTheme));
+        EXPECT_EQ(ReadPrefs(older)->theme, String(kDefaultTheme));
+        EXPECT_TRUE(older == MakePrefs("en", true, kDefaultSeatSetup, kFullMatchHands, kDefaultLevel)) << "the default argument is the default theme";
+
+        MahjongPrefsSave unknown;  // an id the table lacks is the game's to judge, not a reason to refuse the slot
+        unknown.theme = "nope";
+        ASSERT_TRUE(ReadPrefs(unknown).has_value());
+        EXPECT_EQ(ReadPrefs(unknown)->theme, "nope");
+    }
+
     TEST(MahjongSaveTest, ThePrefsKeepALevelPerSeat) {
         const SeatLevels mixed{ComputerLevel{5}, ComputerLevel{2}, ComputerLevel{6}, ComputerLevel{10}};
         const MahjongPrefsSave prefs = MakePrefs("en", true, kPCCC, kFullMatchHands, mixed);

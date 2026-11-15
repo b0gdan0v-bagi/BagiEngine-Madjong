@@ -44,7 +44,9 @@ namespace BECore::Mahjong {
      * `Options` is open, and a language the table does not have is refused (the variable shows the language the game really has).
      *
      * **Options.** `MahjongSetSpeed` takes `slow` | `normal` | `fast` (`TryParseSpeed`); any other text, and the action while the page is
-     * closed, is ignored. The level is not set here: it is a choice of each computer seat on `Setup`.
+     * closed, is ignored. `MahjongSetTheme` takes a theme id of the table of themes (`MahjongGame::SetTheme`): an id it lacks, and the action
+     * while the page is closed, changes nothing (the variable `themeChoice` shows the theme the game really has).
+     * The level is not set here: it is a choice of each computer seat on `Setup`.
      *
      * **Saving.** Every `SceneUpdateEvent` of the active game calls `MahjongGame::FlushSave()`, so a burst of computer steps is one write.
      *
@@ -122,6 +124,7 @@ namespace BECore::Mahjong {
         void PublishHandsChoice() const;
         void PublishLanguage(const MahjongGame& game) const;
         void PublishSpeedChoice(const MahjongGame& game) const;
+        void PublishThemeChoice(const MahjongGame& game) const;
         void PublishEndScreens(const MahjongGame* game);
         void PublishHandOver(const MahjongGame& game);
         void PublishWinningTiles(const Vector<Tile>& tiles);

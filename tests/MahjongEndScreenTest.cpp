@@ -1145,7 +1145,7 @@ namespace BECore::Mahjong::Tests {
                 const UIElement* badge = Element("MatchOver", Format("StandingPlace{}", row).c_str());
                 const UIElement* name = Element("MatchOver", Format("StandingName{}", row).c_str());
                 const UIElement* score = Element("MatchOver", Format("StandingScore{}", row).c_str());
-                const UIElement* first = Element("MatchOver", Format("StandingFirst{}", row).c_str());
+                const UIElement* first = ResolvedElement("MatchOver", Format("StandingFirst{}", row).c_str());
                 ASSERT_TRUE(badge != nullptr && name != nullptr && score != nullptr && first != nullptr) << row;
                 EXPECT_TRUE(SameColor(badge->color, PaletteColor("placeBadge"))) << row;
                 EXPECT_EQ(badge->rect.w, kStandingsBadgeSize) << row;

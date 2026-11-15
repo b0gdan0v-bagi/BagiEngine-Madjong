@@ -259,8 +259,8 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(PersonPungsAndAComputerWins());
         Draw();
 
-        const int baseOf0 = PanelCallAt(_renderer->calls, PlateOf(kSeat0));
-        const int baseOf2 = PanelCallAt(_renderer->calls, PlateOf(kSeat2));
+        const int baseOf0 = PanelCallAt(_renderer->calls, PlateOf(kSeat0), Palette());
+        const int baseOf2 = PanelCallAt(_renderer->calls, PlateOf(kSeat2), Palette());
         int frameAt = -1;
         int blinkAt = -1;
         int firstTile = -1;
@@ -504,7 +504,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(kClaimLostFrame.g, kTurnMark.g);
         EXPECT_EQ(kClaimLostFrame.b, kTurnMark.b);
         for (const Color& other : {kTurnMark, kPendingFrame, kLastDiscardMark, kDrawnTileMark, kCallingFrame, kClaimedEdge, kClaimHighlight, kDeclareMark, kKeepsWaitingMark, kAdvisedFrame,
-                                   kSeatTurnFrame, kVeil, kTileShadow, kTileShadowSoft, kFeltLip, kSeatPlate, kDealerMark}) {
+                                   kSeatTurnFrame, kVeil, kTileShadow, kTileShadowSoft, Palette().feltLip, Palette().seatPlate, kDealerMark}) {
             EXPECT_FALSE(SameColor(kClaimLostFrame, other));
         }
         EXPECT_FLOAT_EQ(kClaimLostSeconds, kClaimHighlightSeconds);

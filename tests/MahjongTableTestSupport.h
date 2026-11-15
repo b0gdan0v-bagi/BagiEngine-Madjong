@@ -14,6 +14,7 @@
 #include <Games/GameManager.h>
 #include <Mahjong/Components/MahjongTableComponent.h>
 #include <Mahjong/MahjongGame.h>
+#include <Mahjong/Table/TablePalette.h>
 #include <Mahjong/Table/TableRegions.h>
 #include <Mahjong/Table/TileAtlas.h>
 #include <Mahjong/Table/TileFlights.h>
@@ -336,12 +337,12 @@ namespace BECore::Mahjong::Tests {
         return found;
     }
 
-    /// The index of the geometry call that is the base of a panel over `zone`: it carries the fill `kSeatPlate` and its border `kSeatPlateFrame` runs round the zone (the border is the one thing whose
-    /// vertices reach every corner). The HUD's canvases mesh the same fill colour, so a panel is found by its place; -1 when none.
-    inline int PanelCallAt(const Vector<DrawCall>& calls, const Rect& zone) {
+    /// The index of the geometry call that is the base of a panel over `zone`: it carries the fill `seatPlate` and its border `seatPlateFrame` of the palette runs round the zone (the border is the
+    /// one thing whose vertices reach every corner). The HUD's canvases mesh the same fill colour, so a panel is found by its place; -1 when none.
+    inline int PanelCallAt(const Vector<DrawCall>& calls, const Rect& zone, const TablePalette& palette) {
         for (size_t i = 0; i < calls.size(); ++i) {
-            const Optional<Rect> frame = BoxOfColor(calls[i], kSeatPlateFrame);
-            if (frame && SameBox(*frame, zone) && BoxOfColor(calls[i], kSeatPlate)) {
+            const Optional<Rect> frame = BoxOfColor(calls[i], palette.seatPlateFrame);
+            if (frame && SameBox(*frame, zone) && BoxOfColor(calls[i], palette.seatPlate)) {
                 return static_cast<int>(i);
             }
         }
@@ -349,11 +350,11 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// How many geometry calls are a panel base over `zone` (`PanelCallAt` finds the first): a panel is drawn once.
-    inline int PanelCountAt(const Vector<DrawCall>& calls, const Rect& zone) {
+    inline int PanelCountAt(const Vector<DrawCall>& calls, const Rect& zone, const TablePalette& palette) {
         int found = 0;
         for (const DrawCall& call : calls) {
-            const Optional<Rect> frame = BoxOfColor(call, kSeatPlateFrame);
-            found += (frame && SameBox(*frame, zone) && BoxOfColor(call, kSeatPlate)) ? 1 : 0;
+            const Optional<Rect> frame = BoxOfColor(call, palette.seatPlateFrame);
+            found += (frame && SameBox(*frame, zone) && BoxOfColor(call, palette.seatPlate)) ? 1 : 0;
         }
         return found;
     }
@@ -369,6 +370,9 @@ namespace BECore::Mahjong::Tests {
             CoreManager::GetUIVars().Clear();
             EXPECT_TRUE(LoadShippedStrings(CoreManager::GetUIStrings()).empty());
             ASSERT_TRUE(CoreManager::GetUIStrings().SetLanguage("en"_intern));  // the expectations of the tests are English
+            // The scene's colours are tokens (`@role`): an element holds the theme's colour only once it was drawn (or `ResolveTheme` ran)
+            const Vector<String> themeProblems = LoadShippedThemes(CoreManager::GetUIThemes());
+            EXPECT_TRUE(themeProblems.empty()) << (themeProblems.empty() ? "" : themeProblems.front().c_str());
             _renderer = New<TurnRecordingRenderer>();
             _renderer->width = kViewWidth;
             _renderer->height = kViewHeight;
@@ -406,7 +410,13 @@ namespace BECore::Mahjong::Tests {
             CoreManager::GetRendererManager().SetRenderer({});
             CoreManager::GetUIVars().Clear();
             CoreManager::GetUIStrings().Clear();
+            CoreManager::GetUIThemes().Clear();  // the table is global: the next test starts with none
             CoreManager::GetFontAtlasLibrary().Clear();
+        }
+
+        /// The colours the table paints in now: those of the themes `SetUp` loaded (the shipped `classic`).
+        TablePalette Palette() const {
+            return MakeTablePalette(CoreManager::GetUIThemes());
         }
 
         void Start(const SeatSetup& seats, uint32_t seed = kSeed, bool flowers = false) {
@@ -568,6 +578,16 @@ namespace BECore::Mahjong::Tests {
         UIElement* Element(const char* node, const char* element) const {
             const auto canvas = Canvas(node);
             return canvas ? canvas->GetRoot().FindByName(PoolString::Intern(element)) : nullptr;
+        }
+
+        /// Like `Element`, with its theme colours resolved: the colours of the scene are tokens, which an element holds in its channels only once it was drawn, and one that is hidden
+        /// (a button of `Actions` not on offer, a row of a screen not shown) was never drawn.
+        UIElement* ResolvedElement(const char* node, const char* element) const {
+            UIElement* found = Element(node, element);
+            if (found) {
+                found->ResolveTheme(CoreManager::GetUIThemes());
+            }
+            return found;
         }
 
         static void CollectControls(const UIElement& element, Vector<const UIElement*>& found) {

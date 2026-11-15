@@ -27,7 +27,7 @@ namespace BECore::Mahjong {
      * (`std::random_device`), never in the rules, which only see it: `StartMatch(seed)` is the seam of a test and of the control API.
      * A match begun through the session is logged, and saved when a person begins it (`StartMatch`; the match `Start()` deals behind
      * `Setup` is not, so it cannot overwrite the saved one); **one started through the non-const `GetMatch()` / `GetLocalMatch()` is
-     * neither**. `GetSettings()`, `GetSeats()`, `GetLevels()`, the language, the hints mode and the animation speed are kept across
+     * neither**. `GetSettings()`, `GetSeats()`, `GetLevels()`, the language, the theme, the hints mode and the animation speed are kept across
      * `Reset()` and `StartMatch`. Contracts of each part: `src/Mahjong/CLAUDE.md`.
      */
     class MahjongGame : public IGame {
@@ -245,6 +245,13 @@ namespace BECore::Mahjong {
         /// Picks the language and applies it to the string table. False, and nothing changes, for a language the table does not have.
         bool SetLanguage(PoolString language);
 
+        /// The colour theme, an id of `config/UIThemes.xml` (`kDefaultTheme` until chosen). A choice of this machine, no rule: the control API reads it, never sets it.
+        PoolString GetTheme() const {
+            return _theme;
+        }
+        /// Picks the theme and applies it to the table of themes. False, and nothing changes, for a theme the table does not have.
+        bool SetTheme(PoolString theme);
+
         /// The player's own choice of hints (`Table/Coach.h`), no rule: the control API does not know it. A change drops the note and the
         /// tally of the coach (`GetCoach()` is enabled exactly while the mode is Coach).
         HintsMode GetHintsMode() const {
@@ -300,6 +307,8 @@ namespace BECore::Mahjong {
     private:
         /// An empty table, or one without the language, is left alone.
         void ApplyLanguage() const;
+        /// An empty table, or one without the theme, is left alone.
+        void ApplyTheme() const;
 
         /// `StartMatch` with `record`: whether the match is kept for the save.
         MatchStatus BeginMatch(uint32_t seed, bool record);
@@ -330,6 +339,7 @@ namespace BECore::Mahjong {
         HintsMode _hintsMode = kDefaultHintsMode;
         AnimationSpeed _animationSpeed = kDefaultAnimationSpeed;
         PoolString _language = PoolString::Intern(kDefaultLanguage);
+        PoolString _theme = PoolString::Intern(kDefaultTheme);
         UploadPrefs _uploadPrefs;
         MatchLogWriter _log;      // before _session: the session reports to it, so it goes last
         MatchUploader _upload;    // forwards to _log

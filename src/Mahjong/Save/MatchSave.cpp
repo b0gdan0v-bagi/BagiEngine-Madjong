@@ -113,11 +113,11 @@ namespace BECore::Mahjong {
         return events;
     }
 
-    MahjongPrefsSave MakePrefs(StringView language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, ComputerLevel level, AnimationSpeed speed, bool coach) {
-        return MakePrefs(language, hintsOn, seats, handsPerMatch, UniformLevels(level), speed, coach);
+    MahjongPrefsSave MakePrefs(StringView language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, ComputerLevel level, AnimationSpeed speed, bool coach, StringView theme) {
+        return MakePrefs(language, hintsOn, seats, handsPerMatch, UniformLevels(level), speed, coach, theme);
     }
 
-    MahjongPrefsSave MakePrefs(StringView language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, const SeatLevels& levels, AnimationSpeed speed, bool coach) {
+    MahjongPrefsSave MakePrefs(StringView language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, const SeatLevels& levels, AnimationSpeed speed, bool coach, StringView theme) {
         MahjongPrefsSave prefs;
         prefs.language.assign(language.data(), language.size());
         prefs.hintsOn = hintsOn || coach;
@@ -141,6 +141,7 @@ namespace BECore::Mahjong {
         }
         const StringView speedText = SpeedText(speed);
         prefs.speed.assign(speedText.data(), speedText.size());
+        prefs.theme.assign(theme.data(), theme.size());
         return prefs;
     }
 
@@ -183,6 +184,7 @@ namespace BECore::Mahjong {
             return std::unexpected(Format("the speed '{}' is not slow, normal or fast", prefs.speed));
         }
         values.speed = *speed;
+        values.theme = prefs.theme;
         return values;
     }
 

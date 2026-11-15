@@ -91,6 +91,22 @@ namespace BECore::Mahjong {
         }
     }
 
+    bool MahjongGame::SetTheme(PoolString theme) {
+        if (!CoreManager::GetUIThemes().HasTheme(theme)) {
+            return false;
+        }
+        _theme = theme;
+        ApplyTheme();
+        return true;
+    }
+
+    void MahjongGame::ApplyTheme() const {
+        UIThemes& themes = CoreManager::GetUIThemes();
+        if (themes.HasTheme(_theme)) {
+            themes.SetTheme(_theme);
+        }
+    }
+
     const std::filesystem::path& MahjongGame::SaveDirectory() const {
         static const std::filesystem::path none;  // by reference: a path by value would allocate in every `FlushSave()`
         return _storage == SaveStorageState::NotRemembered ? none : MatchSaveDirectory();
@@ -147,6 +163,7 @@ namespace BECore::Mahjong {
 
     MatchStatus MahjongGame::BeginMatch(uint32_t seed, bool record) {
         ApplyLanguage();
+        ApplyTheme();
         _recorder.SetRecording(record);
         _upload.SetRecording(record);  // the match dealt behind the panel is nobody's game
         const MatchStatus started = _session.StartMatch(_settings, seed, _seats, _levels);
@@ -181,6 +198,7 @@ namespace BECore::Mahjong {
             return;
         }
         SetLanguage(PoolString::Intern(StringView(values->language.c_str(), values->language.size())));  // a language the table lacks stays out
+        SetTheme(PoolString::Intern(StringView(values->theme.c_str(), values->theme.size())));           // so does a theme
         SetHintsMode(values->hintsMode);
         _seats = values->seats;
         _settings.handsPerMatch = values->handsPerMatch;
@@ -306,6 +324,7 @@ namespace BECore::Mahjong {
             return false;
         }
         ApplyLanguage();
+        ApplyTheme();
         _recorder.SetRecording(true);  // the match goes on being saved
         // Not uploaded: the replay below goes through the whole chain and would record the match again under a new id, and the part
         // played before cannot be rejoined (the match id is not in the save). The next `BeginMatch` records again.
@@ -343,7 +362,7 @@ namespace BECore::Mahjong {
         }
         const int hands = _settings.handsPerMatch;
         const bool handsAreAChoice = hands == kFullMatchHands || hands == kShortMatchHands;
-        const MahjongPrefsSave prefs = MakePrefs(_language.ToStringView(), HintsOn(), _seats, handsAreAChoice ? hands : _savedPrefs.hands, _levels, _animationSpeed, CoachOn());
+        const MahjongPrefsSave prefs = MakePrefs(_language.ToStringView(), HintsOn(), _seats, handsAreAChoice ? hands : _savedPrefs.hands, _levels, _animationSpeed, CoachOn(), _theme.ToStringView());
         if (!(prefs == _savedPrefs)) {
             _savedPrefs = prefs;
             _store.SavePrefs(prefs);

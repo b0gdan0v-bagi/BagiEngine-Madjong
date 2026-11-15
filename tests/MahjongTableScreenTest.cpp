@@ -206,7 +206,7 @@ namespace BECore::Mahjong::Tests {
         for (int i = 0; i < kButtonCount; ++i) {
             const ButtonKind kind = static_cast<ButtonKind>(i);
             const ButtonSpec& spec = SpecOf(kind);
-            const UIElement* element = Element("Actions", spec.element);
+            const UIElement* element = ResolvedElement("Actions", spec.element);
             ASSERT_NE(element, nullptr) << spec.element;
             EXPECT_TRUE(SameColor(element->color, PaletteColor(RoleOf(kind)))) << spec.element << " is a " << RoleOf(kind) << " button";
         }
@@ -218,7 +218,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(Canvas("Actions")->SetElementVisible("Hint"_intern, true));  // a hidden element has no rect
         Canvas("Actions")->UpdateLayout(kViewWidth, kViewHeight);
         EXPECT_EQ(row->rect.w, kRowWidth) << "the row fills its region: four buttons and three gaps";
-        const UIElement* hint = Element("Actions", "Hint");
+        const UIElement* hint = ResolvedElement("Actions", "Hint");
         ASSERT_NE(hint, nullptr);
         EXPECT_TRUE(SameColor(hint->color, PaletteColor("scrim")));
     }
@@ -525,8 +525,8 @@ namespace BECore::Mahjong::Tests {
         wideNames.insert("HintButton");
         EXPECT_EQ(wideNames, narrowNames);
         // The hint button of the row is the one of the table: the action, the word and the colour; it has no pictures
-        const UIElement* tableHint = Element("HintsButton", "HintButton");
-        const UIElement* rowHint = Element("ActionsCompact", "HintButton");
+        const UIElement* tableHint = ResolvedElement("HintsButton", "HintButton");
+        const UIElement* rowHint = ResolvedElement("ActionsCompact", "HintButton");
         ASSERT_TRUE(tableHint != nullptr && rowHint != nullptr);
         ASSERT_TRUE(IsButton(tableHint) && IsButton(rowHint));
         EXPECT_EQ(ButtonAction(rowHint), PoolString::Intern("MahjongHintAdvice"));

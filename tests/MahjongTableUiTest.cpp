@@ -136,9 +136,23 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_renderer->calls[0].kind, DrawKind::Texture);
         EXPECT_TRUE(TileCalls().empty());
         EXPECT_TRUE(_table->GetLayout().slots.empty());
-        EXPECT_EQ(RectsOf(kFeltRim).size(), 4u);
-        EXPECT_EQ(RectsOf(kFeltLip).size(), 4u);
+        EXPECT_EQ(RectsOf(Palette().feltRim).size(), 4u);
+        EXPECT_EQ(RectsOf(Palette().feltLip).size(), 4u);
         EXPECT_TRUE(RectsOf(kTileShadow).empty());
+    }
+
+    TEST_F(MahjongTableUiTest, TheTableReadsItsColoursAgainWhenTheThemeChanges) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        Draw();
+        const Color before = Palette().feltRim;
+        EXPECT_EQ(RectsOf(before).size(), 4u);
+
+        const Color other{before.r, static_cast<uint8_t>(before.g + 20), before.b, before.a};
+        ASSERT_TRUE(CoreManager::GetUIThemes().Set(CoreManager::GetUIThemes().GetTheme(), "feltRim", other));
+        Draw();
+
+        EXPECT_TRUE(RectsOf(before).empty());
+        EXPECT_EQ(RectsOf(other).size(), 4u);
     }
 
     TEST_F(MahjongTableUiTest, TheFeltIsOneTextureOverTheViewMadeOnceAndNotTheAtlas) {
@@ -153,7 +167,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FLOAT_EQ(felt.rect.y, 0.0f);
         EXPECT_FLOAT_EQ(felt.rect.w, kViewWidth);
         EXPECT_FLOAT_EQ(felt.rect.h, kViewHeight);
-        EXPECT_TRUE(RectsOf(kFelt).empty());
+        EXPECT_TRUE(RectsOf(Palette().felt).empty());
         EXPECT_FLOAT_EQ(felt.texture->GetWidth(), static_cast<float>(kFeltTextureWidth));
         EXPECT_FLOAT_EQ(felt.texture->GetHeight(), static_cast<float>(kFeltTextureHeight));
 
@@ -176,7 +190,7 @@ namespace BECore::Mahjong::Tests {
 
         ASSERT_FALSE(_renderer->calls.empty());
         EXPECT_EQ(_renderer->calls[0].kind, DrawKind::Rect);
-        EXPECT_TRUE(SameColor(_renderer->calls[0].color, kFelt));
+        EXPECT_TRUE(SameColor(_renderer->calls[0].color, Palette().felt));
         EXPECT_FLOAT_EQ(_renderer->calls[0].rect.w, kViewWidth);
         EXPECT_FLOAT_EQ(_renderer->calls[0].rect.h, kViewHeight);
         for (const DrawCall& call : _renderer->calls) {
@@ -206,7 +220,7 @@ namespace BECore::Mahjong::Tests {
         Draw();
 
         ASSERT_GE(_renderer->calls.size(), 9u);
-        const Vector<DrawCall> rim = RectsOf(kFeltRim);
+        const Vector<DrawCall> rim = RectsOf(Palette().feltRim);
         ASSERT_EQ(rim.size(), 4u);
         for (size_t i = 0; i < rim.size(); ++i) {
             EXPECT_EQ(rim[i].rect.x, _renderer->calls[1 + i].rect.x) << "the rim is drawn right after the felt";
@@ -225,7 +239,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
         Draw();
 
-        const Vector<DrawCall> lip = RectsOf(kFeltLip);
+        const Vector<DrawCall> lip = RectsOf(Palette().feltLip);
         ASSERT_EQ(lip.size(), 4u);
         float area = 0.0f;
         for (size_t i = 0; i < lip.size(); ++i) {
@@ -250,14 +264,14 @@ namespace BECore::Mahjong::Tests {
         // After the felt (1), the rim (4) and the lip (4) comes the ground of the centre panel (one geometry call), then only its marks up to the first seat plate
         const TableLayout& layout = _table->GetLayout();
         ASSERT_GE(_renderer->calls.size(), 10u);
-        const int ground = PanelCallAt(_renderer->calls, layout.zones.centerPanel);
+        const int ground = PanelCallAt(_renderer->calls, layout.zones.centerPanel, Palette());
         EXPECT_EQ(ground, 9);
         size_t next = 10;
         while (next < _renderer->calls.size() && (SameColor(_renderer->calls[next].color, kPanelTurnLight) || SameColor(_renderer->calls[next].color, kPanelDealerMark))) {
             ++next;
         }
         ASSERT_LT(next, _renderer->calls.size());
-        EXPECT_EQ(static_cast<int>(next), PanelCallAt(_renderer->calls, layout.zones.seatPlates[0]));
+        EXPECT_EQ(static_cast<int>(next), PanelCallAt(_renderer->calls, layout.zones.seatPlates[0], Palette()));
     }
 
     TEST_F(MahjongTableUiTest, EachPanelIsOneGeometryCallThatStaysInsideItsZoneAndItsShadowMargin) {
@@ -270,11 +284,11 @@ namespace BECore::Mahjong::Tests {
         // The view is the output, so a unit is a pixel: the shadow reaches its offset and blur past the zone, the fill and the borders stay in it (a pixel of feather)
         const float shadowMargin = kShadowOffsetY + kShadowBlur;
         for (const Rect& zone : zones) {
-            const int call = PanelCallAt(_renderer->calls, zone);
+            const int call = PanelCallAt(_renderer->calls, zone, Palette());
             ASSERT_GE(call, 0) << "the panel at " << zone.x << "," << zone.y;
             int sameBase = 0;
             for (const DrawCall& other : _renderer->calls) {
-                const Optional<Rect> frame = BoxOfColor(other, kSeatPlateFrame);
+                const Optional<Rect> frame = BoxOfColor(other, Palette().seatPlateFrame);
                 sameBase += (frame && SameBox(*frame, zone)) ? 1 : 0;
             }
             EXPECT_EQ(sameBase, 1) << "one base call per panel";
@@ -283,7 +297,7 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_GE(vertex.y, zone.y - shadowMargin - kPanelBoxEpsilon);
                 EXPECT_LE(vertex.x, zone.x + zone.w + shadowMargin + kPanelBoxEpsilon);
                 EXPECT_LE(vertex.y, zone.y + zone.h + shadowMargin + kPanelBoxEpsilon);
-                if (SameColor(vertex.color, kSeatPlate) || SameColor(vertex.color, kSeatPlateDeep)) {
+                if (SameColor(vertex.color, Palette().seatPlate) || SameColor(vertex.color, Palette().seatPlateDeep)) {
                     EXPECT_GE(vertex.x, zone.x - kPanelBoxEpsilon) << "the fill is inside the zone";
                     EXPECT_LE(vertex.x, zone.x + zone.w + kPanelBoxEpsilon);
                     EXPECT_GE(vertex.y, zone.y - kPanelBoxEpsilon);

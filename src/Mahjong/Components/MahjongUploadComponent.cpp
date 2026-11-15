@@ -8,10 +8,10 @@
 #include <Events/SceneEvents.h>
 #include <Generated/MahjongUploadComponent.gen.hpp>
 #include <Mahjong/BuildInfo.h>
+#include <Mahjong/Components/ColorTokens.h>
 #include <Mahjong/Components/MahjongOnlineComponent.h>
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/Platform.h>
-#include <Mahjong/Table/UiPalette.h>
 #include <Mahjong/Table/Words.h>
 #include <Mahjong/UploadPrefs.h>
 
@@ -32,11 +32,8 @@ namespace BECore::Mahjong {
         constexpr StringView kOptionsPlate = "Plate";
         constexpr StringView kNicknameField = "NicknameField";
         constexpr StringView kOptionsRows[] = {"UploadRow", "NicknameRow", "NicknameNote"};
-        // The height of the plate without the rows (`MahjongOptions.xml`) plus the two rows, the note and the three gaps they add
-        constexpr float kOptionsPlateMaxHeight = 376.0f + 2.0f * 64.0f + 24.0f + 3.0f * 8.0f;
-        // The roles `text` and `textMuted` in `kUiPalette`
-        constexpr size_t kTextIndex = 9;
-        constexpr size_t kTextMutedIndex = 10;
+        // The height of the plate without the rows (`MahjongOptions.xml`, 448) plus the two rows, the note and the three gaps they add
+        constexpr float kOptionsPlateMaxHeight = 448.0f + 2.0f * 64.0f + 24.0f + 3.0f * 8.0f;
         constexpr StringView kNicknameNoneKey = "options.nicknameNone";
 
         IntrusivePtr<UICanvasComponent> FindCanvasOf(Scene& scene, PoolString nodeName) {
@@ -167,7 +164,7 @@ namespace BECore::Mahjong {
         const IntrusivePtr<UICanvasComponent> options = FindCanvasOf(GetScene(), PoolString::Intern(kOptionsNode));
         UIElement* field = options ? options->GetRoot().FindByName(PoolString::Intern(kNicknameField)) : nullptr;
         if (UITextComponent* label = field != nullptr ? field->GetComponent<UITextComponent>() : nullptr) {
-            label->textColor = kUiPalette[none ? kTextMutedIndex : kTextIndex];
+            SetColorToken(*field, label->textColor, none ? PoolString("textMuted"_intern) : PoolString("text"_intern));
         }
     }
 

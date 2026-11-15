@@ -3,7 +3,7 @@
 #include <tests/UiStyleTestSupport.h>
 
 /**
- * The rack under the viewer's hand (`kHandRack`, `kHandRackLip`, `MahjongTableComponent`): one plate for the seat at the bottom, drawn
+ * The rack under the viewer's hand (`Palette().handRack`, `Palette().handRackLip`, `MahjongTableComponent`): one plate for the seat at the bottom, drawn
  * before the turn backdrop and the tiles, wooden and never gold, and clear of the seat plate and of the action area.
  */
 namespace BECore::Mahjong::Tests {
@@ -40,8 +40,8 @@ namespace BECore::Mahjong::Tests {
 
         /// The plate and the body of the rack of the last draw; fails when it is not drawn exactly once.
         void RackOf(Rect& plate, Rect& body) const {
-            const Vector<size_t> lip = CallsOf(kHandRackLip);
-            const Vector<size_t> wood = CallsOf(kHandRack);
+            const Vector<size_t> lip = CallsOf(Palette().handRackLip);
+            const Vector<size_t> wood = CallsOf(Palette().handRack);
             ASSERT_EQ(lip.size(), 1u);
             ASSERT_EQ(wood.size(), 1u);
             EXPECT_EQ(wood[0], lip[0] + 1) << "the body is drawn right on the plate";
@@ -73,7 +73,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FLOAT_EQ(body.y + body.h, plate.y + plate.h - kHandRackLipWidth);
 
         // After the felt, the rim and its lip; before the backdrop of the hand and the first shadow or tile
-        const size_t rack = CallsOf(kHandRackLip)[0];
+        const size_t rack = CallsOf(Palette().handRackLip)[0];
         EXPECT_GE(rack, 9u);
         EXPECT_LT(rack, FirstTile());
         // The turn tints are the seat plate of the seat to move and the backdrop behind its hand, the last of them
@@ -95,7 +95,7 @@ namespace BECore::Mahjong::Tests {
     TEST_F(MahjongHandRackTest, NoNewTableColourEqualsAMarkColour) {
         const Color marks[] = {kTurnMark,       kPendingFrame, kLastDiscardMark, kDrawnTileMark,    kCallingFrame,  kClaimedEdge, kClaimHighlight,
                                kClaimLostFrame, kDeclareMark,  kAdvisedFrame,    kKeepsWaitingMark, kSeatTurnFrame, kVeil};
-        for (const Color& fresh : {kFeltLip, kTileShadowSoft, kHandRack, kHandRackLip}) {
+        for (const Color& fresh : {Palette().feltLip, kTileShadowSoft, Palette().handRack, Palette().handRackLip}) {
             for (const Color& mark : marks) {
                 EXPECT_FALSE(SameColor(fresh, mark));
             }
@@ -103,12 +103,12 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongHandRackTest, TheRackIsWoodAndTakesNoGold) {
-        EXPECT_FALSE(IsGold(kHandRack));
-        EXPECT_FALSE(IsGold(kHandRackLip));
-        EXPECT_FALSE(SameColor(kHandRack, kHandRackLip));
-        EXPECT_GT(kHandRack.r + kHandRack.g + kHandRack.b, kHandRackLip.r + kHandRackLip.g + kHandRackLip.b) << "the lip is the darker";
-        EXPECT_EQ(kHandRack.a, 255);
-        EXPECT_EQ(kHandRackLip.a, 255);
+        EXPECT_FALSE(IsGold(Palette().handRack));
+        EXPECT_FALSE(IsGold(Palette().handRackLip));
+        EXPECT_FALSE(SameColor(Palette().handRack, Palette().handRackLip));
+        EXPECT_GT(Palette().handRack.r + Palette().handRack.g + Palette().handRack.b, Palette().handRackLip.r + Palette().handRackLip.g + Palette().handRackLip.b) << "the lip is the darker";
+        EXPECT_EQ(Palette().handRack.a, 255);
+        EXPECT_EQ(Palette().handRackLip.a, 255);
     }
 
     TEST_F(MahjongHandRackTest, TheWidestRackIsClearOfTheBottomSeatPlateAndOfTheActionArea) {

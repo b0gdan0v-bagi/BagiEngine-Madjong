@@ -5,6 +5,7 @@
 #include <Mahjong/Game/ComputerPlayer.h>
 #include <Mahjong/MahjongGame.h>
 #include <gtest/gtest.h>
+#include <tests/ShippedThemes.h>
 #include <tests/StringsTestSupport.h>
 
 namespace BECore::Mahjong::Tests {
@@ -65,6 +66,7 @@ namespace BECore::Mahjong::Tests {
 
             void SetUp() override {
                 EXPECT_TRUE(LoadShippedStrings(CoreManager::GetUIStrings()).empty());
+                EXPECT_TRUE(LoadShippedThemes(CoreManager::GetUIThemes()).empty());
                 folder = TestTempDirectory(kFolderPrefix);
                 fs::remove_all(folder);
                 SetMatchSaveDirectory(folder);
@@ -77,6 +79,7 @@ namespace BECore::Mahjong::Tests {
                 std::error_code error;
                 fs::remove_all(folder, error);
                 CoreManager::GetUIStrings().Clear();
+                CoreManager::GetUIThemes().Clear();
             }
 
             IntrusivePtr<MahjongGame> NewGame() const {
@@ -480,6 +483,72 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(second->GetLevels()[0], ComputerLevel::Easy);
         EXPECT_EQ(second->GetAnimationSpeed(), AnimationSpeed::Slow);
         EXPECT_FALSE(fs::exists(Slot(kMatchFile)));
+    }
+
+    TEST_F(MahjongSaveGameTest, TheThemeIsKeptAndAppliedAtEveryStart) {
+        const PoolString navy = PoolString::Intern("navy");
+        const PoolString classic = PoolString::Intern(kDefaultTheme);
+        IntrusivePtr<MahjongGame> game = NewGame();
+        EXPECT_EQ(game->GetTheme(), classic);
+        ASSERT_TRUE(game->SetTheme(navy));
+        EXPECT_EQ(CoreManager::GetUIThemes().GetTheme(), navy) << "applied at once";
+        game->FlushSave();
+
+        CoreManager::GetUIThemes().SetTheme(classic);
+        IntrusivePtr<MahjongGame> second = StartedGame();
+        EXPECT_EQ(second->GetTheme(), navy);
+        EXPECT_EQ(CoreManager::GetUIThemes().GetTheme(), navy) << "Start applies the saved choice";
+
+        // The choice outlives a reset and a new match, and the table of themes follows the game's
+        CoreManager::GetUIThemes().SetTheme(classic);
+        second->Reset();
+        EXPECT_EQ(second->GetTheme(), navy);
+        EXPECT_EQ(CoreManager::GetUIThemes().GetTheme(), navy);
+        CoreManager::GetUIThemes().SetTheme(classic);
+        ASSERT_TRUE(second->StartMatch(kSeed).has_value());
+        EXPECT_EQ(CoreManager::GetUIThemes().GetTheme(), navy);
+    }
+
+    TEST_F(MahjongSaveGameTest, ContinueRestoresTheTheme) {
+        IntrusivePtr<MahjongGame> game = NewGame();
+        ASSERT_TRUE(game->StartMatch(kSeed).has_value());
+        ASSERT_TRUE(game->SetTheme(PoolString::Intern("navy")));
+        PlayFirstActions(*game, kPersonActions);
+        game->FlushSave();
+
+        CoreManager::GetUIThemes().SetTheme(PoolString::Intern(kDefaultTheme));
+        IntrusivePtr<MahjongGame> second = StartedGame();
+        ASSERT_TRUE(second->CanContinue());
+        EXPECT_EQ(second->GetTheme(), PoolString::Intern("navy"));
+        EXPECT_EQ(CoreManager::GetUIThemes().GetTheme(), PoolString::Intern("navy"));
+    }
+
+    TEST_F(MahjongSaveGameTest, ATableWithoutTheThemeIsLeftAloneAndAThemeTheTableLacksChangesNothing) {
+        IntrusivePtr<MahjongGame> game = NewGame();
+        ASSERT_TRUE(game->SetTheme(PoolString::Intern("navy")));
+        EXPECT_FALSE(game->SetTheme(PoolString::Intern("nope")));
+        EXPECT_FALSE(game->SetTheme(PoolString()));
+        EXPECT_EQ(game->GetTheme(), PoolString::Intern("navy"));
+        EXPECT_EQ(CoreManager::GetUIThemes().GetTheme(), PoolString::Intern("navy"));
+
+        // A slot that names a theme the table lacks leaves the default and the other choices are still read
+        MatchSaveStore store(CoreManager::GetFileSystem());
+        ASSERT_TRUE(store.Open(folder));
+        MahjongPrefsSave prefs = MakePrefs("ru", false, kDefaultSeatSetup, kShortMatchHands, ComputerLevel::Easy, kDefaultAnimationSpeed, false, "nope");
+        ASSERT_TRUE(store.SavePrefs(prefs));
+        CoreManager::GetUIThemes().SetTheme(PoolString::Intern(kDefaultTheme));
+        IntrusivePtr<MahjongGame> second = StartedGame();
+        EXPECT_EQ(second->GetTheme(), PoolString::Intern(kDefaultTheme));
+        EXPECT_EQ(CoreManager::GetUIThemes().GetTheme(), PoolString::Intern(kDefaultTheme));
+        EXPECT_EQ(second->GetLanguage(), "ru"_intern);
+        EXPECT_FALSE(second->HintsOn());
+        EXPECT_EQ(second->GetSettings().handsPerMatch, kShortMatchHands);
+
+        // An empty table (no theme file) leaves the game on its default and breaks nothing
+        CoreManager::GetUIThemes().Clear();
+        IntrusivePtr<MahjongGame> bare = StartedGame();
+        EXPECT_EQ(bare->GetTheme(), PoolString::Intern(kDefaultTheme));
+        EXPECT_FALSE(bare->SetTheme(PoolString::Intern("navy")));
     }
 
     TEST_F(MahjongSaveGameTest, TheHintsModeIsKeptWhateverItIs) {
