@@ -62,3 +62,8 @@ absurd, and it is fixed here, not tuned to a result. A kong cell may well stay `
 - **Many cells, so some are significant by chance.** About one cell in twenty is `significant` at 95 percent with no effect at all, and
   the tables hold well over a hundred cells. A single `significant` cell is a lead. Only a class that holds in both ranges of the
   protocol is read as a finding.
+- **What "Normal takes" means.** The row marked `Normal takes` is the claim the analyzer's Normal rule picks in that window. Where Normal
+  breaks a tie between equal ratings (two chows of one window, say) it uses the analyzer's fixed tie-break seed, so the marked claim is
+  one valid choice of Normal, not the only one it could make in a game. A window never marks more than one claim.
+- **Windows left out.** A window in which the seat could win is counted and not measured; a window that cannot be analysed (no world
+  can be sampled for the position) is counted as dropped and has no rows. Both counts are printed in the header of every report.
