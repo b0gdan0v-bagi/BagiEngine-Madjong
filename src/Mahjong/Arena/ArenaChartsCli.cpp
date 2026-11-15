@@ -1,6 +1,5 @@
 #include "ArenaChartsCli.h"
 
-
 namespace BECore::Mahjong::Arena {
 
     namespace {
