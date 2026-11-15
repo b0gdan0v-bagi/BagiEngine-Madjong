@@ -42,6 +42,9 @@ namespace BECore::Mahjong {
         }
     };
 
+    /// The theme the game starts in (the default of `config/UIThemes.xml`). Here and not in `MahjongGame.h` because the defaults of the prefs below need it.
+    inline constexpr StringView kDefaultTheme = "classic";
+
     /**
      * @brief The choices of the `Setup` panel and the `Options` page. Rules only a control `reset` can set are not here: the match slot
      * has the settings of its match.
@@ -66,10 +69,12 @@ namespace BECore::Mahjong {
         BE_REFLECT_FIELD String levels;
         /// `SpeedText`; a file without it holds the default
         BE_REFLECT_FIELD String speed = "normal";
+        /// An id of `config/UIThemes.xml`; a file without it holds the default. An id the table lacks is left to the game, like `language`
+        BE_REFLECT_FIELD String theme = "classic";
 
         bool operator==(const MahjongPrefsSave& other) const {
             return language == other.language && hintsOn == other.hintsOn && coach == other.coach && seats == other.seats && hands == other.hands && level == other.level && levels == other.levels &&
-                   speed == other.speed;
+                   speed == other.speed && theme == other.theme;
         }
     };
 
@@ -106,6 +111,8 @@ namespace BECore::Mahjong {
         int handsPerMatch = kFullMatchHands;
         SeatLevels levels = UniformLevels(kDefaultLevel);
         AnimationSpeed speed = kDefaultAnimationSpeed;
+        /// Not checked against the table of themes: that is the game's
+        String theme = String(kDefaultTheme);
     };
 
     /**
@@ -122,10 +129,10 @@ namespace BECore::Mahjong {
 
     /// `coach` implies `hintsOn`.
     [[nodiscard]] MahjongPrefsSave MakePrefs(StringView language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, const SeatLevels& levels, AnimationSpeed speed = kDefaultAnimationSpeed,
-                                             bool coach = false);
+                                             bool coach = false, StringView theme = kDefaultTheme);
     /// A table of one level.
     [[nodiscard]] MahjongPrefsSave MakePrefs(StringView language, bool hintsOn, const SeatSetup& seats, int handsPerMatch, ComputerLevel level, AnimationSpeed speed = kDefaultAnimationSpeed,
-                                             bool coach = false);
+                                             bool coach = false, StringView theme = kDefaultTheme);
 
     /// The choices of a prefs state (`coach` wins over `hintsOn`), or the first thing wrong; `level` is not read when `levels` is there.
     [[nodiscard]] std::expected<PrefsValues, String> ReadPrefs(const MahjongPrefsSave& prefs);

@@ -8,6 +8,7 @@
 #include <tests/FixedWall.h>
 #include <tests/HandTestSupport.h>
 #include <tests/MahjongHubTransport.h>
+#include <tests/ShippedThemes.h>
 #include <tests/StringsTestSupport.h>
 
 /**
@@ -135,8 +136,13 @@ namespace BECore::Mahjong::Tests {
             }
 
             void SetUp() override {
+                EXPECT_TRUE(LoadShippedThemes(CoreManager::GetUIThemes()).empty());
                 game = New<MahjongGame>();
                 control = game->AsControllable();
+            }
+
+            void TearDown() override {
+                CoreManager::GetUIThemes().Clear();
             }
 
             Json State() const {
@@ -420,6 +426,13 @@ namespace BECore::Mahjong::Tests {
             EXPECT_FALSE(Member(entry, "calling").get<bool>());
             EXPECT_EQ(Str(Member(entry, "wind")), String(EnumUtils<Wind>::ToString(MakeSeatWinds(kSeat0)[static_cast<size_t>(seat)]).data()));
         }
+    }
+
+    TEST_F(MahjongGameControlTest, TheStateNamesTheThemeOfTheGame) {
+        ASSERT_NO_FATAL_FAILURE(ResetWithEastAtSeat0());
+        EXPECT_EQ(Str(Member(State(), "theme")), "classic");
+        ASSERT_TRUE(game->SetTheme(PoolString::Intern("navy")));
+        EXPECT_EQ(Str(Member(State(), "theme")), "navy");
     }
 
     TEST_F(MahjongGameControlTest, ThePersonSeatIsOtherThanZeroWhenItIsTheOneToAct) {

@@ -314,7 +314,9 @@ namespace BECore::Mahjong {
         context.viewSeat = seat;
         context.kinds = &session.Seats();
         context.levels = &session.Levels();
-        return TableStateToJson(context, view);
+        Json state = TableStateToJson(context, view);
+        state["theme"] = MakeJsonString(_game.GetTheme().ToStringView());  // this machine's choice: not in the online view that `TableStateToJson` shares
+        return state;
     }
 
     std::expected<Json, ControlError> MahjongGameControl::GetActions() const {
