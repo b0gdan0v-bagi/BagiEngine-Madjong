@@ -1,6 +1,6 @@
 #include "BuildInfo.h"
 
-// The define (a quoted string) comes from CMakeLists.txt for this file only; without it (another build system) the id is unknown.
+// Defined by CMakeLists.txt for this file only, so a new id recompiles nothing else.
 #ifndef MAHJONG_BUILD_ID
 #define MAHJONG_BUILD_ID "unknown"
 #endif

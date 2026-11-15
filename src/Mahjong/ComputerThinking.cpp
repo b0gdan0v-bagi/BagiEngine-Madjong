@@ -39,7 +39,8 @@ namespace BECore::Mahjong {
 
     namespace {
 
-        /// The loop of the background task: the token before the yield, the yield before the rollout (`Awaitables.h`, "Frame budget").
+        /// The loop of the background task: the token before the yield, the yield before the rollout. The yield keeps the page drawing in
+        /// the single-thread build (`engine/src/Modules/TaskSystem/CLAUDE.md`, "Frame budget").
         Task<void> Think(IntrusivePtr<ComputerThinkingState> state, ComputerStepJob job) {
             while (!job.Done()) {
                 if (state->token.IsCancelled()) {
