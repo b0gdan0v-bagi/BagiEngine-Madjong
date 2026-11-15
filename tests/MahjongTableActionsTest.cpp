@@ -5,11 +5,6 @@
 #include <tests/MahjongTableTestSupport.h>
 #include <tests/MahjongTouchTestSupport.h>
 
-/**
- * The action buttons of the table (`Table/ActionButtons.h`, the canvas `Actions` of the shipped scene): which buttons are on screen for a
- * claim window, a win, the kongs and a robbing window, and what each one performs. Hands come from `FixedWall.h`; the scene file itself
- * is checked by `MahjongTableScreenTest`.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -482,7 +477,7 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongTableActionsTest, TheHintFollowsTheButtonThatIsUnderThePointerAfterANewWindow) {
         ASSERT_NO_FATAL_FAILURE(StartWith(kPersonAtSeat1, ClaimWindowModel()));
-        const UIElement* first = Element("Actions", "Pung");  // the first button of the row
+        const UIElement* first = Element("Actions", "Pung");
         ASSERT_NE(first, nullptr);
         const float x = first->rect.x + first->rect.w * 0.5f;
         const float y = first->rect.y + first->rect.h * 0.5f;

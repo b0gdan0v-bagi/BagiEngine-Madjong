@@ -10,11 +10,6 @@
 #include <tests/MahjongTouchTestSupport.h>
 #include <tests/UiStyleTestSupport.h>
 
-/**
- * The rules screen of the shipped scene (`Components/MahjongHudComponent.h`, `Table/RulesText.h`): the `Rules` button of the page `Options` opens
- * the modal pages `Rules` with their bar `RulesAction`, `Next` / `Back` turn them, `Close` closes them, the variables and the elements are
- * the page `FormatRulesPage` makes in each language, nothing moves behind the screen, and a new match or a control action closes it.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

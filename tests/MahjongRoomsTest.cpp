@@ -10,11 +10,6 @@
 #include <gtest/gtest.h>
 #include <tests/MahjongRoomsJudge.h>
 
-/**
- * `MahjongSeatedGame` in rooms: a `RoomHub` (in memory, a clock the test moves, no computer delay) plays whole hands and matches, and
- * every text it sends to every client goes through the judge of `MahjongRoomsJudge.h`. The harness is this file's own (a map from a
- * connection to what it received); the engine's one is in the engine's test target.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

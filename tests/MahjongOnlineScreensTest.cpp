@@ -8,10 +8,6 @@
 #include <tests/ShippedScene.h>
 #include <tests/StringsTestSupport.h>
 
-/**
- * `OnlineScreens` (`Online/OnlineScreens.h`): the pages of the online panel over `OnlineClient`s on a real `RoomHub` with `MahjongSeatedGame` (the in-memory world of
- * `MahjongHubTransport.h`): the player's choices become client commands, and the page, the notice and the status follow the client. No scene.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

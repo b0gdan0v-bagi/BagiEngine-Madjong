@@ -8,10 +8,6 @@
 #include <Rooms/RoomErrors.h>
 #include <gtest/gtest.h>
 
-/**
- * `OnlineClient` (`Online/OnlineClient.h`): the model over a `RoomClient`, driven by a scripted server (the engine's fake transport) and a manual clock. The views come from the real
- * `MahjongSeatedGame`, so the table the model reads is the one the adapter gives. Plain C++: no scene, no `Application`.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

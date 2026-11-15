@@ -1,11 +1,6 @@
 #include <Mahjong/Components/MahjongHudComponent.h>
 #include <tests/MahjongTableTestSupport.h>
 
-/**
- * The motion of the real `Setup` canvas (`config/nodes/MahjongSetup.xml`, the `kMotion*` of `Table/UiPalette.h`) on the manual clock: closed, opened, a frame at the start of the show (nothing
- * visible yet, the click is taken and does nothing), settled (opaque, the click works), closed (the screen is free at once, the card goes after the hide). The numbers in the files are held to the
- * constants by `MahjongUiStyleTest`; the helper that runs the clock is `SettleTransitions` of the table fixture.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

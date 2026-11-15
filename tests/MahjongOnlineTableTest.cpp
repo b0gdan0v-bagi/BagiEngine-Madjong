@@ -9,11 +9,6 @@
 #include <tests/FixedWall.h>
 #include <tests/HandTestSupport.h>
 
-/**
- * `OnlineTable` (`Online/OnlineTable.h`): the view and the actions of a room, read into plain data. The views come from the real
- * `MahjongSeatedGame`, so the reader is held against the writer; the hostile texts are mutations of those views. Plain C++: no scene,
- * no `Application`.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

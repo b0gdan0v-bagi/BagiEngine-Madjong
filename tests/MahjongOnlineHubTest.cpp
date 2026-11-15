@@ -6,11 +6,6 @@
 #include <set>
 #include <tests/MahjongHubTransport.h>
 
-/**
- * Four `OnlineClient`s over a real `RoomHub` with `MahjongSeatedGame` (the in-memory world of `MahjongHubTransport.h`): the whole chain
- * from a click of the model to the adapter and back. Every text a client receives is judged (`MahjongRoomsJudge.h`), so a hand that
- * leaks fails here too. The clients play the first action their table lists, the way a person does in `MahjongRoomsTest.cpp`.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -71,13 +66,11 @@ namespace BECore::Mahjong::Tests {
             return true;
         }
 
-        /// The host makes a room and waits in its lobby.
         void HostRoom(MahjongHubWorld& world, HubPlayer& host, const char* name = "Ann", bool hintsAllowed = false) {
             ASSERT_TRUE(host.Client().Host(kUrl, name, ShortMatch(hintsAllowed)));
             ASSERT_TRUE(RunUntil(world, {&host}, [&] { return InStage(host, OnlineStage::Lobby); }));
         }
 
-        /// The player enters the room of @p host by its code and waits in the lobby.
         void JoinRoom(MahjongHubWorld& world, HubPlayer& player, const HubPlayer& host, const char* name) {
             ASSERT_TRUE(player.Client().Join(kUrl, host.Client().Room(), name));
             ASSERT_TRUE(RunUntil(world, {&player}, [&] { return InStage(player, OnlineStage::Lobby); }));
@@ -199,7 +192,6 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(JoinRoom(world, guest, host, "Bob"));
         EXPECT_FALSE(guest.Client().Lobby().canStart);
 
-        // the guest takes the third seat; both lobbies show it
         ASSERT_TRUE(guest.Client().CanChoose(kGuestSeat));
         ASSERT_TRUE(guest.Client().ChooseSeat(kGuestSeat));
         guest.Sync();
@@ -233,7 +225,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(host.Table().ready == peopleWait);
         EXPECT_TRUE(guest.Table().ready == peopleWait);
 
-        // both read it and are ready: the next hand is dealt
         ASSERT_TRUE(RunUntil(world, players, [&] { return AllInPhase(players, SessionPhase::Playing) && host.Table().handsPlayed == 1 && guest.Table().handsPlayed == 1; }));
         for (const HubPlayer* player : players) {
             EXPECT_FALSE(player->Table().result.has_value());
@@ -357,7 +348,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(guest.Table().version, frozenVersion);
         ExpectNoNotice(guest);
 
-        // the server is back: same seat, same session, a later table
         world.SetRefusing(false);
         ASSERT_TRUE(RunUntil(world, players, [&] { return InStage(guest, OnlineStage::Game) && guest.Table().version > frozenVersion; }, false, milliseconds(100)));
         EXPECT_EQ(guest.Client().Seat(), seat);

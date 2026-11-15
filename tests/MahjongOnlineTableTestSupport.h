@@ -8,11 +8,7 @@
 #include <tests/MahjongTableTestSupport.h>
 #include <vector>
 
-/**
- * The table of a started online game in the shipped scene: the game's client over the in-memory hub (`MahjongHubWorld`) at a seat beside
- * `HubPlayer`s, on the fixture of the table tests. Shared by `MahjongOnlineTableSceneTest` and `MahjongTableAllocTest`. The match save of
- * the game goes to a temp folder named after the test suite, so suites that run at once do not meet.
- */
+// Shared by `MahjongOnlineTableSceneTest` and `MahjongTableAllocTest`.
 namespace BECore::Mahjong::Tests {
 
     namespace {

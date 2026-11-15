@@ -5,10 +5,6 @@
 #include <gtest/gtest.h>
 #include <set>
 
-/**
- * The seeded random source: reproducible sequences, dice, the hand-written shuffle, and golden values that pin the stream so a seed
- * gives the same game on every platform. Pure logic: no engine services.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -133,9 +129,9 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(single[0], 42);
     }
 
-    // Golden values: the numbers come from the first run and are pinned (the first eight are the known mt19937 outputs for seed 1,
-    // 1791095845 4282876139 3093770124 ..., taken modulo 1000). The mt19937 stream is fixed by the standard and the shuffle
-    // is written by hand, so they are the same on every platform; a change here means a seed no longer gives the same game.
+    // Golden values: the first eight are the known mt19937 outputs for seed 1 (1791095845 4282876139 3093770124 ...) modulo 1000. The
+    // mt19937 stream is fixed by the standard and the shuffle is written by hand, so they are the same on every platform; a change here
+    // means a seed no longer gives the same game.
     TEST(MahjongRngTest, GoldenBelowOfSeedOne) {
         const Vector<uint32_t> expected = {845, 139, 124, 368, 263, 313, 491, 341};
         EXPECT_EQ(BelowSequence(kGoldenSeed, kGoldenRange, expected.size()), expected);

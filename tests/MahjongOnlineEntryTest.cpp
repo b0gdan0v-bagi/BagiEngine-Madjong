@@ -5,9 +5,6 @@
 #include <set>
 #include <tests/StringsTestSupport.h>
 
-/**
- * `TextEntry` (`Online/TextEntry.h`): the text of a form field of the online screens, edited from a pad of keys or the keyboard. Pure over the shipped string table.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

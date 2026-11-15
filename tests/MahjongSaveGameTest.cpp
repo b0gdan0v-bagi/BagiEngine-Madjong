@@ -7,15 +7,6 @@
 #include <gtest/gtest.h>
 #include <tests/StringsTestSupport.h>
 
-/**
- * `MahjongGame` saves and loads (`Save/MatchSave.h`, `Save/MatchSaveStore.h`): the match slot is written by `FlushSave()` and only
- * then, once for a burst of play; a second game that `Start()`s on the same folder has the saved match behind `Setup`
- * (`CanContinue()`, `ContinueMatch()`) in the state it was left in (mid-hand, a claim window, the score table, the cover for two
- * people); the match that `Start()` deals otherwise is not recorded and cannot overwrite the save; the choices of `Setup` come back;
- * a save that is broken, of another game or version, that does not replay or that is finished is not offered and is left in place until
- * a match begun by a person replaces it. The game is built directly (no scene) and played through its control adapter. Also the global
- * environment that switches saving off for every other test of the binary.
- */
 namespace BECore::Mahjong::Tests {
 
     using namespace BECore::Tests;
@@ -193,7 +184,7 @@ namespace BECore::Mahjong::Tests {
                 EXPECT_FALSE(game->CanContinue()) << what;
                 EXPECT_TRUE(game->IsSetupOpen()) << what;
                 EXPECT_EQ(game->GetSession().GetPhase(), SessionPhase::Playing) << what;
-                game->GetSession().RunComputers();  // and the table plays
+                game->GetSession().RunComputers();
                 EXPECT_NE(game->GetSession().GetPhase(), SessionPhase::MatchOver) << what;
                 game->FlushSave();
                 EXPECT_EQ(ReadFile(Slot(kMatchFile)), before) << what;  // the match behind the panel is not recorded
@@ -263,7 +254,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(second->CanContinue());
         EXPECT_FALSE(second->ContinueMatch());
         EXPECT_EQ(second->GetSession().Version(), version);  // continuing plays nothing by itself
-        PlayFirstActions(*second, 1);                        // and the match goes on legally
+        PlayFirstActions(*second, 1);
     }
 
     TEST_F(MahjongSaveGameTest, ALevelPerSeatIsKeptByTheMatchContinueAndThePrefs) {
@@ -376,7 +367,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(second->CanContinue());
         EXPECT_EQ(State(*second), State(*game));
         EXPECT_EQ(second->GetSession().GetPhase(), SessionPhase::HandOver);
-        NextHand(*second);  // and Next hand still works
+        NextHand(*second);
 
         for (int hand = 0; hand < kMatchHands && Str(State(*game)["phase"]) != "match_over"; ++hand) {
             game->FlushSave();
@@ -642,7 +633,7 @@ namespace BECore::Mahjong::Tests {
         game->SetHintsOn(false);
         game->SetOnlineName("Bob");
         game->FlushSave();
-        NextHand(*game);  // a hand is played and the game goes on
+        NextHand(*game);
         EXPECT_NE(game->GetSession().GetPhase(), SessionPhase::MatchOver);
         game->Stop();
         EXPECT_EQ(ReadFile(Slot(kMatchFile)), match);

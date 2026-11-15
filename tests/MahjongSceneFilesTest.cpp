@@ -9,11 +9,6 @@
 #include <tests/UiStyleTestSupport.h>
 #include <vector>
 
-/**
- * The scene is split into files: `config/SceneConfig.xml` holds the scene and one `<node ref>` per node, each node lives in `config/nodes/Mahjong<Name>.xml`
- * (the engine's node files, `BECore/Scene/CLAUDE.md`, "Node files"). `kSceneNodes` is the one place a node of the game is added, together with its file and its
- * reference line. The files are read from the source tree (`ShippedScene.h`), the last test loads the scene the way the game does.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

@@ -6,12 +6,6 @@
 #include <tests/MahjongHubTransport.h>
 #include <tests/StringsTestSupport.h>
 
-/**
- * The online play in `MahjongGame` (`MahjongGame.h`: `GetOnline`, `SetOnlineSettings`, `IsOnlineOpen`, `StoredOnline`, `SetOnlineName`) and
- * the `online` slot (`Save/MatchSave.h`): the name and the kept session survive a restart of the game object, a session that the client
- * forgot leaves the slot, a flush with nothing new writes nothing, and a slot that cannot be used is one warning and nothing applies. The
- * client talks to the in-memory hub of `MahjongHubTransport.h`. The token is a secret: it is only ever compared here, never printed.
- */
 namespace BECore::Mahjong::Tests {
 
     using namespace BECore::Tests;

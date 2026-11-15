@@ -3,11 +3,6 @@
 #include <Mahjong/Save/MatchSaveStore.h>
 #include <gtest/gtest.h>
 
-/**
- * The two slots of Mahjong over a `SaveGameService` (`Save/MatchSaveStore.h`): a played match and the prefs round trip, a missing slot
- * is `Missing`, and every way a file can be wrong (garbage, another game, a newer version, a state whose text is broken) is `Broken`
- * with a sentence and nothing thrown. A local `FileSystem` and a temporary folder per test: no engine services, no game.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace fs = std::filesystem;
