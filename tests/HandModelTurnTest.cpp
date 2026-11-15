@@ -5,8 +5,7 @@
 #include <tests/HandTestSupport.h>
 
 /**
- * The turn of a hand: the start, discards, the calling-hand declaration, the self-draw win, bonus tiles and the drawn hand (the claims
- * have `HandModelClaimTest`). Fixed walls say what every seat holds and what comes next. Pure logic: no engine services.
+ * The turn of a hand (the claims have `HandModelClaimTest`). Pure logic: no engine services.
  */
 namespace BECore::Mahjong::Tests {
 

@@ -7,12 +7,8 @@
 #include <memory>
 #include <thread>
 
-/**
- * `ComputerThinking` (`Mahjong/ComputerThinking.h`): a search job run as a background task and polled for. The jobs are made by a
- * `TableSession` that is gone before they run, so the task is shown to touch no session. A wait is a poll with a limit. Under
- * `BE_SINGLE_THREAD` the job is done inside `Start` (no frame has begun, so `YieldIfNeeded()` never parks); the cases that need a
- * parked task are skipped there. Needs the engine services.
- */
+/// Under `BE_SINGLE_THREAD` the job is done inside `Start` (no frame has begun, so `YieldIfNeeded()` never parks), so the cases that need
+/// a parked task are skipped there. A wait is a poll with a limit.
 namespace BECore::Mahjong::Tests {
 
     using BECore::Tests::EngineEnvironment;

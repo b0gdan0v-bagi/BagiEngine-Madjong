@@ -7,14 +7,7 @@
 #include <gtest/gtest.h>
 #include <tests/HandTestSupport.h>
 
-/**
- * The players and the one hand of the arena (`src/Mahjong/Arena/`): the text specs of the players, the table of the knobs of
- * `LevelProfile`, the random "seek win" chooser and `PlayArenaHand`. The last part is the point of the arena: it plays the hands of
- * `ComputerStrengthTest` (seeds 4000..4059, Normal on each seat in turn against three random seats) to the same numbers (those of
- * Normal since `waitingKongByPoints` and the claim window that settles early, 2026-11-12): 190 wins of 240, 27 won by the random seats together, 23 drawn hands, +35270 points
- * for the focus seat. Pure logic: no engine services; about
- * 6 s in Debug (2 s of it the search seat with and without a loop over its worlds).
- */
+/// About 6 s in Debug: 2 s of it the search seat with and without a loop over its worlds.
 namespace BECore::Mahjong::Arena {
 
     using namespace ::BECore::Mahjong::Tests;
@@ -66,7 +59,7 @@ namespace BECore::Mahjong::Arena {
         }
         EXPECT_TRUE(SameProfile(Player("easy").profile, ProfileOf(ComputerLevel::Easy)));
         EXPECT_TRUE(SameProfile(Player("normal").profile, ProfileOf(ComputerLevel::Normal)));
-        EXPECT_FALSE(ParseArenaPlayer("hard").has_value());  // Hard was removed (2026-11-09)
+        EXPECT_FALSE(ParseArenaPlayer("hard").has_value());
         EXPECT_TRUE(SameProfile(Player("normal").profile, kNormalProfile));
     }
 

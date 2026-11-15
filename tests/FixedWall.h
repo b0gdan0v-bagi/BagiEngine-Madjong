@@ -63,7 +63,6 @@ namespace BECore::Mahjong::Tests {
      * The wall comes out through `Wall::FromOrder`, so `DealHands(wall, east, flowers)` gives each seat exactly its `hands[seat]`.
      */
     inline Wall MakeFixedWall(const FixedWallSpec& spec, bool flowers, Seat east = 0) {
-        // How many copies of each kind are left to use.
         Array<int, kTileIdCount> left{};
         for (uint8_t id = 0; id < kTileIdCount; ++id) {
             const Tile tile{id};
@@ -167,7 +166,6 @@ namespace BECore::Mahjong::Tests {
             order.push_back(*it);
         }
 
-        // The dead wall: the last unused tiles.
         if (pool.size() - nextPad < kDeadWallTiles) {
             ADD_FAILURE() << "FixedWallSpec: the set has too few unused tiles for the dead wall";
         }

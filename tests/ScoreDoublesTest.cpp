@@ -1,11 +1,5 @@
 #include <tests/ScoreTestSupport.h>
 
-/**
- * The doubles for everyone, the total of a score and the readings (`ScoreSeat`): pungs and kongs of dragons and winds, one suit,
- * flowers, `points << doubles` with the limit and the rounding, and the choice of the best reading of a hand with several. Pure
- * logic: no engine services. The expected numbers are the table of the rules, in `ScoreTestSupport.h`; the winner's lines are in
- * `ScoreWinnerTest`.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -118,7 +112,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(ScoreSeat(MakeInput("1p 2p 3p", {OpenPung(T("5p")), OpenChow(T("7s"))})).doubles, 0);
         const ScoreBreakdown withHonour = ScoreSeat(MakeInput("1p 2p 3p", {OpenPung(T("5p")), OpenPung(T("Ww"))}));
         EXPECT_EQ(LineDoubles(withHonour, ScoreKind::OneSuitWithHonours), kOneDouble);
-        // A hand of melds only.
         EXPECT_EQ(ScoreSeat(MakeInput("", {OpenChow(T("1s")), OpenPung(T("9s"))})).doubles, kOneSuitNoHonoursDoubles);
     }
 
@@ -171,7 +164,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST(ScoreDoublesTest, EachMatchingFlowerDoubles) {
-        // The flower and the season of the own number double each.
         EXPECT_EQ(ScoreBonus("F2 T2", Wind::South, Wind::East).doubles, kTwoDoubles);
         EXPECT_EQ(ScoreBonus("F2 T2", Wind::South, Wind::South).doubles, 2 * kTwoDoubles);
     }

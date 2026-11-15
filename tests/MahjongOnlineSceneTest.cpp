@@ -13,11 +13,6 @@
 #include <tests/MahjongTouchTestSupport.h>
 #include <tests/StringsTestSupport.h>
 
-/**
- * The online panel in the shipped scene (`Components/MahjongOnlineComponent.h`, the nodes `Online` and `OnlineEntry`): the `Online` button of `Setup` opens it over `Setup`, the pages
- * follow `OnlineScreens`, the pad and the keyboard type, Escape goes one page back, a frame in which nothing moved sets nothing, and every page passes the size matrix. Nothing
- * here connects: the pages that need a room are in the second part of the file.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

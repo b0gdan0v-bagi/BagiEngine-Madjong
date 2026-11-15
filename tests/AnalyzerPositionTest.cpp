@@ -4,11 +4,6 @@
 #include <gtest/gtest.h>
 #include <tests/HandTestSupport.h>
 
-/**
- * The positions of the analyzer (Analyzer/AnalyzerPosition.h): a decision found in a match log of computers (replayed to the point,
- * reduced to the view, numbered by hand and action), and a hand-written position in the tile notation (parsed, judged by
- * `HandModel::Restore`, reduced to the view). Pure logic: no engine services, an in-memory `MatchLog`.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -41,7 +36,6 @@ namespace BECore::Mahjong::Tests {
             return settings;
         }
 
-        /// The log of a match of four computers on `seed`.
         Vector<MatchLogEvent> PlayedLog(uint32_t seed) {
             Match match;
             TableSession session(match);
@@ -78,7 +72,6 @@ namespace BECore::Mahjong::Tests {
             return count;
         }
 
-        /// Everything a view holds, as text, to compare two views.
         String ViewText(const TableView& view) {
             String text =
                 Format("seat {} phase {} current {} pending {} winds {}/{} own", view.seat, Name(view.phase), view.currentSeat, ToString(view.pendingTile), Name(view.seatWind), Name(view.roundWind));
@@ -163,7 +156,6 @@ namespace BECore::Mahjong::Tests {
             return String(text.c_str()).find(part) != String::npos;
         }
 
-        /// The view of a hand-written position, or a failure with the error text.
         TableView Parse(const String& text) {
             const std::expected<TableView, String> view = Analyzer::ParsePosition(text);
             EXPECT_TRUE(view.has_value()) << (view.has_value() ? "" : view.error().c_str());
@@ -224,7 +216,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(first->view.seat, first->seat);
         EXPECT_TRUE(Has(first->view.legal, first->logged));
 
-        // Hand 2 is what follows the first settlement: its first action is an East draw-and-discard of its own.
         const std::expected<LogPosition, String> second = Analyzer::PositionFromLog(events, 2, 0);
         ASSERT_TRUE(second.has_value());
         EXPECT_EQ(second->hand, 2);
@@ -318,7 +309,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(Analyzer::PositionsOfSeat(events, 1, kFarSeat).has_value());
         EXPECT_FALSE(Analyzer::PositionsOfSeat(events, kFarHand, kSeat0).has_value());
 
-        // The first action is changed into one the rules refuse: the log does not replay, the error names the event.
         Vector<MatchLogEvent> broken = events;
         broken[IndexOfFirstAction(broken)].action = HandAction::MakeDiscard(T("F4"));
         const std::expected<LogPosition, String> refused = Analyzer::PositionFromLog(broken, 1, 1);

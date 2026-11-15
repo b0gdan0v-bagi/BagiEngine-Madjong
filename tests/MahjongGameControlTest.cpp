@@ -11,9 +11,8 @@
 #include <tests/StringsTestSupport.h>
 
 /**
- * `MahjongGameControl` (`MahjongGameControl.h`): the state a client sees, the actions it can take, `perform_action` with the computers
- * answering, `reset` and its options, and the errors. The game is built directly (no scene, no `GameManager`) and driven only through
- * the adapter, apart from the fixed walls, which a test lays into the hand in progress (`Match::Hand()`) to know what a seat holds.
+ * `MahjongGameControl` (`MahjongGameControl.h`) driven only through the adapter, with no scene and no `GameManager`; the fixed walls
+ * a test lays into the hand in progress (`Match::Hand()`) say what a seat holds.
  */
 namespace BECore::Mahjong::Tests {
 

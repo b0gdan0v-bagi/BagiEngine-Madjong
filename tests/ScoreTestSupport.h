@@ -5,12 +5,7 @@
 #include <Mahjong/Game/ScoreHand.h>
 #include <tests/HandTestSupport.h>
 
-/**
- * What the scoring tests share (`ScorePointsTest`, `ScoreDoublesTest`, `ScoreWinnerTest`, `ScoreLimitTest`, `ScoreHandTest`,
- * `MatchPlayoutTest`): a `ScoreInput` made from notation, melds, the lines of a breakdown by kind, and the checks every settled hand
- * must pass. Header only. A hand written here needs no 13 or 14 tiles: scoring reads what the seat holds and does not check the
- * count, so a test lists only the tiles it is about (plus `kQuietChows`).
- */
+// A hand needs no 13 or 14 tiles here: scoring does not check the count, so a test lists only the tiles it is about (plus `kQuietChows`).
 namespace BECore::Mahjong::Tests {
 
     // The table of the rules, written out here and not taken from `Score.h`, so a wrong constant there fails a test.

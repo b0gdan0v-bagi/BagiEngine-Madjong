@@ -5,10 +5,6 @@
 #include <tests/ScoreTestSupport.h>
 #include <tests/StringsTestSupport.h>
 
-/**
- * The words of the end-of-hand screen and of the end-of-match screen (`Table/ScoreText.h`). Pure logic: no engine services. The worked
- * hand is the self-draw of `ScoreHandTest` (36 points, 3 doubles, 290), written out here as the rows the screen shows.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

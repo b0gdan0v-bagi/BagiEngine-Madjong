@@ -3,11 +3,7 @@
 #include <Mahjong/Table/TableLayoutSpecXml.h>
 #include <gtest/gtest.h>
 
-/**
- * Where the shipped table layout lives and how the tests read it: the one place that knows. The game's `config/` is not mounted in the test
- * environment, so the file is read from the source tree (like `ShippedScene.h` does for the scene). Header only, pure pugixml and the reader
- * of `Table/TableLayoutSpecXml.h`: no engine services. A file that does not load or does not parse is a failure of the test that asks.
- */
+// The game's `config/` is not mounted in the test environment, so the file is read from the source tree, as `ShippedScene.h` does for the scene.
 namespace BECore::Mahjong::Tests {
 
     inline std::filesystem::path ShippedTableLayoutFile() {

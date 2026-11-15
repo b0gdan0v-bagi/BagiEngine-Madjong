@@ -13,14 +13,9 @@
 #include <tests/FixedWall.h>
 
 /**
- * What the tests of a `HandModel` share: the seat names, `kExpectedStartingScore`, a sum of a number per seat, the name of an enum value
- * or a level (`Name`), a tile from text, the error of a status, a snapshot of everything an action could change, a lap of discards, the checks of
- * `LegalActions` against `Apply` (`EveryCanonicalAction`, `AcceptedExactlyWhenListed`) and the chooser that plays a hand with random
- * legal actions. Header only. Included directly by `ComputerClaimTest`, `ComputerMatchTest`, `ComputerPlayerTest`, `ComputerStrengthTest`,
- * `ComputerTestSupport.h`, `ComputerTurnTest`, `ComputerViewTest`, `HandModelActionsTest`, `HandModelClaimTest`, `HandModelKongTest`,
- * `HandModelPlayoutTest`, `HandModelTurnTest`, `MahjongGameTest`, `MatchTest`, `PaymentsTest` and `TableSessionTest`,
- * and through `ScoreTestSupport.h` by `MatchTestSupport.h` (so `MatchPlayoutTest` and `ComputerMatchTest`) and the `Score*Test` files.
- * What differs between the files (the quiet hands, the specs) stays in them.
+ * What the tests of a `HandModel` share, and several other test files with them: the seat names, a snapshot of everything an
+ * action could change, a lap of discards, the checks of `LegalActions` against `Apply` and the chooser that plays a hand with
+ * random legal actions. Header only. What differs between the files (the quiet hands, the specs) stays in them.
  */
 namespace BECore::Mahjong::Tests {
 

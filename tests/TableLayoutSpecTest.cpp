@@ -5,12 +5,6 @@
 #include <tests/HandTestSupport.h>
 #include <tests/ShippedTableLayout.h>
 
-/**
- * `config/TableLayout.xml` and its reader (`Table/TableLayoutSpecXml.h`): the shipped file parses with no error, a small text gives the spec
- * it says, and every kind of mistake in a file is one message that names the place and the attribute; `CheckTableLayoutSpec`
- * refuses a spec whose table is not sound. Also the global environment that reads
- * the shipped spec once and makes it the active one for the whole test binary: the game's `config/` is not mounted here.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

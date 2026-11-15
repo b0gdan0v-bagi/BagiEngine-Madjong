@@ -9,14 +9,7 @@
 #include <gtest/gtest.h>
 #include <tests/ComputerTestSupport.h>
 
-/**
- * The oracle players of the arena (`src/Mahjong/Arena/ArenaOracle.h`): the view of `oracle-acceptance` differs from the real one only in
- * `visible` and counts exactly the copies that can still be drawn; the oracles choose listed actions only and play whole hands;
- * `oracle-defence` is Normal's action except where Normal's discard wins for a declared opponent and a safe discard of equal shanten
- * exists. The search oracles: the worlds of `oracle-hands` keep the opponents' hands and the wall's tiles and reorder the wall, those of
- * `oracle-whole` are the real table, a decision is listed and the same at any loop over its worlds. Pure logic: no engine services; about
- * 20 s in Debug (the search oracles playing hands are the dear part).
- */
+/// About 20 s in Debug: the search oracles playing hands are the dear part.
 namespace BECore::Mahjong::Arena {
 
     using namespace ::BECore::Mahjong::Tests;
@@ -44,7 +37,6 @@ namespace BECore::Mahjong::Arena {
             return players;
         }
 
-        /// Normal's action on `view` with a fresh rng of `rngSeed`.
         HandAction NormalOn(const TableView& view, uint32_t rngSeed) {
             MahjongRng rng(rngSeed);
             return view.phase == Phase::Discard ? ChooseTurnAction(view, rng) : ChooseClaimAction(view, rng);
@@ -149,7 +141,6 @@ namespace BECore::Mahjong::Arena {
             return SameButVisible(real, other);
         }
 
-        /// The kinds of the three lists of the wall together, sorted.
         Vector<Tile> WallTiles(const HandModel& hand) {
             Vector<Tile> tiles = hand.GetWall().LiveTiles();
             tiles.insert(tiles.end(), hand.GetWall().LooseTiles().begin(), hand.GetWall().LooseTiles().end());

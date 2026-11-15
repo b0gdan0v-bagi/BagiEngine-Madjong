@@ -8,9 +8,8 @@
 #include <vector>
 
 /**
- * `LegalActions` and `Apply`: the one list of what a seat can do, on fixed walls: a plain turn, the kongs, a calling hand that is
- * waiting but not declared, the claim window, the robbing window, a seat out of turn. Every action of a list is accepted by `Apply`
- * and a made-up one is refused. Pure logic: no engine services.
+ * `LegalActions` and `Apply` on fixed walls: every listed action is accepted, a made-up one is refused. Pure logic: no engine
+ * services.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -355,7 +354,7 @@ namespace BECore::Mahjong::Tests {
         HandModel model = MakeModel(spec);
         const String before = Snapshot(model);
 
-        EXPECT_EQ(Error(model.Apply(kSeat0, HandAction::MakeDiscard(T("9m")))), HandError::TileNotInHand);  // not held
+        EXPECT_EQ(Error(model.Apply(kSeat0, HandAction::MakeDiscard(T("9m")))), HandError::TileNotInHand);
         EXPECT_EQ(Error(model.Apply(kSeat0, HandAction::MakeDiscard(Tile{}))), HandError::TileNotInHand);
         EXPECT_EQ(Error(model.Apply(kSeat0, HandAction::MakeDiscard(T("1p"), true))), HandError::NotWaiting);
         EXPECT_EQ(Error(model.Apply(kSeat0, HandAction::MakeDeclareWin())), HandError::NotCalling);

@@ -57,8 +57,7 @@ namespace BECore::Mahjong::Tests {
     }
 
     /// Every element with a text of the tree, shown or not, in tree order. A toggle row (`UIToggleComponent`) is one control: its caption
-    /// is not asked, since the switch beside it may cut it (the look the owner keeps for `Declare`; the class toggle flagged a caption
-    /// only when it had no room at all).
+    /// is not asked, since the switch beside it may cut it (the look the owner keeps for `Declare`).
     inline void CollectTextControls(const UIElement& element, Vector<const UIElement*>& found) {
         if (ShowsText(element)) {
             found.push_back(&element);

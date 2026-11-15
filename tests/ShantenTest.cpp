@@ -5,10 +5,6 @@
 #include <Mahjong/Game/Tile.h>
 #include <gtest/gtest.h>
 
-/**
- * `Shanten` and `ImprovingTiles`: values worked out by hand for hands written in the tile notation, then properties on seeded random
- * hands against `Decompose` (the reference for "complete" and "waiting"). Pure logic: no engine services.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

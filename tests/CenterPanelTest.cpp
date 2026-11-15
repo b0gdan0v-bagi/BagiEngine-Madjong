@@ -6,12 +6,7 @@
 #include <tests/HandTestSupport.h>
 #include <tests/StringsTestSupport.h>
 
-/**
- * The centre panel inside the wall ring (`Table/CenterPanel.h`): the round wind and the number of the hand in it, the tiles left in the wall,
- * and per side of the table the wind letter, the points, the dealer and the turn. Pure logic over a `Match` and its `TableSession`; the
- * shipped words are loaded into a `UIStrings` of the test. The expectations are worked out here from the rules (a hand counts, a round is a
- * quarter of the match), not taken from the function under test.
- */
+/// The expectations are worked out here from the rules (a hand counts, a round is a quarter of the match), not taken from the function under test.
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -66,12 +61,10 @@ namespace BECore::Mahjong::Tests {
             return Words().GetLanguage() == "ru"_intern ? 1 : 0;
         }
 
-        /// "East 1" in the current language: the word of the round and the number.
         String RoundText(int roundIndex, int number) {
             return Format("{} {}", String(kRoundWords[LanguageIndex()][roundIndex]), number);
         }
 
-        /// Checks the panel against the match and the session, with `bottom` the seat the table shows at the bottom.
         void ExpectPanel(const Table& table, Seat bottom) {
             const CenterPanelText panel = MakeCenterPanel(Words(), table.session, table.match);
             const HandModel& hand = table.match.Hand();
@@ -97,7 +90,6 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(turns, turn == kNoSeat ? 0 : 1);
         }
 
-        /// `check(languageId)` once per language of the shipped table.
         template <class Check>
         void InEachLanguage(Check&& check) {
             ForEachLanguage(Words(), check);
@@ -114,7 +106,6 @@ namespace BECore::Mahjong::Tests {
             InEachLanguage([&](PoolString) { EXPECT_EQ(MakeCenterPanel(Words(), table.session, table.match).round, RoundText(played / 4, played % 4 + 1)) << "hand " << played; });
             ASSERT_NO_FATAL_FAILURE(table.Settle(ResultKind::Win, NextSeat(table.match.East())));
         }
-        // Over: the last hand's number stays, and the round wind is the last one
         ASSERT_EQ(table.match.GetPhase(), MatchPhase::Finished);
         EXPECT_EQ(HandNumberInRound(table.match), 4);
         InEachLanguage([&](PoolString) { EXPECT_EQ(MakeCenterPanel(Words(), table.session, table.match).round, RoundText(3, 4)); });
@@ -155,7 +146,6 @@ namespace BECore::Mahjong::Tests {
             Table table;
             ASSERT_NO_FATAL_FAILURE(table.Start(PersonAt(person)));
             ASSERT_EQ(BottomSeat(table.session), person);
-            // After a few hands the winds, the points and the wall differ from the start
             for (int hand = 0; hand < 3; ++hand) {
                 InEachLanguage([&](PoolString) { ExpectPanel(table, person); });
                 SeatScores deltas{};

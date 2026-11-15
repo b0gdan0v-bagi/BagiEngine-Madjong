@@ -3,8 +3,8 @@
 #include <gtest/gtest.h>
 
 /**
- * The hand shape: which splits into sets and a pair a hand has, which hands win, which tiles complete a waiting hand. Pure logic: no
- * engine services. Hands are written in the tile notation of `Tile.h`; waits are written as the notation of the tiles in id order.
+ * The hand shape. Pure logic: no engine services. Hands are written in the tile notation of `Tile.h`; waits are written as the
+ * notation of the tiles in id order.
  */
 namespace BECore::Mahjong::Tests {
 

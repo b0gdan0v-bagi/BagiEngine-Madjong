@@ -7,11 +7,6 @@
 #include <set>
 #include <tests/HandTestSupport.h>
 
-/**
- * `OnlineMirror` (`Online/OnlineMirror.h`): the table of a view as a display copy. The tables come from the real `MahjongSeatedGame`
- * through `ReadOnlineView`, so the copy is held against the model the server plays: every public fact equal, the own tiles real, no
- * valid tile in a hidden place, the winds and the east right for each viewer. Plain C++: no scene, no `Application`.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -114,7 +109,6 @@ namespace BECore::Mahjong::Tests {
             ++coverage.checks;
             coverage.phases.insert(static_cast<int>(want.GetPhase()));
 
-            // The match.
             EXPECT_TRUE(shown.IsRemote());
             EXPECT_TRUE(hand.IsDisplayOnly());
             EXPECT_EQ(shown.Scores(), real.Scores());
@@ -286,8 +280,6 @@ namespace BECore::Mahjong::Tests {
             total.matchOver += seen.matchOver;
             total.checks += seen.checks;
         }
-        // The comparison met the turn, the claim window with and without a claim for the viewer, the end of a hand won and drawn, the
-        // end of the match and kongs.
         EXPECT_EQ(total.phases.size(), 3U);
         EXPECT_GT(total.windowViewerWaiting, 0);
         EXPECT_GT(total.windowViewerPassed, 0);

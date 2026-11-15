@@ -1,10 +1,5 @@
 #include <tests/ScoreTestSupport.h>
 
-/**
- * The lines only a winner has (`ScoreSeat`): the 20 for winning, the wall tile and the only winning tile, and the doubles for the
- * winner, each on a hand that has it and on a near miss that does not; the choice of the reading that the winner's lines decide; the
- * worked hand of the plan. Pure logic: no engine services. The expected numbers are the table of the rules, in `ScoreTestSupport.h`.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

@@ -6,11 +6,6 @@
 #include <tests/FixedWall.h>
 #include <tests/HandTestSupport.h>
 
-/**
- * `MahjongSeatedGame` (`Online/MahjongSeatedGame.h`): the four-seat game a room server runs. Plain C++: no scene, no `Application`.
- * The cases drive it only through `ISeatedGame`, except for the fixed walls, which a test lays into the hand in progress
- * (`GetMatch().Hand()`) to know what a seat holds.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

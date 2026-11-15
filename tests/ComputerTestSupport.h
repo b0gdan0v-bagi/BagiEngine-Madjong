@@ -5,11 +5,6 @@
 #include <tests/FixedWall.h>
 #include <tests/HandTestSupport.h>
 
-/**
- * What the tests of the computer player share (`ComputerViewTest`, `ComputerTurnTest`, `ComputerClaimTest`): the quiet hands of the
- * other seats, the spec of a hand where East holds a given hand, the model of an open pung with the fourth tile drawn and the upgrade
- * model built on it (`UpgradeModel`). Header only.
- */
 namespace BECore::Mahjong::Tests {
 
     // The hands of the other three seats. They hold no pair and no two suit tiles near each other, so no discard of a quiet seat (or of

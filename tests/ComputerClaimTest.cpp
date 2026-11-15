@@ -7,16 +7,9 @@
 #include <tests/FixedWall.h>
 #include <tests/HandTestSupport.h>
 
-/**
- * `ChooseClaimAction`: the choices of a computer player when a discard (or an upgraded kong) is up for claiming, one case per rule, on
- * fixed walls with the expected answer worked out by hand first (the shanten of the hand as it is and of the hand after each claim).
- * Then the helpers (`ConcealedAfterClaim`, `RateClaim`, `ClaimRank`, `IsValueTile`) and a run over random hands: every pending seat
- * answers every window it is asked about with a listed action that `Apply` accepts. Pure logic: no engine services.
- *
- * `WindowModel` opens the window of most cases: East throws the only tile of `live`; seat 1 (South) is the seat under test, the others
- * hold hands without winds that claim nothing the tests look at. The cases of a robbed kong use `OpenPungModel` of
- * `ComputerTestSupport.h` instead (seat 1 upgrades its pung).
- */
+/// `WindowModel` opens the window of most cases: East throws the only tile of `live`; seat 1 (South) is the seat under test, the others
+/// hold hands without winds that claim nothing the tests look at. The cases of a robbed kong use `OpenPungModel` of
+/// `ComputerTestSupport.h` instead (seat 1 upgrades its pung).
 namespace BECore::Mahjong::Tests {
 
     namespace {

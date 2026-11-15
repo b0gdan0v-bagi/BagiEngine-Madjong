@@ -7,12 +7,6 @@
 #include <tests/FixedWall.h>
 #include <tests/HandTestSupport.h>
 
-/**
- * `ExplainAdvice`: the numbers the advice is chosen by, on fixed hands worked out by hand first (the waits of each hand, the unseen
- * copies of each wait), one case per rule of the chooser (`TurnStep`, `ClaimStep`). Every number is held against the rating function
- * of the chooser on the same view (`BestDiscardRating`, `RateDiscards`, `WaitingDiscards`, `RateKong`, `RateClaim`, `WinningTiles`),
- * and a run over random hands holds the explained action to `ComputerPlayer(kAdviceSeed).Choose`. Pure logic: no engine services.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

@@ -15,12 +15,6 @@
 #include <tests/MahjongOnlineTableTestSupport.h>
 #include <thread>
 
-/**
- * The table of a started online game in the shipped scene: the game's client over the in-memory hub with three other people
- * (`HubPlayer`), the display pair that `MahjongGame` shows while the client has a table (`IsOnlineTable()`, `GetMatch()`), and what
- * must not notice it (the local match, the save slot, the control API). The unit under test is the scene's glue; the translation of a
- * view is `MahjongOnlineMirror`.
- */
 namespace BECore::Mahjong::Tests {
 
     class MahjongOnlineTableSceneTest : public MahjongOnlineTableTestBase {

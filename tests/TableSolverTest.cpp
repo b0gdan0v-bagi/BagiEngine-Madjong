@@ -2,11 +2,6 @@
 #include <cmath>
 #include <gtest/gtest.h>
 
-/**
- * `Table/TableSolver.h`: the largest tile a zone holds for what the rules allow it to hold. Pure logic over rectangles. The sizes of the
- * landscape design are the ones the table had before the zones became data; the rest holds the rule (the largest width that fits, the tile
- * never leaves its zone) against a plain search, and a zone that is too small or no number gives size 0.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

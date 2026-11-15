@@ -6,9 +6,6 @@
 #include <gtest/gtest.h>
 #include <set>
 
-/**
- * Tile ids and predicates, the notation, the full tile set and the settings defaults. Pure logic: no engine services.
- */
 namespace BECore::Mahjong::Tests {
 
     // Compile-time checks: a regression breaks the build.
@@ -148,7 +145,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(*parsed, tile);
             names.insert(Str(tile));
         }
-        EXPECT_EQ(names.size(), size_t{kTileIdCount});  // every id has its own name
+        EXPECT_EQ(names.size(), size_t{kTileIdCount});
     }
 
     TEST(TileTest, BadNotationIsRejected) {

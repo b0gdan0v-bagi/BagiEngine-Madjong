@@ -6,10 +6,6 @@
 #include <Mahjong/Game/Wall.h>
 #include <gtest/gtest.h>
 
-/**
- * The wall: the break, the loose tiles, live draws, loose draws with refill from the live tail, the dead wall. Pure logic: no engine
- * services.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

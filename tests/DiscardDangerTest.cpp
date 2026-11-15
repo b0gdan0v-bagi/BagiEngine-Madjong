@@ -9,9 +9,8 @@
 #include <tests/HandTestSupport.h>
 
 /**
- * `DiscardDanger.h`: the danger of a discard against a declared opponent, from public data only. The rules of the reading are tried
- * on views made by hand (every number of a kind is then written in the test), the history they read (`discardedKinds`, `passedKinds`)
- * on a played table, plus no peeking and a view of a sampled world. Pure logic: no engine services.
+ * `DiscardDanger.h`: the danger of a discard against a declared opponent, from public data only. Rules are tried on views made by
+ * hand (every number of a kind is written in the test), the history they read on a played table. Pure logic: no engine services.
  */
 namespace BECore::Mahjong::Tests {
 

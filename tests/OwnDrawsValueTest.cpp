@@ -4,10 +4,6 @@
 #include <cstdlib>
 #include <tests/HandTestSupport.h>
 
-/**
- * The arithmetic under the value of a discard from the own draws: what a win pays and what a standing hand is worth against
- * `Settle`, the chance that nobody else has won, the rounding. Pure logic: no engine services.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

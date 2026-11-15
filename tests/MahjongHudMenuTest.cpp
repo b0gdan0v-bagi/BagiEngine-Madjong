@@ -5,9 +5,8 @@
 #include <tests/StringsTestSupport.h>
 
 /**
- * The three round icon buttons of the HUD (`config/nodes/MahjongHudMenu.xml`): what each is made of, that its tooltip says its word in both languages (and `Leave room`
- * in a room, which `MahjongOnlineTableSceneTest` holds), and that `Rules` opens the pages from the table. Where they lie, their touch size and that they cover no tile are
- * held on the size matrix by `MahjongTouchSizeTest` and `MahjongHudTest`.
+ * The three round icon buttons of the HUD (`config/nodes/MahjongHudMenu.xml`). Where they lie, their touch size and that they cover no
+ * tile are held on the size matrix by `MahjongTouchSizeTest` and `MahjongHudTest`.
  */
 namespace BECore::Mahjong::Tests {
 

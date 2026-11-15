@@ -3,10 +3,6 @@
 #include <cmath>
 #include <gtest/gtest.h>
 
-/**
- * `Table/TapSelect.h` (pure logic): the tap rule of the viewer's hand (select, confirm, move, clear, or discard at once), the rule that
- * picks it (`UsesTapToSelect`) and the rectangle of a raised tile.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

@@ -3,11 +3,6 @@
 #include <gtest/gtest.h>
 #include <tests/ArenaLogTestSupport.h>
 
-/**
- * The match logs of the arena's log mode (`Arena/ArenaLogs.h`, `ArenaLogsReport.h`): the verdict on one log with its reason, the files
- * through the source seam (sorted by name), the counts of a corpus and the bytes of `--check` and of the summary. Pure logic: logs are
- * played in memory, no disk.
- */
 namespace BECore::Mahjong::Arena {
 
     namespace {
@@ -68,7 +63,6 @@ namespace BECore::Mahjong::Arena {
         EXPECT_TRUE(verdict.ok);
         EXPECT_FALSE(verdict.complete);
 
-        // Cut in the middle of a hand: still ok.
         Vector<MatchLogEvent> cut(events.begin(), events.begin() + static_cast<ptrdiff_t>(FirstOf(events, MatchLogKind::Settlement)) - 1);
         const LogVerdict inHand = CheckMatchLog(View(LogText(cut)));
         EXPECT_TRUE(inHand.ok);

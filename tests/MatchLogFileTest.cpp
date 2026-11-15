@@ -11,11 +11,7 @@
 #include <tests/HandTestSupport.h>
 #include <vector>
 
-/**
- * The file of a match log (`MatchLogWriter.h`): a match is written as JSON lines into a file of its own, the file read back and replayed
- * gives the match, and the game wires the writer to its session. Also the global environment that keeps every test of the binary from
- * leaving a `logs/` folder behind: the writer is pointed at a temporary folder for the whole process.
- */
+/** The file of a match log (`MatchLogWriter.h`), and the global environment that keeps every test of the binary from leaving a `logs/` folder behind. */
 namespace BECore::Mahjong::Tests {
 
     using namespace BECore::Tests;
@@ -285,7 +281,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(table.match.History().size(), static_cast<size_t>(kShortMatchHands));
         EXPECT_EQ(FilesIn(folder).size(), 1u) << "only the blocker";
 
-        // the next match, with a folder that works, is written again
         SetMatchLogDirectory(folder / "good");
         ASSERT_NO_FATAL_FAILURE(table.Start());
         EXPECT_TRUE(table.writer.IsOpen());
@@ -315,7 +310,6 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(table.Start(kSeed + 1));
         EXPECT_NE(table.writer.Path(), first);
         EXPECT_EQ(FilesIn(folder).size(), 2u);
-        // the first file holds the start of its match and what was played, and no end
         const auto events = ParseMatchLog(ReadFile(first).c_str());
         ASSERT_TRUE(events.has_value());
         EXPECT_EQ(events->front().seed, kSeed);
@@ -349,7 +343,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(game->GetMatchLog().Path().parent_path(), folder);
         EXPECT_NE(game->GetMatchLog().Path().filename().string().find(Format("_seed{}", seed).c_str()), String::npos);
 
-        // a control reset begins another match, with its own file
         const fs::path first = game->GetMatchLog().Path();
         ASSERT_TRUE(game->AsControllable()->Reset(ParseJson(R"({"seed": 5, "seats": "PCCC"})").value()).has_value());
         EXPECT_NE(game->GetMatchLog().Path(), first);
@@ -367,7 +360,6 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NE(person, events->end()) << "the person's action is not in the log";
         EXPECT_EQ(person->seat, kSeat0);
         EXPECT_EQ(ActionToJson(person->action), actions.front());
-        // and the computers' answers follow it
         EXPECT_TRUE(std::any_of(person, events->end(), [](const MatchLogEvent& event) { return event.kind == MatchLogKind::Action && event.by == SeatKind::Computer; }));
     }
 
@@ -382,7 +374,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(origin.build.empty());
         EXPECT_EQ(origin, MakeMatchOrigin(kBrowserBuild));
 
-        // a control reset is stamped as well
         ASSERT_TRUE(game->AsControllable()->Reset(ParseJson(R"({"seed": 5, "seats": "PCCC"})").value()).has_value());
         const auto again = ParseMatchLog(ReadFile(game->GetMatchLog().Path()).c_str());
         ASSERT_TRUE(again.has_value()) << again.error().c_str();
@@ -402,7 +393,6 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(silent->StartMatch(seed).has_value());
         EXPECT_FALSE(silent->GetMatchLog().IsOpen());
 
-        // a whole hand: the person plays the first listed action until the hand is over
         for (int step = 0; step < kControlStepLimit; ++step) {
             const Json state = logged->AsControllable()->GetState().value();
             ASSERT_EQ(state, silent->AsControllable()->GetState().value()) << "step " << step;

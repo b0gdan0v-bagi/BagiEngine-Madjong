@@ -4,10 +4,6 @@
 #include <Mahjong/UploadPrefs.h>
 #include <gtest/gtest.h>
 
-/**
- * The tester's choice about sending the matches and the file it is kept in (`UploadPrefs.h`): the text round trip, what a damaged
- * file reads as, the temp-and-rename write, and that the game's own saves never list the file. A temporary folder per test.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace fs = std::filesystem;

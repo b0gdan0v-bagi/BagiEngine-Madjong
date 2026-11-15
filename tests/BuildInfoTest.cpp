@@ -1,10 +1,6 @@
 #include <Mahjong/BuildInfo.h>
 #include <gtest/gtest.h>
 
-/**
- * The origin of a match (`BuildInfo.h`): the platform by the build flag, the version of the game and the id of the build, which is
- * the short git hash of the configure or `unknown`. Pure: no engine services.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

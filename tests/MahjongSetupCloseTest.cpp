@@ -4,10 +4,6 @@
 #include <tests/MahjongButtonSupport.h>
 #include <tests/MahjongTableTestSupport.h>
 
-/**
- * The way out of `Setup` (`config/nodes/MahjongSetup.xml`, `Components/MahjongHudComponent.h`): the close cross in the corner of the panel and the
- * Escape key close it and leave the game as it was: no match begun, no choice applied, the table behind the panel is where the player was.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

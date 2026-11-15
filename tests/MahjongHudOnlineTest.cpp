@@ -10,9 +10,9 @@
 #include <vector>
 
 /**
- * The node files `Online` and `OnlineEntry` of the shipped scene (`config/nodes/MahjongOnline.xml`, `MahjongOnlineEntry.xml`) with no component behind them: the
- * canvases are modal `Screen` canvases with a floor, hidden at the start; every page is a set of elements shown by name (what the online component does later), and each
- * page passes the size matrix in both languages with the longest texts, every word whole and every control a touch target.
+ * The node files `Online` and `OnlineEntry` of the shipped scene (`config/nodes/MahjongOnline.xml`, `MahjongOnlineEntry.xml`) with no
+ * component behind them: every page is a set of elements shown by name (what the online component does later) and passes the size
+ * matrix in both languages with the longest texts.
  */
 namespace BECore::Mahjong::Tests {
 

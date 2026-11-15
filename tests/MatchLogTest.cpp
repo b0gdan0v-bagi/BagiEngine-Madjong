@@ -2,10 +2,7 @@
 #include <gtest/gtest.h>
 #include <tests/HandTestSupport.h>
 
-/**
- * The recorder of a match (`Game/MatchLog.h`) and its hook in `TableSession`: the events of a whole match in order, what is not
- * logged, a sink replaced mid-match, and the replay of a log on a fresh `Match`. Pure logic: no engine services, an in-memory `MatchLog`.
- */
+/** The recorder of a match (`Game/MatchLog.h`) and its hook in `TableSession`. Pure logic: no engine services, an in-memory `MatchLog`. */
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -255,7 +252,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(status.error().index, action);
         EXPECT_EQ(status.error().problem, ReplayProblem::ActionRefused);
 
-        // Another seed deals another hand: the first Hand event no longer matches.
         Vector<MatchLogEvent> reseeded = played.events;
         reseeded[0].seed += 1;
         Match second;
@@ -264,7 +260,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(status.error().index, 1u);
         EXPECT_EQ(status.error().problem, ReplayProblem::HandMismatch);
 
-        // A settlement that pays otherwise.
         Vector<MatchLogEvent> paid = played.events;
         const size_t settlement = IndexOf(paid, MatchLogKind::Settlement);
         ASSERT_LT(settlement, paid.size());
@@ -275,7 +270,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(status.error().index, settlement);
         EXPECT_EQ(status.error().problem, ReplayProblem::SettlementMismatch);
 
-        // The final scores of the End event.
         Vector<MatchLogEvent> ended = played.events;
         ended.back().scores[1] += 10;
         Match fourth;
@@ -326,7 +320,7 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(replayed.GetPhase(), MatchPhase::Finished);
             EXPECT_EQ(replayed.Scores(), played.match.Scores());
 
-            // A pass that does not follow the decision that settled a window is refused as before: here before the first action.
+            // A pass that does not follow the decision that settled a window is refused: here before the first action.
             Vector<MatchLogEvent> stray = played.events;
             const size_t action = IndexOf(stray, MatchLogKind::Action);
             ASSERT_LT(action, stray.size());
@@ -401,12 +395,9 @@ namespace BECore::Mahjong::Tests {
         MahjongSettings bad;
         bad.handsPerMatch = kUnplayableHandsPerMatch;
         EXPECT_FALSE(table.session.StartMatch(bad, kSeed, kAllComputers).has_value());
-        // An action the hand refuses.
         ASSERT_TRUE(table.session.ActorIsPerson());
         EXPECT_FALSE(table.session.PerformPerson(HandAction::MakeDeclareWin()).has_value());
-        // A computer step while a person acts.
         EXPECT_FALSE(table.session.StepComputer().has_value());
-        // The hand is not over.
         EXPECT_FALSE(table.session.NextHand().has_value());
         // A cover that goes: nothing happens at the table.
         table.session.Reveal();

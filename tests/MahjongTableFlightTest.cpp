@@ -5,12 +5,6 @@
 #include <tests/MahjongTableTestSupport.h>
 #include <tests/UiStyleTestSupport.h>
 
-/**
- * The tiles that fly to their place (`Components/MahjongTableComponent.h`, "Flights"; the planner is `Table/TileFlights.h`). The shipped
- * scene is drawn into a `RecordingRenderer` as big as the view, so a rect of a draw call is a rect of the layout. The fixed hands come
- * from `FixedWall.h`; a batch is made by changing the model between two draws (as a computer's step, a click or the control API does), and
- * the clock of the table runs on `SceneUpdateEvent`. `MahjongTableTestBase` switches the flights off, these tests switch them on.
- */
 namespace BECore::Mahjong::Tests {
 
     // The flights are over long before the next computer step, so the pace does not change

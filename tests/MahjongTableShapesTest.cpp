@@ -5,11 +5,8 @@
 #include <tests/UiStyleTestSupport.h>
 
 /**
- * The table in the narrow and the wide view (`Table/TableLayout.h`, `TableShape`), after the pattern of `MahjongTablePortraitTest`: the scene
- * picks the view of 1080 x 768 for a landscape output at most 1.55 times as wide as high and the one of 1560 x 720 for an output twice as wide
- * as high or more, and the component lays the table out for it, fits it into the window and plays it by click and tap. The fixture's renderer
- * stands for the window (`SetWindow`). In the design window (the view at density 1) the view is the output, so a rect of a draw call is a rect of
- * the layout; the fitted windows put bars on a pair of sides and the tests map the layout through `TableFit`.
+ * After the pattern of `MahjongTablePortraitTest`. The fixture's renderer stands for the window (`SetWindow`). In the design window (the view at density 1) the view is
+ * the output, so a rect of a draw call is a rect of the layout; the fitted windows put bars on a pair of sides and the tests map the layout through `TableFit`.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -213,7 +210,6 @@ namespace BECore::Mahjong::Tests {
 
     TEST_F(MahjongTableShapesTest, EveryTileIsDrawnAtItsSlotAndTheSideSeatsAreTurned) {
         for (const TableShape shape : kNewShapes) {
-            // The design window: the view is the output, so the draw call of a slot is the slot
             ASSERT_NO_FATAL_FAILURE(StartIn(DesignWindowOf(shape)));
             ASSERT_NO_FATAL_FAILURE(ExpectTableDrawn(false, kSeat0)) << NameOf(shape);
             const TableLayout& layout = _table->GetLayout();
@@ -250,7 +246,6 @@ namespace BECore::Mahjong::Tests {
                     felt = felt || (call.kind == DrawKind::Texture && call.texture != _atlasTexture && NearRect(call.rect, view));
                 }
                 EXPECT_TRUE(felt) << NameOf(shape) << " " << window.label.c_str() << ": the felt covers the view";
-                // The rim is the four bars of `kRimWidth` units of the shape's design on the border of the view
                 float area = 0.0f;
                 for (const Rect& rect : RectsOf(kFeltRim)) {
                     area += rect.w * rect.h;
@@ -347,7 +342,7 @@ namespace BECore::Mahjong::Tests {
             ASSERT_NE(slot, nullptr);
             const Rect slotRect = slot->rect;
             const auto [x, y] = OutCentre(window, slotRect);
-            Tap(x, y);  // a touch: the tap regime is on in every window
+            Tap(x, y);
             Draw();
             ASSERT_EQ(_table->SelectedHandIndex(), index) << window.label.c_str();
             const Rect raised = RaisedRect(slotRect);
@@ -472,7 +467,6 @@ namespace BECore::Mahjong::Tests {
             Draw();
             EXPECT_GT(_table->FlightCount(), 0u) << change.from.label.c_str() << ": a discard makes a flight";
 
-            // The same discard and the window changes its shape before the next draw: the tiles are in place in the other table
             ASSERT_NO_FATAL_FAILURE(StartIn(change.from));
             const auto [x2, y2] = HandTilePoint(change.from, 0);
             EXPECT_FALSE(Click(x2, y2));

@@ -10,10 +10,6 @@
 #include <cmath>
 #include <gtest/gtest.h>
 
-/**
- * What the tests of the look share (`Table/UiPalette.h`): a colour compared field by field, the colour of a role of the palette by its
- * name, the gap between two rects one above the other, rects that are apart and the plates the table paints under the zones.
- */
 namespace BECore::Mahjong::Tests {
 
     inline bool SameColor(const Color& a, const Color& b) {

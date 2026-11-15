@@ -1,11 +1,7 @@
 #include <Mahjong/Game/HandShape.h>
 #include <tests/ScoreTestSupport.h>
 
-/**
- * The limit hands of `ScoreSeat` (the owner's eleven, 12 kinds because seven pairs has two; two of them are about the last / loose
- * tile), each on a hand that has it and on near misses that score normally; the limit setting; a seat that does not win. Pure logic:
- * no engine services. Hands are written with the winning tile in them; the expected numbers are in `ScoreTestSupport.h`.
- */
+// The limit hands of ScoreSeat: the owner's eleven, 12 kinds because seven pairs has two. Hands are written with the winning tile in them.
 namespace BECore::Mahjong::Tests {
 
     namespace {

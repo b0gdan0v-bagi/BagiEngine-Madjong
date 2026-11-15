@@ -4,12 +4,7 @@
 #include <BECore/Scene/SceneNodeFiles.h>
 #include <gtest/gtest.h>
 
-/**
- * Where the shipped scene lives and how the tests read it: the one place that knows. A game's content is not mounted in the test environment, so the
- * files are read from the source tree (`config/SceneConfig.xml` and the node files it references, `config/nodes/`), and what a test sees is the
- * expanded document, the scene as the engine loads it (every `<node ref>` replaced by the node of its file, in the same place). Header only, pure
- * pugixml: `LoadShippedSceneDocument` and `ShippedSceneXml` need no engine services.
- */
+// A game's content is not mounted in the test environment: the files are read from the source tree and `<node ref>` is expanded as the engine loads it.
 namespace BECore::Mahjong::Tests {
 
     inline std::filesystem::path ShippedConfigDirectory() {

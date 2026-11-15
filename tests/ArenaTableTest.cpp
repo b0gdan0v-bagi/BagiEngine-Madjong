@@ -1,12 +1,7 @@
 #include <Mahjong/Arena/ArenaTable.h>
 #include <gtest/gtest.h>
 
-/**
- * The table statistics of the arena (`src/Mahjong/Arena/ArenaTable.h`, `--table-stats`): the tally of one hand worked out by hand (the
- * rounds that are known, the win in a round, the scores of the winner and of the seats that stand), the observer that collects the own
- * turns of a real hand without changing the hand, and the run over seeds: the same result and the same text at 1 and 3 jobs, the sums that
- * must hold. Pure logic: no engine services; the file takes about 2 s in Debug.
- */
+/// About 2 s in Debug.
 namespace BECore::Mahjong::Arena {
 
     namespace {

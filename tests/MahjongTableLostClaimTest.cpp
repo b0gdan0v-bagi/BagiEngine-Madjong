@@ -7,10 +7,8 @@
 #include <tests/UiStyleTestSupport.h>
 
 /**
- * A claim that loses to a better one in a claim window (`Components/MahjongTableComponent.h`, "A claim that lost"): for
- * `kClaimLostSeconds` the seat plate of the window's winner blinks and the plate of each seat whose claim lost has a frame, and a mahjong
- * on a discard flies from the pile into the winner's hand. The model is changed between two draws as a computer's step, a click or the
- * control API does; the windows are built on fixed walls (`FixedWall.h`): seat 3 draws and discards a 4p after a lap of three discards.
+ * A claim that loses to a better one in a claim window (`Components/CLAUDE.md`, "The table (`MahjongTableComponent`)"). The model is changed between two draws as a
+ * computer's step, a click or the control API does; the windows are built on fixed walls (`FixedWall.h`): seat 3 draws and discards a 4p after a lap of three discards.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -31,7 +29,7 @@ namespace BECore::Mahjong::Tests {
 
         constexpr SeatSetup kPersonAtSeat0{SeatKind::Person, SeatKind::Computer, SeatKind::Computer, SeatKind::Computer};
         constexpr SeatSetup kPersonAtSeat1{SeatKind::Computer, SeatKind::Person, SeatKind::Computer, SeatKind::Computer};
-        /// Times that a blink period (`kClaimBlinkSeconds` 0.5) divides exactly in floats: 0.375 s is in the off half, 0.125 s ends it.
+        /// Times that a blink period (`kClaimBlinkSeconds`) divides exactly in floats: 0.375 s is in the off half, 0.125 s ends it.
         constexpr float kOffHalf = 0.375f;
         constexpr float kEndOfPeriod = 0.125f;
         constexpr float kHalfFlight = kTileFlightSeconds * 0.5f;
@@ -253,7 +251,7 @@ namespace BECore::Mahjong::Tests {
         Draw();
         ExpectNoMarks();
         Draw();
-        ExpectNoMarks();  // not back by drawing again
+        ExpectNoMarks();
         EXPECT_EQ(Session().GetPhase(), SessionPhase::HandOver);
     }
 
@@ -303,7 +301,7 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(StartWindow(kPersonAtSeat0, WindowModel(WindowSpec(kQuietHand, kSeatPungs, kSeatWaitsAlone), {kSeat2})));
         ASSERT_EQ(Hand().PendingClaimSeats(), (Vector<Seat>{kSeat1, kSeat2}));
         const TableLayout before = _table->GetLayout();
-        AdvanceTime(kComputerStepSeconds);  // the computers decide one after the other within the pause
+        AdvanceTime(kComputerStepSeconds);
         ASSERT_EQ(Hand().GetPhase(), Phase::Finished);
         ASSERT_EQ(Hand().Result()->winner, kSeat2);
         Draw();
@@ -326,7 +324,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(Blinking(kSeat1)) << "the plate of the pung's owner";
         EXPECT_FALSE(Framed(kSeat1));
         EXPECT_FALSE(Blinking(kSeat0));
-        // The claimed 4p flies from its pile slot as before: a face at the old pile rect in the first frame
         EXPECT_GT(_table->FlightCount(), 0u);
         EXPECT_TRUE(TileAt(RectOfSlot(_before, SlotRole::DiscardTile, kSeat3, kPileEntryOfTheDiscard), T("4p")));
     }
@@ -342,7 +339,6 @@ namespace BECore::Mahjong::Tests {
         Draw();
         ExpectNoMarks();
 
-        // The person claims the pung and nobody else claims: the person is the winner of a window nobody lost
         ASSERT_NO_FATAL_FAILURE(StartWindow(kPersonAtSeat0, WindowModel(WindowSpec(kPungHand, kQuietHand, kSeatWaits), {})));
         ASSERT_EQ(Hand().PendingClaimSeats(), (Vector<Seat>{kSeat0}));
         EmitAction("MahjongClaimPung");
@@ -382,7 +378,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(Framed(kSeat0));
         EXPECT_TRUE(Blinking(kSeat1));
 
-        // A spectator: four computers
         ASSERT_NO_FATAL_FAILURE(StartWindow(kAllComputers, WindowModel(WindowSpec(kChowHand, kSeatPungs, kSeatWaits), {})));
         ASSERT_EQ(Session().Viewer(), kNoSeat);
         ASSERT_TRUE(Model().Claim(kSeat0, ClaimKind::Chow, T("3p")).has_value());
@@ -447,7 +442,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableLostClaimTest, ANewHandAResetAndAControlResetLeaveNoMark) {
-        // A new hand
         ASSERT_NO_FATAL_FAILURE(PersonPungsAndAComputerWins());
         Draw();
         ASSERT_TRUE(Framed(kSeat0));
@@ -455,7 +449,6 @@ namespace BECore::Mahjong::Tests {
         Draw();
         ExpectNoMarks();
 
-        // Reset
         ASSERT_NO_FATAL_FAILURE(PersonPungsAndAComputerWins());
         Draw();
         ASSERT_TRUE(Framed(kSeat0));
@@ -463,7 +456,6 @@ namespace BECore::Mahjong::Tests {
         Draw();
         ExpectNoMarks();
 
-        // A control reset
         ASSERT_NO_FATAL_FAILURE(PersonPungsAndAComputerWins());
         Draw();
         ASSERT_TRUE(Framed(kSeat0));
@@ -493,13 +485,12 @@ namespace BECore::Mahjong::Tests {
         ASSERT_EQ(SeatPosition(kSeat1, kSeat1), 0);
         EmitAction("MahjongClaimPung");
         ASSERT_EQ(Hand().GetPhase(), Phase::Claim);  // seat 2 has yet to decide
-        AdvanceTime(kComputerStepSeconds);           // seat 2 claims the mahjong
+        AdvanceTime(kComputerStepSeconds);
         ASSERT_EQ(Hand().GetPhase(), Phase::Finished);
         Draw();
 
         EXPECT_TRUE(Framed(kSeat1));
         EXPECT_TRUE(Blinking(kSeat2));
-        // The plate of the person is the one at the bottom of the table: lower than every other plate
         for (Seat seat = 0; seat < kSeatCount; ++seat) {
             if (seat != kSeat1) {
                 EXPECT_GT(PlateOf(kSeat1).y, PlateOf(seat).y) << "seat " << seat;
@@ -530,7 +521,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(Shown("HandOverAction"));
         EXPECT_TRUE(Shown("HudMenu")) << "the score table is not up, so the menu stays";
         EXPECT_FALSE(Var("handOverHeadline").empty()) << "the words are published at once";
-        // The flight and the marks are on the table meanwhile
         EXPECT_EQ(_table->FlightCount(), 1u);
         EXPECT_TRUE(Framed(kSeat0));
         EXPECT_TRUE(Blinking(kSeat2));
@@ -550,7 +540,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_FALSE(Shown("HudMenu"));
         ExpectNoMarks();
 
-        // The button works as it always does
         const size_t settled = _game->GetMatch().History().size();
         ASSERT_TRUE(ClickElement("HandOverAction", "NextHand"));
         EXPECT_EQ(_game->GetMatch().History().size(), settled + 1);
@@ -575,7 +564,6 @@ namespace BECore::Mahjong::Tests {
     }
 
     TEST_F(MahjongTableLostClaimTest, AClaimOfAComputerThatLostToAMahjongHoldsNothing) {
-        // The person has no claim; seat 1 pungs, seat 2 wins: the beaten seat is a computer
         ASSERT_NO_FATAL_FAILURE(StartWindow(kPersonAtSeat0, WindowModel(WindowSpec(kQuietHand, kSeatPungs, kSeatWaits), {kSeat2})));
         ASSERT_EQ(Hand().PendingClaimSeats(), (Vector<Seat>{kSeat1, kSeat2}));
         AdvanceTime(kComputerStepSeconds);

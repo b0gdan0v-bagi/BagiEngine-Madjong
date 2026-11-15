@@ -3,10 +3,6 @@
 #include <tests/ScoreTestSupport.h>
 
 /**
- * `SettleHand` end to end: hands played on fixed walls to a self-draw, a win on a discard, a robbed kong and a drawn hand, then
- * scored and settled; the visible copies of the winning tile. Pure logic: no engine services. The expected numbers are worked out
- * by hand from the table of the rules (in `ScoreTestSupport.h`) and written beside each hand.
- *
  * The walls are built so that a discard opens a window only where a test means it to: the lap discards honours that no other seat
  * holds twice, and the other seats hold no tiles that make a chow with a discard.
  */
@@ -179,7 +175,7 @@ namespace BECore::Mahjong::Tests {
         for (const Seat seat : {kSeat0, kSeat2, kSeat3}) {
             ExpectNoWinnerLine(settlement.breakdowns[seat], seat);
         }
-        EXPECT_EQ(LinePoints(settlement.breakdowns[kSeat2], ScoreKind::Pung), kSimplePungConcealed);  // the concealed 3s
+        EXPECT_EQ(LinePoints(settlement.breakdowns[kSeat2], ScoreKind::Pung), kSimplePungConcealed);
         EXPECT_EQ(settlement.breakdowns[kSeat0].points, 0);
         EXPECT_EQ(settlement.breakdowns[kSeat3].points, 0);
     }

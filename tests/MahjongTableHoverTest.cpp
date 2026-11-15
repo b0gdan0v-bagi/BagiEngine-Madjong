@@ -5,11 +5,6 @@
 #include <tests/MahjongTableTestSupport.h>
 #include <tests/UiStyleTestSupport.h>
 
-/**
- * The name on hover in the scene (`Components/MahjongTableComponent.h`, "The name on hover"; the node `TileHover`): the mouse pointer over a
- * face-up tile shows its `TileName` in a plate, over anything else shows nothing. The pure rules are `TileHoverTest`; here the pointer goes
- * through `UIInput` as the platform layer sends it, so a canvas that consumes a motion keeps it from the table as it does in the game.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

@@ -13,12 +13,8 @@
 #include <tests/MahjongTouchTestSupport.h>
 #include <tests/UiStyleTestSupport.h>
 
-/**
- * The hints at the table of a room (`Components/MahjongHintsComponent.h`, `MahjongGame::HintsActive()`): the host decides whether they exist, the
- * player's own mode (`Options`) decides whether he uses them, and every hint is worked out from the viewer's view of the display copy with the server's
- * `actions` as `legal`. The server's own position is laid by a test (`LayOnServer`: the match of the room's game is replaced and the client is
- * cut and comes back, which sends it a fresh view), so the oracle is `MakeTableView` of the server's hand for the viewer's seat.
- */
+/// The server's own position is laid by a test (`LayOnServer`: the room's match is replaced and the client is cut and comes back, which sends it a
+/// fresh view), so the oracle is `MakeTableView` of the server's hand for the viewer's seat.
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -177,7 +173,6 @@ namespace BECore::Mahjong::Tests {
             return PumpUntil([&] { return Table().version > version; });
         }
 
-        /// The number of tiles of the waiting row on screen.
         int ShownWaitCells() const {
             int shown = 0;
             for (int i = 0; i < kMaxWaitingTiles; ++i) {
@@ -201,7 +196,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(ButtonShown());
         EXPECT_FALSE(AdviceShown()) << "the advice waits for the press";
 
-        // The marks are exactly those of the server's own view of the seat
         const int declaringTiles = Count(declaring, held);
         ASSERT_GT(declaringTiles, 0) << "the position declares";
         EXPECT_EQ(RectsOf(kDeclareMark).size(), static_cast<size_t>(declaringTiles));
@@ -216,7 +210,6 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(DangerBarCount(grade), grades[static_cast<size_t>(grade) - 1]) << static_cast<int>(grade);
         }
 
-        // The advice is the one of the server's own seat view
         const Optional<HandAction> advice = AdviceFor(server);
         ASSERT_TRUE(advice.has_value());
         const uint64_t version = _game->GetSession().Version();

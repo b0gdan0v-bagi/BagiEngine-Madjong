@@ -7,8 +7,7 @@
 
 /**
  * A search seat thinks in the background on the table (`Components/MahjongTableComponent.h`, "Pace"; the runner is
- * `Mahjong/ComputerThinking.h`): the table keeps drawing meanwhile, the answer is applied at the pause end or when it arrives, and
- * nothing stale is applied. The tables are started through the session with a search `LevelProfile` (no level turns the search on),
+ * `Mahjong/ComputerThinking.h`). The tables are started through the session with a search `LevelProfile` (no level turns the search on),
  * on a seed whose first decision is a search. A wait is a poll with a limit; the cases that need a parked task are skipped under
  * `BE_SINGLE_THREAD`, where the job is done inside `Start`.
  */

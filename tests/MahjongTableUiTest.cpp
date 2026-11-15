@@ -5,10 +5,7 @@
 #include <tests/MahjongTableTestSupport.h>
 #include <tests/UiStyleTestSupport.h>
 
-/**
- * The table as drawn (`Components/MahjongTableComponent.h`): the shipped scene (`config/SceneConfig.xml` and its node files) is drawn into a `RecordingRenderer` and
- * the draw calls are read back (the fixture is `MahjongTableTestSupport.h`). Needs the engine services.
- */
+/** The table as drawn (`Components/MahjongTableComponent.h`): the draw calls are read back through the fixture of `MahjongTableTestSupport.h`. Needs the engine services. */
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -139,7 +136,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(_renderer->calls[0].kind, DrawKind::Texture);
         EXPECT_TRUE(TileCalls().empty());
         EXPECT_TRUE(_table->GetLayout().slots.empty());
-        // ... and the rim round it with its lip: no plate, no shadow
         EXPECT_EQ(RectsOf(kFeltRim).size(), 4u);
         EXPECT_EQ(RectsOf(kFeltLip).size(), 4u);
         EXPECT_TRUE(RectsOf(kTileShadow).empty());
@@ -427,7 +423,6 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(FaceUpHandTiles(seat), 0) << "seat " << seat;
         }
 
-        // The person it waits for presses "Show": that hand, and only that one, is face up
         const Seat actor = session.Actor();
         session.Reveal();
         Draw();
@@ -618,7 +613,6 @@ namespace BECore::Mahjong::Tests {
             EXPECT_TRUE(found) << "seat " << slot.seat << " role " << static_cast<int>(slot.role) << " index " << slot.index;
         }
         ASSERT_GT(sideSlots, 0u);
-        // A turned face is never drawn upright, and a turned draw is of a side seat only
         for (const TurnedDraw& draw : _renderer->turned) {
             EXPECT_TRUE(draw.transform.rotation == 90.0f || draw.transform.rotation == 270.0f);
             EXPECT_EQ(_renderer->calls[draw.call].kind, DrawKind::Rect);

@@ -8,9 +8,8 @@
 #include <regex>
 
 /**
- * The game owns the recorder of the tester upload (`MahjongGame::GetUpload()`, `MatchUpload.h`) in the chain of its session: with the
- * defaults nothing is recorded and the file log is what it was; with a sink and a consent of `Granted` a match played through the game
- * reaches the sink as pieces that assemble and replay, and `Stop()` gives a match up. The game is built directly (no scene).
+ * The game owns the recorder of the tester upload (`MahjongGame::GetUpload()`, `MatchUpload.h`) in the chain of its session. The game
+ * is built directly (no scene).
  */
 namespace BECore::Mahjong::Tests {
 

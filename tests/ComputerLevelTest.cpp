@@ -6,13 +6,7 @@
 #include <tests/ComputerTestSupport.h>
 #include <tests/MatchTestSupport.h>
 
-/**
- * `ComputerLevel` (the numbers, the two parsers, the default), the golden of the Normal player and the profiles of the levels. The golden is
- * the final scores of four whole matches, written down from the player as it was before levels existed, so that "Normal is the player
- * of `CLAUDE.md`" stays true for as long as the test stays green. The profile cases put one knob of `LevelProfile` at 100 percent on a
- * hand worked out by hand and look at the effect (the numbers of `kEasyProfile` are measured in `ComputerStrengthTest`); a knob at 0
- * draws nothing from the rng. Pure logic: no engine services.
- */
+/// The golden of the Normal player: the final scores of four whole matches; a profile knob at 0 draws nothing from the rng.
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -21,8 +15,7 @@ namespace BECore::Mahjong::Tests {
         constexpr int kGoldenMatchCount = 4;
         constexpr int kWholeHands = 6;
 
-        /// The final scores of the 16-hand match (`SettingsOf(0)`, flowers off) of each seed 700..703 played by four computers, taken
-        /// from the unmodified tree before the level was added; seeds 701 and 703 again when Normal took `waitingKongByPoints` (2026-11-12).
+        /// The final scores of the 16-hand match (`SettingsOf(0)`, flowers off) of each seed 700..703 played by four computers.
         constexpr SeatScores kGoldenScores[kGoldenMatchCount] = {
             {2780, 2550, 1910, 760},
             {1790, 1370, 2810, 2030},

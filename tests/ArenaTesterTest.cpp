@@ -4,11 +4,6 @@
 #include <tests/ArenaLogTestSupport.h>
 #include <tests/HandTestSupport.h>
 
-/**
- * The person's seat against the computer levels (`Arena/ArenaTester.h`): every decision of a person in a replayed log is turned into the
- * view of the seat and judged by bots that see that view and nothing else. Pure logic: matches are played in memory, a person is a
- * `ComputerPlayer` of a known level.
- */
 namespace BECore::Mahjong::Arena {
 
     namespace {
@@ -198,7 +193,6 @@ namespace BECore::Mahjong::Arena {
         EXPECT_EQ(static_cast<int64_t>(easyFirst.differences.size()), Total(easyFirst, 0) - Equal(easyFirst, 0));
         EXPECT_EQ(normalFirst.bots[0], easyFirst.bots[1]);
         EXPECT_EQ(normalFirst.bots[1], easyFirst.bots[0]);
-        // The person is Easy: Easy agrees more than Normal does.
         EXPECT_GT(Equal(normalFirst, 1), Equal(normalFirst, 0));
     }
 
@@ -341,7 +335,6 @@ namespace BECore::Mahjong::Arena {
         EXPECT_EQ(both.n, 3U);
         EXPECT_NEAR(both.mean, (100.0 + 20.0 + 50.0) / 3.0, kShareTolerance);
 
-        // The differences keep the order of the matches.
         ASSERT_EQ(result.differences.size(), 2U);
         EXPECT_EQ(result.differences[0].log, "a.jsonl");
         EXPECT_EQ(result.differences[1].log, "b.jsonl");

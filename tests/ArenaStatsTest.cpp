@@ -3,14 +3,7 @@
 #include <cmath>
 #include <gtest/gtest.h>
 
-/**
- * The statistics and the report of the arena (`src/Mahjong/Arena/ArenaStats.h`, `ArenaReport.h`): `MeanCi` (mean, sample standard
- * deviation, half-width `1.96 * sd / sqrt(n)`, no interval for fewer than two seeds), the per-seed series (a seed's four rotations
- * divided by four), the paired difference of two focus players on the same seeds and its `significant` rule, and the text of the report
- * for a made-up `ArenaResult` (header, both tables, the paired rows, the score lines that occur, the timing table only with timing).
- * The numbers are worked out by hand; the one run of the model is the mirror identity (Normal against three Normal: points 0 for every
- * seed, an interval of 0). Pure logic: no engine services; the file takes about 1 s in Debug.
- */
+/// The numbers are worked out by hand. About 1 s in Debug.
 namespace BECore::Mahjong::Arena {
 
     namespace {
@@ -357,7 +350,6 @@ namespace BECore::Mahjong::Arena {
         EXPECT_EQ(points.mean, 0.0);
         EXPECT_EQ(points.half, 0.0);
         EXPECT_FALSE(IsSignificant(points));
-        // The same player twice in the list differs from itself by nothing.
         const MeanInterval difference = PairedDifference(run->focus[1], run->focus[0], SeedMetric::PointsPerHand);
         EXPECT_EQ(difference.mean, 0.0);
         EXPECT_EQ(difference.half, 0.0);
@@ -368,7 +360,6 @@ namespace BECore::Mahjong::Arena {
             EXPECT_EQ(same.half, 0.0) << static_cast<int>(metric);
             EXPECT_FALSE(IsSignificant(same)) << static_cast<int>(metric);
         }
-        // The report of that run says so.
         const String text = FormatArenaReport(*run);
         EXPECT_TRUE(Contains(text, "+0.00 +- 0.00")) << text;
         EXPECT_FALSE(Contains(text, "significant")) << text;

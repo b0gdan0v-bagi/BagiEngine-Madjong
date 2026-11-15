@@ -11,10 +11,8 @@
 #include <tests/HandTestSupport.h>
 
 /**
- * `HandModel::Capture` / `Restore`: a hand rebuilt from its data is the same hand. For the states of seeded random playouts (flowers
- * off and on, every phase) and of fixed hands (an upgraded kong, the robbing window, a concealed kong, a claim) the restored model has
- * the same data, the same snapshot, the same legal actions, and playing the same random actions on both gives the same hands and the
- * same result; states no play could reach are refused with a text. Pure logic: no engine services.
+ * `HandModel::Capture` / `Restore`: a hand rebuilt from its data is the same hand, on the states of seeded random playouts and of
+ * fixed hands; states no play could reach are refused with a text. Pure logic: no engine services.
  */
 namespace BECore::Mahjong::Tests {
 

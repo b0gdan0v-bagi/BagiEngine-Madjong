@@ -4,11 +4,6 @@
 #include <gtest/gtest.h>
 #include <tests/MahjongHubTransport.h>
 
-/**
- * Browsing the open rooms with `OnlineClient` over a real `RoomHub` with `MahjongSeatedGame` (`MahjongHubTransport.h`): who is listed and with
- * what, a join from the list, a room that is gone or full by the time of the join, the limit of the list, and the end of browsing. Every text
- * a client receives is judged, a `rooms` list included.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

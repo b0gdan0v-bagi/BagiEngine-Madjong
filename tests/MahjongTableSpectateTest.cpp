@@ -4,12 +4,7 @@
 #include <tests/MahjongTableTestSupport.h>
 #include <tests/UiStyleTestSupport.h>
 
-/**
- * A watched match, no seat a person (`Components/MahjongTableComponent.h`, "No peeking"): while the hand is played the concealed tiles of
- * all four seats are drawn face up, the concealed kongs too, and none of the marks that follow the viewer is drawn (a spectator has none).
- * A match with a person keeps its hands as it was: one person sees only its own, two people see the cover. Nothing in the model, the
- * session or the variables of the UI changes with the draw.
- */
+/** A watched match (`Components/MahjongTableComponent.h`, "No peeking"): nothing in the model, the session or the variables of the UI changes with the draw. */
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -197,14 +192,12 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(StartWith(kAllComputers, MakeModel(DeclaringSpec())));
         ExpectEveryHiddenTileFaceUp();
 
-        // A discard
         HandModel afterDiscard = MakeModel(DeclaringSpec());
         ASSERT_TRUE(afterDiscard.Discard(kSeat0, T("Gd")).has_value());
         Lay(afterDiscard);
         Draw();
         ExpectEveryHiddenTileFaceUp();
 
-        // A claim window
         Lay(model);
         Draw();
         ASSERT_EQ(Hand().GetPhase(), Phase::Claim);
@@ -217,7 +210,6 @@ namespace BECore::Mahjong::Tests {
         ASSERT_FALSE(Hand().GetHand(kSeat0).melds.empty());
         ExpectEveryHiddenTileFaceUp();
 
-        // A kong
         Lay(KongModel());
         Draw();
         ASSERT_TRUE(Hand().GetHand(kSeat1).melds[0].concealed);

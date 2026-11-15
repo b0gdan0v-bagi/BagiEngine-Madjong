@@ -7,14 +7,6 @@
 #include <gtest/gtest.h>
 #include <tests/HandTestSupport.h>
 
-/**
- * The text of a saved match, the prefs and the recorder (`Save/MatchSave.h`), and the way from a played match to a resumed one.
- *
- * Resuming a match from its log (`TableSession::ResumeMatch`, `ReplayMatchLog` with an echo; `Game/MatchLog.h`, `Game/TableSession.h`):
- * a match played to some step by people and computers is recorded, its events (without the `Hand` and `End` events, as a saved match
- * keeps them) are resumed into a second session, and the second session is where the first was; it plays on to the end of the match
- * and echoes a whole log; a log that does not replay is refused and changes nothing. Pure logic: no engine services.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

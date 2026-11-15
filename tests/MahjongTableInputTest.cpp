@@ -10,11 +10,6 @@
 #include <tests/MahjongTouchTestSupport.h>
 #include <tests/UiStyleTestSupport.h>
 
-/**
- * Playing on the table with the mouse (`Components/MahjongTableComponent.h`): a click on a tile discards it, `Declare` and the dimmed
- * tiles, the pace of the computers, the cover of a hot seat and an action that comes through the control API. The fixed hands come from
- * `FixedWall.h` and are laid into the hand in progress; clicks go through `UIInput` as the platform layer sends them.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

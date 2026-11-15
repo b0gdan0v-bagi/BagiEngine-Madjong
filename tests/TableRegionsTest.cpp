@@ -5,11 +5,6 @@
 #include <gtest/gtest.h>
 #include <tests/ShippedTableLayout.h>
 
-/**
- * `Table/TableRegions.h`: the regions the table publishes. The zone regions are the layout's own plates (by screen position), centre panel
- * and wall ring; the free regions are the fractions of the spec fitted like the zones (design view, quarter-unit snap, uniform scale,
- * centred, Wide's wing). Pure logic: no engine services.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

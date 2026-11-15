@@ -6,13 +6,8 @@
 #include <tests/StringsTestSupport.h>
 #include <vector>
 
-/**
- * The variables of the card of the coach (`CoachCard`, node `HintsWhy`) for the scene tests: their names in one order, what a `HintCard`
- * puts into them, what they hold now, and the longest text of each over a set of cards (for the size matrix).
- */
 namespace BECore::Mahjong::Tests {
 
-    /// The names of the variables of the card: the title, the head, each cell of each row, the lines under the rows.
     inline Vector<String> CardVarNames() {
         Vector<String> names{"cardTitle", "cardNow"};
         for (const char* cell : {"cardWho", "cardMove", "cardSteps", "cardUseful"}) {
@@ -45,7 +40,6 @@ namespace BECore::Mahjong::Tests {
         return texts;
     }
 
-    /// What the variables of the card hold now.
     inline Vector<String> CardVars() {
         Vector<String> values;
         for (const String& name : CardVarNames()) {

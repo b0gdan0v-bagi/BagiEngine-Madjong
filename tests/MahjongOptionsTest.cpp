@@ -8,12 +8,6 @@
 #include <tests/MahjongTouchTestSupport.h>
 #include <tests/UiStyleTestSupport.h>
 
-/**
- * The page `Options` of the shipped scene (`config/nodes/MahjongOptions.xml`): its shape on the whole size matrix in every language, the
- * words, the touch size, that nothing behind it takes input, the effect of each row on the game, and that `Back` and `CloseSetup`
- * close it with `Setup` and its pending choice left as they were. The rows of segments are one list (the hints row has three segments); the level is the dropdown of the ten levels, whose open list is
- * checked on the matrix too.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -295,7 +289,6 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(OpenPage());
         auto page = Canvas("Options");
 
-        // The design size: the plate of 376, the title band of 48, the rows of 64, Rules and Back of 64 set 16 below the rows
         LayOutInWindow(*page, DesignWindow());
         const Rect plate = Element("Options", "Plate")->rect;
         EXPECT_NEAR(plate.h, kRoomyPlateHeight, 0.01f);

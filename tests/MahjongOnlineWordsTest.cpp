@@ -6,10 +6,6 @@
 #include <set>
 #include <tests/StringsTestSupport.h>
 
-/**
- * The words of the client of a room (`Online/OnlineWords.h`): every code it can meet has a key that the shipped file has in both languages, with only the placeholders the header
- * documents. Pure over the shipped string table.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

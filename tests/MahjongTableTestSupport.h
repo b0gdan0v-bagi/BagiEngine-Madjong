@@ -25,12 +25,10 @@
 #include <tests/UiStyleTestSupport.h>
 
 /**
- * What the tests of the table component share (`MahjongTableUiTest`, `MahjongTableInputTest`, `MahjongTableActionsTest`,
- * `MahjongTableScreenTest`, `MahjongTableWindowTest`, `MahjongHudTest`): the fixture `MahjongTableTestBase` loads the shipped
- * scene (`ShippedScene.h`: `config/SceneConfig.xml` with its node files expanded, read from the source tree, a game's content is not mounted in the test environment), starts the game through
+ * The fixture `MahjongTableTestBase` loads the shipped scene (`ShippedScene.h`: `config/SceneConfig.xml` with its node files expanded,
+ * read from the source tree: a game's content is not mounted in the test environment), starts the game through
  * `GameManager` and draws the scene into a `RecordingRenderer` as big as the view of the scene, so the view transform is the identity:
- * a call's rect is a slot of the layout and a click at a point of the view is a click at that pixel. Header only; needs the engine
- * services.
+ * a call's rect is a slot of the layout and a click at a point of the view is a click at that pixel. Header only; needs the engine services.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -629,7 +627,7 @@ namespace BECore::Mahjong::Tests {
             const float scale = canvas->GetLayout().GetResolved().scale;
             for (const UIElement* control : controls) {
                 if (control->rect.IsEmpty()) {
-                    continue;  // a hidden element
+                    continue;
                 }
                 const float spare = control->IsInteractive() ? air : 0.0f;
                 const UIContentFit fit = control->CheckContent(control->rect.w - 2.0f * spare, control->rect.h, scale);

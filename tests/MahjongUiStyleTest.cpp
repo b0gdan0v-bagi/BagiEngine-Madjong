@@ -5,14 +5,8 @@
 #include <tests/UiStyleTestSupport.h>
 
 /**
- * The look of the shipped scene file held to the style of `Table/UiPalette.h` (pure logic: the files are read from the source tree and parsed
- * with pugixml, no engine services). Every `element` of the shipped scene (`config/SceneConfig.xml` with its node files expanded, `ShippedScene.h`) is walked: each colour (also the `textColor` of a
- * `UITextComponent`) is an entry of the palette, each `fontSize` is on the type scale, each position and size is a multiple of the grid unit (a percent and the tile pictures of the buttons excepted),
- * and each button (a `UIInputClicker`) and toggle row has an action (a segment of a choice group may take its action from the group). A later entry that adds a control with a stray colour, size or
- * number fails here; a deliberately broken copy of the text shows that each check can fail. The skin of a box (`Table/UiPalette.h`) is held too: the colours of `borderColor`, `gradientColor`,
- * `highlight`, of `shadow` and `glow` (`offsetX,offsetY,blur,spread,color`), of `textOutline` / `textShadow` and the tints of a picture are palette entries, a `cornerRadius` is on the scale of the
- * skin (or half the side of a round button), a `borderWidth` is the one width, the numbers of a shadow are on the grid, and a font family and weight are the two of the game. The `set` nodes of a
- * variant (`<set element=".." fontSize/x/y/width/height=..>`) are held to the font and grid rules too.
+ * The look of the shipped scene file (`config/SceneConfig.xml` with its node files expanded, `ShippedScene.h`) held to the style of `Table/UiPalette.h`: pure logic, parsed with pugixml, no engine
+ * services. A deliberately broken copy of the text shows that each check can fail.
  */
 namespace BECore::Mahjong::Tests {
 

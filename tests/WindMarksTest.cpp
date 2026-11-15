@@ -2,10 +2,6 @@
 #include <gtest/gtest.h>
 #include <tests/HandTestSupport.h>
 
-/**
- * Which tiles the winds of a seat mark (`Table/WindMarks.h`, pure logic): the wind tile of the own seat wind, that of the round wind, both
- * when they are the same wind, and no other tile.
- */
 namespace BECore::Mahjong::Tests {
 
     TEST(WindMarksTest, TheTilesOfTheOwnWindAndOfTheRoundWindAreMarkedForEveryPairOfWinds) {

@@ -11,13 +11,6 @@
 #include <tests/FixedWall.h>
 #include <tests/HandTestSupport.h>
 
-/**
- * `SampleWorld` (Game/ComputerWorld.h): a whole hand consistent with what one seat sees. The central invariant: for the view of every
- * decision of seeded random playouts (flowers off and on, the turn, the claim window, the robbing window, concealed and upgraded kongs,
- * declared opponents) the view of the same seat on the sampled world equals the view field by field, every kind has all its copies over
- * the world, and the world can be played on; plus determinism, no peeking, the waits of declared opponents, the flowers inference, the
- * failure cases and the frequency of a kind in an opponent's hand. Pure logic: no engine services.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -32,8 +25,8 @@ namespace BECore::Mahjong::Tests {
         constexpr uint32_t kRngDraws = 3;
         constexpr uint32_t kRngRange = 1000000000;
         constexpr int kStepLimit = 2000;
-        /// A declared opponent with at least this many melds (4 hidden tiles or fewer) waits in the sample almost always (3 and 4 melds:
-        /// every sample waited when this was measured); with 2 melds (7 hidden tiles) about half of the samples do, with fewer almost never.
+        /// A declared opponent with at least this many melds (4 hidden tiles or fewer) waits in the sample almost always; with 2 melds (7 hidden
+        /// tiles) about half of the samples do, with fewer almost never.
         constexpr int kMeldsThatWaitEasily = 3;
         constexpr double kEasyWaitShare = 0.95;
         constexpr int kMeldsThatWaitOften = 2;

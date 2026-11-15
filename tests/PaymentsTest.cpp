@@ -1,10 +1,6 @@
 #include <Mahjong/Game/Payments.h>
 #include <tests/HandTestSupport.h>
 
-/**
- * `Settle`: every loser pays the winner the winner's score, the losers settle pairwise by the difference, East pays and receives
- * double. Pure logic: no engine services. The numbers of the worked payment are those of the plan, worked out by hand.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

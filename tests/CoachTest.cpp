@@ -12,11 +12,6 @@
 #include <tests/StringsTestSupport.h>
 #include <vector>
 
-/**
- * The coach (`Table/Coach.h`): the judge of a person's move against the computer's choice, the card of the note (`Table/HintCard.h`,
- * `MakeNoteCard`) and the ledger of the note and the tally. Fixed hands worked out by hand, one case per kind of action and per kind of difference; the judge is held to the
- * advice (`AdviceFor`) and to the chooser's rating pieces, and to no peeking. Pure logic: no engine services (the words are the shipped file).
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {

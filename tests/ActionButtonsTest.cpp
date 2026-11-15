@@ -5,10 +5,6 @@
 #include <tests/HandTestSupport.h>
 #include <tests/StringsTestSupport.h>
 
-/**
- * `Table/ActionButtons.h`: the legal actions of a seat as the action buttons of the table. Pure logic: hand-made lists and the lists of
- * a hand on a fixed wall.
- */
 namespace BECore::Mahjong::Tests {
 
     namespace {
@@ -24,7 +20,6 @@ namespace BECore::Mahjong::Tests {
             return list;
         }
 
-        /// The pictured tiles of a button in the notation, in order.
         Vector<String> Pictured(const ActionButtons& buttons, ButtonKind kind) {
             Vector<String> tiles;
             const ButtonState& button = buttons[kind];

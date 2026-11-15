@@ -9,10 +9,7 @@
 #include <string>
 #include <vector>
 
-/**
- * What the tests of the words share: the shipped string table read from the source tree (a game's content is not mounted in the test environment, as for
- * `SceneConfig.xml`) and a walk over its languages. Header only, pure: a `UIStrings` of the test's own needs no engine services.
- */
+// The shipped string table is read from the source tree: a game's content is not mounted in the test environment.
 namespace BECore::Mahjong::Tests {
 
     inline std::filesystem::path ShippedStringsPath() {

@@ -5,8 +5,7 @@
 
 /**
  * The claim window on the table (`Components/MahjongTableComponent.h`): the mark and the frame on the discard do not tell a person that a
- * computer holds a claim, and the pause after a discard is one pause whether or not a window opened. The fixed hands come from
- * `FixedWall.h`, laid into the hand in progress.
+ * computer holds a claim, and the pause after a discard is one pause whether or not a window opened.
  */
 namespace BECore::Mahjong::Tests {
 
@@ -107,7 +106,6 @@ namespace BECore::Mahjong::Tests {
         const Vector<Rect> frames = RectsOf(kPendingFrame);
 
         ASSERT_EQ(frames.size(), 1u);
-        // It lies round the last tile of the pile
         const int last = static_cast<int>(Hand().Discards().size()) - 1;
         const auto slot = std::find_if(_table->GetLayout().slots.begin(), _table->GetLayout().slots.end(), [last](const TileSlot& s) { return s.role == SlotRole::DiscardTile && s.index == last; });
         ASSERT_NE(slot, _table->GetLayout().slots.end());
@@ -194,7 +192,6 @@ namespace BECore::Mahjong::Tests {
         ASSERT_FALSE(seat1.melds.empty()) << "seat 1 claimed the red dragon";
         EXPECT_EQ(seat1.melds.front().first, T("Rd"));
         EXPECT_NE(Hand().GetPhase(), Phase::Claim);
-        // The claimed tile left the pile and the claimer discarded in its place, within the one pause: the pile is as long as before
         EXPECT_EQ(Hand().Discards().size(), pile) << "the claim took one tile from the pile, the discard added one";
         EXPECT_NE(Hand().CurrentSeat(), kSeat1) << "the turn has gone on to the next seat";
     }
