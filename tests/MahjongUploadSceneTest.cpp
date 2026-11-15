@@ -40,7 +40,7 @@ namespace BECore::Mahjong::Tests {
         constexpr const char* kEntryDone = "EntryDone";
         constexpr const char* kUploadRows[] = {"UploadRow", "NicknameRow", "NicknameNote"};
         constexpr const char* kUploadControls[] = {"UploadSend", "UploadKeep", "NicknameField"};
-        constexpr float kDesignPlateHeight = 376.0f;
+        constexpr float kDesignPlateHeight = 448.0f;
 
         struct Output {
             float width;

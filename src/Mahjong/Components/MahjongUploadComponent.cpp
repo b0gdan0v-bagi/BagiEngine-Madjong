@@ -32,8 +32,8 @@ namespace BECore::Mahjong {
         constexpr StringView kOptionsPlate = "Plate";
         constexpr StringView kNicknameField = "NicknameField";
         constexpr StringView kOptionsRows[] = {"UploadRow", "NicknameRow", "NicknameNote"};
-        // The height of the plate without the rows (`MahjongOptions.xml`) plus the two rows, the note and the three gaps they add
-        constexpr float kOptionsPlateMaxHeight = 376.0f + 2.0f * 64.0f + 24.0f + 3.0f * 8.0f;
+        // The height of the plate without the rows (`MahjongOptions.xml`, 448) plus the two rows, the note and the three gaps they add
+        constexpr float kOptionsPlateMaxHeight = 448.0f + 2.0f * 64.0f + 24.0f + 3.0f * 8.0f;
         constexpr StringView kNicknameNoneKey = "options.nicknameNone";
 
         IntrusivePtr<UICanvasComponent> FindCanvasOf(Scene& scene, PoolString nodeName) {

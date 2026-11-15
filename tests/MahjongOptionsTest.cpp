@@ -12,12 +12,13 @@ namespace BECore::Mahjong::Tests {
 
     namespace {
 
-        /// A row of segments of the page: the names in the file, the action and variable it carries, its segments with the value each one
-        /// sets, and the segment a fresh game starts on.
+        /// A row of segments of the page: the names in the file, the width of its caption, the action and variable it carries, its segments
+        /// with the value each one sets, and the segment a fresh game starts on. The rows are listed in the order of the file.
         struct PageRow {
             static constexpr size_t kMaxSegments = 3;
             const char* row;
             const char* caption;
+            float captionWidth;
             const char* group;
             const char* variable;
             const char* action;
@@ -28,18 +29,19 @@ namespace BECore::Mahjong::Tests {
         };
 
         constexpr PageRow kRows[] = {
-            {"LanguageRow", "LanguageCaption", "Language", "language", "MahjongSetLanguage", 2, {"LanguageEn", "LanguageRu"}, {"en", "ru"}, 0},
-            {"HintsRow", "HintsCaption", "HintsChoice", "hintsChoice", "MahjongSetHints", 3, {"HintsOff", "HintsHints", "HintsCoach"}, {"off", "hints", "coach"}, 1},
+            {"LanguageRow", "LanguageCaption", 112.0f, "Language", "language", "MahjongSetLanguage", 2, {"LanguageEn", "LanguageRu"}, {"en", "ru"}, 0},
+            {"HintsRow", "HintsCaption", 112.0f, "HintsChoice", "hintsChoice", "MahjongSetHints", 3, {"HintsOff", "HintsHints", "HintsCoach"}, {"off", "hints", "coach"}, 1},
+            {"SpeedRow", "SpeedCaption", 96.0f, "SpeedChoice", "speedChoice", "MahjongSetSpeed", 3, {"SpeedSlow", "SpeedNormal", "SpeedFast"}, {"slow", "normal", "fast"}, 1},
+            {"ThemeRow", "ThemeCaption", 96.0f, "ThemeChoice", "themeChoice", "MahjongSetTheme", 2, {"ThemeClassic", "ThemeNavy"}, {"classic", "navy"}, 0},
         };
         constexpr size_t kRowCount = sizeof(kRows) / sizeof(kRows[0]);
 
-        /// The row of the speed: a caption and the three segments `SpeedSlow`, `SpeedNormal`, `SpeedFast` of the group `SpeedChoice`.
+        /// The row of the speed is also checked against its enum: the segments in the order of `EnumUtils<AnimationSpeed>::Values()`.
         constexpr const char* kSpeedRow = "SpeedRow";
         constexpr const char* kSpeedCaption = "SpeedCaption";
         constexpr const char* kSpeedChoice = "SpeedChoice";
-        constexpr size_t kPageRowCount = kRowCount + 1;
+        constexpr size_t kPageRowCount = kRowCount;
 
-        /// The segments in the order of `EnumUtils<AnimationSpeed>::Values()`.
         constexpr const char* kSpeedSegments[] = {"SpeedSlow", "SpeedNormal", "SpeedFast"};
         static_assert(sizeof(kSpeedSegments) / sizeof(kSpeedSegments[0]) == EnumUtils<AnimationSpeed>::Count());
 
@@ -48,9 +50,6 @@ namespace BECore::Mahjong::Tests {
             Vector<const char*> names;
             for (const PageRow& row : kRows) {
                 names.insert(names.end(), row.segments, row.segments + row.count);
-            }
-            for (const char* segment : kSpeedSegments) {
-                names.push_back(segment);
             }
             names.push_back("OptionsRules");
             names.push_back("Back");
@@ -225,6 +224,9 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(Text("SpeedSlow"), Tr(strings, "options.speedSlow").c_str());
             EXPECT_EQ(Text("SpeedNormal"), Tr(strings, "options.speedNormal").c_str());
             EXPECT_EQ(Text("SpeedFast"), Tr(strings, "options.speedFast").c_str());
+            EXPECT_EQ(Text("ThemeCaption"), Tr(strings, "options.theme").c_str());
+            EXPECT_EQ(Text("ThemeClassic"), Tr(strings, "options.themeClassic").c_str());
+            EXPECT_EQ(Text("ThemeNavy"), Tr(strings, "options.themeNavy").c_str());
         });
     }
 
@@ -236,7 +238,6 @@ namespace BECore::Mahjong::Tests {
         for (const PageRow& row : kRows) {
             bands.push_back(row.row);
         }
-        bands.insert(bands.begin() + 1 + kRowCount, kSpeedRow);
         bands.push_back("ButtonRow");
 
         const CanvasScaleMode modes[] = {CanvasScaleMode::ConstantPixelSize, CanvasScaleMode::ScaleWithScreen, CanvasScaleMode::ConstantPhysicalSize};
@@ -292,7 +293,7 @@ namespace BECore::Mahjong::Tests {
         LayOutInWindow(*page, DesignWindow());
         const Rect plate = Element("Options", "Plate")->rect;
         EXPECT_NEAR(plate.h, kRoomyPlateHeight, 0.01f);
-        EXPECT_NEAR(plate.h, 376.0f, 0.01f);
+        EXPECT_NEAR(plate.h, 448.0f, 0.01f);
         EXPECT_TRUE(SameColor(Element("Options", "Plate")->color, PaletteColor("surface")));
         EXPECT_TRUE(SameColor(Element("Options", "Dim")->color, PaletteColor("scrim")));
         const UIElement* title = Element("Options", "Title");
@@ -314,7 +315,7 @@ namespace BECore::Mahjong::Tests {
             const UIElement* caption = Element("Options", entry.caption);
             const UIElement* group = Element("Options", entry.group);
             ASSERT_TRUE(caption != nullptr && group != nullptr);
-            EXPECT_NEAR(caption->rect.w, 112.0f, 0.01f);
+            EXPECT_NEAR(caption->rect.w, entry.captionWidth, 0.01f);
             EXPECT_TRUE(SameColor(caption->GetComponent<UITextComponent>()->textColor, PaletteColor("textMuted")));
             EXPECT_EQ(caption->rect.x, row->rect.x + kRowPadding);
             EXPECT_EQ(group->rect.x, caption->rect.x + caption->rect.w + kModalGap);
@@ -322,31 +323,6 @@ namespace BECore::Mahjong::Tests {
             EXPECT_EQ(group->rect.y, row->rect.y + kRowPadding);
             EXPECT_EQ(group->rect.y + group->rect.h, row->rect.y + row->rect.h - kRowPadding);
             for (const char* name : Span<const char* const>(entry.segments, entry.count)) {
-                const auto* segment = Element("Options", name);
-                ASSERT_NE(segment, nullptr) << name;
-                EXPECT_TRUE(SameColor(segment->selectedColor, PaletteColor("primary"))) << name;
-                EXPECT_TRUE(SameColor(segment->color, PaletteColor("neutral"))) << name;
-                EXPECT_EQ(segment->rect.h, group->rect.h) << name;
-            }
-        }
-        {
-            SCOPED_TRACE(kSpeedRow);
-            const UIElement* row = Element("Options", kSpeedRow);
-            ASSERT_NE(row, nullptr);
-            EXPECT_NEAR(row->rect.h, 64.0f, 0.01f);
-            EXPECT_TRUE(SameColor(row->color, PaletteColor("surfaceRaised")));
-            EXPECT_EQ(GapBelow(*above, row->rect), kModalGap);
-            above = &row->rect;
-            const UIElement* caption = Element("Options", kSpeedCaption);
-            const UIElement* group = Element("Options", kSpeedChoice);
-            ASSERT_TRUE(caption != nullptr && group != nullptr);
-            EXPECT_NEAR(caption->rect.w, 96.0f, 0.01f) << "narrower than the others: the three words need the room";
-            EXPECT_TRUE(SameColor(caption->GetComponent<UITextComponent>()->textColor, PaletteColor("textMuted")));
-            EXPECT_EQ(group->rect.x, caption->rect.x + caption->rect.w + kModalGap);
-            EXPECT_EQ(group->rect.x + group->rect.w, row->rect.x + row->rect.w - kRowPadding);
-            EXPECT_EQ(group->rect.y, row->rect.y + kRowPadding);
-            EXPECT_EQ(group->rect.y + group->rect.h, row->rect.y + row->rect.h - kRowPadding);
-            for (const char* name : kSpeedSegments) {
                 const auto* segment = Element("Options", name);
                 ASSERT_NE(segment, nullptr) << name;
                 EXPECT_TRUE(SameColor(segment->selectedColor, PaletteColor("primary"))) << name;
@@ -372,11 +348,11 @@ namespace BECore::Mahjong::Tests {
         LayOutInWindow(*page, WindowOf(480.0f, 480.0f), CanvasScaleMode::ConstantPixelSize, 1.5f);
         EXPECT_TRUE(Element("Options", "Title")->rect.IsEmpty());
         EXPECT_TRUE(Element("Options", kSpeedCaption)->rect.IsEmpty()) << "the caption of the speed gives its room to the three words";
+        EXPECT_TRUE(Element("Options", "ThemeCaption")->rect.IsEmpty()) << "and so does the theme's";
         EXPECT_NEAR(Element("Options", "Plate")->rect.w, page->GetLayout().GetResolved().contentBounds.w, 0.01f);
         for (const PageRow& row : kRows) {
             EXPECT_GT(Element("Options", row.row)->rect.h, 0.0f) << row.row << ": nothing but the title is dropped";
         }
-        EXPECT_GT(Element("Options", kSpeedRow)->rect.h, 0.0f) << "nothing but the title is dropped";
         EXPECT_GT(Element("Options", "Back")->rect.h, 0.0f);
 
         // A canvas that is only narrow keeps the title
@@ -400,7 +376,8 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(title->box.cornerRadius.topLeft, static_cast<float>(kCornerMiddle));
         EXPECT_EQ(title->GetComponent<UITextComponent>()->fontFamily, PoolString::Intern(kFontFamilyDisplay)) << "the headline is in the display font";
 
-        for (const char* name : {"LanguageRow", "HintsRow", kSpeedRow}) {
+        for (const PageRow& entry : kRows) {
+            const char* name = entry.row;
             const UIElement* row = Element("Options", name);
             ASSERT_NE(row, nullptr) << name;
             EXPECT_EQ(row->box.cornerRadius.topLeft, static_cast<float>(kCornerSmall)) << name;
@@ -546,6 +523,67 @@ namespace BECore::Mahjong::Tests {
         EXPECT_TRUE(Selected("SpeedSlow"));
         EXPECT_TRUE(Selected("LanguageEn"));
         EXPECT_TRUE(Selected("HintsHints")) << "the hints component publishes while the page is open";
+    }
+
+    TEST_F(MahjongOptionsTest, ThePageOpensOnTheThemeOfTheGame) {
+        ASSERT_NO_FATAL_FAILURE(Start(kDefaultSeatSetup));
+        _game->CloseSetup();
+        Draw();
+        ASSERT_TRUE(_game->SetTheme("navy"_intern));
+        CoreManager::GetUIVars().Set("themeChoice"_intern, "classic");
+        _game->OpenOptions();
+        Draw();
+        EXPECT_EQ(Var("themeChoice"), "navy");
+        EXPECT_TRUE(Selected("ThemeNavy"));
+        EXPECT_FALSE(Selected("ThemeClassic"));
+    }
+
+    TEST_F(MahjongOptionsTest, ThePageHasOneSegmentPerShippedTheme) {
+        ASSERT_NO_FATAL_FAILURE(OpenPage());
+        const auto* group = Element("Options", "ThemeChoice") != nullptr ? Element("Options", "ThemeChoice")->Cast<UISegmented>() : nullptr;
+        ASSERT_NE(group, nullptr);
+        Vector<String> segmentIds;
+        for (const auto& child : group->children) {
+            ASSERT_NE(child.Get(), nullptr);
+            segmentIds.push_back(String(ButtonValue(child.Get()).ToStringView()));
+            // The picture tool names a segment `Theme` + the id with a capital
+            String expectedName = String("Theme") + String(ButtonValue(child.Get()).ToStringView());
+            expectedName[5] = static_cast<char>(std::toupper(static_cast<unsigned char>(expectedName[5])));
+            EXPECT_EQ(String(child->name.ToStringView()), expectedName);
+        }
+        Vector<String> themeIds;
+        for (const PoolString theme : CoreManager::GetUIThemes().GetThemes()) {
+            themeIds.push_back(String(theme.ToStringView()));
+        }
+        std::sort(segmentIds.begin(), segmentIds.end());
+        std::sort(themeIds.begin(), themeIds.end());
+        EXPECT_EQ(segmentIds, themeIds) << "a theme without a segment, or a segment without a theme";
+    }
+
+    TEST_F(MahjongOptionsTest, TheThemeTakesEffectAtOnceAndOnlyAnIdOfTheTableWhileThePageIsOpen) {
+        ASSERT_NO_FATAL_FAILURE(OpenPage());
+        ASSERT_EQ(_game->GetTheme(), "classic"_intern);
+        EXPECT_TRUE(Selected("ThemeClassic"));
+        ASSERT_TRUE(ClickElement("Options", "ThemeNavy"));
+        Draw();
+        EXPECT_EQ(_game->GetTheme(), "navy"_intern);
+        EXPECT_EQ(CoreManager::GetUIThemes().GetTheme(), "navy"_intern);
+        EXPECT_EQ(Var("themeChoice"), "navy");
+        EXPECT_TRUE(Selected("ThemeNavy"));
+        EXPECT_FALSE(Selected("ThemeClassic"));
+
+        for (const char* value : {"nope", "", "Navy", "NAVY ", "1"}) {
+            EmitAction("MahjongSetTheme", value);
+            EXPECT_EQ(_game->GetTheme(), "navy"_intern) << "'" << value << "'";
+            EXPECT_EQ(CoreManager::GetUIThemes().GetTheme(), "navy"_intern) << "'" << value << "'";
+            EXPECT_EQ(Var("themeChoice"), "navy") << "the variable shows what the game has: '" << value << "'";
+        }
+
+        ASSERT_TRUE(ClickElement("Options", "Back"));
+        Draw();
+        EmitAction("MahjongSetTheme", "classic");
+        EXPECT_EQ(_game->GetTheme(), "navy"_intern) << "the page is closed: the event is out of date";
+        EXPECT_EQ(CoreManager::GetUIThemes().GetTheme(), "navy"_intern);
     }
 
     // ----- Back and the end of Setup -----

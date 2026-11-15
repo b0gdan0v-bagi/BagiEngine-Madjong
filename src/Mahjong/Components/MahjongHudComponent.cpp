@@ -43,6 +43,7 @@ namespace BECore::Mahjong {
         constexpr StringView kOptionsBackAction = "MahjongOptionsBack";
         constexpr StringView kSetupCloseAction = "MahjongSetupClose";
         constexpr StringView kSetSpeedAction = "MahjongSetSpeed";
+        constexpr StringView kSetThemeAction = "MahjongSetTheme";
         constexpr StringView kRulesAction = "MahjongRules";
         constexpr StringView kRulesNextAction = "MahjongRulesNext";
         constexpr StringView kRulesBackAction = "MahjongRulesBack";
@@ -261,6 +262,10 @@ namespace BECore::Mahjong {
         CoreManager::GetUIVars().Set("speedChoice"_intern, text);
     }
 
+    void MahjongHudComponent::PublishThemeChoice(const MahjongGame& game) const {
+        CoreManager::GetUIVars().Set("themeChoice"_intern, game.GetTheme().ToStringView());
+    }
+
     void MahjongHudComponent::PublishSetup(const MahjongGame* game) {
         const bool open = game != nullptr && game->IsSetupOpen();
         if (open && !_setupShown) {
@@ -292,6 +297,7 @@ namespace BECore::Mahjong {
             // The rows show what the game has now; the hints row is published by the hints component while the page is open
             PublishLanguage(*game);
             PublishSpeedChoice(*game);
+            PublishThemeChoice(*game);
         }
         UICanvasComponent::SetVisibleByName(GetScene(), "Options"_intern, open);
     }
@@ -622,6 +628,14 @@ namespace BECore::Mahjong {
             if (game->IsOptionsOpen() && speed) {
                 game->SetAnimationSpeed(*speed);
                 PublishSpeedChoice(*game);
+            }
+            return;
+        }
+        if (action == kSetThemeAction) {
+            // An id the table does not have changes nothing, and `PublishThemeChoice` shows the theme the game really has
+            if (game->IsOptionsOpen()) {
+                game->SetTheme(event.value);
+                PublishThemeChoice(*game);
             }
             return;
         }
