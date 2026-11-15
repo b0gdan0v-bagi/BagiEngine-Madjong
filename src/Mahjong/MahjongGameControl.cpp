@@ -2,6 +2,7 @@
 
 #include <BECore/Control/Json.h>
 #include <Mahjong/MahjongGame.h>
+#include <Mahjong/MahjongSetState.h>
 #include <Mahjong/MahjongStateJson.h>
 
 namespace BECore::Mahjong {
@@ -38,37 +39,6 @@ namespace BECore::Mahjong {
 
         StringView View(StringView text) {
             return text;
-        }
-
-        /// The `levels` of a `reset`: an array of four integers 1..10; nullopt for anything else (a number above INT64_MAX included, as
-        /// `GetJsonInt` refuses it).
-        Optional<SeatLevels> ReadResetLevels(const Json& list) {
-            if (!list.is_array() || list.size() != kSeatCount) {
-                return std::nullopt;
-            }
-            SeatLevels levels = UniformLevels(kDefaultLevel);
-            size_t index = 0;
-            for (const Json& item : list) {
-                if (!item.is_number_integer()) {
-                    return std::nullopt;
-                }
-                int64_t number = 0;
-                if (item.is_number_unsigned()) {
-                    const uint64_t value = item.get<uint64_t>();
-                    if (value > static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
-                        return std::nullopt;
-                    }
-                    number = static_cast<int64_t>(value);
-                } else {
-                    number = item.get<int64_t>();
-                }
-                const Optional<ComputerLevel> level = LevelOf(number);
-                if (!level) {
-                    return std::nullopt;
-                }
-                levels[index++] = *level;
-            }
-            return levels;
         }
 
         // ----- the names of the enums in JSON -----
@@ -136,6 +106,35 @@ namespace BECore::Mahjong {
         }
 
     }  // namespace
+
+    Optional<SeatLevels> ReadResetLevels(const Json& list) {
+        if (!list.is_array() || list.size() != kSeatCount) {
+            return std::nullopt;
+        }
+        SeatLevels levels = UniformLevels(kDefaultLevel);
+        size_t index = 0;
+        for (const Json& item : list) {
+            if (!item.is_number_integer()) {
+                return std::nullopt;
+            }
+            int64_t number = 0;
+            if (item.is_number_unsigned()) {
+                const uint64_t value = item.get<uint64_t>();
+                if (value > static_cast<uint64_t>(std::numeric_limits<int64_t>::max())) {
+                    return std::nullopt;
+                }
+                number = static_cast<int64_t>(value);
+            } else {
+                number = item.get<int64_t>();
+            }
+            const Optional<ComputerLevel> level = LevelOf(number);
+            if (!level) {
+                return std::nullopt;
+            }
+            levels[index++] = *level;
+        }
+        return levels;
+    }
 
     Json TileToJson(Tile tile) {
         return tile.IsValid() ? MakeJsonString(View(ToString(tile))) : Json(nullptr);
@@ -464,6 +463,26 @@ namespace BECore::Mahjong {
         }
         _lastSeed = seed;
         _game.GetLocalSession().RunComputers();  // StartMatch closed the seat choice: a reset is a controller entering the game
+        return {};
+    }
+
+    std::expected<void, ControlError> MahjongGameControl::SetState(const Json& state) {
+        if (_game.IsOnlineTable()) {
+            return InARoom();
+        }
+        SetStateDefaults defaults;
+        defaults.seats = _game.GetSeats();
+        defaults.levels = _game.GetLevels();
+        defaults.settings = _game.GetSettings();
+        defaults.seed = _lastSeed;
+        const std::expected<SetStateDeal, ControlError> request = ParseSetState(state, defaults);
+        if (!request) {
+            return std::unexpected(request.error());
+        }
+        if (const std::expected<void, ControlError> started = StartSetState(_game, *request); !started) {
+            return started;
+        }
+        _lastSeed = request->seed;
         return {};
     }
 

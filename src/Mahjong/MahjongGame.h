@@ -168,6 +168,11 @@ namespace BECore::Mahjong {
         /// `StartMatch` with a seed from `std::random_device`; a refusal is logged and returned.
         MatchStatus StartRandomMatch();
 
+        /// `StartMatch` from a position (`Match::Start(settings, seed, state)`): the first hand is the fixed deal of `state`. The match is
+        /// saved like any a person begins, and **never uploaded**: a built position is nobody's game. Nothing changes on a refusal
+        /// (`BadSettings`, `BadDeal`). The control API's `set_state`.
+        MatchStatus StartFixedMatch(uint32_t seed, const FixedStart& state);
+
         /// Whether the panel `Setup` is open. Every new match and every control action close it. While it is open the table is not played.
         bool IsSetupOpen() const {
             return _setupOpen;

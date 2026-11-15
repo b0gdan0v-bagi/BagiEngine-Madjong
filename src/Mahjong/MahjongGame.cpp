@@ -325,6 +325,18 @@ namespace BECore::Mahjong {
         return true;
     }
 
+    MatchStatus MahjongGame::StartFixedMatch(uint32_t seed, const FixedStart& state) {
+        ApplyLanguage();
+        _recorder.SetRecording(true);
+        _upload.SetRecording(false);
+        const MatchStatus started = _session.StartMatch(_settings, seed, _seats, _levels, state);
+        if (started.has_value()) {
+            CloseSetup();
+            CloseRules();
+        }
+        return started;
+    }
+
     void MahjongGame::FlushSave() {
         FollowOnlineSession();  // also with saving off: `StoredOnline()` follows the client
         if (!_store.Open(SaveDirectory())) {

@@ -3,6 +3,7 @@
 #include <Common/EngineEnvironment.h>
 #include <Mahjong/MahjongGame.h>
 #include <Mahjong/MahjongGameControl.h>
+#include <Mahjong/MatchLogJson.h>
 #include <gtest/gtest.h>
 #include <tests/ComputerTestSupport.h>
 #include <tests/FixedWall.h>
@@ -367,13 +368,6 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(CodeOf(control->GetActions()), "no_active_model");
         EXPECT_EQ(CodeOf(control->PerformAction(Parse("{\"type\": \"pass\"}"))), "no_active_model");
         EXPECT_EQ(control->GetStateVersion(), 0u);
-    }
-
-    TEST_F(MahjongGameControlTest, SetStateIsNotSupported) {
-        ASSERT_NO_FATAL_FAILURE(Reset("{\"seed\": 7}"));
-        const auto loaded = control->SetState(Json::object());
-        ASSERT_FALSE(loaded.has_value());
-        EXPECT_EQ(ErrorCodeOf(loaded.error()), "unsupported");
     }
 
     TEST_F(MahjongGameControlTest, TheStateOfAFreshMatchIsTheViewOfThePersonWhoActs) {
@@ -1173,6 +1167,239 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(Strings(Member(meld, "tiles")), (Vector<String>{"5p", "5p", "5p", "5p"}));
     }
 
+    // ----- set_state with a fixed deal -----
+
+    namespace {
+
+        constexpr uint32_t kSetStateSeed = 12;
+        constexpr int kLastHandIndex = kFullMatchHands - 1;
+        constexpr int kDealtHandsOfAFullMatch = kFullMatchHands;
+        constexpr const char* kAllPeople = "PPPP";
+
+        /// Seat 1 has the pung of 5p from seat 0's discard and draws the fourth 5p; seat 3 waits on 5p (and 2p) and declares with its
+        /// discard on the way. Every discard on the way is a tile nobody can claim, and the live tiles are the ones each seat draws.
+        FixedDeal RobbingDeal() {
+            FixedWallSpec spec;
+            spec.hands[0] = "5p 7p 8p 9p 4s 5s 6s 7s 8s 9s Ww Ww Nw";
+            spec.hands[1] = "5p 5p 1m 2m 3m 4m 5m 6m Sw Sw Wd Wd Gd";
+            spec.hands[2] = "1p 2p 3p 2m 3m 4m 6s 6s 6s Rd Wd Sw Ww";
+            spec.hands[3] = "3p 4p 1s 2s 3s 7m 8m 9m Ew Ew Ew Rd Rd";
+            spec.live = "1s 9s Nw Gd 5p";
+            return MakeFixedDeal(spec);
+        }
+
+        /// Seat 0 holds four pungs of honours and waits on Nw, which it draws after one round of discards of the others.
+        FixedDeal LimitHandDeal() {
+            FixedWallSpec spec;
+            spec.hands[0] = "Ew Ew Ew Sw Sw Sw Ww Ww Ww Rd Rd Rd Nw";
+            spec.hands[1] = "2p 5p 8p 2s 5s 8s 2m 5m 8m 3s 6s 9p 4m";
+            spec.hands[2] = "3p 6p 9p 3s 6s 9s 3m 6m 9m 4p 7s 5m 1m";
+            spec.hands[3] = "4p 7p 1s 4s 7s 1m 7m 9m 3m 6m 8s 5p 2m";
+            spec.live = "Gd Wd 1p 9s Nw";
+            return MakeFixedDeal(spec);
+        }
+
+        Json DealRequest(const FixedDeal& deal, const char* options = "{}") {
+            Json request = Parse(options);
+            request["deal"] = FixedDealToJson(deal);
+            return request;
+        }
+
+        class MahjongGameSetStateTest : public MahjongGameControlTest {
+        protected:
+            /// `set_state` that has to be accepted.
+            void Set(const Json& request) {
+                const auto set = control->SetState(request);
+                ASSERT_TRUE(set.has_value()) << ErrorCodeOf(set.error()) << ": " << set.error().message.c_str() << " for " << DumpJson(request).c_str();
+            }
+
+            void PerformAll(std::initializer_list<const char*> actions) {
+                for (const char* action : actions) {
+                    ASSERT_TRUE(IsListed(Actions(), Parse(action))) << action << " is not listed in " << DumpJson(Actions()).c_str();
+                    Perform(action);
+                }
+            }
+
+            /// The hand a seat holds as the match has it, for a comparison of two games.
+            Vector<Tile> HandOf(const MahjongGame& other, Seat seat) const {
+                return other.GetLocalMatch().Hand().GetHand(seat).concealed;
+            }
+        };
+
+    }  // namespace
+
+    TEST_F(MahjongGameSetStateTest, AFixedDealReachesARobbingWindowByTheActionsOfTheTable) {
+        ASSERT_NO_FATAL_FAILURE(Set(DealRequest(RobbingDeal(), R"({"seats": "PPPP"})")));
+        EXPECT_EQ(Str(Member(State(), "phase")), "playing");
+        EXPECT_EQ(Member(State(), "seat").get<int>(), kSeat0);
+
+        ASSERT_NO_FATAL_FAILURE(PerformAll({R"({"type": "discard", "tile": "5p", "declareCalling": false})"}));
+        EXPECT_EQ(Str(Member(Member(State(), "turn"), "phase")), "claim");
+        ASSERT_NO_FATAL_FAILURE(
+            PerformAll({R"({"type": "claim", "claim": "pung"})", R"({"type": "discard", "tile": "Gd", "declareCalling": false})", R"({"type": "discard", "tile": "9s", "declareCalling": false})",
+                        R"({"type": "discard", "tile": "Nw", "declareCalling": true})", R"({"type": "discard", "tile": "Gd", "declareCalling": false})"}));
+        EXPECT_EQ(Member(State(), "seat").get<int>(), kSeat1);
+        ASSERT_NO_FATAL_FAILURE(PerformAll({R"({"type": "upgrade_kong", "tile": "5p"})"}));
+
+        const Json state = State();
+        EXPECT_EQ(Str(Member(Member(state, "turn"), "phase")), "rob_kong");
+        EXPECT_EQ(Member(state, "seat").get<int>(), kSeat3);
+        EXPECT_TRUE(IsListed(Actions(), Parse(R"({"type": "claim", "claim": "mahjong"})")));
+
+        Perform(R"({"type": "claim", "claim": "mahjong"})");
+        const Json over = State();
+        EXPECT_EQ(Str(Member(over, "phase")), "hand_over");
+        const Json& result = Member(over, "result");
+        EXPECT_EQ(Str(Member(result, "kind")), "win");
+        EXPECT_EQ(Member(result, "winner").get<int>(), kSeat3);
+        EXPECT_EQ(Str(Member(result, "source")), "robbed_kong");
+    }
+
+    TEST_F(MahjongGameSetStateTest, ALimitHandIsScoredAtTheLimitOfTheCall) {
+        ASSERT_NO_FATAL_FAILURE(Set(DealRequest(LimitHandDeal(), R"({"seats": "PPPP", "settings": {"limit": 300}})")));
+        ASSERT_NO_FATAL_FAILURE(PerformAll({R"({"type": "discard", "tile": "Gd", "declareCalling": true})", R"({"type": "discard", "tile": "Wd", "declareCalling": false})",
+                                            R"({"type": "discard", "tile": "1p", "declareCalling": false})", R"({"type": "discard", "tile": "9s", "declareCalling": false})", R"({"type": "win"})"}));
+
+        const Json state = State();
+        EXPECT_EQ(Str(Member(state, "phase")), "hand_over");
+        const Json& breakdown = Member(Member(Member(state, "result"), "seats")[0], "breakdown");
+        EXPECT_EQ(Str(Member(breakdown, "limitHand")), "HonoursOnly");
+        EXPECT_EQ(Member(breakdown, "score").get<int>(), 300);
+    }
+
+    TEST_F(MahjongGameSetStateTest, TheLastHandOfAMatchEndsTheMatch) {
+        const String handsPlayed = Format("{{\"seats\": \"{}\", \"handsPlayed\": {}}}", kAllPeople, kLastHandIndex);
+        ASSERT_NO_FATAL_FAILURE(Set(DealRequest(LimitHandDeal(), handsPlayed.c_str())));
+        EXPECT_EQ(Member(State(), "handsPlayed").get<int>(), kLastHandIndex);
+        EXPECT_EQ(Str(Member(State(), "roundWind")), "North");
+        ASSERT_NO_FATAL_FAILURE(PerformAll({R"({"type": "discard", "tile": "Gd", "declareCalling": true})", R"({"type": "discard", "tile": "Wd", "declareCalling": false})",
+                                            R"({"type": "discard", "tile": "1p", "declareCalling": false})", R"({"type": "discard", "tile": "9s", "declareCalling": false})", R"({"type": "win"})"}));
+        EXPECT_EQ(Str(Member(State(), "phase")), "hand_over");
+
+        const Json settled = Perform(R"({"type": "next_hand"})");
+        EXPECT_EQ(Str(Member(settled, "phase")), "match_over");
+        EXPECT_EQ(Member(State(), "handsPlayed").get<int>(), kDealtHandsOfAFullMatch);
+        EXPECT_TRUE(Actions().empty());
+    }
+
+    TEST_F(MahjongGameSetStateTest, ThePositionIsWhatTheStateSays) {
+        const FixedStart position = MakeSamplePosition(2, 5);
+        Json request = DealRequest(position.deal, R"({"seats": "PCCC", "levels": [1, 2, 3, 4], "scores": [250, 120, -40, 900], "handsPlayed": 5})");
+        request["settings"] = Parse(R"({"flowers": false})");
+        ASSERT_NO_FATAL_FAILURE(ResetWithEastAtSeat0());
+        const uint64_t version = control->GetStateVersion();
+        const uint64_t starts = game->GetLocalSession().StartCount();
+
+        ASSERT_NO_FATAL_FAILURE(Set(request));
+
+        const Json state = State();
+        EXPECT_EQ(Str(Member(state, "phase")), "playing");
+        EXPECT_EQ(Member(state, "handsPlayed").get<int>(), 5);
+        EXPECT_EQ(Str(Member(state, "roundWind")), "South");
+        EXPECT_EQ(Member(state, "east").get<int>(), 2);
+        EXPECT_EQ(Member(state, "seat").get<int>(), kSeat0);
+        EXPECT_EQ(LevelsOf(state), (Array<int, kSeatCount>{1, 2, 3, 4}));
+        const Vector<int> scores = {250, 120, -40, 900};
+        for (Seat seat = 0; seat < kSeatCount; ++seat) {
+            EXPECT_EQ(Member(Member(state, "seats")[seat], "score").get<int>(), scores[seat]);
+        }
+        EXPECT_GT(control->GetStateVersion(), version);
+        EXPECT_GT(game->GetLocalSession().StartCount(), starts);
+        EXPECT_EQ(game->GetSeats(), *ReadSeats("PCCC")) << "kept for the next match, as after a reset";
+        EXPECT_EQ(LevelNumber(game->GetLevels()[3]), 4);
+    }
+
+    TEST_F(MahjongGameSetStateTest, TheComputersRunToThePerson) {
+        ASSERT_NO_FATAL_FAILURE(Set(DealRequest(MakeSamplePosition(2).deal, R"({"seats": "PCCC"})")));
+        const Json state = State();
+        EXPECT_EQ(Member(state, "east").get<int>(), 2);
+        EXPECT_EQ(Member(state, "seat").get<int>(), kSeat0);
+        EXPECT_TRUE(Member(Member(state, "turn"), "yourTurn").get<bool>());
+        EXPECT_GT(Member(state, "discards").size(), 0u) << "seats 2 and 3 have played";
+        EXPECT_FALSE(Actions().empty());
+    }
+
+    TEST_F(MahjongGameSetStateTest, TheFirstSetStateStartsTheMatchAndClosesTheSetup) {
+        EXPECT_EQ(CodeOf(control->GetState()), "no_active_model");
+        game->OpenSetup();
+        game->OpenRules();
+        ASSERT_NO_FATAL_FAILURE(Set(DealRequest(MakeSamplePosition().deal, R"({"seats": "PCCC"})")));
+        EXPECT_EQ(Str(Member(State(), "phase")), "playing");
+        EXPECT_FALSE(game->IsSetupOpen());
+        EXPECT_FALSE(game->IsRulesOpen());
+        ASSERT_FALSE(Actions().empty());
+        Perform(Actions()[0]);
+    }
+
+    TEST_F(MahjongGameSetStateTest, WhateverIsWrongChangesNothing) {
+        ASSERT_NO_FATAL_FAILURE(Reset(R"({"seed": 3, "seats": "PCCC", "hands": 8, "level": 2})"));
+        const Json before = State();
+        const uint64_t starts = game->GetLocalSession().StartCount();
+        const SeatSetup seats = game->GetSeats();
+        const SeatLevels levels = game->GetLevels();
+        const int handsPerMatch = game->GetSettings().handsPerMatch;
+
+        Json eastNotASeat = DealRequest(MakeSamplePosition().deal, R"({"seats": "CCCC", "levels": [9, 9, 9, 9], "settings": {"handsPerMatch": 16, "limit": 100}})");
+        eastNotASeat["deal"]["east"] = 4;
+        Json fifthCopy = DealRequest(MakeSamplePosition().deal, R"({"seats": "CCPC"})");
+        fifthCopy["deal"]["live"] = "1p 1p 1p";
+        const Vector<Json> requests = {
+            Json::array(),
+            Json::object(),
+            eastNotASeat,
+            fifthCopy,
+            DealRequest(MakeSamplePosition().deal, R"({"handsPlayed": -1})"),
+            DealRequest(MakeSamplePosition().deal, R"({"handsPlayed": 8, "settings": {"handsPerMatch": 8}})"),
+            DealRequest(MakeSamplePosition().deal, R"({"scores": [1, 2, 3]})"),
+            DealRequest(MakeSamplePosition().deal, R"({"level": 3, "levels": [1, 2, 3, 4]})"),
+            DealRequest(MakeSamplePosition().deal, R"({"settings": {"handsPerMatch": 10}})"),
+            Parse(R"({"deal": {"hands": [[], [], [], []]}})"),
+            Parse(R"({"log": "", "deal": {}})"),
+        };
+        for (const Json& request : requests) {
+            const auto set = control->SetState(request);
+            ASSERT_FALSE(set.has_value()) << DumpJson(request).c_str();
+            EXPECT_EQ(ErrorCodeOf(set.error()), "invalid_params") << DumpJson(request).c_str();
+            EXPECT_EQ(State(), before) << DumpJson(request).c_str();
+        }
+        EXPECT_EQ(game->GetLocalSession().StartCount(), starts);
+        EXPECT_EQ(game->GetSeats(), seats);
+        EXPECT_EQ(game->GetLevels(), levels);
+        EXPECT_EQ(game->GetSettings().handsPerMatch, handsPerMatch);
+        EXPECT_EQ(game->GetSettings().limit, MahjongSettings().limit);
+    }
+
+    TEST_F(MahjongGameSetStateTest, TheSeedIsTheLastResetsUntilTheCallGivesOneAndTheNextHandsFollowIt) {
+        const FixedDeal deal = MakeSamplePosition().deal;
+        const auto nextHand = [&](MahjongGame& played) {
+            played.GetLocalSession().RunComputers();
+            EXPECT_EQ(played.GetLocalSession().GetPhase(), SessionPhase::HandOver);
+            EXPECT_TRUE(played.GetLocalSession().NextHand().has_value());
+        };
+        const String given = Format("{{\"seats\": \"CCCC\", \"seed\": {}}}", kSetStateSeed);
+        ASSERT_NO_FATAL_FAILURE(Set(DealRequest(deal, given.c_str())));
+        nextHand(*game);
+        const Vector<Tile> expected = HandOf(*game, kSeat0);
+
+        // the seed the first call named is the next call's default
+        ASSERT_NO_FATAL_FAILURE(Set(DealRequest(deal, R"({"seats": "CCCC"})")));
+        nextHand(*game);
+        EXPECT_EQ(HandOf(*game, kSeat0), expected);
+
+        // a `reset` names it too
+        IntrusivePtr<MahjongGame> other = New<MahjongGame>();
+        const String reset = Format("{{\"seed\": {}, \"seats\": \"CCCC\"}}", kSetStateSeed);
+        ASSERT_TRUE(other->AsControllable()->Reset(Parse(reset.c_str())).has_value());
+        ASSERT_TRUE(other->AsControllable()->SetState(DealRequest(deal, "{}")).has_value());
+        nextHand(*other);
+        EXPECT_EQ(HandOf(*other, kSeat0), expected);
+
+        const String another = Format("{{\"seats\": \"CCCC\", \"seed\": {}}}", kSetStateSeed + 1);
+        ASSERT_NO_FATAL_FAILURE(Set(DealRequest(deal, another.c_str())));
+        nextHand(*game);
+        EXPECT_NE(HandOf(*game, kSeat0), expected);
+    }
+
     /// The game with its client on the in-memory hub of `MahjongHubTransport.h`; the game goes before the world and the links it uses.
     class MahjongGameControlRoomTest : public MahjongGameControlTest {
     protected:
@@ -1221,6 +1448,7 @@ namespace BECore::Mahjong::Tests {
         EXPECT_EQ(CodeOf(control->GetActions()), "no_active_model");
         EXPECT_EQ(CodeOf(control->PerformAction(Parse("{\"type\": \"pass\"}"))), "no_active_model");
         EXPECT_EQ(CodeOf(control->Reset(Parse("{\"seed\": 3}"))), "no_active_model");
+        EXPECT_EQ(CodeOf(control->SetState(Parse("{\"deal\": {}}"))), "no_active_model");
         EXPECT_EQ(control->GetStateVersion(), version) << "nothing of the local game moved";
 
         ASSERT_TRUE(client.Leave());

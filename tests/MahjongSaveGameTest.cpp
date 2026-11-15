@@ -4,7 +4,9 @@
 #include <Common/TempPath.h>
 #include <Mahjong/Game/ComputerPlayer.h>
 #include <Mahjong/MahjongGame.h>
+#include <Mahjong/MatchLogJson.h>
 #include <gtest/gtest.h>
+#include <tests/FixedWall.h>
 #include <tests/StringsTestSupport.h>
 
 namespace BECore::Mahjong::Tests {
@@ -453,6 +455,26 @@ namespace BECore::Mahjong::Tests {
         ASSERT_TRUE(game->StartMatch(kSeed).has_value());
         game->FlushSave();
         EXPECT_TRUE(fs::exists(Slot(kMatchFile)));
+    }
+
+    TEST_F(MahjongSaveGameTest, APositionSetByTheControlIsSavedAndContinues) {
+        IntrusivePtr<MahjongGame> game = NewGame();
+        Json request = Json::object();
+        request["deal"] = FixedDealToJson(MakeSamplePosition(2, 5).deal);
+        request["handsPlayed"] = 5;
+        request["scores"] = Parse("[250, 120, -40, 900]");
+        request["seats"] = "PCCC";
+        ASSERT_TRUE(game->AsControllable()->SetState(request).has_value());
+        PlayFirstActions(*game, 1);
+        game->FlushSave();
+        ASSERT_TRUE(fs::exists(Slot(kMatchFile)));
+
+        IntrusivePtr<MahjongGame> second = StartedGame();
+        ASSERT_TRUE(second->CanContinue());
+        EXPECT_EQ(State(*second), State(*game));
+        EXPECT_EQ(Actions(*second), Actions(*game));
+        EXPECT_EQ(second->GetLocalMatch().HandsPlayed(), 5);
+        EXPECT_EQ(second->GetLocalMatch().Scores()[3], 900);
     }
 
     TEST_F(MahjongSaveGameTest, TheChoicesOfSetupAreTheDefaultsOfTheNextGame) {

@@ -6,6 +6,7 @@
 #include <Mahjong/MatchLogJson.h>
 #include <gtest/gtest.h>
 #include <regex>
+#include <tests/FixedWall.h>
 
 /**
  * The game owns the recorder of the tester upload (`MahjongGame::GetUpload()`, `MatchUpload.h`) in the chain of its session. The game
@@ -175,6 +176,28 @@ namespace BECore::Mahjong::Tests {
         ASSERT_NO_FATAL_FAILURE(PlayHand());
         game->Stop();
         EXPECT_TRUE(sink.pieces.empty());
+    }
+
+    TEST_F(MahjongGameUploadTest, APositionSetByTheControlIsNotUploadedAndItsFileLogReplays) {
+        Upload();
+        Json request = Json::object();
+        request["deal"] = FixedDealToJson(MakeSamplePosition().deal);
+        ASSERT_TRUE(game->AsControllable()->SetState(request).has_value());
+        EXPECT_FALSE(game->GetUpload().IsRecording());
+        ASSERT_NO_FATAL_FAILURE(PlayMatch());
+        game->Stop();
+        EXPECT_TRUE(sink.pieces.empty());
+
+        const String text = ReadFile(game->GetMatchLog().Path());
+        const auto events = ParseMatchLog(StringView(text.c_str(), text.size()));
+        ASSERT_TRUE(events.has_value()) << events.error().c_str();
+        ASSERT_TRUE(events->front().state.has_value());
+        EXPECT_EQ(events->front().state->deal, MakeSamplePosition().deal);
+        ExpectReplays(text);
+
+        // the next match of a person is uploaded again
+        ASSERT_TRUE(game->StartMatch(kSeed).has_value());
+        EXPECT_TRUE(game->GetUpload().IsRecording());
     }
 
     TEST_F(MahjongGameUploadTest, TheMatchIdIs32HexDigitsAndTwoMatchesDiffer) {
